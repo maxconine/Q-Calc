@@ -906,6 +906,32 @@ compat('Charge & electrical units', [
   { name: '1 microampere to amp', input: '1 microampere to amp', expected: 1e-6, unit: 'amp' },
 ])
 
+describe('Reciprocal named units', () => {
+  it('keeps 1/ohm instead of expanding to SI base units', () => {
+    const r = evaluateLine('1/6.8 ohm')
+    expect(r.value?.n).toBeCloseTo(1 / 6.8, 12)
+    expect(r.display).toMatch(/1\/Ω$/)
+    expect(r.display).not.toMatch(/s\^3/)
+  })
+
+  it('accepts 1/ohm with a space and the plural', () => {
+    const r = evaluateLine('1 / 6.8 ohms')
+    expect(r.value?.n).toBeCloseTo(1 / 6.8, 12)
+    expect(r.display).toMatch(/1\/Ω$/)
+  })
+
+  it('keeps 1/farad and 1/henry', () => {
+    expect(evaluateLine('1/2 farad').display).toMatch(/0\.5 1\/F$/)
+    expect(evaluateLine('1/2 henry').display).toMatch(/0\.5 1\/H$/)
+  })
+
+  it('still names 1/s as hertz', () => {
+    const r = evaluateLine('1 / 1 second')
+    expect(r.value?.n).toBeCloseTo(1, 12)
+    expect(r.display).toMatch(/Hz$/)
+  })
+})
+
 compat('Dimensionless, unit prefix scaling & aliases', [
   { name: '1 yocto', input: '1 yocto', expected: 1e-24 },
   { name: '1 zepto', input: '1 zepto', expected: 1e-21 },

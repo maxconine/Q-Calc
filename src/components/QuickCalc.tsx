@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { evaluateSheet } from '../engine/evaluate'
 import { clampSigFigs, DEFAULT_SIG_FIGS } from '../engine/format'
 import { defaultUnitsEqual, isImproperUnitConversion, sanitizeDefaultUnits, type DefaultUnits } from '../engine/units'
+import { applyTheme, normalizeTheme, type Theme } from '../lib/theme'
+import { AppearanceSettings } from './AppearanceSettings'
 import { UnitSettings } from './UnitSettings'
 import { hasDualAnswer, insertableAnswer, insertableHistoryAnswer, visibleAnswer, type AnswerForm } from '../lib/answer'
 import {
@@ -30,6 +32,7 @@ type Settings = {
   sigFigs: number
   draftSeconds: number
   defaultUnits: DefaultUnits
+  theme: Theme
 }
 
 type CalcWindow = NativeWindow & {
@@ -76,6 +79,7 @@ function defaultSettings(): Settings {
     sigFigs: DEFAULT_SIG_FIGS,
     draftSeconds: DEFAULT_DRAFT_SECONDS,
     defaultUnits: {},
+    theme: 'system',
   }
 }
 
@@ -118,6 +122,7 @@ function mergeSettings(partial: Partial<Settings> | undefined, base: Settings): 
     sigFigs: partial?.sigFigs == null ? base.sigFigs : clampSigFigs(partial.sigFigs),
     draftSeconds: partial?.draftSeconds == null ? base.draftSeconds : clampDraftSeconds(partial.draftSeconds),
     defaultUnits: partial?.defaultUnits == null ? base.defaultUnits : sanitizeDefaultUnits(partial.defaultUnits),
+    theme: partial?.theme == null ? base.theme : normalizeTheme(partial.theme),
   }
 }
 
@@ -183,6 +188,7 @@ function settingsEqual(a: Settings, b: Settings): boolean {
     a.answerForm === b.answerForm &&
     a.sigFigs === b.sigFigs &&
     a.draftSeconds === b.draftSeconds &&
+    a.theme === b.theme &&
     defaultUnitsEqual(a.defaultUnits, b.defaultUnits)
   )
 }
@@ -197,7 +203,9 @@ function loadSettings(): Settings {
     stored = fallback
   }
   const injected = windowDraft().__QCALC_SETTINGS
-  return injected ? mergeSettings(injected, stored) : stored
+  const next = injected ? mergeSettings(injected, stored) : stored
+  applyTheme(next.theme)
+  return next
 }
 
 function uid(): string {
@@ -340,6 +348,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
     nativeHandler()?.postMessage({ type: 'settings', sigFigs: settings.sigFigs })
   }, [settings])
+
+  useEffect(() => {
+    applyTheme(settings.theme)
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => {
+      if (settingsRef.current.theme === 'system') applyTheme('system')
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [settings.theme])
 
   useEffect(() => {
     const el = tapeRef.current
@@ -884,10 +902,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       </div>
     </div>
     {!embedded ? (
-      <UnitSettings
-        value={settings.defaultUnits}
-        onChange={(defaultUnits) => setSettings((s) => ({ ...s, defaultUnits }))}
-      />
+      <>
+        <AppearanceSettings
+          value={settings.theme}
+          onChange={(theme) => setSettings((s) => ({ ...s, theme }))}
+        />
+        <UnitSettings
+          value={settings.defaultUnits}
+          onChange={(defaultUnits) => setSettings((s) => ({ ...s, defaultUnits }))}
+        />
+      </>
     ) : null}
     </div>
   )

@@ -12,6 +12,7 @@ final class AppSettings: ObservableObject {
     static let draftSecondsKey = "qcalc.draftSeconds"
     static let defaultUnitsKey = "qcalc.defaultUnits"
     static let answerFormKey = "qcalc.answerForm"
+    static let themeKey = "qcalc.theme"
     static let defaultSigFigs = 12
     static let minSigFigs = 2
     static let maxSigFigs = 16
@@ -19,11 +20,13 @@ final class AppSettings: ObservableObject {
     static let minDraftSeconds = 0
     static let maxDraftSeconds = 3600
     static let defaultAnswerForm = "exact"
+    static let defaultTheme = "system"
 
     @Published private(set) var significantFigures: Int
     @Published private(set) var draftSeconds: Int
     @Published private(set) var defaultUnits: [String: String]
     @Published private(set) var answerForm: String
+    @Published private(set) var theme: String
 
     private init() {
         let storedFigs = UserDefaults.standard.integer(forKey: Self.sigFigsKey)
@@ -35,11 +38,20 @@ final class AppSettings: ObservableObject {
         }
         defaultUnits = Self.loadDefaultUnits()
         answerForm = Self.loadAnswerForm()
+        theme = Self.loadTheme()
     }
 
     private static func loadAnswerForm() -> String {
         let stored = UserDefaults.standard.string(forKey: answerFormKey) ?? defaultAnswerForm
         return stored == "approx" ? "approx" : defaultAnswerForm
+    }
+
+    static func normalizeTheme(_ raw: String) -> String {
+        raw == "light" || raw == "dark" ? raw : defaultTheme
+    }
+
+    private static func loadTheme() -> String {
+        normalizeTheme(UserDefaults.standard.string(forKey: themeKey) ?? defaultTheme)
     }
 
     private static func loadDefaultUnits() -> [String: String] {
@@ -87,6 +99,28 @@ final class AppSettings: ObservableObject {
         UserDefaults.standard.set(value, forKey: Self.answerFormKey)
         if notifyWeb {
             NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
+        }
+    }
+
+    func setTheme(_ raw: String, notifyWeb: Bool) {
+        let value = Self.normalizeTheme(raw)
+        guard value != theme else { return }
+        theme = value
+        UserDefaults.standard.set(value, forKey: Self.themeKey)
+        applyAppAppearance()
+        if notifyWeb {
+            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
+        }
+    }
+
+    func applyAppAppearance() {
+        switch theme {
+        case "light":
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case "dark":
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        default:
+            NSApp.appearance = nil
         }
     }
 
@@ -143,6 +177,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        AppSettings.shared.applyAppAppearance()
         setupStatusItem()
         overlay = OverlayController()
         overlay?.preload()
@@ -202,6 +237,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         answers.submenu = answerFormMenu()
         menu.addItem(answers)
 
+        let appearance = NSMenuItem(title: "Appearance", action: nil, keyEquivalent: "")
+        appearance.submenu = appearanceMenu()
+        menu.addItem(appearance)
+
         let draft = NSMenuItem(title: "Keep unfinished", action: nil, keyEquivalent: "")
         draft.submenu = draftMenu()
         menu.addItem(draft)
@@ -246,6 +285,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return menu
     }
 
+    private func appearanceMenu() -> NSMenu {
+        let menu = NSMenu()
+        let current = AppSettings.shared.theme
+        let options: [(String, String)] = [
+            ("System", "system"),
+            ("Light", "light"),
+            ("Dark", "dark"),
+        ]
+        for (title, theme) in options {
+            let item = NSMenuItem(title: title, action: #selector(setTheme(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = theme
+            item.state = theme == current ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
+    }
+
     private func draftMenu() -> NSMenu {
         let menu = NSMenu()
         let current = AppSettings.shared.draftSeconds
@@ -281,6 +338,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func setAnswerForm(_ sender: NSMenuItem) {
         let form = sender.representedObject as? String ?? AppSettings.defaultAnswerForm
         AppSettings.shared.setAnswerForm(form, notifyWeb: true)
+    }
+
+    @objc private func setTheme(_ sender: NSMenuItem) {
+        let theme = sender.representedObject as? String ?? AppSettings.defaultTheme
+        AppSettings.shared.setTheme(theme, notifyWeb: true)
     }
 
     @objc private func showUnitSettings() {

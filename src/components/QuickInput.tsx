@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
-import { inferParens } from '../engine/parens'
+import { autofillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
 
 export interface QuickInputHandle {
@@ -158,7 +158,16 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
     }
     if (e.key === 'ArrowDown' && onDownRef.current()) {
       e.preventDefault()
+      return
     }
+    if (e.key !== 'ArrowRight' || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return
+    const el = e.currentTarget
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? start
+    const filled = autofillParens(el.value, start, end)
+    if (!filled) return
+    e.preventDefault()
+    commit(filled, filled.length)
   }
 
   return (

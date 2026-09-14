@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateLine } from './evaluate'
-import { fillParens } from './parens'
+import { autofillParens, fillParens } from './parens'
 
 type Case = { name: string; input: string; filled: string }
 
@@ -215,6 +215,28 @@ suite(
     { name: 'open close open', input: '()(', filled: '()()' },
   ],
 )
+
+describe('Right-arrow autofill at caret end', () => {
+  it('commits trailing inferred parens', () => {
+    expect(autofillParens('sin(90', 6)).toBe('sin(90)')
+    expect(autofillParens('((1 + 2', 7)).toBe('((1 + 2))')
+  })
+
+  it('commits leading inferred parens', () => {
+    expect(autofillParens('5 + 3)', 6)).toBe('(5 + 3)')
+  })
+
+  it('commits leading and trailing together', () => {
+    expect(autofillParens('3 + 4) * (5', 11)).toBe('(3 + 4) * (5)')
+  })
+
+  it('does nothing when balanced, mid-field, or selecting', () => {
+    expect(autofillParens('sin(90)', 7)).toBeNull()
+    expect(autofillParens('sin(90', 3)).toBeNull()
+    expect(autofillParens('sin(90', 0, 6)).toBeNull()
+    expect(autofillParens('', 0)).toBeNull()
+  })
+})
 
 describe('Inferred parens evaluate', () => {
   it.each(

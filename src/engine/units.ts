@@ -709,7 +709,7 @@ function divQty(a: Qty, b: Qty): Qty | null {
   let si = a.si / b.si
   const dim = subVec(a.dim, b.dim)
   if (isPower(a.dim) && isFreq(b.dim) && isEnergy(dim)) si /= 2 * Math.PI
-  const prefer = isZeroVec(b.dim) ? a.prefer : undefined
+  const prefer = isZeroVec(b.dim) ? a.prefer : isZeroVec(a.dim) ? b.prefer : undefined
   return { si, dim, prefer }
 }
 
@@ -721,7 +721,7 @@ function addQty(a: Qty, b: Qty, sign: 1 | -1): Qty | null {
 function powQty(a: Qty, exp: number): Qty | null {
   if (!Number.isFinite(exp)) return null
   if (a.si < 0 && !Number.isInteger(exp)) return null
-  return { si: a.si ** exp, dim: scaleVec(a.dim, exp), prefer: exp === 1 ? a.prefer : undefined }
+  return { si: a.si ** exp, dim: scaleVec(a.dim, exp), prefer: Math.abs(exp) === 1 ? a.prefer : undefined }
 }
 
 function convertQty(q: Qty, target: Qty): number | null {
@@ -782,6 +782,22 @@ function formatCompound(dim: number[]): string {
   return `${left} / ${den.join(' ')}`
 }
 
+/** `1/Ω` rather than a slash-containing compound like `1/m/s`. */
+function reciprocalLabel(symbol: string): string | null {
+  const t = symbol.trim()
+  if (!t || /[\s/^]/.test(t) || t.startsWith('1')) return null
+  return `1/${t}`
+}
+
+function asReciprocal(q: Qty, unit: Unit): Value | null {
+  if (!vecEq(scaleVec(vec(unit.dim), -1), q.dim)) return null
+  const label = reciprocalLabel(unit.symbol)
+  if (!label) return null
+  const n = q.si * siOf(unit)
+  if (!Number.isFinite(n)) return null
+  return { ...num(n), unit: label }
+}
+
 function qtyToValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
   if (target) {
     if (!Number.isFinite(q.si)) return unitError()
@@ -802,6 +818,15 @@ function qtyToValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
     const n = q.si / siOf(named)
     if (!Number.isFinite(n)) return null
     return { ...num(n), unit: named.symbol }
+  }
+  if (q.prefer) {
+    const rec = asReciprocal(q, q.prefer)
+    if (rec) return rec
+  }
+  const inv = namedUnitFor(scaleVec(q.dim, -1))
+  if (inv) {
+    const rec = asReciprocal(q, inv)
+    if (rec) return rec
   }
   const unit = formatCompound(q.dim)
   return unit ? { ...num(q.si), unit } : num(q.si)

@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="./Qcalc_favi.png" />
     <title>Q Calc</title>
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem('qcalc-settings') || localStorage.getItem('instant-solver-settings')
+          var theme = raw ? JSON.parse(raw).theme : ''
+          if (theme === 'light' || theme === 'dark' || theme === 'system') {
+            document.documentElement.dataset.theme = theme
+          }
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

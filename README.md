@@ -79,7 +79,7 @@ To start Q Calc at login, add it under **System Settings → General → Login I
 - The answer updates as you type. Click it or press **⌘C** to copy. Type `ans` to insert it at the cursor.
 - **Enter** saves the calculation to history. **Up arrow** or scroll the tape to see previous ones. Click a history answer — or either side of a dual answer — to insert it.
 
-The menu bar icon can show the calculator without the hotkey. Significant figures, exact vs approximate answers, how long to keep unfinished input, and default units are set from the same menu.
+The menu bar icon can show the calculator without the hotkey. Significant figures, exact vs approximate answers, light or dark appearance, how long to keep unfinished input, and default units are set from the same menu.
 
 ## Development
 

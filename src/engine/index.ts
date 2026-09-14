@@ -1,5 +1,5 @@
 export { evaluateLine, evaluateSheet } from './evaluate'
-export { fillParens, inferParens } from './parens'
+export { autofillParens, fillParens, inferParens } from './parens'
 export type { ParenFill } from './parens'
 export { latexToAscii, tryPlainMath } from './plainMath'
 export { clampSigFigs, DEFAULT_SIG_FIGS, formatNumber, formatValue, MAX_SIG_FIGS, MIN_SIG_FIGS } from './format'

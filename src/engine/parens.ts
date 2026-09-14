@@ -33,3 +33,11 @@ export function inferParens(expr: string): ParenFill {
 export function fillParens(expr: string): string {
   return inferParens(expr).filled
 }
+
+/** Commit inferred parens when the caret is at the end with no selection. */
+export function autofillParens(expr: string, caret: number, selectionEnd = caret): string | null {
+  if (caret !== selectionEnd || caret !== expr.length) return null
+  const inferred = inferParens(expr)
+  if (!inferred.leading && !inferred.trailing) return null
+  return inferred.filled
+}

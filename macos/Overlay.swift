@@ -211,13 +211,15 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let draftSeconds = AppSettings.shared.draftSeconds
         let defaultUnits = AppSettings.shared.defaultUnitsJSON()
         let answerForm = AppSettings.shared.answerForm
+        let theme = AppSettings.shared.theme
         let boot = WKUserScript(
             source: """
             window.__QCALC_NATIVE = true;
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_META = false;
-            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)" };
+            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", theme: "\(theme)" };
+            document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
             };
@@ -305,6 +307,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.contentView = web
         self.web = web
         self.panel = panel
+        applyWebAppearance(web)
         loadQuickCalc(web)
     }
 
@@ -523,6 +526,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            self?.applyWebAppearance()
             self?.pushSettingsToWeb()
         }
     }
@@ -530,7 +534,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func pushSettingsToWeb() {
         let payload = settingsJavaScriptObject()
         web?.evaluateJavaScript(
-            "window.__QCALC_SETTINGS = \(payload); if (window.__qcalcApplySettings) window.__qcalcApplySettings(\(payload));"
+            "window.__QCALC_SETTINGS = \(payload); document.documentElement.dataset.theme = \"\(AppSettings.shared.theme)\"; if (window.__qcalcApplySettings) window.__qcalcApplySettings(\(payload));"
         )
     }
 
@@ -539,7 +543,23 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let d = AppSettings.shared.draftSeconds
         let units = AppSettings.shared.defaultUnitsJSON()
         let form = AppSettings.shared.answerForm
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\" }"
+        let theme = AppSettings.shared.theme
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", theme: \"\(theme)\" }"
+    }
+
+    private func applyWebAppearance(_ webView: WKWebView? = nil) {
+        let target = webView ?? web
+        let appearance: NSAppearance?
+        switch AppSettings.shared.theme {
+        case "light":
+            appearance = NSAppearance(named: .aqua)
+        case "dark":
+            appearance = NSAppearance(named: .darkAqua)
+        default:
+            appearance = nil
+        }
+        target?.appearance = appearance
+        panel?.appearance = appearance
     }
 
     private func applyWebSettings(_ dict: [String: Any]) {

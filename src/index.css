@@ -8,6 +8,7 @@
   --answer: #1d7a4c;
   --answer-hover: #159a5a;
   --shadow: 0 18px 50px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.12);
+  --page: #d8d8d4;
   --radius: 12px;
   --tape-row-height: 36px;
   --tape-visible: 5;
@@ -15,7 +16,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  html:not([data-theme="light"]) {
     --bg: #2c2c2e;
     --bg-tape: #232325;
     --ink: #f5f5f7;
@@ -24,8 +25,22 @@
     --answer: #63d392;
     --answer-hover: #7ee2a8;
     --shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --page: #1c1c1e;
     color-scheme: dark;
   }
+}
+
+html[data-theme="dark"] {
+  --bg: #2c2c2e;
+  --bg-tape: #232325;
+  --ink: #f5f5f7;
+  --muted: #98989d;
+  --line: rgba(255, 255, 255, 0.1);
+  --answer: #63d392;
+  --answer-hover: #7ee2a8;
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --page: #1c1c1e;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -36,7 +51,7 @@ html, body, #root {
 body {
   font-family: var(--font);
   font-weight: 400;
-  background: #d8d8d4;
+  background: var(--page);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -44,10 +59,6 @@ body {
 input, button, textarea {
   font-family: var(--font);
   font-weight: 400;
-}
-
-@media (prefers-color-scheme: dark) {
-  body { background: #1c1c1e; }
 }
 
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -465,6 +476,30 @@ html.quick-native .tape {
 .unit-row select:hover,
 .unit-row select:focus {
   border-color: color-mix(in srgb, var(--answer) 45%, var(--line));
+}
+
+.theme-choices {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.theme-choices button {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: var(--bg-tape);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+.theme-choices button:hover {
+  border-color: color-mix(in srgb, var(--answer) 45%, var(--line));
+}
+.theme-choices button.active {
+  color: var(--answer);
+  border-color: color-mix(in srgb, var(--answer) 45%, var(--line));
+  background: color-mix(in srgb, var(--answer) 12%, transparent);
 }
 
 @media (max-width: 560px) {
