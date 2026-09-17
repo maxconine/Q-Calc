@@ -4,8 +4,18 @@ import { clampSigFigs, DEFAULT_SIG_FIGS } from '../engine/format'
 import { defaultUnitsEqual, isImproperUnitConversion, sanitizeDefaultUnits, type DefaultUnits } from '../engine/units'
 import { applyTheme, normalizeTheme, type Theme } from '../lib/theme'
 import { AppearanceSettings } from './AppearanceSettings'
+import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { UnitSettings } from './UnitSettings'
-import { hasDualAnswer, insertableAnswer, insertableHistoryAnswer, visibleAnswer, type AnswerForm } from '../lib/answer'
+import {
+  hasDualAnswer,
+  insertableAnswer,
+  insertableHistoryAnswer,
+  insertableHistoryReuse,
+  normalizeHistoryInsert,
+  visibleAnswer,
+  type AnswerForm,
+  type HistoryInsert,
+} from '../lib/answer'
 import {
   clampDraftSeconds,
   DEFAULT_DRAFT_SECONDS,
@@ -17,11 +27,12 @@ import {
   evaluateNative,
   hasNativeEval,
   mergeLiveAnswer,
+  // nativeDefinition, // Apple Dictionary — uncomment to restore
   nativeReplyToLive,
   type NativeEvalReply,
   type NativeLive,
 } from '../lib/nativeEval'
-import { QuickInput, type QuickInputHandle } from './QuickInput'
+import { QuickInput, flattenPastedText, type QuickInputHandle } from './QuickInput'
 
 export type AngleMode = 'deg' | 'rad'
 
@@ -29,6 +40,7 @@ type Settings = {
   angleMode: AngleMode
   fractionMode: boolean
   answerForm: AnswerForm
+  historyInsert: HistoryInsert
   sigFigs: number
   draftSeconds: number
   defaultUnits: DefaultUnits
@@ -47,6 +59,7 @@ export type HistoryRow = {
   display: string
   exact?: string
   n?: number
+  kind?: 'definition'
 }
 
 const HISTORY_KEY = 'qcalc-history'
@@ -76,6 +89,7 @@ function defaultSettings(): Settings {
     angleMode: 'deg',
     fractionMode: false,
     answerForm: 'exact',
+    historyInsert: 'expr',
     sigFigs: DEFAULT_SIG_FIGS,
     draftSeconds: DEFAULT_DRAFT_SECONDS,
     defaultUnits: {},
@@ -89,8 +103,12 @@ function dismissNative(): void {
 
 function reportNativeHeight(el: HTMLElement | null): void {
   if (!el) return
-  const height = Math.ceil(el.getBoundingClientRect().height)
-  nativeHandler()?.postMessage({ type: 'size', height })
+  const box = el.getBoundingClientRect()
+  const height = Math.ceil(box.height)
+  const composer = el.querySelector('.composer')
+  const composerBox = composer instanceof HTMLElement ? composer.getBoundingClientRect() : null
+  const anchorTop = composerBox ? Math.max(0, Math.round(composerBox.top - box.top)) : 0
+  nativeHandler()?.postMessage({ type: 'size', height, anchorTop })
 }
 
 function loadHistory(): HistoryRow[] {
@@ -106,6 +124,7 @@ function loadHistory(): HistoryRow[] {
         display: row.display ?? '',
         exact: typeof row.exact === 'string' ? row.exact : undefined,
         n: typeof row.n === 'number' ? row.n : undefined,
+        kind: row.kind === 'definition' ? ('definition' as const) : undefined,
       }))
       .filter((row) => row.expr || row.display)
       .slice(-MAX_HISTORY)
@@ -119,6 +138,7 @@ function mergeSettings(partial: Partial<Settings> | undefined, base: Settings): 
     angleMode: partial?.angleMode === 'rad' ? 'rad' : partial?.angleMode === 'deg' ? 'deg' : base.angleMode,
     fractionMode: partial?.fractionMode == null ? base.fractionMode : Boolean(partial.fractionMode),
     answerForm: partial?.answerForm === 'approx' ? 'approx' : partial?.answerForm === 'exact' ? 'exact' : base.answerForm,
+    historyInsert: partial?.historyInsert == null ? base.historyInsert : normalizeHistoryInsert(partial.historyInsert),
     sigFigs: partial?.sigFigs == null ? base.sigFigs : clampSigFigs(partial.sigFigs),
     draftSeconds: partial?.draftSeconds == null ? base.draftSeconds : clampDraftSeconds(partial.draftSeconds),
     defaultUnits: partial?.defaultUnits == null ? base.defaultUnits : sanitizeDefaultUnits(partial.defaultUnits),
@@ -186,6 +206,7 @@ function settingsEqual(a: Settings, b: Settings): boolean {
     a.angleMode === b.angleMode &&
     a.fractionMode === b.fractionMode &&
     a.answerForm === b.answerForm &&
+    a.historyInsert === b.historyInsert &&
     a.sigFigs === b.sigFigs &&
     a.draftSeconds === b.draftSeconds &&
     a.theme === b.theme &&
@@ -210,6 +231,11 @@ function loadSettings(): Settings {
 
 function uid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function historyExprTitle(row: HistoryRow): string {
+  if (row.kind === 'definition') return 'Insert word at the cursor'
+  return 'Insert expression at the cursor'
 }
 
 function copyText(text: string): void {
@@ -258,8 +284,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [tapeOpen, setTapeOpen] = useState(false)
   const [nativeLive, setNativeLive] = useState<NativeLive | null>(null)
   const mathRef = useRef<QuickInputHandle | null>(null)
+  const caretRef = useRef<{ start: number; end: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const tapeRef = useRef<HTMLDivElement>(null)
+  const definitionRef = useRef<HTMLDivElement>(null)
+  const defLiveRef = useRef<NativeLive | null>(null)
   const copiedTimer = useRef(0)
   const tapeOpenRef = useRef(tapeOpen)
   const historyLenRef = useRef(history.length)
@@ -313,9 +342,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const liveN = merged.n
   const liveExact = q.trim() && jsDisplay ? live?.exact : undefined
   const shownLive = visibleAnswer({ display, exact: liveExact }, settings.answerForm)
+  // Apple Dictionary — uncomment to restore lookups:
+  // const definition = !display ? nativeDefinition(nativeLive, q) : null
+  const definition = null as NativeLive | null
   displayRef.current = display
   exactRef.current = liveExact
   liveNRef.current = liveN
+  defLiveRef.current = definition
 
   const nativeVars = useMemo(() => {
     const vars: Record<string, number> = {}
@@ -330,7 +363,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const lastAnswer = useMemo(() => {
     for (let i = history.length - 1; i >= 0; i--) {
       const row = history[i]
-      if (!row) continue
+      if (!row || row.kind === 'definition') continue
       if (row.n != null && Number.isFinite(row.n)) return row
       if (row.display.trim()) return row
     }
@@ -379,6 +412,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     copiedTimer.current = window.setTimeout(() => setCopied(false), 1200)
   }, [])
 
+  const copyDefinition = useCallback(() => {
+    const text = definition?.display
+    if (!text) return
+    copyText(text)
+    flashCopied()
+  }, [definition, flashCopied])
+
   const copyOutput = useCallback(() => {
     const highlighted = mathRef.current?.highlighted() || highlightedText()
     if (highlighted) {
@@ -386,27 +426,80 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return
     }
     const row = selected != null ? history[selected] : null
-    const text = row ? visibleAnswer(row, settings.answerForm) : shownLive
-    if (!text || isImproperUnitConversion(text)) return
-    copyText(text)
+    if (row) {
+      const text = row.kind === 'definition' ? row.expr : visibleAnswer(row, settings.answerForm)
+      if (!text || isImproperUnitConversion(text)) return
+      copyText(text)
+      flashCopied()
+      return
+    }
+    if (definition?.display) {
+      copyDefinition()
+      return
+    }
+    if (!shownLive || isImproperUnitConversion(shownLive)) return
+    copyText(shownLive)
     flashCopied()
-  }, [flashCopied, history, selected, settings.answerForm, shownLive])
+  }, [copyDefinition, definition, flashCopied, history, selected, settings.answerForm, shownLive])
+
+  const snapshotCaret = useCallback(() => {
+    const tracked = mathRef.current?.caret()
+    if (tracked) {
+      caretRef.current = tracked
+      return
+    }
+    const el = mathRef.current?.element()
+    if (!el) return
+    const start = el.selectionStart ?? el.value.length
+    const end = el.selectionEnd ?? start
+    caretRef.current = { start, end }
+  }, [])
+
+  const restoreCaret = useCallback(() => {
+    const el = mathRef.current?.element()
+    const caret = caretRef.current
+    if (!el || !caret) return
+    const max = el.value.length
+    el.focus()
+    el.setSelectionRange(Math.min(caret.start, max), Math.min(caret.end, max))
+  }, [])
 
   const insertPlain = useCallback((chunk: string) => {
     if (!chunk) return
-    mathRef.current?.insert(chunk)
+    const el = mathRef.current?.element()
+    const tracked = mathRef.current?.caret()
+    const fromEl =
+      el && document.activeElement === el
+        ? {
+            start: el.selectionStart ?? tracked?.start ?? el.value.length,
+            end: el.selectionEnd ?? tracked?.end ?? el.selectionStart ?? el.value.length,
+          }
+        : undefined
+    const at = fromEl ?? tracked ?? caretRef.current ?? undefined
+    mathRef.current?.insert(chunk, at)
+    const dest = (at?.start ?? 0) + chunk.length
+    caretRef.current = { start: dest, end: dest }
     mathRef.current?.focus()
     setSelected(null)
     setTapeOpen(false)
   }, [])
 
+  const insertHistoryExpr = useCallback(
+    (index: number) => {
+      const row = history[index]
+      if (!row?.expr) return
+      insertPlain(row.expr)
+    },
+    [history, insertPlain],
+  )
+
   const insertHistoryAnswer = useCallback(
     (index: number) => {
       const row = history[index]
       if (!row) return
-      insertPlain(insertableHistoryAnswer(row, settings.answerForm))
+      insertPlain(insertableHistoryReuse(row, settings.answerForm, settings.historyInsert))
     },
-    [history, insertPlain, settings.answerForm],
+    [history, insertPlain, settings.answerForm, settings.historyInsert],
   )
 
   const copyValue = useCallback(
@@ -434,7 +527,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   const commit = useCallback(() => {
     const expr = qRef.current
-    const shown = displayRef.current
+    const def = defLiveRef.current
+    const shown = displayRef.current || (def ? def.pos || def.term || def.display.split('\n')[0] || '' : '')
     const exact = exactRef.current
     const n = liveNRef.current
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
@@ -447,8 +541,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           id: uid(),
           expr,
           display: shown,
-          exact: exact && exact !== shown ? exact : undefined,
-          n: Number.isFinite(n) ? n : undefined,
+          exact: def ? undefined : exact && exact !== shown ? exact : undefined,
+          n: def ? undefined : Number.isFinite(n) ? n : undefined,
+          kind: def ? ('definition' as const) : undefined,
         },
       ].slice(-MAX_HISTORY)
     })
@@ -456,10 +551,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     displayRef.current = ''
     exactRef.current = undefined
     liveNRef.current = undefined
+    defLiveRef.current = null
     draftAtRef.current = 0
     stopDraftTimer()
     clearStoredDraft()
     setQ('')
+    setNativeLive(null)
     mathRef.current?.setValue('')
     mathRef.current?.focus()
     setSelected(null)
@@ -531,8 +628,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   const onUp = useCallback((): boolean => {
     if (!history.length) return false
-    const el = mathRef.current?.element()
-    if (selected == null && el && (el.selectionStart ?? 0) !== 0 && q.trim()) return false
+    if (selected == null) snapshotCaret()
     if (!tapeOpen) {
       setTapeOpen(true)
       setSelected(history.length - 1)
@@ -540,18 +636,18 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     setSelected((cur) => (cur == null ? history.length - 1 : Math.max(0, cur - 1)))
     return true
-  }, [history.length, q, selected, tapeOpen])
+  }, [history.length, selected, snapshotCaret, tapeOpen])
 
   const onDown = useCallback((): boolean => {
     if (!tapeOpen) return false
     if (selected == null || selected >= history.length - 1) {
       setSelected(null)
-      mathRef.current?.focus()
+      restoreCaret()
       return true
     }
     setSelected(selected + 1)
     return true
-  }, [history.length, selected, tapeOpen])
+  }, [history.length, restoreCaret, selected, tapeOpen])
 
   const onEnter = useCallback(() => {
     if (selected != null) {
@@ -560,6 +656,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     commit()
   }, [commit, selected, insertHistoryAnswer])
+
+  useEffect(() => {
+    if (!caretRef.current) return
+    restoreCaret()
+    const timers = [0, 40, 120].map((ms) => window.setTimeout(restoreCaret, ms))
+    return () => {
+      for (const t of timers) window.clearTimeout(t)
+    }
+  }, [restoreCaret, selected, tapeOpen])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -601,7 +706,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         return
       }
       const row = selected != null ? history[selected] : null
-      const text = row ? visibleAnswer(row, settings.answerForm) : shownLive
+      const text = row
+        ? row.kind === 'definition'
+          ? row.expr
+          : visibleAnswer(row, settings.answerForm)
+        : definition?.display || shownLive
       if (!text || isImproperUnitConversion(text)) return
       e.preventDefault()
       e.clipboardData?.setData('text/plain', text)
@@ -614,7 +723,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('copy', onCopy, true)
     }
-  }, [copyOutput, embedded, flashCopied, history, onClose, onWillHide, resetToCalculate, selected, settings.answerForm, shownLive])
+  }, [copyOutput, definition, embedded, flashCopied, history, onClose, onWillHide, resetToCalculate, selected, settings.answerForm, shownLive])
 
   useEffect(() => () => stopDraftTimer(), [stopDraftTimer])
 
@@ -643,6 +752,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const w = windowDraft()
     const size = () => reportNativeHeight(rootRef.current)
     w.__qcalcFocus = () => mathRef.current?.focus()
+    w.__qcalcPaste = (text) => {
+      if (typeof text !== 'string' || !text) return
+      mathRef.current?.insert(flattenPastedText(text))
+      mathRef.current?.focus()
+    }
     w.__qcalcSize = size
     w.__qcalcWillHide = () => onWillHide()
     w.__qcalcReset = () => {
@@ -692,7 +806,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     if (!root) return
     const onWheel = (e: WheelEvent) => {
       const tape = tapeRef.current
+      const definitionEl = definitionRef.current
       const overTape = Boolean(tape && e.target instanceof Node && tape.contains(e.target))
+      const overDefinition = Boolean(
+        definitionEl && e.target instanceof Node && definitionEl.contains(e.target),
+      )
+      if (overDefinition) return
       const open = tapeOpenRef.current
       const hasHistory = historyLenRef.current > 0
 
@@ -703,6 +822,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         }
         if (!open) {
           e.preventDefault()
+          const input = mathRef.current?.element()
+          if (input) {
+            const start = input.selectionStart ?? input.value.length
+            caretRef.current = { start, end: input.selectionEnd ?? start }
+          }
           setTapeOpen(true)
           return
         }
@@ -726,6 +850,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         e.preventDefault()
         setTapeOpen(false)
         setSelected(null)
+        const input = mathRef.current?.element()
+        const caret = caretRef.current
+        if (input && caret) {
+          const max = input.value.length
+          input.focus()
+          input.setSelectionRange(Math.min(caret.start, max), Math.min(caret.end, max))
+        }
         return
       }
       if (!overTape) {
@@ -744,7 +875,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}
       onMouseDown={(e) => {
         const t = e.target as HTMLElement
-        if (t.closest('input, button, .tape, .quick-plain, .quick-field, .modes, .unit-settings, .live-dual')) return
+        if (t.closest('input, button, .tape, .definition, .quick-plain, .quick-field, .modes, .unit-settings, .live-dual')) return
         nativeHandler()?.postMessage({ type: 'drag' })
       }}
     >
@@ -759,13 +890,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               <button
                 type="button"
                 className="tape-q"
-                title={
-                  settings.answerForm === 'exact' && row.exact
-                    ? 'Insert exact value at the cursor'
-                    : 'Insert approximation at the cursor'
-                }
+                title={historyExprTitle(row)}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insertHistoryAnswer(i)}
+                onClick={() => insertHistoryExpr(i)}
               >
                 {row.expr}
               </button>
@@ -798,12 +925,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                   type="button"
                   className="tape-a"
                   title={
-                    settings.answerForm === 'exact' && row.exact
-                      ? 'Insert exact value at the cursor'
-                      : 'Insert approximation at the cursor'
+                    row.kind === 'definition'
+                      ? 'Insert word at the cursor'
+                      : settings.answerForm === 'exact' && row.exact
+                        ? 'Insert exact value at the cursor'
+                        : 'Insert approximation at the cursor'
                   }
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => insertHistoryAnswer(i)}
+                  onClick={() => {
+                    if (row.kind === 'definition') insertHistoryAnswer(i)
+                    else insertPlain(insertableHistoryAnswer(row, settings.answerForm))
+                  }}
                 >
                   {visibleAnswer(row, settings.answerForm)}
                 </button>
@@ -848,6 +980,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ansPlain={ansPlain}
           handleRef={mathRef}
           onChange={(text) => {
+            caretRef.current = null
             setQ(text)
             if (selected != null && history[selected]?.expr !== text) setSelected(null)
           }}
@@ -858,6 +991,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         {copied ? (
           <button type="button" className="live copied" disabled>
             copied
+          </button>
+        ) : definition ? (
+          <button
+            type="button"
+            className={`live message ${definition.pos ? '' : 'empty'}`}
+            title="Copy definition · ⌘C also copies"
+            disabled={!definition.display}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={copyDefinition}
+          >
+            {definition.pos ?? ''}
           </button>
         ) : isImproperUnitConversion(display) ? (
           <button type="button" className="live message" disabled>
@@ -900,12 +1044,41 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           </button>
         )}
       </div>
+      {definition ? (
+        <div
+          ref={definitionRef}
+          className="definition"
+          role="region"
+          aria-label={definition.term ? `Definition of ${definition.term}` : 'Definition'}
+        >
+          <div className="definition-head">
+            <span className="definition-term">{definition.term || q.trim()}</span>
+            {definition.pronunciation ? (
+              <span className="definition-pron">{definition.pronunciation}</span>
+            ) : null}
+          </div>
+          <div
+            className="definition-body"
+            title="Copy definition · ⌘C also copies"
+            onClick={() => {
+              if (window.getSelection()?.toString()) return
+              copyDefinition()
+            }}
+          >
+            {definition.body || definition.display}
+          </div>
+        </div>
+      ) : null}
     </div>
     {!embedded ? (
       <>
         <AppearanceSettings
           value={settings.theme}
           onChange={(theme) => setSettings((s) => ({ ...s, theme }))}
+        />
+        <HistoryInsertSettings
+          value={settings.historyInsert}
+          onChange={(historyInsert) => setSettings((s) => ({ ...s, historyInsert }))}
         />
         <UnitSettings
           value={settings.defaultUnits}

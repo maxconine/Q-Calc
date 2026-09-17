@@ -109,6 +109,10 @@ suite('Basic Arithmetic & Order of Operations', [
   { name: 'Simple Addition', input: '125 + 379', expected: 504 },
   { name: 'Subtraction with Negative Result', input: '42 - 189', expected: -147 },
   { name: 'Multiplication', input: '24 * 15', expected: 360 },
+  { name: 'Typeset middle-dot multiplication', input: '24 · 15', expected: 360 },
+  { name: 'Typeset dot-operator multiplication', input: '6⋅7', expected: 42 },
+  { name: 'Typeset bullet-operator multiplication', input: '2∙8', expected: 16 },
+  { name: 'Word-dot multiplication', input: '3 dot 4', expected: 12 },
   { name: 'Exact Division', input: '144 / 12', expected: 12 },
   { name: 'Chained Addition & Subtraction', input: '100 - 45 + 12 - 3', expected: 64 },
   { name: 'Order of Operations (No Parens)', input: '5 + 3 * 4', expected: 17 },
@@ -144,6 +148,10 @@ suite('Fractions & Decimals', [
   { name: 'Negative Fraction', input: '-7/8', expected: -0.875 },
   { name: 'Improper Fraction Conversion', input: '11 / 4', expected: 2.75 },
   { name: 'Precision Fraction Conversion', input: '0.142857', fractionMode: true, display: '1/7' },
+  { name: 'Unit conversion to fraction', input: '2032mm to ft', fractionMode: true, display: '20/3 ft' },
+  { name: 'Unit conversion exact fraction', input: '2032mm to ft', exact: '20/3 ft' },
+  { name: 'Unit arithmetic to fraction', input: '3 ft / 2', fractionMode: true, display: '3/2 ft' },
+  { name: 'Unit sum to fraction', input: '(1/2) m + (1/3) m', fractionMode: true, display: '5/6 m' },
   { name: 'Chained Fractions', input: '1/2 + 1/4 + 1/8 + 1/16', expected: 15 / 16 },
   { name: 'Zero Numerator', input: '0 / 5', expected: 0 },
   { name: 'Fraction Exponents', input: '(2/3)^3', expected: 8 / 27 },
@@ -260,6 +268,22 @@ suite('Inverse Trigonometry', [
   { name: 'Arccosecant (DEG Mode)', input: 'arccsc(2)', expected: 30 },
   { name: 'Arcsecant (DEG Mode)', input: 'arcsec(2)', expected: 60 },
   { name: 'Arccotangent (DEG Mode)', input: 'arccot(1)', expected: 45 },
+  { name: 'asin alias (DEG)', input: 'asin(0.5)', expected: 30 },
+  { name: 'acos alias (DEG)', input: 'acos(0.5)', expected: 60 },
+  { name: 'atan alias (DEG)', input: 'atan(1)', expected: 45 },
+  { name: 'sin^-1 (DEG)', input: 'sin^-1(0.5)', expected: 30 },
+  { name: 'cos^-1 (DEG)', input: 'cos^-1(0.5)', expected: 60 },
+  { name: 'tan^-1 (DEG)', input: 'tan^-1(1)', expected: 45 },
+  { name: 'sin^(-1) (DEG)', input: 'sin^(-1)(0.5)', expected: 30 },
+  { name: 'sin⁻¹ (DEG)', input: 'sin⁻¹(0.5)', expected: 30 },
+  { name: 'csc^-1 (DEG)', input: 'csc^-1(2)', expected: 30 },
+  { name: 'sec^-1 (DEG)', input: 'sec^-1(2)', expected: 60 },
+  { name: 'cot^-1 (DEG)', input: 'cot^-1(1)', expected: 45 },
+  { name: 'sin^-1 without parens', input: 'sin^-1 0.5', expected: 30 },
+  { name: 'atan2 first quadrant (DEG)', input: 'atan2(1,1)', expected: 45 },
+  { name: 'atan2 positive y-axis (DEG)', input: 'atan2(1,0)', expected: 90 },
+  { name: 'atan2 negative x-axis (DEG)', input: 'atan2(0,-1)', expected: 180 },
+  { name: 'atan2 first quadrant (RAD)', input: 'atan2(1,1)', angleMode: 'rad', expected: Math.PI / 4 },
   { name: 'Trig Cancellation', input: 'sin(arcsin(0.8))', expected: 0.8 },
   { name: 'Inverse Trig Cancellation (DEG)', input: 'arcsin(sin(30))', expected: 30 },
   { name: 'Arccosine Boundary -1 (DEG)', input: 'arccos(-1)', expected: 180 },
@@ -533,6 +557,7 @@ describe('Additional latex and constant aliases', () => {
     expect(Math.abs(n('p i') - Math.PI)).toBeLessThan(1e-8)
     expect(Math.abs(n('p*i') - Math.PI)).toBeLessThan(1e-8)
     expect(Math.abs(n('p · i') - Math.PI)).toBeLessThan(1e-8)
+    expect(Math.abs(n('p dot i') - Math.PI)).toBeLessThan(1e-8)
     expect(Math.abs(n('\\pi') - Math.PI)).toBeLessThan(1e-8)
     expect(Math.abs(n('p\\cdot i') - Math.PI)).toBeLessThan(1e-8)
     expect(Math.abs(n('p\\imaginaryI') - Math.PI)).toBeLessThan(1e-8)

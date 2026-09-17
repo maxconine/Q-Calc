@@ -115,6 +115,21 @@ describe('Unit conversion phrases', () => {
     expect(Math.abs(alt.value!.n - 25.4)).toBeLessThan(1e-8)
   })
 
+  it('converts Ohms law current with "in mA"', () => {
+    const expected = (3 / 39) * 1000
+    for (const input of ['3V/39ohm in mA', '3 V / 39 ohm in mA', '3V/39ohm to mA']) {
+      const r = evaluateLine(input)
+      expect(r.value?.n, input).toBeCloseTo(expected, 8)
+      expect(r.display, input).toMatch(/mA$/)
+    }
+  })
+
+  it('still treats "in" as inches in products', () => {
+    const r = evaluateLine('2 in * 3 cm')
+    expect(r.value?.n).toBeCloseTo(0.001524, 10)
+    expect(r.display).toMatch(/m²$/)
+  })
+
   it('does not convert mismatched dimensions', () => {
     const r = evaluateLine('10 meters to kilograms')
     expect(r.value?.kind).toBe('text')
@@ -235,6 +250,32 @@ describe('Requested unit conversion examples', () => {
     const r = evaluateLine('2 in to m')
     expect(r.display).toBe('0.0508 m')
     expect(r.value?.n).toBeCloseTo(0.0508, 8)
+  })
+})
+
+describe('Fractions with units', () => {
+  it('converts 2032 mm to a foot fraction', () => {
+    const r = evaluateLine('2032mm to ft', { fractionMode: true })
+    expect(r.display).toBe('20/3 ft')
+    expect(r.value?.n).toBeCloseTo(20 / 3, 8)
+  })
+
+  it('keeps the unit on an exact fraction next to the decimal', () => {
+    const r = evaluateLine('2032 mm to ft')
+    expect(r.exact).toBe('20/3 ft')
+    expect(r.display).toMatch(/ft$/)
+    expect(r.display).not.toBe('20/3 ft')
+  })
+
+  it('turns unit arithmetic into a fraction', () => {
+    expect(evaluateLine('3 ft / 2', { fractionMode: true }).display).toBe('3/2 ft')
+    expect(evaluateLine('(1/2) m + (1/3) m', { fractionMode: true }).display).toBe('5/6 m')
+    expect(evaluateLine('2 in * 3', { fractionMode: true }).display).toBe('6 in')
+  })
+
+  it('keeps integer unit results as integers in fraction mode', () => {
+    expect(evaluateLine('304.8 mm to ft', { fractionMode: true }).display).toBe('1 ft')
+    expect(evaluateLine('2 m * 2 m', { fractionMode: true }).display).toMatch(/^4 /)
   })
 })
 
@@ -1851,6 +1892,9 @@ describe('Unit conversion phrases', () => {
     ['5 in to cm', 12.7],
     ['5 inches to cm', 12.7],
     ['5 in in cm', 12.7],
+    ['3V/39ohm in mA', (3 / 39) * 1000],
+    ['3 V / 39 ohm in mA', (3 / 39) * 1000],
+    ['12 V / 4 Ohm in mA', 3000],
     ['12 in to ft', 1],
     ['3 ft to yd', 1],
     ['1760 yd to mi', 1],

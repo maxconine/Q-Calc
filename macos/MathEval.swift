@@ -1,8 +1,26 @@
 import Foundation
 
 enum MathEval {
+    /// Prepend/append the grey inferred parens so `5+3)*2` evaluates as `(5+3)*2`.
+    static func fillParens(_ expr: String) -> String {
+        var depth = 0
+        var minDepth = 0
+        for ch in expr {
+            if ch == "(" {
+                depth += 1
+            } else if ch == ")" {
+                depth -= 1
+                if depth < minDepth { minDepth = depth }
+            }
+        }
+        let leading = -minDepth
+        let trailing = depth + leading
+        if leading == 0 && trailing == 0 { return expr }
+        return String(repeating: "(", count: leading) + expr + String(repeating: ")", count: trailing)
+    }
+
     static func evaluate(_ raw: String) -> Double? {
-        var src = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        var src = fillParens(raw.trimmingCharacters(in: .whitespacesAndNewlines))
         src = src.replacingOccurrences(of: "π", with: "pi")
         src = src.replacingOccurrences(of: "\\bpi\\b", with: "(\(Double.pi))", options: [.regularExpression, .caseInsensitive])
         guard src.contains(where: \.isNumber) else { return nil }

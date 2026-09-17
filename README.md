@@ -71,19 +71,22 @@ To start Q Calc at login, add it under **System Settings → General → Login I
 ## Using Q Calc
 
 - **Control + Option + Space** shows the calculator. **Esc** or a click outside the window hides it. What you were typing is kept for a while (see **Keep unfinished** in the menu).
-- Type as you would on a scientific calculator: `sin(90)`, `sqrt(2)`, `2^8`, `5!`. `pi` becomes π as you type.
+- Type as you would on a scientific calculator: `sin(90)`, `arcsin(0.5)`, `sin^-1(0.5)`, `sqrt(2)`, `2^8`, `5!`. `pi` becomes π as you type.
 - **⌃D** switches between degrees and radians. **⌃F** toggles fraction results.
 - Answers show a closed form next to the decimal when both exist (`sqrt(3)/2 ≈ 0.866025`). Click either side to copy (or, in history, to insert). **⌘C** and `ans` follow **Answers → Exact** or **Approximate**.
 - Unit conversions work too: `72 f`, `2 in to cm`.
 - Natural-language math works in the Mac app via SoulverCore: `$10 for lunch + 15% tip`, `40 is what % of 90`, `3:45pm + 4 hr 10 min`.
+<!-- Apple Dictionary — uncomment to restore:
+- Type a word such as `ingenious` to see its Apple Dictionary definition. Phrases work too: `define New York`, `definition of apple`, `what does pi mean`. Click the definition or press **⌘C** to copy it. **Enter** saves the word to history.
+-->
 - The answer updates as you type. Click it or press **⌘C** to copy. Type `ans` to insert it at the cursor.
-- **Enter** saves the calculation to history. **Up arrow** or scroll the tape to see previous ones. Click a history answer — or either side of a dual answer — to insert it.
+- **Enter** saves the calculation to history. **Up arrow** or scroll the tape to see previous ones. Click a previous expression to insert it at the typing cursor. Click a previous answer — or either side of a dual answer — to insert that value (`cos(` then a previous `31` becomes `cos(31)`). Press **Enter** on a highlighted row to reuse it; **History** in the menu (or the History setting in the browser) chooses whether that brings in the original expression or just the answer.
 
-The menu bar icon can show the calculator without the hotkey. Significant figures, exact vs approximate answers, light or dark appearance, how long to keep unfinished input, and default units are set from the same menu.
+The menu bar icon can show the calculator without the hotkey. Significant figures, exact vs approximate answers, whether history inserts the expression or the answer, light or dark appearance, how long to keep unfinished input, and default units are set from the same menu.
 
 ## Development
 
-The JavaScript engine can be tried in a browser. Natural-language phrases like `$10 for lunch + 15% tip` need the Mac app.
+The JavaScript engine can be tried in a browser. Natural-language math needs the Mac app.
 
 ```bash
 npm install

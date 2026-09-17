@@ -986,6 +986,15 @@ function splitConvert(src: string): { left: string; right?: string } {
   return { left: src }
 }
 
+function splitInConvert(src: string): { left: string; right: string } | null {
+  const m = src.match(/^(.*)\s+in\s+(.+)$/i)
+  if (!m) return null
+  const left = (m[1] ?? '').trim()
+  const right = (m[2] ?? '').trim()
+  if (!left || !right) return null
+  return { left, right }
+}
+
 function targetFor(from: Unit, defaults?: DefaultUnits): Unit | undefined {
   const chosen = defaults?.[from.dim]
   if (chosen) {
@@ -1007,8 +1016,7 @@ function applyDefaultUnit(q: Qty, defaults?: DefaultUnits): Value | null {
   return qtyToValue(q)
 }
 
-function tryUnitExpression(src: string, defaults?: DefaultUnits): Value | null {
-  const { left, right } = splitConvert(src)
+function evalUnitSides(left: string, right: string | undefined, defaults?: DefaultUnits): Value | null {
   const leftParser = new UnitParser(left)
   const leftQ = leftParser.parse()
   if (!right) {
@@ -1022,6 +1030,28 @@ function tryUnitExpression(src: string, defaults?: DefaultUnits): Value | null {
   }
   if (!rightQ) return null
   return qtyToValue(leftQ, rightQ, right.replace(/\s+/g, ' '))
+}
+
+function tryUnitExpression(src: string, defaults?: DefaultUnits): Value | null {
+  const { left, right } = splitConvert(src)
+  if (right) return evalUnitSides(left, right, defaults)
+
+  // `in` is also inches, so only treat it as a converter when both sides parse
+  // as quantities and the conversion is dimensionally valid (`3V/39ohm in mA`).
+  const viaIn = splitInConvert(src)
+  if (viaIn) {
+    const leftParser = new UnitParser(viaIn.left)
+    const leftQ = leftParser.parse()
+    const rightQ = new UnitParser(viaIn.right).parse()
+    if (leftQ && rightQ) {
+      if (convertQty(leftQ, rightQ) != null) {
+        return qtyToValue(leftQ, rightQ, viaIn.right.replace(/\s+/g, ' '))
+      }
+      return unitError()
+    }
+  }
+
+  return evalUnitSides(src, undefined, defaults)
 }
 
 function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {

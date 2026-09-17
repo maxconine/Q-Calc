@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { hasDualAnswer, insertableAnswer, insertableHistoryAnswer, visibleAnswer } from './answer'
+import {
+  hasDualAnswer,
+  insertableAnswer,
+  insertableHistoryAnswer,
+  insertableHistoryReuse,
+  normalizeHistoryInsert,
+  visibleAnswer,
+} from './answer'
 
 describe('insertableAnswer', () => {
   it('keeps units from the displayed answer', () => {
@@ -15,6 +22,8 @@ describe('insertableAnswer', () => {
     expect(insertableAnswer('$11.50', 11.5)).toBe('$11.50')
     expect(insertableAnswer('7:55 pm')).toBe('7:55 pm')
     expect(insertableAnswer('5/8', 0.625)).toBe('5/8')
+    expect(insertableAnswer('20/3 ft', 20 / 3)).toBe('20/3 ft')
+    expect(insertableAnswer('3/2 ft', 1.5)).toBe('3/2 ft')
   })
 
   it('uses the numeric value when the display is only a number', () => {
@@ -168,6 +177,42 @@ describe('visibleAnswer', () => {
   it.each(Array.from({ length: 60 }, (_, i) => String(i)))('no exact %s', (d) => {
     expect(visibleAnswer({ display: d }, 'exact')).toBe(d)
     expect(visibleAnswer({ display: d }, 'approx')).toBe(d)
+  })
+})
+
+describe('normalizeHistoryInsert', () => {
+  it('keeps expression as the default', () => {
+    expect(normalizeHistoryInsert(undefined)).toBe('expr')
+    expect(normalizeHistoryInsert('expr')).toBe('expr')
+    expect(normalizeHistoryInsert('answer')).toBe('answer')
+    expect(normalizeHistoryInsert('other')).toBe('expr')
+  })
+})
+
+describe('insertableHistoryReuse', () => {
+  const row = { expr: '2+2', display: '4', n: 4 }
+  const exactRow = {
+    expr: 'cos(30)',
+    display: '0.866025403784',
+    exact: 'sqrt(3)/2',
+    n: Math.sqrt(3) / 2,
+  }
+
+  it('inserts the original expression', () => {
+    expect(insertableHistoryReuse(row, 'exact', 'expr')).toBe('2+2')
+    expect(insertableHistoryReuse(exactRow, 'approx', 'expr')).toBe('cos(30)')
+  })
+
+  it('inserts the answer when that setting is on', () => {
+    expect(insertableHistoryReuse(row, 'exact', 'answer')).toBe('4')
+    expect(insertableHistoryReuse(exactRow, 'exact', 'answer')).toBe('sqrt(3)/2')
+    expect(insertableHistoryReuse(exactRow, 'approx', 'answer')).toBe(String(Math.sqrt(3) / 2))
+  })
+
+  it('always inserts a definition as the looked-up word', () => {
+    const def = { expr: 'ingenious', display: 'adjective', kind: 'definition' }
+    expect(insertableHistoryReuse(def, 'exact', 'answer')).toBe('ingenious')
+    expect(insertableHistoryReuse(def, 'approx', 'expr')).toBe('ingenious')
   })
 })
 

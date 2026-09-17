@@ -12,6 +12,7 @@ final class AppSettings: ObservableObject {
     static let draftSecondsKey = "qcalc.draftSeconds"
     static let defaultUnitsKey = "qcalc.defaultUnits"
     static let answerFormKey = "qcalc.answerForm"
+    static let historyInsertKey = "qcalc.historyInsert"
     static let themeKey = "qcalc.theme"
     static let defaultSigFigs = 12
     static let minSigFigs = 2
@@ -20,12 +21,14 @@ final class AppSettings: ObservableObject {
     static let minDraftSeconds = 0
     static let maxDraftSeconds = 3600
     static let defaultAnswerForm = "exact"
+    static let defaultHistoryInsert = "expr"
     static let defaultTheme = "system"
 
     @Published private(set) var significantFigures: Int
     @Published private(set) var draftSeconds: Int
     @Published private(set) var defaultUnits: [String: String]
     @Published private(set) var answerForm: String
+    @Published private(set) var historyInsert: String
     @Published private(set) var theme: String
 
     private init() {
@@ -38,12 +41,18 @@ final class AppSettings: ObservableObject {
         }
         defaultUnits = Self.loadDefaultUnits()
         answerForm = Self.loadAnswerForm()
+        historyInsert = Self.loadHistoryInsert()
         theme = Self.loadTheme()
     }
 
     private static func loadAnswerForm() -> String {
         let stored = UserDefaults.standard.string(forKey: answerFormKey) ?? defaultAnswerForm
         return stored == "approx" ? "approx" : defaultAnswerForm
+    }
+
+    private static func loadHistoryInsert() -> String {
+        let stored = UserDefaults.standard.string(forKey: historyInsertKey) ?? defaultHistoryInsert
+        return stored == "answer" ? "answer" : defaultHistoryInsert
     }
 
     static func normalizeTheme(_ raw: String) -> String {
@@ -102,25 +111,35 @@ final class AppSettings: ObservableObject {
         }
     }
 
-    func setTheme(_ raw: String, notifyWeb: Bool) {
-        let value = Self.normalizeTheme(raw)
-        guard value != theme else { return }
-        theme = value
-        UserDefaults.standard.set(value, forKey: Self.themeKey)
-        applyAppAppearance()
+    func setHistoryInsert(_ raw: String, notifyWeb: Bool) {
+        let value = raw == "answer" ? "answer" : Self.defaultHistoryInsert
+        guard value != historyInsert else { return }
+        historyInsert = value
+        UserDefaults.standard.set(value, forKey: Self.historyInsertKey)
         if notifyWeb {
             NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
         }
     }
 
-    func applyAppAppearance() {
+    func setTheme(_ raw: String, notifyWeb: Bool) {
+        let value = Self.normalizeTheme(raw)
+        guard value != theme else { return }
+        theme = value
+        UserDefaults.standard.set(value, forKey: Self.themeKey)
+        if notifyWeb {
+            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
+        }
+    }
+
+    /// Overlay and settings windows only — not `NSApp`, so the menu-bar icon can stay a template.
+    var nsAppearance: NSAppearance? {
         switch theme {
         case "light":
-            NSApp.appearance = NSAppearance(named: .aqua)
+            return NSAppearance(named: .aqua)
         case "dark":
-            NSApp.appearance = NSAppearance(named: .darkAqua)
+            return NSAppearance(named: .darkAqua)
         default:
-            NSApp.appearance = nil
+            return nil
         }
     }
 
@@ -177,7 +196,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        AppSettings.shared.applyAppAppearance()
         setupStatusItem()
         overlay = OverlayController()
         overlay?.preload()
@@ -202,7 +220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let url = Bundle.main.url(forResource: "StatusIcon", withExtension: "png"),
            let image = NSImage(contentsOf: url) {
             image.size = NSSize(width: 18, height: 18)
-            image.isTemplate = false
+            image.isTemplate = true
             return image
         }
         let fallback = NSImage(systemSymbolName: "sum", accessibilityDescription: "Q Calc")
@@ -236,6 +254,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let answers = NSMenuItem(title: "Answers", action: nil, keyEquivalent: "")
         answers.submenu = answerFormMenu()
         menu.addItem(answers)
+
+        let history = NSMenuItem(title: "History", action: nil, keyEquivalent: "")
+        history.submenu = historyInsertMenu()
+        menu.addItem(history)
 
         let appearance = NSMenuItem(title: "Appearance", action: nil, keyEquivalent: "")
         appearance.submenu = appearanceMenu()
@@ -280,6 +302,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.target = self
             item.representedObject = form
             item.state = form == current ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    private func historyInsertMenu() -> NSMenu {
+        let menu = NSMenu()
+        let current = AppSettings.shared.historyInsert
+        let options: [(String, String)] = [
+            ("Insert expression", "expr"),
+            ("Insert answer", "answer"),
+        ]
+        for (title, value) in options {
+            let item = NSMenuItem(title: title, action: #selector(setHistoryInsert(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = value
+            item.state = value == current ? .on : .off
             menu.addItem(item)
         }
         return menu
@@ -338,6 +377,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func setAnswerForm(_ sender: NSMenuItem) {
         let form = sender.representedObject as? String ?? AppSettings.defaultAnswerForm
         AppSettings.shared.setAnswerForm(form, notifyWeb: true)
+    }
+
+    @objc private func setHistoryInsert(_ sender: NSMenuItem) {
+        let value = sender.representedObject as? String ?? AppSettings.defaultHistoryInsert
+        AppSettings.shared.setHistoryInsert(value, notifyWeb: true)
     }
 
     @objc private func setTheme(_ sender: NSMenuItem) {

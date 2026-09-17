@@ -29,7 +29,7 @@ enum SoulverEval {
         variables: [String: Double] = [:],
         sigFigs: Int = 12
     ) -> Answer? {
-        let src = expression.trimmingCharacters(in: .whitespacesAndNewlines)
+        let src = MathEval.fillParens(expression.trimmingCharacters(in: .whitespacesAndNewlines))
         guard !src.isEmpty else { return nil }
 
         lock.lock()

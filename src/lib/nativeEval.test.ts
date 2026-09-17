@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  looksLikeDictionaryQuery,
   looksLikeNaturalLanguage,
   mergeLiveAnswer,
+  nativeDefinition,
   nativeEvalPayload,
   nativeReplyToLive,
   usableNativeDisplay,
@@ -334,11 +336,135 @@ describe('nativeEvalPayload', () => {
   it.each(['a', 'b', '2+2', 'what is 40% of 90'])('keeps expr %s', (expr) => {
     expect(nativeEvalPayload({ id: 7, expr }).expr).toBe(expr)
   })
+  // Apple Dictionary — uncomment to restore lookups:
+  // it('asks Apple Dictionary to define a bare word', () => {
+  //   expect(nativeEvalPayload({ id: 1, expr: 'ingenious', sigFigs: 12 })).toEqual({
+  //     type: 'eval',
+  //     id: 1,
+  //     expr: 'ingenious',
+  //     sigFigs: 12,
+  //     wantDefinition: true,
+  //   })
+  // })
+  // it('asks Apple Dictionary for an explicit define query', () => {
+  //   expect(nativeEvalPayload({ id: 1, expr: 'define ingenious' }).wantDefinition).toBe(true)
+  // })
   it.each(Array.from({ length: 40 }, (_, i) => ({ id: i, expr: `e${i}`, ans: i, sigFigs: 4 })))(
     'payload $expr',
     ({ id, expr, ans, sigFigs }) => {
       const p = nativeEvalPayload({ id, expr, ans, sigFigs })
       expect(p).toEqual({ type: 'eval', id, expr, ans, sigFigs })
+    },
+  )
+})
+
+describe('dictionary replies', () => {
+  it('does not treat a definition as a calculator answer', () => {
+    expect(
+      mergeLiveAnswer('serendipity', '', undefined, {
+        expr: 'serendipity',
+        display: 'serendipity\nnoun\nthe occurrence of events by chance',
+        kind: 'definition',
+        term: 'serendipity',
+        pos: 'noun',
+      }),
+    ).toEqual({ display: '' })
+  })
+
+  it('keeps math even if a definition is also present', () => {
+    expect(
+      mergeLiveAnswer('pi', '3.14159', Math.PI, {
+        expr: 'pi',
+        display: 'pi\nnoun\nthe sixteenth letter',
+        kind: 'definition',
+        term: 'pi',
+        pos: 'noun',
+      }),
+    ).toEqual({ display: '3.14159', n: Math.PI })
+  })
+
+  it('does not let natural-language words leak a definition into the live answer', () => {
+    expect(
+      mergeLiveAnswer('lunch', '', undefined, {
+        expr: 'lunch',
+        display: 'lunch\nnoun\na meal eaten in the middle of the day',
+        kind: 'definition',
+        term: 'lunch',
+        pos: 'noun',
+      }),
+    ).toEqual({ display: '' })
+  })
+
+  it('exposes a matching definition for the overlay', () => {
+    const native = {
+      expr: 'serendipity',
+      display: 'serendipity\nnoun\nthe occurrence of events by chance',
+      kind: 'definition' as const,
+      term: 'serendipity',
+      pos: 'noun',
+      body: 'the occurrence of events by chance',
+    }
+    expect(nativeDefinition(native, 'serendipity')).toEqual(native)
+    expect(nativeDefinition(native, 'apple')).toBeNull()
+    expect(nativeDefinition({ expr: '2+2', display: '4', n: 4 }, '2+2')).toBeNull()
+  })
+
+  it('roundtrips definition fields on a matching reply', () => {
+    expect(
+      nativeReplyToLive(
+        {
+          id: 4,
+          expr: 'define apple',
+          display: 'apple\nnoun\na fruit',
+          n: null,
+          kind: 'definition',
+          term: 'apple',
+          pos: 'noun',
+          pronunciation: 'ˈap(ə)l',
+          body: 'a fruit',
+        },
+        4,
+        'define apple',
+      ),
+    ).toEqual({
+      expr: 'define apple',
+      display: 'apple\nnoun\na fruit',
+      kind: 'definition',
+      term: 'apple',
+      pos: 'noun',
+      pronunciation: 'ˈap(ə)l',
+      body: 'a fruit',
+    })
+  })
+
+  it('treats a reply with dictionary fields as a definition even without kind', () => {
+    expect(
+      nativeReplyToLive(
+        { id: 1, expr: 'ingenious', display: 'ingenious\nadjective\nclever', term: 'ingenious', pos: 'adjective' },
+        1,
+        'ingenious',
+      ),
+    ).toEqual({
+      expr: 'ingenious',
+      display: 'ingenious\nadjective\nclever',
+      kind: 'definition',
+      term: 'ingenious',
+      pos: 'adjective',
+    })
+  })
+})
+
+describe('looksLikeDictionaryQuery', () => {
+  it.each(['ingenious', 'serendipity', 'hello', "it's", 'well-being', 'Apple', 'define ingenious', 'Define: apple', 'definition of New York', 'what does pi mean'])(
+    'defines %s',
+    (expr) => {
+      expect(looksLikeDictionaryQuery(expr)).toBe(true)
+    },
+  )
+  it.each(['2+2', 'sin(90)', '72 f', 'today', 'tomorrow', '$10 for lunch + 15% tip', 'what is 40% of 90', 'a', '', '  '])(
+    'leaves %j to the calculator',
+    (expr) => {
+      expect(looksLikeDictionaryQuery(expr)).toBe(false)
     },
   )
 })

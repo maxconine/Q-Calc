@@ -106,6 +106,30 @@ describe('Inferred parens evaluate', () => {
     expect(evaluateLine('(300 * 9)').value?.n).toBe(2700)
     expect(evaluateLine('(5 + 3) * 4').value?.n).toBe(32)
   })
+
+  it('divides a compound unit quantity by a trailing )/2 using inferred opening parens', () => {
+    const inferred = evaluateLine('19600 kg m / s)/2')
+    const grouped = evaluateLine('(19600 kg m / s)/2')
+    expect(inferred.value?.n).toBeCloseTo(9800, 8)
+    expect(grouped.value?.n).toBeCloseTo(9800, 8)
+    expect(inferred.display).toMatch(/kg m \/ s$/)
+    expect(grouped.display).toMatch(/kg m \/ s$/)
+    expect(evaluateLine('19600 kg m / s').value?.n).toBeCloseTo(19600, 8)
+  })
+
+  it('divides force as (19600 kg m / s^2)/2', () => {
+    const r = evaluateLine('19600 kg m / s^2)/2')
+    expect(r.value?.n).toBeCloseTo(9800, 8)
+    expect(r.display).toMatch(/N$/)
+    expect(evaluateLine('19600 N)/2').value?.n).toBeCloseTo(9800, 8)
+  })
+
+  it('applies inferred parens before unit arithmetic', () => {
+    expect(evaluateLine('10 m)/2').value?.n).toBeCloseTo(5, 8)
+    expect(evaluateLine('10 m)/2').display).toMatch(/m$/)
+    expect(evaluateLine('100 kg)/2').value?.n).toBeCloseTo(50, 8)
+    expect(evaluateLine('2 in)/2').value?.n).toBeCloseTo(evaluateLine('(2 in)/2').value?.n ?? NaN, 8)
+  })
 })
 
 const ATOMS = [

@@ -178,6 +178,13 @@ struct UnitSettingsView: View {
 
 final class UnitSettingsWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
+    private var settingsObserver: NSObjectProtocol?
+
+    deinit {
+        if let settingsObserver {
+            NotificationCenter.default.removeObserver(settingsObserver)
+        }
+    }
 
     func show() {
         if window == nil {
@@ -190,7 +197,9 @@ final class UnitSettingsWindowController: NSObject, NSWindowDelegate {
             window.isReleasedWhenClosed = false
             window.delegate = self
             self.window = window
+            observeSettings()
         }
+        applyAppearance()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.center()
@@ -200,5 +209,20 @@ final class UnitSettingsWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         window = nil
         NSApp.setActivationPolicy(.accessory)
+    }
+
+    private func observeSettings() {
+        guard settingsObserver == nil else { return }
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: .qcalcSettingsChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.applyAppearance()
+        }
+    }
+
+    private func applyAppearance() {
+        window?.appearance = AppSettings.shared.nsAppearance
     }
 }

@@ -122,6 +122,13 @@ export function extraFractions(): ExtraCase[] {
     { name: '0.125 as 1/8', input: '0.125', fractionMode: true, display: '1/8' },
     { name: '0.375 as 3/8', input: '0.375', fractionMode: true, display: '3/8' },
     { name: '0.875 as 7/8', input: '0.875', fractionMode: true, display: '7/8' },
+    { name: '2032mm to ft fraction', input: '2032mm to ft', fractionMode: true, display: '20/3 ft' },
+    { name: '2032 mm to feet fraction', input: '2032 mm to feet', fractionMode: true, display: '20/3 ft' },
+    { name: '80 in to ft fraction', input: '80 in to ft', fractionMode: true, display: '20/3 ft' },
+    { name: '3 ft / 2 fraction', input: '3 ft / 2', fractionMode: true, display: '3/2 ft' },
+    { name: '(1/2) m + (1/3) m fraction', input: '(1/2) m + (1/3) m', fractionMode: true, display: '5/6 m' },
+    { name: '2 in * 1/2 fraction', input: '2 in * 1/2', fractionMode: true, display: '1 in' },
+    { name: '90 deg exact with unit', input: '90 deg', exact: 'pi/2 rad' },
   )
   return out
 }
@@ -331,6 +338,14 @@ export function extraInverseTrig(): ExtraCase[] {
     num('tan(arctan(2))', 'tan(arctan(2))', 2),
     num('arcsin(sin(20))', 'arcsin(sin(20))', 20),
     num('arccos(cos(40))', 'arccos(cos(40))', 40),
+    num('asin(0.5)', 'asin(0.5)', 30),
+    num('sin^-1(0.5)', 'sin^-1(0.5)', 30),
+    num('cos^-1(0.5)', 'cos^-1(0.5)', 60),
+    num('tan^-1(1)', 'tan^-1(1)', 45),
+    num('sin^(-1)(1)', 'sin^(-1)(1)', 90),
+    num('sin⁻¹(0)', 'sin⁻¹(0)', 0),
+    num('atan2(1,1)', 'atan2(1,1)', 45),
+    num('arctan2(1,0)', 'arctan2(1,0)', 90),
   )
   return out
 }
@@ -755,6 +770,10 @@ extraLatex.push(
   { name: 'latex tan pi/4 rad', input: '\\tan\\left(\\pi/4\\right)', expected: 1, angleMode: 'rad' },
   { name: 'spaced pi', input: 'p i', expected: Math.PI },
   { name: 'dot pi', input: 'p · i', expected: Math.PI },
+  { name: 'middle-dot mul', input: '2 · 3', expected: 6 },
+  { name: 'dot-operator mul', input: '4⋅5', expected: 20 },
+  { name: 'typeset 3 · 10^2', input: '3 · 10^2', expected: 300 },
+  { name: 'word-dot mul', input: '3 dot 4', expected: 12 },
   { name: 'cdot pi', input: 'p\\cdot i', expected: Math.PI },
   { name: '2pi concat', input: '2pi', expected: 2 * Math.PI },
   { name: 'latex binom 5 2', input: '\\binom{5}{2}', expected: 10 },

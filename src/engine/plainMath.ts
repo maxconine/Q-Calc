@@ -1,6 +1,6 @@
 import type { Value } from './types'
 import { fillParens } from './parens'
-import { evalScientific, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
+import { evalScientific, rewriteTypesetMul, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
 import { tryConvert, type DefaultUnits } from './units'
 
 export type { AngleMode }
@@ -37,7 +37,7 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\left/g, '').replace(/\\right/g, '')
   s = s.replace(/\\,|\\;|\\!|\\:|\\ /g, '')
   s = s.replace(/\\ldots|\\cdots|\\dots/g, '...')
-  s = s.replace(/\\cdot|\\times/g, '*')
+  s = rewriteTypesetMul(s.replace(/\\cdot|\\times/g, '*'))
   s = s.replace(/\\div/g, '/')
   s = s.replace(/\\pm/g, '+')
   s = s.replace(/\\pi\b/g, '(pi)')
@@ -66,6 +66,12 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\csch\b/g, 'csch').replace(/\\sech\b/g, 'sech').replace(/\\coth\b/g, 'coth')
   s = s.replace(/\\arcsin\b/g, 'asin').replace(/\\arccos\b/g, 'acos').replace(/\\arctan\b/g, 'atan')
   s = s.replace(/\\arccsc\b/g, 'acsc').replace(/\\arcsec\b/g, 'asec').replace(/\\arccot\b/g, 'acot')
+  s = s.replace(/\\sin\s*\^\s*\{-1\}/g, 'asin')
+  s = s.replace(/\\cos\s*\^\s*\{-1\}/g, 'acos')
+  s = s.replace(/\\tan\s*\^\s*\{-1\}/g, 'atan')
+  s = s.replace(/\\csc\s*\^\s*\{-1\}/g, 'acsc')
+  s = s.replace(/\\sec\s*\^\s*\{-1\}/g, 'asec')
+  s = s.replace(/\\cot\s*\^\s*\{-1\}/g, 'acot')
   s = s.replace(/\\sin\b/g, 'sin').replace(/\\cos\b/g, 'cos').replace(/\\tan\b/g, 'tan')
   s = s.replace(/\\csc\b/g, 'csc').replace(/\\sec\b/g, 'sec').replace(/\\cot\b/g, 'cot')
   s = s.replace(/\\exp\b/g, 'exp')
@@ -233,15 +239,11 @@ export function tryPlainMath(
 ): Value | null {
   const src = unwrapQuestion(text)
   if (!src) return null
-  const converted = tryConvert(src, ctx.defaultUnits)
+  const ascii = looksLikeLatex(src) ? latexToAscii(src) : src
+  const filled = fillParens(rewriteTypesetMul(ascii))
+  const converted = tryConvert(filled, ctx.defaultUnits)
   if (converted) return converted
   const cleaned = src.replace(/\d+(?:\.\d+)?\s*%\s*of\b/gi, (m) => m.replace(/\s*of\b/i, ''))
   if (hasNlpWords(cleaned) && !looksLikeLatex(src)) return null
-  const ascii = looksLikeLatex(src) ? latexToAscii(src) : src
-  const direct = evalScientific(ascii, ctx)
-  if (direct) return direct
-
-  const filled = fillParens(ascii)
-  if (filled === ascii) return null
   return evalScientific(filled, ctx)
 }

@@ -17,18 +17,43 @@ export type NativeEvalReply = {
   expr: string
   display: string
   n?: number | null
+  kind?: string
+  term?: string
+  pos?: string
+  pronunciation?: string
+  body?: string
 }
 
 export type NativeLive = {
   expr: string
   display: string
   n?: number
+  kind?: 'definition'
+  term?: string
+  pos?: string
+  pronunciation?: string
+  body?: string
 }
 
 export function hasNativeEval(): boolean {
   const w = nativeWindow()
   if (!w) return false
   return Boolean(w.__QCALC_NATIVE || w.webkit?.messageHandlers?.soulver || w.webkit?.messageHandlers?.qcalc)
+}
+
+const DEFINE_PREFIX =
+  /^(?:define[:\s]+|definition of\s+|meaning of\s+|what does\s+.+\s+mean\??$)/i
+const SINGLE_WORD = /^\p{L}[\p{L}'’\-]*$/u
+
+/** Bare words (`ingenious`) and explicit `define …` queries. Date/NLP phrases stay with SoulverCore.
+ *  Apple Dictionary lookups are currently commented out of nativeEvalPayload. */
+export function looksLikeDictionaryQuery(expr: string): boolean {
+  const t = expr.trim()
+  if (!t) return false
+  if (DEFINE_PREFIX.test(t)) return true
+  if (looksLikeNaturalLanguage(t)) return false
+  if (!SINGLE_WORD.test(t)) return false
+  return t.replace(/[^\p{L}]/gu, '').length >= 2
 }
 
 /** WKWebView rejects objects that contain `undefined`, so omit optional fields instead of spreading. */
@@ -41,6 +66,8 @@ export function nativeEvalPayload(req: NativeEvalRequest): Record<string, unknow
   if (req.sigFigs != null && Number.isFinite(req.sigFigs)) payload.sigFigs = req.sigFigs
   if (req.ans != null && Number.isFinite(req.ans)) payload.ans = req.ans
   if (req.variables && Object.keys(req.variables).length > 0) payload.variables = req.variables
+  // Apple Dictionary — uncomment to restore lookups:
+  // if (looksLikeDictionaryQuery(req.expr)) payload.wantDefinition = true
   return payload
 }
 
@@ -73,7 +100,13 @@ function normalizeReply(raw: unknown, req: NativeEvalRequest): NativeEvalReply |
   const expr = typeof o.expr === 'string' ? o.expr : req.expr
   const id = typeof o.id === 'number' && Number.isFinite(o.id) ? o.id : req.id
   const n = typeof o.n === 'number' && Number.isFinite(o.n) ? o.n : null
-  return { id, expr, display, n }
+  const reply: NativeEvalReply = { id, expr, display, n }
+  if (typeof o.kind === 'string' && o.kind) reply.kind = o.kind
+  if (typeof o.term === 'string' && o.term) reply.term = o.term
+  if (typeof o.pos === 'string' && o.pos) reply.pos = o.pos
+  if (typeof o.pronunciation === 'string' && o.pronunciation) reply.pronunciation = o.pronunciation
+  if (typeof o.body === 'string' && o.body) reply.body = o.body
+  return reply
 }
 
 /** Ask SoulverCore and wait for the answer. Falls back to a fire-and-forget message if the reply handler is missing. */
@@ -105,7 +138,8 @@ export function mergeLiveAnswer(
   native: NativeLive | null,
 ): { display: string; n?: number } {
   if (!expr.trim()) return { display: '' }
-  const nativeDisplay = native && native.expr === expr ? usableNativeDisplay(native.display) : ''
+  const nativeDisplay =
+    native && native.expr === expr && native.kind !== 'definition' ? usableNativeDisplay(native.display) : ''
   const nativeHit = native && nativeDisplay ? { ...native, display: nativeDisplay } : null
   if (nativeHit && looksLikeNaturalLanguage(expr)) {
     return { display: nativeHit.display, n: nativeHit.n }
@@ -115,11 +149,26 @@ export function mergeLiveAnswer(
   return { display: '' }
 }
 
+export function nativeDefinition(native: NativeLive | null, expr: string): NativeLive | null {
+  if (!native || native.kind !== 'definition') return null
+  if (native.expr !== expr) return null
+  return native.display.trim() ? native : null
+}
+
 export function nativeReplyToLive(reply: NativeEvalReply, expectedId: number, currentExpr: string): NativeLive | null {
   if (reply.id !== expectedId) return null
   if (reply.expr !== currentExpr) return null
   const display = usableNativeDisplay(typeof reply.display === 'string' ? reply.display : '')
   if (!display) return null
   const n = typeof reply.n === 'number' && Number.isFinite(reply.n) ? reply.n : undefined
-  return { expr: reply.expr, display, n }
+  const live: NativeLive = { expr: reply.expr, display, n }
+  const isDefinition = reply.kind === 'definition' || Boolean(reply.term || reply.pos || reply.body)
+  if (isDefinition) {
+    live.kind = 'definition'
+    if (reply.term) live.term = reply.term
+    if (reply.pos) live.pos = reply.pos
+    if (reply.pronunciation) live.pronunciation = reply.pronunciation
+    if (reply.body) live.body = reply.body
+  }
+  return live
 }

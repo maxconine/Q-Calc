@@ -2,12 +2,15 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type 
 import { autofillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
 
+export type CaretRange = { start: number; end: number }
+
 export interface QuickInputHandle {
-  insert: (chunk: string) => void
+  insert: (chunk: string, at?: CaretRange) => void
   focus: () => void
   setValue: (text: string) => void
   element: () => HTMLInputElement | null
   highlighted: () => string
+  caret: () => CaretRange
 }
 
 interface Props {
@@ -27,6 +30,22 @@ const TOKEN_REPLACEMENTS: [RegExp, string][] = [
   [/\binf\b/gi, '∞'],
   [/\bcbrt\b/gi, '∛'],
 ]
+
+export function flattenPastedText(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, ' ')
+}
+
+/** Insert `chunk` at a caret or selection, replacing the selected range when present. */
+export function spliceText(
+  value: string,
+  chunk: string,
+  start: number,
+  end: number,
+): { next: string; cursor: number } {
+  const a = Math.max(0, Math.min(start, value.length))
+  const b = Math.max(a, Math.min(end, value.length))
+  return { next: value.slice(0, a) + chunk + value.slice(b), cursor: a + chunk.length }
+}
 
 function prettyTokens(text: string, ansPlain?: string): string {
   let out = text
@@ -49,6 +68,8 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
   const ansRef = useRef(ansPlain)
   const heldRef = useRef('')
   const metaRef = useRef(false)
+  const caretPosRef = useRef<CaretRange>({ start: value.length, end: value.length })
+  const holdingArrowRef = useRef(false)
   onChangeRef.current = onChange
   onEnterRef.current = onEnter
   onUpRef.current = onUp
@@ -68,6 +89,21 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
     else if (!metaRef.current) heldRef.current = ''
   }
 
+  const rememberCaret = (el: HTMLInputElement | null) => {
+    if (!el) return
+    const start = el.selectionStart ?? el.value.length
+    const end = el.selectionEnd ?? start
+    caretPosRef.current = { start, end }
+  }
+
+  const pinCaret = (el: HTMLInputElement | null = inputRef.current) => {
+    if (!el) return
+    const max = el.value.length
+    const start = Math.min(caretPosRef.current.start, max)
+    const end = Math.min(caretPosRef.current.end, max)
+    el.setSelectionRange(start, end)
+  }
+
   const { leading: leadingCount, trailing: trailingCount } = inferParens(value)
   const prefix = leadingCount > 0 ? '('.repeat(leadingCount) : ''
   const suffix = trailingCount > 0 ? ')'.repeat(trailingCount) : ''
@@ -79,29 +115,36 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
   const commit = (raw: string, cursor: number) => {
     const before = prettyTokens(raw.slice(0, cursor), ansRef.current)
     const next = prettyTokens(raw, ansRef.current)
+    const pos = Math.min(before.length, next.length)
+    caretPosRef.current = { start: pos, end: pos }
     onChangeRef.current(next)
     requestAnimationFrame(() => {
       const el = inputRef.current
       if (!el) return
-      const pos = Math.min(before.length, next.length)
       el.setSelectionRange(pos, pos)
     })
   }
+
+  useLayoutEffect(() => {
+    if (!holdingArrowRef.current) return
+    pinCaret()
+  })
 
   useEffect(() => {
     const el = inputRef.current
     if (!el) return
     const api: QuickInputHandle = {
-      insert: (chunk: string) => {
+      insert: (chunk: string, at?: CaretRange) => {
         el.focus()
-        const start = el.selectionStart ?? el.value.length
-        const end = el.selectionEnd ?? start
-        const raw = el.value.slice(0, start) + chunk + el.value.slice(end)
-        commit(raw, start + chunk.length)
+        const start = at?.start ?? caretPosRef.current.start ?? el.selectionStart ?? el.value.length
+        const end = at?.end ?? caretPosRef.current.end ?? el.selectionEnd ?? start
+        const { next, cursor } = spliceText(el.value, chunk, start, end)
+        commit(next, cursor)
       },
       focus: () => el.focus(),
       setValue: (text: string) => {
         el.focus()
+        caretPosRef.current = { start: text.length, end: text.length }
         onChangeRef.current(text)
         requestAnimationFrame(() => {
           el.setSelectionRange(text.length, text.length)
@@ -109,6 +152,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
       },
       element: () => el,
       highlighted: () => readHighlight(el) || heldRef.current,
+      caret: () => caretPosRef.current,
     }
     if (handleRef) handleRef.current = api
     const w = nativeWindow()
@@ -130,12 +174,24 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
       metaRef.current = false
       rememberHighlight(el)
     }
+    const onArrow = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+      e.preventDefault()
+      holdingArrowRef.current = true
+      pinCaret(el)
+      if (e.key === 'ArrowUp') onUpRef.current()
+      else onDownRef.current()
+      pinCaret(el)
+      requestAnimationFrame(() => pinCaret(el))
+    }
     window.addEventListener('keydown', onMeta, true)
     window.addEventListener('keyup', onMetaUp, true)
+    window.addEventListener('keydown', onArrow, true)
     return () => {
       for (const t of timers) window.clearTimeout(t)
       window.removeEventListener('keydown', onMeta, true)
       window.removeEventListener('keyup', onMetaUp, true)
+      window.removeEventListener('keydown', onArrow, true)
       if (handleRef) handleRef.current = null
     }
   }, [handleRef])
@@ -152,11 +208,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
       onEnterRef.current()
       return
     }
-    if (e.key === 'ArrowUp' && onUpRef.current()) {
-      e.preventDefault()
-      return
-    }
-    if (e.key === 'ArrowDown' && onDownRef.current()) {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
       return
     }
@@ -195,9 +247,39 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
           const el = e.currentTarget
           commit(el.value, el.selectionStart ?? el.value.length)
         }}
-        onSelect={(e) => rememberHighlight(e.currentTarget)}
-        onMouseUp={(e) => rememberHighlight(e.currentTarget)}
-        onKeyUp={(e) => rememberHighlight(e.currentTarget)}
+        onSelect={(e) => {
+          if (holdingArrowRef.current) {
+            pinCaret(e.currentTarget)
+            return
+          }
+          rememberCaret(e.currentTarget)
+          rememberHighlight(e.currentTarget)
+        }}
+        onMouseDown={(e) => rememberCaret(e.currentTarget)}
+        onMouseUp={(e) => {
+          rememberCaret(e.currentTarget)
+          rememberHighlight(e.currentTarget)
+        }}
+        onKeyUp={(e) => {
+          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            pinCaret(e.currentTarget)
+            holdingArrowRef.current = false
+            rememberHighlight(e.currentTarget)
+            return
+          }
+          rememberCaret(e.currentTarget)
+          rememberHighlight(e.currentTarget)
+        }}
+        onPaste={(e) => {
+          const text = flattenPastedText(e.clipboardData?.getData('text/plain') ?? '')
+          if (!text) return
+          e.preventDefault()
+          const el = e.currentTarget
+          const start = el.selectionStart ?? el.value.length
+          const end = el.selectionEnd ?? start
+          const raw = el.value.slice(0, start) + text + el.value.slice(end)
+          commit(raw, start + text.length)
+        }}
         onKeyDown={onKeyDown}
       />
     </div>

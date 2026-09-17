@@ -13,6 +13,7 @@ export type NativeWindow = Window & {
   __qcalcReset?: () => void
   __qcalcWillHide?: () => void
   __qcalcSize?: () => void
+  __qcalcPaste?: (text: string) => void
 }
 
 export function nativeWindow(): NativeWindow | undefined {

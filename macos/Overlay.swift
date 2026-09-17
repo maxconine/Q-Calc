@@ -7,8 +7,23 @@ extension Notification.Name {
     static let focusOverlay = Notification.Name("QCalc.focusOverlay")
 }
 
+private func isCommandVPasteKey(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    guard flags.contains(.command), !flags.contains(.option), !flags.contains(.control) else {
+        return false
+    }
+    if event.keyCode == UInt16(kVK_ANSI_V) { return true }
+    return event.charactersIgnoringModifiers?.lowercased() == "v"
+}
+
+private func commandShiftHeld() -> Bool {
+    let flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    return flags.contains(.command) && flags.contains(.shift)
+}
+
 final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
+    var onPaste: (() -> Void)?
     var ignoreResignKey = false
 
     override var canBecomeKey: Bool { true }
@@ -26,17 +41,55 @@ final class OverlayPanel: NSPanel {
         super.keyDown(with: event)
     }
 
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if isCommandVPasteKey(event) {
+            onPaste?()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func resignKey() {
         super.resignKey()
-        if !ignoreResignKey {
-            onEscape?()
-        }
+        if ignoreResignKey || commandShiftHeld() { return }
+        onEscape?()
     }
 }
 
 final class OverlayWebView: WKWebView {
+    var onPaste: (() -> Void)?
+
     override var needsPanelToBecomeKey: Bool { true }
     override var acceptsFirstResponder: Bool { true }
+
+    @objc func paste(_ sender: Any?) {
+        onPaste?()
+    }
+
+    @objc func pasteAsPlainText(_ sender: Any?) {
+        onPaste?()
+    }
+
+    @objc func pasteAndMatchStyle(_ sender: Any?) {
+        onPaste?()
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if isCommandVPasteKey(event) {
+            onPaste?()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    override func doCommand(by selector: Selector) {
+        switch NSStringFromSelector(selector) {
+        case "paste:", "pasteAsPlainText:", "pasteAndMatchStyle:":
+            onPaste?()
+        default:
+            super.doCommand(by: selector)
+        }
+    }
 }
 
 final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
@@ -52,7 +105,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var triedDevServer = false
     private let overlayWidth: CGFloat = 680
     private let overlayMinHeight: CGFloat = 72
+    private let overlayMaxHeight: CGFloat = 560
+    /// Distance from the overlay top to the search field; used to grow definitions down and history up.
+    private var sizeAnchorTop: CGFloat = 0
     private var settingsObserver: NSObjectProtocol?
+    private var lastPasteAt: TimeInterval = 0
 
     deinit {
         if let escapeMonitor {
@@ -96,7 +153,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if panel?.contentView === fallback, let web, webReady {
             panel?.contentView = web
         }
-        applySize(height: overlayMinHeight)
+        sizeAnchorTop = 0
+        applySize(height: overlayMinHeight, anchorTop: 0)
         position()
         panel?.ignoreResignKey = true
         panel?.orderFrontRegardless()
@@ -125,8 +183,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if let dict = message.body as? [String: Any] {
             switch dict["type"] as? String {
             case "size":
-                if let height = dict["height"] as? Double {
-                    applySize(height: CGFloat(height))
+                if let height = doubleValue(dict["height"]) {
+                    applySize(
+                        height: CGFloat(height),
+                        anchorTop: CGFloat(doubleValue(dict["anchorTop"]) ?? 0)
+                    )
                 }
             case "dismiss":
                 hide()
@@ -187,6 +248,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             defer: false
         )
         panel.onEscape = { [weak self] in self?.hide() }
+        panel.onPaste = { [weak self] in self?.pasteIntoWeb() }
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -211,6 +273,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let draftSeconds = AppSettings.shared.draftSeconds
         let defaultUnits = AppSettings.shared.defaultUnitsJSON()
         let answerForm = AppSettings.shared.answerForm
+        let historyInsert = AppSettings.shared.historyInsert
         let theme = AppSettings.shared.theme
         let boot = WKUserScript(
             source: """
@@ -218,7 +281,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_META = false;
-            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", theme: "\(theme)" };
+            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", theme: "\(theme)" };
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
@@ -251,6 +314,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
               }
               if (e.key === 'Meta' || e.key === 'Control') window.__QCALC_META = true;
               if (e.metaKey || e.ctrlKey) window.__qcalcRememberText();
+              if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'v' || e.key === 'V' || e.keyCode === 86)) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                return;
+              }
               if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.keyCode === 67)) {
                 var text = window.__qcalcSelectedText() || window.__QCALC_HELD || '';
                 if (text) {
@@ -281,7 +349,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             }, true);
             window.addEventListener('wheel', function (e) {
               var t = e.target;
-              if (t && t.closest && t.closest('.tape')) return;
+              if (t && t.closest && t.closest('.tape, .definition')) return;
               e.preventDefault();
             }, { passive: false, capture: true });
             """,
@@ -307,6 +375,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.contentView = web
         self.web = web
         self.panel = panel
+        web.onPaste = { [weak self] in self?.pasteIntoWeb() }
         applyWebAppearance(web)
         loadQuickCalc(web)
     }
@@ -349,7 +418,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let fallback, panel?.contentView !== fallback {
             panel?.contentView = fallback
-            applySize(height: overlayMinHeight)
+            applySize(height: overlayMinHeight, anchorTop: 0)
         }
     }
 
@@ -376,7 +445,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if body.hasPrefix("height:") {
             let raw = Double(body.dropFirst("height:".count)) ?? Double(overlayMinHeight)
-            applySize(height: CGFloat(raw))
+            applySize(height: CGFloat(raw), anchorTop: sizeAnchorTop)
             return
         }
         if body.hasPrefix("sigFigs:") {
@@ -399,6 +468,38 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func copyToPasteboard(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    private func pasteIntoWeb() {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastPasteAt > 0.05 else { return }
+        lastPasteAt = now
+
+        panel?.ignoreResignKey = true
+        let text = NSPasteboard.general.string(forType: .string) ?? ""
+        if !text.isEmpty, let encoded = jsonStringLiteral(text) {
+            web?.evaluateJavaScript("window.__qcalcPaste && window.__qcalcPaste(\(encoded));")
+        }
+        panel?.makeKeyAndOrderFront(nil)
+        panel?.makeFirstResponder(web)
+        focusInput()
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.panel?.isVisible == true else { return }
+            self.panel?.makeKeyAndOrderFront(nil)
+            self.panel?.makeFirstResponder(self.web)
+            self.focusInput()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.panel?.ignoreResignKey = false
+        }
+    }
+
+    private func jsonStringLiteral(_ string: String) -> String? {
+        guard let data = try? JSONSerialization.data(withJSONObject: [string], options: []),
+              let json = String(data: data, encoding: .utf8),
+              json.count >= 2
+        else { return nil }
+        return String(json.dropFirst().dropLast())
     }
 
     private func notifyWebWillHide() {
@@ -429,19 +530,20 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         """)
     }
 
-    private func applySize(height: CGFloat) {
+    private func applySize(height: CGFloat, anchorTop: CGFloat? = nil) {
         guard let panel else { return }
-        let h = min(max(height.rounded(.up), overlayMinHeight), 420)
+        let h = min(max(height.rounded(.up), overlayMinHeight), overlayMaxHeight)
+        let nextAnchor = min(max(anchorTop ?? sizeAnchorTop, 0), max(0, h - overlayMinHeight))
         var frame = panel.frame
+        let composerTop = frame.maxY - sizeAnchorTop
         frame.size = NSSize(width: overlayWidth, height: h)
+        frame.origin.y = composerTop + nextAnchor - h
         if let screen = panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
             if frame.maxY > screen.maxY {
                 frame.origin.y = screen.maxY - h
             }
-            if frame.origin.y < screen.minY {
-                frame.origin.y = screen.minY
-            }
         }
+        sizeAnchorTop = nextAnchor
         panel.setFrame(frame, display: true)
     }
 
@@ -471,6 +573,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             guard let self, self.panel?.isVisible == true else { return event }
             if event.keyCode == UInt16(kVK_Escape) {
                 self.hide()
+                return nil
+            }
+            if isCommandVPasteKey(event) {
+                self.pasteIntoWeb()
                 return nil
             }
             return event
@@ -543,22 +649,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let d = AppSettings.shared.draftSeconds
         let units = AppSettings.shared.defaultUnitsJSON()
         let form = AppSettings.shared.answerForm
+        let insert = AppSettings.shared.historyInsert
         let theme = AppSettings.shared.theme
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", theme: \"\(theme)\" }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", theme: \"\(theme)\" }"
     }
 
     private func applyWebAppearance(_ webView: WKWebView? = nil) {
-        let target = webView ?? web
-        let appearance: NSAppearance?
-        switch AppSettings.shared.theme {
-        case "light":
-            appearance = NSAppearance(named: .aqua)
-        case "dark":
-            appearance = NSAppearance(named: .darkAqua)
-        default:
-            appearance = nil
-        }
-        target?.appearance = appearance
+        let appearance = AppSettings.shared.nsAppearance
+        (webView ?? web)?.appearance = appearance
         panel?.appearance = appearance
     }
 
@@ -571,26 +669,73 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let dict = dictionary(from: body)
         let id = intValue(dict["id"]) ?? 0
         let expr = dict["expr"] as? String ?? ""
+        // Apple Dictionary — uncomment to restore lookups:
+        // let query = DictionaryLookup.query(from: expr)
+        // let dateWords: Set<String> = ["today", "tomorrow", "yesterday"]
+        // var preferDefinition = boolValue(dict["wantDefinition"]) || query?.forced == true
+        // if let query, !query.forced, !dateWords.contains(query.term.lowercased()) {
+        //     preferDefinition = true
+        // }
+        // if preferDefinition {
+        //     let term = query?.term ?? expr
+        //     if let found = DictionaryLookup.define(term) {
+        //         return definitionPayload(id: id, expr: expr, found: found)
+        //     }
+        //     if query?.forced == true {
+        //         return emptyNativePayload(id: id, expr: expr)
+        //     }
+        // }
+
         let sigFigs = intValue(dict["sigFigs"]) ?? AppSettings.shared.significantFigures
-        let answer = SoulverEval.evaluate(
+        if let answer = SoulverEval.evaluate(
             expr,
             ans: doubleValue(dict["ans"]),
             variables: stringKeyedDoubles(dict["variables"]),
             sigFigs: sigFigs
-        )
-        let display = answer?.display ?? ""
-        var payload: [String: Any] = [
+        ) {
+            var payload: [String: Any] = [
+                "id": id,
+                "expr": expr,
+                "display": answer.display,
+            ]
+            if let n = answer.number, n.isFinite {
+                payload["n"] = n
+            } else {
+                payload["n"] = NSNull()
+            }
+            return payload
+        }
+
+        // if let query, let found = DictionaryLookup.define(query.term) {
+        //     return definitionPayload(id: id, expr: expr, found: found)
+        // }
+        return emptyNativePayload(id: id, expr: expr)
+    }
+
+    private func emptyNativePayload(id: Int, expr: String) -> [String: Any] {
+        [
             "id": id,
             "expr": expr,
-            "display": display,
+            "display": "",
+            "n": NSNull(),
         ]
-        if let n = answer?.number, n.isFinite {
-            payload["n"] = n
-        } else {
-            payload["n"] = NSNull()
-        }
-        return payload
     }
+
+    // Apple Dictionary — uncomment to restore lookups:
+    // private func definitionPayload(id: Int, expr: String, found: DictionaryLookup.Found) -> [String: Any] {
+    //     var payload: [String: Any] = [
+    //         "id": id,
+    //         "expr": expr,
+    //         "display": found.display,
+    //         "n": NSNull(),
+    //         "kind": "definition",
+    //         "term": found.term,
+    //     ]
+    //     if let pos = found.partOfSpeech { payload["pos"] = pos }
+    //     if let pronunciation = found.pronunciation { payload["pronunciation"] = pronunciation }
+    //     if !found.body.isEmpty { payload["body"] = found.body }
+    //     return payload
+    // }
 
     private func pushSoulverResult(_ payload: [String: Any]) {
         guard JSONSerialization.isValidJSONObject(payload),
@@ -612,6 +757,16 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         return [:]
     }
+
+    // Apple Dictionary — uncomment to restore lookups:
+    // private func boolValue(_ any: Any?) -> Bool {
+    //     if let b = any as? Bool { return b }
+    //     if let n = any as? NSNumber { return n.boolValue }
+    //     if let s = any as? String {
+    //         return s.caseInsensitiveCompare("true") == .orderedSame || s == "1"
+    //     }
+    //     return false
+    // }
 
     private func intValue(_ any: Any?) -> Int? {
         if let i = any as? Int { return i }
@@ -678,9 +833,20 @@ struct OverlayView: View {
     }
 
     private func answer(for text: String) -> String {
+        // Apple Dictionary — uncomment to restore lookups:
+        // let query = DictionaryLookup.query(from: text)
+        // if let query, query.forced {
+        //     return DictionaryLookup.define(query.term)?.shortLabel ?? ""
+        // }
+        // let dateWords: Set<String> = ["today", "tomorrow", "yesterday"]
+        // if let query, !dateWords.contains(query.term.lowercased()),
+        //    let found = DictionaryLookup.define(query.term) {
+        //     return found.shortLabel
+        // }
         if let soulver = SoulverEval.evaluate(text) { return soulver.display }
-        guard let v = MathEval.evaluate(text) else { return "" }
-        return MathEval.format(v)
+        if let v = MathEval.evaluate(text) { return MathEval.format(v) }
+        // if let query { return DictionaryLookup.define(query.term)?.shortLabel ?? "" }
+        return ""
     }
 
     private func copyAnswer() {

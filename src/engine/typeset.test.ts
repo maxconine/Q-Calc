@@ -76,6 +76,22 @@ describe('Scientific functions and typeset input', () => {
     expect(r.value?.n).toBe(10)
   })
 
+  it('treats typeset dots as multiplication', () => {
+    closeTo(n('2 · 3'), 6)
+    closeTo(n('2⋅3'), 6)
+    closeTo(n('2∙4'), 8)
+    closeTo(n('2 · 3 + 4'), 10)
+    closeTo(n('(1+2)·4'), 12)
+    closeTo(n('0.5 · 8'), 4)
+    closeTo(n('3 · 10^2'), 300)
+    closeTo(n('2 · \\frac{1}{2}'), 1)
+    closeTo(n('\\sin\\left(2 · 45\\right)'), 1)
+    closeTo(n('3 dot 4'), 12)
+    closeTo(n('3 DOT 4'), 12)
+    closeTo(n('2 dot 3 + 4'), 10)
+    closeTo(n('(1+2) dot 4'), 12)
+  })
+
   it('converts typeset latex to ascii', () => {
     expect(latexToAscii('\\sqrt{16}+2^{8}')).toContain('sqrt')
     expect(tryPlainMath('\\frac{3}{4}')?.n).toBeCloseTo(0.75)
@@ -180,8 +196,11 @@ describe('Scientific functions and typeset input', () => {
       ['cos(60)', 0.5, 'deg'],
       ['tan(45)', 1, 'deg'],
       ['arcsin(0.5)', 30, 'deg'],
+      ['asin(0.5)', 30, 'deg'],
+      ['sin^-1(0.5)', 30, 'deg'],
       ['arccos(0.5)', 60, 'deg'],
       ['arctan(1)', 45, 'deg'],
+      ['atan2(1,1)', 45, 'deg'],
       ['sin(pi/2)', 1, 'rad'],
       ['cos(pi)', -1, 'rad'],
       ['tan(pi/4)', 1, 'rad'],

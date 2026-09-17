@@ -10,6 +10,8 @@ enum MathTest {
         expect("10^-3", 0.001)
         expect("1.5e-4", 0.00015)
         expect("(1+2)*3", 9)
+        expect("5+3)*2", 16)
+        expect("100/2+5)", 55)
         expect("2^8", 256)
         expect("-(2+3)*4", -20)
         expect("1/10^-3", 1000)

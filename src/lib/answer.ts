@@ -23,6 +23,16 @@ export function insertableAnswer(display: string, n?: number): string {
 }
 
 export type AnswerForm = 'exact' | 'approx'
+export type HistoryInsert = 'expr' | 'answer'
+
+export const HISTORY_INSERT_OPTIONS: Array<{ id: HistoryInsert; label: string }> = [
+  { id: 'expr', label: 'Expression' },
+  { id: 'answer', label: 'Answer' },
+]
+
+export function normalizeHistoryInsert(value: unknown): HistoryInsert {
+  return value === 'answer' ? 'answer' : 'expr'
+}
 
 export type HistoryAnswer = {
   display: string
@@ -48,4 +58,14 @@ export function visibleAnswer(row: { display: string; exact?: string }, form: An
 export function insertableHistoryAnswer(row: HistoryAnswer, form: AnswerForm): string {
   if (form === 'exact' && row.exact) return insertableAnswer(row.exact)
   return insertableAnswer(row.display, row.n)
+}
+
+/** What Enter on a highlighted history row inserts. Clicking the expression always uses `expr`; clicking the answer always uses the answer. */
+export function insertableHistoryReuse(
+  row: HistoryAnswer & { expr: string; kind?: string },
+  form: AnswerForm,
+  insert: HistoryInsert,
+): string {
+  if (row.kind === 'definition' || insert === 'expr') return row.expr
+  return insertableHistoryAnswer(row, form)
 }

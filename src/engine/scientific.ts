@@ -5,7 +5,7 @@ import type { Value } from './types'
 export type AngleMode = 'deg' | 'rad'
 
 export const SCIENTIFIC_NAMES =
-  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|arcsin|arccos|arctan|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|pi|tau|inf|infinity|ans'
+  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|pi|tau|inf|infinity|ans'
 
 const FN = SCIENTIFIC_NAMES
 
@@ -120,6 +120,31 @@ function trigAsymptote(cosVal: number): boolean {
 
 const WRAP_SKIP = new Set(['pi', 'tau', 'inf', 'infinity', 'ans', 'e'])
 
+/** Calculator inverse notation: sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 ≠ sin. */
+const INVERSE_POWER_FNS: [string, string][] = [
+  ['csch', 'acsch'],
+  ['sech', 'asech'],
+  ['coth', 'acoth'],
+  ['sinh', 'asinh'],
+  ['cosh', 'acosh'],
+  ['tanh', 'atanh'],
+  ['csc', 'acsc'],
+  ['sec', 'asec'],
+  ['cot', 'acot'],
+  ['sin', 'asin'],
+  ['cos', 'acos'],
+  ['tan', 'atan'],
+]
+
+function rewriteInversePower(expr: string): string {
+  let s = expr
+  for (const [fn, inv] of INVERSE_POWER_FNS) {
+    const re = new RegExp(`\\b${fn}\\s*(?:\\^\\s*(?:-1|\\(\\s*-1\\s*\\))|⁻¹)`, 'gi')
+    s = s.replace(re, inv)
+  }
+  return s
+}
+
 export function wrapBareFunctions(expr: string): string {
   const names = FN.split('|')
     .filter((n) => !WRAP_SKIP.has(n.toLowerCase()))
@@ -161,6 +186,13 @@ export function wrapBareFunctions(expr: string): string {
   return out
 }
 
+/** × and typeset dots from pasted math (middle dot, dot operator, bullet operator). */
+const TYPESET_MUL = /[×·⋅∙]/g
+
+export function rewriteTypesetMul(s: string): string {
+  return s.replace(TYPESET_MUL, '*').replace(/(?<!\\)\bdot\b/gi, '*')
+}
+
 /** Treat typed "p i" / "p·i" as the constant π. */
 export function stitchConstants(s: string): string {
   let out = s
@@ -174,13 +206,16 @@ export function stitchConstants(s: string): string {
 
 export function preprocessAscii(expr: string): string {
   let s = expr
-  s = s.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt')
+  s = rewriteTypesetMul(s).replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt')
   s = s.replace(/\*\*/g, '^')
   s = stitchConstants(s)
   s = s.replace(/(\d+(?:\.\d+)?)\s*%\s*of\b/gi, '($1/100)*')
   s = s.replace(/(\d+(?:\.\d+)?)\s*%/g, '($1/100)')
   s = s.replace(/\barcsin\b/g, 'asin').replace(/\barccos\b/g, 'acos').replace(/\barctan\b/g, 'atan')
-  s = s.replace(/\barccsc\b/g, 'acsc').replace(/\barcsec\b/g, 'asec').replace(/\barccot\b/g, 'acot')
+  s = s.replace(/\barccsc\b/g, 'acsc').replace(/\barccot\b/g, 'acot')
+  s = s.replace(/\barcsec(?=\s*\()/g, 'asec')
+  s = s.replace(/\barctan2\b/g, 'atan2')
+  s = rewriteInversePower(s)
   s = s.replace(/\barcsinh\b|\barsinh\b/g, 'asinh')
   s = s.replace(/\barccosh\b|\barcosh\b/g, 'acosh')
   s = s.replace(/\barctanh\b|\bartanh\b/g, 'atanh')
@@ -435,12 +470,17 @@ export function evalScientific(
     asin: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.asin(x), mode)),
     acos: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.acos(x), mode)),
     atan: (x: number) => fromRad(Math.atan(x), mode),
+    atan2: (y: number, x: number) => fromRad(Math.atan2(y, x), mode),
     acsc: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.asin(1 / x), mode)),
     asec: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.acos(1 / x), mode)),
-    acot: (x: number) => fromRad(Math.atan(1 / x), mode),
+    acot: (x: number) => fromRad(x === 0 ? Math.PI / 2 : Math.atan(1 / x), mode),
     arcsin: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.asin(x), mode)),
     arccos: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.acos(x), mode)),
     arctan: (x: number) => fromRad(Math.atan(x), mode),
+    arctan2: (y: number, x: number) => fromRad(Math.atan2(y, x), mode),
+    arccsc: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.asin(1 / x), mode)),
+    arcsec: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.acos(1 / x), mode)),
+    arccot: (x: number) => fromRad(x === 0 ? Math.PI / 2 : Math.atan(1 / x), mode),
     sinh: Math.sinh,
     cosh: Math.cosh,
     tanh: Math.tanh,

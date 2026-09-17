@@ -6,12 +6,15 @@ import { exactForm } from './simplify'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
 
+function withUnit(text: string, unit?: string): string {
+  return unit ? `${text} ${unit}` : text
+}
+
 function show(value: Value, fractionMode: boolean, sigFigs: number): string {
   if (value.kind === 'text' && value.text) return value.text
-  if (value.unit) return formatValue(value, sigFigs)
   if (fractionMode && value.kind === 'number') {
     const f = formatAsFraction(value.n)
-    if (f) return f
+    if (f) return withUnit(f, value.unit)
   }
   return formatValue(value, sigFigs)
 }
@@ -72,8 +75,9 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     } catch {
       display = ''
     }
-    const exact =
-      value.kind === 'number' && !value.unit && Number.isFinite(value.n) ? (exactForm(value.n) ?? undefined) : undefined
+    const form =
+      value.kind === 'number' && Number.isFinite(value.n) ? exactForm(value.n) : null
+    const exact = form ? withUnit(form, value.unit) : undefined
     results.push({
       raw,
       kind: variable ? 'assignment' : 'expression',

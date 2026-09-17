@@ -273,16 +273,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
   border: 0;
   background: transparent;
   text-align: left;
+  width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 2px 0;
+  padding: 4px 4px;
+  border-radius: 6px;
   font-family: var(--font);
   font-size: 13px;
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--muted);
+}
+.tape-q:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
 }
 .tape-a {
   border: 0;
@@ -323,6 +329,42 @@ button { font: inherit; color: inherit; cursor: pointer; }
   user-select: none;
 }
 
+.definition {
+  max-height: 220px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg-tape);
+  border-top: 1px solid var(--line);
+  padding: 10px 16px 14px;
+  scrollbar-width: thin;
+  text-align: left;
+}
+.definition-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.definition-term {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.definition-pron {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}
+.definition-body {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  cursor: text;
+  user-select: text;
+}
+
 .quick-app {
   min-height: 0;
   background: var(--bg);
@@ -353,7 +395,8 @@ html.quick-native .spotlight,
 html.quick-native .composer {
   background: transparent;
 }
-html.quick-native .tape {
+html.quick-native .tape,
+html.quick-native .definition {
   background: color-mix(in srgb, var(--bg-tape) 90%, transparent);
 }
 
