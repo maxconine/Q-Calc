@@ -21,7 +21,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "mac": "zsh macos/build.sh",
-    "mac:install": "zsh macos/build.sh --install"
+    "mac:install": "zsh macos/build.sh --install",
+    "mac:package": "zsh macos/build.sh --package"
   },
   "dependencies": {
     "mathjs": "^15.2.0",

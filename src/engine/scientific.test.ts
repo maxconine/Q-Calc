@@ -36,6 +36,7 @@ type Case = {
   undefined?: true
   infinity?: true
   fractionMode?: boolean
+  rationalize?: boolean
   angleMode?: Angle
   gte?: number
   lt?: number
@@ -47,7 +48,7 @@ type Case = {
 }
 
 function resultOf(c: Case) {
-  const opts = { angleMode: c.angleMode ?? ('deg' as const), fractionMode: c.fractionMode }
+  const opts = { angleMode: c.angleMode ?? ('deg' as const), fractionMode: c.fractionMode, rationalize: c.rationalize }
   if (Array.isArray(c.input)) {
     return evaluateSheet(c.input, opts)[c.at ?? c.input.length - 1]!
   }

@@ -13,6 +13,7 @@ final class AppSettings: ObservableObject {
     static let defaultUnitsKey = "qcalc.defaultUnits"
     static let answerFormKey = "qcalc.answerForm"
     static let historyInsertKey = "qcalc.historyInsert"
+    static let rationalizeKey = "qcalc.rationalize"
     static let themeKey = "qcalc.theme"
     static let defaultSigFigs = 12
     static let minSigFigs = 2
@@ -22,6 +23,7 @@ final class AppSettings: ObservableObject {
     static let maxDraftSeconds = 3600
     static let defaultAnswerForm = "exact"
     static let defaultHistoryInsert = "expr"
+    static let defaultRationalize = true
     static let defaultTheme = "system"
 
     @Published private(set) var significantFigures: Int
@@ -29,6 +31,7 @@ final class AppSettings: ObservableObject {
     @Published private(set) var defaultUnits: [String: String]
     @Published private(set) var answerForm: String
     @Published private(set) var historyInsert: String
+    @Published private(set) var rationalize: Bool
     @Published private(set) var theme: String
 
     private init() {
@@ -42,6 +45,7 @@ final class AppSettings: ObservableObject {
         defaultUnits = Self.loadDefaultUnits()
         answerForm = Self.loadAnswerForm()
         historyInsert = Self.loadHistoryInsert()
+        rationalize = Self.loadRationalize()
         theme = Self.loadTheme()
     }
 
@@ -53,6 +57,13 @@ final class AppSettings: ObservableObject {
     private static func loadHistoryInsert() -> String {
         let stored = UserDefaults.standard.string(forKey: historyInsertKey) ?? defaultHistoryInsert
         return stored == "answer" ? "answer" : defaultHistoryInsert
+    }
+
+    private static func loadRationalize() -> Bool {
+        if UserDefaults.standard.object(forKey: rationalizeKey) == nil {
+            return defaultRationalize
+        }
+        return UserDefaults.standard.bool(forKey: rationalizeKey)
     }
 
     static func normalizeTheme(_ raw: String) -> String {
@@ -116,6 +127,15 @@ final class AppSettings: ObservableObject {
         guard value != historyInsert else { return }
         historyInsert = value
         UserDefaults.standard.set(value, forKey: Self.historyInsertKey)
+        if notifyWeb {
+            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
+        }
+    }
+
+    func setRationalize(_ value: Bool, notifyWeb: Bool) {
+        guard value != rationalize else { return }
+        rationalize = value
+        UserDefaults.standard.set(value, forKey: Self.rationalizeKey)
         if notifyWeb {
             NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
         }
@@ -304,6 +324,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.state = form == current ? .on : .off
             menu.addItem(item)
         }
+        menu.addItem(.separator())
+        let rat = NSMenuItem(title: "Rationalize", action: #selector(toggleRationalize), keyEquivalent: "")
+        rat.target = self
+        rat.state = AppSettings.shared.rationalize ? .on : .off
+        menu.addItem(rat)
         return menu
     }
 
@@ -382,6 +407,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func setHistoryInsert(_ sender: NSMenuItem) {
         let value = sender.representedObject as? String ?? AppSettings.defaultHistoryInsert
         AppSettings.shared.setHistoryInsert(value, notifyWeb: true)
+    }
+
+    @objc private func toggleRationalize() {
+        AppSettings.shared.setRationalize(!AppSettings.shared.rationalize, notifyWeb: true)
     }
 
     @objc private func setTheme(_ sender: NSMenuItem) {

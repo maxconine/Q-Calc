@@ -83,6 +83,12 @@ function splitSquares(n: number): { coeff: number; rad: number } {
   return { coeff, rad }
 }
 
+function formatRadicalTerm(coeff: number, rad: number): string {
+  if (rad === 1) return String(coeff)
+  const core = `sqrt(${rad})`
+  return coeff === 1 ? core : `${coeff}${core}`
+}
+
 function formatRadical(sign: string, coeff: number, rad: number, den: number): string {
   const g = gcd(coeff, den)
   coeff /= g
@@ -91,9 +97,24 @@ function formatRadical(sign: string, coeff: number, rad: number, den: number): s
     if (den === 1) return `${sign}${coeff}`
     return `${sign}${coeff}/${den}`
   }
-  const core = coeff === 1 ? `sqrt(${rad})` : `${coeff}sqrt(${rad})`
+  const core = formatRadicalTerm(coeff, rad)
   if (den === 1) return `${sign}${core}`
   return `${sign}${core}/${den}`
+}
+
+function formatUnrationalized(
+  sign: string,
+  num: { coeff: number; rad: number },
+  den: { coeff: number; rad: number },
+): string {
+  const g = gcd(num.coeff, den.coeff)
+  const nc = num.coeff / g
+  const dc = den.coeff / g
+  const n = formatRadicalTerm(nc, num.rad)
+  if (dc === 1 && den.rad === 1) return `${sign}${n}`
+  const d = formatRadicalTerm(dc, den.rad)
+  const wrap = dc !== 1 && den.rad !== 1
+  return `${sign}${n}/${wrap ? `(${d})` : d}`
 }
 
 function asPiMultiple(n: number): string | null {
@@ -110,14 +131,20 @@ function asNestedRadical(n: number): string | null {
   return null
 }
 
-function asRadical(n: number): string | null {
+function asRadical(n: number, rationalize: boolean): string | null {
   const sign = n < 0 ? '-' : ''
   const x = Math.abs(n)
   const f = toFraction(x * x, 256, 1e-8)
   if (!f || f.n <= 0) return null
-  const split = splitSquares(f.n * f.d)
-  if (split.rad === 1) return null
-  return formatRadical(sign, split.coeff, split.rad, f.d)
+  if (rationalize) {
+    const split = splitSquares(f.n * f.d)
+    if (split.rad === 1) return null
+    return formatRadical(sign, split.coeff, split.rad, f.d)
+  }
+  const num = splitSquares(f.n)
+  const den = splitSquares(f.d)
+  if (num.rad === 1 && den.rad === 1) return null
+  return formatUnrationalized(sign, num, den)
 }
 
 function asNiceFraction(n: number): string | null {
@@ -127,9 +154,12 @@ function asNiceFraction(n: number): string | null {
   return f.n < 0 ? `-${Math.abs(f.n)}/${f.d}` : `${f.n}/${f.d}`
 }
 
+export type ExactFormOptions = { rationalize?: boolean }
+
 /** Return a simplified exact form for `n`, or null if none is nicer than the decimal. */
-export function exactForm(n: number): string | null {
+export function exactForm(n: number, options: ExactFormOptions = {}): string | null {
   if (!Number.isFinite(n)) return null
+  const rationalize = options.rationalize !== false
 
   const asInt = snapInteger(n)
   if (asInt !== null) return String(asInt)
@@ -140,7 +170,7 @@ export function exactForm(n: number): string | null {
   const pi = asPiMultiple(n)
   if (pi) return pi
 
-  const rad = asRadical(n)
+  const rad = asRadical(n, rationalize)
   if (rad) return rad
 
   return asNiceFraction(n)

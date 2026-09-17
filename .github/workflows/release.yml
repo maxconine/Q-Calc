@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Resolve version
+        id: version
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            TAG="${GITHUB_REF_NAME#v}"
+            if [[ "$PKG" != "$TAG" ]]; then
+              echo "package.json version ${PKG} does not match tag ${TAG}" >&2
+              exit 1
+            fi
+          fi
+          echo "version=${PKG}" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - run: npm test
+
+      - name: Build zip
+        run: npm run mac:package
+
+      - name: Checksum
+        id: sha
+        run: |
+          ZIP="macos/dist/Q-Calc-${{ steps.version.outputs.version }}.zip"
+          SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
+          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "zip=${ZIP}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP: ${{ steps.sha.outputs.zip }}
+        run: |
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" \
+              --title "Q Calc ${VERSION}" \
+              --generate-notes
+          fi
+
+      - name: Update Homebrew cask
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA256: ${{ steps.sha.outputs.sha256 }}
+        run: |
+          zsh macos/update-cask.sh "$VERSION" "$SHA256"
+          UPDATED="${RUNNER_TEMP}/q-calc.rb"
+          cp Casks/q-calc.rb "$UPDATED"
+          git checkout -B main origin/main
+          git pull --ff-only origin main
+          mkdir -p Casks
+          cp "$UPDATED" Casks/q-calc.rb
+          if git diff --quiet -- Casks/q-calc.rb; then
+            echo "Cask already matches ${VERSION}"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/q-calc.rb
+          git commit -m "q-calc ${VERSION}" -m "[skip ci]"
+          git push origin main

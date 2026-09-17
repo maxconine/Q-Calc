@@ -12,18 +12,23 @@ XC="$VENDOR/SoulverCore.xcframework"
 ZIP="$VENDOR/SoulverCore.xcframework.zip"
 SLICE="$XC/macos-arm64_x86_64"
 INSTALL=0
+PACKAGE=0
+APP_VERSION="$(node -p "require('$ROOT/package.json').version")"
+DIST_ZIP="$MAC/dist/Q-Calc-${APP_VERSION}.zip"
 
 for arg in "$@"; do
   case "$arg" in
     --install) INSTALL=1 ;;
+    --package) PACKAGE=1 ;;
     -h|--help)
-      echo "Usage: macos/build.sh [--install]"
+      echo "Usage: macos/build.sh [--install] [--package]"
       echo "  --install   copy Q Calc.app into /Applications"
+      echo "  --package   write macos/dist/Q-Calc-<version>.zip for Homebrew"
       exit 0
       ;;
     *)
       echo "Unknown option: $arg" >&2
-      echo "Usage: macos/build.sh [--install]" >&2
+      echo "Usage: macos/build.sh [--install] [--package]" >&2
       exit 1
       ;;
   esac
@@ -138,6 +143,8 @@ swiftc -parse-as-library \
   -o "$BIN"
 
 cp "$MAC/Info.plist" "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$APP/Contents/Info.plist"
 
 echo "Building web assets…"
 (cd "$ROOT" && npm run build)
@@ -151,7 +158,13 @@ sign_app
 
 rm -rf "$MAC/dist"
 copy_app "$DIST_APP"
-echo "Built $DIST_APP"
+echo "Built $DIST_APP ($APP_VERSION)"
+
+if (( PACKAGE )); then
+  rm -f "$DIST_ZIP"
+  ditto -c -k --keepParent "$DIST_APP" "$DIST_ZIP"
+  echo "Packaged $DIST_ZIP"
+fi
 
 if (( INSTALL )); then
   echo "Installing to /Applications/Q Calc.app…"

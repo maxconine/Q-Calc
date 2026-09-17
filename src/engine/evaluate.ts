@@ -76,7 +76,9 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       display = ''
     }
     const form =
-      value.kind === 'number' && Number.isFinite(value.n) ? exactForm(value.n) : null
+      value.kind === 'number' && Number.isFinite(value.n)
+        ? exactForm(value.n, { rationalize: options.rationalize })
+        : null
     const exact = form ? withUnit(form, value.unit) : undefined
     results.push({
       raw,

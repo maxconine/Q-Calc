@@ -29,3 +29,25 @@ macos/vendor
 *.njsproj
 *.sln
 *.sw?
+
+# ---------------------------------------------------------------------------
+# Ship a Homebrew zip (maintainer)
+#
+# First publish (after the Homebrew cask lands on main):
+#   git push origin main
+#   git tag v2.0.0
+#   git push origin v2.0.0
+#
+# That tag must match package.json "version". GitHub Actions "Release"
+# builds Q-Calc-<version>.zip, attaches it to the GitHub release, and
+# writes the sha256 into Casks/q-calc.rb.
+#
+# Later versions:
+#   1. Bump "version" in package.json (e.g. 2.0.1)
+#   2. Commit that bump (and any app changes)
+#   3. git tag v2.0.1
+#   4. git push origin main v2.0.1
+#
+# Or run workflow Release from the Actions tab (uses package.json version).
+# Field Macs: brew update && brew upgrade --cask q-calc
+# ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import { defaultUnitsEqual, isImproperUnitConversion, sanitizeDefaultUnits, type
 import { applyTheme, normalizeTheme, type Theme } from '../lib/theme'
 import { AppearanceSettings } from './AppearanceSettings'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
+import { RationalizeSettings } from './RationalizeSettings'
 import { UnitSettings } from './UnitSettings'
 import {
   hasDualAnswer,
@@ -39,6 +40,7 @@ export type AngleMode = 'deg' | 'rad'
 type Settings = {
   angleMode: AngleMode
   fractionMode: boolean
+  rationalize: boolean
   answerForm: AnswerForm
   historyInsert: HistoryInsert
   sigFigs: number
@@ -88,6 +90,7 @@ function defaultSettings(): Settings {
   return {
     angleMode: 'deg',
     fractionMode: false,
+    rationalize: true,
     answerForm: 'exact',
     historyInsert: 'expr',
     sigFigs: DEFAULT_SIG_FIGS,
@@ -137,6 +140,7 @@ function mergeSettings(partial: Partial<Settings> | undefined, base: Settings): 
   return {
     angleMode: partial?.angleMode === 'rad' ? 'rad' : partial?.angleMode === 'deg' ? 'deg' : base.angleMode,
     fractionMode: partial?.fractionMode == null ? base.fractionMode : Boolean(partial.fractionMode),
+    rationalize: partial?.rationalize == null ? base.rationalize : Boolean(partial.rationalize),
     answerForm: partial?.answerForm === 'approx' ? 'approx' : partial?.answerForm === 'exact' ? 'exact' : base.answerForm,
     historyInsert: partial?.historyInsert == null ? base.historyInsert : normalizeHistoryInsert(partial.historyInsert),
     sigFigs: partial?.sigFigs == null ? base.sigFigs : clampSigFigs(partial.sigFigs),
@@ -205,6 +209,7 @@ function settingsEqual(a: Settings, b: Settings): boolean {
   return (
     a.angleMode === b.angleMode &&
     a.fractionMode === b.fractionMode &&
+    a.rationalize === b.rationalize &&
     a.answerForm === b.answerForm &&
     a.historyInsert === b.historyInsert &&
     a.sigFigs === b.sigFigs &&
@@ -329,10 +334,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     return evaluateSheet(lines, {
       angleMode: settings.angleMode,
       fractionMode: settings.fractionMode,
+      rationalize: settings.rationalize,
       sigFigs: settings.sigFigs,
       defaultUnits: settings.defaultUnits,
     })
-  }, [history, q, settings.angleMode, settings.fractionMode, settings.sigFigs, settings.defaultUnits])
+  }, [history, q, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.defaultUnits])
 
   const live = sheet[sheet.length - 1]
   const jsDisplay = q.trim() ? (live?.display ?? '') : ''
@@ -379,7 +385,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-    nativeHandler()?.postMessage({ type: 'settings', sigFigs: settings.sigFigs })
+    nativeHandler()?.postMessage({
+      type: 'settings',
+      sigFigs: settings.sigFigs,
+      rationalize: settings.rationalize,
+    })
   }, [settings])
 
   useEffect(() => {
@@ -974,6 +984,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           >
             a/b
           </button>
+          <button
+            type="button"
+            className={settings.rationalize ? 'active' : ''}
+            title="Rationalize denominators · 5/√41 vs 5√41/41"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setSettings((s) => ({ ...s, rationalize: !s.rationalize }))}
+          >
+            √/
+          </button>
         </div>
         <QuickInput
           value={q}
@@ -1079,6 +1098,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         <HistoryInsertSettings
           value={settings.historyInsert}
           onChange={(historyInsert) => setSettings((s) => ({ ...s, historyInsert }))}
+        />
+        <RationalizeSettings
+          value={settings.rationalize}
+          onChange={(rationalize) => setSettings((s) => ({ ...s, rationalize }))}
         />
         <UnitSettings
           value={settings.defaultUnits}

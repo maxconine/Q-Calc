@@ -30,6 +30,8 @@ export interface EvaluateOptions {
   angleMode?: 'deg' | 'rad'
   ans?: number
   fractionMode?: boolean
+  /** Move square roots out of the denominator. Default true. */
+  rationalize?: boolean
   sigFigs?: number
   defaultUnits?: DefaultUnits
 }

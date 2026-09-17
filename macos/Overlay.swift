@@ -274,6 +274,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let defaultUnits = AppSettings.shared.defaultUnitsJSON()
         let answerForm = AppSettings.shared.answerForm
         let historyInsert = AppSettings.shared.historyInsert
+        let rationalize = AppSettings.shared.rationalize ? "true" : "false"
         let theme = AppSettings.shared.theme
         let boot = WKUserScript(
             source: """
@@ -281,7 +282,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_META = false;
-            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", theme: "\(theme)" };
+            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", rationalize: \(rationalize), theme: "\(theme)" };
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
@@ -650,8 +651,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let units = AppSettings.shared.defaultUnitsJSON()
         let form = AppSettings.shared.answerForm
         let insert = AppSettings.shared.historyInsert
+        let rationalize = AppSettings.shared.rationalize ? "true" : "false"
         let theme = AppSettings.shared.theme
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", theme: \"\(theme)\" }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), theme: \"\(theme)\" }"
     }
 
     private func applyWebAppearance(_ webView: WKWebView? = nil) {
@@ -661,8 +663,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private func applyWebSettings(_ dict: [String: Any]) {
-        guard let n = intValue(dict["sigFigs"]) else { return }
-        AppSettings.shared.setSignificantFigures(n, notifyWeb: false)
+        if let n = intValue(dict["sigFigs"]) {
+            AppSettings.shared.setSignificantFigures(n, notifyWeb: false)
+        }
+        if let rationalize = boolValue(dict["rationalize"]) {
+            AppSettings.shared.setRationalize(rationalize, notifyWeb: false)
+        }
     }
 
     private func soulverPayload(from body: Any) -> [String: Any] {
@@ -767,6 +773,16 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     //     }
     //     return false
     // }
+
+    private func boolValue(_ any: Any?) -> Bool? {
+        if let b = any as? Bool { return b }
+        if let n = any as? NSNumber { return n.boolValue }
+        if let s = any as? String {
+            if s.caseInsensitiveCompare("true") == .orderedSame || s == "1" { return true }
+            if s.caseInsensitiveCompare("false") == .orderedSame || s == "0" { return false }
+        }
+        return nil
+    }
 
     private func intValue(_ any: Any?) -> Int? {
         if let i = any as? Int { return i }
