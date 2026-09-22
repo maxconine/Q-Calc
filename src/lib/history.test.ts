@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ellipsize,
+  historyFunctions,
   historyVariables,
   lastHistoryNumber,
   MAX_HISTORY,
@@ -22,6 +23,9 @@ function row(partial: Partial<HistoryRow> & { expr?: string; display?: string })
     exact: partial.exact,
     n: partial.n,
     kind: partial.kind,
+    fnName: partial.fnName,
+    fnParams: partial.fnParams,
+    fnBody: partial.fnBody,
   }
 }
 
@@ -62,6 +66,46 @@ describe('slimHistoryRow', () => {
     expect(historyVariables([slim!])).toEqual({ x: 301 })
   })
 
+  it('keeps function metadata and drops n', () => {
+    const slim = slimHistoryRow(
+      row({
+        expr: 'f(x) = x^2',
+        display: 'f(x) = x^2',
+        n: 99,
+        kind: 'function',
+        fnName: 'f',
+        fnParams: ['x'],
+        fnBody: 'x^2',
+      }),
+    )
+    expect(slim).toMatchObject({
+      kind: 'function',
+      fnName: 'f',
+      fnParams: ['x'],
+      fnBody: 'x^2',
+      display: 'f(x) = x^2',
+    })
+    expect(slim?.n).toBeUndefined()
+  })
+
+  it('keeps the function name when the body is huge', () => {
+    const body = `${'x+'.repeat(200)}1`
+    const slim = slimHistoryRow(
+      row({
+        expr: `f(x) = ${body}`,
+        display: `f(x) = ${body}`,
+        kind: 'function',
+        fnName: 'f',
+        fnParams: ['x'],
+        fnBody: body,
+      }),
+    )
+    expect(slim?.expr.startsWith('f(x) = ')).toBe(true)
+    expect(slim?.expr.length).toBeLessThanOrEqual(MAX_HISTORY_EXPR)
+    expect(slim?.fnName).toBe('f')
+    expect(slim?.fnBody?.length).toBeLessThanOrEqual(MAX_HISTORY_EXPR)
+  })
+
   it('drops empty rows and non-finite numbers', () => {
     expect(slimHistoryRow(row({ expr: '', display: '' }))).toBeNull()
     expect(slimHistoryRow(row({ expr: '170!', display: 'Infinity', n: Infinity }))?.n).toBeUndefined()
@@ -72,6 +116,26 @@ describe('normalizeHistoryRow', () => {
   it('migrates legacy latex fields and slims on load', () => {
     const loaded = normalizeHistoryRow({ latex: '2+2', display: '4', n: 4 }, 'id')
     expect(loaded).toMatchObject({ id: 'id', expr: '2+2', display: '4', n: 4 })
+  })
+
+  it('preserves function kind and fields on load', () => {
+    const loaded = normalizeHistoryRow(
+      {
+        expr: 'g(a, b) = a + b',
+        display: 'g(a, b) = a + b',
+        kind: 'function',
+        fnName: 'g',
+        fnParams: ['a', 'b'],
+        fnBody: 'a + b',
+      },
+      'id',
+    )
+    expect(loaded).toMatchObject({
+      kind: 'function',
+      fnName: 'g',
+      fnParams: ['a', 'b'],
+      fnBody: 'a + b',
+    })
   })
 })
 
@@ -87,8 +151,116 @@ describe('historyVariables and lastHistoryNumber', () => {
     expect(lastHistoryNumber(rows)).toBe(7)
   })
 
+  it('recovers legacy assignment rows missing n', () => {
+    const rows = [
+      row({ id: 'a', expr: 'x = 5', display: '5' }),
+      row({ id: 'b', expr: 'y = x * 2', display: '10' }),
+      row({ id: 'c', expr: 'z = y + 1', display: '' }),
+    ]
+    expect(historyVariables(rows)).toEqual({ x: 5, y: 10, z: 11 })
+  })
+
   it('skips dictionary rows', () => {
     expect(historyVariables([row({ expr: 'pi', display: 'noun', n: 3, kind: 'definition' })])).toEqual({})
+  })
+
+  it('skips function rows when reading variables', () => {
+    expect(
+      historyVariables([
+        row({
+          expr: 'f(x) = x^2',
+          display: 'f(x) = x^2',
+          kind: 'function',
+          fnName: 'f',
+          fnParams: ['x'],
+          fnBody: 'x^2',
+        }),
+      ]),
+    ).toEqual({})
+  })
+
+  it('skips definition rows when finding the last number', () => {
+    const rows = [
+      row({ id: 'a', expr: '2+2', display: '4', n: 4 }),
+      row({ id: 'b', expr: 'pi', display: 'noun', n: 3, kind: 'definition' }),
+    ]
+    expect(lastHistoryNumber(rows)).toBe(4)
+  })
+
+  it('skips function rows when finding the last number', () => {
+    const rows = [
+      row({ id: 'a', expr: '2+2', display: '4', n: 4 }),
+      row({
+        id: 'b',
+        expr: 'f(x) = x',
+        display: 'f(x) = x',
+        kind: 'function',
+        fnName: 'f',
+        fnParams: ['x'],
+        fnBody: 'x',
+        n: 99,
+      }),
+    ]
+    expect(lastHistoryNumber(rows)).toBe(4)
+  })
+})
+
+describe('historyFunctions', () => {
+  it('reads function defs with newest winning', () => {
+    const rows = [
+      row({
+        id: 'a',
+        expr: 'f(x) = x',
+        display: 'f(x) = x',
+        kind: 'function',
+        fnName: 'f',
+        fnParams: ['x'],
+        fnBody: 'x',
+      }),
+      row({
+        id: 'b',
+        expr: 'g(a, b) = a + b',
+        display: 'g(a, b) = a + b',
+        kind: 'function',
+        fnName: 'g',
+        fnParams: ['a', 'b'],
+        fnBody: 'a + b',
+      }),
+      row({
+        id: 'c',
+        expr: 'f(x) = x^2',
+        display: 'f(x) = x^2',
+        kind: 'function',
+        fnName: 'f',
+        fnParams: ['x'],
+        fnBody: 'x^2',
+      }),
+      row({ id: 'd', expr: 'x = 3', display: '3', n: 3 }),
+    ]
+    expect(historyFunctions(rows)).toEqual({
+      f: { params: ['x'], body: 'x^2' },
+      g: { params: ['a', 'b'], body: 'a + b' },
+    })
+  })
+
+  it('recovers functions from expr when metadata is missing', () => {
+    expect(historyFunctions([row({ expr: 'h() = 42', display: 'h() = 42' })])).toEqual({
+      h: { params: [], body: '42' },
+    })
+  })
+
+  it('prefers stored body over a truncated expr', () => {
+    const rows = [
+      row({
+        expr: 'f(x) = x+x+…',
+        display: 'f(x) = …',
+        kind: 'function',
+        fnName: 'f',
+        fnParams: ['x'],
+        fnBody: 'x + x + 1',
+      }),
+    ]
+    expect(historyFunctions(rows)).toEqual({ f: { params: ['x'], body: 'x + x + 1' } })
   })
 })
 

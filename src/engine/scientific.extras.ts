@@ -128,7 +128,6 @@ export function extraFractions(): ExtraCase[] {
     { name: '3 ft / 2 fraction', input: '3 ft / 2', fractionMode: true, display: '3/2 ft' },
     { name: '(1/2) m + (1/3) m fraction', input: '(1/2) m + (1/3) m', fractionMode: true, display: '5/6 m' },
     { name: '2 in * 1/2 fraction', input: '2 in * 1/2', fractionMode: true, display: '1 in' },
-    { name: '90 deg exact with unit', input: '90 deg', exact: 'pi/2 rad' },
   )
   return out
 }
@@ -796,15 +795,22 @@ export const extraExactCopy: Array<{ name: string; input: string; exact: string 
   { name: 'sin(45) exact copy', input: 'sin(45)', exact: 'sqrt(2)/2' },
   { name: 'cos(30) exact copy', input: 'cos(30)', exact: 'sqrt(3)/2' },
   { name: 'tan(60) exact copy', input: 'tan(60)', exact: 'sqrt(3)' },
-  { name: '1/2 exact copy', input: '1/2', exact: '1/2' },
-  { name: '2/3 exact copy', input: '2/3', exact: '2/3' },
-  { name: '3/4 exact copy', input: '3/4', exact: '3/4' },
-  { name: '5/6 exact copy', input: '5/6', exact: '5/6' },
-  { name: 'pi/2 exact copy', input: 'pi/2', exact: 'pi/2' },
-  { name: 'pi/3 exact copy', input: 'pi/3', exact: 'pi/3' },
-  { name: 'pi/4 exact copy', input: 'pi/4', exact: 'pi/4' },
-  { name: '2*pi exact copy', input: '2*pi', exact: '2*pi' },
   { name: 'sqrt(2)/2 already', input: 'sqrt(2)/2', exact: 'sqrt(2)/2' },
+]
+
+/** Fractions, π, and unit results stay decimal unless the expression is trig or a square root. */
+export const extraDecimalOnly: Array<{ name: string; input: string }> = [
+  { name: '1/2 decimal only', input: '1/2' },
+  { name: '2/3 decimal only', input: '2/3' },
+  { name: '3/4 decimal only', input: '3/4' },
+  { name: '5/6 decimal only', input: '5/6' },
+  { name: 'pi/2 decimal only', input: 'pi/2' },
+  { name: 'pi/3 decimal only', input: 'pi/3' },
+  { name: 'pi/4 decimal only', input: 'pi/4' },
+  { name: '2*pi decimal only', input: '2*pi' },
+  { name: 'pi decimal only', input: 'pi' },
+  { name: '90 deg decimal only', input: '90 deg' },
+  { name: '2032mm to ft decimal only', input: '2032mm to ft' },
 ]
 
 for (let k = 2; k <= 40; k++) {

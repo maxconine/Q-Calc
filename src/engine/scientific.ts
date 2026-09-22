@@ -1,6 +1,9 @@
 import { formatNumber, num, textVal } from './format'
 import { math } from './math'
-import type { Value } from './types'
+import type { UserFunction, Value } from './types'
+
+/** Hard cap on list allocations from `[a...b]`, `random(N)`, and `randint(..., count)`. */
+export const MAX_LIST_ALLOC = 10_000
 
 export type AngleMode = 'deg' | 'rad'
 
@@ -145,8 +148,8 @@ function rewriteInversePower(expr: string): string {
   return s
 }
 
-export function wrapBareFunctions(expr: string): string {
-  const names = FN.split('|')
+export function wrapBareFunctions(expr: string, extraNames: string[] = []): string {
+  const names = [...FN.split('|'), ...extraNames]
     .filter((n) => !WRAP_SKIP.has(n.toLowerCase()))
     .sort((a, b) => b.length - a.length)
   const atomRe = /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?)/i
@@ -204,7 +207,7 @@ export function stitchConstants(s: string): string {
   return out
 }
 
-export function preprocessAscii(expr: string): string {
+export function preprocessAscii(expr: string, extraNames: string[] = []): string {
   let s = expr
   s = rewriteTypesetMul(s).replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt')
   s = s.replace(/\*\*/g, '^')
@@ -233,14 +236,20 @@ export function preprocessAscii(expr: string): string {
   s = s.replace(/\breal\b/g, 're').replace(/\bimag\b/g, 'im')
   s = s.replace(/\blog_(\d+(?:\.\d+)?)\s*\(([^)]+)\)/g, 'log($2, $1)')
   s = s.replace(/\blog\(([^,)]+)\)/g, 'log10($1)')
-  const implicitFns = FN.split('|')
+  const implicitFns = [...FN.split('|'), ...extraNames]
     .filter((n) => !WRAP_SKIP.has(n.toLowerCase()))
     .sort((a, b) => b.length - a.length)
     .join('|')
   s = s.replace(new RegExp(`(\\d)(\\s*)(${implicitFns})\\b`, 'gi'), '$1*$2$3')
-  s = wrapBareFunctions(s)
+  s = wrapBareFunctions(s, extraNames)
   s = rewriteFactorial(s)
   return s
+}
+
+function assertListAlloc(count: number): void {
+  if (!Number.isFinite(count) || count < 0 || count > MAX_LIST_ALLOC) {
+    throw new Error('list allocation exceeds limit')
+  }
 }
 
 function rewriteFactorial(expr: string): string {
@@ -335,26 +344,33 @@ function fromMathjs(v: unknown): Value | null {
 
 export function evalScientific(
   text: string,
-  ctx: { ans?: number; angleMode?: AngleMode; variables?: Record<string, number> } = {},
+  ctx: {
+    ans?: number
+    angleMode?: AngleMode
+    variables?: Record<string, number>
+    functions?: Record<string, UserFunction>
+  } = {},
 ): Value | null {
   const src = text.trim()
   if (!src) return null
-  let expr = preprocessAscii(src)
+  const fns = ctx.functions ?? {}
+  const fnNames = Object.keys(fns)
+  let expr = preprocessAscii(src, fnNames)
   if (ctx.ans !== undefined) expr = expr.replace(/\bans\b/gi, `(${ctx.ans})`)
   const vars = ctx.variables ?? {}
 
-  const varNames = Object.keys(vars)
+  const allowNames = [...Object.keys(vars), ...fnNames]
     .sort((a, b) => b.length - a.length)
     .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const varRe = varNames.length ? new RegExp(`\\b(?:${varNames.join('|')})\\b`, 'gi') : null
+  const allowRe = allowNames.length ? new RegExp(`\\b(?:${allowNames.join('|')})\\b`, 'gi') : null
   FN_RE.lastIndex = 0
   const leftover = expr
     .replace(FN_RE, '')
     .replace(/\d+(?:\.\d+)?e[+-]?\d+/gi, '')
-    .replace(varRe ?? /$^/, '')
+    .replace(allowRe ?? /$^/, '')
   FN_RE.lastIndex = 0
   const named = FN_RE.test(src) || FN_RE.test(expr)
-  if (!named && !varRe && !/\d|pi|tau|ans|\be\b/i.test(expr)) return null
+  if (!named && !allowRe && !/\d|pi|tau|ans|\be\b/i.test(expr)) return null
   if (/[a-zA-Z_$€£¥₹#?=\\]/.test(leftover.replace(/[iIeE]/g, ''))) {
     if (!/^[\d\s+\-*/^().,eE!|[\]:]+$/.test(expr) && !named) return null
   }
@@ -383,6 +399,15 @@ export function evalScientific(
       if (digits == null) return Math.round(x)
       const p = 10 ** digits
       return Math.round(x * p) / p
+    },
+    clamp: (x: number, lo: number, hi: number) => {
+      const a = Number(lo)
+      const b = Number(hi)
+      const v = Number(x)
+      if (![v, a, b].every(Number.isFinite)) return Number.NaN
+      const min = Math.min(a, b)
+      const max = Math.max(a, b)
+      return Math.min(Math.max(v, min), max)
     },
     min: (...a: unknown[]) => Math.min(...nums(a)),
     max: (...a: unknown[]) => Math.max(...nums(a)),
@@ -421,6 +446,7 @@ export function evalScientific(
       const xs = nums(a)
       if (xs.length === 0) return Math.random()
       if (xs.length === 1 && xs[0]! >= 2 && Number.isInteger(xs[0])) {
+        assertListAlloc(xs[0]!)
         return Array.from({ length: xs[0]! }, () => Math.random())
       }
       if (xs.length >= 2) return xs[0]! + Math.random() * (xs[1]! - xs[0]!)
@@ -433,6 +459,7 @@ export function evalScientific(
       const count = xs[2]
       const one = () => lo + Math.floor(Math.random() * (hi - lo + 1))
       if (count == null) return one()
+      assertListAlloc(count)
       return Array.from({ length: count }, one)
     },
     gcd: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
@@ -451,9 +478,14 @@ export function evalScientific(
     nCr: math.combinations,
     nPr: math.permutations,
     inclusiveRange: (a: number, b: number) => {
+      const start = Number(a)
+      const end = Number(b)
+      if (![start, end].every(Number.isFinite)) throw new Error('invalid range')
+      const step = start <= end ? 1 : -1
+      const count = Math.floor(Math.abs(end - start)) + 1
+      assertListAlloc(count)
       const out: number[] = []
-      const step = a <= b ? 1 : -1
-      for (let i = a; step > 0 ? i <= b : i >= b; i += step) out.push(i)
+      for (let i = start; step > 0 ? i <= end : i >= end; i += step) out.push(i)
       return out
     },
     csc: (x: number) => {
@@ -500,6 +532,25 @@ export function evalScientific(
     acsch: (x: number) => (x === 0 ? Number.NaN : Math.asinh(1 / x)),
     asech: (x: number) => (x <= 0 || x > 1 ? Number.NaN : Math.acosh(1 / x)),
     acoth: (x: number) => (Math.abs(x) <= 1 ? Number.NaN : Math.atanh(1 / x)),
+  }
+
+  for (const [name, def] of Object.entries(fns)) {
+    scope[name] = (...args: unknown[]) => {
+      const localVars: Record<string, number> = { ...vars }
+      for (let i = 0; i < def.params.length; i++) {
+        const p = def.params[i]!
+        const n = Number(args[i])
+        localVars[p] = Number.isFinite(n) ? n : Number.NaN
+      }
+      const result = evalScientific(def.body, {
+        ans: ctx.ans,
+        angleMode: mode,
+        variables: localVars,
+        functions: fns,
+      })
+      if (!result || result.kind === 'text') return Number.NaN
+      return result.n
+    }
   }
 
   try {

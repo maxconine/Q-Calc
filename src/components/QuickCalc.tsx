@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { evaluateSheet } from '../engine/evaluate'
+import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { clampSigFigs, DEFAULT_SIG_FIGS } from '../engine/format'
+import { isGraphCommand, parseGraphIntent } from '../engine/graph'
 import { defaultUnitsEqual, isImproperUnitConversion, sanitizeDefaultUnits, type DefaultUnits } from '../engine/units'
 import { applyTheme, normalizeTheme, type Theme } from '../lib/theme'
 import { AppearanceSettings } from './AppearanceSettings'
+import { GraphPanel } from './GraphPanel'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { RationalizeSettings } from './RationalizeSettings'
 import { UnitSettings } from './UnitSettings'
@@ -35,6 +37,7 @@ import {
 } from '../lib/nativeEval'
 import { QuickInput, flattenPastedText, type QuickInputHandle } from './QuickInput'
 import {
+  historyFunctions,
   historyVariables,
   lastHistoryNumber,
   normalizeHistoryRow,
@@ -281,13 +284,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [selected, setSelected] = useState<number | null>(null)
   const [tapeOpen, setTapeOpen] = useState(false)
   const [nativeLive, setNativeLive] = useState<NativeLive | null>(null)
+  const [armsShake, setArmsShake] = useState(false)
   const mathRef = useRef<QuickInputHandle | null>(null)
   const caretRef = useRef<{ start: number; end: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const tapeRef = useRef<HTMLDivElement>(null)
   const definitionRef = useRef<HTMLDivElement>(null)
   const defLiveRef = useRef<NativeLive | null>(null)
+  const graphFnRef = useRef<{ name: string; params: string[]; body: string } | null>(null)
   const copiedTimer = useRef(0)
+  const armsTimer = useRef(0)
+  const wasSixtySevenRef = useRef(false)
   const tapeOpenRef = useRef(tapeOpen)
   const historyLenRef = useRef(history.length)
   const qRef = useRef(q)
@@ -308,6 +315,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     draftTimer.current = 0
   }, [])
 
+  const triggerSixtySevenArms = useCallback(() => {
+    setArmsShake(false)
+    window.clearTimeout(armsTimer.current)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setArmsShake(true)
+        armsTimer.current = window.setTimeout(() => setArmsShake(false), 3000)
+      })
+    })
+  }, [])
+
   const resetToCalculate = useCallback(() => {
     qRef.current = ''
     draftAtRef.current = 0
@@ -322,10 +340,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     mathRef.current?.focus()
   }, [stopDraftTimer])
 
+  const clearHistory = useCallback(() => {
+    setHistory([])
+    setSelected(null)
+    setTapeOpen(false)
+  }, [])
+
   const lastAnswer = useMemo(() => {
     for (let i = history.length - 1; i >= 0; i--) {
       const row = history[i]
-      if (!row || row.kind === 'definition') continue
+      if (!row || row.kind === 'definition' || row.kind === 'function') continue
       if (row.n != null && Number.isFinite(row.n)) return row
       if (row.display.trim()) return row
     }
@@ -337,8 +361,25 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     ? insertableHistoryAnswer(lastAnswer, settings.answerForm, settings.sigFigs)
     : undefined
   const nativeVars = useMemo(() => historyVariables(history), [history])
+  const nativeFns = useMemo(() => historyFunctions(history), [history])
+
+  const graphCmd = isGraphCommand(q)
+  const graphIntent = useMemo(
+    () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
+    [graphCmd, q, nativeFns],
+  )
+  const liveFns = useMemo(() => {
+    if (!graphIntent?.functionDef) return nativeFns
+    const d = graphIntent.functionDef
+    return {
+      ...nativeFns,
+      [d.name]: { params: d.params, body: d.body },
+    }
+  }, [nativeFns, graphIntent])
+  graphFnRef.current = graphIntent?.functionDef ?? null
 
   const sheet = useMemo(() => {
+    if (graphCmd) return []
     return evaluateSheet([q], {
       angleMode: settings.angleMode,
       fractionMode: settings.fractionMode,
@@ -347,16 +388,23 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       defaultUnits: settings.defaultUnits,
       ans: lastAns,
       variables: nativeVars,
+      functions: liveFns,
     })
-  }, [q, lastAns, nativeVars, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.defaultUnits])
+  }, [q, graphCmd, lastAns, nativeVars, liveFns, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.defaultUnits])
 
   const live = sheet[sheet.length - 1]
-  const jsDisplay = q.trim() ? (live?.display ?? '') : ''
-  const jsN = live?.value?.kind === 'number' ? live.value.n : undefined
-  const merged = mergeLiveAnswer(q, jsDisplay, jsN, nativeLive)
+  const jsDisplay = graphCmd
+    ? graphIntent?.label
+      ? `graph ${graphIntent.label}`
+      : ''
+    : q.trim()
+      ? (live?.display ?? '')
+      : ''
+  const jsN = graphCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
+  const merged = mergeLiveAnswer(q, jsDisplay, jsN, graphCmd ? null : nativeLive)
   const display = merged.display
   const liveN = merged.n
-  const liveExact = q.trim() && jsDisplay ? live?.exact : undefined
+  const liveExact = graphCmd ? undefined : q.trim() && jsDisplay ? live?.exact : undefined
   const shownLive = visibleAnswer({ display, exact: liveExact }, settings.answerForm)
   // Apple Dictionary — uncomment to restore lookups:
   // const definition = !display ? nativeDefinition(nativeLive, q) : null
@@ -365,6 +413,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   exactRef.current = liveExact
   liveNRef.current = liveN
   defLiveRef.current = definition
+
+  useEffect(() => {
+    const is67 = liveN === 67
+    if (is67 && !wasSixtySevenRef.current) triggerSixtySevenArms()
+    wasSixtySevenRef.current = is67
+  }, [liveN, triggerSixtySevenArms])
+
+  useEffect(() => {
+    return () => window.clearTimeout(armsTimer.current)
+  }, [])
 
   useEffect(() => {
     try {
@@ -485,6 +543,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setTapeOpen(false)
   }, [])
 
+  const selectGraphX = useCallback(
+    (xText: string) => {
+      if (!xText) return
+      copyText(xText)
+      flashCopied()
+      insertPlain(xText)
+    },
+    [flashCopied, insertPlain],
+  )
+
   const insertHistoryExpr = useCallback(
     (index: number) => {
       const row = history[index]
@@ -529,18 +597,31 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const commit = useCallback(() => {
     const expr = qRef.current
     const def = defLiveRef.current
-    const shown = displayRef.current || (def ? def.pos || def.term || def.display.split('\n')[0] || '' : '')
+    const graphFn = graphFnRef.current
+    const fnDef = graphFn ?? parseFunctionDef(expr.trim())
+    const isGraph = isGraphCommand(expr)
+    const shown =
+      displayRef.current ||
+      (fnDef ? `${fnDef.name}(${fnDef.params.join(', ')}) = ${fnDef.body}` : '') ||
+      (def ? def.pos || def.term || def.display.split('\n')[0] || '' : '')
     const exact = exactRef.current
     const n = liveNRef.current
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
+    if (n === 67) triggerSixtySevenArms()
     setHistory((prev) => {
+      // Inline `graph f(x)=…` registers the function; plain `graph expr` is not persisted.
+      if (isGraph && !fnDef) return prev
+      const historyExpr = fnDef && isGraph ? `${fnDef.name}(${fnDef.params.join(', ')}) = ${fnDef.body}` : expr
       const nextRow = slimHistoryRow({
         id: uid(),
-        expr,
-        display: shown,
-        exact: def ? undefined : exact && exact !== shown ? exact : undefined,
-        n: def ? undefined : Number.isFinite(n) ? n : undefined,
-        kind: def ? ('definition' as const) : undefined,
+        expr: historyExpr,
+        display: fnDef ? `${fnDef.name}(${fnDef.params.join(', ')}) = ${fnDef.body}` : shown,
+        exact: def || fnDef ? undefined : exact && exact !== shown ? exact : undefined,
+        n: def || fnDef ? undefined : Number.isFinite(n) ? n : undefined,
+        kind: def ? ('definition' as const) : fnDef ? ('function' as const) : undefined,
+        fnName: fnDef?.name,
+        fnParams: fnDef?.params,
+        fnBody: fnDef?.body,
       })
       if (!nextRow) return prev
       const last = prev[prev.length - 1]
@@ -552,6 +633,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     exactRef.current = undefined
     liveNRef.current = undefined
     defLiveRef.current = null
+    graphFnRef.current = null
     draftAtRef.current = 0
     stopDraftTimer()
     clearStoredDraft()
@@ -561,7 +643,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     mathRef.current?.focus()
     setSelected(null)
     setTapeOpen(false)
-  }, [stopDraftTimer])
+  }, [stopDraftTimer, triggerSixtySevenArms])
 
   const restoreDraft = useCallback((expr: string, savedAt: number) => {
     stopDraftTimer()
@@ -690,7 +772,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         setSettings((s) => ({ ...s, fractionMode: !s.fractionMode }))
         return
       }
-      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && key === 'c') {
+      if (ctrlOnly && key === 'c') {
+        e.preventDefault()
+        e.stopPropagation()
+        clearHistory()
+        return
+      }
+      if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && key === 'c') {
         e.preventDefault()
         e.stopPropagation()
         copyOutput()
@@ -723,12 +811,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('copy', onCopy, true)
     }
-  }, [copyOutput, definition, embedded, flashCopied, history, onClose, onWillHide, resetToCalculate, selected, settings.answerForm, shownLive])
+  }, [clearHistory, copyOutput, definition, embedded, flashCopied, history, onClose, onWillHide, resetToCalculate, selected, settings.answerForm, shownLive])
 
   useEffect(() => () => stopDraftTimer(), [stopDraftTimer])
 
   useEffect(() => {
-    if (!q.trim() || !hasNativeEval()) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q)) return
     const id = ++evalIdRef.current
     const expr = q
     let cancelled = false
@@ -811,7 +899,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const overDefinition = Boolean(
         definitionEl && e.target instanceof Node && definitionEl.contains(e.target),
       )
-      if (overDefinition) return
+      const overGraph = Boolean(e.target instanceof Element && e.target.closest('.graph'))
+      if (overDefinition || overGraph) return
       const open = tapeOpenRef.current
       const hasHistory = historyLenRef.current > 0
 
@@ -872,13 +961,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     <div className={embedded ? undefined : 'quick-wrap'}>
     <div
       ref={rootRef}
-      className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}
+      className="spotlight-slot"
       onMouseDown={(e) => {
         const t = e.target as HTMLElement
-        if (t.closest('input, button, .tape, .definition, .quick-plain, .quick-field, .modes, .unit-settings, .live-dual')) return
+        if (t.closest('input, button, .tape, .definition, .graph, .quick-plain, .quick-field, .edge-tools, .unit-settings, .live-dual')) return
         nativeHandler()?.postMessage({ type: 'drag' })
       }}
     >
+    <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''} ${armsShake ? 'sixty-seven-on' : ''}`}>
       {tapeOpen && history.length > 0 ? (
         <div className="tape" ref={tapeRef} aria-label="Calculation history">
           {history.map((row, i) => (
@@ -946,33 +1036,83 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       ) : null}
 
       <div className="composer">
-        <div className="modes">
+        <div className={`sixty-seven-arms ${armsShake ? 'shaking' : ''}`} aria-hidden="true">
+          <svg className="arm arm-left" viewBox="0 0 48 88" width="48" height="88">
+            <path
+              d="M34 88 C30 62 22 44 10 28"
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth="9"
+              strokeLinecap="round"
+            />
+            <path
+              d="M10 28 C4 22 2 14 6 8 M10 28 C16 20 22 18 26 14 M10 28 C8 18 12 10 18 6"
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+          </svg>
+          <svg className="arm arm-right" viewBox="0 0 48 88" width="48" height="88">
+            <path
+              d="M14 88 C18 62 26 44 38 28"
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth="9"
+              strokeLinecap="round"
+            />
+            <path
+              d="M38 28 C44 22 46 14 42 8 M38 28 C32 20 26 18 22 14 M38 28 C40 18 36 10 30 6"
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
+        <div className="edge-tools">
           <button
             type="button"
-            className={settings.angleMode === 'deg' ? 'active' : ''}
-            title="Degrees · ⌃D"
+            className="edge-tool edge-angle active"
+            aria-keyshortcuts="Control+D"
+            aria-label={settings.angleMode === 'deg' ? 'Degrees. Shortcut Control D' : 'Radians. Shortcut Control D'}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setSettings((s) => ({ ...s, angleMode: 'deg' }))}
+            onClick={() =>
+              setSettings((s) => ({ ...s, angleMode: s.angleMode === 'deg' ? 'rad' : 'deg' }))
+            }
           >
-            deg
+            {settings.angleMode}
+            <span className="edge-key" aria-hidden="true">⌃D</span>
           </button>
           <button
             type="button"
-            className={settings.angleMode === 'rad' ? 'active' : ''}
-            title="Radians · ⌃D"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setSettings((s) => ({ ...s, angleMode: 'rad' }))}
-          >
-            rad
-          </button>
-          <button
-            type="button"
-            className={settings.fractionMode ? 'active' : ''}
-            title="Fraction results · ⌃F"
+            className={`edge-tool edge-frac ${settings.fractionMode ? 'active' : ''}`}
+            aria-keyshortcuts="Control+F"
+            aria-pressed={settings.fractionMode}
+            aria-label={settings.fractionMode ? 'Fraction results on. Shortcut Control F' : 'Fraction results off. Shortcut Control F'}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => setSettings((s) => ({ ...s, fractionMode: !s.fractionMode }))}
           >
-            a/b
+            <span className="edge-frac-mark" aria-hidden="true">
+              <span>a</span>
+              <span className="edge-frac-bar" />
+              <span>b</span>
+            </span>
+            <span className="edge-key" aria-hidden="true">⌃F</span>
+          </button>
+          <button
+            type="button"
+            className="edge-tool edge-clear"
+            aria-keyshortcuts="Control+C"
+            aria-label="Clear history and variables. Shortcut Control C"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              clearHistory()
+              mathRef.current?.focus()
+            }}
+          >
+            clear
+            <span className="edge-key" aria-hidden="true">⌃C</span>
           </button>
         </div>
         <QuickInput
@@ -1068,7 +1208,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             {definition.body || definition.display}
           </div>
         </div>
+      ) : graphCmd ? (
+        <GraphPanel
+          input={q}
+          functions={liveFns}
+          variables={nativeVars}
+          angleMode={settings.angleMode}
+          ans={lastAns}
+          onSelectX={selectGraphX}
+        />
       ) : null}
+    </div>
     </div>
     {!embedded ? (
       <>

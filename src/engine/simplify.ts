@@ -156,6 +156,14 @@ function asNiceFraction(n: number): string | null {
 
 export type ExactFormOptions = { rationalize?: boolean }
 
+const TRIG_OR_SQRT =
+  /√|\\sqrt|(?:^|[^A-Za-z_])(?:sqrt|arcsin|arccos|arctan2|arctan|arccsc|arcsec|arccot|asin|acos|atan2|atan|acsc|asec|acot|sin|cos|tan|csc|sec|cot)(?![A-Za-z_])/i
+
+/** Closed form is only shown beside the decimal for trig and square-root expressions. */
+export function wantsExactForm(expr: string): boolean {
+  return TRIG_OR_SQRT.test(expr)
+}
+
 /** Return a simplified exact form for `n`, or null if none is nicer than the decimal. */
 export function exactForm(n: number, options: ExactFormOptions = {}): string | null {
   if (!Number.isFinite(n)) return null

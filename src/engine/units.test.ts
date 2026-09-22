@@ -260,9 +260,9 @@ describe('Fractions with units', () => {
     expect(r.value?.n).toBeCloseTo(20 / 3, 8)
   })
 
-  it('keeps the unit on an exact fraction next to the decimal', () => {
+  it('shows a unit conversion as a decimal, not an exact fraction pair', () => {
     const r = evaluateLine('2032 mm to ft')
-    expect(r.exact).toBe('20/3 ft')
+    expect(r.exact).toBeUndefined()
     expect(r.display).toMatch(/ft$/)
     expect(r.display).not.toBe('20/3 ft')
   })

@@ -1,10 +1,14 @@
-import type { EvaluateOptions, LineResult, SheetInputLine, Value } from './types'
+import type { EvaluateOptions, LineResult, SheetInputLine, UserFunction, Value } from './types'
 import { DEFAULT_SIG_FIGS, formatValue } from './format'
 import { tryPlainMath } from './plainMath'
 import { formatAsFraction, SCIENTIFIC_NAMES } from './scientific'
-import { exactForm } from './simplify'
+import { exactForm, wantsExactForm } from './simplify'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
+
+function isIdent(name: string): boolean {
+  return /^[A-Za-z][A-Za-z0-9]*$/.test(name)
+}
 
 /** `x = 2+3` → name `x` and rhs `2+3`. Built-in names like `pi` are not assignments. */
 export function parseAssignment(trimmed: string): { variable: string; expr: string } | null {
@@ -13,6 +17,25 @@ export function parseAssignment(trimmed: string): { variable: string; expr: stri
   const variable = assign[1]!
   if (RESERVED.has(variable.toLowerCase())) return null
   return { variable, expr: assign[2]!.trim() }
+}
+
+/** `f(x) = x^2` / `g(a, b) = a+b`. Parsed before scalar assignment. */
+export function parseFunctionDef(
+  trimmed: string,
+): { name: string; params: string[]; body: string } | null {
+  const m = trimmed.match(/^([A-Za-z][A-Za-z0-9]*)\s*\((.*)\)\s*=\s*(.+)$/s)
+  if (!m) return null
+  const name = m[1]!
+  if (RESERVED.has(name.toLowerCase())) return null
+  const rawParams = m[2]!.trim()
+  const params = rawParams === '' ? [] : rawParams.split(',').map((p) => p.trim())
+  if (params.some((p) => !isIdent(p))) return null
+  if (params.some((p) => RESERVED.has(p.toLowerCase()))) return null
+  const lower = params.map((p) => p.toLowerCase())
+  if (new Set(lower).size !== params.length) return null
+  const body = m[3]!.trim()
+  if (!body) return null
+  return { name, params, body }
 }
 
 function withUnit(text: string, unit?: string): string {
@@ -40,6 +63,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
   const fractionMode = options.fractionMode ?? false
   const sigFigs = options.sigFigs ?? DEFAULT_SIG_FIGS
   const variables: Record<string, number> = { ...options.variables }
+  const functions: Record<string, UserFunction> = { ...options.functions }
   let lastAns = options.ans
   const results: LineResult[] = []
 
@@ -47,6 +71,21 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     const trimmed = raw.trim()
     if (!trimmed) {
       results.push({ raw, kind: 'empty', display: '' })
+      continue
+    }
+
+    const fnDef = parseFunctionDef(trimmed)
+    if (fnDef) {
+      functions[fnDef.name] = { params: fnDef.params, body: fnDef.body }
+      const sig = `${fnDef.name}(${fnDef.params.join(', ')})`
+      results.push({
+        raw,
+        kind: 'function',
+        display: `${sig} = ${fnDef.body}`,
+        fnName: fnDef.name,
+        fnParams: fnDef.params,
+        fnBody: fnDef.body,
+      })
       continue
     }
 
@@ -60,7 +99,13 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
 
     let value: Value | null = null
     try {
-      value = tryPlainMath(expr, { ans: lastAns, angleMode, variables, defaultUnits: options.defaultUnits })
+      value = tryPlainMath(expr, {
+        ans: lastAns,
+        angleMode,
+        variables,
+        functions,
+        defaultUnits: options.defaultUnits,
+      })
     } catch {
       value = null
     }
@@ -85,7 +130,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       display = ''
     }
     const form =
-      value.kind === 'number' && Number.isFinite(value.n)
+      value.kind === 'number' && Number.isFinite(value.n) && wantsExactForm(expr)
         ? exactForm(value.n, { rationalize: options.rationalize })
         : null
     const exact = form ? withUnit(form, value.unit) : undefined

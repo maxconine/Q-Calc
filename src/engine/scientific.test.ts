@@ -7,6 +7,7 @@ import {
   extraCombinatorics,
   extraConstants,
   extraEdges,
+  extraDecimalOnly,
   extraExactCopy,
   extraFractions,
   extraHyperbolic,
@@ -152,7 +153,7 @@ suite('Fractions & Decimals', [
   { name: 'Improper Fraction Conversion', input: '11 / 4', expected: 2.75 },
   { name: 'Precision Fraction Conversion', input: '0.142857', fractionMode: true, display: '1/7' },
   { name: 'Unit conversion to fraction', input: '2032mm to ft', fractionMode: true, display: '20/3 ft' },
-  { name: 'Unit conversion exact fraction', input: '2032mm to ft', exact: '20/3 ft' },
+  { name: 'Unit conversion stays decimal without a/b', input: '2032mm to ft', display: /ft$/ },
   { name: 'Unit arithmetic to fraction', input: '3 ft / 2', fractionMode: true, display: '3/2 ft' },
   { name: 'Unit sum to fraction', input: '(1/2) m + (1/3) m', fractionMode: true, display: '5/6 m' },
   { name: 'Chained Fractions', input: '1/2 + 1/4 + 1/8 + 1/16', expected: 15 / 16 },
@@ -631,5 +632,12 @@ describe('Exact form vs decimal copy', () => {
       expect(dualLabel(r.exact, r.display)).toBe(`${r.exact} ≈ ${r.display}`)
     }
     expect(insertableAnswer(r.exact ?? r.display)).toBe(r.exact ?? r.display)
+  })
+
+  it.each(extraDecimalOnly)('$name', (c) => {
+    const r = evaluateLine(c.input)
+    expect(r.exact, c.input).toBeUndefined()
+    expect(hasDualAnswer(r)).toBe(false)
+    expect(r.display, c.input).not.toMatch(/≈|sqrt|pi\//)
   })
 })

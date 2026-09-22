@@ -313,6 +313,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'dismiss' }); } catch (err) {}
                 return;
               }
+              if (e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.keyCode === 67)) {
+                e.preventDefault();
+              }
               if (e.key === 'Meta' || e.key === 'Control') window.__QCALC_META = true;
               if (e.metaKey || e.ctrlKey) window.__qcalcRememberText();
               if ((e.metaKey || e.ctrlKey) && !e.altKey && (e.key === 'v' || e.key === 'V' || e.keyCode === 86)) {
@@ -320,7 +323,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 e.stopImmediatePropagation();
                 return;
               }
-              if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.keyCode === 67)) {
+              if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.keyCode === 67)) {
                 var text = window.__qcalcSelectedText() || window.__QCALC_HELD || '';
                 if (text) {
                   e.preventDefault();

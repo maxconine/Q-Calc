@@ -200,7 +200,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     const ctrlOnly = e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey
     const key = e.key.toLowerCase()
-    if (ctrlOnly && (key === 'd' || key === 'f')) {
+    if (ctrlOnly && (key === 'd' || key === 'f' || key === 'c')) {
       e.preventDefault()
       return
     }

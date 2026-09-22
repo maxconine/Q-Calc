@@ -1,4 +1,4 @@
-import type { Value } from './types'
+import type { UserFunction, Value } from './types'
 import { fillParens } from './parens'
 import { evalScientific, rewriteTypesetMul, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
 import { tryConvert, type DefaultUnits } from './units'
@@ -228,12 +228,23 @@ function grabParen(s: string, open: number): { inner: string; end: number } | nu
   return null
 }
 
+/** True when `expr` mentions a known variable as a bare identifier (unit symbols must not steal them). */
+function mentionsVariable(expr: string, variables?: Record<string, number>): boolean {
+  const names = Object.keys(variables ?? {})
+  if (!names.length) return false
+  const escaped = names
+    .sort((a, b) => b.length - a.length)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  return new RegExp(`\\b(?:${escaped.join('|')})\\b`).test(expr)
+}
+
 export function tryPlainMath(
   text: string,
   ctx: {
     ans?: number
     angleMode?: AngleMode
     variables?: Record<string, number>
+    functions?: Record<string, UserFunction>
     defaultUnits?: DefaultUnits
   } = {},
 ): Value | null {
@@ -241,8 +252,12 @@ export function tryPlainMath(
   if (!src) return null
   const ascii = looksLikeLatex(src) ? latexToAscii(src) : src
   const filled = fillParens(rewriteTypesetMul(ascii))
-  const converted = tryConvert(filled, ctx.defaultUnits)
-  if (converted) return converted
+  // Prefer scientific eval when a token is a known variable (e.g. `n=5` then `n*2`),
+  // so unit symbols like N/m/s do not steal the name.
+  if (!mentionsVariable(filled, ctx.variables)) {
+    const converted = tryConvert(filled, ctx.defaultUnits)
+    if (converted) return converted
+  }
   const cleaned = src.replace(/\d+(?:\.\d+)?\s*%\s*of\b/gi, (m) => m.replace(/\s*of\b/i, ''))
   if (hasNlpWords(cleaned) && !looksLikeLatex(src)) return null
   return evalScientific(filled, ctx)
