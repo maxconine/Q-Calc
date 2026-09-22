@@ -49,5 +49,5 @@ macos/vendor
 #   4. git push origin main v2.0.1
 #
 # Or run workflow Release from the Actions tab (uses package.json version).
-# Field Macs: brew update && brew upgrade --cask q-calc
+# Field Macs get the cask on brew update; autoupdate upgrades q-calc daily.
 # ---------------------------------------------------------------------------

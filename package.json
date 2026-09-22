@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/maxconine/Instant-Calculator.git"
+    "url": "git+https://github.com/maxconine/Q-Calc.git"
   },
   "engines": {
     "node": ">=20"

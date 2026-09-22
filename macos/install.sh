@@ -2,7 +2,7 @@
 set -euo pipefail
 
 TAP="maxconine/qcalc"
-REPO="https://github.com/maxconine/Instant-Calculator.git"
+REPO="https://github.com/maxconine/Q-Calc.git"
 AUTOUPDATE=1
 
 for arg in "$@"; do
@@ -10,7 +10,7 @@ for arg in "$@"; do
     --no-autoupdate) AUTOUPDATE=0 ;;
     -h|--help)
       echo "Usage: macos/install.sh [--no-autoupdate]"
-      echo "  Install Q Calc with Homebrew and optionally enable daily upgrades."
+      echo "  Install Q Calc with Homebrew. Autoupdates are on by default."
       exit 0
       ;;
     *)
@@ -43,16 +43,15 @@ if brew trust --help >/dev/null 2>&1; then
 fi
 
 echo "Installing Q Calc…"
+if (( ! AUTOUPDATE )); then
+  export QCALC_NO_AUTOUPDATE=1
+fi
 brew install --cask --force --yes q-calc
-xattr -cr "/Applications/Q Calc.app"
 
 if (( AUTOUPDATE )); then
-  echo "Enabling daily Homebrew upgrades for Q Calc…"
-  brew tap domt4/autoupdate
-  if brew autoupdate status 2>/dev/null | grep -qi "running"; then
-    echo "brew autoupdate is already running. Q Calc will update with your other casks on brew upgrade."
-  else
-    brew autoupdate start --upgrade --immediate --only=q-calc
+  helper="$(brew --prefix)/Library/Taps/maxconine/homebrew-qcalc/macos/enable-autoupdate.sh"
+  if [[ -f "$helper" ]]; then
+    zsh "$helper"
   fi
 fi
 

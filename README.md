@@ -4,56 +4,43 @@ A Spotlight-style scientific calculator for Mac. Press **Control + Option + Spac
 
 Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as you type.
 
-## Install on Apple silicon
+## Installation
+
+Install via Homebrew to get autoupdates (Preferred)
 
 You need [Homebrew](https://brew.sh), an **Apple silicon Mac** (M1 or later), and **macOS 14** or later.
 
 ```bash
-brew tap maxconine/qcalc https://github.com/maxconine/Instant-Calculator
+brew tap maxconine/qcalc https://github.com/maxconine/Q-Calc
 brew trust --tap maxconine/qcalc
-brew install --cask q-calc
-xattr -cr "/Applications/Q Calc.app"
+brew install --cask maxconine/qcalc/q-calc
 ```
 
-Or run the install script, which also turns on daily upgrades of Q Calc:
+Or:
 
 ```bash
-/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/maxconine/Instant-Calculator/main/macos/install.sh)"
+/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/maxconine/Q-Calc/main/macos/install.sh)"
 ```
 
-The app is ad-hoc signed, not notarized. Homebrew 7 also requires trusting this tap before the cask will load. If macOS still refuses to open it:
+> [!NOTE]
+> By using Q Calc, you acknowledge that it's not notarized.
+>
+> Homebrew automatically deletes the `com.apple.quarantine` attribute, so the app should work out of the box without a warning that “Apple cannot check Q Calc for malicious software.”
+>
+> Daily Homebrew upgrades for Q Calc are turned on at install. Opt out with `macos/install.sh --no-autoupdate`, or later with `brew autoupdate stop`.
 
-1. Control-click **Q Calc** in Applications and choose **Open**.
-2. Or clear the quarantine flag, then open it:
-
-```bash
-xattr -cr "/Applications/Q Calc.app"
-open "/Applications/Q Calc.app"
-```
-
-The Q Calc icon appears in the menu bar. Q Calc is a menu-bar app — it does not show in the Dock.
+The Q Calc icon appears in the menu bar. It does not show in the Dock.
 
 If **Control + Option + Space** does nothing, macOS is often using that shortcut for Input Sources. Turn the shortcut off in **System Settings → Keyboard → Input Sources → Edit**.
 
 To start Q Calc at login, add it under **System Settings → General → Login Items & Extensions**.
 
-### Updates
-
-New versions are published as GitHub Releases and picked up by Homebrew. On a Mac that already has Q Calc:
+To upgrade immediately instead of waiting for the daily check:
 
 ```bash
 brew update
 brew upgrade --cask q-calc
 ```
-
-For field Macs that should take updates on their own, enable Homebrew autoupdate so only Q Calc is upgraded:
-
-```bash
-brew tap domt4/autoupdate
-brew autoupdate start --upgrade --immediate --only=q-calc
-```
-
-That checks once a day (and at login) and installs the latest cask when you ship a release.
 
 ## Using Q Calc
 
@@ -127,7 +114,7 @@ git tag v2.0.1
 git push origin main v2.0.1
 ```
 
-The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, and updates `Casks/q-calc.rb`. Field Macs that used Homebrew (and autoupdate, if enabled) install that build on the next upgrade. You can also run **Release** from the Actions tab without pushing a tag.
+The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, and updates `Casks/q-calc.rb`. Macs that installed with Homebrew pick up that build on the next daily autoupdate, or immediately with `brew upgrade --cask q-calc`. You can also run **Release** from the Actions tab without pushing a tag.
 
 ## License
 
