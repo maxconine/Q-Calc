@@ -38,9 +38,13 @@ fi
 
 echo "Tapping ${TAP}…"
 brew tap "$TAP" "$REPO"
+if brew trust --help >/dev/null 2>&1; then
+  brew trust --tap "$TAP"
+fi
 
 echo "Installing Q Calc…"
-brew install --cask --no-quarantine q-calc
+brew install --cask --force --yes q-calc
+xattr -cr "/Applications/Q Calc.app"
 
 if (( AUTOUPDATE )); then
   echo "Enabling daily Homebrew upgrades for Q Calc…"

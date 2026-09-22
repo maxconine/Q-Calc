@@ -10,7 +10,9 @@ You need [Homebrew](https://brew.sh), an **Apple silicon Mac** (M1 or later), an
 
 ```bash
 brew tap maxconine/qcalc https://github.com/maxconine/Instant-Calculator
-brew install --cask --no-quarantine q-calc
+brew trust --tap maxconine/qcalc
+brew install --cask q-calc
+xattr -cr "/Applications/Q Calc.app"
 ```
 
 Or run the install script, which also turns on daily upgrades of Q Calc:
@@ -19,7 +21,7 @@ Or run the install script, which also turns on daily upgrades of Q Calc:
 /bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/maxconine/Instant-Calculator/main/macos/install.sh)"
 ```
 
-`--no-quarantine` is recommended because the app is ad-hoc signed, not notarized. If macOS still refuses to open it:
+The app is ad-hoc signed, not notarized. Homebrew 7 also requires trusting this tap before the cask will load. If macOS still refuses to open it:
 
 1. Control-click **Q Calc** in Applications and choose **Open**.
 2. Or clear the quarantine flag, then open it:

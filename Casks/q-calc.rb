@@ -28,11 +28,14 @@ cask "q-calc" do
   zap trash: "~/Library/Preferences/com.maxconine.qcalc.plist"
 
   caveats <<~EOS
-    Q Calc is ad-hoc signed. Install with --no-quarantine to skip Gatekeeper,
-    or if macOS refuses to open it:
+    Q Calc is ad-hoc signed. After installing, clear Gatekeeper quarantine:
 
       xattr -cr "/Applications/Q Calc.app"
       open "/Applications/Q Calc.app"
+
+    Homebrew 7+ also requires trusting this tap once:
+
+      brew trust --tap maxconine/qcalc
 
     Field Macs can pick up new versions with:
 
