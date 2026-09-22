@@ -1,6 +1,6 @@
 cask "q-calc" do
-  version "2.0.0"
-  sha256 "b238baefd75b594342c4c0d55da0d1a51411c183f05311f8d5e63a44a7f47d59"
+  version "2.0.1"
+  sha256 "32235ffc156f2dfab9bfb8d508e07d389fd01a596334365325be86ff809815ae"
 
   url "https://github.com/maxconine/Instant-Calculator/releases/download/v#{version}/Q-Calc-#{version}.zip"
   name "Q Calc"
