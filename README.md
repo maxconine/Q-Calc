@@ -57,7 +57,7 @@ That checks once a day (and at login) and installs the latest cask when you ship
 
 - **Control + Option + Space** shows the calculator. **Esc** or a click outside the window hides it. What you were typing is kept for a while (see **Keep unfinished** in the menu).
 - Type as you would on a scientific calculator: `sin(90)`, `arcsin(0.5)`, `sin^-1(0.5)`, `sqrt(2)`, `2^8`, `5!`. `pi` becomes π as you type.
-- **⌃D** switches between degrees and radians. **⌃F** toggles fraction results. **√/** (or **Answers → Rationalize**) controls whether exact answers like `5/sqrt(41)` are rewritten as `5sqrt(41)/41`.
+- **⌃D** switches between degrees and radians. **⌃F** toggles fraction results. **Answers → Rationalize denominators** controls whether exact answers like `5/sqrt(41)` are rewritten as `5sqrt(41)/41`.
 - Answers show a closed form next to the decimal when both exist (`sqrt(3)/2 ≈ 0.866025`). Click either side to copy (or, in history, to insert). **⌘C** and `ans` follow **Answers → Exact** or **Approximate**.
 - Unit conversions work too: `72 f`, `2 in to cm`.
 - Natural-language math works in the Mac app via SoulverCore: `$10 for lunch + 15% tip`, `40 is what % of 90`, `3:45pm + 4 hr 10 min`.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { hasDualAnswer, insertableAnswer } from '../lib/answer'
 import { evaluateLine, evaluateSheet } from './evaluate'
+import { formatNumber } from './format'
 import {
   extraArithmetic,
   extraCombinatorics,
@@ -114,6 +115,7 @@ suite('Basic Arithmetic & Order of Operations', [
   { name: 'Typeset dot-operator multiplication', input: '6⋅7', expected: 42 },
   { name: 'Typeset bullet-operator multiplication', input: '2∙8', expected: 16 },
   { name: 'Word-dot multiplication', input: '3 dot 4', expected: 12 },
+  { name: 'Glued word-dot multiplication', input: '4dot1', expected: 4 },
   { name: 'Exact Division', input: '144 / 12', expected: 12 },
   { name: 'Chained Addition & Subtraction', input: '100 - 45 + 12 - 3', expected: 64 },
   { name: 'Order of Operations (No Parens)', input: '5 + 3 * 4', expected: 17 },
@@ -616,7 +618,9 @@ describe('Exact form vs decimal copy', () => {
     const r = evaluateLine('sqrt(12)')
     const inserted = insertableAnswer(r.display, r.value?.n)
     expect(inserted).not.toMatch(/sqrt/)
+    expect(inserted).toBe(r.display)
     expect(Number(inserted)).toBeCloseTo(Math.sqrt(12), 8)
+    expect(insertableAnswer(r.display, r.value?.n, 4)).toBe(formatNumber(Math.sqrt(12), 4))
   })
 
   it.each(extraExactCopy)('$name', (c) => {

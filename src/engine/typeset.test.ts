@@ -87,6 +87,7 @@ describe('Scientific functions and typeset input', () => {
     closeTo(n('2 · \\frac{1}{2}'), 1)
     closeTo(n('\\sin\\left(2 · 45\\right)'), 1)
     closeTo(n('3 dot 4'), 12)
+    closeTo(n('4dot1'), 4)
     closeTo(n('3 DOT 4'), 12)
     closeTo(n('2 dot 3 + 4'), 10)
     closeTo(n('(1+2) dot 4'), 12)

@@ -325,7 +325,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(item)
         }
         menu.addItem(.separator())
-        let rat = NSMenuItem(title: "Rationalize", action: #selector(toggleRationalize), keyEquivalent: "")
+        let rat = NSMenuItem(title: "Rationalize denominators", action: #selector(toggleRationalize), keyEquivalent: "")
         rat.target = self
         rat.state = AppSettings.shared.rationalize ? .on : .off
         menu.addItem(rat)

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { formatNumber } from '../engine/format'
 import {
   hasDualAnswer,
   insertableAnswer,
@@ -29,8 +30,15 @@ describe('insertableAnswer', () => {
   it('uses the numeric value when the display is only a number', () => {
     expect(insertableAnswer('4', 4)).toBe('4')
     expect(insertableAnswer('1,200', 1200)).toBe('1200')
-    expect(insertableAnswer('3.14159265359', Math.PI)).toBe(String(Math.PI))
-    expect(insertableAnswer('2.46e-11', 2.46e-11)).toBe((2.46e-11).toExponential())
+    expect(insertableAnswer('3.14159265359', Math.PI)).toBe(formatNumber(Math.PI))
+    expect(insertableAnswer('2.46e-11', 2.46e-11)).toBe(formatNumber(2.46e-11))
+  })
+
+  it('inserts only the requested significant figures, not the engine’s full precision', () => {
+    expect(insertableAnswer('3.14159265359', Math.PI, 4)).toBe('3.142')
+    expect(insertableAnswer('3.14159265359', Math.PI, 6)).toBe('3.14159')
+    expect(insertableAnswer('0.866025403784', Math.sqrt(3) / 2, 4)).toBe(formatNumber(Math.sqrt(3) / 2, 4))
+    expect(insertableAnswer('3.14159265359', Math.PI, 4)).not.toBe(String(Math.PI))
   })
 
   it('does not insert an improper unit conversion', () => {
@@ -59,10 +67,8 @@ describe('insertableAnswer', () => {
     },
   )
   it.each([0, 1, -1, 2, 4, 10, 12, 100, 1200, 1.5, Math.PI, 2.46e-11, 1e12, 0.000001, 99.25])('insertable number %s', (n) => {
-    const shown = String(n)
-    const got = insertableAnswer(shown, n)
-    if (/e/i.test(got)) expect(Number(got)).toBeCloseTo(n, 8)
-    else expect(['', shown, String(n)].includes(got) || Number(got) === n || Number(got) === Number(shown)).toBe(true)
+    expect(insertableAnswer(String(n), n)).toBe(formatNumber(n))
+    expect(insertableAnswer(String(n), n, 4)).toBe(formatNumber(n, 4))
   })
   it.each(['improper unit conversion', 'Improper unit conversion', ' IMPROPER UNIT CONVERSION '])('blank for %s', (d) => {
     expect(insertableAnswer(d)).toBe('')
@@ -87,8 +93,13 @@ describe('insertableHistoryAnswer', () => {
   })
 
   it('inserts the approximation when approx is on', () => {
-    expect(insertableHistoryAnswer(cosPiOver6, 'approx')).toBe(String(Math.sqrt(3) / 2))
+    expect(insertableHistoryAnswer(cosPiOver6, 'approx')).toBe(formatNumber(Math.sqrt(3) / 2))
     expect(insertableHistoryAnswer(cosPiOver6, 'approx')).not.toMatch(/sqrt/)
+  })
+
+  it('inserts the approximation at the requested significant figures', () => {
+    expect(insertableHistoryAnswer(cosPiOver6, 'approx', 4)).toBe(formatNumber(Math.sqrt(3) / 2, 4))
+    expect(insertableHistoryAnswer(cosPiOver6, 'approx', 4)).not.toBe(String(Math.sqrt(3) / 2))
   })
 
   it('falls back to the approximation when there is no exact form', () => {
@@ -206,7 +217,8 @@ describe('insertableHistoryReuse', () => {
   it('inserts the answer when that setting is on', () => {
     expect(insertableHistoryReuse(row, 'exact', 'answer')).toBe('4')
     expect(insertableHistoryReuse(exactRow, 'exact', 'answer')).toBe('sqrt(3)/2')
-    expect(insertableHistoryReuse(exactRow, 'approx', 'answer')).toBe(String(Math.sqrt(3) / 2))
+    expect(insertableHistoryReuse(exactRow, 'approx', 'answer')).toBe(formatNumber(Math.sqrt(3) / 2))
+    expect(insertableHistoryReuse(exactRow, 'approx', 'answer', 4)).toBe(formatNumber(Math.sqrt(3) / 2, 4))
   })
 
   it('always inserts a definition as the looked-up word', () => {

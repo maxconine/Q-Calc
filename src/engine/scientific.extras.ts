@@ -774,6 +774,7 @@ extraLatex.push(
   { name: 'dot-operator mul', input: '4⋅5', expected: 20 },
   { name: 'typeset 3 · 10^2', input: '3 · 10^2', expected: 300 },
   { name: 'word-dot mul', input: '3 dot 4', expected: 12 },
+  { name: 'glued word-dot mul', input: '4dot1', expected: 4 },
   { name: 'cdot pi', input: 'p\\cdot i', expected: Math.PI },
   { name: '2pi concat', input: '2pi', expected: 2 * Math.PI },
   { name: 'latex binom 5 2', input: '\\binom{5}{2}', expected: 10 },

@@ -25,6 +25,15 @@ describe('significant figures', () => {
     expect(evaluateLine('2 in', { sigFigs: 3 }).display).toBe('50.8 mm')
   })
 
+  it('keeps full precision on the numeric value while rounding only the display', () => {
+    const r = evaluateLine('pi', { sigFigs: 4 })
+    expect(r.display).toBe('3.142')
+    expect(r.value?.n).toBe(Math.PI)
+    const chained = evaluateLine('ans * 2', { ans: r.value?.n, sigFigs: 4 })
+    expect(chained.display).toBe(formatNumber(Math.PI * 2, 4))
+    expect(chained.value?.n).toBe(Math.PI * 2)
+  })
+
   const nums = [
     0, 1, -1, 2, 10, 12.5, 50.8, 0.0508, 0.001, 3.141592653589793, 2.718281828, 99.9, 100, 123.456, 0.333333, 1e-5, 1e6, 1e11, 9.99e-7, 6.02e23, -50.8, -0.125,
     1.2345, 9, 16, 25, 36, 49, 64, 81, 0.5, 0.25, 0.125, 7.5, 8.75, 1024, 2048, 4096, 1.5e-8, 2.5e9,

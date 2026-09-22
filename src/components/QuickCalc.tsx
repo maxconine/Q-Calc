@@ -377,7 +377,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [history])
 
   const lastAns = lastAnswer?.n
-  const ansPlain = lastAnswer ? insertableHistoryAnswer(lastAnswer, settings.answerForm) : undefined
+  const ansPlain = lastAnswer
+    ? insertableHistoryAnswer(lastAnswer, settings.answerForm, settings.sigFigs)
+    : undefined
 
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-MAX_HISTORY)))
@@ -507,9 +509,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     (index: number) => {
       const row = history[index]
       if (!row) return
-      insertPlain(insertableHistoryReuse(row, settings.answerForm, settings.historyInsert))
+      insertPlain(insertableHistoryReuse(row, settings.answerForm, settings.historyInsert, settings.sigFigs))
     },
-    [history, insertPlain, settings.answerForm, settings.historyInsert],
+    [history, insertPlain, settings.answerForm, settings.historyInsert, settings.sigFigs],
   )
 
   const copyValue = useCallback(
@@ -532,8 +534,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   const copyLiveApprox = useCallback(() => {
     if (!display || isImproperUnitConversion(display)) return
-    copyValue(insertableAnswer(display, liveN))
-  }, [copyValue, display, liveN])
+    copyValue(insertableAnswer(display, liveN, settings.sigFigs))
+  }, [copyValue, display, liveN, settings.sigFigs])
 
   const commit = useCallback(() => {
     const expr = qRef.current
@@ -925,7 +927,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     className="tape-a"
                     title="Insert approximation at the cursor"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => insertPlain(insertableAnswer(row.display, row.n))}
+                    onClick={() => insertPlain(insertableAnswer(row.display, row.n, settings.sigFigs))}
                   >
                     {row.display}
                   </button>
@@ -944,7 +946,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     if (row.kind === 'definition') insertHistoryAnswer(i)
-                    else insertPlain(insertableHistoryAnswer(row, settings.answerForm))
+                    else insertPlain(insertableHistoryAnswer(row, settings.answerForm, settings.sigFigs))
                   }}
                 >
                   {visibleAnswer(row, settings.answerForm)}
@@ -983,15 +985,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             onClick={() => setSettings((s) => ({ ...s, fractionMode: !s.fractionMode }))}
           >
             a/b
-          </button>
-          <button
-            type="button"
-            className={settings.rationalize ? 'active' : ''}
-            title="Rationalize denominators · 5/√41 vs 5√41/41"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setSettings((s) => ({ ...s, rationalize: !s.rationalize }))}
-          >
-            √/
           </button>
         </div>
         <QuickInput

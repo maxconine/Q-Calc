@@ -1,3 +1,4 @@
+import { DEFAULT_SIG_FIGS, formatNumber } from '../engine/format'
 import { isImproperUnitConversion } from '../engine/units'
 
 const PLAIN_NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
@@ -6,19 +7,12 @@ function stripGroupingCommas(s: string): string {
   return s.replace(/,(?=\d{3}(?:\D|$))/g, '')
 }
 
-function insertableNumber(n: number): string {
-  if (Math.abs(n) >= 1e12 || (n !== 0 && Math.abs(n) < 1e-6)) return n.toExponential()
-  if (Number.isInteger(n) && Math.abs(n) < 1e12) return String(n)
-  const s = String(n)
-  if (s.includes('e') || s.includes('E')) return s
-  return s
-}
-
-export function insertableAnswer(display: string, n?: number): string {
+/** Inserts the displayed magnitude (sig figs), never the engine's full-precision `n`. */
+export function insertableAnswer(display: string, n?: number, sigFigs = DEFAULT_SIG_FIGS): string {
   const shown = stripGroupingCommas(display).trim()
   if (isImproperUnitConversion(shown)) return ''
   if (shown && !PLAIN_NUMBER.test(shown)) return shown
-  if (n != null && Number.isFinite(n)) return insertableNumber(n)
+  if (n != null && Number.isFinite(n)) return formatNumber(n, sigFigs)
   return shown
 }
 
@@ -54,10 +48,14 @@ export function visibleAnswer(row: { display: string; exact?: string }, form: An
   return row.display
 }
 
-/** Previous-answer insert: exact form when that mode is on and one exists, otherwise the approximation. */
-export function insertableHistoryAnswer(row: HistoryAnswer, form: AnswerForm): string {
+/** Previous-answer insert: exact form when that mode is on and one exists, otherwise the approximation at `sigFigs`. */
+export function insertableHistoryAnswer(
+  row: HistoryAnswer,
+  form: AnswerForm,
+  sigFigs = DEFAULT_SIG_FIGS,
+): string {
   if (form === 'exact' && row.exact) return insertableAnswer(row.exact)
-  return insertableAnswer(row.display, row.n)
+  return insertableAnswer(row.display, row.n, sigFigs)
 }
 
 /** What Enter on a highlighted history row inserts. Clicking the expression always uses `expr`; clicking the answer always uses the answer. */
@@ -65,7 +63,8 @@ export function insertableHistoryReuse(
   row: HistoryAnswer & { expr: string; kind?: string },
   form: AnswerForm,
   insert: HistoryInsert,
+  sigFigs = DEFAULT_SIG_FIGS,
 ): string {
   if (row.kind === 'definition' || insert === 'expr') return row.expr
-  return insertableHistoryAnswer(row, form)
+  return insertableHistoryAnswer(row, form, sigFigs)
 }

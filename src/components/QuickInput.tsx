@@ -29,6 +29,7 @@ const TOKEN_REPLACEMENTS: [RegExp, string][] = [
   [/\binfty\b/gi, '∞'],
   [/\binf\b/gi, '∞'],
   [/\bcbrt\b/gi, '∛'],
+  [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
 ]
 
 export function flattenPastedText(text: string): string {
@@ -47,7 +48,7 @@ export function spliceText(
   return { next: value.slice(0, a) + chunk + value.slice(b), cursor: a + chunk.length }
 }
 
-function prettyTokens(text: string, ansPlain?: string): string {
+export function prettyTokens(text: string, ansPlain?: string): string {
   let out = text
   for (const [re, put] of TOKEN_REPLACEMENTS) {
     re.lastIndex = 0

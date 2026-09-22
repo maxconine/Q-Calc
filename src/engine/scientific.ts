@@ -190,7 +190,7 @@ export function wrapBareFunctions(expr: string): string {
 const TYPESET_MUL = /[×·⋅∙]/g
 
 export function rewriteTypesetMul(s: string): string {
-  return s.replace(TYPESET_MUL, '*').replace(/(?<!\\)\bdot\b/gi, '*')
+  return s.replace(TYPESET_MUL, '*').replace(/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*')
 }
 
 /** Treat typed "p i" / "p·i" as the constant π. */
