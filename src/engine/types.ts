@@ -29,6 +29,8 @@ export interface SheetInputLine {
 export interface EvaluateOptions {
   angleMode?: 'deg' | 'rad'
   ans?: number
+  /** Named values from earlier lines (or stored history) so later expressions can use them. */
+  variables?: Record<string, number>
   fractionMode?: boolean
   /** Move square roots out of the denominator. Default true. */
   rationalize?: boolean

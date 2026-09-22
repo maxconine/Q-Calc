@@ -76,6 +76,17 @@ describe('Scientific functions and typeset input', () => {
     expect(r.value?.n).toBe(10)
   })
 
+  it('can seed variables without re-evaluating prior lines', () => {
+    const r = evaluateLine('x*2 + y', { variables: { x: 4, y: 3 } })
+    closeTo(r.value!.n, 11)
+  })
+
+  it('does not stringify huge ranges into giant displays', () => {
+    const r = evaluateLine('[1...80]')
+    expect(r.display.length).toBeLessThan(80)
+    expect(r.display).toBe('[1, 2, 3, 4, 5, 6, …, 77, 78, 79, 80]')
+  })
+
   it('treats typeset dots as multiplication', () => {
     closeTo(n('2 · 3'), 6)
     closeTo(n('2⋅3'), 6)

@@ -287,8 +287,15 @@ function rewriteFactorial(expr: string): string {
   return s
 }
 
+const MAX_LIST_SHOWN = 16
+
 function formatList(values: number[]): string {
-  return `[${values.map((v) => formatNumber(v)).join(', ')}]`
+  if (values.length <= MAX_LIST_SHOWN) {
+    return `[${values.map((v) => formatNumber(v)).join(', ')}]`
+  }
+  const head = values.slice(0, 6).map((v) => formatNumber(v))
+  const tail = values.slice(-4).map((v) => formatNumber(v))
+  return `[${head.join(', ')}, …, ${tail.join(', ')}]`
 }
 
 function snapInt(n: number): number {

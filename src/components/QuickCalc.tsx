@@ -34,7 +34,16 @@ import {
   type NativeLive,
 } from '../lib/nativeEval'
 import { QuickInput, flattenPastedText, type QuickInputHandle } from './QuickInput'
+import {
+  historyVariables,
+  lastHistoryNumber,
+  normalizeHistoryRow,
+  persistableHistory,
+  slimHistoryRow,
+  type HistoryRow,
+} from '../lib/history'
 
+export type { HistoryRow }
 export type AngleMode = 'deg' | 'rad'
 
 type Settings = {
@@ -55,22 +64,12 @@ type CalcWindow = NativeWindow & {
   __qcalcNativeResult?: (reply: NativeEvalReply) => void
 }
 
-export type HistoryRow = {
-  id: string
-  expr: string
-  display: string
-  exact?: string
-  n?: number
-  kind?: 'definition'
-}
-
 const HISTORY_KEY = 'qcalc-history'
 const SETTINGS_KEY = 'qcalc-settings'
 const DRAFT_KEY = 'qcalc-draft'
 const LEGACY_HISTORY_KEY = 'instant-solver-history'
 const LEGACY_SETTINGS_KEY = 'instant-solver-settings'
 const LEGACY_DRAFT_KEY = 'instant-solver-draft'
-const MAX_HISTORY = 10
 
 function readStorage(key: string, legacy: string): string | null {
   try {
@@ -120,17 +119,11 @@ function loadHistory(): HistoryRow[] {
     if (!raw) return []
     const parsed = JSON.parse(raw) as Array<Partial<HistoryRow> & { latex?: string }>
     if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((row) => ({
-        id: typeof row.id === 'string' ? row.id : uid(),
-        expr: row.expr ?? row.latex ?? '',
-        display: row.display ?? '',
-        exact: typeof row.exact === 'string' ? row.exact : undefined,
-        n: typeof row.n === 'number' ? row.n : undefined,
-        kind: row.kind === 'definition' ? ('definition' as const) : undefined,
-      }))
-      .filter((row) => row.expr || row.display)
-      .slice(-MAX_HISTORY)
+    return persistableHistory(
+      parsed
+        .map((row) => normalizeHistoryRow(row, uid()))
+        .filter((row): row is HistoryRow => row != null),
+    )
   } catch {
     return []
   }
@@ -329,16 +322,33 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     mathRef.current?.focus()
   }, [stopDraftTimer])
 
+  const lastAnswer = useMemo(() => {
+    for (let i = history.length - 1; i >= 0; i--) {
+      const row = history[i]
+      if (!row || row.kind === 'definition') continue
+      if (row.n != null && Number.isFinite(row.n)) return row
+      if (row.display.trim()) return row
+    }
+    return undefined
+  }, [history])
+
+  const lastAns = lastHistoryNumber(history)
+  const ansPlain = lastAnswer
+    ? insertableHistoryAnswer(lastAnswer, settings.answerForm, settings.sigFigs)
+    : undefined
+  const nativeVars = useMemo(() => historyVariables(history), [history])
+
   const sheet = useMemo(() => {
-    const lines = [...history.map((h) => h.expr), q]
-    return evaluateSheet(lines, {
+    return evaluateSheet([q], {
       angleMode: settings.angleMode,
       fractionMode: settings.fractionMode,
       rationalize: settings.rationalize,
       sigFigs: settings.sigFigs,
       defaultUnits: settings.defaultUnits,
+      ans: lastAns,
+      variables: nativeVars,
     })
-  }, [history, q, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.defaultUnits])
+  }, [q, lastAns, nativeVars, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.defaultUnits])
 
   const live = sheet[sheet.length - 1]
   const jsDisplay = q.trim() ? (live?.display ?? '') : ''
@@ -356,33 +366,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   liveNRef.current = liveN
   defLiveRef.current = definition
 
-  const nativeVars = useMemo(() => {
-    const vars: Record<string, number> = {}
-    for (const row of sheet.slice(0, -1)) {
-      if (row.variable && row.value?.kind === 'number' && Number.isFinite(row.value.n)) {
-        vars[row.variable] = row.value.n
-      }
-    }
-    return vars
-  }, [sheet])
-
-  const lastAnswer = useMemo(() => {
-    for (let i = history.length - 1; i >= 0; i--) {
-      const row = history[i]
-      if (!row || row.kind === 'definition') continue
-      if (row.n != null && Number.isFinite(row.n)) return row
-      if (row.display.trim()) return row
-    }
-    return undefined
-  }, [history])
-
-  const lastAns = lastAnswer?.n
-  const ansPlain = lastAnswer
-    ? insertableHistoryAnswer(lastAnswer, settings.answerForm, settings.sigFigs)
-    : undefined
-
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-MAX_HISTORY)))
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(persistableHistory(history)))
+    } catch {
+      /* WKWebView private stores can reject localStorage. */
+    }
   }, [history])
 
   useEffect(() => {
@@ -545,19 +534,18 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const n = liveNRef.current
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
     setHistory((prev) => {
+      const nextRow = slimHistoryRow({
+        id: uid(),
+        expr,
+        display: shown,
+        exact: def ? undefined : exact && exact !== shown ? exact : undefined,
+        n: def ? undefined : Number.isFinite(n) ? n : undefined,
+        kind: def ? ('definition' as const) : undefined,
+      })
+      if (!nextRow) return prev
       const last = prev[prev.length - 1]
-      if (last && last.expr === expr && last.display === shown) return prev
-      return [
-        ...prev,
-        {
-          id: uid(),
-          expr,
-          display: shown,
-          exact: def ? undefined : exact && exact !== shown ? exact : undefined,
-          n: def ? undefined : Number.isFinite(n) ? n : undefined,
-          kind: def ? ('definition' as const) : undefined,
-        },
-      ].slice(-MAX_HISTORY)
+      if (last && last.expr === nextRow.expr && last.display === nextRow.display) return prev
+      return persistableHistory([...prev, nextRow])
     })
     qRef.current = ''
     displayRef.current = ''

@@ -6,6 +6,15 @@ import { exactForm } from './simplify'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
 
+/** `x = 2+3` → name `x` and rhs `2+3`. Built-in names like `pi` are not assignments. */
+export function parseAssignment(trimmed: string): { variable: string; expr: string } | null {
+  const assign = trimmed.match(/^([A-Za-z][A-Za-z0-9]*)\s*=\s*(.+)$/)
+  if (!assign) return null
+  const variable = assign[1]!
+  if (RESERVED.has(variable.toLowerCase())) return null
+  return { variable, expr: assign[2]!.trim() }
+}
+
 function withUnit(text: string, unit?: string): string {
   return unit ? `${text} ${unit}` : text
 }
@@ -30,7 +39,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
   const angleMode = options.angleMode ?? 'deg'
   const fractionMode = options.fractionMode ?? false
   const sigFigs = options.sigFigs ?? DEFAULT_SIG_FIGS
-  const variables: Record<string, number> = {}
+  const variables: Record<string, number> = { ...options.variables }
   let lastAns = options.ans
   const results: LineResult[] = []
 
@@ -43,10 +52,10 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
 
     let expr = trimmed
     let variable: string | undefined
-    const assign = trimmed.match(/^([A-Za-z][A-Za-z0-9]*)\s*=\s*(.+)$/)
-    if (assign && !RESERVED.has(assign[1].toLowerCase())) {
-      variable = assign[1]
-      expr = assign[2].trim()
+    const assign = parseAssignment(trimmed)
+    if (assign) {
+      variable = assign.variable
+      expr = assign.expr
     }
 
     let value: Value | null = null

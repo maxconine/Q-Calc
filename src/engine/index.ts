@@ -1,4 +1,4 @@
-export { evaluateLine, evaluateSheet } from './evaluate'
+export { evaluateLine, evaluateSheet, parseAssignment } from './evaluate'
 export { autofillParens, fillParens, inferParens } from './parens'
 export type { ParenFill } from './parens'
 export { latexToAscii, tryPlainMath } from './plainMath'

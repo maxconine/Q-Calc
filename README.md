@@ -1,4 +1,4 @@
-# Q Calc
+# Q(uick) Calc
 
 A Spotlight-style scientific calculator for Mac. Press **Control + Option + Space** to calculate without leaving the app you’re in.
 
