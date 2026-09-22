@@ -22,9 +22,6 @@ cask "q-calc" do
       remove "Instant Solver.app", recursive: true, base: :appdir
     end
     run "/usr/bin/xattr", args: ["-cr", "{{appdir}}/Q Calc.app"], must_succeed: false
-    run "/bin/zsh", args: [
-      "{{HOMEBREW_PREFIX}}/Library/Taps/maxconine/homebrew-qcalc/macos/enable-autoupdate.sh",
-    ], must_succeed: false
   end
 
   uninstall quit: "com.maxconine.qcalc"
@@ -34,8 +31,8 @@ cask "q-calc" do
   caveats <<~EOS
     Q Calc is a menu-bar app. Press Control + Option + Space to open it.
 
-    Daily Homebrew upgrades for Q Calc are enabled at install. To stop them:
+    Turn on daily Homebrew upgrades for Q Calc:
 
-      brew autoupdate stop
+      zsh "$(brew --prefix)/Library/Taps/maxconine/homebrew-qcalc/macos/enable-autoupdate.sh"
   EOS
 end

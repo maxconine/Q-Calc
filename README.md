@@ -14,6 +14,7 @@ You need [Homebrew](https://brew.sh), an **Apple silicon Mac** (M1 or later), an
 brew tap maxconine/qcalc https://github.com/maxconine/Q-Calc
 brew trust --tap maxconine/qcalc
 brew install --cask maxconine/qcalc/q-calc
+zsh "$(brew --prefix)/Library/Taps/maxconine/homebrew-qcalc/macos/enable-autoupdate.sh"
 ```
 
 Or:
