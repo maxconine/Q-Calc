@@ -7,6 +7,8 @@ import {
   evaluateGraphY,
   findCriticalPoints,
   findRoots,
+  graphHome,
+  graphTicks,
   isGraphCommand,
   parseGraphIntent,
   sampleGraph,
@@ -261,11 +263,26 @@ describe('refined roots and extrema', () => {
     expect(graph('1/(x-0.3)').criticalPoints).toEqual([])
   })
 
-  it('graphs in radians regardless of the angle setting', () => {
-    const g = buildGraph('graph sin(x)', { angleMode: 'deg' })!
-    const crit = g.criticalPoints
-    expect(crit.length).toBeGreaterThanOrEqual(6)
-    expect(crit.every((c) => Math.abs(Math.abs(c.y) - 1) < 1e-9)).toBe(true)
+  it('follows the angle setting, with a degree window for trig in degrees', () => {
+    const deg = buildGraph('graph sin(x)', { angleMode: 'deg' })!
+    expect(deg.angleUnit).toBe('deg')
+    expect(deg.domain).toEqual([-360, 360])
+    expect(deg.criticalPoints.map((c) => c.x)).toEqual([-270, -90, 90, 270])
+    expect(deg.criticalPoints.every((c) => Math.abs(c.y) === 1)).toBe(true)
+    expect(deg.y(30)).toBeCloseTo(0.5, 12)
+
+    const rad = buildGraph('graph sin(x)', { angleMode: 'rad' })!
+    expect(rad.angleUnit).toBe('rad')
+    expect(rad.domain).toEqual([-10, 10])
+    expect(rad.criticalPoints).toHaveLength(6)
+
+    // No trig, no unit — and the ±10 window regardless of the setting.
+    const poly = buildGraph('graph x^2', { angleMode: 'deg' })!
+    expect(poly.angleUnit).toBeNull()
+    expect(poly.domain).toEqual([-10, 10])
+    // A user function that hides the trig still counts.
+    const viaFn = buildGraph('graph g(x)', { angleMode: 'deg', functions: { g: { params: ['t'], body: 'cos(t)' } } })!
+    expect(viaFn.angleUnit).toBe('deg')
   })
 
   it('collapses runs of zero samples', () => {
@@ -277,6 +294,112 @@ describe('refined roots and extrema', () => {
 
   it('keeps large finite values instead of clamping', () => {
     const g = graph('e^x', [-2, 20])
-    expect(g.points.filter((p) => p.y != null)).toHaveLength(401)
+    expect(g.points.every((p) => p.y != null)).toBe(true)
+    expect(Math.max(...g.points.map((p) => p.y!)) / Math.exp(20)).toBeCloseTo(1, 12)
+  })
+})
+
+describe('clean reported values', () => {
+  const graph = (expr: string, domain?: [number, number]) => buildGraph(`graph ${expr}`, { domain })!
+  const coords = (expr: string) => graph(expr).criticalPoints.map((c) => [c.kind, c.x, c.y])
+
+  it('reports the simplest x the function cannot tell apart from the refined extremum', () => {
+    expect(coords('x^2')).toEqual([['min', 0, 0]])
+    expect(coords('x^3-3x')).toEqual([['max', -1, 2], ['min', 1, -2]])
+    expect(coords('sqrt(9.3-x^2)')).toEqual([['max', 0, Math.sqrt(9.3)]])
+    // Irrational extrema keep their precision.
+    const s = graph('sin(x)').criticalPoints.find((c) => c.x > 0 && c.x < 2)!
+    expect(s.x).toBeCloseTo(Math.PI / 2, 7)
+    expect(graph('(x-1/3)^2').criticalPoints[0]!.x).toBeCloseTo(1 / 3, 7)
+  })
+
+  it('snaps bisected roots to short decimals only when f agrees', () => {
+    expect(graph('x-0.3').roots.map((r) => r.x)).toEqual([0.3])
+    expect(graph('sin(x)', [-1, 2.3]).roots.map((r) => r.x)).toEqual([0])
+    expect(graph('x^2-2').roots[1]!.x).toBeCloseTo(Math.SQRT2, 14)
+  })
+})
+
+describe('refined sampling', () => {
+  const graph = (expr: string, domain?: [number, number]) => buildGraph(`graph ${expr}`, { domain })!
+  const finite = (expr: string, domain?: [number, number]) =>
+    graph(expr, domain).points.filter((p): p is { x: number; y: number } => p.y != null)
+
+  it('follows the curve to where its domain ends', () => {
+    const pts = finite('sqrt(9.3-x^2)')
+    const edge = Math.sqrt(9.3)
+    expect(pts[0]!.x).toBeCloseTo(-edge, 8)
+    expect(pts[pts.length - 1]!.x).toBeCloseTo(edge, 8)
+    expect(Math.min(...pts.map((p) => p.y))).toBeLessThan(1e-3)
+  })
+
+  it('breaks the path at jumps instead of drawing risers', () => {
+    const pts = graph('floor(x)').points
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1]!.y
+      const b = pts[i]!.y
+      if (a != null && b != null) expect(b - a).toBe(0)
+    }
+    expect(pts.filter((p) => p.y == null).length).toBeGreaterThanOrEqual(19)
+  })
+
+  it('breaks at every pole of tan, even with both sides in view', () => {
+    const g = graph('tan(x)')
+    const poles = [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5].map((k) => k * Math.PI)
+    for (const pole of poles) {
+      const gap = g.points.find((p) => p.y == null && Math.abs(p.x - pole) < 1e-6)
+      expect(gap, `pole at ${pole}`).toBeTruthy()
+    }
+  })
+
+  it('leaves smooth curves alone', () => {
+    expect(graph('x').points).toHaveLength(401)
+    expect(graph('x^2').points).toHaveLength(401)
+    expect(graph('sin(x)').points.length).toBeLessThan(600)
+  })
+})
+
+describe('auto y-scale', () => {
+  it('shows a curve without poles whole and reaches down to the axis', () => {
+    const exp = buildGraph('graph e^x')!.yScale
+    expect(exp.max).toBeGreaterThan(Math.exp(10))
+    expect(exp.min).toBeLessThan(0)
+    const cup = buildGraph('graph x^2+1')!.yScale
+    expect(cup.min).toBeLessThan(0)
+    const high = buildGraph('graph cos(x)+3', { angleMode: 'rad' })!.yScale
+    expect(high.min).toBeGreaterThan(1.5)
+  })
+})
+
+describe('graphHome', () => {
+  it('narrows the window around roots and extrema that sit in the middle', () => {
+    expect(graphHome('graph x^3-3x')).toEqual([-3, 3])
+    expect(graphHome('graph x^3-x')).toEqual([-1.6, 1.6])
+  })
+
+  it('keeps the standard window otherwise', () => {
+    expect(graphHome('graph x^2')).toEqual([-10, 10])
+    expect(graphHome('graph 1/x')).toEqual([-10, 10])
+    expect(graphHome('graph sin(x)')).toEqual([-10, 10])
+    expect(graphHome('graph sin(x)', { angleMode: 'deg' })).toEqual([-360, 360])
+    expect(graphHome('graph nope(x)')).toEqual([-10, 10])
+  })
+})
+
+describe('graphTicks', () => {
+  const labels = (lo: number, hi: number, unit?: 'deg' | 'rad' | null) => graphTicks(lo, hi, unit).map((t) => t.label)
+
+  it('steps 1-2-5 with clean labels and a true minus', () => {
+    expect(labels(-10, 10)).toEqual(['\u221210', '\u22125', '0', '5', '10'])
+    expect(labels(0.1, 0.7)).toEqual(['0.2', '0.4', '0.6'])
+    expect(labels(0, 0.9)).toEqual(['0', '0.2', '0.4', '0.6', '0.8'])
+  })
+
+  it('uses multiples of π or of degrees on an angle axis', () => {
+    expect(labels(-10, 10, 'rad')).toEqual(['\u22123π', '\u22122π', '\u2212π', '0', 'π', '2π', '3π'])
+    expect(labels(-360, 360, 'deg')).toEqual(['\u2212360°', '\u2212180°', '0°', '180°', '360°'])
+    // Too narrow or too wide for angle steps: plain decimals.
+    expect(labels(0, 1, 'rad')).toEqual(['0', '0.2', '0.4', '0.6', '0.8', '1'])
+    expect(graphTicks(-10, 10, 'rad')[4]!.value).toBe(Math.PI)
   })
 })

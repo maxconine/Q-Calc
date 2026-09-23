@@ -1451,11 +1451,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         </div>
       ) : graphCmd ? (
         <GraphPanel
-          key={q.trim().toLowerCase()}
+          key={`${q.trim().toLowerCase()}|${settings.angleMode}`}
           input={q}
           functions={liveFns}
           variables={nativeVars}
           ans={lastAns}
+          angleMode={settings.angleMode}
           onSelectX={selectGraphX}
         />
       ) : null}

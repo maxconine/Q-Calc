@@ -603,6 +603,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Graph panel under composer — keep total overlay ≤ ~560px (composer 72 + tape + graph). */
 .graph {
+  --graph-plot: color-mix(in srgb, var(--bg) 70%, var(--bg-tape));
   max-height: 296px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -660,20 +661,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
   cursor: grab;
   touch-action: none;
 }
+.graph-plot.snapped {
+  cursor: pointer;
+}
 .graph-plot.dragging {
   cursor: grabbing;
 }
 .graph-plot-bg {
-  fill: color-mix(in srgb, var(--bg) 70%, var(--bg-tape));
+  fill: var(--graph-plot);
+}
+.graph-grid line {
+  stroke: color-mix(in srgb, var(--ink) 5%, transparent);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
 }
 .graph-axis {
-  stroke: var(--line);
+  stroke: color-mix(in srgb, var(--ink) 18%, transparent);
   stroke-width: 1;
+  shape-rendering: crispEdges;
 }
 .graph-tick {
   fill: var(--muted);
   font-size: 10px;
   font-family: var(--font);
+  font-variant-numeric: tabular-nums;
 }
 .graph-curve {
   stroke: var(--answer);
@@ -686,22 +697,32 @@ button { font: inherit; color: inherit; cursor: pointer; }
   fill: var(--answer);
 }
 .graph-mark {
-  cursor: pointer;
-  stroke: var(--bg);
+  fill: var(--graph-plot);
+  stroke: var(--answer);
   stroke-width: 1.5;
 }
-.graph-mark-min {
-  fill: #3b82f6;
+.graph-hover-line {
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
 }
-.graph-mark-max {
-  fill: #ef4444;
+.graph-hover-dot {
+  fill: var(--answer);
+  stroke: var(--graph-plot);
+  stroke-width: 1.5;
 }
-.graph-mark-critical {
-  fill: #a855f7;
-}
-.graph-mark-root {
+.graph-readout {
   fill: var(--ink);
-  opacity: 0.55;
+  font-family: var(--font);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--graph-plot);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.graph-readout-kind {
+  fill: var(--muted);
 }
 .graph-detail {
   margin-top: 6px;
@@ -747,18 +768,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--muted);
-}
-.graph-kind-min {
-  color: #3b82f6;
-}
-.graph-kind-max {
-  color: #ef4444;
-}
-.graph-kind-critical {
-  color: #a855f7;
-}
-.graph-kind-root {
   color: var(--muted);
 }
 .graph-coords {

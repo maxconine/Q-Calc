@@ -7,6 +7,8 @@ export {
   evaluateGraphY,
   findCriticalPoints,
   findRoots,
+  graphHome,
+  graphTicks,
   isGraphCommand,
   parseGraphIntent,
   sampleGraph,
@@ -19,6 +21,7 @@ export type {
   GraphPoint,
   GraphResult,
   GraphRoot,
+  GraphTick,
   YScale,
 } from './graph'
 export { autofillParens, fillParens, inferParens } from './parens'
