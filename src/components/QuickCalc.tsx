@@ -29,6 +29,7 @@ import { nativeHandler, nativeWindow, type NativeWindow, type StoredDraft } from
 import {
   evaluateNative,
   hasNativeEval,
+  looksLikeNaturalLanguage,
   mergeLiveAnswer,
   // nativeDefinition, // Apple Dictionary — uncomment to restore
   nativeReplyToLive,
@@ -815,8 +816,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => () => stopDraftTimer(), [stopDraftTimer])
 
+  // Warm the engine (mathjs, unit tables) off the first keystroke's critical path.
+  useEffect(() => {
+    const t = window.setTimeout(() => evaluateSheet(['1+1']), 0)
+    return () => window.clearTimeout(t)
+  }, [])
+
   useEffect(() => {
     if (!q.trim() || !hasNativeEval() || isGraphCommand(q)) return
+    // Plain math is already answered in JS; SoulverCore is only needed for natural language.
+    if (jsDisplay && !looksLikeNaturalLanguage(q)) return
     const id = ++evalIdRef.current
     const expr = q
     let cancelled = false
@@ -834,7 +843,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     return () => {
       cancelled = true
     }
-  }, [q, lastAns, settings.sigFigs, nativeVars])
+  }, [q, jsDisplay, lastAns, settings.sigFigs, nativeVars])
 
   useEffect(() => {
     const w = windowDraft()
@@ -1121,6 +1130,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           handleRef={mathRef}
           onChange={(text) => {
             caretRef.current = null
+            qRef.current = text
             setQ(text)
             if (selected != null && history[selected]?.expr !== text) setSelected(null)
           }}

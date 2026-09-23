@@ -82,3 +82,51 @@ describe('spliceText', () => {
     expect(spliceText('cos(x)', '31', 4, 5)).toEqual({ next: 'cos(31)', cursor: 6 })
   })
 })
+
+/** Type `text` one key at a time, prettifying after each keystroke with the caret at the end. */
+function typeKeys(text: string, ans?: string): string {
+  let value = ''
+  for (const ch of text) {
+    const raw = value + ch
+    value = prettyTokens(raw, ans, raw.length)
+  }
+  return value
+}
+
+const TYPED_CASES: Array<{ typed: string; shown: string; ans?: string }> = [
+  { typed: 'pint', shown: 'pint' },
+  { typed: 'pipe', shown: 'pipe' },
+  { typed: 'picofarad', shown: 'picofarad' },
+  { typed: 'infinity', shown: 'infinity' },
+  { typed: 'thetas', shown: 'thetas' },
+  { typed: '3 dots', shown: '3 dots' },
+  { typed: 'pi/2', shown: 'π/2' },
+  { typed: '2pi ', shown: '2π ' },
+  { typed: 'cbrt(8)', shown: '∛(8)' },
+  { typed: 'inf+1', shown: '∞+1' },
+  { typed: '2ans', shown: '2ans', ans: '42' },
+]
+
+describe('prettyTokens while typing', () => {
+  it.each(TYPED_CASES)('$typed → $shown', ({ typed, shown, ans }) => {
+    expect(typeKeys(typed, ans)).toBe(shown)
+  })
+
+  it('leaves the token at the caret for the next keystroke', () => {
+    expect(prettyTokens('pi', undefined, 2)).toBe('pi')
+    expect(prettyTokens('pi+pi', undefined, 2)).toBe('pi+π')
+    expect(prettyTokens('ans', '3', 3)).toBe('ans')
+    expect(prettyTokens('ans*', '3', 4)).toBe('3*')
+  })
+
+  it('settles the waiting token without a caret (Enter, blur)', () => {
+    expect(prettyTokens('2pi')).toBe('2π')
+    expect(prettyTokens('pint')).toBe('pint')
+    expect(prettyTokens('ans', '3')).toBe('3')
+  })
+
+  it('evaluates what the prettifier produces', () => {
+    expect(n(typeKeys('cbrt(8)'))).toBeCloseTo(2)
+    expect(n(prettyTokens('2pi'))).toBeCloseTo(2 * Math.PI)
+  })
+})

@@ -43,7 +43,7 @@ export function hasNativeEval(): boolean {
 
 const DEFINE_PREFIX =
   /^(?:define[:\s]+|definition of\s+|meaning of\s+|what does\s+.+\s+mean\??$)/i
-const SINGLE_WORD = /^\p{L}[\p{L}'’\-]*$/u
+const SINGLE_WORD = /^\p{L}[\p{L}'’-]*$/u
 
 /** Bare words (`ingenious`) and explicit `define …` queries. Date/NLP phrases stay with SoulverCore.
  *  Apple Dictionary lookups are currently commented out of nativeEvalPayload. */

@@ -105,9 +105,36 @@ export function normalizeHistoryRow(
   })
 }
 
+/** Variable or function a row defines (`x = 5`, `f(x) = …`), keyed so the two namespaces stay apart. */
+function definedName(row: HistoryRow): string | undefined {
+  if (row.kind === 'definition') return undefined
+  const expr = row.expr.trim()
+  const fn = row.kind === 'function' ? (row.fnName ?? parseFunctionDef(expr)?.name) : parseFunctionDef(expr)?.name
+  if (fn) return `fn:${fn}`
+  const variable = row.kind === 'function' ? undefined : parseAssignment(expr)?.variable
+  return variable ? `var:${variable}` : undefined
+}
+
+/**
+ * The newest MAX_HISTORY rows, plus the newest older row for each variable or function
+ * they do not redefine, so `x = 5` still works after ten more calculations.
+ */
+export function withStickyDefinitions(rows: HistoryRow[]): HistoryRow[] {
+  const recent = rows.slice(-MAX_HISTORY)
+  const seen = new Set(recent.map(definedName).filter(Boolean))
+  const kept: HistoryRow[] = []
+  for (let i = rows.length - recent.length - 1; i >= 0; i--) {
+    const name = definedName(rows[i]!)
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    kept.unshift(rows[i]!)
+  }
+  return [...kept, ...recent]
+}
+
 export function persistableHistory(rows: HistoryRow[]): HistoryRow[] {
   const slimmed: HistoryRow[] = []
-  for (const row of rows.slice(-MAX_HISTORY)) {
+  for (const row of withStickyDefinitions(rows)) {
     const next = slimHistoryRow(row)
     if (next) slimmed.push(next)
   }

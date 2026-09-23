@@ -75,30 +75,37 @@ const OIL_BBL = 42 * US_GAL
 const CORD = 128 * 28.316846592
 const DARCY = 9.869232667160128e-13
 
-type Prefix = { name: string; names: string[]; symbol?: string; factor: number }
+type Prefix = { name: string; names: string[]; symbol: string; factor: number }
 
 const PREFIXES: Prefix[] = [
-  { name: 'yocto', names: ['yocto'], factor: 1e-24 },
-  { name: 'zepto', names: ['zepto'], factor: 1e-21 },
-  { name: 'atto', names: ['atto'], factor: 1e-18 },
-  { name: 'femto', names: ['femto'], factor: 1e-15 },
-  { name: 'pico', names: ['pico'], factor: 1e-12 },
-  { name: 'nano', names: ['nano'], factor: 1e-9 },
-  { name: 'micro', names: ['micro'], factor: 1e-6 },
+  { name: 'yocto', names: ['yocto'], symbol: 'y', factor: 1e-24 },
+  { name: 'zepto', names: ['zepto'], symbol: 'z', factor: 1e-21 },
+  { name: 'atto', names: ['atto'], symbol: 'a', factor: 1e-18 },
+  { name: 'femto', names: ['femto'], symbol: 'f', factor: 1e-15 },
+  { name: 'pico', names: ['pico'], symbol: 'p', factor: 1e-12 },
+  { name: 'nano', names: ['nano'], symbol: 'n', factor: 1e-9 },
+  { name: 'micro', names: ['micro'], symbol: 'μ', factor: 1e-6 },
   { name: 'milli', names: ['milli', 'm'], symbol: 'm', factor: 1e-3 },
   { name: 'centi', names: ['centi', 'c'], symbol: 'c', factor: 1e-2 },
-  { name: 'deci', names: ['deci'], factor: 1e-1 },
-  { name: 'deka', names: ['deka', 'deca'], factor: 1e1 },
-  { name: 'hecto', names: ['hecto'], factor: 1e2 },
+  { name: 'deci', names: ['deci'], symbol: 'd', factor: 1e-1 },
+  { name: 'deka', names: ['deka', 'deca'], symbol: 'da', factor: 1e1 },
+  { name: 'hecto', names: ['hecto'], symbol: 'h', factor: 1e2 },
   { name: 'kilo', names: ['kilo', 'k'], symbol: 'k', factor: 1e3 },
-  { name: 'mega', names: ['mega'], factor: 1e6 },
-  { name: 'giga', names: ['giga'], factor: 1e9 },
-  { name: 'tera', names: ['tera'], factor: 1e12 },
-  { name: 'peta', names: ['peta'], factor: 1e15 },
-  { name: 'exa', names: ['exa'], factor: 1e18 },
-  { name: 'zetta', names: ['zetta'], factor: 1e21 },
-  { name: 'yotta', names: ['yotta'], factor: 1e24 },
+  { name: 'mega', names: ['mega'], symbol: 'M', factor: 1e6 },
+  { name: 'giga', names: ['giga'], symbol: 'G', factor: 1e9 },
+  { name: 'tera', names: ['tera'], symbol: 'T', factor: 1e12 },
+  { name: 'peta', names: ['peta'], symbol: 'P', factor: 1e15 },
+  { name: 'exa', names: ['exa'], symbol: 'E', factor: 1e18 },
+  { name: 'zetta', names: ['zetta'], symbol: 'Z', factor: 1e21 },
+  { name: 'yotta', names: ['yotta'], symbol: 'Y', factor: 1e24 },
 ]
+
+/** `ms`, `kV`, `MN`. A squared/cubed base (`m²`) keeps the spelled label, since `km²` would mean 10⁶ m². */
+function prefixedLabel(prefix: Prefix, base: Unit): string {
+  if (!/[²³]/.test(base.symbol)) return prefix.symbol + base.symbol
+  const word = wordNames(base)[0]
+  return prefix.name + (word ?? base.symbol)
+}
 
 const UNIT_LIST: Unit[] = [
   // Length — US customary → SI, SI → US
@@ -201,7 +208,7 @@ const UNIT_LIST: Unit[] = [
   { id: 'min', dim: 'time', symbol: 'min', toBase: 60, names: ['min', 'mins', 'minute', 'minutes'] },
   { id: 'wk', dim: 'time', symbol: 'wk', toBase: 604800, names: ['wk', 'wks', 'week', 'weeks'] },
   { id: 'yr', dim: 'time', symbol: 'yr', toBase: YEAR, names: ['yr', 'yrs', 'year', 'years'] },
-  { id: 'month', dim: 'time', symbol: 'mo', toBase: YEAR / 12, names: ['month', 'months'] },
+  { id: 'month', dim: 'time', symbol: 'mo', toBase: YEAR / 12, names: ['mo', 'mos', 'month', 'months'] },
   { id: 'decade', dim: 'time', symbol: 'decades', toBase: 10 * YEAR, names: ['decade', 'decades'] },
   { id: 'century', dim: 'time', symbol: 'centuries', toBase: 100 * YEAR, names: ['century', 'centuries'] },
   { id: 'millennium', dim: 'time', symbol: 'kyr', toBase: 1000 * YEAR, names: ['millenium', 'millennium', 'millenniums', 'millennia'] },
@@ -312,7 +319,14 @@ function takenAliases(units: Unit[]): Set<string> {
 function applySiPrefixes(units: Unit[]): void {
   const taken = takenAliases(units)
   const roots = units.filter((u) => u.prefixable)
+  const families = new Map<Dim, Unit[]>()
+  for (const u of units) {
+    const family = families.get(u.dim)
+    if (family) family.push(u)
+    else families.set(u.dim, [u])
+  }
   for (const base of roots) {
+    const family = families.get(base.dim)!
     const words = wordNames(base)
     for (const prefix of PREFIXES) {
       const toBase = prefix.factor * base.toBase
@@ -326,21 +340,22 @@ function applySiPrefixes(units: Unit[]): void {
       }
       const fresh = [...new Set(candidates.map((a) => a.toLowerCase()))].filter((a) => a && !taken.has(a))
       if (!fresh.length) continue
-      const existing = units.find((u) => u.dim === base.dim && sameScale(u.toBase, toBase))
+      const existing = family.find((u) => sameScale(u.toBase, toBase))
       if (existing) {
         existing.names.push(...fresh)
         for (const a of fresh) taken.add(a)
         continue
       }
-      const label = words[0] ? prefix.name + words[0] : prefix.name + base.symbol
-      units.push({
+      const unit: Unit = {
         id: `${prefix.name}_${base.id}`,
         dim: base.dim,
-        symbol: label,
+        symbol: prefixedLabel(prefix, base),
         toBase,
         defaultTo: base.id,
         names: fresh,
-      })
+      }
+      units.push(unit)
+      family.push(unit)
       for (const a of fresh) taken.add(a)
     }
   }
@@ -415,11 +430,11 @@ const ALIAS_INDEX: { alias: string; unit: Unit }[] = []
       }
     }
   }
-  ALIAS_INDEX.sort((a, b) => b.alias.length - a.alias.length || a.alias.localeCompare(b.alias))
+  ALIAS_INDEX.sort((a, b) => b.alias.length - a.alias.length)
 }
 
 const PREFIX_INDEX = PREFIXES.flatMap((p) => p.names.map((name) => ({ name: name.toLowerCase(), prefix: p }))).sort(
-  (a, b) => b.name.length - a.name.length || a.name.localeCompare(b.name),
+  (a, b) => b.name.length - a.name.length,
 )
 
 const SI_SCALE: Partial<Record<Dim, number>> = { volume: 0.001 }
@@ -428,28 +443,34 @@ function siOf(unit: Unit): number {
   return unit.toBase * (SI_SCALE[unit.dim] ?? 1)
 }
 
-const CASE_PREFIXES: { symbol: string; factor: number; name: string }[] = [
-  { symbol: 'Y', factor: 1e24, name: 'yotta' },
-  { symbol: 'Z', factor: 1e21, name: 'zetta' },
-  { symbol: 'E', factor: 1e18, name: 'exa' },
-  { symbol: 'P', factor: 1e15, name: 'peta' },
-  { symbol: 'T', factor: 1e12, name: 'tera' },
-  { symbol: 'G', factor: 1e9, name: 'giga' },
-  { symbol: 'M', factor: 1e6, name: 'mega' },
-  { symbol: 'k', factor: 1e3, name: 'kilo' },
-  { symbol: 'h', factor: 1e2, name: 'hecto' },
-  { symbol: 'd', factor: 1e-1, name: 'deci' },
-  { symbol: 'c', factor: 1e-2, name: 'centi' },
-  { symbol: 'm', factor: 1e-3, name: 'milli' },
-  { symbol: 'u', factor: 1e-6, name: 'micro' },
-  { symbol: 'n', factor: 1e-9, name: 'nano' },
-  { symbol: 'p', factor: 1e-12, name: 'pico' },
-  { symbol: 'f', factor: 1e-15, name: 'femto' },
-  { symbol: 'a', factor: 1e-18, name: 'atto' },
-]
+const PREFIX_BY_NAME = new Map(PREFIXES.map((p) => [p.name, p]))
+
+/** Case-sensitive one-letter prefixes (`MN`, `mN`, `us` for µs after preprocess). */
+const CASE_PREFIXES: { symbol: string; prefix: Prefix }[] = (
+  [
+    ['Y', 'yotta'],
+    ['Z', 'zetta'],
+    ['E', 'exa'],
+    ['P', 'peta'],
+    ['T', 'tera'],
+    ['G', 'giga'],
+    ['M', 'mega'],
+    ['k', 'kilo'],
+    ['h', 'hecto'],
+    ['d', 'deci'],
+    ['c', 'centi'],
+    ['m', 'milli'],
+    ['u', 'micro'],
+    ['n', 'nano'],
+    ['p', 'pico'],
+    ['f', 'femto'],
+    ['a', 'atto'],
+  ] as const
+).map(([symbol, name]) => ({ symbol, prefix: PREFIX_BY_NAME.get(name)! }))
 
 function preprocess(s: string): string {
   return s
+    .replace(/(\d+)'(\d+(?:\.\d+)?)"/g, "$1 ft $2 in")
     .replace(/π/g, 'pi')
     .replace(/τ/g, 'tau')
     .replace(/−/g, '-')
@@ -491,20 +512,8 @@ function scaleUnit(base: Unit, prefix: Prefix): Unit | null {
   if (!Number.isFinite(toBase) || toBase === 0) return null
   const existing = UNIT_LIST.find((u) => u.dim === base.dim && sameScale(u.toBase, toBase))
   if (existing) return existing
-  const words = wordNames(base)
-  const label = words[0] ? prefix.name + words[0] : prefix.name + base.symbol
+  const label = prefixedLabel(prefix, base)
   return { id: `${prefix.name}_${base.id}`, dim: base.dim, symbol: label, toBase, defaultTo: base.id, names: [] }
-}
-
-function scaleByFactor(base: Unit, factor: number, name: string): Unit | null {
-  if (base.dim === 'temperature' || base.dim === 'digital' || base.dim === 'dimensionless') return null
-  const toBase = base.toBase * factor
-  if (!Number.isFinite(toBase) || toBase === 0) return null
-  const existing = UNIT_LIST.find((u) => u.dim === base.dim && sameScale(u.toBase, toBase))
-  if (existing) return existing
-  const words = wordNames(base)
-  const label = words[0] ? name + words[0] : name + base.symbol
-  return { id: `${name}_${base.id}`, dim: base.dim, symbol: label, toBase, defaultTo: base.id, names: [] }
 }
 
 function matchCasePrefixAtEnd(rest: string, unit: Unit): { unit: Unit; rest: string } | null {
@@ -514,7 +523,7 @@ function matchCasePrefixAtEnd(rest: string, unit: Unit): { unit: Unit; rest: str
     const prev = before[before.length - 1]
     if (isLetter(prev)) continue
     if (!before.trim()) continue
-    const scaled = scaleByFactor(unit, p.factor, p.name)
+    const scaled = scaleUnit(unit, p.prefix)
     if (!scaled) continue
     return { unit: scaled, rest: before.trimEnd() }
   }
@@ -602,12 +611,12 @@ function matchUnitAtStart(s: string): { unit: Unit; rest: string } | null {
     const siId = PREFIX_SI_SYMBOL[rest[0] ?? '']
     if (siId && !isLetter(rest[1])) {
       const base = BY_ID.get(siId)
-      const scaled = base ? scaleByFactor(base, p.factor, p.name) : null
+      const scaled = base ? scaleUnit(base, p.prefix) : null
       if (scaled) return { unit: scaled, rest: rest.slice(1) }
     }
     const u = matchBareUnitAtStart(rest)
     if (!u) continue
-    const scaled = scaleByFactor(u.unit, p.factor, p.name)
+    const scaled = scaleUnit(u.unit, p.prefix)
     if (!scaled) continue
     return { unit: scaled, rest: u.rest }
   }
@@ -617,28 +626,28 @@ function matchUnitAtStart(s: string): { unit: Unit; rest: string } | null {
 type DimVec = readonly number[]
 
 const DIM_VEC: Record<Dim, DimVec> = {
-  mass: [1, 0, 0, 0, 0, 0],
-  length: [0, 1, 0, 0, 0, 0],
-  time: [0, 0, 1, 0, 0, 0],
-  current: [0, 0, 0, 1, 0, 0],
-  temperature: [0, 0, 0, 0, 1, 0],
-  angle: [0, 0, 0, 0, 0, 1],
-  speed: [0, 1, -1, 0, 0, 0],
-  acceleration: [0, 1, -2, 0, 0, 0],
-  force: [1, 1, -2, 0, 0, 0],
-  energy: [1, 2, -2, 0, 0, 0],
-  power: [1, 2, -3, 0, 0, 0],
-  pressure: [1, -1, -2, 0, 0, 0],
-  area: [0, 2, 0, 0, 0, 0],
-  volume: [0, 3, 0, 0, 0, 0],
-  frequency: [0, 0, -1, 0, 0, 0],
-  charge: [0, 0, 1, 1, 0, 0],
-  voltage: [1, 2, -3, -1, 0, 0],
-  resistance: [1, 2, -3, -2, 0, 0],
-  capacitance: [-1, -2, 4, 2, 0, 0],
-  inductance: [1, 2, -2, -2, 0, 0],
-  dimensionless: [0, 0, 0, 0, 0, 0],
-  digital: [0, 0, 0, 0, 0, 0],
+  mass: [1, 0, 0, 0, 0, 0, 0],
+  length: [0, 1, 0, 0, 0, 0, 0],
+  time: [0, 0, 1, 0, 0, 0, 0],
+  current: [0, 0, 0, 1, 0, 0, 0],
+  temperature: [0, 0, 0, 0, 1, 0, 0],
+  angle: [0, 0, 0, 0, 0, 1, 0],
+  speed: [0, 1, -1, 0, 0, 0, 0],
+  acceleration: [0, 1, -2, 0, 0, 0, 0],
+  force: [1, 1, -2, 0, 0, 0, 0],
+  energy: [1, 2, -2, 0, 0, 0, 0],
+  power: [1, 2, -3, 0, 0, 0, 0],
+  pressure: [1, -1, -2, 0, 0, 0, 0],
+  area: [0, 2, 0, 0, 0, 0, 0],
+  volume: [0, 3, 0, 0, 0, 0, 0],
+  frequency: [0, 0, -1, 0, 0, 0, 0],
+  charge: [0, 0, 1, 1, 0, 0, 0],
+  voltage: [1, 2, -3, -1, 0, 0, 0],
+  resistance: [1, 2, -3, -2, 0, 0, 0],
+  capacitance: [-1, -2, 4, 2, 0, 0, 0],
+  inductance: [1, 2, -2, -2, 0, 0, 0],
+  dimensionless: [0, 0, 0, 0, 0, 0, 0],
+  digital: [0, 0, 0, 0, 0, 0, 1],
 }
 
 type Qty = { si: number; dim: number[]; prefer?: Unit }
@@ -767,7 +776,7 @@ function namedUnitFor(dim: number[]): Unit | undefined {
 }
 
 function formatCompound(dim: number[]): string {
-  const names = ['kg', 'm', 's', 'A', 'K', 'rad']
+  const names = ['kg', 'm', 's', 'A', 'K', 'rad', 'B']
   const num: string[] = []
   const den: string[] = []
   dim.forEach((e, i) => {
@@ -909,6 +918,13 @@ class UnitParser {
         const right = this.parsePow()
         if (!right) return null
         left = mulQty(left, right)
+        continue
+      }
+      // `5 ft 10 in`, `2 hr 30 min`: a juxtaposed quantity of the same dimension adds.
+      if (/[\d.]/.test(ch ?? '') && !isZeroVec(left.dim)) {
+        const right = this.parsePow()
+        if (!right || !vecEq(left.dim, right.dim)) return null
+        left = addQty(left, right, 1)!
         continue
       }
       break

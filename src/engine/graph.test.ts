@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   autoYScale,
   buildGraph,
+  compileGraphY,
   DEFAULT_GRAPH_DOMAIN,
+  evaluateGraphY,
   findCriticalPoints,
   findRoots,
   isGraphCommand,
@@ -32,7 +34,7 @@ describe('parseGraphIntent', () => {
       functions: { f: { params: ['x'], body: 'x^2' } },
     })
     expect(intent).toEqual({
-      expression: 'f(x)',
+      expression: 'x^2',
       label: 'f(x)',
     })
   })
@@ -170,7 +172,7 @@ describe('buildGraph', () => {
       functions: { f: { params: ['x'], body: 'x^2' } },
     })
     expect(g!.error).toBeUndefined()
-    expect(g!.intent.expression).toBe('f(x)')
+    expect(g!.intent.expression).toBe('x^2')
     const near3 = g!.points.reduce((best, p) =>
       Math.abs(p.x - 3) < Math.abs(best.x - 3) ? p : best,
     )
@@ -186,5 +188,49 @@ describe('buildGraph', () => {
   it('can omit roots when findRoots is false', () => {
     const g = buildGraph('graph x^2 - 1', { findRoots: false })
     expect(g!.roots).toEqual([])
+  })
+})
+
+describe('compiled sampler', () => {
+  const opts = {
+    variables: { k: 3 },
+    functions: { f: { params: ['x'], body: 'x^3 - x' } },
+  }
+  const cases: Array<{ expr: string; angleMode?: 'deg' | 'rad' }> = [
+    { expr: 'x^2' },
+    { expr: 'x^2-2x' },
+    { expr: '2x+1' },
+    { expr: 'sin(x)' },
+    { expr: 'tan(x)', angleMode: 'rad' },
+    { expr: '1/x' },
+    { expr: 'sqrt(x)' },
+    { expr: 'ln(x)' },
+    { expr: 'x!' },
+    { expr: 'floor(x)' },
+    { expr: 'e^x' },
+    { expr: 'k*x' },
+    { expr: 'f(x)' },
+  ]
+
+  it.each(cases)('matches evaluateGraphY for $expr', ({ expr, angleMode }) => {
+    const options = { ...opts, angleMode, domain: [-10, 10] as [number, number], sampleCount: 161 }
+    const y = compileGraphY(expr, options)
+    let maxErr = 0
+    for (const p of sampleGraph(expr, options)) {
+      const ref = evaluateGraphY(expr, p.x, options)
+      expect(p.y === null, `${expr} at x=${p.x}`).toBe(ref === null)
+      expect(y(p.x)).toBe(p.y)
+      if (p.y !== null && ref !== null) maxErr = Math.max(maxErr, Math.abs(p.y - ref) / Math.max(1, Math.abs(ref)))
+    }
+    expect(maxErr).toBeLessThanOrEqual(1e-9)
+  })
+
+  it('inlines the body for graph <name>, including a non-x parameter', () => {
+    const functions = { f: { params: ['x'], body: 'x^2' }, g: { params: ['t'], body: '2t + 1' } }
+    expect(parseGraphIntent('graph f', { functions })?.expression).toBe('x^2')
+    expect(parseGraphIntent('graph g', { functions })?.expression).toBe('2x + 1')
+    const g = buildGraph('graph g', { functions })
+    expect(g!.error).toBeUndefined()
+    expect(g!.points[g!.points.length - 1]!.y).toBeCloseTo(21, 9)
   })
 })

@@ -1,5 +1,5 @@
 import { parseFunctionDef } from './evaluate'
-import { evalScientific, type AngleMode } from './scientific'
+import { compileScientific, evalScientific, type AngleMode } from './scientific'
 import type { UserFunction } from './types'
 
 /** Default plot domain for y = f(x). */
@@ -119,8 +119,8 @@ export function parseGraphIntent(
         return { expression: '', label: name }
       }
       const param = def.params[0]!
-      // Prefer calling the registered function so outer variables stay consistent.
-      const expression = param === 'x' ? `${name}(x)` : rewriteParam(def.body, param, 'x')
+      // Inline the body so sampling compiles one expression instead of re-evaluating a call per sample.
+      const expression = rewriteParam(def.body, param, 'x')
       return { expression, label: `${name}(${param})` }
     }
   }
@@ -156,16 +156,41 @@ export function evaluateGraphY(
   }
 }
 
+/** Compile the expression once into y(x); same results as evaluateGraphY. */
+export function compileGraphY(expression: string, options: GraphOptions = {}): (x: number) => number | null {
+  const f = expression.trim()
+    ? compileScientific(
+        expression,
+        {
+          ans: options.ans,
+          angleMode: options.angleMode,
+          variables: options.variables,
+          functions: options.functions,
+        },
+        'x',
+      )
+    : null
+  if (!f) return () => null
+  return (x) => {
+    if (!Number.isFinite(x)) return null
+    const v = f(x)
+    if (!v || v.kind !== 'number' || !Number.isFinite(v.n)) return null
+    if (Math.abs(v.n) > GRAPH_Y_CLAMP) return null
+    return v.n
+  }
+}
+
 /** Sample y = f(x) over the domain. */
 export function sampleGraph(expression: string, options: GraphOptions = {}): GraphPoint[] {
   const [xMin, xMax] = normalizeDomain(options.domain)
   const n = Math.max(2, Math.floor(options.sampleCount ?? DEFAULT_GRAPH_SAMPLES))
+  const y = compileGraphY(expression, options)
   const points: GraphPoint[] = []
   const span = xMax - xMin
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1)
     const x = xMin + span * t
-    points.push({ x, y: evaluateGraphY(expression, x, options) })
+    points.push({ x, y: y(x) })
   }
   return points
 }
@@ -323,7 +348,7 @@ function normalizeDomain(domain?: [number, number]): [number, number] {
 /** Replace standalone identifier `from` with `to` in an expression body. */
 function rewriteParam(body: string, from: string, to: string): string {
   if (from === to) return body
-  const re = new RegExp(`\\b${escapeRegExp(from)}\\b`, 'g')
+  const re = new RegExp(`(?<![A-Za-z_])${escapeRegExp(from)}(?![A-Za-z0-9_])`, 'g')
   return body.replace(re, to)
 }
 

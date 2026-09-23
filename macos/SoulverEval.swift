@@ -23,6 +23,11 @@ enum SoulverEval {
         return calc
     }()
 
+    /// Build the calculator and load its tables in the background so the first keystroke is fast.
+    static func warm() {
+        DispatchQueue.global(qos: .utility).async { _ = evaluate("1+1") }
+    }
+
     static func evaluate(
         _ expression: String,
         ans: Double? = nil,

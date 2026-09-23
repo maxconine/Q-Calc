@@ -106,6 +106,10 @@ export function GraphPanel({
   ])
   const [dragging, setDragging] = useState(false)
   const dragRef = useRef<{ startX: number; domain: [number, number] } | null>(null)
+  // Pointer moves outpace frames; resample at most once per frame.
+  const dragFrameRef = useRef(0)
+  const dragDomainRef = useRef<[number, number] | null>(null)
+  useEffect(() => () => cancelAnimationFrame(dragFrameRef.current), [])
   const plotRef = useRef<SVGSVGElement>(null)
 
   // Reset domain when the graph command identity changes (not on every keystroke of unrelated edits).
@@ -212,7 +216,12 @@ export function GraphPanel({
       const [lo, hi] = drag.domain
       const span = hi - lo
       const dx = -(dxPx / plotW) * span
-      setDomain(clampDomain([lo + dx, hi + dx]))
+      dragDomainRef.current = clampDomain([lo + dx, hi + dx])
+      if (dragFrameRef.current) return
+      dragFrameRef.current = requestAnimationFrame(() => {
+        dragFrameRef.current = 0
+        if (dragDomainRef.current) setDomain(dragDomainRef.current)
+      })
     },
     [plotW],
   )

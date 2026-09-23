@@ -151,7 +151,7 @@ suite('Fractions & Decimals', [
   { name: 'Repeating Decimal Conversion', input: '0.333333333', fractionMode: true, display: '1/3' },
   { name: 'Negative Fraction', input: '-7/8', expected: -0.875 },
   { name: 'Improper Fraction Conversion', input: '11 / 4', expected: 2.75 },
-  { name: 'Precision Fraction Conversion', input: '0.142857', fractionMode: true, display: '1/7' },
+  { name: 'Precision Fraction Conversion', input: '1/3 + 1/3', fractionMode: true, display: '2/3' },
   { name: 'Unit conversion to fraction', input: '2032mm to ft', fractionMode: true, display: '20/3 ft' },
   { name: 'Unit conversion stays decimal without a/b', input: '2032mm to ft', display: /ft$/ },
   { name: 'Unit arithmetic to fraction', input: '3 ft / 2', fractionMode: true, display: '3/2 ft' },
@@ -641,3 +641,119 @@ describe('Exact form vs decimal copy', () => {
     expect(r.display, c.input).not.toMatch(/≈|sqrt|pi\//)
   })
 })
+
+suite('Implicit multiplication with variables', [
+  { name: '2x', input: ['x = 3', '2x'], expected: 6 },
+  { name: '3x+1', input: ['x = 3', '3x+1'], expected: 10 },
+  { name: 'x^2-2x', input: ['x = 3', 'x^2-2x'], expected: 3 },
+  { name: '2x^2', input: ['x = 3', '2x^2'], expected: 18 },
+  { name: 'variable m beats metres', input: ['m = 3', '2m'], expected: 6 },
+  { name: 'multi-letter variable', input: ['rate = 4', '5rate'], expected: 20 },
+  { name: 'unit symbols still convert', input: '5 mm', display: /in$/ },
+])
+
+suite('mod operator', [
+  { name: '7 mod 3', input: '7 mod 3', expected: 1 },
+  { name: 'negative dividend', input: '-7 mod 3', expected: 2 },
+  { name: 'mod 0 is undefined', input: '7 mod 0', undefined: true },
+  { name: 'function form unchanged', input: 'mod(7,3)', expected: 1 },
+  { name: 'decimal operands', input: '7.5 mod 2', expected: 1.5 },
+  { name: 'inside an expression', input: '10 mod 4 + 1', expected: 3 },
+])
+
+suite('Cube root symbol', [
+  { name: '∛(8)', input: '∛(8)', expected: 2 },
+  { name: 'bare ∛8', input: '∛8', expected: 2 },
+  { name: 'coefficient 2∛8', input: '2∛8', expected: 4 },
+  { name: 'coefficient 2√8', input: '2√8', expected: 2 * Math.sqrt(8) },
+  { name: 'negative radicand', input: '∛(-27)', expected: -3 },
+])
+
+suite('Factorial of a call', [
+  { name: 'sqrt(4)!', input: 'sqrt(4)!', expected: 2 },
+  { name: 'nCr(5,2)!', input: 'nCr(5,2)!', expected: 3_628_800 },
+  { name: 'user function', input: ['f(x) = x+1', 'f(2)!'], expected: 6 },
+  { name: 'explicit product unchanged', input: '2*(3)!', expected: 12 },
+  { name: 'parenthesised number', input: '(3)!', expected: 6 },
+])
+
+suite('Bare function arguments with constants', [
+  { name: 'sin 2pi', input: 'sin 2pi', matches: 'sin(2pi)' },
+  { name: 'sin 2π', input: 'sin 2π', matches: 'sin(2π)' },
+  { name: 'cos 2pi radians', input: 'cos 2pi', angleMode: 'rad', expected: 1 },
+  { name: 'sin 2tau', input: 'sin 2tau', matches: 'sin(2tau)' },
+  { name: 'two bare calls', input: 'sin 30 + cos 60', expected: 1 },
+])
+
+suite('Statistics and counting edges', [
+  { name: 'stdev of one value', input: 'stdev(5)', undefined: true },
+  { name: 'stdev of nothing', input: 'stdev()', undefined: true },
+  { name: 'var of one value', input: 'var(5)', undefined: true },
+  { name: 'stdevp of one value', input: 'stdevp(5)', expected: 0 },
+  { name: 'varp of one value', input: 'varp(5)', expected: 0 },
+  { name: 'stdev of two values', input: 'stdev(2, 4)', expected: Math.SQRT2 },
+  { name: 'nPr choosing too many', input: 'nPr(2,5)', expected: 0 },
+  { name: 'nCr choosing too many', input: 'nCr(5,6)', expected: 0 },
+  { name: 'nPr non-integer', input: 'nPr(5,2.5)', undefined: true },
+  { name: 'nCr negative', input: 'nCr(-1,2)', undefined: true },
+  { name: 'infix nCr choosing too many', input: '3 nCr 4', expected: 0 },
+])
+
+suite('Gamma factorial and overflow', [
+  { name: '3.5!', input: '3.5!', expected: 11.631728396567448, eps: 1e-9 },
+  { name: '0.5!', input: '0.5!', expected: Math.sqrt(Math.PI) / 2, eps: 1e-9 },
+  { name: '(-0.5)!', input: '(-0.5)!', expected: Math.sqrt(Math.PI), eps: 1e-9 },
+  { name: 'negative integer', input: '(-1)!', undefined: true },
+  { name: '170! is finite', input: '170!', gte: 7e306 },
+  { name: '171! overflows', input: '171!', display: '∞' },
+  { name: 'division by zero is not infinity', input: '1/0', undefined: true },
+])
+
+suite('User names shadow n( and count(', [
+  { name: 'variable n times group', input: ['n = 5', 'n(2+3)'], expected: 25 },
+  { name: 'function named n', input: ['n(x) = x^2', 'n(3)'], expected: 9 },
+  { name: 'built-in count( still counts', input: 'count(4,5,6)', expected: 3 },
+  { name: 'variable k times group', input: ['k = 2', 'k(3)'], expected: 6 },
+  { name: 'built-in n( still counts', input: 'n(1,2,3)', expected: 3 },
+])
+
+suite('Percent adds to the whole left side', [
+  { name: '200+15%', input: '200 + 15%', expected: 230 },
+  { name: '200-15%', input: '200 - 15%', expected: 170 },
+  { name: '2^3+10%', input: '2^3 + 10%', expected: 8.8 },
+  { name: '10-2+10%', input: '10-2+10%', expected: 8.8 },
+  { name: '2*3+10%', input: '2*3+10%', expected: 6.6 },
+  { name: '(10-2)+10%', input: '(10-2)+10%', expected: 8.8 },
+  { name: 'chained', input: '200 + 10% + 10%', expected: 242 },
+  { name: 'down then up', input: '100-10%+10%', expected: 99 },
+  { name: 'percent terms only', input: '15% + 15%', expected: 0.3 },
+  { name: 'variable', input: ['x = 50', 'x+10%'], expected: 55 },
+  { name: 'function value', input: 'sin(30)+10%', expected: 0.55 },
+  { name: 'call argument', input: 'max(1, 2 + 10%)', expected: 2.2 },
+  { name: 'product unchanged', input: '200 * 15%', expected: 30 },
+  { name: 'negative percent product', input: '200 * -15%', expected: -30 },
+  { name: 'scientific notation', input: '1e3+5%', expected: 1050 },
+  { name: 'percent term times more', input: '200 + 15% * 2', expected: 200.3 },
+  { name: 'bare percent', input: '15%', expected: 0.15 },
+])
+
+suite('Thousands separators and absolute bars', [
+  { name: '1,000 + 1', input: '1,000 + 1', expected: 1001 },
+  { name: '1,000,000 * 2', input: '1,000,000 * 2', expected: 2_000_000 },
+  { name: 'decimal', input: '12,345.5 + 0.5', expected: 12_346 },
+  { name: 'call arguments keep commas', input: 'max(1,200)', expected: 200 },
+  { name: 'nCr arguments keep commas', input: 'nCr(5,200)', expected: 0 },
+  { name: 'list keeps commas', input: '[1,200]', display: '[1, 200]' },
+  { name: '|-3|', input: '|-3|', expected: 3 },
+  { name: '|2-5| + 1', input: '|2-5| + 1', expected: 4 },
+  { name: '2*|-3|', input: '2*|-3|', expected: 6 },
+])
+
+suite('Fraction mode only for exact fractions', [
+  { name: 'sqrt(2) stays decimal', input: 'sqrt(2)', fractionMode: true, display: /^1\.414/ },
+  { name: 'pi stays decimal', input: 'pi', fractionMode: true, display: /^3\.14159/ },
+  { name: 'e stays decimal', input: 'e', fractionMode: true, display: /^2\.71828/ },
+  { name: 'sin(45) stays decimal', input: 'sin(45)', fractionMode: true, display: /^0\.7071/ },
+  { name: 'truncated 1/7 stays decimal', input: '0.142857', fractionMode: true, display: '0.142857' },
+  { name: '2/7', input: '2/7', fractionMode: true, display: '2/7' },
+])

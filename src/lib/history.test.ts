@@ -290,3 +290,35 @@ describe('persistableHistory', () => {
     expect(saved.every((r) => r.display.length <= MAX_HISTORY_DISPLAY)).toBe(true)
   })
 })
+
+describe('sticky definitions', () => {
+  const calcs = (count: number, from = 0) =>
+    Array.from({ length: count }, (_, i) => row({ id: `c${from + i}`, expr: `${from + i}+0`, display: `${from + i}`, n: from + i }))
+
+  it('keeps an assignment older than the newest rows', () => {
+    const rows = [row({ id: 'x', expr: 'x = 5', display: '5', n: 5 }), ...calcs(12)]
+    const saved = persistableHistory(rows)
+    expect(saved).toHaveLength(MAX_HISTORY + 1)
+    expect(saved[0]?.expr).toBe('x = 5')
+    expect(historyVariables(saved)).toEqual({ x: 5 })
+  })
+
+  it('drops the old definition once a recent row redefines it', () => {
+    const rows = [row({ id: 'x5', expr: 'x = 5', display: '5', n: 5 }), ...calcs(6), row({ id: 'x7', expr: 'x = 7', display: '7', n: 7 }), ...calcs(6, 6)]
+    const saved = persistableHistory(rows)
+    expect(saved).toHaveLength(MAX_HISTORY)
+    expect(saved.some((r) => r.expr === 'x = 5')).toBe(false)
+    expect(historyVariables(saved)).toEqual({ x: 7 })
+  })
+
+  it('keeps only the newest older definition of each function', () => {
+    const rows = [
+      row({ id: 'f1', expr: 'f(x) = x', display: 'f(x) = x', kind: 'function', fnName: 'f', fnParams: ['x'], fnBody: 'x' }),
+      row({ id: 'f2', expr: 'f(x) = 2x', display: 'f(x) = 2x', kind: 'function', fnName: 'f', fnParams: ['x'], fnBody: '2x' }),
+      ...calcs(MAX_HISTORY),
+    ]
+    const saved = persistableHistory(rows)
+    expect(saved.map((r) => r.id)).toEqual(['f2', ...calcs(MAX_HISTORY).map((r) => r.id)])
+    expect(historyFunctions(saved)).toEqual({ f: { params: ['x'], body: '2x' } })
+  })
+})

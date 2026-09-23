@@ -23,12 +23,13 @@ interface Props {
   handleRef?: MutableRefObject<QuickInputHandle | null>
 }
 
+// Letters around a token make it part of a word (`pint`, `infinity`); digits before it are a coefficient (`2pi`).
 const TOKEN_REPLACEMENTS: [RegExp, string][] = [
-  [/\bpi\b/gi, 'π'],
-  [/\btheta\b/gi, 'θ'],
-  [/\binfty\b/gi, '∞'],
-  [/\binf\b/gi, '∞'],
-  [/\bcbrt\b/gi, '∛'],
+  [/(?<![A-Za-z])pi(?![A-Za-z0-9])/gi, 'π'],
+  [/(?<![A-Za-z])theta(?![A-Za-z0-9])/gi, 'θ'],
+  [/(?<![A-Za-z])infty(?![A-Za-z0-9])/gi, '∞'],
+  [/(?<![A-Za-z])inf(?![A-Za-z0-9])/gi, '∞'],
+  [/(?<![A-Za-z])cbrt(?![A-Za-z0-9])/gi, '∛'],
   [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
 ]
 
@@ -48,14 +49,23 @@ export function spliceText(
   return { next: value.slice(0, a) + chunk + value.slice(b), cursor: a + chunk.length }
 }
 
-export function prettyTokens(text: string, ansPlain?: string): string {
+function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing: boolean): string {
+  // A token that ends the text may still be the start of a word being typed (`pi` → `pint`).
+  const swap = (put: string) => (m: string, offset: number, whole: string) =>
+    keepTrailing && offset + m.length === whole.length ? m : put
   let out = text
   for (const [re, put] of TOKEN_REPLACEMENTS) {
     re.lastIndex = 0
-    out = out.replace(re, put)
+    out = out.replace(re, swap(put))
   }
-  if (ansPlain) out = out.replace(/\bans\b/gi, ansPlain)
+  if (ansPlain) out = out.replace(/\bans\b/gi, swap(ansPlain))
   return out
+}
+
+/** Prettify typed tokens. With a caret, the token right before it is left for the next keystroke to settle. */
+export function prettyTokens(text: string, ansPlain?: string, caret?: number): string {
+  if (caret == null) return replaceTokens(text, ansPlain, false)
+  return replaceTokens(text.slice(0, caret), ansPlain, true) + replaceTokens(text.slice(caret), ansPlain, false)
 }
 
 export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, handleRef }: Props) {
@@ -113,9 +123,10 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
     setPrefixWidth(prefixRef.current?.offsetWidth ?? 0)
   }, [prefix])
 
-  const commit = (raw: string, cursor: number) => {
-    const before = prettyTokens(raw.slice(0, cursor), ansRef.current)
-    const next = prettyTokens(raw, ansRef.current)
+  const commit = (raw: string, cursor: number, settle = false) => {
+    const caret = settle ? undefined : cursor
+    const before = prettyTokens(raw.slice(0, cursor), ansRef.current, caret)
+    const next = prettyTokens(raw, ansRef.current, caret)
     const pos = Math.min(before.length, next.length)
     caretPosRef.current = { start: pos, end: pos }
     onChangeRef.current(next)
@@ -124,6 +135,12 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
       if (!el) return
       el.setSelectionRange(pos, pos)
     })
+  }
+
+  /** Convert a token still waiting at the caret (`2pi` then Enter). */
+  const finishTokens = (el: HTMLInputElement) => {
+    if (prettyTokens(el.value, ansRef.current) === el.value) return
+    commit(el.value, el.selectionStart ?? el.value.length, true)
   }
 
   useLayoutEffect(() => {
@@ -206,6 +223,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
     }
     if (e.key === 'Enter') {
       e.preventDefault()
+      finishTokens(e.currentTarget)
       onEnterRef.current()
       return
     }
@@ -256,6 +274,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
           rememberCaret(e.currentTarget)
           rememberHighlight(e.currentTarget)
         }}
+        onBlur={(e) => finishTokens(e.currentTarget)}
         onMouseDown={(e) => rememberCaret(e.currentTarget)}
         onMouseUp={(e) => {
           rememberCaret(e.currentTarget)

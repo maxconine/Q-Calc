@@ -45,7 +45,7 @@ function avg(xs: number[]): number {
 function varianceOf(xs: number[], population: boolean): number {
   const m = avg(xs)
   const d = population ? xs.length : xs.length - 1
-  if (d <= 0) return 0
+  if (d <= 0) return Number.NaN
   return xs.reduce((s, x) => s + (x - m) ** 2, 0) / d
 }
 
@@ -121,7 +121,36 @@ function trigAsymptote(cosVal: number): boolean {
   return Math.abs(chop(cosVal)) === 0
 }
 
-const WRAP_SKIP = new Set(['pi', 'tau', 'inf', 'infinity', 'ans', 'e'])
+/** Non-negative remainder; `x mod 0` is undefined. */
+function modulo(a: number, b: number): number {
+  if (b === 0) return Number.NaN
+  return ((a % b) + Math.abs(b)) % Math.abs(b)
+}
+
+// `7 mod 3` parses as mathjs's own operator, so the calculator's convention has to replace it there too.
+math.import({ mod: modulo }, { override: true })
+
+/** nCr / nPr: 0 when choosing more than there are, undefined for non-integers or negatives. */
+function choose(f: (n: number, k: number) => number): (n: number, k: number) => number {
+  return (n, k) => {
+    if (![n, k].every(Number.isInteger) || n < 0 || k < 0) return Number.NaN
+    return k > n ? 0 : Number(f(n, k))
+  }
+}
+
+/** n! for integers, Γ(n+1) for other reals; negative integers are undefined. */
+function factorial(n: number): number {
+  if (Number.isInteger(n)) {
+    if (n < 0) return Number.NaN
+    if (n > 170) return Infinity
+    return Number(math.factorial(n))
+  }
+  if (Number.isNaN(n)) return Number.NaN
+  if (n === Infinity) return Infinity
+  return Number(math.gamma(n + 1))
+}
+
+const WRAP_SKIP = new Set(['pi', 'tau', 'inf', 'infinity', 'ans', 'e', 'mod'])
 
 /** Calculator inverse notation: sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 ≠ sin. */
 const INVERSE_POWER_FNS: [string, string][] = [
@@ -139,20 +168,38 @@ const INVERSE_POWER_FNS: [string, string][] = [
   ['tan', 'atan'],
 ]
 
+const INVERSE_POWER_RES: [RegExp, string][] = INVERSE_POWER_FNS.map(([fn, inv]) => [
+  new RegExp(`\\b${fn}\\s*(?:\\^\\s*(?:-1|\\(\\s*-1\\s*\\))|⁻¹)`, 'gi'),
+  inv,
+])
+
 function rewriteInversePower(expr: string): string {
   let s = expr
-  for (const [fn, inv] of INVERSE_POWER_FNS) {
-    const re = new RegExp(`\\b${fn}\\s*(?:\\^\\s*(?:-1|\\(\\s*-1\\s*\\))|⁻¹)`, 'gi')
-    s = s.replace(re, inv)
-  }
+  for (const [re, inv] of INVERSE_POWER_RES) s = s.replace(re, inv)
   return s
 }
 
-export function wrapBareFunctions(expr: string, extraNames: string[] = []): string {
+type CallableNames = { key: string; names: string[]; implicitRe: RegExp }
+let callableCache: CallableNames | null = null
+
+/** Built-in plus user function names (longest first) and the `2sin` → `2*sin` regex, cached per user-function list. */
+function callableNames(extraNames: string[]): CallableNames {
+  const key = extraNames.join('|')
+  if (callableCache?.key === key) return callableCache
   const names = [...FN.split('|'), ...extraNames]
     .filter((n) => !WRAP_SKIP.has(n.toLowerCase()))
     .sort((a, b) => b.length - a.length)
-  const atomRe = /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?)/i
+  const implicitRe = new RegExp(`(\\d)(\\s*)(${names.join('|')})(?![A-Za-z_])`, 'gi')
+  callableCache = { key, names, implicitRe }
+  return callableCache
+}
+
+/** Argument of a bare function (`sin 30`, `sin 2pi`). */
+const BARE_ATOM_RE = /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)/i
+
+export function wrapBareFunctions(expr: string, extraNames: string[] = []): string {
+  const { names } = callableNames(extraNames)
+  const atomRe = BARE_ATOM_RE
   let i = 0
   let out = ''
   while (i < expr.length) {
@@ -207,12 +254,48 @@ export function stitchConstants(s: string): string {
   return out
 }
 
+/** Where the additive left side of `pos` begins: after the nearest unmatched `(` or same-level comma, else 0. */
+function groupStart(s: string, pos: number): number {
+  let depth = 0
+  for (let i = pos - 1; i >= 0; i--) {
+    const ch = s[i]
+    if (ch === ')') depth++
+    else if (ch === '(') {
+      if (depth === 0) return i + 1
+      depth--
+    } else if (ch === ',' && depth === 0) return i + 1
+  }
+  return 0
+}
+
+const PERCENT_TERM_RE = /([+-])\s*(\d+(?:\.\d+)?)\s*%(?=\s*(?:[-+),]|$))/g
+const ONLY_PERCENTS_RE = /^[\s+-]*(?:\d+(?:\.\d+)?\s*%[\s+-]*)+$/
+
+/** `a ± b%` → `a * (1 ± b/100)`, where `a` is the whole additive left side (`200 + 15%` = 230). */
+function rewritePercentAdd(expr: string): string {
+  let s = expr
+  PERCENT_TERM_RE.lastIndex = 0
+  for (let m = PERCENT_TERM_RE.exec(s); m; m = PERCENT_TERM_RE.exec(s)) {
+    const start = groupStart(s, m.index)
+    const left = s.slice(start, m.index)
+    const skip =
+      !left.trim() || /[-+*/^(,]\s*$/.test(left) || /\d[eE]$/.test(left) || ONLY_PERCENTS_RE.test(left)
+    if (skip) continue
+    const put = `((${left.trim()})*(1${m[1]}${m[2]}/100))`
+    s = s.slice(0, start) + put + s.slice(m.index + m[0].length)
+    PERCENT_TERM_RE.lastIndex = start + put.length
+  }
+  return s
+}
+
 export function preprocessAscii(expr: string, extraNames: string[] = []): string {
   let s = expr
-  s = rewriteTypesetMul(s).replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt')
+  s = rewriteTypesetMul(s).replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt')
+  s = s.replace(/(?<![\d)\]!])\|([^|]+)\|/g, 'abs($1)')
   s = s.replace(/\*\*/g, '^')
   s = stitchConstants(s)
   s = s.replace(/(\d+(?:\.\d+)?)\s*%\s*of\b/gi, '($1/100)*')
+  s = rewritePercentAdd(s)
   s = s.replace(/(\d+(?:\.\d+)?)\s*%/g, '($1/100)')
   s = s.replace(/\barcsin\b/g, 'asin').replace(/\barccos\b/g, 'acos').replace(/\barctan\b/g, 'atan')
   s = s.replace(/\barccsc\b/g, 'acsc').replace(/\barccot\b/g, 'acot')
@@ -230,17 +313,14 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   s = s.replace(/((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nPr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))/gi, 'permutations($1,$2)')
   s = s.replace(/\bnCr\s*\(/g, 'combinations(')
   s = s.replace(/\bnPr\s*\(/g, 'permutations(')
-  s = s.replace(/\bn\s*\(/g, 'length(')
+  // `n` can be a user function; `count` is reserved, so it always counts.
+  if (!extraNames.includes('n')) s = s.replace(/\bn\s*\(/g, 'length(')
   s = s.replace(/\bcount\s*\(/g, 'length(')
   s = s.replace(/\[([^\][]*?)\s*\.\.\.\s*([^\][]*?)\]/g, 'inclusiveRange($1,$2)')
   s = s.replace(/\breal\b/g, 're').replace(/\bimag\b/g, 'im')
   s = s.replace(/\blog_(\d+(?:\.\d+)?)\s*\(([^)]+)\)/g, 'log($2, $1)')
   s = s.replace(/\blog\(([^,)]+)\)/g, 'log10($1)')
-  const implicitFns = [...FN.split('|'), ...extraNames]
-    .filter((n) => !WRAP_SKIP.has(n.toLowerCase()))
-    .sort((a, b) => b.length - a.length)
-    .join('|')
-  s = s.replace(new RegExp(`(\\d)(\\s*)(${implicitFns})\\b`, 'gi'), '$1*$2$3')
+  s = s.replace(callableNames(extraNames).implicitRe, '$1*$2$3')
   s = wrapBareFunctions(s, extraNames)
   s = rewriteFactorial(s)
   return s
@@ -273,6 +353,11 @@ function rewriteFactorial(expr: string): string {
           if (depth === 0) break
         }
       }
+      // `sqrt(4)!` takes the whole call, not just its parentheses.
+      let k = start
+      while (k > 0 && /[A-Za-z0-9_]/.test(s[k - 1]!)) k--
+      while (k < start && /\d/.test(s[k]!)) k++
+      if (k < start) start = k
     } else if (s[j] === ']') {
       let depth = 0
       for (; start >= 0; start--) {
@@ -319,8 +404,6 @@ function snapInt(n: number): number {
 function fromMathjs(v: unknown): Value | null {
   if (typeof v === 'number') {
     if (Number.isNaN(v)) return textVal('undefined')
-    if (v === Infinity) return textVal('Infinity')
-    if (v === -Infinity) return textVal('-Infinity')
     return num(snapInt(v))
   }
   if (typeof v === 'boolean') return num(v ? 1 : 0)
@@ -342,27 +425,39 @@ function fromMathjs(v: unknown): Value | null {
   return null
 }
 
-export function evalScientific(
-  text: string,
-  ctx: {
-    ans?: number
-    angleMode?: AngleMode
-    variables?: Record<string, number>
-    functions?: Record<string, UserFunction>
-  } = {},
-): Value | null {
-  const src = text.trim()
+export type ScientificContext = {
+  ans?: number
+  angleMode?: AngleMode
+  variables?: Record<string, number>
+  functions?: Record<string, UserFunction>
+}
+
+function escapeNames(names: string[]): string {
+  return [...names]
+    .sort((a, b) => b.length - a.length)
+    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')
+}
+
+/** Preprocess, reject non-math text, and build the evaluation scope. Shared by eval and compile. */
+function prepare(text: string, ctx: ScientificContext): { expr: string; scope: Record<string, unknown> } | null {
+  let src = text.trim()
   if (!src) return null
   const fns = ctx.functions ?? {}
   const fnNames = Object.keys(fns)
+  const vars = ctx.variables ?? {}
+  // A variable followed by `(` multiplies (`n(2+3)`), unless a function has the same name.
+  const varNames = Object.keys(vars).filter((n) => !(n in fns))
+  if (varNames.length) {
+    src = src.replace(new RegExp(`(?<![A-Za-z0-9_])(${escapeNames(varNames)})\\s*\\(`, 'g'), '$1*(')
+  }
   let expr = preprocessAscii(src, fnNames)
   if (ctx.ans !== undefined) expr = expr.replace(/\bans\b/gi, `(${ctx.ans})`)
-  const vars = ctx.variables ?? {}
 
   const allowNames = [...Object.keys(vars), ...fnNames]
-    .sort((a, b) => b.length - a.length)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const allowRe = allowNames.length ? new RegExp(`\\b(?:${allowNames.join('|')})\\b`, 'gi') : null
+  const allowRe = allowNames.length
+    ? new RegExp(`(?<![A-Za-z_])(?:${escapeNames(allowNames)})(?![A-Za-z0-9_])`, 'gi')
+    : null
   FN_RE.lastIndex = 0
   const leftover = expr
     .replace(FN_RE, '')
@@ -464,19 +559,12 @@ export function evalScientific(
     },
     gcd: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
     lcm: (...a: unknown[]) => nums(a).reduce((x, y) => intLcm(x, y)),
-    mod: (a: number, b: number) => {
-      if (b === 0) return Number.NaN
-      return ((a % b) + Math.abs(b)) % Math.abs(b)
-    },
-    factorial: (n: number) => {
-      if (n < 0 || (Number.isFinite(n) && !Number.isInteger(n))) return Number.NaN
-      if (n > 170) return Infinity
-      return Number(math.factorial(n))
-    },
-    combinations: math.combinations,
-    permutations: math.permutations,
-    nCr: math.combinations,
-    nPr: math.permutations,
+    mod: modulo,
+    factorial,
+    combinations: choose(math.combinations),
+    permutations: choose(math.permutations),
+    nCr: choose(math.combinations),
+    nPr: choose(math.permutations),
     inclusiveRange: (a: number, b: number) => {
       const start = Number(a)
       const end = Number(b)
@@ -553,18 +641,53 @@ export function evalScientific(
     }
   }
 
+  return { expr, scope }
+}
+
+/** Only factorials may overflow to ∞; any other infinity (`1/0`) is undefined. */
+function finish(v: unknown, expr: string): Value | null {
+  const out = fromMathjs(v)
+  if (out?.kind === 'number' && !Number.isFinite(out.n) && !/!|factorial/i.test(expr)) return textVal('undefined')
+  return out
+}
+
+export function evalScientific(text: string, ctx: ScientificContext = {}): Value | null {
+  const prep = prepare(text, ctx)
+  if (!prep) return null
   try {
-    const v = math.evaluate(expr, scope)
-    const out = fromMathjs(v)
-    if (out?.kind === 'text' && out.text === 'Infinity' && !/!|factorial/i.test(expr)) {
-      return textVal('undefined')
-    }
-    if (out?.kind === 'text' && out.text === '-Infinity' && !/!|factorial/i.test(expr)) {
-      return textVal('undefined')
-    }
-    return out
+    return finish(math.evaluate(prep.expr, prep.scope), prep.expr)
   } catch {
     return null
+  }
+}
+
+/**
+ * Preprocess and compile `text` once, then evaluate it for many values of `variable`
+ * (graph sampling). Same results as calling evalScientific with that variable set.
+ */
+export function compileScientific(
+  text: string,
+  ctx: ScientificContext,
+  variable: string,
+): ((value: number) => Value | null) | null {
+  const variables: Record<string, number> = { ...ctx.variables, [variable]: 0 }
+  const prep = prepare(text, { ...ctx, variables })
+  if (!prep) return null
+  let code: { evaluate: (scope: Record<string, unknown>) => unknown }
+  try {
+    code = math.parse(prep.expr).compile()
+  } catch {
+    return null
+  }
+  const { expr, scope } = prep
+  return (value) => {
+    variables[variable] = value
+    scope[variable] = value
+    try {
+      return finish(code.evaluate(scope), expr)
+    } catch {
+      return null
+    }
   }
 }
 
@@ -586,7 +709,8 @@ export function formatAsFraction(n: number, maxDen = 10_000): string | null {
       if (err < 1e-15) break
     }
   }
-  if (bestErr > 1e-6) return null
+  // Only exact-looking values: an approximation like 355/113 for π or 8119/5741 for √2 stays decimal.
+  if (bestErr > 1e-9 * Math.max(1, x)) return null
   const g = intGcd(bestN, bestD)
   return `${sign}${bestN / g}/${bestD / g}`
 }

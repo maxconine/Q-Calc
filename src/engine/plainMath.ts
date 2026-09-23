@@ -235,7 +235,12 @@ function mentionsVariable(expr: string, variables?: Record<string, number>): boo
   const escaped = names
     .sort((a, b) => b.length - a.length)
     .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  return new RegExp(`\\b(?:${escaped.join('|')})\\b`).test(expr)
+  return new RegExp(`(?<![A-Za-z_])(?:${escaped.join('|')})(?![A-Za-z0-9_])`).test(expr)
+}
+
+/** `1,000,000` → `1000000`. Commas inside a call's arguments (`max(1,200)`, `nCr(5,200)`) and lists stay. */
+function stripThousands(s: string): string {
+  return s.replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
 }
 
 export function tryPlainMath(
@@ -251,7 +256,7 @@ export function tryPlainMath(
   const src = unwrapQuestion(text)
   if (!src) return null
   const ascii = looksLikeLatex(src) ? latexToAscii(src) : src
-  const filled = fillParens(rewriteTypesetMul(ascii))
+  const filled = fillParens(stripThousands(rewriteTypesetMul(ascii)))
   // Prefer scientific eval when a token is a known variable (e.g. `n=5` then `n*2`),
   // so unit symbols like N/m/s do not steal the name.
   if (!mentionsVariable(filled, ctx.variables)) {

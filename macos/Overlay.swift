@@ -110,6 +110,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var sizeAnchorTop: CGFloat = 0
     private var settingsObserver: NSObjectProtocol?
     private var lastPasteAt: TimeInterval = 0
+    /// SoulverCore work runs here so a slow evaluation never blocks typing on the main thread.
+    private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
 
     deinit {
         if let escapeMonitor {
@@ -131,6 +133,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func preload() {
         if panel == nil { build() }
+        SoulverEval.warm()
     }
 
     func toggle() {
@@ -162,7 +165,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel?.makeFirstResponder(web)
         resetAndFocus()
         DispatchQueue.main.async { [weak self] in
-            self?.resetAndFocus()
+            self?.focusInput()
             self?.panel?.ignoreResignKey = false
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in self?.focusInput() }
@@ -216,7 +219,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             replyHandler(nil, "unknown handler")
             return
         }
-        replyHandler(soulverPayload(from: message.body), nil)
+        let body = message.body
+        soulverQueue.async { [self] in
+            let payload = soulverPayload(from: body)
+            DispatchQueue.main.async { replyHandler(payload, nil) }
+        }
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {

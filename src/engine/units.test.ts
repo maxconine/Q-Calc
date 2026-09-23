@@ -352,11 +352,11 @@ suite('Requested catalog aliases', [
   { name: 'Barrel to gal', input: '1 Barrel to gal', expected: 42, unit: 'gal' },
   { name: 'Cord to ft3', input: '1 Cord to ft3', expected: 128, unit: 'ft³' },
   { name: 'electron to Coulomb', input: '1 electron to Coulomb', expected: E, unit: 'C', eps: 1e-28 },
-  { name: 'amp to milliamp', input: '1 amp to milliamp', expected: 1000, unit: /milliamp/ },
-  { name: 'Volt to kilovolt', input: '1000 Volt to kilovolt', expected: 1, unit: /kilovolt/ },
-  { name: 'Ohm to kiloohm', input: '1000 Ohm to kiloohm', expected: 1, unit: /kiloohm/ },
-  { name: 'Farad to millifarad', input: '1 Farad to millifarad', expected: 1000, unit: /millifarad/ },
-  { name: 'Henry to millihenry', input: '1 Henry to millihenry', expected: 1000, unit: /millihenry/ },
+  { name: 'amp to milliamp', input: '1 amp to milliamp', expected: 1000, unit: 'mA' },
+  { name: 'Volt to kilovolt', input: '1000 Volt to kilovolt', expected: 1, unit: 'kV' },
+  { name: 'Ohm to kiloohm', input: '1000 Ohm to kiloohm', expected: 1, unit: 'kΩ' },
+  { name: 'Farad to millifarad', input: '1 Farad to millifarad', expected: 1000, unit: 'mF' },
+  { name: 'Henry to millihenry', input: '1 Henry to millihenry', expected: 1000, unit: 'mH' },
   { name: 'Dimensionless to units', input: '5 Dimensionless to units', expected: 5, unit: 'units' },
   { name: 'NoUnit to None', input: '5 NoUnit to None', expected: 5, unit: 'dimensionless' },
 ])
@@ -2116,3 +2116,42 @@ scaledCross(
   1,
   96,
 )
+
+suite('Prefixed unit symbols', [
+  { name: '2 ms', input: '2 ms', expected: 2, unit: 'ms' },
+  { name: '5 us', input: '5 us', expected: 5, unit: 'μs' },
+  { name: '5 µs', input: '5 µs', expected: 5, unit: 'μs' },
+  { name: '1 pF', input: '1 pF', expected: 1, unit: 'pF' },
+  { name: '2 MN', input: '2 MN', expected: 2, unit: 'MN' },
+  { name: '1 kV', input: '1 kV', expected: 1, unit: 'kV' },
+  { name: '2 GHz', input: '2 GHz', expected: 2, unit: 'GHz' },
+  { name: '1 keV', input: '1 keV', expected: 1, unit: 'keV' },
+])
+
+suite('Juxtaposed quantities add', [
+  { name: '5 ft 10 in to cm', input: '5 ft 10 in to cm', expected: 177.8, unit: 'cm' },
+  { name: `5'10" to cm`, input: `5'10" to cm`, expected: 177.8, unit: 'cm' },
+  { name: '2 hr 30 min', input: '2 hr 30 min', expected: 2.5, unit: 'hr' },
+  { name: '1 lb 4 oz', input: '1 lb 4 oz', expected: 1.25, unit: 'lbs' },
+  { name: '1 m 50 cm to cm', input: '1 m 50 cm to cm', expected: 150, unit: 'cm' },
+  { name: 'product with a compound unit', input: '10 kg * 9.8 m/s^2', expected: 98, unit: 'N' },
+])
+
+describe('Juxtaposed quantities of different dimensions', () => {
+  it('stays blank', () => {
+    expect(evaluateLine('5 ft 10 kg').display).toBe('')
+  })
+})
+
+suite('Month abbreviation', [
+  { name: '3 mo to day', input: '3 mo to day', expected: 91.3125, unit: 'd' },
+  { name: '6 mos to yr', input: '6 mos to yr', expected: 0.5, unit: 'yr' },
+  { name: '1 yr to mo', input: '1 yr to mo', expected: 12, unit: 'mo' },
+])
+
+suite('Digital units keep their dimension', [
+  { name: '1 kb', input: '1 kb', expected: 1, unit: 'KB' },
+  { name: '2 kb + 1 kb', input: '2 kb + 1 kb', expected: 3, unit: 'KB' },
+  { name: '2 gb * 3', input: '2 gb * 3', expected: 6, unit: 'GB' },
+  { name: '1 gb / 1 mb', input: '1 gb / 1 mb', expected: 1024, unit: /^1024$/ },
+])
