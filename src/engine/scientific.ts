@@ -8,7 +8,7 @@ export const MAX_LIST_ALLOC = 10_000
 export type AngleMode = 'deg' | 'rad'
 
 export const SCIENTIFIC_NAMES =
-  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|pi|tau|inf|infinity|ans'
+  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|pi|tau|inf|infinity|ans'
 
 const FN = SCIENTIFIC_NAMES
 
@@ -581,6 +581,8 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
       return Array.from({ length: count }, one)
     },
     gcd: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
+    gcf: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
+    hcf: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
     lcm: (...a: unknown[]) => nums(a).reduce((x, y) => intLcm(x, y)),
     mod: modulo,
     powmod,

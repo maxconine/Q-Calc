@@ -1,5 +1,5 @@
 /** How long an answer must hold at 67 before the arms fire (typing `670` passes through 67). */
-export const SIXTY_SEVEN_SETTLE_MS = 300
+export const SIXTY_SEVEN_SETTLE_MS = 200
 
 /**
  * Fire-once gate for the 67 arms. `armed` is true until the arms fire, and re-arms only once the

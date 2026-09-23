@@ -428,7 +428,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setArmsShake(true)
-        armsTimer.current = window.setTimeout(() => setArmsShake(false), 3000)
+        armsTimer.current = window.setTimeout(() => setArmsShake(false), 2700)
       })
     })
   }, [])
@@ -1463,17 +1463,23 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     </div>
     <div className={`sixty-seven-arms ${armsShake ? 'shaking' : ''}`} aria-hidden="true">
       {(['left', 'right'] as const).map((side) => (
-        <svg key={side} className={`sixty-seven-arm sixty-seven-arm-${side}`} viewBox="0 0 36 52">
+        <svg key={side} className={`sixty-seven-arm sixty-seven-arm-${side}`} viewBox="0 0 44 30">
+          {/* A relaxed palm-up hand in profile: rounded heel, four fingers fanning toward the other hand with
+              tips lifting into a slight cup, thumb angled up and forward — the "weighing options" pose. */}
           <g
             fill="currentColor"
             stroke="currentColor"
             strokeLinecap="round"
-            strokeWidth="4.4"
-            transform={side === 'right' ? 'matrix(-1 0 0 1 36 0)' : undefined}
+            transform={side === 'right' ? 'matrix(-1 0 0 1 44 0)' : undefined}
           >
-            <rect x="11" y="32" width="14" height="24" rx="5" stroke="none" />
-            <rect x="8" y="18" width="20" height="20" rx="7" stroke="none" />
-            <path d="M11 22 L9.5 9 M15.5 21 L15 5 M20 21 L20.5 6.5 M24.5 22.5 L26 11 M26 31 L31.5 22" fill="none" />
+            <path d="M4 20.8C4 16.2 7.4 13.6 12 13.5L20.2 13.8C23 14 24.2 16.4 24.2 19.8C24.2 24.3 21 26.9 15.6 26.9H11C6.8 26.9 4 24.6 4 20.8Z" stroke="none" />
+            <g fill="none">
+              <path d="M20 15Q29 15.2 35.6 11.2" strokeWidth="3.4" />
+              <path d="M21 18.4Q31 19.2 38.8 15.9" strokeWidth="3.5" />
+              <path d="M21 21.9Q31 23 38.4 20.6" strokeWidth="3.3" />
+              <path d="M20 25.2Q28 26.5 34.2 25" strokeWidth="3" />
+              <path d="M10.5 14.5Q12.6 8.6 18 6" strokeWidth="4" />
+            </g>
           </g>
         </svg>
       ))}

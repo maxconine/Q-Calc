@@ -408,6 +408,8 @@ suite('Rounding & Number Theory Functions', [
   { name: 'Sign Function (Zero)', input: 'sign(0)', expected: 0 },
   { name: 'Greatest Common Divisor', input: 'gcd(12, 18)', expected: 6 },
   { name: 'Multi-Argument GCD', input: 'gcd(24, 36, 48)', expected: 12 },
+  { name: 'GCF Alias', input: 'gcf(12, 18)', expected: 6 },
+  { name: 'HCF Alias', input: 'hcf(24, 36, 48)', expected: 12 },
   { name: 'Least Common Multiple', input: 'lcm(4, 6)', expected: 12 },
   { name: 'Multi-Argument LCM', input: 'lcm(3, 5, 7)', expected: 105 },
   { name: 'Modulo Function', input: 'mod(10, 3)', expected: 1 },

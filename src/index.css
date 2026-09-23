@@ -137,26 +137,35 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .sixty-seven-arm {
   position: absolute;
   top: 0;
-  width: 36px;
-  height: 52px;
-  color: var(--muted);
-  transform: translateY(-100%);
-  transform-origin: 50% 100%;
+  width: 44px;
+  height: 30px;
+  /* Pointer-style contrast: a light hand with a dark rim reads on any desktop behind the bar. */
+  color: #e4e4ea;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
+  transform: translateY(-110%);
   visibility: hidden;
 }
 
+/* Each hand pivots at its wrist, so a tilt dips or lifts the fingertips rather than spinning the glyph. */
 .sixty-seven-arm-left {
-  left: calc(50% - 78px);
+  left: calc(50% - 92px);
+  transform-origin: 20% 70%;
 }
 
 .sixty-seven-arm-right {
-  left: calc(50% + 42px);
+  left: calc(50% + 48px);
+  transform-origin: 80% 70%;
 }
 
-/* Anti-phase weighing: the hands enter together, then trade places every beat — left leads with the push down. */
+/*
+ * "Six… seven": the hands drop in together, then trade places every 286ms — left leads with the push down.
+ * Each beat eases in and overshoots a touch, so the palms bounce like loose wrists; the fingertips follow
+ * through (dipping at the bottom, flicking up at the top). The first beat is the biggest and the swing relaxes
+ * as it goes; then both settle, dip for a breath, and slip back up behind the bar.
+ */
 .sixty-seven-arms.shaking .sixty-seven-arm {
   visibility: visible;
-  animation: sixty-seven-weigh 2.5s ease-in-out both;
+  animation: sixty-seven-weigh 2.6s cubic-bezier(0.38, 0, 0.26, 1.32) both;
 }
 
 .sixty-seven-arms.shaking .sixty-seven-arm-right {
@@ -165,69 +174,104 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 @keyframes sixty-seven-weigh {
   0% {
-    transform: translateY(-100%);
+    transform: translateY(-110%);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.35, 1.25);
   }
-  8%,
-  28%,
-  48%,
-  68% {
-    transform: translateY(2px) rotate(-4deg);
+  10% {
+    transform: translateY(33px) rotate(9deg);
   }
-  18%,
-  38%,
-  58%,
-  78% {
-    transform: translateY(18px) rotate(4deg);
+  21% {
+    transform: translateY(6px) rotate(-6deg);
+  }
+  32% {
+    transform: translateY(29px) rotate(7deg);
+  }
+  43% {
+    transform: translateY(7px) rotate(-5deg);
+  }
+  54% {
+    transform: translateY(28px) rotate(6deg);
+  }
+  65% {
+    transform: translateY(8px) rotate(-5deg);
+  }
+  76% {
+    transform: translateY(27px) rotate(5deg);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
   }
   86% {
-    transform: translateY(10px);
+    transform: translateY(18px);
+    animation-timing-function: ease-in-out;
+  }
+  90% {
+    transform: translateY(21px);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
   }
   100% {
-    transform: translateY(-100%);
+    transform: translateY(-110%);
   }
 }
 
 @keyframes sixty-seven-weigh-counter {
   0% {
-    transform: translateY(-100%);
+    transform: translateY(-110%);
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.35, 1.25);
   }
-  8%,
-  28%,
-  48%,
-  68% {
-    transform: translateY(18px) rotate(4deg);
+  10% {
+    transform: translateY(5px) rotate(6deg);
   }
-  18%,
-  38%,
-  58%,
-  78% {
-    transform: translateY(2px) rotate(-4deg);
+  21% {
+    transform: translateY(29px) rotate(-7deg);
+  }
+  32% {
+    transform: translateY(7px) rotate(5deg);
+  }
+  43% {
+    transform: translateY(28px) rotate(-6deg);
+  }
+  54% {
+    transform: translateY(8px) rotate(5deg);
+  }
+  65% {
+    transform: translateY(27px) rotate(-5deg);
+  }
+  76% {
+    transform: translateY(9px) rotate(4deg);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
   }
   86% {
-    transform: translateY(10px);
+    transform: translateY(18px);
+    animation-timing-function: ease-in-out;
+  }
+  90% {
+    transform: translateY(21px);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
   }
   100% {
-    transform: translateY(-100%);
+    transform: translateY(-110%);
   }
 }
 
+/* Reduced motion: no travel at all — the hands fade in already holding the six-seven pose, then fade out. */
 @keyframes sixty-seven-still {
   0%,
   100% {
     opacity: 0;
-    transform: translateY(8px);
   }
   15%,
   85% {
     opacity: 1;
-    transform: translateY(8px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .sixty-seven-arms.shaking .sixty-seven-arm {
-    animation-name: sixty-seven-still;
-    animation-delay: 0s;
+    animation: sixty-seven-still 2.6s ease both;
+    transform: translateY(24px) rotate(5deg);
+  }
+
+  .sixty-seven-arms.shaking .sixty-seven-arm-right {
+    transform: translateY(8px) rotate(4deg);
   }
 }
 
@@ -798,9 +842,12 @@ html.quick-native #root {
 html.quick-native .quick-app {
   overflow: hidden;
   overscroll-behavior: none;
+  background: transparent;
+}
+/* The bar material lives on the panel, not the app box, so the 67 hands strip below stays see-through. */
+html.quick-native .spotlight {
   background: color-mix(in srgb, var(--bg) 90%, transparent);
 }
-html.quick-native .spotlight,
 html.quick-native .composer {
   background: transparent;
 }
