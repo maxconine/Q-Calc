@@ -8,6 +8,8 @@ export interface Value {
   text?: string
   unit?: string
   unitId?: string // table id behind `unit`, for SI prefix stepping
+  /** Sig figs / ± of a unit answer, in its own unit (the unit parser tracks them). */
+  meas?: Meas
 }
 
 /** Measurement metadata: significant figures and decimal places (absent = exact), plus a ± uncertainty. */
@@ -35,6 +37,8 @@ export interface LineResult {
   error?: string
   /** Present when the answer is measured (sig figs from the input) or carries a ± uncertainty. */
   meas?: Meas
+  /** A unit answer as text the unit parser reads back (`5 cm`), so variables and `ans` keep the unit; '' if it can't. */
+  quantity?: string
   variable?: string
   /** Present when kind is `'function'`. */
   fnName?: string
@@ -61,5 +65,7 @@ export interface EvaluateOptions {
   sigFigMode?: boolean
   /** Measurement metadata of `variables` (and `ans`) from earlier lines or history. */
   measures?: Record<string, Meas>
+  /** Unit-valued variables (and `ans`) from earlier lines or history, as `LineResult.quantity` text. */
+  quantities?: Record<string, string>
   defaultUnits?: DefaultUnits
 }

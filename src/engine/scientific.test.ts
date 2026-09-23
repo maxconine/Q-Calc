@@ -757,3 +757,23 @@ suite('Fraction mode only for exact fractions', [
   { name: 'truncated 1/7 stays decimal', input: '0.142857', fractionMode: true, display: '0.142857' },
   { name: '2/7', input: '2/7', fractionMode: true, display: '2/7' },
 ])
+
+describe('bugfix batch: exact mod, no ranges, no phantom ans', () => {
+  const d = (text: string) => evaluateLine(text).display
+  it('computes a^b mod m exactly', () => {
+    expect(d('3^100 mod 7')).toBe('4')
+    expect(d('2^64 mod 10')).toBe('6')
+    expect(d('5 - 3^100 mod 7')).toBe('1')
+    expect(d('7 mod 3')).toBe('1')
+    expect(d('-7 mod 3')).toBe('2')
+  })
+  it('refuses mod once the float has lost its low digits', () => {
+    expect(d('2*3^100 mod 7')).toBe('')
+    expect(d('3^100 mod 7^2')).toBe('')
+    expect(d('mod(3^100, 7)')).toBe('')
+  })
+  it('leaves ans blank with no previous answer', () => {
+    expect(d('ans * 2')).toBe('')
+    expect(evaluateLine('ans * 2', { ans: 4 }).display).toBe('8')
+  })
+})

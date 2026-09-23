@@ -108,6 +108,13 @@ describe('uncertainty', () => {
     expect(pm(prettyTokens('5+-2'))).toBe('5 ± 2')
   })
 
+  it('accepts ∓ and -+ as ±', () => {
+    expect(pm('10 ∓ 0.7')).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('10 -+ 0.7'))).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('5-+2'))).toBe('5 ± 2')
+    expect(pm('5.0 ∓ 0.2 * 3')).toBe('15.0 ± 0.6')
+  })
+
   it('uses the interval worst case for other functions', () => {
     expect(pm('sin(30 ± 1)')).toBe('0.50 ± 0.02')
     expect(pm('ln(10 ± 1)')).toBe('2.3 ± 0.1')
@@ -136,7 +143,6 @@ describe('uncertainty', () => {
   })
 
   it('falls back to blank for ± it does not model', () => {
-    expect(pm('10 ± 0.1 * 2')).toBe('')
     expect(pm('mean(1 ± 0.1, 2)')).toBe('')
     expect(pm('5 m ± 1 m')).toBe('')
     expect(pm('±')).toBe('')
@@ -164,5 +170,34 @@ describe('formatting helpers', () => {
 
   it('measure returns null for plain text', () => {
     expect(measure('hello')).toBeNull()
+  })
+})
+
+describe('bugfix batch: ± binds tightest, works with units, never drops', () => {
+  it('treats a ± b as one quantity', () => {
+    expect(pm('5.0 ± 0.2 * 3')).toBe('15.0 ± 0.6')
+    expect(pm('2 * 5.0 ± 0.2')).toBe('10.0 ± 0.4')
+    expect(pm('5 ± 2 * 3 ± 1')).toBe('20 ± 10')
+    expect(pm('10 ± 0.1 * 2')).toBe('20.0 ± 0.2')
+  })
+  it('never returns a bare number for a ± it cannot model', () => {
+    for (const t of ['x ± 1', '(1+2) ± 1', '5.0 ± 0.1 cm + 1 cm', '5 m ± 1 m']) expect(pm(t)).toBe('')
+  })
+  it('propagates ± through unit products and powers', () => {
+    expect(pm('2.0 ± 0.1 m')).toBe('2.0 ± 0.1 m')
+    expect(pm('(5.0 ± 0.1) cm * 2')).toBe('10.0 ± 0.2 cm')
+    expect(pm('5.0 ± 0.1 cm * 2')).toBe('10.0 ± 0.2 cm')
+    expect(pm('(2.0 ± 0.1 m)^2')).toBe('4.0 ± 0.4 m²')
+    expect(pm('(10.0 ± 0.2 cm)')).toBe('10.0 ± 0.2 cm')
+  })
+  it('rounds unit answers to their sig figs', () => {
+    expect(sf('12.0 kg in lb')).toBe('26.5 lbs')
+    expect(sf('10.0 N / 2.0 kg')).toBe('5.0 m/s²')
+    expect(sf('4.7 uF')).toBe('0.0000047 F')
+    expect(sf('5 cm to cm')).toBe('5 cm')
+  })
+  it('counts exponents as exact', () => {
+    expect(sf('2.0^0.5')).toBe(sf('sqrt(2.0)'))
+    expect(sf('2.0^0.5')).toBe('1.4')
   })
 })

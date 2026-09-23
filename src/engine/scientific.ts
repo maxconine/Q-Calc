@@ -121,11 +121,29 @@ function trigAsymptote(cosVal: number): boolean {
   return Math.abs(chop(cosVal)) === 0
 }
 
-/** Non-negative remainder; `x mod 0` is undefined. */
+/** Non-negative remainder; `x mod 0` is undefined. Past 2^53 the float's low digits are gone, so no answer. */
 function modulo(a: number, b: number): number {
   if (b === 0) return Number.NaN
+  if (Math.abs(a) > Number.MAX_SAFE_INTEGER || Math.abs(b) > Number.MAX_SAFE_INTEGER) throw new Error('inexact mod')
   return ((a % b) + Math.abs(b)) % Math.abs(b)
 }
+
+/** `b^e mod m` in exact integers (square-and-multiply). */
+function powmod(b: number, e: number, m: number): number {
+  if (![b, e, m].every(Number.isSafeInteger)) throw new Error('inexact mod')
+  if (m === 0) return Number.NaN
+  const mod = BigInt(Math.abs(m))
+  let base = BigInt(b) % mod
+  let out = 1n % mod
+  for (let k = BigInt(e); k > 0n; k >>= 1n) {
+    if (k & 1n) out = (out * base) % mod
+    base = (base * base) % mod
+  }
+  return Number(out)
+}
+
+/** A whole `3^100 mod 7` term (not `2*3^100 mod 7` or `3^100 mod 7^2`), rewritten to exact `powmod`. */
+const POW_MOD_RE = /(?<=(?:^|[(,+]|[\w)]\s*-)\s*)(\d+)\s*\^\s*(\d+)\s*mod\s*(\d+)(?![\d.]|\s*[(^!])/g
 
 // `7 mod 3` parses as mathjs's own operator, so the calculator's convention has to replace it there too.
 math.import({ mod: modulo }, { override: true })
@@ -293,6 +311,7 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   s = rewriteTypesetMul(s).replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt')
   s = s.replace(/(?<![\d)\]!])\|([^|]+)\|/g, 'abs($1)')
   s = s.replace(/\*\*/g, '^')
+  s = s.replace(POW_MOD_RE, 'powmod($1,$2,$3)')
   s = stitchConstants(s)
   s = s.replace(/(\d+(?:\.\d+)?)\s*%\s*of\b/gi, '($1/100)*')
   s = rewritePercentAdd(s)
@@ -470,10 +489,14 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
     if (!/^[\d\s+\-*/^().,eE!|[\]:]+$/.test(expr) && !named) return null
   }
 
+  // `2:30` is a clock reading (h:mm or m:ss — ambiguous), never a mathjs range.
+  if (expr.includes(':')) return null
+
   const mode = ctx.angleMode
   const scope: Record<string, unknown> = {
     ...vars,
-    ans: ctx.ans ?? 0,
+    // No previous answer leaves `ans` unknown (blank), not 0.
+    ...(ctx.ans !== undefined && { ans: ctx.ans }),
     e: Math.E,
     pi: Math.PI,
     tau: Math.PI * 2,
@@ -560,6 +583,7 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
     gcd: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
     lcm: (...a: unknown[]) => nums(a).reduce((x, y) => intLcm(x, y)),
     mod: modulo,
+    powmod,
     factorial,
     combinations: choose(math.combinations),
     permutations: choose(math.permutations),

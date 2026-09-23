@@ -10,6 +10,8 @@ export type HistoryRow = {
   n?: number
   /** Sig figs / ± uncertainty of a measured answer, so `x` and `ans` keep them. */
   meas?: Meas
+  /** A unit answer as parseable text (`LineResult.quantity`), so `ans` and variables keep the unit. */
+  quantity?: string
   kind?: 'definition' | 'function'
   /** Present when kind is `'function'` (survives expr truncation). */
   fnName?: string
@@ -83,6 +85,8 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     exact,
     n: kind === 'function' || row.n == null || !Number.isFinite(row.n) ? undefined : row.n,
     meas: kind ? undefined : sanitizeMeas(row.meas),
+    // Never truncated: a cut-off quantity would parse as a different one.
+    quantity: kind || typeof row.quantity !== 'string' ? undefined : row.quantity.length <= MAX_HISTORY_EXPR ? row.quantity : '',
     kind,
     ...fnFields,
   }
@@ -101,6 +105,7 @@ export function normalizeHistoryRow(
     exact: typeof row.exact === 'string' ? row.exact : undefined,
     n: typeof row.n === 'number' ? row.n : undefined,
     meas: row.meas,
+    quantity: row.quantity,
     kind,
     fnName: typeof row.fnName === 'string' ? row.fnName : undefined,
     fnParams: Array.isArray(row.fnParams)
@@ -157,6 +162,10 @@ export function historyVariables(rows: HistoryRow[]): Record<string, number> {
     if (row.kind === 'definition' || row.kind === 'function') continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
+    if (row.quantity != null) {
+      delete vars[parsed.variable]
+      continue
+    }
     if (row.n != null && Number.isFinite(row.n)) {
       vars[parsed.variable] = row.n
       continue
@@ -187,10 +196,26 @@ export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
     if (row.n != null && Number.isFinite(row.n)) last = row
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
-    if (row.meas) out[parsed.variable] = row.meas
+    if (row.meas && row.quantity == null) out[parsed.variable] = row.meas
     else delete out[parsed.variable]
   }
-  if (last?.meas) out.ans = last.meas
+  if (last?.meas && last.quantity == null) out.ans = last.meas
+  return out
+}
+
+/** Unit-valued variables from history (newest wins), plus `ans` when the last answer had a unit. */
+export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  let last: HistoryRow | undefined
+  for (const row of rows) {
+    if (row.kind === 'definition' || row.kind === 'function') continue
+    if (row.n != null && Number.isFinite(row.n)) last = row
+    const parsed = parseAssignment(row.expr.trim())
+    if (!parsed) continue
+    if (row.quantity != null) out[parsed.variable] = row.quantity
+    else delete out[parsed.variable]
+  }
+  if (last?.quantity != null) out.ans = last.quantity
   return out
 }
 
@@ -217,7 +242,8 @@ export function lastHistoryNumber(rows: HistoryRow[]): number | undefined {
     const row = rows[i]
     if (!row || row.kind === 'definition' || row.kind === 'function') continue
     const n = row.n
-    if (n != null && Number.isFinite(n)) return n
+    // A unit answer is no plain number: `ans` comes from historyQuantities instead.
+    if (n != null && Number.isFinite(n)) return row.quantity == null ? n : undefined
   }
   return undefined
 }

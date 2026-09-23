@@ -1,5 +1,6 @@
 import { num, textVal } from './format'
-import type { Value } from './types'
+import { literalMeas } from './measure'
+import type { Meas, Value } from './types'
 
 export const IMPROPER_UNIT_CONVERSION = 'improper unit conversion'
 
@@ -151,11 +152,11 @@ const UNIT_LIST: Unit[] = [
   { id: 'kg', dim: 'mass', symbol: 'kg', toBase: 1, defaultTo: 'lb', names: ['kg', 'kilogram', 'kilograms'] },
   { id: 'tonne', dim: 'mass', symbol: 't', toBase: 1000, defaultTo: 'ton', prefixable: true, names: ['t', 'tonne', 'tonnes', 'metricton', 'metrictons', 'metric ton', 'metric tons'] },
 
-  // Temperature
+  // Temperature (°C and °F are offset scales: conversions only, never arithmetic)
   { id: 'c', dim: 'temperature', symbol: '°C', toBase: 0, defaultTo: 'f', names: ['c', 'celsius', 'centigrade', 'degc', 'deg c', 'degree celsius', 'degrees celsius', '°c'] },
   { id: 'f', dim: 'temperature', symbol: '°F', toBase: 0, defaultTo: 'c', names: ['f', 'fahrenheit', 'degf', 'deg f', 'degree fahrenheit', 'degrees fahrenheit', '°f'] },
-  { id: 'k', dim: 'temperature', symbol: 'K', toBase: 0, defaultTo: 'r', names: ['k', 'kelvin', 'kelvins'] },
-  { id: 'r', dim: 'temperature', symbol: '°R', toBase: 0, defaultTo: 'k', names: ['r', 'rankine', 'degr', 'deg r', 'degree rankine', 'degrees rankine', '°r'] },
+  { id: 'k', dim: 'temperature', symbol: 'K', toBase: 1, defaultTo: 'r', names: ['k', 'kelvin', 'kelvins'] },
+  { id: 'r', dim: 'temperature', symbol: '°R', toBase: 5 / 9, defaultTo: 'k', names: ['r', 'rankine', 'degr', 'deg r', 'degree rankine', 'degrees rankine', '°r'] },
 
   // Volume (base = litre)
   { id: 'drop', dim: 'volume', symbol: 'drop', toBase: 5e-5, defaultTo: 'ml', names: ['drop', 'drops'] },
@@ -213,11 +214,15 @@ const UNIT_LIST: Unit[] = [
   { id: 'century', dim: 'time', symbol: 'centuries', toBase: 100 * YEAR, names: ['century', 'centuries'] },
   { id: 'millennium', dim: 'time', symbol: 'kyr', toBase: 1000 * YEAR, names: ['millenium', 'millennium', 'millenniums', 'millennia'] },
 
-  // Digital (explicit "to" only)
-  { id: 'kb', dim: 'digital', symbol: 'KB', toBase: 1024, names: ['kb', 'kib', 'kilobyte', 'kilobytes', 'kibibyte', 'kibibytes'] },
-  { id: 'mb', dim: 'digital', symbol: 'MB', toBase: 1024 ** 2, names: ['mb', 'mib', 'megabyte', 'megabytes', 'mebibyte', 'mebibytes'] },
-  { id: 'gb', dim: 'digital', symbol: 'GB', toBase: 1024 ** 3, names: ['gb', 'gib', 'gigabyte', 'gigabytes', 'gibibyte', 'gibibytes'] },
-  { id: 'tb', dim: 'digital', symbol: 'TB', toBase: 1024 ** 4, names: ['tb', 'tib', 'terabyte', 'terabytes', 'tebibyte', 'tebibytes'] },
+  // Digital (explicit "to" only): SI prefixes are powers of 1000, IEC (KiB, MiB, …) powers of 1024
+  { id: 'kb', dim: 'digital', symbol: 'kB', toBase: 1e3, names: ['kb', 'kilobyte', 'kilobytes'] },
+  { id: 'mb', dim: 'digital', symbol: 'MB', toBase: 1e6, names: ['mb', 'megabyte', 'megabytes'] },
+  { id: 'gb', dim: 'digital', symbol: 'GB', toBase: 1e9, names: ['gb', 'gigabyte', 'gigabytes'] },
+  { id: 'tb', dim: 'digital', symbol: 'TB', toBase: 1e12, names: ['tb', 'terabyte', 'terabytes'] },
+  { id: 'kib', dim: 'digital', symbol: 'KiB', toBase: 1024, names: ['kib', 'kibibyte', 'kibibytes'] },
+  { id: 'mib', dim: 'digital', symbol: 'MiB', toBase: 1024 ** 2, names: ['mib', 'mebibyte', 'mebibytes'] },
+  { id: 'gib', dim: 'digital', symbol: 'GiB', toBase: 1024 ** 3, names: ['gib', 'gibibyte', 'gibibytes'] },
+  { id: 'tib', dim: 'digital', symbol: 'TiB', toBase: 1024 ** 4, names: ['tib', 'tebibyte', 'tebibytes'] },
 
   // Energy (base = J)
   { id: 'ev', dim: 'energy', symbol: 'eV', toBase: E_CHARGE, defaultTo: 'j', prefixable: true, names: ['ev', 'evs', 'electronvolt', 'electronvolts', 'electron volt', 'electron volts'] },
@@ -501,13 +506,16 @@ function matchUnitAtEnd(s: string): { unit: Unit; rest: string } | null {
     const prev = rest[rest.length - 1]
     if (isLetter(prev) && isLetter(alias[0])) continue
     if (!rest.trim()) continue
-    return { unit, rest: rest.trimEnd() }
+    // `1 H` is a henry; hours are `h`/`hr`. (`72 F` and `100 C` stay temperatures here.)
+    return { unit: tail === 'H' ? BY_ID.get('henry')! : unit, rest: rest.trimEnd() }
   }
   return null
 }
 
 function scaleUnit(base: Unit, prefix: Prefix): Unit | null {
   if (base.dim === 'temperature' || base.dim === 'digital' || base.dim === 'dimensionless') return null
+  // Of the time units only seconds take prefixes (`ms`, `µs`); `µhr` is not a thing.
+  if (base.dim === 'time' && base.id !== 's') return null
   const toBase = base.toBase * prefix.factor
   if (!Number.isFinite(toBase) || toBase === 0) return null
   const existing = UNIT_LIST.find((u) => u.dim === base.dim && sameScale(u.toBase, toBase))
@@ -570,8 +578,16 @@ function startsWithToken(s: string, token: string): boolean {
   return true
 }
 
+/**
+ * In arithmetic the capital SI symbols win: `F`, `C`, `H` are farad, coulomb, henry (`1 F * 1 V` = 1 C).
+ * Temperatures are written `°F`/`°C` or appear in a plain conversion (`72 F`, `100 C in F`).
+ */
+const SI_CAPITALS: Record<string, string> = { F: 'farad', C: 'coulomb', H: 'henry' }
+
 function matchBareUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimStart()
+  const si = SI_CAPITALS[t[0] ?? '']
+  if (si && !/[A-Za-z0-9]/.test(t[1] ?? '')) return { unit: BY_ID.get(si)!, rest: t.slice(1) }
   for (const { alias, unit } of ALIAS_INDEX) {
     if (!startsWithToken(t, alias)) continue
     return { unit, rest: t.slice(alias.length) }
@@ -592,9 +608,6 @@ function matchSpelledPrefixAtStart(t: string): { unit: Unit; rest: string } | nu
   return null
 }
 
-/** Capital F/C after an SI prefix are farad/coulomb, not fahrenheit/celsius. */
-const PREFIX_SI_SYMBOL: Record<string, string> = { F: 'farad', C: 'coulomb' }
-
 function matchUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimStart()
   const prefixed = matchSpelledPrefixAtStart(t)
@@ -608,12 +621,6 @@ function matchUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   for (const p of CASE_PREFIXES) {
     if (t[0] !== p.symbol) continue
     const rest = t.slice(p.symbol.length)
-    const siId = PREFIX_SI_SYMBOL[rest[0] ?? '']
-    if (siId && !isLetter(rest[1])) {
-      const base = BY_ID.get(siId)
-      const scaled = base ? scaleUnit(base, p.prefix) : null
-      if (scaled) return { unit: scaled, rest: rest.slice(1) }
-    }
     const u = matchBareUnitAtStart(rest)
     if (!u) continue
     const scaled = scaleUnit(u.unit, p.prefix)
@@ -650,7 +657,22 @@ const DIM_VEC: Record<Dim, DimVec> = {
   digital: [0, 0, 0, 0, 0, 0, 1],
 }
 
-type Qty = { si: number; dim: number[]; prefer?: Unit }
+/**
+ * Measurement riding on a quantity: sig figs (Infinity = exact) and relative ± uncertainty.
+ * Absent = exact. NaN once an addition mixes measured parts (decimal places need D's unit walker).
+ */
+type Prec = { sig: number; rel: number }
+const LOST: Prec = { sig: Number.NaN, rel: Number.NaN }
+
+type Qty = { si: number; dim: number[]; prefer?: Unit; prec?: Prec }
+
+/** Products, quotients and powers: fewest sig figs, relative uncertainties add. */
+function precMul(a: Qty, b: Qty): Prec | undefined {
+  if (!a.prec && !b.prec) return undefined
+  const x = a.prec ?? { sig: Infinity, rel: 0 }
+  const y = b.prec ?? { sig: Infinity, rel: 0 }
+  return { sig: Math.min(x.sig, y.sig), rel: x.rel + y.rel }
+}
 
 function vec(d: Dim): number[] {
   return [...DIM_VEC[d]]
@@ -700,37 +722,57 @@ function unitQty(unit: Unit): Qty {
   return { si: siOf(unit), dim: vec(unit.dim), prefer: unit }
 }
 
+/** An rpm rate counts revolutions (2π rad each); a bare `50/hr` or Hz is just a rate. */
+function isRevs(q: Qty): boolean {
+  return isFreq(q.dim) && q.prefer?.id === 'rpm'
+}
+
 function mulQty(a: Qty, b: Qty): Qty {
   let si = a.si * b.si
-  let dim = addVec(a.dim, b.dim)
-  if ((isEnergy(a.dim) && isFreq(b.dim)) || (isFreq(a.dim) && isEnergy(b.dim))) si *= 2 * Math.PI
-  if ((isFreq(a.dim) && isTime(b.dim)) || (isTime(a.dim) && isFreq(b.dim))) {
-    si *= 2 * Math.PI
-    dim = vec('angle')
-    return { si, dim, prefer: BY_ID.get('rad') }
+  const dim = addVec(a.dim, b.dim)
+  const prec = precMul(a, b)
+  if ((isEnergy(a.dim) && isRevs(b)) || (isRevs(a) && isEnergy(b.dim))) si *= 2 * Math.PI
+  if ((isRevs(a) && isTime(b.dim)) || (isTime(a.dim) && isRevs(b))) {
+    return { si: si * 2 * Math.PI, dim: vec('angle'), prefer: BY_ID.get('rad'), prec }
   }
   const prefer = isZeroVec(a.dim) ? b.prefer : isZeroVec(b.dim) ? a.prefer : undefined
-  return { si, dim, prefer }
+  return { si, dim, prefer, prec }
 }
 
 function divQty(a: Qty, b: Qty): Qty | null {
   if (b.si === 0) return null
   let si = a.si / b.si
   const dim = subVec(a.dim, b.dim)
-  if (isPower(a.dim) && isFreq(b.dim) && isEnergy(dim)) si /= 2 * Math.PI
+  if (isPower(a.dim) && isRevs(b) && isEnergy(dim)) si /= 2 * Math.PI
   const prefer = isZeroVec(b.dim) ? a.prefer : isZeroVec(a.dim) ? b.prefer : undefined
-  return { si, dim, prefer }
+  return { si, dim, prefer, prec: precMul(a, b) }
 }
 
 function addQty(a: Qty, b: Qty, sign: 1 | -1): Qty | null {
   if (!vecEq(a.dim, b.dim)) return null
-  return { si: a.si + sign * b.si, dim: a.dim, prefer: a.prefer ?? b.prefer }
+  const prec = a.prec || b.prec ? LOST : undefined
+  return { si: a.si + sign * b.si, dim: a.dim, prefer: a.prefer ?? b.prefer, prec }
 }
 
-function powQty(a: Qty, exp: number): Qty | null {
-  if (!Number.isFinite(exp)) return null
-  if (a.si < 0 && !Number.isInteger(exp)) return null
-  return { si: a.si ** exp, dim: scaleVec(a.dim, exp), prefer: Math.abs(exp) === 1 ? a.prefer : undefined }
+/** Exponents are exact; an uncertain one is not modelled. */
+function powQty(a: Qty, exp: Qty): Qty | null {
+  const e = exp.si
+  if (!Number.isFinite(e) || !isZeroVec(exp.dim)) return null
+  if (a.si < 0 && !Number.isInteger(e)) return null
+  const prec = exp.prec?.rel ? LOST : a.prec && { sig: a.prec.sig, rel: a.prec.rel * Math.abs(e) }
+  return { si: a.si ** e, dim: scaleVec(a.dim, e), prefer: Math.abs(e) === 1 ? a.prefer : undefined, prec }
+}
+
+/** Sig figs and ± of a unit answer `n`, in the answer's own unit. */
+function precMeas(n: number, p: Prec | undefined): Meas | undefined {
+  if (!p || Number.isNaN(p.sig) || !Number.isFinite(n)) return undefined
+  const out: Meas = {}
+  if (Number.isFinite(p.sig)) {
+    out.sig = p.sig
+    out.dp = n === 0 ? p.sig - 1 : p.sig - 1 - Math.floor(Math.log10(Math.abs(n)))
+  }
+  if (p.rel > 0) out.unc = Math.abs(n) * p.rel
+  return out.sig == null && out.unc == null ? undefined : out
 }
 
 function convertQty(q: Qty, target: Qty): number | null {
@@ -808,6 +850,12 @@ function asReciprocal(q: Qty, unit: Unit): Value | null {
 }
 
 function qtyToValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
+  const v = qtyValue(q, target, targetLabel)
+  const meas = v?.kind === 'number' ? precMeas(v.n, q.prec) : undefined
+  return meas ? { ...v!, meas } : v
+}
+
+function qtyValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
   if (target) {
     if (!Number.isFinite(q.si)) return unitError()
     const n = convertQty(q, target)
@@ -916,7 +964,8 @@ class UnitParser {
         left = quot
         continue
       }
-      if (isLetter(ch)) {
+      // `5 (2 m)` and `4/3 pi (2 m)^3` multiply; after a unit (`sec(0)`, `sec^-1(2)`) `(` is a function call, not ours.
+      if (isLetter(ch) || (ch === '(' && isZeroVec(left.dim))) {
         const right = this.parsePow()
         if (!right) return null
         left = mulQty(left, right)
@@ -941,8 +990,7 @@ class UnitParser {
     if (this.s[this.i] !== '^') return base
     this.i++
     const exp = this.parsePrimary()
-    if (!exp || !isZeroVec(exp.dim)) return null
-    return powQty(base, exp.si)
+    return exp && powQty(base, exp)
   }
 
   parsePrimary(): Qty | null {
@@ -958,40 +1006,66 @@ class UnitParser {
       if (unit) return mulQty({ si: Math.PI, dim: vec('dimensionless') }, unit)
       return { si: Math.PI, dim: vec('dimensionless') }
     }
-    const num = this.parseNumber()
-    if (num != null) {
+    const amount = this.parseAmount()
+    if (amount) {
       const unit = this.parseUnitRef()
       if (unit) {
         this.skip()
         if (this.s[this.i] === '^') {
           this.i++
           const exp = this.parsePrimary()
-          if (!exp || !isZeroVec(exp.dim)) return null
-          const raised = powQty(unit, exp.si)
-          if (!raised) return null
-          return mulQty({ si: num, dim: vec('dimensionless') }, raised)
+          const raised = exp && powQty(unit, exp)
+          return raised && mulQty(amount, raised)
         }
-        return mulQty({ si: num, dim: vec('dimensionless') }, unit)
+        return mulQty(amount, unit)
       }
-      return { si: num, dim: vec('dimensionless') }
+      return amount
     }
     return this.parseUnitRef()
   }
 
-  parseNumber(): number | null {
+  /**
+   * A number as written: `2.50` carries 3 sig figs, `5.0 ± 0.1` / `10 ± 5%` an uncertainty
+   * (± binds tighter than any operator), and a whole-number fraction right before a unit is one amount
+   * (`3/8 in`; `1/6.8 ohm` and `1/1 s` stay reciprocals).
+   */
+  parseAmount(): Qty | null {
+    const value = this.parseNumber()
+    if (!value) return null
+    let q = value
+    if (this.eat('±')) {
+      const u = this.parseNumber()
+      if (!u || value.si === 0) return null
+      const unc = Math.abs(this.eat('%') ? (value.si * u.si) / 100 : u.si)
+      q = { ...value, prec: { sig: value.prec?.sig ?? Infinity, rel: unc / Math.abs(value.si) } }
+    }
+    const at = this.i
+    if (this.eat('/')) {
+      const den = this.parseNumber()
+      this.skip()
+      const vulgar = Number.isInteger(q.si) && !q.prec && den && Number.isInteger(den.si) && den.si > 1 && !den.prec
+      if (vulgar && matchUnitAtStart(this.s.slice(this.i))) return divQty(q, den)
+      this.i = at
+    }
+    return q
+  }
+
+  parseNumber(): Qty | null {
     this.skip()
-    const m = this.s.slice(this.i).match(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i)
+    const m = this.s.slice(this.i).match(/^([+-]?)((?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)/i)
     if (!m) return null
-    const n = Number(m[0])
-    if (!Number.isFinite(n)) return null
+    const si = Number(m[0])
+    if (!Number.isFinite(si)) return null
     this.i += m[0].length
-    return n
+    const { sig } = literalMeas(m[2]!)
+    return { si, dim: vec('dimensionless'), prec: Number.isFinite(sig) ? { sig, rel: 0 } : undefined }
   }
 
   parseUnitRef(): Qty | null {
     this.skip()
     const hit = matchUnitAtStart(this.s.slice(this.i))
-    if (!hit) return null
+    // °C/°F are offset scales: `72 F in C` converts, but they can't be multiplied or added.
+    if (!hit || hit.unit.id === 'c' || hit.unit.id === 'f') return null
     this.i += this.s.slice(this.i).length - hit.rest.length
     this.usedUnit = true
     return unitQty(hit.unit)
@@ -1082,7 +1156,8 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
   let expr: string
   if (conv) {
     const source = matchPrefixedUnit((conv[1] ?? '').trim())
-    if (!source) return null
+    // A mismatch (`2 F in uF`) may still convert once `F` is read as a farad by the unit parser.
+    if (!source || source.unit.dim !== end.unit.dim) return null
     from = source.unit
     to = end.unit
     expr = source.rest
@@ -1100,7 +1175,11 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
 
   const amount = parseAmount(expr)
   if (amount == null) return null
-  return convertAmount(amount, from, to)
+  const out = convertAmount(amount, from, to)
+  // Conversion factors are exact, so `12.0 kg in lb` keeps 3 sig figs. Offset scales (°C/°F) don't.
+  const { sig } = literalMeas(expr.trim().replace(/^[+-]/, ''))
+  const meas = from.dim !== 'temperature' && out?.kind === 'number' ? precMeas(out.n, Number.isFinite(sig) ? { sig, rel: 0 } : undefined) : undefined
+  return meas ? { ...out!, meas } : out
 }
 
 export function tryConvert(text: string, defaults?: DefaultUnits): Value | null {
@@ -1410,4 +1489,13 @@ export function defaultUnitsEqual(a: DefaultUnits, b: DefaultUnits): boolean {
     if (a[key as Dim] !== b[key as Dim]) return false
   }
   return true
+}
+
+/** `5 cm` (or `5.0 ± 0.1 cm`) as text that parses back to the same quantity, or null when the unit label doesn't. */
+export function quantityText(v: Value): string | null {
+  if (v.kind !== 'number' || !v.unit || !v.unitId || !Number.isFinite(v.n)) return null
+  const n = Number(v.n.toPrecision(12))
+  const text = `${n}${v.meas?.unc ? ` ± ${v.meas.unc}` : ''} ${v.unit}`
+  const back = tryConvert(`${text} to ${v.unit}`)
+  return back?.kind === 'number' && back.unitId === v.unitId && sameScale(back.n, n) ? text : null
 }

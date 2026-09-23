@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateLine } from './evaluate'
+import { evaluateLine, evaluateSheet } from './evaluate'
 import { formatValue } from './format'
 import type { Value } from './types'
 import { inLadderUnit, sanitizeDefaultUnits, stepPrefix, tryConvert, UNIT_SETTING_GROUPS } from './units'
@@ -98,9 +98,13 @@ suite('Time', [
 ])
 
 suite('Digital Data Storage', [
-  { name: 'Megabytes to Kilobytes (Binary)', input: '500 megabytes to kilobytes', expected: 500 * 1024, unit: 'KB' },
-  { name: 'Gigabytes to Megabytes (Binary)', input: '16 gigabytes to megabytes', expected: 16 * 1024, unit: 'MB' },
-  { name: 'Terabytes to Gigabytes (Binary)', input: '2 terabytes to gigabytes', expected: 2 * 1024, unit: 'GB' },
+  { name: 'Megabytes to Kilobytes (SI)', input: '500 megabytes to kilobytes', expected: 500 * 1000, unit: 'kB' },
+  { name: 'Gigabytes to Megabytes (SI)', input: '16 gigabytes to megabytes', expected: 16 * 1000, unit: 'MB' },
+  { name: 'Terabytes to Gigabytes (SI)', input: '2 terabytes to gigabytes', expected: 2 * 1000, unit: 'GB' },
+  { name: 'Mebibytes to Kibibytes (IEC)', input: '500 mebibytes to kibibytes', expected: 500 * 1024, unit: 'KiB' },
+  { name: 'Gigabyte to Gibibytes', input: '1 GB in GiB', expected: 1e9 / 1024 ** 3, unit: 'GiB' },
+  { name: 'Terabyte to Gigabytes', input: '1 TB in GB', expected: 1000, unit: 'GB' },
+  { name: 'Gibibyte to Megabytes', input: '1 GiB in MB', expected: 1024 ** 3 / 1e6, unit: 'MB' },
 ])
 
 suite('Energy & Power', [
@@ -964,8 +968,14 @@ describe('Reciprocal named units', () => {
   })
 
   it('keeps 1/farad and 1/henry', () => {
-    expect(evaluateLine('1/2 farad').display).toMatch(/0\.5 1\/F$/)
-    expect(evaluateLine('1/2 henry').display).toMatch(/0\.5 1\/H$/)
+    expect(evaluateLine('1/0.5 farad').display).toMatch(/^2 1\/F$/)
+    expect(evaluateLine('1/0.5 henry').display).toMatch(/^2 1\/H$/)
+  })
+
+  it('reads a whole-number fraction before a unit as one amount', () => {
+    expect(evaluateLine('1/2 farad').display).toBe('0.5 F')
+    expect(evaluateLine('1/2 in + 3/8 in').display).toBe('0.875 in')
+    expect(evaluateLine('5/8 in in mm').display).toBe('15.875 mm')
   })
 
   it('still names 1/s as hertz', () => {
@@ -1466,10 +1476,10 @@ grid(
 grid(
   'Digital Data Storage',
   [
-    ['kilobytes', 1024],
-    ['megabytes', 1024 ** 2],
-    ['gigabytes', 1024 ** 3],
-    ['terabytes', 1024 ** 4],
+    ['kilobytes', 1e3],
+    ['megabytes', 1e6],
+    ['gigabytes', 1e9],
+    ['terabytes', 1e12],
   ],
   [1, 2, 4, 8, 16, 32, 64],
 )
@@ -2152,10 +2162,11 @@ suite('Month abbreviation', [
 ])
 
 suite('Digital units keep their dimension', [
-  { name: '1 kb', input: '1 kb', expected: 1, unit: 'KB' },
-  { name: '2 kb + 1 kb', input: '2 kb + 1 kb', expected: 3, unit: 'KB' },
+  { name: '1 kb', input: '1 kb', expected: 1, unit: 'kB' },
+  { name: '2 kb + 1 kb', input: '2 kb + 1 kb', expected: 3, unit: 'kB' },
   { name: '2 gb * 3', input: '2 gb * 3', expected: 6, unit: 'GB' },
-  { name: '1 gb / 1 mb', input: '1 gb / 1 mb', expected: 1024, unit: /^1024$/ },
+  { name: '1 gb / 1 mb', input: '1 gb / 1 mb', expected: 1000, unit: /^1000$/ },
+  { name: '1 gib / 1 mib', input: '1 gib / 1 mib', expected: 1024, unit: /^1024$/ },
 ])
 
 describe('stepPrefix', () => {
@@ -2208,5 +2219,80 @@ describe('stepPrefix', () => {
   it('re-expresses a value in a unit from the same ladder', () => {
     expect(show(inLadderUnit(at('980 N to N'), 'kilonewton'))).toBe('0.98 kN')
     expect(inLadderUnit(at('980 N to N'), 'kilo_m')).toBeNull()
+  })
+})
+
+describe('bugfix batch: no silent wrong unit answers', () => {
+  const d = (text: string) => evaluateLine(text).display
+  const sheet = (...lines: string[]) => evaluateSheet(lines).map((r) => r.display)
+
+  it('reads capital F, C, H as farad, coulomb, henry in arithmetic', () => {
+    expect(d('1 F * 1 V')).toBe('1 C')
+    expect(d('1 ohm * 1 F')).toBe('1 s')
+    expect(d('1 A * 1 s in C')).toBe('1 C')
+    expect(d('1 C / 1 s')).toBe('1 A')
+    expect(d('2 F in uF')).toBe('2000000 uF')
+    expect(d('1 H')).toBe('1 H')
+    expect(d('1 uH')).toBe('1 μH')
+    expect(d('1 mH')).toBe('1 mH')
+  })
+
+  it('keeps plain temperature conversions and lowercase hours', () => {
+    expect(d('72 F')).toMatch(/°C$/)
+    expect(d('100 C in F')).toBe('212 °F')
+    expect(d('2 h')).toBe('2 hr')
+  })
+
+  it('never multiplies offset temperature scales, but kelvin is a real unit', () => {
+    expect(d('72 f * 2')).toBe('')
+    expect(d('20 °C + 5 K')).toBe('')
+    expect(d('300 K * 2')).toBe('600 K')
+    expect(d('1.38e-23 J/K * 300 K')).toBe('4.14e-21 J')
+  })
+
+  it('gives SI prefixes to seconds but not to other time units', () => {
+    expect(d('2 ms')).toBe('2 ms')
+    expect(d('1 uhr')).toBe('')
+  })
+
+  it('counts revolutions only for rpm; a bare rate times a time is a count', () => {
+    expect(d('50/hr * 40 hr')).toBe('2000')
+    expect(d('60 Hz * 1 s')).toBe('60')
+    expect(d('10 J * 5 Hz')).toBe('50 W')
+    expect(evaluateLine('120 RPM * 10 s').value?.n).toBeCloseTo(40 * Math.PI, 9)
+    expect(evaluateLine('10 N * m * 100 RPM').value?.n).toBeCloseTo((10 * 100 * 2 * Math.PI) / 60, 9)
+    expect(d('100 km / 2 hr * 3 hr')).toBe('150000 m')
+  })
+
+  it('multiplies a number by a parenthesized quantity', () => {
+    expect(evaluateLine('4/3 pi (2 m)^3').value?.n).toBeCloseTo((4 / 3) * Math.PI * 8, 9)
+    expect(d('4/3 pi (2 m)^3')).toMatch(/ m³$/)
+    expect(d('5 (2 m)')).toBe('10 m')
+    expect(d('sec(0)')).toBe('1')
+  })
+
+  it('keeps kB/MB/GB decimal and KiB/MiB/GiB binary', () => {
+    expect(d('1 GB in GiB')).toBe('0.931322574615 GiB')
+    expect(d('1 TB in GB')).toBe('1000 GB')
+  })
+
+  it('never answers a clock reading as a range', () => {
+    expect(d('2:30 * 3')).toBe('')
+    expect(d('1:5')).toBe('')
+  })
+
+  it('carries units through variables and ans', () => {
+    expect(sheet('d = 5 cm', 'd * 2', 'd + 1 m')).toEqual(['1.96850393701 in', '3.93700787402 in', '41.3385826772 in'])
+    expect(sheet('5 cm to cm', 'ans * 2')).toEqual(['5 cm', '10 cm'])
+    expect(sheet('m = 2.0 ± 0.1 kg', 'm * 2')).toEqual(['2.0 ± 0.1 kg', '4.0 ± 0.2 kg'])
+    // An offset temperature can't be scaled: blank, not a unit-less 44.4.
+    expect(sheet('t = 72 F', 't * 2')[1]).toBe('')
+    expect(sheet('d = 5 cm', 'd = 3', 'd * 2')[2]).toBe('6')
+    const r = evaluateLine('d * 2', { quantities: { d: '5 cm' } })
+    expect(r.display).toBe('10 cm')
+  })
+
+  it('makes a unit answer that cannot be carried blank downstream', () => {
+    expect(evaluateLine('ans * 2', { ans: 3, quantities: { ans: '' } }).display).toBe('')
   })
 })

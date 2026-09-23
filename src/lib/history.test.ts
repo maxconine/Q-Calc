@@ -4,6 +4,7 @@ import {
   ellipsize,
   historyFunctions,
   historyMeasures,
+  historyQuantities,
   historyVariables,
   lastHistoryNumber,
   MAX_HISTORY,
@@ -24,6 +25,7 @@ function row(partial: Partial<HistoryRow> & { expr?: string; display?: string })
     display: partial.display ?? '4',
     exact: partial.exact,
     n: partial.n,
+    quantity: partial.quantity,
     kind: partial.kind,
     fnName: partial.fnName,
     fnParams: partial.fnParams,
@@ -352,5 +354,25 @@ describe('measured answers', () => {
     const rows: HistoryRow[] = [{ id: '1', expr: 'x = 2.50', display: '2.50', n: 2.5, meas: { sig: 3, dp: 2 } }]
     const r = evaluateLine('x * 3.1', { sigFigMode: true, variables: historyVariables(rows), measures: historyMeasures(rows) })
     expect(r.display).toBe('7.8')
+  })
+})
+
+describe('unit-valued history answers', () => {
+  const rows = [
+    row({ id: '1', expr: 'k = 2', display: '2', n: 2 }),
+    row({ id: '2', expr: 'd = 5 cm', display: '1.97 in', n: 1.9685, quantity: '1.96850393701 in' }),
+    row({ id: '3', expr: '3 m', display: '9.84 ft', n: 9.84, quantity: '9.84251968504 ft' }),
+  ]
+  it('keeps them out of the numeric variables and ans', () => {
+    expect(historyVariables(rows)).toEqual({ k: 2 })
+    expect(lastHistoryNumber(rows)).toBeUndefined()
+  })
+  it('hands them back as quantities, ans included', () => {
+    expect(historyQuantities(rows)).toEqual({ d: '1.96850393701 in', ans: '9.84251968504 ft' })
+    expect(historyQuantities([...rows, row({ id: '4', expr: 'd = 3', display: '3', n: 3 })])).toEqual({})
+  })
+  it('survives slimming, and drops a malformed quantity', () => {
+    expect(slimHistoryRow(rows[1]!)?.quantity).toBe('1.96850393701 in')
+    expect(normalizeHistoryRow({ expr: '3 m', display: '9.84 ft', quantity: 5 as unknown as string }, 'x')?.quantity).toBeUndefined()
   })
 })

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { clampSigFigs, DEFAULT_SIG_FIGS, formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
+import { hasPlusMinus } from '../engine/measure'
 import { defaultUnitsEqual, inLadderUnit, isImproperUnitConversion, sanitizeDefaultUnits, stepPrefix, type DefaultUnits } from '../engine/units'
 import type { Value } from '../engine/types'
 import { applyTheme, normalizeTheme, type Theme } from '../lib/theme'
@@ -65,6 +66,7 @@ import {
 import {
   historyFunctions,
   historyMeasures,
+  historyQuantities,
   historyVariables,
   lastHistoryNumber,
   normalizeHistoryRow,
@@ -390,6 +392,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const exactRef = useRef<string | undefined>(undefined)
   const liveNRef = useRef<number | undefined>(undefined)
   const liveMeasRef = useRef<HistoryRow['meas']>(undefined)
+  const liveQtyRef = useRef<string | undefined>(undefined)
   const settingsRef = useRef(settings)
   const draftAtRef = useRef(readStoredDraft(settings.draftSeconds)?.savedAt ?? 0)
   const draftTimer = useRef(0)
@@ -469,6 +472,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const nativeVars = useMemo(() => historyVariables(history), [history])
   const nativeFns = useMemo(() => historyFunctions(history), [history])
   const nativeMeas = useMemo(() => historyMeasures(history), [history])
+  const nativeQty = useMemo(() => historyQuantities(history), [history])
 
   const helpShown = helpOpen || isHelpCommand(q)
   const cheats = useMemo(() => cheatSheet(nativeInfo.hotkey || undefined), [nativeInfo.hotkey])
@@ -499,9 +503,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       ans: lastAns,
       variables: nativeVars,
       measures: nativeMeas,
+      quantities: nativeQty,
       functions: liveFns,
     })
-  }, [q, graphCmd, lastAns, nativeVars, nativeMeas, liveFns, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.sigFigMode, settings.defaultUnits])
+  }, [q, graphCmd, lastAns, nativeVars, nativeMeas, nativeQty, liveFns, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.sigFigMode, settings.defaultUnits])
 
   const live = sheet[sheet.length - 1]
   const jsDisplay = graphCmd
@@ -528,6 +533,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   exactRef.current = liveExact
   liveNRef.current = liveN
   liveMeasRef.current = display && display === jsDisplay ? live?.meas : undefined
+  // The unit quantity behind a JS answer (⌥↑-stepped or not), so `ans` and variables keep their unit.
+  liveQtyRef.current = jsValue ? live?.quantity : undefined
   commitFactsRef.current = {
     variable: display && display === jsDisplay && live?.kind === 'assignment' ? live.variable : undefined,
     unit: Boolean(steppableRef.current?.unit),
@@ -757,6 +764,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const exact = exactRef.current
     const n = liveNRef.current
     const meas = liveMeasRef.current
+    const quantity = liveQtyRef.current
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
     const nextHint = quiet ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...commitFactsRef.current })
     updateOnboarding((s) => ({ ...recordCommit(s), hints: s.hints | (nextHint?.bit ?? 0) }))
@@ -777,6 +785,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         exact: def || fnDef ? undefined : exact && exact !== shown ? exact : undefined,
         n: def || fnDef ? undefined : Number.isFinite(n) ? n : undefined,
         meas: def || fnDef ? undefined : meas,
+        quantity: def || fnDef ? undefined : quantity,
         kind: def ? ('definition' as const) : fnDef ? ('function' as const) : undefined,
         fnName: fnDef?.name,
         fnParams: fnDef?.params,
@@ -792,6 +801,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     exactRef.current = undefined
     liveNRef.current = undefined
     liveMeasRef.current = undefined
+    liveQtyRef.current = undefined
     defLiveRef.current = null
     graphFnRef.current = null
     draftAtRef.current = 0
@@ -1017,6 +1027,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isHelpCommand(q)) return
     // Plain math is already answered in JS; SoulverCore is only needed for natural language.
     if (jsDisplay && !looksLikeNaturalLanguage(q)) return
+    // SoulverCore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that.
+    if (hasPlusMinus(q)) return
     const id = ++evalIdRef.current
     const expr = q
     let cancelled = false
@@ -1313,21 +1325,21 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             sf
             <span className="edge-key" aria-hidden="true">⌃S</span>
           </button>
-          <button
-            type="button"
-            className="edge-tool edge-clear"
-            aria-keyshortcuts="Control+C"
-            aria-label="Clear history and variables. Shortcut Control C"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => {
-              clearHistory()
-              mathRef.current?.focus()
-            }}
-          >
-            clear
-            <span className="edge-key" aria-hidden="true">⌃C</span>
-          </button>
         </div>
+        <button
+          type="button"
+          className="edge-tool edge-clear"
+          aria-keyshortcuts="Control+C"
+          aria-label="Clear history and variables. Shortcut Control C"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            clearHistory()
+            mathRef.current?.focus()
+          }}
+        >
+          clear
+          <span className="edge-key" aria-hidden="true">⌃C</span>
+        </button>
         <QuickInput
           value={q}
           ansPlain={ansPlain}

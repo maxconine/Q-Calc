@@ -16,7 +16,8 @@ export type MeasureContext = {
 }
 
 const LITERAL_RE = /(?<![A-Za-z_0-9.])(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/gi
-const PERCENT_UNC_RE = /±\s*(\d+\.?\d*|\.\d+)\s*%/g
+/** `5.0 ± 0.2`, `10 ± 5%`: one measured quantity, so ± binds tighter than any operator (`5.0 ± 0.2 * 3` = 15.0 ± 0.6). */
+const PLUS_MINUS_RE = /(?<![A-Za-z_0-9.])((?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*±\s*((?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(\s*%)?/gi
 
 /** Result keeps the sig figs of its argument. */
 const SIG_FNS = new Set(
@@ -95,13 +96,7 @@ export function sanitizeMeas(raw: unknown): Meas | undefined {
 }
 
 export function hasPlusMinus(text: string): boolean {
-  return text.includes('±')
-}
-
-function unwrap(node: MathNode): MathNode {
-  let n = node
-  while (n.type === 'ParenthesisNode') n = (n as unknown as { content: MathNode }).content
-  return n
+  return text.includes('±') || text.includes('∓')
 }
 
 type Walk = (node: MathNode) => M | null
@@ -142,32 +137,6 @@ function walkFunction(name: string, args: M[], ctx: MeasureContext): M | null {
   return log ? byDp(v, a.sig, unc) : bySig(v, a.sig, unc)
 }
 
-/** `a ± b` / `a ± b%` with literal sides (a may be negated). */
-function walkPlusMinus(node: MathNode, literals: M[]): M | null {
-  const [lhs, rhs] = (node as unknown as { args: MathNode[] }).args.map(unwrap)
-  const lit = (n: MathNode | undefined): M | null => {
-    if (n?.type !== 'SymbolNode') return null
-    const m = /^__L(\d+)$/.exec((n as unknown as { name: string }).name)
-    return m ? (literals[Number(m[1])] ?? null) : null
-  }
-  let a = lit(lhs)
-  if (!a && lhs?.type === 'OperatorNode' && (lhs as unknown as { fn: string }).fn === 'unaryMinus') {
-    const inner = lit(unwrap((lhs as unknown as { args: MathNode[] }).args[0]!))
-    if (inner) a = { ...inner, v: -inner.v }
-  }
-  if (!a) return null
-  let u: number | null = null
-  const direct = lit(rhs)
-  if (direct) u = Math.abs(direct.v)
-  else if (rhs?.type === 'FunctionNode' && (rhs as unknown as { fn: { name: string } }).fn.name === '__pct') {
-    const args = (rhs as unknown as { args: MathNode[] }).args
-    const pct = args.length === 1 ? lit(unwrap(args[0]!)) : null
-    if (pct) u = (Math.abs(a.v) * Math.abs(pct.v)) / 100
-  }
-  if (u == null) return null
-  return { ...a, unc: u }
-}
-
 /**
  * Walk the expression as measured quantities: sig figs from the literals, ± uncertainties
  * propagated worst-case. Returns null for anything it does not model (the caller falls back).
@@ -175,15 +144,16 @@ function walkPlusMinus(node: MathNode, literals: M[]): M | null {
 export function measure(text: string, ctx: MeasureContext = {}): { v: number; meas?: Meas } | null {
   let src = fillParens(rewriteTypesetMul(text.trim()))
   if (!src || src.includes('|')) return null
-  src = src.replace(PERCENT_UNC_RE, '± __pct($1)')
-  const fnNames = Object.keys(ctx.functions ?? {})
   const literals: M[] = []
-  const expr = preprocessAscii(src, fnNames)
-    .replace(/±/g, '|')
-    .replace(LITERAL_RE, (lit) => {
-      literals.push(literalMeas(lit))
-      return `(__L${literals.length - 1})`
-    })
+  const hold = (m: M) => `(__L${literals.push(m) - 1})`
+  src = src.replace(PLUS_MINUS_RE, (_, value: string, u: string, pct?: string) => {
+    const m = literalMeas(value)
+    return hold({ ...m, unc: Math.abs(pct ? (m.v * Number(u)) / 100 : Number(u)) })
+  })
+  // Anything else around ± (`x ± 1`, `(1+2) ± 1`) is not modelled: no answer beats one that drops the ±.
+  if (src.includes('±')) return null
+  const fnNames = Object.keys(ctx.functions ?? {})
+  const expr = preprocessAscii(src, fnNames).replace(LITERAL_RE, (lit) => hold(literalMeas(lit)))
   let root: MathNode
   try {
     root = math.parse(expr)
@@ -214,7 +184,6 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
       }
       case 'OperatorNode': {
         const op = node as unknown as { fn: string; args: MathNode[] }
-        if (op.fn === 'bitOr') return walkPlusMinus(node, literals)
         const args = op.args.map(walk)
         if (args.some((a) => a == null)) return null
         const [a, b] = args as M[]
@@ -244,7 +213,8 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
             if (!Number.isFinite(v)) return null
             if (a.unc > 0 && a.v === 0) return null
             const unc = a.unc > 0 ? (Math.abs(v * b.v) * a.unc) / Math.abs(a.v) : 0
-            return bySig(v, Math.min(a.sig, b.sig), unc)
+            // Exponents are exact: `2.0^0.5` keeps 2 sig figs, like `sqrt(2.0)`.
+            return bySig(v, a.sig, unc)
           }
         }
         return null

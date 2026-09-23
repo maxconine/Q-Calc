@@ -264,7 +264,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: currentColor;
 }
 .edge-clear {
+  position: absolute;
+  right: 12px;
+  bottom: 4px;
+  z-index: 5;
   padding: 0 5px;
+}
+.edge-clear .edge-key {
+  top: auto;
+  bottom: calc(100% + 4px);
 }
 .edge-key {
   position: absolute;

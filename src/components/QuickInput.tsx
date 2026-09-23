@@ -35,6 +35,7 @@ const TOKEN_REPLACEMENTS: [RegExp, string][] = [
   [/(?<![A-Za-z])inf(?![A-Za-z0-9])/gi, '∞'],
   [/(?<![A-Za-z])cbrt(?![A-Za-z0-9])/gi, '∛'],
   [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
+  [/-\+/g, '∓'],
   [/\+-/g, '±'],
   [/~/g, '±'],
 ]
