@@ -22,6 +22,8 @@ interface Props {
   onDown: () => boolean
   /** ⌥↑ / ⌥↓: step the answer's SI prefix. */
   onPrefixStep?: (dir: 1 | -1) => void
+  /** Faint example shown in place of the placeholder while the input is empty; `id` restarts its fade. */
+  example?: { text: string; id: number } | null
   handleRef?: MutableRefObject<QuickInputHandle | null>
 }
 
@@ -72,7 +74,7 @@ export function prettyTokens(text: string, ansPlain?: string, caret?: number): s
   return replaceTokens(text.slice(0, caret), ansPlain, true) + replaceTokens(text.slice(caret), ansPlain, false)
 }
 
-export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, onPrefixStep, handleRef }: Props) {
+export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, onPrefixStep, example, handleRef }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLSpanElement>(null)
   const [prefixWidth, setPrefixWidth] = useState(0)
@@ -266,6 +268,8 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
     commit(filled, filled.length)
   }
 
+  const showExample = !value && example != null
+
   return (
     <div className="quick-field">
       <div className="quick-ghost" aria-hidden>
@@ -274,6 +278,11 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
         </span>
         <span className="quick-ghost-text">{value}</span>
         {suffix ? <span className="quick-inferred">{suffix}</span> : null}
+        {showExample && example ? (
+          <span key={example.id} className="quick-example">
+            {example.text}
+          </span>
+        ) : null}
       </div>
       <input
         ref={inputRef}
@@ -285,7 +294,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
         autoCorrect="off"
         autoComplete="off"
         spellCheck={false}
-        placeholder="Calculate"
+        placeholder={showExample ? '' : 'Calculate'}
         style={prefixWidth ? { paddingLeft: prefixWidth } : undefined}
         onChange={(e) => {
           const el = e.currentTarget

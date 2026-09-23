@@ -110,6 +110,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var sizeAnchorTop: CGFloat = 0
     private var settingsObserver: NSObjectProtocol?
     private var lastPasteAt: TimeInterval = 0
+    private var pendingFirstRun = false
     /// SoulverCore work runs here so a slow evaluation never blocks typing on the main thread.
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
 
@@ -173,6 +174,22 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         NotificationCenter.default.post(name: .focusOverlay, object: nil)
     }
 
+    /// First launch after install: show once so people see where it lives, leading with the shortcut.
+    func showFirstRun() {
+        guard webReady else {
+            pendingFirstRun = true
+            return
+        }
+        show()
+        web?.evaluateJavaScript("window.__QCALC_FIRST_RUN = true; if (window.__qcalcFirstRun) window.__qcalcFirstRun();")
+    }
+
+    /// Menu bar "Tips…": the overlay with the `?` sheet open.
+    func showTips() {
+        show()
+        web?.evaluateJavaScript("if (window.__qcalcShowTips) window.__qcalcShowTips();")
+    }
+
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.name == "soulver" {
             pushSoulverResult(soulverPayload(from: message.body))
@@ -202,6 +219,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 beginWindowDrag()
             case "settings":
                 applyWebSettings(dict)
+            case "onboarding":
+                applyWebOnboarding(dict)
             case "eval":
                 pushSoulverResult(soulverPayload(from: dict))
             default:
@@ -229,6 +248,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webReady = true
         disableWebViewScrolling(webView)
+        if pendingFirstRun {
+            pendingFirstRun = false
+            DispatchQueue.main.async { [weak self] in self?.showFirstRun() }
+        }
         focusInput()
         for delay in [0.05, 0.12, 0.3] {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
@@ -284,13 +307,16 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let rationalize = AppSettings.shared.rationalize ? "true" : "false"
         let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
         let theme = AppSettings.shared.theme
+        let hotKey = hotKeyJavaScriptFields()
+        let onboarding = AppSettings.shared.onboardingJSON()
         let boot = WKUserScript(
             source: """
             window.__QCALC_NATIVE = true;
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_META = false;
-            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: "\(theme)" };
+            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: "\(theme)", \(hotKey) };
+            window.__QCALC_ONBOARDING = \(onboarding);
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
@@ -665,7 +691,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let rationalize = AppSettings.shared.rationalize ? "true" : "false"
         let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
         let theme = AppSettings.shared.theme
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\" }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", \(hotKeyJavaScriptFields()) }"
+    }
+
+    /// The registered shortcut's label ("" when none) so the web side can show it; titles are fixed preset strings.
+    private func hotKeyJavaScriptFields() -> String {
+        let title = AppSettings.shared.activeHotKey?.title ?? ""
+        let failed = AppSettings.shared.hotKeyFailed ? "true" : "false"
+        return "hotkey: \"\(title)\", hotkeyFailed: \(failed)"
     }
 
     private func applyWebAppearance(_ webView: WKWebView? = nil) {
@@ -684,6 +717,15 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if let sigFigMode = boolValue(dict["sigFigMode"]) {
             AppSettings.shared.setSigFigMode(sigFigMode, notifyWeb: false)
         }
+    }
+
+    private func applyWebOnboarding(_ dict: [String: Any]) {
+        var incoming: [String: Int] = [:]
+        for key in ["opens", "commits", "hints"] {
+            if let n = intValue(dict[key]) { incoming[key] = n }
+        }
+        if boolValue(dict["done"]) == true { incoming["done"] = 1 }
+        AppSettings.shared.mergeOnboarding(incoming)
     }
 
     private func soulverPayload(from body: Any) -> [String: Any] {

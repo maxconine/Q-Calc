@@ -38,7 +38,30 @@ import {
   type NativeEvalReply,
   type NativeLive,
 } from '../lib/nativeEval'
-import { QuickInput, flattenPastedText, type QuickInputHandle } from './QuickInput'
+import { QuickInput, flattenPastedText, prettyTokens, type QuickInputHandle } from './QuickInput'
+import {
+  advanceRotation,
+  afterHelpInput,
+  cheatSheet,
+  dismissRotation,
+  emptyOnboarding,
+  EXAMPLE_MS,
+  exampleList,
+  examplesActive,
+  HOTKEY_FAILED_HINT,
+  isHelpCommand,
+  mergeOnboarding,
+  pickHint,
+  recordCommit,
+  recordOpen,
+  ROTATION_OFF,
+  rotationItem,
+  sanitizeOnboarding,
+  startRotation,
+  type CommitFacts,
+  type Onboarding,
+  type Rotation,
+} from '../lib/onboarding'
 import {
   historyFunctions,
   historyMeasures,
@@ -66,15 +89,23 @@ type Settings = {
   theme: Theme
 }
 
+/** Pushed by the Mac app with settings; never stored by the web view. */
+type NativeInfo = { hotkey?: string; hotkeyFailed?: boolean }
+
 type CalcWindow = NativeWindow & {
-  __QCALC_SETTINGS?: Partial<Settings>
-  __qcalcApplySettings?: (s: Partial<Settings>) => void
+  __QCALC_SETTINGS?: Partial<Settings> & NativeInfo
+  __QCALC_ONBOARDING?: unknown
+  __QCALC_FIRST_RUN?: boolean
+  __qcalcApplySettings?: (s: Partial<Settings> & NativeInfo) => void
+  __qcalcFirstRun?: () => void
+  __qcalcShowTips?: () => void
   __qcalcNativeResult?: (reply: NativeEvalReply) => void
 }
 
 const HISTORY_KEY = 'qcalc-history'
 const SETTINGS_KEY = 'qcalc-settings'
 const DRAFT_KEY = 'qcalc-draft'
+const ONBOARDING_KEY = 'qcalc-onboarding'
 const LEGACY_HISTORY_KEY = 'instant-solver-history'
 const LEGACY_SETTINGS_KEY = 'instant-solver-settings'
 const LEGACY_DRAFT_KEY = 'instant-solver-draft'
@@ -238,6 +269,39 @@ function loadSettings(): Settings {
   return next
 }
 
+function mergeNativeInfo(partial: NativeInfo | undefined, base: Required<NativeInfo>): Required<NativeInfo> {
+  return {
+    hotkey: typeof partial?.hotkey === 'string' ? partial.hotkey : base.hotkey,
+    hotkeyFailed: typeof partial?.hotkeyFailed === 'boolean' ? partial.hotkeyFailed : base.hotkeyFailed,
+  }
+}
+
+/** The web view's storage is not persistent in the Mac app, so the app keeps a copy and hands it back. */
+function loadOnboarding(): Onboarding {
+  let stored = emptyOnboarding()
+  try {
+    const raw = localStorage.getItem(ONBOARDING_KEY)
+    if (raw) stored = sanitizeOnboarding(JSON.parse(raw))
+  } catch {
+    /* start fresh */
+  }
+  return mergeOnboarding(stored, sanitizeOnboarding(windowDraft().__QCALC_ONBOARDING))
+}
+
+function saveOnboarding(s: Onboarding): void {
+  try {
+    localStorage.setItem(ONBOARDING_KEY, JSON.stringify(s))
+  } catch {
+    /* the native copy still keeps it */
+  }
+  nativeHandler()?.postMessage({ type: 'onboarding', ...s })
+}
+
+/** Browser page loads count as opens once, even under StrictMode's double mount. */
+let pageOpenCounted = false
+
+const MODIFIER_KEYS = new Set(['Shift', 'Meta', 'Control', 'Alt', 'CapsLock', 'Fn'])
+
 function uid(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
@@ -295,6 +359,19 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [armsShake, setArmsShake] = useState(false)
   /** Unit picked with ⌥↑/⌥↓ for the live answer; cleared when the answer is committed or reset. */
   const [prefixUnit, setPrefixUnit] = useState<string | null>(null)
+  const [nativeInfo, setNativeInfo] = useState(() =>
+    mergeNativeInfo(windowDraft().__QCALC_SETTINGS, { hotkey: '', hotkeyFailed: false }),
+  )
+  const [rotation, setRotation] = useState<Rotation>(ROTATION_OFF)
+  const [firstRun, setFirstRun] = useState(false)
+  /** One muted line under the composer; cleared by the next keystroke. */
+  const [hint, setHint] = useState<string | null>(null)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const onboardingRef = useRef<Onboarding | null>(null)
+  if (!onboardingRef.current) onboardingRef.current = loadOnboarding()
+  const nativeInfoRef = useRef(nativeInfo)
+  nativeInfoRef.current = nativeInfo
+  const commitFactsRef = useRef<Omit<CommitFacts, 'expr'>>({})
   const mathRef = useRef<QuickInputHandle | null>(null)
   const caretRef = useRef<{ start: number; end: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -321,6 +398,21 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   historyLenRef.current = history.length
   qRef.current = q
   settingsRef.current = settings
+
+  const updateOnboarding = useCallback((step: (s: Onboarding) => Onboarding) => {
+    const next = step(onboardingRef.current ?? emptyOnboarding())
+    onboardingRef.current = next
+    saveOnboarding(next)
+  }, [])
+
+  /** Each time the overlay opens: count it, maybe start the examples, and repeat a hotkey failure. */
+  const beginShowing = useCallback(() => {
+    updateOnboarding(recordOpen)
+    setRotation(startRotation(examplesActive(onboardingRef.current ?? emptyOnboarding())))
+    setFirstRun(false)
+    setHelpOpen(false)
+    setHint(nativeInfoRef.current.hotkeyFailed ? HOTKEY_FAILED_HINT : null)
+  }, [updateOnboarding])
 
   const stopDraftTimer = useCallback(() => {
     window.clearTimeout(draftTimer.current)
@@ -349,6 +441,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setCopied(false)
     setNativeLive(null)
     setPrefixUnit(null)
+    setHelpOpen(false)
     mathRef.current?.setValue('')
     mathRef.current?.focus()
   }, [stopDraftTimer])
@@ -377,6 +470,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const nativeFns = useMemo(() => historyFunctions(history), [history])
   const nativeMeas = useMemo(() => historyMeasures(history), [history])
 
+  const helpShown = helpOpen || isHelpCommand(q)
+  const cheats = useMemo(() => cheatSheet(nativeInfo.hotkey || undefined), [nativeInfo.hotkey])
   const graphCmd = isGraphCommand(q)
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
@@ -433,6 +528,35 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   exactRef.current = liveExact
   liveNRef.current = liveN
   liveMeasRef.current = display && display === jsDisplay ? live?.meas : undefined
+  commitFactsRef.current = {
+    variable: display && display === jsDisplay && live?.kind === 'assignment' ? live.variable : undefined,
+    unit: Boolean(steppableRef.current?.unit),
+  }
+
+  const examples = useMemo(
+    () => exampleList(firstRun && nativeInfo.hotkey ? nativeInfo.hotkey : undefined),
+    [firstRun, nativeInfo.hotkey],
+  )
+  const example = !q && !helpShown ? rotationItem(rotation, examples) : undefined
+  const exampleAnswer = useMemo(() => {
+    if (!example || example.plain) return ''
+    const shown =
+      evaluateSheet([prettyTokens(example.expr)], {
+        angleMode: settings.angleMode,
+        fractionMode: settings.fractionMode,
+        rationalize: settings.rationalize,
+        sigFigs: settings.sigFigs,
+        sigFigMode: settings.sigFigMode,
+        defaultUnits: settings.defaultUnits,
+      })[0]?.display ?? ''
+    return shown && example.note ? `${shown} · ${example.note}` : shown
+  }, [example, settings.angleMode, settings.fractionMode, settings.rationalize, settings.sigFigs, settings.sigFigMode, settings.defaultUnits])
+
+  useEffect(() => {
+    if (!rotation.on) return
+    const t = window.setInterval(() => setRotation(advanceRotation), EXAMPLE_MS)
+    return () => window.clearInterval(t)
+  }, [rotation.on])
   defLiveRef.current = definition
 
   // Fire once per answer, after it settles (typing `670` passes through 67 without firing).
@@ -619,7 +743,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     copyValue(insertableAnswer(display, liveN, settings.sigFigs))
   }, [copyValue, display, liveN, settings.sigFigs])
 
-  const commit = useCallback(() => {
+  /** `quiet` is the commit-on-hide path: nobody is looking, so no hint is spent on it. */
+  const commit = useCallback((quiet = false) => {
     const expr = qRef.current
     const def = defLiveRef.current
     const graphFn = graphFnRef.current
@@ -633,6 +758,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const n = liveNRef.current
     const meas = liveMeasRef.current
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
+    const nextHint = quiet ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...commitFactsRef.current })
+    updateOnboarding((s) => ({ ...recordCommit(s), hints: s.hints | (nextHint?.bit ?? 0) }))
+    setHint(nextHint?.text ?? null)
+    setHelpOpen(false)
     // Enter before the answer settled still gets its one firing.
     const gate = sixtySevenGate(sixtySevenArmedRef.current, n)
     sixtySevenArmedRef.current = gate.armed
@@ -675,7 +804,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     mathRef.current?.focus()
     setSelected(null)
     setTapeOpen(false)
-  }, [stopDraftTimer, triggerSixtySevenArms])
+  }, [stopDraftTimer, triggerSixtySevenArms, updateOnboarding])
 
   const onPrefixStep = useCallback((dir: 1 | -1) => {
     const base = steppableRef.current
@@ -698,9 +827,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const onWillHide = useCallback(() => {
     const expr = qRef.current
     const ttl = settingsRef.current.draftSeconds
+    setRotation(ROTATION_OFF)
+    setHint(null)
+    if (isHelpCommand(expr)) {
+      resetToCalculate()
+      return
+    }
     const action = hideAction(expr, displayRef.current, ttl)
     if (action === 'commit') {
-      commit()
+      commit(true)
       return
     }
     setSelected(null)
@@ -747,6 +882,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [resetToCalculate, restoreDraft, stopDraftTimer])
 
   const onUp = useCallback((): boolean => {
+    if (helpOpen || isHelpCommand(qRef.current)) {
+      setHelpOpen(false)
+      if (isHelpCommand(qRef.current)) mathRef.current?.setValue('')
+    }
     if (!history.length) return false
     if (selected == null) snapshotCaret()
     if (!tapeOpen) {
@@ -756,7 +895,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     setSelected((cur) => (cur == null ? history.length - 1 : Math.max(0, cur - 1)))
     return true
-  }, [history.length, selected, snapshotCaret, tapeOpen])
+  }, [helpOpen, history.length, selected, snapshotCaret, tapeOpen])
 
   const onDown = useCallback((): boolean => {
     if (!tapeOpen) return false
@@ -770,12 +909,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [history.length, restoreCaret, selected, tapeOpen])
 
   const onEnter = useCallback(() => {
+    if (isHelpCommand(qRef.current)) {
+      resetToCalculate()
+      return
+    }
     if (selected != null) {
       insertHistoryAnswer(selected)
       return
     }
     commit()
-  }, [commit, selected, insertHistoryAnswer])
+  }, [commit, resetToCalculate, selected, insertHistoryAnswer])
 
   useEffect(() => {
     if (!caretRef.current) return
@@ -788,6 +931,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (!MODIFIER_KEYS.has(e.key)) {
+        setRotation(dismissRotation)
+        setHint(null)
+      }
       if (e.key === 'Escape' || e.key === 'Esc') {
         e.preventDefault()
         e.stopPropagation()
@@ -867,7 +1014,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [])
 
   useEffect(() => {
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isHelpCommand(q)) return
     // Plain math is already answered in JS; SoulverCore is only needed for natural language.
     if (jsDisplay && !looksLikeNaturalLanguage(q)) return
     const id = ++evalIdRef.current
@@ -902,6 +1049,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     w.__qcalcWillHide = () => onWillHide()
     w.__qcalcReset = () => {
       onPrepare()
+      beginShowing()
       requestAnimationFrame(size)
     }
     w.__qcalcApplySettings = (partial) => {
@@ -909,6 +1057,27 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         const next = mergeSettings(partial, prev)
         return settingsEqual(next, prev) ? prev : next
       })
+      setNativeInfo((prev) => {
+        const next = mergeNativeInfo(partial, prev)
+        return next.hotkey === prev.hotkey && next.hotkeyFailed === prev.hotkeyFailed ? prev : next
+      })
+    }
+    w.__qcalcFirstRun = () => {
+      w.__QCALC_FIRST_RUN = false
+      setFirstRun(true)
+      setRotation(startRotation(true))
+    }
+    w.__qcalcShowTips = () => {
+      setRotation(ROTATION_OFF)
+      setHint(null)
+      setHelpOpen(true)
+    }
+    if (w.__QCALC_FIRST_RUN) {
+      beginShowing()
+      w.__qcalcFirstRun()
+    } else if (!w.__QCALC_NATIVE && !pageOpenCounted) {
+      pageOpenCounted = true
+      beginShowing()
     }
     w.__qcalcNativeResult = (reply) => {
       const next = nativeReplyToLive(reply, evalIdRef.current, qRef.current)
@@ -940,7 +1109,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       window.clearTimeout(t3)
       ro?.disconnect()
     }
-  }, [onPrepare, onWillHide])
+  }, [beginShowing, onPrepare, onWillHide])
 
   useEffect(() => {
     const root = rootRef.current
@@ -1022,7 +1191,20 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       }}
     >
     <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}>
-      {tapeOpen && history.length > 0 ? (
+      {helpShown ? (
+        <div
+          className="tape cheats"
+          aria-label="Keyboard shortcuts"
+          style={{ gridTemplateRows: `repeat(${Math.ceil(cheats.length / 2)}, auto)` }}
+        >
+          {cheats.map(([key, label]) => (
+            <div className="tape-row cheat-row" key={key}>
+              <kbd className="cheat-key">{key}</kbd>
+              <span className="cheat-label">{label}</span>
+            </div>
+          ))}
+        </div>
+      ) : tapeOpen && history.length > 0 ? (
         <div className="tape" ref={tapeRef} aria-label="Calculation history">
           {history.map((row, i) => (
             <div
@@ -1150,7 +1332,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           value={q}
           ansPlain={ansPlain}
           handleRef={mathRef}
-          onChange={(text) => {
+          example={example ? { text: example.expr, id: rotation.tick } : null}
+          onChange={(raw) => {
+            const text = afterHelpInput(qRef.current, raw)
+            setHelpOpen(false)
+            // Typing that arrives without a keydown (dictation, IME, tests) also counts as a keystroke.
+            if (text) {
+              setRotation(dismissRotation)
+              setHint(null)
+            }
             caretRef.current = null
             qRef.current = text
             setQ(text)
@@ -1166,6 +1356,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           <button type="button" className="live copied" disabled>
             copied
           </button>
+        ) : example ? (
+          <span key={rotation.tick} className="live live-example" aria-hidden>
+            {exampleAnswer}
+          </span>
         ) : definition ? (
           <button
             type="button"
@@ -1218,6 +1412,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           </button>
         )}
       </div>
+      {hint ? (
+        <div className="composer-hint" role="status">
+          {hint}
+        </div>
+      ) : null}
       {definition ? (
         <div
           ref={definitionRef}

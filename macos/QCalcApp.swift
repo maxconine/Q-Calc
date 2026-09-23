@@ -6,6 +6,74 @@ extension Notification.Name {
     static let qcalcSettingsChanged = Notification.Name("QCalc.settingsChanged")
 }
 
+/// Global shortcut choices. Presets only: each is Space plus modifiers.
+struct HotKeyPreset: Equatable {
+    let id: String
+    let title: String
+    let carbonModifiers: UInt32
+    let menuModifiers: NSEvent.ModifierFlags
+
+    static let all: [HotKeyPreset] = [
+        HotKeyPreset(id: "ctrl-opt-space", title: "⌃⌥Space", carbonModifiers: UInt32(controlKey | optionKey), menuModifiers: [.control, .option]),
+        HotKeyPreset(id: "cmd-opt-space", title: "⌘⌥Space", carbonModifiers: UInt32(cmdKey | optionKey), menuModifiers: [.command, .option]),
+        HotKeyPreset(id: "ctrl-space", title: "⌃Space", carbonModifiers: UInt32(controlKey), menuModifiers: [.control]),
+        HotKeyPreset(id: "opt-space", title: "⌥Space", carbonModifiers: UInt32(optionKey), menuModifiers: [.option]),
+    ]
+    static let standard = all[0]
+
+    static func named(_ id: String?) -> HotKeyPreset {
+        all.first { $0.id == id } ?? standard
+    }
+}
+
+/// macOS keeps its own Space shortcuts (Spotlight, Finder search, input sources) in com.apple.symbolichotkeys.
+/// Carbon happily registers a combo the system already owns, and the system then wins — so ask first.
+enum SystemShortcuts {
+    private static let domain = "com.apple.symbolichotkeys" as CFString
+    private static let modifierMask = NSEvent.ModifierFlags([.shift, .control, .option, .command]).rawValue
+    /// Space shortcuts macOS ships enabled, by symbolic id: 60/61 input sources, 64 Spotlight, 65 Finder search.
+    private static let spaceDefaults: [Int: NSEvent.ModifierFlags] = [
+        60: [.control],
+        61: [.control, .option],
+        64: [.command],
+        65: [.command, .option],
+    ]
+    private static let inputSourceIDs: Set<Int> = [60, 61]
+
+    static func claims(_ preset: HotKeyPreset) -> Bool {
+        CFPreferencesAppSynchronize(domain)
+        let table = CFPreferencesCopyAppValue("AppleSymbolicHotKeys" as CFString, domain) as? [String: Any] ?? [:]
+        let want = preset.menuModifiers.rawValue & modifierMask
+        var owners: [Int] = []
+        for (key, raw) in table {
+            guard let id = Int(key), let entry = raw as? [String: Any],
+                  (entry["enabled"] as? Bool) == true,
+                  let value = entry["value"] as? [String: Any],
+                  let params = value["parameters"] as? [Int], params.count >= 3,
+                  params[1] == kVK_Space,
+                  UInt(params[2]) & modifierMask == want
+            else { continue }
+            owners.append(id)
+        }
+        for (id, flags) in spaceDefaults where table[String(id)] == nil && flags.rawValue == want {
+            owners.append(id)
+        }
+        // The input-source shortcuts only act (and only swallow the key) when there is more than one source.
+        return owners.contains { !inputSourceIDs.contains($0) || switchesInputSources() }
+    }
+
+    private static func switchesInputSources() -> Bool {
+        let filter = [
+            kTISPropertyInputSourceCategory as String: kTISCategoryKeyboardInputSource as String,
+            kTISPropertyInputSourceIsSelectCapable as String: true,
+        ] as CFDictionary
+        guard let list = TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource] else {
+            return false
+        }
+        return list.count > 1
+    }
+}
+
 final class AppSettings: ObservableObject {
     static let shared = AppSettings()
     static let sigFigsKey = "qcalc.sigFigs"
@@ -16,6 +84,9 @@ final class AppSettings: ObservableObject {
     static let rationalizeKey = "qcalc.rationalize"
     static let sigFigModeKey = "qcalc.sigFigMode"
     static let themeKey = "qcalc.theme"
+    static let hotKeyKey = "qcalc.hotkey"
+    static let onboardingKey = "qcalc.onboarding"
+    static let firstRunKey = "qcalc.firstRunDone"
     static let defaultSigFigs = 12
     static let minSigFigs = 2
     static let maxSigFigs = 16
@@ -35,6 +106,14 @@ final class AppSettings: ObservableObject {
     @Published private(set) var rationalize: Bool
     @Published private(set) var sigFigMode: Bool
     @Published private(set) var theme: String
+    /// The shortcut the user picked (persisted).
+    @Published private(set) var hotKey: HotKeyPreset
+    /// The shortcut actually registered right now; nil when none could be.
+    @Published private(set) var activeHotKey: HotKeyPreset?
+    /// The picked shortcut could not be registered at launch.
+    @Published private(set) var hotKeyFailed = false
+    /// Web onboarding progress (opens, commits, hints, done); the web view's own storage does not persist.
+    private(set) var onboarding: [String: Int]
 
     private init() {
         let storedFigs = UserDefaults.standard.integer(forKey: Self.sigFigsKey)
@@ -50,6 +129,55 @@ final class AppSettings: ObservableObject {
         rationalize = Self.loadRationalize()
         sigFigMode = UserDefaults.standard.bool(forKey: Self.sigFigModeKey)
         theme = Self.loadTheme()
+        hotKey = HotKeyPreset.named(UserDefaults.standard.string(forKey: Self.hotKeyKey))
+        onboarding = Self.loadOnboarding()
+    }
+
+    private static let onboardingFields = ["opens", "commits", "hints", "done"]
+
+    private static func loadOnboarding() -> [String: Int] {
+        guard let stored = UserDefaults.standard.dictionary(forKey: onboardingKey) else { return [:] }
+        var out: [String: Int] = [:]
+        for key in onboardingFields {
+            if let n = stored[key] as? Int, n > 0 { out[key] = n }
+        }
+        return out
+    }
+
+    /// Progress only moves forward, whichever side reports it.
+    func mergeOnboarding(_ incoming: [String: Int]) {
+        var next = onboarding
+        for key in Self.onboardingFields {
+            guard let n = incoming[key], n > 0 else { continue }
+            next[key] = key == "hints" ? (next[key] ?? 0) | n : max(next[key] ?? 0, n)
+        }
+        guard next != onboarding else { return }
+        onboarding = next
+        UserDefaults.standard.set(next, forKey: Self.onboardingKey)
+    }
+
+    func onboardingJSON() -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: onboarding, options: [])) ?? Data("{}".utf8)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    /// True exactly once per install.
+    func claimFirstRun() -> Bool {
+        guard !UserDefaults.standard.bool(forKey: Self.firstRunKey) else { return false }
+        UserDefaults.standard.set(true, forKey: Self.firstRunKey)
+        return true
+    }
+
+    func setHotKey(_ preset: HotKeyPreset) {
+        hotKey = preset
+        UserDefaults.standard.set(preset.id, forKey: Self.hotKeyKey)
+    }
+
+    func setHotKeyState(active: HotKeyPreset?, failed: Bool) {
+        guard active != activeHotKey || failed != hotKeyFailed else { return }
+        activeHotKey = active
+        hotKeyFailed = failed
+        NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
     }
 
     private static func loadAnswerForm() -> String {
@@ -219,6 +347,9 @@ enum QCalc {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var overlay: OverlayController?
     private var hotKeyRef: EventHotKeyRef?
+    private var hotKeyHandlerInstalled = false
+    /// A preset macOS refused; its menu title says so on the next menu build, then clears.
+    private var refusedHotKey: String?
     private var statusItem: NSStatusItem?
     private var unitSettings: UnitSettingsWindowController?
 
@@ -229,9 +360,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
+        // Before the web view boots, so its injected settings already carry the shortcut.
+        registerHotKey()
         overlay = OverlayController()
         overlay?.preload()
-        registerHotKey()
+        if AppSettings.shared.claimFirstRun() {
+            overlay?.showFirstRun()
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -274,10 +409,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func buildStatusMenu(_ menu: NSMenu) {
-        let quick = NSMenuItem(title: "Show Q Calc", action: #selector(showQuickCalc), keyEquivalent: "")
+        let active = AppSettings.shared.activeHotKey
+        let quick = NSMenuItem(title: "Show Q Calc", action: #selector(showQuickCalc), keyEquivalent: active == nil ? "" : " ")
+        quick.keyEquivalentModifierMask = active?.menuModifiers ?? []
         quick.target = self
         menu.addItem(quick)
+        let tips = NSMenuItem(title: "Tips…", action: #selector(showTips), keyEquivalent: "")
+        tips.target = self
+        menu.addItem(tips)
         menu.addItem(.separator())
+
+        let shortcut = NSMenuItem(title: "Shortcut", action: nil, keyEquivalent: "")
+        shortcut.submenu = hotKeyMenu()
+        menu.addItem(shortcut)
 
         let figs = NSMenuItem(title: "Significant figures", action: nil, keyEquivalent: "")
         figs.submenu = sigFigsMenu()
@@ -307,6 +451,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let quit = NSMenuItem(title: "Quit Q Calc", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
+    }
+
+    private func hotKeyMenu() -> NSMenu {
+        let menu = NSMenu()
+        let current = AppSettings.shared.activeHotKey
+        let refused = refusedHotKey
+        refusedHotKey = nil
+        for preset in HotKeyPreset.all {
+            let title = preset.id == refused ? "\(preset.title) — in use by macOS" : preset.title
+            let item = NSMenuItem(title: title, action: #selector(setHotKey(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = preset.id
+            item.state = preset == current ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
     }
 
     private func sigFigsMenu() -> NSMenu {
@@ -408,6 +568,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay?.toggle()
     }
 
+    @objc private func showTips() {
+        overlay?.showTips()
+    }
+
+    @objc private func setHotKey(_ sender: NSMenuItem) {
+        let next = HotKeyPreset.named(sender.representedObject as? String)
+        let previous = AppSettings.shared.activeHotKey
+        if next == previous {
+            AppSettings.shared.setHotKey(next)
+            AppSettings.shared.setHotKeyState(active: next, failed: false)
+            return
+        }
+        refusedHotKey = next.id
+        if SystemShortcuts.claims(next) { return }
+        unbindHotKey()
+        if bindHotKey(next) {
+            refusedHotKey = nil
+            AppSettings.shared.setHotKey(next)
+            AppSettings.shared.setHotKeyState(active: next, failed: false)
+            return
+        }
+        if let previous, !bindHotKey(previous) {
+            AppSettings.shared.setHotKeyState(active: nil, failed: true)
+        }
+    }
+
     @objc private func setSigFigs(_ sender: NSMenuItem) {
         AppSettings.shared.setSignificantFigures(sender.tag, notifyWeb: true)
     }
@@ -450,24 +636,56 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.terminate(nil)
     }
 
+    private static let hotKeyID = EventHotKeyID(signature: OSType(0x51434C43), id: 1) // QCLC
+
+    /// Launch: the picked shortcut, else the default, else none — and the overlay's hint line says so.
     private func registerHotKey() {
+        installHotKeyHandler()
+        let preferred = AppSettings.shared.hotKey
+        if !SystemShortcuts.claims(preferred), bindHotKey(preferred) {
+            AppSettings.shared.setHotKeyState(active: preferred, failed: false)
+            return
+        }
+        NSLog("Q Calc: %@ is in use by macOS", preferred.title)
+        refusedHotKey = preferred.id
+        let fallback = HotKeyPreset.standard
+        if preferred != fallback, !SystemShortcuts.claims(fallback), bindHotKey(fallback) {
+            AppSettings.shared.setHotKeyState(active: fallback, failed: true)
+            return
+        }
+        AppSettings.shared.setHotKeyState(active: nil, failed: true)
+    }
+
+    private func bindHotKey(_ preset: HotKeyPreset) -> Bool {
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            UInt32(kVK_Space),
+            preset.carbonModifiers,
+            Self.hotKeyID,
+            GetEventDispatcherTarget(),
+            0,
+            &ref
+        )
+        guard status == noErr, let ref else {
+            NSLog("Q Calc: failed to register %@ (%d)", preset.title, status)
+            return false
+        }
+        hotKeyRef = ref
+        return true
+    }
+
+    private func unbindHotKey() {
+        guard let hotKeyRef else { return }
+        UnregisterEventHotKey(hotKeyRef)
+        self.hotKeyRef = nil
+    }
+
+    private func installHotKeyHandler() {
+        guard !hotKeyHandlerInstalled else { return }
+        hotKeyHandlerInstalled = true
         HotKeyBox.shared.onPress = { [weak self] in
             DispatchQueue.main.async { self?.toggleOverlay() }
         }
-        let hotKeyID = EventHotKeyID(signature: OSType(0x51434C43), id: 1) // QCLC
-        let modifiers = UInt32(controlKey | optionKey)
-        let status = RegisterEventHotKey(
-            UInt32(kVK_Space),
-            modifiers,
-            hotKeyID,
-            GetEventDispatcherTarget(),
-            0,
-            &hotKeyRef
-        )
-        if status != noErr {
-            NSLog("Q Calc: failed to register Control+Option+Space (%d)", status)
-        }
-
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
         InstallEventHandler(
             GetEventDispatcherTarget(),
