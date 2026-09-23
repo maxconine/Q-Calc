@@ -4,7 +4,7 @@ import { fillParens } from './parens'
 import { evalScientific, preprocessAscii, rewriteTypesetMul, type AngleMode } from './scientific'
 import type { Meas, UserFunction } from './types'
 
-/** A measured quantity while walking: exact parts carry infinite sig figs and decimal places. */
+/** Exact parts carry infinite sig figs and decimal places. */
 type M = { v: number; sig: number; dp: number; unc: number }
 
 export type MeasureContext = {
@@ -16,18 +16,17 @@ export type MeasureContext = {
 }
 
 const LITERAL_RE = /(?<![A-Za-z_0-9.])(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/gi
-/** `5.0 ± 0.2`, `10 ± 5%`: one measured quantity, so ± binds tighter than any operator (`5.0 ± 0.2 * 3` = 15.0 ± 0.6). */
+// ± binds tighter than any operator; a measurement is one number (`5.0 ± 0.2 * 3` = 15.0 ± 0.6)
 const PLUS_MINUS_RE = /(?<![A-Za-z_0-9.])((?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)\s*±\s*((?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?)(\s*%)?/gi
 
-/** Result keeps the sig figs of its argument. */
+// keep the sig figs of the argument
 const SIG_FNS = new Set(
   'sqrt cbrt sin cos tan csc sec cot asin acos atan acsc asec acot sinh cosh tanh csch sech coth asinh acosh atanh exp abs'.split(' '),
 )
-/** Result keeps as many decimal places as its argument has sig figs. */
+// keep as many decimal places as the argument has sig figs
 const LOG_FNS = new Set(['ln', 'log', 'log10', 'log2'])
 const MIN_SIG_FNS = new Set(['min', 'max', 'mean', 'median', 'hypot'])
 const SUM_FNS = new Set(['sum', 'total'])
-/** Roots propagate uncertainty like powers (`sqrt` = `^0.5`). */
 const ROOT_POWER: Record<string, number> = { sqrt: 0.5, cbrt: 1 / 3 }
 
 function exact(v: number): M {
@@ -68,24 +67,12 @@ function fromStored(v: number, meas: Meas | undefined): M {
   return { ...exact(v), unc }
 }
 
-function toStored(m: M): Meas | undefined {
-  const out: Meas = {}
-  if (Number.isFinite(m.sig) && Number.isFinite(m.dp)) {
-    out.sig = m.sig
-    out.dp = m.dp
-  }
-  if (m.unc > 0) out.unc = m.unc
-  return out.sig == null && out.unc == null ? undefined : out
+function finite(x: unknown): number | undefined {
+  return typeof x === 'number' && Number.isFinite(x) ? x : undefined
 }
 
-/** Stored metadata from history/JSON: finite numbers only, or nothing. */
-export function sanitizeMeas(raw: unknown): Meas | undefined {
-  if (!raw || typeof raw !== 'object') return undefined
-  const r = raw as Record<string, unknown>
-  const fin = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : undefined)
-  const sig = fin(r.sig)
-  const dp = fin(r.dp)
-  const unc = fin(r.unc)
+/** sig and dp are kept only as a pair; nothing worth storing gives undefined. */
+function storedMeas(sig: number | undefined, dp: number | undefined, unc: number | undefined): Meas | undefined {
   const out: Meas = {}
   if (sig != null && dp != null) {
     out.sig = sig
@@ -95,16 +82,51 @@ export function sanitizeMeas(raw: unknown): Meas | undefined {
   return out.sig == null && out.unc == null ? undefined : out
 }
 
+function toStored(m: M): Meas | undefined {
+  return storedMeas(finite(m.sig), finite(m.dp), m.unc)
+}
+
+/** For metadata read back from history JSON. */
+export function sanitizeMeas(raw: unknown): Meas | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as Record<string, unknown>
+  return storedMeas(finite(r.sig), finite(r.dp), finite(r.unc))
+}
+
 export function hasPlusMinus(text: string): boolean {
   return text.includes('±') || text.includes('∓')
 }
-
-type Walk = (node: MathNode) => M | null
 
 function callValue(name: string, args: number[], ctx: MeasureContext): number | null {
   const out = evalScientific(`${name}(${args.map(String).join(',')})`, { angleMode: ctx.angleMode })
   if (!out || out.kind !== 'number' || !Number.isFinite(out.n)) return null
   return out.n
+}
+
+function walkBinary(fn: string, a: M, b: M): M | null {
+  switch (fn) {
+    case 'add':
+      return byDp(a.v + b.v, Math.min(a.dp, b.dp), a.unc + b.unc)
+    case 'subtract':
+      return byDp(a.v - b.v, Math.min(a.dp, b.dp), a.unc + b.unc)
+    case 'multiply':
+      return bySig(a.v * b.v, Math.min(a.sig, b.sig), Math.abs(a.v) * b.unc + Math.abs(b.v) * a.unc)
+    case 'divide': {
+      if (b.v === 0) return null
+      const v = a.v / b.v
+      return bySig(v, Math.min(a.sig, b.sig), (a.unc + Math.abs(v) * b.unc) / Math.abs(b.v))
+    }
+    case 'pow': {
+      if (b.unc > 0) return null
+      const v = a.v ** b.v
+      if (!Number.isFinite(v)) return null
+      if (a.unc > 0 && a.v === 0) return null
+      const unc = a.unc > 0 ? (Math.abs(v * b.v) * a.unc) / Math.abs(a.v) : 0
+      // exponents are exact: `2.0^0.5` keeps 2 sig figs, like `sqrt(2.0)`
+      return bySig(v, a.sig, unc)
+    }
+  }
+  return null
 }
 
 function walkFunction(name: string, args: M[], ctx: MeasureContext): M | null {
@@ -137,10 +159,7 @@ function walkFunction(name: string, args: M[], ctx: MeasureContext): M | null {
   return log ? byDp(v, a.sig, unc) : bySig(v, a.sig, unc)
 }
 
-/**
- * Walk the expression as measured quantities: sig figs from the literals, ± uncertainties
- * propagated worst-case. Returns null for anything it does not model (the caller falls back).
- */
+/** Sig figs come from the literals and ± propagates worst case. Null for anything not modelled. */
 export function measure(text: string, ctx: MeasureContext = {}): { v: number; meas?: Meas } | null {
   let src = fillParens(rewriteTypesetMul(text.trim()))
   if (!src || src.includes('|')) return null
@@ -150,7 +169,7 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
     const m = literalMeas(value)
     return hold({ ...m, unc: Math.abs(pct ? (m.v * Number(u)) / 100 : Number(u)) })
   })
-  // Anything else around ± (`x ± 1`, `(1+2) ± 1`) is not modelled: no answer beats one that drops the ±.
+  // any other ± (`x ± 1`, `(1+2) ± 1`) is not modelled; no answer beats one that drops the ±
   if (src.includes('±')) return null
   const fnNames = Object.keys(ctx.functions ?? {})
   const expr = preprocessAscii(src, fnNames).replace(LITERAL_RE, (lit) => hold(literalMeas(lit)))
@@ -163,7 +182,7 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
   const vars = ctx.variables ?? {}
   const measures = ctx.measures ?? {}
 
-  const walk: Walk = (node) => {
+  const walk = (node: MathNode): M | null => {
     switch (node.type) {
       case 'ParenthesisNode':
         return walk((node as unknown as { content: MathNode }).content)
@@ -195,29 +214,7 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
             return a
         }
         if (!b || args.length !== 2) return null
-        switch (op.fn) {
-          case 'add':
-            return byDp(a.v + b.v, Math.min(a.dp, b.dp), a.unc + b.unc)
-          case 'subtract':
-            return byDp(a.v - b.v, Math.min(a.dp, b.dp), a.unc + b.unc)
-          case 'multiply':
-            return bySig(a.v * b.v, Math.min(a.sig, b.sig), Math.abs(a.v) * b.unc + Math.abs(b.v) * a.unc)
-          case 'divide': {
-            if (b.v === 0) return null
-            const v = a.v / b.v
-            return bySig(v, Math.min(a.sig, b.sig), (a.unc + Math.abs(v) * b.unc) / Math.abs(b.v))
-          }
-          case 'pow': {
-            if (b.unc > 0) return null
-            const v = a.v ** b.v
-            if (!Number.isFinite(v)) return null
-            if (a.unc > 0 && a.v === 0) return null
-            const unc = a.unc > 0 ? (Math.abs(v * b.v) * a.unc) / Math.abs(a.v) : 0
-            // Exponents are exact: `2.0^0.5` keeps 2 sig figs, like `sqrt(2.0)`.
-            return bySig(v, a.sig, unc)
-          }
-        }
-        return null
+        return walkBinary(op.fn, a, b)
       }
       case 'FunctionNode': {
         const fn = node as unknown as { fn: { name?: string }; args: MathNode[] }
@@ -241,7 +238,7 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
   return { v: m.v, meas: toStored(m) }
 }
 
-/** `-0.0` → `0.0`. */
+/** `-0.0` becomes `0.0`. */
 function unsigned(s: string): string {
   return Number(s) === 0 ? s.replace(/^-/, '') : s
 }
@@ -250,7 +247,7 @@ function stripExpPlus(s: string): string {
   return s.replace('e+', 'e')
 }
 
-/** `v` at `sig` significant figures, keeping trailing zeros; ambiguous integer zeros go scientific (`1.00e2`). */
+/** Keeps trailing zeros; ambiguous integer zeros go scientific (`1.00e2`). */
 export function formatSig(v: number, sig: number, dp: number): string | null {
   if (!Number.isFinite(v)) return null
   if (v === 0 || sig < 1) return unsigned(v.toFixed(Math.max(0, Math.min(20, dp))))
@@ -265,7 +262,7 @@ function roundSig(v: number, sig: number): number {
   return v === 0 || !Number.isFinite(sig) || sig < 1 || sig > 16 ? v : Number(v.toPrecision(sig))
 }
 
-/** `10.0 ± 0.7`: the uncertainty at one significant figure, the value to the same place. */
+/** `10.0 ± 0.7`: the uncertainty at one sig fig, the value to the same place. */
 export function formatUncertain(v: number, unc: number): string | null {
   if (!Number.isFinite(v) || !(unc > 0) || !Number.isFinite(unc)) return null
   const u = Number(unc.toPrecision(1))
@@ -275,10 +272,7 @@ export function formatUncertain(v: number, unc: number): string | null {
   return `${unsigned(value)} ± ${u.toFixed(decimals)}`
 }
 
-/**
- * Display for a measured answer, or null when the normal display applies:
- * sig-fig rounding (when the mode is on) first, then the ± rounding.
- */
+/** Null when the normal display applies. Sig-fig rounding (if the mode is on) happens before ± rounding. */
 export function formatMeasured(v: number, meas: Meas | undefined, sigFigMode: boolean): string | null {
   if (!meas) return null
   const sig = sigFigMode && meas.sig != null ? meas.sig : undefined

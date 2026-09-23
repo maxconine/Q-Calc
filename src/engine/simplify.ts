@@ -1,4 +1,4 @@
-/** Closed-form exact values the calculator can show beside a decimal. */
+import { intGcd } from './math'
 
 const NICE_DEN = new Set([2, 3, 4, 5, 6, 8, 12])
 
@@ -12,17 +12,6 @@ const NESTED: ReadonlyArray<readonly [string, number]> = [
   ['-(2-sqrt(3))', -(2 - Math.sqrt(3))],
   ['-(2+sqrt(3))', -(2 + Math.sqrt(3))],
 ]
-
-function gcd(a: number, b: number): number {
-  a = Math.abs(Math.trunc(a))
-  b = Math.abs(Math.trunc(b))
-  while (b) {
-    const t = b
-    b = a % b
-    a = t
-  }
-  return a || 1
-}
 
 function close(a: number, b: number, eps = 1e-9): boolean {
   return Math.abs(a - b) <= eps * Math.max(1, Math.abs(b))
@@ -46,14 +35,14 @@ function toFraction(x: number, maxDen: number, eps: number): { n: number; d: num
     }
   }
   if (bestErr > eps) return null
-  const g = gcd(bestN, bestD)
+  const g = intGcd(bestN, bestD)
   return { n: sign * (bestN / g), d: bestD / g }
 }
 
 function snapInteger(n: number): number | null {
   if (!Number.isFinite(n)) return null
   const r = Math.round(n)
-  if (close(n, r, 1e-9) && Math.abs(r) < 1e12) return r
+  if (close(n, r) && Math.abs(r) < 1e12) return r
   return null
 }
 
@@ -61,12 +50,8 @@ function formatPi(num: number, den: number): string {
   const sign = num < 0 ? '-' : ''
   const n = Math.abs(num)
   if (n === 0) return '0'
-  if (den === 1) {
-    if (n === 1) return `${sign}pi`
-    return `${sign}${n}*pi`
-  }
-  if (n === 1) return `${sign}pi/${den}`
-  return `${sign}${n}*pi/${den}`
+  const coeff = n === 1 ? '' : `${n}*`
+  return `${sign}${coeff}pi${den === 1 ? '' : `/${den}`}`
 }
 
 function splitSquares(n: number): { coeff: number; rad: number } {
@@ -90,16 +75,11 @@ function formatRadicalTerm(coeff: number, rad: number): string {
 }
 
 function formatRadical(sign: string, coeff: number, rad: number, den: number): string {
-  const g = gcd(coeff, den)
+  const g = intGcd(coeff, den)
   coeff /= g
   den /= g
-  if (rad === 1) {
-    if (den === 1) return `${sign}${coeff}`
-    return `${sign}${coeff}/${den}`
-  }
   const core = formatRadicalTerm(coeff, rad)
-  if (den === 1) return `${sign}${core}`
-  return `${sign}${core}/${den}`
+  return den === 1 ? `${sign}${core}` : `${sign}${core}/${den}`
 }
 
 function formatUnrationalized(
@@ -107,7 +87,7 @@ function formatUnrationalized(
   num: { coeff: number; rad: number },
   den: { coeff: number; rad: number },
 ): string {
-  const g = gcd(num.coeff, den.coeff)
+  const g = intGcd(num.coeff, den.coeff)
   const nc = num.coeff / g
   const dc = den.coeff / g
   const n = formatRadicalTerm(nc, num.rad)
@@ -126,7 +106,7 @@ function asPiMultiple(n: number): string | null {
 
 function asNestedRadical(n: number): string | null {
   for (const [exact, v] of NESTED) {
-    if (close(n, v, 1e-9)) return exact
+    if (close(n, v)) return exact
   }
   return null
 }
@@ -151,7 +131,7 @@ function asNiceFraction(n: number): string | null {
   const f = toFraction(n, 12, 1e-9)
   if (!f || !NICE_DEN.has(f.d)) return null
   if (f.n === 0) return '0'
-  return f.n < 0 ? `-${Math.abs(f.n)}/${f.d}` : `${f.n}/${f.d}`
+  return `${f.n}/${f.d}`
 }
 
 export type ExactFormOptions = { rationalize?: boolean }
@@ -159,29 +139,17 @@ export type ExactFormOptions = { rationalize?: boolean }
 const TRIG_OR_SQRT =
   /√|\\sqrt|(?:^|[^A-Za-z_])(?:sqrt|arcsin|arccos|arctan2|arctan|arccsc|arcsec|arccot|asin|acos|atan2|atan|acsc|asec|acot|sin|cos|tan|csc|sec|cot)(?![A-Za-z_])/i
 
-/** Closed form is only shown beside the decimal for trig and square-root expressions. */
+/** The closed form is only shown beside the decimal for trig and square-root expressions. */
 export function wantsExactForm(expr: string): boolean {
   return TRIG_OR_SQRT.test(expr)
 }
 
-/** Return a simplified exact form for `n`, or null if none is nicer than the decimal. */
+/** Null when no closed form is nicer than the decimal. */
 export function exactForm(n: number, options: ExactFormOptions = {}): string | null {
   if (!Number.isFinite(n)) return null
-  const rationalize = options.rationalize !== false
-
   const asInt = snapInteger(n)
   if (asInt !== null) return String(asInt)
-
-  const nested = asNestedRadical(n)
-  if (nested) return nested
-
-  const pi = asPiMultiple(n)
-  if (pi) return pi
-
-  const rad = asRadical(n, rationalize)
-  if (rad) return rad
-
-  return asNiceFraction(n)
+  return asNestedRadical(n) || asPiMultiple(n) || asRadical(n, options.rationalize !== false) || asNiceFraction(n)
 }
 
 export function dualLabel(exact: string | undefined, display: string): string {

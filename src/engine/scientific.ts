@@ -1,8 +1,8 @@
 import { formatNumber, num, textVal } from './format'
-import { math } from './math'
+import { intGcd, math, namesPattern } from './math'
 import type { UserFunction, Value } from './types'
 
-/** Hard cap on list allocations from `[a...b]`, `random(N)`, and `randint(..., count)`. */
+/** Cap on list sizes from `[a...b]`, `random(N)` and `randint(lo, hi, count)`. */
 export const MAX_LIST_ALLOC = 10_000
 
 export type AngleMode = 'deg' | 'rad'
@@ -10,9 +10,8 @@ export type AngleMode = 'deg' | 'rad'
 export const SCIENTIFIC_NAMES =
   'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|pi|tau|inf|infinity|ans'
 
-const FN = SCIENTIFIC_NAMES
-
-const FN_RE = new RegExp(`\\b(${FN})\\b`, 'gi')
+const NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'gi')
+const HAS_NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'i')
 
 function chop(n: number): number {
   if (!Number.isFinite(n)) return n
@@ -20,6 +19,11 @@ function chop(n: number): number {
   return n
 }
 
+function isMatrix(x: unknown): x is { toArray: () => unknown } {
+  return !!x && typeof x === 'object' && 'toArray' in x && typeof (x as { toArray: unknown }).toArray === 'function'
+}
+
+/** Flattens arrays and mathjs matrices, dropping anything non-finite. */
 function nums(args: unknown[]): number[] {
   const out: number[] = []
   const walk = (x: unknown): void => {
@@ -27,8 +31,8 @@ function nums(args: unknown[]): number[] {
       x.forEach(walk)
       return
     }
-    if (x && typeof x === 'object' && 'toArray' in (x as object) && typeof (x as { toArray: () => unknown }).toArray === 'function') {
-      walk((x as { toArray: () => unknown }).toArray())
+    if (isMatrix(x)) {
+      walk(x.toArray())
       return
     }
     const n = Number(x)
@@ -77,8 +81,8 @@ function quantileLinear(data: number[], p: number): number {
 function pearson(a: number[], b: number[]): number {
   const n = Math.min(a.length, b.length)
   if (n < 2) return Number.NaN
-  const ma = a.slice(0, n).reduce((s, x) => s + x, 0) / n
-  const mb = b.slice(0, n).reduce((s, x) => s + x, 0) / n
+  const ma = avg(a.slice(0, n))
+  const mb = avg(b.slice(0, n))
   let num = 0
   let da = 0
   let db = 0
@@ -91,17 +95,6 @@ function pearson(a: number[], b: number[]): number {
   }
   const den = Math.sqrt(da * db)
   return den === 0 ? Number.NaN : num / den
-}
-
-function intGcd(a: number, b: number): number {
-  a = Math.abs(Math.trunc(a))
-  b = Math.abs(Math.trunc(b))
-  while (b) {
-    const t = b
-    b = a % b
-    a = t
-  }
-  return a || 1
 }
 
 function intLcm(a: number, b: number): number {
@@ -117,18 +110,19 @@ function fromRad(x: number, mode?: AngleMode): number {
   return mode === 'rad' ? x : (x * 180) / Math.PI
 }
 
-function trigAsymptote(cosVal: number): boolean {
-  return Math.abs(chop(cosVal)) === 0
+function nearZero(x: number): boolean {
+  return chop(x) === 0
 }
 
-/** Non-negative remainder; `x mod 0` is undefined. Past 2^53 the float's low digits are gone, so no answer. */
+/** Non-negative remainder; `x mod 0` is undefined. */
 function modulo(a: number, b: number): number {
   if (b === 0) return Number.NaN
+  // past 2^53 the float's low digits are gone, so there is no honest answer
   if (Math.abs(a) > Number.MAX_SAFE_INTEGER || Math.abs(b) > Number.MAX_SAFE_INTEGER) throw new Error('inexact mod')
   return ((a % b) + Math.abs(b)) % Math.abs(b)
 }
 
-/** `b^e mod m` in exact integers (square-and-multiply). */
+/** `b^e mod m` in exact integers. */
 function powmod(b: number, e: number, m: number): number {
   if (![b, e, m].every(Number.isSafeInteger)) throw new Error('inexact mod')
   if (m === 0) return Number.NaN
@@ -142,10 +136,10 @@ function powmod(b: number, e: number, m: number): number {
   return Number(out)
 }
 
-/** A whole `3^100 mod 7` term (not `2*3^100 mod 7` or `3^100 mod 7^2`), rewritten to exact `powmod`. */
+/** A whole `3^100 mod 7` term only, not `2*3^100 mod 7` or `3^100 mod 7^2`. */
 const POW_MOD_RE = /(?<=(?:^|[(,+]|[\w)]\s*-)\s*)(\d+)\s*\^\s*(\d+)\s*mod\s*(\d+)(?![\d.]|\s*[(^!])/g
 
-// `7 mod 3` parses as mathjs's own operator, so the calculator's convention has to replace it there too.
+// `7 mod 3` parses as mathjs's own operator, so it needs the same convention
 math.import({ mod: modulo }, { override: true })
 
 /** nCr / nPr: 0 when choosing more than there are, undefined for non-integers or negatives. */
@@ -170,7 +164,7 @@ function factorial(n: number): number {
 
 const WRAP_SKIP = new Set(['pi', 'tau', 'inf', 'infinity', 'ans', 'e', 'mod'])
 
-/** Calculator inverse notation: sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 ≠ sin. */
+/** sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 isn't read as sin. */
 const INVERSE_POWER_FNS: [string, string][] = [
   ['csch', 'acsch'],
   ['sech', 'asech'],
@@ -200,11 +194,11 @@ function rewriteInversePower(expr: string): string {
 type CallableNames = { key: string; names: string[]; implicitRe: RegExp }
 let callableCache: CallableNames | null = null
 
-/** Built-in plus user function names (longest first) and the `2sin` → `2*sin` regex, cached per user-function list. */
+/** Cached per user-function list. */
 function callableNames(extraNames: string[]): CallableNames {
   const key = extraNames.join('|')
   if (callableCache?.key === key) return callableCache
-  const names = [...FN.split('|'), ...extraNames]
+  const names = [...SCIENTIFIC_NAMES.split('|'), ...extraNames]
     .filter((n) => !WRAP_SKIP.has(n.toLowerCase()))
     .sort((a, b) => b.length - a.length)
   const implicitRe = new RegExp(`(\\d)(\\s*)(${names.join('|')})(?![A-Za-z_])`, 'gi')
@@ -212,12 +206,11 @@ function callableNames(extraNames: string[]): CallableNames {
   return callableCache
 }
 
-/** Argument of a bare function (`sin 30`, `sin 2pi`). */
+/** The argument of a bare function call (`sin 30`, `sin 2pi`). */
 const BARE_ATOM_RE = /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)/i
 
 export function wrapBareFunctions(expr: string, extraNames: string[] = []): string {
   const { names } = callableNames(extraNames)
-  const atomRe = BARE_ATOM_RE
   let i = 0
   let out = ''
   while (i < expr.length) {
@@ -236,7 +229,7 @@ export function wrapBareFunctions(expr: string, extraNames: string[] = []): stri
         let j = i + name.length
         while (expr[j] === ' ') j++
         if (expr[j] !== '(') {
-          const m = expr.slice(j).match(atomRe)
+          const m = expr.slice(j).match(BARE_ATOM_RE)
           if (m) {
             out += `${name}(${m[0]})`
             i = j + m[0].length
@@ -254,22 +247,21 @@ export function wrapBareFunctions(expr: string, extraNames: string[] = []): stri
   return out
 }
 
-/** × and typeset dots from pasted math (middle dot, dot operator, bullet operator). */
+/** ×, middle dot, dot operator and bullet operator from pasted math. */
 const TYPESET_MUL = /[×·⋅∙]/g
 
 export function rewriteTypesetMul(s: string): string {
   return s.replace(TYPESET_MUL, '*').replace(/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*')
 }
 
-/** Treat typed "p i" / "p·i" as the constant π. */
+/** Typed "p i" or "p·i" is the constant π. */
 export function stitchConstants(s: string): string {
-  let out = s
-  out = out.replace(/\\imaginaryI\b/gi, 'i')
-  out = out.replace(/\\mathrm\{i\}/gi, 'i')
-  out = out.replace(/\bp(?:\s*(?:\*|·|⋅|\\cdot)\s*|\s+)i\b/gi, '(pi)')
-  out = out.replace(/(\d+(?:\.\d+)?)(\s*)\(pi\)/gi, '$1*$2(pi)')
-  out = out.replace(/(\d+(?:\.\d+)?)(pi|tau)\b/gi, '$1*$2')
-  return out
+  return s
+    .replace(/\\imaginaryI\b/gi, 'i')
+    .replace(/\\mathrm\{i\}/gi, 'i')
+    .replace(/\bp(?:\s*(?:\*|·|⋅|\\cdot)\s*|\s+)i\b/gi, '(pi)')
+    .replace(/(\d+(?:\.\d+)?)(\s*)\(pi\)/gi, '$1*$2(pi)')
+    .replace(/(\d+(?:\.\d+)?)(pi|tau)\b/gi, '$1*$2')
 }
 
 /** Where the additive left side of `pos` begins: after the nearest unmatched `(` or same-level comma, else 0. */
@@ -289,7 +281,7 @@ function groupStart(s: string, pos: number): number {
 const PERCENT_TERM_RE = /([+-])\s*(\d+(?:\.\d+)?)\s*%(?=\s*(?:[-+),]|$))/g
 const ONLY_PERCENTS_RE = /^[\s+-]*(?:\d+(?:\.\d+)?\s*%[\s+-]*)+$/
 
-/** `a ± b%` → `a * (1 ± b/100)`, where `a` is the whole additive left side (`200 + 15%` = 230). */
+/** `a ± b%` means `a * (1 ± b/100)`, where `a` is the whole additive left side (`200 + 15%` = 230). */
 function rewritePercentAdd(expr: string): string {
   let s = expr
   PERCENT_TERM_RE.lastIndex = 0
@@ -332,7 +324,7 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   s = s.replace(/((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nPr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))/gi, 'permutations($1,$2)')
   s = s.replace(/\bnCr\s*\(/g, 'combinations(')
   s = s.replace(/\bnPr\s*\(/g, 'permutations(')
-  // `n` can be a user function; `count` is reserved, so it always counts.
+  // `n` can be a user function; `count` is reserved, so it always counts
   if (!extraNames.includes('n')) s = s.replace(/\bn\s*\(/g, 'length(')
   s = s.replace(/\bcount\s*\(/g, 'length(')
   s = s.replace(/\[([^\][]*?)\s*\.\.\.\s*([^\][]*?)\]/g, 'inclusiveRange($1,$2)')
@@ -351,6 +343,16 @@ function assertListAlloc(count: number): void {
   }
 }
 
+/** Index of the bracket that opens the group closing at `close`, or -1. */
+function openingIndex(s: string, close: number, openCh: string, closeCh: string): number {
+  let depth = 0
+  for (let i = close; i >= 0; i--) {
+    if (s[i] === closeCh) depth++
+    else if (s[i] === openCh && --depth === 0) return i
+  }
+  return -1
+}
+
 function rewriteFactorial(expr: string): string {
   let s = expr
   for (let guard = 0; guard < 32; guard++) {
@@ -364,28 +366,14 @@ function rewriteFactorial(expr: string): string {
     if (j < 0) break
     let start = j
     if (s[j] === ')') {
-      let depth = 0
-      for (; start >= 0; start--) {
-        if (s[start] === ')') depth++
-        else if (s[start] === '(') {
-          depth--
-          if (depth === 0) break
-        }
-      }
-      // `sqrt(4)!` takes the whole call, not just its parentheses.
+      start = openingIndex(s, j, '(', ')')
+      // `sqrt(4)!` takes the whole call, not just its parentheses
       let k = start
       while (k > 0 && /[A-Za-z0-9_]/.test(s[k - 1]!)) k--
       while (k < start && /\d/.test(s[k]!)) k++
       if (k < start) start = k
     } else if (s[j] === ']') {
-      let depth = 0
-      for (; start >= 0; start--) {
-        if (s[start] === ']') depth++
-        else if (s[start] === '[') {
-          depth--
-          if (depth === 0) break
-        }
-      }
+      start = openingIndex(s, j, '[', ']')
     } else if (/[0-9.]/.test(s[j]!)) {
       while (start > 0 && /[0-9.eE+]/.test(s[start - 1]!)) start--
     } else if (/[A-Za-z_]/.test(s[j]!)) {
@@ -433,14 +421,7 @@ function fromMathjs(v: unknown): Value | null {
     if (!Number.isFinite(re)) return textVal('undefined')
     return num(chop(re))
   }
-  if (Array.isArray(v)) {
-    const xs = nums(v)
-    return textVal(formatList(xs))
-  }
-  if (v && typeof v === 'object' && 'toArray' in v && typeof (v as { toArray: () => unknown }).toArray === 'function') {
-    const xs = nums([(v as { toArray: () => unknown }).toArray()])
-    return textVal(formatList(xs))
-  }
+  if (Array.isArray(v) || isMatrix(v)) return textVal(formatList(nums([v])))
   return null
 }
 
@@ -451,52 +432,68 @@ export type ScientificContext = {
   functions?: Record<string, UserFunction>
 }
 
-function escapeNames(names: string[]): string {
-  return [...names]
-    .sort((a, b) => b.length - a.length)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('|')
+function prepare(text: string, ctx: ScientificContext): { expr: string; scope: Record<string, unknown> } | null {
+  const expr = preprocessChecked(text, ctx)
+  if (expr == null) return null
+  const scope: Record<string, unknown> = {
+    ...ctx.variables,
+    // with no previous answer `ans` stays unknown (blank), not 0
+    ...(ctx.ans !== undefined && { ans: ctx.ans }),
+    ...builtinScope(ctx.angleMode),
+  }
+  const fns = ctx.functions ?? {}
+  for (const [name, def] of Object.entries(fns)) scope[name] = userFunction(def, ctx, fns)
+  return { expr, scope }
 }
 
-/** Preprocess, reject non-math text, and build the evaluation scope. Shared by eval and compile. */
-function prepare(text: string, ctx: ScientificContext): { expr: string; scope: Record<string, unknown> } | null {
+function preprocessChecked(text: string, ctx: ScientificContext): string | null {
   let src = text.trim()
   if (!src) return null
   const fns = ctx.functions ?? {}
   const fnNames = Object.keys(fns)
   const vars = ctx.variables ?? {}
-  // A variable followed by `(` multiplies (`n(2+3)`), unless a function has the same name.
+  // a variable followed by `(` multiplies (`n(2+3)`), unless a function has the same name
   const varNames = Object.keys(vars).filter((n) => !(n in fns))
   if (varNames.length) {
-    src = src.replace(new RegExp(`(?<![A-Za-z0-9_])(${escapeNames(varNames)})\\s*\\(`, 'g'), '$1*(')
+    src = src.replace(new RegExp(`(?<![A-Za-z0-9_])(${namesPattern(varNames)})\\s*\\(`, 'g'), '$1*(')
   }
   let expr = preprocessAscii(src, fnNames)
   if (ctx.ans !== undefined) expr = expr.replace(/\bans\b/gi, `(${ctx.ans})`)
 
   const allowNames = [...Object.keys(vars), ...fnNames]
   const allowRe = allowNames.length
-    ? new RegExp(`(?<![A-Za-z_])(?:${escapeNames(allowNames)})(?![A-Za-z0-9_])`, 'gi')
+    ? new RegExp(`(?<![A-Za-z_])(?:${namesPattern(allowNames)})(?![A-Za-z0-9_])`, 'gi')
     : null
-  FN_RE.lastIndex = 0
   const leftover = expr
-    .replace(FN_RE, '')
+    .replace(NAME_RE, '')
     .replace(/\d+(?:\.\d+)?e[+-]?\d+/gi, '')
     .replace(allowRe ?? /$^/, '')
-  FN_RE.lastIndex = 0
-  const named = FN_RE.test(src) || FN_RE.test(expr)
+  const named = HAS_NAME_RE.test(src) || HAS_NAME_RE.test(expr)
   if (!named && !allowRe && !/\d|pi|tau|ans|\be\b/i.test(expr)) return null
   if (/[a-zA-Z_$€£¥₹#?=\\]/.test(leftover.replace(/[iIeE]/g, ''))) {
     if (!/^[\d\s+\-*/^().,eE!|[\]:]+$/.test(expr) && !named) return null
   }
 
-  // `2:30` is a clock reading (h:mm or m:ss — ambiguous), never a mathjs range.
+  // `2:30` is a clock reading (h:mm or m:ss, ambiguous), never a mathjs range
   if (expr.includes(':')) return null
+  return expr
+}
 
-  const mode = ctx.angleMode
-  const scope: Record<string, unknown> = {
-    ...vars,
-    // No previous answer leaves `ans` unknown (blank), not 0.
-    ...(ctx.ans !== undefined && { ans: ctx.ans }),
+const gcd = (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y))
+const combinations = choose(math.combinations)
+const permutations = choose(math.permutations)
+
+function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
+  const inverseTrig = {
+    asin: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.asin(x), mode)),
+    acos: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.acos(x), mode)),
+    atan: (x: number) => fromRad(Math.atan(x), mode),
+    atan2: (y: number, x: number) => fromRad(Math.atan2(y, x), mode),
+    acsc: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.asin(1 / x), mode)),
+    asec: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.acos(1 / x), mode)),
+    acot: (x: number) => fromRad(x === 0 ? Math.PI / 2 : Math.atan(1 / x), mode),
+  }
+  return {
     e: Math.E,
     pi: Math.PI,
     tau: Math.PI * 2,
@@ -529,10 +526,7 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
     },
     min: (...a: unknown[]) => Math.min(...nums(a)),
     max: (...a: unknown[]) => Math.max(...nums(a)),
-    mean: (...a: unknown[]) => {
-      const xs = nums(a)
-      return xs.reduce((s, x) => s + x, 0) / xs.length
-    },
+    mean: (...a: unknown[]) => avg(nums(a)),
     median: (...a: unknown[]) => medianOf([...nums(a)].sort((x, y) => x - y)),
     stdev: (...a: unknown[]) => Math.sqrt(varianceOf(nums(a), false)),
     stdevp: (...a: unknown[]) => Math.sqrt(varianceOf(nums(a), true)),
@@ -540,7 +534,7 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
     varp: (...a: unknown[]) => varianceOf(nums(a), true),
     mad: (...a: unknown[]) => {
       const xs = nums(a)
-      const m = xs.reduce((p, c) => p + c, 0) / xs.length
+      const m = avg(xs)
       return xs.reduce((p, c) => p + Math.abs(c - m), 0) / xs.length
     },
     total: (...a: unknown[]) => nums(a).reduce((p, c) => p + c, 0),
@@ -580,17 +574,17 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
       assertListAlloc(count)
       return Array.from({ length: count }, one)
     },
-    gcd: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
-    gcf: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
-    hcf: (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y)),
+    gcd,
+    gcf: gcd,
+    hcf: gcd,
     lcm: (...a: unknown[]) => nums(a).reduce((x, y) => intLcm(x, y)),
     mod: modulo,
     powmod,
     factorial,
-    combinations: choose(math.combinations),
-    permutations: choose(math.permutations),
-    nCr: choose(math.combinations),
-    nPr: choose(math.permutations),
+    combinations,
+    permutations,
+    nCr: combinations,
+    nPr: permutations,
     inclusiveRange: (a: number, b: number) => {
       const start = Number(a)
       const end = Number(b)
@@ -604,36 +598,30 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
     },
     csc: (x: number) => {
       const s = Math.sin(toRad(x, mode))
-      return chop(s) === 0 ? Number.NaN : 1 / s
+      return nearZero(s) ? Number.NaN : 1 / s
     },
     sec: (x: number) => {
       const c = Math.cos(toRad(x, mode))
-      return trigAsymptote(c) ? Number.NaN : 1 / c
+      return nearZero(c) ? Number.NaN : 1 / c
     },
     cot: (x: number) => {
       const s = Math.sin(toRad(x, mode))
-      return chop(s) === 0 ? Number.NaN : Math.cos(toRad(x, mode)) / s
+      return nearZero(s) ? Number.NaN : Math.cos(toRad(x, mode)) / s
     },
     sin: (x: number) => chop(Math.sin(toRad(x, mode))),
     cos: (x: number) => chop(Math.cos(toRad(x, mode))),
     tan: (x: number) => {
       const c = Math.cos(toRad(x, mode))
-      return trigAsymptote(c) ? Number.NaN : chop(Math.sin(toRad(x, mode)) / c)
+      return nearZero(c) ? Number.NaN : chop(Math.sin(toRad(x, mode)) / c)
     },
-    asin: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.asin(x), mode)),
-    acos: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.acos(x), mode)),
-    atan: (x: number) => fromRad(Math.atan(x), mode),
-    atan2: (y: number, x: number) => fromRad(Math.atan2(y, x), mode),
-    acsc: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.asin(1 / x), mode)),
-    asec: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.acos(1 / x), mode)),
-    acot: (x: number) => fromRad(x === 0 ? Math.PI / 2 : Math.atan(1 / x), mode),
-    arcsin: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.asin(x), mode)),
-    arccos: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.acos(x), mode)),
-    arctan: (x: number) => fromRad(Math.atan(x), mode),
-    arctan2: (y: number, x: number) => fromRad(Math.atan2(y, x), mode),
-    arccsc: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.asin(1 / x), mode)),
-    arcsec: (x: number) => (Math.abs(x) < 1 ? Number.NaN : fromRad(Math.acos(1 / x), mode)),
-    arccot: (x: number) => fromRad(x === 0 ? Math.PI / 2 : Math.atan(1 / x), mode),
+    ...inverseTrig,
+    arcsin: inverseTrig.asin,
+    arccos: inverseTrig.acos,
+    arctan: inverseTrig.atan,
+    arctan2: inverseTrig.atan2,
+    arccsc: inverseTrig.acsc,
+    arcsec: inverseTrig.asec,
+    arccot: inverseTrig.acot,
     sinh: Math.sinh,
     cosh: Math.cosh,
     tanh: Math.tanh,
@@ -647,27 +635,19 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
     asech: (x: number) => (x <= 0 || x > 1 ? Number.NaN : Math.acosh(1 / x)),
     acoth: (x: number) => (Math.abs(x) <= 1 ? Number.NaN : Math.atanh(1 / x)),
   }
+}
 
-  for (const [name, def] of Object.entries(fns)) {
-    scope[name] = (...args: unknown[]) => {
-      const localVars: Record<string, number> = { ...vars }
-      for (let i = 0; i < def.params.length; i++) {
-        const p = def.params[i]!
-        const n = Number(args[i])
-        localVars[p] = Number.isFinite(n) ? n : Number.NaN
-      }
-      const result = evalScientific(def.body, {
-        ans: ctx.ans,
-        angleMode: mode,
-        variables: localVars,
-        functions: fns,
-      })
-      if (!result || result.kind === 'text') return Number.NaN
-      return result.n
-    }
+function userFunction(def: UserFunction, ctx: ScientificContext, fns: Record<string, UserFunction>) {
+  return (...args: unknown[]) => {
+    const localVars: Record<string, number> = { ...ctx.variables }
+    def.params.forEach((p, i) => {
+      const n = Number(args[i])
+      localVars[p] = Number.isFinite(n) ? n : Number.NaN
+    })
+    const result = evalScientific(def.body, { ans: ctx.ans, angleMode: ctx.angleMode, variables: localVars, functions: fns })
+    if (!result || result.kind === 'text') return Number.NaN
+    return result.n
   }
-
-  return { expr, scope }
 }
 
 /** Only factorials may overflow to ∞; any other infinity (`1/0`) is undefined. */
@@ -687,10 +667,7 @@ export function evalScientific(text: string, ctx: ScientificContext = {}): Value
   }
 }
 
-/**
- * Preprocess and compile `text` once, then evaluate it for many values of `variable`
- * (graph sampling). Same results as calling evalScientific with that variable set.
- */
+/** Same results as evalScientific with `variable` set, but compiled once for graph sampling. */
 export function compileScientific(
   text: string,
   ctx: ScientificContext,
@@ -735,7 +712,7 @@ export function formatAsFraction(n: number, maxDen = 10_000): string | null {
       if (err < 1e-15) break
     }
   }
-  // Only exact-looking values: an approximation like 355/113 for π or 8119/5741 for √2 stays decimal.
+  // only exact-looking values; an approximation like 355/113 for π stays decimal
   if (bestErr > 1e-9 * Math.max(1, x)) return null
   const g = intGcd(bestN, bestD)
   return `${sign}${bestN / g}/${bestD / g}`

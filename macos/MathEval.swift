@@ -1,7 +1,7 @@
 import Foundation
 
 enum MathEval {
-    /// Prepend/append the grey inferred parens so `5+3)*2` evaluates as `(5+3)*2`.
+    // adds the grey inferred parens so `5+3)*2` evaluates as `(5+3)*2`
     static func fillParens(_ expr: String) -> String {
         var depth = 0
         var minDepth = 0

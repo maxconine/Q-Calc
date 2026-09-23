@@ -25,16 +25,15 @@ const SVG_W = 652
 const SVG_H = 200
 const MIN_DOMAIN_SPAN = 1e-6
 const MAX_DOMAIN_SPAN = 1e6
-/** How close (svg px) the pointer must come to a root or extremum for the readout to lock onto it. */
+// svg px within which the readout locks onto a root or extremum
 const SNAP_PX = 8
 
-export type GraphPanelProps = {
+type GraphPanelProps = {
   input: string
   functions?: Record<string, UserFunction>
   variables?: Record<string, number>
   ans?: number
   angleMode?: AngleMode
-  /** Called when a critical/root point is clicked — formatted x value to copy. */
   onSelectX?: (xText: string) => void
 }
 
@@ -61,10 +60,10 @@ function formatCoord(n: number): string {
   return formatNumber(n, 8)
 }
 
-/** Far-off-screen samples are pinned here; the clip path hides them either way. */
+// far off-screen samples are pinned here; the clip path hides them either way
 const PX_LIMIT = 1e4
 
-/** Curve path (gaps at non-finite samples and at jumps across the whole view) plus isolated samples as dots. */
+// gaps at non-finite samples and at jumps across the whole view; isolated samples become dots
 function pointsToPath(
   points: GraphPoint[],
   xToPx: (x: number) => number,
@@ -90,7 +89,7 @@ function pointsToPath(
       continue
     }
     const last = run[run.length - 1]
-    // One step from above the view to below it is a pole (tan, 1/x), not a line to draw.
+    // one step from above the view to below it is a pole (tan, 1/x), not a line to draw
     if (last && ((last.y < top && y > bottom) || (last.y > bottom && y < top))) flush()
     run.push({ x, y: Math.max(-PX_LIMIT, Math.min(PX_LIMIT, y)) })
   }
@@ -104,7 +103,7 @@ function kindLabel(kind: CriticalPoint['kind']): 'min' | 'max' | 'crit' {
   return 'crit'
 }
 
-/** `v` rounded to the finest decimal a pixel of width `res` can distinguish. */
+// rounds to the finest decimal a pixel of width `res` can distinguish
 function roundToPixel(v: number, res: number): number {
   const step = 10 ** Math.floor(Math.log10(res))
   return Number((Math.round(v / step) * step).toPrecision(12))
@@ -120,12 +119,11 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
   )
   const [domain, setDomain] = useState<[number, number]>(home)
   const [dragging, setDragging] = useState(false)
-  /** Pointer x in svg units while hovering the plot (not while dragging). */
   const [hoverPx, setHoverPx] = useState<number | null>(null)
   const dragRef = useRef<{ startPx: number; domain: [number, number]; moved: boolean } | null>(null)
   const plotRef = useRef<SVGSVGElement>(null)
 
-  // Pointer and wheel events outpace frames; resample at most once per frame.
+  // pointer and wheel events outpace frames, so resample at most once per frame
   const domainRef = useRef(domain)
   domainRef.current = domain
   const pendingRef = useRef<[number, number] | null>(null)
@@ -185,7 +183,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     ...critical.map((c) => ({ x: c.x, y: c.y, kind: kindLabel(c.kind) })),
   ].filter((p) => inView(xToPx(p.x), yToPx(p.y)))
 
-  /** Client coordinates → svg viewBox units (exact under any letterboxing). */
+  // client coordinates to svg viewBox units, exact under any letterboxing
   const toSvgX = useCallback((clientX: number, clientY: number) => {
     const svg = plotRef.current
     const ctm = svg?.getScreenCTM()
@@ -216,8 +214,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     if (result?.error) return
     const svg = plotRef.current
     if (!svg) return
-    // Vertical scroll (and pinch, which Chromium sends as ctrl+wheel) zooms about the cursor;
-    // a sideways trackpad swipe pans.
+    // vertical scroll and chromium's ctrl+wheel pinch zoom about the cursor; a sideways swipe pans
     let gesturing = false
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
@@ -233,8 +230,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
       const k = e.ctrlKey ? 0.01 : 0.002
       zoomAt(px, Math.exp(Math.max(-0.5, Math.min(0.5, e.deltaY * unit * k))))
     }
-    // WebKit (the app's WKWebView) reports trackpad pinch as gesture events with a running scale;
-    // any ctrl+wheel it sends alongside is ignored so a pinch zooms once.
+    // webkit reports pinch as gesture events with a running scale; its ctrl+wheel is ignored so a pinch zooms once
     type GestureEvent = UIEvent & { scale: number; clientX: number; clientY: number }
     let lastScale = 1
     const onGestureStart = (e: Event) => {
@@ -265,7 +261,6 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     }
   }, [panBy, zoomAt, toSvgX, result?.error])
 
-  // Readout: locks onto a nearby root or extremum, otherwise follows the curve at the pointer.
   const snapAt = (px: number) =>
     features.reduce<Feature | null>((best, p) => {
       const d = Math.abs(xToPx(p.x) - px)
@@ -289,7 +284,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
       readout = {
         px: xToPx(x),
         py: py != null && py >= PLOT_PAD.top && py <= plotBottom ? py : null,
-        text: `(${withMinus(formatNumber(x, 8))}${deg}, ${y == null ? '—' : withMinus(formatNumber(y, 6))})`,
+        text: `(${withMinus(formatCoord(x))}${deg}, ${y == null ? '—' : withMinus(formatNumber(y, 6))})`,
       }
     }
   }
@@ -335,12 +330,12 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     try {
       e.currentTarget.releasePointerCapture(e.pointerId)
     } catch {
-      /* already released */
+      // already released
     }
     const drag = dragRef.current
     dragRef.current = null
     setDragging(false)
-    // A click (no drag) on a root or extremum copies its x.
+    // a click without a drag on a root or extremum copies its x
     const px = toSvgX(e.clientX, e.clientY)
     const hit = drag && !drag.moved && e.type === 'pointerup' && px != null ? snapAt(px) : null
     if (hit) selectX(hit.x)

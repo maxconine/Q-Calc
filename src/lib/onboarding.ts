@@ -1,13 +1,9 @@
-/** First-use teaching: rotating examples in the empty input, the `?` sheet, and one-time hints. */
-
 export type Onboarding = {
-  /** Times the overlay has been opened (page loads in the browser). */
   opens: number
-  /** Calculations committed with Enter. */
   commits: number
-  /** Bitmask of one-time hints already shown (see HINT). */
+  // bitmask of HINT values already shown
   hints: number
-  /** Examples retired for good. */
+  // examples retired for good
   done: boolean
 }
 
@@ -35,7 +31,7 @@ export function sanitizeOnboarding(raw: unknown): Onboarding {
   }
 }
 
-/** Two copies (web storage, native defaults) only ever move forward, so merge by taking the furthest. */
+// the web and native copies only move forward, so take the furthest of each
 export function mergeOnboarding(a: Onboarding, b: Onboarding): Onboarding {
   return {
     opens: Math.max(a.opens, b.opens),
@@ -61,10 +57,8 @@ export function recordCommit(s: Onboarding): Onboarding {
   return settle({ ...s, commits: s.commits + 1 })
 }
 
-// ── Rotating placeholder ────────────────────────────────────────────────
-
-/** Answers come from the engine at display time so they follow deg/rad and sig-fig settings; `plain` has none. */
-export type Example = { expr: string; note?: string; plain?: boolean }
+// answers are computed at display time so they follow the settings; `plain` has no answer
+type Example = { expr: string; note?: string; plain?: boolean }
 
 export const EXAMPLES: readonly Example[] = [
   { expr: '2 in to cm' },
@@ -80,7 +74,7 @@ export function exampleList(firstRunHotkey?: string): Example[] {
   return [...lead, ...EXAMPLES]
 }
 
-/** One showing of the overlay: examples run until the first keystroke, then stay away. */
+// examples run until the first keystroke of a showing
 export type Rotation = { on: boolean; tick: number }
 
 export const ROTATION_OFF: Rotation = { on: false, tick: 0 }
@@ -102,8 +96,6 @@ export function rotationItem<T>(r: Rotation, items: readonly T[]): T | undefined
   return items[r.tick % items.length]
 }
 
-// ── One-time hints ──────────────────────────────────────────────────────
-
 export const HINT = {
   answer: 1,
   variable: 2,
@@ -115,17 +107,15 @@ const HINT_ALL = HINT.answer | HINT.variable | HINT.units | HINT.trig
 
 export type CommitFacts = {
   expr: string
-  /** Name assigned by `x = …`. */
   variable?: string
-  /** The committed answer carries a unit. */
   unit?: boolean
 }
 
-export type Hint = { bit: number; text: string }
+type Hint = { bit: number; text: string }
 
 const TRIG = /(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan)\s*\(/i
 
-/** The single hint (if any) to show after a commit; each is shown once ever, most basic first. */
+// each hint shows once ever, most basic first
 export function pickHint(seen: number, facts: CommitFacts): Hint | null {
   const candidates: Hint[] = [
     { bit: HINT.answer, text: '⌘C copies · Enter saved it' },
@@ -138,14 +128,12 @@ export function pickHint(seen: number, facts: CommitFacts): Hint | null {
 
 export const HOTKEY_FAILED_HINT = 'shortcut in use by macOS — change it in the menu'
 
-// ── `?` sheet ───────────────────────────────────────────────────────────
-
 export function isHelpCommand(text: string): boolean {
   const t = text.trim().toLowerCase()
   return t === '?' || t === 'help'
 }
 
-/** Typing past `?`/`help` starts fresh with just the new text, so the command never lingers. */
+// typing past `?` or `help` keeps just the new text
 export function afterHelpInput(prev: string, next: string): string {
   if (!isHelpCommand(prev) || next.length <= prev.length || !next.startsWith(prev)) return next
   return next.slice(prev.length)

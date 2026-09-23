@@ -1,5 +1,3 @@
-/** Extra scientific testbench cases. Target is max(5× current, 100) per category. */
-
 export type ExtraCase = {
   name: string
   input: string | string[]

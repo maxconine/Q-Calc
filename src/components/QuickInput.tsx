@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
 import { autofillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
+import { inputHighlight } from '../lib/dom'
 
-export type CaretRange = { start: number; end: number }
+type CaretRange = { start: number; end: number }
 
 export interface QuickInputHandle {
   insert: (chunk: string, at?: CaretRange) => void
@@ -20,14 +21,13 @@ interface Props {
   onEnter: () => void
   onUp: () => boolean
   onDown: () => boolean
-  /** ⌥↑ / ⌥↓: step the answer's SI prefix. */
   onPrefixStep?: (dir: 1 | -1) => void
-  /** Faint example shown in place of the placeholder while the input is empty; `id` restarts its fade. */
+  // shown in place of the placeholder while the input is empty; a new `id` restarts its fade
   example?: { text: string; id: number } | null
   handleRef?: MutableRefObject<QuickInputHandle | null>
 }
 
-// Letters around a token make it part of a word (`pint`, `infinity`); digits before it are a coefficient (`2pi`).
+// letters around a token make it part of a word (`pint`, `infinity`); digits before it are a coefficient (`2pi`)
 const TOKEN_REPLACEMENTS: [RegExp, string][] = [
   [/(?<![A-Za-z])pi(?![A-Za-z0-9])/gi, 'π'],
   [/(?<![A-Za-z])theta(?![A-Za-z0-9])/gi, 'θ'],
@@ -44,7 +44,6 @@ export function flattenPastedText(text: string): string {
   return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, ' ')
 }
 
-/** Insert `chunk` at a caret or selection, replacing the selected range when present. */
 export function spliceText(
   value: string,
   chunk: string,
@@ -57,7 +56,7 @@ export function spliceText(
 }
 
 function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing: boolean): string {
-  // A word token that ends the text may still be the start of a longer word (`pi` → `pint`); symbols convert at once.
+  // a word token at the end may still grow into a longer word (`pi` to `pint`); symbols convert at once
   const swap = (put: string) => (m: string, offset: number, whole: string) =>
     keepTrailing && offset + m.length === whole.length && /[A-Za-z]$/.test(m) ? m : put
   let out = text
@@ -69,7 +68,7 @@ function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing:
   return out
 }
 
-/** Prettify typed tokens. With a caret, the token right before it is left for the next keystroke to settle. */
+// with a caret, the token right before it is left for the next keystroke to settle
 export function prettyTokens(text: string, ansPlain?: string, caret?: number): string {
   if (caret == null) return replaceTokens(text, ansPlain, false)
   return replaceTokens(text.slice(0, caret), ansPlain, true) + replaceTokens(text.slice(caret), ansPlain, false)
@@ -96,15 +95,9 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
   onPrefixStepRef.current = onPrefixStep
   ansRef.current = ansPlain
 
-  const readHighlight = (el: HTMLInputElement | null): string => {
-    if (!el) return ''
-    const start = el.selectionStart ?? 0
-    const end = el.selectionEnd ?? 0
-    return end > start ? el.value.slice(start, end) : ''
-  }
-
+  // holds the last highlight while ⌘ or ⌃ is down so a copy still finds it
   const rememberHighlight = (el: HTMLInputElement | null) => {
-    const live = readHighlight(el)
+    const live = inputHighlight(el)
     if (live) heldRef.current = live
     else if (!metaRef.current) heldRef.current = ''
   }
@@ -146,7 +139,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
     })
   }
 
-  /** Convert a token still waiting at the caret (`2pi` then Enter). */
+  // converts a token still waiting at the caret (`2pi` then enter)
   const finishTokens = (el: HTMLInputElement) => {
     if (prettyTokens(el.value, ansRef.current) === el.value) return
     commit(el.value, el.selectionStart ?? el.value.length, true)
@@ -178,16 +171,18 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
         })
       },
       element: () => el,
-      highlighted: () => readHighlight(el) || heldRef.current,
+      highlighted: () => inputHighlight(el) || heldRef.current,
       caret: () => caretPosRef.current,
     }
     if (handleRef) handleRef.current = api
     const w = nativeWindow()
     if (w) {
       w.__qcalcFocus = () => el.focus()
+      // keys typed before the input had focus, buffered by the mac app's boot script
       const buffered = w.__QCALC_KEYS
       if (buffered?.length) {
-        commit((el.value || '') + buffered.join(''), ((el.value || '') + buffered.join('')).length)
+        const text = (el.value || '') + buffered.join('')
+        commit(text, text.length)
         w.__QCALC_KEYS = []
       }
     }
@@ -203,7 +198,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
     }
     const onArrow = (e: globalThis.KeyboardEvent) => {
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
-        // A ↑/↓ whose keyup landed elsewhere must not keep pinning the caret against ←/→.
+        // a ↑/↓ whose keyup landed elsewhere must not keep pinning the caret against ←/→
         holdingArrowRef.current = false
         return
       }
@@ -248,7 +243,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
       e.preventDefault()
       return
     }
-    // macOS WebKit maps Home/End to page scrolling, not the caret.
+    // macos webkit maps home/end to page scrolling, not the caret
     if ((e.key === 'Home' || e.key === 'End') && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
       const el = e.currentTarget

@@ -6,7 +6,7 @@ extension Notification.Name {
     static let qcalcSettingsChanged = Notification.Name("QCalc.settingsChanged")
 }
 
-/// Global shortcut choices. Presets only: each is Space plus modifiers.
+// presets only: each is space plus modifiers
 struct HotKeyPreset: Equatable {
     let id: String
     let title: String
@@ -26,12 +26,12 @@ struct HotKeyPreset: Equatable {
     }
 }
 
-/// macOS keeps its own Space shortcuts (Spotlight, Finder search, input sources) in com.apple.symbolichotkeys.
-/// Carbon happily registers a combo the system already owns, and the system then wins — so ask first.
+// carbon happily registers a combo macos already owns (spotlight, finder search, input sources),
+// and macos then wins, so check com.apple.symbolichotkeys first
 enum SystemShortcuts {
     private static let domain = "com.apple.symbolichotkeys" as CFString
     private static let modifierMask = NSEvent.ModifierFlags([.shift, .control, .option, .command]).rawValue
-    /// Space shortcuts macOS ships enabled, by symbolic id: 60/61 input sources, 64 Spotlight, 65 Finder search.
+    // space shortcuts macos ships enabled, by symbolic id: 60/61 input sources, 64 spotlight, 65 finder search
     private static let spaceDefaults: [Int: NSEvent.ModifierFlags] = [
         60: [.control],
         61: [.control, .option],
@@ -58,7 +58,7 @@ enum SystemShortcuts {
         for (id, flags) in spaceDefaults where table[String(id)] == nil && flags.rawValue == want {
             owners.append(id)
         }
-        // The input-source shortcuts only act (and only swallow the key) when there is more than one source.
+        // the input source shortcuts only swallow the key when there is more than one source
         return owners.contains { !inputSourceIDs.contains($0) || switchesInputSources() }
     }
 
@@ -106,13 +106,11 @@ final class AppSettings: ObservableObject {
     @Published private(set) var rationalize: Bool
     @Published private(set) var sigFigMode: Bool
     @Published private(set) var theme: String
-    /// The shortcut the user picked (persisted).
+    // what the user picked; activeHotKey is what actually got registered
     @Published private(set) var hotKey: HotKeyPreset
-    /// The shortcut actually registered right now; nil when none could be.
     @Published private(set) var activeHotKey: HotKeyPreset?
-    /// The picked shortcut could not be registered at launch.
     @Published private(set) var hotKeyFailed = false
-    /// Web onboarding progress (opens, commits, hints, done); the web view's own storage does not persist.
+    // kept here because the web view's own storage does not persist
     private(set) var onboarding: [String: Int]
 
     private init() {
@@ -144,7 +142,7 @@ final class AppSettings: ObservableObject {
         return out
     }
 
-    /// Progress only moves forward, whichever side reports it.
+    // progress only moves forward, whichever side reports it
     func mergeOnboarding(_ incoming: [String: Int]) {
         var next = onboarding
         for key in Self.onboardingFields {
@@ -161,7 +159,7 @@ final class AppSettings: ObservableObject {
         return String(data: data, encoding: .utf8) ?? "{}"
     }
 
-    /// True exactly once per install.
+    // true exactly once per install
     func claimFirstRun() -> Bool {
         guard !UserDefaults.standard.bool(forKey: Self.firstRunKey) else { return false }
         UserDefaults.standard.set(true, forKey: Self.firstRunKey)
@@ -177,6 +175,10 @@ final class AppSettings: ObservableObject {
         guard active != activeHotKey || failed != hotKeyFailed else { return }
         activeHotKey = active
         hotKeyFailed = failed
+        notifySettingsChanged()
+    }
+
+    private func notifySettingsChanged() {
         NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
     }
 
@@ -228,9 +230,7 @@ final class AppSettings: ObservableObject {
         guard value != significantFigures else { return }
         significantFigures = value
         UserDefaults.standard.set(value, forKey: Self.sigFigsKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func setDraftSeconds(_ n: Int, notifyWeb: Bool) {
@@ -238,9 +238,7 @@ final class AppSettings: ObservableObject {
         guard value != draftSeconds else { return }
         draftSeconds = value
         UserDefaults.standard.set(value, forKey: Self.draftSecondsKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func setAnswerForm(_ form: String, notifyWeb: Bool) {
@@ -248,9 +246,7 @@ final class AppSettings: ObservableObject {
         guard value != answerForm else { return }
         answerForm = value
         UserDefaults.standard.set(value, forKey: Self.answerFormKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func setHistoryInsert(_ raw: String, notifyWeb: Bool) {
@@ -258,27 +254,21 @@ final class AppSettings: ObservableObject {
         guard value != historyInsert else { return }
         historyInsert = value
         UserDefaults.standard.set(value, forKey: Self.historyInsertKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func setRationalize(_ value: Bool, notifyWeb: Bool) {
         guard value != rationalize else { return }
         rationalize = value
         UserDefaults.standard.set(value, forKey: Self.rationalizeKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func setSigFigMode(_ value: Bool, notifyWeb: Bool) {
         guard value != sigFigMode else { return }
         sigFigMode = value
         UserDefaults.standard.set(value, forKey: Self.sigFigModeKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func setTheme(_ raw: String, notifyWeb: Bool) {
@@ -286,12 +276,10 @@ final class AppSettings: ObservableObject {
         guard value != theme else { return }
         theme = value
         UserDefaults.standard.set(value, forKey: Self.themeKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
-    /// Overlay and settings windows only — not `NSApp`, so the menu-bar icon can stay a template.
+    // for the overlay and settings windows only, not NSApp, so the menu bar icon stays a template
     var nsAppearance: NSAppearance? {
         switch theme {
         case "light":
@@ -322,9 +310,7 @@ final class AppSettings: ObservableObject {
         guard next != defaultUnits else { return }
         defaultUnits = next
         UserDefaults.standard.set(next, forKey: Self.defaultUnitsKey)
-        if notifyWeb {
-            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
-        }
+        if notifyWeb { notifySettingsChanged() }
     }
 
     func defaultUnitsJSON() -> String {
@@ -348,7 +334,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var overlay: OverlayController?
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandlerInstalled = false
-    /// A preset macOS refused; its menu title says so on the next menu build, then clears.
+    // a preset macos refused; its menu title says so on the next menu build, then clears
     private var refusedHotKey: String?
     private var statusItem: NSStatusItem?
     private var unitSettings: UnitSettingsWindowController?
@@ -360,7 +346,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupStatusItem()
-        // Before the web view boots, so its injected settings already carry the shortcut.
+        // before the web view boots, so its injected settings already carry the shortcut
         registerHotKey()
         overlay = OverlayController()
         overlay?.preload()
@@ -419,29 +405,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.addItem(tips)
         menu.addItem(.separator())
 
-        let shortcut = NSMenuItem(title: "Shortcut", action: nil, keyEquivalent: "")
-        shortcut.submenu = hotKeyMenu()
-        menu.addItem(shortcut)
-
-        let figs = NSMenuItem(title: "Significant figures", action: nil, keyEquivalent: "")
-        figs.submenu = sigFigsMenu()
-        menu.addItem(figs)
-
-        let answers = NSMenuItem(title: "Answers", action: nil, keyEquivalent: "")
-        answers.submenu = answerFormMenu()
-        menu.addItem(answers)
-
-        let history = NSMenuItem(title: "History", action: nil, keyEquivalent: "")
-        history.submenu = historyInsertMenu()
-        menu.addItem(history)
-
-        let appearance = NSMenuItem(title: "Appearance", action: nil, keyEquivalent: "")
-        appearance.submenu = appearanceMenu()
-        menu.addItem(appearance)
-
-        let draft = NSMenuItem(title: "Keep unfinished", action: nil, keyEquivalent: "")
-        draft.submenu = draftMenu()
-        menu.addItem(draft)
+        let submenus: [(String, NSMenu)] = [
+            ("Shortcut", hotKeyMenu()),
+            ("Significant figures", sigFigsMenu()),
+            ("Answers", answerFormMenu()),
+            ("History", historyInsertMenu()),
+            ("Appearance", appearanceMenu()),
+            ("Keep unfinished", draftMenu()),
+        ]
+        for (title, submenu) in submenus {
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.submenu = submenu
+            menu.addItem(item)
+        }
 
         let units = NSMenuItem(title: "Default units…", action: #selector(showUnitSettings), keyEquivalent: "")
         units.target = self
@@ -487,20 +463,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return menu
     }
 
-    private func answerFormMenu() -> NSMenu {
+    private func choiceMenu(_ options: [(title: String, value: String)], current: String, action: Selector) -> NSMenu {
         let menu = NSMenu()
-        let current = AppSettings.shared.answerForm
-        let options: [(String, String)] = [
-            ("Exact", "exact"),
-            ("Approximate", "approx"),
-        ]
-        for (title, form) in options {
-            let item = NSMenuItem(title: title, action: #selector(setAnswerForm(_:)), keyEquivalent: "")
+        for option in options {
+            let item = NSMenuItem(title: option.title, action: action, keyEquivalent: "")
             item.target = self
-            item.representedObject = form
-            item.state = form == current ? .on : .off
+            item.representedObject = option.value
+            item.state = option.value == current ? .on : .off
             menu.addItem(item)
         }
+        return menu
+    }
+
+    private func answerFormMenu() -> NSMenu {
+        let menu = choiceMenu(
+            [("Exact", "exact"), ("Approximate", "approx")],
+            current: AppSettings.shared.answerForm,
+            action: #selector(setAnswerForm(_:))
+        )
         menu.addItem(.separator())
         let rat = NSMenuItem(title: "Rationalize denominators", action: #selector(toggleRationalize), keyEquivalent: "")
         rat.target = self
@@ -510,38 +490,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func historyInsertMenu() -> NSMenu {
-        let menu = NSMenu()
-        let current = AppSettings.shared.historyInsert
-        let options: [(String, String)] = [
-            ("Insert expression", "expr"),
-            ("Insert answer", "answer"),
-        ]
-        for (title, value) in options {
-            let item = NSMenuItem(title: title, action: #selector(setHistoryInsert(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = value
-            item.state = value == current ? .on : .off
-            menu.addItem(item)
-        }
-        return menu
+        choiceMenu(
+            [("Insert expression", "expr"), ("Insert answer", "answer")],
+            current: AppSettings.shared.historyInsert,
+            action: #selector(setHistoryInsert(_:))
+        )
     }
 
     private func appearanceMenu() -> NSMenu {
-        let menu = NSMenu()
-        let current = AppSettings.shared.theme
-        let options: [(String, String)] = [
-            ("System", "system"),
-            ("Light", "light"),
-            ("Dark", "dark"),
-        ]
-        for (title, theme) in options {
-            let item = NSMenuItem(title: title, action: #selector(setTheme(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = theme
-            item.state = theme == current ? .on : .off
-            menu.addItem(item)
-        }
-        return menu
+        choiceMenu(
+            [("System", "system"), ("Light", "light"), ("Dark", "dark")],
+            current: AppSettings.shared.theme,
+            action: #selector(setTheme(_:))
+        )
     }
 
     private func draftMenu() -> NSMenu {
@@ -636,9 +597,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.terminate(nil)
     }
 
-    private static let hotKeyID = EventHotKeyID(signature: OSType(0x51434C43), id: 1) // QCLC
+    private static let hotKeyID = EventHotKeyID(signature: hotKeySignature, id: 1)
 
-    /// Launch: the picked shortcut, else the default, else none — and the overlay's hint line says so.
+    // at launch: the picked shortcut, else the default, else none, and the overlay's hint line says so
     private func registerHotKey() {
         installHotKeyHandler()
         let preferred = AppSettings.shared.hotKey
@@ -698,6 +659,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 }
 
+private let hotKeySignature = OSType(0x51434C43) // "QCLC"
+
 final class HotKeyBox {
     static let shared = HotKeyBox()
     var onPress: (() -> Void)?
@@ -718,7 +681,7 @@ func qcalcHotKeyHandler(
         nil,
         &id
     )
-    if id.signature == OSType(0x51434C43) {
+    if id.signature == hotKeySignature {
         HotKeyBox.shared.onPress?()
     }
     return noErr

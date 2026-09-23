@@ -7,12 +7,13 @@ export interface Value {
   n: number
   text?: string
   unit?: string
-  unitId?: string // table id behind `unit`, for SI prefix stepping
-  /** Sig figs / ± of a unit answer, in its own unit (the unit parser tracks them). */
+  /** Table id behind `unit`, for SI prefix stepping. */
+  unitId?: string
+  /** Sig figs and ± of a unit answer, in its own unit. */
   meas?: Meas
 }
 
-/** Measurement metadata: significant figures and decimal places (absent = exact), plus a ± uncertainty. */
+/** Absent sig/dp means exact. */
 export interface Meas {
   sig?: number
   dp?: number
@@ -21,7 +22,6 @@ export interface Meas {
 
 export type LineKind = 'empty' | 'expression' | 'assignment' | 'function'
 
-/** User-defined function stored by name for later evaluation. */
 export interface UserFunction {
   params: string[]
   body: string
@@ -32,15 +32,13 @@ export interface LineResult {
   kind: LineKind
   value?: Value
   display: string
-  /** Simplified exact form when the expression is trig or a square root (e.g. `2sqrt(3)`). */
+  /** Simplified exact form, only for trig and square-root expressions (e.g. `2sqrt(3)`). */
   exact?: string
   error?: string
-  /** Present when the answer is measured (sig figs from the input) or carries a ± uncertainty. */
   meas?: Meas
-  /** A unit answer as text the unit parser reads back (`5 cm`), so variables and `ans` keep the unit; '' if it can't. */
+  /** A unit answer as text the unit parser reads back (`5 cm`); '' when it can't be read back. */
   quantity?: string
   variable?: string
-  /** Present when kind is `'function'`. */
   fnName?: string
   fnParams?: string[]
   fnBody?: string
@@ -53,9 +51,7 @@ export interface SheetInputLine {
 export interface EvaluateOptions {
   angleMode?: 'deg' | 'rad'
   ans?: number
-  /** Named values from earlier lines (or stored history) so later expressions can use them. */
   variables?: Record<string, number>
-  /** User functions from earlier lines (or stored history). */
   functions?: Record<string, UserFunction>
   fractionMode?: boolean
   /** Move square roots out of the denominator. Default true. */
@@ -63,9 +59,9 @@ export interface EvaluateOptions {
   sigFigs?: number
   /** Round measured answers to the sig figs their inputs carry. */
   sigFigMode?: boolean
-  /** Measurement metadata of `variables` (and `ans`) from earlier lines or history. */
+  /** Measurement metadata for `variables` and `ans`. */
   measures?: Record<string, Meas>
-  /** Unit-valued variables (and `ans`) from earlier lines or history, as `LineResult.quantity` text. */
+  /** Unit-valued variables and `ans`, as `LineResult.quantity` text. */
   quantities?: Record<string, string>
   defaultUnits?: DefaultUnits
 }

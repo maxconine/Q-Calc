@@ -122,7 +122,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--bg);
 }
 
-/* 67: two open hands slide down from behind the bar, weigh "six… seven" in the space below it, and retract. */
 .sixty-seven-arms {
   position: relative;
   height: 0;
@@ -139,14 +138,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: 0;
   width: 44px;
   height: 30px;
-  /* Pointer-style contrast: a light hand with a dark rim reads on any desktop behind the bar. */
+  /* light hand with a dark rim, like the pointer, so it reads on any desktop */
   color: #e4e4ea;
   filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.65)) drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3));
   transform: translateY(-110%);
   visibility: hidden;
 }
 
-/* Each hand pivots at its wrist, so a tilt dips or lifts the fingertips rather than spinning the glyph. */
+/* each hand pivots at its wrist */
 .sixty-seven-arm-left {
   left: calc(50% - 92px);
   transform-origin: 20% 70%;
@@ -157,12 +156,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform-origin: 80% 70%;
 }
 
-/*
- * "Six… seven": the hands drop in together, then trade places every 286ms — left leads with the push down.
- * Each beat eases in and overshoots a touch, so the palms bounce like loose wrists; the fingertips follow
- * through (dipping at the bottom, flicking up at the top). The first beat is the biggest and the swing relaxes
- * as it goes; then both settle, dip for a breath, and slip back up behind the bar.
- */
+/* 2.6s has to stay under SHAKE_MS in useSixtySevenArms.ts */
 .sixty-seven-arms.shaking .sixty-seven-arm {
   visibility: visible;
   animation: sixty-seven-weigh 2.6s cubic-bezier(0.38, 0, 0.26, 1.32) both;
@@ -252,7 +246,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
 }
 
-/* Reduced motion: no travel at all — the hands fade in already holding the six-seven pose, then fade out. */
 @keyframes sixty-seven-still {
   0%,
   100% {
@@ -340,7 +333,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   bottom: 1px;
   z-index: 5;
 }
-/* The toggles stay out of sight until the pointer is over the bar (or one has keyboard focus). */
 .edge-tools,
 .edge-clear {
   opacity: 0;
@@ -404,7 +396,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: var(--muted);
 }
 
-/* First-use examples: a faint placeholder and answer that fade between items. */
+/* 2.5s matches EXAMPLE_MS in onboarding.ts */
 .quick-example {
   color: var(--muted);
   white-space: pre;
@@ -578,7 +570,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   user-select: none;
 }
 
-/* `?` sheet: the history tape's surface, two columns of key · what it does. */
 .cheats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -609,43 +600,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   text-overflow: ellipsis;
 }
 
-.definition {
-  max-height: 220px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: var(--bg-tape);
-  border-top: 1px solid var(--line);
-  padding: 10px 16px 14px;
-  scrollbar-width: thin;
-  text-align: left;
-}
-.definition-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-}
-.definition-term {
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.definition-pron {
-  color: var(--muted);
-  font-size: 13px;
-  font-style: italic;
-}
-.definition-body {
-  margin-top: 8px;
-  font-size: 13px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  cursor: text;
-  user-select: text;
-}
-
-/* Graph panel under composer — keep total overlay ≤ ~560px (composer 72 + tape + graph). */
+/* keeps composer + tape + graph under the 560px panel max in Overlay.swift */
 .graph {
   --graph-plot: color-mix(in srgb, var(--bg) 70%, var(--bg-tape));
   max-height: 296px;
@@ -844,7 +799,7 @@ html.quick-native .quick-app {
   overscroll-behavior: none;
   background: transparent;
 }
-/* The bar material lives on the panel, not the app box, so the 67 hands strip below stays see-through. */
+/* the bar material sits on .spotlight, not the app box, so the 67 strip below stays see-through */
 html.quick-native .spotlight {
   background: color-mix(in srgb, var(--bg) 90%, transparent);
 }
@@ -852,7 +807,6 @@ html.quick-native .composer {
   background: transparent;
 }
 html.quick-native .tape,
-html.quick-native .definition,
 html.quick-native .graph {
   background: color-mix(in srgb, var(--bg-tape) 90%, transparent);
 }

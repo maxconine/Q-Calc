@@ -23,7 +23,7 @@ enum SoulverEval {
         return calc
     }()
 
-    /// Build the calculator and load its tables in the background so the first keystroke is fast.
+    // builds the calculator in the background so the first keystroke is fast
     static func warm() {
         DispatchQueue.global(qos: .utility).async { _ = evaluate("1+1") }
     }
@@ -71,8 +71,7 @@ enum SoulverEval {
 
         let display = result.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !display.isEmpty else { return nil }
-        // SoulverCore reports unit mismatch / overflow as a string like
-        // "Error: incompatible units" while leaving isFailedResult false.
+        // soulvercore reports unit mismatch as "Error: incompatible units" with isFailedResult false
         if display.lowercased().hasPrefix("error") {
             if display.lowercased().contains("unit") {
                 return Answer(display: "improper unit conversion", number: nil)

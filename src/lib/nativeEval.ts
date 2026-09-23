@@ -4,7 +4,7 @@ import {
 } from '../engine/units'
 import { nativeWindow } from './bridge'
 
-export type NativeEvalRequest = {
+type NativeEvalRequest = {
   id: number
   expr: string
   ans?: number
@@ -45,8 +45,7 @@ const DEFINE_PREFIX =
   /^(?:define[:\s]+|definition of\s+|meaning of\s+|what does\s+.+\s+mean\??$)/i
 const SINGLE_WORD = /^\p{L}[\p{L}'’-]*$/u
 
-/** Bare words (`ingenious`) and explicit `define …` queries. Date/NLP phrases stay with SoulverCore.
- *  Apple Dictionary lookups are currently commented out of nativeEvalPayload. */
+// bare words and `define ...` queries; the dictionary lookup itself is currently switched off
 export function looksLikeDictionaryQuery(expr: string): boolean {
   const t = expr.trim()
   if (!t) return false
@@ -56,7 +55,7 @@ export function looksLikeDictionaryQuery(expr: string): boolean {
   return t.replace(/[^\p{L}]/gu, '').length >= 2
 }
 
-/** WKWebView rejects objects that contain `undefined`, so omit optional fields instead of spreading. */
+// wkwebview rejects objects containing `undefined`, so optional fields are left out instead
 export function nativeEvalPayload(req: NativeEvalRequest): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     type: 'eval',
@@ -66,8 +65,6 @@ export function nativeEvalPayload(req: NativeEvalRequest): Record<string, unknow
   if (req.sigFigs != null && Number.isFinite(req.sigFigs)) payload.sigFigs = req.sigFigs
   if (req.ans != null && Number.isFinite(req.ans)) payload.ans = req.ans
   if (req.variables && Object.keys(req.variables).length > 0) payload.variables = req.variables
-  // Apple Dictionary — uncomment to restore lookups:
-  // if (looksLikeDictionaryQuery(req.expr)) payload.wantDefinition = true
   return payload
 }
 
@@ -83,7 +80,7 @@ export function looksLikeNaturalLanguage(expr: string): boolean {
   )
 }
 
-/** SoulverCore reports failed conversions as "Error: …" instead of an empty result. */
+// soulvercore reports failed conversions as "Error: ..." instead of an empty result
 export function usableNativeDisplay(display: string): string {
   const t = display.trim()
   if (!t) return ''
@@ -109,7 +106,7 @@ function normalizeReply(raw: unknown, req: NativeEvalRequest): NativeEvalReply |
   return reply
 }
 
-/** Ask SoulverCore and wait for the answer. Falls back to a fire-and-forget message if the reply handler is missing. */
+// without the reply handler, the answer comes back later through __qcalcNativeResult
 export async function evaluateNative(req: NativeEvalRequest): Promise<NativeEvalReply | null> {
   const w = nativeWindow()
   const payload = nativeEvalPayload(req)
@@ -118,15 +115,13 @@ export async function evaluateNative(req: NativeEvalRequest): Promise<NativeEval
     try {
       return normalizeReply(await soulver.postMessage(payload), req)
     } catch {
-      /* use the host handler below */
+      // fall back to the host handler
     }
   }
-  const host = w?.webkit?.messageHandlers?.qcalc
-  if (!host) return null
   try {
-    host.postMessage(payload)
+    w?.webkit?.messageHandlers?.qcalc?.postMessage(payload)
   } catch {
-    return null
+    // no native side to ask
   }
   return null
 }

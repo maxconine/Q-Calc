@@ -1,5 +1,5 @@
-export type NativeHandler = { postMessage: (m: string | Record<string, unknown>) => void }
-export type SoulverHandler = { postMessage: (m: Record<string, unknown> | string) => Promise<unknown> }
+type NativeHandler = { postMessage: (m: string | Record<string, unknown>) => void }
+type SoulverHandler = { postMessage: (m: Record<string, unknown> | string) => Promise<unknown> }
 
 export type StoredDraft = { expr: string; savedAt: number }
 

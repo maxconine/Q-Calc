@@ -41,7 +41,6 @@ function run(c: Case): void {
 }
 
 const cases: Case[] = [
-  // Ohm's law and electrical quotients → current
   { name: '1. kV/ohm in milliamps', input: 'kV/ohm in mA', expected: 1e6, unit: 'mA' },
   { name: '2. 1 kV / 1 ohm in mA', input: '1 kV / 1 ohm in mA', expected: 1e6, unit: 'mA' },
   { name: '3. 1 kV / 1 ohm in A', input: '1 kV / 1 ohm in A', expected: 1000, unit: 'A' },
@@ -63,7 +62,6 @@ const cases: Case[] = [
   { name: '19. 1 mA * 1 kOhm in V', input: '1 mA * 1 kOhm in V', expected: 1, unit: 'V' },
   { name: '20. 2 A * 5 Ohm in V', input: '2 A * 5 Ohm in V', expected: 10, unit: 'V' },
 
-  // Electrical products → voltage, power, charge, energy
   { name: '21. 2 A * 5 Ohm in mV', input: '2 A * 5 Ohm in mV', expected: 10000, unit: 'mV' },
   { name: '22. 120 V * 10 A in W', input: '120 V * 10 A in W', expected: 1200, unit: 'W' },
   { name: '23. 120 V * 10 A in kW', input: '120 V * 10 A in kW', expected: 1.2, unit: 'kW' },
@@ -85,7 +83,6 @@ const cases: Case[] = [
   { name: '39. 0.5 * 10 microfarad * (12 Volt)^2 in J', input: '0.5 * 10 microfarad * (12 Volt)^2 in J', expected: 0.00072, unit: 'J' },
   { name: '40. 0.5 * 2 millihenry * (5 amp)^2 in J', input: '0.5 * 2 millihenry * (5 amp)^2 in J', expected: 0.025, unit: 'J' },
 
-  // Force, energy, pressure cross-units
   { name: '41. 10 N * 2 m in J', input: '10 N * 2 m in J', expected: 20, unit: 'J' },
   { name: '42. 10 N * 2 m in kJ', input: '10 N * 2 m in kJ', expected: 0.02, unit: 'kJ' },
   { name: '43. 10 N * 5 m in cal', input: '10 N * 5 m in cal', expected: 50 / 4.184, unit: 'cal' },
@@ -107,7 +104,6 @@ const cases: Case[] = [
   { name: '59. 1000 dyne * 50 cm in ergs', input: '1000 dyne * 50 cm in ergs', expected: 50000, unit: 'ergs' },
   { name: '60. 2 kgf * 5 m in J', input: '2 kgf * 5 m in J', expected: 2 * G0 * 5, unit: 'J' },
 
-  // Power × time → energy, energy / time → power
   { name: '61. 1 kW * 2 hr in kWh', input: '1 kW * 2 hr in kWh', expected: 2, unit: 'kWh' },
   { name: '62. 1 kW * 2 hr in J', input: '1 kW * 2 hr in J', expected: 7.2e6, unit: 'J' },
   { name: '63. 100 W * 10 s in J', input: '100 W * 10 s in J', expected: 1000, unit: 'J' },
@@ -123,7 +119,6 @@ const cases: Case[] = [
   { name: '73. 1000 BTU / 1 minute in kilowatt', input: '1000 BTU / 1 minute in kilowatt', expected: (1000 * BTU) / 60 / 1000, unit: 'kilowatt' },
   { name: '74. 550 Foot * PoundForce / 1 second in HorsePower', input: '550 Foot * PoundForce / 1 second in HorsePower', expected: 1, unit: 'HorsePower' },
 
-  // Length × length → area; area × length → volume; mixed length
   { name: '75. 20 m * 2 in in m^2', input: '20 m * 2 in in m^2', expected: 40 * IN, unit: 'm^2' },
   { name: '76. 2 in * 3 in in cm^2', input: '2 in * 3 in in cm^2', expected: (2 * IN * 3 * IN) / 1e-4, unit: 'cm^2' },
   { name: '77. 10 ft * 5 m in ft^2', input: '10 ft * 5 m in ft^2', expected: (10 * 5) / FT, unit: 'ft^2' },
@@ -135,7 +130,6 @@ const cases: Case[] = [
   { name: '83. 1 sq yd * 3 ft in ft^3', input: '1 sq yd * 3 ft in ft^3', expected: 27, unit: 'ft^3' },
   { name: '84. 1 m + 50 cm in in', input: '1 m + 50 cm in in', expected: 1.5 / IN, unit: 'in' },
 
-  // Length / time → speed; speed / time → acceleration
   { name: '85. 100 miles / 2 hr in mph', input: '100 miles / 2 hr in mph', expected: 50, unit: 'mph' },
   { name: '86. 100 miles / 2 hr in km/h', input: '100 miles / 2 hr in km/h', expected: 50 * 1.609344, unit: 'km/h' },
   { name: '87. 100 m / 10 s in km/h', input: '100 m / 10 s in km/h', expected: 36, unit: 'km/h' },
@@ -147,7 +141,6 @@ const cases: Case[] = [
   { name: '93. 30 m/s / 3 s in gravity', input: '30 m/s / 3 s in gravity', expected: 10 / G0, unit: 'gravity' },
   { name: '94. 1 lightYear / 1 yr in m/s', input: '1 lightYear / 1 yr in m/s', expected: C, unit: 'm/s' },
 
-  // Density, flow, addition, rotation, multi-operator
   { name: '95. 10 kg / 2 L in g/cm^3', input: '10 kg / 2 L in g/cm^3', expected: 5, unit: 'g/cm^3' },
   { name: '96. 1 g / 1 cm^3 in kg/m^3', input: '1 g / 1 cm^3 in kg/m^3', expected: 1000, unit: 'kg/m^3' },
   { name: '97. 360 deg / 1 s in RPM', input: '360 deg / 1 s in RPM', expected: 60, unit: 'RPM' },

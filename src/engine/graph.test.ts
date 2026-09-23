@@ -183,7 +183,6 @@ describe('buildGraph', () => {
 
   it('errors when name lookup misses', () => {
     const g = buildGraph('graph missing')
-    // Bare name with no function is treated as expression "missing" → eval fails
     expect(g!.error).toBeTruthy()
   })
 

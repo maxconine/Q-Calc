@@ -20,10 +20,9 @@ export function formatNumber(n: number, sigFigs = DEFAULT_SIG_FIGS): string {
   if (n === Infinity) return '∞'
   if (n === -Infinity) return '-∞'
   if (!Number.isFinite(n)) return 'undefined'
-  if (Object.is(n, -0) || n === 0) return '0'
+  if (n === 0) return '0'
   const figs = clampSigFigs(sigFigs)
-  const abs = Math.abs(n)
-  const mag = Math.floor(Math.log10(abs))
+  const mag = Math.floor(Math.log10(Math.abs(n)))
   if (mag < -6 || mag >= 12) return scientific(n, figs)
   const rounded = Number(n.toPrecision(figs))
   if (!Number.isFinite(rounded)) return scientific(n, figs)

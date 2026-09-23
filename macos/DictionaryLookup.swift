@@ -1,9 +1,8 @@
 import CoreServices
 import Foundation
 
-/// Apple Dictionary lookups are currently commented out of the app.
-/// Restore by uncommenting DictionaryLookup usage in Overlay.swift,
-/// adding this file back to macos/build.sh, and restoring wantDefinition in nativeEval.ts.
+// not built into the app right now; only dictionary_test.swift uses it.
+// the overlay wiring was removed on the clean-ui branch and is in git history before that.
 enum DictionaryLookup {
     struct Query: Equatable {
         var term: String

@@ -9,9 +9,9 @@ export function clampDraftSeconds(n: number): number {
   return Math.min(MAX_DRAFT_SECONDS, Math.round(n))
 }
 
-export type HideAction = 'commit' | 'keep' | 'clear'
+type HideAction = 'commit' | 'keep' | 'clear'
 
-/** Hide keeps the current input for `draftSeconds`. Enter is what commits to history. */
+// hiding keeps the input for `draftSeconds`; only with that off does hiding commit
 export function hideAction(expr: string, display: string, draftSeconds: number): HideAction {
   if (!expr.trim()) return 'clear'
   if (draftSeconds > 0) return 'keep'

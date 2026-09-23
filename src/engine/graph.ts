@@ -1,12 +1,15 @@
 import { parseFunctionDef } from './evaluate'
 import { formatNumber } from './format'
+import { namesPattern } from './math'
 import { compileScientific, evalScientific, type AngleMode } from './scientific'
 import type { UserFunction } from './types'
 
-/** Default plot domain for y = f(x). */
 export const DEFAULT_GRAPH_DOMAIN: readonly [number, number] = [-10, 10]
 
-/** Sample count across the domain (inclusive endpoints). */
+/** Two turns either side, for x in degrees. */
+const DEGREE_GRAPH_DOMAIN: readonly [number, number] = [-360, 360]
+
+/** Includes both endpoints. */
 export const DEFAULT_GRAPH_SAMPLES = 401
 
 export interface GraphOptions {
@@ -16,26 +19,22 @@ export interface GraphOptions {
   functions?: Record<string, UserFunction>
   angleMode?: AngleMode
   ans?: number
-  /** When true (default), include approximate roots from sign changes. */
+  /** Default true. */
   findRoots?: boolean
 }
 
-/** Parsed graph command — expression to plot plus optional inline function registration. */
 export interface GraphIntent {
-  /** Expression in free variable `x` evaluated as y. */
+  /** In the free variable `x`. */
   expression: string
-  /** Human label (e.g. `x^3`, `f(x)`, `y = x^3`). */
+  /** e.g. `x^3`, `f(x)`, `y = x^3`. */
   label: string
-  /**
-   * Present for `graph f(x) = …` — caller should register this definition
-   * (same shape as evaluateSheet function results).
-   */
+  /** Present for `graph f(x) = …`; the caller registers it. */
   functionDef?: { name: string; params: string[]; body: string }
 }
 
 export interface GraphPoint {
   x: number
-  /** `null` when the sample is non-finite / discontinuous. */
+  /** null where the curve is undefined or breaks. */
   y: number | null
 }
 
@@ -63,24 +62,18 @@ export interface GraphResult {
   yScale: YScale
   criticalPoints: CriticalPoint[]
   roots: GraphRoot[]
-  /** Unit of x when the curve depends on the angle mode (trig); `null` when it does not. */
+  /** null when the curve doesn't depend on the angle mode. */
   angleUnit: AngleMode | null
-  /** The compiled y(x), for readouts between samples. */
+  /** For readouts between samples. */
   y: GraphY
   error?: string
 }
-
-/** Default window when x is an angle in degrees: two turns either side. */
-export const DEGREE_GRAPH_DOMAIN: readonly [number, number] = [-360, 360]
 
 const GRAPH_CMD = /^\s*graph\s+(.+?)\s*$/is
 const Y_EQ = /^y\s*=\s*(.+)$/is
 const BARE_NAME = /^([A-Za-z][A-Za-z0-9]*)$/
 
-/**
- * Parse a `graph …` command. Returns `null` if the input is not a graph command.
- * Name lookup (`graph f`) resolves against `options.functions`.
- */
+/** `graph f` looks `f` up in `options.functions`. */
 export function parseGraphIntent(
   input: string,
   options: Pick<GraphOptions, 'functions'> = {},
@@ -92,13 +85,7 @@ export function parseGraphIntent(
 
   const fnDef = parseFunctionDef(rest)
   if (fnDef) {
-    if (fnDef.params.length !== 1) {
-      return {
-        expression: '',
-        label: rest,
-        functionDef: fnDef,
-      }
-    }
+    if (fnDef.params.length !== 1) return { expression: '', label: rest, functionDef: fnDef }
     const param = fnDef.params[0]!
     const expression = param === 'x' ? fnDef.body : rewriteParam(fnDef.body, param, 'x')
     return {
@@ -120,25 +107,21 @@ export function parseGraphIntent(
     const name = bare[1]!
     const def = options.functions?.[name]
     if (def) {
-      if (def.params.length !== 1) {
-        return { expression: '', label: name }
-      }
+      if (def.params.length !== 1) return { expression: '', label: name }
       const param = def.params[0]!
-      // Inline the body so sampling compiles one expression instead of re-evaluating a call per sample.
-      const expression = rewriteParam(def.body, param, 'x')
-      return { expression, label: `${name}(${param})` }
+      // inlined so sampling compiles one expression instead of making a call per sample
+      return { expression: rewriteParam(def.body, param, 'x'), label: `${name}(${param})` }
     }
   }
 
   return { expression: rest, label: rest }
 }
 
-/** True when trimmed input starts a graph command (even if incomplete). */
+/** True even for an incomplete command. */
 export function isGraphCommand(input: string): boolean {
   return /^\s*graph(?:\s|$)/i.test(input)
 }
 
-/** Evaluate expression at a single x; returns null for non-finite / failed eval. */
 export function evaluateGraphY(
   expression: string,
   x: number,
@@ -162,7 +145,7 @@ export function evaluateGraphY(
 
 export type GraphY = (x: number) => number | null
 
-/** Compile the expression once into y(x); same results as evaluateGraphY. */
+/** Same results as evaluateGraphY, compiled once. */
 export function compileGraphY(expression: string, options: GraphOptions = {}): GraphY {
   const f = expression.trim()
     ? compileScientific(
@@ -185,7 +168,6 @@ export function compileGraphY(expression: string, options: GraphOptions = {}): G
   }
 }
 
-/** Sample y = f(x) over the domain. */
 export function sampleGraph(expression: string, options: GraphOptions = {}): GraphPoint[] {
   return sampleWith(compileGraphY(expression, options), options)
 }
@@ -194,10 +176,8 @@ function sampleWith(y: GraphY, options: GraphOptions): GraphPoint[] {
   const [xMin, xMax] = normalizeDomain(options.domain)
   const n = Math.max(2, Math.floor(options.sampleCount ?? DEFAULT_GRAPH_SAMPLES))
   const points: GraphPoint[] = []
-  const span = xMax - xMin
   for (let i = 0; i < n; i++) {
-    const t = i / (n - 1)
-    const x = xMin + span * t
+    const x = xMin + (xMax - xMin) * (i / (n - 1))
     points.push({ x, y: y(x) })
   }
   return points
@@ -208,7 +188,7 @@ function sampleWith(y: GraphY, options: GraphOptions): GraphPoint[] {
  * domain ends (so √(9 − x²) reaches the axis), subdivide steep visible stretches, and break the
  * path (a `null` sample) where a jump survives down to a vanishing interval (floor, tan's poles).
  */
-export function refineSamples(points: GraphPoint[], f: GraphY, view: YScale): GraphPoint[] {
+function refineSamples(points: GraphPoint[], f: GraphY, view: YScale): GraphPoint[] {
   if (points.length < 2) return points
   const span = points[points.length - 1]!.x - points[0]!.x
   const minWidth = span * 1e-9
@@ -222,11 +202,11 @@ export function refineSamples(points: GraphPoint[], f: GraphY, view: YScale): Gr
   const offView = (a: number, b: number) =>
     (a > view.max && b > view.max) || (a < view.min && b < view.min)
 
-  /** Push the samples strictly between `a` and `b` (the caller pushes `b`). */
+  // pushes the samples strictly between a and b; the caller pushes b
   const between = (a: GraphPoint, b: GraphPoint): void => {
     if (a.y == null && b.y == null) return
     if (a.y == null || b.y == null) {
-      // Bisect for the last defined x on the finite side.
+      // bisect for the last defined x
       let def = a.y == null ? b : a
       let undef = a.y == null ? a : b
       for (let k = 0; k < 40 && budget > 0; k++) {
@@ -264,9 +244,8 @@ export function refineSamples(points: GraphPoint[], f: GraphY, view: YScale): Gr
 }
 
 /**
- * Auto y-scale from finite samples. A central percentile band keeps vertical asymptotes from
- * dominating the view, but only when there are real outliers; a range that nearly reaches zero
- * is widened to include the x-axis. Then pads slightly.
+ * A central percentile band keeps poles from dominating the view, but only when there are real
+ * outliers. A range that nearly reaches zero is widened to include the x-axis.
  */
 export function autoYScale(
   points: GraphPoint[],
@@ -283,7 +262,7 @@ export function autoYScale(
   const hi = quantile(sorted, 1 - percentile)
   let min = Number.isFinite(lo) ? lo : sorted[0]!
   let max = Number.isFinite(hi) ? hi : sorted[sorted.length - 1]!
-  // Trimming is for poles; a curve without them (eˣ, a semicircle) is shown whole.
+  // trimming is for poles; a curve without them (eˣ, a semicircle) is shown whole
   const fullMin = sorted[0]!
   const fullMax = sorted[sorted.length - 1]!
   if (max > min && fullMax - fullMin <= 2 * (max - min)) {
@@ -299,15 +278,11 @@ export function autoYScale(
     max += bump
   }
 
-  const spread = max - min
-  const margin = spread * pad
+  const margin = (max - min) * pad
   return { min: min - margin, max: max + margin }
 }
 
-/**
- * Critical points where the finite-difference slope changes sign. With `f`, each is refined by
- * golden-section search on its neighbouring interval, and spikes at poles are dropped.
- */
+/** Where the sampled slope changes sign. With `f`, each is refined by golden-section search and poles are dropped. */
 export function findCriticalPoints(points: GraphPoint[], f?: GraphY): CriticalPoint[] {
   const out: CriticalPoint[] = []
   for (let i = 1; i < points.length - 1; i++) {
@@ -321,7 +296,6 @@ export function findCriticalPoints(points: GraphPoint[], f?: GraphY): CriticalPo
     const d1 = (cur.y - prev.y) / dx1
     const d2 = (next.y - cur.y) / dx2
     if (!Number.isFinite(d1) || !Number.isFinite(d2)) continue
-    if (d1 === 0 && d2 === 0) continue
     const s1 = Math.sign(d1)
     const s2 = Math.sign(d2)
     if (s1 === 0 || s2 === 0 || s1 === s2) continue
@@ -332,10 +306,10 @@ export function findCriticalPoints(points: GraphPoint[], f?: GraphY): CriticalPo
     }
     const best = goldenSection(f, prev.x, next.x, kind)
     if (!best) continue
-    // A smooth turn moves y by less than the local variation; a pole runs away.
+    // a smooth turn moves y by less than the local variation; a pole runs away
     const variation = Math.abs(cur.y - prev.y) + Math.abs(next.y - cur.y)
     if (Math.abs(best.y - cur.y) > 4 * variation) continue
-    // Golden section only pins x to ~√ε; report the simplest x that f cannot tell apart (1, not 0.99999999).
+    // golden section only pins x to about √ε, so report the simplest x f can't tell apart (1, not 0.99999999)
     const sign = kind === 'max' ? -1 : 1
     const tol = 8 * Number.EPSILON * Math.max(Math.abs(best.y), Math.abs(cur.y))
     const x = tidy(best.x, (c) => {
@@ -349,8 +323,8 @@ export function findCriticalPoints(points: GraphPoint[], f?: GraphY): CriticalPo
 }
 
 /**
- * Roots where consecutive samples change sign, refined by bisection with `f` (poles and jumps,
- * where |f| stays large, are dropped). A run of zero samples is one root; an all-zero curve has none.
+ * With `f`, sign changes are refined by bisection and poles and jumps are dropped.
+ * A run of zero samples is one root; an all-zero curve has none.
  */
 export function findRoots(points: GraphPoint[], f?: GraphY): GraphRoot[] {
   const out: GraphRoot[] = []
@@ -361,14 +335,14 @@ export function findRoots(points: GraphPoint[], f?: GraphY): GraphRoot[] {
     if (isZero(p.y)) {
       let j = i
       while (j < last && isZero(points[j + 1]!.y)) j++
-      // Report the end of the run that meets the curve (`floor(x)` → 0, `max(0, x)` → 0).
+      // report the end of the run that meets the curve (`floor(x)`, `max(0, x)` give 0)
       if (i > 0 || j < last) {
         const k = i === 0 ? j : i
         const x = points[k]!.x
         const y = Math.abs(points[k]!.y!)
         const lo = points[Math.max(0, k - 1)]!.x
         const hi = points[Math.min(last, k + 1)]!.x
-        // A grid x like 0.3000000000000007 (y ≈ 1e-16) is reported as 0.3 when f(0.3) is as small.
+        // a grid x like 0.3000000000000007 is reported as 0.3 when f(0.3) is as small
         out.push({ x: f ? tidy(x, (c) => c > lo && c < hi && Math.abs(f(c) ?? Infinity) <= y) : x })
       }
       i = j
@@ -381,7 +355,7 @@ export function findRoots(points: GraphPoint[], f?: GraphY): GraphRoot[] {
     const x = f ? bisectRoot(f, prev.x, prev.y, p.x, p.y) : prev.x + (prev.y / (prev.y - p.y)) * (p.x - prev.x)
     if (x != null) out.push({ x })
   }
-  return dedupeRoots(out)
+  return dedupeByX(out)
 }
 
 function bisectRoot(f: GraphY, lo: number, yLo: number, hi: number, yHi: number): number | null {
@@ -408,7 +382,7 @@ function bisectRoot(f: GraphY, lo: number, yLo: number, hi: number, yHi: number)
   if (fa == null || fb == null) return null
   const [x, y] = Math.abs(fa) <= Math.abs(fb) ? [a, fa] : [b, fb]
   if (Math.abs(y) > 1e-6 * scale) return null
-  // Prefer 0.3 over 0.30000000000000004 and 0 over 5e-324 when f cannot tell them apart.
+  // prefer 0.3 over 0.30000000000000004 and 0 over 5e-324 when f can't tell them apart
   const tol = Math.abs(y) + 8 * Number.EPSILON * scale
   return tidy(x, (c) => {
     if (c < lo || c > hi) return false
@@ -417,7 +391,7 @@ function bisectRoot(f: GraphY, lo: number, yLo: number, hi: number, yHi: number)
   })
 }
 
-/** The shortest decimal near `x` that `accept` still takes: 0, then 1, 2, … significant digits. */
+/** The shortest decimal near `x` that `accept` still takes: 0, then 1, 2, ... significant digits. */
 function tidy(x: number, accept: (c: number) => boolean): number {
   if (x !== 0 && accept(0)) return 0
   for (let digits = 1; digits < 17; digits++) {
@@ -463,15 +437,10 @@ function goldenSection(f: GraphY, lo: number, hi: number, kind: CriticalKind): {
   return y == null ? null : { x, y }
 }
 
-/**
- * Full pipeline: parse graph command → sample → y-scale → critical points → roots.
- * Returns `null` when input is not a graph command.
- */
+/** Null when the input is not a graph command. */
 export function buildGraph(input: string, options: GraphOptions = {}): GraphResult | null {
   const intent = parseGraphIntent(input, options)
   if (!intent) return null
-
-  const findRootsFlag = options.findRoots !== false
 
   if (!intent.expression) {
     const msg =
@@ -491,7 +460,7 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
     }
   }
 
-  // Inline defs are available for sampling even before history registers them.
+  // an inline def is usable before history registers it
   const functions: Record<string, UserFunction> = { ...options.functions }
   if (intent.functionDef) {
     functions[intent.functionDef.name] = {
@@ -500,7 +469,6 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
     }
   }
 
-  // x follows the angle setting, like every other answer; degrees get a window wide enough to show it.
   const mode: AngleMode = options.angleMode ?? 'rad'
   const base: GraphOptions = { ...options, functions }
   const f = compileGraphY(intent.expression, { ...base, angleMode: mode })
@@ -510,8 +478,7 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
   const domain = normalizeDomain(options.domain, angleUnit === 'deg' ? DEGREE_GRAPH_DOMAIN : DEFAULT_GRAPH_DOMAIN)
   const uniform = sampleWith(f, { ...base, domain })
   const yScale = autoYScale(uniform)
-  const finite = uniform.some((p) => p.y != null)
-  if (!finite) {
+  if (!uniform.some((p) => p.y != null)) {
     return {
       intent,
       points: uniform,
@@ -532,13 +499,13 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
     domain,
     yScale,
     criticalPoints: findCriticalPoints(points, f),
-    roots: findRootsFlag ? findRoots(points, f) : [],
+    roots: options.findRoots !== false ? findRoots(points, f) : [],
     angleUnit,
     y: f,
   }
 }
 
-/** True when the two compilations (deg vs rad) disagree anywhere on a few probe points. */
+/** Compares a degree and a radian compilation at a few probe points. */
 function dependsOnAngle(a: GraphY, b: GraphY): boolean {
   return [0.37, 1.1, 2.9, -4.3, 7.7].some((x) => {
     const ya = a(x)
@@ -549,9 +516,8 @@ function dependsOnAngle(a: GraphY, b: GraphY): boolean {
 }
 
 /**
- * The window a graph opens on: the standard one (±10, or ±360° for trig in degrees), narrowed
- * around the roots and extrema when they all sit in a small middle part of it — so x³ − 3x shows
- * its hump and dip instead of a flat line between two cliffs.
+ * The window a graph opens on: ±10 (±360 for trig in degrees), narrowed around the roots and
+ * extrema when they all sit in a small middle part of it, so x³ − 3x shows its hump and dip.
  */
 export function graphHome(input: string, options: GraphOptions = {}): [number, number] {
   const g = buildGraph(input, { ...options, domain: undefined })
@@ -582,7 +548,7 @@ function normalizeDomain(
   return lo < hi ? [lo, hi] : [hi, lo]
 }
 
-/** A 1, 2 or 5 × 10ⁿ step at or above (`ceil`) or below (`floor`) `raw`. */
+/** A 1, 2 or 5 × 10ⁿ step at or above (`ceil`) or at or below (`floor`) `raw`. */
 function niceStep(raw: number, round: 'ceil' | 'floor'): number {
   const mag = 10 ** Math.floor(Math.log10(raw))
   const steps = [1, 2, 5, 10].map((m) => m * mag)
@@ -596,14 +562,14 @@ export interface GraphTick {
 
 const MINUS = '−'
 
-/** A leading hyphen as a typographic minus, for display only (copied text keeps `-`). */
+/** Display only; copied text keeps `-`. */
 export function withMinus(s: string): string {
   return s.replace(/^-/, MINUS)
 }
 
 /**
- * Axis ticks for [lo, hi]. Plain axes step 1, 2 or 5 × 10ⁿ; an angle axis steps in multiples of
- * π (rad) or of 15°–360° (deg) while those stay readable, labelled `π/2`, `−2π`, `90°`.
+ * Plain axes step 1, 2 or 5 × 10ⁿ. An angle axis steps in multiples of π (rad) or 15° to 720°
+ * (deg) while those stay readable, labelled `π/2`, `−2π`, `90°`.
  */
 export function graphTicks(lo: number, hi: number, unit: AngleMode | null = null, target = 5): GraphTick[] {
   const span = hi - lo
@@ -622,14 +588,14 @@ export function graphTicks(lo: number, hi: number, unit: AngleMode | null = null
 function angleTicks(lo: number, hi: number, unit: AngleMode | null): GraphTick[] | null {
   if (!unit) return null
   const span = hi - lo
-  // Largest acceptable count keeps labels ~90px apart in the panel.
+  // at most 7 steps keeps labels about 90px apart in the panel
   const fits = (step: number) => span / step <= 7
   if (unit === 'deg') {
     const step = [15, 30, 45, 90, 180, 360, 720].find(fits)
     if (!step || span / step < 2) return null
     return stepTicks(lo, hi, step, (k) => `${k * step < 0 ? MINUS : ''}${Math.abs(k * step)}°`)
   }
-  // Steps of π/4 … 8π, labelled as reduced fractions of π.
+  // steps of π/4 up to 8π
   const quarter = [1, 2, 4, 8, 16, 32].find((q) => fits((q * Math.PI) / 4))
   if (!quarter || span / ((quarter * Math.PI) / 4) < 2) return null
   return stepTicks(lo, hi, (quarter * Math.PI) / 4, (k) => piLabel(k * quarter))
@@ -656,15 +622,9 @@ function piLabel(quarters: number): string {
   return `${sign}${num === 1 ? '' : num}π${den === 1 ? '' : `/${den}`}`
 }
 
-/** Replace standalone identifier `from` with `to` in an expression body. */
 function rewriteParam(body: string, from: string, to: string): string {
   if (from === to) return body
-  const re = new RegExp(`(?<![A-Za-z_])${escapeRegExp(from)}(?![A-Za-z0-9_])`, 'g')
-  return body.replace(re, to)
-}
-
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return body.replace(new RegExp(`(?<![A-Za-z_])${namesPattern([from])}(?![A-Za-z0-9_])`, 'g'), to)
 }
 
 function quantile(sorted: number[], q: number): number {
@@ -678,22 +638,12 @@ function quantile(sorted: number[], q: number): number {
   return a + rest * (b - a)
 }
 
-function dedupeByX(pts: CriticalPoint[], tol = 1e-6): CriticalPoint[] {
-  const out: CriticalPoint[] = []
+function dedupeByX<T extends { x: number }>(pts: T[], tol = 1e-6): T[] {
+  const out: T[] = []
   for (const p of pts) {
     const last = out[out.length - 1]
     if (last && Math.abs(last.x - p.x) <= tol) continue
     out.push(p)
-  }
-  return out
-}
-
-function dedupeRoots(roots: GraphRoot[], tol = 1e-6): GraphRoot[] {
-  const out: GraphRoot[] = []
-  for (const r of roots) {
-    const last = out[out.length - 1]
-    if (last && Math.abs(last.x - r.x) <= tol) continue
-    out.push(r)
   }
   return out
 }

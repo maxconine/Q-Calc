@@ -16,6 +16,11 @@ private func isCommandVPasteKey(_ event: NSEvent) -> Bool {
     return event.charactersIgnoringModifiers?.lowercased() == "v"
 }
 
+private func copyToPasteboard(_ text: String) {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(text, forType: .string)
+}
+
 private func commandShiftHeld() -> Bool {
     let flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
     return flags.contains(.command) && flags.contains(.shift)
@@ -106,26 +111,17 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private let overlayWidth: CGFloat = 680
     private let overlayMinHeight: CGFloat = 72
     private let overlayMaxHeight: CGFloat = 560
-    /// Distance from the overlay top to the search field; used to grow definitions down and history up.
+    // distance from the overlay top to the composer, so history grows up and graphs grow down
     private var sizeAnchorTop: CGFloat = 0
     private var settingsObserver: NSObjectProtocol?
     private var lastPasteAt: TimeInterval = 0
     private var pendingFirstRun = false
-    /// SoulverCore work runs here so a slow evaluation never blocks typing on the main thread.
+    // off the main thread so a slow soulver evaluation never blocks typing
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
 
     deinit {
-        if let escapeMonitor {
-            NSEvent.removeMonitor(escapeMonitor)
-        }
-        if let dragMonitor {
-            NSEvent.removeMonitor(dragMonitor)
-        }
-        if let clickAwayMonitor {
-            NSEvent.removeMonitor(clickAwayMonitor)
-        }
-        if let clickAwayLocalMonitor {
-            NSEvent.removeMonitor(clickAwayLocalMonitor)
+        for monitor in [escapeMonitor, dragMonitor, clickAwayMonitor, clickAwayLocalMonitor].compactMap({ $0 }) {
+            NSEvent.removeMonitor(monitor)
         }
         if let settingsObserver {
             NotificationCenter.default.removeObserver(settingsObserver)
@@ -174,7 +170,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         NotificationCenter.default.post(name: .focusOverlay, object: nil)
     }
 
-    /// First launch after install: show once so people see where it lives, leading with the shortcut.
     func showFirstRun() {
         guard webReady else {
             pendingFirstRun = true
@@ -184,7 +179,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web?.evaluateJavaScript("window.__QCALC_FIRST_RUN = true; if (window.__qcalcFirstRun) window.__qcalcFirstRun();")
     }
 
-    /// Menu bar "Tips…": the overlay with the `?` sheet open.
     func showTips() {
         show()
         web?.evaluateJavaScript("if (window.__qcalcShowTips) window.__qcalcShowTips();")
@@ -261,13 +255,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        if (error as NSError).code == NSURLErrorCancelled { return }
-        recover(from: webView)
+        recover(from: webView, after: error)
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        if (error as NSError).code == NSURLErrorCancelled { return }
-        recover(from: webView)
+        recover(from: webView, after: error)
     }
 
     private func build() {
@@ -294,20 +286,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         observeSettings()
 
         let config = WKWebViewConfiguration()
+        // wiped every launch, so state that must survive (settings, onboarding) is kept in AppSettings
         config.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         config.userContentController.add(self, name: "qcalc")
         config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "soulver")
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
-        let sigFigs = AppSettings.shared.significantFigures
-        let draftSeconds = AppSettings.shared.draftSeconds
-        let defaultUnits = AppSettings.shared.defaultUnitsJSON()
-        let answerForm = AppSettings.shared.answerForm
-        let historyInsert = AppSettings.shared.historyInsert
-        let rationalize = AppSettings.shared.rationalize ? "true" : "false"
-        let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
+        let settings = settingsJavaScriptObject()
         let theme = AppSettings.shared.theme
-        let hotKey = hotKeyJavaScriptFields()
         let onboarding = AppSettings.shared.onboardingJSON()
         let boot = WKUserScript(
             source: """
@@ -315,7 +301,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_META = false;
-            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: "\(theme)", \(hotKey) };
+            window.__QCALC_SETTINGS = \(settings);
             window.__QCALC_ONBOARDING = \(onboarding);
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
@@ -387,7 +373,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             }, true);
             window.addEventListener('wheel', function (e) {
               var t = e.target;
-              if (t && t.closest && t.closest('.tape, .definition')) return;
+              if (t && t.closest && t.closest('.tape')) return;
               e.preventDefault();
             }, { passive: false, capture: true });
             """,
@@ -433,7 +419,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web.load(URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 2))
     }
 
-    private func recover(from webView: WKWebView) {
+    private func recover(from webView: WKWebView, after error: Error) {
+        if (error as NSError).code == NSURLErrorCancelled { return }
         if !triedBundle, let bundled = bundledQuickURL() {
             triedBundle = true
             webView.loadFileURL(bundled, allowingReadAccessTo: bundled.deletingLastPathComponent())
@@ -443,10 +430,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             loadDevServer(webView)
             return
         }
-        loadFallback(from: webView)
+        loadFallback()
     }
 
-    private func loadFallback(from _: WKWebView) {
+    private func loadFallback() {
         if fallback == nil {
             let root = OverlayView(onDismiss: { [weak self] in self?.hide() })
             let host = NSHostingView(rootView: root)
@@ -501,11 +488,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
            dict["type"] as? String == "eval" || dict["expr"] != nil {
             pushSoulverResult(soulverPayload(from: dict))
         }
-    }
-
-    private func copyToPasteboard(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
     }
 
     private func pasteIntoWeb() {
@@ -694,7 +676,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", \(hotKeyJavaScriptFields()) }"
     }
 
-    /// The registered shortcut's label ("" when none) so the web side can show it; titles are fixed preset strings.
+    // titles are fixed preset strings, so they need no escaping
     private func hotKeyJavaScriptFields() -> String {
         let title = AppSettings.shared.activeHotKey?.title ?? ""
         let failed = AppSettings.shared.hotKeyFailed ? "true" : "false"
@@ -732,23 +714,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let dict = dictionary(from: body)
         let id = intValue(dict["id"]) ?? 0
         let expr = dict["expr"] as? String ?? ""
-        // Apple Dictionary — uncomment to restore lookups:
-        // let query = DictionaryLookup.query(from: expr)
-        // let dateWords: Set<String> = ["today", "tomorrow", "yesterday"]
-        // var preferDefinition = boolValue(dict["wantDefinition"]) || query?.forced == true
-        // if let query, !query.forced, !dateWords.contains(query.term.lowercased()) {
-        //     preferDefinition = true
-        // }
-        // if preferDefinition {
-        //     let term = query?.term ?? expr
-        //     if let found = DictionaryLookup.define(term) {
-        //         return definitionPayload(id: id, expr: expr, found: found)
-        //     }
-        //     if query?.forced == true {
-        //         return emptyNativePayload(id: id, expr: expr)
-        //     }
-        // }
-
         let sigFigs = intValue(dict["sigFigs"]) ?? AppSettings.shared.significantFigures
         if let answer = SoulverEval.evaluate(
             expr,
@@ -768,37 +733,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             }
             return payload
         }
-
-        // if let query, let found = DictionaryLookup.define(query.term) {
-        //     return definitionPayload(id: id, expr: expr, found: found)
-        // }
-        return emptyNativePayload(id: id, expr: expr)
+        return ["id": id, "expr": expr, "display": "", "n": NSNull()]
     }
-
-    private func emptyNativePayload(id: Int, expr: String) -> [String: Any] {
-        [
-            "id": id,
-            "expr": expr,
-            "display": "",
-            "n": NSNull(),
-        ]
-    }
-
-    // Apple Dictionary — uncomment to restore lookups:
-    // private func definitionPayload(id: Int, expr: String, found: DictionaryLookup.Found) -> [String: Any] {
-    //     var payload: [String: Any] = [
-    //         "id": id,
-    //         "expr": expr,
-    //         "display": found.display,
-    //         "n": NSNull(),
-    //         "kind": "definition",
-    //         "term": found.term,
-    //     ]
-    //     if let pos = found.partOfSpeech { payload["pos"] = pos }
-    //     if let pronunciation = found.pronunciation { payload["pronunciation"] = pronunciation }
-    //     if !found.body.isEmpty { payload["body"] = found.body }
-    //     return payload
-    // }
 
     private func pushSoulverResult(_ payload: [String: Any]) {
         guard JSONSerialization.isValidJSONObject(payload),
@@ -820,16 +756,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         return [:]
     }
-
-    // Apple Dictionary — uncomment to restore lookups:
-    // private func boolValue(_ any: Any?) -> Bool {
-    //     if let b = any as? Bool { return b }
-    //     if let n = any as? NSNumber { return n.boolValue }
-    //     if let s = any as? String {
-    //         return s.caseInsensitiveCompare("true") == .orderedSame || s == "1"
-    //     }
-    //     return false
-    // }
 
     private func boolValue(_ any: Any?) -> Bool? {
         if let b = any as? Bool { return b }
@@ -906,27 +832,15 @@ struct OverlayView: View {
     }
 
     private func answer(for text: String) -> String {
-        // Apple Dictionary — uncomment to restore lookups:
-        // let query = DictionaryLookup.query(from: text)
-        // if let query, query.forced {
-        //     return DictionaryLookup.define(query.term)?.shortLabel ?? ""
-        // }
-        // let dateWords: Set<String> = ["today", "tomorrow", "yesterday"]
-        // if let query, !dateWords.contains(query.term.lowercased()),
-        //    let found = DictionaryLookup.define(query.term) {
-        //     return found.shortLabel
-        // }
         if let soulver = SoulverEval.evaluate(text) { return soulver.display }
         if let v = MathEval.evaluate(text) { return MathEval.format(v) }
-        // if let query { return DictionaryLookup.define(query.term)?.shortLabel ?? "" }
         return ""
     }
 
     private func copyAnswer() {
         let shown = answer(for: text)
         guard !shown.isEmpty else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(shown, forType: .string)
+        copyToPasteboard(shown)
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             copied = false
@@ -935,10 +849,7 @@ struct OverlayView: View {
 
     private func submit() {
         let shown = answer(for: text)
-        if !shown.isEmpty {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(shown, forType: .string)
-        }
+        if !shown.isEmpty { copyToPasteboard(shown) }
         text = ""
         copied = false
     }

@@ -1,4 +1,5 @@
 import type { UserFunction, Value } from './types'
+import { namesPattern } from './math'
 import { fillParens } from './parens'
 import { evalScientific, rewriteTypesetMul, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
 import { tryConvert, type DefaultUnits } from './units'
@@ -12,7 +13,7 @@ function looksLikeLatex(s: string): boolean {
   return /\\[a-zA-Z]+|[\^_]\{|\\frac|\\sqrt/.test(s)
 }
 
-/** Drop leading "what is" / trailing "?" so "what is 40% of 90" can use the existing percent-of path. */
+/** "what is 40% of 90?" becomes "40% of 90". */
 function unwrapQuestion(text: string): string {
   const src = text.trim()
   if (!src) return src
@@ -59,21 +60,11 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\lfloor\s*/g, 'floor(').replace(/\\rfloor/g, ')')
   s = s.replace(/\\lceil\s*/g, 'ceil(').replace(/\\rceil/g, ')')
   s = convertLogs(s)
-  s = s.replace(/\\operatorname\{arsinh\}|\\arsinh/g, 'asinh')
-  s = s.replace(/\\operatorname\{arcosh\}|\\arcosh/g, 'acosh')
-  s = s.replace(/\\operatorname\{artanh\}|\\artanh/g, 'atanh')
-  s = s.replace(/\\sinh\b/g, 'sinh').replace(/\\cosh\b/g, 'cosh').replace(/\\tanh\b/g, 'tanh')
-  s = s.replace(/\\csch\b/g, 'csch').replace(/\\sech\b/g, 'sech').replace(/\\coth\b/g, 'coth')
-  s = s.replace(/\\arcsin\b/g, 'asin').replace(/\\arccos\b/g, 'acos').replace(/\\arctan\b/g, 'atan')
-  s = s.replace(/\\arccsc\b/g, 'acsc').replace(/\\arcsec\b/g, 'asec').replace(/\\arccot\b/g, 'acot')
-  s = s.replace(/\\sin\s*\^\s*\{-1\}/g, 'asin')
-  s = s.replace(/\\cos\s*\^\s*\{-1\}/g, 'acos')
-  s = s.replace(/\\tan\s*\^\s*\{-1\}/g, 'atan')
-  s = s.replace(/\\csc\s*\^\s*\{-1\}/g, 'acsc')
-  s = s.replace(/\\sec\s*\^\s*\{-1\}/g, 'asec')
-  s = s.replace(/\\cot\s*\^\s*\{-1\}/g, 'acot')
-  s = s.replace(/\\sin\b/g, 'sin').replace(/\\cos\b/g, 'cos').replace(/\\tan\b/g, 'tan')
-  s = s.replace(/\\csc\b/g, 'csc').replace(/\\sec\b/g, 'sec').replace(/\\cot\b/g, 'cot')
+  s = s.replace(/\\ar(sinh|cosh|tanh)/g, 'a$1')
+  s = s.replace(/\\(sinh|cosh|tanh|csch|sech|coth)\b/g, '$1')
+  s = s.replace(/\\arc(sin|cos|tan|csc|sec|cot)\b/g, 'a$1')
+  s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\s*\^\s*\{-1\}/g, 'a$1')
+  s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\b/g, '$1')
   s = s.replace(/\\exp\b/g, 'exp')
   s = s.replace(/\\overline\{([^}]+)\}/g, 'conj($1)')
   s = s.replace(/\|([^|]+)\|/g, 'abs($1)')
@@ -228,17 +219,13 @@ function grabParen(s: string, open: number): { inner: string; end: number } | nu
   return null
 }
 
-/** True when `expr` mentions a known variable as a bare identifier (unit symbols must not steal them). */
 function mentionsVariable(expr: string, variables?: Record<string, number>): boolean {
   const names = Object.keys(variables ?? {})
   if (!names.length) return false
-  const escaped = names
-    .sort((a, b) => b.length - a.length)
-    .map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  return new RegExp(`(?<![A-Za-z_])(?:${escaped.join('|')})(?![A-Za-z0-9_])`).test(expr)
+  return new RegExp(`(?<![A-Za-z_])(?:${namesPattern(names)})(?![A-Za-z0-9_])`).test(expr)
 }
 
-/** `1,000,000` → `1000000`. Commas inside a call's arguments (`max(1,200)`, `nCr(5,200)`) and lists stay. */
+/** `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. */
 function stripThousands(s: string): string {
   return s.replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
 }
@@ -257,8 +244,7 @@ export function tryPlainMath(
   if (!src) return null
   const ascii = looksLikeLatex(src) ? latexToAscii(src) : src
   const filled = fillParens(stripThousands(rewriteTypesetMul(ascii)))
-  // Prefer scientific eval when a token is a known variable (e.g. `n=5` then `n*2`),
-  // so unit symbols like N/m/s do not steal the name.
+  // a known variable (`n = 5`, then `n*2`) must not be read as a unit symbol like N, m or s
   if (!mentionsVariable(filled, ctx.variables)) {
     const converted = tryConvert(filled, ctx.defaultUnits)
     if (converted) return converted

@@ -8,11 +8,11 @@ function stripGroupingCommas(s: string): string {
   return s.replace(/,(?=\d{3}(?:\D|$))/g, '')
 }
 
-/** Inserts the displayed magnitude (sig figs), never the engine's full-precision `n`. */
+// inserts the displayed magnitude at sig figs, never the engine's full-precision `n`
 export function insertableAnswer(display: string, n?: number, sigFigs = DEFAULT_SIG_FIGS): string {
   const shown = stripGroupingCommas(display).trim()
   if (isImproperUnitConversion(shown)) return ''
-  // `10.0 ± 0.7` goes in as one quantity (`ans*2` must not bind to the uncertainty alone).
+  // parenthesized so `ans*2` doesn't bind to the uncertainty alone
   if (shown.includes('±')) return `(${shown})`
   if (shown && !PLAIN_NUMBER.test(shown)) return shown
   if (n != null && Number.isFinite(n)) return formatNumber(n, sigFigs)
@@ -31,15 +31,14 @@ export function normalizeHistoryInsert(value: unknown): HistoryInsert {
   return value === 'answer' ? 'answer' : 'expr'
 }
 
-export type HistoryAnswer = {
+type HistoryAnswer = {
   display: string
   exact?: string
   n?: number
-  /** A measured answer inserts as shown (`5.00`, `7.8`), not re-rounded from `n`. */
+  // a measured answer inserts as shown (`5.00`), not re-rounded from `n`
   meas?: Meas
 }
 
-/** True when both a closed form and a distinct decimal can be shown. */
 export function hasDualAnswer(row: { display: string; exact?: string }): boolean {
   const display = row.display.trim()
   const exact = row.exact?.trim()
@@ -47,13 +46,11 @@ export function hasDualAnswer(row: { display: string; exact?: string }): boolean
   return !isImproperUnitConversion(display) && !isImproperUnitConversion(exact)
 }
 
-/** The value shown for a result: exact form by default, decimal when approx is on. */
 export function visibleAnswer(row: { display: string; exact?: string }, form: AnswerForm): string {
   if (form === 'exact' && row.exact) return row.exact
   return row.display
 }
 
-/** Previous-answer insert: exact form when that mode is on and one exists, otherwise the approximation at `sigFigs`. */
 export function insertableHistoryAnswer(
   row: HistoryAnswer,
   form: AnswerForm,
@@ -63,7 +60,7 @@ export function insertableHistoryAnswer(
   return insertableAnswer(row.display, row.meas ? undefined : row.n, sigFigs)
 }
 
-/** What Enter on a highlighted history row inserts. Clicking the expression always uses `expr`; clicking the answer always uses the answer. */
+// what enter on a highlighted history row inserts; clicks always insert the side they hit
 export function insertableHistoryReuse(
   row: HistoryAnswer & { expr: string; kind?: string },
   form: AnswerForm,

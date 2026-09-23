@@ -336,19 +336,6 @@ describe('nativeEvalPayload', () => {
   it.each(['a', 'b', '2+2', 'what is 40% of 90'])('keeps expr %s', (expr) => {
     expect(nativeEvalPayload({ id: 7, expr }).expr).toBe(expr)
   })
-  // Apple Dictionary — uncomment to restore lookups:
-  // it('asks Apple Dictionary to define a bare word', () => {
-  //   expect(nativeEvalPayload({ id: 1, expr: 'ingenious', sigFigs: 12 })).toEqual({
-  //     type: 'eval',
-  //     id: 1,
-  //     expr: 'ingenious',
-  //     sigFigs: 12,
-  //     wantDefinition: true,
-  //   })
-  // })
-  // it('asks Apple Dictionary for an explicit define query', () => {
-  //   expect(nativeEvalPayload({ id: 1, expr: 'define ingenious' }).wantDefinition).toBe(true)
-  // })
   it.each(Array.from({ length: 40 }, (_, i) => ({ id: i, expr: `e${i}`, ans: i, sigFigs: 4 })))(
     'payload $expr',
     ({ id, expr, ans, sigFigs }) => {

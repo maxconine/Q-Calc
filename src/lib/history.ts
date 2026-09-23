@@ -8,24 +8,25 @@ export type HistoryRow = {
   display: string
   exact?: string
   n?: number
-  /** Sig figs / ± uncertainty of a measured answer, so `x` and `ans` keep them. */
   meas?: Meas
-  /** A unit answer as parseable text (`LineResult.quantity`), so `ans` and variables keep the unit. */
+  // parseable unit text, so `ans` and variables keep their unit
   quantity?: string
   kind?: 'definition' | 'function'
-  /** Present when kind is `'function'` (survives expr truncation). */
+  // kept separately so a function survives expr truncation
   fnName?: string
   fnParams?: string[]
   fnBody?: string
 }
 
 export const MAX_HISTORY = 10
-/** Stored expression text. Long pastes are truncated so the tape stays cheap to render. */
 export const MAX_HISTORY_EXPR = 240
 export const MAX_HISTORY_DISPLAY = 96
 export const MAX_HISTORY_EXACT = 72
-/** Drop oldest slimmed rows if a corrupted store is still oversized. */
 export const MAX_HISTORY_JSON = 16_384
+
+export function newRowId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
 
 export function ellipsize(text: string, max: number): string {
   if (max <= 0) return ''
@@ -68,7 +69,6 @@ function slimFunctionFields(row: HistoryRow): Pick<HistoryRow, 'fnName' | 'fnPar
   return { fnName: name, fnParams: params, fnBody: body }
 }
 
-/** Keep a compact copy of a history row. Returns null when nothing useful remains. */
 export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
   const expr = slimExpr(row.expr)
   const display = ellipsize(row.display, MAX_HISTORY_DISPLAY)
@@ -85,7 +85,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     exact,
     n: kind === 'function' || row.n == null || !Number.isFinite(row.n) ? undefined : row.n,
     meas: kind ? undefined : sanitizeMeas(row.meas),
-    // Never truncated: a cut-off quantity would parse as a different one.
+    // never truncated: a cut-off quantity would parse as a different one
     quantity: kind || typeof row.quantity !== 'string' ? undefined : row.quantity.length <= MAX_HISTORY_EXPR ? row.quantity : '',
     kind,
     ...fnFields,
@@ -115,7 +115,7 @@ export function normalizeHistoryRow(
   })
 }
 
-/** Variable or function a row defines (`x = 5`, `f(x) = …`), keyed so the two namespaces stay apart. */
+// keyed so variable and function names stay in separate namespaces
 function definedName(row: HistoryRow): string | undefined {
   if (row.kind === 'definition') return undefined
   const expr = row.expr.trim()
@@ -125,11 +125,8 @@ function definedName(row: HistoryRow): string | undefined {
   return variable ? `var:${variable}` : undefined
 }
 
-/**
- * The newest MAX_HISTORY rows, plus the newest older row for each variable or function
- * they do not redefine, so `x = 5` still works after ten more calculations.
- */
-export function withStickyDefinitions(rows: HistoryRow[]): HistoryRow[] {
+// older definitions stay so `x = 5` still works after ten more calculations
+function withStickyDefinitions(rows: HistoryRow[]): HistoryRow[] {
   const recent = rows.slice(-MAX_HISTORY)
   const seen = new Set(recent.map(definedName).filter(Boolean))
   const kept: HistoryRow[] = []
@@ -155,7 +152,6 @@ export function persistableHistory(rows: HistoryRow[]): HistoryRow[] {
   return out
 }
 
-/** Numeric assignments from history, newest wins — used instead of re-evaluating old expressions. */
 export function historyVariables(rows: HistoryRow[]): Record<string, number> {
   const vars: Record<string, number> = {}
   for (const row of rows) {
@@ -170,7 +166,7 @@ export function historyVariables(rows: HistoryRow[]): Record<string, number> {
       vars[parsed.variable] = row.n
       continue
     }
-    // Legacy rows may lack `n` — recover from display or by re-evaluating the assignment.
+    // legacy rows may lack `n`
     const fromDisplay = Number(String(row.display).trim())
     if (String(row.display).trim() !== '' && Number.isFinite(fromDisplay)) {
       vars[parsed.variable] = fromDisplay
@@ -181,13 +177,12 @@ export function historyVariables(rows: HistoryRow[]): Record<string, number> {
       const n = result.value?.kind === 'number' ? result.value.n : undefined
       if (n != null && Number.isFinite(n)) vars[parsed.variable] = n
     } catch {
-      // skip unrecoverable legacy rows
+      // unrecoverable legacy row
     }
   }
   return vars
 }
 
-/** Measurement metadata of history variables (newest wins) plus `ans` for the last answer. */
 export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
   const out: Record<string, Meas> = {}
   let last: HistoryRow | undefined
@@ -203,7 +198,6 @@ export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
   return out
 }
 
-/** Unit-valued variables from history (newest wins), plus `ans` when the last answer had a unit. */
 export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
   const out: Record<string, string> = {}
   let last: HistoryRow | undefined
@@ -219,7 +213,6 @@ export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
   return out
 }
 
-/** User function definitions from history, newest wins. */
 export function historyFunctions(rows: HistoryRow[]): Record<string, UserFunction> {
   const fns: Record<string, UserFunction> = {}
   for (const row of rows) {
@@ -242,7 +235,7 @@ export function lastHistoryNumber(rows: HistoryRow[]): number | undefined {
     const row = rows[i]
     if (!row || row.kind === 'definition' || row.kind === 'function') continue
     const n = row.n
-    // A unit answer is no plain number: `ans` comes from historyQuantities instead.
+    // a unit answer's `ans` comes from historyQuantities instead
     if (n != null && Number.isFinite(n)) return row.quantity == null ? n : undefined
   }
   return undefined

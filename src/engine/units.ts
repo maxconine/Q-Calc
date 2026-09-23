@@ -36,7 +36,7 @@ export type Dim =
   | 'inductance'
   | 'dimensionless'
 
-/** Preferred output unit per dimension. Missing keys keep the built-in SI ↔ US counterparts. */
+/** Preferred output unit per dimension. A missing key keeps the built-in SI ↔ US counterpart. */
 export type DefaultUnits = Partial<Record<Dim, string>>
 
 type Unit = {
@@ -45,9 +45,9 @@ type Unit = {
   symbol: string
   toBase: number
   names: string[]
-  /** Counterpart used when the user types a quantity and unit with no "to …" target. */
+  /** The counterpart shown when there is no "to ..." target. */
   defaultTo?: string
-  /** Accept SI prefixes (kilometer, ms, mega joules, …). */
+  /** Accepts SI prefixes (kilometer, ms, mega joules). */
   prefixable?: boolean
 }
 
@@ -101,15 +101,18 @@ const PREFIXES: Prefix[] = [
   { name: 'yotta', names: ['yotta'], symbol: 'Y', factor: 1e24 },
 ]
 
-/** `ms`, `kV`, `MN`. A squared/cubed base (`m²`) keeps the spelled label, since `km²` would mean 10⁶ m². */
+/** `ms`, `kV`, `MN`. A squared or cubed base keeps the spelled label, since `km²` would mean 10⁶ m². */
 function prefixedLabel(prefix: Prefix, base: Unit): string {
   if (!/[²³]/.test(base.symbol)) return prefix.symbol + base.symbol
   const word = wordNames(base)[0]
   return prefix.name + (word ?? base.symbol)
 }
 
+function prefixedUnit(prefix: Prefix, base: Unit, id = `${prefix.name}_${base.id}`): Unit {
+  return { id, dim: base.dim, symbol: prefixedLabel(prefix, base), toBase: base.toBase * prefix.factor, defaultTo: base.id, names: [] }
+}
+
 const UNIT_LIST: Unit[] = [
-  // Length — US customary → SI, SI → US
   { id: 'in', dim: 'length', symbol: 'in', toBase: 0.0254, defaultTo: 'mm', prefixable: true, names: ['in', 'inch', 'inches', '"'] },
   { id: 'ft', dim: 'length', symbol: 'ft', toBase: FT, defaultTo: 'm', names: ['ft', 'foot', 'feet', "'"] },
   { id: 'yd', dim: 'length', symbol: 'yd', toBase: 0.9144, defaultTo: 'm', names: ['yd', 'yds', 'yard', 'yards'] },
@@ -134,7 +137,6 @@ const UNIT_LIST: Unit[] = [
   { id: 'um', dim: 'length', symbol: 'μm', toBase: 1e-6, defaultTo: 'mil', names: ['um', 'μm', 'micron', 'microns', 'micrometer', 'micrometers', 'micrometre', 'micrometres'] },
   { id: 'nm', dim: 'length', symbol: 'nm', toBase: 1e-9, defaultTo: 'in', names: ['nm', 'nanometer', 'nanometers', 'nanometre', 'nanometres'] },
 
-  // Mass
   { id: 'oz', dim: 'mass', symbol: 'oz', toBase: 28.349523125 / 1000, defaultTo: 'g', names: ['oz', 'ozm', 'ounce', 'ounces', 'ouncemass', 'ounce mass'] },
   { id: 'lb', dim: 'mass', symbol: 'lbs', toBase: LB, defaultTo: 'kg', names: ['lb', 'lbs', 'lbm', 'pound', 'pounds', 'poundmass', 'pound mass'] },
   { id: 'st', dim: 'mass', symbol: 'st', toBase: 6.35029318, defaultTo: 'kg', names: ['st', 'stone', 'stones'] },
@@ -152,13 +154,12 @@ const UNIT_LIST: Unit[] = [
   { id: 'kg', dim: 'mass', symbol: 'kg', toBase: 1, defaultTo: 'lb', names: ['kg', 'kilogram', 'kilograms'] },
   { id: 'tonne', dim: 'mass', symbol: 't', toBase: 1000, defaultTo: 'ton', prefixable: true, names: ['t', 'tonne', 'tonnes', 'metricton', 'metrictons', 'metric ton', 'metric tons'] },
 
-  // Temperature (°C and °F are offset scales: conversions only, never arithmetic)
+  // °C and °F are offset scales: conversions only, never arithmetic
   { id: 'c', dim: 'temperature', symbol: '°C', toBase: 0, defaultTo: 'f', names: ['c', 'celsius', 'centigrade', 'degc', 'deg c', 'degree celsius', 'degrees celsius', '°c'] },
   { id: 'f', dim: 'temperature', symbol: '°F', toBase: 0, defaultTo: 'c', names: ['f', 'fahrenheit', 'degf', 'deg f', 'degree fahrenheit', 'degrees fahrenheit', '°f'] },
   { id: 'k', dim: 'temperature', symbol: 'K', toBase: 1, defaultTo: 'r', names: ['k', 'kelvin', 'kelvins'] },
   { id: 'r', dim: 'temperature', symbol: '°R', toBase: 5 / 9, defaultTo: 'k', names: ['r', 'rankine', 'degr', 'deg r', 'degree rankine', 'degrees rankine', '°r'] },
 
-  // Volume (base = litre)
   { id: 'drop', dim: 'volume', symbol: 'drop', toBase: 5e-5, defaultTo: 'ml', names: ['drop', 'drops'] },
   { id: 'tsp', dim: 'volume', symbol: 'tsp', toBase: US_FLOZ / 6, defaultTo: 'ml', names: ['tsp', 'teaspoon', 'teaspoons'] },
   { id: 'tbsp', dim: 'volume', symbol: 'tbsp', toBase: US_FLOZ / 2, defaultTo: 'ml', names: ['tbs', 'tbsp', 'tablespoon', 'tablespoons'] },
@@ -181,7 +182,6 @@ const UNIT_LIST: Unit[] = [
   { id: 'stere', dim: 'volume', symbol: 'stere', toBase: 1000, defaultTo: 'ft3', names: ['stere', 'steres'] },
   { id: 'm3', dim: 'volume', symbol: 'm³', toBase: 1000, defaultTo: 'ft3', names: ['m3', 'm^3', 'cubic meter', 'cubic meters', 'cubic metre', 'cubic metres'] },
 
-  // Area (base = m²)
   { id: 'barn', dim: 'area', symbol: 'barn', toBase: 1e-28, defaultTo: 'm2', prefixable: true, names: ['barn', 'barns'] },
   { id: 'darcy', dim: 'area', symbol: 'D', toBase: DARCY, defaultTo: 'm2', names: ['darcy', 'darcys', 'darcies'] },
   { id: 'in2', dim: 'area', symbol: 'in²', toBase: 0.00064516, defaultTo: 'cm2', names: ['in2', 'in^2', 'sqin', 'sq in', 'square inch', 'square inches'] },
@@ -194,7 +194,6 @@ const UNIT_LIST: Unit[] = [
   { id: 'km2', dim: 'area', symbol: 'km²', toBase: 1e6, defaultTo: 'sqmi', names: ['km2', 'km^2', 'sq km', 'square kilometer', 'square kilometers', 'square kilometre', 'square kilometres'] },
   { id: 'ha', dim: 'area', symbol: 'ha', toBase: 10000, defaultTo: 'acre', names: ['ha', 'hectare', 'hectares'] },
 
-  // Speed (base = m/s)
   { id: 'mph', dim: 'speed', symbol: 'mph', toBase: MI / 3600, defaultTo: 'kmh', names: ['mph', 'mi/h', 'mile/h', 'mile per hour', 'miles per hour'] },
   { id: 'fps', dim: 'speed', symbol: 'ft/s', toBase: FT, defaultTo: 'mps', names: ['fps', 'ft/s', 'foot per second', 'feet per second'] },
   { id: 'knot', dim: 'speed', symbol: 'kn', toBase: 1852 / 3600, defaultTo: 'kmh', names: ['kt', 'knot', 'knots'] },
@@ -202,7 +201,7 @@ const UNIT_LIST: Unit[] = [
   { id: 'mps', dim: 'speed', symbol: 'm/s', toBase: 1, defaultTo: 'fps', names: ['m/s', 'meter per second', 'meters per second', 'metre per second', 'metres per second'] },
   { id: 'light', dim: 'speed', symbol: 'c', toBase: C, defaultTo: 'mps', names: ['lightspeed', 'speedoflight', 'speed of light'] },
 
-  // Time (explicit "to" only — same in SI and US)
+  // time and digital have no defaultTo: they convert only with an explicit "to"
   { id: 'hr', dim: 'time', symbol: 'hr', toBase: 3600, names: ['h', 'hr', 'hrs', 'hour', 'hours'] },
   { id: 's', dim: 'time', symbol: 's', toBase: 1, prefixable: true, names: ['s', 'sec', 'secs', 'second', 'seconds'] },
   { id: 'day', dim: 'time', symbol: 'd', toBase: 86400, names: ['d', 'day', 'days'] },
@@ -214,7 +213,6 @@ const UNIT_LIST: Unit[] = [
   { id: 'century', dim: 'time', symbol: 'centuries', toBase: 100 * YEAR, names: ['century', 'centuries'] },
   { id: 'millennium', dim: 'time', symbol: 'kyr', toBase: 1000 * YEAR, names: ['millenium', 'millennium', 'millenniums', 'millennia'] },
 
-  // Digital (explicit "to" only): SI prefixes are powers of 1000, IEC (KiB, MiB, …) powers of 1024
   { id: 'kb', dim: 'digital', symbol: 'kB', toBase: 1e3, names: ['kb', 'kilobyte', 'kilobytes'] },
   { id: 'mb', dim: 'digital', symbol: 'MB', toBase: 1e6, names: ['mb', 'megabyte', 'megabytes'] },
   { id: 'gb', dim: 'digital', symbol: 'GB', toBase: 1e9, names: ['gb', 'gigabyte', 'gigabytes'] },
@@ -224,7 +222,6 @@ const UNIT_LIST: Unit[] = [
   { id: 'gib', dim: 'digital', symbol: 'GiB', toBase: 1024 ** 3, names: ['gib', 'gibibyte', 'gibibytes'] },
   { id: 'tib', dim: 'digital', symbol: 'TiB', toBase: 1024 ** 4, names: ['tib', 'tebibyte', 'tebibytes'] },
 
-  // Energy (base = J)
   { id: 'ev', dim: 'energy', symbol: 'eV', toBase: E_CHARGE, defaultTo: 'j', prefixable: true, names: ['ev', 'evs', 'electronvolt', 'electronvolts', 'electron volt', 'electron volts'] },
   { id: 'erg', dim: 'energy', symbol: 'erg', toBase: 1e-7, defaultTo: 'j', names: ['erg', 'ergs'] },
   { id: 'cal', dim: 'energy', symbol: 'cal', toBase: 4.184, defaultTo: 'j', names: ['cal', 'calorie', 'calories', 'thermodynamic calorie', 'thermodynamic calories'] },
@@ -236,12 +233,10 @@ const UNIT_LIST: Unit[] = [
   { id: 'wh', dim: 'energy', symbol: 'Wh', toBase: 3600, defaultTo: 'kj', names: ['wh', 'watt hour', 'watt hours'] },
   { id: 'kwh', dim: 'energy', symbol: 'kWh', toBase: 3.6e6, defaultTo: 'btu', names: ['kwh', 'kw h', 'kilowatt hour', 'kilowatt hours'] },
 
-  // Power (base = W)
   { id: 'hp', dim: 'power', symbol: 'hp', toBase: 745.699872, defaultTo: 'kw', names: ['hp', 'horsepower', 'mechanical horsepower'] },
   { id: 'w', dim: 'power', symbol: 'W', toBase: 1, defaultTo: 'hp', prefixable: true, names: ['w', 'watt', 'watts'] },
   { id: 'kw', dim: 'power', symbol: 'kW', toBase: 1000, defaultTo: 'hp', names: ['kw', 'kilowatt', 'kilowatts'] },
 
-  // Pressure (base = Pa)
   { id: 'psi', dim: 'pressure', symbol: 'psi', toBase: PSI, defaultTo: 'kpa', names: ['psi', 'pound per square inch', 'pounds per square inch'] },
   { id: 'ksi', dim: 'pressure', symbol: 'ksi', toBase: PSI * 1000, defaultTo: 'mpa', names: ['ksi'] },
   { id: 'inhg', dim: 'pressure', symbol: 'inHg', toBase: 3386.389, defaultTo: 'kpa', names: ['inhg', 'in hg', 'inch of mercury', 'inches of mercury'] },
@@ -252,7 +247,6 @@ const UNIT_LIST: Unit[] = [
   { id: 'atm', dim: 'pressure', symbol: 'atm', toBase: 101325, defaultTo: 'psi', names: ['atm', 'atmosphere', 'atmospheres'] },
   { id: 'torr', dim: 'pressure', symbol: 'torr', toBase: 101325 / 760, defaultTo: 'psi', names: ['torr', 'torrs', 'mmhg', 'mm hg', 'millimeter of mercury', 'millimeters of mercury'] },
 
-  // Force (base = N)
   { id: 'dyn', dim: 'force', symbol: 'dyn', toBase: 1e-5, defaultTo: 'n', names: ['dyn', 'dyne', 'dynes'] },
   { id: 'ozf', dim: 'force', symbol: 'ozf', toBase: LBF / 16, defaultTo: 'n', names: ['ozf', 'ounceforce', 'ounce-force', 'ounce force'] },
   { id: 'lbf', dim: 'force', symbol: 'lbf', toBase: LBF, defaultTo: 'n', names: ['lbf', 'poundforce', 'pound-force', 'pounds-force', 'pound force'] },
@@ -261,34 +255,29 @@ const UNIT_LIST: Unit[] = [
   { id: 'kilonewton', dim: 'force', symbol: 'kN', toBase: 1000, defaultTo: 'lbf', names: ['kn', 'kilonewton', 'kilonewtons'] },
   { id: 'kgf', dim: 'force', symbol: 'kgf', toBase: G0, defaultTo: 'n', names: ['kgf', 'kgforce', 'kilogramforce', 'kilogram-force', 'kilogram force'] },
 
-  // Angle
   { id: 'arcsec', dim: 'angle', symbol: '″', toBase: Math.PI / (180 * 3600), defaultTo: 'deg', names: ['arcsec', 'arcsecs', 'arcsecond', 'arcseconds', 'arc sec', 'arc secs', 'arc second', 'arc seconds'] },
   { id: 'arcmin', dim: 'angle', symbol: '′', toBase: Math.PI / (180 * 60), defaultTo: 'deg', names: ['arcmin', 'arcmins', 'arcminute', 'arcminutes', 'arc min', 'arc mins', 'arc minute', 'arc minutes'] },
   { id: 'deg', dim: 'angle', symbol: 'deg', toBase: Math.PI / 180, defaultTo: 'rad', names: ['deg', 'degs', 'degree', 'degrees'] },
   { id: 'rad', dim: 'angle', symbol: 'rad', toBase: 1, defaultTo: 'deg', prefixable: true, names: ['rad', 'rads', 'radian', 'radians'] },
   { id: 'rev', dim: 'angle', symbol: 'rev', toBase: 2 * Math.PI, defaultTo: 'deg', names: ['rev', 'revs', 'revolution', 'revolutions'] },
 
-  // Frequency (base = Hz)
   { id: 'hz', dim: 'frequency', symbol: 'Hz', toBase: 1, defaultTo: 'rpm', prefixable: true, names: ['hz', 'hertz'] },
   { id: 'rpm', dim: 'frequency', symbol: 'rpm', toBase: 1 / 60, defaultTo: 'hz', names: ['rpm', 'rpms', 'revolution per minute', 'revolutions per minute'] },
 
-  // Acceleration (base = m/s²)
   { id: 'mps2', dim: 'acceleration', symbol: 'm/s²', toBase: 1, defaultTo: 'gee', names: ['m/s2', 'm/s^2', 'm/s²', 'meter per second squared', 'meters per second squared', 'metre per second squared', 'metres per second squared'] },
   { id: 'gee', dim: 'acceleration', symbol: 'g', toBase: G0, defaultTo: 'mps2', names: ['gs', 'gee', 'gravity'] },
 
-  // Charge (base = C)
   { id: 'electron', dim: 'charge', symbol: 'e', toBase: E_CHARGE, defaultTo: 'coulomb', names: ['electron', 'electrons'] },
   { id: 'photon', dim: 'dimensionless', symbol: 'photon', toBase: 1, names: ['photon', 'photons'] },
   { id: 'coulomb', dim: 'charge', symbol: 'C', toBase: 1, defaultTo: 'electron', prefixable: true, names: ['coulomb', 'coulombs'] },
 
-  // Electrical
   { id: 'amp', dim: 'current', symbol: 'A', toBase: 1, prefixable: true, names: ['a', 'amp', 'amps', 'ampere', 'amperes'] },
   { id: 'volt', dim: 'voltage', symbol: 'V', toBase: 1, prefixable: true, names: ['v', 'volt', 'volts'] },
   { id: 'ohm', dim: 'resistance', symbol: 'Ω', toBase: 1, prefixable: true, names: ['ohm', 'ohms', 'Ω'] },
   { id: 'farad', dim: 'capacitance', symbol: 'F', toBase: 1, prefixable: true, names: ['farad', 'farads'] },
   { id: 'henry', dim: 'inductance', symbol: 'H', toBase: 1, prefixable: true, names: ['henry', 'henrys', 'henries'] },
 
-  // Dimensionless — "1" is intentionally omitted (it would steal trailing digits)
+  // "1" is left out on purpose; it would steal trailing digits
   { id: 'none', dim: 'dimensionless', symbol: 'dimensionless', toBase: 1, names: ['dimensionless', 'none', 'nounit', 'nounits'] },
   { id: 'unit', dim: 'dimensionless', symbol: 'units', toBase: 1, names: ['unit', 'units'] },
   ...PREFIXES.map((p) => ({
@@ -351,14 +340,7 @@ function applySiPrefixes(units: Unit[]): void {
         for (const a of fresh) taken.add(a)
         continue
       }
-      const unit: Unit = {
-        id: `${prefix.name}_${base.id}`,
-        dim: base.dim,
-        symbol: prefixedLabel(prefix, base),
-        toBase,
-        defaultTo: base.id,
-        names: fresh,
-      }
+      const unit: Unit = { ...prefixedUnit(prefix, base), names: fresh }
       units.push(unit)
       family.push(unit)
       for (const a of fresh) taken.add(a)
@@ -442,6 +424,7 @@ const PREFIX_INDEX = PREFIXES.flatMap((p) => p.names.map((name) => ({ name: name
   (a, b) => b.name.length - a.name.length,
 )
 
+// volume's table base is the litre, not m³
 const SI_SCALE: Partial<Record<Dim, number>> = { volume: 0.001 }
 
 function siOf(unit: Unit): number {
@@ -496,32 +479,33 @@ function isLetter(c: string | undefined): boolean {
   return !!c && /[A-Za-z]/.test(c)
 }
 
+/** The text before `token` at the end of `t`, or null when it isn't a separate token there. */
+function beforeTail(t: string, token: string): string | null {
+  if (t.length <= token.length) return null
+  const rest = t.slice(0, t.length - token.length)
+  if (t.slice(rest.length).toLowerCase() !== token) return null
+  if (isLetter(rest[rest.length - 1]) && isLetter(token[0])) return null
+  return rest.trim() ? rest : null
+}
+
 function matchUnitAtEnd(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimEnd()
   for (const { alias, unit } of ALIAS_INDEX) {
-    if (t.length <= alias.length) continue
-    const tail = t.slice(t.length - alias.length)
-    if (tail.toLowerCase() !== alias) continue
-    const rest = t.slice(0, t.length - alias.length)
-    const prev = rest[rest.length - 1]
-    if (isLetter(prev) && isLetter(alias[0])) continue
-    if (!rest.trim()) continue
-    // `1 H` is a henry; hours are `h`/`hr`. (`72 F` and `100 C` stay temperatures here.)
-    return { unit: tail === 'H' ? BY_ID.get('henry')! : unit, rest: rest.trimEnd() }
+    const rest = beforeTail(t, alias)
+    if (rest == null) continue
+    // `1 H` is a henry, hours are `h`/`hr`; `72 F` and `100 C` stay temperatures here
+    return { unit: t.slice(rest.length) === 'H' ? BY_ID.get('henry')! : unit, rest: rest.trimEnd() }
   }
   return null
 }
 
 function scaleUnit(base: Unit, prefix: Prefix): Unit | null {
   if (base.dim === 'temperature' || base.dim === 'digital' || base.dim === 'dimensionless') return null
-  // Of the time units only seconds take prefixes (`ms`, `µs`); `µhr` is not a thing.
+  // of the time units only seconds take prefixes (`ms`, `µs`)
   if (base.dim === 'time' && base.id !== 's') return null
   const toBase = base.toBase * prefix.factor
   if (!Number.isFinite(toBase) || toBase === 0) return null
-  const existing = UNIT_LIST.find((u) => u.dim === base.dim && sameScale(u.toBase, toBase))
-  if (existing) return existing
-  const label = prefixedLabel(prefix, base)
-  return { id: `${prefix.name}_${base.id}`, dim: base.dim, symbol: label, toBase, defaultTo: base.id, names: [] }
+  return UNIT_LIST.find((u) => u.dim === base.dim && sameScale(u.toBase, toBase)) ?? prefixedUnit(prefix, base)
 }
 
 function matchCasePrefixAtEnd(rest: string, unit: Unit): { unit: Unit; rest: string } | null {
@@ -546,13 +530,8 @@ function matchPrefixedUnit(s: string): { unit: Unit; rest: string } | null {
   if (cased) return cased
   for (const { name, prefix } of PREFIX_INDEX) {
     if (name.length === 1) continue
-    if (t.length <= name.length) continue
-    const tail = t.slice(t.length - name.length)
-    if (tail.toLowerCase() !== name) continue
-    const rest = t.slice(0, t.length - name.length)
-    const prev = rest[rest.length - 1]
-    if (isLetter(prev) && isLetter(name[0])) continue
-    if (!rest.trim()) continue
+    const rest = beforeTail(t, name)
+    if (rest == null) continue
     const scaled = scaleUnit(end.unit, prefix)
     if (!scaled) continue
     return { unit: scaled, rest: rest.trimEnd() }
@@ -595,15 +574,18 @@ function matchBareUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   return null
 }
 
+function prefixedUnitAtStart(prefix: Prefix, s: string): { unit: Unit; rest: string } | null {
+  const u = matchBareUnitAtStart(s)
+  const scaled = u && scaleUnit(u.unit, prefix)
+  return scaled ? { unit: scaled, rest: u!.rest } : null
+}
+
 function matchSpelledPrefixAtStart(t: string): { unit: Unit; rest: string } | null {
   for (const { name, prefix } of PREFIX_INDEX) {
     if (name.length === 1) continue
     if (t.length < name.length || t.slice(0, name.length).toLowerCase() !== name) continue
-    const u = matchBareUnitAtStart(t.slice(name.length))
-    if (!u) continue
-    const scaled = scaleUnit(u.unit, prefix)
-    if (!scaled) continue
-    return { unit: scaled, rest: u.rest }
+    const hit = prefixedUnitAtStart(prefix, t.slice(name.length))
+    if (hit) return hit
   }
   return null
 }
@@ -612,20 +594,13 @@ function matchUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimStart()
   const prefixed = matchSpelledPrefixAtStart(t)
   const bare = matchBareUnitAtStart(t)
-  if (prefixed && bare) {
-    const prefixLen = t.length - prefixed.rest.length
-    const bareLen = t.length - bare.rest.length
-    if (prefixLen > bareLen) return prefixed
-  } else if (prefixed) return prefixed
+  // the longer match wins; a tie goes to the bare unit
+  if (prefixed && (!bare || prefixed.rest.length < bare.rest.length)) return prefixed
   if (bare) return bare
   for (const p of CASE_PREFIXES) {
     if (t[0] !== p.symbol) continue
-    const rest = t.slice(p.symbol.length)
-    const u = matchBareUnitAtStart(rest)
-    if (!u) continue
-    const scaled = scaleUnit(u.unit, p.prefix)
-    if (!scaled) continue
-    return { unit: scaled, rest: u.rest }
+    const hit = prefixedUnitAtStart(p.prefix, t.slice(p.symbol.length))
+    if (hit) return hit
   }
   return null
 }
@@ -658,8 +633,8 @@ const DIM_VEC: Record<Dim, DimVec> = {
 }
 
 /**
- * Measurement riding on a quantity: sig figs (Infinity = exact) and relative ± uncertainty.
- * Absent = exact. NaN once an addition mixes measured parts (decimal places need D's unit walker).
+ * Sig figs (Infinity = exact) and relative ± uncertainty; absent means exact.
+ * NaN once an addition mixes measured parts, since that would need decimal places.
  */
 type Prec = { sig: number; rel: number }
 const LOST: Prec = { sig: Number.NaN, rel: Number.NaN }
@@ -964,14 +939,14 @@ class UnitParser {
         left = quot
         continue
       }
-      // `5 (2 m)` and `4/3 pi (2 m)^3` multiply; after a unit (`sec(0)`, `sec^-1(2)`) `(` is a function call, not ours.
+      // `5 (2 m)` multiplies, but after a unit `(` is a function call (`sec(0)`)
       if (isLetter(ch) || (ch === '(' && isZeroVec(left.dim))) {
         const right = this.parsePow()
         if (!right) return null
         left = mulQty(left, right)
         continue
       }
-      // `5 ft 10 in`, `2 hr 30 min`: a juxtaposed quantity of the same dimension adds.
+      // `5 ft 10 in`: a juxtaposed quantity of the same dimension adds
       if (/[\d.]/.test(ch ?? '') && !isZeroVec(left.dim)) {
         const right = this.parsePow()
         if (!right || !vecEq(left.dim, right.dim)) return null
@@ -1064,7 +1039,7 @@ class UnitParser {
   parseUnitRef(): Qty | null {
     this.skip()
     const hit = matchUnitAtStart(this.s.slice(this.i))
-    // °C/°F are offset scales: `72 F in C` converts, but they can't be multiplied or added.
+    // °C and °F are offset scales: `72 F in C` converts, but they can't be multiplied or added
     if (!hit || hit.unit.id === 'c' || hit.unit.id === 'f') return null
     this.i += this.s.slice(this.i).length - hit.rest.length
     this.usedUnit = true
@@ -1128,8 +1103,7 @@ function tryUnitExpression(src: string, defaults?: DefaultUnits): Value | null {
   const { left, right } = splitConvert(src)
   if (right) return evalUnitSides(left, right, defaults)
 
-  // `in` is also inches, so only treat it as a converter when both sides parse
-  // as quantities and the conversion is dimensionally valid (`3V/39ohm in mA`).
+  // `in` is also inches, so it only converts when both sides parse and the dimensions fit (`3V/39ohm in mA`)
   const viaIn = splitInConvert(src)
   if (viaIn) {
     const leftParser = new UnitParser(viaIn.left)
@@ -1156,7 +1130,7 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
   let expr: string
   if (conv) {
     const source = matchPrefixedUnit((conv[1] ?? '').trim())
-    // A mismatch (`2 F in uF`) may still convert once `F` is read as a farad by the unit parser.
+    // a mismatch (`2 F in uF`) may still convert once the unit parser reads `F` as a farad
     if (!source || source.unit.dim !== end.unit.dim) return null
     from = source.unit
     to = end.unit
@@ -1176,7 +1150,7 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
   const amount = parseAmount(expr)
   if (amount == null) return null
   const out = convertAmount(amount, from, to)
-  // Conversion factors are exact, so `12.0 kg in lb` keeps 3 sig figs. Offset scales (°C/°F) don't.
+  // conversion factors are exact, so `12.0 kg in lb` keeps 3 sig figs; offset scales don't
   const { sig } = literalMeas(expr.trim().replace(/^[+-]/, ''))
   const meas = from.dim !== 'temperature' && out?.kind === 'number' ? precMeas(out.n, Number.isFinite(sig) ? { sig, rel: 0 } : undefined) : undefined
   return meas ? { ...out!, meas } : out
@@ -1194,10 +1168,6 @@ const PREFIX_ROOTS = ['m', 'g', 's', 'l', 'j', 'w', 'pa', 'hz', 'n', 'volt', 'am
 
 function prefixExponent(p: Prefix): number {
   return Math.round(Math.log10(p.factor))
-}
-
-function prefixedUnit(prefix: Prefix, base: Unit, id = `${prefix.name}_${base.id}`): Unit {
-  return { id, dim: base.dim, symbol: prefixedLabel(prefix, base), toBase: base.toBase * prefix.factor, defaultTo: base.id, names: [] }
 }
 
 /** Table units by id, plus the `kilo_n`-style ids of prefixed units synthesized on the fly. */
