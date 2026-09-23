@@ -1,4 +1,5 @@
 import { DEFAULT_SIG_FIGS, formatNumber } from '../engine/format'
+import type { Meas } from '../engine/types'
 import { isImproperUnitConversion } from '../engine/units'
 
 const PLAIN_NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
@@ -11,6 +12,8 @@ function stripGroupingCommas(s: string): string {
 export function insertableAnswer(display: string, n?: number, sigFigs = DEFAULT_SIG_FIGS): string {
   const shown = stripGroupingCommas(display).trim()
   if (isImproperUnitConversion(shown)) return ''
+  // `10.0 ± 0.7` goes in as one quantity (`ans*2` must not bind to the uncertainty alone).
+  if (shown.includes('±')) return `(${shown})`
   if (shown && !PLAIN_NUMBER.test(shown)) return shown
   if (n != null && Number.isFinite(n)) return formatNumber(n, sigFigs)
   return shown
@@ -32,6 +35,8 @@ export type HistoryAnswer = {
   display: string
   exact?: string
   n?: number
+  /** A measured answer inserts as shown (`5.00`, `7.8`), not re-rounded from `n`. */
+  meas?: Meas
 }
 
 /** True when both a closed form and a distinct decimal can be shown. */
@@ -55,7 +60,7 @@ export function insertableHistoryAnswer(
   sigFigs = DEFAULT_SIG_FIGS,
 ): string {
   if (form === 'exact' && row.exact) return insertableAnswer(row.exact)
-  return insertableAnswer(row.display, row.n, sigFigs)
+  return insertableAnswer(row.display, row.meas ? undefined : row.n, sigFigs)
 }
 
 /** What Enter on a highlighted history row inserts. Clicking the expression always uses `expr`; clicking the answer always uses the answer. */

@@ -14,6 +14,7 @@ final class AppSettings: ObservableObject {
     static let answerFormKey = "qcalc.answerForm"
     static let historyInsertKey = "qcalc.historyInsert"
     static let rationalizeKey = "qcalc.rationalize"
+    static let sigFigModeKey = "qcalc.sigFigMode"
     static let themeKey = "qcalc.theme"
     static let defaultSigFigs = 12
     static let minSigFigs = 2
@@ -32,6 +33,7 @@ final class AppSettings: ObservableObject {
     @Published private(set) var answerForm: String
     @Published private(set) var historyInsert: String
     @Published private(set) var rationalize: Bool
+    @Published private(set) var sigFigMode: Bool
     @Published private(set) var theme: String
 
     private init() {
@@ -46,6 +48,7 @@ final class AppSettings: ObservableObject {
         answerForm = Self.loadAnswerForm()
         historyInsert = Self.loadHistoryInsert()
         rationalize = Self.loadRationalize()
+        sigFigMode = UserDefaults.standard.bool(forKey: Self.sigFigModeKey)
         theme = Self.loadTheme()
     }
 
@@ -136,6 +139,15 @@ final class AppSettings: ObservableObject {
         guard value != rationalize else { return }
         rationalize = value
         UserDefaults.standard.set(value, forKey: Self.rationalizeKey)
+        if notifyWeb {
+            NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
+        }
+    }
+
+    func setSigFigMode(_ value: Bool, notifyWeb: Bool) {
+        guard value != sigFigMode else { return }
+        sigFigMode = value
+        UserDefaults.standard.set(value, forKey: Self.sigFigModeKey)
         if notifyWeb {
             NotificationCenter.default.post(name: .qcalcSettingsChanged, object: nil)
         }
@@ -307,6 +319,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item.state = n == current ? .on : .off
             menu.addItem(item)
         }
+        menu.addItem(.separator())
+        let propagate = NSMenuItem(title: "Propagate from input", action: #selector(toggleSigFigMode), keyEquivalent: "")
+        propagate.target = self
+        propagate.state = AppSettings.shared.sigFigMode ? .on : .off
+        menu.addItem(propagate)
         return menu
     }
 
@@ -411,6 +428,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func toggleRationalize() {
         AppSettings.shared.setRationalize(!AppSettings.shared.rationalize, notifyWeb: true)
+    }
+
+    @objc private func toggleSigFigMode() {
+        AppSettings.shared.setSigFigMode(!AppSettings.shared.sigFigMode, notifyWeb: true)
     }
 
     @objc private func setTheme(_ sender: NSMenuItem) {

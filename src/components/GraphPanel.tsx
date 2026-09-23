@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -14,7 +15,6 @@ import {
   type YScale,
 } from '../engine/graph'
 import { formatNumber } from '../engine/format'
-import type { AngleMode } from '../engine/scientific'
 import type { UserFunction } from '../engine/types'
 
 const PLOT_PAD = { top: 12, right: 12, bottom: 28, left: 40 }
@@ -27,9 +27,8 @@ export type GraphPanelProps = {
   input: string
   functions?: Record<string, UserFunction>
   variables?: Record<string, number>
-  angleMode?: AngleMode
   ans?: number
-  /** Called when a critical/root point is clicked — formatted x value. */
+  /** Called when a critical/root point is clicked — formatted x value to copy. */
   onSelectX?: (xText: string) => void
 }
 
@@ -58,32 +57,59 @@ function formatCoord(n: number): string {
   return formatNumber(n, 8)
 }
 
+/** Far-off-screen samples are pinned here; the clip path hides them either way. */
+const PX_LIMIT = 1e4
+
+/** Curve path (gaps at non-finite samples and at jumps across the whole view) plus isolated samples as dots. */
 function pointsToPath(
   points: GraphPoint[],
   xToPx: (x: number) => number,
   yToPx: (y: number) => number,
-): string {
+  top: number,
+  bottom: number,
+): { d: string; dots: { x: number; y: number }[] } {
   const parts: string[] = []
-  let drawing = false
-  for (const p of points) {
-    if (p.y == null || !Number.isFinite(p.y)) {
-      drawing = false
-      continue
+  const dots: { x: number; y: number }[] = []
+  let run: { x: number; y: number }[] = []
+  const flush = () => {
+    if (run.length === 1) dots.push(run[0]!)
+    else if (run.length > 1) {
+      parts.push(run.map((p, i) => `${i ? 'L' : 'M'}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' '))
     }
-    const x = xToPx(p.x)
-    const y = yToPx(p.y)
-    if (!Number.isFinite(x) || !Number.isFinite(y)) {
-      drawing = false
-      continue
-    }
-    if (!drawing) {
-      parts.push(`M${x.toFixed(2)} ${y.toFixed(2)}`)
-      drawing = true
-    } else {
-      parts.push(`L${x.toFixed(2)} ${y.toFixed(2)}`)
-    }
+    run = []
   }
-  return parts.join(' ')
+  for (const p of points) {
+    const x = xToPx(p.x)
+    const y = p.y == null ? Number.NaN : yToPx(p.y)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      flush()
+      continue
+    }
+    const last = run[run.length - 1]
+    // One step from above the view to below it is a pole (tan, 1/x), not a line to draw.
+    if (last && ((last.y < top && y > bottom) || (last.y > bottom && y < top))) flush()
+    run.push({ x, y: Math.max(-PX_LIMIT, Math.min(PX_LIMIT, y)) })
+  }
+  flush()
+  return { d: parts.join(' '), dots }
+}
+
+/** About `target` round ticks (1, 2, 5 × 10ⁿ) inside [lo, hi]. */
+function niceTicks(lo: number, hi: number, target = 5): number[] {
+  const span = hi - lo
+  if (!(span > 0) || !Number.isFinite(span)) return []
+  const raw = span / target
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  const step = [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? 10 * mag
+  const out: number[] = []
+  for (let k = Math.ceil(lo / step); k * step <= hi && out.length < 12; k++) {
+    out.push(Number((k * step).toPrecision(12)))
+  }
+  return out
+}
+
+function formatTick(n: number): string {
+  return formatNumber(n, 6)
 }
 
 function kindLabel(kind: CriticalPoint['kind']): string {
@@ -96,10 +122,10 @@ export function GraphPanel({
   input,
   functions,
   variables,
-  angleMode,
   ans,
   onSelectX,
 }: GraphPanelProps) {
+  const clipId = useId()
   const [domain, setDomain] = useState<[number, number]>([
     DEFAULT_GRAPH_DOMAIN[0],
     DEFAULT_GRAPH_DOMAIN[1],
@@ -112,22 +138,15 @@ export function GraphPanel({
   useEffect(() => () => cancelAnimationFrame(dragFrameRef.current), [])
   const plotRef = useRef<SVGSVGElement>(null)
 
-  // Reset domain when the graph command identity changes (not on every keystroke of unrelated edits).
-  const intentKey = useMemo(() => input.trim().toLowerCase(), [input])
-  useEffect(() => {
-    setDomain([DEFAULT_GRAPH_DOMAIN[0], DEFAULT_GRAPH_DOMAIN[1]])
-  }, [intentKey])
-
   const result = useMemo(
     () =>
       buildGraph(input, {
         domain,
         functions,
         variables,
-        angleMode,
         ans,
       }),
-    [input, domain, functions, variables, angleMode, ans],
+    [input, domain, functions, variables, ans],
   )
 
   const yScale: YScale = result?.yScale ?? { min: -10, max: 10 }
@@ -150,10 +169,15 @@ export function GraphPanel({
     [xMin, plotW, xSpan],
   )
 
-  const pathD = useMemo(
-    () => (result ? pointsToPath(result.points, xToPx, yToPx) : ''),
-    [result, xToPx, yToPx],
+  const curve = useMemo(
+    () =>
+      result
+        ? pointsToPath(result.points, xToPx, yToPx, PLOT_PAD.top, PLOT_PAD.top + plotH)
+        : { d: '', dots: [] },
+    [result, xToPx, yToPx, plotH],
   )
+  const xTicks = niceTicks(xMin, xMax)
+  const yTicks = niceTicks(yScale.min, yScale.max)
 
   const axisY = yToPx(0)
   const axisX = xToPx(0)
@@ -263,6 +287,7 @@ export function GraphPanel({
         <span className="graph-domain">
           [{formatCoord(domain[0])}, {formatCoord(domain[1])}]
         </span>
+        <span className="graph-domain">rad</span>
         <button
           type="button"
           className="graph-reset"
@@ -315,24 +340,32 @@ export function GraphPanel({
               y2={PLOT_PAD.top + plotH}
             />
           ) : null}
-          <text className="graph-tick" x={PLOT_PAD.left} y={SVG_H - 8}>
-            {formatCoord(xMin)}
-          </text>
-          <text
-            className="graph-tick"
-            x={PLOT_PAD.left + plotW}
-            y={SVG_H - 8}
-            textAnchor="end"
-          >
-            {formatCoord(xMax)}
-          </text>
-          <text className="graph-tick" x={8} y={PLOT_PAD.top + 4}>
-            {formatCoord(yScale.max)}
-          </text>
-          <text className="graph-tick" x={8} y={PLOT_PAD.top + plotH}>
-            {formatCoord(yScale.min)}
-          </text>
-          {pathD ? <path className="graph-curve" d={pathD} fill="none" /> : null}
+          <clipPath id={clipId}>
+            <rect x={PLOT_PAD.left} y={PLOT_PAD.top} width={plotW} height={plotH} />
+          </clipPath>
+          {xTicks.map((t) => (
+            <text key={`x${t}`} className="graph-tick" x={xToPx(t)} y={SVG_H - 12} textAnchor="middle">
+              {formatTick(t)}
+            </text>
+          ))}
+          {yTicks.map((t) => (
+            <text
+              key={`y${t}`}
+              className="graph-tick"
+              x={PLOT_PAD.left - 6}
+              y={yToPx(t)}
+              textAnchor="end"
+              dominantBaseline="middle"
+            >
+              {formatTick(t)}
+            </text>
+          ))}
+          <g clipPath={`url(#${clipId})`}>
+            {curve.d ? <path className="graph-curve" d={curve.d} fill="none" /> : null}
+            {curve.dots.map((p) => (
+              <circle key={`${p.x}`} className="graph-dot" cx={p.x} cy={p.y} r={2} />
+            ))}
+          </g>
           {roots.map((r, i) => {
             const cx = xToPx(r.x)
             const cy = yToPx(0)
@@ -400,7 +433,7 @@ export function GraphPanel({
                 <button
                   type="button"
                   className="graph-detail-item"
-                  title="Copy / insert x"
+                  title="Copy x"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectX(p.x)}
                 >
@@ -422,7 +455,7 @@ export function GraphPanel({
                   <button
                     type="button"
                     className="graph-detail-item"
-                    title="Copy / insert x"
+                    title="Copy x"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectX(r.x)}
                   >

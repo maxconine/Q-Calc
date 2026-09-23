@@ -234,3 +234,49 @@ describe('compiled sampler', () => {
     expect(g!.points[g!.points.length - 1]!.y).toBeCloseTo(21, 9)
   })
 })
+
+describe('refined roots and extrema', () => {
+  const graph = (expr: string, domain?: [number, number]) => buildGraph(`graph ${expr}`, { domain })!
+
+  it('refines roots by bisection', () => {
+    const roots = graph('x^2-2').roots.map((r) => r.x)
+    expect(roots).toHaveLength(2)
+    expect(roots[1]).toBeCloseTo(Math.SQRT2, 9)
+    expect(roots[0]).toBeCloseTo(-Math.SQRT2, 9)
+  })
+
+  it('refines extrema off the sample grid', () => {
+    const crit = graph('(x-0.333)^2').criticalPoints
+    expect(crit).toHaveLength(1)
+    expect(crit[0]!.kind).toBe('min')
+    expect(crit[0]!.x).toBeCloseTo(0.333, 7)
+  })
+
+  it('ignores poles', () => {
+    const tan = graph('tan(x)')
+    expect(tan.roots.some((r) => Math.abs(Math.abs(r.x) - Math.PI / 2) < 0.1)).toBe(false)
+    expect(tan.roots.map((r) => r.x / Math.PI).map(Math.round)).toEqual([-3, -2, -1, 0, 1, 2, 3])
+    expect(tan.criticalPoints).toEqual([])
+    expect(graph('1/(x-0.3)').roots).toEqual([])
+    expect(graph('1/(x-0.3)').criticalPoints).toEqual([])
+  })
+
+  it('graphs in radians regardless of the angle setting', () => {
+    const g = buildGraph('graph sin(x)', { angleMode: 'deg' })!
+    const crit = g.criticalPoints
+    expect(crit.length).toBeGreaterThanOrEqual(6)
+    expect(crit.every((c) => Math.abs(Math.abs(c.y) - 1) < 1e-9)).toBe(true)
+  })
+
+  it('collapses runs of zero samples', () => {
+    expect(graph('0').roots).toEqual([])
+    const floor = graph('floor(x)').roots
+    expect(floor).toHaveLength(1)
+    expect(floor[0]!.x).toBeCloseTo(0, 9)
+  })
+
+  it('keeps large finite values instead of clamping', () => {
+    const g = graph('e^x', [-2, 20])
+    expect(g.points.filter((p) => p.y != null)).toHaveLength(401)
+  })
+})

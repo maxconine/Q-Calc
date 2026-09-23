@@ -241,3 +241,17 @@ describe('hasDualAnswer', () => {
     expect(hasDualAnswer({ display: 'improper unit conversion', exact: 'sqrt(2)' })).toBe(false)
   })
 })
+
+describe('measured answers', () => {
+  it('inserts a sig-fig answer as shown, trailing zeros included', () => {
+    expect(insertableHistoryAnswer({ display: '5.00', n: 5, meas: { sig: 3, dp: 2 } }, 'approx')).toBe('5.00')
+    expect(insertableHistoryAnswer({ display: '7.8', n: 7.75, meas: { sig: 2, dp: 1 } }, 'exact')).toBe('7.8')
+  })
+
+  it('copies ± as shown and inserts it as one quantity', () => {
+    const row = { display: '10.0 ± 0.7', n: 10, meas: { unc: 0.7 } }
+    expect(visibleAnswer(row, 'exact')).toBe('10.0 ± 0.7')
+    expect(insertableHistoryAnswer(row, 'approx')).toBe('(10.0 ± 0.7)')
+    expect(insertableAnswer('10.0 ± 0.7', 10)).toBe('(10.0 ± 0.7)')
+  })
+})

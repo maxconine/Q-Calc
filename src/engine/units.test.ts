@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateLine } from './evaluate'
-import { sanitizeDefaultUnits, UNIT_SETTING_GROUPS } from './units'
+import { formatValue } from './format'
+import type { Value } from './types'
+import { inLadderUnit, sanitizeDefaultUnits, stepPrefix, tryConvert, UNIT_SETTING_GROUPS } from './units'
 
 type Case = {
   name: string
@@ -2155,3 +2157,56 @@ suite('Digital units keep their dimension', [
   { name: '2 gb * 3', input: '2 gb * 3', expected: 6, unit: 'GB' },
   { name: '1 gb / 1 mb', input: '1 gb / 1 mb', expected: 1024, unit: /^1024$/ },
 ])
+
+describe('stepPrefix', () => {
+  const at = (text: string) => tryConvert(text)!
+  const show = (v: Value | null) => (v ? formatValue(v) : null)
+  const up = (v: Value | null) => (v ? stepPrefix(v, 1) : null)
+  const down = (v: Value | null) => (v ? stepPrefix(v, -1) : null)
+
+  it('steps one engineering prefix at a time', () => {
+    const n = at('98 N to N')
+    expect(show(up(n))).toBe('0.098 kN')
+    expect(show(up(up(n)))).toBe('0.000098 MN')
+    const kn = at('0.098 kN to kN')
+    expect(show(down(kn))).toBe('98 N')
+    expect(show(down(down(kn)))).toBe('98000 mN')
+  })
+
+  it('reuses table units and keeps kg and t on the gram ladder', () => {
+    expect(up(at('0.098 kN to kN'))?.unitId).toBe('mega_n')
+    expect(up(at('98 N to N'))?.unitId).toBe('kilonewton')
+    expect(show(up(at('2.5 kg to kg')))).toBe('0.0025 t')
+    expect(show(down(at('2.5 kg to kg')))).toBe('2500 g')
+    expect(show(up(at('5 kPa to kPa')))).toBe('0.005 MPa')
+    expect(show(up(at('50.8 mm to mm')))).toBe('0.0508 m')
+    expect(show(up(at('3 cm to cm')))).toBe('0.03 m')
+    expect(show(down(at('3 cm to cm')))).toBe('30 mm')
+  })
+
+  it('labels synthesized prefixes with their symbols', () => {
+    expect(show(down(at('2 L to L')))).toBe('2000 mL')
+    expect(show(down(down(at('2 L to L'))))).toBe('2000000 μL')
+    expect(show(up(at('1500 eV to eV')))).toBe('1.5 keV')
+    expect(show(up(at('4700 ohm to ohm')))).toBe('4.7 kΩ')
+    expect(show(down(at('0.01 s to s')))).toBe('10 ms')
+    expect(show(up(at('2000 Hz to Hz')))).toBe('2 kHz')
+  })
+
+  it('is a no-op for plain numbers, non-prefixable units and the ends of the ladder', () => {
+    expect(stepPrefix({ kind: 'number', n: 5 }, 1)).toBeNull()
+    for (const text of ['5 °C to °C', '2 in to in', '3 ft to ft', '4 lbs to lbs', '1 hr to hr', '2 GB to GB', '60 mph to mph']) {
+      expect(up(at(text)), text).toBeNull()
+      expect(down(at(text)), text).toBeNull()
+    }
+    let v: Value | null = at('1 m to m')
+    for (let i = 0; i < 8; i++) v = up(v)
+    expect(show(v)).toBe('1e-24 Ym')
+    expect(up(v)).toBeNull()
+  })
+
+  it('re-expresses a value in a unit from the same ladder', () => {
+    expect(show(inLadderUnit(at('980 N to N'), 'kilonewton'))).toBe('0.98 kN')
+    expect(inLadderUnit(at('980 N to N'), 'kilo_m')).toBeNull()
+  })
+})

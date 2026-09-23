@@ -1,5 +1,6 @@
-import type { EvaluateOptions, LineResult, SheetInputLine, UserFunction, Value } from './types'
-import { DEFAULT_SIG_FIGS, formatValue } from './format'
+import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
+import { DEFAULT_SIG_FIGS, formatValue, num } from './format'
+import { formatMeasured, hasPlusMinus, measure } from './measure'
 import { tryPlainMath } from './plainMath'
 import { formatAsFraction, SCIENTIFIC_NAMES } from './scientific'
 import { exactForm, wantsExactForm } from './simplify'
@@ -51,6 +52,19 @@ function show(value: Value, fractionMode: boolean, sigFigs: number): string {
   return formatValue(value, sigFigs)
 }
 
+/** Measurement metadata when it matters for this line; the walker's value must agree with the engine's. */
+function measured(
+  expr: string,
+  value: Value,
+  ctx: Parameters<typeof measure>[1],
+  wanted: boolean,
+): Meas | undefined {
+  if (!wanted || value.kind !== 'number' || value.unit || !Number.isFinite(value.n)) return undefined
+  const m = measure(expr, ctx)
+  if (!m || Math.abs(m.v - value.n) > 1e-9 * Math.max(1, Math.abs(value.n))) return undefined
+  return m.meas
+}
+
 function numeric(value: Value | undefined): number | undefined {
   if (!value || value.kind === 'text') return undefined
   if (!Number.isFinite(value.n)) return undefined
@@ -62,6 +76,8 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
   const angleMode = options.angleMode ?? 'deg'
   const fractionMode = options.fractionMode ?? false
   const sigFigs = options.sigFigs ?? DEFAULT_SIG_FIGS
+  const sigFigMode = options.sigFigMode ?? false
+  const measures: Record<string, Meas> = { ...options.measures }
   const variables: Record<string, number> = { ...options.variables }
   const functions: Record<string, UserFunction> = { ...options.functions }
   let lastAns = options.ans
@@ -97,15 +113,17 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       expr = assign.expr
     }
 
+    const ctx = { ans: lastAns, angleMode, variables, functions, measures }
+    // `±` is only understood by the measurement walker; its central value is the answer.
+    const plusMinus = hasPlusMinus(expr)
     let value: Value | null = null
     try {
-      value = tryPlainMath(expr, {
-        ans: lastAns,
-        angleMode,
-        variables,
-        functions,
-        defaultUnits: options.defaultUnits,
-      })
+      if (plusMinus) {
+        const m = measure(expr, ctx)
+        value = m ? num(m.v) : null
+      } else {
+        value = tryPlainMath(expr, { ...ctx, defaultUnits: options.defaultUnits })
+      }
     } catch {
       value = null
     }
@@ -119,18 +137,34 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       continue
     }
 
+    const wantMeas = sigFigMode || plusMinus || Boolean(variable) || Object.values(measures).some((m) => m.unc)
+    let meas: Meas | undefined
+    try {
+      meas = measured(expr, value, ctx, wantMeas)
+    } catch {
+      meas = undefined
+    }
     const n = numeric(value)
-    if (n !== undefined) lastAns = n
-    if (variable && n !== undefined) variables[variable] = n
+    if (n !== undefined) {
+      lastAns = n
+      if (meas) measures.ans = meas
+      else delete measures.ans
+    }
+    if (variable && n !== undefined) {
+      variables[variable] = n
+      if (meas) measures[variable] = meas
+      else delete measures[variable]
+    }
 
     let display = ''
     try {
-      display = show(value, fractionMode, sigFigs)
+      display = (meas && formatMeasured(value.n, meas, sigFigMode)) || show(value, fractionMode, sigFigs)
     } catch {
       display = ''
     }
+    const measuredDisplay = Boolean(meas && (meas.unc || (sigFigMode && meas.sig != null)))
     const form =
-      value.kind === 'number' && Number.isFinite(value.n) && wantsExactForm(expr)
+      !measuredDisplay && value.kind === 'number' && Number.isFinite(value.n) && wantsExactForm(expr)
         ? exactForm(value.n, { rationalize: options.rationalize })
         : null
     const exact = form ? withUnit(form, value.unit) : undefined
@@ -140,6 +174,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       value,
       display,
       exact,
+      meas,
       variable,
     })
   }

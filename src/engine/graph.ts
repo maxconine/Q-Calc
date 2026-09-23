@@ -8,9 +8,6 @@ export const DEFAULT_GRAPH_DOMAIN: readonly [number, number] = [-10, 10]
 /** Sample count across the domain (inclusive endpoints). */
 export const DEFAULT_GRAPH_SAMPLES = 401
 
-/** Absolute y-values beyond this are treated as non-finite for scaling/plot gaps. */
-export const GRAPH_Y_CLAMP = 1e6
-
 export interface GraphOptions {
   domain?: [number, number]
   sampleCount?: number
@@ -149,15 +146,16 @@ export function evaluateGraphY(
       functions: options.functions,
     })
     if (!v || v.kind !== 'number' || !Number.isFinite(v.n)) return null
-    if (Math.abs(v.n) > GRAPH_Y_CLAMP) return null
     return v.n
   } catch {
     return null
   }
 }
 
+type GraphY = (x: number) => number | null
+
 /** Compile the expression once into y(x); same results as evaluateGraphY. */
-export function compileGraphY(expression: string, options: GraphOptions = {}): (x: number) => number | null {
+export function compileGraphY(expression: string, options: GraphOptions = {}): GraphY {
   const f = expression.trim()
     ? compileScientific(
         expression,
@@ -175,16 +173,18 @@ export function compileGraphY(expression: string, options: GraphOptions = {}): (
     if (!Number.isFinite(x)) return null
     const v = f(x)
     if (!v || v.kind !== 'number' || !Number.isFinite(v.n)) return null
-    if (Math.abs(v.n) > GRAPH_Y_CLAMP) return null
     return v.n
   }
 }
 
 /** Sample y = f(x) over the domain. */
 export function sampleGraph(expression: string, options: GraphOptions = {}): GraphPoint[] {
+  return sampleWith(compileGraphY(expression, options), options)
+}
+
+function sampleWith(y: GraphY, options: GraphOptions): GraphPoint[] {
   const [xMin, xMax] = normalizeDomain(options.domain)
   const n = Math.max(2, Math.floor(options.sampleCount ?? DEFAULT_GRAPH_SAMPLES))
-  const y = compileGraphY(expression, options)
   const points: GraphPoint[] = []
   const span = xMax - xMin
   for (let i = 0; i < n; i++) {
@@ -226,8 +226,11 @@ export function autoYScale(
   return { min: min - margin, max: max + margin }
 }
 
-/** Critical points via finite-difference derivative sign changes. */
-export function findCriticalPoints(points: GraphPoint[]): CriticalPoint[] {
+/**
+ * Critical points where the finite-difference slope changes sign. With `f`, each is refined by
+ * golden-section search on its neighbouring interval, and spikes at poles are dropped.
+ */
+export function findCriticalPoints(points: GraphPoint[], f?: GraphY): CriticalPoint[] {
   const out: CriticalPoint[] = []
   for (let i = 1; i < points.length - 1; i++) {
     const prev = points[i - 1]!
@@ -244,35 +247,105 @@ export function findCriticalPoints(points: GraphPoint[]): CriticalPoint[] {
     const s1 = Math.sign(d1)
     const s2 = Math.sign(d2)
     if (s1 === 0 || s2 === 0 || s1 === s2) continue
-    let kind: CriticalKind = 'critical'
-    if (s1 > 0 && s2 < 0) kind = 'max'
-    else if (s1 < 0 && s2 > 0) kind = 'min'
-    out.push({ x: cur.x, y: cur.y, kind })
+    const kind: CriticalKind = s1 > 0 ? 'max' : 'min'
+    if (!f) {
+      out.push({ x: cur.x, y: cur.y, kind })
+      continue
+    }
+    const best = goldenSection(f, prev.x, next.x, kind)
+    if (!best) continue
+    // A smooth turn moves y by less than the local variation; a pole runs away.
+    const variation = Math.abs(cur.y - prev.y) + Math.abs(next.y - cur.y)
+    if (Math.abs(best.y - cur.y) > 4 * variation) continue
+    out.push({ ...best, kind })
   }
   return dedupeByX(out)
 }
 
-/** Approximate roots where consecutive finite samples change sign (or hit ~0). */
-export function findRoots(points: GraphPoint[]): GraphRoot[] {
+/**
+ * Roots where consecutive samples change sign, refined by bisection with `f` (poles and jumps,
+ * where |f| stays large, are dropped). A run of zero samples is one root; an all-zero curve has none.
+ */
+export function findRoots(points: GraphPoint[], f?: GraphY): GraphRoot[] {
   const out: GraphRoot[] = []
-  const eps = 1e-12
-  for (let i = 0; i < points.length; i++) {
+  const isZero = (y: number | null) => y != null && Math.abs(y) <= 1e-12
+  const last = points.length - 1
+  for (let i = 0; i <= last; i++) {
     const p = points[i]!
-    if (p.y != null && Math.abs(p.y) <= eps) {
-      out.push({ x: p.x })
+    if (isZero(p.y)) {
+      let j = i
+      while (j < last && isZero(points[j + 1]!.y)) j++
+      // Report the end of the run that meets the curve (`floor(x)` → 0, `max(0, x)` → 0).
+      if (i > 0 || j < last) out.push({ x: points[i === 0 ? j : i]!.x })
+      i = j
       continue
     }
     if (i === 0) continue
     const prev = points[i - 1]!
-    if (prev.y == null || p.y == null) continue
-    if (Math.sign(prev.y) === 0 || Math.sign(p.y) === 0) continue
+    if (prev.y == null || p.y == null || isZero(prev.y)) continue
     if (Math.sign(prev.y) === Math.sign(p.y)) continue
-    // Linear interpolate zero crossing.
-    const t = prev.y / (prev.y - p.y)
-    const x = prev.x + t * (p.x - prev.x)
-    out.push({ x })
+    const x = f ? bisectRoot(f, prev.x, prev.y, p.x, p.y) : prev.x + (prev.y / (prev.y - p.y)) * (p.x - prev.x)
+    if (x != null) out.push({ x })
   }
   return dedupeRoots(out)
+}
+
+function bisectRoot(f: GraphY, lo: number, yLo: number, hi: number, yHi: number): number | null {
+  const scale = Math.max(Math.abs(yLo), Math.abs(yHi))
+  let a = lo
+  let b = hi
+  let ya = yLo
+  for (let k = 0; k < 200; k++) {
+    const mid = (a + b) / 2
+    if (mid <= a || mid >= b) break
+    const ym = f(mid)
+    if (ym == null) return null
+    if (ym === 0) return mid
+    if (Math.sign(ym) === Math.sign(ya)) {
+      a = mid
+      ya = ym
+    } else b = mid
+  }
+  const fa = f(a)
+  const fb = f(b)
+  if (fa == null || fb == null) return null
+  const [x, y] = Math.abs(fa) <= Math.abs(fb) ? [a, fa] : [b, fb]
+  return Math.abs(y) <= 1e-6 * scale ? x : null
+}
+
+const INV_PHI = (Math.sqrt(5) - 1) / 2
+
+function goldenSection(f: GraphY, lo: number, hi: number, kind: CriticalKind): { x: number; y: number } | null {
+  const sign = kind === 'max' ? -1 : 1
+  const g = (x: number) => {
+    const y = f(x)
+    return y == null ? null : sign * y
+  }
+  let a = lo
+  let b = hi
+  let c = b - INV_PHI * (b - a)
+  let d = a + INV_PHI * (b - a)
+  let gc = g(c)
+  let gd = g(d)
+  for (let k = 0; k < 200 && c < d; k++) {
+    if (gc == null || gd == null) return null
+    if (gc < gd) {
+      b = d
+      d = c
+      gd = gc
+      c = b - INV_PHI * (b - a)
+      gc = g(c)
+    } else {
+      a = c
+      c = d
+      gc = gd
+      d = a + INV_PHI * (b - a)
+      gd = g(d)
+    }
+  }
+  const x = (a + b) / 2
+  const y = f(x)
+  return y == null ? null : { x, y }
 }
 
 /**
@@ -311,8 +384,10 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
     }
   }
 
-  const sampleOpts: GraphOptions = { ...options, functions, domain }
-  const points = sampleGraph(intent.expression, sampleOpts)
+  // Always radians: in degrees sin(x) over [-10, 10] is a flat line.
+  const sampleOpts: GraphOptions = { ...options, angleMode: 'rad', functions, domain }
+  const f = compileGraphY(intent.expression, sampleOpts)
+  const points = sampleWith(f, sampleOpts)
   const finite = points.some((p) => p.y != null)
   if (!finite) {
     return {
@@ -331,8 +406,8 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
     points,
     domain,
     yScale: autoYScale(points),
-    criticalPoints: findCriticalPoints(points),
-    roots: findRootsFlag ? findRoots(points) : [],
+    criticalPoints: findCriticalPoints(points, f),
+    roots: findRootsFlag ? findRoots(points, f) : [],
   }
 }
 

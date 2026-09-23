@@ -1,5 +1,6 @@
 import { evaluateLine, parseAssignment, parseFunctionDef } from '../engine/evaluate'
-import type { UserFunction } from '../engine/types'
+import { sanitizeMeas } from '../engine/measure'
+import type { Meas, UserFunction } from '../engine/types'
 
 export type HistoryRow = {
   id: string
@@ -7,6 +8,8 @@ export type HistoryRow = {
   display: string
   exact?: string
   n?: number
+  /** Sig figs / ± uncertainty of a measured answer, so `x` and `ans` keep them. */
+  meas?: Meas
   kind?: 'definition' | 'function'
   /** Present when kind is `'function'` (survives expr truncation). */
   fnName?: string
@@ -79,6 +82,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     display,
     exact,
     n: kind === 'function' || row.n == null || !Number.isFinite(row.n) ? undefined : row.n,
+    meas: kind ? undefined : sanitizeMeas(row.meas),
     kind,
     ...fnFields,
   }
@@ -96,6 +100,7 @@ export function normalizeHistoryRow(
     display: typeof row.display === 'string' ? row.display : '',
     exact: typeof row.exact === 'string' ? row.exact : undefined,
     n: typeof row.n === 'number' ? row.n : undefined,
+    meas: row.meas,
     kind,
     fnName: typeof row.fnName === 'string' ? row.fnName : undefined,
     fnParams: Array.isArray(row.fnParams)
@@ -171,6 +176,22 @@ export function historyVariables(rows: HistoryRow[]): Record<string, number> {
     }
   }
   return vars
+}
+
+/** Measurement metadata of history variables (newest wins) plus `ans` for the last answer. */
+export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
+  const out: Record<string, Meas> = {}
+  let last: HistoryRow | undefined
+  for (const row of rows) {
+    if (row.kind === 'definition' || row.kind === 'function') continue
+    if (row.n != null && Number.isFinite(row.n)) last = row
+    const parsed = parseAssignment(row.expr.trim())
+    if (!parsed) continue
+    if (row.meas) out[parsed.variable] = row.meas
+    else delete out[parsed.variable]
+  }
+  if (last?.meas) out.ans = last.meas
+  return out
 }
 
 /** User function definitions from history, newest wins. */

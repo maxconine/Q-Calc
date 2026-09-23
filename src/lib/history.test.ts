@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { evaluateLine } from '../engine/evaluate'
 import {
   ellipsize,
   historyFunctions,
+  historyMeasures,
   historyVariables,
   lastHistoryNumber,
   MAX_HISTORY,
@@ -320,5 +322,35 @@ describe('sticky definitions', () => {
     const saved = persistableHistory(rows)
     expect(saved.map((r) => r.id)).toEqual(['f2', ...calcs(MAX_HISTORY).map((r) => r.id)])
     expect(historyFunctions(saved)).toEqual({ f: { params: ['x'], body: '2x' } })
+  })
+})
+
+describe('measured answers', () => {
+  it('keeps sig figs and uncertainty through slimming and storage', () => {
+    const r = slimHistoryRow({ id: '1', expr: 'x = 2.50', display: '2.50', n: 2.5, meas: { sig: 3, dp: 2 } })
+    expect(r?.meas).toEqual({ sig: 3, dp: 2 })
+    const stored = JSON.parse(JSON.stringify([r])) as HistoryRow[]
+    expect(normalizeHistoryRow(stored[0]!, 'x')?.meas).toEqual({ sig: 3, dp: 2 })
+  })
+
+  it('drops malformed metadata', () => {
+    const bad = { id: '1', expr: '1', display: '1', n: 1, meas: { sig: 'x', unc: -1 } } as unknown as HistoryRow
+    expect(normalizeHistoryRow(bad, 'a')?.meas).toBeUndefined()
+  })
+
+  it('maps variables and the last answer to their metadata, newest wins', () => {
+    const rows: HistoryRow[] = [
+      { id: '1', expr: 'x = 2.50', display: '2.50', n: 2.5, meas: { sig: 3, dp: 2 } },
+      { id: '2', expr: 'y = 10 ± 0.7', display: '10.0 ± 0.7', n: 10, meas: { unc: 0.7 } },
+      { id: '3', expr: 'x = 4', display: '4', n: 4 },
+      { id: '4', expr: '1.5 * 2', display: '3.0', n: 3, meas: { sig: 2, dp: 1 } },
+    ]
+    expect(historyMeasures(rows)).toEqual({ y: { unc: 0.7 }, ans: { sig: 2, dp: 1 } })
+  })
+
+  it('feeds a later line so x keeps its sig figs', () => {
+    const rows: HistoryRow[] = [{ id: '1', expr: 'x = 2.50', display: '2.50', n: 2.5, meas: { sig: 3, dp: 2 } }]
+    const r = evaluateLine('x * 3.1', { sigFigMode: true, variables: historyVariables(rows), measures: historyMeasures(rows) })
+    expect(r.display).toBe('7.8')
   })
 })

@@ -20,6 +20,8 @@ interface Props {
   onEnter: () => void
   onUp: () => boolean
   onDown: () => boolean
+  /** ⌥↑ / ⌥↓: step the answer's SI prefix. */
+  onPrefixStep?: (dir: 1 | -1) => void
   handleRef?: MutableRefObject<QuickInputHandle | null>
 }
 
@@ -31,6 +33,8 @@ const TOKEN_REPLACEMENTS: [RegExp, string][] = [
   [/(?<![A-Za-z])inf(?![A-Za-z0-9])/gi, '∞'],
   [/(?<![A-Za-z])cbrt(?![A-Za-z0-9])/gi, '∛'],
   [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
+  [/\+-/g, '±'],
+  [/~/g, '±'],
 ]
 
 export function flattenPastedText(text: string): string {
@@ -50,9 +54,9 @@ export function spliceText(
 }
 
 function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing: boolean): string {
-  // A token that ends the text may still be the start of a word being typed (`pi` → `pint`).
+  // A word token that ends the text may still be the start of a longer word (`pi` → `pint`); symbols convert at once.
   const swap = (put: string) => (m: string, offset: number, whole: string) =>
-    keepTrailing && offset + m.length === whole.length ? m : put
+    keepTrailing && offset + m.length === whole.length && /[A-Za-z]$/.test(m) ? m : put
   let out = text
   for (const [re, put] of TOKEN_REPLACEMENTS) {
     re.lastIndex = 0
@@ -68,7 +72,7 @@ export function prettyTokens(text: string, ansPlain?: string, caret?: number): s
   return replaceTokens(text.slice(0, caret), ansPlain, true) + replaceTokens(text.slice(caret), ansPlain, false)
 }
 
-export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, handleRef }: Props) {
+export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, onPrefixStep, handleRef }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLSpanElement>(null)
   const [prefixWidth, setPrefixWidth] = useState(0)
@@ -76,6 +80,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
   const onEnterRef = useRef(onEnter)
   const onUpRef = useRef(onUp)
   const onDownRef = useRef(onDown)
+  const onPrefixStepRef = useRef(onPrefixStep)
   const ansRef = useRef(ansPlain)
   const heldRef = useRef('')
   const metaRef = useRef(false)
@@ -85,6 +90,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
   onEnterRef.current = onEnter
   onUpRef.current = onUp
   onDownRef.current = onDown
+  onPrefixStepRef.current = onPrefixStep
   ansRef.current = ansPlain
 
   const readHighlight = (el: HTMLInputElement | null): string => {
@@ -193,8 +199,16 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
       rememberHighlight(el)
     }
     const onArrow = (e: globalThis.KeyboardEvent) => {
-      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
+        // A ↑/↓ whose keyup landed elsewhere must not keep pinning the caret against ←/→.
+        holdingArrowRef.current = false
+        return
+      }
       e.preventDefault()
+      if (e.altKey) {
+        onPrefixStepRef.current?.(e.key === 'ArrowUp' ? 1 : -1)
+        return
+      }
       holdingArrowRef.current = true
       pinCaret(el)
       if (e.key === 'ArrowUp') onUpRef.current()
@@ -229,6 +243,17 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, h
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
       e.preventDefault()
+      return
+    }
+    // macOS WebKit maps Home/End to page scrolling, not the caret.
+    if ((e.key === 'Home' || e.key === 'End') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault()
+      const el = e.currentTarget
+      const to = e.key === 'Home' ? 0 : el.value.length
+      const anchor = el.selectionDirection === 'backward' ? (el.selectionEnd ?? to) : (el.selectionStart ?? to)
+      if (!e.shiftKey) el.setSelectionRange(to, to)
+      else if (to < anchor) el.setSelectionRange(to, anchor, 'backward')
+      else el.setSelectionRange(anchor, to, 'forward')
       return
     }
     if (e.key !== 'ArrowRight' || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return

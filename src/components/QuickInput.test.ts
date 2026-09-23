@@ -105,6 +105,11 @@ const TYPED_CASES: Array<{ typed: string; shown: string; ans?: string }> = [
   { typed: 'cbrt(8)', shown: '∛(8)' },
   { typed: 'inf+1', shown: '∞+1' },
   { typed: '2ans', shown: '2ans', ans: '42' },
+  { typed: '10 +- 0.7', shown: '10 ± 0.7' },
+  { typed: '10 ~ 0.7', shown: '10 ± 0.7' },
+  { typed: '5+-2', shown: '5±2' },
+  { typed: '5 - -2', shown: '5 - -2' },
+  { typed: '5+(-2)', shown: '5+(-2)' },
 ]
 
 describe('prettyTokens while typing', () => {
@@ -117,6 +122,12 @@ describe('prettyTokens while typing', () => {
     expect(prettyTokens('pi+pi', undefined, 2)).toBe('pi+π')
     expect(prettyTokens('ans', '3', 3)).toBe('ans')
     expect(prettyTokens('ans*', '3', 4)).toBe('3*')
+  })
+
+  it('converts +- and ~ as soon as they are typed', () => {
+    expect(prettyTokens('10 +-', undefined, 5)).toBe('10 ±')
+    expect(prettyTokens('10 ~', undefined, 4)).toBe('10 ±')
+    expect(prettyTokens('(5+-)', undefined, 4)).toBe('(5±)')
   })
 
   it('settles the waiting token without a caret (Enter, blur)', () => {

@@ -94,6 +94,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 .spotlight {
+  position: relative;
   width: min(680px, calc(100vw - 24px));
   background: var(--bg);
   border-radius: var(--radius);
@@ -102,10 +103,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   flex-direction: column;
   font-family: var(--font);
-}
-
-.spotlight.sixty-seven-on {
-  overflow: visible;
 }
 
 .spotlight-embedded {
@@ -125,109 +122,86 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--bg);
 }
 
+/* 67: two open hands rise from the panel's bottom edge, weigh "six… seven", and sink. */
 .sixty-seven-arms {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
   pointer-events: none;
-  z-index: 6;
-  overflow: visible;
+  z-index: 7;
 }
 
-.sixty-seven-arms .arm {
+.sixty-seven-arm {
   position: absolute;
-  bottom: 4px;
-  width: 48px;
-  height: 88px;
-  opacity: 0;
-  visibility: hidden;
+  bottom: 0;
+  width: 36px;
+  height: 52px;
+  color: var(--muted);
+  transform: translateY(100%);
   transform-origin: 50% 100%;
+  visibility: hidden;
 }
 
-.sixty-seven-arms .arm-left {
-  left: -6px;
-  transform: translateY(28px) rotate(8deg);
+.sixty-seven-arm-left {
+  left: calc(50% - 46px);
 }
 
-.sixty-seven-arms .arm-right {
-  right: -6px;
-  transform: translateY(28px) rotate(-8deg);
+.sixty-seven-arm-right {
+  left: calc(50% + 10px);
 }
 
-.sixty-seven-arms.shaking .arm {
+.sixty-seven-arms.shaking .sixty-seven-arm {
   visibility: visible;
+  animation: sixty-seven-weigh 2.5s ease-in-out both;
 }
 
-.sixty-seven-arms.shaking .arm-left {
-  animation:
-    sixty-seven-poke-left 0.35s ease-out forwards,
-    sixty-seven-shake-left 0.32s ease-in-out 0.35s 8,
-    sixty-seven-tuck-left 0.28s ease-in 2.72s forwards;
+.sixty-seven-arms.shaking .sixty-seven-arm-right {
+  animation-delay: 0.24s;
 }
 
-.sixty-seven-arms.shaking .arm-right {
-  animation:
-    sixty-seven-poke-right 0.35s ease-out forwards,
-    sixty-seven-shake-right 0.32s ease-in-out 0.35s 8,
-    sixty-seven-tuck-right 0.28s ease-in 2.72s forwards;
-}
-
-@keyframes sixty-seven-poke-left {
-  to {
-    opacity: 1;
-    transform: translateY(-10px) rotate(-14deg);
+@keyframes sixty-seven-weigh {
+  0% {
+    transform: translateY(100%);
+  }
+  12%,
+  32%,
+  52%,
+  72% {
+    transform: translateY(14px) rotate(3deg);
+  }
+  22%,
+  42%,
+  62%,
+  82% {
+    transform: translateY(2px) rotate(-3deg);
+  }
+  88% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(100%);
   }
 }
 
-@keyframes sixty-seven-poke-right {
-  to {
-    opacity: 1;
-    transform: translateY(-10px) rotate(14deg);
-  }
-}
-
-@keyframes sixty-seven-shake-left {
+@keyframes sixty-seven-still {
   0%,
   100% {
-    transform: translateY(-10px) rotate(-14deg);
-  }
-  25% {
-    transform: translateY(-14px) rotate(-22deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(-8deg);
-  }
-  75% {
-    transform: translateY(-12px) rotate(-18deg);
-  }
-}
-
-@keyframes sixty-seven-shake-right {
-  0%,
-  100% {
-    transform: translateY(-10px) rotate(14deg);
-  }
-  25% {
-    transform: translateY(-14px) rotate(22deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(8deg);
-  }
-  75% {
-    transform: translateY(-12px) rotate(18deg);
-  }
-}
-
-@keyframes sixty-seven-tuck-left {
-  to {
     opacity: 0;
-    transform: translateY(28px) rotate(8deg);
+    transform: translateY(8px);
+  }
+  15%,
+  85% {
+    opacity: 1;
+    transform: translateY(8px);
   }
 }
 
-@keyframes sixty-seven-tuck-right {
-  to {
-    opacity: 0;
-    transform: translateY(28px) rotate(-8deg);
+@media (prefers-reduced-motion: reduce) {
+  .sixty-seven-arms.shaking .sixty-seven-arm {
+    animation-name: sixty-seven-still;
+    animation-delay: 0s;
   }
 }
 
@@ -544,7 +518,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* Graph panel under composer — keep total overlay ≤ ~560px (composer 72 + tape + graph). */
 .graph {
-  max-height: 300px;
+  max-height: 296px;
   overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--bg-tape);
@@ -622,6 +596,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   stroke-linejoin: round;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
+}
+.graph-dot {
+  fill: var(--answer);
 }
 .graph-mark {
   cursor: pointer;

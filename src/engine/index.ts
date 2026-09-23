@@ -7,7 +7,6 @@ export {
   evaluateGraphY,
   findCriticalPoints,
   findRoots,
-  GRAPH_Y_CLAMP,
   isGraphCommand,
   parseGraphIntent,
   sampleGraph,

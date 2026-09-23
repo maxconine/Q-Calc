@@ -413,7 +413,7 @@ function convertAmount(amount: number, from: Unit, to: Unit): Value | null {
   if (from.dim === 'temperature') n = fromKelvin(toKelvin(amount, from.id), to.id)
   else n = (amount * from.toBase) / to.toBase
   if (!Number.isFinite(n)) return unitError()
-  return { ...num(n), unit: to.symbol }
+  return { ...num(n), unit: to.symbol, unitId: to.id }
 }
 
 const ALIAS_INDEX: { alias: string; unit: Unit }[] = []
@@ -813,20 +813,22 @@ function qtyToValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
     const n = convertQty(q, target)
     if (n == null || !Number.isFinite(n)) return unitError()
     const unit = targetLabel || target.prefer?.symbol || formatCompound(target.dim)
-    return unit ? { ...num(n), unit } : num(n)
+    const { prefer } = target
+    const unitId = prefer && vecEq(vec(prefer.dim), target.dim) && sameScale(target.si, siOf(prefer)) ? prefer.id : undefined
+    return unit ? { ...num(n), unit, unitId } : num(n)
   }
   if (!Number.isFinite(q.si)) return null
   if (isZeroVec(q.dim)) return num(q.si)
   if (q.prefer && vecEq(vec(q.prefer.dim), q.dim)) {
     const n = q.si / siOf(q.prefer)
     if (!Number.isFinite(n)) return null
-    return { ...num(n), unit: q.prefer.symbol }
+    return { ...num(n), unit: q.prefer.symbol, unitId: q.prefer.id }
   }
   const named = namedUnitFor(q.dim)
   if (named) {
     const n = q.si / siOf(named)
     if (!Number.isFinite(n)) return null
-    return { ...num(n), unit: named.symbol }
+    return { ...num(n), unit: named.symbol, unitId: named.id }
   }
   if (q.prefer) {
     const rec = asReciprocal(q, q.prefer)
@@ -1106,6 +1108,84 @@ export function tryConvert(text: string, defaults?: DefaultUnits): Value | null 
   if (!src) return null
   const units = sanitizeDefaultUnits(defaults)
   return trySimpleConvert(src, units) ?? tryUnitExpression(src, units)
+}
+
+/** Units that step through SI prefixes with ⌥↑/⌥↓ (kg and t sit on the gram ladder). */
+const PREFIX_ROOTS = ['m', 'g', 's', 'l', 'j', 'w', 'pa', 'hz', 'n', 'volt', 'amp', 'ohm', 'farad', 'henry', 'coulomb', 'ev']
+
+function prefixExponent(p: Prefix): number {
+  return Math.round(Math.log10(p.factor))
+}
+
+function prefixedUnit(prefix: Prefix, base: Unit, id = `${prefix.name}_${base.id}`): Unit {
+  return { id, dim: base.dim, symbol: prefixedLabel(prefix, base), toBase: base.toBase * prefix.factor, defaultTo: base.id, names: [] }
+}
+
+/** Table units by id, plus the `kilo_n`-style ids of prefixed units synthesized on the fly. */
+function unitById(id: string | undefined): Unit | undefined {
+  if (!id) return undefined
+  const known = BY_ID.get(id)
+  if (known) return known
+  const cut = id.indexOf('_')
+  const prefix = PREFIX_BY_NAME.get(id.slice(0, cut))
+  const base = BY_ID.get(id.slice(cut + 1))
+  return cut > 0 && prefix && base ? prefixedUnit(prefix, base, id) : undefined
+}
+
+/** Where a unit sits on a prefix ladder: `kN` → N at 10³, `cm` → m at 10⁻². */
+function ladderPlace(unit: Unit): { root: Unit; exp: number } | null {
+  for (const id of PREFIX_ROOTS) {
+    const root = BY_ID.get(id)!
+    if (root.dim !== unit.dim) continue
+    const exp = Math.log10(unit.toBase / root.toBase)
+    const k = Math.round(exp)
+    if (Math.abs(exp - k) < 1e-9) return { root, exp: k }
+  }
+  return null
+}
+
+/** The unit at 10^exp on a ladder, preferring the table's own (kN, MPa, t). */
+function ladderUnit(root: Unit, exp: number): Unit | null {
+  if (exp === 0) return root
+  const prefix = PREFIXES.find((p) => prefixExponent(p) === exp)
+  if (!prefix) return null
+  if (root.id === 'g' && exp === 6) return BY_ID.get('tonne')!
+  const unit = prefixedUnit(prefix, root)
+  return UNIT_LIST.find((u) => u.dim === unit.dim && u.symbol === unit.symbol && sameScale(u.toBase, unit.toBase)) ?? unit
+}
+
+function moveOnLadder(value: Value, from: { root: Unit; exp: number }, exp: number): Value | null {
+  const to = ladderUnit(from.root, exp)
+  if (!to) return null
+  const shift = from.exp - exp
+  const scale = 10 ** Math.abs(shift)
+  const n = shift >= 0 ? value.n * scale : value.n / scale
+  return { ...num(n), unit: to.symbol, unitId: to.id }
+}
+
+/**
+ * One engineering step (×10³) up or down the SI prefixes: `98 N` → `0.098 kN`. Null for plain numbers,
+ * units without prefixes (°C, in, hr) and the ends of the ladder (y…Y).
+ */
+export function stepPrefix(value: Value, dir: 1 | -1): Value | null {
+  if (value.kind !== 'number' || !Number.isFinite(value.n)) return null
+  const unit = unitById(value.unitId)
+  const place = unit && ladderPlace(unit)
+  if (!place) return null
+  const exp = dir > 0 ? Math.ceil((place.exp + 1) / 3) * 3 : Math.floor((place.exp - 1) / 3) * 3
+  if (Math.abs(exp) > 24) return null
+  return moveOnLadder(value, place, exp)
+}
+
+/** Re-express a value in a unit from the same prefix ladder (keeps a ⌥↑ choice while typing). */
+export function inLadderUnit(value: Value, unitId: string): Value | null {
+  if (value.kind !== 'number' || !Number.isFinite(value.n)) return null
+  const fromUnit = unitById(value.unitId)
+  const toUnit = unitById(unitId)
+  const from = fromUnit && ladderPlace(fromUnit)
+  const to = toUnit && ladderPlace(toUnit)
+  if (!from || !to || from.root !== to.root) return null
+  return moveOnLadder(value, from, to.exp)
 }
 
 export type UnitChoice = { id: string; label: string }

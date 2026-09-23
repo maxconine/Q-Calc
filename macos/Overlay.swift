@@ -282,6 +282,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let answerForm = AppSettings.shared.answerForm
         let historyInsert = AppSettings.shared.historyInsert
         let rationalize = AppSettings.shared.rationalize ? "true" : "false"
+        let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
         let theme = AppSettings.shared.theme
         let boot = WKUserScript(
             source: """
@@ -289,7 +290,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_META = false;
-            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", rationalize: \(rationalize), theme: "\(theme)" };
+            window.__QCALC_SETTINGS = { sigFigs: \(sigFigs), draftSeconds: \(draftSeconds), defaultUnits: \(defaultUnits), answerForm: "\(answerForm)", historyInsert: "\(historyInsert)", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: "\(theme)" };
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
@@ -662,8 +663,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let form = AppSettings.shared.answerForm
         let insert = AppSettings.shared.historyInsert
         let rationalize = AppSettings.shared.rationalize ? "true" : "false"
+        let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
         let theme = AppSettings.shared.theme
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), theme: \"\(theme)\" }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\" }"
     }
 
     private func applyWebAppearance(_ webView: WKWebView? = nil) {
@@ -678,6 +680,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let rationalize = boolValue(dict["rationalize"]) {
             AppSettings.shared.setRationalize(rationalize, notifyWeb: false)
+        }
+        if let sigFigMode = boolValue(dict["sigFigMode"]) {
+            AppSettings.shared.setSigFigMode(sigFigMode, notifyWeb: false)
         }
     }
 
