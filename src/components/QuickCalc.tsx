@@ -1295,7 +1295,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             }
           >
             {settings.angleMode}
-            <span className="edge-key" aria-hidden="true">⌃D</span>
           </button>
           <button
             type="button"
@@ -1311,7 +1310,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               <span className="edge-frac-bar" />
               <span>b</span>
             </span>
-            <span className="edge-key" aria-hidden="true">⌃F</span>
           </button>
           <button
             type="button"
@@ -1323,7 +1321,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             onClick={() => setSettings((s) => ({ ...s, sigFigMode: !s.sigFigMode }))}
           >
             sf
-            <span className="edge-key" aria-hidden="true">⌃S</span>
           </button>
         </div>
         <button
@@ -1338,7 +1335,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           }}
         >
           clear
-          <span className="edge-key" aria-hidden="true">⌃C</span>
         </button>
         <QuickInput
           value={q}
@@ -1463,23 +1459,23 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           onSelectX={selectGraphX}
         />
       ) : null}
-      <div className={`sixty-seven-arms ${armsShake ? 'shaking' : ''}`} aria-hidden="true">
-        {(['left', 'right'] as const).map((side) => (
-          <svg key={side} className={`sixty-seven-arm sixty-seven-arm-${side}`} viewBox="0 0 36 52">
-            <g
-              fill="currentColor"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="4.4"
-              transform={side === 'right' ? 'matrix(-1 0 0 1 36 0)' : undefined}
-            >
-              <rect x="11" y="32" width="14" height="24" rx="5" stroke="none" />
-              <rect x="8" y="18" width="20" height="20" rx="7" stroke="none" />
-              <path d="M11 22 L9.5 9 M15.5 21 L15 5 M20 21 L20.5 6.5 M24.5 22.5 L26 11 M26 31 L31.5 22" fill="none" />
-            </g>
-          </svg>
-        ))}
-      </div>
+    </div>
+    <div className={`sixty-seven-arms ${armsShake ? 'shaking' : ''}`} aria-hidden="true">
+      {(['left', 'right'] as const).map((side) => (
+        <svg key={side} className={`sixty-seven-arm sixty-seven-arm-${side}`} viewBox="0 0 36 52">
+          <g
+            fill="currentColor"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="4.4"
+            transform={side === 'right' ? 'matrix(-1 0 0 1 36 0)' : undefined}
+          >
+            <rect x="11" y="32" width="14" height="24" rx="5" stroke="none" />
+            <rect x="8" y="18" width="20" height="20" rx="7" stroke="none" />
+            <path d="M11 22 L9.5 9 M15.5 21 L15 5 M20 21 L20.5 6.5 M24.5 22.5 L26 11 M26 31 L31.5 22" fill="none" />
+          </g>
+        </svg>
+      ))}
     </div>
     </div>
     {!embedded ? (

@@ -122,66 +122,92 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: var(--bg);
 }
 
-/* 67: two open hands rise from the panel's bottom edge, weigh "six… seven", and sink. */
+/* 67: two open hands slide down from behind the bar, weigh "six… seven" in the space below it, and retract. */
 .sixty-seven-arms {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: relative;
   height: 0;
+  overflow: hidden;
   pointer-events: none;
-  z-index: 7;
+}
+
+.sixty-seven-arms.shaking {
+  height: 72px;
 }
 
 .sixty-seven-arm {
   position: absolute;
-  bottom: 0;
+  top: 0;
   width: 36px;
   height: 52px;
   color: var(--muted);
-  transform: translateY(100%);
+  transform: translateY(-100%);
   transform-origin: 50% 100%;
   visibility: hidden;
 }
 
 .sixty-seven-arm-left {
-  left: calc(50% - 46px);
+  left: calc(50% - 78px);
 }
 
 .sixty-seven-arm-right {
-  left: calc(50% + 10px);
+  left: calc(50% + 42px);
 }
 
+/* Anti-phase weighing: the hands enter together, then trade places every beat — left leads with the push down. */
 .sixty-seven-arms.shaking .sixty-seven-arm {
   visibility: visible;
   animation: sixty-seven-weigh 2.5s ease-in-out both;
 }
 
 .sixty-seven-arms.shaking .sixty-seven-arm-right {
-  animation-delay: 0.24s;
+  animation-name: sixty-seven-weigh-counter;
 }
 
 @keyframes sixty-seven-weigh {
   0% {
-    transform: translateY(100%);
+    transform: translateY(-100%);
   }
-  12%,
-  32%,
-  52%,
-  72% {
-    transform: translateY(14px) rotate(3deg);
+  8%,
+  28%,
+  48%,
+  68% {
+    transform: translateY(2px) rotate(-4deg);
   }
-  22%,
-  42%,
-  62%,
-  82% {
-    transform: translateY(2px) rotate(-3deg);
+  18%,
+  38%,
+  58%,
+  78% {
+    transform: translateY(18px) rotate(4deg);
   }
-  88% {
+  86% {
     transform: translateY(10px);
   }
   100% {
-    transform: translateY(100%);
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes sixty-seven-weigh-counter {
+  0% {
+    transform: translateY(-100%);
+  }
+  8%,
+  28%,
+  48%,
+  68% {
+    transform: translateY(18px) rotate(4deg);
+  }
+  18%,
+  38%,
+  58%,
+  78% {
+    transform: translateY(2px) rotate(-4deg);
+  }
+  86% {
+    transform: translateY(10px);
+  }
+  100% {
+    transform: translateY(-100%);
   }
 }
 
@@ -207,94 +233,79 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .edge-tools {
   position: absolute;
-  top: 4px;
-  right: 12px;
+  top: 1px;
+  right: 5px;
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 6px;
 }
 .edge-tool {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 12px;
-  min-width: 22px;
-  padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--ink) 16%, var(--line));
-  border-radius: 3px;
-  background: var(--bg);
-  color: var(--muted);
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
   font-family: var(--font);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   line-height: 1;
+  transition: color 120ms ease, background-color 120ms ease;
 }
 .edge-tool.active {
   color: var(--answer);
-  border-color: color-mix(in srgb, var(--answer) 42%, var(--line));
-  background: color-mix(in srgb, var(--answer) 12%, var(--bg));
+  font-weight: 600;
 }
 .edge-tool:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--ink) 22%, var(--line));
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 7%, transparent);
+}
+.edge-tool.active:hover:not(:disabled) {
+  color: var(--answer);
+}
+.edge-tool:active:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 14%, transparent);
+  transition-duration: 40ms;
 }
 .edge-angle {
   text-transform: lowercase;
-}
-.edge-frac {
-  min-width: 18px;
-  padding: 0 5px;
 }
 .edge-frac-mark {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 6px;
+  font-size: 6.5px;
   font-weight: 600;
   line-height: 0.8;
   letter-spacing: 0;
 }
 .edge-frac-bar {
-  width: 6px;
+  width: 7px;
   height: 1px;
   margin: 0.5px 0;
   background: currentColor;
 }
 .edge-clear {
   position: absolute;
-  right: 12px;
-  bottom: 4px;
+  right: 5px;
+  bottom: 1px;
   z-index: 5;
-  padding: 0 5px;
 }
-.edge-clear .edge-key {
-  top: auto;
-  bottom: calc(100% + 4px);
-}
-.edge-key {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  z-index: 6;
-  transform: translateX(-50%);
-  padding: 3px 6px;
-  border-radius: 5px;
-  background: var(--ink);
-  color: var(--bg);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  text-transform: none;
-  white-space: nowrap;
+/* The toggles stay out of sight until the pointer is over the bar (or one has keyboard focus). */
+.edge-tools,
+.edge-clear {
   opacity: 0;
-  pointer-events: none;
+  transition: opacity 150ms ease;
 }
-.edge-tool:hover .edge-key,
-.edge-tool:focus-visible .edge-key {
+.composer:hover .edge-tools,
+.composer:hover .edge-clear,
+.edge-tools:focus-within,
+.edge-clear:focus-visible {
   opacity: 1;
 }
 
