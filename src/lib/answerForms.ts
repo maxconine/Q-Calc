@@ -1,5 +1,5 @@
 import { evaluateLine } from '../engine/evaluate'
-import { clampSigFigs, formatNumber, formatValue } from '../engine/format'
+import { clampSigFigs, formatNumber, formatScientific, formatValue } from '../engine/format'
 import { formatAsFraction } from '../engine/scientific'
 import { exactForm } from '../engine/simplify'
 import type { Meas, Value } from '../engine/types'
@@ -26,13 +26,6 @@ function sameNumber(text: string, n: number): boolean {
   const back = evaluateLine(text, { angleMode: 'rad' }).value
   if (back?.kind !== 'number' || back.unit || !Number.isFinite(back.n)) return false
   return Math.abs(back.n - n) <= SAME_NUMBER * Math.max(1, Math.abs(n))
-}
-
-function scientific(n: number, sigFigs: number): string {
-  return n
-    .toExponential(clampSigFigs(sigFigs) - 1)
-    .replace(/(\.\d*?)0+(e[+-]?\d+)$/, '$1$2')
-    .replace(/\.e/, 'e')
 }
 
 function withUnit(text: string, unit: string | undefined): string {
@@ -64,7 +57,7 @@ export function answerForms(src: FormSource): AnswerView[] {
   const exact = exactForm(n, { rationalize: src.rationalize })
   if (exact && /[π√]|pi|sqrt/.test(exact) && !/e[+-]/.test(exact) && exact.replace(/\D/g, '').length <= 6 && sameNumber(exact, n)) add(withUnit(exact, unit))
   const mag = n === 0 ? 0 : Math.floor(Math.log10(Math.abs(n)))
-  if (Math.abs(mag) >= 3) add(withUnit(scientific(n, sigFigs), unit))
+  if (Math.abs(mag) >= 3) add(withUnit(formatScientific(n, clampSigFigs(sigFigs)), unit))
   for (const alt of unitAlternatives(value)) add(formatValue(alt, sigFigs), alt)
 
   const shown = new Set(dual ? [] : [src.display.trim()])

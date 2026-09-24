@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { isEditOf, STEADY_MS } from '../lib/steady'
+import { isEditOf, STEADY_FADE_MS, STEADY_MS } from '../lib/steady'
 
 export type SteadyAnswer = { text: string; fading: boolean }
 
@@ -11,6 +11,7 @@ export type SteadyAnswer = { text: string; fading: boolean }
 export function useSteadyAnswer(q: string, answer: string | null, context: unknown): SteadyAnswer | null {
   const good = useRef<{ q: string; text: string; context: unknown } | null>(null)
   const [fadedFor, setFadedFor] = useState<string | null>(null)
+  const [goneFor, setGoneFor] = useState<string | null>(null)
   if (answer) good.current = { q, text: answer, context }
   else if (answer == null || !q.trim()) good.current = null
   const last = good.current
@@ -19,8 +20,13 @@ export function useSteadyAnswer(q: string, answer: string | null, context: unkno
   useEffect(() => {
     if (!held) return
     const t = window.setTimeout(() => setFadedFor(q), STEADY_MS)
-    return () => window.clearTimeout(t)
+    // once faded it lets go of its width too, so the input isn't left beside an empty gap
+    const gone = window.setTimeout(() => setGoneFor(q), STEADY_MS + STEADY_FADE_MS)
+    return () => {
+      window.clearTimeout(t)
+      window.clearTimeout(gone)
+    }
   }, [held, q])
 
-  return held && last ? { text: last.text, fading: fadedFor === q } : null
+  return held && last && goneFor !== q ? { text: last.text, fading: fadedFor === q } : null
 }

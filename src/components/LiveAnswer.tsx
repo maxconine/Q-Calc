@@ -66,7 +66,7 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
       </span>
     )
   }
-  const letter = label ? (
+  const varLabel = label ? (
     <span className="live-var" aria-hidden>
       {label} =
     </span>
@@ -83,7 +83,7 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
     return (
       <div className="live-dual" role="group" aria-label="Answer">
         {copied ? CHECK : null}
-        {letter}
+        {varLabel}
         <button
           type="button"
           className={`live live-part${copiedSide === 'exact' ? ' copied' : ''}`}
@@ -138,7 +138,7 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
     >
       <span className="live-text">
         {copied ? CHECK : null}
-        {letter}
+        {varLabel}
         <RadicalText text={pretty} answer />
       </span>
     </button>

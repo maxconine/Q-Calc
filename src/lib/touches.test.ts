@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { equalsCommits, lineCopyText } from './touches'
+import { lineCopyText } from './touches'
 
 describe('⌘⇧C line copy', () => {
   it('writes the line and its answer', () => {
@@ -31,24 +31,5 @@ describe('⌘⇧C line copy', () => {
   it('is just the answer without a line, and empty without an answer', () => {
     expect(lineCopyText('', { display: '3' }, 'approx')).toBe('3')
     expect(lineCopyText('2+', { display: '' }, 'approx')).toBe('')
-  })
-})
-
-describe('= saves plain arithmetic', () => {
-  const end = (t: string) => ({ start: t.length, end: t.length })
-
-  it('saves arithmetic when typed at the end', () => {
-    for (const t of ['2+3', '12 × 7', '(1+2)^2', '√2', '15%', '*2', '- 3', '1,234.5/2', '2π', '5!'])
-      expect(equalsCommits(t, end(t)), t).toBe(true)
-  })
-
-  it('leaves = alone where it can mean something', () => {
-    for (const t of ['x', '2x + 1', 'f(x)', 'x^2', 'a = 3', '5 ft', 'sin(30)', 'ans', '', '  ', '()', '2+2='])
-      expect(equalsCommits(t, end(t)), t).toBe(false)
-  })
-
-  it('only at the very end with nothing selected', () => {
-    expect(equalsCommits('2+3', { start: 1, end: 1 })).toBe(false)
-    expect(equalsCommits('2+3', { start: 0, end: 3 })).toBe(false)
   })
 })

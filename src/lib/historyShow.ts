@@ -5,7 +5,7 @@ export type HistoryShow = 'recent' | 'always' | 'arrow'
 
 export const DEFAULT_HISTORY_SHOW: HistoryShow = 'recent'
 
-export const RECENT_MS = 2 * 60 * 1000
+export const RECENT_MS = 5 * 60 * 1000
 export const RECENT_ROWS = 5
 
 export function normalizeHistoryShow(value: unknown): HistoryShow {
@@ -24,13 +24,14 @@ export function recentStart(history: HistoryRow[], now: number): number {
   return i
 }
 
+// variables and functions only count from rows you can see: the whole tape when it's always open,
+// otherwise the recent rows, even when ↑ has opened the rest
+export function scopeStart(history: HistoryRow[], show: HistoryShow, now: number): number {
+  return show === 'always' ? 0 : recentStart(history, now)
+}
+
 // when the recent view next changes on its own, or null if it won't
 export function nextRecentExpiry(history: HistoryRow[], now: number): number | null {
-  const start = recentStart(history, now)
-  let soonest: number | null = null
-  for (let i = start; i < history.length; i++) {
-    const end = history[i]!.at! + RECENT_MS + 1
-    if (soonest == null || end < soonest) soonest = end
-  }
-  return soonest
+  const ends = history.slice(recentStart(history, now)).map((row) => row.at! + RECENT_MS + 1)
+  return ends.length ? Math.min(...ends) : null
 }

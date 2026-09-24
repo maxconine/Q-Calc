@@ -48,7 +48,7 @@ function answerTitle(row: HistoryRow, answerForm: AnswerForm): string {
 }
 
 export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, onInsert, onInsertExpr, onInsertAnswer, from = 0 }: Props) {
-  const singles = alignDecimals(
+  const aligned = alignDecimals(
     history.map((row, i) =>
       i < from || row.kind === 'definition' || unaligned(row) || hasDualAnswer(row) ? null : prettyAnswer(visibleAnswer(row, answerForm)),
     ),
@@ -86,7 +86,7 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
                 className="tape-a"
                 title="Insert approximation at the cursor"
                 onMouseDown={keepFocus}
-                onClick={() => onInsert(solveInsert(row, sigFigs) ?? insertableAnswer(row.display, row.n, sigFigs))}
+                onClick={() => onInsert(insertableHistoryAnswer(row, 'approx', sigFigs))}
               >
                 {row.solve ? prettyRoots(row.display) : prettyAnswer(row.display)}
               </button>
@@ -104,7 +104,7 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
             >
               {solvedFor(row)}
               <RadicalText
-                text={singles[i] ?? (row.solve ? prettyRoots(visibleAnswer(row, answerForm)) : visibleAnswer(row, answerForm))}
+                text={aligned[i] ?? (row.solve ? prettyRoots(visibleAnswer(row, answerForm)) : visibleAnswer(row, answerForm))}
                 answer={row.kind !== 'definition'}
               />
             </button>

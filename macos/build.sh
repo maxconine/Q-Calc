@@ -140,6 +140,7 @@ swiftc -parse-as-library \
   "$MAC/Overlay.swift" \
   "$MAC/UnitSettings.swift" \
   "$MAC/SettingsWindow.swift" \
+  "$MAC/PeriodicWindow.swift" \
   "$MAC/QCalcApp.swift" \
   -o "$BIN"
 

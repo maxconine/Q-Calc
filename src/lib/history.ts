@@ -43,18 +43,15 @@ function slimExpr(expr: string): string {
   if (expr.length <= MAX_HISTORY_EXPR) return expr
   const trimmed = expr.trim()
   const fn = parseFunctionDef(trimmed)
-  if (fn) {
-    const prefix = `${fn.name}(${fn.params.join(', ')}) = `
-    const restMax = Math.max(8, MAX_HISTORY_EXPR - prefix.length)
-    return `${prefix}${ellipsize(fn.body, restMax)}`
-  }
-  const parsed = parseAssignment(trimmed)
-  if (parsed) {
-    const prefix = `${parsed.variable} = `
-    const restMax = Math.max(8, MAX_HISTORY_EXPR - prefix.length)
-    return `${prefix}${ellipsize(parsed.expr, restMax)}`
-  }
+  if (fn) return withPrefix(`${fn.name}(${fn.params.join(', ')}) = `, fn.body)
+  const assigned = parseAssignment(trimmed)
+  if (assigned) return withPrefix(`${assigned.variable} = `, assigned.expr)
   return ellipsize(expr, MAX_HISTORY_EXPR)
+}
+
+// a definition keeps its name whole and cuts the right-hand side instead
+function withPrefix(prefix: string, rest: string): string {
+  return `${prefix}${ellipsize(rest, Math.max(8, MAX_HISTORY_EXPR - prefix.length))}`
 }
 
 const SOLVE_OUTCOMES = new Set(['roots', 'none', 'contradiction', 'noneFound', 'all'])
@@ -68,17 +65,22 @@ function sanitizeSolve(raw: unknown): SolveInfo | undefined {
   return { variable: s.variable, roots: [...s.roots], outcome: s.outcome, ...(s.more === true && { more: true }) }
 }
 
+function rowKind(kind: unknown): HistoryRow['kind'] {
+  return kind === 'definition' || kind === 'function' ? kind : undefined
+}
+
 function slimFunctionFields(row: HistoryRow): Pick<HistoryRow, 'fnName' | 'fnParams' | 'fnBody'> {
   if (row.kind !== 'function') return {}
-  const name =
-    typeof row.fnName === 'string' && row.fnName
-      ? row.fnName
-      : parseFunctionDef(row.expr.trim())?.name
+  const hasName = typeof row.fnName === 'string' && row.fnName !== ''
+  const hasBody = typeof row.fnBody === 'string'
+  // only re-read the expr for fields the row is missing
+  const parsed = hasName && hasBody && Array.isArray(row.fnParams) ? null : parseFunctionDef(row.expr.trim())
+  const name = hasName ? row.fnName : parsed?.name
   if (!name) return {}
   const params = Array.isArray(row.fnParams)
     ? row.fnParams.filter((p): p is string => typeof p === 'string')
-    : parseFunctionDef(row.expr.trim())?.params ?? []
-  let body = typeof row.fnBody === 'string' ? row.fnBody : parseFunctionDef(row.expr.trim())?.body
+    : parsed?.params ?? []
+  let body = hasBody ? row.fnBody : parsed?.body
   if (body == null) return { fnName: name, fnParams: params }
   if (body.length > MAX_HISTORY_EXPR) body = ellipsize(body, MAX_HISTORY_EXPR)
   return { fnName: name, fnParams: params, fnBody: body }
@@ -90,8 +92,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
   let exact = row.exact ? ellipsize(row.exact, MAX_HISTORY_EXACT) : undefined
   if (exact && exact === display) exact = undefined
   if (!expr.trim() && !display.trim()) return null
-  const kind =
-    row.kind === 'definition' ? 'definition' : row.kind === 'function' ? 'function' : undefined
+  const kind = rowKind(row.kind)
   const fnFields = slimFunctionFields({ ...row, kind, expr })
   const solve = kind ? undefined : sanitizeSolve(row.solve)
   return {
@@ -114,8 +115,7 @@ export function normalizeHistoryRow(
   row: Partial<HistoryRow> & { latex?: string },
   fallbackId: string,
 ): HistoryRow | null {
-  const kind =
-    row.kind === 'definition' ? 'definition' : row.kind === 'function' ? 'function' : undefined
+  const kind = rowKind(row.kind)
   return slimHistoryRow({
     id: typeof row.id === 'string' && row.id ? row.id : fallbackId,
     expr: typeof row.expr === 'string' ? row.expr : typeof row.latex === 'string' ? row.latex : '',
@@ -145,7 +145,7 @@ function definedName(row: HistoryRow): string | undefined {
   return variable ? `var:${variable}` : undefined
 }
 
-// older definitions stay so `x = 5` still works after ten more calculations
+// a definition outlives the last ten rows, so `x = 5` still works long after
 function withStickyDefinitions(rows: HistoryRow[]): HistoryRow[] {
   const recent = rows.slice(-MAX_HISTORY)
   const seen = new Set(recent.map(definedName).filter(Boolean))
@@ -160,12 +160,9 @@ function withStickyDefinitions(rows: HistoryRow[]): HistoryRow[] {
 }
 
 export function persistableHistory(rows: HistoryRow[]): HistoryRow[] {
-  const slimmed: HistoryRow[] = []
-  for (const row of withStickyDefinitions(rows)) {
-    const next = slimHistoryRow(row)
-    if (next) slimmed.push(next)
-  }
-  let out = slimmed
+  let out = withStickyDefinitions(rows)
+    .map(slimHistoryRow)
+    .filter((row): row is HistoryRow => row != null)
   while (out.length && JSON.stringify(out).length > MAX_HISTORY_JSON) {
     out = out.slice(1)
   }

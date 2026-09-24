@@ -24,7 +24,7 @@ const NAMES = new Set(`${SCIENTIFIC_NAMES}|e|in|to|as|of|per|and|or|mod`.toLower
 // a prefix on its own (`kilo`) still reads as the start of a longer unit
 const PREFIX_WORDS = new Set(['kilo', 'mega', 'giga', 'tera', 'milli', 'micro', 'nano', 'centi'])
 
-export type CompletionNames = { variables?: string[]; functions?: string[] }
+export type CompletionNames = { variables?: string[]; functions?: string[]; ans?: boolean }
 
 function isWholeWord(word: string, user: string[]): boolean {
   const lower = word.toLowerCase()

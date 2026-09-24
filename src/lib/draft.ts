@@ -15,9 +15,7 @@ type HideAction = 'commit' | 'keep' | 'clear'
 export function hideAction(expr: string, display: string, draftSeconds: number): HideAction {
   if (!expr.trim()) return 'clear'
   if (draftSeconds > 0) return 'keep'
-  if (isImproperUnitConversion(display)) return 'clear'
-  if (display) return 'commit'
-  return 'clear'
+  return display && !isImproperUnitConversion(display) ? 'commit' : 'clear'
 }
 
 export function shouldRestoreDraft(savedAt: number, now: number, draftSeconds: number): boolean {

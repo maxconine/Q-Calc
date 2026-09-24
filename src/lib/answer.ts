@@ -10,13 +10,13 @@ function stripGroupingCommas(s: string): string {
 
 // inserts the displayed magnitude at sig figs, never the engine's full-precision `n`
 export function insertableAnswer(display: string, n?: number, sigFigs = DEFAULT_SIG_FIGS): string {
-  const shown = stripGroupingCommas(display).trim()
-  if (isImproperUnitConversion(shown)) return ''
+  const plain = stripGroupingCommas(display).trim()
+  if (isImproperUnitConversion(plain)) return ''
   // parenthesized so `ans*2` doesn't bind to the uncertainty alone
-  if (shown.includes('±')) return `(${shown})`
-  if (shown && !PLAIN_NUMBER.test(shown)) return shown
+  if (plain.includes('±')) return `(${plain})`
+  if (plain && !PLAIN_NUMBER.test(plain)) return plain
   if (n != null && Number.isFinite(n)) return formatNumber(n, sigFigs)
-  return shown
+  return plain
 }
 
 const ATOM = /^(?:(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|[A-Za-zπτ]+)$/i
@@ -83,8 +83,7 @@ export function hasDualAnswer(row: { display: string; exact?: string }): boolean
 }
 
 export function visibleAnswer(row: { display: string; exact?: string }, form: AnswerForm): string {
-  if (form === 'exact' && row.exact) return row.exact
-  return row.display
+  return form === 'exact' && row.exact ? row.exact : row.display
 }
 
 export function insertableHistoryAnswer(

@@ -145,14 +145,10 @@ enum DictionaryLookup {
 
     private static func detectPartOfSpeech(in text: String) -> String? {
         let head = String(text.prefix(160)).lowercased()
-        var best: (pos: String, idx: String.Index)?
-        for pos in partsOfSpeech {
-            guard let range = head.range(of: pos) else { continue }
-            if best == nil || range.lowerBound < best!.idx {
-                best = (pos, range.lowerBound)
-            }
-        }
-        return best?.pos
+        // the earliest one wins; on a tie, the one listed first
+        return partsOfSpeech
+            .compactMap { pos in head.range(of: pos).map { (pos: pos, at: $0.lowerBound) } }
+            .min { $0.at < $1.at }?.pos
     }
 
     private static func pretty(_ text: String) -> String {

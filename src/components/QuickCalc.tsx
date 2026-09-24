@@ -19,6 +19,7 @@ import { CheatSheet, HistoryTape } from './HistoryTape'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
 import { LiveAnswer } from './LiveAnswer'
+import { PeriodicCard } from './PeriodicCard'
 import { RationalizeSettings } from './RationalizeSettings'
 import { SixtySevenArms } from './SixtySevenArms'
 import { UnitSettings } from './UnitSettings'
@@ -84,7 +85,8 @@ import {
   slimHistoryRow,
   type HistoryRow,
 } from '../lib/history'
-import { nextRecentExpiry, recentStart } from '../lib/historyShow'
+import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
+import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
 import { lineCopyText } from '../lib/touches'
 import {
   mergeNativeInfo,
@@ -185,7 +187,9 @@ export function QuickCalcPage() {
 export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; embedded?: boolean }) {
   const [history, setHistory] = useState<HistoryRow[]>(loadHistory)
   const [settings, setSettings] = useState<Settings>(loadSettings)
-  const [q, setQ] = useState(() => readStoredDraft(loadSettings().draftSeconds)?.expr ?? '')
+  // read once: reading can clear an expired draft, so it mustn't run on every render
+  const [storedDraft] = useState(() => readStoredDraft(settings.draftSeconds))
+  const [q, setQ] = useState(storedDraft?.expr ?? '')
   const [copied, setCopied] = useState(false)
   const [selected, setSelected] = useState<number | null>(null)
   const [tapeOpen, setTapeOpen] = useState(false)
@@ -202,6 +206,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [helpOpen, setHelpOpen] = useState(false)
   const [squiggle, setSquiggle] = useState<{ q: string; span: Span | null } | null>(null)
   const [inputSel, setInputSel] = useState<{ start: number; end: number } | null>(null)
+  // the browser build's periodic table; the mac app opens its own window instead
+  const [periodicOpen, setPeriodicOpen] = useState(false)
 
   const onboardingRef = useRef<Onboarding | null>(null)
   if (!onboardingRef.current) onboardingRef.current = loadOnboarding()
@@ -221,7 +227,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   qRef.current = q
   const settingsRef = useRef(settings)
   settingsRef.current = settings
-  const draftAtRef = useRef(readStoredDraft(settings.draftSeconds)?.savedAt ?? 0)
+  const draftAtRef = useRef(storedDraft?.savedAt ?? 0)
   const draftTimer = useRef(0)
   const evalIdRef = useRef(0)
   // the expression commit() saves when the input continues from the last answer
@@ -231,6 +237,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const lastKeyRef = useRef(0)
   // the clock the recent rows are read against; moves on show, commit and quiet ticks only
   const [recentNow, setRecentNow] = useState(() => Date.now())
+  const overControlRef = useRef(false)
   // whether the full tape sits open this showing when nothing is being browsed
   const tapeRestRef = useRef(false)
 
@@ -318,18 +325,23 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const ansPlain = lastAnswer
     ? insertableHistoryAnswer(lastAnswer, settings.answerForm, settings.sigFigs)
     : undefined
-  const nativeVars = useMemo(() => historyVariables(history), [history])
-  const nativeFns = useMemo(() => historyFunctions(history), [history])
-  const nativeMeas = useMemo(() => historyMeasures(history), [history])
-  const nativeQty = useMemo(() => historyQuantities(history), [history])
+  const scoped = useMemo(
+    () => history.slice(scopeStart(history, settings.historyShow, recentNow)),
+    [history, settings.historyShow, recentNow],
+  )
+  const nativeVars = useMemo(() => historyVariables(scoped), [scoped])
+  const nativeFns = useMemo(() => historyFunctions(scoped), [scoped])
+  const nativeMeas = useMemo(() => historyMeasures(scoped), [scoped])
+  const nativeQty = useMemo(() => historyQuantities(scoped), [scoped])
   const completionNames = useMemo(
-    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns) }),
-    [nativeVars, nativeFns],
+    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null }),
+    [nativeVars, nativeFns, lastAns],
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
   const cheats = useMemo(() => cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE)), [nativeInfo.hotkey])
   const graphCmd = isGraphCommand(q)
+  const periodicCmd = isPeriodicCommand(q)
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
     [graphCmd, q, nativeFns],
@@ -363,16 +375,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings],
   )
   const sheet = useMemo(() => {
-    if (graphCmd) return []
+    if (graphCmd || periodicCmd) return []
     return evaluateSheet([chained ? chainedExpr(q) : q], evalOptions)
-  }, [q, chained, graphCmd, evalOptions])
+  }, [q, chained, graphCmd, periodicCmd, evalOptions])
 
   const live = sheet[sheet.length - 1]
   let jsDisplay = ''
   if (graphCmd) jsDisplay = graphIntent?.label ? `graph ${graphIntent.label}` : ''
   else if (q.trim()) jsDisplay = live?.display ?? ''
   const jsN = graphCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
-  const nativeUsable = !graphCmd && !chained && soulverAngleSafe(q, settings.angleMode)
+  const nativeUsable = !graphCmd && !periodicCmd && !chained && soulverAngleSafe(q, settings.angleMode)
   const merged = mergeLiveAnswer(q, jsDisplay, jsN, nativeUsable ? nativeLive : null)
   // ⌥↑/⌥↓ re-expresses the js answer on its si prefix ladder; what's shown is what's copied and saved
   const jsValue = !graphCmd && jsDisplay && merged.display === jsDisplay ? live?.value : undefined
@@ -397,12 +409,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const shownLive = graphCmd ? '' : visibleAnswer({ display, exact: liveExact }, settings.answerForm)
   shownRef.current = shownLive
   const fromJs = Boolean(display) && display === jsDisplay
+  const liveSolve = fromJs && live?.kind === 'solve' ? live.solve : undefined
+  const rootsOf = liveSolve?.outcome === 'roots' ? liveSolve.variable : undefined
   const steady = useSteadyAnswer(
     q,
-    graphCmd || helpShown ? null : shownLive && !isImproperUnitConversion(display) ? dualLabel(liveExact, display) : '',
+    graphCmd || helpShown || periodicCmd
+      ? null
+      : shownLive && !isImproperUnitConversion(display)
+        ? `${rootsOf ? `${rootsOf} = ` : ''}${dualLabel(liveExact, display)}`
+        : '',
     evalSettings,
   )
-  const liveSolve = fromJs && live?.kind === 'solve' ? live.solve : undefined
   liveRef.current = {
     display,
     exact: liveExact,
@@ -430,14 +447,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [selText, q, graphCmd, evalOptions])
 
   useEffect(() => {
-    if (display || !q.trim() || graphCmd || helpShown || looksLikeNaturalLanguage(q)) return
+    if (display || !q.trim() || graphCmd || helpShown || periodicCmd || looksLikeNaturalLanguage(q)) return
     const t = window.setTimeout(() => {
       const ok = (text: string) => Boolean(evaluateSheet([chained ? chainedExpr(text) : text], evalOptions)[0]?.display)
       const names = { variables: Object.keys(nativeVars), functions: Object.keys(liveFns) }
       setSquiggle({ q, span: blankReason(q, ok, names) })
     }, SQUIGGLE_IDLE_MS)
     return () => window.clearTimeout(t)
-  }, [q, display, chained, graphCmd, helpShown, evalOptions, nativeVars, liveFns])
+  }, [q, display, chained, graphCmd, helpShown, periodicCmd, evalOptions, nativeVars, liveFns])
 
   const examples = useMemo(
     () => exampleList(firstRun && nativeInfo.hotkey ? nativeInfo.hotkey : undefined),
@@ -473,8 +490,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   useEffect(() => saveHistory(history), [history])
 
   const recentOn = settings.historyShow === 'recent'
+  // arrow mode ticks too, since its variables expire with the recent rows
+  const expires = settings.historyShow !== 'always'
   useEffect(() => {
-    const due = recentOn ? nextRecentExpiry(history, recentNow) : null
+    const due = expires ? nextRecentExpiry(history, recentNow) : null
     if (due == null) return
     let t = 0
     const tick = () => {
@@ -484,7 +503,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     t = window.setTimeout(tick, Math.max(0, due - Date.now()))
     return () => window.clearTimeout(t)
-  }, [history, recentNow, recentOn])
+  }, [history, recentNow, expires])
   const recentFrom = recentOn ? recentStart(history, recentNow) : history.length
 
   useEffect(() => {
@@ -732,7 +751,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
-    if (isHelpCommand(expr)) {
+    if (isHelpCommand(expr) || isPeriodicCommand(expr)) {
       resetToCalculate()
       return
     }
@@ -810,17 +829,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   const onEnter = useCallback((alt = false) => {
     if (isHelpCommand(qRef.current)) resetToCalculate()
-    else if (selected != null && alt) insertHistoryOther(selected)
+    else if (selected == null && isPeriodicCommand(qRef.current)) {
+      if (!openNativePeriodicTable()) setPeriodicOpen(true)
+      resetToCalculate()
+    } else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
     else commit()
   }, [commit, resetToCalculate, selected, insertHistoryAnswer, insertHistoryOther])
-
-  const onEquals = useCallback((): boolean => {
-    const shown = liveRef.current.display
-    if (selected != null || !shown || isImproperUnitConversion(shown)) return false
-    commit()
-    return true
-  }, [commit, selected])
 
   // esc peels one layer: a tape opened with ↑ or the cheat sheet, then the input; false means nothing was left to hide.
   // a tape that opened on its own only steps back from a selected row
@@ -918,7 +933,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isHelpCommand(q) || isEquation(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -950,6 +965,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       if (typeof text !== 'string' || !text) return
       mathRef.current?.insert(flattenPastedText(text))
       mathRef.current?.focus()
+    }
+    w.__qcalcInsert = (text) => {
+      if (typeof text === 'string') insertPlain(text)
     }
     w.__qcalcSize = size
     w.__qcalcWillHide = () => onWillHide()
@@ -1009,7 +1027,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       for (const t of focusTimers) window.clearTimeout(t)
       ro?.disconnect()
     }
-  }, [beginShowing, onPrepare, onWillHide])
+  }, [beginShowing, insertPlain, onPrepare, onWillHide])
 
   useTapeWheel(rootRef, tapeRef, {
     isOpen: () => tapeOpen,
@@ -1061,6 +1079,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           if (t.closest('input, button, .tape, .graph, .quick-plain, .quick-field, .edge-tools, .unit-settings, .live-dual')) return
           nativeHandler()?.postMessage({ type: 'drag' })
         }}
+        onMouseOver={(e) => {
+          const on = Boolean((e.target as HTMLElement).closest('button, .tape'))
+          if (on === overControlRef.current) return
+          overControlRef.current = on
+          nativeHandler()?.postMessage({ type: 'overControl', on })
+        }}
       >
         <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}>
           {helpShown ? (
@@ -1106,7 +1130,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               example={example ? { text: example.expr, id: rotation.tick } : null}
               onChange={onInputChange}
               onEnter={onEnter}
-              onEquals={onEquals}
               onUp={onUp}
               onDown={onDown}
               onPrefixStep={onPrefixStep}
@@ -1124,7 +1147,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: rotation.tick, answer: exampleShown } : null}
-              display={graphCmd ? '' : display}
+              display={periodicCmd ? PERIODIC_HINT : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1139,8 +1162,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     ? ''
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
-              label={liveSolve?.outcome === 'roots' ? liveSolve.variable : undefined}
-              message={Boolean(liveSolve && liveSolve.outcome !== 'roots')}
+              label={rootsOf}
+              message={periodicCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}
           </div>
@@ -1163,6 +1186,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         </div>
         <SixtySevenArms shaking={armsShaking} />
       </div>
+      {periodicOpen ? <PeriodicCard onPick={insertPlain} onClose={() => setPeriodicOpen(false)} /> : null}
       {!embedded ? (
         <>
           <AppearanceSettings value={settings.theme} onChange={(theme) => setSettings((s) => ({ ...s, theme }))} />

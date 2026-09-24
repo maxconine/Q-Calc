@@ -341,11 +341,7 @@ final class AppSettings: ObservableObject {
     func setDefaultUnit(dim: String, unitId: String, notifyWeb: Bool) {
         var next = defaultUnits
         let id = unitId.trimmingCharacters(in: .whitespacesAndNewlines)
-        if id.isEmpty {
-            next.removeValue(forKey: dim)
-        } else {
-            next[dim] = id
-        }
+        next[dim] = id.isEmpty ? nil : id
         applyDefaultUnits(next, notifyWeb: notifyWeb)
     }
 
@@ -494,10 +490,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc func showSettings() {
         overlay?.hide()
-        if settingsWindow == nil {
-            settingsWindow = SettingsWindowController()
-        }
-        settingsWindow?.show()
+        let window = settingsWindow ?? SettingsWindowController()
+        settingsWindow = window
+        window.show()
     }
 
     @objc private func quitApp() {

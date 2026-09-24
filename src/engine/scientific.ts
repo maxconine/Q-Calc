@@ -299,6 +299,30 @@ function callableNames(extraNames: string[]): CallableNames {
 const BARE_ATOM_RE =
   /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*/i
 
+const BARE_WORD_RE = /^([A-Za-z][A-Za-z0-9_]*)(?![A-Za-z0-9_(])(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*/
+const ROOTS = new Set(['sqrt', 'cbrt', 'nthroot'])
+const BARE_STOP = new Set(['in', 'to', 'as', 'of', 'per', 'and', 'or', 'xor', 'not', 'mod', 'at', 'for', 'from', 'over'])
+
+function isNamed(word: string, names: string[]): boolean {
+  const lower = word.toLowerCase()
+  return BARE_STOP.has(lower) || names.some((n) => n.toLowerCase() === lower)
+}
+
+const NOT_GLUED = new Set(['mod', 're', 'im', 'pi', 'tau', 'inf', 'infinity', 'ans'])
+const GLUED_FNS = SCIENTIFIC_NAMES.split('|')
+  .filter((n) => !NOT_GLUED.has(n))
+  .sort((a, b) => b.length - a.length)
+  .join('|')
+const GLUED_RE = new RegExp(`(?<![A-Za-z_])(${GLUED_FNS})([A-Za-z]|theta|θ)(?![A-Za-z0-9_(])`, 'g')
+
+// `logx` and `sinθ` mean log x and sin θ. x, y, z and θ always split; another letter only once it's
+// defined, since `cost` or `logs` are words. a name that's itself defined stays whole
+export function splitGluedFunctions(expr: string, known: (name: string) => boolean = () => false): string {
+  return expr.replace(GLUED_RE, (word, fn: string, v: string) =>
+    known(word) || !(/^(x|y|z|theta|θ)$/.test(v) || known(v)) ? word : `${fn} ${v}`,
+  )
+}
+
 export function wrapBareFunctions(expr: string, extraNames: string[] = []): string {
   const { names } = callableNames(extraNames)
   let i = 0
@@ -320,9 +344,20 @@ export function wrapBareFunctions(expr: string, extraNames: string[] = []): stri
         while (expr[j] === ' ') j++
         if (expr[j] !== '(') {
           const m = expr.slice(j).match(BARE_ATOM_RE)
-          if (m) {
-            out += `${name}(${m[0]})`
-            i = j + m[0].length
+          const arg = m?.[0] ?? ''
+          // a name joined on (`sin x`, `sin 2x`) goes inside; `sin x y` could be sin(xy), so it stays blank
+          // a root's bar shows its reach, and `√2x` is drawn as √2·x
+          const word = arg && ROOTS.has(name.toLowerCase()) ? null : expr.slice(j + arg.length).match(BARE_WORD_RE)
+          const joined = word && !isNamed(word[1]!, names) ? word[0] : ''
+          const after = expr.slice(j + arg.length + joined.length)
+          if (joined && /^\s+[A-Za-z0-9]/.test(after) && !isNamed(after.trimStart().match(/^[A-Za-z]+/)?.[0] ?? '', names)) {
+            out += expr.slice(i, j + arg.length + joined.length)
+            i = j + arg.length + joined.length
+            continue
+          }
+          if (arg || joined) {
+            out += `${name}(${arg}${joined})`
+            i = j + arg.length + joined.length
             continue
           }
         }

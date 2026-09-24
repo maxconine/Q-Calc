@@ -15,10 +15,7 @@ enum SoulverEval {
         customization.currencyRateProvider = rates
         customization.featureFlags.variableDeclarations = true
         let calc = Calculator(customization: customization)
-        var formatting = FormattingPreferences()
-        formatting.dp = 10
-        formatting.thousandsSeparatorDisabled = true
-        calc.formattingPreferences = formatting
+        // formatting is set per call in evaluate, from the sig figs setting
         Task { _ = await rates.updateRates() }
         return calc
     }()
@@ -56,8 +53,7 @@ enum SoulverEval {
             vars.append(Variable(name: "ans", value: string(from: ans)))
         }
         let list = vars.isEmpty ? nil : VariableList(variables: vars)
-        let result = calculator.calculate(src, with: list)
-        return answer(from: result)
+        return answer(from: calculator.calculate(src, with: list))
     }
 
     private static func answer(from result: CalculationResult) -> Answer? {
@@ -74,8 +70,9 @@ enum SoulverEval {
         let display = result.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !display.isEmpty else { return nil }
         // soulvercore reports unit mismatch as "Error: incompatible units" with isFailedResult false
-        if display.lowercased().hasPrefix("error") {
-            if display.lowercased().contains("unit") {
+        let lowered = display.lowercased()
+        if lowered.hasPrefix("error") {
+            if lowered.contains("unit") {
                 return Answer(display: "improper unit conversion", number: nil)
             }
             return nil
@@ -88,7 +85,6 @@ enum SoulverEval {
 
     private static func string(from value: Double) -> String {
         guard value.isFinite else { return "0" }
-        if value == 0 { return "0" }
         if value.rounded() == value, abs(value) < 1e15 {
             return String(Int(value))
         }

@@ -10,6 +10,10 @@ export function normalizeTheme(value: unknown): Theme {
   return value === 'light' || value === 'dark' ? value : 'system'
 }
 
+function systemPrefersDark(): boolean {
+  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
 export function resolvedTheme(theme: Theme, prefersDark = systemPrefersDark()): 'light' | 'dark' {
   if (theme === 'light' || theme === 'dark') return theme
   return prefersDark ? 'dark' : 'light'
@@ -21,11 +25,6 @@ export function applyTheme(theme: Theme): void {
   root.dataset.theme = theme
   if (theme === 'system') root.style.removeProperty('color-scheme')
   else root.style.colorScheme = theme
-  const resolved = resolvedTheme(theme)
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#2c2c2e' : '#ffffff')
-}
-
-function systemPrefersDark(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+  meta?.setAttribute('content', resolvedTheme(theme) === 'dark' ? '#2c2c2e' : '#ffffff')
 }

@@ -7,7 +7,7 @@ type TapeWheel = {
   close: () => void
 }
 
-// scrolling up over the overlay opens the history tape; scrolling down past its end closes it
+// scroll up over the overlay to open the history tape; scroll down past its end to close it
 export function useTapeWheel(
   rootRef: RefObject<HTMLElement | null>,
   tapeRef: RefObject<HTMLElement | null>,

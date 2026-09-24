@@ -1,5 +1,5 @@
 type NativeHandler = { postMessage: (m: string | Record<string, unknown>) => void }
-type SoulverHandler = { postMessage: (m: Record<string, unknown> | string) => Promise<unknown> }
+type SoulverHandler = { postMessage: (m: string | Record<string, unknown>) => Promise<unknown> }
 
 export type StoredDraft = { expr: string; savedAt: number }
 
@@ -14,6 +14,7 @@ export type NativeWindow = Window & {
   __qcalcWillHide?: () => void
   __qcalcSize?: () => void
   __qcalcPaste?: (text: string) => void
+  __qcalcInsert?: (text: string) => void
 }
 
 export function nativeWindow(): NativeWindow | undefined {

@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { HistoryRow } from './history'
-import { normalizeHistoryShow, nextRecentExpiry, RECENT_MS, recentStart } from './historyShow'
+import { normalizeHistoryShow, nextRecentExpiry, RECENT_MS, recentStart, scopeStart } from './historyShow'
 import { normalizeHistoryRow } from './history'
 
 const now = 10_000_000
 const row = (at?: number): HistoryRow => ({ id: String(Math.random()), expr: '1+1', display: '2', at })
 
 describe('recent calculations above the bar', () => {
-  it('shows rows committed in the last two minutes', () => {
+  it('shows rows committed in the last five minutes', () => {
     const h = [row(now - RECENT_MS - 5), row(now - RECENT_MS), row(now - 1000)]
     expect(recentStart(h, now)).toBe(1)
   })
@@ -44,5 +44,14 @@ describe('recent calculations above the bar', () => {
     expect(normalizeHistoryShow('arrow')).toBe('arrow')
     expect(normalizeHistoryShow('sometimes')).toBe('recent')
     expect(normalizeHistoryShow(undefined)).toBe('recent')
+  })
+})
+
+describe('variables come from rows you can see', () => {
+  it('drops rows off the recent tape, keeps everything when the tape is always open', () => {
+    const h = [row(now - RECENT_MS - 1000), row(now - 1000)]
+    expect(scopeStart(h, 'recent', now)).toBe(1)
+    expect(scopeStart(h, 'arrow', now)).toBe(1)
+    expect(scopeStart(h, 'always', now)).toBe(0)
   })
 })

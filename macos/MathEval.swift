@@ -38,15 +38,18 @@ enum MathEval {
 
     static func format(_ n: Double) -> String {
         if n == 0 { return "0" }
-        if abs(n) > 0 && abs(n) < 1e-6 { return String(format: "%.4e", n) }
-        if abs(n) >= 1e12 { return String(format: "%.4e", n) }
+        if abs(n) < 1e-6 || abs(n) >= 1e12 { return String(format: "%.4e", n) }
+        return decimal.string(from: NSNumber(value: n)) ?? String(n)
+    }
+
+    private static let decimal: NumberFormatter = {
         let f = NumberFormatter()
         f.numberStyle = .decimal
         f.maximumFractionDigits = 10
         f.minimumFractionDigits = 0
         f.usesGroupingSeparator = true
-        return f.string(from: NSNumber(value: n)) ?? String(n)
-    }
+        return f
+    }()
 }
 
 private struct Parser {

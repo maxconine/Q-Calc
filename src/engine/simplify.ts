@@ -50,8 +50,7 @@ function toFraction(x: number, maxDen: number, eps: number): { n: number; d: num
 function snapInteger(n: number, tol: Tol): number | null {
   if (!Number.isFinite(n)) return null
   const r = Math.round(n)
-  if (close(n, r, tol) && Math.abs(r) < 1e12) return r
-  return null
+  return close(n, r, tol) && Math.abs(r) < 1e12 ? r : null
 }
 
 function formatPi(num: number, den: number): string {
@@ -113,10 +112,7 @@ function asPiMultiple(n: number, tol: Tol): string | null {
 }
 
 function asNestedRadical(n: number, tol: Tol): string | null {
-  for (const [exact, v] of NESTED) {
-    if (close(n, v, tol)) return exact
-  }
-  return null
+  return NESTED.find(([, v]) => close(n, v, tol))?.[0] ?? null
 }
 
 function asRadical(n: number, rationalize: boolean, tol: Tol): string | null {

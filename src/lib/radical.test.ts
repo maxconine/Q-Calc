@@ -39,11 +39,13 @@ describe('radicalSpans', () => {
     ['√16√16', ['16', '16']],
     ['√3/2', ['3']],
     ['√(4)^2', ['(4)']],
+    ['√x', ['x']],
+    ['√e', ['e']],
   ])('%s bars %j', (text, expected) => {
     expect(barred(text)).toEqual(expected)
   })
 
-  it.each(['√', '√x', '√-4', '√.5', '√e', '√pi', 'sqrt(4)'])('%s gets no bar: the engine reads no radicand there', (text) => {
+  it.each(['√', '√-4', '√.5', '√pi', 'sqrt(4)'])('%s gets no bar: the engine reads no radicand there', (text) => {
     expect(barred(text)).toEqual([])
   })
 })
@@ -66,6 +68,23 @@ describe('the bar matches what the engine reads', () => {
     const a = last(text)
     if (!a) return
     expect(last(wrapped)).toBe(a)
+  })
+})
+
+describe('a letter under the root', () => {
+  const last = (text: string) => evaluateSheet(['x = 9', 'y = 4', text]).at(-1)!.display
+
+  it.each(['√xy', '√x y', '√xy+1', '√x^3', '√x!', '√xπ', '∛xy', '√x/2', '2√x', '√x%'])('%s: the bar covers x alone, as the engine reads it', (text) => {
+    const first = radicalSpans(text)[0]!
+    expect(text.slice(first.sign + 1, first.end)).toBe('x')
+    const wrapped = `${text.slice(0, first.sign + 1)}(x)${text.slice(first.end)}`
+    expect(last(text)).not.toBe('')
+    expect(last(wrapped)).toBe(last(text))
+  })
+
+  it('draws no bar under a function name', () => {
+    expect(radicalSpans('√sin(x)')).toEqual([])
+    expect(radicalSpans('√x2')).toEqual([])
   })
 })
 

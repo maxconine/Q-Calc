@@ -68,22 +68,26 @@ export function saveHistory(history: HistoryRow[]): void {
 }
 
 export function loadSettings(): Settings {
-  const fallback = defaultSettings()
-  let stored = fallback
+  const defaults = defaultSettings()
+  let saved = defaults
   try {
     const raw = readStorage(SETTINGS_KEY, LEGACY_SETTINGS_KEY)
-    if (raw) stored = mergeSettings(JSON.parse(raw) as Partial<Settings>, fallback)
+    if (raw) saved = mergeSettings(JSON.parse(raw) as Partial<Settings>, defaults)
   } catch {
-    stored = fallback
+    saved = defaults
   }
   const injected = calcWindow().__QCALC_SETTINGS
-  const next = injected ? mergeSettings(injected, stored) : stored
+  const next = injected ? mergeSettings(injected, saved) : saved
   applyTheme(next.theme)
   return next
 }
 
 export function saveSettings(settings: Settings): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  } catch {
+    // same as history: the mac app's web store can reject writes
+  }
 }
 
 // localStorage can be rejected in the mac app, so drafts also live in memory and on the window

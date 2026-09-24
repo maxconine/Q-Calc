@@ -1,5 +1,7 @@
 // how long a dimmed answer outlives the last keystroke before the slot goes honestly blank
 export const STEADY_MS = 1800
+// matches the .live-steady opacity transition
+export const STEADY_FADE_MS = 260
 
 /** True when `next` reads as `prev` mid-edit (typed on, backspaced, changed in the middle), not new input. */
 export function isEditOf(next: string, prev: string): boolean {

@@ -25,6 +25,7 @@
     "mac:package": "zsh macos/build.sh --package"
   },
   "dependencies": {
+    "decimal.js": "^10.6.0",
     "mathjs": "^15.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

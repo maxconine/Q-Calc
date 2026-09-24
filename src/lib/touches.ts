@@ -17,11 +17,3 @@ export function lineCopyText(expr: string, answer: LineAnswer, form: AnswerForm)
   if (line.includes('=') && rhs === shown.trim()) return line
   return `${line} = ${shown}`
 }
-
-// only plain arithmetic, so an `=` there can't be starting an assignment, a definition or an equation
-const ARITHMETIC = /^[\s\d.,+\-−*×·/÷^%!()√∛π²³]+$/
-
-// `=` typed at the end of plain arithmetic saves it, like = on a calculator
-export function equalsCommits(text: string, caret: { start: number; end: number }): boolean {
-  return caret.start === caret.end && caret.end === text.length && /[\dπ]/.test(text) &&ARITHMETIC.test(text)
-}

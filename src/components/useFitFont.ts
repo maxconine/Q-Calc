@@ -10,9 +10,9 @@ export function useFitFont<T extends HTMLElement>(text: string, maxDrop = 4) {
     fitted.current = { el, text }
     el.style.fontSize = ''
     if (!text || el.scrollWidth <= el.clientWidth) return
-    const base = parseFloat(getComputedStyle(el).fontSize)
+    const basePx = parseFloat(getComputedStyle(el).fontSize)
     for (let drop = 1; drop <= maxDrop && el.scrollWidth > el.clientWidth; drop++) {
-      el.style.fontSize = `${base - drop}px`
+      el.style.fontSize = `${basePx - drop}px`
     }
   })
   return ref

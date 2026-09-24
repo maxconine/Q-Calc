@@ -1,7 +1,7 @@
 import { parseFunctionDef } from './evaluate'
 import { formatNumber } from './format'
 import { namesPattern } from './math'
-import { compileScientific, evalScientific, type AngleMode } from './scientific'
+import { compileScientific, evalScientific, splitGluedFunctions, type AngleMode } from './scientific'
 import type { UserFunction } from './types'
 
 export const DEFAULT_GRAPH_DOMAIN: readonly [number, number] = [-10, 10]
@@ -80,7 +80,7 @@ export function parseGraphIntent(
 ): GraphIntent | null {
   const m = input.match(GRAPH_CMD)
   if (!m) return null
-  const rest = m[1]!.trim()
+  const rest = splitGluedFunctions(m[1]!.trim())
   if (!rest) return null
 
   const fnDef = parseFunctionDef(rest)

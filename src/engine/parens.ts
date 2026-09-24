@@ -24,7 +24,6 @@ export function fillParens(expr: string): string {
 /** Commit inferred parens when the caret is at the end with no selection. */
 export function autofillParens(expr: string, caret: number, selectionEnd = caret): string | null {
   if (caret !== selectionEnd || caret !== expr.length) return null
-  const inferred = inferParens(expr)
-  if (!inferred.leading && !inferred.trailing) return null
-  return inferred.filled
+  const fill = inferParens(expr)
+  return fill.leading || fill.trailing ? fill.filled : null
 }

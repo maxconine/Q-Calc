@@ -6,11 +6,7 @@ export const math = create(all, { number: 'number' })
 export function intGcd(a: number, b: number): number {
   a = Math.abs(Math.trunc(a))
   b = Math.abs(Math.trunc(b))
-  while (b) {
-    const t = b
-    b = a % b
-    a = t
-  }
+  while (b) [a, b] = [b, a % b]
   return a
 }
 

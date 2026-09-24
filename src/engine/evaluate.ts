@@ -5,7 +5,7 @@ import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, V
 import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
 import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './measure'
 import { tryPlainMath } from './plainMath'
-import { formatAsFraction, SCIENTIFIC_NAMES } from './scientific'
+import { formatAsFraction, SCIENTIFIC_NAMES, splitGluedFunctions } from './scientific'
 import { exactForm, wantsExactForm } from './simplify'
 import { formatSolve, solveEquation } from './solve'
 import { normalizeSums, sumAnswer } from './sums'
@@ -19,11 +19,11 @@ function isReserved(name: string): boolean {
 
 /** Built-in names like `pi` can't be assigned. */
 export function parseAssignment(trimmed: string): { variable: string; expr: string } | null {
-  const assign = trimmed.match(/^([A-Za-z][A-Za-z0-9]*)\s*=\s*(.+)$/)
-  if (!assign) return null
-  const variable = assign[1]!
+  const m = trimmed.match(/^([A-Za-z][A-Za-z0-9]*)\s*=\s*(.+)$/)
+  if (!m) return null
+  const variable = m[1]!
   if (isReserved(variable)) return null
-  return { variable, expr: assign[2]!.trim() }
+  return { variable, expr: m[2]!.trim() }
 }
 
 /** `2+3=` is `2+3`; only one `=` goes, and never the end of `==`, `<=`, `>=` or `!=`. */
@@ -38,8 +38,8 @@ export function parseFunctionDef(
   if (!m) return null
   const name = m[1]!
   if (isReserved(name)) return null
-  const rawParams = m[2]!.trim()
-  const params = rawParams === '' ? [] : rawParams.split(',').map((p) => p.trim())
+  const paramText = m[2]!.trim()
+  const params = paramText === '' ? [] : paramText.split(',').map((p) => p.trim())
   if (params.some((p) => !/^[A-Za-z][A-Za-z0-9]*$/.test(p) || isReserved(p))) return null
   if (new Set(params.map((p) => p.toLowerCase())).size !== params.length) return null
   const body = m[3]!.trim()
@@ -107,9 +107,9 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
 
   const known = (name: string) => name in variables || name in quantities || name in measures
   for (const raw of texts) {
-    const line = stripTrailingEquals(raw.trim())
+    const line = splitGluedFunctions(stripTrailingEquals(raw.trim()), known)
     // the input field turns a typed theta into θ, which is also a variable name; solve keeps θ as its unknown
-    const trimmedLine = line.replace(/θ/g, 'theta')
+    const trimmedLine = splitGluedFunctions(line.replace(/θ/g, 'theta'), known)
     if (!trimmedLine) {
       results.push({ raw, kind: 'empty', display: '' })
       continue

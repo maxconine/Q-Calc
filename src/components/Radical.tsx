@@ -39,14 +39,13 @@ function fitRadicals(root: HTMLElement | null) {
     const advance = textWidth(sign) - (parseFloat(style.letterSpacing) || 0)
     // the span's own box: its transformed bar doesn't widen it
     const rect = el.getBoundingClientRect()
-    const total = rect.width
     const a = advance + SLICE_FROM * size
     const b = advance + SLICE_TO * size
-    if (!(size > 0) || total <= b || (edge != null && rect.right > edge)) {
+    if (!(size > 0) || rect.width <= b || (edge != null && rect.right > edge)) {
       glyph.style.visibility = 'hidden'
       continue
     }
-    const scale = (total - a) / (b - a)
+    const scale = (rect.width - a) / (b - a)
     glyph.style.visibility = 'visible'
     glyph.style.clipPath = `polygon(${a}px -50%, ${b}px -50%, ${b}px 150%, ${a}px 150%)`
     glyph.style.transform = `translateX(${a - scale * a}px) scaleX(${scale})`

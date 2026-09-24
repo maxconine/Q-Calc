@@ -1,0 +1,83 @@
+.periodic {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  z-index: 20;
+  padding: var(--sp-5) var(--sp-4) var(--sp-4);
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-family: var(--font);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+.periodic:active { cursor: grabbing; }
+.periodic-close {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  cursor: default;
+  font-size: 16px;
+  line-height: 20px;
+}
+.periodic-close:hover { background: var(--fill-hover); color: var(--ink); }
+.periodic-grid {
+  display: grid;
+  grid-template-columns: repeat(18, 42px);
+  grid-template-rows: repeat(7, 46px) 10px repeat(2, 46px);
+  gap: 3px;
+}
+.periodic-detail {
+  grid-row: 1 / 4;
+  grid-column: 3 / 13;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+}
+.periodic-detail-name { font-size: var(--fs-row); font-weight: 500; }
+.periodic-detail-sub { font-size: var(--fs-small); color: var(--muted); font-variant-numeric: tabular-nums; }
+.periodic-tile {
+  --tint: var(--ink);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--tint) 9%, transparent);
+  color: var(--ink);
+  font-family: inherit;
+  cursor: default;
+}
+.periodic-tile:hover { background: color-mix(in srgb, var(--tint) 20%, transparent); }
+.periodic-tile:active { background: color-mix(in srgb, var(--tint) 28%, transparent); }
+.periodic-tile:focus-visible { outline: 2px solid color-mix(in srgb, var(--tint) 60%, transparent); outline-offset: 1px; }
+.periodic-n {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  color: var(--muted);
+  font-size: 8.5px;
+  font-variant-numeric: tabular-nums;
+}
+.periodic-symbol { margin-top: 3px; font-size: 16px; font-weight: 500; line-height: 1.1; }
+.periodic-mass { color: var(--muted); font-size: 8.5px; font-variant-numeric: tabular-nums; }
+.periodic-alkali, .periodic-alkaline { --tint: #d9822b; }
+.periodic-transition { --tint: #4a7fc1; }
+.periodic-post, .periodic-metalloid { --tint: #3a9a8a; }
+.periodic-nonmetal, .periodic-halogen { --tint: #5aa84a; }
+.periodic-noble { --tint: #8e6cc9; }
+.periodic-lanthanide, .periodic-actinide { --tint: #c2587e; }

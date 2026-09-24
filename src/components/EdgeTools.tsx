@@ -16,7 +16,7 @@ export function EdgeTools({ settings, onToggle, onClear }: Props) {
           type="button"
           className="edge-tool edge-angle active"
           aria-keyshortcuts="Control+D"
-          aria-label={angleMode === 'deg' ? 'Degrees. Shortcut Control D' : 'Radians. Shortcut Control D'}
+          aria-label={`${angleMode === 'deg' ? 'Degrees' : 'Radians'}. Shortcut Control D`}
           onMouseDown={keepFocus}
           onClick={() => onToggle(toggleAngleMode)}
         >
@@ -27,7 +27,7 @@ export function EdgeTools({ settings, onToggle, onClear }: Props) {
           className={`edge-tool edge-frac ${fractionMode ? 'active' : ''}`}
           aria-keyshortcuts="Control+F"
           aria-pressed={fractionMode}
-          aria-label={fractionMode ? 'Fraction results on. Shortcut Control F' : 'Fraction results off. Shortcut Control F'}
+          aria-label={`Fraction results ${fractionMode ? 'on' : 'off'}. Shortcut Control F`}
           onMouseDown={keepFocus}
           onClick={() => onToggle(toggleFractionMode)}
         >
@@ -42,11 +42,7 @@ export function EdgeTools({ settings, onToggle, onClear }: Props) {
           className={`edge-tool ${sigFigMode ? 'active' : ''}`}
           aria-keyshortcuts="Control+S"
           aria-pressed={sigFigMode}
-          aria-label={
-            sigFigMode
-              ? 'Significant figures from input on. Shortcut Control S'
-              : 'Significant figures from input off. Shortcut Control S'
-          }
+          aria-label={`Significant figures from input ${sigFigMode ? 'on' : 'off'}. Shortcut Control S`}
           onMouseDown={keepFocus}
           onClick={() => onToggle(toggleSigFigMode)}
         >

@@ -9,7 +9,7 @@ export function clampSigFigs(n: number): number {
   return Math.min(MAX_SIG_FIGS, Math.max(MIN_SIG_FIGS, Math.round(n)))
 }
 
-function scientific(n: number, sigFigs: number): string {
+export function formatScientific(n: number, sigFigs: number): string {
   return n
     .toExponential(Math.max(0, sigFigs - 1))
     .replace(/(\.\d*?)0+(e[+-]?\d+)$/, '$1$2')
@@ -23,11 +23,11 @@ export function formatNumber(n: number, sigFigs = DEFAULT_SIG_FIGS): string {
   if (n === 0) return '0'
   const figs = clampSigFigs(sigFigs)
   const mag = Math.floor(Math.log10(Math.abs(n)))
-  if (mag < -6 || mag >= 12) return scientific(n, figs)
+  if (mag < -6 || mag >= 12) return formatScientific(n, figs)
   const rounded = Number(n.toPrecision(figs))
-  if (!Number.isFinite(rounded)) return scientific(n, figs)
+  if (!Number.isFinite(rounded)) return formatScientific(n, figs)
   let s = String(rounded)
-  if (s.includes('e')) return scientific(rounded, figs)
+  if (s.includes('e')) return formatScientific(rounded, figs)
   if (s.includes('.')) {
     const decimals = Math.min(100, Math.max(0, figs - mag - 1))
     const frac = s.split('.')[1] ?? ''
@@ -56,7 +56,8 @@ const LEAD_NUMBER = /^(-?)([$€£¥]?)(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(e[+-]?\d
 const MATH_ONLY = /^[\d\s+\-*/^().,πe√i·×sqrt]+$/
 
 function groupDigits(int: string): string {
-  return int.length < 4 ? int : int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  if (int.length < 4) return int
+  return int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
 // display only: copy and insert keep using the plain ascii answer, which re-parses

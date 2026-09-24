@@ -17,11 +17,11 @@ function looksLikeLatex(s: string): boolean {
 function unwrapQuestion(text: string): string {
   const src = text.trim()
   if (!src) return src
-  const stripped = src
+  const bare = src
     .replace(/\s*\?+\s*$/g, '')
     .replace(/^(?:what(?:'s|\s+is|s)|how\s+much\s+is|calculate|compute)\s+/i, '')
     .trim()
-  return stripped || src
+  return bare || src
 }
 
 function hasNlpWords(s: string): boolean {
@@ -207,30 +207,22 @@ function replaceBraced(src: string, cmd: string, arity: number, build: (...args:
   return s
 }
 
-function grabBrace(s: string, open: number): { inner: string; end: number } | null {
-  if (s[open] !== '{') return null
+function grabGroup(s: string, open: number, left: string, right: string): { inner: string; end: number } | null {
+  if (s[open] !== left) return null
   let depth = 0
   for (let i = open; i < s.length; i++) {
-    if (s[i] === '{') depth++
-    else if (s[i] === '}') {
-      depth--
-      if (depth === 0) return { inner: s.slice(open + 1, i), end: i + 1 }
-    }
+    if (s[i] === left) depth++
+    else if (s[i] === right && --depth === 0) return { inner: s.slice(open + 1, i), end: i + 1 }
   }
   return null
 }
 
+function grabBrace(s: string, open: number): { inner: string; end: number } | null {
+  return grabGroup(s, open, '{', '}')
+}
+
 function grabParen(s: string, open: number): { inner: string; end: number } | null {
-  if (s[open] !== '(') return null
-  let depth = 0
-  for (let i = open; i < s.length; i++) {
-    if (s[i] === '(') depth++
-    else if (s[i] === ')') {
-      depth--
-      if (depth === 0) return { inner: s.slice(open + 1, i), end: i + 1 }
-    }
-  }
-  return null
+  return grabGroup(s, open, '(', ')')
 }
 
 /** `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. */

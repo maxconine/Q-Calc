@@ -1,3 +1,5 @@
+import { SCIENTIFIC_NAMES } from '../engine/scientific'
+
 export type RadicalSpan = { sign: number; end: number }
 
 const SIGNS = '√∛'
@@ -7,6 +9,15 @@ const SIGNS = '√∛'
 // a coefficient right before a letter (or a symbol that becomes one) stays outside: `√2πx` is √2·π·x
 const BARE_RADICAND =
   /^(?:[πτ]|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:(?:[*×·⋅∙]?(?:π|pi|tau)|[*×·⋅∙]τ)(?![A-Za-z0-9_√∛∞θ]))?)(?:\s*\^\s*(?:[-−]?\d+(?:\.\d+)?(?![\d.])|[πτ]|\([^()πτ%|°]*\)))*/i
+
+const WORDS = [...new Set(`${SCIENTIFIC_NAMES}|theta`.toLowerCase().split('|'))]
+
+// the engine roots a lone letter only (`√xy` is √x·y), so the bar covers just that letter; a word like `√sin` isn't one
+function bareLetter(rest: string): boolean {
+  if (!/^[A-Za-z](?![0-9_(])/.test(rest)) return false
+  const word = rest.match(/^[A-Za-z]+/)![0].toLowerCase()
+  return word.length === 1 || !WORDS.some((w) => word.startsWith(w))
+}
 
 function closingParen(text: string, open: number): number {
   let depth = 0
@@ -22,6 +33,8 @@ function radicandEnd(text: string, after: number): number | null {
   let j = after
   while (text[j] === ' ') j++
   if (text[j] === '(') return closingParen(text, j)
+  const letter = bareLetter(text.slice(j))
+  if (letter) return j + 1
   const m = BARE_RADICAND.exec(text.slice(j))
   if (!m) return null
   let end = j + m[0].length

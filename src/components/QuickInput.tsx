@@ -1,12 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react'
 import { autofillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
 import type { Span } from '../lib/blankReason'
 import { completionFor, type CompletionNames } from '../lib/completion'
 import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/bounds'
 import { copyText, inputHighlight, keepEndInView } from '../lib/dom'
+import { knownWordSpans } from '../lib/knownWords'
 import { cleanPastedText } from '../lib/paste'
-import { equalsCommits } from '../lib/touches'
 import { breakRun, editKind, recordEdit, redo, undo, undoStart, type EditKind, type Undo, type UndoState } from '../lib/undo'
 import { BoundsInputText } from './Bounds'
 import { RadicalLayer } from './Radical'
@@ -30,7 +30,6 @@ interface Props {
   // `alt`: ⌥↵ reuses the other half of a history row
   onEnter: (alt?: boolean) => void
   // `=` at the end of plain arithmetic; true when it saved the line
-  onEquals?: () => boolean
   onUp: () => boolean
   onDown: () => boolean
   onPrefixStep?: (dir: 1 | -1) => void
@@ -133,7 +132,6 @@ export function QuickInput({
   keepWords = false,
   onChange,
   onEnter,
-  onEquals,
   onUp,
   onDown,
   onPrefixStep,
@@ -163,8 +161,6 @@ export function QuickInput({
   const undoRef = useRef<Undo | null>(null)
   if (!undoRef.current) undoRef.current = undoStart(value)
   const editKindRef = useRef<EditKind>(null)
-  const onEqualsRef = useRef(onEquals)
-  onEqualsRef.current = onEquals
   onChangeRef.current = onChange
   onEnterRef.current = onEnter
   onUpRef.current = onUp
@@ -215,6 +211,10 @@ export function QuickInput({
   const fits = !input || input.scrollWidth <= input.clientWidth + 1
   const mark =
     squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null
+  const bounded = boundsIn(value).length > 0
+  // a word the engine knows is painted from the ghost layer, so the input's own text steps aside
+  const words = fits && !bounded ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []
+  const painted = words.length > 0
 
   const commit = (raw: string, cursor: number, settle = false, typed = false) => {
     const caret = settle ? undefined : cursor
@@ -395,14 +395,6 @@ export function QuickInput({
     if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End') {
       if (undoRef.current) undoRef.current = breakRun(undoRef.current)
     }
-    if (e.key === '=' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      const el = e.currentTarget
-      const caret = { start: el.selectionStart ?? 0, end: el.selectionEnd ?? 0 }
-      if (equalsCommits(el.value, caret) && onEqualsRef.current?.()) {
-        e.preventDefault()
-        return
-      }
-    }
     // tab belongs to the completion only while its ghost shows
     const plainKey = !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey
     if (completion && plainKey && (e.key === 'Tab' || e.key === 'ArrowRight')) {
@@ -460,7 +452,6 @@ export function QuickInput({
   }
 
   const showExample = !value && example != null
-  const bounded = boundsIn(value).length > 0
 
   return (
     <div className={bounded ? 'quick-field quick-field-bounds' : 'quick-field'}>
@@ -475,14 +466,10 @@ export function QuickInput({
             input={inputRef}
             mark={squiggle && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null}
           />
-        ) : mark ? (
-          <span className="quick-ghost-text">
-            {value.slice(0, mark.start)}
-            <span className="quick-squiggle">{value.slice(mark.start, mark.end)}</span>
-            {value.slice(mark.end)}
-          </span>
         ) : (
-          <span className="quick-ghost-text">{value}</span>
+          <span className={painted ? 'quick-ghost-text quick-ghost-painted' : 'quick-ghost-text'}>
+            {paintText(value, mark, words)}
+          </span>
         )}
         {completion ? <span className="quick-inferred quick-completion">{completion}</span> : null}
         {suffix ? <span className="quick-inferred">{suffix}</span> : null}
@@ -495,7 +482,7 @@ export function QuickInput({
       <RadicalLayer value={bounded ? '' : value} input={inputRef} inset={prefixWidth} />
       <input
         ref={inputRef}
-        className="quick-plain"
+        className={painted ? 'quick-plain quick-plain-painted' : 'quick-plain'}
         value={value}
         size={1}
         autoFocus
@@ -553,4 +540,28 @@ export function QuickInput({
       />
     </div>
   )
+}
+
+// the input's text split into plain runs, the squiggle and known words; a word keys on its name and
+// count, so its pulse plays once when it's finished and not again as text around it changes
+function paintText(value: string, mark: Span | null, words: Span[]): ReactNode[] {
+  const cuts = [...words.filter((w) => !mark || w.end <= mark.start || w.start >= mark.end), ...(mark ? [mark] : [])]
+  cuts.sort((a, b) => a.start - b.start)
+  const out: ReactNode[] = []
+  const seen = new Map<string, number>()
+  let at = 0
+  for (const cut of cuts) {
+    if (cut.start > at) out.push(value.slice(at, cut.start))
+    const text = value.slice(cut.start, cut.end)
+    if (cut === mark) {
+      out.push(<span key="squiggle" className="quick-squiggle">{text}</span>)
+    } else {
+      const n = seen.get(text) ?? 0
+      seen.set(text, n + 1)
+      out.push(<span key={`${text}#${n}`} className="quick-word">{text}</span>)
+    }
+    at = cut.end
+  }
+  if (at < value.length) out.push(value.slice(at))
+  return out
 }

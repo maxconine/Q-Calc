@@ -6,12 +6,12 @@ export function copyText(text: string): void {
   void navigator.clipboard.writeText(text).catch(() => {
     // the fallback textarea takes focus; the input gets it back
     const focused = document.activeElement
-    const el = document.createElement('textarea')
-    el.value = text
-    document.body.appendChild(el)
-    el.select()
+    const area = document.createElement('textarea')
+    area.value = text
+    document.body.appendChild(area)
+    area.select()
     document.execCommand('copy')
-    el.remove()
+    area.remove()
     if (focused instanceof HTMLElement) focused.focus()
   })
 }

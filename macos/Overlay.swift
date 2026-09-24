@@ -109,6 +109,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var fallback: NSView?
     private var escapeMonitor: Any?
     private var dragMonitor: Any?
+    // the page says when the pointer is on a button, so the edge strip doesn't steal its click
+    private var overControl = false
     private var clickAwayMonitor: Any?
     private var clickAwayLocalMonitor: Any?
     private var webReady = false
@@ -125,6 +127,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var showCount = 0
     private var revealedShow = 0
     var onSettings: (() -> Void)?
+    private lazy var periodic: PeriodicWindowController = {
+        let controller = PeriodicWindowController()
+        controller.onPick = { [weak self] in self?.insertText($0) }
+        return controller
+    }()
     // off the main thread so a slow soulver evaluation never blocks typing
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
 
@@ -226,12 +233,16 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 }
             case "drag":
                 beginWindowDrag()
+            case "overControl":
+                overControl = dict["on"] as? Bool ?? false
             case "settings":
                 applyWebSettings(dict)
             case "onboarding":
                 applyWebOnboarding(dict)
             case "eval":
                 pushSoulverResult(soulverPayload(from: dict))
+            case "periodic":
+                periodic.show(PeriodicElement.list(from: dict["elements"]))
             default:
                 break
             }
@@ -530,6 +541,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
     }
 
+    // a periodic table click: the insert is queued behind show()'s reset, so it lands in the fresh input
+    private func insertText(_ text: String) {
+        guard let encoded = jsonStringLiteral(text) else { return }
+        if panel?.isVisible != true { show() }
+        web?.evaluateJavaScript("window.__qcalcInsert && window.__qcalcInsert(\(encoded));")
+    }
+
     private func jsonStringLiteral(_ string: String) -> String? {
         guard let data = try? JSONSerialization.data(withJSONObject: [string], options: []),
               let json = String(data: data, encoding: .utf8),
@@ -655,7 +673,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func installDragMonitor() {
         guard dragMonitor == nil else { return }
         dragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self, let panel = self.panel, panel.isVisible, event.window === panel else {
+            guard let self, let panel = self.panel, panel.isVisible, event.window === panel, !self.overControl else {
                 return event
             }
             let p = event.locationInWindow
@@ -682,7 +700,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             self?.hide()
         }
         clickAwayLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-            guard let self, let panel = self.panel, panel.isVisible, event.window !== panel else {
+            guard let self, let panel = self.panel, panel.isVisible, event.window !== panel,
+                  !(event.window is PeriodicPanel) else {
                 return event
             }
             self.hide()
