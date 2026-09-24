@@ -101,6 +101,7 @@ brew upgrade --cask q-calc
 - **⌃D** switches between degrees and radians. **⌃F** toggles fraction results. **⌃C** clears history and resets stored variables and functions. **Answers → Rationalize denominators** controls whether exact answers like `5/sqrt(41)` are rewritten as `5sqrt(41)/41`.
 - For trig and square roots, answers show a closed form next to the decimal when both exist (`sqrt(3)/2 ≈ 0.866025`). Click either side to copy (or, in history, to insert). Other expressions show the decimal. **⌘C** and `ans` follow **Answers → Exact** or **Approximate**.
 - Unit conversions work too: `72 f`, `2 in to cm`.
+- **Option + Up** and **Option + Down** step a metric answer's unit one prefix at a time, a factor of 1000 per press: `4700 ohm` becomes `4.7 kΩ`, and `2 L` becomes `2000 mL`, then `2000000 μL`.
 - Store a variable with `x = 5`, then use it in later expressions (`x*2`). Define a function the same way: `f(x) = x^3`, then call it with `f(2)`.
 - Graph with `graph x^3`, `graph f` (after defining `f`), or `graph f(x) = x^3`. A panel opens under the input with zoom and a list of critical points.
 - Solve a system with `sys 2` through `sys 5`, then **Enter**. A smaller window opens under the calculator with one field per equation, and the answer updates as you type (`x + y = 5`, `x - y = 1`).
@@ -110,7 +111,6 @@ brew upgrade --cask q-calc
 -->
 - The answer updates as you type. Click it or press **⌘C** to copy. Type `ans` to insert it at the cursor.
 - **Enter** saves the calculation to history. **Up arrow** or scroll the tape to see previous ones. Click a previous expression to insert it at the typing cursor. Click a previous answer — or either side of a dual answer — to insert that value (`cos(` then a previous `31` becomes `cos(31)`). Press **Enter** on a highlighted row to reuse it; **History** in the menu (or the History setting in the browser) chooses whether that brings in the original expression or just the answer.
-- Land on exactly **67** and you might notice the calculator grow arms for a second. Land on **69** and a 6 and a 9 on either side spin once.
 
 The menu bar icon can show the calculator without the hotkey. Significant figures, exact vs approximate answers, whether to rationalize denominators, whether history inserts the expression or the answer, light or dark appearance, how long to keep unfinished input, and default units are set from the same menu.
 
