@@ -1,0 +1,19 @@
+[package]
+name = "qcalc"
+version = "2.0.2"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-clipboard-manager = "2"
+serde_json = "1"
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true

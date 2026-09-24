@@ -22,7 +22,9 @@
     "preview": "vite preview",
     "mac": "zsh macos/build.sh",
     "mac:install": "zsh macos/build.sh --install",
-    "mac:package": "zsh macos/build.sh --package"
+    "mac:package": "zsh macos/build.sh --package",
+    "win:dev": "tauri dev",
+    "win:build": "tauri build"
   },
   "dependencies": {
     "@myriaddreamin/typst-ts-renderer": "^0.7.0",
@@ -34,6 +36,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.11.5",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
