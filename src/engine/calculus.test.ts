@@ -219,6 +219,35 @@ describe('definite integrals', () => {
   })
 })
 
+describe('integrals inside a larger expression', () => {
+  it.each([
+    ['4*∫0..1 x^2', 4 / 3],
+    ['4 ∫0..1 x^2', 4 / 3],
+    ['4*∫_0^1 x^2 dx', 4 / 3],
+    ['4 int_(2)^(4) 2 x dx', 48],
+    ['(∫0..1 x^2)+1', 4 / 3],
+    ['(∫0..1 x^2 dx)+1', 4 / 3],
+    ['∫0..1 x^2 dx + 1', 4 / 3],
+    ['∫0..1 x dx * 3', 1.5],
+    ['2*int(x^2, 0, 1)', 2 / 3],
+    ['int(x^2, 0, 1)+1', 4 / 3],
+    ['sqrt(∫0..1 4x^3)', 1],
+    ['(∫0..1 x dx)^2', 0.25],
+    ['∫0..1 x dx * ∫0..2 x dx', 1],
+    ['2 * integral of x^2 from 0 to 1', 2 / 3],
+    ['(integral of x from 0 to 1) + 3', 3.5],
+    ['10 - ∫0..2 x dx', 8],
+    ['∫0..1 x^2 + 1', 4 / 3],
+  ])('%s', (input, want) => {
+    close(value(input), want)
+  })
+
+  it('a diverging integral inside a larger line stays blank', () => {
+    expect(shown('4*∫0..1 1/x')).toBe('')
+    expect(shown('∫0..1 x^2 dx + ∫0..1 1/x')).toBe('')
+  })
+})
+
 describe('limits', () => {
   it.each([
     ['lim x->0 sin(x)/x', 1],

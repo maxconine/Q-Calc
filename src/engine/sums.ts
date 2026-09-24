@@ -919,6 +919,24 @@ function productOfList(args: string[]): string | null {
  */
 const SCRIPT_RE = /(?<![A-Za-z_\\])(sum|prod|product)(?![A-Za-z0-9])\s*/gi
 
+/** First closer the sum itself did not open, so `(sum n, n=1..4)+1` keeps the `+1`. */
+function depthEnd(s: string, from: number): number {
+  let depth = 0
+  for (let i = from; i < s.length; i++) {
+    const ch = s[i]!
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) {
+      if (depth === 0) return i
+      depth--
+    }
+  }
+  return s.length
+}
+
+function wordConsumed(expr: string, restAt: number): number {
+  return depthEnd(expr, restAt) - restAt
+}
+
 /** A `sum_k=1^4 k` inside a larger line, such as `(sum_k=1^4 k)+2`. */
 function embedScriptSums(expr: string, ctx: SumContext): { text: string } | { fail: SumAnswer } | null {
   let out = ''
@@ -928,7 +946,12 @@ function embedScriptSums(expr: string, ctx: SumContext): { text: string } | { fa
   for (let m = SCRIPT_RE.exec(expr); m; m = SCRIPT_RE.exec(expr)) {
     const restAt = m.index + m[0].length
     if (expr[restAt] === '(') continue
-    const spec = specFromScripts(opOf(m[1]!), expr.slice(restAt))
+    const op = opOf(m[1]!)
+    let spec = specFromScripts(op, expr.slice(restAt))
+    if (!spec) {
+      const word = specFromWords(op, expr.slice(restAt, depthEnd(expr, restAt)).trim())
+      if (word) spec = { ...word, consumed: wordConsumed(expr, restAt) }
+    }
     if (!spec) continue
     let r: SumAnswer
     try {

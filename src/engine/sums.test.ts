@@ -109,6 +109,14 @@ describe('finite sums', () => {
     expect(shown('Σ(1/n, n=1..3) + 1')).toBe('2.83333333333')
     expect(shown('sqrt(Σ(n^3, n=1..4))')).toBe('10')
     expect(shown('Σ(n, n=1..3) * Π(n, n=1..3)')).toBe('36')
+    expect(shown('4 sum_(n=1)^10 n')).toBe('220')
+    expect(shown('(2*sum_(n=1)^10 n)+3')).toBe('113')
+    expect(shown('(sum_(n=1)^10 n)+2')).toBe('57')
+    expect(shown('2 * sum n, n=1..10')).toBe('110')
+    expect(shown('(sum n^2, n=1..4)+1')).toBe('31')
+    expect(shown('(sum n, n=1..4)*(prod k, k=1..3)')).toBe('60')
+    expect(shown('10 - sum_(k=1)^4 k')).toBe('0')
+    expect(shown('sqrt(sum_(n=1)^3 n^3)')).toBe('6')
   })
 
   it('are undefined when a term is', () => {

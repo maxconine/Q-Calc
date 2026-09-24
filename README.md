@@ -158,16 +158,17 @@ If the clone is in **Documents** or **Desktop**, macOS may refuse to launch the 
 
 ### Ship an update to field Macs
 
-Before anyone can `brew install`, publish the first zip by tagging the current version (`v2.0.0`) or by running **Release** from the Actions tab.
+The current public release is **v2.0.1**. That is the GitHub Release, the zip linked from the download page, and the Homebrew cask.
 
-For later versions:
+To publish the next version:
 
 1. Bump `"version"` in `package.json`.
-2. Commit, then tag and push that version:
+2. Point the zip link in `docs/index.html` at that same version.
+3. Commit, then tag and push that version:
 
 ```bash
-git tag v2.0.1
-git push origin main v2.0.1
+git tag v$(node -p "require('./package.json').version")
+git push origin main v$(node -p "require('./package.json').version")
 ```
 
 The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, and updates `Casks/q-calc.rb`. Macs that installed with Homebrew pick up that build on the next daily autoupdate, or immediately with `brew upgrade --cask q-calc`. You can also run **Release** from the Actions tab without pushing a tag.

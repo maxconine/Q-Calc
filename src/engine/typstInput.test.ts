@@ -43,6 +43,15 @@ describe('typst input', () => {
     expectNum('integral_(0)^1 2x dif x', 1)
   })
 
+  it('multiplies an integral by a scalar and keeps the rest of the line', () => {
+    expectNum('4 integral_(2)^(4) 2 x dif x', 48)
+    expectNum('4*integral_(2)^(4) 2x dif x', 48)
+    expectNum('$2 integral_(0)^(1) x^2 dif x$', 2 / 3)
+    expectNum('(integral_(0)^(1) x dif x)+3', 3.5)
+    expectNum('integral_(0)^(1) x^2 dif x + integral_(0)^(1) x dif x', 5 / 6)
+    expectNum('10 - integral_(0)^(2) x dif x', 8)
+  })
+
   it('evaluates a typst derivative and limit', () => {
     expect(shown('frac(dif, dif x) x^2')).toBe(shown('d/dx x^2'))
     expect(shown('$frac(dif, dif x) x^3$')).toBe('3x²')

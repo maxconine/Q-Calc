@@ -1,6 +1,6 @@
 import { chemAnswer } from './chem'
 import { splitLetters } from './letters'
-import { evaluateCalculus, type CalculusResult } from './calculus'
+import { embedIntegrals, evaluateCalculus, type CalculusResult } from './calculus'
 import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
 import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
 import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './measure'
@@ -172,7 +172,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
 
     const variable = assign?.variable
     // ∓ is treated as ± until correlation is modelled
-    const expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
+    let expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
 
     const ctx = { ans: lastAns, angleMode, variables, functions, measures }
     const plusMinus = hasPlusMinus(expr)
@@ -181,6 +181,19 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     let calc: CalculusResult | null = null
     try {
       calc = plusMinus ? null : evaluateCalculus(expr, ctx)
+      // a scalar or other term beside an integral is not a calculus line, so the integral is folded in
+      if (!plusMinus && !calc?.value) {
+        for (let n = 0; n < 8 && !calc?.value; n++) {
+          const next = embedIntegrals(expr, ctx)
+          if (next === 'fail') {
+            calc = { value: null }
+            break
+          }
+          if (next == null) break
+          expr = next
+          calc = evaluateCalculus(expr, ctx)
+        }
+      }
       sum = calc ? null : sumAnswer(expr, { ...ctx, defaultUnits: options.defaultUnits, rationalize: options.rationalize })
       const m = plusMinus ? measure(expr, ctx) : null
       value = calc ? calc.value : m ? num(m.v) : sum ? sum.value : tryPlainMath(expr, { ...ctx, defaultUnits: options.defaultUnits })

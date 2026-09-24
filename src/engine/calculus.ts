@@ -185,6 +185,107 @@ function parseIntegral(text: string, functions: Record<string, UserFunction>): I
   return { op: 'integral', body: d.body, v: d.v, lower: lower.trim(), upper: upper.trim() }
 }
 
+const INTEGRAL_START_RE = /(?:the\s+)?(?:integrate|integral)|int|∫/gi
+
+/** First `)` `]` or `}` that the integral itself did not open, else the end of the line. */
+function groupEnd(s: string, from: number): number {
+  let depth = 0
+  for (let i = from; i < s.length; i++) {
+    const ch = s[i]!
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) {
+      if (depth === 0) return i
+      depth--
+    }
+  }
+  return s.length
+}
+
+function isDifferentialAt(s: string, i: number): boolean {
+  if (s[i] !== 'd' && s[i] !== 'D') return false
+  if (i > 0 && /[A-Za-z0-9_]/.test(s[i - 1]!)) return false
+  if (!/^[A-Za-z]$/.test(s[i + 1] ?? '')) return false
+  return !/[A-Za-z0-9_]/.test(s[i + 2] ?? '')
+}
+
+/** Where a sign-form integrand ends so `∫ x^2 dx + 1` is the integral plus one, not a failed body. */
+function differentialCut(s: string, from: number, limit: number): number | null {
+  let depth = 0
+  for (let i = from; i < limit; i++) {
+    const ch = s[i]!
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) {
+      if (depth === 0) return null
+      depth--
+    } else if (depth === 0 && isDifferentialAt(s, i)) {
+      let j = i + 2
+      while (j < limit && /\s/.test(s[j]!)) j++
+      if (j < limit && /[+\-*/^×·⋅]/.test(s[j]!)) return i + 2
+    }
+  }
+  return null
+}
+
+function locateIntegral(
+  text: string,
+  at: number,
+  functions: Record<string, UserFunction>,
+): { start: number; end: number } | null {
+  const slice = text.slice(at)
+  const call = slice.match(/^(?:int|integral|integrate|∫)\s*\(/i)
+  if (call) {
+    const open = at + call[0].length - 1
+    const close = closingParen(text, open)
+    if (close < 0) return null
+    return parseIntegral(text.slice(at, close + 1), functions) ? { start: at, end: close + 1 } : null
+  }
+  const limit = groupEnd(text, at)
+  let end = limit
+  while (end > at && /\s/.test(text[end - 1]!)) end--
+  const sign = slice.match(/^(?:∫|int(?=_|\s|[^A-Za-z\s(]\S*\.\.))/i)
+  if (sign && !/^(?:the\s+)?(?:integral|integrate)\b/i.test(slice)) {
+    const cut = differentialCut(text, at, end)
+    if (cut != null && parseIntegral(text.slice(at, cut), functions)) return { start: at, end: cut }
+  }
+  if (!/^(?:the\s+)?(?:integral|integrate)\b|^(?:∫|int(?=_|\s|[^A-Za-z\s(]\S*\.\.))/i.test(slice)) return null
+  return parseIntegral(text.slice(at, end), functions) ? { start: at, end } : null
+}
+
+/**
+ * Replaces integrals inside a larger line (`4*∫0..1 x^2`, `(∫0..1 x dx)+1`) with their values.
+ * Null when the line has none. `'fail'` when one is there but has no trustworthy value.
+ */
+export function embedIntegrals(expr: string, ctx: ScientificContext): string | 'fail' | null {
+  const functions = ctx.functions ?? {}
+  const found: { start: number; end: number }[] = []
+  INTEGRAL_START_RE.lastIndex = 0
+  for (let m = INTEGRAL_START_RE.exec(expr); m; m = INTEGRAL_START_RE.exec(expr)) {
+    const at = m.index
+    if (at > 0 && /[A-Za-z0-9_]/.test(expr[at - 1]!)) continue
+    const loc = locateIntegral(expr, at, functions)
+    if (loc) found.push(loc)
+  }
+  if (!found.length) return null
+  const innermost = found.filter(
+    (a) => !found.some((b) => b !== a && b.start >= a.start && b.end <= a.end && (b.start > a.start || b.end < a.end)),
+  )
+  const ready: { start: number; end: number; n: number }[] = []
+  for (const loc of innermost) {
+    let result: CalculusResult | null
+    try {
+      result = evaluateCalculus(expr.slice(loc.start, loc.end), ctx)
+    } catch {
+      return 'fail'
+    }
+    if (!result?.value || result.value.kind !== 'number' || !Number.isFinite(result.value.n)) return 'fail'
+    ready.push({ ...loc, n: result.value.n })
+  }
+  ready.sort((a, b) => b.start - a.start)
+  let text = expr
+  for (const p of ready) text = `${text.slice(0, p.start)}(${p.n})${text.slice(p.end)}`
+  return text
+}
+
 function parseSide(to: string): { to: string; side: -1 | 0 | 1 } {
   const m = to.match(/^(.+?)(?:\^?\s*([+-])|([⁺⁻]))$/)
   if (!m || !m[1]!.trim()) return { to, side: 0 }
