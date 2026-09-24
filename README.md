@@ -4,6 +4,57 @@ A Spotlight-style scientific calculator for Mac. Press **Control + Option + Spac
 
 Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as you type.
 
+## Preview
+
+**Unit conversion.** Type a value with units, and add `to` for a specific target.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/units-dark.png">
+  <img alt="Unit conversions: 98.6 f is 37 °C, 60 mph is 26.8224 m/s, 5 ft 10 in is 177.8 cm" src="docs/screenshots/units.png" width="720">
+</picture>
+
+**Uncertainty.** Type `+/-` or `~` for ±, and the uncertainty carries through the calculation.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/uncertainty-dark.png">
+  <img alt="Uncertainty: (9.81 ± 0.02) * (2.50 ± 0.01) is 24.53 ± 0.15" src="docs/screenshots/uncertainty.png" width="720">
+</picture>
+
+**Calendar and time math** (Mac app).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/calendar-dark.png">
+  <img alt="Calendar math: today + 90 days, days until December 25, 3:45pm + 4 hr 10 min is 7:55 PM" src="docs/screenshots/calendar.png" width="720">
+</picture>
+
+**History.** Enter saves a calculation, and the arrow keys walk back through the tape. Stored variables like `x` carry into later lines.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/history-dark.png">
+  <img alt="History tape with a variable, square root, sine, and an integral" src="docs/screenshots/history.png" width="720">
+</picture>
+
+**Solving equations.** Type an equation with `=` to solve it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/solve-dark.png">
+  <img alt="Solving x^2 - 5x + 6 = 0 gives x = 2, 3, and 2^x = 10 gives x = 3.32192809489" src="docs/screenshots/solve.png" width="720">
+</picture>
+
+**Graphing.** `graph` plots a function and lists its critical points.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/graph-dark.png">
+  <img alt="Graph of x^3 - 3x with a max at (-1, 2) and a min at (1, -2)" src="docs/screenshots/graph.png" width="720">
+</picture>
+
+**Periodic table.** Type `periodic table`, then click an element to insert its atomic mass.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/periodic-dark.png">
+  <img alt="Periodic table, with 2*1.008+15.999 = 18.015 built by clicking H and O" src="docs/screenshots/periodic.png" width="720">
+</picture>
+
 ## Installation
 
 Install via Homebrew to get autoupdates (Preferred)
