@@ -118,9 +118,10 @@ describe('a call never drops an argument it was given', () => {
 
 describe('latex pastes', () => {
   it('\\pm is never a plus', () => {
-    expect(shown('5 \\pm 2')).toBe('')
+    expect(shown('5 \\pm 2')).toBe(shown('5 ± 2'))
+    expect(shown('5 \\pm 2')).not.toBe('7')
     expect(shown('\\pm 2')).toBe('')
-    expect(shown('5 \\mp 2')).toBe('')
+    expect(shown('5 \\mp 2')).toBe(shown('5 ± 2'))
   })
 
   it('a subscript is not dropped', () => {
