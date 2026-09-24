@@ -1,6 +1,6 @@
 import { evaluateLine, parseAssignment, parseFunctionDef } from '../engine/evaluate'
 import { sanitizeMeas } from '../engine/measure'
-import type { Meas, UserFunction } from '../engine/types'
+import type { Meas, SolveInfo, UserFunction } from '../engine/types'
 
 export type HistoryRow = {
   id: string
@@ -16,6 +16,8 @@ export type HistoryRow = {
   fnName?: string
   fnParams?: string[]
   fnBody?: string
+  // a solved equation's roots; its expr is never re-read as an assignment
+  solve?: SolveInfo
 }
 
 export const MAX_HISTORY = 10
@@ -53,6 +55,17 @@ function slimExpr(expr: string): string {
   return ellipsize(expr, MAX_HISTORY_EXPR)
 }
 
+const SOLVE_OUTCOMES = new Set(['roots', 'none', 'contradiction', 'noneFound', 'all'])
+
+function sanitizeSolve(raw: unknown): SolveInfo | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const s = raw as Partial<SolveInfo>
+  if (typeof s.variable !== 'string' || !/^(?:[A-Za-z]|θ)$/.test(s.variable)) return undefined
+  if (typeof s.outcome !== 'string' || !SOLVE_OUTCOMES.has(s.outcome)) return undefined
+  if (!Array.isArray(s.roots) || s.roots.length > 8 || !s.roots.every((r) => typeof r === 'number' && Number.isFinite(r))) return undefined
+  return { variable: s.variable, roots: [...s.roots], outcome: s.outcome, ...(s.more === true && { more: true }) }
+}
+
 function slimFunctionFields(row: HistoryRow): Pick<HistoryRow, 'fnName' | 'fnParams' | 'fnBody'> {
   if (row.kind !== 'function') return {}
   const name =
@@ -78,6 +91,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
   const kind =
     row.kind === 'definition' ? 'definition' : row.kind === 'function' ? 'function' : undefined
   const fnFields = slimFunctionFields({ ...row, kind, expr })
+  const solve = kind ? undefined : sanitizeSolve(row.solve)
   return {
     id: ellipsize(row.id, 48) || 'row',
     expr,
@@ -89,6 +103,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     quantity: kind || typeof row.quantity !== 'string' ? undefined : row.quantity.length <= MAX_HISTORY_EXPR ? row.quantity : '',
     kind,
     ...fnFields,
+    ...(solve && { solve }),
   }
 }
 
@@ -112,12 +127,13 @@ export function normalizeHistoryRow(
       ? row.fnParams.filter((p): p is string => typeof p === 'string')
       : undefined,
     fnBody: typeof row.fnBody === 'string' ? row.fnBody : undefined,
+    solve: row.solve,
   })
 }
 
 // keyed so variable and function names stay in separate namespaces
 function definedName(row: HistoryRow): string | undefined {
-  if (row.kind === 'definition') return undefined
+  if (row.kind === 'definition' || row.solve) return undefined
   const expr = row.expr.trim()
   const fn = row.kind === 'function' ? (row.fnName ?? parseFunctionDef(expr)?.name) : parseFunctionDef(expr)?.name
   if (fn) return `fn:${fn}`
@@ -155,7 +171,7 @@ export function persistableHistory(rows: HistoryRow[]): HistoryRow[] {
 export function historyVariables(rows: HistoryRow[]): Record<string, number> {
   const vars: Record<string, number> = {}
   for (const row of rows) {
-    if (row.kind === 'definition' || row.kind === 'function') continue
+    if (row.kind === 'definition' || row.kind === 'function' || row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
     if (row.quantity != null) {
@@ -189,6 +205,7 @@ export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
   for (const row of rows) {
     if (row.kind === 'definition' || row.kind === 'function') continue
     if (row.n != null && Number.isFinite(row.n)) last = row
+    if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
     if (row.meas && row.quantity == null) out[parsed.variable] = row.meas
@@ -204,6 +221,7 @@ export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
   for (const row of rows) {
     if (row.kind === 'definition' || row.kind === 'function') continue
     if (row.n != null && Number.isFinite(row.n)) last = row
+    if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
     if (row.quantity != null) out[parsed.variable] = row.quantity

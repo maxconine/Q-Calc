@@ -392,7 +392,7 @@ function bisectRoot(f: GraphY, lo: number, yLo: number, hi: number, yHi: number)
 }
 
 /** The shortest decimal near `x` that `accept` still takes: 0, then 1, 2, ... significant digits. */
-function tidy(x: number, accept: (c: number) => boolean): number {
+export function tidy(x: number, accept: (c: number) => boolean): number {
   if (x !== 0 && accept(0)) return 0
   for (let digits = 1; digits < 17; digits++) {
     const c = Number(x.toPrecision(digits))
@@ -506,7 +506,7 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
 }
 
 /** Compares a degree and a radian compilation at a few probe points. */
-function dependsOnAngle(a: GraphY, b: GraphY): boolean {
+export function dependsOnAngle(a: GraphY, b: GraphY): boolean {
   return [0.37, 1.1, 2.9, -4.3, 7.7].some((x) => {
     const ya = a(x)
     const yb = b(x)

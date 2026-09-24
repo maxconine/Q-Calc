@@ -81,9 +81,13 @@ final class AppSettings: ObservableObject {
     static let defaultUnitsKey = "qcalc.defaultUnits"
     static let answerFormKey = "qcalc.answerForm"
     static let historyInsertKey = "qcalc.historyInsert"
+    static let historyShowKey = "qcalc.historyShow"
     static let rationalizeKey = "qcalc.rationalize"
     static let sigFigModeKey = "qcalc.sigFigMode"
+    static let keepWordsKey = "qcalc.keepWords"
     static let themeKey = "qcalc.theme"
+    static let angleModeKey = "qcalc.angleMode"
+    static let fractionModeKey = "qcalc.fractionMode"
     static let hotKeyKey = "qcalc.hotkey"
     static let onboardingKey = "qcalc.onboarding"
     static let firstRunKey = "qcalc.firstRunDone"
@@ -95,6 +99,7 @@ final class AppSettings: ObservableObject {
     static let maxDraftSeconds = 3600
     static let defaultAnswerForm = "exact"
     static let defaultHistoryInsert = "expr"
+    static let defaultHistoryShow = "recent"
     static let defaultRationalize = true
     static let defaultTheme = "system"
 
@@ -103,9 +108,13 @@ final class AppSettings: ObservableObject {
     @Published private(set) var defaultUnits: [String: String]
     @Published private(set) var answerForm: String
     @Published private(set) var historyInsert: String
+    @Published private(set) var historyShow: String
     @Published private(set) var rationalize: Bool
     @Published private(set) var sigFigMode: Bool
+    @Published private(set) var keepWords: Bool
     @Published private(set) var theme: String
+    @Published private(set) var angleMode: String
+    @Published private(set) var fractionMode: Bool
     // what the user picked; activeHotKey is what actually got registered
     @Published private(set) var hotKey: HotKeyPreset
     @Published private(set) var activeHotKey: HotKeyPreset?
@@ -124,9 +133,13 @@ final class AppSettings: ObservableObject {
         defaultUnits = Self.loadDefaultUnits()
         answerForm = Self.loadAnswerForm()
         historyInsert = Self.loadHistoryInsert()
+        historyShow = Self.normalizeHistoryShow(UserDefaults.standard.string(forKey: Self.historyShowKey) ?? Self.defaultHistoryShow)
         rationalize = Self.loadRationalize()
         sigFigMode = UserDefaults.standard.bool(forKey: Self.sigFigModeKey)
+        keepWords = UserDefaults.standard.bool(forKey: Self.keepWordsKey)
         theme = Self.loadTheme()
+        angleMode = UserDefaults.standard.string(forKey: Self.angleModeKey) == "rad" ? "rad" : "deg"
+        fractionMode = UserDefaults.standard.bool(forKey: Self.fractionModeKey)
         hotKey = HotKeyPreset.named(UserDefaults.standard.string(forKey: Self.hotKeyKey))
         onboarding = Self.loadOnboarding()
     }
@@ -190,6 +203,10 @@ final class AppSettings: ObservableObject {
     private static func loadHistoryInsert() -> String {
         let stored = UserDefaults.standard.string(forKey: historyInsertKey) ?? defaultHistoryInsert
         return stored == "answer" ? "answer" : defaultHistoryInsert
+    }
+
+    static func normalizeHistoryShow(_ raw: String) -> String {
+        raw == "always" || raw == "arrow" ? raw : defaultHistoryShow
     }
 
     private static func loadRationalize() -> Bool {
@@ -257,6 +274,14 @@ final class AppSettings: ObservableObject {
         if notifyWeb { notifySettingsChanged() }
     }
 
+    func setHistoryShow(_ raw: String, notifyWeb: Bool) {
+        let value = Self.normalizeHistoryShow(raw)
+        guard value != historyShow else { return }
+        historyShow = value
+        UserDefaults.standard.set(value, forKey: Self.historyShowKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
     func setRationalize(_ value: Bool, notifyWeb: Bool) {
         guard value != rationalize else { return }
         rationalize = value
@@ -271,11 +296,33 @@ final class AppSettings: ObservableObject {
         if notifyWeb { notifySettingsChanged() }
     }
 
+    func setKeepWords(_ value: Bool, notifyWeb: Bool) {
+        guard value != keepWords else { return }
+        keepWords = value
+        UserDefaults.standard.set(value, forKey: Self.keepWordsKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
     func setTheme(_ raw: String, notifyWeb: Bool) {
         let value = Self.normalizeTheme(raw)
         guard value != theme else { return }
         theme = value
         UserDefaults.standard.set(value, forKey: Self.themeKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setAngleMode(_ raw: String, notifyWeb: Bool) {
+        let value = raw == "rad" ? "rad" : "deg"
+        guard value != angleMode else { return }
+        angleMode = value
+        UserDefaults.standard.set(value, forKey: Self.angleModeKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setFractionMode(_ value: Bool, notifyWeb: Bool) {
+        guard value != fractionMode else { return }
+        fractionMode = value
+        UserDefaults.standard.set(value, forKey: Self.fractionModeKey)
         if notifyWeb { notifySettingsChanged() }
     }
 
@@ -306,6 +353,10 @@ final class AppSettings: ObservableObject {
         applyDefaultUnits([:], notifyWeb: notifyWeb)
     }
 
+    func replaceDefaultUnits(_ units: [String: String], notifyWeb: Bool) {
+        applyDefaultUnits(units.filter { !$0.value.isEmpty }, notifyWeb: notifyWeb)
+    }
+
     private func applyDefaultUnits(_ next: [String: String], notifyWeb: Bool) {
         guard next != defaultUnits else { return }
         defaultUnits = next
@@ -334,10 +385,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var overlay: OverlayController?
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandlerInstalled = false
-    // a preset macos refused; its menu title says so on the next menu build, then clears
-    private var refusedHotKey: String?
     private var statusItem: NSStatusItem?
-    private var unitSettings: UnitSettingsWindowController?
+    private var settingsWindow: SettingsWindowController?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.prohibited)
@@ -349,6 +398,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // before the web view boots, so its injected settings already carry the shortcut
         registerHotKey()
         overlay = OverlayController()
+        overlay?.onSettings = { [weak self] in self?.showSettings() }
         overlay?.preload()
         if AppSettings.shared.claimFirstRun() {
             overlay?.showFirstRun()
@@ -400,129 +450,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         quick.keyEquivalentModifierMask = active?.menuModifiers ?? []
         quick.target = self
         menu.addItem(quick)
+        let settings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
         let tips = NSMenuItem(title: "Tips…", action: #selector(showTips), keyEquivalent: "")
         tips.target = self
         menu.addItem(tips)
         menu.addItem(.separator())
-
-        let submenus: [(String, NSMenu)] = [
-            ("Shortcut", hotKeyMenu()),
-            ("Significant figures", sigFigsMenu()),
-            ("Answers", answerFormMenu()),
-            ("History", historyInsertMenu()),
-            ("Appearance", appearanceMenu()),
-            ("Keep unfinished", draftMenu()),
-        ]
-        for (title, submenu) in submenus {
-            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-            item.submenu = submenu
-            menu.addItem(item)
-        }
-
-        let units = NSMenuItem(title: "Default units…", action: #selector(showUnitSettings), keyEquivalent: "")
-        units.target = self
-        menu.addItem(units)
-
-        menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Q Calc", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
-    }
-
-    private func hotKeyMenu() -> NSMenu {
-        let menu = NSMenu()
-        let current = AppSettings.shared.activeHotKey
-        let refused = refusedHotKey
-        refusedHotKey = nil
-        for preset in HotKeyPreset.all {
-            let title = preset.id == refused ? "\(preset.title) — in use by macOS" : preset.title
-            let item = NSMenuItem(title: title, action: #selector(setHotKey(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = preset.id
-            item.state = preset == current ? .on : .off
-            menu.addItem(item)
-        }
-        return menu
-    }
-
-    private func sigFigsMenu() -> NSMenu {
-        let menu = NSMenu()
-        let current = AppSettings.shared.significantFigures
-        for n in AppSettings.minSigFigs...AppSettings.maxSigFigs {
-            let item = NSMenuItem(title: "\(n)", action: #selector(setSigFigs(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = n
-            item.state = n == current ? .on : .off
-            menu.addItem(item)
-        }
-        menu.addItem(.separator())
-        let propagate = NSMenuItem(title: "Propagate from input", action: #selector(toggleSigFigMode), keyEquivalent: "")
-        propagate.target = self
-        propagate.state = AppSettings.shared.sigFigMode ? .on : .off
-        menu.addItem(propagate)
-        return menu
-    }
-
-    private func choiceMenu(_ options: [(title: String, value: String)], current: String, action: Selector) -> NSMenu {
-        let menu = NSMenu()
-        for option in options {
-            let item = NSMenuItem(title: option.title, action: action, keyEquivalent: "")
-            item.target = self
-            item.representedObject = option.value
-            item.state = option.value == current ? .on : .off
-            menu.addItem(item)
-        }
-        return menu
-    }
-
-    private func answerFormMenu() -> NSMenu {
-        let menu = choiceMenu(
-            [("Exact", "exact"), ("Approximate", "approx")],
-            current: AppSettings.shared.answerForm,
-            action: #selector(setAnswerForm(_:))
-        )
-        menu.addItem(.separator())
-        let rat = NSMenuItem(title: "Rationalize denominators", action: #selector(toggleRationalize), keyEquivalent: "")
-        rat.target = self
-        rat.state = AppSettings.shared.rationalize ? .on : .off
-        menu.addItem(rat)
-        return menu
-    }
-
-    private func historyInsertMenu() -> NSMenu {
-        choiceMenu(
-            [("Insert expression", "expr"), ("Insert answer", "answer")],
-            current: AppSettings.shared.historyInsert,
-            action: #selector(setHistoryInsert(_:))
-        )
-    }
-
-    private func appearanceMenu() -> NSMenu {
-        choiceMenu(
-            [("System", "system"), ("Light", "light"), ("Dark", "dark")],
-            current: AppSettings.shared.theme,
-            action: #selector(setTheme(_:))
-        )
-    }
-
-    private func draftMenu() -> NSMenu {
-        let menu = NSMenu()
-        let current = AppSettings.shared.draftSeconds
-        let options: [(String, Int)] = [
-            ("Don't keep", 0),
-            ("30 seconds", 30),
-            ("1 minute", 60),
-            ("2 minutes", 120),
-            ("5 minutes", 300),
-        ]
-        for (title, seconds) in options {
-            let item = NSMenuItem(title: title, action: #selector(setDraftSeconds(_:)), keyEquivalent: "")
-            item.target = self
-            item.tag = seconds
-            item.state = seconds == current ? .on : .off
-            menu.addItem(item)
-        }
-        return menu
     }
 
     @objc private func showQuickCalc() {
@@ -533,64 +470,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay?.showTips()
     }
 
-    @objc private func setHotKey(_ sender: NSMenuItem) {
-        let next = HotKeyPreset.named(sender.representedObject as? String)
+    // false when macos or carbon refused the preset; the previous one stays bound
+    @discardableResult
+    func selectHotKey(_ next: HotKeyPreset) -> Bool {
         let previous = AppSettings.shared.activeHotKey
         if next == previous {
             AppSettings.shared.setHotKey(next)
             AppSettings.shared.setHotKeyState(active: next, failed: false)
-            return
+            return true
         }
-        refusedHotKey = next.id
-        if SystemShortcuts.claims(next) { return }
+        if SystemShortcuts.claims(next) { return false }
         unbindHotKey()
         if bindHotKey(next) {
-            refusedHotKey = nil
             AppSettings.shared.setHotKey(next)
             AppSettings.shared.setHotKeyState(active: next, failed: false)
-            return
+            return true
         }
         if let previous, !bindHotKey(previous) {
             AppSettings.shared.setHotKeyState(active: nil, failed: true)
         }
+        return false
     }
 
-    @objc private func setSigFigs(_ sender: NSMenuItem) {
-        AppSettings.shared.setSignificantFigures(sender.tag, notifyWeb: true)
-    }
-
-    @objc private func setDraftSeconds(_ sender: NSMenuItem) {
-        AppSettings.shared.setDraftSeconds(sender.tag, notifyWeb: true)
-    }
-
-    @objc private func setAnswerForm(_ sender: NSMenuItem) {
-        let form = sender.representedObject as? String ?? AppSettings.defaultAnswerForm
-        AppSettings.shared.setAnswerForm(form, notifyWeb: true)
-    }
-
-    @objc private func setHistoryInsert(_ sender: NSMenuItem) {
-        let value = sender.representedObject as? String ?? AppSettings.defaultHistoryInsert
-        AppSettings.shared.setHistoryInsert(value, notifyWeb: true)
-    }
-
-    @objc private func toggleRationalize() {
-        AppSettings.shared.setRationalize(!AppSettings.shared.rationalize, notifyWeb: true)
-    }
-
-    @objc private func toggleSigFigMode() {
-        AppSettings.shared.setSigFigMode(!AppSettings.shared.sigFigMode, notifyWeb: true)
-    }
-
-    @objc private func setTheme(_ sender: NSMenuItem) {
-        let theme = sender.representedObject as? String ?? AppSettings.defaultTheme
-        AppSettings.shared.setTheme(theme, notifyWeb: true)
-    }
-
-    @objc private func showUnitSettings() {
-        if unitSettings == nil {
-            unitSettings = UnitSettingsWindowController()
+    @objc func showSettings() {
+        overlay?.hide()
+        if settingsWindow == nil {
+            settingsWindow = SettingsWindowController()
         }
-        unitSettings?.show()
+        settingsWindow?.show()
     }
 
     @objc private func quitApp() {
@@ -608,7 +515,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         NSLog("Q Calc: %@ is in use by macOS", preferred.title)
-        refusedHotKey = preferred.id
         let fallback = HotKeyPreset.standard
         if preferred != fallback, !SystemShortcuts.claims(fallback), bindHotKey(fallback) {
             AppSettings.shared.setHotKeyState(active: fallback, failed: true)

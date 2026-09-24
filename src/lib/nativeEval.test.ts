@@ -7,6 +7,7 @@ import {
   nativeEvalPayload,
   nativeReplyToLive,
   usableNativeDisplay,
+  soulverAngleSafe,
 } from './nativeEval'
 
 describe('mergeLiveAnswer', () => {
@@ -454,4 +455,29 @@ describe('looksLikeDictionaryQuery', () => {
       expect(looksLikeDictionaryQuery(expr)).toBe(false)
     },
   )
+})
+
+describe('soulverAngleSafe', () => {
+  it('keeps soulvercore, which works in radians, off trig in degree mode', () => {
+    expect(soulverAngleSafe('what is sin(30)', 'deg')).toBe(false)
+    expect(soulverAngleSafe('arctan(1) per day', 'deg')).toBe(false)
+    expect(soulverAngleSafe('what is sin(30)', 'rad')).toBe(true)
+    expect(soulverAngleSafe('sinh(1) per day', 'deg')).toBe(true)
+    expect(soulverAngleSafe('tip of 15% on 80', 'deg')).toBe(true)
+  })
+})
+
+describe('calculus stays in the js engine', () => {
+  it('is never natural language, even with from/to or half typed', () => {
+    expect(looksLikeNaturalLanguage('integral of x^2 from 0 to 1')).toBe(false)
+    expect(looksLikeNaturalLanguage('integral of x^2 from 0')).toBe(false)
+    expect(looksLikeNaturalLanguage('∫ x from 0 to 1')).toBe(false)
+    expect(looksLikeNaturalLanguage('from 2 to 3')).toBe(true)
+  })
+
+  it('a blank calculus answer is not filled in by soulvercore', () => {
+    const native = { expr: '∫0..1 1/x', display: '0', n: 0 }
+    expect(mergeLiveAnswer('∫0..1 1/x', '', undefined, native)).toEqual({ display: '', n: undefined })
+    expect(mergeLiveAnswer('∫0..1 x', '0.5', 0.5, { ...native, expr: '∫0..1 x' })).toEqual({ display: '0.5', n: 0.5 })
+  })
 })

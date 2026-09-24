@@ -135,37 +135,33 @@ struct UnitSettingsView: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("Quantities typed without “to …” convert into these units. Automatic keeps the built-in SI ↔ US pair.")
-                        .foregroundStyle(.secondary)
+        Form {
+            Section {
+                LabeledContent {
+                    Button("Reset") {
+                        settings.resetDefaultUnits(notifyWeb: true)
+                    }
+                    .disabled(settings.defaultUnits.isEmpty)
+                } label: {
+                    Text("Default units")
+                    Text("Quantities typed without “to …” convert into these. Automatic keeps the built-in SI ↔ US pair.")
                 }
-                ForEach(UnitCatalog.groups) { group in
-                    Section(group.title) {
-                        ForEach(group.items) { item in
-                            Picker("\(item.label) default unit", selection: binding(for: item.dim)) {
-                                Text("Automatic").tag("")
-                                ForEach(item.units) { unit in
-                                    Text(unit.label).tag(unit.id)
-                                }
+            }
+            ForEach(UnitCatalog.groups) { group in
+                Section(group.title) {
+                    ForEach(group.items) { item in
+                        Picker(item.label, selection: binding(for: item.dim)) {
+                            Text("Automatic").tag("")
+                            Divider()
+                            ForEach(item.units) { unit in
+                                Text(unit.label).tag(unit.id)
                             }
                         }
                     }
                 }
             }
-            .formStyle(.grouped)
-            .navigationTitle("Default Units")
-            .toolbar {
-                ToolbarItem(placement: .automatic) {
-                    Button("Reset") {
-                        settings.resetDefaultUnits(notifyWeb: true)
-                    }
-                    .disabled(settings.defaultUnits.isEmpty)
-                }
-            }
         }
-        .frame(minWidth: 420, minHeight: 520)
+        .formStyle(.grouped)
     }
 
     private func binding(for dim: String) -> Binding<String> {
@@ -173,56 +169,5 @@ struct UnitSettingsView: View {
             get: { settings.defaultUnits[dim] ?? "" },
             set: { settings.setDefaultUnit(dim: dim, unitId: $0, notifyWeb: true) }
         )
-    }
-}
-
-final class UnitSettingsWindowController: NSObject, NSWindowDelegate {
-    private var window: NSWindow?
-    private var settingsObserver: NSObjectProtocol?
-
-    deinit {
-        if let settingsObserver {
-            NotificationCenter.default.removeObserver(settingsObserver)
-        }
-    }
-
-    func show() {
-        if window == nil {
-            let hosting = NSHostingController(rootView: UnitSettingsView(settings: AppSettings.shared))
-            let window = NSWindow(contentViewController: hosting)
-            window.title = "Default Units"
-            window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-            window.setContentSize(NSSize(width: 440, height: 580))
-            window.minSize = NSSize(width: 380, height: 420)
-            window.isReleasedWhenClosed = false
-            window.delegate = self
-            self.window = window
-            observeSettings()
-        }
-        applyAppearance()
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        window = nil
-        NSApp.setActivationPolicy(.accessory)
-    }
-
-    private func observeSettings() {
-        guard settingsObserver == nil else { return }
-        settingsObserver = NotificationCenter.default.addObserver(
-            forName: .qcalcSettingsChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            self?.applyAppearance()
-        }
-    }
-
-    private func applyAppearance() {
-        window?.appearance = AppSettings.shared.nsAppearance
     }
 }

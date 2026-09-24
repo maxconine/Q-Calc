@@ -1,3 +1,4 @@
+import type { ClosedFormJob } from './closedForm'
 import type { DefaultUnits } from './units'
 
 export type ValueKind = 'number' | 'text'
@@ -20,7 +21,17 @@ export interface Meas {
   unc?: number
 }
 
-export type LineKind = 'empty' | 'expression' | 'assignment' | 'function'
+export type LineKind = 'empty' | 'expression' | 'assignment' | 'function' | 'solve'
+
+export type SolveOutcome = 'roots' | 'none' | 'contradiction' | 'noneFound' | 'all'
+
+export interface SolveInfo {
+  variable: string
+  /** Ascending; at most MAX_SHOWN_ROOTS, the ones nearest 0 when there are more. */
+  roots: number[]
+  outcome: SolveOutcome
+  more?: boolean
+}
 
 export interface UserFunction {
   params: string[]
@@ -42,6 +53,9 @@ export interface LineResult {
   fnName?: string
   fnParams?: string[]
   fnBody?: string
+  solve?: SolveInfo
+  /** Calculus answers the closed-form worker may still upgrade to an exact form. */
+  closedForm?: ClosedFormJob
 }
 
 export interface SheetInputLine {

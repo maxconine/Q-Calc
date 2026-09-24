@@ -1,5 +1,5 @@
-import { DEFAULT_SIG_FIGS, formatNumber } from '../engine/format'
-import type { Meas } from '../engine/types'
+import { DEFAULT_SIG_FIGS, formatNumber, prettyAnswer } from '../engine/format'
+import type { Meas, SolveInfo } from '../engine/types'
 import { isImproperUnitConversion } from '../engine/units'
 
 const PLAIN_NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
@@ -17,6 +17,33 @@ export function insertableAnswer(display: string, n?: number, sigFigs = DEFAULT_
   if (shown && !PLAIN_NUMBER.test(shown)) return shown
   if (n != null && Number.isFinite(n)) return formatNumber(n, sigFigs)
   return shown
+}
+
+const ATOM = /^(?:(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|[A-Za-zπτ]+)$/i
+
+function isWrapped(s: string): boolean {
+  if (!s.startsWith('(') || !s.endsWith(')')) return false
+  let depth = 0
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === '(') depth++
+    else if (s[i] === ')' && --depth === 0 && i < s.length - 1) return false
+  }
+  return true
+}
+
+// an answer placed among other text keeps its value: `ans^2` with ans -3 is (-3)^2, not -3^2
+export function answerAmong(answer: string, alone: boolean): string {
+  const a = answer.trim()
+  if (alone || !a || ATOM.test(a) || isWrapped(a.replace(/^[A-Za-z]\w*(?=\()/, ''))) return answer
+  return `(${a})`
+}
+
+// display only: `±1000000` and `-2, 3` get the same grouping and minus as a single answer
+export function prettyRoots(s: string): string {
+  return s
+    .split(', ')
+    .map((part) => (part.startsWith('±') ? `±${prettyAnswer(part.slice(1))}` : prettyAnswer(part)))
+    .join(', ')
 }
 
 export type AnswerForm = 'exact' | 'approx'
@@ -37,6 +64,15 @@ type HistoryAnswer = {
   n?: number
   // a measured answer inserts as shown (`5.00`), not re-rounded from `n`
   meas?: Meas
+  solve?: SolveInfo
+}
+
+/** A solved row with several roots inserts them as a list, a message row nothing; null for any other row. */
+export function solveInsert(row: { solve?: SolveInfo }, sigFigs = DEFAULT_SIG_FIGS): string | null {
+  const s = row.solve
+  if (!s) return null
+  if (s.outcome !== 'roots') return ''
+  return s.roots.length > 1 ? `[${s.roots.map((r) => formatNumber(r, sigFigs)).join(', ')}]` : null
 }
 
 export function hasDualAnswer(row: { display: string; exact?: string }): boolean {
@@ -56,6 +92,8 @@ export function insertableHistoryAnswer(
   form: AnswerForm,
   sigFigs = DEFAULT_SIG_FIGS,
 ): string {
+  const solved = solveInsert(row, sigFigs)
+  if (solved != null) return solved
   if (form === 'exact' && row.exact) return insertableAnswer(row.exact)
   return insertableAnswer(row.display, row.meas ? undefined : row.n, sigFigs)
 }

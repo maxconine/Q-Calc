@@ -139,6 +139,7 @@ swiftc -parse-as-library \
   "$MAC/SoulverEval.swift" \
   "$MAC/Overlay.swift" \
   "$MAC/UnitSettings.swift" \
+  "$MAC/SettingsWindow.swift" \
   "$MAC/QCalcApp.swift" \
   -o "$BIN"
 

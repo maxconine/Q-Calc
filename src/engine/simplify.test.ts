@@ -65,3 +65,16 @@ describe('evaluateLine exact only for trig and square roots', () => {
     expect(evaluateLine('√8').exact).toBe('2sqrt(2)')
   })
 })
+
+describe('exactForm never claims a nearby value', () => {
+  it('only snaps float noise', () => {
+    expect(exactForm(Math.tan((89.9999999 * Math.PI) / 180))).toBeNull()
+    expect(exactForm(Math.sin((30.00000001 * Math.PI) / 180))).toBeNull()
+    expect(exactForm(Math.sqrt(2.000000001))).toBeNull()
+    expect(exactForm(Math.sqrt(2000000))).toBe('1000sqrt(2)')
+  })
+  it('shows no exact form for these', () => {
+    expect(evaluateLine('tan(89.9999999)').exact).toBeUndefined()
+    expect(evaluateLine('sin(30.00000001)').exact).toBeUndefined()
+  })
+})

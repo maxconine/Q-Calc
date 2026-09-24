@@ -1,7 +1,9 @@
+import { hasDualAnswer } from './answer'
+
 export type Onboarding = {
   opens: number
   commits: number
-  // bitmask of HINT values already shown
+  // bitmask of HINTS bits already shown
   hints: number
   // examples retired for good
   done: boolean
@@ -57,17 +59,28 @@ export function recordCommit(s: Onboarding): Onboarding {
   return settle({ ...s, commits: s.commits + 1 })
 }
 
-// answers are computed at display time so they follow the settings; `plain` has no answer
-type Example = { expr: string; note?: string; plain?: boolean }
+// answers are computed at display time so they follow the settings; `plain` has no answer.
+// lead with what no other calculator does: the first three are seen within 8 seconds
+type Example = { expr: string; plain?: boolean }
 
 export const EXAMPLES: readonly Example[] = [
-  { expr: '2 in to cm' },
-  { expr: 'sin(90)' },
-  { expr: 'x = 5' },
+  { expr: '5 ft 10 in to cm' },
+  { expr: '80 + 15%' },
   { expr: '(5.0 +- 0.2) * 3' },
-  { expr: '100 W * 2 hr', note: '⌥↑' },
-  { expr: 'graph x^3', plain: true },
+  { expr: 'graph sin(x)', plain: true },
+  { expr: 'sqrt(8)' },
+  { expr: '100 W * 2 hr to kWh' },
+  { expr: 'x^2 = 2' },
 ]
+
+// the example answer reads like the live one: exact ≈ approx when there are two, after `x =` for a solve
+export function exampleAnswer(
+  line: { display?: string; exact?: string; solve?: { variable: string; outcome: string } } | undefined,
+): string {
+  const display = line?.display ?? ''
+  const answer = line?.exact && hasDualAnswer({ display, exact: line.exact }) ? `${line.exact} ≈ ${display}` : display
+  return line?.solve?.outcome === 'roots' ? `${line.solve.variable} = ${answer}` : answer
+}
 
 export function exampleList(firstRunHotkey?: string): Example[] {
   const lead: Example[] = firstRunHotkey ? [{ expr: `Press ${firstRunHotkey} anytime`, plain: true }] : []
@@ -96,34 +109,65 @@ export function rotationItem<T>(r: Rotation, items: readonly T[]): T | undefined
   return items[r.tick % items.length]
 }
 
-export const HINT = {
-  answer: 1,
-  variable: 2,
-  units: 4,
-  trig: 8,
-} as const
-
-const HINT_ALL = HINT.answer | HINT.variable | HINT.units | HINT.trig
-
-export type CommitFacts = {
+export type HintFacts = {
   expr: string
+  // the live answer as shown
+  answer?: string
   variable?: string
   unit?: boolean
+  angleMode?: 'deg' | 'rad'
+  fractionMode?: boolean
+  native?: boolean
+  opens?: number
 }
+
+// `pause`: the answer sat still for HINT_PAUSE_MS while typing, so the hint is about the answer on screen.
+// `commit`: enter was pressed, so the hint is about what happens next.
+// `open`: the overlay just appeared
+type HintRule = {
+  bit: number
+  on: 'pause' | 'commit' | 'open'
+  when?: (f: HintFacts) => boolean
+  text: string | ((f: HintFacts) => string)
+}
+
+export const HINT_PAUSE_MS = 1500
+
+const TRIG = /(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan)\s*\(/i
+const DIVISION = /\d\s*\/\s*\d/
+const DECIMAL = /^-?\d*\.\d+$/
+
+// one line each, shown once ever, first match wins. bits are persisted: never reuse or renumber one.
+// retired bits: 1 (the old "⌘C copies · Enter saved it"), 4 and 8 (units and trig after enter)
+export const HINTS: readonly HintRule[] = [
+  { bit: 16, on: 'pause', text: '⌘C copies the answer' },
+  {
+    bit: 32,
+    on: 'pause',
+    when: (f) => TRIG.test(f.expr),
+    text: (f) => (f.angleMode === 'rad' ? 'radians · ⌃D for degrees' : 'degrees · ⌃D for radians'),
+  },
+  { bit: 64, on: 'pause', when: (f) => Boolean(f.unit), text: '⌥↑ ⌥↓ step the unit prefix' },
+  {
+    bit: 128,
+    on: 'pause',
+    when: (f) => !f.fractionMode && DIVISION.test(f.expr) && DECIMAL.test(f.answer ?? ''),
+    text: '⌃F shows fractions',
+  },
+  { bit: 256, on: 'commit', text: '↑ brings it back' },
+  { bit: 2, on: 'commit', when: (f) => Boolean(f.variable), text: (f) => `use ${f.variable} in later calculations` },
+  // not on first run, which already has the hotkey to teach
+  { bit: 512, on: 'open', when: (f) => Boolean(f.native) && (f.opens ?? 0) >= 2, text: '⌘, opens settings' },
+]
+
+const HINT_ALL = HINTS.reduce((all, h) => all | h.bit, 0)
 
 type Hint = { bit: number; text: string }
 
-const TRIG = /(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan)\s*\(/i
-
-// each hint shows once ever, most basic first
-export function pickHint(seen: number, facts: CommitFacts): Hint | null {
-  const candidates: Hint[] = [
-    { bit: HINT.answer, text: '⌘C copies · Enter saved it' },
-    ...(facts.variable ? [{ bit: HINT.variable, text: `use ${facts.variable} in later calculations` }] : []),
-    ...(TRIG.test(facts.expr) ? [{ bit: HINT.trig, text: '⌃D switches degrees/radians' }] : []),
-    ...(facts.unit ? [{ bit: HINT.units, text: '⌥↑ ⌥↓ switch prefixes' }] : []),
-  ]
-  return candidates.find((h) => (seen & h.bit) === 0) ?? null
+export function pickHint(seen: number, facts: HintFacts, on: HintRule['on'] = 'commit'): Hint | null {
+  const rule = HINTS.find((h) => h.on === on && (seen & h.bit) === 0 && (h.when?.(facts) ?? true))
+  if (!rule) return null
+  return { bit: rule.bit, text: typeof rule.text === 'string' ? rule.text : rule.text(facts) }
 }
 
 export const HOTKEY_FAILED_HINT = 'shortcut in use by macOS — change it in the menu'
@@ -139,19 +183,39 @@ export function afterHelpInput(prev: string, next: string): string {
   return next.slice(prev.length)
 }
 
-export function cheatSheet(hotkey?: string): Array<[key: string, label: string]> {
-  return [
-    ...(hotkey ? [[hotkey, 'show / hide'] as [string, string]] : []),
-    ['esc', 'hide'],
-    ['⌘C', 'copy answer'],
-    ['↵', 'save to history'],
+export type CheatRow = [key: string, label: string]
+
+// left column: keys. right column: things to type
+export const CHEATS: { keys: readonly CheatRow[]; type: readonly CheatRow[] } = {
+  keys: [
+    ['↵', 'save'],
     ['↑', 'history'],
+    ['⌘C', 'copy answer'],
+    ['⌥↑ ⌥↓', 'unit prefix'],
     ['⌃D', 'degrees / radians'],
     ['⌃F', 'fractions'],
     ['⌃S', 'sig figs from input'],
-    ['⌥↑ ⌥↓', 'unit prefix'],
     ['⌃C', 'clear history'],
-    ['+-  ~', '±'],
+    ['esc', 'hide'],
+  ],
+  type: [
+    ['ft to cm', 'units'],
+    ['80 + 15%', 'percent'],
+    ['+-  -+', '± ∓ uncertainty'],
+    ['x = 5', 'variables'],
+    ['x^2 = 2', 'solve'],
+    ['graph x^2', 'plot'],
+    ['gcf  lcm', 'factors'],
+    ['sum n, n=1..9', 'Σ sums'],
     ['?', 'this list'],
-  ]
+  ],
+}
+
+// only the mac app has the settings window; the web page shows them inline
+const MENU_BAR: CheatRow = ['⌘,', 'settings']
+
+export function cheatSheet(hotkey?: string, native = false): CheatRow[][] {
+  const keys = [...(hotkey ? [[hotkey, 'show / hide'] as CheatRow] : []), ...CHEATS.keys]
+  if (native) keys.splice(keys.length - 1, 0, MENU_BAR)
+  return [keys, [...CHEATS.type]]
 }

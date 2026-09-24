@@ -16,6 +16,12 @@ private func isCommandVPasteKey(_ event: NSEvent) -> Bool {
     return event.charactersIgnoringModifiers?.lowercased() == "v"
 }
 
+private func isCommandCommaKey(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    return flags.intersection([.command, .option, .control, .shift]) == .command
+        && event.charactersIgnoringModifiers == ","
+}
+
 private func copyToPasteboard(_ text: String) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
@@ -116,6 +122,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var settingsObserver: NSObjectProtocol?
     private var lastPasteAt: TimeInterval = 0
     private var pendingFirstRun = false
+    private var showCount = 0
+    private var revealedShow = 0
+    var onSettings: (() -> Void)?
     // off the main thread so a slow soulver evaluation never blocks typing
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
 
@@ -146,6 +155,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         notifyWebWillHide()
         panel?.ignoreResignKey = true
         panel?.orderOut(nil)
+        panel?.alphaValue = 1
     }
 
     func show() {
@@ -157,10 +167,15 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         applySize(height: overlayMinHeight, anchorTop: 0)
         position()
         panel?.ignoreResignKey = true
+        showCount += 1
+        let token = showCount
+        // clear until the page has sized itself, so a history tape open on show doesn't pop in
+        panel?.alphaValue = 0
         panel?.orderFrontRegardless()
         panel?.makeKeyAndOrderFront(nil)
         panel?.makeFirstResponder(web)
-        resetAndFocus()
+        resetAndFocus { [weak self] in self?.reveal(token) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.reveal(token) }
         DispatchQueue.main.async { [weak self] in
             self?.focusInput()
             self?.panel?.ignoreResignKey = false
@@ -330,6 +345,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
               if (e.key === 'Escape' || e.keyCode === 27) {
                 e.preventDefault();
                 e.stopPropagation();
+                if (window.__qcalcEscape && window.__qcalcEscape()) return;
                 try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'dismiss' }); } catch (err) {}
                 return;
               }
@@ -526,8 +542,26 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web?.evaluateJavaScript("if (window.__qcalcWillHide) window.__qcalcWillHide();")
     }
 
-    private func resetAndFocus() {
-        guard let web else { return }
+    private func reveal(_ token: Int) {
+        guard token == showCount, token != revealedShow, let panel, panel.isVisible else { return }
+        revealedShow = token
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            panel.alphaValue = 1
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.11
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+        }
+    }
+
+    // the page posts its size while this script runs, so `done` comes after the panel has its height
+    private func resetAndFocus(_ done: @escaping () -> Void) {
+        guard let web else {
+            done()
+            return
+        }
         panel?.makeFirstResponder(web)
         web.evaluateJavaScript("""
         (function () {
@@ -536,7 +570,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
           if (el) { el.focus(); if (window.__qcalcFocus) window.__qcalcFocus(); }
           if (window.__qcalcSize) window.__qcalcSize();
         })()
-        """)
+        """) { _, _ in done() }
     }
 
     private func focusInput() {
@@ -583,7 +617,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func beginWindowDrag() {
         guard let panel, let event = NSApp.currentEvent else { return }
         if event.type == .leftMouseDown || event.type == .leftMouseDragged {
-            panel.performDrag(with: event)
+            dragAndRemember(panel, event)
         }
     }
 
@@ -592,14 +626,29 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, self.panel?.isVisible == true else { return event }
             if event.keyCode == UInt16(kVK_Escape) {
-                self.hide()
+                self.escape()
                 return nil
             }
             if isCommandVPasteKey(event) {
                 self.pasteIntoWeb()
                 return nil
             }
+            if isCommandCommaKey(event), event.window === self.panel {
+                self.onSettings?()
+                return nil
+            }
             return event
+        }
+    }
+
+    // the page clears the tape or the input first; only an esc with nothing left hides
+    private func escape() {
+        guard let web, webReady, panel?.contentView === web else {
+            hide()
+            return
+        }
+        web.evaluateJavaScript("window.__qcalcEscape ? window.__qcalcEscape() : false") { [weak self] result, _ in
+            if (result as? Bool) != true { self?.hide() }
         }
     }
 
@@ -615,7 +664,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             let alongTop = p.y >= size.height - edge
             let topCorner = p.y >= size.height - 44 && (p.x <= edge || p.x >= size.width - edge)
             if alongTop || topCorner {
-                panel.performDrag(with: event)
+                if event.clickCount == 2 {
+                    self.forgetPosition()
+                    return nil
+                }
+                self.dragAndRemember(panel, event)
                 return nil
             }
             return event
@@ -638,11 +691,62 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private func position() {
-        guard let panel, let screen = NSScreen.main?.visibleFrame else { return }
+        guard let panel, let main = NSScreen.main else { return }
+        let screen = main.visibleFrame
         let size = panel.frame.size
+        if let saved = savedComposerTop(on: main) {
+            // clamped so a resolution change can't leave it off screen
+            let x = min(max(saved.x, screen.minX), screen.maxX - size.width)
+            let top = min(max(saved.y, screen.minY + size.height), screen.maxY)
+            panel.setFrameOrigin(NSPoint(x: x, y: top - size.height))
+            return
+        }
         let x = screen.midX - size.width / 2
         let y = screen.minY + screen.height * 0.72 - size.height
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    private static let positionsKey = "overlayPositions"
+
+    private func screenKey(_ screen: NSScreen) -> String? {
+        (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.stringValue
+    }
+
+    // stored per display, relative to its visible frame, as the composer's top-left corner
+    private func savedComposerTop(on screen: NSScreen) -> NSPoint? {
+        guard let key = screenKey(screen),
+              let all = UserDefaults.standard.dictionary(forKey: Self.positionsKey),
+              let pair = all[key] as? [Double], pair.count == 2 else { return nil }
+        let origin = screen.visibleFrame.origin
+        return NSPoint(x: origin.x + pair[0], y: origin.y + pair[1])
+    }
+
+    // performDrag runs until mouse up; a click that didn't move it saves nothing
+    private func dragAndRemember(_ panel: OverlayPanel, _ event: NSEvent) {
+        let before = panel.frame.origin
+        panel.performDrag(with: event)
+        if panel.frame.origin != before { rememberPosition() }
+    }
+
+    private func rememberPosition() {
+        guard let panel, let screen = panel.screen, let key = screenKey(screen) else { return }
+        let origin = screen.visibleFrame.origin
+        let top = panel.frame.maxY - sizeAnchorTop
+        var all = UserDefaults.standard.dictionary(forKey: Self.positionsKey) ?? [:]
+        all[key] = [Double(panel.frame.minX - origin.x), Double(top - origin.y)]
+        UserDefaults.standard.set(all, forKey: Self.positionsKey)
+    }
+
+    private func forgetPosition() {
+        guard let panel, let screen = panel.screen, let key = screenKey(screen) else { return }
+        var all = UserDefaults.standard.dictionary(forKey: Self.positionsKey) ?? [:]
+        all.removeValue(forKey: key)
+        UserDefaults.standard.set(all, forKey: Self.positionsKey)
+        let height = panel.frame.height
+        let anchor = sizeAnchorTop
+        let visible = screen.visibleFrame
+        let top = visible.minY + visible.height * 0.72
+        panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2, y: top + anchor - height))
     }
 
     private func observeSettings() {
@@ -670,10 +774,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let units = AppSettings.shared.defaultUnitsJSON()
         let form = AppSettings.shared.answerForm
         let insert = AppSettings.shared.historyInsert
+        let historyShow = AppSettings.shared.historyShow
         let rationalize = AppSettings.shared.rationalize ? "true" : "false"
         let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
+        let keepWords = AppSettings.shared.keepWords ? "true" : "false"
         let theme = AppSettings.shared.theme
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", \(hotKeyJavaScriptFields()) }"
+        let angle = AppSettings.shared.angleMode
+        let fractions = AppSettings.shared.fractionMode ? "true" : "false"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), \(hotKeyJavaScriptFields()) }"
     }
 
     // titles are fixed preset strings, so they need no escaping
@@ -698,6 +806,34 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let sigFigMode = boolValue(dict["sigFigMode"]) {
             AppSettings.shared.setSigFigMode(sigFigMode, notifyWeb: false)
+        }
+        if let keepWords = boolValue(dict["keepWords"]) {
+            AppSettings.shared.setKeepWords(keepWords, notifyWeb: false)
+        }
+        if let fractions = boolValue(dict["fractionMode"]) {
+            AppSettings.shared.setFractionMode(fractions, notifyWeb: false)
+        }
+        if let angle = dict["angleMode"] as? String {
+            AppSettings.shared.setAngleMode(angle, notifyWeb: false)
+        }
+        if let form = dict["answerForm"] as? String {
+            AppSettings.shared.setAnswerForm(form, notifyWeb: false)
+        }
+        if let insert = dict["historyInsert"] as? String {
+            AppSettings.shared.setHistoryInsert(insert, notifyWeb: false)
+        }
+        if let historyShow = dict["historyShow"] as? String {
+            AppSettings.shared.setHistoryShow(historyShow, notifyWeb: false)
+        }
+        if let d = intValue(dict["draftSeconds"]) {
+            AppSettings.shared.setDraftSeconds(d, notifyWeb: false)
+        }
+        if let units = dict["defaultUnits"] as? [String: Any] {
+            AppSettings.shared.replaceDefaultUnits(units.compactMapValues { $0 as? String }, notifyWeb: false)
+        }
+        // theme changes the panel's own appearance, so it goes through the full notify
+        if let theme = dict["theme"] as? String {
+            AppSettings.shared.setTheme(theme, notifyWeb: true)
         }
     }
 

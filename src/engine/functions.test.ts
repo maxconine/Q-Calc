@@ -61,7 +61,8 @@ describe('user-defined functions', () => {
   it('does not treat reserved-name defs as functions', () => {
     const r = evaluateLine('log(x) = x')
     expect(r.kind).not.toBe('function')
-    expect(r.display).toBe('')
+    // read as an equation instead, and log10(x) never reaches x
+    expect(r.display).toBe('no solution found')
   })
 })
 

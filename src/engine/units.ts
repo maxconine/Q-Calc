@@ -420,6 +420,13 @@ const ALIAS_INDEX: { alias: string; unit: Unit }[] = []
   ALIAS_INDEX.sort((a, b) => b.alias.length - a.alias.length)
 }
 
+const ALIAS_NAMES = new Set(ALIAS_INDEX.map((a) => a.alias))
+
+/** A unit's own name or symbol, not a prefix glued onto one (`kilom` is not a name). */
+export function isUnitName(word: string): boolean {
+  return ALIAS_NAMES.has(word.toLowerCase())
+}
+
 const PREFIX_INDEX = PREFIXES.flatMap((p) => p.names.map((name) => ({ name: name.toLowerCase(), prefix: p }))).sort(
   (a, b) => b.name.length - a.name.length,
 )
@@ -466,7 +473,7 @@ function preprocess(s: string): string {
     .replace(/°\s*F\b/gi, ' degf')
     .replace(/°\s*R\b/gi, ' degr')
     .replace(/°/g, ' deg')
-    .replace(/µ|μ/g, 'u')
+    .replace(/[µμ](?=[A-Za-z])/g, 'u')
     .replace(/²/g, '^2')
     .replace(/³/g, '^3')
     .replace(/\s*\/\s*/g, '/')
@@ -488,11 +495,21 @@ function beforeTail(t: string, token: string): string | null {
   return rest.trim() ? rest : null
 }
 
+/** `mPa` is a millipascal and `Mg` a megagram, though the table's `MPa` and `mg` match them ignoring case. */
+function caseClash(typed: string, unit: Unit): boolean {
+  const sym = unit.symbol
+  // only the prefix letter's case differs; `MG` or `MPH` in caps keep their table reading
+  if (typed[0] === sym[0] || typed.slice(1) !== sym.slice(1) || typed[0]!.toLowerCase() !== sym[0]!.toLowerCase()) return false
+  const prefix = CASE_PREFIXES.find((p) => p.symbol === typed[0])
+  const base = prefix && matchBareUnitAtStart(typed.slice(1))
+  return Boolean(base && !base.rest && scaleUnit(base.unit, prefix.prefix))
+}
+
 function matchUnitAtEnd(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimEnd()
   for (const { alias, unit } of ALIAS_INDEX) {
     const rest = beforeTail(t, alias)
-    if (rest == null) continue
+    if (rest == null || caseClash(t.slice(rest.length), unit)) continue
     // `1 H` is a henry, hours are `h`/`hr`; `72 F` and `100 C` stay temperatures here
     return { unit: t.slice(rest.length) === 'H' ? BY_ID.get('henry')! : unit, rest: rest.trimEnd() }
   }
@@ -568,7 +585,7 @@ function matchBareUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   const si = SI_CAPITALS[t[0] ?? '']
   if (si && !/[A-Za-z0-9]/.test(t[1] ?? '')) return { unit: BY_ID.get(si)!, rest: t.slice(1) }
   for (const { alias, unit } of ALIAS_INDEX) {
-    if (!startsWithToken(t, alias)) continue
+    if (!startsWithToken(t, alias) || caseClash(t.slice(0, alias.length), unit)) continue
     return { unit, rest: t.slice(alias.length) }
   }
   return null
@@ -985,18 +1002,37 @@ class UnitParser {
     if (amount) {
       const unit = this.parseUnitRef()
       if (unit) {
-        this.skip()
-        if (this.s[this.i] === '^') {
-          this.i++
-          const exp = this.parsePrimary()
-          const raised = exp && powQty(unit, exp)
-          return raised && mulQty(amount, raised)
-        }
-        return mulQty(amount, unit)
+        const raised = this.parseUnitPower(unit)
+        return raised && this.parsePerUnits(mulQty(amount, raised))
       }
       return amount
     }
     return this.parseUnitRef()
+  }
+
+  parseUnitPower(unit: Qty): Qty | null {
+    this.skip()
+    if (this.s[this.i] !== '^') return unit
+    this.i++
+    const exp = this.parsePrimary()
+    return exp && powQty(unit, exp)
+  }
+
+  /** `4 MB/s` is one rate, so `32 GB / 4 MB/s` divides by the rate, not by 4 MB and then by s. */
+  parsePerUnits(q: Qty): Qty | null {
+    let out: Qty | null = q
+    while (out && this.peek() === '/') {
+      const at = this.i
+      this.i++
+      const unit = this.parseUnitRef()
+      if (!unit) {
+        this.i = at
+        break
+      }
+      const den = this.parseUnitPower(unit)
+      out = den && divQty(out, den)
+    }
+    return out
   }
 
   /**
@@ -1158,7 +1194,8 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
 
 export function tryConvert(text: string, defaults?: DefaultUnits): Value | null {
   const src = preprocess(text)
-  if (!src) return null
+  // a lone quote mark is no quantity, and `5 kg in` is a conversion still being typed, not kg times inches
+  if (!src || /^['"]+$/.test(src) || /(?<!\b(?:to|into|in))(?<=[A-Za-z])\s+in$/i.test(src)) return null
   const units = sanitizeDefaultUnits(defaults)
   return trySimpleConvert(src, units) ?? tryUnitExpression(src, units)
 }
@@ -1468,4 +1505,26 @@ export function quantityText(v: Value): string | null {
   const text = `${n}${v.meas?.unc ? ` ± ${v.meas.unc}` : ''} ${v.unit}`
   const back = tryConvert(`${text} to ${v.unit}`)
   return back?.kind === 'number' && back.unitId === v.unitId && sameScale(back.n, n) ? text : null
+}
+
+/** A few other units worth tabbing to, picked from the Settings lists by how readable the number is. */
+export function unitAlternatives(value: Value, limit = 3): Value[] {
+  if (value.kind !== 'number' || !Number.isFinite(value.n)) return []
+  const from = unitById(value.unitId)
+  if (!from || (value.n === 0 && from.dim !== 'temperature')) return []
+  const choices = UNIT_SETTING_GROUPS.flatMap((g) => g.items).find((item) => item.dim === from.dim)?.units ?? []
+  const out: Value[] = []
+  for (const choice of choices) {
+    const to = BY_ID.get(choice.id)
+    if (!to || to.id === from.id || (to.symbol === from.symbol && sameScale(to.toBase, from.toBase))) continue
+    const v = convertAmount(value.n, from, to)
+    if (v?.kind === 'number' && Number.isFinite(v.n)) out.push(v)
+  }
+  // 1 to 999 reads best; tiny numbers read worse than big ones
+  const readability = (n: number) => {
+    const mag = Math.log10(Math.abs(n))
+    return mag < 0 ? -mag * 2 : Math.max(0, mag - 3)
+  }
+  const picked = new Set([...out].sort((a, b) => readability(a.n) - readability(b.n)).slice(0, limit))
+  return out.filter((v) => picked.has(v))
 }

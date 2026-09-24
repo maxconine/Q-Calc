@@ -13,8 +13,13 @@ const NESTED: ReadonlyArray<readonly [string, number]> = [
   ['-(2+sqrt(3))', -(2 + Math.sqrt(3))],
 ]
 
-function close(a: number, b: number, eps = 1e-9): boolean {
-  return Math.abs(a - b) <= eps * Math.max(1, Math.abs(b))
+// an exact form claims every digit the decimal shows, so it may only differ by float noise
+function tol(x: number): number {
+  return 1e-11 + 1e-14 * Math.abs(x)
+}
+
+function close(a: number, b: number): boolean {
+  return Math.abs(a - b) <= tol(b)
 }
 
 function toFraction(x: number, maxDen: number, eps: number): { n: number; d: number } | null {
@@ -54,7 +59,7 @@ function formatPi(num: number, den: number): string {
   return `${sign}${coeff}pi${den === 1 ? '' : `/${den}`}`
 }
 
-function splitSquares(n: number): { coeff: number; rad: number } {
+export function splitSquares(n: number): { coeff: number; rad: number } {
   let rad = Math.round(Math.abs(n))
   if (rad <= 0) return { coeff: 0, rad: 1 }
   let coeff = 1
@@ -98,7 +103,7 @@ function formatUnrationalized(
 }
 
 function asPiMultiple(n: number): string | null {
-  const f = toFraction(n / Math.PI, 24, 1e-8)
+  const f = toFraction(n / Math.PI, 24, tol(n / Math.PI))
   if (!f) return null
   if (f.n === 0) return '0'
   return formatPi(f.n, f.d)
@@ -114,7 +119,7 @@ function asNestedRadical(n: number): string | null {
 function asRadical(n: number, rationalize: boolean): string | null {
   const sign = n < 0 ? '-' : ''
   const x = Math.abs(n)
-  const f = toFraction(x * x, 256, 1e-8)
+  const f = toFraction(x * x, 256, 2 * tol(x * x))
   if (!f || f.n <= 0) return null
   if (rationalize) {
     const split = splitSquares(f.n * f.d)
@@ -128,7 +133,7 @@ function asRadical(n: number, rationalize: boolean): string | null {
 }
 
 function asNiceFraction(n: number): string | null {
-  const f = toFraction(n, 12, 1e-9)
+  const f = toFraction(n, 12, tol(n))
   if (!f || !NICE_DEN.has(f.d)) return null
   if (f.n === 0) return '0'
   return `${f.n}/${f.d}`
@@ -149,6 +154,8 @@ export function exactForm(n: number, options: ExactFormOptions = {}): string | n
   if (!Number.isFinite(n)) return null
   const asInt = snapInteger(n)
   if (asInt !== null) return String(asInt)
+  // past this any big enough radicand or numerator fits the tolerance by chance
+  if (Math.abs(n) >= 1e4) return null
   return asNestedRadical(n) || asPiMultiple(n) || asRadical(n, options.rationalize !== false) || asNiceFraction(n)
 }
 

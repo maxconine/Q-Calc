@@ -35,6 +35,13 @@ describe('prettyTokens', () => {
     expect(prettyTokens('ans * 2', '3.142')).toBe('3.142 * 2')
     expect(prettyTokens('ANS', '3.14159')).toBe('3.14159')
   })
+
+  it('turns -> into → only in a limit', () => {
+    expect(prettyTokens('lim x->0 sin(x)/x')).toBe('lim x→0 sin(x)/x')
+    expect(prettyTokens('lim_(x->0) sin(x)/x')).toBe('lim_(x→0) sin(x)/x')
+    expect(prettyTokens('limit t -> ∞ 1/t')).toBe('limit t → ∞ 1/t')
+    expect(prettyTokens('5->3')).toBe('5->3')
+  })
 })
 
 const DOT_CASES: Array<{ name: string; input: string; rewritten: string; expected: number }> = [
@@ -139,5 +146,18 @@ describe('prettyTokens while typing', () => {
   it('evaluates what the prettifier produces', () => {
     expect(n(typeKeys('cbrt(8)'))).toBeCloseTo(2)
     expect(n(prettyTokens('2pi'))).toBeCloseTo(2 * Math.PI)
+  })
+})
+
+describe('typed ans among other text', () => {
+  it('keeps a negative or compound answer grouped', () => {
+    expect(typeKeys('ans^2', '-3')).toBe('(-3)^2')
+    expect(n(typeKeys('ans^2', '-3'))).toBe(9)
+    expect(typeKeys('1/ans+', 'sqrt(2)/2')).toBe('1/(sqrt(2)/2)+')
+    expect(prettyTokens('2 ans', '-3')).toBe('2 (-3)')
+  })
+  it('leaves a lone ans or a plain number bare', () => {
+    expect(prettyTokens('ans', '-3')).toBe('-3')
+    expect(prettyTokens('ans*2', '5')).toBe('5*2')
   })
 })

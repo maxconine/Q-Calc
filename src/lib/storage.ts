@@ -13,6 +13,7 @@ export type CalcWindow = NativeWindow & {
   __qcalcApplySettings?: (s: Partial<Settings> & NativeInfo) => void
   __qcalcFirstRun?: () => void
   __qcalcShowTips?: () => void
+  __qcalcEscape?: () => boolean
   __qcalcNativeResult?: (reply: NativeEvalReply) => void
 }
 

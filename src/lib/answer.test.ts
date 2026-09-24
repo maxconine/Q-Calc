@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { formatNumber } from '../engine/format'
 import {
+  answerAmong,
   hasDualAnswer,
   insertableAnswer,
   insertableHistoryAnswer,
   insertableHistoryReuse,
   normalizeHistoryInsert,
+  prettyRoots,
   visibleAnswer,
 } from './answer'
 
@@ -253,5 +255,47 @@ describe('measured answers', () => {
     expect(visibleAnswer(row, 'exact')).toBe('10.0 ± 0.7')
     expect(insertableHistoryAnswer(row, 'approx')).toBe('(10.0 ± 0.7)')
     expect(insertableAnswer('10.0 ± 0.7', 10)).toBe('(10.0 ± 0.7)')
+  })
+})
+
+describe('answerAmong', () => {
+  it('parenthesizes a compound or negative answer among other text', () => {
+    expect(answerAmong('-3', false)).toBe('(-3)')
+    expect(answerAmong('sqrt(2)/2', false)).toBe('(sqrt(2)/2)')
+    expect(answerAmong('2sqrt(2)', false)).toBe('(2sqrt(2))')
+    expect(answerAmong('16.4 ft', false)).toBe('(16.4 ft)')
+  })
+  it('leaves atoms and lone answers as they are', () => {
+    expect(answerAmong('-3', true)).toBe('-3')
+    expect(answerAmong('3.142', false)).toBe('3.142')
+    expect(answerAmong('1e+21', false)).toBe('1e+21')
+    expect(answerAmong('sqrt(2)', false)).toBe('sqrt(2)')
+    expect(answerAmong('(5 ± 1)', false)).toBe('(5 ± 1)')
+  })
+})
+
+describe('solved rows', () => {
+  const roots = (r: number[], outcome: 'roots' | 'none' = 'roots') => ({ variable: 'x', roots: r, outcome })
+
+  it('97: several roots insert as a list', () => {
+    const row = { display: '2, 3', solve: roots([2, 3]) }
+    expect(insertableHistoryAnswer(row, 'approx')).toBe('[2, 3]')
+    const pair = { display: '±1.41421356237', exact: '±sqrt(2)', solve: roots([-Math.SQRT2, Math.SQRT2]) }
+    expect(insertableHistoryAnswer(pair, 'exact')).toBe('[-1.41421356237, 1.41421356237]')
+    expect(insertableHistoryReuse({ ...pair, expr: 'x^2 = 2' }, 'exact', 'answer')).toBe('[-1.41421356237, 1.41421356237]')
+  })
+
+  it('98: one root inserts as usual', () => {
+    expect(insertableHistoryAnswer({ display: '4', n: 4, solve: roots([4]) }, 'approx')).toBe('4')
+    expect(insertableHistoryAnswer({ display: '0.333333333333', exact: '1/3', n: 1 / 3, solve: roots([1 / 3]) }, 'exact')).toBe('1/3')
+  })
+
+  it('99: a message inserts nothing', () => {
+    expect(insertableHistoryAnswer({ display: 'no real solution', solve: roots([], 'none') }, 'approx')).toBe('')
+  })
+
+  it('pretty-prints each root', () => {
+    expect(prettyRoots('±1000000')).toBe('±1,000,000')
+    expect(prettyRoots('-2, 3, …')).toBe('−2, 3, …')
   })
 })

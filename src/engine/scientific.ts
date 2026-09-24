@@ -1,3 +1,4 @@
+import type { MathNode } from 'mathjs'
 import { formatNumber, num, textVal } from './format'
 import { intGcd, math, namesPattern } from './math'
 import type { UserFunction, Value } from './types'
@@ -8,7 +9,7 @@ export const MAX_LIST_ALLOC = 10_000
 export type AngleMode = 'deg' | 'rad'
 
 export const SCIENTIFIC_NAMES =
-  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|pi|tau|inf|infinity|ans'
+  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans'
 
 const NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'gi')
 const HAS_NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'i')
@@ -23,7 +24,7 @@ function isMatrix(x: unknown): x is { toArray: () => unknown } {
   return !!x && typeof x === 'object' && 'toArray' in x && typeof (x as { toArray: unknown }).toArray === 'function'
 }
 
-/** Flattens arrays and mathjs matrices, dropping anything non-finite. */
+/** Flattens arrays and mathjs matrices; an undefined entry stays NaN, so `mean(1, 1/0)` can't quietly skip it. */
 function nums(args: unknown[]): number[] {
   const out: number[] = []
   const walk = (x: unknown): void => {
@@ -35,8 +36,7 @@ function nums(args: unknown[]): number[] {
       walk(x.toArray())
       return
     }
-    const n = Number(x)
-    if (Number.isFinite(n)) out.push(n)
+    out.push(Number(x))
   }
   args.forEach(walk)
   return out
@@ -54,13 +54,15 @@ function varianceOf(xs: number[], population: boolean): number {
 }
 
 function medianOf(s: number[]): number {
-  if (!s.length) return Number.NaN
+  if (!s.length || s.some(Number.isNaN)) return Number.NaN
   const m = (s.length - 1) / 2
   return (s[Math.floor(m)]! + s[Math.ceil(m)]!) / 2
 }
 
 function tukeyQuartile(data: number[], q: number): number {
+  if (![0, 1, 2, 3, 4].includes(q) || data.some(Number.isNaN)) return Number.NaN
   const s = [...data].sort((a, b) => a - b)
+  if (q === 0 || q === 4) return s.length ? s[q === 0 ? 0 : s.length - 1]! : Number.NaN
   if (q === 2) return medianOf(s)
   const n = s.length
   const lower = n % 2 === 0 ? s.slice(0, n / 2) : s.slice(0, (n - 1) / 2)
@@ -69,6 +71,7 @@ function tukeyQuartile(data: number[], q: number): number {
 }
 
 function quantileLinear(data: number[], p: number): number {
+  if (!(p >= 0 && p <= 1) || data.some(Number.isNaN)) return Number.NaN
   const s = [...data].sort((a, b) => a - b)
   if (!s.length) return Number.NaN
   const idx = (s.length - 1) * p
@@ -102,6 +105,36 @@ function intLcm(a: number, b: number): number {
   return Math.abs(a * b) / intGcd(a, b)
 }
 
+// exact n/d for x, or null when x isn't a fraction with a small denominator (like π or √2)
+function asRatio(x: number): [number, number] | null {
+  for (let d = 1; d <= 10000; d++) {
+    const n = Math.round(x * d)
+    if (Math.abs(n / d - x) <= 1e-12 * Math.max(1, Math.abs(x))) return [n, d]
+  }
+  return null
+}
+
+// gcd(a/b, c/d) = gcd(a, c) / lcm(b, d) and lcm(a/b, c/d) = lcm(a, c) / gcd(b, d); non-fractions give NaN
+function ratioFold(args: unknown[], kind: 'gcd' | 'lcm'): number {
+  const ratios = nums(args).map(asRatio)
+  if (!ratios.length || ratios.some((r) => r == null)) return Number.NaN
+  const [n, d] = (ratios as [number, number][]).reduce(([n1, d1], [n2, d2]) =>
+    kind === 'gcd' ? [intGcd(n1, n2), intLcm(d1, d2)] : [intLcm(n1, n2), intGcd(d1, d2)],
+  )
+  return n / d
+}
+
+/** Half away from zero, on the decimal digits as written: `round(1.005, 2)` is 1.01 and `round(-2.5)` is -3. */
+function roundHalfAway(x: number, digits = 0): number {
+  if (!Number.isInteger(digits)) return Number.NaN
+  if (!Number.isFinite(x)) return x
+  const shift = (v: number, k: number) => {
+    const [m, e = '0'] = String(v).split('e')
+    return Number(`${m}e${Number(e) + k}`)
+  }
+  return Math.sign(x) * shift(Math.round(shift(Math.abs(x), digits)), -digits)
+}
+
 function toRad(x: number, mode?: AngleMode): number {
   return mode === 'rad' ? x : (x * Math.PI) / 180
 }
@@ -110,8 +143,18 @@ function fromRad(x: number, mode?: AngleMode): number {
   return mode === 'rad' ? x : (x * 180) / Math.PI
 }
 
-function nearZero(x: number): boolean {
-  return chop(x) === 0
+// sin and cos at a multiple of π/2 miss 0 by float noise that grows with the angle; a tiny angle's tiny sine is real
+function sinCos(x: number, mode?: AngleMode): [number, number] {
+  const r = toRad(x, mode)
+  const noise = 1e-14 * Math.abs(r)
+  const snap = (v: number) => (Math.abs(v) <= noise ? 0 : v)
+  return [snap(Math.sin(r)), snap(Math.cos(r))]
+}
+
+/** Within a few float steps of an integer, which is all `0.29*100` misses 29 by. */
+function nearInteger(x: number): number | null {
+  const r = Math.round(x)
+  return Math.abs(x - r) <= 4 * Number.EPSILON * Math.max(1, Math.abs(r)) ? r : null
 }
 
 /** Non-negative remainder; `x mod 0` is undefined. */
@@ -119,7 +162,10 @@ function modulo(a: number, b: number): number {
   if (b === 0) return Number.NaN
   // past 2^53 the float's low digits are gone, so there is no honest answer
   if (Math.abs(a) > Number.MAX_SAFE_INTEGER || Math.abs(b) > Number.MAX_SAFE_INTEGER) throw new Error('inexact mod')
-  return ((a % b) + Math.abs(b)) % Math.abs(b)
+  const m = Math.abs(b)
+  const r = ((a % b) + m) % m
+  // `1 mod 0.1` lands one float step short of 0.1
+  return nearInteger(a / b) != null ? 0 : r
 }
 
 /** `b^e mod m` in exact integers. */
@@ -142,6 +188,21 @@ const POW_MOD_RE = /(?<=(?:^|[(,+]|[\w)]\s*-)\s*)(\d+)\s*\^\s*(\d+)\s*mod\s*(\d+
 // `7 mod 3` parses as mathjs's own operator, so it needs the same convention
 math.import({ mod: modulo }, { override: true })
 
+// mathjs's own nCr overflows inside (NaN for nCr(1000, 500)) even when the answer fits a float
+function combinationsFloat(n: number, k: number): number {
+  const m = Math.min(k, n - k)
+  // with n >= 2m the answer is at least 2^m, past any float
+  if (m > 1100) return Infinity
+  let r = 1
+  for (let i = 1; i <= m; i++) r = (r * (n - m + i)) / i
+  return r
+}
+
+function combinationsSafe(n: number, k: number): number {
+  const v = Number(math.combinations(n, k))
+  return Number.isNaN(v) ? combinationsFloat(n, k) : v
+}
+
 /** nCr / nPr: 0 when choosing more than there are, undefined for non-integers or negatives. */
 function choose(f: (n: number, k: number) => number): (n: number, k: number) => number {
   return (n, k) => {
@@ -162,7 +223,7 @@ function factorial(n: number): number {
   return Number(math.gamma(n + 1))
 }
 
-const WRAP_SKIP = new Set(['pi', 'tau', 'inf', 'infinity', 'ans', 'e', 'mod'])
+const WRAP_SKIP = new Set(['pi', 'tau', 'inf', 'infinity', 'ans', 'e', 'mod', 'catalan'])
 
 /** sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 isn't read as sin. */
 const INVERSE_POWER_FNS: [string, string][] = [
@@ -206,8 +267,9 @@ function callableNames(extraNames: string[]): CallableNames {
   return callableCache
 }
 
-/** The argument of a bare function call (`sin 30`, `sin 2pi`). */
-const BARE_ATOM_RE = /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)/i
+/** The argument of a bare function call (`sin 30`, `sin 2pi`); a power stays inside, so `log 10^3` is 3. */
+const BARE_ATOM_RE =
+  /^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*/i
 
 export function wrapBareFunctions(expr: string, extraNames: string[] = []): string {
   const { names } = callableNames(extraNames)
@@ -298,9 +360,13 @@ function rewritePercentAdd(expr: string): string {
   return s
 }
 
+const SUPERSCRIPT_DIGITS = '⁻⁰¹²³⁴⁵⁶⁷⁸⁹'
+
 export function preprocessAscii(expr: string, extraNames: string[] = []): string {
-  let s = expr
-  s = rewriteTypesetMul(s).replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt')
+  // `√x` roots a single letter; `√2` and `√(x + 1)` already read right
+  let s = expr.replace(/([√∛])([A-Za-z])(?![A-Za-z0-9_(])/g, '$1($2)')
+  s = rewriteTypesetMul(s).replace(/°/g, ' deg').replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt').replace(/θ/g, 'theta')
+  s = s.replace(/ζ/g, 'zeta').replace(/[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `^(${[...m].map((c) => SUPERSCRIPT_DIGITS.indexOf(c) - 1).map((d) => (d < 0 ? '-' : d)).join('')})`)
   s = s.replace(/(?<![\d)\]!])\|([^|]+)\|/g, 'abs($1)')
   s = s.replace(/\*\*/g, '^')
   s = s.replace(POW_MOD_RE, 'powmod($1,$2,$3)')
@@ -330,10 +396,33 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   s = s.replace(/\[([^\][]*?)\s*\.\.\.\s*([^\][]*?)\]/g, 'inclusiveRange($1,$2)')
   s = s.replace(/\breal\b/g, 're').replace(/\bimag\b/g, 'im')
   s = s.replace(/\blog_(\d+(?:\.\d+)?)\s*\(([^)]+)\)/g, 'log($2, $1)')
-  s = s.replace(/\blog\(([^,)]+)\)/g, 'log10($1)')
   s = s.replace(callableNames(extraNames).implicitRe, '$1*$2$3')
   s = wrapBareFunctions(s, extraNames)
+  // after wrapping, so bare `log 1000` is base 10 too
+  s = rewriteLog10(s)
   s = rewriteFactorial(s)
+  return s
+}
+
+/** One-argument `log(...)` is base 10, however its argument nests (`log(max(10, 100))`). */
+function rewriteLog10(expr: string): string {
+  let s = expr
+  const re = /\blog\(/g
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    const open = m.index + 3
+    let depth = 0
+    let commas = 0
+    let close = -1
+    for (let i = open; i < s.length && close < 0; i++) {
+      if (s[i] === '(' || s[i] === '[') depth++
+      else if (s[i] === ')' || s[i] === ']') {
+        if (--depth === 0) close = i
+      } else if (s[i] === ',' && depth === 1) commas++
+    }
+    if (close < 0 || commas > 0) continue
+    s = `${s.slice(0, m.index)}log10${s.slice(open)}`
+    re.lastIndex = m.index + 5
+  }
   return s
 }
 
@@ -375,7 +464,8 @@ function rewriteFactorial(expr: string): string {
     } else if (s[j] === ']') {
       start = openingIndex(s, j, '[', ']')
     } else if (/[0-9.]/.test(s[j]!)) {
-      while (start > 0 && /[0-9.eE+]/.test(s[start - 1]!)) start--
+      // a sign belongs to the number only inside an exponent (`1e+5!`), never `2+3!`
+      while (start > 0 && (/[0-9.eE]/.test(s[start - 1]!) || (/[+-]/.test(s[start - 1]!) && /\d[eE]$/.test(s.slice(0, start - 1))))) start--
     } else if (/[A-Za-z_]/.test(s[j]!)) {
       while (start > 0 && /[A-Za-z0-9_]/.test(s[start - 1]!)) start--
     } else {
@@ -408,7 +498,7 @@ function snapInt(n: number): number {
   return n
 }
 
-function fromMathjs(v: unknown): Value | null {
+function fromMathjs(v: unknown, overflowOk: boolean): Value | null {
   if (typeof v === 'number') {
     if (Number.isNaN(v)) return textVal('undefined')
     return num(snapInt(v))
@@ -421,7 +511,9 @@ function fromMathjs(v: unknown): Value | null {
     if (!Number.isFinite(re)) return textVal('undefined')
     return num(chop(re))
   }
-  if (Array.isArray(v) || isMatrix(v)) return textVal(formatList(nums([v])))
+  if (Array.isArray(v) || isMatrix(v)) {
+    return textVal(formatList(nums([v]).map((n) => (Number.isFinite(n) || overflowOk ? n : Number.NaN))))
+  }
   return null
 }
 
@@ -446,7 +538,7 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
   return { expr, scope }
 }
 
-function preprocessChecked(text: string, ctx: ScientificContext): string | null {
+export function preprocessChecked(text: string, ctx: ScientificContext): string | null {
   let src = text.trim()
   if (!src) return null
   const fns = ctx.functions ?? {}
@@ -476,14 +568,43 @@ function preprocessChecked(text: string, ctx: ScientificContext): string | null 
 
   // `2:30` is a clock reading (h:mm or m:ss, ambiguous), never a mathjs range
   if (expr.includes(':')) return null
+  // `pi = 3` would be a mathjs assignment, `3!!` reads as a double factorial as often as (3!)!,
+  // and `17 % 5` is a remainder to a programmer, not 17% times 5
+  if (/(?<![=<>!])=(?!=)/.test(expr) || /!\s*!/.test(src) || /%\s*[\d.(]/.test(src)) return null
   return expr
 }
 
-const gcd = (...a: unknown[]) => nums(a).reduce((x, y) => intGcd(x, y))
-const combinations = choose(math.combinations)
+const gcd = (...a: unknown[]) => ratioFold(a, 'gcd')
+const combinations = choose(combinationsSafe)
 const permutations = choose(math.permutations)
 
-function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
+const ANGLE_FNS = new Set(['sin', 'cos', 'tan', 'csc', 'sec', 'cot'])
+
+function hasUnit(x: unknown): boolean {
+  if (math.isUnit(x)) return true
+  if (Array.isArray(x)) return x.some(hasUnit)
+  return isMatrix(x) && hasUnit(x.toArray())
+}
+
+// mathjs reads `90 deg` or `5 m` inside a call as a unit; only trig takes one (as an angle), anything else is blank
+function unitSafe(name: string, fn: (...a: unknown[]) => unknown, mode: AngleMode | undefined) {
+  return (...args: unknown[]) => {
+    if (!args.some(hasUnit)) return fn(...args)
+    const [angle] = args
+    if (ANGLE_FNS.has(name) && args.length === 1 && math.isUnit(angle)) return fn(angle.toNumber(mode === 'rad' ? 'rad' : 'deg'))
+    throw new Error('unit in a scalar function')
+  }
+}
+
+export function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
+  const scope = scalarScope(mode)
+  for (const [name, v] of Object.entries(scope)) {
+    if (typeof v === 'function') scope[name] = unitSafe(name, v as (...a: unknown[]) => unknown, mode)
+  }
+  return scope
+}
+
+function scalarScope(mode: AngleMode | undefined): Record<string, unknown> {
   const inverseTrig = {
     asin: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.asin(x), mode)),
     acos: (x: number) => (x < -1 || x > 1 ? Number.NaN : fromRad(Math.acos(x), mode)),
@@ -496,6 +617,8 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
   return {
     e: Math.E,
     pi: Math.PI,
+    catalan: 0.915965594177219,
+    zeta: (x: number) => Number(math.zeta(x)),
     tau: Math.PI * 2,
     ln: (x: number) => (x <= 0 ? Number.NaN : Math.log(x)),
     log2: (x: number) => (x <= 0 ? Number.NaN : Math.log2(x)),
@@ -508,13 +631,9 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
     nthRoot: math.nthRoot,
     abs: Math.abs,
     sign: Math.sign,
-    floor: Math.floor,
-    ceil: Math.ceil,
-    round: (x: number, digits?: number) => {
-      if (digits == null) return Math.round(x)
-      const p = 10 ** digits
-      return Math.round(x * p) / p
-    },
+    floor: (x: number) => nearInteger(x) ?? Math.floor(x),
+    ceil: (x: number) => nearInteger(x) ?? Math.ceil(x),
+    round: roundHalfAway,
     clamp: (x: number, lo: number, hi: number) => {
       const a = Number(lo)
       const b = Number(hi)
@@ -550,9 +669,13 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
       return quantileLinear(xs, p ?? 0.5)
     },
     corr: (...a: unknown[]) => {
+      if (a.length === 2) {
+        const [xs, ys] = [nums([a[0]]), nums([a[1]])]
+        return xs.length === ys.length ? pearson(xs, ys) : Number.NaN
+      }
       const xs = nums(a)
       const mid = xs.length / 2
-      return pearson(xs.slice(0, mid), xs.slice(mid))
+      return Number.isInteger(mid) ? pearson(xs.slice(0, mid), xs.slice(mid)) : Number.NaN
     },
     random: (...a: unknown[]) => {
       const xs = nums(a)
@@ -566,9 +689,10 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
     },
     randint: (...a: unknown[]) => {
       const xs = nums(a)
-      const lo = xs[0] ?? 0
-      const hi = xs[1] ?? lo
-      const count = xs[2]
+      if (!xs.every(Number.isInteger)) return Number.NaN
+      const [a0 = 0, a1 = a0, count] = xs
+      const lo = Math.min(a0, a1)
+      const hi = Math.max(a0, a1)
       const one = () => lo + Math.floor(Math.random() * (hi - lo + 1))
       if (count == null) return one()
       assertListAlloc(count)
@@ -577,7 +701,7 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
     gcd,
     gcf: gcd,
     hcf: gcd,
-    lcm: (...a: unknown[]) => nums(a).reduce((x, y) => intLcm(x, y)),
+    lcm: (...a: unknown[]) => ratioFold(a, 'lcm'),
     mod: modulo,
     powmod,
     factorial,
@@ -597,22 +721,22 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
       return out
     },
     csc: (x: number) => {
-      const s = Math.sin(toRad(x, mode))
-      return nearZero(s) ? Number.NaN : 1 / s
+      const [s] = sinCos(x, mode)
+      return s === 0 ? Number.NaN : 1 / s
     },
     sec: (x: number) => {
-      const c = Math.cos(toRad(x, mode))
-      return nearZero(c) ? Number.NaN : 1 / c
+      const [, c] = sinCos(x, mode)
+      return c === 0 ? Number.NaN : 1 / c
     },
     cot: (x: number) => {
-      const s = Math.sin(toRad(x, mode))
-      return nearZero(s) ? Number.NaN : Math.cos(toRad(x, mode)) / s
+      const [s, c] = sinCos(x, mode)
+      return s === 0 ? Number.NaN : c / s
     },
-    sin: (x: number) => chop(Math.sin(toRad(x, mode))),
-    cos: (x: number) => chop(Math.cos(toRad(x, mode))),
+    sin: (x: number) => sinCos(x, mode)[0],
+    cos: (x: number) => sinCos(x, mode)[1],
     tan: (x: number) => {
-      const c = Math.cos(toRad(x, mode))
-      return nearZero(c) ? Number.NaN : chop(Math.sin(toRad(x, mode)) / c)
+      const [s, c] = sinCos(x, mode)
+      return c === 0 ? Number.NaN : s / c
     },
     ...inverseTrig,
     arcsin: inverseTrig.asin,
@@ -639,6 +763,7 @@ function builtinScope(mode: AngleMode | undefined): Record<string, unknown> {
 
 function userFunction(def: UserFunction, ctx: ScientificContext, fns: Record<string, UserFunction>) {
   return (...args: unknown[]) => {
+    if (args.some(hasUnit)) throw new Error('unit in a user function')
     const localVars: Record<string, number> = { ...ctx.variables }
     def.params.forEach((p, i) => {
       const n = Number(args[i])
@@ -650,10 +775,11 @@ function userFunction(def: UserFunction, ctx: ScientificContext, fns: Record<str
   }
 }
 
-/** Only factorials may overflow to ∞; any other infinity (`1/0`) is undefined. */
+/** Only factorials and counts may overflow to ∞; any other infinity (`1/0`) is undefined. */
 function finish(v: unknown, expr: string): Value | null {
-  const out = fromMathjs(v)
-  if (out?.kind === 'number' && !Number.isFinite(out.n) && !/!|factorial/i.test(expr)) return textVal('undefined')
+  const overflowOk = /!|factorial|combinations|permutations/i.test(expr)
+  const out = fromMathjs(v, overflowOk)
+  if (out?.kind === 'number' && !Number.isFinite(out.n) && !overflowOk) return textVal('undefined')
   return out
 }
 
@@ -691,6 +817,21 @@ export function compileScientific(
     } catch {
       return null
     }
+  }
+}
+
+/** The tree compileScientific evaluates, with the scope it evaluates in, for walking its shape. */
+export function parseScientific(
+  text: string,
+  ctx: ScientificContext,
+  variable: string,
+): { node: MathNode; scope: Record<string, unknown> } | null {
+  const prep = prepare(text, { ...ctx, variables: { ...ctx.variables, [variable]: 0 } })
+  if (!prep) return null
+  try {
+    return { node: math.parse(prep.expr), scope: prep.scope }
+  } catch {
+    return null
   }
 }
 

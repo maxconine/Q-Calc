@@ -34,7 +34,9 @@ enum SoulverEval {
         variables: [String: Double] = [:],
         sigFigs: Int = 12
     ) -> Answer? {
+        // soulvercore reads √ but not ∛ (it answers ∛27 with 27)
         let src = MathEval.fillParens(expression.trimmingCharacters(in: .whitespacesAndNewlines))
+            .replacingOccurrences(of: "∛", with: "cbrt")
         guard !src.isEmpty else { return nil }
 
         lock.lock()

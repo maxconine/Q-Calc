@@ -49,3 +49,26 @@ export function num(n: number): Value {
 export function textVal(text: string): Value {
   return { kind: 'text', n: 0, text }
 }
+
+const MINUS = '−'
+// a leading number, optionally already grouped (soulver), up to whitespace or the end
+const LEAD_NUMBER = /^(-?)([$€£¥]?)(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?(e[+-]?\d+)?(?=\s|$)/
+const MATH_ONLY = /^[\d\s+\-*/^().,πe√i·×sqrt]+$/
+
+function groupDigits(int: string): string {
+  return int.length < 4 ? int : int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+// display only: copy and insert keep using the plain ascii answer, which re-parses
+export function prettyAnswer(s: string): string {
+  const m = LEAD_NUMBER.exec(s)
+  if (m) {
+    const [whole, sign, cur, int, frac = '', exp = ''] = m
+    const head = (sign ? MINUS : '') + cur + groupDigits(int.replace(/,/g, '')) + frac + exp.replace('-', MINUS)
+    return head + s.slice(whole.length)
+  }
+  if (s === '-∞') return `${MINUS}∞`
+  // exact forms like `-2sqrt(3)` or `π - 1`; a hyphen inside a word or date stays a hyphen
+  if (MATH_ONLY.test(s)) return s.replace(/(^|[\s(])-(?=[\s\d(π√s])/g, `$1${MINUS}`)
+  return s
+}

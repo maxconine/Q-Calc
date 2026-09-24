@@ -1,4 +1,6 @@
-export { evaluateLine, evaluateSheet, parseAssignment, parseFunctionDef } from './evaluate'
+export { evaluateLine, evaluateSheet, parseAssignment, parseFunctionDef, stripTrailingEquals } from './evaluate'
+export { formatSolve, isEquation, MAX_SHOWN_ROOTS, parseEquation, solveEquation } from './solve'
+export type { Solved } from './solve'
 export {
   autoYScale,
   buildGraph,
@@ -29,7 +31,7 @@ export type { ParenFill } from './parens'
 export { latexToAscii, tryPlainMath } from './plainMath'
 export { clampSigFigs, DEFAULT_SIG_FIGS, formatNumber, formatValue, MAX_SIG_FIGS, MIN_SIG_FIGS } from './format'
 export { dualLabel, exactForm, wantsExactForm } from './simplify'
-export type { EvaluateOptions, LineResult, SheetInputLine, UserFunction, Value } from './types'
+export type { EvaluateOptions, LineResult, SheetInputLine, SolveInfo, SolveOutcome, UserFunction, Value } from './types'
 export type { DefaultUnits, Dim, UnitSettingGroup, UnitSettingItem, UnitChoice } from './units'
 export {
   defaultUnitsEqual,

@@ -4,12 +4,15 @@ export function copyText(text: string): void {
   if (!text) return
   nativeHandler()?.postMessage({ type: 'copy', text })
   void navigator.clipboard.writeText(text).catch(() => {
+    // the fallback textarea takes focus; the input gets it back
+    const focused = document.activeElement
     const el = document.createElement('textarea')
     el.value = text
     document.body.appendChild(el)
     el.select()
     document.execCommand('copy')
     el.remove()
+    if (focused instanceof HTMLElement) focused.focus()
   })
 }
 

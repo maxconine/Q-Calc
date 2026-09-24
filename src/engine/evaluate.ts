@@ -1,9 +1,13 @@
+import { chemAnswer } from './chem'
+import { evaluateCalculus, type CalculusResult } from './calculus'
 import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
-import { DEFAULT_SIG_FIGS, formatValue, num } from './format'
+import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
 import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './measure'
 import { tryPlainMath } from './plainMath'
 import { formatAsFraction, SCIENTIFIC_NAMES } from './scientific'
 import { exactForm, wantsExactForm } from './simplify'
+import { formatSolve, solveEquation } from './solve'
+import { normalizeSums, sumAnswer } from './sums'
 import { quantityText } from './units'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
@@ -19,6 +23,11 @@ export function parseAssignment(trimmed: string): { variable: string; expr: stri
   const variable = assign[1]!
   if (isReserved(variable)) return null
   return { variable, expr: assign[2]!.trim() }
+}
+
+/** `2+3=` is `2+3`; only one `=` goes, and never the end of `==`, `<=`, `>=` or `!=`. */
+export function stripTrailingEquals(trimmed: string): string {
+  return trimmed.match(/^(.*[^=<>!\s])\s*=$/s)?.[1] ?? trimmed
 }
 
 export function parseFunctionDef(
@@ -91,7 +100,9 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
   const results: LineResult[] = []
 
   for (const raw of texts) {
-    const trimmed = raw.trim()
+    const typed = stripTrailingEquals(raw.trim())
+    // the input field turns a typed theta into θ, which is also a variable name; solve keeps θ as its unknown
+    const trimmed = typed.replace(/θ/g, 'theta')
     if (!trimmed) {
       results.push({ raw, kind: 'empty', display: '' })
       continue
@@ -111,17 +122,44 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       continue
     }
 
+    const chem = chemAnswer(trimmed, (name) => name in variables || name in quantities || name in functions)
+    if (chem != null) {
+      results.push({ raw, kind: 'expression', display: chem, value: chem ? textVal(chem) : undefined })
+      continue
+    }
+    if (!hasPlusMinus(trimmed)) {
+      const eq = withQuantities(typed, quantities)
+      const solved = solveEquation(eq, { ans: lastAns, angleMode, variables, functions, rationalize: options.rationalize })
+      if (solved) {
+        const { display, exact } = formatSolve(solved, { sigFigs, fractionMode })
+        const [root] = solved.info.roots
+        const single = solved.info.outcome === 'roots' && solved.info.roots.length === 1 && !solved.info.more
+        // the root is never stored as the variable; `ans` carries it
+        if (single) {
+          lastAns = root
+          delete measures.ans
+          delete quantities.ans
+        }
+        results.push({ raw, kind: 'solve', value: single ? num(root!) : textVal(display), display, exact, solve: solved.info })
+        continue
+      }
+    }
+
     const assign = parseAssignment(trimmed)
     const variable = assign?.variable
     // ∓ is treated as ± until correlation is modelled
-    const expr = withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±')
+    const expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
 
     const ctx = { ans: lastAns, angleMode, variables, functions, measures }
     const plusMinus = hasPlusMinus(expr)
     let value: Value | null = null
+    let sum: ReturnType<typeof sumAnswer> = null
+    let calc: CalculusResult | null = null
     try {
+      calc = plusMinus ? null : evaluateCalculus(expr, ctx)
+      sum = calc ? null : sumAnswer(expr, { ...ctx, defaultUnits: options.defaultUnits, rationalize: options.rationalize })
       const m = plusMinus ? measure(expr, ctx) : null
-      value = m ? num(m.v) : tryPlainMath(expr, { ...ctx, defaultUnits: options.defaultUnits })
+      value = calc ? calc.value : m ? num(m.v) : sum ? sum.value : tryPlainMath(expr, { ...ctx, defaultUnits: options.defaultUnits })
       // a ± answer that lost its uncertainty would be a confidently wrong bare number
       if (plusMinus && !m && value?.kind === 'number' && !value.meas?.unc) value = null
     } catch {
@@ -140,7 +178,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     const wantMeas = sigFigMode || plusMinus || Boolean(variable) || Object.values(measures).some((m) => m.unc)
     let meas: Meas | undefined
     try {
-      meas = measured(expr, value, ctx, wantMeas)
+      meas = calc ? undefined : measured(expr, value, ctx, wantMeas)
     } catch {
       meas = undefined
     }
@@ -168,10 +206,10 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     }
     const measuredDisplay = Boolean(meas && (meas.unc || (sigFigMode && meas.sig != null)))
     const form =
-      !measuredDisplay && finite && wantsExactForm(expr)
+      !calc && !measuredDisplay && finite && !sum && wantsExactForm(expr)
         ? exactForm(value.n, { rationalize: options.rationalize })
         : null
-    const exact = form ? withUnit(form, value.unit) : undefined
+    const exact = calc?.exact ?? ((!measuredDisplay && sum?.exact) || (form ? withUnit(form, value.unit) : undefined))
     results.push({
       raw,
       kind: variable ? 'assignment' : 'expression',
@@ -181,6 +219,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       meas,
       quantity,
       variable,
+      closedForm: calc?.job,
     })
   }
 

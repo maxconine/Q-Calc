@@ -2,7 +2,7 @@ import { all, create } from 'mathjs'
 
 export const math = create(all, { number: 'number' })
 
-/** GCD of the truncated magnitudes; 1 (not 0) when both are 0, so it is always safe to divide by. */
+/** GCD of the truncated magnitudes; 0 only when both are 0. */
 export function intGcd(a: number, b: number): number {
   a = Math.abs(Math.trunc(a))
   b = Math.abs(Math.trunc(b))
@@ -11,7 +11,7 @@ export function intGcd(a: number, b: number): number {
     b = a % b
     a = t
   }
-  return a || 1
+  return a
 }
 
 /** A regex alternation matching any of `names` literally, longest first so `ab` wins over `a`. */

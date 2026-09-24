@@ -1,6 +1,7 @@
 import type { UserFunction, Value } from './types'
 import { namesPattern } from './math'
 import { fillParens } from './parens'
+import { truthful } from './precise'
 import { evalScientific, rewriteTypesetMul, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
 import { tryConvert, type DefaultUnits } from './units'
 
@@ -230,6 +231,12 @@ function stripThousands(s: string): string {
   return s.replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
 }
 
+/** LaTeX to ascii, typeset operators, thousands separators and missing parens. */
+export function normalizeMathText(text: string): string {
+  const ascii = looksLikeLatex(text) ? latexToAscii(text) : text
+  return fillParens(stripThousands(rewriteTypesetMul(ascii)))
+}
+
 export function tryPlainMath(
   text: string,
   ctx: {
@@ -242,8 +249,7 @@ export function tryPlainMath(
 ): Value | null {
   const src = unwrapQuestion(text)
   if (!src) return null
-  const ascii = looksLikeLatex(src) ? latexToAscii(src) : src
-  const filled = fillParens(stripThousands(rewriteTypesetMul(ascii)))
+  const filled = normalizeMathText(src)
   // a known variable (`n = 5`, then `n*2`) must not be read as a unit symbol like N, m or s
   if (!mentionsVariable(filled, ctx.variables)) {
     const converted = tryConvert(filled, ctx.defaultUnits)
@@ -251,5 +257,6 @@ export function tryPlainMath(
   }
   const cleaned = src.replace(/\d+(?:\.\d+)?\s*%\s*of\b/gi, (m) => m.replace(/\s*of\b/i, ''))
   if (hasNlpWords(cleaned) && !looksLikeLatex(src)) return null
-  return evalScientific(filled, ctx)
+  const value = evalScientific(filled, ctx)
+  return value && truthful(filled, value, ctx)
 }

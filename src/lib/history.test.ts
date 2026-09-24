@@ -376,3 +376,45 @@ describe('unit-valued history answers', () => {
     expect(normalizeHistoryRow({ expr: '3 m', display: '9.84 ft', quantity: 5 as unknown as string }, 'x')?.quantity).toBeUndefined()
   })
 })
+
+describe('solved equations in history', () => {
+  const solved = (over: Partial<HistoryRow> = {}): HistoryRow => ({
+    id: 's',
+    expr: 'x = 2x - 5',
+    display: '5',
+    n: 5,
+    solve: { variable: 'x', roots: [5], outcome: 'roots' },
+    ...over,
+  })
+
+  it('94: never read back as an assignment', () => {
+    expect(historyVariables([solved()])).toEqual({})
+    expect(historyVariables([{ id: 'a', expr: 'x = 2', display: '2', n: 2 }, solved()])).toEqual({ x: 2 })
+  })
+
+  it('95: nor as a measure, quantity or sticky definition', () => {
+    const measured: HistoryRow = { id: 'm', expr: 'x = 5.0 ± 0.2', display: '5.0 ± 0.2', n: 5, meas: { unc: 0.2 } }
+    const out = historyMeasures([measured, solved()])
+    expect(out.x).toEqual({ unc: 0.2 })
+    // ans is the solved root now, which carries no uncertainty
+    expect(out.ans).toBeUndefined()
+    expect(historyQuantities([{ id: 'q', expr: 'x = 3 cm', display: '3 cm', n: 3, quantity: '3 cm' }, solved()])).toEqual({ x: '3 cm' })
+    const rows = [solved({ id: 'old' }), ...Array.from({ length: MAX_HISTORY }, (_, i) => ({ id: `r${i}`, expr: `${i}+1`, display: `${i + 1}`, n: i + 1 }))]
+    expect(persistableHistory(rows).map((r) => r.id)).not.toContain('old')
+  })
+
+  it('96: keeps a valid solve through slimming and drops a malformed one', () => {
+    const pair = solved({ expr: 'x^2 = 4', display: '±2', n: undefined, solve: { variable: 'x', roots: [-2, 2], outcome: 'roots' } })
+    expect(slimHistoryRow(pair)?.solve).toEqual({ variable: 'x', roots: [-2, 2], outcome: 'roots' })
+    expect(normalizeHistoryRow(JSON.parse(JSON.stringify(pair)), 'id')?.solve).toEqual(pair.solve)
+    const bad = (solve: unknown) => normalizeHistoryRow({ ...pair, solve } as Partial<HistoryRow>, 'id')?.solve
+    expect(bad({ variable: 'xy', roots: [1], outcome: 'roots' })).toBeUndefined()
+    expect(bad({ variable: 'x', roots: ['a'], outcome: 'roots' })).toBeUndefined()
+    expect(bad({ variable: 'x', roots: [1], outcome: 'maybe' })).toBeUndefined()
+    expect(bad({ variable: 'θ', roots: [], outcome: 'none' })).toEqual({ variable: 'θ', roots: [], outcome: 'none' })
+  })
+
+  it('gives ans the single root', () => {
+    expect(lastHistoryNumber([solved()])).toBe(5)
+  })
+})

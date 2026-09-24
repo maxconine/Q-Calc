@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
 import { autofillParens, inferParens } from '../engine/parens'
+import { answerAmong } from '../lib/answer'
 import { nativeWindow } from '../lib/bridge'
+import type { Span } from '../lib/blankReason'
+import { completionFor, type CompletionNames } from '../lib/completion'
 import { inputHighlight } from '../lib/dom'
+import { RadicalLayer } from './Radical'
 
 type CaretRange = { start: number; end: number }
 
@@ -17,24 +21,41 @@ export interface QuickInputHandle {
 interface Props {
   value: string
   ansPlain?: string
+  // typed words like sqrt and pi stay as text instead of becoming symbols
+  keepWords?: boolean
   onChange: (text: string) => void
   onEnter: () => void
   onUp: () => boolean
   onDown: () => boolean
   onPrefixStep?: (dir: 1 | -1) => void
+  onTab?: (dir: 1 | -1) => void
   // shown in place of the placeholder while the input is empty; a new `id` restarts its fade
   example?: { text: string; id: number } | null
   handleRef?: MutableRefObject<QuickInputHandle | null>
+  // a faint `ans` before the text while it continues from the last answer
+  chain?: boolean
+  // the part a blank answer couldn't read
+  squiggle?: Span | null
+  completionNames?: CompletionNames
+  onSelection?: (range: CaretRange) => void
 }
 
-// letters around a token make it part of a word (`pint`, `infinity`); digits before it are a coefficient (`2pi`)
-const TOKEN_REPLACEMENTS: [RegExp, string][] = [
-  [/(?<![A-Za-z])pi(?![A-Za-z0-9])/gi, 'π'],
-  [/(?<![A-Za-z])theta(?![A-Za-z0-9])/gi, 'θ'],
-  [/(?<![A-Za-z])infty(?![A-Za-z0-9])/gi, '∞'],
-  [/(?<![A-Za-z])inf(?![A-Za-z0-9])/gi, '∞'],
-  [/(?<![A-Za-z])cbrt(?![A-Za-z0-9])/gi, '∛'],
+// letters around a word make it part of a longer word (`pint`, `infinity`); digits before it are a coefficient (`2pi`)
+const WORD_SYMBOLS: [RegExp, string][] = [
+  [/(?<![\\A-Za-z])sqrt(?![A-Za-z])/gi, '√'],
+  [/(?<![\\A-Za-z])pi(?![A-Za-z0-9])/gi, 'π'],
+  [/(?<![\\A-Za-z])theta(?![A-Za-z0-9])/gi, 'θ'],
+  [/(?<![\\A-Za-z])infty(?![A-Za-z0-9])/gi, '∞'],
+  [/(?<![\\A-Za-z])inf(?![A-Za-z0-9])/gi, '∞'],
+  [/(?<![\\A-Za-z])cbrt(?![A-Za-z0-9])/gi, '∛'],
+  [/(?<=\blim(?:it)?\s*_?[({]?\s*[A-Za-z]\s*)->/g, '→'],
   [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
+  [/(?<![\\A-Za-z_])sum(?![A-Za-z0-9])/g, 'Σ'],
+  [/(?<![\\A-Za-z_])prod(?![A-Za-z0-9])/g, 'Π'],
+]
+
+// convert even when words are kept as text: a raw `10 +- 0.7` would evaluate as 10 + -0.7
+const SHORTCUT_SYMBOLS: [RegExp, string][] = [
   [/-\+/g, '∓'],
   [/\+-/g, '±'],
   [/~/g, '±'],
@@ -55,26 +76,46 @@ export function spliceText(
   return { next: value.slice(0, a) + chunk + value.slice(b), cursor: a + chunk.length }
 }
 
-function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing: boolean): string {
+function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing: boolean, keepWords: boolean, ansAlone = false): string {
   // a word token at the end may still grow into a longer word (`pi` to `pint`); symbols convert at once
   const swap = (put: string) => (m: string, offset: number, whole: string) =>
     keepTrailing && offset + m.length === whole.length && /[A-Za-z]$/.test(m) ? m : put
   let out = text
-  for (const [re, put] of TOKEN_REPLACEMENTS) {
+  for (const [re, put] of keepWords ? SHORTCUT_SYMBOLS : [...WORD_SYMBOLS, ...SHORTCUT_SYMBOLS]) {
     re.lastIndex = 0
     out = out.replace(re, swap(put))
   }
-  if (ansPlain) out = out.replace(/\bans\b/gi, swap(ansPlain))
+  if (ansPlain) out = out.replace(/\bans\b/gi, swap(answerAmong(ansPlain, ansAlone)))
   return out
 }
 
 // with a caret, the token right before it is left for the next keystroke to settle
-export function prettyTokens(text: string, ansPlain?: string, caret?: number): string {
-  if (caret == null) return replaceTokens(text, ansPlain, false)
-  return replaceTokens(text.slice(0, caret), ansPlain, true) + replaceTokens(text.slice(caret), ansPlain, false)
+export function prettyTokens(text: string, ansPlain?: string, caret?: number, keepWords = false): string {
+  const alone = /^\s*ans\s*$/i.test(text)
+  if (caret == null) return replaceTokens(text, ansPlain, false, keepWords, alone)
+  return (
+    replaceTokens(text.slice(0, caret), ansPlain, true, keepWords, alone) +
+    replaceTokens(text.slice(caret), ansPlain, false, keepWords, alone)
+  )
 }
 
-export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, onPrefixStep, example, handleRef }: Props) {
+export function QuickInput({
+  value,
+  ansPlain,
+  keepWords = false,
+  onChange,
+  onEnter,
+  onUp,
+  onDown,
+  onPrefixStep,
+  onTab,
+  example,
+  handleRef,
+  chain = false,
+  squiggle = null,
+  completionNames,
+  onSelection,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLSpanElement>(null)
   const [prefixWidth, setPrefixWidth] = useState(0)
@@ -83,17 +124,22 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
   const onUpRef = useRef(onUp)
   const onDownRef = useRef(onDown)
   const onPrefixStepRef = useRef(onPrefixStep)
+  const onTabRef = useRef(onTab)
   const ansRef = useRef(ansPlain)
+  const keepWordsRef = useRef(keepWords)
   const heldRef = useRef('')
   const metaRef = useRef(false)
   const caretPosRef = useRef<CaretRange>({ start: value.length, end: value.length })
   const holdingArrowRef = useRef(false)
+  const [caretAtEnd, setCaretAtEnd] = useState(true)
   onChangeRef.current = onChange
   onEnterRef.current = onEnter
   onUpRef.current = onUp
   onDownRef.current = onDown
   onPrefixStepRef.current = onPrefixStep
+  onTabRef.current = onTab
   ansRef.current = ansPlain
+  keepWordsRef.current = keepWords
 
   // holds the last highlight while ⌘ or ⌃ is down so a copy still finds it
   const rememberHighlight = (el: HTMLInputElement | null) => {
@@ -107,6 +153,8 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
     const start = el.selectionStart ?? el.value.length
     const end = el.selectionEnd ?? start
     caretPosRef.current = { start, end }
+    setCaretAtEnd(start === end && end === el.value.length)
+    onSelection?.({ start, end })
   }
 
   const pinCaret = (el: HTMLInputElement | null = inputRef.current) => {
@@ -123,12 +171,23 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
 
   useLayoutEffect(() => {
     setPrefixWidth(prefixRef.current?.offsetWidth ?? 0)
-  }, [prefix])
+  }, [prefix, chain])
+
+  const completion = caretAtEnd ? completionFor(value, completionNames) : ''
+  const acceptCompletion = (el: HTMLInputElement) => {
+    const next = el.value + completion
+    commit(next, next.length)
+  }
+  // the ghost layer doesn't scroll with the input, so a squiggle only shows while the text fits
+  const input = inputRef.current
+  const fits = !input || input.scrollWidth <= input.clientWidth + 1
+  const mark =
+    squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null
 
   const commit = (raw: string, cursor: number, settle = false) => {
     const caret = settle ? undefined : cursor
-    const before = prettyTokens(raw.slice(0, cursor), ansRef.current, caret)
-    const next = prettyTokens(raw, ansRef.current, caret)
+    const before = prettyTokens(raw.slice(0, cursor), ansRef.current, caret, keepWordsRef.current)
+    const next = prettyTokens(raw, ansRef.current, caret, keepWordsRef.current)
     const pos = Math.min(before.length, next.length)
     caretPosRef.current = { start: pos, end: pos }
     onChangeRef.current(next)
@@ -141,7 +200,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
 
   // converts a token still waiting at the caret (`2pi` then enter)
   const finishTokens = (el: HTMLInputElement) => {
-    if (prettyTokens(el.value, ansRef.current) === el.value) return
+    if (prettyTokens(el.value, ansRef.current, undefined, keepWordsRef.current) === el.value) return
     commit(el.value, el.selectionStart ?? el.value.length, true)
   }
 
@@ -233,6 +292,19 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
       e.preventDefault()
       return
     }
+    // tab belongs to the completion only while its ghost shows
+    const plainKey = !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey
+    if (completion && plainKey && (e.key === 'Tab' || e.key === 'ArrowRight')) {
+      e.preventDefault()
+      acceptCompletion(e.currentTarget)
+      return
+    }
+    if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      // tab never moves focus out of the input; it cycles the answer's forms
+      e.preventDefault()
+      onTabRef.current?.(e.shiftKey ? -1 : 1)
+      return
+    }
     if (e.key === 'Enter') {
       e.preventDefault()
       finishTokens(e.currentTarget)
@@ -271,8 +343,18 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
       <div className="quick-ghost" aria-hidden>
         <span ref={prefixRef} className="quick-inferred">
           {prefix}
+          {chain ? <span className="quick-chain">ans</span> : null}
         </span>
-        <span className="quick-ghost-text">{value}</span>
+        {mark ? (
+          <span className="quick-ghost-text">
+            {value.slice(0, mark.start)}
+            <span className="quick-squiggle">{value.slice(mark.start, mark.end)}</span>
+            {value.slice(mark.end)}
+          </span>
+        ) : (
+          <span className="quick-ghost-text">{value}</span>
+        )}
+        {completion ? <span className="quick-inferred quick-completion">{completion}</span> : null}
         {suffix ? <span className="quick-inferred">{suffix}</span> : null}
         {showExample && example ? (
           <span key={example.id} className="quick-example">
@@ -280,6 +362,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
           </span>
         ) : null}
       </div>
+      <RadicalLayer value={value} input={inputRef} inset={prefixWidth} />
       <input
         ref={inputRef}
         className="quick-plain"
@@ -296,6 +379,7 @@ export function QuickInput({ value, ansPlain, onChange, onEnter, onUp, onDown, o
           const el = e.currentTarget
           commit(el.value, el.selectionStart ?? el.value.length)
         }}
+        data-completion={completion || undefined}
         onSelect={(e) => {
           if (holdingArrowRef.current) {
             pinCaret(e.currentTarget)

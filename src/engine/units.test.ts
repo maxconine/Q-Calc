@@ -2296,3 +2296,12 @@ describe('bugfix batch: no silent wrong unit answers', () => {
     expect(evaluateLine('ans * 2', { ans: 3, quantities: { ans: '' } }).display).toBe('')
   })
 })
+
+describe('a rate right after an amount stays one quantity', () => {
+  it('divides by the whole rate', () => {
+    expect(evaluateLine('32 GB / 4 MB/s').display).toBe('8000 s')
+    expect(evaluateLine('32 GB / 4 MB/s to min').display).toBe('133.333333333 min')
+    expect(evaluateLine('5 m/s/s').display).toBe('5 m/s²')
+    expect(evaluateLine('10 m / 2 s').display).toBe('5 m/s')
+  })
+})

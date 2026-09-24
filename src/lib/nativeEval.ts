@@ -1,3 +1,4 @@
+import { isCalculusInput } from '../engine/calculus'
 import {
   IMPROPER_UNIT_CONVERSION,
   isImproperUnitConversion,
@@ -70,7 +71,7 @@ export function nativeEvalPayload(req: NativeEvalRequest): Record<string, unknow
 
 export function looksLikeNaturalLanguage(expr: string): boolean {
   const t = expr.trim()
-  if (!t) return false
+  if (!t || isCalculusInput(t)) return false
   if (/[$€£¥₹]/.test(t)) return true
   if (/\b(?:am|pm)\b/i.test(t)) return true
   if (/\d{1,2}:\d{2}/.test(t)) return true
@@ -126,6 +127,15 @@ export async function evaluateNative(req: NativeEvalRequest): Promise<NativeEval
   return null
 }
 
+const TRIG_CALL = /(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan|sec|csc|cot)(?![A-Za-z])/i
+
+// soulvercore's trig is always in radians, so in degree mode it must not answer anything with trig in it
+export function soulverAngleSafe(expr: string, angleMode: 'deg' | 'rad'): boolean {
+  return angleMode === 'rad' || !TRIG_CALL.test(expr)
+}
+
+const SUM_LINE = /[Σ∑Π∏]|^\s*\\?(?:sum|prod|product)(?![A-Za-z0-9])/i
+
 export function mergeLiveAnswer(
   expr: string,
   jsDisplay: string,
@@ -133,6 +143,10 @@ export function mergeLiveAnswer(
   native: NativeLive | null,
 ): { display: string; n?: number } {
   if (!expr.trim()) return { display: '' }
+  // soulver doesn't know Σ ranges; a blank from the js side is the honest answer
+  if (SUM_LINE.test(expr)) return { display: jsDisplay, n: jsDisplay ? jsN : undefined }
+  // soulvercore would read `∫0..1 1/x` as something; a blank calculus answer stays blank
+  if (isCalculusInput(expr)) return { display: jsDisplay, n: jsN }
   const nativeDisplay =
     native && native.expr === expr && native.kind !== 'definition' ? usableNativeDisplay(native.display) : ''
   const nativeHit = native && nativeDisplay ? { ...native, display: nativeDisplay } : null

@@ -410,6 +410,10 @@ suite('Rounding & Number Theory Functions', [
   { name: 'Multi-Argument GCD', input: 'gcd(24, 36, 48)', expected: 12 },
   { name: 'GCF Alias', input: 'gcf(12, 18)', expected: 6 },
   { name: 'HCF Alias', input: 'hcf(24, 36, 48)', expected: 12 },
+  { name: 'GCF Of Fractions', input: 'gcf(3/2, 3/4)', expected: 0.75 },
+  { name: 'GCF Of Decimals', input: 'gcf(0.5, 0.75)', expected: 0.25 },
+  { name: 'LCM Of Fractions', input: 'lcm(3/2, 3/4)', expected: 1.5 },
+  { name: 'LCM Of Unit Fractions', input: 'lcm(1/3, 1/4)', expected: 1 },
   { name: 'Least Common Multiple', input: 'lcm(4, 6)', expected: 12 },
   { name: 'Multi-Argument LCM', input: 'lcm(3, 5, 7)', expected: 105 },
   { name: 'Modulo Function', input: 'mod(10, 3)', expected: 1 },
@@ -777,5 +781,91 @@ describe('bugfix batch: exact mod, no ranges, no phantom ans', () => {
   it('leaves ans blank with no previous answer', () => {
     expect(d('ans * 2')).toBe('')
     expect(evaluateLine('ans * 2', { ans: 4 }).display).toBe('8')
+  })
+})
+
+describe('no silent rounding or coercion', () => {
+  const d = (text: string) => evaluateLine(text).display
+  it('rounds half away from zero on the digits as written', () => {
+    expect(d('round(-2.5)')).toBe('-3')
+    expect(d('round(1.005, 2)')).toBe('1.01')
+    expect(d('round(2.675, 2)')).toBe('2.68')
+    expect(d('round(1234, -2)')).toBe('1200')
+  })
+  it('keeps randint to integers', () => {
+    expect(d('randint(1.5, 3.2)')).toBe('undefined')
+    for (let k = 0; k < 20; k++) {
+      const v = evaluateLine('randint(6, 1)').value!.n
+      expect(Number.isInteger(v) && v >= 1 && v <= 6).toBe(true)
+    }
+  })
+  it('gives gcd(0, 0) as 0 and lets a zero drop out', () => {
+    expect(d('gcd(0, 0)')).toBe('0')
+    expect(d('gcd(0, 0, 4)')).toBe('4')
+    expect(d('gcd(0, 6)')).toBe('6')
+  })
+  it('never passes a unit through a scalar function', () => {
+    expect(d('max(3 m, 2)')).toBe('')
+    expect(d('abs(-5 m)')).toBe('')
+    expect(d('sqrt(4 m^2)')).toBe('')
+    expect(d('sqrt(g)')).toBe('')
+    expect(evaluateSheet(['f(x) = x^2', 'f(3 m)'])[1]!.display).toBe('')
+  })
+  it('reads an angle unit inside trig in either mode', () => {
+    expect(d('sin(90 deg)')).toBe('1')
+    expect(d('sin(90 deg) + 1')).toBe('2')
+    expect(evaluateLine('sin(90 deg)', { angleMode: 'rad' }).display).toBe('1')
+    expect(d('cos(pi rad)')).toBe('-1')
+  })
+  it('leaves assignments to constants and 3!! blank', () => {
+    expect(d('pi = 3')).toBe('')
+    expect(d('tau = 1')).toBe('')
+    expect(d('3!!')).toBe('')
+    expect(d('(3!)!')).toBe('720')
+  })
+  it('keeps a power inside a bare function argument', () => {
+    expect(d('sin 30^2')).toBe(d('sin(900)'))
+    expect(d('log 10^3')).toBe('3')
+  })
+  it('reads bare log as base 10', () => {
+    expect(d('log 1000')).toBe('3')
+    expect(d('log 100 + 1')).toBe('3')
+    expect(d('2log 100')).toBe('4')
+  })
+})
+
+describe('big counts', () => {
+  it('computes nCr past mathjs overflow and shows a real overflow as infinity', () => {
+    expect(evaluateLine('nCr(1000, 500)').display).toBe('2.70288240945e+299')
+    expect(evaluateLine('nCr(1030, 515)').display).toBe('∞')
+    expect(evaluateLine('nPr(1000, 200)').display).toBe('∞')
+  })
+})
+
+describe('statistics never skip an undefined entry', () => {
+  const d = (text: string) => evaluateLine(text).display
+  it('poisons the aggregate', () => {
+    expect(d('mean(1, 1/0, 3)')).toBe('undefined')
+    expect(d('max(1, 0/0)')).toBe('undefined')
+    expect(d('median(1, 2, asin(2))')).toBe('undefined')
+    expect(d('total(1, sqrt(-1), 2)')).toBe('undefined')
+    expect(d('[1, 1/0, 3]')).toBe('[1, undefined, 3]')
+  })
+  it('reads quartile 0 and 4 as min and max', () => {
+    expect(d('quartile([1, 2, 3, 4, 5], 0)')).toBe('1')
+    expect(d('quartile([1, 2, 3, 4, 5], 4)')).toBe('5')
+    expect(d('quartile([1, 2, 3, 4], 2.5)')).toBe('undefined')
+    expect(d('quantile([1, 2, 3], 2)')).toBe('undefined')
+  })
+  it('needs equal lengths for corr', () => {
+    expect(d('corr([1, 2], [3, 4, 5, 6])')).toBe('undefined')
+    expect(d('corr([1, 2, 3], [3, 2, 1])')).toBe('-1')
+  })
+})
+
+describe('a degree sign inside trig', () => {
+  it('reads as degrees in either mode', () => {
+    expect(evaluateLine('sin(30°)').display).toBe('0.5')
+    expect(evaluateLine('sin(30°) + cos(60°)', { angleMode: 'rad' }).display).toBe('1')
   })
 })

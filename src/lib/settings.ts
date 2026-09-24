@@ -2,6 +2,7 @@ import { clampSigFigs, DEFAULT_SIG_FIGS } from '../engine/format'
 import { defaultUnitsEqual, sanitizeDefaultUnits, type DefaultUnits } from '../engine/units'
 import { normalizeHistoryInsert, type AnswerForm, type HistoryInsert } from './answer'
 import { clampDraftSeconds, DEFAULT_DRAFT_SECONDS } from './draft'
+import { DEFAULT_HISTORY_SHOW, normalizeHistoryShow, type HistoryShow } from './historyShow'
 import { normalizeTheme, type Theme } from './theme'
 
 export type AngleMode = 'deg' | 'rad'
@@ -11,8 +12,10 @@ export type Settings = {
   fractionMode: boolean
   sigFigMode: boolean
   rationalize: boolean
+  keepWords: boolean
   answerForm: AnswerForm
   historyInsert: HistoryInsert
+  historyShow: HistoryShow
   sigFigs: number
   draftSeconds: number
   defaultUnits: DefaultUnits
@@ -28,8 +31,10 @@ export function defaultSettings(): Settings {
     fractionMode: false,
     sigFigMode: false,
     rationalize: true,
+    keepWords: false,
     answerForm: 'exact',
     historyInsert: 'expr',
+    historyShow: DEFAULT_HISTORY_SHOW,
     sigFigs: DEFAULT_SIG_FIGS,
     draftSeconds: DEFAULT_DRAFT_SECONDS,
     defaultUnits: {},
@@ -43,8 +48,10 @@ export function mergeSettings(partial: Partial<Settings> | undefined, base: Sett
     fractionMode: partial?.fractionMode == null ? base.fractionMode : Boolean(partial.fractionMode),
     sigFigMode: partial?.sigFigMode == null ? base.sigFigMode : Boolean(partial.sigFigMode),
     rationalize: partial?.rationalize == null ? base.rationalize : Boolean(partial.rationalize),
+    keepWords: partial?.keepWords == null ? base.keepWords : Boolean(partial.keepWords),
     answerForm: partial?.answerForm === 'approx' ? 'approx' : partial?.answerForm === 'exact' ? 'exact' : base.answerForm,
     historyInsert: partial?.historyInsert == null ? base.historyInsert : normalizeHistoryInsert(partial.historyInsert),
+    historyShow: partial?.historyShow == null ? base.historyShow : normalizeHistoryShow(partial.historyShow),
     sigFigs: partial?.sigFigs == null ? base.sigFigs : clampSigFigs(partial.sigFigs),
     draftSeconds: partial?.draftSeconds == null ? base.draftSeconds : clampDraftSeconds(partial.draftSeconds),
     defaultUnits: partial?.defaultUnits == null ? base.defaultUnits : sanitizeDefaultUnits(partial.defaultUnits),
@@ -58,8 +65,10 @@ export function settingsEqual(a: Settings, b: Settings): boolean {
     a.fractionMode === b.fractionMode &&
     a.sigFigMode === b.sigFigMode &&
     a.rationalize === b.rationalize &&
+    a.keepWords === b.keepWords &&
     a.answerForm === b.answerForm &&
     a.historyInsert === b.historyInsert &&
+    a.historyShow === b.historyShow &&
     a.sigFigs === b.sigFigs &&
     a.draftSeconds === b.draftSeconds &&
     a.theme === b.theme &&

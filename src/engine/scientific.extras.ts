@@ -565,7 +565,7 @@ export function extraRounding(): ExtraCase[] {
     out.push(num(`floor(${v})`, `floor(${v})`, Math.floor(v)))
     out.push(num(`ceil(${v})`, `ceil(${v})`, Math.ceil(v)))
     out.push(num(`sign(${v})`, `sign(${v})`, Math.sign(v)))
-    out.push(num(`round(${v})`, `round(${v})`, Math.round(v)))
+    out.push(num(`round(${v})`, `round(${v})`, Math.sign(v) * Math.round(Math.abs(v))))
   }
   for (let a = 6; a <= 24; a += 3) {
     for (let b = 4; b <= 18; b += 4) {
