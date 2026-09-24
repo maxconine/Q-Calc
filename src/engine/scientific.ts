@@ -2,6 +2,7 @@ import type { MathNode } from 'mathjs'
 import { formatNumber, num, textVal } from './format'
 import { intGcd, math, namesPattern } from './math'
 import type { UserFunction, Value } from './types'
+import { spend } from './work'
 
 /** Cap on list sizes from `[a...b]`, `random(N)` and `randint(lo, hi, count)`. */
 export const MAX_LIST_ALLOC = 10_000
@@ -431,12 +432,12 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   return s
 }
 
-/** One-argument `log(...)` is base 10, however its argument nests (`log(max(10, 100))`). */
+/** One-argument `log(...)` is base 10, however its argument nests (`log(max(10, 100))`), and `log (100)` too. */
 function rewriteLog10(expr: string): string {
   let s = expr
-  const re = /\blog\(/g
+  const re = /\blog\s*\(/g
   for (let m = re.exec(s); m; m = re.exec(s)) {
-    const open = m.index + 3
+    const open = m.index + m[0].length - 1
     let depth = 0
     let commas = 0
     let close = -1
@@ -619,8 +620,13 @@ function hasUnit(x: unknown): boolean {
 }
 
 // mathjs reads `90 deg` or `5 m` inside a call as a unit; only trig takes one (as an angle), anything else is blank
+// a js function drops extra arguments, so `sin(30, 60)` would quietly be sin(30); round's digits have a default
+const MAX_ARGS: Record<string, number> = { round: 2 }
+
 function unitSafe(name: string, fn: (...a: unknown[]) => unknown, mode: AngleMode | undefined) {
+  const most = MAX_ARGS[name] ?? fn.length
   return (...args: unknown[]) => {
+    if (most > 0 && args.length > most) throw new Error('too many arguments')
     if (!args.some(hasUnit)) return fn(...args)
     const [angle] = args
     if (ANGLE_FNS.has(name) && args.length === 1 && math.isUnit(angle)) return fn(angle.toNumber(mode === 'rad' ? 'rad' : 'deg'))
@@ -797,6 +803,7 @@ function scalarScope(mode: AngleMode | undefined): Record<string, unknown> {
 function userFunction(def: UserFunction, ctx: ScientificContext, fns: Record<string, UserFunction>) {
   return (...args: unknown[]) => {
     if (args.some(hasUnit)) throw new Error('unit in a user function')
+    if (args.length > def.params.length) throw new Error('too many arguments')
     const localVars: Record<string, number> = { ...ctx.variables }
     def.params.forEach((p, i) => {
       const n = Number(args[i])
@@ -819,6 +826,8 @@ function finish(v: unknown, expr: string): Value | null {
 export function evalScientific(text: string, ctx: ScientificContext = {}): Value | null {
   const prep = prepare(text, ctx)
   if (!prep) return null
+  // parsing costs several times an evaluation
+  spend(300 + 10 * prep.expr.length)
   try {
     return finish(math.evaluate(prep.expr, prep.scope), prep.expr)
   } catch {
@@ -842,9 +851,11 @@ export function compileScientific(
     return null
   }
   const { expr, scope } = prep
+  const cost = 5 + expr.length
   return (value) => {
     variables[variable] = value
     scope[variable] = value
+    spend(cost)
     try {
       return finish(code.evaluate(scope), expr)
     } catch {
@@ -872,7 +883,9 @@ export function formatAsFraction(n: number, maxDen = 10_000): string | null {
   if (!Number.isFinite(n)) return null
   const sign = n < 0 ? '-' : ''
   const x = Math.abs(n)
-  if (Math.abs(x - Math.round(x)) < 1e-12) return `${sign}${Math.round(x)}`
+  if (x === 0) return '0'
+  // relative, so 5e-13 isn't shown as 0
+  if (Math.round(x) !== 0 && Math.abs(x - Math.round(x)) < 1e-12 * x) return `${sign}${Math.round(x)}`
   let bestN = 1
   let bestD = 1
   let bestErr = Infinity
@@ -886,8 +899,12 @@ export function formatAsFraction(n: number, maxDen = 10_000): string | null {
       if (err < 1e-15) break
     }
   }
-  // only exact-looking values; an approximation like 355/113 for π stays decimal
-  if (bestErr > 1e-9 * Math.max(1, x)) return null
+  // only exact-looking values; an approximation like 355/113 for π stays decimal.
+  // past float noise the miss has to shrink with the denominator, or nearly any value above 10 lands near some p/q
+  if (bestErr > 2e-9 * x) return null
+  // float noise can't tell p/q apart once the fractions near x are closer together than a double's spacing
+  const noise = bestErr <= 4e-16 * x && x * bestD * bestD <= 2.5e11
+  if (!noise && Math.max(bestErr, 2.2e-16 * x) * bestD * bestD > 1e-8) return null
   const g = intGcd(bestN, bestD)
-  return `${sign}${bestN / g}/${bestD / g}`
+  return bestD === g ? `${sign}${bestN / g}` : `${sign}${bestN / g}/${bestD / g}`
 }

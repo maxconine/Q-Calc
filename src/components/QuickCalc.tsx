@@ -214,6 +214,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const liveRef = useRef<LiveSnapshot>(EMPTY_LIVE)
   const steppableRef = useRef<Value | undefined>(undefined)
   const copiedTimer = useRef(0)
+  // the answer the ✓ is for: typing on or tabbing to another form isn't what was copied
+  const copiedFor = useRef('')
+  const shownRef = useRef('')
   const qRef = useRef(q)
   qRef.current = q
   const settingsRef = useRef(settings)
@@ -392,6 +395,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const liveExact = shownForm ? undefined : baseExact
   // the graph panel already labels the curve, so the answer slot stays empty
   const shownLive = graphCmd ? '' : visibleAnswer({ display, exact: liveExact }, settings.answerForm)
+  shownRef.current = shownLive
   const fromJs = Boolean(display) && display === jsDisplay
   const steady = useSteadyAnswer(
     q,
@@ -515,6 +519,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [history.length, selected, tapeOpen])
 
   const flashCopied = useCallback(() => {
+    copiedFor.current = shownRef.current
     setCopied(true)
     window.clearTimeout(copiedTimer.current)
     copiedTimer.current = window.setTimeout(() => setCopied(false), 1200)
@@ -1117,7 +1122,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               </span>
             ) : (
             <LiveAnswer
-              copied={copied}
+              copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: rotation.tick, answer: exampleShown } : null}
               display={graphCmd ? '' : display}
               exact={liveExact}

@@ -178,7 +178,7 @@ const UNIT_LIST: Unit[] = [
   { id: 'furlong', dim: 'length', symbol: 'furlong', toBase: 660 * FT, defaultTo: 'm', names: ['furlong', 'furlongs'] },
   { id: 'league', dim: 'length', symbol: 'league', toBase: 3 * MI, defaultTo: 'km', names: ['league', 'leagues'] },
   { id: 'fermi', dim: 'length', symbol: 'fm', toBase: 1e-15, defaultTo: 'm', names: ['fermi', 'fermis', 'femtometer', 'femtometers', 'femtometre', 'femtometres'] },
-  { id: 'angstrom', dim: 'length', symbol: 'Å', toBase: 1e-10, defaultTo: 'nm', names: ['angstrom', 'angstroms', 'ångström', 'ångstrom'] },
+  { id: 'angstrom', dim: 'length', symbol: 'Å', toBase: 1e-10, defaultTo: 'nm', names: ['angstrom', 'angstroms', 'ångström', 'ångstrom', 'Å'] },
   { id: 'au', dim: 'length', symbol: 'au', toBase: AU, defaultTo: 'km', names: ['au', 'astronomicalunit', 'astronomicalunits', 'astronomical unit', 'astronomical units'] },
   { id: 'ly', dim: 'length', symbol: 'ly', toBase: LIGHT_YEAR, defaultTo: 'km', names: ['ly', 'lightyear', 'lightyears', 'light year', 'light years'] },
   { id: 'pc', dim: 'length', symbol: 'pc', toBase: PARSEC, defaultTo: 'ly', prefixable: true, names: ['pc', 'parsec', 'parsecs'] },
@@ -199,9 +199,9 @@ const UNIT_LIST: Unit[] = [
   { id: 'slug', dim: 'mass', symbol: 'slug', toBase: SLUG, defaultTo: 'kg', names: ['slug', 'slugs'] },
   { id: 'slinch', dim: 'mass', symbol: 'slinch', toBase: SLINCH, defaultTo: 'kg', names: ['slinch', 'snail', 'snails'] },
   { id: 'amu', dim: 'mass', symbol: 'u', toBase: AMU, defaultTo: 'kg', names: ['u', 'amu', 'atomicmassunit', 'atomicmassunits', 'atomic mass unit', 'atomic mass units'] },
-  { id: 'emass', dim: 'mass', symbol: 'mₑ', toBase: 9.1093837015e-31, defaultTo: 'kg', names: ['electronrestmass', 'electron rest mass'] },
-  { id: 'pmass', dim: 'mass', symbol: 'mₚ', toBase: 1.007276466621 * AMU, defaultTo: 'kg', names: ['protonrestmass', 'proton rest mass'] },
-  { id: 'nmass', dim: 'mass', symbol: 'mₙ', toBase: 1.00866491588 * AMU, defaultTo: 'kg', names: ['neutronrestmass', 'neutron rest mass'] },
+  { id: 'emass', dim: 'mass', symbol: 'mₑ', toBase: 9.1093837015e-31, defaultTo: 'kg', names: ['electronrestmass', 'electron rest mass', 'mₑ'] },
+  { id: 'pmass', dim: 'mass', symbol: 'mₚ', toBase: 1.007276466621 * AMU, defaultTo: 'kg', names: ['protonrestmass', 'proton rest mass', 'mₚ'] },
+  { id: 'nmass', dim: 'mass', symbol: 'mₙ', toBase: 1.00866491588 * AMU, defaultTo: 'kg', names: ['neutronrestmass', 'neutron rest mass', 'mₙ'] },
   { id: 'mg', dim: 'mass', symbol: 'mg', toBase: 1e-6, defaultTo: 'grain', names: ['mg', 'milligram', 'milligrams'] },
   { id: 'g', dim: 'mass', symbol: 'g', toBase: 0.001, defaultTo: 'oz', prefixable: true, names: ['g', 'gram', 'grams', 'gramme', 'grammes'] },
   { id: 'kg', dim: 'mass', symbol: 'kg', toBase: 1, defaultTo: 'lb', names: ['kg', 'kilogram', 'kilograms'] },
@@ -236,7 +236,7 @@ const UNIT_LIST: Unit[] = [
   { id: 'm3', dim: 'volume', symbol: 'm³', toBase: 1000, defaultTo: 'ft3', names: ['m3', 'm^3', 'cubic meter', 'cubic meters', 'cubic metre', 'cubic metres'] },
 
   { id: 'barn', dim: 'area', symbol: 'barn', toBase: 1e-28, defaultTo: 'm2', prefixable: true, names: ['barn', 'barns'] },
-  { id: 'darcy', dim: 'area', symbol: 'D', toBase: DARCY, defaultTo: 'm2', names: ['darcy', 'darcys', 'darcies'] },
+  { id: 'darcy', dim: 'area', symbol: 'darcy', toBase: DARCY, defaultTo: 'm2', names: ['darcy', 'darcys', 'darcies'] },
   { id: 'in2', dim: 'area', symbol: 'in²', toBase: 0.00064516, defaultTo: 'cm2', names: ['in2', 'in^2', 'sqin', 'sq in', 'square inch', 'square inches'] },
   { id: 'sqft', dim: 'area', symbol: 'ft²', toBase: 0.09290304, defaultTo: 'm2', names: ['sqft', 'sq ft', 'ft2', 'ft^2', 'square foot', 'square feet'] },
   { id: 'yd2', dim: 'area', symbol: 'yd²', toBase: 0.83612736, defaultTo: 'm2', names: ['yd2', 'yd^2', 'sq yd', 'square yard', 'square yards'] },
@@ -249,7 +249,7 @@ const UNIT_LIST: Unit[] = [
 
   { id: 'mph', dim: 'speed', symbol: 'mph', toBase: MI / 3600, defaultTo: 'kmh', names: ['mph', 'mi/h', 'mile/h', 'mile per hour', 'miles per hour'] },
   { id: 'fps', dim: 'speed', symbol: 'ft/s', toBase: FT, defaultTo: 'mps', names: ['fps', 'ft/s', 'foot per second', 'feet per second'] },
-  { id: 'knot', dim: 'speed', symbol: 'kn', toBase: 1852 / 3600, defaultTo: 'kmh', names: ['kt', 'knot', 'knots'] },
+  { id: 'knot', dim: 'speed', symbol: 'kt', toBase: 1852 / 3600, defaultTo: 'kmh', names: ['kt', 'knot', 'knots'] },
   { id: 'kmh', dim: 'speed', symbol: 'km/h', toBase: 1000 / 3600, defaultTo: 'mph', names: ['km/h', 'km/hr', 'kph', 'kmh', 'kilometer per hour', 'kilometers per hour', 'kilometre per hour', 'kilometres per hour'] },
   { id: 'mps', dim: 'speed', symbol: 'm/s', toBase: 1, defaultTo: 'fps', names: ['m/s', 'meter per second', 'meters per second', 'metre per second', 'metres per second'] },
   { id: 'light', dim: 'speed', symbol: 'c', toBase: C, defaultTo: 'mps', names: ['lightspeed', 'speedoflight', 'speed of light'] },
@@ -264,7 +264,7 @@ const UNIT_LIST: Unit[] = [
   { id: 'month', dim: 'time', symbol: 'mo', toBase: YEAR / 12, names: ['mo', 'mos', 'month', 'months'] },
   { id: 'decade', dim: 'time', symbol: 'decades', toBase: 10 * YEAR, names: ['decade', 'decades'] },
   { id: 'century', dim: 'time', symbol: 'centuries', toBase: 100 * YEAR, names: ['century', 'centuries'] },
-  { id: 'millennium', dim: 'time', symbol: 'kyr', toBase: 1000 * YEAR, names: ['millenium', 'millennium', 'millenniums', 'millennia'] },
+  { id: 'millennium', dim: 'time', symbol: 'kyr', toBase: 1000 * YEAR, names: ['millenium', 'millennium', 'millenniums', 'millennia', 'kyr'] },
 
   ...dataUnits(),
 
@@ -521,11 +521,14 @@ function preprocess(s: string): string {
     .replace(/π/g, 'pi')
     .replace(/τ/g, 'tau')
     .replace(/−/g, '-')
+    .replace(/℃/g, '°C')
+    .replace(/℉/g, '°F')
+    .replace(/[\u00c5\u212b](?!\p{L})/gu, ' angstrom')
     .replace(/°\s*C\b/gi, ' degc')
     .replace(/°\s*F\b/gi, ' degf')
     .replace(/°\s*R\b/gi, ' degr')
     .replace(/°/g, ' deg')
-    .replace(/[µμ](?=[A-Za-z])/g, 'u')
+    .replace(/[µμ](?=[A-Za-zΩ])/g, 'u')
     .replace(/²/g, '^2')
     .replace(/³/g, '^3')
     .replace(/\s*\/\s*/g, '/')
@@ -550,11 +553,18 @@ function beforeTail(t: string, token: string): string | null {
 /** `mPa` is a millipascal and `Mg` a megagram, though the table's `MPa` and `mg` match them ignoring case. */
 function caseClash(typed: string, unit: Unit): boolean {
   const sym = unit.symbol
-  // only the prefix letter's case differs; `MG` or `MPH` in caps keep their table reading
-  if (typed[0] === sym[0] || typed.slice(1) !== sym.slice(1) || typed[0]!.toLowerCase() !== sym[0]!.toLowerCase()) return false
+  const tail = typed.slice(1)
+  const isSymbol = (t: string) => UNIT_LIST.some((u) => u !== unit && u.symbol === t)
+  // only the prefix letter's case differs; `MG` or `MPH` in caps keep their table reading, and `pa` is still Pa
+  const prefixCase = typed[0] !== sym[0] && typed[0]!.toLowerCase() === sym[0]!.toLowerCase() && tail === sym.slice(1) && isSymbol(tail)
+  // or it's a prefix on another unit's exact symbol, and not a name this unit lists: `pA` is a picoamp, `pC` a picocoulomb
+  const otherSymbol = typed !== sym && !unit.names.includes(typed) && isSymbol(tail)
+  if (!prefixCase && !otherSymbol) return false
   const prefix = CASE_PREFIXES.find((p) => p.symbol === typed[0])
   const base = prefix && matchBareUnitAtStart(typed.slice(1))
-  return Boolean(base && !base.rest && scaleUnit(base.unit, prefix.prefix))
+  const scaled = base && !base.rest && scaleUnit(base.unit, prefix.prefix)
+  // `uF` is the table's µF either way
+  return Boolean(scaled && (scaled.dim !== unit.dim || !sameScale(scaled.toBase, unit.toBase)))
 }
 
 function caseFits(typed: string, exact: string | undefined, whole = false): boolean {
@@ -631,7 +641,8 @@ function startsWithToken(s: string, token: string): boolean {
   if (s.length < token.length || s.slice(0, token.length).toLowerCase() !== token) return false
   const next = s[token.length]
   const last = token[token.length - 1]
-  if (next && /[A-Za-z0-9]/.test(next) && last && /[A-Za-z0-9]/.test(last)) return false
+  // `kΩ` is one token, not kelvin then ohm
+  if (next && /[\p{L}\d]/u.test(next) && last && /[A-Za-z0-9]/.test(last)) return false
   // `ft/s^2` is ft / s^2, not (ft/s)^2
   if (token.includes('/') && next === '^') return false
   return true
@@ -685,6 +696,13 @@ function matchUnitAtStart(s: string): { unit: Unit; rest: string } | null {
     if (hit) return hit
   }
   return null
+}
+
+/** A unit name, or a prefixed symbol written exactly as its unit shows (`ms`, `kV`, not `ka`). */
+export function readsAsUnit(word: string): boolean {
+  if (isUnitName(word)) return true
+  const hit = matchUnitAtStart(word)
+  return hit?.rest === '' && hit.unit.symbol === word
 }
 
 type DimVec = readonly number[]
@@ -811,8 +829,16 @@ function divQty(a: Qty, b: Qty): Qty | null {
 
 function addQty(a: Qty, b: Qty, sign: 1 | -1): Qty | null {
   if (!vecEq(a.dim, b.dim)) return null
-  const prec = a.prec || b.prec ? LOST : undefined
-  return { si: a.si + sign * b.si, dim: a.dim, prefer: a.prefer ?? b.prefer, prec }
+  const si = a.si + sign * b.si
+  return { si, dim: a.dim, prefer: a.prefer ?? b.prefer, prec: precAdd(a, b, si) }
+}
+
+/** Sums: absolute uncertainties add, a number without ± counting as exact; sig figs alone aren't kept. */
+function precAdd(a: Qty, b: Qty, si: number): Prec | undefined {
+  if (!a.prec && !b.prec) return undefined
+  const unc = Math.abs(a.si) * (a.prec?.rel ?? 0) + Math.abs(b.si) * (b.prec?.rel ?? 0)
+  if (!(unc > 0) || si === 0) return LOST
+  return { sig: Infinity, rel: unc / Math.abs(si) }
 }
 
 /** Exponents are exact; an uncertain one is not modelled. */
@@ -961,9 +987,24 @@ class UnitParser {
   i = 0
   usedUnit = false
   incompatible = false
+  // a unit symbol that is also a stored variable (`n = 5`, then `2 n`) is ambiguous, so the whole reading goes
+  shadowed = false
+  vars: Record<string, number>
 
-  constructor(s: string) {
+  constructor(s: string, vars: Record<string, number> = {}) {
     this.s = s
+    this.vars = vars
+  }
+
+  /** A plain variable (`price`, not a unit name) standing in for its stored number. */
+  parseVariableRef(): Qty | null {
+    this.skip()
+    const m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(this.s.slice(this.i))
+    if (!m) return null
+    const v = this.vars[m[0]]
+    if (v == null || !Number.isFinite(v)) return null
+    this.i += m[0].length
+    return { si: v, dim: vec('dimensionless') }
   }
 
   skip(): void {
@@ -985,7 +1026,7 @@ class UnitParser {
   parse(): Qty | null {
     const q = this.parseAdd()
     this.skip()
-    if (this.i !== this.s.length || !q || !this.usedUnit) return null
+    if (this.i !== this.s.length || !q || !this.usedUnit || this.shadowed) return null
     return q
   }
 
@@ -1029,8 +1070,8 @@ class UnitParser {
         left = quot
         continue
       }
-      // `5 (2 m)` multiplies, but after a unit `(` is a function call (`sec(0)`)
-      if (isLetter(ch) || (ch === '(' && isZeroVec(left.dim))) {
+      // `5 (2 m)` and `(2 m) (3 s)` multiply, but after a unit `(` is a function call (`sec(0)`, `sec^-1(2)`)
+      if (isLetter(ch) || (ch === '(' && (isZeroVec(left.dim) || this.s.slice(0, this.i).trimEnd().endsWith(')')))) {
         const right = this.parsePow()
         if (!right) return null
         left = mulQty(left, right)
@@ -1071,7 +1112,7 @@ class UnitParser {
       if (unit) return mulQty({ si: Math.PI, dim: vec('dimensionless') }, unit)
       return { si: Math.PI, dim: vec('dimensionless') }
     }
-    const amount = this.parseAmount()
+    const amount = this.parseAmount() ?? this.parseVariableRef()
     if (amount) {
       const unit = this.parseUnitRef()
       if (unit) {
@@ -1153,7 +1194,9 @@ class UnitParser {
     const hit = matchUnitAtStart(this.s.slice(this.i))
     // °C and °F are offset scales: `72 F in C` converts, but they can't be multiplied or added
     if (!hit || hit.unit.id === 'c' || hit.unit.id === 'f') return null
-    this.i += this.s.slice(this.i).length - hit.rest.length
+    const end = this.s.length - hit.rest.length
+    if (this.s.slice(this.i, end).match(/[A-Za-z_][A-Za-z0-9_]*/g)?.some((w) => w in this.vars)) this.shadowed = true
+    this.i = end
     this.usedUnit = true
     return unitQty(hit.unit)
   }
@@ -1195,14 +1238,17 @@ function applyDefaultUnit(q: Qty, defaults?: DefaultUnits): Value | null {
   return qtyToValue(q)
 }
 
-function evalUnitSides(left: string, right: string | undefined, defaults?: DefaultUnits): Value | null {
-  const leftParser = new UnitParser(left)
+function evalUnitSides(left: string, right: string | undefined, defaults?: DefaultUnits, vars?: Record<string, number>): Value | null {
+  const leftParser = new UnitParser(left, vars)
   const leftQ = leftParser.parse()
+  if (leftParser.shadowed) return null
   if (!right) {
     if (!leftQ) return leftParser.incompatible ? unitError() : null
     return applyDefaultUnit(leftQ, defaults)
   }
-  const rightQ = new UnitParser(right).parse()
+  const rightParser = new UnitParser(right, vars)
+  const rightQ = rightParser.parse()
+  if (rightParser.shadowed) return null
   if (!leftQ) {
     if (leftParser.incompatible || (rightQ && leftParser.usedUnit)) return unitError()
     return null
@@ -1211,25 +1257,27 @@ function evalUnitSides(left: string, right: string | undefined, defaults?: Defau
   return qtyToValue(leftQ, rightQ, right.replace(/\s+/g, ' '))
 }
 
-function tryUnitExpression(src: string, defaults?: DefaultUnits): Value | null {
+function tryUnitExpression(src: string, defaults?: DefaultUnits, vars?: Record<string, number>): Value | null {
   const { left, right } = splitConvert(src)
-  if (right) return evalUnitSides(left, right, defaults)
+  if (right) return evalUnitSides(left, right, defaults, vars)
 
   // `in` is also inches, so it only converts when both sides parse and the dimensions fit (`3V/39ohm in mA`)
   const viaIn = splitInConvert(src)
   if (viaIn) {
-    const leftParser = new UnitParser(viaIn.left)
+    const leftParser = new UnitParser(viaIn.left, vars)
     const leftQ = leftParser.parse()
-    const rightQ = new UnitParser(viaIn.right).parse()
+    const rightQ = new UnitParser(viaIn.right, vars).parse()
     if (leftQ && rightQ) {
       if (convertQty(leftQ, rightQ) != null) {
         return qtyToValue(leftQ, rightQ, viaIn.right.replace(/\s+/g, ' '))
       }
       return unitError()
     }
+    // `5 cm in x` is a conversion to something that isn't a unit, not cm times inches times x
+    if (leftQ) return null
   }
 
-  return evalUnitSides(src, undefined, defaults)
+  return evalUnitSides(src, undefined, defaults, vars)
 }
 
 function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
@@ -1268,12 +1316,18 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
   return meas ? { ...out!, meas } : out
 }
 
-export function tryConvert(text: string, defaults?: DefaultUnits): Value | null {
+export function tryConvert(text: string, defaults?: DefaultUnits, variables?: Record<string, number>): Value | null {
   const src = preprocess(text)
-  // a lone quote mark is no quantity, and `5 kg in` is a conversion still being typed, not kg times inches
-  if (!src || /^['"]+$/.test(src) || /(?<!\b(?:to|into|in))(?<=[A-Za-z])\s+in$/i.test(src)) return null
+  // a lone quote mark is no quantity, and `5 kg in` is a conversion still being typed, not kg times inches (`5 sq in` is square inches)
+  if (!src || /^['"]+$/.test(src) || /(?<!\b(?:to|into|in|sq|cu|square|cubic))(?<=[A-Za-z])\s+in$/i.test(src)) return null
   const units = sanitizeDefaultUnits(defaults)
-  return trySimpleConvert(src, units) ?? tryUnitExpression(src, units)
+  // `m = 3`, then `5 m`: the variable wins, so the bare `number unit` reading is off
+  const simple = mentionsUnitLikeVariable(src, variables) ? null : trySimpleConvert(src, units)
+  return simple ?? tryUnitExpression(src, units, variables)
+}
+
+function mentionsUnitLikeVariable(src: string, variables?: Record<string, number>): boolean {
+  return (src.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []).some((w) => variables?.[w] != null && isUnitName(w))
 }
 
 /** Units that step through SI prefixes with ⌥↑/⌥↓ (kg and t sit on the gram ladder). */
@@ -1576,11 +1630,22 @@ export function defaultUnitsEqual(a: DefaultUnits, b: DefaultUnits): boolean {
 
 /** `5 cm` (or `5.0 ± 0.1 cm`) as text that parses back to the same quantity, or null when the unit label doesn't. */
 export function quantityText(v: Value): string | null {
-  if (v.kind !== 'number' || !v.unit || !v.unitId || !Number.isFinite(v.n)) return null
-  const n = Number(v.n.toPrecision(12))
-  const text = `${n}${v.meas?.unc ? ` ± ${v.meas.unc}` : ''} ${v.unit}`
-  const back = tryConvert(`${text} to ${v.unit}`)
-  return back?.kind === 'number' && back.unitId === v.unitId && sameScale(back.n, n) ? text : null
+  if (v.kind !== 'number' || !v.unit || !Number.isFinite(v.n)) return null
+  // full precision, so a stored quantity chains like a plain number: y = 2 kg, y^3 is 8 kg^3
+  const n = v.n
+  const amount = `${n}${v.meas?.unc ? ` ± ${v.meas.unc}` : ''}`
+  if (!v.unitId) {
+    // a compound in SI base units (`200 kg / s^2`) must read back as itself
+    const back = tryConvert(`${amount} ${v.unit}`)
+    return back?.kind === 'number' && back.unit === v.unit && !back.unitId && sameScale(back.n, n) ? `${amount} ${v.unit}` : null
+  }
+  // a symbol that reads back as another unit (g for gee, not gram) falls back to one of its names
+  for (const unit of [v.unit, ...(unitById(v.unitId)?.names ?? [])]) {
+    const text = `${amount} ${unit}`
+    const back = tryConvert(`${text} to ${unit}`)
+    if (back?.kind === 'number' && back.unitId === v.unitId && sameScale(back.n, n)) return text
+  }
+  return null
 }
 
 /** A few other units worth tabbing to, picked from the Settings lists by how readable the number is. */

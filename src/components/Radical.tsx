@@ -13,8 +13,22 @@ function textWidth(node: Node): number {
   return range.getBoundingClientRect().width
 }
 
+// where an ellipsis cuts the text off, or null while it all fits
+function ellipsisEdge(root: HTMLElement): number | null {
+  for (let n = root.parentElement; n; n = n.parentElement) {
+    const style = getComputedStyle(n)
+    if (style.textOverflow !== 'ellipsis') continue
+    if (n.scrollWidth <= n.clientWidth) return null
+    const box = n.getBoundingClientRect()
+    return box.right - parseFloat(style.paddingRight) - parseFloat(style.fontSize)
+  }
+  return null
+}
+
 function fitRadicals(root: HTMLElement | null) {
   if (!root) return
+  // a bar is drawn, not text, so the ellipsis doesn't hide it with the radicand it covers
+  const edge = ellipsisEdge(root)
   for (const el of root.querySelectorAll<HTMLElement>('.radical')) {
     const glyph = el.firstElementChild?.firstElementChild as HTMLElement | null | undefined
     const sign = el.childNodes[1]
@@ -24,10 +38,11 @@ function fitRadicals(root: HTMLElement | null) {
     // the sign's advance without its tracking: the copy has none, so its ink lines up with the sign's
     const advance = textWidth(sign) - (parseFloat(style.letterSpacing) || 0)
     // the span's own box: its transformed bar doesn't widen it
-    const total = el.getBoundingClientRect().width
+    const rect = el.getBoundingClientRect()
+    const total = rect.width
     const a = advance + SLICE_FROM * size
     const b = advance + SLICE_TO * size
-    if (!(size > 0) || total <= b) {
+    if (!(size > 0) || total <= b || (edge != null && rect.right > edge)) {
       glyph.style.visibility = 'hidden'
       continue
     }

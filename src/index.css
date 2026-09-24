@@ -144,7 +144,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .composer {
   position: relative;
   display: grid;
-  grid-template-columns: 1fr minmax(120px, 46%);
+  /* the answer takes the room it needs; the input keeps at least a third and scrolls */
+  grid-template-columns: minmax(33%, 1fr) minmax(120px, max-content);
   gap: var(--sp-3);
   align-items: center;
   height: 72px;
@@ -537,8 +538,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   from { opacity: 0.35; }
   to { opacity: 1; }
 }
-.live.copied,
-.live-dual.copied .live-part {
+.live.copied {
   color: var(--answer-hover);
 }
 .live-text {
@@ -570,11 +570,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .live.live-steady { transition: none; }
 }
 .live-dual {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   min-width: 0;
   max-width: 100%;
+}
+/* hangs left of the group so it never squeezes either half */
+.live-dual > .live-check {
+  position: absolute;
+  right: 100%;
 }
 .live-part {
   font-size: var(--fs-answer-part);

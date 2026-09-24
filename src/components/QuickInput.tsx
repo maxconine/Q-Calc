@@ -4,7 +4,8 @@ import { nativeWindow } from '../lib/bridge'
 import type { Span } from '../lib/blankReason'
 import { completionFor, type CompletionNames } from '../lib/completion'
 import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/bounds'
-import { copyText, inputHighlight } from '../lib/dom'
+import { copyText, inputHighlight, keepEndInView } from '../lib/dom'
+import { cleanPastedText } from '../lib/paste'
 import { equalsCommits } from '../lib/touches'
 import { breakRun, editKind, recordEdit, redo, undo, undoStart, type EditKind, type Undo, type UndoState } from '../lib/undo'
 import { BoundsInputText } from './Bounds'
@@ -94,7 +95,7 @@ const SHORTCUT_SYMBOLS: [RegExp, string][] = [
 ]
 
 export function flattenPastedText(text: string): string {
-  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, ' ')
+  return cleanPastedText(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, ' ')
 }
 
 export function spliceText(
@@ -267,6 +268,16 @@ export function QuickInput({
     if (!holdingArrowRef.current) return
     pinCaret()
   })
+
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      if (document.activeElement === el) keepEndInView(el)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   useEffect(() => {
     const el = inputRef.current

@@ -33,18 +33,28 @@ function exact(v: number): M {
   return { v, sig: Infinity, dp: Infinity, unc: 0 }
 }
 
+// float noise below a power of ten (0.9999999999999999) counts as that power
 function mag(v: number): number {
-  return Math.floor(Math.log10(Math.abs(v)))
+  return Math.floor(Math.log10(Math.abs(v)) + 1e-12)
+}
+
+// the magnitude after rounding, so 9.9989 to one place is 10.0 with 3 sig figs, not 1.0e1
+function roundedMag(v: number, dp: number): number {
+  const scale = 10 ** Math.min(300, Math.max(-300, dp))
+  const r = Math.round(Math.abs(v) * scale) / scale
+  return r === 0 || !Number.isFinite(r) ? mag(v) : Math.max(mag(v), mag(r))
 }
 
 function bySig(v: number, sig: number, unc: number): M {
   if (!Number.isFinite(sig)) return { v, sig, dp: Infinity, unc }
-  return { v, sig, dp: v === 0 ? sig - 1 : sig - 1 - mag(v), unc }
+  if (v === 0) return { v, sig, dp: sig - 1, unc }
+  const dp = sig - 1 - mag(v)
+  return { v, sig, dp: sig - 1 - roundedMag(v, dp), unc }
 }
 
 function byDp(v: number, dp: number, unc: number): M {
   if (!Number.isFinite(dp)) return { v, sig: Infinity, dp, unc }
-  return { v, sig: v === 0 ? 0 : mag(v) + 1 + dp, dp, unc }
+  return { v, sig: v === 0 ? 0 : roundedMag(v, dp) + 1 + dp, dp, unc }
 }
 
 /** `2.50` → 3 s.f.; `6.02e23` → 3 s.f.; `300.` → 3 s.f.; a bare integer is exact. */
@@ -119,12 +129,20 @@ function walkBinary(fn: string, a: M, b: M): M | null {
       return byDp(a.v + b.v, Math.min(a.dp, b.dp), a.unc + b.unc)
     case 'subtract':
       return byDp(a.v - b.v, Math.min(a.dp, b.dp), a.unc + b.unc)
-    case 'multiply':
-      return bySig(a.v * b.v, Math.min(a.sig, b.sig), Math.abs(a.v) * b.unc + Math.abs(b.v) * a.unc)
+    case 'multiply': {
+      const unc = Math.abs(a.v) * b.unc + Math.abs(b.v) * a.unc
+      // a measured zero has a place but no sig figs: (1.0 - 1.0) × 2.001 is 0.0, not 0 to the tens
+      if (a.sig <= 0 && b.sig <= 0) return byDp(a.v * b.v, a.dp + b.dp, unc)
+      const zero = a.sig <= 0 ? [a, b] : b.sig <= 0 ? [b, a] : null
+      if (zero) return byDp(a.v * b.v, zero[0]!.dp - Math.round(Math.log10(Math.abs(zero[1]!.v))), unc)
+      return bySig(a.v * b.v, Math.min(a.sig, b.sig), unc)
+    }
     case 'divide': {
       if (b.v === 0) return null
       const v = a.v / b.v
-      return bySig(v, Math.min(a.sig, b.sig), (a.unc + Math.abs(v) * b.unc) / Math.abs(b.v))
+      const unc = (a.unc + Math.abs(v) * b.unc) / Math.abs(b.v)
+      if (a.sig <= 0 && b.sig > 0) return byDp(v, a.dp + Math.round(Math.log10(Math.abs(b.v))), unc)
+      return bySig(v, Math.min(a.sig, b.sig), unc)
     }
     case 'pow': {
       if (b.unc > 0) return null
@@ -263,9 +281,13 @@ export function formatSig(v: number, sig: number, dp: number): string | null {
   if (!Number.isFinite(v)) return null
   if (v === 0 || sig < 1) return unsigned(v.toFixed(Math.max(0, Math.min(20, dp))))
   if (sig > 16) return null
-  const s = v.toPrecision(sig)
+  // round at the decimal place first, so 0.959 to one place is 1.0, not 0.96 or 1
+  const scale = Number.isFinite(dp) ? 10 ** Math.min(300, Math.max(-300, dp)) : 0
+  const r = scale ? (Math.sign(v) * Math.round(Math.abs(v) * scale)) / scale : v
+  const shown = r === 0 || !Number.isFinite(r) ? v : r
+  const s = shown.toPrecision(sig)
   if (s.includes('e')) return stripExpPlus(s)
-  if (!s.includes('.') && s.endsWith('0')) return stripExpPlus(v.toExponential(sig - 1))
+  if (!s.includes('.') && s.endsWith('0')) return stripExpPlus(shown.toExponential(sig - 1))
   return s
 }
 
@@ -283,13 +305,13 @@ function isTyped(unc: number, digits: string | undefined): boolean {
 
 /**
  * `10.0 ± 0.7`: the uncertainty at one sig fig, or two when it leads with a 1 (`5.0 ± 0.14`), the value to the same place.
- * A ± still as typed never gains a digit (`10 ± 1`, not `10.0 ± 1.0`).
+ * A ± still as typed keeps exactly its typed digits (`10 ± 1`, `2.00 ± 0.35`).
  */
 export function formatUncertain(v: number, unc: number, uncDigits?: string): string | null {
   if (!Number.isFinite(v) || !(unc > 0) || !Number.isFinite(unc)) return null
   const two = Number(unc.toPrecision(2))
   let figs = /^[0.]*1/.test(String(two)) ? 2 : 1
-  if (isTyped(unc, uncDigits)) figs = Math.min(figs, uncDigits!.length)
+  if (isTyped(unc, uncDigits)) figs = uncDigits!.length
   const u = Number(unc.toPrecision(figs))
   const place = mag(u) - figs + 1
   const decimals = Math.max(0, Math.min(20, -place))

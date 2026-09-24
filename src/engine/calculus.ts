@@ -107,7 +107,7 @@ function scanBound(s: string): { bound: string; rest: string } | null {
 /** `x^2 dx` names its variable; the `dx` isn't part of the body. */
 function stripDifferential(body: string): { body: string; v?: string } {
   const m = body.match(/^(.*?)(?:\s*\*)?\s*\bd([A-Za-z])\s*$/s)
-  if (!m || !m[1]!.trim() || /[A-Za-z_]$/.test(m[1]!.trimEnd()) && !/\s$/.test(m[1]!)) return { body: body.trim() }
+  if (!m || !m[1]!.trim()) return { body: body.trim() }
   return { body: m[1]!.trim(), v: m[2] }
 }
 
@@ -144,8 +144,10 @@ function parseIntegral(text: string, functions: Record<string, UserFunction>): I
     const { body, v } = stripDifferential(ft.body)
     return { op: 'integral', body, v, lower: ft.lower, upper: ft.upper }
   }
-  if (!text.startsWith('∫')) return null
-  const rest = text.slice(1).trim()
+  // the word works as the sign too, for anyone who keeps typed words as text
+  const sign = text.match(/^(?:∫|int(?=_|\s|[^A-Za-z\s(]\S*\.\.))/i)
+  if (!sign) return null
+  const rest = text.slice(sign[0].length).trim()
   let lower: string | undefined
   let upper: string | undefined
   let body: string | undefined
@@ -270,7 +272,7 @@ function parseCalculus(
   return parseDerivative(text, functions, variables) ?? parseIntegral(text, functions) ?? parseLimit(text)
 }
 
-const CALCULUS_START = /^(?:∫|d[²³]?\s*\/\s*d[A-Za-z]|lim(?:it)?\b.*(?:->|→)|(?:the\s+)?(?:integral|integrate|derivative|limit)\s+of\b|[A-Za-z][A-Za-z0-9]*\s*(?:'+|′+|″)\s*\()/i
+const CALCULUS_START = /^(?:∫|int(?:_|[^A-Za-z\s(]\S*\.\.)|d[²³]?\s*\/\s*d[A-Za-z]|lim(?:it)?\b.*(?:->|→)|(?:the\s+)?(?:integral|integrate|derivative|limit)\s+of\b|[A-Za-z][A-Za-z0-9]*\s*(?:'+|′+|″)\s*\()/i
 
 /** Cheap syntactic check, true while a calculus line is still being typed, so soulvercore stays out of it. */
 export function isCalculusInput(text: string): boolean {
@@ -790,7 +792,8 @@ function freeLetters(body: string, ctx: ScientificContext): string[] {
   const found = new Set<string>()
   for (const m of body.matchAll(/(?<![A-Za-z0-9_])([A-Za-z])(?![A-Za-z0-9_(])/g)) {
     const c = m[1]!
-    if (c === 'e' || c === 'i' || (ctx.variables && c in ctx.variables)) continue
+    // a bare function name isn't a variable: after f(x) = x², ∫0..3 f isn't ∫0..3 f df
+    if (c === 'e' || c === 'i' || (ctx.variables && c in ctx.variables) || (ctx.functions && c in ctx.functions)) continue
     found.add(c)
   }
   return [...found]
@@ -826,6 +829,8 @@ function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: Scien
   if (!f) return null
   const at = intent.at != null ? boundValue(intent.at.replace(new RegExp(`^${v}\\s*=\\s*`), ''), ctx) : null
   if (intent.at != null && (at == null || !Number.isFinite(at))) return null
+  // no derivative where the function itself is undefined (ln at -1)
+  if (at != null && !Number.isFinite(f(at))) return null
   const checkAt = at != null ? [at] : CHECK_POINTS
 
   let steps: Derived | null = null
@@ -833,6 +838,8 @@ function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: Scien
     let current = tree
     let prevFn = f
     for (let k = 0; k < intent.order; k++) {
+      // each lower derivative has to exist there too: abs'' is 0 either side of 0 but abs' has no value at 0
+      if (at != null && !Number.isFinite(prevFn(at))) return null
       const d = differentiate(current, v, ctx.angleMode !== 'rad')
       if (!d) {
         steps = null

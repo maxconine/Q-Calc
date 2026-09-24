@@ -11,6 +11,8 @@ interface Species {
   charge: bigint
   /** digits, parens, hydrate dots, charges or states: things plain math never writes */
   marked: boolean
+  /** the coefficient as typed, if any */
+  typed?: bigint
 }
 
 export interface Reaction {
@@ -175,6 +177,7 @@ function species(sc: Scanner): Species | null {
     atoms: f.atoms,
     charge: q.n,
     marked: f.marked || q.n !== 0n || state !== '',
+    typed: coef ? BigInt(coef) : undefined,
   }
 }
 
@@ -331,6 +334,12 @@ export function chemAnswer(text: string, isName: (name: string) => boolean = () 
   if (strict && [...r.left, ...r.right].some((s) => isName(s.base))) return null
   if (!strict && !marked(r)) return null
   const b = balance(r)
+  // `V1 = 9 V` is an assignment: one species a side whose typed coefficients the balance throws out
+  const pair = [...r.left, ...r.right]
+  if (strict && pair.length === 2 && b.kind === 'balanced' && pair.some((sp) => sp.typed != null)) {
+    const [a, c] = pair.map((sp) => sp.typed ?? 1n)
+    if (a! * b.coefficients[1]! !== c! * b.coefficients[0]!) return null
+  }
   if (b.kind === 'balanced') return b.display
   if (strict) return null
   return b.kind === 'underdetermined' ? 'underdetermined' : ''

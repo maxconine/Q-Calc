@@ -5,6 +5,7 @@ import { compileScientific, parseScientific, SCIENTIFIC_NAMES, type AngleMode } 
 import { exactForm, wantsExactForm } from './simplify'
 import type { UserFunction, Value } from './types'
 import type { DefaultUnits } from './units'
+import { spend, workBudget } from './work'
 
 export type SumContext = {
   ans?: number
@@ -21,15 +22,15 @@ type Op = 'sum' | 'prod'
 type Spec = { op: Op; body: string; index?: string; from: string; to: string }
 
 // work caps per keystroke; past them the answer is blank, never a partial sum
-const BUDGET_MS = 30
+const BUDGET = 2_500_000
+/** Work units per node for one exact term; float terms are counted as they're evaluated. */
+const EXACT_NODE_COST = 10
 const EXACT_TERMS = 5_000
 const FLOAT_TERMS = 200_000
 const PROD_FLOAT_TERMS = 1_000
 const MAX_BOUND = 1e15
 const MAX_EXACT_TEXT = 24
 const EPS = Number.EPSILON
-
-const now = () => performance.now()
 
 /** Typed Σ and Π read exactly like the words `sum` and `prod`. */
 export function normalizeSums(text: string): string {
@@ -456,7 +457,8 @@ function finite(spec: Spec, index: string, a: number, b: number, ctx: SumContext
   if (!parsed || !term) return { value: null }
   const node = parsed.node as Node
   const count = b - a + 1
-  const deadline = now() + BUDGET_MS
+  const budget = workBudget(BUDGET)
+  const exactCost = EXACT_NODE_COST * parsed.node.filter(() => true).length
   const isSum = spec.op === 'sum'
 
   if (isSum) {
@@ -474,7 +476,8 @@ function finite(spec: Spec, index: string, a: number, b: number, ctx: SumContext
       const v = exactEval(node, index, BigInt(k), vars)
       if (v === UNDEF) return undefinedAnswer()
       acc = v && (isSum ? qAdd(acc, v) : qMul(acc, v))
-      if ((k & 63) === 0 && now() > deadline) acc = null
+      spend(exactCost)
+      if ((k & 63) === 0 && budget.over()) acc = null
     }
     if (acc) return exactAnswer(acc)
   }
@@ -494,7 +497,7 @@ function finite(spec: Spec, index: string, a: number, b: number, ctx: SumContext
       sum = t
       absSum += Math.abs(v.n)
     } else sum *= v.n
-    if ((k & 255) === 0 && now() > deadline) return { value: null }
+    if ((k & 255) === 0 && budget.over()) return { value: null }
   }
   if (!isSum) return Number.isFinite(sum) ? { value: num(sum) } : { value: null }
   sum += comp
@@ -710,7 +713,7 @@ function isOne(q: Q | null): boolean {
 }
 
 /** Σ over n ≥ a of a term whose convergence is settled by its shape; null when it isn't certain. */
-function termSum(t: Term, a: number, deadline: number): Part | null {
+function termSum(t: Term, a: number): Part | null {
   if (t.c === 0) return { v: 0, q: { n: 0n, d: 1n } }
   if (a < 0 || (t.p > 0 && a < 1)) return null
   const ar = Math.abs(t.r)
@@ -722,7 +725,7 @@ function termSum(t: Term, a: number, deadline: number): Part | null {
       return { v: t.c * Math.exp(t.r), exact }
     }
     if (a === 1 && isOne(t.cq) && isOne(t.rq)) return { v: Math.E - 1, exact: 'e - 1' }
-    return series(t, a, deadline)
+    return series(t, a)
   }
   if (t.f !== 0) return null
   if (ar > 1) return null
@@ -742,7 +745,7 @@ function termSum(t: Term, a: number, deadline: number): Part | null {
       const sign = isOne(t.cq) ? '' : t.cq && t.cq.n === -1n && t.cq.d === 1n ? '-' : null
       return { v, exact: x && x !== UNDEF && sign != null ? `${sign}ln(${qText(x)})` : undefined }
     }
-    return series(t, a, deadline)
+    return series(t, a)
   }
   const evenP = Number.isInteger(t.p) && t.p % 2 === 0 && ZETA_EVEN[t.p] ? ZETA_EVEN[t.p]! : null
   if (t.r === 1) {
@@ -785,8 +788,8 @@ function termSum(t: Term, a: number, deadline: number): Part | null {
   return { v: t.c * v, exact }
 }
 
-/** Direct summation with a proven bound on what's left; |r| < 1, or a factorial below. */
-function series(t: Term, a: number, deadline: number): Part | null {
+/** Direct summation with a proven bound on what's left; |r| < 1, or a factorial below. FLOAT_TERMS caps the work. */
+function series(t: Term, a: number): Part | null {
   const lnr = Math.log(Math.abs(t.r))
   const neg = t.r < 0
   let lnFact = 0
@@ -809,7 +812,6 @@ function series(t: Term, a: number, deadline: number): Part | null {
       if (spread * EPS * absSum > 1e-13 * Math.abs(sum)) return null
       return { v: sum }
     }
-    if ((i & 1023) === 0 && now() > deadline) return null
   }
   return null
 }
@@ -832,10 +834,9 @@ function infinite(spec: Spec, index: string, a: number, ctx: SumContext): SumAns
     terms.push(piece.sign > 0 ? t : { ...t, c: -t.c, cq: t.cq && { n: -t.cq.n, d: t.cq.d } })
   }
   if (!agrees(terms, term, a)) return { value: null }
-  const deadline = now() + BUDGET_MS
   const parts: Part[] = []
   for (const t of terms) {
-    const part = termSum(t, a, deadline)
+    const part = termSum(t, a)
     if (!part || !Number.isFinite(part.v)) return { value: null }
     parts.push(part)
   }

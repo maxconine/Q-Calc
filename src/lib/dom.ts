@@ -36,3 +36,12 @@ export function highlightedText(): string {
 export function keepFocus(e: { preventDefault: () => void }): void {
   e.preventDefault()
 }
+
+type Scrolled = Pick<HTMLInputElement, 'selectionStart' | 'selectionEnd' | 'value' | 'scrollWidth' | 'scrollLeft'>
+
+// the input narrows when the answer beside it widens after a keystroke (a closed form lands late),
+// and it doesn't scroll its caret back into view on its own; a caret at the end is put back
+export function keepEndInView(el: Scrolled): void {
+  if (el.selectionStart !== el.selectionEnd || el.selectionEnd !== el.value.length) return
+  el.scrollLeft = el.scrollWidth
+}

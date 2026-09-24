@@ -13,12 +13,15 @@ const NESTED: ReadonlyArray<readonly [string, number]> = [
   ['-(2+sqrt(3))', -(2 + Math.sqrt(3))],
 ]
 
-// an exact form claims every digit the decimal shows, so it may only differ by float noise
-function tol(x: number): number {
-  return 1e-11 + 1e-14 * Math.abs(x)
-}
+type Tol = (x: number) => number
 
-function close(a: number, b: number): boolean {
+// an exact form claims every digit the decimal shows, so it may only differ by float noise;
+// 1e-12 next to 0 or 5e-12 next to √2 is a different number (sin(1e-12) isn't 0)
+const strict: Tol = (x) => 1e-15 + 1e-14 * Math.abs(x)
+// solve checks each candidate on the equation itself, so it can afford to look wider
+const wide: Tol = (x) => 1e-11 + 1e-14 * Math.abs(x)
+
+function close(a: number, b: number, tol: Tol): boolean {
   return Math.abs(a - b) <= tol(b)
 }
 
@@ -44,10 +47,10 @@ function toFraction(x: number, maxDen: number, eps: number): { n: number; d: num
   return { n: sign * (bestN / g), d: bestD / g }
 }
 
-function snapInteger(n: number): number | null {
+function snapInteger(n: number, tol: Tol): number | null {
   if (!Number.isFinite(n)) return null
   const r = Math.round(n)
-  if (close(n, r) && Math.abs(r) < 1e12) return r
+  if (close(n, r, tol) && Math.abs(r) < 1e12) return r
   return null
 }
 
@@ -102,21 +105,21 @@ function formatUnrationalized(
   return `${sign}${n}/${wrap ? `(${d})` : d}`
 }
 
-function asPiMultiple(n: number): string | null {
+function asPiMultiple(n: number, tol: Tol): string | null {
   const f = toFraction(n / Math.PI, 24, tol(n / Math.PI))
   if (!f) return null
   if (f.n === 0) return '0'
   return formatPi(f.n, f.d)
 }
 
-function asNestedRadical(n: number): string | null {
+function asNestedRadical(n: number, tol: Tol): string | null {
   for (const [exact, v] of NESTED) {
-    if (close(n, v)) return exact
+    if (close(n, v, tol)) return exact
   }
   return null
 }
 
-function asRadical(n: number, rationalize: boolean): string | null {
+function asRadical(n: number, rationalize: boolean, tol: Tol): string | null {
   const sign = n < 0 ? '-' : ''
   const x = Math.abs(n)
   const f = toFraction(x * x, 256, 2 * tol(x * x))
@@ -132,14 +135,14 @@ function asRadical(n: number, rationalize: boolean): string | null {
   return formatUnrationalized(sign, num, den)
 }
 
-function asNiceFraction(n: number): string | null {
+function asNiceFraction(n: number, tol: Tol): string | null {
   const f = toFraction(n, 12, tol(n))
   if (!f || !NICE_DEN.has(f.d)) return null
   if (f.n === 0) return '0'
   return `${f.n}/${f.d}`
 }
 
-export type ExactFormOptions = { rationalize?: boolean }
+export type ExactFormOptions = { rationalize?: boolean; /** Candidates the caller verifies itself. */ wide?: boolean }
 
 const TRIG_OR_SQRT =
   /√|\\sqrt|(?:^|[^A-Za-z_])(?:sqrt|arcsin|arccos|arctan2|arctan|arccsc|arcsec|arccot|asin|acos|atan2|atan|acsc|asec|acot|sin|cos|tan|csc|sec|cot)(?![A-Za-z_])/i
@@ -152,11 +155,14 @@ export function wantsExactForm(expr: string): boolean {
 /** Null when no closed form is nicer than the decimal. */
 export function exactForm(n: number, options: ExactFormOptions = {}): string | null {
   if (!Number.isFinite(n)) return null
-  const asInt = snapInteger(n)
+  // no closed form here is this small, and 0 would deny a real 1e-11
+  if (Math.abs(n) >= 1e-15 && Math.abs(n) < 1e-3) return null
+  const tol = options.wide ? wide : strict
+  const asInt = snapInteger(n, tol)
   if (asInt !== null) return String(asInt)
   // past this any big enough radicand or numerator fits the tolerance by chance
   if (Math.abs(n) >= 1e4) return null
-  return asNestedRadical(n) || asPiMultiple(n) || asRadical(n, options.rationalize !== false) || asNiceFraction(n)
+  return asNestedRadical(n, tol) || asPiMultiple(n, tol) || asRadical(n, options.rationalize !== false, tol) || asNiceFraction(n, tol)
 }
 
 export function dualLabel(exact: string | undefined, display: string): string {

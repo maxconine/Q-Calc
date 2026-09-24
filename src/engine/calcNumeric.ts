@@ -1,5 +1,7 @@
 /** Double-precision quadrature, limits and derivatives. Every result carries an error bound, or is null. */
 
+import { workBudget } from './work'
+
 export type RealFn = (x: number) => number
 
 export type Estimate = { value: number; err: number }
@@ -8,12 +10,12 @@ const HALF_PI = Math.PI / 2
 const MAX_LEVEL = 7
 const MAX_EVALS = 40_000
 // the answer is recomputed on every keystroke; a slow user function gets a blank rather than lag
-const MAX_MS = 120
+const MAX_WORK = 4_000_000
 
-type Budget = { evals: number; deadline: number }
+type Budget = { evals: number; work: { over: () => boolean } }
 
 function spent(budget: Budget): boolean {
-  return --budget.evals < 0 || (budget.evals % 64 === 0 && Date.now() > budget.deadline)
+  return --budget.evals < 0 || (budget.evals % 64 === 0 && budget.work.over())
 }
 
 /** Keeps only the digits `err` vouches for, less one and at most 13; null when fewer than 3 survive. */
@@ -72,7 +74,7 @@ function sweep(
     last = { f: fx, dist: n.dist }
     negligible = Math.abs(term) <= 1e-15 * l1
     if (Math.abs(term) <= 1e-18 * l1 || n.w === 0) {
-      if (++small >= 3 && Math.abs(t) > 1) return { sum, l1, cut: null, ok: true }
+      if (++small >= 3 && Math.abs(t) > 2) return { sum, l1, cut: null, ok: true }
     } else small = 0
   }
 }
@@ -211,7 +213,7 @@ export function gaussKronrod(
   a: number,
   b: number,
   maxPanels = 2000,
-  deadline = Infinity,
+  over = () => false,
 ): (Estimate & { l1: number }) | null {
   const first = gk15(f, a, b)
   if (!first) return null
@@ -229,7 +231,7 @@ export function gaussKronrod(
       if (p.err > panels[worst]!.err) worst = i
     }
     if (err <= Math.max(1e-11 * l1, 1e-300)) return { value: total, err: Math.max(err, 4e-16 * l1), l1 }
-    if (n % 16 === 0 && Date.now() > deadline) return null
+    if (n % 16 === 0 && over()) return null
     const p = panels[worst]!
     const m = (p.a + p.b) / 2
     if (m <= p.a || m >= p.b) return null
@@ -241,6 +243,88 @@ export function gaussKronrod(
   return null
 }
 
+function finite(f: RealFn, a: number, b: number, budget: Budget): (Estimate & { l1: number }) | null {
+  const est = doubleExponential(f, tanhSinhRule(a, b), budget)
+  // a spike or kink the double exponential rule stepped over shows up as disagreement here
+  const gk = gaussKronrod(f, a, b, est ? 200 : Math.floor(MAX_EVALS / 30), budget.work.over)
+  // a check that only ever saw zeros has checked nothing
+  const check = gk && gk.l1 > 0 ? gk : null
+  if (est && check && Math.abs(est.value - check.value) > 10 * (est.err + check.err) + 1e-9 * est.l1) return null
+  const out = est ?? check
+  // every sample exactly 0 could still have stepped over a bump (e^-(x-737)² on 0..1000, e^-x on 0..1e6)
+  return out && out.l1 === 0 && hiddenBump(f, a, b) ? null : out
+}
+
+/**
+ * The sharpest peaks or dips an even scan sees. Splitting there crowds the rules' nodes in on them,
+ * since both can step clean over a narrow bump (e^(-1000(x-3.7)²) + 1 on 0..10).
+ */
+function peaks(f: RealFn, a: number, b: number, budget: Budget): number[] {
+  const n = 512
+  const xs: number[] = []
+  const ys: number[] = []
+  for (let i = 1; i < n; i++) {
+    const x = a + ((b - a) * i) / n
+    const y = f(x)
+    // a pole inside is for the rules to find
+    if (!Number.isFinite(y) || spent(budget)) return []
+    xs.push(x)
+    ys.push(y)
+  }
+  const top = Math.max(...ys.map(Math.abs))
+  const out: Array<{ i: number; k: number }> = []
+  for (let i = 1; i + 1 < ys.length; i++) {
+    const [l, c, r] = [ys[i - 1]!, ys[i]!, ys[i + 1]!]
+    const k = Math.abs(2 * c - l - r)
+    if (((c > l && c > r) || (c < l && c < r)) && k > 1e-6 * top) out.push({ i, k })
+  }
+  return out
+    .sort((p, q) => q.k - p.k)
+    .slice(0, 4)
+    .map(({ i }) => extremum(f, xs[i - 1]!, xs[i + 1]!, ys[i]! > ys[i - 1]! ? -1 : 1))
+    .sort((p, q) => p - q)
+    .filter((x, i, cuts) => x > a && x < b && x !== cuts[i - 1])
+}
+
+/** Golden section down to adjacent floats, so the split lands on the peak or kink itself. */
+function extremum(f: RealFn, lo: number, hi: number, sign: 1 | -1): number {
+  const g = (x: number) => sign * f(x)
+  const R = (Math.sqrt(5) - 1) / 2
+  let a = lo
+  let b = hi
+  let c = b - R * (b - a)
+  let d = a + R * (b - a)
+  let gc = g(c)
+  let gd = g(d)
+  for (let k = 0; k < 80 && c < d; k++) {
+    if (gc <= gd) {
+      b = d
+      d = c
+      gd = gc
+      c = b - R * (b - a)
+      gc = g(c)
+    } else {
+      a = c
+      c = d
+      gc = gd
+      d = a + R * (b - a)
+      gd = g(d)
+    }
+  }
+  return (a + b) / 2
+}
+
+/** Evenly across the range, and closing in on each end by halves. */
+function hiddenBump(f: RealFn, a: number, b: number): boolean {
+  const n = 4000
+  const xs = Array.from({ length: n - 1 }, (_, i) => a + ((b - a) * (i + 1)) / n)
+  for (let k = 12; k <= 40; k++) xs.push(a + (b - a) * 2 ** -k, b - (b - a) * 2 ** -k)
+  return xs.some((x) => {
+    const y = f(x)
+    return Number.isFinite(y) && y !== 0
+  })
+}
+
 /** ∫ f from a to b, with ±Infinity bounds allowed. */
 export function integrate(f: RealFn, a: number, b: number): Estimate | null {
   if (Number.isNaN(a) || Number.isNaN(b)) return null
@@ -249,19 +333,22 @@ export function integrate(f: RealFn, a: number, b: number): Estimate | null {
     const r = integrate(f, b, a)
     return r && { value: -r.value, err: r.err }
   }
-  const budget = { evals: MAX_EVALS, deadline: Date.now() + MAX_MS }
+  const budget = { evals: MAX_EVALS, work: workBudget(MAX_WORK) }
   let est: (Estimate & { l1: number }) | null
   if (a === -Infinity && b === Infinity) est = doubleExponential(f, sinhSinhRule(), budget)
   else if (b === Infinity) est = doubleExponential(f, expSinhRule(a), budget)
   else if (a === -Infinity) est = doubleExponential((y) => f(b - y), expSinhRule(0), budget)
   else {
-    est = doubleExponential(f, tanhSinhRule(a, b), budget)
-    // a spike or kink the double exponential rule stepped over shows up as disagreement here
-    const check = gaussKronrod(f, a, b, est ? 200 : Math.floor(MAX_EVALS / 30), budget.deadline)
-    if (est && check && Math.abs(est.value - check.value) > 10 * (est.err + check.err) + 1e-9 * est.l1) return null
-    if (!est) est = check
+    const ends = [a, ...peaks(f, a, b, budget), b]
+    est = { value: 0, err: 0, l1: 0 }
+    for (let i = 1; i < ends.length && est; i++) {
+      const piece = finite(f, ends[i - 1]!, ends[i]!, budget)
+      est = piece && { value: est.value + piece.value, err: est.err + piece.err, l1: est.l1 + piece.l1 }
+    }
   }
   if (!est || !Number.isFinite(est.value)) return null
+  // an infinite range that only ever sampled zeros has no scan to check it
+  if (est.l1 === 0 && !(Number.isFinite(a) && Number.isFinite(b))) return null
   const value = justified(est.value, est.err, est.l1)
   // err covers the rounding too, so the shown value is within err of the truth
   return value == null ? null : { value, err: est.err + Math.abs(value - est.value) }
@@ -354,6 +441,12 @@ function diverges(vals: number[]): number | null {
   return rest.length || last > 1e6 ? sign * Infinity : null
 }
 
+/** Every sample further from `value` than the one before: 1 + 1e-10/h looks settled until the prefix is cut. */
+function driftsAway(vals: number[], value: number): boolean {
+  const dev = vals.filter(Number.isFinite).map((v) => Math.abs(v - value))
+  return dev.length >= 16 && dev.every((d, i) => i === 0 || d > dev[i - 1]!)
+}
+
 const LIMIT_STEPS = 44
 
 function oneSided(f: RealFn, to: number, side: 1 | -1): Estimate | null {
@@ -371,7 +464,7 @@ function oneSided(f: RealFn, to: number, side: 1 | -1): Estimate | null {
   }
   // extrapolating 1/h or 1/√h gives a confident 0 (an anti-limit); the samples must already be close
   const near = best && Math.abs(clean[clean.length - 1]! - best.value) <= 1e-2 * Math.max(1, Math.abs(best.value))
-  if (best && near && best.err <= 1e-7 * Math.max(1, Math.abs(best.value))) return best
+  if (best && near && best.err <= 1e-7 * Math.max(1, Math.abs(best.value)) && !driftsAway(vals, best.value)) return best
   const inf = diverges(vals)
   return inf == null ? null : { value: inf, err: 0 }
 }

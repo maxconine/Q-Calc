@@ -178,7 +178,7 @@ describe('truthful digits fuzz', () => {
       const v = evalScientific(text, { angleMode })
       if (v?.kind !== 'number' || !Number.isFinite(v.n)) continue
       numeric++
-      const out = verdict(text, v, { angleMode }, 50)
+      const out = verdict(text, v, { angleMode }, 10_000)
       if (out.kind === 'kept' && out.reason === 'meaning') meaning++
     }
     expect(numeric).toBeGreaterThan(800)

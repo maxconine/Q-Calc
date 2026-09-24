@@ -1,5 +1,4 @@
 import type { UserFunction, Value } from './types'
-import { namesPattern } from './math'
 import { fillParens } from './parens'
 import { truthful } from './precise'
 import { evalScientific, rewriteTypesetMul, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
@@ -11,7 +10,7 @@ const NLP_WORDS =
   /\b(of|off|from|today|tomorrow|yesterday|tax|tip|people|nights|was|until|between|per|earnings|lunch|miles|weeks?|days?|hours?|months?)\b/i
 
 function looksLikeLatex(s: string): boolean {
-  return /\\[a-zA-Z]+|[\^_]\{|\\frac|\\sqrt/.test(s)
+  return /\\[a-zA-Z%]+|[\^_]\{|\\frac|\\sqrt/.test(s)
 }
 
 /** "what is 40% of 90?" becomes "40% of 90". */
@@ -41,7 +40,8 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\ldots|\\cdots|\\dots/g, '...')
   s = rewriteTypesetMul(s.replace(/\\cdot|\\times/g, '*'))
   s = s.replace(/\\div/g, '/')
-  s = s.replace(/\\pm/g, '+')
+  // ± stays ±: the engine reads it as an uncertainty, or leaves the line blank
+  s = s.replace(/\\pm\b/g, '±').replace(/\\mp\b/g, '∓')
   s = s.replace(/\\pi\b/g, '(pi)')
   s = s.replace(/\\tau\b/g, '(tau)')
   s = s.replace(/\\infty\b/g, 'Infinity')
@@ -54,6 +54,7 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\text\{([^}]*)\}/g, ' $1 ')
   s = s.replace(/\\operatorname\{([^}]+)\}/g, '$1')
   s = s.replace(/\\mathrm\{([^}]+)\}/g, '$1')
+  s = s.replace(/\\[dtc]frac\b/g, '\\frac')
   s = replaceBraced(s, '\\frac', 2, (a, b) => `((${a})/(${b}))`)
   s = replaceBraced(s, '\\binom', 2, (a, b) => `combinations(${a},${b})`)
   s = convertSqrts(s)
@@ -67,16 +68,27 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\s*\^\s*\{-1\}/g, 'a$1')
   s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\b/g, '$1')
   s = s.replace(/\\exp\b/g, 'exp')
+  s = repeatingDecimals(s)
   s = s.replace(/\\overline\{([^}]+)\}/g, 'conj($1)')
   s = s.replace(/\|([^|]+)\|/g, 'abs($1)')
   s = s.replace(/\^{([^{}]+)}/g, '^($1)')
-  s = s.replace(/_{([^{}]+)}/g, '')
+  // a subscript names a different thing (`x_{1}`, `10_{2}`), so it stays and the line goes blank
+  s = s.replace(/_{([^{}]+)}/g, '_$1')
   s = s.replace(/\\%/g, '%')
   s = s.replace(/\\\$/g, '$')
   s = s.replace(/\\/g, '')
   s = s.replace(/[{}]/g, '')
   s = wrapBareFunctions(s.replace(/\s+/g, ' ').trim())
   return s
+}
+
+/** `0.1\overline{6}` is 0.1666…, as a fraction so no digits are lost. */
+function repeatingDecimals(s: string): string {
+  return s.replace(/(?<![\d.])(\d*)\.(\d*)\\overline\{(\d+)\}/g, (_, whole: string, fixed: string, rep: string) => {
+    const top = BigInt(fixed + rep) - BigInt(fixed || '0')
+    const bottom = '9'.repeat(rep.length) + '0'.repeat(fixed.length)
+    return `(${whole || '0'}+${top}/${bottom})`
+  })
 }
 
 function convertSqrts(src: string): string {
@@ -189,7 +201,8 @@ function replaceBraced(src: string, cmd: string, arity: number, build: (...args:
     }
     const put = build(...args)
     s = s.slice(0, at) + put + s.slice(p)
-    i = at + put.length
+    // an argument can hold the same command (`\frac{\frac{1}{2}}{2}`)
+    i = at
   }
   return s
 }
@@ -220,21 +233,31 @@ function grabParen(s: string, open: number): { inner: string; end: number } | nu
   return null
 }
 
-function mentionsVariable(expr: string, variables?: Record<string, number>): boolean {
-  const names = Object.keys(variables ?? {})
-  if (!names.length) return false
-  return new RegExp(`(?<![A-Za-z_])(?:${namesPattern(names)})(?![A-Za-z0-9_])`).test(expr)
-}
-
 /** `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. */
 function stripThousands(s: string): string {
   return s.replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
 }
 
+const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹'
+
+/**
+ * `3.00 × 10^8 m/s` becomes `3.00e8 m/s`, so the unit reads. only where nothing binds tighter on
+ * either side: `1/2 × 10^3`, `2^-3 × 10^2` and `3 × 10^2!` are left alone.
+ */
+function foldPowersOfTen(s: string): string {
+  return s.replace(
+    /(?<=(?:^|[-+*(,=−])\s*)(?<!\^\s*[-+−]\s*)(?<![\d.][eE][-+−])(\d+(?:\.\d*)?|\.\d+)\s*[×*·⋅]\s*10\s*(?:\^\s*(?:\(\s*([-−]?\d+)\s*\)|([-−]?\d+))|([⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))(?![\d.^!(%⁰¹²³⁴⁵⁶⁷⁸⁹⁻])/g,
+    (_, mantissa: string, paren?: string, bare?: string, sup?: string) => {
+      const power = paren ?? bare ?? [...sup!].map((c) => (c === '⁻' ? '-' : SUPERSCRIPT.indexOf(c))).join('')
+      return `${mantissa}e${power.replace('−', '-')}`
+    },
+  )
+}
+
 /** LaTeX to ascii, typeset operators, thousands separators and missing parens. */
 export function normalizeMathText(text: string): string {
   const ascii = looksLikeLatex(text) ? latexToAscii(text) : text
-  return fillParens(stripThousands(rewriteTypesetMul(ascii)))
+  return fillParens(foldPowersOfTen(stripThousands(rewriteTypesetMul(ascii))))
 }
 
 export function tryPlainMath(
@@ -250,11 +273,9 @@ export function tryPlainMath(
   const src = unwrapQuestion(text)
   if (!src) return null
   const filled = normalizeMathText(src)
-  // a known variable (`n = 5`, then `n*2`) must not be read as a unit symbol like N, m or s
-  if (!mentionsVariable(filled, ctx.variables)) {
-    const converted = tryConvert(filled, ctx.defaultUnits)
-    if (converted) return converted
-  }
+  // a known variable (`n = 5`, then `n*2`) is never read as a unit symbol like N, m or s
+  const converted = tryConvert(filled, ctx.defaultUnits, ctx.variables)
+  if (converted) return converted
   const cleaned = src.replace(/\d+(?:\.\d+)?\s*%\s*of\b/gi, (m) => m.replace(/\s*of\b/i, ''))
   if (hasNlpWords(cleaned) && !looksLikeLatex(src)) return null
   const value = evalScientific(filled, ctx)

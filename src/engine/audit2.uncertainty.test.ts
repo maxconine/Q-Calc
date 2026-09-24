@@ -85,28 +85,22 @@ describe('audit2: scientific-notation literals keep their written sig figs', () 
   })
 })
 
-describe('audit2: the uncertainty itself rounds to one sig fig, and binary floats can tip that either way', () => {
-  // unc.toPrecision(1) is exact IEEE-754 rounding of the *stored* double, not of the decimal
-  // the user typed. 0.95, 0.85, 0.35 and 0.15 are all stored a hair below their decimal value
-  // (e.g. 0.95 is really 0.94999999999999995...), so they round DOWN instead of the naively
-  // expected round-up. 0.75, 0.65, 0.45 and 0.25 happen to round as expected. This mirrors the
-  // codebase's own documented round(1.005, 2) quirk; it is a float-representation fact, not a
-  // fixable rounding bug in formatUncertain.
+describe('audit2: a typed uncertainty is never rounded, a calculated one is', () => {
   it.each([
-    ['(2.0 ± 0.95)', '2.0 ± 0.9'],
-    ['(2.0 ± 0.85)', '2.0 ± 0.8'],
-    ['(2.0 ± 0.35)', '2.0 ± 0.3'],
+    ['(2.0 ± 0.95)', '2.00 ± 0.95'],
+    ['(2.0 ± 0.35)', '2.00 ± 0.35'],
     ['(2.0 ± 0.15)', '2.00 ± 0.15'],
-  ])('%s → %s (binary-float rounding, not the naive decimal round-up)', (text, want) => {
+    ['(2.0 ± 0.25)', '2.00 ± 0.25'],
+  ])('%s → %s (as typed)', (text, want) => {
     expect(pm(text)).toBe(want)
   })
 
+  // unc.toPrecision(1) rounds the stored double, and 0.35 is stored a hair below
   it.each([
-    ['(2.0 ± 0.75)', '2.0 ± 0.8'],
-    ['(2.0 ± 0.65)', '2.0 ± 0.7'],
-    ['(2.0 ± 0.45)', '2.0 ± 0.5'],
-    ['(2.0 ± 0.25)', '2.0 ± 0.3'],
-  ])('%s → %s (these particular halves round as expected)', (text, want) => {
+    ['(2.0 ± 0.35)*1', '2.0 ± 0.3'],
+    ['(2.0 ± 0.75)*1', '2.0 ± 0.8'],
+    ['(2.0 ± 0.15)*1', '2.00 ± 0.15'],
+  ])('%s → %s (calculated)', (text, want) => {
     expect(pm(text)).toBe(want)
   })
 })

@@ -42,7 +42,7 @@ export function radicalSpans(text: string): RadicalSpan[] {
   return out
 }
 
-const ANSWER_MATH = /^[\d\s+\-−*/^().,πτei]*$/
+const ANSWER_MATH = /^[\d\s+\-−±∓*/^().,πτei]*$/
 
 /** Display only: an exact answer's `sqrt(3)` reads `√3`, `sqrt(2 + sqrt(3))` reads `√(2 + √3)`. */
 export function radicalAnswer(s: string): string {
@@ -66,4 +66,9 @@ export function radicalAnswer(s: string): string {
     i = close
   }
   return out
+}
+
+// a one-string answer (`x = a ≈ b`, an example or a held one) in pieces, so each side reads its roots like the live answer
+export function answerParts(s: string): string[] {
+  return s.split(/(^\S+ = | ≈ )/).filter(Boolean)
 }

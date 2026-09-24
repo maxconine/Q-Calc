@@ -18,7 +18,10 @@ import type { Value } from './types'
 // by the higher one only when both agree with each other and every function agrees with the
 // engine's own at the same inputs. Anything unsupported, slow or doubtful keeps the float answer.
 
-export const BUDGET_MS = 5
+/** Work per answer, counted rather than timed so the digits never depend on how busy the machine is. */
+export const BUDGET = 1000
+/** A function or a power costs this much more than an operator; about 5 ms of budget runs 20 of them. */
+const CALL_COST = 50
 /** Precision pairs, tried in turn while the answer hasn't settled and there's time left. */
 const LADDER: [number, number][] = [
   [32, 48],
@@ -389,7 +392,18 @@ const OPS_BIG: Record<string, (args: Dec[]) => Dec> = {
   factorial: ([a]) => factorial(a!.constructor as DecCtor, a!),
 }
 
-function bigBackend(low: number, high: number, mode: AngleMode, deadline: number, scale: { max: number }): Backend<Pair> {
+type Work = { left: number }
+
+const PRODUCTS = new Set(['factorial', 'combinations', 'permutations', 'nCr', 'nPr'])
+
+/** A factorial or nCr runs a loop of multiplications: five of them to a unit of work. */
+function productWork(name: string, args: Pair[]): number {
+  if (!PRODUCTS.has(name)) return 0
+  const len = name === 'factorial' ? args[0]?.lo.toNumber() : 2 * (args[1]?.lo.toNumber() ?? 0)
+  return len != null && Number.isFinite(len) && len > 0 ? Math.ceil(len / 5) : 0
+}
+
+function bigBackend(low: number, high: number, mode: AngleMode, work: Work, scale: { max: number }): Backend<Pair> {
   const L = Decs.get(low)!
   const H = Decs.get(high)!
   const C = Decs.get(CHECK)!
@@ -413,11 +427,14 @@ function bigBackend(low: number, high: number, mode: AngleMode, deadline: number
     fromNumber: (n) => (Number.isFinite(n) ? both((D) => new D(String(n))) : abort()),
     constant: (name) => both((_D, k) => (name === 'pi' ? k.pi : name === 'tau' ? k.pi.times(2) : k.e)),
     op: (fn, args) => {
+      if (fn === 'pow') work.left -= CALL_COST
       const xs = jumpArgs(fn, args)
       if (fn === 'mod') return pairMod(xs)
       return { lo: OPS_BIG[fn]!(xs.map((a) => a.lo)), hi: OPS_BIG[fn]!(xs.map((a) => a.hi)) }
     },
     call: (name, args) => {
+      work.left -= CALL_COST + productWork(name, args)
+      if (work.left < 0) abort()
       const xs = jumpArgs(name, args)
       if (name === 'mod') return args.length === 2 ? pairMod(xs) : abort()
       const twin = TWINS[name]!
@@ -432,7 +449,7 @@ function bigBackend(low: number, high: number, mode: AngleMode, deadline: number
       return out
     },
     tick: (v) => {
-      if (!v.lo.isFinite() || !v.hi.isFinite() || performance.now() > deadline) abort()
+      if (!v.lo.isFinite() || !v.hi.isFinite() || --work.left < 0) abort()
       const mag = Math.abs(v.hi.toNumber())
       if (mag > scale.max) scale.max = mag
       return v
@@ -448,17 +465,17 @@ export type Verdict =
 type Kept = Extract<Verdict, { kind: 'kept' }>
 
 /** The precise value of `tree`, climbing the ladder until the two precisions agree. */
-function precise(tree: MathNode, vars: Record<string, number>, f: number, ctx: ScientificContext, mode: AngleMode, deadline: number): number | Kept {
+function precise(tree: MathNode, vars: Record<string, number>, f: number, ctx: ScientificContext, mode: AngleMode, work: Work): number | Kept {
   const scale = { max: 0 }
   let out: Pair | undefined
   for (const [low, high] of LADDER) {
     try {
-      const b = bigBackend(low, high, mode, deadline, scale)
+      const b = bigBackend(low, high, mode, work, scale)
       const env: Record<string, Pair> = {}
       for (const [k, v] of Object.entries(vars)) env[k] = b.fromNumber(v)
       out = walk(tree, b, { vars: env, ctx, depth: 0 })
     } catch (e) {
-      if (performance.now() > deadline) return { kind: 'kept', reason: 'budget' }
+      if (work.left < 0) return { kind: 'kept', reason: 'budget' }
       return { kind: 'kept', reason: e === MEANING ? 'meaning' : 'unsupported' }
     }
     const { lo, hi } = out
@@ -480,9 +497,9 @@ function sigDigits(n: number): number {
 }
 
 /** Why the float answer stays, or what replaces it. */
-export function verdict(text: string, value: Value, ctx: ScientificContext, budgetMs = BUDGET_MS): Verdict {
+export function verdict(text: string, value: Value, ctx: ScientificContext, budget = BUDGET): Verdict {
   if (value.kind !== 'number' || value.unit || !Number.isFinite(value.n)) return { kind: 'kept', reason: 'not-a-number' }
-  const deadline = performance.now() + budgetMs
+  const work = { left: budget }
   const mode: AngleMode = ctx.angleMode === 'rad' ? 'rad' : 'deg'
   const f = value.n
   // `ans` stays a name, not pasted digits, so it can be told apart from a typed number
@@ -499,7 +516,7 @@ export function verdict(text: string, value: Value, ctx: ScientificContext, budg
     return { kind: 'kept', reason: 'unsupported' }
   }
 
-  const n = precise(tree, vars, f, bare, mode, deadline)
+  const n = precise(tree, vars, f, bare, mode, work)
   if (typeof n !== 'number') return n
   if (n === f) return { kind: 'same' }
   // a computed input like 1/3 is only known to the last bit of its double; the correction must
@@ -508,7 +525,7 @@ export function verdict(text: string, value: Value, ctx: ScientificContext, budg
   for (const dir of shaky.length ? [1, -1] : []) {
     const nudged = { ...vars }
     for (const k of shaky) nudged[k] = vars[k]! * (1 + dir * Number.EPSILON)
-    const m = precise(tree, nudged, f, bare, mode, deadline)
+    const m = precise(tree, nudged, f, bare, mode, work)
     if (typeof m !== 'number') return m
     if (m !== n && !(Math.abs(m - n) <= 1e-13 * Math.abs(n))) return { kind: 'kept', reason: 'inexact input' }
   }

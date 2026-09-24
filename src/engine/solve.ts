@@ -14,15 +14,18 @@ import {
 } from './scientific'
 import { exactForm, splitSquares } from './simplify'
 import type { SolveInfo, SolveOutcome } from './types'
+import { workBudget } from './work'
 
 export type { SolveInfo, SolveOutcome }
 
 export const MAX_SHOWN_ROOTS = 4
 export const MAX_EVALS = 4000
-// parallel test workers make a wall-clock limit flaky; the evaluation cap still holds there
-const MAX_MS = import.meta.env?.MODE === 'test' ? Infinity : 20
+// counted in work, not milliseconds, so a busy machine can't change the answer
+const MAX_WORK = 600_000
 /** Sign-change cells and near-misses refined on the numeric path, nearest 0 first. */
 const MAX_REFINED = 12
+/** Grid cells nearest 0 searched for a root hiding beside a pole. */
+const MAX_POLE_CELLS = 6
 const NOISE = 8 * Number.EPSILON
 
 const UNKNOWN = /^(?:[A-Za-z]|θ)$/
@@ -160,11 +163,11 @@ const OVER_BUDGET = Symbol('solve budget')
 
 class Budget {
   evals = 0
-  private readonly start = performance.now()
+  private readonly work = workBudget(MAX_WORK)
   tick(): void {
     this.evals++
     if (this.evals > MAX_EVALS) throw OVER_BUDGET
-    if (this.evals % 64 === 0 && performance.now() - this.start > MAX_MS) throw OVER_BUDGET
+    if (this.evals % 64 === 0 && this.work.over()) throw OVER_BUDGET
   }
 }
 
@@ -363,6 +366,16 @@ class Solver {
     return out
   }
 
+  /** Still `y` far out, so a term lost next to a huge constant (x + 1e20 = 2e20) can't pass for none. */
+  private flatFar(y: number): boolean {
+    for (const t of [1e30, -1e30]) {
+      const a = this.L(t)
+      const b = this.R(t)
+      if (a != null && b != null && Math.abs(a - b - y) > 1e-9 * Math.max(Math.abs(a), Math.abs(b))) return false
+    }
+    return true
+  }
+
   /** How big the evaluation's rounding can be at x. */
   private scale(x: number): number {
     if (this.poly) {
@@ -438,7 +451,13 @@ class Solver {
 
   private exactRoot(root: Root): Root {
     // past 1e4 a radical or fraction is never nicer than the number, and finding one gets slow
-    const s = Math.abs(root.x) <= 1e4 ? exactForm(root.x, { rationalize: this.ctx.rationalize }) : String(Math.round(root.x))
+    // a root within noise of 0 is still tried as 0; accept checks it
+    const s =
+      Math.abs(root.x) <= 1e-11
+        ? '0'
+        : Math.abs(root.x) <= 1e4
+          ? exactForm(root.x, { rationalize: this.ctx.rationalize, wide: true })
+          : String(Math.round(root.x))
     if (!s || /\d{7}/.test(s.replace(/^-?\d+$/, ''))) return root
     const frac = s.match(/^(-?\d+)(?:\/(\d+))?$/)
     if (frac) {
@@ -465,11 +484,13 @@ class Solver {
     const { L, R } = this.poly!
     const d = L.c.map((a, k) => {
       const b = R.c[k]!
-      const tol = k === 0 ? 1e-12 * Math.max(Math.abs(a), Math.abs(b)) : (1e-14 * (L.maxY + R.maxY)) / 2 ** k
+      const size = Math.max(Math.abs(a), Math.abs(b))
+      // fitting noise only cancels a term both sides have; 2x = 1e20 keeps its 2x
+      const tol = k === 0 ? 1e-12 * size : Math.min((1e-14 * (L.maxY + R.maxY)) / 2 ** k, 1e-9 * size)
       return Math.abs(a - b) <= tol ? 0 : a - b
     })
     const n = degreeOf(d)
-    if (n === 0) return this.found(d[0] === 0 ? 'all' : 'contradiction')
+    if (n === 0) return this.flatFar(d[0]!) ? this.found(d[0] === 0 ? 'all' : 'contradiction') : null
     const ints = integerCoeffs(d.slice(0, n + 1))
     if (n === 1) {
       const exact = ints ? ratio(-ints[0]!, ints[1]!) : undefined
@@ -532,9 +553,25 @@ class Solver {
     const noise = 32 * Number.EPSILON * (L.maxY + R.maxY) * (2 * Math.abs(b) + 4 * Math.abs(a) + 4 * Math.abs(c))
     const D = b * b - 4 * a * c
     if (D < -noise) return this.found('none')
+    if (Math.abs(D) <= noise && D > 0) {
+      // roots too close for the noise estimate are still two when the curve really crosses between them (x^2 = 6.6e-34)
+      const pair = this.straddle(stableRoots(a, b, c))
+      if (pair) return pair
+    }
     const cands = Math.abs(D) <= noise ? [-b / (2 * a)] : stableRoots(a, b, c)
     const roots = this.settleAll(cands.map((x) => ({ x })))
     return roots && this.found('roots', roots)
+  }
+
+  private straddle([lo, hi]: number[]): Found | null {
+    const gap = hi! - lo!
+    if (!(gap > 0)) return null
+    const ys = [lo! - gap, (lo! + hi!) / 2, hi! + gap].map(this.f)
+    if (ys.some((y) => y == null || y === 0)) return null
+    const [out1, mid, out2] = ys.map((y) => Math.sign(y!))
+    if (out1 !== out2 || mid === out1) return null
+    const roots = this.settleAll([{ x: lo! }, { x: hi! }])
+    return roots?.length === 2 ? this.found('roots', roots) : null
   }
 
   /** `(p ± q·sqrt(r))/d`, kept only when both of its values are as good as the roots found. */
@@ -574,17 +611,19 @@ class Solver {
     const periodic = this.periodic(period)
     const xs = periodic ? linear(0, period, 401) : WIDE_GRID
     const sizes: number[] = []
+    const sides: Array<[number | null, number | null]> = []
     const pts: GraphPoint[] = xs.map((x) => {
       const a = this.L(x)
       const b = a == null ? null : this.R(x)
       sizes.push(Math.max(Math.abs(a ?? 0), Math.abs(b ?? 0)))
+      sides.push([a, b])
       return { x, y: a == null || b == null ? null : a - b }
     })
     const defined = pts.filter((p) => p.y != null)
     if (!defined.length) return null
     // zero next to the sides' own size, so tan(x) - x near 0 isn't mistaken for flat
     const small = (i: number) => pts[i]?.y != null && Math.abs(pts[i]!.y!) <= 1e-12 * sizes[i]!
-    if (pts.every((p, i) => p.y == null || small(i))) return defined.length === pts.length ? this.found('all') : null
+    if (pts.every((p, i) => p.y == null || small(i))) return defined.length === pts.length && this.flatFar(0) ? this.found('all') : null
     const roots: Root[] = []
     type Job = { at: number; crossing: boolean; run: () => Root | null }
     const jobs: Job[] = []
@@ -603,6 +642,12 @@ class Solver {
         const reach = Math.max(1, Math.abs(pts[i]!.x), Math.abs(pts[j]!.x))
         const flatZero = zeros.length > 1 && zeros[zeros.length - 1]!.x - zeros[0]!.x > 1e-6 * reach
         if (flatZero || pts[j]!.x - pts[i]!.x > 1e-3 * reach) return null
+        // flat up to a lone undefined sample: sin(x)/x = 1 flattens into its hole at 0, which isn't a root
+        const hole = (m: number) => pts[m]?.y === null && pts[m - 1]?.y != null && pts[m + 1]?.y != null
+        if (hole(i - 1) || hole(j + 1)) {
+          i = j
+          continue
+        }
         const opposite = live(i - 1) && live(j + 1) && Math.sign(pts[i - 1]!.y!) !== Math.sign(pts[j + 1]!.y!)
         if (opposite) cross(pts[i - 1]!, pts[j + 1]!)
         else {
@@ -626,6 +671,19 @@ class Solver {
         if (dips && low <= rise) jobs.push({ at: Math.abs(p.x), crossing: false, run: () => this.touching(prev!, p, next) })
       }
     }
+    // a root can share a grid cell with a pole just past it (tan(x) = x near 90°); a side flipping sign across the cell finds the pole
+    const poleCells: number[] = []
+    for (let i = 1; i < pts.length; i++) {
+      if (!live(i - 1) || !live(i) || Math.sign(pts[i - 1]!.y!) !== Math.sign(pts[i]!.y!)) continue
+      if ([0, 1].some((k) => sides[i - 1]![k]! * sides[i]![k]! < 0)) poleCells.push(i)
+    }
+    poleCells.sort((p, q) => Math.min(Math.abs(pts[p - 1]!.x), Math.abs(pts[p]!.x)) - Math.min(Math.abs(pts[q - 1]!.x), Math.abs(pts[q]!.x)))
+    for (const i of poleCells.slice(0, MAX_POLE_CELLS)) {
+      const a = pts[i - 1]!
+      const b = pts[i]!
+      const k = sides[i - 1]![0]! * sides[i]![0]! < 0 ? 0 : 1
+      jobs.push({ at: Math.min(Math.abs(a.x), Math.abs(b.x)), crossing: true, run: () => this.besidePole(a, b, k === 0 ? this.L : this.R) })
+    }
     jobs.sort((a, b) => a.at - b.at)
     for (const job of jobs.slice(0, MAX_REFINED)) {
       const r = job.run()
@@ -640,14 +698,64 @@ class Solver {
 
   private crossing(a: number, ya: number, b: number, yb: number): Root | null {
     const x = this.bisect(a, ya, b, yb)
-    return x == null ? null : { x, sure: true }
+    return x == null || this.holeBeside(x) ? null : { x, sure: true }
+  }
+
+  /** Splits a cell where the side S flips sign (a pole, or a zero with two roots around it) and bisects the half that crosses. */
+  private besidePole(a: GraphPoint, b: GraphPoint, S: Fn): Root | null {
+    const sa = S(a.x)
+    if (sa == null) return null
+    let lo = a.x
+    let hi = b.x
+    for (let k = 0; k < 64; k++) {
+      const m = (lo + hi) / 2
+      if (m <= lo || m >= hi) break
+      const sm = S(m)
+      if (sm == null) {
+        // tan(90°) is undefined, not huge: the split is the undefined stretch around m
+        lo = this.lastDefined(lo, m)
+        hi = this.lastDefined(hi, m)
+        break
+      }
+      if (Math.sign(sm) === Math.sign(sa)) lo = m
+      else hi = m
+    }
+    const ylo = this.f(lo)
+    const yhi = this.f(hi)
+    if (ylo != null && ylo !== 0 && Math.sign(ylo) !== Math.sign(a.y!)) return this.crossing(a.x, a.y!, lo, ylo)
+    if (yhi != null && yhi !== 0 && Math.sign(yhi) !== Math.sign(b.y!)) return this.crossing(hi, yhi, b.x, b.y!)
+    return null
+  }
+
+  private lastDefined(def: number, undef: number): number {
+    for (let k = 0; k < 64; k++) {
+      const m = (def + undef) / 2
+      if (m === def || m === undef) break
+      if (this.f(m) == null) undef = m
+      else def = m
+    }
+    return def
+  }
+
+  /** A lone undefined float next to x: the sign change is across a hole, (x² - 1)/(x - 1) = 2 at 1. */
+  private holeBeside(x: number): boolean {
+    for (const dir of [-1, 1]) {
+      const a = nextFloat(x, dir)
+      if (this.f(a) == null && this.f(nextFloat(a, dir)) != null) return true
+    }
+    return false
   }
 
   /** A curve that dips toward zero between samples might touch it (sin(x) = 1). */
   private touching(prev: GraphPoint, cur: GraphPoint, next: GraphPoint): Root | null {
     const best = findCriticalPoints([prev, cur, next], this.f)[0]
     if (!best) return null
-    if (Math.abs(best.y) > NOISE * Math.max(1, this.scale(best.x))) return null
+    // zero only when rounding x, or the tidying findCriticalPoints allows, moves f that far:
+    // sin(x)² = 0 at π, but not x² + 1e-30 = 0 at 0
+    const dx = NOISE * Math.abs(best.x)
+    const nudge = Math.max(...[best.x - dx, best.x + dx].map((c) => Math.abs((this.f(c) ?? best.y) - best.y)))
+    const tidied = 8 * Number.EPSILON * Math.abs(cur.y!)
+    if (Math.abs(best.y) > NOISE * this.scale(best.x) + nudge + tidied) return null
     return { x: best.x, sure: false }
   }
 
@@ -662,14 +770,25 @@ class Solver {
     for (const [a, b] of edges.slice(0, 4)) {
       let def = a.y == null ? b.x : a.x
       let undef = a.y == null ? a.x : b.x
+      let pinned = false
       for (let k = 0; k < 80; k++) {
         const m = (def + undef) / 2
-        if (m === def || m === undef) break
+        pinned = m === def || m === undef
+        if (pinned) break
         if (this.f(m) == null) undef = m
         else def = m
       }
+      // defined again just past it: a hole (sin(x)/x = 1 at 0), not an edge
+      const dir = Math.sign(undef - def)
+      if (this.f(pinned ? nextFloat(undef, dir) : undef + (undef - def)) != null) continue
       const y = this.f(def)
-      if (y != null && Math.abs(y) <= NOISE * Math.max(1, this.scale(def))) out.push({ x: def, sure: true })
+      if (y == null) continue
+      // an edge short of adjacent floats (x ln(x) = 0 toward 0) only counts at an exact 0; a pinned one also
+      // when one float inward moves f as much, as a square root does (sqrt(x² - 2) = 0 at √2)
+      const inner = pinned ? this.f(nextFloat(def, -dir)) : null
+      const moved = inner == null ? 0 : Math.abs(inner - y)
+      const tol = pinned ? Math.max(NOISE * Math.max(1, this.scale(def)), 4 * moved) : 0
+      if (Math.abs(y) <= tol) out.push({ x: def, sure: true })
     }
     return out
   }
@@ -697,6 +816,12 @@ class Solver {
     }
     return dependsOnAngle(f, g)
   }
+}
+
+function nextFloat(x: number, dir: number): number {
+  if (x === 0) return dir * Number.MIN_VALUE
+  const ulp = 2 ** (Math.floor(Math.log2(Math.abs(x))) - 52)
+  return x + dir * Math.max(ulp, Number.MIN_VALUE)
 }
 
 function linear(lo: number, hi: number, n: number): number[] {

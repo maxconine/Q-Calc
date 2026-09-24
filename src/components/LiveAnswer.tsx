@@ -1,9 +1,10 @@
-import type { DragEvent } from 'react'
+import { useEffect, useState, type DragEvent } from 'react'
 import { prettyAnswer } from '../engine/format'
 import { isImproperUnitConversion } from '../engine/units'
 import { hasDualAnswer, prettyRoots } from '../lib/answer'
 import { useFitFont } from './useFitFont'
 import { RadicalText } from './Radical'
+import { answerParts } from '../lib/radical'
 import type { SteadyAnswer } from './useSteadyAnswer'
 
 type Props = {
@@ -51,10 +52,17 @@ function answerHandle(text: string, onCopy: (text: string) => void, onRefocus: (
 export function LiveAnswer({ copied, example, display, exact, shown, steady, formTick, sides, onCopy, onRefocus, label, message }: Props) {
   const pretty = label ? prettyRoots(shown) : prettyAnswer(shown)
   const fitRef = useFitFont<HTMLButtonElement>(pretty)
+  // the half that was clicked; ⌘C copies whichever half is the shown answer
+  const [clicked, setClicked] = useState<'exact' | 'approx' | null>(null)
+  useEffect(() => {
+    if (!copied) setClicked(null)
+  }, [copied])
   if (example && !copied) {
     return (
       <span key={example.tick} className="live live-example" aria-hidden>
-        {prettyAnswer(example.answer)}
+        {answerParts(prettyAnswer(example.answer)).map((part, i) => (
+          <RadicalText key={i} text={part} answer />
+        ))}
       </span>
     )
   }
@@ -71,17 +79,38 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
     )
   }
   if (exact && hasDualAnswer({ display, exact })) {
+    const copiedSide = copied ? (clicked ?? (shown === exact ? 'exact' : 'approx')) : null
     return (
-      <div className={`live-dual ${copied ? 'copied' : ''}`} role="group" aria-label="Answer">
+      <div className="live-dual" role="group" aria-label="Answer">
         {copied ? CHECK : null}
         {letter}
-        <button type="button" className="live live-part" title="Copy exact value" {...answerHandle(sides.exact, onCopy, onRefocus)}>
+        <button
+          type="button"
+          className={`live live-part${copiedSide === 'exact' ? ' copied' : ''}`}
+          title="Copy exact value"
+          {...answerHandle(sides.exact, onCopy, onRefocus)}
+          onClick={() => {
+            setClicked('exact')
+            onCopy(sides.exact)
+            onRefocus()
+          }}
+        >
           <RadicalText text={label ? prettyRoots(exact) : prettyAnswer(exact)} answer />
         </button>
         <span className="live-eq" aria-hidden>
           ≈
         </span>
-        <button type="button" className="live live-part" title="Copy approximation" {...answerHandle(sides.approx, onCopy, onRefocus)}>
+        <button
+          type="button"
+          className={`live live-part${copiedSide === 'approx' ? ' copied' : ''}`}
+          title="Copy approximation"
+          {...answerHandle(sides.approx, onCopy, onRefocus)}
+          onClick={() => {
+            setClicked('approx')
+            onCopy(sides.approx)
+            onRefocus()
+          }}
+        >
           {label ? prettyRoots(display) : prettyAnswer(display)}
         </button>
       </div>
@@ -91,7 +120,9 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
     // not a button: a held answer belongs to earlier input, so it can't be copied, dragged or committed
     return (
       <span className={`live live-steady${steady.fading ? ' fading' : ''}`} aria-hidden>
-        <RadicalText text={prettyAnswer(steady.text)} answer />
+        {answerParts(prettyAnswer(steady.text)).map((part, i) => (
+          <RadicalText key={i} text={part} answer />
+        ))}
       </span>
     )
   }

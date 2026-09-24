@@ -1,4 +1,5 @@
 import { chemAnswer } from './chem'
+import { splitLetters } from './letters'
 import { evaluateCalculus, type CalculusResult } from './calculus'
 import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
 import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
@@ -8,7 +9,7 @@ import { formatAsFraction, SCIENTIFIC_NAMES } from './scientific'
 import { exactForm, wantsExactForm } from './simplify'
 import { formatSolve, solveEquation } from './solve'
 import { normalizeSums, sumAnswer } from './sums'
-import { quantityText } from './units'
+import { quantityText, readsAsUnit, tryConvert } from './units'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
 
@@ -81,6 +82,11 @@ function measured(
   return m.meas
 }
 
+/** Whether `expr` names a variable (or ans) that carries a ±. */
+function usesUncertain(expr: string, measures: Record<string, Meas>): boolean {
+  return Object.entries(measures).some(([name, m]) => m.unc && new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(expr))
+}
+
 function setOrDelete<T>(record: Record<string, T>, key: string, value: T | undefined): void {
   if (value != null) record[key] = value
   else delete record[key]
@@ -99,17 +105,19 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
   let lastAns = options.ans
   const results: LineResult[] = []
 
+  const known = (name: string) => name in variables || name in quantities || name in measures
   for (const raw of texts) {
-    const typed = stripTrailingEquals(raw.trim())
+    const line = stripTrailingEquals(raw.trim())
     // the input field turns a typed theta into θ, which is also a variable name; solve keeps θ as its unknown
-    const trimmed = typed.replace(/θ/g, 'theta')
-    if (!trimmed) {
+    const trimmedLine = line.replace(/θ/g, 'theta')
+    if (!trimmedLine) {
       results.push({ raw, kind: 'empty', display: '' })
       continue
     }
 
-    const fnDef = parseFunctionDef(trimmed)
+    const fnDef = parseFunctionDef(trimmedLine)
     if (fnDef) {
+      fnDef.body = splitLetters(fnDef.body, (n) => fnDef.params.includes(n) || known(n), fnDef.params)
       functions[fnDef.name] = { params: fnDef.params, body: fnDef.body }
       results.push({
         raw,
@@ -122,14 +130,29 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       continue
     }
 
-    const chem = chemAnswer(trimmed, (name) => name in variables || name in quantities || name in functions)
+    const chem = chemAnswer(trimmedLine, (name) => name in variables || name in quantities || name in functions)
     if (chem != null) {
       results.push({ raw, kind: 'expression', display: chem, value: chem ? textVal(chem) : undefined })
       continue
     }
-    if (!hasPlusMinus(trimmed)) {
+    const typed = splitLetters(line, known)
+    const trimmed = splitLetters(trimmedLine, known)
+    const assign = parseAssignment(trimmed)
+    // `V = 12 V` stores 12 volts; as an equation it could only ever say V = 0
+    const unitSelf = assign != null && readsAsUnit(assign.variable) && tryConvert(assign.expr)?.unit != null
+    if (unitSelf) {
+      delete variables[assign.variable]
+      delete quantities[assign.variable]
+      delete measures[assign.variable]
+    }
+    if (!hasPlusMinus(trimmed) && !unitSelf) {
       const eq = withQuantities(typed, quantities)
       const solved = solveEquation(eq, { ans: lastAns, angleMode, variables, functions, rationalize: options.rationalize })
+      // solve can't carry a ±, and a bare root would look exact
+      if (solved && usesUncertain(typed, measures)) {
+        results.push({ raw, kind: 'expression', display: '' })
+        continue
+      }
       if (solved) {
         const { display, exact } = formatSolve(solved, { sigFigs, fractionMode })
         const [root] = solved.info.roots
@@ -145,7 +168,6 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       }
     }
 
-    const assign = parseAssignment(trimmed)
     const variable = assign?.variable
     // ∓ is treated as ± until correlation is modelled
     const expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
@@ -181,6 +203,11 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       meas = calc ? undefined : measured(expr, value, ctx, wantMeas)
     } catch {
       meas = undefined
+    }
+    // a ± that went in and didn't come out would show a bare number as if exact
+    if (!meas?.unc && usesUncertain(assign?.expr ?? trimmed, measures)) {
+      results.push({ raw, kind: variable ? 'assignment' : 'expression', display: '', variable })
+      continue
     }
     const finite = value.kind === 'number' && Number.isFinite(value.n)
     // '' (a unit the parser can't read back) makes later uses blank rather than unit-less.
