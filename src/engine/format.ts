@@ -69,6 +69,6 @@ export function prettyAnswer(s: string): string {
   }
   if (s === '-∞') return `${MINUS}∞`
   // exact forms like `-2sqrt(3)` or `π - 1`; a hyphen inside a word or date stays a hyphen
-  if (MATH_ONLY.test(s)) return s.replace(/(^|[\s(])-(?=[\s\d(π√s])/g, `$1${MINUS}`)
+  if (MATH_ONLY.test(s)) return s.replace(/(^|[\s(])-(?=[\s\d(π√sei])/g, `$1${MINUS}`)
   return s
 }

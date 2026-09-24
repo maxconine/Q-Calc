@@ -69,16 +69,23 @@ export function nativeEvalPayload(req: NativeEvalRequest): Record<string, unknow
   return payload
 }
 
+// the only things soulvercore may answer: phrases the js engine can't read, never math it left blank on purpose
+const SOULVER_ONLY: RegExp[] = [
+  /[$€£¥₹]/,
+  /\b(?:usd|eur|gbp|jpy|cad|aud|chf|cny|inr|mxn|dollars?|euros?|yen)\b/i,
+  /(?:\d|\b)(?:am|pm)\b/i,
+  /\d{1,2}:\d{2}/,
+  /\b(?:today|tomorrow|yesterday|ago|until|since|between|from now|time in)\b/i,
+  /\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b/i,
+  /\b(?:january|february|march|april|june|july|august|september|october|november|december)\b/i,
+  /%\s*(?:off|on)\b|\bas an? %|\bwhat %/i,
+  /\b(?:tip|lunch|dinner|people|person|nights|percent)\b/i,
+]
+
 export function looksLikeNaturalLanguage(expr: string): boolean {
   const t = expr.trim()
   if (!t || isCalculusInput(t)) return false
-  if (/[$€£¥₹]/.test(t)) return true
-  if (/\b(?:am|pm)\b/i.test(t)) return true
-  if (/\d{1,2}:\d{2}/.test(t)) return true
-  if (/%/.test(t) && /\b(?:of|off|on|what|is)\b/i.test(t)) return true
-  return /\b(?:what|what's|whats|tip|lunch|today|tomorrow|yesterday|percent|people|nights|from|until|between|per|ago)\b/i.test(
-    t,
-  )
+  return SOULVER_ONLY.some((re) => re.test(t))
 }
 
 // soulvercore reports failed conversions as "Error: ..." instead of an empty result
@@ -153,9 +160,7 @@ export function mergeLiveAnswer(
   if (nativeHit && looksLikeNaturalLanguage(expr)) {
     return { display: nativeHit.display, n: nativeHit.n }
   }
-  if (jsDisplay) return { display: jsDisplay, n: jsN }
-  if (nativeHit) return { display: nativeHit.display, n: nativeHit.n }
-  return { display: '' }
+  return jsDisplay ? { display: jsDisplay, n: jsN } : { display: '' }
 }
 
 export function nativeDefinition(native: NativeLive | null, expr: string): NativeLive | null {

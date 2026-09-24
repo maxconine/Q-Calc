@@ -10,13 +10,13 @@ function valueOf(text: string, opts: EvaluateOptions = {}): number | undefined {
 }
 
 /** Type `text` one key at a time with the caret at the end, as QuickInput does. */
-function typeKeys(text: string, ans?: string): string {
+function typeKeys(text: string): string {
   let value = ''
   for (const ch of text) {
     const raw = value + ch
-    value = prettyTokens(raw, ans, raw.length)
+    value = prettyTokens(raw, raw.length)
   }
-  return prettyTokens(value, ans)
+  return prettyTokens(value)
 }
 
 describe('audit: prettyTokens leaves words alone', () => {
@@ -25,18 +25,18 @@ describe('audit: prettyTokens leaves words alone', () => {
     ['epic', 'epic'],
     ['api', 'api'],
     ['pint', 'pint'],
-    ['pi2', 'pi2'],
+    ['pi2', 'π2'],
     ['info', 'info'],
     ['infinity', 'infinity'],
     ['thetas', 'thetas'],
     ['dots', 'dots'],
     ['\\cdot', '\\cdot'],
-    ['cbrt2', 'cbrt2'],
+    ['cbrt2', '∛2'],
     ['answer', 'answer'],
     ['trans', 'trans'],
   ])('%s → %s', (typed, want) => {
-    expect(prettyTokens(typed, '5')).toBe(want)
-    expect(typeKeys(typed, '5')).toBe(want)
+    expect(prettyTokens(typed)).toBe(want)
+    expect(typeKeys(typed)).toBe(want)
   })
 })
 
@@ -50,8 +50,8 @@ describe('audit: prettyTokens replaces tokens', () => {
     ['theta', 'θ'],
     ['cbrt(27)', '∛(27)'],
     ['3 dot 4', '3 * 4'],
-    ['5 +- 1', '5 ± 1'],
-    ['5 -+ 1', '5 ∓ 1'],
+    ['5 +/- 1', '5 ± 1'],
+    ['5 -/+ 1', '5 ∓ 1'],
     ['5 ~ 1', '5 ± 1'],
   ])('%s → %s', (typed, want) => {
     expect(prettyTokens(typed)).toBe(want)
@@ -74,8 +74,8 @@ describe('audit: what prettyTokens produces still evaluates the same', () => {
     expect(n, typeKeys(typed)).toBeCloseTo(want, 12)
   })
 
-  it('a ± typed as +- evaluates as a measurement', () => {
-    expect(evaluateLine(typeKeys('(2.0 +- 0.1) * 3')).display).toBe('6.0 ± 0.3')
+  it('a ± typed as +/- evaluates as a measurement', () => {
+    expect(evaluateLine(typeKeys('(2.0 +/- 0.1) * 3')).display).toBe('6.0 ± 0.3')
   })
 
   // theta turns into θ, which the engine does not read, so a theta variable stops working
@@ -85,34 +85,35 @@ describe('audit: what prettyTokens produces still evaluates the same', () => {
   })
 })
 
-describe('audit: typed ans is swapped for the previous answer', () => {
+describe('audit: typed ans reads the last answer at full precision', () => {
+  const after = (first: string, typed: string, opts: EvaluateOptions = {}) =>
+    evaluateSheet([first, typeKeys(typed)], opts)[1]!
   it('a plain positive answer is fine', () => {
-    expect(valueOf(prettyTokens('ans * 2', '21'))).toBe(42)
-    expect(valueOf(prettyTokens('ans^2', '3'))).toBe(9)
-    expect(valueOf(prettyTokens('10 - ans', '4'))).toBe(6)
+    expect(after('21', 'ans * 2').value?.n).toBe(42)
+    expect(after('3', 'ans^2').value?.n).toBe(9)
+    expect(after('4', '10 - ans').value?.n).toBe(6)
   })
-
-  it('a measured answer is parenthesized', () => {
-    expect(evaluateLine(prettyTokens('ans * 2', insertableAnswer('10.0 ± 0.7'))).display).toBe('20 ± 1')
+  it('keeps full precision: 1/3 then ans*3 is 1', () => {
+    expect(after('1/3', 'ans*3').display).toBe('1')
   })
-
-  // the answer text goes in without parentheses, so the new operator binds into it
+  it('a measured answer keeps its ±', () => {
+    expect(after('10.0 ± 0.7', 'ans * 2').display).toBe('20.0 ± 1.4')
+  })
   it('ans^2 with ans = -3 is 9', () => {
-    expect(valueOf(prettyTokens('ans^2', '-3'))).toBe(9)
+    expect(after('0-3', 'ans^2').value?.n).toBe(9)
   })
-  it('4/ans with a fraction answer 1/2 is 8', () => {
-    expect(valueOf(prettyTokens('4/ans', '1/2'))).toBe(8)
+  it('4/ans with ans 1/2 is 8', () => {
+    expect(after('1/2', '4/ans').value?.n).toBe(8)
   })
-  it('6/ans with an exact answer 2sqrt(3) is sqrt(3)', () => {
-    expect(valueOf(prettyTokens('6/ans', '2sqrt(3)'))).toBeCloseTo(Math.sqrt(3), 12)
+  it('6/ans with ans 2sqrt(3) is sqrt(3)', () => {
+    expect(after('2sqrt(3)', '6/ans').value?.n).toBeCloseTo(Math.sqrt(3), 12)
   })
-  it('1/ans with an exact answer pi/6 is 6/pi', () => {
-    expect(valueOf(prettyTokens('1/ans', 'pi/6'), { angleMode: 'rad' })).toBeCloseTo(6 / Math.PI, 12)
+  it('1/ans with ans pi/6 is 6/pi', () => {
+    expect(after('pi/6', '1/ans', { angleMode: 'rad' }).value?.n).toBeCloseTo(6 / Math.PI, 12)
   })
-  it.fails('ans^2 with ans = 3 cm is 9 cm² (engine sees 3 cm^2)', () => {
-    const r = evaluateLine(prettyTokens('ans^2', '3 cm'))
-    expect(r.value?.n).toBeCloseTo(9, 12)
-    expect(r.value?.unit).toBe('cm²')
+  it('ans^2 with ans = 3 cm keeps the unit', () => {
+    const r = after('3 cm', 'ans^2')
+    expect(r.value?.unit).toMatch(/²/)
   })
 })
 

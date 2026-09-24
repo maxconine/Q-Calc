@@ -1,10 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject } from 'react'
 import { autofillParens, inferParens } from '../engine/parens'
-import { answerAmong } from '../lib/answer'
 import { nativeWindow } from '../lib/bridge'
 import type { Span } from '../lib/blankReason'
 import { completionFor, type CompletionNames } from '../lib/completion'
-import { inputHighlight } from '../lib/dom'
+import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/bounds'
+import { copyText, inputHighlight } from '../lib/dom'
+import { equalsCommits } from '../lib/touches'
+import { breakRun, editKind, recordEdit, redo, undo, undoStart, type EditKind, type Undo, type UndoState } from '../lib/undo'
+import { BoundsInputText } from './Bounds'
 import { RadicalLayer } from './Radical'
 
 type CaretRange = { start: number; end: number }
@@ -20,11 +23,13 @@ export interface QuickInputHandle {
 
 interface Props {
   value: string
-  ansPlain?: string
   // typed words like sqrt and pi stay as text instead of becoming symbols
   keepWords?: boolean
   onChange: (text: string) => void
-  onEnter: () => void
+  // `alt`: ⌥↵ reuses the other half of a history row
+  onEnter: (alt?: boolean) => void
+  // `=` at the end of plain arithmetic; true when it saved the line
+  onEquals?: () => boolean
   onUp: () => boolean
   onDown: () => boolean
   onPrefixStep?: (dir: 1 | -1) => void
@@ -43,21 +48,48 @@ interface Props {
 // letters around a word make it part of a longer word (`pint`, `infinity`); digits before it are a coefficient (`2pi`)
 const WORD_SYMBOLS: [RegExp, string][] = [
   [/(?<![\\A-Za-z])sqrt(?![A-Za-z])/gi, '√'],
-  [/(?<![\\A-Za-z])pi(?![A-Za-z0-9])/gi, 'π'],
+  [/(?<![\\A-Za-z])pi(?![A-Za-z])/gi, 'π'],
   [/(?<![\\A-Za-z])theta(?![A-Za-z0-9])/gi, 'θ'],
   [/(?<![\\A-Za-z])infty(?![A-Za-z0-9])/gi, '∞'],
   [/(?<![\\A-Za-z])inf(?![A-Za-z0-9])/gi, '∞'],
-  [/(?<![\\A-Za-z])cbrt(?![A-Za-z0-9])/gi, '∛'],
+  [/(?<![\\A-Za-z])cbrt(?![A-Za-z])/gi, '∛'],
   [/(?<=\blim(?:it)?\s*_?[({]?\s*[A-Za-z]\s*)->/g, '→'],
+  [/(?<![\\A-Za-z])plus[\s.-]?minus(?![A-Za-z])/gi, '±'],
+  [/(?<![\\A-Za-z])minus[\s.-]?plus(?![A-Za-z])/gi, '∓'],
   [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
   [/(?<![\\A-Za-z_])sum(?![A-Za-z0-9])/g, 'Σ'],
   [/(?<![\\A-Za-z_])prod(?![A-Za-z0-9])/g, 'Π'],
+  [/(?<![\\A-Za-z_])int(?![A-Za-z]|_[A-Za-z])/g, '∫'],
 ]
 
-// convert even when words are kept as text: a raw `10 +- 0.7` would evaluate as 10 + -0.7
+// these turn into symbols the moment they're typed; theta, dot and ans still wait a keystroke
+const AT_ONCE = new Set(['√', '∛', '±', '∓', '∫', 'π', 'Σ', 'Π', '∞'])
+
+// if the letters after a fresh symbol spell a longer word, the word comes back (`π` then `nt` is `pint`); the `_` is a limit slot
+const LONGER_WORDS: [string, string, string[]][] = [
+  ['π', 'pi', ['pint', 'pica', 'pico', 'pipe', 'pixel']],
+  ['∫', 'int', ['integral', 'integrate', 'integer', 'interest', 'into']],
+  ['∞', 'inf', ['infinity', 'info', 'infty']],
+  ['Σ', 'sum', ['sums', 'summary', 'summation']],
+  ['Π', 'prod', ['product']],
+]
+
+function restoreLongerWords(text: string): string {
+  let out = text
+  for (const [sign, word, longer] of LONGER_WORDS) {
+    out = out.replace(new RegExp(`${sign}_?([A-Za-z]+)`, 'g'), (m, rest: string) => {
+      const w = (word + rest).toLowerCase()
+      const hit = longer.some((l) => l === w || (rest.length >= 2 && (l.startsWith(w) || w.startsWith(l))))
+      return hit ? word + rest : m
+    })
+  }
+  return out
+}
+
+// convert even when words are kept as text; `5+-3` stays plus negative three
 const SHORTCUT_SYMBOLS: [RegExp, string][] = [
-  [/-\+/g, '∓'],
-  [/\+-/g, '±'],
+  [/-[/.]\+/g, '∓'],
+  [/\+[/.]-/g, '±'],
   [/~/g, '±'],
 ]
 
@@ -76,35 +108,31 @@ export function spliceText(
   return { next: value.slice(0, a) + chunk + value.slice(b), cursor: a + chunk.length }
 }
 
-function replaceTokens(text: string, ansPlain: string | undefined, keepTrailing: boolean, keepWords: boolean, ansAlone = false): string {
-  // a word token at the end may still grow into a longer word (`pi` to `pint`); symbols convert at once
+function replaceTokens(text: string, keepTrailing: boolean, keepWords: boolean): string {
+  // a word at the end may still grow into a longer one (`theta` to `thetas`) unless its symbol converts at once
   const swap = (put: string) => (m: string, offset: number, whole: string) =>
-    keepTrailing && offset + m.length === whole.length && /[A-Za-z]$/.test(m) ? m : put
-  let out = text
+    keepTrailing && !AT_ONCE.has(put) && offset + m.length === whole.length && /[A-Za-z]$/.test(m) ? m : put
+  let out = keepWords ? text : restoreLongerWords(text)
   for (const [re, put] of keepWords ? SHORTCUT_SYMBOLS : [...WORD_SYMBOLS, ...SHORTCUT_SYMBOLS]) {
     re.lastIndex = 0
     out = out.replace(re, swap(put))
   }
-  if (ansPlain) out = out.replace(/\bans\b/gi, swap(answerAmong(ansPlain, ansAlone)))
   return out
 }
 
-// with a caret, the token right before it is left for the next keystroke to settle
-export function prettyTokens(text: string, ansPlain?: string, caret?: number, keepWords = false): string {
-  const alone = /^\s*ans\s*$/i.test(text)
-  if (caret == null) return replaceTokens(text, ansPlain, false, keepWords, alone)
-  return (
-    replaceTokens(text.slice(0, caret), ansPlain, true, keepWords, alone) +
-    replaceTokens(text.slice(caret), ansPlain, false, keepWords, alone)
-  )
+// with a caret, the token right before it is left for the next keystroke to settle;
+// a typed `ans` stays a word, so the engine reads the last answer at full precision
+export function prettyTokens(text: string, caret?: number, keepWords = false): string {
+  if (caret == null) return replaceTokens(text, false, keepWords)
+  return replaceTokens(text.slice(0, caret), true, keepWords) + replaceTokens(text.slice(caret), false, keepWords)
 }
 
 export function QuickInput({
   value,
-  ansPlain,
   keepWords = false,
   onChange,
   onEnter,
+  onEquals,
   onUp,
   onDown,
   onPrefixStep,
@@ -125,20 +153,23 @@ export function QuickInput({
   const onDownRef = useRef(onDown)
   const onPrefixStepRef = useRef(onPrefixStep)
   const onTabRef = useRef(onTab)
-  const ansRef = useRef(ansPlain)
   const keepWordsRef = useRef(keepWords)
   const heldRef = useRef('')
   const metaRef = useRef(false)
   const caretPosRef = useRef<CaretRange>({ start: value.length, end: value.length })
   const holdingArrowRef = useRef(false)
   const [caretAtEnd, setCaretAtEnd] = useState(true)
+  const undoRef = useRef<Undo | null>(null)
+  if (!undoRef.current) undoRef.current = undoStart(value)
+  const editKindRef = useRef<EditKind>(null)
+  const onEqualsRef = useRef(onEquals)
+  onEqualsRef.current = onEquals
   onChangeRef.current = onChange
   onEnterRef.current = onEnter
   onUpRef.current = onUp
   onDownRef.current = onDown
   onPrefixStepRef.current = onPrefixStep
   onTabRef.current = onTab
-  ansRef.current = ansPlain
   keepWordsRef.current = keepWords
 
   // holds the last highlight while ⌘ or ⌃ is down so a copy still finds it
@@ -184,11 +215,13 @@ export function QuickInput({
   const mark =
     squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null
 
-  const commit = (raw: string, cursor: number, settle = false) => {
+  const commit = (raw: string, cursor: number, settle = false, typed = false) => {
     const caret = settle ? undefined : cursor
-    const before = prettyTokens(raw.slice(0, cursor), ansRef.current, caret, keepWordsRef.current)
-    const next = prettyTokens(raw, ansRef.current, caret, keepWordsRef.current)
-    const pos = Math.min(before.length, next.length)
+    const before = prettyTokens(raw.slice(0, cursor), caret, keepWordsRef.current)
+    let next = prettyTokens(raw, caret, keepWordsRef.current)
+    let pos = Math.min(before.length, next.length)
+    const slotted = typed ? afterTyping(next, pos) : null
+    if (slotted) ({ text: next, caret: pos } = slotted)
     caretPosRef.current = { start: pos, end: pos }
     onChangeRef.current(next)
     requestAnimationFrame(() => {
@@ -198,10 +231,36 @@ export function QuickInput({
     })
   }
 
+  const applyEdit = (el: HTMLInputElement, edit: Edit) => {
+    caretPosRef.current = { start: edit.caret, end: edit.caret }
+    if (edit.text !== el.value) {
+      onChangeRef.current(edit.text)
+      requestAnimationFrame(() => inputRef.current?.setSelectionRange(edit.caret, edit.caret))
+    } else el.setSelectionRange(edit.caret, edit.caret)
+  }
+
   // converts a token still waiting at the caret (`2pi` then enter)
   const finishTokens = (el: HTMLInputElement) => {
-    if (prettyTokens(el.value, ansRef.current, undefined, keepWordsRef.current) === el.value) return
+    if (prettyTokens(el.value, undefined, keepWordsRef.current) === el.value) return
     commit(el.value, el.selectionStart ?? el.value.length, true)
+  }
+
+  // every value change is a step, whoever made it (typing, a paste, a history insert, esc, enter)
+  useLayoutEffect(() => {
+    const u = undoRef.current
+    if (!u) return
+    const { start, end } = caretPosRef.current
+    undoRef.current = recordEdit(u, { value, start: Math.min(start, value.length), end: Math.min(end, value.length) }, editKindRef.current, Date.now())
+    editKindRef.current = null
+  }, [value])
+
+  const applyUndo = (next: Undo | null) => {
+    if (!next) return
+    const state: UndoState = next.current
+    undoRef.current = next
+    caretPosRef.current = { start: state.start, end: state.end }
+    onChangeRef.current(state.value)
+    requestAnimationFrame(() => inputRef.current?.setSelectionRange(state.start, state.end))
   }
 
   useLayoutEffect(() => {
@@ -266,6 +325,13 @@ export function QuickInput({
         onPrefixStepRef.current?.(e.key === 'ArrowUp' ? 1 : -1)
         return
       }
+      const limit = el.selectionStart === el.selectionEnd && !e.metaKey && !e.ctrlKey && !e.shiftKey
+        ? boundKey(el.value, el.selectionStart ?? el.value.length, e.key)
+        : null
+      if (limit) {
+        applyEdit(el, limit)
+        return
+      }
       holdingArrowRef.current = true
       pinCaret(el)
       if (e.key === 'ArrowUp') onUpRef.current()
@@ -292,12 +358,60 @@ export function QuickInput({
       e.preventDefault()
       return
     }
+    // done here too because the mac overlay has no edit menu to route ⌘Z, ⌘A and ⌘X
+    const cmd = e.metaKey && !e.ctrlKey && !e.altKey
+    if (cmd && key === 'z') {
+      e.preventDefault()
+      const u = undoRef.current
+      if (u) applyUndo(e.shiftKey ? redo(u) : undo(u))
+      return
+    }
+    if (cmd && !e.shiftKey && key === 'a') {
+      e.preventDefault()
+      e.currentTarget.select()
+      return
+    }
+    if (cmd && !e.shiftKey && key === 'x') {
+      const el = e.currentTarget
+      const start = el.selectionStart ?? 0
+      const end = el.selectionEnd ?? start
+      if (end <= start) return
+      e.preventDefault()
+      copyText(el.value.slice(start, end))
+      commit(el.value.slice(0, start) + el.value.slice(end), start)
+      return
+    }
+    if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End') {
+      if (undoRef.current) undoRef.current = breakRun(undoRef.current)
+    }
+    if (e.key === '=' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const el = e.currentTarget
+      const caret = { start: el.selectionStart ?? 0, end: el.selectionEnd ?? 0 }
+      if (equalsCommits(el.value, caret) && onEqualsRef.current?.()) {
+        e.preventDefault()
+        return
+      }
+    }
     // tab belongs to the completion only while its ghost shows
     const plainKey = !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey
     if (completion && plainKey && (e.key === 'Tab' || e.key === 'ArrowRight')) {
       e.preventDefault()
       acceptCompletion(e.currentTarget)
       return
+    }
+    // → and tab step through ∫ and Σ limits; `^` and space leave a limit too
+    const el = e.currentTarget
+    const bare = !e.altKey && !e.metaKey && !e.ctrlKey && (!e.shiftKey || e.key === '^' || e.key === ' ')
+    if (bare && el.selectionStart === el.selectionEnd) {
+      const at = el.selectionStart ?? el.value.length
+      const edit =
+        boundKey(el.value, at, e.key) ??
+        (!keepWordsRef.current && (e.key === 'Tab' || e.key === 'ArrowRight') ? wordToSign(el.value, at) : null)
+      if (edit) {
+        e.preventDefault()
+        applyEdit(el, edit)
+        return
+      }
     }
     if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       // tab never moves focus out of the input; it cycles the answer's forms
@@ -308,7 +422,7 @@ export function QuickInput({
     if (e.key === 'Enter') {
       e.preventDefault()
       finishTokens(e.currentTarget)
-      onEnterRef.current()
+      onEnterRef.current(e.altKey)
       return
     }
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
@@ -318,7 +432,6 @@ export function QuickInput({
     // macos webkit maps home/end to page scrolling, not the caret
     if ((e.key === 'Home' || e.key === 'End') && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
-      const el = e.currentTarget
       const to = e.key === 'Home' ? 0 : el.value.length
       const anchor = el.selectionDirection === 'backward' ? (el.selectionEnd ?? to) : (el.selectionStart ?? to)
       if (!e.shiftKey) el.setSelectionRange(to, to)
@@ -327,7 +440,6 @@ export function QuickInput({
       return
     }
     if (e.key !== 'ArrowRight' || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return
-    const el = e.currentTarget
     const start = el.selectionStart ?? 0
     const end = el.selectionEnd ?? start
     const filled = autofillParens(el.value, start, end)
@@ -337,15 +449,22 @@ export function QuickInput({
   }
 
   const showExample = !value && example != null
+  const bounded = boundsIn(value).length > 0
 
   return (
-    <div className="quick-field">
+    <div className={bounded ? 'quick-field quick-field-bounds' : 'quick-field'}>
       <div className="quick-ghost" aria-hidden>
         <span ref={prefixRef} className="quick-inferred">
           {prefix}
           {chain ? <span className="quick-chain">ans</span> : null}
         </span>
-        {mark ? (
+        {bounded ? (
+          <BoundsInputText
+            value={value}
+            input={inputRef}
+            mark={squiggle && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null}
+          />
+        ) : mark ? (
           <span className="quick-ghost-text">
             {value.slice(0, mark.start)}
             <span className="quick-squiggle">{value.slice(mark.start, mark.end)}</span>
@@ -362,7 +481,7 @@ export function QuickInput({
           </span>
         ) : null}
       </div>
-      <RadicalLayer value={value} input={inputRef} inset={prefixWidth} />
+      <RadicalLayer value={bounded ? '' : value} input={inputRef} inset={prefixWidth} />
       <input
         ref={inputRef}
         className="quick-plain"
@@ -377,7 +496,9 @@ export function QuickInput({
         style={prefixWidth ? { paddingLeft: prefixWidth } : undefined}
         onChange={(e) => {
           const el = e.currentTarget
-          commit(el.value, el.selectionStart ?? el.value.length)
+          const typed = e.nativeEvent as InputEvent
+          editKindRef.current = editKind(typed.inputType)
+          commit(el.value, el.selectionStart ?? el.value.length, false, typed.inputType === 'insertText')
         }}
         data-completion={completion || undefined}
         onSelect={(e) => {
@@ -389,7 +510,10 @@ export function QuickInput({
           rememberHighlight(e.currentTarget)
         }}
         onBlur={(e) => finishTokens(e.currentTarget)}
-        onMouseDown={(e) => rememberCaret(e.currentTarget)}
+        onMouseDown={(e) => {
+          if (undoRef.current) undoRef.current = breakRun(undoRef.current)
+          rememberCaret(e.currentTarget)
+        }}
         onMouseUp={(e) => {
           rememberCaret(e.currentTarget)
           rememberHighlight(e.currentTarget)

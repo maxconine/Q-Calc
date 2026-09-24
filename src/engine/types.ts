@@ -19,6 +19,8 @@ export interface Meas {
   sig?: number
   dp?: number
   unc?: number
+  /** Significant digits of a ± the user typed, while the answer's ± is still that one (`0.10` → `10`). */
+  uncDigits?: string
 }
 
 export type LineKind = 'empty' | 'expression' | 'assignment' | 'function' | 'solve'

@@ -66,7 +66,7 @@ function run(c: Case): void {
     return
   }
   if (c.infinity) {
-    expect(r.display, label).toMatch(/∞|Infinity/)
+    expect(r.display, label).toBe('overflow')
     return
   }
   if (c.exact !== undefined) {
@@ -711,7 +711,7 @@ suite('Gamma factorial and overflow', [
   { name: '(-0.5)!', input: '(-0.5)!', expected: Math.sqrt(Math.PI), eps: 1e-9 },
   { name: 'negative integer', input: '(-1)!', undefined: true },
   { name: '170! is finite', input: '170!', gte: 7e306 },
-  { name: '171! overflows', input: '171!', display: '∞' },
+  { name: '171! overflows', input: '171!', display: 'overflow' },
   { name: 'division by zero is not infinity', input: '1/0', undefined: true },
 ])
 
@@ -835,10 +835,10 @@ describe('no silent rounding or coercion', () => {
 })
 
 describe('big counts', () => {
-  it('computes nCr past mathjs overflow and shows a real overflow as infinity', () => {
+  it('computes nCr past mathjs overflow and says when a real one overflows', () => {
     expect(evaluateLine('nCr(1000, 500)').display).toBe('2.70288240945e+299')
-    expect(evaluateLine('nCr(1030, 515)').display).toBe('∞')
-    expect(evaluateLine('nPr(1000, 200)').display).toBe('∞')
+    expect(evaluateLine('nCr(1030, 515)').display).toBe('overflow')
+    expect(evaluateLine('nPr(1000, 200)').display).toBe('overflow')
   })
 })
 
@@ -867,5 +867,26 @@ describe('a degree sign inside trig', () => {
   it('reads as degrees in either mode', () => {
     expect(evaluateLine('sin(30°)').display).toBe('0.5')
     expect(evaluateLine('sin(30°) + cos(60°)', { angleMode: 'rad' }).display).toBe('1')
+  })
+})
+
+describe('overflow and real odd roots', () => {
+  const d = (text: string) => evaluateLine(text).display
+  it('says overflow for a result too big for a double, and keeps 1/0 undefined', () => {
+    expect(d('2^1024')).toBe('overflow')
+    expect(d('1e308*10')).toBe('overflow')
+    expect(d('factorial(171)')).toBe('overflow')
+    expect(d('1/0')).toBe('undefined')
+    expect(d('0/0')).toBe('undefined')
+    expect(d('0^-1')).toBe('undefined')
+    expect(d('log(5, 1)')).toBe('undefined')
+  })
+  it('takes odd roots of negatives as real', () => {
+    expect(d('(-8)^(1/3)')).toBe('-2')
+    expect(d('(-32)^(1/5)')).toBe('-2')
+    expect(d('(-8)^(2/3)')).toBe('4')
+    expect(d('(-32)^0.2')).toBe('-2')
+    expect(d('(-2)^0.5')).toBe('undefined')
+    expect(d('(-8)^0.3')).toBe('undefined')
   })
 })

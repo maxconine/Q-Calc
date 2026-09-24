@@ -18,6 +18,8 @@ export type HistoryRow = {
   fnBody?: string
   // a solved equation's roots; its expr is never re-read as an assignment
   solve?: SolveInfo
+  // commit time in ms; rows from before this was kept count as old
+  at?: number
 }
 
 export const MAX_HISTORY = 10
@@ -104,6 +106,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     kind,
     ...fnFields,
     ...(solve && { solve }),
+    ...(typeof row.at === 'number' && Number.isFinite(row.at) && row.at > 0 && { at: row.at }),
   }
 }
 
@@ -128,6 +131,7 @@ export function normalizeHistoryRow(
       : undefined,
     fnBody: typeof row.fnBody === 'string' ? row.fnBody : undefined,
     solve: row.solve,
+    at: row.at,
   })
 }
 

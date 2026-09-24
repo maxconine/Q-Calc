@@ -17,6 +17,9 @@ export const COMPLETION_UNITS = [
   'acre', 'hectare', 'hertz', 'knot', 'horsepower', 'volt', 'ampere',
 ]
 
+// these become √ and Σ, which read their argument without parens
+const NO_PAREN = new Set(['sqrt', 'sum'])
+
 const NAMES = new Set(`${SCIENTIFIC_NAMES}|e|in|to|as|of|per|and|or|mod`.toLowerCase().split('|'))
 // a prefix on its own (`kilo`) still reads as the start of a longer unit
 const PREFIX_WORDS = new Set(['kilo', 'mega', 'giga', 'tera', 'milli', 'micro', 'nano', 'centi'])
@@ -45,7 +48,7 @@ export function completionFor(text: string, names: CompletionNames = {}): string
   const lower = word.toLowerCase()
   const pick = (list: string[], tail = '') => {
     const hit = list.find((n) => n.length > word.length && n.toLowerCase().startsWith(lower))
-    return hit ? hit.slice(word.length) + tail : ''
+    return hit ? hit.slice(word.length) + (NO_PAREN.has(hit) ? '' : tail) : ''
   }
   const fn = () => pick(fns, '(') || pick(COMPLETION_FUNCTIONS, '(')
   const unit = () => pick(COMPLETION_UNITS)

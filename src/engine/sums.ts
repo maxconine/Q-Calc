@@ -96,11 +96,11 @@ function topMatches(s: string, re: RegExp): Cut[] {
 const lastTopWord = (s: string, re: RegExp): Cut | undefined => topMatches(s, re).at(-1)
 const firstTopWord = (s: string, re: RegExp): Cut | undefined => topMatches(s, re)[0]
 
-const RANGE_RE = /^\s*(?:([A-Za-z])\s*(?:=|\bfrom\b|\bin\b)\s*)?(.+?)\s*(?:\.\.\.?|…|\bto\b)\s*(.+?)\s*$/i
+const RANGE_RE = /^\s*(?:([A-Za-z]|theta)\s*(?:=|\bfrom\b|\bin\b)\s*)?(.+?)\s*(?:\.\.\.?|…|\bto\b)\s*(.+?)\s*$/i
 
 function parseRange(text: string): { index?: string; from: string; to: string } | null {
   let s = text.trim()
-  const bracket = s.match(/^([A-Za-z])\s*(?:=|\bin\b)\s*\[(.*)\]$/i)
+  const bracket = s.match(/^([A-Za-z]|theta)\s*(?:=|\bin\b)\s*\[(.*)\]$/i)
   if (bracket) s = `${bracket[1]}=${bracket[2]}`
   const m = s.match(RANGE_RE)
   if (!m) return null
@@ -119,14 +119,14 @@ function specFromCall(op: Op, args: string[], ctx: SumContext): Spec | null {
     return r ? { op, body, ...r } : null
   }
   if (args.length === 3) {
-    const at = args[1]!.match(/^\s*([A-Za-z])\s*=\s*(\S+)\s*$/)
+    const at = args[1]!.match(/^\s*([A-Za-z]|theta)\s*=\s*(\S+)\s*$/)
     if (at) return { op, body, index: at[1], from: at[2]!, to: args[2]!.trim() }
     // `sum(k^2, 1, 10)` with k unknown; with no free letter it's a list
     return pickIndex(body, ctx) ? { op, body, from: args[1]!.trim(), to: args[2]!.trim() } : null
   }
   if (args.length === 4) {
     const index = args[1]!.trim()
-    if (!/^[A-Za-z]$/.test(index)) return null
+    if (!/^(?:[A-Za-z]|theta)$/.test(index)) return null
     // `sum(x, y, 1, 10)` with y a variable not in the body is a list of four numbers
     const mentions = new RegExp(`(?<![A-Za-z0-9_])${index}(?![A-Za-z0-9_])`).test(body)
     if (index in (ctx.variables ?? {}) && !mentions) return null
@@ -155,7 +155,7 @@ function specFromScripts(op: Op, rest: string): Spec | null {
   if (!upper) return null
   const body = s.slice(upper.end).trim()
   if (!body) return null
-  const at = lower.inner.match(/^\s*([A-Za-z])\s*=\s*(.+?)\s*$/)
+  const at = lower.inner.match(/^\s*([A-Za-z]|theta)\s*=\s*(.+?)\s*$/)
   return { op, body, index: at?.[1], from: at ? at[2]! : lower.inner.trim(), to: upper.inner.trim() }
 }
 
@@ -881,8 +881,9 @@ function bound(text: string, ctx: SumContext): number | null {
 function evaluateSpec(spec: Spec, ctx: SumContext): SumAnswer {
   const body = /\\[a-zA-Z]|[\^_]\{/.test(spec.body) ? latexToAscii(spec.body) : spec.body
   const s = { ...spec, body }
+  // a typed θ reaches here as theta, the one multi-letter index
   const index = spec.index ?? pickIndex(body, ctx)
-  if (!index || !/^[A-Za-z]$/.test(index) || index === 'e' || index in (ctx.functions ?? {})) return { value: null }
+  if (!index || !/^(?:[A-Za-z]|theta)$/.test(index) || index === 'e' || index in (ctx.functions ?? {})) return { value: null }
   const a = bound(spec.from, ctx)
   if (a == null) return { value: null }
   if (INFINITY_RE.test(spec.to)) return infinite(s, index, a, ctx)

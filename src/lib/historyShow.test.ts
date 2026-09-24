@@ -1,32 +1,42 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeHistoryShow, RECENT_USE_MS, tapeOpensOnShow } from './historyShow'
+import type { HistoryRow } from './history'
+import { normalizeHistoryShow, nextRecentExpiry, RECENT_MS, recentStart } from './historyShow'
+import { normalizeHistoryRow } from './history'
 
 const now = 10_000_000
+const row = (at?: number): HistoryRow => ({ id: String(Math.random()), expr: '1+1', display: '2', at })
 
-describe('history tape on show', () => {
-  it('opens when used within two minutes', () => {
-    expect(tapeOpensOnShow('recent', true, now - 5_000, now)).toBe(true)
-    expect(tapeOpensOnShow('recent', true, now - RECENT_USE_MS, now)).toBe(true)
+describe('recent calculations above the bar', () => {
+  it('shows rows committed in the last two minutes', () => {
+    const h = [row(now - RECENT_MS - 5), row(now - RECENT_MS), row(now - 1000)]
+    expect(recentStart(h, now)).toBe(1)
   })
 
-  it('stays closed after two minutes, or before any use this run', () => {
-    expect(tapeOpensOnShow('recent', true, now - RECENT_USE_MS - 1, now)).toBe(false)
-    expect(tapeOpensOnShow('recent', true, 0, now)).toBe(false)
+  it('old rows and rows without a time are not recent', () => {
+    expect(recentStart([row(), row()], now)).toBe(2)
+    expect(recentStart([row(now - 1000), row()], now)).toBe(2)
+    expect(recentStart([], now)).toBe(0)
+  })
+
+  it('is capped at five rows', () => {
+    const h = [row(now - 7), row(now - 6), row(now - 5), row(now - 4), row(now - 3), row(now - 2), row(now - 1)]
+    expect(recentStart(h, now)).toBe(2)
   })
 
   it('a clock that went backwards does not count as recent', () => {
-    expect(tapeOpensOnShow('recent', true, now + 60_000, now)).toBe(false)
+    expect(recentStart([row(now + 60_000)], now)).toBe(1)
   })
 
-  it('never opens with no history', () => {
-    for (const mode of ['recent', 'always', 'arrow'] as const) {
-      expect(tapeOpensOnShow(mode, false, now, now)).toBe(false)
-    }
+  it('knows when the next row ages out', () => {
+    const h = [row(now - 90_000), row(now - 10_000)]
+    expect(nextRecentExpiry(h, now)).toBe(now - 90_000 + RECENT_MS + 1)
+    expect(recentStart(h, nextRecentExpiry(h, now)!)).toBe(1)
+    expect(nextRecentExpiry([row()], now)).toBeNull()
   })
 
-  it('always and only on ↑ ignore the clock', () => {
-    expect(tapeOpensOnShow('always', true, 0, now)).toBe(true)
-    expect(tapeOpensOnShow('arrow', true, now, now)).toBe(false)
+  it('the commit time survives a save and load', () => {
+    expect(normalizeHistoryRow({ expr: '2+3', display: '5', at: 123 }, 'x')?.at).toBe(123)
+    expect(normalizeHistoryRow({ expr: '2+3', display: '5', at: Number.NaN }, 'x')?.at).toBeUndefined()
   })
 
   it('unknown values fall back to recent', () => {

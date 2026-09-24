@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { prettyTokens } from '../components/QuickInput'
 import { evaluateLine, evaluateSheet } from './evaluate'
-import { formatSig, formatUncertain, literalMeas, measure } from './measure'
+import { formatSig, formatUncertain, literalMeas, measure, sanitizeMeas, typedDigits } from './measure'
 
 const sf = (text: string) => evaluateLine(text, { sigFigMode: true }).display
 const pm = (text: string) => evaluateLine(text).display
@@ -90,9 +90,9 @@ describe('sig fig mode', () => {
 describe('uncertainty', () => {
   it.each([
     ['(5.0 ± 0.1) + (3.2 ± 0.2)', '8.2 ± 0.3'],
-    ['(10.0 ± 0.2) * (2.0 ± 0.1)', '20 ± 1'],
+    ['(10.0 ± 0.2) * (2.0 ± 0.1)', '20.0 ± 1.4'],
     ['(2.0 ± 0.1)^2', '4.0 ± 0.4'],
-    ['sqrt(4.0 ± 0.4)', '2.0 ± 0.1'],
+    ['sqrt(4.0 ± 0.4)', '2.00 ± 0.10'],
     ['10 ± 0.7', '10.0 ± 0.7'],
     ['10 ± 5%', '10.0 ± 0.5'],
     ['-5 ± 0.25', '-5.0 ± 0.3'],
@@ -102,22 +102,36 @@ describe('uncertainty', () => {
     expect(pm(text)).toBe(want)
   })
 
-  it('accepts +- and ~ as typed', () => {
-    expect(pm(prettyTokens('10 +- 0.7'))).toBe('10.0 ± 0.7')
+  it('accepts +/- and ~ as typed', () => {
+    expect(pm(prettyTokens('10 +/- 0.7'))).toBe('10.0 ± 0.7')
     expect(pm(prettyTokens('10 ~ 0.7'))).toBe('10.0 ± 0.7')
-    expect(pm(prettyTokens('5+-2'))).toBe('5 ± 2')
+    expect(pm(prettyTokens('5+/-2'))).toBe('5 ± 2')
   })
 
-  it('accepts ∓ and -+ as ±', () => {
+  it('accepts +.- and spelled out plus minus', () => {
+    expect(pm(prettyTokens('10 +.- 0.7'))).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('10 plusminus 0.7'))).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('10 plus minus 0.7'))).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('10 plus-minus 0.7'))).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('10 minusplus 0.7'))).toBe('10.0 ± 0.7')
+  })
+
+  it('leaves +- as plus a negative number', () => {
+    expect(prettyTokens('5+-3')).toBe('5+-3')
+    expect(prettyTokens('5-+3')).toBe('5-+3')
+    expect(evaluateSheet([prettyTokens('5+-3')])[0]?.display).toBe('2')
+  })
+
+  it('accepts ∓ and -/+ as ±', () => {
     expect(pm('10 ∓ 0.7')).toBe('10.0 ± 0.7')
-    expect(pm(prettyTokens('10 -+ 0.7'))).toBe('10.0 ± 0.7')
-    expect(pm(prettyTokens('5-+2'))).toBe('5 ± 2')
+    expect(pm(prettyTokens('10 -/+ 0.7'))).toBe('10.0 ± 0.7')
+    expect(pm(prettyTokens('5-/+2'))).toBe('5 ± 2')
     expect(pm('5.0 ∓ 0.2 * 3')).toBe('15.0 ± 0.6')
   })
 
   it('uses the interval worst case for other functions', () => {
-    expect(pm('sin(30 ± 1)')).toBe('0.50 ± 0.02')
-    expect(pm('ln(10 ± 1)')).toBe('2.3 ± 0.1')
+    expect(pm('sin(30 ± 1)')).toBe('0.500 ± 0.015')
+    expect(pm('ln(10 ± 1)')).toBe('2.30 ± 0.11')
   })
 
   it('answers with the central value', () => {
@@ -134,11 +148,11 @@ describe('uncertainty', () => {
 
   it('carries a variable’s uncertainty', () => {
     const [, b] = evaluateSheet(['x = 10 ± 0.7', 'x * 2'])
-    expect(b!.display).toBe('20 ± 1')
+    expect(b!.display).toBe('20.0 ± 1.4')
   })
 
   it('applies sig-fig rounding first when both are on', () => {
-    expect(evaluateLine('(10.0 ± 0.2) * (2.0 ± 0.1)', { sigFigMode: true }).display).toBe('20 ± 1')
+    expect(evaluateLine('(10.0 ± 0.2) * (2.0 ± 0.1)', { sigFigMode: true }).display).toBe('20.0 ± 1.4')
     expect(evaluateLine('2.0 ± 0.05', { sigFigMode: true }).display).toBe('2.00 ± 0.05')
   })
 
@@ -177,7 +191,7 @@ describe('bugfix batch: ± binds tightest, works with units, never drops', () =>
   it('treats a ± b as one quantity', () => {
     expect(pm('5.0 ± 0.2 * 3')).toBe('15.0 ± 0.6')
     expect(pm('2 * 5.0 ± 0.2')).toBe('10.0 ± 0.4')
-    expect(pm('5 ± 2 * 3 ± 1')).toBe('20 ± 10')
+    expect(pm('5 ± 2 * 3 ± 1')).toBe('15 ± 11')
     expect(pm('10 ± 0.1 * 2')).toBe('20.0 ± 0.2')
   })
   it('never returns a bare number for a ± it cannot model', () => {
@@ -199,5 +213,55 @@ describe('bugfix batch: ± binds tightest, works with units, never drops', () =>
   it('counts exponents as exact', () => {
     expect(sf('2.0^0.5')).toBe(sf('sqrt(2.0)'))
     expect(sf('2.0^0.5')).toBe('1.4')
+  })
+})
+
+describe('± rounding', () => {
+  it('keeps two figures of an uncertainty that leads with a 1, else one', () => {
+    expect(pm('5.0 ± 0.14')).toBe('5.00 ± 0.14')
+    expect(pm('5.0 ± 0.34')).toBe('5.0 ± 0.3')
+    expect(pm('100 ± 15')).toBe('100 ± 15')
+    expect(pm('2.0 ± 0.195')).toBe('2.0 ± 0.2')
+  })
+})
+
+describe('a typed ± shows as written', () => {
+  it.each([
+    ['10 ± 1', '10 ± 1'],
+    ['5.0 ± 0.1', '5.0 ± 0.1'],
+    ['5.0 ± 0.1 m', '5.0 ± 0.1 m'],
+    ['(10 ± 1) cm', '10 ± 1 cm'],
+    ['-(5.0 ± 0.1)', '-5.0 ± 0.1'],
+    ['-5.0 ± 0.1', '-5.0 ± 0.1'],
+    ['5 ± 0.10', '5.00 ± 0.10'],
+    ['10 ± 1.0', '10.0 ± 1.0'],
+    ['1e3 ± 1e1', '1000 ± 10'],
+    ['5.0 ± 0.1 cm to m', '0.050 ± 0.001 m'],
+    ['5.0 ± 0.1 m to cm', '500 ± 10 cm'],
+  ])('%s → %s', (text, want) => {
+    expect(pm(text)).toBe(want)
+  })
+  it('a calculated ± keeps the rounding rule', () => {
+    expect(pm('(10.0 ± 0.2) * (2.0 ± 0.1)')).toBe('20.0 ± 1.4')
+    expect(pm('(5.0 ± 0.1) * 10')).toBe('50.0 ± 1.0')
+    expect(pm('(5.0 ± 0.1) + 0')).toBe('5.00 ± 0.10')
+    expect(pm('(5.0 ± 0.1 m) * 10 s')).toBe('50.0 ± 1.0 m s')
+    expect(pm('100 ± 1%')).toBe('100.0 ± 1.0')
+    // 0.1 ft is 1.2 in: new digits, so the rule applies
+    expect(pm('5.0 ± 0.1 ft to in')).toBe('60.0 ± 1.2 in')
+  })
+  it('stays as written through variables and ans, and gains the digit once used', () => {
+    expect(evaluateSheet(['x = 10 ± 1', 'x', 'ans', '2x']).map((r) => r.display)).toEqual(['10 ± 1', '10 ± 1', '10 ± 1', '20 ± 2'])
+    expect(evaluateSheet(['x = 5.0 ± 0.1', 'x * 10']).map((r) => r.display)).toEqual(['5.0 ± 0.1', '50.0 ± 1.0'])
+  })
+  it('typed digits and history round trip', () => {
+    expect(typedDigits('0.10')).toBe('10')
+    expect(typedDigits('10')).toBe('1')
+    expect(typedDigits('1e-1')).toBe('1')
+    expect(sanitizeMeas({ unc: 1, uncDigits: '1' })).toEqual({ unc: 1, uncDigits: '1' })
+    expect(sanitizeMeas({ unc: 1, uncDigits: 'x' })).toEqual({ unc: 1 })
+    expect(formatUncertain(10, 1)).toBe('10.0 ± 1.0')
+    expect(formatUncertain(10, 1, '1')).toBe('10 ± 1')
+    expect(formatUncertain(10, 1.2, '1')).toBe('10.0 ± 1.2')
   })
 })

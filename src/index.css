@@ -1148,3 +1148,71 @@ html.quick-native .graph {
   pointer-events: none;
   user-select: none;
 }
+
+/* ∫ and Σ limits drawn small beside the sign; in the input this layer draws the text, caret and selection */
+.quick-field-bounds .quick-plain {
+  color: transparent;
+  caret-color: transparent;
+}
+.quick-field-bounds .quick-plain::selection {
+  background: transparent;
+}
+.bounds-input {
+  position: relative;
+  color: var(--ink);
+}
+.bounds {
+  white-space: pre;
+}
+.bounds-limits {
+  display: inline-flex;
+  flex-direction: column;
+  vertical-align: middle;
+  margin-block: -1em;
+  font-size: 0.56em;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+.tape-q .bounds-limits {
+  font-size: 0.66em;
+}
+.bounds-upper,
+.bounds-lower {
+  display: block;
+  min-height: 1.12em;
+}
+.bounds-upper {
+  padding-left: 0.3em;
+}
+.bounds-lower,
+.bounds-upright .bounds-upper {
+  padding-left: 0.05em;
+}
+.bounds-hole {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.8em;
+  vertical-align: -0.08em;
+  border-radius: 0.14em;
+  background: color-mix(in srgb, var(--muted) 18%, transparent);
+}
+.bounds-caret {
+  position: absolute;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--ink);
+  pointer-events: none;
+  animation: qcalc-caret 1.06s steps(1) infinite;
+}
+@keyframes qcalc-caret {
+  50% { opacity: 0; }
+}
+.bounds-selection {
+  position: absolute;
+  background: Highlight;
+  pointer-events: none;
+}
+.bounds-selection-blur {
+  background: color-mix(in srgb, var(--muted) 25%, transparent);
+}

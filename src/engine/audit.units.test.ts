@@ -237,7 +237,7 @@ describe('audit: digital storage (GB is 10^9, GiB is 2^30)', () => {
     ['1 GiB to MiB', 1024],
     ['1 GiB to GB', 1.073741824],
     ['1 TB to GiB', 1e12 / 2 ** 30],
-    ['1 kib to kb', 1.024],
+    ['1 kib to kB', 1.024],
     ['1 MB to KiB', 1e6 / 1024],
     ['500 GB to TB', 0.5],
     ['1 TiB to GiB', 1024],

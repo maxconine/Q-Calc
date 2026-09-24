@@ -31,9 +31,9 @@ describe('prettyTokens', () => {
     expect(prettyTokens('\\dot{x}')).toBe('\\dot{x}')
   })
 
-  it('replaces typed ans with the previous answer as shown', () => {
-    expect(prettyTokens('ans * 2', '3.142')).toBe('3.142 * 2')
-    expect(prettyTokens('ANS', '3.14159')).toBe('3.14159')
+  it('leaves a typed ans for the engine', () => {
+    expect(prettyTokens('ans * 2')).toBe('ans * 2')
+    expect(prettyTokens('ANS')).toBe('ANS')
   })
 
   it('turns -> into → only in a limit', () => {
@@ -91,16 +91,16 @@ describe('spliceText', () => {
 })
 
 /** Type `text` one key at a time, prettifying after each keystroke with the caret at the end. */
-function typeKeys(text: string, ans?: string): string {
+function typeKeys(text: string): string {
   let value = ''
   for (const ch of text) {
     const raw = value + ch
-    value = prettyTokens(raw, ans, raw.length)
+    value = prettyTokens(raw, raw.length)
   }
   return value
 }
 
-const TYPED_CASES: Array<{ typed: string; shown: string; ans?: string }> = [
+const TYPED_CASES: Array<{ typed: string; shown: string }> = [
   { typed: 'pint', shown: 'pint' },
   { typed: 'pipe', shown: 'pipe' },
   { typed: 'picofarad', shown: 'picofarad' },
@@ -111,36 +111,36 @@ const TYPED_CASES: Array<{ typed: string; shown: string; ans?: string }> = [
   { typed: '2pi ', shown: '2π ' },
   { typed: 'cbrt(8)', shown: '∛(8)' },
   { typed: 'inf+1', shown: '∞+1' },
-  { typed: '2ans', shown: '2ans', ans: '42' },
-  { typed: '10 +- 0.7', shown: '10 ± 0.7' },
+  { typed: '2ans', shown: '2ans' },
+  { typed: 'ans^2', shown: 'ans^2' },
+  { typed: '10 +/- 0.7', shown: '10 ± 0.7' },
   { typed: '10 ~ 0.7', shown: '10 ± 0.7' },
-  { typed: '5+-2', shown: '5±2' },
+  { typed: '5+/-2', shown: '5±2' },
   { typed: '5 - -2', shown: '5 - -2' },
   { typed: '5+(-2)', shown: '5+(-2)' },
 ]
 
 describe('prettyTokens while typing', () => {
-  it.each(TYPED_CASES)('$typed → $shown', ({ typed, shown, ans }) => {
-    expect(typeKeys(typed, ans)).toBe(shown)
+  it.each(TYPED_CASES)('$typed → $shown', ({ typed, shown }) => {
+    expect(typeKeys(typed)).toBe(shown)
   })
 
   it('leaves the token at the caret for the next keystroke', () => {
-    expect(prettyTokens('pi', undefined, 2)).toBe('pi')
-    expect(prettyTokens('pi+pi', undefined, 2)).toBe('pi+π')
-    expect(prettyTokens('ans', '3', 3)).toBe('ans')
-    expect(prettyTokens('ans*', '3', 4)).toBe('3*')
+    expect(prettyTokens('theta', 5)).toBe('theta')
+    expect(prettyTokens('theta+theta', 5)).toBe('theta+θ')
+    expect(prettyTokens('ans*', 4)).toBe('ans*')
   })
 
-  it('converts +- and ~ as soon as they are typed', () => {
-    expect(prettyTokens('10 +-', undefined, 5)).toBe('10 ±')
-    expect(prettyTokens('10 ~', undefined, 4)).toBe('10 ±')
-    expect(prettyTokens('(5+-)', undefined, 4)).toBe('(5±)')
+  it('converts +/- and ~ as soon as they are typed', () => {
+    expect(prettyTokens('10 +/-', 6)).toBe('10 ±')
+    expect(prettyTokens('10 ~', 4)).toBe('10 ±')
+    expect(prettyTokens('(5+/-)', 5)).toBe('(5±)')
   })
 
   it('settles the waiting token without a caret (Enter, blur)', () => {
     expect(prettyTokens('2pi')).toBe('2π')
     expect(prettyTokens('pint')).toBe('pint')
-    expect(prettyTokens('ans', '3')).toBe('3')
+    expect(prettyTokens('ans')).toBe('ans')
   })
 
   it('evaluates what the prettifier produces', () => {
@@ -149,15 +149,10 @@ describe('prettyTokens while typing', () => {
   })
 })
 
-describe('typed ans among other text', () => {
-  it('keeps a negative or compound answer grouped', () => {
-    expect(typeKeys('ans^2', '-3')).toBe('(-3)^2')
-    expect(n(typeKeys('ans^2', '-3'))).toBe(9)
-    expect(typeKeys('1/ans+', 'sqrt(2)/2')).toBe('1/(sqrt(2)/2)+')
-    expect(prettyTokens('2 ans', '-3')).toBe('2 (-3)')
-  })
-  it('leaves a lone ans or a plain number bare', () => {
-    expect(prettyTokens('ans', '-3')).toBe('-3')
-    expect(prettyTokens('ans*2', '5')).toBe('5*2')
+describe('typed ans', () => {
+  it('stays a word, so the engine reads the full precision last answer', () => {
+    expect(typeKeys('ans*3')).toBe('ans*3')
+    expect(evaluateLine(typeKeys('ans*3'), { ans: 1 / 3 }).display).toBe('1')
+    expect(evaluateLine(typeKeys('ans^2'), { ans: -3 }).display).toBe('9')
   })
 })

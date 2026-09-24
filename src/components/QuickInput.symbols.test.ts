@@ -4,13 +4,13 @@ import { buildGraph } from '../engine/graph'
 import { defaultSettings, mergeSettings, settingsEqual } from '../lib/settings'
 import { prettyTokens } from './QuickInput'
 
-function typeKeys(text: string, keepWords = false, ans?: string): string {
+function typeKeys(text: string, keepWords = false): string {
   let value = ''
   for (const ch of text) {
     const raw = value + ch
-    value = prettyTokens(raw, ans, raw.length, keepWords)
+    value = prettyTokens(raw, raw.length, keepWords)
   }
-  return prettyTokens(value, ans, undefined, keepWords)
+  return prettyTokens(value, undefined, keepWords)
 }
 
 function outcome(lines: string[], angleMode: 'deg' | 'rad' = 'deg') {
@@ -30,16 +30,30 @@ describe('typed words become symbols', () => {
     ['theta = 30', 'θ = 30'],
     ['\\sqrt{2}', '\\sqrt{2}'],
     ['\\pi', '\\pi'],
-    ['sqrts', 'sqrts'],
+    ['sqrts', '√s'],
     ['pint', 'pint'],
     ['infinity', 'infinity'],
   ])('%s → %s', (typed, shown) => {
     expect(typeKeys(typed)).toBe(shown)
   })
 
-  it('leaves sqrt at the caret until the next keystroke', () => {
-    expect(prettyTokens('sqrt', undefined, 4)).toBe('sqrt')
-    expect(prettyTokens('sqrt(', undefined, 5)).toBe('√(')
+  it('turns sqrt and cbrt into symbols the moment the word is typed', () => {
+    expect(prettyTokens('sqrt', 4)).toBe('√')
+    expect(prettyTokens('2cbrt', 5)).toBe('2∛')
+    expect(prettyTokens('sqrt(', 5)).toBe('√(')
+  })
+
+  it('converts pi, int and sum at once and gives the word back if it grows', () => {
+    expect(prettyTokens('pi', 2)).toBe('π')
+    expect(prettyTokens('int', 3)).toBe('∫')
+    expect(prettyTokens('sum', 3)).toBe('Σ')
+    for (const w of ['pint', 'picofarad', 'integral of x^2 from 0 to 1', 'interest', 'infinity', 'info', 'summary', 'product']) {
+      expect(typeKeys(w)).toBe(w)
+    }
+  })
+
+  it('theta still waits a keystroke, since thetas and theta2 are names', () => {
+    expect(prettyTokens('theta', 5)).toBe('theta')
   })
 })
 
@@ -109,19 +123,19 @@ describe('keeping typed words as text', () => {
     ['cbrt(8)', 'cbrt(8)'],
     ['1/inf', '1/inf'],
     ['4 dot 1', '4 dot 1'],
-    ['10 +- 0.7', '10 ± 0.7'],
-    ['10 -+ 0.7', '10 ∓ 0.7'],
+    ['10 +/- 0.7', '10 ± 0.7'],
+    ['10 -/+ 0.7', '10 ∓ 0.7'],
     ['10 ~ 0.7', '10 ± 0.7'],
   ])('%s → %s', (typed, shown) => {
     expect(typeKeys(typed, true)).toBe(shown)
   })
 
-  it('still fills in ans', () => {
-    expect(typeKeys('ans*2', true, '3')).toBe('3*2')
+  it('leaves ans as a word', () => {
+    expect(typeKeys('ans*2', true)).toBe('ans*2')
   })
 
   it('gives the same answer as the symbols', () => {
-    for (const word of ['sqrt(2)', '2pi', 'cbrt(27)', '4 dot 1', '10 +- 0.7']) {
+    for (const word of ['sqrt(2)', '2pi', 'cbrt(27)', '4 dot 1', '10 +/- 0.7']) {
       expect(outcome([typeKeys(word, true)])).toEqual(outcome([typeKeys(word)]))
     }
   })

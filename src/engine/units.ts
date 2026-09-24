@@ -1,5 +1,5 @@
 import { num, textVal } from './format'
-import { literalMeas } from './measure'
+import { literalMeas, typedDigits } from './measure'
 import type { Meas, Value } from './types'
 
 export const IMPROPER_UNIT_CONVERSION = 'improper unit conversion'
@@ -21,6 +21,7 @@ export type Dim =
   | 'speed'
   | 'time'
   | 'digital'
+  | 'datarate'
   | 'energy'
   | 'power'
   | 'pressure'
@@ -49,6 +50,10 @@ type Unit = {
   defaultTo?: string
   /** Accepts SI prefixes (kilometer, ms, mega joules). */
   prefixable?: boolean
+  /** Symbols whose b or B must match as typed: `Mb` is a megabit, `MB` a megabyte. */
+  cased?: string[]
+  /** Names that only match exactly as written: `Cal` is the food calorie, `cal` the small one. */
+  exactNames?: string[]
 }
 
 const LB = 0.45359237
@@ -110,6 +115,54 @@ function prefixedLabel(prefix: Prefix, base: Unit): string {
 
 function prefixedUnit(prefix: Prefix, base: Unit, id = `${prefix.name}_${base.id}`): Unit {
   return { id, dim: base.dim, symbol: prefixedLabel(prefix, base), toBase: base.toBase * prefix.factor, defaultTo: base.id, names: [] }
+}
+
+const DATA_PREFIXES = [
+  ['', '', 1],
+  ['k', 'kilo', 1e3],
+  ['M', 'mega', 1e6],
+  ['G', 'giga', 1e9],
+  ['T', 'tera', 1e12],
+  ['P', 'peta', 1e15],
+  ['E', 'exa', 1e18],
+  ['Z', 'zetta', 1e21],
+  ['Y', 'yotta', 1e24],
+] as const
+
+const BINARY_PREFIXES = [
+  ['Ki', 'kibi'],
+  ['Mi', 'mebi'],
+  ['Gi', 'gibi'],
+  ['Ti', 'tebi'],
+  ['Pi', 'pebi'],
+  ['Ei', 'exbi'],
+] as const
+
+// bytes are the base; the byte ids (kb, mb, gb, tb) predate the bit units and stay as they were
+function dataUnits(): Unit[] {
+  const out: Unit[] = []
+  for (const [p, word, f] of DATA_PREFIXES) {
+    const id = p.toLowerCase()
+    out.push(
+      { id: id ? `${id}b` : 'byte', dim: 'digital', symbol: `${p}B`, toBase: f, names: [`${word}byte`, `${word}bytes`], cased: [`${p}B`] },
+      // a lone b stays a letter, since `a + b = 10` is an equation, not ares plus bits
+      { id: `${id}bit`, dim: 'digital', symbol: p ? `${p}b` : 'bit', toBase: f / 8, names: [`${word}bit`, `${word}bits`], cased: p ? [`${p}b`] : [] },
+      {
+        id: `${id}bps`,
+        dim: 'datarate',
+        symbol: `${p}bps`,
+        toBase: f / 8,
+        names: [`${p}bps`, `${p}bit/s`, `${word}bits per second`],
+        cased: [`${p}b/s`],
+      },
+      { id: `${id}byteps`, dim: 'datarate', symbol: `${p}B/s`, toBase: f, names: [`${word}bytes per second`], cased: [`${p}B/s`] },
+    )
+  }
+  BINARY_PREFIXES.forEach(([p, word], i) => {
+    const id = p.toLowerCase()
+    out.push({ id: `${id}b`, dim: 'digital', symbol: `${p}B`, toBase: 1024 ** (i + 1), names: [`${id}b`, `${word}byte`, `${word}bytes`] })
+  })
+  return out
 }
 
 const UNIT_LIST: Unit[] = [
@@ -213,19 +266,12 @@ const UNIT_LIST: Unit[] = [
   { id: 'century', dim: 'time', symbol: 'centuries', toBase: 100 * YEAR, names: ['century', 'centuries'] },
   { id: 'millennium', dim: 'time', symbol: 'kyr', toBase: 1000 * YEAR, names: ['millenium', 'millennium', 'millenniums', 'millennia'] },
 
-  { id: 'kb', dim: 'digital', symbol: 'kB', toBase: 1e3, names: ['kb', 'kilobyte', 'kilobytes'] },
-  { id: 'mb', dim: 'digital', symbol: 'MB', toBase: 1e6, names: ['mb', 'megabyte', 'megabytes'] },
-  { id: 'gb', dim: 'digital', symbol: 'GB', toBase: 1e9, names: ['gb', 'gigabyte', 'gigabytes'] },
-  { id: 'tb', dim: 'digital', symbol: 'TB', toBase: 1e12, names: ['tb', 'terabyte', 'terabytes'] },
-  { id: 'kib', dim: 'digital', symbol: 'KiB', toBase: 1024, names: ['kib', 'kibibyte', 'kibibytes'] },
-  { id: 'mib', dim: 'digital', symbol: 'MiB', toBase: 1024 ** 2, names: ['mib', 'mebibyte', 'mebibytes'] },
-  { id: 'gib', dim: 'digital', symbol: 'GiB', toBase: 1024 ** 3, names: ['gib', 'gibibyte', 'gibibytes'] },
-  { id: 'tib', dim: 'digital', symbol: 'TiB', toBase: 1024 ** 4, names: ['tib', 'tebibyte', 'tebibytes'] },
+  ...dataUnits(),
 
   { id: 'ev', dim: 'energy', symbol: 'eV', toBase: E_CHARGE, defaultTo: 'j', prefixable: true, names: ['ev', 'evs', 'electronvolt', 'electronvolts', 'electron volt', 'electron volts'] },
   { id: 'erg', dim: 'energy', symbol: 'erg', toBase: 1e-7, defaultTo: 'j', names: ['erg', 'ergs'] },
   { id: 'cal', dim: 'energy', symbol: 'cal', toBase: 4.184, defaultTo: 'j', names: ['cal', 'calorie', 'calories', 'thermodynamic calorie', 'thermodynamic calories'] },
-  { id: 'kcal', dim: 'energy', symbol: 'kcal', toBase: 4184, defaultTo: 'kj', names: ['kcal', 'kilocalorie', 'kilocalories', 'food calorie', 'food calories'] },
+  { id: 'kcal', dim: 'energy', symbol: 'kcal', toBase: 4184, defaultTo: 'kj', names: ['kcal', 'kilocalorie', 'kilocalories', 'food calorie', 'food calories'], exactNames: ['Cal'] },
   { id: 'btu', dim: 'energy', symbol: 'BTU', toBase: 1055.05585262, defaultTo: 'kj', names: ['btu', 'btus', 'british thermal unit', 'british thermal units'] },
   { id: 'therm', dim: 'energy', symbol: 'thm', toBase: THERM, defaultTo: 'btu', names: ['thm', 'therm', 'therms'] },
   { id: 'j', dim: 'energy', symbol: 'J', toBase: 1, defaultTo: 'cal', prefixable: true, names: ['j', 'joule', 'joules'] },
@@ -301,6 +347,7 @@ function wordNames(unit: Unit): string[] {
 function takenAliases(units: Unit[]): Set<string> {
   const taken = new Set<string>()
   for (const unit of units) {
+    for (const name of unit.cased ?? []) taken.add(name.toLowerCase())
     for (const name of unit.names) {
       taken.add(name.toLowerCase())
       const norm = normalizeName(name)
@@ -403,10 +450,12 @@ function convertAmount(amount: number, from: Unit, to: Unit): Value | null {
   return { ...num(n), unit: to.symbol, unitId: to.id }
 }
 
-const ALIAS_INDEX: { alias: string; unit: Unit }[] = []
+const ALIAS_INDEX: { alias: string; unit: Unit; exact?: string; whole?: boolean }[] = []
 {
   const seen = new Set<string>()
   for (const unit of UNIT_LIST) {
+    for (const exact of unit.cased ?? []) ALIAS_INDEX.push({ alias: exact.toLowerCase(), unit, exact })
+    for (const exact of unit.exactNames ?? []) ALIAS_INDEX.push({ alias: exact.toLowerCase(), unit, exact, whole: true })
     for (const name of unit.names) {
       for (const alias of [name.toLowerCase(), normalizeName(name)]) {
         if (!alias) continue
@@ -417,7 +466,8 @@ const ALIAS_INDEX: { alias: string; unit: Unit }[] = []
       }
     }
   }
-  ALIAS_INDEX.sort((a, b) => b.alias.length - a.alias.length)
+  // longest first, and a case-sensitive name before a plain one of the same length
+  ALIAS_INDEX.sort((a, b) => b.alias.length - a.alias.length || Number(Boolean(b.exact)) - Number(Boolean(a.exact)))
 }
 
 const ALIAS_NAMES = new Set(ALIAS_INDEX.map((a) => a.alias))
@@ -460,6 +510,8 @@ const CASE_PREFIXES: { symbol: string; prefix: Prefix }[] = (
     ['p', 'pico'],
     ['f', 'femto'],
     ['a', 'atto'],
+    ['z', 'zepto'],
+    ['y', 'yocto'],
   ] as const
 ).map(([symbol, name]) => ({ symbol, prefix: PREFIX_BY_NAME.get(name)! }))
 
@@ -505,11 +557,22 @@ function caseClash(typed: string, unit: Unit): boolean {
   return Boolean(base && !base.rest && scaleUnit(base.unit, prefix.prefix))
 }
 
+function caseFits(typed: string, exact: string | undefined, whole = false): boolean {
+  if (!exact) return true
+  if (whole) return typed === exact
+  for (let i = 0; i < exact.length; i++) {
+    if ((exact[i] === 'b' || exact[i] === 'B') && typed[i] !== exact[i]) return false
+  }
+  return true
+}
+
 function matchUnitAtEnd(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimEnd()
-  for (const { alias, unit } of ALIAS_INDEX) {
+  for (const { alias, unit, exact, whole } of ALIAS_INDEX) {
     const rest = beforeTail(t, alias)
-    if (rest == null || caseClash(t.slice(rest.length), unit)) continue
+    if (rest == null) continue
+    const typed = t.slice(rest.length)
+    if (!caseFits(typed, exact, whole) || caseClash(typed, unit)) continue
     // `1 H` is a henry, hours are `h`/`hr`; `72 F` and `100 C` stay temperatures here
     return { unit: t.slice(rest.length) === 'H' ? BY_ID.get('henry')! : unit, rest: rest.trimEnd() }
   }
@@ -584,8 +647,10 @@ function matchBareUnitAtStart(s: string): { unit: Unit; rest: string } | null {
   const t = s.trimStart()
   const si = SI_CAPITALS[t[0] ?? '']
   if (si && !/[A-Za-z0-9]/.test(t[1] ?? '')) return { unit: BY_ID.get(si)!, rest: t.slice(1) }
-  for (const { alias, unit } of ALIAS_INDEX) {
-    if (!startsWithToken(t, alias) || caseClash(t.slice(0, alias.length), unit)) continue
+  for (const { alias, unit, exact, whole } of ALIAS_INDEX) {
+    if (!startsWithToken(t, alias)) continue
+    const typed = t.slice(0, alias.length)
+    if (!caseFits(typed, exact, whole) || caseClash(typed, unit)) continue
     return { unit, rest: t.slice(alias.length) }
   }
   return null
@@ -647,23 +712,27 @@ const DIM_VEC: Record<Dim, DimVec> = {
   inductance: [1, 2, -2, -2, 0, 0, 0],
   dimensionless: [0, 0, 0, 0, 0, 0, 0],
   digital: [0, 0, 0, 0, 0, 0, 1],
+  datarate: [0, 0, -1, 0, 0, 0, 1],
 }
 
 /**
  * Sig figs (Infinity = exact) and relative ± uncertainty; absent means exact.
  * NaN once an addition mixes measured parts, since that would need decimal places.
+ * `digits` marks a ± still exactly as typed: naming its unit keeps it, any arithmetic drops it.
  */
-type Prec = { sig: number; rel: number }
+type Prec = { sig: number; rel: number; digits?: string }
 const LOST: Prec = { sig: Number.NaN, rel: Number.NaN }
 
-type Qty = { si: number; dim: number[]; prefer?: Unit; prec?: Prec }
+/** `bare` is a unit on its own (`m`, `s^2`), with no number. */
+type Qty = { si: number; dim: number[]; prefer?: Unit; prec?: Prec; bare?: boolean }
 
 /** Products, quotients and powers: fewest sig figs, relative uncertainties add. */
 function precMul(a: Qty, b: Qty): Prec | undefined {
   if (!a.prec && !b.prec) return undefined
   const x = a.prec ?? { sig: Infinity, rel: 0 }
   const y = b.prec ?? { sig: Infinity, rel: 0 }
-  return { sig: Math.min(x.sig, y.sig), rel: x.rel + y.rel }
+  const digits = b.bare ? x.digits : a.bare ? y.digits : undefined
+  return { sig: Math.min(x.sig, y.sig), rel: x.rel + y.rel, ...(digits && { digits }) }
 }
 
 function vec(d: Dim): number[] {
@@ -711,7 +780,7 @@ function isPower(d: readonly number[]): boolean {
 }
 
 function unitQty(unit: Unit): Qty {
-  return { si: siOf(unit), dim: vec(unit.dim), prefer: unit }
+  return { si: siOf(unit), dim: vec(unit.dim), prefer: unit, bare: true }
 }
 
 /** An rpm rate counts revolutions (2π rad each); a bare `50/hr` or Hz is just a rate. */
@@ -752,7 +821,8 @@ function powQty(a: Qty, exp: Qty): Qty | null {
   if (!Number.isFinite(e) || !isZeroVec(exp.dim)) return null
   if (a.si < 0 && !Number.isInteger(e)) return null
   const prec = exp.prec?.rel ? LOST : a.prec && { sig: a.prec.sig, rel: a.prec.rel * Math.abs(e) }
-  return { si: a.si ** e, dim: scaleVec(a.dim, e), prefer: Math.abs(e) === 1 ? a.prefer : undefined, prec }
+  const bare = a.bare && !exp.prec
+  return { si: a.si ** e, dim: scaleVec(a.dim, e), prefer: Math.abs(e) === 1 ? a.prefer : undefined, prec, ...(bare && { bare }) }
 }
 
 /** Sig figs and ± of a unit answer `n`, in the answer's own unit. */
@@ -763,7 +833,10 @@ function precMeas(n: number, p: Prec | undefined): Meas | undefined {
     out.sig = p.sig
     out.dp = n === 0 ? p.sig - 1 : p.sig - 1 - Math.floor(Math.log10(Math.abs(n)))
   }
-  if (p.rel > 0) out.unc = Math.abs(n) * p.rel
+  if (p.rel > 0) {
+    out.unc = Math.abs(n) * p.rel
+    if (p.digits) out.uncDigits = p.digits
+  }
   return out.sig == null && out.unc == null ? undefined : out
 }
 
@@ -1045,10 +1118,13 @@ class UnitParser {
     if (!value) return null
     let q = value
     if (this.eat('±')) {
+      const start = this.i
       const u = this.parseNumber()
       if (!u || value.si === 0) return null
-      const unc = Math.abs(this.eat('%') ? (value.si * u.si) / 100 : u.si)
-      q = { ...value, prec: { sig: value.prec?.sig ?? Infinity, rel: unc / Math.abs(value.si) } }
+      const pct = this.eat('%')
+      const unc = Math.abs(pct ? (value.si * u.si) / 100 : u.si)
+      const digits = pct ? undefined : typedDigits(this.s.slice(start, this.i).replace(/[\s+-]/g, ''))
+      q = { ...value, prec: { sig: value.prec?.sig ?? Infinity, rel: unc / Math.abs(value.si), digits } }
     }
     const at = this.i
     if (this.eat('/')) {

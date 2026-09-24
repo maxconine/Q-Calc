@@ -66,7 +66,7 @@ type Example = { expr: string; plain?: boolean }
 export const EXAMPLES: readonly Example[] = [
   { expr: '5 ft 10 in to cm' },
   { expr: '80 + 15%' },
-  { expr: '(5.0 +- 0.2) * 3' },
+  { expr: '(5.0 +/- 0.2) * 3' },
   { expr: 'graph sin(x)', plain: true },
   { expr: 'sqrt(8)' },
   { expr: '100 W * 2 hr to kWh' },
@@ -190,7 +190,7 @@ export const CHEATS: { keys: readonly CheatRow[]; type: readonly CheatRow[] } = 
   keys: [
     ['↵', 'save'],
     ['↑', 'history'],
-    ['⌘C', 'copy answer'],
+    ['⌘C ⌘⇧C', 'copy answer / line'],
     ['⌥↑ ⌥↓', 'unit prefix'],
     ['⌃D', 'degrees / radians'],
     ['⌃F', 'fractions'],
@@ -201,7 +201,7 @@ export const CHEATS: { keys: readonly CheatRow[]; type: readonly CheatRow[] } = 
   type: [
     ['ft to cm', 'units'],
     ['80 + 15%', 'percent'],
-    ['+-  -+', '± ∓ uncertainty'],
+    ['+/-  -/+', '± ∓ uncertainty'],
     ['x = 5', 'variables'],
     ['x^2 = 2', 'solve'],
     ['graph x^2', 'plot'],

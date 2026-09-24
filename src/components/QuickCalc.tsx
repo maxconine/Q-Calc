@@ -6,6 +6,7 @@ import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
+import { inferParens } from '../engine/parens'
 import { dualLabel } from '../engine/simplify'
 import { inLadderUnit, isImproperUnitConversion, stepPrefix } from '../engine/units'
 import type { SolveInfo, UserFunction, Value } from '../engine/types'
@@ -34,7 +35,7 @@ import {
   type AnswerForm,
 } from '../lib/answer'
 import { blankReason, type Span } from '../lib/blankReason'
-import { chainedExpr, chainedHistoryExpr, chainsFromAnswer } from '../lib/chain'
+import { ansWrittenOut, chainedExpr, chainedHistoryExpr, chainsFromAnswer } from '../lib/chain'
 import { hideAction, shouldRestoreDraft } from '../lib/draft'
 import { nativeHandler } from '../lib/bridge'
 import { copyText, highlightedText, inputHighlight } from '../lib/dom'
@@ -83,7 +84,8 @@ import {
   slimHistoryRow,
   type HistoryRow,
 } from '../lib/history'
-import { tapeOpensOnShow } from '../lib/historyShow'
+import { nextRecentExpiry, recentStart } from '../lib/historyShow'
+import { lineCopyText } from '../lib/touches'
 import {
   mergeNativeInfo,
   mergeSettings,
@@ -124,6 +126,8 @@ const EMPTY_LIVE: LiveSnapshot = { display: '', fnDef: null, facts: {} }
 
 // how long typing has to pause before a blank answer points at what it couldn't read
 const SQUIGGLE_IDLE_MS = 700
+// recent rows wait for a pause in typing before they age out, so the panel never resizes mid keystroke
+const RECENT_IDLE_MS = 1500
 
 const MODIFIER_KEYS = new Set(['Shift', 'Meta', 'Control', 'Alt', 'CapsLock', 'Fn'])
 
@@ -221,9 +225,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const chainedRef = useRef('')
   const historyRef = useRef(history)
   historyRef.current = history
-  // last keystroke or commit; in memory only, so a relaunch starts clean
-  const lastUsedRef = useRef(0)
-  // whether the tape sits open this showing when nothing is being browsed
+  const lastKeyRef = useRef(0)
+  // the clock the recent rows are read against; moves on show, commit and quiet ticks only
+  const [recentNow, setRecentNow] = useState(() => Date.now())
+  // whether the full tape sits open this showing when nothing is being browsed
   const tapeRestRef = useRef(false)
 
   const updateOnboarding = useCallback((step: (s: Onboarding) => Onboarding) => {
@@ -238,8 +243,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setRotation(startRotation(examplesActive(onboardingRef.current ?? emptyOnboarding())))
     setFirstRun(false)
     setHelpOpen(false)
-    const rest = tapeOpensOnShow(settingsRef.current.historyShow, historyRef.current.length > 0, lastUsedRef.current, Date.now())
+    const rest = settingsRef.current.historyShow === 'always' && historyRef.current.length > 0
     tapeRestRef.current = rest
+    setRecentNow(Date.now())
     setSelected(null)
     setTapeOpen(rest)
     const s = onboardingRef.current ?? emptyOnboarding()
@@ -271,10 +277,37 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     mathRef.current?.focus()
   }, [stopDraftTimer])
 
+  // ⌘Z right after clearing the tape or removing a row puts it back; any edit to the input forgets it
+  const tapeUndoRef = useRef<{ history: HistoryRow[]; selected: number | null; open: boolean } | null>(null)
+
   const clearHistory = useCallback(() => {
+    if (historyRef.current.length) tapeUndoRef.current = { history: historyRef.current, selected: null, open: false }
     setHistory([])
     setSelected(null)
     setTapeOpen(false)
+  }, [])
+
+  const removeRow = useCallback((index: number) => {
+    const prev = historyRef.current
+    if (!prev[index]) return
+    tapeUndoRef.current = { history: prev, selected: index, open: true }
+    const next = prev.filter((_, i) => i !== index)
+    setHistory(next)
+    if (next.length) setSelected(Math.min(index, next.length - 1))
+    else {
+      setSelected(null)
+      setTapeOpen(false)
+    }
+  }, [])
+
+  const undoTape = useCallback((): boolean => {
+    const saved = tapeUndoRef.current
+    if (!saved) return false
+    tapeUndoRef.current = null
+    setHistory(saved.history)
+    setSelected(saved.selected)
+    if (saved.open) setTapeOpen(true)
+    return true
   }, [])
 
   const lastAnswer = useMemo(() => lastAnswerRow(history), [history])
@@ -313,7 +346,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const chainAnswer =
     ansPlain && lastAnswer && Number.isFinite(lastAnswer.n) ? { plain: ansPlain, unit: lastAnswer.quantity != null } : undefined
   const chained = !graphCmd && chainsFromAnswer(q, chainAnswer)
-  chainedRef.current = chained && ansPlain ? chainedHistoryExpr(q, ansPlain) : ''
+  const tapeExpr = chained && ansPlain ? chainedHistoryExpr(q, ansPlain) : q
+  chainedRef.current = chainAnswer ? ansWrittenOut(tapeExpr, chainAnswer.plain) : chained ? tapeExpr : ''
   const evalOptions = useMemo(
     () => ({
       ...evalSettings,
@@ -434,6 +468,21 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => saveHistory(history), [history])
 
+  const recentOn = settings.historyShow === 'recent'
+  useEffect(() => {
+    const due = recentOn ? nextRecentExpiry(history, recentNow) : null
+    if (due == null) return
+    let t = 0
+    const tick = () => {
+      const idle = Date.now() - lastKeyRef.current
+      if (idle < RECENT_IDLE_MS) t = window.setTimeout(tick, RECENT_IDLE_MS - idle)
+      else setRecentNow(Date.now())
+    }
+    t = window.setTimeout(tick, Math.max(0, due - Date.now()))
+    return () => window.clearTimeout(t)
+  }, [history, recentNow, recentOn])
+  const recentFrom = recentOn ? recentStart(history, recentNow) : history.length
+
   useEffect(() => {
     saveSettings(settings)
     // all of it, so the mac settings window follows ⌃D/⌃F/⌃S live
@@ -489,6 +538,26 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const row = selected != null ? history[selected] : null
     copyValue(row ? rowCopyText(row, settings.answerForm) : shownLive)
   }, [copyValue, history, selected, settings.answerForm, shownLive])
+
+  // exact forms read with their symbols, like the line they sit next to
+  const copyLine = useCallback(() => {
+    const row = selected != null ? history[selected] : null
+    if (row) {
+      const exact = row.exact && prettyTokens(row.exact)
+      copyValue(row.kind === 'definition' || row.kind === 'function' ? row.expr : lineCopyText(row.expr, { ...row, exact }, settings.answerForm))
+      return
+    }
+    const { display: shown, exact, solve } = liveRef.current
+    if (!shown || graphCmd) return
+    const expr = chainedRef.current || qRef.current
+    if (isReactionInput(expr)) {
+      copyValue(shown)
+      return
+    }
+    const { leading, trailing } = inferParens(expr)
+    const whole = '('.repeat(Math.max(0, leading)) + expr.trim() + ')'.repeat(Math.max(0, trailing))
+    copyValue(lineCopyText(whole, { display: shown, exact: exact && prettyTokens(exact), solve }, settings.answerForm))
+  }, [copyValue, graphCmd, history, selected, settings.answerForm])
 
   const snapshotCaret = useCallback(() => {
     const tracked = mathRef.current?.caret()
@@ -553,6 +622,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [history, insertPlain, settings.answerForm, settings.historyInsert, settings.sigFigs],
   )
 
+  // whichever half of the row enter doesn't insert
+  const insertHistoryOther = useCallback(
+    (index: number) => {
+      const row = history[index]
+      if (!row) return
+      if (row.kind === 'definition' || row.kind === 'function' || settings.historyInsert === 'answer') insertHistoryExpr(index)
+      else insertPlain(insertableHistoryAnswer(row, settings.answerForm, settings.sigFigs), true)
+    },
+    [history, insertHistoryExpr, insertPlain, settings.answerForm, settings.historyInsert, settings.sigFigs],
+  )
+
   // `quiet` is the commit-on-hide path: nobody is looking, so no hint is spent on it
   const commit = useCallback((quiet = false) => {
     const expr = chainedRef.current || qRef.current
@@ -563,7 +643,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
     const nextHint = quiet ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...facts })
     updateOnboarding((s) => ({ ...recordCommit(s), hints: s.hints | (nextHint?.bit ?? 0) }))
-    lastUsedRef.current = Date.now()
+    const at = Date.now()
+    setRecentNow(at)
     setHint(nextHint?.text ?? null)
     setHelpOpen(false)
     // enter before the answer settled still gets its one firing
@@ -594,10 +675,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             },
       )
       if (!nextRow) return prev
+      nextRow.at = at
       const last = prev[prev.length - 1]
-      if (last && last.expr === nextRow.expr && last.display === nextRow.display) return prev
+      if (last && last.expr === nextRow.expr && last.display === nextRow.display) return [...prev.slice(0, -1), { ...last, at }]
       return persistableHistory([...prev, nextRow])
     })
+    tapeUndoRef.current = null
     qRef.current = ''
     liveRef.current = EMPTY_LIVE
     draftAtRef.current = 0
@@ -720,11 +803,19 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     return true
   }, [history.length, restoreCaret, selected, tapeOpen])
 
-  const onEnter = useCallback(() => {
+  const onEnter = useCallback((alt = false) => {
     if (isHelpCommand(qRef.current)) resetToCalculate()
+    else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
     else commit()
-  }, [commit, resetToCalculate, selected, insertHistoryAnswer])
+  }, [commit, resetToCalculate, selected, insertHistoryAnswer, insertHistoryOther])
+
+  const onEquals = useCallback((): boolean => {
+    const shown = liveRef.current.display
+    if (selected != null || !shown || isImproperUnitConversion(shown)) return false
+    commit()
+    return true
+  }, [commit, selected])
 
   // esc peels one layer: a tape opened with ↑ or the cheat sheet, then the input; false means nothing was left to hide.
   // a tape that opened on its own only steps back from a selected row
@@ -774,10 +865,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const ctrlOnly = e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey
       const cmdOnly = e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
       const toggle = ctrlOnly ? CTRL_SETTING_KEYS.get(key) : undefined
+      const cmdShift = e.metaKey && e.shiftKey && !e.ctrlKey && !e.altKey
       let action: (() => void) | undefined
       if (toggle) action = () => setSettings(toggle)
       else if (ctrlOnly && key === 'c') action = clearHistory
       else if (cmdOnly && key === 'c') action = copyOutput
+      else if (cmdShift && key === 'c') action = copyLine
+      else if (cmdOnly && e.key === 'Backspace' && selected != null) action = () => removeRow(selected)
+      else if (cmdOnly && key === 'z' && tapeUndoRef.current) action = undoTape
       if (!action) return
       e.preventDefault()
       e.stopPropagation()
@@ -806,7 +901,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('copy', onCopy, true)
     }
-  }, [clearHistory, copyOutput, embedded, escapeLayer, flashCopied, history, onClose, onWillHide, resetToCalculate, selected, settings.answerForm, shownLive])
+  }, [clearHistory, copyLine, copyOutput, embedded, escapeLayer, flashCopied, history, onClose, onWillHide, removeRow, resetToCalculate, selected, settings.answerForm, shownLive, undoTape])
 
   useEffect(() => () => stopDraftTimer(), [stopDraftTimer])
 
@@ -820,7 +915,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     // an equation js can't solve would come back from soulvercore as something else
     if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isHelpCommand(q) || isEquation(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
-    if (chained || (jsDisplay && !looksLikeNaturalLanguage(q))) return
+    if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
     if (hasPlusMinus(q) || !soulverAngleSafe(q, settings.angleMode)) return
     // a reaction js couldn't balance stays blank
@@ -941,7 +1036,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     caretRef.current = null
     setInputSel(null)
     // resets and restored drafts come through here too, already matching qRef
-    if (text !== qRef.current) lastUsedRef.current = Date.now()
+    if (text !== qRef.current) {
+      lastKeyRef.current = Date.now()
+      tapeUndoRef.current = null
+    }
     qRef.current = text
     setQ(text)
     if (!text.trim()) setPrefixUnit(null)
@@ -973,6 +1071,18 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               onInsertExpr={insertHistoryExpr}
               onInsertAnswer={insertHistoryAnswer}
             />
+          ) : recentFrom < history.length ? (
+            <HistoryTape
+              history={history}
+              from={recentFrom}
+              selected={null}
+              answerForm={settings.answerForm}
+              sigFigs={settings.sigFigs}
+              tapeRef={tapeRef}
+              onInsert={(text) => insertPlain(text, true)}
+              onInsertExpr={insertHistoryExpr}
+              onInsertAnswer={insertHistoryAnswer}
+            />
           ) : null}
 
           <div className="composer">
@@ -986,12 +1096,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             />
             <QuickInput
               value={q}
-              ansPlain={ansPlain}
               keepWords={settings.keepWords}
               handleRef={mathRef}
               example={example ? { text: example.expr, id: rotation.tick } : null}
               onChange={onInputChange}
               onEnter={onEnter}
+              onEquals={onEquals}
               onUp={onUp}
               onDown={onDown}
               onPrefixStep={onPrefixStep}

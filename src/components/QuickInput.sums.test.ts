@@ -7,9 +7,9 @@ function typeKeys(text: string, keepWords = false): string {
   let value = ''
   for (const ch of text) {
     const raw = value + ch
-    value = prettyTokens(raw, undefined, raw.length, keepWords)
+    value = prettyTokens(raw, raw.length, keepWords)
   }
-  return prettyTokens(value, undefined, undefined, keepWords)
+  return prettyTokens(value, undefined, keepWords)
 }
 
 function outcome(lines: string[], options: { angleMode?: 'deg' | 'rad'; sigFigMode?: boolean; fractionMode?: boolean } = {}) {
@@ -29,16 +29,17 @@ describe('sum and prod become Σ and Π', () => {
     ['product', 'product'],
     ['produce', 'produce'],
     ['x_sum', 'x_sum'],
-    ['sum2', 'sum2'],
+    ['sum2', 'Σ2'],
     ['\\sum_{n=1}^{3} n', '\\sum_{n=1}^{3} n'],
     ['\\prod_{n=1}^{3} n', '\\prod_{n=1}^{3} n'],
   ])('%s → %s', (typed, shown) => {
     expect(typeKeys(typed)).toBe(shown)
   })
 
-  it('waits at the caret, since sum may still grow into summary', () => {
-    expect(prettyTokens('sum', undefined, 3)).toBe('sum')
-    expect(prettyTokens('sum ', undefined, 4)).toBe('Σ ')
+  it('turns into Σ at once, and back into a word if it grows into summary', () => {
+    expect(prettyTokens('sum', 3)).toBe('Σ')
+    expect(typeKeys('summary')).toBe('summary')
+    expect(prettyTokens('sum ', 4)).toBe('Σ ')
   })
 
   it('keeps the words when words are kept', () => {

@@ -12,6 +12,7 @@ import {
 import { alignDecimals } from '../lib/decimalAlign'
 import { keepFocus } from '../lib/dom'
 import type { HistoryRow } from '../lib/history'
+import { MathText } from './Bounds'
 import { RadicalText } from './Radical'
 
 type Props = {
@@ -23,6 +24,8 @@ type Props = {
   onInsert: (text: string) => void
   onInsertExpr: (index: number) => void
   onInsertAnswer: (index: number) => void
+  // rows before this stay hidden; the recent view is a tail of the tape
+  from?: number
 }
 
 // a list of roots or a message doesn't line up on a decimal point
@@ -44,15 +47,15 @@ function answerTitle(row: HistoryRow, answerForm: AnswerForm): string {
   return 'Insert approximation at the cursor'
 }
 
-export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, onInsert, onInsertExpr, onInsertAnswer }: Props) {
+export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, onInsert, onInsertExpr, onInsertAnswer, from = 0 }: Props) {
   const singles = alignDecimals(
-    history.map((row) =>
-      row.kind === 'definition' || unaligned(row) || hasDualAnswer(row) ? null : prettyAnswer(visibleAnswer(row, answerForm)),
+    history.map((row, i) =>
+      i < from || row.kind === 'definition' || unaligned(row) || hasDualAnswer(row) ? null : prettyAnswer(visibleAnswer(row, answerForm)),
     ),
   )
   return (
     <div className="tape" ref={tapeRef} aria-label="Calculation history">
-      {history.map((row, i) => (
+      {history.map((row, i) => i < from ? null : (
         <div className={`tape-row ${selected === i ? 'selected' : ''}`} data-hist={i} key={row.id}>
           <button
             type="button"
@@ -61,7 +64,7 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
             onMouseDown={keepFocus}
             onClick={() => onInsertExpr(i)}
           >
-            <RadicalText text={row.expr} />
+            <MathText text={row.expr} />
           </button>
           {hasDualAnswer(row) ? (
             <div className="tape-a-dual" role="group" aria-label="History answer">

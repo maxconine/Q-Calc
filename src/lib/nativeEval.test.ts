@@ -20,12 +20,12 @@ describe('mergeLiveAnswer', () => {
 
   it('prefers SoulverCore for natural-language phrases even if JS also answered', () => {
     expect(
-      mergeLiveAnswer('what is 40% of 90', '36', 36, {
-        expr: 'what is 40% of 90',
-        display: '36',
-        n: 36,
+      mergeLiveAnswer('tip of 15% on 80', '1', 1, {
+        expr: 'tip of 15% on 80',
+        display: '92',
+        n: 92,
       }),
-    ).toEqual({ display: '36', n: 36 })
+    ).toEqual({ display: '92', n: 92 })
   })
 
   it('keeps the JS engine for unit products even if SoulverCore also answered', () => {
@@ -54,13 +54,13 @@ describe('mergeLiveAnswer', () => {
     )
   })
 
-  it('shows a unit conversion failure from SoulverCore', () => {
+  it('never lets SoulverCore answer unit input, even with an error', () => {
     expect(
       mergeLiveAnswer('10 meters to kilograms', '', undefined, {
         expr: '10 meters to kilograms',
         display: 'Error: incompatible units',
       }),
-    ).toEqual({ display: 'improper unit conversion' })
+    ).toEqual({ display: '' })
   })
 
   it('clears the answer when the field is empty', () => {
@@ -113,7 +113,6 @@ describe('usableNativeDisplay', () => {
 
 describe('looksLikeNaturalLanguage', () => {
   it('detects Soulver-style phrases', () => {
-    expect(looksLikeNaturalLanguage('what is 40% of 90')).toBe(true)
     expect(looksLikeNaturalLanguage('$10 for lunch + 15% tip')).toBe(true)
     expect(looksLikeNaturalLanguage('3:45pm + 4 hr 10 min')).toBe(true)
   })
@@ -148,7 +147,7 @@ describe('mergeLiveAnswer', () => {
       expect(mergeLiveAnswer(expr, '1', 1, { expr, display: '9', n: 9 })).toEqual({ display: '1', n: 1 })
     },
   )
-  it.each(['what is 10% of 50', 'what is 20% of 80', "what's 15% of 40", '40 is what % of 90', '$5 for lunch + 10% tip'])(
+  it.each(['40 is what % of 90', '$5 for lunch + 10% tip', '20% off 50', '3 weeks from today'])(
     'prefers native NLP for %s',
     (expr) => {
       expect(mergeLiveAnswer(expr, '1', 1, { expr, display: '9', n: 9 })).toEqual({ display: '9', n: 9 })
@@ -166,10 +165,8 @@ describe('mergeLiveAnswer', () => {
   it.each(['', ' ', '   ', '\t'])('clears blank %j', (expr) => {
     expect(mergeLiveAnswer(expr, '4', 4, { expr: '2+2', display: '4', n: 4 })).toEqual({ display: '' })
   })
-  it.each(['10 m to kg', '2 kg to m', '1 J to m'])('maps native unit error for %s', (expr) => {
-    expect(mergeLiveAnswer(expr, '', undefined, { expr, display: 'Error: incompatible units' })).toEqual({
-      display: 'improper unit conversion',
-    })
+  it.each(['10 m to kg', '2 kg to m', '1 J to m'])('leaves the unit error to js for %s', (expr) => {
+    expect(mergeLiveAnswer(expr, '', undefined, { expr, display: 'Error: incompatible units' })).toEqual({ display: '' })
   })
   it.each(Array.from({ length: 60 }, (_, i) => `2+${i}`))('js wins arithmetic %s', (expr) => {
     expect(mergeLiveAnswer(expr, String(iFrom(expr)), iFrom(expr), { expr, display: '9', n: 9 })).toEqual({
@@ -248,17 +245,12 @@ describe('usableNativeDisplay', () => {
 
 describe('looksLikeNaturalLanguage', () => {
   it.each([
-    'what is 40% of 90',
-    'what is 10% of 20',
-    "what's 5% of 80",
-    'whats 12% of 50',
     '$10 for lunch + 15% tip',
     '$20 lunch + 20% tip',
     '3:45pm + 4 hr',
     '9:00am + 1 hr',
     '10:30 pm - 15 min',
     '20% off 40',
-    '15% of 200',
     'tip 18%',
     'lunch 12',
     'today + 1 day',
@@ -267,7 +259,6 @@ describe('looksLikeNaturalLanguage', () => {
     'percent of 50',
     '3 people * $20',
     '2 nights * $100',
-    'from 3 to 5',
     'until 6pm',
     'between 1 and 2',
     '5 per person',
@@ -314,8 +305,8 @@ describe('looksLikeNaturalLanguage', () => {
   ])('scientific %s', (expr) => {
     expect(looksLikeNaturalLanguage(expr)).toBe(false)
   })
-  it.each(Array.from({ length: 20 }, (_, i) => `what is ${i}% of 100`))('detects %s', (expr) => {
-    expect(looksLikeNaturalLanguage(expr)).toBe(true)
+  it.each(Array.from({ length: 20 }, (_, i) => `what is ${i}% of 100`))('leaves %s to js', (expr) => {
+    expect(looksLikeNaturalLanguage(expr)).toBe(false)
   })
   it.each(Array.from({ length: 20 }, (_, i) => `sqrt(${i})`))('scientific extra %s', (expr) => {
     expect(looksLikeNaturalLanguage(expr)).toBe(false)
@@ -472,12 +463,52 @@ describe('calculus stays in the js engine', () => {
     expect(looksLikeNaturalLanguage('integral of x^2 from 0 to 1')).toBe(false)
     expect(looksLikeNaturalLanguage('integral of x^2 from 0')).toBe(false)
     expect(looksLikeNaturalLanguage('∫ x from 0 to 1')).toBe(false)
-    expect(looksLikeNaturalLanguage('from 2 to 3')).toBe(true)
+    expect(looksLikeNaturalLanguage('from 2 to 3')).toBe(false)
   })
 
   it('a blank calculus answer is not filled in by soulvercore', () => {
     const native = { expr: '∫0..1 1/x', display: '0', n: 0 }
     expect(mergeLiveAnswer('∫0..1 1/x', '', undefined, native)).toEqual({ display: '', n: undefined })
     expect(mergeLiveAnswer('∫0..1 x', '0.5', 0.5, { ...native, expr: '∫0..1 x' })).toEqual({ display: '0.5', n: 0.5 })
+  })
+})
+
+describe('soulvercore only answers what js cannot read', () => {
+  it.each([
+    'tip of 15% on 80',
+    '20% off 50',
+    '10% on 200',
+    '50 as a % of 200',
+    '3 weeks from today',
+    '9am + 5 hours',
+    '3pm EST in PST',
+    'time in Tokyo',
+    'days until christmas',
+    'june 5 to july 1',
+    '2:30 + 1:45',
+    '$50 in euros',
+    '50 USD in EUR',
+  ])('allows %s', (expr) => {
+    expect(looksLikeNaturalLanguage(expr)).toBe(true)
+  })
+  it.each([
+    '17 % 5',
+    'pi = 3',
+    '1 = 2',
+    'x + 2 = 5',
+    '3!!',
+    '10 c + 10 c',
+    '5 µ',
+    'max(3 m, 2)',
+    '5 miles per hour',
+    '5 pounds to kg',
+    'what is 15% of 200',
+    'what is sqrt(2)',
+    '15% of 200',
+    'from 3 to 5',
+    '100 minus 20%',
+  ])('keeps %s away from it', (expr) => {
+    expect(looksLikeNaturalLanguage(expr)).toBe(false)
+    expect(mergeLiveAnswer(expr, '', undefined, { expr, display: '2', n: 2 })).toEqual({ display: '' })
   })
 })

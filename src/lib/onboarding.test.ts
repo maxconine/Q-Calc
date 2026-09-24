@@ -89,7 +89,7 @@ describe('rotation', () => {
     }
     expect(evaluateSheet(['5 ft 10 in to cm'])[0]?.display).toBe('177.8 cm')
     expect(evaluateSheet(['80 + 15%'])[0]?.display).toBe('92')
-    expect(evaluateSheet([prettyTokens('(5.0 +- 0.2) * 3')])[0]?.display).toBe('15.0 ± 0.6')
+    expect(evaluateSheet([prettyTokens('(5.0 +/- 0.2) * 3')])[0]?.display).toBe('15.0 ± 0.6')
   })
 
   it('example answers show exact ≈ approx when there are two', () => {
@@ -211,7 +211,7 @@ describe('? sheet', () => {
   })
 
   it('every thing to type works', () => {
-    for (const expr of ['5 ft to cm', '80 + 15%', '5 +- 0.2', '5 -+ 0.2', 'x = 5', 'gcf(12, 18)', 'lcm(4, 6)']) {
+    for (const expr of ['5 ft to cm', '80 + 15%', '5 +/- 0.2', '5 -/+ 0.2', 'x = 5', 'gcf(12, 18)', 'lcm(4, 6)']) {
       expect(evaluateSheet([prettyTokens(expr)])[0]?.display, expr).toBeTruthy()
     }
   })

@@ -4,10 +4,14 @@ import { COMPLETION_FUNCTIONS, COMPLETION_UNITS, completionFor } from './complet
 
 describe('completionFor', () => {
   it('finishes function names with an open paren', () => {
-    expect(completionFor('sq')).toBe('rt(')
     expect(completionFor('2 + co')).toBe('s(')
-    expect(completionFor('2sq')).toBe('rt(')
     expect(completionFor('fac')).toBe('torial(')
+  })
+
+  it('leaves sqrt and sum open, since √ and Σ need no parens', () => {
+    expect(completionFor('sq')).toBe('rt')
+    expect(completionFor('2sq')).toBe('rt')
+    expect(completionFor('su')).toBe('m')
   })
 
   it('finishes unit names', () => {

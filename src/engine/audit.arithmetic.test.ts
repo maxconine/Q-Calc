@@ -194,8 +194,8 @@ describe('audit: factorial', () => {
     expectNum('1+5!', 121)
   })
 
-  it('171! overflows to infinity, not a finite number', () => {
-    expect(shown('171!')).toBe('∞')
+  it('171! says overflow, not a finite number', () => {
+    expect(shown('171!')).toBe('overflow')
   })
 
   it('negative integers have no factorial', () => {
@@ -308,7 +308,6 @@ describe('audit: undefined and overflow', () => {
   })
 
   it('a finite overflow is not shown as a number', () => {
-    const d = shown('10^400')
-    expect(d === '' || d === 'undefined' || d === '∞').toBe(true)
+    expect(shown('10^400')).toBe('overflow')
   })
 })

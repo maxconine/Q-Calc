@@ -592,10 +592,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let composerTop = frame.maxY - sizeAnchorTop
         frame.size = NSSize(width: overlayWidth, height: h)
         frame.origin.y = composerTop + nextAnchor - h
+        // the whole panel stays on the visible screen; if it can't fit, the top wins
         if let screen = panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
-            if frame.maxY > screen.maxY {
-                frame.origin.y = screen.maxY - h
-            }
+            frame.origin.y = min(max(frame.origin.y, screen.minY), screen.maxY - h)
+            frame.origin.x = min(max(frame.origin.x, screen.minX), screen.maxX - frame.width)
         }
         sizeAnchorTop = nextAnchor
         panel.setFrame(frame, display: true)

@@ -35,12 +35,12 @@ struct GeneralSettingsView: View {
                     Text("Dark").tag("dark")
                 }
                 Picker(selection: bind(\.historyShow, AppSettings.setHistoryShow(_:notifyWeb:))) {
-                    Text("When used recently").tag("recent")
+                    Text("Recent calculations").tag("recent")
                     Text("Always").tag("always")
                     Text("Only on ↑").tag("arrow")
                 } label: {
                     Text("Show history")
-                    Text("Recently means the last 2 minutes")
+                    Text("Recent means the last 2 minutes")
                 }
                 Picker("Enter on a history row inserts", selection: bind(\.historyInsert, AppSettings.setHistoryInsert(_:notifyWeb:))) {
                     Text("Expression").tag("expr")

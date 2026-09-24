@@ -2162,9 +2162,11 @@ suite('Month abbreviation', [
 ])
 
 suite('Digital units keep their dimension', [
-  { name: '1 kb', input: '1 kb', expected: 1, unit: 'kB' },
-  { name: '2 kb + 1 kb', input: '2 kb + 1 kb', expected: 3, unit: 'kB' },
-  { name: '2 gb * 3', input: '2 gb * 3', expected: 6, unit: 'GB' },
+  { name: '1 kb', input: '1 kb', expected: 1, unit: 'kb' },
+  { name: '1 kB', input: '1 kB', expected: 1, unit: 'kB' },
+  { name: '2 kb + 1 kb', input: '2 kb + 1 kb', expected: 3, unit: 'kb' },
+  { name: '2 gb * 3', input: '2 gb * 3', expected: 6, unit: 'Gb' },
+  { name: '2 GB * 3', input: '2 GB * 3', expected: 6, unit: 'GB' },
   { name: '1 gb / 1 mb', input: '1 gb / 1 mb', expected: 1000, unit: /^1000$/ },
   { name: '1 gib / 1 mib', input: '1 gib / 1 mib', expected: 1024, unit: /^1024$/ },
 ])
@@ -2303,5 +2305,13 @@ describe('a rate right after an amount stays one quantity', () => {
     expect(evaluateLine('32 GB / 4 MB/s to min').display).toBe('133.333333333 min')
     expect(evaluateLine('5 m/s/s').display).toBe('5 m/s²')
     expect(evaluateLine('10 m / 2 s').display).toBe('5 m/s')
+  })
+})
+
+describe('Cal is the food calorie', () => {
+  it('reads capital Cal as a kilocalorie and cal as the small one', () => {
+    expect(evaluateLine('2000 Cal to kJ').display).toBe('8368 kJ')
+    expect(evaluateLine('1 cal to J').display).toBe('4.184 J')
+    expect(evaluateLine('500 cal to Cal').display).toBe('0.5 kcal')
   })
 })

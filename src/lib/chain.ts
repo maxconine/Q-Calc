@@ -1,6 +1,9 @@
+import { parseFunctionDef } from '../engine/evaluate'
+import { answerAmong } from './answer'
+
 // an operator typed first continues from the last answer, like pressing × after = on a calculator.
-// a leading minus only chains with a space after it: `-3` is negative three, `- 3` is ans minus three
-const CHAIN_OP = /^\s*(?:[*×·/÷^+!]|[-−]\s)/
+// a leading minus never does: `-3` and `- 3` are both negative three
+const CHAIN_OP = /^\s*[*×·/÷^+!]/
 const CHAIN_CONVERT = /^\s*(?:in|to)\s+\S/i
 const PLAIN_UNSIGNED = /^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
 
@@ -24,4 +27,10 @@ export function chainedHistoryExpr(q: string, plain: string): string {
   const loose = /^[+\-−]/.test(rest)
   const base = loose || PLAIN_UNSIGNED.test(plain) ? plain : `(${plain})`
   return `${base}${rest}`
+}
+
+// a typed `ans` is written out in the tape too; a function body keeps it, since it reads ans when called
+export function ansWrittenOut(expr: string, plain: string): string {
+  if (!/\bans\b/i.test(expr) || parseFunctionDef(expr.trim())) return expr
+  return expr.replace(/\bans\b/gi, answerAmong(plain, /^\s*ans\s*$/i.test(expr)))
 }

@@ -185,8 +185,35 @@ function powmod(b: number, e: number, m: number): number {
 /** A whole `3^100 mod 7` term only, not `2*3^100 mod 7` or `3^100 mod 7^2`. */
 const POW_MOD_RE = /(?<=(?:^|[(,+]|[\w)]\s*-)\s*)(\d+)\s*\^\s*(\d+)\s*mod\s*(\d+)(?![\d.]|\s*[(^!])/g
 
-// `7 mod 3` parses as mathjs's own operator, so it needs the same convention
-math.import({ mod: modulo }, { override: true })
+/** An odd root of a negative is real: `(-8)^(1/3)` is -2 and `(-8)^(2/3)` is 4; an even one stays undefined. */
+function realPow(a: number, b: number): number {
+  if (a === 0 && b < 0) return Number.NaN
+  if (a >= 0 || Number.isInteger(b)) return a ** b
+  const r = asRatio(b)
+  if (!r || r[1] % 2 === 0) return Number.NaN
+  const v = (-a) ** b
+  return Math.abs(r[0]) % 2 === 0 ? v : -v
+}
+
+const mathDivide = math.divide
+const mathPow = math.pow
+
+// `7 mod 3` parses as mathjs's own operator, so it needs the same convention; dividing by zero is
+// undefined here and never infinity, so any infinity left over is a real overflow
+math.import(
+  {
+    mod: modulo,
+    divide: math.typed('divide', {
+      'number, number': (a: number, b: number) => (b === 0 ? Number.NaN : a / b),
+      'any, any': (a: unknown, b: unknown) => mathDivide(a as number, b as number),
+    }),
+    pow: math.typed('pow', {
+      'number, number': realPow,
+      'any, any': (a: unknown, b: unknown) => mathPow(a as number, b as number),
+    }),
+  },
+  { override: true },
+)
 
 // mathjs's own nCr overflows inside (NaN for nCr(1000, 500)) even when the answer fits a float
 function combinationsFloat(n: number, k: number): number {
@@ -480,12 +507,17 @@ function rewriteFactorial(expr: string): string {
 
 const MAX_LIST_SHOWN = 16
 
+function listEntry(v: number): string {
+  if (Number.isNaN(v)) return 'undefined'
+  return Number.isFinite(v) ? formatNumber(v) : 'overflow'
+}
+
 function formatList(values: number[]): string {
   if (values.length <= MAX_LIST_SHOWN) {
-    return `[${values.map((v) => formatNumber(v)).join(', ')}]`
+    return `[${values.map(listEntry).join(', ')}]`
   }
-  const head = values.slice(0, 6).map((v) => formatNumber(v))
-  const tail = values.slice(-4).map((v) => formatNumber(v))
+  const head = values.slice(0, 6).map(listEntry)
+  const tail = values.slice(-4).map(listEntry)
   return `[${head.join(', ')}, …, ${tail.join(', ')}]`
 }
 
@@ -498,7 +530,7 @@ function snapInt(n: number): number {
   return n
 }
 
-function fromMathjs(v: unknown, overflowOk: boolean): Value | null {
+function fromMathjs(v: unknown): Value | null {
   if (typeof v === 'number') {
     if (Number.isNaN(v)) return textVal('undefined')
     return num(snapInt(v))
@@ -512,7 +544,7 @@ function fromMathjs(v: unknown, overflowOk: boolean): Value | null {
     return num(chop(re))
   }
   if (Array.isArray(v) || isMatrix(v)) {
-    return textVal(formatList(nums([v]).map((n) => (Number.isFinite(n) || overflowOk ? n : Number.NaN))))
+    return textVal(formatList(nums([v])))
   }
   return null
 }
@@ -623,7 +655,8 @@ function scalarScope(mode: AngleMode | undefined): Record<string, unknown> {
     ln: (x: number) => (x <= 0 ? Number.NaN : Math.log(x)),
     log2: (x: number) => (x <= 0 ? Number.NaN : Math.log2(x)),
     log10: (x: number) => (x <= 0 ? Number.NaN : Math.log10(x)),
-    log: math.log,
+    log: (x: number, base?: number) =>
+      base == null ? math.log(x) : x <= 0 || base <= 0 || base === 1 ? Number.NaN : Math.log(x) / Math.log(base),
     exp: Math.exp,
     sqrt: (x: number) => (x < 0 ? Number.NaN : Math.sqrt(x)),
     cbrt: Math.cbrt,
@@ -775,11 +808,11 @@ function userFunction(def: UserFunction, ctx: ScientificContext, fns: Record<str
   }
 }
 
-/** Only factorials and counts may overflow to ∞; any other infinity (`1/0`) is undefined. */
+/** NaN is undefined; an infinity is a result too big for a double. */
 function finish(v: unknown, expr: string): Value | null {
-  const overflowOk = /!|factorial|combinations|permutations/i.test(expr)
-  const out = fromMathjs(v, overflowOk)
-  if (out?.kind === 'number' && !Number.isFinite(out.n) && !overflowOk) return textVal('undefined')
+  const out = fromMathjs(v)
+  // a typed ∞ is not a result, so it stays undefined
+  if (out?.kind === 'number' && !Number.isFinite(out.n)) return textVal(/Infinity/.test(expr) ? 'undefined' : 'overflow')
   return out
 }
 

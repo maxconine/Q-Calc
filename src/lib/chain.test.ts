@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateLine } from '../engine/evaluate'
-import { chainedExpr, chainedHistoryExpr, chainsFromAnswer } from './chain'
+import { ansWrittenOut, chainedExpr, chainedHistoryExpr, chainsFromAnswer } from './chain'
 
 const num = { plain: '26', unit: false }
 const lb = { plain: '26.5 lb', unit: true }
 
 describe('chainsFromAnswer', () => {
   it('chains a leading operator', () => {
-    for (const q of ['*2', '× 2', '/3', '÷3', '^2', '+5', '!', '- 5']) expect(chainsFromAnswer(q, num)).toBe(true)
+    for (const q of ['*2', '× 2', '/3', '÷3', '^2', '+5', '!']) expect(chainsFromAnswer(q, num)).toBe(true)
   })
 
   it('keeps a leading minus as a negative number', () => {
-    for (const q of ['-3', '-', '-(2+3)', '−3', '-x']) expect(chainsFromAnswer(q, num)).toBe(false)
+    for (const q of ['-3', '- 3', '-', '-(2+3)', '−3', '- x']) expect(chainsFromAnswer(q, num)).toBe(false)
   })
 
   it('needs a last answer', () => {
@@ -34,7 +34,6 @@ describe('chainedExpr', () => {
   it('evaluates through ans at full precision', () => {
     expect(evaluateLine(chainedExpr('*3'), { ans: 1 / 3 }).display).toBe('1')
     expect(evaluateLine(chainedExpr('^2'), { ans: -3 }).display).toBe('9')
-    expect(evaluateLine(chainedExpr('- 5'), { ans: 2 }).display).toBe('-3')
     expect(evaluateLine(chainedExpr('!'), { ans: 4 }).display).toBe('24')
   })
 
@@ -58,5 +57,17 @@ describe('chainedHistoryExpr', () => {
   it('saves an expression that gives the same answer', () => {
     expect(evaluateLine(chainedHistoryExpr('^2', '-3')).display).toBe('9')
     expect(evaluateLine(chainedHistoryExpr('*2', '26.5 lb')).display).toBe(evaluateLine('26.5 lb * 2').display)
+  })
+})
+
+describe('ansWrittenOut', () => {
+  it('writes the answer into the tape row, grouped where it needs to be', () => {
+    expect(ansWrittenOut('ans*3', '0.333333333333')).toBe('0.333333333333*3')
+    expect(ansWrittenOut('ans^2', '-3')).toBe('(-3)^2')
+    expect(ansWrittenOut('ans', '-3')).toBe('-3')
+    expect(ansWrittenOut('2 + 2', '5')).toBe('2 + 2')
+  })
+  it('leaves a function body reading ans when called', () => {
+    expect(ansWrittenOut('f(x) = x + ans', '5')).toBe('f(x) = x + ans')
   })
 })

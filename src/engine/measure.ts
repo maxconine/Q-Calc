@@ -4,8 +4,8 @@ import { fillParens } from './parens'
 import { evalScientific, preprocessAscii, rewriteTypesetMul, type AngleMode } from './scientific'
 import type { Meas, UserFunction } from './types'
 
-/** Exact parts carry infinite sig figs and decimal places. */
-type M = { v: number; sig: number; dp: number; unc: number }
+/** Exact parts carry infinite sig figs and decimal places. `digits` marks a ± still exactly as typed. */
+type M = { v: number; sig: number; dp: number; unc: number; digits?: string }
 
 export type MeasureContext = {
   ans?: number
@@ -25,7 +25,7 @@ const SIG_FNS = new Set(
 )
 // keep as many decimal places as the argument has sig figs
 const LOG_FNS = new Set(['ln', 'log', 'log10', 'log2'])
-const MIN_SIG_FNS = new Set(['min', 'max', 'mean', 'median', 'hypot'])
+const MIN_SIG_FNS = new Set(['min', 'max', 'mean', 'median', 'hypot', 'atan2'])
 const SUM_FNS = new Set(['sum', 'total'])
 const ROOT_POWER: Record<string, number> = { sqrt: 0.5, cbrt: 1 / 3 }
 
@@ -59,12 +59,18 @@ export function literalMeas(text: string): M {
   return v === 0 ? { v, sig: 0, dp, unc: 0 } : { v, sig: Math.max(1, digits.length), dp, unc: 0 }
 }
 
+/** `0.10` → `10`, `1e-1` → `1`; a whole number's trailing zeros don't count (`10` → `1`). */
+export function typedDigits(text: string): string {
+  const [mant = ''] = text.toLowerCase().split('e')
+  const digits = mant.replace('.', '').replace(/^0+/, '')
+  return mant.includes('.') ? digits : digits.replace(/0+$/, '')
+}
+
 function fromStored(v: number, meas: Meas | undefined): M {
   if (!meas) return exact(v)
   const unc = meas.unc ?? 0
-  if (meas.dp != null) return byDp(v, meas.dp, unc)
-  if (meas.sig != null) return bySig(v, meas.sig, unc)
-  return { ...exact(v), unc }
+  const m = meas.dp != null ? byDp(v, meas.dp, unc) : meas.sig != null ? bySig(v, meas.sig, unc) : { ...exact(v), unc }
+  return meas.uncDigits ? { ...m, digits: meas.uncDigits } : m
 }
 
 function finite(x: unknown): number | undefined {
@@ -72,25 +78,29 @@ function finite(x: unknown): number | undefined {
 }
 
 /** sig and dp are kept only as a pair; nothing worth storing gives undefined. */
-function storedMeas(sig: number | undefined, dp: number | undefined, unc: number | undefined): Meas | undefined {
+function storedMeas(sig: number | undefined, dp: number | undefined, unc: number | undefined, uncDigits?: string): Meas | undefined {
   const out: Meas = {}
   if (sig != null && dp != null) {
     out.sig = sig
     out.dp = dp
   }
-  if (unc != null && unc > 0) out.unc = unc
+  if (unc != null && unc > 0) {
+    out.unc = unc
+    if (uncDigits) out.uncDigits = uncDigits
+  }
   return out.sig == null && out.unc == null ? undefined : out
 }
 
 function toStored(m: M): Meas | undefined {
-  return storedMeas(finite(m.sig), finite(m.dp), m.unc)
+  return storedMeas(finite(m.sig), finite(m.dp), m.unc, m.digits)
 }
 
 /** For metadata read back from history JSON. */
 export function sanitizeMeas(raw: unknown): Meas | undefined {
   if (!raw || typeof raw !== 'object') return undefined
   const r = raw as Record<string, unknown>
-  return storedMeas(finite(r.sig), finite(r.dp), finite(r.unc))
+  const digits = typeof r.uncDigits === 'string' && /^[1-9]\d{0,15}$/.test(r.uncDigits) ? r.uncDigits : undefined
+  return storedMeas(finite(r.sig), finite(r.dp), finite(r.unc), digits)
 }
 
 export function hasPlusMinus(text: string): boolean {
@@ -167,7 +177,8 @@ export function measure(text: string, ctx: MeasureContext = {}): { v: number; me
   const hold = (m: M) => `(__L${literals.push(m) - 1})`
   src = src.replace(PLUS_MINUS_RE, (_, value: string, u: string, pct?: string) => {
     const m = literalMeas(value)
-    return hold({ ...m, unc: Math.abs(pct ? (m.v * Number(u)) / 100 : Number(u)) })
+    if (pct) return hold({ ...m, unc: Math.abs((m.v * Number(u)) / 100) })
+    return hold({ ...m, unc: Number(u), digits: typedDigits(u) })
   })
   // any other ± (`x ± 1`, `(1+2) ± 1`) is not modelled; no answer beats one that drops the ±
   if (src.includes('±')) return null
@@ -262,11 +273,25 @@ function roundSig(v: number, sig: number): number {
   return v === 0 || !Number.isFinite(sig) || sig < 1 || sig > 16 ? v : Number(v.toPrecision(sig))
 }
 
-/** `10.0 ± 0.7`: the uncertainty at one sig fig, the value to the same place. */
-export function formatUncertain(v: number, unc: number): string | null {
+/** Whether `unc` still has exactly the typed digits, perhaps moved by a power of ten (`0.1 m` → `10 cm`). */
+function isTyped(unc: number, digits: string | undefined): boolean {
+  if (!digits || digits.length > 16) return false
+  const s = unc.toPrecision(digits.length)
+  if (Math.abs(Number(s) - unc) > 1e-9 * unc) return false
+  return (s.split('e')[0] ?? '').replace('.', '').replace(/^0+/, '') === digits
+}
+
+/**
+ * `10.0 ± 0.7`: the uncertainty at one sig fig, or two when it leads with a 1 (`5.0 ± 0.14`), the value to the same place.
+ * A ± still as typed never gains a digit (`10 ± 1`, not `10.0 ± 1.0`).
+ */
+export function formatUncertain(v: number, unc: number, uncDigits?: string): string | null {
   if (!Number.isFinite(v) || !(unc > 0) || !Number.isFinite(unc)) return null
-  const u = Number(unc.toPrecision(1))
-  const place = mag(u)
+  const two = Number(unc.toPrecision(2))
+  let figs = /^[0.]*1/.test(String(two)) ? 2 : 1
+  if (isTyped(unc, uncDigits)) figs = Math.min(figs, uncDigits!.length)
+  const u = Number(unc.toPrecision(figs))
+  const place = mag(u) - figs + 1
   const decimals = Math.max(0, Math.min(20, -place))
   const value = place > 0 ? (Math.round(v / 10 ** place) * 10 ** place).toFixed(0) : v.toFixed(decimals)
   return `${unsigned(value)} ± ${u.toFixed(decimals)}`
@@ -276,7 +301,7 @@ export function formatUncertain(v: number, unc: number): string | null {
 export function formatMeasured(v: number, meas: Meas | undefined, sigFigMode: boolean): string | null {
   if (!meas) return null
   const sig = sigFigMode && meas.sig != null ? meas.sig : undefined
-  if (meas.unc) return formatUncertain(sig == null ? v : roundSig(v, sig), meas.unc)
+  if (meas.unc) return formatUncertain(sig == null ? v : roundSig(v, sig), meas.unc, meas.uncDigits)
   if (sig == null) return null
   return formatSig(v, sig, meas.dp ?? Infinity)
 }

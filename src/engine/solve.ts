@@ -560,6 +560,10 @@ class Solver {
     })
     if (!ok) return undefined
     const term = `${q === 1 ? '' : q}sqrt(${rad})`
+    if (p === 0 && d !== 1 && this.ctx.rationalize === false) {
+      const plain = exactForm(values[1]!, { rationalize: false })
+      if (plain) return `±${plain}`
+    }
     if (p === 0) return d === 1 ? `±${term}` : `±${term}/${d}`
     return d === 1 ? `${p} ± ${term}` : `(${p} ± ${term})/${d}`
   }
