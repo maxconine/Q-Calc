@@ -5,7 +5,7 @@ import { isUnitName } from '../engine/units'
 export const COMPLETION_FUNCTIONS = [
   'sqrt', 'sin', 'cos', 'tan', 'log', 'abs', 'exp', 'floor', 'ceil', 'round', 'factorial',
   'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh', 'arcsin', 'arccos', 'arctan',
-  'gcd', 'lcm', 'mean', 'median', 'sum', 'max', 'min', 'nthRoot', 'hypot', 'combinations', 'permutations',
+  'gcd', 'gcf', 'lcf', 'lcm', 'mean', 'median', 'sum', 'max', 'min', 'nthRoot', 'hypot', 'combinations', 'permutations',
 ]
 
 export const COMPLETION_UNITS = [

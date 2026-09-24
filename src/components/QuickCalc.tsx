@@ -4,6 +4,7 @@ import { chemCopyText, isReactionInput } from '../engine/chem'
 import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
+import { isSysCommand, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
 import { inferParens } from '../engine/parens'
@@ -15,14 +16,22 @@ import { applyTheme } from '../lib/theme'
 import { AppearanceSettings } from './AppearanceSettings'
 import { EdgeTools } from './EdgeTools'
 import { GraphPanel } from './GraphPanel'
+import { SystemPanel } from './SystemPanel'
 import { CheatSheet, HistoryTape } from './HistoryTape'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
 import { LiveAnswer } from './LiveAnswer'
 import { PeriodicCard } from './PeriodicCard'
 import { RationalizeSettings } from './RationalizeSettings'
+import { FourTwentySmoke } from './FourTwentySmoke'
+import { SixtyNineFold } from './SixtyNineFold'
 import { SixtySevenArms } from './SixtySevenArms'
+import { typstAnswer } from '../lib/typstMath'
+import { TypstPreview } from './TypstPreview'
+import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { UnitSettings } from './UnitSettings'
+import { useFourTwentySmoke } from './useFourTwentySmoke'
+import { useSixtyNineFold } from './useSixtyNineFold'
 import { useSixtySevenArms } from './useSixtySevenArms'
 import { useTapeWheel } from './useTapeWheel'
 import { useAnswerForms } from './useAnswerForms'
@@ -39,7 +48,7 @@ import { blankReason, type Span } from '../lib/blankReason'
 import { ansWrittenOut, chainedExpr, chainedHistoryExpr, chainsFromAnswer } from '../lib/chain'
 import { hideAction, shouldRestoreDraft } from '../lib/draft'
 import { nativeHandler } from '../lib/bridge'
-import { copyText, highlightedText, inputHighlight } from '../lib/dom'
+import { copyText, highlightedText, inputHighlight, installSearchBarCopy, searchBarCopy } from '../lib/dom'
 import {
   evaluateNative,
   hasNativeEval,
@@ -168,7 +177,7 @@ function rowCopyText(row: HistoryRow, answerForm: AnswerForm): string {
 function lastAnswerRow(history: HistoryRow[]): HistoryRow | undefined {
   for (let i = history.length - 1; i >= 0; i--) {
     const row = history[i]
-    if (!row || row.kind === 'definition' || row.kind === 'function') continue
+    if (!row || row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     // `ans` never becomes "no real solution"
     if (row.solve && row.solve.outcome !== 'roots') continue
     if ((row.n != null && Number.isFinite(row.n)) || row.display.trim()) return row
@@ -208,6 +217,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [inputSel, setInputSel] = useState<{ start: number; end: number } | null>(null)
   // the browser build's periodic table; the mac app opens its own window instead
   const [periodicOpen, setPeriodicOpen] = useState(false)
+  // equation fields for `sys N`; null until enter opens them
+  const [sysLines, setSysLines] = useState<string[] | null>(null)
+  const sysLinesRef = useRef<string[] | null>(null)
+  sysLinesRef.current = sysLines
 
   const onboardingRef = useRef<Onboarding | null>(null)
   if (!onboardingRef.current) onboardingRef.current = loadOnboarding()
@@ -283,6 +296,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setNativeLive(null)
     setPrefixUnit(null)
     setHelpOpen(false)
+    setSysLines(null)
     mathRef.current?.setValue('')
     mathRef.current?.focus()
   }, [stopDraftTimer])
@@ -341,6 +355,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const helpShown = helpOpen || isHelpCommand(q)
   const cheats = useMemo(() => cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE)), [nativeInfo.hotkey])
   const graphCmd = isGraphCommand(q)
+  const sysCmd = isSysCommand(q)
   const periodicCmd = isPeriodicCommand(q)
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
@@ -375,16 +390,27 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings],
   )
   const sheet = useMemo(() => {
-    if (graphCmd || periodicCmd) return []
+    if (graphCmd || periodicCmd || sysCmd) return []
     return evaluateSheet([chained ? chainedExpr(q) : q], evalOptions)
-  }, [q, chained, graphCmd, periodicCmd, evalOptions])
+  }, [q, chained, graphCmd, periodicCmd, sysCmd, evalOptions])
+
+  const sysParsed = useMemo(() => (sysCmd ? sysCommand(q) : null), [sysCmd, q])
+  const sysAnswer = useMemo((): SystemAnswer | null => {
+    if (!sysLines || !sysParsed || !('count' in sysParsed) || sysParsed.count !== sysLines.length) return null
+    return solveLive(sysLines)
+  }, [sysLines, sysParsed])
+
+  const sysShown = sysAnswer?.display ?? (sysParsed && 'hint' in sysParsed && !sysLines ? sysParsed.hint : '')
+  const sysShownRef = useRef('')
+  sysShownRef.current = sysShown
+  const sysMessage = Boolean(sysCmd && (sysAnswer?.message || (sysParsed && 'hint' in sysParsed && !sysLines)))
 
   const live = sheet[sheet.length - 1]
   let jsDisplay = ''
   if (graphCmd) jsDisplay = graphIntent?.label ? `graph ${graphIntent.label}` : ''
   else if (q.trim()) jsDisplay = live?.display ?? ''
-  const jsN = graphCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
-  const nativeUsable = !graphCmd && !periodicCmd && !chained && soulverAngleSafe(q, settings.angleMode)
+  const jsN = graphCmd || sysCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
+  const nativeUsable = !graphCmd && !sysCmd && !periodicCmd && !chained && soulverAngleSafe(q, settings.angleMode)
   const merged = mergeLiveAnswer(q, jsDisplay, jsN, nativeUsable ? nativeLive : null)
   // ⌥↑/⌥↓ re-expresses the js answer on its si prefix ladder; what's shown is what's copied and saved
   const jsValue = !graphCmd && jsDisplay && merged.display === jsDisplay ? live?.value : undefined
@@ -402,18 +428,18 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       : null,
   )
   const shownForm = tabForm.form
-  const display = shownForm?.display ?? baseDisplay
-  const liveN = shownForm?.value ? shownForm.value.n : stepped ? stepped.n : merged.n
-  const liveExact = shownForm ? undefined : baseExact
+  const display = sysCmd ? (sysMessage ? '' : sysShown) : (shownForm?.display ?? baseDisplay)
+  const liveN = sysCmd ? undefined : shownForm?.value ? shownForm.value.n : stepped ? stepped.n : merged.n
+  const liveExact = sysCmd ? (sysMessage ? undefined : sysAnswer?.exact) : shownForm ? undefined : baseExact
   // the graph panel already labels the curve, so the answer slot stays empty
-  const shownLive = graphCmd ? '' : visibleAnswer({ display, exact: liveExact }, settings.answerForm)
+  const shownLive = sysCmd ? (sysMessage ? '' : sysShown) : graphCmd ? '' : visibleAnswer({ display, exact: liveExact }, settings.answerForm)
   shownRef.current = shownLive
   const fromJs = Boolean(display) && display === jsDisplay
   const liveSolve = fromJs && live?.kind === 'solve' ? live.solve : undefined
   const rootsOf = liveSolve?.outcome === 'roots' ? liveSolve.variable : undefined
   const steady = useSteadyAnswer(
     q,
-    graphCmd || helpShown || periodicCmd
+    graphCmd || sysCmd || helpShown || periodicCmd
       ? null
       : shownLive && !isImproperUnitConversion(display)
         ? `${rootsOf ? `${rootsOf} = ` : ''}${dualLabel(liveExact, display)}`
@@ -447,14 +473,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [selText, q, graphCmd, evalOptions])
 
   useEffect(() => {
-    if (display || !q.trim() || graphCmd || helpShown || periodicCmd || looksLikeNaturalLanguage(q)) return
+    if (display || !q.trim() || graphCmd || sysCmd || helpShown || periodicCmd || looksLikeNaturalLanguage(q)) return
     const t = window.setTimeout(() => {
       const ok = (text: string) => Boolean(evaluateSheet([chained ? chainedExpr(text) : text], evalOptions)[0]?.display)
       const names = { variables: Object.keys(nativeVars), functions: Object.keys(liveFns) }
       setSquiggle({ q, span: blankReason(q, ok, names) })
     }, SQUIGGLE_IDLE_MS)
     return () => window.clearTimeout(t)
-  }, [q, display, chained, graphCmd, helpShown, periodicCmd, evalOptions, nativeVars, liveFns])
+  }, [q, display, chained, graphCmd, sysCmd, helpShown, periodicCmd, evalOptions, nativeVars, liveFns])
 
   const examples = useMemo(
     () => exampleList(firstRun && nativeInfo.hotkey ? nativeInfo.hotkey : undefined),
@@ -467,6 +493,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
 
   const { shaking: armsShaking, settle: settleArms } = useSixtySevenArms(liveN)
+  const { folding: sixtyNine, settle: settleSixtyNine } = useSixtyNineFold(liveN)
+  const { smoking, settle: settleSmoke } = useFourTwentySmoke(liveN)
 
   useEffect(() => {
     if (!rotation.on) return
@@ -513,6 +541,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [settings])
 
   useEffect(() => {
+    installSearchBarCopy(() => settingsRef.current.typstCopy)
+  }, [])
+
+  useEffect(() => {
     applyTheme(settings.theme)
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = () => {
@@ -554,7 +586,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
 
   const copyOutput = useCallback(() => {
-    const highlighted = mathRef.current?.highlighted() || highlightedText()
+    const fromBar = mathRef.current?.highlighted()
+    if (fromBar) {
+      copyText(searchBarCopy(fromBar))
+      return
+    }
+    const highlighted = highlightedText()
     if (highlighted) {
       copyText(highlighted)
       return
@@ -628,6 +665,21 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setTapeOpen(tapeRestRef.current)
   }, [])
 
+  const openHistorySystem = useCallback((index: number) => {
+    const row = history[index]
+    const lines = row?.kind === 'system' ? row.equations?.slice(0, 5) : undefined
+    if (!lines?.length) return
+    const text = `sys ${lines.length}`
+    sysLinesRef.current = lines
+    qRef.current = text
+    setSysLines(lines)
+    setQ(text)
+    setSelected(null)
+    setTapeOpen(false)
+    setCopied(false)
+    mathRef.current?.setValue(text)
+  }, [history])
+
   const insertHistoryExpr = useCallback(
     (index: number) => {
       const row = history[index]
@@ -659,11 +711,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   // `quiet` is the commit-on-hide path: nobody is looking, so no hint is spent on it
   const commit = useCallback((quiet = false) => {
-    const expr = chainedRef.current || qRef.current
+    const sysNow = sysLinesRef.current
+    const expr = sysNow ? 'sys' : chainedRef.current || qRef.current
     const { display: liveDisplay, exact, n, meas, quantity, solve, fnDef: graphFn, facts } = liveRef.current
     const fnDef = graphFn ?? parseFunctionDef(expr.trim())
     const isGraph = isGraphCommand(expr)
-    const shown = liveDisplay || (fnDef ? fnDefText(fnDef) : '')
+    const written = sysNow?.map((line) => line.trim()).filter(Boolean).join('; ') ?? ''
+    const shown = sysNow ? sysShownRef.current.trim() || written : liveDisplay || (fnDef ? fnDefText(fnDef) : '')
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
     const nextHint = quiet ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...facts })
     updateOnboarding((s) => ({ ...recordCommit(s), hints: s.hints | (nextHint?.bit ?? 0) }))
@@ -673,6 +727,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setHelpOpen(false)
     // enter before the answer settled still gets its one firing
     settleArms(n)
+    settleSmoke(n)
+    settleSixtyNine(n)
     setHistory((prev) => {
       // inline `graph f(x)=...` registers the function; plain `graph expr` is not saved
       if (isGraph && !fnDef) return prev
@@ -696,12 +752,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               meas,
               quantity,
               solve,
+              ...(sysNow ? { kind: 'system' as const, equations: sysNow.slice(0, 5) } : {}),
             },
       )
       if (!nextRow) return prev
       nextRow.at = at
       const last = prev[prev.length - 1]
-      if (last && last.expr === nextRow.expr && last.display === nextRow.display) return [...prev.slice(0, -1), { ...last, at }]
+      const sameSystem = nextRow.kind === 'system' && last?.equations?.join('\n') === nextRow.equations?.join('\n')
+      const same = last && last.expr === nextRow.expr && last.display === nextRow.display && (nextRow.kind !== 'system' || sameSystem)
+      if (same) return [...prev.slice(0, -1), { ...last, at }]
       return persistableHistory([...prev, nextRow])
     })
     tapeUndoRef.current = null
@@ -711,13 +770,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     stopDraftTimer()
     clearStoredDraft()
     setQ('')
+    setSysLines(null)
     setNativeLive(null)
     setPrefixUnit(null)
     mathRef.current?.setValue('')
     mathRef.current?.focus()
     setSelected(null)
     setTapeOpen(tapeRestRef.current)
-  }, [settleArms, stopDraftTimer, updateOnboarding])
+  }, [settleArms, settleSmoke, settleSixtyNine, stopDraftTimer, updateOnboarding])
 
   const stepForm = tabForm.step
   const onTab = useCallback(
@@ -817,6 +877,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [helpOpen, history.length, selected, snapshotCaret, tapeOpen])
 
   const onDown = useCallback((): boolean => {
+    const first = document.querySelector<HTMLInputElement>('.sys-eq')
+    if (sysLinesRef.current?.length && first) {
+      first.focus()
+      const end = first.value.length
+      first.setSelectionRange(end, end)
+      return true
+    }
     if (!tapeOpen) return false
     if (selected == null || selected >= history.length - 1) {
       setSelected(null)
@@ -828,29 +895,27 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [history.length, restoreCaret, selected, tapeOpen])
 
   const onEnter = useCallback((alt = false) => {
+    const opening = sysCommand(qRef.current)
+    if (selected == null && opening && 'count' in opening && sysLinesRef.current?.length !== opening.count) {
+      setSysLines(Array.from({ length: opening.count }, () => ''))
+      return
+    }
+    if (opening && 'count' in opening && sysLinesRef.current?.length === opening.count) {
+      commit()
+      return
+    }
     if (isHelpCommand(qRef.current)) resetToCalculate()
     else if (selected == null && isPeriodicCommand(qRef.current)) {
       if (!openNativePeriodicTable()) setPeriodicOpen(true)
       resetToCalculate()
-    } else if (selected != null && alt) insertHistoryOther(selected)
+    } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
+    else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
     else commit()
-  }, [commit, resetToCalculate, selected, insertHistoryAnswer, insertHistoryOther])
+  }, [commit, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem])
 
-  // esc peels one layer: a tape opened with ↑ or the cheat sheet, then the input; false means nothing was left to hide.
-  // a tape that opened on its own only steps back from a selected row
-  const escapeLayer = useCallback((): boolean => {
-    if ((tapeOpen && !tapeRestRef.current) || selected != null || helpOpen) {
-      setTapeOpen(tapeRestRef.current)
-      setSelected(null)
-      setHelpOpen(false)
-      restoreCaret()
-      return true
-    }
-    if (!qRef.current.trim()) return false
-    resetToCalculate()
-    return true
-  }, [helpOpen, resetToCalculate, restoreCaret, selected, tapeOpen])
+  // esc always leaves the overlay. false tells the mac app to hide; the page does not clear the tape or the input first.
+  const escapeLayer = useCallback((): boolean => false, [])
 
   useEffect(() => {
     calcWindow().__qcalcEscape = escapeLayer
@@ -886,11 +951,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const cmdOnly = e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
       const toggle = ctrlOnly ? CTRL_SETTING_KEYS.get(key) : undefined
       const cmdShift = e.metaKey && e.shiftKey && !e.ctrlKey && !e.altKey
+      const mainInput = e.target instanceof HTMLInputElement && e.target.classList.contains('quick-plain')
       let action: (() => void) | undefined
       if (toggle) action = () => setSettings(toggle)
       else if (ctrlOnly && key === 'c') action = clearHistory
       else if (cmdOnly && key === 'c') action = copyOutput
       else if (cmdShift && key === 'c') action = copyLine
+      else if (cmdOnly && (e.key === 'Backspace' || e.key === 'Delete') && mainInput && sysLinesRef.current) action = resetToCalculate
       else if (cmdOnly && e.key === 'Backspace' && selected != null) action = () => removeRow(selected)
       else if (cmdOnly && key === 'z' && tapeUndoRef.current) action = undoTape
       if (!action) return
@@ -904,7 +971,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       nativeHandler()?.postMessage({ type: 'copy', text })
     }
     const onCopy = (e: ClipboardEvent) => {
-      const highlighted = inputHighlight(e.target) || mathRef.current?.highlighted() || highlightedText()
+      const field = document.querySelector('.quick-plain')
+      const fromBar = inputHighlight(e.target instanceof Element && e.target.classList.contains('quick-plain') ? e.target : field) || mathRef.current?.highlighted()
+      if (fromBar) {
+        putOnClipboard(e, searchBarCopy(fromBar))
+        return
+      }
+      const highlighted = inputHighlight(e.target) || highlightedText()
       if (highlighted) {
         putOnClipboard(e, highlighted)
         return
@@ -933,7 +1006,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1065,6 +1138,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     qRef.current = text
     setQ(text)
+    const opened = sysLinesRef.current
+    if (opened) {
+      const cmd = sysCommand(text)
+      if (!cmd || !('count' in cmd) || cmd.count !== opened.length) setSysLines(null)
+    }
     if (!text.trim()) setPrefixUnit(null)
     if (selected != null && history[selected]?.expr !== text) setSelected(null)
   }
@@ -1086,6 +1164,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           nativeHandler()?.postMessage({ type: 'overControl', on })
         }}
       >
+        <FourTwentySmoke smoking={smoking} />
         <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}>
           {helpShown ? (
             <CheatSheet cheats={cheats} />
@@ -1099,6 +1178,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               onInsert={(text) => insertPlain(text, true)}
               onInsertExpr={insertHistoryExpr}
               onInsertAnswer={insertHistoryAnswer}
+              onOpenSystem={openHistorySystem}
             />
           ) : recentFrom < history.length ? (
             <HistoryTape
@@ -1111,10 +1191,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               onInsert={(text) => insertPlain(text, true)}
               onInsertExpr={insertHistoryExpr}
               onInsertAnswer={insertHistoryAnswer}
+              onOpenSystem={openHistorySystem}
             />
           ) : null}
 
           <div className="composer">
+            <SixtyNineFold active={sixtyNine} />
             <EdgeTools
               settings={settings}
               onToggle={setSettings}
@@ -1147,7 +1229,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: rotation.tick, answer: exampleShown } : null}
-              display={periodicCmd ? PERIODIC_HINT : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1163,14 +1245,36 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
               label={rootsOf}
-              message={periodicCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
+              message={sysMessage || periodicCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}
           </div>
+          {settings.typstPreview ? (
+            <TypstPreview
+              expr={q}
+              answer={graphCmd || periodicCmd ? '' : typstAnswer(liveExact, display)}
+              theme={settings.theme}
+            />
+          ) : null}
           {hint ? (
             <div className="composer-hint" role="status">
               {hint}
             </div>
+          ) : null}
+          {sysLines && sysParsed && 'count' in sysParsed && sysParsed.count === sysLines.length ? (
+            <SystemPanel
+              lines={sysLines}
+              onChange={(index, text) => {
+                setSysLines((prev) => (prev ? prev.map((line, i) => (i === index ? text : line)) : prev))
+              }}
+              onEnter={(index) => {
+                const rows = document.querySelectorAll<HTMLInputElement>('.sys-eq')
+                const next = rows[index + 1]
+                if (next) next.focus()
+                else commit()
+              }}
+              onFocusMain={() => mathRef.current?.focus()}
+            />
           ) : null}
           {graphCmd ? (
             <GraphPanel
@@ -1201,6 +1305,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           <KeepWordsSettings
             value={settings.keepWords}
             onChange={(keepWords) => setSettings((s) => ({ ...s, keepWords }))}
+          />
+          <TypstSettings
+            value={settings.typstPreview}
+            onChange={(typstPreview) => setSettings((s) => ({ ...s, typstPreview }))}
+          />
+          <TypstCopySettings
+            value={settings.typstCopy}
+            onChange={(typstCopy) => setSettings((s) => ({ ...s, typstCopy }))}
           />
           <UnitSettings
             value={settings.defaultUnits}

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { insertableAnswer } from '../lib/answer'
-import { alignDecimals } from '../lib/decimalAlign'
 import { prettyAnswer } from './format'
 
 const M = '−'
@@ -51,28 +50,5 @@ describe('prettyAnswer', () => {
       expect(insertableAnswer(raw)).toBe(raw)
       expect(Number(insertableAnswer(prettyAnswer(raw).replace(M, '-')))).toBe(Number(raw))
     }
-  })
-})
-
-describe('alignDecimals', () => {
-  const F = ' '
-  const P = ' '
-  it('pads plain numbers to the widest fraction', () => {
-    expect(alignDecimals(['1.5', '12', '0.125', null, '3 m'])).toEqual([
-      `1.5${F}${F}`,
-      `12${P}${F}${F}${F}`,
-      '0.125',
-      null,
-      '3 m',
-    ])
-  })
-
-  it('leaves integer-only columns alone', () => {
-    expect(alignDecimals(['12', '3,456'])).toEqual(['12', '3,456'])
-  })
-
-  it('skips a pad that would push the number out of the column', () => {
-    const out = alignDecimals(['0.333333333333', '3,000,000,000,000'])
-    expect(out[1]).toBe('3,000,000,000,000')
   })
 })

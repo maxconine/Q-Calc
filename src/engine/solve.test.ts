@@ -286,3 +286,52 @@ describe('solve budget', () => {
     }
   })
 })
+
+describe('single-equation solve', () => {
+  it('a linear equation uses a stored coefficient', () => {
+    const rows = evaluateSheet(['a = 2', 'a*x = 10'])
+    expect(rows[1]?.display).toBe('5')
+    expect(rows[1]?.solve?.variable).toBe('x')
+    expect(rows[1]?.solve?.roots).toEqual([5])
+  })
+
+  it('solves for the named unknown when two letters appear', () => {
+    const r = line('x + y = 5 for y', { variables: { x: 2 } })
+    expect(r.solve?.variable).toBe('y')
+    expect(r.solve?.roots?.[0]).toBeCloseTo(3, 10)
+  })
+
+  it.each([
+    ['x^2 = 0', '0'],
+    ['-3x = 9', '-3'],
+    ['2^x = 8', '3'],
+    ['2^x = 1', '0'],
+    ['(x-2)^2 = 0', '2'],
+    ['x^2 = 9', '±3'],
+  ])('%s → %s', (text, display) => {
+    const r = line(text)
+    expect(r.display).toBe(display)
+    expect(r.solve?.variable).toBe('x')
+  })
+
+  it('a negative square has no real root', () => {
+    expect(line('x^2 = -4').display).toBe('no real solution')
+    expect(line('x^2 + 4 = 0').solve?.outcome).toBe('none')
+  })
+
+  it('an identity and a contradiction stay messages', () => {
+    expect(line('2x = x+x').display).toBe('true for all x')
+    expect(line('0*x = 1').display).toMatch(/no solution/)
+  })
+
+  it('degrees: sin(x) = 1/2 includes 30', () => {
+    const r = line('sin(x) = 0.5')
+    expect(r.solve?.roots).toContain(30)
+    expect(r.solve?.roots?.every((n) => Math.abs(Math.sin((n * Math.PI) / 180) - 0.5) < 1e-9)).toBe(true)
+  })
+
+  it('a bare assignment is not a solve', () => {
+    expect(line('x = 5').kind).toBe('assignment')
+    expect(line('x = 5').solve).toBeUndefined()
+  })
+})

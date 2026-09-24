@@ -10,7 +10,7 @@ export const MAX_LIST_ALLOC = 10_000
 export type AngleMode = 'deg' | 'rad'
 
 export const SCIENTIFIC_NAMES =
-  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans'
+  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans'
 
 const NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'gi')
 const HAS_NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'i')
@@ -449,6 +449,9 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   s = s.replace(/\barcsech\b/g, 'asech')
   s = s.replace(/\barccoth\b/g, 'acoth')
   s = s.replace(/\bnthroot\b/g, 'nthRoot')
+  s = s.replace(/\bgcf\b/gi, 'gcf')
+  s = s.replace(/\blcm\b/gi, 'lcm')
+  s = s.replace(/\blcf\b/gi, 'lcf')
   s = s.replace(/((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nCr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))/gi, 'combinations($1,$2)')
   s = s.replace(/((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nPr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))/gi, 'permutations($1,$2)')
   s = s.replace(/\bnCr\s*\(/g, 'combinations(')
@@ -776,6 +779,7 @@ function scalarScope(mode: AngleMode | undefined): Record<string, unknown> {
     gcf: gcd,
     hcf: gcd,
     lcm: (...a: unknown[]) => ratioFold(a, 'lcm'),
+    lcf: (...a: unknown[]) => ratioFold(a, 'lcm'),
     mod: modulo,
     powmod,
     factorial,

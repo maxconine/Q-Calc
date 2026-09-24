@@ -15,6 +15,8 @@ const nativePush = {
   angleMode: 'rad',
   fractionMode: true,
   keepWords: true,
+  typstPreview: true,
+  typstCopy: true,
   hotkey: '⌃⌥Space',
   hotkeyFailed: false,
 } as const

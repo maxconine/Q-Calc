@@ -417,4 +417,19 @@ describe('solved equations in history', () => {
   it('gives ans the single root', () => {
     expect(lastHistoryNumber([solved()])).toBe(5)
   })
+
+  it('keeps a system as sys and restores its equations', () => {
+    const saved = slimHistoryRow({
+      id: 's',
+      expr: 'x + y = 5; x - y = 1',
+      display: 'x = 3, y = 2',
+      kind: 'system',
+      equations: ['x + y = 5', 'x - y = 1', ''],
+    })
+    expect(saved?.expr).toBe('sys')
+    expect(saved?.kind).toBe('system')
+    expect(saved?.equations).toEqual(['x + y = 5', 'x - y = 1', ''])
+    expect(normalizeHistoryRow(JSON.parse(JSON.stringify(saved)), 'id')?.equations).toEqual(saved?.equations)
+    expect(lastHistoryNumber([saved!])).toBeUndefined()
+  })
 })

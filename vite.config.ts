@@ -8,6 +8,7 @@ const root = dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
   base: './',
+  server: { host: '127.0.0.1' },
   build: {
     rollupOptions: {
       input: {

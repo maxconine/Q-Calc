@@ -68,6 +68,8 @@ struct GeneralSettingsView: View {
                 toggle("Fractions", "Show answers as fractions · ⌃F", \.fractionMode, AppSettings.setFractionMode(_:notifyWeb:))
                 toggle("Rationalize denominators", "5/√41 becomes 5√41/41", \.rationalize, AppSettings.setRationalize(_:notifyWeb:))
                 toggle("Keep typed words as text", "sqrt stays sqrt, not √", \.keepWords, AppSettings.setKeepWords(_:notifyWeb:))
+                toggle("Typst preview", "Show the calculation typeset under the bar", \.typstPreview, AppSettings.setTypstPreview(_:notifyWeb:))
+                toggle("Copy Typst compatible", "Equations copied from the bar paste as Typst math", \.typstCopy, AppSettings.setTypstCopy(_:notifyWeb:))
             }
 
             Section("Significant figures") {

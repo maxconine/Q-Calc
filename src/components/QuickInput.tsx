@@ -4,7 +4,7 @@ import { nativeWindow } from '../lib/bridge'
 import type { Span } from '../lib/blankReason'
 import { completionFor, type CompletionNames } from '../lib/completion'
 import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/bounds'
-import { copyText, inputHighlight, keepEndInView } from '../lib/dom'
+import { copyText, inputHighlight, keepEndInView, searchBarCopy } from '../lib/dom'
 import { knownWordSpans } from '../lib/knownWords'
 import { cleanPastedText } from '../lib/paste'
 import { breakRun, editKind, recordEdit, redo, undo, undoStart, type EditKind, type Undo, type UndoState } from '../lib/undo'
@@ -56,7 +56,7 @@ const WORD_SYMBOLS: [RegExp, string][] = [
   [/(?<=\blim(?:it)?\s*_?[({]?\s*[A-Za-z]\s*)->/g, '→'],
   [/(?<![\\A-Za-z])plus[\s.-]?minus(?![A-Za-z])/gi, '±'],
   [/(?<![\\A-Za-z])minus[\s.-]?plus(?![A-Za-z])/gi, '∓'],
-  [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '*'],
+  [/(?<![\\A-Za-z])dot(?![A-Za-z])/gi, '·'],
   [/(?<![\\A-Za-z_])sum(?![A-Za-z0-9])/g, 'Σ'],
   [/(?<![\\A-Za-z_])prod(?![A-Za-z0-9])/g, 'Π'],
   [/(?<![\\A-Za-z_])int(?![A-Za-z]|_[A-Za-z])/g, '∫'],
@@ -326,6 +326,8 @@ export function QuickInput({
       rememberHighlight(el)
     }
     const onArrow = (e: globalThis.KeyboardEvent) => {
+      const target = e.target
+      if (target instanceof HTMLElement && target !== el && target.closest('input, textarea')) return
       if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
         // a ↑/↓ whose keyup landed elsewhere must not keep pinning the caret against ←/→
         holdingArrowRef.current = false
@@ -343,12 +345,17 @@ export function QuickInput({
         applyEdit(el, limit)
         return
       }
-      holdingArrowRef.current = true
-      pinCaret(el)
       if (e.key === 'ArrowUp') onUpRef.current()
       else onDownRef.current()
+      if (document.activeElement !== el) {
+        holdingArrowRef.current = false
+        return
+      }
+      holdingArrowRef.current = true
       pinCaret(el)
-      requestAnimationFrame(() => pinCaret(el))
+      requestAnimationFrame(() => {
+        if (document.activeElement === el) pinCaret(el)
+      })
     }
     window.addEventListener('keydown', onMeta, true)
     window.addEventListener('keyup', onMetaUp, true)
@@ -388,7 +395,7 @@ export function QuickInput({
       const end = el.selectionEnd ?? start
       if (end <= start) return
       e.preventDefault()
-      copyText(el.value.slice(start, end))
+      copyText(searchBarCopy(el.value.slice(start, end)))
       commit(el.value.slice(0, start) + el.value.slice(end), start)
       return
     }
@@ -518,7 +525,7 @@ export function QuickInput({
         }}
         onKeyUp={(e) => {
           if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            pinCaret(e.currentTarget)
+            if (document.activeElement === e.currentTarget) pinCaret(e.currentTarget)
             holdingArrowRef.current = false
             rememberHighlight(e.currentTarget)
             return

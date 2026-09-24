@@ -78,3 +78,82 @@ describe('exactForm never claims a nearby value', () => {
     expect(evaluateLine('sin(30.00000001)').exact).toBeUndefined()
   })
 })
+
+function line(text: string, opts: { fractionMode?: boolean; rationalize?: boolean; angleMode?: 'deg' | 'rad' } = {}) {
+  return evaluateLine(text, { angleMode: 'deg', ...opts })
+}
+
+describe('exact forms', () => {
+  it('shows a closed form only for trig and square roots', () => {
+    expect(wantsExactForm('sin(30)')).toBe(true)
+    expect(wantsExactForm('sqrt(12)')).toBe(true)
+    expect(wantsExactForm('2+2')).toBe(false)
+    expect(wantsExactForm('log(100)')).toBe(false)
+    expect(line('2+2').exact).toBeUndefined()
+  })
+
+  it.each([
+    ['sin(30)', '1/2'],
+    ['sin(45)', 'sqrt(2)/2'],
+    ['sin(60)', 'sqrt(3)/2'],
+    ['sin(90)', '1'],
+    ['sin(180)', '0'],
+    ['sin(-30)', '-1/2'],
+    ['cos(60)', '1/2'],
+    ['cos(180)', '-1'],
+    ['tan(45)', '1'],
+    ['sqrt(12)', '2sqrt(3)'],
+    ['sqrt(50)', '5sqrt(2)'],
+    ['sqrt(8/9)', '2sqrt(2)/3'],
+    ['1/sqrt(2)', 'sqrt(2)/2'],
+    ['5/sqrt(41)', '5sqrt(41)/41'],
+  ])('%s exact is %s', (text, exact) => {
+    expect(line(text).exact, line(text).display).toBe(exact)
+  })
+
+  it('leaves the root in the denominator when rationalize is off', () => {
+    expect(line('1/sqrt(2)', { rationalize: false }).exact).toBe('1/sqrt(2)')
+    expect(line('5/sqrt(41)', { rationalize: false }).exact).toBe('5/sqrt(41)')
+    expect(line('sin(45)', { rationalize: false }).exact).toBe('1/sqrt(2)')
+    expect(line('-5/sqrt(41)', { rationalize: false }).exact).toBe('-5/sqrt(41)')
+  })
+
+  it('a plain decimal has no closed form', () => {
+    expect(exactForm(1.23456789)).toBeNull()
+    expect(line('1.23456789').exact).toBeUndefined()
+  })
+
+  it('pi multiples and the trig half-angles that have a nested form', () => {
+    expect(exactForm(Math.PI / 6)).toBe('pi/6')
+    expect(exactForm(Math.PI)).toBe('pi')
+    expect(exactForm((Math.sqrt(6) - Math.sqrt(2)) / 4)).toBe('(sqrt(6)-sqrt(2))/4')
+    expect(line('sin(15)').exact).toBe('(sqrt(6)-sqrt(2))/4')
+    expect(line('tan(15)').exact).toBe('2-sqrt(3)')
+  })
+})
+
+describe('fraction mode', () => {
+  it.each([
+    ['1/2 + 1/3', '5/6'],
+    ['1/2 - 1/3', '1/6'],
+    ['2/3 * 3/4', '1/2'],
+    ['(1/2) / (1/4)', '2'],
+    ['0.5', '1/2'],
+    ['0.25', '1/4'],
+    ['-0.75', '-3/4'],
+    ['1/6 + 1/3', '1/2'],
+    ['7/8', '7/8'],
+  ])('%s displays %s', (text, display) => {
+    expect(line(text, { fractionMode: true }).display).toBe(display)
+  })
+
+  it('keeps pi as a decimal and treats 0.1 as one tenth', () => {
+    expect(line('pi', { fractionMode: true }).display).not.toMatch(/^\d+\/\d+$/)
+    expect(line('1/3 + 0.1', { fractionMode: true }).display).toBe('13/30')
+  })
+
+  it('fraction mode still keeps the trig exact form', () => {
+    const r = line('sin(45)', { fractionMode: true })
+    expect(r.exact).toBe('sqrt(2)/2')
+  })
+})

@@ -88,6 +88,8 @@ final class AppSettings: ObservableObject {
     static let themeKey = "qcalc.theme"
     static let angleModeKey = "qcalc.angleMode"
     static let fractionModeKey = "qcalc.fractionMode"
+    static let typstPreviewKey = "qcalc.typstPreview"
+    static let typstCopyKey = "qcalc.typstCopy"
     static let hotKeyKey = "qcalc.hotkey"
     static let onboardingKey = "qcalc.onboarding"
     static let firstRunKey = "qcalc.firstRunDone"
@@ -115,6 +117,8 @@ final class AppSettings: ObservableObject {
     @Published private(set) var theme: String
     @Published private(set) var angleMode: String
     @Published private(set) var fractionMode: Bool
+    @Published private(set) var typstPreview: Bool
+    @Published private(set) var typstCopy: Bool
     // what the user picked; activeHotKey is what actually got registered
     @Published private(set) var hotKey: HotKeyPreset
     @Published private(set) var activeHotKey: HotKeyPreset?
@@ -140,6 +144,8 @@ final class AppSettings: ObservableObject {
         theme = Self.loadTheme()
         angleMode = UserDefaults.standard.string(forKey: Self.angleModeKey) == "rad" ? "rad" : "deg"
         fractionMode = UserDefaults.standard.bool(forKey: Self.fractionModeKey)
+        typstPreview = UserDefaults.standard.bool(forKey: Self.typstPreviewKey)
+        typstCopy = UserDefaults.standard.bool(forKey: Self.typstCopyKey)
         hotKey = HotKeyPreset.named(UserDefaults.standard.string(forKey: Self.hotKeyKey))
         onboarding = Self.loadOnboarding()
     }
@@ -323,6 +329,20 @@ final class AppSettings: ObservableObject {
         guard value != fractionMode else { return }
         fractionMode = value
         UserDefaults.standard.set(value, forKey: Self.fractionModeKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setTypstPreview(_ value: Bool, notifyWeb: Bool) {
+        guard value != typstPreview else { return }
+        typstPreview = value
+        UserDefaults.standard.set(value, forKey: Self.typstPreviewKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setTypstCopy(_ value: Bool, notifyWeb: Bool) {
+        guard value != typstCopy else { return }
+        typstCopy = value
+        UserDefaults.standard.set(value, forKey: Self.typstCopyKey)
         if notifyWeb { notifySettingsChanged() }
     }
 

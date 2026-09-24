@@ -229,3 +229,43 @@ describe('against brute force', () => {
     expect(tally.underdetermined).toBeGreaterThan(0)
   })
 })
+
+describe('more reactions', () => {
+  it.each([
+    ['N2 + H2 -> NH3', 'N₂ + 3 H₂ → 2 NH₃'],
+    ['H2O2 -> H2O + O2', '2 H₂O₂ → 2 H₂O + O₂'],
+    ['2H2+O2->2H2O', '2 H₂ + O₂ → 2 H₂O'],
+    ['Ba(OH)2 + HNO3 -> Ba(NO3)2 + H2O', 'Ba(OH)₂ + 2 HNO₃ → Ba(NO₃)₂ + 2 H₂O'],
+    ['CH4(g) + O2(g) -> CO2(g) + H2O(g)', 'CH₄(g) + 2 O₂(g) → CO₂(g) + 2 H₂O(g)'],
+    ['Al + HCl -> AlCl3 + H2', '2 Al + 6 HCl → 2 AlCl₃ + 3 H₂'],
+    ['P4 + O2 -> P4O10', 'P₄ + 5 O₂ → P₄O₁₀'],
+    ['SO2 + O2 -> SO3', '2 SO₂ + O₂ → 2 SO₃'],
+    ['C2H5OH + O2 -> CO2 + H2O', 'C₂H₅OH + 3 O₂ → 2 CO₂ + 3 H₂O'],
+    ['Fe(s) + CuSO4(aq) -> FeSO4(aq) + Cu(s)', 'Fe(s) + CuSO₄(aq) → FeSO₄(aq) + Cu(s)'],
+  ])('%s', (input, want) => {
+    expect(shown(input)).toBe(want)
+  })
+
+  it('a typed coefficient is ignored and the equation is balanced again', () => {
+    expect(shown('0 H2 + O2 -> H2O')).toBe('2 H₂ + O₂ → 2 H₂O')
+    expect(shown('9 H2 + 9 O2 -> 1 H2O')).toBe('2 H₂ + O₂ → 2 H₂O')
+  })
+
+  it('lowercase is not a formula, so the line is left to math', () => {
+    expect(chemAnswer('h2 + o2 -> h2o')).toBeNull()
+  })
+
+  it('a repeated species is impossible', () => {
+    expect(shown('H2 + H2 -> H2')).toBe('')
+    expect(shown('H2 + O2 -> H2 + O2')).toBe('')
+  })
+
+  it('a half-typed arrow is not a reaction', () => {
+    expect(chemAnswer('H2 + O2 ->')).toBeNull()
+    expect(chemAnswer('H2 +')).toBeNull()
+  })
+
+  it('states and a hydrate can sit on the same species', () => {
+    expect(shown('CuSO4·5H2O(s) -> CuSO4(s) + H2O(g)')).toBe('CuSO₄·5H₂O(s) → CuSO₄(s) + 5 H₂O(g)')
+  })
+})

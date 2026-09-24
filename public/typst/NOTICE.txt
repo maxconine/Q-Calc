@@ -1,0 +1,4 @@
+New Computer Modern
+Copyright (c) 2019–2023 Antonis Tsolomitis and the Greek Font Society.
+Licensed under the SIL Open Font License, Version 1.1.
+https://openfontlicense.org

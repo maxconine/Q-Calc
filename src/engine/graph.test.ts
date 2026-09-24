@@ -402,3 +402,67 @@ describe('graphTicks', () => {
     expect(graphTicks(-10, 10, 'rad')[4]!.value).toBe(Math.PI)
   })
 })
+
+describe('more graphs', () => {
+  it('a constant sits on a flat line with no roots', () => {
+    const g = buildGraph('graph 5', { domain: [-2, 2], sampleCount: 5 })!
+    expect(g.points.every((p) => p.y === 5)).toBe(true)
+    expect(g.roots).toEqual([])
+    expect(g.yScale.max).toBeGreaterThan(5)
+    expect(g.yScale.min).toBeLessThan(5)
+  })
+
+  it('abs has a minimum at 0 and (x-2)^2 has a minimum at 2', () => {
+    const abs = buildGraph('graph abs(x)', { domain: [-4, 4] })!
+    const tip = abs.criticalPoints.find((c) => Math.abs(c.x) < 1e-6)
+    expect(tip?.kind).toBe('min')
+    expect(tip?.y).toBeCloseTo(0, 8)
+
+    const cup = buildGraph('graph (x-2)^2', { domain: [-2, 6] })!
+    expect(cup.criticalPoints).toHaveLength(1)
+    expect(cup.criticalPoints[0]).toMatchObject({ kind: 'min' })
+    expect(cup.criticalPoints[0]!.x).toBeCloseTo(2, 6)
+    expect(cup.roots.map((r) => r.x)).toEqual([2])
+  })
+
+  it('uses a stored coefficient', () => {
+    const g = buildGraph('graph k*x', { domain: [0, 2], variables: { k: -4 } })!
+    expect(g.y(2)).toBeCloseTo(-8, 8)
+  })
+
+  it('ln is blank on the nonpositive side and defined just after 0', () => {
+    const pts = sampleGraph('ln(x)', { domain: [-1, 1], sampleCount: 5 })
+    expect(pts.filter((p) => p.x <= 0).every((p) => p.y == null)).toBe(true)
+    expect(pts.some((p) => p.x > 0 && p.y != null && p.y < 0)).toBe(true)
+  })
+
+  it('a reversed domain is sampled from low to high', () => {
+    const pts = sampleGraph('x', { domain: [3, -1], sampleCount: 5 })
+    expect(pts[0]!.x).toBeCloseTo(-1, 10)
+    expect(pts[pts.length - 1]!.x).toBeCloseTo(3, 10)
+    expect(pts[pts.length - 1]!.y).toBeCloseTo(3, 10)
+  })
+
+  it('a missing name and an empty expression do not invent a curve', () => {
+    expect(buildGraph('graph missing')!.error).toBeTruthy()
+    expect(compileGraphY('')(1)).toBeNull()
+    expect(compileGraphY('1/0')(1)).toBeNull()
+  })
+
+  it('home stays wide for a line and tightens around a nearby turning point', () => {
+    expect(graphHome('graph x+1')).toEqual([-10, 10])
+    expect(graphHome('graph (x-0.2)^2')).toEqual([-10, 10])
+    const home = graphHome('graph (x-0.2)^2-1')
+    expect(home[0]).toBeGreaterThan(-10)
+    expect(home[1]).toBeLessThan(10)
+    expect(home[0]).toBeLessThan(0.2)
+    expect(home[1]).toBeGreaterThan(0.2)
+  })
+
+  it('degrees: a polynomial stays on ±10 and sine uses the degree window', () => {
+    expect(buildGraph('graph x^2+1', { angleMode: 'deg' })!.domain).toEqual([-10, 10])
+    const s = buildGraph('graph sin(x)', { angleMode: 'deg' })!
+    expect(s.domain).toEqual([-360, 360])
+    expect(s.y(90)).toBeCloseTo(1, 10)
+  })
+})

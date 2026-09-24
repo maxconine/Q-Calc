@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateLine } from './evaluate'
+import { evaluateLine, evaluateSheet } from './evaluate'
 import { autofillParens, fillParens } from './parens'
 
 type Case = { name: string; input: string; filled: string }
@@ -278,5 +278,56 @@ describe('Inferred parens evaluate', () => {
     const a = evaluateLine(input).value?.n
     const b = evaluateLine(filled).value?.n
     if (a != null && b != null) expect(a).toBeCloseTo(b, 8)
+  })
+})
+
+function line(text: string) {
+  return evaluateLine(text, { angleMode: 'deg' })
+}
+
+describe('parentheses and glued input', () => {
+  it.each([
+    ['sin(30', '0.5'],
+    ['(2+3', '5'],
+    ['5+3)*2', '16'],
+    ['2(3+4)', '14'],
+    ['(2+3)(4+1)', '25'],
+    ['2sin(90)', '2'],
+    ['2sqrt(9)', '6'],
+    ['sqrt(2', line('sqrt(2)').display],
+    ['((1+2)*3', '9'],
+    ['(3+1)!', '24'],
+    ['5(2+1)', '15'],
+    ['2(3)(4)', '24'],
+    ['log 100', '2'],
+    ['sin 90', '1'],
+  ])('%s → %s', (text, display) => {
+    expect(line(text).display).toBe(display)
+  })
+
+  it('a stored letter glues to a coefficient and to a function', () => {
+    const rows = evaluateSheet(['x = 4', '3x', '2sinx'], { angleMode: 'deg' })
+    expect(rows[1]!.display).toBe('12')
+    expect(rows[2]!.value!.n).toBeCloseTo(2 * Math.sin((4 * Math.PI) / 180), 10)
+  })
+
+  it('fill only adds the missing ends, and autofill waits for the caret at the end', () => {
+    expect(fillParens('sin(30')).toBe('sin(30)')
+    expect(fillParens('5+3)*2')).toBe('(5+3)*2')
+    expect(fillParens(')(')).toBe('()()')
+    expect(autofillParens('sin(30', 6)).toBe('sin(30)')
+    expect(autofillParens('sin(30', 3)).toBeNull()
+    expect(autofillParens('(2+3)', 5)).toBeNull()
+  })
+
+  it('a trailing operator is still unfinished', () => {
+    expect(line('sin(30+').display).toBe('')
+    expect(line('2+').display).toBe('')
+  })
+
+  it('words that only look glued stay words', () => {
+    expect(line('cost')).toBeTruthy()
+    const rows = evaluateSheet(['cost = 5', 'cost'], { angleMode: 'deg' })
+    expect(rows[1]!.display).toBe('5')
   })
 })

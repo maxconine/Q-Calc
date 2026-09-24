@@ -25,6 +25,9 @@
     "mac:package": "zsh macos/build.sh --package"
   },
   "dependencies": {
+    "@myriaddreamin/typst-ts-renderer": "^0.7.0",
+    "@myriaddreamin/typst-ts-web-compiler": "^0.7.0",
+    "@myriaddreamin/typst.ts": "^0.7.0",
     "decimal.js": "^10.6.0",
     "mathjs": "^15.2.0",
     "react": "^19.2.8",

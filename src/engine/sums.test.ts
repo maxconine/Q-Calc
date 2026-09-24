@@ -37,6 +37,11 @@ describe('the ways to write a sum', () => {
     expect(shown(line)).toBe('385')
   })
 
+  it('keeps arithmetic after a parenthesized sum outside the sum', () => {
+    expect(shown('(Σ_k=2^21 3k^2)+2-44')).toBe('9888')
+    expect(shown('2*(Σ_k=1^4 k)-1')).toBe('19')
+  })
+
   it('takes the one free letter as the index', () => {
     expect(shown('Σ k, 1..100')).toBe('5050')
     expect(shown('Σ 2^i, 0..10')).toBe('2047')
@@ -205,5 +210,52 @@ describe('hurwitz zeta', () => {
     expect(hurwitz(2, 0.5)).toBeCloseTo(Math.PI ** 2 / 2, 14)
     expect(hurwitz(40, 1)).toBeCloseTo(1 + 2 ** -40, 15)
     expect(hurwitz(1, 1)).toBeNull()
+  })
+})
+
+describe('sum and product bounds', () => {
+  it.each([
+    ['Σ n, n=4..4', '4'],
+    ['Π n, n=5..5', '5'],
+    ['Σ 0, n=1..100', '0'],
+    ['Π 1, n=1..40', '1'],
+    ['Π n, n=0..5', '0'],
+    ['Σ n, n=-2..2', '0'],
+    ['Σ n^2, n=-2..2', '10'],
+    ['Σ (-1)^n * n, n=1..4', '2'],
+    ['Π (n/(n+1)), n=1..9', '0.1'],
+  ])('%s → %s', (text, display) => {
+    expect(shown(text)).toBe(display)
+  })
+
+  it('a one-term geometric sum is the first term', () => {
+    expect(shown('Σ 1/2^n, n=0..0')).toBe('1')
+    expect(shown('Σ 1/2^n, n=0..3', { fractionMode: true })).toBe('15/8')
+  })
+
+  it('an empty or reversed range stays blank', () => {
+    expect(shown('Σ n, n=5..4')).toBe('')
+    expect(shown('Π n, n=3..1')).toBe('')
+    expect(shown('Σ n^2, n=1..')).toBe('')
+  })
+
+  it('the index shadows a stored variable of the same name', () => {
+    const rows = evaluateSheet(['k = 100', 'Σ k, k=1..4', 'k'])
+    expect(rows[1]!.display).toBe('10')
+    expect(rows[2]!.display).toBe('100')
+  })
+
+  it('a product through a zero term is zero even when a later term is undefined', () => {
+    expect(shown('Π n, n=-1..2')).toBe('0')
+  })
+
+  it('an infinite geometric with ratio 1 is blank', () => {
+    expect(shown('Σ 1^n, n=0..∞')).toBe('')
+    expect(run('Σ (1/2)^n, n=0..∞').exact).toBe('2')
+  })
+
+  it('a sum of a user function of the index', () => {
+    const rows = evaluateSheet(['f(t) = 2t+1', 'Σ f(n), n=0..3'])
+    expect(rows[1]!.display).toBe('16')
   })
 })

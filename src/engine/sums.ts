@@ -147,17 +147,31 @@ function grabGroup(s: string, at: number, stop: RegExp): { inner: string; end: n
 }
 
 /** `_{n=1}^{10} n^2`, also `_(n=1)^10 n^2`, the way sums are typeset. */
-function specFromScripts(op: Op, rest: string): Spec | null {
-  const s = rest.replace(/^\\limits/, '')
+function specFromScripts(op: Op, rest: string): (Spec & { consumed: number }) | null {
+  const limits = rest.match(/^\\limits/)
+  const s = limits ? rest.slice(limits[0].length) : rest
+  const shift = limits ? limits[0].length : 0
   if (s[0] !== '_') return null
   const lower = grabGroup(s, 1, /[\^\s]/)
   if (!lower || s[lower.end] !== '^') return null
   const upper = grabGroup(s, lower.end + 1, /\s/)
   if (!upper) return null
-  const body = s.slice(upper.end).trim()
+  // A `)` that the summand itself did not open belongs to the expression around the sum.
+  let depth = 0
+  let end = upper.end
+  for (let i = upper.end; i < s.length; i++) {
+    const ch = s[i]!
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) {
+      if (depth === 0) break
+      depth--
+    }
+    end = i + 1
+  }
+  const body = s.slice(upper.end, end).trim()
   if (!body) return null
   const at = lower.inner.match(/^\s*([A-Za-z]|theta)\s*=\s*(.+?)\s*$/)
-  return { op, body, index: at?.[1], from: at ? at[2]! : lower.inner.trim(), to: upper.inner.trim() }
+  return { op, body, index: at?.[1], from: at ? at[2]! : lower.inner.trim(), to: upper.inner.trim(), consumed: shift + end }
 }
 
 /** `sum n^2, n = 1..10`, `sum n^2 for n = 1 to 10`, `sum from n = 1 to 10 of n^2`. */
@@ -903,6 +917,34 @@ function productOfList(args: string[]): string | null {
  * Σ and Π lines (already `sum` and `prod` via normalizeSums), or null when the line holds none
  * and the usual evaluation should run.
  */
+const SCRIPT_RE = /(?<![A-Za-z_\\])(sum|prod|product)(?![A-Za-z0-9])\s*/gi
+
+/** A `sum_k=1^4 k` inside a larger line, such as `(sum_k=1^4 k)+2`. */
+function embedScriptSums(expr: string, ctx: SumContext): { text: string } | { fail: SumAnswer } | null {
+  let out = ''
+  let last = 0
+  let replaced = false
+  SCRIPT_RE.lastIndex = 0
+  for (let m = SCRIPT_RE.exec(expr); m; m = SCRIPT_RE.exec(expr)) {
+    const restAt = m.index + m[0].length
+    if (expr[restAt] === '(') continue
+    const spec = specFromScripts(opOf(m[1]!), expr.slice(restAt))
+    if (!spec) continue
+    let r: SumAnswer
+    try {
+      r = evaluateSpec(spec, ctx)
+    } catch {
+      r = { value: null }
+    }
+    if (!r.value || r.value.kind !== 'number') return { fail: r }
+    out += expr.slice(last, m.index) + `(${r.value.n})`
+    last = restAt + spec.consumed
+    SCRIPT_RE.lastIndex = last
+    replaced = true
+  }
+  return replaced ? { text: out + expr.slice(last) } : null
+}
+
 export function sumAnswer(expr: string, ctx: SumContext): SumAnswer | null {
   if (!HINT_RE.test(expr)) return null
   const whole = wholeLineSpec(expr.trim(), ctx)
@@ -913,6 +955,10 @@ export function sumAnswer(expr: string, ctx: SumContext): SumAnswer | null {
       return { value: null }
     }
   }
+
+  const embedded = embedScriptSums(expr, ctx)
+  if (embedded && 'fail' in embedded) return embedded.fail
+  if (embedded) expr = embedded.text
 
   let out = ''
   let last = 0
@@ -944,7 +990,11 @@ export function sumAnswer(expr: string, ctx: SumContext): SumAnswer | null {
     CALL_RE.lastIndex = close + 1
     replaced = true
   }
-  if (!replaced) return null
+  if (!replaced) {
+    if (!embedded) return null
+    const value = tryPlainMath(expr, ctx)
+    return { value }
+  }
   const text = out + expr.slice(last)
   const value = tryPlainMath(text, ctx)
   const form =

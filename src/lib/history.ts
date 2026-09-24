@@ -11,7 +11,9 @@ export type HistoryRow = {
   meas?: Meas
   // parseable unit text, so `ans` and variables keep their unit
   quantity?: string
-  kind?: 'definition' | 'function'
+  kind?: 'definition' | 'function' | 'system'
+  /** Equation fields for a `sys` row, so history can reopen them. */
+  equations?: string[]
   // kept separately so a function survives expr truncation
   fnName?: string
   fnParams?: string[]
@@ -66,7 +68,16 @@ function sanitizeSolve(raw: unknown): SolveInfo | undefined {
 }
 
 function rowKind(kind: unknown): HistoryRow['kind'] {
-  return kind === 'definition' || kind === 'function' ? kind : undefined
+  return kind === 'definition' || kind === 'function' || kind === 'system' ? kind : undefined
+}
+
+function slimEquations(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined
+  const lines = raw
+    .filter((line): line is string => typeof line === 'string')
+    .slice(0, 5)
+    .map((line) => ellipsize(line.trim(), 160))
+  return lines.length ? lines : undefined
 }
 
 function slimFunctionFields(row: HistoryRow): Pick<HistoryRow, 'fnName' | 'fnParams' | 'fnBody'> {
@@ -95,9 +106,10 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
   const kind = rowKind(row.kind)
   const fnFields = slimFunctionFields({ ...row, kind, expr })
   const solve = kind ? undefined : sanitizeSolve(row.solve)
+  const equations = kind === 'system' ? slimEquations(row.equations) : undefined
   return {
     id: ellipsize(row.id, 48) || 'row',
-    expr,
+    expr: kind === 'system' ? 'sys' : expr,
     display,
     exact,
     n: kind === 'function' || row.n == null || !Number.isFinite(row.n) ? undefined : row.n,
@@ -106,6 +118,7 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     quantity: kind || typeof row.quantity !== 'string' ? undefined : row.quantity.length <= MAX_HISTORY_EXPR ? row.quantity : '',
     kind,
     ...fnFields,
+    ...(equations && { equations }),
     ...(solve && { solve }),
     ...(typeof row.at === 'number' && Number.isFinite(row.at) && row.at > 0 && { at: row.at }),
   }
@@ -130,6 +143,7 @@ export function normalizeHistoryRow(
       ? row.fnParams.filter((p): p is string => typeof p === 'string')
       : undefined,
     fnBody: typeof row.fnBody === 'string' ? row.fnBody : undefined,
+    equations: Array.isArray(row.equations) ? row.equations.filter((line): line is string => typeof line === 'string') : undefined,
     solve: row.solve,
     at: row.at,
   })
@@ -172,7 +186,7 @@ export function persistableHistory(rows: HistoryRow[]): HistoryRow[] {
 export function historyVariables(rows: HistoryRow[]): Record<string, number> {
   const vars: Record<string, number> = {}
   for (const row of rows) {
-    if (row.kind === 'definition' || row.kind === 'function' || row.solve) continue
+    if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system' || row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
     if (row.quantity != null) {
@@ -204,7 +218,7 @@ export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
   const out: Record<string, Meas> = {}
   let last: HistoryRow | undefined
   for (const row of rows) {
-    if (row.kind === 'definition' || row.kind === 'function') continue
+    if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     if (row.n != null && Number.isFinite(row.n)) last = row
     if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
@@ -220,7 +234,7 @@ export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
   const out: Record<string, string> = {}
   let last: HistoryRow | undefined
   for (const row of rows) {
-    if (row.kind === 'definition' || row.kind === 'function') continue
+    if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     if (row.n != null && Number.isFinite(row.n)) last = row
     if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
@@ -235,7 +249,7 @@ export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
 export function historyFunctions(rows: HistoryRow[]): Record<string, UserFunction> {
   const fns: Record<string, UserFunction> = {}
   for (const row of rows) {
-    if (row.kind === 'definition') continue
+    if (row.kind === 'definition' || row.kind === 'system') continue
     if (row.kind === 'function' && row.fnName && row.fnBody != null) {
       fns[row.fnName] = {
         params: Array.isArray(row.fnParams) ? row.fnParams : [],
@@ -252,7 +266,7 @@ export function historyFunctions(rows: HistoryRow[]): Record<string, UserFunctio
 export function lastHistoryNumber(rows: HistoryRow[]): number | undefined {
   for (let i = rows.length - 1; i >= 0; i--) {
     const row = rows[i]
-    if (!row || row.kind === 'definition' || row.kind === 'function') continue
+    if (!row || row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     const n = row.n
     // a unit answer's `ans` comes from historyQuantities instead
     if (n != null && Number.isFinite(n)) return row.quantity == null ? n : undefined

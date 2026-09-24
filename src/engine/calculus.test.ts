@@ -400,3 +400,63 @@ describe('superscripts', () => {
     expect(evaluateSheet(['f(x) = 3x² + 1', 'f(2)'], rad)[1]!.display).toBe('13')
   })
 })
+
+describe('more calculus', () => {
+  it.each([
+    ['d/dx x at 0', 1],
+    ['d^3/dx^3 sin(x) at 0', -1],
+    ['d^2/dx^2 sin(x) at 0', 0],
+    ['d^4/dx^4 x^4 at 2', 24],
+    ['d³/dx³ x^3 at 1', 6],
+    ['d/dx abs(x) at 2', 1],
+    ['d/dx abs(x) at -3', -1],
+    ['∫0..4 3', 12],
+    ['∫-2..-1 x', -1.5],
+    ['∫1..e 1/x', 1],
+    ['∫0..1 (x+1)^2', 7 / 3],
+    ['lim x->7 4', 4],
+    ['lim x->∞ (2x+1)/(x-3)', 2],
+    ['lim x->0- e^(1/x)', 0],
+    ['lim x->0 abs(x)', 0],
+    ['lim x->∞ (3x^2-x)/(x^2+4)', 3],
+  ])('%s', (text, want) => {
+    expect(value(text)).toBeCloseTo(want, 8)
+  })
+
+  it('a higher derivative of sin in degrees carries π/180 each time', () => {
+    const factor = Math.PI / 180
+    expect(value('d^3/dx^3 sin(x) at 0', deg)).toBeCloseTo(-(factor ** 3), 8)
+    expect(shown('d/dx tan(x)', deg)).toBe('π sec(x)²/180')
+  })
+
+  it('shows the formula when there is no point', () => {
+    expect(shown('d^3/dx^3 sin(x)')).toBe('-cos(x)')
+    expect(shown('d³/dx³ x^3')).toBe('6')
+    expect(shown('d/dx (x+1)(x-1)')).toBe('2x')
+    expect(shown('d/dx ln(x^2)')).toBe('2/x')
+  })
+
+  it('abs is |x|/x away from 0, and has no second derivative at the corner', () => {
+    expect(value('d^2/dx^2 abs(x) at 2')).toBe(0)
+    expect(shown('d/dx abs(x)')).toBe('|x|/x')
+    expect(shown('d^2/dx^2 abs(x) at 0')).toBe('')
+  })
+
+  it('bounds and the body can use a stored value', () => {
+    const rows = evaluateSheet(['a = 4', '∫0..a x', 'd/dx a*x^2 at 3'], rad)
+    expect(rows[1]!.value!.n).toBeCloseTo(8, 10)
+    expect(rows[2]!.value!.n).toBeCloseTo(24, 10)
+  })
+
+  it('a slow divergence stays blank; a steady one is signed', () => {
+    expect(shown('lim x->0+ ln(x)')).toBe('')
+    expect(shown('lim x->0 ln(x)')).toBe('')
+    expect(shown('lim x->0+ 1/x')).toBe('∞')
+    expect(shown('lim x->0- 1/x')).toBe('-∞')
+  })
+
+  it('an integral of a non-number stays blank', () => {
+    expect(value('∫0..1 1/x^0.5 - 1/x^0.5')).toBeCloseTo(0, 8)
+    expect(shown('∫0..1 sqrt(-x-1)')).toBe('')
+  })
+})

@@ -20,6 +20,8 @@ export type Settings = {
   draftSeconds: number
   defaultUnits: DefaultUnits
   theme: Theme
+  typstPreview: boolean
+  typstCopy: boolean
 }
 
 // pushed by the mac app alongside settings; never stored by the web view
@@ -39,6 +41,8 @@ export function defaultSettings(): Settings {
     draftSeconds: DEFAULT_DRAFT_SECONDS,
     defaultUnits: {},
     theme: 'system',
+    typstPreview: false,
+    typstCopy: false,
   }
 }
 
@@ -56,6 +60,8 @@ export function mergeSettings(partial: Partial<Settings> | undefined, base: Sett
     draftSeconds: partial?.draftSeconds == null ? base.draftSeconds : clampDraftSeconds(partial.draftSeconds),
     defaultUnits: partial?.defaultUnits == null ? base.defaultUnits : sanitizeDefaultUnits(partial.defaultUnits),
     theme: partial?.theme == null ? base.theme : normalizeTheme(partial.theme),
+    typstPreview: partial?.typstPreview == null ? base.typstPreview : Boolean(partial.typstPreview),
+    typstCopy: partial?.typstCopy == null ? base.typstCopy : Boolean(partial.typstCopy),
   }
 }
 
@@ -72,6 +78,8 @@ export function settingsEqual(a: Settings, b: Settings): boolean {
     a.sigFigs === b.sigFigs &&
     a.draftSeconds === b.draftSeconds &&
     a.theme === b.theme &&
+    a.typstPreview === b.typstPreview &&
+    a.typstCopy === b.typstCopy &&
     defaultUnitsEqual(a.defaultUnits, b.defaultUnits)
   )
 }

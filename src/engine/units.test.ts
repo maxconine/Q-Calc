@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { expectQty, shown } from './audit.helpers'
 import { evaluateLine, evaluateSheet } from './evaluate'
 import { formatValue } from './format'
 import type { Value } from './types'
@@ -2313,5 +2314,71 @@ describe('Cal is the food calorie', () => {
     expect(evaluateLine('2000 Cal to kJ').display).toBe('8368 kJ')
     expect(evaluateLine('1 cal to J').display).toBe('4.184 J')
     expect(evaluateLine('500 cal to Cal').display).toBe('0.5 kcal')
+  })
+})
+
+describe('units: length, mass, time', () => {
+  it.each([
+    ['0 in to cm', 0, 'cm'],
+    ['1 in to cm', 2.54, 'cm'],
+    ['12 in to ft', 1, 'ft'],
+    ['1 ft to cm', 30.48, 'cm'],
+    ['1 m to mm', 1000, 'mm'],
+    ['1 km to m', 1000, 'm'],
+    ['1000 m to km', 1, 'km'],
+    ['1 mi to ft', 5280, 'ft'],
+    ['1 kg to g', 1000, 'g'],
+    ['1 kg to lb', 1 / LB, 'lbs'],
+    ['1 lb to kg', LB, 'kg'],
+    ['1 min to s', 60, 's'],
+    ['1 hr to min', 60, 'min'],
+    ['1 day to hr', 24, 'hr'],
+    ['1 m^2 to cm^2', 10000, 'cm²'],
+  ] as const)('%s', (text, n, unit) => {
+    expectQty(text, n, unit)
+  })
+
+  it('a negative length converts, and zero mass stays zero', () => {
+    expectQty('-2 m to cm', -200, 'cm')
+    expectQty('0 kg to lb', 0, 'lbs')
+  })
+
+  it('refuses a conversion across different dimensions', () => {
+    for (const text of ['1 kg to m', '1 m to s', '1 in to kg']) {
+      expect(shown(text)).toBe('improper unit conversion')
+    }
+  })
+})
+
+describe('units: temperature offsets', () => {
+  it.each([
+    ['0 C to F', 32, '°F'],
+    ['-40 C to F', -40, '°F'],
+    ['-40 F to C', -40, '°C'],
+    ['32 F to C', 0, '°C'],
+    ['100 C to F', 212, '°F'],
+    ['0 K to C', -273.15, '°C'],
+    ['273.15 K to C', 0, '°C'],
+    ['0 C to K', 273.15, 'K'],
+  ] as const)('%s', (text, n, unit) => {
+    expectQty(text, n, unit, {}, 1e-9)
+  })
+
+  it('a temperature difference is not an absolute conversion', () => {
+    expect(shown('20 °C + 5 °C')).toBe('')
+  })
+})
+
+describe('units: angles and compound rates', () => {
+  it('degrees and radians', () => {
+    expectQty('180 deg to rad', Math.PI, 'rad')
+    expectQty('90 deg to rad', Math.PI / 2, 'rad')
+    expectQty('1 rad to deg', 180 / Math.PI, 'deg')
+  })
+
+  it('speed and a same-unit ratio', () => {
+    expectQty('10 m/s to km/h', 36, 'km/h')
+    expectQty('1 hr to min', 60, 'min')
+    expectQty('100 cm / 2', 50, 'cm')
   })
 })

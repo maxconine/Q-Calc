@@ -1,5 +1,6 @@
 import type { UserFunction, Value } from './types'
 import { fillParens } from './parens'
+import { looksLikeTypst, typstToAscii } from './typstInput'
 import { truthful } from './precise'
 import { evalScientific, rewriteTypesetMul, stitchConstants, wrapBareFunctions, type AngleMode } from './scientific'
 import { tryConvert, type DefaultUnits } from './units'
@@ -9,7 +10,7 @@ export type { AngleMode }
 const NLP_WORDS =
   /\b(of|off|from|today|tomorrow|yesterday|tax|tip|people|nights|was|until|between|per|earnings|lunch|miles|weeks?|days?|hours?|months?)\b/i
 
-function looksLikeLatex(s: string): boolean {
+export function looksLikeLatex(s: string): boolean {
   return /\\[a-zA-Z%]+|[\^_]\{|\\frac|\\sqrt/.test(s)
 }
 
@@ -45,6 +46,7 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\pi\b/g, '(pi)')
   s = s.replace(/\\tau\b/g, '(tau)')
   s = s.replace(/\\infty\b/g, 'Infinity')
+  s = s.replace(/\\to\b/g, '->')
   s = s.replace(/\\exponentialE\b/g, '(e)')
   s = s.replace(/\\mathrm\{e\}/g, '(e)')
   s = s.replace(/\\imaginaryI\b|\\imaginaryJ\b/g, 'i')
@@ -248,7 +250,8 @@ function foldPowersOfTen(s: string): string {
 
 /** LaTeX to ascii, typeset operators, thousands separators and missing parens. */
 export function normalizeMathText(text: string): string {
-  const ascii = looksLikeLatex(text) ? latexToAscii(text) : text
+  const typst = looksLikeTypst(text) ? typstToAscii(text) : text
+  const ascii = looksLikeLatex(typst) ? latexToAscii(typst) : typst
   return fillParens(foldPowersOfTen(stripThousands(rewriteTypesetMul(ascii))))
 }
 

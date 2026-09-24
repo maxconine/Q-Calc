@@ -266,3 +266,54 @@ describe('a typed ± shows as written', () => {
     expect(formatUncertain(10, 1.2, '1')).toBe('10.0 ± 1.2')
   })
 })
+
+describe('more sig figs and uncertainty', () => {
+  it.each([
+    ['1.0 + 0.001', '1.0'],
+    ['10.00 * 2.0', '2.0e1'],
+    ['1.23 - 1.22', '0.01'],
+    ['-2.50 * 2', '-5.00'],
+    ['sqrt(2.500)', '1.581'],
+    ['log(100.0)', '2.0000'],
+    ['0.10 / 2.0', '0.050'],
+    ['1.20e3 * 2', '2.40e3'],
+    ['100.0 - 99.9', '0.1'],
+    ['2.0 * 3.0 * 4', '24'],
+  ])('%s → %s', (text, display) => {
+    expect(sf(text)).toBe(display)
+  })
+
+  it('sig fig mode is a display rounding; the stored value stays full', () => {
+    const r = evaluateLine('1.23 - 1.22', { sigFigMode: true })
+    expect(r.display).toBe('0.01')
+    expect(r.value!.n).toBeCloseTo(0.01, 12)
+    expect(evaluateLine('2.50 * 3.1', { sigFigMode: true }).value!.n).toBeCloseTo(7.75, 12)
+  })
+
+  it('an exact integer does not limit a measurement, and the mode is off by default', () => {
+    expect(sf('2 * 1.20')).toBe('2.40')
+    expect(pm('2.50 * 2')).toBe('5')
+  })
+
+  it.each([
+    ['(2.0 ± 0.1) * 3', '6.0 ± 0.3'],
+    ['(20 ± 10%) * 2', '40 ± 4'],
+    ['(1.00 ± 0.01) - (1.00 ± 0.01)', '0.00 ± 0.02'],
+    ['-(5.0 ± 0.2)', '-5.0 ± 0.2'],
+    ['(10.0 ± 0.3) / 2', '5.00 ± 0.15'],
+  ])('%s → %s', (text, display) => {
+    expect(pm(text)).toBe(display)
+  })
+
+  it('a stored ± is carried into the next line', () => {
+    const rows = evaluateSheet(['x = 5.0 ± 0.2', 'x * 2', 'x'])
+    expect(rows[0]!.display).toBe('5.0 ± 0.2')
+    expect(rows[1]!.display).toBe('10.0 ± 0.4')
+    expect(rows[2]!.display).toBe('5.0 ± 0.2')
+  })
+
+  it('a ± that cannot be modelled stays blank rather than a bare number', () => {
+    expect(pm('(1+2) ± 0.1')).toBe('')
+    expect(pm('sin(30 ± 1)')).toBe('0.500 ± 0.015')
+  })
+})

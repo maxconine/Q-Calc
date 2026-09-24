@@ -326,6 +326,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_NATIVE = true;
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
+            window.__QCALC_HELD_BAR = false;
             window.__QCALC_META = false;
             window.__QCALC_SETTINGS = \(settings);
             window.__QCALC_ONBOARDING = \(onboarding);
@@ -333,11 +334,16 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
             };
-            window.__qcalcSelectedText = function () {
+            window.__qcalcBarText = function () {
               var el = document.querySelector('.quick-plain');
               if (el && el.selectionStart != null && el.selectionEnd > el.selectionStart) {
                 return el.value.slice(el.selectionStart, el.selectionEnd);
               }
+              return '';
+            };
+            window.__qcalcSelectedText = function () {
+              var bar = window.__qcalcBarText();
+              if (bar) return bar;
               var ae = document.activeElement;
               if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') && ae.selectionEnd > ae.selectionStart) {
                 return ae.value.slice(ae.selectionStart, ae.selectionEnd);
@@ -345,10 +351,24 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
               var sel = window.getSelection();
               return (sel && sel.toString()) || '';
             };
+            window.__qcalcCopyText = function (text, fromBar) {
+              if (!fromBar || typeof window.__qcalcFormatCopy !== 'function') return text;
+              try {
+                var next = window.__qcalcFormatCopy(text);
+                if (typeof next === 'string' && next) return next;
+              } catch (err) {}
+              return text;
+            };
             window.__qcalcRememberText = function () {
-              var live = window.__qcalcSelectedText();
-              if (live) window.__QCALC_HELD = live;
-              else if (!window.__QCALC_META) window.__QCALC_HELD = '';
+              var bar = window.__qcalcBarText();
+              var live = bar || window.__qcalcSelectedText();
+              if (live) {
+                window.__QCALC_HELD = live;
+                window.__QCALC_HELD_BAR = !!bar;
+              } else if (!window.__QCALC_META) {
+                window.__QCALC_HELD = '';
+                window.__QCALC_HELD_BAR = false;
+              }
             };
             document.documentElement.classList.add('quick-native');
             document.documentElement.style.overflow = 'hidden';
@@ -356,7 +376,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
               if (e.key === 'Escape' || e.keyCode === 27) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (window.__qcalcEscape && window.__qcalcEscape()) return;
                 try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'dismiss' }); } catch (err) {}
                 return;
               }
@@ -371,10 +390,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 return;
               }
               if (e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'c' || e.key === 'C' || e.keyCode === 67)) {
-                var text = window.__qcalcSelectedText() || window.__QCALC_HELD || '';
+                var barText = window.__qcalcBarText();
+                var fromBar = !!barText || (!window.__qcalcSelectedText() && window.__QCALC_HELD_BAR);
+                var text = barText || window.__qcalcSelectedText() || window.__QCALC_HELD || '';
                 if (text) {
                   e.preventDefault();
                   e.stopImmediatePropagation();
+                  text = window.__qcalcCopyText(text, fromBar);
                   try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'copy', text: text }); } catch (err) {}
                   return;
                 }
@@ -391,8 +413,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             document.addEventListener('select', window.__qcalcRememberText, true);
             document.addEventListener('mouseup', window.__qcalcRememberText, true);
             window.addEventListener('copy', function (e) {
-              var text = window.__qcalcSelectedText() || window.__QCALC_HELD || '';
+              var barText = window.__qcalcBarText();
+              var fromBar = !!barText || (!window.__qcalcSelectedText() && window.__QCALC_HELD_BAR);
+              var text = barText || window.__qcalcSelectedText() || window.__QCALC_HELD || '';
               if (!text) return;
+              text = window.__qcalcCopyText(text, fromBar);
               e.preventDefault();
               e.stopImmediatePropagation();
               if (e.clipboardData) e.clipboardData.setData('text/plain', text);
@@ -659,15 +684,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
     }
 
-    // the page clears the tape or the input first; only an esc with nothing left hides
+    // esc hides immediately; the page does not get a chance to keep the panel up
     private func escape() {
-        guard let web, webReady, panel?.contentView === web else {
-            hide()
-            return
-        }
-        web.evaluateJavaScript("window.__qcalcEscape ? window.__qcalcEscape() : false") { [weak self] result, _ in
-            if (result as? Bool) != true { self?.hide() }
-        }
+        hide()
     }
 
     private func installDragMonitor() {
@@ -797,10 +816,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let rationalize = AppSettings.shared.rationalize ? "true" : "false"
         let sigFigMode = AppSettings.shared.sigFigMode ? "true" : "false"
         let keepWords = AppSettings.shared.keepWords ? "true" : "false"
+        let typstPreview = AppSettings.shared.typstPreview ? "true" : "false"
+        let typstCopy = AppSettings.shared.typstCopy ? "true" : "false"
         let theme = AppSettings.shared.theme
         let angle = AppSettings.shared.angleMode
         let fractions = AppSettings.shared.fractionMode ? "true" : "false"
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), \(hotKeyJavaScriptFields()) }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), \(hotKeyJavaScriptFields()) }"
     }
 
     // titles are fixed preset strings, so they need no escaping
@@ -828,6 +849,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let keepWords = boolValue(dict["keepWords"]) {
             AppSettings.shared.setKeepWords(keepWords, notifyWeb: false)
+        }
+        if let typstPreview = boolValue(dict["typstPreview"]) {
+            AppSettings.shared.setTypstPreview(typstPreview, notifyWeb: false)
+        }
+        if let typstCopy = boolValue(dict["typstCopy"]) {
+            AppSettings.shared.setTypstCopy(typstCopy, notifyWeb: false)
         }
         if let fractions = boolValue(dict["fractionMode"]) {
             AppSettings.shared.setFractionMode(fractions, notifyWeb: false)

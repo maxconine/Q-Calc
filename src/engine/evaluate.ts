@@ -4,7 +4,8 @@ import { evaluateCalculus, type CalculusResult } from './calculus'
 import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
 import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
 import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './measure'
-import { tryPlainMath } from './plainMath'
+import { latexToAscii, looksLikeLatex, tryPlainMath } from './plainMath'
+import { typstToAscii } from './typstInput'
 import { formatAsFraction, SCIENTIFIC_NAMES, splitGluedFunctions } from './scientific'
 import { exactForm, wantsExactForm } from './simplify'
 import { formatSolve, solveEquation } from './solve'
@@ -107,7 +108,8 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
 
   const known = (name: string) => name in variables || name in quantities || name in measures
   for (const raw of texts) {
-    const line = splitGluedFunctions(stripTrailingEquals(raw.trim()), known)
+    const source = stripTrailingEquals(typstToAscii(raw.trim()))
+    const line = splitGluedFunctions(looksLikeLatex(source) ? latexToAscii(source) : source, known)
     // the input field turns a typed theta into θ, which is also a variable name; solve keeps θ as its unknown
     const trimmedLine = splitGluedFunctions(line.replace(/θ/g, 'theta'), known)
     if (!trimmedLine) {

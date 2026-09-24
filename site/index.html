@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Q Calc</title>
+  <meta name="description" content="Q Calc is a Spotlight-style scientific calculator for Mac. Press Control + Option + Space.">
+  <style>
+    body {
+      max-width: 40rem;
+      margin: 2.5rem auto;
+      padding: 0 1.25rem 3rem;
+      font: 1.125rem/1.5 serif;
+    }
+    h1, h2 { line-height: 1.2; }
+    pre {
+      overflow-x: auto;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+    footer { margin-top: 3rem; }
+  </style>
+</head>
+<body>
+  <h1>Q Calc</h1>
+  <p>A scientific calculator for Mac that shows up like Spotlight. Press <strong>Control + Option + Space</strong>, type, and the answer updates as you type. The app lives in the menu bar.</p>
+  <p>Try <code>sin(90)</code>, <code>72 f</code>, <code>2 in to cm</code>, <code>graph x^3</code>, or <code>$10 for lunch + 15% tip</code>.</p>
+  <p>It handles the usual scientific functions, unit conversions, variables, functions, graphs, and small systems of equations.</p>
+
+  <h2>Download</h2>
+  <p>Apple silicon (M1 or later) and macOS 14 or later. Q Calc is not notarized. Homebrew removes the quarantine flag, so the app opens without the “Apple cannot check this for malicious software” warning.</p>
+
+  <h3>Homebrew</h3>
+  <p>This is the way to get daily updates. You need <a href="https://brew.sh">Homebrew</a>.</p>
+  <pre><code>brew tap maxconine/qcalc https://github.com/maxconine/Q-Calc
+brew trust --tap maxconine/qcalc
+brew install --cask maxconine/qcalc/q-calc
+zsh "$(brew --prefix)/Library/Taps/maxconine/homebrew-qcalc/macos/enable-autoupdate.sh"</code></pre>
+  <p>Or paste this into Terminal:</p>
+  <pre><code>/bin/zsh -c "$(curl -fsSL https://raw.githubusercontent.com/maxconine/Q-Calc/main/macos/install.sh)"</code></pre>
+
+  <h3>Zip</h3>
+  <p><a href="https://github.com/maxconine/Q-Calc/releases/download/v2.0.1/Q-Calc-2.0.1.zip">Download Q Calc 2.0.1</a> (.zip). Unzip it and move <strong>Q Calc.app</strong> to Applications. If macOS blocks the first open, use System Settings → Privacy &amp; Security → Open Anyway.</p>
+  <p>Other builds are on the <a href="https://github.com/maxconine/Q-Calc/releases">releases page</a>.</p>
+
+  <h2>After you install</h2>
+  <p>Look for the icon in the menu bar. <strong>Control + Option + Space</strong> opens the calculator. <strong>Esc</strong> or a click outside hides it.</p>
+  <p>If the shortcut does nothing, macOS is often using it for Input Sources. Turn that off in System Settings → Keyboard → Keyboard Shortcuts → Input Sources.</p>
+
+  <footer>
+    <p><a href="https://github.com/maxconine/Q-Calc">Source on GitHub</a>. MIT license.</p>
+  </footer>
+</body>
+</html>

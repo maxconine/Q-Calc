@@ -15,6 +15,7 @@ export type NativeWindow = Window & {
   __qcalcSize?: () => void
   __qcalcPaste?: (text: string) => void
   __qcalcInsert?: (text: string) => void
+  __qcalcFormatCopy?: (text: string) => string
 }
 
 export function nativeWindow(): NativeWindow | undefined {

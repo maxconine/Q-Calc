@@ -306,6 +306,177 @@ button { font: inherit; color: inherit; cursor: pointer; }
   }
 }
 
+/* 420: white smoke above the window and off both sides. 2.5s stays under SMOKE_MS. */
+.four-twenty-room {
+  height: 0;
+}
+
+html.quick-native .four-twenty-room.smoking {
+  height: 128px;
+}
+
+.four-twenty {
+  position: absolute;
+  z-index: 6;
+  left: -56px;
+  right: -56px;
+  top: -128px;
+  height: 280px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+html.quick-native .four-twenty {
+  top: 0;
+}
+
+.four-twenty.smoking {
+  visibility: visible;
+}
+
+.four-twenty-puff {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 255, 255, 0.45) 36%,
+    rgba(210, 210, 214, 0.16) 62%,
+    transparent 74%
+  );
+  filter: blur(12px);
+  opacity: 0;
+  transform: translate3d(-50%, -50%, 0) scale(0.3);
+}
+
+.four-twenty.smoking .four-twenty-puff {
+  animation: four-twenty-rise 2.15s ease-out both;
+}
+
+@keyframes four-twenty-rise {
+  0% {
+    transform: translate3d(-50%, calc(-50% + 16px), 0) scale(0.22);
+    opacity: 0;
+  }
+  14% {
+    opacity: 0.92;
+  }
+  48% {
+    transform: translate3d(calc(-50% + var(--sway)), calc(-50% + var(--rise) * 0.55), 0) scale(1.05);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(calc(-50% + var(--drift)), calc(-50% + var(--rise)), 0) scale(1.55);
+    opacity: 0;
+  }
+}
+
+@keyframes four-twenty-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  18%,
+  68% {
+    opacity: 0.8;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .four-twenty.smoking .four-twenty-puff {
+    animation: four-twenty-fade 2.5s ease both;
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+}
+
+/* 69: a 6 and a 9 on either side each turn once. 2.2s stays under FOLD_MS. */
+.sixty-nine {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.sixty-nine.folding {
+  visibility: visible;
+}
+
+.sixty-nine-digit {
+  position: absolute;
+  top: 50%;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--answer);
+  opacity: 0;
+}
+
+.sixty-nine-six {
+  left: 14%;
+}
+
+.sixty-nine-nine {
+  right: 14%;
+}
+
+.sixty-nine.folding .sixty-nine-six {
+  animation: sixty-nine-spin 2.2s ease-in-out both;
+}
+
+.sixty-nine.folding .sixty-nine-nine {
+  animation: sixty-nine-spin-back 2.2s ease-in-out both;
+}
+
+@keyframes sixty-nine-spin {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg);
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sixty-nine-spin-back {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg);
+  }
+  12%,
+  88% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sixty-nine.folding .sixty-nine-six,
+  .sixty-nine.folding .sixty-nine-nine {
+    animation: sixty-nine-still 2.2s ease both;
+  }
+}
+
+@keyframes sixty-nine-still {
+  0%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+}
+
 .edge-tools {
   position: absolute;
   top: 0;
@@ -500,6 +671,20 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .quick-example, .live.live-example { animation: none; }
 }
 
+.typst-preview {
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--gutter) var(--sp-2);
+  overflow: hidden;
+}
+.typst-preview svg {
+  display: block;
+  max-width: 100%;
+  max-height: 72px;
+  width: auto;
+  height: auto;
+}
+
 .composer-hint {
   position: relative;
   z-index: 1;
@@ -689,6 +874,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .tape-q:hover {
   color: var(--ink);
 }
+.tape-row > .tape-a {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+}
 .tape-a {
   border: 0;
   background: transparent;
@@ -715,6 +906,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+  width: 100%;
   min-width: 0;
 }
 .tape-a-dual .tape-a {
@@ -760,6 +952,40 @@ button { font: inherit; color: inherit; cursor: pointer; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* a smaller window under the calculator; five rows stay inside the 560px panel */
+.sys {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 var(--sp-3) var(--sp-3);
+  padding: var(--sp-2);
+  background: var(--bg-tape);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+.sys-row {
+  display: block;
+}
+.sys-eq {
+  width: 100%;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--fs-row);
+  letter-spacing: var(--track-display);
+  padding: 0 var(--sp-3);
+  outline: none;
+}
+.sys-eq::placeholder {
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+.sys-eq:focus {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
 /* keeps composer + tape + graph under the 560px panel max in Overlay.swift */

@@ -94,3 +94,80 @@ describe('clamp and list allocation caps', () => {
     expect(evaluateLine(`[1...${MAX_LIST_ALLOC}]`).display.startsWith('[')).toBe(true)
   })
 })
+
+function last(lines: string[]) {
+  const rows = evaluateSheet(lines)
+  return rows[rows.length - 1]!
+}
+
+describe('variables and ans', () => {
+  it('stores a variable and reads it later', () => {
+    expect(last(['x = 5', 'x*2']).value?.n).toBe(10)
+  })
+
+  it('a later assignment replaces the earlier value', () => {
+    expect(last(['x = 5', 'x = 7', 'x']).value?.n).toBe(7)
+  })
+
+  it('ans is the previous numeric answer, not the assignment itself', () => {
+    const rows = evaluateSheet(['2+3', 'ans*2'])
+    expect(rows[0]?.value?.n).toBe(5)
+    expect(rows[1]?.value?.n).toBe(10)
+  })
+
+  it('an assignment updates ans to the stored value', () => {
+    expect(last(['x = 4', 'ans+1']).value?.n).toBe(5)
+  })
+
+  it('a built-in name cannot be stored', () => {
+    const r = evaluateLine('pi = 3')
+    expect(r.kind).not.toBe('assignment')
+    expect(last(['pi = 3', 'pi']).value?.n).toBeCloseTo(Math.PI, 10)
+  })
+
+  it('an unknown name is blank', () => {
+    expect(evaluateLine('unknown').display).toBe('')
+  })
+
+  it('two variables stay independent', () => {
+    const rows = evaluateSheet(['a = 2', 'b = 3', 'a*b'])
+    expect(rows[2]?.value?.n).toBe(6)
+    expect(rows[2]?.display).not.toContain('a')
+  })
+})
+
+describe('user functions at the edges', () => {
+  it('a parameter shadows a global of the same name', () => {
+    const rows = evaluateSheet(['x = 10', 'f(x) = x+1', 'f(2)', 'x'])
+    expect(rows[2]?.value?.n).toBe(3)
+    expect(rows[3]?.value?.n).toBe(10)
+  })
+
+  it('a function sees a variable as of the call, not the definition', () => {
+    const rows = evaluateSheet(['k = 1', 'f(x) = x+k', 'k = 10', 'f(2)'])
+    expect(rows[3]?.value?.n).toBe(12)
+  })
+
+  it('too many or too few arguments give no number', () => {
+    expect(['', 'undefined']).toContain(last(['f(x) = x', 'f(1, 2)']).display)
+    expect(['', 'undefined']).toContain(last(['f(x, y) = x+y', 'f(1)']).display)
+  })
+
+  it('a function can call another function', () => {
+    expect(last(['g(x) = x+1', 'f(x) = g(x)*2', 'f(3)']).value?.n).toBe(8)
+  })
+
+  it('redefining the callee changes the caller', () => {
+    expect(last(['g(x) = x', 'f(x) = g(x)+1', 'g(x) = x*10', 'f(2)']).value?.n).toBe(21)
+  })
+
+  it('an unguarded recursive function does not throw and gives no number', () => {
+    const r = last(['fact(n) = n*fact(n-1)', 'fact(3)'])
+    expect(['', 'undefined']).toContain(r.display)
+    expect(r.value?.kind).not.toBe('number')
+  })
+
+  it('a zero-argument function returns its body', () => {
+    expect(last(['k() = 6', 'k()*7']).value?.n).toBe(42)
+  })
+})

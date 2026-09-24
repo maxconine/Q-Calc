@@ -2,7 +2,7 @@ import { SCIENTIFIC_NAMES } from '../engine/scientific'
 
 export type Span = { start: number; end: number }
 
-const KNOWN = new Set(`${SCIENTIFIC_NAMES}|e|i|in|to|as|of|mod|and|or|not|xor|graph`.toLowerCase().split('|'))
+const KNOWN = new Set(`${SCIENTIFIC_NAMES}|e|i|in|to|as|of|mod|and|or|not|xor|graph|sys`.toLowerCase().split('|'))
 const OPERATOR = /[+\-−*×·/÷^=,.]/
 const CAN_LEAD = /[+\-−.]/
 

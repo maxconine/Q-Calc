@@ -1,4 +1,5 @@
-import { nativeHandler } from './bridge'
+import { nativeHandler, nativeWindow } from './bridge'
+import { copiedEquation } from './typstMath'
 
 export function copyText(text: string): void {
   if (!text) return
@@ -14,6 +15,17 @@ export function copyText(text: string): void {
     area.remove()
     if (focused instanceof HTMLElement) focused.focus()
   })
+}
+
+export function searchBarCopy(text: string): string {
+  const format = nativeWindow()?.__qcalcFormatCopy
+  return format ? format(text) || text : text
+}
+
+export function installSearchBarCopy(typstCopy: () => boolean): void {
+  const w = nativeWindow()
+  if (!w) return
+  w.__qcalcFormatCopy = (text) => copiedEquation(text, typstCopy())
 }
 
 export function inputHighlight(el: EventTarget | null): string {

@@ -9,7 +9,6 @@ import {
   visibleAnswer,
   type AnswerForm,
 } from '../lib/answer'
-import { alignDecimals } from '../lib/decimalAlign'
 import { keepFocus } from '../lib/dom'
 import type { HistoryRow } from '../lib/history'
 import { MathText } from './Bounds'
@@ -24,13 +23,21 @@ type Props = {
   onInsert: (text: string) => void
   onInsertExpr: (index: number) => void
   onInsertAnswer: (index: number) => void
+  onOpenSystem?: (index: number) => void
   // rows before this stay hidden; the recent view is a tail of the tape
   from?: number
 }
 
-// a list of roots or a message doesn't line up on a decimal point
-function unaligned(row: HistoryRow): boolean {
+// a list of roots or a message is shown as written, not as a single pretty number
+function solveList(row: HistoryRow): boolean {
   return Boolean(row.solve && (row.solve.outcome !== 'roots' || row.solve.roots.length > 1))
+}
+
+function historyAnswerText(row: HistoryRow, answerForm: AnswerForm): string {
+  const shown = visibleAnswer(row, answerForm)
+  if (row.kind === 'definition') return shown
+  if (solveList(row)) return prettyRoots(shown)
+  return prettyAnswer(shown)
 }
 
 function solvedFor(row: HistoryRow) {
@@ -47,12 +54,7 @@ function answerTitle(row: HistoryRow, answerForm: AnswerForm): string {
   return 'Insert approximation at the cursor'
 }
 
-export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, onInsert, onInsertExpr, onInsertAnswer, from = 0 }: Props) {
-  const aligned = alignDecimals(
-    history.map((row, i) =>
-      i < from || row.kind === 'definition' || unaligned(row) || hasDualAnswer(row) ? null : prettyAnswer(visibleAnswer(row, answerForm)),
-    ),
-  )
+export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, onInsert, onInsertExpr, onInsertAnswer, onOpenSystem, from = 0 }: Props) {
   return (
     <div className="tape" ref={tapeRef} aria-label="Calculation history">
       {history.map((row, i) => i < from ? null : (
@@ -60,9 +62,9 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
           <button
             type="button"
             className="tape-q"
-            title={row.kind === 'definition' ? 'Insert word at the cursor' : 'Insert expression at the cursor'}
+            title={row.kind === 'system' ? 'Edit equations' : row.kind === 'definition' ? 'Insert word at the cursor' : 'Insert expression at the cursor'}
             onMouseDown={keepFocus}
-            onClick={() => onInsertExpr(i)}
+            onClick={() => (row.kind === 'system' && onOpenSystem ? onOpenSystem(i) : onInsertExpr(i))}
           >
             <MathText text={row.expr} />
           </button>
@@ -103,10 +105,7 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
               }}
             >
               {solvedFor(row)}
-              <RadicalText
-                text={aligned[i] ?? (row.solve ? prettyRoots(visibleAnswer(row, answerForm)) : visibleAnswer(row, answerForm))}
-                answer={row.kind !== 'definition'}
-              />
+              <RadicalText text={historyAnswerText(row, answerForm)} answer={row.kind !== 'definition'} />
             </button>
           )}
         </div>

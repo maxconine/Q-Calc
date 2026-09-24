@@ -59,8 +59,8 @@ describe('prettyTokens: two known words fused with no separator do not partially
 })
 
 describe('prettyTokens: dot shortcut multiplication between digits', () => {
-  it('a bare "dot" between two numbers becomes *', () => {
-    expect(typeKeys('4dot5')).toBe('4*5')
+  it('a bare "dot" between two numbers becomes a dot', () => {
+    expect(typeKeys('4dot5')).toBe('4·5')
   })
   it('gives the same answer as writing * directly', () => {
     expect(evaluateSheet([typeKeys('4dot5')]).at(-1)!.display).toBe(evaluateSheet(['4*5']).at(-1)!.display)

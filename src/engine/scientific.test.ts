@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { hasDualAnswer, insertableAnswer } from '../lib/answer'
+import { expectNum, expectUndefined, shown } from './audit.helpers'
 import { evaluateLine, evaluateSheet } from './evaluate'
 import { formatNumber } from './format'
 import {
@@ -409,6 +410,10 @@ suite('Rounding & Number Theory Functions', [
   { name: 'Greatest Common Divisor', input: 'gcd(12, 18)', expected: 6 },
   { name: 'Multi-Argument GCD', input: 'gcd(24, 36, 48)', expected: 12 },
   { name: 'GCF Alias', input: 'gcf(12, 18)', expected: 6 },
+  { name: 'GCF Any Case', input: 'GCF(12, 18)', expected: 6 },
+  { name: 'LCM Any Case', input: 'LCM(4, 6)', expected: 12 },
+  { name: 'LCF Alias', input: 'lcf(4, 6)', expected: 12 },
+  { name: 'LCF Any Case', input: 'Lcf(4, 6)', expected: 12 },
   { name: 'HCF Alias', input: 'hcf(24, 36, 48)', expected: 12 },
   { name: 'GCF Of Fractions', input: 'gcf(3/2, 3/4)', expected: 0.75 },
   { name: 'GCF Of Decimals', input: 'gcf(0.5, 0.75)', expected: 0.25 },
@@ -888,5 +893,160 @@ describe('overflow and real odd roots', () => {
     expect(d('(-32)^0.2')).toBe('-2')
     expect(d('(-2)^0.5')).toBe('undefined')
     expect(d('(-8)^0.3')).toBe('undefined')
+  })
+})
+
+const deg = { angleMode: 'deg' as const }
+const rad = { angleMode: 'rad' as const }
+
+describe('scientific: angles', () => {
+  it.each([
+    ['sin(0)', 0],
+    ['sin(30)', 0.5],
+    ['sin(90)', 1],
+    ['sin(180)', 0],
+    ['sin(270)', -1],
+    ['sin(360)', 0],
+    ['sin(-30)', -0.5],
+    ['sin(360+30)', 0.5],
+    ['cos(0)', 1],
+    ['cos(60)', 0.5],
+    ['cos(90)', 0],
+    ['cos(180)', -1],
+    ['cos(360)', 1],
+    ['tan(0)', 0],
+    ['tan(45)', 1],
+    ['tan(-45)', -1],
+  ])('%s = %s in degrees', (text, want) => {
+    expectNum(text, want, deg, 1e-12)
+  })
+
+  it('radian right angle and a full turn', () => {
+    expectNum('sin(pi/2)', 1, rad, 1e-12)
+    expectNum('cos(pi)', -1, rad, 1e-12)
+    expectNum('sin(2*pi)', 0, rad, 1e-12)
+    expectNum('tan(pi/4)', 1, rad, 1e-12)
+  })
+
+  it('inverse trig in degrees lands on the principal value', () => {
+    expectNum('asin(0.5)', 30, deg, 1e-9)
+    expectNum('acos(0.5)', 60, deg, 1e-9)
+    expectNum('atan(1)', 45, deg, 1e-9)
+    expectNum('asin(-1)', -90, deg, 1e-9)
+    expectNum('sin^-1(0.5)', 30, deg, 1e-9)
+  })
+
+  it('inverse trig outside [-1, 1] is undefined', () => {
+    expectUndefined('asin(1.1)', deg)
+    expectUndefined('acos(-2)', deg)
+    expectUndefined('asin(2)', rad)
+  })
+
+  it('tan poles are undefined, and the next degree is finite', () => {
+    expectUndefined('tan(90)', deg)
+    expectUndefined('tan(270)', deg)
+    expectNum('tan(89)', Math.tan((89 * Math.PI) / 180), deg, 1e-9)
+  })
+})
+
+describe('scientific: logs, powers, roots', () => {
+  it.each([
+    ['log(1)', 0],
+    ['log(10)', 1],
+    ['log(1000)', 3],
+    ['log(0.01)', -2],
+    ['ln(1)', 0],
+    ['ln(e)', 1],
+    ['log2(8)', 3],
+    ['log2(1)', 0],
+    ['sqrt(0)', 0],
+    ['sqrt(4)', 2],
+    ['cbrt(0)', 0],
+    ['cbrt(8)', 2],
+    ['cbrt(-8)', -2],
+    ['cbrt(-27)', -3],
+    ['2^-3', 0.125],
+    ['8^(1/3)', 2],
+    ['(-8)^(1/3)', -2],
+    ['(-32)^(1/5)', -2],
+    ['0^5', 0],
+    ['5^0', 1],
+    ['0^0', 1],
+    ['exp(0)', 1],
+    ['exp(ln(5))', 5],
+    ['10^log(7)', 7],
+  ])('%s', (text, want) => {
+    expectNum(text, want, deg, 1e-9)
+  })
+
+  it('logs of zero and negatives are undefined', () => {
+    for (const text of ['log(0)', 'ln(0)', 'log(-1)', 'ln(-2)', 'log2(0)', 'sqrt(-1)', 'sqrt(-4)']) {
+      expectUndefined(text)
+    }
+  })
+
+  it('a square root of a square is the absolute value', () => {
+    expectNum('sqrt((-3)^2)', 3)
+    expectNum('sqrt(0.25)', 0.5)
+  })
+})
+
+describe('scientific: factorial and combinatorics', () => {
+  it.each([
+    ['0!', 1],
+    ['1!', 1],
+    ['5!', 120],
+    ['10!', 3628800],
+    ['factorial(0)', 1],
+    ['factorial(6)', 720],
+    ['nCr(5, 0)', 1],
+    ['nCr(5, 5)', 1],
+    ['nCr(5, 1)', 5],
+    ['nCr(10, 3)', 120],
+    ['nPr(5, 0)', 1],
+    ['nPr(10, 3)', 720],
+    ['nCr(5, 6)', 0],
+    ['gcd(12, 18)', 6],
+    ['gcd(0, 5)', 5],
+    ['lcm(4, 6)', 12],
+  ])('%s = %s', (text, want) => {
+    expectNum(text, want)
+  })
+
+  it('half-integer factorial is gamma', () => {
+    // (1/2)! = Γ(3/2) = √π / 2
+    expectNum('factorial(0.5)', Math.sqrt(Math.PI) / 2, {}, 1e-9)
+    expectNum('(1/2)!', Math.sqrt(Math.PI) / 2, {}, 1e-9)
+  })
+
+  it('negative integer factorials and non-integer choices are undefined', () => {
+    expectUndefined('(-1)!')
+    expectUndefined('factorial(-3)')
+    expectUndefined('nCr(4.5, 2)')
+    expectUndefined('nCr(-1, 1)')
+    expectUndefined('nPr(5, -1)')
+  })
+
+  it('171! overflows', () => {
+    expect(shown('171!')).toBe('overflow')
+  })
+})
+
+describe('scientific: rounding, abs, mod', () => {
+  it.each([
+    ['abs(-3.5)', 3.5],
+    ['abs(0)', 0],
+    ['floor(2.9)', 2],
+    ['floor(-1.1)', -2],
+    ['ceil(2.1)', 3],
+    ['ceil(-1.1)', -1],
+    ['round(2.5)', 3],
+    // half away from zero, not Math.round's half toward +∞
+    ['round(-1.5)', -2],
+    ['mod(5, 2)', 1],
+    ['mod(-5, 3)', 1],
+    ['5 mod 2', 1],
+  ])('%s = %s', (text, want) => {
+    expectNum(text, want)
   })
 })

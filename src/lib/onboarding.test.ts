@@ -207,11 +207,11 @@ describe('? sheet', () => {
     expect(keys!.length).toBeLessThanOrEqual(11)
     expect(type!.length).toBeLessThanOrEqual(keys!.length)
     for (const k of ['⌥↑ ⌥↓', '⌃D', '⌃F', '⌃S', '⌃C']) expect(keys!.map(([key]) => key)).toContain(k)
-    expect(type!.map(([key]) => key).join(' ')).toMatch(/graph.*gcf/)
+    expect(type!.map(([key]) => key).join(' ')).toMatch(/graph.*GCF/)
   })
 
   it('every thing to type works', () => {
-    for (const expr of ['5 ft to cm', '80 + 15%', '5 +/- 0.2', '5 -/+ 0.2', 'x = 5', 'gcf(12, 18)', 'lcm(4, 6)']) {
+    for (const expr of ['5 ft to cm', '80 + 15%', '5 +/- 0.2', '5 -/+ 0.2', 'x = 5', 'GCF(12, 18)', 'LCM(4, 6)']) {
       expect(evaluateSheet([prettyTokens(expr)])[0]?.display, expr).toBeTruthy()
     }
   })
