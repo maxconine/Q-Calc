@@ -1,28 +1,239 @@
+# builds the windows installers and, for a v* tag, attaches them and the updater manifest
+# (latest.json) to the release that release.yml creates. separate from release.yml on purpose:
+# nothing here can block or break the mac release. setup: src-tauri/release/README.md
+
 name: Windows
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Attach to the release for package.json's version (off = just build installers)
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
 
 jobs:
   build:
+    name: build ${{ matrix.arch }}
     runs-on: windows-latest
+    # arm64 is a bonus: if it fails, x64 still ships
+    continue-on-error: ${{ matrix.arch == 'arm64' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            target: x86_64-pc-windows-msvc
+          - arch: arm64
+            target: aarch64-pc-windows-msvc
+    defaults:
+      run:
+        shell: bash
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          PKG="$(node -p "require('./package.json').version")"
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME#v}" != "$PKG" ]]; then
+            echo "::error::package.json version ${PKG} does not match tag ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+          echo "version=${PKG}" >> "$GITHUB_OUTPUT"
+
+      - name: Check updater key
+        if: env.PUBLISH == 'true'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          PUBKEY="$(node -p "require('./src-tauri/tauri.windows.conf.json').plugins.updater.pubkey")"
+          if [[ -z "$PUBKEY" || "$PUBKEY" == *QCALC_UPDATER_PUBKEY_PLACEHOLDER* ]]; then
+            echo "::error::The updater public key in src-tauri/tauri.windows.conf.json is still the placeholder. Installed copies could never verify an update. See src-tauri/release/README.md."
+            exit 1
+          fi
+          if [[ -z "$TAURI_SIGNING_PRIVATE_KEY" ]]; then
+            echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret is missing, so updates can't be signed. See src-tauri/release/README.md."
+            exit 1
+          fi
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+          key: ${{ matrix.target }}
+
       - run: npm ci
-      - run: npm run win:build
+
+      # authenticode, option 1: azure artifact signing signs the app, uninstaller and installer during the build
+      - name: Set up Azure signing
+        id: azure
+        if: env.AZURE_CLIENT_ID != '' && vars.AZURE_SIGNING_ENDPOINT != ''
+        env:
+          ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+        run: |
+          cargo install --locked artifact-signing-cli
+          node - <<'JS'
+          const { ENDPOINT, ACCOUNT, PROFILE } = process.env
+          const cmd = `artifact-signing-cli -e ${ENDPOINT} -a ${ACCOUNT} -c ${PROFILE} -d "Q Calc" %1`
+          require('fs').writeFileSync('sign.json', JSON.stringify({ bundle: { windows: { signCommand: cmd } } }))
+          JS
+          # a relative path: a windows RUNNER_TEMP would lose its backslashes once spliced into bash
+          echo "config=--config sign.json" >> "$GITHUB_OUTPUT"
+
+      - name: Build installer
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          npx tauri build --target ${{ matrix.target }} --bundles nsis ${{ steps.azure.outputs.config }}
+          mkdir -p out
+          cp src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*-setup.exe "out/Q-Calc-${VERSION}-${ARCH}-setup.exe"
+
+      # authenticode, option 2: signpath signs the finished installer (only when azure isn't set up)
+      - name: Upload unsigned installer for SignPath
+        id: unsigned
+        if: steps.azure.outcome != 'success' && env.SIGNPATH_API_TOKEN != '' && vars.SIGNPATH_ORGANIZATION_ID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-${{ matrix.arch }}
+          path: out/*.exe
+          if-no-files-found: error
+
+      - name: Sign with SignPath
+        if: steps.unsigned.outcome == 'success'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: out
+
+      # the updater signature goes last so it covers the authenticode-signed bytes
+      - name: Sign for the updater
+        if: env.PUBLISH == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx tauri signer sign --app-version "$VERSION" "out/Q-Calc-${VERSION}-${ARCH}-setup.exe"
+
       - uses: actions/upload-artifact@v4
         with:
-          name: q-calc-windows
-          path: src-tauri/target/release/bundle/nsis/*.exe
+          name: q-calc-windows-${{ matrix.arch }}
+          path: out/
           if-no-files-found: error
+
+  publish:
+    needs: build
+    if: ${{ !cancelled() && (github.event_name == 'push' || inputs.publish) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: q-calc-windows-*
+          merge-multiple: true
+          path: win
+
+      - name: Collect installers
+        id: files
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          X64="Q-Calc-${VERSION}-x64-setup.exe"
+          ARM="Q-Calc-${VERSION}-arm64-setup.exe"
+          if [[ ! -f "win/${X64}.sig" ]]; then
+            echo "::error::The signed x64 installer is missing, so nothing is published."
+            exit 1
+          fi
+          PAIRS="windows-x86_64=${X64}"
+          FILES="win/${X64}"
+          if [[ -f "win/${ARM}.sig" ]]; then
+            PAIRS="${PAIRS} windows-aarch64=${ARM}"
+            FILES="${FILES} win/${ARM}"
+          else
+            echo "::warning::No arm64 installer this time; arm64 installs pick this version up with the next release."
+          fi
+          {
+            echo "version=${VERSION}"
+            echo "pairs=${PAIRS}"
+            echo "files=${FILES}"
+          } >> "$GITHUB_OUTPUT"
+
+      # release.yml is the only thing that creates the release; creating it here could make its
+      # own create step fail, so wait instead
+      - name: Wait for the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.files.outputs.version }}
+        run: |
+          for _ in $(seq 1 120); do
+            if gh release view "$TAG" >/dev/null 2>&1; then exit 0; fi
+            sleep 30
+          done
+          echo "::error::Release ${TAG} didn't appear within an hour. Once the mac Release workflow has made it, re-run this job."
+          exit 1
+
+      - name: Write latest.json
+        env:
+          VERSION: ${{ steps.files.outputs.version }}
+          PAIRS: ${{ steps.files.outputs.pairs }}
+        run: |
+          # shellcheck disable=SC2086
+          node src-tauri/release/latest-json.mjs "$VERSION" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" win $PAIRS
+          cat win/latest.json
+
+      # installers first, manifest last, so latest.json never points at a file that isn't there yet
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.files.outputs.version }}
+          FILES: ${{ steps.files.outputs.files }}
+        run: |
+          # shellcheck disable=SC2086
+          gh release upload "$TAG" $FILES --clobber
+          gh release upload "$TAG" win/latest.json --clobber
+
+      - name: Write winget manifests
+        env:
+          VERSION: ${{ steps.files.outputs.version }}
+        run: bash src-tauri/release/winget.sh "$VERSION" "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" win winget
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: winget-manifests
+          path: winget/
