@@ -102,13 +102,11 @@ fn main() {
             if let (true, Some(path)) = (first_run, &path) {
                 let _ = store.save(path);
             }
-            // before the web view boots, so its injected settings already carry the shortcut
-            let shortcuts = app.global_shortcut();
-            let hotkey = hotkey::launch(hotkey::named(&store.hotkey), |i| shortcuts.register(PRESETS[i].shortcut()).is_ok());
+            let preferred = hotkey::named(&store.hotkey);
             app.manage(Host(Mutex::new(State {
                 store,
                 path,
-                hotkey,
+                hotkey: HotKey { active: None, failed: false },
                 anchor: 0.0,
                 shown_at: None,
                 dragging: false,
@@ -116,6 +114,10 @@ fn main() {
                 first_run,
                 rates: cache.page_value(now()),
             })));
+            // before the web view boots, so its injected settings already carry the shortcut
+            let shortcuts = app.global_shortcut();
+            let hotkey = hotkey::launch(preferred, |i| shortcuts.register(PRESETS[i].shortcut()).is_ok());
+            with(app.handle(), |s| s.hotkey = hotkey);
 
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("quick.html".into()))
                 .title("Q Calc")
