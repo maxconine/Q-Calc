@@ -4,8 +4,10 @@
 
 name: Windows
 
-# tag releases stay off until the windows updater key exists (src-tauri/release/README.md)
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       publish:
