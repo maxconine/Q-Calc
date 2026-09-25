@@ -17,6 +17,12 @@ html[data-host="windows"][data-theme="dark"] { --page: #202020; --edge: rgba(255
 html[data-host="windows"] :is(.quick-field, .live) {
   font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
 }
+/* segoe's line box has more room above the letters than below, so they sat 1.5px low in the bar (measured on
+   the runner); 2px less padding on top brings the input and answer back to the middle */
+html[data-host="windows"] .composer {
+  padding-top: calc(var(--sp-2) - 2px);
+  padding-bottom: calc(var(--sp-2) + 2px);
+}
 
 /* the page can't tell whether dwm rounds and shadows the window (it won't without a gpu, or on windows 10), or
    whether the web view is see-through at all, so the bar is drawn to look finished either way: square, solid,

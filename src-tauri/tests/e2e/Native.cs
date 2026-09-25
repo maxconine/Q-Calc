@@ -59,7 +59,7 @@ namespace QCalcE2E
         const uint KEYEVENTF_EXTENDEDKEY = 0x1, KEYEVENTF_KEYUP = 0x2, KEYEVENTF_UNICODE = 0x4;
         const uint MOUSEEVENTF_LEFTDOWN = 0x2, MOUSEEVENTF_LEFTUP = 0x4;
         public const ushort VK_BACK = 0x08, VK_RETURN = 0x0D, VK_SHIFT = 0x10, VK_CONTROL = 0x11, VK_MENU = 0x12,
-            VK_ESCAPE = 0x1B, VK_SPACE = 0x20, VK_A = 0x41;
+            VK_ESCAPE = 0x1B, VK_SPACE = 0x20, VK_A = 0x41, VK_OEM_COMMA = 0xBC;
 
         static INPUT Key(ushort vk, bool up)
         {

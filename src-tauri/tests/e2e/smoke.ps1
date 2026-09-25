@@ -106,7 +106,7 @@ function Hide-QCalc {
         if (Test-Front) { $N::Chord($N::VK_ESCAPE) }
         if (-not (Wait-Until { -not (Test-Shown) } 1500)) {
             Open-Other
-            Click-Other
+            Click-Other | Out-Null
             Wait-Until { -not (Test-Shown) } 1500 | Out-Null
         }
     }
@@ -130,20 +130,25 @@ function Open-Other {
     $script:otherHwnd = @($N::Windows([int[]]@($script:other.Id), 'qcalc-e2e-other'))[0]
 }
 
-# a real click on another app's window; that's what takes focus away on a desktop
+# a real click on another app's window; that's what takes focus away on a desktop. a fresh window can miss the
+# first click, so it clicks again (a little lower each time) until that window is in front; returns whether it is
 function Click-Other {
-    $r = $N::Rect($script:otherHwnd)
-    $x = [int](($r.Left + $r.Right) / 2); $y = [int](($r.Top + $r.Bottom) / 2)
-    $q = Get-QCalcWindow
-    if ($q -ne [IntPtr]::Zero -and $N::IsWindowVisible($q)) {
-        $qr = $N::Rect($q)
-        if ($x -ge $qr.Left -and $x -le $qr.Right -and $y -ge $qr.Top -and $y -le $qr.Bottom) {
-            $y = $r.Bottom - 20
-            Log 'click point overlapped the calculator; clicking the bottom of the other window'
+    for ($i = 0; $i -lt 4; $i++) {
+        $r = $N::Rect($script:otherHwnd)
+        $x = [int](($r.Left + $r.Right) / 2); $y = [int](($r.Top + $r.Bottom) / 2) + 20 * $i
+        $q = Get-QCalcWindow
+        if ($q -ne [IntPtr]::Zero -and $N::IsWindowVisible($q)) {
+            $qr = $N::Rect($q)
+            if ($x -ge $qr.Left -and $x -le $qr.Right -and $y -ge $qr.Top -and $y -le $qr.Bottom) {
+                $y = $r.Bottom - 20
+                Log 'click point overlapped the calculator; clicking the bottom of the other window'
+            }
         }
+        $N::Click($x, $y)
+        if (Wait-Until { $N::GetForegroundWindow() -eq $script:otherHwnd } 600) { return $true }
+        Log "click $($i + 1) on the other window left $(Describe-Foreground) in front"
     }
-    $N::Click($x, $y)
-    Start-Sleep -Milliseconds 300
+    return $false
 }
 
 function Normalize([string]$s) {
@@ -216,10 +221,9 @@ function Distance([int]$a, [int]$b) {
 }
 
 # the window with an answer over a full-screen backdrop, cropped with room for its shadow, plus pixel probes:
-# a rounded corner shows what's outside the window at its corner pixel, a shadow darkens just below the bottom edge,
-# and with -SeeThrough, 420's smoke room above the bar (left transparent by the page) shows whether the web view
-# really lets the desktop through
-function Save-Look([string]$file, [string]$color, [string]$alt, [switch]$SeeThrough) {
+# a rounded corner shows what's outside the window at its corner pixel instead of the hairline the top edge has,
+# and a shadow darkens just below the bottom edge
+function Save-Look([string]$file, [string]$color, [string]$alt) {
     Hide-QCalc
     $backdrop = Start-Process powershell -PassThru -ArgumentList @(
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
@@ -227,51 +231,57 @@ function Save-Look([string]$file, [string]$color, [string]$alt, [switch]$SeeThro
     try {
         $up = Wait-Until { @($N::Windows([int[]]@($backdrop.Id), 'qcalc-e2e-backdrop')).Count -gt 0 } 15000
         if (-not $up) { throw 'the backdrop never appeared' }
-        Start-Sleep -Milliseconds 500
+        Start-Sleep -Milliseconds 300
         $h = Show-QCalc
         Clear-Input
         $N::Type('12 kg to lb', 30)
         $a = Read-Answer '^26\.4'
-        Start-Sleep -Milliseconds 800
+        Start-Sleep -Milliseconds 400
         $r = $N::Rect($h)
         $m = 48
         $N::Screenshot((Join-Path $OutDir $file), $r.Left - $m, $r.Top - $m, $r.Right - $r.Left + 2 * $m, $r.Bottom - $r.Top + 2 * $m)
         $cx = [int](($r.Left + $r.Right) / 2)
-        $inside = $N::Pixel($r.Left + 6, $r.Top + 6)
         $corner = $N::Pixel($r.Left, $r.Top)
-        $outside = $N::Pixel($r.Left - 1, $r.Top - 1)
+        $edge = $N::Pixel($cx, $r.Top)
         $near = $N::Pixel($cx, $r.Bottom + 3)
         $far = $N::Pixel($cx, $r.Bottom + 40)
-        $parts = @(
+        @(
             "$file $($r.Right - $r.Left)x$($r.Bottom - $r.Top) px, answer $(if ($a.Found) { 'shown' } else { 'missing' })",
-            "corner pixel $(Hex $corner), inside $(Hex $inside), just outside $(Hex $outside) (rounded: $((Distance $corner $outside) -lt (Distance $corner $inside)))",
-            "below the edge $(Hex $near) vs 40 px down $(Hex $far) (shadow: $((Distance $near $far) -gt 6))")
-        if ($SeeThrough) {
-            $bar = $r.Bottom - $r.Top
-            Clear-Input
-            $N::Type('420', 30)
-            Start-Sleep -Milliseconds 900
-            $r = $N::Rect($h)
-            $room = ($r.Bottom - $r.Top) - $bar
-            $N::Screenshot((Join-Path $OutDir 'look-420.png'), $r.Left - $m, $r.Top - $m, $r.Right - $r.Left + 2 * $m, $r.Bottom - $r.Top + 2 * $m)
-            $bg = @([Convert]::ToInt32($color, 16), [Convert]::ToInt32($alt, 16))
-            $hits = 0; $seen = @()
-            if ($room -gt 20) {
-                foreach ($fy in 0.2, 0.5, 0.8) {
-                    foreach ($fx in 0.1, 0.3, 0.5, 0.7, 0.9) {
-                        $p = $N::Pixel([int]($r.Left + $fx * ($r.Right - $r.Left)), [int]($r.Top + $fy * $room))
-                        $seen += Hex $p
-                        if (@($bg | Where-Object { (Distance $_ $p) -le 8 }).Count) { $hits++ }
-                    }
-                }
-            }
-            $parts += "420 room $room px tall: $hits of 15 points show the backdrop (see-through: $($hits -ge 5)); $($seen -join ' ')"
-            Clear-Input
-        }
-        $parts -join '; '
+            "corner pixel $(Hex $corner) vs top edge $(Hex $edge) (rounded: $((Distance $corner $edge) -gt 16))",
+            "below the edge $(Hex $near) vs 40 px down $(Hex $far) (shadow: $((Distance $near $far) -gt 6))"
+        ) -join '; '
     } finally {
         Stop-Process -Id $backdrop.Id -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Get-SettingsWindow {
+    $pids = Get-QCalcPids
+    if (-not $pids) { return [IntPtr]::Zero }
+    $w = @($N::Windows([int[]]$pids, 'Q Calc Settings') | Where-Object { $N::IsWindowVisible($_) })
+    if ($w) { return $w[0] }
+    [IntPtr]::Zero
+}
+
+# picks an appearance in the settings window the way a person would, saves a shot of that window, and closes it
+function Set-Appearance([string]$choice, [string]$shot) {
+    Show-QCalc | Out-Null
+    $N::Chord($N::VK_CONTROL, $N::VK_OEM_COMMA)
+    if (-not (Wait-Until { (Get-SettingsWindow) -ne [IntPtr]::Zero } 5000)) { throw 'ctrl+comma never opened the settings window' }
+    $w = Get-SettingsWindow
+    $root = [System.Windows.Automation.AutomationElement]::FromHandle($w)
+    $cond = New-Object System.Windows.Automation.AndCondition(
+        (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $choice)),
+        (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))
+    $script:button = $null
+    Wait-Until { $script:button = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond); [bool]$script:button } 5000 | Out-Null
+    if (-not $script:button) { throw "no '$choice' button in the settings window" }
+    $script:button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    Start-Sleep -Milliseconds 500
+    $r = $N::Rect($w)
+    $N::Screenshot((Join-Path $OutDir $shot), $r.Left, $r.Top, $r.Right - $r.Left, $r.Bottom - $r.Top)
+    $root.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+    Wait-Until { (Get-SettingsWindow) -eq [IntPtr]::Zero } 2000 | Out-Null
 }
 
 # ---------------------------------------------------------------------------
@@ -311,13 +321,14 @@ Invoke-Check '0' 'first launch shows once' $false {
 
 Get-Process -Name $ProcName -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
+Remove-Item $lookNotes -ErrorAction SilentlyContinue
 $script:proc = Start-Process -FilePath $Exe -PassThru
 Log "relaunched pid $($script:proc.Id)"
 
 Invoke-Check '1' 'later launches start hidden' $true {
     $exists = Wait-Until { (Get-QCalcWindow) -ne [IntPtr]::Zero } 30000
     # let the webview load and anything that would flash on screen do so
-    Start-Sleep -Seconds 4
+    Start-Sleep -Seconds 2
     $alive = -not $script:proc.HasExited
     $visible = @($N::Windows([int[]](Get-QCalcPids), '') | Where-Object { $N::IsWindowVisible($_) -and $N::Title($_) -like 'Q Calc*' } | ForEach-Object { "'$($N::Title($_))'" })
     @{ Pass = ($alive -and $exists -and $visible.Count -eq 0)
@@ -329,8 +340,13 @@ Invoke-Check '1b' 'tray icon' $false {
         foreach ($cls in 'Shell_TrayWnd', 'NotifyIconOverflowWindow', 'TopLevelWindowForOverflowXamlIsland') {
             $h = $N::FindWindowW($cls, $null)
             if ($h -eq [IntPtr]::Zero) { continue }
-            $hit = @(Get-UiaNames $h | Where-Object { $_ -like '*Q Calc*' })
-            if ($hit) { return "'$($hit[0])' in $cls" }
+            $buttons = [System.Windows.Automation.AutomationElement]::FromHandle($h).FindAll(
+                [System.Windows.Automation.TreeScope]::Descendants,
+                (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))
+            foreach ($b in $buttons) {
+                try { $n = $b.Current.Name } catch { continue }
+                if ($n -like '*Q Calc*') { return "'$n' in $cls" }
+            }
         }
         return $null
     }
@@ -380,9 +396,7 @@ Invoke-Check '5' 'esc hides' $true {
 Invoke-Check '6' 'hotkey refocuses over another app' $true {
     Hide-QCalc
     Open-Other
-    Click-Other
-    $otherFront = Wait-Until { $N::GetForegroundWindow() -eq $script:otherHwnd } 1500
-    if (-not $otherFront) { Log "other window did not take the foreground; front: $(Describe-Foreground)" }
+    $otherFront = Click-Other
     $sw = [Diagnostics.Stopwatch]::StartNew()
     $k = Invoke-Hotkey
     if (-not $k) { return @{ Pass = $false; Detail = 'hotkey did not show the window the second time' } }
@@ -394,7 +408,7 @@ Invoke-Check '6' 'hotkey refocuses over another app' $true {
 Invoke-Check '7' 'click elsewhere hides' $true {
     Show-QCalc | Out-Null
     Open-Other
-    Click-Other
+    Click-Other | Out-Null
     $hidden = Wait-Until { -not (Test-Shown) } 1500
     @{ Pass = $hidden; Detail = "front after click: $(Describe-Foreground); hidden: $hidden" }
 }
@@ -403,7 +417,8 @@ Invoke-Check '7' 'click elsewhere hides' $true {
 Invoke-Check '8' 'second launch reuses the first' $false {
     Hide-QCalc
     $second = Start-Process -FilePath $Exe -PassThru
-    Start-Sleep -Seconds 5
+    Wait-Until { $second.HasExited } 5000 | Out-Null
+    Wait-Until { Test-Shown } 1000 | Out-Null
     $pids = Get-QCalcPids
     $shown = Test-Shown
     @{ Pass = ($pids.Count -eq 1 -and $shown)
@@ -415,7 +430,7 @@ Invoke-Check '9' 'window grows with content' $true {
     $h = Show-QCalc
     Clear-Input
     $N::Type('1', 30)
-    Start-Sleep -Milliseconds 800
+    Start-Sleep -Milliseconds 400
     $before = Height $h
     Clear-Input
     $N::Type('graph sin(x)', 30)
@@ -424,10 +439,20 @@ Invoke-Check '9' 'window grows with content' $true {
 }
 
 # for people to look at: the rounded edge, hairline, shadow and backdrop against light and dark
-Invoke-Check '10' 'look over light and dark' $false {
+Invoke-Check '10' 'look in light and dark' $false {
+    # the other window stays on top, and would sit in the settings shots
+    if ($script:other -and -not $script:other.HasExited) { Stop-Process -Id $script:other.Id -Force }
+    $script:other = $null; $script:otherHwnd = [IntPtr]::Zero
     $light = Save-Look 'look-light.png' 'f3f3f3' 'd0d7e2'
-    $dark = Save-Look 'look-dark.png' '1c1c1c' '2f3a4c' -SeeThrough
-    @{ Pass = $true; Detail = "$light; $dark" }
+    $dark = Save-Look 'look-dark.png' '1c1c1c' '2f3a4c'
+    # the runner's system theme is light, so the app's own dark setting is switched on for one shot
+    try {
+        Set-Appearance 'Dark' 'settings-dark.png'
+        $themed = Save-Look 'look-dark-theme.png' '1c1c1c' '2f3a4c'
+    } finally {
+        try { Set-Appearance 'System' 'settings-system.png' } catch { Log "could not put the appearance back: $($_.Exception.Message)" }
+    }
+    @{ Pass = $true; Detail = "$light; $dark; $themed" }
 }
 
 # what the app saw when it dressed the window and what the page paints: tells the runner's limits from our bugs

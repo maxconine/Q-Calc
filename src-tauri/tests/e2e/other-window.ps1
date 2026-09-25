@@ -8,4 +8,6 @@ $form.StartPosition = 'Manual'
 $form.Location = New-Object System.Drawing.Point($X, $Y)
 $form.Size = New-Object System.Drawing.Size(320, 200)
 $form.BackColor = [System.Drawing.Color]::LightSteelBlue
+# on top, so a terminal the runner leaves open can't sit over the spot the test clicks
+$form.TopMost = $true
 [System.Windows.Forms.Application]::Run($form)

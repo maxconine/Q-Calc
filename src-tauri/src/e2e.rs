@@ -15,10 +15,14 @@ pub fn note(line: &str) {
     }
 }
 
-// what the page itself paints under the bar, and what chromium renders with
+// what the page itself paints under the bar, and what chromium renders with. sent once the window is first shown:
+// a hidden web view's timers can sleep, so a timer at load never fired
 pub const PAGE: &str = r#"
-addEventListener('load', function () {
-  setTimeout(function () {
+(function () {
+  var sent = false;
+  function report() {
+    if (sent) return;
+    sent = true;
     var bg = function (sel) { var el = document.querySelector(sel); return el ? getComputedStyle(el).backgroundColor : 'missing' };
     var gl;
     try {
@@ -34,6 +38,7 @@ addEventListener('load', function () {
       'page font: ' + (field ? getComputedStyle(field).fontFamily : 'no field'),
       'webgl renderer: ' + gl
     ] } });
-  }, 1500);
-});
+  }
+  addEventListener('focus', function () { setTimeout(report, 300); });
+})();
 "#;
