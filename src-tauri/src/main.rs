@@ -217,7 +217,11 @@ fn host(window: WebviewWindow, message: Value) {
     match message["type"].as_str() {
         Some("size") if overlay => {
             if let Some(height) = message["height"].as_f64() {
-                resize(&window, height, message["anchorTop"].as_f64().unwrap_or(0.0));
+                let anchor = message["anchorTop"].as_f64().unwrap_or(0.0);
+                if e2e::enabled() {
+                    e2e::note(&format!("size {height} anchor {anchor}"));
+                }
+                resize(&window, height, anchor);
             }
         }
         Some("dismiss") if overlay => hide(&window),
@@ -241,7 +245,12 @@ fn host(window: WebviewWindow, message: Value) {
                 save(s);
             }
         }),
-        Some("openSettings") => open_settings(app),
+        // webview2 deadlocks if a window is built inside one of its own message callbacks, which is where this
+        // command runs; the event loop builds it a moment later instead
+        Some("openSettings") => {
+            let handle = app.clone();
+            let _ = app.run_on_main_thread(move || open_settings(&handle));
+        }
         Some("e2e") if e2e::enabled() => {
             for line in message["lines"].as_array().into_iter().flatten().filter_map(Value::as_str) {
                 e2e::note(line);

@@ -344,8 +344,9 @@ Invoke-Check '1b' 'tray icon' $false {
                 [System.Windows.Automation.TreeScope]::Descendants,
                 (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))
             foreach ($b in $buttons) {
-                try { $n = $b.Current.Name } catch { continue }
-                if ($n -like '*Q Calc*') { return "'$n' in $cls" }
+                # not $n: powershell names ignore case, and that would hide $N
+                try { $name = $b.Current.Name } catch { continue }
+                if ($name -like '*Q Calc*') { return "'$name' in $cls" }
             }
         }
         return $null
@@ -436,6 +437,23 @@ Invoke-Check '9' 'window grows with content' $true {
     $N::Type('graph sin(x)', 30)
     $grew = Wait-Until { (Height $h) -gt $before } 4000
     @{ Pass = $grew; Detail = "height $before px before, $(Height $h) px after typing 'graph sin(x)'" }
+}
+
+# 420's smoke rises from a room the page opens above the bar; the window has to grow up to hold it, as on the mac
+Invoke-Check '9b' 'smoke room grows the window' $false {
+    $h = Show-QCalc
+    Clear-Input
+    Start-Sleep -Milliseconds 300
+    $before = Height $h
+    $top = $N::Rect($h).Top
+    $N::Type('420', 30)
+    $grew = Wait-Until { (Height $h) -ge $before + 100 } 2000
+    $tall = Height $h
+    $moved = $top - $N::Rect($h).Top
+    Clear-Input
+    # the smoke clears after about 2.7 s; later shots shouldn't catch it
+    $back = Wait-Until { (Height $h) -le $before } 4000
+    @{ Pass = $grew; Detail = "height $before px, then $tall px with the top $moved px higher; back to $(Height $h) px: $back" }
 }
 
 # for people to look at: the rounded edge, hairline, shadow and backdrop against light and dark

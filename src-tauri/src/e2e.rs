@@ -18,7 +18,7 @@ pub fn note(line: &str) {
 // what the page itself paints under the bar, and what chromium renders with. sent once the window is first shown:
 // a hidden web view's timers can sleep, so a timer at load never fired
 pub const PAGE: &str = r#"
-(function () {
+;(function () {
   var sent = false;
   function report() {
     if (sent) return;
@@ -40,5 +40,6 @@ pub const PAGE: &str = r#"
     ] } });
   }
   addEventListener('focus', function () { setTimeout(report, 300); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(report, 300); });
 })();
 "#;
