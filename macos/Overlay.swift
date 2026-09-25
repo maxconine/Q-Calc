@@ -298,7 +298,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.onEscape = { [weak self] in self?.hide() }
         panel.onPaste = { [weak self] in self?.pasteIntoWeb() }
         panel.isFloatingPanel = true
-        panel.level = .floating
+        // above full screen apps' own floating windows, like spotlight
+        panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.isOpaque = false
         panel.backgroundColor = .clear

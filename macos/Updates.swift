@@ -59,9 +59,9 @@ final class Updates: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandard
         installNow()
     }
 
-    // the status item's own window is always visible, so skip that level
+    // the status item's own window is always visible, so skip it (the overlay shares its level)
     private static var inUse: Bool {
-        NSApp.isActive || NSApp.windows.contains { $0.isVisible && $0.level != .statusBar }
+        NSApp.isActive || NSApp.windows.contains { $0.isVisible && $0.className != "NSStatusBarWindow" }
     }
 
     private static var idleSeconds: TimeInterval {
