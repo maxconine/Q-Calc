@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: release
@@ -20,6 +21,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Check Sparkle key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          if [[ -z "$SPARKLE_PRIVATE_KEY" ]]; then
+            echo "::error::The SPARKLE_PRIVATE_KEY secret is missing. Without it the zip can't be signed and installed copies won't update. See 'Automatic updates' in the README." >&2
+            exit 1
+          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -68,10 +78,12 @@ jobs:
               --generate-notes
           fi
 
-      - name: Update Homebrew cask
+      - name: Update Homebrew cask and appcast
         env:
           VERSION: ${{ steps.version.outputs.version }}
           SHA256: ${{ steps.sha.outputs.sha256 }}
+          ZIP: ${{ steps.sha.outputs.zip }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           zsh macos/update-cask.sh "$VERSION" "$SHA256"
           UPDATED="${RUNNER_TEMP}/q-calc.rb"
@@ -80,12 +92,22 @@ jobs:
           git pull --ff-only origin main
           mkdir -p Casks
           cp "$UPDATED" Casks/q-calc.rb
-          if git diff --quiet -- Casks/q-calc.rb; then
-            echo "Cask already matches ${VERSION}"
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Q-Calc-${VERSION}.zip"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | zsh macos/update-appcast.sh "$ZIP" "$URL"
+          if git diff --quiet -- Casks/q-calc.rb docs/appcast.xml; then
+            echo "Cask and appcast already match ${VERSION}"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/q-calc.rb
+          git add Casks/q-calc.rb docs/appcast.xml
           git commit -m "q-calc ${VERSION}" -m "[skip ci]"
           git push origin main
+
+      # the appcast is served by pages; ask for a build in case the bot push didn't start one
+      - name: Publish appcast
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/builds" >/dev/null \
+            || echo "::warning::Couldn't request a Pages build. Check that docs/appcast.xml is live."

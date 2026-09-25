@@ -419,6 +419,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if AppSettings.shared.claimFirstRun() {
             overlay?.showFirstRun()
         }
+        Updates.shared.start()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -472,6 +473,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let tips = NSMenuItem(title: "Tips…", action: #selector(showTips), keyEquivalent: "")
         tips.target = self
         menu.addItem(tips)
+        if Updates.shared.enabled {
+            let updates = NSMenuItem(title: "Check for Updates…", action: #selector(Updates.checkForUpdates), keyEquivalent: "")
+            updates.target = Updates.shared
+            menu.addItem(updates)
+        }
         menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Q Calc", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self

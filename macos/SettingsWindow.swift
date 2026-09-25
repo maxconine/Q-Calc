@@ -3,6 +3,7 @@ import SwiftUI
 
 struct GeneralSettingsView: View {
     @ObservedObject var settings: AppSettings
+    @ObservedObject private var updates = Updates.shared
     // the preset macos just refused, so the row can say why nothing changed
     @State private var refusedHotKey: HotKeyPreset?
 
@@ -49,6 +50,12 @@ struct GeneralSettingsView: View {
                 Picker("Keep unfinished input", selection: bind(\.draftSeconds, AppSettings.setDraftSeconds(_:notifyWeb:))) {
                     ForEach(draftChoices, id: \.seconds) { choice in
                         Text(choice.title).tag(choice.seconds)
+                    }
+                }
+                if updates.enabled {
+                    Toggle(isOn: $updates.automatic) {
+                        Text("Update automatically")
+                        Text("Installs new versions while you’re away")
                     }
                 }
             }

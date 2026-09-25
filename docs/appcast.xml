@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Q Calc</title>
+    <link>https://maxconine.github.io/Q-Calc/appcast.xml</link>
+    <description>Q Calc updates</description>
+    <language>en</language>
+  </channel>
+</rss>

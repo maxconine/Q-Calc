@@ -11,6 +11,10 @@ SOULVER_SHA256="36e51abc2d22b2f1000ceeb4468cfa9ce74f4cf3fb79097f7f3e004b7bf9e7c7
 XC="$VENDOR/SoulverCore.xcframework"
 ZIP="$VENDOR/SoulverCore.xcframework.zip"
 SLICE="$XC/macos-arm64_x86_64"
+SPARKLE_VERSION="2.10.0"
+SPARKLE_SHA256="c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c"
+SPARKLE="$VENDOR/Sparkle-${SPARKLE_VERSION}"
+SPARKLE_PLACEHOLDER_KEY="SPARKLE_PUBLIC_KEY_PLACEHOLDER"
 INSTALL=0
 PACKAGE=0
 APP_VERSION="$(node -p "require('$ROOT/package.json').version")"
@@ -23,7 +27,8 @@ for arg in "$@"; do
     -h|--help)
       echo "Usage: macos/build.sh [--install] [--package]"
       echo "  --install   copy Q Calc.app into /Applications"
-      echo "  --package   write macos/dist/Q-Calc-<version>.zip for Homebrew"
+      echo "  --package   write macos/dist/Q-Calc-<version>.zip for release (needs the real SUPublicEDKey)"
+      echo "  QCALC_SPARKLE_PUBLIC_KEY=<key> overrides SUPublicEDKey, for update tests"
       exit 0
       ;;
     *)
@@ -78,6 +83,50 @@ fetch_soulver() {
   unzip -q -o "$ZIP" -d "$VENDOR"
 }
 
+# the full release, not just the framework: the workflow signs the zip with bin/sign_update
+fetch_sparkle() {
+  mkdir -p "$VENDOR"
+  if [[ -d "$SPARKLE/Sparkle.framework" ]]; then
+    return
+  fi
+  local archive="$VENDOR/Sparkle-${SPARKLE_VERSION}.tar.xz"
+  echo "Downloading Sparkle ${SPARKLE_VERSION}…"
+  curl -L --fail -o "$archive" \
+    "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+  local got
+  got="$(shasum -a 256 "$archive" | awk '{print $1}')"
+  if [[ "$got" != "$SPARKLE_SHA256" ]]; then
+    echo "Sparkle checksum mismatch: $got" >&2
+    exit 1
+  fi
+  rm -rf "$SPARKLE"
+  mkdir -p "$SPARKLE"
+  tar -xJf "$archive" -C "$SPARKLE"
+}
+
+# a real key is 32 bytes of base64. A release zip with the placeholder could never be updated
+set_update_key() {
+  local plist="$APP/Contents/Info.plist"
+  if [[ -n "${QCALC_SPARKLE_PUBLIC_KEY:-}" ]]; then
+    /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $QCALC_SPARKLE_PUBLIC_KEY" "$plist"
+  fi
+  local key
+  key="$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$plist")"
+  if [[ "$key" == "$SPARKLE_PLACEHOLDER_KEY" ]]; then
+    if (( PACKAGE )); then
+      echo "error: SUPublicEDKey in macos/Info.plist is still the placeholder." >&2
+      echo "A release built like this can never update itself. See 'Automatic updates' in the README." >&2
+      exit 1
+    fi
+    echo "SUPublicEDKey is the placeholder; this build won't check for updates." >&2
+    return
+  fi
+  if [[ "$(printf %s "$key" | base64 -D 2>/dev/null | wc -c | tr -d ' ')" != "32" ]]; then
+    echo "error: SUPublicEDKey is not a base64 EdDSA public key: $key" >&2
+    exit 1
+  fi
+}
+
 make_icon() {
   local resources="$APP/Contents/Resources"
   local work="$STAGE/iconwork"
@@ -105,9 +154,15 @@ sign_app() {
   local framework="$APP/Contents/Frameworks/SoulverCore.framework"
   codesign --force --sign - --timestamp=none "$framework/Versions/A"
   codesign --force --sign - --timestamp=none "$framework"
+  # inside out: helpers first, then the framework that seals them
+  local sparkle="$APP/Contents/Frameworks/Sparkle.framework"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Autoupdate"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Updater.app"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle"
   codesign --force --sign - --timestamp=none --identifier com.maxconine.qcalc "$BIN"
   codesign --force --sign - --timestamp=none --identifier com.maxconine.qcalc "$APP"
-  codesign --verify --deep "$APP"
+  codesign --verify --deep --strict "$APP"
 }
 
 copy_app() {
@@ -118,10 +173,15 @@ copy_app() {
 }
 
 fetch_soulver
+fetch_sparkle
 
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 
 ditto "$SLICE/SoulverCore.framework" "$APP/Contents/Frameworks/SoulverCore.framework"
+# the xpc services are only for sandboxed apps
+ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" \
+  "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
 
 # Apple Dictionary — to restore, add "$MAC/DictionaryLookup.swift" \ after SoulverEval.swift.
 swiftc -parse-as-library \
@@ -129,11 +189,13 @@ swiftc -parse-as-library \
   -target "${ARCH}-apple-macos14.0" \
   -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
   -F "$SLICE" \
+  -F "$SPARKLE" \
   -framework SwiftUI \
   -framework AppKit \
   -framework WebKit \
   -framework Carbon \
   -framework SoulverCore \
+  -framework Sparkle \
   -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
   "$MAC/MathEval.swift" \
   "$MAC/SoulverEval.swift" \
@@ -141,12 +203,14 @@ swiftc -parse-as-library \
   "$MAC/UnitSettings.swift" \
   "$MAC/SettingsWindow.swift" \
   "$MAC/PeriodicWindow.swift" \
+  "$MAC/Updates.swift" \
   "$MAC/QCalcApp.swift" \
   -o "$BIN"
 
 cp "$MAC/Info.plist" "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$APP/Contents/Info.plist"
+set_update_key
 
 echo "Building web assets…"
 (cd "$ROOT" && npm run build)
