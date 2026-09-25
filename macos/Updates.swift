@@ -9,7 +9,7 @@ final class Updates: NSObject, ObservableObject, SPUUpdaterDelegate, SPUStandard
     // macos/test-update.sh shortens this through the defaults key
     private static var quietSeconds: TimeInterval {
         let override = UserDefaults.standard.double(forKey: "qcalc.updateQuietSeconds")
-        return override > 0 ? override : 10 * 60
+        return override > 0 ? override : 30 * 60
     }
 
     private var controller: SPUStandardUpdaterController?

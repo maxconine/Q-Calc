@@ -175,7 +175,7 @@ The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, a
 
 ### Automatic updates
 
-The app updates itself with [Sparkle](https://sparkle-project.org). Once a day it reads `docs/appcast.xml` from GitHub Pages and downloads a newer zip in the background. The update installs when Q Calc quits, or when the Mac has been idle for 10 minutes with no Q Calc window open, and Q Calc reopens on its own. **Update automatically** in Settings turns this off; Sparkle then asks before installing.
+The app updates itself with [Sparkle](https://sparkle-project.org). Once a day it reads `docs/appcast.xml` from GitHub Pages and downloads a newer zip in the background. The update installs when Q Calc quits, or when the Mac has been idle for 30 minutes with no Q Calc window open, and Q Calc reopens on its own. **Update automatically** in Settings turns this off; Sparkle then asks before installing.
 
 The Release action signs each zip with an EdDSA key. One-time setup, done by a repo admin:
 
