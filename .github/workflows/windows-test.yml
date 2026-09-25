@@ -2,6 +2,11 @@ name: Windows test
 
 on:
   workflow_dispatch:
+    inputs:
+      full:
+        description: "optimised build and the real installer (slower)"
+        type: boolean
+        default: false
   push:
     branches:
       - "windows*"
@@ -31,8 +36,17 @@ jobs:
       - run: npm ci
       # updater artefacts need a signing key, which a fork doesn't have; the test doesn't need them.
       # bash because powershell's npm shim can swallow the bare --
+      # pushes get a quick unoptimised build with no installer; install.ps1 then runs the bare exe
       - shell: bash
-        run: npm run win:build -- --config "$GITHUB_WORKSPACE/src-tauri/tests/e2e/tauri.e2e.json"
+        env:
+          FULL: ${{ inputs.full && '1' || '' }}
+        run: |
+          if [ -n "$FULL" ]; then
+            npm run win:build -- --config "$GITHUB_WORKSPACE/src-tauri/tests/e2e/tauri.e2e.json"
+          else
+            export CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_OPT_LEVEL=0 CARGO_PROFILE_RELEASE_CODEGEN_UNITS=256
+            npm run win:build -- --no-bundle --config "$GITHUB_WORKSPACE/src-tauri/tests/e2e/tauri.e2e.json"
+          fi
       - name: Install
         shell: pwsh
         run: ./src-tauri/tests/e2e/install.ps1
