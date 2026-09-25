@@ -7,6 +7,7 @@ import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/b
 import { copyText, inputHighlight, keepEndInView, searchBarCopy } from '../lib/dom'
 import { knownWordSpans } from '../lib/knownWords'
 import { cleanPastedText } from '../lib/paste'
+import { commandHeld } from '../lib/platform'
 import { breakRun, editKind, recordEdit, redo, undo, undoStart, type EditKind, type Undo, type UndoState } from '../lib/undo'
 import { BoundsInputText } from './Bounds'
 import { RadicalLayer } from './Radical'
@@ -377,7 +378,7 @@ export function QuickInput({
       return
     }
     // done here too because the mac overlay has no edit menu to route ⌘Z, ⌘A and ⌘X
-    const cmd = e.metaKey && !e.ctrlKey && !e.altKey
+    const cmd = commandHeld(e) && !e.altKey
     if (cmd && key === 'z') {
       e.preventDefault()
       const u = undoRef.current

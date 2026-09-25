@@ -5,6 +5,7 @@ import { hasDualAnswer, prettyRoots } from '../lib/answer'
 import { useFitFont } from './useFitFont'
 import { RadicalText } from './Radical'
 import { answerParts } from '../lib/radical'
+import { hostKeys } from '../lib/platform'
 import type { SteadyAnswer } from './useSteadyAnswer'
 
 type Props = {
@@ -132,7 +133,7 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
       ref={fitRef}
       type="button"
       className={`live ${shown ? '' : 'empty'}${formTick ? ' live-cycled' : ''}${copied ? ' copied' : ''}`}
-      title={shown ? 'Copy to clipboard · ⌘C also copies' : undefined}
+      title={shown ? hostKeys('Copy to clipboard · ⌘C also copies') : undefined}
       disabled={!shown}
       {...answerHandle(shown, onCopy, onRefocus)}
     >

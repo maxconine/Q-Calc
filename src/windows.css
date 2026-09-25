@@ -1,0 +1,51 @@
+/* the windows shell only: its shim sets data-host, which the mac app and the web page never do */
+
+html[data-host="windows"] {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  /* segoe is spaced for its size already; sf's display tightening crowds it */
+  --track-display: 0;
+  /* the settings window sits on windows' own window colour */
+  --page: #f3f3f3;
+  --edge: rgba(0, 0, 0, 0.14);
+}
+@media (prefers-color-scheme: dark) {
+  html[data-host="windows"]:not([data-theme="light"]) { --page: #202020; --edge: rgba(255, 255, 255, 0.12); }
+}
+html[data-host="windows"][data-theme="dark"] { --page: #202020; --edge: rgba(255, 255, 255, 0.12); }
+
+/* the 24px input and answer take segoe's display cut, as windows' own large text does */
+html[data-host="windows"] :is(.quick-field, .live) {
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+}
+/* segoe's line box has more room above the letters than below, so they sat 1.5px low in the bar (measured on
+   the runner); 2px less padding on top brings the input and answer back to the middle */
+html[data-host="windows"] .composer {
+  padding-top: calc(var(--sp-2) - 2px);
+  padding-bottom: calc(var(--sp-2) + 2px);
+}
+
+/* the page can't tell whether dwm rounds and shadows the window (it won't without a gpu, or on windows 10), or
+   whether the web view is see-through at all, so the bar is drawn to look finished either way: square, solid,
+   with its own hairline. where dwm does round, it clips the corners and its border sits on the same pixel */
+html[data-host="windows"].quick-native .spotlight {
+  border-radius: 0;
+  background: var(--bg);
+}
+html[data-host="windows"].quick-native .tape,
+html[data-host="windows"].quick-native .graph {
+  background: var(--bg-tape);
+}
+html[data-host="windows"].quick-native .spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  border: 1px solid var(--edge);
+  pointer-events: none;
+}
+
+/* the host asks webview2 for windows' overlay scrollbars, which fade out like the mac's; 'thin' would swap them
+   for a permanent track at the edge of the tape and graph */
+html[data-host="windows"] :is(.tape, .graph) {
+  scrollbar-width: auto;
+}

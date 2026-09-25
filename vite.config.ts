@@ -14,6 +14,7 @@ export default defineConfig({
       input: {
         index: resolve(root, 'index.html'),
         quick: resolve(root, 'quick.html'),
+        settings: resolve(root, 'settings.html'),
       },
     },
   },
