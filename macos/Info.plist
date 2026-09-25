@@ -36,6 +36,16 @@
 	<false/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUFeedURL</key>
+	<string>https://maxconine.github.io/Q-Calc/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>iiGABe+K49qAMq2I0Kx/TluoLA19jMjhG3e9GbbJ1bc=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

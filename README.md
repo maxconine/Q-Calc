@@ -171,7 +171,34 @@ git tag v$(node -p "require('./package.json').version")
 git push origin main v$(node -p "require('./package.json').version")
 ```
 
-The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, and updates `Casks/q-calc.rb`. Macs that installed with Homebrew pick up that build on the next daily autoupdate, or immediately with `brew upgrade --cask q-calc`. You can also run **Release** from the Actions tab without pushing a tag.
+The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, and updates `Casks/q-calc.rb` and `docs/appcast.xml`. Installed copies, from the zip or Homebrew, update themselves within a day (see below), or immediately with **Check for Updates…** in the menu bar menu or `brew upgrade --cask q-calc`. You can also run **Release** from the Actions tab without pushing a tag.
+
+### Automatic updates
+
+The app updates itself with [Sparkle](https://sparkle-project.org). Once a day it reads `docs/appcast.xml` from GitHub Pages and downloads a newer zip in the background. The update installs when Q Calc quits, or when the Mac has been idle for 30 minutes with no Q Calc window open, and Q Calc reopens on its own. **Update automatically** in Settings turns this off; Sparkle then asks before installing.
+
+The Release action signs each zip with an EdDSA key. One-time setup, done by a repo admin:
+
+1. Run `zsh macos/build.sh` once so Sparkle's tools land in `macos/vendor`.
+2. Create the key in your login Keychain. This prints the public key:
+
+   ```bash
+   macos/vendor/Sparkle-2.10.0/bin/generate_keys --account q-calc
+   ```
+
+3. Put that public key in `macos/Info.plist` as `SUPublicEDKey` (replacing `SPARKLE_PUBLIC_KEY_PLACEHOLDER`) and commit it. `npm run mac:package` refuses to build a release while the placeholder is there.
+4. Copy the private key into the `SPARKLE_PRIVATE_KEY` repository secret, then delete the exported file:
+
+   ```bash
+   KEY="$(mktemp)"
+   macos/vendor/Sparkle-2.10.0/bin/generate_keys --account q-calc -x "$KEY"
+   gh secret set SPARKLE_PRIVATE_KEY < "$KEY"
+   rm "$KEY"
+   ```
+
+5. In **Settings → Pages**, deploy from the `main` branch, `/docs` folder, so `https://maxconine.github.io/Q-Calc/appcast.xml` loads.
+
+Keep the private key safe and backed up. Q Calc is ad-hoc signed, so Sparkle trusts an update only if this key signed it. If the key is lost, installed copies can never update again and everyone has to download the zip by hand.
 
 ## License
 
