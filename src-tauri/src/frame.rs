@@ -23,7 +23,7 @@ pub fn settings_background(theme: Theme) -> Color {
 pub fn dress(window: &WebviewWindow) -> Vec<String> {
     use windows_sys::Win32::Graphics::Dwm::{
         DwmExtendFrameIntoClientArea, DwmGetWindowAttribute, DwmIsCompositionEnabled, DwmSetWindowAttribute,
-        DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
+        DWMWA_BORDER_COLOR, DWMWA_COLOR_DEFAULT, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
     };
     use windows_sys::Win32::UI::Controls::MARGINS;
     use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowLongPtrW, GWL_EXSTYLE, GWL_STYLE};
@@ -33,9 +33,11 @@ pub fn dress(window: &WebviewWindow) -> Vec<String> {
     // any frame in the client area brings dwm's shadow back; one pixel along the bottom, because a taller one
     // would show the caption buttons dwm still keeps at the top right for a window with a system menu
     let glass = MARGINS { cxLeftWidth: 0, cxRightWidth: 0, cyTopHeight: 0, cyBottomHeight: 1 };
-    let round = DWMWCP_ROUND;
+    let (round, border) = (DWMWCP_ROUND, DWMWA_COLOR_DEFAULT);
     let (mut composed, mut corner) = (0, -1);
     let (extend, set, get, composition) = unsafe {
+        // back from `bare`; windows 10 has no border colour and says so, which is fine
+        DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR as u32, (&border as *const u32).cast(), 4);
         (
             DwmExtendFrameIntoClientArea(hwnd, &glass),
             DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE as u32, (&round as *const i32).cast(), 4),
@@ -56,6 +58,30 @@ pub fn dress(window: &WebviewWindow) -> Vec<String> {
 pub fn dress(_: &WebviewWindow) -> Vec<String> {
     Vec::new()
 }
+
+// while the 420 smoke has the window grown around the bar, dwm's shadow, border and rounding would draw a box round
+// the smoke; they go until `dress` brings them back
+#[cfg(windows)]
+pub fn bare(window: &WebviewWindow) {
+    use windows_sys::Win32::Graphics::Dwm::{
+        DwmExtendFrameIntoClientArea, DwmSetWindowAttribute, DWMWA_BORDER_COLOR, DWMWA_COLOR_NONE,
+        DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_DONOTROUND,
+    };
+    use windows_sys::Win32::UI::Controls::MARGINS;
+
+    let Ok(hwnd) = window.hwnd() else { return };
+    let hwnd = hwnd.0;
+    let none = MARGINS { cxLeftWidth: 0, cxRightWidth: 0, cyTopHeight: 0, cyBottomHeight: 0 };
+    let (square, border) = (DWMWCP_DONOTROUND, DWMWA_COLOR_NONE);
+    unsafe {
+        DwmExtendFrameIntoClientArea(hwnd, &none);
+        DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE as u32, (&square as *const i32).cast(), 4);
+        DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR as u32, (&border as *const u32).cast(), 4);
+    }
+}
+
+#[cfg(not(windows))]
+pub fn bare(_: &WebviewWindow) {}
 
 // the web view's own background: 0,0,0,0 means it should let the window show through
 #[cfg(windows)]

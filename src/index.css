@@ -315,12 +315,33 @@ html.quick-native .four-twenty-room.smoking {
   height: 128px;
 }
 
+/* the wide room: 160 above, 100 each side, 64 below, as in SMOKE_ROOM. the host widens the window and the padding
+   comes from the window's width, so the bar never narrows while the window catches up */
+html.quick-native .four-twenty-room.smoking.wide {
+  height: 160px;
+}
+
+html.quick-native .spotlight-slot {
+  padding-inline: max(0px, (100vw - 680px) / 2);
+}
+
+html.quick-native .spotlight-slot:has(> .four-twenty-room.wide) {
+  padding-bottom: 64px;
+}
+
+/* the host drops its window shadow while the room is open, or it would outline the smoke */
+html.quick-native .spotlight-slot:has(> .four-twenty-room.wide) .spotlight {
+  box-shadow: var(--shadow);
+}
+
 .four-twenty {
+  --bar-x: 56px;
+  --bar-top: 128px;
   position: absolute;
   z-index: 6;
-  left: -56px;
-  right: -56px;
-  top: -128px;
+  left: calc(-1 * var(--bar-x));
+  right: calc(-1 * var(--bar-x));
+  top: calc(-1 * var(--bar-top));
   height: 280px;
   pointer-events: none;
   visibility: hidden;
@@ -328,6 +349,18 @@ html.quick-native .four-twenty-room.smoking {
 
 html.quick-native .four-twenty {
   top: 0;
+}
+
+html.quick-native .four-twenty.wide {
+  --bar-x: max(0px, (100% - 680px) / 2);
+  --bar-top: 160px;
+  inset: 0;
+  height: auto;
+  /* fades out well before the window's edges, so nothing is cut off square */
+  mask-image:
+    linear-gradient(to right, transparent, #000 56px, #000 calc(100% - 56px), transparent),
+    linear-gradient(to bottom, transparent, #000 64px, #000 calc(100% - 28px), transparent);
+  mask-composite: intersect;
 }
 
 .four-twenty.smoking {
@@ -339,12 +372,13 @@ html.quick-native .four-twenty {
   border-radius: 50%;
   background: radial-gradient(
     ellipse at 50% 50%,
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(255, 255, 255, 0.45) 36%,
-    rgba(210, 210, 214, 0.16) 62%,
-    transparent 74%
+    rgba(255, 255, 255, 0.62) 0%,
+    rgba(255, 255, 255, 0.5) 28%,
+    rgba(230, 230, 234, 0.26) 50%,
+    rgba(215, 215, 220, 0.08) 64%,
+    transparent 72%
   );
-  filter: blur(12px);
+  filter: blur(18px);
   opacity: 0;
   transform: translate3d(-50%, -50%, 0) scale(0.3);
 }
@@ -355,18 +389,18 @@ html.quick-native .four-twenty {
 
 @keyframes four-twenty-rise {
   0% {
-    transform: translate3d(-50%, calc(-50% + 16px), 0) scale(0.22);
+    transform: translate3d(-50%, calc(-50% + 16px), 0) scale(0.45);
     opacity: 0;
   }
   14% {
-    opacity: 0.92;
+    opacity: 0.85;
   }
   48% {
-    transform: translate3d(calc(-50% + var(--sway)), calc(-50% + var(--rise) * 0.55), 0) scale(1.05);
-    opacity: 0.6;
+    transform: translate3d(calc(-50% + var(--sway)), calc(-50% + var(--rise) * 0.55), 0) scale(1.1);
+    opacity: 0.55;
   }
   100% {
-    transform: translate3d(calc(-50% + var(--drift)), calc(-50% + var(--rise)), 0) scale(1.55);
+    transform: translate3d(calc(-50% + var(--drift)), calc(-50% + var(--rise)), 0) scale(1.6);
     opacity: 0;
   }
 }
@@ -385,7 +419,8 @@ html.quick-native .four-twenty {
 @media (prefers-reduced-motion: reduce) {
   .four-twenty.smoking .four-twenty-puff {
     animation: four-twenty-fade 2.5s ease both;
-    transform: translate3d(-50%, -50%, 0) scale(1);
+    /* still, where the moving smoke is halfway: off the bar, so the answer stays clear */
+    transform: translate3d(calc(-50% + var(--sway)), calc(-50% + var(--rise) * 0.55), 0) scale(1);
   }
 }
 

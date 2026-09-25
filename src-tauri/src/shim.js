@@ -42,6 +42,8 @@
   if (!boot.overlay) return
 
   window.__QCALC_NATIVE = true
+  // the window can grow past the bar's sides for the 420 smoke
+  window.__QCALC_SMOKE_ROOM = true
   window.__QCALC_KEYS = []
   window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
     window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }))

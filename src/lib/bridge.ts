@@ -6,6 +6,7 @@ export type StoredDraft = { expr: string; savedAt: number }
 export type NativeWindow = Window & {
   webkit?: { messageHandlers?: { qcalc?: NativeHandler; soulver?: SoulverHandler } }
   __QCALC_NATIVE?: boolean
+  __QCALC_SMOKE_ROOM?: boolean
   __QCALC_KEYS?: string[]
   __QCALC_SETTINGS?: Record<string, unknown>
   __QCALC_DRAFT?: StoredDraft | null

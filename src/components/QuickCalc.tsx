@@ -48,6 +48,7 @@ import { blankReason, type Span } from '../lib/blankReason'
 import { ansWrittenOut, chainedExpr, chainedHistoryExpr, chainsFromAnswer } from '../lib/chain'
 import { hideAction, shouldRestoreDraft } from '../lib/draft'
 import { nativeHandler } from '../lib/bridge'
+import { openSmokeRoom } from '../lib/smokeRoom'
 import { copyText, highlightedText, inputHighlight, installSearchBarCopy, searchBarCopy } from '../lib/dom'
 import {
   evaluateNative,
@@ -165,7 +166,8 @@ function reportNativeHeight(el: HTMLElement | null): void {
   const composer = el.querySelector('.composer')
   const composerBox = composer instanceof HTMLElement ? composer.getBoundingClientRect() : null
   const anchorTop = composerBox ? Math.max(0, Math.round(composerBox.top - box.top)) : 0
-  nativeHandler()?.postMessage({ type: 'size', height, anchorTop })
+  const room = openSmokeRoom(el)
+  nativeHandler()?.postMessage(room ? { type: 'size', height, anchorTop, room } : { type: 'size', height, anchorTop })
 }
 
 function fnDefText(fn: FunctionDef): string {
@@ -1161,6 +1163,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         onMouseDown={(e) => {
           const t = e.target as HTMLElement
           if (t.closest('input, button, .tape, .graph, .quick-plain, .quick-field, .edge-tools, .unit-settings, .live-dual')) return
+          // the smoke's room is the desktop to the eye, so a click there is a click away
+          const inRoom = t === e.currentTarget || t.classList.contains('four-twenty-room')
+          if (inRoom && openSmokeRoom(e.currentTarget)) return dismissNative()
           nativeHandler()?.postMessage({ type: 'drag' })
         }}
         onMouseOver={(e) => {

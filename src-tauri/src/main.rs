@@ -26,7 +26,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 use hotkey::{HotKey, PRESETS};
-use place::Area;
+use place::{Area, Room};
 use rates::Cache;
 use store::Store;
 
@@ -52,6 +52,8 @@ struct State {
     hotkey: HotKey,
     // distance from the window top to the composer, so history grows up and graphs grow down
     anchor: f64,
+    // the 420 smoke's room around the bar, logical
+    room: Room,
     shown_at: Option<Instant>,
     // set by the page's drag; moves while it's set are the user's, and get remembered
     dragging: bool,
@@ -113,6 +115,7 @@ fn main() {
                 path,
                 hotkey: HotKey { active: None, failed: false },
                 anchor: 0.0,
+                room: Room::CLOSED,
                 shown_at: None,
                 dragging: false,
                 unsaved: false,
@@ -225,10 +228,12 @@ fn host(window: WebviewWindow, message: Value) {
         Some("size") if overlay => {
             if let Some(height) = message["height"].as_f64() {
                 let anchor = message["anchorTop"].as_f64().unwrap_or(0.0);
+                let px = |key: &str| message["room"][key].as_f64().unwrap_or(0.0).clamp(0.0, 240.0);
+                let room = Room { top: px("top"), side: px("side"), bottom: px("bottom") };
                 if e2e::enabled() {
-                    e2e::note(&format!("size {height} anchor {anchor}"));
+                    e2e::note(&format!("size {height} anchor {anchor} room {room:?}"));
                 }
-                resize(&window, height, anchor);
+                resize(&window, height, anchor, room);
             }
         }
         Some("dismiss") if overlay => hide(&window),
@@ -423,12 +428,15 @@ fn show_window(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else { return };
     let monitor = monitor_at_cursor(&window);
     let key = monitor.as_ref().map(|m| describe(m).0);
-    let saved = with(app, |s| {
+    let (saved, was) = with(app, |s| {
         s.anchor = 0.0;
         s.dragging = false;
         s.shown_at = Some(Instant::now());
-        key.and_then(|k| s.store.positions.get(&k).copied())
+        (key.and_then(|k| s.store.positions.get(&k).copied()), std::mem::replace(&mut s.room, Room::CLOSED))
     });
+    if was != Room::CLOSED {
+        frame::dress(&window);
+    }
     match monitor {
         Some(monitor) => {
             let (_, area, scale) = describe(&monitor);
@@ -479,10 +487,11 @@ fn blurred(window: &WebviewWindow) {
 
 fn moved(window: &WebviewWindow, position: PhysicalPosition<i32>) {
     let app = window.app_handle();
-    let Some(anchor) = with(app, |s| s.dragging.then_some(s.anchor)) else { return };
+    let Some((anchor, side)) = with(app, |s| s.dragging.then_some((s.anchor, s.room.side))) else { return };
     let Some(monitor) = window.current_monitor().ok().flatten() else { return };
     let (key, area, scale) = describe(&monitor);
-    let spot = place::remembered(area, scale, position.x as f64, position.y as f64, anchor * scale);
+    let x = position.x as f64 + side * scale;
+    let spot = place::remembered(area, scale, x, position.y as f64, anchor * scale);
     with(app, |s| {
         s.store.positions.insert(key, spot);
         s.unsaved = true;
@@ -493,29 +502,39 @@ fn moved(window: &WebviewWindow, position: PhysicalPosition<i32>) {
 fn recenter(window: &WebviewWindow) {
     let Some(monitor) = window.current_monitor().ok().flatten() else { return };
     let (key, area, scale) = describe(&monitor);
-    let anchor = with(window.app_handle(), |s| {
+    let (anchor, side) = with(window.app_handle(), |s| {
         s.dragging = false;
         s.store.positions.remove(&key);
         save(s);
-        s.anchor
+        (s.anchor, s.room.side)
     });
-    let (x, y) = place::centred(area, WIDTH * scale, anchor * scale);
+    let (x, y) = place::centred(area, (WIDTH + 2.0 * side) * scale, anchor * scale);
     let _ = window.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32));
 }
 
-fn resize(window: &WebviewWindow, height: f64, anchor_top: f64) {
+fn resize(window: &WebviewWindow, height: f64, anchor_top: f64, room: Room) {
     let scale = window.scale_factor().unwrap_or(1.0);
-    let h = height.ceil().clamp(MIN_HEIGHT, MAX_HEIGHT);
-    let next = anchor_top.clamp(0.0, h - MIN_HEIGHT);
-    let previous = with(window.app_handle(), |s| {
+    let extra = room.top + room.bottom;
+    let h = height.ceil().clamp(MIN_HEIGHT + extra, MAX_HEIGHT + extra);
+    let next = anchor_top.clamp(room.top, h - room.bottom - MIN_HEIGHT);
+    let (previous, was) = with(window.app_handle(), |s| {
         s.dragging = false;
-        std::mem::replace(&mut s.anchor, next)
+        (std::mem::replace(&mut s.anchor, next), std::mem::replace(&mut s.room, room))
     });
     let Ok(origin) = window.outer_position() else { return };
     let area = window.current_monitor().ok().flatten().map(|m| describe(&m).1);
-    let size = (WIDTH * scale, h * scale);
-    let origin = place::resized(area, origin.x as f64, origin.y as f64, size.0, size.1, previous * scale, next * scale);
+    let size = ((WIDTH + 2.0 * room.side) * scale, h * scale);
+    let (x, y) = (origin.x as f64, origin.y as f64);
+    let (anchor, next) = (previous * scale, next * scale);
+    let origin = place::resized(area, x, y, size.0, size.1, anchor, next, was.scaled(scale), room.scaled(scale));
+    // dwm's edge would draw a box round the smoke, so it goes while the room is open
+    if was == Room::CLOSED && room != Room::CLOSED {
+        frame::bare(window);
+    }
     set_frame(window, origin, size);
+    if was != Room::CLOSED && room == Room::CLOSED {
+        frame::dress(window);
+    }
 }
 
 // on windows, building a web view window on the event loop's own thread (a command, a menu click, even

@@ -103,6 +103,14 @@ final class OverlayWebView: WKWebView {
     }
 }
 
+// space the page asks for around the bar while the 420 smoke plays; the bar keeps its size and spot inside it
+private struct OverlayRoom: Equatable {
+    var top: CGFloat = 0
+    var side: CGFloat = 0
+    var bottom: CGFloat = 0
+    static let closed = OverlayRoom()
+}
+
 final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
     private var panel: OverlayPanel?
     private var web: OverlayWebView?
@@ -121,6 +129,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private let overlayMaxHeight: CGFloat = 560
     // distance from the overlay top to the composer, so history grows up and graphs grow down
     private var sizeAnchorTop: CGFloat = 0
+    private var sizeRoom = OverlayRoom.closed
     private var settingsObserver: NSObjectProtocol?
     private var lastPasteAt: TimeInterval = 0
     private var pendingFirstRun = false
@@ -171,7 +180,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             panel?.contentView = web
         }
         sizeAnchorTop = 0
-        applySize(height: overlayMinHeight, anchorTop: 0)
+        applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
         position()
         panel?.ignoreResignKey = true
         showCount += 1
@@ -222,7 +231,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 if let height = doubleValue(dict["height"]) {
                     applySize(
                         height: CGFloat(height),
-                        anchorTop: CGFloat(doubleValue(dict["anchorTop"]) ?? 0)
+                        anchorTop: CGFloat(doubleValue(dict["anchorTop"]) ?? 0),
+                        room: overlayRoom(dict["room"])
                     )
                 }
             case "dismiss":
@@ -325,6 +335,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let boot = WKUserScript(
             source: """
             window.__QCALC_NATIVE = true;
+            window.__QCALC_SMOKE_ROOM = true;
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
             window.__QCALC_HELD_BAR = false;
@@ -496,7 +507,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let fallback, panel?.contentView !== fallback {
             panel?.contentView = fallback
-            applySize(height: overlayMinHeight, anchorTop: 0)
+            applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
         }
     }
 
@@ -628,21 +639,50 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         """)
     }
 
-    private func applySize(height: CGFloat, anchorTop: CGFloat? = nil) {
+    private func applySize(height: CGFloat, anchorTop: CGFloat? = nil, room: OverlayRoom? = nil) {
         guard let panel else { return }
-        let h = min(max(height.rounded(.up), overlayMinHeight), overlayMaxHeight)
-        let nextAnchor = min(max(anchorTop ?? sizeAnchorTop, 0), max(0, h - overlayMinHeight))
-        var frame = panel.frame
-        let composerTop = frame.maxY - sizeAnchorTop
-        frame.size = NSSize(width: overlayWidth, height: h)
-        frame.origin.y = composerTop + nextAnchor - h
-        // the whole panel stays on the visible screen; if it can't fit, the top wins
+        let room = room ?? sizeRoom
+        let extra = room.top + room.bottom
+        let h = min(max(height.rounded(.up), overlayMinHeight + extra), overlayMaxHeight + extra)
+        let lowest = max(room.top, h - room.bottom - overlayMinHeight)
+        let nextAnchor = min(max(anchorTop ?? sizeAnchorTop, room.top), lowest)
+        let composerTop = panel.frame.maxY - sizeAnchorTop
+        // the panel without its room: the bar, with any history or graph
+        var body = NSRect(
+            x: panel.frame.minX + sizeRoom.side,
+            y: composerTop + nextAnchor - h + room.bottom,
+            width: overlayWidth,
+            height: h - extra
+        )
+        // the body stays on the visible screen; if it can't fit, the top wins. the room may run off the edges
         if let screen = panel.screen?.visibleFrame ?? NSScreen.main?.visibleFrame {
-            frame.origin.y = min(max(frame.origin.y, screen.minY), screen.maxY - h)
-            frame.origin.x = min(max(frame.origin.x, screen.minX), screen.maxX - frame.width)
+            body.origin.y = min(max(body.minY, screen.minY), screen.maxY - body.height)
+            body.origin.x = min(max(body.minX, screen.minX), screen.maxX - body.width)
         }
+        let frame = NSRect(
+            x: body.minX - room.side,
+            y: body.minY - room.bottom,
+            width: body.width + 2 * room.side,
+            height: h
+        )
         sizeAnchorTop = nextAnchor
+        sizeRoom = room
+        // the shadow follows the window's alpha, so it would trace the smoke; the page shadows the bar meanwhile
+        if room != .closed { panel.hasShadow = false }
         panel.setFrame(frame, display: true)
+        if room == .closed, !panel.hasShadow {
+            panel.hasShadow = true
+            panel.invalidateShadow()
+            // again once the page has drawn at the new size
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak panel] in panel?.invalidateShadow() }
+        }
+    }
+
+    // the page's room for the 420 smoke; anything missing or odd is no room
+    private func overlayRoom(_ any: Any?) -> OverlayRoom {
+        guard let dict = any as? [String: Any] else { return .closed }
+        func px(_ key: String) -> CGFloat { CGFloat(min(max(doubleValue(dict[key]) ?? 0, 0), 240)) }
+        return OverlayRoom(top: px("top"), side: px("side"), bottom: px("bottom"))
     }
 
     private func disableWebViewScrolling(_ web: WKWebView) {
@@ -697,10 +737,19 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 return event
             }
             let p = event.locationInWindow
+            let room = self.sizeRoom
             let size = panel.frame.size
+            let body = NSRect(
+                x: room.side,
+                y: room.bottom,
+                width: size.width - 2 * room.side,
+                height: size.height - room.top - room.bottom
+            )
+            // a click in the smoke's room goes to the page, which takes it as a click away
+            guard p.x >= body.minX, p.x <= body.maxX, p.y >= body.minY, p.y <= body.maxY else { return event }
             let edge: CGFloat = 14
-            let alongTop = p.y >= size.height - edge
-            let topCorner = p.y >= size.height - 44 && (p.x <= edge || p.x >= size.width - edge)
+            let alongTop = p.y >= body.maxY - edge
+            let topCorner = p.y >= body.maxY - 44 && (p.x <= body.minX + edge || p.x >= body.maxX - edge)
             if alongTop || topCorner {
                 if event.clickCount == 2 {
                     self.forgetPosition()
@@ -772,7 +821,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let origin = screen.visibleFrame.origin
         let top = panel.frame.maxY - sizeAnchorTop
         var all = UserDefaults.standard.dictionary(forKey: Self.positionsKey) ?? [:]
-        all[key] = [Double(panel.frame.minX - origin.x), Double(top - origin.y)]
+        all[key] = [Double(panel.frame.minX + sizeRoom.side - origin.x), Double(top - origin.y)]
         UserDefaults.standard.set(all, forKey: Self.positionsKey)
     }
 
