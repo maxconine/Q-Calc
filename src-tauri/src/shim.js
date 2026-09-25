@@ -1,5 +1,5 @@
 // the page talks to the mac host through webkit message handlers; this gives it the same door into rust
-(function () {
+(function (boot) {
   function send(message) {
     var tauri = window.__TAURI_INTERNALS__
     if (tauri) tauri.invoke('host', { message: message }).catch(function () {})
@@ -12,9 +12,22 @@
     : { qcalc: qcalc }
   Object.defineProperty(window, 'webkit', { value: { messageHandlers: handlers }, configurable: true })
 
+  window.__QCALC_PLATFORM = 'windows'
+  window.__QCALC_SETTINGS = boot.settings
+  window.__QCALC_ONBOARDING = boot.onboarding
+  if (boot.rates) window.__QCALC_RATES = boot.rates
+  document.documentElement.dataset.theme = boot.settings.theme
+
+  // reload or print would throw the page away
+  window.addEventListener('keydown', function (e) {
+    var key = (e.key || '').toLowerCase()
+    if (e.key === 'F5' || (e.ctrlKey && (key === 'r' || key === 'p'))) e.preventDefault()
+  }, true)
+
+  if (!boot.overlay) return
+
   window.__QCALC_NATIVE = true
   window.__QCALC_KEYS = []
-  window.__QCALC_SETTINGS = __QCALC_HOTKEY__
   window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
     window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }))
   }
@@ -28,14 +41,32 @@
       send({ type: 'dismiss' })
       return
     }
+    if (e.key === ',' && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
+      e.preventDefault()
+      e.stopPropagation()
+      send({ type: 'openSettings' })
+      return
+    }
     var field = document.querySelector('.quick-plain')
     if (field && document.activeElement !== field && e.key.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey) {
       window.__QCALC_KEYS.push(e.key)
     }
+  }, true)
+  // the mac's edge strip: a double click along the top forgets the remembered spot
+  window.addEventListener('mousedown', function (e) {
+    if (e.detail !== 2 || e.button !== 0) return
+    var t = e.target
+    if (t && t.closest && t.closest('button, .tape')) return
+    var edge = 14
+    var corner = e.clientY <= 44 && (e.clientX <= edge || e.clientX >= window.innerWidth - edge)
+    if (e.clientY > edge && !corner) return
+    e.preventDefault()
+    e.stopPropagation()
+    send({ type: 'recenter' })
   }, true)
   window.addEventListener('wheel', function (e) {
     var t = e.target
     if (t && t.closest && t.closest('.tape')) return
     e.preventDefault()
   }, { passive: false, capture: true })
-})()
+})(__QCALC_BOOT__)
