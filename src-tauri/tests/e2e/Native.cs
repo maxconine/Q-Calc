@@ -174,7 +174,17 @@ namespace QCalcE2E
 
         public static void Screenshot(string path)
         {
-            Rectangle s = Screen();
+            Capture(path, Screen());
+        }
+
+        // a part of the screen, clipped to it
+        public static void Screenshot(string path, int x, int y, int width, int height)
+        {
+            Capture(path, Rectangle.Intersect(new Rectangle(x, y, width, height), Screen()));
+        }
+
+        static void Capture(string path, Rectangle s)
+        {
             using (Bitmap bmp = new Bitmap(Math.Max(1, s.Width), Math.Max(1, s.Height)))
             {
                 using (Graphics g = Graphics.FromImage(bmp))

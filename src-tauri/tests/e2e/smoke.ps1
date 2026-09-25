@@ -206,6 +206,30 @@ function Expect-Answer([string]$expr, [string]$pattern) {
     else { @{ Pass = $false; Detail = "'$expr' never showed /$pattern/; saw: $($a.Text)" } }
 }
 
+# the window with an answer over a full-screen backdrop, cropped with room for its shadow
+function Save-Look([string]$file, [string]$color, [string]$alt) {
+    Hide-QCalc
+    $backdrop = Start-Process powershell -PassThru -ArgumentList @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+        '-File', (Join-Path $PSScriptRoot 'backdrop.ps1'), '-Color', $color, '-Alt', $alt)
+    try {
+        $up = Wait-Until { @($N::Windows([int[]]@($backdrop.Id), 'qcalc-e2e-backdrop')).Count -gt 0 } 15000
+        if (-not $up) { throw 'the backdrop never appeared' }
+        Start-Sleep -Milliseconds 500
+        $h = Show-QCalc
+        Clear-Input
+        $N::Type('12 kg to lb', 30)
+        $a = Read-Answer '^26\.4'
+        Start-Sleep -Milliseconds 800
+        $r = $N::Rect($h)
+        $m = 48
+        $N::Screenshot((Join-Path $OutDir $file), $r.Left - $m, $r.Top - $m, $r.Right - $r.Left + 2 * $m, $r.Bottom - $r.Top + 2 * $m)
+        "$file ($($r.Right - $r.Left)x$($r.Bottom - $r.Top) px, answer $(if ($a.Found) { 'shown' } else { 'missing' }))"
+    } finally {
+        Stop-Process -Id $backdrop.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # ---------------------------------------------------------------------------
 
 $screen = $N::Screen()
@@ -346,6 +370,13 @@ Invoke-Check '9' 'window grows with content' $true {
     $N::Type('graph sin(x)', 30)
     $grew = Wait-Until { (Height $h) -gt $before } 4000
     @{ Pass = $grew; Detail = "height $before px before, $(Height $h) px after typing 'graph sin(x)'" }
+}
+
+# for people to look at: the rounded edge, hairline, shadow and backdrop against light and dark
+Invoke-Check '10' 'look over light and dark' $false {
+    $light = Save-Look 'look-light.png' 'f3f3f3' 'd0d7e2'
+    $dark = Save-Look 'look-dark.png' '1c1c1c' '2f3a4c'
+    @{ Pass = $true; Detail = "$light; $dark" }
 }
 
 # ---------------------------------------------------------------------------

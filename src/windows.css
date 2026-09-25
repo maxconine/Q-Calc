@@ -1,0 +1,23 @@
+/* the windows shell only: its shim sets data-host, which the mac app and the web page never do */
+
+html[data-host="windows"] {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', sans-serif;
+  /* segoe is spaced for its size already; sf's display tightening crowds it */
+  --track-display: 0;
+  /* the settings window sits on windows' own window colour */
+  --page: #f3f3f3;
+}
+@media (prefers-color-scheme: dark) {
+  html[data-host="windows"]:not([data-theme="light"]) { --page: #202020; }
+}
+html[data-host="windows"][data-theme="dark"] { --page: #202020; }
+
+/* the 24px input and answer take segoe's display cut, as windows' own large text does */
+html[data-host="windows"] :is(.quick-field, .live) {
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+}
+
+/* dwm rounds, outlines and shadows the window itself, so the bar under it is a plain rectangle */
+html[data-host="windows"].quick-native .spotlight {
+  border-radius: 0;
+}

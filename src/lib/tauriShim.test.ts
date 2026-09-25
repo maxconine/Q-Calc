@@ -59,6 +59,7 @@ describe('windows shim', () => {
     expect(win.__QCALC_ONBOARDING).toEqual({ opens: 2, commits: 0, hints: 16, done: false })
     expect(win.__QCALC_RATES).toEqual({ base: 'EUR', rates: { USD: 1.1 } })
     expect(root.dataset.theme).toBe('dark')
+    expect(root.dataset.host).toBe('windows')
     expect(classes).toContain('quick-native')
   })
 
@@ -87,8 +88,9 @@ describe('windows shim', () => {
   })
 
   it('the settings window gets the door and settings, not the overlay’s keys', () => {
-    const { win, classes, sent, fire } = boot(false)
+    const { win, root, classes, sent, fire } = boot(false)
     expect(win.__QCALC_SETTINGS).toEqual(SETTINGS)
+    expect(root.dataset.host).toBe('windows')
     expect(win.__QCALC_NATIVE).toBeUndefined()
     expect(win.__QCALC_RATES).toBeUndefined()
     expect(classes).toEqual([])

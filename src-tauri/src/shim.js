@@ -17,6 +17,8 @@
   window.__QCALC_ONBOARDING = boot.onboarding
   if (boot.rates) window.__QCALC_RATES = boot.rates
   document.documentElement.dataset.theme = boot.settings.theme
+  // windows-only css hangs off this; the mac app and the web page never set it
+  document.documentElement.dataset.host = 'windows'
 
   // reload or print would throw the page away
   window.addEventListener('keydown', function (e) {

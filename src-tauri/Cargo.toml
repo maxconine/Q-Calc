@@ -20,7 +20,7 @@ ureq = { version = "3", default-features = false, features = ["native-tls-no-def
 
 [target.'cfg(windows)'.dependencies]
 tauri-plugin-updater = "2"
-windows-sys = { version = "0.61", features = ["Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse"] }
+windows-sys = { version = "0.61", features = ["Win32_Graphics_Dwm", "Win32_System_SystemInformation", "Win32_UI_Controls", "Win32_UI_Input_KeyboardAndMouse"] }
 webview2-com = "0.38"
 windows-core = "0.61"
 

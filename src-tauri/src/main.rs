@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod frame;
 mod hotkey;
 mod place;
 mod rates;
@@ -121,6 +122,7 @@ fn main() {
             let hotkey = hotkey::launch(preferred, |i| shortcuts.register(PRESETS[i].shortcut()).is_ok());
             with(app.handle(), |s| s.hotkey = hotkey);
 
+            let theme = with(app.handle(), |s| window_theme(&s.store.settings.theme));
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("quick.html".into()))
                 .title("Q Calc")
                 .inner_size(WIDTH, MIN_HEIGHT)
@@ -133,6 +135,8 @@ fn main() {
                 .maximizable(false)
                 .minimizable(false)
                 .visible(false)
+                .theme(theme)
+                .scroll_bar_style(frame::SCROLL_BARS)
                 .initialization_script(boot_script(app.handle(), true))
                 .on_page_load(|window, payload| {
                     let app = window.app_handle();
@@ -142,6 +146,7 @@ fn main() {
                     }
                 })
                 .build()?;
+            frame::dress(&window);
             quiet_browser_keys(&window);
             let handle = window.clone();
             window.on_window_event(move |event| match event {
@@ -283,8 +288,11 @@ fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<usize>) 
             let _ = window.eval(&script);
         }
     }
-    if let Some(window) = app.get_webview_window("settings") {
-        let _ = window.set_theme(window_theme(&theme));
+    // the frame follows too: the border, the shadow and the acrylic's tint
+    for label in ["main", "settings"] {
+        if let Some(window) = app.get_webview_window(label) {
+            let _ = window.set_theme(window_theme(&theme));
+        }
     }
 }
 
@@ -491,12 +499,16 @@ fn open_settings(app: &AppHandle) {
         return;
     }
     let theme = with(app, |s| window_theme(&s.store.settings.theme));
+    // the overlay already wears the chosen theme, or the system's
+    let shown = app.get_webview_window("main").and_then(|w| w.theme().ok()).unwrap_or(Theme::Light);
     let built = WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings.html".into()))
         .title("Q Calc Settings")
         .inner_size(SETTINGS_SIZE.0, SETTINGS_SIZE.1)
         .min_inner_size(420.0, 360.0)
         .maximizable(false)
         .theme(theme)
+        .background_color(frame::settings_background(shown))
+        .scroll_bar_style(frame::SCROLL_BARS)
         .visible(false)
         .initialization_script(boot_script(app, false))
         .build();
