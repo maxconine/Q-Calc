@@ -18,11 +18,13 @@ serde = { version = "1", features = ["derive"] }
 roxmltree = "0.20"
 ureq = { version = "3", default-features = false, features = ["native-tls-no-default"] }
 
+[target.'cfg(windows)'.dependencies]
+tauri-plugin-updater = "2"
+windows-sys = { version = "0.61", features = ["Win32_System_SystemInformation", "Win32_UI_Input_KeyboardAndMouse"] }
+webview2-com = "0.38"
+windows-core = "0.61"
+
 [profile.release]
 lto = true
 opt-level = "s"
 strip = true
-
-[target."cfg(windows)".dependencies]
-webview2-com = "0.38"
-windows-core = "0.61"

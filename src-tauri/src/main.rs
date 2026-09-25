@@ -4,6 +4,7 @@ mod hotkey;
 mod place;
 mod rates;
 mod store;
+mod update;
 
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -79,6 +80,7 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show_window(app)))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(update::plugin())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _, event| {
