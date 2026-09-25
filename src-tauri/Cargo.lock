@@ -4830,6 +4830,7 @@ dependencies = [
  "rustls-pki-types",
  "ureq-proto",
  "utf8-zero",
+ "webpki-root-certs",
 ]
 
 [[package]]
