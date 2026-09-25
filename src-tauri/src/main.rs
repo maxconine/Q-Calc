@@ -9,6 +9,8 @@ use tauri::{AppHandle, LogicalPosition, LogicalSize, Manager, WebviewUrl, Webvie
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
+mod update;
+
 const WIDTH: f64 = 680.0;
 const MIN_HEIGHT: f64 = 72.0;
 const MAX_HEIGHT: f64 = 560.0;
@@ -27,6 +29,7 @@ struct AnchorTop(Mutex<f64>);
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(update::plugin())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _, event| {
