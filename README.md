@@ -158,7 +158,7 @@ If the clone is in **Documents** or **Desktop**, macOS may refuse to launch the 
 
 ### Ship an update to field Macs
 
-The current public release is **v2.0.2**. That is the GitHub Release, the zip linked from the download page, and the Homebrew cask.
+The current public release is **v2.0.3**. That is the GitHub Release, the zip linked from the download page, and the Homebrew cask.
 
 To publish the next version:
 
