@@ -12,7 +12,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "QCALC_UPDATER_PUBKEY_PLACEHOLDER",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUxMjE3NjdFMDRBQzc5REQKUldUZGVhd0VmblloVWJrb2xaQ3grMy9PVlRGQjFzUVpRcm4vOTJhUy9nRnBqYUZNTngyYjY1bEMK",
       "endpoints": ["https://github.com/maxconine/Q-Calc/releases/latest/download/latest.json"],
       "requireSignedVersion": true,
       "windows": { "installMode": "quiet" }
