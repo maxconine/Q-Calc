@@ -39,7 +39,7 @@
 	<key>SUFeedURL</key>
 	<string>https://maxconine.github.io/Q-Calc/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>SPARKLE_PUBLIC_KEY_PLACEHOLDER</string>
+	<string>iiGABe+K49qAMq2I0Kx/TluoLA19jMjhG3e9GbbJ1bc=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUAutomaticallyUpdate</key>
