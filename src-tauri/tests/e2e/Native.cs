@@ -179,7 +179,7 @@ namespace QCalcE2E
             {
                 using (Graphics g = Graphics.FromImage(bmp))
                 {
-                    g.CopyFromScreen(s.Left, s.Top, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy | CopyPixelOperation.CaptureBlt);
+                    g.CopyFromScreen(s.Left, s.Top, 0, 0, bmp.Size, CopyPixelOperation.SourceCopy);
                 }
                 bmp.Save(path, ImageFormat.Png);
             }

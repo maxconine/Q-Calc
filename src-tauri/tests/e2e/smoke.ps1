@@ -228,12 +228,23 @@ $env:QCALC_E2E = '1'
 $script:proc = Start-Process -FilePath $Exe -PassThru
 Log "started pid $($script:proc.Id)"
 
-Invoke-Check '1' 'starts hidden' $true {
+# the very first launch shows the window once so people know it's there
+Invoke-Check '0' 'first launch shows once' $false {
+    $shown = Wait-Until { Test-Shown } 30000
+    @{ Pass = $shown; Detail = "shown on first launch: $shown" }
+}
+
+Get-Process -Name $ProcName -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Milliseconds 500
+$script:proc = Start-Process -FilePath $Exe -PassThru
+Log "relaunched pid $($script:proc.Id)"
+
+Invoke-Check '1' 'later launches start hidden' $true {
     $exists = Wait-Until { (Get-QCalcWindow) -ne [IntPtr]::Zero } 30000
     # let the webview load and anything that would flash on screen do so
     Start-Sleep -Seconds 4
     $alive = -not $script:proc.HasExited
-    $visible = @($N::Windows([int[]](Get-QCalcPids), '') | Where-Object { $N::IsWindowVisible($_) } | ForEach-Object { "'$($N::Title($_))'" })
+    $visible = @($N::Windows([int[]](Get-QCalcPids), '') | Where-Object { $N::IsWindowVisible($_) -and $N::Title($_) -like 'Q Calc*' } | ForEach-Object { "'$($N::Title($_))'" })
     @{ Pass = ($alive -and $exists -and $visible.Count -eq 0)
        Detail = "process alive: $alive; window created: $exists; visible windows: $(if ($visible) { $visible -join ', ' } else { 'none' })" }
 }
