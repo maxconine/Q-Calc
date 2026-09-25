@@ -116,11 +116,21 @@ namespace QCalcE2E
 
         public static void Click(int x, int y)
         {
+            Press(x, y, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP);
+        }
+
+        public static void RightClick(int x, int y)
+        {
+            Press(x, y, 0x0008, 0x0010);
+        }
+
+        static void Press(int x, int y, uint downFlag, uint upFlag)
+        {
             SetCursorPos(x, y);
             Thread.Sleep(50);
             List<INPUT> inputs = new List<INPUT>();
-            INPUT down = new INPUT(); down.type = INPUT_MOUSE; down.u.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
-            INPUT up = new INPUT(); up.type = INPUT_MOUSE; up.u.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+            INPUT down = new INPUT(); down.type = INPUT_MOUSE; down.u.mi.dwFlags = downFlag;
+            INPUT up = new INPUT(); up.type = INPUT_MOUSE; up.u.mi.dwFlags = upFlag;
             inputs.Add(down); inputs.Add(up);
             Send(inputs);
         }

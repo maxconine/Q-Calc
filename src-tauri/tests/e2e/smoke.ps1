@@ -255,6 +255,32 @@ function Save-Look([string]$file, [string]$color, [string]$alt) {
     }
 }
 
+# the tray menu's Settings... opens the same window; a second route, reported rather than required
+function Test-TraySettings {
+    try {
+        Hide-QCalc
+        $button = Find-TrayButton
+        if (-not $button) { return 'tray icon not found' }
+        $box = $button.Current.BoundingRectangle
+        $N::RightClick([int]($box.X + $box.Width / 2), [int]($box.Y + $box.Height / 2))
+        $script:item = $null
+        $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, "Settings$([char]0x2026)")
+        Wait-Until {
+            $menu = $N::FindWindowW('#32768', $null)
+            if ($menu -ne [IntPtr]::Zero) { $script:item = [System.Windows.Automation.AutomationElement]::FromHandle($menu).FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond) }
+            [bool]$script:item
+        } 3000 | Out-Null
+        if (-not $script:item) { $N::Chord($N::VK_ESCAPE); return 'no Settings... in the tray menu' }
+        $script:item.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+        if (-not (Wait-Until { (Get-SettingsWindow) -ne [IntPtr]::Zero } 5000)) { return 'Settings... did not open the window' }
+        $w = Get-SettingsWindow
+        [System.Windows.Automation.AutomationElement]::FromHandle($w).GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close()
+        'opened the settings window'
+    } catch {
+        "error: $($_.Exception.Message)"
+    }
+}
+
 function Get-SettingsWindow {
     $pids = Get-QCalcPids
     if (-not $pids) { return [IntPtr]::Zero }
@@ -335,7 +361,9 @@ Invoke-Check '1' 'later launches start hidden' $true {
        Detail = "process alive: $alive; window created: $exists; visible windows: $(if ($visible) { $visible -join ', ' } else { 'none' })" }
 }
 
-Invoke-Check '1b' 'tray icon' $false {
+# the notification area button named Q Calc, opening the overflow flyout if the icon is tucked in there
+# (the flyout stays open when it's found there, so the button can be clicked); $null if there's none
+function Find-TrayButton {
     $find = {
         foreach ($cls in 'Shell_TrayWnd', 'NotifyIconOverflowWindow', 'TopLevelWindowForOverflowXamlIsland') {
             $h = $N::FindWindowW($cls, $null)
@@ -346,28 +374,30 @@ Invoke-Check '1b' 'tray icon' $false {
             foreach ($b in $buttons) {
                 # not $n: powershell names ignore case, and that would hide $N
                 try { $name = $b.Current.Name } catch { continue }
-                if ($name -like '*Q Calc*') { return "'$name' in $cls" }
+                if ($name -like '*Q Calc*') { return $b }
             }
         }
         return $null
     }
-    $where = & $find
-    if (-not $where) {
-        # windows 11 style taskbars tuck new icons into the overflow flyout, which is empty until opened
-        $tray = $N::FindWindowW('Shell_TrayWnd', $null)
-        if ($tray -ne [IntPtr]::Zero) {
-            $root = [System.Windows.Automation.AutomationElement]::FromHandle($tray)
-            $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'Show hidden icons', [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)
-            $chevron = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
-            if ($chevron) {
-                $chevron.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-                Start-Sleep -Milliseconds 800
-                $where = & $find
-                $N::Chord($N::VK_ESCAPE)
-            }
-        }
-    }
-    @{ Pass = [bool]$where; Detail = $(if ($where) { "found $where" } else { 'no notification area item named Q Calc (best effort: shell layouts differ)' }) }
+    $button = & $find
+    if ($button) { return $button }
+    # windows 11 style taskbars tuck new icons into the overflow flyout, which is empty until opened
+    $tray = $N::FindWindowW('Shell_TrayWnd', $null)
+    if ($tray -eq [IntPtr]::Zero) { return $null }
+    $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, 'Show hidden icons', [System.Windows.Automation.PropertyConditionFlags]::IgnoreCase)
+    $chevron = [System.Windows.Automation.AutomationElement]::FromHandle($tray).FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
+    if (-not $chevron) { return $null }
+    $chevron.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    Start-Sleep -Milliseconds 800
+    $button = & $find
+    if (-not $button) { $N::Chord($N::VK_ESCAPE) }
+    $button
+}
+
+Invoke-Check '1b' 'tray icon' $false {
+    $button = Find-TrayButton
+    if ($button) { $N::Chord($N::VK_ESCAPE) }
+    @{ Pass = [bool]$button; Detail = $(if ($button) { "found '$($button.Current.Name)'" } else { 'no notification area item named Q Calc (best effort: shell layouts differ)' }) }
 }
 
 Invoke-Check '2' 'hotkey shows and focuses' $true {
@@ -471,7 +501,7 @@ Invoke-Check '10' 'look in light and dark' $false {
     } finally {
         try { Set-Appearance 'System' 'settings-system.png' } catch { Log "could not put the appearance back: $($_.Exception.Message)" }
     }
-    @{ Pass = $true; Detail = "$light; $dark; $themed" }
+    @{ Pass = $true; Detail = "$light; $dark; $themed; tray route: $(Test-TraySettings)" }
 }
 
 # what the app saw when it dressed the window and what the page paints: tells the runner's limits from our bugs

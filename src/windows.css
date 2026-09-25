@@ -43,3 +43,9 @@ html[data-host="windows"].quick-native .spotlight::after {
   border: 1px solid var(--edge);
   pointer-events: none;
 }
+
+/* the host asks webview2 for windows' overlay scrollbars, which fade out like the mac's; 'thin' would swap them
+   for a permanent track at the edge of the tape and graph */
+html[data-host="windows"] :is(.tape, .graph) {
+  scrollbar-width: auto;
+}

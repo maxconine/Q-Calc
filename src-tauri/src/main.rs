@@ -78,6 +78,7 @@ fn save(state: &mut State) {
 }
 
 fn main() {
+    e2e::catch_panics();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show_window(app)))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
@@ -180,7 +181,7 @@ fn main() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => show_window(app),
-                    "settings" => open_settings(app),
+                    "settings" => open_settings_later(app),
                     "tips" => show_tips(app),
                     "quit" => app.exit(0),
                     _ => {}
@@ -251,12 +252,7 @@ fn host(window: WebviewWindow, message: Value) {
                 save(s);
             }
         }),
-        // webview2 deadlocks if a window is built inside one of its own message callbacks, which is where this
-        // command runs; the event loop builds it a moment later instead
-        Some("openSettings") => {
-            let handle = app.clone();
-            let _ = app.run_on_main_thread(move || open_settings(&handle));
-        }
+        Some("openSettings") => open_settings_later(app),
         Some("e2e") if e2e::enabled() => {
             for line in message["lines"].as_array().into_iter().flatten().filter_map(Value::as_str) {
                 e2e::note(line);
@@ -522,6 +518,14 @@ fn resize(window: &WebviewWindow, height: f64, anchor_top: f64) {
     set_frame(window, origin, size);
 }
 
+// on windows, building a web view window on the event loop's own thread (a command, a menu click, even
+// run_on_main_thread) never returns: the build waits for the loop it is blocking. from another thread it asks the
+// loop to build it and waits there instead
+fn open_settings_later(app: &AppHandle) {
+    let app = app.clone();
+    thread::spawn(move || open_settings(&app));
+}
+
 fn open_settings(app: &AppHandle) {
     e2e::note("open_settings");
     if let Some(main) = app.get_webview_window("main") {
@@ -545,8 +549,9 @@ fn open_settings(app: &AppHandle) {
         .background_color(frame::settings_background(shown))
         .scroll_bar_style(frame::SCROLL_BARS)
         .visible(false)
-        .initialization_script(boot_script(app, false))
-        .build();
+        .initialization_script(boot_script(app, false));
+    e2e::note("building the settings window");
+    let built = built.build();
     e2e::note(&match &built {
         Ok(_) => "settings window built".to_string(),
         Err(e) => format!("settings window failed: {e}"),

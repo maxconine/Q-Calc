@@ -5,6 +5,18 @@ pub fn enabled() -> bool {
     std::env::var_os("QCALC_E2E").is_some()
 }
 
+// a panic on some thread would otherwise vanish with the windows subsystem's missing console
+pub fn catch_panics() {
+    if !enabled() {
+        return;
+    }
+    let previous = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        note(&format!("panic: {info}"));
+        previous(info);
+    }));
+}
+
 pub fn note(line: &str) {
     if !enabled() {
         return;
@@ -64,7 +76,7 @@ pub const PAGE: &str = r#"
     }, 500);
   };
   addEventListener('keydown', function (e) {
-    if (!e.ctrlKey && e.key !== ',') return;
+    if (e.key !== ',' && e.code !== 'Comma') return;
     post(['page keydown key "' + e.key + '" code ' + e.code + ' ctrl ' + e.ctrlKey + ' alt ' + e.altKey + ' shift ' + e.shiftKey + ' prevented ' + e.defaultPrevented + ' target ' + (e.target && e.target.className)]);
   }, true);
   addEventListener('input', function (e) {
