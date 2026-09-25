@@ -96,6 +96,7 @@ import {
 } from '../lib/history'
 import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
+import { commandHeld, hostCheats, hostKeys, isClearHistoryKey } from '../lib/platform'
 import { lineCopyText } from '../lib/touches'
 import {
   mergeNativeInfo,
@@ -353,7 +354,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
-  const cheats = useMemo(() => cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE)), [nativeInfo.hotkey])
+  const cheats = useMemo(() => hostCheats(cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE))), [nativeInfo.hotkey])
   const graphCmd = isGraphCommand(q)
   const sysCmd = isSysCommand(q)
   const periodicCmd = isPeriodicCommand(q)
@@ -948,13 +949,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       }
       const key = e.key.toLowerCase()
       const ctrlOnly = e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey
-      const cmdOnly = e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+      const cmd = commandHeld(e) && !e.altKey
+      const cmdOnly = cmd && !e.shiftKey
       const toggle = ctrlOnly ? CTRL_SETTING_KEYS.get(key) : undefined
-      const cmdShift = e.metaKey && e.shiftKey && !e.ctrlKey && !e.altKey
+      const cmdShift = cmd && e.shiftKey
       const mainInput = e.target instanceof HTMLInputElement && e.target.classList.contains('quick-plain')
       let action: (() => void) | undefined
       if (toggle) action = () => setSettings(toggle)
-      else if (ctrlOnly && key === 'c') action = clearHistory
+      else if (isClearHistoryKey(e)) action = clearHistory
       else if (cmdOnly && key === 'c') action = copyOutput
       else if (cmdShift && key === 'c') action = copyLine
       else if (cmdOnly && (e.key === 'Backspace' || e.key === 'Delete') && mainInput && sysLinesRef.current) action = resetToCalculate
@@ -1258,7 +1260,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ) : null}
           {hint ? (
             <div className="composer-hint" role="status">
-              {hint}
+              {hostKeys(hint)}
             </div>
           ) : null}
           {sysLines && sysParsed && 'count' in sysParsed && sysParsed.count === sysLines.length ? (

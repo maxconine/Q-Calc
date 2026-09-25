@@ -1,4 +1,5 @@
 import { keepFocus } from '../lib/dom'
+import { isWindowsHost } from '../lib/platform'
 import { toggleAngleMode, toggleFractionMode, toggleSigFigMode, type Settings } from '../lib/settings'
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
 
 export function EdgeTools({ settings, onToggle, onClear }: Props) {
   const { angleMode, fractionMode, sigFigMode } = settings
+  const clearKeys = isWindowsHost() ? ['Control+Shift+Backspace', 'Control Shift Backspace'] : ['Control+C', 'Control C']
   return (
     <>
       <div className="edge-tools">
@@ -52,8 +54,8 @@ export function EdgeTools({ settings, onToggle, onClear }: Props) {
       <button
         type="button"
         className="edge-tool edge-clear"
-        aria-keyshortcuts="Control+C"
-        aria-label="Clear history and variables. Shortcut Control C"
+        aria-keyshortcuts={clearKeys[0]}
+        aria-label={`Clear history and variables. Shortcut ${clearKeys[1]}`}
         onMouseDown={keepFocus}
         onClick={onClear}
       >
