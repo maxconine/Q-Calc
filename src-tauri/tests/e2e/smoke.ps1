@@ -450,10 +450,11 @@ Invoke-Check '9b' 'smoke room grows the window' $false {
     $grew = Wait-Until { (Height $h) -ge $before + 100 } 2000
     $tall = Height $h
     $moved = $top - $N::Rect($h).Top
+    $a = Read-Answer '^420$' 1000
     Clear-Input
     # the smoke clears after about 2.7 s; later shots shouldn't catch it
     $back = Wait-Until { (Height $h) -le $before } 4000
-    @{ Pass = $grew; Detail = "height $before px, then $tall px with the top $moved px higher; back to $(Height $h) px: $back" }
+    @{ Pass = $grew; Detail = "answer 420 $(if ($a.Found) { 'shown' } else { 'not seen: ' + $a.Text }); height $before px, then $tall px with the top $moved px higher; back to $(Height $h) px: $back" }
 }
 
 # for people to look at: the rounded edge, hairline, shadow and backdrop against light and dark

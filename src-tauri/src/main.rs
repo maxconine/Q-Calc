@@ -214,6 +214,9 @@ fn main() {
 fn host(window: WebviewWindow, message: Value) {
     let app = window.app_handle();
     let overlay = window.label() == "main";
+    if e2e::enabled() && message["type"] != "size" && message["type"] != "e2e" {
+        e2e::note(&format!("host got {} from {}", message["type"], window.label()));
+    }
     match message["type"].as_str() {
         Some("size") if overlay => {
             if let Some(height) = message["height"].as_f64() {
@@ -440,6 +443,9 @@ fn show_window(app: &AppHandle) {
     let _ = window.show();
     let _ = window.set_focus();
     let _ = window.eval(RESET);
+    if e2e::enabled() {
+        let _ = window.eval("if (window.__qcalcE2eReport) window.__qcalcE2eReport();");
+    }
 }
 
 fn show_tips(app: &AppHandle) {
@@ -514,6 +520,7 @@ fn resize(window: &WebviewWindow, height: f64, anchor_top: f64) {
 }
 
 fn open_settings(app: &AppHandle) {
+    e2e::note("open_settings");
     if let Some(main) = app.get_webview_window("main") {
         hide(&main);
     }
@@ -537,6 +544,10 @@ fn open_settings(app: &AppHandle) {
         .visible(false)
         .initialization_script(boot_script(app, false))
         .build();
+    e2e::note(&match &built {
+        Ok(_) => "settings window built".to_string(),
+        Err(e) => format!("settings window failed: {e}"),
+    });
     let Ok(window) = built else { return };
     quiet_browser_keys(&window);
     if let Some(monitor) = monitor_at_cursor(&window) {
