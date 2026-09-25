@@ -15,6 +15,21 @@ pub fn note(line: &str) {
     }
 }
 
+// the injected scripts, with anything they throw kept for the probe instead of lost
+pub fn guarded(script: &str) -> String {
+    format!("try {{\n{script}\n}} catch (e) {{ window.__qcalcInitError = String((e && e.stack) || e) }}")
+}
+
+// run by rust once the page has loaded, so it answers even if the injected scripts never ran
+pub const PROBE: &str = r#"(function () {
+  var t = window.__TAURI_INTERNALS__;
+  if (!t) return;
+  var root = document.documentElement;
+  t.invoke('host', { message: { type: 'e2e', lines: [
+    'probe: platform ' + window.__QCALC_PLATFORM + ', native ' + window.__QCALC_NATIVE + ', data-host ' + root.dataset.host + ', class "' + root.className + '", report ' + typeof window.__qcalcE2eReport + ', init error ' + (window.__qcalcInitError || 'none')
+  ] } }).catch(function () {});
+})()"#;
+
 // the page's side: what it paints under the bar and what chromium renders with (rust asks for this on each show,
 // since a hidden web view may never see focus or visibility events), the ctrl keys it sees, and 420's smoke room
 pub const PAGE: &str = r#"

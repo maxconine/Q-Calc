@@ -5,6 +5,17 @@
     if (tauri) tauri.invoke('host', { message: message }).catch(function () {})
   }
   var qcalc = { postMessage: send }
+  // webview2 runs this before the document has its <html>; touching the root then threw and took the rest of
+  // this script with it, so anything on the root waits until the element exists
+  function withRoot(fn) {
+    if (document.documentElement) return fn(document.documentElement)
+    var watch = new MutationObserver(function () {
+      if (!document.documentElement) return
+      watch.disconnect()
+      fn(document.documentElement)
+    })
+    watch.observe(document, { childList: true })
+  }
   // wkwebview (tauri dev on a mac) has a read-only webkit of its own; its other handlers stay reachable
   var own = window.webkit && window.webkit.messageHandlers
   var handlers = own
@@ -16,9 +27,11 @@
   window.__QCALC_SETTINGS = boot.settings
   window.__QCALC_ONBOARDING = boot.onboarding
   if (boot.rates) window.__QCALC_RATES = boot.rates
-  document.documentElement.dataset.theme = boot.settings.theme
-  // windows-only css hangs off this; the mac app and the web page never set it
-  document.documentElement.dataset.host = 'windows'
+  withRoot(function (root) {
+    root.dataset.theme = boot.settings.theme
+    // windows-only css hangs off this; the mac app and the web page never set it
+    root.dataset.host = 'windows'
+  })
 
   // reload or print would throw the page away
   window.addEventListener('keydown', function (e) {
@@ -33,8 +46,10 @@
   window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
     window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }))
   }
-  document.documentElement.classList.add('quick-native')
-  document.documentElement.style.overflow = 'hidden'
+  withRoot(function (root) {
+    root.classList.add('quick-native')
+    root.style.overflow = 'hidden'
+  })
 
   window.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {

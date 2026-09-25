@@ -141,6 +141,9 @@ fn main() {
                 .initialization_script(boot_script(app.handle(), true))
                 .on_page_load(|window, payload| {
                     let app = window.app_handle();
+                    if payload.event() == PageLoadEvent::Finished && e2e::enabled() {
+                        let _ = window.eval(e2e::PROBE);
+                    }
                     if payload.event() == PageLoadEvent::Finished && with(app, |s| std::mem::take(&mut s.first_run)) {
                         show_window(app);
                         let _ = window.eval(FIRST_RUN);
@@ -295,7 +298,7 @@ fn boot_script(app: &AppHandle, overlay: bool) -> String {
     });
     let shim = include_str!("shim.js").replace("__QCALC_BOOT__", &boot.to_string());
     if overlay && e2e::enabled() {
-        shim + e2e::PAGE
+        e2e::guarded(&(shim + e2e::PAGE))
     } else {
         shim
     }
