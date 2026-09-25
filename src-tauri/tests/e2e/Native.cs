@@ -47,6 +47,7 @@ namespace QCalcE2E
         [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
         [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
         [DllImport("user32.dll")] static extern int GetSystemMetrics(int index);
+        [DllImport("dwmapi.dll")] static extern int DwmIsCompositionEnabled(out bool enabled);
         [DllImport("user32.dll", SetLastError = true)] static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
         [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern bool GetUserObjectInformationW(IntPtr obj, int index, StringBuilder info, int length, out int needed);
         [DllImport("user32.dll")] static extern bool CloseDesktop(IntPtr desktop);
@@ -181,6 +182,25 @@ namespace QCalcE2E
         public static void Screenshot(string path, int x, int y, int width, int height)
         {
             Capture(path, Rectangle.Intersect(new Rectangle(x, y, width, height), Screen()));
+        }
+
+        public static bool DwmComposition()
+        {
+            bool on;
+            return DwmIsCompositionEnabled(out on) == 0 && on;
+        }
+
+        // the screen's colour at one point, as 0xRRGGBB
+        public static int Pixel(int x, int y)
+        {
+            using (Bitmap bmp = new Bitmap(1, 1))
+            {
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    g.CopyFromScreen(x, y, 0, 0, new Size(1, 1), CopyPixelOperation.SourceCopy);
+                }
+                return bmp.GetPixel(0, 0).ToArgb() & 0xFFFFFF;
+            }
         }
 
         static void Capture(string path, Rectangle s)

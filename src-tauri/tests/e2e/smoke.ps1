@@ -206,8 +206,20 @@ function Expect-Answer([string]$expr, [string]$pattern) {
     else { @{ Pass = $false; Detail = "'$expr' never showed /$pattern/; saw: $($a.Text)" } }
 }
 
-# the window with an answer over a full-screen backdrop, cropped with room for its shadow
-function Save-Look([string]$file, [string]$color, [string]$alt) {
+function Hex([int]$c) { '#{0:x6}' -f $c }
+
+# how far apart two colours are, channel by channel
+function Distance([int]$a, [int]$b) {
+    $d = 0
+    foreach ($shift in 0, 8, 16) { $d = [Math]::Max($d, [Math]::Abs((($a -shr $shift) -band 255) - (($b -shr $shift) -band 255))) }
+    $d
+}
+
+# the window with an answer over a full-screen backdrop, cropped with room for its shadow, plus pixel probes:
+# a rounded corner shows what's outside the window at its corner pixel, a shadow darkens just below the bottom edge,
+# and with -SeeThrough, 420's smoke room above the bar (left transparent by the page) shows whether the web view
+# really lets the desktop through
+function Save-Look([string]$file, [string]$color, [string]$alt, [switch]$SeeThrough) {
     Hide-QCalc
     $backdrop = Start-Process powershell -PassThru -ArgumentList @(
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
@@ -224,7 +236,39 @@ function Save-Look([string]$file, [string]$color, [string]$alt) {
         $r = $N::Rect($h)
         $m = 48
         $N::Screenshot((Join-Path $OutDir $file), $r.Left - $m, $r.Top - $m, $r.Right - $r.Left + 2 * $m, $r.Bottom - $r.Top + 2 * $m)
-        "$file ($($r.Right - $r.Left)x$($r.Bottom - $r.Top) px, answer $(if ($a.Found) { 'shown' } else { 'missing' }))"
+        $cx = [int](($r.Left + $r.Right) / 2)
+        $inside = $N::Pixel($r.Left + 6, $r.Top + 6)
+        $corner = $N::Pixel($r.Left, $r.Top)
+        $outside = $N::Pixel($r.Left - 1, $r.Top - 1)
+        $near = $N::Pixel($cx, $r.Bottom + 3)
+        $far = $N::Pixel($cx, $r.Bottom + 40)
+        $parts = @(
+            "$file $($r.Right - $r.Left)x$($r.Bottom - $r.Top) px, answer $(if ($a.Found) { 'shown' } else { 'missing' })",
+            "corner pixel $(Hex $corner), inside $(Hex $inside), just outside $(Hex $outside) (rounded: $((Distance $corner $outside) -lt (Distance $corner $inside)))",
+            "below the edge $(Hex $near) vs 40 px down $(Hex $far) (shadow: $((Distance $near $far) -gt 6))")
+        if ($SeeThrough) {
+            $bar = $r.Bottom - $r.Top
+            Clear-Input
+            $N::Type('420', 30)
+            Start-Sleep -Milliseconds 900
+            $r = $N::Rect($h)
+            $room = ($r.Bottom - $r.Top) - $bar
+            $N::Screenshot((Join-Path $OutDir 'look-420.png'), $r.Left - $m, $r.Top - $m, $r.Right - $r.Left + 2 * $m, $r.Bottom - $r.Top + 2 * $m)
+            $bg = @([Convert]::ToInt32($color, 16), [Convert]::ToInt32($alt, 16))
+            $hits = 0; $seen = @()
+            if ($room -gt 20) {
+                foreach ($fy in 0.2, 0.5, 0.8) {
+                    foreach ($fx in 0.1, 0.3, 0.5, 0.7, 0.9) {
+                        $p = $N::Pixel([int]($r.Left + $fx * ($r.Right - $r.Left)), [int]($r.Top + $fy * $room))
+                        $seen += Hex $p
+                        if (@($bg | Where-Object { (Distance $_ $p) -le 8 }).Count) { $hits++ }
+                    }
+                }
+            }
+            $parts += "420 room $room px tall: $hits of 15 points show the backdrop (see-through: $($hits -ge 5)); $($seen -join ' ')"
+            Clear-Input
+        }
+        $parts -join '; '
     } finally {
         Stop-Process -Id $backdrop.Id -Force -ErrorAction SilentlyContinue
     }
@@ -237,6 +281,11 @@ $env_ = [ordered]@{
     'exe' = $Exe
     'install' = $(if ($env:QCALC_INSTALL_MODE) { $env:QCALC_INSTALL_MODE } else { 'unknown' })
     'os' = [Environment]::OSVersion.VersionString
+    'edition' = $(try { $o = Get-CimInstance Win32_OperatingSystem; "$($o.Caption) build $($o.BuildNumber)" } catch { "unknown: $($_.Exception.Message)" })
+    'display adapter' = $(try { (@(Get-CimInstance Win32_VideoController | ForEach-Object { "$($_.Name) (driver $($_.DriverVersion))" }) -join ', ') } catch { "unknown: $($_.Exception.Message)" })
+    'dwm composition' = $N::DwmComposition()
+    'transparency effects' = $(try { (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -ErrorAction Stop).EnableTransparency } catch { 'unset' })
+    'apps use light theme' = $(try { (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -ErrorAction Stop).AppsUseLightTheme } catch { 'unset' })
     'session' = "$($N::Session()) (console session $($N::ConsoleSession()))"
     'interactive' = [Environment]::UserInteractive
     'input desktop' = $N::InputDesktop()
@@ -249,6 +298,8 @@ $env_.GetEnumerator() | ForEach-Object { Log "$($_.Key): $($_.Value)" }
 Get-Process -Name $ProcName -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
 $env:QCALC_E2E = '1'
+$lookNotes = Join-Path $env:TEMP 'qcalc-e2e-look.txt'
+Remove-Item $lookNotes -ErrorAction SilentlyContinue
 $script:proc = Start-Process -FilePath $Exe -PassThru
 Log "started pid $($script:proc.Id)"
 
@@ -375,8 +426,15 @@ Invoke-Check '9' 'window grows with content' $true {
 # for people to look at: the rounded edge, hairline, shadow and backdrop against light and dark
 Invoke-Check '10' 'look over light and dark' $false {
     $light = Save-Look 'look-light.png' 'f3f3f3' 'd0d7e2'
-    $dark = Save-Look 'look-dark.png' '1c1c1c' '2f3a4c'
+    $dark = Save-Look 'look-dark.png' '1c1c1c' '2f3a4c' -SeeThrough
     @{ Pass = $true; Detail = "$light; $dark" }
+}
+
+# what the app saw when it dressed the window and what the page paints: tells the runner's limits from our bugs
+Invoke-Check '11' 'look diagnostics' $false {
+    $notes = @(if (Test-Path $lookNotes) { Get-Content $lookNotes })
+    $notes | ForEach-Object { Log "look: $_" }
+    @{ Pass = ($notes.Count -gt 0); Detail = $(if ($notes) { $notes -join ' / ' } else { "no notes at $lookNotes" }) }
 }
 
 # ---------------------------------------------------------------------------

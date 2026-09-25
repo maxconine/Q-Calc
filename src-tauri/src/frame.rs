@@ -15,31 +15,62 @@ pub fn settings_background(theme: Theme) -> Color {
     }
 }
 
-// dwm draws the overlay's edge the way windows 11 draws a flyout: rounded corners, the system's hairline border,
-// a shadow and acrylic behind the page's translucent bar. older systems refuse what they lack: windows 10 keeps
-// square corners and the shadow, and acrylic needs windows 11 22h2; without it the bar sits on the plain window
+// dwm draws the overlay's edge the way windows 11 draws a flyout: rounded corners, the system's hairline border
+// and a shadow. windows turns rounding off without a gpu (basic display adapter, most vms) and windows 10 never
+// rounds, so the page draws a square bar with its own hairline and never depends on this. returns what dwm said,
+// for the smoke test
 #[cfg(windows)]
-pub fn dress(window: &WebviewWindow) {
+pub fn dress(window: &WebviewWindow) -> Vec<String> {
     use windows_sys::Win32::Graphics::Dwm::{
-        DwmExtendFrameIntoClientArea, DwmSetWindowAttribute, DWMSBT_TRANSIENTWINDOW, DWMWA_SYSTEMBACKDROP_TYPE,
+        DwmExtendFrameIntoClientArea, DwmGetWindowAttribute, DwmIsCompositionEnabled, DwmSetWindowAttribute,
         DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
     };
     use windows_sys::Win32::UI::Controls::MARGINS;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetWindowLongPtrW, GWL_EXSTYLE, GWL_STYLE};
 
-    let Ok(hwnd) = window.hwnd() else { return };
+    let Ok(hwnd) = window.hwnd() else { return vec!["no hwnd".into()] };
     let hwnd = hwnd.0;
-    let set = |attribute: i32, value: i32| unsafe {
-        DwmSetWindowAttribute(hwnd, attribute as u32, (&value as *const i32).cast(), 4);
-    };
     // any frame in the client area brings dwm's shadow back; one pixel along the bottom, because a taller one
     // would show the caption buttons dwm still keeps at the top right for a window with a system menu
     let glass = MARGINS { cxLeftWidth: 0, cxRightWidth: 0, cyTopHeight: 0, cyBottomHeight: 1 };
-    unsafe {
-        DwmExtendFrameIntoClientArea(hwnd, &glass);
-    }
-    set(DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND);
-    set(DWMWA_SYSTEMBACKDROP_TYPE, DWMSBT_TRANSIENTWINDOW);
+    let round = DWMWCP_ROUND;
+    let (mut composed, mut corner) = (0, -1);
+    let (extend, set, get, composition) = unsafe {
+        (
+            DwmExtendFrameIntoClientArea(hwnd, &glass),
+            DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE as u32, (&round as *const i32).cast(), 4),
+            DwmGetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE as u32, (&mut corner as *mut i32).cast(), 4),
+            DwmIsCompositionEnabled(&mut composed),
+        )
+    };
+    let (style, ex_style) = unsafe { (GetWindowLongPtrW(hwnd, GWL_STYLE), GetWindowLongPtrW(hwnd, GWL_EXSTYLE)) };
+    vec![
+        format!("dwm composition: {} (hr {:#010x})", composed != 0, composition),
+        format!("extend frame: hr {extend:#010x}"),
+        format!("corner preference round: hr {set:#010x}; reads back {corner} (hr {get:#010x})"),
+        format!("style {style:#010x}, ex style {ex_style:#010x}"),
+    ]
 }
 
 #[cfg(not(windows))]
-pub fn dress(_: &WebviewWindow) {}
+pub fn dress(_: &WebviewWindow) -> Vec<String> {
+    Vec::new()
+}
+
+// the web view's own background: 0,0,0,0 means it should let the window show through
+#[cfg(windows)]
+pub fn webview_background(window: &WebviewWindow, report: impl FnOnce(String) + Send + 'static) {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Controller2, COREWEBVIEW2_COLOR};
+    use windows_core::Interface;
+    let _ = window.with_webview(move |webview| unsafe {
+        let mut c = COREWEBVIEW2_COLOR::default();
+        let read = webview.controller().cast::<ICoreWebView2Controller2>().and_then(|c2| c2.DefaultBackgroundColor(&mut c));
+        report(match read {
+            Ok(()) => format!("webview2 default background: rgba({}, {}, {}, {})", c.R, c.G, c.B, c.A),
+            Err(e) => format!("webview2 default background: unreadable ({e})"),
+        });
+    });
+}
+
+#[cfg(not(windows))]
+pub fn webview_background(_: &WebviewWindow, _: impl FnOnce(String) + Send + 'static) {}

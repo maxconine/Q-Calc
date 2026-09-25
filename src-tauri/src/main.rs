@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod e2e;
 mod frame;
 mod hotkey;
 mod place;
@@ -146,7 +147,12 @@ fn main() {
                     }
                 })
                 .build()?;
-            frame::dress(&window);
+            for line in frame::dress(&window) {
+                e2e::note(&line);
+            }
+            if e2e::enabled() {
+                frame::webview_background(&window, |line| e2e::note(&line));
+            }
             quiet_browser_keys(&window);
             let handle = window.clone();
             window.on_window_event(move |event| match event {
@@ -236,6 +242,11 @@ fn host(window: WebviewWindow, message: Value) {
             }
         }),
         Some("openSettings") => open_settings(app),
+        Some("e2e") if e2e::enabled() => {
+            for line in message["lines"].as_array().into_iter().flatten().filter_map(Value::as_str) {
+                e2e::note(line);
+            }
+        }
         Some("hotkey") => choose_hotkey(app, message["id"].as_str().unwrap_or_default()),
         Some("autostart") => {
             let launcher = app.autolaunch();
@@ -270,7 +281,12 @@ fn boot_script(app: &AppHandle, overlay: bool) -> String {
         let rates = if overlay { s.rates.clone() } else { None };
         json!({ "overlay": overlay, "settings": settings_payload(s, None, autostart), "onboarding": s.store.onboarding, "rates": rates })
     });
-    include_str!("shim.js").replace("__QCALC_BOOT__", &boot.to_string())
+    let shim = include_str!("shim.js").replace("__QCALC_BOOT__", &boot.to_string());
+    if overlay && e2e::enabled() {
+        shim + e2e::PAGE
+    } else {
+        shim
+    }
 }
 
 fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<usize>) {
