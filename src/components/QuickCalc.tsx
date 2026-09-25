@@ -96,6 +96,7 @@ import {
 } from '../lib/history'
 import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
+import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
 import {
   mergeNativeInfo,
@@ -411,7 +412,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   else if (q.trim()) jsDisplay = live?.display ?? ''
   const jsN = graphCmd || sysCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
   const nativeUsable = !graphCmd && !sysCmd && !periodicCmd && !chained && soulverAngleSafe(q, settings.angleMode)
-  const merged = mergeLiveAnswer(q, jsDisplay, jsN, nativeUsable ? nativeLive : null)
+  const merged = withPhraseAnswer(q, jsDisplay, mergeLiveAnswer(q, jsDisplay, jsN, nativeUsable ? nativeLive : null), {
+    enabled: nativeUsable && !hasSoulver(),
+    sigFigs: settings.sigFigs,
+  })
   // ⌥↑/⌥↓ re-expresses the js answer on its si prefix ladder; what's shown is what's copied and saved
   const jsValue = !graphCmd && jsDisplay && merged.display === jsDisplay ? live?.value : undefined
   const stepped = prefixUnit && jsValue ? inLadderUnit(jsValue, prefixUnit) : null
