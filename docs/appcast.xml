@@ -5,5 +5,13 @@
     <link>https://maxconine.github.io/Q-Calc/appcast.xml</link>
     <description>Q Calc updates</description>
     <language>en</language>
+    <item>
+      <title>Version 2.0.3</title>
+      <pubDate>Sat, 26 Sep 2026 00:07:29 +0000</pubDate>
+      <sparkle:version>2.0.3</sparkle:version>
+      <sparkle:shortVersionString>2.0.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v2.0.3/Q-Calc-2.0.3.zip" sparkle:edSignature="MEuTiX/4MuIz8hBkFYkGp2pzt2i0iErOVBhBc9VJu0Mw3hjP3PG4ZJoSGB/KdxyRkQJ9Yy7qk+GW6xlmyvZACA==" length="20208629" type="application/octet-stream"/>
+    </item>
   </channel>
 </rss>
