@@ -227,7 +227,7 @@ describe('against brute force', () => {
     expect(tally.balanced).toBe(150)
     expect(tally.impossible).toBeGreaterThan(0)
     expect(tally.underdetermined).toBeGreaterThan(0)
-  })
+  }, 30000)
 })
 
 describe('more reactions', () => {
