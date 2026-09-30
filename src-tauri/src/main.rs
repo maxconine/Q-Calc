@@ -36,6 +36,8 @@ const MAX_HEIGHT: f64 = 560.0;
 const SETTINGS_SIZE: (f64, f64) = (520.0, 640.0);
 // windows can hand focus back to the taskbar or tray just after a show; the mac overlay ignores that too
 const BLUR_GRACE: Duration = Duration::from_millis(250);
+// how long dwm can take to switch a title bar between light and dark
+const CAPTION_SETTLE: Duration = Duration::from_millis(200);
 
 const RESET: &str = "(function () {
   if (window.__qcalcReset) window.__qcalcReset();
@@ -347,10 +349,16 @@ fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<&str>) {
             let _ = window.set_theme(window_theme(&theme));
         }
     }
-    // queued behind the theme change, so the title bar repaints in the new one
+    // queued behind the theme change, so the title bar repaints in the new one. dwm takes the dark mode attribute
+    // on its own time, and a repaint that beats it paints the old theme, so a second one follows once it has
     if let Some(window) = app.get_webview_window("settings") {
         let w = window.clone();
         let _ = window.run_on_main_thread(move || frame::repaint_caption(&w));
+        thread::spawn(move || {
+            thread::sleep(CAPTION_SETTLE);
+            let w = window.clone();
+            let _ = window.run_on_main_thread(move || frame::repaint_caption(&w));
+        });
     }
 }
 
