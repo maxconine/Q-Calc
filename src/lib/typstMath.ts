@@ -128,7 +128,7 @@ export function typstAnswer(exact: string | undefined, display: string): string 
  * `solvedFor` names the variable of a solved equation: `x^2 = 4 ⇒ x = ±2`, not `x^2 = 4 = ±2`.
  */
 export function typstDocument(expr: string, answer = '', solvedFor = ''): string | null {
-  const math = toTypstMath(expr)
+  const math = previewMath(expr)
   if (!math) return null
   const ans = toTypstMath(answer)
   const lhs = toTypstMath(solvedFor)
@@ -164,14 +164,132 @@ for (const g of GREEK) {
  */
 export function typstPreviewUseful(expr: string): boolean {
   // ± reads the same typeset as in the bar; left as +/- its slash would count as a fraction
-  const math = toTypstMath(expr.replace(/\+\/-|-\/\+/g, '±'))
+  const typed = expr.replace(/\+\/-|-\/\+/g, '±')
+  const math = previewMath(typed)
   if (!math) return false
   // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
   const bare = math.replace(/op\("[^"]*"\)/g, 'op').replace(/delim: "[^"]*"/g, '')
   if (bare.includes('"')) return false
+  // an integral, sum, limit, derivative or solve line always shows: its answer is what the bar can't typeset
+  if (isKeywordMath(typed.trim())) return true
+  if (simpleMath(bare)) return false
   // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet
   if (/!|[/^_](?=\s*[^\s)])/.test(bare)) return true
   return (bare.match(/[A-Za-z][A-Za-z0-9.]*/g) ?? []).some((name) => TYPESET_NAMES.has(name.split('.')[0]!))
+}
+
+// a number, or `ans` standing in for one
+const PLAIN_NUMBER = String.raw`-?\s*(?:\d+(?:\.\d*)?|\.\d+|ans)`
+const PLAIN_DIVISION = new RegExp(String.raw`^${PLAIN_NUMBER}\s*/\s*${PLAIN_NUMBER}$`)
+const PLAIN_CALL = new RegExp(String.raw`^([A-Za-z][A-Za-z0-9]*)\s*\(\s*${PLAIN_NUMBER}\s*\)$`)
+// a root still looks different typeset, so it isn't simple
+const ROOTS = new Set(['sqrt', 'root'])
+
+/** `3.5/2` or `sin(30)`: one division of two numbers, or one function of a number, reads fine in the bar as typed. */
+function simpleMath(math: string): boolean {
+  const s = math.trim()
+  if (PLAIN_DIVISION.test(s)) return true
+  const call = PLAIN_CALL.exec(s)
+  return Boolean(call && !ROOTS.has(call[1]!))
+}
+
+/**
+ * The preview's math: the typed line as Typst, with the calculator's keyword forms written as the math they
+ * mean (`int 0..1 x^2 dx` is ∫₀¹, `solve x^2 = 4` is the equation, `d/dx x^3` is a d/dx fraction).
+ * Copy keeps `toTypstMath`, so what's pasted still says what was typed.
+ */
+export function previewMath(expr: string): string {
+  const s = expr.trim()
+  const derivative = derivativeMath(s)
+  if (derivative != null) return derivative
+  return toTypstMath(keywordMath(s))
+}
+
+const BOUND = String.raw`(\S+?)`
+const INT_RANGE = new RegExp(String.raw`^(?:int|integral|∫)\s*${BOUND}\s*\.\.\s*(\S+)\s+(.+)$`, 'is')
+const INT_WORDS = /^(?:(?:the\s+)?integral\s+of|integrate)\s+(.+?)\s+from\s+(\S+)\s+to\s+(\S+)$/is
+const SUM_WORDS = /^(sum|prod|product)\s+(?:of\s+)?(.+?)\s+from\s+(\S+)\s+to\s+(\S+)$/is
+const LIM_ARROW = /^lim(?:it)?\s+([A-Za-z]|theta)\s*(?:->|→)\s*(\S+)\s+(.+)$/is
+const LIM_WORDS = /^(?:the\s+)?limit\s+of\s+(.+?)\s+as\s+([A-Za-z]|theta)\s*(?:->|→|approaches)\s*(\S+)$/is
+const SOLVE_FOR = /^(?:solve|isolate)\s+(?:for\s+)?[A-Za-z]\w*\s*(?::|in\b)\s*(.+)$/is
+const SOLVE_TAIL = /^(?:solve\s+)?(.+?=.+?)\s+(?:for|isolate)\s+[A-Za-z]\w*$/is
+const SOLVE_HEAD = /^solve\s+(.+=.+)$/is
+
+/** The keyword forms the calculator reads, respelled with the limits and signs toTypstMath typesets. */
+function keywordMath(s: string): string {
+  let m = INT_RANGE.exec(s)
+  if (m) return `∫_{${m[1]}}^{${m[2]}} ${m[3]}`
+  m = INT_WORDS.exec(s)
+  if (m) return `∫_{${m[2]}}^{${m[3]}} ${m[1]}${/\bd[A-Za-z]\s*$/.test(m[1]!) ? '' : ` d${indexOf(m[1]!, 'x')}`}`
+  m = SUM_WORDS.exec(s)
+  if (m) return `${/^prod/i.test(m[1]!) ? 'Π' : 'Σ'}_{${indexOf(m[2]!, 'n')}=${m[3]}}^{${m[4]}} ${m[2]}`
+  m = LIM_ARROW.exec(s)
+  if (m) return `lim_{${m[1]}->${m[2]}} ${m[3]}`
+  m = LIM_WORDS.exec(s)
+  if (m) return `lim_{${m[2]}->${m[3]}} ${m[1]}`
+  m = SOLVE_FOR.exec(s) ?? SOLVE_TAIL.exec(s) ?? SOLVE_HEAD.exec(s)
+  if (m) return m[1]!
+  return s
+}
+
+function isKeywordMath(s: string): boolean {
+  return derivativeMath(s) != null || keywordMath(s) !== s
+}
+
+/** The variable a sum or integral runs over: the usual one if it's there, else the body's only letter. */
+function indexOf(body: string, usual: string): string {
+  const letters = new Set(body.match(/(?<![A-Za-z])[A-Za-z](?![A-Za-z(])/g) ?? [])
+  if (letters.has(usual)) return usual
+  for (const v of ['n', 'k', 'i', 'j', 'x', 't']) if (letters.has(v)) return v
+  return letters.size === 1 ? [...letters][0]! : usual
+}
+
+const ORDER_TEXT = String.raw`(?:\^?([2-9]|[²³]))?`
+const D_DX = new RegExp(String.raw`^d${ORDER_TEXT}\s*\/\s*d([A-Za-z])${ORDER_TEXT}\s+(.+)$`, 's')
+const D_WORDS = /^(?:the\s+)?(?:(second|2nd)\s+)?derivative\s+of\s+(.+?)(?:\s+(?:with\s+respect\s+to|wrt)\s+([A-Za-z]))?$/is
+
+/** `d/dx x^3 at 2` as a d/dx fraction in front of the body, evaluated at the point when there is one. */
+function derivativeMath(s: string): string | null {
+  let order = 1
+  let v = ''
+  let rest = ''
+  const sym = D_DX.exec(s)
+  const words = sym ? null : D_WORDS.exec(s)
+  if (sym) {
+    order = orderNumber(sym[1] ?? sym[3]) ?? 1
+    v = sym[2]!
+    rest = sym[4]!
+  } else if (words) {
+    order = words[1] ? 2 : 1
+    rest = words[2]!
+    v = words[3] ?? indexOf(rest.replace(/\s+at\s+.+$/i, ''), 'x')
+  } else {
+    return null
+  }
+  const at = /^(.+?)\s+at\s+(?:[A-Za-z]\s*=\s*)?(.+)$/is.exec(rest)
+  const body = toTypstMath(at ? at[1]! : rest)
+  if (!body) return null
+  const d = order === 1 ? `frac(dif, dif ${v})` : `frac(dif^${order}, dif ${v}^${order})`
+  const point = at ? toTypstMath(at[2]!) : ''
+  // only a sum needs parens to stay under the d/dx: d/dx x^3, but d/dx (x^2 + 1)
+  const inner = topLevelSum(body) ? `(${body})` : body
+  return point ? `lr(${d} ${inner} |)_(${v} = ${point})` : `${d} ${inner}`
+}
+
+function topLevelSum(math: string): boolean {
+  let depth = 0
+  for (let i = 0; i < math.length; i++) {
+    const ch = math[i]!
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) depth--
+    else if (depth === 0 && i > 0 && (ch === '+' || ch === '-' || ch === '±') && math[i - 1] === ' ') return true
+  }
+  return false
+}
+
+function orderNumber(raw: string | undefined): number | null {
+  if (!raw) return null
+  return raw === '²' ? 2 : raw === '³' ? 3 : Number(raw)
 }
 
 /** Search-bar copy: Typst math when the setting is on, otherwise the typed text. */
