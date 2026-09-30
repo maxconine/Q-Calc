@@ -244,7 +244,8 @@ struct KeybindsSheet: View {
             }
             return nil
         }
-        guard let chord = Chord(event: event) else { return nil }
+        // the page's keys follow the layout's letters; show / hide is a carbon hotkey, so it stays physical
+        guard let chord = Chord(event: event, typed: action != "show") else { return nil }
         if let why = KeyActions.problem(chord, for: action, binds: allBinds) {
             note = why
             return nil
