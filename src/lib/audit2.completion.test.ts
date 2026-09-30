@@ -56,3 +56,15 @@ describe('completionFor: quiet cases', () => {
     expect(completionFor('mass', { variables: ['mass'] })).toBe('')
   })
 })
+
+describe('completionFor: the periodic table command', () => {
+  it('finishes the command instead of offering a unit', () => {
+    expect(completionFor('periodic table')).toBe('')
+    expect(completionFor('Periodic Table')).toBe('')
+    expect(completionFor('periodic ta')).toBe('ble')
+    expect(completionFor('periodic ')).toBe('table')
+  })
+  it('stays quiet when the second word is not table', () => {
+    expect(completionFor('periodic tea')).toBe('')
+  })
+})
