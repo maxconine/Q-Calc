@@ -109,6 +109,12 @@ fn main() {
             if let (true, Some(path)) = (first_run, &path) {
                 let _ = store.save(path);
             }
+            // a tray app that isn't running after a restart just looks like a dead hotkey, so windows opens it at
+            // sign in from the start; settings turns that off. the mac leaves this to login items
+            #[cfg(windows)]
+            if first_run && !cfg!(debug_assertions) {
+                let _ = app.autolaunch().enable();
+            }
             let preferred = hotkey::named(&store.hotkey);
             app.manage(Host(Mutex::new(State {
                 store,
@@ -325,6 +331,11 @@ fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<usize>) 
         if let Some(window) = app.get_webview_window(label) {
             let _ = window.set_theme(window_theme(&theme));
         }
+    }
+    // queued behind the theme change, so the title bar repaints in the new one
+    if let Some(window) = app.get_webview_window("settings") {
+        let w = window.clone();
+        let _ = window.run_on_main_thread(move || frame::repaint_caption(&w));
     }
 }
 

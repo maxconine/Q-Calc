@@ -83,6 +83,28 @@ pub fn bare(window: &WebviewWindow) {
 #[cfg(not(windows))]
 pub fn bare(_: &WebviewWindow) {}
 
+// tao sets the dark title bar attribute on a theme change but leaves the caption to repaint at the next activation,
+// so the settings window kept the old theme's title bar, text and all, until it lost focus. an off-then-on pair of
+// activation paints (on-then-off for a window in the back) repaints it where it stands. straight to the default
+// window proc, as tao's own repaint does: through tao's, they'd read as the window losing and regaining focus.
+// on the event loop's thread only, which owns the window
+#[cfg(windows)]
+pub fn repaint_caption(window: &WebviewWindow) {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::GetActiveWindow;
+    use windows_sys::Win32::UI::WindowsAndMessaging::{DefWindowProcW, WM_NCACTIVATE};
+
+    let Ok(hwnd) = window.hwnd() else { return };
+    let hwnd = hwnd.0;
+    let active = unsafe { GetActiveWindow() } == hwnd;
+    unsafe {
+        DefWindowProcW(hwnd, WM_NCACTIVATE, usize::from(!active), 0);
+        DefWindowProcW(hwnd, WM_NCACTIVATE, usize::from(active), 0);
+    }
+}
+
+#[cfg(not(windows))]
+pub fn repaint_caption(_: &WebviewWindow) {}
+
 // the web view's own background: 0,0,0,0 means it should let the window show through
 #[cfg(windows)]
 pub fn webview_background(window: &WebviewWindow, report: impl FnOnce(String) + Send + 'static) {

@@ -8,7 +8,12 @@ const root = dirname(fileURLToPath(import.meta.url))
 export default defineConfig({
   plugins: [react()],
   base: './',
-  server: { host: '127.0.0.1' },
+  server: {
+    host: '127.0.0.1',
+    // tauri dev runs cargo beside this; on windows, watching the exe it's writing in target/ fails with EBUSY and
+    // takes the dev server down
+    watch: { ignored: ['**/src-tauri/**'] },
+  },
   build: {
     rollupOptions: {
       input: {
