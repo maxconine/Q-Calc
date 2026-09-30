@@ -1,6 +1,6 @@
 # Q(uick) Calc
 
-A Spotlight-style scientific calculator for Mac. Press **Control + Option + Space** to calculate without leaving the app you’re in.
+A Spotlight-style scientific calculator for Mac and Windows. Press **Control + Option + Space** (**Alt + Space** on Windows) to calculate without leaving the app you’re in.
 
 Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as you type.
 
@@ -20,7 +20,7 @@ Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as y
   <img alt="Uncertainty: (9.81 ± 0.02) * (2.50 ± 0.01) is 24.53 ± 0.15" src="docs/screenshots/uncertainty.png" width="720">
 </picture>
 
-**Calendar and time math** (Mac app).
+**Calendar and time math** (Mac and Windows apps).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/calendar-dark.png">
@@ -56,6 +56,25 @@ Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as y
 </picture>
 
 ## Installation
+
+### Windows
+
+You need **Windows 10 or 11**, on an x64 or Arm PC.
+
+Download `Q-Calc-<version>-x64-setup.exe` (or `-arm64-setup.exe` for Snapdragon PCs) from the [latest release](https://github.com/maxconine/Q-Calc/releases/latest) and run it. It installs for your account only, so there's no admin prompt, and adds Q Calc to the Start menu and **Installed apps**.
+
+> [!NOTE]
+> The installer isn't code-signed yet, so Windows may say it protected your PC. Click **More info → Run anyway**. Updates after that install silently, and never show this.
+
+Q Calc runs in the notification area. Windows 11 puts new icons under the **^** on the taskbar; drag it onto the taskbar to keep it in view. Click it to show the calculator, or right-click it for **Settings…** and **Quit**.
+
+Q Calc opens when you sign in. Turn that off with **Open at login** in settings (**Ctrl + ,**).
+
+If **Alt + Space** opens something else (PowerToys Run and Command Palette use it too), pick another **Keyboard shortcut** in settings. If another app already holds the shortcut when Q Calc starts, the calculator says so.
+
+Q Calc checks for updates once a day and installs them while you're away from the PC. See [src-tauri/release/README.md](src-tauri/release/README.md) for the details.
+
+### Mac
 
 Install via Homebrew to get autoupdates (Preferred)
 
@@ -96,6 +115,8 @@ brew upgrade --cask q-calc
 
 ## Using Q Calc
 
+On Windows, read **⌘** and **⌃** below as **Ctrl**, **Option** as **Alt**, and use **Ctrl + Shift + Backspace** to clear history, since Ctrl + C copies. Settings live in the settings window (**Ctrl + ,** or the tray icon) rather than a menu. Type `?` for the shortcuts on your platform.
+
 - **Control + Option + Space** shows the calculator. **Esc** or a click outside the window hides it. What you were typing is kept for a while (see **Keep unfinished** in the menu).
 - Type as you would on a scientific calculator: `sin(90)`, `arcsin(0.5)`, `sin^-1(0.5)`, `sqrt(2)`, `2^8`, `5!`. `pi` becomes π as you type.
 - **⌃D** switches between degrees and radians. **⌃F** toggles fraction results. **⌃C** clears history and resets stored variables and functions. **Answers → Rationalize denominators** controls whether exact answers like `5/sqrt(41)` are rewritten as `5sqrt(41)/41`.
@@ -105,7 +126,7 @@ brew upgrade --cask q-calc
 - Store a variable with `x = 5`, then use it in later expressions (`x*2`). Define a function the same way: `f(x) = x^3`, then call it with `f(2)`.
 - Graph with `graph x^3`, `graph f` (after defining `f`), or `graph f(x) = x^3`. A panel opens under the input with zoom and a list of critical points.
 - Solve a system with `sys 2` through `sys 5`, then **Enter**. A smaller window opens under the calculator with one field per equation, and the answer updates as you type (`x + y = 5`, `x - y = 1`).
-- Natural-language math works in the Mac app via SoulverCore: `$10 for lunch + 15% tip`, `40 is what % of 90`, `3:45pm + 4 hr 10 min`.
+- Natural-language math works in the Mac app via SoulverCore: `$10 for lunch + 15% tip`, `40 is what % of 90`, `3:45pm + 4 hr 10 min`. The Windows app has its own phrases for the common cases, like `$10 for lunch + 15% tip`, `3:45pm + 4 hr 10 min`, `days until december 25` and `100 usd to eur`.
 <!-- Apple Dictionary — uncomment to restore:
 - Type a word such as `ingenious` to see its Apple Dictionary definition. Phrases work too: `define New York`, `definition of apple`, `what does pi mean`. Click the definition or press **⌘C** to copy it. **Enter** saves the word to history.
 -->
