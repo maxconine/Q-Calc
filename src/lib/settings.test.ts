@@ -17,6 +17,8 @@ const nativePush = {
   keepWords: true,
   typstPreview: true,
   typstCopy: true,
+  shareUsage: false,
+  keybinds: { angle: 'ctrl+alt+r', clear: '' },
   hotkey: '⌃⌥Space',
   hotkeyFailed: false,
 } as const

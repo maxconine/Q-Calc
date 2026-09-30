@@ -547,6 +547,7 @@ html.quick-native .four-twenty.wide {
 }
 /* hover keeps an off toggle grey, so a click that turns it on shows at once */
 .edge-tool.active:hover:not(:disabled),
+.edge-settings:hover:not(:disabled),
 .edge-clear:hover:not(:disabled) {
   color: var(--answer);
 }
@@ -582,13 +583,23 @@ html.quick-native .four-twenty.wide {
   bottom: 0;
   z-index: 5;
 }
+.edge-settings {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  z-index: 5;
+  padding: 4px 6px;
+}
 .edge-tools,
+.edge-settings,
 .edge-clear {
   opacity: 0;
   transition: opacity 150ms ease;
 }
 .composer:hover .edge-tools,
 .composer:hover .edge-clear,
+.composer:hover .edge-settings,
+.edge-settings:focus-visible,
 .edge-tools:focus-within,
 .edge-clear:focus-visible {
   opacity: 1;
@@ -711,6 +722,16 @@ html.quick-native .four-twenty.wide {
   justify-content: center;
   padding: 0 var(--gutter) var(--sp-2);
   overflow: hidden;
+  color: var(--ink);
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 0.15s ease;
+}
+.typst-preview-stale {
+  opacity: 0.4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .typst-preview { transition: none; }
 }
 .typst-preview svg {
   display: block;
@@ -1398,6 +1419,53 @@ html.quick-native .graph {
 }
 .unit-row select:focus-visible {
   outline-offset: 1px;
+}
+
+/* a key cap per action; clicking it listens for the next chord */
+.keybind-list {
+  border-top: 1px solid var(--line);
+}
+.keybind-problem {
+  color: var(--ink);
+}
+.keybind-controls {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--sp-1);
+}
+.keybind-key {
+  min-width: 96px;
+  border: 0;
+  background: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--ink);
+  border-radius: var(--radius-s);
+  padding: 3px var(--sp-2);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.keybind-key.none {
+  color: var(--muted);
+}
+.keybind-key.recording {
+  color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.keybind-default {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--fs-body);
+  line-height: 16px;
+  padding: 3px 6px;
+  border-radius: var(--radius-s);
+}
+.keybind-default:hover {
+  color: var(--ink);
+  background: var(--fill-hover);
 }
 
 /* native segmented control */

@@ -21,8 +21,9 @@ describe('a unit literal times a plain variable', () => {
 describe('a variable holding a quantity times a plain variable', () => {
   it('multiplies either order', () => {
     const rows = evaluateSheet(['price = 3', 'weight = 2 kg', 'price * weight'])
-    expect(rows[2]!.value?.unit).toBe('lbs')
-    expect(rows[2]!.value?.n).toBeCloseTo(3 * 4.4092452437, 6)
+    // the stored 2 kg stays kg, not its lbs counterpart
+    expect(rows[2]!.value?.unit).toBe('kg')
+    expect(rows[2]!.value?.n).toBeCloseTo(6, 9)
     expect(shown(['price = 3', 'weight = 2 kg', 'weight * price'])).toBe(shown(['price = 3', 'weight = 2 kg', 'price * weight']))
   })
 

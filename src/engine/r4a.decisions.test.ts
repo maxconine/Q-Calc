@@ -12,8 +12,8 @@ describe('decisions from homework sessions', () => {
     expect(last(['m = 2 kg', 'h = 10 m']).display).toBe('')
   })
 
-  // today `E = 5` is blank (E is reserved as e) and then `E*2` is 2e = 5.44; recommended: E is a free name
-  it.fails('E can hold a value, as in E = hc/λ', () => {
+  // decided: E is a free name (Young's modulus, energy); lowercase e stays Euler's number
+  it('E can hold a value, as in E = hc/λ', () => {
     expect(last(['E = 5', 'E*2']).value?.n).toBe(10)
   })
 

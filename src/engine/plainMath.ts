@@ -263,13 +263,15 @@ export function tryPlainMath(
     variables?: Record<string, number>
     functions?: Record<string, UserFunction>
     defaultUnits?: DefaultUnits
+    /** Keep the units as typed (`F = 10 kN` stores kN, not its lbf counterpart). */
+    keepUnits?: boolean
   } = {},
 ): Value | null {
   const src = unwrapQuestion(text)
   if (!src) return null
   const filled = normalizeMathText(src)
   // a known variable (`n = 5`, then `n*2`) is never read as a unit symbol like N, m or s
-  const converted = tryConvert(filled, ctx.defaultUnits, ctx.variables)
+  const converted = tryConvert(filled, ctx.defaultUnits, ctx.variables, ctx.keepUnits)
   if (converted) return converted
   const cleaned = src.replace(/\d+(?:\.\d+)?\s*%\s*of\b/gi, (m) => m.replace(/\s*of\b/i, ''))
   if (hasNlpWords(cleaned) && !looksLikeLatex(src)) return null

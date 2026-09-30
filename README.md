@@ -70,7 +70,7 @@ Q Calc runs in the notification area. Windows 11 puts new icons under the **^** 
 
 Q Calc opens when you sign in. Turn that off with **Open at login** in settings (**Ctrl + ,**).
 
-If **Alt + Space** opens something else (PowerToys Run and Command Palette use it too), pick another **Keyboard shortcut** in settings. If another app already holds the shortcut when Q Calc starts, the calculator says so.
+If **Alt + Space** opens something else (PowerToys Run and Command Palette use it too), open settings, click **Choose keybinds…** under **Keybinds**, then click the **Show / hide Q Calc** key and press a new one. Any shortcut in that list can be changed the same way. If another app already holds the shortcut when Q Calc starts, the calculator says so.
 
 Q Calc checks for updates once a day and installs them while you're away from the PC. See [src-tauri/release/README.md](src-tauri/release/README.md) for the details.
 
@@ -115,7 +115,7 @@ brew upgrade --cask q-calc
 
 ## Using Q Calc
 
-On Windows, read **⌘** and **⌃** below as **Ctrl**, **Option** as **Alt**, and use **Ctrl + Shift + Backspace** to clear history, since Ctrl + C copies. Settings live in the settings window (**Ctrl + ,** or the tray icon) rather than a menu. Type `?` for the shortcuts on your platform.
+On Windows, read **⌘** and **⌃** below as **Ctrl**, **Option** as **Alt**, and use **Ctrl + Shift + Backspace** to clear history, since Ctrl + C copies. Those are the defaults; **Keybinds** in settings changes any of them. Settings live in the settings window (**Ctrl + ,** or the tray icon) rather than a menu. Type `?` for the shortcuts in use.
 
 - **Control + Option + Space** shows the calculator. **Esc** or a click outside the window hides it. What you were typing is kept for a while (see **Keep unfinished** in the menu).
 - Type as you would on a scientific calculator: `sin(90)`, `arcsin(0.5)`, `sin^-1(0.5)`, `sqrt(2)`, `2^8`, `5!`. `pi` becomes π as you type.
@@ -125,7 +125,10 @@ On Windows, read **⌘** and **⌃** below as **Ctrl**, **Option** as **Alt**, a
 - **Option + Up** and **Option + Down** step a metric answer's unit one prefix at a time, a factor of 1000 per press: `4700 ohm` becomes `4.7 kΩ`, and `2 L` becomes `2000 mL`, then `2000000 μL`.
 - Store a variable with `x = 5`, then use it in later expressions (`x*2`). Define a function the same way: `f(x) = x^3`, then call it with `f(2)`.
 - Graph with `graph x^3`, `graph f` (after defining `f`), or `graph f(x) = x^3`. A panel opens under the input with zoom and a list of critical points.
-- Solve a system with `sys 2` through `sys 5`, then **Enter**. A smaller window opens under the calculator with one field per equation, and the answer updates as you type (`x + y = 5`, `x - y = 1`).
+- Matrices: type `[1 2; 3 4]` (or `[[1,2],[3,4]]`) and use `+`, `-`, `*` (a number scales, two matrices multiply rows by columns), `inv(A)`, `A^-1` or `inverse of A`, `det(A)` or `det A`, `A^T`, `A'` or `transpose A`, `trace(A)`, `rank(A)`, `rref(A)`, `identity(3)`, and `dot`, `cross` and `norm` for vectors. Entries can be any math (`[sqrt(2) 0; 0 1]`). Store one with `A = [1 2; 3 4]`, and a matrix answer becomes `ans`, so `*2` keeps going. Answers show simple fractions beside the decimals. Sizes that don't fit say why, and a nearly singular matrix has no inverse rather than junk digits.
+- Rearrange a formula with `isolate`: `isolate T in PV = nRT` gives `T = P*V/(R*n)`, and `y = mx + b isolate x` works too. On its own, `isolate x` uses the equation in the row before. Letters written together multiply (`nRT`), and stored variables stay letters.
+- `solve x in …`, `solve for x: …` or `… for x` gives a number when every other letter is known, and otherwise rearranges like `isolate` (`solve y = mx + b for x` is `x = (y - b)/m`). Here stored variables are filled in.
+- Solve a system with `sys2` through `sys5` (`sys 3` works too). The fields open as soon as you type the count, and the answer updates as you type (`x + y = 5`, `x - y = 1`). You don't have to fill every field: once the equations you've typed settle a value, it shows. Units carry through: `x + y = 10 m`, `x - y = 2 m` gives `x = 6 m, y = 4 m`, and `F = m*a`, `m = 2 kg`, `a = 3 m/s^2` gives `F = 6 N`.
 - Natural-language math works in the Mac app via SoulverCore: `$10 for lunch + 15% tip`, `40 is what % of 90`, `3:45pm + 4 hr 10 min`. The Windows app has its own phrases for the common cases, like `$10 for lunch + 15% tip`, `3:45pm + 4 hr 10 min`, `days until december 25` and `100 usd to eur`.
 <!-- Apple Dictionary — uncomment to restore:
 - Type a word such as `ingenious` to see its Apple Dictionary definition. Phrases work too: `define New York`, `definition of apple`, `what does pi mean`. Click the definition or press **⌘C** to copy it. **Enter** saves the word to history.
@@ -179,7 +182,7 @@ If the clone is in **Documents** or **Desktop**, macOS may refuse to launch the 
 
 ### Ship an update to field Macs
 
-The current public release is **v2.0.3**. That is the GitHub Release, the zip linked from the download page, and the Homebrew cask.
+The current public release is **v2.0.4**. That is the GitHub Release, the zip linked from the download page, and the Homebrew cask.
 
 To publish the next version:
 
@@ -220,6 +223,10 @@ The Release action signs each zip with an EdDSA key. One-time setup, done by a r
 5. In **Settings → Pages**, deploy from the `main` branch, `/docs` folder, so `https://maxconine.github.io/Q-Calc/appcast.xml` loads.
 
 Keep the private key safe and backed up. Q Calc is ad-hoc signed, so Sparkle trusts an update only if this key signed it. If the key is lost, installed copies can never update again and everyone has to download the zip by hand.
+
+## Privacy
+
+Q Calc sends anonymous usage counts, such as how many calculations used units or how often the history was used. It never sends what you type or the answers. Each install gets a random ID that isn't tied to you, and the counts go out at most every few hours. To turn this off, open Settings and switch off **Share anonymous usage**; that also deletes the ID. The collector and dashboard live in [analytics/](analytics/README.md).
 
 ## License
 

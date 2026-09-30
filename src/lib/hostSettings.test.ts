@@ -1,36 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { draftChoices, EMPTY_HOST, hostInfo, hotkeyNote } from './hostSettings'
 
-const HOTKEYS = [
-  { id: 'alt-space', title: 'Alt+Space' },
-  { id: 'ctrl-space', title: 'Ctrl+Space' },
-]
-
 describe('hostInfo', () => {
   it('reads what the shell sends', () => {
-    const info = hostInfo({ hotkeyId: 'ctrl-space', hotkeyFailed: false, hotkeys: HOTKEYS, autostart: true, sigFigs: 9 })
-    expect(info).toEqual({ hotkeyId: 'ctrl-space', hotkeyFailed: false, hotkeyRefused: '', hotkeys: HOTKEYS, autostart: true })
+    const info = hostInfo({ hotkeyChord: 'ctrl+space', hotkeyFailed: false, autostart: true, sigFigs: 9 })
+    expect(info).toEqual({ hotkeyChord: 'ctrl+space', hotkeyFailed: false, hotkeyRefused: '', autostart: true })
   })
 
   it('keeps what a partial push leaves out, except a refusal', () => {
-    const base = { ...EMPTY_HOST, hotkeyId: 'alt-space', hotkeys: HOTKEYS, autostart: true, hotkeyRefused: 'Ctrl+Space' }
+    const base = { ...EMPTY_HOST, hotkeyChord: 'alt+space', autostart: true, hotkeyRefused: 'Ctrl+Space' }
     expect(hostInfo({ theme: 'dark' }, base)).toEqual({ ...base, hotkeyRefused: '' })
-    expect(hostInfo(undefined, base).hotkeys).toBe(HOTKEYS)
+    expect(hostInfo(undefined, base).hotkeyChord).toBe('alt+space')
   })
 
   it('drops junk', () => {
-    const info = hostInfo({ hotkeyId: 3, autostart: 'yes', hotkeys: [{ id: 'a' }, null, { id: 'b', title: 'B' }] })
-    expect(info.hotkeyId).toBe('')
+    const info = hostInfo({ hotkeyChord: 3, autostart: 'yes' })
+    expect(info.hotkeyChord).toBe('')
     expect(info.autostart).toBe(false)
-    expect(info.hotkeys).toEqual([{ id: 'b', title: 'B' }])
   })
 })
 
 describe('hotkeyNote', () => {
-  it('says why the shortcut did not change', () => {
+  it('says why the shortcut did not change, and nothing when it did', () => {
     expect(hotkeyNote({ ...EMPTY_HOST, hotkeyRefused: 'Ctrl+Space' })).toBe('Ctrl+Space is in use by another app')
-    expect(hotkeyNote({ ...EMPTY_HOST, hotkeyFailed: true })).toBe('Your shortcut is in use by another app')
-    expect(hotkeyNote(EMPTY_HOST)).not.toMatch(/in use/)
+    expect(hotkeyNote({ ...EMPTY_HOST, hotkeyFailed: true })).toBe('Your show / hide shortcut is in use by another app')
+    expect(hotkeyNote(EMPTY_HOST)).toBe('')
   })
 })
 

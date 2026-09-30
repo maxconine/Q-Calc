@@ -151,6 +151,8 @@ make_icon() {
 
 sign_app() {
   echo "Signing…"
+  # ditto carries FinderInfo and File Provider xattrs over from the synced Documents folder
+  xattr -cr "$APP"
   local framework="$APP/Contents/Frameworks/SoulverCore.framework"
   codesign --force --sign - --timestamp=none "$framework/Versions/A"
   codesign --force --sign - --timestamp=none "$framework"
@@ -201,6 +203,7 @@ swiftc -parse-as-library \
   "$MAC/SoulverEval.swift" \
   "$MAC/Overlay.swift" \
   "$MAC/UnitSettings.swift" \
+  "$MAC/Keybinds.swift" \
   "$MAC/SettingsWindow.swift" \
   "$MAC/PeriodicWindow.swift" \
   "$MAC/Updates.swift" \

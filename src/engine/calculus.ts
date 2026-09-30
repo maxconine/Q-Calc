@@ -3,11 +3,12 @@ import { derivativeAt, integrate, justified, limit, type RealFn } from './calcNu
 import type { Ast, ClosedFormJob } from './closedForm'
 import { num, textVal } from './format'
 import { math } from './math'
-import { compileScientific, evalScientific, preprocessChecked, type ScientificContext } from './scientific'
+import { compileScientific, evalScientific, preprocessChecked, SCIENTIFIC_NAMES, type ScientificContext } from './scientific'
 import type { UserFunction, Value } from './types'
 
 type Intent =
-  | { op: 'derivative'; body: string; v: string; order: number; at?: string }
+  /** One variable per differentiation, innermost first; `''` means pick one from the body. */
+  | { op: 'derivative'; body: string; vars: string[]; at?: string }
   | { op: 'integral'; body: string; v?: string; lower: string; upper: string }
   | { op: 'limit'; body: string; v: string; to: string; side: -1 | 0 | 1 }
 
@@ -329,8 +330,26 @@ function parseLimit(text: string): Intent | null {
   return { op: 'limit', body, v, to, side }
 }
 
+/** A variable a derivative can be taken in: a letter, a Greek letter, or `theta` (θ as the engine reads it). */
+const VAR = String.raw`(?:theta|[A-Za-z]|(?![πτζθΠΣ])[α-ωΑ-Ω])`
+const ORDER = String.raw`(?:\^?([2-9]|[²³]))?`
+const ORDINARY_RE = new RegExp(String.raw`^d${ORDER}\s*\/\s*d(${VAR})${ORDER}(?![A-Za-z0-9_α-ωΑ-Ω])(.*)$`, 's')
+const PARTIAL_RE = new RegExp(String.raw`^∂${ORDER}\s*\/\s*((?:∂\s*${VAR}(?:\^?(?:[2-9]|[²³]))?\s*)+?)(?![A-Za-z0-9_α-ωΑ-Ω])(?=[\s(]|$)(.*)$`, 's')
+const PARTIAL_PART_RE = new RegExp(String.raw`∂\s*(${VAR})(?:\^?([2-9]|[²³]))?`, 'g')
+const WRT_RE = new RegExp(String.raw`^(.+?)\s+(?:with\s+respect\s+to|wrt|w\.r\.t\.?)\s+(${VAR})$`, 'is')
+
+/** `∂²/∂x∂y`: the denominator's variables, rightmost first since that one is applied first. */
+function partialVars(denominator: string): string[] {
+  const out: string[] = []
+  for (const m of denominator.matchAll(PARTIAL_PART_RE)) {
+    const n = orderOf(m[2]) ?? 1
+    for (let i = 0; i < n; i++) out.push(m[1]!)
+  }
+  return out.reverse()
+}
+
 function parseDerivative(text: string, functions: Record<string, UserFunction>, variables: Record<string, number>): Intent | null {
-  const m = text.match(/^d(?:\^?([2-9]|[²³]))?\s*\/\s*d([A-Za-z])(?:\^?([2-9]|[²³]))?(?![A-Za-z0-9_])(.*)$/s)
+  const m = text.match(ORDINARY_RE)
   if (m) {
     const v = m[2]!
     // `d/dx` with `d` and `dx` both defined is plain division
@@ -340,13 +359,23 @@ function parseDerivative(text: string, functions: Record<string, UserFunction>, 
     if (top !== bottom && !(top == null && bottom == null)) return null
     const { body, at } = splitAt(m[4]!)
     if (!body) return null
-    return { op: 'derivative', body: stripOuterParens(body), v, order: top ?? 1, at }
+    return { op: 'derivative', body: stripOuterParens(body), vars: Array(top ?? 1).fill(v), at }
   }
-  const words = text.match(/^(?:the\s+)?(?:(second|2nd)\s+)?derivative\s+of\s+(.+)$/is)
-  if (words) {
-    const { body, at } = splitAt(words[2]!)
+  const p = text.match(PARTIAL_RE)
+  if (p) {
+    const vars = partialVars(p[2]!)
+    if (vars.length !== (orderOf(p[1]) ?? 1) || vars.length > 4) return null
+    const { body, at } = splitAt(p[3]!)
     if (!body) return null
-    return { op: 'derivative', body, v: '', order: words[1] ? 2 : 1, at }
+    return { op: 'derivative', body: stripOuterParens(body), vars, at }
+  }
+  const words = text.match(/^(?:the\s+)?(?:(second|2nd)\s+)?(?:partial\s+)?derivative\s+of\s+(.+)$/is)
+  if (words) {
+    const split = splitAt(words[2]!)
+    const wrt = split.body.match(WRT_RE)
+    const body = wrt ? wrt[1]!.trim() : split.body
+    if (!body) return null
+    return { op: 'derivative', body, vars: Array(words[1] ? 2 : 1).fill(wrt?.[2] ?? ''), at: split.at }
   }
   const prime = text.match(/^([A-Za-z][A-Za-z0-9]*)\s*('+|′+|″)\s*\((.+)\)$/s)
   if (prime) {
@@ -357,8 +386,8 @@ function parseDerivative(text: string, functions: Record<string, UserFunction>, 
     if (order > 3) return null
     const arg = prime[3]!.trim()
     const param = def.params[0]!
-    if (/^[A-Za-z]$/.test(arg) && !(arg in variables)) return { op: 'derivative', body: `${name}(${arg})`, v: arg, order }
-    return { op: 'derivative', body: `${name}(${param})`, v: param, order, at: arg }
+    if (/^[A-Za-z]$/.test(arg) && !(arg in variables)) return { op: 'derivative', body: `${name}(${arg})`, vars: Array(order).fill(arg) }
+    return { op: 'derivative', body: `${name}(${param})`, vars: Array(order).fill(param), at: arg }
   }
   return null
 }
@@ -373,7 +402,7 @@ function parseCalculus(
   return parseDerivative(text, functions, variables) ?? parseIntegral(text, functions) ?? parseLimit(text)
 }
 
-const CALCULUS_START = /^(?:∫|int(?:_|[^A-Za-z\s(]\S*\.\.)|d[²³]?\s*\/\s*d[A-Za-z]|lim(?:it)?\b.*(?:->|→)|(?:the\s+)?(?:integral|integrate|derivative|limit)\s+of\b|[A-Za-z][A-Za-z0-9]*\s*(?:'+|′+|″)\s*\()/i
+const CALCULUS_START = /^(?:∫|int(?:_|[^A-Za-z\s(]\S*\.\.)|d[²³]?\s*\/\s*d(?:[A-Za-z]|[α-ωΑ-Ω])|∂[²³]?\s*\/\s*∂|lim(?:it)?\b.*(?:->|→)|(?:the\s+)?(?:integral|integrate|(?:partial\s+)?derivative|limit)\s+of\b|[A-Za-z][A-Za-z0-9]*\s*(?:'+|′+|″)\s*\()/i
 
 /** Cheap syntactic check, true while a calculus line is still being typed, so soulvercore stays out of it. */
 export function isCalculusInput(text: string): boolean {
@@ -543,13 +572,16 @@ function toUserAngles(n: N, deg: boolean): N | null {
   return n
 }
 
-/** simplify folds `log(2)` into 0.693...; constant calls hide behind placeholder symbols while it runs. */
-function simplifyKeepingConstants(n: N, v: string): N {
+/**
+ * simplify folds `log(2)` into 0.693...; constant calls hide behind placeholder symbols while it runs.
+ * A call is constant when it doesn't mention `v`, or with `v` null when it mentions no letter at all.
+ */
+function simplifyKeepingConstants(n: N, v: string | null): N {
   const saved: N[] = []
   const hide = (x: N): N => {
     // d/dx e^x comes back from mathjs as e^x log(e)
     if (x.type === 'FunctionNode' && fnName(x) === 'log' && x.args![0]!.type === 'SymbolNode' && x.args![0]!.name === 'e') return constant(1)
-    if (x.type === 'FunctionNode' && !mentions(x, v)) {
+    if (x.type === 'FunctionNode' && (v == null ? !hasSymbol(x) : !mentions(x, v))) {
       saved.push(x)
       return symbol(`k${saved.length - 1}__`)
     }
@@ -623,6 +655,14 @@ function factors(n: N): N[] {
   return [n]
 }
 
+/** `x` before `y`: letters and their powers in a product go in alphabetical order. */
+function letterOrder(a: N, b: N): number {
+  const name = (f: N) => (f.type === 'SymbolNode' ? f.name! : f.args![0]!.name!)
+  const x = name(a)
+  const y = name(b)
+  return x < y ? -1 : x > y ? 1 : 0
+}
+
 /** `2x sin(x) + x² cos(x)`: typeset, but still text the engine can read back. */
 function pretty(n: N): Printed {
   switch (n.type) {
@@ -631,7 +671,7 @@ function pretty(n: N): Printed {
       return { s: numberText(v), prec: v < 0 ? UNARY : ATOM, kind: 'num' }
     }
     case 'SymbolNode':
-      return { s: n.name === 'pi' ? 'π' : n.name!, prec: ATOM, kind: 'sym' }
+      return { s: n.name === 'pi' ? 'π' : n.name === 'theta' ? 'θ' : n.name!, prec: ATOM, kind: 'sym' }
     case 'ParenthesisNode':
       return pretty(n.content!)
     case 'FunctionNode': {
@@ -706,7 +746,7 @@ function pretty(n: N): Printed {
     }
     const parts = rest
       .map((f, i) => ({ f, i }))
-      .sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i)
+      .sort((a, b) => rank(a.f) - rank(b.f) || (rank(a.f) === 1 ? letterOrder(a.f, b.f) : 0) || a.i - b.i)
       .map(({ f }) => pretty(f))
     let s = ''
     let prevKind: Printed['kind'] | null = null
@@ -721,7 +761,7 @@ function pretty(n: N): Printed {
       // `2x`, `2(x + 1)`, `2√x` and `πx` sit tight; everything else is spaced
       const tight =
         (prevKind === 'num' && (kind === 'sym' || kind === 'group' || /^[√∛]/.test(text))) ||
-        (prevKind === 'sym' && /^[a-zπ]$/i.test(text))
+        (prevKind === 'sym' && /^[a-zπα-ωΑ-Ω]$/i.test(text))
       // `x (x + 1)` would read back as a call to x
       const sep = prevKind === 'sym' && kind === 'group' ? '·' : ' '
       s += prevKind == null || tight ? text : `${sep}${text}`
@@ -763,6 +803,354 @@ function pretty(n: N): Printed {
   return { s: asMath(n).toString(), prec: SUM, kind: 'other' }
 }
 
+// ---- one denominator: `((γ²D - γLv)/√(γ² + v²)² - D)/(m √(γ² + v²))` is `-v·(Dv + Lγ)/(m (γ² + v²)^(3/2))`
+
+/** A coefficient times atoms to powers; an atom is a letter, a call, or a sum that can't be multiplied out. */
+type Term = { c: number; p: Map<string, number> }
+type Atom = { node: N; sum?: Term[] }
+
+const MAX_TERMS = 40
+const MAX_EXPAND = 6
+
+const isWhole = (x: number) => Math.abs(x - Math.round(x)) < 1e-9
+
+class TooBig extends Error {}
+
+function termKey(p: Map<string, number>): string {
+  return [...p]
+    .filter(([, e]) => !isWhole(e) || Math.round(e) !== 0)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([k, e]) => `${k}^${Number(e.toFixed(9))}`)
+    .join('*')
+}
+
+function sumKey(terms: Term[]): string {
+  return terms.map((t) => `${Number(t.c.toPrecision(12))}:${termKey(t.p)}`).sort().join('+')
+}
+
+function combine(terms: Term[]): Term[] {
+  const out = new Map<string, Term>()
+  const scale = Math.max(0, ...terms.map((t) => Math.abs(t.c)))
+  for (const t of terms) {
+    const p = new Map([...t.p].filter(([, e]) => !isWhole(e) || Math.round(e) !== 0))
+    const key = termKey(p)
+    const prev = out.get(key)
+    if (prev) prev.c += t.c
+    else out.set(key, { c: t.c, p })
+  }
+  const kept = [...out.values()].filter((t) => Math.abs(t.c) > 1e-12 * scale)
+  if (kept.length > MAX_TERMS) throw new TooBig()
+  return kept
+}
+
+function mulTerm(a: Term, b: Term): Term {
+  const p = new Map(a.p)
+  for (const [k, e] of b.p) p.set(k, (p.get(k) ?? 0) + e)
+  return { c: a.c * b.c, p }
+}
+
+function mulSum(a: Term[], b: Term[]): Term[] {
+  return combine(a.flatMap((x) => b.map((y) => mulTerm(x, y))))
+}
+
+function wholePower(a: Term[], k: number): Term[] {
+  let out: Term[] = [{ c: 1, p: new Map() }]
+  for (let i = 0; i < k; i++) out = mulSum(out, a)
+  return out
+}
+
+/** `p/q` with a small `q`, or null. */
+function toFraction(x: number): [number, number] | null {
+  if (!Number.isFinite(x)) return null
+  for (let q = 1; q <= 100000; q++) {
+    const p = Math.round(x * q)
+    if (Math.abs(p / q - x) <= 1e-10 * Math.max(1, Math.abs(x))) return [p, q]
+  }
+  return null
+}
+
+function constantOf(n: N): number | null {
+  if (n.type === 'ConstantNode' && typeof n.value === 'number') return n.value
+  if (n.type === 'ParenthesisNode' && n.content) return constantOf(n.content)
+  if (n.type === 'OperatorNode' && fnName(n) === 'unaryMinus') {
+    const a = constantOf(n.args![0]!)
+    return a == null ? null : -a
+  }
+  if (n.type === 'OperatorNode' && fnName(n) === 'divide') {
+    const a = constantOf(n.args![0]!)
+    const b = constantOf(n.args![1]!)
+    return a == null || b == null || b === 0 ? null : a / b
+  }
+  return null
+}
+
+class Terms {
+  atoms = new Map<string, Atom>()
+
+  atom(key: string, node: N, e = 1, sum?: Term[]): Term[] {
+    if (!this.atoms.has(key)) this.atoms.set(key, { node, sum })
+    return [{ c: 1, p: new Map([[key, e]]) }]
+  }
+
+  of(n: N): Term[] {
+    switch (n.type) {
+      case 'ConstantNode':
+        if (typeof n.value !== 'number' || !Number.isFinite(n.value)) throw new TooBig()
+        return n.value === 0 ? [] : [{ c: n.value, p: new Map() }]
+      case 'SymbolNode':
+        return this.atom(n.name!, n)
+      case 'ParenthesisNode':
+        return this.of(n.content!)
+      case 'FunctionNode': {
+        const name = fnName(n)
+        if (name === 'sqrt') return this.power(this.of(n.args![0]!), 0.5)
+        return this.atom(asMath(n).toString(), n)
+      }
+      case 'OperatorNode':
+        break
+      default:
+        throw new TooBig()
+    }
+    const args = n.args!
+    switch (fnName(n)) {
+      case 'add':
+        return combine(args.flatMap((a) => this.of(a)))
+      case 'subtract':
+        return combine([...this.of(args[0]!), ...this.of(args[1]!).map((t) => ({ ...t, c: -t.c }))])
+      case 'unaryMinus':
+        return this.of(args[0]!).map((t) => ({ ...t, c: -t.c }))
+      case 'unaryPlus':
+        return this.of(args[0]!)
+      case 'multiply':
+        return args.map((a) => this.of(a)).reduce(mulSum)
+      case 'divide':
+        return mulSum(this.of(args[0]!), this.power(this.of(args[1]!), -1))
+      case 'pow': {
+        const k = constantOf(args[1]!)
+        if (k == null) return this.atom(asMath(n).toString(), n)
+        return this.power(this.of(args[0]!), k)
+      }
+      default:
+        throw new TooBig()
+    }
+  }
+
+  power(base: Term[], k: number): Term[] {
+    if (k === 0) return [{ c: 1, p: new Map() }]
+    if (!base.length) {
+      if (k < 0) throw new TooBig()
+      return []
+    }
+    if (isWhole(k) && k > 0 && k <= MAX_EXPAND) return wholePower(base, Math.round(k))
+    if (base.length === 1) {
+      const [t] = base as [Term]
+      if (isWhole(k)) return [{ c: t.c ** k, p: new Map([...t.p].map(([a, e]) => [a, e * k])) }]
+      // (x²)^(1/2) is |x|, not x
+      if (t.c > 0 && [...t.p].every(([, e]) => !isWhole(e) || Math.round(e) % 2 !== 0 || isWhole(e * k))) {
+        let out: Term[] = [{ c: t.c ** k, p: new Map() }]
+        for (const [a, e] of t.p) {
+          const even = isWhole(e) && Math.round(e) % 2 === 0
+          const piece = even
+            ? this.atom(`abs(${a})`, call('abs', [this.atoms.get(a)!.node]), e * k)
+            : [{ c: 1, p: new Map([[a, e * k]]) }]
+          out = mulSum(out, piece)
+        }
+        return out
+      }
+    }
+    const key = `(${sumKey(base)})`
+    return this.atom(key, this.node(base), k, base)
+  }
+
+  /** Atoms to powers, as a product; roots print as √. */
+  factorNodes(p: Map<string, number>): N[] | null {
+    const out: N[] = []
+    for (const [k, e] of [...p].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+      if (isWhole(e) && Math.round(e) === 0) continue
+      const inner = k.match(/^abs\((.*)\)$/)?.[1]
+      // |v|² prints as v²
+      const base = inner && this.atoms.has(inner) && isWhole(e) && Math.round(e) % 2 === 0 ? this.atoms.get(inner)!.node : this.atoms.get(k)!.node
+      if (isWhole(e)) out.push(Math.round(e) === 1 ? base : op('^', 'pow', [base, constant(Math.round(e))]))
+      else if (Math.abs(e - 0.5) < 1e-9) out.push(call('sqrt', [base]))
+      else {
+        const f = toFraction(e)
+        if (!f || f[1] > 12) return null
+        out.push(op('^', 'pow', [base, op('/', 'divide', [constant(f[0]), constant(f[1])])]))
+      }
+    }
+    return out
+  }
+
+  node(terms: Term[]): N {
+    const sorted = [...terms].sort((a, b) => degree(b) - degree(a) || (termKey(a.p) < termKey(b.p) ? -1 : 1))
+    const parts = sorted.map((t) => {
+      const fs = this.factorNodes(t.p) ?? [constant(Number.NaN)]
+      const c = Math.abs(t.c)
+      const body = fs.length ? (c === 1 ? product(fs) : product([constant(c), ...fs])) : constant(c)
+      return { neg: t.c < 0, body }
+    })
+    let out: N = parts[0]!.neg ? op('-', 'unaryMinus', [parts[0]!.body]) : parts[0]!.body
+    for (const part of parts.slice(1)) out = op(part.neg ? '-' : '+', part.neg ? 'subtract' : 'add', [out, part.body])
+    return out
+  }
+}
+
+function degree(t: Term): number {
+  let d = 0
+  for (const [, e] of t.p) d += e
+  return d
+}
+
+function product(fs: N[]): N {
+  return fs.length === 1 ? fs[0]! : op('*', 'multiply', fs)
+}
+
+function gcd(a: number, b: number): number {
+  return b ? gcd(b, a % b) : Math.abs(a)
+}
+
+/** The expression over a single denominator with the numerator multiplied out and its common factors pulled out front. */
+function together(n: N): N | null {
+  const terms = new Terms()
+  let sum: Term[]
+  try {
+    sum = terms.of(n)
+    if (!sum.length) return constant(0)
+    // v² is |v|², so it can cancel with a |v| from a root
+    sum = combine(sum.map((t) => {
+      const p = new Map(t.p)
+      for (const [k, e] of t.p) {
+        const abs = `abs(${k})`
+        if (terms.atoms.has(abs) && isWhole(e) && Math.round(e) % 2 === 0) {
+          p.delete(k)
+          p.set(abs, (p.get(abs) ?? 0) + e)
+        }
+      }
+      return { c: t.c, p }
+    }))
+    const den = new Map<string, number>()
+    for (const t of sum) for (const [k, e] of t.p) if (e < 0) den.set(k, Math.min(den.get(k) ?? 0, e))
+    let top: Term[] = []
+    for (const t of sum) {
+      let expanded: Term[] = [{ c: t.c, p: new Map() }]
+      const p = new Map(t.p)
+      for (const [k, e] of den) p.set(k, (p.get(k) ?? 0) - e)
+      for (const [k, e] of p) {
+        // a sum back to a whole power multiplies out, so its terms can cancel
+        const inner = terms.atoms.get(k)?.sum
+        const whole = Math.floor(e + 1e-9)
+        const rest = e - whole
+        if (inner && whole >= 1 && whole <= MAX_EXPAND) {
+          expanded = mulSum(expanded, wholePower(inner, whole))
+          if (Math.abs(rest) > 1e-9) expanded = expanded.map((x) => mulTerm(x, { c: 1, p: new Map([[k, rest]]) }))
+        } else expanded = expanded.map((x) => mulTerm(x, { c: 1, p: new Map([[k, e]]) }))
+      }
+      top.push(...expanded)
+    }
+    top = combine(top)
+    if (!top.length) return constant(0)
+
+    // what every numerator term shares comes out front, and cancels against the denominator
+    const outer = new Map<string, number>()
+    for (const [k] of top[0]!.p) {
+      const least = Math.min(...top.map((t) => t.p.get(k) ?? 0))
+      if (least > 1e-9) outer.set(k, least)
+    }
+    top = top.map((t) => {
+      const p = new Map(t.p)
+      for (const [k, e] of outer) p.set(k, p.get(k)! - e)
+      return { c: t.c, p }
+    })
+    const bottom = new Map([...den].map(([k, e]) => [k, -e]))
+    for (const [k, e] of outer) {
+      const m = Math.min(e, bottom.get(k) ?? 0)
+      if (m > 0) {
+        outer.set(k, e - m)
+        bottom.set(k, bottom.get(k)! - m)
+      }
+    }
+
+    // whole-number coefficients, with the sign of the leading term out front
+    const fractions = top.map((t) => toFraction(t.c))
+    if (fractions.some((f) => !f)) return null
+    const g = fractions.reduce((a, f) => gcd(a, f![0]), 0)
+    const l = fractions.reduce((a, f) => (a * f![1]) / gcd(a, f![1]), 1)
+    const ordered = [...top].sort((a, b) => degree(b) - degree(a) || (termKey(a.p) < termKey(b.p) ? -1 : 1))
+    const sign = ordered[0]!.c < 0 ? -1 : 1
+    const scale = (sign * g) / l
+    top = top.map((t) => ({ c: Math.round(t.c / scale), p: t.p }))
+    let [pOut, qOut] = toFraction(Math.abs(scale)) ?? [0, 0]
+    if (!qOut) return null
+
+    // a numerator that is itself one of the denominator's sums cancels with it
+    if (top.length > 1) {
+      const key = `(${sumKey(top)})`
+      if (bottom.has(key) && (bottom.get(key) ?? 0) >= 1) {
+        bottom.set(key, bottom.get(key)! - 1)
+        top = [{ c: 1, p: new Map() }]
+      }
+    }
+    if (top.length === 1) {
+      const [t] = top as [Term]
+      for (const [k, e] of t.p) outer.set(k, (outer.get(k) ?? 0) + e)
+      pOut *= Math.abs(t.c)
+      top = []
+    }
+
+    const upper = terms.factorNodes(outer)
+    const lower = terms.factorNodes(bottom)
+    if (!upper || !lower) return null
+    const numFactors: N[] = [...(pOut !== 1 || (!upper.length && !top.length) ? [constant(pOut)] : []), ...upper, ...(top.length ? [terms.node(top)] : [])]
+    const denFactors: N[] = [...(qOut !== 1 ? [constant(qOut)] : []), ...lower]
+    let out = product(numFactors)
+    if (denFactors.length) out = op('/', 'divide', [out, product(denFactors)])
+    return sign < 0 ? op('-', 'unaryMinus', [out]) : out
+  } catch {
+    return null
+  }
+}
+
+const TIDY_SAMPLES = [
+  [0.83, 1.37, 0.61, 2.21, 0.47, 1.93, 1.28, 0.72],
+  [1.61, 0.74, 2.58, 1.12, 0.45, 0.91, 2.67, 1.33],
+  [-1.19, 2.31, -0.57, 1.46, -2.03, 0.66, -0.88, 1.74],
+]
+
+function symbolNames(n: N, out = new Set<string>()): Set<string> {
+  if (n.type === 'SymbolNode' && n.name !== 'pi' && n.name !== 'e') out.add(n.name!)
+  for (const a of n.args ?? []) symbolNames(a, out)
+  if (n.content) symbolNames(n.content, out)
+  return out
+}
+
+/** Same value wherever both are real; at least one sample has to be. */
+function sameValue(a: N, b: N): boolean {
+  const names = [...new Set([...symbolNames(a), ...symbolNames(b)])]
+  let compared = 0
+  try {
+    const fa = asMath(a).compile()
+    const fb = asMath(b).compile()
+    for (const sample of TIDY_SAMPLES) {
+      const scope = Object.fromEntries(names.map((n, i) => [n, sample[i % sample.length]!]))
+      const x = fa.evaluate(scope)
+      const y = fb.evaluate(scope)
+      if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) continue
+      if (Math.abs(x - y) > 1e-9 * Math.max(1, Math.abs(x))) return false
+      compared++
+    }
+  } catch {
+    return false
+  }
+  return compared > 0
+}
+
+/** The one-denominator form when it reads shorter than what simplify gave. */
+function tidy(n: N): N {
+  const t = together(n)
+  if (!t || !sameValue(n, t)) return n
+  return pretty(t).s.length < pretty(n).s.length ? t : n
+}
+
 type Derived = { tree: N; user: N }
 
 /** d/dv of a radian tree; `user` is the same derivative written back in the user's angle mode. */
@@ -778,7 +1166,7 @@ function differentiate(tree: N, v: string, deg: boolean): Derived | null {
   const withDeg = substitute(back, { [DEG]: op('/', 'divide', [symbol('pi'), constant(180)]) })
   let user: N
   try {
-    user = simplifyKeepingConstants(withDeg, v)
+    user = tidy(simplifyKeepingConstants(withDeg, v))
   } catch {
     return null
   }
@@ -921,15 +1309,137 @@ function agreesNumerically(f: RealFn, df: RealFn, points: number[]): boolean {
 
 const CHECK_POINTS = [0.7, 1.3, 2.9, -0.6, 4.2, 11.5, 0.2, -3.1]
 
+const LETTER = String.raw`A-Za-z0-9_α-ωΑ-Ω`
+const SYMBOL_RE = new RegExp(String.raw`(?<![${LETTER}])(${VAR})(?![${LETTER}(])`, 'g')
+const WORD_RE = new RegExp(String.raw`(?<![${LETTER}\\.])[A-Za-zα-ωΑ-Ω]{2,}(?![${LETTER}.]|\s*\()`, 'g')
+const WHOLE_WORDS = new Set(`${SCIENTIFIC_NAMES}|e|i|theta|mod|deg|rad|and|or|not|xor`.toLowerCase().split('|'))
+
+/** `Lv` in a derivative is L times v: an unknown word of letters is a product of one-letter constants. */
+function splitSymbols(body: string, ctx: ScientificContext): string {
+  return body.replace(WORD_RE, (word) => {
+    if (WHOLE_WORDS.has(word.toLowerCase()) || (ctx.variables && word in ctx.variables) || (ctx.functions && word in ctx.functions)) return word
+    return [...word].join(' ')
+  })
+}
+
+/** Letters, Greek letters included, that aren't a known variable, function or constant, in order of appearance. */
+function freeSymbols(body: string, ctx: ScientificContext): string[] {
+  const found = new Set<string>()
+  for (const m of body.matchAll(SYMBOL_RE)) {
+    const c = m[1]!
+    if (c === 'e' || c === 'i' || (ctx.variables && c in ctx.variables) || (ctx.functions && c in ctx.functions)) continue
+    found.add(c)
+  }
+  return [...found]
+}
+
+/** `at x = 1, y = 2`, `at (x, y) = (1, 2)`, or a bare `at 2` when there is one variable. Null when it doesn't read. */
+function readPoint(text: string, vars: string[]): Record<string, string> | null {
+  const t = text.trim()
+  const named = new RegExp(String.raw`^(${VAR})\s*=(?!=)\s*(.+)$`, 's')
+  const tuple = t.match(/^\((.+)\)\s*=\s*\((.+)\)$/s)
+  if (tuple) {
+    const names = splitArgs(tuple[1]!)
+    const values = splitArgs(tuple[2]!)
+    if (names.length !== values.length || !names.every((n) => new RegExp(`^${VAR}$`).test(n)) || !values.every(Boolean)) return null
+    return Object.fromEntries(names.map((n, i) => [n, values[i]!]))
+  }
+  const parts = splitArgs(t).flatMap((p) => p.split(/\s+and\s+/i)).map((p) => p.trim())
+  const pairs = parts.map((p) => p.match(named))
+  if (pairs.every(Boolean)) {
+    const out: Record<string, string> = {}
+    for (const m of pairs) {
+      if (m![1]! in out) return null
+      out[m![1]!] = m![2]!.trim()
+    }
+    return out
+  }
+  if (new Set(vars).size === 1 && parts.length === 1 && !pairs[0]) return { [vars[0]!]: t }
+  return null
+}
+
 function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: ScientificContext): CalculusResult | null {
-  const v = intent.v || pickVariable(intent.body, ctx)
-  if (!v) return null
+  const body = splitSymbols(intent.body, ctx)
+  const free = freeSymbols(body, ctx)
+  const first = intent.vars[0] || (free.includes('x') || !free.length ? 'x' : free.length === 1 ? free[0]! : null)
+  if (!first) return null
+  const vars = intent.vars.map((v) => v || first)
+  const point = intent.at == null ? {} : readPoint(intent.at, vars)
+  if (!point) return null
+  const symbols = [...new Set([...vars, ...free])]
+  if (symbols.length === 1) return runOrdinary(body, first, vars.length, point[first], ctx)
+  return runPartial(body, vars, symbols, point, ctx)
+}
+
+/** Sample values for the letters held constant while a partial derivative is checked. */
+const SAMPLE_SETS = [
+  [0.83, 1.37, -0.61, 2.21, 0.47, 1.93, -1.28],
+  [1.61, -0.74, 0.58, 1.12, -1.45, 0.91, 2.67],
+]
+
+/** A derivative in one of several letters, the others held constant; symbolic unless `at` gives every letter a value. */
+function runPartial(body: string, vars: string[], symbols: string[], point: Record<string, string>, ctx: ScientificContext): CalculusResult | null {
+  const deg = ctx.angleMode !== 'rad'
+  const tree = toTree(body, { ...ctx, bound: null, keep: symbols, depth: 0 })
+  if (!tree) return null
+  let current = tree
+  let user: N | null = null
+  const texts = [body]
+  for (const v of vars) {
+    const d = differentiate(current, v, deg)
+    if (!d) return null
+    const dText = engineText(d.user)
+    for (const sample of SAMPLE_SETS) {
+      const held = Object.fromEntries(symbols.filter((s) => s !== v).map((s, i) => [s, sample[i % sample.length]!]))
+      const sctx = { ...ctx, variables: { ...ctx.variables, ...held } }
+      const f = realFn(texts.at(-1)!, sctx, v)
+      const df = realFn(dText, sctx, v)
+      if (!f || !df || !agreesNumerically(f, df, CHECK_POINTS)) return null
+    }
+    current = d.tree
+    user = d.user
+    texts.push(dText)
+  }
+  if (!user) return null
+
+  const names = Object.keys(point)
+  if (!names.length) return { value: textVal(pretty(user).s) }
+  if (names.some((n) => !symbols.includes(n))) return null
+  const values: Record<string, number> = {}
+  for (const n of names) {
+    const x = boundValue(point[n]!, ctx)
+    if (x == null) return null
+    values[n] = x
+  }
+  const vctx = { ...ctx, variables: { ...ctx.variables, ...values } }
+  if (symbols.every((s) => s in values)) {
+    // the function and each lower derivative have to exist there too
+    let r: Value | null = null
+    for (const t of texts) {
+      r = evalScientific(t, vctx)
+      if (!r || r.kind !== 'number' || !Number.isFinite(r.n)) return null
+    }
+    return { value: r }
+  }
+  const at = substitute(user, Object.fromEntries(names.map((n) => [n, constant(values[n]!)])))
+  let simplified: N
+  try {
+    // simplify would make (v²)^(3/2) into v³
+    const whole = together(at)
+    simplified = whole && sameValue(at, whole) ? whole : simplifyKeepingConstants(at, null)
+  } catch {
+    return null
+  }
+  return { value: textVal(pretty(simplified).s) }
+}
+
+function runOrdinary(body: string, v: string, order: number, atText: string | undefined, ctx: ScientificContext): CalculusResult | null {
   const tctx: TreeCtx = { ...ctx, bound: v, depth: 0 }
-  const tree = toTree(intent.body, tctx)
-  const f = realFn(intent.body, ctx, v)
+  const tree = toTree(body, tctx)
+  const f = realFn(body, ctx, v)
   if (!f) return null
-  const at = intent.at != null ? boundValue(intent.at.replace(new RegExp(`^${v}\\s*=\\s*`), ''), ctx) : null
-  if (intent.at != null && (at == null || !Number.isFinite(at))) return null
+  const at = atText != null ? boundValue(atText, ctx) : null
+  if (atText != null && (at == null || !Number.isFinite(at))) return null
   // no derivative where the function itself is undefined (ln at -1)
   if (at != null && !Number.isFinite(f(at))) return null
   const checkAt = at != null ? [at] : CHECK_POINTS
@@ -938,7 +1448,7 @@ function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: Scien
   if (tree) {
     let current = tree
     let prevFn = f
-    for (let k = 0; k < intent.order; k++) {
+    for (let k = 0; k < order; k++) {
       // each lower derivative has to exist there too: abs'' is 0 either side of 0 but abs' has no value at 0
       if (at != null && !Number.isFinite(prevFn(at))) return null
       const d = differentiate(current, v, ctx.angleMode !== 'rad')
@@ -955,8 +1465,7 @@ function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: Scien
     if (steps && at != null) {
       const value = prevFn(at)
       if (!Number.isFinite(value)) return null
-      const atText = intent.at!.replace(new RegExp(`^${v}\\s*=\\s*`), '')
-      const atTree = toTree(atText, { ...tctx, bound: null })
+      const atTree = toTree(atText!, { ...tctx, bound: null })
       const dAst = jobAst(steps.tree, v)
       const atAst = atTree && jobAst(atTree, null)
       const draft: JobDraft | null = dAst && atAst ? { kind: 'value', f: dAst, at: atAst } : null
@@ -965,7 +1474,7 @@ function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: Scien
     if (steps) return { value: textVal(pretty(steps.user).s) }
   }
   // no symbolic form (floor, mod, ...): a first derivative at a point can still be numeric
-  if (at == null || intent.order !== 1) return null
+  if (at == null || order !== 1) return null
   const est = derivativeAt(f, at)
   if (!est || est.err > 1e-7 * Math.max(1, Math.abs(est.value))) return null
   const value = justified(est.value, est.err, Math.max(1, Math.abs(est.value)))

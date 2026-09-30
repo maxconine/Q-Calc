@@ -25,7 +25,7 @@ use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
-use hotkey::{HotKey, PRESETS};
+use hotkey::HotKey;
 use place::{Area, Room};
 use rates::Cache;
 use store::Store;
@@ -116,6 +116,7 @@ fn main() {
                 let _ = app.autolaunch().enable();
             }
             let preferred = hotkey::named(&store.hotkey);
+            store.hotkey = preferred.clone();
             app.manage(Host(Mutex::new(State {
                 store,
                 path,
@@ -130,7 +131,7 @@ fn main() {
             })));
             // before the web view boots, so its injected settings already carry the shortcut
             let shortcuts = app.global_shortcut();
-            let hotkey = hotkey::launch(preferred, |i| shortcuts.register(PRESETS[i].shortcut()).is_ok());
+            let hotkey = hotkey::launch(&preferred, |c| register(&shortcuts, c));
             with(app.handle(), |s| s.hotkey = hotkey);
 
             let theme = with(app.handle(), |s| window_theme(&s.store.settings.theme));
@@ -263,13 +264,22 @@ fn host(window: WebviewWindow, message: Value) {
                 save(s);
             }
         }),
+        Some("analytics") if overlay => with(app, |s| {
+            let next = if s.store.settings.share_usage { message["stash"].clone() } else { Value::Null };
+            if s.store.analytics != next {
+                s.store.analytics = next;
+                save(s);
+            }
+        }),
         Some("openSettings") => open_settings_later(app),
         Some("e2e") if e2e::enabled() => {
             for line in message["lines"].as_array().into_iter().flatten().filter_map(Value::as_str) {
                 e2e::note(line);
             }
         }
-        Some("hotkey") => choose_hotkey(app, message["id"].as_str().unwrap_or_default()),
+        Some("hotkey") => choose_hotkey(app, message["chord"].as_str().unwrap_or_default()),
+        // while the settings page records a new show / hide key, the old one mustn't swallow the press
+        Some("hotkeyPause") => pause_hotkey(app, message["on"].as_bool() == Some(true)),
         Some("autostart") => {
             let launcher = app.autolaunch();
             let _ = if message["on"].as_bool() == Some(true) { launcher.enable() } else { launcher.disable() };
@@ -280,15 +290,14 @@ fn host(window: WebviewWindow, message: Value) {
 }
 
 // what the page reads as __QCALC_SETTINGS: its settings plus the host's own facts
-fn settings_payload(state: &State, refused: Option<usize>, autostart: bool) -> Value {
+fn settings_payload(state: &State, refused: Option<&str>, autostart: bool) -> Value {
     let mut payload = serde_json::to_value(&state.store.settings).unwrap_or_else(|_| json!({}));
-    let picked = state.hotkey.active.unwrap_or_else(|| hotkey::named(&state.store.hotkey));
+    let picked = state.hotkey.active.clone().unwrap_or_else(|| hotkey::named(&state.store.hotkey));
     let extra = json!({
-        "hotkey": state.hotkey.active.map_or("", |i| PRESETS[i].title),
+        "hotkey": state.hotkey.active.as_deref().map_or(String::new(), hotkey::title),
         "hotkeyFailed": state.hotkey.failed,
-        "hotkeyId": PRESETS[picked].id,
-        "hotkeyRefused": refused.map_or("", |i| PRESETS[i].title),
-        "hotkeys": PRESETS.iter().map(|p| json!({ "id": p.id, "title": p.title })).collect::<Vec<_>>(),
+        "hotkeyChord": picked,
+        "hotkeyRefused": refused.map_or(String::new(), hotkey::title),
         "autostart": autostart,
     });
     if let (Some(to), Some(from)) = (payload.as_object_mut(), extra.as_object()) {
@@ -301,7 +310,13 @@ fn boot_script(app: &AppHandle, overlay: bool) -> String {
     let autostart = app.autolaunch().is_enabled().unwrap_or(false);
     let boot = with(app, |s| {
         let rates = if overlay { s.rates.clone() } else { None };
-        json!({ "overlay": overlay, "settings": settings_payload(s, None, autostart), "onboarding": s.store.onboarding, "rates": rates })
+        json!({
+            "overlay": overlay,
+            "settings": settings_payload(s, None, autostart),
+            "onboarding": s.store.onboarding,
+            "rates": rates,
+            "analytics": s.store.analytics,
+        })
     });
     let shim = include_str!("shim.js").replace("__QCALC_BOOT__", &boot.to_string());
     if overlay && e2e::enabled() {
@@ -311,7 +326,7 @@ fn boot_script(app: &AppHandle, overlay: bool) -> String {
     }
 }
 
-fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<usize>) {
+fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<&str>) {
     let autostart = app.autolaunch().is_enabled().unwrap_or(false);
     let (payload, theme) = with(app, |s| (settings_payload(s, refused, autostart), s.store.settings.theme.clone()));
     let script = format!(
@@ -376,14 +391,30 @@ fn window_theme(theme: &str) -> Option<Theme> {
     }
 }
 
-fn choose_hotkey(app: &AppHandle, id: &str) {
-    let next = hotkey::named(id);
-    let now = with(app, |s| s.hotkey);
+fn register(shortcuts: &tauri_plugin_global_shortcut::GlobalShortcut<tauri::Wry>, chord: &str) -> bool {
+    hotkey::shortcut(chord).is_some_and(|s| shortcuts.register(s).is_ok())
+}
+
+fn pause_hotkey(app: &AppHandle, paused: bool) {
+    let shortcuts = app.global_shortcut();
+    let _ = shortcuts.unregister_all();
+    if !paused {
+        if let Some(active) = with(app, |s| s.hotkey.active.clone()) {
+            register(&shortcuts, &active);
+        }
+    }
+}
+
+fn choose_hotkey(app: &AppHandle, raw: &str) {
+    // a pause from the recorder ends with the pick
+    pause_hotkey(app, false);
+    let next = hotkey::named(raw);
+    let now = with(app, |s| s.hotkey.clone());
     let shortcuts = app.global_shortcut();
     let (after, taken) = hotkey::select(
-        next,
-        now,
-        |i| shortcuts.register(PRESETS[i].shortcut()).is_ok(),
+        &next,
+        &now,
+        |c| register(&shortcuts, c),
         || {
             let _ = shortcuts.unregister_all();
         },
@@ -391,11 +422,11 @@ fn choose_hotkey(app: &AppHandle, id: &str) {
     with(app, |s| {
         s.hotkey = after;
         if taken {
-            s.store.hotkey = PRESETS[next].id.to_string();
+            s.store.hotkey = next.clone();
         }
         save(s);
     });
-    push_settings(app, None, (!taken).then_some(next));
+    push_settings(app, None, (!taken).then_some(next.as_str()));
 }
 
 fn toggle(app: &AppHandle) {

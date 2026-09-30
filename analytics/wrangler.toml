@@ -1,0 +1,17 @@
+name = "qcalc-analytics"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+preview_urls = false
+
+# a snapshot of github's download counters, once a day
+[triggers]
+crons = ["17 6 * * *"]
+
+[vars]
+GITHUB_REPO = "maxconine/Q-Calc"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "qcalc-analytics"
+database_id = "1be437df-a2f5-4b49-9b67-4370c82aa7e3"

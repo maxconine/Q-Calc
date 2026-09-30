@@ -269,6 +269,7 @@ const UNIT_LIST: Unit[] = [
   ...dataUnits(),
 
   { id: 'ev', dim: 'energy', symbol: 'eV', toBase: E_CHARGE, defaultTo: 'j', prefixable: true, names: ['ev', 'evs', 'electronvolt', 'electronvolts', 'electron volt', 'electron volts'] },
+  { id: 'ftlbf', dim: 'energy', symbol: 'ft·lbf', toBase: FT * LBF, defaultTo: 'j', names: ['ftlbf', 'footpound', 'footpounds', 'foot pound', 'foot pounds'] },
   { id: 'erg', dim: 'energy', symbol: 'erg', toBase: 1e-7, defaultTo: 'j', names: ['erg', 'ergs'] },
   { id: 'cal', dim: 'energy', symbol: 'cal', toBase: 4.184, defaultTo: 'j', names: ['cal', 'calorie', 'calories', 'thermodynamic calorie', 'thermodynamic calories'] },
   { id: 'kcal', dim: 'energy', symbol: 'kcal', toBase: 4184, defaultTo: 'kj', names: ['kcal', 'kilocalorie', 'kilocalories', 'food calorie', 'food calories'], exactNames: ['Cal'] },
@@ -422,6 +423,12 @@ applySiPrefixes(UNIT_LIST)
   microfarad?.names.push('uf')
 }
 
+// squared and cubed millimeters sit outside the prefix pass, so µL keeps its own name
+UNIT_LIST.push(
+  { id: 'mm2', dim: 'area', symbol: 'mm²', toBase: 1e-6, defaultTo: 'in2', names: ['mm2', 'mm^2', 'sq mm', 'square millimeter', 'square millimeters', 'square millimetre', 'square millimetres'] },
+  { id: 'mm3', dim: 'volume', symbol: 'mm³', toBase: 1e-6, defaultTo: 'in3', names: ['mm3', 'mm^3', 'cu mm', 'cubic millimeter', 'cubic millimeters', 'cubic millimetre', 'cubic millimetres'] },
+)
+
 const BY_ID = new Map<string, Unit>()
 for (const unit of UNIT_LIST) {
   BY_ID.set(unit.id, unit)
@@ -519,6 +526,7 @@ function preprocess(s: string): string {
   return s
     .replace(/(\d+)'(\d+(?:\.\d+)?)"/g, "$1 ft $2 in")
     .replace(/π/g, 'pi')
+    .replace(/[·⋅]/g, '*')
     .replace(/τ/g, 'tau')
     .replace(/−/g, '-')
     .replace(/℃/g, '°C')
@@ -741,8 +749,56 @@ const DIM_VEC: Record<Dim, DimVec> = {
 type Prec = { sig: number; rel: number; digits?: string }
 const LOST: Prec = { sig: Number.NaN, rel: Number.NaN }
 
-/** `bare` is a unit on its own (`m`, `s^2`), with no number. */
-type Qty = { si: number; dim: number[]; prefer?: Unit; prec?: Prec; bare?: boolean }
+/**
+ * `bare` is a unit on its own (`m`, `s^2`), with no number. `via` is the units as typed: `u` each unit with its
+ * power (`lbf / in^2` is lbf¹ in⁻²), `us` / `si` count the US and metric units typed.
+ */
+type Qty = { si: number; dim: number[]; prefer?: Unit; prec?: Prec; bare?: boolean; via?: Via }
+type Via = { u: [Unit, number][]; us: number; si: number }
+
+/** US customary units; every other unit with a system (not time, angle, data, ...) counts as metric. */
+const US_UNIT_IDS = new Set([
+  'in', 'ft', 'yd', 'mi', 'mil', 'fathom', 'rod', 'chain', 'furlong', 'league',
+  'oz', 'lb', 'st', 'ton', 'longton', 'grain', 'slug', 'slinch', 'f', 'r',
+  'tsp', 'tbsp', 'floz', 'cup', 'pt', 'qt', 'usgal', 'impgal', 'peck', 'bushel', 'barrel', 'cord', 'in3', 'ft3', 'yd3',
+  'in2', 'sqft', 'yd2', 'acre', 'sqmi', 'mph', 'fps',
+  'ftlbf', 'btu', 'therm', 'hp', 'psi', 'ksi', 'inhg', 'ozf', 'lbf', 'kip',
+])
+const SYSTEMLESS_DIMS = new Set<Dim>(['time', 'angle', 'digital', 'datarate', 'dimensionless', 'frequency'])
+
+function unitSystem(unit: Unit): 'us' | 'si' | null {
+  if (US_UNIT_IDS.has(unit.id)) return 'us'
+  return SYSTEMLESS_DIMS.has(unit.dim) ? null : 'si'
+}
+
+function viaOf(q: Qty): Via {
+  return q.via ?? { u: [], us: 0, si: 0 }
+}
+
+function powUnits(u: [Unit, number][], e: number): [Unit, number][] {
+  return u.map(([unit, p]) => [unit, p * e])
+}
+
+function mergeUnits(a: [Unit, number][], b: [Unit, number][]): [Unit, number][] {
+  const out = a.map(([u, p]): [Unit, number] => [u, p])
+  for (const [unit, p] of b) {
+    const hit = out.find(([u]) => u === unit)
+    if (hit) hit[1] += p
+    else out.push([unit, p])
+  }
+  return out.filter(([, p]) => p !== 0)
+}
+
+function mulVia(a: Qty, b: Qty, sign: 1 | -1): Via | undefined {
+  if (!a.via && !b.via) return undefined
+  const x = viaOf(a)
+  const y = viaOf(b)
+  return { u: mergeUnits(x.u, powUnits(y.u, sign)), us: x.us + y.us, si: x.si + y.si }
+}
+
+function unitsSize(u: [Unit, number][]): number {
+  return u.reduce((f, [unit, p]) => f * siOf(unit) ** p, 1)
+}
 
 /** Products, quotients and powers: fewest sig figs, relative uncertainties add. */
 function precMul(a: Qty, b: Qty): Prec | undefined {
@@ -797,8 +853,35 @@ function isPower(d: readonly number[]): boolean {
   return vecEq(d, DIM_VEC.power)
 }
 
+/** ft³ is ft to the 3rd and ft·lbf is ft times lbf, so `lb/ft^3 * ft` cancels to lb/ft² and `ft·lbf * in / in^4` to psi. */
+function typedParts(unit: Unit): [Unit, number][] {
+  if (unit.id === 'ftlbf') return [[BY_ID.get('lbf')!, 1], [BY_ID.get('ft')!, 1]]
+  const m = unit.symbol.match(/^(\S+?)([²³])$/)
+  const power = m?.[2] === '²' ? 2 : 3
+  const len = m && UNIT_LIST.find((u) => u.dim === 'length' && u.symbol === m[1])
+  return len && unit.dim === (power === 2 ? 'area' : 'volume') && sameScale(siOf(len) ** power, siOf(unit)) ? [[len, power]] : [[unit, 1]]
+}
+
+const METRIC_MOMENTS: [string, number][] = [['N·mm', 1e-3], ['N·m', 1], ['kN·m', 1e3], ['MN·m', 1e6]]
+
+/** A metric moment reads 1 to 999 on the N·mm, N·m, kN·m, MN·m ladder (`1000 N * 500 mm` is 500 N·m). */
+function metricMoment(n: number, label: string, size: number): Value {
+  const a = Math.abs(n)
+  if (a === 0 || (a >= 1 && a < 1000)) return { ...num(n), unit: label }
+  const si = n * size
+  const fit = METRIC_MOMENTS.find(([, f]) => Math.abs(si / f) >= 1 && Math.abs(si / f) < 1000)
+    ?? (Math.abs(si) < 1e-3 ? METRIC_MOMENTS[0]! : METRIC_MOMENTS[METRIC_MOMENTS.length - 1]!)
+  return { ...num(si / fit[1]), unit: fit[0] }
+}
+
+/** A force times a length (`kN*m`, `lbf*in`) is a torque or moment, kept as typed rather than read as energy. */
+function isMoment(u: [Unit, number][]): boolean {
+  return u.length === 2 && u.every(([, p]) => p === 1) && u.some(([x]) => x.dim === 'force') && u.some(([x]) => x.dim === 'length')
+}
+
 function unitQty(unit: Unit): Qty {
-  return { si: siOf(unit), dim: vec(unit.dim), prefer: unit, bare: true }
+  const sys = unitSystem(unit)
+  return { si: siOf(unit), dim: vec(unit.dim), prefer: unit, bare: true, via: { u: typedParts(unit), us: sys === 'us' ? 1 : 0, si: sys === 'si' ? 1 : 0 } }
 }
 
 /** An rpm rate counts revolutions (2π rad each); a bare `50/hr` or Hz is just a rate. */
@@ -815,7 +898,7 @@ function mulQty(a: Qty, b: Qty): Qty {
     return { si: si * 2 * Math.PI, dim: vec('angle'), prefer: BY_ID.get('rad'), prec }
   }
   const prefer = isZeroVec(a.dim) ? b.prefer : isZeroVec(b.dim) ? a.prefer : undefined
-  return { si, dim, prefer, prec }
+  return { si, dim, prefer, prec, via: mulVia(a, b, 1) }
 }
 
 function divQty(a: Qty, b: Qty): Qty | null {
@@ -824,13 +907,14 @@ function divQty(a: Qty, b: Qty): Qty | null {
   const dim = subVec(a.dim, b.dim)
   if (isPower(a.dim) && isRevs(b) && isEnergy(dim)) si /= 2 * Math.PI
   const prefer = isZeroVec(b.dim) ? a.prefer : isZeroVec(a.dim) ? b.prefer : undefined
-  return { si, dim, prefer, prec: precMul(a, b) }
+  return { si, dim, prefer, prec: precMul(a, b), via: mulVia(a, b, -1) }
 }
 
 function addQty(a: Qty, b: Qty, sign: 1 | -1): Qty | null {
   if (!vecEq(a.dim, b.dim)) return null
   const si = a.si + sign * b.si
-  return { si, dim: a.dim, prefer: a.prefer ?? b.prefer, prec: precAdd(a, b, si) }
+  const via = a.via || b.via ? { u: viaOf(a.via ? a : b).u, us: viaOf(a).us + viaOf(b).us, si: viaOf(a).si + viaOf(b).si } : undefined
+  return { si, dim: a.dim, prefer: a.prefer ?? b.prefer, prec: precAdd(a, b, si), via }
 }
 
 /** Sums: absolute uncertainties add, a number without ± counting as exact; sig figs alone aren't kept. */
@@ -848,7 +932,8 @@ function powQty(a: Qty, exp: Qty): Qty | null {
   if (a.si < 0 && !Number.isInteger(e)) return null
   const prec = exp.prec?.rel ? LOST : a.prec && { sig: a.prec.sig, rel: a.prec.rel * Math.abs(e) }
   const bare = a.bare && !exp.prec
-  return { si: a.si ** e, dim: scaleVec(a.dim, e), prefer: Math.abs(e) === 1 ? a.prefer : undefined, prec, ...(bare && { bare }) }
+  const via = a.via && { ...a.via, u: powUnits(a.via.u, e) }
+  return { si: a.si ** e, dim: scaleVec(a.dim, e), prefer: Math.abs(e) === 1 ? a.prefer : undefined, prec, ...(bare && { bare }), via }
 }
 
 /** Sig figs and ± of a unit answer `n`, in the answer's own unit. */
@@ -908,6 +993,133 @@ function namedUnitFor(dim: number[]): Unit | undefined {
   )
 }
 
+/**
+ * The answer's unit follows the units typed, in the system most of them are in (an even split keeps SI):
+ * `3 in * 4 in` is in², `10 mi / 2 hr` mph, `10 kN / 20 mm^2` 500 MPa. Typed units of one kind fold into one
+ * (`6 in * 2 ft` is in²); with no named unit to fit, the answer reads in the typed units themselves when that
+ * takes at most two (`12 kN / 3 m` is kN/m, `50 lbf * 12 in` lbf·in). Otherwise a US answer takes the SI unit's
+ * US counterpart (N → lbf, J → ft·lbf) and a metric one the SI unit with an engineering prefix.
+ */
+function systemValue(q: Qty): Value | null {
+  const via = q.via
+  if (!via || via.us === via.si || isZeroVec(q.dim) || !Number.isFinite(q.si)) return null
+  const sys = via.us > via.si ? 'us' : 'si'
+  const typed = foldUnits(via.u, sys)
+  const size = unitsSize(typed)
+  const label = compoundLabel(typed)
+  if (label && isMoment(via.u)) return sys === 'si' ? metricMoment(q.si / size, label, size) : { ...num(q.si / size), unit: label }
+  const matches = UNIT_LIST.filter((u) => vecEq(vec(u.dim), q.dim) && unitSystem(u) === sys && siOf(u) > 0 && !u.id.includes('_') && !CONSTANT_UNIT_IDS.has(u.id))
+  // named units only, not generated prefixes (daL); lengths multiplied out read as powers of one (cm³, not mL)
+  const powered = (u: Unit) => (/[²³]/.test(u.symbol) ? 0 : 1)
+  const exact = matches.filter((u) => sameScale(siOf(u), size)).sort((a, b) => powered(a) - powered(b))[0]
+  if (exact) return sys === 'si' ? engineering(q, exact) : inUnit(q, exact)
+  if (sys === 'si') {
+    const onLadder = ladderAt(q.dim, size)
+    if (onLadder) return engineering(q, onLadder)
+  }
+  if (label && typed.length <= 2 && typed.every(([u]) => COMPOUND_DIMS.has(u.dim))) return { ...num(q.si / size), unit: label }
+  if (sys === 'si') {
+    const named = namedUnitFor(q.dim)
+    return named && sameScale(siOf(named), 1) ? engineering(q, named) : null
+  }
+  // power × time is heat (BTU); any other energy is work (ft·lbf)
+  const heat = typed.some(([u, p]) => u.dim === 'time' && p > 0)
+  const counterpart = BY_ID.get(isEnergy(q.dim) ? (heat ? 'btu' : 'ftlbf') : (namedUnitFor(q.dim)?.defaultTo ?? ''))
+  if (counterpart && vecEq(vec(counterpart.dim), q.dim) && unitSystem(counterpart) === 'us') return inUnit(q, counterpart)
+  return null
+}
+
+/** Units a typed compound is built from: `lb/in³`, `kN/m`, `mm/s`, `kg/L`, `BTU/hr`, never `bar·m²` or `hp/rpm`. */
+const COMPOUND_DIMS = new Set<Dim>(['length', 'mass', 'time', 'force', 'volume', 'energy'])
+
+/** Physical constants are never the unit of an answer: `1 c` would read back as a coulomb. */
+const CONSTANT_UNIT_IDS = new Set(['light', 'emass', 'pmass', 'nmass', 'amu'])
+
+function inUnit(q: Qty, unit: Unit): Value | null {
+  const n = q.si / siOf(unit)
+  return Number.isFinite(n) ? { ...num(n), unit: unit.symbol, unitId: unit.id } : null
+}
+
+/**
+ * Typed units of one kind become one unit, from the answer's system (`in·ft` → in²); mixed metric prefixes
+ * fold to the SI unit (`km·mm` → m²).
+ */
+function foldUnits(u: [Unit, number][], sys: 'us' | 'si'): [Unit, number][] {
+  const out: [Unit, number][] = []
+  for (const [unit] of u) {
+    if (out.some(([o]) => o.dim === unit.dim)) continue
+    const kin = u.filter(([o]) => o.dim === unit.dim)
+    const metric = kin.filter(([o]) => unitSystem(o) === 'si')
+    const si = sys === 'si' && metric.length > 1 ? namedUnitFor(vec(unit.dim)) : undefined
+    const pick = si && sameScale(siOf(si), 1) ? si : kin.reduce((best, cur) => {
+      const rank = (x: [Unit, number]) => (unitSystem(x[0]) === sys ? 100 : 0) + Math.abs(x[1])
+      return rank(cur) > rank(best) ? cur : best
+    })[0]
+    const power = kin.reduce((sum, [, e]) => sum + e, 0)
+    // a ratio of one kind (in / mm) cancels out
+    if (power !== 0) out.push([pick, power])
+  }
+  return out
+}
+
+/** A prefixed SI unit of exactly this size (GPa for kN/mm²). */
+function ladderAt(dim: number[], size: number): Unit | null {
+  for (const id of PREFIX_ROOTS) {
+    const root = BY_ID.get(id)!
+    if (!vecEq(vec(root.dim), dim)) continue
+    const exp = Math.log10(size / siOf(root))
+    const k = Math.round(exp)
+    if (Math.abs(exp - k) < 1e-9 && k % 3 === 0 && inEngineeringRange(root, k)) return ladderUnit(root, k)
+  }
+  return null
+}
+
+/**
+ * A metric answer steps along its prefix ladder to read 1 to 999 (`0.5 GPa` is 500 MPa, `98100 Pa` 98.1 kPa);
+ * lengths stop at mm (`0.0005 m` is 0.5 mm, not 500 μm).
+ */
+function engineering(q: Qty, unit: Unit): Value | null {
+  const v = inUnit(q, unit)
+  if (!v || v.kind !== 'number') return v
+  const a = Math.abs(v.n)
+  const place = ladderPlace(unit)
+  if (!place || a === 0) return v
+  const log = Math.log10(a) + place.exp
+  const toMm = place.root.id === 'm' && place.exp < -3 && log >= -5
+  // 999.9999999 ms is 1 s
+  if (a >= 1 && a < 1000 * (1 - 1e-12) && !toMm) return v
+  let exp = Math.floor(log / 3) * 3
+  if (place.root.id === 'm' && exp < -3 && log >= -5) exp = -3
+  if (!inEngineeringRange(place.root, exp)) return v
+  return moveOnLadder(v, place, exp) ?? v
+}
+
+/** Everyday prefixes only (n to G): 4.14e-21 J stays in J, not zJ; time stays in seconds, not ks; mass tops out at t. */
+function inEngineeringRange(root: Unit, exp: number): boolean {
+  if (Math.abs(exp) > 9) return false
+  if (root.id === 's' && exp > 0) return false
+  return !(root.id === 'g' && exp > 6)
+}
+
+const ENGINEERING_DIMS = new Set<Dim>(['pressure', 'force', 'energy', 'power'])
+
+const SUPERSCRIPT: Record<number, string> = { 2: '²', 3: '³' }
+
+/** `lbf/ft`, `kg/m³`, `lbf·in`; null when nothing is left on top (`1/s` reads better as a named unit). */
+function compoundLabel(u: [Unit, number][]): string | null {
+  const part = ([unit, p]: [Unit, number]) => {
+    const e = Math.abs(p)
+    const sym = unit.id === 'lb' ? 'lb' : unit.symbol
+    if (!/^[A-Za-zμ]+[²³]?$/.test(sym) || (e !== 1 && /[²³]/.test(sym))) return null
+    return e === 1 ? sym : SUPERSCRIPT[e] ? sym + SUPERSCRIPT[e] : Number.isInteger(e) ? `${sym}^${e}` : null
+  }
+  const top = u.filter(([, p]) => p > 0).sort(([a], [b]) => Number(b.dim === 'force') - Number(a.dim === 'force')).map(part)
+  const bottom = u.filter(([, p]) => p < 0).map(part)
+  if (!top.length || [...top, ...bottom].some((x) => x == null)) return null
+  const den = bottom.length > 1 ? `(${bottom.join('·')})` : bottom[0]
+  return den ? `${top.join('·')}/${den}` : top.join('·')
+}
+
 function formatCompound(dim: number[]): string {
   const names = ['kg', 'm', 's', 'A', 'K', 'rad', 'B']
   const num: string[] = []
@@ -958,11 +1170,17 @@ function qtyValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
   }
   if (!Number.isFinite(q.si)) return null
   if (isZeroVec(q.dim)) return num(q.si)
+  // `200 GPa * 0.001` is 200 MPa: scaled stresses, forces, energies and powers keep an engineering prefix
+  if (q.prefer && !q.bare && vecEq(vec(q.prefer.dim), q.dim) && ENGINEERING_DIMS.has(q.prefer.dim) && unitSystem(q.prefer) === 'si') {
+    return engineering(q, q.prefer)
+  }
   if (q.prefer && vecEq(vec(q.prefer.dim), q.dim)) {
     const n = q.si / siOf(q.prefer)
     if (!Number.isFinite(n)) return null
     return { ...num(n), unit: q.prefer.symbol, unitId: q.prefer.id }
   }
+  const typed = systemValue(q)
+  if (typed) return typed
   const named = namedUnitFor(q.dim)
   if (named) {
     const n = q.si / siOf(named)
@@ -1280,7 +1498,7 @@ function tryUnitExpression(src: string, defaults?: DefaultUnits, vars?: Record<s
   return evalUnitSides(src, undefined, defaults, vars)
 }
 
-function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
+function trySimpleConvert(src: string, defaults?: DefaultUnits, keepUnits = false): Value | null {
   const end = matchPrefixedUnit(src)
   if (!end) return null
 
@@ -1297,7 +1515,7 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
     expr = source.rest
   } else {
     from = end.unit
-    const target = targetFor(from, defaults)
+    const target = keepUnits ? from : targetFor(from, defaults)
     if (!target) {
       const amount = parseAmount(end.rest)
       if (amount != null && from.dim === 'dimensionless') return num(amount * from.toBase)
@@ -1316,13 +1534,14 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits): Value | null {
   return meas ? { ...out!, meas } : out
 }
 
-export function tryConvert(text: string, defaults?: DefaultUnits, variables?: Record<string, number>): Value | null {
+/** `keepUnits` answers in the units typed: no SI ↔ US counterpart and no default unit, only an explicit "to". */
+export function tryConvert(text: string, defaults?: DefaultUnits, variables?: Record<string, number>, keepUnits = false): Value | null {
   const src = preprocess(text)
   // a lone quote mark is no quantity, and `5 kg in` is a conversion still being typed, not kg times inches (`5 sq in` is square inches)
   if (!src || /^['"]+$/.test(src) || /(?<!\b(?:to|into|in|sq|cu|square|cubic))(?<=[A-Za-z])\s+in$/i.test(src)) return null
-  const units = sanitizeDefaultUnits(defaults)
+  const units = keepUnits ? {} : sanitizeDefaultUnits(defaults)
   // `m = 3`, then `5 m`: the variable wins, so the bare `number unit` reading is off
-  const simple = mentionsUnitLikeVariable(src, variables) ? null : trySimpleConvert(src, units)
+  const simple = mentionsUnitLikeVariable(src, variables) ? null : trySimpleConvert(src, units, keepUnits)
   return simple ?? tryUnitExpression(src, units, variables)
 }
 
@@ -1668,4 +1887,24 @@ export function unitAlternatives(value: Value, limit = 3): Value[] {
   }
   const picked = new Set([...out].sort((a, b) => readability(a.n) - readability(b.n)).slice(0, limit))
   return out.filter((v) => picked.has(v))
+}
+
+/** A typed quantity (`10 km`, `9.8 m/s^2`) in SI, for solvers that do their own algebra. */
+export type SiQuantity = { si: number; dim: number[]; unitId?: string }
+
+/** Null for anything but a number with a unit; temperatures other than kelvin carry an offset, so they're out too. */
+export function siQuantity(text: string): SiQuantity | null {
+  const parser = new UnitParser(preprocess(text))
+  const q = parser.parse()
+  if (!q || !Number.isFinite(q.si) || isZeroVec(q.dim)) return null
+  if (q.dim[4] && q.prefer && q.prefer.id !== 'k') return null
+  if (q.dim[4] && !q.prefer) return null
+  return { si: q.si, dim: [...q.dim], unitId: q.prefer && vecEq(vec(q.prefer.dim), q.dim) ? q.prefer.id : undefined }
+}
+
+/** An SI amount shown in `unitId` when it fits the dimension, else the default or named unit. */
+export function siValue(si: number, dim: number[], unitId?: string, defaults?: DefaultUnits): Value | null {
+  const prefer = unitById(unitId)
+  const q: Qty = { si, dim: [...dim], prefer: prefer && vecEq(vec(prefer.dim), dim) ? prefer : undefined }
+  return q.prefer ? qtyToValue(q) : applyDefaultUnit(q, sanitizeDefaultUnits(defaults))
 }

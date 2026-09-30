@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cheatSheet, HINTS, HOTKEY_FAILED_HINT, pickHint } from './onboarding'
 import { openNativePeriodicTable } from './periodic'
-import { commandHeld, hostCheats, hostKeys, isClearHistoryKey, isWindowsHost } from './platform'
+import { commandHeld, hostCheats, hostKeys, isWindowsHost } from './platform'
 
 const MAC_GLYPHS = /[⌘⌃⌥⇧]/
 const key = (k: string, mods: Partial<Record<'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey', boolean>> = {}) => ({
@@ -42,15 +42,6 @@ describe('shortcut keys', () => {
     expect(commandHeld(key('c', { ctrlKey: true }), false)).toBe(false)
     expect(commandHeld(key('c', { ctrlKey: true }), true)).toBe(true)
     expect(commandHeld(key('c', { metaKey: true }), true)).toBe(false)
-  })
-
-  it('never clears history on the key that copies', () => {
-    expect(isClearHistoryKey(key('c', { ctrlKey: true }), false)).toBe(true)
-    expect(isClearHistoryKey(key('c', { ctrlKey: true }), true)).toBe(false)
-    expect(isClearHistoryKey(key('Backspace', { ctrlKey: true, shiftKey: true }), true)).toBe(true)
-    expect(isClearHistoryKey(key('Backspace', { ctrlKey: true }), true)).toBe(false)
-    expect(isClearHistoryKey(key('C', { ctrlKey: true, shiftKey: true }), false)).toBe(false)
-    expect(isClearHistoryKey(key('c', { ctrlKey: true, altKey: true }), false)).toBe(false)
   })
 })
 

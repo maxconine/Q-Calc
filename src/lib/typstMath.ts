@@ -87,6 +87,21 @@ const CONTENT = new Set([
 
 const CALLS = new Set(['multibinom', 'amat', 'emat', 'dmat', 'ibar', 'imod', 'ip'])
 
+// Typst looks a bare multi-letter word up as a variable, and an unknown one fails the whole
+// preview. These are the names it knows; any other word is written upright in quotes.
+const GREEK = [
+  'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta', 'theta', 'iota', 'kappa', 'lambda', 'mu',
+  'nu', 'xi', 'omicron', 'pi', 'rho', 'sigma', 'tau', 'upsilon', 'phi', 'chi', 'psi', 'omega',
+]
+const TYPST_NAMES = new Set([
+  ...GREEK,
+  ...GREEK.map((g) => g[0]!.toUpperCase() + g.slice(1)),
+  'arccos', 'arcsin', 'arctan', 'arg', 'cos', 'cosh', 'cot', 'coth', 'csc', 'csch', 'ctg', 'deg', 'det', 'dim',
+  'exp', 'gcd', 'lcm', 'hom', 'id', 'im', 'inf', 'ker', 'lg', 'lim', 'liminf', 'limsup', 'ln', 'log', 'max',
+  'min', 'mod', 'Pr', 'sec', 'sech', 'sin', 'sinc', 'sinh', 'sup', 'tan', 'tanh', 'tg',
+])
+const TYPST_FUNCTIONS = new Set(['sqrt', 'root', 'abs', 'norm', 'floor', 'ceil', 'round', 'binom', 'frac', 'vec', 'mat'])
+
 const INVERSE: Record<string, string> = {
   asin: 'arcsin',
   acos: 'arccos',
@@ -94,13 +109,9 @@ const INVERSE: Record<string, string> = {
   arcsin: 'arcsin',
   arccos: 'arccos',
   arctan: 'tan1',
-  arccsc: 'arccsc',
-  arcsec: 'arcsec',
-  arccot: 'arccot',
-}
-
-function hexFill(fill: string): string {
-  return /^#[0-9a-fA-F]{6}$/.test(fill) ? fill : '#1d1d1f'
+  arccsc: 'op("arccsc")',
+  arcsec: 'op("arcsec")',
+  arccot: 'op("arccot")',
 }
 
 /** Exact form when the engine has one, otherwise the displayed answer. */
@@ -111,14 +122,23 @@ export function typstAnswer(exact: string | undefined, display: string): string 
   return pretty || shown
 }
 
-export function typstDocument(expr: string, fill: string, answer = ''): string | null {
+/**
+ * The preview document. Glyphs are black, and the renderer swaps black for currentColor, so the
+ * page's own text color (light or dark) applies without compiling again.
+ * `solvedFor` names the variable of a solved equation: `x^2 = 4 ⇒ x = ±2`, not `x^2 = 4 = ±2`.
+ */
+export function typstDocument(expr: string, answer = '', solvedFor = ''): string | null {
   const math = toTypstMath(expr)
   if (!math) return null
   const ans = toTypstMath(answer)
-  const body = ans ? `${math} = ${ans}` : math
+  const lhs = toTypstMath(solvedFor)
+  let body = math
+  if (ans && lhs) body = `${math} quad arrow.r.double quad ${lhs} = ${ans}`
+  else if (ans && /(^|[^<>!])=/.test(answer)) body = `${math} quad arrow.r.double quad ${ans}`
+  else if (ans) body = `${math} = ${ans}`
   return `#import "/macros.typ": *
 #set page(width: auto, height: auto, margin: 2pt, fill: none)
-#set text(size: 18pt, fill: rgb("${hexFill(fill)}"))
+#set text(size: 18pt, fill: black)
 $ ${body} $
 `
 }
@@ -167,14 +187,18 @@ type Piece = { text: string; end: number }
 function readPiece(s: string, i: number, to: number): Piece | null {
   const ch = s[i]!
   if (ch === '(' || ch === '[' || ch === '{') {
-    if (s.startsWith('[[', i)) return readMatrix(s, i, to)
+    const grid = ch === '[' ? readMatrix(s, i, to) : null
+    if (grid) return grid
     const close = matchClose(s, i, to)
-    if (close < 0) return { text: ch, end: i + 1 }
+    // still being typed: an open bracket shows on its own
+    if (close < 0) return { text: ch === '(' ? '(' : `\\${ch}`, end: i + 1 }
     const inner = emit(s, i + 1, close)
     const wrap = ch === '(' ? `(${inner})` : ch === '[' ? `lr(\\[${inner}\\])` : `lr(\\{${inner}\\})`
     return { text: wrap, end: close + 1 }
   }
-  if (ch === ')' || ch === ']' || ch === '}') return null
+  // a stray closer is printed, and what follows it still is
+  if (ch === ')') return { text: ')', end: i + 1 }
+  if (ch === ']' || ch === '}') return { text: `\\${ch}`, end: i + 1 }
   if (ch === ',') return { text: ',', end: i + 1 }
   if (ch === '_') return readSubscript(s, i, to)
   if (ch === '√' || ch === '∛') return readRadical(s, i, to)
@@ -199,6 +223,15 @@ function readWord(s: string, i: number, to: number): Piece {
   const word = s.slice(i, j)
   let k = j
   while (k < to && /\s/.test(s[k]!)) k++
+  // `det [[1,2],[3,4]]`, `inverse of A`
+  const key = word.toLowerCase()
+  if (MATRIX_WORDS.has(key) && k > j && s[k] !== '(') {
+    const of = /^of\s+/i.exec(s.slice(k, to))
+    const at = of ? k + of[0].length : k
+    const arg = at < to && /[[A-Za-z]/.test(s[at]!) ? readPiece(s, at, to) : null
+    const text = arg?.text ? matrixFn(key, [arg.text]) : null
+    if (arg && text) return { text, end: arg.end }
+  }
   if (s[k] === '(' && CALLS.has(word)) {
     const close = matchClose(s, k, to)
     if (close > 0) return { text: callMacro(word, s.slice(k + 1, close)), end: close + 1 }
@@ -225,20 +258,24 @@ function callMacro(name: string, inner: string): string {
 function callFn(word: string, inner: string): string {
   const key = word.toLowerCase()
   const args = splitTop(inner, ',').map((arg) => emit(arg, 0, arg.length))
+  const matrix = MATRIX_FNS.has(key) ? matrixFn(key, args) : null
+  if (matrix) return matrix
   if (key === 'sqrt') return `sqrt(${args[0] ?? ''})`
   if (key === 'cbrt') return `root(3, ${args[0] ?? ''})`
   if (key === 'nthroot' && args.length >= 2) return `root(${args[1]}, ${args[0]})`
   if (key === 'ncr' || key === 'combinations') return `binom(${args[0] ?? ''}, ${args[1] ?? ''})`
   if (key === 'npr' || key === 'permutations') return `attach(P, bl: ${args[0] ?? ''}, br: ${args[1] ?? ''})`
-  if (key === 'log2') return `log(${args[0] ?? ''}, base: 2)`
+  if (key === 'log2') return `log_2(${args[0] ?? ''})`
   if (key === 'log10' || key === 'log') return `log(${args[0] ?? ''})`
   if (key === 'ln') return `ln(${args[0] ?? ''})`
   if (key === 'abs') return `abs(${args[0] ?? ''})`
   const inv = INVERSE[key]
   if (inv === 'tan1') return `(#tan1)(${args.join(', ')})`
   if (inv) return `${inv}(${args.join(', ')})`
-  const name = mathName(word)
-  return `${name}(${args.join(', ')})`
+  const name = TYPST_FUNCTIONS.has(word) ? word : mathName(word)
+  // a quoted name would be text, which reads as a product; op keeps f-of-x spacing
+  const head = name.startsWith('"') ? `op(${name})` : name
+  return `${head}(${args.join(', ')})`
 }
 
 function bareName(word: string): string {
@@ -246,6 +283,7 @@ function bareName(word: string): string {
   const key = word.toLowerCase()
   if (CONTENT.has(key) && key === word) return `#${word}`
   if (key === 'dot') return 'dot.op'
+  if (key === 'ans') return '"ans"'
   if (key === 'pi' || word === 'π') return 'pi'
   if (key === 'theta' || word === 'θ') return 'theta'
   if (key === 'tau') return 'tau'
@@ -257,8 +295,15 @@ function bareName(word: string): string {
 }
 
 function mathName(word: string): string {
-  if (/^[A-Za-z][A-Za-z0-9]*$/.test(word)) return word
-  return `"${word.replaceAll('"', '')}"`
+  if (/^[A-Za-z]$/.test(word) || TYPST_NAMES.has(word)) return word
+  // x1 is x sub 1
+  const indexed = /^([A-Za-z])(\d+)$/.exec(word)
+  if (indexed) return `${indexed[1]}_(${indexed[2]})`
+  // dl, dy: a differential
+  const dif = /^d([A-Za-z])$/.exec(word)
+  if (dif) return `dif ${dif[1]}`
+  // km, kg, xy: upright text, where a bare word is an unknown variable to Typst
+  return `"${word.replace(/["\\]/g, '')}"`
 }
 
 function readRadical(s: string, i: number, to: number): Piece {
@@ -280,14 +325,17 @@ function readRadical(s: string, i: number, to: number): Piece {
 function readNumber(s: string, i: number, to: number): Piece {
   let j = i
   while (j < to && /[\d.]/.test(s[j]!)) j++
+  const mantissa = s.slice(i, j)
   if ((s[j] === 'e' || s[j] === 'E') && j + 1 < to) {
     let k = j + 1
-    if (s[k] === '+' || s[k] === '-' || s[k] === '−') k++
+    const minus = s[k] === '-' || s[k] === '−'
+    if (minus || s[k] === '+') k++
     const exp = k
     while (k < to && isDigit(s[k]!)) k++
-    if (k > exp) j = k
+    // 1.2e+30 is typeset as 1.2 × 10³⁰
+    if (k > exp) return { text: `${mantissa} times 10^(${minus ? '-' : ''}${s.slice(exp, k)})`, end: k }
   }
-  return { text: s.slice(i, j).replaceAll('−', '-'), end: j }
+  return { text: mantissa, end: j }
 }
 
 function readSymbol(s: string, i: number, to: number): Piece {
@@ -301,6 +349,18 @@ function readSymbol(s: string, i: number, to: number): Piece {
   if (two.startsWith('!=' ) || two.startsWith('≠')) return { text: '!=', end: i + (two.startsWith('!=') ? 2 : 1) }
   if (two.startsWith('+-') || two.startsWith('±')) return { text: '#pm', end: i + (two.startsWith('+-') ? 2 : 1) }
   const ch = s[i]!
+  // `^-1` keeps its minus in the exponent; `ᵀ` and `⁻¹` are exponents too
+  if (ch === '^') {
+    const minus = /^\^\s*[-−]\s*/.exec(s.slice(i, to))
+    const power = minus ? readPiece(s, i + minus[0].length, to) : null
+    if (minus && power?.text) return { text: `^(-${power.text})`, end: power.end }
+  }
+  if (ch === 'ᵀ') return { text: '^T', end: i + 1 }
+  const raised = /^[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/.exec(s.slice(i, to))
+  if (raised && raised[0].length > 1) {
+    const plain = [...raised[0]].map((c) => '⁻⁺⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(c)).map((n) => (n === 0 ? '-' : n === 1 ? '+' : String(n - 2))).join('')
+    return { text: `^(${plain})`, end: i + raised[0].length }
+  }
   const one: Record<string, string> = {
     '+': '+',
     '-': '-',
@@ -328,24 +388,109 @@ function readSymbol(s: string, i: number, to: number): Piece {
     '…': 'dots.h',
     '|': '|',
     '&': '&',
+    "'": "'",
+    '′': "'",
+    ':': ':',
+    ';': ';',
+    '?': '?',
+    '~': 'tilde.op',
   }
   if (one[ch]) return { text: one[ch], end: i + 1 }
   if (ch === '$' || ch === '#') return { text: `\\${ch}`, end: i + 1 }
-  if (ch === '\\') return { text: '', end: i + 1 }
+  // α, Ω, ∂, ∇ and other letters and symbols typeset as themselves
+  const cp = s.codePointAt(i)!
+  const glyph = String.fromCodePoint(cp)
+  if (cp > 0x7f && /[\p{L}\p{No}\p{Sm}\p{So}]/u.test(glyph)) return { text: glyph, end: i + glyph.length }
   return { text: '', end: i + 1 }
 }
 
+// every way a matrix is typed or answered: `[[1,2],[3,4]]`, `[1,2;3,4]`, `[1 2; 3 4]`, `[1 2 3]`.
+// a comma list `[1,2,3]` stays a list
 function readMatrix(s: string, i: number, to: number): Piece | null {
-  if (!s.startsWith('[[', i)) return null
   const close = matchClose(s, i, to)
-  if (close < 0 || s[close - 1] !== ']') return null
-  const inner = s.slice(i + 1, close)
-  const rows = splitTop(inner.slice(1, -1), ',').map((row) => {
-    const cell = row.trim()
-    const body = cell.startsWith('[') && cell.endsWith(']') ? cell.slice(1, -1) : cell
-    return splitTop(body, ',').map((c) => emit(c, 0, c.length) || ' ').join(', ')
-  })
-  return { text: `mat(${rows.join('; ')})`, end: close + 1 }
+  if (close < 0) return null
+  const inner = s.slice(i + 1, close).trim()
+  let rows: string[][]
+  if (inner.startsWith('[')) {
+    const parts = splitTop(inner, ',').map((r) => r.trim())
+    if (!parts.every((r) => r.startsWith('[') && matchClose(r, 0, r.length) === r.length - 1)) return null
+    rows = parts.map((r) => rowCells(r.slice(1, -1)))
+  } else if (splitTop(inner, ';').length > 1) {
+    rows = splitTop(inner, ';').map(rowCells)
+  } else if (splitTop(inner, ',').length === 1 && spacedCells(inner).length > 1) {
+    rows = [spacedCells(inner)]
+  } else {
+    return null
+  }
+  const body = rows.map((row) => row.map((c) => emit(c, 0, c.length) || ' ').join(', ')).join('; ')
+  const text = `mat(delim: "[", ${body})`
+  // `A'`, `A transpose`, `A inverse` mark the matrix just before
+  const after = /^(?:\s*['′]|\s+(transpose|inverse)\b)/i.exec(s.slice(close + 1, to))
+  if (!after) return { text, end: close + 1 }
+  return { text: `${text}^${/^inv/i.test(after[1] ?? '') ? '(-1)' : 'T'}`, end: close + 1 + after[0].length }
+}
+
+function rowCells(row: string): string[] {
+  return splitTop(row, ',').length > 1 ? splitTop(row, ',') : spacedCells(row)
+}
+
+// `3/5 -7/10` is two entries; `1 + 2` and `2 * x` are one
+function spacedCells(row: string): string[] {
+  const cells: string[] = []
+  let depth = 0
+  let start = 0
+  const words: string[] = []
+  for (let k = 0; k <= row.length; k++) {
+    const ch = row[k] ?? ' '
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) depth--
+    else if (/\s/.test(ch) && depth === 0) {
+      if (k > start) words.push(row.slice(start, k))
+      start = k + 1
+    }
+  }
+  for (const w of words) {
+    const prev = cells[cells.length - 1]
+    const joins = prev != null && (/[+\-−*/^×·÷]$/.test(prev) || /^(?:[*/^×·÷]|[+\-−]$)/.test(w))
+    if (joins) cells[cells.length - 1] = `${prev} ${w}`
+    else cells.push(w)
+  }
+  return cells
+}
+
+// the matrix functions, written the way they're printed: A^(-1), A^T, tr A, I_3, a · b
+const MATRIX_WORDS = new Set(['inv', 'inverse', 'transpose', 'det', 'determinant', 'trace', 'tr', 'rank', 'rref'])
+const MATRIX_FNS = new Set(['inv', 'inverse', 'transpose', 'det', 'determinant', 'trace', 'tr', 'rank', 'rref', 'identity', 'eye', 'dot', 'cross'])
+
+function matrixFn(key: string, args: string[]): string | null {
+  const [a = '', b = ''] = args
+  const applied = (head: string) => (a.startsWith('mat(') && atomic(a) ? `${head} ${a}` : `${head}(${a})`)
+  if (key === 'inv' || key === 'inverse') return `${grouped(a)}^(-1)`
+  if (key === 'transpose') return `${grouped(a)}^T`
+  if (key === 'det' || key === 'determinant') return applied('det')
+  if (key === 'trace' || key === 'tr') return applied('op("tr")')
+  if (key === 'rank' || key === 'rref') return applied(`op("${key}")`)
+  if (key === 'identity' || key === 'eye') return `I_(${a})`
+  if ((key === 'dot' || key === 'cross') && args.length === 2) return `${grouped(a)} ${key === 'dot' ? 'dot' : 'times'} ${grouped(b)}`
+  return null
+}
+
+function grouped(t: string): string {
+  return atomic(t) ? t : `(${t})`
+}
+
+// one piece of math, with no space outside its own brackets or quotes
+function atomic(t: string): boolean {
+  let depth = 0
+  let quoted = false
+  for (const ch of t) {
+    if (ch === '"') quoted = !quoted
+    else if (quoted) continue
+    else if ('(['.includes(ch)) depth++
+    else if (')]'.includes(ch)) depth--
+    else if (ch === ' ' && depth === 0) return false
+  }
+  return t.length > 0
 }
 
 function readBigOp(s: string, i: number, to: number): Piece | null {

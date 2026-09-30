@@ -1,43 +1,33 @@
 // what the windows shell adds to __QCALC_SETTINGS for its settings window; never stored by the page
-export type HotKeyChoice = { id: string; title: string }
-
 export type HostInfo = {
-  hotkeyId: string
+  // the show / hide chord the user picked, spelled like the page's keybinds
+  hotkeyChord: string
   hotkeyFailed: boolean
-  // the preset the shell just couldn't register, so the row can say why nothing changed
+  // the chord the shell just couldn't register, so the row can say why nothing changed
   hotkeyRefused: string
-  hotkeys: HotKeyChoice[]
   autostart: boolean
 }
 
-export const EMPTY_HOST: HostInfo = { hotkeyId: '', hotkeyFailed: false, hotkeyRefused: '', hotkeys: [], autostart: false }
-
-function choices(raw: unknown): HotKeyChoice[] | null {
-  if (!Array.isArray(raw)) return null
-  return raw.flatMap((c: unknown) => {
-    const { id, title } = (c ?? {}) as Partial<HotKeyChoice>
-    return typeof id === 'string' && typeof title === 'string' && id && title ? [{ id, title }] : []
-  })
-}
+export const EMPTY_HOST: HostInfo = { hotkeyChord: '', hotkeyFailed: false, hotkeyRefused: '', autostart: false }
 
 export function hostInfo(raw: unknown, base: HostInfo = EMPTY_HOST): HostInfo {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const text = (key: string, fallback: string) => (typeof o[key] === 'string' ? (o[key] as string) : fallback)
   const flag = (key: string, fallback: boolean) => (typeof o[key] === 'boolean' ? (o[key] as boolean) : fallback)
   return {
-    hotkeyId: text('hotkeyId', base.hotkeyId),
+    hotkeyChord: text('hotkeyChord', base.hotkeyChord),
     hotkeyFailed: flag('hotkeyFailed', base.hotkeyFailed),
     // only ever about the change just made
     hotkeyRefused: text('hotkeyRefused', ''),
-    hotkeys: choices(o.hotkeys) ?? base.hotkeys,
     autostart: flag('autostart', base.autostart),
   }
 }
 
+// '' when the shortcut is fine
 export function hotkeyNote(host: HostInfo): string {
   if (host.hotkeyRefused) return `${host.hotkeyRefused} is in use by another app`
-  if (host.hotkeyFailed) return 'Your shortcut is in use by another app'
-  return 'Shows and hides Q Calc from anywhere'
+  if (host.hotkeyFailed) return 'Your show / hide shortcut is in use by another app'
+  return ''
 }
 
 const DRAFT_CHOICES: Array<{ id: number; label: string }> = [

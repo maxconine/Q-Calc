@@ -5,6 +5,7 @@ import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
 import { isSysCommand, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
+import { isIsolateCommand, isolatePrevious } from '../engine/isolate'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
 import { inferParens } from '../engine/parens'
@@ -88,6 +89,7 @@ import {
   historyFunctions,
   historyMeasures,
   historyQuantities,
+  isMatrixQuantity,
   historyVariables,
   lastHistoryNumber,
   newRowId,
@@ -97,7 +99,11 @@ import {
 } from '../lib/history'
 import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
-import { commandHeld, hostCheats, hostKeys, isClearHistoryKey } from '../lib/platform'
+import { calcKind, setUsageSharing, track } from '../lib/analytics'
+import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
+import { KeybindSettings } from './KeybindSettings'
+import { useKeyLabels } from './useKeyLabels'
+import { commandHeld, hostCheats, hostKeys, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
 import {
@@ -133,6 +139,8 @@ type LiveSnapshot = {
   quantity?: string
   solve?: SolveInfo
   fnDef: FunctionDef | null
+  // the answer came from soulvercore or a phrase, not the js engine
+  native?: boolean
   facts: Omit<HintFacts, 'expr'>
 }
 
@@ -144,12 +152,6 @@ const SQUIGGLE_IDLE_MS = 700
 const RECENT_IDLE_MS = 1500
 
 const MODIFIER_KEYS = new Set(['Shift', 'Meta', 'Control', 'Alt', 'CapsLock', 'Fn'])
-
-const CTRL_SETTING_KEYS = new Map<string, (s: Settings) => Settings>([
-  ['d', toggleAngleMode],
-  ['f', toggleFractionMode],
-  ['s', toggleSigFigMode],
-])
 
 // browser page loads count as one open, even under StrictMode's double mount
 let pageOpenCounted = false
@@ -332,6 +334,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const saved = tapeUndoRef.current
     if (!saved) return false
     tapeUndoRef.current = null
+    track('history.undo')
     setHistory(saved.history)
     setSelected(saved.selected)
     if (saved.open) setTapeOpen(true)
@@ -357,7 +360,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
-  const cheats = useMemo(() => hostCheats(cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE))), [nativeInfo.hotkey])
+  const keyLabels = useKeyLabels(settings.keybinds)
+  const cheats = useMemo(
+    () => hostCheats(cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE), keyLabels)),
+    [nativeInfo.hotkey, keyLabels],
+  )
   const graphCmd = isGraphCommand(q)
   const sysCmd = isSysCommand(q)
   const periodicCmd = isPeriodicCommand(q)
@@ -378,10 +385,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   // a chain needs the last answer row to be the one `ans` means
   const chainAnswer =
-    ansPlain && lastAnswer && Number.isFinite(lastAnswer.n) ? { plain: ansPlain, unit: lastAnswer.quantity != null } : undefined
-  const chained = !graphCmd && chainsFromAnswer(q, chainAnswer)
+    ansPlain && lastAnswer && (Number.isFinite(lastAnswer.n) || isMatrixQuantity(lastAnswer.quantity))
+      ? { plain: ansPlain, unit: lastAnswer.quantity != null && !isMatrixQuantity(lastAnswer.quantity) }
+      : undefined
+  // `isolate x` or `solve for x` alone works on the equation in the row before
+  const isolated = isolatePrevious(q, history[history.length - 1]?.expr)
+  const chained = !graphCmd && !isolated && chainsFromAnswer(q, chainAnswer)
   const tapeExpr = chained && ansPlain ? chainedHistoryExpr(q, ansPlain) : q
-  chainedRef.current = chainAnswer ? ansWrittenOut(tapeExpr, chainAnswer.plain) : chained ? tapeExpr : ''
+  chainedRef.current = isolated ?? (chainAnswer ? ansWrittenOut(tapeExpr, chainAnswer.plain) : chained ? tapeExpr : '')
   const evalOptions = useMemo(
     () => ({
       ...evalSettings,
@@ -395,14 +406,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
   const sheet = useMemo(() => {
     if (graphCmd || periodicCmd || sysCmd) return []
-    return evaluateSheet([chained ? chainedExpr(q) : q], evalOptions)
-  }, [q, chained, graphCmd, periodicCmd, sysCmd, evalOptions])
+    return evaluateSheet([isolated ?? (chained ? chainedExpr(q) : q)], evalOptions)
+  }, [q, isolated, chained, graphCmd, periodicCmd, sysCmd, evalOptions])
 
   const sysParsed = useMemo(() => (sysCmd ? sysCommand(q) : null), [sysCmd, q])
   const sysAnswer = useMemo((): SystemAnswer | null => {
     if (!sysLines || !sysParsed || !('count' in sysParsed) || sysParsed.count !== sysLines.length) return null
-    return solveLive(sysLines)
-  }, [sysLines, sysParsed])
+    return solveLive(sysLines, defaultUnits)
+  }, [sysLines, sysParsed, defaultUnits])
 
   const sysShown = sysAnswer?.display ?? (sysParsed && 'hint' in sysParsed && !sysLines ? sysParsed.hint : '')
   const sysShownRef = useRef('')
@@ -461,6 +472,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     quantity: jsValue ? live?.quantity : undefined,
     solve: liveSolve,
     fnDef: graphIntent?.functionDef ?? null,
+    native: Boolean(display) && !fromJs && !sysCmd,
     facts: {
       answer: display,
       variable: fromJs && live?.kind === 'assignment' ? live.variable : undefined,
@@ -552,6 +564,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [])
 
   useEffect(() => {
+    setUsageSharing(settings.shareUsage)
+  }, [settings.shareUsage])
+
+  useEffect(() => {
+    if (helpShown) track('help')
+  }, [helpShown])
+
+  useEffect(() => {
     applyTheme(settings.theme)
     const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onChange = () => {
@@ -604,12 +624,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return
     }
     const row = selected != null ? history[selected] : null
+    track('copy.answer')
     copyValue(row ? rowCopyText(row, settings.answerForm) : shownLive)
   }, [copyValue, history, selected, settings.answerForm, shownLive])
 
   // exact forms read with their symbols, like the line they sit next to
   const copyLine = useCallback(() => {
     const row = selected != null ? history[selected] : null
+    track('copy.line')
     if (row) {
       const exact = row.exact && prettyTokens(row.exact)
       copyValue(row.kind === 'definition' || row.kind === 'function' ? row.expr : lineCopyText(row.expr, { ...row, exact }, settings.answerForm))
@@ -690,7 +712,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const insertHistoryExpr = useCallback(
     (index: number) => {
       const row = history[index]
-      if (row?.expr) insertPlain(row.expr)
+      if (!row?.expr) return
+      track('history.insert')
+      insertPlain(row.expr)
     },
     [history, insertPlain],
   )
@@ -699,6 +723,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     (index: number) => {
       const row = history[index]
       if (!row) return
+      track('history.insert')
       const isAnswer = row.kind !== 'definition' && settings.historyInsert === 'answer'
       insertPlain(insertableHistoryReuse(row, settings.answerForm, settings.historyInsert, settings.sigFigs), isAnswer)
     },
@@ -711,7 +736,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const row = history[index]
       if (!row) return
       if (row.kind === 'definition' || row.kind === 'function' || settings.historyInsert === 'answer') insertHistoryExpr(index)
-      else insertPlain(insertableHistoryAnswer(row, settings.answerForm, settings.sigFigs), true)
+      else {
+        track('history.insert')
+        insertPlain(insertableHistoryAnswer(row, settings.answerForm, settings.sigFigs), true)
+      }
     },
     [history, insertHistoryExpr, insertPlain, settings.answerForm, settings.historyInsert, settings.sigFigs],
   )
@@ -720,12 +748,28 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const commit = useCallback((quiet = false) => {
     const sysNow = sysLinesRef.current
     const expr = sysNow ? 'sys' : chainedRef.current || qRef.current
-    const { display: liveDisplay, exact, n, meas, quantity, solve, fnDef: graphFn, facts } = liveRef.current
+    const { display: liveDisplay, exact, n, meas, quantity, solve, fnDef: graphFn, native, facts } = liveRef.current
     const fnDef = graphFn ?? parseFunctionDef(expr.trim())
     const isGraph = isGraphCommand(expr)
     const written = sysNow?.map((line) => line.trim()).filter(Boolean).join('; ') ?? ''
     const shown = sysNow ? sysShownRef.current.trim() || written : liveDisplay || (fnDef ? fnDefText(fnDef) : '')
-    if (!expr.trim() || !shown || isImproperUnitConversion(shown)) return
+    if (!expr.trim() || !shown || isImproperUnitConversion(shown)) {
+      if (expr.trim() && !quiet) track(isImproperUnitConversion(shown) ? 'error.unit' : 'error.blank')
+      return
+    }
+    track(
+      calcKind({
+        expr,
+        system: Boolean(sysNow),
+        graph: isGraph,
+        fn: Boolean(fnDef),
+        solve: Boolean(solve),
+        assign: Boolean(facts.variable),
+        unit: facts.unit,
+        chained: Boolean(chainedRef.current) && !sysNow,
+        native,
+      }),
+    )
     const nextHint = quiet ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...facts })
     updateOnboarding((s) => ({ ...recordCommit(s), hints: s.hints | (nextHint?.bit ?? 0) }))
     const at = Date.now()
@@ -789,7 +833,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const stepForm = tabForm.step
   const onTab = useCallback(
     (dir: 1 | -1) => {
-      if (selected == null) stepForm(dir)
+      if (selected != null) return
+      track('form.tab')
+      stepForm(dir)
     },
     [selected, stepForm],
   )
@@ -797,7 +843,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const onPrefixStep = useCallback((dir: 1 | -1) => {
     const base = steppableRef.current
     const next = base ? stepPrefix(base, dir) : null
-    if (next?.unitId) setPrefixUnit(next.unitId)
+    if (!next?.unitId) return
+    track('prefix.step')
+    setPrefixUnit(next.unitId)
   }, [])
 
   const restoreDraft = useCallback((expr: string, savedAt: number) => {
@@ -908,11 +956,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return
     }
     if (opening && 'count' in opening && sysLinesRef.current?.length === opening.count) {
-      commit()
+      // nothing typed yet: enter goes down to the first equation rather than saving an empty system
+      const first = document.querySelector<HTMLInputElement>('.sys-eq')
+      if (first && sysLinesRef.current.every((line) => !line.trim())) first.focus()
+      else commit()
       return
     }
     if (isHelpCommand(qRef.current)) resetToCalculate()
     else if (selected == null && isPeriodicCommand(qRef.current)) {
+      track('periodic')
       if (!openNativePeriodicTable()) setPeriodicOpen(true)
       resetToCalculate()
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
@@ -938,7 +990,24 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [restoreCaret, selected, tapeOpen])
 
   useEffect(() => {
+    const keyActions: Record<KeyAction, (() => void) | undefined> = {
+      // the host's global shortcut, never seen here
+      show: undefined,
+      settings: nativeHandler()
+        ? () => {
+            track('settings.open')
+            nativeHandler()?.postMessage({ type: 'openSettings' })
+          }
+        : undefined,
+      copyAnswer: copyOutput,
+      copyLine,
+      angle: () => setSettings(toggleAngleMode),
+      fraction: () => setSettings(toggleFractionMode),
+      sigFigs: () => setSettings(toggleSigFigMode),
+      clear: clearHistory,
+    }
     const onKey = (e: KeyboardEvent) => {
+      if (keyRecorder.active) return
       if (!MODIFIER_KEYS.has(e.key)) {
         setRotation(dismissRotation)
         setHint(null)
@@ -954,17 +1023,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         return
       }
       const key = e.key.toLowerCase()
-      const ctrlOnly = e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey
       const cmd = commandHeld(e) && !e.altKey
       const cmdOnly = cmd && !e.shiftKey
-      const toggle = ctrlOnly ? CTRL_SETTING_KEYS.get(key) : undefined
-      const cmdShift = cmd && e.shiftKey
       const mainInput = e.target instanceof HTMLInputElement && e.target.classList.contains('quick-plain')
+      const bound = actionForEvent(e, settingsRef.current.keybinds, isWindowsHost())
       let action: (() => void) | undefined
-      if (toggle) action = () => setSettings(toggle)
-      else if (isClearHistoryKey(e)) action = clearHistory
-      else if (cmdOnly && key === 'c') action = copyOutput
-      else if (cmdShift && key === 'c') action = copyLine
+      if (bound) action = keyActions[bound]
       else if (cmdOnly && (e.key === 'Backspace' || e.key === 'Delete') && mainInput && sysLinesRef.current) action = resetToCalculate
       else if (cmdOnly && e.key === 'Backspace' && selected != null) action = () => removeRow(selected)
       else if (cmdOnly && key === 'z' && tapeUndoRef.current) action = undoTape
@@ -1014,7 +1078,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q) || isIsolateCommand(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1054,6 +1118,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     w.__qcalcWillHide = () => onWillHide()
     // synchronous so the height is reported before the mac app fades the panel in
     w.__qcalcReset = () => {
+      track('open')
       flushSync(() => {
         onPrepare()
         beginShowing()
@@ -1140,16 +1205,22 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     caretRef.current = null
     setInputSel(null)
     // resets and restored drafts come through here too, already matching qRef
-    if (text !== qRef.current) {
+    const typed = text !== qRef.current
+    if (typed) {
       lastKeyRef.current = Date.now()
       tapeUndoRef.current = null
     }
     qRef.current = text
     setQ(text)
     const opened = sysLinesRef.current
+    const cmd = sysCommand(text)
     if (opened) {
-      const cmd = sysCommand(text)
       if (!cmd || !('count' in cmd) || cmd.count !== opened.length) setSysLines(null)
+    } else if (typed && cmd && 'count' in cmd) {
+      // `sys3` opens its three fields as soon as the count is typed; no enter needed
+      const lines = Array.from({ length: cmd.count }, () => '')
+      sysLinesRef.current = lines
+      setSysLines(lines)
     }
     if (!text.trim()) setPrefixUnit(null)
     if (selected != null && history[selected]?.expr !== text) setSelected(null)
@@ -1210,6 +1281,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <SixtyNineFold active={sixtyNine} />
             <EdgeTools
               settings={settings}
+              keyLabels={keyLabels}
               onToggle={setSettings}
               onClear={() => {
                 clearHistory()
@@ -1262,9 +1334,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           </div>
           {settings.typstPreview ? (
             <TypstPreview
-              expr={q}
-              answer={graphCmd || periodicCmd ? '' : typstAnswer(liveExact, display)}
-              theme={settings.theme}
+              expr={chained ? chainedExpr(q) : q}
+              answer={
+                // a message ("no real solution") or a command label isn't an answer to typeset
+                graphCmd || periodicCmd || sysMessage || (liveSolve && !rootsOf)
+                  ? ''
+                  : typstAnswer(liveExact, display)
+              }
+              solvedFor={rootsOf}
             />
           ) : null}
           {hint ? (
@@ -1324,6 +1401,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           <TypstCopySettings
             value={settings.typstCopy}
             onChange={(typstCopy) => setSettings((s) => ({ ...s, typstCopy }))}
+          />
+          <KeybindSettings
+            value={settings.keybinds}
+            windows={isWindowsHost()}
+            settingsWindow={false}
+            onChange={(keybinds) => setSettings((s) => ({ ...s, keybinds }))}
           />
           <UnitSettings
             value={settings.defaultUnits}

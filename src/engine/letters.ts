@@ -3,7 +3,7 @@ import { isCalculusInput } from './calculus'
 import { readsAsUnit } from './units'
 
 // the words solve, sums, graph and calculus read, which `for y` or `at 3` would lose if split
-const KEYWORDS = 'at|for|from|over|solve|prod|product|lim|limit|int|integral|integrate|derivative|the|second|approaches|graph|theta|inf|infinity'
+const KEYWORDS = 'at|for|from|over|solve|isolate|prod|product|lim|limit|int|integral|integrate|derivative|the|second|approaches|graph|theta|inf|infinity'
 const TAKEN = new Set(`${SCIENTIFIC_NAMES}|e|ans|in|to|as|of|per|and|or|not|xor|mod|${KEYWORDS}`.toLowerCase().split('|'))
 
 /**

@@ -37,7 +37,7 @@ describe('Cal, cal and everyday temperature edges', () => {
 
 describe('uncertainty through units and powers', () => {
   it('propagates a relative uncertainty through a product with units', () => {
-    expect(shown('2.0 ± 0.05 cm * 3.0 ± 0.05 cm')).toBe('0.00060 ± 0.00003 m²')
+    expect(shown('2.0 ± 0.05 cm * 3.0 ± 0.05 cm')).toBe('6.0 ± 0.3 cm²')
   })
 
   it('keeps two figures only when the calculated ± leads with a 1', () => {

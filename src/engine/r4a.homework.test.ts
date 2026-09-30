@@ -104,8 +104,8 @@ describe('kinematics with stored quantities', () => {
 describe('compound units stored in a variable', () => {
   it('a spring constant in N/m chains', () => {
     const setup = ['k = 200 N/m', 'x0 = 5 cm']
-    expect(last([...setup, '0.5*k*x0^2']).display).toBe('0.25 J')
-    expect(last([...setup, '0.5 k x0^2']).display).toBe('0.25 J')
+    expect(last([...setup, '0.5*k*x0^2']).display).toBe('250 mJ')
+    expect(last([...setup, '0.5 k x0^2']).display).toBe('250 mJ')
     expect(last([...setup, 'k*x0']).display).toBe('10 N')
   })
 

@@ -1,5 +1,8 @@
 export { evaluateLine, evaluateSheet, parseAssignment, parseFunctionDef, stripTrailingEquals } from './evaluate'
 export { formatSolve, isEquation, MAX_SHOWN_ROOTS, parseEquation, solveEquation } from './solve'
+export { isIsolateCommand, isolatePrevious, isolateVariable, parseIsolate, parseNamedSolve } from './isolate'
+export type { NamedSolve } from './isolate'
+export type { Isolated } from './isolate'
 export { solveSystem } from './system'
 export type { SystemResult } from './system'
 export type { Solved } from './solve'

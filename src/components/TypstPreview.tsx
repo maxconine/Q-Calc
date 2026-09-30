@@ -1,32 +1,54 @@
-import { useEffect, useState } from 'react'
-import { toTypstMath, typstDocument } from '../lib/typstMath'
+import { memo, useEffect, useMemo, useState } from 'react'
+import { typstDocument } from '../lib/typstMath'
 import { isStaleRender, renderTypstSvg, warmupTypst } from '../lib/typstRender'
 
-export function TypstPreview({ expr, answer, theme }: { expr: string; answer: string; theme: string }) {
-  const [svg, setSvg] = useState('')
+type Shown = { svg: string; doc: string }
+
+// The svg is black glyphs made currentColor, so the css text color themes it, light or dark,
+// without compiling again. Mid-edit input that Typst can't compile keeps the last render, dimmed,
+// so the preview doesn't blink out (and the window doesn't jump) on every keystroke.
+export const TypstPreview = memo(function TypstPreview({
+  expr,
+  answer,
+  solvedFor = '',
+}: {
+  expr: string
+  answer: string
+  solvedFor?: string
+}) {
+  const [shown, setShown] = useState<Shown | null>(null)
+  const [failed, setFailed] = useState('')
+  const doc = useMemo(() => typstDocument(expr, answer, solvedFor), [expr, answer, solvedFor])
 
   useEffect(() => {
     warmupTypst()
   }, [])
 
   useEffect(() => {
-    const root = document.documentElement
-    const fill = getComputedStyle(root).getPropertyValue('--ink').trim() || '#1d1d1f'
-    const doc = typstDocument(expr, fill, answer)
-    if (!doc) return
+    if (!doc) {
+      setShown(null)
+      return
+    }
     let cancelled = false
     renderTypstSvg(doc)
-      .then((next) => {
-        if (!cancelled) setSvg(next)
+      .then((svg) => {
+        if (!cancelled) setShown({ svg, doc })
       })
       .catch((err: unknown) => {
-        if (!cancelled && !isStaleRender(err)) setSvg('')
+        if (!cancelled && !isStaleRender(err)) setFailed(doc)
       })
     return () => {
       cancelled = true
     }
-  }, [expr, answer, theme])
+  }, [doc])
 
-  if (!svg || !toTypstMath(expr)) return null
-  return <div className="typst-preview" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
-}
+  if (!doc || !shown) return null
+  const stale = shown.doc !== doc && failed === doc
+  return (
+    <div
+      className={`typst-preview${stale ? ' typst-preview-stale' : ''}`}
+      aria-hidden="true"
+      dangerouslySetInnerHTML={{ __html: shown.svg }}
+    />
+  )
+})

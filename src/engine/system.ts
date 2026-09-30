@@ -1,5 +1,7 @@
 import type { MathNode } from 'mathjs'
+import { formatValue } from './format'
 import { math } from './math'
+import { readsAsUnit, siQuantity, siValue, type DefaultUnits, type SiQuantity } from './units'
 
 /** A solved linear system, up to five equations. */
 export interface SystemResult {
@@ -10,6 +12,8 @@ export interface SystemResult {
   /** Infinite: each variable as an expression in the free names. */
   general?: string[]
   free?: string[]
+  /** Infinite: just the variables the equations already fix, e.g. `z = 1`. */
+  pinned?: string
   /** Linear solves in sin/cos (or similar) before inverting. */
   atoms?: { expr: string; value: string }[]
   /** Angles in [0, 2π) for a trig unknown. */
@@ -783,6 +787,11 @@ function finish<C>(rows: C[][], F: Field<C>, variables: string[]): SystemResult 
   freeIdx.forEach((j) => {
     exprs[j] = variables[j]!
   })
+  const fixed = out.pivots.filter((_, k) => freeIdx.every((j) => F.isZero(out.rows[k]![j]!)))
+  const pinned = variables
+    .map((name, i) => (fixed.includes(i) ? `${name} = ${exprs[i]}` : null))
+    .filter(Boolean)
+    .join(', ')
   const display = variables
     .map((name, i) => (free.includes(name) ? null : `${name} = ${exprs[i]}`))
     .filter(Boolean)
@@ -792,6 +801,7 @@ function finish<C>(rows: C[][], F: Field<C>, variables: string[]): SystemResult 
     variables,
     general: exprs,
     free,
+    ...(pinned && { pinned }),
     display: display || `free: ${free.join(', ')}`,
   }
 }
@@ -1204,7 +1214,10 @@ function tryQuadratic(diffs: MathNode[], variables: string[]): SystemResult | nu
     status: roots.length === 1 ? 'unique' : 'finite',
     variables,
     solutions,
-    display: solutions.map((sol) => `(${variables.join(', ')}) = (${sol.join(', ')})`).join(' or '),
+    display:
+      solutions.length === 1
+        ? variables.map((name, i) => `${name} = ${solutions[0]![i]}`).join(', ')
+        : solutions.map((sol) => `(${variables.join(', ')}) = (${sol.join(', ')})`).join(' or '),
   }
 }
 
@@ -1507,33 +1520,34 @@ function walkTrig(
   return null
 }
 
+/** `sys`, `sys3`, `sys 3`, `system 3`. The count needs no enter: the fields open as soon as it's typed. */
 export function sysCommand(text: string): { count: number } | { hint: string } | null {
-  const m = text.trim().match(/^sys(?:\s+(\d+))?\s*$/i)
+  const m = text.trim().match(/^sys(?:tem)?\s*(\d+)?\s*$/i)
   if (!m) return null
-  if (!m[1]) return { hint: 'how many equations? 1–5' }
+  if (!m[1]) return { hint: 'how many equations? sys2, sys3… up to sys5' }
   const n = Number(m[1])
   if (!Number.isInteger(n) || n < 1 || n > 5) return { hint: 'up to 5 equations' }
   return { count: n }
 }
 
 export function isSysCommand(text: string): boolean {
-  return /^\s*sys(?:\s|$)/i.test(text)
+  return /^\s*sys(?:tem)?(?:\s|\d|$)/i.test(text) && sysCommand(text) != null
 }
 
 export type SystemAnswer = { display: string; exact?: string; message?: boolean }
 
 /**
  * Solve the equations that parse, including while later fields are empty or still being typed.
- * An underdetermined system stays blank until every field is an equation or the typed ones already decide it.
+ * An underdetermined system shows only what the typed equations already fix until every field is an equation.
  */
-export function solveLive(lines: string[]): SystemAnswer | null {
+export function solveLive(lines: string[], defaults?: DefaultUnits): SystemAnswer | null {
   const pending = lines.some((line) => !prepEq(line))
   const ready = lines.map((line) => line.trim()).filter((line) => prepEq(line))
   if (!ready.length) return null
-  const result = solveSystem(ready)
+  const result = solveWithUnits(ready, defaults) ?? solveSystem(ready)
   if (!result) return null
-  if (result.status === 'infinite' && pending) return null
-  if (result.status === 'inconsistent') return { display: result.display, message: true }
+  if (result.status === 'inconsistent' || result.status === 'mismatch') return { display: result.display, message: true }
+  if (result.status === 'infinite' && pending) return result.pinned ? { display: result.pinned } : null
   return { display: result.display }
 }
 
@@ -1545,7 +1559,8 @@ export function solveSystem(equations: string[]): SystemResult | null {
   const ready = parsed as Parsed[]
   const names: string[] = []
   for (const p of ready) symbolsOf(p.diff, names)
-  const { unknowns, params } = classify(names)
+  // as many equations as names (`F = m*a`, `m = 2`, `a = 3`): every name is an unknown, lowercase or not
+  const { unknowns, params } = names.length <= ready.length ? { unknowns: names, params: [] } : classify(names)
   if (!unknowns.length || unknowns.length > 8) return null
   const diffs = ready.map((p) => p.diff)
   if (!params.length) {
@@ -1564,4 +1579,301 @@ export function solveSystem(equations: string[]): SystemResult | null {
   if (linear) return linear
   if (!params.length) return tryQuadratic(diffs, unknowns)
   return null
+}
+
+// ---- units: `x + y = 10 m`, `F = m*a` with `a = 9.8 m/s^2` ----
+
+type UnitResult = SystemResult | { status: 'mismatch'; display: string; pinned?: undefined }
+
+const UNIT_WORD = String.raw`[A-Za-zΩµμ°][A-Za-zΩµμ°]*`
+const UNIT_POW = String.raw`(?:\s*(?:\^\s*-?\d+|[²³]))?`
+// a number, then a unit that may be a product or quotient (`9.8 m/s^2`, `3 kg*m/s²`)
+const QUANTITY = new RegExp(
+  String.raw`(?<![\w.])((?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)(\s*)(${UNIT_WORD}${UNIT_POW}(?:\s*[*/·]\s*${UNIT_WORD}${UNIT_POW})*)`,
+  'g',
+)
+const DIMS = 7
+
+/** An exact rational for an SI float, kept within mathjs safe integers: `(3048/10^4)`. */
+function siRatText(x: number): string | null {
+  const m = Math.abs(x)
+    .toPrecision(15)
+    .match(/^(\d+)(?:\.(\d+))?(?:e([+-]\d+))?$/)
+  if (!m) return null
+  const frac = (m[2] ?? '').replace(/0+$/, '')
+  let digits = (m[1]! + frac).replace(/^0+(?=\d)/, '')
+  let exp = Number(m[3] ?? 0) - frac.length
+  while (digits.length > 1 && digits.endsWith('0')) {
+    digits = digits.slice(0, -1)
+    exp++
+  }
+  const pow = (k: number) => {
+    const parts: string[] = []
+    for (; k > 0; k -= 12) parts.push(`10^${Math.min(k, 12)}`)
+    return parts.join('*')
+  }
+  const sign = x < 0 ? '-' : ''
+  if (exp === 0) return `(${sign}${digits})`
+  return exp > 0 ? `(${sign}${digits}*${pow(exp)})` : `(${sign}${digits}/(${pow(-exp)}))`
+}
+
+type UnitPrep = { plain: string[]; marked: string[]; quantities: SiQuantity[] }
+
+/** Swap each `number unit` for its SI value, and for a marker the dimension check reads. Null when no line has a unit. */
+function prepUnits(lines: string[]): UnitPrep | null {
+  // a name used on its own anywhere is a variable, so `m` in `m = 2 kg` never reads as meters
+  const bare = new Set<string>()
+  for (const line of lines) {
+    for (const w of line.replace(QUANTITY, ' ').match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []) bare.add(w)
+  }
+  const quantities: SiQuantity[] = []
+  const plain: string[] = []
+  const marked: string[] = []
+  for (const line of lines) {
+    let p = ''
+    let q = ''
+    let at = 0
+    for (const m of line.matchAll(QUANTITY)) {
+      const unitText = keptUnit(m[3]!, bare)
+      if (!unitText) continue
+      const qty = siQuantity(`${m[1]} ${unitText}`)
+      const value = qty && siRatText(qty.si)
+      if (!qty || !value) continue
+      const start = m.index!
+      const end = start + m[1]!.length + m[2]!.length + unitText.length
+      const before = line.slice(at, start)
+      p += `${before}${value}`
+      q += `${before}(__q${quantities.length})`
+      quantities.push(qty)
+      at = end
+    }
+    plain.push(p + line.slice(at))
+    marked.push(q + line.slice(at))
+  }
+  return quantities.length ? { plain, marked, quantities } : null
+}
+
+/**
+ * The leading run of unit words. A word that is also a variable ends the run (`10 m/t` with `t = 2 s`),
+ * unless a plain unit follows it: `3 m/s^2` is still meters beside a variable `m`, but `2 m` is 2 times it.
+ */
+function keptUnit(text: string, bare: Set<string>): string | null {
+  const re = new RegExp(String.raw`(^|\s*[*/·]\s*)(${UNIT_WORD})(${UNIT_POW})`, 'gy')
+  const parts: Array<{ text: string; variable: boolean }> = []
+  for (const m of text.matchAll(re)) {
+    const word = m[2]!
+    if (!(readsAsUnit(word) || siQuantity(`1 ${word}`))) break
+    parts.push({ text: m[0], variable: bare.has(word.replace(/[°µμΩ]/g, '')) })
+  }
+  while (parts.length && parts.at(-1)!.variable) parts.pop()
+  return parts.map((p) => p.text).join('') || null
+}
+
+class DimClash extends Error {}
+
+function dimsEqual(a: number[], b: number[]): boolean {
+  return a.every((x, i) => x === b[i])
+}
+
+/** Each unknown's SI dimension, read off the typed quantities; null when a sum or a side mixes units. */
+function inferDims(marked: string[], quantities: SiQuantity[], unknowns: string[]): Map<string, number[]> | null {
+  const zero = Array.from({ length: DIMS }, () => 0)
+  const assigned = new Map<string, number[]>()
+  const known = (name: string): number[] | undefined => {
+    const q = /^__q(\d+)$/.exec(name)
+    if (q) return quantities[Number(q[1])]!.dim
+    if (assigned.has(name)) return assigned.get(name)
+    return unknowns.includes(name) ? undefined : zero
+  }
+  let changed = false
+  let settle = false
+
+  const dimOf = (node: MathNode): number[] | undefined => {
+    node = unwrap(node)
+    if (node.type === 'ConstantNode') return zero
+    if (node.type === 'SymbolNode') {
+      const d = known((node as unknown as { name: string }).name)
+      return d ?? (settle ? zero : undefined)
+    }
+    const name = fnName(node)
+    if (name) {
+      const args = argsOf(node)
+      if (name === 'abs' && args.length === 1) return dimOf(args[0]!)
+      if (name === 'sqrt' && args.length === 1) {
+        const d = dimOf(args[0]!)
+        if (!d) return undefined
+        if (d.some((x) => x % 2)) throw new DimClash()
+        return d.map((x) => x / 2)
+      }
+      for (const a of args) unify(a, zero)
+      return zero
+    }
+    if (node.type !== 'OperatorNode') throw new DimClash()
+    const op = (node as unknown as { op: string }).op
+    const args = argsOf(node)
+    if (args.length === 1) return dimOf(args[0]!)
+    const [a, b] = [args[0]!, args[1]!]
+    if (op === '+' || op === '-') {
+      const da = dimOf(a)
+      const db = dimOf(b)
+      if (da && db && !dimsEqual(da, db)) throw new DimClash()
+      const d = da ?? db
+      if (d) {
+        unify(a, d)
+        unify(b, d)
+      }
+      return d
+    }
+    if (op === '*' || op === '/') {
+      const da = dimOf(a)
+      const db = dimOf(b)
+      if (!da || !db) return undefined
+      return da.map((x, i) => (op === '*' ? x + db[i]! : x - db[i]!))
+    }
+    if (op === '^') {
+      const e = constRat(b)
+      const da = dimOf(a)
+      if (!e) {
+        unify(a, zero)
+        return zero
+      }
+      if (!da) return undefined
+      const out = da.map((x) => (x * Number(e.n)) / Number(e.d))
+      if (out.some((x) => !Number.isInteger(x))) throw new DimClash()
+      return out
+    }
+    throw new DimClash()
+  }
+
+  const unify = (node: MathNode, d: number[]): void => {
+    node = unwrap(node)
+    if (node.type === 'ConstantNode') {
+      if (!dimsEqual(d, zero)) throw new DimClash()
+      return
+    }
+    if (node.type === 'SymbolNode') {
+      const name = (node as unknown as { name: string }).name
+      const have = known(name)
+      if (have) {
+        if (!dimsEqual(have, d)) throw new DimClash()
+        return
+      }
+      assigned.set(name, d)
+      changed = true
+      return
+    }
+    const name = fnName(node)
+    if (name) {
+      const args = argsOf(node)
+      if (name === 'abs' && args.length === 1) unify(args[0]!, d)
+      else if (name === 'sqrt' && args.length === 1) unify(args[0]!, d.map((x) => x * 2))
+      else if (!dimsEqual(d, zero)) throw new DimClash()
+      return
+    }
+    if (node.type !== 'OperatorNode') return
+    const op = (node as unknown as { op: string }).op
+    const args = argsOf(node)
+    if (args.length === 1) return unify(args[0]!, d)
+    const [a, b] = [args[0]!, args[1]!]
+    if (op === '+' || op === '-') {
+      unify(a, d)
+      unify(b, d)
+      return
+    }
+    if (op === '*' || op === '/') {
+      const da = dimOf(a)
+      const db = dimOf(b)
+      if (da && db) {
+        if (!dimsEqual(da.map((x, i) => (op === '*' ? x + db[i]! : x - db[i]!)), d)) throw new DimClash()
+      } else if (da) unify(b, op === '*' ? d.map((x, i) => x - da[i]!) : da.map((x, i) => x - d[i]!))
+      else if (db) unify(a, op === '*' ? d.map((x, i) => x - db[i]!) : d.map((x, i) => x + db[i]!))
+      return
+    }
+    if (op === '^') {
+      const e = constRat(b)
+      if (!e || rzero(e)) return
+      const base = d.map((x) => (x * Number(e.d)) / Number(e.n))
+      if (base.some((x) => !Number.isInteger(x))) throw new DimClash()
+      unify(a, base)
+    }
+  }
+
+  const sides = marked.map(prepEq)
+  if (sides.some((s) => !s)) return null
+  const eqs = sides as Parsed[]
+  const pass = () => {
+    for (const eq of eqs) {
+      const dl = dimOf(eq.lhs)
+      const dr = dimOf(eq.rhs)
+      if (dl && dr && !dimsEqual(dl, dr)) throw new DimClash()
+      if (dl) unify(eq.rhs, dl)
+      if (dr) unify(eq.lhs, dr)
+    }
+  }
+  try {
+    for (let round = 0; round < 12; round++) {
+      changed = false
+      pass()
+      if (!changed) break
+    }
+    // what nothing pinned down is a plain number; one more pass checks every side agrees
+    settle = true
+    for (const name of unknowns) if (!assigned.has(name)) assigned.set(name, zero)
+    pass()
+  } catch (e) {
+    if (e instanceof DimClash) return null
+    throw e
+  }
+  return assigned
+}
+
+/** Solve with units by working in SI; null when no equation has a unit, so the plain solver takes over. */
+export function solveWithUnits(equations: string[], defaults?: DefaultUnits): UnitResult | null {
+  const prep = prepUnits(equations)
+  if (!prep) return null
+  const result = solveSystem(prep.plain)
+  const mismatch: UnitResult = { status: 'mismatch', display: "units don't match" }
+  if (!result) return null
+  if (result.status === 'inconsistent') return result
+  if (result.atoms || result.angles) return null
+  const dims = inferDims(prep.marked, prep.quantities, result.variables)
+  if (!dims) return mismatch
+  // an unknown shows in the unit typed for that dimension, else the preferred or named unit
+  const unitFor = (d: number[]) => prep.quantities.find((q) => q.unitId && dimsEqual(q.dim, d))?.unitId
+  const show = (name: string, exact: string): string | null => {
+    let n: number
+    try {
+      const v = math.evaluate(exact)
+      if (typeof v !== 'number' || !Number.isFinite(v)) return null
+      n = v
+    } catch {
+      return null
+    }
+    const d = dims.get(name)!
+    const value = dimsEqual(d, Array.from({ length: DIMS }, () => 0)) ? { kind: 'number' as const, n } : siValue(n, d, unitFor(d), defaults)
+    return value?.kind === 'number' ? formatValue(value) : null
+  }
+  const { variables } = result
+  if (result.status === 'unique' || result.status === 'finite') {
+    const rows = result.solutions!.map((sol) => sol.map((exact, i) => show(variables[i]!, exact)))
+    if (rows.some((row) => row.some((s) => s == null))) return null
+    const display =
+      rows.length === 1
+        ? variables.map((name, i) => `${name} = ${rows[0]![i]}`).join(', ')
+        : rows
+            .map((row) => (variables.length === 1 ? `${variables[0]} = ${row[0]}` : `(${variables.join(', ')}) = (${row.join(', ')})`))
+            .join(' or ')
+    return { ...result, display }
+  }
+  // underdetermined: only the pinned values have a unit to show; the rest stay free
+  const free = result.free ?? []
+  const pinnedParts: string[] = []
+  variables.forEach((name, i) => {
+    const expr = result.general?.[i]
+    if (!expr || free.includes(name) || symbolsOf(math.parse(expr)).some((s) => free.includes(s))) return
+    const shown = show(name, expr)
+    if (shown) pinnedParts.push(`${name} = ${shown}`)
+  })
+  const pinned = pinnedParts.join(', ')
+  return { ...result, pinned: pinned || undefined, display: [pinned, `free: ${free.join(', ')}`].filter(Boolean).join(', ') }
 }
