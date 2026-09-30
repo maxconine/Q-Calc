@@ -37,7 +37,10 @@ function isWholeWord(word: string, user: string[]): boolean {
  * After a number or `in`/`to` a unit is likelier than a function; elsewhere functions come first.
  */
 export function completionFor(text: string, names: CompletionNames = {}): string {
-  const m = text.match(/(^|[^A-Za-z])([A-Za-z]{2,})$/)
+  // `periodic table` is a command, not a unit: `periodic ta` finishes it, and `table` never becomes `tablespoon`
+  const periodic = text.match(/^\s*periodic\s+([A-Za-z]*)$/i)
+  if (periodic) return 'table'.startsWith(periodic[1]!.toLowerCase()) ? 'table'.slice(periodic[1]!.length) : ''
+  const m =text.match(/(^|[^A-Za-z])([A-Za-z]{2,})$/)
   if (!m) return ''
   const word = m[2]!
   const before = text.slice(0, text.length - word.length)

@@ -2,6 +2,10 @@
 param([int]$X = 20, [int]$Y = 400)
 
 Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+# the smoke test works in physical pixels; unaware, windows would scale X and Y too, and at 150% a spot near the
+# bottom of the screen lands off it, so the test's clicks hit the taskbar
+Add-Type -Namespace QCalcE2E -Name Dpi -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetProcessDPIAware();'
+[QCalcE2E.Dpi]::SetProcessDPIAware() | Out-Null
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'qcalc-e2e-other'
 $form.StartPosition = 'Manual'

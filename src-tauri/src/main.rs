@@ -36,6 +36,8 @@ const MAX_HEIGHT: f64 = 560.0;
 const SETTINGS_SIZE: (f64, f64) = (520.0, 640.0);
 // windows can hand focus back to the taskbar or tray just after a show; the mac overlay ignores that too
 const BLUR_GRACE: Duration = Duration::from_millis(250);
+// how long dwm can take to switch a title bar between light and dark
+const CAPTION_SETTLE: Duration = Duration::from_millis(200);
 
 const RESET: &str = "(function () {
   if (window.__qcalcReset) window.__qcalcReset();
@@ -108,6 +110,12 @@ fn main() {
             let first_run = store.claim_first_run();
             if let (true, Some(path)) = (first_run, &path) {
                 let _ = store.save(path);
+            }
+            // a tray app that isn't running after a restart just looks like a dead hotkey, so windows opens it at
+            // sign in from the start; settings turns that off. the mac leaves this to login items
+            #[cfg(windows)]
+            if first_run && !cfg!(debug_assertions) {
+                let _ = app.autolaunch().enable();
             }
             let preferred = hotkey::named(&store.hotkey);
             store.hotkey = preferred.clone();
@@ -340,6 +348,17 @@ fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<&str>) {
         if let Some(window) = app.get_webview_window(label) {
             let _ = window.set_theme(window_theme(&theme));
         }
+    }
+    // queued behind the theme change, so the title bar repaints in the new one. dwm takes the dark mode attribute
+    // on its own time, and a repaint that beats it paints the old theme, so a second one follows once it has
+    if let Some(window) = app.get_webview_window("settings") {
+        let w = window.clone();
+        let _ = window.run_on_main_thread(move || frame::repaint_caption(&w));
+        thread::spawn(move || {
+            thread::sleep(CAPTION_SETTLE);
+            let w = window.clone();
+            let _ = window.run_on_main_thread(move || frame::repaint_caption(&w));
+        });
     }
 }
 

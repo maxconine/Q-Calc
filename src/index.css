@@ -984,12 +984,21 @@ html.quick-native .four-twenty.wide {
   max-height: none;
   padding-block: var(--sp-2);
 }
-.cheat-row {
-  grid-template-columns: 64px 1fr;
-  height: 28px;
+/* the key column fits its widest key: windows spells out Ctrl+Shift+ where the mac has one glyph each.
+   the rows share it through subgrid, whose edge track also holds the row's left padding. the gap lives here too:
+   a subgrid's own gap would be split around the line, moving the labels half of it left */
+.cheat-col {
+  display: grid;
+  grid-template-columns: minmax(calc(64px + var(--sp-2)), max-content) minmax(0, 1fr);
+  column-gap: var(--sp-3);
 }
-.cheat-col + .cheat-col .cheat-row {
-  grid-template-columns: 96px 1fr;
+.cheat-col + .cheat-col {
+  grid-template-columns: minmax(calc(96px + var(--sp-2)), max-content) minmax(0, 1fr);
+}
+.cheat-row {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  height: 28px;
 }
 .cheat-row:hover {
   background: transparent;
