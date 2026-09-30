@@ -14,4 +14,4 @@ GITHUB_REPO = "maxconine/Q-Calc"
 [[d1_databases]]
 binding = "DB"
 database_name = "qcalc-analytics"
-database_id = "1be437df-a2f5-4b49-9b67-4370c82aa7e3"
+database_id = "<your d1 database_id>"

@@ -19,6 +19,7 @@ The apps send at most one small POST every 6 hours, and only when there is somet
 
 ```bash
 cd analytics
+cp wrangler.example.toml wrangler.toml          # wrangler.toml is gitignored, so the database id stays local
 npx wrangler login
 npx wrangler d1 create qcalc-analytics          # paste the database_id into wrangler.toml
 npx wrangler d1 execute qcalc-analytics --remote --file schema.sql

@@ -5,7 +5,7 @@ import { toggleAngleMode, toggleFractionMode, toggleSigFigMode, type Settings } 
 
 type Props = {
   settings: Pick<Settings, 'angleMode' | 'fractionMode' | 'sigFigMode'>
-  // the chosen keys, for screen readers and the hover title
+  // the chosen keys, for screen readers and the hover tip
   keyLabels: Record<KeyAction, string>
   onToggle: (toggle: (s: Settings) => Settings) => void
   onClear: () => void
@@ -13,6 +13,11 @@ type Props = {
 
 function shortcut(label: string): string {
   return label ? `. Shortcut ${label}` : ''
+}
+
+// what hovering a button says it does; drawn by css inside the bar, since the overlay window has no room outside it
+function tip(text: string, label: string): string {
+  return label ? `${text} · ${label}` : text
 }
 
 export function EdgeTools({ settings, keyLabels, onToggle, onClear }: Props) {
@@ -26,7 +31,7 @@ export function EdgeTools({ settings, keyLabels, onToggle, onClear }: Props) {
           type="button"
           className="edge-tool edge-settings"
           aria-label={`Settings${shortcut(keyLabels.settings)}`}
-          title={keyLabels.settings ? `Settings (${keyLabels.settings})` : 'Settings'}
+          data-tip={tip('Open settings', keyLabels.settings)}
           onMouseDown={keepFocus}
           onClick={() => host.postMessage({ type: 'openSettings' })}
         >
@@ -44,6 +49,7 @@ export function EdgeTools({ settings, keyLabels, onToggle, onClear }: Props) {
           type="button"
           className="edge-tool edge-angle active"
           aria-label={`${angleMode === 'deg' ? 'Degrees' : 'Radians'}${shortcut(keyLabels.angle)}`}
+          data-tip={tip(angleMode === 'deg' ? 'Degrees · click for radians' : 'Radians · click for degrees', keyLabels.angle)}
           onMouseDown={keepFocus}
           onClick={() => onToggle(toggleAngleMode)}
         >
@@ -54,6 +60,7 @@ export function EdgeTools({ settings, keyLabels, onToggle, onClear }: Props) {
           className={`edge-tool edge-frac ${fractionMode ? 'active' : ''}`}
           aria-pressed={fractionMode}
           aria-label={`Fraction results ${fractionMode ? 'on' : 'off'}${shortcut(keyLabels.fraction)}`}
+          data-tip={tip(`Answers as fractions: ${fractionMode ? 'on' : 'off'}`, keyLabels.fraction)}
           onMouseDown={keepFocus}
           onClick={() => onToggle(toggleFractionMode)}
         >
@@ -68,6 +75,7 @@ export function EdgeTools({ settings, keyLabels, onToggle, onClear }: Props) {
           className={`edge-tool ${sigFigMode ? 'active' : ''}`}
           aria-pressed={sigFigMode}
           aria-label={`Significant figures from input ${sigFigMode ? 'on' : 'off'}${shortcut(keyLabels.sigFigs)}`}
+          data-tip={tip(`Sig figs from what you type: ${sigFigMode ? 'on' : 'off'}`, keyLabels.sigFigs)}
           onMouseDown={keepFocus}
           onClick={() => onToggle(toggleSigFigMode)}
         >
@@ -78,6 +86,7 @@ export function EdgeTools({ settings, keyLabels, onToggle, onClear }: Props) {
         type="button"
         className="edge-tool edge-clear"
         aria-label={`Clear history and variables${shortcut(keyLabels.clear)}`}
+        data-tip={tip('Clear history and variables', keyLabels.clear)}
         onMouseDown={keepFocus}
         onClick={onClear}
       >
