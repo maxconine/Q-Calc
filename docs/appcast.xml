@@ -6,6 +6,14 @@
     <description>Q Calc updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.0.6</title>
+      <pubDate>Wed, 30 Sep 2026 18:38:03 +0000</pubDate>
+      <sparkle:version>2.0.6</sparkle:version>
+      <sparkle:shortVersionString>2.0.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v2.0.6/Q-Calc-2.0.6.zip" sparkle:edSignature="Yb/h7faOZ7IErHgkllIJ0Lyu4rDVg4e2DA/KnV2p6np+kqjzyu8IniGmRu8WC9TTQjGvDTUkCqmkBPCja+hWDQ==" length="20270094" type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.0.5</title>
       <pubDate>Wed, 30 Sep 2026 07:48:56 +0000</pubDate>
       <sparkle:version>2.0.5</sparkle:version>
