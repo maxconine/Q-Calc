@@ -26,11 +26,6 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-if [[ "$(uname -m)" != "arm64" ]]; then
-  echo "Q Calc requires an Apple silicon Mac (M1 or later)." >&2
-  exit 1
-fi
-
 if ! command -v brew >/dev/null; then
   echo "Install Homebrew first: https://brew.sh" >&2
   exit 1

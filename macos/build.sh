@@ -57,10 +57,9 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-ARCH="$(uname -m)"
-if [[ "$ARCH" != "arm64" ]]; then
-  echo "Q Calc is documented for Apple silicon. Detected $ARCH; continuing anyway." >&2
-fi
+# universal: apple silicon and intel, back to ventura. 13.5 is soulvercore's own minimum
+ARCHS=(arm64 x86_64)
+MIN_MACOS="13.5"
 
 require xcrun "Install Xcode 26 or later, then run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
 require swiftc "Install Xcode 26 or later from the Mac App Store."
@@ -186,9 +185,12 @@ rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" \
   "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
 
 # Apple Dictionary — to restore, add "$MAC/DictionaryLookup.swift" \ after SoulverEval.swift.
+# one slice per architecture, then lipo makes them one binary
+slices=()
+for arch in "${ARCHS[@]}"; do
 swiftc -parse-as-library \
   -O \
-  -target "${ARCH}-apple-macos14.0" \
+  -target "${arch}-apple-macos${MIN_MACOS}" \
   -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
   -F "$SLICE" \
   -F "$SPARKLE" \
@@ -208,7 +210,11 @@ swiftc -parse-as-library \
   "$MAC/PeriodicWindow.swift" \
   "$MAC/Updates.swift" \
   "$MAC/QCalcApp.swift" \
-  -o "$BIN"
+  -module-cache-path "$STAGE/modules-$arch" \
+  -o "$STAGE/QCalc-$arch"
+slices+=("$STAGE/QCalc-$arch")
+done
+lipo -create "${slices[@]}" -output "$BIN"
 
 cp "$MAC/Info.plist" "$APP/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist"

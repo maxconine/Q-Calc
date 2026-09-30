@@ -78,7 +78,7 @@ Q Calc checks for updates once a day and installs them while you're away from th
 
 Install via Homebrew to get autoupdates (Preferred)
 
-You need [Homebrew](https://brew.sh), an **Apple silicon Mac** (M1 or later), and **macOS 14** or later.
+You need [Homebrew](https://brew.sh), a Mac with **macOS 13.5 Ventura** or later (Apple silicon or Intel).
 
 ```bash
 brew tap maxconine/qcalc https://github.com/maxconine/Q-Calc
