@@ -22,13 +22,15 @@ $script:otherHwnd = [IntPtr]::Zero
 
 function Log([string]$msg) { Write-Host ("[{0:HH:mm:ss.fff}] {1}" -f (Get-Date), $msg) }
 
-function Wait-Until([scriptblock]$cond, [int]$ms = 2000) {
-    $sw = [Diagnostics.Stopwatch]::StartNew()
+# the block sees the caller's variables through powershell's dynamic scope, so this uses names no caller does
+# (it once took $cond, which hid the ui automation conditions the settings and tray checks keep under that name)
+function Wait-Until([scriptblock]$__until, [int]$__ms = 2000) {
+    $__sw = [Diagnostics.Stopwatch]::StartNew()
     do {
-        if (& $cond) { return $true }
+        if (& $__until) { return $true }
         Start-Sleep -Milliseconds 50
-    } while ($sw.ElapsedMilliseconds -lt $ms)
-    return [bool](& $cond)
+    } while ($__sw.ElapsedMilliseconds -lt $__ms)
+    return [bool](& $__until)
 }
 
 function Get-QCalcPids { @(Get-Process -Name $ProcName -ErrorAction SilentlyContinue | ForEach-Object { $_.Id }) }
@@ -302,7 +304,10 @@ function Set-Appearance([string]$choice, [string]$shot) {
     $script:button = $null
     Wait-Until { $script:button = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond); [bool]$script:button } 5000 | Out-Null
     if (-not $script:button) { throw "no '$choice' button in the settings window" }
-    $script:button.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
+    # the choices carry aria-pressed, so chromium offers them as toggles with no invoke; either one clicks
+    $pattern = $null
+    if ($script:button.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) { $pattern.Invoke() }
+    else { $script:button.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Toggle() }
     Start-Sleep -Milliseconds 500
     $r = $N::Rect($w)
     $N::Screenshot((Join-Path $OutDir $shot), $r.Left, $r.Top, $r.Right - $r.Left, $r.Bottom - $r.Top)
@@ -366,9 +371,11 @@ Invoke-Check '1' 'later launches start hidden' $true {
 function Find-TrayButton {
     $find = {
         foreach ($cls in 'Shell_TrayWnd', 'NotifyIconOverflowWindow', 'TopLevelWindowForOverflowXamlIsland') {
-            $h = $N::FindWindowW($cls, $null)
-            if ($h -eq [IntPtr]::Zero) { continue }
-            $buttons = [System.Windows.Automation.AutomationElement]::FromHandle($h).FindAll(
+            # ui automation's desktop, not FindWindowW: that never returns windows 11's overflow flyout
+            $w = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children,
+                (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ClassNameProperty, $cls)))
+            if (-not $w) { continue }
+            $buttons = $w.FindAll(
                 [System.Windows.Automation.TreeScope]::Descendants,
                 (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))
             foreach ($b in $buttons) {
@@ -388,10 +395,10 @@ function Find-TrayButton {
     $chevron = [System.Windows.Automation.AutomationElement]::FromHandle($tray).FindFirst([System.Windows.Automation.TreeScope]::Descendants, $cond)
     if (-not $chevron) { return $null }
     $chevron.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke()
-    Start-Sleep -Milliseconds 800
-    $button = & $find
-    if (-not $button) { $N::Chord($N::VK_ESCAPE) }
-    $button
+    $script:trayButton = $null
+    Wait-Until { $script:trayButton = & $find; [bool]$script:trayButton } 2000 | Out-Null
+    if (-not $script:trayButton) { $N::Chord($N::VK_ESCAPE) }
+    $script:trayButton
 }
 
 Invoke-Check '1b' 'tray icon' $false {
