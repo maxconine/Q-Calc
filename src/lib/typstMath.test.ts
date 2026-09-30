@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TYPST_PREAMBLE, copiedEquation, toTypstMath, typstAnswer, typstDocument, typstPreviewUseful } from './typstMath'
+import { TYPST_PREAMBLE, copiedEquation, previewMath, toTypstMath, typstAnswer, typstDocument, typstPreviewUseful } from './typstMath'
 
 describe('copiedEquation', () => {
   it('keeps the typed equation until Typst copy is on', () => {
@@ -145,8 +145,8 @@ describe('matrices', () => {
 describe('typstPreviewUseful', () => {
   it.each([
     '1/3 + 2/5', 'x^2 - 5x + 6 = 0', 'integral(x^2, 0, 1)', 'sum n, n=1..9', '[1 2; 3 4]', 'det([1 2; 3 4])',
-    'inv([1 2; 3 4])', 'sqrt(2)', 'nthRoot(27, 3)', 'sin(90)', 'sin^-1(0.5)', 'arccsc(2)', 'ln(2)', 'gcd(12, 18)',
-    '5!', '2^8', 'x_1 + x_2', 'abs(-3)', 'f(x) = x^3', '10 choose 3',
+    'inv([1 2; 3 4])', 'sqrt(2)', 'nthRoot(27, 3)', 'sin^-1(0.5)', 'gcd(12, 18)', 'sin(x)', '2 sin(30)', 'cos(pi/3)',
+    '5!', '2^8', 'x_1 + x_2', 'f(x) = x^3', '10 choose 3', '1/2 + 1/3', 'x/(x+1)',
   ])('shows for %s, which typesets differently', (expr) => {
     expect(typstPreviewUseful(expr)).toBe(true)
   })
@@ -159,8 +159,43 @@ describe('typstPreviewUseful', () => {
     expect(typstPreviewUseful(expr)).toBe(false)
   })
 
+  it.each(['3.5/2', '10/4', '-10/4', '1/3', 'sin(90)', 'ln(2)', 'log(100)', 'abs(-3)', 'arccsc(2)', 'cos(-0.5)'])(
+    'hides for %s, one division of two numbers or one function of a number',
+    (expr) => {
+      expect(typstPreviewUseful(expr)).toBe(false)
+    },
+  )
+
+  it.each([
+    ['int 0..1 x^2 dx', 'integral_(0)^(1) x ^ 2 dif x'],
+    ['∫0..pi sin(x) dx', 'integral_(0)^(pi) sin(x) dif x'],
+    ['integral of x^2 from 0 to 1', 'integral_(0)^(1) x ^ 2 dif x'],
+    ['integrate t^2 from 0 to 1', 'integral_(0)^(1) t ^ 2 dif t'],
+    ['sum n^2 from 1 to 10', 'sum_(n = 1)^(10) n ^ 2'],
+    ['prod k from 1 to 5', 'product_(k = 1)^(5) k'],
+    ['lim x->0 sin(x)/x', 'lim_(x arrow.r 0) sin(x) / x'],
+    ['limit of sin(x)/x as x -> 0', 'lim_(x arrow.r 0) sin(x) / x'],
+    ['solve x^2 = 4', 'x ^ 2 = 4'],
+    ['solve 2x = 6', '2 x = 6'],
+    ['x^2 = 4 for x', 'x ^ 2 = 4'],
+    ['solve for x: x^2 = 4', 'x ^ 2 = 4'],
+    ['isolate T in P*V = n*R*T', 'P ast V = n ast R ast T'],
+    ['d/dx x^3', 'frac(dif, dif x) x ^ 3'],
+    ['d/dx x^2 + 1', 'frac(dif, dif x) (x ^ 2 + 1)'],
+    ['d/dx x^3 at 2', 'lr(frac(dif, dif x) x ^ 3 |)_(x = 2)'],
+    ['d²/dx² sin(x)', 'frac(dif^2, dif x^2) sin(x)'],
+    ['second derivative of t^4', 'frac(dif^2, dif t^2) t ^ 4'],
+  ])('shows %s typeset as the math it means', (expr, math) => {
+    expect(typstPreviewUseful(expr)).toBe(true)
+    expect(previewMath(expr)).toBe(math)
+  })
+
+  it('keeps the typed words when copying', () => {
+    expect(copiedEquation('solve x^2 = 4', true)).toBe('"solve" x ^ 2 = 4')
+  })
+
   it('follows the input as it is typed', () => {
     expect(['x', 'x^', 'x^2', 'x^2 -', 'x^2 - 1'].map(typstPreviewUseful)).toEqual([false, false, true, true, true])
-    expect(['1', '1/', '1/3'].map(typstPreviewUseful)).toEqual([false, false, true])
+    expect(['1', '1/', '1/x'].map(typstPreviewUseful)).toEqual([false, false, true])
   })
 })
