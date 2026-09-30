@@ -7,15 +7,18 @@ import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './me
 import { latexToAscii, looksLikeLatex, tryPlainMath } from './plainMath'
 import { typstToAscii } from './typstInput'
 import { formatAsFraction, SCIENTIFIC_NAMES, splitGluedFunctions } from './scientific'
+import { looksLikeMatrix, matrixAnswer } from './matrix'
 import { exactForm, wantsExactForm } from './simplify'
-import { formatSolve, solveEquation } from './solve'
+import { isolateVariable, parseNamedSolve } from './isolate'
+import { formatSolve, solveEquation, type Solved } from './solve'
 import { normalizeSums, sumAnswer } from './sums'
 import { quantityText, readsAsUnit, tryConvert } from './units'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
 
+/** Capital E is free (Young's modulus, energy); lowercase e stays Euler's number. */
 function isReserved(name: string): boolean {
-  return RESERVED.has(name.toLowerCase())
+  return name !== 'E' && RESERVED.has(name.toLowerCase())
 }
 
 /** Built-in names like `pi` can't be assigned. */
@@ -117,6 +120,50 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       continue
     }
 
+    const pushSolved = (solved: Solved) => {
+      const { display, exact } = formatSolve(solved, { sigFigs, fractionMode })
+      const [root] = solved.info.roots
+      const single = solved.info.outcome === 'roots' && solved.info.roots.length === 1 && !solved.info.more
+      // the root is never stored as the variable; `ans` carries it
+      if (single) {
+        lastAns = root
+        delete measures.ans
+        delete quantities.ans
+      }
+      results.push({ raw, kind: 'solve', value: single ? num(root!) : textVal(display), display, exact, solve: solved.info })
+    }
+    const pushIsolated = (text: string, known?: Record<string, number>): boolean => {
+      const iso = isolateVariable(text, { variables: known })
+      if (iso) results.push({ raw, kind: 'expression', display: iso.display, value: textVal(iso.display) })
+      return Boolean(iso)
+    }
+
+    // `isolate x in …` rearranges symbolically; stored values stay letters
+    if (/\bisolate\b/i.test(line)) {
+      if (!pushIsolated(line)) results.push({ raw, kind: 'expression', display: '' })
+      continue
+    }
+
+    // `solve x in …` or `… for x` is a number when the other letters are known, else x on its own
+    const named = hasPlusMinus(line) ? null : parseNamedSolve(line)
+    if (named) {
+      const typedNamed = splitLetters(named.numeric, known)
+      if (usesUncertain(typedNamed, measures)) {
+        results.push({ raw, kind: 'expression', display: '' })
+        continue
+      }
+      const eq = withQuantities(typedNamed, quantities)
+      const solved = solveEquation(eq, { ans: lastAns, angleMode, variables, functions, rationalize: options.rationalize })
+      // a formula beats "no solution found", which only means the search came up empty
+      if (solved && solved.info.outcome !== 'noneFound') pushSolved(solved)
+      // a solve uses what's stored, like the numeric solve would; isolate keeps every letter
+      else if (!pushIsolated(named.isolate, variables)) {
+        if (solved) pushSolved(solved)
+        else results.push({ raw, kind: 'expression', display: '' })
+      }
+      continue
+    }
+
     const fnDef = parseFunctionDef(trimmedLine)
     if (fnDef) {
       fnDef.body = splitLetters(fnDef.body, (n) => fnDef.params.includes(n) || known(n), fnDef.params)
@@ -141,11 +188,51 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     const trimmed = splitLetters(trimmedLine, known)
     const assign = parseAssignment(trimmed)
     // `V = 12 V` stores 12 volts; as an equation it could only ever say V = 0
-    const unitSelf = assign != null && readsAsUnit(assign.variable) && tryConvert(assign.expr)?.unit != null
+    // `B = A^-1` with a stored matrix A is a matrix, though B is a byte and A an ampere
+    const unitSelf =
+      assign != null &&
+      readsAsUnit(assign.variable) &&
+      !looksLikeMatrix(withQuantities(assign.expr, quantities), Object.keys(functions)) &&
+      tryConvert(assign.expr)?.unit != null
     if (unitSelf) {
       delete variables[assign.variable]
       delete quantities[assign.variable]
       delete measures[assign.variable]
+    }
+    const scalar = (text: string) => {
+      const v = tryPlainMath(text, { ans: lastAns, angleMode, variables, functions })
+      return v?.kind === 'number' && !v.unit ? v.n : null
+    }
+    const matrix = unitSelf
+      ? null
+      : matrixAnswer(withQuantities(assign?.expr ?? trimmed, quantities), { variables, sigFigs, fractionMode, functions: Object.keys(functions), scalar })
+    if (matrix) {
+      const variable = matrix.message ? undefined : assign?.variable
+      if (variable) {
+        // a matrix is stored as its literal, the way a unit answer is, and read back wherever the name appears
+        delete measures[variable]
+        setOrDelete(variables, variable, matrix.n)
+        setOrDelete(quantities, variable, matrix.literal)
+      }
+      if (matrix.n != null) {
+        lastAns = matrix.n
+        delete measures.ans
+        delete quantities.ans
+      } else if (matrix.literal) {
+        // `ans` is the whole matrix, read back like a unit answer
+        delete measures.ans
+        quantities.ans = matrix.literal
+      }
+      results.push({
+        raw,
+        kind: variable ? 'assignment' : 'expression',
+        value: matrix.n != null ? num(matrix.n) : textVal(matrix.display),
+        display: matrix.display,
+        exact: matrix.exact,
+        quantity: matrix.literal,
+        variable,
+      })
+      continue
     }
     if (!hasPlusMinus(trimmed) && !unitSelf) {
       const eq = withQuantities(typed, quantities)
@@ -156,16 +243,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
         continue
       }
       if (solved) {
-        const { display, exact } = formatSolve(solved, { sigFigs, fractionMode })
-        const [root] = solved.info.roots
-        const single = solved.info.outcome === 'roots' && solved.info.roots.length === 1 && !solved.info.more
-        // the root is never stored as the variable; `ans` carries it
-        if (single) {
-          lastAns = root
-          delete measures.ans
-          delete quantities.ans
-        }
-        results.push({ raw, kind: 'solve', value: single ? num(root!) : textVal(display), display, exact, solve: solved.info })
+        pushSolved(solved)
         continue
       }
     }
@@ -196,7 +274,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       }
       sum = calc ? null : sumAnswer(expr, { ...ctx, defaultUnits: options.defaultUnits, rationalize: options.rationalize })
       const m = plusMinus ? measure(expr, ctx) : null
-      value = calc ? calc.value : m ? num(m.v) : sum ? sum.value : tryPlainMath(expr, { ...ctx, defaultUnits: options.defaultUnits })
+      value = calc ? calc.value : m ? num(m.v) : sum ? sum.value : tryPlainMath(expr, { ...ctx, defaultUnits: options.defaultUnits, keepUnits: Boolean(variable) })
       // a ± answer that lost its uncertainty would be a confidently wrong bare number
       if (plusMinus && !m && value?.kind === 'number' && !value.meas?.unc) value = null
     } catch {

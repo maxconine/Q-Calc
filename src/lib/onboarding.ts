@@ -1,3 +1,4 @@
+import type { KeyAction } from './keybinds'
 import { hasDualAnswer } from './answer'
 
 export type Onboarding = {
@@ -215,8 +216,27 @@ export const CHEATS: { keys: readonly CheatRow[]; type: readonly CheatRow[] } = 
 // only the mac app has the settings window; the web page shows them inline
 const MENU_BAR: CheatRow = ['⌘,', 'settings']
 
-export function cheatSheet(hotkey?: string, native = false): CheatRow[][] {
-  const keys = [...(hotkey ? [[hotkey, 'show / hide'] as CheatRow] : []), ...CHEATS.keys]
+// which chosen keybind each key row shows; the copy row shows two
+const ROW_ACTIONS: Record<string, KeyAction[]> = {
+  'copy answer / line': ['copyAnswer', 'copyLine'],
+  'degrees / radians': ['angle'],
+  fractions: ['fraction'],
+  'sig figs from input': ['sigFigs'],
+  'clear history': ['clear'],
+  settings: ['settings'],
+}
+
+// `labels` are the user's chosen keys, already written for the host; a row whose keys are all unset goes
+export function cheatSheet(hotkey?: string, native = false, labels?: Partial<Record<KeyAction, string>>): CheatRow[][] {
+  let keys = [...(hotkey ? [[hotkey, 'show / hide'] as CheatRow] : []), ...CHEATS.keys]
   if (native) keys.splice(keys.length - 1, 0, MENU_BAR)
+  if (labels) {
+    keys = keys.flatMap(([key, label]): CheatRow[] => {
+      const actions = ROW_ACTIONS[label]
+      if (!actions) return [[key, label]]
+      const shown = actions.map((a) => labels[a] ?? '').filter(Boolean)
+      return shown.length ? [[shown.join(' '), label]] : []
+    })
+  }
   return [keys, [...CHEATS.type]]
 }

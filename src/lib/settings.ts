@@ -1,5 +1,6 @@
 import { clampSigFigs, DEFAULT_SIG_FIGS } from '../engine/format'
 import { defaultUnitsEqual, sanitizeDefaultUnits, type DefaultUnits } from '../engine/units'
+import { keybindsEqual, sanitizeKeybinds, type Keybinds } from './keybinds'
 import { normalizeHistoryInsert, type AnswerForm, type HistoryInsert } from './answer'
 import { clampDraftSeconds, DEFAULT_DRAFT_SECONDS } from './draft'
 import { DEFAULT_HISTORY_SHOW, normalizeHistoryShow, type HistoryShow } from './historyShow'
@@ -22,6 +23,9 @@ export type Settings = {
   theme: Theme
   typstPreview: boolean
   typstCopy: boolean
+  // anonymous usage counts, see lib/analytics
+  shareUsage: boolean
+  keybinds: Keybinds
 }
 
 // pushed by the mac app alongside settings; never stored by the web view
@@ -43,6 +47,8 @@ export function defaultSettings(): Settings {
     theme: 'system',
     typstPreview: false,
     typstCopy: false,
+    shareUsage: true,
+    keybinds: {},
   }
 }
 
@@ -62,6 +68,8 @@ export function mergeSettings(partial: Partial<Settings> | undefined, base: Sett
     theme: partial?.theme == null ? base.theme : normalizeTheme(partial.theme),
     typstPreview: partial?.typstPreview == null ? base.typstPreview : Boolean(partial.typstPreview),
     typstCopy: partial?.typstCopy == null ? base.typstCopy : Boolean(partial.typstCopy),
+    shareUsage: partial?.shareUsage == null ? base.shareUsage : Boolean(partial.shareUsage),
+    keybinds: partial?.keybinds == null ? base.keybinds : sanitizeKeybinds(partial.keybinds),
   }
 }
 
@@ -80,6 +88,8 @@ export function settingsEqual(a: Settings, b: Settings): boolean {
     a.theme === b.theme &&
     a.typstPreview === b.typstPreview &&
     a.typstCopy === b.typstCopy &&
+    a.shareUsage === b.shareUsage &&
+    keybindsEqual(a.keybinds, b.keybinds) &&
     defaultUnitsEqual(a.defaultUnits, b.defaultUnits)
   )
 }

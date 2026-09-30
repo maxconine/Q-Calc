@@ -2,17 +2,19 @@ import { useEffect, useState } from 'react'
 import { MAX_SIG_FIGS, MIN_SIG_FIGS } from '../engine/format'
 import { nativeHandler } from '../lib/bridge'
 import { draftChoices, hostInfo, hotkeyNote, type HostInfo } from '../lib/hostSettings'
-import { hostKeys } from '../lib/platform'
+import { isWindowsHost } from '../lib/platform'
 import { mergeSettings, settingsEqual, type Settings } from '../lib/settings'
 import { calcWindow, loadSettings } from '../lib/storage'
 import { applyTheme } from '../lib/theme'
 import { AppearanceSettings } from './AppearanceSettings'
 import { ChoiceSetting, OnOffSetting } from './ChoiceSetting'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
+import { KeybindSettings } from './KeybindSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
 import { RationalizeSettings } from './RationalizeSettings'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { UnitSettings } from './UnitSettings'
+import { useKeyLabels } from './useKeyLabels'
 import './SettingsPage.css'
 
 const SIG_FIG_CHOICES = Array.from({ length: MAX_SIG_FIGS - MIN_SIG_FIGS + 1 }, (_, i) => {
@@ -54,11 +56,21 @@ function post(message: Record<string, unknown>): void {
   nativeHandler()?.postMessage(message)
 }
 
+// one function for the page's life, so recording pauses the shell's hotkey once
+function pauseHotkey(on: boolean): void {
+  post({ type: 'hotkeyPause', on })
+}
+
+function withKey(hint: string, key: string): string {
+  return key ? `${hint} · ${key}` : `${hint}.`
+}
+
 // the windows shell's settings window: every row the mac settings window has, in the page's own controls
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(loadSettings)
   const [host, setHost] = useState<HostInfo>(() => hostInfo(calcWindow().__QCALC_SETTINGS))
   const set = <K extends keyof Settings>(key: K) => (value: Settings[K]) => setSettings((s) => ({ ...s, [key]: value }))
+  const keyLabels = useKeyLabels(settings.keybinds)
 
   useEffect(() => {
     calcWindow().__qcalcApplySettings = (partial) => {
@@ -86,12 +98,17 @@ export function SettingsPage() {
 
   return (
     <main className="settings-page">
-      <SelectSetting
-        title="Keyboard shortcut"
-        hint={hotkeyNote(host)}
-        options={host.hotkeys.map((k) => ({ id: k.id, label: k.title }))}
-        value={host.hotkeyId}
-        onChange={(id) => post({ type: 'hotkey', id })}
+      <KeybindSettings
+        value={settings.keybinds}
+        onChange={set('keybinds')}
+        windows={isWindowsHost()}
+        settingsWindow
+        show={{
+          chord: host.hotkeyChord,
+          note: hotkeyNote(host),
+          onPick: (chord) => post({ type: 'hotkey', chord }),
+          onRecording: pauseHotkey,
+        }}
       />
       <OnOffSetting
         title="Open at login"
@@ -119,11 +136,17 @@ export function SettingsPage() {
         value={String(settings.draftSeconds)}
         onChange={(v) => set('draftSeconds')(Number(v))}
       />
+      <OnOffSetting
+        title="Share anonymous usage"
+        hint="Counts of which features get used, never what you type."
+        value={settings.shareUsage}
+        onChange={set('shareUsage')}
+      />
 
       <h2 className="settings-heading">Answers</h2>
       <ChoiceSetting
         title="Angles"
-        hint={hostKeys('Switch with ⌃D')}
+        hint={keyLabels.angle ? `Switch with ${keyLabels.angle}` : 'The unit trig functions read.'}
         options={[
           { id: 'deg', label: 'Degrees' },
           { id: 'rad', label: 'Radians' },
@@ -143,7 +166,7 @@ export function SettingsPage() {
       />
       <OnOffSetting
         title="Fractions"
-        hint={hostKeys('Show answers as fractions · ⌃F')}
+        hint={withKey('Show answers as fractions', keyLabels.fraction)}
         value={settings.fractionMode}
         onChange={set('fractionMode')}
       />
@@ -162,7 +185,7 @@ export function SettingsPage() {
       />
       <OnOffSetting
         title="Propagate from input"
-        hint={hostKeys('Match the precision you typed · ⌃S')}
+        hint={withKey('Match the precision you typed', keyLabels.sigFigs)}
         value={settings.sigFigMode}
         onChange={set('sigFigMode')}
       />

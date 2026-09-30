@@ -17,17 +17,14 @@ describe('settings window', () => {
     sigFigs: 9,
     draftSeconds: 120,
     angleMode: 'rad',
-    hotkeyId: 'ctrl-space',
+    hotkeyChord: 'ctrl+space',
     hotkeyFailed: true,
-    hotkeys: [
-      { id: 'alt-space', title: 'Alt+Space' },
-      { id: 'ctrl-space', title: 'Ctrl+Space' },
-    ],
+    keybinds: { fraction: 'ctrl+alt+q' },
   })
 
   it('has every row the mac settings window has, plus login', () => {
     for (const title of [
-      'Keyboard shortcut',
+      'Keybinds',
       'Open at login',
       'Appearance',
       'Show history',
@@ -49,16 +46,17 @@ describe('settings window', () => {
   })
 
   it('shows the injected values', () => {
-    expect(html).toMatch(/<option value="ctrl-space" selected="">Ctrl\+Space<\/option>/)
+    expect(html).toContain('Choose keybinds…')
     expect(html).toMatch(/<option value="9" selected="">9<\/option>/)
     expect(html).toMatch(/<option value="120" selected="">2 minutes<\/option>/)
     expect(html).toMatch(/aria-pressed="true"[^>]*>Radians/)
-    expect(html).toContain('Your shortcut is in use by another app')
+    expect(html).toContain('Your show / hide shortcut is in use by another app')
   })
 
   it('speaks windows keys', () => {
     expect(html).toContain('Switch with Ctrl+D')
-    expect(html).toContain('Ctrl+F')
+    // the user's own key, not the default
+    expect(html).toContain('Show answers as fractions · Ctrl+Alt+Q')
     expect(html).not.toMatch(/[⌘⌃⌥]/)
   })
 })

@@ -26,6 +26,13 @@ export type HistoryRow = {
 
 export const MAX_HISTORY = 10
 export const MAX_HISTORY_EXPR = 240
+/** A stored matrix is read back whole, so its literal gets more room than an expression. */
+const MAX_MATRIX_LITERAL = 4000
+
+/** A matrix answer keeps its literal (`[[1, 2], [3, 4]]`) as its quantity. */
+export function isMatrixQuantity(quantity: string | undefined): boolean {
+  return typeof quantity === 'string' && quantity.startsWith('[[')
+}
 export const MAX_HISTORY_DISPLAY = 96
 export const MAX_HISTORY_EXACT = 72
 export const MAX_HISTORY_JSON = 16_384
@@ -115,7 +122,12 @@ export function slimHistoryRow(row: HistoryRow): HistoryRow | null {
     n: kind === 'function' || row.n == null || !Number.isFinite(row.n) ? undefined : row.n,
     meas: kind ? undefined : sanitizeMeas(row.meas),
     // never truncated: a cut-off quantity would parse as a different one
-    quantity: kind || typeof row.quantity !== 'string' ? undefined : row.quantity.length <= MAX_HISTORY_EXPR ? row.quantity : '',
+    quantity:
+      kind || typeof row.quantity !== 'string'
+        ? undefined
+        : row.quantity.length <= (isMatrixQuantity(row.quantity) ? MAX_MATRIX_LITERAL : MAX_HISTORY_EXPR)
+          ? row.quantity
+          : '',
     kind,
     ...fnFields,
     ...(equations && { equations }),
@@ -219,7 +231,7 @@ export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
   let last: HistoryRow | undefined
   for (const row of rows) {
     if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
-    if (row.n != null && Number.isFinite(row.n)) last = row
+    if ((row.n != null && Number.isFinite(row.n)) || isMatrixQuantity(row.quantity)) last = row
     if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
@@ -235,7 +247,7 @@ export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
   let last: HistoryRow | undefined
   for (const row of rows) {
     if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
-    if (row.n != null && Number.isFinite(row.n)) last = row
+    if ((row.n != null && Number.isFinite(row.n)) || isMatrixQuantity(row.quantity)) last = row
     if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
@@ -267,6 +279,8 @@ export function lastHistoryNumber(rows: HistoryRow[]): number | undefined {
   for (let i = rows.length - 1; i >= 0; i--) {
     const row = rows[i]
     if (!row || row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
+    // a matrix answer is `ans` now, through historyQuantities
+    if (isMatrixQuantity(row.quantity)) return undefined
     const n = row.n
     // a unit answer's `ans` comes from historyQuantities instead
     if (n != null && Number.isFinite(n)) return row.quantity == null ? n : undefined

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateLine } from '../engine/evaluate'
-import { flattenPastedText, prettyTokens, spliceText } from './QuickInput'
+import { bracketKey, flattenPastedText, prettyTokens, spliceText } from './QuickInput'
 
 function n(text: string): number {
   const r = evaluateLine(text)
@@ -163,5 +163,68 @@ describe('typed ans', () => {
     expect(typeKeys('ans*3')).toBe('ans*3')
     expect(evaluateLine(typeKeys('ans*3'), { ans: 1 / 3 }).display).toBe('1')
     expect(evaluateLine(typeKeys('ans^2'), { ans: -3 }).display).toBe('9')
+  })
+})
+
+// types key by key with a caret, the way the input sees it: a bracket key may take over, anything else is inserted
+function typeWithBrackets(keys: string[]): { text: string; caret: number } {
+  let text = ''
+  let caret = 0
+  for (const key of keys) {
+    const edit = bracketKey(text, caret, caret, key)
+    if (edit) ({ text, caret } = edit)
+    else if (key === 'Backspace') {
+      if (caret > 0) ({ text, caret } = { text: text.slice(0, caret - 1) + text.slice(caret), caret: caret - 1 })
+    } else ({ next: text, cursor: caret } = spliceText(text, key, caret, caret))
+  }
+  return { text, caret }
+}
+
+describe('bracketKey', () => {
+  it('closes a typed [ with the caret inside', () => {
+    expect(bracketKey('', 0, 0, '[')).toEqual({ text: '[]', caret: 1 })
+    expect(bracketKey('2*', 2, 2, '[')).toEqual({ text: '2*[]', caret: 3 })
+    expect(bracketKey('[1,2]', 3, 3, 'x')).toBeNull()
+  })
+
+  it('steps over a ] that is already there', () => {
+    expect(bracketKey('[1,2]', 4, 4, ']')).toEqual({ text: '[1,2]', caret: 5 })
+    expect(bracketKey('[1,2', 4, 4, ']')).toBeNull()
+  })
+
+  it('takes both halves of an empty [] on backspace', () => {
+    expect(bracketKey('2*[]', 3, 3, 'Backspace')).toEqual({ text: '2*', caret: 2 })
+    expect(bracketKey('[1]', 2, 2, 'Backspace')).toBeNull()
+    expect(bracketKey('[[]', 2, 2, 'Backspace')).toBeNull()
+  })
+
+  it('leaves a lone [ where brackets are uneven or text follows', () => {
+    expect(bracketKey('1,2]', 0, 0, '[')).toBeNull()
+    expect(bracketKey('[1,2', 4, 4, '[')).toBeNull()
+    expect(bracketKey('[1,2]', 1, 1, '[')).toBeNull()
+  })
+
+  it('leaves a selection to the input', () => {
+    expect(bracketKey('12', 0, 2, '[')).toBeNull()
+    expect(bracketKey('[]', 0, 2, 'Backspace')).toBeNull()
+  })
+
+  it('types nested matrix rows without doubling a bracket', () => {
+    const typed = typeWithBrackets([...'[[1,2],[3,4]]'])
+    expect(typed).toEqual({ text: '[[1,2],[3,4]]', caret: 13 })
+    expect(evaluateLine(typed.text).display).toBe(evaluateLine('[[1,2],[3,4]]').display)
+    expect(typeWithBrackets([...'[[1,2],[3,4]] + [[5,6],[7,8]]']).text).toBe('[[1,2],[3,4]] + [[5,6],[7,8]]')
+    expect(typeWithBrackets([...'det([[1,2],[3,4]])']).text).toBe('det([[1,2],[3,4]])')
+  })
+
+  it('stops short with the rest still closed', () => {
+    expect(typeWithBrackets([...'[[1,2'])).toEqual({ text: '[[1,2]]', caret: 5 })
+    expect(typeWithBrackets(['[', '[', 'Backspace'])).toEqual({ text: '[]', caret: 1 })
+    expect(typeWithBrackets(['[', '[', 'Backspace', 'Backspace'])).toEqual({ text: '', caret: 0 })
+  })
+
+  it('does nothing to pasted text', () => {
+    expect(flattenPastedText('[[1,2],[3,4]]')).toBe('[[1,2],[3,4]]')
+    expect(spliceText('', '[1, 2', 0, 0)).toEqual({ next: '[1, 2', cursor: 5 })
   })
 })

@@ -119,9 +119,9 @@ describe('Inferred parens evaluate', () => {
 
   it('divides force as (19600 kg m / s^2)/2', () => {
     const r = evaluateLine('19600 kg m / s^2)/2')
-    expect(r.value?.n).toBeCloseTo(9800, 8)
-    expect(r.display).toMatch(/N$/)
-    expect(evaluateLine('19600 N)/2').value?.n).toBeCloseTo(9800, 8)
+    expect(r.value?.n).toBeCloseTo(9.8, 8)
+    expect(r.display).toMatch(/kN$/)
+    expect(evaluateLine('19600 N)/2').display).toBe('9.8 kN')
   })
 
   it('applies inferred parens before unit arithmetic', () => {

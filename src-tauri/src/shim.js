@@ -42,6 +42,8 @@
   if (!boot.overlay) return
 
   window.__QCALC_NATIVE = true
+  // the usage counts the host kept (null before the first save); only the overlay reports
+  window.__QCALC_ANALYTICS = boot.analytics
   // the window can grow past the bar's sides for the 420 smoke
   window.__QCALC_SMOKE_ROOM = true
   window.__QCALC_KEYS = []
@@ -58,12 +60,6 @@
       e.preventDefault()
       e.stopPropagation()
       send({ type: 'dismiss' })
-      return
-    }
-    if (e.key === ',' && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
-      e.preventDefault()
-      e.stopPropagation()
-      send({ type: 'openSettings' })
       return
     }
     var field = document.querySelector('.quick-plain')

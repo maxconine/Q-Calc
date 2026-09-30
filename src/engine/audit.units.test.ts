@@ -295,10 +295,10 @@ describe('audit: energy, power, pressure, force', () => {
     ['1 J/s to W', 1],
   ])
 
-  it('mass times acceleration is a force, force times distance is energy', () => {
+  it('mass times acceleration is a force, force times distance is a moment (N·m, the same size as J)', () => {
     expectQty('10 kg * 9.8 m/s^2', 98, 'N')
-    expectQty('5 N * 2 m', 10, 'J')
-    expectQty('1 kWh / 1 hr', 1000, 'W')
+    expectQty('5 N * 2 m', 10, 'N·m')
+    expectQty('1 kWh / 1 hr', 1, 'kW')
   })
 })
 

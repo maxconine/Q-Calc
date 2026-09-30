@@ -30,7 +30,12 @@ pub struct Settings {
     pub theme: String,
     pub typst_preview: bool,
     pub typst_copy: bool,
+    pub share_usage: bool,
+    // the page's own shortcuts, overrides only; "" is an action left without a key. the page checks the chords
+    pub keybinds: BTreeMap<String, String>,
 }
+
+const KEY_ACTIONS: [&str; 7] = ["settings", "copyAnswer", "copyLine", "angle", "fraction", "sigFigs", "clear"];
 
 impl Default for Settings {
     fn default() -> Self {
@@ -49,6 +54,8 @@ impl Default for Settings {
             theme: "system".into(),
             typst_preview: false,
             typst_copy: false,
+            share_usage: true,
+            keybinds: BTreeMap::new(),
         }
     }
 }
@@ -73,6 +80,7 @@ impl Settings {
         flag("keepWords", &mut self.keep_words);
         flag("typstPreview", &mut self.typst_preview);
         flag("typstCopy", &mut self.typst_copy);
+        flag("shareUsage", &mut self.share_usage);
         if let Some(s) = v["angleMode"].as_str() {
             if s == "deg" || s == "rad" {
                 self.angle_mode = s.into();
@@ -102,6 +110,13 @@ impl Settings {
             self.default_units = units
                 .iter()
                 .filter_map(|(dim, id)| id.as_str().filter(|id| !id.is_empty()).map(|id| (dim.clone(), id.to_string())))
+                .collect();
+        }
+        if let Some(binds) = v["keybinds"].as_object() {
+            self.keybinds = binds
+                .iter()
+                .filter(|(action, _)| KEY_ACTIONS.contains(&action.as_str()))
+                .filter_map(|(action, chord)| chord.as_str().map(|c| (action.clone(), c.to_lowercase())))
                 .collect();
         }
         *self != before
@@ -139,12 +154,14 @@ impl Onboarding {
 #[serde(rename_all = "camelCase")]
 pub struct Store {
     pub settings: Settings,
-    // the preset the user picked; what actually got registered is kept by the host
+    // the show / hide chord the user picked; what actually got registered is kept by the host
     pub hotkey: String,
     pub onboarding: Onboarding,
     pub first_run_done: bool,
     // per monitor: the composer's top-left from the work area's top-left, in logical pixels
     pub positions: BTreeMap<String, [f64; 2]>,
+    // the page's usage counts (lib/analytics), kept as it sent them; null when sharing is off
+    pub analytics: Value,
 }
 
 impl Store {
@@ -156,6 +173,7 @@ impl Store {
         store.onboarding.merge(&v["onboarding"]);
         store.hotkey = v["hotkey"].as_str().unwrap_or_default().to_string();
         store.first_run_done = v["firstRunDone"].as_bool().unwrap_or(false);
+        store.analytics = v["analytics"].clone();
         if let Some(all) = v["positions"].as_object() {
             for (key, pair) in all {
                 if let (Some(x), Some(y)) = (pair[0].as_f64(), pair[1].as_f64()) {
@@ -201,9 +219,22 @@ mod tests {
                 "angleMode": "deg", "fractionMode": false, "sigFigMode": false, "rationalize": true,
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 12, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
-                "typstPreview": false, "typstCopy": false
+                "typstPreview": false, "typstCopy": false, "shareUsage": true, "keybinds": {}
             })
         );
+    }
+
+    #[test]
+    fn keybinds_keep_known_actions_and_empty_keys() {
+        let mut s = Settings::default();
+        assert!(s.merge(&json!({ "keybinds": { "angle": "Ctrl+Alt+R", "clear": "", "show": "ctrl+k", "nope": "ctrl+x", "fraction": 3 } })));
+        assert_eq!(
+            s.keybinds,
+            BTreeMap::from([("angle".to_string(), "ctrl+alt+r".to_string()), ("clear".to_string(), String::new())])
+        );
+        assert!(!s.merge(&json!({ "theme": "system" })));
+        assert!(s.merge(&json!({ "keybinds": {} })));
+        assert!(s.keybinds.is_empty());
     }
 
     #[test]
@@ -250,7 +281,8 @@ mod tests {
         let mut store = Store::default();
         store.settings.merge(&json!({ "sigFigs": 9, "theme": "light", "defaultUnits": { "length": "m" } }));
         store.onboarding.merge(&json!({ "opens": 3, "hints": 512 }));
-        store.hotkey = "ctrl-space".into();
+        store.hotkey = "ctrl+shift+k".into();
+        store.settings.merge(&json!({ "keybinds": { "angle": "ctrl+alt+r" } }));
         store.positions.insert("\\\\.\\DISPLAY2".into(), [120.5, 300.0]);
         assert!(store.claim_first_run());
         assert!(!store.claim_first_run());

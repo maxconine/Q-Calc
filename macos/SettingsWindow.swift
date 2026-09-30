@@ -1,11 +1,11 @@
 import AppKit
+import Carbon
 import SwiftUI
 
 struct GeneralSettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject private var updates = Updates.shared
-    // the preset macos just refused, so the row can say why nothing changed
-    @State private var refusedHotKey: HotKeyPreset?
+    @State private var choosingKeys = false
 
     private static let draftChoices: [(title: String, seconds: Int)] = [
         ("Don’t keep", 0),
@@ -18,17 +18,18 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker(selection: hotKeyBinding) {
-                    ForEach(HotKeyPreset.all, id: \.id) { preset in
-                        Text(preset.title).tag(preset.id)
-                    }
+                LabeledContent {
+                    Button("Choose Keybinds…") { choosingKeys = true }
                 } label: {
-                    Text("Keyboard shortcut")
-                    if let refusedHotKey {
-                        Text("\(refusedHotKey.title) is in use by macOS")
-                    } else if settings.hotKeyFailed {
-                        Text("Your shortcut is in use by macOS")
+                    Text("Keybinds")
+                    if settings.hotKeyFailed {
+                        Text("Your show / hide shortcut is in use by macOS")
+                    } else {
+                        Text("Show / hide with \((settings.activeHotKey ?? settings.hotKey).title)")
                     }
+                }
+                .sheet(isPresented: $choosingKeys) {
+                    KeybindsSheet(settings: settings)
                 }
                 Picker("Appearance", selection: bind(\.theme, AppSettings.setTheme(_:notifyWeb:))) {
                     Text("System").tag("system")
@@ -52,6 +53,7 @@ struct GeneralSettingsView: View {
                         Text(choice.title).tag(choice.seconds)
                     }
                 }
+                toggle("Share anonymous usage", "Counts of which features get used, never what you type", \.shareUsage, AppSettings.setShareUsage(_:notifyWeb:))
                 if updates.enabled {
                     Toggle(isOn: $updates.automatic) {
                         Text("Update automatically")
@@ -66,13 +68,15 @@ struct GeneralSettingsView: View {
                     Text("Radians").tag("rad")
                 } label: {
                     Text("Angles")
-                    Text("Switch with ⌃D")
+                    if !keyTitle("angle").isEmpty {
+                        Text("Switch with \(keyTitle("angle"))")
+                    }
                 }
                 Picker("Answer form", selection: bind(\.answerForm, AppSettings.setAnswerForm(_:notifyWeb:))) {
                     Text("Exact").tag("exact")
                     Text("Approximate").tag("approx")
                 }
-                toggle("Fractions", "Show answers as fractions · ⌃F", \.fractionMode, AppSettings.setFractionMode(_:notifyWeb:))
+                toggle("Fractions", withKey("Show answers as fractions", "fraction"), \.fractionMode, AppSettings.setFractionMode(_:notifyWeb:))
                 toggle("Rationalize denominators", "5/√41 becomes 5√41/41", \.rationalize, AppSettings.setRationalize(_:notifyWeb:))
                 toggle("Keep typed words as text", "sqrt stays sqrt, not √", \.keepWords, AppSettings.setKeepWords(_:notifyWeb:))
                 toggle("Typst preview", "Show the calculation typeset under the bar", \.typstPreview, AppSettings.setTypstPreview(_:notifyWeb:))
@@ -85,7 +89,7 @@ struct GeneralSettingsView: View {
                         Text("\(n)").tag(n)
                     }
                 }
-                toggle("Propagate from input", "Match the precision you typed · ⌃S", \.sigFigMode, AppSettings.setSigFigMode(_:notifyWeb:))
+                toggle("Propagate from input", withKey("Match the precision you typed", "sigFigs"), \.sigFigMode, AppSettings.setSigFigMode(_:notifyWeb:))
             }
         }
         .formStyle(.grouped)
@@ -97,14 +101,13 @@ struct GeneralSettingsView: View {
         return Self.draftChoices + [("\(current) seconds", current)]
     }
 
-    private var hotKeyBinding: Binding<String> {
-        Binding(
-            get: { (settings.activeHotKey ?? settings.hotKey).id },
-            set: { id in
-                let preset = HotKeyPreset.named(id)
-                refusedHotKey = QCalc.delegate.selectHotKey(preset) ? nil : preset
-            }
-        )
+    private func keyTitle(_ action: String) -> String {
+        KeyActions.title(KeyActions.chord(action, in: settings.keybinds))
+    }
+
+    private func withKey(_ detail: String, _ action: String) -> String {
+        let key = keyTitle(action)
+        return key.isEmpty ? detail : "\(detail) · \(key)"
     }
 
     // every row writes through AppSettings, which tells the web view; the web view's own changes land here through @Published
@@ -124,6 +127,155 @@ struct GeneralSettingsView: View {
         Toggle(isOn: bind(value, set)) {
             Text(title)
             Text(detail)
+        }
+    }
+}
+
+// a row per action; clicking a row's key listens for the next chord pressed. same rules as the page's KeybindSettings
+struct KeybindsSheet: View {
+    @ObservedObject var settings: AppSettings
+    @Environment(\.dismiss) private var dismiss
+    @State private var recording: String?
+    @State private var note = ""
+    @State private var monitor: Any?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Keybinds").font(.headline)
+            Text(hint)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Form {
+                ForEach(KeyActions.all, id: \.id) { action in
+                    LabeledContent(action.label) {
+                        HStack(spacing: 6) {
+                            if chord(action.id) != KeyActions.defaults[action.id] {
+                                Button {
+                                    pick(action.id, KeyActions.defaults[action.id] ?? "")
+                                } label: {
+                                    Image(systemName: "arrow.uturn.backward")
+                                }
+                                .buttonStyle(.borderless)
+                                .help("Back to \(KeyActions.title(KeyActions.defaults[action.id] ?? ""))")
+                            }
+                            Button {
+                                toggleRecording(action.id)
+                            } label: {
+                                Text(buttonTitle(action.id))
+                                    .frame(minWidth: 96)
+                                    .foregroundStyle(recording == action.id ? Color.accentColor : .primary)
+                            }
+                        }
+                    }
+                }
+            }
+            .formStyle(.grouped)
+            HStack {
+                Button("Reset All", action: resetAll).disabled(!changed)
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 460)
+        .onDisappear { stopRecording() }
+    }
+
+    private var hint: String {
+        if !note.isEmpty { return note }
+        if recording != nil { return "Press the new keys. Esc cancels, ⌫ leaves it without a key." }
+        return "Click a shortcut, then press the keys you want."
+    }
+
+    private var showChord: String { (settings.activeHotKey ?? settings.hotKey).id }
+
+    // the global shortcut counts for conflicts too
+    private var allBinds: [String: String] {
+        var binds = settings.keybinds
+        binds["show"] = showChord
+        return binds
+    }
+
+    private var changed: Bool { !settings.keybinds.isEmpty || showChord != GlobalHotKey.standard.id }
+
+    private func chord(_ action: String) -> String {
+        action == "show" ? showChord : KeyActions.chord(action, in: settings.keybinds)
+    }
+
+    private func buttonTitle(_ action: String) -> String {
+        if recording == action { return "Press keys…" }
+        let title = KeyActions.title(chord(action))
+        return title.isEmpty ? "None" : title
+    }
+
+    private func toggleRecording(_ action: String) {
+        let again = recording == action
+        stopRecording()
+        note = ""
+        guard !again else { return }
+        recording = action
+        if action == "show" { QCalc.delegate.pauseHotKey(true) }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            handle(event)
+        }
+    }
+
+    private func stopRecording() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+        if recording == "show" { QCalc.delegate.pauseHotKey(false) }
+        recording = nil
+    }
+
+    private func handle(_ event: NSEvent) -> NSEvent? {
+        guard let action = recording else { return event }
+        let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
+        if flags.isEmpty && event.keyCode == UInt16(kVK_Escape) {
+            stopRecording()
+            note = ""
+            return nil
+        }
+        if flags.isEmpty && (event.keyCode == UInt16(kVK_Delete) || event.keyCode == UInt16(kVK_ForwardDelete)) {
+            if action == "show" {
+                note = "Show / hide needs a key"
+            } else {
+                pick(action, "")
+            }
+            return nil
+        }
+        guard let chord = Chord(event: event) else { return nil }
+        if let why = KeyActions.problem(chord, for: action, binds: allBinds) {
+            note = why
+            return nil
+        }
+        pick(action, chord.text)
+        return nil
+    }
+
+    private func pick(_ action: String, _ chord: String) {
+        stopRecording()
+        note = ""
+        if action == "show" {
+            guard let next = GlobalHotKey(chord) else { return }
+            if !QCalc.delegate.selectHotKey(next) { note = "\(next.title) is in use by macOS" }
+            return
+        }
+        var binds = settings.keybinds
+        if chord == KeyActions.defaults[action] {
+            binds.removeValue(forKey: action)
+        } else {
+            binds[action] = chord
+        }
+        settings.setKeybinds(binds, notifyWeb: true)
+    }
+
+    private func resetAll() {
+        stopRecording()
+        note = ""
+        settings.setKeybinds([:], notifyWeb: true)
+        if showChord != GlobalHotKey.standard.id, !QCalc.delegate.selectHotKey(.standard) {
+            note = "\(GlobalHotKey.standard.title) is in use by macOS"
         }
     }
 }

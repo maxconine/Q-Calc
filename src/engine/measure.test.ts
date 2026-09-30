@@ -246,7 +246,7 @@ describe('a typed ± shows as written', () => {
     expect(pm('(10.0 ± 0.2) * (2.0 ± 0.1)')).toBe('20.0 ± 1.4')
     expect(pm('(5.0 ± 0.1) * 10')).toBe('50.0 ± 1.0')
     expect(pm('(5.0 ± 0.1) + 0')).toBe('5.00 ± 0.10')
-    expect(pm('(5.0 ± 0.1 m) * 10 s')).toBe('50.0 ± 1.0 m s')
+    expect(pm('(5.0 ± 0.1 m) * 10 s')).toBe('50.0 ± 1.0 m·s')
     expect(pm('100 ± 1%')).toBe('100.0 ± 1.0')
     // 0.1 ft is 1.2 in: new digits, so the rule applies
     expect(pm('5.0 ± 0.1 ft to in')).toBe('60.0 ± 1.2 in')

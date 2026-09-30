@@ -4,6 +4,7 @@ import { nativeWindow } from '../lib/bridge'
 import type { Span } from '../lib/blankReason'
 import { completionFor, type CompletionNames } from '../lib/completion'
 import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/bounds'
+import { chainedExpr } from '../lib/chain'
 import { copyText, inputHighlight, keepEndInView, searchBarCopy } from '../lib/dom'
 import { knownWordSpans } from '../lib/knownWords'
 import { cleanPastedText } from '../lib/paste'
@@ -107,6 +108,26 @@ export function spliceText(
   const a = Math.max(0, Math.min(start, value.length))
   const b = Math.max(a, Math.min(end, value.length))
   return { next: value.slice(0, a) + chunk + value.slice(b), cursor: a + chunk.length }
+}
+
+const bracketsEven = (s: string) => (s.match(/\[/g)?.length ?? 0) === (s.match(/\]/g)?.length ?? 0)
+
+// `[` brings its `]` along, a typed `]` steps over the one already there, and backspace in `[]` takes both;
+// only while the brackets pair up, and not in front of text a `[` would swallow
+export function bracketKey(text: string, start: number, end: number, key: string): Edit | null {
+  if (start !== end) return null
+  const next = text[start]
+  if (key === '[') {
+    if (next != null && !/[\s\]),;]/.test(next)) return null
+    if (!bracketsEven(text)) return null
+    return { text: text.slice(0, start) + '[]' + text.slice(start), caret: start + 1 }
+  }
+  if (key === ']') return next === ']' && bracketsEven(text) ? { text, caret: start + 1 } : null
+  if (key === 'Backspace') {
+    if (text[start - 1] !== '[' || next !== ']' || !bracketsEven(text)) return null
+    return { text: text.slice(0, start - 1) + text.slice(start + 1), caret: start - 1 }
+  }
+  return null
 }
 
 function replaceTokens(text: string, keepTrailing: boolean, keepWords: boolean): string {
@@ -424,6 +445,19 @@ export function QuickInput({
         return
       }
     }
+    // alt can be part of typing `[` on some layouts
+    if (!e.metaKey && !e.ctrlKey && !e.nativeEvent.isComposing && (e.key === '[' || e.key === ']' || (e.key === 'Backspace' && !e.altKey && !e.shiftKey))) {
+      const edit = bracketKey(el.value, el.selectionStart ?? el.value.length, el.selectionEnd ?? el.value.length, e.key)
+      if (edit) {
+        e.preventDefault()
+        if (edit.text === el.value) applyEdit(el, edit)
+        else {
+          editKindRef.current = e.key === 'Backspace' ? 'delete' : 'insert'
+          commit(edit.text, edit.caret)
+        }
+        return
+      }
+    }
     if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && !e.altKey) {
       // tab never moves focus out of the input; it cycles the answer's forms
       e.preventDefault()
@@ -453,6 +487,14 @@ export function QuickInput({
     if (e.key !== 'ArrowRight' || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return
     const start = el.selectionStart ?? 0
     const end = el.selectionEnd ?? start
+    // → at the end of a chain writes its faint `ans` into the text
+    if (chain && start === end && end === el.value.length) {
+      e.preventDefault()
+      // `+ 2` reads `ans + 2`, `+2` reads `ans+2`
+      const next = /^\s*\S\s/.test(el.value) ? `ans ${el.value.trimStart()}` : chainedExpr(el.value)
+      commit(next, next.length)
+      return
+    }
     const filled = autofillParens(el.value, start, end)
     if (!filled) return
     e.preventDefault()

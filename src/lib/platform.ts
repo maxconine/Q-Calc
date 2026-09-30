@@ -13,12 +13,6 @@ export function commandHeld(e: Modifiers, windows = isWindowsHost()): boolean {
   return windows ? e.ctrlKey && !e.metaKey : e.metaKey && !e.ctrlKey
 }
 
-// ⌃C on the mac; windows keeps ctrl+c for copy, so clearing moves to ctrl+shift+backspace
-export function isClearHistoryKey(e: Modifiers, windows = isWindowsHost()): boolean {
-  if (e.altKey || e.metaKey || !e.ctrlKey) return false
-  return windows ? e.shiftKey && e.key === 'Backspace' : !e.shiftKey && e.key.toLowerCase() === 'c'
-}
-
 const WINDOWS_TEXT = new Map([[HOTKEY_FAILED_HINT, 'shortcut in use by another app · change it from the tray']])
 const WINDOWS_MODIFIERS: Array<[glyphs: string, name: string]> = [
   ['⌘⌃', 'Ctrl'],

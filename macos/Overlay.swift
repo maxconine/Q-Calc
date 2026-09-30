@@ -16,12 +16,6 @@ private func isCommandVPasteKey(_ event: NSEvent) -> Bool {
     return event.charactersIgnoringModifiers?.lowercased() == "v"
 }
 
-private func isCommandCommaKey(_ event: NSEvent) -> Bool {
-    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-    return flags.intersection([.command, .option, .control, .shift]) == .command
-        && event.charactersIgnoringModifiers == ","
-}
-
 private func copyToPasteboard(_ text: String) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
@@ -247,8 +241,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 overControl = dict["on"] as? Bool ?? false
             case "settings":
                 applyWebSettings(dict)
+            case "openSettings":
+                onSettings?()
             case "onboarding":
                 applyWebOnboarding(dict)
+            case "analytics":
+                AppSettings.shared.saveAnalytics(dict["stash"])
             case "eval":
                 pushSoulverResult(soulverPayload(from: dict))
             case "periodic":
@@ -332,6 +330,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let settings = settingsJavaScriptObject()
         let theme = AppSettings.shared.theme
         let onboarding = AppSettings.shared.onboardingJSON()
+        let analytics = AppSettings.shared.analyticsJSON()
+        let os = ProcessInfo.processInfo.operatingSystemVersion
         let boot = WKUserScript(
             source: """
             window.__QCALC_NATIVE = true;
@@ -342,6 +342,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_META = false;
             window.__QCALC_SETTINGS = \(settings);
             window.__QCALC_ONBOARDING = \(onboarding);
+            window.__QCALC_ANALYTICS = \(analytics);
+            window.__QCALC_OS = "macOS \(os.majorVersion).\(os.minorVersion)";
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
               window.dispatchEvent(new CustomEvent('qcalc-soulver', { detail: reply }));
@@ -717,10 +719,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 self.pasteIntoWeb()
                 return nil
             }
-            if isCommandCommaKey(event), event.window === self.panel {
-                self.onSettings?()
-                return nil
-            }
+            // the settings key is the user's choice now, so the page reads it and posts openSettings
             return event
         }
     }
@@ -868,17 +867,20 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let keepWords = AppSettings.shared.keepWords ? "true" : "false"
         let typstPreview = AppSettings.shared.typstPreview ? "true" : "false"
         let typstCopy = AppSettings.shared.typstCopy ? "true" : "false"
+        let shareUsage = AppSettings.shared.shareUsage ? "true" : "false"
         let theme = AppSettings.shared.theme
         let angle = AppSettings.shared.angleMode
         let fractions = AppSettings.shared.fractionMode ? "true" : "false"
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), \(hotKeyJavaScriptFields()) }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), shareUsage: \(shareUsage), keybinds: \(AppSettings.shared.keybindsJSON()), \(hotKeyJavaScriptFields()) }"
     }
 
-    // titles are fixed preset strings, so they need no escaping
+    // a chosen key can be \ or ', so the title goes through json
     private func hotKeyJavaScriptFields() -> String {
         let title = AppSettings.shared.activeHotKey?.title ?? ""
+        let data = (try? JSONSerialization.data(withJSONObject: [title], options: [])) ?? Data("[\"\"]".utf8)
+        let quoted = String(data: data, encoding: .utf8).map { String($0.dropFirst().dropLast()) } ?? "\"\""
         let failed = AppSettings.shared.hotKeyFailed ? "true" : "false"
-        return "hotkey: \"\(title)\", hotkeyFailed: \(failed)"
+        return "hotkey: \(quoted), hotkeyFailed: \(failed)"
     }
 
     private func applyWebAppearance(_ webView: WKWebView? = nil) {
@@ -906,6 +908,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if let typstCopy = boolValue(dict["typstCopy"]) {
             AppSettings.shared.setTypstCopy(typstCopy, notifyWeb: false)
         }
+        if let shareUsage = boolValue(dict["shareUsage"]) {
+            AppSettings.shared.setShareUsage(shareUsage, notifyWeb: false)
+        }
         if let fractions = boolValue(dict["fractionMode"]) {
             AppSettings.shared.setFractionMode(fractions, notifyWeb: false)
         }
@@ -926,6 +931,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let units = dict["defaultUnits"] as? [String: Any] {
             AppSettings.shared.replaceDefaultUnits(units.compactMapValues { $0 as? String }, notifyWeb: false)
+        }
+        if let binds = dict["keybinds"] as? [String: Any] {
+            AppSettings.shared.setKeybinds(binds.compactMapValues { $0 as? String }, notifyWeb: false)
         }
         // theme changes the panel's own appearance, so it goes through the full notify
         if let theme = dict["theme"] as? String {

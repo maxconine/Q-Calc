@@ -86,22 +86,19 @@ describe('windows shim', () => {
   it('waits for the <html> element webview2 hasn’t made yet, and still wires up the keys', () => {
     const { root, classes, sent, fire, addRoot } = boot(true, undefined, true)
     expect(root.dataset.host).toBeUndefined()
-    expect(fire('keydown', { key: ',', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })).toBe(true)
-    expect(sent).toEqual([['host', { type: 'openSettings' }]])
+    expect(fire('keydown', { key: 'Escape' })).toBe(true)
+    expect(sent).toEqual([['host', { type: 'dismiss' }]])
     addRoot()
     expect(root.dataset.host).toBe('windows')
     expect(root.dataset.theme).toBe('dark')
     expect(classes).toContain('quick-native')
   })
 
-  it('esc hides, ctrl+comma opens settings', () => {
+  it('esc hides; the settings key is the page’s, since the user picks it', () => {
     const { sent, fire } = boot(true)
     expect(fire('keydown', { key: 'Escape' })).toBe(true)
-    expect(fire('keydown', { key: ',', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })).toBe(true)
-    expect(sent).toEqual([
-      ['host', { type: 'dismiss' }],
-      ['host', { type: 'openSettings' }],
-    ])
+    fire('keydown', { key: ',', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })
+    expect(sent).toEqual([['host', { type: 'dismiss' }]])
   })
 
   it('a double click on the top edge recentres; one lower down does not', () => {

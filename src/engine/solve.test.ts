@@ -151,12 +151,17 @@ describe('solve: not a solve', () => {
     [91, 'x^2', {}],
     [92, 'solve', {}],
     [92, 'solve ', {}],
-    [93, 'x^2 = a for x', {}],
   ]
   it.each(blanks)('%i: %s is blank', (_n, text, opts) => {
     const r = line(text, opts)
     expect(r.kind).not.toBe('solve')
     expect(r.display).toBe('')
+  })
+
+  it('93: x^2 = a for x has another letter, so x is isolated instead of solved', () => {
+    const r = line('x^2 = a for x')
+    expect(r.kind).not.toBe('solve')
+    expect(r.display).toBe('x = ±sqrt(a)')
   })
 
   it('76: xy = 6 stays what it was (an assignment to xy)', () => {

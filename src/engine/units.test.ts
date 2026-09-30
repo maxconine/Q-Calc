@@ -3,7 +3,7 @@ import { expectQty, shown } from './audit.helpers'
 import { evaluateLine, evaluateSheet } from './evaluate'
 import { formatValue } from './format'
 import type { Value } from './types'
-import { inLadderUnit, sanitizeDefaultUnits, stepPrefix, tryConvert, UNIT_SETTING_GROUPS } from './units'
+import { inLadderUnit, sanitizeDefaultUnits, siQuantity, stepPrefix, tryConvert, UNIT_SETTING_GROUPS } from './units'
 
 type Case = {
   name: string
@@ -11,12 +11,19 @@ type Case = {
   expected: number
   eps?: number
   unit?: string | RegExp
+  /** Compare the answer as an SI amount, whatever unit it is shown in (it follows the units typed). */
+  inSi?: boolean
+}
+
+function asSi(v: Value | undefined): number | undefined {
+  if (v?.kind !== 'number' || !v.unit) return v?.n
+  return siQuantity(`${v.n} ${v.unit}`)?.si ?? v.n
 }
 
 function run(c: Case): void {
   const r = evaluateLine(c.input)
   const label = `${c.input} → ${r.display}`
-  const actual = r.value?.n
+  const actual = c.inSi ? asSi(r.value) : r.value?.n
   expect(actual, label).toEqual(expect.any(Number))
   const eps = c.eps ?? 1e-8
   expect(Math.abs(actual! - c.expected), `${label} (expected ${c.expected})`).toBeLessThan(eps)
@@ -1051,12 +1058,12 @@ compat('Pressure, stress & fluid dynamics', [
   { name: '100 Newton / 2 meter^2', input: '100 Newton / 2 meter^2', expected: 50, unit: 'Pa' },
   { name: '1000 PoundForce / 1 Inch^2 to ksi', input: '1000 PoundForce / 1 Inch^2 to ksi', expected: 1, unit: 'ksi' },
   { name: '1 ksi to PSI', input: '1 ksi to PSI', expected: 1000, unit: /PSI|psi/i },
-  { name: '1 bar * 1 meter^2', input: '1 bar * 1 meter^2', expected: 1e5, unit: 'N' },
+  { name: '1 bar * 1 meter^2', input: '1 bar * 1 meter^2', inSi: true, expected: 1e5, unit: 'N' },
   { name: '1 atmosphere * 1 foot^2 to Lbf', input: '1 atmosphere * 1 foot^2 to Lbf', expected: (101325 * FT * FT) / LBF, unit: /Lbf/i },
-  { name: '10 kg / 1 liter', input: '10 kg / 1 liter', expected: 10000, unit: /kg \/ m/ },
+  { name: '10 kg / 1 liter', input: '10 kg / 1 liter', inSi: true, expected: 10000, unit: 'kg/L' },
   { name: '1 Lbm / 1 Gallon to kg/l', input: '1 Lbm / 1 Gallon to kg / liter', expected: LB / US_GAL },
   { name: '1 Slug / 1 Foot^3 to kg/m^3', input: '1 Slug / 1 Foot^3 to kg / m^3', expected: SLUG / (FT ** 3) },
-  { name: '1 gram / 1 cc', input: '1 gram / 1 cc', expected: 1000, unit: /kg \/ m/ },
+  { name: '1 gram / 1 cc', input: '1 gram / 1 cc', inSi: true, expected: 1000, unit: /kg \/ m/ },
   { name: '100 Pascal * 5 meter^3', input: '100 Pascal * 5 meter^3', expected: 500, unit: 'J' },
   { name: '1 PSI * 1 Gallon to Joule', input: '1 PSI * 1 Gallon to Joule', expected: 6894.757293168361 * US_GAL * 0.001, unit: 'Joule' },
 ])
@@ -1064,10 +1071,10 @@ compat('Pressure, stress & fluid dynamics', [
 compat('Electromagnetism', [
   { name: '2 amp * 10 Ohm', input: '2 amp * 10 Ohm', expected: 20, unit: 'V' },
   { name: '12 Volt / 4 Ohm', input: '12 Volt / 4 Ohm', expected: 3, unit: 'A' },
-  { name: '120 Volt * 10 amp', input: '120 Volt * 10 amp', expected: 1200, unit: 'W' },
+  { name: '120 Volt * 10 amp', input: '120 Volt * 10 amp', inSi: true, expected: 1200, unit: 'kW' },
   { name: '5 amp * 30 second', input: '5 amp * 30 second', expected: 150, unit: 'C' },
-  { name: '0.5 * 10 microfarad * (12 Volt)^2', input: '0.5 * 10 microfarad * (12 Volt)^2', expected: 0.00072, unit: 'J' },
-  { name: '0.5 * 2 millihenry * (5 amp)^2', input: '0.5 * 2 millihenry * (5 amp)^2', expected: 0.025, unit: 'J' },
+  { name: '0.5 * 10 microfarad * (12 Volt)^2', input: '0.5 * 10 microfarad * (12 Volt)^2', inSi: true, expected: 0.00072, unit: 'J' },
+  { name: '0.5 * 2 millihenry * (5 amp)^2', input: '0.5 * 2 millihenry * (5 amp)^2', inSi: true, expected: 0.025, unit: 'J' },
   { name: '1 Coulomb * 10 Volt', input: '1 Coulomb * 10 Volt', expected: 10, unit: 'J' },
   { name: '100 Volt / 2 amp', input: '100 Volt / 2 amp', expected: 50, unit: /Ω|ohm/i },
   { name: '1 Farad * 1 Ohm', input: '1 Farad * 1 Ohm', expected: 1, unit: 's' },
@@ -1081,7 +1088,7 @@ compat('Quantum, relativistic & atomic physics', [
   { name: 'proton rest energy to eV', input: '1 protonRestMass * (1 speedOfLight)^2 to eV', expected: (1.007276466621 * AMU * C * C) / E, unit: /eV|MeV/ },
   { name: 'neutron rest energy to eV', input: '1 neutronRestMass * (1 speedOfLight)^2 to eV', expected: (1.00866491588 * AMU * C * C) / E, unit: /eV|MeV/ },
   { name: '100 eV / 1 electron', input: '100 eV / 1 electron', expected: 100, unit: 'V' },
-  { name: '1 MeV / 1 electron', input: '1 MeV / 1 electron', expected: 1e6, unit: 'V' },
+  { name: '1 MeV / 1 electron', input: '1 MeV / 1 electron', inSi: true, expected: 1e6, unit: 'MV' },
   { name: 'electron / proton mass ratio', input: '1 electronRestMass / 1 protonRestMass', expected: 9.1093837015e-31 / (1.007276466621 * AMU) },
   { name: '1 photon * 100 eV', input: '1 photon * 100 eV to Joule', expected: 100 * E },
   { name: '1 barn * 1 megabarrels', input: '1 barn * 1 megabarrels', expected: 1e-28 * 1e6 * OIL_BBL * 0.001, unit: /m\^5/ },
@@ -1091,7 +1098,7 @@ compat('Angular dynamics', [
   { name: '10 Newton * 2 meter', input: '10 Newton * 2 meter', expected: 20, unit: /N|J/ },
   { name: '100 Lbf * 2 Foot', input: '100 Lbf * 2 Foot to Foot * PoundForce', expected: 200 },
   { name: '10 N*m * 100 RPM', input: '10 N * m * 100 RPM', expected: 10 * 100 * ((2 * Math.PI) / 60), unit: 'W' },
-  { name: '1 HP / 1750 RPM', input: '1 HP / 1750 RPM', expected: HP / (1750 * ((2 * Math.PI) / 60)) },
+  { name: '1 HP / 1750 RPM', input: '1 HP / 1750 RPM', inSi: true, expected: HP / (1750 * ((2 * Math.PI) / 60)) },
   { name: '1 kg * m^2 * 10 rad/s^2', input: '1 kg * m^2 * 10 rad / s^2', expected: 10, unit: /N|J/ },
   { name: '2 Slug * Foot^2 * 5 rad/s', input: '2 Slug * Foot^2 * 5 rad / s to Slug * Foot^2 / s', expected: 10 },
   { name: '360 degree / 1 second to RPM', input: '360 degree / 1 second to RPM', expected: 60, unit: /RPM/i },
@@ -1101,15 +1108,15 @@ compat('Angular dynamics', [
 ])
 
 compat('Ideal gas law & thermodynamics', [
-  { name: '1 atmosphere * 22.414 liter', input: '1 atmosphere * 22.414 liter', expected: 101325 * 0.022414, unit: 'J' },
-  { name: '100 kPa * 1 meter^3', input: '100 kPa * 1 meter^3', expected: 1e5, unit: 'J' },
+  { name: '1 atmosphere * 22.414 liter', input: '1 atmosphere * 22.414 liter', inSi: true, expected: 101325 * 0.022414, unit: 'J' },
+  { name: '100 kPa * 1 meter^3', input: '100 kPa * 1 meter^3', inSi: true, expected: 1e5, unit: 'J' },
   { name: '1 BTU / 1 Lbm to J / kg', input: '1 BTU / 1 Lbm to Joule / kilogram', expected: BTU / LB },
-  { name: '1 calorie / 1 gram', input: '1 calorie / 1 gram', expected: 4184, unit: /Joule \/ kilogram|J \/ kg/i },
+  { name: '1 calorie / 1 gram', input: '1 calorie / 1 gram', inSi: true, expected: 4184, unit: /Joule \/ kilogram|J \/ kg/i },
   { name: '1 Therm / 1000 Gallon to Joule / milliliter', input: '1 Therm / 1000 Gallon to Joule / milliliter', expected: (1e5 * BTU) / (1000 * US_GAL * 1000) },
   { name: '1000 Watt * 1 hour to BTU', input: '1000 Watt * 1 hour to BTU', expected: 3.6e6 / BTU, unit: 'BTU' },
   { name: '1 HorsePower * 1 hour to BTU', input: '1 HorsePower * 1 hour to BTU', expected: (HP * 3600) / BTU, unit: 'BTU' },
-  { name: '1 calorie / 1 second', input: '1 calorie / 1 second', expected: 4.184, unit: 'W' },
-  { name: '1 BTU / 1 hour', input: '1 BTU / 1 hour', expected: BTU / 3600, unit: 'W' },
+  { name: '1 calorie / 1 second', input: '1 calorie / 1 second', inSi: true, expected: 4.184, unit: 'W' },
+  { name: '1 BTU / 1 hour', input: '1 BTU / 1 hour', inSi: true, expected: BTU / 3600, unit: 'BTU/hr' },
   { name: '1000 BTU / 1 minute to kilowatt', input: '1000 BTU / 1 minute to kilowatt', expected: (1000 * BTU) / 60 / 1000, unit: 'kilowatt' },
 ])
 
@@ -1155,7 +1162,7 @@ function cross(title: string, cases: Cross[]) {
       })
     }
     if (c.live !== false) {
-      live.push({ name: `${c.name} (Quick Calc)`, input: asTyped(c.expr), expected: c.si })
+      live.push({ name: `${c.name} (Quick Calc)`, input: asTyped(c.expr), expected: c.si, inSi: true })
     }
   }
   compat(title, out)
@@ -2264,7 +2271,7 @@ describe('bugfix batch: no silent wrong unit answers', () => {
     expect(d('10 J * 5 Hz')).toBe('50 W')
     expect(evaluateLine('120 RPM * 10 s').value?.n).toBeCloseTo(40 * Math.PI, 9)
     expect(evaluateLine('10 N * m * 100 RPM').value?.n).toBeCloseTo((10 * 100 * 2 * Math.PI) / 60, 9)
-    expect(d('100 km / 2 hr * 3 hr')).toBe('150000 m')
+    expect(d('100 km / 2 hr * 3 hr')).toBe('150 km')
   })
 
   it('multiplies a number by a parenthesized quantity', () => {
@@ -2285,7 +2292,8 @@ describe('bugfix batch: no silent wrong unit answers', () => {
   })
 
   it('carries units through variables and ans', () => {
-    expect(sheet('d = 5 cm', 'd * 2', 'd + 1 m')).toEqual(['1.96850393701 in', '3.93700787402 in', '41.3385826772 in'])
+    // metric in, metric out: the stored 5 cm is not its inch counterpart
+    expect(sheet('d = 5 cm', 'd * 2', 'd + 1 m')).toEqual(['5 cm', '10 cm', '105 cm'])
     expect(sheet('5 cm to cm', 'ans * 2')).toEqual(['5 cm', '10 cm'])
     expect(sheet('m = 2.0 ± 0.1 kg', 'm * 2')).toEqual(['2.0 ± 0.1 kg', '4.0 ± 0.2 kg'])
     // An offset temperature can't be scaled: blank, not a unit-less 44.4.

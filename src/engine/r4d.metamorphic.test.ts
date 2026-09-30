@@ -127,7 +127,8 @@ describe('a unit answer typed back in reads as the same quantity', () => {
   it('sq in and cu in end a line as units, while `5 kg in` still waits for its target', () => {
     expect(shown('5 sq in')).toBe('32.258 cm²')
     expect(shown('1 L to cu in')).toBe('61.0237440947 in³')
-    expect(run(['q = 10 sq in', 'q*2']).display).toBe('129.032 cm²')
+    // a stored 10 sq in stays square inches
+    expect(run(['q = 10 sq in', 'q*2']).display).toBe('20 in²')
     expect(shown('5 kg in')).toBe('')
   })
 })

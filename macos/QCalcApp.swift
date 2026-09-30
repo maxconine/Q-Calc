@@ -6,26 +6,6 @@ extension Notification.Name {
     static let qcalcSettingsChanged = Notification.Name("QCalc.settingsChanged")
 }
 
-// presets only: each is space plus modifiers
-struct HotKeyPreset: Equatable {
-    let id: String
-    let title: String
-    let carbonModifiers: UInt32
-    let menuModifiers: NSEvent.ModifierFlags
-
-    static let all: [HotKeyPreset] = [
-        HotKeyPreset(id: "ctrl-opt-space", title: "⌃⌥Space", carbonModifiers: UInt32(controlKey | optionKey), menuModifiers: [.control, .option]),
-        HotKeyPreset(id: "cmd-opt-space", title: "⌘⌥Space", carbonModifiers: UInt32(cmdKey | optionKey), menuModifiers: [.command, .option]),
-        HotKeyPreset(id: "ctrl-space", title: "⌃Space", carbonModifiers: UInt32(controlKey), menuModifiers: [.control]),
-        HotKeyPreset(id: "opt-space", title: "⌥Space", carbonModifiers: UInt32(optionKey), menuModifiers: [.option]),
-    ]
-    static let standard = all[0]
-
-    static func named(_ id: String?) -> HotKeyPreset {
-        all.first { $0.id == id } ?? standard
-    }
-}
-
 // carbon happily registers a combo macos already owns (spotlight, finder search, input sources),
 // and macos then wins, so check com.apple.symbolichotkeys first
 enum SystemShortcuts {
@@ -40,7 +20,7 @@ enum SystemShortcuts {
     ]
     private static let inputSourceIDs: Set<Int> = [60, 61]
 
-    static func claims(_ preset: HotKeyPreset) -> Bool {
+    static func claims(_ preset: GlobalHotKey) -> Bool {
         CFPreferencesAppSynchronize(domain)
         let table = CFPreferencesCopyAppValue("AppleSymbolicHotKeys" as CFString, domain) as? [String: Any] ?? [:]
         let want = preset.menuModifiers.rawValue & modifierMask
@@ -50,12 +30,13 @@ enum SystemShortcuts {
                   (entry["enabled"] as? Bool) == true,
                   let value = entry["value"] as? [String: Any],
                   let params = value["parameters"] as? [Int], params.count >= 3,
-                  params[1] == kVK_Space,
+                  params[1] == Int(preset.keyCode),
                   UInt(params[2]) & modifierMask == want
             else { continue }
             owners.append(id)
         }
-        for (id, flags) in spaceDefaults where table[String(id)] == nil && flags.rawValue == want {
+        let isSpace = preset.keyCode == UInt32(kVK_Space)
+        for (id, flags) in spaceDefaults where isSpace && table[String(id)] == nil && flags.rawValue == want {
             owners.append(id)
         }
         // the input source shortcuts only swallow the key when there is more than one source
@@ -90,7 +71,10 @@ final class AppSettings: ObservableObject {
     static let fractionModeKey = "qcalc.fractionMode"
     static let typstPreviewKey = "qcalc.typstPreview"
     static let typstCopyKey = "qcalc.typstCopy"
+    static let shareUsageKey = "qcalc.shareUsage"
+    static let analyticsKey = "qcalc.analytics"
     static let hotKeyKey = "qcalc.hotkey"
+    static let keybindsKey = "qcalc.keybinds"
     static let onboardingKey = "qcalc.onboarding"
     static let firstRunKey = "qcalc.firstRunDone"
     static let defaultSigFigs = 12
@@ -119,10 +103,13 @@ final class AppSettings: ObservableObject {
     @Published private(set) var fractionMode: Bool
     @Published private(set) var typstPreview: Bool
     @Published private(set) var typstCopy: Bool
+    @Published private(set) var shareUsage: Bool
     // what the user picked; activeHotKey is what actually got registered
-    @Published private(set) var hotKey: HotKeyPreset
-    @Published private(set) var activeHotKey: HotKeyPreset?
+    @Published private(set) var hotKey: GlobalHotKey
+    @Published private(set) var activeHotKey: GlobalHotKey?
     @Published private(set) var hotKeyFailed = false
+    // the page's own shortcuts, overrides only; "" is an action left without a key
+    @Published private(set) var keybinds: [String: String]
     // kept here because the web view's own storage does not persist
     private(set) var onboarding: [String: Int]
 
@@ -146,7 +133,9 @@ final class AppSettings: ObservableObject {
         fractionMode = UserDefaults.standard.bool(forKey: Self.fractionModeKey)
         typstPreview = UserDefaults.standard.bool(forKey: Self.typstPreviewKey)
         typstCopy = UserDefaults.standard.bool(forKey: Self.typstCopyKey)
-        hotKey = HotKeyPreset.named(UserDefaults.standard.string(forKey: Self.hotKeyKey))
+        shareUsage = UserDefaults.standard.object(forKey: Self.shareUsageKey) as? Bool ?? true
+        hotKey = GlobalHotKey.stored(UserDefaults.standard.string(forKey: Self.hotKeyKey))
+        keybinds = KeyActions.sanitize(UserDefaults.standard.dictionary(forKey: Self.keybindsKey) ?? [:])
         onboarding = Self.loadOnboarding()
     }
 
@@ -173,6 +162,23 @@ final class AppSettings: ObservableObject {
         UserDefaults.standard.set(next, forKey: Self.onboardingKey)
     }
 
+    // the page's usage counts (lib/analytics), kept as it sent them since its own storage doesn't last
+    func analyticsJSON() -> String {
+        guard shareUsage, let stored = UserDefaults.standard.string(forKey: Self.analyticsKey) else { return "null" }
+        return stored
+    }
+
+    func saveAnalytics(_ stash: Any?) {
+        guard shareUsage, let stash, !(stash is NSNull),
+              let data = try? JSONSerialization.data(withJSONObject: stash, options: []),
+              let json = String(data: data, encoding: .utf8)
+        else {
+            UserDefaults.standard.removeObject(forKey: Self.analyticsKey)
+            return
+        }
+        UserDefaults.standard.set(json, forKey: Self.analyticsKey)
+    }
+
     func onboardingJSON() -> String {
         let data = (try? JSONSerialization.data(withJSONObject: onboarding, options: [])) ?? Data("{}".utf8)
         return String(data: data, encoding: .utf8) ?? "{}"
@@ -185,12 +191,25 @@ final class AppSettings: ObservableObject {
         return true
     }
 
-    func setHotKey(_ preset: HotKeyPreset) {
+    func setHotKey(_ preset: GlobalHotKey) {
         hotKey = preset
         UserDefaults.standard.set(preset.id, forKey: Self.hotKeyKey)
     }
 
-    func setHotKeyState(active: HotKeyPreset?, failed: Bool) {
+    func setKeybinds(_ value: [String: String], notifyWeb: Bool) {
+        let clean = KeyActions.sanitize(value)
+        guard clean != keybinds else { return }
+        keybinds = clean
+        UserDefaults.standard.set(clean, forKey: Self.keybindsKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func keybindsJSON() -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: keybinds, options: [.sortedKeys])) ?? Data("{}".utf8)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    func setHotKeyState(active: GlobalHotKey?, failed: Bool) {
         guard active != activeHotKey || failed != hotKeyFailed else { return }
         activeHotKey = active
         hotKeyFailed = failed
@@ -346,6 +365,14 @@ final class AppSettings: ObservableObject {
         if notifyWeb { notifySettingsChanged() }
     }
 
+    func setShareUsage(_ value: Bool, notifyWeb: Bool) {
+        guard value != shareUsage else { return }
+        shareUsage = value
+        UserDefaults.standard.set(value, forKey: Self.shareUsageKey)
+        if !value { UserDefaults.standard.removeObject(forKey: Self.analyticsKey) }
+        if notifyWeb { notifySettingsChanged() }
+    }
+
     // for the overlay and settings windows only, not NSApp, so the menu bar icon stays a template
     var nsAppearance: NSAppearance? {
         switch theme {
@@ -463,11 +490,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func buildStatusMenu(_ menu: NSMenu) {
         let active = AppSettings.shared.activeHotKey
-        let quick = NSMenuItem(title: "Show Q Calc", action: #selector(showQuickCalc), keyEquivalent: active == nil ? "" : " ")
+        let quick = NSMenuItem(title: "Show Q Calc", action: #selector(showQuickCalc), keyEquivalent: active?.menuKey ?? "")
         quick.keyEquivalentModifierMask = active?.menuModifiers ?? []
         quick.target = self
         menu.addItem(quick)
-        let settings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: ",")
+        // the key the user chose for settings, shown beside the item
+        let settingsKey = GlobalHotKey(KeyActions.chord("settings", in: AppSettings.shared.keybinds))
+        let settings = NSMenuItem(title: "Settings…", action: #selector(showSettings), keyEquivalent: settingsKey?.menuKey ?? "")
+        settings.keyEquivalentModifierMask = settingsKey?.menuModifiers ?? []
         settings.target = self
         menu.addItem(settings)
         let tips = NSMenuItem(title: "Tips…", action: #selector(showTips), keyEquivalent: "")
@@ -494,9 +524,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // false when macos or carbon refused the preset; the previous one stays bound
     @discardableResult
-    func selectHotKey(_ next: HotKeyPreset) -> Bool {
+    func selectHotKey(_ next: GlobalHotKey) -> Bool {
         let previous = AppSettings.shared.activeHotKey
         if next == previous {
+            if hotKeyRef == nil { _ = bindHotKey(next) }
             AppSettings.shared.setHotKey(next)
             AppSettings.shared.setHotKeyState(active: next, failed: false)
             return true
@@ -512,6 +543,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             AppSettings.shared.setHotKeyState(active: nil, failed: true)
         }
         return false
+    }
+
+    // while the settings window records a new show / hide key, the old one mustn't swallow the press
+    func pauseHotKey(_ paused: Bool) {
+        if paused {
+            unbindHotKey()
+        } else if hotKeyRef == nil, let active = AppSettings.shared.activeHotKey {
+            _ = bindHotKey(active)
+        }
     }
 
     @objc func showSettings() {
@@ -536,7 +576,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         NSLog("Q Calc: %@ is in use by macOS", preferred.title)
-        let fallback = HotKeyPreset.standard
+        let fallback = GlobalHotKey.standard
         if preferred != fallback, !SystemShortcuts.claims(fallback), bindHotKey(fallback) {
             AppSettings.shared.setHotKeyState(active: fallback, failed: true)
             return
@@ -544,10 +584,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         AppSettings.shared.setHotKeyState(active: nil, failed: true)
     }
 
-    private func bindHotKey(_ preset: HotKeyPreset) -> Bool {
+    private func bindHotKey(_ preset: GlobalHotKey) -> Bool {
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(
-            UInt32(kVK_Space),
+            preset.keyCode,
             preset.carbonModifiers,
             Self.hotKeyID,
             GetEventDispatcherTarget(),
