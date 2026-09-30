@@ -174,20 +174,22 @@ npm run mac:install
 That compiles Q Calc and copies **Q Calc.app** into `/Applications`. An older **Instant Solver.app** in Applications is removed.
 
 ```bash
-npm run mac          # macos/dist/Q Calc.app
-npm run mac:package  # macos/dist/Q-Calc-<version>.zip for Homebrew
+npm run mac          # macos/dist/Q Calc.app, for this Mac's chip
+npm run mac:package  # macos/dist/Q-Calc-<version>-apple-silicon.zip and -intel.zip, for release
 ```
 
 If the clone is in **Documents** or **Desktop**, macOS may refuse to launch the repo build directly — use `npm run mac:install` or the Homebrew cask.
 
 ### Ship an update to field Macs
 
-The current public release is **v2.0.6**. That is the GitHub Release, the zip linked from the download page, and the Homebrew cask.
+The current public release is **v2.0.6**. That is the GitHub Release, the zips linked from the download page, and the Homebrew cask.
+
+Each release has two Mac zips: `Q-Calc-<version>-apple-silicon.zip` and `Q-Calc-<version>-intel.zip`. Each carries only its own chip's code, so it's about half the size of a universal app. Homebrew picks the right one.
 
 To publish the next version:
 
 1. Bump `"version"` in `package.json`.
-2. Point the zip link in `docs/index.html` at that same version.
+2. Point the Apple silicon and Intel zip links in `docs/index.html` at that same version.
 3. Commit, then tag and push that version:
 
 ```bash
@@ -195,11 +197,11 @@ git tag v$(node -p "require('./package.json').version")
 git push origin main v$(node -p "require('./package.json').version")
 ```
 
-The **Release** GitHub Action builds the zip, publishes it on GitHub Releases, and updates `Casks/q-calc.rb` and `docs/appcast.xml`. Installed copies, from the zip or Homebrew, update themselves within a day (see below), or immediately with **Check for Updates…** in the menu bar menu or `brew upgrade --cask q-calc`. You can also run **Release** from the Actions tab without pushing a tag.
+The **Release** GitHub Action builds both zips, publishes them on GitHub Releases, and updates `Casks/q-calc.rb`, `docs/appcast.xml` (Apple silicon) and `docs/appcast-intel.xml` (Intel). Installed copies, from the zip or Homebrew, update themselves within a day (see below), or immediately with **Check for Updates…** in the menu bar menu or `brew upgrade --cask q-calc`. You can also run **Release** from the Actions tab without pushing a tag.
 
 ### Automatic updates
 
-The app updates itself with [Sparkle](https://sparkle-project.org). Once a day it reads `docs/appcast.xml` from GitHub Pages and downloads a newer zip in the background. The update installs when Q Calc quits, or when the Mac has been idle for 30 minutes with no Q Calc window open, and Q Calc reopens on its own. **Update automatically** in Settings turns this off; Sparkle then asks before installing.
+The app updates itself with [Sparkle](https://sparkle-project.org). Once a day it reads its feed from GitHub Pages (`docs/appcast.xml` on Apple silicon, `docs/appcast-intel.xml` on Intel) and downloads a newer zip in the background. The update installs when Q Calc quits, or when the Mac has been idle for 30 minutes with no Q Calc window open, and Q Calc reopens on its own. **Update automatically** in Settings turns this off; Sparkle then asks before installing.
 
 The Release action signs each zip with an EdDSA key. One-time setup, done by a repo admin:
 

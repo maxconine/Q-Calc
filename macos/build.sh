@@ -17,23 +17,26 @@ SPARKLE="$VENDOR/Sparkle-${SPARKLE_VERSION}"
 SPARKLE_PLACEHOLDER_KEY="SPARKLE_PUBLIC_KEY_PLACEHOLDER"
 INSTALL=0
 PACKAGE=0
+ONLY_ARCH=""
 APP_VERSION="$(node -p "require('$ROOT/package.json').version")"
-DIST_ZIP="$MAC/dist/Q-Calc-${APP_VERSION}.zip"
 
 for arg in "$@"; do
   case "$arg" in
     --install) INSTALL=1 ;;
     --package) PACKAGE=1 ;;
+    --arch=*) ONLY_ARCH="${arg#--arch=}" ;;
     -h|--help)
-      echo "Usage: macos/build.sh [--install] [--package]"
+      echo "Usage: macos/build.sh [--install] [--package] [--arch=arm64|x86_64]"
       echo "  --install   copy Q Calc.app into /Applications"
-      echo "  --package   write macos/dist/Q-Calc-<version>.zip for release (needs the real SUPublicEDKey)"
+      echo "  --package   build both and write macos/dist/Q-Calc-<version>-apple-silicon.zip and -intel.zip"
+      echo "              for release (needs the real SUPublicEDKey)"
+      echo "  --arch=…    build only this architecture (default: this Mac's, or both with --package)"
       echo "  QCALC_SPARKLE_PUBLIC_KEY=<key> overrides SUPublicEDKey, for update tests"
       exit 0
       ;;
     *)
       echo "Unknown option: $arg" >&2
-      echo "Usage: macos/build.sh [--install] [--package]" >&2
+      echo "Usage: macos/build.sh [--install] [--package] [--arch=arm64|x86_64]" >&2
       exit 1
       ;;
   esac
@@ -57,9 +60,25 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-# universal: apple silicon and intel, back to ventura. 13.5 is soulvercore's own minimum
-ARCHS=(arm64 x86_64)
+# a separate app per architecture, each carrying only its own slices, back to ventura. 13.5 is soulvercore's own minimum
 MIN_MACOS="13.5"
+HOST_ARCH="$(uname -m)"
+if [[ -n "$ONLY_ARCH" ]]; then
+  ARCHS=("$ONLY_ARCH")
+elif (( PACKAGE )); then
+  ARCHS=(arm64 x86_64)
+else
+  ARCHS=("$HOST_ARCH")
+fi
+for arch in "${ARCHS[@]}"; do
+  if [[ "$arch" != arm64 && "$arch" != x86_64 ]]; then
+    echo "Unknown architecture: $arch (use arm64 or x86_64)" >&2
+    exit 1
+  fi
+done
+# the name on the download, and each build's own update feed: apple silicon keeps the feed installed copies read
+label() { [[ "$1" == arm64 ]] && echo apple-silicon || echo intel; }
+feed() { [[ "$1" == arm64 ]] && echo appcast.xml || echo appcast-intel.xml; }
 
 require xcrun "Install Xcode 26 or later, then run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
 require swiftc "Install Xcode 26 or later from the Mac App Store."
@@ -126,8 +145,10 @@ set_update_key() {
   fi
 }
 
+# once per run, into $STAGE/icon; each app copies it
 make_icon() {
-  local resources="$APP/Contents/Resources"
+  local resources="$STAGE/icon"
+  mkdir -p "$resources"
   local work="$STAGE/iconwork"
   local iconset="$work/AppIcon.iconset"
   local src="$ROOT/public/Qcalc_favi.png"
@@ -176,74 +197,109 @@ copy_app() {
 fetch_soulver
 fetch_sparkle
 
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
-
-ditto "$SLICE/SoulverCore.framework" "$APP/Contents/Frameworks/SoulverCore.framework"
-# the xpc services are only for sandboxed apps
-ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
-rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" \
-  "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
-
-# Apple Dictionary — to restore, add "$MAC/DictionaryLookup.swift" \ after SoulverEval.swift.
-# one slice per architecture, then lipo makes them one binary
-slices=()
-for arch in "${ARCHS[@]}"; do
-swiftc -parse-as-library \
-  -O \
-  -target "${arch}-apple-macos${MIN_MACOS}" \
-  -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
-  -F "$SLICE" \
-  -F "$SPARKLE" \
-  -framework SwiftUI \
-  -framework AppKit \
-  -framework WebKit \
-  -framework Carbon \
-  -framework SoulverCore \
-  -framework Sparkle \
-  -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
-  "$MAC/MathEval.swift" \
-  "$MAC/SoulverEval.swift" \
-  "$MAC/Overlay.swift" \
-  "$MAC/UnitSettings.swift" \
-  "$MAC/Keybinds.swift" \
-  "$MAC/SettingsWindow.swift" \
-  "$MAC/PeriodicWindow.swift" \
-  "$MAC/Updates.swift" \
-  "$MAC/QCalcApp.swift" \
-  -module-cache-path "$STAGE/modules-$arch" \
-  -o "$STAGE/QCalc-$arch"
-slices+=("$STAGE/QCalc-$arch")
-done
-lipo -create "${slices[@]}" -output "$BIN"
-
-cp "$MAC/Info.plist" "$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$APP/Contents/Info.plist"
-set_update_key
-
 echo "Building web assets…"
 (cd "$ROOT" && npm run build)
-
-rm -rf "$APP/Contents/Resources/web"
-cp -R "$ROOT/dist" "$APP/Contents/Resources/web"
-
-chmod +x "$BIN"
 make_icon
-sign_app
+
+# a fat binary carries every architecture; each app keeps only its own
+thin_app() {
+  local arch="$1" file archs
+  find "$APP" -type f -print0 | while IFS= read -r -d '' file; do
+    archs="$(lipo -archs "$file" 2>/dev/null)" || continue
+    [[ "$archs" == *" "* ]] || continue
+    lipo -thin "$arch" "$file" -output "$file.thin"
+    chmod "$(stat -f %Lp "$file")" "$file.thin"
+    mv "$file.thin" "$file"
+  done
+}
+
+# Apple Dictionary — to restore, add "$MAC/DictionaryLookup.swift" \ after SoulverEval.swift.
+build_app() {
+  local arch="$1"
+  APP="$STAGE/$arch/Q Calc.app"
+  BIN="$APP/Contents/MacOS/QCalc"
+  echo "Building for $arch…"
+  mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
+
+  ditto "$SLICE/SoulverCore.framework" "$APP/Contents/Frameworks/SoulverCore.framework"
+  # the xpc services are only for sandboxed apps
+  ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+  rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" \
+    "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
+
+  swiftc -parse-as-library \
+    -O \
+    -target "${arch}-apple-macos${MIN_MACOS}" \
+    -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
+    -F "$SLICE" \
+    -F "$SPARKLE" \
+    -framework SwiftUI \
+    -framework AppKit \
+    -framework WebKit \
+    -framework Carbon \
+    -framework SoulverCore \
+    -framework Sparkle \
+    -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+    -Xlinker -dead_strip \
+    -module-cache-path "$STAGE/modules-$arch" \
+    "$MAC/MathEval.swift" \
+    "$MAC/SoulverEval.swift" \
+    "$MAC/Overlay.swift" \
+    "$MAC/UnitSettings.swift" \
+    "$MAC/Keybinds.swift" \
+    "$MAC/SettingsWindow.swift" \
+    "$MAC/PeriodicWindow.swift" \
+    "$MAC/Updates.swift" \
+    "$MAC/QCalcApp.swift" \
+    -o "$BIN"
+  # local symbols only help a debugger
+  strip -x "$BIN"
+
+  cp "$MAC/Info.plist" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$APP/Contents/Info.plist"
+  /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://maxconine.github.io/Q-Calc/$(feed "$arch")" "$APP/Contents/Info.plist"
+  set_update_key
+
+  cp -R "$ROOT/dist" "$APP/Contents/Resources/web"
+  cp "$STAGE/icon/"* "$APP/Contents/Resources/" 2>/dev/null || true
+
+  thin_app "$arch"
+  chmod +x "$BIN"
+  sign_app
+}
 
 rm -rf "$MAC/dist"
-copy_app "$DIST_APP"
-echo "Built $DIST_APP ($APP_VERSION)"
-
-if (( PACKAGE )); then
-  rm -f "$DIST_ZIP"
-  ditto -c -k --keepParent "$DIST_APP" "$DIST_ZIP"
-  echo "Packaged $DIST_ZIP"
-fi
+for arch in "${ARCHS[@]}"; do
+  build_app "$arch"
+  if (( ${#ARCHS[@]} > 1 )); then
+    dest="$MAC/dist/$(label "$arch")/Q Calc.app"
+  else
+    dest="$DIST_APP"
+  fi
+  copy_app "$dest"
+  echo "Built $dest ($APP_VERSION, $arch)"
+  if (( PACKAGE )); then
+    zip="$MAC/dist/Q-Calc-${APP_VERSION}-$(label "$arch").zip"
+    rm -f "$zip"
+    # from the stage: a copy in a synced Documents folder picks up xattrs that break the signature
+    ditto -c -k --norsrc --keepParent "$APP" "$zip"
+    echo "Packaged $zip ($(du -h "$zip" | cut -f1))"
+  fi
+  # this Mac's build is the one that installs
+  if [[ "$arch" == "$HOST_ARCH" ]]; then
+    INSTALL_APP="$dest"
+  fi
+done
 
 if (( INSTALL )); then
+  if [[ -z "${INSTALL_APP:-}" ]]; then
+    echo "Nothing built for this Mac ($HOST_ARCH) to install." >&2
+    exit 1
+  fi
   echo "Installing to /Applications/Q Calc.app…"
   rm -rf "/Applications/Instant Solver.app"
+  APP="$INSTALL_APP"
   copy_app "/Applications/Q Calc.app"
   echo "Installed /Applications/Q Calc.app"
 fi

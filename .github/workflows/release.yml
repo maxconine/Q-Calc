@@ -55,25 +55,31 @@ jobs:
       - name: Build zip
         run: npm run mac:package
 
+      # one zip per architecture: each carries only its own code, and each has its own update feed
       - name: Checksum
         id: sha
         run: |
-          ZIP="macos/dist/Q-Calc-${{ steps.version.outputs.version }}.zip"
-          SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
-          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
-          echo "zip=${ZIP}" >> "$GITHUB_OUTPUT"
+          VERSION="${{ steps.version.outputs.version }}"
+          for arch in apple-silicon intel; do
+            ZIP="macos/dist/Q-Calc-${VERSION}-${arch}.zip"
+            SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
+            KEY="${arch//-/_}"
+            echo "${KEY}_sha256=${SHA}" >> "$GITHUB_OUTPUT"
+            echo "${KEY}_zip=${ZIP}" >> "$GITHUB_OUTPUT"
+          done
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
-          ZIP: ${{ steps.sha.outputs.zip }}
+          ARM_ZIP: ${{ steps.sha.outputs.apple_silicon_zip }}
+          INTEL_ZIP: ${{ steps.sha.outputs.intel_zip }}
         run: |
           TAG="v${VERSION}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP" --clobber
+            gh release upload "$TAG" "$ARM_ZIP" "$INTEL_ZIP" --clobber
           else
-            gh release create "$TAG" "$ZIP" \
+            gh release create "$TAG" "$ARM_ZIP" "$INTEL_ZIP" \
               --title "Q Calc ${VERSION}" \
               --generate-notes
           fi
@@ -81,26 +87,31 @@ jobs:
       - name: Update Homebrew cask and appcast
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          SHA256: ${{ steps.sha.outputs.sha256 }}
-          ZIP: ${{ steps.sha.outputs.zip }}
+          ARM_SHA256: ${{ steps.sha.outputs.apple_silicon_sha256 }}
+          INTEL_SHA256: ${{ steps.sha.outputs.intel_sha256 }}
+          ARM_ZIP: ${{ steps.sha.outputs.apple_silicon_zip }}
+          INTEL_ZIP: ${{ steps.sha.outputs.intel_zip }}
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
-          zsh macos/update-cask.sh "$VERSION" "$SHA256"
+          zsh macos/update-cask.sh "$VERSION" "$ARM_SHA256" "$INTEL_SHA256"
           UPDATED="${RUNNER_TEMP}/q-calc.rb"
           cp Casks/q-calc.rb "$UPDATED"
           git checkout -B main origin/main
           git pull --ff-only origin main
           mkdir -p Casks
           cp "$UPDATED" Casks/q-calc.rb
-          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/Q-Calc-${VERSION}.zip"
-          printf '%s' "$SPARKLE_PRIVATE_KEY" | zsh macos/update-appcast.sh "$ZIP" "$URL"
-          if git diff --quiet -- Casks/q-calc.rb docs/appcast.xml; then
+          BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}"
+          # apple silicon keeps appcast.xml, the feed every copy installed before the intel build reads
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | zsh macos/update-appcast.sh "$ARM_ZIP" "${BASE}/Q-Calc-${VERSION}-apple-silicon.zip"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" | QCALC_APPCAST="$PWD/docs/appcast-intel.xml" \
+            zsh macos/update-appcast.sh "$INTEL_ZIP" "${BASE}/Q-Calc-${VERSION}-intel.zip"
+          if git diff --quiet -- Casks/q-calc.rb docs/appcast.xml docs/appcast-intel.xml; then
             echo "Cask and appcast already match ${VERSION}"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/q-calc.rb docs/appcast.xml
+          git add Casks/q-calc.rb docs/appcast.xml docs/appcast-intel.xml
           git commit -m "q-calc ${VERSION}" -m "[skip ci]"
           git push origin main
 
