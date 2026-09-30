@@ -27,7 +27,7 @@ import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
 import { SixtySevenArms } from './SixtySevenArms'
-import { typstAnswer } from '../lib/typstMath'
+import { typstAnswer, typstPreviewUseful } from '../lib/typstMath'
 import { TypstPreview } from './TypstPreview'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { UnitSettings } from './UnitSettings'
@@ -393,6 +393,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const chained = !graphCmd && !isolated && chainsFromAnswer(q, chainAnswer)
   const tapeExpr = chained && ansPlain ? chainedHistoryExpr(q, ansPlain) : q
   chainedRef.current = isolated ?? (chainAnswer ? ansWrittenOut(tapeExpr, chainAnswer.plain) : chained ? tapeExpr : '')
+  // typeset only when it shows something the bar doesn't, and never for a command's own panel
+  const typstExpr = chained ? chainedExpr(q) : q
+  const typstShown = useMemo(
+    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !helpShown && typstPreviewUseful(typstExpr),
+    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, helpShown, typstExpr],
+  )
   const evalOptions = useMemo(
     () => ({
       ...evalSettings,
@@ -1332,9 +1338,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             />
             )}
           </div>
-          {settings.typstPreview ? (
+          {typstShown ? (
             <TypstPreview
-              expr={chained ? chainedExpr(q) : q}
+              expr={typstExpr}
               answer={
                 // a message ("no real solution") or a command label isn't an answer to typeset
                 graphCmd || periodicCmd || sysMessage || (liveSolve && !rootsOf)

@@ -143,6 +143,37 @@ $ ${body} $
 `
 }
 
+// names that typeset differently from how they're typed: a function set upright with its own spacing, a big
+// operator, a root, a matrix. greek letters, e, i and the plain operators (ast, dot, times) don't count
+const TYPESET_NAMES = new Set([
+  ...TYPST_NAMES,
+  ...TYPST_FUNCTIONS,
+  ...CALLS,
+  'op', 'integral', 'sum', 'product', 'lim', 'tan1', 'choose', 'multichoose', 'dif', 'partial',
+])
+for (const g of GREEK) {
+  TYPESET_NAMES.delete(g)
+  TYPESET_NAMES.delete(g[0]!.toUpperCase() + g.slice(1))
+}
+
+/**
+ * Whether the preview earns its place for `expr`: only when the typeset math looks different from the typed text.
+ * Words (units, dates, money, commands) come out as upright quoted text and hide it; so does plain arithmetic,
+ * which would only say again what the bar says. Fractions, powers, subscripts, factorials, roots, big operators,
+ * matrices and named functions show it.
+ */
+export function typstPreviewUseful(expr: string): boolean {
+  // ± reads the same typeset as in the bar; left as +/- its slash would count as a fraction
+  const math = toTypstMath(expr.replace(/\+\/-|-\/\+/g, '±'))
+  if (!math) return false
+  // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
+  const bare = math.replace(/op\("[^"]*"\)/g, 'op').replace(/delim: "[^"]*"/g, '')
+  if (bare.includes('"')) return false
+  // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet
+  if (/!|[/^_](?=\s*[^\s)])/.test(bare)) return true
+  return (bare.match(/[A-Za-z][A-Za-z0-9.]*/g) ?? []).some((name) => TYPESET_NAMES.has(name.split('.')[0]!))
+}
+
 /** Search-bar copy: Typst math when the setting is on, otherwise the typed text. */
 export function copiedEquation(text: string, typstCopy: boolean): string {
   if (!typstCopy) return text

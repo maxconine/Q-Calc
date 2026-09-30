@@ -15,7 +15,7 @@ export function TypstSettings({ value, onChange }: { value: boolean; onChange: (
   return (
     <OnOffSetting
       title="Typst preview"
-      hint="When on, the calculation is typeset under the bar."
+      hint="When on, math like fractions, powers and integrals is typeset under the bar."
       value={value}
       onChange={onChange}
     />
