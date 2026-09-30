@@ -31,6 +31,20 @@ describe('chords from key presses', () => {
     expect(chordFromEvent(press('Backspace', { ctrlKey: true, shiftKey: true }))).toBe('ctrl+shift+backspace')
   })
 
+  it('reads letters from the layout, so non-qwerty shortcuts stay where their letters are', () => {
+    // dvorak: the qwerty c key types j, and the qwerty i key types c
+    expect(chordFromEvent(press('j', { ctrlKey: true }, 'KeyC'))).toBe('ctrl+j')
+    expect(chordFromEvent(press('c', { ctrlKey: true }, 'KeyI'))).toBe('ctrl+c')
+    expect(actionForEvent(press('c', { ctrlKey: true }, 'KeyI'), {}, false)).toBe('clear')
+    expect(actionForEvent(press('j', { ctrlKey: true }, 'KeyC'), {}, false)).toBeNull()
+    // azerty: the qwerty q key types a
+    expect(chordFromEvent(press('a', { metaKey: true }, 'KeyQ'))).toBe('cmd+a')
+    // a non-latin layout types no latin letter, so the physical key stands in
+    expect(chordFromEvent(press('с', { ctrlKey: true }, 'KeyC'))).toBe('ctrl+c')
+    // ⌥ on dvorak still types a glyph, so it stays physical
+    expect(chordFromEvent(press('ç', { altKey: true }, 'KeyC'))).toBe('alt+c')
+  })
+
   it('waits while only modifiers are down', () => {
     expect(chordFromEvent(press('Meta', { metaKey: true }, 'MetaLeft'))).toBeNull()
     expect(chordFromEvent(press('Shift', { shiftKey: true }))).toBeNull()

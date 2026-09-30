@@ -101,10 +101,11 @@ const MODIFIER_KEYS = new Set(['shift', 'meta', 'control', 'alt', 'altgraph', 'c
 
 type KeyEventLike = Pick<KeyboardEvent, 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey' | 'key'> & { code?: string }
 
-// the physical key when the browser says, so ⌥D reads as d and not ∂
+// a letter is the one the layout types, so ⌃C on dvorak or azerty is c wherever c sits. with ⌥ held the mac
+// types ∂ for d, and a non-latin layout types no latin letter, so those fall back to the physical key
 export function eventKeyName(e: KeyEventLike): string | null {
   const code = e.code ?? ''
-  if (/^Key[A-Z]$/.test(code)) return code.slice(3).toLowerCase()
+  if (/^Key[A-Z]$/.test(code)) return !e.altKey && /^[a-z]$/i.test(e.key ?? '') ? e.key.toLowerCase() : code.slice(3).toLowerCase()
   if (/^Digit[0-9]$/.test(code)) return code.slice(5)
   if (/^F[0-9]{1,2}$/.test(code)) return code.toLowerCase()
   if (CODE_KEYS[code]) return CODE_KEYS[code]

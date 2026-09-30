@@ -77,10 +77,16 @@ struct Chord: Equatable {
         self.key = key
     }
 
-    // nil for a key the table doesn't know, or while only modifiers are down
-    init?(event: NSEvent) {
-        guard let key = KeyNames.byCode[Int(event.keyCode)] else { return nil }
+    // nil for a key the table doesn't know, or while only modifiers are down. `typed` names a letter by what the
+    // layout types, like the page does (⌃C on dvorak is c); without it the key is physical, which carbon needs
+    init?(event: NSEvent, typed: Bool = false) {
+        guard var key = KeyNames.byCode[Int(event.keyCode)] else { return nil }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if typed, !flags.contains(.option), key.count == 1, key.first!.isLetter,
+           let letter = event.charactersIgnoringModifiers?.lowercased(),
+           letter.count == 1, letter.first!.isASCII, letter.first!.isLetter {
+            key = letter
+        }
         var mods = Set<String>()
         if flags.contains(.control) { mods.insert("ctrl") }
         if flags.contains(.option) { mods.insert("alt") }
