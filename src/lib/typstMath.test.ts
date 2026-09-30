@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { TYPST_PREAMBLE, copiedEquation, toTypstMath, typstAnswer, typstDocument } from './typstMath'
+import { TYPST_PREAMBLE, copiedEquation, toTypstMath, typstAnswer, typstDocument, typstPreviewUseful } from './typstMath'
 
 describe('copiedEquation', () => {
   it('keeps the typed equation until Typst copy is on', () => {
@@ -139,5 +139,28 @@ describe('matrices', () => {
     expect(toTypstMath('trace([[1,2],[3,4]])')).toBe(`op("tr") ${a}`)
     expect(toTypstMath('identity(3)')).toBe('I_(3)')
     expect(toTypstMath('dot([1,2],[3,4])')).toBe('lr(\\[1 , 2\\]) dot lr(\\[3 , 4\\])')
+  })
+})
+
+describe('typstPreviewUseful', () => {
+  it.each([
+    '1/3 + 2/5', 'x^2 - 5x + 6 = 0', 'integral(x^2, 0, 1)', 'sum n, n=1..9', '[1 2; 3 4]', 'det([1 2; 3 4])',
+    'inv([1 2; 3 4])', 'sqrt(2)', 'nthRoot(27, 3)', 'sin(90)', 'sin^-1(0.5)', 'arccsc(2)', 'ln(2)', 'gcd(12, 18)',
+    '5!', '2^8', 'x_1 + x_2', 'abs(-3)', 'f(x) = x^3', '10 choose 3',
+  ])('shows for %s, which typesets differently', (expr) => {
+    expect(typstPreviewUseful(expr)).toBe(true)
+  })
+
+  it.each([
+    '2+3', '12*4', '0.5 * 3', '42', '2 pi', '2x + 3 = 7', 'x = 5', '(9.81 +/- 0.02) * (2.50 +/- 0.01)',
+    '12 kg to lb', '72 f', '100 usd to eur', '$10 for lunch + 15% tip', '20% off 80', 'today + 90 days',
+    '3:45pm + 4 hr 10 min', 'graph x^2', 'periodic table', 'sys 2', 'isolate T in PV = nRT', '?', '',
+  ])('hides for %s, which would only say what the bar says', (expr) => {
+    expect(typstPreviewUseful(expr)).toBe(false)
+  })
+
+  it('follows the input as it is typed', () => {
+    expect(['x', 'x^', 'x^2', 'x^2 -', 'x^2 - 1'].map(typstPreviewUseful)).toEqual([false, false, true, true, true])
+    expect(['1', '1/', '1/3'].map(typstPreviewUseful)).toEqual([false, false, true])
   })
 })
