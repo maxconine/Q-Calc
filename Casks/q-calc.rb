@@ -1,8 +1,11 @@
 cask "q-calc" do
-  version "2.0.6"
-  sha256 "2d571fe87b9db7beafecb440007257945a6fb0b7c05e8abe9bde2b5c697aac12"
+  arch arm: "apple-silicon", intel: "intel"
 
-  url "https://github.com/maxconine/Q-Calc/releases/download/v#{version}/Q-Calc-#{version}.zip"
+  version "2.0.7"
+  sha256 arm:   "d9a7d1f61709baa7bab318785baeedda06bf41635c29d6a588c6b8517eae829f",
+         intel: "7b45bd644366e928c352431b362bb1cf704c1bbc433dfe381fd111306f522749"
+
+  url "https://github.com/maxconine/Q-Calc/releases/download/v#{version}/Q-Calc-#{version}-#{arch}.zip"
   name "Q Calc"
   desc "Spotlight-style scientific calculator"
   homepage "https://github.com/maxconine/Q-Calc"

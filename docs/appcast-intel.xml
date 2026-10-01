@@ -5,5 +5,13 @@
     <link>https://maxconine.github.io/Q-Calc/appcast-intel.xml</link>
     <description>Q Calc updates for Intel Macs</description>
     <language>en</language>
+    <item>
+      <title>Version 2.0.7</title>
+      <pubDate>Thu, 01 Oct 2026 00:54:19 +0000</pubDate>
+      <sparkle:version>2.0.7</sparkle:version>
+      <sparkle:shortVersionString>2.0.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.5</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v2.0.7/Q-Calc-2.0.7-intel.zip" sparkle:edSignature="iLIdxQW2zNjOtUJB8Cy+e4qeLmlt+daadM9N67L/qXG4V8Q5/KO6RjX3i3l8hUvnv3Fo5rf22+7BJdIo9jexCg==" length="17843544" type="application/octet-stream"/>
+    </item>
   </channel>
 </rss>
