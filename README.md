@@ -182,7 +182,7 @@ If the clone is in **Documents** or **Desktop**, macOS may refuse to launch the 
 
 ### Ship an update to field Macs
 
-The current public release is **v2.0.6**. That is the GitHub Release, the zips linked from the download page, and the Homebrew cask.
+The current public release is **v2.0.7**. That is the GitHub Release, the zips linked from the download page, and the Homebrew cask.
 
 Each release has two Mac zips: `Q-Calc-<version>-apple-silicon.zip` and `Q-Calc-<version>-intel.zip`. Each carries only its own chip's code, so it's about half the size of a universal app. Homebrew picks the right one.
 
