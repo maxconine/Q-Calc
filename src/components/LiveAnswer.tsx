@@ -27,9 +27,10 @@ type Props = {
   message?: boolean
 }
 
+// says so in words, and screen readers hear it too
 const CHECK = (
-  <span className="live-check" aria-hidden>
-    ✓
+  <span className="live-check" role="status">
+    ✓ copied
   </span>
 )
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { formatNumber } from '../engine/format'
 import {
   answerAmong,
+  unitlessAnswer,
   hasDualAnswer,
   insertableAnswer,
   insertableHistoryAnswer,
@@ -298,4 +299,32 @@ describe('solved rows', () => {
     expect(prettyRoots('±1000000')).toBe('±1,000,000')
     expect(prettyRoots('-2, 3, …')).toBe('−2, 3, …')
   })
+})
+
+describe('unitlessAnswer', () => {
+  it.each([
+    ['15 m²', '15'],
+    ['500 MPa', '500'],
+    ['4700 Ω', '4700'],
+    ['500 N·m', '500'],
+    ['68 °F', '68'],
+    ['-40 °C', '-40'],
+    ['27.7777777778 m/s', '27.7777777778'],
+    ['3.28083989501e-9 ft', '3.28083989501e-9'],
+    ['1.602176634e-19 J', '1.602176634e-19'],
+    ['4,050,416.66667 ft', '4,050,416.66667'],
+    ['19.62 ± 0.04 m/s', '19.62 ± 0.04'],
+    ['x = 6 m, y = 4 m', 'x = 6, y = 4'],
+    ['F = 19.6 N, m = 2 kg, a = 9.8 m/s²', 'F = 19.6, m = 2, a = 9.8'],
+    ['(x, y) = (3 kg, 2 kg) or (x, y) = (2 kg, 3 kg)', '(x, y) = (3, 2) or (x, y) = (2, 3)'],
+  ])('copies %s as %s', (shown, copied) => {
+    expect(unitlessAnswer(shown)).toBe(copied)
+  })
+
+  it.each(['1.75', '±2', 'x = ±2', '5 ft 3 in', '$11.50', '15%', '3:45 PM', 'no solution', "units don't match", 'T = P*V/(R*n)'])(
+    'leaves %s as shown',
+    (shown) => {
+      expect(unitlessAnswer(shown)).toBe(shown)
+    },
+  )
 })

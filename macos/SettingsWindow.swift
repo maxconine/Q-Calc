@@ -81,6 +81,7 @@ struct GeneralSettingsView: View {
                 toggle("Keep typed words as text", "sqrt stays sqrt, not √", \.keepWords, AppSettings.setKeepWords(_:notifyWeb:))
                 toggle("Typst preview", "Show math like fractions, powers and integrals typeset under the bar", \.typstPreview, AppSettings.setTypstPreview(_:notifyWeb:))
                 toggle("Copy Typst compatible", "Equations copied from the bar paste as Typst math", \.typstCopy, AppSettings.setTypstCopy(_:notifyWeb:))
+                toggle("Copy answers without units", "A copied answer is just the number: 15 m² copies as 15", \.copyUnitless, AppSettings.setCopyUnitless(_:notifyWeb:))
             }
 
             Section("Significant figures") {

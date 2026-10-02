@@ -247,6 +247,7 @@ build_app() {
     "$MAC/Overlay.swift" \
     "$MAC/UnitSettings.swift" \
     "$MAC/Keybinds.swift" \
+    "$MAC/UnitlessCopy.swift" \
     "$MAC/SettingsWindow.swift" \
     "$MAC/PeriodicWindow.swift" \
     "$MAC/Updates.swift" \

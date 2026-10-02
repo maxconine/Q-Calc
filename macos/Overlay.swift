@@ -868,10 +868,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let typstPreview = AppSettings.shared.typstPreview ? "true" : "false"
         let typstCopy = AppSettings.shared.typstCopy ? "true" : "false"
         let shareUsage = AppSettings.shared.shareUsage ? "true" : "false"
+        let copyUnitless = AppSettings.shared.copyUnitless ? "true" : "false"
         let theme = AppSettings.shared.theme
         let angle = AppSettings.shared.angleMode
         let fractions = AppSettings.shared.fractionMode ? "true" : "false"
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), shareUsage: \(shareUsage), keybinds: \(AppSettings.shared.keybindsJSON()), \(hotKeyJavaScriptFields()) }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), copyUnitless: \(copyUnitless), shareUsage: \(shareUsage), keybinds: \(AppSettings.shared.keybindsJSON()), \(hotKeyJavaScriptFields()) }"
     }
 
     // a chosen key can be \ or ', so the title goes through json
@@ -907,6 +908,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let typstCopy = boolValue(dict["typstCopy"]) {
             AppSettings.shared.setTypstCopy(typstCopy, notifyWeb: false)
+        }
+        if let copyUnitless = boolValue(dict["copyUnitless"]) {
+            AppSettings.shared.setCopyUnitless(copyUnitless, notifyWeb: false)
         }
         if let shareUsage = boolValue(dict["shareUsage"]) {
             AppSettings.shared.setShareUsage(shareUsage, notifyWeb: false)
@@ -1080,7 +1084,7 @@ struct OverlayView: View {
     private func copyAnswer() {
         let shown = answer(for: text)
         guard !shown.isEmpty else { return }
-        copyToPasteboard(shown)
+        copyToPasteboard(UnitlessCopy.copied(shown))
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             copied = false
@@ -1089,7 +1093,7 @@ struct OverlayView: View {
 
     private func submit() {
         let shown = answer(for: text)
-        if !shown.isEmpty { copyToPasteboard(shown) }
+        if !shown.isEmpty { copyToPasteboard(UnitlessCopy.copied(shown)) }
         text = ""
         copied = false
     }

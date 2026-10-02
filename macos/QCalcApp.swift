@@ -72,6 +72,7 @@ final class AppSettings: ObservableObject {
     static let typstPreviewKey = "qcalc.typstPreview"
     static let typstCopyKey = "qcalc.typstCopy"
     static let shareUsageKey = "qcalc.shareUsage"
+    static let copyUnitlessKey = "qcalc.copyUnitless"
     static let analyticsKey = "qcalc.analytics"
     static let hotKeyKey = "qcalc.hotkey"
     static let keybindsKey = "qcalc.keybinds"
@@ -104,6 +105,8 @@ final class AppSettings: ObservableObject {
     @Published private(set) var typstPreview: Bool
     @Published private(set) var typstCopy: Bool
     @Published private(set) var shareUsage: Bool
+    // copied answers leave their unit behind; on unless turned off
+    @Published private(set) var copyUnitless: Bool
     // what the user picked; activeHotKey is what actually got registered
     @Published private(set) var hotKey: GlobalHotKey
     @Published private(set) var activeHotKey: GlobalHotKey?
@@ -134,6 +137,7 @@ final class AppSettings: ObservableObject {
         typstPreview = UserDefaults.standard.bool(forKey: Self.typstPreviewKey)
         typstCopy = UserDefaults.standard.bool(forKey: Self.typstCopyKey)
         shareUsage = UserDefaults.standard.object(forKey: Self.shareUsageKey) as? Bool ?? true
+        copyUnitless = UserDefaults.standard.object(forKey: Self.copyUnitlessKey) as? Bool ?? true
         hotKey = GlobalHotKey.stored(UserDefaults.standard.string(forKey: Self.hotKeyKey))
         keybinds = KeyActions.sanitize(UserDefaults.standard.dictionary(forKey: Self.keybindsKey) ?? [:])
         onboarding = Self.loadOnboarding()
@@ -362,6 +366,13 @@ final class AppSettings: ObservableObject {
         guard value != typstCopy else { return }
         typstCopy = value
         UserDefaults.standard.set(value, forKey: Self.typstCopyKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setCopyUnitless(_ value: Bool, notifyWeb: Bool) {
+        guard value != copyUnitless else { return }
+        copyUnitless = value
+        UserDefaults.standard.set(value, forKey: Self.copyUnitlessKey)
         if notifyWeb { notifySettingsChanged() }
     }
 
