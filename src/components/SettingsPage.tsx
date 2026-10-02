@@ -8,6 +8,7 @@ import { calcWindow, loadSettings } from '../lib/storage'
 import { applyTheme } from '../lib/theme'
 import { AppearanceSettings } from './AppearanceSettings'
 import { ChoiceSetting, OnOffSetting } from './ChoiceSetting'
+import { CopyUnitlessSettings } from './CopySettings'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeybindSettings } from './KeybindSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
@@ -174,6 +175,7 @@ export function SettingsPage() {
       <KeepWordsSettings value={settings.keepWords} onChange={set('keepWords')} />
       <TypstSettings value={settings.typstPreview} onChange={set('typstPreview')} />
       <TypstCopySettings value={settings.typstCopy} onChange={set('typstCopy')} />
+      <CopyUnitlessSettings value={settings.copyUnitless} onChange={set('copyUnitless')} />
 
       <h2 className="settings-heading">Significant figures</h2>
       <SelectSetting

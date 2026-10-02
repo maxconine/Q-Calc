@@ -30,6 +30,7 @@ import { SixtySevenArms } from './SixtySevenArms'
 import { typstAnswer, typstPreviewUseful } from '../lib/typstMath'
 import { TypstPreview } from './TypstPreview'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
+import { CopyUnitlessSettings } from './CopySettings'
 import { UnitSettings } from './UnitSettings'
 import { useFourTwentySmoke } from './useFourTwentySmoke'
 import { useSixtyNineFold } from './useSixtyNineFold'
@@ -42,6 +43,7 @@ import {
   insertableAnswer,
   insertableHistoryAnswer,
   insertableHistoryReuse,
+  unitlessAnswer,
   visibleAnswer,
   type AnswerForm,
 } from '../lib/answer'
@@ -618,6 +620,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [flashCopied],
   )
 
+  // an answer, as opposed to a whole line, leaves its unit behind when the setting says so
+  const answerCopy = useCallback(
+    (text: string) => (settingsRef.current.copyUnitless ? unitlessAnswer(text) : text),
+    [],
+  )
+  const copyAnswer = useCallback((text: string) => copyValue(answerCopy(text)), [answerCopy, copyValue])
+
   const copyOutput = useCallback(() => {
     const fromBar = mathRef.current?.highlighted()
     if (fromBar) {
@@ -631,8 +640,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     const row = selected != null ? history[selected] : null
     track('copy.answer')
-    copyValue(row ? rowCopyText(row, settings.answerForm) : shownLive)
-  }, [copyValue, history, selected, settings.answerForm, shownLive])
+    copyAnswer(row ? rowCopyText(row, settings.answerForm) : shownLive)
+  }, [copyAnswer, history, selected, settings.answerForm, shownLive])
 
   // exact forms read with their symbols, like the line they sit next to
   const copyLine = useCallback(() => {
@@ -1063,7 +1072,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const row = selected != null ? history[selected] : null
       const text = row ? rowCopyText(row, settings.answerForm) : shownLive
       if (!text || isImproperUnitConversion(text)) return
-      putOnClipboard(e, chemCopyText(text))
+      putOnClipboard(e, chemCopyText(answerCopy(text)))
       flashCopied()
     }
     window.addEventListener('keydown', onKey, true)
@@ -1072,7 +1081,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('copy', onCopy, true)
     }
-  }, [clearHistory, copyLine, copyOutput, embedded, escapeLayer, flashCopied, history, onClose, onWillHide, removeRow, resetToCalculate, selected, settings.answerForm, shownLive, undoTape])
+  }, [answerCopy, clearHistory, copyLine, copyOutput, embedded, escapeLayer, flashCopied, history, onClose, onWillHide, removeRow, resetToCalculate, selected, settings.answerForm, shownLive, undoTape])
 
   useEffect(() => () => stopDraftTimer(), [stopDraftTimer])
 
@@ -1323,7 +1332,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               shown={shownLive}
               steady={steady}
               formTick={tabForm.tick}
-              onCopy={copyValue}
+              onCopy={copyAnswer}
               onRefocus={() => mathRef.current?.focus()}
               sides={{
                 exact: liveExact ? (liveSolve ? liveExact : insertableAnswer(liveExact)) : '',
@@ -1407,6 +1416,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           <TypstCopySettings
             value={settings.typstCopy}
             onChange={(typstCopy) => setSettings((s) => ({ ...s, typstCopy }))}
+          />
+          <CopyUnitlessSettings
+            value={settings.copyUnitless}
+            onChange={(copyUnitless) => setSettings((s) => ({ ...s, copyUnitless }))}
           />
           <KeybindSettings
             value={settings.keybinds}

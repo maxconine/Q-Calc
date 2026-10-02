@@ -46,6 +46,25 @@ export function prettyRoots(s: string): string {
     .join(', ')
 }
 
+// a number as answers show it: sign, grouping commas, decimals, ×10ⁿ or e notation, a ± part, π and roots in an
+// exact form, a fraction. no latin letter but the e of e notation, so a unit can't hide inside it
+const SHOWN_NUMBER = String.raw`[+\-−±]?(?:[\d.,√∛π/^⁰¹²³⁴⁵⁶⁷⁸⁹⁻·×]|(?<=\d)e[+\-−]?(?=\d)|\s(?=[±×·]))*\d[\d.⁰¹²³⁴⁵⁶⁷⁸⁹⁻]*(?:\s*±\s*[\d.,]+)?`
+// a unit as answers show it: letters, °, µ, Ω and Å, with powers, products and quotients (`kg·m/s²`, `ft·lbf`)
+const SHOWN_UNIT = String.raw`[A-Za-z°µμΩÅ][A-Za-z°µμΩÅ²³⁻¹^\d·*/]*`
+// a number and its unit standing alone: at the start, after `=`, `(`, `, ` or ` or `, and before the end, `,`, `)` or ` or`
+const NUMBER_WITH_UNIT = new RegExp(
+  String.raw`(^|=\s*|\(\s*|,\s*|\sor\s+)(${SHOWN_NUMBER})\s+${SHOWN_UNIT}(?=\s*$|\s*,|\s*\)|\s+or\b)`,
+  'g',
+)
+
+/**
+ * An answer copied without its unit: `15 m²` is `15`, `x = 6 m, y = 4 m` is `x = 6, y = 4`. A number that runs
+ * into more units (`5 ft 3 in`), money (`$10.00`), a date or a message is copied as shown.
+ */
+export function unitlessAnswer(text: string): string {
+  return text.replace(NUMBER_WITH_UNIT, (_, lead: string, n: string) => `${lead}${n.trim()}`)
+}
+
 export type AnswerForm = 'exact' | 'approx'
 export type HistoryInsert = 'expr' | 'answer'
 

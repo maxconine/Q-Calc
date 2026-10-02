@@ -23,6 +23,8 @@ export type Settings = {
   theme: Theme
   typstPreview: boolean
   typstCopy: boolean
+  // copied answers leave their unit behind (`15 m²` copies as 15)
+  copyUnitless: boolean
   // anonymous usage counts, see lib/analytics
   shareUsage: boolean
   keybinds: Keybinds
@@ -47,6 +49,7 @@ export function defaultSettings(): Settings {
     theme: 'system',
     typstPreview: false,
     typstCopy: false,
+    copyUnitless: true,
     shareUsage: true,
     keybinds: {},
   }
@@ -68,6 +71,7 @@ export function mergeSettings(partial: Partial<Settings> | undefined, base: Sett
     theme: partial?.theme == null ? base.theme : normalizeTheme(partial.theme),
     typstPreview: partial?.typstPreview == null ? base.typstPreview : Boolean(partial.typstPreview),
     typstCopy: partial?.typstCopy == null ? base.typstCopy : Boolean(partial.typstCopy),
+    copyUnitless: partial?.copyUnitless == null ? base.copyUnitless : Boolean(partial.copyUnitless),
     shareUsage: partial?.shareUsage == null ? base.shareUsage : Boolean(partial.shareUsage),
     keybinds: partial?.keybinds == null ? base.keybinds : sanitizeKeybinds(partial.keybinds),
   }
@@ -88,6 +92,7 @@ export function settingsEqual(a: Settings, b: Settings): boolean {
     a.theme === b.theme &&
     a.typstPreview === b.typstPreview &&
     a.typstCopy === b.typstCopy &&
+    a.copyUnitless === b.copyUnitless &&
     a.shareUsage === b.shareUsage &&
     keybindsEqual(a.keybinds, b.keybinds) &&
     defaultUnitsEqual(a.defaultUnits, b.defaultUnits)
