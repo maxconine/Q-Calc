@@ -1084,7 +1084,7 @@ struct OverlayView: View {
     private func copyAnswer() {
         let shown = answer(for: text)
         guard !shown.isEmpty else { return }
-        copyToPasteboard(shown)
+        copyToPasteboard(UnitlessCopy.copied(shown))
         copied = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             copied = false
@@ -1093,7 +1093,7 @@ struct OverlayView: View {
 
     private func submit() {
         let shown = answer(for: text)
-        if !shown.isEmpty { copyToPasteboard(shown) }
+        if !shown.isEmpty { copyToPasteboard(UnitlessCopy.copied(shown)) }
         text = ""
         copied = false
     }
