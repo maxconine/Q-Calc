@@ -6,6 +6,14 @@
     <description>Q Calc updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.0.8</title>
+      <pubDate>Fri, 02 Oct 2026 21:06:06 +0000</pubDate>
+      <sparkle:version>2.0.8</sparkle:version>
+      <sparkle:shortVersionString>2.0.8</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.5</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v2.0.8/Q-Calc-2.0.8-apple-silicon.zip" sparkle:edSignature="2dSiGT/nKZ8cJVMUvVNlu/GBr6uV3TkL+uxYtynLVazq6GMSiQ2MySTktzY37OED4QF4/K5PnToWZC5zdEnQDQ==" length="17543254" type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.0.7</title>
       <pubDate>Thu, 01 Oct 2026 00:54:19 +0000</pubDate>
       <sparkle:version>2.0.7</sparkle:version>
