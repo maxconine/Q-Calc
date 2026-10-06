@@ -172,6 +172,10 @@ export function QuickInput({
   // the unit under the pointer, named after a short rest on it
   const [unitTip, setUnitTip] = useState<{ text: string; left: number } | null>(null)
   const unitTipTimer = useRef(0)
+  // where the pointer rests over the input, so an edit under it can rename the unit at once
+  const pointerX = useRef<number | null>(null)
+  // a label has shown since the pointer came over the input; from then on, labels follow edits with no wait
+  const tipEngaged = useRef(false)
   const [prefixWidth, setPrefixWidth] = useState(0)
   const onChangeRef = useRef(onChange)
   const onEnterRef = useRef(onEnter)
@@ -247,7 +251,8 @@ export function QuickInput({
   )
   const painted = words.length > 0 || units.length > 0
 
-  const hoverUnit = (x: number) => {
+  // the first label waits for a short rest; once one shows, the next unit's (or an edited unit's) shows at once
+  const hoverUnit = (x: number, now = false) => {
     const field = ghostRef.current?.parentElement
     const hit = [...(ghostRef.current?.querySelectorAll<HTMLElement>('.quick-unit') ?? [])].find((el) => {
       const box = el.getBoundingClientRect()
@@ -261,9 +266,19 @@ export function QuickInput({
     const text = hit.dataset.unit ?? ''
     const left = hit.getBoundingClientRect().left - field.getBoundingClientRect().left
     if (unitTip?.text === text && unitTip.left === left) return
-    setUnitTip(null)
-    unitTipTimer.current = window.setTimeout(() => setUnitTip({ text, left }), 350)
+    const show = () => {
+      tipEngaged.current = true
+      setUnitTip({ text, left })
+    }
+    if (now || unitTip || tipEngaged.current) show()
+    else unitTipTimer.current = window.setTimeout(show, 350)
   }
+  // an edit under the pointer renames the label straight away (Nm to nm reads nanometer), or hides it while no
+// unit is there, once a label has shown in this hover
+  useLayoutEffect(() => {
+    if (pointerX.current != null && tipEngaged.current) hoverUnit(pointerX.current, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
 
   const commit = (raw: string, cursor: number, settle = false, typed = false) => {
     const caret = settle ? undefined : cursor
@@ -590,8 +605,13 @@ export function QuickInput({
           rememberHighlight(e.currentTarget)
         }}
         onBlur={(e) => finishTokens(e.currentTarget)}
-        onMouseMove={units.length ? (e) => hoverUnit(e.clientX) : undefined}
+        onMouseMove={(e) => {
+          pointerX.current = e.clientX
+          if (units.length || unitTip) hoverUnit(e.clientX)
+        }}
         onMouseLeave={() => {
+          pointerX.current = null
+          tipEngaged.current = false
           window.clearTimeout(unitTipTimer.current)
           setUnitTip(null)
         }}
@@ -647,7 +667,7 @@ function paintText(value: string, mark: Span | null, words: Span[], units: UnitS
       const n = seen.get(text) ?? 0
       seen.set(text, n + 1)
       out.push(
-        <span key={`unit:${text}#${n}`} className="quick-unit" data-unit={`${text} → ${(cut as UnitSpan).name}`}>
+        <span key={`unit:${text}#${n}`} className="quick-unit" data-unit={(cut as UnitSpan).name}>
           {text}
         </span>,
       )

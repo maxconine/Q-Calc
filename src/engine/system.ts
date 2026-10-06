@@ -1617,16 +1617,19 @@ function siRatText(x: number): string | null {
   return exp > 0 ? `(${sign}${digits}*${pow(exp)})` : `(${sign}${digits}/(${pow(-exp)}))`
 }
 
-type UnitPrep = { plain: string[]; marked: string[]; quantities: SiQuantity[] }
+/** `texts` is each quantity as typed (`9.8 m/s^2`), in the order of `__q0`, `__q1`, … */
+export type UnitPrep = { plain: string[]; marked: string[]; quantities: SiQuantity[]; texts: string[] }
 
 /** Swap each `number unit` for its SI value, and for a marker the dimension check reads. Null when no line has a unit. */
-function prepUnits(lines: string[]): UnitPrep | null {
-  // a name used on its own anywhere is a variable, so `m` in `m = 2 kg` never reads as meters
-  const bare = new Set<string>()
+export function prepUnits(lines: string[], unknowns: string[] = []): UnitPrep | null {
+  // a name used on its own anywhere is a variable, so `m` in `m = 2 kg` never reads as meters; so is one being
+  // solved for, so the h in `9.8 m/s^2 * h` stays h and isn't hours
+  const bare = new Set<string>(unknowns)
   for (const line of lines) {
     for (const w of line.replace(QUANTITY, ' ').match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []) bare.add(w)
   }
   const quantities: SiQuantity[] = []
+  const texts: string[] = []
   const plain: string[] = []
   const marked: string[] = []
   for (const line of lines) {
@@ -1645,12 +1648,13 @@ function prepUnits(lines: string[]): UnitPrep | null {
       p += `${before}${value}`
       q += `${before}(__q${quantities.length})`
       quantities.push(qty)
+      texts.push(line.slice(start, end))
       at = end
     }
     plain.push(p + line.slice(at))
     marked.push(q + line.slice(at))
   }
-  return quantities.length ? { plain, marked, quantities } : null
+  return quantities.length ? { plain, marked, quantities, texts } : null
 }
 
 /**
@@ -1676,7 +1680,7 @@ function dimsEqual(a: number[], b: number[]): boolean {
 }
 
 /** Each unknown's SI dimension, read off the typed quantities; null when a sum or a side mixes units. */
-function inferDims(marked: string[], quantities: SiQuantity[], unknowns: string[]): Map<string, number[]> | null {
+export function inferDims(marked: string[], quantities: SiQuantity[], unknowns: string[]): Map<string, number[]> | null {
   const zero = Array.from({ length: DIMS }, () => 0)
   const assigned = new Map<string, number[]>()
   const known = (name: string): number[] | undefined => {
@@ -1734,7 +1738,9 @@ function inferDims(marked: string[], quantities: SiQuantity[], unknowns: string[
       const e = constRat(b)
       const da = dimOf(a)
       if (!e) {
+        // `e^(-t/τ)`: base and exponent are both plain numbers, so t has τ's unit
         unify(a, zero)
+        unify(b, zero)
         return zero
       }
       if (!da) return undefined

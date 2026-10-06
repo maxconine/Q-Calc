@@ -2,6 +2,7 @@ import type { MathNode } from 'mathjs'
 import { math } from './math'
 import { normalizeMathText } from './plainMath'
 import { preprocessAscii, SCIENTIFIC_NAMES } from './scientific'
+import { solveCall } from './solve'
 
 /** `isolate x in a*x + b = c`, `isolate x: …`, `… isolate x`; a line with no `=` is set to 0. */
 export interface IsolateCmd {
@@ -58,7 +59,7 @@ export interface NamedSolve {
 }
 
 export function parseNamedSolve(text: string): NamedSolve | null {
-  const s = subscripts(text.trim())
+  const s = subscripts(solveCall(text).trim())
   let variable: string | undefined
   let eq: string | undefined
   let m: RegExpMatchArray | null

@@ -49,9 +49,36 @@ const FOR_VAR = /^(.+?)\s+for\s+([A-Za-z]|θ)$/s
 const REJECT = /==|[<>!]=|[≤≥≠<>]/
 const BARE_NAME = /^(?:[A-Za-z][A-Za-z0-9]*|θ)$/
 
+/**
+ * `solve(eq, t)` as the words it means, `solve eq for t`, and `solve(eq)` as `solve eq`; anything else as given.
+ * Only a call that is the whole line, split at its own last comma, so `solve(max(a, b) = 3, a)` keeps max's comma.
+ */
+export function solveCall(text: string): string {
+  const s = text.trim()
+  const m = /^solve\s*\(/i.exec(s)
+  if (!m || !s.endsWith(')')) return text
+  const open = m[0].length - 1
+  let depth = 0
+  let comma = -1
+  for (let i = open; i < s.length; i++) {
+    const ch = s[i]!
+    if (ch === '(' || ch === '[') depth++
+    else if (ch === ')' || ch === ']') {
+      depth--
+      // the call closes before the end: `solve(a) + 1` isn't a solve call
+      if (depth === 0 && i !== s.length - 1) return text
+    } else if (ch === ',' && depth === 1) comma = i
+  }
+  const inner = s.slice(open + 1, -1)
+  if (comma < 0) return `solve ${inner.trim()}`
+  const variable = s.slice(comma + 1, -1).trim()
+  if (!/^(?:[A-Za-z][A-Za-z0-9_]*|θ)$/.test(variable)) return text
+  return `solve ${s.slice(open + 1, comma).trim()} for ${variable}`
+}
+
 /** Null unless the line is shaped like an equation: one lone `=`, or `solve …`. No evaluation. */
 export function parseEquation(text: string): Equation | null {
-  let s = text.trim()
+  let s = solveCall(text).trim()
   if (!s || /^graph(?:\s|$)/i.test(s)) return null
   const cmd = s.match(SOLVE_CMD)
   if (cmd) s = cmd[1]!.trim()

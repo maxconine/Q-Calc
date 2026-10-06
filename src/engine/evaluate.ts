@@ -10,7 +10,9 @@ import { formatAsFraction, SCIENTIFIC_NAMES, splitGluedFunctions } from './scien
 import { looksLikeMatrix, matrixAnswer } from './matrix'
 import { exactForm, wantsExactForm } from './simplify'
 import { isolateVariable, parseNamedSolve } from './isolate'
-import { formatSolve, solveEquation, type Solved } from './solve'
+import { formatSolve, isEquation, solveEquation, type Solved } from './solve'
+import { prepUnits } from './system'
+import { clearlyUnits, isolateWithUnits, solveWithUnitsOne } from './unitSolve'
 import { normalizeSums, sumAnswer } from './sums'
 import { quantityText, readsAsUnit, tryConvert } from './units'
 
@@ -132,6 +134,35 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       }
       results.push({ raw, kind: 'solve', value: single ? num(root!) : textVal(display), display, exact, solve: solved.info })
     }
+    // an equation with units (`0.5 = e^(-t/0.384 ms)`): solved in SI, the root back in the unit typed for it
+    const pushUnitSolved = (eq: string, variable?: string): boolean => {
+      const u = solveWithUnitsOne(eq, {
+        names: [...Object.keys(variables), ...Object.keys(quantities), ...Object.keys(functions)],
+        ans: lastAns,
+        angleMode,
+        variables,
+        functions,
+        rationalize: options.rationalize,
+        variable,
+        defaults: options.defaultUnits,
+        sigFigs,
+      })
+      if (!u) return false
+      if (!u.info) {
+        results.push({ raw, kind: 'expression', display: u.display })
+        return true
+      }
+      if (u.value) {
+        // `ans` is the quantity, like any unit answer
+        delete measures.ans
+        const literal = quantityText(u.value)
+        if (literal) quantities.ans = literal
+        else delete quantities.ans
+        lastAns = undefined
+      }
+      results.push({ raw, kind: 'solve', value: u.value ?? textVal(u.display), display: u.display, solve: u.info })
+      return true
+    }
     const pushIsolated = (text: string, known?: Record<string, number>): boolean => {
       const iso = isolateVariable(text, { variables: known })
       if (iso) results.push({ raw, kind: 'expression', display: iso.display, value: textVal(iso.display) })
@@ -147,6 +178,20 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     // `solve x in …` or `… for x` is a number when the other letters are known, else x on its own
     const named = hasPlusMinus(line) ? null : parseNamedSolve(line)
     if (named) {
+      const unitEq = withQuantities(named.eq, quantities)
+      if (pushUnitSolved(unitEq, named.variable)) continue
+      // with units and letters left over, a formula, its quantities kept whole (`h = v^2/(2*(9.8 m/s^2))`)
+      const formula = isolateWithUnits(unitEq, named.variable, variables)
+      if (formula) {
+        results.push({ raw, kind: 'expression', display: formula, value: textVal(formula) })
+        continue
+      }
+      // clear units that won't rearrange stay blank, rather than read as letters (m and s for m/s)
+      const units = prepUnits([unitEq], [named.variable, ...Object.keys(variables)])
+      if (units && clearlyUnits(units.texts)) {
+        results.push({ raw, kind: 'expression', display: '' })
+        continue
+      }
       const typedNamed = splitLetters(named.numeric, known)
       if (usesUncertain(typedNamed, measures)) {
         results.push({ raw, kind: 'expression', display: '' })
@@ -236,6 +281,9 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     }
     if (!hasPlusMinus(trimmed) && !unitSelf) {
       const eq = withQuantities(typed, quantities)
+      // `5 m = x` is an assignment written backwards, not a solve; the bare name side says so
+      const bareSide = eq.split('=').some((side) => /^\s*[A-Za-zθ][A-Za-z0-9_]*\s*$/.test(side))
+      if (isEquation(eq) && !bareSide && pushUnitSolved(eq)) continue
       const solved = solveEquation(eq, { ans: lastAns, angleMode, variables, functions, rationalize: options.rationalize })
       // solve can't carry a ±, and a bare root would look exact
       if (solved && usesUncertain(typed, measures)) {
