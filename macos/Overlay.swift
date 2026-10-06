@@ -26,35 +26,6 @@ private func commandShiftHeld() -> Bool {
     return flags.contains(.command) && flags.contains(.shift)
 }
 
-// a thin strip on one side of the bar: drag it to make the bar wider or narrower
-final class OverlayResizeHandle: NSView {
-    enum Side { case left, right }
-    let side: Side
-    var onDrag: ((CGFloat) -> Void)?
-    var onEnd: (() -> Void)?
-    private var lastX: CGFloat = 0
-
-    init(side: Side) {
-        self.side = side
-        super.init(frame: .zero)
-    }
-
-    required init?(coder: NSCoder) { nil }
-
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .resizeLeftRight) }
-    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
-    override func mouseDown(with event: NSEvent) { lastX = NSEvent.mouseLocation.x }
-
-    // in screen points, so moving the window under the cursor doesn't feed back into the drag
-    override func mouseDragged(with event: NSEvent) {
-        let x = NSEvent.mouseLocation.x
-        onDrag?(side == .right ? x - lastX : lastX - x)
-        lastX = x
-    }
-
-    override func mouseUp(with event: NSEvent) { onEnd?() }
-}
-
 final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onPaste: (() -> Void)?
@@ -151,7 +122,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // the bar's width: dragged wider from either edge for long calculations, and kept across launches
     private static let overlayWidthKey = "qcalc.overlayWidth"
     private var overlayWidth: CGFloat = max(680, CGFloat(UserDefaults.standard.double(forKey: OverlayController.overlayWidthKey)))
-    private var resizeHandles: [OverlayResizeHandle] = []
+    // how close to the bar's left or right edge a press resizes it rather than reaching the page
+    private let resizeGrip: CGFloat = 8
     private let overlayMinHeight: CGFloat = 72
     private let overlayMaxHeight: CGFloat = 560
     // distance from the overlay top to the composer, so history grows up and graphs grow down
@@ -368,6 +340,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let boot = WKUserScript(
             source: """
             window.__QCALC_NATIVE = true;
+            document.documentElement.classList.add('quick-resizable');
             window.__QCALC_SMOKE_ROOM = true;
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
@@ -498,7 +471,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.contentView = web
         self.web = web
         self.panel = panel
-        addResizeHandles(to: web)
         web.onPaste = { [weak self] in self?.pasteIntoWeb() }
         applyWebAppearance(web)
         loadQuickCalc(web)
@@ -720,21 +692,28 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         return min(max(width, minOverlayWidth), max(minOverlayWidth, visible.width - 40))
     }
 
-    private func addResizeHandles(to view: NSView) {
-        let grip: CGFloat = 6
-        for side in [OverlayResizeHandle.Side.left, .right] {
-            let handle = OverlayResizeHandle(side: side)
-            handle.frame = NSRect(x: side == .left ? 0 : view.bounds.width - grip, y: 0, width: grip, height: view.bounds.height)
-            handle.autoresizingMask = side == .left ? [.height, .maxXMargin] : [.height, .minXMargin]
-            handle.onDrag = { [weak self] dx in self?.resizeBar(by: dx, from: side) }
-            handle.onEnd = { [weak self] in self?.saveBarWidth(movedLeftEdge: side == .left) }
-            view.addSubview(handle)
-            resizeHandles.append(handle)
+    private enum ResizeSide { case left, right }
+
+    // runs until the mouse comes up, so the page never sees the press
+    private func trackResize(from side: ResizeSide) {
+        guard let panel else { return }
+        var lastX = NSEvent.mouseLocation.x
+        panel.trackEvents(matching: [.leftMouseDragged, .leftMouseUp], timeout: .greatestFiniteMagnitude, mode: .eventTracking) { event, stop in
+            guard let event else { return }
+            if event.type == .leftMouseUp {
+                stop.pointee = true
+                return
+            }
+            // screen points, so the window moving under the cursor doesn't feed back into the drag
+            let x = NSEvent.mouseLocation.x
+            self.resizeBar(by: side == .right ? x - lastX : lastX - x, from: side)
+            lastX = x
         }
+        saveBarWidth(movedLeftEdge: side == .left)
     }
 
     // the dragged side moves and the other stays put; the page reports its new height as it reflows
-    private func resizeBar(by dx: CGFloat, from side: OverlayResizeHandle.Side) {
+    private func resizeBar(by dx: CGFloat, from side: ResizeSide) {
         guard let panel, sizeRoom == .closed, dx != 0 else { return }
         let width = fittedWidth(panel.frame.width + dx, on: panel.screen)
         guard width != panel.frame.width else { return }
@@ -750,7 +729,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func saveBarWidth(movedLeftEdge: Bool) {
         UserDefaults.standard.set(Double(overlayWidth), forKey: Self.overlayWidthKey)
         if movedLeftEdge { rememberPosition() }
-        for handle in resizeHandles { panel?.invalidateCursorRects(for: handle) }
     }
 
     // the page's room for the 420 smoke; anything missing or odd is no room
@@ -821,6 +799,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             guard p.x >= body.minX, p.x <= body.maxX, p.y >= body.minY, p.y <= body.maxY else { return event }
             let edge: CGFloat = 14
             let alongTop = p.y >= body.maxY - edge
+            // either side edge drags the bar wider or narrower; the top strip still moves it
+            let onLeft = p.x <= body.minX + self.resizeGrip
+            let onRight = p.x >= body.maxX - self.resizeGrip
+            if !alongTop, room == .closed, onLeft || onRight {
+                self.trackResize(from: onLeft ? .left : .right)
+                return nil
+            }
             let topCorner = p.y >= body.maxY - 44 && (p.x <= body.minX + edge || p.x >= body.maxX - edge)
             if alongTop || topCorner {
                 if event.clickCount == 2 {

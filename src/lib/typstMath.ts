@@ -128,10 +128,18 @@ export function typstAnswer(exact: string | undefined, display: string): string 
  * page's own text color (light or dark) applies without compiling again.
  * `solvedFor` names the variable of a solved equation: `x^2 = 4 ⇒ x = ±2`, not `x^2 = 4 = ±2`.
  */
+// an answer's unit is upright text like the units typed (`69.8 L`, not an italic variable L)
+const ANSWER_WITH_UNIT = /^([+\-−]?[\d.,]+(?:e[+\-−]?\d+)?(?:\s*±\s*[\d.,]+)?)\s+([A-Za-z°µμΩÅ][^\s]*)$/
+
+function answerMath(answer: string): string {
+  const m = ANSWER_WITH_UNIT.exec(answer.trim())
+  return m ? `${toTypstMath(m[1]!)} ${JSON.stringify(m[2]!)}` : toTypstMath(answer)
+}
+
 export function typstDocument(expr: string, answer = '', solvedFor = ''): string | null {
   const math = previewMath(expr)
   if (!math) return null
-  const ans = toTypstMath(answer)
+  const ans = answerMath(answer)
   const lhs = toTypstMath(solvedFor)
   let body = math
   if (ans && lhs) body = `${math} quad arrow.r.double quad ${lhs} = ${ans}`
@@ -524,7 +532,8 @@ function readSymbol(s: string, i: number, to: number): Piece {
     '-': '-',
     '−': '-',
     '–': '-',
-    '*': 'ast',
+    // a centred dot, as multiplication is written by hand; `ast` (∗) reads the same when pasted back
+    '*': 'dot',
     '×': 'times',
     '·': 'dot.op',
     '÷': 'div',

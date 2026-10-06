@@ -101,6 +101,7 @@ import {
 } from '../lib/history'
 import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
+import { GREETING_REPLY, isGreeting } from '../lib/greeting'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
@@ -369,7 +370,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
   const graphCmd = isGraphCommand(q)
   const sysCmd = isSysCommand(q)
-  const periodicCmd = isPeriodicCommand(q)
+  const greeting = isGreeting(q)
+  // `periodic` and `hello` answer with a message, not a calculation
+  const periodicCmd = isPeriodicCommand(q) || greeting
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
     [graphCmd, q, nativeFns],
@@ -881,7 +884,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
-    if (isHelpCommand(expr) || isPeriodicCommand(expr)) {
+    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isGreeting(expr)) {
       resetToCalculate()
       return
     }
@@ -977,7 +980,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       else commit()
       return
     }
-    if (isHelpCommand(qRef.current)) resetToCalculate()
+    if (isHelpCommand(qRef.current) || isGreeting(qRef.current)) resetToCalculate()
     else if (selected == null && isPeriodicCommand(qRef.current)) {
       track('periodic')
       if (!openNativePeriodicTable()) setPeriodicOpen(true)
@@ -1093,7 +1096,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q) || isIsolateCommand(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1327,7 +1330,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: rotation.tick, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
