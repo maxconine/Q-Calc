@@ -720,6 +720,27 @@ html.quick-native .four-twenty.wide {
 @keyframes qcalc-word {
   from { color: var(--accent-hover); }
 }
+/* a unit: the accent green, brighter than a function name, so the two read apart */
+.quick-unit {
+  color: var(--accent);
+}
+/* what the unit under the pointer is (`Nm → newton meter`), above it since the bar ends just below the text */
+.quick-unit-tip {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  z-index: 10;
+  padding: 2px 7px;
+  border-radius: var(--radius-s);
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .quick-squiggle, .quick-word { animation: none; }
 }

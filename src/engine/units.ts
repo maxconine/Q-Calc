@@ -273,8 +273,8 @@ const UNIT_LIST: Unit[] = [
   // newton-metres as engineers write them; cased, so `nm` stays a nanometre. an id with _ is never picked for an answer
   { id: 'nm_torque', dim: 'energy', symbol: 'N·m', toBase: 1, defaultTo: 'ftlbf', names: ['newton meter', 'newton meters', 'newton metre', 'newton metres', 'newton-meter', 'newton-meters', 'newton-metre', 'newton-metres'], exactNames: ['Nm'] },
   { id: 'knm_torque', dim: 'energy', symbol: 'kN·m', toBase: 1e3, defaultTo: 'ftlbf', names: ['kilonewton meter', 'kilonewton meters', 'kilonewton metre', 'kilonewton metres'], exactNames: ['kNm'] },
-  { id: 'mnm_torque', dim: 'energy', symbol: 'MN·m', toBase: 1e6, defaultTo: 'ftlbf', names: [], exactNames: ['MNm'] },
-  { id: 'nmm_torque', dim: 'energy', symbol: 'N·mm', toBase: 1e-3, defaultTo: 'ftlbf', names: [], exactNames: ['Nmm'] },
+  { id: 'mnm_torque', dim: 'energy', symbol: 'MN·m', toBase: 1e6, defaultTo: 'ftlbf', names: ['meganewton meter', 'meganewton meters', 'meganewton metre', 'meganewton metres'], exactNames: ['MNm'] },
+  { id: 'nmm_torque', dim: 'energy', symbol: 'N·mm', toBase: 1e-3, defaultTo: 'ftlbf', names: ['newton millimeter', 'newton millimeters', 'newton millimetre', 'newton millimetres'], exactNames: ['Nmm'] },
   { id: 'erg', dim: 'energy', symbol: 'erg', toBase: 1e-7, defaultTo: 'j', names: ['erg', 'ergs'] },
   { id: 'cal', dim: 'energy', symbol: 'cal', toBase: 4.184, defaultTo: 'j', names: ['cal', 'calorie', 'calories', 'thermodynamic calorie', 'thermodynamic calories'] },
   { id: 'kcal', dim: 'energy', symbol: 'kcal', toBase: 4184, defaultTo: 'kj', names: ['kcal', 'kilocalorie', 'kilocalories', 'food calorie', 'food calories'], exactNames: ['Cal'] },
@@ -485,6 +485,34 @@ const ALIAS_INDEX: { alias: string; unit: Unit; exact?: string; whole?: boolean 
 const ALIAS_NAMES = new Set(ALIAS_INDEX.map((a) => a.alias))
 
 /** A unit's own name or symbol, not a prefix glued onto one (`kilom` is not a name). */
+/** A whole typed word read as a unit (`Nm` a newton meter, `nm` a nanometer), with its spelled-out name. */
+export function unitInfo(word: string): { symbol: string; name: string } | null {
+  if (!word || /\s/.test(word)) return null
+  // µ (micro sign) and μ (mu) look alike, and u stands in for either
+  for (const w of new Set([word, word.replace(/µ/g, 'μ'), word.replace(/[µμ]/g, 'u')])) {
+    const hit = matchUnitAtStart(w)
+    if (hit && hit.rest === '') return { symbol: hit.unit.symbol, name: spelledName(hit.unit) }
+  }
+  return null
+}
+
+// the plainest singular name: `meter` for m, `second` not `secs`, `gram` not a generated prefix pile-up,
+// and spaced when there's a choice (`foot pound`, `newton meter`)
+function spelledName(unit: Unit): string {
+  const symbol = unit.symbol.toLowerCase().replace(/[·*]/g, '')
+  const all = new Set(unit.names.map((n) => n.toLowerCase()))
+  const plural = (w: string) => (w.endsWith('s') && all.has(w.slice(0, -1))) || (w.endsWith('es') && all.has(w.slice(0, -2)))
+  // `kw h`, `deg c` and `millisec` are shorthands, not names
+  const abbreviated = (n: string) => n.split(/[ -]/).some((w) => w.length < 3 || /^(?:sec|secs|hrs?|mins?|degs?|deg[cfkr])$|sec$/i.test(w))
+  const spelled = unit.names.filter(
+    (n) => /^[a-z][a-z -]*[a-z]$/i.test(n) && n.toLowerCase() !== symbol && !plural(n.toLowerCase()) && !abbreviated(n),
+  )
+  const score = (n: string) => n.length - (/[ -]/.test(n) ? 1.5 : 0)
+  const pick = (min: number) =>
+    spelled.filter((n) => n.length >= min).reduce<string | null>((best, n) => (best == null || score(n) < score(best) ? n : best), null)
+  return pick(4) ?? pick(3) ?? unit.symbol
+}
+
 export function isUnitName(word: string): boolean {
   return ALIAS_NAMES.has(word.toLowerCase())
 }

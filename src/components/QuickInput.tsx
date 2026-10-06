@@ -7,6 +7,7 @@ import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/b
 import { chainedExpr } from '../lib/chain'
 import { copyText, inputHighlight, keepEndInView, searchBarCopy } from '../lib/dom'
 import { knownWordSpans } from '../lib/knownWords'
+import { unitSpans, type UnitSpan } from '../lib/unitSpans'
 import { cleanPastedText } from '../lib/paste'
 import { commandHeld } from '../lib/platform'
 import { breakRun, editKind, recordEdit, redo, undo, undoStart, type EditKind, type Undo, type UndoState } from '../lib/undo'
@@ -167,6 +168,10 @@ export function QuickInput({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLSpanElement>(null)
+  const ghostRef = useRef<HTMLDivElement>(null)
+  // the unit under the pointer, named after a short rest on it
+  const [unitTip, setUnitTip] = useState<{ text: string; left: number } | null>(null)
+  const unitTipTimer = useRef(0)
   const [prefixWidth, setPrefixWidth] = useState(0)
   const onChangeRef = useRef(onChange)
   const onEnterRef = useRef(onEnter)
@@ -235,8 +240,30 @@ export function QuickInput({
     squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null
   const bounded = boundsIn(value).length > 0
   // a word the engine knows is painted from the ghost layer, so the input's own text steps aside
-  const words = fits && !bounded ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []
-  const painted = words.length > 0
+  // units are green and say what they are on hover; a word that's a unit there isn't also a function
+  const units = fits && !bounded ? unitSpans(value, completionNames?.variables, completionNames?.functions) : []
+  const words = (fits && !bounded ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []).filter(
+    (w) => !units.some((u) => u.start < w.end && w.start < u.end),
+  )
+  const painted = words.length > 0 || units.length > 0
+
+  const hoverUnit = (x: number) => {
+    const field = ghostRef.current?.parentElement
+    const hit = [...(ghostRef.current?.querySelectorAll<HTMLElement>('.quick-unit') ?? [])].find((el) => {
+      const box = el.getBoundingClientRect()
+      return x >= box.left && x <= box.right
+    })
+    window.clearTimeout(unitTipTimer.current)
+    if (!hit || !field) {
+      setUnitTip(null)
+      return
+    }
+    const text = hit.dataset.unit ?? ''
+    const left = hit.getBoundingClientRect().left - field.getBoundingClientRect().left
+    if (unitTip?.text === text && unitTip.left === left) return
+    setUnitTip(null)
+    unitTipTimer.current = window.setTimeout(() => setUnitTip({ text, left }), 350)
+  }
 
   const commit = (raw: string, cursor: number, settle = false, typed = false) => {
     const caret = settle ? undefined : cursor
@@ -505,7 +532,7 @@ export function QuickInput({
 
   return (
     <div className={bounded ? 'quick-field quick-field-bounds' : 'quick-field'}>
-      <div className="quick-ghost" aria-hidden>
+      <div ref={ghostRef} className="quick-ghost" aria-hidden>
         <span ref={prefixRef} className="quick-inferred">
           {prefix}
           {chain ? <span className="quick-chain">ans</span> : null}
@@ -518,7 +545,7 @@ export function QuickInput({
           />
         ) : (
           <span className={painted ? 'quick-ghost-text quick-ghost-painted' : 'quick-ghost-text'}>
-            {paintText(value, mark, words)}
+            {paintText(value, mark, words, units)}
           </span>
         )}
         {completion ? <span className="quick-inferred quick-completion">{completion}</span> : null}
@@ -530,6 +557,11 @@ export function QuickInput({
         ) : null}
       </div>
       <RadicalLayer value={bounded ? '' : value} input={inputRef} inset={prefixWidth} />
+      {unitTip && units.length ? (
+        <span className="quick-unit-tip" style={{ left: unitTip.left }} role="tooltip">
+          {unitTip.text}
+        </span>
+      ) : null}
       <input
         ref={inputRef}
         className={painted ? 'quick-plain quick-plain-painted' : 'quick-plain'}
@@ -558,6 +590,11 @@ export function QuickInput({
           rememberHighlight(e.currentTarget)
         }}
         onBlur={(e) => finishTokens(e.currentTarget)}
+        onMouseMove={units.length ? (e) => hoverUnit(e.clientX) : undefined}
+        onMouseLeave={() => {
+          window.clearTimeout(unitTipTimer.current)
+          setUnitTip(null)
+        }}
         onMouseDown={(e) => {
           if (undoRef.current) undoRef.current = breakRun(undoRef.current)
           rememberCaret(e.currentTarget)
@@ -592,10 +629,11 @@ export function QuickInput({
   )
 }
 
-// the input's text split into plain runs, the squiggle and known words; a word keys on its name and
+// the input's text split into plain runs, the squiggle, known words and units; a word keys on its name and
 // count, so its pulse plays once when it's finished and not again as text around it changes
-function paintText(value: string, mark: Span | null, words: Span[]): ReactNode[] {
-  const cuts = [...words.filter((w) => !mark || w.end <= mark.start || w.start >= mark.end), ...(mark ? [mark] : [])]
+function paintText(value: string, mark: Span | null, words: Span[], units: UnitSpan[] = []): ReactNode[] {
+  const clear = (w: Span) => !mark || w.end <= mark.start || w.start >= mark.end
+  const cuts: Span[] = [...words.filter(clear), ...units.filter(clear), ...(mark ? [mark] : [])]
   cuts.sort((a, b) => a.start - b.start)
   const out: ReactNode[] = []
   const seen = new Map<string, number>()
@@ -605,6 +643,14 @@ function paintText(value: string, mark: Span | null, words: Span[]): ReactNode[]
     const text = value.slice(cut.start, cut.end)
     if (cut === mark) {
       out.push(<span key="squiggle" className="quick-squiggle">{text}</span>)
+    } else if ('name' in cut) {
+      const n = seen.get(text) ?? 0
+      seen.set(text, n + 1)
+      out.push(
+        <span key={`unit:${text}#${n}`} className="quick-unit" data-unit={`${text} → ${(cut as UnitSpan).name}`}>
+          {text}
+        </span>,
+      )
     } else {
       const n = seen.get(text) ?? 0
       seen.set(text, n + 1)
