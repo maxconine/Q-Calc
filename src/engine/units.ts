@@ -270,6 +270,11 @@ const UNIT_LIST: Unit[] = [
 
   { id: 'ev', dim: 'energy', symbol: 'eV', toBase: E_CHARGE, defaultTo: 'j', prefixable: true, names: ['ev', 'evs', 'electronvolt', 'electronvolts', 'electron volt', 'electron volts'] },
   { id: 'ftlbf', dim: 'energy', symbol: 'ft·lbf', toBase: FT * LBF, defaultTo: 'j', names: ['ftlbf', 'footpound', 'footpounds', 'foot pound', 'foot pounds'] },
+  // newton-metres as engineers write them; cased, so `nm` stays a nanometre. an id with _ is never picked for an answer
+  { id: 'nm_torque', dim: 'energy', symbol: 'N·m', toBase: 1, defaultTo: 'ftlbf', names: ['newton meter', 'newton meters', 'newton metre', 'newton metres', 'newton-meter', 'newton-meters', 'newton-metre', 'newton-metres'], exactNames: ['Nm'] },
+  { id: 'knm_torque', dim: 'energy', symbol: 'kN·m', toBase: 1e3, defaultTo: 'ftlbf', names: ['kilonewton meter', 'kilonewton meters', 'kilonewton metre', 'kilonewton metres'], exactNames: ['kNm'] },
+  { id: 'mnm_torque', dim: 'energy', symbol: 'MN·m', toBase: 1e6, defaultTo: 'ftlbf', names: [], exactNames: ['MNm'] },
+  { id: 'nmm_torque', dim: 'energy', symbol: 'N·mm', toBase: 1e-3, defaultTo: 'ftlbf', names: [], exactNames: ['Nmm'] },
   { id: 'erg', dim: 'energy', symbol: 'erg', toBase: 1e-7, defaultTo: 'j', names: ['erg', 'ergs'] },
   { id: 'cal', dim: 'energy', symbol: 'cal', toBase: 4.184, defaultTo: 'j', names: ['cal', 'calorie', 'calories', 'thermodynamic calorie', 'thermodynamic calories'] },
   { id: 'kcal', dim: 'energy', symbol: 'kcal', toBase: 4184, defaultTo: 'kj', names: ['kcal', 'kilocalorie', 'kilocalories', 'food calorie', 'food calories'], exactNames: ['Cal'] },
@@ -853,9 +858,18 @@ function isPower(d: readonly number[]): boolean {
   return vecEq(d, DIM_VEC.power)
 }
 
+const TORQUE_PARTS: Record<string, [string, number][]> = {
+  nm_torque: [['n', 1], ['m', 1]],
+  knm_torque: [['kilonewton', 1], ['m', 1]],
+  mnm_torque: [['mega_n', 1], ['m', 1]],
+  nmm_torque: [['n', 1], ['mm', 1]],
+}
+
 /** ft³ is ft to the 3rd and ft·lbf is ft times lbf, so `lb/ft^3 * ft` cancels to lb/ft² and `ft·lbf * in / in^4` to psi. */
 function typedParts(unit: Unit): [Unit, number][] {
   if (unit.id === 'ftlbf') return [[BY_ID.get('lbf')!, 1], [BY_ID.get('ft')!, 1]]
+  const torque = TORQUE_PARTS[unit.id]
+  if (torque) return torque.map(([id, p]) => [BY_ID.get(id)!, p])
   const m = unit.symbol.match(/^(\S+?)([²³])$/)
   const power = m?.[2] === '²' ? 2 : 3
   const len = m && UNIT_LIST.find((u) => u.dim === 'length' && u.symbol === m[1])

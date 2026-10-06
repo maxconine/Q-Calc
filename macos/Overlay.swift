@@ -26,6 +26,35 @@ private func commandShiftHeld() -> Bool {
     return flags.contains(.command) && flags.contains(.shift)
 }
 
+// a thin strip on one side of the bar: drag it to make the bar wider or narrower
+final class OverlayResizeHandle: NSView {
+    enum Side { case left, right }
+    let side: Side
+    var onDrag: ((CGFloat) -> Void)?
+    var onEnd: (() -> Void)?
+    private var lastX: CGFloat = 0
+
+    init(side: Side) {
+        self.side = side
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .resizeLeftRight) }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) { lastX = NSEvent.mouseLocation.x }
+
+    // in screen points, so moving the window under the cursor doesn't feed back into the drag
+    override func mouseDragged(with event: NSEvent) {
+        let x = NSEvent.mouseLocation.x
+        onDrag?(side == .right ? x - lastX : lastX - x)
+        lastX = x
+    }
+
+    override func mouseUp(with event: NSEvent) { onEnd?() }
+}
+
 final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onPaste: (() -> Void)?
@@ -118,7 +147,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var webReady = false
     private var triedBundle = false
     private var triedDevServer = false
-    private let overlayWidth: CGFloat = 680
+    private let minOverlayWidth: CGFloat = 680
+    // the bar's width: dragged wider from either edge for long calculations, and kept across launches
+    private static let overlayWidthKey = "qcalc.overlayWidth"
+    private var overlayWidth: CGFloat = max(680, CGFloat(UserDefaults.standard.double(forKey: OverlayController.overlayWidthKey)))
+    private var resizeHandles: [OverlayResizeHandle] = []
     private let overlayMinHeight: CGFloat = 72
     private let overlayMaxHeight: CGFloat = 560
     // distance from the overlay top to the composer, so history grows up and graphs grow down
@@ -465,6 +498,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.contentView = web
         self.web = web
         self.panel = panel
+        addResizeHandles(to: web)
         web.onPaste = { [weak self] in self?.pasteIntoWeb() }
         applyWebAppearance(web)
         loadQuickCalc(web)
@@ -653,7 +687,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         var body = NSRect(
             x: panel.frame.minX + sizeRoom.side,
             y: composerTop + nextAnchor - h + room.bottom,
-            width: overlayWidth,
+            width: fittedWidth(overlayWidth, on: panel.screen),
             height: h - extra
         )
         // the body stays on the visible screen; if it can't fit, the top wins. the room may run off the edges
@@ -678,6 +712,45 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             // again once the page has drawn at the new size
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak panel] in panel?.invalidateShadow() }
         }
+    }
+
+    // never wider than the screen it's on, less a margin each side
+    private func fittedWidth(_ width: CGFloat, on screen: NSScreen?) -> CGFloat {
+        guard let visible = (screen ?? NSScreen.main)?.visibleFrame else { return max(width, minOverlayWidth) }
+        return min(max(width, minOverlayWidth), max(minOverlayWidth, visible.width - 40))
+    }
+
+    private func addResizeHandles(to view: NSView) {
+        let grip: CGFloat = 6
+        for side in [OverlayResizeHandle.Side.left, .right] {
+            let handle = OverlayResizeHandle(side: side)
+            handle.frame = NSRect(x: side == .left ? 0 : view.bounds.width - grip, y: 0, width: grip, height: view.bounds.height)
+            handle.autoresizingMask = side == .left ? [.height, .maxXMargin] : [.height, .minXMargin]
+            handle.onDrag = { [weak self] dx in self?.resizeBar(by: dx, from: side) }
+            handle.onEnd = { [weak self] in self?.saveBarWidth(movedLeftEdge: side == .left) }
+            view.addSubview(handle)
+            resizeHandles.append(handle)
+        }
+    }
+
+    // the dragged side moves and the other stays put; the page reports its new height as it reflows
+    private func resizeBar(by dx: CGFloat, from side: OverlayResizeHandle.Side) {
+        guard let panel, sizeRoom == .closed, dx != 0 else { return }
+        let width = fittedWidth(panel.frame.width + dx, on: panel.screen)
+        guard width != panel.frame.width else { return }
+        var frame = panel.frame
+        if side == .left { frame.origin.x = frame.maxX - width }
+        frame.size.width = width
+        overlayWidth = width
+        panel.setFrame(frame, display: true)
+        panel.invalidateShadow()
+    }
+
+    // dragging the left edge moves the bar, so its spot is kept too; a centred bar dragged on the right stays centred
+    private func saveBarWidth(movedLeftEdge: Bool) {
+        UserDefaults.standard.set(Double(overlayWidth), forKey: Self.overlayWidthKey)
+        if movedLeftEdge { rememberPosition() }
+        for handle in resizeHandles { panel?.invalidateCursorRects(for: handle) }
     }
 
     // the page's room for the 420 smoke; anything missing or odd is no room

@@ -190,6 +190,17 @@ describe('typstPreviewUseful', () => {
     expect(previewMath(expr)).toBe(math)
   })
 
+  it.each(['1.2*10^3 Nm / (28*10^9 Pa * pi/2 * (25*10^-3)^4)', '50 kN / 20 mm^2', '9.81 m/s^2 * (2 s)^2 / 2'])(
+    'shows for %s: a unit is quoted text but still math',
+    (expr) => {
+      expect(typstPreviewUseful(expr)).toBe(true)
+    },
+  )
+
+  it.each(['2 hr 30 min', '10 km to mi', '3:45pm + 4 hr 10 min', '5 m * 3 m'])('hides for %s', (expr) => {
+    expect(typstPreviewUseful(expr)).toBe(false)
+  })
+
   it('keeps the typed words when copying', () => {
     expect(copiedEquation('solve x^2 = 4', true)).toBe('"solve" x ^ 2 = 4')
   })

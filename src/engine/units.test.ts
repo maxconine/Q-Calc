@@ -2390,3 +2390,19 @@ describe('units: angles and compound rates', () => {
     expectQty('100 cm / 2', 50, 'cm')
   })
 })
+
+describe('newton-metres written together', () => {
+  const answer = (expr: string) => evaluateSheet([expr])[0]?.display
+  it('reads Nm, kNm, MNm and Nmm as torque, and nm still as a nanometre', () => {
+    expect(answer('1 Nm to J')).toBe('1 J')
+    expect(answer('3 kNm * 2')).toBe('6 kN·m')
+    expect(answer('2 MNm to kNm')).toBe('2000 kN·m')
+    expect(answer('500 Nmm to Nm')).toBe('0.5 N·m')
+    expect(answer('1 nm to m')).toBe('1e-9 m')
+  })
+
+  it('carries through a formula as N·m', () => {
+    // 1.2 kN·m over 28 GPa times a dimensionless π/2·(0.025)⁴ is a volume
+    expect(answer('1.2*10^3 Nm / (28*10^9 Pa * pi/2 * (25*10^-3)^4)')).toBe(answer('1.2*10^3 N*m / (28*10^9 Pa * pi/2 * (25*10^-3)^4)'))
+  })
+})
