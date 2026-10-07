@@ -135,8 +135,9 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       results.push({ raw, kind: 'solve', value: single ? num(root!) : textVal(display), display, exact, solve: solved.info })
     }
     // an equation with units (`0.5 = e^(-t/0.384 ms)`): solved in SI, the root back in the unit typed for it
-    const pushUnitSolved = (eq: string, variable?: string): boolean => {
+    const pushUnitSolved = (eq: string, variable?: string, near?: string): boolean => {
       const u = solveWithUnitsOne(eq, {
+        near,
         names: [...Object.keys(variables), ...Object.keys(quantities), ...Object.keys(functions)],
         ans: lastAns,
         angleMode,
@@ -179,7 +180,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     const named = hasPlusMinus(line) ? null : parseNamedSolve(line)
     if (named) {
       const unitEq = withQuantities(named.eq, quantities)
-      if (pushUnitSolved(unitEq, named.variable)) continue
+      if (pushUnitSolved(unitEq, named.variable, named.near)) continue
       // with units and letters left over, a formula, its quantities kept whole (`h = v^2/(2*(9.8 m/s^2))`)
       const formula = isolateWithUnits(unitEq, named.variable, variables)
       if (formula) {

@@ -4,7 +4,7 @@ import type { ScientificContext } from './scientific'
 import { formatSolve, solveEquation } from './solve'
 import { inferDims, prepUnits } from './system'
 import type { SolveInfo, Value } from './types'
-import { siValue, type DefaultUnits } from './units'
+import { siQuantity, siValue, type DefaultUnits } from './units'
 
 export type UnitSolved = {
   /** Null for a message (units that can't match), which isn't a solve. */
@@ -22,6 +22,8 @@ type Ctx = ScientificContext & {
   sigFigs: number
   /** Stored names, which are never units (`2H` with H = 3 is 6). */
   names?: string[]
+  /** A starting guess as typed; `0.2 ms` goes to SI with everything else. */
+  near?: string
 }
 
 /**
@@ -33,7 +35,9 @@ export function solveWithUnitsOne(equation: string, ctx: Ctx): UnitSolved | null
   const prep = prepUnits([equation], [...(ctx.variable ? [ctx.variable] : []), ...(ctx.names ?? [])])
   if (!prep) return null
   const plain = prep.plain[0]!
-  const solved = solveEquation(ctx.variable ? `solve ${plain} for ${ctx.variable}` : plain, ctx)
+  const guess = ctx.near ? (siQuantity(ctx.near)?.si ?? ctx.near) : null
+  const near = guess != null && ctx.variable ? ` near ${guess}` : ''
+  const solved = solveEquation(ctx.variable ? `solve ${plain} for ${ctx.variable}${near}` : plain, ctx)
   if (!solved) return null
   const { info } = solved
   if (info.outcome !== 'roots') return { info, ...formatSolve(solved, { sigFigs: ctx.sigFigs }) }

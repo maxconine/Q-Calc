@@ -59,3 +59,36 @@ describe('equations with units', () => {
     expect(answer('x = 5 m').kind).toBe('assignment')
   })
 })
+
+describe('solve(eq, x = guess)', () => {
+  const rad = (line: string) => evaluateSheet([line], { angleMode: 'rad' })[0]!
+
+  it.each([
+    ['solve(x ^ 2 - cos(x) = 0, x = 0.2)', '0.824132312303'],
+    ['solve(x ^ 2 - cos(x) = 0, x = -9)', '-0.824132312303'],
+    ['solve(x^2 = 4, x = -5)', '-2'],
+    ['solve(sin(x) = 0.5, x = 2)', '2.61799387799'],
+    ['solve(sin(x) = 0.5, x = pi/4)', '0.523598775598'],
+    ['solve(e^x = 3x, x = 0)', '0.619061286736'],
+    ['solve(x^3 - 2x - 5 = 0, x = 2)', '2.09455148154'],
+    ['solve x^2 - cos(x) = 0 for x near 0.2', '0.824132312303'],
+  ])('%s starts from the guess and gives %s', (line, shown) => {
+    const r = rad(line)
+    expect(r.kind).toBe('solve')
+    expect(r.display).toBe(shown)
+  })
+
+  it('still says when there is nothing to find', () => {
+    expect(rad('solve(x^2 = -1, x = 1)').display).toBe('no real solution')
+  })
+
+  it('takes a guess with units', () => {
+    expect(answer('solve(0.5 = e^(-t/0.384 ms), t = 0.1 ms)').display).toBe('0.266168517335 ms')
+    expect(answer('solve(x^2 = 9 m^2, x = -1 m)').display).toBe('-3 m')
+  })
+
+  it('reads the guess out of the call', () => {
+    expect(solveCall('solve(x^2 - cos(x) = 0, x = 0.2)')).toBe('solve x^2 - cos(x) = 0 for x near 0.2')
+    expect(solveCall('solve(f(a, b) = 0, a = -1)')).toBe('solve f(a, b) = 0 for a near -1')
+  })
+})

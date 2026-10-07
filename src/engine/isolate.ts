@@ -2,7 +2,7 @@ import type { MathNode } from 'mathjs'
 import { math } from './math'
 import { normalizeMathText } from './plainMath'
 import { preprocessAscii, SCIENTIFIC_NAMES } from './scientific'
-import { solveCall } from './solve'
+import { solveCall, splitNear } from './solve'
 
 /** `isolate x in a*x + b = c`, `isolate x: …`, `… isolate x`; a line with no `=` is set to 0. */
 export interface IsolateCmd {
@@ -56,10 +56,13 @@ export interface NamedSolve {
   numeric: string
   /** The same line as isolate reads it. */
   isolate: string
+  /** A starting guess as typed (`solve(eq, x = 0.2)`), which `numeric` carries too. */
+  near?: string
 }
 
 export function parseNamedSolve(text: string): NamedSolve | null {
-  const s = subscripts(solveCall(text).trim())
+  const guessed = splitNear(solveCall(text))
+  const s = subscripts(guessed.text.trim())
   let variable: string | undefined
   let eq: string | undefined
   let m: RegExpMatchArray | null
@@ -76,7 +79,8 @@ export function parseNamedSolve(text: string): NamedSolve | null {
   const isolate = `isolate ${variable} in ${eq}`
   if (!parseIsolate(isolate)) return null
   // the numeric solver reads `mx` the way isolate does, as m times x
-  return { variable, eq, numeric: `solve ${splitShortWords(eq, variable)} for ${variable}`, isolate }
+  const near = guessed.near ? ` near ${guessed.near}` : ''
+  return { variable, eq, numeric: `solve ${splitShortWords(eq, variable)} for ${variable}${near}`, isolate, near: guessed.near }
 }
 
 /** Lines isolate or a named solve owns, which natural-language math shouldn't answer instead. */

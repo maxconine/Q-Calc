@@ -42,6 +42,8 @@ export interface Equation {
   assignVar?: string
   /** `solve …` or `… for v`: always an equation. */
   explicit: boolean
+  /** `… for x near 0.2`: where to start looking, as typed. */
+  near?: string
 }
 
 const SOLVE_CMD = /^solve\s+(.+)$/is
@@ -71,14 +73,25 @@ export function solveCall(text: string): string {
   }
   const inner = s.slice(open + 1, -1)
   if (comma < 0) return `solve ${inner.trim()}`
-  const variable = s.slice(comma + 1, -1).trim()
+  const last = s.slice(comma + 1, -1).trim()
+  // `x = 0.2` names the unknown and where to start looking
+  const guessed = /^([A-Za-z][A-Za-z0-9_]*|θ)\s*=\s*(.+)$/s.exec(last)
+  const variable = guessed ? guessed[1]! : last
   if (!/^(?:[A-Za-z][A-Za-z0-9_]*|θ)$/.test(variable)) return text
-  return `solve ${s.slice(open + 1, comma).trim()} for ${variable}`
+  const near = guessed ? ` near ${guessed[2]!.trim()}` : ''
+  return `solve ${s.slice(open + 1, comma).trim()} for ${variable}${near}`
+}
+
+/** `… for x near 0.2`: the line without its starting guess, and the guess as typed. */
+export function splitNear(text: string): { text: string; near?: string } {
+  const m = /^(.*\bfor\s+(?:[A-Za-z][A-Za-z0-9_]*|θ))\s+near\s+(.+)$/is.exec(text.trim())
+  return m ? { text: m[1]!, near: m[2]!.trim() } : { text }
 }
 
 /** Null unless the line is shaped like an equation: one lone `=`, or `solve …`. No evaluation. */
 export function parseEquation(text: string): Equation | null {
-  let s = solveCall(text).trim()
+  const guessed = splitNear(solveCall(text))
+  let s = guessed.text.trim()
   if (!s || /^graph(?:\s|$)/i.test(s)) return null
   const cmd = s.match(SOLVE_CMD)
   if (cmd) s = cmd[1]!.trim()
@@ -87,13 +100,13 @@ export function parseEquation(text: string): Equation | null {
   const explicit = Boolean(cmd || named)
   if (REJECT.test(s)) return null
   const parts = s.split('=')
-  if (parts.length === 1) return cmd ? { lhs: s, rhs: '0', forVar: named?.[2], explicit } : null
+  if (parts.length === 1) return cmd ? { lhs: s, rhs: '0', forVar: named?.[2], explicit, near: guessed.near } : null
   if (parts.length !== 2) return null
   const lhs = parts[0]!.trim()
   const rhs = parts[1]!.trim()
   if (!lhs || !rhs) return null
   const assignVar = !explicit && BARE_NAME.test(lhs) && !KNOWN.has(lhs.toLowerCase()) ? lhs : undefined
-  return { lhs, rhs, forVar: named?.[2], assignVar, explicit }
+  return { lhs, rhs, forVar: named?.[2], assignVar, explicit, near: guessed.near }
 }
 
 /** Cheap routing check: true for lines solve would read as an equation (`x = 5` is an assignment). */
@@ -198,6 +211,65 @@ class Budget {
   }
 }
 
+// a guess may be any expression with no unknown in it: `0.2`, `-9`, `pi/4`
+function guessValue(text: string, ctx: ScientificContext): number | null {
+  try {
+    const c = compileScientific(normalizeMathText(text), ctx, '__none__')
+    const r = c?.(0)
+    return r && r.kind === 'number' && Number.isFinite(r.n) ? r.n : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * The root a starting guess leads to, the way a calculator's solve does it: Newton's method from the guess, so
+ * x^2 - cos(x) = 0 from 0.2 is 0.82413 and from -9 is -0.82413. If Newton wanders off, the found root nearest
+ * the guess; with none, what the plain solve said (no solution, and so on).
+ */
+function nearGuess(found: Omit<Solved, 'evals'> | null, L: Fn, R: Fn, guess: number, v: string): Omit<Solved, 'evals'> | null {
+  const f = (x: number) => {
+    const l = L(x)
+    const r = R(x)
+    return l == null || r == null ? null : l - r
+  }
+  const roots = found?.info.outcome === 'roots' ? found.info.roots : []
+  const pick = (x: number): Omit<Solved, 'evals'> => {
+    // a root the search also found keeps its exact form
+    const i = roots.findIndex((r) => Math.abs(r - x) <= 1e-9 * Math.max(1, Math.abs(x)))
+    return {
+      info: { variable: v, roots: [i >= 0 ? roots[i]! : x], outcome: 'roots' },
+      ...(i >= 0 && found?.exact?.[i] != null ? { exact: [found.exact[i]!] } : {}),
+      ...(i >= 0 && found?.loose?.[i] != null ? { loose: [found.loose[i]!] } : {}),
+    }
+  }
+  const newton = newtonRoot(f, guess)
+  if (newton != null) return pick(newton)
+  if (roots.length) return pick(roots.reduce((best, r) => (Math.abs(r - guess) < Math.abs(best - guess) ? r : best)))
+  return found
+}
+
+function newtonRoot(f: (x: number) => number | null, start: number): number | null {
+  let x = start
+  for (let i = 0; i < 100; i++) {
+    const y = f(x)
+    if (y == null || !Number.isFinite(y)) return null
+    const h = 1e-6 * Math.max(1, Math.abs(x))
+    const a = f(x + h)
+    const b = f(x - h)
+    if (a == null || b == null) return null
+    const slope = (a - b) / (2 * h)
+    if (!Number.isFinite(slope) || slope === 0) return null
+    const step = y / slope
+    x -= step
+    if (!Number.isFinite(x)) return null
+    if (Math.abs(step) <= 1e-14 * Math.max(1, Math.abs(x))) break
+  }
+  const y = f(x)
+  // a real root, not a stall: f is about zero there, against the size of its two sides
+  return y != null && Math.abs(y) <= 1e-9 * Math.max(1, Math.abs(x)) ? x : null
+}
+
 function compileSide(side: string, v: string, ctx: ScientificContext, budget: Budget): Fn | null {
   // the engine reads θ as theta
   const c = compileScientific(side, ctx, v === 'θ' ? 'theta' : v)
@@ -225,6 +297,11 @@ export function solveEquation(text: string, ctx: ScientificContext & { rationali
     const R = compileSide(rhs, v, ctx, budget)
     if (!L || !R) return null
     const found = new Solver(L, R, lhs, rhs, v, ctx).run()
+    const guess = eq.near != null ? guessValue(eq.near, ctx) : null
+    if (guess != null) {
+      const near = nearGuess(found, L, R, guess, v)
+      return near ? { ...near, evals: budget.evals } : null
+    }
     if (!found) return null
     return { ...found, evals: budget.evals }
   } catch {
