@@ -4,7 +4,7 @@ import { chemCopyText, isReactionInput } from '../engine/chem'
 import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
-import { isSysCommand, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
+import { isSysCommand, parseSystemCall, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
 import { isIsolateCommand, isolatePrevious } from '../engine/isolate'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
@@ -423,8 +423,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const sysParsed = useMemo(() => (sysCmd ? sysCommand(q) : null), [sysCmd, q])
   const sysAnswer = useMemo((): SystemAnswer | null => {
     if (!sysLines || !sysParsed || !('count' in sysParsed) || sysParsed.count !== sysLines.length) return null
-    return solveLive(sysLines, defaultUnits)
-  }, [sysLines, sysParsed, defaultUnits])
+    return solveLive(sysLines, defaultUnits, angleMode)
+  }, [sysLines, sysParsed, defaultUnits, angleMode])
 
   const sysShown = sysAnswer?.display ?? (sysParsed && 'hint' in sysParsed && !sysLines ? sysParsed.hint : '')
   const sysShownRef = useRef('')
@@ -1096,7 +1096,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that

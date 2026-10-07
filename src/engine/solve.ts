@@ -58,7 +58,8 @@ const BARE_NAME = /^(?:[A-Za-z][A-Za-z0-9]*|θ)$/
 export function solveCall(text: string): string {
   const s = text.trim()
   const m = /^solve\s*\(/i.exec(s)
-  if (!m || !s.endsWith(')')) return text
+  // `solve({eq1, eq2}, …)` is a system, read by parseSystemCall
+  if (!m || !s.endsWith(')') || /^solve\s*\(\s*\{/i.test(s)) return text
   const open = m[0].length - 1
   let depth = 0
   let comma = -1

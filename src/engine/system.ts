@@ -1,6 +1,7 @@
 import type { MathNode } from 'mathjs'
-import { formatValue } from './format'
+import { formatNumber, formatValue } from './format'
 import { math } from './math'
+import { guessNumber, solveNumericSystem, type NumericOptions } from './systemNumeric'
 import { readsAsUnit, siQuantity, siValue, type DefaultUnits, type SiQuantity } from './units'
 
 /** A solved linear system, up to five equations. */
@@ -1540,11 +1541,11 @@ export type SystemAnswer = { display: string; exact?: string; message?: boolean 
  * Solve the equations that parse, including while later fields are empty or still being typed.
  * An underdetermined system shows only what the typed equations already fix until every field is an equation.
  */
-export function solveLive(lines: string[], defaults?: DefaultUnits): SystemAnswer | null {
+export function solveLive(lines: string[], defaults?: DefaultUnits, angleMode?: NumericOptions['angleMode']): SystemAnswer | null {
   const pending = lines.some((line) => !prepEq(line))
   const ready = lines.map((line) => line.trim()).filter((line) => prepEq(line))
   if (!ready.length) return null
-  const result = solveWithUnits(ready, defaults) ?? solveSystem(ready)
+  const result = solveWithUnits(ready, defaults, { angleMode }) ?? solveSystem(ready, { angleMode })
   if (!result) return null
   if (result.status === 'inconsistent' || result.status === 'mismatch') return { display: result.display, message: true }
   if (result.status === 'infinite' && pending) return result.pinned ? { display: result.pinned } : null
@@ -1552,17 +1553,25 @@ export function solveLive(lines: string[], defaults?: DefaultUnits): SystemAnswe
 }
 
 /** Solve up to five equations. Null when the system isn't one this solver reads. */
-export function solveSystem(equations: string[]): SystemResult | null {
+export function solveSystem(equations: string[], opts: NumericOptions = {}): SystemResult | null {
   if (equations.length < 1 || equations.length > 5) return null
   const parsed = equations.map(prepEq)
   if (parsed.some((p) => !p)) return null
   const ready = parsed as Parsed[]
-  const names: string[] = []
+  let names: string[] = []
   for (const p of ready) symbolsOf(p.diff, names)
+  // `e^x` is Euler's number; an e that's only ever a value of its own (`d + e = 5`) stays a variable
+  if (names.includes('e') && equations.some((eq) => /(?<![A-Za-z0-9_])e\s*\^/.test(eq))) names = names.filter((n) => n !== 'e')
   // as many equations as names (`F = m*a`, `m = 2`, `a = 3`): every name is an unknown, lowercase or not
   const { unknowns, params } = names.length <= ready.length ? { unknowns: names, params: [] } : classify(names)
   if (!unknowns.length || unknowns.length > 8) return null
   const diffs = ready.map((p) => p.diff)
+  const square = !params.length && unknowns.length === ready.length
+  // a guess asks for the one solution it leads to
+  if (square && opts.guess) {
+    const near = numericResult(diffs, unknowns, opts)
+    if (near) return near
+  }
   if (!params.length) {
     const exp = tryExponential(ready, unknowns)
     if (exp) return exp
@@ -1577,8 +1586,31 @@ export function solveSystem(equations: string[]): SystemResult | null {
   }
   const linear = solveLinear(diffs, unknowns, params)
   if (linear) return linear
-  if (!params.length) return tryQuadratic(diffs, unknowns)
-  return null
+  const quadratic = params.length ? null : tryQuadratic(diffs, unknowns)
+  if (quadratic && quadratic.status !== 'inconsistent') return quadratic
+  // anything else nonlinear (`x^2 + y^2 = 4`, `x^2 - y = 2`; `e^x = y`, `x + y = 2`) is solved numerically.
+  // so is a nonlinear "no solution", which the exact path can give for roots it can't write (x = y on the unit circle)
+  if (!square) return quadratic
+  // a search that comes up empty can't prove there's nothing, so it says only what it found
+  return numericResult(diffs, unknowns, { ...opts, guess: undefined }) ?? quadratic ?? { status: 'inconsistent', variables: unknowns, display: 'no solution found' }
+}
+
+function numericResult(diffs: MathNode[], variables: string[], opts: NumericOptions): SystemResult | null {
+  const found = solveNumericSystem(diffs, variables, opts)
+  if (!found) return null
+  // full precision for units and ans to work from; the display rounds as answers do
+  const solutions = found.solutions.map((sol) => sol.map((v) => String(v)))
+  const shown = found.solutions.map((sol) => sol.map((v) => formatNumber(v)))
+  const more = found.more ? ' or …' : ''
+  return {
+    status: solutions.length === 1 && !found.more ? 'unique' : 'finite',
+    variables,
+    solutions,
+    display:
+      shown.length === 1
+        ? variables.map((name, i) => `${name} = ${shown[0]![i]}`).join(', ')
+        : shown.map((sol) => `(${variables.join(', ')}) = (${sol.join(', ')})`).join(' or ') + more,
+  }
 }
 
 // ---- units: `x + y = 10 m`, `F = m*a` with `a = 9.8 m/s^2` ----
@@ -1834,10 +1866,17 @@ export function inferDims(marked: string[], quantities: SiQuantity[], unknowns: 
 }
 
 /** Solve with units by working in SI; null when no equation has a unit, so the plain solver takes over. */
-export function solveWithUnits(equations: string[], defaults?: DefaultUnits): UnitResult | null {
-  const prep = prepUnits(equations)
+export function solveWithUnits(
+  equations: string[],
+  defaults?: DefaultUnits,
+  opts: { angleMode?: NumericOptions['angleMode']; guessText?: Record<string, string> } = {},
+): UnitResult | null {
+  const prep = prepUnits(equations, Object.keys(opts.guessText ?? {}))
   if (!prep) return null
-  const result = solveSystem(prep.plain)
+  // a guess with a unit (`t = 2 s`) goes to SI along with the equations
+  const guess = opts.guessText ? siGuesses(opts.guessText) : undefined
+  if (opts.guessText && !guess) return null
+  const result = solveSystem(prep.plain, { angleMode: opts.angleMode, guess })
   const mismatch: UnitResult = { status: 'mismatch', display: "units don't match" }
   if (!result) return null
   if (result.status === 'inconsistent') return result
@@ -1882,4 +1921,84 @@ export function solveWithUnits(equations: string[], defaults?: DefaultUnits): Un
   })
   const pinned = pinnedParts.join(', ')
   return { ...result, pinned: pinned || undefined, display: [pinned, `free: ${free.join(', ')}`].filter(Boolean).join(', ') }
+}
+
+function siGuesses(texts: Record<string, string>): Record<string, number> | undefined {
+  const out: Record<string, number> = {}
+  for (const [name, text] of Object.entries(texts)) {
+    const v = siQuantity(text)?.si ?? guessNumber(text)
+    if (v == null) return undefined
+    out[name] = v
+  }
+  return out
+}
+
+/**
+ * `solve({eq1, eq2}, x = 1, y = 2)`: the equations, solved with units when they have them, from the guesses when
+ * given (then only the solution they lead to). A guess for some unknowns but not all is no guess.
+ */
+export function solveSystemCall(
+  equations: string[],
+  guessText: Record<string, string>,
+  opts: { angleMode?: NumericOptions['angleMode']; defaults?: DefaultUnits } = {},
+): SystemAnswer | null {
+  const texts = Object.keys(guessText).length ? guessText : undefined
+  const withUnits = solveWithUnits(equations, opts.defaults, { angleMode: opts.angleMode, guessText: texts })
+  if (withUnits) return { display: withUnits.display, message: withUnits.status === 'inconsistent' || withUnits.status === 'mismatch' }
+  const guess = texts ? siGuesses(texts) : undefined
+  const result = solveSystem(equations, { angleMode: opts.angleMode, guess })
+  if (!result) return null
+  return { display: result.display, message: result.status === 'inconsistent' }
+}
+
+/**
+ * `solve({x^2 + y^2 = 4, x^2 - y = 2}, x = 1, y = 1)`: the equations in the braces (split at their own commas or
+ * semicolons) and a guess per `name = value` after them. A bare name after them is allowed and changes nothing.
+ * Null for anything else, including a plain `solve(eq, x)`.
+ */
+export function parseSystemCall(text: string): { equations: string[]; guessText: Record<string, string> } | null {
+  const s = text.trim()
+  const m = /^solve\s*\(\s*\{/i.exec(s)
+  if (!m || !s.endsWith(')')) return null
+  const close = matchingBrace(s, m[0].length - 1)
+  if (close < 0) return null
+  const equations = splitTopLevel(s.slice(m[0].length, close), /[,;]/).map((e) => e.trim()).filter(Boolean)
+  if (!equations.length || equations.length > 5 || equations.some((e) => !e.includes('='))) return null
+  const rest = s.slice(close + 1, -1).trim()
+  const guessText: Record<string, string> = {}
+  if (rest) {
+    if (!rest.startsWith(',')) return null
+    for (const arg of splitTopLevel(rest.slice(1), /,/).map((a) => a.trim()).filter(Boolean)) {
+      const g = /^([A-Za-z][A-Za-z0-9_]*|θ)\s*(?:=\s*(.+))?$/s.exec(arg)
+      if (!g) return null
+      if (g[2]) guessText[g[1]!] = g[2].trim()
+    }
+  }
+  return { equations, guessText }
+}
+
+function matchingBrace(s: string, open: number): number {
+  let depth = 0
+  for (let i = open; i < s.length; i++) {
+    if (s[i] === '{') depth++
+    else if (s[i] === '}' && --depth === 0) return i
+  }
+  return -1
+}
+
+function splitTopLevel(s: string, sep: RegExp): string[] {
+  const out: string[] = []
+  let depth = 0
+  let start = 0
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]!
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) depth--
+    else if (depth === 0 && sep.test(ch)) {
+      out.push(s.slice(start, i))
+      start = i + 1
+    }
+  }
+  out.push(s.slice(start))
+  return out
 }

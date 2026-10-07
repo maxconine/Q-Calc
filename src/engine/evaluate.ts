@@ -11,7 +11,7 @@ import { looksLikeMatrix, matrixAnswer } from './matrix'
 import { exactForm, wantsExactForm } from './simplify'
 import { isolateVariable, parseNamedSolve } from './isolate'
 import { formatSolve, isEquation, solveEquation, type Solved } from './solve'
-import { prepUnits } from './system'
+import { parseSystemCall, prepUnits, solveSystemCall } from './system'
 import { clearlyUnits, isolateWithUnits, solveWithUnitsOne } from './unitSolve'
 import { normalizeSums, sumAnswer } from './sums'
 import { quantityText, readsAsUnit, tryConvert } from './units'
@@ -168,6 +168,14 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       const iso = isolateVariable(text, { variables: known })
       if (iso) results.push({ raw, kind: 'expression', display: iso.display, value: textVal(iso.display) })
       return Boolean(iso)
+    }
+
+    // `solve({eq1, eq2}, x = 1, y = 2)`: a system, solved exactly where it can be, else numerically
+    const systemCall = parseSystemCall(line)
+    if (systemCall) {
+      const answer = solveSystemCall(systemCall.equations, systemCall.guessText, { angleMode, defaults: options.defaultUnits })
+      results.push({ raw, kind: 'expression', display: answer?.display ?? '', value: answer ? textVal(answer.display) : undefined })
+      continue
     }
 
     // `isolate x in …` rearranges symbolically; stored values stay letters
