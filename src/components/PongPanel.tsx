@@ -22,6 +22,8 @@ type Screen =
   | { k: 'pairing'; peer: PeerInfo }
   | { k: 'game'; role: Side; peer: string }
 
+const FRIEND: PeerInfo = { id: '', name: 'your friend' }
+
 const plainKey = (e: KeyboardEvent) => !e.metaKey && !e.ctrlKey && !e.altKey
 
 // keys pong takes for itself; everything else (⌘C, ⌃D…) still reaches the bar. the mac app's boot script
@@ -43,7 +45,12 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
     transport.host()
   }, [transport])
 
+  // the online link has no list of hosts: join goes straight to the code
   const browse = useCallback(() => {
+    if (!transport.discovers) {
+      setScreen({ k: 'code', peer: FRIEND, digits: '' })
+      return
+    }
     setScreen({ k: 'browse', peers: [], pick: 0, denied: false })
     transport.discover()
   }, [transport])
@@ -91,7 +98,7 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
               return
             }
             // a game reports its own end
-            if (cur.k !== 'game') setScreen({ k: 'menu', note: closeReasonText(e.reason) })
+            if (cur.k !== 'game') setScreen({ k: 'menu', note: closeReasonText(e.reason, transport.peerWord) })
             return
         }
       }),
@@ -100,7 +107,7 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
 
   const submitCode = useCallback(
     (peer: PeerInfo, digits: string) => {
-      if (!isPairingCode(digits)) return
+      if (!isPairingCode(digits, transport.codeLength)) return
       setScreen({ k: 'pairing', peer })
       transport.join(peer.id, digits)
     },
@@ -135,13 +142,15 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
       }
       if (cur.k === 'code') {
         swallow(e)
-        if (/^[0-9]$/.test(e.key) && cur.digits.length < 4) {
+        const n = transport.codeLength
+        if (/^[0-9]$/.test(e.key) && cur.digits.length < n) {
           const digits = cur.digits + e.key
-          if (digits.length === 4) submitCode(cur.peer, digits)
+          if (digits.length === n) submitCode(cur.peer, digits)
           else setScreen({ ...cur, digits, note: undefined })
         } else if (e.key === 'Backspace') {
           if (cur.digits) setScreen({ ...cur, digits: cur.digits.slice(0, -1) })
-          else browse()
+          else if (transport.discovers) browse()
+          else toMenu()
         }
         return
       }
@@ -149,7 +158,7 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [browse, host, pickPeer, submitCode, toMenu])
+  }, [browse, host, pickPeer, submitCode, toMenu, transport])
 
   return (
     <div className="pong" aria-label="Pong">
@@ -164,7 +173,7 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
               esc
             </button>
           </div>
-          <Lobby screen={screen} word={transport.peerWord} onHost={host} onJoin={browse} onPick={pickPeer} onBack={() => toMenu()} />
+          <Lobby screen={screen} transport={transport} onHost={host} onJoin={browse} onPick={pickPeer} onBack={() => toMenu()} />
         </div>
       )}
     </div>
@@ -173,19 +182,21 @@ export function PongPanel({ transport, onClose }: { transport: PeerTransport; on
 
 function Lobby({
   screen,
-  word,
+  transport,
   onHost,
   onJoin,
   onPick,
   onBack,
 }: {
   screen: Exclude<Screen, { k: 'game' }>
-  word: string
+  transport: PeerTransport
   onHost: () => void
   onJoin: () => void
   onPick: (p: PeerInfo) => void
   onBack: () => void
 }) {
+  const word = transport.peerWord
+  const n = transport.codeLength
   switch (screen.k) {
     case 'menu':
       return (
@@ -206,13 +217,15 @@ function Lobby({
       return (
         <div className="pong-body">
           <div className="pong-code" aria-label="pairing code">
-            {(screen.code ?? '····').split('').map((d, i) => (
+            {(screen.code ?? '·'.repeat(n)).split('').map((d, i) => (
               <span key={i}>{d}</span>
             ))}
           </div>
           <p className="pong-line">
             {screen.renewed ? 'too many wrong codes, so here’s a new one. ' : ''}
-            on the other {word}: type pong, join, pick this {word}, enter the code
+            {transport.discovers
+              ? `on the other ${word}: type pong, join, pick this ${word}, enter the code`
+              : 'send your friend this code · on their Q Calc: type pong, join, enter the code'}
           </p>
           <p className="pong-note pong-wait">waiting for your friend…</p>
         </div>
@@ -221,7 +234,7 @@ function Lobby({
       return (
         <div className="pong-body">
           {screen.denied ? (
-            <p className="pong-note">{closeReasonText('denied')}</p>
+            <p className="pong-note">{closeReasonText('denied', word)}</p>
           ) : screen.peers.length ? (
             <ul className="pong-peers" role="listbox">
               {screen.peers.map((p, i) => (
@@ -245,18 +258,18 @@ function Lobby({
       )
     case 'code':
     case 'pairing': {
-      const digits = screen.k === 'code' ? screen.digits : '····'
+      const digits = screen.k === 'code' ? screen.digits : '·'.repeat(n)
       return (
         <div className="pong-body">
-          <p className="pong-line">code shown on {screen.peer.name}</p>
+          <p className="pong-line">{transport.discovers ? `code shown on ${screen.peer.name}` : 'the code your friend sent'}</p>
           <div className={`pong-code entry ${screen.k === 'pairing' ? 'busy' : ''}`}>
-            {[0, 1, 2, 3].map((i) => (
+            {Array.from({ length: n }, (_, i) => (
               <span key={i} className={i === digits.length && screen.k === 'code' ? 'caret' : undefined}>
                 {screen.k === 'pairing' ? '•' : (digits[i] ?? '')}
               </span>
             ))}
           </div>
-          <p className="pong-note">{screen.k === 'pairing' ? 'pairing…' : (screen.note ?? 'type the 4 digits · ⌫ back')}</p>
+          <p className="pong-note">{screen.k === 'pairing' ? 'pairing…' : (screen.note ?? `type the ${n} digits · ⌫ back`)}</p>
         </div>
       )
     }
@@ -325,7 +338,7 @@ function PongGame({ transport, role, peer, onEnd }: { transport: PeerTransport; 
 
     const off = transport.subscribe((e) => {
       if (e.type === 'message') session.receive(e.data, performance.now())
-      else if (e.type === 'closed') onEndRef.current(closeReasonText(e.reason))
+      else if (e.type === 'closed') onEndRef.current(closeReasonText(e.reason, transport.peerWord))
     })
 
     const onKey = (e: KeyboardEvent, down: boolean) => {

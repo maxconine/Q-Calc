@@ -1,9 +1,11 @@
 import { nativeHandler, nativeWindow } from './bridge'
 import { DevPeer, Listeners } from './peerDev'
+import { OnlinePeer, relayUrl } from './peerOnline'
 import { isWindowsHost } from './platform'
 
-// a link to one other q calc on the same wi-fi. the mac app's PeerLink does the finding, pairing and
-// encryption; the page sees only these events. games and anything else sent between bars sit on top
+// a link to one other q calc: over the internet through the relay (peerOnline), or on the same wi-fi through
+// the mac app's PeerLink, which does the finding, pairing and encryption. the page sees only these events.
+// games and anything else sent between bars sit on top
 
 export type PeerInfo = { id: string; name: string }
 
@@ -16,6 +18,7 @@ export type CloseReason =
   | 'denied'
   | 'network'
   | 'too-many-tries'
+  | 'expired'
 
 export type PeerEvent =
   | { type: 'peers'; peers: PeerInfo[] }
@@ -31,6 +34,9 @@ export interface PeerTransport {
   readonly label: string
   // what the other end is called in the lobby's copy
   readonly peerWord: string
+  // whether join lists hosts to pick from; the online link has none, the guest just types the code
+  readonly discovers: boolean
+  readonly codeLength: number
   discover(): void
   stopDiscovery(): void
   host(): void
@@ -41,14 +47,16 @@ export interface PeerTransport {
   subscribe(fn: (e: PeerEvent) => void): () => void
 }
 
-const REASONS = new Set<CloseReason>(['wrong-code', 'busy', 'unreachable', 'lost', 'bye', 'denied', 'network', 'too-many-tries'])
+const REASONS = new Set<CloseReason>(['wrong-code', 'busy', 'unreachable', 'lost', 'bye', 'denied', 'network', 'too-many-tries', 'expired'])
 
-export function isPairingCode(s: string): boolean {
-  return /^[0-9]{4}$/.test(s)
+export const LOCAL_CODE_LENGTH = 4
+
+export function isPairingCode(s: string, length = LOCAL_CODE_LENGTH): boolean {
+  return s.length === length && /^[0-9]+$/.test(s)
 }
 
 // events come from native code but are still checked; a bad one is dropped
-export function parsePeerEvent(raw: unknown): PeerEvent | null {
+export function parsePeerEvent(raw: unknown, codeLength = LOCAL_CODE_LENGTH): PeerEvent | null {
   if (!raw || typeof raw !== 'object') return null
   const e = raw as Record<string, unknown>
   switch (e.type) {
@@ -63,7 +71,7 @@ export function parsePeerEvent(raw: unknown): PeerEvent | null {
     case 'denied':
       return { type: 'denied' }
     case 'hosting':
-      if (typeof e.code !== 'string' || !isPairingCode(e.code)) return null
+      if (typeof e.code !== 'string' || !isPairingCode(e.code, codeLength)) return null
       return e.renewed === true ? { type: 'hosting', code: e.code, renewed: true } : { type: 'hosting', code: e.code }
     case 'pairing':
       return { type: 'pairing' }
@@ -84,6 +92,8 @@ type PeerWindow = Window & { __qcalcPeer?: (e: unknown) => void }
 class NativePeer implements PeerTransport {
   readonly label = 'same Wi-Fi'
   readonly peerWord = 'Mac'
+  readonly discovers = true
+  readonly codeLength = LOCAL_CODE_LENGTH
   private listeners = new Listeners()
 
   constructor() {
@@ -125,28 +135,32 @@ class NativePeer implements PeerTransport {
 
 let shared: PeerTransport | null | undefined
 
-// the mac app's link, the dev link in a plain browser, or none (the windows shell has no link yet)
+// the relay wherever there is one, else the mac app's wi-fi link, the dev link in a plain browser, or none
 export function peerTransport(): PeerTransport | null {
   if (shared !== undefined) return shared
+  const relay = relayUrl()
   if (!hasPeerTransport()) shared = null
+  else if (relay) shared = new OnlinePeer(relay)
   else shared = nativeWindow()?.__QCALC_NATIVE ? new NativePeer() : new DevPeer()
   return shared
 }
 
 export function hasPeerTransport(): boolean {
   const w = nativeWindow()
+  if (relayUrl() && typeof WebSocket !== 'undefined') return true
   if (isWindowsHost()) return false
   return w?.__QCALC_NATIVE ? Boolean(nativeHandler()) : typeof BroadcastChannel !== 'undefined'
 }
 
-export function closeReasonText(reason: CloseReason): string {
+// `word` is what the other end is called: a Mac on the wi-fi link, a computer online
+export function closeReasonText(reason: CloseReason, word = 'Mac'): string {
   switch (reason) {
     case 'wrong-code':
-      return 'wrong code'
+      return word === 'Mac' ? 'wrong code' : 'no game with that code'
     case 'busy':
-      return 'that Mac is already playing'
+      return `that ${word} is already playing`
     case 'unreachable':
-      return 'couldn’t reach that Mac'
+      return `couldn’t reach that ${word}`
     case 'lost':
       return 'lost the connection'
     case 'bye':
@@ -154,8 +168,10 @@ export function closeReasonText(reason: CloseReason): string {
     case 'denied':
       return 'Q Calc needs Local Network access · System Settings › Privacy & Security › Local Network'
     case 'network':
-      return 'couldn’t start the link'
+      return word === 'Mac' ? 'couldn’t start the link' : 'couldn’t reach the game server · check your internet'
     case 'too-many-tries':
-      return 'stopped hosting after too many wrong codes · host again for a new one'
+      return word === 'Mac' ? 'stopped hosting after too many wrong codes · host again for a new one' : 'too many tries · wait a minute'
+    case 'expired':
+      return 'nobody joined for 15 minutes · host again for a new code'
   }
 }

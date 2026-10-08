@@ -47,6 +47,8 @@ function newCode(): string {
 export class DevPeer implements PeerTransport {
   readonly label = 'dev link · tabs in this browser'
   readonly peerWord = 'tab'
+  readonly discovers = true
+  readonly codeLength = 4
   readonly id = randomId()
   readonly name: string
   private channel: BroadcastChannel
