@@ -1,13 +1,15 @@
 import { C4_HINT, isConnect4Command } from './connect4'
+import { EMBER_HINT, isEmberCommand } from './ember'
 import { isPongCommand, PONG_HINT } from './pong'
 
 // the two-player games the bar opens, by what's typed in it
 
-export type GameKind = 'pong' | 'connect4'
+export type GameKind = 'pong' | 'connect4' | 'ember'
 
 export function gameCommand(text: string): GameKind | null {
   if (isPongCommand(text)) return 'pong'
   if (isConnect4Command(text)) return 'connect4'
+  if (isEmberCommand(text)) return 'ember'
   return null
 }
 
@@ -15,6 +17,7 @@ export function gameCommand(text: string): GameKind | null {
 export const GAMES: ReadonlyArray<{ kind: GameKind; name: string; blurb: string }> = [
   { kind: 'pong', name: 'pong', blurb: 'first to 7 · two players, anywhere' },
   { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · two players, anywhere' },
+  { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or two Macs' },
 ]
 
 export const GAMES_HINT = 'type a game’s name, or click one'
@@ -27,6 +30,8 @@ export function isGamesCommand(text: string): boolean {
 
 // the hint under the bar; linked is false where there's no peer link to play over
 export function gameHint(kind: GameKind, linked: boolean): string {
+  // ember & frost plays on one keyboard, so it needs no link
+  if (kind === 'ember') return EMBER_HINT
   const name = kind === 'pong' ? 'pong' : 'connect 4'
   if (!linked) return `${name} needs Q Calc for Mac`
   return kind === 'pong' ? PONG_HINT : C4_HINT

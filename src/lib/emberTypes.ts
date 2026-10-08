@@ -187,6 +187,9 @@ export type GameState = {
   mirrors: Slant[]
   on: string[] // channels on after the last step, sorted
   events: GameEvent[] // what happened during the last step only
+  // per level.plates / level.sensors: pressed / lit as of the last step (the engine fills these; they let it report changes)
+  plates?: boolean[]
+  sensors?: boolean[]
 }
 
 export type Beam = { x1: number; y1: number; x2: number; y2: number }

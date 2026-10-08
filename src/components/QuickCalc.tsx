@@ -26,6 +26,7 @@ import { PeriodicCard } from './PeriodicCard'
 import { IdentityCard } from './IdentityCard'
 import { PongPanel } from './PongPanel'
 import { Connect4Panel } from './Connect4Panel'
+import { EmberPanel } from './EmberPanel'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -280,6 +281,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // a game (pong, connect 4) takes over the bar until esc or the panel hides
   const [pongOpen, setPongOpen] = useState<GameKind | null>(null)
   const pongOpenRef = useRef<GameKind | null>(null)
+  const emberEscRef = useRef<(() => boolean) | null>(null)
   pongOpenRef.current = pongOpen
   const sysLinesRef = useRef<string[] | null>(null)
   sysLinesRef.current = sysLines
@@ -1123,7 +1125,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // from typing a game's name and ↵, or a row of the `games` sheet
   const playGame = useCallback(
     (game: GameKind) => {
-      if (!peerTransport()) return
+      if (!peerTransport() && game !== 'ember') return
       resetToCalculate()
       setTapeOpen(false)
       setPongOpen(game)
@@ -1174,6 +1176,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // the page does not clear the tape or the input first.
   const escapeLayer = useCallback((): boolean => {
     if (!pongOpenRef.current) return false
+    // ember & frost steps back through its own screens first, and only closes from its title
+    if (pongOpenRef.current === 'ember' && emberEscRef.current?.()) return true
     pongOpenRef.current = null
     setPongOpen(null)
     return true
@@ -1467,6 +1471,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <PongPanel transport={peerTransport()!} onClose={escapeLayer} />
           ) : pongOpen === 'connect4' && peerTransport() ? (
             <Connect4Panel transport={peerTransport()!} onClose={escapeLayer} />
+          ) : pongOpen === 'ember' ? (
+            <EmberPanel transport={peerTransport()} escapeRef={emberEscRef} onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (
