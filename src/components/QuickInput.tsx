@@ -511,9 +511,11 @@ export function QuickInput({
       }
     }
     if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      // tab never moves focus out of the input; it cycles the answer's forms
+      // tab never moves focus out of the input. like →, it first writes in the faint parens; then it cycles the answer's forms
       e.preventDefault()
-      onTabRef.current?.(e.shiftKey ? -1 : 1)
+      const filled = e.shiftKey ? null : autofillParens(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0)
+      if (filled) commit(filled, filled.length)
+      else onTabRef.current?.(e.shiftKey ? -1 : 1)
       return
     }
     if (e.key === 'Enter') {
