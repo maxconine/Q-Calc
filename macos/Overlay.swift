@@ -21,6 +21,10 @@ private func copyToPasteboard(_ text: String) {
     NSPasteboard.general.setString(text, forType: .string)
 }
 
+private func uptime() -> TimeInterval {
+    ProcessInfo.processInfo.systemUptime
+}
+
 private func commandShiftHeld() -> Bool {
     let flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
     return flags.contains(.command) && flags.contains(.shift)
@@ -28,6 +32,7 @@ private func commandShiftHeld() -> Bool {
 
 final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
+    var onResignKey: (() -> Void)?
     var onPaste: (() -> Void)?
     var ignoreResignKey = false
 
@@ -57,7 +62,7 @@ final class OverlayPanel: NSPanel {
     override func resignKey() {
         super.resignKey()
         if ignoreResignKey || commandShiftHeld() { return }
-        onEscape?()
+        onResignKey?()
     }
 }
 
@@ -127,12 +132,27 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var settingsObserver: NSObjectProtocol?
     private var lastPasteAt: TimeInterval = 0
     private var pendingFirstRun = false
+    private var pendingShow: String?
     private var showCount = 0
     private var revealedShow = 0
     // the last show whose page answered from a painted frame
     private var paintedShow = 0
     // hotkey shows in the last few seconds; pressing again and again means the user sees nothing
     private var recentShows: [TimeInterval] = []
+    // whether the user asked for the overlay and hasn't dismissed it; a panel ordered out behind our back is a failure
+    private var wantVisible = false
+    private var shownAt: TimeInterval = 0
+    // the display picked for the current show, the one with the pointer
+    private var targetScreen: NSRect?
+    private var pageLoadStartedAt: TimeInterval = 0
+    // why and when the current panel was made, for the diary
+    private var panelMadeAt: TimeInterval = 0
+    private var panelMadeFor = "launch"
+    // a fresh panel waiting for a space switch, wake or display change to settle
+    private var pendingRefresh: DispatchWorkItem?
+    private var observingEnvironment = false
+    // the page wouldn't draw for this show, so the plain bar stays until the next one
+    private var keepFallback = false
     var onSettings: (() -> Void)?
     private lazy var periodic: PeriodicWindowController = {
         let controller = PeriodicWindowController()
@@ -163,76 +183,146 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         SoulverEval.warm()
     }
 
-    func toggle() {
-        if panel?.isVisible == true {
-            OverlayLog.note("hotkey: hide")
-            hide()
+    func toggle(from source: String = "hotkey") {
+        if let panel, OverlayHealth.hotkeyHides(snapshot(panel)) {
+            hide(because: source)
             return
         }
-        OverlayLog.note("hotkey: show")
-        let now = ProcessInfo.processInfo.systemUptime
+        // ordered in but somewhere the user isn't: a show on the same panel would land there again
+        if let panel, panel.isVisible, !panel.isOnActiveSpace {
+            replacePanel("ordered in on another space")
+        }
+        let now = uptime()
         recentShows = recentShows.filter { now - $0 < 4 } + [now]
         if recentShows.count >= 3 {
             recentShows = []
             rebuildAll("shown three times in four seconds")
         }
-        show()
+        show(from: source)
     }
 
-    func hide() {
+    func hide(because why: String = "asked") {
+        wantVisible = false
         guard panel?.isVisible == true else { return }
+        OverlayLog.note("hide \(showCount) (\(why)) after \(seconds(uptime() - shownAt))")
         notifyWebWillHide()
         panel?.ignoreResignKey = true
         panel?.orderOut(nil)
         panel?.alphaValue = 1
     }
 
-    func show() {
+    func show(from source: String = "menu") {
+        pendingRefresh?.cancel()
+        pendingRefresh = nil
         // a hidden app's windows never come forward, and with no dock icon nothing else unhides it
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }
+        wantVisible = true
+        keepFallback = false
+        shownAt = uptime()
+        targetScreen = Self.screenWithPointer()?.frame
         showOnce()
-        checkShown(showCount, attempt: 0)
+        let age = panelMadeAt > 0 ? seconds(shownAt - panelMadeAt) : "new"
+        OverlayLog.note(
+            "show \(showCount) (\(source)): panel \(age) old (\(panelMadeFor)), "
+                + "page \(webReady ? "ready" : "loading"), \(NSScreen.screens.count) display(s)")
+        verify(showCount, attempt: 0)
     }
 
-    // isVisible only says the panel is ordered in; ask the window server whether it's up and the page whether it drew.
-    // a fresh panel first, then a fresh page, which is what quitting and reopening used to fix
-    private func checkShown(_ token: Int, attempt: Int) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            guard let self, token == self.showCount, let panel = self.panel, panel.isVisible else { return }
-            if panel.alphaValue < 1 { panel.alphaValue = 1 }
-            let onScreen = Self.windowServerShows(panel)
-            // a page still loading has nothing to answer with yet
-            let painted = self.paintedShow == token || !self.webReady || panel.contentView !== self.web
-            OverlayLog.note("show \(token): on screen \(onScreen), painted \(painted), \(self.describe(panel))")
-            guard !(onScreen && painted), attempt < 2 else { return }
-            if attempt == 0 {
-                self.replacePanel(onScreen ? "the page didn't draw" : "show didn't bring it forward")
-            } else {
-                self.rebuildAll(onScreen ? "the page still didn't draw" : "still not on screen")
+    // the one place a show is judged: isVisible only says the panel is ordered in, so ask the window server
+    // where it is and the page whether it drew, fix the least that's wrong, and look again
+    private func verify(_ token: Int, attempt: Int) {
+        let delay = attempt == 0 ? 0.4 : 0.5
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, token == self.showCount, self.wantVisible else { return }
+            guard let panel = self.panel else { return }
+            let state = self.snapshot(panel)
+            let problems = OverlayHealth.problems(state)
+            if problems.isEmpty {
+                // a loading page is see-through; it isn't counted against the show until it's stuck
+                if !state.pageReady, !state.usesFallback {
+                    self.verify(token, attempt: attempt)
+                    return
+                }
+                OverlayLog.note("show \(token) seen after \(self.seconds(uptime() - self.shownAt))\(attempt > 0 ? ", recovered" : "")")
+                return
             }
+            let fix = OverlayHealth.recovery(for: problems, attempt: attempt)
+            OverlayLog.note(
+                "show \(token) not seen (\(OverlayHealth.summary(problems))), check \(attempt + 1), \(fix.name). "
+                    + self.describe(panel))
+            switch fix {
+            case .none:
+                // out of fixes; at least don't leave it see-through
+                if panel.isVisible, panel.alphaValue < 1 { panel.alphaValue = 1 }
+                return
+            case .wait:
+                self.verify(token, attempt: attempt + 1)
+                return
+            case .reorder:
+                break
+            case .freshPanel:
+                self.replacePanel(OverlayHealth.summary(problems))
+            case .freshPage:
+                self.rebuildAll(OverlayHealth.summary(problems))
+            case .fallback:
+                self.keepFallback = true
+                self.loadFallback()
+            }
+            if NSApp.isHidden { NSApp.unhideWithoutActivation() }
             self.showOnce()
-            self.checkShown(self.showCount, attempt: attempt + 1)
+            self.verify(self.showCount, attempt: attempt + 1)
         }
+    }
+
+    private func snapshot(_ panel: NSPanel) -> OverlaySnapshot {
+        var s = OverlaySnapshot()
+        s.ordered = panel.isVisible
+        s.appHidden = NSApp.isHidden
+        s.onActiveSpace = panel.isOnActiveSpace
+        s.windowServerOnScreen = Self.windowServerShows(panel)
+        s.occlusionVisible = panel.occlusionState.contains(.visible)
+        s.alpha = Double(panel.alphaValue)
+        s.frame = panel.frame
+        s.targetScreen = targetScreen
+        s.screens = NSScreen.screens.map(\.frame)
+        let content = panel.contentView
+        s.usesFallback = fallback != nil && content === fallback
+        s.contentInPanel = s.usesFallback || (web != nil && content === web)
+        s.pageReady = webReady
+        s.pageLoadingFor = webReady ? 0 : uptime() - pageLoadStartedAt
+        s.painted = paintedShow == showCount
+        return s
     }
 
     private static func windowServerShows(_ panel: NSPanel) -> Bool {
         guard panel.windowNumber > 0,
               let rows = CGWindowListCopyWindowInfo([.optionIncludingWindow], CGWindowID(panel.windowNumber)) as? [[String: Any]],
               let row = rows.first else { return false }
-        return (row[kCGWindowIsOnscreen as String] as? Bool) == true && panel.isOnActiveSpace
+        return (row[kCGWindowIsOnscreen as String] as? Bool) == true
+    }
+
+    private static func screenWithPointer() -> NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens.first
     }
 
     private func describe(_ panel: NSPanel) -> String {
-        "active space \(panel.isOnActiveSpace), alpha \(panel.alphaValue), "
-            + "frame \(NSStringFromRect(panel.frame)), screen \(panel.screen != nil), "
-            + "occlusion \(panel.occlusionState.rawValue), app hidden \(NSApp.isHidden), "
-            + "page in panel \(web?.window === panel), page hidden \(web?.isHidden ?? true), "
-            + "page frame \(NSStringFromRect(web?.frame ?? .zero)), page ready \(webReady)"
+        "ordered \(panel.isVisible), key \(panel.isKeyWindow), active space \(panel.isOnActiveSpace), "
+            + "on screen \(Self.windowServerShows(panel)), occlusion \(panel.occlusionState.rawValue), "
+            + "alpha \(panel.alphaValue), level \(panel.level.rawValue), frame \(NSStringFromRect(panel.frame)), "
+            + "target \(targetScreen.map(NSStringFromRect) ?? "none"), app hidden \(NSApp.isHidden), active \(NSApp.isActive), "
+            + "panel \(seconds(uptime() - panelMadeAt)) old (\(panelMadeFor)), "
+            + "content \(panel.contentView === web ? "page" : panel.contentView === fallback ? "plain bar" : "none"), "
+            + "page frame \(NSStringFromRect(web?.frame ?? .zero)), page ready \(webReady), painted \(paintedShow)/\(showCount)"
+    }
+
+    private func seconds(_ t: TimeInterval) -> String {
+        String(format: "%.2fs", t)
     }
 
     private func showOnce() {
         if panel == nil { build() }
-        if panel?.contentView === fallback, let web, webReady {
+        if panel?.contentView === fallback, let web, webReady, !keepFallback {
             panel?.contentView = web
         }
         sizeAnchorTop = 0
@@ -247,11 +337,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel?.makeKeyAndOrderFront(nil)
         panel?.makeFirstResponder(web)
         resetAndFocus { [weak self] in self?.reveal(token) }
-        web?.evaluateJavaScript("""
-        requestAnimationFrame(function () { requestAnimationFrame(function () {
-          try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'painted', token: \(token) }); } catch (err) {}
-        }); });
-        """)
+        askPainted(token)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.reveal(token) }
         DispatchQueue.main.async { [weak self] in
             self?.focusInput()
@@ -262,17 +348,35 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         NotificationCenter.default.post(name: .focusOverlay, object: nil)
     }
 
+    // the page answers from its second frame, so an answer means it really drew for this show
+    private func askPainted(_ token: Int) {
+        web?.evaluateJavaScript("""
+        requestAnimationFrame(function () { requestAnimationFrame(function () {
+          try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'painted', token: \(token) }); } catch (err) {}
+        }); });
+        """)
+    }
+
+    // at launch the page is still loading, and a show before it can size itself would flash
+    func showWhenReady(from source: String) {
+        guard webReady else {
+            pendingShow = source
+            return
+        }
+        show(from: source)
+    }
+
     func showFirstRun() {
         guard webReady else {
             pendingFirstRun = true
             return
         }
-        show()
+        show(from: "first run")
         web?.evaluateJavaScript("window.__QCALC_FIRST_RUN = true; if (window.__qcalcFirstRun) window.__qcalcFirstRun();")
     }
 
     func showTips() {
-        show()
+        show(from: "tips")
         web?.evaluateJavaScript("if (window.__qcalcShowTips) window.__qcalcShowTips();")
     }
 
@@ -297,7 +401,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                     )
                 }
             case "dismiss":
-                hide()
+                hide(because: "page")
             case "painted":
                 if let token = doubleValue(dict["token"]) { paintedShow = max(paintedShow, Int(token)) }
             case "copy":
@@ -348,7 +452,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     // a page whose process ended (long sleeps, memory pressure) is fully transparent, so reload it
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        OverlayLog.note("web content process ended, reloading")
+        OverlayLog.note("page process ended (overlay \(panel?.isVisible == true ? "up" : "hidden")), reloading")
         webReady = false
         pageTakesEscape = false
         peer.close()
@@ -358,16 +462,23 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        if pageLoadStartedAt > 0, uptime() - pageLoadStartedAt > OverlayHealth.pageLoadLimit {
+            OverlayLog.note("page loaded after \(seconds(uptime() - pageLoadStartedAt))")
+        }
         webReady = true
         disableWebViewScrolling(webView)
         if pendingFirstRun {
             pendingFirstRun = false
             DispatchQueue.main.async { [weak self] in self?.showFirstRun() }
+        } else if let source = pendingShow {
+            pendingShow = nil
+            DispatchQueue.main.async { [weak self] in self?.showWhenReady(from: source) }
         }
         // a page rebuilt while the panel is up still owes it a size and a reveal
         if panel?.isVisible == true {
             let token = showCount
             resetAndFocus { [weak self] in self?.reveal(token) }
+            askPainted(token)
         }
         focusInput()
         for delay in [0.05, 0.12, 0.3] {
@@ -392,7 +503,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             backing: .buffered,
             defer: false
         )
-        panel.onEscape = { [weak self] in self?.hide() }
+        panel.onEscape = { [weak self] in self?.hide(because: "esc") }
+        panel.onResignKey = { [weak self] in self?.lostFocus() }
         panel.onPaste = { [weak self] in self?.pasteIntoWeb() }
         panel.isFloatingPanel = true
         // above full screen apps' own floating windows, like spotlight
@@ -408,16 +520,17 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     // a fresh panel around the same page, for when the old one stops coming forward (seen after a long sleep)
-    private func replacePanel(_ why: String) {
+    private func replacePanel(_ why: String, quiet: Bool = false) {
         guard let old = panel else { return }
-        OverlayLog.note("rebuilding the overlay panel (\(why))")
-        let content = old.contentView
+        if !quiet { OverlayLog.note("fresh panel (\(why))") }
+        let content = old.contentView === fallback ? fallback : web
         old.ignoreResignKey = true
         old.orderOut(nil)
         old.contentView = NSView()
         let fresh = makePanel()
         fresh.contentView = content
         panel = fresh
+        markPanel(why)
         sizeRoom = .closed
         applyWebAppearance()
     }
@@ -425,7 +538,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // a fresh panel and a fresh page from the same configuration, so the handlers and stored drafts carry over
     private func rebuildAll(_ why: String) {
         guard let old = web, let oldPanel = panel else { return }
-        OverlayLog.note("rebuilding the overlay and its page (\(why))")
+        OverlayLog.note("fresh panel and page (\(why))")
         oldPanel.ignoreResignKey = true
         oldPanel.orderOut(nil)
         oldPanel.contentView = NSView()
@@ -438,6 +551,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         next.contentView = fresh
         web = fresh
         panel = next
+        markPanel(why)
         webReady = false
         triedBundle = false
         triedDevServer = false
@@ -446,21 +560,71 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         loadQuickCalc(fresh)
     }
 
-    private func observeWake() {
-        let refresh: (Notification) -> Void = { [weak self] note in
-            guard let self, self.panel?.isVisible != true else { return }
-            self.replacePanel(note.name.rawValue)
+    private func markPanel(_ why: String) {
+        panelMadeAt = uptime()
+        panelMadeFor = why
+    }
+
+    // a space switch, wake or display change can leave a hidden panel unable to come forward where the user is,
+    // so it's swapped for a fresh one once things settle. never while the overlay is wanted: the switch can land
+    // in the middle of a show (the notification arrives after the swipe ends), and swapping then hid the panel
+    private func observeEnvironment() {
+        guard !observingEnvironment else { return }
+        observingEnvironment = true
+        let workspace = NSWorkspace.shared.notificationCenter
+        workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.environmentChanged("wake", log: true)
         }
-        NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main, using: refresh)
-        // after a swipe between full screen apps the old panel could come up somewhere the user can't see
-        NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: refresh)
+        workspace.addObserver(forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.environmentChanged("space switch", log: false)
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.environmentChanged("display change", log: true)
+        }
+    }
+
+    private func environmentChanged(_ why: String, log: Bool) {
+        if wantVisible {
+            // shown just before the switch finished: the panel joins every space, but the switch took its focus
+            if let panel, panel.isVisible, uptime() - shownAt < 2 {
+                if log || !panel.isKeyWindow {
+                    OverlayLog.note("\(why) during show \(showCount), key \(panel.isKeyWindow), bringing it forward")
+                }
+                panel.orderFrontRegardless()
+                panel.makeKeyAndOrderFront(nil)
+                focusInput()
+            }
+            return
+        }
+        if log { OverlayLog.note("\(why) while hidden, fresh panel once it settles") }
+        pendingRefresh?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self, !self.wantVisible, self.panel?.isVisible != true else { return }
+            self.pendingRefresh = nil
+            self.replacePanel(why, quiet: true)
+        }
+        pendingRefresh = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: item)
+    }
+
+    // the panel lost key: a click elsewhere or an app switch hides it, but focus taken during the show itself
+    // (a space switch finishing, the launch activating something) leaves it up
+    private func lostFocus() {
+        guard wantVisible, panel?.isVisible == true else { return }
+        let since = uptime() - shownAt
+        if OverlayHealth.focusLossHides(sinceShow: since) {
+            hide(because: "lost focus")
+        } else {
+            OverlayLog.note("show \(showCount) lost focus after \(seconds(since)), kept up")
+        }
     }
 
     private func build() {
         let panel = makePanel()
-        observeWake()
+        markPanel("launch")
+        observeEnvironment()
         installEscapeMonitor()
         installDragMonitor()
         installClickAwayMonitors()
@@ -622,6 +786,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private func loadQuickCalc(_ web: WKWebView) {
+        pageLoadStartedAt = uptime()
         if let bundled = bundledQuickURL() {
             triedBundle = true
             web.loadFileURL(bundled, allowingReadAccessTo: bundled.deletingLastPathComponent())
@@ -652,13 +817,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     private func loadFallback() {
         if fallback == nil {
-            let root = OverlayView(onDismiss: { [weak self] in self?.hide() })
+            let root = OverlayView(onDismiss: { [weak self] in self?.hide(because: "esc") })
             let host = NSHostingView(rootView: root)
             host.frame = panel?.contentView?.bounds ?? .zero
             host.autoresizingMask = [.width, .height]
             fallback = host
         }
         if let fallback, panel?.contentView !== fallback {
+            OverlayLog.note("showing the plain bar instead of the page")
             panel?.contentView = fallback
             applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
         }
@@ -674,7 +840,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     private func handleMessage(_ body: String) {
         if body == "dismiss" {
-            hide()
+            hide(because: "page")
             return
         }
         if body == "drag" {
@@ -734,7 +900,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // a periodic table click: the insert is queued behind show()'s reset, so it lands in the fresh input
     private func insertText(_ text: String) {
         guard let encoded = jsonStringLiteral(text) else { return }
-        if panel?.isVisible != true { show() }
+        if panel?.isVisible != true { show(from: "periodic table") }
         web?.evaluateJavaScript("window.__qcalcInsert && window.__qcalcInsert(\(encoded));")
     }
 
@@ -879,11 +1045,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // and a page that doesn't answer true still gets the panel hidden
     private func escape() {
         guard pageTakesEscape, let web else {
-            hide()
+            hide(because: "esc")
             return
         }
         web.evaluateJavaScript("!!(window.__qcalcEscape && window.__qcalcEscape())") { [weak self] result, _ in
-            if (result as? Bool) != true { self?.hide() }
+            if (result as? Bool) != true { self?.hide(because: "esc") }
         }
     }
 
@@ -952,20 +1118,23 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         guard clickAwayMonitor == nil else { return }
         clickAwayMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard self?.panel?.isVisible == true else { return }
-            self?.hide()
+            self?.hide(because: "click in another app")
         }
         clickAwayLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window !== panel,
                   !(event.window is PeriodicPanel) else {
                 return event
             }
-            self.hide()
+            self.hide(because: "click in another window")
             return event
         }
     }
 
+    // on the display with the pointer, so it opens where the user is looking
     private func position() {
-        guard let panel, let main = NSScreen.main else { return }
+        guard let panel,
+              let main = NSScreen.screens.first(where: { $0.frame == targetScreen }) ?? Self.screenWithPointer()
+        else { return }
         let screen = main.visibleFrame
         let size = panel.frame.size
         if let saved = savedComposerTop(on: main) {
@@ -1286,10 +1455,14 @@ struct OverlayView: View {
     }
 }
 
-// q calc's NSLog lines never reach the unified log, so the overlay keeps a short diary of its own shows
+// q calc's NSLog lines never reach the unified log, so the overlay keeps a short diary of its own shows:
+// every show with how old its panel was, whether it was seen, what was wrong and what fixed it, and every hide
+// with its reason. at 128 KB it moves to overlay.log.1, so the pair stays under 256 KB
 enum OverlayLog {
     private static let url = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/Logs/Q Calc/overlay.log")
+    private static let previous = url.deletingPathExtension().appendingPathExtension("log.1")
+    private static let limit = 128_000
     private static let queue = DispatchQueue(label: "qcalc.overlaylog", qos: .utility)
     private static let stamp: DateFormatter = {
         let formatter = DateFormatter()
@@ -1303,9 +1476,9 @@ enum OverlayLog {
         queue.async {
             let files = FileManager.default
             try? files.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            if let size = try? files.attributesOfItem(atPath: url.path)[.size] as? Int, size > 512_000,
-               let data = try? Data(contentsOf: url) {
-                try? data.suffix(256_000).write(to: url)
+            if let size = try? files.attributesOfItem(atPath: url.path)[.size] as? Int, size > limit {
+                try? files.removeItem(at: previous)
+                try? files.moveItem(at: url, to: previous)
             }
             guard let handle = try? FileHandle(forWritingTo: url) else {
                 try? Data(text.utf8).write(to: url)

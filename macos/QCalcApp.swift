@@ -78,6 +78,7 @@ final class AppSettings: ObservableObject {
     static let keybindsKey = "qcalc.keybinds"
     static let onboardingKey = "qcalc.onboarding"
     static let firstRunKey = "qcalc.firstRunDone"
+    static let hotKeyWarnedKey = "qcalc.hotkeyWarned"
     static let defaultSigFigs = 12
     static let minSigFigs = 2
     static let maxSigFigs = 16
@@ -192,6 +193,19 @@ final class AppSettings: ObservableObject {
     func claimFirstRun() -> Bool {
         guard !UserDefaults.standard.bool(forKey: Self.firstRunKey) else { return false }
         UserDefaults.standard.set(true, forKey: Self.firstRunKey)
+        return true
+    }
+
+    // true once for each way the shortcut can fail, so a broken one opens the overlay at launch to say so,
+    // but not at every login
+    func claimHotKeyWarning() -> Bool {
+        guard hotKeyFailed else {
+            UserDefaults.standard.removeObject(forKey: Self.hotKeyWarnedKey)
+            return false
+        }
+        let state = "\(hotKey.id)>\(activeHotKey?.id ?? "none")"
+        guard UserDefaults.standard.string(forKey: Self.hotKeyWarnedKey) != state else { return false }
+        UserDefaults.standard.set(state, forKey: Self.hotKeyWarnedKey)
         return true
     }
 
@@ -441,6 +455,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKeyHandlerInstalled = false
     private var statusItem: NSStatusItem?
     private var settingsWindow: SettingsWindowController?
+    private var settingsObserver: NSObjectProtocol?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.prohibited)
@@ -451,17 +466,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupStatusItem()
         // before the web view boots, so its injected settings already carry the shortcut
         registerHotKey()
+        OverlayLog.note("launch \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"), "
+            + "macOS \(ProcessInfo.processInfo.operatingSystemVersionString), \(hotKeyDiary())")
+        refreshStatusItem()
+        settingsObserver = NotificationCenter.default.addObserver(
+            forName: .qcalcSettingsChanged, object: nil, queue: .main
+        ) { [weak self] _ in self?.refreshStatusItem() }
         overlay = OverlayController()
         overlay?.onSettings = { [weak self] in self?.showSettings() }
         overlay?.preload()
         if AppSettings.shared.claimFirstRun() {
             overlay?.showFirstRun()
+        } else if AppSettings.shared.claimHotKeyWarning() {
+            // the overlay's hint line names the shortcut that works, or says to use the menu bar icon
+            overlay?.showWhenReady(from: "shortcut warning")
         }
         Updates.shared.start()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        overlay?.toggle()
+        overlay?.toggle(from: "reopen")
         return false
     }
 
@@ -486,6 +510,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return fallback ?? NSImage()
     }
 
+    private func hotKeyDiary() -> String {
+        let settings = AppSettings.shared
+        guard settings.hotKeyFailed else { return "shortcut \(settings.activeHotKey?.title ?? "none")" }
+        return "shortcut \(settings.hotKey.title) taken, using \(settings.activeHotKey?.title ?? "none")"
+    }
+
+    // with no working shortcut the menu bar icon is the only way in, so it carries a dot and says why
+    private func refreshStatusItem() {
+        guard let button = statusItem?.button else { return }
+        let settings = AppSettings.shared
+        let none = settings.activeHotKey == nil
+        button.image = none ? badged(statusBarImage()) : statusBarImage()
+        if none {
+            button.toolTip = "Q Calc: \(settings.hotKey.title) is taken, so no shortcut opens it. Pick another in Settings"
+        } else if settings.hotKeyFailed, let active = settings.activeHotKey {
+            button.toolTip = "Q Calc: \(active.title) (\(settings.hotKey.title) is taken)"
+        } else {
+            button.toolTip = "Q Calc" + (settings.activeHotKey.map { ": \($0.title)" } ?? "")
+        }
+    }
+
+    // a dot in the top right corner, cut out of the icon so it reads at menu bar size; still a template
+    private func badged(_ base: NSImage) -> NSImage {
+        let image = NSImage(size: base.size, flipped: false) { rect in
+            base.draw(in: rect)
+            let d: CGFloat = 7
+            let dot = NSRect(x: rect.maxX - d, y: rect.maxY - d, width: d, height: d)
+            NSGraphicsContext.current?.compositingOperation = .clear
+            NSBezierPath(ovalIn: dot.insetBy(dx: -1.5, dy: -1.5)).fill()
+            NSGraphicsContext.current?.compositingOperation = .sourceOver
+            NSColor.black.setFill()
+            NSBezierPath(ovalIn: dot).fill()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
@@ -501,6 +563,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func buildStatusMenu(_ menu: NSMenu) {
         let active = AppSettings.shared.activeHotKey
+        if AppSettings.shared.hotKeyFailed {
+            let taken = AppSettings.shared.hotKey.title
+            let title = active.map { "\(taken) is taken, so \($0.title) opens Q Calc…" }
+                ?? "\(taken) is taken, so no shortcut opens Q Calc…"
+            let warning = NSMenuItem(title: title, action: #selector(showSettings), keyEquivalent: "")
+            warning.target = self
+            warning.image = NSImage(systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
+            menu.addItem(warning)
+            menu.addItem(.separator())
+        }
         let quick = NSMenuItem(title: "Show Q Calc", action: #selector(showQuickCalc), keyEquivalent: active?.menuKey ?? "")
         quick.keyEquivalentModifierMask = active?.menuModifiers ?? []
         quick.target = self
@@ -526,7 +598,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func showQuickCalc() {
-        overlay?.toggle()
+        overlay?.toggle(from: "menu")
     }
 
     @objc private func showTips() {
@@ -566,7 +638,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc func showSettings() {
-        overlay?.hide()
+        overlay?.hide(because: "settings")
         let window = settingsWindow ?? SettingsWindowController()
         settingsWindow = window
         window.show()
@@ -587,6 +659,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return
         }
         NSLog("Q Calc: %@ is in use by macOS", preferred.title)
+        OverlayLog.note("\(preferred.title) is taken")
         let fallback = GlobalHotKey.standard
         if preferred != fallback, !SystemShortcuts.claims(fallback), bindHotKey(fallback) {
             AppSettings.shared.setHotKeyState(active: fallback, failed: true)
@@ -607,6 +680,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         guard status == noErr, let ref else {
             NSLog("Q Calc: failed to register %@ (%d)", preset.title, status)
+        OverlayLog.note("couldn't register \(preset.title) (\(status))")
             return false
         }
         hotKeyRef = ref

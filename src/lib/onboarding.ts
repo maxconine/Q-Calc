@@ -171,7 +171,7 @@ export function pickHint(seen: number, facts: HintFacts, on: HintRule['on'] = 'c
   return { bit: rule.bit, text: typeof rule.text === 'string' ? rule.text : rule.text(facts) }
 }
 
-export const HOTKEY_FAILED_HINT = 'shortcut in use by macOS — change it in the menu'
+export const HOTKEY_FAILED_HINT = 'no shortcut works — open Q Calc from the menu bar icon, or change it in the menu'
 
 export function isHelpCommand(text: string): boolean {
   const t = text.trim().toLowerCase()

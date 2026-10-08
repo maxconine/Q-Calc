@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cheatSheet, HINTS, HOTKEY_FAILED_HINT, pickHint } from './onboarding'
 import { openNativePeriodicTable } from './periodic'
-import { commandHeld, hostCheats, hostKeys, isWindowsHost } from './platform'
+import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from './platform'
 
 const MAC_GLYPHS = /[⌘⌃⌥⇧]/
 const key = (k: string, mods: Partial<Record<'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey', boolean>> = {}) => ({
@@ -67,6 +67,13 @@ describe('windows wording', () => {
 
   it('points a hotkey failure at the tray', () => {
     expect(hostKeys(HOTKEY_FAILED_HINT, true)).toBe('shortcut in use by another app · change it from the tray')
+    expect(hostKeys(hotkeyFailedText('Alt+Space', true), true)).toBe('shortcut in use by another app · change it from the tray')
+  })
+
+  it('names the shortcut that still works when the picked one is taken', () => {
+    expect(hotkeyFailedText('⌃⌥Space', false)).toBe('your shortcut is taken, so ⌃⌥Space opens Q Calc — change it in the menu')
+    expect(hotkeyFailedText('', false)).toBe(HOTKEY_FAILED_HINT)
+    expect(hotkeyFailedText(undefined, false)).toBe(HOTKEY_FAILED_HINT)
   })
 
   it('rewrites the cheat sheet, with clearing off ctrl+c', () => {

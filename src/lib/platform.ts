@@ -13,6 +13,11 @@ export function commandHeld(e: Modifiers, windows = isWindowsHost()): boolean {
   return windows ? e.ctrlKey && !e.metaKey : e.metaKey && !e.ctrlKey
 }
 
+// a working fallback is named, so the user learns the shortcut that does open it; windows words its own
+export function hotkeyFailedText(active?: string, windows = isWindowsHost()): string {
+  return active && !windows ? `your shortcut is taken, so ${active} opens Q Calc — change it in the menu` : HOTKEY_FAILED_HINT
+}
+
 const WINDOWS_TEXT = new Map([[HOTKEY_FAILED_HINT, 'shortcut in use by another app · change it from the tray']])
 const WINDOWS_MODIFIERS: Array<[glyphs: string, name: string]> = [
   ['⌘⌃', 'Ctrl'],

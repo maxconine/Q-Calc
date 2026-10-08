@@ -76,7 +76,6 @@ import {
   exampleList,
   examplesActive,
   HINT_PAUSE_MS,
-  HOTKEY_FAILED_HINT,
   isHelpCommand,
   pickHint,
   recordCommit,
@@ -108,7 +107,7 @@ import { KeybindSettings } from './KeybindSettings'
 import { useKeyLabels } from './useKeyLabels'
 import { hasPeerTransport, peerTransport } from '../lib/peer'
 import { isPongCommand, PONG_HINT } from '../lib/pong'
-import { commandHeld, hostCheats, hostKeys, isWindowsHost } from '../lib/platform'
+import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
 import {
@@ -291,7 +290,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       ? null
       : pickHint(s.hints, { expr: '', native: Boolean(calcWindow().__QCALC_NATIVE), opens: s.opens }, 'open')
     if (opened) updateOnboarding((o) => ({ ...o, hints: o.hints | opened.bit }))
-    setHint(nativeInfoRef.current.hotkeyFailed ? HOTKEY_FAILED_HINT : (opened?.text ?? null))
+    setHint(nativeInfoRef.current.hotkeyFailed ? hotkeyFailedText(nativeInfoRef.current.hotkey) : (opened?.text ?? null))
   }, [updateOnboarding])
 
   const stopDraftTimer = useCallback(() => {

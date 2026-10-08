@@ -247,6 +247,7 @@ build_app() {
     -module-cache-path "$STAGE/modules-$arch" \
     "$MAC/MathEval.swift" \
     "$MAC/SoulverEval.swift" \
+    "$MAC/OverlayHealth.swift" \
     "$MAC/Overlay.swift" \
     "$MAC/UnitSettings.swift" \
     "$MAC/Keybinds.swift" \
