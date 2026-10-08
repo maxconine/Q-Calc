@@ -240,6 +240,8 @@ build_app() {
     -framework SoulverCore \
     -framework Sparkle \
     -framework ServiceManagement \
+    -framework Network \
+    -framework CryptoKit \
     -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
     -Xlinker -dead_strip \
     -module-cache-path "$STAGE/modules-$arch" \
@@ -253,6 +255,8 @@ build_app() {
     "$MAC/PeriodicWindow.swift" \
     "$MAC/Updates.swift" \
     "$MAC/LoginItem.swift" \
+    "$MAC/PeerPairing.swift" \
+    "$MAC/PeerLink.swift" \
     "$MAC/QCalcApp.swift" \
     -o "$BIN"
   # local symbols only help a debugger

@@ -46,6 +46,12 @@
 	<true/>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Q Calc finds and pairs with Q Calc on other Macs on your Wi-Fi, for games like pong.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_qcalc._tcp</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

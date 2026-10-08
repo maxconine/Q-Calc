@@ -141,6 +141,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }()
     // off the main thread so a slow soulver evaluation never blocks typing
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
+    // the page has something open (pong) that esc should close before the panel hides
+    private var pageTakesEscape = false
+    private lazy var peer: PeerLink = {
+        let link = PeerLink()
+        link.onEvent = { [weak self] in self?.pushPeerEvent($0) }
+        return link
+    }()
 
     deinit {
         for monitor in [escapeMonitor, dragMonitor, clickAwayMonitor, clickAwayLocalMonitor].compactMap({ $0 }) {
@@ -313,6 +320,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 pushSoulverResult(soulverPayload(from: dict))
             case "periodic":
                 periodic.show(PeriodicElement.list(from: dict["elements"]))
+            case "peer":
+                handlePeer(dict)
+            case "escapeLayer":
+                pageTakesEscape = dict["on"] as? Bool ?? false
             default:
                 break
             }
@@ -339,6 +350,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         OverlayLog.note("web content process ended, reloading")
         webReady = false
+        pageTakesEscape = false
+        peer.close()
         triedBundle = false
         triedDevServer = false
         loadQuickCalc(webView)
@@ -417,6 +430,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         oldPanel.orderOut(nil)
         oldPanel.contentView = NSView()
         old.navigationDelegate = nil
+        // the new page knows nothing of a link the old one had open, so nothing should stay hosting behind it
+        pageTakesEscape = false
+        peer.close()
         let fresh = makeWebView(old.configuration)
         let next = makePanel()
         next.contentView = fresh
@@ -859,9 +875,45 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
     }
 
-    // esc hides immediately; the page does not get a chance to keep the panel up
+    // esc hides immediately, unless the page said it has a layer open; then the page closes that instead,
+    // and a page that doesn't answer true still gets the panel hidden
     private func escape() {
-        hide()
+        guard pageTakesEscape, let web else {
+            hide()
+            return
+        }
+        web.evaluateJavaScript("!!(window.__qcalcEscape && window.__qcalcEscape())") { [weak self] result, _ in
+            if (result as? Bool) != true { self?.hide() }
+        }
+    }
+
+    private func handlePeer(_ dict: [String: Any]) {
+        switch dict["op"] as? String {
+        case "discover":
+            peer.discover()
+        case "stopDiscovery":
+            peer.stopDiscovery()
+        case "host":
+            peer.host()
+        case "join":
+            if let id = dict["peer"] as? String, let code = dict["code"] as? String {
+                peer.join(id, code: code)
+            }
+        case "send":
+            if let data = dict["data"] as? String { peer.send(data) }
+        case "close":
+            peer.close()
+        default:
+            break
+        }
+    }
+
+    private func pushPeerEvent(_ event: [String: Any]) {
+        guard JSONSerialization.isValidJSONObject(event),
+              let data = try? JSONSerialization.data(withJSONObject: event, options: []),
+              let json = String(data: data, encoding: .utf8)
+        else { return }
+        web?.evaluateJavaScript("window.__qcalcPeer && window.__qcalcPeer(\(json));")
     }
 
     private func installDragMonitor() {

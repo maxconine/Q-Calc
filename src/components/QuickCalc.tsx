@@ -23,6 +23,7 @@ import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
 import { LiveAnswer } from './LiveAnswer'
 import { PeriodicCard } from './PeriodicCard'
+import { PongPanel } from './PongPanel'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -105,6 +106,8 @@ import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
 import { useKeyLabels } from './useKeyLabels'
+import { hasPeerTransport, peerTransport } from '../lib/peer'
+import { isPongCommand, PONG_HINT } from '../lib/pong'
 import { commandHeld, hostCheats, hostKeys, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
@@ -227,6 +230,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [periodicOpen, setPeriodicOpen] = useState(false)
   // equation fields for `sys N`; null until enter opens them
   const [sysLines, setSysLines] = useState<string[] | null>(null)
+  // pong takes over the bar until esc or the panel hides
+  const [pongOpen, setPongOpen] = useState(false)
+  const pongOpenRef = useRef(false)
+  pongOpenRef.current = pongOpen
   const sysLinesRef = useRef<string[] | null>(null)
   sysLinesRef.current = sysLines
 
@@ -370,6 +377,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const graphCmd = isGraphCommand(q)
   const sysCmd = isSysCommand(q)
   const periodicCmd = isPeriodicCommand(q)
+  const pongCmd = isPongCommand(q)
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
     [graphCmd, q, nativeFns],
@@ -398,8 +406,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // typeset only when it shows something the bar doesn't, and never for a command's own panel
   const typstExpr = chained ? chainedExpr(q) : q
   const typstShown = useMemo(
-    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !helpShown && typstPreviewUseful(typstExpr),
-    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, helpShown, typstExpr],
+    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !pongCmd && !helpShown && typstPreviewUseful(typstExpr),
+    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, pongCmd, helpShown, typstExpr],
   )
   const evalOptions = useMemo(
     () => ({
@@ -413,9 +421,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings],
   )
   const sheet = useMemo(() => {
-    if (graphCmd || periodicCmd || sysCmd) return []
+    if (graphCmd || periodicCmd || pongCmd || sysCmd) return []
     return evaluateSheet([isolated ?? (chained ? chainedExpr(q) : q)], evalOptions)
-  }, [q, isolated, chained, graphCmd, periodicCmd, sysCmd, evalOptions])
+  }, [q, isolated, chained, graphCmd, periodicCmd, pongCmd, sysCmd, evalOptions])
 
   const sysParsed = useMemo(() => (sysCmd ? sysCommand(q) : null), [sysCmd, q])
   const sysAnswer = useMemo((): SystemAnswer | null => {
@@ -433,7 +441,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   if (graphCmd) jsDisplay = graphIntent?.label ? `graph ${graphIntent.label}` : ''
   else if (q.trim()) jsDisplay = live?.display ?? ''
   const jsN = graphCmd || sysCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
-  const nativeUsable = !graphCmd && !sysCmd && !periodicCmd && !chained && soulverAngleSafe(q, settings.angleMode)
+  const nativeUsable = !graphCmd && !sysCmd && !periodicCmd && !pongCmd && !chained && soulverAngleSafe(q, settings.angleMode)
   const merged = withPhraseAnswer(q, jsDisplay, mergeLiveAnswer(q, jsDisplay, jsN, nativeUsable ? nativeLive : null), {
     enabled: nativeUsable && !hasSoulver(),
     sigFigs: settings.sigFigs,
@@ -465,7 +473,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const rootsOf = liveSolve?.outcome === 'roots' ? liveSolve.variable : undefined
   const steady = useSteadyAnswer(
     q,
-    graphCmd || sysCmd || helpShown || periodicCmd
+    graphCmd || sysCmd || helpShown || periodicCmd || pongCmd
       ? null
       : shownLive && !isImproperUnitConversion(display)
         ? `${rootsOf ? `${rootsOf} = ` : ''}${dualLabel(liveExact, display)}`
@@ -500,14 +508,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [selText, q, graphCmd, evalOptions])
 
   useEffect(() => {
-    if (display || !q.trim() || graphCmd || sysCmd || helpShown || periodicCmd || looksLikeNaturalLanguage(q)) return
+    if (display || !q.trim() || graphCmd || sysCmd || helpShown || periodicCmd || pongCmd || looksLikeNaturalLanguage(q)) return
     const t = window.setTimeout(() => {
       const ok = (text: string) => Boolean(evaluateSheet([chained ? chainedExpr(text) : text], evalOptions)[0]?.display)
       const names = { variables: Object.keys(nativeVars), functions: Object.keys(liveFns) }
       setSquiggle({ q, span: blankReason(q, ok, names) })
     }, SQUIGGLE_IDLE_MS)
     return () => window.clearTimeout(t)
-  }, [q, display, chained, graphCmd, sysCmd, helpShown, periodicCmd, evalOptions, nativeVars, liveFns])
+  }, [q, display, chained, graphCmd, sysCmd, helpShown, periodicCmd, pongCmd, evalOptions, nativeVars, liveFns])
 
   const examples = useMemo(
     () => exampleList(firstRun && nativeInfo.hotkey ? nativeInfo.hotkey : undefined),
@@ -881,7 +889,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
-    if (isHelpCommand(expr) || isPeriodicCommand(expr)) {
+    setPongOpen(false)
+    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isPongCommand(expr)) {
       resetToCalculate()
       return
     }
@@ -982,14 +991,31 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       track('periodic')
       if (!openNativePeriodicTable()) setPeriodicOpen(true)
       resetToCalculate()
+    } else if (selected == null && isPongCommand(qRef.current)) {
+      if (!peerTransport()) return
+      resetToCalculate()
+      setTapeOpen(false)
+      setPongOpen(true)
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
     else commit()
   }, [commit, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem])
 
-  // esc always leaves the overlay. false tells the mac app to hide; the page does not clear the tape or the input first.
-  const escapeLayer = useCallback((): boolean => false, [])
+  // esc leaves the overlay, except from pong, which it closes back to the bar. false tells the mac app to hide;
+  // the page does not clear the tape or the input first.
+  const escapeLayer = useCallback((): boolean => {
+    if (!pongOpenRef.current) return false
+    pongOpenRef.current = false
+    setPongOpen(false)
+    return true
+  }, [])
+
+  // so the mac app hands esc to the page while pong is up
+  useEffect(() => {
+    nativeHandler()?.postMessage({ type: 'escapeLayer', on: pongOpen })
+    if (!pongOpen) mathRef.current?.focus()
+  }, [pongOpen])
 
   useEffect(() => {
     calcWindow().__qcalcEscape = escapeLayer
@@ -1093,7 +1119,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isEquation(q) || isIsolateCommand(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isPongCommand(q) || isEquation(q) || isIsolateCommand(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1263,7 +1289,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       >
         <FourTwentySmoke smoking={smoking} />
         <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}>
-          {helpShown ? (
+          {pongOpen && peerTransport() ? (
+            <PongPanel transport={peerTransport()!} onClose={escapeLayer} />
+          ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : tapeOpen && history.length > 0 ? (
             <HistoryTape
@@ -1292,7 +1320,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             />
           ) : null}
 
-          <div className="composer">
+          <div className={pongOpen ? 'composer composer-hidden' : 'composer'}>
             <SixtyNineFold active={sixtyNine} />
             <EdgeTools
               settings={settings}
@@ -1327,7 +1355,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: rotation.tick, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : pongCmd ? (hasPeerTransport() ? PONG_HINT : 'pong needs Q Calc for Mac') : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1343,23 +1371,23 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
               label={rootsOf}
-              message={sysMessage || periodicCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
+              message={sysMessage || periodicCmd || pongCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}
           </div>
-          {typstShown ? (
+          {typstShown && !pongOpen ? (
             <TypstPreview
               expr={typstExpr}
               answer={
                 // a message ("no real solution") or a command label isn't an answer to typeset
-                graphCmd || periodicCmd || sysMessage || (liveSolve && !rootsOf)
+                graphCmd || periodicCmd || pongCmd || sysMessage || (liveSolve && !rootsOf)
                   ? ''
                   : typstAnswer(liveExact, display)
               }
               solvedFor={rootsOf}
             />
           ) : null}
-          {hint ? (
+          {hint && !pongOpen ? (
             <div className="composer-hint" role="status">
               {hostKeys(hint)}
             </div>
