@@ -1,6 +1,7 @@
 import { chemAnswer } from './chem'
 import { splitLetters } from './letters'
 import { embedIntegrals, evaluateCalculus, type CalculusResult } from './calculus'
+import { joinDots } from './dots'
 import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
 import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
 import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './measure'
@@ -113,7 +114,10 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
 
   const known = (name: string) => name in variables || name in quantities || name in measures
   for (const raw of texts) {
-    const source = stripTrailingEquals(typstToAscii(raw.trim()))
+    // `\dot\theta`, `dot(theta)` and `θ̇` all read as `thetadot` before anything else rewrites them
+    // LaTeX pasted inside a line (`d/dt $x\sin\theta$`) loses its $ signs; money (`$10`) has no backslash
+    const unwrapped = raw.trim().replace(/\$([^$]*\\[A-Za-z][^$]*)\$/g, '$1')
+    const source = stripTrailingEquals(typstToAscii(joinDots(unwrapped)))
     const line = splitGluedFunctions(looksLikeLatex(source) ? latexToAscii(source) : source, known)
     // the input field turns a typed theta into θ, which is also a variable name; solve keeps θ as its unknown
     const trimmedLine = splitGluedFunctions(line.replace(/θ/g, 'theta'), known)
@@ -309,7 +313,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     // ∓ is treated as ± until correlation is modelled
     let expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
 
-    const ctx = { ans: lastAns, angleMode, variables, functions, measures }
+    const ctx = { ans: lastAns, angleMode, variables, functions, measures, timeVarying: options.timeVarying }
     const plusMinus = hasPlusMinus(expr)
     let value: Value | null = null
     let sum: ReturnType<typeof sumAnswer> = null
@@ -397,6 +401,7 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       quantity,
       variable,
       closedForm: calc?.job,
+      ...(calc?.time ? { time: calc.time } : {}),
     })
   }
 

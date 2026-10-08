@@ -68,7 +68,9 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/\\(sinh|cosh|tanh|csch|sech|coth)\b/g, '$1')
   s = s.replace(/\\arc(sin|cos|tan|csc|sec|cot)\b/g, 'a$1')
   s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\s*\^\s*\{-1\}/g, 'a$1')
-  s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\b/g, '$1')
+  s = bareTrigArguments(s)
+  // spaced, so `x\sin(…)` is x times sin, not one word
+  s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\b/g, ' $1')
   s = s.replace(/\\exp\b/g, 'exp')
   s = repeatingDecimals(s)
   s = s.replace(/\\overline\{([^}]+)\}/g, 'conj($1)')
@@ -82,6 +84,47 @@ export function latexToAscii(latex: string): string {
   s = s.replace(/[{}]/g, '')
   s = wrapBareFunctions(s.replace(/\s+/g, ' ').trim())
   return s
+}
+
+const BARE_TRIG = new RegExp(
+  String.raw`\\(sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot)\s*(?:\^\s*(\{[^{}]*\}|\d))?\s*(theta\b|\\[A-Za-z]+|[A-Za-z](?![A-Za-z])|\d+(?:\.\d+)?)`,
+  'g',
+)
+
+/**
+ * A function written without brackets takes the next symbol or number, and a power written on the function is a
+ * power of its value: `x\sin\theta` is x·sin(θ), `\cos^2\theta` is cos(θ)², `\sin 30` is sin(30).
+ */
+function bareTrigArguments(s: string): string {
+  const bare = s.replace(BARE_TRIG, (_, fn: string, pow: string | undefined, arg: string) => {
+    const power = pow ? `^(${pow.replace(/[{}]/g, '')})` : ''
+    return ` ${fn}(${arg.replace(/^\\/, '')})${power}`
+  })
+  return poweredCalls(bare)
+}
+
+// `\cos^2(60)` is cos(60)²: the power moves past the bracket it was written in front of
+function poweredCalls(s: string): string {
+  const re = /\\(sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot)\s*\^\s*(\{[^{}]*\}|\d)\s*\(/g
+  let out = ''
+  let at = 0
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    const open = m.index + m[0].length - 1
+    let depth = 0
+    let close = -1
+    for (let i = open; i < s.length; i++) {
+      if (s[i] === '(') depth++
+      else if (s[i] === ')' && --depth === 0) {
+        close = i
+        break
+      }
+    }
+    if (close < 0) continue
+    out += `${s.slice(at, m.index)} ${m[1]}${s.slice(open, close + 1)}^(${m[2]!.replace(/[{}]/g, '')})`
+    at = close + 1
+    re.lastIndex = at
+  }
+  return out + s.slice(at)
 }
 
 /** `0.1\overline{6}` is 0.1666…, as a fraction so no digits are lost. */

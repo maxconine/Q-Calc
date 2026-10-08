@@ -29,6 +29,7 @@ import { SixtyNineFold } from './SixtyNineFold'
 import { SixtySevenArms } from './SixtySevenArms'
 import { typstAnswer, typstPreviewUseful } from '../lib/typstMath'
 import { TypstPreview } from './TypstPreview'
+import { TimeLetters } from './TimeLetters'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { CopyUnitlessSettings } from './CopySettings'
 import { UnitSettings } from './UnitSettings'
@@ -226,6 +227,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [inputSel, setInputSel] = useState<{ start: number; end: number } | null>(null)
   // the browser build's periodic table; the mac app opens its own window instead
   const [periodicOpen, setPeriodicOpen] = useState(false)
+  // letters moved by hand between changing with time and constant, for d/dt; kept until Q Calc quits
+  const [timeVarying, setTimeVarying] = useState<Record<string, boolean>>({})
   // equation fields for `sys N`; null until enter opens them
   const [sysLines, setSysLines] = useState<string[] | null>(null)
   const sysLinesRef = useRef<string[] | null>(null)
@@ -412,8 +415,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       measures: nativeMeas,
       quantities: nativeQty,
       functions: liveFns,
+      timeVarying,
     }),
-    [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings],
+    [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings, timeVarying],
   )
   const sheet = useMemo(() => {
     if (graphCmd || periodicCmd || sysCmd) return []
@@ -1360,6 +1364,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                   : typstAnswer(liveExact, display)
               }
               solvedFor={rootsOf}
+            />
+          ) : null}
+          {live?.time && !graphCmd && !sysCmd && (live.time.varying.length || live.time.constant.length) ? (
+            <TimeLetters
+              letters={live.time}
+              onToggle={(letter, varying) => setTimeVarying((prev) => ({ ...prev, [letter]: varying }))}
             />
           ) : null}
           {hint ? (

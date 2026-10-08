@@ -812,6 +812,50 @@ html.quick-native .four-twenty.wide {
   height: auto;
 }
 
+/* under a d/dt: the letters it took as changing with time, and the constants; click one to switch it */
+.time-letters {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: calc(-1 * var(--sp-3));
+  padding: 0 var(--gutter) var(--sp-3);
+  font-size: var(--fs-small);
+  line-height: 18px;
+}
+.time-label {
+  color: var(--muted);
+  margin-right: 2px;
+}
+.time-chip {
+  min-width: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-family: var(--font);
+  font-size: var(--fs-small);
+  line-height: 20px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.time-chip.varying {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.time-chip.constant {
+  color: var(--muted);
+  background: var(--fill-hover);
+}
+.time-chip:hover:not(:disabled) {
+  background: var(--fill-selected);
+}
+.time-chip.locked {
+  cursor: default;
+  opacity: 0.75;
+}
+
 .composer-hint {
   position: relative;
   z-index: 1;

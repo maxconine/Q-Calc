@@ -8,12 +8,21 @@ import type { UserFunction, Value } from './types'
 
 type Intent =
   /** One variable per differentiation, innermost first; `''` means pick one from the body. */
-  | { op: 'derivative'; body: string; vars: string[]; at?: string }
+  | { op: 'derivative'; body: string; vars: string[]; at?: string; partial?: boolean }
   | { op: 'integral'; body: string; v?: string; lower: string; upper: string }
   | { op: 'limit'; body: string; v: string; to: string; side: -1 | 0 | 1 }
 
+/** Which letters a time derivative took as changing with time, and which as constant, as shown (θ, not theta). */
+export type TimeLetters = {
+  varying: string[]
+  constant: string[]
+  /** Letters written with a dot somewhere, which have to move; a chip can't make them constant. */
+  locked: string[]
+}
+
 export type CalculusResult = {
   value: Value | null
+  time?: TimeLetters
   exact?: string
   /** High-precision work for the closed-form worker; absent once it has answered. */
   job?: ClosedFormJob
@@ -367,7 +376,7 @@ function parseDerivative(text: string, functions: Record<string, UserFunction>, 
     if (vars.length !== (orderOf(p[1]) ?? 1) || vars.length > 4) return null
     const { body, at } = splitAt(p[3]!)
     if (!body) return null
-    return { op: 'derivative', body: stripOuterParens(body), vars, at }
+    return { op: 'derivative', body: stripOuterParens(body), vars, at, partial: true }
   }
   const words = text.match(/^(?:the\s+)?(?:(second|2nd)\s+)?(?:partial\s+)?derivative\s+of\s+(.+)$/is)
   if (words) {
@@ -1359,6 +1368,12 @@ function readPoint(text: string, vars: string[]): Record<string, string> | null 
 }
 
 function runDerivative(intent: Extract<Intent, { op: 'derivative' }>, ctx: ScientificContext): CalculusResult | null {
+  // d/dt of letters that aren't t (`x sin θ`) is a time derivative: they move with time
+  // ∂/∂t holds the other letters still, by definition
+  if (!intent.partial && intent.at == null && intent.vars.length <= 2 && intent.vars.every((v) => v === 't')) {
+    const timed = runTimeDerivative(intent.body, intent.vars.length, ctx)
+    if (timed) return timed
+  }
   const body = splitSymbols(intent.body, ctx)
   const free = freeSymbols(body, ctx)
   const first = intent.vars[0] || (free.includes('x') || !free.length ? 'x' : free.length === 1 ? free[0]! : null)
@@ -1525,4 +1540,107 @@ export function evaluateCalculus(text: string, ctx: ScientificContext = {}): Cal
   } catch {
     return { value: null }
   }
+}
+
+// ---- time derivatives: d/dt (x sin θ) = ẋ sin θ + x cos θ θ̇
+
+/** The physics convention: positions and angles move, other letters (L, h, k, m, g, R…) are constants. */
+const VARYING_BY_DEFAULT = new Set(['x', 'y', 'z', 'r', 's', 'q', 'u', 'v', 'w', 'theta', 'φ', 'ψ'])
+const GREEK_WORDS: Record<string, string> = { phi: 'φ', psi: 'ψ', omega: 'ω', alpha: 'α', beta: 'β', gamma: 'γ' }
+const GREEK_SHOWN: Record<string, string> = { theta: 'θ' }
+// stand-ins for ẋ, θ̈ and the rest while mathjs works: Greek capitals nobody types (not Σ Π Δ Ω Θ Φ, which mean things)
+const STAND_INS = ['Ξ', 'Ψ', 'Γ', 'Λ', 'Υ', 'Ζ', 'Η', 'Ι', 'Κ', 'Μ', 'Ν']
+const MARKS = ['', '̇', '̈', '⃛']
+/** `thetadot`, `xddot`, `θdot`: a letter or Greek name, then d once per derivative, then ot. */
+const DOTTED_WORD = /(?<![A-Za-z])(theta|phi|psi|omega|alpha|beta|gamma|[A-Za-zθφψωαβγ])(d{1,3})ot(?![A-Za-z])/g
+
+/** A letter as the answer shows it: θ for theta. */
+function shownLetter(name: string): string {
+  return GREEK_SHOWN[name] ?? name
+}
+
+/**
+ * d/dt or d²/dt² of an expression whose letters move with time. By the physics convention x, y, z, r, s, θ, φ, ψ
+ * (and anything written dotted) vary and the rest are constants; `ctx.timeVarying` overrides a letter either way.
+ * Each varying q contributes ∂f/∂q · q̇, and q̇'s own derivative is q̈. Worked in radians, as dotted physics is.
+ * Null when there's nothing to move (only t, or no letters at all), so the plain derivative takes over.
+ */
+function runTimeDerivative(text: string, order: number, ctx: ScientificContext): CalculusResult | null {
+  let body = ` ${text} `.replace(/\b(phi|psi|omega|alpha|beta|gamma)\b/g, (w) => GREEK_WORDS[w]!)
+  const free = STAND_INS.filter((c) => !body.includes(c))
+  // each dotted name, and each derivative of a moving letter, gets a stand-in
+  const stands = new Map<string, { base: string; order: number }>()
+  const standFor = (base: string, k: number): string | null => {
+    for (const [c, d] of stands) if (d.base === base && d.order === k) return c
+    const c = free.shift()
+    if (!c) return null
+    stands.set(c, { base, order: k })
+    return c
+  }
+  let missing = false
+  body = body.replace(DOTTED_WORD, (_, base: string, ds: string) => {
+    const name = GREEK_WORDS[base] ?? (base === 'θ' ? 'theta' : base)
+    const c = standFor(name, ds.length)
+    if (!c) missing = true
+    return ` ${c} `
+  })
+  if (missing) return null
+  // `ktheta` is k times θ, not six letters
+  const split = splitSymbols(body.replace(/theta/g, ' theta '), ctx)
+  const letters = freeSymbols(split, ctx).filter((n) => !STAND_INS.includes(n) && n !== 't')
+  const dottedBases = new Set([...stands.values()].map((d) => d.base))
+  if (!letters.length && !stands.size) return null
+  const varies = (name: string) =>
+    dottedBases.has(name) || (ctx.timeVarying?.[shownLetter(name)] ?? VARYING_BY_DEFAULT.has(name))
+  const moving = letters.filter(varies)
+  const still = letters.filter((n) => !varies(n))
+  const explicitT = /(?<![A-Za-z])t(?![A-Za-z(])/.test(split)
+  // nothing moves and there's no t: d/dt is 0, but then the letters probably weren't meant as constants, so
+  // say what was assumed rather than quietly answer 0
+  const rctx = { ...ctx, angleMode: 'rad' as const }
+  let tree = toTree(split, { ...rctx, bound: null, keep: [...letters, ...stands.keys(), 't'], depth: 0 })
+  if (!tree) return null
+  // a letter only ever written dotted (`1/2 m xdot^2`) moves too, and is listed so
+  const onlyDotted = [...dottedBases].filter((b) => !moving.includes(b))
+  const time: TimeLetters = {
+    varying: [...moving, ...onlyDotted].map(shownLetter),
+    constant: still.map(shownLetter),
+    locked: [...dottedBases].map(shownLetter),
+  }
+  for (let k = 0; k < order; k++) {
+    const terms: N[] = []
+    const part = (q: string): N | null => {
+      try {
+        return asN(math.derivative(asMath(tree!), q, { simplify: false }))
+      } catch {
+        return null
+      }
+    }
+    const symbolsNow = symbolNames(tree)
+    if (explicitT && symbolsNow.has('t')) {
+      const d = part('t')
+      if (!d) return null
+      terms.push(d)
+    }
+    for (const q of [...moving, ...stands.keys()]) {
+      if (!symbolsNow.has(q)) continue
+      const known = stands.get(q)
+      const base = known ? known.base : q
+      const next = standFor(base, (known?.order ?? 0) + 1)
+      if (!next || (known?.order ?? 0) + 1 >= MARKS.length) return null
+      const d = part(q)
+      if (!d) return null
+      terms.push(op('*', 'multiply', [d, symbol(next)]))
+    }
+    const sum = terms.length ? terms.reduce((a, b) => op('+', 'add', [a, b])) : constant(0)
+    try {
+      tree = tidy(simplifyKeepingConstants(sum, null))
+    } catch {
+      return null
+    }
+  }
+  let shown = pretty(tree).s
+  for (const [c, d] of stands) shown = shown.split(c).join(shownLetter(d.base) + MARKS[d.order]!)
+  // one character where there is one (ẋ, not x and a combining dot); θ̇ has none and keeps its mark
+  return { value: textVal(shown.normalize('NFC')), time }
 }

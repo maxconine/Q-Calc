@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MutableRefObject, type ReactNode } from 'react'
+import { isCalculusInput } from '../engine/calculus'
 import { autofillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
 import type { Span } from '../lib/blankReason'
@@ -245,7 +246,9 @@ export function QuickInput({
   const bounded = boundsIn(value).length > 0
   // a word the engine knows is painted from the ghost layer, so the input's own text steps aside
   // units are green and say what they are on hover; a word that's a unit there isn't also a function
-  const units = fits && !bounded ? unitSpans(value, completionNames?.variables, completionNames?.functions) : []
+  // in a derivative, an integral or a limit the letters are variables (`1/2 m xdot^2`), not units
+  const units =
+    fits && !bounded && !isCalculusInput(value) ? unitSpans(value, completionNames?.variables, completionNames?.functions) : []
   const words = (fits && !bounded ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []).filter(
     (w) => !units.some((u) => u.start < w.end && w.start < u.end),
   )
