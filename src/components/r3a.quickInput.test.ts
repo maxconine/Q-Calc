@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { afterTyping } from '../lib/bounds'
-import { flattenPastedText, prettyTokens, spliceText } from './QuickInput'
+import { flattenPastedText, joinPlusMinusAt, prettyTokens, spliceText } from './QuickInput'
 
 /** Types `text` one keystroke at a time with the caret always at the end, mirroring the real input. */
 function typeKeys(text: string, keepWords = false): string {
@@ -135,10 +135,16 @@ describe('± shortcuts beyond the basics', () => {
     expect(typeKeys(typed)).toBe(shown)
   })
 
-  it('+- alone never becomes ± no matter how it is typed', () => {
-    expect(typeKeys('5+-3')).toBe('5+-3')
-    expect(typeKeys('5 +- 3')).toBe('5 +- 3')
-    expect(prettyTokens('5+-3', 4)).toBe('5+-3')
+  it('a +- that meets at the caret joins at once, so enter saves what was shown', () => {
+    expect(joinPlusMinusAt('5+-3', 2)).toBe('5±3')
+    expect(joinPlusMinusAt('5+-3', 1)).toBe('5+-3')
+    expect(joinPlusMinusAt('5+2-3', 2)).toBe('5+2-3')
+  })
+
+  it('+- becomes ± however it is typed', () => {
+    expect(typeKeys('5+-3')).toBe('5±3')
+    expect(typeKeys('5 +- 3')).toBe('5 ± 3')
+    expect(prettyTokens('5+-3', 4)).toBe('5±3')
   })
 
   it('keepWords still converts the shortcut forms, since only the word form is a "word"', () => {

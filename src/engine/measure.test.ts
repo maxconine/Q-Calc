@@ -116,10 +116,10 @@ describe('uncertainty', () => {
     expect(pm(prettyTokens('10 minusplus 0.7'))).toBe('10.0 ± 0.7')
   })
 
-  it('leaves +- as plus a negative number', () => {
-    expect(prettyTokens('5+-3')).toBe('5+-3')
+  it('reads +- as ± and keeps plus a negative number as +(-3)', () => {
+    expect(prettyTokens('5+-3')).toBe('5±3')
     expect(prettyTokens('5-+3')).toBe('5-+3')
-    expect(evaluateSheet([prettyTokens('5+-3')])[0]?.display).toBe('2')
+    expect(evaluateSheet([prettyTokens('5+(-3)')])[0]?.display).toBe('2')
   })
 
   it('accepts ∓ and -/+ as ±', () => {

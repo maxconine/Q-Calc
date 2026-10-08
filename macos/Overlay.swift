@@ -129,6 +129,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var pendingFirstRun = false
     private var showCount = 0
     private var revealedShow = 0
+    // the last show whose page answered from a painted frame
+    private var paintedShow = 0
+    // hotkey shows in the last few seconds; pressing again and again means the user sees nothing
+    private var recentShows: [TimeInterval] = []
     var onSettings: (() -> Void)?
     private lazy var periodic: PeriodicWindowController = {
         let controller = PeriodicWindowController()
@@ -154,8 +158,16 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func toggle() {
         if panel?.isVisible == true {
+            OverlayLog.note("hotkey: hide")
             hide()
             return
+        }
+        OverlayLog.note("hotkey: show")
+        let now = ProcessInfo.processInfo.systemUptime
+        recentShows = recentShows.filter { now - $0 < 4 } + [now]
+        if recentShows.count >= 3 {
+            recentShows = []
+            rebuildAll("shown three times in four seconds")
         }
         show()
     }
@@ -169,6 +181,49 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     func show() {
+        // a hidden app's windows never come forward, and with no dock icon nothing else unhides it
+        if NSApp.isHidden { NSApp.unhideWithoutActivation() }
+        showOnce()
+        checkShown(showCount, attempt: 0)
+    }
+
+    // isVisible only says the panel is ordered in; ask the window server whether it's up and the page whether it drew.
+    // a fresh panel first, then a fresh page, which is what quitting and reopening used to fix
+    private func checkShown(_ token: Int, attempt: Int) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            guard let self, token == self.showCount, let panel = self.panel, panel.isVisible else { return }
+            if panel.alphaValue < 1 { panel.alphaValue = 1 }
+            let onScreen = Self.windowServerShows(panel)
+            // a page still loading has nothing to answer with yet
+            let painted = self.paintedShow == token || !self.webReady || panel.contentView !== self.web
+            OverlayLog.note("show \(token): on screen \(onScreen), painted \(painted), \(self.describe(panel))")
+            guard !(onScreen && painted), attempt < 2 else { return }
+            if attempt == 0 {
+                self.replacePanel(onScreen ? "the page didn't draw" : "show didn't bring it forward")
+            } else {
+                self.rebuildAll(onScreen ? "the page still didn't draw" : "still not on screen")
+            }
+            self.showOnce()
+            self.checkShown(self.showCount, attempt: attempt + 1)
+        }
+    }
+
+    private static func windowServerShows(_ panel: NSPanel) -> Bool {
+        guard panel.windowNumber > 0,
+              let rows = CGWindowListCopyWindowInfo([.optionIncludingWindow], CGWindowID(panel.windowNumber)) as? [[String: Any]],
+              let row = rows.first else { return false }
+        return (row[kCGWindowIsOnscreen as String] as? Bool) == true && panel.isOnActiveSpace
+    }
+
+    private func describe(_ panel: NSPanel) -> String {
+        "active space \(panel.isOnActiveSpace), alpha \(panel.alphaValue), "
+            + "frame \(NSStringFromRect(panel.frame)), screen \(panel.screen != nil), "
+            + "occlusion \(panel.occlusionState.rawValue), app hidden \(NSApp.isHidden), "
+            + "page in panel \(web?.window === panel), page hidden \(web?.isHidden ?? true), "
+            + "page frame \(NSStringFromRect(web?.frame ?? .zero)), page ready \(webReady)"
+    }
+
+    private func showOnce() {
         if panel == nil { build() }
         if panel?.contentView === fallback, let web, webReady {
             panel?.contentView = web
@@ -185,6 +240,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel?.makeKeyAndOrderFront(nil)
         panel?.makeFirstResponder(web)
         resetAndFocus { [weak self] in self?.reveal(token) }
+        web?.evaluateJavaScript("""
+        requestAnimationFrame(function () { requestAnimationFrame(function () {
+          try { window.webkit.messageHandlers.qcalc.postMessage({ type: 'painted', token: \(token) }); } catch (err) {}
+        }); });
+        """)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in self?.reveal(token) }
         DispatchQueue.main.async { [weak self] in
             self?.focusInput()
@@ -231,6 +291,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 }
             case "dismiss":
                 hide()
+            case "painted":
+                if let token = doubleValue(dict["token"]) { paintedShow = max(paintedShow, Int(token)) }
             case "copy":
                 if let text = dict["text"] as? String {
                     copyToPasteboard(text)
@@ -273,12 +335,26 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
     }
 
+    // a page whose process ended (long sleeps, memory pressure) is fully transparent, so reload it
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        OverlayLog.note("web content process ended, reloading")
+        webReady = false
+        triedBundle = false
+        triedDevServer = false
+        loadQuickCalc(webView)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webReady = true
         disableWebViewScrolling(webView)
         if pendingFirstRun {
             pendingFirstRun = false
             DispatchQueue.main.async { [weak self] in self?.showFirstRun() }
+        }
+        // a page rebuilt while the panel is up still owes it a size and a reveal
+        if panel?.isVisible == true {
+            let token = showCount
+            resetAndFocus { [weak self] in self?.reveal(token) }
         }
         focusInput()
         for delay in [0.05, 0.12, 0.3] {
@@ -296,7 +372,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         recover(from: webView, after: error)
     }
 
-    private func build() {
+    private func makePanel() -> OverlayPanel {
         let panel = OverlayPanel(
             contentRect: NSRect(x: 0, y: 0, width: overlayWidth, height: overlayMinHeight),
             styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
@@ -315,6 +391,60 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = true
         panel.becomesKeyOnlyIfNeeded = false
+        return panel
+    }
+
+    // a fresh panel around the same page, for when the old one stops coming forward (seen after a long sleep)
+    private func replacePanel(_ why: String) {
+        guard let old = panel else { return }
+        OverlayLog.note("rebuilding the overlay panel (\(why))")
+        let content = old.contentView
+        old.ignoreResignKey = true
+        old.orderOut(nil)
+        old.contentView = NSView()
+        let fresh = makePanel()
+        fresh.contentView = content
+        panel = fresh
+        sizeRoom = .closed
+        applyWebAppearance()
+    }
+
+    // a fresh panel and a fresh page from the same configuration, so the handlers and stored drafts carry over
+    private func rebuildAll(_ why: String) {
+        guard let old = web, let oldPanel = panel else { return }
+        OverlayLog.note("rebuilding the overlay and its page (\(why))")
+        oldPanel.ignoreResignKey = true
+        oldPanel.orderOut(nil)
+        oldPanel.contentView = NSView()
+        old.navigationDelegate = nil
+        let fresh = makeWebView(old.configuration)
+        let next = makePanel()
+        next.contentView = fresh
+        web = fresh
+        panel = next
+        webReady = false
+        triedBundle = false
+        triedDevServer = false
+        sizeRoom = .closed
+        applyWebAppearance()
+        loadQuickCalc(fresh)
+    }
+
+    private func observeWake() {
+        let refresh: (Notification) -> Void = { [weak self] note in
+            guard let self, self.panel?.isVisible != true else { return }
+            self.replacePanel(note.name.rawValue)
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification, object: nil, queue: .main, using: refresh)
+        // after a swipe between full screen apps the old panel could come up somewhere the user can't see
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: refresh)
+    }
+
+    private func build() {
+        let panel = makePanel()
+        observeWake()
         installEscapeMonitor()
         installDragMonitor()
         installClickAwayMonitors()
@@ -447,6 +577,15 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             forMainFrameOnly: true
         )
         config.userContentController.addUserScript(boot)
+        let web = makeWebView(config)
+        panel.contentView = web
+        self.web = web
+        self.panel = panel
+        applyWebAppearance(web)
+        loadQuickCalc(web)
+    }
+
+    private func makeWebView(_ config: WKWebViewConfiguration) -> OverlayWebView {
         let web = OverlayWebView(frame: NSRect(x: 0, y: 0, width: overlayWidth, height: overlayMinHeight), configuration: config)
         web.navigationDelegate = self
         web.autoresizingMask = [.width, .height]
@@ -462,12 +601,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         #if DEBUG
         if #available(macOS 13.3, *) { web.isInspectable = true }
         #endif
-        panel.contentView = web
-        self.web = web
-        self.panel = panel
         web.onPaste = { [weak self] in self?.pasteIntoWeb() }
-        applyWebAppearance(web)
-        loadQuickCalc(web)
+        return web
     }
 
     private func loadQuickCalc(_ web: WKWebView) {
@@ -1096,5 +1231,37 @@ struct OverlayView: View {
         if !shown.isEmpty { copyToPasteboard(UnitlessCopy.copied(shown)) }
         text = ""
         copied = false
+    }
+}
+
+// q calc's NSLog lines never reach the unified log, so the overlay keeps a short diary of its own shows
+enum OverlayLog {
+    private static let url = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Logs/Q Calc/overlay.log")
+    private static let queue = DispatchQueue(label: "qcalc.overlaylog", qos: .utility)
+    private static let stamp: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        return formatter
+    }()
+
+    static func note(_ line: String) {
+        let text = "\(stamp.string(from: Date())) \(line)\n"
+        queue.async {
+            let files = FileManager.default
+            try? files.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if let size = try? files.attributesOfItem(atPath: url.path)[.size] as? Int, size > 512_000,
+               let data = try? Data(contentsOf: url) {
+                try? data.suffix(256_000).write(to: url)
+            }
+            guard let handle = try? FileHandle(forWritingTo: url) else {
+                try? Data(text.utf8).write(to: url)
+                return
+            }
+            handle.seekToEndOfFile()
+            handle.write(Data(text.utf8))
+            try? handle.close()
+        }
     }
 }

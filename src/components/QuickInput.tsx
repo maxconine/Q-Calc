@@ -88,10 +88,10 @@ function restoreLongerWords(text: string): string {
   return out
 }
 
-// convert even when words are kept as text; `5+-3` stays plus negative three
+// convert even when words are kept as text; `+-` is ± (plus negative is `+(-3)`)
 const SHORTCUT_SYMBOLS: [RegExp, string][] = [
   [/-[/.]\+/g, '∓'],
-  [/\+[/.]-/g, '±'],
+  [/\+[/.]?-/g, '±'],
   [/~/g, '±'],
 ]
 
@@ -140,6 +140,12 @@ function replaceTokens(text: string, keepTrailing: boolean, keepWords: boolean):
     out = out.replace(re, swap(put))
   }
   return out
+}
+
+// a +- that meets at the caret (deleting the digit between them) is ± now, so enter can't save
+// a different answer than the one shown; the caret stays at the same index, just after the ±
+export function joinPlusMinusAt(text: string, caret: number): string {
+  return text[caret - 1] === '+' && text[caret] === '-' ? text.slice(0, caret - 1) + '±' + text.slice(caret + 1) : text
 }
 
 // with a caret, the token right before it is left for the next keystroke to settle;
@@ -239,6 +245,7 @@ export function QuickInput({
   const painted = words.length > 0
 
   const commit = (raw: string, cursor: number, settle = false, typed = false) => {
+    raw = joinPlusMinusAt(raw, cursor)
     const caret = settle ? undefined : cursor
     const before = prettyTokens(raw.slice(0, cursor), caret, keepWordsRef.current)
     let next = prettyTokens(raw, caret, keepWordsRef.current)

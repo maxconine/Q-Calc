@@ -5,6 +5,7 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject private var updates = Updates.shared
+    @ObservedObject private var loginItem = LoginItem.shared
     @State private var choosingKeys = false
 
     private static let draftChoices: [(title: String, seconds: Int)] = [
@@ -30,6 +31,10 @@ struct GeneralSettingsView: View {
                 }
                 .sheet(isPresented: $choosingKeys) {
                     KeybindsSheet(settings: settings)
+                }
+                Toggle(isOn: $loginItem.enabled) {
+                    Text("Open at login")
+                    Text("Keeps the shortcut working after a restart")
                 }
                 Picker("Appearance", selection: bind(\.theme, AppSettings.setTheme(_:notifyWeb:))) {
                     Text("System").tag("system")
@@ -304,6 +309,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             observeSettings()
         }
         applyAppearance()
+        LoginItem.shared.refresh()
         NSApp.mainMenu = Self.mainMenu()
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
