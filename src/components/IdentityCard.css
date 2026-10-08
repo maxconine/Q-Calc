@@ -1,0 +1,59 @@
+/* the card itself, its drag and its close button are the periodic table's */
+.identity {
+  width: min(720px, calc(100vw - 32px));
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+}
+.identity-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2);
+}
+.identity-title { font-size: var(--fs-body); font-weight: 600; }
+.identity-copied { color: var(--muted); font-size: var(--fs-caption); }
+.identity-copied.shown { color: var(--answer-hover); }
+.identity-body {
+  max-height: min(520px, calc(100vh - 120px));
+  overflow-y: auto;
+  cursor: default;
+  touch-action: pan-y;
+}
+.identity-section + .identity-section { margin-top: var(--sp-4); }
+.identity-section-title {
+  margin: 0 0 var(--sp-1);
+  padding-bottom: var(--sp-1);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+.identity-groups { column-count: 2; column-gap: var(--sp-4); }
+.identity-group { break-inside: avoid; padding-top: var(--sp-2); }
+.identity-group-title {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+}
+.identity-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--fs-body);
+  text-align: left;
+  cursor: default;
+}
+.identity-row:hover { background: var(--fill-hover); }
+.identity-row:active { background: var(--fill-selected); }
+.identity-row.copied { color: var(--answer-hover); }
+.identity-row:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 30%, transparent); outline-offset: -1px; }
+.identity-math sup, .identity-math sub { font-size: 0.72em; line-height: 0; }
+.identity-note { flex: none; color: var(--muted); font-size: var(--fs-caption); }

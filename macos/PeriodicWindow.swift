@@ -313,8 +313,8 @@ final class PeriodicWindowController: NSObject {
     // between the table and the lanthanide and actinide rows
     private let fGap: CGFloat = 10
 
-    // the overlay's own --bg, so the two read as one app
-    private static let background = NSColor(name: nil) { appearance in
+    // the overlay's own --bg, so the two read as one app; the identity sheets share it
+    static let background = NSColor(name: nil) { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             ? NSColor(srgbRed: 44 / 255, green: 44 / 255, blue: 46 / 255, alpha: 1)
             : .white

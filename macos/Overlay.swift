@@ -159,6 +159,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         controller.onPick = { [weak self] in self?.insertText($0) }
         return controller
     }()
+    // one window per sheet, identities and calculus, each made on its first open
+    private var identitySheets: [String: IdentityWindowController] = [:]
     // off the main thread so a slow soulver evaluation never blocks typing
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
     // the page has something open (pong) that esc should close before the panel hides
@@ -424,6 +426,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 pushSoulverResult(soulverPayload(from: dict))
             case "periodic":
                 periodic.show(PeriodicElement.list(from: dict["elements"]))
+            case "identities":
+                if let sheet = IdentitySheet(dict) { identityWindow(sheet.id).show(sheet) }
             case "peer":
                 handlePeer(dict)
             case "escapeLayer":
@@ -432,6 +436,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 break
             }
         }
+    }
+
+    private func identityWindow(_ id: String) -> IdentityWindowController {
+        if let controller = identitySheets[id] { return controller }
+        let controller = IdentityWindowController(id: id, cascade: identitySheets.count)
+        identitySheets[id] = controller
+        return controller
     }
 
     func userContentController(

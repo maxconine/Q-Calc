@@ -254,6 +254,7 @@ build_app() {
     "$MAC/UnitlessCopy.swift" \
     "$MAC/SettingsWindow.swift" \
     "$MAC/PeriodicWindow.swift" \
+    "$MAC/IdentityWindow.swift" \
     "$MAC/Updates.swift" \
     "$MAC/LoginItem.swift" \
     "$MAC/PeerPairing.swift" \

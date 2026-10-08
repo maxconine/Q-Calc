@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cheatSheet, HINTS, HOTKEY_FAILED_HINT, pickHint } from './onboarding'
+import { CALCULUS_SHEET, IDENTITY_SHEET, openNativeIdentitySheet } from './identities'
 import { openNativePeriodicTable } from './periodic'
 import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from './platform'
 
@@ -101,5 +102,26 @@ describe('periodic table on windows', () => {
     expect(openNativePeriodicTable()).toBe(true)
     expect(posted).toHaveLength(1)
     expect((posted[0] as { type: string }).type).toBe('periodic')
+  })
+})
+
+describe('identity sheets on windows', () => {
+  it('opens the page’s own sheet instead of posting to the host', () => {
+    const posted = stubHost('windows')
+    expect(openNativeIdentitySheet(IDENTITY_SHEET)).toBe(false)
+    expect(posted).toEqual([])
+  })
+
+  it('still goes to the mac window, with its runs drawn out', () => {
+    const posted = stubHost()
+    expect(openNativeIdentitySheet(CALCULUS_SHEET)).toBe(true)
+    expect(posted).toHaveLength(1)
+    const message = posted[0] as { type: string; id: string; title: string; sections: { groups: { items: { runs: unknown[]; copy: string }[] }[] }[] }
+    expect(message.type).toBe('identities')
+    expect(message.id).toBe('calculus')
+    expect(message.title).toBe(CALCULUS_SHEET.title)
+    const first = message.sections[0]!.groups[0]!.items[0]!
+    expect(first.copy).toBe('d/dx x^n = n x^(n - 1)')
+    expect(first.runs).toContainEqual({ text: 'n', shift: 'sup' })
   })
 })
