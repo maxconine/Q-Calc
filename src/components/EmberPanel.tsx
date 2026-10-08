@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { nativeWindow } from '../lib/bridge'
-import { closeReasonText, type CloseReason, type PeerInfo, type PeerTransport } from '../lib/peer'
+import { closeReasonText, type PeerInfo, type PeerTransport } from '../lib/peer'
 import { compileLevel, scoreOf } from '../lib/emberEngine'
 import { LEVELS } from '../lib/emberLevels'
 import { loadProgress, recordResult, saveProgress, unlockedCount, type EmberProgress } from '../lib/emberProgress'
@@ -36,14 +36,6 @@ function swallow(e: KeyboardEvent): void {
 
 // enter, arrows, backspace and letters would otherwise reach the hidden bar and commit or move through the tape
 const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || e.key.startsWith('Arrow') || e.key === 'Backspace'
-
-// the link is mid-change (relay codes are 6 digits and skip browsing); read the new fields if they're there
-const linkDiscovers = (t: PeerTransport) => (t as { discovers?: boolean }).discovers ?? true
-const linkCodeLength = (t: PeerTransport) => (t as { codeLength?: number }).codeLength ?? 4
-function reasonText(t: PeerTransport, reason: CloseReason): string {
-  const text = (closeReasonText as (r: CloseReason, word?: string) => string | undefined)(reason, t.peerWord)
-  return text || 'lost the connection'
-}
 
 function fmtTime(secs: number): string {
   const s = Math.max(0, secs)
@@ -139,7 +131,7 @@ export function EmberPanel({
       const cur = screenRef.current
       if (cur.k !== 'game' || !cur.online) return
       if (e.type === 'message') cur.game.receive(e.data, performance.now())
-      else if (e.type === 'closed') endGame('lobby', reasonText(transport, e.reason), true)
+      else if (e.type === 'closed') endGame('lobby', closeReasonText(e.reason, transport.peerWord), true)
     })
   }, [transport, endGame])
 
@@ -318,8 +310,8 @@ function EmberLobby({
   const [lobby, setLobby] = useState<Lobby>({ k: 'menu', note })
   const lobbyRef = useRef(lobby)
   lobbyRef.current = lobby
-  const discovers = linkDiscovers(transport)
-  const codeLength = linkCodeLength(transport)
+  const discovers = transport.discovers
+  const codeLength = transport.codeLength
   const onOpenRef = useRef(onOpen)
   onOpenRef.current = onOpen
 
@@ -334,7 +326,7 @@ function EmberLobby({
   }, [set, transport])
 
   const join = useCallback(() => {
-    if (!linkDiscovers(transport)) {
+    if (!transport.discovers) {
       set({ k: 'code', peer: null, digits: '' })
       return
     }
@@ -380,7 +372,7 @@ function EmberLobby({
             if (cur.k === 'browse') set({ ...cur, denied: true })
             return
           case 'open':
-            if (linkDiscovers(transport)) transport.stopDiscovery()
+            if (transport.discovers) transport.stopDiscovery()
             onOpenRef.current(e.role, e.peer)
             return
           case 'closed':
@@ -388,7 +380,7 @@ function EmberLobby({
               set({ k: 'code', peer: cur.peer, digits: '', note: 'wrong code · try again' })
               return
             }
-            set({ k: 'menu', note: reasonText(transport, e.reason) })
+            set({ k: 'menu', note: closeReasonText(e.reason, transport.peerWord) })
             return
         }
       }),
@@ -397,7 +389,7 @@ function EmberLobby({
 
   const submitCode = useCallback(
     (peer: PeerInfo | null, digits: string) => {
-      if (!/^[0-9]+$/.test(digits) || digits.length !== linkCodeLength(transport)) return
+      if (!/^[0-9]+$/.test(digits) || digits.length !== transport.codeLength) return
       set({ k: 'pairing', peer })
       transport.join(peer?.id ?? '', digits)
     },
@@ -433,7 +425,7 @@ function EmberLobby({
       }
       if (cur.k === 'code') {
         swallow(e)
-        const len = linkCodeLength(transport)
+        const len = transport.codeLength
         if (/^[0-9]$/.test(e.key) && cur.digits.length < len) {
           const digits = cur.digits + e.key
           if (digits.length === len) submitCode(cur.peer, digits)
@@ -500,7 +492,7 @@ function EmberLobby({
       return (
         <div className="ember-body">
           {lobby.denied ? (
-            <p className="ember-note">{reasonText(transport, 'denied')}</p>
+            <p className="ember-note">{closeReasonText('denied', transport.peerWord)}</p>
           ) : lobby.peers.length ? (
             <ul className="ember-peers" role="listbox">
               {lobby.peers.map((p, i) => (
