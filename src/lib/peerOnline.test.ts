@@ -3,12 +3,15 @@ import type { PeerEvent } from './peer'
 import { OnlinePeer } from './peerOnline'
 
 class FakeSocket {
-  readyState = 1
+  readyState: 0 | 1 | 2 | 3 = 1
   sent: string[] = []
   closed = false
   onmessage: ((e: { data: unknown }) => void) | null = null
   onclose: (() => void) | null = null
-  constructor(readonly url: string) {}
+  readonly url: string
+  constructor(url: string) {
+    this.url = url
+  }
   send(s: string) {
     this.sent.push(s)
   }
