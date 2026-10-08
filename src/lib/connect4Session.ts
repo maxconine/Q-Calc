@@ -1,4 +1,5 @@
-import { C4_VERSION, canDrop, decodeC4, drop, encodeC4, firstFor, isOver, newBoard, type C4Msg, type C4State, type Side } from './connect4'
+import { botColumn, type C4Skill } from './connect4Bot'
+import { C4_VERSION, canDrop, decodeC4, drop, encodeC4, firstFor, isOver, newBoard, other, type C4Msg, type C4State, type Side } from './connect4'
 
 // hi goes out this often until the other side's hi comes in, since its board may not have been listening yet
 const HI_MS = 400
@@ -6,6 +7,8 @@ const HI_MS = 400
 export const KEEP_MS = 1000
 // nothing from the other side for this long and the game is over
 export const C4_SILENCE_MS = 5000
+// solo: how long the computer seems to think before it drops
+export const BOT_THINK_MS = 500
 
 export type C4View = {
   state: C4State
@@ -18,6 +21,8 @@ export type C4View = {
   ended: string | null
   // bumps on every change, so the board knows when to redraw
   rev: number
+  // solo: the computer is about to move
+  thinking: boolean
 }
 
 // one side of a game, without the page: the board component feeds it columns, messages and times
@@ -34,15 +39,30 @@ export class Connect4Session {
   private rev = 0
 
   readonly role: Side
+  // a game against the computer: no link, the computer plays the guest
+  readonly solo: C4Skill | null
+  // solo: when the computer drops next, once it's its turn
+  private botAt: number | null = null
   private readonly send: (text: string) => void
+  private readonly rand: () => number
 
-  constructor(role: Side, send: (text: string) => void, now: number) {
-    this.role = role
+  constructor(role: Side, send: (text: string) => void, now: number, solo: C4Skill | null = null, rand: () => number = Math.random) {
+    this.role = solo ? 'host' : role
+    this.solo = solo
     this.send = send
+    this.rand = rand
     this.heard = now
     this.lastHi = now
     this.lastSent = now
-    this.hi()
+    if (solo) {
+      this.greeted = true
+      this.botTurn(now)
+    } else this.hi()
+  }
+
+  // solo: if it's the computer's turn, it moves after a moment
+  private botTurn(now: number): void {
+    this.botAt = this.solo && !isOver(this.state) && this.state.turn !== this.role ? now + BOT_THINK_MS : null
   }
 
   private hi(): void {
@@ -72,10 +92,11 @@ export class Connect4Session {
     return true
   }
 
-  private restart(): void {
+  private restart(now = 0): void {
     this.game++
     this.state = newBoard(firstFor(this.game))
     this.again = { mine: false, theirs: false }
+    this.botTurn(now)
     this.changed()
   }
 
@@ -84,6 +105,10 @@ export class Connect4Session {
     if (this.ended || !this.greeted || !canDrop(this.state, col, this.role)) return false
     const n = this.state.moves
     this.apply(col, this.role)
+    if (this.solo) {
+      this.botTurn(now)
+      return true
+    }
     this.post({ t: 'c4m', g: this.game, n, c: col })
     this.lastSent = now
     return true
@@ -92,6 +117,11 @@ export class Connect4Session {
   // enter: asks for a rematch once the game is over; both sides restart when both have asked
   rematch(now: number): void {
     if (this.ended || !isOver(this.state) || this.again.mine) return
+    // the computer always wants another
+    if (this.solo) {
+      this.restart(now)
+      return
+    }
     this.again = { ...this.again, mine: true }
     this.post({ t: 'c4a', g: this.game })
     this.lastSent = now
@@ -143,6 +173,14 @@ export class Connect4Session {
   // resends hi until it's answered, keeps the link warm, and notices when the other side has gone quiet
   tick(now: number): C4View {
     if (this.ended) return this.view()
+    if (this.solo) {
+      if (this.botAt != null && now >= this.botAt) {
+        this.botAt = null
+        const col = botColumn(this.state, other(this.role), this.solo, this.rand)
+        if (col >= 0) this.apply(col, other(this.role))
+      }
+      return this.view()
+    }
     if (now - this.heard > C4_SILENCE_MS) {
       this.end('lost the connection')
       return this.view()
@@ -159,6 +197,6 @@ export class Connect4Session {
   }
 
   view(): C4View {
-    return { state: this.state, started: this.greeted, wins: [...this.wins], again: this.again, ended: this.ended, rev: this.rev }
+    return { state: this.state, started: this.greeted, thinking: this.botAt != null, wins: [...this.wins], again: this.again, ended: this.ended, rev: this.rev }
   }
 }

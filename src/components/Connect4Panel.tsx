@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { cellAt, COLS, isOver, landingRow, ROWS, type C4State } from '../lib/connect4'
+import { C4_SKILLS, type C4Skill } from '../lib/connect4Bot'
 import { Connect4Session, type C4View } from '../lib/connect4Session'
 import { plainKey, swallow } from '../lib/gameKeys'
 import { closeReasonText, type PeerTransport } from '../lib/peer'
@@ -9,7 +10,17 @@ import { GameLobby, type GameProps } from './GameLobby'
 export function Connect4Panel({ transport, onClose }: { transport: PeerTransport; onClose: () => void }) {
   return (
     <div className="pong" aria-label="Connect 4">
-      <GameLobby transport={transport} name="connect 4" blurb="four in a row wins." onClose={onClose} game={(p) => <Connect4Game {...p} />} />
+      <GameLobby
+        transport={transport}
+        name="connect 4"
+        blurb="four in a row wins."
+        onClose={onClose}
+        game={(p) => <Connect4Game {...p} />}
+        solo={{
+          levels: C4_SKILLS,
+          play: (level, onEnd) => <Connect4Game transport={null} role="host" peer="computer" solo={level as C4Skill} onEnd={onEnd} />,
+        }}
+      />
     </div>
   )
 }
@@ -27,7 +38,14 @@ const KEEP_TICK_MS = 200
 
 type Actions = { play: (col: number) => void; rematch: () => void }
 
-function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
+// solo: against the computer, at that level; there's no link then
+function Connect4Game({
+  transport,
+  role,
+  peer,
+  onEnd,
+  solo = null,
+}: Omit<GameProps, 'transport'> & { transport: GameProps['transport'] | null; solo?: C4Skill | null }) {
   const [view, setView] = useState<C4View | null>(null)
   const [col, setCol] = useState(Math.floor(COLS / 2))
   const colRef = useRef(col)
@@ -37,7 +55,7 @@ function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
   const act = useRef<Actions>({ play: () => {}, rematch: () => {} })
 
   useEffect(() => {
-    const session = new Connect4Session(role, (text) => transport.send(text), performance.now())
+    const session = new Connect4Session(role, (text) => transport?.send(text), performance.now(), solo)
     let shown = -1
     let done = false
     const finish = (note?: string) => {
@@ -63,7 +81,7 @@ function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
       },
     }
 
-    const off = transport.subscribe((e) => {
+    const off = transport?.subscribe((e) => {
       if (e.type === 'message') {
         session.receive(e.data, performance.now())
         sync()
@@ -92,12 +110,12 @@ function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
     sync()
 
     return () => {
-      off()
+      off?.()
       window.clearInterval(timer)
       window.removeEventListener('keydown', onKey, true)
       act.current = { play: () => {}, rematch: () => {} }
     }
-  }, [transport, role])
+  }, [transport, role, solo])
 
   if (!view) return null
   const { state, started, again, wins } = view
@@ -111,8 +129,11 @@ function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
   if (!started) status = `waiting for ${theirName}…`
   else if (over) {
     const who = state.winner === role ? 'you win' : state.winner ? `${theirName} wins` : 'draw'
-    status = `${who} · ${again.mine ? 'waiting for a rematch…' : again.theirs ? `${theirName} wants a rematch · ↵` : '↵ rematch'}`
-  } else if (state.moves === 0) status = myTurn ? 'you go first' : `${theirName} goes first`
+    status = solo
+      ? `${who} · ↵ play again`
+      : `${who} · ${again.mine ? 'waiting for a rematch…' : again.theirs ? `${theirName} wants a rematch · ↵` : '↵ rematch'}`
+  } else if (view.thinking) status = state.moves === 0 ? 'the computer goes first…' : 'the computer is thinking…'
+  else if (state.moves === 0) status = myTurn ? 'you go first' : `${theirName} goes first`
   else status = myTurn ? 'your turn' : `${theirName}’s turn`
 
   return (
@@ -128,7 +149,9 @@ function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
         {status}
       </p>
       <Board state={state} role={role} cursor={myTurn ? col : null} onHover={setCol} onPick={(c) => act.current.play(c)} />
-      <p className="pong-note">← → or 1–{COLS} to pick · ↵ drop · esc leaves</p>
+      <p className="pong-note">
+        ← → or 1–{COLS} to pick · ↵ drop · {solo ? `${solo} · ` : ''}esc leaves
+      </p>
     </div>
   )
 }
