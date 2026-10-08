@@ -136,7 +136,7 @@ export type Level = {
   mirrors: Array<{ x: number; y: number; slant: Slant }> // tile-centre px, starting slant
   sensors: Array<Rect & { ch: string }>
   portals: Array<Rect & { pair: string; other: number }> // other = index of the paired portal
-  signs: Array<{ x: number; y: number; text: string }>
+  signs: Array<{ x: number; y: number; text: string }> // tile-centre px
   thin: number[] // tile indices of 'w' tiles, in row-major order
 }
 

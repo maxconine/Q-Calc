@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { LEVELS } from './emberLevels'
 import { decodeEmber, encodeEmber, STATE_HZ, SILENCE_MS } from './emberProtocol'
 import { createLocalGame, createOnlineGame, type EmberGame, type EmberView } from './emberSession'
-import { IN_LEFT, IN_RIGHT, IN_UP, type GameEvent } from './emberTypes'
+import { IN_LEFT, IN_RIGHT, IN_UP, RUN_ACCEL, type GameEvent } from './emberTypes'
 
 // the session is tested on four small levels of its own: 0 open floor, 1 a water pit right of ember,
 // 2 and 3 each player one step left of their door with a wall behind it
@@ -396,8 +396,10 @@ describe('online: play', () => {
     const x0 = pos(g.views().gv, 1).x
     const h0 = pos(g.views().hv, 1).x
     g.guest.keys(1, IN_RIGHT)
+    // 50ms is less than the 80ms the keys take to reach the host. from rest the engine accelerates, so
+    // frost covers about RUN_ACCEL·t²/2 by now; half of that is plenty to show it moved before the host knew
     g.run(50)
-    expect(pos(g.views().gv, 1).x).toBeGreaterThan(x0 + 3)
+    expect(pos(g.views().gv, 1).x).toBeGreaterThan(x0 + (RUN_ACCEL * 0.05 ** 2) / 4)
     expect(pos(g.views().hv, 1).x).toBe(h0)
     g.run(400)
     expect(pos(g.views().hv, 1).x).toBeGreaterThan(h0 + 10)
