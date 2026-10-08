@@ -1,5 +1,6 @@
 import type { KeyAction } from './keybinds'
 import { hasDualAnswer } from './answer'
+import { TOUR_ALL } from './tour'
 
 export type Onboarding = {
   opens: number
@@ -116,6 +117,8 @@ export type HintFacts = {
   answer?: string
   variable?: string
   unit?: boolean
+  // the input carries on from the last answer
+  chained?: boolean
   angleMode?: 'deg' | 'rad'
   fractionMode?: boolean
   native?: boolean
@@ -161,7 +164,8 @@ export const HINTS: readonly HintRule[] = [
   { bit: 512, on: 'open', when: (f) => Boolean(f.native) && (f.opens ?? 0) >= 2, text: '⌘, opens settings' },
 ]
 
-const HINT_ALL = HINTS.reduce((all, h) => all | h.bit, 0)
+// the walkthrough's bits share the mask (src/lib/tour.ts)
+const HINT_ALL = HINTS.reduce((all, h) => all | h.bit, 0) | TOUR_ALL
 
 type Hint = { bit: number; text: string }
 
@@ -209,6 +213,7 @@ export const CHEATS: { keys: readonly CheatRow[]; type: readonly CheatRow[] } = 
     ['graph x^2', 'plot'],
     ['GCF  LCM', 'factors'],
     ['sum n, n=1..9', 'Σ sums'],
+    ['tutorial', 'the walkthrough'],
     ['?', 'this list'],
   ],
 }

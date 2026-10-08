@@ -161,6 +161,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }()
     // one window per sheet, identities and calculus, each made on its first open
     private var identitySheets: [String: IdentityWindowController] = [:]
+    var isShown: Bool { panel?.isVisible == true }
+
+    // the walkthrough from the top, from settings or the menu
+    func showTutorial() {
+        show()
+        web?.evaluateJavaScript("if (window.__qcalcTutorial) window.__qcalcTutorial();")
+    }
+
     // off the main thread so a slow soulver evaluation never blocks typing
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
     // the page has something open (pong) that esc should close before the panel hides

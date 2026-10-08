@@ -165,7 +165,7 @@ describe('hints', () => {
 
   it('bitmask survives storage and merges by union', () => {
     const a = sanitizeOnboarding({ opens: 2, commits: 1, hints: COPY, done: false })
-    const b = sanitizeOnboarding({ opens: 1, commits: 3, hints: UNIT | 1 | 1 << 20 })
+    const b = sanitizeOnboarding({ opens: 1, commits: 3, hints: UNIT | 1 | 1 << 29 })
     expect(mergeOnboarding(a, b)).toEqual({ opens: 2, commits: 3, hints: COPY | UNIT, done: false })
     expect(sanitizeOnboarding('junk')).toEqual(emptyOnboarding())
     expect(sanitizeOnboarding({ opens: -4, commits: 'x' })).toEqual(emptyOnboarding())

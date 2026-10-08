@@ -59,6 +59,12 @@ struct GeneralSettingsView: View {
                     }
                 }
                 toggle("Share anonymous usage", "Counts of which features get used, never what you type", \.shareUsage, AppSettings.setShareUsage(_:notifyWeb:))
+                LabeledContent {
+                    Button("Replay") { QCalc.delegate.showTutorial() }
+                } label: {
+                    Text("Tutorial")
+                    Text("Walk through the basics in the bar again, or type tutorial there")
+                }
                 if updates.enabled {
                     Toggle(isOn: $updates.automatic) {
                         Text("Update automatically")

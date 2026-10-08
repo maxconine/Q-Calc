@@ -117,6 +117,15 @@ export function SettingsPage() {
         value={host.autostart}
         onChange={(on) => post({ type: 'autostart', on })}
       />
+      <section className="unit-settings" aria-label="Tutorial">
+        <div className="unit-settings-head">
+          <h2>Tutorial</h2>
+          <button type="button" className="unit-reset" onClick={() => post({ type: 'tutorial' })}>
+            Replay
+          </button>
+        </div>
+        <p className="unit-settings-hint">Walk through the basics in the bar again, or type tutorial there.</p>
+      </section>
       <AppearanceSettings value={settings.theme} onChange={set('theme')} />
       <ChoiceSetting
         title="Show history"

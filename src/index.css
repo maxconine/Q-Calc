@@ -1857,3 +1857,40 @@ html.quick-native .graph {
   font-size: var(--fs-body);
   white-space: nowrap;
 }
+
+/* the walkthrough's line: muted like a hint, with its count and a way out */
+.tour-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.tour-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tour-count {
+  flex: none;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.tour-skip {
+  flex: none;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.tour-skip:hover {
+  opacity: 1;
+}

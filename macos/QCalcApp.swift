@@ -1,6 +1,7 @@
 import AppKit
 import Carbon
 import Combine
+import SwiftUI
 
 extension Notification.Name {
     static let qcalcSettingsChanged = Notification.Name("QCalc.settingsChanged")
@@ -90,6 +91,8 @@ final class AppSettings: ObservableObject {
     static let defaultHistoryShow = "recent"
     static let defaultRationalize = true
     static let defaultTheme = "system"
+    static let hotKeyNudgesKey = "qcalc.hotKeyNudges"
+    static let maxHotKeyNudges = 3
 
     @Published private(set) var significantFigures: Int
     @Published private(set) var draftSeconds: Int
@@ -187,6 +190,16 @@ final class AppSettings: ObservableObject {
     func onboardingJSON() -> String {
         let data = (try? JSONSerialization.data(withJSONObject: onboarding, options: [])) ?? Data("{}".utf8)
         return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    // under two opens is only the first-run showing: the shortcut was never used, so it's worth pointing at, a few times at most
+    var wantsHotKeyNudge: Bool {
+        (onboarding["opens"] ?? 0) < 2 && (onboarding["done"] ?? 0) == 0
+            && UserDefaults.standard.integer(forKey: Self.hotKeyNudgesKey) < Self.maxHotKeyNudges
+    }
+
+    func noteHotKeyNudge() {
+        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: Self.hotKeyNudgesKey) + 1, forKey: Self.hotKeyNudgesKey)
     }
 
     // true exactly once per install
@@ -451,6 +464,9 @@ enum QCalc {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var overlay: OverlayController?
+    // the note under the menu bar icon naming the shortcut, while it's up
+    private var nudge: NSPopover?
+    private var nudgeObserver: NSObjectProtocol?
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandlerInstalled = false
     private var statusItem: NSStatusItem?
@@ -482,6 +498,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             overlay?.showWhenReady(from: "shortcut warning")
         }
         Updates.shared.start()
+        scheduleHotKeyNudge()
+    }
+
+    // no opens yet means this is the first run: wait a while in case it gets closed and forgotten.
+    // otherwise once launch has settled
+    private func scheduleHotKeyNudge() {
+        guard AppSettings.shared.wantsHotKeyNudge else { return }
+        let delay: TimeInterval = (AppSettings.shared.onboarding["opens"] ?? 0) == 0 ? 90 : 8
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.nudgeHotKey() }
+    }
+
+    // never takes focus, and leaves by itself, on a click, or when the overlay shows
+    private func nudgeHotKey() {
+        guard AppSettings.shared.wantsHotKeyNudge, overlay?.isShown != true, nudge == nil,
+              let hotKey = AppSettings.shared.activeHotKey, let button = statusItem?.button else { return }
+        AppSettings.shared.noteHotKeyNudge()
+        let popover = NSPopover()
+        popover.behavior = .applicationDefined
+        popover.contentViewController = NSHostingController(rootView: HotKeyNudgeView(hotKey: hotKey.title) { [weak self] in
+            self?.closeNudge()
+        })
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        nudge = popover
+        nudgeObserver = NotificationCenter.default.addObserver(forName: .focusOverlay, object: nil, queue: .main) { [weak self] _ in
+            self?.closeNudge()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self, weak popover] in
+            guard let self, let popover, self.nudge === popover else { return }
+            self.closeNudge()
+        }
+    }
+
+    private func closeNudge() {
+        nudge?.close()
+        nudge = nil
+        if let nudgeObserver { NotificationCenter.default.removeObserver(nudgeObserver) }
+        nudgeObserver = nil
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -586,6 +639,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let tips = NSMenuItem(title: "Tips…", action: #selector(showTips), keyEquivalent: "")
         tips.target = self
         menu.addItem(tips)
+        let tutorial = NSMenuItem(title: "Tutorial", action: #selector(showTutorial), keyEquivalent: "")
+        tutorial.target = self
+        menu.addItem(tutorial)
         if Updates.shared.enabled {
             let updates = NSMenuItem(title: "Check for Updates…", action: #selector(Updates.checkForUpdates), keyEquivalent: "")
             updates.target = Updates.shared
@@ -603,6 +659,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func showTips() {
         overlay?.showTips()
+    }
+
+    @objc func showTutorial() {
+        overlay?.showTutorial()
     }
 
     // false when macos or carbon refused the preset; the previous one stays bound
@@ -712,6 +772,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 }
 
 private let hotKeySignature = OSType(0x51434C43) // "QCLC"
+
+private struct HotKeyNudgeView: View {
+    let hotKey: String
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Q Calc lives up here").font(.headline)
+            Text("Press \(hotKey) in any app to open it.")
+            Text("Type math, press Return.").foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .fixedSize()
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
+    }
+}
 
 final class HotKeyBox {
     static let shared = HotKeyBox()

@@ -47,6 +47,7 @@ const RESET: &str = "(function () {
 })()";
 const FIRST_RUN: &str = "window.__QCALC_FIRST_RUN = true; if (window.__qcalcFirstRun) window.__qcalcFirstRun();";
 const SHOW_TIPS: &str = "if (window.__qcalcShowTips) window.__qcalcShowTips();";
+const SHOW_TUTORIAL: &str = "if (window.__qcalcTutorial) window.__qcalcTutorial();";
 
 struct State {
     store: Store,
@@ -183,6 +184,7 @@ fn main() {
                     &MenuItem::with_id(app, "show", "Show Q Calc", true, None::<&str>)?,
                     &MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?,
                     &MenuItem::with_id(app, "tips", "Tips…", true, None::<&str>)?,
+                    &MenuItem::with_id(app, "tutorial", "Tutorial", true, None::<&str>)?,
                     &PredefinedMenuItem::separator(app)?,
                     &MenuItem::with_id(app, "quit", "Quit Q Calc", true, None::<&str>)?,
                 ],
@@ -195,6 +197,7 @@ fn main() {
                     "show" => show_window(app),
                     "settings" => open_settings_later(app),
                     "tips" => show_tips(app),
+                    "tutorial" => show_tutorial(app),
                     "quit" => app.exit(0),
                     _ => {}
                 })
@@ -282,6 +285,7 @@ fn host(window: WebviewWindow, message: Value) {
         Some("hotkey") => choose_hotkey(app, message["chord"].as_str().unwrap_or_default()),
         // while the settings page records a new show / hide key, the old one mustn't swallow the press
         Some("hotkeyPause") => pause_hotkey(app, message["on"].as_bool() == Some(true)),
+        Some("tutorial") => show_tutorial(app),
         Some("autostart") => {
             let launcher = app.autolaunch();
             let _ = if message["on"].as_bool() == Some(true) { launcher.enable() } else { launcher.disable() };
@@ -509,6 +513,14 @@ fn show_tips(app: &AppHandle) {
     show_window(app);
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.eval(SHOW_TIPS);
+    }
+}
+
+// the walkthrough from the top, from the tray or the settings window
+fn show_tutorial(app: &AppHandle) {
+    show_window(app);
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.eval(SHOW_TUTORIAL);
     }
 }
 

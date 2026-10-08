@@ -49,7 +49,7 @@ import {
   visibleAnswer,
   type AnswerForm,
 } from '../lib/answer'
-import { blankReason, type Span } from '../lib/blankReason'
+import { blankReason, enterHint, type Span } from '../lib/blankReason'
 import { ansWrittenOut, chainedExpr, chainedHistoryExpr, chainsFromAnswer } from '../lib/chain'
 import { hideAction, shouldRestoreDraft } from '../lib/draft'
 import { nativeHandler } from '../lib/bridge'
@@ -107,6 +107,22 @@ import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
 import { useKeyLabels } from './useKeyLabels'
+import {
+  enrolTour,
+  isSkipCommand,
+  isTutorialCommand,
+  TOUR_ALL,
+  TOUR_DONE_HINT,
+  TOUR_OFF,
+  tourBit,
+  tourExtra,
+  tourLineFits,
+  tourProgress,
+  tourRunning,
+  tourStep,
+  tourUsed,
+  TUTORIAL_HINT,
+} from '../lib/tour'
 import { hasPeerTransport, peerTransport } from '../lib/peer'
 import { isPongCommand, PONG_HINT } from '../lib/pong'
 import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from '../lib/platform'
@@ -197,6 +213,21 @@ function lastAnswerRow(history: HistoryRow[]): HistoryRow | undefined {
   return undefined
 }
 
+// the walkthrough's line under the bar: what to try, how far along, and a way out
+function TourLine({ text, progress, onSkip }: { text: string; progress: { at: number; of: number }; onSkip: () => void }) {
+  return (
+    <div className="composer-hint tour-line" role="status">
+      <span className="tour-text">{text}</span>
+      <span className="tour-count">
+        {progress.at}/{progress.of}
+      </span>
+      <button type="button" className="tour-skip" onClick={onSkip} title="skip the tutorial (or type skip)">
+        skip
+      </button>
+    </div>
+  )
+}
+
 export function QuickCalcPage() {
   return (
     <div className="quick-app">
@@ -224,6 +255,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [firstRun, setFirstRun] = useState(false)
   // one muted line under the composer, cleared by the next keystroke
   const [hint, setHint] = useState<string | null>(null)
+  // a hint that also puts its example in the empty bar, for as long as that hint is up
+  const [hintGhost, setHintGhost] = useState<{ hint: string; expr: string; plain?: boolean } | null>(null)
+  // the walkthrough's bits, mirrored from onboarding so a step done re-renders the line
+  const [tourSeen, setTourSeen] = useState(() => loadOnboarding().hints & TOUR_ALL)
+  // steps done in a replay asked for with `tutorial`; null when not replaying. lives for this page only
+  const [replay, setReplay] = useState<number | null>(null)
+  const replayRef = useRef<number | null>(null)
+  replayRef.current = replay
   const [helpOpen, setHelpOpen] = useState(false)
   const [squiggle, setSquiggle] = useState<{ q: string; span: Span | null } | null>(null)
   const [inputSel, setInputSel] = useState<{ start: number; end: number } | null>(null)
@@ -276,12 +315,37 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const next = step(onboardingRef.current ?? emptyOnboarding())
     onboardingRef.current = next
     saveOnboarding(next)
+    setTourSeen(next.hints & TOUR_ALL)
+  }, [])
+
+  // a step or extra used, in the real progress and in a replay alike
+  const markTour = useCallback(
+    (bits: number) => {
+      if (!bits) return
+      if (((onboardingRef.current?.hints ?? 0) & bits) !== bits) updateOnboarding((s) => ({ ...s, hints: s.hints | bits }))
+      // the ref moves now so a commit can tell the basics just finished
+      if (replayRef.current != null) replayRef.current |= bits
+      setReplay((r) => (r == null ? r : r | bits))
+    },
+    [updateOnboarding],
+  )
+
+  const touringNow = useCallback(
+    (): boolean => replayRef.current != null || tourRunning(onboardingRef.current ?? emptyOnboarding()),
+    [],
+  )
+
+  // the walkthrough owns the line under the bar until its basics are done, so ordinary hints wait
+  const tourBasicsLeft = useCallback((): boolean => {
+    const s = onboardingRef.current ?? emptyOnboarding()
+    const done = replayRef.current ?? s.hints
+    return (replayRef.current != null || tourRunning(s)) && tourStep(done, nativeInfoRef.current.hotkey) != null
   }, [])
 
   // each time the overlay opens: count it, maybe start the examples, and repeat a hotkey failure
   const beginShowing = useCallback(() => {
-    updateOnboarding(recordOpen)
-    setRotation(startRotation(examplesActive(onboardingRef.current ?? emptyOnboarding())))
+    updateOnboarding((s) => enrolTour(recordOpen(s), Boolean(calcWindow().__QCALC_NATIVE)))
+    setRotation(startRotation(!touringNow() && examplesActive(onboardingRef.current ?? emptyOnboarding())))
     setFirstRun(false)
     setHelpOpen(false)
     const rest = settingsRef.current.historyShow === 'always' && historyRef.current.length > 0
@@ -296,6 +360,18 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     if (opened) updateOnboarding((o) => ({ ...o, hints: o.hints | opened.bit }))
     setHint(nativeInfoRef.current.hotkeyFailed ? hotkeyFailedText(nativeInfoRef.current.hotkey) : (opened?.text ?? null))
   }, [updateOnboarding])
+
+  // after beginShowing: an open after the first is the shortcut learned (or the menu used, which names it too),
+  // and once the basics are done each open brings one "you can also", in place of the open's hint
+  const beginTour = useCallback(() => {
+    if ((onboardingRef.current?.opens ?? 0) >= 2 || replayRef.current != null) markTour(tourBit('hotkey'))
+    if (!touringNow() || nativeInfoRef.current.hotkeyFailed) return
+    const extra = tourExtra(replayRef.current ?? onboardingRef.current?.hints ?? 0, nativeInfoRef.current.hotkey)
+    if (!extra) return
+    markTour(extra.bit)
+    setHint(extra.text)
+    setHintGhost({ hint: extra.text, expr: extra.expr, plain: extra.plain })
+  }, [markTour, touringNow])
 
   const stopDraftTimer = useCallback(() => {
     window.clearTimeout(draftTimer.current)
@@ -382,6 +458,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const periodicCmd = isPeriodicCommand(q)
   const identityCmd = identitySheetFor(q)
   const pongCmd = isPongCommand(q)
+  const tutorialCmd = isTutorialCommand(q)
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
     [graphCmd, q, nativeFns],
@@ -410,8 +487,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // typeset only when it shows something the bar doesn't, and never for a command's own panel
   const typstExpr = chained ? chainedExpr(q) : q
   const typstShown = useMemo(
-    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !helpShown && typstPreviewUseful(typstExpr),
-    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, identityCmd, pongCmd, helpShown, typstExpr],
+    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !tutorialCmd && !helpShown && typstPreviewUseful(typstExpr),
+    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, identityCmd, pongCmd, tutorialCmd, helpShown, typstExpr],
   )
   const evalOptions = useMemo(
     () => ({
@@ -424,10 +501,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }),
     [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings],
   )
+  // for enter's blank hint, read from a stable callback
+  const liveOptionsRef = useRef(evalOptions)
+  liveOptionsRef.current = evalOptions
+  const liveChainRef = useRef(chained)
+  liveChainRef.current = chained
   const sheet = useMemo(() => {
-    if (graphCmd || periodicCmd || identityCmd || pongCmd || sysCmd) return []
+    if (graphCmd || periodicCmd || identityCmd || pongCmd || tutorialCmd || sysCmd) return []
     return evaluateSheet([isolated ?? (chained ? chainedExpr(q) : q)], evalOptions)
-  }, [q, isolated, chained, graphCmd, periodicCmd, identityCmd, pongCmd, sysCmd, evalOptions])
+  }, [q, isolated, chained, graphCmd, periodicCmd, identityCmd, pongCmd, tutorialCmd, sysCmd, evalOptions])
 
   const sysParsed = useMemo(() => (sysCmd ? sysCommand(q) : null), [sysCmd, q])
   const sysAnswer = useMemo((): SystemAnswer | null => {
@@ -445,7 +527,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   if (graphCmd) jsDisplay = graphIntent?.label ? `graph ${graphIntent.label}` : ''
   else if (q.trim()) jsDisplay = live?.display ?? ''
   const jsN = graphCmd || sysCmd ? undefined : live?.value?.kind === 'number' ? live.value.n : undefined
-  const nativeUsable = !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !chained && soulverAngleSafe(q, settings.angleMode)
+  const nativeUsable = !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !tutorialCmd && !chained && soulverAngleSafe(q, settings.angleMode)
   const merged = withPhraseAnswer(q, jsDisplay, mergeLiveAnswer(q, jsDisplay, jsN, nativeUsable ? nativeLive : null), {
     enabled: nativeUsable && !hasSoulver(),
     sigFigs: settings.sigFigs,
@@ -477,7 +559,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const rootsOf = liveSolve?.outcome === 'roots' ? liveSolve.variable : undefined
   const steady = useSteadyAnswer(
     q,
-    graphCmd || sysCmd || helpShown || periodicCmd || identityCmd || pongCmd
+    graphCmd || sysCmd || helpShown || periodicCmd || identityCmd || pongCmd || tutorialCmd
       ? null
       : shownLive && !isImproperUnitConversion(display)
         ? `${rootsOf ? `${rootsOf} = ` : ''}${dualLabel(liveExact, display)}`
@@ -497,6 +579,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       answer: display,
       variable: fromJs && live?.kind === 'assignment' ? live.variable : undefined,
       unit: Boolean(steppableRef.current?.unit),
+      chained,
       angleMode: settings.angleMode,
       fractionMode: settings.fractionMode,
     },
@@ -512,23 +595,30 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [selText, q, graphCmd, evalOptions])
 
   useEffect(() => {
-    if (display || !q.trim() || graphCmd || sysCmd || helpShown || periodicCmd || identityCmd || pongCmd || looksLikeNaturalLanguage(q)) return
+    if (display || !q.trim() || graphCmd || sysCmd || helpShown || periodicCmd || identityCmd || pongCmd || tutorialCmd || looksLikeNaturalLanguage(q)) return
     const t = window.setTimeout(() => {
       const ok = (text: string) => Boolean(evaluateSheet([chained ? chainedExpr(text) : text], evalOptions)[0]?.display)
       const names = { variables: Object.keys(nativeVars), functions: Object.keys(liveFns) }
       setSquiggle({ q, span: blankReason(q, ok, names) })
     }, SQUIGGLE_IDLE_MS)
     return () => window.clearTimeout(t)
-  }, [q, display, chained, graphCmd, sysCmd, helpShown, periodicCmd, identityCmd, pongCmd, evalOptions, nativeVars, liveFns])
+  }, [q, display, chained, graphCmd, sysCmd, helpShown, periodicCmd, identityCmd, pongCmd, tutorialCmd, evalOptions, nativeVars, liveFns])
 
   const examples = useMemo(
     () => exampleList(firstRun && nativeInfo.hotkey ? nativeInfo.hotkey : undefined),
     [firstRun, nativeInfo.hotkey],
   )
-  const example = !q && !helpShown ? rotationItem(rotation, examples) : undefined
+  // the walkthrough: the step it's on, its example in the empty bar, and the line under it while that still fits
+  const tourDone = replay ?? tourSeen
+  const tourOn = replay != null || tourRunning({ ...(onboardingRef.current ?? emptyOnboarding()), hints: tourSeen })
+  const step = tourOn ? tourStep(tourDone, nativeInfo.hotkey) : null
+  const ghost = step ?? (hintGhost && hint === hintGhost.hint ? hintGhost : null)
+  const example = !q && !helpShown ? (ghost ? { expr: ghost.expr, plain: ghost.plain } : rotationItem(rotation, examples)) : undefined
+  const exampleId = ghost ? -1 - (step ? tourProgress(tourDone, nativeInfo.hotkey).at : 0) : rotation.tick
+  const exampleExpr = example && !example.plain ? example.expr : ''
   const exampleShown = useMemo(
-    () => (example && !example.plain ? exampleAnswer(evaluateSheet([prettyTokens(example.expr)], evalSettings)[0]) : ''),
-    [example, evalSettings],
+    () => (exampleExpr ? exampleAnswer(evaluateSheet([prettyTokens(exampleExpr)], evalSettings)[0]) : ''),
+    [exampleExpr, evalSettings],
   )
 
   const { shaking: armsShaking, settle: settleArms } = useSixtySevenArms(liveN)
@@ -546,13 +636,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   useEffect(() => {
     if (!pauseHintable) return
     const t = window.setTimeout(() => {
+      if (tourBasicsLeft()) return
       const next = pickHint(onboardingRef.current?.hints ?? 0, { expr: qRef.current, ...liveRef.current.facts }, 'pause')
       if (!next) return
       updateOnboarding((s) => ({ ...s, hints: s.hints | next.bit }))
       setHint(next.text)
     }, HINT_PAUSE_MS)
     return () => window.clearTimeout(t)
-  }, [pauseHintable, q, display, updateOnboarding])
+  }, [pauseHintable, q, display, tourBasicsLeft, updateOnboarding])
 
   useEffect(() => saveHistory(history), [history])
 
@@ -618,10 +709,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   const flashCopied = useCallback(() => {
     copiedFor.current = shownRef.current
+    // the walkthrough's copy step, and the ⌘C hint it already taught
+    const basicsLeft = tourBasicsLeft()
+    markTour(tourBit('copy') | 16)
+    if (basicsLeft && !tourBasicsLeft()) setHint(TOUR_DONE_HINT)
     setCopied(true)
     window.clearTimeout(copiedTimer.current)
     copiedTimer.current = window.setTimeout(() => setCopied(false), 1200)
-  }, [])
+  }, [markTour, tourBasicsLeft])
 
   const copyValue = useCallback(
     (text: string) => {
@@ -771,8 +866,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [history, insertHistoryExpr, insertPlain, settings.answerForm, settings.historyInsert, settings.sigFigs],
   )
 
-  // `quiet` is the commit-on-hide path: nobody is looking, so no hint is spent on it
-  const commit = useCallback((quiet = false) => {
+  // `quiet` is the commit-on-hide path: nobody is looking, so no hint is spent on it.
+  // false when there was nothing to save
+  const commit = useCallback((quiet = false): boolean => {
     const sysNow = sysLinesRef.current
     const expr = sysNow ? 'sys' : chainedRef.current || qRef.current
     const { display: liveDisplay, exact, n, meas, quantity, solve, fnDef: graphFn, native, facts } = liveRef.current
@@ -782,7 +878,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     const shown = sysNow ? sysShownRef.current.trim() || written : liveDisplay || (fnDef ? fnDefText(fnDef) : '')
     if (!expr.trim() || !shown || isImproperUnitConversion(shown)) {
       if (expr.trim() && !quiet) track(isImproperUnitConversion(shown) ? 'error.unit' : 'error.blank')
-      return
+      return false
     }
     track(
       calcKind({
@@ -797,11 +893,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         native,
       }),
     )
-    const nextHint = quiet ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...facts })
+    const basicsLeft = tourBasicsLeft()
+    const nextHint = quiet || basicsLeft ? null : pickHint(onboardingRef.current?.hints ?? 0, { expr, ...facts })
     updateOnboarding((s) => ({ ...recordCommit(s), hints: s.hints | (nextHint?.bit ?? 0) }))
+    markTour(tourUsed({ expr, unit: facts.unit || quantity != null, chained: facts.chained, solve: Boolean(solve), graph: isGraph }))
     const at = Date.now()
     setRecentNow(at)
-    setHint(nextHint?.text ?? null)
+    setHint(!quiet && basicsLeft && !tourBasicsLeft() ? TOUR_DONE_HINT : (nextHint?.text ?? null))
     setHelpOpen(false)
     // enter before the answer settled still gets its one firing
     settleArms(n)
@@ -855,7 +953,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     mathRef.current?.focus()
     setSelected(null)
     setTapeOpen(tapeRestRef.current)
-  }, [settleArms, settleSmoke, settleSixtyNine, stopDraftTimer, updateOnboarding])
+    return true
+  }, [markTour, settleArms, settleSmoke, settleSixtyNine, stopDraftTimer, tourBasicsLeft, updateOnboarding])
 
   const stepForm = tabForm.step
   const onTab = useCallback(
@@ -894,7 +993,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setRotation(ROTATION_OFF)
     setHint(null)
     setPongOpen(false)
-    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || isPongCommand(expr)) {
+    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || isPongCommand(expr) || isTutorialCommand(expr)) {
       resetToCalculate()
       return
     }
@@ -977,6 +1076,40 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     return true
   }, [history.length, restoreCaret, selected, tapeOpen])
 
+  // `tutorial` in the bar, or replay from settings: the walkthrough from the top, whatever was done before
+  const startTutorial = useCallback(() => {
+    replayRef.current = 0
+    setReplay(0)
+    setRotation(ROTATION_OFF)
+    setHint(null)
+    resetToCalculate()
+  }, [resetToCalculate])
+
+  const skipTutorial = useCallback(() => {
+    if (replayRef.current != null) {
+      replayRef.current = null
+      setReplay(null)
+    } else updateOnboarding((s) => ({ ...s, hints: s.hints | TOUR_OFF }))
+    setHint('skipped · type tutorial any time to see it again')
+    mathRef.current?.focus()
+  }, [updateOnboarding])
+
+  // enter that saved nothing says why, in the hint line; the squiggle shows where
+  const blankEnterHint = useCallback((): string => {
+    const expr = qRef.current
+    const ok = (text: string) => Boolean(evaluateSheet([liveChainRef.current ? chainedExpr(text) : text], liveOptionsRef.current)[0]?.display)
+    const names = { variables: Object.keys(liveOptionsRef.current.variables ?? {}), functions: Object.keys(liveOptionsRef.current.functions ?? {}) }
+    const graph = isGraphCommand(expr)
+    return enterHint({
+      expr,
+      span: graph || !expr.trim() ? null : blankReason(expr, ok, names),
+      improper: isImproperUnitConversion(liveRef.current.display),
+      naturalLanguage: looksLikeNaturalLanguage(expr),
+      bareGraph: graph && /^\s*graph\s*$/i.test(expr),
+      history: historyRef.current.length > 0,
+    })
+  }, [])
+
   const onEnter = useCallback((alt = false) => {
     const opening = sysCommand(qRef.current)
     if (selected == null && opening && 'count' in opening && sysLinesRef.current?.length !== opening.count) {
@@ -990,8 +1123,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       else commit()
       return
     }
-    if (isHelpCommand(qRef.current)) resetToCalculate()
-    else if (selected == null && isPeriodicCommand(qRef.current)) {
+    if (isHelpCommand(qRef.current)) {
+      markTour(tourBit('help'))
+      resetToCalculate()
+    } else if (selected == null && isTutorialCommand(qRef.current)) startTutorial()
+    else if (selected == null && isSkipCommand(qRef.current) && tourBasicsLeft()) {
+      skipTutorial()
+      resetToCalculate()
+    } else if (selected == null && isPeriodicCommand(qRef.current)) {
+      markTour(tourBit('periodic'))
       track('periodic')
       if (!openNativePeriodicTable()) setPeriodicOpen(true)
       resetToCalculate()
@@ -1007,8 +1147,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
-    else commit()
-  }, [commit, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem])
+    else if (!commit()) setHint(blankEnterHint())
+  }, [blankEnterHint, commit, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, skipTutorial, startTutorial, tourBasicsLeft])
 
   // esc leaves the overlay, except from pong, which it closes back to the bar. false tells the mac app to hide;
   // the page does not clear the tape or the input first.
@@ -1127,7 +1267,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || isPongCommand(q) || isEquation(q) || isIsolateCommand(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || isPongCommand(q) || isTutorialCommand(q) || isEquation(q) || isIsolateCommand(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1171,6 +1311,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       flushSync(() => {
         onPrepare()
         beginShowing()
+        beginTour()
       })
       size()
       requestAnimationFrame(size)
@@ -1188,19 +1329,24 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     w.__qcalcFirstRun = () => {
       w.__QCALC_FIRST_RUN = false
       setFirstRun(true)
-      setRotation(startRotation(true))
+      // the walkthrough's first step teaches the shortcut in place of the examples
+      setRotation(startRotation(!touringNow()))
     }
     w.__qcalcShowTips = () => {
       setRotation(ROTATION_OFF)
       setHint(null)
       setHelpOpen(true)
+      markTour(tourBit('help'))
     }
+    w.__qcalcTutorial = startTutorial
     if (w.__QCALC_FIRST_RUN) {
       beginShowing()
+      beginTour()
       w.__qcalcFirstRun()
     } else if (!w.__QCALC_NATIVE && !pageOpenCounted) {
       pageOpenCounted = true
       beginShowing()
+      beginTour()
     }
     w.__qcalcNativeResult = (reply) => {
       const next = nativeReplyToLive(reply, evalIdRef.current, qRef.current)
@@ -1222,7 +1368,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       for (const t of focusTimers) window.clearTimeout(t)
       ro?.disconnect()
     }
-  }, [beginShowing, insertPlain, onPrepare, onWillHide])
+  }, [beginShowing, beginTour, insertPlain, markTour, touringNow, onPrepare, onWillHide, startTutorial])
 
   useTapeWheel(rootRef, tapeRef, {
     isOpen: () => tapeOpen,
@@ -1343,7 +1489,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               value={q}
               keepWords={settings.keepWords}
               handleRef={mathRef}
-              example={example ? { text: example.expr, id: rotation.tick } : null}
+              example={example ? { text: example.expr, id: exampleId } : null}
               onChange={onInputChange}
               onEnter={onEnter}
               onUp={onUp}
@@ -1362,8 +1508,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             ) : (
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
-              example={example ? { tick: rotation.tick, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : pongCmd ? (hasPeerTransport() ? PONG_HINT : 'pong needs Q Calc for Mac') : graphCmd ? '' : display}
+              example={example ? { tick: exampleId, answer: exampleShown } : null}
+              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : pongCmd ? (hasPeerTransport() ? PONG_HINT : 'pong needs Q Calc for Mac') : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1379,7 +1525,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
               label={rootsOf}
-              message={sysMessage || periodicCmd || Boolean(identityCmd) || pongCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
+              message={sysMessage || periodicCmd || Boolean(identityCmd) || tutorialCmd || pongCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}
           </div>
@@ -1388,7 +1534,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               expr={typstExpr}
               answer={
                 // a message ("no real solution") or a command label isn't an answer to typeset
-                graphCmd || periodicCmd || identityCmd || pongCmd || sysMessage || (liveSolve && !rootsOf)
+                graphCmd || periodicCmd || identityCmd || pongCmd || tutorialCmd || sysMessage || (liveSolve && !rootsOf)
                   ? ''
                   : typstAnswer(liveExact, display)
               }
@@ -1399,6 +1545,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <div className="composer-hint" role="status">
               {hostKeys(hint)}
             </div>
+          ) : step && !pongOpen && !helpShown && tourLineFits(step, q, Boolean(shownLive)) ? (
+            <TourLine text={hostKeys(step.text)} progress={tourProgress(tourDone, nativeInfo.hotkey)} onSkip={skipTutorial} />
           ) : null}
           {sysLines && sysParsed && 'count' in sysParsed && sysParsed.count === sysLines.length ? (
             <SystemPanel
