@@ -13,10 +13,15 @@ type Screen =
   | { k: 'code'; peer: PeerInfo; digits: string; note?: string }
   | { k: 'pairing'; peer: PeerInfo }
   | { k: 'game'; role: Side; peer: string }
+  | { k: 'levels' }
+  | { k: 'solo'; level: string }
 
 const FRIEND: PeerInfo = { id: '', name: 'your friend' }
 
 export type GameProps = { transport: PeerTransport; role: Side; peer: string; onEnd: (note?: string) => void }
+
+// a game that can also be played alone, against the computer, at one of its levels (picked with 1, 2, 3…)
+export type SoloGame = { levels: readonly string[]; play: (level: string, onEnd: (note?: string) => void) => ReactNode }
 
 
 export function GameLobby({
@@ -25,6 +30,7 @@ export function GameLobby({
   blurb,
   onClose,
   game,
+  solo,
 }: {
   transport: PeerTransport
   // the game's name, as typed in the bar
@@ -33,6 +39,7 @@ export function GameLobby({
   blurb: string
   onClose: () => void
   game: (props: GameProps) => ReactNode
+  solo?: SoloGame
 }) {
   const [screen, setScreen] = useState<Screen>({ k: 'menu' })
   const screenRef = useRef(screen)
@@ -115,7 +122,7 @@ export function GameLobby({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const cur = screenRef.current
-      if (cur.k === 'game' || !plainKey(e) || e.key === 'Escape') return
+      if (cur.k === 'game' || cur.k === 'solo' || !plainKey(e) || e.key === 'Escape') return
       const key = e.key.toLowerCase()
       // enter, arrows and backspace would otherwise reach the hidden bar and commit or move through the tape
       const barKey = e.key.length === 1 || e.key === 'Enter' || e.key.startsWith('Arrow') || e.key === 'Backspace'
@@ -126,7 +133,17 @@ export function GameLobby({
         } else if (key === 'j') {
           swallow(e)
           browse()
+        } else if (key === 's' && solo) {
+          swallow(e)
+          setScreen({ k: 'levels' })
         } else if (barKey) swallow(e)
+        return
+      }
+      if (cur.k === 'levels' && solo) {
+        swallow(e)
+        const level = solo.levels[Number(e.key) - 1]
+        if (/^[1-9]$/.test(e.key) && level) setScreen({ k: 'solo', level })
+        else if (e.key === 'Backspace') setScreen({ k: 'menu' })
         return
       }
       if (cur.k === 'browse') {
@@ -156,8 +173,9 @@ export function GameLobby({
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [browse, host, pickPeer, submitCode, toMenu, transport])
+  }, [browse, host, pickPeer, solo, submitCode, toMenu, transport])
 
+  if (screen.k === 'solo') return solo ? solo.play(screen.level, (note) => setScreen({ k: 'menu', note })) : null
   return screen.k === 'game' ? (
     game({ transport, role: screen.role, peer: screen.peer, onEnd: toMenu })
   ) : (
@@ -174,6 +192,9 @@ export function GameLobby({
         name={name}
         blurb={blurb}
         transport={transport}
+        solo={solo}
+        onSolo={() => setScreen({ k: 'levels' })}
+        onLevel={(level) => setScreen({ k: 'solo', level })}
         onHost={host}
         onJoin={browse}
         onPick={pickPeer}
@@ -188,15 +209,21 @@ function Lobby({
   name,
   blurb,
   transport,
+  solo,
+  onSolo,
+  onLevel,
   onHost,
   onJoin,
   onPick,
   onBack,
 }: {
-  screen: Exclude<Screen, { k: 'game' }>
+  screen: Exclude<Screen, { k: 'game' } | { k: 'solo' }>
   name: string
   blurb: string
   transport: PeerTransport
+  solo?: SoloGame
+  onSolo: () => void
+  onLevel: (level: string) => void
   onHost: () => void
   onJoin: () => void
   onPick: (p: PeerInfo) => void
@@ -209,9 +236,14 @@ function Lobby({
       return (
         <div className="pong-body">
           <p className="pong-line">
-            two players on two {word}s. {blurb}
+            {solo ? `play the computer, or a friend on another ${word}. ${blurb}` : `two players on two ${word}s. ${blurb}`}
           </p>
           <div className="pong-actions">
+            {solo ? (
+              <button type="button" className="pong-button" onClick={onSolo}>
+                solo <kbd>S</kbd>
+              </button>
+            ) : null}
             <button type="button" className="pong-button" onClick={onHost}>
               host <kbd>H</kbd>
             </button>
@@ -220,6 +252,24 @@ function Lobby({
             </button>
           </div>
           {screen.note ? <p className="pong-note">{screen.note}</p> : null}
+        </div>
+      )
+    case 'levels':
+      return (
+        <div className="pong-body">
+          <p className="pong-line">how good is the computer?</p>
+          <div className="pong-actions">
+            {solo?.levels.map((level, i) => (
+              <button type="button" className="pong-button" key={level} onClick={() => onLevel(level)}>
+                {level} <kbd>{i + 1}</kbd>
+              </button>
+            ))}
+          </div>
+          <p className="pong-note">
+            <button type="button" className="pong-link" onClick={onBack}>
+              ⌫ back
+            </button>
+          </p>
         </div>
       )
     case 'hosting':

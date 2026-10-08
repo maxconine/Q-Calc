@@ -1,9 +1,11 @@
 import {
   advance,
+  botStep,
   COURT_H,
   decodePong,
   encodePong,
   movePaddle,
+  newBotMind,
   newGame,
   PONG_VERSION,
   SILENCE_MS,
@@ -11,8 +13,10 @@ import {
   snapshotOf,
   STATE_HZ,
   type PongMsg,
+  type BotMind,
   type PongState,
   type Side,
+  type Skill,
   type Snapshot,
 } from './pong'
 
@@ -59,18 +63,25 @@ export class PongSession {
   private ended: string | null = null
 
   readonly role: Side
+  // a game against the computer: no link, the computer plays the guest's paddle
+  readonly solo: Skill | null
+  private bot: BotMind = newBotMind()
   private readonly send: (text: string) => void
   private readonly rand: () => number
 
-  constructor(role: Side, send: (text: string) => void, now: number, rand: () => number = Math.random) {
-    this.role = role
+  constructor(role: Side, send: (text: string) => void, now: number, rand: () => number = Math.random, solo: Skill | null = null) {
+    this.role = solo ? 'host' : role
+    this.solo = solo
     this.send = send
     this.rand = rand
     this.game = newGame(rand() < 0.5 ? 1 : -1)
     this.heard = now
     this.lastTick = now
     this.lastHi = now
-    this.hi()
+    if (solo) {
+      this.greeted = true
+      this.started = true
+    } else this.hi()
   }
 
   private hi(): void {
@@ -92,6 +103,7 @@ export class PongSession {
   private restart(): void {
     this.game = newGame(this.rand() < 0.5 ? 1 : -1)
     this.carry = 0
+    this.bot = newBotMind()
     this.again = { mine: false, theirs: false }
   }
 
@@ -106,6 +118,11 @@ export class PongSession {
   // enter: asks for a rematch once the game is over; the host restarts when both have asked
   rematch(): void {
     if (this.ended || !this.over() || this.again.mine) return
+    // the computer always wants another
+    if (this.solo) {
+      this.restart()
+      return
+    }
     this.again = { ...this.again, mine: true }
     this.post({ t: 'again' })
     if (this.role === 'host' && this.again.theirs) this.restart()
@@ -152,7 +169,7 @@ export class PongSession {
     const dt = Math.min(0.1, Math.max(0, now - this.lastTick) / 1000)
     this.lastTick = now
     if (this.ended) return this.view(null)
-    if (now - this.heard > SILENCE_MS) {
+    if (!this.solo && now - this.heard > SILENCE_MS) {
       this.end('lost the connection')
       return this.view(null)
     }
@@ -161,11 +178,12 @@ export class PongSession {
       this.hi()
     }
     this.mineY = movePaddle(this.mineY, (this.held.down ? 1 : 0) - (this.held.up ? 1 : 0), dt)
+    if (this.solo) ({ y: this.theirY, mind: this.bot } = botStep(this.game, this.theirY, this.bot, this.solo, dt, this.rand))
     if (this.role === 'host') {
       this.game = { ...this.game, paddles: [this.mineY, this.theirY] }
       // the serve waits until the guest's court is up
       if (this.started) ({ state: this.game, carry: this.carry } = advance(this.game, this.carry, dt, this.rand))
-      if (now >= this.nextState) {
+      if (!this.solo && now >= this.nextState) {
         // a frame that came very late doesn't make the next few go early
         this.nextState = Math.max(this.nextState, now - STATE_MS / 2) + STATE_MS
         this.post({ t: 's', ...snapshotOf(this.game, now) })

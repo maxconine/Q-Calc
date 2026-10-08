@@ -7,8 +7,10 @@ import {
   PADDLE_H,
   PADDLE_INSET,
   PADDLE_W,
+  SKILLS,
   WIN_SCORE,
   type Side,
+  type Skill,
   type Snapshot,
 } from '../lib/pong'
 import { PongSession, type SessionView } from '../lib/pongSession'
@@ -18,7 +20,17 @@ import { GameLobby, type GameProps } from './GameLobby'
 export function PongPanel({ transport, onClose }: { transport: PeerTransport; onClose: () => void }) {
   return (
     <div className="pong" aria-label="Pong">
-      <GameLobby transport={transport} name="pong" blurb={`first to ${WIN_SCORE}.`} onClose={onClose} game={(p) => <PongGame {...p} />} />
+      <GameLobby
+        transport={transport}
+        name="pong"
+        blurb={`first to ${WIN_SCORE}.`}
+        onClose={onClose}
+        game={(p) => <PongGame {...p} />}
+        solo={{
+          levels: SKILLS,
+          play: (level, onEnd) => <PongGame transport={null} role="host" peer="computer" solo={level as Skill} onEnd={onEnd} />,
+        }}
+      />
     </div>
   )
 }
@@ -60,7 +72,14 @@ function draw(canvas: HTMLCanvasElement, colors: Colors, view: Snapshot, mine: S
 }
 
 // the court: PongSession runs the game, this feeds it keys and frames and draws what it returns
-function PongGame({ transport, role, peer, onEnd }: GameProps) {
+// solo: against the computer, at that level; there's no link then
+function PongGame({
+  transport,
+  role,
+  peer,
+  onEnd,
+  solo = null,
+}: Omit<GameProps, 'transport'> & { transport: GameProps['transport'] | null; solo?: Skill | null }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [view, setView] = useState<Pick<Snapshot, 'score' | 'phase' | 'winner'> & Pick<SessionView, 'started' | 'again'>>({
     score: [0, 0],
@@ -81,9 +100,9 @@ function PongGame({ transport, role, peer, onEnd }: GameProps) {
     let frames = 0
     let raf = 0
     let shown = ''
-    const session = new PongSession(role, (text) => transport.send(text), performance.now())
+    const session = new PongSession(role, (text) => transport?.send(text), performance.now(), Math.random, solo)
 
-    const off = transport.subscribe((e) => {
+    const off = transport?.subscribe((e) => {
       if (e.type === 'message') session.receive(e.data, performance.now())
       else if (e.type === 'closed') onEndRef.current(closeReasonText(e.reason, transport.peerWord))
     })
@@ -125,12 +144,12 @@ function PongGame({ transport, role, peer, onEnd }: GameProps) {
 
     return () => {
       cancelAnimationFrame(raf)
-      off()
+      off?.()
       window.removeEventListener('keydown', onDown, true)
       window.removeEventListener('keyup', onUp, true)
       window.removeEventListener('blur', onBlur)
     }
-  }, [transport, role])
+  }, [transport, role, solo])
 
   const left = role === 'host' ? 'you' : peer
   const right = role === 'guest' ? 'you' : peer
@@ -139,7 +158,9 @@ function PongGame({ transport, role, peer, onEnd }: GameProps) {
   if (!view.started) banner = `waiting for ${peer}…`
   else if (view.phase === 'over') {
     const who = view.winner === role ? 'you win' : `${peer} wins`
-    banner = `${who} · ${again.mine ? 'waiting for a rematch…' : again.theirs ? `${peer} wants a rematch · ↵` : '↵ rematch'}`
+    banner = solo
+      ? `${who} · ↵ play again`
+      : `${who} · ${again.mine ? 'waiting for a rematch…' : again.theirs ? `${peer} wants a rematch · ↵` : '↵ rematch'}`
   } else if (view.phase === 'serve' && view.score[0] + view.score[1] === 0) banner = `first to ${WIN_SCORE}`
 
   return (
@@ -155,7 +176,7 @@ function PongGame({ transport, role, peer, onEnd }: GameProps) {
         <canvas ref={canvasRef} className="pong-canvas" aria-label="court" />
         {banner ? <div className="pong-banner">{banner}</div> : null}
       </div>
-      <p className="pong-note">↑↓ or W S to move · esc leaves</p>
+      <p className="pong-note">↑↓ or W S to move · {solo ? `${solo} · ` : ''}esc leaves</p>
     </div>
   )
 }

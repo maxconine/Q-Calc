@@ -292,3 +292,54 @@ export class SnapshotBuffer {
     }
   }
 }
+
+// ---- the computer, for solo games: it plays the guest's paddle on the right
+
+export type Skill = 'easy' | 'normal' | 'hard'
+export const SKILLS: readonly Skill[] = ['easy', 'normal', 'hard']
+
+// how the computer plays at each level. reach: the share of the court, from its own side, where it starts
+// following an incoming ball; speed: of a player's paddle; miss: how far off its aim can land, in paddle heights, for a
+// ball at serve speed; a faster ball throws its aim off further, so even hard cracks once a rally gets quick
+const BOT: Record<Skill, { reach: number; speed: number; miss: number }> = {
+  easy: { reach: 0.45, speed: 0.55, miss: 0.7 },
+  normal: { reach: 0.7, speed: 0.8, miss: 0.45 },
+  hard: { reach: 1, speed: 1, miss: 0.3 },
+}
+
+// what the computer keeps between frames: where on its paddle it means to meet the ball, picked once per rally
+export type BotMind = { aim: number; coming: boolean }
+
+export function newBotMind(): BotMind {
+  return { aim: 0, coming: false }
+}
+
+// where the ball will be, top to bottom, when it reaches x, folding its path off the walls
+export function landingY(ball: Ball, x: number): number {
+  if (ball.vx === 0) return ball.y
+  const t = (x - ball.x) / ball.vx
+  if (t <= 0) return ball.y
+  const half = BALL_SIZE / 2
+  const span = COURT_H - 2 * half
+  const raw = ball.y - half + ball.vy * t
+  const m = ((raw % (2 * span)) + 2 * span) % (2 * span)
+  return half + (m <= span ? m : 2 * span - m)
+}
+
+// one frame of the computer's paddle. it heads for where the ball will land once the ball is near enough,
+// and drifts back to the middle while the ball goes the other way
+export function botStep(s: PongState, y: number, mind: BotMind, skill: Skill, dt: number, rand: () => number): { y: number; mind: BotMind } {
+  const bot = BOT[skill]
+  const coming = s.phase === 'play' && s.ball.vx > 0
+  // a new rally toward it: decide how well this one goes
+  const pace = Math.hypot(s.ball.vx, s.ball.vy) / SERVE_SPEED
+  const next: BotMind = coming && !mind.coming ? { aim: (rand() * 2 - 1) * bot.miss * pace * PADDLE_H, coming } : { ...mind, coming }
+  const face = COURT_W - PADDLE_INSET - PADDLE_W
+  const seen = coming && s.ball.x >= face - bot.reach * COURT_W
+  const target = seen ? landingY(s.ball, face - BALL_SIZE / 2) + next.aim : COURT_H / 2
+  const gap = target - y
+  // a dead zone, so it doesn't shiver once it's there
+  if (Math.abs(gap) < 2) return { y, mind: next }
+  const most = PADDLE_SPEED * bot.speed * dt
+  return { y: clampPaddle(y + clamp(gap, -most, most)), mind: next }
+}
