@@ -16,6 +16,17 @@ private func isCommandVPasteKey(_ event: NSEvent) -> Bool {
     return event.charactersIgnoringModifiers?.lowercased() == "v"
 }
 
+// ⌘W by the layout's letter; a layout without latin letters falls back to the key where w sits on qwerty
+private func isCommandWCloseKey(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    guard flags.contains(.command), !flags.contains(.option), !flags.contains(.control), !flags.contains(.shift) else {
+        return false
+    }
+    guard let chars = event.charactersIgnoringModifiers?.lowercased(), !chars.isEmpty else { return false }
+    if chars == "w" { return true }
+    return !chars.unicodeScalars.allSatisfy({ $0.isASCII }) && event.keyCode == UInt16(kVK_ANSI_W)
+}
+
 private func copyToPasteboard(_ text: String) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
@@ -1104,6 +1115,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             }
             if isCommandVPasteKey(event) {
                 self.pasteIntoWeb()
+                return nil
+            }
+            // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W
+            if event.window === self.panel, isCommandWCloseKey(event) {
+                self.hide(because: "⌘W")
                 return nil
             }
             // the settings key is the user's choice now, so the page reads it and posts openSettings
