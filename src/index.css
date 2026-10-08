@@ -147,6 +147,21 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: none;
 }
 
+/* the mac app resizes the bar from either side edge (its grip is 8pt); the page only shows the cursor for it */
+html.quick-resizable .spotlight-embedded::before,
+html.quick-resizable .spotlight-embedded::after {
+  content: '';
+  position: absolute;
+  /* the top 14pt strip moves the bar instead */
+  top: 14px;
+  bottom: 0;
+  z-index: 20;
+  width: 8px;
+  cursor: ew-resize;
+}
+html.quick-resizable .spotlight-embedded::before { left: 0; }
+html.quick-resizable .spotlight-embedded::after { right: 0; }
+
 .composer {
   position: relative;
   display: grid;
@@ -705,6 +720,27 @@ html.quick-native .four-twenty.wide {
 @keyframes qcalc-word {
   from { color: var(--accent-hover); }
 }
+/* a unit: the accent green, brighter than a function name, so the two read apart */
+.quick-unit {
+  color: var(--accent);
+}
+/* what the unit under the pointer is (`Nm → newton meter`), above it since the bar ends just below the text */
+.quick-unit-tip {
+  position: absolute;
+  bottom: calc(100% - 2px);
+  z-index: 10;
+  padding: 2px 7px;
+  border-radius: var(--radius-s);
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .quick-squiggle, .quick-word { animation: none; }
 }
@@ -774,6 +810,50 @@ html.quick-native .four-twenty.wide {
   max-height: 72px;
   width: auto;
   height: auto;
+}
+
+/* under a d/dt: the letters it took as changing with time, and the constants; click one to switch it */
+.time-letters {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: calc(-1 * var(--sp-3));
+  padding: 0 var(--gutter) var(--sp-3);
+  font-size: var(--fs-small);
+  line-height: 18px;
+}
+.time-label {
+  color: var(--muted);
+  margin-right: 2px;
+}
+.time-chip {
+  min-width: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-family: var(--font);
+  font-size: var(--fs-small);
+  line-height: 20px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.time-chip.varying {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.time-chip.constant {
+  color: var(--muted);
+  background: var(--fill-hover);
+}
+.time-chip:hover:not(:disabled) {
+  background: var(--fill-selected);
+}
+.time-chip.locked {
+  cursor: default;
+  opacity: 0.75;
 }
 
 .composer-hint {

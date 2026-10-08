@@ -593,6 +593,8 @@ export type ScientificContext = {
   angleMode?: AngleMode
   variables?: Record<string, number>
   functions?: Record<string, UserFunction>
+  /** For d/dt: letters the user moved to varying (true) or constant (false), keyed as shown (θ, L). */
+  timeVarying?: Record<string, boolean>
 }
 
 function prepare(text: string, ctx: ScientificContext): { expr: string; scope: Record<string, unknown> } | null {

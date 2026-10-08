@@ -4,7 +4,7 @@ import { chemCopyText, isReactionInput } from '../engine/chem'
 import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
-import { isSysCommand, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
+import { isSysCommand, parseSystemCall, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
 import { isIsolateCommand, isolatePrevious } from '../engine/isolate'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
@@ -31,6 +31,7 @@ import { SixtyNineFold } from './SixtyNineFold'
 import { SixtySevenArms } from './SixtySevenArms'
 import { typstAnswer, typstPreviewUseful } from '../lib/typstMath'
 import { TypstPreview } from './TypstPreview'
+import { TimeLetters } from './TimeLetters'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { CopyUnitlessSettings } from './CopySettings'
 import { UnitSettings } from './UnitSettings'
@@ -103,6 +104,7 @@ import {
 import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
 import { identitySheetFor, isIdentityCommand, openNativeIdentitySheet, type IdentitySheet } from '../lib/identities'
+import { GREETING_REPLY, isGreeting } from '../lib/greeting'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
@@ -270,6 +272,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [periodicOpen, setPeriodicOpen] = useState(false)
   // the browser build's identity or calculus sheet, the same way
   const [identityOpen, setIdentityOpen] = useState<IdentitySheet | null>(null)
+  // letters moved by hand between changing with time and constant, for d/dt; kept until Q Calc quits
+  const [timeVarying, setTimeVarying] = useState<Record<string, boolean>>({})
   // equation fields for `sys N`; null until enter opens them
   const [sysLines, setSysLines] = useState<string[] | null>(null)
   // pong takes over the bar until esc or the panel hides
@@ -455,7 +459,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
   const graphCmd = isGraphCommand(q)
   const sysCmd = isSysCommand(q)
-  const periodicCmd = isPeriodicCommand(q)
+  const greeting = isGreeting(q)
+  // `periodic` and `hello` answer with a message, not a calculation
+  const periodicCmd = isPeriodicCommand(q) || greeting
   const identityCmd = identitySheetFor(q)
   const pongCmd = isPongCommand(q)
   const tutorialCmd = isTutorialCommand(q)
@@ -498,8 +504,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       measures: nativeMeas,
       quantities: nativeQty,
       functions: liveFns,
+      timeVarying,
     }),
-    [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings],
+    [lastAns, nativeVars, nativeMeas, nativeQty, liveFns, evalSettings, timeVarying],
   )
   // for enter's blank hint, read from a stable callback
   const liveOptionsRef = useRef(evalOptions)
@@ -514,8 +521,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const sysParsed = useMemo(() => (sysCmd ? sysCommand(q) : null), [sysCmd, q])
   const sysAnswer = useMemo((): SystemAnswer | null => {
     if (!sysLines || !sysParsed || !('count' in sysParsed) || sysParsed.count !== sysLines.length) return null
-    return solveLive(sysLines, defaultUnits)
-  }, [sysLines, sysParsed, defaultUnits])
+    return solveLive(sysLines, defaultUnits, angleMode)
+  }, [sysLines, sysParsed, defaultUnits, angleMode])
 
   const sysShown = sysAnswer?.display ?? (sysParsed && 'hint' in sysParsed && !sysLines ? sysParsed.hint : '')
   const sysShownRef = useRef('')
@@ -993,7 +1000,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setRotation(ROTATION_OFF)
     setHint(null)
     setPongOpen(false)
-    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || isPongCommand(expr) || isTutorialCommand(expr)) {
+    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || isPongCommand(expr) || isTutorialCommand(expr) || isGreeting(expr)) {
       resetToCalculate()
       return
     }
@@ -1126,7 +1133,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     if (isHelpCommand(qRef.current)) {
       markTour(tourBit('help'))
       resetToCalculate()
-    } else if (selected == null && isTutorialCommand(qRef.current)) startTutorial()
+    } else if (isGreeting(qRef.current)) resetToCalculate()
+    else if (selected == null && isTutorialCommand(qRef.current)) startTutorial()
     else if (selected == null && isSkipCommand(qRef.current) && tourBasicsLeft()) {
       skipTutorial()
       resetToCalculate()
@@ -1267,7 +1275,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || isPongCommand(q) || isTutorialCommand(q) || isEquation(q) || isIsolateCommand(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || isPongCommand(q) || isTutorialCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1509,7 +1517,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : pongCmd ? (hasPeerTransport() ? PONG_HINT : 'pong needs Q Calc for Mac') : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : pongCmd ? (hasPeerTransport() ? PONG_HINT : 'pong needs Q Calc for Mac') : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1539,6 +1547,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                   : typstAnswer(liveExact, display)
               }
               solvedFor={rootsOf}
+            />
+          ) : null}
+          {live?.time && !pongOpen && !graphCmd && !sysCmd && (live.time.varying.length || live.time.constant.length) ? (
+            <TimeLetters
+              letters={live.time}
+              onToggle={(letter, varying) => setTimeVarying((prev) => ({ ...prev, [letter]: varying }))}
             />
           ) : null}
           {hint && !pongOpen ? (

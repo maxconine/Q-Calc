@@ -58,6 +58,8 @@ export interface LineResult {
   solve?: SolveInfo
   /** Calculus answers the closed-form worker may still upgrade to an exact form. */
   closedForm?: ClosedFormJob
+  /** A time derivative's letters: which it took as moving with time, and which as constant (θ, not theta). */
+  time?: { varying: string[]; constant: string[]; locked: string[] }
 }
 
 export interface SheetInputLine {
@@ -80,4 +82,6 @@ export interface EvaluateOptions {
   /** Unit-valued variables and `ans`, as `LineResult.quantity` text. */
   quantities?: Record<string, string>
   defaultUnits?: DefaultUnits
+  /** For d/dt: letters moved to varying (true) or constant (false) by hand, keyed as shown (θ, L). */
+  timeVarying?: Record<string, boolean>
 }

@@ -1,4 +1,5 @@
 import { latexToAscii } from '../engine/plainMath'
+import { readsAsUnit } from '../engine/units'
 import { boundsIn } from './bounds'
 
 /** Macros available to the typeset preview. */
@@ -127,10 +128,18 @@ export function typstAnswer(exact: string | undefined, display: string): string 
  * page's own text color (light or dark) applies without compiling again.
  * `solvedFor` names the variable of a solved equation: `x^2 = 4 ⇒ x = ±2`, not `x^2 = 4 = ±2`.
  */
+// an answer's unit is upright text like the units typed (`69.8 L`, not an italic variable L)
+const ANSWER_WITH_UNIT = /^([+\-−]?[\d.,]+(?:e[+\-−]?\d+)?(?:\s*±\s*[\d.,]+)?)\s+([A-Za-z°µμΩÅ][^\s]*)$/
+
+function answerMath(answer: string): string {
+  const m = ANSWER_WITH_UNIT.exec(answer.trim())
+  return m ? `${toTypstMath(m[1]!)} ${JSON.stringify(m[2]!)}` : toTypstMath(answer)
+}
+
 export function typstDocument(expr: string, answer = '', solvedFor = ''): string | null {
   const math = previewMath(expr)
   if (!math) return null
-  const ans = toTypstMath(answer)
+  const ans = answerMath(answer)
   const lhs = toTypstMath(solvedFor)
   let body = math
   if (ans && lhs) body = `${math} quad arrow.r.double quad ${lhs} = ${ans}`
@@ -168,14 +177,22 @@ export function typstPreviewUseful(expr: string): boolean {
   const math = previewMath(typed)
   if (!math) return false
   // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
-  const bare = math.replace(/op\("[^"]*"\)/g, 'op').replace(/delim: "[^"]*"/g, '')
+  // a quoted unit (`"Nm"`, `"Pa"`) is still math; any other quoted word (`"to"`, a date, money) hides it
+  const bare = math
+    .replace(/op\("[^"]*"\)/g, 'op')
+    .replace(/delim: "[^"]*"/g, '')
+    .replace(/"([^"]*)"/g, (word, inner: string) => (readsAsUnit(inner) ? 'unit' : word))
   if (bare.includes('"')) return false
+  // a clock time (`3:45pm + 4 hr`) reads fine as typed
+  if (/\d\s*:\s*\d/.test(bare)) return false
   // an integral, sum, limit, derivative or solve line always shows: its answer is what the bar can't typeset
   if (isKeywordMath(typed.trim())) return true
   if (simpleMath(bare)) return false
   // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet
   if (/!|[/^_](?=\s*[^\s)])/.test(bare)) return true
-  return (bare.match(/[A-Za-z][A-Za-z0-9.]*/g) ?? []).some((name) => TYPESET_NAMES.has(name.split('.')[0]!))
+  // a word right after a number is its unit (`10 min`), not a call (`min(3, 4)`)
+  const names = bare.replace(/(\d\s+)[A-Za-z]+\b(?!\s*\()/g, '$1unit')
+  return (names.match(/[A-Za-z][A-Za-z0-9.]*/g) ?? []).some((name) => TYPESET_NAMES.has(name.split('.')[0]!))
 }
 
 // a number, or `ans` standing in for one
@@ -515,7 +532,8 @@ function readSymbol(s: string, i: number, to: number): Piece {
     '-': '-',
     '−': '-',
     '–': '-',
-    '*': 'ast',
+    // a centred dot, as multiplication is written by hand; `ast` (∗) reads the same when pasted back
+    '*': 'dot',
     '×': 'times',
     '·': 'dot.op',
     '÷': 'div',

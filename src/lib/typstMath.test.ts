@@ -22,7 +22,7 @@ describe('toTypstMath', () => {
     expect(toTypstMath('1/2')).toBe('1 / 2')
     expect(toTypstMath('π')).toBe('pi')
     expect(toTypstMath('√(2)')).toBe('sqrt(2)')
-    expect(toTypstMath('2 * 3')).toBe('2 ast 3')
+    expect(toTypstMath('2 * 3')).toBe('2 dot 3')
     expect(toTypstMath('2 dot 3')).toBe('2 dot.op 3')
     expect(toTypstMath('2 · 3')).toBe('2 dot.op 3')
   })
@@ -61,7 +61,7 @@ describe('toTypstMath', () => {
     expect(toTypstMath('int_0^1 x^2 dx')).toBe('integral_(0)^(1) x ^ 2 dif x')
     expect(toTypstMath('sum_{n=1}^{10} n^2')).toBe('sum_(n = 1)^(10) n ^ 2')
     expect(toTypstMath('prod_n=1^5 n')).toBe('product_(n = 1)^(5) n')
-    expect(toTypstMath('2*(Σ_n=1^10 n^2)+1')).toBe('2 ast (sum_(n = 1)^(10) n ^ 2) + 1')
+    expect(toTypstMath('2*(Σ_n=1^10 n^2)+1')).toBe('2 dot (sum_(n = 1)^(10) n ^ 2) + 1')
     expect(copiedEquation('∫_0^1 x^2 dx', true)).toBe('integral_(0)^(1) x ^ 2 dif x')
     expect(copiedEquation('Σ_n=1^10 n^2', true)).toBe('sum_(n = 1)^(10) n ^ 2')
   })
@@ -79,7 +79,7 @@ describe('toTypstMath', () => {
 
   it('keeps unicode letters, stray brackets and what follows them', () => {
     expect(toTypstMath('2α + ∂')).toBe('2 α + ∂')
-    expect(toTypstMath('2+3)*4')).toBe('2 + 3 ) ast 4')
+    expect(toTypstMath('2+3)*4')).toBe('2 + 3 ) dot 4')
     expect(toTypstMath('[1, 2')).toBe('\\[ 1 , 2')
     expect(toTypstMath("f'(x)")).toBe("f ' (x)")
   })
@@ -179,7 +179,7 @@ describe('typstPreviewUseful', () => {
     ['solve 2x = 6', '2 x = 6'],
     ['x^2 = 4 for x', 'x ^ 2 = 4'],
     ['solve for x: x^2 = 4', 'x ^ 2 = 4'],
-    ['isolate T in P*V = n*R*T', 'P ast V = n ast R ast T'],
+    ['isolate T in P*V = n*R*T', 'P dot V = n dot R dot T'],
     ['d/dx x^3', 'frac(dif, dif x) x ^ 3'],
     ['d/dx x^2 + 1', 'frac(dif, dif x) (x ^ 2 + 1)'],
     ['d/dx x^3 at 2', 'lr(frac(dif, dif x) x ^ 3 |)_(x = 2)'],
@@ -188,6 +188,23 @@ describe('typstPreviewUseful', () => {
   ])('shows %s typeset as the math it means', (expr, math) => {
     expect(typstPreviewUseful(expr)).toBe(true)
     expect(previewMath(expr)).toBe(math)
+  })
+
+  it.each(['1.2*10^3 Nm / (28*10^9 Pa * pi/2 * (25*10^-3)^4)', '50 kN / 20 mm^2', '9.81 m/s^2 * (2 s)^2 / 2'])(
+    'shows for %s: a unit is quoted text but still math',
+    (expr) => {
+      expect(typstPreviewUseful(expr)).toBe(true)
+    },
+  )
+
+  it.each(['2 hr 30 min', '10 km to mi', '3:45pm + 4 hr 10 min', '5 m * 3 m'])('hides for %s', (expr) => {
+    expect(typstPreviewUseful(expr)).toBe(false)
+  })
+
+  it('sets an answer unit upright, like the units typed', () => {
+    expect(typstDocument('5 m * 3 m', '15 m²')).toContain('15 "m²"')
+    expect(typstDocument('1.2*10^3 Nm / (28*10^9 Pa)', '4.28571428571e-8 m³')).toContain('"m³"')
+    expect(typstDocument('x^2 = 4', '±2', 'x')).toContain('x = #pm 2')
   })
 
   it('keeps the typed words when copying', () => {

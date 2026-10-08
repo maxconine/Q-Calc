@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { expectNum, shown } from './audit.helpers'
 import { evaluateLine } from './evaluate'
 import { latexToAscii } from './plainMath'
-import { typstToAscii } from './typstInput'
+import { looksLikeTypst, typstToAscii } from './typstInput'
 
 describe('typst input', () => {
   it('leaves ordinary calculator text alone', () => {
@@ -134,5 +134,15 @@ describe('plain math, LaTeX, and Typst', () => {
   it('Typst frac and a product agree with the ascii forms', () => {
     expect(line('$frac(1, 2)+frac(1, 3)$').value!.n).toBeCloseTo(5 / 6, 12)
     expect(line('product_(k=1)^4 k').display).toBe('24')
+  })
+})
+
+describe('ast and dot', () => {
+  it('both multiply when pasted back from typst', () => {
+    expect(typstToAscii('2 dot 3')).toBe(typstToAscii('2 ast 3'))
+    expect(looksLikeTypst('2 dot 3')).toBe(true)
+    expect(looksLikeTypst('2 ast 3')).toBe(true)
+    // the matrix dot product stays a call
+    expect(looksLikeTypst('dot([1, 2], [3, 4])')).toBe(false)
   })
 })

@@ -5,7 +5,7 @@
  */
 
 const MARK =
-  /^\$(?:\$[\s\S]+\$|[^$\n]+)\$\s*$|(?:^|[^A-Za-z])(?:frac|binom|root|attach|lr|overline|underline|limits|scripts|upright|bold|italic|bb|cal|frak)\s*\(|\b(?:plus\.minus|minus\.plus|plusminus|arrow\.[a-z]|dot\.(?:c|op|circle)|dots(?:\.[a-z]+)?|eq\.(?:not|triple)|gt\.eq|lt\.eq|times(?:\.circle)?)\b|\bdiv\b|\bdif\b|\bintegral_|\bbase\s*:/
+  /^\$(?:\$[\s\S]+\$|[^$\n]+)\$\s*$|(?:^|[^A-Za-z])(?:frac|binom|root|attach|lr|overline|underline|limits|scripts|upright|bold|italic|bb|cal|frak)\s*\(|\b(?:plus\.minus|minus\.plus|plusminus|arrow\.[a-z]|dot\.(?:c|op|circle)|dots(?:\.[a-z]+)?|eq\.(?:not|triple)|gt\.eq|lt\.eq|times(?:\.circle)?)\b|\b(?:dot|ast)\b(?!\s*[(.])|\bdiv\b|\bdif\b|\bintegral_|\bbase\s*:/
 
 /** Words in quotes are Typst text in math (`"isolate" R_("eq") "in" …`); calculator input never quotes. */
 const QUOTED_TEXT = /(?:^|[\s(_])"[A-Za-z][^"\n]*"/

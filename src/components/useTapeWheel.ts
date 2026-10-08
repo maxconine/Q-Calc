@@ -21,6 +21,8 @@ export function useTapeWheel(
     if (!root) return
     const onWheel = (e: WheelEvent) => {
       if (e.target instanceof Element && e.target.closest('.graph')) return
+      // a sideways two-finger swipe scrolls a long input, so it's left to the browser
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
       const { isOpen, hasHistory, open, close } = handlersRef.current
       const tape = tapeRef.current
       const overTape = Boolean(tape && e.target instanceof Node && tape.contains(e.target))
