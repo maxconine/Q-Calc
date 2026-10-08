@@ -13,6 +13,7 @@ import { keepFocus } from '../lib/dom'
 import type { HistoryRow } from '../lib/history'
 import { MathText } from './Bounds'
 import { RadicalText } from './Radical'
+import type { GameKind } from '../lib/games'
 
 type Props = {
   history: HistoryRow[]
@@ -110,6 +111,22 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
           )}
         </div>
       ))}
+    </div>
+  )
+}
+
+// `games`: each row opens its game
+export function GamesSheet({ games, onPlay }: { games: ReadonlyArray<{ kind: GameKind; name: string; blurb: string }>; onPlay: (kind: GameKind) => void }) {
+  return (
+    <div className="tape cheats games-sheet" aria-label="Games">
+      <div className="cheat-col">
+        {games.map((g) => (
+          <button type="button" className="tape-row cheat-row game-row" key={g.kind} onClick={() => onPlay(g.kind)}>
+            <span className="cheat-key">{g.name}</span>
+            <span className="cheat-label">{g.blurb}</span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

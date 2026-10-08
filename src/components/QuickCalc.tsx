@@ -18,7 +18,7 @@ import { AppearanceSettings } from './AppearanceSettings'
 import { EdgeTools } from './EdgeTools'
 import { GraphPanel } from './GraphPanel'
 import { SystemPanel } from './SystemPanel'
-import { CheatSheet, HistoryTape } from './HistoryTape'
+import { CheatSheet, GamesSheet, HistoryTape } from './HistoryTape'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
 import { LiveAnswer } from './LiveAnswer'
@@ -127,7 +127,7 @@ import {
   TUTORIAL_HINT,
 } from '../lib/tour'
 import { hasPeerTransport, peerTransport } from '../lib/peer'
-import { gameCommand, gameHint, type GameKind } from '../lib/games'
+import { GAMES, GAMES_HINT, gameCommand, gameHint, isGamesCommand, type GameKind } from '../lib/games'
 import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
@@ -453,6 +453,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
+  const gamesShown = isGamesCommand(q)
   const keyLabels = useKeyLabels(settings.keybinds)
   const cheats = useMemo(
     () => hostCheats(cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE), keyLabels)),
@@ -495,8 +496,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // typeset only when it shows something the bar doesn't, and never for a command's own panel
   const typstExpr = chained ? chainedExpr(q) : q
   const typstShown = useMemo(
-    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !tutorialCmd && !helpShown && typstPreviewUseful(typstExpr),
-    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, identityCmd, pongCmd, tutorialCmd, helpShown, typstExpr],
+    () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !tutorialCmd && !helpShown && !gamesShown && typstPreviewUseful(typstExpr),
+    [settings.typstPreview, graphCmd, sysCmd, periodicCmd, identityCmd, pongCmd, tutorialCmd, helpShown, gamesShown, typstExpr],
   )
   const evalOptions = useMemo(
     () => ({
@@ -568,7 +569,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const rootsOf = liveSolve?.outcome === 'roots' ? liveSolve.variable : undefined
   const steady = useSteadyAnswer(
     q,
-    graphCmd || sysCmd || helpShown || periodicCmd || identityCmd || pongCmd || tutorialCmd
+    graphCmd || sysCmd || helpShown || gamesShown || periodicCmd || identityCmd || pongCmd || tutorialCmd
       ? null
       : shownLive && !isImproperUnitConversion(display)
         ? `${rootsOf ? `${rootsOf} = ` : ''}${dualLabel(liveExact, display)}`
@@ -604,14 +605,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [selText, q, graphCmd, evalOptions])
 
   useEffect(() => {
-    if (display || !q.trim() || graphCmd || sysCmd || helpShown || periodicCmd || identityCmd || pongCmd || tutorialCmd || looksLikeNaturalLanguage(q)) return
+    if (display || !q.trim() || graphCmd || sysCmd || helpShown || gamesShown || periodicCmd || identityCmd || pongCmd || tutorialCmd || looksLikeNaturalLanguage(q)) return
     const t = window.setTimeout(() => {
       const ok = (text: string) => Boolean(evaluateSheet([chained ? chainedExpr(text) : text], evalOptions)[0]?.display)
       const names = { variables: Object.keys(nativeVars), functions: Object.keys(liveFns) }
       setSquiggle({ q, span: blankReason(q, ok, names) })
     }, SQUIGGLE_IDLE_MS)
     return () => window.clearTimeout(t)
-  }, [q, display, chained, graphCmd, sysCmd, helpShown, periodicCmd, identityCmd, pongCmd, tutorialCmd, evalOptions, nativeVars, liveFns])
+  }, [q, display, chained, graphCmd, sysCmd, helpShown, gamesShown, periodicCmd, identityCmd, pongCmd, tutorialCmd, evalOptions, nativeVars, liveFns])
 
   const examples = useMemo(
     () => exampleList(firstRun && nativeInfo.hotkey ? nativeInfo.hotkey : undefined),
@@ -1002,7 +1003,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setRotation(ROTATION_OFF)
     setHint(null)
     setPongOpen(null)
-    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || gameCommand(expr) || isTutorialCommand(expr) || isGreeting(expr)) {
+    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || gameCommand(expr) || isGamesCommand(expr) || isTutorialCommand(expr) || isGreeting(expr)) {
       resetToCalculate()
       return
     }
@@ -1119,6 +1120,17 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     })
   }, [])
 
+  // from typing a game's name and ↵, or a row of the `games` sheet
+  const playGame = useCallback(
+    (game: GameKind) => {
+      if (!peerTransport()) return
+      resetToCalculate()
+      setTapeOpen(false)
+      setPongOpen(game)
+    },
+    [resetToCalculate],
+  )
+
   const onEnter = useCallback((alt = false) => {
     const opening = sysCommand(qRef.current)
     if (selected == null && opening && 'count' in opening && sysLinesRef.current?.length !== opening.count) {
@@ -1149,17 +1161,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const sheet = identitySheetFor(qRef.current)!
       if (!openNativeIdentitySheet(sheet)) setIdentityOpen(sheet)
       resetToCalculate()
-    } else if (selected == null && gameCommand(qRef.current)) {
-      if (!peerTransport()) return
-      const game = gameCommand(qRef.current)
-      resetToCalculate()
-      setTapeOpen(false)
-      setPongOpen(game)
+    } else if (selected == null && gameCommand(qRef.current)) playGame(gameCommand(qRef.current)!)
+    else if (selected == null && isGamesCommand(qRef.current)) {
+      // the list stays up: a game is picked by name or by a click
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
     else if (!commit()) setHint(blankEnterHint())
-  }, [blankEnterHint, commit, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, skipTutorial, startTutorial, tourBasicsLeft])
+  }, [blankEnterHint, commit, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
 
   // esc leaves the overlay, except from pong, which it closes back to the bar. false tells the mac app to hide;
   // the page does not clear the tape or the input first.
@@ -1278,7 +1287,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || gameCommand(q) || isTutorialCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || gameCommand(q) || isGamesCommand(q) || isTutorialCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1460,6 +1469,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <Connect4Panel transport={peerTransport()!} onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
+          ) : gamesShown ? (
+            <GamesSheet games={GAMES} onPlay={playGame} />
           ) : tapeOpen && history.length > 0 ? (
             <HistoryTape
               history={history}
@@ -1522,7 +1533,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : pongCmd ? gameHint(pongCmd, hasPeerTransport()) : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd, hasPeerTransport()) : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1538,7 +1549,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
               label={rootsOf}
-              message={sysMessage || periodicCmd || Boolean(identityCmd) || tutorialCmd || Boolean(pongCmd) || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
+              message={sysMessage || periodicCmd || gamesShown || Boolean(identityCmd) || tutorialCmd || Boolean(pongCmd) || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}
           </div>

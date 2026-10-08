@@ -11,6 +11,20 @@ export function gameCommand(text: string): GameKind | null {
   return null
 }
 
+// what `games` lists, in order; a new game adds a row here
+export const GAMES: ReadonlyArray<{ kind: GameKind; name: string; blurb: string }> = [
+  { kind: 'pong', name: 'pong', blurb: 'first to 7 · two players, anywhere' },
+  { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · two players, anywhere' },
+]
+
+export const GAMES_HINT = 'type a game’s name, or click one'
+
+// `games` lists them above the bar, the way `?` lists the shortcuts
+export function isGamesCommand(text: string): boolean {
+  const t = text.trim().toLowerCase()
+  return t === 'games' || t === 'game'
+}
+
 // the hint under the bar; linked is false where there's no peer link to play over
 export function gameHint(kind: GameKind, linked: boolean): string {
   const name = kind === 'pong' ? 'pong' : 'connect 4'

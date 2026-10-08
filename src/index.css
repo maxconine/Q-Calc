@@ -1126,6 +1126,23 @@ html.quick-native .four-twenty.wide {
 .cheat-row:hover {
   background: transparent;
 }
+.games-sheet {
+  grid-template-columns: 1fr;
+}
+/* a game's row is a button: it opens the game */
+.game-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.game-row:hover,
+.game-row:focus-visible {
+  background: var(--fill-hover);
+  outline: none;
+}
 .cheat-key {
   font-family: var(--font);
   font-size: var(--fs-body);
