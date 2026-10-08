@@ -1,0 +1,203 @@
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { cellAt, COLS, isOver, landingRow, ROWS, type C4State } from '../lib/connect4'
+import { Connect4Session, type C4View } from '../lib/connect4Session'
+import { plainKey, swallow } from '../lib/gameKeys'
+import { closeReasonText, type PeerTransport } from '../lib/peer'
+import type { Side } from '../lib/pong'
+import { GameLobby, type GameProps } from './GameLobby'
+
+export function Connect4Panel({ transport, onClose }: { transport: PeerTransport; onClose: () => void }) {
+  return (
+    <div className="pong" aria-label="Connect 4">
+      <GameLobby transport={transport} name="connect 4" blurb="four in a row wins." onClose={onClose} game={(p) => <Connect4Game {...p} />} />
+    </div>
+  )
+}
+
+// board geometry in svg units: a lane on top for the disc you're holding, then the 7×6 grid
+const CELL = 40
+const R = 15
+const LANE = CELL
+const W = COLS * CELL
+const H = LANE + ROWS * CELL
+const cx = (col: number) => col * CELL + CELL / 2
+const cy = (row: number) => LANE + (ROWS - 1 - row) * CELL + CELL / 2
+
+const KEEP_TICK_MS = 200
+
+type Actions = { play: (col: number) => void; rematch: () => void }
+
+function Connect4Game({ transport, role, peer, onEnd }: GameProps) {
+  const [view, setView] = useState<C4View | null>(null)
+  const [col, setCol] = useState(Math.floor(COLS / 2))
+  const colRef = useRef(col)
+  colRef.current = col
+  const onEndRef = useRef(onEnd)
+  onEndRef.current = onEnd
+  const act = useRef<Actions>({ play: () => {}, rematch: () => {} })
+
+  useEffect(() => {
+    const session = new Connect4Session(role, (text) => transport.send(text), performance.now())
+    let shown = -1
+    let done = false
+    const finish = (note?: string) => {
+      if (done) return
+      done = true
+      onEndRef.current(note)
+    }
+    const sync = () => {
+      const v = session.view()
+      if (v.ended != null) return finish(v.ended || undefined)
+      if (v.rev === shown) return
+      shown = v.rev
+      setView(v)
+    }
+    act.current = {
+      play: (c) => {
+        session.play(c, performance.now())
+        sync()
+      },
+      rematch: () => {
+        session.rematch(performance.now())
+        sync()
+      },
+    }
+
+    const off = transport.subscribe((e) => {
+      if (e.type === 'message') {
+        session.receive(e.data, performance.now())
+        sync()
+      } else if (e.type === 'closed') finish(closeReasonText(e.reason, transport.peerWord))
+    })
+    const timer = window.setInterval(() => {
+      session.tick(performance.now())
+      sync()
+    }, KEEP_TICK_MS)
+
+    const onKey = (e: KeyboardEvent) => {
+      if (!plainKey(e) || e.key === 'Escape') return
+      const n = /^[1-9]$/.test(e.key) ? Number(e.key) : 0
+      if (e.key === 'ArrowLeft') setCol((c) => (c - 1 + COLS) % COLS)
+      else if (e.key === 'ArrowRight') setCol((c) => (c + 1) % COLS)
+      else if (n >= 1 && n <= COLS) setCol(n - 1)
+      else if (e.key === 'Enter' || e.key === ' ') {
+        if (!e.repeat) {
+          if (isOver(session.view().state)) act.current.rematch()
+          else act.current.play(colRef.current)
+        }
+      } else if (e.key.length !== 1 && e.key !== 'Backspace' && !e.key.startsWith('Arrow')) return
+      swallow(e)
+    }
+    window.addEventListener('keydown', onKey, true)
+    sync()
+
+    return () => {
+      off()
+      window.clearInterval(timer)
+      window.removeEventListener('keydown', onKey, true)
+      act.current = { play: () => {}, rematch: () => {} }
+    }
+  }, [transport, role])
+
+  if (!view) return null
+  const { state, started, again, wins } = view
+  const over = isOver(state)
+  const myTurn = started && !over && state.turn === role
+  const theirName = peer
+  const left = role === 'host' ? 'you' : theirName
+  const right = role === 'guest' ? 'you' : theirName
+
+  let status: string
+  if (!started) status = `waiting for ${theirName}…`
+  else if (over) {
+    const who = state.winner === role ? 'you win' : state.winner ? `${theirName} wins` : 'draw'
+    status = `${who} · ${again.mine ? 'waiting for a rematch…' : again.theirs ? `${theirName} wants a rematch · ↵` : '↵ rematch'}`
+  } else if (state.moves === 0) status = myTurn ? 'you go first' : `${theirName} goes first`
+  else status = myTurn ? 'your turn' : `${theirName}’s turn`
+
+  return (
+    <div className="pong-game c4-game">
+      <div className="pong-score">
+        <span className={`pong-name ${role === 'host' ? 'mine' : ''}`}>{left}</span>
+        <span className="pong-points">
+          {wins[0]} <span className="pong-dash">–</span> {wins[1]}
+        </span>
+        <span className={`pong-name right ${role === 'guest' ? 'mine' : ''}`}>{right}</span>
+      </div>
+      <p className={`c4-status ${myTurn || state.winner === role ? 'mine' : ''} ${started ? '' : 'pong-wait'}`} aria-live="polite">
+        {status}
+      </p>
+      <Board state={state} role={role} cursor={myTurn ? col : null} onHover={setCol} onPick={(c) => act.current.play(c)} />
+      <p className="pong-note">← → or 1–{COLS} to pick · ↵ drop · esc leaves</p>
+    </div>
+  )
+}
+
+function Board({
+  state,
+  role,
+  cursor,
+  onHover,
+  onPick,
+}: {
+  state: C4State
+  role: Side
+  // the column of the disc you're holding, when it's your turn
+  cursor: number | null
+  onHover: (col: number) => void
+  onPick: (col: number) => void
+}) {
+  const over = isOver(state)
+  const line = new Set(state.line ?? [])
+  // the newest disc falls in
+  const last = state.last ?? -1
+  const holes = []
+  const discs = []
+  for (let row = 0; row < ROWS; row++) {
+    for (let c = 0; c < COLS; c++) {
+      const i = cellAt(c, row)
+      holes.push(<circle key={i} className="c4-hole" cx={cx(c)} cy={cy(row)} r={R} />)
+      const who = state.board[i]
+      if (!who) continue
+      const cls = ['c4-disc', who === role ? 'mine' : 'theirs']
+      if (over && state.line && !line.has(i)) cls.push('dim')
+      if (line.has(i)) cls.push('win')
+      if (i === last) cls.push('fall')
+      discs.push(
+        <circle
+          key={i}
+          className={cls.join(' ')}
+          cx={cx(c)}
+          cy={cy(row)}
+          r={R}
+          style={i === last ? ({ '--fall': `${-(cy(row) - LANE / 2)}px` } as CSSProperties) : undefined}
+        />,
+      )
+    }
+  }
+  const landing = cursor != null ? landingRow(state, cursor) : -1
+  return (
+    <div className="c4-wrap">
+      <svg className="c4-board" viewBox={`0 0 ${W} ${H}`} role="grid" aria-label="board">
+        <rect className="c4-frame" x={0} y={LANE} width={W} height={ROWS * CELL} rx={10} />
+        {holes}
+        {cursor != null && landing >= 0 ? <circle className="c4-ghost" cx={cx(cursor)} cy={cy(landing)} r={R} /> : null}
+        {discs}
+        {cursor != null ? <circle className={`c4-disc mine held ${landing < 0 ? 'full' : ''}`} cx={cx(cursor)} cy={LANE / 2} r={R} /> : null}
+        {Array.from({ length: COLS }, (_, c) => (
+          <rect
+            key={c}
+            className="c4-col"
+            x={c * CELL}
+            y={0}
+            width={CELL}
+            height={H}
+            onMouseEnter={() => onHover(c)}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onPick(c)}
+          />
+        ))}
+      </svg>
+    </div>
+  )
+}

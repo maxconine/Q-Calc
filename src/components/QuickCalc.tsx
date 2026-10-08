@@ -25,6 +25,7 @@ import { LiveAnswer } from './LiveAnswer'
 import { PeriodicCard } from './PeriodicCard'
 import { IdentityCard } from './IdentityCard'
 import { PongPanel } from './PongPanel'
+import { Connect4Panel } from './Connect4Panel'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -126,7 +127,7 @@ import {
   TUTORIAL_HINT,
 } from '../lib/tour'
 import { hasPeerTransport, peerTransport } from '../lib/peer'
-import { isPongCommand, PONG_HINT } from '../lib/pong'
+import { gameCommand, gameHint, type GameKind } from '../lib/games'
 import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
@@ -276,9 +277,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [timeVarying, setTimeVarying] = useState<Record<string, boolean>>({})
   // equation fields for `sys N`; null until enter opens them
   const [sysLines, setSysLines] = useState<string[] | null>(null)
-  // pong takes over the bar until esc or the panel hides
-  const [pongOpen, setPongOpen] = useState(false)
-  const pongOpenRef = useRef(false)
+  // a game (pong, connect 4) takes over the bar until esc or the panel hides
+  const [pongOpen, setPongOpen] = useState<GameKind | null>(null)
+  const pongOpenRef = useRef<GameKind | null>(null)
   pongOpenRef.current = pongOpen
   const sysLinesRef = useRef<string[] | null>(null)
   sysLinesRef.current = sysLines
@@ -463,7 +464,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // `periodic` and `hello` answer with a message, not a calculation
   const periodicCmd = isPeriodicCommand(q) || greeting
   const identityCmd = identitySheetFor(q)
-  const pongCmd = isPongCommand(q)
+  // pong or connect 4
+  const pongCmd = gameCommand(q)
   const tutorialCmd = isTutorialCommand(q)
   const graphIntent = useMemo(
     () => (graphCmd ? parseGraphIntent(q, { functions: nativeFns }) : null),
@@ -999,8 +1001,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
-    setPongOpen(false)
-    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || isPongCommand(expr) || isTutorialCommand(expr) || isGreeting(expr)) {
+    setPongOpen(null)
+    if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || gameCommand(expr) || isTutorialCommand(expr) || isGreeting(expr)) {
       resetToCalculate()
       return
     }
@@ -1147,11 +1149,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const sheet = identitySheetFor(qRef.current)!
       if (!openNativeIdentitySheet(sheet)) setIdentityOpen(sheet)
       resetToCalculate()
-    } else if (selected == null && isPongCommand(qRef.current)) {
+    } else if (selected == null && gameCommand(qRef.current)) {
       if (!peerTransport()) return
+      const game = gameCommand(qRef.current)
       resetToCalculate()
       setTapeOpen(false)
-      setPongOpen(true)
+      setPongOpen(game)
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
@@ -1162,14 +1165,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // the page does not clear the tape or the input first.
   const escapeLayer = useCallback((): boolean => {
     if (!pongOpenRef.current) return false
-    pongOpenRef.current = false
-    setPongOpen(false)
+    pongOpenRef.current = null
+    setPongOpen(null)
     return true
   }, [])
 
   // so the mac app hands esc to the page while pong is up
   useEffect(() => {
-    nativeHandler()?.postMessage({ type: 'escapeLayer', on: pongOpen })
+    nativeHandler()?.postMessage({ type: 'escapeLayer', on: Boolean(pongOpen) })
     if (!pongOpen) mathRef.current?.focus()
   }, [pongOpen])
 
@@ -1275,7 +1278,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || isPongCommand(q) || isTutorialCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || gameCommand(q) || isTutorialCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1451,8 +1454,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       >
         <FourTwentySmoke smoking={smoking} />
         <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}>
-          {pongOpen && peerTransport() ? (
+          {pongOpen === 'pong' && peerTransport() ? (
             <PongPanel transport={peerTransport()!} onClose={escapeLayer} />
+          ) : pongOpen === 'connect4' && peerTransport() ? (
+            <Connect4Panel transport={peerTransport()!} onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : tapeOpen && history.length > 0 ? (
@@ -1517,7 +1522,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : pongCmd ? (hasPeerTransport() ? PONG_HINT : 'pong needs Q Calc for Mac') : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : pongCmd ? gameHint(pongCmd, hasPeerTransport()) : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1533,7 +1538,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
               label={rootsOf}
-              message={sysMessage || periodicCmd || Boolean(identityCmd) || tutorialCmd || pongCmd || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
+              message={sysMessage || periodicCmd || Boolean(identityCmd) || tutorialCmd || Boolean(pongCmd) || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}
           </div>
