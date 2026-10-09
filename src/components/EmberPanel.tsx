@@ -37,6 +37,9 @@ function swallow(e: KeyboardEvent): void {
 // enter, arrows, backspace and letters would otherwise reach the hidden bar and commit or move through the tape
 const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || e.key.startsWith('Arrow') || e.key === 'Backspace'
 
+// a level hint about who uses which keys is wrong online, where both sets steer your own character
+const CONTROLS_HINT = /WASD|arrows/i
+
 function fmtTime(secs: number): string {
   const s = Math.max(0, secs)
   const m = Math.floor(s / 60)
@@ -622,6 +625,7 @@ function EmberPlay({
     }
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
     let raf = 0
+    let failed = false
     let shown = ''
     let entry = 0
     let lastLevel = -1
@@ -643,7 +647,10 @@ function EmberPlay({
       let v: EmberView
       try {
         v = game.tick(now)
-      } catch {
+      } catch (err) {
+        // say it once, so a broken frame shows up without flooding the console 60 times a second
+        if (!failed) console.error('ember & frost', err)
+        failed = true
         return
       }
       if (v.ended != null) {
@@ -717,10 +724,15 @@ function EmberPlay({
         // a session that isn't ready yet has nothing to steer
       }
     }
+    // presses quicker than a render all see the same hud, so they chain from the last ask until the hud moves
+    let asked: { from: number; to: number } | null = null
     const pick = (dx: number, dy: number) => {
       const h = hudRef.current
-      const next = h.level + dx + dy * COLS
-      if (next >= 0 && next < LEVELS.length) game.pick(next)
+      const base = asked && asked.from === h.level ? asked.to : h.level
+      const next = base + dx + dy * COLS
+      if (next < 0 || next >= Math.min(LEVELS.length, h.unlocked)) return
+      asked = { from: h.level, to: next }
+      game.pick(next)
     }
     const onDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return
@@ -834,7 +846,7 @@ function EmberPlay({
         </div>
         <div className="ember-stage">
           <canvas ref={canvasRef} className="ember-canvas" aria-label="level" />
-          {def?.hint && hud.phase !== 'won' ? (
+          {def?.hint && hud.phase === 'play' && !(online && CONTROLS_HINT.test(def.hint)) ? (
             <div key={hud.entry} className="ember-hint">
               {def.hint}
             </div>

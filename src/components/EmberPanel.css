@@ -495,9 +495,9 @@ html[data-theme="dark"] .ember {
     transform: translate(-50%, 0);
   }
 }
+/* up on the top wall, like the hint: in the middle it sat on signs and on the spot the player just died */
 .ember-ouch {
-  top: 50%;
-  margin-top: -16px;
+  top: var(--sp-3);
   animation: ember-in 180ms ease both;
 }
 .ember-peer-note {
