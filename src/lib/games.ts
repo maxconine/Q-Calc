@@ -4,10 +4,11 @@ import { EMBER_HINT, isEmberCommand } from './ember'
 import { EQUAL_HINT, isEqualCommand } from './equal'
 import { isNumbersCommand, NUMBERS_HINT } from './numbers'
 import { isPongCommand, PONG_HINT } from './pong'
+import { isTrailsCommand, TRAILS_HINT } from './trails'
 
 // the games the bar opens, by what's typed in it. a new game adds its kind, a row in GAMES and a panel in QuickCalc
 
-export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal' | 'numbers'
+export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal' | 'numbers' | 'trails'
 
 type Game = {
   kind: GameKind
@@ -30,6 +31,7 @@ export const GAMES: readonly Game[] = [
   { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot', is: isCrackCommand, hint: CRACK_HINT, needsLink: false },
   { kind: 'equal', name: 'equal', blurb: 'guess the hidden equation · daily or practice', is: isEqualCommand, hint: EQUAL_HINT, needsLink: false },
   { kind: 'numbers', name: '24 / countdown', blurb: 'make the number · two modes against the clock', is: isNumbersCommand, hint: NUMBERS_HINT, needsLink: false },
+  { kind: 'trails', name: 'trails', blurb: 'leave a trail, don’t hit one · vs the computer or a friend', is: isTrailsCommand, hint: TRAILS_HINT, needsLink: false },
 ]
 
 const byKind = (kind: GameKind) => GAMES.find((g) => g.kind === kind)!

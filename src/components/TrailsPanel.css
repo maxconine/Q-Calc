@@ -1,0 +1,41 @@
+/* trails: `trails` then enter. shares pong's head, buttons, score row and court; the arena is
+   64 × 26 cells at 10px, the same 640:260 as pong's court. you are --accent, the other cycle --trails-rival */
+.trails {
+  --trails-rival: #d4520f;
+  padding: var(--sp-3) var(--gutter);
+  text-align: left;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .trails {
+    --trails-rival: #ff9a5c;
+  }
+}
+html[data-theme="dark"] .trails {
+  --trails-rival: #ff9a5c;
+}
+
+.trails .pong-name.trails-mine {
+  color: var(--accent);
+}
+.trails .pong-name.trails-rival {
+  color: var(--trails-rival);
+}
+.trails-friend {
+  min-width: 0;
+  padding: 0 var(--sp-3);
+}
+.trails-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 260;
+}
+.trails-count {
+  min-width: 44px;
+  font-size: var(--fs-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
