@@ -36,6 +36,25 @@ const cy = (row: number) => LANE + (ROWS - 1 - row) * CELL + CELL / 2
 
 const KEEP_TICK_MS = 200
 
+// whether the landing preview shows at all; G flips it, and it's kept for next time
+const GHOST_KEY = 'qcalc-c4-ghost'
+
+function ghostSaved(): boolean {
+  try {
+    return localStorage.getItem(GHOST_KEY) !== 'off'
+  } catch {
+    return true
+  }
+}
+
+function saveGhost(on: boolean): void {
+  try {
+    localStorage.setItem(GHOST_KEY, on ? 'on' : 'off')
+  } catch {
+    // private window: it just isn't remembered
+  }
+}
+
 type Actions = { play: (col: number) => void; rematch: () => void }
 
 // solo: against the computer, at that level; there's no link then
@@ -48,6 +67,9 @@ function Connect4Game({
 }: Omit<GameProps, 'transport'> & { transport: GameProps['transport'] | null; solo?: C4Skill | null }) {
   const [view, setView] = useState<C4View | null>(null)
   const [col, setCol] = useState(Math.floor(COLS / 2))
+  const [ghostOn, setGhostOn] = useState(ghostSaved)
+  // aiming: the mouse is over the board, or a column was just picked with the keys; the preview only shows then
+  const [aiming, setAiming] = useState(false)
   const colRef = useRef(col)
   colRef.current = col
   const onEndRef = useRef(onEnd)
@@ -95,10 +117,17 @@ function Connect4Game({
     const onKey = (e: KeyboardEvent) => {
       if (!plainKey(e) || e.key === 'Escape') return
       const n = /^[1-9]$/.test(e.key) ? Number(e.key) : 0
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || (n >= 1 && n <= COLS)) setAiming(true)
       if (e.key === 'ArrowLeft') setCol((c) => (c - 1 + COLS) % COLS)
       else if (e.key === 'ArrowRight') setCol((c) => (c + 1) % COLS)
       else if (n >= 1 && n <= COLS) setCol(n - 1)
-      else if (e.key === 'Enter' || e.key === ' ') {
+      else if (e.key.toLowerCase() === 'g') {
+        if (!e.repeat)
+          setGhostOn((on) => {
+            saveGhost(!on)
+            return !on
+          })
+      } else if (e.key === 'Enter' || e.key === ' ') {
         if (!e.repeat) {
           if (isOver(session.view().state)) act.current.rematch()
           else act.current.play(colRef.current)
@@ -148,9 +177,20 @@ function Connect4Game({
       <p className={`c4-status ${myTurn || state.winner === role ? 'mine' : ''} ${started ? '' : 'pong-wait'}`} aria-live="polite">
         {status}
       </p>
-      <Board state={state} role={role} cursor={myTurn ? col : null} onHover={setCol} onPick={(c) => act.current.play(c)} />
+      <Board
+        state={state}
+        role={role}
+        cursor={myTurn ? col : null}
+        ghost={ghostOn && aiming}
+        onHover={(c) => {
+          setCol(c)
+          setAiming(true)
+        }}
+        onLeave={() => setAiming(false)}
+        onPick={(c) => act.current.play(c)}
+      />
       <p className="pong-note">
-        ← → or 1–{COLS} to pick · ↵ drop · {solo ? `${solo} · ` : ''}esc leaves
+        ← → or 1–{COLS} to pick · ↵ drop · G {ghostOn ? 'hides' : 'shows'} the preview · {solo ? `${solo} · ` : ''}esc leaves
       </p>
     </div>
   )
@@ -160,14 +200,19 @@ function Board({
   state,
   role,
   cursor,
+  ghost,
   onHover,
+  onLeave,
   onPick,
 }: {
   state: C4State
   role: Side
   // the column of the disc you're holding, when it's your turn
   cursor: number | null
+  // whether to show where the held disc would land
+  ghost: boolean
   onHover: (col: number) => void
+  onLeave: () => void
   onPick: (col: number) => void
 }) {
   const over = isOver(state)
@@ -201,10 +246,10 @@ function Board({
   const landing = cursor != null ? landingRow(state, cursor) : -1
   return (
     <div className="c4-wrap">
-      <svg className="c4-board" viewBox={`0 0 ${W} ${H}`} role="grid" aria-label="board">
+      <svg className="c4-board" viewBox={`0 0 ${W} ${H}`} role="grid" aria-label="board" onMouseLeave={onLeave}>
         <rect className="c4-frame" x={0} y={LANE} width={W} height={ROWS * CELL} rx={10} />
         {holes}
-        {cursor != null && landing >= 0 ? <circle className="c4-ghost" cx={cx(cursor)} cy={cy(landing)} r={R} /> : null}
+        {ghost && cursor != null && landing >= 0 ? <circle className="c4-ghost" cx={cx(cursor)} cy={cy(landing)} r={R} /> : null}
         {discs}
         {cursor != null ? <circle className={`c4-disc mine held ${landing < 0 ? 'full' : ''}`} cx={cx(cursor)} cy={LANE / 2} r={R} /> : null}
         {Array.from({ length: COLS }, (_, c) => (
