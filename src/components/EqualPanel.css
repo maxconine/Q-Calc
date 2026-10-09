@@ -1,0 +1,181 @@
+/* equal: `equal` then enter. six rows of eight tiles, a keypad, ~400px tall */
+.equal {
+  --equal-hit: #2e8b57;
+  --equal-near: #c9a227;
+  --equal-miss: #8e8e93;
+  --equal-tile-line: color-mix(in srgb, var(--ink) 14%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .equal {
+    --equal-hit: #3f9e64;
+    --equal-near: #c7a33a;
+    --equal-miss: #545458;
+  }
+}
+html[data-theme="dark"] .equal {
+  --equal-hit: #3f9e64;
+  --equal-near: #c7a33a;
+  --equal-miss: #545458;
+}
+
+.equal-modes {
+  display: inline-flex;
+  margin-left: auto;
+  padding: 2px;
+  border-radius: var(--radius-s);
+  background: var(--fill-track);
+}
+.equal-modes button {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  padding: 2px var(--sp-2);
+  cursor: pointer;
+}
+.equal-modes button.on {
+  background: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--ink);
+}
+.equal .equal-leave {
+  margin-left: var(--sp-2);
+}
+
+.equal-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin: var(--sp-3) 0 var(--sp-2);
+}
+.equal-row {
+  display: flex;
+  gap: 5px;
+}
+.equal-row.shake {
+  animation: equal-shake 0.36s ease;
+}
+.equal-tile {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 34px;
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1px var(--equal-tile-line);
+  color: var(--ink);
+  font-size: var(--fs-row);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.equal-tile.typed {
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.equal-tile.hit,
+.equal-tile.near,
+.equal-tile.miss {
+  box-shadow: none;
+  color: #fff;
+}
+.equal-tile.hit { background: var(--equal-hit); }
+.equal-tile.near { background: var(--equal-near); }
+.equal-tile.miss { background: var(--equal-miss); }
+.equal-tile.flip {
+  animation: equal-flip 0.42s ease both;
+}
+
+.equal-note {
+  margin: 0 0 var(--sp-2);
+  min-height: 16px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+.equal-keys {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.equal-keyrow {
+  display: flex;
+  gap: 5px;
+}
+.equal-key {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 var(--sp-1);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+.equal-key:hover {
+  background: color-mix(in srgb, var(--control) 92%, var(--ink));
+}
+.equal-key.wide {
+  min-width: 46px;
+}
+.equal-key.hit,
+.equal-key.near,
+.equal-key.miss {
+  box-shadow: none;
+  color: #fff;
+}
+.equal-key.hit { background: var(--equal-hit); }
+.equal-key.near { background: var(--equal-near); }
+.equal-key.miss { background: var(--equal-miss); }
+.equal-key.miss { opacity: 0.7; }
+
+.equal .equal-help {
+  margin: var(--sp-2) 0 0;
+  text-align: center;
+}
+
+.equal-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-bottom: var(--sp-1);
+}
+.equal-summary p {
+  margin: 0;
+  text-align: center;
+}
+.equal-result {
+  color: var(--ink);
+  font-size: var(--fs-body);
+}
+.equal-result.won {
+  color: var(--accent);
+}
+.equal-result b {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes equal-shake {
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes equal-flip {
+  0% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .equal-row.shake,
+  .equal-tile.flip {
+    animation: none;
+  }
+}

@@ -28,6 +28,7 @@ import { PongPanel } from './PongPanel'
 import { Connect4Panel } from './Connect4Panel'
 import { CrackPanel } from './CrackPanel'
 import { EmberPanel } from './EmberPanel'
+import { EqualPanel } from './EqualPanel'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -129,7 +130,7 @@ import {
   TUTORIAL_HINT,
 } from '../lib/tour'
 import { hasPeerTransport, peerTransport } from '../lib/peer'
-import { GAMES, GAMES_HINT, gameCommand, gameHint, isGamesCommand, type GameKind } from '../lib/games'
+import { GAMES, GAMES_HINT, gameCommand, gameHint, gameNeedsLink, isGamesCommand, type GameKind } from '../lib/games'
 import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
@@ -1126,7 +1127,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // from typing a game's name and ↵, or a row of the `games` sheet
   const playGame = useCallback(
     (game: GameKind) => {
-      if (!peerTransport() && game !== 'ember' && game !== 'crack') return
+      if (!peerTransport() && gameNeedsLink(game)) return
       resetToCalculate()
       setTapeOpen(false)
       setPongOpen(game)
@@ -1476,6 +1477,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <EmberPanel transport={peerTransport()} escapeRef={emberEscRef} onClose={escapeLayer} />
           ) : pongOpen === 'crack' ? (
             <CrackPanel onClose={escapeLayer} />
+          ) : pongOpen === 'equal' ? (
+            <EqualPanel onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (

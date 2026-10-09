@@ -1,27 +1,44 @@
 import { C4_HINT, isConnect4Command } from './connect4'
 import { CRACK_HINT, isCrackCommand } from './crack'
 import { EMBER_HINT, isEmberCommand } from './ember'
+import { EQUAL_HINT, isEqualCommand } from './equal'
 import { isPongCommand, PONG_HINT } from './pong'
 
-// the two-player games the bar opens, by what's typed in it
+// the games the bar opens, by what's typed in it. a new game adds its kind, a row in GAMES and a panel in QuickCalc
 
-export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack'
+export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal'
 
-export function gameCommand(text: string): GameKind | null {
-  if (isPongCommand(text)) return 'pong'
-  if (isConnect4Command(text)) return 'connect4'
-  if (isEmberCommand(text)) return 'ember'
-  if (isCrackCommand(text)) return 'crack'
-  return null
+type Game = {
+  kind: GameKind
+  // what `games` lists it as
+  name: string
+  blurb: string
+  // whether a typed line opens it
+  is: (text: string) => boolean
+  // the line under the bar while its name is typed
+  hint: string
+  // played only over the peer link; the rest play on this computer alone
+  needsLink: boolean
 }
 
-// what `games` lists, in order; a new game adds a row here
-export const GAMES: ReadonlyArray<{ kind: GameKind; name: string; blurb: string }> = [
-  { kind: 'pong', name: 'pong', blurb: 'first to 7 · two players, anywhere' },
-  { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · two players, anywhere' },
-  { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or online' },
-  { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot' },
+// what `games` lists, in order
+export const GAMES: readonly Game[] = [
+  { kind: 'pong', name: 'pong', blurb: 'first to 7 · two players, anywhere', is: isPongCommand, hint: PONG_HINT, needsLink: true },
+  { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · two players, anywhere', is: isConnect4Command, hint: C4_HINT, needsLink: true },
+  { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or online', is: isEmberCommand, hint: EMBER_HINT, needsLink: false },
+  { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot', is: isCrackCommand, hint: CRACK_HINT, needsLink: false },
+  { kind: 'equal', name: 'equal', blurb: 'guess the hidden equation · daily or practice', is: isEqualCommand, hint: EQUAL_HINT, needsLink: false },
 ]
+
+const byKind = (kind: GameKind) => GAMES.find((g) => g.kind === kind)!
+
+export function gameCommand(text: string): GameKind | null {
+  return GAMES.find((g) => g.is(text))?.kind ?? null
+}
+
+export function gameNeedsLink(kind: GameKind): boolean {
+  return byKind(kind).needsLink
+}
 
 export const GAMES_HINT = 'type a game’s name, or click one'
 
@@ -33,11 +50,7 @@ export function isGamesCommand(text: string): boolean {
 
 // the hint under the bar; linked is false where there's no peer link to play over
 export function gameHint(kind: GameKind, linked: boolean): string {
-  // ember & frost plays on one keyboard, so it needs no link
-  if (kind === 'ember') return EMBER_HINT
-  // crack is one player
-  if (kind === 'crack') return CRACK_HINT
-  const name = kind === 'pong' ? 'pong' : 'connect 4'
-  if (!linked) return `${name} needs Q Calc for Mac`
-  return kind === 'pong' ? PONG_HINT : C4_HINT
+  const game = byKind(kind)
+  if (game.needsLink && !linked) return `${game.name} needs Q Calc for Mac`
+  return game.hint
 }
