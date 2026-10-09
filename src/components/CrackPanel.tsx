@@ -46,6 +46,10 @@ export function CrackPanel({ onClose }: { onClose: () => void }) {
       if (!plainKey(e) || e.key === 'Escape') return
       if (e.key === ' ' || e.key === 'Enter') {
         if (!e.repeat) hit()
+      } else if (e.key === '1' && !e.repeat) {
+        // back to the first level; the best stays
+        setPop(null)
+        apply({ state: startLevel(1, performance.now(), Math.random), event: null })
       } else if (e.key.length !== 1 && e.key !== 'Backspace') return
       swallow(e)
     }
@@ -69,8 +73,11 @@ export function CrackPanel({ onClose }: { onClose: () => void }) {
   const big = s.phase === 'clear' ? 'open' : String(s.level)
   const small = s.phase === 'clear' ? `level ${s.level} cracked` : s.phase === 'fail' ? 'missed' : `${s.left} to go`
 
+  const restart = s.level > 1 ? ' · 1 back to level 1' : ''
   const note =
-    s.phase === 'ready' ? 'space, ↵ or a click starts the needle · esc leaves' : 'press as the needle crosses the dot · esc leaves'
+    s.phase === 'ready'
+      ? `space, ↵ or a click starts the needle${restart} · esc leaves`
+      : `press as the needle crosses the dot${restart} · esc leaves`
 
   return (
     <div className="pong crack" aria-label="Crack">
