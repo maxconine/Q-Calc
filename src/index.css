@@ -1139,6 +1139,7 @@ html.quick-native .four-twenty.wide {
   cursor: pointer;
 }
 .game-row:hover,
+.game-row.selected,
 .game-row:focus-visible {
   background: var(--fill-hover);
   outline: none;

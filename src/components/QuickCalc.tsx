@@ -460,6 +460,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   const helpShown = helpOpen || isHelpCommand(q)
   const gamesShown = isGamesCommand(q)
+  // the row ↑ and ↓ have picked in the `games` list, from the top; null is back in the bar
+  const [gamePick, setGamePick] = useState<number | null>(null)
+  if (!gamesShown && gamePick != null) setGamePick(null)
   const keyLabels = useKeyLabels(settings.keybinds)
   const cheats = useMemo(
     () => hostCheats(cheatSheet(nativeInfo.hotkey || undefined, Boolean(calcWindow().__QCALC_NATIVE), keyLabels)),
@@ -1059,6 +1062,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [resetToCalculate, restoreDraft, stopDraftTimer])
 
   const onUp = useCallback((): boolean => {
+    // in the `games` list, ↑ starts at the game nearest the bar and climbs
+    if (isGamesCommand(qRef.current)) {
+      setGamePick((cur) => (cur == null ? GAMES.length - 1 : Math.max(0, cur - 1)))
+      return true
+    }
     if (helpOpen || isHelpCommand(qRef.current)) {
       setHelpOpen(false)
       if (isHelpCommand(qRef.current)) mathRef.current?.setValue('')
@@ -1072,9 +1080,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     setSelected((cur) => (cur == null ? history.length - 1 : Math.max(0, cur - 1)))
     return true
-  }, [helpOpen, history.length, selected, snapshotCaret, tapeOpen])
+  }, [helpOpen, history.length, selected, setGamePick, snapshotCaret, tapeOpen])
 
   const onDown = useCallback((): boolean => {
+    if (isGamesCommand(qRef.current)) {
+      if (gamePick == null) return false
+      setGamePick(gamePick >= GAMES.length - 1 ? null : gamePick + 1)
+      return true
+    }
     const first = document.querySelector<HTMLInputElement>('.sys-eq')
     if (sysLinesRef.current?.length && first) {
       first.focus()
@@ -1090,7 +1103,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     setSelected(selected + 1)
     return true
-  }, [history.length, restoreCaret, selected, tapeOpen])
+  }, [gamePick, history.length, restoreCaret, selected, setGamePick, tapeOpen])
 
   // `tutorial` in the bar, or replay from settings: the walkthrough from the top, whatever was done before
   const startTutorial = useCallback(() => {
@@ -1169,12 +1182,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       resetToCalculate()
     } else if (selected == null && gameCommand(qRef.current)) playGame(gameCommand(qRef.current)!)
     else if (selected == null && isGamesCommand(qRef.current)) {
-      // the list stays up: a game is picked by name or by a click
+      // ↵ plays the row ↑ ↓ picked; with none picked the list stays up, for a name or a click
+      if (gamePick != null) playGame(GAMES[gamePick]!.kind)
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
     else if (!commit()) setHint(blankEnterHint())
-  }, [blankEnterHint, commit, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
+  }, [blankEnterHint, commit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
 
   // esc leaves the overlay, except from pong, which it closes back to the bar. false tells the mac app to hide;
   // the page does not clear the tape or the input first.
@@ -1492,7 +1506,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (
-            <GamesSheet games={GAMES} onPlay={playGame} />
+            <GamesSheet games={GAMES} selected={gamePick} onPlay={playGame} />
           ) : tapeOpen && history.length > 0 ? (
             <HistoryTape
               history={history}

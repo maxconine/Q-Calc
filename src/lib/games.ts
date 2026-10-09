@@ -44,7 +44,7 @@ export function gameNeedsLink(kind: GameKind): boolean {
   return byKind(kind).needsLink
 }
 
-export const GAMES_HINT = 'type a game’s name, or click one'
+export const GAMES_HINT = '↑↓ pick · ↵ play · or type a name'
 
 // `games` lists them above the bar, the way `?` lists the shortcuts
 export function isGamesCommand(text: string): boolean {

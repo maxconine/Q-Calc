@@ -116,12 +116,27 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
 }
 
 // `games`: each row opens its game
-export function GamesSheet({ games, onPlay }: { games: ReadonlyArray<{ kind: GameKind; name: string; blurb: string }>; onPlay: (kind: GameKind) => void }) {
+export function GamesSheet({
+  games,
+  selected = null,
+  onPlay,
+}: {
+  games: ReadonlyArray<{ kind: GameKind; name: string; blurb: string }>
+  // the row ↑ ↓ picked, which ↵ plays
+  selected?: number | null
+  onPlay: (kind: GameKind) => void
+}) {
   return (
     <div className="tape cheats games-sheet" aria-label="Games">
       <div className="cheat-col">
-        {games.map((g) => (
-          <button type="button" className="tape-row cheat-row game-row" key={g.kind} onClick={() => onPlay(g.kind)}>
+        {games.map((g, i) => (
+          <button
+            type="button"
+            className={i === selected ? 'tape-row cheat-row game-row selected' : 'tape-row cheat-row game-row'}
+            aria-selected={i === selected}
+            key={g.kind}
+            onClick={() => onPlay(g.kind)}
+          >
             <span className="cheat-key">{g.name}</span>
             <span className="cheat-label">{g.blurb}</span>
           </button>
