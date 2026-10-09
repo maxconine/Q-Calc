@@ -1,0 +1,122 @@
+/* crack: `crack` then enter. head + a 200px dial + a note line, well under the 560px panel max in Overlay.swift */
+.crack {
+  --crack-dot: #e9a800;
+  --crack-miss: #d93a2b;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .crack {
+    --crack-dot: #ffd23f;
+    --crack-miss: #ff6b5c;
+  }
+}
+html[data-theme="dark"] .crack {
+  --crack-dot: #ffd23f;
+  --crack-miss: #ff6b5c;
+}
+.crack-stage {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-2) 0 var(--sp-1);
+}
+.crack-dial {
+  display: block;
+  width: 200px;
+  height: 200px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.crack-bezel {
+  fill: color-mix(in srgb, var(--bg) 70%, var(--bg-tape));
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.crack-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--ink) 11%, transparent);
+  stroke-width: 26;
+  transition: stroke 0.2s;
+}
+.crack-ticks line {
+  stroke: var(--muted);
+  stroke-width: 1;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+.crack-ticks line.major {
+  stroke-width: 1.6;
+  opacity: 0.9;
+}
+.crack-dot {
+  fill: var(--crack-dot);
+}
+.crack-needle {
+  stroke: var(--ink);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.crack-level {
+  fill: var(--ink);
+  font-family: var(--font);
+  font-size: 30px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-anchor: middle;
+}
+.crack-left {
+  fill: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  text-anchor: middle;
+}
+.crack-note {
+  margin: 0;
+  text-align: center;
+}
+
+/* a hit: the dot bursts outward and fades */
+.crack-pop {
+  fill: none;
+  stroke: var(--crack-dot);
+  stroke-width: 3;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: crack-pop 0.35s ease-out forwards;
+}
+@keyframes crack-pop {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(2.2); opacity: 0; }
+}
+
+/* a miss: the track goes red and the dial shakes */
+.crack-dial.fail .crack-track { stroke: color-mix(in srgb, var(--crack-miss) 45%, transparent); }
+.crack-dial.fail .crack-needle { stroke: var(--crack-miss); }
+.crack-dial.fail .crack-left { fill: var(--crack-miss); }
+.crack-dial.fail { animation: crack-shake 0.4s ease-in-out; }
+@keyframes crack-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-7px); }
+  35% { transform: translateX(6px); }
+  55% { transform: translateX(-4px); }
+  75% { transform: translateX(2px); }
+}
+
+/* a cleared level: the track lights up and the dial turns a click, like a tumbler giving */
+.crack-dial.clear .crack-track { stroke: color-mix(in srgb, var(--accent) 55%, transparent); }
+.crack-dial.clear .crack-needle { stroke: var(--accent); }
+.crack-dial.clear .crack-level { fill: var(--accent); }
+.crack-dial.clear .crack-ticks {
+  transform-origin: 100px 100px;
+  animation: crack-click 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) forwards;
+}
+@keyframes crack-click {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(27deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crack-dial.fail,
+  .crack-dial.clear .crack-ticks,
+  .crack-pop { animation: none; }
+  .crack-pop { opacity: 0; }
+}

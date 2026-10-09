@@ -26,6 +26,7 @@ import { PeriodicCard } from './PeriodicCard'
 import { IdentityCard } from './IdentityCard'
 import { PongPanel } from './PongPanel'
 import { Connect4Panel } from './Connect4Panel'
+import { CrackPanel } from './CrackPanel'
 import { EmberPanel } from './EmberPanel'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
@@ -1125,7 +1126,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // from typing a game's name and ↵, or a row of the `games` sheet
   const playGame = useCallback(
     (game: GameKind) => {
-      if (!peerTransport() && game !== 'ember') return
+      if (!peerTransport() && game !== 'ember' && game !== 'crack') return
       resetToCalculate()
       setTapeOpen(false)
       setPongOpen(game)
@@ -1473,6 +1474,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <Connect4Panel transport={peerTransport()!} onClose={escapeLayer} />
           ) : pongOpen === 'ember' ? (
             <EmberPanel transport={peerTransport()} escapeRef={emberEscRef} onClose={escapeLayer} />
+          ) : pongOpen === 'crack' ? (
+            <CrackPanel onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (
