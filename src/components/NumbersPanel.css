@@ -1,0 +1,242 @@
+/* the numbers game: `24 game` or `countdown` then enter. stays under the 560px panel max in Overlay.swift */
+.nums {
+  padding: var(--sp-3) var(--gutter);
+  color: var(--ink);
+  font-family: var(--font);
+  text-align: left;
+}
+.nums-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+}
+.nums-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.nums-sub,
+.nums-note {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.nums-leave {
+  margin: -3px calc(-1 * var(--sp-2)) -3px 0;
+  padding: 3px var(--sp-2);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.nums-leave:first-of-type {
+  margin-left: auto;
+}
+.nums-leave:hover {
+  color: var(--ink);
+  background: var(--fill-hover);
+}
+.nums-note {
+  margin: var(--sp-2) 0 0;
+  text-align: center;
+}
+.nums-link {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.nums-link:hover {
+  color: var(--ink);
+}
+
+/* start screen */
+.nums-modes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3) 0 0;
+}
+.nums-mode {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+.nums-mode.on {
+  background: var(--fill-selected);
+}
+.nums-mode-name {
+  min-width: 76px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.nums-mode-blurb {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.nums-large {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.nums-large button {
+  width: 20px;
+  padding: 1px 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-s);
+  color: var(--muted);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.nums-large button.on {
+  background: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* a round */
+.nums-board {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) 0 0;
+}
+.nums-target {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+.nums-target-label {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.nums-target-value {
+  color: var(--accent);
+  font-size: 30px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.nums-tiles {
+  display: flex;
+  gap: var(--sp-2);
+}
+.nums-tile {
+  width: 52px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.nums-tiles.six .nums-tile {
+  width: 46px;
+  font-size: 18px;
+}
+.nums-tile.large {
+  color: var(--accent);
+}
+.nums-tile.used {
+  opacity: 0.3;
+}
+.nums-tile:disabled {
+  cursor: default;
+}
+.nums-clock {
+  width: min(320px, 100%);
+  height: 3px;
+  border-radius: 2px;
+  background: var(--fill-track);
+  overflow: hidden;
+}
+.nums-clock-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+.nums-clock-fill.low {
+  background: #d9534f;
+}
+.nums-entry {
+  position: relative;
+  width: min(320px, 100%);
+}
+.nums-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 44px 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--bg-tape);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+.nums-input:focus {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.nums-input::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
+.nums-secs {
+  position: absolute;
+  right: var(--sp-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.nums-live,
+.nums-result,
+.nums-solution {
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+.nums-live {
+  color: var(--muted);
+}
+.nums-live.bad {
+  color: #d9534f;
+}
+.nums-over {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.nums-result {
+  font-weight: 600;
+}
+.nums-result.win {
+  color: var(--accent);
+}
+.nums-solution {
+  color: var(--muted);
+}

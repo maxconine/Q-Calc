@@ -2,11 +2,12 @@ import { C4_HINT, isConnect4Command } from './connect4'
 import { CRACK_HINT, isCrackCommand } from './crack'
 import { EMBER_HINT, isEmberCommand } from './ember'
 import { EQUAL_HINT, isEqualCommand } from './equal'
+import { isNumbersCommand, NUMBERS_HINT } from './numbers'
 import { isPongCommand, PONG_HINT } from './pong'
 
 // the games the bar opens, by what's typed in it. a new game adds its kind, a row in GAMES and a panel in QuickCalc
 
-export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal'
+export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal' | 'numbers'
 
 type Game = {
   kind: GameKind
@@ -28,6 +29,7 @@ export const GAMES: readonly Game[] = [
   { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or online', is: isEmberCommand, hint: EMBER_HINT, needsLink: false },
   { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot', is: isCrackCommand, hint: CRACK_HINT, needsLink: false },
   { kind: 'equal', name: 'equal', blurb: 'guess the hidden equation · daily or practice', is: isEqualCommand, hint: EQUAL_HINT, needsLink: false },
+  { kind: 'numbers', name: '24 / countdown', blurb: 'make the number · two modes against the clock', is: isNumbersCommand, hint: NUMBERS_HINT, needsLink: false },
 ]
 
 const byKind = (kind: GameKind) => GAMES.find((g) => g.kind === kind)!

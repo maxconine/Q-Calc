@@ -29,6 +29,7 @@ import { Connect4Panel } from './Connect4Panel'
 import { CrackPanel } from './CrackPanel'
 import { EmberPanel } from './EmberPanel'
 import { EqualPanel } from './EqualPanel'
+import { NumbersPanel } from './NumbersPanel'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -1479,6 +1480,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <CrackPanel onClose={escapeLayer} />
           ) : pongOpen === 'equal' ? (
             <EqualPanel onClose={escapeLayer} />
+          ) : pongOpen === 'numbers' ? (
+            <NumbersPanel onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (
