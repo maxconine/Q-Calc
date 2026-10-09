@@ -5,9 +5,15 @@ type TapeWheel = {
   hasHistory: () => boolean
   open: () => void
   close: () => void
+  // the input, when its expression is too long to show; up and down scroll through it there
+  longInput?: () => HTMLInputElement | null
 }
 
-// scroll up over the overlay to open the history tape; scroll down past its end to close it
+// a scroll that coasts on past either end of a long input is still the same gesture, so it doesn't open the tape
+const SETTLE_MS = 350
+
+// scroll up over the overlay to open the history tape; scroll down past its end to close it. over a long input,
+// up and down move through the expression first (up toward its start), and only past its start does up open the tape
 export function useTapeWheel(
   rootRef: RefObject<HTMLElement | null>,
   tapeRef: RefObject<HTMLElement | null>,
@@ -19,11 +25,29 @@ export function useTapeWheel(
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
+    let lastInputScroll = -Infinity
     const onWheel = (e: WheelEvent) => {
       if (e.target instanceof Element && e.target.closest('.graph')) return
       // a sideways two-finger swipe scrolls a long input, so it's left to the browser
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
-      const { isOpen, hasHistory, open, close } = handlersRef.current
+      const { isOpen, hasHistory, open, close, longInput } = handlersRef.current
+      const input = longInput?.()
+      if (input && e.target instanceof Element && e.target.closest('.composer')) {
+        const max = input.scrollWidth - input.clientWidth
+        const atEnd = e.deltaY < 0 ? input.scrollLeft <= 0 : input.scrollLeft >= max - 1
+        const now = performance.now()
+        if (!atEnd) {
+          e.preventDefault()
+          input.scrollLeft = Math.max(0, Math.min(max, input.scrollLeft + e.deltaY))
+          lastInputScroll = now
+          return
+        }
+        if (now - lastInputScroll < SETTLE_MS) {
+          e.preventDefault()
+          lastInputScroll = now
+          return
+        }
+      }
       const tape = tapeRef.current
       const overTape = Boolean(tape && e.target instanceof Node && tape.contains(e.target))
 

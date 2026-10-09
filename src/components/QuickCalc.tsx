@@ -1399,6 +1399,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [beginShowing, beginTour, insertPlain, markTour, touringNow, onPrepare, onWillHide, startTutorial])
 
   useTapeWheel(rootRef, tapeRef, {
+    longInput: () => {
+      const input = mathRef.current?.element()
+      return input && input.scrollWidth > input.clientWidth + 1 ? input : null
+    },
     isOpen: () => tapeOpen,
     hasHistory: () => history.length > 0,
     open: () => {
