@@ -177,12 +177,12 @@ describe('audit: exact forms beside the decimal', () => {
   })
 
   it.each([
-    ['asin(1)', 'pi/2'],
-    ['acos(-1)', 'pi'],
-    ['atan(1)', 'pi/4'],
-    ['acos(0.5)', 'pi/3'],
-    ['asin(-0.5)', '-pi/6'],
-    ['atan2(1, -1)', '3*pi/4'],
+    ['asin(1)', 'pi/2 rad'],
+    ['acos(-1)', 'pi rad'],
+    ['atan(1)', 'pi/4 rad'],
+    ['acos(0.5)', 'pi/3 rad'],
+    ['asin(-0.5)', '-pi/6 rad'],
+    ['atan2(1, -1)', '3*pi/4 rad'],
   ])('%s in radians → %s', (text, want) => {
     expect(line(text, { angleMode: 'rad' }).exact).toBe(want)
   })

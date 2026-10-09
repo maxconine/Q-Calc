@@ -1162,10 +1162,19 @@ function compoundLabel(u: [Unit, number][]): string | null {
   return den ? `${top.join('·')}/${den}` : top.join('·')
 }
 
+/** The angle an answer per angle (N m / deg) reads in: the calculator's deg/rad mode, set for each conversion. */
+let angleShown: 'deg' | 'rad' = 'rad'
+const ANGLE_AXIS = 5
+
+/** A unit no name fits, in base units, with newtons pulled out: `kg m^2 / s^2 K` reads `N m / K`, `kg / s^2` `N / m`. */
 function formatCompound(dim: number[]): string {
   const names = ['kg', 'm', 's', 'A', 'K', 'rad', 'B']
   const num: string[] = []
   const den: string[] = []
+  if (dim[0] === 1 && (dim[2] ?? 0) <= -2) {
+    num.push('N')
+    dim = addVec(dim, [-1, -1, 2, 0, 0, 0, 0])
+  }
   dim.forEach((e, i) => {
     if (!e) return
     const s = Math.abs(e) === 1 ? names[i]! : `${names[i]}^${Math.abs(e)}`
@@ -1194,6 +1203,24 @@ function asReciprocal(q: Qty, unit: Unit): Value | null {
   return { ...num(n), unit: label }
 }
 
+/**
+ * Something per angle that isn't a turning rate (rad/s stays rpm): `549.16 Nm / 0.293 deg` is 1874.27 N m / deg in
+ * deg mode and 107387.5 N m / rad in rad mode. Energy over an angle is a torque, so N m, not J. Times an angle
+ * (`I α` is kg m² rad/s²) is left alone: the radian there is just a number.
+ */
+function angleRateValue(q: Qty): Value | null {
+  const e = q.dim[ANGLE_AXIS] ?? 0
+  if (e >= 0) return null
+  const rest = q.dim.map((x, i) => (i === ANGLE_AXIS ? 0 : x))
+  if (rest.every((x, i) => i === 2 || x === 0)) return null
+  const named = isEnergy(rest) ? null : namedUnitFor(rest)
+  const restLabel = isEnergy(rest) ? 'N m' : named && sameScale(siOf(named), 1) ? named.symbol : formatCompound(rest)
+  const angle = Math.abs(e) === 1 ? angleShown : `${angleShown}^${Math.abs(e)}`
+  const unit = restLabel.includes('/') ? `${restLabel} ${angle}` : `${restLabel} / ${angle}`
+  const n = angleShown === 'deg' ? q.si * (180 / Math.PI) ** e : q.si
+  return Number.isFinite(n) ? { ...num(n), unit } : null
+}
+
 function qtyToValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
   const v = qtyValue(q, target, targetLabel)
   const meas = v?.kind === 'number' ? precMeas(v.n, q.prec) : undefined
@@ -1212,6 +1239,8 @@ function qtyValue(q: Qty, target?: Qty, targetLabel?: string): Value | null {
   }
   if (!Number.isFinite(q.si)) return null
   if (isZeroVec(q.dim)) return num(q.si)
+  const perAngle = angleRateValue(q)
+  if (perAngle) return perAngle
   // `200 GPa * 0.001` is 200 MPa: scaled stresses, forces, energies and powers keep an engineering prefix
   if (q.prefer && !q.bare && vecEq(vec(q.prefer.dim), q.dim) && ENGINEERING_DIMS.has(q.prefer.dim) && unitSystem(q.prefer) === 'si') {
     return engineering(q, q.prefer)
@@ -1576,15 +1605,84 @@ function trySimpleConvert(src: string, defaults?: DefaultUnits, keepUnits = fals
   return meas ? { ...out!, meas } : out
 }
 
-/** `keepUnits` answers in the units typed: no SI ↔ US counterpart and no default unit, only an explicit "to". */
-export function tryConvert(text: string, defaults?: DefaultUnits, variables?: Record<string, number>, keepUnits = false): Value | null {
-  const src = preprocess(text)
+/**
+ * `keepUnits` answers in the units typed: no SI ↔ US counterpart and no default unit, only an explicit "to".
+ * `angleMode` is the angle an answer per angle reads in (N m / deg).
+ */
+export function tryConvert(
+  text: string,
+  defaults?: DefaultUnits,
+  variables?: Record<string, number>,
+  keepUnits = false,
+  angleMode?: 'deg' | 'rad',
+): Value | null {
+  const before = angleShown
+  if (angleMode) angleShown = angleMode
+  try {
+    return convertText(preprocess(text), defaults, variables, keepUnits, 0)
+  } finally {
+    angleShown = before
+  }
+}
+
+function convertText(src: string, defaults: DefaultUnits | undefined, variables: Record<string, number> | undefined, keepUnits: boolean, depth: number): Value | null {
   // a lone quote mark is no quantity, and `5 kg in` is a conversion still being typed, not kg times inches (`5 sq in` is square inches)
   if (!src || /^['"]+$/.test(src) || /(?<!\b(?:to|into|in|sq|cu|square|cubic))(?<=[A-Za-z])\s+in$/i.test(src)) return null
+  const again = (text: string) => (depth < 6 ? convertText(preprocess(text), defaults, variables, keepUnits, depth + 1) : null)
+
+  // `(1.1009 in to mm) / 10`: a conversion in brackets is done first, and its answer used like ans
+  const folded = foldConversions(src, again)
+  if (folded !== src) return again(folded)
+  // `1.1009 in to mm / 10`: arithmetic after the target unit works on the converted answer
+  const tail = splitTargetTail(src)
+  if (tail) {
+    const converted = again(tail.convert)
+    const text = converted && quantityText(converted)
+    if (text) return again(`(${text}) ${tail.rest}`)
+  }
+
   const units = keepUnits ? {} : sanitizeDefaultUnits(defaults)
   // `m = 3`, then `5 m`: the variable wins, so the bare `number unit` reading is off
   const simple = mentionsUnitLikeVariable(src, variables) ? null : trySimpleConvert(src, units, keepUnits)
-  return simple ?? tryUnitExpression(src, units, variables)
+  const value = simple ?? tryUnitExpression(src, units, variables)
+  // `ans in to mm`: once the left already has a unit, `in to` is into, not inches
+  const into = src.match(/^(.*\S)\s+in\s+(?:to|into)\s+(.+)$/i)
+  if (into && (!value || (value.kind === 'text' && isImproperUnitConversion(value.text ?? "")))) {
+    const read = again(`${into[1]} to ${into[2]}`)
+    if (read?.kind === 'number') return read
+  }
+  return value
+}
+
+/**
+ * The first bracket whose own level holds a conversion, replaced by its answer as a quantity:
+ * `((1.1009 in) to mm) / 10` → `(27.96286 mm) / 10`. Inner brackets (a stored `ans`) stay part of it.
+ */
+function foldConversions(src: string, convert: (text: string) => Value | null): string {
+  const opens: number[] = []
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] === '(') opens.push(i)
+    else if (src[i] === ')' && opens.length) {
+      const start = opens.pop()!
+      const inner = src.slice(start + 1, i)
+      // only this bracket's own level: nested brackets blanked out
+      const own = inner.replace(/\([^()]*\)/g, (m) => ' '.repeat(m.length))
+      if (!/\s(?:to|into)\s/i.test(own) || /[()]/.test(own)) continue
+      const v = convert(inner.trim())
+      const text = v && quantityText(v)
+      if (text) return `${src.slice(0, start)}(${text})${src.slice(i + 1)}`
+    }
+  }
+  return src
+}
+
+/** `… to mm / 10` → convert `… to mm`, then `/ 10`; the target is units only (mm^2 and m/s are still targets). */
+function splitTargetTail(src: string): { convert: string; rest: string } | null {
+  const m = src.match(/^(.*\s(?:to|into)\s+)(.*?[A-Za-zμ°²³\d])\s*([*/+-]\s*[\d.(].*)$/i)
+  if (!m) return null
+  const target = m[2]!.trim()
+  if (/\d/.test(target.replace(/\^\s*-?\d+/g, '')) || !new UnitParser(`1 ${target}`).parse()) return null
+  return { convert: `${m[1]}${target}`, rest: m[3]! }
 }
 
 function mentionsUnitLikeVariable(src: string, variables?: Record<string, number>): boolean {
@@ -1890,20 +1988,31 @@ export function defaultUnitsEqual(a: DefaultUnits, b: DefaultUnits): boolean {
 }
 
 /** `5 cm` (or `5.0 ± 0.1 cm`) as text that parses back to the same quantity, or null when the unit label doesn't. */
-export function quantityText(v: Value): string | null {
+export function quantityText(v: Value, angleMode?: 'deg' | 'rad'): string | null {
+  if (v.kind !== 'number' || !v.unit || !Number.isFinite(v.n)) return null
+  const before = angleShown
+  if (angleMode) angleShown = angleMode
+  try {
+    return quantityTextNow(v)
+  } finally {
+    angleShown = before
+  }
+}
+
+function quantityTextNow(v: Value): string | null {
   if (v.kind !== 'number' || !v.unit || !Number.isFinite(v.n)) return null
   // full precision, so a stored quantity chains like a plain number: y = 2 kg, y^3 is 8 kg^3
   const n = v.n
   const amount = `${n}${v.meas?.unc ? ` ± ${v.meas.unc}` : ''}`
   if (!v.unitId) {
     // a compound in SI base units (`200 kg / s^2`) must read back as itself
-    const back = tryConvert(`${amount} ${v.unit}`)
+    const back = tryConvert(`${amount} ${v.unit}`, undefined, undefined, false, angleShown)
     return back?.kind === 'number' && back.unit === v.unit && !back.unitId && sameScale(back.n, n) ? `${amount} ${v.unit}` : null
   }
   // a symbol that reads back as another unit (g for gee, not gram) falls back to one of its names
   for (const unit of [v.unit, ...(unitById(v.unitId)?.names ?? [])]) {
     const text = `${amount} ${unit}`
-    const back = tryConvert(`${text} to ${unit}`)
+    const back = tryConvert(`${text} to ${unit}`, undefined, undefined, false, angleShown)
     if (back?.kind === 'number' && back.unitId === v.unitId && sameScale(back.n, n)) return text
   }
   return null

@@ -106,7 +106,7 @@ describe('a call never drops an argument it was given', () => {
     expect(shown('log(8, 2)')).toBe('3')
     expect(shown('clamp(5, 1, 3)')).toBe('3')
     expect(shown('max(1,000,2)')).toBe('2')
-    expect(shown('atan2(1, 1)')).toBe('45')
+    expect(shown('atan2(1, 1)')).toBe('45 deg')
     expect(shown('nCr(5, 2)')).toBe('10')
   })
 

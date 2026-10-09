@@ -33,8 +33,8 @@ describe('audit2: exact-form labels do not depend on fraction or sig-fig mode', 
     expect(line('sin(60)', { fractionMode: true }).exact).toBe('sqrt(3)/2')
   })
   it('degree vs radian mode changes the exact label, independent of fraction/sig-fig settings', () => {
-    expect(line('acos(-0.5)', { angleMode: 'deg', fractionMode: true }).exact).toBe('120')
-    expect(line('acos(-0.5)', { angleMode: 'rad', fractionMode: true }).exact).toBe('2*pi/3')
+    expect(line('acos(-0.5)', { angleMode: 'deg', fractionMode: true }).exact).toBe('120 deg')
+    expect(line('acos(-0.5)', { angleMode: 'rad', fractionMode: true }).exact).toBe('2*pi/3 rad')
   })
 })
 

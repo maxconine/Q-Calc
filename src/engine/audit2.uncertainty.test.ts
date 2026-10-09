@@ -32,8 +32,8 @@ describe('audit2: atan2 does not carry sig figs through, unlike its sibling hypo
   // it and the whole expression falls back to full, unrounded precision.
   // input: 'atan2(3.0, 4.00)' in sig-fig mode, expected: 2 sig figs, "37"
   // actual: "36.8698976458" (full double precision, sig figs silently dropped)
-  it('atan2(3.0, 4.00) keeps the fewer sig figs of its arguments: 37', () => {
-    expect(sf('atan2(3.0, 4.00)')).toBe('37')
+  it('atan2(3.0, 4.00) keeps the fewer sig figs of its arguments: 37 deg', () => {
+    expect(sf('atan2(3.0, 4.00)')).toBe('37 deg')
   })
 })
 

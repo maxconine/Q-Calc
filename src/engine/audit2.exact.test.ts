@@ -35,7 +35,7 @@ describe('audit2: only a curated set of denominators counts as a "nice" fraction
 
 describe('audit2: pi-multiple detection on radian answers beyond the basics', () => {
   it('acos(-0.5) in radians is 2*pi/3', () => {
-    expect(line('acos(-0.5)', { angleMode: 'rad' }).exact).toBe('2*pi/3')
+    expect(line('acos(-0.5)', { angleMode: 'rad' }).exact).toBe('2*pi/3 rad')
   })
   it('atan(1/3) in radians is not mistaken for any nearby pi fraction', () => {
     expect(line('atan(1/3)', { angleMode: 'rad' }).exact).toBeUndefined()

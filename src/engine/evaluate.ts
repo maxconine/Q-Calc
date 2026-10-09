@@ -16,6 +16,7 @@ import { parseSystemCall, prepUnits, solveSystemCall } from './system'
 import { clearlyUnits, isolateWithUnits, solveWithUnitsOne } from './unitSolve'
 import { normalizeSums, sumAnswer } from './sums'
 import { quantityText, readsAsUnit, tryConvert } from './units'
+import { angleExponent } from './angles'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
 
@@ -363,9 +364,13 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       results.push({ raw, kind: variable ? 'assignment' : 'expression', display: '', variable })
       continue
     }
+    // an inverse trig answer is an angle, so it says which: `asin(0.5)` is 30 deg in deg mode, 0.5236 rad in rad mode
+    if (!calc && !sum && value.kind === 'number' && !value.unit && Number.isFinite(value.n) && angleExponent(expr) === 1) {
+      value = { ...value, unit: angleMode, unitId: angleMode }
+    }
     const finite = value.kind === 'number' && Number.isFinite(value.n)
     // '' (a unit the parser can't read back) makes later uses blank rather than unit-less.
-    const quantity = finite && value.unit ? (quantityText(value) ?? '') : undefined
+    const quantity = finite && value.unit ? (quantityText(value, angleMode) ?? '') : undefined
     if (finite) {
       const plainMeas = quantity == null ? meas : undefined
       lastAns = value.n

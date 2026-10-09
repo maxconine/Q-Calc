@@ -25,7 +25,7 @@ describe('an exact form beside a decimal is that decimal', () => {
     ['1/sqrt(2)', 'sqrt(2)/2'],
     ['tan(pi/12)', '2-sqrt(3)'],
     ['cos(pi/12)', '(sqrt(6)+sqrt(2))/4'],
-    ['asin(0.5)', 'pi/6'],
+    ['asin(0.5)', 'pi/6 rad'],
     ['sqrt(9999)', '3sqrt(1111)'],
   ])('%s is still %s', (text, exact) => {
     expect(evaluateLine(text, rad).exact).toBe(exact)
