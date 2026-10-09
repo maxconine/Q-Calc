@@ -254,7 +254,7 @@ function Title({ note, online, done, onLocal, onOnline }: { note?: string; onlin
         <span className="ember-amp">&amp;</span>
         <span className="ember-frost">frost</span>
       </h2>
-      <p className="ember-line">two of you, one keyboard or two Macs. both get to their doors.</p>
+      <p className="ember-line">two of you, on one keyboard or two computers anywhere. both get to their doors.</p>
       <div className="ember-actions">
         <button type="button" className="ember-button" onClick={onLocal}>
           same keyboard <kbd>L</kbd>
