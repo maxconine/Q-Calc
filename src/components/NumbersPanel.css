@@ -203,6 +203,24 @@
   color: var(--muted);
   opacity: 0.6;
 }
+/* the faint parens the expression is missing, laid over the input after the typed text */
+.nums-ghost {
+  position: absolute;
+  inset: 0 44px 0 var(--sp-3);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  white-space: pre;
+  color: var(--muted);
+  opacity: 0.55;
+  font-family: var(--font);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.nums-ghost-typed {
+  visibility: hidden;
+}
 .nums-secs {
   position: absolute;
   right: var(--sp-3);

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { autofillParens, fillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
 import { plainKey, swallow } from '../lib/gameKeys'
 import {
@@ -85,7 +86,9 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     setNow(Date.now())
   }, [update])
 
-  const check = useMemo(() => (round ? checkExpr(text, round.nums, round.mode) : null), [round, text])
+  // like the bar: a missing `)` is read as there, shows faint after the text, and → or tab writes it in
+  const filled = fillParens(text)
+  const check = useMemo(() => (round ? checkExpr(filled, round.nums, round.mode) : null), [round, filled])
 
   // read by the clock and finish, which outlive a render
   const roundRef = useRef(round)
@@ -118,7 +121,7 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
       setNow(at)
       const r = roundRef.current
       if (!r || r.over || at < r.deadline) return
-      const c = checkExpr(textRef.current, r.nums, r.mode)
+      const c = checkExpr(fillParens(textRef.current), r.nums, r.mode)
       finish('time', r.mode === 'countdown' && c.valid && c.value ? c.value.n : null)
     }, 200)
     return () => window.clearInterval(t)
@@ -136,7 +139,7 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
   const submit = useCallback(() => {
     if (!round || round.over || !check) return
     if (round.mode === '24') {
-      if (solves24(text, round.nums)) finish('solved', TARGET_24)
+      if (solves24(filled, round.nums)) finish('solved', TARGET_24)
       else if (check.problem) setNote(check.problem)
       else if (check.value) setNote(`that’s ${fracText(check.value)}, not 24`)
       else setNote(text.trim() ? 'not finished' : 'type an expression')
@@ -144,7 +147,7 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     }
     if (check.valid && check.value) finish('locked', check.value.n)
     else setNote(check.problem ?? (text.trim() ? 'not finished' : 'type an expression'))
-  }, [round, check, text, finish])
+  }, [round, check, text, filled, finish])
 
   const [pick, setPick] = useState<Mode>(stats.mode)
   const [large, setLarge] = useState(stats.large)
@@ -181,6 +184,20 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     if (round.over) {
       if (e.key.length === 1 || e.key === 'Backspace' || e.key.startsWith('Arrow')) swallow(e)
       return
+    }
+    if (inField && (e.key === 'Tab' || e.key === 'ArrowRight') && input) {
+      const written = autofillParens(input.value, input.selectionStart ?? 0, input.selectionEnd ?? 0)
+      if (written) {
+        setText(written)
+        requestAnimationFrame(() => input.setSelectionRange(written.length, written.length))
+        swallow(e)
+        return
+      }
+      // tab never leaves the field
+      if (e.key === 'Tab') {
+        swallow(e)
+        return
+      }
     }
     if (inField) {
       // typing into our own field: let it, but keep it out of the bar's buffer
@@ -260,7 +277,11 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
 
   const total = (round.mode === '24' ? SECONDS_24 : SECONDS_COUNTDOWN) * 1000
   const taken = usedTiles(text, round.nums)
+  // the faint closing parens, only while the text fits, since the ghost doesn't scroll with the input
+  const field = inputRef.current
+  const fits = !field || field.scrollWidth <= field.clientWidth + 1
   const over = round.over
+  const ghost = !over && fits ? ')'.repeat(inferParens(text).trailing) : ''
   let live = ''
   let liveBad = false
   if (note) {
@@ -332,6 +353,12 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
               setNote('')
             }}
           />
+          {ghost ? (
+            <span className="nums-ghost" aria-hidden>
+              <span className="nums-ghost-typed">{text}</span>
+              {ghost}
+            </span>
+          ) : null}
           <span className="nums-secs">{over ? '' : `${Math.ceil(left / 1000)}s`}</span>
         </div>
         <p className={`nums-live ${liveBad ? 'bad' : ''}`}>{over ? '' : live || ' '}</p>
