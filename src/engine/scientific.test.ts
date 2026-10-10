@@ -812,8 +812,10 @@ describe('no silent rounding or coercion', () => {
   it('never passes a unit through a scalar function', () => {
     expect(d('max(3 m, 2)')).toBe('')
     expect(d('abs(-5 m)')).toBe('')
-    expect(d('sqrt(4 m^2)')).toBe('')
+    // a root of a whole square is the one exception: it is worked out on the quantity itself, not passed through
+    expect(d('sqrt(4 m^2)')).toBe('2 m')
     expect(d('sqrt(g)')).toBe('')
+    expect(d('sqrt(5 m)')).toBe('')
     expect(evaluateSheet(['f(x) = x^2', 'f(3 m)'])[1]!.display).toBe('')
   })
   it('reads an angle unit inside trig in either mode', () => {

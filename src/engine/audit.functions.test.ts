@@ -159,9 +159,9 @@ describe('audit: inverse trig', () => {
   })
 
   it('the short names acot, asec, acsc give the right angle or blank', () => {
-    expectBlankOr('acot(1)', ['45'], deg)
-    expectBlankOr('asec(2)', ['60'], deg)
-    expectBlankOr('acsc(2)', ['30'], deg)
+    expectBlankOr('acot(1)', ['45 deg'], deg)
+    expectBlankOr('asec(2)', ['60 deg'], deg)
+    expectBlankOr('acsc(2)', ['30 deg'], deg)
   })
 
   it.each(['asin(1.01)', 'acos(-2)', 'arcsec(0.5)', 'arccsc(0.5)'])('%s is undefined', (text) => {

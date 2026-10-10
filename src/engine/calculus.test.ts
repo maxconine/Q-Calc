@@ -425,7 +425,7 @@ describe('superscripts', () => {
     expect(shown('3³ + 1')).toBe('28')
     expect(shown('2⁻¹')).toBe('0.5')
     expect(shown('10³')).toBe('1000')
-    expect(shown('sin⁻¹(1)', deg)).toBe('90')
+    expect(shown('sin⁻¹(1)', deg)).toBe('90 deg')
     expect(evaluateSheet(['f(x) = 3x² + 1', 'f(2)'], rad)[1]!.display).toBe('13')
   })
 })

@@ -10,7 +10,7 @@ export const MAX_LIST_ALLOC = 10_000
 export type AngleMode = 'deg' | 'rad'
 
 export const SCIENTIFIC_NAMES =
-  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans'
+  'sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|acsc|asec|acot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans'
 
 const NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'gi')
 const HAS_NAME_RE = new RegExp(`\\b(${SCIENTIFIC_NAMES})\\b`, 'i')
@@ -270,9 +270,63 @@ const INVERSE_POWER_FNS: [string, string][] = [
 ]
 
 const INVERSE_POWER_RES: [RegExp, string][] = INVERSE_POWER_FNS.map(([fn, inv]) => [
-  new RegExp(`\\b${fn}\\s*(?:\\^\\s*(?:-1|\\(\\s*-1\\s*\\))|⁻¹)`, 'gi'),
+  new RegExp(`(?<![A-Za-z])${fn}\\s*(?:\\^\\s*(?:-1|\\(\\s*-1\\s*\\))|⁻¹)`, 'gi'),
   inv,
 ])
+
+/** `sin^2(x)`, `tan²(x)`, `ln^2(x)`: the function's answer to that power, as written in textbooks. */
+const FN_POWER_RE = /(?<![A-Za-z])(sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot|ln|log)\s*\^\s*(?:(\d+)|\(\s*(\d+)\s*\))\s*\(/gi
+
+// the same with a bare argument: `sin^2 30`, `cos^2 x`
+const FN_POWER_BARE_RE = /(?<![A-Za-z])(sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot|ln|log)\s*\^\s*(?:(\d+)|\(\s*(\d+)\s*\))\s+(\d+(?:\.\d+)?|pi|[A-Za-z])(?![A-Za-z0-9_.(])/gi
+
+function rewriteFunctionPower(expr: string): string {
+  let s = expr.replace(FN_POWER_BARE_RE, (_m: string, fn: string, n1: string | undefined, n2: string | undefined, arg: string) => `(${fn}(${arg}))^${n1 ?? n2}`)
+  for (let guard = 0; guard < 20; guard++) {
+    FN_POWER_RE.lastIndex = 0
+    const m = FN_POWER_RE.exec(s)
+    if (!m) break
+    const open = m.index + m[0].length - 1
+    let depth = 0
+    let close = -1
+    for (let i = open; i < s.length; i++) {
+      if (s[i] === '(') depth++
+      else if (s[i] === ')' && --depth === 0) {
+        close = i
+        break
+      }
+    }
+    if (close < 0) break
+    s = `${s.slice(0, m.index)}(${m[1]}${s.slice(open, close + 1)})^${m[2] ?? m[3]}${s.slice(close + 1)}`
+  }
+  return s
+}
+
+/** Built-in names, written any case when called: `SIN(30)`, `Ln(2)`, `SQRT(4)`. */
+const CANONICAL_NAME = new Map(SCIENTIFIC_NAMES.split('|').map((n) => [n.toLowerCase(), n]))
+const CASED_CALL_RE = new RegExp(`(?<![A-Za-z0-9_])(${SCIENTIFIC_NAMES})(?=\\s*[(^⁻])`, 'gi')
+
+// `Pi` and `TAU` are the constants too, wherever they stand
+const CASED_CONSTANT_RE = /(?<![A-Za-z0-9_])(?:pi|tau)(?![A-Za-z0-9_])/gi
+
+function lowerCalls(expr: string, extraNames: string[]): string {
+  return expr
+    .replace(CASED_CALL_RE, (m: string) => (extraNames.includes(m) ? m : (CANONICAL_NAME.get(m.toLowerCase()) ?? m)))
+    .replace(CASED_CONSTANT_RE, (m: string) => (extraNames.includes(m) ? m : m.toLowerCase()))
+}
+
+/**
+ * `sin(pi/6 rad)`: the unit is for the whole argument, not just the 6 it sits beside. Only when the argument is
+ * plain arithmetic with one unit at its end; `sin(30 deg + 15 deg)` already reads right.
+ */
+const TRIG_ARG_UNIT_RE = /(?<![A-Za-z])(sin|cos|tan|csc|sec|cot)\(\s*([^()]*?[/])([^()]*?)\s+(rad|rads|radian|radians|deg|degs|degree|degrees)\s*\)/gi
+
+function wrapAngleArgument(expr: string): string {
+  return expr.replace(TRIG_ARG_UNIT_RE, (whole: string, fn: string, a: string, b: string, unit: string) => {
+    const arg = a + b
+    return /[A-Za-z]/.test(arg.replace(/\b(?:pi|tau|e)\b/gi, '')) ? whole : `${fn}((${arg}) ${unit})`
+  })
+}
 
 function rewriteInversePower(expr: string): string {
   let s = expr
@@ -427,7 +481,7 @@ const SUPERSCRIPT_DIGITS = '⁻⁰¹²³⁴⁵⁶⁷⁸⁹'
 
 export function preprocessAscii(expr: string, extraNames: string[] = []): string {
   // `√x` roots a single letter; `√2` and `√(x + 1)` already read right
-  let s = expr.replace(/([√∛])([A-Za-z])(?![A-Za-z0-9_(])/g, '$1($2)')
+  let s = lowerCalls(expr, extraNames).replace(/([√∛])([A-Za-z])(?![A-Za-z0-9_(])/g, '$1($2)')
   s = rewriteTypesetMul(s).replace(/°/g, ' deg').replace(/÷/g, '/').replace(/−/g, '-').replace(/π/g, '(pi)').replace(/τ/g, '(tau)').replace(/∞/g, 'Infinity').replace(/√/g, 'sqrt').replace(/∛/g, 'cbrt').replace(/θ/g, 'theta')
   s = s.replace(/ζ/g, 'zeta').replace(/[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+/g, (m) => `^(${[...m].map((c) => SUPERSCRIPT_DIGITS.indexOf(c) - 1).map((d) => (d < 0 ? '-' : d)).join('')})`)
   s = s.replace(/(?<![\d)\]!])\|([^|]+)\|/g, 'abs($1)')
@@ -442,6 +496,9 @@ export function preprocessAscii(expr: string, extraNames: string[] = []): string
   s = s.replace(/\barcsec(?=\s*\()/g, 'asec')
   s = s.replace(/\barctan2\b/g, 'atan2')
   s = rewriteInversePower(s)
+  s = rewriteFunctionPower(s)
+  s = wrapAngleArgument(s)
+  s = s.replace(/(?<![A-Za-z0-9_])inf(?:inity)?(?![A-Za-z0-9_])/gi, 'Infinity')
   s = s.replace(/\barcsinh\b|\barsinh\b/g, 'asinh')
   s = s.replace(/\barccosh\b|\barcosh\b/g, 'acosh')
   s = s.replace(/\barctanh\b|\bartanh\b/g, 'atanh')

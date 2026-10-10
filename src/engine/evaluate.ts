@@ -15,8 +15,8 @@ import { formatSolve, isEquation, solveEquation, type Solved } from './solve'
 import { parseSystemCall, prepUnits, solveSystemCall } from './system'
 import { clearlyUnits, isolateWithUnits, solveWithUnitsOne } from './unitSolve'
 import { normalizeSums, sumAnswer } from './sums'
-import { quantityText, readsAsUnit, tryConvert } from './units'
-import { angleExponent } from './angles'
+import { isImproperUnitConversion, quantityText, readsAsUnit, tryConvert } from './units'
+import { angleExponent, callsWorkedOut } from './angles'
 
 const RESERVED = new Set(`${SCIENTIFIC_NAMES}|e`.split('|'))
 
@@ -341,6 +341,24 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
       if (plusMinus && !m && value?.kind === 'number' && !value.meas?.unc) value = null
     } catch {
       value = null
+    }
+    // functions among typed units, which the unit reader can't call: `10 N * cos(30)`, `180 deg - asin(0.5)`,
+    // `sqrt((3 m)^2 + (4 m)^2)`, `tan^-1(x) to rad`. each call is worked out and stands in as its number or angle
+    // (a conversion the unit reader gave up on reads as improper, not blank, so that gets a second go too)
+    const improper = value?.kind === 'text' && isImproperUnitConversion(value.text ?? '')
+    if ((!value || improper) && !plusMinus) {
+      try {
+        const plain = { ...ctx, defaultUnits: options.defaultUnits }
+        const worked = callsWorkedOut(expr, angleMode, (call) => {
+          const v = tryPlainMath(call, plain)
+          return v?.kind === 'number' && !v.unit ? v.n : null
+        })
+        const second = worked ? tryPlainMath(worked, { ...plain, keepUnits: Boolean(variable) }) : null
+        // a root that leaves half a unit (sqrt(5 m) as m^0.5) is no answer
+        if (second && !(second.kind === 'number' && /\^-?\d*\.\d/.test(second.unit ?? ''))) value = second
+      } catch {
+        // the first reading stands
+      }
     }
     if (!value) {
       results.push({

@@ -107,3 +107,167 @@ describe('a conversion inside arithmetic, or on ans', () => {
     expect(shown(['1.1009 in to mm', 'ans + 1 in'])).toEqual(['27.96286 mm', '53.36286 mm'])
   })
 })
+
+describe('every way of writing an inverse says deg or rad', () => {
+  it.each([
+    'tan ^(-1) (1781 / 1135)',
+    'tan^-1(1781/1135)',
+    'tan^(-1)(1781/1135)',
+    'tan⁻¹(1781/1135)',
+    'tan^{-1}(1781/1135)',
+    '\\tan^{-1}(1781/1135)',
+    '\\arctan(1781/1135)',
+    'arctan(1781/1135)',
+    'atan(1781/1135)',
+    'atan2(1781, 1135)',
+    'ATAN(1781/1135)',
+    'Tan^-1(1781/1135)',
+  ])('%s', (text) => {
+    expect(last([text], 'deg')).toBe('57.4913540527 deg')
+    expect(last([text], 'rad')).toBe('1.00341341965 rad')
+  })
+
+  it.each([
+    ['sin^-1(0.5)', '30 deg'],
+    ['cos^-1(0.5)', '60 deg'],
+    ['sec^-1(2)', '60 deg'],
+    ['csc^-1(2)', '30 deg'],
+    ['cot^-1(1)', '45 deg'],
+    ['asec(2)', '60 deg'],
+    ['acsc(2)', '30 deg'],
+    ['acot(1)', '45 deg'],
+    ['tan^-1 1', '45 deg'],
+    ['2tan^-1(1)', '90 deg'],
+    ['2 tan^-1(1)', '90 deg'],
+    ['atan(inf)', '90 deg'],
+    ['atan(infinity)', '90 deg'],
+  ])('%s → %s', (text, want) => {
+    expect(last([text], 'deg')).toBe(want)
+  })
+
+  it('a hyperbolic inverse is not an angle', () => {
+    expect(last(['sinh^-1(1)'])).toBe('0.88137358702')
+    expect(last(['asinh(1)'])).toBe('0.88137358702')
+  })
+
+  it('converts with to and in', () => {
+    expect(last(['tan^-1(1781/1135) to rad'], 'deg')).toBe('1.00341341965 rad')
+    expect(last(['tan^-1(1781/1135) in rad'], 'deg')).toBe('1.00341341965 rad')
+    expect(last(['tan^-1(1781/1135) to deg'], 'rad')).toBe('57.4913540527 deg')
+    expect(last(['asin(0.5) to arcmin'], 'deg')).toBe('1800 arcmin')
+    expect(last(['asin(0.5) to kg'], 'deg')).toBe('improper unit conversion')
+  })
+})
+
+describe('function notation', () => {
+  it('a power on the function name is a power of its answer', () => {
+    expect(last(['sin^2(30)'])).toBe('0.25')
+    expect(last(['sin²(45)'])).toBe('0.5')
+    expect(last(['cos²(30) + sin²(30)'])).toBe('1')
+    expect(last(['tan^2(45)'])).toBe('1')
+    expect(last(['ln^2(e)'])).toBe('1')
+    expect(last(['sin^2(30 + 15)'])).toBe('0.5')
+  })
+
+  it('built-in names are read in any case when called', () => {
+    expect(last(['SIN(30)'])).toBe('0.5')
+    expect(last(['Sin(30)'])).toBe('0.5')
+    expect(last(['LN(e)'])).toBe('1')
+    expect(last(['Sqrt(16)'])).toBe('4')
+    expect(last(['MAX(3, 7, 2)'])).toBe('7')
+  })
+
+  it('a user function keeps its own capitals', () => {
+    expect(evaluateSheet(['Foo(x) = 2x', 'Foo(3)']).at(-1)!.display).toBe('6')
+    expect(evaluateSheet(['Max2(x) = 2x', 'Max2(3)']).at(-1)!.display).toBe('6')
+  })
+
+  it('an angle unit at the end of a trig argument is for the whole argument', () => {
+    expect(last(['sin(pi/6 rad)'])).toBe('0.5')
+    expect(last(['cos(pi/3 rad)'])).toBe('0.5')
+    expect(last(['sin(30 deg)'])).toBe('0.5')
+  })
+})
+
+describe('an angle answer carries on like a number', () => {
+  it('ans plus a plain number stays in the angle', () => {
+    expect(shown(['asin(0.5)', 'ans + 30', 'ans - 15', 'ans / 2'])).toEqual(['30 deg', '60 deg', '45 deg', '22.5 deg'])
+    expect(last(['30 deg + 30'])).toBe('60 deg')
+    expect(last(['90 deg - 45'])).toBe('45 deg')
+  })
+
+  it('other units still refuse a plain number', () => {
+    expect(last(['5 m + 3'])).toBe('')
+  })
+
+  it('round keeps the angle', () => {
+    expect(last(['round(atan(2), 1)'])).toBe('63.4 deg')
+    expect(last(['round(atan(2))'])).toBe('63 deg')
+  })
+
+  it('a variable holds it', () => {
+    expect(shown(['theta = atan(3/4)', '5 * cos(theta)', '5 * sin(theta)'])).toEqual(['36.8698976458 deg', '4', '3'])
+  })
+})
+
+describe('functions among typed units', () => {
+  it.each([
+    ['5 m * sin(30)', '2.5 m'],
+    ['10 N * cos(30)', '8.66025403784 N'],
+    ['10 N cos(30)', '8.66025403784 N'],
+    ['sin(30) * 5 m', '2.5 m'],
+    ['5 m * sqrt(4)', '10 m'],
+    ['9.81 m/s^2 * sin(30 deg)', '4.905 m/s²'],
+    ['100 N * cos(30 deg) * 2 m', '173.205080757 N·m'],
+    ['5 m / tan(45)', '5 m'],
+    ['3 m * max(2, 5)', '15 m'],
+    ['100 kPa * exp(-1)', '36.7879441171 kPa'],
+    ['10 N * COS(60)', '5 N'],
+    ['50 N * sin^2(30)', '12.5 N'],
+    ['5 kg * 9.81 m/s^2 * sin(asin(0.5))', '24.525 N'],
+    ['(5 ft to m) * cos(60)', '0.762 m'],
+    ['10 N * cos(30) to lbf', '1.94690255722 lbf'],
+  ])('%s → %s', (text, want) => {
+    expect(last([text])).toBe(want)
+  })
+
+  it('a root of a quantity', () => {
+    expect(last(['sqrt(16 m^2)'])).toBe('4 m')
+    expect(last(['sqrt((3 m)^2 + (4 m)^2)'])).toBe('5 m')
+    expect(last(['sqrt(2 * 9.81 m/s^2 * 10 m)'])).toBe('14.0071410359 m/s')
+    expect(last(['sqrt(2 * 10 m / (9.81 m/s^2))'])).toBe('1.42784312293 s')
+    expect(last(['cbrt(27 m^3)'])).toBe('3 m')
+    expect(last(['√(16 m^2)'])).toBe('4 m')
+    expect(last(['√(9) km'])).toBe('3 km')
+    expect(last(['∛(8 m^3)'])).toBe('2 m')
+  })
+
+  it('but not one that leaves half a unit, and no other function takes a unit', () => {
+    for (const text of ['sqrt(5 m)', 'sqrt(g)', 'sqrt(2 kg)', 'abs(-5 m)', 'max(3 m, 2)', 'ln(5 m)', 'sin(5 m)', 'exp(2 s)']) expect(last([text])).toBe('')
+  })
+
+  it('inverse trig among units goes in as an angle', () => {
+    expect(last(['180 deg - asin(0.5)'])).toBe('150 deg')
+    expect(last(['549.16 Nm / asin(0.5)'], 'deg')).toBe('18.3053333333 N m / deg')
+    expect(last(['549.16 Nm / asin(0.5)'], 'rad')).toBe('1048.81834258 N m / rad')
+    expect(last(['\\arcsin(0.5) + 10 deg'])).toBe('40 deg')
+  })
+
+  it('an unknown function is still blank, and plain maths is untouched', () => {
+    expect(last(['5 m * foo(2)'])).toBe('')
+    expect(last(['sin(30)'])).toBe('0.5')
+    expect(last(['sqrt(16)'])).toBe('4')
+  })
+})
+
+describe('more notation', () => {
+  it('a power on a function with a bare argument', () => {
+    expect(last(['sin^2 30'])).toBe('0.25')
+    expect(last(['sin^2 30 + cos^2 30'])).toBe('1')
+  })
+
+  it('Pi in any case', () => {
+    expect(last(['Pi * 2'])).toBe('6.28318530718')
+    expect(last(['2 PI'])).toBe('6.28318530718')
+  })
+})

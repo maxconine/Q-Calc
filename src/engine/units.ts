@@ -952,7 +952,15 @@ function divQty(a: Qty, b: Qty): Qty | null {
   return { si, dim, prefer, prec: precMul(a, b), via: mulVia(a, b, -1) }
 }
 
+/** A lone angle in a named unit: 30 deg, 0.5 rad. */
+function isPlainAngle(q: Qty): q is Qty & { prefer: Unit } {
+  return q.prefer?.dim === 'angle' && q.dim.every((x, i) => x === (i === ANGLE_AXIS ? 1 : 0))
+}
+
 function addQty(a: Qty, b: Qty, sign: 1 | -1): Qty | null {
+  // an angle is a number at heart, so a plain number beside one is in its unit: `asin(0.5)` then `ans + 30` is 60 deg
+  if (isPlainAngle(a) && isZeroVec(b.dim)) return addQty(a, { ...b, si: b.si * siOf(a.prefer), dim: a.dim }, sign)
+  if (isPlainAngle(b) && isZeroVec(a.dim)) return addQty({ ...a, si: a.si * siOf(b.prefer), dim: b.dim }, b, sign)
   if (!vecEq(a.dim, b.dim)) return null
   const si = a.si + sign * b.si
   const via = a.via || b.via ? { u: viaOf(a.via ? a : b).u, us: viaOf(a).us + viaOf(b).us, si: viaOf(a).si + viaOf(b).si } : undefined
