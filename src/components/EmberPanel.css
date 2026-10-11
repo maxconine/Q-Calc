@@ -458,7 +458,45 @@ html[data-theme="dark"] .ember {
   text-overflow: ellipsis;
 }
 
-/* overlays on the stage */
+/* overlays on the stage: one layer over the picture. in fullscreen it is zoomed with the hud, so its
+   children keep their bar-size numbers and still sit at the same places on the picture */
+.ember-over {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* the fullscreen shortcut. on the title: a clear pill for five seconds as the game opens */
+.ember-fs-hint {
+  margin: 0;
+  padding: 4px var(--sp-3);
+  border-radius: 999px;
+  background: var(--fill-selected);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  font-weight: 600;
+}
+/* and at the start of each level: small, in the corner of the picture */
+.ember-fs-tip {
+  position: absolute;
+  right: var(--sp-2);
+  bottom: var(--sp-2);
+  padding: 2px var(--sp-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  white-space: nowrap;
+}
+
+/* fullscreen (⌃F): the hook lays the root out; these are the panel's own adjustments */
+.game-fullscreen .ember-stage {
+  border-radius: calc(var(--radius-s) * var(--game-fs-ui, 1));
+}
+/* the hidden play column must stay out of the centred layout whatever width fullscreen gives a column */
+.ember .ember-game.ember-hidden {
+  width: 1px;
+}
+
 .ember-hint,
 .ember-ouch,
 .ember-peer-note {

@@ -3,17 +3,25 @@ import { nativeWindow } from '../lib/bridge'
 import { closeReasonText, type PeerInfo, type PeerTransport } from '../lib/peer'
 import { compileLevel, scoreOf, stageOf } from '../lib/emberEngine'
 import { LEVELS } from '../lib/emberLevels'
-import { firstUnfinished, loadProgress, recordResult, saveProgress, type EmberProgress } from '../lib/emberProgress'
+import { finishedCount, firstUnfinished, loadProgress, recordResult, saveProgress, type EmberProgress } from '../lib/emberProgress'
 import { createLocalGame, createOnlineGame, type EmberGame, type EmberScreen, type EmberView } from '../lib/emberSession'
 import { createEmberSound } from '../lib/emberSound'
 import { IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, type DeathCause, type Element, type GameState, type Level, type PlayerIndex, type Score } from '../lib/emberTypes'
 import { drawThumb, EmberRenderer } from './emberDraw'
+import { useGameFullscreen } from './useGameFullscreen'
 import './EmberPanel.css'
 
 // ember & frost: `ember` then enter. the panel owns the title, the online lobby and the progress file;
 // emberSession runs the game (select screen, levels, clock, link) and this feeds it keys and frames.
 // esc goes back one screen: the app hands every esc (a keydown in the browser, __qcalcEscape in the mac
-// app) to escapeLayer, which asks escapeRef first and closes the panel only when it says false
+// app) to escapeLayer, which asks escapeRef first and closes the panel only when it says false.
+// ⌃F fills the screen (useGameFullscreen, GAME_FULLSCREEN.md): the first esc then only leaves fullscreen
+
+// what the play screen spends above and below the picture at the bar's size: the hud row, the keys line and
+// the two gaps between them and the stage. the fullscreen layout keeps this much (scaled) clear of the picture
+const FS_CHROME = 54
+// the root's own padding above and below, which fullscreen replaces
+const FS_PAD = 12
 
 type Screen =
   | { k: 'title'; note?: string }
@@ -82,7 +90,8 @@ export function EmberPanel({
   // the lobby's own esc: steps back inside it, false when it's already on host/join
   const lobbyBackRef = useRef<(() => boolean) | null>(null)
   const gameIds = useRef(0)
-
+  const fs = useGameFullscreen<HTMLDivElement>({ chrome: FS_CHROME, pad: FS_PAD })
+  const leaveFullscreen = fs.escape
 
   const startLocal = useCallback(() => {
     try {
@@ -161,12 +170,14 @@ export function EmberPanel({
     return true
   }, [endGame, transport])
 
+  // esc while fullscreen leaves fullscreen and nothing else; the next one is the game's
   useEffect(() => {
-    escapeRef.current = back
+    const esc = () => leaveFullscreen() || back()
+    escapeRef.current = esc
     return () => {
-      if (escapeRef.current === back) escapeRef.current = null
+      if (escapeRef.current === esc) escapeRef.current = null
     }
-  }, [back, escapeRef])
+  }, [back, escapeRef, leaveFullscreen])
 
   const record = useCallback((levelId: string, score: Score) => {
     const next = recordResult(progressRef.current, levelId, score)
@@ -208,24 +219,31 @@ export function EmberPanel({
         </span>
       ) : null}
       {sub ? <span className="ember-sub">{sub}</span> : null}
-      <button type="button" className="ember-leave" onClick={() => back() || onClose()}>
+      <button type="button" className="ember-leave" onClick={() => leaveFullscreen() || back() || onClose()}>
         esc
       </button>
     </div>
   )
 
   return (
-    <div className="ember" aria-label="ember and frost">
+    <div ref={fs.ref} className="ember" aria-label="ember and frost">
       {screen.k === 'title' ? (
-        <>
+        <div className="ember-screen game-fs-screen">
           {head('', false)}
-          <Title note={screen.note} online={Boolean(transport)} done={Object.keys(progress.levels).length} onLocal={startLocal} onOnline={() => setScreen({ k: 'lobby' })} />
-        </>
+          <Title
+            note={screen.note}
+            online={Boolean(transport)}
+            done={finishedCount(progress, LEVELS)}
+            fsHint={fs.hint}
+            onLocal={startLocal}
+            onOnline={() => setScreen({ k: 'lobby' })}
+          />
+        </div>
       ) : screen.k === 'lobby' && transport ? (
-        <>
+        <div className="ember-screen game-fs-screen">
           {head(transport.label)}
           <EmberLobby transport={transport} note={screen.note} backRef={lobbyBackRef} onOpen={startOnline} onBack={() => back()} />
-        </>
+        </div>
       ) : screen.k === 'game' ? (
         <EmberPlay
           key={screen.id}
@@ -233,6 +251,8 @@ export function EmberPanel({
           online={screen.online}
           peer={screen.peer}
           progress={progress}
+          fsHint={fs.hint}
+          fsOn={fs.on}
           screenRef={gameScreenRef}
           head={head}
           onRecord={record}
@@ -244,7 +264,21 @@ export function EmberPanel({
   )
 }
 
-function Title({ note, online, done, onLocal, onOnline }: { note?: string; online: boolean; done: number; onLocal: () => void; onOnline: () => void }) {
+function Title({
+  note,
+  online,
+  done,
+  fsHint,
+  onLocal,
+  onOnline,
+}: {
+  note?: string
+  online: boolean
+  done: number
+  fsHint: string
+  onLocal: () => void
+  onOnline: () => void
+}) {
   return (
     <div className="ember-body ember-title">
       <h2 className="ember-logo" aria-label="ember and frost">
@@ -280,6 +314,8 @@ function Title({ note, online, done, onLocal, onOnline }: { note?: string; onlin
           <kbd>S</kbd> / <kbd>↓</kbd> use a lever or mirror
         </span>
       </div>
+      {/* said out loud for five seconds as the game opens; the keys line in a level keeps saying it */}
+      <p className="ember-fs-hint game-fs-hint">{fsHint}</p>
       {note ? <p className="ember-note">{note}</p> : done ? <p className="ember-note">{`${done} of ${LEVELS.length} levels done`}</p> : null}
     </div>
   )
@@ -582,6 +618,8 @@ function EmberPlay({
   online,
   peer,
   progress,
+  fsHint,
+  fsOn,
   screenRef,
   head,
   onRecord,
@@ -592,6 +630,9 @@ function EmberPlay({
   online: boolean
   peer: string
   progress: EmberProgress
+  // how to go fullscreen (or leave it), worded for this platform, and whether it's on
+  fsHint: string
+  fsOn: boolean
   screenRef: MutableRefObject<EmberScreen>
   head: (sub: string) => ReactNode
   onRecord: (levelId: string, score: Score) => void
@@ -802,7 +843,7 @@ function EmberPlay({
   return (
     <>
       {hud.screen === 'select' ? (
-        <>
+        <div className="ember-screen game-fs-screen">
           {head(online ? `with ${peer}` : 'same keyboard')}
           <Select
             level={hud.level}
@@ -815,17 +856,17 @@ function EmberPlay({
               game.play()
             }}
           />
-        </>
+        </div>
       ) : hud.screen === 'wait' ? (
-        <>
+        <div className="ember-screen game-fs-screen">
           {head(online ? `with ${peer}` : '')}
           <div className="ember-body">
             <p className="ember-line ember-wait">{online ? `waiting for ${peer}…` : 'getting ready…'}</p>
           </div>
-        </>
+        </div>
       ) : null}
-      <div className={`ember-game ${hud.screen === 'play' ? '' : 'ember-hidden'}`}>
-        <div className="ember-hud">
+      <div className={`ember-game game-fs-column ${hud.screen === 'play' ? '' : 'ember-hidden'}`}>
+        <div className="ember-hud game-fs-ui">
           <span className="ember-hud-level">
             <b>{hud.level + 1}</b> {def?.name ?? ''}
           </span>
@@ -842,17 +883,28 @@ function EmberPlay({
         </div>
         <div className="ember-stage">
           <canvas ref={canvasRef} className="ember-canvas" aria-label="level" />
-          {def?.hint && hud.phase === 'play' && !(online && CONTROLS_HINT.test(def.hint)) ? (
-            <div key={hud.entry} className="ember-hint">
-              {def.hint}
-            </div>
-          ) : null}
-          {hud.ouch && hud.phase === 'dead' ? <div className="ember-ouch">{hud.ouch}</div> : null}
-          {hud.phase === 'won' && hud.score && def ? <Win score={hud.score} par={def.par} last={hud.level >= LEVELS.length - 1} /> : null}
-          {hud.note ? <div className="ember-peer-note">{hud.note}</div> : null}
+          {/* everything written over the picture: one layer that grows with the hud in fullscreen. a sibling of
+              the canvas, never an ancestor, so the canvas keeps its real css pixels */}
+          <div className="ember-over game-fs-ui">
+            {def?.hint && hud.phase === 'play' && !(online && CONTROLS_HINT.test(def.hint)) ? (
+              <div key={hud.entry} className="ember-hint">
+                {def.hint}
+              </div>
+            ) : null}
+            {hud.ouch && hud.phase === 'dead' ? <div className="ember-ouch">{hud.ouch}</div> : null}
+            {hud.phase === 'won' && hud.score && def ? <Win score={hud.score} par={def.par} last={hud.level >= LEVELS.length - 1} /> : null}
+            {hud.note ? <div className="ember-peer-note">{hud.note}</div> : null}
+            {/* again as each level starts, small and out of the way */}
+            {hud.screen === 'play' ? (
+              <div key={`fs${hud.entry}`} className="ember-fs-tip game-fs-hint">
+                {fsHint}
+              </div>
+            ) : null}
+          </div>
         </div>
-        <p className="ember-note ember-keys">
-          {online ? 'WASD or arrows' : 'ember WASD · frost arrows'} · S/↓ use · R retry · M {muted ? 'unmute' : 'mute'} · esc levels
+        <p className="ember-note ember-keys game-fs-ui">
+          {online ? 'WASD or arrows' : 'ember WASD · frost arrows'} · S/↓ use · R retry · M {muted ? 'unmute' : 'mute'} · {fsHint}
+          {fsOn ? '' : ' · esc levels'}
         </p>
       </div>
     </>
