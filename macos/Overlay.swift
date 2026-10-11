@@ -189,6 +189,10 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
     // the page has something open (pong) that esc should close before the panel hides
     private var pageTakesEscape = false
+    // a game filling the display (⌃F in the page): the bar's frame from before, to go back to. nil when not
+    private var gameRestoreFrame: NSRect?
+    // over the menu bar, the Dock and the menu bar's own status items, which sit at the bar's usual level
+    private static let gameFullscreenLevel = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
     private lazy var peer: PeerLink = {
         let link = PeerLink()
         link.onEvent = { [weak self] in self?.pushPeerEvent($0) }
@@ -229,6 +233,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func hide(because why: String = "asked") {
         wantVisible = false
+        // before anything else, so the next show never finds the bar the size of the screen
+        setGameFullscreen(false, fade: false)
         guard panel?.isVisible == true else { return }
         OverlayLog.note("hide \(showCount) (\(why)) after \(seconds(uptime() - shownAt))")
         notifyWebWillHide()
@@ -351,6 +357,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if panel?.contentView === fallback, let web, webReady, !keepFallback {
             panel?.contentView = web
         }
+        setGameFullscreen(false, fade: false)
         sizeAnchorTop = 0
         applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
         position()
@@ -456,6 +463,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 handlePeer(dict)
             case "escapeLayer":
                 pageTakesEscape = dict["on"] as? Bool ?? false
+            case "gameFullscreen":
+                setGameFullscreen(dict["on"] as? Bool ?? false, fromPage: true)
             default:
                 break
             }
@@ -490,6 +499,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         OverlayLog.note("page process ended (overlay \(panel?.isVisible == true ? "up" : "hidden")), reloading")
         webReady = false
         pageTakesEscape = false
+        setGameFullscreen(false, fade: false)
         peer.close()
         triedBundle = false
         triedDevServer = false
@@ -557,6 +567,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // a fresh panel around the same page, for when the old one stops coming forward (seen after a long sleep)
     private func replacePanel(_ why: String, quiet: Bool = false) {
         guard let old = panel else { return }
+        setGameFullscreen(false, fade: false)
         if !quiet { OverlayLog.note("fresh panel (\(why))") }
         let content = old.contentView === fallback ? fallback : web
         old.ignoreResignKey = true
@@ -574,6 +585,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func rebuildAll(_ why: String) {
         guard let old = web, let oldPanel = panel else { return }
         OverlayLog.note("fresh panel and page (\(why))")
+        setGameFullscreen(false, fade: false)
         oldPanel.ignoreResignKey = true
         oldPanel.orderOut(nil)
         oldPanel.contentView = NSView()
@@ -621,6 +633,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private func environmentChanged(_ why: String, log: Bool) {
+        // the display the game covers changed shape or went away; the bar's own frame is the safe place to be
+        if log, gameRestoreFrame != nil { setGameFullscreen(false, fade: false) }
         if wantVisible {
             // shown just before the switch finished: the panel joins every space, but the switch took its focus
             if let panel, panel.isVisible, uptime() - shownAt < 2 {
@@ -860,6 +874,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             fallback = host
         }
         if let fallback, panel?.contentView !== fallback {
+            setGameFullscreen(false, fade: false)
             OverlayLog.note("showing the plain bar instead of the page")
             panel?.contentView = fallback
             applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
@@ -995,7 +1010,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private func applySize(height: CGFloat, anchorTop: CGFloat? = nil, room: OverlayRoom? = nil) {
-        guard let panel else { return }
+        // a game has the whole display; the page is asked for its size again when that ends
+        guard let panel, gameRestoreFrame == nil else { return }
         let room = room ?? sizeRoom
         let extra = room.top + room.bottom
         let h = min(max(height.rounded(.up), overlayMinHeight + extra), overlayMaxHeight + extra)
@@ -1099,7 +1115,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private func beginWindowDrag() {
-        guard let panel, let event = NSApp.currentEvent else { return }
+        guard let panel, gameRestoreFrame == nil, let event = NSApp.currentEvent else { return }
         if event.type == .leftMouseDown || event.type == .leftMouseDragged {
             dragAndRemember(panel, event)
         }
@@ -1130,6 +1146,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // esc hides immediately, unless the page said it has a layer open; then the page closes that instead,
     // and a page that doesn't answer true still gets the panel hidden
     private func escape() {
+        // out of a fullscreen game first; the next esc is the game's or the bar's as usual
+        if gameRestoreFrame != nil {
+            setGameFullscreen(false)
+            return
+        }
         guard pageTakesEscape, let web else {
             hide(because: "esc")
             return
@@ -1137,6 +1158,72 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web.evaluateJavaScript("!!(window.__qcalcEscape && window.__qcalcEscape())") { [weak self] result, _ in
             if (result as? Bool) != true { self?.hide(because: "esc") }
         }
+    }
+
+    // a game takes the whole display the bar is on, and gives it back. the frame moves in one step behind a
+    // short fade (the page needs a frame or two to lay out at the new size, and a window animating its frame
+    // would let a size report or a hide land halfway). `fromPage` is the page asking (⌃F); anything else is the
+    // shell leaving on its own (esc, the panel hiding), which the page is told so its state follows
+    private func setGameFullscreen(_ on: Bool, fromPage: Bool = false, fade: Bool = true) {
+        guard let panel else {
+            gameRestoreFrame = nil
+            return
+        }
+        if on {
+            guard gameRestoreFrame == nil else { return }
+            guard panel.isVisible, wantVisible, web != nil, panel.contentView === web,
+                  let screen = panel.screen ?? Self.screenWithPointer() else {
+                // not now (hidden, or the plain bar is up): the page mustn't think it's fullscreen
+                tellPageGameFullscreen(false)
+                return
+            }
+            gameRestoreFrame = panel.frame
+            OverlayLog.note("game fullscreen on \(NSStringFromRect(screen.frame))")
+            panel.hasShadow = false
+            panel.isMovableByWindowBackground = false
+            panel.level = Self.gameFullscreenLevel
+            moveForGame(panel, to: screen.frame, fade: fade)
+            // the level change reorders the window; it stays the key one, with the page taking the keys
+            panel.makeKeyAndOrderFront(nil)
+            panel.makeFirstResponder(web)
+            return
+        }
+        guard let frame = gameRestoreFrame else { return }
+        gameRestoreFrame = nil
+        OverlayLog.note("game fullscreen off")
+        panel.level = .statusBar
+        panel.isMovableByWindowBackground = true
+        moveForGame(panel, to: frame, fade: fade && panel.isVisible)
+        if sizeRoom == .closed {
+            panel.hasShadow = true
+            panel.invalidateShadow()
+        }
+        if !fromPage { tellPageGameFullscreen(false) }
+        // size reports were ignored meanwhile, so ask for the current one
+        web?.evaluateJavaScript("if (window.__qcalcSize) window.__qcalcSize();")
+    }
+
+    private func moveForGame(_ panel: OverlayPanel, to frame: NSRect, fade: Bool) {
+        guard fade, panel.isVisible, panel.alphaValue == 1, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            panel.setFrame(frame, display: true)
+            return
+        }
+        panel.alphaValue = 0
+        panel.setFrame(frame, display: true)
+        // a hide in the meantime sets the alpha back itself, and a show starts its own reveal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak panel] in
+            guard let self, let panel, panel === self.panel, panel.isVisible, self.wantVisible,
+                  self.revealedShow == self.showCount else { return }
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.16
+                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                panel.animator().alphaValue = 1
+            }
+        }
+    }
+
+    private func tellPageGameFullscreen(_ on: Bool) {
+        web?.evaluateJavaScript("if (window.__qcalcGameFullscreen) window.__qcalcGameFullscreen(\(on));")
     }
 
     private func handlePeer(_ dict: [String: Any]) {
@@ -1171,7 +1258,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func installDragMonitor() {
         guard dragMonitor == nil else { return }
         dragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            guard let self, let panel = self.panel, panel.isVisible, event.window === panel, !self.overControl else {
+            // nothing to move or widen while a game covers the display
+            guard let self, let panel = self.panel, panel.isVisible, event.window === panel, !self.overControl,
+                  self.gameRestoreFrame == nil else {
                 return event
             }
             let p = event.locationInWindow
