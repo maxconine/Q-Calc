@@ -1,8 +1,12 @@
 import {
   AIR_ACCEL,
   BOX_SIZE,
-  COLS,
+  CANNON_POWER,
+  CH_LIT,
+  CHECKPOINT_ZONE_H,
+  CHECKPOINT_ZONE_W,
   COYOTE_TICKS,
+  CRUMBLE_TICKS,
   DEATH_TICKS,
   FAN_ACCEL,
   FAN_MAX_UP,
@@ -16,28 +20,37 @@ import {
   IN_UP,
   JUMP_BUFFER_TICKS,
   JUMP_V,
+  MAX_COLS,
   MAX_FALL,
+  MAX_ROWS,
+  MAX_STAGES,
   MELT_TICKS,
+  MIN_COLS,
+  MIN_ROWS,
   MOVER_SPEED,
   PLAYER_H,
   PLAYER_W,
   POOL_SINK,
   PORTAL_COOLDOWN_TICKS,
   PUSH_SPEED,
-  ROWS,
   RUN_ACCEL,
   RUN_SPEED,
+  STAGE_TICKS,
   STEP_HZ,
   STEP_S,
+  T_CRUMBLE,
+  T_DARK,
   T_EMPTY,
   T_GOO,
   T_LAVA,
+  T_LIGHT,
+  T_ONEWAY,
   T_THIN,
+  T_TRAMP,
   T_WALL,
   T_WATER,
   TILE,
-  WORLD_H,
-  WORLD_W,
+  type Aim,
   type Beam,
   type Cond,
   type DeathCause,
@@ -52,6 +65,9 @@ import {
   type Rect,
   type Score,
   type Slant,
+  type Snapshot,
+  type Stage,
+  type StageDef,
   type Tile,
 } from './emberTypes'
 
@@ -59,7 +75,8 @@ import {
 // Sets or object keys whose order could differ. online play reruns it on both computers, so the same
 // (level, state, inputs) must give a bit-identical state everywhere.
 //
-// one play tick, in order:
+// a level is a list of stages; the state says which one is being played (s.stage) and every per-thing array in
+// it indexes that stage. one play tick, in order:
 //   1. clocks: tick, phaseT, portal cooldowns
 //   2. interact: a down-key press flips a lever the player overlaps, else turns a mirror it overlaps
 //   3. channels: plates (alive players and boxes overlapping them, as of the end of the last tick), levers,
@@ -69,7 +86,13 @@ import {
 //   5. thin water freezes around frost (or counts down to a thaw); ice melts under fire's touch
 //   6. boxes: gravity and fans
 //   7. players: run, jump, gravity and fans, then move x (pushing boxes) and y, axis by axis
-//   8. pools kill, gems, portals, doors, and the win
+//   8. pools kill, gems, portals, doors
+//   9. checkpoints, then the phase: a death ('dead'), a finished stage ('clear') or the win ('won')
+// outside 'play': 'dead' counts DEATH_TICKS then respawns at the last checkpoint; 'clear' counts STAGE_TICKS
+// then begins the next stage; 'won' only counts.
+//
+// ember 2 status: variable map sizes, stages, respawning and checkpoints work. every other new mechanic is
+// compiled into the Stage and carried in the state but does nothing yet: search TODO(ember-2:engine)
 
 const EPS = 0.01 // overlaps thinner than this don't count, so rounded network states don't wedge things
 const RIDE = 0.5 // a body whose feet are within this of a solid's top rides it
@@ -87,15 +110,25 @@ const TILE_CHARS: Record<string, Tile> = {
   W: T_WATER,
   G: T_GOO,
   w: T_THIN,
+  T: T_TRAMP,
+  '=': T_ONEWAY,
+  '~': T_CRUMBLE,
+  O: T_LIGHT,
+  D: T_DARK,
   '1': T_EMPTY,
   '2': T_EMPTY,
   r: T_EMPTY,
   b: T_EMPTY,
   R: T_EMPTY,
   B: T_EMPTY,
+  '^': T_EMPTY,
+  k: T_EMPTY,
+  C: T_EMPTY,
 }
 
 const DIRS: Record<Dir, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }
+const D = Math.SQRT1_2
+const AIMS: Record<Aim, [number, number]> = { ...DIRS, upleft: [-D, -D], upright: [D, -D], downleft: [-D, D], downright: [D, D] }
 
 const overlaps = (a: Rect, b: Rect) => a.x < b.x + b.w - EPS && b.x < a.x + a.w - EPS && a.y < b.y + b.h - EPS && b.y < a.y + a.h - EPS
 const inRect = (r: Rect, x: number, y: number) => x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h
@@ -105,13 +138,20 @@ const boxRect = (b: { x: number; y: number }): Rect => ({ x: b.x, y: b.y, w: BOX
 
 // ---- compiling
 
-// every map problem, as lines. compileLevel throws on the first of these
-function mapProblems(def: LevelDef): string[] {
+const mapCols = (def: StageDef) => def.map?.[0]?.length ?? 0
+const mapRows = (def: StageDef) => def.map?.length ?? 0
+
+// every map problem of one stage, as lines. compileLevel throws on the first of these
+function mapProblems(def: StageDef): string[] {
   const out: string[] = []
-  if (!Array.isArray(def.map) || def.map.length !== ROWS) out.push(`map has ${def.map?.length ?? 0} rows, needs ${ROWS}`)
+  if (!Array.isArray(def.map)) return ['map is not a list of rows']
+  const cols = mapCols(def)
+  const rows = mapRows(def)
+  if (rows < MIN_ROWS || rows > MAX_ROWS) out.push(`map has ${rows} rows, needs ${MIN_ROWS} to ${MAX_ROWS}`)
+  if (cols < MIN_COLS || cols > MAX_COLS) out.push(`map is ${cols} wide, needs ${MIN_COLS} to ${MAX_COLS}`)
   const counts: Record<string, number> = { '1': 0, '2': 0, R: 0, B: 0 }
-  ;(def.map ?? []).forEach((row, ty) => {
-    if (row.length !== COLS) out.push(`row ${ty} has ${row.length} chars, needs ${COLS}`)
+  def.map.forEach((row, ty) => {
+    if (row.length !== cols) out.push(`row ${ty} has ${row.length} chars, needs ${cols} like row 0`)
     for (let tx = 0; tx < row.length; tx++) {
       const c = row[tx]!
       if (!(c in TILE_CHARS)) out.push(`unknown char '${c}' at (${tx}, ${ty})`)
@@ -127,8 +167,14 @@ function mapProblems(def: LevelDef): string[] {
   return out
 }
 
+type Thing = StageDef['things'][number]
+
+// a checkpoint's zone in tiles: its own, or the default around the flag
+const zoneOf = (t: Extract<Thing, { k: 'checkpoint' }> | { x: number; y: number; zone?: undefined }): Rect =>
+  t.zone ?? { x: t.x - (CHECKPOINT_ZONE_W - 1) / 2, y: t.y - CHECKPOINT_ZONE_H + 1, w: CHECKPOINT_ZONE_W, h: CHECKPOINT_ZONE_H }
+
 // tile rects each thing covers, for bounds checks
-function thingBounds(t: LevelDef['things'][number]): Rect[] {
+function thingBounds(t: Thing): Rect[] {
   switch (t.k) {
     case 'plate':
       return [{ x: t.x, y: t.y, w: t.w ?? 2, h: 1 }]
@@ -136,6 +182,8 @@ function thingBounds(t: LevelDef['things'][number]): Rect[] {
       return [{ x: t.x, y: t.y, w: t.w ?? 1, h: 1 }]
     case 'gate':
     case 'ice':
+    case 'lock':
+    case 'dark':
       return [{ x: t.x, y: t.y, w: t.w, h: t.h }]
     case 'mover':
       return [
@@ -146,6 +194,8 @@ function thingBounds(t: LevelDef['things'][number]): Rect[] {
       return [{ x: t.x, y: t.y - t.h + 1, w: t.w, h: t.h }]
     case 'portal':
       return [{ x: t.x, y: t.y - 1, w: 1, h: 2 }]
+    case 'checkpoint':
+      return [{ x: t.x, y: t.y, w: 1, h: 1 }, ...(t.zone ? [t.zone] : [])]
     default:
       return [{ x: t.x, y: t.y, w: 1, h: 1 }]
   }
@@ -156,60 +206,87 @@ function condChannels(c: Cond | undefined): string[] {
   return (Array.isArray(c) ? c : [c]).map((n) => (n.startsWith('!') ? n.slice(1) : n))
 }
 
-function thingProblems(def: LevelDef): string[] {
+function thingProblems(def: StageDef): string[] {
   const out: string[] = []
-  const driven = new Set<string>()
+  const cols = mapCols(def)
+  const rows = mapRows(def)
+  // the lights drive their own channel
+  const driven = new Set<string>([CH_LIT])
   const pairs: Record<string, number> = {}
   def.things.forEach((t, i) => {
     for (const b of thingBounds(t)) {
-      const ok = [b.x, b.y, b.w, b.h].every(Number.isFinite) && b.w > 0 && b.h > 0 && b.x >= 0 && b.y >= 0 && b.x + b.w <= COLS && b.y + b.h <= ROWS
+      const ok = [b.x, b.y, b.w, b.h].every(Number.isFinite) && b.w > 0 && b.h > 0 && b.x >= 0 && b.y >= 0 && b.x + b.w <= cols && b.y + b.h <= rows
       if (!ok) out.push(`thing ${i} (${t.k}) at (${t.x}, ${t.y}) is out of bounds`)
     }
-    if (t.k === 'plate' || t.k === 'lever' || t.k === 'button' || t.k === 'sensor') driven.add(t.ch)
+    if (t.k === 'plate' || t.k === 'lever' || t.k === 'button' || t.k === 'sensor') {
+      if (t.ch === CH_LIT) out.push(`thing ${i} (${t.k}) can't drive '${CH_LIT}': that channel is the lights`)
+      driven.add(t.ch)
+    }
     if (t.k === 'portal') pairs[t.pair] = (pairs[t.pair] ?? 0) + 1
     if (t.k === 'button' && !(t.secs > 0)) out.push(`thing ${i} (button) needs secs > 0`)
+    if (t.k === 'lamp' && t.secs !== undefined && !(t.secs > 0)) out.push(`thing ${i} (lamp) needs secs > 0, or none`)
+    if (t.k === 'cannon' && !(t.aim in AIMS)) out.push(`thing ${i} (cannon) has no aim '${String(t.aim)}'`)
+    if (t.k === 'cannon' && t.power !== undefined && !(t.power > 0 && t.power <= 60)) out.push(`thing ${i} (cannon) needs power in 1..60 tiles/s`)
   })
   for (const pair of Object.keys(pairs).sort()) if (pairs[pair] !== 2) out.push(`portal pair '${pair}' has ${pairs[pair]} portals, needs exactly 2`)
   def.things.forEach((t, i) => {
-    const c = t.k === 'gate' ? t.open : t.k === 'mover' || t.k === 'fan' || t.k === 'emitter' ? t.when : undefined
+    const c = t.k === 'gate' ? t.open : t.k === 'mover' || t.k === 'fan' || t.k === 'emitter' ? t.when : t.k === 'cannon' ? t.fire : undefined
     for (const ch of condChannels(c)) if (!driven.has(ch)) out.push(`thing ${i} (${t.k}) listens to channel '${ch}' that no plate, lever, button or sensor drives`)
   })
+  // a key with nowhere to go, or a lock nothing opens, is a mistake
+  const keys = def.map.reduce((n, row) => n + [...row].filter((c) => c === 'k').length, 0)
+  const locks = def.things.filter((t) => t.k === 'lock').length
+  if (keys !== locks) out.push(`${keys} keys for ${locks} locks: every lock needs its own key`)
   return out
 }
 
-// everything wrong with a level definition, as readable lines; [] when it compiles cleanly
-export function validateLevel(def: LevelDef): string[] {
+function stageProblems(def: StageDef): string[] {
+  if (!def || typeof def !== 'object') return ['stage is not an object']
   const m = mapProblems(def)
   return [...m, ...(Array.isArray(def.things) ? thingProblems(def) : ['things is not a list'])]
 }
 
-// turns a LevelDef into px geometry. throws on a malformed map (wrong size, missing spawn or door, unknown char),
-// a portal without exactly one partner, or a thing out of bounds. channels nobody drives don't throw (validateLevel reports them)
+// everything wrong with a level definition, as readable lines; [] when it compiles cleanly.
+// lines about a stage of a multi-stage level start 'stage N: ' (N from 1)
+export function validateLevel(def: LevelDef): string[] {
+  if (!Array.isArray(def.stages) || def.stages.length < 1 || def.stages.length > MAX_STAGES) return [`a level needs 1 to ${MAX_STAGES} stages`]
+  const many = def.stages.length > 1
+  return def.stages.flatMap((st, i) => stageProblems(st).map((p) => (many ? `stage ${i + 1}: ${p}` : p)))
+}
+
+// turns a LevelDef into px geometry. throws on a malformed map (wrong size, missing spawn or door,
+// unknown char), a portal without exactly one partner, or a thing out of bounds. channels nobody drives don't
+// throw (validateLevel reports them)
 export function compileLevel(def: LevelDef): Level {
-  const problems = [...mapProblems(def), ...thingProblems(def).filter((p) => !p.includes('listens to channel'))]
+  const problems = validateLevel(def).filter((p) => !p.includes('listens to channel'))
   if (problems.length) throw new Error(`level '${def.id}': ${problems.join('; ')}`)
+  const stages = def.stages.map(compileStage)
+  const gemTotals: [number, number] = [0, 0]
+  for (const st of stages) for (const g of st.gems) gemTotals[g.el === 'fire' ? 0 : 1]++
+  return { def, stages, gemTotals }
+}
+
+function compileStage(def: StageDef, index: number): Stage {
+  const cols = mapCols(def)
+  const rows = mapRows(def)
   const tiles: Tile[] = []
   const spawns: Array<{ x: number; y: number }> = []
   const doors: Rect[] = []
-  const gems: Level['gems'] = []
-  const thin: number[] = []
-  def.map.forEach((row, ty) => {
-    for (let tx = 0; tx < COLS; tx++) {
-      const c = row[tx]!
-      const t = TILE_CHARS[c]!
-      tiles.push(t)
-      if (t === T_THIN) thin.push(ty * COLS + tx)
-      if (c === '1' || c === '2') spawns[Number(c) - 1] = { x: tx * TILE + (TILE - PLAYER_W) / 2, y: (ty + 1) * TILE - PLAYER_H }
-      if (c === 'R' || c === 'B') doors[c === 'R' ? 0 : 1] = { x: tx * TILE, y: (ty - 1) * TILE, w: TILE, h: 2 * TILE }
-      if (c === 'r' || c === 'b') gems.push({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, el: c === 'r' ? 'fire' : 'frost' })
-    }
-  })
-  const L: Level = {
+  const centre = (tx: number, ty: number) => ({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 })
+  const px = (r: Rect): Rect => ({ x: r.x * TILE, y: r.y * TILE, w: r.w * TILE, h: r.h * TILE })
+  const flag = (t: { x: number; y: number; zone?: Rect }) => ({ x: t.x * TILE + TILE / 2, y: (t.y + 1) * TILE, zone: px(zoneOf(t as Extract<Thing, { k: 'checkpoint' }>)) })
+  const L: Stage = {
+    index,
     def,
+    cols,
+    rows,
+    w: cols * TILE,
+    h: rows * TILE,
     tiles,
-    spawns: spawns as Level['spawns'],
-    doors: doors as Level['doors'],
-    gems,
+    dark: !!def.dark,
+    spawns: spawns as Stage['spawns'],
+    doors: doors as Stage['doors'],
+    gems: [],
     plates: [],
     levers: [],
     buttons: [],
@@ -223,33 +300,51 @@ export function compileLevel(def: LevelDef): Level {
     sensors: [],
     portals: [],
     signs: [],
-    thin,
+    thin: [],
+    crumble: [],
+    checkpoints: [],
+    lamps: [],
+    gswitches: [],
+    arrows: [],
+    keys: [],
+    locks: [],
+    cannons: [],
+    darks: [],
   }
+  def.map.forEach((row, ty) => {
+    for (let tx = 0; tx < cols; tx++) {
+      const c = row[tx]!
+      const t = TILE_CHARS[c]!
+      tiles.push(t)
+      if (t === T_THIN) L.thin.push(ty * cols + tx)
+      if (t === T_CRUMBLE) L.crumble.push(ty * cols + tx)
+      if (c === '1' || c === '2') spawns[Number(c) - 1] = { x: tx * TILE + (TILE - PLAYER_W) / 2, y: (ty + 1) * TILE - PLAYER_H }
+      if (c === 'R' || c === 'B') doors[c === 'R' ? 0 : 1] = { x: tx * TILE, y: (ty - 1) * TILE, w: TILE, h: 2 * TILE }
+      if (c === 'r' || c === 'b') L.gems.push({ ...centre(tx, ty), el: c === 'r' ? 'fire' : 'frost' })
+      if (c === '^') L.arrows.push(centre(tx, ty))
+      if (c === 'k') L.keys.push(centre(tx, ty))
+      if (c === 'C') L.checkpoints.push(flag({ x: tx, y: ty }))
+    }
+  })
   const portalPairs: string[] = []
-  const centre = (tx: number, ty: number) => ({ x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 })
+  // a plate's or button's strip: the bottom of its row, or the top when it's on the ceiling
+  const strip = (t: { x: number; y: number; ceil?: boolean }, w: number): Rect => ({ x: t.x * TILE, y: t.ceil ? t.y * TILE : (t.y + 1) * TILE - PLATE_H, w: w * TILE, h: PLATE_H })
   for (const t of def.things) {
     switch (t.k) {
       case 'plate':
-        L.plates.push({ x: t.x * TILE, y: (t.y + 1) * TILE - PLATE_H, w: (t.w ?? 2) * TILE, h: PLATE_H, ch: t.ch })
+        L.plates.push({ ...strip(t, t.w ?? 2), ch: t.ch, ceil: !!t.ceil })
         break
       case 'button':
-        L.buttons.push({ x: t.x * TILE, y: (t.y + 1) * TILE - PLATE_H, w: (t.w ?? 1) * TILE, h: PLATE_H, ch: t.ch, ticks: Math.max(1, Math.round(t.secs * STEP_HZ)) })
+        L.buttons.push({ ...strip(t, t.w ?? 1), ch: t.ch, ticks: Math.max(1, Math.round(t.secs * STEP_HZ)), ceil: !!t.ceil })
         break
       case 'lever':
         L.levers.push({ ...tileRect(t.x, t.y), ch: t.ch, on: !!t.on })
         break
       case 'gate':
-        L.gates.push({ x: t.x * TILE, y: t.y * TILE, w: t.w * TILE, h: t.h * TILE, open: t.open, dir: t.dir ?? 'up' })
+        L.gates.push({ ...px(t), open: t.open, dir: t.dir ?? 'up' })
         break
       case 'mover': {
-        const m: Level['movers'][number] = {
-          x: t.x * TILE,
-          y: t.y * TILE,
-          w: t.w * TILE,
-          h: t.h * TILE,
-          to: { x: t.to.x * TILE, y: t.to.y * TILE },
-          speed: (t.speed ?? MOVER_SPEED) * TILE,
-        }
+        const m: Stage['movers'][number] = { ...px(t), to: { x: t.to.x * TILE, y: t.to.y * TILE }, speed: (t.speed ?? MOVER_SPEED) * TILE }
         if (t.when !== undefined) m.when = t.when
         L.movers.push(m)
         break
@@ -258,16 +353,16 @@ export function compileLevel(def: LevelDef): Level {
         L.boxes.push({ x: t.x * TILE, y: t.y * TILE })
         break
       case 'fan': {
-        const f: Level['fans'][number] = { x: t.x * TILE, y: (t.y - t.h + 1) * TILE, w: t.w * TILE, h: t.h * TILE }
+        const f: Stage['fans'][number] = { x: t.x * TILE, y: (t.y - t.h + 1) * TILE, w: t.w * TILE, h: t.h * TILE }
         if (t.when !== undefined) f.when = t.when
         L.fans.push(f)
         break
       }
       case 'ice':
-        L.ice.push({ x: t.x * TILE, y: t.y * TILE, w: t.w * TILE, h: t.h * TILE })
+        L.ice.push(px(t))
         break
       case 'emitter': {
-        const e: Level['emitters'][number] = { ...centre(t.x, t.y), dir: t.dir }
+        const e: Stage['emitters'][number] = { ...centre(t.x, t.y), dir: t.dir }
         if (t.when !== undefined) e.when = t.when
         L.emitters.push(e)
         break
@@ -285,30 +380,56 @@ export function compileLevel(def: LevelDef): Level {
       case 'sign':
         L.signs.push({ ...centre(t.x, t.y), text: t.text })
         break
+      case 'checkpoint':
+        L.checkpoints.push(flag(t))
+        break
+      case 'lamp':
+        L.lamps.push({ ...tileRect(t.x, t.y), ticks: t.secs === undefined ? 0 : Math.max(1, Math.round(t.secs * STEP_HZ)) })
+        break
+      case 'gswitch':
+        L.gswitches.push({ ...tileRect(t.x, t.y), who: t.who ?? 'self' })
+        break
+      case 'lock':
+        L.locks.push(px(t))
+        break
+      case 'cannon': {
+        const v = (t.power ?? CANNON_POWER) * TILE
+        const c: Stage['cannons'][number] = { ...centre(t.x, t.y), aim: t.aim, vx: AIMS[t.aim][0] * v, vy: AIMS[t.aim][1] * v }
+        if (t.fire !== undefined) c.fire = t.fire
+        L.cannons.push(c)
+        break
+      }
+      case 'dark':
+        L.darks.push(px(t))
+        break
     }
   }
   L.portals.forEach((p, i) => (p.other = portalPairs.findIndex((q, j) => j !== i && q === p.pair)))
   return L
 }
 
-// ---- lookups cached per compiled level (pure functions of the level, so caching can't change results)
+// ---- lookups cached per compiled stage (pure functions of the stage, so caching can't change results)
 
-type Lookup = { mirrorAt: Map<number, number>; sensorAt: Map<number, number>; thinAt: Map<number, number> }
-const lookups = new WeakMap<Level, Lookup>()
-function lookup(level: Level): Lookup {
-  let l = lookups.get(level)
+type Lookup = { mirrorAt: Map<number, number>; sensorAt: Map<number, number>; thinAt: Map<number, number>; crumbleAt: Map<number, number> }
+const lookups = new WeakMap<Stage, Lookup>()
+function lookup(stage: Stage): Lookup {
+  let l = lookups.get(stage)
   if (!l) {
-    const at = (x: number, y: number) => Math.floor(y / TILE) * COLS + Math.floor(x / TILE)
-    l = { mirrorAt: new Map(), sensorAt: new Map(), thinAt: new Map() }
-    level.mirrors.forEach((m, i) => l!.mirrorAt.set(at(m.x, m.y), i))
-    level.sensors.forEach((m, i) => l!.sensorAt.set(at(m.x, m.y), i))
-    level.thin.forEach((t, i) => l!.thinAt.set(t, i))
-    lookups.set(level, l)
+    const at = (x: number, y: number) => Math.floor(y / TILE) * stage.cols + Math.floor(x / TILE)
+    l = { mirrorAt: new Map(), sensorAt: new Map(), thinAt: new Map(), crumbleAt: new Map() }
+    stage.mirrors.forEach((m, i) => l!.mirrorAt.set(at(m.x, m.y), i))
+    stage.sensors.forEach((m, i) => l!.sensorAt.set(at(m.x, m.y), i))
+    stage.thin.forEach((t, i) => l!.thinAt.set(t, i))
+    stage.crumble.forEach((t, i) => l!.crumbleAt.set(t, i))
+    lookups.set(stage, l)
   }
   return l
 }
 
 // ---- state
+
+// what goes in GameState.on: every channel that's on but the lights' own, which `lit` already says
+const listOn = (on: Set<string>) => [...on].filter((c) => c !== CH_LIT).sort()
 
 function evalCond(c: Cond | undefined, on: Set<string>): boolean {
   if (c === undefined) return true
@@ -316,54 +437,100 @@ function evalCond(c: Cond | undefined, on: Set<string>): boolean {
   return Array.isArray(c) ? c.every(one) : one(c)
 }
 
-function newPlayer(level: Level, i: PlayerIndex): Player {
-  const sp = level.spawns[i]
-  return { x: sp.x, y: sp.y, vx: 0, vy: 0, ground: true, face: 1, alive: true, inDoor: false, coyote: 0, buffer: 0, prevIn: 0, portalCd: 0, gems: 0 }
+function newPlayer(stage: Stage, i: PlayerIndex): Player {
+  const sp = stage.spawns[i]
+  return {
+    x: sp.x,
+    y: sp.y,
+    vx: 0,
+    vy: 0,
+    ground: true,
+    face: 1,
+    alive: true,
+    inDoor: false,
+    coyote: 0,
+    buffer: 0,
+    prevIn: 0,
+    portalCd: 0,
+    gems: 0,
+    grav: 1,
+    air: 0,
+    cannon: -1,
+    fly: 0,
+    cannonCd: 0,
+  }
 }
 
-const moverPos = (m: Level['movers'][number], t: number) => ({ x: m.x + (m.to.x - m.x) * t, y: m.y + (m.to.y - m.y) * t })
+const moverPos = (m: Stage['movers'][number], t: number) => ({ x: m.x + (m.to.x - m.x) * t, y: m.y + (m.to.y - m.y) * t })
 
-// a fresh attempt at a level. deaths carries the death count across restarts.
+// the stage the state is in
+export function stageOf(level: Level, s: { stage: number }): Stage {
+  return level.stages[Math.min(level.stages.length - 1, Math.max(0, s.stage | 0))]!
+}
+
+// the beginning of stage `index`. `from` carries the clock, the deaths and the gems banked so far (a fresh level
+// when absent). gravity, keys and lights never carry over from one stage to the next.
 // gates and when-driven movers start where their conditions put them, so a '!plate' gate starts open
-export function initState(level: Level, deaths = 0): GameState {
+export function startStage(level: Level, index: number, from?: { tick: number; deaths: number; banked: [number, number] }): GameState {
+  const stage = level.stages[index]!
   const s: GameState = {
-    tick: 0,
+    tick: from?.tick ?? 0,
     phase: 'play',
     phaseT: 0,
-    deaths,
-    players: [newPlayer(level, 0), newPlayer(level, 1)],
-    taken: level.gems.map(() => false),
-    levers: level.levers.map((l) => l.on),
-    buttons: level.buttons.map(() => 0),
-    gates: level.gates.map(() => 0),
-    movers: level.movers.map((m) => ({ x: m.x, y: m.y, t: 0, dir: 1 as const })),
-    boxes: level.boxes.map((b) => ({ x: b.x, y: b.y, vx: 0, vy: 0 })),
-    ice: level.ice.map(() => 0),
-    thin: level.thin.map(() => 0),
-    mirrors: level.mirrors.map((m) => m.slant),
+    deaths: from?.deaths ?? 0,
+    stage: index,
+    banked: from ? [from.banked[0], from.banked[1]] : [0, 0],
+    players: [newPlayer(stage, 0), newPlayer(stage, 1)],
+    taken: stage.gems.map(() => false),
+    levers: stage.levers.map((l) => l.on),
+    buttons: stage.buttons.map(() => 0),
+    gates: stage.gates.map(() => 0),
+    movers: stage.movers.map((m) => ({ x: m.x, y: m.y, t: 0, dir: 1 as const })),
+    boxes: stage.boxes.map((b) => ({ x: b.x, y: b.y, vx: 0, vy: 0 })),
+    ice: stage.ice.map(() => 0),
+    thin: stage.thin.map(() => 0),
+    mirrors: stage.mirrors.map((m) => m.slant),
+    lit: !stage.dark,
+    litT: 0,
+    arrows: stage.arrows.map(() => 0),
+    crumble: stage.crumble.map(() => 0),
+    keys: 0,
+    keyTaken: stage.keys.map(() => false),
+    locks: stage.locks.map(() => false),
+    cannons: stage.cannons.map(() => 0),
+    cp: -1,
+    saved: null,
     on: [],
     events: [],
-    plates: level.plates.map(() => false),
-    sensors: level.sensors.map(() => false),
+    plates: stage.plates.map(() => false),
+    sensors: stage.sensors.map(() => false),
   }
-  const on = channels(level, s, null)
-  level.gates.forEach((g, i) => (s.gates[i] = evalCond(g.open, on) ? 1 : 0))
-  level.movers.forEach((m, i) => {
+  const on = channels(stage, s, null)
+  stage.gates.forEach((g, i) => (s.gates[i] = evalCond(g.open, on) ? 1 : 0))
+  stage.movers.forEach((m, i) => {
     if (m.when === undefined || !evalCond(m.when, on)) return
     s.movers[i] = { ...moverPos(m, 1), t: 1, dir: 1 }
   })
   // sensors may see differently once gates are open
-  s.on = [...channels(level, s, null)].sort()
+  s.on = listOn(channels(stage, s, null))
   s.events = []
   return s
 }
 
-function clone(s: GameState): GameState {
+// a fresh go at a level, from its first stage with the clock at zero
+export function initState(level: Level, deaths = 0): GameState {
+  return startStage(level, 0, { tick: 0, deaths, banked: [0, 0] })
+}
+
+// a copy to step on. `saved` is shared, never copied: nothing mutates a snapshot
+function clone(s: GameState | Snapshot): GameState {
   return {
     tick: s.tick,
     phase: s.phase,
     phaseT: s.phaseT,
     deaths: s.deaths,
+    stage: s.stage,
+    banked: [s.banked[0], s.banked[1]],
     players: [{ ...s.players[0] }, { ...s.players[1] }],
     taken: s.taken.slice(),
     levers: s.levers.slice(),
@@ -374,6 +541,16 @@ function clone(s: GameState): GameState {
     ice: s.ice.slice(),
     thin: s.thin.slice(),
     mirrors: s.mirrors.slice(),
+    lit: s.lit,
+    litT: s.litT,
+    arrows: s.arrows.slice(),
+    crumble: s.crumble.slice(),
+    keys: s.keys,
+    keyTaken: s.keyTaken.slice(),
+    locks: s.locks.slice(),
+    cannons: s.cannons.slice(),
+    cp: s.cp,
+    saved: 'saved' in s ? (s.saved ?? null) : null,
     on: s.on.slice(),
     events: [],
     ...(s.plates ? { plates: s.plates.slice() } : {}),
@@ -381,28 +558,56 @@ function clone(s: GameState): GameState {
   }
 }
 
+// both players back at the last checkpoint taken in this stage (or the stage's start), the world as it was
+// then. the clock keeps the time of death and the death counts. what a death does after DEATH_TICKS, and what
+// the retry key does at once
+export function respawn(level: Level, s: GameState): GameState {
+  const at = { tick: s.tick, deaths: s.deaths + 1, banked: s.banked }
+  let n: GameState
+  if (s.saved) {
+    n = clone(s.saved)
+    n.saved = s.saved
+    n.tick = at.tick
+    n.deaths = at.deaths
+    n.phase = 'play'
+    n.phaseT = 0
+    // a key still held from before the death is not a fresh press
+    for (const p of n.players) p.prevIn = IN_LEFT | IN_RIGHT | IN_UP | IN_DOWN
+  } else n = startStage(level, s.stage, at)
+  n.events = [{ k: 'respawn', cp: n.cp }]
+  return n
+}
+
 // ---- geometry
 
-// the tile at (tx, ty) as it currently behaves: outside the map is T_WALL; a frozen thin tile reads as T_WALL
-export function tileAt(level: Level, s: GameState, tx: number, ty: number): Tile {
-  if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return T_WALL
-  const t = level.tiles[ty * COLS + tx]!
+// the tile at (tx, ty) as it currently behaves: outside the map is T_WALL; a frozen thin tile reads as T_WALL;
+// a light-only or dark-only block reads as T_WALL when it's there and T_EMPTY when it isn't; a crumbling block
+// that has fallen away reads as T_EMPTY. trampolines, one-ways and whole crumbling blocks read as themselves
+export function tileAt(stage: Stage, s: GameState, tx: number, ty: number): Tile {
+  if (tx < 0 || ty < 0 || tx >= stage.cols || ty >= stage.rows) return T_WALL
+  const t = stage.tiles[ty * stage.cols + tx]!
   if (t === T_THIN) {
-    const i = lookup(level).thinAt.get(ty * COLS + tx)
+    const i = lookup(stage).thinAt.get(ty * stage.cols + tx)
     if (i !== undefined && (s.thin[i] ?? 0) > 0) return T_WALL
+  }
+  if (t === T_LIGHT) return s.lit ? T_WALL : T_EMPTY
+  if (t === T_DARK) return s.lit ? T_EMPTY : T_WALL
+  if (t === T_CRUMBLE) {
+    const i = lookup(stage).crumbleAt.get(ty * stage.cols + tx)
+    if (i !== undefined && (s.crumble[i] ?? 0) > CRUMBLE_TICKS) return T_EMPTY
   }
   return t
 }
 
 // current gate rect (after sliding) for drawing and collision
-export function gateRect(level: Level, s: GameState, i: number): { x: number; y: number; w: number; h: number } {
-  const g = level.gates[i]!
+export function gateRect(stage: Stage, s: GameState, i: number): { x: number; y: number; w: number; h: number } {
+  const g = stage.gates[i]!
   const f = s.gates[i] ?? 0
   const [dx, dy] = DIRS[g.dir]
   return { x: g.x + dx * f * g.w, y: g.y + dy * f * g.h, w: g.w, h: g.h }
 }
 
-const moverRect = (level: Level, s: GameState, i: number): Rect => ({ x: s.movers[i]!.x, y: s.movers[i]!.y, w: level.movers[i]!.w, h: level.movers[i]!.h })
+const moverRect = (stage: Stage, s: GameState, i: number): Rect => ({ x: s.movers[i]!.x, y: s.movers[i]!.y, w: stage.movers[i]!.w, h: stage.movers[i]!.h })
 
 // body ids: players 0 and 1, boxes 2 + i. solid ids: gates 1000 + i, movers 2000 + i
 const BOX0 = 2
@@ -418,35 +623,39 @@ const hits: Hit[] = []
 
 // fills `hits` with every solid overlapping r. `self` is the body asking (skipped). players are solid only to boxes
 // (players never collide with each other). `skip` lists more ids to ignore (a gate or mover moving its riders, the riders)
-function collide(level: Level, s: GameState, r: Rect, self: number, skip?: number[]): number {
+function collide(stage: Stage, s: GameState, r: Rect, self: number, skip?: number[]): number {
   hits.length = 0
   const x0 = Math.max(0, Math.floor((r.x + EPS) / TILE))
-  const x1 = Math.min(COLS - 1, Math.floor((r.x + r.w - EPS) / TILE))
+  const x1 = Math.min(stage.cols - 1, Math.floor((r.x + r.w - EPS) / TILE))
   const y0 = Math.max(0, Math.floor((r.y + EPS) / TILE))
-  const y1 = Math.min(ROWS - 1, Math.floor((r.y + r.h - EPS) / TILE))
+  const y1 = Math.min(stage.rows - 1, Math.floor((r.y + r.h - EPS) / TILE))
   // the world's edge is a wall
   if (r.x < -EPS) hits.push({ x: -TILE, y: r.y, w: TILE, h: r.h, id: -1 })
-  if (r.x + r.w > WORLD_W + EPS) hits.push({ x: WORLD_W, y: r.y, w: TILE, h: r.h, id: -1 })
+  if (r.x + r.w > stage.w + EPS) hits.push({ x: stage.w, y: r.y, w: TILE, h: r.h, id: -1 })
   if (r.y < -EPS) hits.push({ x: r.x, y: -TILE, w: r.w, h: TILE, id: -1 })
-  if (r.y + r.h > WORLD_H + EPS) hits.push({ x: r.x, y: WORLD_H, w: r.w, h: TILE, id: -1 })
+  if (r.y + r.h > stage.h + EPS) hits.push({ x: r.x, y: stage.h, w: r.w, h: TILE, id: -1 })
   for (let ty = y0; ty <= y1; ty++) {
     for (let tx = x0; tx <= x1; tx++) {
-      const t = tileAt(level, s, tx, ty)
-      if (t === T_EMPTY) continue
-      const sink = t === T_WALL ? 0 : POOL_SINK
+      const t = tileAt(stage, s, tx, ty)
+      // TODO(ember-2:engine): one-way platforms are air for now (ONEWAY_H slab, solid only from the far side)
+      if (t === T_EMPTY || t === T_ONEWAY) continue
+      // TODO(ember-2:engine): trampolines and crumbling blocks are plain walls for now
+      const sink = t === T_WALL || t === T_TRAMP || t === T_CRUMBLE ? 0 : POOL_SINK
       const h = { x: tx * TILE, y: ty * TILE + sink, w: TILE, h: TILE - sink, id: -1 }
       if (overlaps(r, h)) hits.push(h)
     }
   }
-  for (let i = 0; i < level.ice.length; i++) if (s.ice[i]! < 1 && overlaps(r, level.ice[i]!)) hits.push({ ...level.ice[i]!, id: -1 })
-  for (let i = 0; i < level.gates.length; i++) {
+  for (let i = 0; i < stage.ice.length; i++) if (s.ice[i]! < 1 && overlaps(r, stage.ice[i]!)) hits.push({ ...stage.ice[i]!, id: -1 })
+  // TODO(ember-2:engine): a lock opens when a player carrying a key touches it; for now it's a wall until s.locks says otherwise
+  for (let i = 0; i < stage.locks.length; i++) if (!s.locks[i] && overlaps(r, stage.locks[i]!)) hits.push({ ...stage.locks[i]!, id: -1 })
+  for (let i = 0; i < stage.gates.length; i++) {
     if (skip?.includes(GATE0 + i)) continue
-    const g = gateRect(level, s, i)
+    const g = gateRect(stage, s, i)
     if (overlaps(r, g)) hits.push({ ...g, id: GATE0 + i })
   }
-  for (let i = 0; i < level.movers.length; i++) {
+  for (let i = 0; i < stage.movers.length; i++) {
     if (skip?.includes(MOVER0 + i)) continue
-    const m = moverRect(level, s, i)
+    const m = moverRect(stage, s, i)
     if (overlaps(r, m)) hits.push({ ...m, id: MOVER0 + i })
   }
   for (let i = 0; i < s.boxes.length; i++) {
@@ -470,7 +679,7 @@ const standsOn = (b: Rect, top: Rect) => Math.abs(b.y + b.h - top.y) <= RIDE && 
 
 // moves a gate or mover (solid id `self`) from rect a to b, carrying everything standing on it (and on those).
 // returns false, moving nothing, when the move would push into a body that isn't riding or lift a rider into something
-function shove(level: Level, s: GameState, self: number, a: Rect, b: Rect, apply: () => void): boolean {
+function shove(stage: Stage, s: GameState, self: number, a: Rect, b: Rect, apply: () => void): boolean {
   const dx = b.x - a.x
   const dy = b.y - a.y
   if (dx === 0 && dy === 0) {
@@ -503,9 +712,9 @@ function shove(level: Level, s: GameState, self: number, a: Rect, b: Rect, apply
   for (const id of riders) {
     const r = bodyRect(s, id)
     let mx = dx
-    if (collide(level, s, { ...r, x: r.x + dx, y: r.y + dy }, id, skip)) {
+    if (collide(stage, s, { ...r, x: r.x + dx, y: r.y + dy }, id, skip)) {
       mx = 0
-      if (dy !== 0 && collide(level, s, { ...r, y: r.y + dy }, id, skip)) return false
+      if (dy !== 0 && collide(stage, s, { ...r, y: r.y + dy }, id, skip)) return false
       if (dy === 0) continue
     }
     // players standing on a box rider: boxes are solid to them, but the box moves too
@@ -525,17 +734,17 @@ function shove(level: Level, s: GameState, self: number, a: Rect, b: Rect, apply
 const BLOCK_NONE = -1
 
 // light segments from every running emitter; also reports which sensors are lit
-function trace(level: Level, s: GameState, on: Set<string>, lit: boolean[] | null): Beam[] {
+function trace(stage: Stage, s: GameState, on: Set<string>, lit: boolean[] | null): Beam[] {
   const beams: Beam[] = []
-  if (!level.emitters.length) return beams
-  const { mirrorAt, sensorAt } = lookup(level)
+  if (!stage.emitters.length) return beams
+  const { mirrorAt, sensorAt } = lookup(stage)
   const blockers: Rect[] = []
-  level.gates.forEach((_, i) => s.gates[i]! < 1 && blockers.push(gateRect(level, s, i)))
-  level.ice.forEach((r, i) => s.ice[i]! < 1 && blockers.push(r))
+  stage.gates.forEach((_, i) => s.gates[i]! < 1 && blockers.push(gateRect(stage, s, i)))
+  stage.ice.forEach((r, i) => s.ice[i]! < 1 && blockers.push(r))
   s.boxes.forEach((b) => blockers.push(boxRect(b)))
-  level.movers.forEach((_, i) => blockers.push(moverRect(level, s, i)))
+  stage.movers.forEach((_, i) => blockers.push(moverRect(stage, s, i)))
   s.players.forEach((p) => p.alive && blockers.push(playerRect(p)))
-  for (const e of level.emitters) {
+  for (const e of stage.emitters) {
     if (!evalCond(e.when, on)) continue
     let x = e.x
     let y = e.y
@@ -559,14 +768,14 @@ function trace(level: Level, s: GameState, on: Set<string>, lit: boolean[] | nul
       let mirror = BLOCK_NONE
       const tx0 = Math.floor(x / TILE)
       const ty0 = Math.floor(y / TILE)
-      for (let k = 1; k <= COLS + ROWS; k++) {
+      for (let k = 1; k <= stage.cols + stage.rows; k++) {
         const tx = tx0 + dx * k
         const ty = ty0 + dy * k
-        if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS || level.tiles[ty * COLS + tx] === T_WALL) {
+        if (tx < 0 || ty < 0 || tx >= stage.cols || ty >= stage.rows || tileAt(stage, s, tx, ty) === T_WALL) {
           dEnd = (k - 0.5) * TILE
           break
         }
-        const idx = ty * COLS + tx
+        const idx = ty * stage.cols + tx
         const si = sensorAt.get(idx)
         if (si !== undefined) {
           dEnd = k * TILE
@@ -598,42 +807,43 @@ function reflect(d: Dir, m: Slant): Dir {
 }
 
 // light beam segments for the current state, emitter to wherever each stops (for drawing)
-export function traceBeams(level: Level, s: GameState): Beam[] {
-  return trace(level, s, new Set(s.on), null)
+export function traceBeams(stage: Stage, s: GameState): Beam[] {
+  return trace(stage, s, new Set(s.lit ? [...s.on, CH_LIT] : s.on), null)
 }
 
 const rectMid = (r: Rect) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })
 
 // which channels are on. with `ev` (a stepping state) it also advances buttons, records plates/sensors and pushes change events
-function channels(level: Level, s: GameState, ev: GameEvent[] | null): Set<string> {
+function channels(stage: Stage, s: GameState, ev: GameEvent[] | null): Set<string> {
   const on = new Set<string>()
+  if (s.lit) on.add(CH_LIT)
   const bodies: Rect[] = []
   for (const p of s.players) if (p.alive) bodies.push(playerRect(p))
   for (const b of s.boxes) bodies.push(boxRect(b))
   const pressed = (r: Rect) => bodies.some((b) => overlaps(b, r))
-  const plates = level.plates.map((p) => pressed(p))
-  level.plates.forEach((p, i) => {
+  const plates = stage.plates.map((p) => pressed(p))
+  stage.plates.forEach((p, i) => {
     if (plates[i]) on.add(p.ch)
     if (ev && s.plates && s.plates[i] !== plates[i]) ev.push({ k: 'plate', i, on: plates[i]!, ...rectMid(p) })
   })
   s.plates = plates
-  level.levers.forEach((l, i) => s.levers[i] && on.add(l.ch))
-  level.buttons.forEach((b, i) => {
+  stage.levers.forEach((l, i) => s.levers[i] && on.add(l.ch))
+  stage.buttons.forEach((b, i) => {
     const was = s.buttons[i]! > 0
     if (ev) s.buttons[i] = pressed(b) ? b.ticks : Math.max(0, s.buttons[i]! - 1)
     const now = s.buttons[i]! > 0
     if (now) on.add(b.ch)
     if (ev && was !== now) ev.push({ k: 'button', i, on: now, ...rectMid(b) })
   })
-  if (level.sensors.length) {
+  if (stage.sensors.length) {
     // emitters see this tick's plates, levers and buttons plus last tick's sensors
     const seen = new Set(on)
     // a state off the network has no sensors list; its `on` still says which sensor channels were lit
-    if (s.sensors) level.sensors.forEach((m, i) => s.sensors![i] && seen.add(m.ch))
-    else level.sensors.forEach((m) => s.on.includes(m.ch) && seen.add(m.ch))
-    const lit = level.sensors.map(() => false)
-    trace(level, s, seen, lit)
-    level.sensors.forEach((m, i) => {
+    if (s.sensors) stage.sensors.forEach((m, i) => s.sensors![i] && seen.add(m.ch))
+    else stage.sensors.forEach((m) => s.on.includes(m.ch) && seen.add(m.ch))
+    const lit = stage.sensors.map(() => false)
+    trace(stage, s, seen, lit)
+    stage.sensors.forEach((m, i) => {
       if (lit[i]) on.add(m.ch)
       if (ev && s.sensors && s.sensors[i] !== lit[i]) ev.push({ k: 'sensor', i, on: lit[i]!, ...rectMid(m) })
     })
@@ -647,10 +857,10 @@ function channels(level: Level, s: GameState, ev: GameEvent[] | null): Set<strin
 const centreOf = (p: Player) => ({ x: p.x + PLAYER_W / 2, y: p.y + PLAYER_H / 2 })
 
 // fan lift on a body whose centre x is in a running fan's column and whose feet are inside it
-function fanned(level: Level, on: Set<string>, r: Rect): boolean {
+function fanned(stage: Stage, on: Set<string>, r: Rect): boolean {
   const cx = r.x + r.w / 2
   const bottom = r.y + r.h
-  for (const f of level.fans) if (cx >= f.x && cx < f.x + f.w && bottom > f.y && r.y < f.y + f.h && evalCond(f.when, on)) return true
+  for (const f of stage.fans) if (cx >= f.x && cx < f.x + f.w && bottom > f.y && r.y < f.y + f.h && evalCond(f.when, on)) return true
   return false
 }
 
@@ -661,10 +871,10 @@ function liftFall(vy: number, fan: boolean): number {
 }
 
 // the pool under a body's feet, if any: the tile containing a point just above the feet
-function poolUnder(level: Level, s: GameState, r: Rect): Tile {
+function poolUnder(stage: Stage, s: GameState, r: Rect): Tile {
   const y = Math.floor((r.y + r.h - 1) / TILE)
   for (const x of [r.x + 2, r.x + r.w / 2, r.x + r.w - 2]) {
-    const t = tileAt(level, s, Math.floor(x / TILE), y)
+    const t = tileAt(stage, s, Math.floor(x / TILE), y)
     if (t === T_LAVA || t === T_WATER || t === T_GOO || t === T_THIN) return t
   }
   return T_EMPTY
@@ -678,10 +888,10 @@ function killer(t: Tile, el: PlayerIndex): DeathCause | null {
 }
 
 // moves body `id` along y by dy; returns true when it hit something (and snaps flush to it)
-function moveY(level: Level, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dy: number): boolean {
+function moveY(stage: Stage, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dy: number): boolean {
   if (dy === 0) return false
   const r = { x: o.x, y: o.y + dy, w, h }
-  if (!collide(level, s, r, id)) {
+  if (!collide(stage, s, r, id)) {
     o.y += dy
     return false
   }
@@ -691,10 +901,10 @@ function moveY(level: Level, s: GameState, id: number, o: { x: number; y: number
 }
 
 // moves body `id` along x by dx, stepping up pool lips; returns true when it hit something
-function moveX(level: Level, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dx: number, ground: boolean): boolean {
+function moveX(stage: Stage, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dx: number, ground: boolean): boolean {
   if (dx === 0) return false
   const r = { x: o.x + dx, y: o.y, w, h }
-  if (!collide(level, s, r, id)) {
+  if (!collide(stage, s, r, id)) {
     o.x += dx
     return false
   }
@@ -702,12 +912,12 @@ function moveX(level: Level, s: GameState, id: number, o: { x: number; y: number
   if (ground) {
     const top = Math.min(...hits.map((t) => t.y))
     const up = o.y + h - top
-    if (up > 0 && up <= POOL_SINK + EPS && !collide(level, s, { x: o.x + dx, y: top - h, w, h }, id)) {
+    if (up > 0 && up <= POOL_SINK + EPS && !collide(stage, s, { x: o.x + dx, y: top - h, w, h }, id)) {
       o.x += dx
       o.y = top - h
       return false
     }
-    collide(level, s, r, id)
+    collide(stage, s, r, id)
   }
   if (dx > 0) o.x = Math.max(o.x, Math.min(...hits.map((t) => t.x)) - w)
   else o.x = Math.min(o.x, Math.max(...hits.map((t) => t.x + t.w)))
@@ -715,15 +925,15 @@ function moveX(level: Level, s: GameState, id: number, o: { x: number; y: number
 }
 
 // pushes a box sideways by up to dx (it stops flush against whatever's in the way); true when it moved
-function pushBox(level: Level, s: GameState, i: number, dx: number): boolean {
+function pushBox(stage: Stage, s: GameState, i: number, dx: number): boolean {
   const b = s.boxes[i]!
   const x0 = b.x
-  moveX(level, s, BOX0 + i, b, BOX_SIZE, BOX_SIZE, dx, false)
+  moveX(stage, s, BOX0 + i, b, BOX_SIZE, BOX_SIZE, dx, false)
   b.vx = (b.x - x0) / STEP_S
   return b.x !== x0
 }
 
-function stepPlayer(level: Level, s: GameState, pi: PlayerIndex, bits: number, on: Set<string>, prevBoxVx: number[]): void {
+function stepPlayer(stage: Stage, s: GameState, pi: PlayerIndex, bits: number, on: Set<string>, prevBoxVx: number[]): void {
   const p = s.players[pi]
   const ev = s.events
   const pressed = bits & ~p.prevIn
@@ -753,14 +963,14 @@ function stepPlayer(level: Level, s: GameState, pi: PlayerIndex, bits: number, o
 
   // y moves by the average of this tick's start and end velocity: a full jump peaks at JUMP_V²/2g = 63px
   const v0 = p.vy
-  p.vy = liftFall(p.vy, fanned(level, on, playerRect(p)))
+  p.vy = liftFall(p.vy, fanned(stage, on, playerRect(p)))
 
   // x, pushing a box that's in the way
   const dx = p.vx * STEP_S
   if (dx !== 0) {
     const r = { x: p.x + dx, y: p.y, w: PLAYER_W, h: PLAYER_H }
     let done = false
-    if (collide(level, s, r, pi) === 1 && hits[0]!.id >= BOX0 && hits[0]!.id < GATE0) {
+    if (collide(stage, s, r, pi) === 1 && hits[0]!.id >= BOX0 && hits[0]!.id < GATE0) {
       const bi = hits[0]!.id - BOX0
       const b = s.boxes[bi]!
       // only a box beside us, not one we're under or on
@@ -769,7 +979,7 @@ function stepPlayer(level: Level, s: GameState, pi: PlayerIndex, bits: number, o
         // the gap between us and the box first, then push the rest
         const gap = dx > 0 ? b.x - (p.x + PLAYER_W) : p.x - (b.x + BOX_SIZE)
         const pushBy = amt - Math.sign(dx) * Math.max(0, gap)
-        if (Math.sign(pushBy) === Math.sign(dx) && pushBox(level, s, bi, pushBy)) {
+        if (Math.sign(pushBy) === Math.sign(dx) && pushBox(stage, s, bi, pushBy)) {
           p.x = dx > 0 ? b.x - PLAYER_W : b.x + BOX_SIZE
           p.vx = Math.sign(dx) * Math.min(Math.abs(p.vx), PUSH_SPEED)
           if (!prevBoxVx[bi]) ev.push({ k: 'push', p: pi, ...centreOf(p) })
@@ -778,13 +988,13 @@ function stepPlayer(level: Level, s: GameState, pi: PlayerIndex, bits: number, o
       }
     }
     // pressing into a wall keeps the run speed, so a jump up beside a ledge pops over its corner
-    if (!done && moveX(level, s, pi, p, PLAYER_W, PLAYER_H, dx, p.ground) && Math.sign(dx) !== dirX) p.vx = 0
+    if (!done && moveX(stage, s, pi, p, PLAYER_W, PLAYER_H, dx, p.ground) && Math.sign(dx) !== dirX) p.vx = 0
   }
 
   // y
   const wasGround = p.ground
   const fallVy = p.vy
-  const hit = moveY(level, s, pi, p, PLAYER_W, PLAYER_H, ((v0 + p.vy) / 2) * STEP_S)
+  const hit = moveY(stage, s, pi, p, PLAYER_W, PLAYER_H, ((v0 + p.vy) / 2) * STEP_S)
   p.ground = hit && fallVy >= 0
   if (hit) p.vy = 0
   if (p.ground && !wasGround) {
@@ -796,12 +1006,21 @@ function stepPlayer(level: Level, s: GameState, pi: PlayerIndex, bits: number, o
 }
 
 // advances exactly one STEP_S tick. pure: never mutates `s`, returns a new state whose `events` are this tick's only.
-// in phase 'dead' it counts DEATH_TICKS then returns initState(level, deaths + 1); in 'won' it only counts phaseT
+// in phase 'dead' it counts DEATH_TICKS then returns respawn(level, s); in 'clear' it counts STAGE_TICKS then
+// returns the start of the next stage; in 'won' it only counts phaseT
 export function step(level: Level, s0: GameState, input: Inputs): GameState {
   const s = clone(s0)
+  const stage = stageOf(level, s)
   if (s.phase === 'dead') {
     s.phaseT++
-    return s.phaseT >= DEATH_TICKS ? initState(level, s.deaths + 1) : s
+    return s.phaseT >= DEATH_TICKS ? respawn(level, s) : s
+  }
+  if (s.phase === 'clear') {
+    s.phaseT++
+    if (s.phaseT < STAGE_TICKS) return s
+    const n = startStage(level, s.stage + 1, { tick: s.tick, deaths: s.deaths, banked: bank(stage, s) })
+    n.events = [{ k: 'stage', stage: n.stage }]
+    return n
   }
   if (s.phase === 'won') {
     s.phaseT++
@@ -817,36 +1036,36 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
     const p = s.players[pi]
     if (!p.alive || !(bits[pi]! & IN_DOWN) || p.prevIn & IN_DOWN) continue
     const r = playerRect(p)
-    const li = level.levers.findIndex((l) => overlaps(r, l))
+    const li = stage.levers.findIndex((l) => overlaps(r, l))
     if (li >= 0) {
       s.levers[li] = !s.levers[li]
-      ev.push({ k: 'lever', i: li, ...rectMid(level.levers[li]!) })
+      ev.push({ k: 'lever', i: li, ...rectMid(stage.levers[li]!) })
       continue
     }
-    const mi = level.mirrors.findIndex((m) => overlaps(r, { x: m.x - TILE / 2, y: m.y - TILE / 2, w: TILE, h: TILE }))
+    const mi = stage.mirrors.findIndex((m) => overlaps(r, { x: m.x - TILE / 2, y: m.y - TILE / 2, w: TILE, h: TILE }))
     if (mi >= 0) {
       s.mirrors[mi] = s.mirrors[mi] === '/' ? '\\' : '/'
-      ev.push({ k: 'mirror', i: mi, x: level.mirrors[mi]!.x, y: level.mirrors[mi]!.y })
+      ev.push({ k: 'mirror', i: mi, x: stage.mirrors[mi]!.x, y: stage.mirrors[mi]!.y })
     }
   }
 
   // 3. channels
-  const on = channels(level, s, ev)
-  s.on = [...on].sort()
+  const on = channels(stage, s, ev)
+  s.on = listOn(on)
 
   // 4. gates and movers
-  level.gates.forEach((g, i) => {
+  stage.gates.forEach((g, i) => {
     const f = s.gates[i]!
     const want = evalCond(g.open, on) ? 1 : 0
     if (f === want) return
     const nf = want > f ? Math.min(1, f + GATE_SPEED * STEP_S) : Math.max(0, f - GATE_SPEED * STEP_S)
-    const a = gateRect(level, s, i)
+    const a = gateRect(stage, s, i)
     s.gates[i] = nf
-    const b = gateRect(level, s, i)
+    const b = gateRect(stage, s, i)
     s.gates[i] = f
-    shove(level, s, GATE0 + i, a, b, () => (s.gates[i] = nf))
+    shove(stage, s, GATE0 + i, a, b, () => (s.gates[i] = nf))
   })
-  level.movers.forEach((m, i) => {
+  stage.movers.forEach((m, i) => {
     const st = s.movers[i]!
     const len = Math.hypot(m.to.x - m.x, m.to.y - m.y)
     if (len === 0) return
@@ -864,8 +1083,8 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
       else if (nt <= 0) [nt, nd] = [0, 1]
     }
     const to = moverPos(m, nt)
-    const a = moverRect(level, s, i)
-    shove(level, s, MOVER0 + i, a, { ...a, x: to.x, y: to.y }, () => {
+    const a = moverRect(stage, s, i)
+    shove(stage, s, MOVER0 + i, a, { ...a, x: to.x, y: to.y }, () => {
       st.x = to.x
       st.y = to.y
       st.t = nt
@@ -876,9 +1095,9 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   // 5. thin water and ice
   const frost = s.players[1]
   const fc = centreOf(frost)
-  level.thin.forEach((ti, i) => {
-    const tx = ti % COLS
-    const ty = (ti - tx) / COLS
+  stage.thin.forEach((ti, i) => {
+    const tx = ti % stage.cols
+    const ty = (ti - tx) / stage.cols
     const cx = tx * TILE + TILE / 2
     const cy = ty * TILE + TILE / 2
     const near = frost.alive && Math.hypot(fc.x - cx, fc.y - cy) <= FREEZE_RADIUS
@@ -901,7 +1120,7 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   const fire = s.players[0]
   if (fire.alive) {
     const fr = { x: fire.x - 1, y: fire.y - 1, w: PLAYER_W + 2, h: PLAYER_H + 2 }
-    level.ice.forEach((r, i) => {
+    stage.ice.forEach((r, i) => {
       if (s.ice[i]! >= 1 || !overlaps(fr, r)) return
       s.ice[i] = s.ice[i]! + 1 / MELT_TICKS >= 1 - 1e-6 ? 1 : s.ice[i]! + 1 / MELT_TICKS
       if (s.ice[i] === 1) ev.push({ k: 'melt', i, ...rectMid(r) })
@@ -913,19 +1132,19 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   s.boxes.forEach((b, i) => {
     b.vx = 0
     const v0 = b.vy
-    b.vy = liftFall(b.vy, fanned(level, on, boxRect(b)))
-    if (moveY(level, s, BOX0 + i, b, BOX_SIZE, BOX_SIZE, ((v0 + b.vy) / 2) * STEP_S)) b.vy = 0
+    b.vy = liftFall(b.vy, fanned(stage, on, boxRect(b)))
+    if (moveY(stage, s, BOX0 + i, b, BOX_SIZE, BOX_SIZE, ((v0 + b.vy) / 2) * STEP_S)) b.vy = 0
   })
 
   // 7. players
-  for (const pi of [0, 1] as const) if (s.players[pi].alive) stepPlayer(level, s, pi, bits[pi]!, on, prevBoxVx)
+  for (const pi of [0, 1] as const) if (s.players[pi].alive) stepPlayer(stage, s, pi, bits[pi]!, on, prevBoxVx)
 
   // 8. pools, gems, portals, doors
   for (const pi of [0, 1] as const) {
     const p = s.players[pi]
     if (!p.alive) continue
     const r = playerRect(p)
-    const cause = killer(poolUnder(level, s, r), pi)
+    const cause = killer(poolUnder(stage, s, r), pi)
     if (cause) {
       p.alive = false
       p.inDoor = false
@@ -933,7 +1152,7 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
       continue
     }
     const el = pi === 0 ? 'fire' : 'frost'
-    level.gems.forEach((g, gi) => {
+    stage.gems.forEach((g, gi) => {
       if (s.taken[gi] || g.el !== el) return
       if (!overlaps(r, { x: g.x - GEM_BOX / 2, y: g.y - GEM_BOX / 2, w: GEM_BOX, h: GEM_BOX })) return
       s.taken[gi] = true
@@ -941,41 +1160,66 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
       ev.push({ k: 'gem', p: pi, x: g.x, y: g.y, el })
     })
     const c = centreOf(p)
-    const inPortal = level.portals.findIndex((q) => inRect(q, c.x, c.y))
+    const inPortal = stage.portals.findIndex((q) => inRect(q, c.x, c.y))
     if (inPortal >= 0 && p.portalCd === 0) {
-      const o = level.portals[level.portals[inPortal]!.other]!
+      const o = stage.portals[stage.portals[inPortal]!.other]!
       p.x = o.x + (TILE - PLAYER_W) / 2
       p.y = o.y + o.h - PLAYER_H
       p.portalCd = PORTAL_COOLDOWN_TICKS
       ev.push({ k: 'portal', p: pi, ...centreOf(p) })
     } else if (inPortal < 0 && p.portalCd > 0) p.portalCd-- // the cooldown holds while still standing in a portal
-    const d = level.doors[pi]
+    const d = stage.doors[pi]
     const cx = p.x + PLAYER_W / 2
     const was = p.inDoor
     p.inDoor = p.ground && cx >= d.x && cx <= d.x + d.w && Math.abs(p.y + PLAYER_H - (d.y + d.h)) < 1
     if (p.inDoor && !was) ev.push({ k: 'door', p: pi, x: d.x + d.w / 2, y: d.y + d.h / 2 })
   }
+
+  // 9. checkpoints, then the phase
+  // TODO(ember-2:engine): lamps, gravity switches, arrows, keys and locks, crumbling, trampolines, one-ways and
+  // cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
+  const [fire0, frost0] = s.players
+  if (fire0.alive && frost0.alive) {
+    const safe = (p: Player) => p.ground && p.cannon < 0
+    stage.checkpoints.forEach((c, i) => {
+      if (i === s.cp || !safe(fire0) || !safe(frost0)) return
+      if (!overlaps(playerRect(fire0), c.zone) || !overlaps(playerRect(frost0), c.zone)) return
+      s.cp = i
+      // the world as it stands at the end of this tick, flag already lit. s is done changing below unless the
+      // stage ends this very tick, and then the snapshot is never used
+      const { saved: _old, events: _ev, ...snap } = clone(s)
+      s.saved = snap
+      ev.push({ k: 'checkpoint', i, x: c.x, y: c.y })
+    })
+  }
   if (!s.players[0].alive || !s.players[1].alive) {
     s.phase = 'dead'
     s.phaseT = 0
   } else if (s.players[0].inDoor && s.players[1].inDoor) {
-    s.phase = 'won'
     s.phaseT = 0
-    ev.push({ k: 'win' })
+    if (s.stage + 1 < level.stages.length) {
+      s.phase = 'clear'
+      ev.push({ k: 'clear', stage: s.stage })
+    } else {
+      s.phase = 'won'
+      ev.push({ k: 'win' })
+    }
   }
   return s
 }
 
-// stars: 1 for finishing, +1 for every gem, +1 for secs <= par
+// the banked gems plus this stage's
+function bank(stage: Stage, s: GameState): [number, number] {
+  const out: [number, number] = [s.banked[0], s.banked[1]]
+  stage.gems.forEach((g, i) => s.taken[i] && out[g.el === 'fire' ? 0 : 1]++)
+  return out
+}
+
+// gems over every stage so far against the level's total. stars: 1 for finishing, +1 for every gem, +1 for secs <= par
 export function scoreOf(level: Level, s: GameState): Score {
   const secs = s.tick / STEP_HZ
-  const gems: [number, number] = [0, 0]
-  const total: [number, number] = [0, 0]
-  level.gems.forEach((g, i) => {
-    const k = g.el === 'fire' ? 0 : 1
-    total[k]++
-    if (s.taken[i]) gems[k]++
-  })
+  const gems = bank(stageOf(level, s), s)
+  const total: [number, number] = [level.gemTotals[0], level.gemTotals[1]]
   const won = s.phase === 'won'
   const all = gems[0] === total[0] && gems[1] === total[1]
   const stars = won ? 1 + (all ? 1 : 0) + (secs <= level.def.par ? 1 : 0) : 0

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { compileLevel, gateRect, initState, scoreOf, step, tileAt, traceBeams, validateLevel } from './emberEngine'
+import { compileLevel, gateRect, initState, respawn, scoreOf, step, tileAt, traceBeams, validateLevel } from './emberEngine'
 import {
-  COLS,
   DEATH_TICKS,
   FREEZE_TICKS,
   IN_DOWN,
@@ -13,11 +12,13 @@ import {
   PLAYER_W,
   PORTAL_COOLDOWN_TICKS,
   PUSH_SPEED,
-  ROWS,
   RUN_SPEED,
+  STAGE_TICKS,
   STEP_HZ,
   T_WALL,
   TILE,
+  VIEW_COLS as COLS,
+  VIEW_ROWS as ROWS,
   type GameEvent,
   type GameState,
   type Inputs,
@@ -31,8 +32,10 @@ import {
 const row = (s: string) => '#' + s.padEnd(COLS - 2, '.').slice(0, COLS - 2) + '#'
 function def(rows: string[], things: ThingDef[] = [], floor = '#'.repeat(COLS)): LevelDef {
   const map = ['#'.repeat(COLS), ...Array.from({ length: ROWS - 2 - rows.length }, () => row('')), ...rows.map(row), floor]
-  return { id: 't', name: 't', par: 10, map, things }
+  return { id: 't', name: 't', par: 10, stages: [{ map, things }] }
 }
+// the same level with another map
+const remap = (d: LevelDef, f: (map: string[]) => string[]): LevelDef => ({ ...d, stages: [{ ...d.stages[0]!, map: f(d.stages[0]!.map) }] })
 const level = (rows: string[], things: ThingDef[] = [], floor?: string) => compileLevel(def(rows, things, floor))
 
 // runs n ticks with the same inputs (or a function of the tick), collecting events
@@ -53,16 +56,16 @@ const OPEN = ['.1........................R.2B']
 describe('compile', () => {
   it('places spawns, doors and gems', () => {
     const L = level(['.1.r.b..R....B.............2..'])
-    expect(L.spawns[0]).toEqual({ x: 2 * TILE + (TILE - PLAYER_W) / 2, y: 17 * TILE - PLAYER_H })
-    expect(L.doors[0]).toEqual({ x: 9 * TILE, y: 15 * TILE, w: TILE, h: 2 * TILE })
-    expect(L.gems).toEqual([
+    expect(L.stages[0]!.spawns[0]).toEqual({ x: 2 * TILE + (TILE - PLAYER_W) / 2, y: 17 * TILE - PLAYER_H })
+    expect(L.stages[0]!.doors[0]).toEqual({ x: 9 * TILE, y: 15 * TILE, w: TILE, h: 2 * TILE })
+    expect(L.stages[0]!.gems).toEqual([
       { x: 4 * TILE + 10, y: 16 * TILE + 10, el: 'fire' },
       { x: 6 * TILE + 10, y: 16 * TILE + 10, el: 'frost' },
     ])
   })
 
   it('throws on malformed maps', () => {
-    expect(() => compileLevel({ ...def(OPEN), map: def(OPEN).map.slice(1) })).toThrow(/rows/)
+    expect(() => compileLevel(remap(def(OPEN), (m) => m.slice(1)))).toThrow(/rows/)
     expect(() => level(['.1.......R....B.............2.', '..x'])).toThrow(/unknown char 'x'/)
     expect(() => level(['.........R....B.............2.'])).toThrow(/missing fire spawn/)
     expect(() => level(['.1.1.....R....B.............2.'])).toThrow(/2 fire spawns/)
@@ -78,11 +81,11 @@ describe('compile', () => {
       { k: 'portal', x: 10, y: 16, pair: 'p' },
       { k: 'portal', x: 20, y: 16, pair: 'p' },
     ])
-    expect(L.plates[0]).toEqual({ x: 60, y: 336, w: 40, h: 4, ch: 'a' })
-    expect(L.buttons[0]).toEqual({ x: 100, y: 336, w: 20, h: 4, ch: 'b', ticks: 120 })
-    expect(L.fans[0]).toEqual({ x: 120, y: 260, w: 20, h: 80 })
-    expect(L.movers[0]).toMatchObject({ x: 160, y: 200, to: { x: 160, y: 100 }, speed: 60 })
-    expect(L.portals.map((p) => [p.y, p.h, p.other])).toEqual([
+    expect(L.stages[0]!.plates[0]).toEqual({ x: 60, y: 336, w: 40, h: 4, ch: 'a', ceil: false })
+    expect(L.stages[0]!.buttons[0]).toEqual({ x: 100, y: 336, w: 20, h: 4, ch: 'b', ticks: 120, ceil: false })
+    expect(L.stages[0]!.fans[0]).toEqual({ x: 120, y: 260, w: 20, h: 80 })
+    expect(L.stages[0]!.movers[0]).toMatchObject({ x: 160, y: 200, to: { x: 160, y: 100 }, speed: 60 })
+    expect(L.stages[0]!.portals.map((p) => [p.y, p.h, p.other])).toEqual([
       [300, 40, 1],
       [300, 40, 0],
     ])
@@ -100,7 +103,7 @@ describe('compile', () => {
     expect(p.some((l) => /out of bounds/.test(l))).toBe(true)
     expect(p.some((l) => /channel 'b'/.test(l))).toBe(true)
     expect(p.some((l) => /channel 'a'/.test(l))).toBe(false)
-    expect(validateLevel({ ...def(OPEN), map: [...def(OPEN).map.slice(0, 17), '##'] }).some((l) => /row 17/.test(l))).toBe(true)
+    expect(validateLevel(remap(def(OPEN), (m) => [...m.slice(0, 17), '##'])).some((l) => /row 17/.test(l))).toBe(true)
   })
 })
 
@@ -266,7 +269,8 @@ describe('pools and death', () => {
     expect(s.phase).toBe('dead')
     expect(s.tick).toBe(t)
     s = step(L, s, R)
-    expect(s).toEqual(initState(L, 1))
+    // back at the stage's start, the clock still running
+    expect(s).toEqual({ ...initState(L, 1), tick: t, events: [{ k: 'respawn', cp: -1 }] })
   })
 })
 
@@ -309,7 +313,7 @@ describe('switches, gates, movers', () => {
     expect(r.ev.find((e) => e.k === 'plate')).toMatchObject({ i: 0, on: true })
     r = run(L, r.s, 30, [0, 0])
     expect(r.s.gates[0]).toBe(1)
-    expect(gateRect(L, r.s, 0).y).toBe(14 * TILE - 3 * TILE)
+    expect(gateRect(L.stages[0]!, r.s, 0).y).toBe(14 * TILE - 3 * TILE)
     r = run(L, r.s, 60, R)
     expect(r.s.on).toEqual([])
     expect(r.ev.find((e) => e.k === 'plate')).toMatchObject({ on: false })
@@ -329,7 +333,7 @@ describe('switches, gates, movers', () => {
     s = run(L, s, 60, [IN_RIGHT, 0]).s
     s = run(L, s, 60, [0, 0]).s
     expect(s.gates[0]).toBeGreaterThan(0)
-    const g = gateRect(L, s, 0)
+    const g = gateRect(L.stages[0]!, s, 0)
     expect(g.y + g.h).toBeLessThanOrEqual(s.players[1].y + 0.01)
     expect(g.y + g.h).toBeGreaterThan(s.players[1].y - 1)
     // frost steps out and it shuts
@@ -483,7 +487,7 @@ describe('fans, ice and thin water', () => {
   it('thin water freezes near frost, carries fire, and thaws later', () => {
     const floor = '#'.repeat(6) + 'www' + '#'.repeat(COLS - 9)
     const L = level(['.12.......................R..B'], [], floor)
-    expect(tileAt(L, initState(L), 7, 17)).toBe(5)
+    expect(tileAt(L.stages[0]!, initState(L), 7, 17)).toBe(5)
     // both walk right; frost leads, fire stops on the middle tile
     const ev: GameEvent[] = []
     let s = initState(L)
@@ -492,7 +496,7 @@ describe('fans, ice and thin water', () => {
       ev.push(...s.events)
     }
     expect(ev.filter((e) => e.k === 'freeze').length).toBe(3)
-    expect(tileAt(L, s, 7, 17)).toBe(T_WALL)
+    expect(tileAt(L.stages[0]!, s, 7, 17)).toBe(T_WALL)
     expect(s.phase).toBe('play')
     // frost walks on away
     const r = run(L, s, FREEZE_TICKS + 60, [0, IN_RIGHT])
@@ -517,7 +521,7 @@ describe('light and portals', () => {
     const s0 = initState(L)
     expect(s0.on).toEqual(['s'])
     expect(s0.gates[0]).toBe(1)
-    expect(traceBeams(L, s0)).toEqual([
+    expect(traceBeams(L.stages[0]!, s0)).toEqual([
       { x1: 70, y1: 330, x2: 210, y2: 330 },
       { x1: 210, y1: 330, x2: 210, y2: 210 },
     ])
@@ -527,7 +531,7 @@ describe('light and portals', () => {
     const L = light([{ k: 'box', x: 6, y: 16 }])
     const s = initState(L)
     expect(s.on).toEqual([])
-    expect(traceBeams(L, s)).toEqual([{ x1: 70, y1: 330, x2: 120, y2: 330 }])
+    expect(traceBeams(L.stages[0]!, s)).toEqual([{ x1: 70, y1: 330, x2: 120, y2: 330 }])
   })
 
   it('a player blocks the beam, and the down key turns the mirror', () => {
@@ -541,7 +545,7 @@ describe('light and portals', () => {
     expect(s.events).toContainEqual({ k: 'mirror', i: 0, x: 210, y: 330 })
     r = run(L, s, 40, R)
     expect(r.s.on).toEqual([])
-    expect(traceBeams(L, r.s).at(-1)).toEqual({ x1: 210, y1: 330, x2: 210, y2: 340 })
+    expect(traceBeams(L.stages[0]!, r.s).at(-1)).toEqual({ x1: 210, y1: 330, x2: 210, y2: 340 })
   })
 
   it('portals teleport with a cooldown', () => {
@@ -610,5 +614,174 @@ describe('determinism and purity', () => {
       expect(step(L, j, script(t))).toEqual(n)
       s = n
     }
+  })
+})
+
+// ---- ember 2: the foundations. TODO(ember-2:engine): every new mechanic gets its own describe below
+
+// a walled room of any size from its inner rows (padded with air above), for maps bigger than a screen
+function room(cols: number, rows: number, bottom: string[], things: ThingDef[] = []): LevelDef['stages'][number] {
+  const pad = (r: string) => '#' + r.padEnd(cols - 2, '.').slice(0, cols - 2) + '#'
+  const map = ['#'.repeat(cols), ...Array.from({ length: rows - 2 - bottom.length }, () => pad('')), ...bottom.map(pad), '#'.repeat(cols)]
+  return { map, things }
+}
+const levelOf = (...stages: LevelDef['stages']) => compileLevel({ id: 't', name: 't', par: 10, stages })
+
+describe('big maps', () => {
+  it('compiles a stage bigger than a screen and walls its edges', () => {
+    const L = levelOf(room(80, 40, ['1.2....................................................................RB']))
+    const st = L.stages[0]!
+    expect([st.cols, st.rows, st.w, st.h]).toEqual([80, 40, 1600, 800])
+    expect(st.tiles.length).toBe(80 * 40)
+    expect(st.doors[0].x).toBe(72 * TILE)
+    expect(tileAt(st, initState(L), 80, 5)).toBe(T_WALL)
+    expect(tileAt(st, initState(L), 79, 39)).toBe(T_WALL)
+    // far past where a 32-wide world ended
+    const r = run(L, initState(L), 400, R)
+    expect(r.s.players[0].x).toBeGreaterThan(50 * TILE)
+  })
+
+  it('refuses maps smaller than a screen or bigger than four', () => {
+    expect(validateLevel({ id: 't', name: 't', par: 1, stages: [room(31, 18, ['12RB'])] }).join()).toMatch(/wide/)
+    expect(validateLevel({ id: 't', name: 't', par: 1, stages: [room(32, 73, ['12RB'])] }).join()).toMatch(/rows/)
+    expect(validateLevel({ id: 't', name: 't', par: 1, stages: [] }).join()).toMatch(/stages/)
+  })
+
+  it('compiles every version 2 glyph and thing', () => {
+    const L = levelOf(
+      room(40, 20, ['.^.k.C.......', '1.2.T=~OD..RB'], [
+        { k: 'lock', x: 20, y: 17, w: 1, h: 2 },
+        { k: 'lamp', x: 22, y: 18, secs: 2 },
+        { k: 'gswitch', x: 23, y: 18, who: 'other' },
+        { k: 'cannon', x: 24, y: 18, aim: 'upright', power: 20, fire: 'lights' },
+        { k: 'checkpoint', x: 26, y: 18, zone: { x: 25, y: 10, w: 4, h: 9 } },
+        { k: 'dark', x: 30, y: 1, w: 5, h: 5 },
+        { k: 'plate', x: 28, y: 1, ch: 'a', ceil: true },
+        { k: 'gate', x: 36, y: 16, w: 1, h: 3, open: 'a' },
+      ]),
+    )
+    const st = L.stages[0]!
+    expect(st.tiles.slice(18 * 40 + 5, 18 * 40 + 10)).toEqual([6, 7, 8, 9, 10])
+    expect(st.crumble).toEqual([18 * 40 + 7])
+    expect(st.arrows).toEqual([{ x: 2 * TILE + 10, y: 17 * TILE + 10 }])
+    expect(st.keys).toEqual([{ x: 4 * TILE + 10, y: 17 * TILE + 10 }])
+    expect(st.checkpoints).toEqual([
+      { x: 6 * TILE + 10, y: 18 * TILE, zone: { x: 5 * TILE, y: 15 * TILE, w: 3 * TILE, h: 3 * TILE } },
+      { x: 26 * TILE + 10, y: 19 * TILE, zone: { x: 25 * TILE, y: 10 * TILE, w: 4 * TILE, h: 9 * TILE } },
+    ])
+    expect(st.lamps[0]).toMatchObject({ x: 22 * TILE, ticks: 120 })
+    expect(st.gswitches[0]!.who).toBe('other')
+    expect(st.cannons[0]!.vx).toBeCloseTo(20 * TILE * Math.SQRT1_2)
+    expect(st.cannons[0]!.vy).toBeCloseTo(-20 * TILE * Math.SQRT1_2)
+    expect(st.plates[0]).toMatchObject({ y: TILE, h: 4, ceil: true })
+    expect(st.darks).toEqual([{ x: 30 * TILE, y: TILE, w: 5 * TILE, h: 5 * TILE }])
+    const s = initState(L)
+    expect([s.lit, s.keys, s.cp, s.arrows, s.crumble, s.keyTaken, s.locks, s.cannons]).toEqual([true, 0, -1, [0], [0], [false], [false], [0]])
+    expect(s.players[0]).toMatchObject({ grav: 1, air: 0, cannon: -1, fly: 0 })
+  })
+
+  it('light-only and dark-only blocks follow the lights', () => {
+    const L = levelOf({ ...room(32, 18, ['1.2.OD.....RB']), dark: true })
+    const st = L.stages[0]!
+    const s = initState(L)
+    expect(s.lit).toBe(false)
+    expect([tileAt(st, s, 5, 16), tileAt(st, s, 6, 16)]).toEqual([0, T_WALL])
+    expect([tileAt(st, { ...s, lit: true }, 5, 16), tileAt(st, { ...s, lit: true }, 6, 16)]).toEqual([T_WALL, 0])
+  })
+
+  it('wants a key for every lock', () => {
+    const def: LevelDef = { id: 't', name: 't', par: 1, stages: [room(32, 18, ['1.2........RB'], [{ k: 'lock', x: 8, y: 15, w: 1, h: 2 }])] }
+    expect(validateLevel(def).join()).toMatch(/0 keys for 1 locks/)
+  })
+})
+
+describe('stages', () => {
+  // both one step left of their doors, a gem each on the way in the first stage
+  const WIN = ['1rR#...................#2bB']
+  const BOTH: Inputs = [IN_RIGHT, IN_RIGHT]
+
+  it('clears a stage, pauses, and begins the next with the clock still running', () => {
+    const L = levelOf(room(32, 18, WIN), room(48, 20, ['1.R#...................#2.B']))
+    expect(L.gemTotals).toEqual([1, 1])
+    let r = run(L, initState(L), 40, BOTH)
+    expect(r.s.phase).toBe('clear')
+    expect(r.ev).toContainEqual({ k: 'clear', stage: 0 })
+    expect(r.ev.some((e) => e.k === 'win')).toBe(false)
+    const tick = r.s.tick
+    // the pause is STAGE_TICKS long from the moment the doors closed, and the clock stands still through it
+    r = run(L, r.s, STAGE_TICKS - r.s.phaseT - 1, [0, 0])
+    expect(r.s).toMatchObject({ stage: 0, phase: 'clear', tick })
+    r = run(L, r.s, 1, [0, 0])
+    expect(r.ev).toEqual([{ k: 'stage', stage: 1 }])
+    expect(r.s).toMatchObject({ stage: 1, phase: 'play', banked: [1, 1], cp: -1, saved: null, tick })
+    expect(r.s.taken).toEqual([])
+    expect(r.s.players[0].x).toBe(L.stages[1]!.spawns[0].x)
+    r = run(L, r.s, 40, BOTH)
+    expect(r.s.tick).toBeGreaterThan(tick)
+    expect(r.s.phase).toBe('won')
+    expect(r.ev.at(-1)).toEqual({ k: 'win' })
+    expect(scoreOf(L, r.s)).toMatchObject({ gems: [1, 1], total: [1, 1], stars: 3 })
+  })
+
+  it('a death in a later stage restarts that stage, not the level', () => {
+    const L = levelOf(room(32, 18, WIN), { ...room(32, 18, ['1...........R.....B.......2']), map: room(32, 18, ['1...........R.....B.......2']).map.map((r, i) => (i === 17 ? '####WWWW' + '#'.repeat(24) : r)) })
+    let s = run(L, initState(L), 40 + STAGE_TICKS + 2, BOTH).s
+    expect(s.stage).toBe(1)
+    while (s.phase === 'play') s = step(L, s, R)
+    expect(s.phase).toBe('dead')
+    const tick = s.tick
+    s = run(L, s, DEATH_TICKS, [0, 0]).s
+    expect(s).toMatchObject({ stage: 1, phase: 'play', deaths: 1, banked: [1, 1], tick })
+    expect(s.events).toEqual([{ k: 'respawn', cp: -1 }])
+    expect(s.players[0].x).toBe(L.stages[1]!.spawns[0].x)
+  })
+})
+
+describe('checkpoints', () => {
+  // fire walks right: a gem, the flag at x8 (both must stand in its zone), another gem, then water
+  const def = (): LevelDef['stages'][number] => {
+    const st = room(32, 18, ['1...r...C2....r............RB'])
+    return { ...st, map: st.map.map((r, i) => (i === 17 ? '#'.repeat(20) + 'WWWW' + '#'.repeat(8) : r)) }
+  }
+
+  it('is taken when both stand in its zone, and a death comes back to it with the world as it was', () => {
+    const L = levelOf(def())
+    let r = run(L, initState(L), 30, R)
+    expect(r.s.cp).toBe(-1)
+    r = run(L, r.s, 40, R)
+    expect(r.ev.filter((e) => e.k === 'checkpoint')).toEqual([{ k: 'checkpoint', i: 0, x: 9 * TILE + 10, y: 17 * TILE }])
+    expect(r.s.cp).toBe(0)
+    const at = r.s.saved!
+    expect(at.taken).toEqual([true, false])
+    expect(at.cp).toBe(0)
+    expect('saved' in at).toBe(false)
+    let s = r.s
+    while (s.phase === 'play') s = step(L, s, R)
+    expect(s.taken).toEqual([true, true])
+    const tick = s.tick
+    s = run(L, s, DEATH_TICKS, R).s
+    expect(s).toMatchObject({ phase: 'play', deaths: 1, cp: 0, tick, taken: [true, false] })
+    expect(s.events).toEqual([{ k: 'respawn', cp: 0 }])
+    expect(s.players[0].x).toBeCloseTo(at.players[0].x)
+    expect(s.saved).toBe(at)
+    // the held key isn't a fresh press, and it dies and comes back there again
+    while (s.phase === 'play') s = step(L, s, R)
+    s = run(L, s, DEATH_TICKS, R).s
+    expect(s).toMatchObject({ deaths: 2, cp: 0 })
+  })
+
+  it('respawn() goes back at once, and to the start when no flag was taken', () => {
+    const L = levelOf(def())
+    const moved = run(L, initState(L), 20, R).s
+    const back = respawn(L, moved)
+    expect(back.players[0].x).toBe(L.stages[0]!.spawns[0].x)
+    expect(back).toMatchObject({ deaths: 1, tick: moved.tick, phase: 'play' })
+    expect(step(L, moved, R).saved).toBe(null)
+  })
+
+  it('needs both players: one alone in the zone takes nothing', () => {
+    const st = room(32, 18, ['1...C...............2......RB'])
+    const L = levelOf(st)
+    expect(run(L, initState(L), 60, R).s.cp).toBe(-1)
   })
 })

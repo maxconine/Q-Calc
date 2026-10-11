@@ -21,156 +21,12 @@ vi.mock('./emberLevels', () => {
   const win = { 1: '1', 2: 'R', 3: '#', 27: '#', 28: '2', 29: 'B', 30: '#' }
   return {
     LEVELS: [
-      { id: 't-open', name: 'open', par: 20, map: map({ 2: '1', 13: 'R', 24: 'B', 27: '2' }), things: [] },
-      { id: 't-pit', name: 'pit', par: 20, map: map({ 2: '1', 20: 'R', 26: 'B', 29: '2' }, '####WWWW' + '#'.repeat(24)), things: [] },
-      { id: 't-win', name: 'win', par: 20, map: map(win), things: [] },
-      { id: 't-last', name: 'last', par: 20, map: map(win), things: [] },
+      { id: 't-open', name: 'open', par: 20, stages: [{ map: map({ 2: '1', 13: 'R', 24: 'B', 27: '2' }), things: [] }] },
+      { id: 't-pit', name: 'pit', par: 20, stages: [{ map: map({ 2: '1', 20: 'R', 26: 'B', 29: '2' }, '####WWWW' + '#'.repeat(24)), things: [] }] },
+      { id: 't-win', name: 'win', par: 20, stages: [{ map: map(win), things: [] }] },
+      { id: 't-last', name: 'last', par: 20, stages: [{ map: map(win), things: [] }] },
     ],
   }
-})
-
-// the real engine when it works; until it lands, a tiny stand-in with the same contract (walls, running,
-// jumping, deadly pools, doors) so the session's flow can be tested
-vi.mock('./emberEngine', async (importOriginal) => {
-  const real = await importOriginal<typeof import('./emberEngine')>()
-  const { LEVELS } = await import('./emberLevels')
-  try {
-    const level = real.compileLevel(LEVELS[0]!)
-    real.step(level, real.initState(level), [0, 0])
-    return real
-  } catch {
-    // the stub throws
-  }
-  const T = await import('./emberTypes')
-  type S = import('./emberTypes').GameState
-  type L = import('./emberTypes').Level
-  type P = import('./emberTypes').Player
-  type E = import('./emberTypes').GameEvent
-  const CH: Record<string, number> = { '#': T.T_WALL, L: T.T_LAVA, W: T.T_WATER, G: T.T_GOO }
-  const compileLevel = (def: import('./emberTypes').LevelDef): L => {
-    const tiles: number[] = []
-    const spawns: Array<{ x: number; y: number }> = []
-    const doors: Array<{ x: number; y: number; w: number; h: number }> = []
-    def.map.forEach((r, ty) =>
-      [...r].forEach((c, tx) => {
-        const x = tx * T.TILE
-        const y = ty * T.TILE
-        tiles.push(CH[c] ?? 0)
-        if (c === '1' || c === '2') spawns[Number(c) - 1] = { x: x + (T.TILE - T.PLAYER_W) / 2, y: y + T.TILE - T.PLAYER_H }
-        if (c === 'R' || c === 'B') doors[c === 'R' ? 0 : 1] = { x, y: y - T.TILE, w: T.TILE, h: 2 * T.TILE }
-      }),
-    )
-    const none: never[] = []
-    return {
-      def,
-      tiles: tiles as L['tiles'],
-      spawns: spawns as L['spawns'],
-      doors: doors as L['doors'],
-      gems: [],
-      plates: none,
-      levers: none,
-      buttons: none,
-      gates: none,
-      movers: none,
-      boxes: none,
-      fans: none,
-      ice: none,
-      emitters: none,
-      mirrors: none,
-      sensors: none,
-      portals: none,
-      signs: none,
-      thin: none,
-    }
-  }
-  const player = (at: { x: number; y: number }): P => ({
-    ...at,
-    vx: 0,
-    vy: 0,
-    ground: false,
-    face: 1,
-    alive: true,
-    inDoor: false,
-    coyote: 0,
-    buffer: 0,
-    prevIn: 0,
-    portalCd: 0,
-    gems: 0,
-  })
-  const initState = (level: L, deaths = 0): S => ({
-    tick: 0,
-    phase: 'play',
-    phaseT: 0,
-    deaths,
-    players: [player(level.spawns[0]), player(level.spawns[1])],
-    taken: [],
-    levers: [],
-    buttons: [],
-    gates: [],
-    movers: [],
-    boxes: [],
-    ice: [],
-    thin: [],
-    mirrors: [],
-    on: [],
-    events: [],
-  })
-  const tileAt = (level: L, _s: S, tx: number, ty: number) =>
-    tx < 0 || ty < 0 || tx >= T.COLS || ty >= T.ROWS ? T.T_WALL : level.tiles[ty * T.COLS + tx]!
-  const solidAt = (level: L, x0: number, y0: number, w: number, h: number) => {
-    for (let ty = Math.floor(y0 / T.TILE); ty <= Math.floor((y0 + h - 1e-6) / T.TILE); ty++)
-      for (let tx = Math.floor(x0 / T.TILE); tx <= Math.floor((x0 + w - 1e-6) / T.TILE); tx++) if (tileAt(level, null as never, tx, ty) !== 0) return true
-    return false
-  }
-  const move = (level: L, p: P, bits: number, i: 0 | 1, events: E[]): P => {
-    const dt = T.STEP_S
-    let { x, y, vy } = p
-    const vx = (bits & T.IN_RIGHT ? T.RUN_SPEED : 0) - (bits & T.IN_LEFT ? T.RUN_SPEED : 0)
-    if (bits & T.IN_UP && p.ground) {
-      vy = -T.JUMP_V
-      events.push({ k: 'jump', p: i, x, y })
-    }
-    vy = Math.min(T.MAX_FALL, vy + T.GRAVITY * dt)
-    x += vx * dt
-    if (solidAt(level, x, y, T.PLAYER_W, T.PLAYER_H)) x = vx > 0 ? Math.floor((x + T.PLAYER_W) / T.TILE) * T.TILE - T.PLAYER_W : (Math.floor(x / T.TILE) + 1) * T.TILE
-    y += vy * dt
-    let ground = false
-    if (solidAt(level, x, y, T.PLAYER_W, T.PLAYER_H)) {
-      if (vy > 0) {
-        y = Math.floor((y + T.PLAYER_H) / T.TILE) * T.TILE - T.PLAYER_H
-        ground = true
-      } else y = (Math.floor(y / T.TILE) + 1) * T.TILE
-      vy = 0
-    }
-    if (ground && !p.ground) events.push({ k: 'land', p: i, x, y })
-    const face: 1 | -1 = vx > 0 ? 1 : vx < 0 ? -1 : p.face
-    return { ...p, x, y, vx, vy, ground, face, prevIn: bits }
-  }
-  const step = (level: L, s: S, input: [number, number]): S => {
-    if (s.phase === 'dead') return s.phaseT + 1 >= T.DEATH_TICKS ? initState(level, s.deaths + 1) : { ...s, phaseT: s.phaseT + 1, events: [] }
-    if (s.phase === 'won') return { ...s, phaseT: s.phaseT + 1, events: [] }
-    const events: E[] = []
-    let phase: S['phase'] = 'play'
-    const players = [0, 1].map((i) => {
-      const p = move(level, s.players[i]!, input[i]!, i as 0 | 1, events)
-      const below = tileAt(level, s, Math.floor((p.x + T.PLAYER_W / 2) / T.TILE), Math.floor((p.y + T.PLAYER_H + 1) / T.TILE))
-      const deadly = below === T.T_GOO || below === (i === 0 ? T.T_WATER : T.T_LAVA)
-      if (p.ground && deadly) {
-        phase = 'dead'
-        events.push({ k: 'die', p: i as 0 | 1, x: p.x, y: p.y, cause: below === T.T_GOO ? 'goo' : i === 0 ? 'water' : 'lava' })
-        return { ...p, alive: false }
-      }
-      const d = level.doors[i]!
-      const cx = p.x + T.PLAYER_W / 2
-      return { ...p, inDoor: cx > d.x && cx < d.x + d.w && p.ground && p.y + T.PLAYER_H <= d.y + d.h + 1 }
-    }) as [P, P]
-    if (phase === 'play' && players[0].inDoor && players[1].inDoor) {
-      phase = 'won'
-      events.push({ k: 'win' })
-    }
-    return { ...s, tick: s.tick + 1, phase, phaseT: phase === s.phase ? s.phaseT + 1 : 0, players, events }
-  }
-  return { ...real, compileLevel, initState, step, tileAt }
 })
 
 const FRAME = 1000 / 60
@@ -180,8 +36,6 @@ function pair(
   opts: {
     lag?: number
     fps?: number
-    hostUnlocked?: number
-    guestUnlocked?: number
     guestVersion?: number
     dropFirst?: number
     drop?: (to: 'host' | 'guest', text: string) => boolean
@@ -201,13 +55,12 @@ function pair(
     if (opts.drop?.(to, text)) return
     queue.push({ at: now + lag, to, text })
   }
-  const host = createOnlineGame('host', route('guest'), now, opts.hostUnlocked ?? 1)
+  const host = createOnlineGame('host', route('guest'), now)
   const guestSend = route('host')
   const guest = createOnlineGame(
     'guest',
     opts.guestVersion == null ? guestSend : (t) => guestSend(t.replace(/"v":\d+/, `"v":${opts.guestVersion}`)),
     now,
-    opts.guestUnlocked ?? 1,
   )
   let hv: EmberView = host.tick(now)
   let gv: EmberView = guest.tick(now)
@@ -318,11 +171,9 @@ describe('online: the link', () => {
 })
 
 describe('online: select', () => {
-  it('shares the highlight and the most unlocked of both', () => {
-    const g = pair({ hostUnlocked: 1, guestUnlocked: 4 })
+  it('shares the highlight, and every level can be picked', () => {
+    const g = pair()
     g.run(500)
-    expect(g.views().hv.unlocked).toBe(4)
-    expect(g.views().gv.unlocked).toBe(4)
     g.guest.pick(2)
     expect(g.guest.tick(g.now()).level).toBe(2)
     g.run(200)
@@ -337,7 +188,7 @@ describe('online: select', () => {
   })
 
   it.each(['host', 'guest'] as const)('the %s can start the highlighted level', (who) => {
-    const g = pair({ hostUnlocked: 4 })
+    const g = pair()
     g.startOn(1, who === 'host' ? g.host : g.guest)
     const { hv, gv } = g.views()
     expect(hv.screen).toBe('play')
@@ -350,7 +201,7 @@ describe('online: select', () => {
   })
 
   it('menu from either side takes both back to select', () => {
-    const g = pair({ hostUnlocked: 4 })
+    const g = pair()
     g.startOn(1)
     g.guest.menu()
     g.run(300)
@@ -385,8 +236,8 @@ describe('online: play', () => {
       expect(pos(gv, p).y).toBeCloseTo(pos(hv, p).y, 0)
     }
     // they really moved
-    expect(pos(hv, 0).x).toBeGreaterThan(hv.compiled!.spawns[0].x + 40)
-    expect(pos(hv, 1).x).toBeLessThan(hv.compiled!.spawns[1].x - 40)
+    expect(pos(hv, 0).x).toBeGreaterThan(hv.compiled!.stages[0]!.spawns[0].x + 40)
+    expect(pos(hv, 1).x).toBeLessThan(hv.compiled!.stages[0]!.spawns[1].x - 40)
   })
 
   it('the guest moves its own character at once under lag; the host sees it later', () => {
@@ -426,7 +277,7 @@ describe('online: play', () => {
   })
 
   it('a death on the host shows on the guest, and the level comes back', () => {
-    const g = pair({ lag: 40, hostUnlocked: 4 })
+    const g = pair({ lag: 40 })
     g.startOn(1)
     g.host.keys(0, IN_RIGHT)
     let sawDead = false
@@ -445,17 +296,17 @@ describe('online: play', () => {
 
   it('a guest that walks into a pit freezes until the host confirms, never dying alone', () => {
     // frost's own predicted death waits for the host; the host here never hears frost's keys
-    const g = pair({ lag: 40, hostUnlocked: 4, drop: (to, text) => to === 'host' && text.startsWith('{"t":"k"') })
+    const g = pair({ lag: 40, drop: (to, text) => to === 'host' && text.startsWith('{"t":"k"') })
     g.startOn(0)
     g.guest.keys(1, IN_LEFT)
     g.run(2000)
     // the host never moved frost, so after the guest's prediction is corrected frost is back near its spawn
     expect(g.views().gv.state?.phase).toBe('play')
-    expect(Math.abs(pos(g.views().gv, 1).x - g.views().hv.compiled!.spawns[1].x)).toBeLessThan(45)
+    expect(Math.abs(pos(g.views().gv, 1).x - g.views().hv.compiled!.stages[0]!.spawns[1].x)).toBeLessThan(45)
   })
 
   it('win, then next from the guest, then next past the last level goes to select', () => {
-    const g = pair({ lag: 30, hostUnlocked: 3 })
+    const g = pair({ lag: 30 })
     g.startOn(2)
     g.host.keys(0, IN_RIGHT)
     g.guest.keys(1, IN_RIGHT)
@@ -464,8 +315,6 @@ describe('online: play', () => {
     expect(g.views().gv.state?.phase).toBe('won')
     expect(g.events.guest.filter((e) => e.k === 'win')).toHaveLength(1)
     expect(g.events.host.filter((e) => e.k === 'win')).toHaveLength(1)
-    expect(g.views().hv.unlocked).toBe(4)
-    expect(g.views().gv.unlocked).toBe(4)
     // let go first: the next level is the same one step from the doors, so held keys would win it at once
     g.host.release()
     g.guest.release()
@@ -485,7 +334,7 @@ describe('online: play', () => {
     expect(g.views().gv.screen).toBe('select')
   })
 
-  it('next does nothing before a win; retry from the guest restarts both', () => {
+  it('next does nothing before a win; retry from the guest takes both back', () => {
     const g = pair({ lag: 30 })
     g.startOn(0)
     g.host.keys(0, IN_RIGHT)
@@ -495,12 +344,12 @@ describe('online: play', () => {
     g.run(200)
     expect(g.views().hv.level).toBe(0)
     const moved = pos(g.views().hv, 0).x
-    expect(moved).toBeGreaterThan(g.views().hv.compiled!.spawns[0].x + 20)
+    expect(moved).toBeGreaterThan(g.views().hv.compiled!.stages[0]!.spawns[0].x + 20)
     g.guest.retry()
     g.run(300)
-    expect(g.views().hv.note).toBe('frost restarted')
-    expect(pos(g.views().hv, 0).x).toBeCloseTo(g.views().hv.compiled!.spawns[0].x, 0)
-    expect(pos(g.views().gv, 0).x).toBeCloseTo(g.views().hv.compiled!.spawns[0].x, 0)
+    expect(g.views().hv.note).toBe('frost went back to the checkpoint')
+    expect(pos(g.views().hv, 0).x).toBeCloseTo(g.views().hv.compiled!.stages[0]!.spawns[0].x, 0)
+    expect(pos(g.views().gv, 0).x).toBeCloseTo(g.views().hv.compiled!.stages[0]!.spawns[0].x, 0)
   })
 })
 
@@ -549,14 +398,14 @@ describe('online: message rates', () => {
     g.guest.keys(1, 0)
     g.run(1500)
     expect(pos(g.views().hv, 1).x).toBeCloseTo(pos(g.views().gv, 1).x, 0)
-    expect(pos(g.views().hv, 1).x).toBeLessThan(g.views().hv.compiled!.spawns[1].x - 20)
+    expect(pos(g.views().hv, 1).x).toBeLessThan(g.views().hv.compiled!.stages[0]!.spawns[1].x - 20)
   })
 })
 
 describe('local game', () => {
-  const at = (unlocked = 1) => {
+  const at = () => {
     let now = 0
-    const game = createLocalGame(now, unlocked)
+    const game = createLocalGame(now)
     let v = game.tick(now)
     const events: GameEvent[] = []
     const run = (ms: number, fps = 60) => {
@@ -570,17 +419,19 @@ describe('local game', () => {
     return { game, run, events, view: () => v, gap: (ms: number) => ((now += ms), (v = game.tick(now))) }
   }
 
-  it('starts on select and clamps picks to what is unlocked', () => {
-    const l = at(2)
+  it('starts on select with every level open, and clamps picks to the list', () => {
+    const l = at()
     expect(l.view().screen).toBe('select')
     expect(l.view().mode).toBe('local')
     expect(l.view().me).toBe(null)
     l.game.pick(3)
-    expect(l.game.tick(1).level).toBe(1)
+    expect(l.game.tick(1).level).toBe(3)
+    l.game.pick(99)
+    expect(l.game.tick(1).level).toBe(LEVELS.length - 1)
     l.game.pick(-4)
     expect(l.game.tick(2).level).toBe(0)
-    expect(createLocalGame(0, 999).tick(0).unlocked).toBe(LEVELS.length)
-    expect(createLocalGame(0, 0).tick(0).unlocked).toBe(1)
+    expect(createLocalGame(0, 999).tick(0).level).toBe(LEVELS.length - 1)
+    expect(createLocalGame(0, 2).tick(0).level).toBe(2)
   })
 
   it.each([60, 120, 144, 30])('steps once per 1/60s at %i fps, and cuts a long gap short', (fps) => {
@@ -598,7 +449,7 @@ describe('local game', () => {
   })
 
   it('collects events from every step', () => {
-    const l = at(2)
+    const l = at()
     l.game.pick(1)
     l.game.play()
     l.game.keys(0, IN_RIGHT)
@@ -607,8 +458,8 @@ describe('local game', () => {
     expect(l.view().state!.phase).toBe('dead')
   })
 
-  it('a win unlocks the next level; next after the last goes back to select', () => {
-    const l = at(3)
+  it('next after a win plays the next level; after the last it goes back to select', () => {
+    const l = at()
     l.game.pick(2)
     l.game.play()
     l.game.next()
@@ -618,7 +469,6 @@ describe('local game', () => {
     l.run(1500)
     expect(l.view().state!.phase).toBe('won')
     expect(l.events.filter((e) => e.k === 'win')).toHaveLength(1)
-    expect(l.view().unlocked).toBe(4)
     l.game.next()
     l.run(20)
     expect(l.view().level).toBe(3)
@@ -636,7 +486,7 @@ describe('local game', () => {
     l.game.play()
     l.game.keys(0, IN_RIGHT)
     l.run(500)
-    const s = l.view().compiled!.spawns[0]
+    const s = l.view().compiled!.stages[0]!.spawns[0]
     expect(l.view().state!.players[0].x).toBeGreaterThan(s.x + 20)
     l.game.release()
     l.game.retry()

@@ -1,11 +1,16 @@
-import type { Element, LevelDef, ThingDef } from './emberTypes'
+import type { Element, StageDef, ThingDef } from './emberTypes'
 
-// a conservative reachability check for ember & frost levels, used by tests to catch broken maps (a door or gem
-// nobody can get to, a typo'd wall). it works on the tile grid, not the physics: a player is a 1x2-tile body whose
-// feet sit in a "standing cell" above something solid. mechanics are treated optimistically (gates open, plates
-// held, movers anywhere along their path, fans on) since the point is geometry, not proving the puzzle.
+// a conservative reachability check for ember & frost stages, used by tests to catch broken maps (a door or gem
+// nobody can get to, a typo'd wall). it takes ONE stage (a level's stages are checked one by one) of any size.
+// it works on the tile grid, not the physics: a player is a 1x2-tile body whose feet sit in a "standing cell"
+// above something solid. mechanics are treated optimistically (gates open, plates held, movers anywhere along
+// their path, fans on) since the point is geometry, not proving the puzzle.
 // ice and thin water are the exceptions: ice only melts where fire can reach it, thin water only freezes where
 // frost can, so those run as a small fixed point.
+//
+// TODO(ember-2:solver): version 2's tiles and things aren't modelled yet. as it stands 'T', '~', 'O' and 'D' read
+// as air (so does '='), locks don't exist, and arrows, cannons, gravity switches and ceilings give no reach.
+// see EMBER2_PLAN.md for what each should do here
 
 export type ReachOpts = {
   // how many tiles a jump can climb. 3 matches the physics (a stretch); 2 is the comfortable design rule
@@ -51,7 +56,7 @@ const NONE = 0
 const SAFE = 1
 const DEADLY = 2
 
-function build(def: LevelDef): Ctx {
+function build(def: StageDef): Ctx {
   const map = def.map
   const h = map.length
   const w = map[0]?.length ?? 0
@@ -268,7 +273,7 @@ function reach(c: Ctx, el: Element, start: { x: number; y: number }, o: Required
   return { stand, touched }
 }
 
-function find(def: LevelDef, ch: string): { x: number; y: number } | undefined {
+function find(def: StageDef, ch: string): { x: number; y: number } | undefined {
   for (let y = 0; y < def.map.length; y++) {
     const x = def.map[y]!.indexOf(ch)
     if (x >= 0) return { x, y }
@@ -276,7 +281,7 @@ function find(def: LevelDef, ch: string): { x: number; y: number } | undefined {
   return undefined
 }
 
-export function reachability(def: LevelDef, opts: ReachOpts = {}): Reach {
+export function reachability(def: StageDef, opts: ReachOpts = {}): Reach {
   const o = { jump: opts.jump ?? 3, carry: opts.carry ?? 4 }
   const c = build(def)
   const n = c.w * c.h
@@ -358,7 +363,7 @@ export function reachability(def: LevelDef, opts: ReachOpts = {}): Reach {
 
 // the map with standing cells marked, for eyeballing a level: '+' fire stands there, '-' frost, '=' both.
 // only empty tiles get marked, so the map's own characters stay readable
-export function renderReach(def: LevelDef, r: Reach = reachability(def)): string {
+export function renderReach(def: StageDef, r: Reach = reachability(def)): string {
   return def.map
     .map((row, y) =>
       [...row]

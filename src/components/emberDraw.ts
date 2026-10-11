@@ -1,6 +1,6 @@
 import { gateRect, tileAt, traceBeams } from '../lib/emberEngine'
-import { COLS, PLAYER_H, PLAYER_W, POOL_SINK, ROWS, RUN_SPEED, T_GOO, T_LAVA, T_THIN, T_WALL, T_WATER, TILE, WORLD_W } from '../lib/emberTypes'
-import type { GameEvent, GameState, Level, Player, PlayerIndex, Rect } from '../lib/emberTypes'
+import { PLAYER_H, PLAYER_W, POOL_SINK, RUN_SPEED, T_GOO, T_LAVA, T_THIN, T_WALL, T_WATER, TILE } from '../lib/emberTypes'
+import type { GameEvent, GameState, Player, PlayerIndex, Rect, Stage } from '../lib/emberTypes'
 import {
   CHANNEL_COLORS,
   channelIndex,
@@ -26,7 +26,12 @@ import {
 import type { RGB } from './emberFx'
 
 // ember & frost on a canvas: tiles, pools, mechanics, the two characters, particles and glow.
-// world units throughout (640x360); one transform scales them to the backing store
+// world units throughout; one transform scales them to the backing store. it draws ONE stage (the panel passes
+// compiled.stages[state.stage]); a `level` in here is a Stage.
+//
+// TODO(ember-2:render): this is version 1's renderer made to compile. it fits the WHOLE stage into the canvas
+// (so a one-screen stage looks as before and a big one comes out tiny) instead of following cameraFor(), bakes
+// the static layer at stage size, and draws none of version 2's tiles, things, darkness or flipped players
 
 export type DrawOpts = {
   me: PlayerIndex | null // online: outline/label this side's character; null in local play
@@ -233,22 +238,22 @@ function archPath(g: CanvasRenderingContext2D, x: number, y: number, w: number, 
   g.closePath()
 }
 
-function isWall(level: Level, tx: number, ty: number): boolean {
-  if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true
-  return level.tiles[ty * COLS + tx] === T_WALL
+function isWall(level: Stage, tx: number, ty: number): boolean {
+  if (tx < 0 || ty < 0 || tx >= level.cols || ty >= level.rows) return true
+  return level.tiles[ty * level.cols + tx] === T_WALL
 }
 
 // a wall's neighbour that hides its edge: more wall, or a pool sunk into it (so basins have square rims)
-function closed(level: Level, tx: number, ty: number): boolean {
-  if (tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) return true
-  return level.tiles[ty * COLS + tx] !== 0
+function closed(level: Stage, tx: number, ty: number): boolean {
+  if (tx < 0 || ty < 0 || tx >= level.cols || ty >= level.rows) return true
+  return level.tiles[ty * level.cols + tx] !== 0
 }
 
 // ---------------------------------------------------------------- the static layer: backdrop + walls
 
-function paintBackdrop(g: CanvasRenderingContext2D, p: Palette): void {
-  const W = WORLD_W
-  const H = ROWS * TILE
+function paintBackdrop(g: CanvasRenderingContext2D, level: Stage, p: Palette): void {
+  const W = level.w
+  const H = level.h
   const sky = g.createLinearGradient(0, 0, 0, H)
   sky.addColorStop(0, css(mixRgb(p.bg, p.tape, p.dark ? 0.1 : 0.15)))
   sky.addColorStop(1, css(p.dark ? mixRgb(p.tape, BLACK, 0.12) : mixRgb(p.tape, p.wall, 0.12)))
@@ -268,7 +273,7 @@ function paintBackdrop(g: CanvasRenderingContext2D, p: Palette): void {
   // faint big bricks in the back wall, each a touch different
   const bw = TILE * 2
   const bh = TILE
-  for (let row = 0; row < ROWS; row++) {
+  for (let row = 0; row < level.rows; row++) {
     const off = row % 2 ? bw / 2 : 0
     for (let bx = -off; bx < W; bx += bw) {
       const n = hash01(row * 97 + Math.round(bx) * 13 + 5)
@@ -286,12 +291,12 @@ function paintBackdrop(g: CanvasRenderingContext2D, p: Palette): void {
 }
 
 // walls as one soft mass: rounded only where two open sides meet, lit on top, shaded underneath
-function paintWalls(g: CanvasRenderingContext2D, level: Level, p: Palette, detail: boolean): void {
+function paintWalls(g: CanvasRenderingContext2D, level: Stage, p: Palette, detail: boolean): void {
   const R = 5
   // a soft drop shadow first, so it sits under every block
   g.fillStyle = p.dark ? 'rgba(0, 0, 0, 0.32)' : 'rgba(40, 30, 70, 0.10)'
-  for (let ty = 0; ty < ROWS; ty++)
-    for (let tx = 0; tx < COLS; tx++) {
+  for (let ty = 0; ty < level.rows; ty++)
+    for (let tx = 0; tx < level.cols; tx++) {
       if (!isWall(level, tx, ty)) continue
       if (closed(level, tx, ty + 1) && closed(level, tx + 1, ty)) continue
       const u = !closed(level, tx, ty - 1)
@@ -306,8 +311,8 @@ function paintWalls(g: CanvasRenderingContext2D, level: Level, p: Palette, detai
   const lo = css(p.wallLo)
   const mortar = css(p.wallLo, p.dark ? 0.35 : 0.22)
   const speck = css(p.dark ? p.wallHi : p.wallLo, 0.25)
-  for (let ty = 0; ty < ROWS; ty++)
-    for (let tx = 0; tx < COLS; tx++) {
+  for (let ty = 0; ty < level.rows; ty++)
+    for (let tx = 0; tx < level.cols; tx++) {
       if (!isWall(level, tx, ty)) continue
       const x = tx * TILE
       const y = ty * TILE
@@ -333,8 +338,8 @@ function paintWalls(g: CanvasRenderingContext2D, level: Level, p: Palette, detai
         g.fillRect(x + ((j + TILE / 2) % TILE) - 0.5, y + TILE / 2, 1, TILE / 2)
         g.fillStyle = speck
         for (let k = 0; k < 3; k++) {
-          const n = hash01(ty * COLS * 7 + tx * 7 + k)
-          const m = hash01(ty * COLS * 11 + tx * 5 + k + 999)
+          const n = hash01(ty * level.cols * 7 + tx * 7 + k)
+          const m = hash01(ty * level.cols * 11 + tx * 5 + k + 999)
           g.fillRect(x + 2 + n * (TILE - 4), y + 2 + m * (TILE - 4), 1, 1)
         }
       }
@@ -394,7 +399,7 @@ export class EmberRenderer {
   private statKey = ''
   private glowCache = new Map<string, HTMLCanvasElement>()
   private poolGrad: Array<CanvasGradient | null> = []
-  private level: Level | null = null
+  private level: Stage | null = null
   // per-level lists built once so a frame doesn't have to search the map
   private pools: number[] = [] // tile indices of every liquid tile
   private lavaTops: number[] = [] // lava tiles with open sky, for glow and sparks
@@ -453,7 +458,7 @@ export class EmberRenderer {
     this.statKey = ''
   }
 
-  private setLevel(level: Level): void {
+  private setLevel(level: Stage): void {
     this.level = level
     this.statKey = ''
     this.pools = []
@@ -461,7 +466,7 @@ export class EmberRenderer {
     for (let i = 0; i < level.tiles.length; i++) {
       const t = level.tiles[i]
       if (t === T_LAVA || t === T_WATER || t === T_GOO || t === T_THIN) this.pools.push(i)
-      if (t === T_LAVA && (i < COLS || level.tiles[i - COLS] !== T_LAVA)) this.lavaTops.push(i)
+      if (t === T_LAVA && (i < level.cols || level.tiles[i - level.cols] !== T_LAVA)) this.lavaTops.push(i)
     }
     this.thinIndex.clear()
     level.thin.forEach((ti, j) => this.thinIndex.set(ti, j))
@@ -520,10 +525,10 @@ export class EmberRenderer {
 
   // ------------------------------------------------------------ static layer
 
-  private ensureStatic(level: Level): void {
+  private ensureStatic(level: Stage): void {
     const W = this.canvas.width
     const H = this.canvas.height
-    const key = `${level.def.id}|${this.pal.key}|${W}x${H}`
+    const key = `${this.pal.key}|${W}x${H}`
     if (this.stat && key === this.statKey) return
     if (!this.stat) this.stat = document.createElement('canvas')
     const c = this.stat
@@ -531,9 +536,9 @@ export class EmberRenderer {
     c.height = H
     const g = c.getContext('2d')
     if (!g) return
-    const k = W / WORLD_W
+    const k = Math.min(W / level.w, H / level.h)
     g.setTransform(k, 0, 0, k, 0, 0)
-    paintBackdrop(g, this.pal)
+    paintBackdrop(g, level, this.pal)
     paintWalls(g, level, this.pal, true)
     this.statKey = key
   }
@@ -552,7 +557,7 @@ export class EmberRenderer {
     return name ? C_CH + channelIndex(name) : C_WHITE
   }
 
-  private onEvent(level: Level, cur: GameState, e: GameEvent, opts: DrawOpts, t: number): void {
+  private onEvent(level: Stage, cur: GameState, e: GameEvent, opts: DrawOpts, t: number): void {
     const less = opts.reduceMotion ? 0.4 : 1
     const n = (k: number) => Math.max(1, Math.round(k * less))
     switch (e.k) {
@@ -668,7 +673,7 @@ export class EmberRenderer {
     }
   }
 
-  private portalNear(level: Level, x: number, y: number): number {
+  private portalNear(level: Stage, x: number, y: number): number {
     let best = 0
     let bd = Infinity
     level.portals.forEach((p, i) => {
@@ -692,7 +697,7 @@ export class EmberRenderer {
   // ------------------------------------------------------------ the frame
 
   // one frame. events are everything since the last frame; prev/alpha interpolate moving things
-  draw(level: Level, prev: GameState | null, cur: GameState, alpha: number, events: GameEvent[], nowMs: number, opts: DrawOpts): void {
+  draw(level: Stage, prev: GameState | null, cur: GameState, alpha: number, events: GameEvent[], nowMs: number, opts: DrawOpts): void {
     const g = this.ctx
     if (!g) return
     const W = this.canvas.width
@@ -727,7 +732,7 @@ export class EmberRenderer {
     }
     this.shake = Math.max(0, this.shake - dt * 3)
 
-    const k = W / WORLD_W
+    const k = Math.min(W / level.w, H / level.h)
     g.setTransform(1, 0, 0, 1, 0, 0)
     g.globalAlpha = 1
     g.globalCompositeOperation = 'source-over'
@@ -797,11 +802,11 @@ export class EmberRenderer {
     return Math.sin(wx * 0.19 + t * 2.6) * 0.8 + Math.sin(wx * 0.47 - t * 3.7) * 0.35
   }
 
-  private drawPools(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number, dt: number, opts: DrawOpts): void {
+  private drawPools(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number, dt: number, opts: DrawOpts): void {
     const tiles = level.tiles
     for (const i of this.pools) {
-      const tx = i % COLS
-      const ty = (i - tx) / COLS
+      const tx = i % level.cols
+      const ty = (i - tx) / level.cols
       const x = tx * TILE
       const y = ty * TILE
       const kind = tiles[i]
@@ -809,7 +814,7 @@ export class EmberRenderer {
         this.drawFrozen(g, level, cur, i, x, y, t)
         continue
       }
-      const open = ty === 0 || tiles[i - COLS] !== kind
+      const open = ty === 0 || tiles[i - level.cols] !== kind
       g.save()
       g.translate(x, y)
       g.beginPath()
@@ -867,22 +872,22 @@ export class EmberRenderer {
     // lava glows and spits the odd spark
     this.beginGlow(g)
     for (const i of this.lavaTops) {
-      const tx = i % COLS
-      const ty = (i - tx) / COLS
+      const tx = i % level.cols
+      const ty = (i - tx) / level.cols
       const fl = 0.85 + 0.15 * Math.sin(t * 3 + tx)
       this.glow(g, tx * TILE + TILE / 2, ty * TILE + POOL_SINK + 2, 24, css(LAVA_MID), 0.33 * fl)
     }
     this.endGlow(g)
     if (this.lavaTops.length && Math.random() < this.lavaTops.length * dt * (opts.reduceMotion ? 0.2 : 0.7)) {
       const i = this.lavaTops[Math.floor(Math.random() * this.lavaTops.length)]
-      const tx = i % COLS
-      const ty = (i - tx) / COLS
+      const tx = i % level.cols
+      const ty = (i - tx) / level.cols
       this.parts.spawn(PK_SPARK, Math.random() < 0.5 ? C_CORE : C_FIRE2, tx * TILE + rand(2, 18), ty * TILE + POOL_SINK, rand(-12, 12), rand(-70, -30), rand(0.5, 0.9), rand(0.7, 1.1), 60, 0.5, true)
     }
   }
 
   // frost's frozen water: solid pale ice that flickers when it's about to thaw
-  private drawFrozen(g: CanvasRenderingContext2D, level: Level, cur: GameState, i: number, x: number, y: number, t: number): void {
+  private drawFrozen(g: CanvasRenderingContext2D, level: Stage, cur: GameState, i: number, x: number, y: number, t: number): void {
     const j = this.thinIndex.get(i)
     const left = j === undefined ? 999 : (cur.thin[j] ?? 999)
     const warn = left < 40 ? 0.55 + 0.45 * Math.abs(Math.sin(t * 9)) : 1
@@ -915,7 +920,7 @@ export class EmberRenderer {
 
   // ------------------------------------------------------------ doors, signs, portals
 
-  private drawDoors(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number, dt: number): void {
+  private drawDoors(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number, dt: number): void {
     const p = this.pal
     for (let i = 0; i < 2; i++) {
       const d = level.doors[i]
@@ -1003,7 +1008,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawSigns(g: CanvasRenderingContext2D, level: Level, t: number): void {
+  private drawSigns(g: CanvasRenderingContext2D, level: Stage, t: number): void {
     if (!level.signs.length) return
     const p = this.pal
     g.font = '9px system-ui, -apple-system, "Helvetica Neue", sans-serif'
@@ -1031,7 +1036,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawPortals(g: CanvasRenderingContext2D, level: Level, t: number, opts: DrawOpts): void {
+  private drawPortals(g: CanvasRenderingContext2D, level: Stage, t: number, opts: DrawOpts): void {
     for (let i = 0; i < level.portals.length; i++) {
       const pt = level.portals[i]
       const col = PORTAL_COLORS[this.portalCol[i] ?? 0]
@@ -1072,7 +1077,7 @@ export class EmberRenderer {
 
   // ------------------------------------------------------------ switches
 
-  private drawPlates(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number): void {
+  private drawPlates(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number): void {
     for (let i = 0; i < level.plates.length; i++) {
       const pl = level.plates[i]
       const on = cur.plates?.[i] ?? cur.on.includes(pl.ch)
@@ -1099,7 +1104,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawButtons(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number): void {
+  private drawButtons(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number): void {
     for (let i = 0; i < level.buttons.length; i++) {
       const b = level.buttons[i]
       const left = cur.buttons[i] ?? 0
@@ -1141,7 +1146,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawLevers(g: CanvasRenderingContext2D, level: Level, cur: GameState, dt: number): void {
+  private drawLevers(g: CanvasRenderingContext2D, level: Stage, cur: GameState, dt: number): void {
     for (let i = 0; i < level.levers.length; i++) {
       const lv = level.levers[i]
       const on = cur.levers[i] ?? lv.on
@@ -1185,7 +1190,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawSensors(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number): void {
+  private drawSensors(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number): void {
     for (let i = 0; i < level.sensors.length; i++) {
       const s = level.sensors[i]
       const lit = cur.sensors?.[i] ?? cur.on.includes(s.ch)
@@ -1215,7 +1220,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawEmitters(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number): void {
+  private drawEmitters(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number): void {
     for (const em of level.emitters) {
       const on = condHolds(em.when, cur.on)
       const ch = condChannels(em.when)[0]
@@ -1248,7 +1253,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawMirrors(g: CanvasRenderingContext2D, level: Level, cur: GameState, dt: number): void {
+  private drawMirrors(g: CanvasRenderingContext2D, level: Stage, cur: GameState, dt: number): void {
     for (let i = 0; i < level.mirrors.length; i++) {
       const m = level.mirrors[i]
       const slant = cur.mirrors[i] ?? m.slant
@@ -1279,7 +1284,7 @@ export class EmberRenderer {
 
   // ------------------------------------------------------------ solid moving things
 
-  private drawGates(g: CanvasRenderingContext2D, level: Level, cur: GameState): void {
+  private drawGates(g: CanvasRenderingContext2D, level: Stage, cur: GameState): void {
     const p = this.pal
     for (let i = 0; i < level.gates.length; i++) {
       const home = level.gates[i]
@@ -1320,7 +1325,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawMoverRails(g: CanvasRenderingContext2D, level: Level): void {
+  private drawMoverRails(g: CanvasRenderingContext2D, level: Stage): void {
     g.lineCap = 'round'
     for (const m of level.movers) {
       const ch = condChannels(m.when)[0]
@@ -1343,7 +1348,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawMovers(g: CanvasRenderingContext2D, level: Level, prev: GameState | null, cur: GameState, a: number): void {
+  private drawMovers(g: CanvasRenderingContext2D, level: Stage, prev: GameState | null, cur: GameState, a: number): void {
     const p = this.pal
     for (let i = 0; i < level.movers.length; i++) {
       const m = level.movers[i]
@@ -1415,7 +1420,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawIce(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number): void {
+  private drawIce(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number): void {
     for (let i = 0; i < level.ice.length; i++) {
       const r = level.ice[i]
       const p = cur.ice[i] ?? 0
@@ -1484,7 +1489,7 @@ export class EmberRenderer {
 
   // ------------------------------------------------------------ fans
 
-  private drawFanColumns(g: CanvasRenderingContext2D, level: Level, cur: GameState, dt: number, opts: DrawOpts): void {
+  private drawFanColumns(g: CanvasRenderingContext2D, level: Stage, cur: GameState, dt: number, opts: DrawOpts): void {
     const p = this.pal
     for (let i = 0; i < level.fans.length; i++) {
       const f = level.fans[i]
@@ -1539,7 +1544,7 @@ export class EmberRenderer {
 
   // ------------------------------------------------------------ gems, beams
 
-  private drawGems(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number, opts: DrawOpts): void {
+  private drawGems(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number, opts: DrawOpts): void {
     const p = this.pal
     for (let i = 0; i < level.gems.length; i++) {
       if (cur.taken[i]) continue
@@ -1591,7 +1596,7 @@ export class EmberRenderer {
     }
   }
 
-  private drawBeams(g: CanvasRenderingContext2D, level: Level, cur: GameState, t: number, opts: DrawOpts): void {
+  private drawBeams(g: CanvasRenderingContext2D, level: Stage, cur: GameState, t: number, opts: DrawOpts): void {
     const beams = traceBeams(level, cur)
     if (!beams.length) return
     const p = this.pal
@@ -1921,27 +1926,27 @@ function channelColorOf(name: string): string {
 // ---------------------------------------------------------------- the select screen's thumbnails
 
 // a small static picture of a level for the select screen
-export function drawThumb(canvas: HTMLCanvasElement, level: Level): void {
+export function drawThumb(canvas: HTMLCanvasElement, level: Stage): void {
   const g = canvas.getContext('2d')
   if (!g) return
   const p = readPalette(canvas)
-  const k = canvas.width / WORLD_W
+  const k = canvas.width / level.w
   g.setTransform(1, 0, 0, 1, 0, 0)
   g.clearRect(0, 0, canvas.width, canvas.height)
-  g.setTransform(k, 0, 0, canvas.height / (ROWS * TILE), 0, 0)
-  const sky = g.createLinearGradient(0, 0, 0, ROWS * TILE)
+  g.setTransform(k, 0, 0, canvas.height / level.h, 0, 0)
+  const sky = g.createLinearGradient(0, 0, 0, level.h)
   sky.addColorStop(0, css(mixRgb(p.bg, p.tape, 0.15)))
   sky.addColorStop(1, css(p.dark ? mixRgb(p.tape, BLACK, 0.12) : mixRgb(p.tape, p.wall, 0.15)))
   g.fillStyle = sky
-  g.fillRect(0, 0, WORLD_W, ROWS * TILE)
+  g.fillRect(0, 0, level.w, level.h)
   // walls without texture: at this size the shapes are what matter
   paintWalls(g, level, p, false)
   for (let i = 0; i < level.tiles.length; i++) {
     const t = level.tiles[i]
     if (t !== T_LAVA && t !== T_WATER && t !== T_GOO && t !== T_THIN) continue
-    const tx = i % COLS
-    const ty = (i - tx) / COLS
-    const top = ty > 0 && level.tiles[i - COLS] === t ? 0 : POOL_SINK
+    const tx = i % level.cols
+    const ty = (i - tx) / level.cols
+    const top = ty > 0 && level.tiles[i - level.cols] === t ? 0 : POOL_SINK
     g.fillStyle = css(t === T_LAVA ? LAVA_MID : t === T_WATER ? WATER_TOP : t === T_GOO ? GOO_TOP : THIN_TOP)
     g.fillRect(tx * TILE, ty * TILE + top, TILE, TILE - top)
   }

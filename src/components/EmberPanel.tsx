@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { nativeWindow } from '../lib/bridge'
 import { closeReasonText, type PeerInfo, type PeerTransport } from '../lib/peer'
-import { compileLevel, scoreOf } from '../lib/emberEngine'
+import { compileLevel, scoreOf, stageOf } from '../lib/emberEngine'
 import { LEVELS } from '../lib/emberLevels'
-import { loadProgress, recordResult, saveProgress, unlockedCount, type EmberProgress } from '../lib/emberProgress'
+import { firstUnfinished, loadProgress, recordResult, saveProgress, type EmberProgress } from '../lib/emberProgress'
 import { createLocalGame, createOnlineGame, type EmberGame, type EmberScreen, type EmberView } from '../lib/emberSession'
 import { createEmberSound } from '../lib/emberSound'
 import { IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, type DeathCause, type Element, type GameState, type Level, type PlayerIndex, type Score } from '../lib/emberTypes'
@@ -83,11 +83,10 @@ export function EmberPanel({
   const lobbyBackRef = useRef<(() => boolean) | null>(null)
   const gameIds = useRef(0)
 
-  const unlocked = unlockedCount(progress, LEVELS)
 
   const startLocal = useCallback(() => {
     try {
-      const game = createLocalGame(performance.now(), unlockedCount(progressRef.current, LEVELS))
+      const game = createLocalGame(performance.now(), firstUnfinished(progressRef.current, LEVELS))
       gameScreenRef.current = 'select'
       setScreen({ k: 'game', game, online: false, peer: '', id: ++gameIds.current })
     } catch {
@@ -100,7 +99,7 @@ export function EmberPanel({
     (role: 'host' | 'guest', peer: string) => {
       if (!transport) return
       try {
-        const game = createOnlineGame(role, (text) => transport.send(text), performance.now(), unlockedCount(progressRef.current, LEVELS))
+        const game = createOnlineGame(role, (text) => transport.send(text), performance.now(), firstUnfinished(progressRef.current, LEVELS))
         gameScreenRef.current = 'wait'
         const next: Screen = { k: 'game', game, online: true, peer: peer || 'friend', id: ++gameIds.current }
         screenRef.current = next
@@ -234,7 +233,6 @@ export function EmberPanel({
           online={screen.online}
           peer={screen.peer}
           progress={progress}
-          unlocked={unlocked}
           screenRef={gameScreenRef}
           head={head}
           onRecord={record}
@@ -554,13 +552,13 @@ const OUCH: Record<DeathCause, Record<PlayerIndex, string>> = {
   lava: { 0: 'ember tripped in lava? odd · again', 1: 'frost melted · again' },
   water: { 0: 'ember fizzled out · again', 1: 'frost took a swim · again' },
   goo: { 0: 'ember got gooed · again', 1: 'frost got gooed · again' },
+  crush: { 0: 'ember got walled in · again', 1: 'frost got walled in · again' },
 }
 
 type Hud = {
   screen: EmberScreen
   level: number
   me: PlayerIndex | null
-  unlocked: number
   note: string | null
   phase: GameState['phase'] | null
   deaths: number
@@ -571,11 +569,12 @@ type Hud = {
   score: Score | null
 }
 
-const EMPTY_HUD: Hud = { screen: 'wait', level: 0, me: null, unlocked: 1, note: null, phase: null, deaths: 0, gems: [], ouch: null, entry: 0, score: null }
+const EMPTY_HUD: Hud = { screen: 'wait', level: 0, me: null, note: null, phase: null, deaths: 0, gems: [], ouch: null, entry: 0, score: null }
 
 function gemsOf(level: Level | null, s: GameState | null): Hud['gems'] {
   if (!level || !s) return []
-  return level.gems.map((g, i) => ({ el: g.el, taken: Boolean(s.taken[i]) }))
+  // TODO(ember-2:panel): this stage's gems only; show the level's whole count (scoreOf) and the stage number
+  return stageOf(level, s).gems.map((g, i) => ({ el: g.el, taken: Boolean(s.taken[i]) }))
 }
 
 function EmberPlay({
@@ -583,7 +582,6 @@ function EmberPlay({
   online,
   peer,
   progress,
-  unlocked,
   screenRef,
   head,
   onRecord,
@@ -594,7 +592,6 @@ function EmberPlay({
   online: boolean
   peer: string
   progress: EmberProgress
-  unlocked: number
   screenRef: MutableRefObject<EmberScreen>
   head: (sub: string) => ReactNode
   onRecord: (levelId: string, score: Score) => void
@@ -684,15 +681,16 @@ function EmberPlay({
         const s = v.state!
         if (s.phase === 'play' && s.tick < 2) ouch = null
         if (s.phase === 'won' && !score) score = scoreOf(v.compiled!, s)
-        renderer?.draw(v.compiled!, v.prev, s, v.alpha, v.events, now, { me: v.me, reduceMotion })
+        // TODO(ember-2:panel): R is now 'back to the checkpoint'; add restart(), the stage and checkpoint notes, ctrl+F
+        renderer?.draw(stageOf(v.compiled!, s), v.prev, s, v.alpha, v.events, now, { me: v.me, reduceMotion })
         if (timerRef.current) timerRef.current.textContent = fmtTime(s.tick / 60)
       }
       const s = playing ? v.state! : null
       const gems = gemsOf(v.compiled, s)
-      const key = [v.screen, v.level, v.me, v.unlocked, v.note, s?.phase, s?.deaths, gems.map((g) => +g.taken).join(''), ouch, entry, score?.stars].join('|')
+      const key = [v.screen, v.level, v.me, v.note, s?.phase, s?.stage, s?.deaths, gems.map((g) => +g.taken).join(''), ouch, entry, score?.stars].join('|')
       if (key === shown) return
       shown = key
-      setHud({ screen: v.screen, level: v.level, me: v.me, unlocked: v.unlocked, note: v.note, phase: s?.phase ?? null, deaths: s?.deaths ?? 0, gems, ouch, entry, score })
+      setHud({ screen: v.screen, level: v.level, me: v.me, note: v.note, phase: s?.phase ?? null, deaths: s?.deaths ?? 0, gems, ouch, entry, score })
     }
     raf = requestAnimationFrame(frame)
 
@@ -730,7 +728,7 @@ function EmberPlay({
       const h = hudRef.current
       const base = asked && asked.from === h.level ? asked.to : h.level
       const next = base + dx + dy * COLS
-      if (next < 0 || next >= Math.min(LEVELS.length, h.unlocked)) return
+      if (next < 0 || next >= LEVELS.length) return
       asked = { from: h.level, to: next }
       game.pick(next)
     }
@@ -748,7 +746,7 @@ function EmberPlay({
           else if (move.bit === IN_RIGHT) pick(1, 0)
           else if (move.bit === IN_UP) pick(0, -1)
           else pick(0, 1)
-        } else if ((e.key === 'Enter' || e.key === ' ') && !e.repeat && h.level < h.unlocked) game.play()
+        } else if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) game.play()
         else if (e.key.toLowerCase() === 'm' && !e.repeat) cb.current.onMute()
         return
       }
@@ -808,12 +806,10 @@ function EmberPlay({
           {head(online ? `with ${peer}` : 'same keyboard')}
           <Select
             level={hud.level}
-            unlocked={Math.max(hud.unlocked, online ? 0 : unlocked)}
             progress={progress}
             you={you}
             note={hud.note}
             muted={muted}
-            onPick={(i) => game.pick(i)}
             onPlay={(i) => {
               game.pick(i)
               game.play()
@@ -894,21 +890,17 @@ function Win({ score, par, last }: { score: Score; par: number; last: boolean })
 
 function Select({
   level,
-  unlocked,
   progress,
   you,
   note,
   muted,
-  onPick,
   onPlay,
 }: {
   level: number
-  unlocked: number
   progress: EmberProgress
   you: ReactNode
   note: string | null
   muted: boolean
-  onPick: (i: number) => void
   onPlay: (i: number) => void
 }) {
   const gridRef = useRef<HTMLDivElement>(null)
@@ -920,31 +912,23 @@ function Select({
       <div className="ember-grid" ref={gridRef} role="listbox" aria-label="levels">
         {LEVELS.map((def, i) => {
           const best = progress.levels[def.id]
-          const locked = i >= unlocked
           return (
             <button
               key={def.id}
               type="button"
               role="option"
               aria-selected={i === level}
-              aria-disabled={locked}
-              className={`ember-card ${i === level ? 'on' : ''} ${locked ? 'locked' : ''}`}
-              onClick={() => (locked ? onPick(i) : onPlay(i))}
+              className={`ember-card ${i === level ? 'on' : ''}`}
+              onClick={() => onPlay(i)}
             >
               <Thumb index={i} />
               <span className="ember-card-name">
                 <b>{i + 1}</b> {def.name}
               </span>
               <span className="ember-card-meta">
-                {locked ? (
-                  <span className="ember-lock">locked</span>
-                ) : (
-                  <>
-                    <Stars n={best?.stars ?? 0} />
-                    {best?.secs != null ? <span>{fmtTime(best.secs)}</span> : null}
-                    {best?.gems ? <span className="ember-card-gems">◆ {best.gems}</span> : null}
-                  </>
-                )}
+                <Stars n={best?.stars ?? 0} />
+                {best?.secs != null ? <span>{fmtTime(best.secs)}</span> : null}
+                {best?.gems ? <span className="ember-card-gems">◆ {best.gems}</span> : null}
               </span>
             </button>
           )
@@ -969,7 +953,8 @@ function Thumb({ index }: { index: number }) {
     canvas.width = 144 * dpr
     canvas.height = 81 * dpr
     try {
-      drawThumb(canvas, level)
+      // TODO(ember-2:panel): the first stage only, squashed to the card; long levels want a better picture
+      drawThumb(canvas, level.stages[0]!)
     } catch {
       // no picture beats no select screen
     }

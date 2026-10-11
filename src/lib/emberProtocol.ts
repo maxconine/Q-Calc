@@ -1,7 +1,8 @@
+import { stageOf } from './emberEngine'
 import { LEVELS } from './emberLevels'
 import {
-  COLS,
-  ROWS,
+  MAX_COLS,
+  MAX_ROWS,
   type DeathCause,
   type Element,
   type GameEvent,
@@ -10,28 +11,33 @@ import {
   type Phase,
   type Player,
   type Slant,
+  type Stage,
 } from './emberTypes'
 
 // ember & frost over the peer link, as json text. the host is authoritative: it streams state at STATE_HZ,
 // the guest sends its keys when they change. every message may cross a relay that charges per request,
-// so state goes as short keys and rounded numbers, and anything empty is left out
+// so state goes as short keys and rounded numbers, and anything empty is left out.
+//
+// TODO(ember-2:net): version 2's state (stage, lights, arrows, crumbling, keys, locks, cannons, checkpoint, the new
+// player fields) and events are carried below in the plainest way that round-trips. big stages make big frames:
+// make them compact again (see EMBER2_PLAN.md), and never send GameState.saved
 
 // nothing from the other side for this long and the game is over
 export const SILENCE_MS = 3000
 export const STATE_HZ = 30
 
 // what the other side did, for the small note line
-export type EmberNote = 'play' | 'retry' | 'next' | 'menu'
+export type EmberNote = 'play' | 'retry' | 'restart' | 'next' | 'menu'
 
 // a guest key change: the guest frame it starts at, and the held bits
 export type KeyChange = [frame: number, bits: number]
 
 export type EmberMsg =
-  // u: levels unlocked on the sender's side; ok: the sender already heard the other side's hi
-  | { t: 'hi'; v: number; u: number; ok?: boolean }
+  // ok: the sender already heard the other side's hi
+  | { t: 'hi'; v: number; ok?: boolean }
   | { t: 'bye' }
   // host: the select screen. l is the shared highlight
-  | { t: 'sel'; l: number; u: number }
+  | { t: 'sel'; l: number }
   // host: authoritative state of attempt a of level l after frame f (steps since the attempt began).
   // fi: ember's held keys; sl: the least slack of the guest keys heard since the last state, and the
   // guest frame that message carried; e: events since the last state message
@@ -42,6 +48,7 @@ export type EmberMsg =
   | { t: 'pick'; l: number }
   | { t: 'go'; l: number }
   | { t: 'retry' }
+  | { t: 'restart' }
   | { t: 'next' }
   | { t: 'menu' }
   // host: something it did itself
@@ -49,7 +56,8 @@ export type EmberMsg =
 
 // ---- limits for text from another machine
 
-const MAX_TEXT = 32_000
+const MAX_TEXT = 64_000
+const MAX_TILES = MAX_COLS * MAX_ROWS
 const MAX_FRAME = 1e9
 const MAX_COUNT = 1e9
 const MAX_THINGS = 512
@@ -59,9 +67,9 @@ const MAX_CHANGES = 8
 const POS = 10_000
 const VEL = 10_000
 
-const PHASES: Phase[] = ['play', 'dead', 'won']
-const NOTES: EmberNote[] = ['play', 'retry', 'next', 'menu']
-const CAUSES: DeathCause[] = ['lava', 'water', 'goo']
+const PHASES: Phase[] = ['play', 'dead', 'won', 'clear']
+const NOTES: EmberNote[] = ['play', 'retry', 'restart', 'next', 'menu']
+const CAUSES: DeathCause[] = ['lava', 'water', 'goo', 'crush']
 const ELS: Element[] = ['fire', 'frost']
 const KINDS = [
   'jump',
@@ -80,6 +88,24 @@ const KINDS = [
   'freeze',
   'thaw',
   'win',
+  'airjump',
+  'bounce',
+  'arrow',
+  'key',
+  'load',
+  'fire',
+  'flip',
+  'gswitch',
+  'arrowback',
+  'unlock',
+  'checkpoint',
+  'light',
+  'shake',
+  'break',
+  'mend',
+  'clear',
+  'stage',
+  'respawn',
 ] as const
 type Kind = (typeof KINDS)[number]
 
@@ -93,12 +119,11 @@ const int = (v: unknown, lo: number, hi: number): v is number => Number.isIntege
 const within = (v: unknown, lim: number): v is number => finite(v) && Math.abs(v) <= lim
 const isBit = (v: unknown): v is 0 | 1 => v === 0 || v === 1
 const levelIndex = (v: unknown): v is number => int(v, 0, LEVELS.length - 1)
-const clampUnlocked = (v: unknown) => (finite(v) ? Math.min(Math.max(1, LEVELS.length), Math.max(1, Math.floor(v))) : 1)
 
 // ---- state
 
-// x y vx vy ground face alive inDoor coyote buffer prevIn portalCd gems
-const PLAYER_LEN = 13
+// x y vx vy ground face alive inDoor coyote buffer prevIn portalCd gems grav air cannon fly cannonCd
+const PLAYER_LEN = 18
 
 function packPlayer(p: Player): number[] {
   return [
@@ -115,16 +140,22 @@ function packPlayer(p: Player): number[] {
     p.prevIn,
     p.portalCd,
     p.gems,
+    p.grav,
+    p.air,
+    p.cannon,
+    p.fly,
+    p.cannonCd,
   ]
 }
 
 function unpackPlayer(v: unknown): Player | null {
   if (!Array.isArray(v) || v.length !== PLAYER_LEN) return null
-  const [x, y, vx, vy, ground, face, alive, inDoor, coyote, buffer, prevIn, portalCd, gems] = v as unknown[]
+  const [x, y, vx, vy, ground, face, alive, inDoor, coyote, buffer, prevIn, portalCd, gems, grav, air, cannon, fly, cannonCd] = v as unknown[]
   if (!within(x, POS) || !within(y, POS) || !within(vx, VEL) || !within(vy, VEL)) return null
   if (!isBit(ground) || !isBit(alive) || !isBit(inDoor) || (face !== 1 && face !== -1)) return null
   if (!int(coyote, 0, 1e4) || !int(buffer, 0, 1e4) || !int(prevIn, 0, 15) || !int(portalCd, 0, 1e4) || !int(gems, 0, MAX_THINGS)) return null
-  return { x, y, vx, vy, ground: ground === 1, face, alive: alive === 1, inDoor: inDoor === 1, coyote, buffer, prevIn, portalCd, gems }
+  if ((grav !== 1 && grav !== -1) || !int(air, 0, 1) || !int(cannon, -1, MAX_THINGS) || !int(fly, 0, 1e4) || !int(cannonCd, 0, 1e4)) return null
+  return { x, y, vx, vy, ground: ground === 1, face, alive: alive === 1, inDoor: inDoor === 1, coyote, buffer, prevIn, portalCd, gems, grav, air, cannon, fly, cannonCd }
 }
 
 // booleans and slants go as strings of 0s and 1s
@@ -144,6 +175,17 @@ function packState(s: GameState): Record<string, unknown> {
   if (s.thin.length) o.th = s.thin
   if (s.mirrors.length) o.mi = s.mirrors.map((m) => (m === '/' ? '0' : '1')).join('')
   if (s.on.length) o.on = s.on
+  if (s.stage) o.st = s.stage
+  if (s.banked[0] || s.banked[1]) o.bk = s.banked
+  if (!s.lit) o.dk = 1
+  if (s.litT) o.lt = s.litT
+  if (s.arrows.length) o.ar = s.arrows
+  if (s.crumble.length) o.cr = s.crumble
+  if (s.keys) o.ky = s.keys
+  if (s.keyTaken.length) o.kt = flags(s.keyTaken)
+  if (s.locks.length) o.lk = flags(s.locks)
+  if (s.cannons.length) o.cn = s.cannons
+  if (s.cp >= 0) o.cp = s.cp
   return o
 }
 
@@ -185,16 +227,32 @@ function unpackState(v: unknown): GameState | null {
     return within(x, POS) && within(y, POS) && within(vx, VEL) && within(vy, VEL) ? { x, y, vx, vy } : null
   })
   const ice = list(o.ic, frac)
-  const thin = list(o.th, count, ROWS * COLS)
+  const thin = list(o.th, count, MAX_TILES)
   const mirrors: Slant[] | null =
     o.mi === undefined ? [] : typeof o.mi === 'string' && /^[01]*$/.test(o.mi) && o.mi.length <= MAX_THINGS ? [...o.mi].map((c) => (c === '0' ? '/' : '\\')) : null
   const on = list(o.on, (c) => (typeof c === 'string' && c.length <= 64 ? c : null), MAX_CHANNELS)
   if (!taken || !levers || !buttons || !gates || !movers || !boxes || !ice || !thin || !mirrors || !on) return null
+  const opt = (v: unknown, lo: number, hi: number, d: number) => (v === undefined ? d : int(v, lo, hi) ? v : null)
+  const stage = opt(o.st, 0, 64, 0)
+  const litT = opt(o.lt, 0, MAX_COUNT, 0)
+  const keys = opt(o.ky, 0, MAX_THINGS, 0)
+  const cp = opt(o.cp, 0, MAX_THINGS, -1)
+  const bk = o.bk === undefined ? [0, 0] : o.bk
+  const arrows = list(o.ar, count)
+  const crumble = list(o.cr, count, MAX_TILES)
+  const keyTaken = o.kt === undefined ? [] : unflags(o.kt)
+  const locks = o.lk === undefined ? [] : unflags(o.lk)
+  const cannons = list(o.cn, count)
+  if (stage === null || litT === null || keys === null || cp === null || !arrows || !crumble || !keyTaken || !locks || !cannons) return null
+  if (!Array.isArray(bk) || bk.length !== 2 || !int(bk[0], 0, MAX_COUNT) || !int(bk[1], 0, MAX_COUNT)) return null
+  if (o.dk !== undefined && o.dk !== 1) return null
   return {
     tick: o.T,
     phase: PHASES[o.ph]!,
     phaseT: o.pt,
     deaths: o.d,
+    stage,
+    banked: [bk[0], bk[1]],
     players: [a, b],
     taken,
     levers,
@@ -205,23 +263,41 @@ function unpackState(v: unknown): GameState | null {
     ice,
     thin,
     mirrors,
+    lit: o.dk !== 1,
+    litT,
+    arrows,
+    crumble,
+    keys,
+    keyTaken,
+    locks,
+    cannons,
+    cp,
     on,
     events: [],
   }
 }
 
-// a decoded state still has to match the level it's for: the renderer indexes level arrays with it
+// a decoded state still has to match the level it's for: the renderer indexes the stage's arrays with it
 export function fitsLevel(level: Level, s: GameState): boolean {
+  if (s.stage >= level.stages.length) return false
+  const stage = stageOf(level, s)
   return (
-    s.taken.length === level.gems.length &&
-    s.levers.length === level.levers.length &&
-    s.buttons.length === level.buttons.length &&
-    s.gates.length === level.gates.length &&
-    s.movers.length === level.movers.length &&
-    s.boxes.length === level.boxes.length &&
-    s.ice.length === level.ice.length &&
-    s.thin.length === level.thin.length &&
-    s.mirrors.length === level.mirrors.length
+    s.taken.length === stage.gems.length &&
+    s.levers.length === stage.levers.length &&
+    s.buttons.length === stage.buttons.length &&
+    s.gates.length === stage.gates.length &&
+    s.movers.length === stage.movers.length &&
+    s.boxes.length === stage.boxes.length &&
+    s.ice.length === stage.ice.length &&
+    s.thin.length === stage.thin.length &&
+    s.mirrors.length === stage.mirrors.length &&
+    s.arrows.length === stage.arrows.length &&
+    s.crumble.length === stage.crumble.length &&
+    s.keyTaken.length === stage.keys.length &&
+    s.locks.length === stage.locks.length &&
+    s.cannons.length === stage.cannons.length &&
+    s.cp < stage.checkpoints.length &&
+    s.players.every((p) => p.cannon < stage.cannons.length)
   )
 }
 
@@ -232,11 +308,31 @@ function packEvent(e: GameEvent): number[] {
   switch (e.k) {
     case 'win':
       return [k]
+    case 'clear':
+    case 'stage':
+      return [k, e.stage]
+    case 'respawn':
+      return [k, e.cp]
     case 'gem':
       return [k, e.p, r1(e.x), r1(e.y), ELS.indexOf(e.el)]
+    case 'bounce':
+      return [k, e.p, r1(e.x), r1(e.y), Math.round(e.v)]
+    case 'flip':
+      return [k, e.p, r1(e.x), r1(e.y), e.grav]
+    case 'arrow':
+    case 'key':
+    case 'load':
+    case 'fire':
+      return [k, e.p, e.i, r1(e.x), r1(e.y)]
+    case 'light':
+      return [k, bit(e.on), r1(e.x), r1(e.y)]
     case 'lever':
     case 'mirror':
     case 'melt':
+    case 'gswitch':
+    case 'arrowback':
+    case 'unlock':
+    case 'checkpoint':
       return [k, e.i, r1(e.x), r1(e.y)]
     case 'plate':
     case 'button':
@@ -244,6 +340,9 @@ function packEvent(e: GameEvent): number[] {
       return [k, e.i, bit(e.on), r1(e.x), r1(e.y)]
     case 'freeze':
     case 'thaw':
+    case 'shake':
+    case 'break':
+    case 'mend':
       return [k, e.tile, r1(e.x), r1(e.y)]
     default:
       return [k, e.p, r1(e.x), r1(e.y), ...(e.cause ? [CAUSES.indexOf(e.cause)] : [])]
@@ -260,6 +359,22 @@ function unpackEvent(v: unknown): GameEvent | null {
   switch (k) {
     case 'win':
       return n.length === 1 ? { k } : null
+    case 'clear':
+    case 'stage':
+      return n.length === 2 && int(n[1], 0, 64) ? { k, stage: n[1]! } : null
+    case 'respawn':
+      return n.length === 2 && int(n[1], -1, MAX_THINGS) ? { k, cp: n[1]! } : null
+    case 'bounce':
+      return n.length === 5 && isBit(n[1]) && xy(2) && within(n[4], VEL) ? { k, p: n[1], x: n[2]!, y: n[3]!, v: n[4]! } : null
+    case 'flip':
+      return n.length === 5 && isBit(n[1]) && xy(2) && (n[4] === 1 || n[4] === -1) ? { k, p: n[1], x: n[2]!, y: n[3]!, grav: n[4] } : null
+    case 'arrow':
+    case 'key':
+    case 'load':
+    case 'fire':
+      return n.length === 5 && isBit(n[1]) && idx(2) && xy(3) ? { k, p: n[1], i: n[2]!, x: n[3]!, y: n[4]! } : null
+    case 'light':
+      return n.length === 4 && isBit(n[1]) && xy(2) ? { k, on: n[1] === 1, x: n[2]!, y: n[3]! } : null
     case 'gem': {
       const el = ELS[n[4]!]
       return n.length === 5 && isBit(n[1]) && xy(2) && el ? { k, p: n[1], x: n[2]!, y: n[3]!, el } : null
@@ -267,6 +382,10 @@ function unpackEvent(v: unknown): GameEvent | null {
     case 'lever':
     case 'mirror':
     case 'melt':
+    case 'gswitch':
+    case 'arrowback':
+    case 'unlock':
+    case 'checkpoint':
       return n.length === 4 && idx(1) && xy(2) ? { k, i: n[1]!, x: n[2]!, y: n[3]! } : null
     case 'plate':
     case 'button':
@@ -274,7 +393,10 @@ function unpackEvent(v: unknown): GameEvent | null {
       return n.length === 5 && idx(1) && isBit(n[2]) && xy(3) ? { k, i: n[1]!, on: n[2] === 1, x: n[3]!, y: n[4]! } : null
     case 'freeze':
     case 'thaw':
-      return n.length === 4 && int(n[1], 0, ROWS * COLS - 1) && xy(2) ? { k, tile: n[1]!, x: n[2]!, y: n[3]! } : null
+    case 'shake':
+    case 'break':
+    case 'mend':
+      return n.length === 4 && int(n[1], 0, MAX_TILES - 1) && xy(2) ? { k, tile: n[1]!, x: n[2]!, y: n[3]! } : null
     default: {
       if ((n.length !== 4 && n.length !== 5) || !isBit(n[1]) || !xy(2)) return null
       const cause = n.length === 5 ? CAUSES[n[4]!] : undefined
@@ -284,21 +406,35 @@ function unpackEvent(v: unknown): GameEvent | null {
   }
 }
 
-// an event's index points at something in this level, so the panel can look it up without checking
-export function eventFits(level: Level, e: GameEvent): boolean {
+// an event's index points at something in this stage, so the panel can look it up without checking
+export function eventFits(stage: Stage, e: GameEvent): boolean {
   switch (e.k) {
     case 'lever':
-      return e.i < level.levers.length
+      return e.i < stage.levers.length
     case 'mirror':
-      return e.i < level.mirrors.length
+      return e.i < stage.mirrors.length
     case 'melt':
-      return e.i < level.ice.length
+      return e.i < stage.ice.length
     case 'plate':
-      return e.i < level.plates.length
+      return e.i < stage.plates.length
     case 'button':
-      return e.i < level.buttons.length
+      return e.i < stage.buttons.length
     case 'sensor':
-      return e.i < level.sensors.length
+      return e.i < stage.sensors.length
+    case 'gswitch':
+      return e.i < stage.gswitches.length
+    case 'arrow':
+    case 'arrowback':
+      return e.i < stage.arrows.length
+    case 'key':
+      return e.i < stage.keys.length
+    case 'unlock':
+      return e.i < stage.locks.length
+    case 'load':
+    case 'fire':
+      return e.i < stage.cannons.length
+    case 'checkpoint':
+      return e.i < stage.checkpoints.length
     default:
       return true
   }
@@ -336,10 +472,11 @@ export function decodeEmber(raw: string): EmberMsg | null {
   const o = m as Record<string, unknown>
   switch (o.t) {
     case 'hi':
-      // u is read leniently: a hi from another version must still decode, to say so
-      return finite(o.v) ? { t: 'hi', v: o.v, u: clampUnlocked(o.u), ...(o.ok === true ? { ok: true } : {}) } : null
+      // read leniently: a hi from another version must still decode, to say so
+      return finite(o.v) ? { t: 'hi', v: o.v, ...(o.ok === true ? { ok: true } : {}) } : null
     case 'bye':
     case 'retry':
+    case 'restart':
     case 'next':
     case 'menu':
       return { t: o.t }
@@ -347,7 +484,7 @@ export function decodeEmber(raw: string): EmberMsg | null {
     case 'go':
       return levelIndex(o.l) ? { t: o.t, l: o.l } : null
     case 'sel':
-      return levelIndex(o.l) ? { t: 'sel', l: o.l, u: clampUnlocked(o.u) } : null
+      return levelIndex(o.l) ? { t: 'sel', l: o.l } : null
     case 'note':
       return NOTES.includes(o.w as EmberNote) ? { t: 'note', w: o.w as EmberNote } : null
     case 'k': {

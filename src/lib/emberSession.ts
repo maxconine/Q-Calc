@@ -1,7 +1,19 @@
-import { compileLevel, initState, step } from './emberEngine'
+import { compileLevel, initState, respawn, stageOf, step } from './emberEngine'
 import { LEVELS } from './emberLevels'
 import { decodeEmber, encodeEmber, eventFits, fitsLevel, SILENCE_MS, STATE_HZ, type EmberMsg, type EmberNote, type KeyChange } from './emberProtocol'
-import { EMBER_VERSION, STEP_S, type GameEvent, type GameState, type Inputs, type Level, type LevelDef, type PlayerIndex } from './emberTypes'
+import {
+  EMBER_VERSION,
+  STEP_S,
+  type EmberGame,
+  type EmberScreen,
+  type EmberView,
+  type GameEvent,
+  type GameState,
+  type Inputs,
+  type Level,
+  type LevelDef,
+  type PlayerIndex,
+} from './emberTypes'
 
 // drives ember & frost: which screen, which level, the fixed-step clock, and (online) the link.
 // the panel feeds it keys and frame times and draws what tick() returns. no DOM here
@@ -11,45 +23,15 @@ import { EMBER_VERSION, STEP_S, type GameEvent, type GameState, type Inputs, typ
 // at once: on each host state it rewinds to it and replays its own recorded keys up to its current frame.
 // the guest stamps its keys with the frame they belong to and the host applies them at that frame, so a guest
 // running far enough ahead predicts its own character exactly; the host reports how early the keys arrive and
-// the guest moves its clock to keep them early
+// the guest moves its clock to keep them early.
+//
+// every level can be picked from the start. a death goes back to the last checkpoint inside the engine's step;
+// retry() does the same at once, restart() begins the level again.
+// TODO(ember-2:net): the guest holds its prediction at every phase change (a death, a cleared stage) until the
+// host's state says what came next, because a respawn needs GameState.saved, which only the host has. check the
+// respawn and the stage change look right from the guest's side, and that prediction survives a gravity flip
 
-export type EmberScreen = 'wait' | 'select' | 'play'
-
-export type EmberView = {
-  mode: 'local' | 'online'
-  screen: EmberScreen
-  level: number // index into LEVELS: the one being played, or the one highlighted on select
-  compiled: Level | null // compiled LEVELS[level] while playing
-  state: GameState | null // latest state to draw (online guest: predicted, corrections eased in)
-  prev: GameState | null // the state one step before `state`, for interpolation
-  alpha: number // 0..1, how far between prev and state this frame sits
-  events: GameEvent[] // everything that happened since the last tick() call
-  me: PlayerIndex | null // online: the character this side plays; local: null (both)
-  unlocked: number // levels 0..unlocked-1 can be picked
-  // online: the line the lobby shows once the link is over
-  ended: string | null
-  // online: something the other side did or asked for, shown small (e.g. 'frost restarted')
-  note: string | null
-}
-
-export interface EmberGame {
-  tick(now: number): EmberView
-  // held keys. local: per player; online: the player argument is ignored and this side's character is used
-  keys(player: PlayerIndex, bits: number): void
-  // drop all held keys (window blur)
-  release(): void
-  // select screen: move the highlight / start the highlighted level
-  pick(index: number): void
-  play(): void
-  // in play: restart the attempt; after a win: the next level; back to select
-  retry(): void
-  next(): void
-  menu(): void
-  // online only: a message from the link
-  receive(text: string, now: number): void
-  // tell the other side we're leaving (online), stop
-  leave(): void
-}
+export type { EmberGame, EmberScreen, EmberView } from './emberTypes'
 
 // a frame after a long gap (a background tab) only catches up this much, so it never spirals
 const MAX_GAP_S = 0.25
@@ -83,13 +65,15 @@ const OWN_KINDS = new Set<GameEvent['k']>(['jump', 'land', 'gem', 'portal', 'pus
 const NAMES = ['ember', 'frost'] as const
 const NOTE_TEXT: Record<EmberNote, string> = {
   play: 'started the level',
-  retry: 'restarted',
+  retry: 'went back to the checkpoint',
+  restart: 'restarted the level',
   next: 'went on to the next level',
   menu: 'went back to the levels',
 }
 
-const levelCount = () => Math.max(1, LEVELS.length)
-const clampUnlocked = (u: number) => Math.min(levelCount(), Math.max(1, Math.floor(u) || 1))
+const clampLevel = (i: number) => Math.min(Math.max(0, LEVELS.length - 1), Math.max(0, Math.floor(i) || 0))
+// two states the drawing mustn't blend between: another stage, or a respawn
+const jumped = (a: GameState, b: GameState) => a.stage !== b.stage || b.events.some((e) => e.k === 'respawn')
 
 const cache = new WeakMap<LevelDef, Level>()
 // null when the level doesn't exist or doesn't compile; the select screen just won't start it
@@ -143,16 +127,14 @@ class Clock {
 class LocalGame implements EmberGame {
   private screen: 'select' | 'play' = 'select'
   private level: number
-  private unlocked: number
   private compiled: Level | null = null
   private state: GameState | null = null
   private prev: GameState | null = null
   private held: Inputs = [0, 0]
   private clock: Clock
 
-  constructor(now: number, unlocked: number) {
-    this.unlocked = clampUnlocked(unlocked)
-    this.level = this.unlocked - 1
+  constructor(now: number, start: number) {
+    this.level = clampLevel(start)
     this.clock = new Clock(now)
   }
 
@@ -161,10 +143,10 @@ class LocalGame implements EmberGame {
     const events: GameEvent[] = []
     if (this.screen === 'play' && this.compiled && this.state) {
       for (let i = 0; i < n; i++) {
-        this.prev = this.state
-        this.state = step(this.compiled, this.state, [this.held[0], this.held[1]])
+        const before = this.state
+        this.state = step(this.compiled, before, [this.held[0], this.held[1]])
+        this.prev = jumped(before, this.state) ? this.state : before
         events.push(...this.state.events)
-        if (this.state.phase === 'won' && this.prev.phase !== 'won') this.unlocked = clampUnlocked(Math.max(this.unlocked, this.level + 2))
       }
     }
     return {
@@ -177,7 +159,6 @@ class LocalGame implements EmberGame {
       alpha: this.clock.alpha(),
       events,
       me: null,
-      unlocked: this.unlocked,
       ended: null,
       note: null,
     }
@@ -192,7 +173,7 @@ class LocalGame implements EmberGame {
   }
 
   pick(index: number): void {
-    if (this.screen === 'select') this.level = Math.min(this.unlocked - 1, Math.max(0, Math.floor(index) || 0))
+    if (this.screen === 'select') this.level = clampLevel(index)
   }
 
   play(): void {
@@ -210,9 +191,16 @@ class LocalGame implements EmberGame {
     this.clock.reset()
   }
 
-  // a restart mid level keeps the death count; one after a win is a fresh go
+  // back to the last checkpoint; after a win there's nothing to go back to, so the level begins again
   retry(): void {
-    if (this.screen === 'play' && this.state) this.start(this.level, this.state.phase === 'won' ? 0 : this.state.deaths)
+    if (this.screen !== 'play' || !this.state || !this.compiled) return
+    if (this.state.phase === 'won') return this.restart()
+    if (this.state.phase === 'clear') return
+    this.state = this.prev = respawn(this.compiled, this.state)
+  }
+
+  restart(): void {
+    if (this.screen === 'play' && this.state) this.start(this.level, 0)
   }
 
   next(): void {
@@ -238,7 +226,6 @@ class LocalGame implements EmberGame {
 abstract class OnlineGame implements EmberGame {
   protected screen: EmberScreen = 'wait'
   protected level: number
-  protected unlocked: number
   protected compiled: Level | null = null
   protected held = 0
   protected greeted = false
@@ -254,11 +241,10 @@ abstract class OnlineGame implements EmberGame {
   private readonly send: (text: string) => void
   abstract readonly me: PlayerIndex
 
-  constructor(send: (text: string) => void, now: number, unlocked: number) {
+  constructor(send: (text: string) => void, now: number, start: number) {
     this.send = send
     this.now = this.heard = this.lastHi = now
-    this.unlocked = clampUnlocked(unlocked)
-    this.level = this.unlocked - 1
+    this.level = clampLevel(start)
     this.clock = new Clock(now)
     this.hi()
   }
@@ -268,7 +254,7 @@ abstract class OnlineGame implements EmberGame {
   }
 
   private hi(): void {
-    this.post({ t: 'hi', v: EMBER_VERSION, u: this.unlocked, ...(this.greeted ? { ok: true } : {}) })
+    this.post({ t: 'hi', v: EMBER_VERSION, ...(this.greeted ? { ok: true } : {}) })
   }
 
   private end(line: string): void {
@@ -281,11 +267,7 @@ abstract class OnlineGame implements EmberGame {
   }
 
   protected clampPick(i: number): number {
-    return Math.min(this.unlocked - 1, Math.max(0, Math.floor(i) || 0))
-  }
-
-  protected unlock(upTo: number): void {
-    this.unlocked = clampUnlocked(Math.max(this.unlocked, upTo))
+    return clampLevel(i)
   }
 
   protected abstract handle(m: EmberMsg, now: number): void
@@ -306,7 +288,6 @@ abstract class OnlineGame implements EmberGame {
       }
       const first = !this.greeted
       this.greeted = true
-      this.unlock(m.u)
       if (first && this.screen === 'wait') this.screen = 'select'
       if (!m.ok) this.hi()
       return
@@ -347,7 +328,6 @@ abstract class OnlineGame implements EmberGame {
       alpha: this.clock.alpha(),
       events,
       me: this.me,
-      unlocked: this.unlocked,
       ended: this.ended,
       note: this.note,
     }
@@ -370,6 +350,7 @@ abstract class OnlineGame implements EmberGame {
   abstract pick(index: number): void
   abstract play(): void
   abstract retry(): void
+  abstract restart(): void
   abstract next(): void
   abstract menu(): void
 }
@@ -407,8 +388,14 @@ class HostGame extends OnlineGame {
   }
 
   retry(): void {
-    if (!this.restart()) return
+    if (this.state?.phase === 'won') return this.restart()
+    if (!this.back()) return
     this.post({ t: 'note', w: 'retry' })
+  }
+
+  restart(): void {
+    if (!this.again()) return
+    this.post({ t: 'note', w: 'restart' })
   }
 
   next(): void {
@@ -440,9 +427,20 @@ class HostGame extends OnlineGame {
     return true
   }
 
-  private restart(): boolean {
+  // the level again from the top
+  private again(): boolean {
     if (this.screen !== 'play' || !this.state) return false
-    return this.start(this.level, this.state.phase === 'won' ? 0 : this.state.deaths)
+    return this.start(this.level, 0)
+  }
+
+  // back to the last checkpoint, in the same attempt: the guest's frames and keys carry on
+  private back(): boolean {
+    if (this.screen !== 'play' || !this.state || !this.compiled || this.state.phase === 'won' || this.state.phase === 'clear') return false
+    this.state = this.prev = respawn(this.compiled, this.state)
+    this.out.push(...this.state.events)
+    this.pending.push(...this.state.events)
+    this.nextState = -Infinity
+    return true
   }
 
   private forward(): boolean {
@@ -481,7 +479,10 @@ class HostGame extends OnlineGame {
         if (this.start(this.clampPick(m.l), 0)) this.say(1, 'play')
         return
       case 'retry':
-        if (this.restart()) this.say(1, 'retry')
+        if (this.state?.phase === 'won' ? this.again() : this.back()) this.say(1, this.state?.phase === 'won' ? 'restart' : 'retry')
+        return
+      case 'restart':
+        if (this.again()) this.say(1, 'restart')
         return
       case 'next':
         if (this.forward()) this.say(1, 'next')
@@ -495,13 +496,13 @@ class HostGame extends OnlineGame {
     if (this.screen === 'play' && this.compiled && this.state) {
       for (let i = 0; i < steps; i++) {
         while (this.queue.length && this.queue[0]![0] <= this.frame) this.guestBits = this.queue.shift()![1]
-        this.prev = this.state
-        this.state = step(this.compiled, this.state, [this.held, this.guestBits])
+        const before = this.state
+        this.state = step(this.compiled, before, [this.held, this.guestBits])
+        this.prev = jumped(before, this.state) ? this.state : before
         this.frame++
         this.out.push(...this.state.events)
         // the guest makes its own win from the phase, so a lost message can't lose it
         for (const e of this.state.events) if (e.k !== 'win') this.pending.push(e)
-        if (this.state.phase === 'won' && this.prev.phase !== 'won') this.unlock(this.level + 2)
       }
       if (now >= this.nextState) {
         // a frame that came very late doesn't make the next few go early
@@ -521,7 +522,7 @@ class HostGame extends OnlineGame {
       }
     } else if (this.screen === 'select' && now >= this.nextSel) {
       this.nextSel = now + SEL_MS
-      this.post({ t: 'sel', l: this.level, u: this.unlocked })
+      this.post({ t: 'sel', l: this.level })
     }
   }
 
@@ -583,6 +584,10 @@ class GuestGame extends OnlineGame {
     if (this.screen === 'play') this.post({ t: 'retry' })
   }
 
+  restart(): void {
+    if (this.screen === 'play') this.post({ t: 'restart' })
+  }
+
   next(): void {
     if (this.screen === 'play' && this.auth?.phase === 'won') this.post({ t: 'next' })
   }
@@ -594,7 +599,6 @@ class GuestGame extends OnlineGame {
   protected handle(m: EmberMsg, now: number): void {
     switch (m.t) {
       case 'sel':
-        this.unlock(m.u)
         if (this.screen !== 'select') {
           this.screen = 'select'
           this.auth = this.cur = this.prev = this.compiled = null
@@ -640,14 +644,13 @@ class GuestGame extends OnlineGame {
     this.fireBits = m.fi
     this.dirty = true
     for (const e of m.e) {
-      if (e.k === 'win' || !eventFits(level, e)) continue
+      if (e.k === 'win' || !eventFits(stageOf(level, m.g), e)) continue
       if ('p' in e && e.p === this.me && OWN_KINDS.has(e.k)) continue
       this.out.push(e)
     }
     if (m.g.phase === 'won' && !this.winSeen) {
       this.winSeen = true
       this.out.push({ k: 'win' })
-      this.unlock(this.level + 2)
     }
     // the host fell back behind this side's clock (a stall here): jump ahead of it again
     if (this.frame < m.f) {
@@ -707,7 +710,7 @@ class GuestGame extends OnlineGame {
       s = n
     }
     this.cur = s
-    this.prev = prev
+    this.prev = prev.stage === s.stage ? prev : s
     for (const p of [0, 1] as const) {
       const o = this.offsets[p]
       const a = before?.players[p]
@@ -715,7 +718,7 @@ class GuestGame extends OnlineGame {
       // keep what's on screen where it was and let the difference ease out, unless it's a jump
       const x = a ? a.x + o.x - b.x : 0
       const y = a ? a.y + o.y - b.y : 0
-      const far = !before || before.phase !== s.phase || Math.hypot(x, y) > SNAP_PX
+      const far = !before || before.phase !== s.phase || before.stage !== s.stage || Math.hypot(x, y) > SNAP_PX
       this.offsets[p] = far ? { x: 0, y: 0 } : { x, y }
     }
   }
@@ -780,11 +783,12 @@ class GuestGame extends OnlineGame {
   }
 }
 
-export function createLocalGame(now: number, unlocked: number): EmberGame {
-  return new LocalGame(now, unlocked)
+// start: the level highlighted on the select screen to begin with (the panel passes the first one not yet finished)
+export function createLocalGame(now: number, start = 0): EmberGame {
+  return new LocalGame(now, start)
 }
 
-// role host plays fire (0), guest plays frost (1). unlocked is this side's own; online uses the max of both
-export function createOnlineGame(role: 'host' | 'guest', send: (text: string) => void, now: number, unlocked: number): EmberGame {
-  return role === 'host' ? new HostGame(send, now, unlocked) : new GuestGame(send, now, unlocked)
+// role host plays fire (0), guest plays frost (1). the host's highlight is the shared one
+export function createOnlineGame(role: 'host' | 'guest', send: (text: string) => void, now: number, start = 0): EmberGame {
+  return role === 'host' ? new HostGame(send, now, start) : new GuestGame(send, now, start)
 }

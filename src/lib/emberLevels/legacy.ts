@@ -1,9 +1,13 @@
-import type { LevelDef } from './emberTypes'
+import type { LevelDef, ThingDef } from '../emberTypes'
 
-// the shipped levels, easiest first. ids are saved in progress: never change or reuse one.
+// TODO(ember-2:levels-a): the 15 levels of version 1, each wrapped as a level of one one-screen stage so the game
+// keeps running while version 2 is built. the basics designer keeps 'first-light' as the tutorial, reworks the
+// best of 'crates' onward into harder levels (new ids), and deletes this file.
 // coordinates in the solution notes are tiles: x from the left wall (0), y from the top (0).
 // "feet row" is the row a player's feet stand in; they stand on the row below it
-export const LEVELS: LevelDef[] = [
+type OldLevel = { id: string; name: string; hint?: string; par: number; map: string[]; things: ThingDef[] }
+
+const OLD: OldLevel[] = [
   // 1. first light: movement, pools, gems, doors.
   //  - both start bottom left. jump the step at x5-6
   //  - ember drops down and wades the lava at x8-12 (fire gem in the lava); frost jumps onto the shelf above it (frost gem)
@@ -657,3 +661,5 @@ export const LEVELS: LevelDef[] = [
     ],
   },
 ]
+
+export const LEGACY: LevelDef[] = OLD.map(({ map, things, ...rest }) => ({ ...rest, stages: [{ map, things }] }))

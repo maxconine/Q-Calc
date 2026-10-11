@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyProgress, parseProgress, recordResult, sanitizeProgress, unlockedCount } from './emberProgress'
+import { emptyProgress, parseProgress, recordResult, sanitizeProgress, firstUnfinished } from './emberProgress'
 import type { Score } from './emberTypes'
 
 const score = (secs: number, stars: number, fire = 0, frost = 0): Score => ({ secs, stars, gems: [fire, frost], total: [2, 2] })
@@ -65,23 +65,18 @@ describe('sanitizeProgress', () => {
   })
 })
 
-describe('unlockedCount', () => {
-  it('always opens the first level', () => {
-    expect(unlockedCount(emptyProgress(), LEVELS)).toBe(1)
-    expect(unlockedCount(emptyProgress(), [])).toBe(0)
+describe('firstUnfinished', () => {
+  it('starts on the first level, and on nothing when there are none', () => {
+    expect(firstUnfinished(emptyProgress(), LEVELS)).toBe(0)
+    expect(firstUnfinished(emptyProgress(), [])).toBe(0)
   })
 
-  it('opens one past each leading completed level', () => {
+  it('skips finished levels, wherever they are', () => {
     let p = recordResult(emptyProgress(), 'a', score(5, 1))
-    expect(unlockedCount(p, LEVELS)).toBe(2)
-    p = recordResult(p, 'b', score(5, 1))
-    expect(unlockedCount(p, LEVELS)).toBe(3)
+    expect(firstUnfinished(p, LEVELS)).toBe(1)
     p = recordResult(p, 'c', score(5, 1))
-    expect(unlockedCount(p, LEVELS)).toBe(3)
-  })
-
-  it('stops at the first gap', () => {
-    const p = recordResult(emptyProgress(), 'b', score(5, 1))
-    expect(unlockedCount(p, LEVELS)).toBe(1)
+    expect(firstUnfinished(p, LEVELS)).toBe(1)
+    p = recordResult(p, 'b', score(5, 1))
+    expect(firstUnfinished(p, LEVELS)).toBe(0)
   })
 })

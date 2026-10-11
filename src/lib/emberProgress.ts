@@ -67,12 +67,11 @@ export function recordResult(progress: EmberProgress, levelId: string, score: Sc
   return { ...progress, levels: { ...progress.levels, [levelId]: best } }
 }
 
-// how many leading levels can be picked: the first always, and each completed one opens the next
-export function unlockedCount(progress: EmberProgress, levels: ReadonlyArray<{ id: string }>): number {
-  if (!levels.length) return 0
-  let n = 1
-  while (n < levels.length && progress.levels[levels[n - 1]!.id]?.completed) n++
-  return n
+// where the select screen's highlight starts: the first level not finished yet, or the first of all once
+// every one is. nothing is ever locked
+export function firstUnfinished(progress: EmberProgress, levels: ReadonlyArray<{ id: string }>): number {
+  const i = levels.findIndex((l) => !progress.levels[l.id]?.completed)
+  return i < 0 ? 0 : i
 }
 
 export function loadProgress(): EmberProgress {
