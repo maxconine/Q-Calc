@@ -77,28 +77,63 @@ describe('complex answers, once an i is typed', () => {
   })
 })
 
-describe('spaces group thousands', () => {
+describe('a typed space between numbers', () => {
+  const on = (text: string) => evaluateSheet([text], { spaceThousands: true })[0]!.display
+
+  it.each([
+    ['3 4', '12'],
+    ['2 3 4', '24'],
+    ['1.5 2', '3'],
+    ['3 .5', '1.5'],
+    ['2 10^3', '2000'],
+    ['10 20 / 5', '40'],
+    ['2 3 m', '6 m'],
+    ['x = 3 4', '12'],
+    ['1 000', '0'],
+    ['12 345.67', '4148.04'],
+  ])('multiplies by default: %s → %s', (text, want) => {
+    expect(last([text])).toBe(want)
+  })
+
   it.each([
     ['1 000 000 / 4', '250000'],
     ['1 000', '1000'],
     ['12 345.67', '12345.67'],
     ['1 000 000 + 2 500', '1002500'],
-    ['1 000 * 1 000', '1000000'],
     ['3 000 m to km', '3 km'],
     ['2 500 mL to L', '2.5 L'],
     ['mean(1 000, 2 000)', '1500'],
-    ['1 000 000', '1000000'],
-    ['1 000', '1000'],
     ['12 345 678.9 / 2', '6172839.45'],
-  ])('%s → %s', (text, want) => {
-    expect(last([text])).toBe(want)
+    ['1 000 in hex', '0x3E8'],
+  ])('groups thousands with the setting on: %s → %s', (text, want) => {
+    expect(on(text)).toBe(want)
   })
 
-  it('only in groups of three', () => {
-    for (const text of ['1 00', '1 0000', '3 4', '12 34']) expect(last([text])).toBe('')
+  it('with the setting on, anything but a group of three still multiplies', () => {
+    expect(on('3 4')).toBe('12')
+    expect(on('1 00')).toBe('0')
+    expect(on('2 3 m')).toBe('6 m')
   })
 
-  it('commas still do', () => {
+  it('a pasted thin or no-break space groups thousands either way: nobody types those', () => {
+    for (const text of ['1\u202f000\u202f000', '1\u00a0000\u00a0000', '1\u2009000\u2009000']) {
+      expect(last([text])).toBe('1000000')
+      expect(on(text)).toBe('1000000')
+    }
+  })
+
+  it('never between a function and its argument, and a mixed number stays unread', () => {
+    expect(last(['sin^2 30'])).toBe('0.25')
+    expect(last(['tan^-1 1'])).toBe('45 deg')
+    expect(last(['2 1/2'])).toBe('')
+    expect(last(['10 20 / 5'])).toBe('40')
+  })
+
+  it('leaves spaces that mean something else alone', () => {
+    expect(last(['5 ft 3 in'])).toBe('5.25 ft')
+    expect(last(['[1 2; 3 4]'])).toBe('[1 2; 3 4]')
+    expect(last(['3 -4'])).toBe('-1')
+    expect(last(['2 (3)'])).toBe('6')
     expect(last(['1,000,000 / 4'])).toBe('250000')
   })
 })
@@ -128,7 +163,6 @@ describe('hex, binary and octal', () => {
     ['2^10 in hex', '0x400'],
     ['-255 in hex', '-0xFF'],
     ['0xff in decimal', '255'],
-    ['1 000 in hex', '0x3E8'],
   ])('writes %s as %s', (text, want) => {
     expect(last([text])).toBe(want)
   })

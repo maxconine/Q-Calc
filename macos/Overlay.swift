@@ -1407,10 +1407,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let typstCopy = AppSettings.shared.typstCopy ? "true" : "false"
         let shareUsage = AppSettings.shared.shareUsage ? "true" : "false"
         let copyUnitless = AppSettings.shared.copyUnitless ? "true" : "false"
+        let spaceThousands = AppSettings.shared.spaceThousands ? "true" : "false"
         let theme = AppSettings.shared.theme
         let angle = AppSettings.shared.angleMode
         let fractions = AppSettings.shared.fractionMode ? "true" : "false"
-        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), copyUnitless: \(copyUnitless), shareUsage: \(shareUsage), keybinds: \(AppSettings.shared.keybindsJSON()), \(hotKeyJavaScriptFields()) }"
+        return "{ sigFigs: \(n), draftSeconds: \(d), defaultUnits: \(units), answerForm: \"\(form)\", historyInsert: \"\(insert)\", historyShow: \"\(historyShow)\", rationalize: \(rationalize), sigFigMode: \(sigFigMode), theme: \"\(theme)\", angleMode: \"\(angle)\", fractionMode: \(fractions), keepWords: \(keepWords), typstPreview: \(typstPreview), typstCopy: \(typstCopy), copyUnitless: \(copyUnitless), spaceThousands: \(spaceThousands), shareUsage: \(shareUsage), keybinds: \(AppSettings.shared.keybindsJSON()), \(hotKeyJavaScriptFields()) }"
     }
 
     // a chosen key can be \ or ', so the title goes through json
@@ -1446,6 +1447,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let typstCopy = boolValue(dict["typstCopy"]) {
             AppSettings.shared.setTypstCopy(typstCopy, notifyWeb: false)
+        }
+        if let spaceThousands = boolValue(dict["spaceThousands"]) {
+            AppSettings.shared.setSpaceThousands(spaceThousands, notifyWeb: false)
         }
         if let copyUnitless = boolValue(dict["copyUnitless"]) {
             AppSettings.shared.setCopyUnitless(copyUnitless, notifyWeb: false)

@@ -41,6 +41,7 @@ import { TypstPreview } from './TypstPreview'
 import { TimeLetters } from './TimeLetters'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { CopyUnitlessSettings } from './CopySettings'
+import { SpaceThousandsSettings } from './SpaceThousandsSettings'
 import { UnitSettings } from './UnitSettings'
 import { useFourTwentySmoke } from './useFourTwentySmoke'
 import { useSixtyNineFold } from './useSixtyNineFold'
@@ -487,10 +488,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     return d ? { ...nativeFns, [d.name]: { params: d.params, body: d.body } } : nativeFns
   }, [nativeFns, graphIntent])
 
-  const { angleMode, fractionMode, rationalize, sigFigs, sigFigMode, defaultUnits } = settings
+  const { angleMode, fractionMode, rationalize, sigFigs, sigFigMode, defaultUnits, spaceThousands } = settings
   const evalSettings = useMemo(
-    () => ({ angleMode, fractionMode, rationalize, sigFigs, sigFigMode, defaultUnits }),
-    [angleMode, fractionMode, rationalize, sigFigs, sigFigMode, defaultUnits],
+    () => ({ angleMode, fractionMode, rationalize, sigFigs, sigFigMode, defaultUnits, spaceThousands }),
+    [angleMode, fractionMode, rationalize, sigFigs, sigFigMode, defaultUnits, spaceThousands],
   )
 
   // a chain needs the last answer row to be the one `ans` means
@@ -1662,6 +1663,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           <KeepWordsSettings
             value={settings.keepWords}
             onChange={(keepWords) => setSettings((s) => ({ ...s, keepWords }))}
+          />
+          <SpaceThousandsSettings
+            value={settings.spaceThousands}
+            onChange={(spaceThousands) => setSettings((s) => ({ ...s, spaceThousands }))}
           />
           <TypstSettings
             value={settings.typstPreview}

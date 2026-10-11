@@ -74,6 +74,7 @@ final class AppSettings: ObservableObject {
     static let typstCopyKey = "qcalc.typstCopy"
     static let shareUsageKey = "qcalc.shareUsage"
     static let copyUnitlessKey = "qcalc.copyUnitless"
+    static let spaceThousandsKey = "qcalc.spaceThousands"
     static let analyticsKey = "qcalc.analytics"
     static let hotKeyKey = "qcalc.hotkey"
     static let keybindsKey = "qcalc.keybinds"
@@ -111,6 +112,7 @@ final class AppSettings: ObservableObject {
     @Published private(set) var shareUsage: Bool
     // copied answers leave their unit behind; on unless turned off
     @Published private(set) var copyUnitless: Bool
+    @Published private(set) var spaceThousands: Bool
     // what the user picked; activeHotKey is what actually got registered
     @Published private(set) var hotKey: GlobalHotKey
     @Published private(set) var activeHotKey: GlobalHotKey?
@@ -142,6 +144,7 @@ final class AppSettings: ObservableObject {
         typstCopy = UserDefaults.standard.bool(forKey: Self.typstCopyKey)
         shareUsage = UserDefaults.standard.object(forKey: Self.shareUsageKey) as? Bool ?? true
         copyUnitless = UserDefaults.standard.object(forKey: Self.copyUnitlessKey) as? Bool ?? true
+        spaceThousands = UserDefaults.standard.bool(forKey: Self.spaceThousandsKey)
         hotKey = GlobalHotKey.stored(UserDefaults.standard.string(forKey: Self.hotKeyKey))
         keybinds = KeyActions.sanitize(UserDefaults.standard.dictionary(forKey: Self.keybindsKey) ?? [:])
         onboarding = Self.loadOnboarding()
@@ -393,6 +396,13 @@ final class AppSettings: ObservableObject {
         guard value != typstCopy else { return }
         typstCopy = value
         UserDefaults.standard.set(value, forKey: Self.typstCopyKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setSpaceThousands(_ value: Bool, notifyWeb: Bool) {
+        guard value != spaceThousands else { return }
+        spaceThousands = value
+        UserDefaults.standard.set(value, forKey: Self.spaceThousandsKey)
         if notifyWeb { notifySettingsChanged() }
     }
 

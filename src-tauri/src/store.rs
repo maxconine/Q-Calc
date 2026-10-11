@@ -30,6 +30,8 @@ pub struct Settings {
     pub theme: String,
     pub typst_preview: bool,
     pub typst_copy: bool,
+    // a typed space between digits groups thousands; off, it multiplies
+    pub space_thousands: bool,
     // copied answers leave their unit behind
     pub copy_unitless: bool,
     pub share_usage: bool,
@@ -56,6 +58,7 @@ impl Default for Settings {
             theme: "system".into(),
             typst_preview: false,
             typst_copy: false,
+            space_thousands: false,
             copy_unitless: true,
             share_usage: true,
             keybinds: BTreeMap::new(),
@@ -83,6 +86,7 @@ impl Settings {
         flag("keepWords", &mut self.keep_words);
         flag("typstPreview", &mut self.typst_preview);
         flag("typstCopy", &mut self.typst_copy);
+        flag("spaceThousands", &mut self.space_thousands);
         flag("copyUnitless", &mut self.copy_unitless);
         flag("shareUsage", &mut self.share_usage);
         if let Some(s) = v["angleMode"].as_str() {
@@ -223,7 +227,7 @@ mod tests {
                 "angleMode": "deg", "fractionMode": false, "sigFigMode": false, "rationalize": true,
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 12, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
-                "typstPreview": false, "typstCopy": false, "copyUnitless": true, "shareUsage": true, "keybinds": {}
+                "typstPreview": false, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {}
             })
         );
     }

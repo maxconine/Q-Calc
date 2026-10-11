@@ -170,9 +170,10 @@ describe('audit: stray unit symbols', () => {
 })
 
 describe('audit: inputs that could be misread as a different number', () => {
-  it('spaced thousands are 1000000 or blank', () => {
-    expectBlankOr('1 000 000', ['1000000'])
-    expectBlankOr('10 000', ['10000'])
+  it('a typed space multiplies unless the setting says it groups thousands', () => {
+    expect(evaluateSheet(['1 000 000'])[0]!.display).toBe('0')
+    expect(evaluateSheet(['1 000 000'], { spaceThousands: true })[0]!.display).toBe('1000000')
+    expect(evaluateSheet(['10 000'], { spaceThousands: true })[0]!.display).toBe('10000')
   })
 
   it('hex, binary and octal literals are right or blank', () => {

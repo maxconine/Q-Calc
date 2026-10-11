@@ -10,6 +10,9 @@ export function cleanPastedText(text: string): string {
   return text
     .replace(/[\u0085\u2028\u2029]/g, '\n')
     .replace(INVISIBLE, '')
+    // a thin or no-break space inside a number groups its thousands (1 000 000 from a web page); joined here, before
+    // those spaces become plain ones, which between two numbers would multiply them
+    .replace(/(?<![\w.,])\d{1,3}(?:[\u00a0\u2007\u2009\u202f]\d{3})+(?!\d)/g, (m) => m.replace(/[\u00a0\u2007\u2009\u202f]/g, ''))
     .replace(SPACES, ' ')
     .replace(HYPHENS, '-')
     .replace(/[⁄∕]/g, '/')

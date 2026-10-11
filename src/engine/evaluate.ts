@@ -5,7 +5,7 @@ import { joinDots } from './dots'
 import type { EvaluateOptions, LineResult, Meas, SheetInputLine, UserFunction, Value } from './types'
 import { DEFAULT_SIG_FIGS, formatValue, num, textVal } from './format'
 import { formatMeasured, hasPlusMinus, measure, type MeasureContext } from './measure'
-import { latexToAscii, looksLikeLatex, tryPlainMath } from './plainMath'
+import { latexToAscii, looksLikeLatex, tryPlainMath, withSpaceThousands } from './plainMath'
 import { typstToAscii } from './typstInput'
 import { formatAsFraction, SCIENTIFIC_NAMES, splitGluedFunctions } from './scientific'
 import { looksLikeMatrix, matrixAnswer } from './matrix'
@@ -128,6 +128,10 @@ function inBase(n: number, base: Base): string | null {
 }
 
 export function evaluateSheet(lines: SheetInputLine[] | string[], options: EvaluateOptions = {}): LineResult[] {
+  return withSpaceThousands(Boolean(options.spaceThousands), () => evaluateLines(lines, options))
+}
+
+function evaluateLines(lines: SheetInputLine[] | string[], options: EvaluateOptions): LineResult[] {
   const texts = lines.map((l) => (typeof l === 'string' ? l : l.text))
   const angleMode = options.angleMode ?? 'deg'
   const fractionMode = options.fractionMode ?? false

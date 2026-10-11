@@ -84,6 +84,8 @@ export interface EvaluateOptions {
   /** Unit-valued variables and `ans`, as `LineResult.quantity` text. */
   quantities?: Record<string, string>
   defaultUnits?: DefaultUnits
+  /** A typed space groups thousands (`1 000 000`); off, it multiplies (`3 4` is 12). Default off. */
+  spaceThousands?: boolean
   /** For d/dt: letters moved to varying (true) or constant (false) by hand, keyed as shown (θ, L). */
   timeVarying?: Record<string, boolean>
 }

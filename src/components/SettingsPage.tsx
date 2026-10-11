@@ -13,6 +13,7 @@ import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeybindSettings } from './KeybindSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
 import { RationalizeSettings } from './RationalizeSettings'
+import { SpaceThousandsSettings } from './SpaceThousandsSettings'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
 import { UnitSettings } from './UnitSettings'
 import { useKeyLabels } from './useKeyLabels'
@@ -182,6 +183,7 @@ export function SettingsPage() {
       />
       <RationalizeSettings value={settings.rationalize} onChange={set('rationalize')} />
       <KeepWordsSettings value={settings.keepWords} onChange={set('keepWords')} />
+      <SpaceThousandsSettings value={settings.spaceThousands} onChange={set('spaceThousands')} />
       <TypstSettings value={settings.typstPreview} onChange={set('typstPreview')} />
       <TypstCopySettings value={settings.typstCopy} onChange={set('typstCopy')} />
       <CopyUnitlessSettings value={settings.copyUnitless} onChange={set('copyUnitless')} />

@@ -90,6 +90,7 @@ struct GeneralSettingsView: View {
                 toggle("Fractions", withKey("Show answers as fractions", "fraction"), \.fractionMode, AppSettings.setFractionMode(_:notifyWeb:))
                 toggle("Rationalize denominators", "5/√41 becomes 5√41/41", \.rationalize, AppSettings.setRationalize(_:notifyWeb:))
                 toggle("Keep typed words as text", "sqrt stays sqrt, not √", \.keepWords, AppSettings.setKeepWords(_:notifyWeb:))
+                toggle("Spaces group thousands", "1 000 000 is one million; off, a space between numbers multiplies (3 4 is 12)", \.spaceThousands, AppSettings.setSpaceThousands(_:notifyWeb:))
                 toggle("Typst preview", "Show math like fractions, powers and integrals typeset under the bar", \.typstPreview, AppSettings.setTypstPreview(_:notifyWeb:))
                 toggle("Copy Typst compatible", "Equations copied from the bar paste as Typst math", \.typstCopy, AppSettings.setTypstCopy(_:notifyWeb:))
                 toggle("Copy answers without units", "A copied answer is just the number: 15 m² copies as 15", \.copyUnitless, AppSettings.setCopyUnitless(_:notifyWeb:))

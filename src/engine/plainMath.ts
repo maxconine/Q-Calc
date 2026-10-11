@@ -270,18 +270,70 @@ function grabParen(s: string, open: number): { inner: string; end: number } | nu
   return grabGroup(s, open, '(', ')')
 }
 
+// the "spaces group thousands" setting, for the sheet being worked out; off unless evaluateSheet turns it on
+let spaceThousands = false
+
+export function withSpaceThousands<T>(on: boolean, run: () => T): T {
+  const before = spaceThousands
+  spaceThousands = on
+  try {
+    return run()
+  } finally {
+    spaceThousands = before
+  }
+}
+
+// spaces nobody types: they come pasted with a number, where they only ever group its digits
+const PASTED_SPACE = '\\u00a0\\u2009\\u202f'
+const PASTED_THOUSANDS_RE = new RegExp(`(?<![\\w.,])\\d{1,3}(?:[${PASTED_SPACE}]\\d{3})+(?!\\d)`, 'g')
+const TYPED_THOUSANDS_RE = /(?<![\w.,])\d{1,3}(?: \d{3})+(?!\d)/g
+
+/** A typed space between two numbers multiplies them (`3 4` is 12), outside a matrix, where it separates entries. */
+function multiplySpacedNumbers(s: string): string {
+  let depth = 0
+  let out = ''
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]!
+    if (ch === '[') depth++
+    else if (ch === ']') depth = Math.max(0, depth - 1)
+    if (ch === ' ' && depth === 0 && /[\d.]/.test(s[i - 1] ?? '')) {
+      let k = i
+      while (s[k] === ' ') k++
+      // a digit ends the number before, and a digit or a leading point starts the next
+      const before = s.slice(0, i)
+      const after = s.slice(k)
+      // not after a function's own power or base (`sin^2 30`, `tan^-1 1`, `log_2 8`): what follows is its argument.
+      // and not a mixed number (`2 1/2`): two and a half read as 2 × ½ would be a wrong answer, so it stays unread
+      const argument = /(?<![A-Za-z])(?:sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot|ln|log)\s*(?:\^\s*[-−]?|_)\(?\d*\.?\d*\)?$/i.test(before)
+      const mixed = /(?<![\d.])\d+$/.test(before) && /^\d+[/⁄]\d/.test(after)
+      if (!argument && !mixed && (/\d/.test(s[i - 1]!) || /\d\.$/.test(before))) {
+        if (/\d/.test(s[k] ?? '') || (s[k] === '.' && /\d/.test(s[k + 1] ?? ''))) {
+          out += '*'
+          i = k - 1
+          continue
+        }
+      }
+    }
+    out += ch
+  }
+  return out
+}
+
 /**
- * `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. Spaces group
- * thousands too (`1 000 000`, also with a thin or no-break space), and `0xff`, `0b1010`, `0o17` are whole numbers.
+ * `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. `0xff`, `0b1010`
+ * and `0o17` are whole numbers. A pasted thin or no-break space groups thousands; a typed space does only with the
+ * setting on (`1 000 000`), and otherwise multiplies (`3 4` is 12).
  */
 function stripThousands(s: string): string {
-  return s
+  const joined = s
     .replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
-    .replace(/(?<![\w.,])\d{1,3}(?:[ \u00a0\u2009\u202f]\d{3})+(?!\d)/g, (m) => m.replace(/[ \u00a0\u2009\u202f]/g, ''))
+    .replace(PASTED_THOUSANDS_RE, (m) => m.replace(new RegExp(`[${PASTED_SPACE}]`, 'g'), ''))
     .replace(/(?<![\w.])0(?:x[0-9a-f]+|b[01]+|o[0-7]+)(?![\w.])/gi, (m) => {
       const n = Number(BigInt(m.toLowerCase()))
       return Number.isSafeInteger(n) ? String(n) : m
     })
+  const grouped = spaceThousands ? joined.replace(TYPED_THOUSANDS_RE, (m) => m.replace(/ /g, '')) : joined
+  return multiplySpacedNumbers(grouped)
 }
 
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹'
