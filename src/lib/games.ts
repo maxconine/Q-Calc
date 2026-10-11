@@ -5,10 +5,11 @@ import { EQUAL_HINT, isEqualCommand } from './equal'
 import { isNumbersCommand, NUMBERS_HINT } from './numbers'
 import { isPongCommand, PONG_HINT } from './pong'
 import { isTrailsCommand, TRAILS_HINT } from './trails'
+import { isUltimateCommand, UT_HINT } from './ultimate'
 
 // the games the bar opens, by what's typed in it. a new game adds its kind, a row in GAMES and a panel in QuickCalc
 
-export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal' | 'numbers' | 'trails'
+export type GameKind = 'pong' | 'connect4' | 'ember' | 'crack' | 'equal' | 'numbers' | 'trails' | 'ultimate'
 
 type Game = {
   kind: GameKind
@@ -27,6 +28,7 @@ type Game = {
 export const GAMES: readonly Game[] = [
   { kind: 'pong', name: 'pong', blurb: 'first to 7 · two players, anywhere', is: isPongCommand, hint: PONG_HINT, needsLink: true },
   { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · two players, anywhere', is: isConnect4Command, hint: C4_HINT, needsLink: true },
+  { kind: 'ultimate', name: 'ultimate tic-tac-toe', blurb: 'nine boards in one · two players, anywhere', is: isUltimateCommand, hint: UT_HINT, needsLink: true },
   { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or online', is: isEmberCommand, hint: EMBER_HINT, needsLink: false },
   { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot', is: isCrackCommand, hint: CRACK_HINT, needsLink: false },
   { kind: 'equal', name: 'equal', blurb: 'guess the hidden equation · daily or practice', is: isEqualCommand, hint: EQUAL_HINT, needsLink: false },

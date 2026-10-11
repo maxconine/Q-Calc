@@ -2030,6 +2030,83 @@ html.quick-native .graph {
   cursor: pointer;
 }
 
+/* ultimate tic-tac-toe: `ultimate` then enter. connect 4's panel, status and click targets; nine small
+   boards, the ones you may play in lit, the one the digits pick cells in lit more */
+.ut-grid {
+  display: block;
+  width: min(100%, 300px);
+  height: auto;
+  aspect-ratio: 1;
+  overflow: visible;
+}
+.ut-board {
+  fill: color-mix(in srgb, var(--bg) 70%, var(--bg-tape));
+  stroke: color-mix(in srgb, var(--line) 60%, transparent);
+  stroke-width: 1;
+  transition: fill 120ms ease-out, stroke 120ms ease-out;
+}
+.ut-board.open {
+  fill: color-mix(in srgb, var(--accent) 7%, var(--bg));
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.ut-board.zone {
+  fill: color-mix(in srgb, var(--accent) 13%, var(--bg));
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.ut-board.done {
+  fill: color-mix(in srgb, var(--bg) 85%, var(--bg-tape));
+}
+.ut-board.win {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+.ut-line {
+  stroke: color-mix(in srgb, var(--line) 80%, transparent);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+.ut-mark {
+  fill: none;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+.ut-mark.mine {
+  stroke: var(--accent);
+}
+.ut-mark.theirs {
+  stroke: var(--ink);
+}
+.ut-mark.dim {
+  opacity: 0.28;
+}
+.ut-mark.big {
+  stroke-width: 7;
+  opacity: 0.9;
+}
+.ut-mark.big.dim {
+  opacity: 0.25;
+}
+.ut-mark.last {
+  animation: ut-pop 200ms ease-out both;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes ut-pop {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ut-mark.last { animation: none; }
+  .ut-board { transition: none; }
+}
+.ut-aim {
+  fill: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.ut-aim.blocked {
+  fill: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
 /* the walkthrough's line: muted like a hint, with its count and a way out */
 .tour-line {
   display: flex;

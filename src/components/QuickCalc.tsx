@@ -26,6 +26,7 @@ import { PeriodicCard } from './PeriodicCard'
 import { IdentityCard } from './IdentityCard'
 import { PongPanel } from './PongPanel'
 import { Connect4Panel } from './Connect4Panel'
+import { UltimatePanel } from './UltimatePanel'
 import { CrackPanel } from './CrackPanel'
 import { EmberPanel } from './EmberPanel'
 import { EqualPanel } from './EqualPanel'
@@ -1493,6 +1494,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <PongPanel transport={peerTransport()!} onClose={escapeLayer} />
           ) : pongOpen === 'connect4' && peerTransport() ? (
             <Connect4Panel transport={peerTransport()!} onClose={escapeLayer} />
+          ) : pongOpen === 'ultimate' && peerTransport() ? (
+            <UltimatePanel transport={peerTransport()!} onClose={escapeLayer} />
           ) : pongOpen === 'ember' ? (
             <EmberPanel transport={peerTransport()} escapeRef={emberEscRef} onClose={escapeLayer} />
           ) : pongOpen === 'crack' ? (
