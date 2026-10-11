@@ -1409,6 +1409,13 @@ class UnitParser {
       if (unit) return mulQty({ si: Math.PI, dim: vec('dimensionless') }, unit)
       return { si: Math.PI, dim: vec('dimensionless') }
     }
+    // the golden ratio, unless phi is a variable
+    if (this.s.slice(this.i, this.i + 3).toLowerCase() === 'phi' && !/[A-Za-z0-9]/.test(this.s[this.i + 3] ?? '') && this.vars.phi == null) {
+      this.i += 3
+      const golden = { si: (1 + Math.sqrt(5)) / 2, dim: vec('dimensionless') }
+      const unit = this.parseUnitRef()
+      return unit ? mulQty(golden, unit) : golden
+    }
     const amount = this.parseAmount() ?? this.parseVariableRef()
     if (amount) {
       const unit = this.parseUnitRef()

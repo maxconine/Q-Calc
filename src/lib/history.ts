@@ -33,6 +33,16 @@ const MAX_MATRIX_LITERAL = 4000
 export function isMatrixQuantity(quantity: string | undefined): boolean {
   return typeof quantity === 'string' && quantity.startsWith('[[')
 }
+
+/** A complex answer keeps its parts (`5 + 5i`, at full precision) as its quantity. */
+export function isComplexQuantity(quantity: string | undefined): boolean {
+  return typeof quantity === 'string' && /^-?[\d.e+-]+ [+-] [\d.e+-]+i$/i.test(quantity)
+}
+
+/** An answer that isn't one number but still chains, written out as its quantity: a matrix or a complex number. */
+export function isLiteralQuantity(quantity: string | undefined): boolean {
+  return isMatrixQuantity(quantity) || isComplexQuantity(quantity)
+}
 export const MAX_HISTORY_DISPLAY = 96
 export const MAX_HISTORY_EXACT = 72
 export const MAX_HISTORY_JSON = 16_384
@@ -231,7 +241,7 @@ export function historyMeasures(rows: HistoryRow[]): Record<string, Meas> {
   let last: HistoryRow | undefined
   for (const row of rows) {
     if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
-    if ((row.n != null && Number.isFinite(row.n)) || isMatrixQuantity(row.quantity)) last = row
+    if ((row.n != null && Number.isFinite(row.n)) || isLiteralQuantity(row.quantity)) last = row
     if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
@@ -247,7 +257,7 @@ export function historyQuantities(rows: HistoryRow[]): Record<string, string> {
   let last: HistoryRow | undefined
   for (const row of rows) {
     if (row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
-    if ((row.n != null && Number.isFinite(row.n)) || isMatrixQuantity(row.quantity)) last = row
+    if ((row.n != null && Number.isFinite(row.n)) || isLiteralQuantity(row.quantity)) last = row
     if (row.solve) continue
     const parsed = parseAssignment(row.expr.trim())
     if (!parsed) continue
@@ -280,7 +290,7 @@ export function lastHistoryNumber(rows: HistoryRow[]): number | undefined {
     const row = rows[i]
     if (!row || row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     // a matrix answer is `ans` now, through historyQuantities
-    if (isMatrixQuantity(row.quantity)) return undefined
+    if (isLiteralQuantity(row.quantity)) return undefined
     const n = row.n
     // a unit answer's `ans` comes from historyQuantities instead
     if (n != null && Number.isFinite(n)) return row.quantity == null ? n : undefined

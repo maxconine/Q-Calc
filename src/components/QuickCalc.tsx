@@ -100,7 +100,7 @@ import {
   historyFunctions,
   historyMeasures,
   historyQuantities,
-  isMatrixQuantity,
+  isLiteralQuantity,
   historyVariables,
   lastHistoryNumber,
   newRowId,
@@ -495,8 +495,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   // a chain needs the last answer row to be the one `ans` means
   const chainAnswer =
-    ansPlain && lastAnswer && (Number.isFinite(lastAnswer.n) || isMatrixQuantity(lastAnswer.quantity))
-      ? { plain: ansPlain, unit: lastAnswer.quantity != null && !isMatrixQuantity(lastAnswer.quantity) }
+    ansPlain && lastAnswer && (Number.isFinite(lastAnswer.n) || isLiteralQuantity(lastAnswer.quantity))
+      ? { plain: ansPlain, unit: lastAnswer.quantity != null && !isLiteralQuantity(lastAnswer.quantity) }
       : undefined
   // `isolate x` or `solve for x` alone works on the equation in the row before
   const isolated = isolatePrevious(q, history[history.length - 1]?.expr)

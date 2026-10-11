@@ -12,6 +12,8 @@ export interface Value {
   unitId?: string
   /** Sig figs and ± of a unit answer, in its own unit. */
   meas?: Meas
+  /** A complex answer's parts at full precision; `text` is how it reads (`5 + 5i`). */
+  complex?: { re: number; im: number }
 }
 
 /** Absent sig/dp means exact. */

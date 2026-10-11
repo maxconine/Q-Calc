@@ -100,6 +100,33 @@ function setOrDelete<T>(record: Record<string, T>, key: string, value: T | undef
   else delete record[key]
 }
 
+type Base = 2 | 8 | 10 | 16
+const BASE_WORDS: Record<string, Base> = { hex: 16, hexadecimal: 16, binary: 2, bin: 2, octal: 8, oct: 8, decimal: 10 }
+const BASE_PREFIX: Record<Base, string> = { 2: '0b', 8: '0o', 10: '', 16: '0x' }
+
+/** `<expr> in hex`, `<expr> to binary`, `<expr> as octal`, or `hex(<expr>)`, `bin(…)`, `oct(…)`. */
+function baseRequest(expr: string): { left: string; base: Base } | null {
+  const tail = expr.match(/^(.*\S)\s+(?:in|to|as|into)\s+(hex|hexadecimal|binary|bin|octal|oct|decimal)\s*$/i)
+  if (tail) return { left: tail[1]!, base: BASE_WORDS[tail[2]!.toLowerCase()]! }
+  const call = expr.match(/^\s*(hex|bin|oct)\s*\((.*)\)\s*$/i)
+  if (!call) return null
+  // the bracket that opens the call must be the one that closes the line: hex(2)+(3) is not a call around it all
+  let depth = 0
+  for (const ch of call[2]!) {
+    if (ch === '(') depth++
+    else if (ch === ')' && --depth < 0) return null
+  }
+  return depth === 0 ? { left: call[2]!, base: BASE_WORDS[call[1]!.toLowerCase()]! } : null
+}
+
+/** A whole number written in the base: 255 → 0xFF, 10 → 0b1010, -8 → -0o10. Null for anything else. */
+function inBase(n: number, base: Base): string | null {
+  const whole = Math.round(n)
+  if (!Number.isSafeInteger(whole) || Math.abs(n - whole) > 1e-9 * Math.max(1, Math.abs(n))) return null
+  const digits = Math.abs(whole).toString(base)
+  return `${whole < 0 ? '-' : ''}${BASE_PREFIX[base]}${base === 16 ? digits.toUpperCase() : digits}`
+}
+
 export function evaluateSheet(lines: SheetInputLine[] | string[], options: EvaluateOptions = {}): LineResult[] {
   const texts = lines.map((l) => (typeof l === 'string' ? l : l.text))
   const angleMode = options.angleMode ?? 'deg'
@@ -314,6 +341,10 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     // ∓ is treated as ± until correlation is modelled
     let expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
 
+    // `255 in hex`, `0xff + 1 to binary`, `hex(255)`: worked out as usual, then written in that base
+    const based = variable ? null : baseRequest(expr)
+    if (based) expr = based.left
+
     const ctx = { ans: lastAns, angleMode, variables, functions, measures, timeVarying: options.timeVarying }
     const plusMinus = hasPlusMinus(expr)
     let value: Value | null = null
@@ -388,7 +419,19 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     }
     const finite = value.kind === 'number' && Number.isFinite(value.n)
     // '' (a unit the parser can't read back) makes later uses blank rather than unit-less.
-    const quantity = finite && value.unit ? (quantityText(value, angleMode) ?? '') : undefined
+    // a complex answer chains as its own text at full precision, the way a unit answer does
+    const z = value.complex
+    const quantity =
+      finite && value.unit ? (quantityText(value, angleMode) ?? '') : z ? `${z.re} ${z.im < 0 ? '-' : '+'} ${Math.abs(z.im)}i` : undefined
+    if (z && quantity) {
+      setOrDelete(measures, 'ans', undefined)
+      setOrDelete(quantities, 'ans', quantity)
+      if (variable) {
+        setOrDelete(variables, variable, undefined)
+        setOrDelete(quantities, variable, quantity)
+        setOrDelete(measures, variable, undefined)
+      }
+    }
     if (finite) {
       const plainMeas = quantity == null ? meas : undefined
       lastAns = value.n
@@ -408,9 +451,18 @@ export function evaluateSheet(lines: SheetInputLine[] | string[], options: Evalu
     } catch {
       display = ''
     }
+    if (based) {
+      // only a whole number without a unit has a hex or binary form
+      const written = value.kind === 'number' && !value.unit ? inBase(value.n, based.base) : null
+      if (written == null) {
+        results.push({ raw, kind: 'expression', display: '' })
+        continue
+      }
+      display = written
+    }
     const measuredDisplay = Boolean(meas && (meas.unc || (sigFigMode && meas.sig != null)))
     const form =
-      !calc && !measuredDisplay && finite && !sum && wantsExactForm(expr)
+      !based && !calc && !measuredDisplay && finite && !sum && wantsExactForm(expr)
         ? exactForm(value.n, { rationalize: options.rationalize })
         : null
     const exact = calc?.exact ?? ((!measuredDisplay && sum?.exact) || (form ? withUnit(form, value.unit) : undefined))

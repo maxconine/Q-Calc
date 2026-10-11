@@ -626,7 +626,7 @@ function snapInt(n: number): number {
   return n
 }
 
-function fromMathjs(v: unknown): Value | null {
+function fromMathjs(v: unknown, complex = false): Value | null {
   if (typeof v === 'number') {
     if (Number.isNaN(v)) return textVal('undefined')
     return num(snapInt(v))
@@ -635,14 +635,32 @@ function fromMathjs(v: unknown): Value | null {
   if (v && typeof v === 'object' && 're' in v && 'im' in v) {
     const re = Number((v as { re: number }).re)
     const im = Number((v as { im: number }).im)
-    if (Math.abs(im) > 1e-12) return textVal('undefined')
-    if (!Number.isFinite(re)) return textVal('undefined')
+    if (!Number.isFinite(re) || !Number.isFinite(im)) return textVal('undefined')
+    // a complex answer shows only when an i was typed; `sqrt(-1)` in plain real maths stays undefined
+    if (Math.abs(im) > 1e-12) return complex ? { ...textVal(formatComplex(re, im)), complex: { re, im } } : textVal('undefined')
     return num(chop(re))
   }
   if (Array.isArray(v) || isMatrix(v)) {
     return textVal(formatList(nums([v])))
   }
   return null
+}
+
+export const PHI = (1 + Math.sqrt(5)) / 2
+
+// set while an expression with a typed i is worked out
+let complexTyped = false
+
+// a typed imaginary unit: `i`, `2i`, `(1+2i)`; never the i inside pi, sin or phi
+const TYPED_I_RE = /(?<![A-Za-z_])(?:\d+\.?\d*|\.\d+)?i(?![A-Za-z0-9_])/
+
+/** `5 + 5i`, `3 - i`, `-2i`: the real part first, a coefficient of 1 left out. */
+export function formatComplex(re: number, im: number): string {
+  const real = chop(re)
+  const size = Math.abs(im)
+  const unit = Math.abs(size - 1) < 1e-12 ? 'i' : `${formatNumber(snapInt(size))}i`
+  if (Math.abs(real) < 1e-12) return im < 0 ? `-${unit}` : unit
+  return `${formatNumber(snapInt(real))} ${im < 0 ? '-' : '+'} ${unit}`
 }
 
 export type ScientificContext = {
@@ -658,6 +676,8 @@ function prepare(text: string, ctx: ScientificContext): { expr: string; scope: R
   const expr = preprocessChecked(text, ctx)
   if (expr == null) return null
   const scope: Record<string, unknown> = {
+    // the golden ratio, unless phi is a variable; it isn't a reserved name, so `phi = 30` and d/dt's φ still work
+    phi: PHI,
     ...ctx.variables,
     // with no previous answer `ans` stays unknown (blank), not 0
     ...(ctx.ans !== undefined && { ans: ctx.ans }),
@@ -679,6 +699,8 @@ export function preprocessChecked(text: string, ctx: ScientificContext): string 
   if (varNames.length) {
     src = src.replace(new RegExp(`(?<![A-Za-z0-9_])(${namesPattern(varNames)})\\s*\\(`, 'g'), '$1*(')
   }
+  // φ is the golden ratio's letter too, unless it's a variable of its own
+  if (!('φ' in vars)) src = src.replace(/[φϕ]/g, 'phi')
   let expr = preprocessAscii(src, fnNames)
   if (ctx.ans !== undefined) expr = expr.replace(/\bans\b/gi, `(${ctx.ans})`)
 
@@ -688,10 +710,11 @@ export function preprocessChecked(text: string, ctx: ScientificContext): string 
     : null
   const leftover = expr
     .replace(NAME_RE, '')
+    .replace(/(?<![A-Za-z_])phi(?![A-Za-z0-9_])/g, '')
     .replace(/\d+(?:\.\d+)?e[+-]?\d+/gi, '')
     .replace(allowRe ?? /$^/, '')
   const named = HAS_NAME_RE.test(src) || HAS_NAME_RE.test(expr)
-  if (!named && !allowRe && !/\d|pi|tau|ans|\be\b/i.test(expr)) return null
+  if (!named && !allowRe && !/\d|pi|tau|ans|phi|\be\b|(?<![A-Za-z_])i(?![A-Za-z0-9_])/i.test(expr)) return null
   if (/[a-zA-Z_$€£¥₹#?=\\]/.test(leftover.replace(/[iIeE]/g, ''))) {
     if (!/^[\d\s+\-*/^().,eE!|[\]:]+$/.test(expr) && !named) return null
   }
@@ -761,11 +784,12 @@ function scalarScope(mode: AngleMode | undefined): Record<string, unknown> {
     log: (x: number, base?: number) =>
       base == null ? math.log(x) : x <= 0 || base <= 0 || base === 1 ? Number.NaN : Math.log(x) / Math.log(base),
     exp: Math.exp,
-    sqrt: (x: number) => (x < 0 ? Number.NaN : Math.sqrt(x)),
+    // with an i typed, the root of a negative is imaginary; in plain real maths it's undefined
+    sqrt: (x: number) => (x < 0 ? (complexTyped ? math.complex(0, Math.sqrt(-x)) : Number.NaN) : Math.sqrt(x)),
     cbrt: Math.cbrt,
     nthroot: math.nthRoot,
     nthRoot: math.nthRoot,
-    abs: Math.abs,
+    abs: (x: unknown) => (typeof x === 'number' ? Math.abs(x) : Number(math.abs(x as never))),
     sign: Math.sign,
     floor: (x: number) => nearInteger(x) ?? Math.floor(x),
     ceil: (x: number) => nearInteger(x) ?? Math.ceil(x),
@@ -915,7 +939,7 @@ function userFunction(def: UserFunction, ctx: ScientificContext, fns: Record<str
 
 /** NaN is undefined; an infinity is a result too big for a double. */
 function finish(v: unknown, expr: string): Value | null {
-  const out = fromMathjs(v)
+  const out = fromMathjs(v, TYPED_I_RE.test(expr))
   // a typed ∞ is not a result, so it stays undefined
   if (out?.kind === 'number' && !Number.isFinite(out.n)) return textVal(/Infinity/.test(expr) ? 'undefined' : 'overflow')
   return out
@@ -926,10 +950,14 @@ export function evalScientific(text: string, ctx: ScientificContext = {}): Value
   if (!prep) return null
   // parsing costs several times an evaluation
   spend(300 + 10 * prep.expr.length)
+  const before = complexTyped
+  complexTyped = TYPED_I_RE.test(prep.expr)
   try {
     return finish(math.evaluate(prep.expr, prep.scope), prep.expr)
   } catch {
     return null
+  } finally {
+    complexTyped = before
   }
 }
 

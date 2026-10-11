@@ -6,6 +6,8 @@ import {
   historyMeasures,
   historyQuantities,
   historyVariables,
+  isComplexQuantity,
+  isLiteralQuantity,
   lastHistoryNumber,
   MAX_HISTORY,
   MAX_HISTORY_DISPLAY,
@@ -431,5 +433,17 @@ describe('solved equations in history', () => {
     expect(saved?.equations).toEqual(['x + y = 5', 'x - y = 1', ''])
     expect(normalizeHistoryRow(JSON.parse(JSON.stringify(saved)), 'id')?.equations).toEqual(saved?.equations)
     expect(lastHistoryNumber([saved!])).toBeUndefined()
+  })
+})
+
+describe('a complex answer chains like a matrix does', () => {
+  it('knows its quantity', () => {
+    expect(isComplexQuantity('5 + 5i')).toBe(true)
+    expect(isComplexQuantity('-0.5 - 2.25i')).toBe(true)
+    expect(isComplexQuantity('3 m')).toBe(false)
+    expect(isComplexQuantity('[[1, 2], [3, 4]]')).toBe(false)
+    expect(isLiteralQuantity('5 + 5i')).toBe(true)
+    expect(isLiteralQuantity('[[1, 2], [3, 4]]')).toBe(true)
+    expect(isLiteralQuantity(undefined)).toBe(false)
   })
 })

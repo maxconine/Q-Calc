@@ -270,9 +270,18 @@ function grabParen(s: string, open: number): { inner: string; end: number } | nu
   return grabGroup(s, open, '(', ')')
 }
 
-/** `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. */
+/**
+ * `1,000,000` becomes `1000000`; commas inside a call's arguments (`max(1,200)`) and lists stay. Spaces group
+ * thousands too (`1 000 000`, also with a thin or no-break space), and `0xff`, `0b1010`, `0o17` are whole numbers.
+ */
 function stripThousands(s: string): string {
-  return s.replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
+  return s
+    .replace(/(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)/g, (m) => m.replace(/,/g, ''))
+    .replace(/(?<![\w.,])\d{1,3}(?:[ \u00a0\u2009\u202f]\d{3})+(?!\d)/g, (m) => m.replace(/[ \u00a0\u2009\u202f]/g, ''))
+    .replace(/(?<![\w.])0(?:x[0-9a-f]+|b[01]+|o[0-7]+)(?![\w.])/gi, (m) => {
+      const n = Number(BigInt(m.toLowerCase()))
+      return Number.isSafeInteger(n) ? String(n) : m
+    })
 }
 
 const SUPERSCRIPT = '⁰¹²³⁴⁵⁶⁷⁸⁹'

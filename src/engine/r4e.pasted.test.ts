@@ -39,9 +39,9 @@ describe('pasted look-alike characters read like their ascii', () => {
     expect(pasted('2 1⁄2')).toBe('')
   })
 
-  it('thin space thousands stay blank, never a product', () => {
-    expect(pasted('1 000 + 1')).toBe('')
-    expect(pasted('1 000 000')).toBe('')
+  it('thin space thousands are the number, never a product', () => {
+    expect(pasted('1 000 + 1')).toBe('1001')
+    expect(pasted('1 000 000')).toBe('1000000')
   })
 
   it('a ligature spells its letters', () => {
