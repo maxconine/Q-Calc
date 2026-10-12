@@ -158,6 +158,8 @@ class LocalGame implements EmberGame {
   private prev: GameState | null = null
   private held: Inputs = [0, 0]
   private clock: Clock
+  // events made outside a step (a retry's respawn), for the next view
+  private out: GameEvent[] = []
 
   constructor(now: number, start: number) {
     this.level = clampLevel(start)
@@ -166,7 +168,8 @@ class LocalGame implements EmberGame {
 
   tick(now: number): EmberView {
     const n = this.clock.steps(now)
-    const events: GameEvent[] = []
+    const events = this.out
+    this.out = []
     if (this.screen === 'play' && this.compiled && this.state) {
       for (let i = 0; i < n; i++) {
         const before = this.state
@@ -213,6 +216,7 @@ class LocalGame implements EmberGame {
     this.compiled = level
     this.state = initState(level, deaths)
     this.prev = this.state
+    this.out = []
     this.screen = 'play'
     this.clock.reset()
   }
@@ -223,6 +227,7 @@ class LocalGame implements EmberGame {
     if (this.state.phase === 'won') return this.restart()
     if (this.state.phase === 'clear') return
     this.state = this.prev = respawn(this.compiled, this.state)
+    this.out.push(...this.state.events)
   }
 
   restart(): void {
@@ -238,6 +243,7 @@ class LocalGame implements EmberGame {
   menu(): void {
     this.screen = 'select'
     this.state = this.prev = this.compiled = null
+    this.out = []
   }
 
   receive(): void {}
