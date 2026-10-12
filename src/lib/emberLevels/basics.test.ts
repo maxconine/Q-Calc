@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { compileLevel, startStage, step, validateLevel } from '../emberEngine'
+import { describe, it } from 'vitest'
+import { compileLevel, startStage, step } from '../emberEngine'
 import type { LevelDef } from '../emberTypes'
 import { BASICS } from './basics'
 import { describeLevel, JUMP, LEFT, record, RIGHT, StageRun, timingSummary, type LevelChecks, type Walkthrough } from './testkit'
@@ -42,6 +42,8 @@ function glide(r: StageRun, p: 'ember' | 'frost', tileX: number, other = 0): Sta
   return r
 }
 
+// skipReach: the solver doesn't model version 2's tiles and things (one-ways, crates as steps, trampolines,
+// arrows, locks, light-driven lifts and gates), so for these levels the walkthrough is the proof
 // the recorded walkthroughs: per level, one function per stage
 const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: LevelChecks }> = {
   'dead-weight': {
@@ -332,33 +334,9 @@ function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown
   }
 }
 
-// TODO(ember-2:levels-a): levels whose walkthrough stops where a mechanic the engine hasn't landed yet begins
-const WAITING: Record<string, string> = { 'updraft-tower': 'arrows (engine step 2)', 'lock-and-light': 'keys and locks (engine step 4)' }
-
-// EMBER_STAGE='level-id:2' runs one stage's recording on its own, from that stage's start, and prints how far it got
-if (process.env.EMBER_STAGE) {
-  const [id, n] = process.env.EMBER_STAGE.split(':')
-  const level = compileLevel(BASICS.find((d) => d.id === id)!)
-  const run = new StageRun(level, Number(n) - 1)
-  // EMBER_HACK: every lock already open, to try a stage before the engine has keys
-  if (process.env.EMBER_HACK) run.state = { ...run.state, keys: 1, locks: run.state.locks.map(() => true) }
-  try {
-    RUNS[id!]!.stages[Number(n) - 1]!(run)
-    console.log(`${id} stage ${n}: ${(run.tick / 60).toFixed(1)} s, ${run.state.phase}\n${run.timings()}`)
-  } catch (e) {
-    console.log(String(e).split('\n').slice(0, 26).join('\n'))
-  }
-}
-
 describe('basics', () => {
   for (const def of BASICS) {
     const { walk, error } = walkFor(def)
-    if (WAITING[def.id] && !walk) {
-      if (process.env.EMBER_TRACE) console.log(String(error).split('\n').slice(0, 24).join('\n'))
-      it(`${def.id} validates`, () => expect(validateLevel(def)).toEqual([]))
-      it.todo(`${def.id}: the walkthrough waits on ${WAITING[def.id]}`)
-      continue
-    }
     if (error) it(`${def.id}: the walkthrough records`, () => { throw error })
     describeLevel(def, walk, RUNS[def.id]?.checks)
   }
