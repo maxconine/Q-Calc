@@ -127,6 +127,10 @@ export function createEmberSound(): EmberSound {
           case 'die':
             if (e.cause === 'water') hiss(c, t, 0.5, 0.35, 3500, 0.6, 1800, 'highpass')
             else if (e.cause === 'goo') tone(c, t, 180, 0.25, 0.18, 'sine', 70)
+            else if (e.cause === 'crush') {
+              hiss(c, t, 0.12, 0.4, 500, 0.8, 120, 'lowpass')
+              tone(c, t, 110, 0.14, 0.3, 'square', 50)
+            }
             else hiss(c, t, 0.35, 0.2, 900, 2, 400)
             tone(c, t, 520, 0.4, 0.13, 'triangle', 130)
             break
@@ -150,6 +154,92 @@ export function createEmberSound(): EmberSound {
             break
           case 'thaw':
             tone(c, t, 700, 0.08, 0.04, 'sine', 400)
+            break
+          case 'airjump':
+            tone(c, t, fire ? 520 : 700, 0.1, 0.14, 'triangle', fire ? 880 : 1175)
+            hiss(c, t, 0.08, 0.08, 2400, 2)
+            break
+          case 'bounce': {
+            // a springy boing, higher the harder the launch
+            const f = 150 + Math.max(0, Math.min(1, (e.v - 420) / 280)) * 130
+            tone(c, t, f, 0.22, 0.2, 'sine', f * 2.6)
+            tone(c, t, f * 2, 0.1, 0.05, 'triangle', f * 3.4)
+            break
+          }
+          case 'arrow':
+            tone(c, t, 880, 0.08, 0.12, 'triangle')
+            tone(c, t + 0.06, 1319, 0.16, 0.1, 'triangle')
+            break
+          case 'arrowback':
+            tone(c, t, 1319, 0.08, 0.04, 'sine', 1760)
+            break
+          case 'key':
+            tone(c, t, 1568, 0.07, 0.1, 'square')
+            tone(c, t + 0.06, 2093, 0.2, 0.08, 'sine')
+            break
+          case 'unlock':
+            tone(c, t, 1400, 0.03, 0.1, 'square')
+            tone(c, t + 0.05, 700, 0.05, 0.1, 'square')
+            hiss(c, t + 0.08, 0.25, 0.15, 500, 1, 200, 'lowpass')
+            tone(c, t + 0.1, 784, 0.3, 0.08, 'sine', 1047)
+            break
+          case 'load':
+            tone(c, t, 220, 0.09, 0.14, 'sine', 110)
+            hiss(c, t, 0.06, 0.1, 400, 1, undefined, 'lowpass')
+            break
+          case 'fire':
+            hiss(c, t, 0.35, 0.45, 900, 0.7, 150, 'lowpass')
+            tone(c, t, 160, 0.3, 0.3, 'sine', 45)
+            hiss(c, t + 0.05, 0.4, 0.12, 1800, 2, 5000)
+            break
+          case 'flip':
+            // gravity turning over: a swoop up when it flips, down when it comes back
+            tone(c, t, e.grav < 0 ? 260 : 780, 0.28, 0.14, 'sine', e.grav < 0 ? 780 : 260)
+            tone(c, t, e.grav < 0 ? 390 : 1170, 0.28, 0.05, 'triangle', e.grav < 0 ? 1170 : 390)
+            break
+          case 'gswitch':
+            tone(c, t, 1200, 0.03, 0.09, 'square')
+            tone(c, t + 0.04, 600, 0.12, 0.08, 'sawtooth', 300)
+            break
+          case 'checkpoint':
+            tone(c, t, 659, 0.12, 0.12, 'triangle')
+            tone(c, t + 0.09, 988, 0.12, 0.12, 'triangle')
+            tone(c, t + 0.18, 1319, 0.35, 0.1, 'sine')
+            break
+          case 'light':
+            // a clunk of the switch, then the room: a bright hum up, or a sigh down into the dark
+            tone(c, t, e.on ? 1800 : 1100, 0.03, 0.12, 'square')
+            if (e.on) {
+              tone(c, t + 0.03, 392, 0.4, 0.09, 'sine', 784)
+              tone(c, t + 0.03, 1568, 0.3, 0.04, 'sine')
+            } else {
+              tone(c, t + 0.03, 392, 0.45, 0.1, 'sine', 98)
+              hiss(c, t + 0.03, 0.4, 0.08, 1200, 1, 200, 'lowpass')
+            }
+            break
+          case 'shake':
+            hiss(c, t, 0.12, 0.1, 700, 1.5, 300)
+            tone(c, t, 90, 0.1, 0.08, 'sine', 60)
+            break
+          case 'break':
+            hiss(c, t, 0.3, 0.3, 1200, 0.8, 200, 'lowpass')
+            for (let i = 0; i < 3; i++) tone(c, t + i * 0.045, 240 - i * 50 + Math.random() * 40, 0.07, 0.09, 'triangle', 70)
+            break
+          case 'mend':
+            tone(c, t, 330, 0.1, 0.05, 'sine', 495)
+            break
+          case 'clear':
+            ;[523, 659, 784].forEach((f, i) => tone(c, t + i * 0.09, f, 0.25, 0.12, 'triangle'))
+            hiss(c, t + 0.3, 0.6, 0.1, 400, 1, 3000)
+            break
+          case 'stage':
+            hiss(c, t, 0.4, 0.08, 2600, 1, 500)
+            tone(c, t + 0.1, 523, 0.25, 0.07, 'sine', 784)
+            break
+          case 'respawn':
+            hiss(c, t, 0.25, 0.1, 600, 2, 2400)
+            tone(c, t + 0.05, 440, 0.12, 0.1, 'triangle', 660)
+            tone(c, t + 0.13, 660, 0.18, 0.08, 'triangle', 880)
             break
           case 'win': {
             // a bright little arpeggio, the top note from both elements at once

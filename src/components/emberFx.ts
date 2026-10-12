@@ -1,4 +1,5 @@
-import type { Cond } from '../lib/emberTypes'
+import { CH_LIT, GLOW_EMBER, GLOW_FROST, GLOW_SMALL, PLAYER_H, PLAYER_W, POOL_SINK, T_LAVA, TILE } from '../lib/emberTypes'
+import type { Camera, Cond, GameState, Rect, Stage } from '../lib/emberTypes'
 
 // ember & frost's little helpers for the renderer: colour maths, channel colours, and a fixed particle pool.
 // nothing here touches the DOM, so it can be tested in node
@@ -75,16 +76,141 @@ export function condChannels(c: Cond | undefined): string[] {
   return list.map((n) => n.replace(/^!/, ''))
 }
 
-// whether a condition holds for the channels that are on; no condition means always
-export function condHolds(c: Cond | undefined, on: readonly string[]): boolean {
+// whether a condition holds for the channels that are on; no condition means always. `lit` is the lights'
+// own channel, which a state never lists in `on`
+export function condHolds(c: Cond | undefined, on: readonly string[], lit = false): boolean {
   if (c === undefined) return true
   const list = typeof c === 'string' ? [c] : c
   for (const n of list) {
     const neg = n.startsWith('!')
     const name = neg ? n.slice(1) : n
-    if (on.includes(name) === neg) return false
+    if ((name === CH_LIT ? lit : on.includes(name)) === neg) return false
   }
   return true
+}
+
+// ---------------------------------------------------------------- the camera on a canvas
+
+// world px to canvas px: cx = wx * k + ox. the offsets are whole pixels so tiles and the baked static layer
+// land on the pixel grid and stay crisp while the camera glides
+export type View = { k: number; ox: number; oy: number }
+
+export function viewFor(cam: Camera, width: number, shakeX = 0, shakeY = 0): View {
+  const k = width / cam.w
+  return { k, ox: Math.round((shakeX - cam.x) * k), oy: Math.round((shakeY - cam.y) * k) }
+}
+
+export function toCanvas(v: View, x: number, y: number): [number, number] {
+  return [x * v.k + v.ox, y * v.k + v.oy]
+}
+
+export function toWorld(v: View, cx: number, cy: number): [number, number] {
+  return [(cx - v.ox) / v.k, (cy - v.oy) / v.k]
+}
+
+// the tiles a camera can see, x1 / y1 exclusive, kept inside the stage. pad is in tiles
+export function visibleTiles(cam: Camera, stage: { cols: number; rows: number }, pad = 0): { x0: number; y0: number; x1: number; y1: number } {
+  const x0 = Math.max(0, Math.floor(cam.x / TILE) - pad)
+  const y0 = Math.max(0, Math.floor(cam.y / TILE) - pad)
+  const x1 = Math.min(stage.cols, Math.ceil((cam.x + cam.w) / TILE) + pad)
+  const y1 = Math.min(stage.rows, Math.ceil((cam.y + cam.h) / TILE) + pad)
+  return { x0, y0, x1: Math.max(x0, x1), y1: Math.max(y0, y1) }
+}
+
+// whether a world rect (grown by pad px) touches what the camera shows
+export function inView(cam: Camera, x: number, y: number, w: number, h: number, pad = 0): boolean {
+  return x + w + pad >= cam.x && x - pad <= cam.x + cam.w && y + h + pad >= cam.y && y - pad <= cam.y + cam.h
+}
+
+// the static layer is baked in square chunks at a few fixed zooms, each half a stop apart, and drawn scaled
+// by at most ~19% either way: at zoom 1, 0.5 and 0.25 it is pixel for pixel
+export const MIPS = [1, Math.SQRT1_2, 0.5, Math.SQRT1_2 / 2, 0.25] as const
+export const CHUNK_PX = 512
+
+// the baked zoom to draw `zoom` from. it keeps the one it has (`held`) until another is clearly nearer, so a
+// camera hovering between two doesn't bake both over and over
+export function mipFor(zoom: number, held = -1): number {
+  let best = 0
+  let bd = Infinity
+  for (let i = 0; i < MIPS.length; i++) {
+    const d = Math.abs(Math.log(zoom / MIPS[i]))
+    if (d < bd) {
+      bd = d
+      best = i
+    }
+  }
+  if (held >= 0 && held < MIPS.length && held !== best && Math.abs(Math.log(zoom / MIPS[held])) < bd + 0.06) return held
+  return best
+}
+
+// the chunks (x1 / y1 exclusive, may be negative: the wall around a stage is baked too) a camera sees when
+// the layer is baked at `kb` canvas px per world px
+export function chunkRange(cam: Camera, kb: number, size = CHUNK_PX): { x0: number; y0: number; x1: number; y1: number } {
+  const w = size / kb
+  return { x0: Math.floor(cam.x / w), y0: Math.floor(cam.y / w), x1: Math.ceil((cam.x + cam.w) / w), y1: Math.ceil((cam.y + cam.h) / w) }
+}
+
+// ---------------------------------------------------------------- darkness
+
+// a soft hole in the dark: fully clear (times a) out to HOLE_CORE of its radius, then fading to nothing at r
+// p: the player whose glow this is
+export type Hole = { x: number; y: number; r: number; a: number; p?: number }
+export const HOLE_CORE = 0.45
+
+const lavaTopsOf = new WeakMap<Stage, number[]>()
+// lava tiles with something other than lava above them: where lava glows from
+export function lavaTops(stage: Stage): number[] {
+  let l = lavaTopsOf.get(stage)
+  if (!l) {
+    l = []
+    for (let i = 0; i < stage.tiles.length; i++) if (stage.tiles[i] === T_LAVA && (i < stage.cols || stage.tiles[i - stage.cols] !== T_LAVA)) l.push(i)
+    lavaTopsOf.set(stage, l)
+  }
+  return l
+}
+
+// where the dark is when the lights are off: the stage's dark patches, or all of it (and the wall around it)
+export function darkRects(stage: Stage): Rect[] {
+  return stage.darks.length ? stage.darks : [{ x: -1e5, y: -1e5, w: 2e5 + stage.w, h: 2e5 + stage.h }]
+}
+
+// everything that lights its own surroundings in the dark. the two players first (ember's glow is the big
+// warm one), then the small lights: lava, lamps, doors, gems still there, portals and the checkpoint taken.
+// `at` is where the players are drawn this frame, when that isn't exactly where the state has them
+export function lightHoles(stage: Stage, s: GameState, at?: ReadonlyArray<{ x: number; y: number }>): Hole[] {
+  const out: Hole[] = []
+  for (let i = 0; i < 2; i++) {
+    const p = s.players[i]
+    if (!p || !p.alive) continue
+    const q = at?.[i] ?? p
+    out.push({ x: q.x + PLAYER_W / 2, y: q.y + PLAYER_H / 2, r: i === 0 ? GLOW_EMBER : GLOW_FROST, a: 1, p: i })
+  }
+  for (const i of lavaTops(stage)) {
+    const tx = i % stage.cols
+    out.push({ x: tx * TILE + TILE / 2, y: ((i - tx) / stage.cols) * TILE + POOL_SINK, r: GLOW_SMALL, a: 0.6 })
+  }
+  for (const l of stage.lamps) out.push({ x: l.x + l.w / 2, y: l.y + l.h / 2, r: GLOW_SMALL, a: 0.85 })
+  for (const d of stage.doors) out.push({ x: d.x + d.w / 2, y: d.y + d.h / 2, r: GLOW_SMALL, a: 0.75 })
+  for (let i = 0; i < stage.gems.length; i++) if (!s.taken[i]) out.push({ x: stage.gems[i].x, y: stage.gems[i].y, r: GLOW_SMALL * 0.7, a: 0.7 })
+  for (const p of stage.portals) out.push({ x: p.x + p.w / 2, y: p.y + p.h / 2, r: GLOW_SMALL, a: 0.75 })
+  const cp = stage.checkpoints[s.cp]
+  if (cp) out.push({ x: cp.x, y: cp.y - TILE * 0.7, r: GLOW_SMALL, a: 0.75 })
+  return out
+}
+
+// how dark a point is, 0 (lit) to 1 (black), with the lights off: the model the renderer's mask follows
+export function darknessAt(holes: readonly Hole[], rects: readonly Rect[], x: number, y: number): number {
+  let inside = false
+  for (const r of rects) if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) inside = true
+  if (!inside) return 0
+  let dark = 1
+  for (const h of holes) {
+    const d = Math.hypot(x - h.x, y - h.y) / h.r
+    if (d >= 1) continue
+    const f = d <= HOLE_CORE ? 1 : 1 - (d - HOLE_CORE) / (1 - HOLE_CORE)
+    dark *= 1 - h.a * f
+  }
+  return dark
 }
 
 // particle kinds
@@ -97,6 +223,8 @@ export const PK_STAR = 5 // a four-point twinkle
 export const PK_SHARD = 6 // a spinning ice shard
 export const PK_STEAM = 7 // a growing soft puff
 export const PK_STREAK = 8 // a vertical airflow line
+export const PK_CHEV = 9 // a little chevron pointing the way it moves, up or down
+export const PK_CHUNK = 10 // a tumbling square of rubble
 
 export const MAX_PARTICLES = 400
 
@@ -203,9 +331,11 @@ export class Particles {
     this.add[to] = this.add[from]
   }
 
-  // two passes, plain then additive, so the composite mode switches at most twice a frame
-  draw(ctx: CanvasRenderingContext2D, colors: readonly string[], addOp: GlobalCompositeOperation): void {
+  // two passes, plain then additive, so the composite mode switches at most twice a frame. `only` draws one
+  // of them (0 plain, 1 additive): the glowing ones go on after the darkness, so sparks show in the dark
+  draw(ctx: CanvasRenderingContext2D, colors: readonly string[], addOp: GlobalCompositeOperation, only = -1): void {
     for (let pass = 0; pass < 2; pass++) {
+      if (only >= 0 && only !== pass) continue
       ctx.globalCompositeOperation = pass === 0 ? 'source-over' : addOp
       for (let i = 0; i < this.n; i++) {
         if (this.add[i] !== pass) continue
@@ -313,6 +443,28 @@ export class Particles {
         ctx.globalAlpha = 0.45 * Math.min(1, t * 3) * fadeIn
         ctx.fillStyle = color
         ctx.fillRect(x - 0.4, y, 0.8, s)
+        break
+      }
+      case PK_CHEV: {
+        ctx.globalAlpha = Math.min(1, t * 2.5) * fadeIn
+        ctx.strokeStyle = color
+        ctx.lineWidth = 1.1
+        const d = this.vy[i] > 0 ? -1 : 1
+        ctx.beginPath()
+        ctx.moveTo(x - s, y + s * 0.5 * d)
+        ctx.lineTo(x, y - s * 0.5 * d)
+        ctx.lineTo(x + s, y + s * 0.5 * d)
+        ctx.stroke()
+        break
+      }
+      case PK_CHUNK: {
+        ctx.globalAlpha = Math.min(1, t * 2.5)
+        ctx.fillStyle = color
+        ctx.save()
+        ctx.translate(x, y)
+        ctx.rotate(this.rot[i])
+        ctx.fillRect(-s / 2, -s / 2, s, s * 0.8)
+        ctx.restore()
         break
       }
     }
