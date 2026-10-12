@@ -24,6 +24,7 @@ import {
   IN_UP,
   JUMP_BUFFER_TICKS,
   JUMP_V,
+  LIGHT_EJECT_TILES,
   MAX_COLS,
   MAX_FALL,
   MAX_ROWS,
@@ -86,8 +87,11 @@ import {
 //
 // a level is a list of stages; the state says which one is being played (s.stage) and every per-thing array in
 // it indexes that stage. one play tick, in order:
-//   1. clocks: tick, phaseT, crumbling blocks (breaking, mending once nothing is inside), arrows coming back
-//   2. interact: a down-key press flips a lever the player overlaps, else turns a mirror it overlaps
+//   1. clocks: tick, phaseT, crumbling blocks (breaking, mending once nothing is inside), a timed lamp
+//      running out, arrows coming back
+//   2. interact: a down-key press flips the first of these the player overlaps: a lever, a lamp, a mirror.
+//      the moment the lights change, a body inside a light-only or dark-only block that is now solid is pushed
+//      out against its gravity, or (a player) crushed when there's no room within LIGHT_EJECT_TILES
 //   3. channels: plates (alive players and boxes overlapping them, as of the end of the last tick), levers,
 //      buttons (refreshed while pressed, then counting down), then sensors lit by beams. emitters' `when` is
 //      read with this tick's plates/levers/buttons plus last tick's sensors, so a sensor feeding an emitter lags a tick
@@ -101,7 +105,7 @@ import {
 // outside 'play': 'dead' counts DEATH_TICKS then respawns at the last checkpoint; 'clear' counts STAGE_TICKS
 // then begins the next stage; 'won' only counts.
 //
-// ember 2 status: one-way platforms, trampolines, crumbling blocks and double-jump arrows work, and the player's step already
+// ember 2 status: one-way platforms, trampolines, crumbling blocks, double-jump arrows and lights work, and the player's step already
 // mirrors by Player.grav. the rest is carried in the state but does nothing yet: search TODO(ember-2:engine)
 
 const EPS = 0.01 // overlaps thinner than this don't count, so rounded network states don't wedge things
@@ -1116,6 +1120,54 @@ function stepPlayer(stage: Stage, s: GameState, pi: PlayerIndex, bits: number, o
   p.prevIn = bits
 }
 
+// where a body caught inside a light-only or dark-only block that has just turned solid ends up: pushed out
+// against its gravity g to the nearest tile line with room, at most LIGHT_EJECT_TILES away. the y it should
+// have (its own when it isn't caught at all), or null when there is nowhere to go
+function ejectY(stage: Stage, s: GameState, r: Rect, id: number, g: number): number | null {
+  collide(stage, s, r, id)
+  if (!hits.some((h) => h.t === T_LIGHT || h.t === T_DARK)) return r.y
+  const far = LIGHT_EJECT_TILES * TILE + EPS
+  if (g > 0) {
+    const bottom = r.y + r.h
+    for (let ty = Math.floor((bottom - EPS) / TILE); bottom - ty * TILE <= far; ty--) {
+      if (!collide(stage, s, { x: r.x, y: ty * TILE - r.h, w: r.w, h: r.h }, id)) return ty * TILE - r.h
+    }
+  } else {
+    for (let ty = Math.ceil((r.y + EPS) / TILE); ty * TILE - r.y <= far; ty++) {
+      if (!collide(stage, s, { x: r.x, y: ty * TILE, w: r.w, h: r.h }, id)) return ty * TILE
+    }
+  }
+  return null
+}
+
+// turns the lights on or off. (x, y) is where the light event happens. players caught in a block that
+// appears are pushed out or crushed; a box with nowhere to go stays stuck in it until the lights change back
+function setLit(stage: Stage, s: GameState, lit: boolean, x: number, y: number): void {
+  if (s.lit === lit) return
+  s.lit = lit
+  s.events.push({ k: 'light', on: lit, x, y })
+  for (const pi of [0, 1] as const) {
+    const p = s.players[pi]
+    // a player in a cannon is safe from everything
+    if (!p.alive || p.cannon >= 0) continue
+    const y1 = ejectY(stage, s, playerRect(p), pi, p.grav)
+    if (y1 === null) {
+      p.alive = false
+      p.inDoor = false
+      s.events.push({ k: 'die', p: pi, ...centreOf(p), cause: 'crush' })
+    } else if (y1 !== p.y) {
+      p.y = y1
+      if (p.vy * p.grav > 0) p.vy = 0
+    }
+  }
+  s.boxes.forEach((b, i) => {
+    const y1 = ejectY(stage, s, boxRect(b), BOX0 + i, 1)
+    if (y1 === null || y1 === b.y) return
+    b.y = y1
+    b.vy = 0
+  })
+}
+
 // advances exactly one STEP_S tick. pure: never mutates `s`, returns a new state whose `events` are this tick's only.
 // in phase 'dead' it counts DEATH_TICKS then returns respawn(level, s); in 'clear' it counts STAGE_TICKS then
 // returns the start of the next stage; in 'won' it only counts phaseT
@@ -1161,6 +1213,7 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
     s.crumble[i] = 0
     ev.push({ k: 'mend', ...at })
   }
+  if (s.litT > 0 && --s.litT === 0) setLit(stage, s, !stage.dark, stage.w / 2, stage.h / 2)
   for (let i = 0; i < stage.arrows.length; i++) {
     if (!(s.arrows[i]! > 0)) continue
     s.arrows[i]!--
@@ -1176,6 +1229,21 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
     if (li >= 0) {
       s.levers[li] = !s.levers[li]
       ev.push({ k: 'lever', i: li, ...rectMid(stage.levers[li]!) })
+      continue
+    }
+    const la = stage.lamps.findIndex((l) => overlaps(r, l))
+    if (la >= 0) {
+      const lamp = stage.lamps[la]!
+      const at = rectMid(lamp)
+      // a timed lamp: the other state from the one the stage began in, for its ticks (a press while it runs
+      // starts the time again). a plain one: the other state from now, for good
+      if (lamp.ticks > 0) {
+        setLit(stage, s, stage.dark, at.x, at.y)
+        s.litT = lamp.ticks
+      } else {
+        setLit(stage, s, !s.lit, at.x, at.y)
+        s.litT = 0
+      }
       continue
     }
     const mi = stage.mirrors.findIndex((m) => overlaps(r, { x: m.x - TILE / 2, y: m.y - TILE / 2, w: TILE, h: TILE }))
@@ -1323,7 +1391,7 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   }
 
   // 9. checkpoints, then the phase
-  // TODO(ember-2:engine): lamps, gravity switches, keys and locks and cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
+  // TODO(ember-2:engine): gravity switches, keys and locks and cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
   const [fire0, frost0] = s.players
   if (fire0.alive && frost0.alive) {
     const safe = (p: Player) => p.ground && p.cannon < 0

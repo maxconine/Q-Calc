@@ -1091,3 +1091,134 @@ describe('double-jump arrows', () => {
     expect(r.ev.map((e) => e.k).filter((k) => k === 'bounce' || k === 'arrow' || k === 'airjump').slice(0, 3)).toEqual(['bounce', 'arrow', 'airjump'])
   })
 })
+
+describe('lights', () => {
+  const press = (t: number): Inputs => [t === 0 ? IN_DOWN : 0, 0]
+  // put a player's feet on the floor of a tile
+  const stand = (s: GameState, p: 0 | 1, tx: number, ty: number) => Object.assign(s.players[p], { x: tx * TILE + 3, y: (ty + 1) * TILE - PLAYER_H, vx: 0, vy: 0 })
+  const dark = (d: Level): Level => compileLevel({ ...d.def, stages: [{ ...d.def.stages[0]!, dark: true }] })
+
+  it('a lamp toggles the lights on a down press, with an event at the lamp', () => {
+    const L = mk(['.1'], [
+      { k: 'lamp', x: 2, y: 16 },
+      { k: 'gate', x: 10, y: 14, w: 1, h: 3, open: '!lights' },
+    ])
+    let s = step(L, initState(L), [IN_DOWN, 0])
+    expect(s.lit).toBe(false)
+    expect(s.events).toContainEqual({ k: 'light', on: false, x: 2 * TILE + 10, y: 16 * TILE + 10 })
+    expect(s.on).toEqual([])
+    // holding the key is one press; the gate follows the lights
+    s = run(L, s, 40, [IN_DOWN, 0]).s
+    expect(s.lit).toBe(false)
+    expect(s.gates[0]).toBe(1)
+    s = step(L, step(L, s, [0, 0]), [IN_DOWN, 0])
+    expect(s.lit).toBe(true)
+    expect(s.litT).toBe(0)
+  })
+
+  it('a lever comes before a lamp in the same tile', () => {
+    const L = mk(['.1'], [
+      { k: 'lamp', x: 2, y: 16 },
+      { k: 'lever', x: 2, y: 16, ch: 'a' },
+    ])
+    const s = step(L, initState(L), [IN_DOWN, 0])
+    expect([s.lit, s.levers[0]]).toEqual([true, true])
+  })
+
+  it('a timed lamp holds the other state for its seconds, then falls back; a press restarts it', () => {
+    const L = dark(mk(['.1'], [{ k: 'lamp', x: 2, y: 16, secs: 1 }]))
+    const st = L.stages[0]!
+    let s = step(L, initState(L), [IN_DOWN, 0])
+    expect([s.lit, s.litT]).toEqual([true, 60])
+    s = run(L, s, 59, [0, 0]).s
+    expect([s.lit, s.litT]).toEqual([true, 1])
+    s = step(L, s, [0, 0])
+    expect([s.lit, s.litT]).toEqual([false, 0])
+    expect(s.events).toContainEqual({ k: 'light', on: false, x: st.w / 2, y: st.h / 2 })
+    // pressed again half way through, it runs a whole second more and says nothing new
+    s = step(L, s, [IN_DOWN, 0])
+    s = run(L, s, 30, [0, 0]).s
+    const again = step(L, s, [IN_DOWN, 0])
+    expect([again.lit, again.litT]).toEqual([true, 60])
+    expect(again.events.some((e) => e.k === 'light')).toBe(false)
+    // in a lit stage it gives darkness instead
+    const M = mk(['.1'], [{ k: 'lamp', x: 2, y: 16, secs: 1 }])
+    const m = step(M, initState(M), [IN_DOWN, 0])
+    expect([m.lit, m.litT]).toEqual([false, 60])
+  })
+
+  it('a body inside a block that turns solid is pushed up onto it', () => {
+    const L = mk(['.1...', '....D'], [
+      { k: 'lamp', x: 2, y: 15 },
+      { k: 'box', x: 6, y: 16 },
+    ])
+    const s0 = initState(L)
+    // frost stands in the gap where the dark-only block will be
+    stand(s0, 1, 5, 16)
+    let s = run(L, s0, 3, [0, 0]).s
+    expect(feet(s, 1)).toBe(FLOOR)
+    s = step(L, s, [IN_DOWN, 0])
+    expect(s.players[1].alive).toBe(true)
+    expect(feet(s, 1)).toBe(16 * TILE)
+    s = run(L, s, 10, [0, 0]).s
+    expect(s.players[1].ground).toBe(true)
+    expect(feet(s, 1)).toBe(16 * TILE)
+    // and back on: the block is air again and frost drops to the floor
+    s = run(L, s, 30, (t) => [t === 1 ? IN_DOWN : 0, 0]).s
+    expect(feet(s, 1)).toBe(FLOOR)
+  })
+
+  it('with no room within two tiles the player is crushed', () => {
+    const L = mk(['....#', '....D', '.1..D'], [{ k: 'lamp', x: 2, y: 16 }])
+    const s0 = initState(L)
+    stand(s0, 1, 5, 16)
+    const s = step(L, run(L, s0, 3, [0, 0]).s, [IN_DOWN, 0])
+    expect(s.players[1].alive).toBe(false)
+    expect(s.events).toContainEqual(expect.objectContaining({ k: 'die', p: 1, cause: 'crush' }))
+    expect(s.phase).toBe('dead')
+    // two tiles of block with air above is survivable: out of the top
+    const M = mk(['....D', '.1..D'], [{ k: 'lamp', x: 2, y: 16 }])
+    const m0 = initState(M)
+    stand(m0, 1, 5, 16)
+    const m = step(M, run(M, m0, 3, [0, 0]).s, [IN_DOWN, 0])
+    expect(m.players[1].alive).toBe(true)
+    expect(feet(m, 1)).toBe(15 * TILE)
+  })
+
+  it('lights changing under a box drop it, and a box in a new block is lifted onto it', () => {
+    const L = mk(['.1....', '....OD'], [
+      { k: 'lamp', x: 2, y: 15 },
+      { k: 'box', x: 5, y: 15 },
+      { k: 'box', x: 6, y: 16 },
+    ])
+    let s = run(L, initState(L), 10, [0, 0]).s
+    expect(s.boxes.map((b) => b.y)).toEqual([15 * TILE, 16 * TILE])
+    s = run(L, s, 40, press).s
+    expect(s.boxes.map((b) => b.y)).toEqual([16 * TILE, 15 * TILE])
+  })
+
+  it('a timed lamp runs out under a player on a light-only bridge', () => {
+    const L = dark(mk(['.1.OOO', '......', '......'], [{ k: 'lamp', x: 2, y: 14, secs: 1 }]))
+    let s = step(L, initState(L), [IN_DOWN, 0])
+    expect(s.lit).toBe(true)
+    stand(s, 0, 5, 13)
+    s = run(L, s, 40, [0, 0]).s
+    expect(feet(s, 0)).toBe(14 * TILE)
+    s = run(L, s, 60, [0, 0]).s
+    expect(s.lit).toBe(false)
+    expect(feet(s, 0)).toBe(FLOOR)
+    expect(s.players[0].alive).toBe(true)
+  })
+
+  it('a beam passes a light-only block only in the dark', () => {
+    const L = mk(['.1', '....O'], [
+      { k: 'lamp', x: 2, y: 15 },
+      { k: 'emitter', x: 1, y: 16, dir: 'right' },
+      { k: 'sensor', x: 9, y: 16, ch: 's' },
+    ])
+    let s = run(L, initState(L), 3, [0, 0]).s
+    expect(s.on).toEqual([])
+    s = run(L, s, 3, press).s
+    expect(s.on).toEqual(['s'])
+  })
+})
