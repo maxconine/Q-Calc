@@ -10,6 +10,7 @@ import {
   IN_LEFT,
   IN_RIGHT,
   IN_UP,
+  JUMP_V,
   MELT_TICKS,
   PLAYER_H,
   PLAYER_W,
@@ -623,7 +624,7 @@ describe('determinism and purity', () => {
   })
 })
 
-// ---- ember 2: the foundations. TODO(ember-2:engine): every new mechanic gets its own describe below
+// ---- ember 2: the foundations
 
 // a walled room of any size from its inner rows (padded with air above), for maps bigger than a screen
 function room(cols: number, rows: number, bottom: string[], things: ThingDef[] = []): LevelDef['stages'][number] {
@@ -1272,5 +1273,221 @@ describe('keys and locks', () => {
     const r = run(L, initState(L), 140, R)
     expect(r.ev.map((e) => e.k).filter((k) => k === 'key' || k === 'portal' || k === 'unlock')).toEqual(['key', 'portal', 'unlock'])
     expect(r.s.players[0].x).toBeGreaterThan(15 * TILE)
+  })
+})
+
+describe('gravity switches', () => {
+  // a whole room: rows from the ceiling down, then rows from the floor up, doors bottom right
+  const tb = (top: string[], bottom: string[], things: ThingDef[] = []) => {
+    const body = [...top, ...Array.from({ length: ROWS - 2 - top.length - bottom.length }, () => ''), ...bottom]
+    return level(
+      body.map((r, i) => (i === body.length - 1 && !r.includes('B') ? r.padEnd(26, '.') + 'R.2B' : r)),
+      things,
+    )
+  }
+  const CEIL = TILE // the underside of the ceiling
+  const SW: ThingDef = { k: 'gswitch', x: 2, y: 16 }
+  const head = (s: GameState, p: 0 | 1) => s.players[p].y
+  // ember flipped and settled on the ceiling
+  const up = (L: Level) => run(L, initState(L), 70, (t) => [t === 0 ? IN_DOWN : 0, 0]).s
+
+  it('flips whoever pressed it: they fall up, stand on the ceiling, and a second press brings them down', () => {
+    const L = tb([], ['.1'], [SW])
+    let s = step(L, initState(L), [IN_DOWN, 0])
+    expect(s.events).toEqual(expect.arrayContaining([expect.objectContaining({ k: 'gswitch', i: 0 }), expect.objectContaining({ k: 'flip', p: 0, grav: -1 })]))
+    expect(s.players[0].grav).toBe(-1)
+    expect(s.players[1].grav).toBe(1)
+    const r = run(L, s, 70, [0, 0])
+    s = r.s
+    expect(head(s, 0)).toBe(CEIL)
+    expect(s.players[0].ground).toBe(true)
+    expect(r.ev.some((e) => e.k === 'land' && e.p === 0)).toBe(true)
+    // walking works as ever
+    s = run(L, s, 30, R).s
+    expect(head(s, 0)).toBe(CEIL)
+    expect(s.players[0].x).toBeGreaterThan(4 * TILE)
+    // and back down at the switch (it is out of reach from up here: frost presses nothing, so use the state)
+    s = { ...s, players: [{ ...s.players[0], grav: 1, ground: false }, s.players[1]] }
+    s = run(L, s, 70, [0, 0]).s
+    expect(feet(s, 0)).toBe(FLOOR)
+  })
+
+  it('a flipped jump goes down, just as far, and coyote and buffering still work', () => {
+    const L = tb([], ['.1'], [SW])
+    const s = up(L)
+    let low = 0
+    let t = s
+    const ev: GameEvent[] = []
+    for (let k = 0; k < 60; k++) {
+      t = step(L, t, [k < 30 ? IN_UP : 0, 0])
+      ev.push(...t.events)
+      low = Math.max(low, head(t, 0))
+    }
+    expect(ev.filter((e) => e.k === 'jump').length).toBe(1)
+    expect(low - CEIL).toBeGreaterThan(3 * TILE)
+    expect(low - CEIL).toBeLessThan(3.4 * TILE)
+    expect(head(t, 0)).toBe(CEIL)
+    expect(step(L, s, [IN_UP, 0]).players[0].vy).toBeCloseTo(JUMP_V - 1400 / 60)
+  })
+
+  it('who: other, fire, frost, both', () => {
+    const flips = (who: 'other' | 'fire' | 'frost' | 'both' | 'self', presser: 0 | 1) => {
+      const L = tb([], ['.12......................R..B'], [{ k: 'gswitch', x: 2, y: 16, w: 2, who } as ThingDef, { k: 'gswitch', x: 3, y: 16, who }])
+      const s = step(L, initState(L), presser === 0 ? [IN_DOWN, 0] : [0, IN_DOWN])
+      return [s.players[0].grav, s.players[1].grav]
+    }
+    expect(flips('self', 1)).toEqual([1, -1])
+    expect(flips('other', 0)).toEqual([1, -1])
+    expect(flips('other', 1)).toEqual([-1, 1])
+    expect(flips('fire', 1)).toEqual([-1, 1])
+    expect(flips('frost', 0)).toEqual([1, -1])
+    expect(flips('both', 0)).toEqual([-1, -1])
+    // both pressing a 'both' switch in the same tick flips each twice
+    const L = tb([], ['.12......................R..B'], [{ k: 'gswitch', x: 2, y: 16, who: 'both' }, { k: 'gswitch', x: 3, y: 16, who: 'both' }])
+    const s = step(L, initState(L), [IN_DOWN, IN_DOWN])
+    expect([s.players[0].grav, s.players[1].grav]).toEqual([1, 1])
+  })
+
+  it('pools are walls to a flipped player: frost walks the underside of a lava ceiling', () => {
+    // a lava ceiling over the whole room, frost flipped beneath it
+    const L = level(['.2.......................R.1B'], [{ k: 'gswitch', x: 2, y: 16 }])
+    const lava = compileLevel(remap(L.def, (m) => m.map((r, i) => (i === 1 ? '#' + 'L'.repeat(COLS - 2) + '#' : r))))
+    let s = run(lava, initState(lava), 80, (t) => [0, t === 0 ? IN_DOWN : 0]).s
+    expect(s.players[1].alive).toBe(true)
+    expect(head(s, 1)).toBe(2 * TILE)
+    s = run(lava, s, 60, [0, IN_RIGHT]).s
+    expect(s.players[1].alive).toBe(true)
+    expect(s.players[1].x).toBeGreaterThan(6 * TILE)
+    expect(head(s, 1)).toBe(2 * TILE)
+  })
+
+  it('a ceiling plate takes a flipped player and nobody else', () => {
+    // a low ceiling ember can jump into: the plate hangs from it
+    const L = tb([], ['.####', '.....', '.....', '.1...'], [SW, { k: 'plate', x: 2, y: 14, w: 3, ch: 'c', ceil: true }, { k: 'plate', x: 8, y: 16, ch: 'f' }])
+    // upright: a jump touches the ceiling and presses nothing
+    let r = run(L, initState(L), 40, (t) => [t < 20 ? IN_UP : 0, 0])
+    expect(r.ev.some((e) => e.k === 'plate')).toBe(false)
+    // flipped: standing on it holds it
+    r = run(L, initState(L), 40, (t) => [t === 0 ? IN_DOWN : 0, 0])
+    expect(head(r.s, 0)).toBe(14 * TILE)
+    expect(r.s.on).toEqual(['c'])
+    // and a flipped player jumping down onto a floor plate with their head presses nothing
+    const s = initState(L)
+    Object.assign(s.players[0], { x: 8 * TILE + 10, y: 16 * TILE - 4, grav: -1, ground: false })
+    expect(step(L, s, [0, 0]).on).toEqual([])
+    Object.assign(s.players[0], { grav: 1, y: FLOOR - PLAYER_H })
+    expect(step(L, s, [0, 0]).on).toEqual(['f'])
+  })
+
+  it('a door wants an upright player', () => {
+    const L = tb([], ['..#', '...', '.1R.....................2B'], [SW])
+    // flipped under the low block right above the door: in the doorway, but upside down
+    const s = initState(L)
+    Object.assign(s.players[0], { x: 3 * TILE + 3 })
+    Object.assign(s.players[1], { x: 26 * TILE + 3 })
+    const ok = run(L, s, 5, [0, 0]).s
+    expect(ok.phase).toBe('won')
+    const f = initState(L)
+    Object.assign(f.players[0], { x: 3 * TILE + 3, grav: -1 })
+    Object.assign(f.players[1], { x: 26 * TILE + 3 })
+    const no = run(L, f, 60, [0, 0]).s
+    expect(no.phase).toBe('play')
+    expect(no.players[0].inDoor).toBe(false)
+  })
+
+  it('a one-way is a floor from above and a ceiling to stand under for the flipped', () => {
+    // a row of one-ways three tiles up
+    const L = tb([], ['.====', '.....', '.....', '.1...'], [SW])
+    const s = run(L, initState(L), 60, (t) => [t === 0 ? IN_DOWN : 0, 0]).s
+    // flipped, ember rises and stops on the underside of the slab (its top 6 px)
+    expect(head(s, 0)).toBe(13 * TILE + 6)
+    expect(s.players[0].ground).toBe(true)
+    // a flipped jump from the ceiling goes down through one
+    const t = initState(L)
+    Object.assign(t.players[0], { y: CEIL, grav: -1 })
+    const r = run(L, t, 80, (k) => [k > 2 && k < 8 ? IN_UP : 0, 0])
+    expect(r.ev.some((e) => e.k === 'jump')).toBe(true)
+    expect(head(r.s, 0)).toBe(CEIL)
+    // falling up from under it they stop there; an upright player dropped from above lands on top
+    const u = initState(L)
+    Object.assign(u.players[0], { y: 5 * TILE, ground: false })
+    expect(feet(run(L, u, 80, [0, 0]).s, 0)).toBe(13 * TILE)
+  })
+
+  it('a trampoline in the ceiling bounces a flipped player downward', () => {
+    const L = tb(['.TTT'], ['.1'], [SW])
+    const st = L.stages[0]!
+    expect(st.tiles[1 * COLS + 2]).toBe(6)
+    const r = run(L, initState(L), 200, (t) => [t === 0 ? IN_DOWN : 0, 0])
+    const b = r.ev.find((e) => e.k === 'bounce') as { v: number; y: number }
+    expect(b.v).toBeGreaterThan(600)
+    // the bounce sends them back down, and they come up again
+    expect(r.ev.filter((e) => e.k === 'bounce').length).toBeGreaterThan(1)
+    expect(r.ev.some((e) => e.k === 'land')).toBe(false)
+  })
+
+  it('a flipped player under a crumbling block starts it, and falls up through the hole', () => {
+    const L = tb(['', '.~'], ['.1'], [SW])
+    const r = run(L, initState(L), 50, (t) => [t === 0 ? IN_DOWN : 0, 0])
+    expect(r.ev.some((e) => e.k === 'shake')).toBe(true)
+    expect(head(r.s, 0)).toBe(3 * TILE)
+    const later = run(L, r.s, CRUMBLE_TICKS + 30, [0, 0])
+    expect(later.ev.some((e) => e.k === 'break')).toBe(true)
+    expect(head(later.s, 0)).toBe(CEIL)
+  })
+
+  it('an arrow jump while flipped goes down', () => {
+    const L = tb([], ['.1'], [SW])
+    const s = initState(L)
+    Object.assign(s.players[0], { y: 8 * TILE, grav: -1, ground: false, air: 1, vy: 0 })
+    const n = step(L, s, [IN_UP, 0])
+    expect(n.events).toContainEqual(expect.objectContaining({ k: 'airjump', p: 0 }))
+    expect(n.players[0].vy).toBeGreaterThan(350)
+    expect(n.players[0].air).toBe(0)
+  })
+
+  it('a flipped player rides the underside of a mover, and a mover never crushes them', () => {
+    const L = tb([], ['.1'], [SW, { k: 'mover', x: 1, y: 8, w: 6, h: 1, to: { x: 12, y: 8 }, speed: 2 }])
+    let s = run(L, initState(L), 40, (t) => [t === 0 ? IN_DOWN : 0, 0]).s
+    expect(head(s, 0)).toBe(9 * TILE)
+    const off = s.players[0].x - s.movers[0]!.x
+    s = run(L, s, 120, [0, 0]).s
+    expect(s.movers[0]!.x).toBeGreaterThan(5 * TILE)
+    expect(s.players[0].x - s.movers[0]!.x).toBeCloseTo(off, 5)
+    // a mover coming down onto a player standing on the ceiling's underside... can't: one rising under a ceiling walker waits
+    const M = tb([], ['.1'], [SW, { k: 'lever', x: 20, y: 16, ch: 'go' }, { k: 'mover', x: 2, y: 6, w: 3, h: 1, to: { x: 2, y: 1 }, when: 'go' }])
+    let m = up(M)
+    m = { ...m, levers: [true] }
+    m = run(M, m, 200, [0, 0]).s
+    expect(head(m, 0)).toBe(CEIL)
+    expect(m.movers[0]!.y).toBeGreaterThanOrEqual(CEIL + PLAYER_H - 0.01)
+  })
+
+  it('a fan blows a flipped player up too, and lights push them out downward', () => {
+    const L = tb(['', '.D'], ['.1'], [SW, { k: 'lamp', x: 20, y: 16 }])
+    const s = initState(L)
+    // flipped ember hanging in the gap where the dark-only block will be, under the ceiling
+    Object.assign(s.players[0], { y: CEIL, grav: -1 })
+    Object.assign(s.players[1], { x: 20 * TILE + 3 })
+    let t = run(L, s, 3, [0, 0]).s
+    expect(head(t, 0)).toBe(CEIL)
+    t = step(L, t, [0, IN_DOWN])
+    expect(t.lit).toBe(false)
+    expect(t.players[0].alive).toBe(true)
+    expect(head(t, 0)).toBe(3 * TILE)
+    expect(run(L, t, 10, [0, 0]).s.players[0].ground).toBe(true)
+  })
+
+  it('a checkpoint is taken with a flipped player on the ceiling of its zone, and a death brings them back flipped', () => {
+    const L = tb([], ['.12......................R..B'], [SW, { k: 'checkpoint', x: 2, y: 16, zone: { x: 1, y: 1, w: 5, h: 16 } }])
+    // the press comes before the flag in the tick, so the flag is first taken with ember on the ceiling
+    const s = up(L)
+    expect(s.cp).toBe(0)
+    expect(s.saved!.players[0].grav).toBe(-1)
+    const back = respawn(L, run(L, s, 30, [0, IN_RIGHT]).s)
+    expect(back.players[0].grav).toBe(-1)
+    expect(head(back, 0)).toBe(CEIL)
+    expect(back.deaths).toBe(1)
+    expect(run(L, back, 20, [0, 0]).s.players[0].ground).toBe(true)
   })
 })

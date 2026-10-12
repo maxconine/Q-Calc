@@ -89,7 +89,8 @@ import {
 // it indexes that stage. one play tick, in order:
 //   1. clocks: tick, phaseT, crumbling blocks (breaking, mending once nothing is inside), a timed lamp
 //      running out, arrows coming back
-//   2. interact: a down-key press flips the first of these the player overlaps: a lever, a lamp, a mirror.
+//   2. interact: a down-key press flips the first of these the player overlaps: a lever, a lamp, a gravity
+//      switch, a mirror.
 //      the moment the lights change, a body inside a light-only or dark-only block that is now solid is pushed
 //      out against its gravity, or (a player) crushed when there's no room within LIGHT_EJECT_TILES
 //   3. channels: plates (alive players and boxes overlapping them, as of the end of the last tick), levers,
@@ -107,8 +108,13 @@ import {
 // outside 'play': 'dead' counts DEATH_TICKS then respawns at the last checkpoint; 'clear' counts STAGE_TICKS
 // then begins the next stage; 'won' only counts.
 //
-// ember 2 status: one-way platforms, trampolines, crumbling blocks, double-jump arrows, lights, keys and locks work, and the player's step already
-// mirrors by Player.grav. the rest is carried in the state but does nothing yet: search TODO(ember-2:engine)
+// gravity: a player with grav -1 is the same player upside down. gravity, jumps, the fall cap, ground, coyote,
+// landing, one-ways, trampolines, crumbling and riding movers all mirror; fans still blow up; pools are plain
+// walls to them (they only harm an upright player standing in one); doors and floor plates want an upright
+// player, ceiling plates a flipped one; boxes never flip.
+//
+// cannons are not in version 1: they compile and are carried in the state (Player.cannon stays -1, fly and
+// cannonCd 0, GameState.cannons all 0) but nothing loads or fires. the player's step already honours `fly`
 
 const EPS = 0.01 // overlaps thinner than this don't count, so rounded network states don't wedge things
 const RIDE = 0.5 // a body whose feet are within this of a solid's top rides it
@@ -845,10 +851,10 @@ const rectMid = (r: Rect) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 })
 function channels(stage: Stage, s: GameState, ev: GameEvent[] | null): Set<string> {
   const on = new Set<string>()
   if (s.lit) on.add(CH_LIT)
-  const bodies: Rect[] = []
-  for (const p of s.players) if (p.alive) bodies.push(playerRect(p))
-  for (const b of s.boxes) bodies.push(boxRect(b))
-  const pressed = (r: Rect) => bodies.some((b) => overlaps(b, r))
+  // a floor plate takes an upright player or a box; one on the ceiling only a flipped player (boxes never flip),
+  // so a jump can't reach up and press it
+  const pressed = (r: Rect & { ceil: boolean }) =>
+    s.players.some((p) => p.alive && p.grav === (r.ceil ? -1 : 1) && overlaps(playerRect(p), r)) || (!r.ceil && s.boxes.some((b) => overlaps(boxRect(b), r)))
   const plates = stage.plates.map((p) => pressed(p))
   stage.plates.forEach((p, i) => {
     if (plates[i]) on.add(p.ch)
@@ -1249,6 +1255,21 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
       }
       continue
     }
+    const gi = stage.gswitches.findIndex((g) => overlaps(r, g))
+    if (gi >= 0) {
+      const g = stage.gswitches[gi]!
+      ev.push({ k: 'gswitch', i: gi, ...rectMid(g) })
+      const who: PlayerIndex[] = g.who === 'both' ? [0, 1] : g.who === 'fire' ? [0] : g.who === 'frost' ? [1] : g.who === 'self' ? [pi] : [pi === 0 ? 1 : 0]
+      for (const qi of who) {
+        const q = s.players[qi]
+        if (!q.alive) continue
+        q.grav = q.grav === 1 ? -1 : 1
+        q.ground = false
+        q.coyote = 0
+        ev.push({ k: 'flip', p: qi, ...centreOf(q), grav: q.grav })
+      }
+      continue
+    }
     const mi = stage.mirrors.findIndex((m) => overlaps(r, { x: m.x - TILE / 2, y: m.y - TILE / 2, w: TILE, h: TILE }))
     if (mi >= 0) {
       s.mirrors[mi] = s.mirrors[mi] === '/' ? '\\' : '/'
@@ -1351,7 +1372,8 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
     const p = s.players[pi]
     if (!p.alive) continue
     const r = playerRect(p)
-    const cause = killer(poolUnder(stage, s, r), pi)
+    // pools only harm an upright player standing in them: to a flipped one they are walls
+    const cause = p.grav === 1 ? killer(poolUnder(stage, s, r), pi) : null
     if (cause) {
       p.alive = false
       p.inDoor = false
@@ -1398,19 +1420,19 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
     if (inPortal >= 0 && p.portalCd === 0) {
       const o = stage.portals[stage.portals[inPortal]!.other]!
       p.x = o.x + (TILE - PLAYER_W) / 2
-      p.y = o.y + o.h - PLAYER_H
+      p.y = p.grav === 1 ? o.y + o.h - PLAYER_H : o.y
       p.portalCd = PORTAL_COOLDOWN_TICKS
       ev.push({ k: 'portal', p: pi, ...centreOf(p) })
     } else if (inPortal < 0 && p.portalCd > 0) p.portalCd-- // the cooldown holds while still standing in a portal
     const d = stage.doors[pi]
     const cx = p.x + PLAYER_W / 2
     const was = p.inDoor
-    p.inDoor = p.ground && cx >= d.x && cx <= d.x + d.w && Math.abs(p.y + PLAYER_H - (d.y + d.h)) < 1
+    p.inDoor = p.ground && p.grav === 1 && cx >= d.x && cx <= d.x + d.w && Math.abs(p.y + PLAYER_H - (d.y + d.h)) < 1
     if (p.inDoor && !was) ev.push({ k: 'door', p: pi, x: d.x + d.w / 2, y: d.y + d.h / 2 })
   }
 
   // 9. checkpoints, then the phase
-  // TODO(ember-2:engine): gravity switches and cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
+  // (cannons, when they come, load in 8 and fire before 7)
   const [fire0, frost0] = s.players
   if (fire0.alive && frost0.alive) {
     const safe = (p: Player) => p.ground && p.cannon < 0
