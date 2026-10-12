@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { compileLevel, gateRect, initState, respawn, scoreOf, step, tileAt, traceBeams, validateLevel } from './emberEngine'
 import {
+  CRUMBLE_GONE_TICKS,
+  CRUMBLE_TICKS,
   DEATH_TICKS,
   FREEZE_TICKS,
   IN_DOWN,
@@ -15,8 +17,11 @@ import {
   RUN_SPEED,
   STAGE_TICKS,
   STEP_HZ,
+  T_CRUMBLE,
   T_WALL,
   TILE,
+  TRAMP_MAX_V,
+  TRAMP_MIN_V,
   VIEW_COLS as COLS,
   VIEW_ROWS as ROWS,
   type GameEvent,
@@ -783,5 +788,228 @@ describe('checkpoints', () => {
     const st = room(32, 18, ['1...C...............2......RB'])
     const L = levelOf(st)
     expect(run(L, initState(L), 60, R).s.cp).toBe(-1)
+  })
+})
+
+// ---- ember 2: the mechanics
+
+// the tick (from 0) of the first event of a kind, -1 for none
+function when(L: Level, s: GameState, n: number, input: Inputs | ((t: number) => Inputs), k: GameEvent['k']): number {
+  for (let t = 0; t < n; t++) {
+    s = step(L, s, typeof input === 'function' ? input(t) : input)
+    if (s.events.some((e) => e.k === k)) return t
+  }
+  return -1
+}
+// the highest the feet get (smallest y) over n ticks
+function peak(L: Level, s: GameState, n: number, input: Inputs | ((t: number) => Inputs), p: 0 | 1 = 0): number {
+  let top = Infinity
+  for (let t = 0; t < n; t++) {
+    s = step(L, s, typeof input === 'function' ? input(t) : input)
+    top = Math.min(top, feet(s, p))
+  }
+  return top
+}
+const FLOOR = 17 * TILE
+// a small level from its bottom rows; the doors and frost go at the far right of the last row unless it has them
+const mk = (rows: string[], things: ThingDef[] = []) =>
+  level(
+    rows.map((r, i) => (i === rows.length - 1 && !r.includes('B') ? r.padEnd(26, '.') + 'R.2B' : r)),
+    things,
+  )
+
+describe('one-way platforms', () => {
+  it('a jump goes up through one and lands on top of it', () => {
+    const L = mk(['.=', '..', '.1.......................R.2B'])
+    const r = run(L, initState(L), 60, (t) => [t < 20 ? IN_UP : 0, 0])
+    expect(feet(r.s, 0)).toBe(14 * TILE)
+    expect(r.s.players[0].ground).toBe(true)
+    // and stays there: there is no dropping through
+    const later = run(L, r.s, 120, [IN_DOWN, 0]).s
+    expect(feet(later, 0)).toBe(14 * TILE)
+    // walking off its end falls back to the floor
+    expect(feet(run(L, later, 60, R).s, 0)).toBe(FLOOR)
+  })
+
+  it('is never solid sideways, nor from below', () => {
+    // one at head height in the way, and a row of them overhead
+    const L = mk(['.===', '....', '.1.=.....................R.2B'])
+    const r = run(L, initState(L), 40, R)
+    expect(r.s.players[0].x).toBeGreaterThan(5 * TILE)
+    expect(feet(r.s, 0)).toBe(FLOOR)
+  })
+
+  it('a box lands on one, and a player can stand on that box', () => {
+    const L = mk(['.1', '.#=='], [{ k: 'box', x: 4, y: 10 }])
+    const s = run(L, initState(L), 80, [0, 0]).s
+    expect(s.boxes[0]!.y).toBe(16 * TILE - TILE)
+    // ember walks out along the platform and pushes it off the far end
+    const t = run(L, s, 20, R).s
+    expect(feet(t, 0)).toBe(16 * TILE)
+    expect(t.boxes[0]!.x).toBeGreaterThan(4 * TILE)
+    expect(t.boxes[0]!.y).toBe(15 * TILE)
+    expect(run(L, t, 80, R).s.boxes[0]!.y).toBe(FLOOR - TILE)
+  })
+
+  it('a state rounded by the network still stands on one', () => {
+    const L = mk(['.1', '.='])
+    let s = run(L, initState(L), 5, [0, 0]).s
+    s = { ...s, players: [{ ...s.players[0], y: s.players[0].y + 0.004 }, s.players[1]] }
+    s = run(L, s, 30, [0, 0]).s
+    expect(s.players[0].ground).toBe(true)
+    expect(feet(s, 0)).toBeCloseTo(16 * TILE, 1)
+  })
+})
+
+describe('trampolines', () => {
+  // ember on a block beside a trampoline
+  const PAD = ['.1', '.#T.......................R.2B']
+  const TOP = 16 * TILE
+
+  it('stepping onto one bounces at the least speed, about 3.8 tiles', () => {
+    const L = mk(PAD)
+    const r = run(L, initState(L), 30, R)
+    const b = r.ev.find((e) => e.k === 'bounce')
+    expect(b).toMatchObject({ k: 'bounce', p: 0, v: TRAMP_MIN_V })
+    const s = initState(L)
+    s.players[0].x = 3 * TILE + 3
+    s.players[0].y = TOP - PLAYER_H
+    const top = peak(L, s, 30, [0, 0])
+    expect(TOP - top).toBeGreaterThan(3.7 * TILE)
+    expect(TOP - top).toBeLessThan(3.9 * TILE)
+  })
+
+  it('a longer fall bounces higher, up to the cap, and nobody rests on one', () => {
+    const L = mk(PAD)
+    const drop = (h: number) => {
+      const s = initState(L)
+      s.players[0].x = 3 * TILE + 3
+      s.players[0].y = TOP - PLAYER_H - h
+      s.players[0].ground = false
+      const t = when(L, s, 200, [0, 0], 'bounce')
+      const at = run(L, s, t + 1, [0, 0])
+      const v = (at.ev.find((e) => e.k === 'bounce') as { v: number }).v
+      return { v, rise: TOP - peak(L, at.s, 40, [0, 0]) }
+    }
+    const five = drop(5 * TILE)
+    expect(five.rise / TILE).toBeGreaterThan(6)
+    expect(five.rise / TILE).toBeLessThan(6.6)
+    const far = drop(13 * TILE)
+    // at the fastest fall: 620 * 0.9 + 120. only a second bounce reaches the cap
+    expect(far.v).toBe(678)
+    expect(far.v).toBeLessThan(TRAMP_MAX_V)
+    expect(far.rise / TILE).toBeGreaterThan(8)
+    expect(far.rise / TILE).toBeLessThan(8.4)
+    // left alone on the pad every bounce comes down faster than the last, up to the fastest fall there is
+    const s = initState(L)
+    s.players[0].x = 3 * TILE + 3
+    const r = run(L, s, 600, [0, 0])
+    const vs = r.ev.filter((e) => e.k === 'bounce').map((e) => Math.round((e as { v: number }).v))
+    expect(vs.slice(0, 5)).toEqual([460, 546, 616, 678, 678])
+    expect(vs.length).toBeGreaterThan(8)
+    expect(r.ev.filter((e) => e.k === 'land').length).toBe(0)
+  })
+
+  it('letting go of jump while rising cuts the bounce', () => {
+    const L = mk(PAD)
+    const s = initState(L)
+    s.players[0].x = 3 * TILE + 3
+    s.players[0].y = TOP - PLAYER_H - 40
+    s.players[0].ground = false
+    const t = when(L, s, 100, [IN_UP, 0], 'bounce')
+    const at = run(L, s, t + 1, [IN_UP, 0]).s
+    const held = TOP - peak(L, at, 30, [IN_UP, 0])
+    const cut = TOP - peak(L, at, 30, (k) => [k < 3 ? IN_UP : 0, 0])
+    expect(cut).toBeLessThan(held * 0.6)
+  })
+
+  it('boxes do not bounce, and a player on a box on a trampoline stands', () => {
+    const L = mk(PAD, [{ k: 'box', x: 3, y: 12 }])
+    const r = run(L, initState(L), 120, [0, 0])
+    expect(r.s.boxes[0]!.y).toBe(TOP - TILE)
+    expect(r.ev.some((e) => e.k === 'bounce')).toBe(false)
+  })
+
+  it('bounces up through a one-way and lands on it; a one-way right above shields it', () => {
+    const L = mk(['..===', '.....', '.1...', '.#TTT'])
+    const s = run(L, initState(L), 120, (t) => [t < 14 ? IN_RIGHT : 0, 0]).s
+    expect(s.players[0].ground).toBe(true)
+    expect(feet(s, 0)).toBe(13 * TILE)
+    const M = mk(['.1..', '.#==', '..TT'])
+    const r = run(M, initState(M), 60, (t) => [t < 14 ? IN_RIGHT : 0, 0])
+    expect(r.s.players[0].x).toBeGreaterThan(3 * TILE)
+    expect(feet(r.s, 0)).toBe(15 * TILE)
+    expect(r.ev.some((e) => e.k === 'bounce')).toBe(false)
+  })
+
+  it('stops a beam', () => {
+    const L = mk(['.1', '....T'], [
+      { k: 'emitter', x: 1, y: 16, dir: 'right' },
+      { k: 'sensor', x: 9, y: 16, ch: 's' },
+    ])
+    const s = run(L, initState(L), 3, [0, 0]).s
+    expect(s.on).toEqual([])
+  })
+})
+
+describe('crumbling blocks', () => {
+  // a block to stand on, then two crumbling blocks over the floor
+  const BRIDGE = ['.1', '.#~~#.....................R.2B']
+  const idx = (tx: number, ty: number) => ty * COLS + tx
+
+  it('shakes when stepped on, breaks CRUMBLE_TICKS later whoever is on it, and mends when clear', () => {
+    const L = mk(BRIDGE)
+    const st = L.stages[0]!
+    const walk = (t: number): Inputs => [t < 12 ? IN_RIGHT : 0, 0]
+    const t0 = when(L, initState(L), 100, walk, 'shake')
+    expect(t0).toBeGreaterThan(0)
+    let s = run(L, initState(L), t0 + 1, walk).s
+    expect(s.events).toContainEqual({ k: 'shake', tile: idx(3, 16), x: 3 * TILE + 10, y: 16 * TILE + 10 })
+    expect(s.crumble[0]).toBe(1)
+    const a = run(L, s, CRUMBLE_TICKS - 1, (t) => walk(t + t0 + 1))
+    expect(tileAt(st, a.s, 3, 16)).toBe(T_CRUMBLE)
+    expect(a.ev.some((e) => e.k === 'break')).toBe(false)
+    s = step(L, a.s, [0, 0])
+    expect(s.events).toContainEqual({ k: 'break', tile: idx(3, 16), x: 3 * TILE + 10, y: 16 * TILE + 10 })
+    expect(tileAt(st, s, 3, 16)).toBe(0)
+    // ember stood still on it and is now in the hole: it waits for them
+    s = run(L, s, CRUMBLE_GONE_TICKS + 60, [0, 0]).s
+    expect(feet(s, 0)).toBe(FLOOR)
+    expect(tileAt(st, s, 3, 16)).toBe(0)
+    expect(s.crumble[0]).toBe(CRUMBLE_TICKS + CRUMBLE_GONE_TICKS)
+    // out of the hole (the second block has long gone too) and it grows back
+    const out = run(L, s, 80, (t) => [IN_RIGHT | (t % 30 === 0 ? IN_UP : 0), 0])
+    expect(out.ev.some((e) => e.k === 'mend' && e.tile === idx(3, 16))).toBe(true)
+  })
+
+  it('is gone for exactly CRUMBLE_GONE_TICKS when nothing is in the way', () => {
+    const L = mk(BRIDGE)
+    // run straight across: both blocks start, ember is long gone when they break
+    const r = run(L, initState(L), CRUMBLE_TICKS + CRUMBLE_GONE_TICKS + 60, (t) => [t < 40 ? IN_RIGHT : 0, 0])
+    const at = (k: string, tile: number) => {
+      let s = initState(L)
+      for (let t = 0; t < 400; t++) {
+        s = step(L, s, [t < 40 ? IN_RIGHT : 0, 0])
+        if (s.events.some((e) => e.k === k && 'tile' in e && e.tile === tile)) return t
+      }
+      return -1
+    }
+    const tile = idx(3, 16)
+    expect(at('break', tile) - at('shake', tile)).toBe(CRUMBLE_TICKS)
+    expect(at('mend', tile) - at('break', tile)).toBe(CRUMBLE_GONE_TICKS)
+    expect(r.s.crumble).toEqual([0, 0])
+    expect(r.s.players[0].x).toBeGreaterThan(5 * TILE)
+  })
+
+  it('a box does not start one, but falls with it', () => {
+    const L = mk(['.1.', '.~~'], [{ k: 'box', x: 3, y: 15 }])
+    // ember's block goes from under them; the box's block was never stood on
+    let s = run(L, initState(L), CRUMBLE_TICKS + 40, [0, 0]).s
+    expect(feet(s, 0)).toBe(FLOOR)
+    expect(s.crumble[1]).toBe(0)
+    expect(s.boxes[0]!.y).toBe(15 * TILE)
+    s = { ...s, crumble: [s.crumble[0]!, 1] }
+    s = run(L, s, CRUMBLE_TICKS + 30, [0, 0]).s
+    expect(s.boxes[0]!.y).toBe(FLOOR - TILE)
   })
 })

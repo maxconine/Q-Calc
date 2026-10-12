@@ -1,11 +1,13 @@
 import {
   AIR_ACCEL,
+  AIR_JUMP_V,
   BOX_SIZE,
   CANNON_POWER,
   CH_LIT,
   CHECKPOINT_ZONE_H,
   CHECKPOINT_ZONE_W,
   COYOTE_TICKS,
+  CRUMBLE_GONE_TICKS,
   CRUMBLE_TICKS,
   DEATH_TICKS,
   FAN_ACCEL,
@@ -28,6 +30,7 @@ import {
   MIN_COLS,
   MIN_ROWS,
   MOVER_SPEED,
+  ONEWAY_H,
   PLAYER_H,
   PLAYER_W,
   POOL_SINK,
@@ -50,6 +53,10 @@ import {
   T_WALL,
   T_WATER,
   TILE,
+  TRAMP_ADD,
+  TRAMP_GAIN,
+  TRAMP_MAX_V,
+  TRAMP_MIN_V,
   type Aim,
   type Beam,
   type Cond,
@@ -77,7 +84,7 @@ import {
 //
 // a level is a list of stages; the state says which one is being played (s.stage) and every per-thing array in
 // it indexes that stage. one play tick, in order:
-//   1. clocks: tick, phaseT, portal cooldowns
+//   1. clocks: tick, phaseT, crumbling blocks (breaking, mending once nothing is inside)
 //   2. interact: a down-key press flips a lever the player overlaps, else turns a mirror it overlaps
 //   3. channels: plates (alive players and boxes overlapping them, as of the end of the last tick), levers,
 //      buttons (refreshed while pressed, then counting down), then sensors lit by beams. emitters' `when` is
@@ -85,14 +92,15 @@ import {
 //   4. gates slide and movers travel, carrying what stands on them; anything they would crush makes them wait
 //   5. thin water freezes around frost (or counts down to a thaw); ice melts under fire's touch
 //   6. boxes: gravity and fans
-//   7. players: run, jump, gravity and fans, then move x (pushing boxes) and y, axis by axis
+//   7. players: run, jump, gravity and fans, then move x (pushing boxes) and y, axis by axis; landing on a
+//      trampoline bounces, standing on a crumbling block starts it; one-way platforms only stop a fall
 //   8. pools kill, gems, portals, doors
 //   9. checkpoints, then the phase: a death ('dead'), a finished stage ('clear') or the win ('won')
 // outside 'play': 'dead' counts DEATH_TICKS then respawns at the last checkpoint; 'clear' counts STAGE_TICKS
 // then begins the next stage; 'won' only counts.
 //
-// ember 2 status: variable map sizes, stages, respawning and checkpoints work. every other new mechanic is
-// compiled into the Stage and carried in the state but does nothing yet: search TODO(ember-2:engine)
+// ember 2 status: one-way platforms, trampolines and crumbling blocks work, and the player's step already
+// mirrors by Player.grav. the rest is carried in the state but does nothing yet: search TODO(ember-2:engine)
 
 const EPS = 0.01 // overlaps thinner than this don't count, so rounded network states don't wedge things
 const RIDE = 0.5 // a body whose feet are within this of a solid's top rides it
@@ -101,6 +109,7 @@ const GEM_BOX = 12
 const LAND_VY = 150 // a land event needs a real fall
 const JUMP_CUT = 0.5 // releasing jump while rising keeps this much of vy
 const MAX_SEGMENTS = 32
+const ONEWAY_SLOP = 0.05 // feet this far into a one-way still count as on it (states off the network are rounded)
 
 const TILE_CHARS: Record<string, Tile> = {
   '#': T_WALL,
@@ -410,13 +419,13 @@ function compileStage(def: StageDef, index: number): Stage {
 
 // ---- lookups cached per compiled stage (pure functions of the stage, so caching can't change results)
 
-type Lookup = { mirrorAt: Map<number, number>; sensorAt: Map<number, number>; thinAt: Map<number, number>; crumbleAt: Map<number, number> }
+type Lookup = { mirrorAt: Map<number, number>; sensorAt: Map<number, number>; thinAt: Map<number, number>; crumbleAt: Map<number, number>; oneWays: boolean }
 const lookups = new WeakMap<Stage, Lookup>()
 function lookup(stage: Stage): Lookup {
   let l = lookups.get(stage)
   if (!l) {
     const at = (x: number, y: number) => Math.floor(y / TILE) * stage.cols + Math.floor(x / TILE)
-    l = { mirrorAt: new Map(), sensorAt: new Map(), thinAt: new Map(), crumbleAt: new Map() }
+    l = { mirrorAt: new Map(), sensorAt: new Map(), thinAt: new Map(), crumbleAt: new Map(), oneWays: stage.tiles.includes(T_ONEWAY) }
     stage.mirrors.forEach((m, i) => l!.mirrorAt.set(at(m.x, m.y), i))
     stage.sensors.forEach((m, i) => l!.sensorAt.set(at(m.x, m.y), i))
     stage.thin.forEach((t, i) => l!.thinAt.set(t, i))
@@ -618,8 +627,12 @@ function bodyRect(s: GameState, id: number): Rect {
   return id < BOX0 ? playerRect(s.players[id as PlayerIndex]) : boxRect(s.boxes[id - BOX0]!)
 }
 
-type Hit = Rect & { id: number }
+// t: what a tile hit is made of, as the map has it (T_WALL for everything that isn't a tile). ti: its tile index, else -1
+type Hit = Rect & { id: number; t: Tile; ti: number }
 const hits: Hit[] = []
+// after a moveY that hit something: the hits the body came to rest against
+let support: Hit[] = []
+const solid = (r: Rect, id: number): Hit => ({ x: r.x, y: r.y, w: r.w, h: r.h, id, t: T_WALL, ti: -1 })
 
 // fills `hits` with every solid overlapping r. `self` is the body asking (skipped). players are solid only to boxes
 // (players never collide with each other). `skip` lists more ids to ignore (a gate or mover moving its riders, the riders)
@@ -630,54 +643,56 @@ function collide(stage: Stage, s: GameState, r: Rect, self: number, skip?: numbe
   const y0 = Math.max(0, Math.floor((r.y + EPS) / TILE))
   const y1 = Math.min(stage.rows - 1, Math.floor((r.y + r.h - EPS) / TILE))
   // the world's edge is a wall
-  if (r.x < -EPS) hits.push({ x: -TILE, y: r.y, w: TILE, h: r.h, id: -1 })
-  if (r.x + r.w > stage.w + EPS) hits.push({ x: stage.w, y: r.y, w: TILE, h: r.h, id: -1 })
-  if (r.y < -EPS) hits.push({ x: r.x, y: -TILE, w: r.w, h: TILE, id: -1 })
-  if (r.y + r.h > stage.h + EPS) hits.push({ x: r.x, y: stage.h, w: r.w, h: TILE, id: -1 })
+  if (r.x < -EPS) hits.push(solid({ x: -TILE, y: r.y, w: TILE, h: r.h }, -1))
+  if (r.x + r.w > stage.w + EPS) hits.push(solid({ x: stage.w, y: r.y, w: TILE, h: r.h }, -1))
+  if (r.y < -EPS) hits.push(solid({ x: r.x, y: -TILE, w: r.w, h: TILE }, -1))
+  if (r.y + r.h > stage.h + EPS) hits.push(solid({ x: r.x, y: stage.h, w: r.w, h: TILE }, -1))
   for (let ty = y0; ty <= y1; ty++) {
     for (let tx = x0; tx <= x1; tx++) {
       const t = tileAt(stage, s, tx, ty)
-      // TODO(ember-2:engine): one-way platforms are air for now (ONEWAY_H slab, solid only from the far side)
+      // one-way platforms are never solid here: moveY alone lands a body on them
       if (t === T_EMPTY || t === T_ONEWAY) continue
-      // TODO(ember-2:engine): trampolines and crumbling blocks are plain walls for now
       const sink = t === T_WALL || t === T_TRAMP || t === T_CRUMBLE ? 0 : POOL_SINK
-      const h = { x: tx * TILE, y: ty * TILE + sink, w: TILE, h: TILE - sink, id: -1 }
+      const ti = ty * stage.cols + tx
+      const h: Hit = { x: tx * TILE, y: ty * TILE + sink, w: TILE, h: TILE - sink, id: -1, t: stage.tiles[ti]!, ti }
       if (overlaps(r, h)) hits.push(h)
     }
   }
-  for (let i = 0; i < stage.ice.length; i++) if (s.ice[i]! < 1 && overlaps(r, stage.ice[i]!)) hits.push({ ...stage.ice[i]!, id: -1 })
-  // TODO(ember-2:engine): a lock opens when a player carrying a key touches it; for now it's a wall until s.locks says otherwise
-  for (let i = 0; i < stage.locks.length; i++) if (!s.locks[i] && overlaps(r, stage.locks[i]!)) hits.push({ ...stage.locks[i]!, id: -1 })
+  for (let i = 0; i < stage.ice.length; i++) if (s.ice[i]! < 1 && overlaps(r, stage.ice[i]!)) hits.push(solid(stage.ice[i]!, -1))
+  for (let i = 0; i < stage.locks.length; i++) if (!s.locks[i] && overlaps(r, stage.locks[i]!)) hits.push(solid(stage.locks[i]!, -1))
   for (let i = 0; i < stage.gates.length; i++) {
     if (skip?.includes(GATE0 + i)) continue
     const g = gateRect(stage, s, i)
-    if (overlaps(r, g)) hits.push({ ...g, id: GATE0 + i })
+    if (overlaps(r, g)) hits.push(solid(g, GATE0 + i))
   }
   for (let i = 0; i < stage.movers.length; i++) {
     if (skip?.includes(MOVER0 + i)) continue
     const m = moverRect(stage, s, i)
-    if (overlaps(r, m)) hits.push({ ...m, id: MOVER0 + i })
+    if (overlaps(r, m)) hits.push(solid(m, MOVER0 + i))
   }
   for (let i = 0; i < s.boxes.length; i++) {
     const id = BOX0 + i
     if (id === self || skip?.includes(id)) continue
     const b = boxRect(s.boxes[i]!)
-    if (overlaps(r, b)) hits.push({ ...b, id })
+    if (overlaps(r, b)) hits.push(solid(b, id))
   }
   if (self >= BOX0) {
     for (let p = 0; p < 2; p++) {
       const pl = s.players[p as PlayerIndex]
       if (!pl.alive || skip?.includes(p)) continue
       const pr = playerRect(pl)
-      if (overlaps(r, pr)) hits.push({ ...pr, id: p })
+      if (overlaps(r, pr)) hits.push(solid(pr, p))
     }
   }
   return hits.length
 }
 
-const standsOn = (b: Rect, top: Rect) => Math.abs(b.y + b.h - top.y) <= RIDE && b.x < top.x + top.w - EPS && top.x < b.x + b.w - EPS
+// a body with gravity g rests on `on`: its feet on the top, or flipped, on the underside
+const restsOn = (b: Rect, g: number, on: Rect) =>
+  Math.abs(g > 0 ? b.y + b.h - on.y : b.y - (on.y + on.h)) <= RIDE && b.x < on.x + on.w - EPS && on.x < b.x + b.w - EPS
 
-// moves a gate or mover (solid id `self`) from rect a to b, carrying everything standing on it (and on those).
+// moves a gate or mover (solid id `self`) from rect a to b, carrying everything standing on it (and on those),
+// and every flipped player standing on its underside.
 // returns false, moving nothing, when the move would push into a body that isn't riding or lift a rider into something
 function shove(stage: Stage, s: GameState, self: number, a: Rect, b: Rect, apply: () => void): boolean {
   const dx = b.x - a.x
@@ -697,8 +712,11 @@ function shove(stage: Stage, s: GameState, self: number, a: Rect, b: Rect, apply
     for (const id of bodies) {
       if (riders.includes(id)) continue
       const r = bodyRect(s, id)
-      if (id < BOX0 && s.players[id as PlayerIndex].vy < 0) continue
-      if (tops.some((t) => standsOn(r, t))) {
+      const pl = id < BOX0 ? s.players[id as PlayerIndex] : null
+      // a player jumping away isn't riding, and one in a cannon is held where it is
+      if (pl && (pl.vy * pl.grav < 0 || pl.cannon >= 0)) continue
+      const g = pl ? pl.grav : 1
+      if (tops.some((t) => restsOn(r, g, t))) {
         riders.push(id)
         tops.push(r)
         grew = true
@@ -771,7 +789,8 @@ function trace(stage: Stage, s: GameState, on: Set<string>, lit: boolean[] | nul
       for (let k = 1; k <= stage.cols + stage.rows; k++) {
         const tx = tx0 + dx * k
         const ty = ty0 + dy * k
-        if (tx < 0 || ty < 0 || tx >= stage.cols || ty >= stage.rows || tileAt(stage, s, tx, ty) === T_WALL) {
+        const t = tx < 0 || ty < 0 || tx >= stage.cols || ty >= stage.rows ? T_WALL : tileAt(stage, s, tx, ty)
+        if (t === T_WALL || t === T_TRAMP || t === T_CRUMBLE) {
           dEnd = (k - 0.5) * TILE
           break
         }
@@ -864,10 +883,11 @@ function fanned(stage: Stage, on: Set<string>, r: Rect): boolean {
   return false
 }
 
-function liftFall(vy: number, fan: boolean): number {
-  vy += GRAVITY * STEP_S
+// one tick of gravity (g: 1 down, -1 up) and of a fan, which always blows up
+function liftFall(vy: number, fan: boolean, g: number): number {
+  vy += g * GRAVITY * STEP_S
   if (fan && vy > -FAN_MAX_UP) vy = Math.max(-FAN_MAX_UP, vy - FAN_ACCEL * STEP_S)
-  return Math.min(MAX_FALL, vy)
+  return g > 0 ? Math.min(MAX_FALL, vy) : Math.max(-MAX_FALL, vy)
 }
 
 // the pool under a body's feet, if any: the tile containing a point just above the feet
@@ -887,20 +907,58 @@ function killer(t: Tile, el: PlayerIndex): DeathCause | null {
   return null
 }
 
-// moves body `id` along y by dy; returns true when it hit something (and snaps flush to it)
-function moveY(stage: Stage, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dy: number): boolean {
+// adds to `hits` the one-way slabs a body with gravity g lands on when it moves from o to r: only those its
+// feet were beyond (above for an upright body, below for a flipped one) before the move
+function oneWayHits(stage: Stage, o: { x: number; y: number }, r: Rect, g: number): number {
+  if (!lookup(stage).oneWays) return 0
+  let n = 0
+  const x0 = Math.max(0, Math.floor((r.x + EPS) / TILE))
+  const x1 = Math.min(stage.cols - 1, Math.floor((r.x + r.w - EPS) / TILE))
+  const y0 = Math.max(0, Math.floor((r.y + EPS) / TILE))
+  const y1 = Math.min(stage.rows - 1, Math.floor((r.y + r.h - EPS) / TILE))
+  for (let ty = y0; ty <= y1; ty++) {
+    for (let tx = x0; tx <= x1; tx++) {
+      const ti = ty * stage.cols + tx
+      if (stage.tiles[ti] !== T_ONEWAY) continue
+      const top = ty * TILE
+      if (g > 0 ? o.y + r.h > top + ONEWAY_SLOP : o.y < top + ONEWAY_H - ONEWAY_SLOP) continue
+      const slab: Hit = { x: tx * TILE, y: top, w: TILE, h: ONEWAY_H, id: -1, t: T_ONEWAY, ti }
+      if (overlaps(r, slab)) {
+        hits.push(slab)
+        n++
+      }
+    }
+  }
+  return n
+}
+
+// moves body `id` along y by dy; returns true when it hit something (and snaps flush to it), leaving what it
+// came to rest against in `support`. g is the body's gravity: one-way platforms only stop a move along it
+function moveY(stage: Stage, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dy: number, g: number): boolean {
   if (dy === 0) return false
   const r = { x: o.x, y: o.y + dy, w, h }
-  if (!collide(stage, s, r, id)) {
+  let n = collide(stage, s, r, id)
+  if (dy * g > 0) n += oneWayHits(stage, o, r, g)
+  if (!n) {
     o.y += dy
     return false
   }
-  if (dy > 0) o.y = Math.max(o.y, Math.min(...hits.map((t) => t.y)) - h)
-  else o.y = Math.min(o.y, Math.max(...hits.map((t) => t.y + t.h)))
+  if (dy > 0) {
+    let top = Infinity
+    for (const t of hits) top = Math.min(top, t.y)
+    o.y = Math.max(o.y, top - h)
+    support = hits.filter((t) => t.y <= top + EPS)
+  } else {
+    let bottom = -Infinity
+    for (const t of hits) bottom = Math.max(bottom, t.y + t.h)
+    o.y = Math.min(o.y, bottom)
+    support = hits.filter((t) => t.y + t.h >= bottom - EPS)
+  }
   return true
 }
 
 // moves body `id` along x by dx, stepping up pool lips; returns true when it hit something
+// (`ground`: the body stands upright on something, so it may step up a lip)
 function moveX(stage: Stage, s: GameState, id: number, o: { x: number; y: number }, w: number, h: number, dx: number, ground: boolean): boolean {
   if (dx === 0) return false
   const r = { x: o.x + dx, y: o.y, w, h }
@@ -936,37 +994,50 @@ function pushBox(stage: Stage, s: GameState, i: number, dx: number): boolean {
 function stepPlayer(stage: Stage, s: GameState, pi: PlayerIndex, bits: number, on: Set<string>, prevBoxVx: number[]): void {
   const p = s.players[pi]
   const ev = s.events
+  // everything up and down below is mirrored by the player's own gravity
+  const g = p.grav
+  // a cannon's shot can't be steered
+  const flying = p.fly > 0
   const pressed = bits & ~p.prevIn
-  const dirX = (bits & IN_RIGHT ? 1 : 0) - (bits & IN_LEFT ? 1 : 0)
+  const dirX = flying ? 0 : (bits & IN_RIGHT ? 1 : 0) - (bits & IN_LEFT ? 1 : 0)
   if (dirX) p.face = dirX > 0 ? 1 : -1
 
   // run
-  const target = dirX * RUN_SPEED
-  const acc = (p.ground ? RUN_ACCEL : AIR_ACCEL) * STEP_S
-  p.vx = p.vx < target ? Math.min(target, p.vx + acc) : Math.max(target, p.vx - acc)
+  if (!flying) {
+    const target = dirX * RUN_SPEED
+    const acc = (p.ground ? RUN_ACCEL : AIR_ACCEL) * STEP_S
+    p.vx = p.vx < target ? Math.min(target, p.vx + acc) : Math.max(target, p.vx - acc)
+  }
 
-  // jump: buffered presses and coyote time
+  // jump: buffered presses and coyote time; in mid-air, an arrow's jump if one is held
   if (pressed & IN_UP) p.buffer = JUMP_BUFFER_TICKS
   if (p.ground) p.coyote = COYOTE_TICKS
   if (p.buffer > 0 && p.coyote > 0) {
-    p.vy = -JUMP_V
+    p.vy = -g * JUMP_V
     p.buffer = 0
     p.coyote = 0
     p.ground = false
     ev.push({ k: 'jump', p: pi, ...centreOf(p) })
+  } else if (p.buffer > 0 && p.air > 0) {
+    p.vy = -g * AIR_JUMP_V
+    p.buffer = 0
+    p.air = 0
+    p.fly = 0 // and it takes back control of a cannon shot
+    ev.push({ k: 'airjump', p: pi, ...centreOf(p) })
   } else {
     if (p.buffer > 0) p.buffer--
     if (!p.ground && p.coyote > 0) p.coyote--
   }
-  // a short hop: letting go while rising
-  if (p.prevIn & IN_UP && !(bits & IN_UP) && p.vy < 0) p.vy *= JUMP_CUT
+  // a short hop: letting go while rising (off the ground, an arrow or a trampoline, but not out of a cannon)
+  if (!flying && p.prevIn & IN_UP && !(bits & IN_UP) && p.vy * g < 0) p.vy *= JUMP_CUT
 
   // y moves by the average of this tick's start and end velocity: a full jump peaks at JUMP_V²/2g = 63px
   const v0 = p.vy
-  p.vy = liftFall(p.vy, fanned(stage, on, playerRect(p)))
+  p.vy = liftFall(p.vy, fanned(stage, on, playerRect(p)), g)
 
   // x, pushing a box that's in the way
   const dx = p.vx * STEP_S
+  let hitX = false
   if (dx !== 0) {
     const r = { x: p.x + dx, y: p.y, w: PLAYER_W, h: PLAYER_H }
     let done = false
@@ -983,25 +1054,63 @@ function stepPlayer(stage: Stage, s: GameState, pi: PlayerIndex, bits: number, o
           p.x = dx > 0 ? b.x - PLAYER_W : b.x + BOX_SIZE
           p.vx = Math.sign(dx) * Math.min(Math.abs(p.vx), PUSH_SPEED)
           if (!prevBoxVx[bi]) ev.push({ k: 'push', p: pi, ...centreOf(p) })
-          done = true
+          done = hitX = true
         }
       }
     }
     // pressing into a wall keeps the run speed, so a jump up beside a ledge pops over its corner
-    if (!done && moveX(stage, s, pi, p, PLAYER_W, PLAYER_H, dx, p.ground) && Math.sign(dx) !== dirX) p.vx = 0
+    if (!done && moveX(stage, s, pi, p, PLAYER_W, PLAYER_H, dx, p.ground && g > 0)) {
+      hitX = true
+      if (Math.sign(dx) !== dirX) p.vx = 0
+    }
   }
 
   // y
   const wasGround = p.ground
-  const fallVy = p.vy
-  const hit = moveY(stage, s, pi, p, PLAYER_W, PLAYER_H, ((v0 + p.vy) / 2) * STEP_S)
-  p.ground = hit && fallVy >= 0
+  const fall = p.vy * g // speed along gravity
+  const hit = moveY(stage, s, pi, p, PLAYER_W, PLAYER_H, ((v0 + p.vy) / 2) * STEP_S, g)
+  p.ground = hit && fall >= 0
   if (hit) p.vy = 0
-  if (p.ground && !wasGround) {
-    if (fallVy > LAND_VY) ev.push({ k: 'land', p: pi, ...centreOf(p) })
-    // holding jump through a landing hops again
-    if (bits & IN_UP) p.buffer = Math.max(p.buffer, 1)
+  if (p.ground) {
+    // a trampoline bounces whoever comes down with their middle over it, or with nothing else underfoot
+    const cx = p.x + PLAYER_W / 2
+    let tramp = false
+    let other = false
+    let mid = false
+    for (const h of support) {
+      const under = cx >= h.x && cx < h.x + h.w
+      if (h.t === T_TRAMP) {
+        tramp = true
+        if (under) mid = true
+      } else if (under) other = true
+    }
+    if (tramp && (mid || !other)) {
+      const v = Math.min(TRAMP_MAX_V, Math.max(TRAMP_MIN_V, fall * TRAMP_GAIN + TRAMP_ADD))
+      p.vy = -g * v
+      p.ground = false
+      p.coyote = 0
+      p.buffer = 0
+      ev.push({ k: 'bounce', p: pi, ...centreOf(p), v })
+    } else {
+      // landing loses an arrow's jump
+      p.air = 0
+      // crumbling blocks underfoot begin to go
+      for (const h of support) {
+        if (h.t !== T_CRUMBLE) continue
+        const i = lookup(stage).crumbleAt.get(h.ti)
+        if (i === undefined || s.crumble[i] !== 0) continue
+        s.crumble[i] = 1
+        ev.push({ k: 'shake', tile: h.ti, x: h.x + TILE / 2, y: h.y + TILE / 2 })
+      }
+      if (!wasGround) {
+        if (fall > LAND_VY) ev.push({ k: 'land', p: pi, ...centreOf(p) })
+        // holding jump through a landing hops again
+        if (bits & IN_UP) p.buffer = Math.max(p.buffer, 1)
+      }
+    }
   }
+  // a shot ends on anything it hits
+  if (p.fly > 0) p.fly = hit || hitX ? 0 : p.fly - 1
   p.prevIn = bits
 }
 
@@ -1030,6 +1139,26 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   s.tick++
   s.phaseT++
   const bits = [input[0] | 0, input[1] | 0]
+
+  // 1. clocks
+  for (let i = 0; i < stage.crumble.length; i++) {
+    const c = s.crumble[i]!
+    if (c === 0) continue
+    const ti = stage.crumble[i]!
+    const tx = ti % stage.cols
+    const ty = (ti - tx) / stage.cols
+    const at = { tile: ti, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 }
+    if (c < CRUMBLE_TICKS + CRUMBLE_GONE_TICKS) {
+      s.crumble[i] = c + 1
+      if (c === CRUMBLE_TICKS) ev.push({ k: 'break', ...at })
+      continue
+    }
+    // time to grow back, once nothing is in the way
+    const r = tileRect(tx, ty)
+    if (s.players.some((p) => p.alive && overlaps(playerRect(p), r)) || s.boxes.some((b) => overlaps(boxRect(b), r))) continue
+    s.crumble[i] = 0
+    ev.push({ k: 'mend', ...at })
+  }
 
   // 2. interact
   for (const pi of [0, 1] as const) {
@@ -1132,8 +1261,8 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   s.boxes.forEach((b, i) => {
     b.vx = 0
     const v0 = b.vy
-    b.vy = liftFall(b.vy, fanned(stage, on, boxRect(b)))
-    if (moveY(stage, s, BOX0 + i, b, BOX_SIZE, BOX_SIZE, ((v0 + b.vy) / 2) * STEP_S)) b.vy = 0
+    b.vy = liftFall(b.vy, fanned(stage, on, boxRect(b)), 1)
+    if (moveY(stage, s, BOX0 + i, b, BOX_SIZE, BOX_SIZE, ((v0 + b.vy) / 2) * STEP_S, 1)) b.vy = 0
   })
 
   // 7. players
@@ -1176,8 +1305,7 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   }
 
   // 9. checkpoints, then the phase
-  // TODO(ember-2:engine): lamps, gravity switches, arrows, keys and locks, crumbling, trampolines, one-ways and
-  // cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
+  // TODO(ember-2:engine): lamps, gravity switches, arrows, keys and locks and cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
   const [fire0, frost0] = s.players
   if (fire0.alive && frost0.alive) {
     const safe = (p: Player) => p.ground && p.cannon < 0
