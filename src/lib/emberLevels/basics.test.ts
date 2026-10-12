@@ -2,7 +2,7 @@ import { describe, it } from 'vitest'
 import { compileLevel } from '../emberEngine'
 import type { LevelDef } from '../emberTypes'
 import { BASICS } from './basics'
-import { describeLevel, LEFT, record, timingSummary, type LevelChecks, type StageRun, type Walkthrough } from './testkit'
+import { describeLevel, LEFT, record, RIGHT, timingSummary, type LevelChecks, type StageRun, type Walkthrough } from './testkit'
 
 // every level of the pack with a walkthrough that finishes it in the real engine without a death: one script
 // per stage. the new levels' walkthroughs are written with the testkit's recorder: each line drives the engine
@@ -167,6 +167,66 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
         r.walkToStop(E, 20).press(E).waitGate(11)
         r.press(F).walkToStop(F, 21)
         r.press(E).waitGate(10).waitGate(12)
+        r.intoDoor(E, -1)
+        last(r, F, LEFT)
+      },
+    ],
+  },
+  'thin-ice': {
+    checks: { minSecs: 60, skipReach: true },
+    stages: [
+      (r) => {
+        const cx = (p: 0 | 1) => (r.state.players[p].x + 7) / 20
+        // the bottom. ember melts frost out; frost takes the gem in his cell
+        r.oneUntil(E, LEFT, (_, s) => s.ice[0]! >= 1, {}, 'the ice to melt')
+        r.walkTo(F, 1.3).walkTo(F, 7.6)
+        // the thin water in the floor, frost a tile and a half ahead; then frost back for the gem above it
+        r.until(() => cx(0) > 17.5, RIGHT, RIGHT)
+        // the lift: ember holds the plate, frost rides up
+        r.walkTo(E, 17.6).jump(E, 1, { toX: 22 }).walkToStop(E, 23.5)
+        r.walkTo(F, 17.6).jump(F, 1, { toX: 19.5 }).settle(F).waitMover(0)
+        // frost over the thin water and the crate, the gem, then the crate all the way to the hole
+        r.walkTo(F, 10.9).jump(F, -1, { toX: 7.6 }).walkTo(F, 7)
+        r.oneUntil(F, RIGHT, (_, s) => s.boxes[0]!.y > 501, { max: 1200 }, 'the crate to fall').waitGate(0)
+        // down the hole after it, onto the lift's plate; ember up and along
+        r.walkTo(F, 27.6).land(F).jump(F, -1, { toX: 25.5 })
+        r.walkToStop(E, 21.6).waitMover(0, 0).jump(E, -1, { toX: 19.5 }).settle(E)
+        r.walkToStop(F, 23.5).waitMover(0)
+        r.walkTo(E, 26.2).jump(E, 1, { toX: 29.5 }).walkToStop(E, 35.5)
+        // frost up the steps into the corridor
+        r.walkTo(F, 26.3).jump(F, 1, { toX: 29.6 }).expect(() => r.at(F).y === 31, 'frost on the first step')
+        r.jump(F, 1, { toX: 31.6 }).jump(F, 1, { toX: 34 }).walkToStop(F, 36).expect(() => r.at(F).y === 28, 'frost in the corridor')
+        // the white crossing
+        r.until(() => cx(0) > 45.8, RIGHT, RIGHT)
+        r.walkTo(E, 51.6).land(E).walkToStop(E, 51.9).walkToStop(F, 51.3).checkpoint(1).mark('the shaft')
+        // the shaft. frost over the crumbling ledge to the first thin one; ember after it has mended
+        r.jump(F, 1, { toX: 53.6 }).jump(F, 1, { toX: 57 }).expect(() => r.at(F).y === 24, 'frost on the second ledge')
+        r.waitMend()
+        r.jump(E, 1, { toX: 53.6 }).jump(E, 1, { toX: 56.3 }).expect(() => r.at(E).y === 24, 'ember on the second ledge')
+        r.jump(F, 1, { toX: 60 }).jump(E, 1, { toX: 59.4 }).expect(() => r.at(E).y === 22, 'ember on the third ledge')
+        // ember first over the second crumbling ledge
+        r.jump(E, 1, { toX: 61 }).jump(E, -1, { toX: 58 }).expect(() => r.at(E).y === 18, 'ember on the rock')
+        r.waitMend()
+        r.jump(F, 1, { toX: 61 }).jump(F, -1, { toX: 57.6 }).expect(() => r.at(F).y === 18, 'frost on the rock')
+        r.jump(E, -1, { toX: 54.5 }).walkToStop(E, 52.3).jump(F, -1, { toX: 54.5 }).walkToStop(F, 52.8).checkpoint(0).mark('the top')
+        // the top. frost over the crate and the ice; then ember melts it and drops into the lava with the crate
+        r.walkTo(F, 47).jump(F, -1, { toX: 43 }).walkToStop(F, 40.5)
+        r.oneUntil(E, LEFT, (_, s) => s.ice[1]! >= 1, {}, 'the bridge to melt').land(E).waitChannel('shelf')
+        r.jump(E, -1, { toX: 40.6 }).expect(() => r.at(E).y === 16, 'ember out of the lava')
+        // ember up the rungs onto the deck
+        r.walkToStop(E, 40.6)
+        for (let i = 0; i < 3; i++) r.jump(E, 0)
+        r.expect(() => r.at(E).y === 10, 'ember at the top of the rungs').waitGate(2).walkToStop(E, 30.6)
+        // frost through his gate and up through the one-way into the corridor
+        r.waitGate(1).walkToStop(F, 34.6).jump(F, 0).expect(() => r.at(F).y === 13, 'frost in the top corridor')
+        // the gem under the crumbling floor: frost lets it drop him, wades over, and comes back round
+        r.walkToStop(F, 28.5).until((s) => s.players[1].y > 300, 0, 0, 200, 'the floor to give way').land(F)
+        r.walkTo(F, 20).walkToStop(F, 34.6).jump(F, 0).expect(() => r.at(F).y === 13, 'frost back in the top corridor')
+        r.waitMend().walkToStop(F, 30.3)
+        // the run: frost can't stop on the crumbling floor, ember stays just behind and hops the block at x22
+        r.until(() => cx(0) < 23.6, LEFT, LEFT)
+        r.jump(E, -1, { other: LEFT })
+        r.until(() => cx(0) < 12, LEFT, LEFT)
         r.intoDoor(E, -1)
         last(r, F, LEFT)
       },

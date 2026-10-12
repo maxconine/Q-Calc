@@ -150,6 +150,114 @@ const DEAD_WEIGHT: LevelDef = {
   ],
 }
 
+// 3. thin ice: ice only ember melts, thin water only frost freezes, and blocks that crumble underfoot.
+// two screens wide and two tall: right along the bottom, up the shaft on the right, back left along the top.
+// the best of version 1's 'thaw', 'white crossing' and 'cold storage'.
+//  the bottom (feet row 33, heading right):
+//  - frost starts shut in behind the ice at x4: ember leans on it until it melts (frost gem in the cell)
+//  - the floor at x9-16 is thin water: frost walks out first and it freezes around him, ember right behind
+//  - the lift at x19-20 goes up to two decks (y26) while someone stands on the plate at x23-24. the only crate
+//    is at the far end of the LEFT deck (x9), across thin water (x11-15): so it's frost who rides up, ember on the plate
+//  - frost crosses the thin water (frost gem at x7), hops the crate and pushes it right: over the water, which
+//    is ice around him, over the lift that ember still holds up as a bridge, and along the right deck into the
+//    hole at x27-28. it falls into the pit below and holds the plate there: the gate at x35 into the low
+//    corridor sinks open for good
+//  - frost drops down the hole after it and stands on the lift's plate; ember rides up, walks right, jumps the
+//    hole and waits at x36
+//  - frost climbs the steps at x29-32 into the corridor, right under the deck's thin water at x37-44, and walks
+//    right; ember crosses on top, a step behind him (ahead of him the water isn't frozen yet)
+//  - frost wades the water at x45-49 (which is why it's frost down here), ember drops off the deck's end.
+//    checkpoint at x53
+//  the shaft (x54-61), six ledges, two up each:
+//  - x55-56 (y27) crumbles: jump on, jump on again. x58-59 (y25) and x55-56 (y23) are thin water: frost goes
+//    first and stands on each, ember follows onto it (it holds 2.5 s after he leaves)
+//  - x58-59 (y21) crumbles, and it's the catch: if frost goes first he can't wait on it, and ember's ice thaws
+//    before it grows back. EMBER goes first, off the ice they share, over the crumbling ledge to the rock at
+//    x55-56 (y19); frost waits for it to mend and follows. both jump left to the top floor. checkpoint at x52
+//  the top (feet row 16, heading left):
+//  - the bridge over the lava at x42-48 is ice, with a crate on it. frost crosses first (over the crate).
+//    then ember walks on: it melts under her, and she and the crate drop into the lava. the crate holds the
+//    plate down there: both gates in the wall at x38 open (ember can't hold it herself: her own gate needs it)
+//  - ember climbs out, up the one-way rungs at x40-41 and through the upper gate onto the deck (y11);
+//    frost walks through the lower gate (the rungs don't stop him) and jumps up through the one-way at x34-35
+//    into the corridor (y14)
+//  - the last crossing, x14-29: ember's deck is thin water and frost's floor right under it crumbles, over a
+//    pool. so frost can't stop, and ember has to run with him, a step behind, hopping the block at x22.
+//    if frost falls he wades out to the right and they try again (a frost gem is down there at x20)
+//  - red door at x3 on the deck, blue door at x3 in the corridor
+//  - misplays: ember on the ice bridge before frost is over (frost jumps into the lava to go back to the
+//    flag); ember ahead of frost on thin water
+const THIN_ICE: LevelDef = {
+  id: 'thin-ice',
+  name: 'thin ice',
+  hint: 'ember melts ice · frost freezes thin water: ember, stay a step behind him',
+  par: 105,
+  stages: [
+    {
+      map: [
+    // 0000000000111111111122222222223333333333444444444455555555556666
+    // 0123456789012345678901234567890123456789012345678901234567890123
+    '################################################################', // 0
+    '################################################################', // 1
+    '################################################################', // 2
+    '################################################################', // 3
+    '################################################################', // 4
+    '################################################################', // 5
+    '################################################################', // 6
+    '#.....................................#........................#', // 7
+    '#.....................r...............#........................#', // 8
+    '#..............................................................#', // 9
+    '#..R.....r............#........................................#', // 10
+    '##############wwwwwwwwwwwwwwww##########==.....................#', // 11
+    '#.....................................##.......................#', // 12
+    '#..B.....b............................##==.....................#', // 13
+    '##############~~~~~~~~~~~~~~~~####==..##.......................#', // 14
+    '##############..........................==.....................#', // 15
+    '##############......b...............................C..........#', // 16
+    '##############WWWWWWWWWWWWWWWW############.......#######.......#', // 17
+    '##########################################.......#####.........#', // 18
+    '##########################################LLLLLLL#####...##....#', // 19
+    '######################################################.......r.#', // 20
+    '#..................................................#.........~.#', // 21
+    '#..................................................#...........#', // 22
+    '#..................................................#.......ww..#', // 23
+    '#........................................................b.....#', // 24
+    '#......b........................r........r..............ww.....#', // 25
+    '#......####wwwww###..######..########wwwwwwww######............#', // 26
+    '#....................................................~~........#', // 27
+    '#........................................b..........C..........#', // 28
+    '#................................############WWWWW##############', // 29
+    '#####..........................#################################', // 30
+    '#..............................#################################', // 31
+    '#............................###################################', // 32
+    '#b2...1.....r................###################################', // 33
+    '#########wwwwwwww##########..###################################', // 34
+    '################################################################', // 35
+      ],
+      things: [
+        // the bottom
+        { k: 'ice', x: 4, y: 31, w: 1, h: 3 },
+        { k: 'mover', x: 19, y: 33, w: 2, h: 1, to: { x: 19, y: 26 }, when: 'lift' },
+        { k: 'plate', x: 23, y: 33, ch: 'lift' },
+        { k: 'box', x: 9, y: 25 },
+        { k: 'plate', x: 27, y: 34, ch: 'crate' },
+        { k: 'gate', x: 35, y: 27, w: 1, h: 2, open: 'crate', dir: 'down' },
+        // the top
+        { k: 'ice', x: 42, y: 17, w: 7, h: 1 },
+        { k: 'box', x: 45, y: 16 },
+        { k: 'plate', x: 42, y: 18, w: 7, ch: 'shelf' },
+        { k: 'gate', x: 38, y: 15, w: 1, h: 2, open: 'shelf' },
+        { k: 'gate', x: 38, y: 9, w: 1, h: 2, open: 'shelf' },
+        { k: 'sign', x: 5, y: 28, text: 'only ember melts ice' },
+        { k: 'sign', x: 12, y: 29, text: 'frost freezes thin water' },
+        { k: 'sign', x: 57, y: 30, text: 'these crumble: keep moving' },
+        { k: 'sign', x: 45, y: 13, text: 'ice melts under ember' },
+        { k: 'sign', x: 22, y: 5, text: 'run together' },
+      ],
+    },
+  ],
+}
+
 // TODO(ember-2:levels-a): version 1's levels that haven't been reworked yet stay playable after the new ones
-const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates']
-export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]
+const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates', 'thaw', 'white-crossing', 'cold-storage']
+export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]
