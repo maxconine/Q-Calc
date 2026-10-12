@@ -1133,9 +1133,15 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 self.pasteIntoWeb()
                 return nil
             }
-            // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W
+            // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W.
+            // a reference sheet (identities, calculus, the periodic table) never takes the keys, so while one
+            // is up ⌘W closes the front one of those first
             if event.window === self.panel, isCommandWCloseKey(event) {
-                self.hide(because: "⌘W")
+                if let sheet = NSApp.orderedWindows.first(where: { $0 is PeriodicPanel && $0.isVisible }) {
+                    sheet.close()
+                } else {
+                    self.hide(because: "⌘W")
+                }
                 return nil
             }
             // the settings key is the user's choice now, so the page reads it and posts openSettings
