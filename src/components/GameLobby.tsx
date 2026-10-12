@@ -31,6 +31,7 @@ export function GameLobby({
   onClose,
   game,
   solo,
+  onBack,
 }: {
   transport: PeerTransport
   // the game's name, as typed in the bar
@@ -40,6 +41,8 @@ export function GameLobby({
   onClose: () => void
   game: (props: GameProps) => ReactNode
   solo?: SoloGame
+  // a game with a start screen of its own: ⌫ on the menu goes back to it
+  onBack?: () => void
 }) {
   const [screen, setScreen] = useState<Screen>({ k: 'menu' })
   const screenRef = useRef(screen)
@@ -136,7 +139,10 @@ export function GameLobby({
         } else if (key === 's' && solo) {
           swallow(e)
           setScreen({ k: 'levels' })
-        } else if (barKey) swallow(e)
+        } else if (barKey) {
+          swallow(e)
+          if (e.key === 'Backspace') onBack?.()
+        }
         return
       }
       if (cur.k === 'levels' && solo) {
@@ -173,7 +179,7 @@ export function GameLobby({
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [browse, host, pickPeer, solo, submitCode, toMenu, transport])
+  }, [browse, host, onBack, pickPeer, solo, submitCode, toMenu, transport])
 
   if (screen.k === 'solo') return solo ? solo.play(screen.level, (note) => setScreen({ k: 'menu', note })) : null
   return screen.k === 'game' ? (
@@ -199,6 +205,7 @@ export function GameLobby({
         onJoin={browse}
         onPick={pickPeer}
         onBack={() => toMenu()}
+        onLeave={onBack}
       />
     </div>
   )
@@ -216,6 +223,7 @@ function Lobby({
   onJoin,
   onPick,
   onBack,
+  onLeave,
 }: {
   screen: Exclude<Screen, { k: 'game' } | { k: 'solo' }>
   name: string
@@ -228,6 +236,7 @@ function Lobby({
   onJoin: () => void
   onPick: (p: PeerInfo) => void
   onBack: () => void
+  onLeave?: () => void
 }) {
   const word = transport.peerWord
   const n = transport.codeLength
@@ -252,6 +261,13 @@ function Lobby({
             </button>
           </div>
           {screen.note ? <p className="pong-note">{screen.note}</p> : null}
+          {onLeave ? (
+            <p className="pong-note">
+              <button type="button" className="pong-link" onClick={onLeave}>
+                ⌫ back
+              </button>
+            </p>
+          ) : null}
         </div>
       )
     case 'levels':

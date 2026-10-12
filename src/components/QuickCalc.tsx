@@ -1506,7 +1506,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ) : pongOpen === 'numbers' ? (
             <NumbersPanel onClose={escapeLayer} />
           ) : pongOpen === 'trails' ? (
-            <TrailsPanel onClose={escapeLayer} />
+            <TrailsPanel transport={peerTransport()} onClose={escapeLayer} />
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (

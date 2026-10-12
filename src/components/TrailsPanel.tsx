@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { plainKey, swallow } from '../lib/gameKeys'
+import { closeReasonText, type PeerTransport } from '../lib/peer'
 import {
   botTurn,
   COLS,
@@ -21,17 +22,20 @@ import {
   type Player,
   type Round,
 } from '../lib/trails'
+import { COUNT_MS, POINT_MS } from '../lib/trailsNet'
+import { TrailsSession, type TrailsView } from '../lib/trailsSession'
+import { GameLobby, type GameProps } from './GameLobby'
 import './TrailsPanel.css'
 
-// trails: `trails` then enter. no link needed: the computer, or two players on one keyboard. the start screen
-// picks which; ⌫ goes back to it, and esc closes the panel (the bar's escapeLayer, so not handled here)
+// trails: `trails` then enter. no link needed: the computer, or two players on one keyboard; with a link,
+// a friend on another computer too. the start screen picks which; ⌫ goes back to it, and esc closes the panel
+// (the bar's escapeLayer, so not handled here)
 
 type Vs = Level | 'friend'
+type Mode = Vs | 'online'
 
 // logical px per cell; the canvas is COLS × ROWS cells at this, times devicePixelRatio
 const CELL = 10
-const COUNT_MS = 550
-const POINT_MS = 1300
 
 // enter, arrows, backspace and letters would otherwise reach the hidden bar and commit or move through the tape
 const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || e.key.startsWith('Arrow') || e.key === 'Backspace'
@@ -39,8 +43,9 @@ const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || 
 const WASD: Record<string, Dir> = { w: 0, d: 1, s: 2, a: 3 }
 const ARROWS: Record<string, Dir> = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
 
-export function TrailsPanel({ onClose }: { onClose: () => void }) {
-  const [vs, setVs] = useState<Vs | null>(null)
+// transport is null where there's no link to play over; everything but online still plays
+export function TrailsPanel({ transport, onClose }: { transport: PeerTransport | null; onClose: () => void }) {
+  const [vs, setVs] = useState<Mode | null>(null)
   // a fresh match each time one starts, even at the same level
   const [match, setMatch] = useState(0)
 
@@ -50,15 +55,31 @@ export function TrailsPanel({ onClose }: { onClose: () => void }) {
       if (!plainKey(e) || e.key === 'Escape' || !barKey(e)) return
       swallow(e)
       if (e.repeat) return
-      const pick = e.key === '4' ? 'friend' : LEVELS[Number(e.key) - 1]
-      if (/^[1-4]$/.test(e.key) && pick) {
+      const pick: Mode | undefined = e.key === '4' ? 'friend' : e.key === '5' ? (transport ? 'online' : undefined) : LEVELS[Number(e.key) - 1]
+      if (/^[1-5]$/.test(e.key) && pick) {
         setVs(pick)
         setMatch((m) => m + 1)
       }
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [vs])
+  }, [vs, transport])
+
+  // the lobby has a head of its own, and the game it opens takes the whole panel, as pong's does
+  if (vs === 'online' && transport) {
+    return (
+      <div className="trails" aria-label="Trails">
+        <GameLobby
+          transport={transport}
+          name="trails"
+          blurb={`first to ${WIN_ROUNDS} rounds.`}
+          onClose={onClose}
+          onBack={() => setVs(null)}
+          game={(p) => <TrailsOnline {...p} />}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="trails" aria-label="Trails">
@@ -69,7 +90,7 @@ export function TrailsPanel({ onClose }: { onClose: () => void }) {
           esc
         </button>
       </div>
-      {vs ? (
+      {vs && vs !== 'online' ? (
         <TrailsGame key={match} vs={vs} onMenu={() => setVs(null)} />
       ) : (
         <div className="pong-body">
@@ -89,17 +110,25 @@ export function TrailsPanel({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            className="pong-button trails-friend"
-            onClick={() => {
-              setVs('friend')
-              setMatch((m) => m + 1)
-            }}
-          >
-            two players, one keyboard <kbd>4</kbd>
-          </button>
-          <p className="pong-note">vs the computer, steer with WASD or the arrows · two players: WASD and arrows</p>
+          <div className="pong-actions">
+            <button
+              type="button"
+              className="pong-button trails-friend"
+              onClick={() => {
+                setVs('friend')
+                setMatch((m) => m + 1)
+              }}
+            >
+              two players, one keyboard <kbd>4</kbd>
+            </button>
+            <button type="button" className="pong-button trails-friend" disabled={!transport} onClick={() => setVs('online')}>
+              online <kbd>5</kbd>
+            </button>
+          </div>
+          <p className="pong-note">
+            vs the computer or online, steer with WASD or the arrows · one keyboard: WASD and arrows
+            {transport ? '' : ' · online needs Q Calc for Mac'}
+          </p>
         </div>
       )}
     </div>
@@ -340,9 +369,7 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
-    canvas.width = COLS * CELL * dpr
-    canvas.height = ROWS * CELL * dpr
+    const dpr = sizeCanvas(canvas)
     let colors = readColors(canvas)
     let frames = 0
     let raf = 0
@@ -453,11 +480,39 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
   }
 
   return (
+    <Arena
+      canvasRef={canvasRef}
+      names={names}
+      score={view.score}
+      banner={banner}
+      big={big}
+      note={`${solo ? 'WASD or arrows to turn' : 'left: WASD · right: arrows'} · first to ${WIN_ROUNDS} · ⌫ menu · esc leaves`}
+    />
+  )
+}
+
+// the score row, the arena and the line under it, whoever is playing. the left cycle is --accent
+function Arena({
+  canvasRef,
+  names,
+  score,
+  banner,
+  big,
+  note,
+}: {
+  canvasRef: RefObject<HTMLCanvasElement | null>
+  names: [string, string]
+  score: [number, number]
+  banner: string
+  big: boolean
+  note: string
+}) {
+  return (
     <div className="pong-game">
       <div className="pong-score">
         <span className="pong-name trails-mine">{names[0]}</span>
         <span className="pong-points">
-          {view.score[0]} <span className="pong-dash">–</span> {view.score[1]}
+          {score[0]} <span className="pong-dash">–</span> {score[1]}
         </span>
         <span className="pong-name right trails-rival">{names[1]}</span>
       </div>
@@ -465,9 +520,140 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
         <canvas ref={canvasRef} className="trails-canvas" aria-label="arena" />
         {banner ? <div className={big ? 'pong-banner trails-count' : 'pong-banner'}>{banner}</div> : null}
       </div>
-      <p className="pong-note">
-        {solo ? 'WASD or arrows to turn' : 'left: WASD · right: arrows'} · first to {WIN_ROUNDS} · ⌫ menu · esc leaves
-      </p>
+      <p className="pong-note">{note}</p>
     </div>
+  )
+}
+
+function sizeCanvas(canvas: HTMLCanvasElement): number {
+  const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
+  canvas.width = COLS * CELL * dpr
+  canvas.height = ROWS * CELL * dpr
+  return dpr
+}
+
+type OnlineView = Pick<TrailsView, 'score' | 'phase' | 'count' | 'last' | 'winner' | 'stalled' | 'again'>
+
+// a friend on another computer: TrailsSession runs the match, this feeds it keys, messages and frames and
+// draws what it returns. the host is the left cycle, the guest the right; each steers with WASD or the arrows
+function TrailsOnline({ transport, role, peer, onEnd }: GameProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [view, setView] = useState<OnlineView>({
+    score: [0, 0],
+    phase: 'wait',
+    count: 0,
+    last: null,
+    winner: null,
+    stalled: false,
+    again: { mine: false, theirs: false },
+  })
+  const onEndRef = useRef(onEnd)
+  onEndRef.current = onEnd
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const dpr = sizeCanvas(canvas)
+    let colors = readColors(canvas)
+    let frames = 0
+    let raf = 0
+    let shown = ''
+    let done = false
+    let lastFrame = performance.now()
+    const session = new TrailsSession(role, (text) => transport.send(text), performance.now())
+
+    const finish = (note?: string) => {
+      if (done) return
+      done = true
+      cancelAnimationFrame(raf)
+      onEndRef.current(note)
+    }
+
+    const off = transport.subscribe((e) => {
+      if (e.type === 'message') session.receive(e.data, performance.now())
+      else if (e.type === 'closed') finish(closeReasonText(e.reason, transport.peerWord))
+    })
+
+    const onKey = (e: KeyboardEvent) => {
+      if (!plainKey(e) || e.key === 'Escape' || !barKey(e)) return
+      swallow(e)
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+      if (key === 'Backspace') {
+        // the other side hears it now, rather than when the link drops
+        session.leave()
+        finish()
+      } else if (key === 'Enter') {
+        if (!e.repeat) session.rematch(performance.now())
+      } else {
+        const dir = WASD[key] ?? ARROWS[key]
+        if (dir != null && !e.repeat) session.turn(dir)
+      }
+    }
+    window.addEventListener('keydown', onKey, true)
+
+    const pump = (now: number): TrailsView | null => {
+      if (done) return null
+      const v = session.tick(now)
+      if (v.ended != null) {
+        finish(v.ended || undefined)
+        return null
+      }
+      const key = `${v.score.join(':')}|${v.phase}|${v.count}|${v.last}|${v.stalled}|${v.again.mine}|${v.again.theirs}`
+      if (key !== shown) {
+        shown = key
+        setView({ score: v.score, phase: v.phase, count: v.count, last: v.last, winner: v.winner, stalled: v.stalled, again: v.again })
+      }
+      return v
+    }
+
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame)
+      lastFrame = now
+      if (++frames % 30 === 0) colors = readColors(canvas)
+      const v = pump(now)
+      if (v) draw(canvas, colors, v.round, dpr, { t: v.t, now, crashMs: v.crashMs })
+    }
+    raf = requestAnimationFrame(frame)
+    // a hidden window gets no frames: a slow timer keeps the link warm and the round creeping on, so the other
+    // side waits rather than loses the connection
+    const idle = window.setInterval(() => {
+      const now = performance.now()
+      if (now - lastFrame > 200) pump(now)
+    }, 250)
+
+    return () => {
+      done = true
+      cancelAnimationFrame(raf)
+      window.clearInterval(idle)
+      off()
+      window.removeEventListener('keydown', onKey, true)
+    }
+  }, [transport, role])
+
+  const me: Player = role === 'host' ? 0 : 1
+  const names: [string, string] = me === 0 ? ['you', peer] : [peer, 'you']
+  const { again } = view
+  let banner = ''
+  let big = false
+  if (view.phase === 'wait' || view.stalled) banner = `waiting for ${peer}…`
+  else if (view.phase === 'count') {
+    banner = String(Math.max(1, view.count))
+    big = true
+  } else if (view.phase === 'point') banner = view.last == null ? 'a draw · no point' : view.last === me ? 'you take the round' : `${peer} takes the round`
+  else if (view.phase === 'over' && view.winner != null) {
+    const who = view.winner === me ? 'you win' : `${peer} wins`
+    const ask = again.mine ? 'waiting for a rematch…' : again.theirs ? `${peer} wants a rematch · ↵` : '↵ rematch'
+    banner = `${who} ${view.score[0]}–${view.score[1]} · ${ask}`
+  }
+
+  return (
+    <Arena
+      canvasRef={canvasRef}
+      names={names}
+      score={view.score}
+      banner={banner}
+      big={big}
+      note={`you’re ${me === 0 ? 'left' : 'right'} · WASD or arrows to turn · first to ${WIN_ROUNDS} · ⌫ leaves`}
+    />
   )
 }
