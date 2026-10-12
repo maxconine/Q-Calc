@@ -43,7 +43,7 @@ export type Walkthrough = Script[]
 export type LevelChecks = {
   // the walkthrough must take at least this long (the clock at the win), so a level can't quietly be short
   minSecs?: number
-  // TODO(ember-2:levels): only while the solver can't see a mechanic the level leans on. no shipped level sets this
+  // only while the solver can't see a mechanic the level leans on.
   skipReach?: boolean
 }
 

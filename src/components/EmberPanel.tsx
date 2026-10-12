@@ -818,7 +818,13 @@ function EmberPlay({
           banner = null
         }
         seen = { tick: s.tick, stage: s.stage, cp: s.cp, deaths: s.deaths, phase: s.phase }
-        renderer?.draw(stage, v.prev, s, v.alpha, v.events, now, { me: v.me, reduceMotion })
+        try {
+          renderer?.draw(stage, v.prev, s, v.alpha, v.events, now, { me: v.me, reduceMotion })
+        } catch (err) {
+          // a picture that can't be drawn mustn't take the hud, the clock and esc with it. said once
+          if (!failed) console.error('ember & frost', err)
+          failed = true
+        }
         if (timerRef.current) timerRef.current.textContent = fmtTime(s.tick / STEP_HZ)
       }
       const s = playing ? v.state! : null
@@ -1255,7 +1261,7 @@ function Thumb({ index, stages }: { index: number; stages: number }) {
     canvas.width = THUMB_W * k
     canvas.height = THUMB_H * k
     try {
-      drawThumb(canvas, stage)
+      drawThumb(canvas, stage, { stages: compiledAt(index)?.stages.length })
     } catch {
       // no picture beats no select screen
     }

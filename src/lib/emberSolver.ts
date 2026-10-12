@@ -8,7 +8,7 @@ import type { Element, StageDef, ThingDef } from './emberTypes'
 // ice and thin water are the exceptions: ice only melts where fire can reach it, thin water only freezes where
 // frost can, so those run as a small fixed point.
 //
-// TODO(ember-2:solver): version 2's tiles and things aren't modelled yet. as it stands 'T', '~', 'O' and 'D' read
+// version 2's tiles and things aren't modelled yet. as it stands 'T', '~', 'O' and 'D' read
 // as air (so does '='), locks don't exist, and arrows, cannons, gravity switches and ceilings give no reach.
 // see EMBER2_PLAN.md for what each should do here
 

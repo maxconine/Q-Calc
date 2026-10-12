@@ -2,12 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { LEVELS } from './emberLevels'
 import { decodeEmber, STATE_HZ, SILENCE_MS } from './emberProtocol'
 import { createLocalGame, createOnlineGame, type EmberGame, type EmberView } from './emberSession'
-import { IN_LEFT, IN_RIGHT, IN_UP, RUN_ACCEL, type GameEvent } from './emberTypes'
+import { IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, RUN_ACCEL, type GameEvent } from './emberTypes'
 
 // the session is tested on small levels of its own: 0 open floor, 1 a water pit right of ember,
 // 2 two stages: the doors a step away, then a checkpoint flag at column 8 and a water pit from column 14,
 // 3 left of frost a trampoline under a one-way deck, then a crumbling floor over a drop,
-// 4 and 5 each player one step left of their door with a wall behind it
+// 4 a lamp beside ember, light-only and dark-only blocks, and left of frost an arrow overhead, a key and a lock,
+// 5 and 6 each player one step left of their door with a wall behind it
 vi.mock('./emberLevels', () => {
   const row = (cells: Record<number, string>) => {
     let s = '#'
@@ -52,6 +53,28 @@ vi.mock('./emberLevels', () => {
               '#'.repeat(32),
             ],
             things: [],
+          },
+        ],
+      },
+      {
+        id: 't-things',
+        name: 'things',
+        par: 60,
+        stages: [
+          {
+            map: [
+              '#'.repeat(32),
+              ...Array.from({ length: 12 }, () => row({})),
+              row({ 25: '^' }),
+              row({ 8: 'O', 9: 'D' }),
+              row({}),
+              row({ 2: '1', 10: 'R', 12: 'B', 20: 'k', 27: '2' }),
+              '#'.repeat(32),
+            ],
+            things: [
+              { k: 'lamp', x: 4, y: 16 },
+              { k: 'lock', x: 18, y: 15, w: 1, h: 2 },
+            ],
           },
         ],
       },
@@ -227,13 +250,13 @@ describe('online: select', () => {
     g.run(200)
     expect(g.views().hv.level).toBe(2)
     expect(g.views().gv.level).toBe(2)
-    expect(LEVELS).toHaveLength(6)
+    expect(LEVELS).toHaveLength(7)
     g.host.pick(1)
     g.run(200)
     expect(g.views().gv.level).toBe(1)
     g.host.pick(9)
     g.run(200)
-    expect(g.views().gv.level).toBe(5)
+    expect(g.views().gv.level).toBe(6)
   })
 
   it.each(['host', 'guest'] as const)('the %s can start the highlighted level', (who) => {
@@ -356,7 +379,7 @@ describe('online: play', () => {
 
   it('win, then next from the guest, then next past the last level goes to select', () => {
     const g = pair({ lag: 30 })
-    g.startOn(4)
+    g.startOn(5)
     g.host.keys(0, IN_RIGHT)
     g.guest.keys(1, IN_RIGHT)
     g.run(1500)
@@ -369,8 +392,8 @@ describe('online: play', () => {
     g.guest.release()
     g.guest.next()
     g.run(300)
-    expect(g.views().hv.level).toBe(5)
-    expect(g.views().gv.level).toBe(5)
+    expect(g.views().hv.level).toBe(6)
+    expect(g.views().gv.level).toBe(6)
     expect(g.views().gv.state?.phase).toBe('play')
     expect(g.views().hv.note).toBe('frost went on to the next level')
     g.host.keys(0, IN_RIGHT)
@@ -509,10 +532,10 @@ describe('local game', () => {
 
   it('next after a win plays the next level; after the last it goes back to select', () => {
     const l = at()
-    l.game.pick(4)
+    l.game.pick(5)
     l.game.play()
     l.game.next()
-    expect(l.game.tick(0).level).toBe(4)
+    expect(l.game.tick(0).level).toBe(5)
     l.game.keys(0, IN_RIGHT)
     l.game.keys(1, IN_RIGHT)
     l.run(1500)
@@ -520,7 +543,7 @@ describe('local game', () => {
     expect(l.events.filter((e) => e.k === 'win')).toHaveLength(1)
     l.game.next()
     l.run(20)
-    expect(l.view().level).toBe(5)
+    expect(l.view().level).toBe(6)
     expect(l.view().state!.phase).toBe('play')
     l.run(1500)
     expect(l.view().state!.phase).toBe('won')
@@ -690,7 +713,7 @@ describe.each(NETS)('online: stages and checkpoints over $name', ({ name: _n, ..
 
   it('the win shows the same time and deaths on both sides', () => {
     const g = pair(net)
-    g.startOn(4)
+    g.startOn(5)
     g.guest.keys(1, IN_LEFT)
     g.run(300)
     g.host.keys(0, IN_RIGHT)
@@ -700,6 +723,45 @@ describe.each(NETS)('online: stages and checkpoints over $name', ({ name: _n, ..
     expect(g.views().gv.state!.tick).toBe(g.views().hv.state!.tick)
     expect(g.views().gv.state!.deaths).toBe(g.views().hv.state!.deaths)
     expect(count(g.events.guest, 'win')).toBe(1)
+  })
+
+  it('a lamp press, an arrow jump, a key and a lock all agree', () => {
+    const t = tracker(1)
+    const g = pair({ ...net, frame: t.frame })
+    g.startOn(4)
+    g.run(400)
+    g.events.guest.length = g.events.host.length = 0
+    // ember walks to the lamp and presses it: dark on both screens
+    g.host.keys(0, IN_RIGHT)
+    g.run(350)
+    g.host.keys(0, IN_DOWN)
+    expect(g.until(() => g.views().hv.state!.lit === false && g.views().gv.state!.lit === false, 1500)).toBe(true)
+    g.host.release()
+    expect(g.events.guest.filter((e) => e.k === 'light')).toEqual(g.events.host.filter((e) => e.k === 'light').map((e) => ({ ...e, x: Math.round((e as { x: number }).x), y: Math.round((e as { y: number }).y) })))
+    expect(count(g.events.guest, 'light')).toBe(1)
+    // frost jumps into the arrow and spends it at once, on its own screen first
+    g.guest.keys(1, IN_LEFT | IN_UP)
+    expect(g.until(() => pos(g.views().gv, 1).air === 1, 1500)).toBe(true)
+    g.guest.keys(1, IN_LEFT)
+    g.run(34)
+    g.guest.keys(1, IN_LEFT | IN_UP)
+    expect(g.until(() => g.events.guest.some((e) => e.k === 'airjump' && e.p === 1), 200)).toBe(true)
+    g.guest.keys(1, IN_LEFT)
+    // on to the key and into the lock
+    expect(g.until(() => g.views().hv.state!.locks[0] === true, 4000)).toBe(true)
+    g.guest.release()
+    g.run(1200)
+    agree(g)
+    const { hv, gv } = g.views()
+    for (const k of ['lit', 'keys', 'keyTaken', 'locks', 'on'] as const) expect(gv.state![k]).toEqual(hv.state![k])
+    expect(gv.state!.keyTaken).toEqual([true])
+    expect(gv.state!.keys).toBe(0)
+    expect(gv.state!.arrows.map((a) => a > 0)).toEqual(hv.state!.arrows.map((a) => a > 0))
+    for (const k of ['airjump', 'arrow', 'key', 'unlock'] as const) {
+      expect(count(g.events.host, k)).toBe(1)
+      expect(count(g.events.guest, k)).toBe(1)
+    }
+    expect(t.max).toBeLessThan(16)
   })
 
   it('the guest bounces, lands on a one-way and runs a crumbling floor without a hitch', () => {

@@ -9,8 +9,8 @@ import type { StageDef, ThingDef } from './emberTypes'
 // (emberLevels/<pack>.test.ts), through emberLevels/testkit.ts
 describe('ember & frost levels', () => {
   it('has levels, the tutorial first', () => {
-    // TODO(ember-2:levels): 14 once the three packs are in
-    expect(LEVELS.length).toBeGreaterThanOrEqual(1)
+    // seven for now: the five basics, lights out and head over heels
+    expect(LEVELS.length).toBe(7)
     expect(LEVELS[0]!.id).toBe('first-light')
   })
 
