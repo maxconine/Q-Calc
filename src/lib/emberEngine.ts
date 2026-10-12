@@ -100,12 +100,14 @@ import {
 //   6. boxes: gravity and fans
 //   7. players: run, jump, gravity and fans, then move x (pushing boxes) and y, axis by axis; landing on a
 //      trampoline bounces, standing on a crumbling block starts it; one-way platforms only stop a fall
-//   8. pools kill, gems, arrows (taken in the air; spent by a jump press in mid-air in 7), portals, doors
+//   8. pools kill, gems, keys (taken on touch, carried by the team), locks (a closed one within a pixel of a
+//      player spends a key and is gone for good), arrows (taken in the air; spent by a jump press in mid-air
+//      in 7), portals, doors
 //   9. checkpoints, then the phase: a death ('dead'), a finished stage ('clear') or the win ('won')
 // outside 'play': 'dead' counts DEATH_TICKS then respawns at the last checkpoint; 'clear' counts STAGE_TICKS
 // then begins the next stage; 'won' only counts.
 //
-// ember 2 status: one-way platforms, trampolines, crumbling blocks, double-jump arrows and lights work, and the player's step already
+// ember 2 status: one-way platforms, trampolines, crumbling blocks, double-jump arrows, lights, keys and locks work, and the player's step already
 // mirrors by Player.grav. the rest is carried in the state but does nothing yet: search TODO(ember-2:engine)
 
 const EPS = 0.01 // overlaps thinner than this don't count, so rounded network states don't wedge things
@@ -765,6 +767,7 @@ function trace(stage: Stage, s: GameState, on: Set<string>, lit: boolean[] | nul
   const blockers: Rect[] = []
   stage.gates.forEach((_, i) => s.gates[i]! < 1 && blockers.push(gateRect(stage, s, i)))
   stage.ice.forEach((r, i) => s.ice[i]! < 1 && blockers.push(r))
+  stage.locks.forEach((r, i) => !s.locks[i] && blockers.push(r))
   s.boxes.forEach((b) => blockers.push(boxRect(b)))
   stage.movers.forEach((_, i) => blockers.push(moverRect(stage, s, i)))
   s.players.forEach((p) => p.alive && blockers.push(playerRect(p)))
@@ -1363,6 +1366,22 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
       p.gems++
       ev.push({ k: 'gem', p: pi, x: g.x, y: g.y, el })
     })
+    // keys go to the team; a closed lock within a pixel of a player takes one and opens for good
+    stage.keys.forEach((k, i) => {
+      if (s.keyTaken[i] || !overlaps(r, { x: k.x - GEM_BOX / 2, y: k.y - GEM_BOX / 2, w: GEM_BOX, h: GEM_BOX })) return
+      s.keyTaken[i] = true
+      s.keys++
+      ev.push({ k: 'key', p: pi, i, x: k.x, y: k.y })
+    })
+    if (s.keys > 0) {
+      const reach = { x: r.x - 1, y: r.y - 1, w: r.w + 2, h: r.h + 2 }
+      stage.locks.forEach((l, i) => {
+        if (s.locks[i] || s.keys <= 0 || !overlaps(reach, l)) return
+        s.locks[i] = true
+        s.keys--
+        ev.push({ k: 'unlock', i, ...rectMid(l) })
+      })
+    }
     // an arrow: only in the air, and only one at a time
     if (!p.ground && p.air === 0) {
       for (let i = 0; i < stage.arrows.length; i++) {
@@ -1391,7 +1410,7 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
   }
 
   // 9. checkpoints, then the phase
-  // TODO(ember-2:engine): gravity switches, keys and locks and cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
+  // TODO(ember-2:engine): gravity switches and cannons all go in above; this tick order is the engine agent's to extend (and to document in the header)
   const [fire0, frost0] = s.players
   if (fire0.alive && frost0.alive) {
     const safe = (p: Player) => p.ground && p.cannon < 0

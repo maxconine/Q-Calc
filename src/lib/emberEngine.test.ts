@@ -1222,3 +1222,55 @@ describe('lights', () => {
     expect(s.on).toEqual(['s'])
   })
 })
+
+describe('keys and locks', () => {
+  const LOCK: ThingDef = { k: 'lock', x: 8, y: 14, w: 1, h: 3 }
+
+  it('a lock is a wall, and stops a beam, until a key is brought', () => {
+    const M = mk(['.1.k'], [LOCK, { k: 'emitter', x: 1, y: 15, dir: 'right' }, { k: 'sensor', x: 20, y: 15, ch: 's' }])
+    // without the key: jump over it and run at the lock
+    let s = run(M, initState(M), 120, (t) => [IN_RIGHT | (t > 5 && t < 25 ? IN_UP : 0), 0]).s
+    expect(s.keyTaken).toEqual([false])
+    expect(s.players[0].x + PLAYER_W).toBe(8 * TILE)
+    expect(s.locks).toEqual([false])
+    expect(s.on).toEqual([])
+    // back for the key, and through
+    const r = run(M, s, 200, (t) => [t < 60 ? IN_LEFT : IN_RIGHT, 0])
+    expect(r.ev.filter((e) => e.k === 'key' || e.k === 'unlock')).toEqual([
+      { k: 'key', p: 0, i: 0, x: 4 * TILE + 10, y: 16 * TILE + 10 },
+      { k: 'unlock', i: 0, x: 8 * TILE + 10, y: 15.5 * TILE },
+    ])
+    s = r.s
+    expect([s.keys, s.keyTaken, s.locks]).toEqual([0, [true], [true]])
+    expect(s.players[0].x).toBeGreaterThan(9 * TILE)
+    expect(s.on).toEqual(['s'])
+  })
+
+  it('the team carries keys: one fetches, the other opens', () => {
+    const L = mk(['.1.k.................2.....R.B'], [{ k: 'lock', x: 24, y: 14, w: 1, h: 3 }])
+    const r = run(L, initState(L), 60, (t) => [t < 30 ? IN_RIGHT : 0, t > 40 ? IN_RIGHT : 0])
+    expect(r.ev.filter((e) => e.k === 'key').length).toBe(1)
+    expect(r.ev.filter((e) => e.k === 'unlock').length).toBe(1)
+    expect(r.s.keys).toBe(0)
+    expect(r.s.players[1].x).toBeGreaterThan(24 * TILE)
+  })
+
+  it('one key opens one lock; the next lock stays shut', () => {
+    // the second key is out of reach overhead
+    const L = mk(['.....k', '', '', '', '', '', '.1.k'], [LOCK, { k: 'lock', x: 12, y: 14, w: 1, h: 3 }])
+    const r = run(L, initState(L), 160, R)
+    expect([r.s.keys, r.s.keyTaken, r.s.locks]).toEqual([0, [false, true], [true, false]])
+    expect(r.s.players[0].x + PLAYER_W).toBe(12 * TILE)
+  })
+
+  it('a key carried through a portal still opens the lock on the other side', () => {
+    const L = mk(['.1.k...#.......'], [
+      { k: 'portal', x: 6, y: 16, pair: 'p' },
+      { k: 'portal', x: 10, y: 16, pair: 'p' },
+      { k: 'lock', x: 14, y: 14, w: 1, h: 3 },
+    ])
+    const r = run(L, initState(L), 140, R)
+    expect(r.ev.map((e) => e.k).filter((k) => k === 'key' || k === 'portal' || k === 'unlock')).toEqual(['key', 'portal', 'unlock'])
+    expect(r.s.players[0].x).toBeGreaterThan(15 * TILE)
+  })
+})
