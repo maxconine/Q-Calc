@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { nativeWindow } from '../lib/bridge'
 import { closeReasonText, type PeerInfo, type PeerTransport } from '../lib/peer'
+import { fmtPar, fmtTime, levelDifficulty, levelLength, MAX_DIFFICULTY } from '../lib/ember'
 import { compileLevel, scoreOf, stageOf } from '../lib/emberEngine'
 import { LEVELS } from '../lib/emberLevels'
-import { finishedCount, firstUnfinished, loadProgress, recordResult, saveProgress, type EmberProgress } from '../lib/emberProgress'
+import { finishedCount, firstUnfinished, improved, loadProgress, recordResult, saveProgress, type EmberProgress } from '../lib/emberProgress'
 import { createLocalGame, createOnlineGame, type EmberGame, type EmberScreen, type EmberView } from '../lib/emberSession'
 import { createEmberSound } from '../lib/emberSound'
-import { IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, type DeathCause, type Element, type GameState, type Level, type PlayerIndex, type Score } from '../lib/emberTypes'
+import { ELEMENTS, IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, STEP_HZ, type DeathCause, type GameState, type Level, type PlayerIndex, type Score, type Stage } from '../lib/emberTypes'
 import { drawThumb, EmberRenderer } from './emberDraw'
 import { useGameFullscreen } from './useGameFullscreen'
 import './EmberPanel.css'
@@ -29,7 +30,12 @@ type Screen =
   | { k: 'game'; game: EmberGame; online: boolean; peer: string; id: number }
 
 const NAMES: Record<PlayerIndex, string> = { 0: 'ember', 1: 'frost' }
-const COLS = 4
+// the select grid: this many cards a row (the css grid says the same), so 14 levels are three rows and fit
+// the bar without scrolling
+const COLS = 5
+// a card's picture at the bar's size, css px
+const THUMB_W = 144
+const THUMB_H = 81
 
 const plainKey = (e: KeyboardEvent) => !e.metaKey && !e.ctrlKey && !e.altKey
 
@@ -47,13 +53,6 @@ const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || 
 
 // a level hint about who uses which keys is wrong online, where both sets steer your own character
 const CONTROLS_HINT = /WASD|arrows/i
-
-function fmtTime(secs: number): string {
-  const s = Math.max(0, secs)
-  const m = Math.floor(s / 60)
-  const rest = s - m * 60
-  return `${m}:${rest < 10 ? '0' : ''}${rest.toFixed(1)}`
-}
 
 // compiled once per level for thumbnails; a broken level just draws no picture
 const compiledCache = new Map<number, Level | null>()
@@ -179,8 +178,8 @@ export function EmberPanel({
     }
   }, [back, escapeRef, leaveFullscreen])
 
-  const record = useCallback((levelId: string, score: Score) => {
-    const next = recordResult(progressRef.current, levelId, score)
+  const record = useCallback((levelId: string, score: Score, deaths: number) => {
+    const next = recordResult(progressRef.current, levelId, score, deaths)
     progressRef.current = next
     setProgress(next)
     saveProgress(next)
@@ -287,6 +286,9 @@ function Title({
         <span className="ember-frost">frost</span>
       </h2>
       <p className="ember-line">two of you, on one keyboard or two computers anywhere. both get to their doors.</p>
+      <p className="ember-note ember-blurb">
+        {LEVELS.length} long levels, every one open: lights out, gravity upside down, cannons, keys, and checkpoints on the way.
+      </p>
       <div className="ember-actions">
         <button type="button" className="ember-button" onClick={onLocal}>
           same keyboard <kbd>L</kbd>
@@ -311,7 +313,7 @@ function Title({
           <kbd>↓</kbd>
         </span>
         <span>
-          <kbd>S</kbd> / <kbd>↓</kbd> use a lever or mirror
+          <kbd>S</kbd> / <kbd>↓</kbd> use a lever, lamp or switch
         </span>
       </div>
       {/* said out loud for five seconds as the game opens; the keys line in a level keeps saying it */}
@@ -585,11 +587,16 @@ const MOVE: Record<string, { p: PlayerIndex; bit: number }> = {
 }
 
 const OUCH: Record<DeathCause, Record<PlayerIndex, string>> = {
-  lava: { 0: 'ember tripped in lava? odd · again', 1: 'frost melted · again' },
-  water: { 0: 'ember fizzled out · again', 1: 'frost took a swim · again' },
-  goo: { 0: 'ember got gooed · again', 1: 'frost got gooed · again' },
-  crush: { 0: 'ember got walled in · again', 1: 'frost got walled in · again' },
+  lava: { 0: 'ember tripped in lava? odd', 1: 'frost melted' },
+  water: { 0: 'ember fizzled out', 1: 'frost took a swim' },
+  goo: { 0: 'ember got gooed', 1: 'frost got gooed' },
+  crush: { 0: 'ember got walled in', 1: 'frost got walled in' },
 }
+
+// one line over the top of the picture at a time; the newest wins. hint: the level's or a stage's opening
+// line. flag: a checkpoint taken. back: both players are back after a death. ouch: someone just died (stays
+// while the death lasts). each new one gets a new id, which replays its animation
+type Banner = { id: number; kind: 'hint' | 'flag' | 'back' | 'ouch'; title?: string; text: string }
 
 type Hud = {
   screen: EmberScreen
@@ -598,19 +605,60 @@ type Hud = {
   note: string | null
   phase: GameState['phase'] | null
   deaths: number
-  gems: Array<{ el: Element; taken: boolean }>
-  ouch: string | null
-  // bumps each time a level is entered, to replay the hint
+  // the stage being played and how many the level has
+  stage: number
+  stages: number
+  // the checkpoint the pair would come back to (-1: the stage's start) and how many this stage has
+  cp: number
+  cps: number
+  // over the whole level
+  gems: [number, number]
+  total: [number, number]
+  keys: number
+  // the clock has passed the target time
+  over: boolean
+  banner: Banner | null
+  // bumps each time a level begins (entered, or begun again), to replay the hints
   entry: number
   score: Score | null
+  // what this finish beat
+  fresh: Fresh | null
 }
 
-const EMPTY_HUD: Hud = { screen: 'wait', level: 0, me: null, note: null, phase: null, deaths: 0, gems: [], ouch: null, entry: 0, score: null }
+type Fresh = ReturnType<typeof improved>
 
-function gemsOf(level: Level | null, s: GameState | null): Hud['gems'] {
-  if (!level || !s) return []
-  // TODO(ember-2:panel): this stage's gems only; show the level's whole count (scoreOf) and the stage number
-  return stageOf(level, s).gems.map((g, i) => ({ el: g.el, taken: Boolean(s.taken[i]) }))
+const EMPTY_HUD: Hud = {
+  screen: 'wait',
+  level: 0,
+  me: null,
+  note: null,
+  phase: null,
+  deaths: 0,
+  stage: 0,
+  stages: 1,
+  cp: -1,
+  cps: 0,
+  gems: [0, 0],
+  total: [0, 0],
+  keys: 0,
+  over: false,
+  banner: null,
+  entry: 0,
+  score: null,
+  fresh: null,
+}
+
+// where a death sends the pair, said two ways: while they're gone, and once they're back
+function backTo(s: GameState, arrived: boolean): string {
+  const at = arrived ? 'back at' : 'back to'
+  if (s.cp >= 0) return `${at} checkpoint ${s.cp + 1}`
+  return s.stage > 0 ? `${at} the start of the stage` : `${at} the start`
+}
+
+function stageTitle(level: Level, index: number): string | undefined {
+  if (level.stages.length < 2) return undefined
+  const name = level.stages[index]?.def.name
+  return `stage ${index + 1} of ${level.stages.length}${name ? ` · ${name}` : ''}`
 }
 
 function EmberPlay({
@@ -635,7 +683,7 @@ function EmberPlay({
   fsOn: boolean
   screenRef: MutableRefObject<EmberScreen>
   head: (sub: string) => ReactNode
-  onRecord: (levelId: string, score: Score) => void
+  onRecord: (levelId: string, score: Score, deaths: number) => void
   onMute: () => void
   onEnded: (note?: string) => void
 }) {
@@ -646,6 +694,8 @@ function EmberPlay({
   hudRef.current = hud
   const cb = useRef({ onRecord, onMute, onEnded })
   cb.current = { onRecord, onMute, onEnded }
+  const progressRef = useRef(progress)
+  progressRef.current = progress
   const muted = progress.muted
   const sound = useMemo(() => createEmberSound(), [])
   useEffect(() => sound.setMuted(muted), [sound, muted])
@@ -668,8 +718,21 @@ function EmberPlay({
     let entry = 0
     let lastLevel = -1
     let lastScreen: EmberScreen | null = null
-    let ouch: string | null = null
     let score: Score | null = null
+    let fresh: Fresh | null = null
+    let banner: Banner | null = null
+    let banners = 0
+    // the last frame's state, to tell what just happened. read from the state and not only from events, so
+    // the guest's side of an online game says the same things even when an event was lost on the way
+    let seen: { tick: number; stage: number; cp: number; deaths: number; phase: GameState['phase'] } | null = null
+    // someone died and the pair isn't back yet
+    let owed = false
+    // why, from the die event, until the death is shown
+    let cause: string | null = null
+
+    const say = (kind: Banner['kind'], text: string, title?: string) => {
+      banner = text || title ? { id: ++banners, kind, text, title } : null
+    }
 
     const resize = () => renderer?.resize()
     const recolor = () => renderer?.refreshColors()
@@ -698,40 +761,91 @@ function EmberPlay({
       }
       screenRef.current = v.screen
       const playing = v.screen === 'play' && v.compiled && v.state
+      let entered = false
       if (v.screen !== lastScreen || v.level !== lastLevel) {
-        if (v.screen === 'play') {
+        entered = v.screen === 'play'
+        lastScreen = v.screen
+        lastLevel = v.level
+        seen = null
+        banner = null
+      }
+      for (const e of v.events) {
+        sound.play(e)
+        if (e.k === 'die') cause = e.cause ? OUCH[e.cause][e.p] : null
+      }
+      let sc: Score | null = null
+      let stage: Stage | null = null
+      if (playing) {
+        const level = v.compiled!
+        const s = v.state!
+        stage = stageOf(level, s)
+        sc = scoreOf(level, s)
+        // the clock never goes back inside a level, and nor do the stage or the deaths: it began again (⇧R,
+        // R after a win, the other side's restart). a guest's predicted clock can step back a frame or two
+        const again = seen != null && (s.tick + 20 < seen.tick || s.stage < seen.stage || s.deaths < seen.deaths)
+        if (entered || again || !seen) {
           entry++
           renderer?.reset()
           // the canvas was hidden on select; its size may only be right now
           resize()
+          score = null
+          fresh = null
+          owed = false
+          cause = null
+          const hint = level.def.hint && !(online && CONTROLS_HINT.test(level.def.hint)) ? level.def.hint : (stage.def.hint ?? '')
+          say('hint', hint, stageTitle(level, s.stage))
+        } else if (s.stage !== seen.stage) {
+          owed = false
+          say('hint', stage.def.hint ?? '', stageTitle(level, s.stage))
+        } else {
+          if (s.deaths > seen.deaths) owed = true
+          if (s.phase === 'dead' && seen.phase !== 'dead') {
+            owed = true
+            say('ouch', backTo(s, false), cause ?? 'ouch')
+            cause = null
+          } else if (owed && s.phase === 'play') {
+            owed = false
+            say('back', backTo(s, true))
+          } else if (s.cp !== seen.cp && s.cp >= 0 && s.deaths === seen.deaths) {
+            say('flag', stage.checkpoints.length > 1 ? `checkpoint ${s.cp + 1} of ${stage.checkpoints.length}` : 'checkpoint')
+          }
         }
-        ouch = null
-        score = null
-        lastScreen = v.screen
-        lastLevel = v.level
-      }
-      for (const e of v.events) {
-        sound.play(e)
-        if (e.k === 'die') ouch = e.cause ? OUCH[e.cause][e.p] : 'ouch · again'
-        if (e.k === 'win' && v.compiled && v.state) {
-          score = scoreOf(v.compiled, v.state)
-          cb.current.onRecord(v.compiled.def.id, score)
+        if (s.phase === 'won' && !score) {
+          // by the state, not the win event: the guest's copy of the event can be late or lost
+          score = sc
+          fresh = improved(progressRef.current.levels[level.def.id], sc, s.deaths)
+          cb.current.onRecord(level.def.id, sc, s.deaths)
+          banner = null
         }
-      }
-      if (playing) {
-        const s = v.state!
-        if (s.phase === 'play' && s.tick < 2) ouch = null
-        if (s.phase === 'won' && !score) score = scoreOf(v.compiled!, s)
-        // TODO(ember-2:panel): R is now 'back to the checkpoint'; add restart(), the stage and checkpoint notes, ctrl+F
-        renderer?.draw(stageOf(v.compiled!, s), v.prev, s, v.alpha, v.events, now, { me: v.me, reduceMotion })
-        if (timerRef.current) timerRef.current.textContent = fmtTime(s.tick / 60)
+        seen = { tick: s.tick, stage: s.stage, cp: s.cp, deaths: s.deaths, phase: s.phase }
+        renderer?.draw(stage, v.prev, s, v.alpha, v.events, now, { me: v.me, reduceMotion })
+        if (timerRef.current) timerRef.current.textContent = fmtTime(s.tick / STEP_HZ)
       }
       const s = playing ? v.state! : null
-      const gems = gemsOf(v.compiled, s)
-      const key = [v.screen, v.level, v.me, v.note, s?.phase, s?.stage, s?.deaths, gems.map((g) => +g.taken).join(''), ouch, entry, score?.stars].join('|')
+      const over = Boolean(s && v.compiled && s.tick / STEP_HZ > v.compiled.def.par)
+      const key = [v.screen, v.level, v.me, v.note, s?.phase, s?.stage, s?.cp, s?.deaths, s?.keys, sc?.gems.join(','), over, banner?.id, entry, score?.stars].join('|')
       if (key === shown) return
       shown = key
-      setHud({ screen: v.screen, level: v.level, me: v.me, note: v.note, phase: s?.phase ?? null, deaths: s?.deaths ?? 0, gems, ouch, entry, score })
+      setHud({
+        screen: v.screen,
+        level: v.level,
+        me: v.me,
+        note: v.note,
+        phase: s?.phase ?? null,
+        deaths: s?.deaths ?? 0,
+        stage: s?.stage ?? 0,
+        stages: v.compiled?.stages.length ?? 1,
+        cp: s?.cp ?? -1,
+        cps: stage?.checkpoints.length ?? 0,
+        gems: sc?.gems ?? [0, 0],
+        total: sc?.total ?? [0, 0],
+        keys: s?.keys ?? 0,
+        over,
+        banner,
+        entry,
+        score,
+        fresh,
+      })
     }
     raf = requestAnimationFrame(frame)
 
@@ -741,7 +855,7 @@ function EmberPlay({
       mo.disconnect()
       dark?.removeEventListener?.('change', recolor)
     }
-  }, [game, screenRef, sound])
+  }, [game, online, screenRef, sound])
 
   // keys. held movement keys are a set so key repeat and overlapping presses don't matter
   useEffect(() => {
@@ -768,8 +882,8 @@ function EmberPlay({
     const pick = (dx: number, dy: number) => {
       const h = hudRef.current
       const base = asked && asked.from === h.level ? asked.to : h.level
-      const next = base + dx + dy * COLS
-      if (next < 0 || next >= LEVELS.length) return
+      const next = gridStep(base, dx, dy, LEVELS.length, COLS)
+      if (next === base) return
       asked = { from: h.level, to: next }
       game.pick(next)
     }
@@ -787,7 +901,9 @@ function EmberPlay({
           else if (move.bit === IN_RIGHT) pick(1, 0)
           else if (move.bit === IN_UP) pick(0, -1)
           else pick(0, 1)
-        } else if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) game.play()
+        } else if (e.key === 'Home') pick(-LEVELS.length, 0)
+        else if (e.key === 'End') pick(LEVELS.length, 0)
+        else if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) game.play()
         else if (e.key.toLowerCase() === 'm' && !e.repeat) cb.current.onMute()
         return
       }
@@ -807,8 +923,12 @@ function EmberPlay({
       swallow(e)
       if (e.repeat) return
       const key = e.key.toLowerCase()
-      if (key === 'r') game.retry()
-      else if (key === 'm') cb.current.onMute()
+      // R alone is the small undo, back to the checkpoint; the whole level again takes shift as well, so it
+      // can't be hit by a thumb on the way to a jump. both go through the session, which asks the host online
+      if (key === 'r') {
+        if (e.shiftKey) game.restart()
+        else game.retry()
+      } else if (key === 'm') cb.current.onMute()
       else if ((e.key === 'Enter' || e.key === ' ') && h.phase === 'won') game.next()
     }
     const onUp = (e: KeyboardEvent) => {
@@ -839,6 +959,10 @@ function EmberPlay({
     <span className={`ember-you ${hud.me === 0 ? 'ember-fire' : 'ember-frost'}`}>you’re {meName}</span>
   ) : null
   const def = LEVELS[hud.level]
+  const banner = hud.banner
+  // a death's line stays for as long as the death does; the others time themselves out
+  const showBanner = banner && (banner.kind === 'ouch' ? hud.phase === 'dead' : hud.phase === 'play' || hud.phase === 'dead')
+  const allGems = hud.total[0] + hud.total[1]
 
   return (
     <>
@@ -851,6 +975,7 @@ function EmberPlay({
             you={you}
             note={hud.note}
             muted={muted}
+            fsHint={fsHint}
             onPlay={(i) => {
               game.pick(i)
               game.play()
@@ -870,15 +995,34 @@ function EmberPlay({
           <span className="ember-hud-level">
             <b>{hud.level + 1}</b> {def?.name ?? ''}
           </span>
-          <span className="ember-gems" aria-label="gems">
-            {hud.gems.map((g, i) => (
-              <i key={i} className={`ember-gem ${g.el} ${g.taken ? 'got' : ''}`} />
-            ))}
-          </span>
-          {hud.deaths ? <span className="ember-deaths">{hud.deaths === 1 ? '1 try' : `${hud.deaths} tries`}</span> : null}
+          {hud.stages > 1 ? (
+            <span className="ember-chip" aria-label={`stage ${hud.stage + 1} of ${hud.stages}`}>
+              stage {hud.stage + 1}/{hud.stages}
+            </span>
+          ) : null}
+          {hud.cps ? (
+            <span
+              key={`cp${hud.stage}.${hud.cp}`}
+              className={`ember-chip ember-flag ${hud.cp >= 0 ? 'on' : ''}`}
+              aria-label={hud.cp >= 0 ? `checkpoint ${hud.cp + 1} of ${hud.cps}` : `no checkpoint yet, ${hud.cps} in this stage`}
+            >
+              ⚑ {Math.max(0, hud.cp + 1)}/{hud.cps}
+            </span>
+          ) : null}
+          {allGems ? <Gems gems={hud.gems} total={hud.total} /> : null}
+          {hud.keys ? (
+            <span className="ember-keys-held" aria-label={`${hud.keys} ${hud.keys === 1 ? 'key' : 'keys'} carried`}>
+              <i className="ember-key" />
+              {hud.keys > 1 ? `×${hud.keys}` : ''}
+            </span>
+          ) : null}
+          {hud.deaths ? <span className="ember-deaths">{hud.deaths === 1 ? '1 death' : `${hud.deaths} deaths`}</span> : null}
           {you}
-          <span className="ember-timer" ref={timerRef}>
-            0:00.0
+          <span className={`ember-clock ${hud.over ? 'over' : ''}`} aria-label="time, and the target time">
+            <span className="ember-timer" ref={timerRef}>
+              0:00.0
+            </span>
+            {def ? <span className="ember-par"> / {fmtPar(def.par)}</span> : null}
           </span>
         </div>
         <div className="ember-stage">
@@ -886,13 +1030,24 @@ function EmberPlay({
           {/* everything written over the picture: one layer that grows with the hud in fullscreen. a sibling of
               the canvas, never an ancestor, so the canvas keeps its real css pixels */}
           <div className="ember-over game-fs-ui">
-            {def?.hint && hud.phase === 'play' && !(online && CONTROLS_HINT.test(def.hint)) ? (
-              <div key={hud.entry} className="ember-hint">
-                {def.hint}
+            {showBanner ? (
+              <div key={banner.id} className={`ember-banner ${banner.kind}`} role="status">
+                {banner.title ? <b>{banner.title}</b> : null}
+                {banner.title && banner.text ? <span className="ember-dim"> · </span> : null}
+                {banner.text}
               </div>
             ) : null}
-            {hud.ouch && hud.phase === 'dead' ? <div className="ember-ouch">{hud.ouch}</div> : null}
-            {hud.phase === 'won' && hud.score && def ? <Win score={hud.score} par={def.par} last={hud.level >= LEVELS.length - 1} /> : null}
+            {hud.phase === 'clear' ? (
+              <div className="ember-clear" role="status">
+                <p className="ember-win-title">stage {hud.stage + 1} clear</p>
+                <p className="ember-note">
+                  {hud.stage + 2 >= hud.stages ? 'the last stage is next' : `stage ${hud.stage + 2} of ${hud.stages} is next`}
+                </p>
+              </div>
+            ) : null}
+            {hud.phase === 'won' && hud.score && def ? (
+              <Win score={hud.score} par={def.par} deaths={hud.deaths} fresh={hud.fresh} last={hud.level >= LEVELS.length - 1} />
+            ) : null}
             {hud.note ? <div className="ember-peer-note">{hud.note}</div> : null}
             {/* again as each level starts, small and out of the way */}
             {hud.screen === 'play' ? (
@@ -903,11 +1058,35 @@ function EmberPlay({
           </div>
         </div>
         <p className="ember-note ember-keys game-fs-ui">
-          {online ? 'WASD or arrows' : 'ember WASD · frost arrows'} · S/↓ use · R retry · M {muted ? 'unmute' : 'mute'} · {fsHint}
+          {online ? 'WASD or arrows' : 'ember WASD · frost arrows'} · S/↓ use · R checkpoint · ⇧R restart level · M {muted ? 'unmute' : 'mute'} · {fsHint}
           {fsOn ? '' : ' · esc levels'}
         </p>
       </div>
     </>
+  )
+}
+
+// a level's gems, both colours, over all its stages. a handful shows as pips; a long level's as counts
+function Gems({ gems, total }: { gems: [number, number]; total: [number, number] }) {
+  const label = `gems: ember ${gems[0]} of ${total[0]}, frost ${gems[1]} of ${total[1]}`
+  if (total[0] + total[1] <= 8) {
+    return (
+      <span className="ember-gems" aria-label={label}>
+        {ELEMENTS.map((el, c) => Array.from({ length: total[c]! }, (_, i) => <i key={`${el}${i}`} className={`ember-gem ${el} ${i < gems[c]! ? 'got' : ''}`} />))}
+      </span>
+    )
+  }
+  return (
+    <span className="ember-gems counts" aria-label={label}>
+      {ELEMENTS.map((el, c) =>
+        total[c] ? (
+          <span key={el} className={`ember-gem-count ${el}`}>
+            <i className={`ember-gem ${el} ${gems[c] === total[c] ? 'got' : ''}`} />
+            {gems[c]}/{total[c]}
+          </span>
+        ) : null,
+      )}
+    </span>
   )
 }
 
@@ -923,21 +1102,50 @@ function Stars({ n, pop = false }: { n: number; pop?: boolean }) {
   )
 }
 
-function Win({ score, par, last }: { score: Score; par: number; last: boolean }) {
+function Pips({ n }: { n: number }) {
+  return (
+    <span className="ember-pips" aria-label={`difficulty ${n} of ${MAX_DIFFICULTY}`}>
+      {Array.from({ length: MAX_DIFFICULTY }, (_, i) => (
+        <i key={i} className={i < n ? 'on' : undefined} />
+      ))}
+    </span>
+  )
+}
+
+function Win({ score, par, deaths, fresh, last }: { score: Score; par: number; deaths: number; fresh: Fresh | null; last: boolean }) {
   const got = score.gems[0] + score.gems[1]
   const all = score.total[0] + score.total[1]
+  const news = fresh ? [fresh.secs ? 'best time' : '', fresh.gems ? 'most gems' : '', fresh.deaths ? 'fewest deaths' : ''].filter(Boolean) : []
   return (
     <div className="ember-win" role="status">
       <p className="ember-win-title">both home</p>
       <Stars n={score.stars} pop />
       <p className="ember-win-line">
         <span className={score.secs <= par ? 'ember-good' : undefined}>{fmtTime(score.secs)}</span>
-        <span className="ember-dim"> / par {fmtTime(par)}</span>
-        {all ? <span> · gems {got}/{all}</span> : null}
+        <span className="ember-dim"> / {fmtPar(par)}</span>
+        {all ? (
+          <span>
+            {' '}
+            · <span className={got === all ? 'ember-good' : undefined}>gems {got}/{all}</span>
+          </span>
+        ) : null}
+        <span> · {deaths === 0 ? 'no deaths' : deaths === 1 ? '1 death' : `${deaths} deaths`}</span>
       </p>
-      <p className="ember-note">{last ? 'that was the last level · R retry · esc levels' : '↵ next level · R retry · esc levels'}</p>
+      {news.length ? <p className="ember-win-new">new: {news.join(' · ')}</p> : null}
+      <p className="ember-note">{last ? 'that was the last level · R again · esc levels' : '↵ next level · R again · esc levels'}</p>
     </div>
   )
+}
+
+// the select grid's arrows: sideways runs on through the rows; down from above a short last row lands on its
+// last card; anything else that would leave the grid stays put
+function gridStep(from: number, dx: number, dy: number, count: number, cols: number): number {
+  if (count < 1) return 0
+  if (dx) return Math.min(count - 1, Math.max(0, from + dx))
+  const to = from + dy * cols
+  if (to < 0) return from
+  if (to < count) return to
+  return Math.floor(from / cols) < Math.floor((count - 1) / cols) ? count - 1 : from
 }
 
 function Select({
@@ -946,6 +1154,7 @@ function Select({
   you,
   note,
   muted,
+  fsHint,
   onPlay,
 }: {
   level: number
@@ -953,60 +1162,100 @@ function Select({
   you: ReactNode
   note: string | null
   muted: boolean
+  fsHint: string
   onPlay: (i: number) => void
 }) {
   const gridRef = useRef<HTMLDivElement>(null)
+  // the mouse only looks: the card under it fills the detail line, and the highlight (which both sides of
+  // an online game share) moves with the arrows or a click
+  // remembered with the highlight it was seen under, so moving the highlight by key shows that level again
+  const [hover, setHover] = useState<{ i: number; under: number } | null>(null)
   useEffect(() => {
     gridRef.current?.querySelector<HTMLElement>('.ember-card.on')?.scrollIntoView({ block: 'nearest' })
   }, [level])
+  const shown = hover && hover.under === level && LEVELS[hover.i] ? hover.i : level
+  const def = LEVELS[shown]
+  const best = def ? progress.levels[def.id] : undefined
+  const totals = compiledAt(shown)?.gemTotals
+  const allGems = totals ? totals[0] + totals[1] : 0
   return (
     <div className="ember-select">
-      <div className="ember-grid" ref={gridRef} role="listbox" aria-label="levels">
-        {LEVELS.map((def, i) => {
-          const best = progress.levels[def.id]
+      <div className="ember-grid" ref={gridRef} role="listbox" aria-label="levels" onMouseLeave={() => setHover(null)}>
+        {LEVELS.map((d, i) => {
+          const b = progress.levels[d.id]
           return (
             <button
-              key={def.id}
+              key={d.id}
               type="button"
               role="option"
               aria-selected={i === level}
-              className={`ember-card ${i === level ? 'on' : ''}`}
+              className={`ember-card ${i === level ? 'on' : ''} ${b?.completed ? 'done' : ''}`}
+              onMouseEnter={() => setHover({ i, under: level })}
               onClick={() => onPlay(i)}
             >
-              <Thumb index={i} />
+              <Thumb index={i} stages={d.stages.length} />
               <span className="ember-card-name">
-                <b>{i + 1}</b> {def.name}
+                <b>{i + 1}</b> {d.name}
               </span>
               <span className="ember-card-meta">
-                <Stars n={best?.stars ?? 0} />
-                {best?.secs != null ? <span>{fmtTime(best.secs)}</span> : null}
-                {best?.gems ? <span className="ember-card-gems">◆ {best.gems}</span> : null}
+                <Stars n={b?.stars ?? 0} />
+                {b?.secs != null ? <span>{fmtTime(b.secs)}</span> : null}
+                <Pips n={levelDifficulty(i, LEVELS.length)} />
               </span>
             </button>
           )
         })}
       </div>
+      {def ? (
+        <p className="ember-detail" aria-live="polite">
+          <span className="ember-detail-name">
+            <b>{shown + 1}</b> {def.name}
+          </span>
+          <Pips n={levelDifficulty(shown, LEVELS.length)} />
+          <span>{levelLength(def)}</span>
+          <span>target {fmtPar(def.par)}</span>
+          {best?.completed ? (
+            <>
+              <span className="ember-detail-best">
+                best {best.secs != null ? fmtTime(best.secs) : '–'} <Stars n={best.stars} />
+              </span>
+              {allGems ? (
+                <span>
+                  gems {Math.min(best.gems, allGems)}/{allGems}
+                </span>
+              ) : null}
+              {best.deaths != null ? <span>{best.deaths === 0 ? 'no deaths' : best.deaths === 1 ? '1 death' : `${best.deaths} deaths`}</span> : null}
+            </>
+          ) : (
+            <span>
+              not finished yet{allGems ? ` · ${allGems} gems` : ''}
+            </span>
+          )}
+        </p>
+      ) : null}
       <p className="ember-note">
         {note ? `${note} · ` : ''}
         {you}
-        {you ? ' · ' : ''}arrows or WASD pick · ↵ play · M {muted ? 'unmute' : 'mute'} · esc back
+        {you ? ' · ' : ''}every level is open · arrows or WASD pick · ↵ play · M {muted ? 'unmute' : 'mute'} · {fsHint} · esc back
       </p>
     </div>
   )
 }
 
-function Thumb({ index }: { index: number }) {
+// a level's picture on its card: its first stage, whatever its shape (drawThumb fits it to the canvas), with
+// the number of stages said on it when there's more than one
+function Thumb({ index, stages }: { index: number; stages: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     const canvas = ref.current
-    const level = compiledAt(index)
-    if (!canvas || !level) return
-    const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
-    canvas.width = 144 * dpr
-    canvas.height = 81 * dpr
+    const stage = compiledAt(index)?.stages[0]
+    if (!canvas || !stage) return
+    // twice the card's size, so it is still sharp when fullscreen draws the select screen twice as large
+    const k = Math.min(4, 2 * Math.max(1, Math.round(window.devicePixelRatio || 1)))
+    canvas.width = THUMB_W * k
+    canvas.height = THUMB_H * k
     try {
-      // TODO(ember-2:panel): the first stage only, squashed to the card; long levels want a better picture
-      drawThumb(canvas, level.stages[0]!)
+      drawThumb(canvas, stage)
     } catch {
       // no picture beats no select screen
     }
@@ -1014,6 +1263,7 @@ function Thumb({ index }: { index: number }) {
   return (
     <span className="ember-thumb">
       <canvas ref={ref} aria-hidden="true" />
+      {stages > 1 ? <span className="ember-thumb-badge">{stages} stages</span> : null}
     </span>
   )
 }

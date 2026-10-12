@@ -1,5 +1,7 @@
-/* ember & frost: `ember` then enter. play screen = hud + 640:360 canvas at full width + a keys line,
-   ~450px at the bar's 680px, under the 560px panel max in Overlay.swift */
+/* ember & frost: `ember` then enter. play screen = hud + a 16:9 canvas at full width + a keys line,
+   ~440px at the bar's 680px, under the 560px panel max in Overlay.swift; the select screen is three rows of
+   five cards and a detail line, about as tall. ⌃F fills the screen: GameFullscreen.css lays the root out and
+   the .game-fullscreen rules here are the panel's own adjustments */
 .ember {
   --ember-fire: #e8641c;
   --ember-fire-2: #f5a524;
@@ -257,9 +259,11 @@ html[data-theme="dark"] .ember {
 }
 .ember-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--sp-2);
-  max-height: 388px;
+  /* five a row: EmberPanel's COLS says the same, for the arrows */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-1);
+  /* three rows and a bit, so a fourth row shows it's there to scroll to */
+  max-height: 372px;
   margin: 0 -4px;
   padding: 4px;
   overflow-y: auto;
@@ -289,13 +293,6 @@ html[data-theme="dark"] .ember {
     inset 0 0 0 1.5px color-mix(in srgb, var(--ember-fire) 55%, transparent),
     0 0 0 0 transparent;
 }
-.ember-card.locked {
-  cursor: default;
-}
-.ember-card.locked .ember-thumb,
-.ember-card.locked .ember-card-name {
-  opacity: 0.4;
-}
 .ember-thumb {
   position: relative;
   display: block;
@@ -310,8 +307,16 @@ html[data-theme="dark"] .ember {
   width: 100%;
   height: 100%;
 }
-.ember-card.locked .ember-thumb canvas {
-  filter: grayscale(1);
+.ember-thumb-badge {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 15px;
 }
 .ember-card-name {
   overflow: hidden;
@@ -333,11 +338,54 @@ html[data-theme="dark"] .ember {
   font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
 }
-.ember-card-gems {
+/* the difficulty mark: five pips, as many lit as the level is hard */
+.ember-pips {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+.ember-pips i {
+  width: 3px;
+  height: 9px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+.ember-pips i.on {
+  background: var(--ember-fire);
+}
+.ember-card-meta .ember-pips {
+  align-self: center;
   margin-left: auto;
 }
-.ember-lock {
-  letter-spacing: 0.02em;
+/* everything about the highlighted level (or the one under the mouse) in one line under the grid */
+.ember-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px var(--sp-3);
+  min-height: 18px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.ember-detail .ember-pips {
+  align-self: center;
+}
+.ember-detail-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ember-detail-name b {
+  color: var(--muted);
+}
+.ember-detail-best {
+  color: var(--ink);
+}
+.ember-blurb {
+  max-width: 460px;
 }
 .ember-you {
   font-weight: 600;
@@ -410,7 +458,79 @@ html[data-theme="dark"] .ember {
 }
 .ember-gems {
   display: inline-flex;
+  align-items: center;
   gap: 3px;
+}
+.ember-gems.counts {
+  gap: var(--sp-2);
+  font-variant-numeric: tabular-nums;
+}
+.ember-gem-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ember-gem-count.fire {
+  color: var(--ember-fire);
+}
+.ember-gem-count.frost {
+  color: var(--ember-frost);
+}
+/* stage 2/3, and the checkpoint the pair would come back to */
+.ember-chip {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--fill-track);
+  color: var(--muted);
+  font-size: var(--fs-caption);
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.ember-flag.on {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  animation: ember-flag 700ms ease both;
+}
+@keyframes ember-flag {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.ember-keys-held {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 3px;
+  color: var(--ember-star);
+  font-variant-numeric: tabular-nums;
+}
+/* a small key: a ring and a shaft */
+.ember-key {
+  position: relative;
+  width: 7px;
+  height: 7px;
+  margin-right: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.ember-key::after {
+  content: '';
+  position: absolute;
+  top: 2.5px;
+  left: 6px;
+  width: 8px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  box-shadow: 5px 2px 0 -0.25px currentColor;
+  clip-path: inset(0 0 -3px 0);
 }
 .ember-gem {
   width: 7px;
@@ -433,11 +553,21 @@ html[data-theme="dark"] .ember {
 .ember-deaths {
   color: var(--muted);
 }
-.ember-timer {
+.ember-clock {
+  flex: none;
   margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.ember-timer {
   color: var(--ink);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+}
+.ember-par {
+  color: var(--muted);
+}
+/* past the target: the time star is gone, quietly */
+.ember-clock.over .ember-timer {
+  color: var(--muted);
 }
 .ember-stage {
   position: relative;
@@ -492,13 +622,17 @@ html[data-theme="dark"] .ember {
 .game-fullscreen .ember-stage {
   border-radius: calc(var(--radius-s) * var(--game-fs-ui, 1));
 }
+/* the select screen may be taller than a short display: its grid gives way and scrolls. lengths inside the
+   zoomed screen are in its own (bar-size) pixels, so the window's height is divided back down */
+.game-fullscreen .ember-grid {
+  max-height: max(140px, calc((100vh - 2 * var(--game-fs-pad, 0px) * var(--game-fs-ui, 1)) / var(--game-fs-ui, 1) - 96px));
+}
 /* the hidden play column must stay out of the centred layout whatever width fullscreen gives a column */
 .ember .ember-game.ember-hidden {
   width: 1px;
 }
 
-.ember-hint,
-.ember-ouch,
+.ember-banner,
 .ember-peer-note {
   position: absolute;
   left: 50%;
@@ -514,9 +648,28 @@ html[data-theme="dark"] .ember {
   transform: translateX(-50%);
   pointer-events: none;
 }
-.ember-hint {
+/* one line up on the top wall at a time: in the middle it sat on signs and on the spot the player just died.
+   the level's or stage's opening line, a checkpoint taken, a death, and coming back from one */
+.ember-banner {
   top: var(--sp-3);
   animation: ember-hint 4.2s ease forwards;
+}
+.ember-banner b {
+  font-weight: 600;
+}
+.ember-banner.flag,
+.ember-banner.back {
+  animation-duration: 2.4s;
+}
+.ember-banner.flag {
+  color: var(--accent);
+  font-weight: 600;
+}
+.ember-banner.flag::before {
+  content: '⚑ ';
+}
+.ember-banner.ouch {
+  animation: ember-in 180ms ease both;
 }
 @keyframes ember-hint {
   0% {
@@ -533,11 +686,6 @@ html[data-theme="dark"] .ember {
     transform: translate(-50%, 0);
   }
 }
-/* up on the top wall, like the hint: in the middle it sat on signs and on the spot the player just died */
-.ember-ouch {
-  top: var(--sp-3);
-  animation: ember-in 180ms ease both;
-}
 .ember-peer-note {
   bottom: var(--sp-3);
   color: var(--muted);
@@ -550,7 +698,8 @@ html[data-theme="dark"] .ember {
   }
 }
 
-.ember-win {
+.ember-win,
+.ember-clear {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -574,8 +723,19 @@ html[data-theme="dark"] .ember {
     transform: translate(-50%, -46%) scale(0.94);
   }
 }
-.ember-win p {
+.ember-win p,
+.ember-clear p {
   margin: 0;
+}
+/* a stage done, between two stages: smaller than the win card, and gone when the next stage begins */
+.ember-clear {
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-5);
+}
+.ember-win-new {
+  color: var(--accent);
+  font-size: var(--fs-small);
+  font-weight: 600;
 }
 .ember-win-title {
   background-image: linear-gradient(90deg, var(--ember-fire), var(--ember-frost));
@@ -600,13 +760,16 @@ html[data-theme="dark"] .ember {
 
 @media (prefers-reduced-motion: reduce) {
   .ember-wait,
-  .ember-ouch,
+  .ember-banner.ouch,
   .ember-win,
+  .ember-clear,
+  .ember-flag.on,
   .ember-stars.pop span.on {
     animation: none;
   }
-  .ember-hint {
-    animation: ember-hint-still 4.2s step-end forwards;
+  .ember-banner {
+    animation-name: ember-hint-still;
+    animation-timing-function: step-end;
   }
   .ember-card {
     transition: none;
