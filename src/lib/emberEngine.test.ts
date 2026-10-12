@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { compileLevel, gateRect, initState, respawn, scoreOf, step, tileAt, traceBeams, validateLevel } from './emberEngine'
 import {
+  ARROW_RESPAWN_TICKS,
   CRUMBLE_GONE_TICKS,
   CRUMBLE_TICKS,
   DEATH_TICKS,
@@ -1011,5 +1012,82 @@ describe('crumbling blocks', () => {
     s = { ...s, crumble: [s.crumble[0]!, 1] }
     s = run(L, s, CRUMBLE_TICKS + 30, [0, 0]).s
     expect(s.boxes[0]!.y).toBe(FLOOR - TILE)
+  })
+})
+
+describe('double-jump arrows', () => {
+  // an arrow two tiles over ember's head
+  const ARROW = ['.^', '..', '..', '.1']
+  // jump, then press again `at` ticks later
+  const hop = (at: number) => (t: number): Inputs => [t < 8 || (t >= at && t < at + 10) ? IN_UP : 0, 0]
+
+  it('is not taken from the ground, is taken in the air, and comes back later', () => {
+    const L = mk(['.1^'])
+    // walking through it does nothing
+    let r = run(L, initState(L), 30, R)
+    expect(r.ev.some((e) => e.k === 'arrow')).toBe(false)
+    expect(r.s.arrows).toEqual([0])
+    // jumping into it takes it
+    const M = mk(ARROW)
+    const t0 = when(M, initState(M), 60, [IN_UP, 0], 'arrow')
+    expect(t0).toBeGreaterThan(0)
+    r = run(M, initState(M), t0 + 1, [IN_UP, 0])
+    expect(r.s.events).toContainEqual({ k: 'arrow', p: 0, i: 0, x: 2 * TILE + 10, y: 13 * TILE + 10 })
+    expect(r.s.players[0].air).toBe(1)
+    expect(r.s.arrows).toEqual([ARROW_RESPAWN_TICKS])
+    const back = run(M, r.s, ARROW_RESPAWN_TICKS - 1, [0, 0])
+    expect(back.s.arrows).toEqual([1])
+    const s = step(M, back.s, [0, 0])
+    expect(s.arrows).toEqual([0])
+    expect(s.events).toContainEqual({ k: 'arrowback', i: 0, x: 2 * TILE + 10, y: 13 * TILE + 10 })
+  })
+
+  it('a second press in the air jumps again, about 2.6 tiles, once', () => {
+    const L = mk(ARROW)
+    // the first hop is let go early, so by itself it stays under 3 tiles
+    const plain = (FLOOR - peak(L, initState(L), 80, hop(999))) / TILE
+    expect(plain).toBeLessThan(3)
+    const r = run(L, initState(L), 80, hop(18))
+    expect(r.ev.filter((e) => e.k === 'airjump').length).toBe(1)
+    const top = (FLOOR - peak(L, initState(L), 80, hop(18))) / TILE
+    expect(top).toBeGreaterThan(plain + 1.5)
+    expect(top).toBeLessThan(5.8)
+    // from a standstill in the air the arrow's jump is 380² / 2g = 51.6 px
+    const still = initState(L)
+    Object.assign(still.players[0], { y: 8 * TILE, ground: false, air: 1 })
+    const y0 = feet(still, 0)
+    expect(y0 - peak(L, still, 40, [IN_UP, 0])).toBeGreaterThan(50)
+    expect(y0 - peak(L, still, 40, [IN_UP, 0])).toBeLessThan(52.5)
+    // a third press does nothing
+    const three = run(L, initState(L), 80, (t) => [hop(18)(t)[0] | (t >= 34 && t < 38 ? IN_UP : 0), 0])
+    expect(three.ev.filter((e) => e.k === 'airjump').length).toBe(1)
+    expect(r.s.players[0].air).toBe(0)
+  })
+
+  it('landing loses it', () => {
+    const L = mk(ARROW)
+    let s = run(L, initState(L), 70, hop(999)).s
+    expect(s.players[0].ground).toBe(true)
+    expect(s.players[0].air).toBe(0)
+    expect(s.arrows[0]).toBeGreaterThan(0)
+    // back on the ground, the next jump is a plain one
+    const r = run(L, s, 30, (t) => [t > 2 && t < 6 ? IN_UP : 0, 0])
+    expect(r.ev.some((e) => e.k === 'airjump')).toBe(false)
+    s = r.s
+  })
+
+  it('one arrow, two players: the second waits for it to come back', () => {
+    const L = mk(['.^', '..', '..', '.12......................R..B'])
+    const both: Inputs = [IN_UP, IN_UP]
+    const r = run(L, initState(L), 30, (t) => (t < 8 ? both : [0, 0]))
+    expect(r.ev.filter((e) => e.k === 'arrow').map((e) => (e as { p: number }).p)).toEqual([0])
+    expect(r.s.players[1].air).toBe(0)
+  })
+
+  it('a held arrow survives a trampoline, and its jump works off a bounce', () => {
+    const L = mk(['.^', '..', '..', '.1', '.T'])
+    const s = initState(L)
+    const r = run(L, s, 60, (t) => [t >= 30 && t < 34 ? IN_UP : 0, 0])
+    expect(r.ev.map((e) => e.k).filter((k) => k === 'bounce' || k === 'arrow' || k === 'airjump').slice(0, 3)).toEqual(['bounce', 'arrow', 'airjump'])
   })
 })
