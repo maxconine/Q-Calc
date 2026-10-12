@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { LEVELS } from './emberLevels'
 import { reachability } from './emberSolver'
+import { compileLevel } from './emberEngine'
+import { checkDeterminism, diagnose, formatWalkthrough, record, runWalkthrough, StageRun, timingSummary, traceStage, viewState } from './emberLevels/testkit'
 import type { StageDef, ThingDef } from './emberTypes'
 
 // the set as a whole, and the solver. each level's own checks and walkthrough live in its pack's test file
@@ -80,5 +82,41 @@ describe('ember solver', () => {
     const rf = reachability(far)
     expect(rf.frozen).toBe(0)
     expect(rf.fireDoor).toBe(false)
+  })
+})
+
+// the walkthrough tools in emberLevels/testkit.ts, on the tutorial
+describe('ember testkit', () => {
+  const level = compileLevel(LEVELS[0]!)
+
+  it('records a script by driving the engine, and the bare script replays to the same state', () => {
+    const run = new StageRun(level)
+    run.walkTo('ember', run.at('ember').x + 2).jump('ember', 1).settle('ember').mark('hopped')
+    expect(run.player('ember').ground).toBe(true)
+    expect(run.script.length).toBeGreaterThan(1)
+    const again = runWalkthrough(level, [run.script])
+    expect(again.players[0].x).toBe(run.state.players[0].x)
+    expect(again.tick).toBe(run.tick)
+    expect(formatWalkthrough([run.script])).toContain('[')
+    expect(run.timings()).toContain('hopped')
+  })
+
+  it('says where and why a run stopped', () => {
+    const run = new StageRun(level)
+    expect(() => run.walkTo('ember', 0)).toThrow(/ember is stuck walking left[\s\S]*tick \d+[\s\S]*ember tile/)
+    expect(() => run.press('frost')).toThrow(/nothing answered/)
+    const d = diagnose(level, [[[30, 0, 0]]])
+    expect(d.won).toBe(false)
+    expect(d.problem).toMatch(/script ran out[\s\S]*NOT in the door/)
+    expect(viewState(level, d.state)).toMatch(/E/)
+    expect(traceStage(level, 0, [[10, 2, 0]])).toMatch(/ember \d+,\d+/)
+    expect(timingSummary(level, [[[30, 0, 0]]])).toMatch(/NOT finished/)
+    expect(() => record(level, [(r) => r.wait(5)])).toThrow(/hasn't/)
+  })
+
+  it('runs the same script to the same hash twice', () => {
+    const r = checkDeterminism(level, [[[40, 2, 1], [30, 6, 5], [60, 0, 0]]])
+    expect(r.same).toBe(true)
+    expect(r.hash).toMatch(/^[0-9a-f]{8}$/)
   })
 })
