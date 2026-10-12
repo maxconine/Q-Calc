@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { compileLevel, validateLevel } from '../emberEngine'
 import type { LevelDef } from '../emberTypes'
 import { BASICS } from './basics'
-import { describeLevel, JUMP, LEFT, record, RIGHT, timingSummary, type LevelChecks, type StageRun, type Walkthrough } from './testkit'
+import { describeLevel, JUMP, LEFT, record, RIGHT, StageRun, timingSummary, type LevelChecks, type Walkthrough } from './testkit'
 
 // every level of the pack with a walkthrough that finishes it in the real engine without a death: one script
 // per stage. the new levels' walkthroughs are written with the testkit's recorder: each line drives the engine
@@ -296,6 +296,84 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
       },
     ],
   },
+  'lock-and-light': {
+    checks: { minSecs: 90, skipReach: true },
+    stages: [
+      (r) => {
+        // room A. ember into the lava for the key: her shadow opens the gate to the water lane
+        r.walkToStop(E, 14).waitGate(6)
+        // frost up the rungs, through the water, and the crate off the ledge into the upper beam
+        r.walkToStop(F, 10.6).jump(F, 0).jump(F, 0).jump(F, 1, { toX: 12.6 })
+        r.oneUntil(F, RIGHT, (_, s) => s.boxes[0]!.y > 201, {}, 'the crate to fall').settle(F).waitGate(0)
+        r.walkTo(F, 19.6).land(F)
+        r.walkTo(E, 19)
+        r.expect((s) => s.keys === 1 || !!process.env.EMBER_HACK, 'the key taken')
+        r.walkToStop(E, 23.4).walkToStop(F, 22.7).checkpoint(0).mark('room B')
+        // room B. both up the rungs; frost through the water to the lock, and back down out of the beam
+        r.walkToStop(E, 31.4).walkToStop(F, 31.7)
+        while (r.at(E).y > 10) r.jump(E, 0)
+        while (r.at(F).y > 10) r.jump(F, 0)
+        r.oneUntil(F, LEFT, (_, s) => s.locks[0]!, {}, 'the lock to open')
+        r.walkTo(F, 33.6).land(F)
+        // ember into the lava, the mirror, and a step clear of the beam
+        r.jump(E, 1, { toX: 35.6 }).walkToStop(E, 37).press(E).walkToStop(E, 38.4).waitGate(1)
+        r.walkTo(E, 39.6).land(E).walkToStop(E, 44.6).walkToStop(F, 43.8).checkpoint(1).mark('room C')
+        // room C. ember in the lava breaks the beam; frost over the lava, through his gate and up the rungs to the lane
+        r.walkToStop(E, 47).waitGate(2)
+        r.walkTo(F, 45.2).jump(F, 1, { toX: 50 }).walkToStop(F, 60.6)
+        while (r.at(F).y > 3) r.jump(F, 0)
+        // the crate through the first gate, which ember's shadow holds open
+        r.waitGate(3).walkTo(F, 50.5).mark('the crate past the first gate')
+        // ember back to room B, up the rungs and into the beam there: the second gate
+        r.walkToStop(E, 31.4)
+        while (r.at(E).y > 10) r.jump(E, 0)
+        r.jump(E, 1, { toX: 35.6 }).waitGate(4)
+        r.walkTo(F, 38.5).mark('the crate past the second gate')
+        // ember back to room A and into the lava there: the third gate
+        r.walkTo(E, 33.5).land(E).walkToStop(E, 14.5).waitGate(7)
+        r.oneUntil(F, LEFT, (_, s) => s.boxes[1]!.y > 61, { max: 900 }, 'the crate to drop into the pit').waitGate(5)
+        r.walkTo(F, 12.4).land(F).jump(F, -1, { toX: 10.5 }).intoDoor(F, -1)
+        last(r, E, RIGHT)
+      },
+      (r) => {
+        // room D. ember up the rungs into the lava, the top mirror, and off the ledge's far end
+        r.walkToStop(E, 6.6).jump(E, 0).jump(E, 0).jump(E, 1, { toX: 8.6 })
+        r.walkToStop(E, 10.8).press(E).walkTo(E, 12.6).land(E).walkTo(E, 14.5)
+        // frost into the water, the bottom mirror, and out
+        r.walkToStop(F, 11).press(F).walkTo(F, 13.5).waitGate(0)
+        r.walkToStop(E, 23.5).walkToStop(F, 22.8).checkpoint(1).mark('room E')
+        // room E. ember onto the lift, frost into the beam: up she goes
+        r.walkTo(E, 39.2).jump(E, 1, { toX: 40.5 }).settle(E)
+        r.walkToStop(F, 37).waitMover(0)
+        r.walkToStop(E, 38.8)
+        // frost to the lift as it comes back down; ember into the beam on the deck
+        r.walkToStop(F, 38.6).waitMover(0, 0).jump(F, 1, { toX: 40.5 }).settle(F)
+        r.jump(E, -1, { toX: 35.5 }).waitMover(0)
+        r.walkToStop(F, 38.8)
+        // the key in the lava, frost's gem, and on over the lift's gap
+        r.walkTo(E, 27.2).walkTo(E, 36).jump(E, 1, { toX: 38.8 })
+        r.jump(F, -1, { toX: 35.5 }).walkTo(F, 33).walkTo(F, 36).jump(F, 1, { toX: 38.8 })
+        r.expect((s) => s.keys === 1 || !!process.env.EMBER_HACK, 'the key taken')
+        r.walkTo(E, 39.4).jump(E, 1, { toX: 43 }).walkTo(F, 39.4).jump(F, 1, { toX: 42.6 })
+        r.walkToStop(E, 44.5).walkToStop(F, 43.8).checkpoint(0).mark('room F')
+        // room F. onto the walkway: ember melts the ice and opens the lock, then back and down
+        r.walkTo(E, 47.4).land(E)
+        r.oneUntil(E, RIGHT, (_, s) => s.ice[0]! >= 1, {}, 'the ice to melt')
+        r.oneUntil(E, RIGHT, (_, s) => s.locks[0]!, {}, 'the lock to open')
+        r.walkTo(E, 44.3).land(E)
+        // frost through the water to the mirror, and out of the light the same way
+        r.walkTo(F, 47.4).land(F).walkToStop(F, 56).press(F)
+        r.walkTo(F, 44.3).land(F).waitGate(1).waitMover(1, 0)
+        // frost in onto the little lift; ember back up the rungs into the beam, which sends him up
+        r.walkTo(F, 60.5).jump(F, 1, { toX: 62 }).settle(F)
+        r.walkToStop(E, 46.6).jump(E, 0).jump(E, 0).expect(() => r.at(E).y === 11, 'ember back on the walkway').waitMover(1)
+        r.intoDoor(F, -1)
+        // and out of it again for her own gate
+        r.walkTo(E, 44.3).land(E).waitGate(1)
+        last(r, E, RIGHT)
+      },
+    ],
+  },
 }
 
 function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown } {
@@ -311,12 +389,28 @@ function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown
 }
 
 // TODO(ember-2:levels-a): levels whose walkthrough stops where a mechanic the engine hasn't landed yet begins
-const WAITING: Record<string, string> = { 'updraft-tower': 'arrows (engine step 2)' }
+const WAITING: Record<string, string> = { 'updraft-tower': 'arrows (engine step 2)', 'lock-and-light': 'keys and locks (engine step 4)' }
+
+// EMBER_STAGE='level-id:2' runs one stage's recording on its own, from that stage's start, and prints how far it got
+if (process.env.EMBER_STAGE) {
+  const [id, n] = process.env.EMBER_STAGE.split(':')
+  const level = compileLevel(BASICS.find((d) => d.id === id)!)
+  const run = new StageRun(level, Number(n) - 1)
+  // EMBER_HACK: every lock already open, to try a stage before the engine has keys
+  if (process.env.EMBER_HACK) run.state = { ...run.state, keys: 1, locks: run.state.locks.map(() => true) }
+  try {
+    RUNS[id!]!.stages[Number(n) - 1]!(run)
+    console.log(`${id} stage ${n}: ${(run.tick / 60).toFixed(1)} s, ${run.state.phase}\n${run.timings()}`)
+  } catch (e) {
+    console.log(String(e).split('\n').slice(0, 26).join('\n'))
+  }
+}
 
 describe('basics', () => {
   for (const def of BASICS) {
     const { walk, error } = walkFor(def)
     if (WAITING[def.id] && !walk) {
+      if (process.env.EMBER_TRACE) console.log(String(error).split('\n').slice(0, 24).join('\n'))
       it(`${def.id} validates`, () => expect(validateLevel(def)).toEqual([]))
       it.todo(`${def.id}: the walkthrough waits on ${WAITING[def.id]}`)
       continue

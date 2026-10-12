@@ -290,7 +290,7 @@ const THIN_ICE: LevelDef = {
 //  - the fan at x7-8 runs while a plate is held: the one in the water at x11-13 (frost's) or the one in the lava
 //    on the high ledge at x2-4, y9 (ember's). so ember goes first: frost stands in the water, ember floats up,
 //    touches the arrow at the top of the fan (x7, y10) and jumps again, left onto the ledge. she stands in the
-//    lava; frost jumps the... no: he walks to the fan, floats up, takes the arrow and joins her
+//    lava; frost walks into the fan, floats up, takes the arrow once it's back and joins her
 //  - from the ledge's end (x5) another arrow (x8, y5) carries each across to the top ledge (x13-22):
 //    red door at x16, blue door at x19
 //  - nothing here can be lost for good: a fall costs the climb, and whoever is still up holds the plate again
@@ -389,6 +389,172 @@ const UPDRAFT: LevelDef = {
   ],
 }
 
+// 5. lock and light: beams, mirrors and sensors, with keys and locks. two stages, each two screens wide and
+// three rooms long. the best of version 1's 'break the beam', 'two mirrors' and 'last light'.
+// light is stopped by walls, bodies, crates, ice, shut gates and shut locks; it passes through pools.
+// keys belong to the team: whoever touches a lock opens it.
+//  stage 1, room A (x1-20): the gate at x21 is shut while the beam at y12 (lamp x20, sensor x17) is lit
+//  - a second beam runs low over the lava at x13-15, and the gate into the water lane above (x12, y9-10) is
+//    open only while it's broken: ember wades into the lava (the key is there, x14) and waits in it
+//  - frost climbs the one-way rungs at x10-11 and jumps through that gate into the water on the ledge
+//    (x12-15, y11), wades across and pushes the crate (x17) off the ledge's end: it lands on the shelf at
+//    x18, in the upper beam, and the gate at x21 opens for good
+//  room B (x22-42): the gate at x43 opens while the sensor at x37, y6 is lit. the beam runs right along y10
+//  into a lock (x26), and beyond it into a mirror (x37) that throws it down into the ledge
+//  - both climb the one-way rungs at x31-32. frost wades left through the water (x27-30) and walks into
+//    the lock: the key ember carries opens it, and the beam goes through
+//  - ember jumps right into the lava (x35-38) and turns the mirror: the beam goes up into the sensor. she
+//    stands clear of it (right of the mirror, or down off the ledge), and frost climbs down out of it too
+//  room C (x44-62) and the lane in the roof: the beam over the lava at x46-48 holds frost's gate (x53) shut
+//  - ember stands in the lava, in the beam: frost jumps the lava and walks in, and climbs the one-way rungs
+//    at x60-61 all the way up into the lane (y3), where a crate waits. the lane is too low to jump the crate:
+//    it only goes left, back over all three rooms, and each of the lane's gates is open only while the beam
+//    in the room below it is BROKEN. ember is the only one who can stand in any of them: they all run over lava
+//  - the first gate (x52) is the beam ember already stands in: she stays until frost has pushed the crate through
+//  - the second (x40) is room B's: ember walks back (the gate at x43 is still lit open), climbs the rungs and
+//    jumps into the lava on the ledge, left of the mirror. frost pushes on
+//  - the third (x24) is the low beam in room A: ember walks back through the gate at x21 (the crate on the
+//    shelf holds it open) and into the lava at x13-15. frost pushes on
+//  - the crate drops into the pit at x12-13 and holds the plate in it: the last gate (x9) opens. blue door
+//    at x7 in the lane; ember steps out of the lava to the red door at x19
+//  stage 2, room D (x1-20): the beam along y9 has to be turned down by the mirror at x11, and at the floor
+//  turned right by the mirror under it, into the sensor at x12: the gate at x21 opens
+//  - ember climbs the one-way rungs at x6-7 into the lava on the ledge (x8-11, y10) and turns the top mirror; the
+//    beam drops through the lava. she walks off the ledge's right end, out of the beam
+//  - frost walks under the rungs into the water (x9-11) and turns the bottom mirror, then
+//    wades on, out of the beam
+//  room E (x22-41): the lift at x40-41 is up only while the beam is BROKEN. the beam runs along the deck
+//  (y7), is turned down the hole at x37 and ends in the sensor on the floor there
+//  - frost stands on the sensor at x37, in the beam: the lift carries ember up to the deck
+//  - frost walks to the lift, which comes down as soon as he steps out; ember stands in the beam up on the
+//    deck (anywhere left of x37) and it carries him up. she wades the lava on the deck for the key (x27)
+//  - both jump the lift's gap (x40-41) to the ledge at x42-46. checkpoint. (frost only has to come up for
+//    his gem: the doorway under the ledge at x42 leads to room F too, and back, should the key be forgotten)
+//  room F (x43-62): the last beam runs along the walkway (y11): through ice (x49), a lock (x53) and into
+//  a mirror over water (x56) that has to throw it up into the sensor at y7. that opens the gate at x57
+//  - both drop onto the walkway. ember leans on the ice until it melts; either walks into the lock with the
+//    key; frost wades the water and turns the mirror
+//  - everyone out of the light: back along the walkway and down off its left end. the gate opens, and the
+//    little lift inside (x62), which is up only while this beam is BROKEN, comes down
+//  - the blue door is up on the shelf inside (x59, y8), the red one on the floor (x58). frost walks in and
+//    stands on the lift; ember climbs the one-way rungs at x46-47 back onto the walkway, into the beam: the
+//    gate shuts between them and the lift carries frost up. ember drops back down, the gate opens again,
+//    and she walks in
+//  - nothing spendable can go wrong: there is one key for each lock and each lock is the only thing its key can open
+const LOCK_AND_LIGHT: LevelDef = {
+  id: 'lock-and-light',
+  name: 'lock and light',
+  hint: 'light stops at anything solid: you, a crate, ice, a lock',
+  par: 150,
+  stages: [
+    {
+      name: 'lamplight',
+      hint: '↓ or S turns a mirror · keys are shared',
+      map: [
+      // 0000000000111111111122222222223333333333444444444455555555556666
+      // 0123456789012345678901234567890123456789012345678901234567890123
+      '################################################################', // 0
+      '################################################################', // 1
+      '#####.........................................................##', // 2
+      '#####..B......................b.................b.............##', // 3
+      '############..##############################################==##', // 4
+      '#...........####.....#.....................#...................#', // 5
+      '#...........####.....#.....................#................==.#', // 6
+      '#...........####.....#.....................#...................#', // 7
+      '#...........####.....#.....................#................==.#', // 8
+      '#....................#.....................#...................#', // 9
+      '#............b.......#.......b......r......#................==.#', // 10
+      '#...........WWWW##...#.####WWWW==..LLLL....#...................#', // 11
+      '#.........==.........#.........==..........#.........#######==##', // 12
+      '#.................#............................................#', // 13
+      '#.........==...................==...........................==.#', // 14
+      '#.....12......kr...R...C....................C..r........b......#', // 15
+      '#############LLL##############################LLL###############', // 16
+      '################################################################', // 17
+      ],
+      things: [
+        // room A
+        { k: 'box', x: 17, y: 10 },
+        { k: 'emitter', x: 20, y: 12, dir: 'left' },
+        { k: 'sensor', x: 17, y: 12, ch: 'ea' },
+        { k: 'gate', x: 21, y: 13, w: 1, h: 3, open: '!ea' },
+        // room B
+        { k: 'emitter', x: 23, y: 10, dir: 'right' },
+        { k: 'lock', x: 26, y: 9, w: 1, h: 2 },
+        { k: 'mirror', x: 37, y: 10, slant: '\\' },
+        { k: 'sensor', x: 37, y: 6, ch: 'eb' },
+        { k: 'gate', x: 43, y: 13, w: 1, h: 3, open: 'eb' },
+        // room C
+        { k: 'emitter', x: 45, y: 15, dir: 'right' },
+        { k: 'sensor', x: 50, y: 15, ch: 'ec' },
+        { k: 'gate', x: 53, y: 13, w: 1, h: 3, open: '!ec' },
+        // the lane in the roof: its gates want the beams below broken
+        { k: 'box', x: 58, y: 3 },
+        { k: 'gate', x: 52, y: 2, w: 1, h: 2, open: '!ec' },
+        { k: 'gate', x: 40, y: 2, w: 1, h: 2, open: '!eb' },
+        { k: 'plate', x: 12, y: 4, ch: 'pit' },
+        { k: 'gate', x: 9, y: 2, w: 1, h: 2, open: 'pit' },
+        // room A again: the gate into the water lane wants the beam over the lava broken
+        { k: 'emitter', x: 12, y: 15, dir: 'right' },
+        { k: 'sensor', x: 16, y: 15, ch: 'e0' },
+        { k: 'gate', x: 12, y: 9, w: 1, h: 2, open: '!e0' },
+        { k: 'gate', x: 24, y: 2, w: 1, h: 2, open: '!e0' },
+        { k: 'sign', x: 5, y: 8, text: 'something has to break that beam for good' },
+        { k: 'sign', x: 30, y: 7, text: 'a lock stops light too' },
+        { k: 'sign', x: 48, y: 9, text: 'some gates want the dark' },
+      ],
+    },
+    {
+      name: 'last light',
+      hint: 'stand in a beam to break it; step out to mend it',
+      map: [
+      // 0000000000111111111122222222223333333333444444444455555555556666
+      // 0123456789012345678901234567890123456789012345678901234567890123
+      '################################################################', // 0
+      '################################################################', // 1
+      '################################################################', // 2
+      '################################################################', // 3
+      '################################################################', // 4
+      '#....................#....................#..............#.....#', // 5
+      '#....................#...................................#.....#', // 6
+      '#....................#.....kr....b..........C............#.....#', // 7
+      '#....................#..##LLLL#######.##..#####..........#.B...#', // 8
+      '#........r...........#....................#..............#####.#', // 9
+      '#.......LLLL.........#....................#..............#.....#', // 10
+      '#....................#....................#........r...b.#.....#', // 11
+      '#.....==.............#....................#..#==######WWW#.....#', // 12
+      '#..............................................................#', // 13
+      '#.....==......................................==...............#', // 14
+      '#12.......b............C..................................R....#', // 15
+      '#########WWW####################################################', // 16
+      '################################################################', // 17
+      ],
+      things: [
+        // room D
+        { k: 'emitter', x: 1, y: 9, dir: 'right' },
+        { k: 'mirror', x: 11, y: 9, slant: '/' },
+        { k: 'mirror', x: 11, y: 15, slant: '/' },
+        { k: 'sensor', x: 12, y: 15, ch: 'ed' },
+        { k: 'gate', x: 21, y: 13, w: 1, h: 3, open: 'ed' },
+        // room E
+        { k: 'emitter', x: 24, y: 7, dir: 'right' },
+        { k: 'mirror', x: 37, y: 7, slant: '\\' },
+        { k: 'sensor', x: 37, y: 15, ch: 'ee' },
+        { k: 'mover', x: 40, y: 15, w: 2, h: 1, to: { x: 40, y: 8 }, when: '!ee' },
+        // room F
+        { k: 'emitter', x: 45, y: 11, dir: 'right' },
+        { k: 'ice', x: 49, y: 10, w: 1, h: 2 },
+        { k: 'lock', x: 53, y: 10, w: 1, h: 2 },
+        { k: 'mirror', x: 56, y: 11, slant: '\\' },
+        { k: 'sensor', x: 56, y: 7, ch: 'ef' },
+        { k: 'gate', x: 57, y: 13, w: 1, h: 3, open: 'ef' },
+        { k: 'mover', x: 62, y: 15, w: 1, h: 1, to: { x: 62, y: 9 }, when: '!ef' },
+        { k: 'sign', x: 31, y: 12, text: 'this lift rises in the dark' },
+      ],
+    },
+  ],
+}
+
 // TODO(ember-2:levels-a): version 1's levels that haven't been reworked yet stay playable after the new ones
-const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates', 'thaw', 'white-crossing', 'cold-storage', 'updraft', 'the-lifts']
-export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, UPDRAFT, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]
+const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates', 'thaw', 'white-crossing', 'cold-storage', 'updraft', 'the-lifts', 'relay', 'break-the-beam', 'two-mirrors', 'lantern-works', 'last-light']
+export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, UPDRAFT, LOCK_AND_LIGHT, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]
