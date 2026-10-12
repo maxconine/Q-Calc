@@ -27,8 +27,9 @@ import type { LevelDef } from '../emberTypes'
 //   - look down before you turn: the floor under x8-21 is goo. the ceiling switches at x11 and x19 drop you in
 //     it; the one at x15 drops you on the island at x14-16 (a gem each, and a switch to go back up); the one at
 //     x24 is the way on, down to the floor before the hanging wall at x27-28. checkpoint at x22-30
-//   - FROST wades into the water tunnel at x31-36 (two high: nobody can jump to its middle) and presses the
-//     switch at x34: frost comes out along the tunnel's roof and up to the ceiling, onto the ceiling plate at
+//   - both climb the steps at x30-31 and cross the block at x32-36. FROST wades back under it, into the water
+//     tunnel at x32-36 (two high: nobody can jump to its middle) and presses the switch at x33: frost comes
+//     out along the tunnel's roof and up to the ceiling at x37, onto the ceiling plate at
 //     x43-44, and the lift at x40-42 carries EMBER over the goo at x40-49 (frost gem at x46 on the ceiling)
 //   - ember wades the lava at x52-57 (fire gem at x55) to the switch at x59 and rises through the hole at
 //     x60-61; frost has walked the ceiling there already
@@ -63,12 +64,12 @@ const HEAD_OVER_HEELS: LevelDef = {
         '############################################################..##',
         '#..........................##.................b................#',
         '#..........................##..................................#',
+        '#..........................##...#####..........................#',
         '#..........................##..######..........................#',
         '#..........................##..######..........................#',
-        '#..........................##..######..........................#',
-        '#..............................................................#',
-        '#.............b.r......................................r.......#',
-        '##..####GGGGGG###GGGGG#########WWWWWW###GGGGGGGGGG##LLLLLL######',
+        '#.............................##...............................#',
+        '#.............b.r.............##.......................r.......#',
+        '##..####GGGGGG###GGGGG##########WWWWW###GGGGGGGGGG##LLLLLL######',
         '##..############################################################',
         '#.............r...............##...........b...................#',
         '#.............................##...............................#',
@@ -129,7 +130,7 @@ const HEAD_OVER_HEELS: LevelDef = {
         { k: 'gswitch', x: 24, y: 9 },
         { k: 'gswitch', x: 24, y: 15 },
         { k: 'checkpoint', x: 29, y: 15, zone: { x: 22, y: 13, w: 9, h: 3 } },
-        { k: 'gswitch', x: 34, y: 15 },
+        { k: 'gswitch', x: 33, y: 15 },
         { k: 'plate', x: 43, y: 9, ch: 'm3', ceil: true },
         { k: 'mover', x: 40, y: 15, w: 3, h: 1, to: { x: 47, y: 15 }, when: 'm3' },
         { k: 'gswitch', x: 59, y: 15 },
