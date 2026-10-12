@@ -1,5 +1,4 @@
 import type { LevelDef } from '../emberTypes'
-import { LEGACY } from './legacy'
 
 // pack 1 of 3, "basics": the tutorial, then the classics of version 1 reworked into bigger, harder levels.
 // owner: levels-a. coordinates in the solution notes are tiles: x from the left wall (0), y from the top (0).
@@ -555,6 +554,4 @@ const LOCK_AND_LIGHT: LevelDef = {
   ],
 }
 
-// TODO(ember-2:levels-a): version 1's levels that haven't been reworked yet stay playable after the new ones
-const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates', 'thaw', 'white-crossing', 'cold-storage', 'updraft', 'the-lifts', 'relay', 'break-the-beam', 'two-mirrors', 'lantern-works', 'last-light']
-export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, UPDRAFT, LOCK_AND_LIGHT, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]
+export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, UPDRAFT, LOCK_AND_LIGHT]
