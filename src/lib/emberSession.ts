@@ -1,6 +1,23 @@
 import { compileLevel, initState, respawn, stageOf, step } from './emberEngine'
 import { LEVELS } from './emberLevels'
-import { decodeEmber, encodeEmber, eventFits, fitsLevel, SILENCE_MS, STATE_HZ, type EmberMsg, type EmberNote, type KeyChange } from './emberProtocol'
+import {
+  decodeEmber,
+  encodeEmber,
+  eventFits,
+  fastOf,
+  joinState,
+  KEY_EVERY,
+  SILENCE_MS,
+  SLOW_REPEAT,
+  slowOf,
+  STATE_HZ,
+  WIRE_VERSION,
+  type EmberMsg,
+  type EmberNote,
+  type KeyChange,
+  type Slow,
+  type StateMsg,
+} from './emberProtocol'
 import {
   EMBER_VERSION,
   STEP_S,
@@ -26,10 +43,17 @@ import {
 // the guest moves its clock to keep them early.
 //
 // every level can be picked from the start. a death goes back to the last checkpoint inside the engine's step;
-// retry() does the same at once, restart() begins the level again.
-// TODO(ember-2:net): the guest holds its prediction at every phase change (a death, a cleared stage) until the
-// host's state says what came next, because a respawn needs GameState.saved, which only the host has. check the
-// respawn and the stage change look right from the guest's side, and that prediction survives a gravity flip
+// retry() does the same at once, restart() begins the level again. either side may ask for both.
+//
+// the guest never changes phase by itself: a death, a respawn, a cleared stage, the next stage and a win all
+// wait, frozen on the last step before them, for the host's state. a respawn needs GameState.saved, which only
+// the host has, and a death the host doesn't confirm must never show. so the clock and the deaths the guest
+// draws are the host's, a few frames ahead while playing and equal whenever the game stands still.
+// a correction that is really a jump (another stage, a respawn, a gravity flip, into or out of a cannon, through
+// a portal) snaps; every other one eases out over a few frames. the guest's frames and keys run on through
+// respawns and stage changes: only a new level or a restart begins a new attempt.
+// the state crosses in two parts (emberProtocol.ts): the slow part only when it changes, so the guest keeps the
+// last one, and a state whose slow part it doesn't hold waits aside while its next key message asks for it
 
 export type { EmberGame, EmberScreen, EmberView } from './emberTypes'
 
@@ -60,8 +84,10 @@ const SLACK_WINDOW = 8
 // a correction bigger than this jumps (a portal, a respawn); smaller ones ease out by SMOOTH per step
 const SNAP_PX = 40
 const SMOOTH = 0.8
+// the guest asks for a slow part it's missing at most this often
+const ASK_MS = 100
 // the guest plays these for its own character as it predicts them, and skips the host's copies
-const OWN_KINDS = new Set<GameEvent['k']>(['jump', 'land', 'gem', 'portal', 'push'])
+const OWN_KINDS = new Set<GameEvent['k']>(['jump', 'land', 'gem', 'portal', 'push', 'airjump', 'bounce'])
 const NAMES = ['ember', 'frost'] as const
 const NOTE_TEXT: Record<EmberNote, string> = {
   play: 'started the level',
@@ -254,7 +280,7 @@ abstract class OnlineGame implements EmberGame {
   }
 
   private hi(): void {
-    this.post({ t: 'hi', v: EMBER_VERSION, ...(this.greeted ? { ok: true } : {}) })
+    this.post({ t: 'hi', v: EMBER_VERSION, w: WIRE_VERSION, ...(this.greeted ? { ok: true } : {}) })
   }
 
   private end(line: string): void {
@@ -281,7 +307,7 @@ abstract class OnlineGame implements EmberGame {
     this.heard = now
     this.now = Math.max(this.now, now)
     if (m.t === 'hi') {
-      if (m.v !== EMBER_VERSION) {
+      if (m.v !== EMBER_VERSION || m.w !== WIRE_VERSION) {
         this.post({ t: 'bye' })
         this.end('update both Q Calcs to play each other')
         return
@@ -375,6 +401,13 @@ class HostGame extends OnlineGame {
   // due times step by STATE_MS, so 60 and 120hz frames both send STATE_HZ
   private nextState = -Infinity
   private nextSel = -Infinity
+  // the slow part as last sent, its number, how many more messages must carry it, and messages since one did
+  private slowText = ''
+  private rev = 0
+  private slowLeft = 0
+  private sinceKey = 0
+  // the last state message's frame and events, sent once more with the next
+  private last: [number, GameEvent[]] | null = null
 
   pick(index: number): void {
     if (this.screen !== 'select') return
@@ -422,6 +455,9 @@ class HostGame extends OnlineGame {
     this.queuedTo = -1
     this.slack = undefined
     this.pending = []
+    this.last = null
+    // a new attempt always begins with its slow part
+    this.slowText = ''
     this.nextState = -Infinity
     this.clock.reset()
     return true
@@ -460,7 +496,10 @@ class HostGame extends OnlineGame {
   protected handle(m: EmberMsg): void {
     switch (m.t) {
       case 'k': {
-        if (this.screen !== 'play' || m.a !== this.attempt) return
+        if (this.screen !== 'play') return
+        // the guest holds another slow part than the current one, or none: send it again
+        if (m.r !== this.rev) this.slowLeft = Math.max(this.slowLeft, 1)
+        if (m.a !== this.attempt) return
         for (const c of m.i) {
           if (c[0] <= this.queuedTo) continue
           this.queue.push(c)
@@ -507,16 +546,32 @@ class HostGame extends OnlineGame {
       if (now >= this.nextState) {
         // a frame that came very late doesn't make the next few go early
         this.nextState = Math.max(this.nextState, now - STATE_MS / 2) + STATE_MS
+        const stage = stageOf(this.compiled, this.state)
+        const k = slowOf(this.level, stage, this.state)
+        const text = JSON.stringify(k)
+        if (text !== this.slowText) {
+          this.slowText = text
+          this.rev++
+          this.slowLeft = SLOW_REPEAT
+        }
+        const key = this.slowLeft > 0 || this.sinceKey >= KEY_EVERY - 1
+        if (key) {
+          this.slowLeft = Math.max(0, this.slowLeft - 1)
+          this.sinceKey = 0
+        } else this.sinceKey++
         this.post({
           t: 's',
-          l: this.level,
           a: this.attempt,
           f: this.frame,
           fi: this.held,
           ...(this.slack ? { sl: this.slack } : {}),
-          g: this.state,
+          r: this.rev,
+          ...(key ? { k } : {}),
+          g: fastOf(stage, this.state),
           e: this.pending,
+          ...(this.last?.[1].length ? { q: this.last } : {}),
         })
+        this.last = [this.frame, this.pending]
         this.pending = []
         this.slack = undefined
       }
@@ -568,6 +623,13 @@ class GuestGame extends OnlineGame {
   ]
   private winSeen = false
   private picked: { l: number; until: number } | null = null
+  // the slow part held and its number; a state that needs another one, kept until it comes
+  private slow: Slow | null = null
+  private slowRev = -1
+  private parked: StateMsg | null = null
+  private asked = -Infinity
+  // the host frame whose events were last played
+  private evF = -1
 
   pick(index: number): void {
     if (this.screen !== 'select') return
@@ -602,6 +664,7 @@ class GuestGame extends OnlineGame {
         if (this.screen !== 'select') {
           this.screen = 'select'
           this.auth = this.cur = this.prev = this.compiled = null
+          this.parked = null
         }
         // an older select still in flight shouldn't undo this side's own move
         if (this.picked && now < this.picked.until && m.l !== this.picked.l) return
@@ -616,13 +679,30 @@ class GuestGame extends OnlineGame {
     }
   }
 
-  private onState(m: Extract<EmberMsg, { t: 's' }>): void {
+  private onState(m: StateMsg): void {
     if (m.a < this.attempt) return
-    const level = compiledAt(m.l)
-    if (!level || !fitsLevel(level, m.g)) return
-    if (m.a > this.attempt) {
+    const fresh = m.a > this.attempt
+    if (!fresh && (this.screen !== 'play' || m.f <= this.authF)) return
+    const slow = m.k ?? (!fresh && m.r === this.slowRev ? this.slow : null)
+    if (!slow) {
+      // its slow part was lost or is still on its way: keep the newest such state and ask
+      const p = this.parked
+      if (!p || m.a > p.a || (m.a === p.a && m.f > p.f)) this.parked = m
+      if (this.now - this.asked >= ASK_MS) {
+        this.asked = this.now
+        this.unsent = true
+      }
+      return
+    }
+    const level = compiledAt(slow.l)
+    const g = level && joinState(level, slow, m.g)
+    if (!level || !g) return
+    this.slow = slow
+    this.slowRev = m.r
+    const before = fresh ? null : this.auth
+    if (fresh) {
       this.attempt = m.a
-      this.level = m.l
+      this.level = slow.l
       this.compiled = level
       this.screen = 'play'
       this.frame = m.f + this.lead
@@ -634,21 +714,24 @@ class GuestGame extends OnlineGame {
       this.slacks = []
       this.skip = 0
       this.winSeen = false
+      this.evF = -1
       this.offsets = [
         { x: 0, y: 0 },
         { x: 0, y: 0 },
       ]
-    } else if (m.l !== this.level || m.f <= this.authF || this.screen !== 'play') return
-    this.auth = m.g
+    }
+    this.auth = g
     this.authF = m.f
     this.fireBits = m.fi
     this.dirty = true
-    for (const e of m.e) {
-      if (e.k === 'win' || !eventFits(stageOf(level, m.g), e)) continue
-      if ('p' in e && e.p === this.me && OWN_KINDS.has(e.k)) continue
-      this.out.push(e)
-    }
-    if (m.g.phase === 'won' && !this.winSeen) {
+    const stage = stageOf(level, g)
+    const heard = [...(m.q && m.q[0] > this.evF ? m.q[1] : []), ...m.e].filter((e) => e.k !== 'win' && eventFits(level, stage, e))
+    this.evF = m.f
+    // two lost messages running could take a stage change or a respawn with them: the camera needs both
+    if (before && before.stage !== g.stage && !heard.some((e) => e.k === 'stage')) heard.push({ k: 'stage', stage: g.stage })
+    else if (before && before.deaths !== g.deaths && !heard.some((e) => e.k === 'respawn')) heard.push({ k: 'respawn', cp: g.cp })
+    for (const e of heard) if (!('p' in e && e.p === this.me && OWN_KINDS.has(e.k))) this.out.push(e)
+    if (g.phase === 'won' && !this.winSeen) {
       this.winSeen = true
       this.out.push({ k: 'win' })
     }
@@ -659,6 +742,13 @@ class GuestGame extends OnlineGame {
     }
     this.steer(m.sl)
     this.lead = Math.min(MAX_AHEAD, Math.max(2, this.frame - m.f))
+    // a newer state was waiting for this slow part
+    const p = this.parked
+    if (p && (p.a < m.a || (p.a === m.a && p.f <= m.f))) this.parked = null
+    else if (p && p.a === m.a && p.r === m.r) {
+      this.parked = null
+      this.onState(p)
+    }
   }
 
   // keys turning up late: run further ahead at once. keys turning up early for a while: ease back a frame
@@ -711,14 +801,25 @@ class GuestGame extends OnlineGame {
     }
     this.cur = s
     this.prev = prev.stage === s.stage ? prev : s
+    // the whole world jumped: another phase, another stage, or back at a checkpoint
+    const all = !before || before.phase !== s.phase || before.stage !== s.stage || before.deaths !== s.deaths
     for (const p of [0, 1] as const) {
       const o = this.offsets[p]
       const a = before?.players[p]
       const b = s.players[p]
-      // keep what's on screen where it was and let the difference ease out, unless it's a jump
+      // keep what's on screen where it was and let the difference ease out, unless it's a jump:
+      // gravity the other way, into or out of a cannon, a shot beginning or ending, a portal, or just far
       const x = a ? a.x + o.x - b.x : 0
       const y = a ? a.y + o.y - b.y : 0
-      const far = !before || before.phase !== s.phase || before.stage !== s.stage || Math.hypot(x, y) > SNAP_PX
+      const far =
+        all ||
+        !a ||
+        a.grav !== b.grav ||
+        a.cannon !== b.cannon ||
+        a.fly > 0 !== b.fly > 0 ||
+        a.portalCd > 0 !== b.portalCd > 0 ||
+        a.alive !== b.alive ||
+        Math.hypot(x, y) > SNAP_PX
       this.offsets[p] = far ? { x: 0, y: 0 } : { x, y }
     }
   }
@@ -762,7 +863,13 @@ class GuestGame extends OnlineGame {
     if (this.greeted && (this.unsent || now - this.lastSent >= KEEP_MS)) {
       this.unsent = false
       this.lastSent = now
-      this.post({ t: 'k', a: Math.max(0, this.attempt), f: this.frame, i: this.screen === 'play' ? this.recent : [] })
+      this.post({
+        t: 'k',
+        a: Math.max(0, this.attempt),
+        f: this.frame,
+        i: this.screen === 'play' ? this.recent : [],
+        ...(this.slowRev >= 0 ? { r: this.slowRev } : {}),
+      })
     }
   }
 
