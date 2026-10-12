@@ -1,12 +1,17 @@
-import { describe } from 'vitest'
+import { describe, it } from 'vitest'
+import { compileLevel } from '../emberEngine'
+import type { LevelDef } from '../emberTypes'
 import { BASICS } from './basics'
-import { describeLevel, type Walkthrough } from './testkit'
+import { describeLevel, LEFT, record, timingSummary, type LevelChecks, type StageRun, type Walkthrough } from './testkit'
 
-// hand-made input sequences that finish levels in the real engine: one script per stage, each a list of
-// [ticks, fire bits, frost bits] with 1 left, 2 right, 4 jump, 8 down (one player moves at a time, mostly).
-// TODO(ember-2:levels-a): these are version 1's levels and walkthroughs, each a single stage
+// every level of the pack with a walkthrough that finishes it in the real engine without a death: one script
+// per stage. the new levels' walkthroughs are written with the testkit's recorder: each line drives the engine
+// (walk to a column, jump, wait for a gate) and the bare inputs it took are what describeLevel replays.
+// EMBER_TRACE=1 prints each level's timings
 const one = (script: Walkthrough[number]): Walkthrough => [script]
 
+// TODO(ember-2:levels-a): version 1's hand-made scripts, [ticks, fire bits, frost bits] with 1 left, 2 right,
+// 4 jump, 8 down, for the old levels still in the pack
 const SCRIPTS: Record<string, Walkthrough[number]> = {
   'first-light': [
     // ember: over the step, through the lava, over the goo, up the step and shelf, down to the red door
@@ -102,6 +107,89 @@ const SCRIPTS: Record<string, Walkthrough[number]> = {
   ],
 }
 
+
+const E = 'ember'
+const F = 'frost'
+
+// the last one into their door: the stage ends the tick they arrive, mid-stride
+const last = (r: StageRun, p: 'ember' | 'frost', bits: number) => r.oneUntil(p, bits, (pl) => pl.inDoor, {}, 'to walk into the door')
+
+// the recorded walkthroughs: per level, one function per stage
+const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: LevelChecks }> = {
+  'dead-weight': {
+    checks: { minSecs: 45, skipReach: true },
+    stages: [
+      (r) => {
+        // act 1. ember holds the plate, frost goes through and parks the crate on the second plate
+        r.walkToStop(E, 4.5).waitGate(0)
+        r.walkTo(F, 11).settle(F)
+        r.walkTo(E, 9)
+        // the crate under the deck; frost up it and through the deck, and along for the gem
+        r.walkTo(F, 16.3).settle(F)
+        r.jump(F, 1, { toX: 17.5 }).jump(F, 0).expect(() => r.at(F).y === 11, `${F} on row 11`)
+        r.jump(F, 1, { toX: 19.5 })
+        // ember over the crate, the gem under the deck, then the plate
+        r.walkTo(E, 14.5).jump(E, 1, { toX: 17.5 }).walkToStop(E, 23).jump(E, 0).walkToStop(E, 21.5).waitGate(1)
+        r.walkToStop(F, 33.5).waitGate(2)
+        r.walkTo(E, 37.5)
+        r.walkTo(F, 35).land(F).walkTo(F, 38.5).bothLand().checkpoint(0).mark('act 2')
+        // act 2. the goo, the pit (frost drops in for the gem), the block, the deck
+        for (const p of [E, F] as const) {
+          r.walkTo(p, 39.2).jump(p, 1, { toX: 42.4 })
+          r.walkTo(p, 43.5).land(p).jump(p, 1, { toX: 46 })
+          // a full jump from the floor goes up through the deck by itself; the block at x49-50 is the easy way
+          r.walkTo(p, 47.5).jump(p, 1, { toX: 49.6 })
+          if (r.at(p).y > 12) r.jump(p, 0)
+          r.expect(() => r.at(p).y === 12, `${p} on row 12`)
+        }
+        // ember up the crate for the gem on the top deck, back down off its end, and over the crate
+        r.jump(E, -1, { toX: 47.5 }).jump(E, 0).expect(() => r.at(E).y === 8, `${E} on row 8`)
+        r.oneUntil(E, LEFT, (pl) => !pl.ground, {}, 'to step off the top deck').land(E).expect(() => r.at(E).y === 12, `${E} on row 12`)
+        r.jump(E, 1, { toX: 49.5 })
+        // frost up top; ember sends the crate into the pit
+        r.jump(F, -1, { toX: 47.5 }).jump(F, 0).expect(() => r.at(F).y === 8, `${F} on row 8`)
+        r.oneUntil(E, LEFT, (_, s) => s.boxes[1]!.y > 241, {}, 'the crate to fall').waitChannel('pit').waitGate(3)
+        r.walkToStop(F, 59).waitGate(4)
+        r.walkToStop(E, 62)
+        // the rungs
+        for (let i = 0; i < 3; i++) r.jump(E, 0)
+        r.jump(E, -1, { toX: 61 }).expect(() => r.at(E).y === 5, `${E} on row 5`)
+        r.walkToStop(F, 60)
+        while (r.at(F).y > 2) r.jump(F, 0)
+        r.checkpoint(1).mark('act 3')
+        // act 3. the first airlock: ember's lever lets frost in, frost's lets ember in, and each lets the other out
+        r.walkToStop(E, 41).press(E).waitGate(5)
+        r.walkToStop(F, 35).press(F).waitGate(7)
+        r.press(E).walkToStop(E, 36)
+        r.press(F).waitGate(6).waitGate(8)
+        // the second, the other way round
+        r.walkToStop(F, 26).press(F).waitGate(9)
+        r.walkToStop(E, 20).press(E).waitGate(11)
+        r.press(F).walkToStop(F, 21)
+        r.press(E).waitGate(10).waitGate(12)
+        r.intoDoor(E, -1)
+        last(r, F, LEFT)
+      },
+    ],
+  },
+}
+
+function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown } {
+  const run = RUNS[def.id]
+  if (!run) return { walk: SCRIPTS[def.id] && one(SCRIPTS[def.id]!), error: null }
+  try {
+    const walk = record(def, run.stages)
+    if (process.env.EMBER_TRACE) console.log(`${def.id}\n${timingSummary(compileLevel(def), walk)}`)
+    return { walk, error: null }
+  } catch (error) {
+    return { walk: undefined, error }
+  }
+}
+
 describe('basics', () => {
-  for (const def of BASICS) describeLevel(def, SCRIPTS[def.id] && one(SCRIPTS[def.id]!))
+  for (const def of BASICS) {
+    const { walk, error } = walkFor(def)
+    if (error) it(`${def.id}: the walkthrough records`, () => { throw error })
+    describeLevel(def, walk, RUNS[def.id]?.checks)
+  }
 })
