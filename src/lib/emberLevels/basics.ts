@@ -287,17 +287,17 @@ const THIN_ICE: LevelDef = {
 //  - the goo at x17-23 is too wide to jump: jump, touch the arrow over it (x21, y13) and jump again in mid-air.
 //    the arrow comes back 2.5 s after someone takes it
 //  - the fan at x7-8 runs while a plate is held: the one in the water at x11-13 (frost's) or the one in the lava
-//    on the high ledge at x2-4, y9 (ember's). so ember goes first: frost stands in the water, ember floats up,
+//    on the high ledge at x2-4, y10 (ember's). so ember goes first: frost stands in the water, ember floats up,
 //    touches the arrow at the top of the fan (x7, y10) and jumps again, left onto the ledge. she stands in the
 //    lava; frost walks into the fan, floats up, takes the arrow once it's back and joins her
-//  - from the ledge's end (x6) another arrow (x9, y5) carries each across to the top ledge (x13-22):
-//    red door at x16, blue door at x19
+//  - from the ledge's end (x6) another arrow (x9, y6) carries each across to the top ledge (x13-17):
+//    red door at x14, blue door at x16
 //  - nothing here can be lost for good: a fall costs the climb, and whoever is still up holds the plate again
 const UPDRAFT: LevelDef = {
   id: 'updraft-tower',
   name: 'updraft',
   hint: 'fans lift whoever floats over them',
-  par: 130,
+  par: 135,
   stages: [
     {
       map: [
@@ -308,15 +308,15 @@ const UPDRAFT: LevelDef = {
       '#..............................#', // 2
       '#..............................#', // 3
       '#..............................#', // 4
-      '#........^.....................#', // 5
-      '#..............................#', // 6
+      '#..............................#', // 5
+      '#........^.....................#', // 6
       '#..............................#', // 7
-      '#..r..........b.R..B.r.........#', // 8
-      '##LLL##......##########........#', // 9
-      '#......^.......................#', // 10
+      '#..............................#', // 8
+      '#..r.........bR.Br.............#', // 9
+      '##LLL##^.....#####.............#', // 10
       '#..............................#', // 11
       '#..............................#', // 12
-      '#.......b............^.........#', // 13
+      '#......b.............^.........#', // 13
       '#..............................#', // 14
       '#..............................#', // 15
       '#..........................C...#', // 16
@@ -346,7 +346,7 @@ const UPDRAFT: LevelDef = {
       '#..............................#', // 40
       '#..............................#', // 41
       '#..............................#', // 42
-      '#...........b.r................#', // 43
+      '#............b.r...............#', // 43
       '#########............########..#', // 44
       '#..............................#', // 45
       '#............b.................#', // 46
@@ -354,7 +354,7 @@ const UPDRAFT: LevelDef = {
       '#..............................#', // 48
       '#..............................#', // 49
       '#..............................#', // 50
-      '#.12............r..............#', // 51
+      '#.12......r....................#', // 51
       '########LLLLLLLLLLLL###LLL######', // 52
       '################################', // 53
       ],
@@ -378,7 +378,7 @@ const UPDRAFT: LevelDef = {
         // the top
         { k: 'plate', x: 11, y: 16, w: 3, ch: 'h' },
         { k: 'fan', x: 7, y: 16, w: 2, h: 5, when: 'h' },
-        { k: 'plate', x: 2, y: 8, w: 3, ch: 'h' },
+        { k: 'plate', x: 2, y: 9, w: 3, ch: 'h' },
         { k: 'sign', x: 11, y: 45, text: 'one fan stops, the other starts' },
         { k: 'sign', x: 10, y: 31, text: 'every bounce is higher' },
         { k: 'sign', x: 24, y: 24, text: 'it comes back when the plate lets go' },
@@ -444,7 +444,7 @@ const LOCK_AND_LIGHT: LevelDef = {
   id: 'lock-and-light',
   name: 'lock and light',
   hint: 'light stops at anything solid: you, a crate, ice, a lock',
-  par: 150,
+  par: 160,
   stages: [
     {
       name: 'lamplight',

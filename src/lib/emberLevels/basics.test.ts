@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compileLevel, validateLevel } from '../emberEngine'
+import { compileLevel, startStage, step, validateLevel } from '../emberEngine'
 import type { LevelDef } from '../emberTypes'
 import { BASICS } from './basics'
 import { describeLevel, JUMP, LEFT, record, RIGHT, StageRun, timingSummary, type LevelChecks, type Walkthrough } from './testkit'
@@ -213,13 +213,13 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
         // frost into the water, on the fan's plate; ember over the water, up the fan, the arrow, and left onto the ledge
         r.walkToStop(F, 12)
         r.walkTo(E, 14.3).jump(E, -1, { toX: 9.6 }).walkTo(E, 7.4).takeArrow(E, 0).airJump(E, -1, { toX: 5.4 })
-        r.expect(() => r.at(E).y === 8, 'ember on the high ledge').walkToStop(E, 3.5)
+        r.expect(() => r.at(E).y === 9, 'ember on the high ledge').walkToStop(E, 3.5)
         // frost the same way while ember holds the plate in the lava
-        r.walkTo(F, 7.4).waitArrow(1).takeArrow(F, 0).airJump(F, -1, { toX: 5.6 }).expect(() => r.at(F).y === 8, 'frost on the high ledge')
+        r.walkTo(F, 7.4).waitArrow(1).takeArrow(F, 0).airJump(F, -1, { toX: 5.6 }).expect(() => r.at(F).y === 9, 'frost on the high ledge')
         // the last arrow, across to the doors
-        r.walkTo(F, 6.2).jump(F, 1, { land: false }).takeArrow(F, 1).airJump(F, 1, { toX: 14 }).expect(() => r.at(F).y === 8, 'frost on the top ledge')
-        r.walkTo(E, 6.2).waitArrow(0).jump(E, 1, { land: false }).takeArrow(E, 1).airJump(E, 1, { toX: 14 }).expect(() => r.at(E).y === 8, 'ember on the top ledge')
-        r.walkTo(E, 21).intoDoor(E, -1)
+        r.walkTo(F, 6.2).jump(F, 1, { land: false }).takeArrow(F, 1).airJump(F, 1, { toX: 14 }).expect(() => r.at(F).y === 9, 'frost on the top ledge')
+        r.walkTo(E, 6.2).waitArrow(0).jump(E, 1, { land: false }).takeArrow(E, 1).airJump(E, 1, { toX: 14 }).expect(() => r.at(E).y === 9, 'ember on the top ledge')
+        r.walkTo(E, 17).walkTo(F, 13).intoDoor(E, -1)
         last(r, F, RIGHT)
       },
     ],
@@ -304,12 +304,28 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
   },
 }
 
+// EMBER_TRACE: the gems a walkthrough leaves behind, per stage, as tiles
+function missed(def: LevelDef, walk: Walkthrough): string {
+  const level = compileLevel(def)
+  let out = ''
+  let s = startStage(level, 0)
+  for (let i = 0; i < level.stages.length; i++) {
+    let last = s
+    for (const [ticks, a, b] of walk[i]!) for (let t = 0; t < ticks && s.phase === 'play' && s.stage === i; t++) s = step(level, (last = s), [a, b])
+    const end = s.stage === i ? s : last
+    const left = level.stages[i]!.gems.filter((_, g) => !end.taken[g]).map((g) => `${g.el} ${Math.floor(g.x / 20)},${Math.floor(g.y / 20)}`)
+    if (left.length) out += `\nstage ${i + 1} leaves ${left.join('; ')}`
+    for (let t = 0; t < 600 && s.phase === 'clear'; t++) s = step(level, s, [0, 0])
+  }
+  return out
+}
+
 function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown } {
   const run = RUNS[def.id]
   if (!run) return { walk: SCRIPTS[def.id] && one(SCRIPTS[def.id]!), error: null }
   try {
     const walk = record(def, run.stages)
-    if (process.env.EMBER_TRACE) console.log(`${def.id}\n${timingSummary(compileLevel(def), walk)}`)
+    if (process.env.EMBER_TRACE) console.log(`${def.id}\n${timingSummary(compileLevel(def), walk)}${missed(def, walk)}`)
     return { walk, error: null }
   } catch (error) {
     return { walk: undefined, error }
