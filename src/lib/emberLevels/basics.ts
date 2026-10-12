@@ -281,8 +281,10 @@ const THIN_ICE: LevelDef = {
 //  - frost stands in the water. ember bounces on the second trampoline (x17-18, on the ledge) until she can
 //    steer right onto the platform, and then frost lets go: the platform carries her back to the far ledge
 //  - ember stands on the plate at x29: the platform comes out again. frost takes the trampolines up onto it,
-//    ember steps off the plate into the fan at x30 and floats up through the ceiling; the platform brings
-//    frost over and he follows. checkpoint at x27
+//    ember steps off the plate into the fan at x30 and floats up through the ceiling, drifting left onto the
+//    floor at x28; the platform brings frost over and he follows. checkpoint at x27
+//  - (gone up without holding the plate for the other? the hole in the ceiling is two wide: drop back down
+//    its left half, out of the fan, onto the plate)
 //  the top (floor y17):
 //  - the goo at x17-23 is too wide to jump: jump, touch the arrow over it (x21, y13) and jump again in mid-air.
 //    the arrow comes back 2.5 s after someone takes it
@@ -320,8 +322,8 @@ const UPDRAFT: LevelDef = {
       '#..............................#', // 14
       '#..............................#', // 15
       '#..........................C...#', // 16
-      '###########WWW###GGGGGGG######.#', // 17
-      '##############################.#', // 18
+      '###########WWW###GGGGGGG#####..#', // 17
+      '#############################..#', // 18
       '#..............................#', // 19
       '#..............................#', // 20
       '#.......................br.....#', // 21

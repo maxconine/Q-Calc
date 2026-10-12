@@ -204,8 +204,8 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
         glide(r, F, 14.5).expect(() => r.at(F).y === 28, 'frost on the ledge')
         r.walkTo(F, 17).bounce(F, 655)
         glide(r, F, 21.6).expect(() => r.at(F).y === 21, 'frost on the platform')
-        r.walkTo(E, 30.2).oneUntil(E, 0, () => feet(0) < 16.9, {}, 'ember to float up').walkTo(E, 28.6).land(E)
-        r.waitMover(2, 0).walkTo(F, 30.2).oneUntil(F, 0, () => feet(1) < 16.9, {}, 'frost to float up').walkTo(F, 28).land(F)
+        r.walkTo(E, 30.2).oneUntil(E, 0, () => feet(0) < 16.6, {}, 'ember to float up').walkTo(E, 27.8).land(E).expect(() => r.at(E).y === 16, 'ember on the top floor')
+        r.waitMover(2, 0).walkTo(F, 30.2).oneUntil(F, 0, () => feet(1) < 16.6, {}, 'frost to float up').walkTo(F, 27.8).land(F).expect(() => r.at(F).y === 16, 'frost on the top floor')
         r.walkToStop(E, 27.4).walkToStop(F, 26.8).checkpoint(0).mark('the top')
         // the top. the goo: jump, take the arrow, jump again. frost, then ember once it's back
         r.walkTo(F, 24.4).jump(F, -1, { land: false }).takeArrow(F, -1).airJump(F, -1, { toX: 15.5 })
