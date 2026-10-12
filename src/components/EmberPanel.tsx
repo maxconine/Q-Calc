@@ -287,7 +287,7 @@ function Title({
       </h2>
       <p className="ember-line">two of you, on one keyboard or two computers anywhere. both get to their doors.</p>
       <p className="ember-note ember-blurb">
-        {LEVELS.length} long levels, every one open: lights out, gravity upside down, cannons, keys, and checkpoints on the way.
+        {LEVELS.length} long levels, every one open: lights out, gravity upside down, trampolines, keys, and checkpoints on the way.
       </p>
       <div className="ember-actions">
         <button type="button" className="ember-button" onClick={onLocal}>
