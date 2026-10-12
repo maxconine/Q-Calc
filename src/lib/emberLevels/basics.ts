@@ -258,6 +258,137 @@ const THIN_ICE: LevelDef = {
   ],
 }
 
+// 4. updraft: fans, lifts, trampolines and double-jump arrows. one screen wide and three tall: a tower climbed
+// from the bottom. the best of version 1's 'updraft' and 'the lifts'.
+//  the bottom (floor y52):
+//  - the lava at x8-19 has two fans over it: the left one (x8-14) runs while the plate at x5-6 is held, the
+//    right one (x13-19) while it ISN'T. ember stands on the plate; frost walks off the edge into the left fan
+//    and floats to the middle (x13-14), where one fan or the other always blows. there he waits, ember steps
+//    off, the right fan takes over, and he floats on across. (off the plate too soon and he drops in the lava)
+//  - ember wades the lava. the lift at x29-30 rises while someone stands on the plate at x23-25, which lies in
+//    lava: so it's ember who holds it and frost who rides. frost jumps the lava and onto the lift FIRST, then
+//    ember steps in; up on the ledge (y44) frost waits by the lever at x27
+//  - ember steps out, the lift comes back down, she gets on, and frost flips the lever: it carries her up and stays
+//  - both jump from the ledge's end (x21) onto the platform that shuttles between x16-18 and x10-12 over the
+//    fans, ride it left (a gem each on the way) and jump off onto the ledge at x1-8
+//  - the fan in the corner (x1-2) blows up through the ceiling while its plate is held: one stands on the
+//    plate at x5-6, the other rides up and stands on the plate at x4-5 on the next floor, and the first follows.
+//    checkpoint at x8
+//  the middle (floor y35):
+//  - the trampoline at x10-11: every bounce is higher than the last, up to eight tiles. a gem each right above
+//    it; then steer right onto the ledge at x13-16 (y29)
+//  - the platform up at y22 rests by the ledge at x29-30 and slides out to x21-22 while a plate is held: the
+//    one in the water at x14-16 on the floor (frost's), or the one at x29 on the far ledge
+//  - frost stands in the water. ember bounces on the second trampoline (x17-18, on the ledge) until she can
+//    steer right onto the platform, and then frost lets go: the platform carries her back to the far ledge
+//  - ember stands on the plate at x29: the platform comes out again. frost takes the trampolines up onto it,
+//    ember steps off the plate into the fan at x30 and floats up through the ceiling; the platform brings
+//    frost over and he follows. checkpoint at x27
+//  the top (floor y17):
+//  - the goo at x17-23 is too wide to jump: jump, touch the arrow over it (x21, y13) and jump again in mid-air.
+//    the arrow comes back 2.5 s after someone takes it
+//  - the fan at x7-8 runs while a plate is held: the one in the water at x11-13 (frost's) or the one in the lava
+//    on the high ledge at x2-4, y9 (ember's). so ember goes first: frost stands in the water, ember floats up,
+//    touches the arrow at the top of the fan (x7, y10) and jumps again, left onto the ledge. she stands in the
+//    lava; frost jumps the... no: he walks to the fan, floats up, takes the arrow and joins her
+//  - from the ledge's end (x5) another arrow (x8, y5) carries each across to the top ledge (x13-22):
+//    red door at x16, blue door at x19
+//  - nothing here can be lost for good: a fall costs the climb, and whoever is still up holds the plate again
+const UPDRAFT: LevelDef = {
+  id: 'updraft-tower',
+  name: 'updraft',
+  hint: 'fans lift whoever floats over them',
+  par: 130,
+  stages: [
+    {
+      map: [
+    // 00000000001111111111222222222233
+    // 01234567890123456789012345678901
+    '################################', // 0
+    '#..............................#', // 1
+    '#..............................#', // 2
+    '#..............................#', // 3
+    '#..............................#', // 4
+    '#.......^......................#', // 5
+    '#..............................#', // 6
+    '#..............................#', // 7
+    '#..r..........b.R..B.r.........#', // 8
+    '##LLL#.......##########........#', // 9
+    '#......^.......................#', // 10
+    '#..............................#', // 11
+    '#..............................#', // 12
+    '#.......b............^.........#', // 13
+    '#..............................#', // 14
+    '#..............................#', // 15
+    '#..........................C...#', // 16
+    '###########WWW###GGGGGGG######.#', // 17
+    '##############################.#', // 18
+    '#..............................#', // 19
+    '#..............................#', // 20
+    '#.......................br.....#', // 21
+    '#............................###', // 22
+    '#..............................#', // 23
+    '#..............................#', // 24
+    '#..............................#', // 25
+    '#..............................#', // 26
+    '#.........rb...................#', // 27
+    '#..............................#', // 28
+    '#............####TT#...........#', // 29
+    '#..............................#', // 30
+    '#..............................#', // 31
+    '#..............................#', // 32
+    '#..............................#', // 33
+    '#.......C......................#', // 34
+    '#..#######TT##WWW###############', // 35
+    '#..#############################', // 36
+    '#..............................#', // 37
+    '#..............................#', // 38
+    '#..............................#', // 39
+    '#..............................#', // 40
+    '#..............................#', // 41
+    '#..............................#', // 42
+    '#...........b.r................#', // 43
+    '#########............########..#', // 44
+    '#..............................#', // 45
+    '#............b.................#', // 46
+    '#..............................#', // 47
+    '#..............................#', // 48
+    '#..............................#', // 49
+    '#..............................#', // 50
+    '#.12............r..............#', // 51
+    '########LLLLLLLLLLLL###LLL######', // 52
+    '################################', // 53
+      ],
+      things: [
+        // the bottom
+        { k: 'plate', x: 5, y: 51, ch: 'a' },
+        { k: 'fan', x: 8, y: 51, w: 7, h: 5, when: 'a' },
+        { k: 'fan', x: 13, y: 51, w: 7, h: 5, when: '!a' },
+        { k: 'plate', x: 23, y: 51, w: 3, ch: 'lift' },
+        { k: 'mover', x: 29, y: 51, w: 2, h: 1, to: { x: 29, y: 44 }, when: 'lift' },
+        { k: 'lever', x: 27, y: 43, ch: 'lift' },
+        { k: 'mover', x: 16, y: 44, w: 3, h: 1, to: { x: 10, y: 44 }, speed: 1.5 },
+        { k: 'fan', x: 1, y: 43, w: 2, h: 10, when: 'g' },
+        { k: 'plate', x: 5, y: 43, ch: 'g' },
+        { k: 'plate', x: 4, y: 34, ch: 'g' },
+        // the middle
+        { k: 'plate', x: 14, y: 34, w: 3, ch: 'plat' },
+        { k: 'mover', x: 27, y: 22, w: 2, h: 1, to: { x: 21, y: 22 }, when: 'plat' },
+        { k: 'plate', x: 29, y: 21, w: 1, ch: 'plat' },
+        { k: 'fan', x: 30, y: 21, w: 1, h: 6 },
+        // the top
+        { k: 'plate', x: 11, y: 16, w: 3, ch: 'h' },
+        { k: 'fan', x: 7, y: 16, w: 2, h: 5, when: 'h' },
+        { k: 'plate', x: 2, y: 8, w: 3, ch: 'h' },
+        { k: 'sign', x: 11, y: 45, text: 'one fan stops, the other starts' },
+        { k: 'sign', x: 10, y: 31, text: 'every bounce is higher' },
+        { k: 'sign', x: 24, y: 24, text: 'it comes back when the plate lets go' },
+        { k: 'sign', x: 21, y: 11, text: 'touch the arrow, jump again in the air' },
+      ],
+    },
+  ],
+}
+
 // TODO(ember-2:levels-a): version 1's levels that haven't been reworked yet stay playable after the new ones
-const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates', 'thaw', 'white-crossing', 'cold-storage']
-export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]
+const REPLACED = ['first-light', 'two-lanes', 'hold-the-door', 'lockstep', 'crates', 'thaw', 'white-crossing', 'cold-storage', 'updraft', 'the-lifts']
+export const BASICS: LevelDef[] = [FIRST_LIGHT, DEAD_WEIGHT, THIN_ICE, UPDRAFT, ...LEGACY.filter((l) => !REPLACED.includes(l.id))]

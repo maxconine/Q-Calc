@@ -1,8 +1,8 @@
-import { describe, it } from 'vitest'
-import { compileLevel } from '../emberEngine'
+import { describe, expect, it } from 'vitest'
+import { compileLevel, validateLevel } from '../emberEngine'
 import type { LevelDef } from '../emberTypes'
 import { BASICS } from './basics'
-import { describeLevel, LEFT, record, RIGHT, timingSummary, type LevelChecks, type StageRun, type Walkthrough } from './testkit'
+import { describeLevel, JUMP, LEFT, record, RIGHT, timingSummary, type LevelChecks, type StageRun, type Walkthrough } from './testkit'
 
 // every level of the pack with a walkthrough that finishes it in the real engine without a death: one script
 // per stage. the new levels' walkthroughs are written with the testkit's recorder: each line drives the engine
@@ -113,6 +113,20 @@ const F = 'frost'
 
 // the last one into their door: the stage ends the tick they arrive, mid-stride
 const last = (r: StageRun, p: 'ember' | 'frost', bits: number) => r.oneUntil(p, bits, (pl) => pl.inDoor, {}, 'to walk into the door')
+
+// in the air: steers towards a tile column until the player lands. jump stays held while rising (letting go
+// would cut a bounce short) and is let go on the way down (held through a landing, it hops again)
+function glide(r: StageRun, p: 'ember' | 'frost', tileX: number, other = 0): StageRun {
+  const i = p === 'ember' ? 0 : 1
+  const target = tileX * 20 + 10
+  for (let t = 0; !r.state.players[i].ground && !r.over; t++) {
+    if (t > 600) r.fail(`${p} never landed`)
+    const cx = r.state.players[i].x + 7
+    const up = r.state.players[i].vy < 0 ? JUMP : 0
+    r.one(p, (cx < target - 2 ? RIGHT : cx > target + 2 ? LEFT : 0) | up, 1, { other })
+  }
+  return r
+}
 
 // the recorded walkthroughs: per level, one function per stage
 const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: LevelChecks }> = {
@@ -232,6 +246,56 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
       },
     ],
   },
+  'updraft-tower': {
+    checks: { minSecs: 70, skipReach: true },
+    stages: [
+      (r) => {
+        const cx = (p: 0 | 1) => (r.state.players[p].x + 7) / 20
+        const feet = (p: 0 | 1) => (r.state.players[p].y + 22) / 20
+        // the bottom. ember on the plate; frost floats out over the lava to where the fans overlap, and she steps off
+        r.walkToStop(E, 5.6)
+        r.walkTo(F, 13.5)
+        r.walkTo(E, 7.5)
+        r.oneUntil(F, RIGHT, () => cx(1) > 20.4, { max: 300 }, 'frost to float across').land(F)
+        r.walkTo(E, 21).land(E)
+        // frost over the lava puddle and onto the lift, then ember onto its plate
+        r.walkTo(F, 22).jump(F, 1, { toX: 27 }).jump(F, 1, { toX: 29.5 }).settle(F)
+        r.walkToStop(E, 24).waitMover(0)
+        r.walkToStop(F, 27)
+        // ember onto the lift once it's back down; frost's lever brings it up and leaves it there
+        r.walkToStop(E, 27.5).waitMover(0, 0).jump(E, 1, { toX: 29.5 }).settle(E)
+        r.press(F).waitMover(0)
+        // the shuttle: both on at its right stop, off at its left
+        r.walkToStop(E, 21.5).walkToStop(F, 21.5)
+        r.waitMover(1, (m) => m.t < 0.03)
+        r.jump(E, -1, { toX: 17.2 }).jump(F, -1, { toX: 17 })
+        r.waitMover(1, (m) => m.t > 0.9)
+        r.jump(F, -1, { toX: 6 }).jump(E, -1, { toX: 6.8 }).expect(() => r.at(F).y === 43 && r.at(E).y === 43, 'both on the left ledge')
+        // the corner fan, one at a time
+        r.walkToStop(E, 5.5)
+        r.walkTo(F, 1.6).oneUntil(F, 0, () => feet(1) < 34.9, {}, 'frost to float up').walkTo(F, 4.5).land(F).settle(F)
+        r.walkTo(E, 1.6).oneUntil(E, 0, () => feet(0) < 34.9, {}, 'ember to float up').walkTo(E, 3.5).land(E)
+        r.walkToStop(E, 8).walkToStop(F, 7.4).checkpoint(1).mark('the middle')
+        // the middle. the first trampoline: up for the gem, then over onto the ledge. frost comes back down to his plate
+        r.walkTo(E, 9.8).bounce(E, 670).one(E, JUMP, 1).bounce(E, 670)
+        glide(r, E, 14.5).expect(() => r.at(E).y === 28, 'ember on the ledge')
+        r.walkTo(F, 10.9).bounce(F, 670).one(F, JUMP, 1).bounce(F, 670)
+        glide(r, F, 12.4).walkTo(F, 12.3).land(F).walkToStop(F, 15).waitMover(2)
+        // ember off the second trampoline onto the platform; frost lets go and it carries her over
+        r.walkTo(E, 17).bounce(E, 655)
+        glide(r, E, 21.6).expect(() => r.at(E).y === 21, 'ember on the platform')
+        r.walkTo(F, 12.5).waitMover(2, 0).walkToStop(E, 29).waitMover(2)
+        // frost the same way while ember holds the far plate, then both up the fan
+        r.walkTo(F, 11).bounce(F, 640)
+        glide(r, F, 14.5).expect(() => r.at(F).y === 28, 'frost on the ledge')
+        r.walkTo(F, 17).bounce(F, 655)
+        glide(r, F, 21.6).expect(() => r.at(F).y === 21, 'frost on the platform')
+        r.walkTo(E, 30.2).oneUntil(E, 0, () => feet(0) < 16.9, {}, 'ember to float up').walkTo(E, 28.6).land(E)
+        r.waitMover(2, 0).walkTo(F, 30.2).oneUntil(F, 0, () => feet(1) < 16.9, {}, 'frost to float up').walkTo(F, 28).land(F)
+        r.walkToStop(E, 27.4).walkToStop(F, 26.8).checkpoint(0).mark('the top')
+      },
+    ],
+  },
 }
 
 function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown } {
@@ -246,9 +310,17 @@ function walkFor(def: LevelDef): { walk: Walkthrough | undefined; error: unknown
   }
 }
 
+// TODO(ember-2:levels-a): levels whose walkthrough stops where a mechanic the engine hasn't landed yet begins
+const WAITING: Record<string, string> = { 'updraft-tower': 'arrows (engine step 2)' }
+
 describe('basics', () => {
   for (const def of BASICS) {
     const { walk, error } = walkFor(def)
+    if (WAITING[def.id] && !walk) {
+      it(`${def.id} validates`, () => expect(validateLevel(def)).toEqual([]))
+      it.todo(`${def.id}: the walkthrough waits on ${WAITING[def.id]}`)
+      continue
+    }
     if (error) it(`${def.id}: the walkthrough records`, () => { throw error })
     describeLevel(def, walk, RUNS[def.id]?.checks)
   }
