@@ -207,6 +207,20 @@ const RUNS: Record<string, { stages: Array<(r: StageRun) => void>; checks: Level
         r.walkTo(E, 30.2).oneUntil(E, 0, () => feet(0) < 16.9, {}, 'ember to float up').walkTo(E, 28.6).land(E)
         r.waitMover(2, 0).walkTo(F, 30.2).oneUntil(F, 0, () => feet(1) < 16.9, {}, 'frost to float up').walkTo(F, 28).land(F)
         r.walkToStop(E, 27.4).walkToStop(F, 26.8).checkpoint(0).mark('the top')
+        // the top. the goo: jump, take the arrow, jump again. frost, then ember once it's back
+        r.walkTo(F, 24.4).jump(F, -1, { land: false }).takeArrow(F, -1).airJump(F, -1, { toX: 15.5 })
+        r.waitArrow(2).walkTo(E, 24.4).jump(E, -1, { land: false }).takeArrow(E, -1).airJump(E, -1, { toX: 15.5 })
+        // frost into the water, on the fan's plate; ember over the water, up the fan, the arrow, and left onto the ledge
+        r.walkToStop(F, 12)
+        r.walkTo(E, 14.3).jump(E, -1, { toX: 9.6 }).walkTo(E, 7.4).takeArrow(E, 0).airJump(E, -1, { toX: 5.4 })
+        r.expect(() => r.at(E).y === 8, 'ember on the high ledge').walkToStop(E, 3.5)
+        // frost the same way while ember holds the plate in the lava
+        r.walkTo(F, 7.4).waitArrow(1).takeArrow(F, 0).airJump(F, -1, { toX: 5.6 }).expect(() => r.at(F).y === 8, 'frost on the high ledge')
+        // the last arrow, across to the doors
+        r.walkTo(F, 6.2).jump(F, 1, { land: false }).takeArrow(F, 1).airJump(F, 1, { toX: 14 }).expect(() => r.at(F).y === 8, 'frost on the top ledge')
+        r.walkTo(E, 6.2).waitArrow(0).jump(E, 1, { land: false }).takeArrow(E, 1).airJump(E, 1, { toX: 14 }).expect(() => r.at(E).y === 8, 'ember on the top ledge')
+        r.walkTo(E, 21).intoDoor(E, -1)
+        last(r, F, RIGHT)
       },
     ],
   },
