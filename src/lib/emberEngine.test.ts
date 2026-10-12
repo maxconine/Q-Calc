@@ -1454,13 +1454,20 @@ describe('gravity switches', () => {
     s = run(L, s, 120, [0, 0]).s
     expect(s.movers[0]!.x).toBeGreaterThan(5 * TILE)
     expect(s.players[0].x - s.movers[0]!.x).toBeCloseTo(off, 5)
-    // a mover coming down onto a player standing on the ceiling's underside... can't: one rising under a ceiling walker waits
+    // a mover rising under the ceiling carries the player hanging beneath it all the way up
     const M = tb([], ['.1'], [SW, { k: 'lever', x: 20, y: 16, ch: 'go' }, { k: 'mover', x: 2, y: 6, w: 3, h: 1, to: { x: 2, y: 1 }, when: 'go' }])
     let m = up(M)
-    m = { ...m, levers: [true] }
-    m = run(M, m, 200, [0, 0]).s
-    expect(head(m, 0)).toBe(CEIL)
-    expect(m.movers[0]!.y).toBeGreaterThanOrEqual(CEIL + PLAYER_H - 0.01)
+    expect(head(m, 0)).toBe(7 * TILE)
+    m = run(M, { ...m, levers: [true] }, 200, [0, 0]).s
+    expect(m.movers[0]!.y).toBe(CEIL)
+    expect(head(m, 0)).toBe(2 * TILE)
+    // but one rising towards a player already standing on the ceiling waits rather than crush them
+    const w = initState(M)
+    Object.assign(w.players[0], { y: CEIL, grav: -1 })
+    const stuck = run(M, { ...w, levers: [true] }, 200, [0, 0]).s
+    expect(head(stuck, 0)).toBe(CEIL)
+    expect(stuck.players[0].alive).toBe(true)
+    expect(stuck.movers[0]!.y).toBeGreaterThanOrEqual(CEIL + PLAYER_H - 0.01)
   })
 
   it('a fan blows a flipped player up too, and lights push them out downward', () => {
