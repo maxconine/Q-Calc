@@ -57,6 +57,8 @@
 
   window.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
+      // an open game takes esc itself (full screen, its lobby, pause); the page closes it from the lobby
+      if (window.__QCALC_GAME_OPEN) return
       e.preventDefault()
       e.stopPropagation()
       send({ type: 'dismiss' })

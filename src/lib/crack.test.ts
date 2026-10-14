@@ -185,6 +185,6 @@ describe('in the games list', () => {
   it('opens from the bar without a peer link', () => {
     expect(gameCommand('crack')).toBe('crack')
     expect(GAMES.some((g) => g.kind === 'crack')).toBe(true)
-    expect(gameHint('crack', false)).toBe(CRACK_HINT)
+    expect(gameHint('crack')).toBe(CRACK_HINT)
   })
 })

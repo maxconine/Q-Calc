@@ -1,8 +1,8 @@
-import type { CloseReason, PeerEvent, PeerInfo, PeerTransport } from './peer'
+import type { CloseReason, HostOptions, PeerEvent, PeerTransport, RoomInfo } from './peer'
 
-// the peer link for a plain browser: tabs of the same browser find and pair with each other over a
-// BroadcastChannel, so pong can be played and checked without two macs. the code is only compared
-// here, nothing is encrypted; it is a stand-in for the mac app's PeerLink, not a network link
+// the peer link for a plain browser: tabs of the same browser list each other's rooms and pair over a
+// BroadcastChannel, so the lobby and the games can be played and checked without two computers. the code is
+// only compared here, nothing is encrypted; it is a stand-in for the relay's room list, not a network link
 
 export class Listeners {
   private fns = new Set<(e: PeerEvent) => void>()
@@ -20,8 +20,8 @@ export class Listeners {
 }
 
 type Wire =
-  | { k: 'where' }
-  | { k: 'here'; id: string; name: string }
+  | { k: 'where'; game: string }
+  | { k: 'here'; id: string; game: string; name: string; locked: boolean }
   | { k: 'gone'; id: string }
   | { k: 'join'; from: string; name: string; to: string; code: string }
   | { k: 'ok'; from: string; to: string; name: string }
@@ -35,6 +35,7 @@ const TRIES_PER_CODE = 3
 const BEAT_MS = 1000
 const HOST_SEEN_MS = 3500
 const LOST_MS = 4500
+const JOIN_WAIT_MS = 3000
 
 function randomId(): string {
   return Math.random().toString(36).slice(2, 10)
@@ -44,22 +45,24 @@ function newCode(): string {
   return String(Math.floor(Math.random() * 10000)).padStart(4, '0')
 }
 
+type Hosted = { game: string; name: string; locked: boolean }
+
 export class DevPeer implements PeerTransport {
   readonly label = 'dev link · tabs in this browser'
   readonly peerWord = 'tab'
-  readonly discovers = true
   readonly codeLength = 4
   readonly id = randomId()
   readonly name: string
   private channel: BroadcastChannel
   private listeners = new Listeners()
-  private hosting = false
+  private hosting: Hosted | null = null
   private code = ''
   private failures = 0
-  private discovering = false
-  private hosts = new Map<string, { name: string; seen: number }>()
+  private watching: string | null = null
+  private hosts = new Map<string, { name: string; locked: boolean; seen: number }>()
   private peer: string | null = null
   private pending: string | null = null
+  private joinTimer: ReturnType<typeof setTimeout> | undefined
   private heard = 0
   private timer: ReturnType<typeof setInterval> | undefined
 
@@ -78,10 +81,15 @@ export class DevPeer implements PeerTransport {
     this.listeners.emit(e)
   }
 
+  private announce(): void {
+    const h = this.hosting
+    if (h && !this.peer) this.post({ k: 'here', id: this.id, game: h.game, name: h.name, locked: h.locked })
+  }
+
   private tick = () => {
     const now = Date.now()
-    if (this.hosting && !this.peer) this.post({ k: 'here', id: this.id, name: this.name })
-    if (this.discovering) {
+    this.announce()
+    if (this.watching) {
       let changed = false
       for (const [id, h] of this.hosts) {
         if (now - h.seen > HOST_SEEN_MS) {
@@ -103,30 +111,32 @@ export class DevPeer implements PeerTransport {
   }
 
   private idle(): void {
-    if (this.timer && !this.hosting && !this.discovering && !this.peer) {
+    if (this.timer && !this.hosting && !this.watching && !this.peer) {
       clearInterval(this.timer)
       this.timer = undefined
     }
   }
 
   private publish(): void {
-    const peers: PeerInfo[] = [...this.hosts].map(([id, h]) => ({ id, name: h.name })).sort((a, b) => a.name.localeCompare(b.name))
-    this.emit({ type: 'peers', peers })
+    const rooms: RoomInfo[] = [...this.hosts]
+      .map(([id, h]) => ({ id, name: h.name, locked: h.locked }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    this.emit({ type: 'rooms', rooms })
   }
 
   private receive(m: Wire): void {
     if (!m || typeof m !== 'object') return
     switch (m.k) {
       case 'where':
-        if (this.hosting && !this.peer) this.post({ k: 'here', id: this.id, name: this.name })
+        if (this.hosting?.game === m.game) this.announce()
         return
       case 'here':
-        if (!this.discovering || m.id === this.id) return
-        this.hosts.set(m.id, { name: m.name, seen: Date.now() })
+        if (!this.watching || m.game !== this.watching || m.id === this.id) return
+        this.hosts.set(m.id, { name: m.name, locked: m.locked, seen: Date.now() })
         this.publish()
         return
       case 'gone':
-        if (this.hosts.delete(m.id) && this.discovering) this.publish()
+        if (this.hosts.delete(m.id) && this.watching) this.publish()
         return
       case 'join':
         if (m.to !== this.id || !this.hosting) return
@@ -134,7 +144,7 @@ export class DevPeer implements PeerTransport {
           this.post({ k: 'nope', to: m.from, reason: 'busy' })
           return
         }
-        if (m.code !== this.code) {
+        if (this.hosting.locked && m.code !== this.code) {
           this.post({ k: 'nope', to: m.from, reason: 'wrong-code' })
           if (++this.failures >= TRIES_PER_CODE) {
             this.failures = 0
@@ -146,12 +156,12 @@ export class DevPeer implements PeerTransport {
         this.peer = m.from
         this.heard = Date.now()
         this.post({ k: 'gone', id: this.id })
-        this.post({ k: 'ok', from: this.id, to: m.from, name: this.name })
+        this.post({ k: 'ok', from: this.id, to: m.from, name: this.hosting.name })
         this.emit({ type: 'open', role: 'host', peer: m.name })
         return
       case 'ok':
         if (m.to !== this.id || this.pending !== m.from) return
-        this.pending = null
+        this.endJoin()
         this.peer = m.from
         this.heard = Date.now()
         this.wake()
@@ -159,7 +169,7 @@ export class DevPeer implements PeerTransport {
         return
       case 'nope':
         if (m.to !== this.id || !this.pending) return
-        this.pending = null
+        this.endJoin()
         this.emit({ type: 'closed', reason: m.reason })
         return
       case 'data':
@@ -175,6 +185,12 @@ export class DevPeer implements PeerTransport {
     }
   }
 
+  private endJoin(): void {
+    this.pending = null
+    clearTimeout(this.joinTimer)
+    this.joinTimer = undefined
+  }
+
   private fail(reason: CloseReason): void {
     this.reset()
     this.emit({ type: 'closed', reason })
@@ -182,52 +198,50 @@ export class DevPeer implements PeerTransport {
 
   private reset(): void {
     if (this.hosting && !this.peer) this.post({ k: 'gone', id: this.id })
-    this.hosting = false
-    this.discovering = false
+    this.hosting = null
     this.peer = null
-    this.pending = null
-    this.hosts.clear()
+    this.endJoin()
     this.idle()
   }
 
-  discover(): void {
-    this.discovering = true
+  watch(game: string): void {
+    this.watching = game
     this.hosts.clear()
     this.publish()
     this.wake()
-    this.post({ k: 'where' })
+    this.post({ k: 'where', game })
   }
 
-  stopDiscovery(): void {
-    this.discovering = false
+  unwatch(): void {
+    this.watching = null
+    this.hosts.clear()
     this.idle()
   }
 
-  host(): void {
+  host({ game, name, locked }: HostOptions): void {
     this.reset()
-    this.hosting = true
-    this.code = newCode()
+    this.hosting = { game, name: name || this.name, locked }
+    this.code = locked ? newCode() : ''
     this.failures = 0
     this.wake()
-    this.post({ k: 'here', id: this.id, name: this.name })
+    this.announce()
     // after the caller has subscribed, like the native link's listener coming up
     queueMicrotask(() => {
       if (this.hosting) this.emit({ type: 'hosting', code: this.code })
     })
   }
 
-  join(peerId: string, code: string): void {
+  join(peerId: string, code: string, name: string): void {
     this.peer = null
+    this.endJoin()
     this.pending = peerId
     this.emit({ type: 'pairing' })
-    this.post({ k: 'join', from: this.id, name: this.name, to: peerId, code })
-    const asked = peerId
-    setTimeout(() => {
-      if (this.pending === asked) {
-        this.pending = null
-        this.emit({ type: 'closed', reason: 'unreachable' })
-      }
-    }, 3000)
+    this.post({ k: 'join', from: this.id, name: name || this.name, to: peerId, code })
+    this.joinTimer = setTimeout(() => {
+      if (this.pending !== peerId) return
+      this.endJoin()
+      this.emit({ type: 'closed', reason: 'unreachable' })
+    }, JOIN_WAIT_MS)
   }
 
   send(data: string): void {
@@ -235,7 +249,9 @@ export class DevPeer implements PeerTransport {
   }
 
   close(): void {
-    if (this.peer) this.post({ k: 'bye', from: this.id, to: this.peer })
+    // a join still waiting tells the host too, in case it already said yes
+    const other = this.peer ?? this.pending
+    if (other) this.post({ k: 'bye', from: this.id, to: other })
     this.reset()
   }
 
@@ -246,6 +262,7 @@ export class DevPeer implements PeerTransport {
   // tests only
   dispose(): void {
     this.close()
+    this.unwatch()
     this.channel.close()
   }
 }

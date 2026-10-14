@@ -41,7 +41,7 @@ describe('isNumbersCommand', () => {
     expect(gameCommand('countdown')).toBe('numbers')
     expect(gameCommand('24 game')).toBe('numbers')
     expect(gameCommand('24')).toBe(null)
-    expect(gameHint('numbers', false)).toBe(NUMBERS_HINT)
+    expect(gameHint('numbers')).toBe(NUMBERS_HINT)
   })
 })
 

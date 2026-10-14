@@ -14,21 +14,24 @@ import {
   type Snapshot,
 } from '../lib/pong'
 import { PongSession, type SessionView } from '../lib/pongSession'
+import { fitCanvas } from '../lib/canvasFit'
+import { gameNow } from '../lib/gameClock'
 import { plainKey, swallow } from '../lib/gameKeys'
 import { GameLobby, type GameProps } from './GameLobby'
 
-export function PongPanel({ transport, onClose }: { transport: PeerTransport; onClose: () => void }) {
+export function PongPanel({ transport }: { transport: PeerTransport | null }) {
   return (
     <div className="pong" aria-label="Pong">
       <GameLobby
+        game="pong"
         transport={transport}
         name="pong"
         blurb={`first to ${WIN_SCORE}.`}
-        onClose={onClose}
-        game={(p) => <PongGame {...p} />}
-        solo={{
-          levels: SKILLS,
-          play: (level, onEnd) => <PongGame transport={null} role="host" peer="computer" solo={level as Skill} onEnd={onEnd} />,
+        online={(p) => <PongGame {...p} />}
+        local={{
+          prompt: 'play the computer',
+          options: SKILLS,
+          play: (i, onEnd) => <PongGame transport={null} role="host" peer="computer" solo={SKILLS[i] as Skill} onEnd={onEnd} />,
         }}
       />
     </div>
@@ -93,17 +96,15 @@ function PongGame({
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
-    canvas.width = COURT_W * dpr
-    canvas.height = COURT_H * dpr
+    const unfit = fitCanvas(canvas, COURT_W, COURT_H)
     let colors = readColors(canvas)
     let frames = 0
     let raf = 0
     let shown = ''
-    const session = new PongSession(role, (text) => transport?.send(text), performance.now(), Math.random, solo)
+    const session = new PongSession(role, (text) => transport?.send(text), gameNow(), Math.random, solo)
 
     const off = transport?.subscribe((e) => {
-      if (e.type === 'message') session.receive(e.data, performance.now())
+      if (e.type === 'message') session.receive(e.data, gameNow())
       else if (e.type === 'closed') onEndRef.current(closeReasonText(e.reason, transport.peerWord))
     })
 
@@ -124,8 +125,9 @@ function PongGame({
     window.addEventListener('keyup', onUp, true)
     window.addEventListener('blur', onBlur)
 
-    const frame = (now: number) => {
+    const frame = () => {
       raf = requestAnimationFrame(frame)
+      const now = gameNow()
       if (++frames % 30 === 0) colors = readColors(canvas)
       const v = session.tick(now)
       if (v.ended != null) {
@@ -144,6 +146,7 @@ function PongGame({
 
     return () => {
       cancelAnimationFrame(raf)
+      unfit()
       off?.()
       window.removeEventListener('keydown', onDown, true)
       window.removeEventListener('keyup', onUp, true)

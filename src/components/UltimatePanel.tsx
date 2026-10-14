@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState, type MouseEvent } from 'react'
+import { gameNow } from '../lib/gameClock'
 import { plainKey, swallow } from '../lib/gameKeys'
 import { closeReasonText, type PeerTransport } from '../lib/peer'
 import type { Side } from '../lib/pong'
@@ -6,30 +7,33 @@ import { boardOf, boardOpen, canPlay, cellIn, CELLS, isOver, SIZE, spotOf, type 
 import { UT_SKILLS, type UtSkill } from '../lib/ultimateBot'
 import { UltimateSession, type UtView } from '../lib/ultimateSession'
 import { GameLobby, type GameProps } from './GameLobby'
+import { chalkBox, chalkLine, chalkMark } from './ultimateChalk'
 
-export function UltimatePanel({ transport, onClose }: { transport: PeerTransport; onClose: () => void }) {
+export function UltimatePanel({ transport }: { transport: PeerTransport | null }) {
   return (
     <div className="pong" aria-label="Ultimate tic-tac-toe">
       <GameLobby
+        game="ultimate"
         transport={transport}
         name="ultimate"
         blurb="win three small boards in a row."
-        onClose={onClose}
-        game={(p) => <UltimateGame {...p} />}
-        solo={{
-          levels: UT_SKILLS,
-          play: (level, onEnd) => <UltimateGame transport={null} role="host" peer="computer" solo={level as UtSkill} onEnd={onEnd} />,
+        online={(p) => <UltimateGame {...p} />}
+        local={{
+          prompt: 'play the computer',
+          options: UT_SKILLS,
+          play: (i, onEnd) => <UltimateGame transport={null} role="host" peer="computer" solo={UT_SKILLS[i] as UtSkill} onEnd={onEnd} />,
         }}
       />
     </div>
   )
 }
 
-// geometry in svg units: nine 3×3 boards with a gap between them
-const CELL = 28
+// geometry in svg units: nine 3×3 boards on a slate, the big # between them
+const CELL = 30
 const BOARD = 3 * CELL
-const GAP = 10
+const GAP = 14
 const W = 3 * BOARD + 2 * GAP
+const PAD = 10
 const bx = (b: number) => (b % 3) * (BOARD + GAP)
 const by = (b: number) => Math.floor(b / 3) * (BOARD + GAP)
 const cx = (cell: number) => bx(boardOf(cell)) + (spotOf(cell) % 3) * CELL
@@ -62,6 +66,8 @@ function UltimateGame({
   const [picked, setPicked] = useState<number | null>(null)
   // aiming: the mouse is over the board, or a cell was just picked with the keys; the cursor only shows then
   const [aiming, setAiming] = useState(false)
+  const aimingRef = useRef(aiming)
+  aimingRef.current = aiming
   const cursorRef = useRef(cursor)
   cursorRef.current = cursor
   const pickedRef = useRef(picked)
@@ -71,7 +77,7 @@ function UltimateGame({
   const act = useRef<Actions>({ play: () => {}, rematch: () => {} })
 
   useEffect(() => {
-    const session = new UltimateSession(role, (text) => transport?.send(text), performance.now(), solo)
+    const session = new UltimateSession(role, (text) => transport?.send(text), gameNow(), solo)
     let shown = -1
     let moved = 0
     let done = false
@@ -96,23 +102,23 @@ function UltimateGame({
     }
     act.current = {
       play: (c) => {
-        session.play(c, performance.now())
+        session.play(c, gameNow())
         sync()
       },
       rematch: () => {
-        session.rematch(performance.now())
+        session.rematch(gameNow())
         sync()
       },
     }
 
     const off = transport?.subscribe((e) => {
       if (e.type === 'message') {
-        session.receive(e.data, performance.now())
+        session.receive(e.data, gameNow())
         sync()
       } else if (e.type === 'closed') finish(closeReasonText(e.reason, transport.peerWord))
     })
     const timer = window.setInterval(() => {
-      session.tick(performance.now())
+      session.tick(gameNow())
       sync()
     }, KEEP_TICK_MS)
 
@@ -139,6 +145,8 @@ function UltimateGame({
       } else if (e.key === 'Enter' || e.key === ' ') {
         if (!e.repeat) {
           if (isOver(state)) act.current.rematch()
+          // a hidden cursor shows first, so ↵ never plays a cell you can't see
+          else if (!aimingRef.current) setAiming(true)
           else act.current.play(cursorRef.current)
         }
       } else if (e.key.length !== 1) return
@@ -181,13 +189,13 @@ function UltimateGame({
   return (
     <div className="pong-game c4-game">
       <div className="pong-score">
-        <span className={`pong-name ${role === 'host' ? 'mine' : ''}`}>{left} · x</span>
+        <span className={`pong-name ut-name ${role === 'host' ? 'mine' : 'theirs'}`}>{left} · x</span>
         <span className="pong-points">
           {wins[0]} <span className="pong-dash">–</span> {wins[1]}
         </span>
-        <span className={`pong-name right ${role === 'guest' ? 'mine' : ''}`}>o · {right}</span>
+        <span className={`pong-name right ut-name ${role === 'guest' ? 'mine' : 'theirs'}`}>o · {right}</span>
       </div>
-      <p className={`c4-status ${myTurn || state.winner === role ? 'mine' : ''} ${started ? '' : 'pong-wait'}`} aria-live="polite">
+      <p className={`c4-status ut-status ${myTurn || state.winner === role ? 'mine' : ''} ${started ? '' : 'pong-wait'}`} aria-live="polite">
         {status}
       </p>
       <Board
@@ -210,16 +218,97 @@ function UltimateGame({
   )
 }
 
-function Mark({ who, x, y, size, className }: { who: Side; x: number; y: number; size: number; className: string }) {
-  const pad = size * 0.24
-  if (markOf(who) === 'x')
-    return (
-      <g className={className}>
-        <line x1={x + pad} y1={y + pad} x2={x + size - pad} y2={y + size - pad} />
-        <line x1={x + size - pad} y1={y + pad} x2={x + pad} y2={y + size - pad} />
+// one chalk stroke: a soft wide pass under a crisp one, which reads as a glow without an svg filter
+function Ink({ d, tone, className = '' }: { d: string; tone: 'mine' | 'theirs'; className?: string }) {
+  return (
+    <g className={`ut-ink ${tone} ${className}`}>
+      <path className="ut-glow" d={d} pathLength={1} />
+      <path className="ut-core" d={d} pathLength={1} />
+    </g>
+  )
+}
+
+// a few faint flecks of chalk dust, scattered once
+const DUST = Array.from({ length: 70 }, (_, i) => {
+  const h = Math.sin(i * 12.9898) * 43758.5453
+  const k = Math.sin(i * 78.233) * 12345.678
+  return { x: (h - Math.floor(h)) * (W + 2 * PAD) - PAD, y: (k - Math.floor(k)) * (W + 2 * PAD) - PAD, r: 0.4 + ((h * 7) % 1 + 1) % 1 * 0.9 }
+})
+
+// the slate, its dust and every grid line. it never changes, so it renders once
+const Slate = memo(function Slate() {
+  const lines = []
+  for (const k of [1, 2]) {
+    const p = k * (BOARD + GAP) - GAP / 2
+    lines.push(<path key={`V${k}`} className="ut-big" d={chalkLine([p, -4], [p, W + 4], 100 + k, 1.6)} />)
+    lines.push(<path key={`H${k}`} className="ut-big" d={chalkLine([-4, p], [W + 4, p], 200 + k, 1.6)} />)
+  }
+  for (let b = 0; b < SIZE; b++) {
+    for (const k of [1, 2]) {
+      lines.push(<path key={`v${b}${k}`} className="ut-small" d={chalkLine([bx(b) + k * CELL, by(b) + 5], [bx(b) + k * CELL, by(b) + BOARD - 5], b * 10 + k)} />)
+      lines.push(<path key={`h${b}${k}`} className="ut-small" d={chalkLine([bx(b) + 5, by(b) + k * CELL], [bx(b) + BOARD - 5, by(b) + k * CELL], b * 10 + k + 5)} />)
+    }
+  }
+  return (
+    <g>
+      <g className="ut-dust">
+        {DUST.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r={p.r} />
+        ))}
       </g>
-    )
-  return <circle className={className} cx={x + size / 2} cy={y + size / 2} r={size / 2 - pad} />
+      {lines}
+    </g>
+  )
+})
+
+// every x and o, the big ones on won boards and the line through the winning three. it only changes
+// when a move is made; the newest mark draws itself in
+const Pieces = memo(function Pieces({ state, role }: { state: UtState; role: Side }) {
+  const tone = (who: Side) => (who === role ? 'mine' : 'theirs')
+  const last = state.last ?? -1
+  const out = []
+  for (let b = 0; b < SIZE; b++) {
+    const mark = state.boards[b]
+    if (mark && mark !== 'draw') out.push(<ellipse key={`e${b}`} className="ut-erased" cx={bx(b) + BOARD / 2} cy={by(b) + BOARD / 2} rx={BOARD / 2} ry={BOARD / 2.3} />)
+  }
+  for (let i = 0; i < CELLS; i++) {
+    const who = state.cells[i]
+    if (!who) continue
+    const cls = [state.boards[boardOf(i)] ? 'dim' : '', i === last ? 'fresh' : ''].join(' ')
+    out.push(<Ink key={i} d={chalkMark(markOf(who), cx(i), cy(i), CELL, i)} tone={tone(who)} className={cls} />)
+  }
+  const won = new Set(state.line ?? [])
+  for (let b = 0; b < SIZE; b++) {
+    const mark = state.boards[b]
+    if (!mark || mark === 'draw') continue
+    // a decided board holding the last move was decided by it
+    const cls = ['big', last >= 0 && boardOf(last) === b ? 'fresh' : '', state.line && !won.has(b) ? 'dim' : ''].join(' ')
+    out.push(<Ink key={`m${b}`} d={chalkMark(markOf(mark), bx(b), by(b), BOARD, 50 + b)} tone={tone(mark)} className={cls} />)
+  }
+  if (state.line && state.winner) {
+    const [a, , z] = state.line
+    const ax = bx(a!) + BOARD / 2
+    const ay = by(a!) + BOARD / 2
+    const zx = bx(z!) + BOARD / 2
+    const zy = by(z!) + BOARD / 2
+    const ext = 0.18
+    out.push(<Ink key="win" d={chalkLine([ax - (zx - ax) * ext, ay - (zy - ay) * ext], [zx + (zx - ax) * ext, zy + (zy - ay) * ext], 999, 2.5)} tone={tone(state.winner)} className="win fresh" />)
+  }
+  return <g>{out}</g>
+})
+
+// the cell under a point on the board, or -1 in a gap or off it
+function cellAtPoint(svg: SVGSVGElement, clientX: number, clientY: number): number {
+  const r = svg.getBoundingClientRect()
+  const span = W + 2 * PAD
+  const x = ((clientX - r.left) / r.width) * span - PAD
+  const y = ((clientY - r.top) / r.height) * span - PAD
+  const col = Math.floor(x / (BOARD + GAP))
+  const row = Math.floor(y / (BOARD + GAP))
+  const ix = x - col * (BOARD + GAP)
+  const iy = y - row * (BOARD + GAP)
+  if (col < 0 || col > 2 || row < 0 || row > 2 || ix >= BOARD || iy >= BOARD) return -1
+  return cellIn(row * 3 + col, Math.floor(iy / CELL) * 3 + Math.floor(ix / CELL))
 }
 
 function Board({
@@ -234,7 +323,7 @@ function Board({
 }: {
   state: UtState
   role: Side
-  // it's your move, so the boards you may play in light up
+  // it's your move, so the boards you may play in are chalked round
   live: boolean
   // the board the digits pick cells in, when there is one
   zone: number | null
@@ -244,61 +333,57 @@ function Board({
   onLeave: () => void
   onPick: (cell: number) => void
 }) {
-  const over = isOver(state)
-  const won = new Set(state.line ?? [])
-  const boards = []
-  for (let b = 0; b < SIZE; b++) {
-    const mark = state.boards[b]
-    const open = live && boardOpen(state, b)
-    const cls = ['ut-board', open ? 'open' : '', open && zone === b ? 'zone' : '', mark ? 'done' : '', won.has(b) ? 'win' : '']
-    boards.push(<rect key={`b${b}`} className={cls.join(' ')} x={bx(b) - 3} y={by(b) - 3} width={BOARD + 6} height={BOARD + 6} rx={7} />)
+  const hovered = useRef(-1)
+  const move = (e: MouseEvent<SVGSVGElement>) => {
+    const c = cellAtPoint(e.currentTarget, e.clientX, e.clientY)
+    if (c === hovered.current) return
+    hovered.current = c
+    if (c >= 0) onHover(c)
   }
-  const lines = []
-  for (let b = 0; b < SIZE; b++) {
-    for (const k of [1, 2]) {
-      lines.push(<line key={`v${b}${k}`} className="ut-line" x1={bx(b) + k * CELL} y1={by(b) + 4} x2={bx(b) + k * CELL} y2={by(b) + BOARD - 4} />)
-      lines.push(<line key={`h${b}${k}`} className="ut-line" x1={bx(b) + 4} y1={by(b) + k * CELL} x2={bx(b) + BOARD - 4} y2={by(b) + k * CELL} />)
+  const click = (e: MouseEvent<SVGSVGElement>) => {
+    const c = cellAtPoint(e.currentTarget, e.clientX, e.clientY)
+    if (c >= 0) onPick(c)
+  }
+  const open = []
+  if (live) {
+    for (let b = 0; b < SIZE; b++) {
+      if (!boardOpen(state, b)) continue
+      open.push(<path key={b} className={`ut-open ${zone === b ? 'zone' : ''}`} d={chalkBox(bx(b) - 4, by(b) - 4, BOARD + 8, BOARD + 8, 300 + b)} pathLength={1} />)
     }
   }
-  const marks = []
-  for (let i = 0; i < CELLS; i++) {
-    const who = state.cells[i]
-    if (!who) continue
-    const cls = ['ut-mark', who === role ? 'mine' : 'theirs']
-    if (state.boards[boardOf(i)]) cls.push('dim')
-    if (i === state.last) cls.push('last')
-    marks.push(<Mark key={i} who={who} x={cx(i)} y={cy(i)} size={CELL} className={cls.join(' ')} />)
-  }
-  const big = []
-  for (let b = 0; b < SIZE; b++) {
-    const mark = state.boards[b]
-    if (!mark || mark === 'draw') continue
-    const cls = ['ut-mark', 'big', mark === role ? 'mine' : 'theirs']
-    if (over && state.line && !won.has(b)) cls.push('dim')
-    big.push(<Mark key={`m${b}`} who={mark} x={bx(b)} y={by(b)} size={BOARD} className={cls.join(' ')} />)
+  const last = state.last ?? -1
+  // where the last move sent you, as a dotted chalk arc
+  const sent = live && last >= 0 && state.forced != null && boardOf(last) !== state.forced
+  let trail = null
+  if (sent) {
+    const x1 = cx(last) + CELL / 2
+    const y1 = cy(last) + CELL / 2
+    const x2 = bx(state.forced!) + BOARD / 2
+    const y2 = by(state.forced!) + BOARD / 2
+    const bend = 0.18
+    trail = <path key={`t${last}`} className="ut-trail" d={`M${x1} ${y1}Q${(x1 + x2) / 2 - (y2 - y1) * bend} ${(y1 + y2) / 2 + (x2 - x1) * bend} ${x2} ${y2}`} />
   }
   const aimOk = cursor != null && canPlay(state, cursor, role)
   return (
-    <div className="c4-wrap">
-      <svg className="ut-grid" viewBox={`-4 -4 ${W + 8} ${W + 8}`} role="grid" aria-label="board" onMouseLeave={onLeave}>
-        {boards}
-        {lines}
-        {cursor != null ? <rect className={`ut-aim ${aimOk ? '' : 'blocked'}`} x={cx(cursor) + 2} y={cy(cursor) + 2} width={CELL - 4} height={CELL - 4} rx={5} /> : null}
-        {marks}
-        {big}
-        {Array.from({ length: CELLS }, (_, i) => (
-          <rect
-            key={`c${i}`}
-            className="c4-col"
-            x={cx(i)}
-            y={cy(i)}
-            width={CELL}
-            height={CELL}
-            onMouseEnter={() => onHover(i)}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onPick(i)}
-          />
-        ))}
+    <div className="ut-slate">
+      <svg
+        className="ut-grid"
+        viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${W + 2 * PAD}`}
+        role="grid"
+        aria-label="board"
+        onMouseMove={move}
+        onMouseLeave={() => {
+          hovered.current = -1
+          onLeave()
+        }}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={click}
+      >
+        <Slate />
+        {open}
+        {trail}
+        {cursor != null ? <rect className={`ut-aim ${aimOk ? '' : 'blocked'}`} x={cx(cursor) + 3} y={cy(cursor) + 3} width={CELL - 6} height={CELL - 6} rx={7} /> : null}
+        <Pieces state={state} role={role} />
       </svg>
     </div>
   )

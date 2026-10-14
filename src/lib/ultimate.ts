@@ -1,3 +1,4 @@
+import { otherHello } from './hello'
 import type { Side } from './pong'
 
 // ultimate tic-tac-toe over the peer link: nine small boards in a big one. where you play in a small board
@@ -123,7 +124,7 @@ export function play(s: UtState, cell: number, who: Side): UtState | null {
 // the wire. every type starts ut so pong and connect 4 on the other end ignore it; bye is the one all share
 export type UtMsg =
   // ok: the sender has already heard the other side's hi, so it needs no answer
-  | { t: 'ut'; v: number; ok?: boolean }
+  | { t: 'ut'; v: number; g?: 'ultimate'; ok?: boolean }
   // move n (counting from 0) of game g takes cell c
   | { t: 'utm'; g: number; n: number; c: number }
   // asks for a rematch once game g is over
@@ -152,6 +153,8 @@ export function decodeUt(raw: string): UtIn | null {
   }
   if (!m || typeof m !== 'object' || Array.isArray(m)) return null
   const o = m as Record<string, unknown>
+  const other = otherHello(o, 'ultimate')
+  if (other) return { t: 'other', game: other }
   switch (o.t) {
     case 'ut':
       return typeof o.v === 'number' && Number.isFinite(o.v) ? { t: 'ut', v: o.v, ...(o.ok === true ? { ok: true } : {}) } : null
@@ -163,11 +166,6 @@ export function decodeUt(raw: string): UtIn | null {
       return { t: 'utk' }
     case 'bye':
       return { t: 'bye' }
-    // the other turn-based and real-time games' hellos
-    case 'hi':
-      return { t: 'other', game: 'pong' }
-    case 'c4':
-      return { t: 'other', game: 'connect 4' }
     default:
       return null
   }

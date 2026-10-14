@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
+import { fitCanvas } from '../lib/canvasFit'
+import { gameNow } from '../lib/gameClock'
+import { useGameShell } from '../lib/gameShellContext'
 import { plainKey, swallow } from '../lib/gameKeys'
 import { closeReasonText, type PeerTransport } from '../lib/peer'
 import {
@@ -27,12 +30,11 @@ import { TrailsSession, type TrailsView } from '../lib/trailsSession'
 import { GameLobby, type GameProps } from './GameLobby'
 import './TrailsPanel.css'
 
-// trails: `trails` then enter. no link needed: the computer, or two players on one keyboard; with a link,
-// a friend on another computer too. the start screen picks which; ⌫ goes back to it, and esc closes the panel
-// (the bar's escapeLayer, so not handled here)
+// trails: `trails` then enter. the shared lobby picks the computer, two players on one keyboard, or a room
+// online (where there's a link). ⌫ goes back to the lobby, and esc pauses, then leaves (the game shell, so
+// not handled here)
 
 type Vs = Level | 'friend'
-type Mode = Vs | 'online'
 
 // logical px per cell; the canvas is COLS × ROWS cells at this, times devicePixelRatio
 const CELL = 10
@@ -43,95 +45,44 @@ const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || 
 const WASD: Record<string, Dir> = { w: 0, d: 1, s: 2, a: 3 }
 const ARROWS: Record<string, Dir> = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
 
+// the shared lobby offers the computer at each level and two players on one keyboard
+const VS: readonly Vs[] = [...LEVELS, 'friend']
+
 // transport is null where there's no link to play over; everything but online still plays
-export function TrailsPanel({ transport, onClose }: { transport: PeerTransport | null; onClose: () => void }) {
-  const [vs, setVs] = useState<Mode | null>(null)
-  // a fresh match each time one starts, even at the same level
-  const [match, setMatch] = useState(0)
-
-  useEffect(() => {
-    if (vs) return
-    const onKey = (e: KeyboardEvent) => {
-      if (!plainKey(e) || e.key === 'Escape' || !barKey(e)) return
-      swallow(e)
-      if (e.repeat) return
-      const pick: Mode | undefined = e.key === '4' ? 'friend' : e.key === '5' ? (transport ? 'online' : undefined) : LEVELS[Number(e.key) - 1]
-      if (/^[1-5]$/.test(e.key) && pick) {
-        setVs(pick)
-        setMatch((m) => m + 1)
-      }
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [vs, transport])
-
-  // the lobby has a head of its own, and the game it opens takes the whole panel, as pong's does
-  if (vs === 'online' && transport) {
-    return (
-      <div className="trails" aria-label="Trails">
-        <GameLobby
-          transport={transport}
-          name="trails"
-          blurb={`first to ${WIN_ROUNDS} rounds.`}
-          onClose={onClose}
-          onBack={() => setVs(null)}
-          game={(p) => <TrailsOnline {...p} />}
-        />
-      </div>
-    )
-  }
-
+export function TrailsPanel({ transport }: { transport: PeerTransport | null }) {
+  const shell = useGameShell()
   return (
     <div className="trails" aria-label="Trails">
+      <GameLobby
+        game="trails"
+        name="trails"
+        blurb="leave a trail, don’t hit one. the last one moving takes the round."
+        transport={transport}
+        sub={`first to ${WIN_ROUNDS} rounds`}
+        online={(p) => <TrailsOnline {...p} />}
+        local={{
+          prompt: 'vs the computer, or two players on one keyboard',
+          options: VS.map((v) => (v === 'friend' ? 'two players' : v)),
+          play: (i, onEnd) => <TrailsPlay vs={VS[i]!} onMenu={() => onEnd()} onClose={() => shell?.escape()} />,
+        }}
+        footer={<p className="pong-note">vs the computer or online, steer with WASD or the arrows · two players: WASD and arrows</p>}
+      />
+    </div>
+  )
+}
+
+function TrailsPlay({ vs, onMenu, onClose }: { vs: Vs; onMenu: () => void; onClose: () => void }) {
+  return (
+    <>
       <div className="pong-head">
         <span className="pong-title">trails</span>
-        <span className="pong-sub">{vs == null ? `first to ${WIN_ROUNDS} rounds` : vs === 'friend' ? 'one keyboard' : `vs the computer · ${vs}`}</span>
+        <span className="pong-sub">{vs === 'friend' ? 'one keyboard' : `vs the computer · ${vs}`}</span>
         <button type="button" className="pong-leave" onClick={onClose}>
           esc
         </button>
       </div>
-      {vs && vs !== 'online' ? (
-        <TrailsGame key={match} vs={vs} onMenu={() => setVs(null)} />
-      ) : (
-        <div className="pong-body">
-          <p className="pong-line">leave a trail, don’t hit one. the last one moving takes the round.</p>
-          <div className="pong-actions">
-            {LEVELS.map((level, i) => (
-              <button
-                type="button"
-                className="pong-button"
-                key={level}
-                onClick={() => {
-                  setVs(level)
-                  setMatch((m) => m + 1)
-                }}
-              >
-                {level} <kbd>{i + 1}</kbd>
-              </button>
-            ))}
-          </div>
-          <div className="pong-actions">
-            <button
-              type="button"
-              className="pong-button trails-friend"
-              onClick={() => {
-                setVs('friend')
-                setMatch((m) => m + 1)
-              }}
-            >
-              two players, one keyboard <kbd>4</kbd>
-            </button>
-            <button type="button" className="pong-button trails-friend" disabled={!transport} onClick={() => setVs('online')}>
-              online <kbd>5</kbd>
-            </button>
-          </div>
-          <p className="pong-note">
-            vs the computer or online, steer with WASD or the arrows · one keyboard: WASD and arrows
-            {transport ? '' : ' · online needs Q Calc for Mac'}
-          </p>
-        </div>
-      )}
-    </div>
+      <TrailsGame vs={vs} onMenu={onMenu} />
+    </>
   )
 }
 
@@ -369,7 +320,7 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const dpr = sizeCanvas(canvas)
+    const unfit = fitCanvas(canvas, COLS * CELL, ROWS * CELL)
     let colors = readColors(canvas)
     let frames = 0
     let raf = 0
@@ -378,7 +329,7 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
     let round = newRound()
     let score: [number, number] = [0, 0]
     let phase: Phase = 'count'
-    let phaseAt = performance.now()
+    let phaseAt = gameNow()
     let last = phaseAt
     let acc = 0
     let lastWinner: Player | null = null
@@ -400,7 +351,7 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
         return
       }
       if (key === 'Enter') {
-        if (phase === 'over' && !e.repeat) restart(performance.now())
+        if (phase === 'over' && !e.repeat) restart(gameNow())
         return
       }
       const fromWasd = WASD[key]
@@ -413,8 +364,11 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
     }
     window.addEventListener('keydown', onKey, true)
 
-    const frame = (now: number) => {
+    const frame = () => {
       raf = requestAnimationFrame(frame)
+      const now = gameNow()
+      // the canvas grows with its panel (full screen), and the drawing's line widths with it
+      const dpr = canvas.width / (COLS * CELL)
       if (++frames % 30 === 0) colors = readColors(canvas)
       if (phase === 'count' && now - phaseAt >= COUNT_MS * 3) {
         phase = 'run'
@@ -451,7 +405,7 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
         crashMs: ended ? now - phaseAt : null,
       })
 
-      const count = phase === 'count' ? 3 - Math.floor((now - phaseAt) / COUNT_MS) : 0
+      const count = phase === 'count' ? 3 - Math.floor(Math.max(0, now - phaseAt) / COUNT_MS) : 0
       const key = `${score.join(':')}|${phase}|${count}|${lastWinner}`
       if (key === shown) return
       shown = key
@@ -461,6 +415,7 @@ function TrailsGame({ vs, onMenu }: { vs: Vs; onMenu: () => void }) {
 
     return () => {
       cancelAnimationFrame(raf)
+      unfit()
       window.removeEventListener('keydown', onKey, true)
     }
   }, [vs])
@@ -525,13 +480,6 @@ function Arena({
   )
 }
 
-function sizeCanvas(canvas: HTMLCanvasElement): number {
-  const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1))
-  canvas.width = COLS * CELL * dpr
-  canvas.height = ROWS * CELL * dpr
-  return dpr
-}
-
 type OnlineView = Pick<TrailsView, 'score' | 'phase' | 'count' | 'last' | 'winner' | 'stalled' | 'again'>
 
 // a friend on another computer: TrailsSession runs the match, this feeds it keys, messages and frames and
@@ -553,7 +501,7 @@ function TrailsOnline({ transport, role, peer, onEnd }: GameProps) {
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const dpr = sizeCanvas(canvas)
+    const unfit = fitCanvas(canvas, COLS * CELL, ROWS * CELL)
     let colors = readColors(canvas)
     let frames = 0
     let raf = 0
@@ -611,7 +559,7 @@ function TrailsOnline({ transport, role, peer, onEnd }: GameProps) {
       lastFrame = now
       if (++frames % 30 === 0) colors = readColors(canvas)
       const v = pump(now)
-      if (v) draw(canvas, colors, v.round, dpr, { t: v.t, now, crashMs: v.crashMs })
+      if (v) draw(canvas, colors, v.round, canvas.width / (COLS * CELL), { t: v.t, now, crashMs: v.crashMs })
     }
     raf = requestAnimationFrame(frame)
     // a hidden window gets no frames: a slow timer keeps the link warm and the round creeping on, so the other
@@ -624,6 +572,7 @@ function TrailsOnline({ transport, role, peer, onEnd }: GameProps) {
     return () => {
       done = true
       cancelAnimationFrame(raf)
+      unfit()
       window.clearInterval(idle)
       off()
       window.removeEventListener('keydown', onKey, true)

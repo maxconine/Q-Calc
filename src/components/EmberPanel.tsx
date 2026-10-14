@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react'
 import { nativeWindow } from '../lib/bridge'
-import { closeReasonText, type PeerInfo, type PeerTransport } from '../lib/peer'
+import { gameNow } from '../lib/gameClock'
+import { useGameShell, useShellFullscreen } from '../lib/gameShellContext'
+import { closeReasonText, type PeerTransport } from '../lib/peer'
 import { fmtPar, fmtTime, levelDifficulty, levelLength, MAX_DIFFICULTY } from '../lib/ember'
 import { compileLevel, scoreOf, stageOf } from '../lib/emberEngine'
 import { LEVELS } from '../lib/emberLevels'
@@ -9,25 +11,20 @@ import { createLocalGame, createOnlineGame, type EmberGame, type EmberScreen, ty
 import { createEmberSound } from '../lib/emberSound'
 import { ELEMENTS, IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, STEP_HZ, type DeathCause, type GameState, type Level, type PlayerIndex, type Score, type Stage } from '../lib/emberTypes'
 import { drawThumb, EmberRenderer } from './emberDraw'
-import { useGameFullscreen } from './useGameFullscreen'
+import { GameLobby } from './GameLobby'
 import './EmberPanel.css'
 
-// ember & frost: `ember` then enter. the panel owns the title, the online lobby and the progress file;
-// emberSession runs the game (select screen, levels, clock, link) and this feeds it keys and frames.
-// esc goes back one screen: the app hands every esc (a keydown in the browser, __qcalcEscape in the mac
-// app) to escapeLayer, which asks escapeRef first and closes the panel only when it says false.
-// ⌃F fills the screen (useGameFullscreen, GAME_FULLSCREEN.md): the first esc then only leaves fullscreen
+// ember & frost: `ember` then enter. the shared lobby picks one keyboard or a room online; the panel owns the
+// progress file, and emberSession runs the game (select screen, levels, clock, link) while this feeds it keys
+// and frames. esc in a level pauses (or warns, online) and then goes back to the level picker; from the picker
+// it leaves to the lobby. ⌃F fills the screen (the game shell's useGameFullscreen, GAME_FULLSCREEN.md): the
+// first esc then only leaves fullscreen
 
 // what the play screen spends above and below the picture at the bar's size: the hud row, the keys line and
 // the two gaps between them and the stage. the fullscreen layout keeps this much (scaled) clear of the picture
 const FS_CHROME = 54
 // the root's own padding above and below, which fullscreen replaces
 const FS_PAD = 12
-
-type Screen =
-  | { k: 'title'; note?: string }
-  | { k: 'lobby'; note?: string }
-  | { k: 'game'; game: EmberGame; online: boolean; peer: string; id: number }
 
 const NAMES: Record<PlayerIndex, string> = { 0: 'ember', 1: 'frost' }
 // the select grid: this many cards a row (the css grid says the same), so 14 levels are three rows and fit
@@ -69,67 +66,32 @@ function compiledAt(i: number): Level | null {
   return compiledCache.get(i) ?? null
 }
 
-export function EmberPanel({
-  transport,
-  escapeRef,
-  onClose,
-}: {
-  transport: PeerTransport | null
-  escapeRef: MutableRefObject<(() => boolean) | null>
-  onClose: () => void
-}) {
-  const [screen, setScreen] = useState<Screen>({ k: 'title' })
-  const screenRef = useRef(screen)
-  screenRef.current = screen
+export function EmberPanel({ transport }: { transport: PeerTransport | null }) {
+  const shell = useGameShell()
+  // the shell's fullscreen (⌃F), laid out for ember's picture and hud
+  const fs = useShellFullscreen()
   const [progress, setProgress] = useState<EmberProgress>(loadProgress)
   const progressRef = useRef(progress)
   progressRef.current = progress
   // what the running game shows, kept by EmberPlay so esc knows whether it's in a level or on select
   const gameScreenRef = useRef<EmberScreen>('select')
-  // the lobby's own esc: steps back inside it, false when it's already on host/join
-  const lobbyBackRef = useRef<(() => boolean) | null>(null)
-  const gameIds = useRef(0)
-  const fs = useGameFullscreen<HTMLDivElement>({ chrome: FS_CHROME, pad: FS_PAD })
-  const leaveFullscreen = fs.escape
+  // the game that's running, local or online
+  const gameRef = useRef<EmberGame | null>(null)
+  // an online game's end, for when the link closes under it
+  const endRef = useRef<((note?: string) => void) | null>(null)
 
-  const startLocal = useCallback(() => {
-    try {
-      const game = createLocalGame(performance.now(), firstUnfinished(progressRef.current, LEVELS))
-      gameScreenRef.current = 'select'
-      setScreen({ k: 'game', game, online: false, peer: '', id: ++gameIds.current })
-    } catch {
-      setScreen({ k: 'title', note: 'couldn’t start the game' })
-    }
-  }, [])
+  useEffect(() => shell?.fullscreenLayout({ chrome: FS_CHROME, pad: FS_PAD }), [shell])
 
-  // created right inside the lobby's 'open' handler, so the first message after it already has a game
+  // made right inside the lobby's 'open' handler, so the first message after it already has a game
   const startOnline = useCallback(
-    (role: 'host' | 'guest', peer: string) => {
+    (role: 'host' | 'guest') => {
       if (!transport) return
       try {
-        const game = createOnlineGame(role, (text) => transport.send(text), performance.now(), firstUnfinished(progressRef.current, LEVELS))
+        gameRef.current = createOnlineGame(role, (text) => transport.send(text), gameNow(), firstUnfinished(progressRef.current, LEVELS))
         gameScreenRef.current = 'wait'
-        const next: Screen = { k: 'game', game, online: true, peer: peer || 'friend', id: ++gameIds.current }
-        screenRef.current = next
-        setScreen(next)
       } catch {
-        transport.close()
-        setScreen({ k: 'lobby', note: 'couldn’t start the game' })
+        gameRef.current = null
       }
-    },
-    [transport],
-  )
-
-  const endGame = useCallback(
-    (to: 'title' | 'lobby', note?: string, quiet = false) => {
-      const cur = screenRef.current
-      if (cur.k === 'game') {
-        if (!quiet) cur.game.leave()
-        if (cur.online) transport?.close()
-      }
-      const next: Screen = to === 'lobby' && transport ? { k: 'lobby', note } : { k: 'title', note }
-      screenRef.current = next
-      setScreen(next)
     },
     [transport],
   )
@@ -138,45 +100,10 @@ export function EmberPanel({
   useEffect(() => {
     if (!transport) return
     return transport.subscribe((e) => {
-      const cur = screenRef.current
-      if (cur.k !== 'game' || !cur.online) return
-      if (e.type === 'message') cur.game.receive(e.data, performance.now())
-      else if (e.type === 'closed') endGame('lobby', closeReasonText(e.reason, transport.peerWord), true)
+      if (e.type === 'message') gameRef.current?.receive(e.data, gameNow())
+      else if (e.type === 'closed') endRef.current?.(closeReasonText(e.reason, transport.peerWord))
     })
-  }, [transport, endGame])
-
-  // the link and the game go when the panel does, however it closes
-  useEffect(
-    () => () => {
-      const cur = screenRef.current
-      if (cur.k === 'game') cur.game.leave()
-      transport?.close()
-    },
-    [transport],
-  )
-
-  const back = useCallback((): boolean => {
-    const cur = screenRef.current
-    if (cur.k === 'title') return false
-    if (cur.k === 'lobby') {
-      if (lobbyBackRef.current?.()) return true
-      transport?.close()
-      setScreen({ k: 'title' })
-      return true
-    }
-    if (gameScreenRef.current === 'play') cur.game.menu()
-    else endGame(cur.online ? 'lobby' : 'title')
-    return true
-  }, [endGame, transport])
-
-  // esc while fullscreen leaves fullscreen and nothing else; the next one is the game's
-  useEffect(() => {
-    const esc = () => leaveFullscreen() || back()
-    escapeRef.current = esc
-    return () => {
-      if (escapeRef.current === esc) escapeRef.current = null
-    }
-  }, [back, escapeRef, leaveFullscreen])
+  }, [transport])
 
   const record = useCallback((levelId: string, score: Score, deaths: number) => {
     const next = recordResult(progressRef.current, levelId, score, deaths)
@@ -192,113 +119,134 @@ export function EmberPanel({
     saveProgress(next)
   }, [])
 
-  // title keys; the lobby and the game listen for their own
-  useEffect(() => {
-    if (screen.k !== 'title') return
-    const onKey = (e: KeyboardEvent) => {
-      if (!plainKey(e) || e.key === 'Escape') return
-      const key = e.key.toLowerCase()
-      if (key === 'l' || (e.key === 'Enter' && !e.repeat)) {
-        swallow(e)
-        if (!e.repeat) startLocal()
-      } else if (key === 'o' && transport) {
-        swallow(e)
-        if (!e.repeat) setScreen({ k: 'lobby' })
-      } else if (barKey(e)) swallow(e)
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [screen.k, startLocal, transport])
-
-  const head = (sub: string, mark = true) => (
+  const head = (sub: string) => (
     <div className="ember-head">
-      {mark ? (
-        <span className="ember-mark">
-          <span className="ember-fire">ember</span> <span className="ember-amp">&amp;</span> <span className="ember-frost">frost</span>
-        </span>
-      ) : null}
+      <span className="ember-mark">
+        <span className="ember-fire">ember</span> <span className="ember-amp">&amp;</span> <span className="ember-frost">frost</span>
+      </span>
       {sub ? <span className="ember-sub">{sub}</span> : null}
-      <button type="button" className="ember-leave" onClick={() => leaveFullscreen() || back() || onClose()}>
+      <button type="button" className="ember-leave" onClick={() => shell?.escape()}>
         esc
       </button>
     </div>
   )
 
+  const fsHint = fs?.hint ?? ''
+  const play = (game: EmberGame | null, online: boolean, peer: string, onEnd: (note?: string) => void) =>
+    game ? (
+      <EmberRun
+        game={game}
+        online={online}
+        peer={peer}
+        progress={progress}
+        fsHint={fsHint}
+        fsOn={Boolean(fs?.on)}
+        screenRef={gameScreenRef}
+        gameRef={gameRef}
+        endRef={online ? endRef : null}
+        head={head}
+        onRecord={record}
+        onMute={toggleMute}
+        onEnded={onEnd}
+      />
+    ) : (
+      <EmberFailed onEnd={onEnd} />
+    )
+
+  const done = finishedCount(progress, LEVELS)
   return (
-    <div ref={fs.ref} className="ember" aria-label="ember and frost">
-      {screen.k === 'title' ? (
-        <div className="ember-screen game-fs-screen">
-          {head('', false)}
-          <Title
-            note={screen.note}
-            online={Boolean(transport)}
-            done={finishedCount(progress, LEVELS)}
-            fsHint={fs.hint}
-            onLocal={startLocal}
-            onOnline={() => setScreen({ k: 'lobby' })}
-          />
-        </div>
-      ) : screen.k === 'lobby' && transport ? (
-        <div className="ember-screen game-fs-screen">
-          {head(transport.label)}
-          <EmberLobby transport={transport} note={screen.note} backRef={lobbyBackRef} onOpen={startOnline} onBack={() => back()} />
-        </div>
-      ) : screen.k === 'game' ? (
-        <EmberPlay
-          key={screen.id}
-          game={screen.game}
-          online={screen.online}
-          peer={screen.peer}
-          progress={progress}
-          fsHint={fs.hint}
-          fsOn={fs.on}
-          screenRef={gameScreenRef}
-          head={head}
-          onRecord={record}
-          onMute={toggleMute}
-          onEnded={(note) => endGame('lobby', note, true)}
-        />
-      ) : null}
+    <div className="ember" aria-label="ember and frost">
+      <GameLobby
+        game="ember"
+        name="ember & frost"
+        blurb="two of you, on one keyboard or two computers anywhere. both get to their doors. you’re ember if you host, frost if you join."
+        transport={transport}
+        sub={done ? `${done} of ${LEVELS.length} levels done` : ''}
+        online={(p) => play(gameRef.current, true, p.peer, p.onEnd)}
+        onOpen={startOnline}
+        local={{
+          prompt: '',
+          options: ['same keyboard'],
+          play: (_, onEnd) => {
+            gameScreenRef.current = 'select'
+            return <EmberLocal start={firstUnfinished(progressRef.current, LEVELS)} play={(game) => play(game, false, '', onEnd)} />
+          },
+        }}
+        footer={<Controls fsHint={fsHint} />}
+        ownHead
+        idle={() => gameScreenRef.current !== 'play'}
+        leave={() => {
+          // from a level, esc's leave goes back to the level picker, as it always has
+          if (gameScreenRef.current !== 'play' || !gameRef.current) return false
+          gameRef.current.menu()
+          return true
+        }}
+      />
     </div>
   )
 }
 
-function Title({
-  note,
-  online,
-  done,
-  fsHint,
-  onLocal,
-  onOnline,
-}: {
-  note?: string
-  online: boolean
-  done: number
-  fsHint: string
-  onLocal: () => void
-  onOnline: () => void
+// a game on one keyboard, made once for as long as it's played
+function EmberLocal({ start, play }: { start: number; play: (game: EmberGame | null) => ReactNode }) {
+  const [game] = useState<EmberGame | null>(() => {
+    try {
+      return createLocalGame(gameNow(), start)
+    } catch {
+      return null
+    }
+  })
+  return <>{play(game)}</>
+}
+
+function EmberFailed({ onEnd }: { onEnd: (note?: string) => void }) {
+  useEffect(() => onEnd('couldn’t start the game'), [onEnd])
+  return null
+}
+
+// the running game's lifetime: it's the one esc and the link talk to, and it's left when it goes
+function EmberRun(props: Omit<Parameters<typeof EmberPlay>[0], 'onEnded'> & {
+  gameRef: MutableRefObject<EmberGame | null>
+  endRef: MutableRefObject<((note?: string) => void) | null> | null
+  onEnded: (note?: string) => void
 }) {
+  const { game, gameRef, endRef, onEnded, ...rest } = props
+  const ended = useRef(false)
+  // the lobby hands a new onEnded each render; only the game going may leave it, not a re-render
+  const endedRef = useRef(onEnded)
+  endedRef.current = onEnded
+  useEffect(() => {
+    gameRef.current = game
+    if (endRef) endRef.current = (note) => {
+      ended.current = true
+      endedRef.current(note)
+    }
+    return () => {
+      if (gameRef.current === game) gameRef.current = null
+      if (endRef) endRef.current = null
+      // strict mode (development) runs this and the effect again at once: leave only if the game didn't come back
+      queueMicrotask(() => {
+        if (!ended.current && gameRef.current !== game) game.leave()
+      })
+    }
+  }, [endRef, game, gameRef])
   return (
-    <div className="ember-body ember-title">
-      <h2 className="ember-logo" aria-label="ember and frost">
-        <span className="ember-fire">ember</span>
-        <span className="ember-amp">&amp;</span>
-        <span className="ember-frost">frost</span>
-      </h2>
-      <p className="ember-line">two of you, on one keyboard or two computers anywhere. both get to their doors.</p>
+    <EmberPlay
+      {...rest}
+      game={game}
+      onEnded={(note) => {
+        ended.current = true
+        endedRef.current(note)
+      }}
+    />
+  )
+}
+
+function Controls({ fsHint }: { fsHint: string }) {
+  return (
+    <>
       <p className="ember-note ember-blurb">
         {LEVELS.length} long levels, every one open: lights out, gravity upside down, trampolines, keys, and checkpoints on the way.
       </p>
-      <div className="ember-actions">
-        <button type="button" className="ember-button" onClick={onLocal}>
-          same keyboard <kbd>L</kbd>
-        </button>
-        {online ? (
-          <button type="button" className="ember-button" onClick={onOnline}>
-            online <kbd>O</kbd>
-          </button>
-        ) : null}
-      </div>
       <div className="ember-controls">
         <span>
           <b className="ember-fire">ember</b> <kbd>W</kbd>
@@ -317,260 +265,9 @@ function Title({
         </span>
       </div>
       {/* said out loud for five seconds as the game opens; the keys line in a level keeps saying it */}
-      <p className="ember-fs-hint game-fs-hint">{fsHint}</p>
-      {note ? <p className="ember-note">{note}</p> : done ? <p className="ember-note">{`${done} of ${LEVELS.length} levels done`}</p> : null}
-    </div>
+      {fsHint ? <p className="ember-fs-hint game-fs-hint">{fsHint}</p> : null}
+    </>
   )
-}
-
-// ——— the online lobby: host shows a code, join finds a host (wi-fi) or goes straight to the code (relay).
-// kept to itself so it can give way to a shared GameLobby later
-
-type Lobby =
-  | { k: 'menu'; note?: string }
-  | { k: 'hosting'; code: string | null; renewed: boolean }
-  | { k: 'browse'; peers: PeerInfo[]; pick: number; denied: boolean }
-  | { k: 'code'; peer: PeerInfo | null; digits: string; note?: string }
-  | { k: 'pairing'; peer: PeerInfo | null }
-
-function EmberLobby({
-  transport,
-  note,
-  backRef,
-  onOpen,
-  onBack,
-}: {
-  transport: PeerTransport
-  note?: string
-  backRef: MutableRefObject<(() => boolean) | null>
-  onOpen: (role: 'host' | 'guest', peer: string) => void
-  onBack: () => void
-}) {
-  const [lobby, setLobby] = useState<Lobby>({ k: 'menu', note })
-  const lobbyRef = useRef(lobby)
-  lobbyRef.current = lobby
-  const discovers = transport.discovers
-  const codeLength = transport.codeLength
-  const onOpenRef = useRef(onOpen)
-  onOpenRef.current = onOpen
-
-  const set = useCallback((next: Lobby) => {
-    lobbyRef.current = next
-    setLobby(next)
-  }, [])
-
-  const host = useCallback(() => {
-    set({ k: 'hosting', code: null, renewed: false })
-    transport.host()
-  }, [set, transport])
-
-  const join = useCallback(() => {
-    if (!transport.discovers) {
-      set({ k: 'code', peer: null, digits: '' })
-      return
-    }
-    set({ k: 'browse', peers: [], pick: 0, denied: false })
-    transport.discover()
-  }, [set, transport])
-
-  const toMenu = useCallback(
-    (note?: string) => {
-      transport.close()
-      set({ k: 'menu', note })
-    },
-    [set, transport],
-  )
-
-  useEffect(() => {
-    backRef.current = () => {
-      if (lobbyRef.current.k === 'menu') return false
-      toMenu()
-      return true
-    }
-    return () => {
-      backRef.current = null
-    }
-  }, [backRef, toMenu])
-
-  useEffect(
-    () =>
-      transport.subscribe((e) => {
-        const cur = lobbyRef.current
-        switch (e.type) {
-          case 'hosting':
-            if (cur.k === 'hosting') set({ k: 'hosting', code: e.code, renewed: Boolean(e.renewed) })
-            return
-          case 'peers':
-            if (cur.k === 'browse') {
-              const keep = cur.peers[cur.pick]?.id
-              const pick = Math.max(0, e.peers.findIndex((p) => p.id === keep))
-              set({ ...cur, peers: e.peers, pick })
-            }
-            return
-          case 'denied':
-            if (cur.k === 'browse') set({ ...cur, denied: true })
-            return
-          case 'open':
-            if (transport.discovers) transport.stopDiscovery()
-            onOpenRef.current(e.role, e.peer)
-            return
-          case 'closed':
-            if (cur.k === 'pairing' && e.reason === 'wrong-code') {
-              set({ k: 'code', peer: cur.peer, digits: '', note: 'wrong code · try again' })
-              return
-            }
-            set({ k: 'menu', note: closeReasonText(e.reason, transport.peerWord) })
-            return
-        }
-      }),
-    [set, transport],
-  )
-
-  const submitCode = useCallback(
-    (peer: PeerInfo | null, digits: string) => {
-      if (!/^[0-9]+$/.test(digits) || digits.length !== transport.codeLength) return
-      set({ k: 'pairing', peer })
-      transport.join(peer?.id ?? '', digits)
-    },
-    [set, transport],
-  )
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const cur = lobbyRef.current
-      if (!plainKey(e) || e.key === 'Escape') return
-      const key = e.key.toLowerCase()
-      if (cur.k === 'menu') {
-        if (key === 'h') {
-          swallow(e)
-          if (!e.repeat) host()
-        } else if (key === 'j') {
-          swallow(e)
-          if (!e.repeat) join()
-        } else if (e.key === 'Backspace') {
-          swallow(e)
-          onBack()
-        } else if (barKey(e)) swallow(e)
-        return
-      }
-      if (cur.k === 'browse') {
-        swallow(e)
-        const n = cur.peers.length
-        if (e.key === 'ArrowDown' && n) set({ ...cur, pick: (cur.pick + 1) % n })
-        else if (e.key === 'ArrowUp' && n) set({ ...cur, pick: (cur.pick - 1 + n) % n })
-        else if (e.key === 'Enter' && cur.peers[cur.pick]) set({ k: 'code', peer: cur.peers[cur.pick]!, digits: '' })
-        else if (e.key === 'Backspace') toMenu()
-        return
-      }
-      if (cur.k === 'code') {
-        swallow(e)
-        const len = transport.codeLength
-        if (/^[0-9]$/.test(e.key) && cur.digits.length < len) {
-          const digits = cur.digits + e.key
-          if (digits.length === len) submitCode(cur.peer, digits)
-          else set({ ...cur, digits, note: undefined })
-        } else if (e.key === 'Backspace') {
-          if (cur.digits) set({ ...cur, digits: cur.digits.slice(0, -1) })
-          else if (cur.peer) join()
-          else toMenu()
-        }
-        return
-      }
-      if (cur.k === 'hosting' && e.key === 'Backspace') {
-        swallow(e)
-        toMenu()
-        return
-      }
-      if (barKey(e)) swallow(e)
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [host, join, onBack, set, submitCode, toMenu, transport])
-
-  const word = transport.peerWord
-  const slots = Array.from({ length: codeLength }, (_, i) => i)
-  switch (lobby.k) {
-    case 'menu':
-      return (
-        <div className="ember-body">
-          <p className="ember-line">
-            you’re <b className="ember-fire">ember</b> if you host, <b className="ember-frost">frost</b> if you join
-          </p>
-          <div className="ember-actions">
-            <button type="button" className="ember-button" onClick={host}>
-              host <kbd>H</kbd>
-            </button>
-            <button type="button" className="ember-button" onClick={join}>
-              join <kbd>J</kbd>
-            </button>
-          </div>
-          <p className="ember-note">
-            {lobby.note ? `${lobby.note} · ` : ''}
-            <button type="button" className="ember-link" onClick={onBack}>
-              ⌫ back
-            </button>
-          </p>
-        </div>
-      )
-    case 'hosting':
-      return (
-        <div className="ember-body">
-          <div className="ember-code" aria-label="pairing code">
-            {slots.map((i) => (
-              <span key={i}>{lobby.code?.[i] ?? '·'}</span>
-            ))}
-          </div>
-          <p className="ember-line">
-            {lobby.renewed ? 'too many wrong codes, so here’s a new one. ' : ''}
-            {discovers ? `on the other ${word}: type ember, online, join, pick this ${word}, enter the code` : 'on the other side: type ember, online, join, enter the code'}
-          </p>
-          <p className="ember-note ember-wait">waiting for frost…</p>
-        </div>
-      )
-    case 'browse':
-      return (
-        <div className="ember-body">
-          {lobby.denied ? (
-            <p className="ember-note">{closeReasonText('denied', transport.peerWord)}</p>
-          ) : lobby.peers.length ? (
-            <ul className="ember-peers" role="listbox">
-              {lobby.peers.map((p, i) => (
-                <li key={p.id} role="option" aria-selected={i === lobby.pick}>
-                  <button type="button" className={i === lobby.pick ? 'on' : undefined} onClick={() => set({ k: 'code', peer: p, digits: '' })}>
-                    {p.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="ember-line ember-wait">looking for {word}s hosting ember & frost…</p>
-          )}
-          <p className="ember-note">
-            ↑↓ pick · ↵ choose ·{' '}
-            <button type="button" className="ember-link" onClick={() => toMenu()}>
-              ⌫ back
-            </button>
-          </p>
-        </div>
-      )
-    case 'code':
-    case 'pairing': {
-      const digits = lobby.k === 'code' ? lobby.digits : ''
-      return (
-        <div className="ember-body">
-          <p className="ember-line">{lobby.peer ? `code shown on ${lobby.peer.name}` : 'the code your friend’s Q Calc shows'}</p>
-          <div className={`ember-code entry ${lobby.k === 'pairing' ? 'busy' : ''}`}>
-            {slots.map((i) => (
-              <span key={i} className={i === digits.length && lobby.k === 'code' ? 'caret' : undefined}>
-                {lobby.k === 'pairing' ? '•' : (digits[i] ?? '')}
-              </span>
-            ))}
-          </div>
-          <p className="ember-note">{lobby.k === 'pairing' ? 'pairing…' : (lobby.note ?? `type the ${codeLength} digits · ⌫ back`)}</p>
-        </div>
-      )
-    }
-  }
 }
 
 // ——— the game: select screen and play, one frame loop for both
@@ -699,6 +396,8 @@ function EmberPlay({
   const muted = progress.muted
   const sound = useMemo(() => createEmberSound(), [])
   useEffect(() => sound.setMuted(muted), [sound, muted])
+  // browsers allow only a few audio contexts at once, so each game closes its own
+  useEffect(() => () => sound.dispose(), [sound])
 
   // the frame loop: tick the session, draw, play sounds, and push the slow-changing bits into react
   useEffect(() => {
@@ -722,6 +421,8 @@ function EmberPlay({
     let fresh: Fresh | null = null
     let banner: Banner | null = null
     let banners = 0
+    // a move to a screen with another pixel ratio doesn't resize the canvas, so the frame loop watches it
+    let dpr = window.devicePixelRatio
     // the last frame's state, to tell what just happened. read from the state and not only from events, so
     // the guest's side of an online game says the same things even when an event was lost on the way
     let seen: { tick: number; stage: number; cp: number; deaths: number; phase: GameState['phase'] } | null = null
@@ -743,8 +444,14 @@ function EmberPlay({
     const mo = new MutationObserver(recolor)
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
 
-    const frame = (now: number) => {
+    const frame = () => {
       raf = requestAnimationFrame(frame)
+      // the game clock stands still while the shell has the game paused
+      const now = gameNow()
+      if (window.devicePixelRatio !== dpr) {
+        dpr = window.devicePixelRatio
+        resize()
+      }
       let v: EmberView
       try {
         v = game.tick(now)
@@ -863,7 +570,8 @@ function EmberPlay({
     }
   }, [game, online, screenRef, sound])
 
-  // keys. held movement keys are a set so key repeat and overlapping presses don't matter
+  // keys. held movement keys are a set so key repeat and overlapping presses don't matter. it follows what's down on
+  // every screen, so a level starts with whatever is already held
   useEffect(() => {
     const held = new Set<string>()
     const push = () => {
@@ -899,7 +607,13 @@ function EmberPlay({
       // a key already held keeps going even if ⌘ joins it; new modified presses belong to the bar
       if (!plainKey(e) && !(move && held.has(e.code))) return
       const h = hudRef.current
-      if (h.screen === 'select') {
+      // the screen as of the last frame: the hud trails it by a render, and a level can start in between
+      const screen = screenRef.current
+      if (move && !held.has(e.code)) {
+        held.add(e.code)
+        push()
+      }
+      if (screen === 'select') {
         swallow(e)
         // held arrows walk the grid at the system's repeat rate
         if (move) {
@@ -913,16 +627,12 @@ function EmberPlay({
         else if (e.key.toLowerCase() === 'm' && !e.repeat) cb.current.onMute()
         return
       }
-      if (h.screen !== 'play') {
+      if (screen !== 'play') {
         if (barKey(e)) swallow(e)
         return
       }
       if (move) {
         swallow(e)
-        if (!held.has(e.code)) {
-          held.add(e.code)
-          push()
-        }
         return
       }
       if (!barKey(e)) return
@@ -938,6 +648,12 @@ function EmberPlay({
       else if ((e.key === 'Enter' || e.key === ' ') && h.phase === 'won') game.next()
     }
     const onUp = (e: KeyboardEvent) => {
+      // macOS sends no keyup for a key let go while ⌘ is down, so letting go of ⌘ lets go of everything
+      if (e.key === 'Meta' && held.size) {
+        held.clear()
+        push()
+        return
+      }
       if (!held.delete(e.code)) return
       swallow(e)
       push()
@@ -958,7 +674,7 @@ function EmberPlay({
       window.removeEventListener('keyup', onUp, true)
       window.removeEventListener('blur', onBlur)
     }
-  }, [game, online])
+  }, [game, online, screenRef])
 
   const meName = hud.me != null ? NAMES[hud.me] : null
   const you = meName ? (

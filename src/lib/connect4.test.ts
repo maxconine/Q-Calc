@@ -53,9 +53,8 @@ describe('isConnect4Command', () => {
     expect(gameCommand('pong')).toBe('pong')
     expect(gameCommand('connect 4')).toBe('connect4')
     expect(gameCommand('1+1')).toBe(null)
-    expect(gameHint('connect4', true)).toBe('↵ play connect 4')
-    expect(gameHint('connect4', false)).toBe('connect 4 needs Q Calc for Mac')
-    expect(gameHint('pong', false)).toBe('pong needs Q Calc for Mac')
+    expect(gameHint('connect4')).toBe('↵ play connect 4')
+    expect(gameHint('pong')).toBe('↵ play pong')
   })
 })
 
@@ -176,7 +175,9 @@ describe('wire', () => {
   })
 
   it('knows pong’s hello, and pong ignores connect 4', () => {
-    expect(decodeC4(encodePong({ t: 'hi', v: 1 }))).toEqual({ t: 'pong' })
+    expect(decodeC4(encodePong({ t: 'hi', v: 1 }))).toEqual({ t: 'other', game: 'pong' })
+    expect(decodeC4('{"t":"hi","v":1,"u":3}')).toEqual({ t: 'other', game: 'ember' })
+    expect(decodeC4('{"t":"ut","v":1,"g":"ultimate"}')).toEqual({ t: 'other', game: 'ultimate' })
   })
 
   it('rejects junk', () => {

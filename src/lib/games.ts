@@ -20,30 +20,24 @@ type Game = {
   is: (text: string) => boolean
   // the line under the bar while its name is typed
   hint: string
-  // played only over the peer link; the rest play on this computer alone
-  needsLink: boolean
 }
 
 // what `games` lists, in order
 export const GAMES: readonly Game[] = [
-  { kind: 'pong', name: 'pong', blurb: 'first to 7 · two players, anywhere', is: isPongCommand, hint: PONG_HINT, needsLink: true },
-  { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · two players, anywhere', is: isConnect4Command, hint: C4_HINT, needsLink: true },
-  { kind: 'ultimate', name: 'ultimate tic-tac-toe', blurb: 'nine boards in one · two players, anywhere', is: isUltimateCommand, hint: UT_HINT, needsLink: true },
-  { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or online', is: isEmberCommand, hint: EMBER_HINT, needsLink: false },
-  { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot', is: isCrackCommand, hint: CRACK_HINT, needsLink: false },
-  { kind: 'equal', name: 'equal', blurb: 'guess the hidden equation · daily or practice', is: isEqualCommand, hint: EQUAL_HINT, needsLink: false },
-  { kind: 'numbers', name: '24 / countdown', blurb: 'make the number · two modes against the clock', is: isNumbersCommand, hint: NUMBERS_HINT, needsLink: false },
-  { kind: 'trails', name: 'trails', blurb: 'leave a trail, don’t hit one · solo, one keyboard or online', is: isTrailsCommand, hint: TRAILS_HINT, needsLink: false },
+  { kind: 'pong', name: 'pong', blurb: 'first to 7 · vs the computer or anyone online', is: isPongCommand, hint: PONG_HINT },
+  { kind: 'connect4', name: 'connect 4', blurb: 'four in a row · vs the computer or anyone online', is: isConnect4Command, hint: C4_HINT },
+  { kind: 'ultimate', name: 'ultimate tic-tac-toe', blurb: 'nine boards in one · vs the computer or anyone online', is: isUltimateCommand, hint: UT_HINT },
+  { kind: 'ember', name: 'ember & frost', blurb: 'co-op puzzle platformer · one keyboard or online', is: isEmberCommand, hint: EMBER_HINT },
+  { kind: 'crack', name: 'crack', blurb: 'crack the safe · tap when the dial hits the dot', is: isCrackCommand, hint: CRACK_HINT },
+  { kind: 'equal', name: 'equal', blurb: 'guess the hidden equation · daily or practice', is: isEqualCommand, hint: EQUAL_HINT },
+  { kind: 'numbers', name: '24 / countdown', blurb: 'make the number · two modes against the clock', is: isNumbersCommand, hint: NUMBERS_HINT },
+  { kind: 'trails', name: 'trails', blurb: 'leave a trail, don’t hit one · solo, one keyboard or online', is: isTrailsCommand, hint: TRAILS_HINT },
 ]
 
 const byKind = (kind: GameKind) => GAMES.find((g) => g.kind === kind)!
 
 export function gameCommand(text: string): GameKind | null {
   return GAMES.find((g) => g.is(text))?.kind ?? null
-}
-
-export function gameNeedsLink(kind: GameKind): boolean {
-  return byKind(kind).needsLink
 }
 
 export const GAMES_HINT = '↑↓ pick · ↵ play · or type a name'
@@ -54,9 +48,7 @@ export function isGamesCommand(text: string): boolean {
   return t === 'games' || t === 'game'
 }
 
-// the hint under the bar; linked is false where there's no peer link to play over
-export function gameHint(kind: GameKind, linked: boolean): string {
-  const game = byKind(kind)
-  if (game.needsLink && !linked) return `${game.name} needs Q Calc for Mac`
-  return game.hint
+// the hint under the bar. every game plays on this computer; the ones with online play list rooms too
+export function gameHint(kind: GameKind): string {
+  return byKind(kind).hint
 }

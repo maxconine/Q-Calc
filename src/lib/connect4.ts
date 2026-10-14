@@ -1,3 +1,4 @@
+import { otherHello } from './hello'
 import type { Side } from './pong'
 
 // two-player connect 4 over the peer link. turn based, so neither side is in charge: each sends its own
@@ -108,7 +109,7 @@ export function drop(s: C4State, col: number, who: Side): C4State | null {
 // bye is the one both games share
 export type C4Msg =
   // ok: the sender has already heard the other side's hi, so it needs no answer
-  | { t: 'c4'; v: number; ok?: boolean }
+  | { t: 'c4'; v: number; g?: 'connect4'; ok?: boolean }
   // move n (counting from 0) of game g drops in column c
   | { t: 'c4m'; g: number; n: number; c: number }
   // asks for a rematch once game g is over
@@ -117,8 +118,8 @@ export type C4Msg =
   | { t: 'c4k' }
   | { t: 'bye' }
 
-// what can come in: a c4 message, or pong's hello from a friend who opened pong instead
-export type C4In = C4Msg | { t: 'pong' }
+// what can come in: a c4 message, or another game's hello from a friend who opened that instead
+export type C4In = C4Msg | { t: 'other'; game: string }
 
 export function encodeC4(msg: C4Msg): string {
   return JSON.stringify(msg)
@@ -137,6 +138,8 @@ export function decodeC4(raw: string): C4In | null {
   }
   if (!m || typeof m !== 'object' || Array.isArray(m)) return null
   const o = m as Record<string, unknown>
+  const other = otherHello(o, 'connect4')
+  if (other) return { t: 'other', game: other }
   switch (o.t) {
     case 'c4':
       return typeof o.v === 'number' && Number.isFinite(o.v) ? { t: 'c4', v: o.v, ...(o.ok === true ? { ok: true } : {}) } : null
@@ -148,9 +151,6 @@ export function decodeC4(raw: string): C4In | null {
       return { t: 'c4k' }
     case 'bye':
       return { t: 'bye' }
-    // pong's hello
-    case 'hi':
-      return { t: 'pong' }
     default:
       return null
   }

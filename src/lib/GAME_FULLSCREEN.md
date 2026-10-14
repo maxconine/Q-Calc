@@ -9,6 +9,8 @@ A game panel can take over the whole display. **Ctrl+F** toggles it, **Esc** or 
 
 ## Adopting it in a panel
 
+In Q Calc every game opens inside `GameShell`, which calls the hook once with its root as `ref`, so every game has ⌃F already; f in the lobby or on the paused card and the small fullscreen buttons toggle the same one. A panel reads it with `useShellFullscreen()` (`lib/gameShellContext.ts`) and gives its own `base`/`chrome`/`pad` with `useGameShell()?.fullscreenLayout(...)`, as ember does. What follows is how the hook works for a panel that holds it itself.
+
 ```tsx
 import { useGameFullscreen } from './useGameFullscreen'
 

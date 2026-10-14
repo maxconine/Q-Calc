@@ -15,8 +15,8 @@ describe('isGamesCommand', () => {
 })
 
 describe('gameHint', () => {
-  it('ember & frost plays on one keyboard, so it never asks for the mac link', () => {
-    expect(gameHint('ember', false)).toBe(EMBER_HINT)
-    expect(gameHint('pong', false)).toMatch(/needs Q Calc for Mac/)
+  it('every game plays without a link, so the hint is always its own', () => {
+    expect(gameHint('ember')).toBe(EMBER_HINT)
+    for (const g of GAMES) expect(gameHint(g.kind)).not.toMatch(/needs/)
   })
 })

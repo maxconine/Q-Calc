@@ -193,11 +193,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var gameRestoreFrame: NSRect?
     // over the menu bar, the Dock and the menu bar's own status items, which sit at the bar's usual level
     private static let gameFullscreenLevel = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
-    private lazy var peer: PeerLink = {
-        let link = PeerLink()
-        link.onEvent = { [weak self] in self?.pushPeerEvent($0) }
-        return link
-    }()
+    // a game is open: clicking away or losing focus leaves the panel up
+    private var gameOpen = false
+    private static let nicknameKey = "qcalc.nickname"
 
     deinit {
         for monitor in [escapeMonitor, dragMonitor, clickAwayMonitor, clickAwayLocalMonitor].compactMap({ $0 }) {
@@ -459,12 +457,22 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 periodic.show(PeriodicElement.list(from: dict["elements"]))
             case "identities":
                 if let sheet = IdentitySheet(dict) { identityWindow(sheet.id).show(sheet) }
-            case "peer":
-                handlePeer(dict)
             case "escapeLayer":
                 pageTakesEscape = dict["on"] as? Bool ?? false
             case "gameFullscreen":
                 setGameFullscreen(dict["on"] as? Bool ?? false, fromPage: true)
+            case "game":
+                gameOpen = dict["open"] as? Bool ?? false
+                if !gameOpen { setGameFullscreen(false, fade: false) }
+            case "gameSave":
+                if let key = dict["key"] as? String {
+                    AppSettings.shared.saveGame(key, dict["value"] as? String)
+                }
+            case "nickname":
+                // the page's web storage is wiped every launch, so the name the room lists show is kept here
+                if let name = dict["name"] as? String, !name.isEmpty, name.count <= 64 {
+                    UserDefaults.standard.set(name, forKey: Self.nicknameKey)
+                }
             default:
                 break
             }
@@ -499,8 +507,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         OverlayLog.note("page process ended (overlay \(panel?.isVisible == true ? "up" : "hidden")), reloading")
         webReady = false
         pageTakesEscape = false
+        gameOpen = false
         setGameFullscreen(false, fade: false)
-        peer.close()
         triedBundle = false
         triedDevServer = false
         loadQuickCalc(webView)
@@ -590,9 +598,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         oldPanel.orderOut(nil)
         oldPanel.contentView = NSView()
         old.navigationDelegate = nil
-        // the new page knows nothing of a link the old one had open, so nothing should stay hosting behind it
         pageTakesEscape = false
-        peer.close()
         let fresh = makeWebView(old.configuration)
         let next = makePanel()
         next.contentView = fresh
@@ -661,7 +667,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // the panel lost key: a click elsewhere or an app switch hides it, but focus taken during the show itself
     // (a space switch finishing, the launch activating something) leaves it up
     private func lostFocus() {
-        guard wantVisible, panel?.isVisible == true else { return }
+        guard wantVisible, panel?.isVisible == true, !gameOpen else { return }
         let since = uptime() - shownAt
         if OverlayHealth.focusLossHides(sinceShow: since) {
             hide(because: "lost focus")
@@ -680,7 +686,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         observeSettings()
 
         let config = WKWebViewConfiguration()
-        // wiped every launch, so state that must survive (settings, onboarding) is kept in AppSettings
+        // wiped every launch, so state that must survive (settings, onboarding, game saves) is kept in AppSettings
         config.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         config.userContentController.add(self, name: "qcalc")
         config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "soulver")
@@ -690,7 +696,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let theme = AppSettings.shared.theme
         let onboarding = AppSettings.shared.onboardingJSON()
         let analytics = AppSettings.shared.analyticsJSON()
+        let gameSaves = AppSettings.shared.gameSavesJSON()
         let os = ProcessInfo.processInfo.operatingSystemVersion
+        let nickname = UserDefaults.standard.string(forKey: Self.nicknameKey).flatMap { jsonStringLiteral($0) } ?? "null"
         let boot = WKUserScript(
             source: """
             window.__QCALC_NATIVE = true;
@@ -703,6 +711,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_SETTINGS = \(settings);
             window.__QCALC_ONBOARDING = \(onboarding);
             window.__QCALC_ANALYTICS = \(analytics);
+            window.__QCALC_NICKNAME = \(nickname);
+            window.__QCALC_GAME_SAVES = \(gameSaves);
             window.__QCALC_OS = "macOS \(os.majorVersion).\(os.minorVersion)";
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
@@ -1232,35 +1242,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web?.evaluateJavaScript("if (window.__qcalcGameFullscreen) window.__qcalcGameFullscreen(\(on));")
     }
 
-    private func handlePeer(_ dict: [String: Any]) {
-        switch dict["op"] as? String {
-        case "discover":
-            peer.discover()
-        case "stopDiscovery":
-            peer.stopDiscovery()
-        case "host":
-            peer.host()
-        case "join":
-            if let id = dict["peer"] as? String, let code = dict["code"] as? String {
-                peer.join(id, code: code)
-            }
-        case "send":
-            if let data = dict["data"] as? String { peer.send(data) }
-        case "close":
-            peer.close()
-        default:
-            break
-        }
-    }
-
-    private func pushPeerEvent(_ event: [String: Any]) {
-        guard JSONSerialization.isValidJSONObject(event),
-              let data = try? JSONSerialization.data(withJSONObject: event, options: []),
-              let json = String(data: data, encoding: .utf8)
-        else { return }
-        web?.evaluateJavaScript("window.__qcalcPeer && window.__qcalcPeer(\(json));")
-    }
-
     private func installDragMonitor() {
         guard dragMonitor == nil else { return }
         dragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
@@ -1305,12 +1286,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func installClickAwayMonitors() {
         guard clickAwayMonitor == nil else { return }
         clickAwayMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard self?.panel?.isVisible == true else { return }
+            guard self?.panel?.isVisible == true, self?.gameOpen == false else { return }
             self?.hide(because: "click in another app")
         }
         clickAwayLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window !== panel,
-                  !(event.window is PeriodicPanel) else {
+                  !(event.window is PeriodicPanel), !self.gameOpen else {
                 return event
             }
             self.hide(because: "click in another window")

@@ -1,3 +1,4 @@
+import { otherGameNote } from './hello'
 import { botColumn, type C4Skill } from './connect4Bot'
 import { C4_VERSION, canDrop, decodeC4, drop, encodeC4, firstFor, isOver, newBoard, other, type C4Msg, type C4State, type Side } from './connect4'
 
@@ -66,7 +67,7 @@ export class Connect4Session {
   }
 
   private hi(): void {
-    this.post({ t: 'c4', v: C4_VERSION, ...(this.greeted ? { ok: true } : {}) })
+    this.post({ t: 'c4', v: C4_VERSION, g: 'connect4', ...(this.greeted ? { ok: true } : {}) })
   }
 
   private post(m: C4Msg): void {
@@ -147,9 +148,9 @@ export class Connect4Session {
         }
         if (!m.ok) this.hi()
         return
-      case 'pong':
+      case 'other':
         this.post({ t: 'bye' })
-        this.end('your friend opened pong · both type connect 4')
+        this.end(otherGameNote(m.game, 'connect4'))
         return
       case 'c4m':
         // only the next move of this game, from the side whose turn it is; anything else is stale or made up

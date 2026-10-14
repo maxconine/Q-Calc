@@ -3,7 +3,7 @@
 
 export const CRACK_HINT = '↵ crack the safe'
 
-// 'crack', 'crack the safe', 'safe'. whole words only, so 'crack2' stays calculator input
+// 'crack', 'crack the safe', 'safecracker', 'safe cracking'. whole words only, so 'crack2' stays calculator input
 export function isCrackCommand(text: string): boolean {
   return /^(?:crack(?: the safe)?|safe ?crack(?:er|ing)?)$/i.test(text.trim().replace(/\s+/g, ' '))
 }

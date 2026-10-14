@@ -2030,81 +2030,169 @@ html.quick-native .graph {
   cursor: pointer;
 }
 
-/* ultimate tic-tac-toe: `ultimate` then enter. connect 4's panel, status and click targets; nine small
-   boards, the ones you may play in lit, the one the digits pick cells in lit more */
+/* ultimate tic-tac-toe: `ultimate` then enter. connect 4's panel and status line on a chalkboard: hand-drawn
+   lines (the wobble is in the paths, see ultimateChalk.ts) in neon chalk, you green and them orange. it's
+   built to be cheap to draw: no svg filters, the glow is a wide faint stroke under each line, nothing loops
+   forever, and only the newest mark and the boards you can play in animate, once */
+.pong {
+  --ut-mine: var(--accent);
+  --ut-theirs: #d4520f;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="light"]) .pong {
+    --ut-theirs: #ff9a5c;
+  }
+}
+html[data-theme="dark"] .pong {
+  --ut-theirs: #ff9a5c;
+}
+.ut-name.mine {
+  color: var(--ut-mine);
+}
+.ut-name.theirs {
+  color: var(--ut-theirs);
+}
+.ut-status {
+  font-family: "Chalkboard SE", "Marker Felt", var(--font, system-ui), sans-serif;
+}
+.ut-slate {
+  /* the slate is dark in both themes, so its chalk colours are fixed */
+  --chalk: #efece2;
+  --chalk-mine: #6ee69e;
+  --chalk-theirs: #ff9a5c;
+  width: min(100%, 340px);
+  margin: 0 auto;
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 30% 15%, rgba(255, 255, 255, 0.06), transparent 60%),
+    radial-gradient(90% 70% at 85% 95%, rgba(0, 0, 0, 0.28), transparent 60%),
+    #1f2a25;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 2px 14px rgba(0, 0, 0, 0.35);
+}
 .ut-grid {
   display: block;
-  width: min(100%, 300px);
+  width: 100%;
   height: auto;
   aspect-ratio: 1;
-  overflow: visible;
+  cursor: pointer;
 }
-.ut-board {
-  fill: color-mix(in srgb, var(--bg) 70%, var(--bg-tape));
-  stroke: color-mix(in srgb, var(--line) 60%, transparent);
-  stroke-width: 1;
-  transition: fill 120ms ease-out, stroke 120ms ease-out;
+.ut-dust {
+  fill: var(--chalk);
+  opacity: 0.07;
 }
-.ut-board.open {
-  fill: color-mix(in srgb, var(--accent) 7%, var(--bg));
-  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
-}
-.ut-board.zone {
-  fill: color-mix(in srgb, var(--accent) 13%, var(--bg));
-  stroke: var(--accent);
-  stroke-width: 1.5;
-}
-.ut-board.done {
-  fill: color-mix(in srgb, var(--bg) 85%, var(--bg-tape));
-}
-.ut-board.win {
-  stroke: var(--accent);
-  stroke-width: 2;
-}
-.ut-line {
-  stroke: color-mix(in srgb, var(--line) 80%, transparent);
-  stroke-width: 1;
-  stroke-linecap: round;
-}
-.ut-mark {
+.ut-big,
+.ut-small {
   fill: none;
-  stroke-width: 2.6;
+  stroke: var(--chalk);
   stroke-linecap: round;
 }
-.ut-mark.mine {
-  stroke: var(--accent);
+.ut-big {
+  stroke-width: 3.2;
+  opacity: 0.85;
 }
-.ut-mark.theirs {
-  stroke: var(--ink);
+.ut-small {
+  stroke-width: 1.4;
+  opacity: 0.3;
 }
-.ut-mark.dim {
-  opacity: 0.28;
+.ut-ink path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.ut-mark.big {
+.ut-ink.mine {
+  stroke: var(--chalk-mine);
+}
+.ut-ink.theirs {
+  stroke: var(--chalk-theirs);
+}
+.ut-glow {
   stroke-width: 7;
-  opacity: 0.9;
+  opacity: 0.2;
 }
-.ut-mark.big.dim {
-  opacity: 0.25;
+.ut-core {
+  stroke-width: 2.7;
 }
-.ut-mark.last {
-  animation: ut-pop 200ms ease-out both;
-  transform-box: fill-box;
-  transform-origin: center;
+.ut-ink.big .ut-glow {
+  stroke-width: 16;
+  opacity: 0.16;
 }
-@keyframes ut-pop {
-  from { transform: scale(0.4); opacity: 0; }
-  to { transform: scale(1); }
+.ut-ink.big .ut-core {
+  stroke-width: 6.5;
 }
-@media (prefers-reduced-motion: reduce) {
-  .ut-mark.last { animation: none; }
-  .ut-board { transition: none; }
+.ut-ink.win .ut-glow {
+  stroke-width: 14;
+  opacity: 0.3;
+}
+.ut-ink.win .ut-core {
+  stroke-width: 4;
+}
+.ut-ink.dim {
+  opacity: 0.22;
+}
+.ut-erased {
+  fill: var(--chalk);
+  opacity: 0.045;
+}
+.ut-ink.fresh path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ut-draw 320ms ease-out forwards;
+}
+.ut-ink.big.fresh path {
+  animation-duration: 560ms;
+  animation-delay: 120ms;
+}
+.ut-ink.win.fresh path {
+  animation-duration: 500ms;
+  animation-delay: 650ms;
+}
+.ut-open {
+  fill: none;
+  stroke: var(--chalk-mine);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0.45;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: ut-draw 380ms ease-out forwards;
+}
+.ut-open.zone {
+  stroke-width: 2.4;
+  opacity: 1;
+}
+.ut-trail {
+  fill: none;
+  stroke: var(--chalk-mine);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 0.5 6;
+  opacity: 0;
+  animation: ut-fade 300ms 150ms ease-out forwards;
 }
 .ut-aim {
-  fill: color-mix(in srgb, var(--accent) 22%, transparent);
+  fill: var(--chalk-mine);
+  opacity: 0.2;
 }
 .ut-aim.blocked {
-  fill: color-mix(in srgb, var(--ink) 8%, transparent);
+  fill: var(--chalk);
+  opacity: 0.06;
+}
+@keyframes ut-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ut-fade {
+  to { opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ut-ink.fresh path,
+  .ut-open,
+  .ut-trail {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .ut-trail { opacity: 0.6; }
 }
 
 /* the walkthrough's line: muted like a hint, with its count and a way out */

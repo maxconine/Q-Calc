@@ -1,8 +1,10 @@
+import { otherHello } from './hello'
 import { COLS, ROWS, WIN_ROUNDS, type Cycle, type Dir, type Round, type RoundResult } from './trails'
 
 // trails over the peer link, as json text. both sides run the same round and only swap turns: one small
 // frame message a tick, each naming the tick its turns land on. every type starts `tr`, so pong, connect 4
-// and ember & frost ignore them; their hellos are recognised here so a mismatched pair is told
+// and ember & frost ignore them; the hello is tagged with its game, and every game's is recognised here
+// (hello.ts) so a mismatched pair is told
 
 export const TRAILS_VERSION = 1
 // how the start of a round is timed, here so the panel and the online game count the same
@@ -46,7 +48,7 @@ export type Snap = {
 
 export type TrailsMsg =
   // ok: the sender has already heard the other side's hello, so it needs no answer
-  | { t: 'tr'; v: number; ok?: boolean }
+  | { t: 'tr'; v: number; g?: 'trails'; ok?: boolean }
   // the host's ping, and keepalive: c is its clock, sent straight back in trq
   | { t: 'trp'; c: number }
   | { t: 'trq'; c: number }
@@ -200,6 +202,8 @@ export function decodeTrails(raw: string): TrailsIn | null {
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null
   const o = parsed as Record<string, unknown>
+  const other = otherHello(o, 'trails')
+  if (other) return { t: 'other', game: other }
   switch (o.t) {
     case 'tr':
       return count(o.v) ? { t: 'tr', v: o.v, ...(o.ok === true ? { ok: true } : {}) } : null
@@ -239,11 +243,6 @@ export function decodeTrails(raw: string): TrailsIn | null {
       if (phase === 'count' && round.tick !== 0) return null
       return { t: 'trs', e: o.e, r: o.r, d: o.d, score: [o.s[0], o.s[1]], phase, wait: o.w, round, frames: [mine, theirs], hash: o.h }
     }
-    // pong's hello, and ember & frost's, which also says how many levels are unlocked
-    case 'hi':
-      return { t: 'other', game: 'u' in o ? 'ember' : 'pong' }
-    case 'c4':
-      return { t: 'other', game: 'connect 4' }
     default:
       return null
   }

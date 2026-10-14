@@ -193,6 +193,6 @@ describe('isEqualCommand', () => {
   it('opens from the bar with no peer link', () => {
     expect(gameCommand('equal')).toBe('equal')
     expect(gameCommand('Nerdle')).toBe('equal')
-    expect(gameHint('equal', false)).toBe(EQUAL_HINT)
+    expect(gameHint('equal')).toBe(EQUAL_HINT)
   })
 })

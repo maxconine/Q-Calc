@@ -32,6 +32,7 @@ import { EmberPanel } from './EmberPanel'
 import { EqualPanel } from './EqualPanel'
 import { NumbersPanel } from './NumbersPanel'
 import { TrailsPanel } from './TrailsPanel'
+import { GAME_HIDE_EVENT, GameShell } from './GameShell'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -133,8 +134,8 @@ import {
   tourUsed,
   TUTORIAL_HINT,
 } from '../lib/tour'
-import { hasPeerTransport, peerTransport } from '../lib/peer'
-import { GAMES, GAMES_HINT, gameCommand, gameHint, gameNeedsLink, isGamesCommand, type GameKind } from '../lib/games'
+import { peerTransport } from '../lib/peer'
+import { GAMES, GAMES_HINT, gameCommand, gameHint, isGamesCommand, type GameKind } from '../lib/games'
 import { commandHeld, hostCheats, hostKeys, hotkeyFailedText, isWindowsHost } from '../lib/platform'
 import { hasSoulver, withPhraseAnswer } from '../lib/phraseLive'
 import { lineCopyText } from '../lib/touches'
@@ -284,10 +285,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [timeVarying, setTimeVarying] = useState<Record<string, boolean>>({})
   // equation fields for `sys N`; null until enter opens them
   const [sysLines, setSysLines] = useState<string[] | null>(null)
-  // a game (pong, connect 4) takes over the bar until esc or the panel hides
+  // a game takes over the bar until esc closes it from its lobby, or the panel hides (unless someone's waiting
+  // to join or playing over the link: then it stays for the next show)
   const [pongOpen, setPongOpen] = useState<GameKind | null>(null)
   const pongOpenRef = useRef<GameKind | null>(null)
-  const emberEscRef = useRef<(() => boolean) | null>(null)
+  // the open game's shell: what esc does there, and whether the game must outlive a hide
+  const gameEscRef = useRef<(() => boolean) | null>(null)
+  const gameHoldRef = useRef<(() => boolean) | null>(null)
   pongOpenRef.current = pongOpen
   const sysLinesRef = useRef<string[] | null>(null)
   sysLinesRef.current = sysLines
@@ -1013,7 +1017,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
-    setPongOpen(null)
+    // a game kept open hears about it: it leaves full screen and pauses
+    if (pongOpenRef.current && gameHoldRef.current?.()) window.dispatchEvent(new Event(GAME_HIDE_EVENT))
+    else setPongOpen(null)
     if (isHelpCommand(expr) || isPeriodicCommand(expr) || isIdentityCommand(expr) || gameCommand(expr) || isGamesCommand(expr) || isTutorialCommand(expr) || isGreeting(expr)) {
       resetToCalculate()
       return
@@ -1064,6 +1070,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [resetToCalculate, restoreDraft, stopDraftTimer])
 
   const onUp = useCallback((): boolean => {
+    // a game has the arrows; the hidden bar mustn't open its tape behind it
+    if (pongOpenRef.current) return true
     // in the `games` list, ↑ starts at the game nearest the bar and climbs
     if (isGamesCommand(qRef.current)) {
       setGamePick((cur) => (cur == null ? GAMES.length - 1 : Math.max(0, cur - 1)))
@@ -1085,6 +1093,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   }, [helpOpen, history.length, selected, setGamePick, snapshotCaret, tapeOpen])
 
   const onDown = useCallback((): boolean => {
+    if (pongOpenRef.current) return true
     if (isGamesCommand(qRef.current)) {
       if (gamePick == null) return false
       setGamePick(gamePick >= GAMES.length - 1 ? null : gamePick + 1)
@@ -1144,7 +1153,6 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // from typing a game's name and ↵, or a row of the `games` sheet
   const playGame = useCallback(
     (game: GameKind) => {
-      if (!peerTransport() && gameNeedsLink(game)) return
       resetToCalculate()
       setTapeOpen(false)
       setPongOpen(game)
@@ -1192,20 +1200,26 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     else if (!commit()) setHint(blankEnterHint())
   }, [blankEnterHint, commit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
 
-  // esc leaves the overlay, except from pong, which it closes back to the bar. false tells the mac app to hide;
-  // the page does not clear the tape or the input first.
-  const escapeLayer = useCallback((): boolean => {
-    if (!pongOpenRef.current) return false
-    // ember & frost steps back through its own screens first, and only closes from its title
-    if (pongOpenRef.current === 'ember' && emberEscRef.current?.()) return true
+  const closeGame = useCallback(() => {
     pongOpenRef.current = null
     setPongOpen(null)
-    return true
   }, [])
 
-  // so the mac app hands esc to the page while pong is up
+  // esc leaves the overlay, except from a game: its shell decides (full screen, lobby steps, pause), and from the
+  // lobby's list it closes the game back to the bar. false tells the mac app to hide; the page does not clear
+  // the tape or the input first.
+  const escapeLayer = useCallback((): boolean => {
+    if (!pongOpenRef.current) return false
+    if (!gameEscRef.current?.()) closeGame()
+    return true
+  }, [closeGame])
+
+  // so the mac app hands esc to the page while a game is up, and keeps the window up when it loses focus;
+  // the windows shell reads the flag, since its esc listener runs before the page's
   useEffect(() => {
     nativeHandler()?.postMessage({ type: 'escapeLayer', on: Boolean(pongOpen) })
+    nativeHandler()?.postMessage({ type: 'game', open: Boolean(pongOpen) })
+    calcWindow().__QCALC_GAME_OPEN = Boolean(pongOpen)
     if (!pongOpen) mathRef.current?.focus()
   }, [pongOpen])
 
@@ -1260,6 +1274,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const cmdOnly = cmd && !e.shiftKey
       const mainInput = e.target instanceof HTMLInputElement && e.target.classList.contains('quick-plain')
       const bound = actionForEvent(e, settingsRef.current.keybinds, isWindowsHost())
+      // a game has the keys: only settings still opens, so ⌘⌫ can't delete a tape row nobody can see
+      if (pongOpenRef.current && bound !== 'settings') return
       let action: (() => void) | undefined
       if (bound) action = keyActions[bound]
       else if (cmdOnly && (e.key === 'Backspace' || e.key === 'Delete') && mainInput && sysLinesRef.current) action = resetToCalculate
@@ -1341,6 +1357,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     w.__qcalcFocus = () => mathRef.current?.focus()
     w.__qcalcPaste = (text) => {
       if (typeof text !== 'string' || !text) return
+      // a field of the page's own (a game's input, a settings box) takes the paste, not the hidden bar
+      const active = document.activeElement
+      if ((active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && !active.classList.contains('quick-plain')) {
+        if (!document.execCommand('insertText', false, text)) active.setRangeText(text, active.selectionStart ?? active.value.length, active.selectionEnd ?? active.value.length, 'end')
+        return
+      }
       mathRef.current?.insert(flattenPastedText(text))
       mathRef.current?.focus()
     }
@@ -1491,22 +1513,26 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       >
         <FourTwentySmoke smoking={smoking} />
         <div className={`spotlight ${embedded ? 'spotlight-embedded' : ''}`}>
-          {pongOpen === 'pong' && peerTransport() ? (
-            <PongPanel transport={peerTransport()!} onClose={escapeLayer} />
-          ) : pongOpen === 'connect4' && peerTransport() ? (
-            <Connect4Panel transport={peerTransport()!} onClose={escapeLayer} />
-          ) : pongOpen === 'ultimate' && peerTransport() ? (
-            <UltimatePanel transport={peerTransport()!} onClose={escapeLayer} />
-          ) : pongOpen === 'ember' ? (
-            <EmberPanel transport={peerTransport()} escapeRef={emberEscRef} onClose={escapeLayer} />
-          ) : pongOpen === 'crack' ? (
-            <CrackPanel onClose={escapeLayer} />
-          ) : pongOpen === 'equal' ? (
-            <EqualPanel onClose={escapeLayer} />
-          ) : pongOpen === 'numbers' ? (
-            <NumbersPanel onClose={escapeLayer} />
-          ) : pongOpen === 'trails' ? (
-            <TrailsPanel transport={peerTransport()} onClose={escapeLayer} />
+          {pongOpen ? (
+            <GameShell key={pongOpen} escRef={gameEscRef} holdRef={gameHoldRef} onClose={closeGame}>
+              {pongOpen === 'pong' ? (
+                <PongPanel transport={peerTransport()} />
+              ) : pongOpen === 'connect4' ? (
+                <Connect4Panel transport={peerTransport()} />
+              ) : pongOpen === 'ultimate' ? (
+                <UltimatePanel transport={peerTransport()} />
+              ) : pongOpen === 'ember' ? (
+                <EmberPanel transport={peerTransport()} />
+              ) : pongOpen === 'crack' ? (
+                <CrackPanel />
+              ) : pongOpen === 'equal' ? (
+                <EqualPanel />
+              ) : pongOpen === 'numbers' ? (
+                <NumbersPanel />
+              ) : (
+                <TrailsPanel transport={peerTransport()} />
+              )}
+            </GameShell>
           ) : helpShown ? (
             <CheatSheet cheats={cheats} />
           ) : gamesShown ? (
@@ -1573,7 +1599,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd, hasPeerTransport()) : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}

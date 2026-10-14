@@ -1,3 +1,4 @@
+import { otherGameNote } from './hello'
 import { botCell, type UtSkill } from './ultimateBot'
 import { UT_VERSION, canPlay, decodeUt, encodeUt, firstFor, isOver, newGame, other, play, type Side, type UtMsg, type UtState } from './ultimate'
 
@@ -66,7 +67,7 @@ export class UltimateSession {
   }
 
   private hi(): void {
-    this.post({ t: 'ut', v: UT_VERSION, ...(this.greeted ? { ok: true } : {}) })
+    this.post({ t: 'ut', v: UT_VERSION, g: 'ultimate', ...(this.greeted ? { ok: true } : {}) })
   }
 
   private post(m: UtMsg): void {
@@ -149,7 +150,7 @@ export class UltimateSession {
         return
       case 'other':
         this.post({ t: 'bye' })
-        this.end(`your friend opened ${m.game} · both type ultimate`)
+        this.end(otherGameNote(m.game, 'ultimate'))
         return
       case 'utm':
         // only the next move of this game, from the side whose turn it is; anything else is stale or made up

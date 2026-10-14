@@ -1,354 +1,460 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { plainKey, swallow } from '../lib/gameKeys'
-import { closeReasonText, isPairingCode, type PeerInfo, type PeerTransport } from '../lib/peer'
-import type { Side } from '../lib/pong'
+import { lobbyBack, lobbyEvent, lobbyHoldsLink, lobbyKey, listScreen, type LobbyCtx, type LobbyEffect, type LobbyState, type Side } from '../lib/lobby'
+import { loadNickname, randomNickname, saveNickname } from '../lib/nickname'
+import { closeReasonText, type PeerTransport, type RoomInfo } from '../lib/peer'
+import { useGameShell, useShellFullscreen } from '../lib/gameShellContext'
+import { FullscreenButton } from './GameShell'
 
-// the host / join / pick / code screens every game over the peer link starts from. once the link opens,
-// the game takes the panel and talks to the transport itself; when it ends it hands back a line to show
-
-type Screen =
-  | { k: 'menu'; note?: string }
-  | { k: 'hosting'; code: string | null; renewed: boolean }
-  | { k: 'browse'; peers: PeerInfo[]; pick: number; denied: boolean }
-  | { k: 'code'; peer: PeerInfo; digits: string; note?: string }
-  | { k: 'pairing'; peer: PeerInfo }
-  | { k: 'game'; role: Side; peer: string }
-  | { k: 'levels' }
-  | { k: 'solo'; level: string }
-
-const FRIEND: PeerInfo = { id: '', name: 'your friend' }
+// the lobby every game opens on (lib/lobby.ts has its rules). over the link: the open rooms for this game, by
+// the host's nickname, 🔒 when they take a code; ↑↓ pick, ↵ join, h host, n renames you. on this computer: the
+// game's own options, 1, 2, 3… once a game starts it takes the panel and talks to the transport itself; when it
+// ends it hands back a line to show
 
 export type GameProps = { transport: PeerTransport; role: Side; peer: string; onEnd: (note?: string) => void }
 
-// a game that can also be played alone, against the computer, at one of its levels (picked with 1, 2, 3…)
-export type SoloGame = { levels: readonly string[]; play: (level: string, onEnd: (note?: string) => void) => ReactNode }
+// what a game offers on this computer: solo levels, modes, a friend on the same keyboard
+export type LocalGames = {
+  // the line over the options
+  prompt: string
+  options: readonly string[]
+  play: (option: number, onEnd: (note?: string) => void) => ReactNode
+}
 
+const LOCKED_KEY = 'qcalc-host-locked'
+
+function lockedPref(): boolean {
+  try {
+    return localStorage.getItem(LOCKED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function saveLockedPref(locked: boolean): void {
+  try {
+    localStorage.setItem(LOCKED_KEY, locked ? '1' : '0')
+  } catch {
+    // private window: open again next time
+  }
+}
+
+// enter, arrows, backspace and letters would otherwise reach the hidden bar and commit or move through the tape
+const barKey = (e: KeyboardEvent) => e.key.length === 1 || e.key === 'Enter' || e.key.startsWith('Arrow') || e.key === 'Backspace' || e.key === 'Tab'
 
 export function GameLobby({
-  transport,
+  game,
   name,
   blurb,
-  onClose,
-  game,
-  solo,
-  onBack,
+  transport,
+  online,
+  onOpen,
+  local,
+  sub,
+  footer,
+  onKey,
+  idle,
+  leave,
+  frame = false,
+  ownHead = false,
 }: {
-  transport: PeerTransport
+  // the game's kind, which the room lists go by
+  game: string
   // the game's name, as typed in the bar
   name: string
-  // the menu's line under the title, after "two players on two Macs."
+  // the line under the title
   blurb: string
-  onClose: () => void
-  game: (props: GameProps) => ReactNode
-  solo?: SoloGame
-  // a game with a start screen of its own: ⌫ on the menu goes back to it
-  onBack?: () => void
+  // null where there's no link: only the local options show
+  transport: PeerTransport | null
+  // the game over the link
+  online?: (props: GameProps) => ReactNode
+  // the link just opened, before the next message: a game that must exist by then makes it here
+  onOpen?: (role: Side, peer: string) => void
+  local?: LocalGames
+  // the header's line when there's no link
+  sub?: string
+  // more under the options (the controls, a setting)
+  footer?: ReactNode
+  // the game's own lobby keys, before the lobby's; true takes the key
+  onKey?: (e: KeyboardEvent) => boolean
+  // esc while playing: nothing is running, so leave without a pause
+  idle?: () => boolean
+  // esc's leave while playing, when the game has somewhere nearer to go than the lobby; false goes to the lobby
+  leave?: () => boolean
+  // the lobby brings its own panel padding: the game it opens has a panel of its own instead of sitting in one
+  frame?: boolean
+  // the game over the link draws its own header (ember's screens), so the lobby's would be a second one
+  ownHead?: boolean
 }) {
-  const [screen, setScreen] = useState<Screen>({ k: 'menu' })
-  const screenRef = useRef(screen)
-  screenRef.current = screen
+  const link = online ? transport : null
+  const shell = useGameShell()
+  const fullscreen = Boolean(useShellFullscreen()?.on)
+  const [state, setState] = useState<LobbyState>(listScreen)
+  const stateRef = useRef(state)
+  const [nick, setNick] = useState(loadNickname)
+  // the relay sent no room list, so rooms go by code
+  const [codeOnly, setCodeOnly] = useState(false)
+  const nickRef = useRef(nick)
+  nickRef.current = nick
+  const callbacks = useRef({ onOpen, onKey, idle, leave })
+  callbacks.current = { onOpen, onKey, idle, leave }
 
-  const host = useCallback(() => {
-    setScreen({ k: 'hosting', code: null, renewed: false })
-    transport.host()
-  }, [transport])
-
-  // the online link has no list of hosts: join goes straight to the code
-  const browse = useCallback(() => {
-    if (!transport.discovers) {
-      setScreen({ k: 'code', peer: FRIEND, digits: '' })
-      return
-    }
-    setScreen({ k: 'browse', peers: [], pick: 0, denied: false })
-    transport.discover()
-  }, [transport])
-
-  const pickPeer = useCallback((peer: PeerInfo) => {
-    setScreen({ k: 'code', peer, digits: '' })
+  const set = useCallback((next: LobbyState) => {
+    stateRef.current = next
+    setState(next)
   }, [])
 
-  const toMenu = useCallback(
-    (note?: string) => {
-      transport.close()
-      setScreen({ k: 'menu', note })
-    },
-    [transport],
+  const ctx = useMemo<LobbyCtx>(
+    () => ({
+      online: Boolean(link),
+      codeOnly,
+      codeLength: link?.codeLength ?? 0,
+      options: local?.options.length ?? 0,
+      closeText: (reason) => closeReasonText(reason, link?.peerWord),
+      randomName: () => randomNickname(),
+    }),
+    [codeOnly, link, local?.options.length],
   )
 
-  // the link goes when the game does, however it closes
-  useEffect(() => () => transport.close(), [transport])
+  const run = useCallback(
+    (effect: LobbyEffect | undefined) => {
+      if (!effect) return
+      switch (effect.k) {
+        case 'host':
+          saveLockedPref(effect.locked)
+          link?.host({ game, name: nickRef.current, locked: effect.locked })
+          return
+        case 'join':
+          link?.join(effect.room.id, effect.code, nickRef.current)
+          return
+        case 'cancel':
+          link?.close()
+          return
+        case 'rename':
+          setNick(saveNickname(effect.name))
+          return
+        case 'fullscreen':
+          shell?.toggleFullscreen()
+      }
+    },
+    [game, link, shell],
+  )
+
+  const toList = useCallback(
+    (note?: string) => {
+      link?.close()
+      set(listScreen(note))
+    },
+    [link, set],
+  )
+
+  // where the player is, for esc: the lobby, a game on this computer, or one over the link
+  useEffect(() => {
+    shell?.setMode(state.k === 'game' ? 'online' : state.k === 'local' ? 'local' : 'lobby')
+  }, [shell, state.k])
 
   useEffect(
     () =>
-      transport.subscribe((e) => {
-        const cur = screenRef.current
-        switch (e.type) {
-          case 'hosting':
-            if (cur.k === 'hosting') setScreen({ k: 'hosting', code: e.code, renewed: Boolean(e.renewed) })
-            return
-          case 'peers':
-            if (cur.k === 'browse') {
-              const keep = cur.peers[cur.pick]?.id
-              const pick = Math.max(0, e.peers.findIndex((p) => p.id === keep))
-              setScreen({ ...cur, peers: e.peers, pick })
-            }
-            return
-          case 'denied':
-            if (cur.k === 'browse') setScreen({ ...cur, denied: true })
-            return
-          case 'open':
-            transport.stopDiscovery()
-            setScreen({ k: 'game', role: e.role, peer: e.peer || 'friend' })
-            return
-          case 'closed':
-            if (cur.k === 'pairing' && e.reason === 'wrong-code') {
-              setScreen({ k: 'code', peer: cur.peer, digits: '', note: 'wrong code · try again' })
-              return
-            }
-            // a game reports its own end
-            if (cur.k !== 'game') setScreen({ k: 'menu', note: closeReasonText(e.reason, transport.peerWord) })
-            return
-        }
+      shell?.register({
+        back: () => {
+          const back = lobbyBack(stateRef.current)
+          if (!back) return false
+          set(back.state)
+          run(back.effect)
+          return true
+        },
+        leave: () => {
+          if (callbacks.current.leave?.()) return
+          toList()
+        },
+        idle: () => Boolean(callbacks.current.idle?.()),
+        hold: () => lobbyHoldsLink(stateRef.current),
       }),
-    [transport],
+    [run, set, shell, toList],
   )
 
-  const submitCode = useCallback(
-    (peer: PeerInfo, digits: string) => {
-      if (!isPairingCode(digits, transport.codeLength)) return
-      setScreen({ k: 'pairing', peer })
-      transport.join(peer.id, digits)
-    },
-    [transport],
-  )
+  // the list is watched only while it shows
+  const watching = Boolean(link) && state.k === 'list'
+  useEffect(() => {
+    if (!watching || !link) return
+    link.watch(game)
+    return () => link.unwatch()
+  }, [game, link, watching])
+
+  // the link goes when the game does, however it closes
+  useEffect(() => () => link?.close(), [link])
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const cur = screenRef.current
-      if (cur.k === 'game' || cur.k === 'solo' || !plainKey(e) || e.key === 'Escape') return
-      const key = e.key.toLowerCase()
-      // enter, arrows and backspace would otherwise reach the hidden bar and commit or move through the tape
-      const barKey = e.key.length === 1 || e.key === 'Enter' || e.key.startsWith('Arrow') || e.key === 'Backspace'
-      if (cur.k === 'menu') {
-        if (key === 'h') {
-          swallow(e)
-          host()
-        } else if (key === 'j') {
-          swallow(e)
-          browse()
-        } else if (key === 's' && solo) {
-          swallow(e)
-          setScreen({ k: 'levels' })
-        } else if (barKey) {
-          swallow(e)
-          if (e.key === 'Backspace') onBack?.()
-        }
-        return
-      }
-      if (cur.k === 'levels' && solo) {
-        swallow(e)
-        const level = solo.levels[Number(e.key) - 1]
-        if (/^[1-9]$/.test(e.key) && level) setScreen({ k: 'solo', level })
-        else if (e.key === 'Backspace') setScreen({ k: 'menu' })
-        return
-      }
-      if (cur.k === 'browse') {
-        swallow(e)
-        const n = cur.peers.length
-        if (e.key === 'ArrowDown' && n) setScreen({ ...cur, pick: (cur.pick + 1) % n })
-        else if (e.key === 'ArrowUp' && n) setScreen({ ...cur, pick: (cur.pick - 1 + n) % n })
-        else if (e.key === 'Enter' && cur.peers[cur.pick]) pickPeer(cur.peers[cur.pick]!)
-        else if (e.key === 'Backspace') toMenu()
-        return
-      }
-      if (cur.k === 'code') {
-        swallow(e)
-        const n = transport.codeLength
-        if (/^[0-9]$/.test(e.key) && cur.digits.length < n) {
-          const digits = cur.digits + e.key
-          if (digits.length === n) submitCode(cur.peer, digits)
-          else setScreen({ ...cur, digits, note: undefined })
-        } else if (e.key === 'Backspace') {
-          if (cur.digits) setScreen({ ...cur, digits: cur.digits.slice(0, -1) })
-          else if (transport.discovers) browse()
-          else toMenu()
-        }
-        return
-      }
-      if (barKey) swallow(e)
-    }
-    window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
-  }, [browse, host, onBack, pickPeer, solo, submitCode, toMenu, transport])
+    if (!link) return
+    return link.subscribe((e) => {
+      if (e.type === 'rooms') setCodeOnly(Boolean(e.codeOnly))
+      const cur = stateRef.current
+      const next = lobbyEvent(cur, e, ctx)
+      if (next === cur) return
+      if (next.k === 'game' && e.type === 'open') callbacks.current.onOpen?.(next.role, next.peer)
+      set(next)
+    })
+  }, [ctx, link, set])
 
-  if (screen.k === 'solo') return solo ? solo.play(screen.level, (note) => setScreen({ k: 'menu', note })) : null
-  return screen.k === 'game' ? (
-    game({ transport, role: screen.role, peer: screen.peer, onEnd: toMenu })
-  ) : (
-    <div className="pong-lobby">
-      <div className="pong-head">
-        <span className="pong-title">{name}</span>
-        <span className="pong-sub">{transport.label}</span>
-        <button type="button" className="pong-leave" onClick={onClose}>
-          esc
-        </button>
-      </div>
-      <Lobby
-        screen={screen}
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const cur = stateRef.current
+      if (cur.k === 'game' || cur.k === 'local' || !plainKey(e) || e.key === 'Escape') return
+      if (cur.k === 'list' && callbacks.current.onKey?.(e)) {
+        swallow(e)
+        return
+      }
+      const step = lobbyKey(cur, e.key, ctx, lockedPref(), nickRef.current)
+      if (step.handled || barKey(e)) swallow(e)
+      if (e.repeat && step.effect) return
+      if (step.state !== cur) set(step.state)
+      run(step.effect)
+    }
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [ctx, run, set])
+
+  if (state.k === 'local' && local) return <>{local.play(state.option, (note) => set(listScreen(note)))}</>
+  if (state.k === 'game' && link && online) {
+    if (ownHead) return <>{online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}</>
+    return (
+      <>
+        <LobbyHead name={name} sub={`with ${state.peer}`} fullscreen={fullscreen} onFullscreen={() => shell?.toggleFullscreen()} onEsc={() => shell?.escape()} />
+        {online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}
+      </>
+    )
+  }
+
+  return (
+    // game-fs-screen: drawn larger, centred, while the game is fullscreen
+    <div className={`${frame ? 'pong pong-lobby' : 'pong-lobby'} game-fs-screen`}>
+      <LobbyHead name={name} sub={link ? link.label : (sub ?? '')} fullscreen={fullscreen} onFullscreen={() => shell?.toggleFullscreen()} onEsc={() => shell?.escape()} />
+      <LobbyBody
+        state={state.k === 'game' || state.k === 'local' ? listScreen() : state}
         name={name}
         blurb={blurb}
-        transport={transport}
-        solo={solo}
-        onSolo={() => setScreen({ k: 'levels' })}
-        onLevel={(level) => setScreen({ k: 'solo', level })}
-        onHost={host}
-        onJoin={browse}
-        onPick={pickPeer}
-        onBack={() => toMenu()}
-        onLeave={onBack}
+        link={link}
+        local={local}
+        footer={footer}
+        nick={nick}
+        codeOnly={codeOnly}
+        onLocal={(option) => set({ k: 'local', option })}
+        onJoin={(room) => {
+          const step = lobbyKey({ k: 'list', rooms: [room], pick: 0 }, 'Enter', ctx, false, nick)
+          set(step.state)
+          run(step.effect)
+        }}
+        onKey={(key) => {
+          const step = lobbyKey(stateRef.current, key, ctx, lockedPref(), nickRef.current)
+          set(step.state)
+          run(step.effect)
+        }}
       />
     </div>
   )
 }
 
-function Lobby({
-  screen,
+function LobbyHead({ name, sub, fullscreen, onFullscreen, onEsc }: { name: string; sub: string; fullscreen: boolean; onFullscreen: () => void; onEsc: () => void }) {
+  return (
+    <div className="pong-head">
+      <span className="pong-title">{name}</span>
+      <span className="pong-sub">{sub}</span>
+      <FullscreenButton className="lobby-full" on={fullscreen} onClick={onFullscreen} />
+      <button type="button" className="pong-leave" onClick={onEsc}>
+        esc
+      </button>
+    </div>
+  )
+}
+
+function LobbyBody({
+  state,
   name,
   blurb,
-  transport,
-  solo,
-  onSolo,
-  onLevel,
-  onHost,
+  link,
+  local,
+  footer,
+  nick,
+  codeOnly,
+  onLocal,
   onJoin,
-  onPick,
-  onBack,
-  onLeave,
+  onKey,
 }: {
-  screen: Exclude<Screen, { k: 'game' } | { k: 'solo' }>
+  state: Exclude<LobbyState, { k: 'game' } | { k: 'local' }>
   name: string
   blurb: string
-  transport: PeerTransport
-  solo?: SoloGame
-  onSolo: () => void
-  onLevel: (level: string) => void
-  onHost: () => void
-  onJoin: () => void
-  onPick: (p: PeerInfo) => void
-  onBack: () => void
-  onLeave?: () => void
+  link: PeerTransport | null
+  local?: LocalGames
+  footer?: ReactNode
+  nick: string
+  codeOnly: boolean
+  onLocal: (option: number) => void
+  onJoin: (room: RoomInfo) => void
+  // a key's worth, from a click
+  onKey: (key: string) => void
 }) {
-  const word = transport.peerWord
-  const n = transport.codeLength
-  switch (screen.k) {
-    case 'menu':
+  const back = (
+    <button type="button" className="pong-link" onClick={() => onKey('Backspace')}>
+      ⌫ back
+    </button>
+  )
+  switch (state.k) {
+    case 'list':
       return (
-        <div className="pong-body">
-          <p className="pong-line">
-            {solo ? `play the computer, or a friend on another ${word}. ${blurb}` : `two players on two ${word}s. ${blurb}`}
-          </p>
-          <div className="pong-actions">
-            {solo ? (
-              <button type="button" className="pong-button" onClick={onSolo}>
-                solo <kbd>S</kbd>
-              </button>
-            ) : null}
-            <button type="button" className="pong-button" onClick={onHost}>
-              host <kbd>H</kbd>
-            </button>
-            <button type="button" className="pong-button" onClick={onJoin}>
-              join <kbd>J</kbd>
-            </button>
-          </div>
-          {screen.note ? <p className="pong-note">{screen.note}</p> : null}
-          {onLeave ? (
-            <p className="pong-note">
-              <button type="button" className="pong-link" onClick={onLeave}>
-                ⌫ back
-              </button>
-            </p>
+        <div className="pong-body lobby-body">
+          <p className="pong-line">{blurb}</p>
+          {local ? (
+            <div className="lobby-local">
+              {local.prompt ? <span className="lobby-label">{local.prompt}</span> : null}
+              <div className="pong-actions">
+                {local.options.map((option, i) => (
+                  <button type="button" key={option} className={`pong-button ${!link && i === state.pick ? 'on' : ''}`} onClick={() => onLocal(i)}>
+                    {option} <kbd>{i + 1}</kbd>
+                  </button>
+                ))}
+              </div>
+            </div>
           ) : null}
+          {footer}
+          {link && codeOnly ? (
+            <div className="lobby-rooms">
+              <div className="pong-actions">
+                <button type="button" className="pong-button" onClick={() => onKey('h')}>
+                  host <kbd>H</kbd>
+                </button>
+                <button type="button" className="pong-button" onClick={() => onKey('j')}>
+                  join with a code <kbd>J</kbd>
+                </button>
+              </div>
+              <p className="pong-note">
+                no room list from the game server yet, so rooms go by code · you’re{' '}
+                <button type="button" className="pong-link lobby-nick" onClick={() => onKey('n')}>
+                  {nick}
+                </button>
+              </p>
+            </div>
+          ) : link ? (
+            <div className="lobby-rooms">
+              <span className="lobby-label">rooms open now</span>
+              {state.offline ? (
+                <p className="pong-note pong-wait">{closeReasonText('network', link.peerWord)}</p>
+              ) : state.rooms.length ? (
+                <ul className="pong-peers lobby-list" role="listbox" aria-label="rooms">
+                  {state.rooms.map((r, i) => (
+                    <li key={r.id} role="option" aria-selected={i === state.pick}>
+                      <button type="button" className={i === state.pick ? 'on' : undefined} onClick={() => onJoin(r)}>
+                        <span className="lobby-host">{r.name}</span>
+                        <span className="lobby-game">{name}</span>
+                        <span className="lobby-lock" aria-label={r.locked ? 'locked' : 'open'}>
+                          {r.locked ? '🔒' : ''}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="pong-note lobby-empty">nobody’s hosting {name} right now</p>
+              )}
+              <p className="pong-note">
+                {state.rooms.length ? '↑↓ pick · ↵ join · ' : ''}
+                <button type="button" className="pong-link" onClick={() => onKey('h')}>
+                  h host
+                </button>{' '}
+                · you’re{' '}
+                <button type="button" className="pong-link lobby-nick" onClick={() => onKey('n')}>
+                  {nick}
+                </button>{' '}
+                · n renames
+              </p>
+            </div>
+          ) : local ? (
+            <p className="pong-note">{local.options.length > 1 ? '↑↓ pick · ↵ play · ' : '↵ plays · '}f full screen</p>
+          ) : null}
+          {state.note ? <p className="pong-note lobby-note">{state.note}</p> : null}
         </div>
       )
-    case 'levels':
+    case 'setup':
       return (
         <div className="pong-body">
-          <p className="pong-line">how good is the computer?</p>
+          <p className="pong-line">host a room as {nick}</p>
           <div className="pong-actions">
-            {solo?.levels.map((level, i) => (
-              <button type="button" className="pong-button" key={level} onClick={() => onLevel(level)}>
-                {level} <kbd>{i + 1}</kbd>
-              </button>
-            ))}
+            <button type="button" className={`pong-button ${state.locked ? '' : 'on'}`} onClick={() => onKey('o')}>
+              open <kbd>O</kbd>
+            </button>
+            <button type="button" className={`pong-button ${state.locked ? 'on' : ''}`} onClick={() => onKey('l')}>
+              🔒 locked <kbd>L</kbd>
+            </button>
           </div>
           <p className="pong-note">
-            <button type="button" className="pong-link" onClick={onBack}>
-              ⌫ back
-            </button>
+            {state.locked ? 'only someone with the code you send can join' : 'anyone who opens ' + name + ' can join'} · ↵ host · {back}
           </p>
         </div>
       )
-    case 'hosting':
+    case 'hosting': {
+      const n = link?.codeLength ?? 0
       return (
         <div className="pong-body">
-          <div className="pong-code" aria-label="pairing code">
-            {(screen.code ?? '·'.repeat(n)).split('').map((d, i) => (
-              <span key={i}>{d}</span>
-            ))}
-          </div>
-          <p className="pong-line">
-            {screen.renewed ? 'too many wrong codes, so here’s a new one. ' : ''}
-            {transport.discovers
-              ? `on the other ${word}: type ${name}, join, pick this ${word}, enter the code`
-              : `send your friend this code · on their Q Calc: type ${name}, join, enter the code`}
-          </p>
-          <p className="pong-note pong-wait">waiting for your friend…</p>
-        </div>
-      )
-    case 'browse':
-      return (
-        <div className="pong-body">
-          {screen.denied ? (
-            <p className="pong-note">{closeReasonText('denied', transport.peerWord)}</p>
-          ) : screen.peers.length ? (
-            <ul className="pong-peers" role="listbox">
-              {screen.peers.map((p, i) => (
-                <li key={p.id} role="option" aria-selected={i === screen.pick}>
-                  <button type="button" className={i === screen.pick ? 'on' : undefined} onClick={() => onPick(p)}>
-                    {p.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {state.locked ? (
+            <>
+              <div className="pong-code" aria-label="room code">
+                {(state.code || '·'.repeat(n)).split('').map((d, i) => (
+                  <span key={i}>{d}</span>
+                ))}
+              </div>
+              <p className="pong-line">
+                {state.renewed ? 'too many wrong codes, so here’s a new one. ' : ''}
+                {codeOnly ? `send your friend this code · on their Q Calc: type ${name}, J, then the code` : `send your friend this code · they pick ${nick} in the ${name} list`}
+              </p>
+            </>
           ) : (
-            <p className="pong-line pong-wait">
-              looking for {word}s hosting {name}…
+            <p className="pong-line">
+              your room is open · it’s listed as <b>{nick}</b>
             </p>
           )}
-          <p className="pong-note">
-            ↑↓ pick · ↵ choose ·{' '}
-            <button type="button" className="pong-link" onClick={onBack}>
-              ⌫ back
-            </button>
-          </p>
-        </div>
-      )
-    case 'code':
-    case 'pairing': {
-      const digits = screen.k === 'code' ? screen.digits : '·'.repeat(n)
-      return (
-        <div className="pong-body">
-          <p className="pong-line">{transport.discovers ? `code shown on ${screen.peer.name}` : 'the code your friend sent'}</p>
-          <div className={`pong-code entry ${screen.k === 'pairing' ? 'busy' : ''}`}>
-            {Array.from({ length: n }, (_, i) => (
-              <span key={i} className={i === digits.length && screen.k === 'code' ? 'caret' : undefined}>
-                {screen.k === 'pairing' ? '•' : (digits[i] ?? '')}
-              </span>
-            ))}
-          </div>
-          <p className="pong-note">{screen.k === 'pairing' ? 'pairing…' : (screen.note ?? `type the ${n} digits · ⌫ back`)}</p>
+          <p className="pong-note pong-wait">waiting for someone to join…</p>
+          <p className="pong-note">{back}</p>
         </div>
       )
     }
+    case 'code':
+    case 'pairing': {
+      const n = link?.codeLength ?? 0
+      if (state.k === 'pairing' && !state.room.locked) {
+        return (
+          <div className="pong-body">
+            <p className="pong-line pong-wait">joining {state.room.name}…</p>
+            <p className="pong-note">{back}</p>
+          </div>
+        )
+      }
+      const digits = state.k === 'code' ? state.digits : ''
+      return (
+        <div className="pong-body">
+          <p className="pong-line">{state.room.id ? `🔒 the code for ${state.room.name}’s room` : 'the code your friend sent'}</p>
+          <div className={`pong-code entry ${state.k === 'pairing' ? 'busy' : ''}`}>
+            {Array.from({ length: n }, (_, i) => (
+              <span key={i} className={i === digits.length && state.k === 'code' ? 'caret' : undefined}>
+                {state.k === 'pairing' ? '•' : (digits[i] ?? '')}
+              </span>
+            ))}
+          </div>
+          <p className="pong-note">
+            {state.k === 'pairing' ? 'joining… · ' : state.note ? `${state.note} · ` : `type the ${n} digits · `}
+            {back}
+          </p>
+        </div>
+      )
+    }
+    case 'rename':
+      return (
+        <div className="pong-body">
+          <p className="pong-line">what the room lists call you</p>
+          <div className="lobby-rename" aria-label="nickname">
+            {state.draft}
+            <span className="lobby-caret" />
+          </div>
+          <p className="pong-note">↵ keep · tab picks another · esc back</p>
+        </div>
+      )
   }
 }

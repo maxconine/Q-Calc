@@ -1,0 +1,241 @@
+/* the shell around an open game (GameShell.tsx) and the lobby every game opens on (GameLobby.tsx), in the
+   bar's own look. the game area always has a definite width, so a panel sized in container units fits it */
+.game-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.game-area {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.game-full-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.game-full-btn svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.game-full-btn:hover {
+  color: var(--ink);
+  background: var(--fill-hover);
+}
+.pong-head .lobby-full {
+  margin: -3px 0 -3px auto;
+  align-self: center;
+}
+.pong-head .lobby-full + .pong-leave {
+  margin-left: 0;
+}
+/* while playing, in the panel's corner, out of the way of its own esc */
+.game-corner {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 5;
+  opacity: 0.5;
+}
+.game-corner:hover,
+.game-corner:focus-visible {
+  opacity: 1;
+}
+
+.game-paused {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+.game-paused-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+.game-paused-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--fs-display);
+  font-weight: 600;
+  letter-spacing: var(--track-display);
+}
+.game-paused-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.game-paused-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+.game-toast {
+  position: absolute;
+  top: var(--sp-3);
+  left: 50%;
+  z-index: 30;
+  transform: translateX(-50%);
+  padding: 5px var(--sp-3);
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+  font-size: var(--fs-small);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* the lobby */
+.lobby-body {
+  gap: var(--sp-3);
+}
+.lobby-local,
+.lobby-rooms {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+.lobby-local .pong-actions {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.lobby-label {
+  color: var(--muted);
+  font-size: var(--fs-caption);
+}
+.pong-button.on {
+  box-shadow: var(--control-shadow), inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.lobby-list {
+  max-height: calc(5 * (var(--tape-row-height) + 2px));
+  overflow-y: auto;
+}
+.lobby-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 1.4em;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.lobby-host {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lobby-game {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.lobby-lock {
+  font-size: var(--fs-small);
+  text-align: right;
+}
+.lobby-nick {
+  color: var(--ink);
+}
+.lobby-empty {
+  padding: var(--sp-2) 0;
+}
+.lobby-rename {
+  min-width: 220px;
+  min-height: 1.4em;
+  padding: 6px var(--sp-3);
+  border-radius: var(--radius-s);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--ink);
+  font-size: var(--fs-body);
+  text-align: center;
+}
+.lobby-caret {
+  display: inline-block;
+  width: 1px;
+  height: 1.1em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: lobby-blink 1s steps(1) infinite;
+}
+@keyframes lobby-blink {
+  50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lobby-caret { animation: none; }
+}
+
+/* full screen (⌃F, f, the buttons): useGameFullscreen puts .game-fullscreen on the shell, which covers the
+   screen (GameFullscreen.css). the game area gets a definite size, centred, that each game scales inside;
+   canvases keep their aspect and redraw at the larger size. ember lays itself out with the hook's
+   game-fs-* classes instead */
+.game-shell.game-fullscreen {
+  position: fixed;
+}
+.game-shell.game-fullscreen .game-area {
+  --game-h: calc(100vh - 2 * var(--game-fs-pad, 0px) * var(--game-fs-ui, 1));
+  /* the widest that still leaves room for a court's height; pong reads --crt-max-w */
+  --crt-max-w: calc((var(--game-h) - 160px) * 640 / 260);
+  flex: none;
+  width: min(100%, calc(var(--game-h) * 1.8));
+  height: var(--game-h);
+  justify-content: center;
+  overflow: auto;
+}
+.game-shell.game-fullscreen .pong-court {
+  width: 100%;
+  max-width: var(--crt-max-w);
+  margin-inline: auto;
+}
+.game-shell.game-fullscreen .c4-board,
+.game-shell.game-fullscreen .ut-grid {
+  width: min(100%, calc(var(--game-h) - 200px));
+}
+.game-shell.game-fullscreen .crack-dial {
+  width: min(100%, calc(var(--game-h) - 160px));
+  height: auto;
+  aspect-ratio: 1;
+}
+.game-shell.game-fullscreen .game-area:has(> .equal) {
+  width: min(100%, calc(var(--game-h) * 0.95));
+}
+/* ember: the hook's layout, as when ember was the root itself. its own padding is the shell's now */
+.game-shell.game-fullscreen .game-area:has(> .ember) {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.game-shell.game-fullscreen .ember {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}

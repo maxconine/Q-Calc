@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { autofillParens, fillParens, inferParens } from '../engine/parens'
 import { nativeWindow } from '../lib/bridge'
+import { gameDateNow } from '../lib/gameClock'
+import { useGameShell } from '../lib/gameShellContext'
 import { plainKey, swallow } from '../lib/gameKeys'
 import {
   checkExpr,
@@ -19,6 +21,7 @@ import {
   type Mode,
   type NumbersStats,
 } from '../lib/numbers'
+import { GameLobby } from './GameLobby'
 import './NumbersPanel.css'
 
 // the numbers game: `24 game` or `countdown` then enter. a start screen picks the mode, then rounds against
@@ -38,7 +41,7 @@ type Round = {
 }
 
 function newRound(mode: Mode, large: number): Round {
-  const now = Date.now()
+  const now = gameDateNow()
   if (mode === '24') {
     const { nums, solution } = deal24()
     return { mode, nums, target: TARGET_24, solution, bestValue: TARGET_24, deadline: now + SECONDS_24 * 1000, over: null }
@@ -57,17 +60,48 @@ function usedTiles(text: string, nums: readonly number[]): boolean[] {
   return taken
 }
 
-const MODES: { mode: Mode; name: string; blurb: string }[] = [
-  { mode: '24', name: '24', blurb: `four numbers, each once · make exactly 24 · ${SECONDS_24}s` },
-  { mode: 'countdown', name: 'countdown', blurb: `six numbers, each at most once · get near the target · ${SECONDS_COUNTDOWN}s` },
-]
+// the lobby picks the mode (1 or 2) and countdown's large numbers (← →); a round starts straight away
+export function NumbersPanel() {
+  const shell = useGameShell()
+  const [large, setLarge] = useState(() => loadStats().large)
+  const changeLarge = (by: number) => {
+    const next = Math.min(4, Math.max(0, large + by))
+    setLarge(next)
+    saveStats({ ...loadStats(), large: next })
+  }
+  return (
+    <GameLobby
+      game="numbers"
+      name="24 / countdown"
+      blurb="make the number, against the clock."
+      transport={null}
+      frame
+      local={{
+        prompt: '',
+        options: ['24', 'countdown'],
+        play: (i, onEnd) => <NumbersGame mode={i ? 'countdown' : '24'} large={large} onMenu={() => onEnd()} onClose={() => shell?.escape()} />,
+      }}
+      footer={
+        <p className="pong-note">
+          24: four numbers, each once, make exactly 24 in {SECONDS_24}s · countdown: six numbers, get near the target in {SECONDS_COUNTDOWN}s, dealing{' '}
+          {large} large · ← → changes
+        </p>
+      }
+      onKey={(e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return false
+        changeLarge(e.key === 'ArrowLeft' ? -1 : 1)
+        return true
+      }}
+    />
+  )
+}
 
-export function NumbersPanel({ onClose }: { onClose: () => void }) {
-  const [stats, setStats] = useState<NumbersStats>(loadStats)
-  const [round, setRound] = useState<Round | null>(null)
+function NumbersGame({ mode, large, onMenu, onClose }: { mode: Mode; large: number; onMenu: () => void; onClose: () => void }) {
+  const [stats, setStats] = useState<NumbersStats>(() => ({ ...loadStats(), mode, large }))
+  const [round, setRound] = useState<Round | null>(() => newRound(mode, large))
   const [text, setText] = useState('')
   const [note, setNote] = useState('')
-  const [now, setNow] = useState(Date.now)
+  const [now, setNow] = useState(gameDateNow)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const update = useCallback((next: (s: NumbersStats) => NumbersStats) => {
@@ -83,8 +117,11 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     setRound(newRound(mode, large))
     setText('')
     setNote('')
-    setNow(Date.now())
+    setNow(gameDateNow())
   }, [update])
+
+  // the mode and large numbers the lobby picked are kept as the next default
+  useEffect(() => saveStats({ ...loadStats(), mode, large }), [mode, large])
 
   // like the bar: a missing `)` is read as there, shows faint after the text, and → or tab writes it in
   const filled = fillParens(text)
@@ -112,12 +149,21 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     [update],
   )
 
+  // leaving mid-round (modes, esc, closing) counts as giving up; the panel may already be gone, so save directly
+  useEffect(
+    () => () => {
+      const r = roundRef.current
+      if (r && !r.over) saveStats(r.mode === '24' ? record24(loadStats(), false) : recordCountdown(loadStats(), 0))
+    },
+    [],
+  )
+
   // the clock; when it runs out, countdown takes what's typed if it's a legal answer
   const playing = Boolean(round && !round.over)
   useEffect(() => {
     if (!playing) return
     const t = window.setInterval(() => {
-      const at = Date.now()
+      const at = gameDateNow()
       setNow(at)
       const r = roundRef.current
       if (!r || r.over || at < r.deadline) return
@@ -149,25 +195,13 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     else setNote(check.problem ?? (text.trim() ? 'not finished' : 'type an expression'))
   }, [round, check, text, filled, finish])
 
-  const [pick, setPick] = useState<Mode>(stats.mode)
-  const [large, setLarge] = useState(stats.large)
-
   const keys = useRef<(e: KeyboardEvent) => void>(() => {})
   keys.current = (e: KeyboardEvent) => {
     if (e.key === 'Escape' || e.key === 'Esc') return
     if (!plainKey(e)) return
     const input = inputRef.current
     const inField = input != null && e.target === input
-    if (!round) {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') setPick((m) => (m === '24' ? 'countdown' : '24'))
-      else if (e.key === 'ArrowLeft') setLarge((n) => Math.max(0, n - 1))
-      else if (e.key === 'ArrowRight') setLarge((n) => Math.min(4, n + 1))
-      else if (/^[0-4]$/.test(e.key) && pick === 'countdown') setLarge(Number(e.key))
-      else if (e.key === 'Enter' && !e.repeat) start(pick, large)
-      else if (!(e.key.length === 1 || e.key === 'Backspace' || e.key === 'Tab')) return
-      swallow(e)
-      return
-    }
+    if (!round) return
     if (e.key === 'Enter') {
       if (!e.repeat) {
         if (round.over) start(round.mode, stats.large)
@@ -231,7 +265,7 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
             : 'make the number'}
       </span>
       {round ? (
-        <button type="button" className="nums-leave" onClick={() => setRound(null)}>
+        <button type="button" className="nums-leave" onClick={onMenu}>
           modes
         </button>
       ) : null}
@@ -241,39 +275,7 @@ export function NumbersPanel({ onClose }: { onClose: () => void }) {
     </div>
   )
 
-  if (!round) {
-    return (
-      <div className="nums" aria-label="numbers game">
-        {head}
-        <div className="nums-modes" role="listbox" aria-label="mode">
-          {MODES.map((m) => (
-            <div
-              key={m.mode}
-              role="option"
-              aria-selected={pick === m.mode}
-              className={`nums-mode ${pick === m.mode ? 'on' : ''}`}
-              onClick={() => start(m.mode, large)}
-              onMouseEnter={() => setPick(m.mode)}
-            >
-              <span className="nums-mode-name">{m.name}</span>
-              <span className="nums-mode-blurb">{m.blurb}</span>
-              {m.mode === 'countdown' ? (
-                <span className="nums-large" onClick={(e) => e.stopPropagation()}>
-                  large
-                  {[0, 1, 2, 3, 4].map((n) => (
-                    <button type="button" key={n} className={n === large ? 'on' : ''} onClick={() => setLarge(n)}>
-                      {n}
-                    </button>
-                  ))}
-                </span>
-              ) : null}
-            </div>
-          ))}
-        </div>
-        <p className="nums-note">↑↓ pick · ←→ large numbers · ↵ start · esc leaves</p>
-      </div>
-    )
-  }
+  if (!round) return null
 
   const total = (round.mode === '24' ? SECONDS_24 : SECONDS_COUNTDOWN) * 1000
   const taken = usedTiles(text, round.nums)

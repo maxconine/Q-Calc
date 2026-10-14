@@ -22,6 +22,8 @@ import {
   type Mark,
 } from '../lib/equal'
 import { plainKey, swallow } from '../lib/gameKeys'
+import { useGameShell } from '../lib/gameShellContext'
+import { GameLobby } from './GameLobby'
 import './EqualPanel.css'
 
 // equal: `equal` then enter. guess the hidden 8-character equation in six. daily is one puzzle a day for
@@ -33,8 +35,26 @@ const ROWS = ['1234567890', '+-*/=']
 
 const newPractice = () => generate(Math.random)
 
-export function EqualPanel({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<Mode>('daily')
+export function EqualPanel() {
+  const shell = useGameShell()
+  return (
+    <GameLobby
+      game="equal"
+      name="equal"
+      blurb="guess the hidden equation in six tries."
+      transport={null}
+      frame
+      local={{
+        prompt: '',
+        options: ['daily', 'practice'],
+        play: (i) => <EqualGame start={i ? 'practice' : 'daily'} onClose={() => shell?.escape()} />,
+      }}
+    />
+  )
+}
+
+function EqualGame({ start, onClose }: { start: Mode; onClose: () => void }) {
+  const [mode, setMode] = useState<Mode>(start)
   const [save, setSave] = useState<EqualSave>(loadSave)
   const [today, setToday] = useState(() => dateKey(new Date()))
   const [practice, setPractice] = useState(() => ({ answer: newPractice(), guesses: [] as string[] }))
@@ -54,6 +74,14 @@ export function EqualPanel({ onClose }: { onClose: () => void }) {
   const over = isDone(guesses, answer)
   const won = isWon(guesses, answer)
   const title = daily ? `equal #${dailyNumber(today)}` : 'equal practice'
+
+  // left open past midnight, daily moves on by itself once the board is empty or done; a puzzle part way through stays
+  const idle = guesses.length === 0 || over
+  useEffect(() => {
+    if (!daily || !idle) return
+    const t = window.setInterval(() => setToday(dateKey(new Date())), 30_000)
+    return () => window.clearInterval(t)
+  }, [daily, idle])
 
   const switchTo = useCallback((m: Mode) => {
     setMode(m)

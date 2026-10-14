@@ -1,13 +1,16 @@
-import { nativeHandler, nativeWindow } from './bridge'
-import { DevPeer, Listeners } from './peerDev'
+import { nativeWindow } from './bridge'
+import { DevPeer } from './peerDev'
 import { OnlinePeer, relayUrl } from './peerOnline'
+import { cleanNickname } from './nickname'
 import { isWindowsHost } from './platform'
 
-// a link to one other q calc: over the internet through the relay (peerOnline), or on the same wi-fi through
-// the mac app's PeerLink, which does the finding, pairing and encryption. the page sees only these events.
-// games and anything else sent between bars sit on top
+// a link to one other q calc through the relay (peerOnline), or between tabs under `npm run dev` (peerDev).
+// the page sees only these events. games and anything else sent between bars sit on top
 
-export type PeerInfo = { id: string; name: string }
+// a room in a lobby's list: who's hosting, and whether it takes a code. nothing else about the host is known
+export type RoomInfo = { id: string; name: string; locked: boolean }
+
+export type HostOptions = { game: string; name: string; locked: boolean }
 
 export type CloseReason =
   | 'wrong-code'
@@ -15,14 +18,16 @@ export type CloseReason =
   | 'unreachable'
   | 'lost'
   | 'bye'
-  | 'denied'
   | 'network'
   | 'too-many-tries'
   | 'expired'
+  | 'gone'
 
 export type PeerEvent =
-  | { type: 'peers'; peers: PeerInfo[] }
-  | { type: 'denied' }
+  // offline: the list couldn't be reached. codeOnly: it never could, so the relay may be one from before room
+  // lists; hosting and joining then go by code alone, which every relay understands
+  | { type: 'rooms'; rooms: RoomInfo[]; offline?: boolean; codeOnly?: boolean }
+  // code is '' for an open room
   | { type: 'hosting'; code: string; renewed?: boolean }
   | { type: 'pairing' }
   | { type: 'open'; role: 'host' | 'guest'; peer: string }
@@ -34,50 +39,51 @@ export interface PeerTransport {
   readonly label: string
   // what the other end is called in the lobby's copy
   readonly peerWord: string
-  // whether join lists hosts to pick from; the online link has none, the guest just types the code
-  readonly discovers: boolean
   readonly codeLength: number
-  discover(): void
-  stopDiscovery(): void
-  host(): void
-  join(peerId: string, code: string): void
+  // lists the rooms open for this game, as `rooms` events, until unwatch
+  watch(game: string): void
+  unwatch(): void
+  host(options: HostOptions): void
+  // code is '' for an open room; name is what the host will see
+  join(roomId: string, code: string, name: string): void
   send(data: string): void
   // leaves quietly: the other side hears `bye`, this side hears nothing
   close(): void
   subscribe(fn: (e: PeerEvent) => void): () => void
 }
 
-const REASONS = new Set<CloseReason>(['wrong-code', 'busy', 'unreachable', 'lost', 'bye', 'denied', 'network', 'too-many-tries', 'expired'])
+const REASONS = new Set<CloseReason>(['wrong-code', 'busy', 'unreachable', 'lost', 'bye', 'network', 'too-many-tries', 'expired', 'gone'])
 
-export const LOCAL_CODE_LENGTH = 4
+const MAX_ROOMS = 100
 
-export function isPairingCode(s: string, length = LOCAL_CODE_LENGTH): boolean {
+export function isPairingCode(s: string, length: number): boolean {
   return s.length === length && /^[0-9]+$/.test(s)
 }
 
-// events come from native code but are still checked; a bad one is dropped
-export function parsePeerEvent(raw: unknown, codeLength = LOCAL_CODE_LENGTH): PeerEvent | null {
+function roomOf(raw: unknown, lockedDefault: boolean): RoomInfo[] {
+  const o = raw as Record<string, unknown> | null
+  if (!o || typeof o.id !== 'string' || !o.id || o.id.length > 64) return []
+  return [{ id: o.id, name: cleanNickname(o.name) || 'friend', locked: typeof o.locked === 'boolean' ? o.locked : lockedDefault }]
+}
+
+// events come from the relay but are still checked; a bad one is dropped
+export function parsePeerEvent(raw: unknown, codeLength: number): PeerEvent | null {
   if (!raw || typeof raw !== 'object') return null
   const e = raw as Record<string, unknown>
   switch (e.type) {
-    case 'peers': {
-      if (!Array.isArray(e.peers)) return null
-      const peers = e.peers.flatMap((p: unknown): PeerInfo[] => {
-        const o = p as Record<string, unknown> | null
-        return o && typeof o.id === 'string' && typeof o.name === 'string' ? [{ id: o.id, name: o.name }] : []
-      })
-      return { type: 'peers', peers }
+    case 'rooms':
+      if (!Array.isArray(e.rooms)) return null
+      return { type: 'rooms', rooms: e.rooms.slice(0, MAX_ROOMS).flatMap((r) => roomOf(r, true)) }
+    case 'hosting': {
+      const code = e.code ?? ''
+      if (typeof code !== 'string' || (code !== '' && !isPairingCode(code, codeLength))) return null
+      return e.renewed === true ? { type: 'hosting', code, renewed: true } : { type: 'hosting', code }
     }
-    case 'denied':
-      return { type: 'denied' }
-    case 'hosting':
-      if (typeof e.code !== 'string' || !isPairingCode(e.code, codeLength)) return null
-      return e.renewed === true ? { type: 'hosting', code: e.code, renewed: true } : { type: 'hosting', code: e.code }
     case 'pairing':
       return { type: 'pairing' }
     case 'open':
       if (e.role !== 'host' && e.role !== 'guest') return null
-      return { type: 'open', role: e.role, peer: typeof e.peer === 'string' ? e.peer : '' }
+      return { type: 'open', role: e.role, peer: cleanNickname(e.peer) }
     case 'message':
       return typeof e.data === 'string' ? { type: 'message', data: e.data } : null
     case 'closed':
@@ -87,91 +93,44 @@ export function parsePeerEvent(raw: unknown, codeLength = LOCAL_CODE_LENGTH): Pe
   }
 }
 
-type PeerWindow = Window & { __qcalcPeer?: (e: unknown) => void }
-
-class NativePeer implements PeerTransport {
-  readonly label = 'same Wi-Fi'
-  readonly peerWord = 'Mac'
-  readonly discovers = true
-  readonly codeLength = LOCAL_CODE_LENGTH
-  private listeners = new Listeners()
-
-  constructor() {
-    const w = nativeWindow() as PeerWindow | undefined
-    if (w) {
-      w.__qcalcPeer = (raw) => {
-        const e = parsePeerEvent(raw)
-        if (e) this.listeners.emit(e)
-      }
-    }
-  }
-
-  private post(op: string, extra: Record<string, unknown> = {}): void {
-    nativeHandler()?.postMessage({ type: 'peer', op, ...extra })
-  }
-
-  discover(): void {
-    this.post('discover')
-  }
-  stopDiscovery(): void {
-    this.post('stopDiscovery')
-  }
-  host(): void {
-    this.post('host')
-  }
-  join(peerId: string, code: string): void {
-    this.post('join', { peer: peerId, code })
-  }
-  send(data: string): void {
-    this.post('send', { data })
-  }
-  close(): void {
-    this.post('close')
-  }
-  subscribe(fn: (e: PeerEvent) => void): () => void {
-    return this.listeners.add(fn)
-  }
-}
-
 let shared: PeerTransport | null | undefined
 
-// the relay wherever there is one, else the mac app's wi-fi link, the dev link in a plain browser, or none
+// the relay wherever there is one, else the dev link in a plain browser, or none
 export function peerTransport(): PeerTransport | null {
   if (shared !== undefined) return shared
   const relay = relayUrl()
   if (!hasPeerTransport()) shared = null
   else if (relay) shared = new OnlinePeer(relay)
-  else shared = nativeWindow()?.__QCALC_NATIVE ? new NativePeer() : new DevPeer()
+  else shared = new DevPeer()
   return shared
 }
 
 export function hasPeerTransport(): boolean {
-  const w = nativeWindow()
   if (relayUrl() && typeof WebSocket !== 'undefined') return true
-  if (isWindowsHost()) return false
-  return w?.__QCALC_NATIVE ? Boolean(nativeHandler()) : typeof BroadcastChannel !== 'undefined'
+  if (isWindowsHost() || nativeWindow()?.__QCALC_NATIVE) return false
+  return typeof BroadcastChannel !== 'undefined'
 }
 
-// `word` is what the other end is called: a Mac on the wi-fi link, a computer online
-export function closeReasonText(reason: CloseReason, word = 'Mac'): string {
+// `word` is what the other end is called: a computer online, a tab on the dev link
+export function closeReasonText(reason: CloseReason, word = 'computer'): string {
   switch (reason) {
     case 'wrong-code':
-      return word === 'Mac' ? 'wrong code' : 'no game with that code'
+      return 'wrong code · try again'
     case 'busy':
-      return `that ${word} is already playing`
+      return 'someone else just joined that room'
+    case 'gone':
+      return 'that room has closed'
     case 'unreachable':
       return `couldn’t reach that ${word}`
     case 'lost':
       return 'lost the connection'
     case 'bye':
       return 'your friend left'
-    case 'denied':
-      return 'Q Calc needs Local Network access · System Settings › Privacy & Security › Local Network'
     case 'network':
-      return word === 'Mac' ? 'couldn’t start the link' : 'couldn’t reach the game server · check your internet'
+      return 'couldn’t reach the game server · check your internet'
     case 'too-many-tries':
-      return word === 'Mac' ? 'stopped hosting after too many wrong codes · host again for a new one' : 'too many tries · wait a minute'
+      return 'too many tries · wait a minute'
     case 'expired':
-      return 'nobody joined for 15 minutes · host again for a new code'
+      return 'nobody joined for 15 minutes · host again'
   }
 }

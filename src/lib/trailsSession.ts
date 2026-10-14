@@ -153,7 +153,7 @@ export class TrailsSession {
   }
 
   private hi(): void {
-    this.post({ t: 'tr', v: TRAILS_VERSION, ...(this.greeted ? { ok: true } : {}) })
+    this.post({ t: 'tr', v: TRAILS_VERSION, g: 'trails', ...(this.greeted ? { ok: true } : {}) })
   }
 
   private end(note: string): void {

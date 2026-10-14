@@ -2,23 +2,25 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { cellAt, COLS, isOver, landingRow, ROWS, type C4State } from '../lib/connect4'
 import { C4_SKILLS, type C4Skill } from '../lib/connect4Bot'
 import { Connect4Session, type C4View } from '../lib/connect4Session'
+import { gameNow } from '../lib/gameClock'
 import { plainKey, swallow } from '../lib/gameKeys'
 import { closeReasonText, type PeerTransport } from '../lib/peer'
 import type { Side } from '../lib/pong'
 import { GameLobby, type GameProps } from './GameLobby'
 
-export function Connect4Panel({ transport, onClose }: { transport: PeerTransport; onClose: () => void }) {
+export function Connect4Panel({ transport }: { transport: PeerTransport | null }) {
   return (
     <div className="pong" aria-label="Connect 4">
       <GameLobby
+        game="connect4"
         transport={transport}
         name="connect 4"
         blurb="four in a row wins."
-        onClose={onClose}
-        game={(p) => <Connect4Game {...p} />}
-        solo={{
-          levels: C4_SKILLS,
-          play: (level, onEnd) => <Connect4Game transport={null} role="host" peer="computer" solo={level as C4Skill} onEnd={onEnd} />,
+        online={(p) => <Connect4Game {...p} />}
+        local={{
+          prompt: 'play the computer',
+          options: C4_SKILLS,
+          play: (i, onEnd) => <Connect4Game transport={null} role="host" peer="computer" solo={C4_SKILLS[i] as C4Skill} onEnd={onEnd} />,
         }}
       />
     </div>
@@ -77,7 +79,7 @@ function Connect4Game({
   const act = useRef<Actions>({ play: () => {}, rematch: () => {} })
 
   useEffect(() => {
-    const session = new Connect4Session(role, (text) => transport?.send(text), performance.now(), solo)
+    const session = new Connect4Session(role, (text) => transport?.send(text), gameNow(), solo)
     let shown = -1
     let done = false
     const finish = (note?: string) => {
@@ -94,23 +96,23 @@ function Connect4Game({
     }
     act.current = {
       play: (c) => {
-        session.play(c, performance.now())
+        session.play(c, gameNow())
         sync()
       },
       rematch: () => {
-        session.rematch(performance.now())
+        session.rematch(gameNow())
         sync()
       },
     }
 
     const off = transport?.subscribe((e) => {
       if (e.type === 'message') {
-        session.receive(e.data, performance.now())
+        session.receive(e.data, gameNow())
         sync()
       } else if (e.type === 'closed') finish(closeReasonText(e.reason, transport.peerWord))
     })
     const timer = window.setInterval(() => {
-      session.tick(performance.now())
+      session.tick(gameNow())
       sync()
     }, KEEP_TICK_MS)
 

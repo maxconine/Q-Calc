@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { gameNow } from '../lib/gameClock'
+import { useGameShell } from '../lib/gameShellContext'
 import { plainKey, swallow } from '../lib/gameKeys'
 import { HIT_WINDOW, loadBest, press, saveBest, startLevel, tick, type CrackEvent, type CrackState } from '../lib/crack'
+import { GameLobby } from './GameLobby'
 import './CrackPanel.css'
 
 // the dial, in svg units: the track the needle and dot ride on, and the tick ring inside it
@@ -12,10 +15,25 @@ const TICKS = Array.from({ length: 40 }, (_, i) => i)
 
 const polar = (angle: number, r: number) => ({ x: C + r * Math.sin(angle), y: C - r * Math.cos(angle) })
 
-// crack: `crack` then enter. one player, no link; esc leaves through the bar's escapeLayer
-export function CrackPanel({ onClose }: { onClose: () => void }) {
+// crack: `crack` then enter. one player, no link: the shared lobby, then the dial; esc pauses, then leaves
+export function CrackPanel() {
+  const shell = useGameShell()
+  return (
+    <GameLobby
+      game="crack"
+      name="crack"
+      blurb="tap as the needle crosses the dot. each level spins faster."
+      transport={null}
+      sub={`best level ${loadBest()}`}
+      frame
+      local={{ prompt: '', options: ['play'], play: () => <CrackGame onClose={() => shell?.escape()} /> }}
+    />
+  )
+}
+
+function CrackGame({ onClose }: { onClose: () => void }) {
   const [best, setBest] = useState(loadBest)
-  const [s, setS] = useState<CrackState>(() => startLevel(best, performance.now(), Math.random))
+  const [s, setS] = useState<CrackState>(() => startLevel(best, gameNow(), Math.random))
   // the last popped dot, keyed so each pop replays its animation
   const [pop, setPop] = useState<{ n: number; angle: number } | null>(null)
   const ref = useRef(s)
@@ -33,14 +51,14 @@ export function CrackPanel({ onClose }: { onClose: () => void }) {
       }
       setS(next.state)
     }
-    const frame = (now: number) => {
+    const frame = () => {
       raf = requestAnimationFrame(frame)
       const cur = ref.current
       if (cur.phase === 'ready') return
-      apply(tick(cur, now, Math.random))
+      apply(tick(cur, gameNow(), Math.random))
     }
     raf = requestAnimationFrame(frame)
-    const hit = () => apply(press(ref.current, performance.now(), Math.random))
+    const hit = () => apply(press(ref.current, gameNow(), Math.random))
 
     const onKey = (e: KeyboardEvent) => {
       if (!plainKey(e) || e.key === 'Escape') return
@@ -49,7 +67,7 @@ export function CrackPanel({ onClose }: { onClose: () => void }) {
       } else if (e.key === '1' && !e.repeat) {
         // back to the first level; the best stays
         setPop(null)
-        apply({ state: startLevel(1, performance.now(), Math.random), event: null })
+        apply({ state: startLevel(1, gameNow(), Math.random), event: null })
       } else if (e.key.length !== 1 && e.key !== 'Backspace') return
       swallow(e)
     }
