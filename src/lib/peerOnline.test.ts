@@ -184,7 +184,7 @@ describe('OnlinePeer', () => {
     peer.host({ game: 'pong', name: 'teal otter', locked: false })
     expect(last().url).toBe('wss://relay.test/host?resume=1')
     peer.join('', '123456', 'teal otter')
-    expect(last().url).toBe('wss://relay.test/join/123456?resume=1')
+    expect(last().url).toBe('wss://relay.test/join/123456?name=teal+otter&resume=1')
     // the relay is updated later: the list comes, and rooms work again
     vi.advanceTimersByTime(3_000)
     const watcher = last()

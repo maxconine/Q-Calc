@@ -166,7 +166,8 @@ export function EmberPanel({ transport }: { transport: PeerTransport | null }) {
         onOpen={startOnline}
         local={{
           prompt: '',
-          options: ['same keyboard'],
+          options: [],
+          together: ['same keyboard'],
           play: (_, onEnd) => {
             gameScreenRef.current = 'select'
             return <EmberLocal start={firstUnfinished(progressRef.current, LEVELS)} play={(game) => play(game, false, '', onEnd)} />

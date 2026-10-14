@@ -61,8 +61,9 @@ export function TrailsPanel({ transport }: { transport: PeerTransport | null }) 
         sub={`first to ${WIN_ROUNDS} rounds`}
         online={(p) => <TrailsOnline {...p} />}
         local={{
-          prompt: 'vs the computer, or two players on one keyboard',
-          options: VS.map((v) => (v === 'friend' ? 'two players' : v)),
+          prompt: 'play the computer',
+          options: LEVELS,
+          together: ['two players (same keyboard)'],
           play: (i, onEnd) => <TrailsPlay vs={VS[i]!} onMenu={() => onEnd()} onClose={() => shell?.escape()} />,
         }}
         footer={<p className="pong-note">vs the computer or online, steer with WASD or the arrows · two players: WASD and arrows</p>}

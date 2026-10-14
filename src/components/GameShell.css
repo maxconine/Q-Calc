@@ -126,9 +126,16 @@
   gap: var(--sp-2);
   width: 100%;
 }
-.lobby-local .pong-actions {
+.lobby-local .pong-actions,
+.lobby-friend {
   flex-wrap: wrap;
   justify-content: center;
+}
+/* the first screen's two choices, a size up from the other buttons */
+.lobby-choice {
+  min-width: 148px;
+  height: 46px;
+  font-size: var(--fs-row);
 }
 .lobby-label {
   color: var(--muted);

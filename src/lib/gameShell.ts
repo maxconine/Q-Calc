@@ -1,5 +1,5 @@
 // what esc and the keys do around an open game, as plain functions; GameShell keeps the state.
-// esc leaves full screen first. in the lobby it steps back, and closes the game from the list. a game on this
+// esc leaves full screen first. in the lobby it steps back, and closes the game from the screen it opened on. a game on this
 // computer pauses on the first esc and leaves to the lobby on the second; a game over the link can't pause the
 // other side, so the first esc only warns and a second one soon after leaves
 

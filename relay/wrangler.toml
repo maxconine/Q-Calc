@@ -4,7 +4,7 @@ compatibility_date = "2026-03-01"
 workers_dev = true
 preview_urls = false
 
-# one room per host (and per code, for earlier releases' code-only rooms)
+# one room per host, and per code: earlier releases' code-only rooms, and the claims on locked rooms' codes
 [[durable_objects.bindings]]
 name = "ROOMS"
 class_name = "Room"

@@ -1,24 +1,41 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { plainKey, swallow } from '../lib/gameKeys'
-import { lobbyBack, lobbyEvent, lobbyHoldsLink, lobbyKey, listScreen, type LobbyCtx, type LobbyEffect, type LobbyState, type Side } from '../lib/lobby'
+import {
+  firstScreen,
+  homeScreen,
+  joinRoom,
+  lobbyBack,
+  lobbyEvent,
+  lobbyHoldsLink,
+  lobbyKey,
+  optionScreen,
+  type LobbyCtx,
+  type LobbyEffect,
+  type LobbyState,
+  type Screen,
+  type Side,
+} from '../lib/lobby'
 import { loadNickname, randomNickname, saveNickname } from '../lib/nickname'
 import { closeReasonText, type PeerTransport, type RoomInfo } from '../lib/peer'
 import { useGameShell, useShellFullscreen } from '../lib/gameShellContext'
 import { pauseGameClock, resumeGameClock } from '../lib/gameClock'
 import { FullscreenButton, GAME_HIDE_EVENT, GAME_SHOW_EVENT } from './GameShell'
 
-// the lobby every game opens on (lib/lobby.ts has its rules). over the link: the open rooms for this game, by
-// the host's nickname, 🔒 when they take a code; ↑↓ pick, ↵ join, h host, n renames you. on this computer: the
-// game's own options, 1, 2, 3… once a game starts it takes the panel and talks to the transport itself; when it
-// ends it hands back a line to show
+// the lobby every game opens on (lib/lobby.ts has its rules). first vs computer or vs a friend; vs computer
+// is the game's own options, 1, 2, 3…; vs a friend is the same-keyboard options, host, join with a code and
+// the open rooms for this game, by the host's nickname, 🔒 when they take a code. once a game starts it takes
+// the panel and talks to the transport itself; when it ends it hands back a line to show
 
 export type GameProps = { transport: PeerTransport; role: Side; peer: string; onEnd: (note?: string) => void }
 
-// what a game offers on this computer: solo levels, modes, a friend on the same keyboard
+// what a game offers on this computer: solo levels or modes, and a friend on the same keyboard
 export type LocalGames = {
-  // the line over the options
+  // the line over the solo options
   prompt: string
   options: readonly string[]
+  // two on one keyboard, on the friend screen
+  together?: readonly string[]
+  // option counts through options, then together
   play: (option: number, onEnd: (note?: string) => void) => ReactNode
 }
 
@@ -90,7 +107,9 @@ export function GameLobby({
   const link = online ? transport : null
   const shell = useGameShell()
   const fullscreen = Boolean(useShellFullscreen()?.on)
-  const [state, setState] = useState<LobbyState>(listScreen)
+  const solo = local?.options.length ?? 0
+  const together = local?.together?.length ?? 0
+  const [state, setState] = useState<LobbyState>(() => homeScreen(firstScreen({ online: Boolean(link), solo, together })))
   const stateRef = useRef(state)
   const [nick, setNick] = useState(loadNickname)
   // the relay sent no room list, so rooms go by code
@@ -112,12 +131,15 @@ export function GameLobby({
       online: Boolean(link),
       codeOnly,
       codeLength: link?.codeLength ?? 0,
-      options: local?.options.length ?? 0,
+      solo,
+      together,
       closeText: (reason) => closeReasonText(reason, link?.peerWord),
       randomName: () => randomNickname(),
     }),
-    [codeOnly, link, local?.options.length],
+    [codeOnly, link, solo, together],
   )
+  const ctxRef = useRef(ctx)
+  ctxRef.current = ctx
 
   const run = useCallback(
     (effect: LobbyEffect | undefined) => {
@@ -143,10 +165,11 @@ export function GameLobby({
     [game, link, shell],
   )
 
-  const toList = useCallback(
+  // a game over the link ended: back to the friend screen
+  const toFriend = useCallback(
     (note?: string) => {
       link?.close()
-      set(listScreen(note))
+      set(homeScreen('friend', note))
     },
     [link, set],
   )
@@ -160,7 +183,7 @@ export function GameLobby({
     () =>
       shell?.register({
         back: () => {
-          const back = lobbyBack(stateRef.current)
+          const back = lobbyBack(stateRef.current, ctxRef.current)
           if (!back) return false
           set(back.state)
           run(back.effect)
@@ -168,16 +191,18 @@ export function GameLobby({
         },
         leave: () => {
           if (callbacks.current.leave?.()) return
-          toList()
+          const cur = stateRef.current
+          if (cur.k === 'local') set(homeScreen(optionScreen(cur.option, ctxRef.current)))
+          else toFriend()
         },
         idle: () => Boolean(callbacks.current.idle?.()),
         hold: () => lobbyHoldsLink(stateRef.current),
       }),
-    [run, set, shell, toList],
+    [run, set, shell, toFriend],
   )
 
-  // the list is watched only while it shows
-  const watching = Boolean(link) && state.k === 'list'
+  // the list is watched while the lobby's own screens show, so the friend screen has it as it opens
+  const watching = Boolean(link) && state.k === 'home'
   useEffect(() => {
     if (!watching || !link) return
     link.watch(game)
@@ -225,7 +250,7 @@ export function GameLobby({
     const onKeyDown = (e: KeyboardEvent) => {
       const cur = stateRef.current
       if (cur.k === 'game' || cur.k === 'local' || !plainKey(e) || e.key === 'Escape') return
-      if (cur.k === 'list' && callbacks.current.onKey?.(e)) {
+      if (cur.k === 'home' && callbacks.current.onKey?.(e)) {
         swallow(e)
         return
       }
@@ -239,18 +264,18 @@ export function GameLobby({
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [ctx, run, set])
 
-  if (state.k === 'local' && local) return <>{local.play(state.option, (note) => set(listScreen(note)))}</>
+  if (state.k === 'local' && local) return <>{local.play(state.option, (note) => set(homeScreen(optionScreen(state.option, ctx), note)))}</>
   if (state.k === 'game' && link && online) {
     const waiting = away ? (
       <div className="game-toast" role="status">
         {away === 'peer' ? `${state.peer} stepped away · the game waits for them` : 'reconnecting to your game…'}
       </div>
     ) : null
-    if (ownHead) return <>{online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}{waiting}</>
+    if (ownHead) return <>{online({ transport: link, role: state.role, peer: state.peer, onEnd: toFriend })}{waiting}</>
     return (
       <>
         <LobbyHead name={name} sub={`with ${state.peer}`} fullscreen={fullscreen} onFullscreen={() => shell?.toggleFullscreen()} onEsc={() => shell?.escape()} />
-        {online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}
+        {online({ transport: link, role: state.role, peer: state.peer, onEnd: toFriend })}
         {waiting}
       </>
     )
@@ -261,7 +286,8 @@ export function GameLobby({
     <div className={`${frame ? 'pong pong-lobby' : 'pong-lobby'} game-fs-screen`}>
       <LobbyHead name={name} sub={link ? link.label : (sub ?? '')} fullscreen={fullscreen} onFullscreen={() => shell?.toggleFullscreen()} onEsc={() => shell?.escape()} />
       <LobbyBody
-        state={state.k === 'game' || state.k === 'local' ? listScreen() : state}
+        state={state.k === 'game' || state.k === 'local' ? homeScreen(firstScreen(ctx)) : state}
+        first={firstScreen(ctx)}
         name={name}
         blurb={blurb}
         link={link}
@@ -271,7 +297,7 @@ export function GameLobby({
         codeOnly={codeOnly}
         onLocal={(option) => set({ k: 'local', option })}
         onJoin={(room) => {
-          const step = lobbyKey({ k: 'list', rooms: [room], pick: 0 }, 'Enter', ctx, false, nick)
+          const step = joinRoom(room)
           set(step.state)
           run(step.effect)
         }}
@@ -300,6 +326,7 @@ function LobbyHead({ name, sub, fullscreen, onFullscreen, onEsc }: { name: strin
 
 function LobbyBody({
   state,
+  first,
   name,
   blurb,
   link,
@@ -312,6 +339,8 @@ function LobbyBody({
   onKey,
 }: {
   state: Exclude<LobbyState, { k: 'game' } | { k: 'local' }>
+  // the screen the lobby opens on, which has no ⌫ back
+  first: Screen
   name: string
   blurb: string
   link: PeerTransport | null
@@ -329,41 +358,86 @@ function LobbyBody({
       ⌫ back
     </button>
   )
+  const you = (
+    <>
+      you’re{' '}
+      <button type="button" className="pong-link lobby-nick" onClick={() => onKey('n')}>
+        {nick}
+      </button>{' '}
+      · n renames
+    </>
+  )
   switch (state.k) {
-    case 'list':
-      return (
-        <div className="pong-body lobby-body">
-          <p className="pong-line">{blurb}</p>
-          {local ? (
+    case 'home': {
+      const note = state.note ? <p className="pong-note lobby-note">{state.note}</p> : null
+      const backHint = state.screen === first ? null : <>{back} · </>
+      if (state.screen === 'start') {
+        return (
+          <div className="pong-body lobby-body">
+            <p className="pong-line">{blurb}</p>
+            <div className="pong-actions">
+              {['vs computer', 'vs a friend'].map((choice, i) => (
+                <button type="button" key={choice} className={`pong-button lobby-choice ${i === state.pick ? 'on' : ''}`} onClick={() => onKey(String(i + 1))}>
+                  {choice} <kbd>{i + 1}</kbd>
+                </button>
+              ))}
+            </div>
+            <p className="pong-note">{link ? you : '←→ pick · ↵ go'}</p>
+            {note}
+          </div>
+        )
+      }
+      if (state.screen === 'solo') {
+        const options = local?.options ?? []
+        return (
+          <div className="pong-body lobby-body">
+            <p className="pong-line">{blurb}</p>
             <div className="lobby-local">
-              {local.prompt ? <span className="lobby-label">{local.prompt}</span> : null}
+              {local?.prompt ? <span className="lobby-label">{local.prompt}</span> : null}
               <div className="pong-actions">
-                {local.options.map((option, i) => (
-                  <button type="button" key={option} className={`pong-button ${!link && i === state.pick ? 'on' : ''}`} onClick={() => onLocal(i)}>
+                {options.map((option, i) => (
+                  <button type="button" key={option} className={`pong-button ${i === state.pick ? 'on' : ''}`} onClick={() => onLocal(i)}>
                     {option} <kbd>{i + 1}</kbd>
                   </button>
                 ))}
               </div>
             </div>
-          ) : null}
-          {footer}
-          {link && codeOnly ? (
-            <div className="lobby-rooms">
-              <div className="pong-actions">
+            {footer}
+            <p className="pong-note">
+              {options.length > 1 ? '↑↓ pick · ↵ play · ' : '↵ plays · '}
+              {backHint}f full screen
+            </p>
+            {note}
+          </div>
+        )
+      }
+      const solo = local?.options.length ?? 0
+      const together = local?.together ?? []
+      return (
+        <div className="pong-body lobby-body">
+          <p className="pong-line">{blurb}</p>
+          <div className="pong-actions lobby-friend">
+            {together.map((option, i) => (
+              <button type="button" key={option} className={`pong-button ${!link && i === state.pick ? 'on' : ''}`} onClick={() => onLocal(solo + i)}>
+                {option} <kbd>{i + 1}</kbd>
+              </button>
+            ))}
+            {link ? (
+              <>
                 <button type="button" className="pong-button" onClick={() => onKey('h')}>
                   host <kbd>H</kbd>
                 </button>
                 <button type="button" className="pong-button" onClick={() => onKey('j')}>
                   join with a code <kbd>J</kbd>
                 </button>
-              </div>
-              <p className="pong-note">
-                no room list from the game server yet, so rooms go by code · you’re{' '}
-                <button type="button" className="pong-link lobby-nick" onClick={() => onKey('n')}>
-                  {nick}
-                </button>
-              </p>
-            </div>
+              </>
+            ) : null}
+          </div>
+          {link && codeOnly ? (
+            <p className="pong-note">
+              no room list from the game server yet, so rooms go by code · {backHint}
+              {you}
+            </p>
           ) : link ? (
             <div className="lobby-rooms">
               <span className="lobby-label">rooms open now</span>
@@ -388,22 +462,21 @@ function LobbyBody({
               )}
               <p className="pong-note">
                 {state.rooms.length ? '↑↓ pick · ↵ join · ' : ''}
-                <button type="button" className="pong-link" onClick={() => onKey('h')}>
-                  h host
-                </button>{' '}
-                · you’re{' '}
-                <button type="button" className="pong-link lobby-nick" onClick={() => onKey('n')}>
-                  {nick}
-                </button>{' '}
-                · n renames
+                {backHint}
+                {you}
               </p>
             </div>
-          ) : local ? (
-            <p className="pong-note">{local.options.length > 1 ? '↑↓ pick · ↵ play · ' : '↵ plays · '}f full screen</p>
-          ) : null}
-          {state.note ? <p className="pong-note lobby-note">{state.note}</p> : null}
+          ) : (
+            <p className="pong-note">
+              {together.length > 1 ? '↑↓ pick · ↵ play · ' : '↵ plays · '}
+              {backHint}f full screen
+            </p>
+          )}
+          {footer}
+          {note}
         </div>
       )
+    }
     case 'setup':
       return (
         <div className="pong-body">

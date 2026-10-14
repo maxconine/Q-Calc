@@ -321,12 +321,13 @@ export class OnlinePeer implements PeerTransport {
   join(roomId: string, code: string, name: string): void {
     this.forget()
     this.emit({ type: 'pairing' })
-    // no room: the code alone, as relays before room lists take it
+    // resume=1: this page can take its seat back after a dropped link (relays that know it hold one)
+    const q = new URLSearchParams({ name, resume: '1' })
+    // no room: the code alone, which reaches a locked listed room too; relays before room lists skip the name
     if (!roomId) {
-      this.connect(`/join/${encodeURIComponent(code)}?resume=1`)
+      this.connect(`/join/${encodeURIComponent(code)}?${q}`)
       return
     }
-    const q = new URLSearchParams({ name, resume: '1' })
     if (code) q.set('code', code)
     this.connect(`/join/${encodeURIComponent(roomId)}?${q}`)
   }

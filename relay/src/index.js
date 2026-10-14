@@ -17,12 +17,18 @@ import { enqueue, GRACE_MS, LEFT, newSeats, otherSide, overdue, seatOf, SIDES } 
 //   /rooms/<game>                          the game's open rooms, sent now and again on every change
 //   /host/<game>?name=…&locked=1|0         opens a room; hears hosting {code}, code '' when open
 //   /join/<room>?name=…[&code=123456]      joins a room from the list
-//   /host, /join/<code>                    the code-only rooms of earlier releases, kept so they still pair
+//   /join/<code>[?name=…]                  joins by the code alone: a locked listed room, or a code-only room
+//   /host                                  the code-only rooms of earlier releases, kept so they still pair
 //   /back/<room or code>?token=…          takes back a seat after a dropped link (seats.js)
 //
 // a page that can take a seat back asks with resume=1; only when both sides did is a seat held. then `open`
 // carries the room and the side's token. a close other than 1000 (a lost link, a quit app)
 // holds the seat for a few minutes: the other side hears `away`, then `back`, or `closed` once time's up
+//
+// a locked listed room's code is held in that code's own room object, the one a code-only room would use, so
+// /join/<code> finds it and no two rooms of either kind share a code. the claim lasts while the room waits and
+// goes when it's joined, closed or expired. a seat is taken back only through /back with its token, never
+// through a code, so a player coming back is never a new guest and never a wrong code
 
 const CODE_DIGITS = 6
 // a fresh code or room id that happens to be taken is drawn again, this many times
@@ -80,7 +86,8 @@ export default {
     if (legacy) {
       if (!(await allowed(env.JOINS, req))) return refuse('too-many-tries')
       const resume = url.searchParams.get('resume') === '1' ? '1' : '0'
-      return room(env, legacy[1]).fetch(`https://room/guest?key=${legacy[1]}&resume=${resume}`, upgrade)
+      const q = new URLSearchParams({ key: legacy[1], resume, name: cleanName(url.searchParams.get('name')) })
+      return room(env, legacy[1]).fetch(`https://room/guest?${q}`, upgrade)
     }
 
     const route = ROUTE.exec(url.pathname)
@@ -98,7 +105,7 @@ export default {
       const name = cleanName(url.searchParams.get('name'))
       for (let i = 0; i < HOST_TRIES; i++) {
         const id = newRoomId()
-        const q = new URLSearchParams({ id, game, name, locked: locked ? '1' : '0', code: locked ? newCode() : '', resume: url.searchParams.get('resume') === '1' ? '1' : '0' })
+        const q = new URLSearchParams({ id, game, name, locked: locked ? '1' : '0', resume: url.searchParams.get('resume') === '1' ? '1' : '0' })
         const res = await room(env, `room:${id}`).fetch(`https://room/open?${q}`, upgrade)
         if (res.status !== 409) return res
       }
@@ -138,7 +145,9 @@ export default {
 }
 
 // one room: at most a host and a guest. hibernates between messages, so a waiting host costs nothing. a listed
-// room keeps what it is (its id, game, nickname and code) on the host's socket, which outlasts hibernation
+// room keeps what it is (its id, game, nickname and code) on the host's socket, which outlasts hibernation.
+// the room named by a code is either a code-only room or, in storage, a claim pointing at the locked listed
+// room that holds that code; never both
 export class Room extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env)
@@ -223,11 +232,85 @@ export class Room extends DurableObject {
 
   async unlist(meta) {
     if (!meta?.id) return
-    try {
-      await directory(this.env, meta.game).remove(meta.id)
-    } catch {
-      // the list drops it when it expires anyway
+    await Promise.all([
+      directory(this.env, meta.game)
+        .remove(meta.id)
+        .catch(() => {
+          // the list drops it when it expires anyway
+        }),
+      meta.code ? this.free(meta.code, meta.id) : null,
+    ])
+  }
+
+  // a fresh code for a locked listed room, claimed in that code's room; null when none could be
+  async draw(id, until) {
+    for (let i = 0; i < HOST_TRIES; i++) {
+      const code = newCode()
+      try {
+        if (await room(this.env, code).claim(id, code, until)) return code
+      } catch {
+        return null
+      }
     }
+    return null
+  }
+
+  async free(code, id) {
+    try {
+      await room(this.env, code).release(id)
+    } catch {
+      // the claim lapses when the room would have expired anyway
+    }
+  }
+
+  // over rpc, in a code's room: hold this code for a listed room, unless a code-only room or another listed
+  // room has it. a code-only game whose player is away, or that ended moments ago, still has it: its players
+  // come back through /back/<code>
+  async claim(id, code, until) {
+    if (this.live('host') || this.live('guest') || (await this.seats()) || (await this.ctx.storage.get('ended'))) return false
+    const held = await this.held()
+    if (held && held.id !== id) return false
+    await this.ctx.storage.put('claim', { id, code, until })
+    await this.ctx.storage.setAlarm(until)
+    return true
+  }
+
+  async release(id) {
+    const held = await this.ctx.storage.get('claim')
+    if (held?.id !== id) return
+    await this.ctx.storage.delete('claim')
+    await this.ctx.storage.deleteAlarm()
+  }
+
+  // the listed room this code stands for, if it still does
+  async held() {
+    const held = await this.ctx.storage.get('claim')
+    if (!held) return null
+    if (held.until > Date.now()) return held
+    await this.ctx.storage.delete('claim')
+    return null
+  }
+
+  // a new code after too many wrong ones. the old one works until the new one is claimed; if none can be,
+  // the old one stays and the next wrong code tries again
+  async redraw(host) {
+    const { id, until } = this.meta(host)
+    const code = await this.draw(id, until)
+    const meta = this.meta(host)
+    if (host.readyState !== WebSocket.OPEN || this.live('guest')) {
+      if (code) await this.free(code, id)
+      return
+    }
+    if (!code) {
+      meta.wrong = TRIES_PER_CODE - 1
+      host.serializeAttachment(meta)
+      return
+    }
+    const old = meta.code
+    meta.code = code
+    host.serializeAttachment(meta)
+    host.send(event({ type: 'hosting', code, renewed: true }))
+    await this.free(old, id)
   }
 
   async fetch(req) {
@@ -237,11 +320,21 @@ export class Room extends DurableObject {
     switch (url.pathname) {
       case '/open': {
         if (host || (await this.seats())) return new Response(null, { status: 409 })
-        const meta = { id: p.get('id'), game: p.get('game'), name: p.get('name'), locked: p.get('locked') === '1', code: p.get('code') ?? '', wrong: 0, resume: p.get('resume') === '1' }
+        const until = Date.now() + WAIT_MS
+        const meta = { id: p.get('id'), game: p.get('game'), name: p.get('name'), locked: p.get('locked') === '1', code: '', wrong: 0, until, resume: p.get('resume') === '1' }
+        if (meta.locked) {
+          meta.code = await this.draw(meta.id, until)
+          if (!meta.code) return refuse('network')
+          // the same id drawn twice at once
+          if (this.live('host')) {
+            await this.free(meta.code, meta.id)
+            return new Response(null, { status: 409 })
+          }
+        }
         const { client, server } = this.accept('host', meta)
         server.send(event({ type: 'hosting', code: meta.code }))
         await this.ctx.storage.delete('ended')
-        await this.ctx.storage.setAlarm(Date.now() + WAIT_MS)
+        await this.ctx.storage.setAlarm(until)
         try {
           await directory(this.env, meta.game).add({ id: meta.id, name: meta.name, locked: meta.locked })
         } catch {
@@ -252,15 +345,14 @@ export class Room extends DurableObject {
       case '/enter': {
         const meta = this.meta(host)
         if (!host || !meta?.id) return refuse('gone')
-        if (this.live('guest')) return refuse('busy')
+        // a guest who's away still has the seat: nobody else takes it, and no code is counted against it
+        if (this.live('guest') || (await this.seats())) return refuse('busy')
         if (meta.locked && p.get('code') !== meta.code) {
           meta.wrong++
-          if (meta.wrong >= TRIES_PER_CODE) {
-            meta.wrong = 0
-            meta.code = newCode()
-            host.send(event({ type: 'hosting', code: meta.code, renewed: true }))
-          }
+          const renew = meta.wrong >= TRIES_PER_CODE
+          if (renew) meta.wrong = 0
           host.serializeAttachment(meta)
+          if (renew) await this.redraw(host)
           return refuse('wrong-code')
         }
         const name = p.get('name') || 'friend'
@@ -272,7 +364,7 @@ export class Room extends DurableObject {
       }
       // the code-only rooms of earlier releases
       case '/host': {
-        if (host || (await this.seats())) return new Response(null, { status: 409 })
+        if (host || (await this.seats()) || (await this.held())) return new Response(null, { status: 409 })
         // a code-only room's host carries no meta, only whether it can take its seat back
         const { client, server } = this.accept('host', { resume: p.get('resume') === '1' })
         server.send(event({ type: 'hosting', code: p.get('code') }))
@@ -281,8 +373,15 @@ export class Room extends DurableObject {
         return new Response(null, { status: 101, webSocket: client })
       }
       case '/guest': {
-        if (!host || this.meta(host)?.id) return refuse('wrong-code')
-        if (this.live('guest')) return refuse('busy')
+        // no code-only room here: the locked listed room holding this code, if any, checks it as its own
+        if (!host) {
+          const held = await this.held()
+          if (!held) return refuse('wrong-code')
+          const q = new URLSearchParams({ name: p.get('name') || 'friend', code: held.code, resume: p.get('resume') === '1' ? '1' : '0' })
+          return room(this.env, `room:${held.id}`).fetch(`https://room/enter?${q}`, upgrade)
+        }
+        if (this.meta(host)?.id) return refuse('wrong-code')
+        if (this.live('guest') || (await this.seats())) return refuse('busy')
         const { client, server } = this.accept('guest')
         await this.ctx.storage.deleteAlarm()
         await this.pair(host, server, p.get('key') ?? '', '', '', Boolean(this.meta(host)?.resume) && p.get('resume') === '1')
@@ -386,7 +485,8 @@ export class Room extends DurableObject {
     await this.drop(ws)
   }
 
-  // a held seat whose time is up, a host nobody joined, or an ended game's leftovers
+  // a held seat whose time is up, a claim on a code its room never let go of, a host nobody joined, or an
+  // ended game's leftovers
   async alarm() {
     const seats = await this.seats()
     if (seats) {
@@ -406,6 +506,13 @@ export class Room extends DurableObject {
           // already closed
         }
       }
+      return
+    }
+    // a code's room standing in for a listed room: it never has seats or sockets of its own
+    const held = await this.ctx.storage.get('claim')
+    if (held) {
+      if (held.until > Date.now()) await this.ctx.storage.setAlarm(held.until)
+      else await this.ctx.storage.delete('claim')
       return
     }
     // an ended game with nobody left: its leftovers go
