@@ -17,6 +17,16 @@ The list holds only a random room id, the nickname and the lock. It never holds 
 | `/host/<game>?name=…&locked=1\|0` | Opens a room. The host hears `hosting {code}`, with `code` empty for an open room |
 | `/join/<room>?name=…[&code=…]` | Joins a room from the list |
 | `/host`, `/join/<code>` | The code-only rooms of earlier releases, kept so those still pair. They're never listed |
+| `/back/<room or code>?token=…` | Takes a seat back after a dropped link (below) |
+
+## Coming back to a game
+
+Mid-game, a player's link can drop: they hid Q Calc, their laptop slept, or the network changed. The room then holds their seat for 10 minutes instead of ending the game. The other player hears `away` and the game waits. When the first player's app reconnects with its seat's token, the other player hears `back`, and the messages sent meanwhile are handed over in order (the newest 256). After 10 minutes the other player hears `closed` (`lost`).
+
+- **Seats.** When two players pair, each `open` carries the room's key and that side's token. The token is 32 random hex characters and only works for its own seat. Seats live in the room's storage, so they outlast hibernation. `relay/src/seats.js` holds the plain rules, tested in `seats.test.js`.
+- **Leaving on purpose.** A socket closed with code 1000 still ends the game at once, and the other player hears `bye`. Any other close holds the seat. The app closes with 4000 when it means to come back.
+- **Earlier releases.** A page that can take its seat back asks with `resume=1` when it hosts or joins. Seats are kept only when both sides asked, so a game with a 2.0.9 or earlier app ends the moment a link drops, as before.
+- **Hiding Q Calc.** The app counts hiding mid-game as stepping away. It closes its link with 4000, the game pauses for both players, and showing Q Calc again takes the seat back. Quitting Q Calc leaves the game outright, since the game itself is gone.
 
 ## Limits
 
@@ -31,6 +41,18 @@ npx wrangler deploy        # prints https://qcalc-relay.<you>.workers.dev
 ```
 
 For a first deploy, set `RELAY_URL` in `src/lib/peerOnline.ts` to `wss://qcalc-relay.<you>.workers.dev` afterwards and ship a release.
+
+### Deploying seats that outlast a dropped link
+
+This update adds `/back` and the seat rules in `seats.js`. It needs no new bindings, migrations or secrets, because seats use the `Room` class's existing storage. It's backward compatible both ways:
+
+- **Released apps on the new relay** don't ask for seats, so their games behave exactly as before.
+- **New apps on the old relay** get no tokens, so a dropped link ends the game as it always has. Once the relay is deployed, seats start working without an app update.
+
+```bash
+cd relay
+npx wrangler deploy
+```
 
 ### Deploying the room lists
 

@@ -32,7 +32,7 @@ import { EmberPanel } from './EmberPanel'
 import { EqualPanel } from './EqualPanel'
 import { NumbersPanel } from './NumbersPanel'
 import { TrailsPanel } from './TrailsPanel'
-import { GAME_HIDE_EVENT, GameShell } from './GameShell'
+import { GAME_HIDE_EVENT, GAME_SHOW_EVENT, GameShell } from './GameShell'
 import { RationalizeSettings } from './RationalizeSettings'
 import { FourTwentySmoke } from './FourTwentySmoke'
 import { SixtyNineFold } from './SixtyNineFold'
@@ -1405,6 +1405,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     // synchronous so the height is reported before the mac app fades the panel in
     w.__qcalcReset = () => {
       track('open')
+      if (pongOpenRef.current) window.dispatchEvent(new Event(GAME_SHOW_EVENT))
       flushSync(() => {
         onPrepare()
         beginShowing()

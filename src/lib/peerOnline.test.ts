@@ -15,8 +15,10 @@ class FakeSocket {
   send(s: string) {
     this.sent.push(s)
   }
-  close() {
+  closeCode: number | undefined
+  close(code?: number) {
     this.closed = true
+    this.closeCode = code
     this.readyState = 3
   }
   // from the relay
@@ -51,7 +53,7 @@ describe('OnlinePeer', () => {
   it('hosts: opens /host and passes on the code the relay hands out', () => {
     const { peer, events, last } = setup()
     peer.host({ game: 'pong', name: 'teal otter', locked: true })
-    expect(last().url).toBe('wss://relay.test/host/pong?name=teal+otter&locked=1')
+    expect(last().url).toBe('wss://relay.test/host/pong?name=teal+otter&locked=1&resume=1')
     last().event({ type: 'hosting', code: '042017' })
     expect(events).toEqual([{ type: 'hosting', code: '042017' }])
   })
@@ -66,7 +68,7 @@ describe('OnlinePeer', () => {
   it('hosts an open room with no code', () => {
     const { peer, events, last } = setup()
     peer.host({ game: 'connect4', name: 'amber fox', locked: false })
-    expect(last().url).toBe('wss://relay.test/host/connect4?name=amber+fox&locked=0')
+    expect(last().url).toBe('wss://relay.test/host/connect4?name=amber+fox&locked=0&resume=1')
     last().event({ type: 'hosting', code: '' })
     expect(events).toEqual([{ type: 'hosting', code: '' }])
   })
@@ -74,7 +76,7 @@ describe('OnlinePeer', () => {
   it('joins by code and plays: messages go out with a dot and come back without one', () => {
     const { peer, events, last } = setup()
     peer.join('r1', '123456', 'jade owl')
-    expect(last().url).toBe('wss://relay.test/join/r1?name=jade+owl&code=123456')
+    expect(last().url).toBe('wss://relay.test/join/r1?name=jade+owl&resume=1&code=123456')
     expect(events).toEqual([{ type: 'pairing' }])
     peer.send('too early')
     expect(last().sent).toEqual([])
@@ -180,9 +182,9 @@ describe('OnlinePeer', () => {
     last().drop()
     expect(events.at(-1)).toEqual({ type: 'rooms', rooms: [], offline: true, codeOnly: true })
     peer.host({ game: 'pong', name: 'teal otter', locked: false })
-    expect(last().url).toBe('wss://relay.test/host')
+    expect(last().url).toBe('wss://relay.test/host?resume=1')
     peer.join('', '123456', 'teal otter')
-    expect(last().url).toBe('wss://relay.test/join/123456')
+    expect(last().url).toBe('wss://relay.test/join/123456?resume=1')
     // the relay is updated later: the list comes, and rooms work again
     vi.advanceTimersByTime(3_000)
     const watcher = last()
@@ -190,7 +192,7 @@ describe('OnlinePeer', () => {
     watcher.event({ type: 'rooms', rooms: [] })
     expect(events.at(-1)).toEqual({ type: 'rooms', rooms: [] })
     peer.host({ game: 'pong', name: 'teal otter', locked: false })
-    expect(last().url).toBe('wss://relay.test/host/pong?name=teal+otter&locked=0')
+    expect(last().url).toBe('wss://relay.test/host/pong?name=teal+otter&locked=0&resume=1')
   })
 
   it('a list that drops after it came is only offline', () => {
@@ -206,5 +208,127 @@ describe('OnlinePeer', () => {
     peer.host({ game: 'pong', name: 'teal otter', locked: true })
     for (const junk of ['', '!', '!{', '!{"type":"open","role":"king"}', '?hello', '.before open']) last().hear(junk)
     expect(events).toEqual([])
+  })
+})
+
+describe('OnlinePeer keeps its seat through a dropped link', () => {
+  const TOKEN = '0123456789abcdef0123456789abcdef'
+
+  function playing() {
+    const t = setup()
+    t.peer.join('room1', '', 'jade owl')
+    t.last().event({ type: 'open', role: 'guest', peer: 'teal otter', room: 'room1', token: TOKEN })
+    t.events.length = 0
+    return t
+  }
+
+  it('reconnects to the same seat instead of ending the game', () => {
+    const { peer, sockets, events, last } = playing()
+    const first = last()
+    first.drop()
+    expect(events).toEqual([{ type: 'away', who: 'self' }])
+    vi.advanceTimersByTime(0)
+    expect(sockets).toHaveLength(2)
+    expect(last().url).toBe(`wss://relay.test/back/room1?token=${TOKEN}`)
+    peer.send('move 3')
+    expect(last().sent).toEqual([])
+    last().event({ type: 'open', role: 'guest', peer: 'teal otter', room: 'room1', token: TOKEN, resumed: true })
+    expect(events).toEqual([
+      { type: 'away', who: 'self' },
+      { type: 'back', who: 'self' },
+    ])
+    // what was sent while away goes once the seat is back
+    expect(last().sent).toEqual(['.move 3'])
+  })
+
+  it('closes a link gone quiet with the code the relay reads as reconnecting', () => {
+    const { last } = playing()
+    const first = last()
+    first.hear('pong')
+    vi.advanceTimersByTime(40_000)
+    expect(first.closeCode).toBe(4000)
+    expect(last()).not.toBe(first)
+  })
+
+  it('keeps trying, then gives up once the relay would have let the seat go', () => {
+    const { sockets, events, last } = playing()
+    last().drop()
+    vi.advanceTimersByTime(0)
+    for (let i = 0; i < 200 && events.every((e) => e.type !== 'closed'); i++) {
+      last().drop()
+      vi.advanceTimersByTime(5_000)
+    }
+    expect(sockets.length).toBeGreaterThan(10)
+    expect(events.at(-1)).toEqual({ type: 'closed', reason: 'lost' })
+  })
+
+  it('ends when the relay says the friend left meanwhile', () => {
+    const { events, last } = playing()
+    last().drop()
+    vi.advanceTimersByTime(0)
+    last().event({ type: 'closed', reason: 'bye' })
+    expect(events.at(-1)).toEqual({ type: 'closed', reason: 'bye' })
+    const count = events.length
+    vi.advanceTimersByTime(60_000)
+    expect(events).toHaveLength(count)
+  })
+
+  it('passes on the other side stepping away and coming back', () => {
+    const { events, last } = playing()
+    last().event({ type: 'away' })
+    last().event({ type: 'back' })
+    expect(events).toEqual([
+      { type: 'away', who: 'peer' },
+      { type: 'back', who: 'peer' },
+    ])
+  })
+
+  it('leaving on purpose closes with 1000, so the game ends for the friend', () => {
+    const { peer, sockets, last } = playing()
+    const first = last()
+    peer.close()
+    expect(first.closeCode).toBe(1000)
+    vi.advanceTimersByTime(60_000)
+    expect(sockets).toHaveLength(1)
+  })
+
+  it('hiding mid-game steps away: no retries until shown again, then the same seat', () => {
+    const { peer, sockets, events, last } = playing()
+    const first = last()
+    peer.stepAway()
+    expect(first.closeCode).toBe(4000)
+    expect(events).toEqual([{ type: 'away', who: 'self' }])
+    vi.advanceTimersByTime(30 * 60_000)
+    expect(sockets).toHaveLength(1)
+    peer.comeBack()
+    expect(last().url).toBe(`wss://relay.test/back/room1?token=${TOKEN}`)
+    last().event({ type: 'open', role: 'guest', peer: 'teal otter', room: 'room1', token: TOKEN, resumed: true })
+    expect(events.at(-1)).toEqual({ type: 'back', who: 'self' })
+  })
+
+  it('coming back after the game ended says so', () => {
+    const { peer, events, last } = playing()
+    peer.stepAway()
+    vi.advanceTimersByTime(30 * 60_000)
+    peer.comeBack()
+    last().event({ type: 'closed', reason: 'lost' })
+    expect(events.at(-1)).toEqual({ type: 'closed', reason: 'lost' })
+  })
+
+  it('stepping away before a game starts does nothing', () => {
+    const { peer, sockets, events, last } = setup()
+    peer.host({ game: 'pong', name: 'teal otter', locked: false })
+    peer.stepAway()
+    peer.comeBack()
+    expect(sockets).toHaveLength(1)
+    expect(last().closed).toBe(false)
+    expect(events).toEqual([])
+  })
+
+  it('a link that drops before pairing still just fails', () => {
+    const { peer, events, last } = setup()
+    peer.join('room1', '', 'jade owl')
+    last().drop()
+    expect(events.at(-1)).toEqual({ type: 'closed', reason: 'network' })
   })
 })

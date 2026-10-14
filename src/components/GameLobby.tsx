@@ -4,7 +4,8 @@ import { lobbyBack, lobbyEvent, lobbyHoldsLink, lobbyKey, listScreen, type Lobby
 import { loadNickname, randomNickname, saveNickname } from '../lib/nickname'
 import { closeReasonText, type PeerTransport, type RoomInfo } from '../lib/peer'
 import { useGameShell, useShellFullscreen } from '../lib/gameShellContext'
-import { FullscreenButton } from './GameShell'
+import { pauseGameClock, resumeGameClock } from '../lib/gameClock'
+import { FullscreenButton, GAME_HIDE_EVENT, GAME_SHOW_EVENT } from './GameShell'
 
 // the lobby every game opens on (lib/lobby.ts has its rules). over the link: the open rooms for this game, by
 // the host's nickname, 🔒 when they take a code; ↑↓ pick, ↵ join, h host, n renames you. on this computer: the
@@ -94,6 +95,8 @@ export function GameLobby({
   const [nick, setNick] = useState(loadNickname)
   // the relay sent no room list, so rooms go by code
   const [codeOnly, setCodeOnly] = useState(false)
+  // mid-game, whose link dropped: the game stands still until they're back
+  const [away, setAway] = useState<'peer' | 'self' | null>(null)
   const nickRef = useRef(nick)
   nickRef.current = nick
   const callbacks = useRef({ onOpen, onKey, idle, leave })
@@ -184,10 +187,32 @@ export function GameLobby({
   // the link goes when the game does, however it closes
   useEffect(() => () => link?.close(), [link])
 
+  // hiding q calc mid-game steps away: the seat is kept and the game waits, and showing it again goes back
+  useEffect(() => {
+    if (!link) return
+    const hide = () => {
+      if (stateRef.current.k === 'game') link.stepAway?.()
+    }
+    const show = () => link.comeBack?.()
+    window.addEventListener(GAME_HIDE_EVENT, hide)
+    window.addEventListener(GAME_SHOW_EVENT, show)
+    return () => {
+      window.removeEventListener(GAME_HIDE_EVENT, hide)
+      window.removeEventListener(GAME_SHOW_EVENT, show)
+    }
+  }, [link])
+
   useEffect(() => {
     if (!link) return
     return link.subscribe((e) => {
       if (e.type === 'rooms') setCodeOnly(Boolean(e.codeOnly))
+      if (e.type === 'away') {
+        pauseGameClock()
+        setAway(e.who)
+      } else if (e.type === 'back' || e.type === 'closed') {
+        resumeGameClock()
+        setAway(null)
+      }
       const cur = stateRef.current
       const next = lobbyEvent(cur, e, ctx)
       if (next === cur) return
@@ -216,11 +241,17 @@ export function GameLobby({
 
   if (state.k === 'local' && local) return <>{local.play(state.option, (note) => set(listScreen(note)))}</>
   if (state.k === 'game' && link && online) {
-    if (ownHead) return <>{online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}</>
+    const waiting = away ? (
+      <div className="game-toast" role="status">
+        {away === 'peer' ? `${state.peer} stepped away · the game waits for them` : 'reconnecting to your game…'}
+      </div>
+    ) : null
+    if (ownHead) return <>{online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}{waiting}</>
     return (
       <>
         <LobbyHead name={name} sub={`with ${state.peer}`} fullscreen={fullscreen} onFullscreen={() => shell?.toggleFullscreen()} onEsc={() => shell?.escape()} />
         {online({ transport: link, role: state.role, peer: state.peer, onEnd: toList })}
+        {waiting}
       </>
     )
   }

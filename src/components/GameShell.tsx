@@ -16,6 +16,8 @@ import './GameShell.css'
 
 // sent when the window hides with a game kept open (someone's waiting to join, or playing online)
 export const GAME_HIDE_EVENT = 'qcalc-game-hide'
+// and when it shows again with that game still there
+export const GAME_SHOW_EVENT = 'qcalc-game-show'
 
 // a game that doesn't lay itself out: a margin round the game area, which the css sizes
 const DEFAULT_LAYOUT: GameFullscreenOptions = { pad: 16 }

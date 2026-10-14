@@ -30,7 +30,12 @@ export type PeerEvent =
   // code is '' for an open room
   | { type: 'hosting'; code: string; renewed?: boolean }
   | { type: 'pairing' }
-  | { type: 'open'; role: 'host' | 'guest'; peer: string }
+  // room and token: the seat this side can take back if its link drops; resumed: it just did
+  | { type: 'open'; role: 'host' | 'guest'; peer: string; room?: string; token?: string; resumed?: boolean }
+  // mid-game, a side's link dropped and its seat is held (`peer`: the other side's, `self`: this side's, which
+  // is reconnecting); back is that side returning to the same game
+  | { type: 'away'; who: 'peer' | 'self' }
+  | { type: 'back'; who: 'peer' | 'self' }
   | { type: 'message'; data: string }
   | { type: 'closed'; reason: CloseReason }
 
@@ -47,6 +52,10 @@ export interface PeerTransport {
   // code is '' for an open room; name is what the host will see
   join(roomId: string, code: string, name: string): void
   send(data: string): void
+  // mid-game, the window hid: let go of the link but keep the seat, so the game waits (relays that hold seats)
+  stepAway?(): void
+  // the window showed again: take the seat back
+  comeBack?(): void
   // leaves quietly: the other side hears `bye`, this side hears nothing
   close(): void
   subscribe(fn: (e: PeerEvent) => void): () => void
@@ -81,9 +90,21 @@ export function parsePeerEvent(raw: unknown, codeLength: number): PeerEvent | nu
     }
     case 'pairing':
       return { type: 'pairing' }
-    case 'open':
+    case 'open': {
       if (e.role !== 'host' && e.role !== 'guest') return null
-      return { type: 'open', role: e.role, peer: cleanNickname(e.peer) }
+      const open: PeerEvent = { type: 'open', role: e.role, peer: cleanNickname(e.peer) }
+      if (typeof e.room === 'string' && /^[a-z0-9]{1,64}$/.test(e.room) && typeof e.token === 'string' && /^[0-9a-f]{32}$/.test(e.token)) {
+        open.room = e.room
+        open.token = e.token
+      }
+      if (e.resumed === true) open.resumed = true
+      return open
+    }
+    // from the relay these are always about the other side
+    case 'away':
+      return { type: 'away', who: 'peer' }
+    case 'back':
+      return { type: 'back', who: 'peer' }
     case 'message':
       return typeof e.data === 'string' ? { type: 'message', data: e.data } : null
     case 'closed':
