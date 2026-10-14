@@ -4,16 +4,25 @@ compatibility_date = "2026-03-01"
 workers_dev = true
 preview_urls = false
 
-# one room per pairing code
+# one room per host (and per code, for earlier releases' code-only rooms)
 [[durable_objects.bindings]]
 name = "ROOMS"
 class_name = "Room"
+
+# one list of open rooms per game
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "Directory"
 
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
 
-# per ip, so codes can't be guessed by brute force and rooms can't be hoarded
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Directory"]
+
+# per ip (an ipv6 address's /64), so codes can't be guessed by brute force and rooms can't be hoarded
 [[ratelimits]]
 name = "JOINS"
 namespace_id = "7301"
@@ -23,3 +32,8 @@ simple = { limit = 20, period = 60 }
 name = "HOSTS"
 namespace_id = "7302"
 simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "LISTS"
+namespace_id = "7303"
+simple = { limit = 30, period = 60 }
