@@ -1,3 +1,4 @@
+import { otherGameNote } from './hello'
 import { compileLevel, initState, respawn, stageOf, step } from './emberEngine'
 import { LEVELS } from './emberLevels'
 import {
@@ -157,6 +158,8 @@ class LocalGame implements EmberGame {
   private state: GameState | null = null
   private prev: GameState | null = null
   private held: Inputs = [0, 0]
+  // presses not yet seen by a step, so a tap quicker than a step still lands
+  private tap: Inputs = [0, 0]
   private clock: Clock
   // events made outside a step (a retry's respawn), for the next view
   private out: GameEvent[] = []
@@ -173,7 +176,8 @@ class LocalGame implements EmberGame {
     if (this.screen === 'play' && this.compiled && this.state) {
       for (let i = 0; i < n; i++) {
         const before = this.state
-        this.state = step(this.compiled, before, [this.held[0], this.held[1]])
+        this.state = step(this.compiled, before, [this.held[0] | this.tap[0], this.held[1] | this.tap[1]])
+        this.tap = [0, 0]
         this.prev = jumped(before, this.state) ? this.state : before
         events.push(...this.state.events)
       }
@@ -194,11 +198,13 @@ class LocalGame implements EmberGame {
   }
 
   keys(player: PlayerIndex, bits: number): void {
+    this.tap[player] |= bits & 15 & ~this.held[player]
     this.held[player] = bits & 15
   }
 
   release(): void {
     this.held = [0, 0]
+    this.tap = [0, 0]
   }
 
   pick(index: number): void {
@@ -218,6 +224,7 @@ class LocalGame implements EmberGame {
     this.prev = this.state
     this.out = []
     this.screen = 'play'
+    this.tap = [0, 0]
     this.clock.reset()
   }
 
@@ -260,6 +267,8 @@ abstract class OnlineGame implements EmberGame {
   protected level: number
   protected compiled: Level | null = null
   protected held = 0
+  // presses not yet seen by a step, so a tap quicker than a step still lands
+  protected tap = 0
   protected greeted = false
   protected now: number
   protected clock: Clock
@@ -286,7 +295,7 @@ abstract class OnlineGame implements EmberGame {
   }
 
   private hi(): void {
-    this.post({ t: 'hi', v: EMBER_VERSION, w: WIRE_VERSION, ...(this.greeted ? { ok: true } : {}) })
+    this.post({ t: 'hi', v: EMBER_VERSION, w: WIRE_VERSION, g: 'ember', ...(this.greeted ? { ok: true } : {}) })
   }
 
   private end(line: string): void {
@@ -322,6 +331,11 @@ abstract class OnlineGame implements EmberGame {
       this.greeted = true
       if (first && this.screen === 'wait') this.screen = 'select'
       if (!m.ok) this.hi()
+      return
+    }
+    if (m.t === 'other') {
+      this.post({ t: 'bye' })
+      this.end(otherGameNote(m.game, 'ember'))
       return
     }
     if (m.t === 'bye') {
@@ -366,11 +380,13 @@ abstract class OnlineGame implements EmberGame {
   }
 
   keys(_player: PlayerIndex, bits: number): void {
+    this.tap |= bits & 15 & ~this.held
     this.held = bits & 15
   }
 
   release(): void {
     this.held = 0
+    this.tap = 0
   }
 
   leave(): void {
@@ -457,6 +473,7 @@ class HostGame extends OnlineGame {
     this.frame = 0
     this.attempt++
     this.guestBits = 0
+    this.tap = 0
     this.queue = []
     this.queuedTo = -1
     this.slack = undefined
@@ -540,9 +557,11 @@ class HostGame extends OnlineGame {
   protected advance(steps: number, now: number): void {
     if (this.screen === 'play' && this.compiled && this.state) {
       for (let i = 0; i < steps; i++) {
-        while (this.queue.length && this.queue[0]![0] <= this.frame) this.guestBits = this.queue.shift()![1]
+        // one change a step: keys that turn up late play out in order, so a tap's press and release can't cancel
+        if (this.queue.length && this.queue[0]![0] <= this.frame) this.guestBits = this.queue.shift()![1]
         const before = this.state
-        this.state = step(this.compiled, before, [this.held, this.guestBits])
+        this.state = step(this.compiled, before, [this.held | this.tap, this.guestBits])
+        this.tap = 0
         this.prev = jumped(before, this.state) ? this.state : before
         this.frame++
         this.out.push(...this.state.events)
@@ -716,6 +735,7 @@ class GuestGame extends OnlineGame {
       this.log = []
       this.recent = []
       this.logged = -1
+      this.tap = 0
       this.adjustedAt = this.frame
       this.slacks = []
       this.skip = 0
@@ -842,15 +862,17 @@ class GuestGame extends OnlineGame {
       for (let i = skip; i < steps; i++) {
         // far ahead of anything the host has said: wait for it rather than guess on
         if (this.frame - this.authF >= MAX_AHEAD) break
-        if (this.held !== this.logged) {
-          const c: KeyChange = [this.frame, this.held]
+        const bits = this.held | this.tap
+        this.tap = 0
+        if (bits !== this.logged) {
+          const c: KeyChange = [this.frame, bits]
           this.log.push(c)
           this.recent = [...this.recent, c].slice(-4)
-          this.logged = this.held
+          this.logged = bits
           this.unsent = true
         }
         const s = this.cur!
-        const n = this.holding ? null : this.predict(level, s, this.held)
+        const n = this.holding ? null : this.predict(level, s, bits)
         if (n) {
           this.prev = s
           this.cur = n

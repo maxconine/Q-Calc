@@ -441,6 +441,36 @@ describe('boxes', () => {
     expect(s.players[0].ground).toBe(true)
   })
 
+  it('a mover never carries one rider into another that a wall stopped', () => {
+    // frost and a crate ride a mover right; a ledge stops the crate, and frost behind it must stop too
+    const map = ['#'.repeat(COLS), ...Array.from({ length: ROWS - 2 }, () => row('')), '#'.repeat(COLS)]
+    map[9] = row('...............#')
+    map[15] = row('.1.2.......................RB')
+    const L = compileLevel({
+      id: 't',
+      name: 't',
+      par: 10,
+      stages: [
+        {
+          map,
+          things: [
+            { k: 'mover', x: 4, y: 10, w: 6, h: 1, to: { x: 14, y: 10 }, speed: 2 },
+            { k: 'box', x: 9, y: 9 },
+          ],
+        },
+      ],
+    })
+    let s = initState(L)
+    s.players[1] = { ...s.players[1], x: 7 * TILE + 3, y: 10 * TILE - PLAYER_H, vx: 0, vy: 0, ground: true }
+    for (let t = 0; t < 300; t++) {
+      s = step(L, s, [0, 0])
+      const p = s.players[1]
+      const b = s.boxes[0]!
+      expect(p.x + PLAYER_W <= b.x + 0.01 || p.y + PLAYER_H <= b.y + 0.01).toBe(true)
+    }
+    expect(s.boxes[0]!.x).toBeCloseTo(15 * TILE)
+  })
+
   it('boxes stack', () => {
     const L = level(OPEN, [
       { k: 'box', x: 8, y: 16 },
@@ -573,6 +603,19 @@ describe('light and portals', () => {
     s = initState(L)
     while (!s.events.some((e) => e.k === 'portal')) s = step(L, s, R)
     expect(s.players[0].portalCd).toBe(PORTAL_COOLDOWN_TICKS)
+  })
+
+  it('a crate on the far side blocks a portal instead of burying the player in it', () => {
+    const L = level(['.1........................R.2B'], [
+      { k: 'portal', x: 6, y: 16, pair: 'a' },
+      { k: 'portal', x: 15, y: 16, pair: 'a' },
+      { k: 'box', x: 15, y: 16 },
+    ])
+    const r = run(L, initState(L), 50, R)
+    expect(r.ev.some((e) => e.k === 'portal')).toBe(false)
+    // it walked over the portal and on, and was never put inside the crate
+    expect(r.s.players[0].x).toBeGreaterThan(6 * TILE + 4)
+    expect(r.s.players[0].x).toBeLessThan(10 * TILE)
   })
 })
 

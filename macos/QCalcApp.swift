@@ -76,6 +76,7 @@ final class AppSettings: ObservableObject {
     static let copyUnitlessKey = "qcalc.copyUnitless"
     static let spaceThousandsKey = "qcalc.spaceThousands"
     static let analyticsKey = "qcalc.analytics"
+    static let gameSavesKey = "qcalc.gameSaves"
     static let hotKeyKey = "qcalc.hotkey"
     static let keybindsKey = "qcalc.keybinds"
     static let onboardingKey = "qcalc.onboarding"
@@ -188,6 +189,36 @@ final class AppSettings: ObservableObject {
             return
         }
         UserDefaults.standard.set(json, forKey: Self.analyticsKey)
+    }
+
+    // the games' local storage saves (lib/gameSaves), key to string as the page wrote them. the page picks the
+    // keys; this only holds the line on shape and size
+    static let maxGameSaveKeys = 32
+    static let maxGameSaveLength = 32 * 1024
+    static let maxGameSavesTotal = 256 * 1024
+
+    private var gameSaves: [String: String] {
+        (UserDefaults.standard.dictionary(forKey: Self.gameSavesKey) ?? [:]).compactMapValues { $0 as? String }
+    }
+
+    func gameSavesJSON() -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: gameSaves, options: [])) ?? Data("{}".utf8)
+        return String(data: data, encoding: .utf8) ?? "{}"
+    }
+
+    // nil removes it. a write that breaks a cap is dropped, so the last one that fit stays
+    func saveGame(_ key: String, _ value: String?) {
+        guard key.hasPrefix("qcalc-"), key.count <= 64 else { return }
+        var next = gameSaves
+        if let value {
+            guard value.utf16.count <= Self.maxGameSaveLength else { return }
+            next[key] = value
+        } else {
+            next.removeValue(forKey: key)
+        }
+        let total = next.reduce(0) { $0 + $1.key.utf16.count + $1.value.utf16.count }
+        guard next.count <= Self.maxGameSaveKeys, total <= Self.maxGameSavesTotal else { return }
+        UserDefaults.standard.set(next, forKey: Self.gameSavesKey)
     }
 
     func onboardingJSON() -> String {

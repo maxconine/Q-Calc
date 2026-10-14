@@ -738,26 +738,41 @@ function shove(stage: Stage, s: GameState, self: number, a: Rect, b: Rect, apply
     }
   }
   for (const id of bodies) if (!riders.includes(id) && overlaps(bodyRect(s, id), b)) return false
-  // where each rider ends up: the full shift, or just the vertical part if something stops it sideways
-  const skip = [self, ...riders]
-  const moves: Array<[number, number, number]> = []
-  for (const id of riders) {
+  // riders move one at a time, front first, each against those already moved, so one stopped by a wall stops
+  // whoever is behind it rather than letting them ride into it
+  const lead = (id: number) => {
+    const r = bodyRect(s, id)
+    return r.x * dx + r.y * dy
+  }
+  riders.sort((p, q) => lead(q) - lead(p))
+  const moved: Array<[{ x: number; y: number }, number, number]> = []
+  const undo = () => {
+    for (const [o, x, y] of moved) {
+      o.x = x
+      o.y = y
+    }
+  }
+  for (let k = 0; k < riders.length; k++) {
+    const id = riders[k]!
+    // where it ends up: the full shift, or just the vertical part if something stops it sideways
+    const skip = [self, ...riders.slice(k + 1)]
     const r = bodyRect(s, id)
     let mx = dx
     if (collide(stage, s, { ...r, x: r.x + dx, y: r.y + dy }, id, skip)) {
       mx = 0
-      if (dy !== 0 && collide(stage, s, { ...r, y: r.y + dy }, id, skip)) return false
+      if (dy !== 0 && collide(stage, s, { ...r, y: r.y + dy }, id, skip)) {
+        undo()
+        return false
+      }
       if (dy === 0) continue
     }
     // players standing on a box rider: boxes are solid to them, but the box moves too
-    moves.push([id, mx, dy])
+    const o = id < BOX0 ? s.players[id as PlayerIndex] : s.boxes[id - BOX0]!
+    moved.push([o, o.x, o.y])
+    o.x += mx
+    o.y += dy
   }
   apply()
-  for (const [id, mx, my] of moves) {
-    const o = id < BOX0 ? s.players[id as PlayerIndex] : s.boxes[id - BOX0]!
-    o.x += mx
-    o.y += my
-  }
   return true
 }
 
@@ -1419,10 +1434,14 @@ export function step(level: Level, s0: GameState, input: Inputs): GameState {
     const inPortal = stage.portals.findIndex((q) => inRect(q, c.x, c.y))
     if (inPortal >= 0 && p.portalCd === 0) {
       const o = stage.portals[stage.portals[inPortal]!.other]!
-      p.x = o.x + (TILE - PLAYER_W) / 2
-      p.y = p.grav === 1 ? o.y + o.h - PLAYER_H : o.y
-      p.portalCd = PORTAL_COOLDOWN_TICKS
-      ev.push({ k: 'portal', p: pi, ...centreOf(p) })
+      const to = { x: o.x + (TILE - PLAYER_W) / 2, y: p.grav === 1 ? o.y + o.h - PLAYER_H : o.y, w: PLAYER_W, h: PLAYER_H }
+      // a crate (or gate, or mover) sitting on the far side blocks the portal; going through would bury us in it
+      if (!collide(stage, s, to, pi)) {
+        p.x = to.x
+        p.y = to.y
+        p.portalCd = PORTAL_COOLDOWN_TICKS
+        ev.push({ k: 'portal', p: pi, ...centreOf(p) })
+      }
     } else if (inPortal < 0 && p.portalCd > 0) p.portalCd-- // the cooldown holds while still standing in a portal
     const d = stage.doors[pi]
     const cx = p.x + PLAYER_W / 2

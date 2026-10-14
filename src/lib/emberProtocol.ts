@@ -1,3 +1,4 @@
+import { otherHello } from './hello'
 import { LEVELS } from './emberLevels'
 import {
   type DeathCause,
@@ -99,7 +100,7 @@ export type StateMsg = {
 
 export type EmberMsg =
   // ok: the sender already heard the other side's hi
-  | { t: 'hi'; v: number; w: number; ok?: boolean }
+  | { t: 'hi'; v: number; w: number; g?: 'ember'; ok?: boolean }
   | { t: 'bye' }
   // host: the select screen. l is the shared highlight
   | { t: 'sel'; l: number }
@@ -703,8 +704,11 @@ export function encodeEmber(m: EmberMsg): string {
   })
 }
 
+// what can come in: an ember message, or another game's hello from a friend who opened that instead
+export type EmberIn = EmberMsg | { t: 'other'; game: string }
+
 // anything malformed is null, never a throw: this is text from another machine
-export function decodeEmber(raw: string): EmberMsg | null {
+export function decodeEmber(raw: string): EmberIn | null {
   if (typeof raw !== 'string' || raw.length > MAX_TEXT) return null
   let m: unknown
   try {
@@ -714,6 +718,9 @@ export function decodeEmber(raw: string): EmberMsg | null {
   }
   if (!isObj(m)) return null
   const o = m
+  // a hello without a version is nobody's
+  const other = finite(o.v) ? otherHello(o, 'ember') : null
+  if (other) return { t: 'other', game: other }
   switch (o.t) {
     case 'hi':
       // read leniently: a hi from another version must still decode, to say so

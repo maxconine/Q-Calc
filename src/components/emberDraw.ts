@@ -1215,8 +1215,8 @@ export class EmberRenderer {
     g.setTransform(v.k, 0, 0, v.k, v.ox, v.oy)
     this.parts.draw(g, this.colors, this.pal.dark ? 'lighter' : 'source-over', 1)
 
-    // celebration keeps fizzing for a moment
-    if (cur.phase === 'won' && this.winAt >= 0 && t - this.winAt < 1.6 && Math.random() < (opts.reduceMotion ? 0.15 : 0.5)) this.confetti(2)
+    // celebration keeps fizzing for a moment, at the same rate whatever the frame rate
+    if (cur.phase === 'won' && this.winAt >= 0 && t - this.winAt < 1.6 && Math.random() < (opts.reduceMotion ? 9 : 30) * dt) this.confetti(2)
     if (cur.phase === 'won' && this.winAt < 0) this.winAt = t
 
     g.setTransform(1, 0, 0, 1, 0, 0)

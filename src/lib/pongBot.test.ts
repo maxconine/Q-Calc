@@ -162,3 +162,26 @@ describe('PongSession solo', () => {
     expect(sent).toEqual([])
   })
 })
+
+describe('PongSession solo, frame for frame', () => {
+  // a digest of every frame of seeded games with a wandering player, taken before online play changed;
+  // solo must keep playing exactly the same
+  it.each([
+    ['easy', 827484971],
+    ['normal', 1301697141],
+    ['hard', -1500791610],
+  ] as const)('%s plays as it always has', (skill, digest) => {
+    const rand = seeded(11)
+    const game = new PongSession('host', () => {}, 0, rand, skill)
+    let now = 0
+    let h = 0
+    for (let i = 0; i < 60 * 90; i++) {
+      if (i % 37 === 0) game.key('up', i % 74 === 0)
+      if (i % 53 === 0) game.key('down', i % 106 !== 0)
+      const s = game.tick((now += 1000 / 60)).snap!
+      for (const n of [s.ball.x, s.ball.y, s.paddles[0], s.paddles[1], s.score[0], s.score[1], s.phase.length]) h = (Math.imul(h, 31) + Math.round(n * 1000)) | 0
+      if (s.phase === 'over') game.rematch()
+    }
+    expect(h).toBe(digest)
+  })
+})

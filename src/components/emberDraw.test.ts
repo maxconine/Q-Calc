@@ -203,4 +203,27 @@ describe('EmberRenderer', () => {
       vi.unstubAllGlobals()
     }
   })
+
+  it('a win fizzes as much at 240 frames a second as at 60', () => {
+    vi.stubGlobal('document', { createElement: () => fakeCanvas(64, 64) })
+    const level = compileLevel(everything)
+    const won = { ...initState(level), phase: 'won' as const }
+    const fizz = (fps: number) => {
+      let seed = 7
+      const random = vi.spyOn(Math, 'random').mockImplementation(() => (seed = (seed * 16807) % 2147483647) / 2147483647)
+      const r = new EmberRenderer(fakeCanvas(640, 360))
+      const confetti = vi.spyOn(r as unknown as { confetti: (n: number) => void }, 'confetti')
+      for (let ms = 1000; ms < 2500; ms += 1000 / fps) r.draw(level.stages[0], won, won, 1, [], ms, { me: null, reduceMotion: false })
+      const n = confetti.mock.calls.length
+      random.mockRestore()
+      return n
+    }
+    try {
+      const slow = fizz(60)
+      expect(slow).toBeGreaterThan(10)
+      expect(fizz(240) / slow).toBeLessThan(1.5)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
 })

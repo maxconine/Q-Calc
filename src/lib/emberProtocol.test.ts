@@ -400,7 +400,8 @@ describe('the wire: the small messages', () => {
   })
 
   it('reads a hello from any version, so it can say so', () => {
-    expect(decodeEmber('{"t":"hi","v":1}')).toEqual({ t: 'hi', v: 1, w: 0 })
+    // version 1's hi carried u; a bare hi is pong's (hello.ts)
+    expect(decodeEmber('{"t":"hi","v":1,"u":3}')).toEqual({ t: 'hi', v: 1, w: 0 })
     expect(decodeEmber('{"t":"hi","v":2,"w":1,"ok":true}')).toEqual({ t: 'hi', v: 2, w: 1, ok: true })
     expect(decodeEmber('{"t":"hi"}')).toBe(null)
   })

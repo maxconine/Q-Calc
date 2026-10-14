@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { LEVELS } from './emberLevels'
-import { decodeEmber, STATE_HZ, SILENCE_MS } from './emberProtocol'
+import { decodeEmber, STATE_HZ, SILENCE_MS, WIRE_VERSION } from './emberProtocol'
 import { createLocalGame, createOnlineGame, type EmberGame, type EmberView } from './emberSession'
-import { IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, RUN_ACCEL, type GameEvent } from './emberTypes'
+import { EMBER_VERSION, IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, RUN_ACCEL, type GameEvent } from './emberTypes'
 
 // the session is tested on small levels of its own: 0 open floor, 1 a water pit right of ember,
 // 2 two stages: the doors a step away, then a checkpoint flag at column 8 and a water pit from column 14,
@@ -348,6 +348,44 @@ describe('online: play', () => {
     expect(jumps(g.events.host, 0)).toBe(1)
   })
 
+  it('taps quicker than a frame still jump, on both sides', () => {
+    const g = pair({ lag: 80 })
+    g.startOn(0)
+    g.run(500)
+    g.events.guest.length = 0
+    g.events.host.length = 0
+    g.guest.keys(1, IN_UP)
+    g.guest.keys(1, 0)
+    g.host.keys(0, IN_UP)
+    g.host.keys(0, 0)
+    g.run(1500)
+    const jumps = (es: GameEvent[], p: number) => es.filter((e) => e.k === 'jump' && e.p === p).length
+    expect(jumps(g.events.host, 0)).toBe(1)
+    expect(jumps(g.events.host, 1)).toBe(1)
+    expect(jumps(g.events.guest, 1)).toBe(1)
+  })
+
+  it('a guest tap that reaches the host late, press and release together, still jumps', () => {
+    let now = 1000
+    const host = createOnlineGame('host', () => {}, now)
+    host.receive(JSON.stringify({ t: 'hi', v: EMBER_VERSION, w: WIRE_VERSION, g: 'ember', ok: true }), now)
+    host.tick(now)
+    host.play()
+    let y0 = Infinity
+    let top = Infinity
+    for (let i = 0; i < 120; i++) {
+      now += FRAME
+      // the guest held jump for its frames 30..33, but the message only turns up at frame 40
+      if (i === 40) host.receive(JSON.stringify({ t: 'k', a: 1, f: 34, i: [[30, IN_UP], [34, 0]] }), now)
+      const v = host.tick(now)
+      if (v.state) {
+        if (i < 40) y0 = v.state.players[1].y
+        top = Math.min(top, v.state.players[1].y)
+      }
+    }
+    expect(top).toBeLessThan(y0 - 10)
+  })
+
   it('a death on the host shows on the guest, and the level comes back', () => {
     const g = pair({ lag: 40 })
     g.startOn(1)
@@ -551,6 +589,17 @@ describe('local game', () => {
     l.run(20)
     expect(l.view().screen).toBe('select')
     expect(l.view().state).toBe(null)
+  })
+
+  it('a tap quicker than a step still jumps', () => {
+    const l = at()
+    l.game.play()
+    l.run(300)
+    l.events.length = 0
+    l.game.keys(1, IN_UP)
+    l.game.keys(1, 0)
+    l.run(500)
+    expect(l.events.filter((e) => e.k === 'jump' && 'p' in e && e.p === 1).length).toBe(1)
   })
 
   it('retry restarts the attempt; menu goes back to select', () => {

@@ -2,7 +2,7 @@ import type { GameEvent } from './emberTypes'
 
 // ember & frost's sounds: tiny webaudio blips, no files. the context is made on the first sound (after a key press,
 // so autoplay rules are happy) and every failure is swallowed: no audio just means a quiet game
-export type EmberSound = { play(e: GameEvent): void; setMuted(m: boolean): void; muted: boolean }
+export type EmberSound = { play(e: GameEvent): void; setMuted(m: boolean): void; muted: boolean; dispose(): void }
 
 type Ctx = AudioContext
 type Wave = OscillatorType
@@ -82,6 +82,12 @@ export function createEmberSound(): EmberSound {
     muted: false,
     setMuted(m) {
       s.muted = m
+    },
+    // browsers allow only a few contexts at once, so each game closes its own. a later sound makes a new one
+    dispose() {
+      const c = ac
+      ac = out = noise = null
+      if (c) void c.close().catch(() => {})
     },
     play(e) {
       if (s.muted) return

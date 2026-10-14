@@ -8,7 +8,12 @@ import {
   COURT_W,
   decodePong,
   encodePong,
-  INTERP_MS,
+  EASE_MS,
+  FarPaddle,
+  fly,
+  GUEST_FACE_X,
+  HOST_FACE_X,
+  HostClock,
   isPongCommand,
   MAX_BOUNCE,
   MAX_SPEED,
@@ -20,13 +25,15 @@ import {
   PADDLE_W,
   SERVE_PAUSE_S,
   SERVE_SPEED,
-  SnapshotBuffer,
-  snapshotOf,
+  newer,
+  secondsTo,
   step,
   STEP_S,
   WIN_SCORE,
+  winnerOf,
+  wireLeg,
+  type Leg,
   type PongState,
-  type Snapshot,
 } from './pong'
 
 const half = () => 0.5
@@ -154,91 +161,110 @@ describe('bounceOff', () => {
   })
 })
 
+describe('fly', () => {
+  it('folds off the walls the way step does', () => {
+    const ball = { x: 320, y: 40, vx: 400, vy: -650 }
+    let s = playing({ ball, paddles: [130, 130] })
+    for (let i = 0; i < 60; i++) s = step(s, STEP_S)
+    const b = fly(ball, 60 * STEP_S)
+    expect(b.x).toBeCloseTo(s.ball.x, 6)
+    expect(b.y).toBeCloseTo(s.ball.y, 6)
+    expect(b.vy).toBe(s.ball.vy)
+  })
+
+  it('times the ball to a face', () => {
+    expect(secondsTo({ x: 100, y: 0, vx: 200, vy: 0 }, GUEST_FACE_X)).toBeCloseTo((GUEST_FACE_X - 100) / 200)
+    expect(secondsTo({ x: 100, y: 0, vx: -200, vy: 0 }, HOST_FACE_X)).toBeCloseTo((100 - HOST_FACE_X) / 200)
+    expect(secondsTo({ x: 10, y: 0, vx: -200, vy: 0 }, HOST_FACE_X)).toBe(0)
+  })
+})
+
+describe('legs', () => {
+  const leg: Leg = { game: 2, n: 5, at: 1234.56, kind: 'play', ball: { x: 100.123, y: 50.46, vx: -300.04, vy: 12.5 }, score: [3, 6] }
+
+  it('round trip, rounded the same way the sender keeps them', () => {
+    const msg = decodePong(encodePong({ t: 'l', ...leg, c: 99.99 }))
+    expect(msg).toEqual({ t: 'l', ...wireLeg(leg), c: 100 })
+    expect(wireLeg(leg)).toMatchObject({ at: 1234.6, ball: { x: 100.1, y: 50.5, vx: -300, vy: 12.5 } })
+  })
+
+  it('go by game, then by leg', () => {
+    expect(newer({ ...leg, n: 6 }, leg)).toBe(true)
+    expect(newer({ ...leg, game: 3, n: 0 }, leg)).toBe(true)
+    expect(newer(leg, leg)).toBe(false)
+    expect(newer({ ...leg, n: 4 }, leg)).toBe(false)
+    expect(newer(leg, null)).toBe(true)
+    expect(winnerOf([WIN_SCORE, 2])).toBe('host')
+    expect(winnerOf([2, WIN_SCORE])).toBe('guest')
+    expect(winnerOf([6, 6])).toBeUndefined()
+  })
+})
+
 describe('wire messages', () => {
-  it('round trip state, rounded', () => {
-    const s = playing({ ball: { x: 100.123, y: 50.46, vx: -300.04, vy: 12.5 }, paddles: [80.33, 90], score: [3, 6] })
-    const msg = decodePong(encodePong({ t: 's', ...snapshotOf(s, 1234.6) }))
-    expect(msg).toEqual({ t: 's', at: 1235, ball: { x: 100.1, y: 50.5, vx: -300, vy: 12.5 }, paddles: [80.3, 90], score: [3, 6], phase: 'play' })
-  })
-
-  it('keeps the winner', () => {
-    const msg = decodePong(encodePong({ t: 's', ...snapshotOf({ ...newGame(), phase: 'over', winner: 'guest', score: [2, 7] }, 1) }))
-    expect(msg).toMatchObject({ phase: 'over', winner: 'guest' })
-  })
-
   it('round trip the small messages', () => {
-    for (const m of [{ t: 'hi', v: 1 }, { t: 'hi', v: 1, ok: true }, { t: 'again' }, { t: 'bye' }, { t: 'p', y: 120 }] as const) {
+    for (const m of [
+      { t: 'hi', v: 2 },
+      { t: 'hi', v: 2, ok: true, c: 5, e: 1.5, h: 2 },
+      { t: 'again', c: 7 },
+      { t: 'bye' },
+      { t: 'p', at: 10.5, y: 120, d: -1, game: 1, n: 4 },
+    ] as const) {
       expect(decodePong(encodePong(m))).toEqual(m)
     }
   })
 
   it('clamps what another machine could get wrong', () => {
-    expect(decodePong('{"t":"p","y":99999}')).toEqual({ t: 'p', y: COURT_H - PADDLE_H / 2 })
-    expect(decodePong('{"t":"s","at":1,"b":[9999,-5,0,0],"p":[0,0],"s":[-3,400.7],"ph":1}')).toMatchObject({
-      ball: { x: COURT_W + BALL_SIZE, y: 0 },
+    expect(decodePong('{"t":"p","at":1,"y":99999,"d":0,"r":0,"n":0}')).toMatchObject({ y: COURT_H - PADDLE_H / 2 })
+    expect(decodePong('{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[9999,-5,1e300,-1e300],"s":[-3,400.7]}')).toMatchObject({
+      ball: { x: COURT_W + BALL_SIZE, y: BALL_SIZE / 2, vx: MAX_SPEED, vy: -MAX_SPEED },
       score: [0, 99],
     })
-    // a wild speed would fling the guest's carried-on ball off the court
-    expect(decodePong('{"t":"s","at":1,"b":[0,0,1e300,-1e300],"p":[0,0],"s":[0,0],"ph":1}')).toMatchObject({
-      ball: { vx: MAX_SPEED, vy: -MAX_SPEED },
-    })
-    expect(decodePong('{"t":"hi","v":1,"ok":"yes"}')).toEqual({ t: 'hi', v: 1 })
+    expect(decodePong('{"t":"hi","v":1,"ok":"yes","c":"x"}')).toEqual({ t: 'hi', v: 1 })
   })
 
   it('refuses anything malformed', () => {
-    for (const raw of ['', 'nope', 'null', '[]', '{"t":"x"}', '{"t":"p"}', '{"t":"p","y":"3"}', '{"t":"hi"}',
-      '{"t":"s","at":1,"b":[1,2,3],"p":[0,0],"s":[0,0],"ph":1}', '{"t":"s","at":1,"b":[1,2,3,4],"p":[0,0],"s":[0,0],"ph":7}',
-      '{"t":"s","at":1,"b":[1,2,3,null],"p":[0,0],"s":[0,0],"ph":1}']) {
+    for (const raw of ['', 'nope', 'null', '[]', '{"t":"x"}', '{"t":"p"}', '{"t":"p","y":3}', '{"t":"hi"}',
+      // the last version's messages
+      '{"t":"p","y":3}', '{"t":"s","at":1,"b":[1,2,3,4],"p":[0,0],"s":[0,0],"ph":1}',
+      '{"t":"p","at":1,"y":3,"d":2,"r":0,"n":0}', '{"t":"p","at":1,"y":3,"d":0,"r":-1,"n":0}',
+      '{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,3],"s":[0,0]}', '{"t":"l","r":1,"n":1,"at":1,"k":7,"b":[1,2,3,4],"s":[0,0]}',
+      '{"t":"l","r":1,"n":1.5,"at":1,"k":0,"b":[1,2,3,4],"s":[0,0]}', '{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,3,null],"s":[0,0]}',
+      // a ball in play that goes nowhere would never be judged
+      '{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,0,4],"s":[0,0]}']) {
       expect(decodePong(raw)).toBeNull()
     }
   })
 })
 
-describe('SnapshotBuffer', () => {
-  const snap = (at: number, x: number, over: Partial<Snapshot> = {}): Snapshot => ({
-    at,
-    ball: { x, y: 100, vx: 300, vy: 0 },
-    paddles: [100, 100],
-    score: [0, 0],
-    phase: 'play',
-    ...over,
+describe('HostClock', () => {
+  it('reads the offset from the quickest round trip', () => {
+    const clock = new HostClock()
+    expect(clock.offset()).toBe(0)
+    // the host runs 5000ms ahead; one way takes 40ms, then 25ms
+    clock.heard({ c: 5000 + 960 }, 1000)
+    expect(clock.offset()).toBe(4960)
+    clock.heard({ c: 5000 + 1960, e: 1900, h: 20 }, 2000)
+    expect(clock.offset()).toBeCloseTo(5000)
+    // a slow, lopsided trip doesn't move it
+    clock.heard({ c: 5000 + 2900, e: 2700, h: 10 }, 3000)
+    expect(clock.offset()).toBeCloseTo(5000)
+    clock.heard({ c: 5000 + 3975, e: 3940, h: 10 }, 4000)
+    expect(clock.offset()).toBeCloseTo(5000)
   })
+})
 
-  it('draws INTERP_MS behind, easing between snapshots', () => {
-    const buf = new SnapshotBuffer()
-    // host clock runs 5000ms behind ours, plus some arrival jitter
-    buf.push(snap(1000, 100), 6000)
-    buf.push(snap(1033, 110), 6040)
-    buf.push(snap(1066, 120), 6066)
-    buf.push(snap(1100, 130), 6101)
-    // the least delayed arrival sets the offset at 5000, so this local time draws host time 1050
-    const mid = buf.sample(1050 + 5000 + INTERP_MS)
-    expect(mid?.ball.x).toBeCloseTo(110 + (10 * 17) / 33, 1)
-  })
-
-  it('carries the ball a little past the newest, then holds', () => {
-    const buf = new SnapshotBuffer()
-    buf.push(snap(0, 100), 1000)
-    expect(buf.sample(1000 + INTERP_MS + 50)?.ball.x).toBeCloseTo(100 + 300 * 0.05)
-    expect(buf.sample(1000 + INTERP_MS + 5000)?.ball.x).toBeCloseTo(100 + 300 * 0.1)
-  })
-
-  it('jumps across a point instead of sliding the ball back to centre', () => {
-    const buf = new SnapshotBuffer()
-    buf.push(snap(0, 630), 1000)
-    buf.push(snap(33, 320, { phase: 'serve', score: [1, 0] }), 1033)
-    const early = buf.sample(1000 + 10 + INTERP_MS)
-    const late = buf.sample(1000 + 25 + INTERP_MS)
-    expect(early?.ball.x).toBe(630)
-    expect(late?.ball.x).toBe(320)
-    expect(late?.score).toEqual([1, 0])
-  })
-
-  it('ignores stale and repeated snapshots', () => {
-    const buf = new SnapshotBuffer()
-    buf.push(snap(100, 1), 0)
-    buf.push(snap(50, 2), 0)
-    buf.push(snap(100, 3), 0)
-    expect(buf.latest()?.ball.x).toBe(1)
+describe('FarPaddle', () => {
+  it('carries the paddle on at paddle speed, and eases a report in', () => {
+    const p = new FarPaddle()
+    p.report(100, 1, 1000, 1000, -1000)
+    expect(p.where(1100)).toBeCloseTo(100 + PADDLE_SPEED * 0.1)
+    expect(p.where(10_000)).toBe(COURT_H - PADDLE_H / 2)
+    // it stopped at 120 50ms ago: drawn where it was, sliding to 120
+    p.report(120, 0, 1050, 1100, 100)
+    expect(p.shown(1100, 100)).toBeCloseTo(100 + PADDLE_SPEED * 0.1)
+    expect(p.shown(1100, 100 + 6 * EASE_MS)).toBeCloseTo(120, 0)
+    // an older report is dropped
+    p.report(30, 0, 1020, 1100, 400)
+    expect(p.where(1200)).toBe(120)
   })
 })

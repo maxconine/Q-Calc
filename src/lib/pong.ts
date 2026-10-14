@@ -1,7 +1,9 @@
-// two-player pong over the peer link. the host is authoritative: it runs step() and sends state;
-// the guest sends its paddle and draws the host's state a little behind, interpolated
+import { otherHello } from './hello'
+// two-player pong over the peer link, and solo against the computer. solo runs step(); online, each side judges the
+// ball at its own paddle and sends the next leg of its flight (see below)
 
-export const PONG_VERSION = 1
+// 2: each side judges its own paddle. 1 had the host judge both
+export const PONG_VERSION = 2
 export const PONG_HINT = '↵ play pong'
 
 export const COURT_W = 640
@@ -22,9 +24,6 @@ export const SERVE_PAUSE_S = 0.9
 export const WIN_SCORE = 7
 // fixed simulation step; at max speed the ball moves 6px a step, under a paddle's width
 export const STEP_S = 1 / 120
-export const STATE_HZ = 30
-// how far behind the host's clock the guest draws, so there's always a later snapshot to ease toward
-export const INTERP_MS = 80
 // nothing from the other side for this long and the game is over
 export const SILENCE_MS = 3000
 
@@ -61,7 +60,7 @@ export function movePaddle(y: number, dir: number, dt: number): number {
   return clampPaddle(y + Math.sign(dir) * PADDLE_SPEED * dt)
 }
 
-function centreBall(): Ball {
+export function centreBall(): Ball {
   return { x: COURT_W / 2, y: COURT_H / 2, vx: 0, vy: 0 }
 }
 
@@ -91,7 +90,7 @@ export function bounceOff(ball: Ball, paddleY: number, dir: 1 | -1): Ball {
   return { ...ball, vx: Math.cos(angle) * speed * dir, vy: Math.sin(angle) * speed }
 }
 
-function overlapsPaddle(y: number, paddleY: number): boolean {
+export function overlapsPaddle(y: number, paddleY: number): boolean {
   return Math.abs(y - paddleY) <= PADDLE_H / 2 + BALL_SIZE / 2
 }
 
@@ -155,10 +154,9 @@ export function advance(s: PongState, carry: number, dt: number, rand?: () => nu
   return { state, carry: left }
 }
 
-// ---- wire messages, as json text over the peer link
-
+// what a court draws
 export type Snapshot = {
-  // host clock, ms
+  // shared clock, ms
   at: number
   ball: Ball
   paddles: [number, number]
@@ -167,37 +165,119 @@ export type Snapshot = {
   winner?: Side
 }
 
+// ---- online play. each side judges its own paddle: while the ball heads toward a side, that side alone decides
+// the hit or the miss, against its own paddle where it is now, and sends the next leg of the ball's flight. the
+// other side flies the ball on from that leg by a shared clock, the host's, and guesses the far bounce from the
+// far paddle as it draws it until the real leg comes in. the score only changes in a leg, and only the side the
+// ball was heading to sends one, so the two can't both count a point
+
+// where the ball's centre meets each paddle's face
+export const HOST_FACE_X = PADDLE_INSET + PADDLE_W + BALL_SIZE / 2
+export const GUEST_FACE_X = COURT_W - PADDLE_INSET - PADDLE_W - BALL_SIZE / 2
+// a correction fades rather than jumps, to a third in this long
+export const EASE_MS = 50
+// one bigger than this jumps instead: sliding that far would read as the ball flying backward
+export const SNAP_PX = 96
+// a leg that reaches the side it's heading to later than this, after a stall, is taken up from this far in, so
+// the side that has to judge it still sees it coming
+export const LATE_MS = 200
+
+export type Dir = -1 | 0 | 1
+export type LegKind = 'play' | 'serve' | 'over'
+
+// a stretch of the ball's flight between two judgements. game counts games (a rematch is the next one), n the legs
+// within one. at is shared time in ms: when the leg starts, or for a serve when the ball leaves the centre
+export type Leg = { game: number; n: number; at: number; kind: LegKind; ball: Ball; score: [number, number] }
+
+export const towards = (b: Ball): Side => (b.vx > 0 ? 'guest' : 'host')
+
+export const fade = (ms: number): number => Math.exp(-Math.max(0, ms) / EASE_MS)
+
+export function newer(a: Leg, b: Leg | null): boolean {
+  return !b || a.game > b.game || (a.game === b.game && a.n > b.n)
+}
+
+export function winnerOf(score: [number, number]): Side | undefined {
+  return score[0] >= WIN_SCORE ? 'host' : score[1] >= WIN_SCORE ? 'guest' : undefined
+}
+
+// the ball s seconds on, off the walls but through the paddles, which are judged apart
+export function fly(b: Ball, s: number): Ball {
+  const half = BALL_SIZE / 2
+  const span = COURT_H - 2 * half
+  const m = (((b.y - half + b.vy * s) % (2 * span)) + 2 * span) % (2 * span)
+  const down = m <= span
+  return { x: b.x + b.vx * s, y: half + (down ? m : 2 * span - m), vx: b.vx, vy: down ? b.vy : -b.vy }
+}
+
+// seconds until the ball's centre reaches x; 0 if it's already there or past
+export function secondsTo(b: Ball, x: number): number {
+  if (!b.vx) return Infinity
+  return Math.max(0, (x - b.x) / b.vx)
+}
+
+// ---- wire messages, as json text over the peer link
+
+// every message carries the sender's own clock as c. the host's also echo the guest's latest c as e, with how long
+// it held it as h: that's the guest's round trip, and from it the host's clock
+export type Stamp = { c?: number; e?: number; h?: number }
+
 export type PongMsg =
   // ok: the sender has already heard the other side's hi, so it needs no answer
-  | { t: 'hi'; v: number; ok?: boolean }
-  | { t: 'p'; y: number }
-  | ({ t: 's' } & Snapshot)
-  | { t: 'again' }
+  | ({ t: 'hi'; v: number; g?: 'pong'; ok?: boolean } & Stamp)
+  // a paddle at shared time at and the way it's going, sent when that changes and as a keepalive. game and n: the
+  // newest leg the sender has, so one that went missing can go again
+  | ({ t: 'p'; at: number; y: number; d: Dir; game: number; n: number } & Stamp)
+  | ({ t: 'l' } & Leg & Stamp)
+  | ({ t: 'again' } & Stamp)
   | { t: 'bye' }
 
-const PHASES: Phase[] = ['serve', 'play', 'over']
+const KINDS: LegKind[] = ['play', 'serve', 'over']
 const round1 = (n: number) => Math.round(n * 10) / 10
 
-// state is the one sent 30 times a second, so it goes as short arrays
+function stampOf(m: Stamp): Stamp {
+  return {
+    ...(m.c != null ? { c: round1(m.c) } : {}),
+    ...(m.e != null ? { e: round1(m.e) } : {}),
+    ...(m.h != null ? { h: round1(m.h) } : {}),
+  }
+}
+
+// a leg as it goes over the wire; the side that sends one keeps this copy too, so both fly the very same ball
+export function wireLeg(l: Leg): Leg {
+  const { x, y, vx, vy } = l.ball
+  return { game: l.game, n: l.n, at: round1(l.at), kind: l.kind, ball: { x: round1(x), y: round1(y), vx: round1(vx), vy: round1(vy) }, score: [l.score[0], l.score[1]] }
+}
+
 export function encodePong(msg: PongMsg): string {
-  if (msg.t !== 's') return JSON.stringify(msg)
-  const { ball, paddles, score, phase, winner, at } = msg
-  return JSON.stringify({
-    t: 's',
-    at: Math.round(at),
-    b: [ball.x, ball.y, ball.vx, ball.vy].map(round1),
-    p: paddles.map(round1),
-    s: score,
-    ph: PHASES.indexOf(phase),
-    ...(winner ? { w: winner === 'host' ? 0 : 1 } : {}),
-  })
+  switch (msg.t) {
+    case 'p':
+      return JSON.stringify({ t: 'p', at: round1(msg.at), y: round1(msg.y), d: msg.d, r: msg.game, n: msg.n, ...stampOf(msg) })
+    case 'l': {
+      const l = wireLeg(msg)
+      const { x, y, vx, vy } = l.ball
+      return JSON.stringify({ t: 'l', r: l.game, n: l.n, at: l.at, k: KINDS.indexOf(l.kind), b: [x, y, vx, vy], s: l.score, ...stampOf(msg) })
+    }
+    case 'bye':
+      return JSON.stringify(msg)
+    default:
+      return JSON.stringify({ ...msg, ...stampOf(msg) })
+  }
 }
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 const numbers = (v: unknown, n: number): v is number[] => Array.isArray(v) && v.length === n && v.every(finite)
+const count = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0 && (v as number) < 1e9
+
+function readStamp(o: Record<string, unknown>): Stamp {
+  return { ...(finite(o.c) ? { c: o.c } : {}), ...(finite(o.e) ? { e: o.e } : {}), ...(finite(o.h) ? { h: o.h } : {}) }
+}
 
 // anything malformed is null, never a throw: this is text from another machine
-export function decodePong(raw: string): PongMsg | null {
+// what can come in: a pong message, or another game's hello from a friend who opened that instead
+export type PongIn = PongMsg | { t: 'other'; game: string }
+
+export function decodePong(raw: string): PongIn | null {
   let m: unknown
   try {
     m = JSON.parse(raw)
@@ -206,31 +286,37 @@ export function decodePong(raw: string): PongMsg | null {
   }
   if (!m || typeof m !== 'object') return null
   const o = m as Record<string, unknown>
+  const other = otherHello(o, 'pong')
+  if (other) return { t: 'other', game: other }
   switch (o.t) {
     case 'hi':
-      return finite(o.v) ? { t: 'hi', v: o.v, ...(o.ok === true ? { ok: true } : {}) } : null
+      return finite(o.v) ? { t: 'hi', v: o.v, ...(o.ok === true ? { ok: true } : {}), ...readStamp(o) } : null
     case 'p':
-      return finite(o.y) ? { t: 'p', y: clampPaddle(o.y) } : null
-    case 'again':
-      return { t: 'again' }
-    case 'bye':
-      return { t: 'bye' }
-    case 's': {
-      if (!finite(o.at) || !numbers(o.b, 4) || !numbers(o.p, 2) || !numbers(o.s, 2) || !finite(o.ph)) return null
-      const phase = PHASES[o.ph]
-      if (!phase) return null
+      if (!finite(o.at) || !finite(o.y) || (o.d !== -1 && o.d !== 0 && o.d !== 1) || !count(o.r) || !count(o.n)) return null
+      return { t: 'p', at: o.at, y: clampPaddle(o.y), d: o.d, game: o.r, n: o.n, ...readStamp(o) }
+    case 'l': {
+      if (!count(o.r) || !count(o.n) || !finite(o.at) || !numbers(o.b, 4) || !numbers(o.s, 2) || !finite(o.k)) return null
+      const kind = KINDS[o.k]
+      if (!kind) return null
       const [x, y, vx, vy] = o.b
-      const score = o.s.map((n) => clamp(Math.floor(n), 0, 99)) as [number, number]
+      // a ball in flight has to be going somewhere, or nobody would ever judge it
+      if (kind !== 'over' && Math.abs(vx) < 1) return null
+      const half = BALL_SIZE / 2
       return {
-        t: 's',
+        t: 'l',
+        game: o.r,
+        n: o.n,
         at: o.at,
-        ball: { x: clamp(x, -BALL_SIZE, COURT_W + BALL_SIZE), y: clamp(y, 0, COURT_H), vx: clamp(vx, -MAX_SPEED, MAX_SPEED), vy: clamp(vy, -MAX_SPEED, MAX_SPEED) },
-        paddles: [clampPaddle(o.p[0]), clampPaddle(o.p[1])],
-        score,
-        phase,
-        ...(o.w === 0 || o.w === 1 ? { winner: o.w === 0 ? 'host' : 'guest' } : {}),
+        kind,
+        ball: { x: clamp(x, -BALL_SIZE, COURT_W + BALL_SIZE), y: clamp(y, half, COURT_H - half), vx: clamp(vx, -MAX_SPEED, MAX_SPEED), vy: clamp(vy, -MAX_SPEED, MAX_SPEED) },
+        score: o.s.map((n) => clamp(Math.floor(n), 0, 99)) as [number, number],
+        ...readStamp(o),
       }
     }
+    case 'again':
+      return { t: 'again', ...readStamp(o) }
+    case 'bye':
+      return { t: 'bye' }
     default:
       return null
   }
@@ -240,56 +326,63 @@ export function snapshotOf(s: PongState, at: number): Snapshot {
   return { at, ball: s.ball, paddles: s.paddles, score: s.score, phase: s.phase, winner: s.winner }
 }
 
-// ---- the guest's view of the host's snapshots
+// ---- the clock and the far paddle
 
-export class SnapshotBuffer {
-  private snaps: Snapshot[] = []
-  // local time minus host time, the smallest seen: the least delayed arrival is the best guess at the offset
-  private offset = Infinity
-  private recent: number[] = []
+// the guest's guess at the host's clock. a round trip pins the offset to within half its lopsidedness, so the
+// quickest recent one wins; before the first, the host's stamps as they land, as if they took no time
+export class HostClock {
+  private trips: Array<{ rtt: number; offset: number }> = []
+  private rough = -Infinity
 
-  push(snap: Snapshot, localNow: number): void {
-    const last = this.snaps[this.snaps.length - 1]
-    if (last && snap.at <= last.at) return
-    this.snaps.push(snap)
-    if (this.snaps.length > 32) this.snaps.shift()
-    this.recent.push(localNow - snap.at)
-    if (this.recent.length > 60) this.recent.shift()
-    this.offset = Math.min(...this.recent)
+  heard(s: Stamp, now: number): void {
+    if (s.c == null) return
+    this.rough = Math.max(this.rough, s.c - now)
+    if (s.e == null || s.h == null) return
+    const rtt = now - s.e - s.h
+    if (!(rtt >= 0 && rtt < 10_000)) return
+    this.trips.push({ rtt, offset: s.c + rtt / 2 - now })
+    if (this.trips.length > 40) this.trips.shift()
   }
 
-  latest(): Snapshot | undefined {
-    return this.snaps[this.snaps.length - 1]
+  // the host's clock minus ours
+  offset(): number {
+    let best: { rtt: number; offset: number } | undefined
+    for (const t of this.trips) if (!best || t.rtt < best.rtt) best = t
+    if (best) return best.offset
+    return Number.isFinite(this.rough) ? this.rough : 0
+  }
+}
+
+// the other side's paddle, carried on at paddle speed from its last report, which is exact while a key is held;
+// a report that moves it eases in
+export class FarPaddle {
+  private y = COURT_H / 2
+  private d: Dir = 0
+  private at = 0
+  private seen = -Infinity
+  private off = 0
+  private offAt = 0
+
+  // where it is at shared time t, by the reports
+  where(t: number): number {
+    return clampPaddle(this.y + (this.d * PADDLE_SPEED * clamp(t - this.at, 0, 1000)) / 1000)
   }
 
-  // the host's ball and paddle as they were INTERP_MS ago; a new serve or a point jumps rather than slides
-  sample(localNow: number): Snapshot | undefined {
-    const snaps = this.snaps
-    if (!snaps.length) return undefined
-    const at = localNow - this.offset - INTERP_MS
-    let i = snaps.length - 1
-    while (i > 0 && snaps[i - 1]!.at > at) i--
-    const b = snaps[i]!
-    const a = snaps[i - 1]
-    if (!a || at >= b.at) {
-      // past the newest: carry the ball on a little, then hold
-      const ahead = Math.min(Math.max(0, at - b.at), 100) / 1000
-      if (b.phase !== 'play' || !ahead) return b
-      return { ...b, ball: { ...b.ball, x: b.ball.x + b.ball.vx * ahead, y: clamp(b.ball.y + b.ball.vy * ahead, BALL_SIZE / 2, COURT_H - BALL_SIZE / 2) } }
-    }
-    if (at <= a.at) return a
-    const k = (at - a.at) / (b.at - a.at)
-    const lerp = (p: number, q: number) => p + (q - p) * k
-    const jump = a.phase !== b.phase || a.score[0] !== b.score[0] || a.score[1] !== b.score[1]
-    return {
-      ...b,
-      at,
-      ball: jump ? (k < 0.5 ? a.ball : b.ball) : { ...b.ball, x: lerp(a.ball.x, b.ball.x), y: lerp(a.ball.y, b.ball.y) },
-      paddles: [lerp(a.paddles[0], b.paddles[0]), lerp(a.paddles[1], b.paddles[1])],
-      score: k < 0.5 ? a.score : b.score,
-      phase: k < 0.5 ? a.phase : b.phase,
-      winner: k < 0.5 ? a.winner : b.winner,
-    }
+  // where it's drawn at shared time t, our time now
+  shown(t: number, now: number): number {
+    return clampPaddle(this.where(t) + this.off * fade(now - this.offAt))
+  }
+
+  report(y: number, d: Dir, at: number, t: number, now: number): void {
+    if (at < this.seen) return
+    const was = this.shown(t, now)
+    this.y = y
+    this.d = d
+    this.at = at
+    this.seen = at
+    const off = was - this.where(t)
+    this.off = Math.abs(off) > SNAP_PX ? 0 : off
+    this.offAt = now
   }
 }
 
