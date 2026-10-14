@@ -141,7 +141,7 @@ final class AppSettings: ObservableObject {
         theme = Self.loadTheme()
         angleMode = UserDefaults.standard.string(forKey: Self.angleModeKey) == "rad" ? "rad" : "deg"
         fractionMode = UserDefaults.standard.bool(forKey: Self.fractionModeKey)
-        typstPreview = UserDefaults.standard.bool(forKey: Self.typstPreviewKey)
+        typstPreview = UserDefaults.standard.object(forKey: Self.typstPreviewKey) as? Bool ?? true
         typstCopy = UserDefaults.standard.bool(forKey: Self.typstCopyKey)
         shareUsage = UserDefaults.standard.object(forKey: Self.shareUsageKey) as? Bool ?? true
         copyUnitless = UserDefaults.standard.object(forKey: Self.copyUnitlessKey) as? Bool ?? true

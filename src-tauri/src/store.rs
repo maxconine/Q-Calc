@@ -56,7 +56,7 @@ impl Default for Settings {
             draft_seconds: DEFAULT_DRAFT_SECONDS,
             default_units: BTreeMap::new(),
             theme: "system".into(),
-            typst_preview: false,
+            typst_preview: true,
             typst_copy: false,
             space_thousands: false,
             copy_unitless: true,
@@ -227,7 +227,7 @@ mod tests {
                 "angleMode": "deg", "fractionMode": false, "sigFigMode": false, "rationalize": true,
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 12, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
-                "typstPreview": false, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {}
+                "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {}
             })
         );
     }

@@ -712,6 +712,13 @@ html.quick-native .four-twenty.wide {
 .quick-plain.quick-plain-painted::selection {
   color: var(--ink);
 }
+/* a unit offered where a number was owed one; the text is longer than what's typed, so the caret sits out */
+.quick-offered {
+  color: var(--muted);
+}
+.quick-plain.quick-plain-offered {
+  caret-color: transparent;
+}
 /* a word the engine knows: a quiet green, with one brighter beat as it completes */
 .quick-word {
   color: color-mix(in srgb, var(--accent) 85%, var(--ink));

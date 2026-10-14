@@ -12,6 +12,8 @@ struct IdentitySheet {
         let runs: [Run]
         let copy: String
         let note: String
+        // leading table cells, drawn in fixed columns ahead of the runs: a prefix's name and symbol
+        let lead: [String]
     }
 
     struct Group {
@@ -42,7 +44,7 @@ struct IdentitySheet {
                         guard let r = any as? [String: Any], let text = r["text"] as? String else { return nil }
                         return Run(text: text, shift: r["shift"] as? String ?? "")
                     }
-                    return runs.isEmpty ? nil : Item(runs: runs, copy: copy, note: i["note"] as? String ?? "")
+                    return runs.isEmpty ? nil : Item(runs: runs, copy: copy, note: i["note"] as? String ?? "", lead: i["lead"] as? [String] ?? [])
                 }
                 return items.isEmpty ? nil : Group(title: title, items: items)
             }
@@ -76,6 +78,8 @@ private final class IdentityRow: NSView {
     private static let raised = NSFont.systemFont(ofSize: 9.5)
     private static let deeper = NSFont.systemFont(ofSize: 8)
     private static let small = NSFont.systemFont(ofSize: 11)
+    // the page's LEAD_WIDTHS
+    private static let leadWidths: [CGFloat] = [64, 28]
 
     init(_ item: IdentitySheet.Item, frame: NSRect) {
         self.item = item
@@ -83,7 +87,7 @@ private final class IdentityRow: NSView {
         // the tint is the layer's own background, so hover and press recolor it without redrawing
         wantsLayer = true
         fill()
-        let label = item.runs.map(\.text).joined()
+        let label = (item.lead + [item.runs.map(\.text).joined()]).joined(separator: " ")
         toolTip = "Click to copy \(item.copy)"
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
@@ -158,7 +162,13 @@ private final class IdentityRow: NSView {
         let noteSize = note.size()
         // both share the plain text's baseline, so a raised run doesn't push the line down
         let baseline = (bounds.height + Self.font.ascender + Self.font.descender) / 2
-        math.draw(at: NSPoint(x: 6, y: baseline - Self.font.ascender))
+        var x: CGFloat = 6
+        for (i, cell) in item.lead.enumerated() {
+            let text = NSAttributedString(string: cell, attributes: [.font: Self.font, .foregroundColor: copied ? NSColor.secondaryLabelColor : NSColor.labelColor])
+            text.draw(at: NSPoint(x: x, y: baseline - Self.font.ascender))
+            x += i < Self.leadWidths.count ? Self.leadWidths[i] : Self.leadWidths.last ?? 0
+        }
+        math.draw(at: NSPoint(x: x, y: baseline - Self.font.ascender))
         if !side.isEmpty {
             note.draw(at: NSPoint(x: bounds.width - 6 - noteSize.width, y: baseline - Self.small.ascender))
         }

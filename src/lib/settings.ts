@@ -49,7 +49,7 @@ export function defaultSettings(): Settings {
     draftSeconds: DEFAULT_DRAFT_SECONDS,
     defaultUnits: {},
     theme: 'system',
-    typstPreview: false,
+    typstPreview: true,
     typstCopy: false,
     spaceThousands: false,
     copyUnitless: true,

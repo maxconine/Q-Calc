@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { copyText } from '../lib/dom'
-import { identityLabel, identityRuns, type Identity, type IdentitySheet } from '../lib/identities'
+import { identityLabel, identityRuns, LEAD_WIDTHS, type Identity, type IdentitySheet } from '../lib/identities'
 import './PeriodicCard.css'
 import './IdentityCard.css'
 
@@ -46,7 +46,7 @@ export function IdentityCard({ sheet, onClose }: { sheet: IdentitySheet; onClose
                     key={item.copy}
                     type="button"
                     className={`identity-row${copied === item ? ' copied' : ''}`}
-                    aria-label={`${identityLabel(item.show)}${item.note ? `, ${item.note}` : ''}, copy`}
+                    aria-label={`${identityLabel(item.show, item.lead)}${item.note ? `, ${item.note}` : ''}, copy`}
                     onClick={() => {
                       copyText(item.copy)
                       setCopied(item)
@@ -55,6 +55,11 @@ export function IdentityCard({ sheet, onClose }: { sheet: IdentitySheet; onClose
                     }}
                   >
                     <span className="identity-math">
+                      {item.lead?.map((cell, i) => (
+                        <span key={i} className="identity-lead" style={{ width: LEAD_WIDTHS[i] }}>
+                          {cell}
+                        </span>
+                      ))}
                       <IdentityText show={item.show} />
                     </span>
                     {copied === item ? (

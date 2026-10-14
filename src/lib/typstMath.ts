@@ -1,3 +1,4 @@
+import { fillParens } from '../engine/parens'
 import { latexToAscii } from '../engine/plainMath'
 import { readsAsUnit } from '../engine/units'
 import { boundsIn } from './bounds'
@@ -216,7 +217,8 @@ function simpleMath(math: string): boolean {
  * Copy keeps `toTypstMath`, so what's pasted still says what was typed.
  */
 export function previewMath(expr: string): string {
-  const s = expr.trim()
+  // a line still being typed previews as the input shows it, with its faint parens closed
+  const s = fillParens(expr.trim())
   const derivative = derivativeMath(s)
   if (derivative != null) return derivative
   return toTypstMath(keywordMath(s))
@@ -231,6 +233,8 @@ const LIM_WORDS = /^(?:the\s+)?limit\s+of\s+(.+?)\s+as\s+([A-Za-z]|theta)\s*(?:-
 const SOLVE_FOR = /^(?:solve|isolate)\s+(?:for\s+)?[A-Za-z]\w*\s*(?::|in\b)\s*(.+)$/is
 const SOLVE_TAIL = /^(?:solve\s+)?(.+?=.+?)\s+(?:for|isolate)\s+[A-Za-z]\w*$/is
 const SOLVE_HEAD = /^solve\s+(.+=.+)$/is
+// a solve still being typed (`solve 6 (3 / (3 + R)`, or one with its = but no right side yet) previews its equation so far
+const SOLVE_OPEN = /^solve\s+(?!(?:for|isolate)\b)(.+)$/is
 
 /** The keyword forms the calculator reads, respelled with the limits and signs toTypstMath typesets. */
 function keywordMath(s: string): string {
@@ -244,7 +248,7 @@ function keywordMath(s: string): string {
   if (m) return `lim_{${m[1]}->${m[2]}} ${m[3]}`
   m = LIM_WORDS.exec(s)
   if (m) return `lim_{${m[2]}->${m[3]}} ${m[1]}`
-  m = SOLVE_FOR.exec(s) ?? SOLVE_TAIL.exec(s) ?? SOLVE_HEAD.exec(s)
+  m = SOLVE_FOR.exec(s) ?? SOLVE_TAIL.exec(s) ?? SOLVE_HEAD.exec(s) ?? SOLVE_OPEN.exec(s)
   if (m) return m[1]!
   return s
 }

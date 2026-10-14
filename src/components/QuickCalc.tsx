@@ -60,6 +60,7 @@ import {
   type AnswerForm,
 } from '../lib/answer'
 import { blankReason, enterHint, type Span } from '../lib/blankReason'
+import { missingUnit, type UnitFix } from '../lib/missingUnit'
 import { ansWrittenOut, chainedExpr, chainedHistoryExpr, chainsFromAnswer } from '../lib/chain'
 import { hideAction, shouldRestoreDraft } from '../lib/draft'
 import { nativeHandler } from '../lib/bridge'
@@ -277,6 +278,15 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [helpOpen, setHelpOpen] = useState(false)
   const [squiggle, setSquiggle] = useState<{ q: string; span: Span | null } | null>(null)
   const [inputSel, setInputSel] = useState<{ start: number; end: number } | null>(null)
+  // the unit ↵ offered for a number that had none, for the text and caret it was offered on
+  const [unitFix, setUnitFix] = useState<(UnitFix & { q: string; caret: number }) | null>(null)
+  const unitFixRef = useRef(unitFix)
+  unitFixRef.current = unitFix
+  const onInputSel = useCallback((range: { start: number; end: number }) => {
+    setInputSel(range)
+    const fix = unitFixRef.current
+    if (fix && (range.start !== fix.caret || range.end !== fix.caret)) setUnitFix(null)
+  }, [])
   // the browser build's periodic table; the mac app opens its own window instead
   const [periodicOpen, setPeriodicOpen] = useState(false)
   // the browser build's identity or calculus sheet, the same way
@@ -1150,6 +1160,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     })
   }, [])
 
+  // units that don't add up because one number has none: the unit it was owed, to offer and not to assume
+  const offerUnit = useCallback((): UnitFix | null => {
+    if (!isImproperUnitConversion(liveRef.current.display)) return null
+    const ok = (text: string) => {
+      const shown = evaluateSheet([liveChainRef.current ? chainedExpr(text) : text], liveOptionsRef.current)[0]?.display ?? ''
+      return Boolean(shown) && !isImproperUnitConversion(shown)
+    }
+    return missingUnit(qRef.current, ok)
+  }, [])
+
   // from typing a game's name and ↵, or a row of the `games` sheet
   const playGame = useCallback(
     (game: GameKind) => {
@@ -1197,8 +1217,19 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
     else if (selected != null) insertHistoryAnswer(selected)
-    else if (!commit()) setHint(blankEnterHint())
-  }, [blankEnterHint, commit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
+    else if (unitFixRef.current?.q === qRef.current) {
+      // the second ↵ writes the offered unit in; the answer it gives is the next ↵'s to save
+      const { at, text } = unitFixRef.current
+      mathRef.current?.insert(text, { start: at, end: at })
+      setUnitFix(null)
+      setHint(null)
+    } else if (!commit()) {
+      const fix = offerUnit()
+      const caret = mathRef.current?.caret().end ?? qRef.current.length
+      setUnitFix(fix && { ...fix, q: qRef.current, caret })
+      setHint(fix?.hint ?? blankEnterHint())
+    }
+  }, [blankEnterHint, commit, offerUnit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
 
   const closeGame = useCallback(() => {
     pongOpenRef.current = null
@@ -1469,6 +1500,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     caretRef.current = null
     setInputSel(null)
+    setUnitFix(null)
     // resets and restored drafts come through here too, already matching qRef
     const typed = text !== qRef.current
     if (typed) {
@@ -1587,8 +1619,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               onPrefixStep={onPrefixStep}
               chain={chained}
               squiggle={squiggle?.q === q && !display ? squiggle.span : null}
+              suggest={unitFix?.q === q ? unitFix : null}
               completionNames={completionNames}
-              onSelection={setInputSel}
+              onSelection={onInputSel}
               onTab={onTab}
             />
             {selDisplay ? (

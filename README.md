@@ -122,6 +122,7 @@ On Windows, read **⌘** and **⌃** below as **Ctrl**, **Option** as **Alt**, a
 - **⌃D** switches between degrees and radians. **⌃F** toggles fraction results. **⌃C** clears history and resets stored variables and functions. **Answers → Rationalize denominators** controls whether exact answers like `5/sqrt(41)` are rewritten as `5sqrt(41)/41`.
 - For trig and square roots, answers show a closed form next to the decimal when both exist (`sqrt(3)/2 ≈ 0.866025`). Click either side to copy (or, in history, to insert). Other expressions show the decimal. **⌘C** and `ans` follow **Answers → Exact** or **Approximate**.
 - Unit conversions work too: `72 f`, `2 in to cm`.
+- `conversion` or `metric prefixes` opens a reference sheet: the metric prefixes from quetta to quecto, and the common conversion factors and temperature formulas. Click a row to copy it.
 - **Option + Up** and **Option + Down** step a metric answer's unit one prefix at a time, a factor of 1000 per press: `4700 ohm` becomes `4.7 kΩ`, and `2 L` becomes `2000 mL`, then `2000000 μL`.
 - Store a variable with `x = 5`, then use it in later expressions (`x*2`). Define a function the same way: `f(x) = x^3`, then call it with `f(2)`.
 - Graph with `graph x^3`, `graph f` (after defining `f`), or `graph f(x) = x^3`. A panel opens under the input with zoom and a list of critical points.

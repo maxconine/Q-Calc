@@ -45,6 +45,8 @@ interface Props {
   chain?: boolean
   // the part a blank answer couldn't read
   squiggle?: Span | null
+  // a unit a number was owed, faint where it would go; ↵ writes it in
+  suggest?: { at: number; text: string } | null
   completionNames?: CompletionNames
   onSelection?: (range: CaretRange) => void
 }
@@ -170,6 +172,7 @@ export function QuickInput({
   handleRef,
   chain = false,
   squiggle = null,
+  suggest = null,
   completionNames,
   onSelection,
 }: Props) {
@@ -195,7 +198,8 @@ export function QuickInput({
   const metaRef = useRef(false)
   const caretPosRef = useRef<CaretRange>({ start: value.length, end: value.length })
   const holdingArrowRef = useRef(false)
-  const [caretAtEnd, setCaretAtEnd] = useState(true)
+  // where a collapsed caret is, null while text is selected; `end` follows the end of the text as it grows
+  const [caret, setCaret] = useState<{ at: number; end: boolean } | null>({ at: value.length, end: true })
   const undoRef = useRef<Undo | null>(null)
   if (!undoRef.current) undoRef.current = undoStart(value)
   const editKindRef = useRef<EditKind>(null)
@@ -219,7 +223,7 @@ export function QuickInput({
     const start = el.selectionStart ?? el.value.length
     const end = el.selectionEnd ?? start
     caretPosRef.current = { start, end }
-    setCaretAtEnd(start === end && end === el.value.length)
+    setCaret(start === end ? { at: end, end: end === el.value.length } : null)
     onSelection?.({ start, end })
   }
 
@@ -239,16 +243,22 @@ export function QuickInput({
     setPrefixWidth(prefixRef.current?.offsetWidth ?? 0)
   }, [prefix, chain])
 
-  const completion = caretAtEnd ? completionFor(value, completionNames) : ''
+  // a word is finished wherever the caret ends it, so `2 sq|(9)` completes as well as `2 sq|` does
+  const completionAt = caret ? (caret.end ? value.length : Math.min(caret.at, value.length)) : -1
+  const completed =
+    completionAt >= 0 && !/[A-Za-z0-9_]/.test(value[completionAt] ?? '') ? completionFor(value.slice(0, completionAt), completionNames) : ''
+  // `sq|(9)` already has its paren
+  const completion = value[completionAt] === '(' ? completed.replace(/\($/, '') : completed
+  const midCompletion = completion && completionAt < value.length ? { at: completionAt, text: completion, className: 'quick-inferred quick-completion' } : null
   const acceptCompletion = (el: HTMLInputElement) => {
-    const next = el.value + completion
-    commit(next, next.length)
+    const next = el.value.slice(0, completionAt) + completion + el.value.slice(completionAt)
+    commit(next, completionAt + completion.length)
   }
   // the ghost layer doesn't scroll with the input, so a squiggle only shows while the text fits
   const input = inputRef.current
   const fits = !input || input.scrollWidth <= input.clientWidth + 1
   const mark =
-    squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null
+    squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === completionAt) ? squiggle : null
   const bounded = boundsIn(value).length > 0
   // a word the engine knows is painted from the ghost layer, so the input's own text steps aside
   // units are green and say what they are on hover; a word that's a unit there isn't also a function
@@ -258,7 +268,11 @@ export function QuickInput({
   const words = (fits && !bounded ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []).filter(
     (w) => !units.some((u) => u.start < w.end && w.start < u.end),
   )
-  const painted = words.length > 0 || units.length > 0
+  // the faint unit sits inside the text, so the ghost layer paints all of it and the caret waits
+  const offered = suggest && fits && !bounded && suggest.at <= value.length ? { ...suggest, className: 'quick-offered' } : null
+  // a completion inside the text pushes what follows along, so the ghost layer paints that too
+  const inlined = offered ?? (midCompletion && fits && !bounded ? midCompletion : null)
+  const painted = words.length > 0 || units.length > 0 || inlined != null
 
   // the first label waits for a short rest; once one shows, the next unit's (or an edited unit's) shows at once
   const hoverUnit = (x: number, now = false) => {
@@ -298,6 +312,7 @@ export function QuickInput({
     const slotted = typed ? afterTyping(next, pos) : null
     if (slotted) ({ text: next, caret: pos } = slotted)
     caretPosRef.current = { start: pos, end: pos }
+    setCaret({ at: pos, end: pos === next.length })
     onChangeRef.current(next)
     requestAnimationFrame(() => {
       const el = inputRef.current
@@ -568,14 +583,14 @@ export function QuickInput({
           <BoundsInputText
             value={value}
             input={inputRef}
-            mark={squiggle && squiggle.end <= value.length && !(completion && squiggle.end === value.length) ? squiggle : null}
+            mark={squiggle && squiggle.end <= value.length && !(completion && squiggle.end === completionAt) ? squiggle : null}
           />
         ) : (
           <span className={painted ? 'quick-ghost-text quick-ghost-painted' : 'quick-ghost-text'}>
-            {paintText(value, mark, words, units)}
+            {paintText(value, mark, words, units, inlined)}
           </span>
         )}
-        {completion ? <span className="quick-inferred quick-completion">{completion}</span> : null}
+        {completion && !midCompletion ? <span className="quick-inferred quick-completion">{completion}</span> : null}
         {suffix ? <span className="quick-inferred">{suffix}</span> : null}
         {showExample && example ? (
           <span key={example.id} className="quick-example">
@@ -591,7 +606,7 @@ export function QuickInput({
       ) : null}
       <input
         ref={inputRef}
-        className={painted ? 'quick-plain quick-plain-painted' : 'quick-plain'}
+        className={offered ? 'quick-plain quick-plain-painted quick-plain-offered' : painted ? 'quick-plain quick-plain-painted' : 'quick-plain'}
         value={value}
         size={1}
         autoFocus
@@ -663,15 +678,29 @@ export function QuickInput({
 
 // the input's text split into plain runs, the squiggle, known words and units; a word keys on its name and
 // count, so its pulse plays once when it's finished and not again as text around it changes
-function paintText(value: string, mark: Span | null, words: Span[], units: UnitSpan[] = []): ReactNode[] {
+function paintText(
+  value: string,
+  mark: Span | null,
+  words: Span[],
+  units: UnitSpan[] = [],
+  inlined: { at: number; text: string; className: string } | null = null,
+): ReactNode[] {
   const clear = (w: Span) => !mark || w.end <= mark.start || w.start >= mark.end
   const cuts: Span[] = [...words.filter(clear), ...units.filter(clear), ...(mark ? [mark] : [])]
   cuts.sort((a, b) => a.start - b.start)
   const out: ReactNode[] = []
   const seen = new Map<string, number>()
+  const plain = (from: number, to: number) => {
+    if (!inlined || inlined.at < from || inlined.at > to) {
+      out.push(value.slice(from, to))
+      return
+    }
+    out.push(value.slice(from, inlined.at), <span key="inlined" className={inlined.className}>{inlined.text}</span>, value.slice(inlined.at, to))
+    inlined = null
+  }
   let at = 0
   for (const cut of cuts) {
-    if (cut.start > at) out.push(value.slice(at, cut.start))
+    if (cut.start > at) plain(at, cut.start)
     const text = value.slice(cut.start, cut.end)
     if (cut === mark) {
       out.push(<span key="squiggle" className="quick-squiggle">{text}</span>)
@@ -690,6 +719,6 @@ function paintText(value: string, mark: Span | null, words: Span[], units: UnitS
     }
     at = cut.end
   }
-  if (at < value.length) out.push(value.slice(at))
+  if (at < value.length) plain(at, value.length)
   return out
 }

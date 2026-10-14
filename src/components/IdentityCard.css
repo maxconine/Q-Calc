@@ -56,4 +56,5 @@
 .identity-row.copied { color: var(--answer-hover); }
 .identity-row:focus-visible { outline: 2px solid color-mix(in srgb, var(--ink) 30%, transparent); outline-offset: -1px; }
 .identity-math sup, .identity-math sub { font-size: 0.72em; line-height: 0; }
+.identity-lead { display: inline-block; }
 .identity-note { flex: none; color: var(--muted); font-size: var(--fs-caption); }

@@ -216,3 +216,15 @@ describe('typstPreviewUseful', () => {
     expect(['1', '1/', '1/x'].map(typstPreviewUseful)).toEqual([false, false, true])
   })
 })
+
+describe('a solve still being typed', () => {
+  it.each([
+    ['solve ( 6 (3 / (3 + R)) = 2', '(6 (3 / (3 + R)) = 2)'],
+    ['solve ( 6 (3 / (3 + R)', '(6 (3 / (3 + R)))'],
+    ['solve 6 (3 / (3 + R)) =', '6 (3 / (3 + R)) ='],
+    ['solve 6 (3 / (3 + R', '6 (3 / (3 + R))'],
+  ])('%s previews its equation so far', (expr, math) => {
+    expect(typstPreviewUseful(expr)).toBe(true)
+    expect(previewMath(expr).replace(/\s+/g, ' ')).toBe(math)
+  })
+})

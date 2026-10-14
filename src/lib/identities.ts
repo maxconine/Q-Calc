@@ -3,14 +3,18 @@ import { isWindowsHost } from './platform'
 
 // `show` is how a line reads, with ^{…} raised and _{…} lowered; `copy` is what a click puts on the clipboard,
 // written the way the bar takes it
-export type Identity = { show: string; copy: string; note?: string }
+// `lead` is a row's leading table cells, drawn in fixed columns ahead of `show`: a prefix's name and symbol
+export type Identity = { show: string; copy: string; note?: string; lead?: string[] }
 export type IdentityGroup = { title: string; items: Identity[] }
 export type IdentitySection = { title: string; groups: IdentityGroup[] }
-export type IdentitySheet = { id: 'identities' | 'calculus'; title: string; hint: string; sections: IdentitySection[] }
+export type IdentitySheet = { id: 'identities' | 'calculus' | 'conversions'; title: string; hint: string; sections: IdentitySection[] }
 
 // a run of text, raised or lowered or neither; supsub is a subscript inside a superscript, as in b^{log_{b}x}.
 // the page and the mac window both draw these
 export type Run = { text: string; shift?: 'sup' | 'sub' | 'supsub' }
+
+/** The widths, in points, of a row's `lead` cells. */
+export const LEAD_WIDTHS = [64, 28]
 
 const id = (show: string, copy: string, note?: string): Identity => (note ? { show, copy, note } : { show, copy })
 
@@ -266,6 +270,233 @@ const INTEGRALS: IdentitySection = {
   ],
 }
 
+const spaced = (digits: string) => digits.replace(/(\d{3})(?=\d)/g, '$1 ')
+// 10^n written out, in groups of three: 1 000 000, 0.000 001
+const written = (n: number) => (n < 0 ? `0.${spaced(`${'0'.repeat(-n - 1)}1`)}` : n % 3 ? `1${'0'.repeat(n)}` : `1${' 000'.repeat(n / 3)}`)
+// past 10^15 the digits no longer fit a row, so the name stands in
+const prefix = (name: string, symbol: string, n: number, word = ''): Identity => ({
+  lead: [name, symbol],
+  show: `10^{${n < 0 ? '−' : ''}${Math.abs(n)}}`,
+  copy: `10^${n}`,
+  note: word || written(n),
+})
+// one unit in another, as the calculator itself converts it; `show` defaults to the copy with its powers raised
+const cv = (copy: string, show?: string, note?: string): Identity =>
+  id(show ?? copy.replace(/\^(\d+)/g, '^{$1}').replace(/\bpi\b/g, 'π'), copy, note)
+
+const PREFIXES: IdentitySection = {
+  title: 'Metric prefixes',
+  groups: [
+    {
+      title: 'Multiples',
+      items: [
+        prefix('quetta', 'Q', 30, 'nonillion'),
+        prefix('ronna', 'R', 27, 'octillion'),
+        prefix('yotta', 'Y', 24, 'septillion'),
+        prefix('zetta', 'Z', 21, 'sextillion'),
+        prefix('exa', 'E', 18, 'quintillion'),
+        prefix('peta', 'P', 15),
+        prefix('tera', 'T', 12),
+        prefix('giga', 'G', 9),
+        prefix('mega', 'M', 6),
+        prefix('kilo', 'k', 3),
+        prefix('hecto', 'h', 2),
+        prefix('deka', 'da', 1),
+      ],
+    },
+    {
+      title: 'Fractions',
+      items: [
+        prefix('deci', 'd', -1),
+        prefix('centi', 'c', -2),
+        prefix('milli', 'm', -3),
+        prefix('micro', 'μ', -6),
+        prefix('nano', 'n', -9),
+        prefix('pico', 'p', -12),
+        prefix('femto', 'f', -15),
+        prefix('atto', 'a', -18, 'quintillionth'),
+        prefix('zepto', 'z', -21, 'sextillionth'),
+        prefix('yocto', 'y', -24, 'septillionth'),
+        prefix('ronto', 'r', -27, 'octillionth'),
+        prefix('quecto', 'q', -30, 'nonillionth'),
+      ],
+    },
+  ],
+}
+
+const SIZE: IdentitySection = {
+  title: 'Length, area, volume and mass',
+  groups: [
+    {
+      title: 'Length',
+      items: [
+        cv('1 in = 2.54 cm', undefined, 'exact'),
+        cv('1 ft = 0.3048 m', undefined, 'exact'),
+        cv('1 yd = 0.9144 m', undefined, 'exact'),
+        cv('1 mi = 1.609344 km', undefined, 'exact'),
+        cv('1 mi = 5280 ft'),
+        cv('1 nmi = 1852 m'),
+        cv('1 m = 3.28084 ft'),
+        cv('1 km = 0.621371 mi'),
+        cv('1 mil = 0.0254 mm'),
+        cv('1 angstrom = 1e-10 m', '1 Å = 10^{−10} m'),
+        cv('1 au = 1.495979e8 km', '1 au = 1.495979 × 10^{8} km'),
+        cv('1 ly = 9.46073e12 km', '1 ly = 9.46073 × 10^{12} km'),
+      ],
+    },
+    {
+      title: 'Volume',
+      items: [
+        cv('1 L = 1000 cm^3'),
+        cv('1 m^3 = 1000 L'),
+        cv('1 gal = 3.78541 L'),
+        cv('1 gal = 231 in^3'),
+        cv('1 qt = 0.946353 L'),
+        cv('1 cup = 236.588 mL'),
+        cv('1 floz = 29.5735 mL', '1 fl oz = 29.5735 mL'),
+        cv('1 tbsp = 14.7868 mL'),
+        cv('1 tsp = 4.92892 mL'),
+        cv('1 ft^3 = 28.3168 L'),
+        cv('1 in^3 = 16.3871 cm^3'),
+      ],
+    },
+    {
+      title: 'Area',
+      items: [
+        cv('1 m^2 = 10000 cm^2', '1 m^{2} = 10^{4} cm^{2}'),
+        cv('1 ft^2 = 144 in^2'),
+        cv('1 ft^2 = 0.092903 m^2'),
+        cv('1 acre = 43560 ft^2'),
+        cv('1 acre = 4046.86 m^2'),
+        cv('1 ha = 10000 m^2', '1 ha = 10^{4} m^{2}'),
+        cv('1 mi^2 = 2.58999 km^2'),
+      ],
+    },
+    {
+      title: 'Mass',
+      items: [
+        cv('1 lb = 0.453592 kg'),
+        cv('1 kg = 2.20462 lb'),
+        cv('1 lb = 16 oz'),
+        cv('1 oz = 28.3495 g'),
+        cv('1 slug = 14.5939 kg'),
+        cv('1 tonne = 1000 kg'),
+        cv('1 ton = 2000 lb', undefined, 'US short'),
+        cv('1 grain = 64.7989 mg'),
+        cv('1 u = 1.66054e-27 kg', '1 u = 1.66054 × 10^{−27} kg'),
+      ],
+    },
+  ],
+}
+
+const MECHANICS: IdentitySection = {
+  title: 'Force, pressure, energy and motion',
+  groups: [
+    {
+      title: 'Force',
+      items: [
+        cv('1 lbf = 4.44822 N'),
+        cv('1 N = 0.224809 lbf'),
+        cv('1 kgf = 9.80665 N', undefined, 'exact'),
+        cv('1 kip = 1000 lbf'),
+        cv('1 dyn = 1e-5 N', '1 dyn = 10^{−5} N'),
+      ],
+    },
+    {
+      title: 'Pressure',
+      items: [
+        cv('1 atm = 101.325 kPa', undefined, 'exact'),
+        cv('1 atm = 760 torr'),
+        cv('1 atm = 14.6959 psi'),
+        cv('1 bar = 100 kPa'),
+        cv('1 psi = 6.89476 kPa'),
+        cv('1 ksi = 6.89476 MPa'),
+        cv('1 torr = 133.322 Pa'),
+        cv('1 inHg = 3.38639 kPa'),
+      ],
+    },
+    {
+      title: 'Energy',
+      items: [
+        cv('1 cal = 4.184 J', undefined, 'exact'),
+        cv('1 kcal = 4.184 kJ'),
+        cv('1 BTU = 1055.06 J'),
+        cv('1 kWh = 3.6 MJ'),
+        cv('1 ft lbf = 1.35582 J'),
+        cv('1 L atm = 101.325 J'),
+        cv('1 eV = 1.60218e-19 J', '1 eV = 1.60218 × 10^{−19} J'),
+        cv('1 erg = 1e-7 J', '1 erg = 10^{−7} J'),
+      ],
+    },
+    {
+      title: 'Power',
+      items: [cv('1 hp = 745.7 W'), cv('1 kW = 1.34102 hp'), cv('1 BTU/hr = 0.293071 W')],
+    },
+    {
+      title: 'Torque',
+      items: [cv('1 lbf ft = 1.35582 N m'), cv('1 N m = 0.737562 lbf ft'), cv('1 lbf in = 0.112985 N m')],
+    },
+    {
+      title: 'Speed',
+      items: [
+        cv('1 mph = 0.44704 m/s', undefined, 'exact'),
+        cv('1 mph = 1.609344 km/h'),
+        cv('1 m/s = 2.23694 mph'),
+        cv('1 m/s = 3.6 km/h'),
+        cv('1 ft/s = 0.3048 m/s'),
+        cv('1 knot = 0.514444 m/s'),
+      ],
+    },
+    {
+      title: 'Density',
+      items: [cv('1 g/cm^3 = 1000 kg/m^3'), cv('1 lb/ft^3 = 16.0185 kg/m^3')],
+    },
+  ],
+}
+
+const OTHER: IdentitySection = {
+  title: 'Temperature, angle, time and data',
+  groups: [
+    {
+      title: 'Temperature',
+      items: [
+        id('°F = °C × 9/5 + 32', 'F = C*9/5 + 32'),
+        id('°C = (°F − 32) × 5/9', 'C = (F - 32)*5/9'),
+        id('K = °C + 273.15', 'K = C + 273.15'),
+        id('°R = °F + 459.67', 'R = F + 459.67'),
+        id('°R = K × 9/5', 'R = K*9/5'),
+        id('Δ1 °C = Δ1 K = Δ1.8 °F', 'dC = dK = 1.8 dF', 'a difference'),
+      ],
+    },
+    {
+      title: 'Angle',
+      items: [
+        cv('180 deg = pi rad', '180° = π rad'),
+        cv('1 rad = 57.2958 deg', '1 rad = 57.2958°'),
+        cv('1 rev = 2pi rad', '1 rev = 2π rad'),
+        cv('1 deg = 60 arcmin', '1° = 60 arcmin'),
+        cv('1 arcmin = 60 arcsec'),
+        cv('1 rpm = 0.10472 rad/s'),
+        cv('1 Hz = 60 rpm'),
+      ],
+    },
+    {
+      title: 'Time',
+      items: [
+        cv('1 hr = 3600 s'),
+        cv('1 day = 86400 s'),
+        cv('1 week = 7 days'),
+        cv('1 year = 365.25 days', undefined, 'Julian'),
+        cv('1 year = 3.15576e7 s', '1 year = 3.15576 × 10^{7} s'),
+      ],
+    },
+    {
+      title: 'Data',
+      items: [cv('1 byte = 8 bits'), cv('1 kB = 1000 bytes'), cv('1 GB = 1000 MB'), cv('1 KiB = 1024 bytes'), cv('1 GiB = 1024 MiB')],
+    },
+  ],
+}
+
 export const IDENTITY_SHEET: IdentitySheet = {
   id: 'identities',
   title: 'Identities',
@@ -280,7 +511,16 @@ export const CALCULUS_SHEET: IdentitySheet = {
   sections: [DERIVATIVES, INTEGRALS],
 }
 
+export const CONVERSION_SHEET: IdentitySheet = {
+  id: 'conversions',
+  title: 'Unit Conversions',
+  hint: 'unit conversions',
+  sections: [PREFIXES, SIZE, MECHANICS, OTHER],
+}
+
 const IDENTITY_WORDS = /^(?:(?:trig(?:onometric|onometry)?|log(?:arithm(?:ic)?)?|exponent|algebra(?:ic)?|math)\s+)?identit(?:y|ies)$/i
+const CONVERSION_WORDS =
+  /^(?:(?:(?:unit|metric)\s+)?conversions?(?:\s+(?:table|sheet|factors))?|(?:(?:metric|si)\s+)?prefix(?:es)?(?:\s+table)?|metric(?:\s+(?:table|system))?|units?\s+(?:table|sheet))$/i
 const CALCULUS_WORDS = /^(?:(?:common\s+)?(?:derivatives?|integrals?)|calculus(?:\s+(?:identities|sheet|rules))?|derivative\s+rules)$/i
 
 /** The sheet a bar line opens on enter, or null. */
@@ -288,6 +528,7 @@ export function identitySheetFor(text: string): IdentitySheet | null {
   const t = text.trim().replace(/\s+/g, ' ')
   if (IDENTITY_WORDS.test(t)) return IDENTITY_SHEET
   if (CALCULUS_WORDS.test(t)) return CALCULUS_SHEET
+  if (CONVERSION_WORDS.test(t)) return CONVERSION_SHEET
   return null
 }
 
@@ -328,10 +569,11 @@ export function identityRuns(show: string): Run[] {
 }
 
 /** The plain text a screen reader gets for a line. */
-export function identityLabel(show: string): string {
-  return identityRuns(show)
+export function identityLabel(show: string, lead: string[] = []): string {
+  const text = identityRuns(show)
     .map((r) => r.text)
     .join('')
+  return [...lead, text].join(' ')
 }
 
 // the mac app draws the sheet in its own window from this, so the data lives in one place; false means no native window.
@@ -343,7 +585,7 @@ export function openNativeIdentitySheet(sheet: IdentitySheet): boolean {
     title: s.title,
     groups: s.groups.map((g) => ({
       title: g.title,
-      items: g.items.map((item) => ({ runs: identityRuns(item.show), copy: item.copy, note: item.note ?? '' })),
+      items: g.items.map((item) => ({ runs: identityRuns(item.show), copy: item.copy, note: item.note ?? '', lead: item.lead ?? [] })),
     })),
   }))
   native.postMessage({ type: 'identities', id: sheet.id, title: sheet.title, sections })
