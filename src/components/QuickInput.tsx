@@ -498,7 +498,9 @@ export function QuickInput({
     }
     // tab belongs to the completion only while its ghost shows
     const plainKey = !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey
-    if (plainKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && onSideRef.current?.(e.key === 'ArrowLeft' ? -1 : 1)) {
+    // on a highlighted history row ← → (and tab, shift-tab, as → and ←) pick its expression or one of its answers
+    const side = plainKey && e.key === 'ArrowLeft' ? -1 : plainKey && e.key === 'ArrowRight' ? 1 : e.key === 'Tab' && !e.altKey && !e.metaKey && !e.ctrlKey ? (e.shiftKey ? -1 : 1) : 0
+    if (side && onSideRef.current?.(side)) {
       e.preventDefault()
       return
     }
@@ -535,9 +537,10 @@ export function QuickInput({
       }
     }
     if (e.key === 'Tab' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      // tab never moves focus out of the input. like →, it first writes in the faint parens; then it cycles the answer's forms
+      // tab never moves focus out of the input. it fills in whatever → would (the faint `ans` of a chain, then the faint
+      // parens); with nothing to fill it cycles the answer's forms
       e.preventDefault()
-      const filled = e.shiftKey ? null : autofillParens(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0)
+      const filled = e.shiftKey ? null : chainFill(el) ?? autofillParens(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0)
       if (filled) commit(filled, filled.length)
       else onTabRef.current?.(e.shiftKey ? -1 : 1)
       return
@@ -566,17 +569,24 @@ export function QuickInput({
     const start = el.selectionStart ?? 0
     const end = el.selectionEnd ?? start
     // → at the end of a chain writes its faint `ans` into the text
-    if (chain && start === end && end === el.value.length) {
+    const chained = chainFill(el)
+    if (chained) {
       e.preventDefault()
-      // `+ 2` reads `ans + 2`, `+2` reads `ans+2`
-      const next = /^\s*\S\s/.test(el.value) ? `ans ${el.value.trimStart()}` : chainedExpr(el.value)
-      commit(next, next.length)
+      commit(chained, chained.length)
       return
     }
     const filled = autofillParens(el.value, start, end)
     if (!filled) return
     e.preventDefault()
     commit(filled, filled.length)
+  }
+
+  // the text with a chain's faint `ans` written in, when the caret is at its end; `+ 2` reads `ans + 2`, `+2` reads `ans+2`
+  function chainFill(el: HTMLInputElement): string | null {
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? start
+    if (!chain || start !== end || end !== el.value.length) return null
+    return /^\s*\S\s/.test(el.value) ? `ans ${el.value.trimStart()}` : chainedExpr(el.value)
   }
 
   const showExample = !value && example != null
