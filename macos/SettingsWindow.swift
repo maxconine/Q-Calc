@@ -58,6 +58,14 @@ struct GeneralSettingsView: View {
                         Text(choice.title).tag(choice.seconds)
                     }
                 }
+                Picker(selection: bind(\.placeResetMinutes, AppSettings.setPlaceResetMinutes(_:notifyWeb:))) {
+                    ForEach(placeResetChoices, id: \.self) { minutes in
+                        Text(Self.placeResetTitle(minutes)).tag(minutes)
+                    }
+                } label: {
+                    Text("Move the bar back after")
+                    Text("Once Q Calc has gone this long unopened, a bar you moved or widened opens in its usual spot and width")
+                }
                 toggle("Share anonymous usage", "Counts of which features get used, never what you type", \.shareUsage, AppSettings.setShareUsage(_:notifyWeb:))
                 LabeledContent {
                     Button("Replay") { QCalc.delegate.showTutorial() }
@@ -106,6 +114,21 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    private var placeResetChoices: [Int] {
+        let current = settings.placeResetMinutes
+        let choices = AppSettings.placeResetChoices
+        return choices.contains(current) ? choices : choices + [current]
+    }
+
+    private static func placeResetTitle(_ minutes: Int) -> String {
+        switch minutes {
+        case 0: return "Never"
+        case 1: return "1 minute"
+        case 60: return "1 hour"
+        default: return "\(minutes) minutes"
+        }
     }
 
     private var draftChoices: [(title: String, seconds: Int)] {

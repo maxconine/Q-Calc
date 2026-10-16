@@ -60,6 +60,7 @@ final class AppSettings: ObservableObject {
     static let shared = AppSettings()
     static let sigFigsKey = "qcalc.sigFigs"
     static let draftSecondsKey = "qcalc.draftSeconds"
+    static let placeResetMinutesKey = "qcalc.placeResetMinutes"
     static let defaultUnitsKey = "qcalc.defaultUnits"
     static let answerFormKey = "qcalc.answerForm"
     static let historyInsertKey = "qcalc.historyInsert"
@@ -86,6 +87,9 @@ final class AppSettings: ObservableObject {
     static let minSigFigs = 2
     static let maxSigFigs = 16
     static let defaultDraftSeconds = 60
+    // a moved or widened bar goes back to its usual spot and width once q calc has gone this long unopened; 0 never
+    static let defaultPlaceResetMinutes = 5
+    static let placeResetChoices = [0, 1, 5, 15, 60]
     static let minDraftSeconds = 0
     static let maxDraftSeconds = 3600
     static let defaultAnswerForm = "exact"
@@ -98,6 +102,7 @@ final class AppSettings: ObservableObject {
 
     @Published private(set) var significantFigures: Int
     @Published private(set) var draftSeconds: Int
+    @Published private(set) var placeResetMinutes: Int
     @Published private(set) var defaultUnits: [String: String]
     @Published private(set) var answerForm: String
     @Published private(set) var historyInsert: String
@@ -126,6 +131,11 @@ final class AppSettings: ObservableObject {
     private init() {
         let storedFigs = UserDefaults.standard.integer(forKey: Self.sigFigsKey)
         significantFigures = Self.clampSigFigs(storedFigs == 0 ? Self.defaultSigFigs : storedFigs)
+        if UserDefaults.standard.object(forKey: Self.placeResetMinutesKey) == nil {
+            placeResetMinutes = Self.defaultPlaceResetMinutes
+        } else {
+            placeResetMinutes = max(0, UserDefaults.standard.integer(forKey: Self.placeResetMinutesKey))
+        }
         if UserDefaults.standard.object(forKey: Self.draftSecondsKey) == nil {
             draftSeconds = Self.defaultDraftSeconds
         } else {
@@ -338,6 +348,14 @@ final class AppSettings: ObservableObject {
         significantFigures = value
         UserDefaults.standard.set(value, forKey: Self.sigFigsKey)
         if notifyWeb { notifySettingsChanged() }
+    }
+
+    // only the mac shell reads it, so the page isn't told
+    func setPlaceResetMinutes(_ n: Int, notifyWeb: Bool) {
+        let value = max(0, n)
+        guard value != placeResetMinutes else { return }
+        placeResetMinutes = value
+        UserDefaults.standard.set(value, forKey: Self.placeResetMinutesKey)
     }
 
     func setDraftSeconds(_ n: Int, notifyWeb: Bool) {

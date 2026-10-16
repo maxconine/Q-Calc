@@ -231,6 +231,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func hide(because why: String = "asked") {
         wantVisible = false
+        // the clock for moving the bar back runs from the last time it was in use
+        if panel?.isVisible == true { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastHiddenKey) }
         // before anything else, so the next show never finds the bar the size of the screen
         setGameFullscreen(false, fade: false)
         guard panel?.isVisible == true else { return }
@@ -250,6 +252,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         keepFallback = false
         shownAt = uptime()
         targetScreen = Self.screenWithPointer()?.frame
+        resetPlaceIfIdle()
         showOnce()
         let age = panelMadeAt > 0 ? seconds(shownAt - panelMadeAt) : "new"
         OverlayLog.note(
@@ -1263,6 +1266,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             guard p.x >= body.minX, p.x <= body.maxX, p.y >= body.minY, p.y <= body.maxY else { return event }
             let edge: CGFloat = 14
             let alongTop = p.y >= body.maxY - edge
+            // a thin strip along the bottom moves it too, below the input's text
+            let alongBottom = p.y <= body.minY + 5
             // either side edge drags the bar wider or narrower; the top strip still moves it
             let onLeft = p.x <= body.minX + self.resizeGrip
             let onRight = p.x >= body.maxX - self.resizeGrip
@@ -1271,7 +1276,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 return nil
             }
             let topCorner = p.y >= body.maxY - 44 && (p.x <= body.minX + edge || p.x >= body.maxX - edge)
-            if alongTop || topCorner {
+            if alongTop || topCorner || alongBottom {
                 if event.clickCount == 2 {
                     self.forgetPosition()
                     return nil
@@ -1319,6 +1324,26 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     private static let positionsKey = "overlayPositions"
+    private static let lastHiddenKey = "qcalc.lastHidden"
+
+    // gone unopened longer than the setting: every remembered spot and the dragged width go, so this show opens in the
+    // usual place at the usual width
+    private func resetPlaceIfIdle() {
+        let minutes = AppSettings.shared.placeResetMinutes
+        let last = UserDefaults.standard.double(forKey: Self.lastHiddenKey)
+        guard minutes > 0, last > 0, Date().timeIntervalSince1970 - last >= Double(minutes) * 60 else { return }
+        let moved = UserDefaults.standard.object(forKey: Self.positionsKey) != nil || overlayWidth != minOverlayWidth
+        guard moved else { return }
+        UserDefaults.standard.removeObject(forKey: Self.positionsKey)
+        UserDefaults.standard.removeObject(forKey: Self.overlayWidthKey)
+        overlayWidth = minOverlayWidth
+        if let panel, !panel.isVisible, sizeRoom == .closed {
+            var frame = panel.frame
+            frame.size.width = minOverlayWidth
+            panel.setFrame(frame, display: false)
+        }
+        OverlayLog.note("back to the usual spot and width after \(minutes) min unopened")
+    }
 
     private func screenKey(_ screen: NSScreen) -> String? {
         (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.stringValue
