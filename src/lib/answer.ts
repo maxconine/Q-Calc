@@ -86,12 +86,22 @@ type HistoryAnswer = {
   solve?: SolveInfo
 }
 
-/** A solved row with several roots inserts them as a list, a message row nothing; null for any other row. */
+/** A solved row's roots as each one inserts, when it has more than one; null for any other row. */
+export function solveRoots(row: { solve?: SolveInfo }, sigFigs = DEFAULT_SIG_FIGS): string[] | null {
+  const s = row.solve
+  if (s?.outcome !== 'roots' || s.roots.length < 2) return null
+  return s.roots.map((r) => formatNumber(r, sigFigs))
+}
+
+/**
+ * A solved row with several roots inserts its first one (each root in the tape is its own button, so a click picks
+ * another), never the whole list; a message row inserts nothing; null for any other row.
+ */
 export function solveInsert(row: { solve?: SolveInfo }, sigFigs = DEFAULT_SIG_FIGS): string | null {
   const s = row.solve
   if (!s) return null
   if (s.outcome !== 'roots') return ''
-  return s.roots.length > 1 ? `[${s.roots.map((r) => formatNumber(r, sigFigs)).join(', ')}]` : null
+  return solveRoots(row, sigFigs)?.[0] ?? null
 }
 
 export function hasDualAnswer(row: { display: string; exact?: string }): boolean {

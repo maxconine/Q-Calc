@@ -220,6 +220,8 @@ function lastAnswerRow(history: HistoryRow[]): HistoryRow | undefined {
     if (!row || row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     // `ans` never becomes "no real solution"
     if (row.solve && row.solve.outcome !== 'roots') continue
+    // nor a list of roots: the one wanted is clicked in the tape
+    if (row.solve && row.solve.roots.length > 1) return undefined
     if ((row.n != null && Number.isFinite(row.n)) || row.display.trim()) return row
   }
   return undefined

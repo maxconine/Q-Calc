@@ -291,6 +291,8 @@ export function lastHistoryNumber(rows: HistoryRow[]): number | undefined {
     if (!row || row.kind === 'definition' || row.kind === 'function' || row.kind === 'system') continue
     // a matrix answer is `ans` now, through historyQuantities
     if (isLiteralQuantity(row.quantity)) return undefined
+    // several roots are no one number; the one wanted is clicked in the tape
+    if (row.solve?.outcome === 'roots' && row.solve.roots.length > 1) return undefined
     const n = row.n
     // a unit answer's `ans` comes from historyQuantities instead
     if (n != null && Number.isFinite(n)) return row.quantity == null ? n : undefined

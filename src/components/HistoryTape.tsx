@@ -1,4 +1,4 @@
-import type { RefObject } from 'react'
+import { Fragment, type RefObject } from 'react'
 import { prettyAnswer } from '../engine/format'
 import {
   hasDualAnswer,
@@ -6,6 +6,7 @@ import {
   insertableHistoryAnswer,
   prettyRoots,
   solveInsert,
+  solveRoots,
   visibleAnswer,
   type AnswerForm,
 } from '../lib/answer'
@@ -49,6 +50,28 @@ function solvedFor(row: HistoryRow) {
   ) : null
 }
 
+// a row with several roots: each is its own button, so a click puts just that one in the bar
+function RootPicks({ row, sigFigs, onInsert, lead = true }: { row: HistoryRow; sigFigs?: number; onInsert: (text: string) => void; lead?: boolean }) {
+  const roots = solveRoots(row, sigFigs) ?? []
+  // the tape shows each root as the row reads; it inserts at full precision
+  const shown = row.display.split(', ').filter((part) => part !== '…')
+  const labels = shown.length === roots.length ? shown : roots
+  return (
+    <div className="tape-a tape-roots" role="group" aria-label="Solutions: click one to insert it">
+      {lead ? solvedFor(row) : null}
+      {roots.map((root, k) => (
+        <Fragment key={k}>
+          {k ? <span className="tape-root-sep">, </span> : null}
+          <button type="button" className="tape-root" title="Insert this solution at the cursor" onMouseDown={keepFocus} onClick={() => onInsert(root)}>
+            {prettyRoots(labels[k]!)}
+          </button>
+        </Fragment>
+      ))}
+      {row.solve?.more ? <span className="tape-root-sep">, …</span> : null}
+    </div>
+  )
+}
+
 function answerTitle(row: HistoryRow, answerForm: AnswerForm): string {
   if (row.kind === 'definition') return 'Insert word at the cursor'
   if (answerForm === 'exact' && row.exact) return 'Insert exact value at the cursor'
@@ -84,16 +107,22 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
               <span className="tape-eq" aria-hidden>
                 ≈
               </span>
-              <button
-                type="button"
-                className="tape-a"
-                title="Insert approximation at the cursor"
-                onMouseDown={keepFocus}
-                onClick={() => onInsert(insertableHistoryAnswer(row, 'approx', sigFigs))}
-              >
-                {row.solve ? prettyRoots(row.display) : prettyAnswer(row.display)}
-              </button>
+              {solveRoots(row) ? (
+                <RootPicks row={row} sigFigs={sigFigs} onInsert={onInsert} lead={false} />
+              ) : (
+                <button
+                  type="button"
+                  className="tape-a"
+                  title="Insert approximation at the cursor"
+                  onMouseDown={keepFocus}
+                  onClick={() => onInsert(insertableHistoryAnswer(row, 'approx', sigFigs))}
+                >
+                  {row.solve ? prettyRoots(row.display) : prettyAnswer(row.display)}
+                </button>
+              )}
             </div>
+          ) : solveRoots(row) ? (
+            <RootPicks row={row} sigFigs={sigFigs} onInsert={onInsert} />
           ) : (
             <button
               type="button"

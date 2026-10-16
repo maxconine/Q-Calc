@@ -10,6 +10,7 @@ import {
   normalizeHistoryInsert,
   prettyRoots,
   visibleAnswer,
+  solveRoots,
 } from './answer'
 
 describe('insertableAnswer', () => {
@@ -278,12 +279,15 @@ describe('answerAmong', () => {
 describe('solved rows', () => {
   const roots = (r: number[], outcome: 'roots' | 'none' = 'roots') => ({ variable: 'x', roots: r, outcome })
 
-  it('97: several roots insert as a list', () => {
+  it('97: several roots never insert as a list: the whole row gives the first, each root is its own pick', () => {
     const row = { display: '2, 3', solve: roots([2, 3]) }
-    expect(insertableHistoryAnswer(row, 'approx')).toBe('[2, 3]')
+    expect(insertableHistoryAnswer(row, 'approx')).toBe('2')
+    expect(solveRoots(row)).toEqual(['2', '3'])
     const pair = { display: '±1.41421356237', exact: '±sqrt(2)', solve: roots([-Math.SQRT2, Math.SQRT2]) }
-    expect(insertableHistoryAnswer(pair, 'exact')).toBe('[-1.41421356237, 1.41421356237]')
-    expect(insertableHistoryReuse({ ...pair, expr: 'x^2 = 2' }, 'exact', 'answer')).toBe('[-1.41421356237, 1.41421356237]')
+    expect(insertableHistoryAnswer(pair, 'exact')).toBe('-1.41421356237')
+    expect(insertableHistoryReuse({ ...pair, expr: 'x^2 = 2' }, 'exact', 'answer')).toBe('-1.41421356237')
+    expect(solveRoots(pair)).toEqual(['-1.41421356237', '1.41421356237'])
+    expect(solveRoots({ solve: roots([4]) })).toBeNull()
   })
 
   it('98: one root inserts as usual', () => {

@@ -1087,6 +1087,33 @@ html.quick-native .four-twenty.wide {
 .tape-a.tape-message {
   color: var(--muted);
 }
+.tape-roots {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  column-gap: 0;
+}
+.tape-row > .tape-roots {
+  display: flex;
+}
+.tape-root {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.tape-root:hover {
+  color: var(--answer-hover);
+  background: color-mix(in srgb, var(--answer) 12%, transparent);
+}
+.tape-root-sep {
+  white-space: pre;
+}
 .tape-a-dual {
   display: flex;
   align-items: center;
