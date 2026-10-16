@@ -134,10 +134,18 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var webReady = false
     private var triedBundle = false
     private var triedDevServer = false
-    private let minOverlayWidth: CGFloat = 680
+    // the usual width, and how narrow a drag on a side edge may make it
+    private let defaultOverlayWidth: CGFloat = 680
+    private let minOverlayWidth: CGFloat = 340
     // the bar's width: dragged wider from either edge for long calculations, and kept across launches
     private static let overlayWidthKey = "qcalc.overlayWidth"
-    private var overlayWidth: CGFloat = max(680, CGFloat(UserDefaults.standard.double(forKey: OverlayController.overlayWidthKey)))
+    private var overlayWidth: CGFloat = {
+        let saved = CGFloat(UserDefaults.standard.double(forKey: OverlayController.overlayWidthKey))
+        return saved > 0 ? max(340, saved) : 680
+    }()
+    // set by a drag the user started; while it's set, wherever the window moves is where they put it
+    private var userMoving = false
+    private var moveObserver: NSObjectProtocol?
     // how close to the bar's left or right edge a press resizes it rather than reaching the page
     private let resizeGrip: CGFloat = 8
     private let overlayMinHeight: CGFloat = 72
@@ -231,6 +239,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func hide(because why: String = "asked") {
         wantVisible = false
+        userMoving = false
         // the clock for moving the bar back runs from the last time it was in use
         if panel?.isVisible == true { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastHiddenKey) }
         // before anything else, so the next show never finds the bar the size of the screen
@@ -1091,7 +1100,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // the dragged side moves and the other stays put; the page reports its new height as it reflows
     private func resizeBar(by dx: CGFloat, from side: ResizeSide) {
         guard let panel, sizeRoom == .closed, dx != 0 else { return }
-        let width = fittedWidth(panel.frame.width + dx, on: panel.screen)
+        var width = fittedWidth(panel.frame.width + dx, on: panel.screen)
+        // the dragged edge stops at the screen's edge; the other side never moves to make room
+        if let visible = panel.screen?.visibleFrame {
+            let room = side == .right ? visible.maxX - panel.frame.minX : panel.frame.maxX - visible.minX
+            width = max(min(width, room), min(panel.frame.width, minOverlayWidth))
+        }
         guard width != panel.frame.width else { return }
         var frame = panel.frame
         if side == .left { frame.origin.x = frame.maxX - width }
@@ -1306,6 +1320,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     // on the display with the pointer, so it opens where the user is looking
     private func position() {
+        userMoving = false
         guard let panel,
               let main = NSScreen.screens.first(where: { $0.frame == targetScreen }) ?? Self.screenWithPointer()
         else { return }
@@ -1332,14 +1347,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let minutes = AppSettings.shared.placeResetMinutes
         let last = UserDefaults.standard.double(forKey: Self.lastHiddenKey)
         guard minutes > 0, last > 0, Date().timeIntervalSince1970 - last >= Double(minutes) * 60 else { return }
-        let moved = UserDefaults.standard.object(forKey: Self.positionsKey) != nil || overlayWidth != minOverlayWidth
+        let moved = UserDefaults.standard.object(forKey: Self.positionsKey) != nil || overlayWidth != defaultOverlayWidth
         guard moved else { return }
         UserDefaults.standard.removeObject(forKey: Self.positionsKey)
         UserDefaults.standard.removeObject(forKey: Self.overlayWidthKey)
-        overlayWidth = minOverlayWidth
+        overlayWidth = defaultOverlayWidth
         if let panel, !panel.isVisible, sizeRoom == .closed {
             var frame = panel.frame
-            frame.size.width = minOverlayWidth
+            frame.size.width = defaultOverlayWidth
             panel.setFrame(frame, display: false)
         }
         OverlayLog.note("back to the usual spot and width after \(minutes) min unopened")
@@ -1361,8 +1376,20 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // performDrag runs until mouse up; a click that didn't move it saves nothing
     private func dragAndRemember(_ panel: OverlayPanel, _ event: NSEvent) {
         let before = panel.frame.origin
+        observeMoves()
+        userMoving = true
         panel.performDrag(with: event)
         if panel.frame.origin != before { rememberPosition() }
+    }
+
+    // performDrag can hand the drag to the window server and return before the window has moved, so the spot is kept
+    // as the window moves, for as long as the bar stays up after the user grabbed it
+    private func observeMoves() {
+        guard moveObserver == nil else { return }
+        moveObserver = NotificationCenter.default.addObserver(forName: NSWindow.didMoveNotification, object: nil, queue: .main) { [weak self] note in
+            guard let self, self.userMoving, let panel = self.panel, note.object as? NSWindow === panel, panel.isVisible else { return }
+            self.rememberPosition()
+        }
     }
 
     private func rememberPosition() {
