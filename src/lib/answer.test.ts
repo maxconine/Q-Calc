@@ -11,6 +11,7 @@ import {
   prettyRoots,
   visibleAnswer,
   solveRoots,
+  historyPicks,
 } from './answer'
 
 describe('insertableAnswer', () => {
@@ -331,4 +332,28 @@ describe('unitlessAnswer', () => {
       expect(unitlessAnswer(shown)).toBe(shown)
     },
   )
+})
+
+describe('historyPicks: what ← → step through on a highlighted row', () => {
+  const roots = (r: number[]) => ({ variable: 'x', roots: r, outcome: 'roots' as const })
+
+  it('a solve with several roots: the expression, then each root, starting on the first root', () => {
+    const row = { expr: 'solve sin(x) = 0.5', display: '30, 150', solve: roots([30, 150]) }
+    expect(historyPicks(row, 'exact')).toEqual({ answers: ['30', '150'], start: 1 })
+  })
+
+  it('an exact and approximate answer: both, starting on the one the setting shows', () => {
+    const row = { expr: 'sqrt(2)', display: '1.41421356237', exact: 'sqrt(2)', n: Math.SQRT2 }
+    expect(historyPicks(row, 'exact')).toEqual({ answers: ['sqrt(2)', '1.41421356237'], start: 1 })
+    expect(historyPicks(row, 'approx').start).toBe(2)
+  })
+
+  it('a plain answer: the expression and the answer, starting on the answer', () => {
+    expect(historyPicks({ expr: '2+3', display: '5', n: 5 }, 'exact')).toEqual({ answers: ['5'], start: 1 })
+  })
+
+  it('a row with no answer to pick stays on its expression', () => {
+    expect(historyPicks({ expr: 'solve x^2 = -1', display: 'no real solution', solve: { variable: 'x', roots: [], outcome: 'none' } }, 'exact')).toEqual({ answers: [], start: 0 })
+    expect(historyPicks({ expr: 'f(x) = x^2', display: '', kind: 'function' }, 'exact').start).toBe(0)
+  })
 })

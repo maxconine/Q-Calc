@@ -37,6 +37,8 @@ interface Props {
   onUp: () => boolean
   onDown: () => boolean
   onPrefixStep?: (dir: 1 | -1) => void
+  // ← → while a history row is highlighted, to pick its expression or one of its answers; true when it took the key
+  onSide?: (dir: 1 | -1) => boolean
   onTab?: (dir: 1 | -1) => void
   // shown in place of the placeholder while the input is empty; a new `id` restarts its fade
   example?: { text: string; id: number } | null
@@ -166,6 +168,7 @@ export function QuickInput({
   onEnter,
   onUp,
   onDown,
+  onSide,
   onPrefixStep,
   onTab,
   example,
@@ -207,6 +210,8 @@ export function QuickInput({
   onEnterRef.current = onEnter
   onUpRef.current = onUp
   onDownRef.current = onDown
+  const onSideRef = useRef(onSide)
+  onSideRef.current = onSide
   onPrefixStepRef.current = onPrefixStep
   onTabRef.current = onTab
   keepWordsRef.current = keepWords
@@ -493,6 +498,10 @@ export function QuickInput({
     }
     // tab belongs to the completion only while its ghost shows
     const plainKey = !e.shiftKey && !e.altKey && !e.metaKey && !e.ctrlKey
+    if (plainKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && onSideRef.current?.(e.key === 'ArrowLeft' ? -1 : 1)) {
+      e.preventDefault()
+      return
+    }
     if (completion && plainKey && (e.key === 'Tab' || e.key === 'ArrowRight')) {
       e.preventDefault()
       acceptCompletion(e.currentTarget)

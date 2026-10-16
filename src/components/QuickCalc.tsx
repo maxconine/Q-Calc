@@ -55,6 +55,8 @@ import {
   insertableAnswer,
   insertableHistoryAnswer,
   insertableHistoryReuse,
+  historyPicks,
+  solveRoots,
   unitlessAnswer,
   visibleAnswer,
   type AnswerForm,
@@ -258,6 +260,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [q, setQ] = useState(storedDraft?.expr ?? '')
   const [copied, setCopied] = useState(false)
   const [selected, setSelected] = useState<number | null>(null)
+  // on the selected row, its expression (0) or one of its answers (1…), which ← → move between and ↵ inserts
+  const [pick, setPick] = useState(1)
   const [tapeOpen, setTapeOpen] = useState(false)
   const [nativeLive, setNativeLive] = useState<NativeLive | null>(null)
   // unit picked with ⌥↑/⌥↓ for the live answer
@@ -1095,14 +1099,37 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     if (!history.length) return false
     if (selected == null) snapshotCaret()
-    if (!tapeOpen) {
-      setTapeOpen(true)
-      setSelected(history.length - 1)
-      return true
-    }
-    setSelected((cur) => (cur == null ? history.length - 1 : Math.max(0, cur - 1)))
+    const to = !tapeOpen || selected == null ? history.length - 1 : Math.max(0, selected - 1)
+    if (!tapeOpen) setTapeOpen(true)
+    setSelected(to)
+    setPick(historyPicks(history[to]!, settings.answerForm, settings.sigFigs).start)
     return true
-  }, [helpOpen, history.length, selected, setGamePick, snapshotCaret, tapeOpen])
+  }, [helpOpen, history, selected, setGamePick, settings.answerForm, settings.sigFigs, snapshotCaret, tapeOpen])
+
+  const onSide = useCallback(
+    (dir: 1 | -1): boolean => {
+      const row = selected != null && tapeOpen ? history[selected] : undefined
+      if (!row) return false
+      const { answers } = historyPicks(row, settings.answerForm, settings.sigFigs)
+      setPick((cur) => Math.min(answers.length, Math.max(0, cur + dir)))
+      return true
+    },
+    [history, selected, settings.answerForm, settings.sigFigs, tapeOpen],
+  )
+
+  // ↵ on a highlighted row: whatever ← → have picked
+  const insertHistoryPick = useCallback(
+    (index: number) => {
+      const row = history[index]
+      if (!row) return
+      const { answers } = historyPicks(row, settings.answerForm, settings.sigFigs)
+      const text = pick > 0 ? answers[Math.min(pick, answers.length) - 1] : undefined
+      if (text == null) return insertHistoryExpr(index)
+      track('history.insert')
+      insertPlain(text, row.kind !== 'definition')
+    },
+    [history, insertHistoryExpr, insertPlain, pick, settings.answerForm, settings.sigFigs],
+  )
 
   const onDown = useCallback((): boolean => {
     if (pongOpenRef.current) return true
@@ -1125,8 +1152,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return true
     }
     setSelected(selected + 1)
+    setPick(historyPicks(history[selected + 1]!, settings.answerForm, settings.sigFigs).start)
     return true
-  }, [gamePick, history.length, restoreCaret, selected, setGamePick, tapeOpen])
+  }, [gamePick, history, restoreCaret, selected, setGamePick, settings.answerForm, settings.sigFigs, tapeOpen])
 
   // `tutorial` in the bar, or replay from settings: the walkthrough from the top, whatever was done before
   const startTutorial = useCallback(() => {
@@ -1218,7 +1246,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       if (gamePick != null) playGame(GAMES[gamePick]!.kind)
     } else if (selected != null && history[selected]?.kind === 'system') openHistorySystem(selected)
     else if (selected != null && alt) insertHistoryOther(selected)
-    else if (selected != null) insertHistoryAnswer(selected)
+    else if (selected != null) insertHistoryPick(selected)
     else if (unitFixRef.current?.q === qRef.current) {
       // the second ↵ writes the offered unit in; the answer it gives is the next ↵'s to save
       const { at, text } = unitFixRef.current
@@ -1231,7 +1259,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       setUnitFix(fix && { ...fix, q: qRef.current, caret })
       setHint(fix?.hint ?? blankEnterHint())
     }
-  }, [blankEnterHint, commit, offerUnit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryAnswer, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
+  }, [blankEnterHint, commit, offerUnit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryPick, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
 
   const closeGame = useCallback(() => {
     pongOpenRef.current = null
@@ -1576,10 +1604,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <HistoryTape
               history={history}
               selected={selected}
+              pick={pick}
               answerForm={settings.answerForm}
               sigFigs={settings.sigFigs}
               tapeRef={tapeRef}
               onInsert={(text) => insertPlain(text, true)}
+              onCopy={copyValue}
               onInsertExpr={insertHistoryExpr}
               onInsertAnswer={insertHistoryAnswer}
               onOpenSystem={openHistorySystem}
@@ -1593,6 +1623,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               sigFigs={settings.sigFigs}
               tapeRef={tapeRef}
               onInsert={(text) => insertPlain(text, true)}
+              onCopy={copyValue}
               onInsertExpr={insertHistoryExpr}
               onInsertAnswer={insertHistoryAnswer}
               onOpenSystem={openHistorySystem}
@@ -1619,6 +1650,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               onEnter={onEnter}
               onUp={onUp}
               onDown={onDown}
+              onSide={onSide}
               onPrefixStep={onPrefixStep}
               chain={chained}
               squiggle={squiggle?.q === q && !display ? squiggle.span : null}
@@ -1651,6 +1683,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                     : insertableAnswer(display, liveN, settings.sigFigs),
               }}
               label={rootsOf}
+              roots={liveSolve ? solveRoots({ solve: liveSolve }, settings.sigFigs) : null}
               message={sysMessage || periodicCmd || gamesShown || Boolean(identityCmd) || tutorialCmd || Boolean(pongCmd) || Boolean(liveSolve && liveSolve.outcome !== 'roots')}
             />
             )}

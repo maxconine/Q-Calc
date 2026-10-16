@@ -1004,6 +1004,49 @@ html.quick-native .four-twenty.wide {
   user-select: none;
   margin-right: 0.3em;
 }
+.live-roots {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.live-roots {
+  font-size: var(--fs-display);
+  letter-spacing: var(--track-display);
+}
+.live-roots > .live-root {
+  width: auto;
+  flex: 0 0 auto;
+  min-width: 0;
+  margin-right: 0;
+  padding: 2px 3px;
+  border-radius: 4px;
+}
+.live-roots > .live-var {
+  font-size: var(--fs-answer-part);
+  margin-right: 0.2em;
+}
+.live-roots > .live-root:hover,
+.live-all:hover,
+.tape-all:hover {
+  color: var(--answer-hover);
+  background: color-mix(in srgb, var(--answer) 12%, transparent);
+}
+.live-all,
+.tape-all {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  padding: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.live-root-sep {
+  white-space: pre;
+  color: var(--answer);
+}
 .live-dual > .live-var {
   font-size: var(--fs-answer-part);
   flex-shrink: 0;
@@ -1110,6 +1153,17 @@ html.quick-native .four-twenty.wide {
 .tape-root:hover {
   color: var(--answer-hover);
   background: color-mix(in srgb, var(--answer) 12%, transparent);
+}
+/* the part of the selected row ← → have picked, which ↵ puts in the bar */
+.tape-row.selected .picked {
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--answer) 55%, transparent);
+  background: color-mix(in srgb, var(--answer) 14%, transparent);
+}
+.tape-row.selected .tape-q.picked {
+  color: var(--ink);
+  padding-left: 4px;
+  padding-right: 4px;
 }
 .tape-root-sep {
   white-space: pre;

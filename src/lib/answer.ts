@@ -126,6 +126,30 @@ export function insertableHistoryAnswer(
   return insertableAnswer(row.display, row.meas ? undefined : row.n, sigFigs)
 }
 
+/**
+ * What ← and → step through on a highlighted history row: the expression (pick 0), then each answer the row shows,
+ * as each inserts: a solve's roots one by one, the exact value and then the approximation, or the one answer.
+ * `start` is the pick ↑ lands on: the answer the row reads as, or the expression when there is none.
+ */
+export function historyPicks(
+  row: HistoryAnswer & { expr: string; kind?: string },
+  form: AnswerForm,
+  sigFigs = DEFAULT_SIG_FIGS,
+): { answers: string[]; start: number } {
+  if (row.kind === 'function' || row.kind === 'system') return { answers: [], start: 0 }
+  if (row.kind === 'definition') return { answers: [insertableHistoryReuse(row, form, 'answer', sigFigs)], start: 1 }
+  if (row.solve && row.solve.outcome !== 'roots') return { answers: [], start: 0 }
+  const roots = solveRoots(row, sigFigs)
+  if (roots) return { answers: roots, start: 1 }
+  if (hasDualAnswer(row)) {
+    return {
+      answers: [insertableAnswer(row.exact!), insertableHistoryAnswer(row, 'approx', sigFigs)],
+      start: form === 'exact' ? 1 : 2,
+    }
+  }
+  return { answers: [insertableHistoryAnswer(row, form, sigFigs)], start: 1 }
+}
+
 // what enter on a highlighted history row inserts; clicks always insert the side they hit
 export function insertableHistoryReuse(
   row: HistoryAnswer & { expr: string; kind?: string },

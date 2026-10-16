@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent } from 'react'
+import { Fragment, useEffect, useState, type DragEvent } from 'react'
 import { prettyAnswer } from '../engine/format'
 import { isImproperUnitConversion } from '../engine/units'
 import { hasDualAnswer, prettyRoots } from '../lib/answer'
@@ -25,6 +25,8 @@ type Props = {
   // a solved equation: the letter shown before its roots, or a message with no roots
   label?: string
   message?: boolean
+  // a solve with several roots, each as it copies: each root is its own click, and the letter before them copies all
+  roots?: string[] | null
 }
 
 // says so in words, and screen readers hear it too
@@ -51,7 +53,7 @@ function answerHandle(text: string, onCopy: (text: string) => void, onRefocus: (
   }
 }
 
-export function LiveAnswer({ copied, example, display, exact, shown, steady, formTick, sides, onCopy, onRefocus, label, message }: Props) {
+export function LiveAnswer({ copied, example, display, exact, shown, steady, formTick, sides, onCopy, onRefocus, label, message, roots }: Props) {
   const pretty = label ? prettyRoots(shown) : prettyAnswer(shown)
   const fitRef = useFitFont<HTMLButtonElement>(pretty)
   // the half that was clicked; ⌘C copies whichever half is the shown answer
@@ -78,6 +80,28 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
       <button type="button" className="live message" disabled>
         {display}
       </button>
+    )
+  }
+  if (label && roots && roots.length > 1 && shown && !(exact && hasDualAnswer({ display, exact }))) {
+    // each root reads as the answer shows it, and copies at full precision
+    const parts = shown.split(', ').filter((part) => part !== '…')
+    const labels = parts.length === roots.length ? parts : roots
+    return (
+      <div className={`live-roots${copied ? ' copied' : ''}`} role="group" aria-label="Solutions">
+        {copied ? CHECK : null}
+        <button type="button" className="live-var live-all" title="Copy all the solutions" {...answerHandle(shown, onCopy, onRefocus)}>
+          {label} =
+        </button>
+        {roots.map((root, k) => (
+          <Fragment key={k}>
+            {k ? <span className="live-root-sep">, </span> : null}
+            <button type="button" className="live live-root" title="Copy this solution" {...answerHandle(root, onCopy, onRefocus)}>
+              {prettyRoots(labels[k]!)}
+            </button>
+          </Fragment>
+        ))}
+        {parts.length < shown.split(', ').length ? <span className="live-root-sep">, …</span> : null}
+      </div>
     )
   }
   if (exact && hasDualAnswer({ display, exact })) {

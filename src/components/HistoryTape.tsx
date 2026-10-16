@@ -19,11 +19,15 @@ import type { GameKind } from '../lib/games'
 type Props = {
   history: HistoryRow[]
   selected: number | null
+  // on the selected row, the part ← → have picked: 0 the expression, then each answer in the order they read
+  pick?: number
   answerForm: AnswerForm
   sigFigs: number
   tapeRef: RefObject<HTMLDivElement | null>
   onInsert: (text: string) => void
   onInsertExpr: (index: number) => void
+  // the letter before a solve's roots copies them all
+  onCopy?: (text: string) => void
   onInsertAnswer: (index: number) => void
   onOpenSystem?: (index: number) => void
   // rows before this stay hidden; the recent view is a tail of the tape
@@ -51,18 +55,37 @@ function solvedFor(row: HistoryRow) {
 }
 
 // a row with several roots: each is its own button, so a click puts just that one in the bar
-function RootPicks({ row, sigFigs, onInsert, lead = true }: { row: HistoryRow; sigFigs?: number; onInsert: (text: string) => void; lead?: boolean }) {
+function RootPicks({
+  row,
+  sigFigs,
+  onInsert,
+  lead = true,
+  picked,
+  onCopy,
+}: {
+  row: HistoryRow
+  sigFigs?: number
+  onInsert: (text: string) => void
+  lead?: boolean
+  // the root ← → are on, from 0
+  picked?: number
+  onCopy?: (text: string) => void
+}) {
   const roots = solveRoots(row, sigFigs) ?? []
   // the tape shows each root as the row reads; it inserts at full precision
   const shown = row.display.split(', ').filter((part) => part !== '…')
   const labels = shown.length === roots.length ? shown : roots
   return (
     <div className="tape-a tape-roots" role="group" aria-label="Solutions: click one to insert it">
-      {lead ? solvedFor(row) : null}
+      {lead && row.solve ? (
+        <button type="button" className="tape-var tape-all" title="Copy all the solutions" onMouseDown={keepFocus} onClick={() => onCopy?.(row.display)}>
+          {row.solve.variable} =
+        </button>
+      ) : null}
       {roots.map((root, k) => (
         <Fragment key={k}>
           {k ? <span className="tape-root-sep">, </span> : null}
-          <button type="button" className="tape-root" title="Insert this solution at the cursor" onMouseDown={keepFocus} onClick={() => onInsert(root)}>
+          <button type="button" className={`tape-root${picked === k ? ' picked' : ''}`} title="Insert this solution at the cursor" onMouseDown={keepFocus} onClick={() => onInsert(root)}>
             {prettyRoots(labels[k]!)}
           </button>
         </Fragment>
@@ -78,14 +101,19 @@ function answerTitle(row: HistoryRow, answerForm: AnswerForm): string {
   return 'Insert approximation at the cursor'
 }
 
-export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, onInsert, onInsertExpr, onInsertAnswer, onOpenSystem, from = 0 }: Props) {
+export function HistoryTape({ history, selected, pick, answerForm, sigFigs, tapeRef, onInsert, onCopy, onInsertExpr, onInsertAnswer, onOpenSystem, from = 0 }: Props) {
   return (
     <div className="tape" ref={tapeRef} aria-label="Calculation history">
-      {history.map((row, i) => i < from ? null : (
+      {history.map((row, i) => {
+        if (i < from) return null
+        // which part of this row ← → have picked, if it's the selected one
+        const at = selected === i ? pick : undefined
+        const on = (n: number) => (at === n ? ' picked' : '')
+        return (
         <div className={`tape-row ${selected === i ? 'selected' : ''}`} data-hist={i} key={row.id}>
           <button
             type="button"
-            className="tape-q"
+            className={`tape-q${on(0)}`}
             title={row.kind === 'system' ? 'Edit equations' : row.kind === 'definition' ? 'Insert word at the cursor' : 'Insert expression at the cursor'}
             onMouseDown={keepFocus}
             onClick={() => (row.kind === 'system' && onOpenSystem ? onOpenSystem(i) : onInsertExpr(i))}
@@ -97,7 +125,7 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
               {solvedFor(row)}
               <button
                 type="button"
-                className="tape-a"
+                className={`tape-a${solveRoots(row) ? '' : on(1)}`}
                 title="Insert exact value at the cursor"
                 onMouseDown={keepFocus}
                 onClick={() => onInsert(solveInsert(row, sigFigs) ?? insertableAnswer(row.exact!))}
@@ -108,11 +136,11 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
                 ≈
               </span>
               {solveRoots(row) ? (
-                <RootPicks row={row} sigFigs={sigFigs} onInsert={onInsert} lead={false} />
+                <RootPicks row={row} sigFigs={sigFigs} onInsert={onInsert} onCopy={onCopy} lead={false} picked={at == null ? undefined : at - 1} />
               ) : (
                 <button
                   type="button"
-                  className="tape-a"
+                  className={`tape-a${on(2)}`}
                   title="Insert approximation at the cursor"
                   onMouseDown={keepFocus}
                   onClick={() => onInsert(insertableHistoryAnswer(row, 'approx', sigFigs))}
@@ -122,11 +150,11 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
               )}
             </div>
           ) : solveRoots(row) ? (
-            <RootPicks row={row} sigFigs={sigFigs} onInsert={onInsert} />
+            <RootPicks row={row} sigFigs={sigFigs} onInsert={onInsert} onCopy={onCopy} picked={at == null ? undefined : at - 1} />
           ) : (
             <button
               type="button"
-              className={`tape-a ${row.solve && row.solve.outcome !== 'roots' ? 'tape-message' : ''}`}
+              className={`tape-a ${row.solve && row.solve.outcome !== 'roots' ? 'tape-message' : ''}${on(1)}`}
               title={answerTitle(row, answerForm)}
               onMouseDown={keepFocus}
               onClick={() => {
@@ -139,7 +167,8 @@ export function HistoryTape({ history, selected, answerForm, sigFigs, tapeRef, o
             </button>
           )}
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
