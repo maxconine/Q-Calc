@@ -1,9 +1,9 @@
 cask "q-calc" do
   arch arm: "apple-silicon", intel: "intel"
 
-  version "2.0.10"
-  sha256 arm:   "dfb4a1bb0854bcf60fff4e778b64f2c631da07ced93286baca3b029a4c505de5",
-         intel: "6885381cb1d79ad7a36735dabec6c2b453c868194f188cef4b49aaa4790461d4"
+  version "2.0.11"
+  sha256 arm:   "033d4006400d29b280cf2150fe01070be601378f9dd65efe2b863fa4b7063286",
+         intel: "7ed610ab0118c4eb6c629033f8af99d36273714e582754c6ab11bc6090d81a44"
 
   url "https://github.com/maxconine/Q-Calc/releases/download/v#{version}/Q-Calc-#{version}-#{arch}.zip"
   name "Q Calc"
