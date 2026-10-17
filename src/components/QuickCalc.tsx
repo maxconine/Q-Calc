@@ -1288,6 +1288,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     calcWindow().__qcalcEscape = escapeLayer
   }, [escapeLayer])
 
+  // the windows shell's ctrl+w closes the front reference sheet before the bar, as the mac's ⌘W does
+  useEffect(() => {
+    calcWindow().__qcalcCloseSheet = () => {
+      if (identityOpen) setIdentityOpen(null)
+      else if (periodicOpen) setPeriodicOpen(false)
+      else return false
+      return true
+    }
+  }, [identityOpen, periodicOpen])
+
   useEffect(() => {
     if (!caretRef.current) return
     restoreCaret()

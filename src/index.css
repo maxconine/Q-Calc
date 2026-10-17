@@ -336,8 +336,9 @@ html.quick-native .four-twenty-room.smoking.wide {
   height: 160px;
 }
 
+/* --bar-width is the bar's own width where the host lets it be dragged wider (the windows shell sets it) */
 html.quick-native .spotlight-slot {
-  padding-inline: max(0px, (100vw - 680px) / 2);
+  padding-inline: max(0px, (100vw - var(--bar-width, 680px)) / 2);
 }
 
 html.quick-native .spotlight-slot:has(> .four-twenty-room.wide) {
@@ -367,7 +368,7 @@ html.quick-native .four-twenty {
 }
 
 html.quick-native .four-twenty.wide {
-  --bar-x: max(0px, (100% - 680px) / 2);
+  --bar-x: max(0px, (100% - var(--bar-width, 680px)) / 2);
   --bar-top: 160px;
   inset: 0;
   height: auto;

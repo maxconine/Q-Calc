@@ -20,7 +20,11 @@ function boot(overlay: boolean, own?: Record<string, { postMessage: (m: unknown)
       },
     },
     innerWidth: 680,
+    innerHeight: 72,
     addEventListener: (type: string, f: Listener) => (listeners[type] ??= []).push(f),
+    removeEventListener: (type: string, f: Listener) => {
+      listeners[type] = (listeners[type] ?? []).filter((g) => g !== f)
+    },
     dispatchEvent: () => true,
   }
   if (own) Object.defineProperty(win, 'webkit', { get: () => ({ messageHandlers: own }), configurable: true })
@@ -44,12 +48,12 @@ function boot(overlay: boolean, own?: Record<string, { postMessage: (m: unknown)
     doc.documentElement = root
     for (const w of watchers) w()
   }
-  const boot = { overlay, settings: SETTINGS, onboarding: { opens: 2, commits: 0, hints: 16, done: false }, rates: overlay ? { base: 'EUR', rates: { USD: 1.1 } } : null }
+  const boot = { overlay, settings: SETTINGS, onboarding: { opens: 2, commits: 0, hints: 16, done: false }, rates: overlay ? { base: 'EUR', rates: { USD: 1.1 } } : null, os: 'Windows 11 26200' }
   const source = shim.replace('__QCALC_BOOT__', JSON.stringify(boot))
   new Function('window', 'document', 'CustomEvent', 'MutationObserver', source)(win, doc, function () {}, FakeObserver)
   const fire = (type: string, e: Record<string, unknown>) => {
     let stopped = false
-    for (const f of listeners[type] ?? []) f({ preventDefault() {}, stopPropagation: () => (stopped = true), ...e })
+    for (const f of [...(listeners[type] ?? [])]) f({ preventDefault() {}, stopPropagation: () => (stopped = true), ...e })
     return stopped
   }
   return { win, root, classes, sent, fire, addRoot }
@@ -101,11 +105,98 @@ describe('windows shim', () => {
     expect(sent).toEqual([['host', { type: 'dismiss' }]])
   })
 
+  it('esc steps back through a layer of the page first, and ctrl+w closes whatever is open', () => {
+    const { win, sent, fire } = boot(true)
+    let layers = 1
+    win.__qcalcEscape = () => layers-- > 0
+    expect(fire('keydown', { key: 'Escape' })).toBe(true)
+    expect(sent).toEqual([])
+    fire('keydown', { key: 'Escape' })
+    expect(sent).toEqual([['host', { type: 'dismiss' }]])
+    layers = 1
+    expect(fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })).toBe(true)
+    expect(sent).toHaveLength(2)
+    // typing a w, or ctrl+shift+w, is the page's
+    expect(fire('keydown', { key: 'w', ctrlKey: false })).toBe(false)
+    expect(fire('keydown', { key: 'W', ctrlKey: true, shiftKey: true })).toBe(false)
+    expect(sent).toHaveLength(2)
+  })
+
+  it('ctrl+w closes an open reference sheet before the bar', () => {
+    const { win, sent, fire } = boot(true)
+    let sheets = 1
+    win.__qcalcCloseSheet = () => sheets-- > 0
+    expect(fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })).toBe(true)
+    expect(sent).toEqual([])
+    fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })
+    expect(sent).toEqual([['host', { type: 'dismiss' }]])
+  })
+
+  it('leaves esc to an open game', () => {
+    const { win, sent, fire } = boot(true)
+    win.__QCALC_GAME_OPEN = true
+    expect(fire('keydown', { key: 'Escape' })).toBe(false)
+    expect(sent).toEqual([])
+  })
+
+  it('tells the page which windows it is on, for the usage counts', () => {
+    expect(boot(true).win.__QCALC_OS).toBe('Windows 11 26200')
+    expect(boot(false).win.__QCALC_OS).toBeUndefined()
+  })
+
+  it('a press along the top edge or a top corner moves the bar, before the input can take it', () => {
+    const { sent, fire } = boot(true)
+    const target = { closest: () => null }
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 4, target })).toBe(true)
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 675, clientY: 30, target })).toBe(true)
+    expect(sent).toEqual([
+      ['host', { type: 'drag' }],
+      ['host', { type: 'drag' }],
+    ])
+    // the middle of the bar, a right click, and a button or the tape are the page's
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 40, target })).toBe(false)
+    expect(fire('mousedown', { detail: 1, button: 2, clientX: 300, clientY: 4, target })).toBe(false)
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 4, target: { closest: () => ({}) } })).toBe(false)
+    expect(sent).toHaveLength(2)
+  })
+
+  it('a thin strip along the bottom moves the bar too, as on the mac', () => {
+    const { sent, fire } = boot(true)
+    const target = { closest: () => null }
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 69, target })).toBe(true)
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 60, target })).toBe(false)
+    expect(sent).toEqual([['host', { type: 'drag' }]])
+  })
+
+  it('dragging a side edge widens the bar by what the pointer moved on screen', () => {
+    const { sent, fire } = boot(true)
+    const target = { closest: () => null }
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 677, clientY: 50, screenX: 1000, target })).toBe(true)
+    fire('mousemove', { screenX: 1030, clientX: 707, clientY: 50, target })
+    fire('mousemove', { screenX: 1020, clientX: 697, clientY: 50, target })
+    fire('mouseup', {})
+    // let go, so later moves widen nothing
+    fire('mousemove', { screenX: 1200, clientX: 300, clientY: 50, target })
+    expect(sent).toEqual([
+      ['host', { type: 'widen', side: 'right', dx: 30 }],
+      ['host', { type: 'widen', side: 'right', dx: -10 }],
+      ['host', { type: 'widenEnd', side: 'right' }],
+    ])
+    sent.length = 0
+    // the left edge grows the bar as the pointer goes left
+    fire('mousedown', { detail: 1, button: 0, clientX: 3, clientY: 50, screenX: 400, target })
+    fire('mousemove', { screenX: 360, clientX: 3, clientY: 50, target })
+    fire('mouseup', {})
+    expect(sent).toEqual([
+      ['host', { type: 'widen', side: 'left', dx: 40 }],
+      ['host', { type: 'widenEnd', side: 'left' }],
+    ])
+  })
+
   it('a double click on the top edge recentres; one lower down does not', () => {
     const { sent, fire } = boot(true)
     const target = { closest: () => null }
     fire('mousedown', { detail: 2, button: 0, clientX: 300, clientY: 40, target })
-    fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 4, target })
     expect(sent).toEqual([])
     fire('mousedown', { detail: 2, button: 0, clientX: 300, clientY: 4, target })
     fire('mousedown', { detail: 2, button: 0, clientX: 675, clientY: 30, target })

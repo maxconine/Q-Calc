@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MAX_SIG_FIGS, MIN_SIG_FIGS } from '../engine/format'
 import { nativeHandler } from '../lib/bridge'
-import { draftChoices, hostInfo, hotkeyNote, type HostInfo } from '../lib/hostSettings'
+import { draftChoices, hostInfo, hotkeyNote, spotChoices, type HostInfo } from '../lib/hostSettings'
 import { isWindowsHost } from '../lib/platform'
 import { mergeSettings, settingsEqual, type Settings } from '../lib/settings'
 import { calcWindow, loadSettings } from '../lib/storage'
@@ -117,6 +117,13 @@ export function SettingsPage() {
         hint="Start Q Calc in the tray when you sign in."
         value={host.autostart}
         onChange={(on) => post({ type: 'autostart', on })}
+      />
+      <SelectSetting
+        title="Move the bar back after"
+        hint="Once Q Calc has gone this long unopened, a bar you moved or widened opens in its usual spot and width."
+        options={spotChoices(host.spotSeconds).map((c) => ({ id: String(c.id), label: c.label }))}
+        value={String(host.spotSeconds)}
+        onChange={(v) => post({ type: 'spotSeconds', seconds: Number(v) })}
       />
       <section className="unit-settings" aria-label="Tutorial">
         <div className="unit-settings-head">
