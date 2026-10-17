@@ -494,6 +494,84 @@ Invoke-Check '9b' 'smoke room grows the window' $false {
     @{ Pass = $grew; Detail = "answer 420 $(if ($a.Found) { 'shown' } else { 'not seen: ' + $a.Text }); height $before px, then $tall px with the top $moved px higher; back to $(Height $h) px: $back" }
 }
 
+function Near([int]$a, [int]$b, [int]$within = 6) { [Math]::Abs($a - $b) -le $within }
+
+# the top edge is the bar's handle, as on the mac: the input lies under it, and mustn't take the press instead
+Invoke-Check '9c' 'top edge drags the bar and the spot is kept' $true {
+    $h = Show-QCalc
+    Clear-Input
+    Start-Sleep -Milliseconds 300
+    $r = $N::Rect($h)
+    $x = [int](($r.Left + $r.Right) / 2); $y = $r.Top + 5
+    $N::Drag($x, $y, $x + 220, $y + 140)
+    $moved = Wait-Until { $m = $N::Rect($h); (Near $m.Left ($r.Left + 220)) -and (Near $m.Top ($r.Top + 140)) } 2000
+    $m = $N::Rect($h)
+    $stayed = Test-Shown
+    Hide-QCalc
+    $h = Show-QCalc
+    $again = $N::Rect($h)
+    $kept = (Near $again.Left $m.Left) -and (Near $again.Top $m.Top)
+    @{ Pass = ($moved -and $stayed -and $kept)
+       Detail = "dragged 220, 140 px: moved $($m.Left - $r.Left), $($m.Top - $r.Top) px; still shown: $stayed; same spot after hide and show: $kept" }
+}
+
+Invoke-Check '9d' 'double click on the top edge recentres' $true {
+    $h = Show-QCalc
+    $r = $N::Rect($h)
+    $x = [int](($r.Left + $r.Right) / 2); $y = $r.Top + 5
+    $N::Click($x, $y)
+    $N::Click($x, $y)
+    $s = $N::Screen()
+    $centred = Wait-Until { $m = $N::Rect($h); Near ([int](($m.Left + $m.Right) / 2)) ([int]($s.Width / 2)) 40 } 2000
+    $m = $N::Rect($h)
+    @{ Pass = $centred; Detail = "window middle at x $([int](($m.Left + $m.Right) / 2)) on a $($s.Width) px wide screen; shown: $(Test-Shown)" }
+}
+
+# a thin strip under the input's text moves it too, as on the mac; recentred after for the checks that follow
+Invoke-Check '9d2' 'bottom edge drags the bar' $true {
+    $h = Show-QCalc
+    $r = $N::Rect($h)
+    $x = [int](($r.Left + $r.Right) / 2); $y = $r.Bottom - 2
+    $N::Drag($x, $y, $x - 180, $y - 120)
+    $moved = Wait-Until { $m = $N::Rect($h); (Near $m.Left ($r.Left - 180)) -and (Near $m.Top ($r.Top - 120)) } 2000
+    $m = $N::Rect($h)
+    $stayed = Test-Shown
+    $cx = [int](($m.Left + $m.Right) / 2)
+    $N::Click($cx, $m.Top + 5)
+    $N::Click($cx, $m.Top + 5)
+    Start-Sleep -Milliseconds 400
+    @{ Pass = ($moved -and $stayed); Detail = "dragged -180, -120 px from the bottom edge: moved $($m.Left - $r.Left), $($m.Top - $r.Top) px; still shown: $stayed" }
+}
+
+# either side edge makes the bar wider for a long calculation. the left one here: the right has the settings and
+# clear buttons at its edge, which keep their clicks. put back after, so the later shots are the usual bar
+Invoke-Check '9e' 'side edge widens the bar' $true {
+    $h = Show-QCalc
+    $r = $N::Rect($h)
+    # near the bottom: the top corners, most of the way down a bare bar, move it instead
+    $y = $r.Bottom - 10
+    $N::Drag($r.Left + 3, $y, $r.Left - 147, $y)
+    $wider = Wait-Until { $m = $N::Rect($h); (Near ($m.Right - $m.Left) ($r.Right - $r.Left + 150) 12) -and (Near $m.Right $r.Right 3) } 2000
+    $m = $N::Rect($h)
+    $grew = ($m.Right - $m.Left) - ($r.Right - $r.Left)
+    Start-Sleep -Milliseconds 400
+    # the bar itself, not only its window: the page's white reaches the new left edge
+    $edge = $N::Pixel($m.Left + 12, $y)
+    $inside = $N::Pixel($m.Right - 200, $y)
+    $filled = (Distance $edge $inside) -le 12
+    $stayed = Test-Shown
+    $N::Drag($m.Left + 3, $y, $m.Left + 3 + $grew + 60, $y)
+    $back = Wait-Until { $e = $N::Rect($h); Near ($e.Right - $e.Left) ($r.Right - $r.Left) 3 } 2000
+    # the left edge's drag is a move too, so the spot it left is forgotten for the checks after
+    $e = $N::Rect($h)
+    $x = [int](($e.Left + $e.Right) / 2)
+    $N::Click($x, $e.Top + 5)
+    $N::Click($x, $e.Top + 5)
+    Start-Sleep -Milliseconds 400
+    @{ Pass = ($wider -and $filled -and $stayed -and $back)
+       Detail = "dragged the left edge 150 px: $($r.Right - $r.Left) px wide, then $($m.Right - $m.Left) px, right edge moved $($m.Right - $r.Right) px; bar fills it: $filled ($(Hex $edge) at the new edge, $(Hex $inside) inside); still shown: $stayed; back to the standard width: $back" }
+}
+
 # for people to look at: the rounded edge, hairline, shadow and backdrop against light and dark
 Invoke-Check '10' 'look in light and dark' $false {
     # the other window stays on top, and would sit in the settings shots

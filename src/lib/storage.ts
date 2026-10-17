@@ -15,6 +15,8 @@ export type CalcWindow = NativeWindow & {
   __qcalcShowTips?: () => void
   __qcalcTutorial?: () => void
   __qcalcEscape?: () => boolean
+  // the windows shell's ctrl+w: closes an open reference sheet and says so, or false to hide the bar
+  __qcalcCloseSheet?: () => boolean
   // a game is open; the windows shell's own esc leaves it to the page then
   __QCALC_GAME_OPEN?: boolean
   __qcalcNativeResult?: (reply: NativeEvalReply) => void

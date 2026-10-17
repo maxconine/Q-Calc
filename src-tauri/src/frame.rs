@@ -105,6 +105,32 @@ pub fn repaint_caption(window: &WebviewWindow) {
 #[cfg(not(windows))]
 pub fn repaint_caption(_: &WebviewWindow) {}
 
+// whether this is the window the user is working in
+#[cfg(windows)]
+pub fn in_front(window: &WebviewWindow) -> bool {
+    use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
+    window.hwnd().is_ok_and(|hwnd| unsafe { GetForegroundWindow() } == hwnd.0)
+}
+
+#[cfg(not(windows))]
+pub fn in_front(_: &WebviewWindow) -> bool {
+    false
+}
+
+// the button that clicks and drags: the right one for someone who has swapped them
+#[cfg(windows)]
+pub fn primary_button_down() -> bool {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_RBUTTON};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_SWAPBUTTON};
+    let button = if unsafe { GetSystemMetrics(SM_SWAPBUTTON) } != 0 { VK_RBUTTON } else { VK_LBUTTON };
+    (unsafe { GetAsyncKeyState(button as i32) }) < 0
+}
+
+#[cfg(not(windows))]
+pub fn primary_button_down() -> bool {
+    false
+}
+
 // the web view's own background: 0,0,0,0 means it should let the window show through
 #[cfg(windows)]
 pub fn webview_background(window: &WebviewWindow, report: impl FnOnce(String) + Send + 'static) {

@@ -26,6 +26,7 @@ describe('settings window', () => {
     for (const title of [
       'Keybinds',
       'Open at login',
+      'Move the bar back after',
       'Appearance',
       'Show history',
       'History',

@@ -124,6 +124,32 @@ namespace QCalcE2E
             Press(x, y, 0x0008, 0x0010);
         }
 
+        // the left button held from one point to another, in steps, so a window's move loop or the page's own
+        // tracking has moves to follow
+        public static void Drag(int x0, int y0, int x1, int y1)
+        {
+            SetCursorPos(x0, y0);
+            Thread.Sleep(80);
+            Mouse(MOUSEEVENTF_LEFTDOWN);
+            Thread.Sleep(150);
+            const int steps = 12;
+            for (int i = 1; i <= steps; i++)
+            {
+                SetCursorPos(x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps);
+                // a move with no distance, so the input queue hears of the new spot
+                Mouse(0x0001);
+                Thread.Sleep(30);
+            }
+            Thread.Sleep(150);
+            Mouse(MOUSEEVENTF_LEFTUP);
+        }
+
+        static void Mouse(uint flag)
+        {
+            INPUT input = new INPUT(); input.type = INPUT_MOUSE; input.u.mi.dwFlags = flag;
+            Send(new List<INPUT> { input });
+        }
+
         static void Press(int x, int y, uint downFlag, uint upFlag)
         {
             SetCursorPos(x, y);

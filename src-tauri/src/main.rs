@@ -30,7 +30,6 @@ use place::{Area, Room};
 use rates::Cache;
 use store::Store;
 
-const WIDTH: f64 = 680.0;
 const MIN_HEIGHT: f64 = 72.0;
 const MAX_HEIGHT: f64 = 560.0;
 const SETTINGS_SIZE: (f64, f64) = (520.0, 640.0);
@@ -146,7 +145,7 @@ fn main() {
             let theme = with(app.handle(), |s| window_theme(&s.store.settings.theme));
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("quick.html".into()))
                 .title("Q Calc")
-                .inner_size(WIDTH, MIN_HEIGHT)
+                .inner_size(place::MIN_WIDTH, MIN_HEIGHT)
                 .decorations(false)
                 .transparent(true)
                 .shadow(false)
@@ -274,8 +273,23 @@ fn host(window: WebviewWindow, message: Value) {
         Some("drag") if overlay => {
             with(app, |s| s.dragging = true);
             let _ = window.start_dragging();
+            refocus_after_press(&window);
         }
         Some("recenter") if overlay => recenter(&window),
+        // a side edge dragged by `dx` logical pixels since the last of these; the page sends them while the button is down
+        Some("widen") if overlay => {
+            if let Some(dx) = message["dx"].as_f64().filter(|dx| dx.is_finite()) {
+                widen(&window, dx, message["side"] == "left");
+            }
+        }
+        Some("widenEnd") if overlay => widened(&window, message["side"] == "left"),
+        Some("spotSeconds") => {
+            with(app, |s| {
+                s.store.spot_seconds = store::spot_seconds(&message["seconds"]);
+                save(s);
+            });
+            push_settings(app, None, None);
+        }
         Some("settings") => {
             if with(app, |s| s.store.settings.merge(&message).then(|| save(s)).is_some()) {
                 push_settings(app, Some(window.label()), None);
@@ -322,6 +336,7 @@ fn settings_payload(state: &State, refused: Option<&str>, autostart: bool) -> Va
         "hotkeyChord": picked,
         "hotkeyRefused": refused.map_or(String::new(), hotkey::title),
         "autostart": autostart,
+        "spotSeconds": state.store.spot_seconds,
     });
     if let (Some(to), Some(from)) = (payload.as_object_mut(), extra.as_object()) {
         to.extend(from.clone());
@@ -339,6 +354,8 @@ fn boot_script(app: &AppHandle, overlay: bool) -> String {
             "onboarding": s.store.onboarding,
             "rates": rates,
             "analytics": s.store.analytics,
+            "os": os_name(),
+            "width": s.store.width.max(place::MIN_WIDTH),
         })
     });
     let shim = include_str!("shim.js").replace("__QCALC_BOOT__", &boot.to_string());
@@ -410,6 +427,30 @@ fn refresh_rates(app: &AppHandle, mut cache: Cache, path: &std::path::Path) {
         }
         thread::sleep(Duration::from_secs(60 * 60));
     }
+}
+
+// for the usage counts, like the mac's "macOS 14.5": "Windows 11 26200". RtlGetVersion, because the documented
+// calls answer with windows 8 unless the app's manifest names each later version
+#[cfg(windows)]
+fn os_name() -> String {
+    use windows_sys::Win32::System::SystemInformation::OSVERSIONINFOW;
+    #[link(name = "ntdll")]
+    extern "system" {
+        fn RtlGetVersion(info: *mut OSVERSIONINFOW) -> i32;
+    }
+    let mut info: OSVERSIONINFOW = unsafe { std::mem::zeroed() };
+    info.dwOSVersionInfoSize = std::mem::size_of::<OSVERSIONINFOW>() as u32;
+    if unsafe { RtlGetVersion(&mut info) } != 0 {
+        return "Windows".to_string();
+    }
+    // windows 11 kept 10.0 as its version; its builds start at 22000
+    let name = if info.dwMajorVersion >= 10 && info.dwBuildNumber >= 22000 { 11 } else { info.dwMajorVersion };
+    format!("Windows {name} {}", info.dwBuildNumber)
+}
+
+#[cfg(not(windows))]
+fn os_name() -> String {
+    String::new()
 }
 
 fn window_theme(theme: &str) -> Option<Theme> {
@@ -499,7 +540,15 @@ fn show_window(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else { return };
     let monitor = monitor_at_cursor(&window);
     let key = monitor.as_ref().map(|m| describe(m).0);
+    // a moved or widened bar keeps its spot and width only so long after it was last put away, as on the mac; one
+    // in use doesn't run out
+    let (at, hidden) = (now(), !window.is_visible().unwrap_or(false));
     let (saved, was) = with(app, |s| {
+        if hidden && s.store.moved_or_widened() && place::spot_expired(at, s.store.used_at, s.store.spot_seconds) {
+            s.store.positions.clear();
+            s.store.width = 0.0;
+            s.unsaved = true;
+        }
         s.anchor = 0.0;
         s.dragging = false;
         s.shown_at = Some(Instant::now());
@@ -511,11 +560,14 @@ fn show_window(app: &AppHandle) {
     match monitor {
         Some(monitor) => {
             let (_, area, scale) = describe(&monitor);
-            let size = (WIDTH * scale, MIN_HEIGHT * scale);
+            let width = bar_width(app, Some(area), scale);
+            // a narrower monitor than the one it was dragged on gets a narrower bar
+            tell_width(&window, width);
+            let size = (width * scale, MIN_HEIGHT * scale);
             set_frame(&window, place::show_origin(area, scale, size.0, size.1, saved), size);
         }
         None => {
-            let _ = window.set_size(LogicalSize::new(WIDTH, MIN_HEIGHT));
+            let _ = window.set_size(LogicalSize::new(bar_width(app, None, 1.0), MIN_HEIGHT));
         }
     }
     let _ = window.show();
@@ -561,8 +613,14 @@ fn hide(window: &WebviewWindow) {
     }
     let _ = window.eval("if (window.__qcalcWillHide) window.__qcalcWillHide();");
     let _ = window.hide();
+    let at = now();
     with(window.app_handle(), |s| {
         s.shown_at = None;
+        // what a moved or widened bar's time runs from; with nothing kept there's nothing to time
+        if s.store.moved_or_widened() {
+            s.store.used_at = at;
+            s.unsaved = true;
+        }
         if s.unsaved {
             save(s);
         }
@@ -579,12 +637,40 @@ fn blurred(window: &WebviewWindow) {
         let _ = window.set_focus();
         return;
     }
+    // moving the bar hands the keyboard from the web view to the window's own frame, which arrives here as a blur
+    // though q calc is still the window in front. only another window taking the foreground is a click away
+    if frame::in_front(window) {
+        return;
+    }
     hide(window);
 }
 
+// the move leaves the keyboard with the window's frame; once the button is up it goes back to the page, so typing
+// carries on
+fn refocus_after_press(window: &WebviewWindow) {
+    let window = window.clone();
+    thread::spawn(move || {
+        // the move loop takes a moment to begin
+        thread::sleep(Duration::from_millis(60));
+        while frame::primary_button_down() {
+            thread::sleep(Duration::from_millis(30));
+        }
+        if window.is_visible().unwrap_or(false) && frame::in_front(&window) {
+            let _ = window.set_focus();
+        }
+    });
+}
+
 fn moved(window: &WebviewWindow, position: PhysicalPosition<i32>) {
+    if with(window.app_handle(), |s| s.dragging) {
+        remember(window, position);
+    }
+}
+
+// keeps where the bar is as this monitor's spot
+fn remember(window: &WebviewWindow, position: PhysicalPosition<i32>) {
     let app = window.app_handle();
-    let Some((anchor, side)) = with(app, |s| s.dragging.then_some((s.anchor, s.room.side))) else { return };
+    let (anchor, side) = with(app, |s| (s.anchor, s.room.side));
     let Some(monitor) = window.current_monitor().ok().flatten() else { return };
     let (key, area, scale) = describe(&monitor);
     let x = position.x as f64 + side * scale;
@@ -605,8 +691,65 @@ fn recenter(window: &WebviewWindow) {
         save(s);
         (s.anchor, s.room.side)
     });
-    let (x, y) = place::centred(area, (WIDTH + 2.0 * side) * scale, anchor * scale);
+    let width = bar_width(window.app_handle(), Some(area), scale);
+    let (x, y) = place::centred(area, (width + 2.0 * side) * scale, anchor * scale);
     let _ = window.set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32));
+}
+
+// the bar's width in logical pixels: what it was dragged to, as far as this monitor allows
+fn bar_width(app: &AppHandle, area: Option<Area>, scale: f64) -> f64 {
+    let stored = with(app, |s| s.store.width);
+    match area {
+        Some(area) => place::fitted_width(stored, area.width / scale),
+        None => stored.max(place::MIN_WIDTH),
+    }
+}
+
+// one step of a side edge's drag: that edge moves and the other stays put, as on the mac. the page reflows to the
+// new width and reports its height as usual
+fn widen(window: &WebviewWindow, dx: f64, left: bool) {
+    let app = window.app_handle();
+    // the smoke's room has the window wider than the bar, and it's gone in a moment
+    if with(app, |s| s.room != Room::CLOSED) {
+        return;
+    }
+    let Some(monitor) = window.current_monitor().ok().flatten() else { return };
+    let (_, area, scale) = describe(&monitor);
+    let (Ok(origin), Ok(size)) = (window.outer_position(), window.inner_size()) else { return };
+    let width = bar_width(app, Some(area), scale);
+    let (next, shift) = place::widened(width, dx, left, area.width / scale);
+    if next == width {
+        return;
+    }
+    with(app, |s| {
+        s.dragging = false;
+        s.store.width = next;
+        s.unsaved = true;
+    });
+    set_frame(window, (origin.x as f64 + shift * scale, origin.y as f64), (next * scale, size.height as f64));
+}
+
+// the page pads the bar to this width inside a window the 420 smoke has grown, so it has to know it
+fn tell_width(window: &WebviewWindow, width: f64) {
+    let _ = window.eval(format!("document.documentElement.style.setProperty('--bar-width', '{width}px')"));
+}
+
+// the drag is over: the width is kept, and a moved left edge is a moved bar, so its spot is kept too. a centred bar
+// widened from the right stays centred
+fn widened(window: &WebviewWindow, left: bool) {
+    let scale = window.scale_factor().unwrap_or(1.0);
+    let area = window.current_monitor().ok().flatten().map(|m| describe(&m).1);
+    tell_width(window, bar_width(window.app_handle(), area, scale));
+    if left {
+        if let Ok(position) = window.outer_position() {
+            remember(window, position);
+        }
+    }
+    with(window.app_handle(), |s| {
+        if s.unsaved {
+            save(s);
+        }
+    });
 }
 
 fn resize(window: &WebviewWindow, height: f64, anchor_top: f64, room: Room) {
@@ -623,7 +766,7 @@ fn resize(window: &WebviewWindow, height: f64, anchor_top: f64, room: Room) {
     });
     let Ok(origin) = window.outer_position() else { return };
     let area = window.current_monitor().ok().flatten().map(|m| describe(&m).1);
-    let size = ((WIDTH + 2.0 * room.side) * scale, h * scale);
+    let size = ((bar_width(window.app_handle(), area, scale) + 2.0 * room.side) * scale, h * scale);
     let (x, y) = (origin.x as f64, origin.y as f64);
     let (anchor, next) = (previous * scale, next * scale);
     let origin = place::resized(area, x, y, size.0, size.1, anchor, next, was.scaled(scale), room.scaled(scale));

@@ -12,6 +12,18 @@ const MAX_SIG_FIGS: f64 = 16.0;
 const DEFAULT_SIG_FIGS: i64 = 12;
 const MAX_DRAFT_SECONDS: f64 = 3600.0;
 const DEFAULT_DRAFT_SECONDS: i64 = 60;
+// how long a moved or widened bar keeps its spot and width after it was last used; 0 keeps them for good. the
+// mac's 5 minutes
+pub const DEFAULT_SPOT_SECONDS: i64 = 300;
+const MAX_SPOT_SECONDS: f64 = 86_400.0;
+
+// what the settings window sends for "move the bar back after"; anything odd is the default
+pub fn spot_seconds(v: &Value) -> i64 {
+    match v.as_f64() {
+        Some(n) if n.is_finite() && n >= 0.0 => n.round().min(MAX_SPOT_SECONDS) as i64,
+        _ => DEFAULT_SPOT_SECONDS,
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -158,7 +170,7 @@ impl Onboarding {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Store {
     pub settings: Settings,
@@ -168,11 +180,38 @@ pub struct Store {
     pub first_run_done: bool,
     // per monitor: the composer's top-left from the work area's top-left, in logical pixels
     pub positions: BTreeMap<String, [f64; 2]>,
+    // the spots above and the width below go once the bar has been out of use this long; 0 never
+    pub spot_seconds: i64,
+    // when the bar was last put away, unix seconds
+    pub used_at: u64,
+    // the bar's width in logical pixels, dragged wider from either side edge; 0 is the standard width
+    pub width: f64,
     // the page's usage counts (lib/analytics), kept as it sent them; null when sharing is off
     pub analytics: Value,
 }
 
+impl Default for Store {
+    fn default() -> Self {
+        Store {
+            settings: Settings::default(),
+            hotkey: String::new(),
+            onboarding: Onboarding::default(),
+            first_run_done: false,
+            positions: BTreeMap::new(),
+            spot_seconds: DEFAULT_SPOT_SECONDS,
+            used_at: 0,
+            width: 0.0,
+            analytics: Value::Null,
+        }
+    }
+}
+
 impl Store {
+    // something the "move the bar back after" setting would put back
+    pub fn moved_or_widened(&self) -> bool {
+        !self.positions.is_empty() || self.width > crate::place::MIN_WIDTH
+    }
+
     // field by field, so one bad value can't reset the rest
     pub fn from_json(text: &str) -> Store {
         let v: Value = serde_json::from_str(text).unwrap_or(Value::Null);
@@ -182,6 +221,9 @@ impl Store {
         store.hotkey = v["hotkey"].as_str().unwrap_or_default().to_string();
         store.first_run_done = v["firstRunDone"].as_bool().unwrap_or(false);
         store.analytics = v["analytics"].clone();
+        store.spot_seconds = spot_seconds(&v["spotSeconds"]);
+        store.used_at = v["usedAt"].as_u64().unwrap_or(0);
+        store.width = v["width"].as_f64().filter(|w| w.is_finite() && *w > 0.0).unwrap_or(0.0);
         if let Some(all) = v["positions"].as_object() {
             for (key, pair) in all {
                 if let (Some(x), Some(y)) = (pair[0].as_f64(), pair[1].as_f64()) {
@@ -292,6 +334,7 @@ mod tests {
         store.hotkey = "ctrl+shift+k".into();
         store.settings.merge(&json!({ "keybinds": { "angle": "ctrl+alt+r" } }));
         store.positions.insert("\\\\.\\DISPLAY2".into(), [120.5, 300.0]);
+        (store.spot_seconds, store.used_at, store.width) = (300, 1_790_000_000, 912.0);
         assert!(store.claim_first_run());
         assert!(!store.claim_first_run());
         store.save(&path).unwrap();
@@ -307,6 +350,30 @@ mod tests {
         assert_eq!(store.positions.len(), 1);
         assert!(!store.first_run_done);
         assert_eq!(Store::from_json("not json"), Store::default());
+    }
+
+    #[test]
+    fn a_moved_bar_lasts_five_minutes_unless_the_file_says_otherwise() {
+        let fresh = Store::from_json("{}");
+        assert_eq!((fresh.spot_seconds, fresh.used_at, fresh.width), (DEFAULT_SPOT_SECONDS, 0, 0.0));
+        // 0 is never, which a missing or broken value mustn't turn into
+        assert_eq!(Store::from_json(r#"{ "spotSeconds": 0 }"#).spot_seconds, 0);
+        assert_eq!(Store::from_json(r#"{ "spotSeconds": -3, "width": -200, "usedAt": "then" }"#), Store::default());
+        assert_eq!(spot_seconds(&json!(1e9)), 86_400);
+        assert_eq!(spot_seconds(&json!("5")), DEFAULT_SPOT_SECONDS);
         assert_eq!(Store::load(Path::new("/nonexistent/qcalc/settings.json")), Store::default());
+    }
+
+    #[test]
+    fn a_wider_bar_counts_as_moved() {
+        let mut store = Store::default();
+        assert!(!store.moved_or_widened());
+        store.width = crate::place::MIN_WIDTH;
+        assert!(!store.moved_or_widened());
+        store.width = 900.0;
+        assert!(store.moved_or_widened());
+        store.width = 0.0;
+        store.positions.insert("a".into(), [1.0, 2.0]);
+        assert!(store.moved_or_widened());
     }
 }

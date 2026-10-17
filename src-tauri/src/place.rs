@@ -38,6 +38,28 @@ impl Room {
     }
 }
 
+// the bar's standard width, and the least it can be dragged to
+pub const MIN_WIDTH: f64 = 680.0;
+// how much of the work area's width a widened bar leaves free
+const WIDTH_MARGIN: f64 = 40.0;
+
+// a dragged width, logical: never under the standard one, nor wider than its monitor allows, as on the mac
+pub fn fitted_width(width: f64, area_width: f64) -> f64 {
+    width.max(MIN_WIDTH).min((area_width - WIDTH_MARGIN).max(MIN_WIDTH))
+}
+
+// a dragged spot lasts `keep` seconds after the bar was last put away, and then it opens centred again. 0 keeps the
+// spot for good; a clock set back counts as no time gone
+pub fn spot_expired(now: u64, used_at: u64, keep: i64) -> bool {
+    keep > 0 && now.saturating_sub(used_at) >= keep as u64
+}
+
+// dragging a side edge by `dx` (logical, positive widens): the new width, and how far the left edge moves
+pub fn widened(width: f64, dx: f64, left: bool, area_width: f64) -> (f64, f64) {
+    let next = fitted_width(width + dx, area_width);
+    (next, if left { width - next } else { 0.0 })
+}
+
 // the whole window stays on the work area; if it can't fit, the top-left wins
 pub fn fit(area: Area, x: f64, y: f64, width: f64, height: f64) -> (f64, f64) {
     (x.min(area.right() - width).max(area.x), y.min(area.bottom() - height).max(area.y))
@@ -87,6 +109,34 @@ pub fn resized(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_dragged_width_stays_between_the_standard_and_the_monitor() {
+        assert_eq!(fitted_width(500.0, 1920.0), MIN_WIDTH);
+        assert_eq!(fitted_width(900.0, 1920.0), 900.0);
+        assert_eq!(fitted_width(5000.0, 1920.0), 1880.0);
+        // a monitor narrower than the bar can't shrink it
+        assert_eq!(fitted_width(900.0, 600.0), MIN_WIDTH);
+    }
+
+    #[test]
+    fn the_left_edge_moves_by_what_the_width_gained() {
+        assert_eq!(widened(680.0, 100.0, false, 1920.0), (780.0, 0.0));
+        assert_eq!(widened(680.0, 100.0, true, 1920.0), (780.0, -100.0));
+        // nothing to give at the standard width, so the edge stays
+        assert_eq!(widened(680.0, -50.0, true, 1920.0), (680.0, 0.0));
+        assert_eq!(widened(1800.0, 500.0, true, 1920.0), (1880.0, -80.0));
+    }
+
+    #[test]
+    fn a_spot_lasts_as_long_as_the_setting_says() {
+        assert!(!spot_expired(1_000, 950, 60));
+        assert!(spot_expired(1_000, 940, 60));
+        assert!(spot_expired(1_000, 0, 60));
+        // 0 keeps it for good, and a clock set back is no time gone
+        assert!(!spot_expired(1_000_000, 0, 0));
+        assert!(!spot_expired(900, 1_000, 60));
+    }
 
     const PRIMARY: Area = Area { x: 0.0, y: 0.0, width: 1920.0, height: 1040.0 };
     // a 150% monitor to the right, and a 100% one to the left at negative coordinates

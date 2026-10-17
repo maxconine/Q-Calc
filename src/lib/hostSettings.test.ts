@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { draftChoices, EMPTY_HOST, hostInfo, hotkeyNote } from './hostSettings'
+import { draftChoices, EMPTY_HOST, hostInfo, hotkeyNote, spotChoices } from './hostSettings'
 
 describe('hostInfo', () => {
   it('reads what the shell sends', () => {
-    const info = hostInfo({ hotkeyChord: 'ctrl+space', hotkeyFailed: false, autostart: true, sigFigs: 9 })
-    expect(info).toEqual({ hotkeyChord: 'ctrl+space', hotkeyFailed: false, hotkeyRefused: '', autostart: true })
+    const info = hostInfo({ hotkeyChord: 'ctrl+space', hotkeyFailed: false, autostart: true, sigFigs: 9, spotSeconds: 300 })
+    expect(info).toEqual({ hotkeyChord: 'ctrl+space', hotkeyFailed: false, hotkeyRefused: '', autostart: true, spotSeconds: 300 })
   })
 
   it('keeps what a partial push leaves out, except a refusal', () => {
@@ -17,6 +17,22 @@ describe('hostInfo', () => {
     const info = hostInfo({ hotkeyChord: 3, autostart: 'yes' })
     expect(info.hotkeyChord).toBe('')
     expect(info.autostart).toBe(false)
+  })
+
+  it('a moved bar goes back after 5 minutes until the shell says otherwise', () => {
+    expect(hostInfo({}).spotSeconds).toBe(300)
+    expect(hostInfo({ spotSeconds: 0 }).spotSeconds).toBe(0)
+    expect(hostInfo({ spotSeconds: -5 }).spotSeconds).toBe(300)
+    expect(hostInfo({ spotSeconds: 'soon' }, { ...EMPTY_HOST, spotSeconds: 300 }).spotSeconds).toBe(300)
+  })
+})
+
+describe('spotChoices', () => {
+  it('lists the mac’s times, and keeps an odd value visible', () => {
+    expect(spotChoices(300).map((c) => c.id)).toEqual([0, 60, 300, 900, 3600])
+    expect(spotChoices(0)[0]).toEqual({ id: 0, label: 'Never' })
+    expect(spotChoices(30).at(-1)).toEqual({ id: 30, label: '30 seconds' })
+    expect(spotChoices(1800).at(-1)).toEqual({ id: 1800, label: '30 minutes' })
   })
 })
 
