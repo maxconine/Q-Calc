@@ -113,6 +113,8 @@ fn main() {
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
 
             let dir = app.path().app_config_dir().ok();
+            // the launch an update's installer makes is as quiet as the one at sign in
+            let updated = dir.as_ref().map(|dir| dir.join(update::UPDATED_MARKER)).is_some_and(|marker| std::fs::remove_file(marker).is_ok());
             let path = dir.as_ref().map(|dir| dir.join("settings.json"));
             let rates_path = dir.map(|dir| dir.join("rates.json"));
             let cache = rates_path.as_deref().map(Cache::load).unwrap_or_default();
@@ -132,7 +134,7 @@ fn main() {
             if !first_run && !cfg!(debug_assertions) && app.autolaunch().is_enabled().unwrap_or(false) {
                 let _ = app.autolaunch().enable();
             }
-            let autostarted = std::env::args().any(|arg| arg == AUTOSTART_ARG);
+            let autostarted = updated || std::env::args().any(|arg| arg == AUTOSTART_ARG);
             let preferred = hotkey::named(&store.hotkey);
             store.hotkey = preferred.clone();
             app.manage(Host(Mutex::new(State {
