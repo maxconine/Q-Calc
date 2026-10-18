@@ -715,6 +715,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             source: """
             window.__QCALC_NATIVE = true;
             document.documentElement.classList.add('quick-resizable');
+            document.documentElement.style.setProperty('--bar-width', '\(Int(overlayWidth))px');
             window.__QCALC_SMOKE_ROOM = true;
             window.__QCALC_KEYS = [];
             window.__QCALC_HELD = '';
@@ -1072,6 +1073,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     // never wider than the screen it's on, less a margin each side
+    // the page centres a bar this wide in the window (the window is wider while the smoke's room is open)
+    private func tellPageBarWidth() {
+        web?.evaluateJavaScript("document.documentElement.style.setProperty('--bar-width', '\(Int(overlayWidth))px')")
+    }
+
     private func fittedWidth(_ width: CGFloat, on screen: NSScreen?) -> CGFloat {
         guard let visible = (screen ?? NSScreen.main)?.visibleFrame else { return max(width, minOverlayWidth) }
         return min(max(width, minOverlayWidth), max(minOverlayWidth, visible.width - 40))
@@ -1111,6 +1117,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if side == .left { frame.origin.x = frame.maxX - width }
         frame.size.width = width
         overlayWidth = width
+        tellPageBarWidth()
         panel.setFrame(frame, display: true)
         panel.invalidateShadow()
     }
@@ -1352,6 +1359,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         UserDefaults.standard.removeObject(forKey: Self.positionsKey)
         UserDefaults.standard.removeObject(forKey: Self.overlayWidthKey)
         overlayWidth = defaultOverlayWidth
+        tellPageBarWidth()
         if let panel, !panel.isVisible, sizeRoom == .closed {
             var frame = panel.frame
             frame.size.width = defaultOverlayWidth
