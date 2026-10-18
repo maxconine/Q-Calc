@@ -607,6 +607,23 @@ Invoke-Check '11' 'look diagnostics' $false {
     @{ Pass = ($notes.Count -gt 0); Detail = $(if ($notes) { $notes -join ' / ' } else { "no notes at $lookNotes" }) }
 }
 
+# a hotkey the user picked: saved as alt+q, then a launch like the one at sign in has to answer it
+Invoke-Check '12' 'a custom hotkey (Alt+Q) works after a launch' $true {
+    try { Hide-QCalc } catch { }
+    Get-Process -Name $ProcName -ErrorAction SilentlyContinue | Stop-Process -Force
+    Start-Sleep -Milliseconds 500
+    $file = Join-Path $env:APPDATA 'com.maxconine.qcalc\settings.json'
+    $json = if (Test-Path $file) { Get-Content -Raw $file | ConvertFrom-Json } else { New-Object psobject }
+    $json | Add-Member -NotePropertyName hotkey -NotePropertyValue 'alt+q' -Force
+    [IO.File]::WriteAllText($file, ($json | ConvertTo-Json -Depth 20))
+    $script:proc = Start-Process -FilePath $Exe -ArgumentList '--autostart' -PassThru
+    if (-not (Wait-Until { (Get-QCalcWindow) -ne [IntPtr]::Zero } 30000)) { return @{ Pass = $false; Detail = 'no window after the launch' } }
+    Start-Sleep -Seconds 2
+    $N::Chord($N::VK_MENU, $N::VK_Q)
+    $shown = Wait-Until { Test-Shown } 3000
+    @{ Pass = $shown; Detail = "settings file: $file; shown after Alt+Q: $shown" }
+}
+
 # ---------------------------------------------------------------------------
 
 try { Hide-QCalc } catch { }

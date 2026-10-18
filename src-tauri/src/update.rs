@@ -15,6 +15,9 @@ const TICK: Duration = Duration::from_secs(30);
 const IDLE: Duration = Duration::from_secs(5 * 60);
 pub const PLACEHOLDER_KEY: &str = "QCALC_UPDATER_PUBKEY_PLACEHOLDER";
 
+// left in the config folder just before an update installs, and taken by the launch that follows it
+pub const UPDATED_MARKER: &str = "updated";
+
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
     tauri::plugin::Builder::new("qcalc-update")
         .setup(|_app, _| {
@@ -118,7 +121,12 @@ mod live {
             quiet.observe(visible, Instant::now());
             if ready.is_some() && quiet.ready(Instant::now(), input_idle()) {
                 if let Some((update, bytes)) = ready.take() {
-                    // exits the process once the installer starts; the installer relaunches us
+                    // exits the process once the installer starts; the installer relaunches us. the marker tells
+                    // that launch it was an update, so it stays in the tray rather than opening the bar
+                    if let Ok(dir) = app.path().app_config_dir() {
+                        let _ = std::fs::create_dir_all(&dir);
+                        let _ = std::fs::write(dir.join(UPDATED_MARKER), "");
+                    }
                     if let Err(err) = update.install(&bytes) {
                         eprintln!("update install failed: {err}");
                     }
