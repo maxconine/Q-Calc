@@ -216,7 +216,8 @@ describe('trails', () => {
     expect(normalEasy.a).toBeGreaterThan(normalEasy.b * 3)
     const hardNormal = duel('hard', 'normal', 12, 5)
     expect(hardNormal.a).toBeGreaterThan(hardNormal.b * 2)
-  }, 20_000)
+    // about 5 s alone; a shared ci runner running every file at once has taken more than 20
+  }, 60_000)
 
   it('opens from its names, and leaves maths alone', () => {
     for (const t of ['trails', 'Trail', ' cycles ', 'TRAILS']) {
