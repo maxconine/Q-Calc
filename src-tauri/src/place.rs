@@ -70,10 +70,17 @@ pub fn centred(area: Area, width: f64, anchor: f64) -> (f64, f64) {
     (area.x + (area.width - width) / 2.0, area.y + area.height * TOP - anchor)
 }
 
+// a remembered spot as the user left it: it may hang off either side by up to half the bar, but never off the top or
+// bottom. after a change of monitors or resolution it's pulled back that far
+fn fit_spot(area: Area, x: f64, y: f64, width: f64, height: f64) -> (f64, f64) {
+    let half = width / 2.0;
+    (x.min(area.right() - half).max(area.x - half), y.min(area.bottom() - height).max(area.y))
+}
+
 // where a showing opens: the spot remembered for this monitor, else the default
 pub fn show_origin(area: Area, scale: f64, width: f64, height: f64, saved: Option<[f64; 2]>) -> (f64, f64) {
     match saved {
-        Some([dx, dy]) => fit(area, area.x + dx * scale, area.y + dy * scale, width, height),
+        Some([dx, dy]) => fit_spot(area, area.x + dx * scale, area.y + dy * scale, width, height),
         None => centred(area, width, 0.0),
     }
 }
@@ -174,8 +181,17 @@ mod tests {
 
     #[test]
     fn a_spot_off_the_work_area_is_pulled_back() {
-        assert_eq!(show_origin(PRIMARY, 1.0, 680.0, 72.0, Some([1800.0, 1030.0])), (1240.0, 968.0));
-        assert_eq!(show_origin(LEFT, 1.0, 680.0, 72.0, Some([-50.0, -50.0])), (-1280.0, 200.0));
+        // half the bar may hang off a side, never the top or bottom
+        assert_eq!(show_origin(PRIMARY, 1.0, 680.0, 72.0, Some([1800.0, 1030.0])), (1580.0, 968.0));
+        assert_eq!(show_origin(LEFT, 1.0, 680.0, 72.0, Some([-50.0, -50.0])), (-1330.0, 200.0));
+        assert_eq!(show_origin(LEFT, 1.0, 680.0, 72.0, Some([-900.0, 0.0])), (-1620.0, 200.0));
+    }
+
+    #[test]
+    fn a_bar_left_hanging_off_a_side_comes_back_where_it_was() {
+        // dragged to 392 on a 1024 px screen: its right 48 px are off the edge, and it opens there again
+        let small = Area { x: 0.0, y: 0.0, width: 1024.0, height: 728.0 };
+        assert_eq!(show_origin(small, 1.0, 680.0, 72.0, Some([392.0, 342.0])), (392.0, 342.0));
     }
 
     #[test]
