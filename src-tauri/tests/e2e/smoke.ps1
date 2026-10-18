@@ -202,6 +202,8 @@ function Invoke-Check([string]$id, [string]$name, [bool]$required, [scriptblock]
     try { $N::Screenshot((Join-Path $OutDir $shot)) } catch { $shot = "(screenshot failed: $($_.Exception.Message))" }
     $script:results.Add([pscustomobject]@{ Id = $id; Name = $name; Required = $required; Pass = $pass; Detail = $detail; Shot = $shot })
     Log ("{0} {1}: {2}" -f $(if ($pass) { 'PASS' } else { 'FAIL' }), $id, $detail)
+    # an annotation shows on the run's page without signing in, unlike the log
+    if (-not $pass) { Write-Host ("::{0} title=check {1} {2}::{3}" -f $(if ($required) { 'error' } else { 'warning' }), $id, $name, ($detail -replace "`r?`n", ' ')) }
 }
 
 function Expect-Answer([string]$expr, [string]$pattern) {
