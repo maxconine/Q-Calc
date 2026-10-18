@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod crash;
 mod e2e;
 mod frame;
 mod hotkey;
@@ -92,8 +93,9 @@ fn save(state: &mut State) {
 const AUTOSTART_ARG: &str = "--autostart";
 
 fn main() {
+    crash::install();
     e2e::catch_panics();
-    let app = tauri::Builder::default()
+    let built = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show_window(app)))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![AUTOSTART_ARG])))
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -114,7 +116,7 @@ fn main() {
 
             let dir = app.path().app_config_dir().ok();
             // the launch an update's installer makes is as quiet as the one at sign in
-            let updated = dir.as_ref().map(|dir| dir.join(update::UPDATED_MARKER)).is_some_and(|marker| std::fs::remove_file(marker).is_ok());
+            let updated = dir.as_deref().is_some_and(|dir| update::take_marker(dir, SystemTime::now()));
             let path = dir.as_ref().map(|dir| dir.join("settings.json"));
             let rates_path = dir.map(|dir| dir.join("rates.json"));
             let cache = rates_path.as_deref().map(Cache::load).unwrap_or_default();
@@ -238,9 +240,19 @@ fn main() {
             }
             Ok(())
         })
-        .build(tauri::generate_context!())
-        .expect("q calc failed to start");
+        .build(tauri::generate_context!());
+    let app = match built {
+        Ok(app) => app,
+        Err(err) => {
+            crash::failed(&err.to_string());
+            std::process::exit(1);
+        }
+    };
     app.run(|app, event| {
+        if let RunEvent::Ready = event {
+            let args: Vec<String> = std::env::args().skip(1).collect();
+            crash::started(&format!("started {} on {} {args:?}", app.package_info().version, os_name()));
+        }
         if let RunEvent::Exit = event {
             with(app, |s| {
                 if s.unsaved {

@@ -17,6 +17,21 @@ pub const PLACEHOLDER_KEY: &str = "QCALC_UPDATER_PUBKEY_PLACEHOLDER";
 
 // left in the config folder just before an update installs, and taken by the launch that follows it
 pub const UPDATED_MARKER: &str = "updated";
+// the installer relaunches q calc within moments; a marker older than this was never taken by that launch (the
+// install failed, or didn't relaunch), and must not keep someone opening q calc by hand in the tray
+const MARKER_FRESH: Duration = Duration::from_secs(10 * 60);
+
+// whether this launch is the one an update made: takes the marker either way, so it counts at most once
+pub fn take_marker(dir: &std::path::Path, now: SystemTime) -> bool {
+    let marker = dir.join(UPDATED_MARKER);
+    let made = std::fs::metadata(&marker).and_then(|m| m.modified());
+    std::fs::remove_file(&marker).is_ok() && made.is_ok_and(|made| fresh(made, now))
+}
+
+// a clock set back counts as stale
+fn fresh(made: SystemTime, now: SystemTime) -> bool {
+    now.duration_since(made).is_ok_and(|age| age < MARKER_FRESH)
+}
 
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
     tauri::plugin::Builder::new("qcalc-update")
@@ -128,7 +143,10 @@ mod live {
                         let _ = std::fs::write(dir.join(UPDATED_MARKER), "");
                     }
                     if let Err(err) = update.install(&bytes) {
-                        eprintln!("update install failed: {err}");
+                        crate::crash::log(&format!("update install failed: {err}"));
+                        if let Ok(dir) = app.path().app_config_dir() {
+                            let _ = std::fs::remove_file(dir.join(UPDATED_MARKER));
+                        }
                     }
                 }
             }
@@ -170,6 +188,29 @@ mod tests {
         assert!(is_placeholder(""));
         assert!(is_placeholder("  "));
         assert!(!is_placeholder("dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFCQ0QK"));
+    }
+
+    #[test]
+    fn only_a_fresh_marker_is_an_update() {
+        let t0 = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
+        assert!(fresh(t0, t0 + Duration::from_secs(5)));
+        assert!(!fresh(t0, t0 + MARKER_FRESH));
+        // a clock set back
+        assert!(!fresh(t0, t0 - Duration::from_secs(5)));
+    }
+
+    #[test]
+    fn the_marker_is_taken_once_and_a_stale_one_still_goes() {
+        let dir = std::env::temp_dir().join(format!("qcalc-marker-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join(UPDATED_MARKER), "").unwrap();
+        assert!(take_marker(&dir, SystemTime::now()));
+        assert!(!take_marker(&dir, SystemTime::now()));
+        // left behind by an install that never relaunched: this launch is someone opening q calc
+        std::fs::write(dir.join(UPDATED_MARKER), "").unwrap();
+        assert!(!take_marker(&dir, SystemTime::now() + Duration::from_secs(3600)));
+        assert!(!dir.join(UPDATED_MARKER).exists());
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[test]
