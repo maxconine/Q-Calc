@@ -672,6 +672,14 @@ fn refocus_after_press(window: &WebviewWindow) {
         while frame::primary_button_down() {
             thread::sleep(Duration::from_millis(30));
         }
+        // where the button came up is the spot kept: a size report from the page can end `dragging` mid-move, and
+        // the moves after it weren't remembered
+        if window.is_visible().unwrap_or(false) {
+            if let Ok(position) = window.outer_position() {
+                remember(&window, position);
+            }
+        }
+        with(window.app_handle(), |s| s.dragging = false);
         if window.is_visible().unwrap_or(false) && frame::in_front(&window) {
             let _ = window.set_focus();
         }
