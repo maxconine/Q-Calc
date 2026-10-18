@@ -352,11 +352,22 @@ Invoke-Check '0' 'first launch shows once' $false {
 
 Get-Process -Name $ProcName -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep -Milliseconds 500
-Remove-Item $lookNotes -ErrorAction SilentlyContinue
 $script:proc = Start-Process -FilePath $Exe -PassThru
-Log "relaunched pid $($script:proc.Id)"
+Log "opened again pid $($script:proc.Id)"
 
-Invoke-Check '1' 'later launches start hidden' $true {
+# opening it from start or a shortcut, with nothing running, shows the bar; only the launch at sign in is quiet
+Invoke-Check '0b' 'opening it again shows the bar' $false {
+    $shown = Wait-Until { Test-Shown } 30000
+    @{ Pass = $shown; Detail = "shown when opened with nothing running: $shown" }
+}
+
+Get-Process -Name $ProcName -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Milliseconds 500
+Remove-Item $lookNotes -ErrorAction SilentlyContinue
+$script:proc = Start-Process -FilePath $Exe -ArgumentList '--autostart' -PassThru
+Log "relaunched as at sign in, pid $($script:proc.Id)"
+
+Invoke-Check '1' 'the launch at sign in starts hidden' $true {
     $exists = Wait-Until { (Get-QCalcWindow) -ne [IntPtr]::Zero } 30000
     # let the webview load and anything that would flash on screen do so
     Start-Sleep -Seconds 2

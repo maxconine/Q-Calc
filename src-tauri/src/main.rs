@@ -61,6 +61,9 @@ struct State {
     dragging: bool,
     unsaved: bool,
     first_run: bool,
+    // whether the bar shows once the page has loaded: every launch but the one at sign in, so opening q calc from
+    // start or a shortcut opens it rather than only putting an icon in the tray
+    show_on_load: bool,
     // what the page has as __QCALC_RATES
     rates: Option<Value>,
     // a game is open: losing focus leaves the window up
@@ -85,11 +88,14 @@ fn save(state: &mut State) {
     state.unsaved = false;
 }
 
+// what windows passes when it starts q calc at sign in; that launch stays in the tray
+const AUTOSTART_ARG: &str = "--autostart";
+
 fn main() {
     e2e::catch_panics();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show_window(app)))
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, None))
+        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![AUTOSTART_ARG])))
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(update::plugin())
         .plugin(
@@ -121,6 +127,12 @@ fn main() {
             if first_run && !cfg!(debug_assertions) {
                 let _ = app.autolaunch().enable();
             }
+            // an entry written before launches at sign in carried AUTOSTART_ARG is written again, so it starts quietly
+            #[cfg(windows)]
+            if !first_run && !cfg!(debug_assertions) && app.autolaunch().is_enabled().unwrap_or(false) {
+                let _ = app.autolaunch().enable();
+            }
+            let autostarted = std::env::args().any(|arg| arg == AUTOSTART_ARG);
             let preferred = hotkey::named(&store.hotkey);
             store.hotkey = preferred.clone();
             app.manage(Host(Mutex::new(State {
@@ -133,6 +145,7 @@ fn main() {
                 dragging: false,
                 unsaved: false,
                 first_run,
+                show_on_load: first_run || !autostarted,
                 rates: cache.page_value(now()),
                 game_open: false,
                 fullscreen: false,
@@ -163,9 +176,11 @@ fn main() {
                     if payload.event() == PageLoadEvent::Finished && e2e::enabled() {
                         let _ = window.eval(e2e::PROBE);
                     }
-                    if payload.event() == PageLoadEvent::Finished && with(app, |s| std::mem::take(&mut s.first_run)) {
+                    if payload.event() == PageLoadEvent::Finished && with(app, |s| std::mem::take(&mut s.show_on_load)) {
                         show_window(app);
-                        let _ = window.eval(FIRST_RUN);
+                        if with(app, |s| std::mem::take(&mut s.first_run)) {
+                            let _ = window.eval(FIRST_RUN);
+                        }
                     }
                 })
                 .build()?;
