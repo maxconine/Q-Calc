@@ -561,6 +561,12 @@ fn show_window(app: &AppHandle) {
     // in use doesn't run out
     let (at, hidden) = (now(), !window.is_visible().unwrap_or(false));
     let (saved, was) = with(app, |s| {
+        e2e::note(&format!(
+            "show on {key:?}: hidden {hidden}, spots {:?}, used {}s ago, keep {}s",
+            s.store.positions,
+            at.saturating_sub(s.store.used_at),
+            s.store.spot_seconds
+        ));
         if hidden && s.store.moved_or_widened() && place::spot_expired(at, s.store.used_at, s.store.spot_seconds) {
             s.store.positions.clear();
             s.store.width = 0.0;
@@ -581,7 +587,9 @@ fn show_window(app: &AppHandle) {
             // a narrower monitor than the one it was dragged on gets a narrower bar
             tell_width(&window, width);
             let size = (width * scale, MIN_HEIGHT * scale);
-            set_frame(&window, place::show_origin(area, scale, size.0, size.1, saved), size);
+            let origin = place::show_origin(area, scale, size.0, size.1, saved);
+            e2e::note(&format!("show at {origin:?} from {saved:?}"));
+            set_frame(&window, origin, size);
         }
         None => {
             let _ = window.set_size(LogicalSize::new(bar_width(app, None, 1.0), MIN_HEIGHT));
@@ -632,6 +640,7 @@ fn hide(window: &WebviewWindow) {
     let _ = window.hide();
     let at = now();
     with(window.app_handle(), |s| {
+        e2e::note(&format!("hide: spots {:?}", s.store.positions));
         s.shown_at = None;
         // what a moved or widened bar's time runs from; with nothing kept there's nothing to time
         if s.store.moved_or_widened() {
@@ -700,6 +709,7 @@ fn remember(window: &WebviewWindow, position: PhysicalPosition<i32>) {
     let (key, area, scale) = describe(&monitor);
     let x = position.x as f64 + side * scale;
     let spot = place::remembered(area, scale, x, position.y as f64, anchor * scale);
+    e2e::note(&format!("remember {key} at {},{} as {spot:?}", position.x, position.y));
     with(app, |s| {
         s.store.positions.insert(key, spot);
         s.unsaved = true;
