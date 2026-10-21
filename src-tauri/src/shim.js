@@ -65,7 +65,10 @@
       // an open game takes esc itself (full screen, its lobby, pause); the page closes it from the lobby
       if (window.__QCALC_GAME_OPEN) return
       e.preventDefault()
-      e.stopPropagation()
+      // immediate: the page listens on the window too, and its own esc would send a second dismiss. that one can
+      // land after the hotkey has already shown the bar again and hide it; the page resets on __qcalcWillHide
+      // instead, as on the mac, where the app takes esc before the page sees it
+      e.stopImmediatePropagation()
       // a layer the page has open steps back first, as on the mac's escapeLayer; only then does esc hide the bar
       if (window.__qcalcEscape && window.__qcalcEscape()) return
       send({ type: 'dismiss' })
@@ -75,7 +78,7 @@
     // the periodic table) goes first, as ⌘W closes the mac's sheet windows before the bar
     if ((e.key || '').toLowerCase() === 'w' && e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey) {
       e.preventDefault()
-      e.stopPropagation()
+      e.stopImmediatePropagation()
       if (window.__qcalcCloseSheet && window.__qcalcCloseSheet()) return
       send({ type: 'dismiss' })
       return

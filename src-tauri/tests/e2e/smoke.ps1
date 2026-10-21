@@ -531,8 +531,13 @@ Invoke-Check '9c' 'top edge drags the bar and the spot is kept' $true {
     Start-Sleep -Milliseconds 300
     $r = $N::Rect($h)
     $x = [int](($r.Left + $r.Right) / 2); $y = $r.Top + 5
-    $N::Drag($x, $y, $x + 220, $y + 140)
-    $moved = Wait-Until { $m = $N::Rect($h); (Near $m.Left ($r.Left + 220)) -and (Near $m.Top ($r.Top + 140)) } 2000
+    # toward whichever side has room: a bar pushed off the screen is pulled back on at the next show, so on a small
+    # screen (the runner's is 1024x768) a fixed 220 px to the right isn't a spot that can be kept
+    $s = $N::Screen()
+    $dx = if ($r.Right + 230 -le $s.Width) { 220 } else { -[Math]::Min(220, $r.Left - 10) }
+    $dy = if ($r.Bottom + 150 -le $s.Height) { 140 } else { -[Math]::Min(140, $r.Top - 10) }
+    $N::Drag($x, $y, $x + $dx, $y + $dy)
+    $moved = Wait-Until { $m = $N::Rect($h); (Near $m.Left ($r.Left + $dx)) -and (Near $m.Top ($r.Top + $dy)) } 2000
     $m = $N::Rect($h)
     $stayed = Test-Shown
     Hide-QCalc
@@ -540,7 +545,7 @@ Invoke-Check '9c' 'top edge drags the bar and the spot is kept' $true {
     $again = $N::Rect($h)
     $kept = (Near $again.Left $m.Left) -and (Near $again.Top $m.Top)
     @{ Pass = ($moved -and $stayed -and $kept)
-       Detail = "dragged 220, 140 px: moved $($m.Left - $r.Left), $($m.Top - $r.Top) px; still shown: $stayed; same spot after hide and show: $kept" }
+       Detail = "dragged $dx, $dy px: moved $($m.Left - $r.Left), $($m.Top - $r.Top) px; still shown: $stayed; same spot after hide and show: $kept" }
 }
 
 Invoke-Check '9d' 'double click on the top edge recentres' $true {
