@@ -938,13 +938,26 @@ html.quick-native .four-twenty.wide {
 .live-text {
   position: relative;
 }
+/* the single answer's box, like .live-dual's: the mark hangs off it rather than inside the answer, which clips */
+.live-single {
+  position: relative;
+  /* hugs the answer in its grid column, so the mark hangs beside the number rather than off the column's edge */
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
+}
 /* hangs left of the number so it never pushes a long answer into the ellipsis */
-.live-text .live-check {
+.live-single > .live-check {
   position: absolute;
   right: 100%;
   top: 50%;
   translate: 0 -50%;
 }
+/* while it shows, the answer hugs its number so the mark sits beside it; right-aligned, the number doesn't move */
+.live-single > .live.copied { min-width: 0; }
 .live-check {
   display: inline-block;
   margin-right: 6px;

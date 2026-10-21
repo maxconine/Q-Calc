@@ -152,21 +152,25 @@ export function LiveAnswer({ copied, example, display, exact, shown, steady, for
       </span>
     )
   }
+  // the mark hangs off the wrapper, outside the button: the button clips (for the ellipsis), and a short answer's
+  // button hadn't room to its left for the whole mark
   return (
-    <button
-      key={formTick}
-      ref={fitRef}
-      type="button"
-      className={`live ${shown ? '' : 'empty'}${formTick ? ' live-cycled' : ''}${copied ? ' copied' : ''}`}
-      title={shown ? hostKeys('Copy to clipboard · ⌘C also copies') : undefined}
-      disabled={!shown}
-      {...answerHandle(shown, onCopy, onRefocus)}
-    >
-      <span className="live-text">
-        {copied ? CHECK : null}
-        {varLabel}
-        <RadicalText text={pretty} answer />
-      </span>
-    </button>
+    <span className="live-single">
+      {copied ? CHECK : null}
+      <button
+        key={formTick}
+        ref={fitRef}
+        type="button"
+        className={`live ${shown ? '' : 'empty'}${formTick ? ' live-cycled' : ''}${copied ? ' copied' : ''}`}
+        title={shown ? hostKeys('Copy to clipboard · ⌘C also copies') : undefined}
+        disabled={!shown}
+        {...answerHandle(shown, onCopy, onRefocus)}
+      >
+        <span className="live-text">
+          {varLabel}
+          <RadicalText text={pretty} answer />
+        </span>
+      </button>
+    </span>
   )
 }

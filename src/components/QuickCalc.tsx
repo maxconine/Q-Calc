@@ -1572,6 +1572,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         onMouseDown={(e) => {
           const t = e.target as HTMLElement
           if (t.closest('input, button, .tape, .graph, .quick-plain, .quick-field, .edge-tools, .unit-settings, .live-dual')) return
+          // a game's play area is the game's: on windows a window drag takes the keys from the page, and the blur
+          // paused a game at every click on its board. the top edge still moves the bar
+          if (t.closest('.game-area, .game-paused')) return
           // the smoke's room is the desktop to the eye, so a click there is a click away
           const inRoom = t === e.currentTarget || t.classList.contains('four-twenty-room')
           if (inRoom && openSmokeRoom(e.currentTarget)) return dismissNative()
