@@ -5,6 +5,7 @@ import {
   chordLabel,
   chordProblem,
   heldLabel,
+  missedKeyText,
   keybindFor,
   keybindsEqual,
   sanitizeKeybinds,
@@ -148,5 +149,15 @@ describe('heldLabel', () => {
     expect(heldLabel('cmd', true)).toBe('Win+…')
     expect(heldLabel('ctrl+alt', false)).toBe('⌃⌥…')
     expect(heldLabel('', true)).toBe('')
+  })
+})
+
+describe('missedKeyText', () => {
+  it('says the key went to another app when only modifiers came through', () => {
+    expect(missedKeyText('alt')).toBe(
+      'Only Alt came through. If you pressed a key with it, another app has that shortcut (PowerToys Run uses Alt+Space): change it there, or pick another here.',
+    )
+    expect(missedKeyText('ctrl+alt')).toMatch(/^Only Ctrl\+Alt came through\. If you pressed a key with them,/)
+    expect(missedKeyText('')).toBe('')
   })
 })

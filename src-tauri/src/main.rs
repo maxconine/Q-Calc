@@ -1014,6 +1014,7 @@ fn open_settings(app: &AppHandle) {
     });
     let Ok(window) = built else { return };
     quiet_browser_keys(&window);
+    recorder::attach(&window);
     if let Some(monitor) = monitor_at_cursor(&window) {
         let (_, area, scale) = describe(&monitor);
         let (w, h) = (SETTINGS_SIZE.0 * scale, SETTINGS_SIZE.1 * scale);

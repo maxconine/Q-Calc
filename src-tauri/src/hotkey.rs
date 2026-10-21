@@ -145,84 +145,6 @@ pub fn vk_name(vk: u32) -> Option<String> {
     Some(name.to_string())
 }
 
-fn modifier(vk: u32) -> Option<&'static str> {
-    match vk {
-        0x11 | 0xA2 | 0xA3 => Some("ctrl"),
-        0x12 | 0xA4 | 0xA5 => Some("alt"),
-        0x10 | 0xA0 | 0xA1 => Some("shift"),
-        0x5B | 0x5C => Some("cmd"),
-        _ => None,
-    }
-}
-
-// what the recorder's hook tells the settings page
-#[derive(Clone, Debug, PartialEq)]
-pub enum Heard {
-    // the modifiers down so far, "ctrl+alt", so the row shows what it hears before the key
-    Held(String),
-    Chord(String),
-    // a key no shortcut can use
-    Unknown,
-}
-
-// the keyboard as the recorder's hook sees it: modifiers down, and the presses it kept from windows, so their
-// releases are kept too and nothing is left half pressed
-#[derive(Default)]
-pub struct Keys {
-    held: Vec<u32>,
-    kept: Vec<u32>,
-}
-
-impl Keys {
-    fn mods(&self) -> Vec<&'static str> {
-        let down: Vec<&str> = self.held.iter().filter_map(|vk| modifier(*vk)).collect();
-        MODIFIERS.iter().copied().filter(|m| down.contains(m)).collect()
-    }
-
-    // true to keep the press from windows and every other app. only while the settings window is in front, and
-    // only what the page can't hear itself: alt and win (the window menu, the start menu) and chords with ctrl, alt
-    // or win, which another app's hotkey or the shell would take first. plain keys and esc stay the page's
-    pub fn key(&mut self, vk: u32, down: bool, focused: bool) -> (bool, Option<Heard>) {
-        if let Some(m) = modifier(vk) {
-            let before = self.mods();
-            let keep = if down { focused && (m == "alt" || m == "cmd") } else { self.kept.contains(&vk) };
-            if down {
-                if !self.held.contains(&vk) {
-                    self.held.push(vk);
-                }
-                if keep && !self.kept.contains(&vk) {
-                    self.kept.push(vk);
-                }
-            } else {
-                self.held.retain(|k| *k != vk);
-                self.kept.retain(|k| *k != vk);
-            }
-            let after = self.mods();
-            return (keep, (focused && after != before).then(|| Heard::Held(after.join("+"))));
-        }
-        if !down {
-            let kept = self.kept.contains(&vk);
-            self.kept.retain(|k| *k != vk);
-            return (kept, None);
-        }
-        // a held key repeats
-        if self.kept.contains(&vk) {
-            return (true, None);
-        }
-        let mods = self.mods();
-        let fkey = (0x70..=0x87).contains(&vk);
-        if !focused || !(fkey || mods.iter().any(|m| *m != "shift")) {
-            return (false, None);
-        }
-        self.kept.push(vk);
-        let heard = match vk_name(vk) {
-            Some(key) => Heard::Chord(mods.into_iter().chain([key.as_str()]).collect::<Vec<_>>().join("+")),
-            None => Heard::Unknown,
-        };
-        (true, Some(heard))
-    }
-}
-
 // launchers known to take a chord like q calc's, with their own default. windows has no call that names the
 // process holding a hotkey, so a running launcher whose shortcut matches is only a likely owner
 pub struct Launcher {
@@ -443,51 +365,6 @@ mod tests {
         for key in (0..=0xFF).filter_map(vk_name) {
             assert!(shortcut(&format!("ctrl+alt+{key}")).is_some(), "{key}");
         }
-    }
-
-    // left alt, right alt, left win, left ctrl, left shift
-    const LALT: u32 = 0xA4;
-    const LWIN: u32 = 0x5B;
-    const LCTRL: u32 = 0xA2;
-    const LSHIFT: u32 = 0xA0;
-    const SPACE: u32 = 0x20;
-
-    #[test]
-    fn the_hook_keeps_alt_space_from_the_window_menu() {
-        let mut keys = Keys::default();
-        assert_eq!(keys.key(LALT, true, true), (true, Some(Heard::Held("alt".into()))));
-        assert_eq!(keys.key(SPACE, true, true), (true, Some(Heard::Chord("alt+space".into()))));
-        // the repeat and the release stay kept, and say nothing more
-        assert_eq!(keys.key(SPACE, true, true), (true, None));
-        assert_eq!(keys.key(SPACE, false, true), (true, None));
-        assert_eq!(keys.key(LALT, false, true), (true, Some(Heard::Held("".into()))));
-    }
-
-    #[test]
-    fn the_hook_hears_win_chords_in_order_and_leaves_plain_keys() {
-        let mut keys = Keys::default();
-        keys.key(LSHIFT, true, true);
-        keys.key(LWIN, true, true);
-        assert_eq!(keys.key(LCTRL, true, true), (false, Some(Heard::Held("ctrl+shift+cmd".into()))));
-        assert_eq!(keys.key(0x4B, true, true), (true, Some(Heard::Chord("ctrl+shift+cmd+k".into()))));
-        let mut keys = Keys::default();
-        assert_eq!(keys.key(0x1B, true, true), (false, None));
-        keys.key(LSHIFT, true, true);
-        assert_eq!(keys.key(0x4B, true, true), (false, None));
-        assert_eq!(keys.key(0x74, true, true), (true, Some(Heard::Chord("shift+f5".into()))));
-        let mut keys = Keys::default();
-        keys.key(LCTRL, true, true);
-        assert_eq!(keys.key(0x6B, true, true), (true, Some(Heard::Unknown)));
-    }
-
-    #[test]
-    fn the_hook_leaves_other_windows_alone() {
-        let mut keys = Keys::default();
-        assert_eq!(keys.key(LALT, true, false), (false, None));
-        assert_eq!(keys.key(SPACE, true, false), (false, None));
-        assert_eq!(keys.key(SPACE, false, false), (false, None));
-        // a release whose press windows saw goes to windows too
-        assert_eq!(keys.key(LALT, false, true), (false, Some(Heard::Held("".into()))));
     }
 
     #[test]

@@ -262,6 +262,17 @@ export function windowsKeeps(chord: string): string | null {
 }
 
 // the modifiers held so far, while the rest of a chord is on its way: "Ctrl+Alt+…", "⌃⌥…"
+/**
+ * Windows hands a key another app has as a global shortcut to that app, so the recorder hears only the modifiers go
+ * down and up again. What it says then: where the key went, and what to do about it. '' when no modifier was held.
+ */
+export function missedKeyText(mods: string): string {
+  const label = heldLabel(mods, true).replace(/\+…$/, '')
+  if (!label) return ''
+  const them = label.includes('+') ? 'them' : 'it'
+  return `Only ${label} came through. If you pressed a key with ${them}, another app has that shortcut (PowerToys Run uses Alt+Space): change it there, or pick another here.`
+}
+
 export function heldLabel(mods: string, windows: boolean): string {
   const held = new Set(mods.split('+'))
   const down = MODIFIERS.filter((m) => held.has(m))

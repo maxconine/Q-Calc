@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   chordFromEvent,
   chordLabel,
@@ -8,6 +8,7 @@ import {
   keybindFor,
   keyRecorder,
   heldLabel,
+  missedKeyText,
   setKeybind,
   type KeyAction,
   type Keybinds,
@@ -26,8 +27,8 @@ type Props = {
     note: string
     onPick: (chord: string) => void
     onRecording?: (on: boolean) => void
-    // the windows shell tries a recorded chord before it's kept and answers with verdict; it also hears the keys
-    // itself while the row records, and says so with 'qcalc-hotkey' events
+    // the windows shell tries a recorded chord before it's kept and answers with verdict; while the row records it
+    // also passes on alt+space, which web view2 gives it instead of this page, with a 'qcalc-hotkey' event
     check?: (chord: string) => void
     verdict?: HotkeyVerdict | null
     // a free chord the note offers instead of a taken one
@@ -37,8 +38,8 @@ type Props = {
 
 const IDLE_HINT = 'Click a shortcut, then press the keys you want.'
 const RECORDING_HINT = 'Press the new keys. Esc cancels, ⌫ leaves it without a key.'
-// the shell hears what windows or another app would take first
-const HOST_RECORDING_HINT = 'Press the new keys, Alt+Space and Win keys too. Esc cancels.'
+// the shell keeps windows' window menu off alt+space while this records
+const HOST_RECORDING_HINT = 'Press the new keys, Alt+Space too. Esc cancels.'
 
 function heldMods(e: KeyboardEvent): string {
   const held = { ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey, cmd: e.metaKey }
@@ -60,11 +61,14 @@ export function KeybindSettings({ value, onChange, windows, settingsWindow, show
   const [held, setHeld] = useState('')
   const [pending, setPending] = useState('')
   const [offer, setOffer] = useState('')
+  // the modifiers held so far in this press, and whether a whole chord came through before they went up
+  const sawMods = useRef('')
+  const sawChord = useRef(false)
   const actions = KEY_ACTIONS.filter((a) => (a.id !== 'show' || show) && (a.id !== 'settings' || settingsWindow))
   // conflicts are checked against the global shortcut too
   const all: Keybinds = show ? { ...value, show: show.chord } : value
   const onShowRecording = show?.onRecording
-  const hostHears = recording === 'show' && Boolean(show?.check)
+  const hostChecks = recording === 'show' && Boolean(show?.check)
   const verdict = show?.verdict
 
   // the old show / hide key would reach the host instead of this page
@@ -120,26 +124,33 @@ export function KeybindSettings({ value, onChange, windows, settingsWindow, show
         return
       }
       const chord = chordFromEvent(e)
-      if (chord) take(chord)
-      else if (!hostHears) setHeld(heldMods(e))
+      if (chord) {
+        sawChord.current = true
+        take(chord)
+        return
+      }
+      const mods = heldMods(e)
+      setHeld(mods)
+      if (mods.length > sawMods.current.length) sawMods.current = mods
     }
     const onKeyUp = (e: KeyboardEvent) => {
-      if (!hostHears) setHeld(heldMods(e))
+      const mods = heldMods(e)
+      setHeld(mods)
+      if (mods) return
+      // every modifier is up again with no chord between: on windows, another app's shortcut took the key
+      const missed = hostChecks && !sawChord.current ? missedKeyText(sawMods.current) : ''
+      sawMods.current = ''
+      sawChord.current = false
+      if (missed) setProblem(missed)
     }
-    // keys windows or another app would take before this page: the shell's keyboard hook hears them instead
+    // alt+space, which web view2 gives the windows shell rather than this page; the shell passes it on
     const onHost = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { held?: unknown; heard?: unknown; unknown?: unknown } | null
-      if (!detail) return
-      if (typeof detail.held === 'string') setHeld(detail.held)
-      if (typeof detail.heard === 'string' && detail.heard) take(detail.heard)
-      if (detail.unknown === true) {
-        setHeld('')
-        setProblem('That key can’t be a shortcut. Try a letter, number or F key.')
-      }
+      const heard = ((e as CustomEvent).detail as { heard?: unknown } | null)?.heard
+      if (typeof heard === 'string' && heard) take(heard)
     }
     window.addEventListener('keydown', onKey, true)
     window.addEventListener('keyup', onKeyUp, true)
-    if (hostHears) window.addEventListener('qcalc-hotkey', onHost)
+    if (hostChecks) window.addEventListener('qcalc-hotkey', onHost)
     return () => {
       window.removeEventListener('keydown', onKey, true)
       window.removeEventListener('keyup', onKeyUp, true)
@@ -170,7 +181,7 @@ export function KeybindSettings({ value, onChange, windows, settingsWindow, show
   }
 
   // a host's complaint about the show / hide key wins over the idle hints
-  const recordingHint = hostHears ? HOST_RECORDING_HINT : RECORDING_HINT
+  const recordingHint = hostChecks ? HOST_RECORDING_HINT : RECORDING_HINT
   const note = problem || (recording ? recordingHint : show?.note || (open ? IDLE_HINT : 'Every shortcut Q Calc answers to.'))
   // a free chord, offered with a taken one's note
   const suggestion = recording === 'show' ? (problem ? offer : '') : !recording && show?.note ? (show.suggest ?? '') : ''

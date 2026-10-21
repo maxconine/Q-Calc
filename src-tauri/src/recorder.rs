@@ -1,25 +1,17 @@
-// the settings window's show / hide recorder, on the host's side. while the page records, a keyboard hook hears the
-// chord before windows or another app acts on it: alt+space would open the window menu, win chords the shell's own
-// things, and a launcher holding the chord would open instead of the page hearing anything. a probe then tries the
-// chord before it's kept, and guesses who holds a taken one
+// the settings window's show / hide recorder, on the host's side. while the page records, alt+space reaches it: web
+// view2 keeps that chord from the page as a system key, so the host hands it on, and the window's own menu stays shut. a probe then tries the chord before it's kept,
+// and guesses who holds a taken one. (a global keyboard hook heard nothing in this process, and would read as a
+// keylogger to security software already wary of an unsigned app)
 use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 
-use crate::hotkey::{self, Heard, Owner, Setting, Verdict};
+use crate::hotkey::{self, Owner, Setting, Verdict};
 
 // the page listens for these on the window
 pub fn tell(app: &AppHandle, detail: &Value) {
     if let Some(window) = app.get_webview_window("settings") {
         let _ = window.eval(format!("window.dispatchEvent(new CustomEvent('qcalc-hotkey', {{ detail: {detail} }}))"));
-    }
-}
-
-fn heard_json(heard: &Heard) -> Value {
-    match heard {
-        Heard::Held(mods) => json!({ "held": mods }),
-        Heard::Chord(chord) => json!({ "heard": chord }),
-        Heard::Unknown => json!({ "unknown": true }),
     }
 }
 
@@ -105,92 +97,90 @@ fn setting(id: &'static str) -> Setting {
     }
 }
 
-// on while the page records the show / hide key, off when it stops. the hook lives on the main thread, whose message
-// loop it needs
+// on while the page records the show / hide key, off when it stops
 #[cfg(windows)]
 pub fn listen(app: &AppHandle, on: bool) {
-    let handle = app.clone();
-    let _ = app.run_on_main_thread(move || {
-        hook::stop();
-        if on {
-            hook::start(&handle);
-        }
-    });
+    menu::set(app, on);
 }
 
 #[cfg(not(windows))]
 pub fn listen(_: &AppHandle, _: bool) {}
 
+// once, as the settings window is built: web view2 tells the host of alt+space instead of the page, and while the row
+// records the host passes it on as heard
 #[cfg(windows)]
-mod hook {
-    use std::sync::atomic::{AtomicIsize, Ordering};
-    use std::sync::mpsc::{channel, Sender};
-    use std::sync::Mutex;
-    use std::thread;
-
-    use serde_json::Value;
-    use tauri::{AppHandle, Manager};
-    use windows_sys::Win32::Foundation::{LPARAM, LRESULT, WPARAM};
-    use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
-    use windows_sys::Win32::UI::WindowsAndMessaging::{
-        CallNextHookEx, GetForegroundWindow, SetWindowsHookExW, UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LLKHF_INJECTED,
-        WH_KEYBOARD_LL, WM_KEYDOWN, WM_SYSKEYDOWN,
+pub fn attach(window: &tauri::WebviewWindow) {
+    use webview2_com::AcceleratorKeyPressedEventHandler;
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        COREWEBVIEW2_KEY_EVENT_KIND, COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN,
     };
-
-    use crate::hotkey::Keys;
-
-    static HOOK: AtomicIsize = AtomicIsize::new(0);
-    static WINDOW: AtomicIsize = AtomicIsize::new(0);
-    // the keyboard so far, and the way out to the page
-    static STATE: Mutex<Option<(Keys, Sender<Value>)>> = Mutex::new(None);
-
-    pub fn start(app: &AppHandle) {
-        let Some(hwnd) = app.get_webview_window("settings").and_then(|w| w.hwnd().ok()) else { return };
-        WINDOW.store(hwnd.0 as isize, Ordering::SeqCst);
-        // windows drops a hook that's slow to answer, so the page hears from one thread of its own, in order; it
-        // ends when stop drops the sender
-        let (send, heard) = channel::<Value>();
-        let app = app.clone();
-        thread::spawn(move || {
-            for detail in heard {
-                super::tell(&app, &detail);
+    let page = window.clone();
+    let _ = window.with_webview(move |webview| unsafe {
+        let handler = AcceleratorKeyPressedEventHandler::create(Box::new(move |_, args| {
+            let Some(args) = args else { return Ok(()) };
+            if !menu::recording() {
+                return Ok(());
             }
+            let mut kind = COREWEBVIEW2_KEY_EVENT_KIND::default();
+            args.KeyEventKind(&mut kind)?;
+            let mut key = 0u32;
+            args.VirtualKey(&mut key)?;
+            // space with alt held: what windows would turn into the window menu
+            if kind == COREWEBVIEW2_KEY_EVENT_KIND_SYSTEM_KEY_DOWN && key == 0x20 {
+                args.SetHandled(true)?;
+                tell(page.app_handle(), &json!({ "heard": "alt+space" }));
+            }
+            Ok(())
+        }));
+        let mut token = 0;
+        let _ = webview.controller().add_AcceleratorKeyPressed(&handler, &mut token);
+    });
+}
+
+#[cfg(not(windows))]
+pub fn attach(_: &tauri::WebviewWindow) {}
+
+// windows opens a window's menu at alt+space (the web view hands the key on to the window when the page doesn't take
+// it all the way); while the row records, the settings window lets that one command go by
+#[cfg(windows)]
+mod menu {
+    use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
+
+    use tauri::{AppHandle, Manager};
+    use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+    use windows_sys::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SC_KEYMENU, WM_SYSCOMMAND};
+
+    static RECORDING: AtomicBool = AtomicBool::new(false);
+
+    pub fn recording() -> bool {
+        RECORDING.load(Ordering::SeqCst)
+    }
+    // the settings window the subclass is on; a new one (it's rebuilt each time it opens) gets it again
+    static ON: AtomicIsize = AtomicIsize::new(0);
+
+    pub fn set(app: &AppHandle, on: bool) {
+        RECORDING.store(on, Ordering::SeqCst);
+        if !on {
+            return;
+        }
+        let Some(window) = app.get_webview_window("settings") else { return };
+        let Ok(hwnd) = window.hwnd() else { return };
+        let hwnd = hwnd.0 as isize;
+        if ON.swap(hwnd, Ordering::SeqCst) == hwnd {
+            return;
+        }
+        // on the window's own thread, as subclassing has to be
+        let _ = window.run_on_main_thread(move || unsafe {
+            SetWindowSubclass(hwnd as HWND, Some(proc), 1, 0);
         });
-        *STATE.lock().unwrap_or_else(|e| e.into_inner()) = Some((Keys::default(), send));
-        let hook = unsafe { SetWindowsHookExW(WH_KEYBOARD_LL, Some(on_key), GetModuleHandleW(std::ptr::null()), 0) };
-        HOOK.store(hook as isize, Ordering::SeqCst);
     }
 
-    pub fn stop() {
-        let hook = HOOK.swap(0, Ordering::SeqCst);
-        if hook != 0 {
-            unsafe { UnhookWindowsHookEx(hook as _) };
+    unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM, _: usize, _: usize) -> LRESULT {
+        if msg == WM_SYSCOMMAND && (wparam & 0xFFF0) as u32 == SC_KEYMENU && RECORDING.load(Ordering::SeqCst) {
+            return 0;
         }
-        *STATE.lock().unwrap_or_else(|e| e.into_inner()) = None;
-    }
-
-    // injected keys (another app's, or a test's) go by untouched
-    unsafe extern "system" fn on_key(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-        if code >= 0 {
-            let info = &*(lparam as *const KBDLLHOOKSTRUCT);
-            if info.flags & LLKHF_INJECTED == 0 {
-                let down = matches!(wparam as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
-                let focused = GetForegroundWindow() as isize == WINDOW.load(Ordering::SeqCst);
-                let mut keep = false;
-                if let Ok(mut state) = STATE.try_lock() {
-                    if let Some((keys, send)) = state.as_mut() {
-                        let (kept, heard) = keys.key(info.vkCode, down, focused);
-                        keep = kept;
-                        if let Some(heard) = heard {
-                            let _ = send.send(super::heard_json(&heard));
-                        }
-                    }
-                }
-                if keep {
-                    return 1;
-                }
-            }
-        }
-        CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam)
+        DefSubclassProc(hwnd, msg, wparam, lparam)
     }
 }
+
