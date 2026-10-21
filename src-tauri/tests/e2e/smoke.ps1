@@ -204,6 +204,21 @@ function Invoke-Check([string]$id, [string]$name, [bool]$required, [scriptblock]
     Log ("{0} {1}: {2}" -f $(if ($pass) { 'PASS' } else { 'FAIL' }), $id, $detail)
     # an annotation shows on the run's page without signing in, unlike the log
     if (-not $pass) { Write-Host ("::{0} title=check {1} {2}::{3}" -f $(if ($required) { 'error' } else { 'warning' }), $id, $name, ($detail -replace "`r?`n", ' ')) }
+    # and what the app saw, which otherwise is only in the artifact
+    if (-not $pass -and $required) { Write-Host ("::notice title=check {0}: what the app saw::{1}" -f $id, (Describe-App)) }
+}
+
+# whether q calc is still running, where its window is, and the host's last notes, on one line
+function Describe-App {
+    $pids = Get-QCalcPids
+    $h = Get-QCalcWindow
+    $win = if ($h -eq [IntPtr]::Zero) { 'no window' } else {
+        $r = $N::Rect($h)
+        "window $($r.Left),$($r.Top) to $($r.Right),$($r.Bottom), visible $($N::IsWindowVisible($h))"
+    }
+    $notes = if ($lookNotes -and (Test-Path $lookNotes)) { (Get-Content $lookNotes -Tail 40) -join ' / ' } else { 'no notes' }
+    $text = "processes: $($pids.Count); $win; screen $($N::Screen().Width)x$($N::Screen().Height); front: $(Describe-Foreground); notes: $notes"
+    $text -replace "`r?`n", ' ' -replace '::', ': :' | ForEach-Object { if ($_.Length -gt 6000) { $_.Substring($_.Length - 6000) } else { $_ } }
 }
 
 function Expect-Answer([string]$expr, [string]$pattern) {
