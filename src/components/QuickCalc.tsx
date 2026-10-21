@@ -55,7 +55,10 @@ import {
   insertableAnswer,
   insertableHistoryAnswer,
   insertableHistoryReuse,
+  historyPickOn,
   historyPicks,
+  historySideOf,
+  type HistorySide,
   solveRoots,
   unitlessAnswer,
   visibleAnswer,
@@ -262,6 +265,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const [selected, setSelected] = useState<number | null>(null)
   // on the selected row, its expression (0) or one of its answers (1…), which ← → move between and ↵ inserts
   const [pick, setPick] = useState(1)
+  // the side ← → last chose; ↑ ↓ keep to it from row to row, and a fresh trip up the tape starts on the answers
+  const sideRef = useRef<HistorySide>('answer')
   const [tapeOpen, setTapeOpen] = useState(false)
   const [nativeLive, setNativeLive] = useState<NativeLive | null>(null)
   // unit picked with ⌥↑/⌥↓ for the live answer
@@ -1099,10 +1104,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     }
     if (!history.length) return false
     if (selected == null) snapshotCaret()
-    const to = !tapeOpen || selected == null ? history.length - 1 : Math.max(0, selected - 1)
+    const fresh = !tapeOpen || selected == null
+    if (fresh) sideRef.current = 'answer'
+    const to = fresh ? history.length - 1 : Math.max(0, selected - 1)
     if (!tapeOpen) setTapeOpen(true)
     setSelected(to)
-    setPick(historyPicks(history[to]!, settings.answerForm, settings.sigFigs).start)
+    setPick(historyPickOn(sideRef.current, historyPicks(history[to]!, settings.answerForm, settings.sigFigs)))
     return true
   }, [helpOpen, history, selected, setGamePick, settings.answerForm, settings.sigFigs, snapshotCaret, tapeOpen])
 
@@ -1111,10 +1118,12 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       const row = selected != null && tapeOpen ? history[selected] : undefined
       if (!row) return false
       const { answers } = historyPicks(row, settings.answerForm, settings.sigFigs)
-      setPick((cur) => Math.min(answers.length, Math.max(0, cur + dir)))
+      const next = Math.min(answers.length, Math.max(0, pick + dir))
+      sideRef.current = historySideOf(next)
+      setPick(next)
       return true
     },
-    [history, selected, settings.answerForm, settings.sigFigs, tapeOpen],
+    [history, pick, selected, settings.answerForm, settings.sigFigs, tapeOpen],
   )
 
   // ↵ on a highlighted row: whatever ← → have picked
@@ -1152,7 +1161,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return true
     }
     setSelected(selected + 1)
-    setPick(historyPicks(history[selected + 1]!, settings.answerForm, settings.sigFigs).start)
+    setPick(historyPickOn(sideRef.current, historyPicks(history[selected + 1]!, settings.answerForm, settings.sigFigs)))
     return true
   }, [gamePick, history, restoreCaret, selected, setGamePick, settings.answerForm, settings.sigFigs, tapeOpen])
 

@@ -83,7 +83,8 @@ final class AppSettings: ObservableObject {
     static let onboardingKey = "qcalc.onboarding"
     static let firstRunKey = "qcalc.firstRunDone"
     static let hotKeyWarnedKey = "qcalc.hotkeyWarned"
-    static let defaultSigFigs = 12
+    // an unset value is the default, so everyone who never picked one gets the new 6
+    static let defaultSigFigs = 6
     static let minSigFigs = 2
     static let maxSigFigs = 16
     static let defaultDraftSeconds = 60

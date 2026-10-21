@@ -9,7 +9,11 @@ use serde_json::Value;
 
 const MIN_SIG_FIGS: f64 = 2.0;
 const MAX_SIG_FIGS: f64 = 16.0;
-const DEFAULT_SIG_FIGS: i64 = 12;
+const DEFAULT_SIG_FIGS: i64 = 6;
+// the file keeps every setting, the defaults too, so a changed default needs the file brought up to date once: 2 is
+// 6 significant figures (was 12) and the typst preview on (was off). a 12 or an off preview in an older file is
+// taken for the old default, since the file can't say whether someone chose it
+const DEFAULTS: u64 = 2;
 const MAX_DRAFT_SECONDS: f64 = 3600.0;
 const DEFAULT_DRAFT_SECONDS: i64 = 60;
 // how long a moved or widened bar keeps its spot and width after it was last used; 0 keeps them for good. the
@@ -188,6 +192,8 @@ pub struct Store {
     pub width: f64,
     // the page's usage counts (lib/analytics), kept as it sent them; null when sharing is off
     pub analytics: Value,
+    // which defaults the settings above were last brought up to (DEFAULTS)
+    pub defaults: u64,
 }
 
 impl Default for Store {
@@ -202,6 +208,7 @@ impl Default for Store {
             used_at: 0,
             width: 0.0,
             analytics: Value::Null,
+            defaults: DEFAULTS,
         }
     }
 }
@@ -224,6 +231,12 @@ impl Store {
         store.spot_seconds = spot_seconds(&v["spotSeconds"]);
         store.used_at = v["usedAt"].as_u64().unwrap_or(0);
         store.width = v["width"].as_f64().filter(|w| w.is_finite() && *w > 0.0).unwrap_or(0.0);
+        if v["settings"].is_object() && v["defaults"].as_u64().unwrap_or(1) < 2 {
+            if store.settings.sig_figs == 12 {
+                store.settings.sig_figs = DEFAULT_SIG_FIGS;
+            }
+            store.settings.typst_preview = true;
+        }
         if let Some(all) = v["positions"].as_object() {
             for (key, pair) in all {
                 if let (Some(x), Some(y)) = (pair[0].as_f64(), pair[1].as_f64()) {
@@ -261,6 +274,19 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn an_older_file_takes_the_new_defaults_once() {
+        // written before 6 figures and the preview were the defaults: its 12 and its off are the old defaults
+        let old = Store::from_json(r#"{ "settings": { "sigFigs": 12, "typstPreview": false, "theme": "dark" } }"#);
+        assert_eq!((old.settings.sig_figs, old.settings.typst_preview, old.defaults), (6, true, DEFAULTS));
+        assert_eq!(old.settings.theme, "dark");
+        // a value someone picked that was never a default stays
+        assert_eq!(Store::from_json(r#"{ "settings": { "sigFigs": 9 } }"#).settings.sig_figs, 9);
+        // once brought up to date, a 12 or an off preview is a choice
+        let chosen = Store::from_json(r#"{ "defaults": 2, "settings": { "sigFigs": 12, "typstPreview": false } }"#);
+        assert_eq!((chosen.settings.sig_figs, chosen.settings.typst_preview), (12, false));
+    }
+
+    #[test]
     fn defaults_match_the_page() {
         let v = serde_json::to_value(Settings::default()).unwrap();
         assert_eq!(
@@ -268,7 +294,7 @@ mod tests {
             json!({
                 "angleMode": "deg", "fractionMode": false, "sigFigMode": false, "rationalize": true,
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
-                "sigFigs": 12, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
+                "sigFigs": 6, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
                 "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {}
             })
         );
@@ -345,7 +371,7 @@ mod tests {
     #[test]
     fn a_damaged_file_keeps_what_it_can() {
         let store = Store::from_json(r#"{ "settings": { "sigFigs": "many", "theme": "dark" }, "positions": { "a": [1, 2], "b": "x" }, "firstRunDone": 1 }"#);
-        assert_eq!(store.settings.sig_figs, 12);
+        assert_eq!(store.settings.sig_figs, DEFAULT_SIG_FIGS);
         assert_eq!(store.settings.theme, "dark");
         assert_eq!(store.positions.len(), 1);
         assert!(!store.first_run_done);
