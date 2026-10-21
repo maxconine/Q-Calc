@@ -215,6 +215,60 @@ function reserved(chord: string, windows: boolean): string | null {
   return null
 }
 
+// chords windows keeps for itself: some never reach an app at all (ctrl+alt+delete, win+l), the rest do something of
+// windows' own first, so no app can register them
+const WINDOWS_KEEPS: Record<string, string> = {
+  'ctrl+alt+delete': 'the security screen',
+  'ctrl+shift+escape': 'Task Manager',
+  'ctrl+escape': 'the Start menu',
+  'alt+tab': 'switching windows',
+  'alt+shift+tab': 'switching windows',
+  'alt+escape': 'switching windows',
+  'alt+f4': 'closing windows',
+  'cmd+l': 'locking the PC',
+  'cmd+d': 'showing the desktop',
+  'cmd+e': 'File Explorer',
+  'cmd+r': 'Run',
+  'cmd+i': 'Settings',
+  'cmd+a': 'quick settings',
+  'cmd+s': 'search',
+  'cmd+x': 'the Start button’s menu',
+  'cmd+v': 'clipboard history',
+  'cmd+.': 'emoji',
+  'cmd+;': 'emoji',
+  'cmd+space': 'switching keyboard layouts',
+  'shift+cmd+space': 'switching keyboard layouts',
+  'cmd+tab': 'Task view',
+  'cmd+m': 'minimizing windows',
+  'cmd+n': 'notifications',
+  'cmd+h': 'voice typing',
+  'cmd+k': 'casting',
+  'cmd+p': 'display modes',
+  'cmd+u': 'accessibility',
+  'cmd+g': 'Game Bar',
+  'cmd+w': 'widgets',
+  'cmd+,': 'peeking at the desktop',
+  'shift+cmd+s': 'screenshots',
+}
+
+// what windows does with a chord, or null when an app could have it
+export function windowsKeeps(chord: string): string | null {
+  const c = normalizeChord(chord)
+  if (Object.hasOwn(WINDOWS_KEEPS, c)) return WINDOWS_KEEPS[c]
+  // win+1..9 open the taskbar's apps, win+arrows snap windows
+  if (/^(ctrl\+|alt\+|shift\+)*cmd\+[0-9]$/.test(c)) return 'opening taskbar apps'
+  if (/^(shift\+)?cmd\+(up|down|left|right)$/.test(c)) return 'snapping windows'
+  return null
+}
+
+// the modifiers held so far, while the rest of a chord is on its way: "Ctrl+Alt+…", "⌃⌥…"
+export function heldLabel(mods: string, windows: boolean): string {
+  const held = new Set(mods.split('+'))
+  const down = MODIFIERS.filter((m) => held.has(m))
+  if (!down.length) return ''
+  return windows ? `${down.map((m) => WINDOWS_NAMES[m]).join('+')}+…` : `${down.map((m) => MAC_GLYPHS[m]).join('')}…`
+}
+
 // why a chord can't be used, or null when it can. typing keys need ctrl, alt or ⌘ so they don't eat the input
 export function chordProblem(chord: string, action: KeyAction, binds: Keybinds, windows: boolean): string | null {
   if (!isChord(chord)) return 'Press a key'
@@ -223,6 +277,8 @@ export function chordProblem(chord: string, action: KeyAction, binds: Keybinds, 
   if (!fkey && !mods.has('ctrl') && !mods.has('alt') && !mods.has('cmd')) {
     return `Add ${windows ? 'Ctrl or Alt' : '⌘, ⌃ or ⌥'} so typing still works`
   }
+  const own = windows ? windowsKeeps(chord) : null
+  if (own) return `${chordLabel(chord, windows)} is kept by Windows for ${own}`
   const kept = reserved(chord, windows)
   if (kept) return `${chordLabel(chord, windows)} is kept for ${kept}`
   for (const other of KEY_ACTIONS) {
