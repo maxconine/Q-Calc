@@ -2,8 +2,9 @@ import { useMemo, useRef, useState, type PointerEvent } from 'react'
 import { ELEMENTS, gridCell, insertableMass, type Element } from '../lib/elements'
 import './PeriodicCard.css'
 
-// the browser build's stand-in for the mac app's periodic table window
-export function PeriodicCard({ onPick, onClose }: { onPick: (text: string) => void; onClose: () => void }) {
+// the browser build's stand-in for the mac app's periodic table window; `windowed`, it fills a window of its own (the
+// windows shell's), which has its own title bar to move and close it
+export function PeriodicCard({ onPick, onClose, windowed = false }: { onPick: (text: string) => void; onClose: () => void; windowed?: boolean }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [shown, setShown] = useState<Element | null>(null)
   const dragStart = useRef<{ x: number; y: number; from: { x: number; y: number } } | null>(null)
@@ -36,7 +37,7 @@ export function PeriodicCard({ onPick, onClose }: { onPick: (text: string) => vo
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     // clicks on the card keep the input's focus and caret
     e.preventDefault()
-    if ((e.target as HTMLElement).closest('button')) return
+    if (windowed || (e.target as HTMLElement).closest('button')) return
     dragStart.current = { x: e.clientX, y: e.clientY, from: offset }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
@@ -47,18 +48,20 @@ export function PeriodicCard({ onPick, onClose }: { onPick: (text: string) => vo
 
   return (
     <div
-      className="periodic"
+      className={`periodic${windowed ? ' windowed' : ''}`}
       role="dialog"
       aria-label="Periodic table"
-      style={{ transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)` }}
+      style={windowed ? undefined : { transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)` }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={() => (dragStart.current = null)}
       onMouseDown={(e) => e.preventDefault()}
     >
-      <button type="button" className="periodic-close" aria-label="Close" onClick={onClose}>
-        ×
-      </button>
+      {windowed ? null : (
+        <button type="button" className="periodic-close" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      )}
       <div className="periodic-grid" onMouseLeave={() => setShown(null)}>
         <div className="periodic-detail" aria-live="polite">
           {shown ? (

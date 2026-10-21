@@ -524,6 +524,11 @@ const CONVERSION_WORDS =
 const CALCULUS_WORDS = /^(?:(?:common\s+)?(?:derivatives?|integrals?)|calculus(?:\s+(?:identities|sheet|rules))?|derivative\s+rules)$/i
 
 /** The sheet a bar line opens on enter, or null. */
+// the windows sheet window's page, which is told only the id
+export function identitySheetById(id: string | null): IdentitySheet | null {
+  return [IDENTITY_SHEET, CALCULUS_SHEET, CONVERSION_SHEET].find((s) => s.id === id) ?? null
+}
+
 export function identitySheetFor(text: string): IdentitySheet | null {
   const t = text.trim().replace(/\s+/g, ' ')
   if (IDENTITY_WORDS.test(t)) return IDENTITY_SHEET
@@ -577,10 +582,14 @@ export function identityLabel(show: string, lead: string[] = []): string {
 }
 
 // the mac app draws the sheet in its own window from this, so the data lives in one place; false means no native window.
-// the windows shell has none, so it gets the page's own sheet
+// the windows shell opens its own window on sheet.html, which finds the sheet by its id and draws it itself
 export function openNativeIdentitySheet(sheet: IdentitySheet): boolean {
   const native = nativeHandler()
-  if (!native || isWindowsHost()) return false
+  if (!native) return false
+  if (isWindowsHost()) {
+    native.postMessage({ type: 'identities', id: sheet.id, title: sheet.title })
+    return true
+  }
   const sections = sheet.sections.map((s) => ({
     title: s.title,
     groups: s.groups.map((g) => ({

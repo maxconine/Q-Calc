@@ -5,6 +5,7 @@ mod e2e;
 mod frame;
 mod hotkey;
 mod place;
+mod sheet;
 mod rates;
 mod store;
 mod update;
@@ -71,6 +72,8 @@ struct State {
     game_open: bool,
     // a game asked for the whole screen; the page's sizes wait until it's done
     fullscreen: bool,
+    // the reference sheets' windows that are open, the front one last
+    sheets: Vec<String>,
 }
 
 struct Host(Mutex<State>);
@@ -153,6 +156,7 @@ fn main() {
                 rates: cache.page_value(now()),
                 game_open: false,
                 fullscreen: false,
+                sheets: Vec::new(),
             })));
             // before the web view boots, so its injected settings already carry the shortcut
             let shortcuts = app.global_shortcut();
@@ -282,7 +286,27 @@ fn host(window: WebviewWindow, message: Value) {
                 resize(&window, height, anchor, room);
             }
         }
-        Some("dismiss") if overlay => hide(&window),
+        // ctrl+w closes the front reference sheet before the bar, as cmd-w does on the mac
+        Some("dismiss") if overlay => {
+            if message["key"] != "ctrlW" || !close_front_sheet(app) {
+                hide(&window);
+            }
+        }
+        Some("periodic") if overlay => open_sheet_later(app, &sheet::PERIODIC),
+        Some("identities") if overlay => {
+            if let Some(found) = message["id"].as_str().and_then(sheet::identities) {
+                open_sheet_later(app, found);
+            }
+        }
+        // a periodic table tile: what it holds goes in the bar, which opens first if it's put away
+        Some("insert") if sheet::is_sheet(window.label()) => {
+            if let Some(text) = message["text"].as_str() {
+                insert_in_bar(app, text);
+            }
+        }
+        Some("closeSheet") if sheet::is_sheet(window.label()) => {
+            let _ = window.close();
+        }
         Some("game") if overlay => {
             let open = message["open"].as_bool() == Some(true);
             with(app, |s| s.game_open = open);
@@ -402,19 +426,15 @@ fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<&str>) {
         "window.__QCALC_SETTINGS = {payload}; document.documentElement.dataset.theme = {theme}; if (window.__qcalcApplySettings) window.__qcalcApplySettings({payload});",
         theme = Value::String(theme.clone()),
     );
-    for label in ["main", "settings"] {
-        if except == Some(label) {
-            continue;
-        }
-        if let Some(window) = app.get_webview_window(label) {
+    // every window: the overlay, settings and any reference sheet
+    for (label, window) in app.webview_windows() {
+        if except != Some(label.as_str()) {
             let _ = window.eval(&script);
         }
     }
     // the frame follows too: the border, the shadow and the acrylic's tint
-    for label in ["main", "settings"] {
-        if let Some(window) = app.get_webview_window(label) {
-            let _ = window.set_theme(window_theme(&theme));
-        }
+    for window in app.webview_windows().values() {
+        let _ = window.set_theme(window_theme(&theme));
     }
     // queued behind the theme change, so the title bar repaints in the new one. dwm takes the dark mode attribute
     // on its own time, and a repaint that beats it paints the old theme, so a second one follows once it has
@@ -665,6 +685,103 @@ fn hide(window: &WebviewWindow) {
     });
 }
 
+// off the event loop's thread, as settings is: a window built on it never finishes
+fn open_sheet_later(app: &AppHandle, which: &'static sheet::Sheet) {
+    let app = app.clone();
+    thread::spawn(move || open_sheet(&app, which));
+}
+
+// a reference sheet in its own window, as on the mac: always on top, never taking the keys (so the bar keeps its caret
+// and stays up while it's clicked), and a second open brings the same one forward. it stays when the bar is put away
+fn open_sheet(app: &AppHandle, which: &sheet::Sheet) {
+    let label = which.label();
+    with(app, |s| {
+        s.sheets.retain(|l| l != &label);
+        s.sheets.push(label.clone());
+    });
+    if let Some(window) = app.get_webview_window(&label) {
+        let _ = window.show();
+        frame::raise_quietly(&window);
+        return;
+    }
+    let theme = with(app, |s| window_theme(&s.store.settings.theme));
+    let shown = app.get_webview_window("main").and_then(|w| w.theme().ok()).unwrap_or(Theme::Light);
+    let earlier = with(app, |s| s.sheets.len().saturating_sub(1)) as f64;
+    let built = WebviewWindowBuilder::new(app, &label, WebviewUrl::App(which.url().into()))
+        .title(which.title)
+        .inner_size(which.size.0, which.size.1)
+        .min_inner_size(which.min.0, which.min.1)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .focusable(false)
+        .focused(false)
+        .maximizable(false)
+        .minimizable(false)
+        .theme(theme)
+        .background_color(frame::sheet_background(shown))
+        .scroll_bar_style(frame::SCROLL_BARS)
+        .visible(false)
+        .initialization_script(boot_script(app, false))
+        .build();
+    let window = match built {
+        Ok(window) => window,
+        Err(err) => {
+            crash::log(&format!("{label} window failed: {err}"));
+            with(app, |s| s.sheets.retain(|l| l != &label));
+            return;
+        }
+    };
+    quiet_browser_keys(&window);
+    let handle = window.clone();
+    window.on_window_event(move |event| match event {
+        WindowEvent::Destroyed => {
+            let label = handle.label().to_string();
+            with(handle.app_handle(), |s| s.sheets.retain(|l| l != &label));
+        }
+        // in case windows hands it the keys anyway: they go back to the bar while it's up
+        WindowEvent::Focused(true) => {
+            if let Some(main) = handle.app_handle().get_webview_window("main") {
+                if main.is_visible().unwrap_or(false) {
+                    let _ = main.set_focus();
+                }
+            }
+        }
+        _ => {}
+    });
+    // centred on the screen the bar is on, each further sheet a little down and right of the one before
+    if let Some(monitor) = monitor_at_cursor(&window) {
+        let (_, area, scale) = describe(&monitor);
+        let (w, h) = (which.size.0 * scale, which.size.1 * scale);
+        let step = sheet::CASCADE * scale * earlier;
+        let origin = (area.x + (area.width - w) / 2.0 + step, area.y + (area.height - h) / 2.0 + step);
+        set_frame(&window, place::fit(area, origin.0, origin.1, w, h), (w, h));
+    }
+    let _ = window.show();
+}
+
+// the front one that's still up; false when there's none, so ctrl+w goes on to the bar
+fn close_front_sheet(app: &AppHandle) -> bool {
+    let open = with(app, |s| s.sheets.clone());
+    let front = open.iter().rev().find_map(|label| app.get_webview_window(label).filter(|w| w.is_visible().unwrap_or(false)));
+    match front {
+        Some(window) => {
+            let _ = window.close();
+            true
+        }
+        None => false,
+    }
+}
+
+// behind show_window's reset, so it lands in the fresh input
+fn insert_in_bar(app: &AppHandle, text: &str) {
+    let Some(main) = app.get_webview_window("main") else { return };
+    if !main.is_visible().unwrap_or(false) {
+        show_window(app);
+    }
+    let _ = main.eval(format!("window.__qcalcInsert && window.__qcalcInsert({});", Value::String(text.to_string())));
+    let _ = main.set_focus();
+}
+
 fn blurred(window: &WebviewWindow) {
     // clicking away from an open game leaves it up
     if with(window.app_handle(), |s| s.game_open) {
@@ -678,6 +795,14 @@ fn blurred(window: &WebviewWindow) {
     // moving the bar hands the keyboard from the web view to the window's own frame, which arrives here as a blur
     // though q calc is still the window in front. only another window taking the foreground is a click away
     if frame::in_front(window) {
+        return;
+    }
+    // a click on a reference sheet can still hand it the foreground (the web view inside asks for focus); that's
+    // q calc's own window, so the bar stays up and takes the keys back, as the mac's never-key panels leave it
+    let app = window.app_handle();
+    let sheets = with(app, |s| s.sheets.clone());
+    if sheets.iter().filter_map(|label| app.get_webview_window(label)).any(|sheet| frame::in_front(&sheet)) {
+        let _ = window.set_focus();
         return;
     }
     hide(window);

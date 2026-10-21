@@ -24,8 +24,9 @@ function IdentityText({ show }: { show: string }) {
   )
 }
 
-// the browser build's stand-in for the mac app's identity sheet window; a click copies the line
-export function IdentityCard({ sheet, onClose }: { sheet: IdentitySheet; onClose: () => void }) {
+// the browser build's stand-in for the mac app's identity sheet window; a click copies the line. `windowed`, it
+// fills a window of its own (the windows shell's), which has its own title bar to move and close it
+export function IdentityCard({ sheet, onClose, windowed = false }: { sheet: IdentitySheet; onClose: () => void; windowed?: boolean }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [copied, setCopied] = useState<Identity | null>(null)
   const copiedTimer = useRef(0)
@@ -82,7 +83,7 @@ export function IdentityCard({ sheet, onClose }: { sheet: IdentitySheet; onClose
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     // clicks on the card keep the input's focus and caret
     e.preventDefault()
-    if ((e.target as HTMLElement).closest('button, .identity-body')) return
+    if (windowed || (e.target as HTMLElement).closest('button, .identity-body')) return
     dragStart.current = { x: e.clientX, y: e.clientY, from: offset }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
@@ -93,18 +94,20 @@ export function IdentityCard({ sheet, onClose }: { sheet: IdentitySheet; onClose
 
   return (
     <div
-      className="periodic identity"
+      className={`periodic identity${windowed ? ' windowed' : ''}`}
       role="dialog"
       aria-label={sheet.title}
-      style={{ transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)` }}
+      style={windowed ? undefined : { transform: `translate(calc(-50% + ${offset.x}px), ${offset.y}px)` }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={() => (dragStart.current = null)}
       onMouseDown={(e) => e.preventDefault()}
     >
-      <button type="button" className="periodic-close" aria-label="Close" onClick={onClose}>
-        ×
-      </button>
+      {windowed ? null : (
+        <button type="button" className="periodic-close" aria-label="Close" onClick={onClose}>
+          ×
+        </button>
+      )}
       <div className="identity-head">
         <span className="identity-title">{sheet.title}</span>
         <span className={`identity-copied${copied ? ' shown' : ''}`} aria-live="polite">

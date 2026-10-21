@@ -23,6 +23,7 @@ export default defineConfig({
         index: resolve(root, 'index.html'),
         quick: resolve(root, 'quick.html'),
         settings: resolve(root, 'settings.html'),
+        sheet: resolve(root, 'sheet.html'),
       },
     },
   },

@@ -134,7 +134,8 @@ describe('windows shim', () => {
     expect(fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })).toBe(true)
     expect(sent).toEqual([])
     fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })
-    expect(sent).toEqual([['host', { type: 'dismiss' }]])
+    // the host closes the front sheet window first, if there is one
+    expect(sent).toEqual([['host', { type: 'dismiss', key: 'ctrlW' }]])
   })
 
   it('esc and ctrl+w reach no other listener, so the page never sends a second dismiss', () => {
@@ -144,7 +145,7 @@ describe('windows shim', () => {
     fire('keydown', { key: 'Escape' })
     fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })
     expect(page).toBe(0)
-    expect(sent).toEqual([['host', { type: 'dismiss' }], ['host', { type: 'dismiss' }]])
+    expect(sent).toEqual([['host', { type: 'dismiss' }], ['host', { type: 'dismiss', key: 'ctrlW' }]])
     // other keys are still the page's
     fire('keydown', { key: 'a' })
     expect(page).toBe(1)
