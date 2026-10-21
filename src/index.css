@@ -1658,6 +1658,11 @@ html.quick-native .graph {
 .keybind-problem {
   color: var(--ink);
 }
+/* a free show / hide chord, offered under a taken one's note; lined up with the note's text */
+.keybind-suggest {
+  align-self: flex-start;
+  margin: 0 0 var(--sp-1) calc(-1 * var(--sp-2));
+}
 .keybind-controls {
   display: inline-flex;
   flex-shrink: 0;

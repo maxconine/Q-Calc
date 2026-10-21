@@ -1,7 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MAX_SIG_FIGS, MIN_SIG_FIGS } from '../engine/format'
 import { nativeHandler } from '../lib/bridge'
-import { draftChoices, hostInfo, hotkeyNote, spotChoices, type HostInfo } from '../lib/hostSettings'
+import {
+  draftChoices,
+  hostInfo,
+  hotkeyNote,
+  hotkeyVerdict,
+  spotChoices,
+  type HostInfo,
+  type HotkeyVerdict,
+} from '../lib/hostSettings'
 import { isWindowsHost } from '../lib/platform'
 import { mergeSettings, settingsEqual, type Settings } from '../lib/settings'
 import { calcWindow, loadSettings } from '../lib/storage'
@@ -63,6 +71,11 @@ function pauseHotkey(on: boolean): void {
   post({ type: 'hotkeyPause', on })
 }
 
+// the shell tries the chord and answers with a 'qcalc-hotkey' event carrying its verdict
+function probeHotkey(chord: string): void {
+  post({ type: 'hotkeyProbe', chord })
+}
+
 function withKey(hint: string, key: string): string {
   return key ? `${hint} · ${key}` : `${hint}.`
 }
@@ -73,6 +86,29 @@ export function SettingsPage() {
   const [host, setHost] = useState<HostInfo>(() => hostInfo(calcWindow().__QCALC_SETTINGS))
   const set = <K extends keyof Settings>(key: K) => (value: Settings[K]) => setSettings((s) => ({ ...s, [key]: value }))
   const keyLabels = useKeyLabels(settings.keybinds)
+  const windows = isWindowsHost()
+  const [verdict, setVerdict] = useState<HotkeyVerdict | null>(null)
+
+  useEffect(() => {
+    const onHost = (e: Event) => {
+      const next = hotkeyVerdict(((e as CustomEvent).detail as { verdict?: unknown } | null)?.verdict)
+      if (next) setVerdict(next)
+    }
+    window.addEventListener('qcalc-hotkey', onHost)
+    return () => window.removeEventListener('qcalc-hotkey', onHost)
+  }, [])
+
+  // a taken shortcut gets tried again, so its note can say who probably holds it and what's free instead
+  useEffect(() => {
+    if (windows && host.hotkeyTaken) probeHotkey(host.hotkeyTaken)
+  }, [windows, host.hotkeyTaken])
+
+  const checkHotkey = useCallback((chord: string) => {
+    // an older answer about the same chord mustn't settle this one
+    setVerdict(null)
+    probeHotkey(chord)
+  }, [])
+  const takenVerdict = verdict && !verdict.free && verdict.chord === host.hotkeyTaken ? verdict : null
 
   useEffect(() => {
     calcWindow().__qcalcApplySettings = (partial) => {
@@ -103,13 +139,14 @@ export function SettingsPage() {
       <KeybindSettings
         value={settings.keybinds}
         onChange={set('keybinds')}
-        windows={isWindowsHost()}
+        windows={windows}
         settingsWindow
         show={{
           chord: host.hotkeyChord,
-          note: hotkeyNote(host),
+          note: hotkeyNote(host, takenVerdict),
           onPick: (chord) => post({ type: 'hotkey', chord }),
           onRecording: pauseHotkey,
+          ...(windows ? { check: checkHotkey, verdict, suggest: takenVerdict?.suggest } : {}),
         }}
       />
       <OnOffSetting

@@ -4,10 +4,12 @@ import {
   chordFromEvent,
   chordLabel,
   chordProblem,
+  heldLabel,
   keybindFor,
   keybindsEqual,
   sanitizeKeybinds,
   setKeybind,
+  windowsKeeps,
 } from './keybinds'
 
 type Mods = Partial<Record<'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey', boolean>>
@@ -112,5 +114,39 @@ describe('stored keybinds', () => {
     expect(sanitizeKeybinds('ctrl+d')).toEqual({})
     expect(keybindsEqual({ angle: 'ctrl+r' }, { angle: 'ctrl+r' })).toBe(true)
     expect(keybindsEqual({ angle: 'ctrl+r' }, {})).toBe(false)
+  })
+})
+
+describe('chords windows keeps', () => {
+  it('names what windows does with them', () => {
+    expect(windowsKeeps('cmd+l')).toBe('locking the PC')
+    expect(windowsKeeps('ctrl+alt+delete')).toBe('the security screen')
+    expect(windowsKeeps('cmd+shift+s')).toBe('screenshots')
+    expect(windowsKeeps('cmd+3')).toBe('opening taskbar apps')
+    expect(windowsKeeps('shift+cmd+left')).toBe('snapping windows')
+    expect(windowsKeeps('alt+space')).toBeNull()
+    expect(windowsKeeps('ctrl+cmd+k')).toBeNull()
+    expect(windowsKeeps('constructor')).toBeNull()
+  })
+
+  it('says so up front on windows only', () => {
+    expect(chordProblem('cmd+l', 'show', {}, true)).toBe('Win+L is kept by Windows for locking the PC')
+    expect(chordProblem('alt+tab', 'show', {}, true)).toBe('Alt+Tab is kept by Windows for switching windows')
+    expect(chordProblem('cmd+l', 'show', {}, false)).toBeNull()
+    expect(chordProblem('alt+space', 'show', {}, true)).toBeNull()
+  })
+
+  it('hears altgr as ctrl+alt, the way a windows hotkey sees it', () => {
+    // altgr+q types @ on a german layout
+    expect(chordFromEvent(press('@', { ctrlKey: true, altKey: true }, 'KeyQ'))).toBe('ctrl+alt+q')
+  })
+})
+
+describe('heldLabel', () => {
+  it('shows the modifiers heard so far', () => {
+    expect(heldLabel('alt+ctrl', true)).toBe('Ctrl+Alt+…')
+    expect(heldLabel('cmd', true)).toBe('Win+…')
+    expect(heldLabel('ctrl+alt', false)).toBe('⌃⌥…')
+    expect(heldLabel('', true)).toBe('')
   })
 })

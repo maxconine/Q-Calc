@@ -6,6 +6,7 @@ mod frame;
 mod hotkey;
 mod place;
 mod rates;
+mod recorder;
 mod store;
 mod update;
 
@@ -345,6 +346,8 @@ fn host(window: WebviewWindow, message: Value) {
         Some("hotkey") => choose_hotkey(app, message["chord"].as_str().unwrap_or_default()),
         // while the settings page records a new show / hide key, the old one mustn't swallow the press
         Some("hotkeyPause") => pause_hotkey(app, message["on"].as_bool() == Some(true)),
+        // a recorded chord, tried before it's kept
+        Some("hotkeyProbe") => recorder::probe(app, message["chord"].as_str().unwrap_or_default()),
         Some("tutorial") => show_tutorial(app),
         Some("autostart") => {
             let launcher = app.autolaunch();
@@ -364,6 +367,7 @@ fn settings_payload(state: &State, refused: Option<&str>, autostart: bool) -> Va
         "hotkeyFailed": state.hotkey.failed,
         "hotkeyChord": picked,
         "hotkeyRefused": refused.map_or(String::new(), hotkey::title),
+        "hotkeyTaken": hotkey::taken(refused, &state.hotkey, &state.store.hotkey),
         "autostart": autostart,
         "spotSeconds": state.store.spot_seconds,
     });
@@ -497,6 +501,7 @@ fn register(shortcuts: &tauri_plugin_global_shortcut::GlobalShortcut<tauri::Wry>
 fn pause_hotkey(app: &AppHandle, paused: bool) {
     let shortcuts = app.global_shortcut();
     let _ = shortcuts.unregister_all();
+    recorder::listen(app, paused);
     if !paused {
         if let Some(active) = with(app, |s| s.hotkey.active.clone()) {
             register(&shortcuts, &active);
