@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MAX_SIG_FIGS, MIN_SIG_FIGS } from '../engine/format'
 import { nativeHandler } from '../lib/bridge'
-import { draftChoices, hostInfo, hotkeyNote, spotChoices, type HostInfo } from '../lib/hostSettings'
+import { draftChoices, hostInfo, hotkeyNote, spotChoices, updateLine, type HostInfo } from '../lib/hostSettings'
 import { isWindowsHost } from '../lib/platform'
 import { mergeSettings, settingsEqual, type Settings } from '../lib/settings'
 import { calcWindow, loadSettings } from '../lib/storage'
@@ -67,6 +67,47 @@ function withKey(hint: string, key: string): string {
   return key ? `${hint} · ${key}` : `${hint}.`
 }
 
+// the version that's running and how its updates are going: a check or an install now, or updates only when asked
+function SoftwareUpdate({ host }: { host: HostInfo }) {
+  // the "checked 5 minutes ago" keeps up while the window stays open
+  const [now, setNow] = useState(() => Date.now() / 1000)
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now() / 1000), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const { state } = host.update
+  const busy = state === 'checking' || state === 'downloading' || state === 'installing'
+  return (
+    <>
+      <section className="unit-settings" aria-label="Software update">
+        <div className="unit-settings-head">
+          <h2>Software update{host.version ? ` · ${host.version}` : ''}</h2>
+          {state === 'ready' ? (
+            <button type="button" className="unit-reset" onClick={() => post({ type: 'updateInstall' })}>
+              Install now
+            </button>
+          ) : state !== 'off' ? (
+            <button type="button" className="unit-reset" disabled={busy} onClick={() => post({ type: 'updateCheck' })}>
+              Check now
+            </button>
+          ) : null}
+        </div>
+        <p className="unit-settings-hint" aria-live="polite">
+          {updateLine(host.update, host.autoUpdate, now)}
+        </p>
+      </section>
+      {state !== 'off' ? (
+        <OnOffSetting
+          title="Update automatically"
+          hint="Check daily and install when Q Calc is put away. Off, only when you ask here."
+          value={host.autoUpdate}
+          onChange={(on) => post({ type: 'autoUpdate', on })}
+        />
+      ) : null}
+    </>
+  )
+}
+
 // the windows shell's settings window: every row the mac settings window has, in the page's own controls
 export function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(loadSettings)
@@ -125,6 +166,7 @@ export function SettingsPage() {
         value={String(host.spotSeconds)}
         onChange={(v) => post({ type: 'spotSeconds', seconds: Number(v) })}
       />
+      <SoftwareUpdate host={host} />
       <section className="unit-settings" aria-label="Tutorial">
         <div className="unit-settings-head">
           <h2>Tutorial</h2>

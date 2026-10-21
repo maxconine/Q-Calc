@@ -194,6 +194,8 @@ pub struct Store {
     pub analytics: Value,
     // which defaults the settings above were last brought up to (DEFAULTS)
     pub defaults: u64,
+    // updates check, download and install by themselves; off, only when settings asks
+    pub auto_update: bool,
 }
 
 impl Default for Store {
@@ -209,6 +211,7 @@ impl Default for Store {
             width: 0.0,
             analytics: Value::Null,
             defaults: DEFAULTS,
+            auto_update: true,
         }
     }
 }
@@ -231,6 +234,7 @@ impl Store {
         store.spot_seconds = spot_seconds(&v["spotSeconds"]);
         store.used_at = v["usedAt"].as_u64().unwrap_or(0);
         store.width = v["width"].as_f64().filter(|w| w.is_finite() && *w > 0.0).unwrap_or(0.0);
+        store.auto_update = v["autoUpdate"].as_bool().unwrap_or(true);
         if v["settings"].is_object() && v["defaults"].as_u64().unwrap_or(1) < 2 {
             if store.settings.sig_figs == 12 {
                 store.settings.sig_figs = DEFAULT_SIG_FIGS;

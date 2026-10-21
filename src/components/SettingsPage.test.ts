@@ -27,6 +27,7 @@ describe('settings window', () => {
       'Keybinds',
       'Open at login',
       'Move the bar back after',
+      'Software update',
       'Appearance',
       'Show history',
       'History',

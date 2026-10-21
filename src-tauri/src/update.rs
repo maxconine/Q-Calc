@@ -1,9 +1,14 @@
 // silent updates on windows: check at launch and then daily, download in the background,
 // and install only once the calculator is hidden and the user has been idle for a while.
 // the installer runs quietly and relaunches the app, which always starts hidden.
+// the settings window shows how that's going and can ask for a check or an install now, or turn the automatic ones off
 #![cfg_attr(any(not(windows), debug_assertions), allow(dead_code))]
 
-use std::time::{Duration, Instant, SystemTime};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+use serde::Serialize;
 
 use tauri::plugin::TauriPlugin;
 use tauri::Runtime;
@@ -12,6 +17,8 @@ const FIRST_CHECK: Duration = Duration::from_secs(20);
 const CHECK_EVERY: Duration = Duration::from_secs(24 * 60 * 60);
 const RETRY_AFTER: Duration = Duration::from_secs(60 * 60);
 const TICK: Duration = Duration::from_secs(30);
+// how often the loop looks for a check or an install asked for from settings while it waits out a tick
+const NUDGE: Duration = Duration::from_millis(250);
 const IDLE: Duration = Duration::from_secs(5 * 60);
 pub const PLACEHOLDER_KEY: &str = "QCALC_UPDATER_PUBKEY_PLACEHOLDER";
 
@@ -31,6 +38,82 @@ pub fn take_marker(dir: &std::path::Path, now: SystemTime) -> bool {
 // a clock set back counts as stale
 fn fresh(made: SystemTime, now: SystemTime) -> bool {
     now.duration_since(made).is_ok_and(|age| age < MARKER_FRESH)
+}
+
+// what the settings window shows. `state` is one of: off (a build that can't update), idle (nothing checked yet),
+// checking, current, downloading, ready (downloaded, waiting to install), installing, failed
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Status {
+    pub state: &'static str,
+    // the newer version found, while there's one
+    pub latest: String,
+    // unix seconds of the last check that finished; 0 before any
+    pub checked_at: u64,
+    pub error: String,
+}
+
+struct Control {
+    status: Mutex<Status>,
+    check: AtomicBool,
+    install: AtomicBool,
+    auto: AtomicBool,
+    notify: OnceLock<Box<dyn Fn() + Send + Sync>>,
+}
+
+fn control() -> &'static Control {
+    static CONTROL: OnceLock<Control> = OnceLock::new();
+    CONTROL.get_or_init(|| Control {
+        status: Mutex::new(Status { state: "off", latest: String::new(), checked_at: 0, error: String::new() }),
+        check: AtomicBool::new(false),
+        install: AtomicBool::new(false),
+        auto: AtomicBool::new(true),
+        notify: OnceLock::new(),
+    })
+}
+
+pub fn status() -> Status {
+    control().status.lock().unwrap_or_else(|e| e.into_inner()).clone()
+}
+
+fn set_status(change: impl FnOnce(&mut Status)) {
+    let changed = {
+        let mut status = control().status.lock().unwrap_or_else(|e| e.into_inner());
+        let before = status.clone();
+        change(&mut status);
+        *status != before
+    };
+    if changed {
+        if let Some(notify) = control().notify.get() {
+            notify();
+        }
+    }
+}
+
+// told each time the status changes, so the settings window can show it
+pub fn on_change(notify: impl Fn() + Send + Sync + 'static) {
+    let _ = control().notify.set(Box::new(notify));
+}
+
+pub fn ask_check() {
+    control().check.store(true, Ordering::SeqCst);
+}
+
+pub fn ask_install() {
+    control().install.store(true, Ordering::SeqCst);
+}
+
+// off, nothing is checked or installed until settings asks
+pub fn set_auto(on: bool) {
+    control().auto.store(on, Ordering::SeqCst);
+}
+
+fn auto() -> bool {
+    control().auto.load(Ordering::SeqCst)
+}
+
+fn unix(at: SystemTime) -> u64 {
+    at.duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs())
 }
 
 pub fn plugin<R: Runtime>() -> TauriPlugin<R> {
@@ -102,7 +185,8 @@ mod live {
         if let Err(err) = app.plugin(tauri_plugin_updater::Builder::new().build()) {
             return eprintln!("updates off: {err}");
         }
-        std::thread::sleep(FIRST_CHECK);
+        set_status(|s| s.state = "idle");
+        wait_or_asked(FIRST_CHECK);
         let cleanup = app.clone();
         let updater = match app
             .updater_builder()
@@ -111,7 +195,10 @@ mod live {
             .build()
         {
             Ok(updater) => updater,
-            Err(err) => return eprintln!("updates off: {err}"),
+            Err(err) => {
+                set_status(|s| (s.state, s.error) = ("off", err.to_string()));
+                return eprintln!("updates off: {err}");
+            }
         };
 
         let mut last_check: Option<SystemTime> = None;
@@ -119,38 +206,77 @@ mod live {
         let mut ready: Option<(Update, Vec<u8>)> = None;
         let mut quiet = Quiet::default();
         loop {
-            if check_due(last_check, wait, SystemTime::now()) {
+            let asked = control().check.swap(false, Ordering::SeqCst);
+            if asked || (auto() && check_due(last_check, wait, SystemTime::now())) {
                 last_check = Some(SystemTime::now());
                 wait = CHECK_EVERY;
-                match tauri::async_runtime::block_on(fetch(&updater, ready.as_ref().map(|(u, _)| u.version.clone()))) {
-                    Ok(Some(found)) => ready = Some(found),
-                    Ok(None) => {}
+                set_status(|s| (s.state, s.error) = ("checking", String::new()));
+                let have = ready.as_ref().map(|(u, _)| u.version.clone());
+                let found = tauri::async_runtime::block_on(fetch(&updater, have, |version| {
+                    set_status(|s| (s.state, s.latest) = ("downloading", version.to_string()));
+                }));
+                let at = unix(SystemTime::now());
+                match found {
+                    Ok(Some(found)) => {
+                        let version = found.0.version.clone();
+                        ready = Some(found);
+                        set_status(|s| (s.state, s.latest, s.checked_at) = ("ready", version, at));
+                    }
+                    Ok(None) => set_status(|s| {
+                        s.state = if ready.is_some() { "ready" } else { "current" };
+                        s.checked_at = at;
+                    }),
                     Err(err) => {
                         eprintln!("update check failed: {err}");
                         wait = RETRY_AFTER;
+                        let error = err.to_string();
+                        set_status(|s| {
+                            s.state = if ready.is_some() { "ready" } else { "failed" };
+                            s.error = error;
+                            s.checked_at = at;
+                        });
                     }
                 }
             }
 
             let visible = app.get_webview_window("main").map_or(false, |w| w.is_visible().unwrap_or(false));
             quiet.observe(visible, Instant::now());
-            if ready.is_some() && quiet.ready(Instant::now(), input_idle()) {
+            // asked for from settings, or the usual quiet moment when updates are automatic
+            let now = control().install.swap(false, Ordering::SeqCst);
+            if ready.is_some() && (now || (auto() && quiet.ready(Instant::now(), input_idle()))) {
                 if let Some((update, bytes)) = ready.take() {
+                    set_status(|s| s.state = "installing");
                     // exits the process once the installer starts; the installer relaunches us. the marker tells
-                    // that launch it was an update, so it stays in the tray rather than opening the bar
-                    if let Ok(dir) = app.path().app_config_dir() {
-                        let _ = std::fs::create_dir_all(&dir);
-                        let _ = std::fs::write(dir.join(UPDATED_MARKER), "");
+                    // that launch it was an update, so it stays in the tray rather than opening the bar; one asked
+                    // for opens the bar as any launch does, so it's plain the update went in
+                    if !now {
+                        if let Ok(dir) = app.path().app_config_dir() {
+                            let _ = std::fs::create_dir_all(&dir);
+                            let _ = std::fs::write(dir.join(UPDATED_MARKER), "");
+                        }
                     }
                     if let Err(err) = update.install(&bytes) {
                         crate::crash::log(&format!("update install failed: {err}"));
                         if let Ok(dir) = app.path().app_config_dir() {
                             let _ = std::fs::remove_file(dir.join(UPDATED_MARKER));
                         }
+                        let error = err.to_string();
+                        set_status(|s| (s.state, s.error) = ("failed", error));
                     }
                 }
             }
-            std::thread::sleep(TICK);
+            wait_or_asked(TICK);
+        }
+    }
+
+    // a tick, cut short when settings asks for a check or an install
+    fn wait_or_asked(tick: Duration) {
+        let until = Instant::now() + tick;
+        while Instant::now() < until {
+            if control().check.load(Ordering::SeqCst) || control().install.load(Ordering::SeqCst) {
+                return;
+            }
+            std::thread::sleep(NUDGE);
         }
     }
 
@@ -158,11 +284,13 @@ mod live {
     async fn fetch(
         updater: &tauri_plugin_updater::Updater,
         have: Option<String>,
+        found: impl Fn(&str),
     ) -> tauri_plugin_updater::Result<Option<(Update, Vec<u8>)>> {
         let Some(update) = updater.check().await? else { return Ok(None) };
         if have.as_deref() == Some(update.version.as_str()) {
             return Ok(None);
         }
+        found(&update.version);
         let bytes = update.download(|_, _| {}, || {}).await?;
         Ok(Some((update, bytes)))
     }
@@ -181,6 +309,20 @@ mod live {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_status_settings_shows_starts_off_and_says_what_changed() {
+        let s = status();
+        assert_eq!(serde_json::to_value(&s).unwrap()["checkedAt"], 0);
+        set_status(|s| (s.state, s.latest) = ("ready", "9.9.9".to_string()));
+        assert_eq!((status().state, status().latest.as_str()), ("ready", "9.9.9"));
+        ask_check();
+        assert!(control().check.swap(false, Ordering::SeqCst));
+        assert!(!control().check.load(Ordering::SeqCst));
+        set_auto(false);
+        assert!(!auto());
+        set_auto(true);
+    }
 
     #[test]
     fn placeholder_key_is_caught() {

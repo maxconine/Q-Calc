@@ -140,6 +140,9 @@ fn main() {
                 let _ = app.autolaunch().enable();
             }
             let autostarted = updated || std::env::args().any(|arg| arg == AUTOSTART_ARG);
+            update::set_auto(store.auto_update);
+            let notify = app.handle().clone();
+            update::on_change(move || push_settings(&notify, None, None));
             let preferred = hotkey::named(&store.hotkey);
             store.hotkey = preferred.clone();
             app.manage(Host(Mutex::new(State {
@@ -367,6 +370,17 @@ fn host(window: WebviewWindow, message: Value) {
             }
         }
         Some("hotkey") => choose_hotkey(app, message["chord"].as_str().unwrap_or_default()),
+        Some("updateCheck") => update::ask_check(),
+        Some("updateInstall") => update::ask_install(),
+        Some("autoUpdate") => {
+            let on = message["on"].as_bool() == Some(true);
+            update::set_auto(on);
+            with(app, |s| {
+                s.store.auto_update = on;
+                save(s);
+            });
+            push_settings(app, None, None);
+        }
         // while the settings page records a new show / hide key, the old one mustn't swallow the press
         Some("hotkeyPause") => pause_hotkey(app, message["on"].as_bool() == Some(true)),
         Some("tutorial") => show_tutorial(app),
@@ -390,6 +404,9 @@ fn settings_payload(state: &State, refused: Option<&str>, autostart: bool) -> Va
         "hotkeyRefused": refused.map_or(String::new(), hotkey::title),
         "autostart": autostart,
         "spotSeconds": state.store.spot_seconds,
+        "version": env!("CARGO_PKG_VERSION"),
+        "autoUpdate": state.store.auto_update,
+        "update": update::status(),
     });
     if let (Some(to), Some(from)) = (payload.as_object_mut(), extra.as_object()) {
         to.extend(from.clone());
