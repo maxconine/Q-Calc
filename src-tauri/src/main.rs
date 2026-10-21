@@ -4,6 +4,7 @@ mod crash;
 mod e2e;
 mod frame;
 mod hotkey;
+mod icon;
 mod place;
 mod sheet;
 mod rates;
@@ -221,7 +222,7 @@ fn main() {
                     &MenuItem::with_id(app, "quit", "Quit Q Calc", true, None::<&str>)?,
                 ],
             )?;
-            let mut tray = TrayIconBuilder::new()
+            let mut tray = TrayIconBuilder::with_id(icon::TRAY)
                 .tooltip("Q Calc")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
@@ -238,10 +239,11 @@ fn main() {
                         show_window(tray.app_handle());
                     }
                 });
-            if let Some(icon) = app.default_window_icon() {
-                tray = tray.icon(icon.clone());
+            if let Some(image) = icon::tray(app.handle()) {
+                tray = tray.icon(image);
             }
             tray.build(app)?;
+            icon::watch_taskbar(app.handle());
             if let Some(path) = rates_path {
                 let app = app.handle().clone();
                 thread::spawn(move || refresh_rates(&app, cache, &path));
@@ -456,6 +458,7 @@ fn push_settings(app: &AppHandle, except: Option<&str>, refused: Option<&str>) {
     // the frame follows too: the border, the shadow and the acrylic's tint
     for window in app.webview_windows().values() {
         let _ = window.set_theme(window_theme(&theme));
+        icon::dress(window);
     }
     // queued behind the theme change, so the title bar repaints in the new one. dwm takes the dark mode attribute
     // on its own time, and a repaint that beats it paints the old theme, so a second one follows once it has
@@ -650,6 +653,8 @@ fn show_window(app: &AppHandle) {
         }
     }
     let _ = window.show();
+    // above any reference sheet left open
+    frame::raise_quietly(&window);
     let _ = window.set_focus();
     let _ = window.eval(RESET);
     if e2e::enabled() {
@@ -724,6 +729,7 @@ fn open_sheet(app: &AppHandle, which: &sheet::Sheet) {
     if let Some(window) = app.get_webview_window(&label) {
         let _ = window.show();
         frame::raise_quietly(&window);
+        keep_bar_on_top(app);
         return;
     }
     let theme = with(app, |s| window_theme(&s.store.settings.theme));
@@ -778,7 +784,16 @@ fn open_sheet(app: &AppHandle, which: &sheet::Sheet) {
         let origin = (area.x + (area.width - w) / 2.0 + step, area.y + (area.height - h) / 2.0 + step);
         set_frame(&window, place::fit(area, origin.0, origin.1, w, h), (w, h));
     }
+    icon::dress(&window);
     let _ = window.show();
+    keep_bar_on_top(app);
+}
+
+// the bar sits above the sheets, as the mac's panel sits a level above its floating sheets
+fn keep_bar_on_top(app: &AppHandle) {
+    if let Some(main) = app.get_webview_window("main").filter(|w| w.is_visible().unwrap_or(false)) {
+        frame::raise_quietly(&main);
+    }
 }
 
 // the front one that's still up; false when there's none, so ctrl+w goes on to the bar
@@ -1015,6 +1030,7 @@ fn open_settings(app: &AppHandle) {
     let Ok(window) = built else { return };
     quiet_browser_keys(&window);
     recorder::attach(&window);
+    icon::dress(&window);
     if let Some(monitor) = monitor_at_cursor(&window) {
         let (_, area, scale) = describe(&monitor);
         let (w, h) = (SETTINGS_SIZE.0 * scale, SETTINGS_SIZE.1 * scale);
