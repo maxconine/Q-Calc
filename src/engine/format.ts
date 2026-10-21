@@ -24,6 +24,9 @@ export function formatNumber(n: number, sigFigs = DEFAULT_SIG_FIGS): string {
   const figs = clampSigFigs(sigFigs)
   const mag = Math.floor(Math.log10(Math.abs(n)))
   if (mag < -6 || mag >= 12) return formatScientific(n, figs)
+  // more whole digits than the figures shown: rounding to the figures would put zeros where real digits are
+  // (123456789 as 123457000 at 6), so the whole number shows instead, without a fraction
+  if (mag >= figs) return String(Math.round(n))
   const rounded = Number(n.toPrecision(figs))
   if (!Number.isFinite(rounded)) return formatScientific(n, figs)
   let s = String(rounded)
