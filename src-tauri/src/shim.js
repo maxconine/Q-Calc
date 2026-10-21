@@ -80,7 +80,7 @@
       e.preventDefault()
       e.stopImmediatePropagation()
       if (window.__qcalcCloseSheet && window.__qcalcCloseSheet()) return
-      send({ type: 'dismiss' })
+      send({ type: 'dismiss', key: 'ctrlW' })
       return
     }
     var field = document.querySelector('.quick-plain')

@@ -91,10 +91,10 @@ describe('windows wording', () => {
 })
 
 describe('periodic table on windows', () => {
-  it('opens the page’s own table instead of posting to the host', () => {
+  it('asks the host for its own window, which draws the page’s table', () => {
     const posted = stubHost('windows')
-    expect(openNativePeriodicTable()).toBe(false)
-    expect(posted).toEqual([])
+    expect(openNativePeriodicTable()).toBe(true)
+    expect(posted).toEqual([{ type: 'periodic' }])
   })
 
   it('still goes to the mac window', () => {
@@ -106,10 +106,10 @@ describe('periodic table on windows', () => {
 })
 
 describe('identity sheets on windows', () => {
-  it('opens the page’s own sheet instead of posting to the host', () => {
+  it('asks the host for a window by the sheet’s id', () => {
     const posted = stubHost('windows')
-    expect(openNativeIdentitySheet(IDENTITY_SHEET)).toBe(false)
-    expect(posted).toEqual([])
+    expect(openNativeIdentitySheet(IDENTITY_SHEET)).toBe(true)
+    expect(posted).toEqual([{ type: 'identities', id: 'identities', title: IDENTITY_SHEET.title }])
   })
 
   it('still goes to the mac window, with its runs drawn out', () => {

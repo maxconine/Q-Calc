@@ -1,4 +1,4 @@
-import { clampSigFigs, DEFAULT_SIG_FIGS } from '../engine/format'
+import { clampSigFigs } from '../engine/format'
 import { defaultUnitsEqual, sanitizeDefaultUnits, type DefaultUnits } from '../engine/units'
 import { keybindsEqual, sanitizeKeybinds, type Keybinds } from './keybinds'
 import { normalizeHistoryInsert, type AnswerForm, type HistoryInsert } from './answer'
@@ -7,6 +7,9 @@ import { DEFAULT_HISTORY_SHOW, normalizeHistoryShow, type HistoryShow } from './
 import { normalizeTheme, type Theme } from './theme'
 
 export type AngleMode = 'deg' | 'rad'
+
+// what a new user's answers round to; the engine's own fallback (DEFAULT_SIG_FIGS) stays 12 for its callers
+export const DEFAULT_SETTINGS_SIG_FIGS = 6
 
 export type Settings = {
   angleMode: AngleMode
@@ -45,7 +48,7 @@ export function defaultSettings(): Settings {
     answerForm: 'exact',
     historyInsert: 'expr',
     historyShow: DEFAULT_HISTORY_SHOW,
-    sigFigs: DEFAULT_SIG_FIGS,
+    sigFigs: DEFAULT_SETTINGS_SIG_FIGS,
     draftSeconds: DEFAULT_DRAFT_SECONDS,
     defaultUnits: {},
     theme: 'system',

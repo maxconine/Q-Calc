@@ -49,3 +49,17 @@ html[data-host="windows"].quick-native .spotlight::after {
 html[data-host="windows"] :is(.tape, .graph) {
   scrollbar-width: auto;
 }
+
+/* the reference sheets' own windows (sheet.html): the card is the page, on the card's own colour */
+html.sheet-window,
+html.sheet-window body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+html.sheet-window .sheet-fit {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+}

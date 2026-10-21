@@ -13,6 +13,16 @@ describe('significant figures', () => {
     expect(formatNumber(0.0508, 12)).toBe('0.0508')
   })
 
+  it('never puts zeros where a large number has real digits', () => {
+    expect(formatNumber(123456789, 6)).toBe('123456789')
+    expect(formatNumber(1234567.891, 6)).toBe('1234568')
+    expect(formatNumber(100000, 6)).toBe('100000')
+    expect(formatNumber(123456.7, 6)).toBe('123457')
+    expect(formatNumber(123456789012, 6)).toBe('123456789012')
+    // thirteen digits and up go to scientific, as before
+    expect(formatNumber(1234567890123, 6)).toMatch(/e\+12$/)
+  })
+
   it('does not throw on extreme magnitudes', () => {
     expect(() => formatNumber(1e-320, 12)).not.toThrow()
     expect(() => formatNumber(1e308, 12)).not.toThrow()

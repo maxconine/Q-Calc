@@ -126,6 +126,22 @@ export function insertableHistoryAnswer(
   return insertableAnswer(row.display, row.meas ? undefined : row.n, sigFigs)
 }
 
+/** The side of the history rows ← and → last chose: ↑ and ↓ keep to it from row to row. */
+export type HistorySide = 'expr' | 'answer'
+
+/**
+ * Where ↑ or ↓ land on the next row: on the expression side, its expression; on the answer side, the answer the row
+ * reads as (or its expression when it has none, though the side stays the answer's for the rows after).
+ */
+export function historyPickOn(side: HistorySide, picks: { start: number }): number {
+  return side === 'expr' ? 0 : picks.start
+}
+
+/** The side a pick is on. */
+export function historySideOf(pick: number): HistorySide {
+  return pick === 0 ? 'expr' : 'answer'
+}
+
 /**
  * What ← and → step through on a highlighted history row: the expression (pick 0), then each answer the row shows,
  * as each inserts: a solve's roots one by one, the exact value and then the approximation, or the one answer.

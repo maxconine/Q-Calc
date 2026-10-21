@@ -58,3 +58,13 @@
 .identity-math sup, .identity-math sub { font-size: 0.72em; line-height: 0; }
 .identity-lead { display: inline-block; }
 .identity-note { flex: none; color: var(--muted); font-size: var(--fs-caption); }
+
+/* a window of its own: the head stays put and the rows scroll in whatever height the window has */
+.identity.windowed {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100vh;
+}
+.identity.windowed .identity-body { flex: 1; min-height: 0; max-height: none; }

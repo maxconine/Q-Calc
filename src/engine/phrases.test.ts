@@ -271,3 +271,52 @@ describe('ordinary maths is not a phrase', () => {
     expect(shown(expr)).toBe('')
   })
 })
+
+describe('arithmetic in words', () => {
+  const said = (s: string) => answerPhrase(s, { sigFigs: 6 })?.display
+  it('turns the words into symbols', () => {
+    expect(said('7 plus 2')).toBe('9')
+    expect(said('7 minus 2')).toBe('5')
+    expect(said('10 divided by 4')).toBe('2.5')
+    expect(said('10 over 4')).toBe('2.5')
+    expect(said('6 multiplied by 7')).toBe('42')
+    expect(said('3 squared')).toBe('9')
+    expect(said('3 cubed')).toBe('27')
+    expect(said('2 to the power of 10')).toBe('1024')
+    expect(said('3 to the 4th')).toBe('81')
+    expect(said('square root of 81')).toBe('9')
+    expect(said('what is the square root of 2')).toBe('1.41421')
+    expect(said('cube root of 27')).toBe('3')
+    expect(said('17 modulo 5')).toBe('2')
+  })
+
+  it('reads the phrases around a number', () => {
+    expect(said('half of 50')).toBe('25')
+    expect(said('a third of 90')).toBe('30')
+    expect(said('a quarter of 80')).toBe('20')
+    expect(said('double 21')).toBe('42')
+    expect(said('twice 8')).toBe('16')
+    expect(said('triple 7')).toBe('21')
+    expect(said('square of 12')).toBe('144')
+    expect(said('cube of 3')).toBe('27')
+    expect(said('5 choose 2')).toBe('10')
+  })
+
+  it('stays blank for words it can’t read', () => {
+    expect(said('ten plus five')).toBeUndefined()
+    expect(said('half of the pizza')).toBeUndefined()
+    expect(said('twice as fast')).toBeUndefined()
+    expect(said('the cube of everything')).toBeUndefined()
+  })
+})
+
+describe('percentages of quantities', () => {
+  const said = (s: string) => answerPhrase(s, { sigFigs: 6 })?.display
+  it('keeps the unit', () => {
+    expect(said('10% of 50 kg')).toBe('5 kg')
+    expect(said('50 kg + 10%')).toBe('55 kg')
+    expect(said('3 km - 20%')).toBe('2.4 km')
+    expect(said('25% off 8 h')).toBe('6 h')
+    expect(said('15% on 200 m')).toBe('230 m')
+  })
+})

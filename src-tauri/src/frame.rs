@@ -83,6 +83,25 @@ pub fn bare(window: &WebviewWindow) {
 #[cfg(not(windows))]
 pub fn bare(_: &WebviewWindow) {}
 
+// a reference sheet's: the page's --bg, which the card is drawn on
+pub fn sheet_background(theme: Theme) -> Color {
+    match theme {
+        Theme::Dark => Color(0x2c, 0x2c, 0x2e, 255),
+        _ => Color(0xff, 0xff, 0xff, 255),
+    }
+}
+
+// a sheet opened again comes to the front of the always-on-top windows without taking the keys from the bar
+#[cfg(windows)]
+pub fn raise_quietly(window: &WebviewWindow) {
+    use windows_sys::Win32::UI::WindowsAndMessaging::{SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE};
+    let Ok(hwnd) = window.hwnd() else { return };
+    unsafe { SetWindowPos(hwnd.0, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE) };
+}
+
+#[cfg(not(windows))]
+pub fn raise_quietly(_: &WebviewWindow) {}
+
 // tao sets the dark title bar attribute on a theme change but leaves the caption to repaint at the next activation,
 // so the settings window kept the old theme's title bar, text and all, until it lost focus. an off-then-on pair of
 // activation paints (on-then-off for a window in the back) repaints it where it stands. straight to the default

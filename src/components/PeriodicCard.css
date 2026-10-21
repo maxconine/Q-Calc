@@ -81,3 +81,13 @@
 .periodic-nonmetal, .periodic-halogen { --tint: #5aa84a; }
 .periodic-noble { --tint: #8e6cc9; }
 .periodic-lanthanide, .periodic-actinide { --tint: #c2587e; }
+
+/* a window of its own (the windows shell's sheet.html): the card is the whole page, laid out at its usual size and
+   scaled to the window by sheet.tsx */
+.periodic.windowed {
+  position: static;
+  box-shadow: none;
+  border-radius: 0;
+  cursor: default;
+  width: max-content;
+}

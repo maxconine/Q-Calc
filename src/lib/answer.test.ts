@@ -11,7 +11,9 @@ import {
   prettyRoots,
   visibleAnswer,
   solveRoots,
+  historyPickOn,
   historyPicks,
+  historySideOf,
 } from './answer'
 
 describe('insertableAnswer', () => {
@@ -332,6 +334,21 @@ describe('unitlessAnswer', () => {
       expect(unitlessAnswer(shown)).toBe(shown)
     },
   )
+})
+
+describe('historyPickOn: ↑ ↓ keep to the side ← → chose', () => {
+  it('stays on the expressions once ← has gone there', () => {
+    expect(historyPickOn('expr', { start: 2 })).toBe(0)
+    expect(historyPickOn('answer', { start: 2 })).toBe(2)
+    // a row with no answer shows its expression, but the side is still the answers'
+    expect(historyPickOn('answer', { start: 0 })).toBe(0)
+  })
+
+  it('reads the side off a pick', () => {
+    expect(historySideOf(0)).toBe('expr')
+    expect(historySideOf(1)).toBe('answer')
+    expect(historySideOf(3)).toBe('answer')
+  })
 })
 
 describe('historyPicks: what ← → step through on a highlighted row', () => {
