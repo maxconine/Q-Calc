@@ -53,7 +53,12 @@ function boot(overlay: boolean, own?: Record<string, { postMessage: (m: unknown)
   new Function('window', 'document', 'CustomEvent', 'MutationObserver', source)(win, doc, function () {}, FakeObserver)
   const fire = (type: string, e: Record<string, unknown>) => {
     let stopped = false
-    for (const f of [...(listeners[type] ?? [])]) f({ preventDefault() {}, stopPropagation: () => (stopped = true), ...e })
+    let only = false
+    const event = { preventDefault() {}, stopPropagation: () => (stopped = true), stopImmediatePropagation: () => (stopped = only = true), ...e }
+    for (const f of [...(listeners[type] ?? [])]) {
+      f(event)
+      if (only) break
+    }
     return stopped
   }
   return { win, root, classes, sent, fire, addRoot }
@@ -130,6 +135,19 @@ describe('windows shim', () => {
     expect(sent).toEqual([])
     fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })
     expect(sent).toEqual([['host', { type: 'dismiss' }]])
+  })
+
+  it('esc and ctrl+w reach no other listener, so the page never sends a second dismiss', () => {
+    const { win, sent, fire } = boot(true)
+    let page = 0
+    ;(win.addEventListener as (type: string, f: () => void) => void)('keydown', () => page++)
+    fire('keydown', { key: 'Escape' })
+    fire('keydown', { key: 'w', ctrlKey: true, altKey: false, shiftKey: false, metaKey: false })
+    expect(page).toBe(0)
+    expect(sent).toEqual([['host', { type: 'dismiss' }], ['host', { type: 'dismiss' }]])
+    // other keys are still the page's
+    fire('keydown', { key: 'a' })
+    expect(page).toBe(1)
   })
 
   it('leaves esc to an open game', () => {
