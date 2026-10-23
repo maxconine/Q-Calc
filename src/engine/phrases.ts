@@ -13,6 +13,7 @@ import {
 } from './currency'
 import { evaluateLine } from './evaluate'
 import { DEFAULT_SIG_FIGS, formatNumber } from './format'
+import { moneyMath } from './phraseMoney'
 import { answerTimePhrase } from './phraseTime'
 
 export type PhraseAnswer = { display: string; n?: number }
@@ -81,6 +82,24 @@ function scaledBase(text: string, factor: number, sigFigs: number): PhraseAnswer
 }
 
 function percentPhrase(s: string, sigFigs: number): PhraseAnswer | null {
+  // the whole from a part: `30 is 20% of what`, `20% of what is 30`
+  const isOf = match(s, String.raw`(.+?) is ${PCT} of what`)
+  const ofIs = match(s, String.raw`${PCT} of what is (.+)`)
+  const whole = isOf ? { text: isOf[1]!, pct: isOf[2]! } : ofIs ? { text: ofIs[2]!, pct: ofIs[1]! } : null
+  if (whole) {
+    const p = parseNumber(whole.pct)
+    if (p == null || p === 0) return null
+    return scaledBase(whole.text, 100 / p, sigFigs)
+  }
+  // `increase 50 by 10%`, `decrease $200 by 25%`
+  const by = match(s, String.raw`(increase|raise|decrease|reduce|lower) (.+?) by ${PCT}`)
+  if (by) {
+    const p = parseNumber(by[3])
+    if (p == null) return null
+    const up = by[1] === 'increase' || by[1] === 'raise'
+    if (!up && p > 100) return null
+    return scaledBase(by[2], up ? 1 + p / 100 : 1 - p / 100, sigFigs)
+  }
   let m = match(s, String.raw`${PCT} off (.+)`)
   if (m) {
     const p = parseNumber(m[1])
@@ -99,6 +118,7 @@ function percentPhrase(s: string, sigFigs: number): PhraseAnswer | null {
     if (p == null) return null
     return scaledBase(m[1], m[2] === '+' ? 1 + p / 100 : 1 - p / 100, sigFigs)
   }
+  // the whole from a part: `30 is 20% of what`, `20% of what is 30`
   // part and whole, in any of the three usual orders
   const asked = match(s, String.raw`what % of (.+?) is (.+)`)
   const stated = match(s, String.raw`(.+?) is what % of (.+)`) ?? match(s, String.raw`(.+?) as (?:an? )?% of (.+)`)
@@ -138,6 +158,12 @@ function percent(n: number, sigFigs: number): PhraseAnswer | null {
   return Number.isFinite(n) ? { display: `${formatNumber(n, sigFigs)}%` } : null
 }
 
+// `$45.50 + $12.25`, `3 x $4.99`, `$100 + 8.25% tax`, `$30/hr * 40 hr`, `$50k / 12`, `5 dozen`
+function sumPhrase(s: string, sigFigs: number): PhraseAnswer | null {
+  const sum = moneyMath(s)
+  return sum ? amount(sum.n, sum.currency, sigFigs) : null
+}
+
 // `$20 in euros`, `20 usd to gbp`, `£5 as yen`
 function conversionPhrase(s: string, rates: CurrencyRates | null | undefined): PhraseAnswer | null {
   const m = s.match(/^(.+?)\s+(?:in|to|as|into)\s+(.+)$/)
@@ -168,6 +194,7 @@ export function answerPhrase(expr: string, options: PhraseOptions = {}): PhraseA
     splitPhrase(s, sigFigs) ??
     percentPhrase(s, sigFigs) ??
     conversionPhrase(s, options.rates) ??
+    sumPhrase(s, sigFigs) ??
     answerTimePhrase(s, options.now ?? new Date())
   )
 }

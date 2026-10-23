@@ -111,7 +111,8 @@ describe('clock times', () => {
   })
 
   it('leaves times that could be durations blank', () => {
-    for (const expr of ['3:45 + 1 hr', '12:30 + 1', '1:30:00', '9am - 5pm', '9am to 9am', '13pm', '3:75pm', '3:45pm + 4', '3:45pm + 2 days', '25:00 + 1 hr']) {
+    // `3:45 + 1 hr` is a time of day now, as soulvercore read it (see phrases.soulver.test.ts)
+    for (const expr of ['12:30 + 1', '1:30:00', '9am - 5pm', '9am to 9am', '13pm', '3:75pm', '3:45pm + 4', '3:45pm + 2 days', '25:00 + 1 hr']) {
       expect(shown(expr), expr).toBe('')
     }
   })
@@ -161,7 +162,8 @@ describe('dates', () => {
     ['jan 31 2026 + 1 month', 'Sat 28 Feb 2026'],
     ['feb 29 2028 + 1 year', 'Wed 28 Feb 2029'],
     ['days until dec 25', '92 days'],
-    ['how many days until christmas', ''],
+    // a holiday on a fixed date, as soulvercore read it
+    ['how many days until christmas', '92 days'],
     ['days until 25th december', '92 days'],
     ['days until sep 1', '342 days'],
     ['days until tomorrow', '1 day'],
