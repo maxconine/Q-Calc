@@ -1,5 +1,6 @@
 import { SCIENTIFIC_NAMES } from '../engine/scientific'
 import { isUnitName } from '../engine/units'
+import { IDENTITY_PARTS } from './identities'
 
 // ranked: the first name a prefix reaches is the one offered
 export const COMPLETION_FUNCTIONS = [
@@ -40,6 +41,10 @@ export function completionFor(text: string, names: CompletionNames = {}): string
   // `periodic table` is a command, not a unit: `periodic ta` finishes it, and `table` never becomes `tablespoon`
   const periodic = text.match(/^\s*periodic\s+([A-Za-z]*)$/i)
   if (periodic) return 'table'.startsWith(periodic[1]!.toLowerCase()) ? 'table'.slice(periodic[1]!.length) : ''
+  // `idt in` finishes the part of the sheet to open, `integration`; one that's no part goes on to the usual picks
+  const part = text.match(/^\s*(?:identities|identity|idt)\s+([A-Za-z][A-Za-z ]*)$/i)?.[1]?.toLowerCase()
+  const hit = part && IDENTITY_PARTS.find((p) => p.length > part.length && p.startsWith(part))
+  if (hit) return hit.slice(part.length)
   const m =text.match(/(^|[^A-Za-z])([A-Za-z]{2,})$/)
   if (!m) return ''
   const word = m[2]!

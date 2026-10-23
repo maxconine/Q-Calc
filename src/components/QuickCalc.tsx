@@ -118,7 +118,7 @@ import {
 } from '../lib/history'
 import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
-import { identitySheetFor, isIdentityCommand, openNativeIdentitySheet, type IdentitySheet } from '../lib/identities'
+import { identityTargetFor, isIdentityCommand, openNativeIdentitySheet, type IdentityTarget } from '../lib/identities'
 import { GREETING_REPLY, isGreeting } from '../lib/greeting'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
@@ -301,7 +301,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // the browser build's periodic table; the mac app opens its own window instead
   const [periodicOpen, setPeriodicOpen] = useState(false)
   // the browser build's identity or calculus sheet, the same way
-  const [identityOpen, setIdentityOpen] = useState<IdentitySheet | null>(null)
+  const [identityOpen, setIdentityOpen] = useState<IdentityTarget | null>(null)
   // letters moved by hand between changing with time and constant, for d/dt; kept until Q Calc quits
   const [timeVarying, setTimeVarying] = useState<Record<string, boolean>>({})
   // equation fields for `sys N`; null until enter opens them
@@ -500,7 +500,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const greeting = isGreeting(q)
   // `periodic` and `hello` answer with a message, not a calculation
   const periodicCmd = isPeriodicCommand(q) || greeting
-  const identityCmd = identitySheetFor(q)
+  const identityCmd = useMemo(() => identityTargetFor(q), [q])
   // pong or connect 4
   const pongCmd = gameCommand(q)
   const tutorialCmd = isTutorialCommand(q)
@@ -1246,8 +1246,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       if (!openNativePeriodicTable()) setPeriodicOpen(true)
       resetToCalculate()
     } else if (selected == null && isIdentityCommand(qRef.current)) {
-      const sheet = identitySheetFor(qRef.current)!
-      if (!openNativeIdentitySheet(sheet)) setIdentityOpen(sheet)
+      const target = identityTargetFor(qRef.current)!
+      if (!openNativeIdentitySheet(target)) setIdentityOpen(target)
       resetToCalculate()
     } else if (selected == null && gameCommand(qRef.current)) playGame(gameCommand(qRef.current)!)
     else if (selected == null && isGamesCommand(qRef.current)) {
@@ -1765,7 +1765,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         <SixtySevenArms shaking={armsShaking} />
       </div>
       {periodicOpen ? <PeriodicCard onPick={insertPlain} onClose={() => setPeriodicOpen(false)} /> : null}
-      {identityOpen ? <IdentityCard sheet={identityOpen} onClose={() => setIdentityOpen(null)} /> : null}
+      {identityOpen ? <IdentityCard sheet={identityOpen.sheet} section={identityOpen.section} onClose={() => setIdentityOpen(null)} /> : null}
       {!embedded ? (
         <>
           <AppearanceSettings value={settings.theme} onChange={(theme) => setSettings((s) => ({ ...s, theme }))} />

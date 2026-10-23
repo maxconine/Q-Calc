@@ -12,8 +12,8 @@ struct IdentitySheet {
         let runs: [Run]
         let copy: String
         let note: String
-        // leading table cells, drawn in fixed columns ahead of the runs: a prefix's name and symbol
-        let lead: [String]
+        // leading table cells, drawn in fixed columns ahead of the runs: a prefix's name and symbol, a constant's symbol
+        let lead: [[Run]]
     }
 
     struct Group {
@@ -23,6 +23,8 @@ struct IdentitySheet {
 
     struct Section {
         let title: String
+        // its groups one under another at the sheet's full width, for rows too long for a column
+        let wide: Bool
         let groups: [Group]
     }
 
@@ -40,17 +42,22 @@ struct IdentitySheet {
                 guard let g = any as? [String: Any], let title = g["title"] as? String else { return nil }
                 let items: [Item] = (g["items"] as? [Any] ?? []).compactMap { any in
                     guard let i = any as? [String: Any], let copy = i["copy"] as? String else { return nil }
-                    let runs: [Run] = (i["runs"] as? [Any] ?? []).compactMap { any in
-                        guard let r = any as? [String: Any], let text = r["text"] as? String else { return nil }
-                        return Run(text: text, shift: r["shift"] as? String ?? "")
-                    }
-                    return runs.isEmpty ? nil : Item(runs: runs, copy: copy, note: i["note"] as? String ?? "", lead: i["lead"] as? [String] ?? [])
+                    let runs = Self.runs(i["runs"])
+                    let lead = (i["lead"] as? [Any] ?? []).map { $0 is String ? [Run(text: $0 as! String, shift: "")] : Self.runs($0) }
+                    return runs.isEmpty ? nil : Item(runs: runs, copy: copy, note: i["note"] as? String ?? "", lead: lead)
                 }
                 return items.isEmpty ? nil : Group(title: title, items: items)
             }
-            return groups.isEmpty ? nil : Section(title: title, groups: groups)
+            return groups.isEmpty ? nil : Section(title: title, wide: s["wide"] as? Bool ?? false, groups: groups)
         }
         if sections.isEmpty { return nil }
+    }
+
+    private static func runs(_ any: Any?) -> [Run] {
+        (any as? [Any] ?? []).compactMap { any in
+            guard let r = any as? [String: Any], let text = r["text"] as? String else { return nil }
+            return Run(text: text, shift: r["shift"] as? String ?? "")
+        }
     }
 }
 
@@ -87,7 +94,7 @@ private final class IdentityRow: NSView {
         // the tint is the layer's own background, so hover and press recolor it without redrawing
         wantsLayer = true
         fill()
-        let label = (item.lead + [item.runs.map(\.text).joined()]).joined(separator: " ")
+        let label = (item.lead + [item.runs]).map { $0.map(\.text).joined() }.joined(separator: " ")
         toolTip = "Click to copy \(item.copy)"
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
@@ -164,8 +171,7 @@ private final class IdentityRow: NSView {
         let baseline = (bounds.height + Self.font.ascender + Self.font.descender) / 2
         var x: CGFloat = 6
         for (i, cell) in item.lead.enumerated() {
-            let text = NSAttributedString(string: cell, attributes: [.font: Self.font, .foregroundColor: copied ? NSColor.secondaryLabelColor : NSColor.labelColor])
-            text.draw(at: NSPoint(x: x, y: baseline - Self.font.ascender))
+            Self.math(cell, copied ? .secondaryLabelColor : .labelColor).draw(at: NSPoint(x: x, y: baseline - Self.font.ascender))
             x += i < Self.leadWidths.count ? Self.leadWidths[i] : Self.leadWidths.last ?? 0
         }
         math.draw(at: NSPoint(x: x, y: baseline - Self.font.ascender))
@@ -198,6 +204,9 @@ final class IdentityWindowController: NSObject {
     private var copiedRow: IdentityRow?
     private var clearCopied: DispatchWorkItem?
     private var settingsObserver: NSObjectProtocol?
+    private var scroll: NSScrollView?
+    // each section's top in the scrolled content, for opening at one (`idt summation`)
+    private var sectionTops: [CGFloat] = []
     private let id: String
     // a second sheet opens a little down and right of the first rather than on top of it
     private let cascade: Int
@@ -223,11 +232,24 @@ final class IdentityWindowController: NSObject {
         }
     }
 
-    // a second open just brings the same window forward
-    func show(_ sheet: IdentitySheet) {
+    // a second open just brings the same window forward, at the section asked for. `bar` is the bar's frame and the
+    // visible frame of its screen: a sheet that would cover the bar moves beside it
+    func show(_ sheet: IdentitySheet, section: Int = 0, bar: (frame: NSRect, visible: NSRect)? = nil) {
         if panel == nil { build(sheet) }
         applyAppearance()
+        if let panel, let bar, SheetPlace.needsMoving(panel.frame, bar: bar.frame, visible: bar.visible) {
+            let least = panel.frameRect(forContentRect: NSRect(origin: .zero, size: panel.contentMinSize)).height
+            panel.setFrame(SheetPlace.beside(panel.frame.size, bar: bar.frame, visible: bar.visible, give: .height(min: least)), display: true)
+        }
+        scrollTo(section)
         panel?.orderFrontRegardless()
+    }
+
+    private func scrollTo(_ section: Int) {
+        guard let scroll, let content = scroll.documentView, sectionTops.indices.contains(section) else { return }
+        let most = max(0, content.frame.height - scroll.contentView.bounds.height)
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: min(sectionTops[section], most)))
+        scroll.reflectScrolledClipView(scroll.contentView)
     }
 
     private func build(_ sheet: IdentitySheet) {
@@ -235,31 +257,33 @@ final class IdentityWindowController: NSObject {
         let content = IdentitySheetView(frame: NSRect(x: 0, y: 0, width: width, height: 0))
         var y: CGFloat = 0
         for section in sheet.sections {
+            sectionTops.append(y)
             let title = label(section.title, size: 12, weight: .semibold, color: .labelColor)
             title.frame = NSRect(x: inset, y: y + 4, width: width - inset * 2, height: 16)
             content.addSubview(title)
             let rule = NSBox(frame: NSRect(x: inset, y: y + sectionTitle - 3, width: width - inset * 2, height: 1))
             rule.boxType = .separator
             content.addSubview(rule)
-            // each group goes in whichever column is shorter so far
-            var columns: [CGFloat] = [y + sectionTitle, y + sectionTitle]
+            // each group goes in whichever column is shorter so far; a wide section has the one, the sheet's width
+            var columns: [CGFloat] = section.wide ? [y + sectionTitle] : [y + sectionTitle, y + sectionTitle]
+            let span = section.wide ? width - inset * 2 : column
             for group in section.groups {
-                let c = columns[1] < columns[0] ? 1 : 0
+                let c = columns.count > 1 && columns[1] < columns[0] ? 1 : 0
                 let x = inset + CGFloat(c) * (column + inset)
                 var gy = columns[c] + 6
                 let name = label(group.title, size: 11, weight: .medium, color: .secondaryLabelColor)
-                name.frame = NSRect(x: x + 6, y: gy + 2, width: column - 6, height: 14)
+                name.frame = NSRect(x: x + 6, y: gy + 2, width: span - 6, height: 14)
                 content.addSubview(name)
                 gy += groupTitle
                 for item in group.items {
-                    let row = IdentityRow(item, frame: NSRect(x: x, y: gy, width: column, height: rowHeight))
+                    let row = IdentityRow(item, frame: NSRect(x: x, y: gy, width: span, height: rowHeight))
                     row.onPick = { [weak self] in self?.copy($0) }
                     content.addSubview(row)
                     gy += rowHeight
                 }
                 columns[c] = gy
             }
-            y = max(columns[0], columns[1]) + 14
+            y = (columns.max() ?? y) + 14
         }
         content.setFrameSize(NSSize(width: width, height: y + inset - 14))
 
@@ -308,6 +332,7 @@ final class IdentityWindowController: NSObject {
         scroll.documentView = content
         scroll.autoresizingMask = [.width, .height]
         root.addSubview(scroll)
+        self.scroll = scroll
         panel.contentView = root
 
         let frameName = "IdentitySheet-\(id)"

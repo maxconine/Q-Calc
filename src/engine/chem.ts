@@ -1,4 +1,5 @@
-// chemical equation balancing: element symbols by pattern, no periodic table
+// chemical equation balancing, element symbols by pattern; molar masses from the periodic table's weights
+import { formulaOf } from '../lib/elements'
 
 type Counts = Map<string, bigint>
 
@@ -343,6 +344,38 @@ export function chemAnswer(text: string, isName: (name: string) => boolean = () 
   if (b.kind === 'balanced') return b.display
   if (strict) return null
   return b.kind === 'underdetermined' ? 'underdetermined' : ''
+}
+
+/** One formula, the whole of `text`: `H2O`, `Ca(OH)2`, `CuSO4·5H2O`, `H₂O`; atoms in the order written. */
+export function parseFormula(text: string): { atoms: Map<string, number>; marked: boolean } | null {
+  const sc = new Scanner(text.trim().replace(/[₀-₉]/g, (d) => String(SUB_DIGITS.indexOf(d))))
+  const f = formula(sc)
+  if (!f || !sc.done()) return null
+  return { atoms: new Map([...f.atoms].map(([el, n]) => [el, Number(n)])), marked: f.marked }
+}
+
+const MOLAR_ASK = /^(?:molar\s+mass|molecular\s+(?:weight|mass)|formula\s+(?:weight|mass)|chem)(?:\s+of)?\s+(\S+)$/i
+const MOLAR_AFTER = /^(\S+)\s+molar\s+mass$/i
+
+/** Whether a line asks for a molar mass in words: `molar mass H2O`, `H2O molar mass`. */
+export function isMolarMassInput(text: string): boolean {
+  const t = text.trim()
+  return MOLAR_ASK.test(t) || MOLAR_AFTER.test(t)
+}
+
+/**
+ * The molar mass a line asks for, as `18.015 g/mol`, or null to leave the line alone. In words any formula goes
+ * (`molar mass NaCl`); on its own a formula needs digits, brackets or a hydrate dot and two elements (`H2O`,
+ * `Ca(OH)2`), and none of its letters may be a name in use, so `V2` and a stored `H` stay math.
+ */
+export function molarMassAnswer(text: string, isName: (name: string) => boolean = () => false): { mass: number; display: string } | null {
+  const t = text.trim()
+  const asked = (MOLAR_ASK.exec(t) ?? MOLAR_AFTER.exec(t))?.[1]
+  const f = parseFormula(asked ?? t)
+  if (!f) return null
+  if (!asked && (!f.marked || f.atoms.size < 2 || isName(t) || [...f.atoms.keys()].some(isName))) return null
+  const found = formulaOf(f.atoms)
+  return found ? { mass: Number(found.mass), display: `${found.mass} g/mol` } : null
 }
 
 /** Copy text for a shown balanced reaction: ascii digits, caret charges and `->`. Anything else is unchanged. */

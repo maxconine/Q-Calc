@@ -103,7 +103,11 @@ private final class PeriodicRoot: NSView {
 private final class PeriodicTile: NSView {
     let element: PeriodicElement
     var onPick: ((PeriodicElement) -> Void)?
+    // a right click takes one of it back out of the formula
+    var onDrop: ((PeriodicElement) -> Void)?
     var onHover: ((PeriodicElement, Bool) -> Void)?
+    // how many are in the formula: a picked tile is tinted deeper and ringed, and says ×2 past one
+    var count = 0 { didSet { if count != oldValue { fill(); needsDisplay = true } } }
     private var hovered = false { didSet { if hovered != oldValue { fill() } } }
     private var pressed = false { didSet { if pressed != oldValue { fill() } } }
     private let number: NSAttributedString
@@ -114,6 +118,7 @@ private final class PeriodicTile: NSView {
 
     private static let small = NSFont.monospacedDigitSystemFont(ofSize: 8.5, weight: .regular)
     private static let large = NSFont.systemFont(ofSize: 17, weight: .medium)
+    private static let badge = NSFont.monospacedDigitSystemFont(ofSize: 8.5, weight: .semibold)
 
     init(_ element: PeriodicElement, frame: NSRect) {
         self.element = element
@@ -168,6 +173,12 @@ private final class PeriodicTile: NSView {
         if bounds.contains(convert(event.locationInWindow, from: nil)) { onPick?(element) }
     }
 
+    override func rightMouseDown(with event: NSEvent) {}
+
+    override func rightMouseUp(with event: NSEvent) {
+        if bounds.contains(convert(event.locationInWindow, from: nil)) { onDrop?(element) }
+    }
+
     override func accessibilityPerformPress() -> Bool {
         onPick?(element)
         return true
@@ -184,17 +195,25 @@ private final class PeriodicTile: NSView {
     }
 
     private func fill() {
-        let alpha: CGFloat = pressed ? 0.3 : hovered ? 0.2 : 0.1
+        let alpha: CGFloat = pressed ? 0.4 : count > 0 ? 0.32 : hovered ? 0.2 : 0.1
         var color: CGColor?
+        var ring: CGColor?
         effectiveAppearance.performAsCurrentDrawingAppearance {
             color = Self.tint(element.category).withAlphaComponent(alpha).cgColor
+            ring = Self.tint(element.category).withAlphaComponent(0.7).cgColor
         }
         layer?.backgroundColor = color
+        layer?.borderColor = ring
+        layer?.borderWidth = count > 0 ? 1.5 : 0
         layer?.cornerRadius = 6
     }
 
     override func draw(_ dirtyRect: NSRect) {
         number.draw(at: NSPoint(x: 4, y: 3))
+        if count > 1 {
+            let times = Self.text("×\(count)", Self.badge, .labelColor)
+            times.draw(at: NSPoint(x: bounds.width - times.size().width - 4, y: 3))
+        }
         symbol.draw(at: NSPoint(x: (bounds.width - symbolSize.width) / 2, y: 11))
         mass.draw(at: NSPoint(x: (bounds.width - massSize.width) / 2, y: bounds.height - massSize.height - 4))
     }
@@ -213,6 +232,80 @@ private final class PeriodicTile: NSView {
         case "lanthanide", "actinide": return .systemPink
         default: return .systemGray
         }
+    }
+}
+
+// a line of the formula card: the formula itself (a click puts its molar mass in the bar), a part of it (a click takes
+// one away) or the clear button, each with the tiles' hover and press tint
+private final class FormulaText: NSView {
+    var onClick: (() -> Void)?
+    private let text: NSAttributedString
+    private var hovered = false { didSet { if hovered != oldValue { fill() } } }
+    private var pressed = false { didSet { if pressed != oldValue { fill() } } }
+
+    init(_ text: NSAttributedString, help: String) {
+        self.text = text
+        let size = text.size()
+        super.init(frame: NSRect(x: 0, y: 0, width: ceil(size.width) + 12, height: ceil(size.height) + 4))
+        wantsLayer = true
+        toolTip = help
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
+        setAccessibilityLabel(text.string)
+        setAccessibilityHelp(help)
+        addTrackingArea(NSTrackingArea(
+            rect: .zero,
+            options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        ))
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override var isFlipped: Bool { true }
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseEntered(with event: NSEvent) {
+        hovered = true
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        hovered = false
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        pressed = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        pressed = false
+        if bounds.contains(convert(event.locationInWindow, from: nil)) { onClick?() }
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        onClick?()
+        return true
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        fill()
+    }
+
+    private func fill() {
+        let alpha: CGFloat = pressed ? 0.08 : hovered ? 0.05 : 0
+        var color: CGColor?
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            color = NSColor.labelColor.withAlphaComponent(alpha).cgColor
+        }
+        layer?.backgroundColor = color
+        layer?.cornerRadius = 5
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        text.draw(at: NSPoint(x: 6, y: 2))
     }
 }
 
@@ -303,6 +396,14 @@ final class PeriodicWindowController: NSObject {
     private var detailSub: NSTextField?
     private var detailN: Int?
     private var settingsObserver: NSObjectProtocol?
+    // one symbol a click, in order: H, H, O is H₂O
+    private var picks: [String] = []
+    private var tiles: [String: PeriodicTile] = [:]
+    // each element's weight in thousandths, so a formula's sum comes out exact, as the page's formulaOf does
+    private var masses: [String: Int] = [:]
+    private var grid: ScaledView?
+    private var formulaViews: [NSView] = []
+    private var formulaFrame = NSRect.zero
     var onPick: ((String) -> Void)?
 
     private static let frameName = "PeriodicTable"
@@ -326,14 +427,18 @@ final class PeriodicWindowController: NSObject {
         }
     }
 
-    // a second open just brings the same window forward
-    func show(_ elements: @autoclosure () -> [PeriodicElement]) {
+    // a second open just brings the same window forward. `bar` is the bar's frame and the visible frame of its
+    // screen: a table that would cover the bar moves beside it, scaled down a little if it has to be
+    func show(_ elements: @autoclosure () -> [PeriodicElement], bar: (frame: NSRect, visible: NSRect)? = nil) {
         if panel == nil {
             let elements = elements()
             guard !elements.isEmpty else { return }
             build(elements)
         }
         applyAppearance()
+        if let panel, let bar, SheetPlace.needsMoving(panel.frame, bar: bar.frame, visible: bar.visible) {
+            panel.setFrame(SheetPlace.beside(panel.frame.size, bar: bar.frame, visible: bar.visible, give: .scale(min: 0.6)), display: true)
+        }
         panel?.orderFrontRegardless()
     }
 
@@ -372,11 +477,13 @@ final class PeriodicWindowController: NSObject {
         panel.contentMaxSize = NSSize(width: size.width * 2.5, height: size.height * 2.5)
 
         let grid = ScaledView(designSize: size)
-        let detailFrame = cell(row: 1, col: 3).union(cell(row: 3, col: 12))
+        // the hovered element's name in the first row, the formula the picks make in the two under it
+        let detailFrame = cell(row: 1, col: 3).union(cell(row: 1, col: 12))
+        formulaFrame = cell(row: 2, col: 3).union(cell(row: 3, col: 12))
         let name = label(size: 15, weight: .medium, color: .labelColor)
         let sub = label(size: 11, weight: .regular, color: .secondaryLabelColor)
-        name.frame = NSRect(x: detailFrame.minX, y: detailFrame.midY - 22, width: detailFrame.width, height: 20)
-        sub.frame = NSRect(x: detailFrame.minX, y: detailFrame.midY + 1, width: detailFrame.width, height: 16)
+        name.frame = NSRect(x: detailFrame.minX, y: detailFrame.minY + 6, width: detailFrame.width, height: 20)
+        sub.frame = NSRect(x: detailFrame.minX, y: detailFrame.minY + 28, width: detailFrame.width, height: 16)
         grid.addSubview(name)
         grid.addSubview(sub)
         detailName = name
@@ -384,10 +491,15 @@ final class PeriodicWindowController: NSObject {
 
         for element in elements {
             let view = PeriodicTile(element, frame: cell(row: element.row, col: element.col))
-            view.onPick = { [weak self] in self?.onPick?($0.insert) }
+            view.onPick = { [weak self] in self?.pick($0.symbol) }
+            view.onDrop = { [weak self] in self?.drop($0.symbol) }
             view.onHover = { [weak self] in self?.showDetail($0, $1) }
             grid.addSubview(view)
+            tiles[element.symbol] = view
+            masses[element.symbol] = Int(((Double(element.insert) ?? 0) * 1000).rounded())
         }
+        self.grid = grid
+        showFormula()
         let root = PeriodicRoot(frame: grid.frame)
         grid.autoresizingMask = [.width, .height]
         root.addSubview(grid)
@@ -410,6 +522,88 @@ final class PeriodicWindowController: NSObject {
         field.textColor = color
         field.alignment = .center
         return field
+    }
+
+    private func pick(_ symbol: String) {
+        picks.append(symbol)
+        showFormula()
+    }
+
+    private func drop(_ symbol: String) {
+        guard let at = picks.lastIndex(of: symbol) else { return }
+        picks.remove(at: at)
+        showFormula()
+    }
+
+    private static let subscripts = Array("₀₁₂₃₄₅₆₇₈₉")
+
+    private static func sub(_ n: Int) -> String {
+        n == 1 ? "" : String(String(n).compactMap { $0.wholeNumberValue.map { subscripts[$0] } })
+    }
+
+    private static func grams(_ m: Int) -> String {
+        guard m % 1000 != 0 else { return String(m / 1000) }
+        var digits = String(format: "%03d", m % 1000)
+        while digits.hasSuffix("0") { digits.removeLast() }
+        return "\(m / 1000).\(digits)"
+    }
+
+    // the card under the hover detail: the formula and its molar mass, and each element's share, compact
+    private func showFormula() {
+        var order: [String] = []
+        var counts: [String: Int] = [:]
+        for symbol in picks {
+            if counts[symbol] == nil { order.append(symbol) }
+            counts[symbol, default: 0] += 1
+        }
+        for (symbol, tile) in tiles { tile.count = counts[symbol] ?? 0 }
+        formulaViews.forEach { $0.removeFromSuperview() }
+        formulaViews = []
+        guard let grid else { return }
+        let muted = NSColor.secondaryLabelColor
+        guard !order.isEmpty else {
+            let hint = label(size: 11, weight: .regular, color: muted)
+            hint.font = .systemFont(ofSize: 11)
+            hint.stringValue = "click elements to build a formula · right click takes one away"
+            hint.frame = NSRect(x: formulaFrame.minX, y: formulaFrame.midY - 8, width: formulaFrame.width, height: 16)
+            grid.addSubview(hint)
+            formulaViews = [hint]
+            return
+        }
+        let total = order.reduce(0) { $0 + (masses[$1] ?? 0) * counts[$1]! }
+        let mass = Self.grams(total)
+        let main = NSMutableAttributedString(string: order.map { $0 + Self.sub(counts[$0]!) }.joined(), attributes: [
+            .font: NSFont.systemFont(ofSize: 20, weight: .medium), .foregroundColor: NSColor.labelColor,
+        ])
+        main.append(NSAttributedString(string: "  \(mass) g/mol", attributes: [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular), .foregroundColor: NSColor.labelColor,
+        ]))
+        let formula = FormulaText(main, help: "Put the molar mass in the bar")
+        formula.onClick = { [weak self] in self?.onPick?(mass) }
+        formula.setFrameOrigin(NSPoint(x: formulaFrame.midX - formula.frame.width / 2, y: formulaFrame.minY + 18))
+
+        let small: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular), .foregroundColor: muted]
+        var parts: [FormulaText] = order.map { symbol in
+            let n = counts[symbol]!
+            let text = NSAttributedString(string: "\(symbol)\(Self.sub(n)) \(Self.grams((masses[symbol] ?? 0) * n))", attributes: small)
+            let part = FormulaText(text, help: "Take one \(symbol) away")
+            part.onClick = { [weak self] in self?.drop(symbol) }
+            return part
+        }
+        let clear = FormulaText(NSAttributedString(string: "×", attributes: small), help: "Clear the formula")
+        clear.onClick = { [weak self] in
+            self?.picks = []
+            self?.showFormula()
+        }
+        parts.append(clear)
+        let width = parts.reduce(0) { $0 + $1.frame.width }
+        var x = formulaFrame.midX - width / 2
+        for part in parts {
+            part.setFrameOrigin(NSPoint(x: x, y: formula.frame.maxY + 4))
+            x += part.frame.width
+        }
+        formulaViews = [formula] + parts
+        formulaViews.forEach { grid.addSubview($0) }
     }
 
     // leaving a tile only clears the detail if no other tile has taken it since

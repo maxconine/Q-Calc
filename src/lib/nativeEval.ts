@@ -1,4 +1,5 @@
 import { isCalculusInput } from '../engine/calculus'
+import { isMolarMassInput } from '../engine/chem'
 import {
   IMPROPER_UNIT_CONVERSION,
   isImproperUnitConversion,
@@ -154,6 +155,8 @@ export function mergeLiveAnswer(
   if (SUM_LINE.test(expr)) return { display: jsDisplay, n: jsDisplay ? jsN : undefined }
   // soulvercore would read `∫0..1 1/x` as something; a blank calculus answer stays blank
   if (isCalculusInput(expr)) return { display: jsDisplay, n: jsN }
+  // soulver has no periodic table; `molar mass of H2O` reads to it like a sentence
+  if (isMolarMassInput(expr)) return { display: jsDisplay, n: jsN }
   const nativeDisplay =
     native && native.expr === expr && native.kind !== 'definition' ? usableNativeDisplay(native.display) : ''
   const nativeHit = native && nativeDisplay ? { ...native, display: nativeDisplay } : null

@@ -28,6 +28,7 @@
   font-weight: 600;
 }
 .identity-groups { column-count: 2; column-gap: var(--sp-4); }
+.identity-section.wide .identity-groups { column-count: 1; }
 .identity-group { break-inside: avoid; padding-top: var(--sp-2); }
 .identity-group-title {
   margin: 0 0 2px;

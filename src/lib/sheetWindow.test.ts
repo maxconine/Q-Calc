@@ -6,7 +6,9 @@ const keys = { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false }
 describe('sheet windows', () => {
   it('read which sheet from the query the shell opened them on', () => {
     expect(sheetFromSearch('?kind=periodic')).toEqual({ kind: 'periodic' })
-    expect(sheetFromSearch('?kind=identities&id=calculus')).toEqual({ kind: 'identities', id: 'calculus' })
+    expect(sheetFromSearch('?kind=identities&id=calculus')).toEqual({ kind: 'identities', id: 'calculus', section: 0 })
+    expect(sheetFromSearch('?kind=identities&id=identities&section=4')).toEqual({ kind: 'identities', id: 'identities', section: 4 })
+    expect(sheetFromSearch('?kind=identities&id=identities&section=x')).toEqual({ kind: 'identities', id: 'identities', section: 0 })
     expect(sheetFromSearch('?kind=identities')).toBeNull()
     expect(sheetFromSearch('')).toBeNull()
   })

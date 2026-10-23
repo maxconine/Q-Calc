@@ -1,12 +1,14 @@
 // the windows shell's sheet windows (sheet.html): which sheet a window shows, from the query the shell opened it on
-export type SheetWhich = { kind: 'periodic' } | { kind: 'identities'; id: string }
+// `section` is the identity sheet's section to open at, as `idt summation` asks
+export type SheetWhich = { kind: 'periodic' } | { kind: 'identities'; id: string; section: number }
 
 export function sheetFromSearch(search: string): SheetWhich | null {
   const params = new URLSearchParams(search)
   const kind = params.get('kind')
   if (kind === 'periodic') return { kind }
   const id = params.get('id')
-  if (kind === 'identities' && id) return { kind, id }
+  const section = Number(params.get('section') ?? 0)
+  if (kind === 'identities' && id) return { kind, id, section: Number.isInteger(section) && section > 0 ? section : 0 }
   return null
 }
 

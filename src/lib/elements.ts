@@ -177,3 +177,43 @@ export function gridCell(e: Element): { row: number; col: number } {
   const first = e.period === 6 ? 57 : 89
   return { row: e.period + 3, col: 3 + e.n - first }
 }
+
+const BY_SYMBOL = new Map(ELEMENTS.map((e) => [e.symbol, e]))
+
+const SUBSCRIPTS = '₀₁₂₃₄₅₆₇₈₉'
+const subscript = (n: number) => (n === 1 ? '' : String(n).replace(/\d/g, (d) => SUBSCRIPTS[Number(d)]!))
+
+// thousandths, so a sum of masses comes out exact: 2 × 1.008 + 15.999 is 18.015, not 18.015000000000001
+const milli = (e: Element) => Math.round(Number(insertableMass(e)) * 1000)
+const grams = (m: number) => String(m / 1000)
+
+// `text` is the part as the formula writes it, H₂; `mass` is all of that element's share
+export type FormulaPart = { symbol: string; count: number; text: string; mass: string }
+export type Formula = { formula: string; plain: string; mass: string; parts: FormulaPart[] }
+
+/** Atoms and counts, in the order given, as one formula and its molar mass in g/mol; null for an unknown symbol. */
+export function formulaOf(atoms: Iterable<[string, number]>): Formula | null {
+  const counts = new Map<string, number>()
+  for (const [symbol, n] of atoms) {
+    if (!BY_SYMBOL.has(symbol) || !(n > 0)) return null
+    counts.set(symbol, (counts.get(symbol) ?? 0) + n)
+  }
+  if (!counts.size) return null
+  let total = 0
+  const parts = [...counts].map(([symbol, count]) => {
+    const m = milli(BY_SYMBOL.get(symbol)!) * count
+    total += m
+    return { symbol, count, text: symbol + subscript(count), mass: grams(m) }
+  })
+  return {
+    formula: parts.map((p) => p.text).join(''),
+    plain: parts.map((p) => p.symbol + (p.count === 1 ? '' : p.count)).join(''),
+    mass: grams(total),
+    parts,
+  }
+}
+
+/** The periodic table's picks, a symbol a click, grouped by element in the order first picked: H, H, O is H₂O. */
+export function formulaOfPicks(symbols: readonly string[]): Formula | null {
+  return formulaOf(symbols.map((s): [string, number] => [s, 1]))
+}

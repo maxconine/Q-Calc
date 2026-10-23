@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ELEMENTS, gridCell, hasStandardWeight, insertableMass } from './elements'
+import { ELEMENTS, formulaOf, formulaOfPicks, gridCell, hasStandardWeight, insertableMass } from './elements'
 import { isPeriodicCommand } from './periodic'
 
 const PERIOD_STARTS = [1, 3, 11, 19, 37, 55, 87, 119]
@@ -120,6 +120,34 @@ describe('periodic table data', () => {
     expect(insertableMass(find('Na'))).toBe('22.990')
     expect(insertableMass(find('Tc'))).toBe('98')
     expect(insertableMass(find('Og'))).toBe('294')
+  })
+})
+
+describe('a formula from the picks', () => {
+  it('groups clicks by element in the order first picked', () => {
+    const water = formulaOfPicks(['H', 'H', 'O'])!
+    expect(water.formula).toBe('H₂O')
+    expect(water.plain).toBe('H2O')
+    expect(water.mass).toBe('18.015')
+    expect(water.parts).toEqual([
+      { symbol: 'H', count: 2, text: 'H₂', mass: '2.016' },
+      { symbol: 'O', count: 1, text: 'O', mass: '15.999' },
+    ])
+    expect(formulaOfPicks(['H', 'O', 'H'])!.formula).toBe('H₂O')
+    expect(formulaOfPicks(['O', 'H', 'H'])!.formula).toBe('OH₂')
+    expect(formulaOfPicks(['Na', 'Cl'])!.mass).toBe('58.44')
+  })
+
+  it('adds masses exactly, past ten atoms and with mass numbers', () => {
+    expect(formulaOf([['C', 6], ['H', 12], ['O', 6]])!).toMatchObject({ formula: 'C₆H₁₂O₆', mass: '180.156' })
+    expect(formulaOfPicks(Array(10).fill('H'))!).toMatchObject({ formula: 'H₁₀', mass: '10.08' })
+    expect(formulaOfPicks(['Tc'])!.mass).toBe('98')
+  })
+
+  it('has nothing for no picks or an unknown symbol', () => {
+    expect(formulaOfPicks([])).toBeNull()
+    expect(formulaOfPicks(['Xx'])).toBeNull()
+    expect(formulaOf([['H', 0]])).toBeNull()
   })
 })
 
