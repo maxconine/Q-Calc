@@ -257,6 +257,7 @@ build_app() {
     "$MAC/IdentityWindow.swift" \
     "$MAC/Updates.swift" \
     "$MAC/LoginItem.swift" \
+    "$MAC/MessageInbox.swift" \
     "$MAC/Messages.swift" \
     "$MAC/QCalcApp.swift" \
     -o "$BIN"
