@@ -28,7 +28,7 @@ function boot(overlay: boolean, own?: Record<string, { postMessage: (m: unknown)
     dispatchEvent: () => true,
   }
   if (own) Object.defineProperty(win, 'webkit', { get: () => ({ messageHandlers: own }), configurable: true })
-  const root = { classList: { add: (c: string) => classes.push(c) }, style: {} as Record<string, string>, dataset: {} as Record<string, string> }
+  const root = { classList: { add: (c: string) => classes.push(c), contains: (c: string) => classes.includes(c) }, style: {} as Record<string, string>, dataset: {} as Record<string, string> }
   const doc: { documentElement: typeof root | null; querySelector: () => null; activeElement: null } = {
     documentElement: rootLater ? null : root,
     querySelector: () => null,
@@ -177,6 +177,15 @@ describe('windows shim', () => {
     expect(fire('mousedown', { detail: 1, button: 2, clientX: 300, clientY: 4, target })).toBe(false)
     expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 4, target: { closest: () => ({}) } })).toBe(false)
     expect(sent).toHaveLength(2)
+  })
+
+  it('leaves every press to the page while a game has the window as its own', () => {
+    const { sent, fire, classes } = boot(true)
+    classes.push('game-fullscreen-on')
+    const target = { closest: () => null }
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 300, clientY: 4, target })).toBe(false)
+    expect(fire('mousedown', { detail: 1, button: 0, clientX: 677, clientY: 50, screenX: 1000, target })).toBe(false)
+    expect(sent).toEqual([])
   })
 
   it('a thin strip along the bottom moves the bar too, as on the mac', () => {

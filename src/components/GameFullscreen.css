@@ -1,7 +1,8 @@
-/* a game filling the screen (⌃F). useGameFullscreen puts .game-fullscreen on the panel's root and sets
-   --game-fs-w / --game-fs-h (the picture's letterboxed box), --game-fs-ui (how much larger the hud is drawn),
-   --game-fs-pad and --game-fs-base-w. the panel marks its own parts with the .game-fs-* classes below;
-   src/lib/GAME_FULLSCREEN.md says which */
+/* a game filling the screen, or in the apps its own big window (⌃F). useGameFullscreen puts .game-fullscreen on
+   the panel's root and sets --game-fs-w / --game-fs-h (the picture's letterboxed box), --game-fs-ui (how much
+   larger the hud is drawn), --game-fs-pad and --game-fs-base-w; the mac shell sets --game-fs-inset on <html>, the
+   title bar's strip. the panel marks its own parts with the .game-fs-* classes below; src/lib/GAME_FULLSCREEN.md
+   says which */
 
 html.game-fullscreen-on,
 html.game-fullscreen-on body {
@@ -14,8 +15,8 @@ html.game-fullscreen-on .spotlight-embedded::after {
   display: none;
 }
 
-/* fixed, so it covers the window whether or not the browser granted real fullscreen; in the mac app the
-   window is the display by now */
+/* fixed, so it covers the window whether or not the browser granted real fullscreen; in the apps the window
+   is the game's own by now. the top keeps clear of the mac's traffic lights */
 .game-fullscreen {
   position: fixed;
   inset: 0;
@@ -31,6 +32,7 @@ html.game-fullscreen-on .spotlight-embedded::after {
   max-height: none;
   margin: 0;
   padding: calc(var(--game-fs-pad, 0px) * var(--game-fs-ui, 1));
+  padding-top: calc(var(--game-fs-inset, 0px) + var(--game-fs-pad, 0px) * var(--game-fs-ui, 1));
   overflow: hidden;
   border-radius: 0;
   background: var(--bg, Canvas);

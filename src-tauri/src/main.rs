@@ -72,8 +72,9 @@ struct State {
     rates: Option<Value>,
     // a game is open: losing focus leaves the window up
     game_open: bool,
-    // a game asked for the whole screen; the page's sizes wait until it's done
-    fullscreen: bool,
+    // a game has the window as its own (ctrl+F): the bar's frame from before, to go back to. the page's sizes
+    // wait until it's done
+    game_frame: Option<(PhysicalPosition<i32>, PhysicalSize<u32>)>,
     // the reference sheets' windows that are open, the front one last
     sheets: Vec<String>,
 }
@@ -160,7 +161,7 @@ fn main() {
                 show_on_load: first_run || !autostarted,
                 rates: cache.page_value(now()),
                 game_open: false,
-                fullscreen: false,
+                game_frame: None,
                 sheets: Vec::new(),
             })));
             // before the web view boots, so its injected settings already carry the shortcut
@@ -207,6 +208,11 @@ fn main() {
             let handle = window.clone();
             window.on_window_event(move |event| match event {
                 WindowEvent::Focused(false) => blurred(&handle),
+                // a game's window closes back to the bar
+                WindowEvent::CloseRequested { api, .. } if with(handle.app_handle(), |s| s.game_frame.is_some()) => {
+                    api.prevent_close();
+                    leave_game_window(&handle);
+                }
                 WindowEvent::Moved(position) => moved(&handle, *position),
                 _ => {}
             });
@@ -317,12 +323,13 @@ fn host(window: WebviewWindow, message: Value) {
             let open = message["open"].as_bool() == Some(true);
             with(app, |s| s.game_open = open);
             if !open {
-                set_fullscreen(&window, false);
+                set_game_window(&window, false, None);
             }
         }
-        // the page's ⌃F (useGameFullscreen); the page also asks webview2 for element fullscreen
+        // the page's ⌃F (useGameFullscreen), with its normal size for the window's shape
         Some("gameFullscreen") if overlay => {
-            set_fullscreen(&window, message["on"].as_bool() == Some(true));
+            let natural = message["w"].as_f64().zip(message["h"].as_f64());
+            set_game_window(&window, message["on"].as_bool() == Some(true), natural);
         }
         Some("copy") => {
             if let Some(text) = message["text"].as_str() {
@@ -575,6 +582,14 @@ fn choose_hotkey(app: &AppHandle, raw: &str) {
 
 fn toggle(app: &AppHandle) {
     match app.get_webview_window("main") {
+        // a game's window minimised, or behind another, comes forward rather than going
+        Some(window)
+            if with(app, |s| s.game_frame.is_some())
+                && (window.is_minimized().unwrap_or(false) || !window.is_focused().unwrap_or(true)) =>
+        {
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+        }
         Some(window) if window.is_visible().unwrap_or(false) => hide(&window),
         _ => show_window(app),
     }
@@ -677,24 +692,67 @@ fn show_tutorial(app: &AppHandle) {
     }
 }
 
-// a game's full screen: the window covers its monitor, and goes back to the bar's size after (the page reports
-// it again as it shrinks). says whether it changed
-fn set_fullscreen(window: &WebviewWindow, on: bool) -> bool {
-    let was = with(window.app_handle(), |s| std::mem::replace(&mut s.fullscreen, on));
-    if was != on {
-        let _ = window.set_fullscreen(on);
+// a game's own window (ctrl+F): the bar becomes an ordinary window, with windows' title bar, frame and caption
+// buttons, large and centred on its monitor, and goes back to the bar's frame after (the page reports its size
+// again). says whether it changed
+fn set_game_window(window: &WebviewWindow, on: bool, natural: Option<(f64, f64)>) -> bool {
+    let app = window.app_handle();
+    if !on {
+        let Some((position, size)) = with(app, |s| s.game_frame.take()) else { return false };
+        let _ = window.unminimize();
+        let _ = window.unmaximize();
+        let _ = window.set_min_size(None::<LogicalSize<f64>>);
+        let _ = window.set_decorations(false);
+        let _ = window.set_resizable(false);
+        let _ = window.set_maximizable(false);
+        let _ = window.set_minimizable(false);
+        let _ = window.set_skip_taskbar(true);
+        let _ = window.set_always_on_top(true);
+        let _ = window.set_shadow(false);
+        let _ = window.set_position(position);
+        let _ = window.set_size(size);
+        frame::dress(window);
+        let _ = window.eval("if (window.__qcalcSize) window.__qcalcSize();");
+        return true;
     }
-    was != on
+    if with(app, |s| s.game_frame.is_some()) {
+        return false;
+    }
+    let (Ok(position), Ok(size)) = (window.outer_position(), window.inner_size()) else { return false };
+    with(app, |s| s.game_frame = Some((position, size)));
+    let monitor = window.current_monitor().ok().flatten().map(|m| describe(&m));
+    // dwm's flyout edge is the bar's; windows draws a real frame's
+    frame::bare(window);
+    let _ = window.set_always_on_top(false);
+    let _ = window.set_skip_taskbar(false);
+    let _ = window.set_decorations(true);
+    let _ = window.set_shadow(true);
+    let _ = window.set_resizable(true);
+    let _ = window.set_maximizable(true);
+    let _ = window.set_minimizable(true);
+    if let Some((_, area, scale)) = monitor {
+        let (w, h) = place::game_window(area.width / scale, area.height / scale, natural);
+        let (min_w, min_h) = place::game_window_min(area.width / scale, area.height / scale, natural);
+        let _ = window.set_min_size(Some(LogicalSize::new(min_w, min_h)));
+        let _ = window.set_size(LogicalSize::new(w, h));
+    }
+    let _ = window.center();
+    let _ = window.set_focus();
+    true
+}
+
+// the shell left the game's window by itself (its close button, the bar hiding), so the page's state follows
+fn leave_game_window(window: &WebviewWindow) {
+    if set_game_window(window, false, None) {
+        let _ = window.eval("if (window.__qcalcGameFullscreen) window.__qcalcGameFullscreen(false);");
+    }
 }
 
 fn hide(window: &WebviewWindow) {
     if !window.is_visible().unwrap_or(false) {
         return;
     }
-    // the shell left fullscreen by itself, so the page's state follows
-    if set_fullscreen(window, false) {
-        let _ = window.eval("if (window.__qcalcGameFullscreen) window.__qcalcGameFullscreen(false);");
-    }
+    leave_game_window(window);
     let _ = window.eval("if (window.__qcalcWillHide) window.__qcalcWillHide();");
     let _ = window.hide();
     let at = now();
@@ -990,7 +1048,7 @@ fn widened(window: &WebviewWindow, left: bool) {
 }
 
 fn resize(window: &WebviewWindow, height: f64, anchor_top: f64, room: Room) {
-    if with(window.app_handle(), |s| s.fullscreen) {
+    if with(window.app_handle(), |s| s.game_frame.is_some()) {
         return;
     }
     let scale = window.scale_factor().unwrap_or(1.0);

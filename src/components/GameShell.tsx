@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { pauseGameClock, resumeGameClock } from '../lib/gameClock'
 import { setKeyGate } from '../lib/gameKeys'
 import { ARM_MS, escAction, pausedKey, type ShellMode } from '../lib/gameShell'
-import { FullscreenContext, ShellContext, type GameShellApi, type ShellHooks } from '../lib/gameShellContext'
-import { macLike } from '../lib/gameFullscreen'
+import { FullscreenContext, ShellContext, useShellFullscreen, type GameShellApi, type ShellHooks } from '../lib/gameShellContext'
+import { fullscreenLabel, macLike } from '../lib/gameFullscreen'
 import { isWindowsHost } from '../lib/platform'
 import { useGameFullscreen, type GameFullscreenOptions } from './useGameFullscreen'
 import './GameShell.css'
@@ -12,7 +12,7 @@ import './GameShell.css'
 // leaving an online game), the paused overlay, and full screen. the lobby tells it where the player is; a game
 // with screens of its own (ember's level picker) can say when nothing is running and how to leave.
 // full screen is useGameFullscreen (⌃F, GAME_FULLSCREEN.md) on the shell's root, so every game has it; f in
-// the lobby or the paused card and the small buttons toggle the same one
+// the lobby or the paused card and the small buttons toggle the same one. in the apps it's a big window
 
 // sent when the window hides with a game kept open (someone's waiting to join, or playing online)
 export const GAME_HIDE_EVENT = 'qcalc-game-hide'
@@ -193,7 +193,7 @@ export function GameShell({
                     resume <kbd>↵</kbd>
                   </button>
                   <button type="button" className="pong-button" onClick={toggleFullscreen}>
-                    {fullscreen ? 'leave full screen' : 'full screen'} <kbd>F</kbd>
+                    {fullscreenLabel(fullscreen, fs.windowed)} <kbd>F</kbd>
                   </button>
                 </div>
               </div>
@@ -212,12 +212,13 @@ export function GameShell({
 
 // the small button beside a game's esc: in the lobby's header, and in a corner while playing
 export function FullscreenButton({ on, onClick, className = '' }: { on: boolean; onClick: () => void; className?: string }) {
+  const label = fullscreenLabel(on, Boolean(useShellFullscreen()?.windowed))
   return (
     <button
       type="button"
       className={`game-full-btn ${className}`}
-      aria-label={on ? 'leave full screen' : 'full screen'}
-      title={on ? `leave full screen (F, ${chord()} or esc)` : `full screen (F or ${chord()})`}
+      aria-label={label}
+      title={on ? `${label} (F, ${chord()} or esc)` : `${label} (F or ${chord()})`}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
     >

@@ -5,10 +5,12 @@ import {
   fullscreenHint,
   fullscreenLayout,
   GAME_FULLSCREEN_CLASS,
+  GAME_FULLSCREEN_INSET_VAR,
   GAME_FULLSCREEN_ROOT_CLASS,
   isFullscreenChord,
   isPlainEscape,
   macLike,
+  naturalSize,
   type Box,
   type FullscreenLayout,
   type Size,
@@ -17,10 +19,10 @@ import { swallow } from '../lib/gameKeys'
 import { isWindowsHost } from '../lib/platform'
 import './GameFullscreen.css'
 
-// fullscreen for a game panel, on ⌃F. in the mac app the shell grows the panel over the whole display and
-// the page only has to lay itself out to fill its window; in a browser and the windows shell the panel's
-// root goes fullscreen through the Fullscreen API, and fills the window when that's refused.
-// GAME_FULLSCREEN.md is the how-to
+// fullscreen for a game panel, on ⌃F. in the mac and windows apps the shell turns the bar into a big, centred,
+// ordinary window (title bar, close, minimise, zoom) and the page only has to lay itself out to fill it; in a
+// browser the panel's root goes fullscreen through the Fullscreen API, and fills the window when that's
+// refused. GAME_FULLSCREEN.md is the how-to
 
 export type GameFullscreenOptions = {
   // the picture at its normal size in css pixels; the default is ember & frost's 640 × 360
@@ -56,6 +58,8 @@ export type GameFullscreen<T extends HTMLElement> = {
   size: Size | null
   // how much larger the hud is drawn (1 when not fullscreen)
   ui: number
+  // the apps open a window of the game's own rather than the whole screen, so it's worded that way
+  windowed: boolean
 }
 
 type FullscreenWindow = NativeWindow & { __qcalcGameFullscreen?: (on: boolean) => void }
@@ -80,13 +84,20 @@ function leaveDomFullscreen(): void {
   }
 }
 
-// the mac shell does the growing itself; its web view has no element fullscreen to ask for
-function macHost(): boolean {
-  return Boolean(nativeHandler()) && !isWindowsHost()
+// either app makes the game's window itself, so the page asks for no element fullscreen there
+function windowedHost(): boolean {
+  return Boolean(nativeHandler())
 }
 
-function tellHost(on: boolean): void {
-  nativeHandler()?.postMessage({ type: 'gameFullscreen', on })
+// with the panel's normal size, which the shell gives the window's shape
+function tellHost(on: boolean, natural?: Size): void {
+  nativeHandler()?.postMessage(natural ? { type: 'gameFullscreen', on, w: natural.w, h: natural.h } : { type: 'gameFullscreen', on })
+}
+
+// the strip the mac's title bar keeps at the top of the window, in css px
+function topInset(el: Element): number {
+  const n = parseFloat(getComputedStyle(el).getPropertyValue(GAME_FULLSCREEN_INSET_VAR))
+  return Number.isFinite(n) && n > 0 ? n : 0
 }
 
 function sameLayout(a: FullscreenLayout | null, b: FullscreenLayout | null): boolean {
@@ -129,8 +140,9 @@ export function useGameFullscreen<T extends HTMLElement = HTMLDivElement>(option
     if (onRef.current || !el || opts.current.disabled) return
     heightRef.current = el.getBoundingClientRect().height
     set(true)
-    tellHost(true)
-    if (macHost()) return
+    const o = opts.current
+    tellHost(true, naturalSize({ base: o.base ?? DEFAULT_BASE, chrome: o.chrome, pad: o.pad }))
+    if (windowedHost()) return
     // refused (no user gesture, an iframe without the permission, an old web view): the fixed layout the
     // class gives is the fullscreen, as large as the window
     const legacy = el as LegacyElement
@@ -196,7 +208,7 @@ export function useGameFullscreen<T extends HTMLElement = HTMLDivElement>(option
     }
   }, [exit])
 
-  // the mac shell leaves fullscreen by itself on esc and whenever the panel hides, and says so here
+  // the shell leaves the game's window by itself (esc, its close button, the bar hiding), and says so here
   useEffect(() => {
     const w = nativeWindow() as FullscreenWindow | undefined
     if (!w) return
@@ -221,7 +233,7 @@ export function useGameFullscreen<T extends HTMLElement = HTMLDivElement>(option
   })
 
   // the layout: measured from the root once the class has made it fill the window, and again whenever the
-  // window changes (the mac panel growing, a display change, the browser's fullscreen arriving)
+  // window changes (the app's window opening or being resized, the browser's fullscreen arriving)
   useLayoutEffect(() => {
     const el = ref.current
     document.documentElement.classList.toggle(GAME_FULLSCREEN_ROOT_CLASS, on)
@@ -238,9 +250,12 @@ export function useGameFullscreen<T extends HTMLElement = HTMLDivElement>(option
     const measure = () => {
       const o = opts.current
       const box = el.getBoundingClientRect()
-      const viewport = { w: box.width || window.innerWidth, h: box.height || window.innerHeight }
+      // the mac's title bar strip is padding on top (the css adds it), so the picture lays out below it
+      const inset = topInset(el)
+      const viewport = { w: box.width || window.innerWidth, h: Math.max(0, (box.height || window.innerHeight) - inset) }
       const base = o.base ?? DEFAULT_BASE
-      const next = fullscreenLayout(viewport, { base, chrome: o.chrome, pad: o.pad, maxUi: o.maxUi, integer: o.integer })
+      const laid = fullscreenLayout(viewport, { base, chrome: o.chrome, pad: o.pad, maxUi: o.maxUi, integer: o.integer })
+      const next = inset && laid.stage.w ? { ...laid, stage: { ...laid.stage, y: laid.stage.y + Math.floor(inset) } } : laid
       el.style.setProperty('--game-fs-w', `${next.stage.w}px`)
       el.style.setProperty('--game-fs-h', `${next.stage.h}px`)
       el.style.setProperty('--game-fs-ui', String(next.ui))
@@ -276,10 +291,14 @@ export function useGameFullscreen<T extends HTMLElement = HTMLDivElement>(option
     [],
   )
 
-  const hint = useMemo(() => fullscreenHint(macLike(isWindowsHost(), typeof navigator === 'undefined' ? '' : navigator.platform), on), [on])
+  const windowed = windowedHost()
+  const hint = useMemo(
+    () => fullscreenHint(macLike(isWindowsHost(), typeof navigator === 'undefined' ? '' : navigator.platform), on, windowed),
+    [on, windowed],
+  )
   const stage = on ? (layout?.stage ?? null) : null
   const dpr = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
   const size = useMemo(() => (stage ? backingSize(stage, dpr) : null), [stage, dpr])
 
-  return { ref, on, toggle, exit: leave, escape: exit, hint, stage, size, ui: on ? (layout?.ui ?? 1) : 1 }
+  return { ref, on, toggle, exit: leave, escape: exit, hint, stage, size, ui: on ? (layout?.ui ?? 1) : 1, windowed }
 }
