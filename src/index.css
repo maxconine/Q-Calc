@@ -2307,6 +2307,8 @@ html[data-theme="dark"] .pong {
   display: flex;
   align-items: baseline;
   gap: var(--sp-2);
+  /* clear hangs over this corner of the line (and takes clicks there), so skip stops short of it */
+  padding-right: calc(var(--gutter) + 44px);
 }
 
 .tour-text {

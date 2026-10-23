@@ -11,7 +11,7 @@ export type Onboarding = {
   done: boolean
 }
 
-export const EXAMPLE_OPENS = 5
+export const EXAMPLE_OPENS = 3
 export const EXAMPLE_COMMITS = 5
 export const EXAMPLE_MS = 2500
 

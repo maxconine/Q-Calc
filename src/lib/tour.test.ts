@@ -55,12 +55,29 @@ describe('who takes the tour', () => {
     expect(enrolTour({ ...s, done: true }, true).hints & TOUR_OFF).toBe(0)
   })
 
-  it('outlasts the examples but goes quiet after enough opens', () => {
+  it('outlasts the examples within an open', () => {
     let s = fresh()
-    for (let i = 0; i < 6; i++) s = recordCommit(recordOpen(s))
+    for (let i = 0; i < 6; i++) s = recordCommit(s)
     expect(s.done).toBe(true)
     expect(tourRunning(s)).toBe(true)
-    while (s.opens <= TOUR_OPENS) s = recordOpen(s)
+  })
+
+  it('retires for good after its opens, finished or not', () => {
+    let s = fresh()
+    expect(TOUR_OPENS).toBe(3)
+    while (s.opens < TOUR_OPENS) s = enrolTour(recordOpen(s), true)
+    expect(tourRunning(s)).toBe(true)
+    expect(tourStep(s.hints, KEY)).not.toBeNull()
+    s = enrolTour(recordOpen(s), true)
+    expect(tourRunning(s)).toBe(false)
+    expect(s.hints & TOUR_OFF).toBeTruthy()
+    // a copy whose count went backwards stays off
+    expect(tourRunning({ ...s, opens: 1 })).toBe(false)
+  })
+
+  it('a late enrolment past its opens never starts', () => {
+    const s = enrolTour({ opens: TOUR_OPENS + 1, commits: 0, hints: 0, done: false }, true)
+    expect(s.hints & TOUR_OFF).toBeTruthy()
     expect(tourRunning(s)).toBe(false)
   })
 

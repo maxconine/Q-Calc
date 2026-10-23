@@ -32,6 +32,7 @@ function times(n: number, s: Onboarding, step: (s: Onboarding) => Onboarding): O
 
 describe('example lifetime', () => {
   it('runs for the first opens, then retires for good', () => {
+    expect(EXAMPLE_OPENS).toBe(3)
     const s = times(EXAMPLE_OPENS, emptyOnboarding(), recordOpen)
     expect(examplesActive(s)).toBe(true)
     const after = recordOpen(s)

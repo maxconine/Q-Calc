@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { evaluateLine } from '../engine/evaluate'
-import { bracketKey, flattenPastedText, prettyTokens, spliceText } from './QuickInput'
+import { bracketKey, flattenPastedText, prettyTokens, spliceText, wrapSelection } from './QuickInput'
 
 function n(text: string): number {
   const r = evaluateLine(text)
@@ -226,5 +226,24 @@ describe('bracketKey', () => {
   it('does nothing to pasted text', () => {
     expect(flattenPastedText('[[1,2],[3,4]]')).toBe('[[1,2],[3,4]]')
     expect(spliceText('', '[1, 2', 0, 0)).toEqual({ next: '[1, 2', cursor: 5 })
+  })
+})
+
+describe('wrapSelection', () => {
+  it('wraps the selection and keeps it selected inside', () => {
+    expect(wrapSelection('2+3*4', 0, 3, '(')).toEqual({ text: '(2+3)*4', start: 1, end: 4 })
+    expect(wrapSelection('1,2', 0, 3, '[')).toEqual({ text: '[1,2]', start: 1, end: 4 })
+    expect(wrapSelection('x', 0, 1, '{')).toEqual({ text: '{x}', start: 1, end: 2 })
+  })
+
+  it('wraps again around a wrap', () => {
+    const once = wrapSelection('a+b', 0, 3, '(')!
+    expect(wrapSelection(once.text, once.start, once.end, '(')).toEqual({ text: '((a+b))', start: 2, end: 5 })
+  })
+
+  it('leaves a bare caret and other keys alone', () => {
+    expect(wrapSelection('12', 1, 1, '(')).toBeNull()
+    expect(wrapSelection('12', 0, 2, ')')).toBeNull()
+    expect(wrapSelection('12', 0, 2, 'x')).toBeNull()
   })
 })

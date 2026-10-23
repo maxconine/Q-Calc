@@ -5,8 +5,8 @@ import type { Onboarding } from './onboarding'
 export const TOUR_ON = 1 << 12
 // skipped, or the install was past onboarding when the tour arrived
 export const TOUR_OFF = 1 << 13
-// the tour goes quiet after this many opens however far it got, so it never outstays its welcome
-export const TOUR_OPENS = 15
+// the tour retires after this many opens however far it got, so it never outstays its welcome
+export const TOUR_OPENS = 3
 
 export type TourStepId = 'hotkey' | 'arithmetic' | 'units' | 'chain' | 'copy'
 
@@ -62,7 +62,10 @@ export function tourBit(id: TourStepId | TourExtra['id']): number {
  * onboarding never does. Whatever it has clearly done already counts as done.
  */
 export function enrolTour(s: Onboarding, native: boolean): Onboarding {
-  if (s.hints & (TOUR_ON | TOUR_OFF)) return s
+  // past its opens it's off for good, written down like a skip; `tutorial` still replays it
+  if (s.hints & TOUR_OFF) return s
+  if (s.opens > TOUR_OPENS) return { ...s, hints: s.hints | TOUR_OFF }
+  if (s.hints & TOUR_ON) return s
   if (s.done || !native) return { ...s, hints: s.hints | TOUR_OFF }
   const known = (s.opens >= 2 ? tourBit('hotkey') : 0) | (s.commits > 0 ? tourBit('arithmetic') : 0)
   return { ...s, hints: s.hints | TOUR_ON | known }

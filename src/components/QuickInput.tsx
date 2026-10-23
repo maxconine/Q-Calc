@@ -136,6 +136,15 @@ export function bracketKey(text: string, start: number, end: number, key: string
   return null
 }
 
+const WRAPS: Record<string, string> = { '(': ')', '[': ']', '{': '}' }
+
+// an opening bracket typed over a selection wraps it and keeps it selected, as code editors do
+export function wrapSelection(text: string, start: number, end: number, key: string): { text: string; start: number; end: number } | null {
+  const close = WRAPS[key]
+  if (!close || end <= start) return null
+  return { text: text.slice(0, start) + key + text.slice(start, end) + close + text.slice(end), start: start + 1, end: end + 1 }
+}
+
 function replaceTokens(text: string, keepTrailing: boolean, keepWords: boolean): string {
   // a word at the end may still grow into a longer one (`theta` to `thetas`) unless its symbol converts at once
   const swap = (put: string) => (m: string, offset: number, whole: string) =>
@@ -520,6 +529,21 @@ export function QuickInput({
       if (edit) {
         e.preventDefault()
         applyEdit(el, edit)
+        return
+      }
+    }
+    if (!e.metaKey && !e.ctrlKey && !e.nativeEvent.isComposing) {
+      const start = el.selectionStart ?? 0
+      const wrap = wrapSelection(el.value, start, el.selectionEnd ?? start, e.key)
+      if (wrap) {
+        e.preventDefault()
+        // its own undo step, and undo brings the selection back with the text
+        const u = undoRef.current
+        if (u) undoRef.current = breakRun({ ...u, current: { ...u.current, start, end: el.selectionEnd ?? start } })
+        caretPosRef.current = { start: wrap.start, end: wrap.end }
+        setCaret(null)
+        onChangeRef.current(wrap.text)
+        requestAnimationFrame(() => inputRef.current?.setSelectionRange(wrap.start, wrap.end))
         return
       }
     }
