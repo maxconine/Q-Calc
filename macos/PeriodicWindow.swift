@@ -236,18 +236,22 @@ private final class PeriodicTile: NSView {
 }
 
 // a line of the formula card: the formula itself (a click puts its molar mass in the bar), a part of it (a click takes
-// one away) or the clear button, each with the tiles' hover and press tint
+// one away) or the clear button, each with the tiles' hover and press tint; `resting` tints it before any hover, so
+// the clear button reads as one
 private final class FormulaText: NSView {
     var onClick: (() -> Void)?
     private let text: NSAttributedString
+    private let resting: CGFloat
     private var hovered = false { didSet { if hovered != oldValue { fill() } } }
     private var pressed = false { didSet { if pressed != oldValue { fill() } } }
 
-    init(_ text: NSAttributedString, help: String) {
+    init(_ text: NSAttributedString, help: String, resting: CGFloat = 0) {
         self.text = text
+        self.resting = resting
         let size = text.size()
         super.init(frame: NSRect(x: 0, y: 0, width: ceil(size.width) + 12, height: ceil(size.height) + 4))
         wantsLayer = true
+        fill()
         toolTip = help
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
@@ -295,7 +299,7 @@ private final class FormulaText: NSView {
     }
 
     private func fill() {
-        let alpha: CGFloat = pressed ? 0.08 : hovered ? 0.05 : 0
+        let alpha: CGFloat = resting + (pressed ? 0.08 : hovered ? 0.05 : 0)
         var color: CGColor?
         effectiveAppearance.performAsCurrentDrawingAppearance {
             color = NSColor.labelColor.withAlphaComponent(alpha).cgColor
@@ -524,6 +528,19 @@ final class PeriodicWindowController: NSObject {
         return field
     }
 
+    // a formula is being built and the table is up, so ↵ in the bar is the table's
+    var hasFormula: Bool { panel?.isVisible == true && !picks.isEmpty }
+
+    // the formula's molar mass goes in the bar, as a click on it does, and the table starts over, open for the next one
+    @discardableResult
+    func putFormulaIn() -> Bool {
+        guard hasFormula else { return false }
+        onPick?(Self.grams(picks.reduce(0) { $0 + (masses[$1] ?? 0) }))
+        picks = []
+        showFormula()
+        return true
+    }
+
     private func pick(_ symbol: String) {
         picks.append(symbol)
         showFormula()
@@ -578,8 +595,8 @@ final class PeriodicWindowController: NSObject {
         main.append(NSAttributedString(string: "  \(mass) g/mol", attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular), .foregroundColor: NSColor.labelColor,
         ]))
-        let formula = FormulaText(main, help: "Put the molar mass in the bar")
-        formula.onClick = { [weak self] in self?.onPick?(mass) }
+        let formula = FormulaText(main, help: "Put the molar mass in the bar (↵)")
+        formula.onClick = { [weak self] in self?.putFormulaIn() }
         formula.setFrameOrigin(NSPoint(x: formulaFrame.midX - formula.frame.width / 2, y: formulaFrame.minY + 18))
 
         let small: [NSAttributedString.Key: Any] = [.font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular), .foregroundColor: muted]
@@ -590,18 +607,22 @@ final class PeriodicWindowController: NSObject {
             part.onClick = { [weak self] in self?.drop(symbol) }
             return part
         }
-        let clear = FormulaText(NSAttributedString(string: "×", attributes: small), help: "Clear the formula")
+        let clear = FormulaText(NSAttributedString(string: "Clear", attributes: [
+            .font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: NSColor.labelColor,
+        ]), help: "Clear the formula", resting: 0.06)
         clear.onClick = { [weak self] in
             self?.picks = []
             self?.showFormula()
         }
-        parts.append(clear)
-        let width = parts.reduce(0) { $0 + $1.frame.width }
+        let clearGap: CGFloat = 8
+        let width = parts.reduce(0) { $0 + $1.frame.width } + clearGap + clear.frame.width
         var x = formulaFrame.midX - width / 2
         for part in parts {
             part.setFrameOrigin(NSPoint(x: x, y: formula.frame.maxY + 4))
             x += part.frame.width
         }
+        clear.setFrameOrigin(NSPoint(x: x + clearGap, y: formula.frame.maxY + 4))
+        parts.append(clear)
         formulaViews = [formula] + parts
         formulaViews.forEach { grid.addSubview($0) }
     }
