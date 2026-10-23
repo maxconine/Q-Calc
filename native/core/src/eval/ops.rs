@@ -88,6 +88,7 @@ fn int32(x: f64, op: Op) -> Result<i64, EvalError> {
 }
 
 pub fn unary(op: Op, a: &Val) -> EvalResult {
+    // PORT(WP-FUNCTIONS / WP-MATRIX): complex and list operands dispatch here, as in `binary`.
     match op {
         Op::Not => Ok(Val::Bool(!a.truthy())),
         Op::UnaryPlus => Ok(Val::Num(scalar(a, op)?)),
@@ -98,6 +99,8 @@ pub fn unary(op: Op, a: &Val) -> EvalResult {
 }
 
 pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
+    // PORT(WP-FUNCTIONS): a complex operand goes to `eval::complex::binary` here, one line.
+    // PORT(WP-MATRIX): a list operand goes to `eval::matrix::binary` here, one line.
     if op == Op::Xor {
         return Ok(Val::Bool(a.truthy() != b.truthy()));
     }

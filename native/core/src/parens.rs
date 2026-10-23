@@ -32,7 +32,7 @@ pub fn fill_parens(expr: &str) -> String {
     infer_parens(expr).filled
 }
 
-/// Commits inferred parens when the caret is at the end with no selection (caret in chars).
+/// Commits inferred parens when the caret is at the end with no selection (caret in UTF-16 units, as the field reports).
 pub fn autofill_parens(expr: &str, caret: usize, selection_end: usize) -> Option<String> {
     if caret != selection_end || caret != expr.encode_utf16().count() {
         return None;
