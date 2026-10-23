@@ -1,4 +1,4 @@
-import { chemAnswer } from './chem'
+import { chemAnswer, gasConstant } from './chem'
 import { splitLetters } from './letters'
 import { embedIntegrals, evaluateCalculus, type CalculusResult } from './calculus'
 import { joinDots } from './dots'
@@ -65,6 +65,22 @@ function withQuantities(expr: string, quantities: Record<string, string>): strin
   if (!names.length) return expr
   const re = new RegExp(`(?<![A-Za-z_])(?:${names.join('|')})(?![A-Za-z0-9_])`, 'g')
   return expr.replace(re, (name) => `(${quantities[name]})`)
+}
+
+/**
+ * `ans ft` when ans is already 5 m reads as ans in feet, not m·ft: a unit of the same kind converts,
+ * so `ans ft` is `ans to ft` and `ans ft to in` is `ans to in`. any other unit still multiplies.
+ * a temperature converts only unbracketed (`212 °F to K`), since an offset scale can't be multiplied out
+ */
+function ansInUnit(expr: string, ansQty: string | undefined): string {
+  const m = ansQty ? expr.match(/^ans\s+(?:(?:to|into|in)\s+(.+)|([A-Za-zµμ°Ω].*?)(?:\s+(?:to|into|in)\s+(.+))?)$/i) : null
+  if (!m) return expr
+  const kind = m[1] ?? m[2]!
+  const target = m[1] ?? m[3] ?? kind
+  for (const [left, out] of [[`(${ansQty})`, `ans to ${target}`], [ansQty!, `${ansQty} to ${target}`]] as const) {
+    if (tryConvert(`${left} to ${kind}`)?.kind === 'number') return out
+  }
+  return expr
 }
 
 function show(value: Value, fractionMode: boolean, sigFigs: number): string {
@@ -269,6 +285,16 @@ function evaluateLines(lines: SheetInputLine[] | string[], options: EvaluateOpti
       continue
     }
 
+    // the gas constant has no mol unit to carry, so `ans` after it is the bare number
+    const gas = gasConstant(trimmedLine)
+    if (gas) {
+      const value = { ...num(gas.n), unit: gas.unit }
+      results.push({ raw, kind: 'expression', display: show(value, false, sigFigs), value })
+      lastAns = gas.n
+      delete measures.ans
+      delete quantities.ans
+      continue
+    }
     const chem = chemAnswer(trimmedLine, (name) => name in variables || name in quantities || name in functions)
     if (chem != null) {
       results.push({ raw, kind: 'expression', display: chem, value: chem ? textVal(chem) : undefined })
@@ -343,7 +369,7 @@ function evaluateLines(lines: SheetInputLine[] | string[], options: EvaluateOpti
 
     const variable = assign?.variable
     // ∓ is treated as ± until correlation is modelled
-    let expr = normalizeSums(withQuantities(assign?.expr ?? trimmed, quantities).replace(/∓/g, '±'))
+    let expr = normalizeSums(withQuantities(ansInUnit(assign?.expr ?? trimmed, quantities.ans), quantities).replace(/∓/g, '±'))
 
     // `255 in hex`, `0xff + 1 to binary`, `hex(255)`: worked out as usual, then written in that base
     const based = variable ? null : baseRequest(expr)

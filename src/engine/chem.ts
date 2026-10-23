@@ -357,3 +357,28 @@ export function chemCopyText(shown: string): string {
     .replace(' → ', ' -> ')
   return parseReaction(plain) ? plain : shown
 }
+
+// R = N_A·k, both exact since 2019
+const R = 6.02214076e23 * 1.380649e-23
+
+// `chem R` alone is SI; a word after it picks the pressure or energy the answer is in
+const GAS_CONSTANT: { words: RegExp; n: number; unit: string }[] = [
+  { words: /^(?:si|j|joules?)$/, n: R, unit: 'J·mol⁻¹·K⁻¹' },
+  { words: /^(?:l\s*)?(?:atm|atmospheres?)$/, n: R / 101.325, unit: 'L·atm·mol⁻¹·K⁻¹' },
+  { words: /^(?:l\s*)?bars?$/, n: R / 100, unit: 'L·bar·mol⁻¹·K⁻¹' },
+  { words: /^(?:l\s*)?torr$/, n: (R * 760) / 101.325, unit: 'L·torr·mol⁻¹·K⁻¹' },
+  { words: /^(?:l\s*)?mm\s*hg$/, n: (R * 760) / 101.325, unit: 'L·mmHg·mol⁻¹·K⁻¹' },
+  { words: /^(?:cal|calories?)$/, n: R / 4.184, unit: 'cal·mol⁻¹·K⁻¹' },
+]
+
+/** The words `chem R` takes after it, offered by completion. */
+export const GAS_CONSTANT_UNITS = ['atm', 'bar', 'torr', 'mmhg', 'cal', 'si']
+
+/** `chem R`, `chem R atm`, `chem R torr`: the gas constant in those units, or null. */
+export function gasConstant(text: string): { n: number; unit: string } | null {
+  const m = text.trim().match(/^chem\s+r(?:\s+(.+))?$/i)
+  if (!m) return null
+  const word = (m[1] ?? 'si').trim().toLowerCase()
+  const hit = GAS_CONSTANT.find((g) => g.words.test(word))
+  return hit ? { n: hit.n, unit: hit.unit } : null
+}

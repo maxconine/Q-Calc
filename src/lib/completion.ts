@@ -1,3 +1,4 @@
+import { GAS_CONSTANT_UNITS } from '../engine/chem'
 import { SCIENTIFIC_NAMES } from '../engine/scientific'
 import { isUnitName } from '../engine/units'
 
@@ -40,6 +41,12 @@ export function completionFor(text: string, names: CompletionNames = {}): string
   // `periodic table` is a command, not a unit: `periodic ta` finishes it, and `table` never becomes `tablespoon`
   const periodic = text.match(/^\s*periodic\s+([A-Za-z]*)$/i)
   if (periodic) return 'table'.startsWith(periodic[1]!.toLowerCase()) ? 'table'.slice(periodic[1]!.length) : ''
+  // `chem R a` finishes `atm`: the units the gas constant comes in, not the unit list
+  const gas = text.match(/^\s*chem\s+r\s+([A-Za-z]+)$/i)
+  if (gas) {
+    const hit = GAS_CONSTANT_UNITS.find((u) => u.length > gas[1]!.length && u.startsWith(gas[1]!.toLowerCase()))
+    return hit ? hit.slice(gas[1]!.length) : ''
+  }
   const m =text.match(/(^|[^A-Za-z])([A-Za-z]{2,})$/)
   if (!m) return ''
   const word = m[2]!

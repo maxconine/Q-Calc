@@ -68,3 +68,13 @@ describe('completionFor: the periodic table command', () => {
     expect(completionFor('periodic tea')).toBe('')
   })
 })
+
+describe('completionFor: chem R units', () => {
+  it('finishes the gas constant units', () => {
+    expect(completionFor('chem R a')).toBe('tm')
+    expect(completionFor('chem R t')).toBe('orr')
+    expect(completionFor('chem r mm')).toBe('hg')
+    expect(completionFor('chem R atm')).toBe('')
+    expect(completionFor('chem R x')).toBe('')
+  })
+})

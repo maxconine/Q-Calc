@@ -375,7 +375,14 @@ export function tryPlainMath(
   if (!src) return null
   const filled = normalizeMathText(src)
   // a known variable (`n = 5`, then `n*2`) is never read as a unit symbol like N, m or s
-  const converted = tryConvert(filled, ctx.defaultUnits, ctx.variables, ctx.keepUnits, ctx.angleMode)
+  // `ans mm to in`: a plain previous answer takes a unit the way a variable does (`x mm`); failing that a leading
+  // one is its number outright, so an offset scale reads too (`ans °C to °F`)
+  const hasAns = ctx.ans !== undefined && /\bans\b/i.test(filled)
+  const vars = hasAns ? { ...ctx.variables, ans: ctx.ans! } : ctx.variables
+  const leading = hasAns && /^ans\s*[A-Za-zµμ°Ω]/i.test(filled) ? filled.replace(/^ans/i, String(ctx.ans)) : null
+  const converted =
+    tryConvert(hasAns ? filled.replace(/\bans\b/gi, 'ans') : filled, ctx.defaultUnits, vars, ctx.keepUnits, ctx.angleMode) ??
+    (leading ? tryConvert(leading, ctx.defaultUnits, ctx.variables, ctx.keepUnits, ctx.angleMode) : null)
   if (converted) return converted
   const cleaned = src.replace(/\d+(?:\.\d+)?\s*%\s*of\b/gi, (m) => m.replace(/\s*of\b/i, ''))
   if (hasNlpWords(cleaned) && !looksLikeLatex(src)) return null
