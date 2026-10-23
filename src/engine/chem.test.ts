@@ -269,3 +269,29 @@ describe('more reactions', () => {
     expect(shown('CuSO4·5H2O(s) -> CuSO4(s) + H2O(g)')).toBe('CuSO₄·5H₂O(s) → CuSO₄(s) + 5 H₂O(g)')
   })
 })
+
+describe('chem R, the gas constant', () => {
+  it('is SI unless a unit is picked', () => {
+    expect(shown('chem R')).toBe('8.31446261815 J·mol⁻¹·K⁻¹')
+    expect(shown('chem r')).toBe(shown('chem R'))
+    expect(shown('chem R J')).toBe(shown('chem R'))
+  })
+
+  it('comes in litres with a pressure, or in calories', () => {
+    expect(shown('chem R atm')).toBe('0.082057366081 L·atm·mol⁻¹·K⁻¹')
+    expect(shown('chem R L atm')).toBe(shown('chem R atm'))
+    expect(shown('chem R bar')).toBe('0.0831446261815 L·bar·mol⁻¹·K⁻¹')
+    expect(shown('chem R torr')).toBe('62.3635982215 L·torr·mol⁻¹·K⁻¹')
+    expect(shown('chem R mmHg')).toBe('62.3635982215 L·mmHg·mol⁻¹·K⁻¹')
+    expect(shown('chem R cal')).toBe('1.98720425864 cal·mol⁻¹·K⁻¹')
+  })
+
+  it('keeps full precision for ans', () => {
+    const rows = evaluateSheet(['chem R', 'ans'])
+    expect(rows[1]!.value?.n).toBe(6.02214076e23 * 1.380649e-23)
+  })
+
+  it('leaves an unknown unit blank', () => {
+    expect(shown('chem R furlong')).toBe('')
+  })
+})
