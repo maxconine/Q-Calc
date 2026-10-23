@@ -990,6 +990,36 @@ export function compileScientific(
   }
 }
 
+/** compileScientific in two free variables, for a contour plot's f(x, y). */
+export function compileScientific2(
+  text: string,
+  ctx: ScientificContext,
+  a: string,
+  b: string,
+): ((u: number, v: number) => Value | null) | null {
+  const variables: Record<string, number> = { ...ctx.variables, [a]: 0, [b]: 0 }
+  const prep = prepare(text, { ...ctx, variables })
+  if (!prep) return null
+  let code: { evaluate: (scope: Record<string, unknown>) => unknown }
+  try {
+    code = math.parse(prep.expr).compile()
+  } catch {
+    return null
+  }
+  const { expr, scope } = prep
+  const cost = 5 + expr.length
+  return (u, v) => {
+    scope[a] = u
+    scope[b] = v
+    spend(cost)
+    try {
+      return finish(code.evaluate(scope), expr)
+    } catch {
+      return null
+    }
+  }
+}
+
 /** The tree compileScientific evaluates, with the scope it evaluates in, for walking its shape. */
 export function parseScientific(
   text: string,

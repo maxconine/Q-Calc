@@ -1,7 +1,7 @@
 import { parseFunctionDef } from './evaluate'
 import { formatNumber } from './format'
 import { namesPattern } from './math'
-import { compileScientific, evalScientific, splitGluedFunctions, type AngleMode } from './scientific'
+import { compileScientific, compileScientific2, evalScientific, splitGluedFunctions, type AngleMode } from './scientific'
 import type { UserFunction } from './types'
 
 export const DEFAULT_GRAPH_DOMAIN: readonly [number, number] = [-10, 10]
@@ -21,6 +21,8 @@ export interface GraphOptions {
   ans?: number
   /** Default true. */
   findRoots?: boolean
+  /** The plot's height over its width, so a contour plot's x and y share a scale. */
+  aspect?: number
 }
 
 export interface GraphIntent {
@@ -30,6 +32,23 @@ export interface GraphIntent {
   label: string
   /** Present for `graph f(x) = …`; the caller registers it. */
   functionDef?: { name: string; params: string[]; body: string }
+  /** From `{0 < x < 3}` after the curve. */
+  bounds?: GraphBounds
+  /** Braces that don't read as bounds. */
+  boundsError?: string
+  /** In `x` and `y`, drawn as level curves; `zero` draws only where it is 0 (`x^2 + y^2 = 25`). */
+  contour?: 'levels' | 'zero'
+}
+
+export interface GraphRange {
+  lo: number
+  hi: number
+}
+
+/** The pieces of the plot to keep: a union of ranges per axis, intersected across x and y. */
+export interface GraphBounds {
+  x: GraphRange[]
+  y: GraphRange[]
 }
 
 export interface GraphPoint {
@@ -66,33 +85,70 @@ export interface GraphResult {
   angleUnit: AngleMode | null
   /** For readouts between samples. */
   y: GraphY
+  /** Present for a function of x and y; yScale is then its y range, at the plot's aspect. */
+  contours?: ContourLevel[]
+  /** f(x, y) inside the bounds, for a contour plot's readout. */
+  z?: (x: number, y: number) => number | null
   error?: string
+}
+
+export interface ContourLevel {
+  level: number
+  label: string
+  /** x1, y1, x2, y2 for each piece of the line. */
+  segments: number[]
+  /** Where its label sits, clear of the edges and the other labels. */
+  at: { x: number; y: number } | null
 }
 
 const GRAPH_CMD = /^\s*graph\s+(.+?)\s*$/is
 const Y_EQ = /^y\s*=\s*(.+)$/is
+const Z_EQ = /^z\s*=\s*(.+)$/is
+// one `=`, not part of <=, >= or ==
+const IMPLICIT_EQ = /^([^=<>!]+)=([^=<>]+)$/s
 const BARE_NAME = /^([A-Za-z][A-Za-z0-9]*)$/
+const FREE_Y = /(?<![A-Za-z0-9_])y(?![A-Za-z0-9_])/
 
-/** `graph f` looks `f` up in `options.functions`. */
+/** `graph f` looks `f` up in `options.functions`; trailing braces like `{0 < x < 3}` are bounds. */
 export function parseGraphIntent(
   input: string,
-  options: Pick<GraphOptions, 'functions'> = {},
+  options: Pick<GraphOptions, 'functions' | 'variables'> = {},
 ): GraphIntent | null {
   const m = input.match(GRAPH_CMD)
   if (!m) return null
-  const rest = splitGluedFunctions(m[1]!.trim())
+  const { rest: raw, groups, open } = peelBounds(m[1]!.trim())
+  const rest = splitGluedFunctions(raw)
   if (!rest) return null
+  const intent = curveIntent(rest, options)
+  if (!intent || !intent.expression || (!groups.length && open == null)) return intent
 
+  // a function's own parameters name its axes: f(t) bounds t, g(u, v) bounds u and v
+  const params = intent.functionDef?.params ?? options.functions?.[rest]?.params
+  const names: Record<string, 'x' | 'y'> =
+    params?.length === 2 ? { [params[0]!]: 'x', [params[1]!]: 'y' } : { y: 'y', [params?.[0] ?? 'x']: 'x' }
+  const ctx = { variables: options.variables, functions: options.functions }
+  const bounds = parseBounds(groups, names, ctx)
+  if (!bounds) return { ...intent, boundsError: 'Write bounds like {0 < x < 3} or {2 < y < 5}' }
+  // a group still being typed counts once it reads as bounds
+  const typing = open != null ? parseBounds([open], names, ctx) : null
+  if (typing) {
+    bounds.x.push(...typing.x)
+    bounds.y.push(...typing.y)
+  }
+  if (!bounds.x.length && !bounds.y.length) return intent
+  return { ...intent, bounds, label: `${intent.label} ${groups.map((g) => `{${g.trim()}}`).join(' ')}`.trim() }
+}
+
+function curveIntent(rest: string, options: Pick<GraphOptions, 'functions' | 'variables'>): GraphIntent | null {
   const fnDef = parseFunctionDef(rest)
   if (fnDef) {
-    if (fnDef.params.length !== 1) return { expression: '', label: rest, functionDef: fnDef }
-    const param = fnDef.params[0]!
-    const expression = param === 'x' ? fnDef.body : rewriteParam(fnDef.body, param, 'x')
-    return {
-      expression,
-      label: `${fnDef.name}(${fnDef.params.join(', ')})`,
-      functionDef: fnDef,
+    const label = `${fnDef.name}(${fnDef.params.join(', ')})`
+    const [p, q] = fnDef.params
+    if (fnDef.params.length === 2) {
+      return { expression: rewriteParams(fnDef.body, { [p!]: 'x', [q!]: 'y' }), label, functionDef: fnDef, contour: 'levels' }
     }
+    if (fnDef.params.length !== 1) return { expression: '', label: rest, functionDef: fnDef }
+    return { expression: rewriteParams(fnDef.body, { [p!]: 'x' }), label, functionDef: fnDef }
   }
 
   const yEq = rest.match(Y_EQ)
@@ -101,20 +157,147 @@ export function parseGraphIntent(
     if (!expression) return null
     return { expression, label: `y = ${expression}` }
   }
+  const zEq = rest.match(Z_EQ)
+  if (zEq) return { expression: zEq[1]!.trim(), label: `z = ${zEq[1]!.trim()}`, contour: 'levels' }
 
   const bare = rest.match(BARE_NAME)
   if (bare) {
     const name = bare[1]!
     const def = options.functions?.[name]
     if (def) {
-      if (def.params.length !== 1) return { expression: '', label: name }
-      const param = def.params[0]!
+      const [p, q] = def.params
       // inlined so sampling compiles one expression instead of making a call per sample
-      return { expression: rewriteParam(def.body, param, 'x'), label: `${name}(${param})` }
+      if (def.params.length === 2) {
+        return { expression: rewriteParams(def.body, { [p!]: 'x', [q!]: 'y' }), label: `${name}(${p}, ${q})`, contour: 'levels' }
+      }
+      if (def.params.length !== 1) return { expression: '', label: name }
+      return { expression: rewriteParams(def.body, { [p!]: 'x' }), label: `${name}(${p})` }
     }
   }
 
+  // `x^2 + y^2 = 25` is the curve where the sides meet
+  const eq = rest.match(IMPLICIT_EQ)
+  if (eq && eq[1]!.trim() && eq[2]!.trim()) {
+    const [l, r] = [eq[1]!.trim(), eq[2]!.trim()]
+    return { expression: `(${l}) - (${r})`, label: `${l} = ${r}`, contour: 'zero' }
+  }
+  // a free y makes it a surface, unless y is a variable
+  if (FREE_Y.test(rest) && !(options.variables && 'y' in options.variables)) {
+    return { expression: rest, label: rest, contour: 'levels' }
+  }
   return { expression: rest, label: rest }
+}
+
+// trailing `{…}` groups holding a comparison, and one still open at the end
+function peelBounds(text: string): { rest: string; groups: string[]; open: string | null } {
+  const groups: string[] = []
+  let rest = text
+  let open: string | null = null
+  const typing = rest.match(/\{([^{}]*)$/)
+  if (typing && /[<>≤≥]/.test(typing[1]!)) {
+    open = typing[1]!
+    rest = rest.slice(0, typing.index).replace(/[\s,]+$/, '')
+  }
+  for (let g = rest.match(/\{([^{}]*)\}\s*$/); g && /[<>≤≥]/.test(g[1]!); g = rest.match(/\{([^{}]*)\}\s*$/)) {
+    groups.unshift(g[1]!)
+    rest = rest.slice(0, g.index).replace(/[\s,]+$/, '')
+  }
+  return { rest, groups, open }
+}
+
+const CMP = /(<=|>=|=<|=>|≤|≥|<|>)/
+const isLess = (op: string) => op.includes('<') || op === '≤'
+
+/** `0 < x < 3`, `y >= 2`, `5 > y > 2`, comma-separated; null when a piece isn't one. */
+function parseBounds(
+  groups: string[],
+  names: Record<string, 'x' | 'y'>,
+  ctx: Pick<GraphOptions, 'variables' | 'functions'>,
+): GraphBounds | null {
+  const out: GraphBounds = { x: [], y: [] }
+  const num = (text: string): number | null => {
+    if (!text) return null
+    try {
+      const v = evalScientific(text, ctx)
+      return v?.kind === 'number' && !Number.isNaN(v.n) ? v.n : null
+    } catch {
+      return null
+    }
+  }
+  const axisOf = (name: string) => (Object.hasOwn(names, name) ? names[name] : undefined)
+  for (const piece of groups.flatMap(splitTopCommas)) {
+    if (!piece.trim()) continue
+    const t = piece.split(CMP).map((s) => s.trim())
+    let axis: 'x' | 'y' | undefined
+    let lo = -Infinity
+    let hi = Infinity
+    if (t.length === 3) {
+      const [a, op, b] = t as [string, string, string]
+      const left = axisOf(a)
+      axis = left ?? axisOf(b)
+      const bound = axis ? num(left ? b : a) : null
+      if (!axis || bound == null) return null
+      // x < 3 and 3 > x both cap x
+      if (isLess(op) === Boolean(left)) hi = bound
+      else lo = bound
+    } else if (t.length === 5) {
+      const [a, op1, v, op2, b] = t as [string, string, string, string, string]
+      axis = axisOf(v)
+      const na = num(a)
+      const nb = num(b)
+      if (!axis || isLess(op1) !== isLess(op2) || na == null || nb == null) return null
+      ;[lo, hi] = isLess(op1) ? [na, nb] : [nb, na]
+    } else return null
+    out[axis].push({ lo, hi })
+  }
+  return out
+}
+
+function splitTopCommas(text: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let from = 0
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (ch === '(' || ch === '[') depth++
+    else if (ch === ')' || ch === ']') depth--
+    else if (ch === ',' && depth === 0) {
+      out.push(text.slice(from, i))
+      from = i + 1
+    }
+  }
+  out.push(text.slice(from))
+  return out
+}
+
+const inRanges = (v: number, rs: GraphRange[]) => !rs.length || rs.some((r) => v >= r.lo && v <= r.hi)
+
+// the span the ranges cover, when it is finite
+function hull(rs: GraphRange[] | undefined): [number, number] | null {
+  if (!rs?.length) return null
+  const lo = Math.min(...rs.map((r) => r.lo))
+  const hi = Math.max(...rs.map((r) => r.hi))
+  return Number.isFinite(lo) && Number.isFinite(hi) && hi > lo ? [lo, hi] : null
+}
+
+/** null outside the bounds, so the path breaks there and bisection finds the edges. */
+function restrict(f: GraphY, bounds: GraphBounds | undefined): GraphY {
+  if (!bounds) return f
+  return (x) => {
+    if (!inRanges(x, bounds.x)) return null
+    const y = f(x)
+    return y != null && inRanges(y, bounds.y) ? y : null
+  }
+}
+
+// samples at the x bounds' own ends, so a piece starts and stops exactly there
+function withEnds(points: GraphPoint[], f: GraphY, bounds: GraphBounds | undefined): GraphPoint[] {
+  if (!bounds?.x.length || points.length < 2) return points
+  const lo = points[0]!.x
+  const hi = points[points.length - 1]!.x
+  const ends = bounds.x.flatMap((r) => [r.lo, r.hi]).filter((x) => x > lo && x < hi && !points.some((p) => p.x === x))
+  if (!ends.length) return points
+  return [...points, ...ends.map((x) => ({ x, y: f(x) }))].sort((a, b) => a.x - b.x)
 }
 
 /** True even for an incomplete command. */
@@ -442,11 +625,11 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
   const intent = parseGraphIntent(input, options)
   if (!intent) return null
 
-  if (!intent.expression) {
-    const msg =
-      intent.functionDef && intent.functionDef.params.length !== 1
-        ? 'Graphing requires a single-variable function'
-        : 'Unknown function — define it first (e.g. f(x) = …)'
+  if (!intent.expression || intent.boundsError) {
+    const msg = intent.boundsError
+      ?? (intent.functionDef && intent.functionDef.params.length !== 1
+        ? 'Graphing takes a function of x, or of x and y'
+        : 'Unknown function — define it first (e.g. f(x) = …)')
     return {
       intent,
       points: [],
@@ -471,14 +654,17 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
 
   const mode: AngleMode = options.angleMode ?? 'rad'
   const base: GraphOptions = { ...options, functions }
-  const f = compileGraphY(intent.expression, { ...base, angleMode: mode })
-  const angleUnit = dependsOnAngle(f, compileGraphY(intent.expression, { ...base, angleMode: mode === 'deg' ? 'rad' : 'deg' }))
+  if (intent.contour) return buildContour(intent, base, mode)
+  const curve = compileGraphY(intent.expression, { ...base, angleMode: mode })
+  const angleUnit = dependsOnAngle(curve, compileGraphY(intent.expression, { ...base, angleMode: mode === 'deg' ? 'rad' : 'deg' }))
     ? mode
     : null
+  const f = restrict(curve, intent.bounds)
   const domain = normalizeDomain(options.domain, angleUnit === 'deg' ? DEGREE_GRAPH_DOMAIN : DEFAULT_GRAPH_DOMAIN)
-  const uniform = sampleWith(f, { ...base, domain })
+  const uniform = withEnds(sampleWith(f, { ...base, domain }), f, intent.bounds)
   const yScale = autoYScale(uniform)
   if (!uniform.some((p) => p.y != null)) {
+    const somewhere = intent.bounds && sampleWith(curve, { ...base, domain }).some((p) => p.y != null)
     return {
       intent,
       points: uniform,
@@ -488,7 +674,7 @@ export function buildGraph(input: string, options: GraphOptions = {}): GraphResu
       roots: [],
       angleUnit,
       y: f,
-      error: 'Could not evaluate expression over the domain',
+      error: somewhere ? 'Nothing to plot within the bounds here' : 'Could not evaluate expression over the domain',
     }
   }
 
@@ -520,20 +706,251 @@ export function dependsOnAngle(a: GraphY, b: GraphY): boolean {
  * extrema when they all sit in a small middle part of it, so x³ − 3x shows its hump and dip.
  */
 export function graphHome(input: string, options: GraphOptions = {}): [number, number] {
+  // finite bounds frame the view, with a little room either side
+  const intent = parseGraphIntent(input, options)
+  const bx = intent?.boundsError ? null : hull(intent?.bounds?.x)
+  const by = intent?.contour && !intent.boundsError ? hull(intent.bounds?.y) : null
+  if (bx || by) {
+    const span = Math.max(bx ? bx[1] - bx[0] : 0, by ? (by[1] - by[0]) / (options.aspect ?? CONTOUR_ASPECT) : 0)
+    return niceWindow(bx ? (bx[0] + bx[1]) / 2 : 0, span * 1.2)
+  }
   const g = buildGraph(input, { ...options, domain: undefined })
   if (!g || g.error) return g?.domain ?? [DEFAULT_GRAPH_DOMAIN[0], DEFAULT_GRAPH_DOMAIN[1]]
   const [lo, hi] = g.domain
+  // y bounds frame the pieces they keep
+  const drawn = intent?.bounds && !g.contours ? g.points.filter((p) => p.y != null).map((p) => p.x) : []
+  if (drawn.length > 1) {
+    const a = Math.min(...drawn)
+    const b = Math.max(...drawn)
+    if (b > a && b - a < 0.6 * (hi - lo)) return niceWindow((a + b) / 2, (b - a) * 1.2)
+  }
   const xs = [...g.roots.map((r) => r.x), ...g.criticalPoints.map((c) => c.x)]
   if (xs.length < 2) return g.domain
   const a = Math.min(...xs)
   const b = Math.max(...xs)
   const span = Math.max((b - a) * 1.5, (hi - lo) / 10)
   if (!(b > a) || span > 0.6 * (hi - lo)) return g.domain
-  const mid = (a + b) / 2
+  return niceWindow((a + b) / 2, span)
+}
+
+// at least `span` wide about `mid`, with ends on a round step
+function niceWindow(mid: number, span: number): [number, number] {
   const step = niceStep(span / 10, 'floor')
   return [Math.floor((mid - span / 2) / step + 1e-9) * step, Math.ceil((mid + span / 2) / step - 1e-9) * step].map(
     (v) => Number(v.toPrecision(12)),
   ) as [number, number]
+}
+
+/** Height over width of the graph panel's plot. */
+export const CONTOUR_ASPECT = 160 / 600
+// grid columns sampled across the view; rows follow the aspect, so cells are square
+const CONTOUR_COLUMNS = 120
+const CONTOUR_LINES = 6
+
+export type GraphZ = (x: number, y: number) => number | null
+
+export function compileGraphZ(expression: string, options: GraphOptions = {}): GraphZ {
+  const f = expression.trim()
+    ? compileScientific2(
+        expression,
+        { ans: options.ans, angleMode: options.angleMode, variables: options.variables, functions: options.functions },
+        'x',
+        'y',
+      )
+    : null
+  if (!f) return () => null
+  return (x, y) => {
+    const v = f(x, y)
+    return v && v.kind === 'number' && Number.isFinite(v.n) ? v.n : null
+  }
+}
+
+/** Level curves of f(x, y) by marching squares, clipped to the bounds. */
+function buildContour(intent: GraphIntent, options: GraphOptions, mode: AngleMode): GraphResult {
+  const raw = compileGraphZ(intent.expression, { ...options, angleMode: mode })
+  const other = compileGraphZ(intent.expression, { ...options, angleMode: mode === 'deg' ? 'rad' : 'deg' })
+  const angleUnit = dependsOnAngle((x) => raw(x, 0.61 - x / 3), (x) => other(x, 0.61 - x / 3)) ? mode : null
+  const domain = normalizeDomain(options.domain, angleUnit === 'deg' ? DEGREE_GRAPH_DOMAIN : DEFAULT_GRAPH_DOMAIN)
+  const [x0, x1] = domain
+  const aspect = options.aspect ?? CONTOUR_ASPECT
+  const by = hull(intent.bounds?.y)
+  const yMid = by ? (by[0] + by[1]) / 2 : 0
+  const yHalf = ((x1 - x0) * aspect) / 2
+  const yScale = { min: yMid - yHalf, max: yMid + yHalf }
+  const b = intent.bounds
+  const inside = (x: number, y: number) => !b || (inRanges(x, b.x) && inRanges(y, b.y))
+  const z: GraphZ = (x, y) => (inside(x, y) ? raw(x, y) : null)
+
+  const nx = CONTOUR_COLUMNS
+  const ny = Math.max(4, Math.round(nx * aspect))
+  const dx = (x1 - x0) / nx
+  const dy = (yScale.max - yScale.min) / ny
+  const grid = new Float64Array((nx + 1) * (ny + 1))
+  const seen: number[] = []
+  for (let j = 0; j <= ny; j++) {
+    const y = yScale.min + j * dy
+    for (let i = 0; i <= nx; i++) {
+      const x = x0 + i * dx
+      const v = raw(x, y) ?? Number.NaN
+      grid[j * (nx + 1) + i] = v
+      if (!Number.isNaN(v) && inside(x, y)) seen.push(v)
+    }
+  }
+  const result: GraphResult = { intent, points: [], domain, yScale, criticalPoints: [], roots: [], angleUnit, y: () => null, z }
+  if (!seen.length) {
+    const somewhere = b && grid.some((v) => !Number.isNaN(v))
+    return { ...result, error: somewhere ? 'Nothing to plot within the bounds here' : 'Could not evaluate expression over the domain' }
+  }
+
+  const levels = intent.contour === 'zero' ? [0] : contourLevels(seen)
+  // the bounds as rectangles, each segment kept only where it's inside one
+  const rects = b ? (b.x.length ? b.x : [FULL]).flatMap((rx) => (b.y.length ? b.y : [FULL]).map((ry) => [rx, ry] as const)) : null
+  const contours: ContourLevel[] = levels.map((level) => {
+    const found = marchingSquares(grid, nx, ny, level, x0, yScale.min, dx, dy)
+    let segments = found
+    if (rects) {
+      segments = []
+      for (let k = 0; k < found.length; k += 4) {
+        for (const [rx, ry] of rects) {
+          const c = clipSegment(found[k]!, found[k + 1]!, found[k + 2]!, found[k + 3]!, rx, ry)
+          if (c) segments.push(...c)
+        }
+      }
+    }
+    return { level, label: withMinus(formatNumber(level, 4)), segments, at: null }
+  })
+  // a lone f = 0 curve needs no label
+  if (intent.contour === 'levels') placeLabels(contours, domain, yScale)
+  return { ...result, contours }
+}
+
+const FULL: GraphRange = { lo: -Infinity, hi: Infinity }
+
+// a handful of round values across the middle of what f takes, so a pole doesn't crowd them out
+function contourLevels(values: number[]): number[] {
+  const sorted = values.sort((a, b) => a - b)
+  const lo = quantile(sorted, 0.02)
+  const hi = quantile(sorted, 0.98)
+  if (!(hi > lo)) return []
+  const step = niceStep((hi - lo) / CONTOUR_LINES, 'ceil')
+  const out: number[] = []
+  for (let k = Math.floor(lo / step) + 1; k * step < hi && out.length < 12; k++) out.push(Number((k * step).toPrecision(12)))
+  return out
+}
+
+/** x1, y1, x2, y2 per crossing, with saddles split by the cell's centre. */
+export function marchingSquares(
+  grid: ArrayLike<number>,
+  nx: number,
+  ny: number,
+  level: number,
+  x0: number,
+  y0: number,
+  dx: number,
+  dy: number,
+): number[] {
+  const out: number[] = []
+  const w = nx + 1
+  const ex = new Float64Array(4)
+  const ey = new Float64Array(4)
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const a = grid[j * w + i]! // (i, j)
+      const b = grid[j * w + i + 1]! // (i + 1, j)
+      const c = grid[(j + 1) * w + i + 1]! // (i + 1, j + 1)
+      const d = grid[(j + 1) * w + i]! // (i, j + 1)
+      if (Number.isNaN(a + b + c + d)) continue
+      const idx = (a > level ? 1 : 0) | (b > level ? 2 : 0) | (c > level ? 4 : 0) | (d > level ? 8 : 0)
+      if (idx === 0 || idx === 15) continue
+      const x = x0 + i * dx
+      const y = y0 + j * dy
+      const t = (p: number, q: number) => (level - p) / (q - p)
+      // edges 0 bottom, 1 right, 2 top, 3 left, where they cross
+      const cross: number[] = []
+      if ((idx & 1) !== (idx & 2) >> 1) {
+        ex[0] = x + t(a, b) * dx
+        ey[0] = y
+        cross.push(0)
+      }
+      if ((idx & 2) >> 1 !== (idx & 4) >> 2) {
+        ex[1] = x + dx
+        ey[1] = y + t(b, c) * dy
+        cross.push(1)
+      }
+      if ((idx & 4) >> 2 !== (idx & 8) >> 3) {
+        ex[2] = x + t(d, c) * dx
+        ey[2] = y + dy
+        cross.push(2)
+      }
+      if ((idx & 8) >> 3 !== (idx & 1)) {
+        ex[3] = x
+        ey[3] = y + t(a, d) * dy
+        cross.push(3)
+      }
+      let pairs: number[]
+      if (cross.length === 4) {
+        const high = (a + b + c + d) / 4 > level
+        // a high centre joins the high corners, so the lines cut off the low ones
+        pairs = (idx === 5) === high ? [0, 1, 2, 3] : [0, 3, 1, 2]
+      } else pairs = cross
+      for (let k = 0; k + 1 < pairs.length; k += 2) out.push(ex[pairs[k]!]!, ey[pairs[k]!]!, ex[pairs[k + 1]!]!, ey[pairs[k + 1]!]!)
+    }
+  }
+  return out
+}
+
+// liang–barsky against a box whose sides may be infinite
+function clipSegment(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  rx: GraphRange,
+  ry: GraphRange,
+): [number, number, number, number] | null {
+  const dx = x2 - x1
+  const dy = y2 - y1
+  let t0 = 0
+  let t1 = 1
+  for (const [p, q] of [[-dx, x1 - rx.lo], [dx, rx.hi - x1], [-dy, y1 - ry.lo], [dy, ry.hi - y1]] as const) {
+    if (p === 0) {
+      if (q < 0) return null
+      continue
+    }
+    const r = q / p
+    if (p < 0) {
+      if (r > t1) return null
+      if (r > t0) t0 = r
+    } else {
+      if (r < t0) return null
+      if (r < t1) t1 = r
+    }
+  }
+  return [x1 + t0 * dx, y1 + t0 * dy, x1 + t1 * dx, y1 + t1 * dy]
+}
+
+// each level's label at the point of its line farthest from the edges and the labels already placed
+function placeLabels(contours: ContourLevel[], domain: [number, number], yScale: YScale): void {
+  const span = domain[1] - domain[0]
+  // a label is about 4% of the plot wide and 2% tall
+  const w = 0.04 * span
+  const h = 0.02 * span
+  const placed: { x: number; y: number }[] = []
+  for (const c of contours) {
+    let best = 0
+    const s = c.segments
+    for (let k = 0; k < s.length; k += 4) {
+      const x = (s[k]! + s[k + 2]!) / 2
+      const y = (s[k + 1]! + s[k + 3]!) / 2
+      let score = Math.min(x - domain[0] - w, domain[1] - x - w, y - yScale.min - h, yScale.max - y - h)
+      for (const p of placed) score = Math.min(score, Math.hypot((x - p.x) / 2, y - p.y) - 2 * h)
+      if (score > best) {
+        best = score
+        c.at = { x, y }
+      }
+    }
+    if (c.at) placed.push(c.at)
+  }
 }
 
 function normalizeDomain(
@@ -622,9 +1039,11 @@ function piLabel(quarters: number): string {
   return `${sign}${num === 1 ? '' : num}π${den === 1 ? '' : `/${den}`}`
 }
 
-function rewriteParam(body: string, from: string, to: string): string {
-  if (from === to) return body
-  return body.replace(new RegExp(`(?<![A-Za-z_])${namesPattern([from])}(?![A-Za-z0-9_])`, 'g'), to)
+// all at once, so f(y, x) swaps rather than merging
+function rewriteParams(body: string, map: Record<string, string>): string {
+  const from = Object.keys(map).filter((k) => map[k] !== k)
+  if (!from.length) return body
+  return body.replace(new RegExp(`(?<![A-Za-z_])(?:${namesPattern(from)})(?![A-Za-z0-9_])`, 'g'), (n) => map[n] ?? n)
 }
 
 function quantile(sorted: number[], q: number): number {
