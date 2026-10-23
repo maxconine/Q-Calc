@@ -36,6 +36,13 @@ vi.mock('../../src/engine/typstInput', async (orig) => (await import('./recorder
 vi.mock('../../src/engine/unitSolve', async (orig) => (await import('./recorder')).wrapModule('engine/unitSolve', await orig()))
 vi.mock('../../src/engine/units', async (orig) => (await import('./recorder')).wrapModule('engine/units', await orig()))
 
+// WP-SYMBOLIC: mathjs's simplify/derivative/rationalize/toString/parse as the engine calls them
+vi.mock('../../src/engine/math', async (orig) => {
+  const mod = (await orig()) as { math: Record<string, unknown> }
+  ;(await import('./symbolic')).instrumentMath(mod.math)
+  return mod
+})
+
 vi.mock('../../src/lib/answer', async (orig) => (await import('./recorder')).wrapModule('lib/answer', await orig()))
 vi.mock('../../src/lib/answerForms', async (orig) => (await import('./recorder')).wrapModule('lib/answerForms', await orig()))
 vi.mock('../../src/lib/blankReason', async (orig) => (await import('./recorder')).wrapModule('lib/blankReason', await orig()))

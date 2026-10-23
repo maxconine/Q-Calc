@@ -184,6 +184,20 @@ export function wrap<F extends (...args: never[]) => unknown>(module: string, na
   return wrapped as unknown as F
 }
 
+// WP-SYMBOLIC: a record made outside `wrap`, for calls into mathjs (see symbolic.ts); args come pre-encoded
+export function record(module: string, name: string, args: unknown, result: { out?: unknown; throws?: string }): void {
+  const rec: Record<string, unknown> = { module, fn: name, args, src: testPath(), now: Date.now(), trace: [] }
+  if (result.throws != null) rec.throws = result.throws
+  else rec.out = result.out
+  const line = `${JSON.stringify(rec)}\n`
+  if (line.length > MAX_RECORD) stats.oversize++
+  else {
+    buffer.push(line)
+    stats.recorded++
+    if (buffer.length >= FLUSH_AT) flush()
+  }
+}
+
 function isPlainFunction(v: unknown): v is (...args: never[]) => unknown {
   if (typeof v !== 'function') return false
   return !/^class[\s{]/.test(Function.prototype.toString.call(v))

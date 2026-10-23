@@ -1,0 +1,275 @@
+{"fn":"toString","args":[{"C":0},{"parenthesis":"auto"}],"out":"0","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"C":0}],"out":"0","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"C":1},{"parenthesis":"auto"}],"out":"1","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"C":24},{"parenthesis":"auto"}],"out":"24","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"C":2},{"parenthesis":"auto","implicit":"hide"}],"out":"2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"C":2},{"parenthesis":"auto"}],"out":"2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"C":3}],"out":"3","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"C":6},{"parenthesis":"auto"}],"out":"6","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"C":6}],"out":"6","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"F":"abs","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}]}],"out":"abs(x - 1)","src":"src/engine/r4b.calculus.test.ts"}
+{"fn":"toString","args":[{"F":"abs","a":[{"S":"x"}]}],"out":"abs(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"asin","a":[{"O":"divide","op":"/","a":[{"S":"y"},{"S":"r"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"asin(y / r)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"asin","a":[{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"asin(y)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"F":"atan","a":[{"S":"x"}]}],"out":"atan(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"cbrt","a":[{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"cbrt(y)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]}]}],"out":"cos(2 * x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"w"},{"S":"t"}]}]}],"out":"cos(w * t)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}],"out":"cos(x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"S":"t"}]}],"out":"cos(t)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"S":"theta"}]}],"out":"cos(theta)","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"S":"x"}]},{"parenthesis":"auto"}],"out":"cos(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"S":"x"}]}],"out":"cos(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"cos","a":[{"S":"φ"}]}],"out":"cos(φ)","src":"src/engine/numberForms.test.ts"}
+{"fn":"toString","args":[{"F":"cosh","a":[{"S":"x"}]},{"parenthesis":"auto"}],"out":"cosh(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"cosh","a":[{"S":"x"}]}],"out":"cosh(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"exp","a":[{"S":"x"}]},{"parenthesis":"auto"}],"out":"exp(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"exp","a":[{"S":"x"}]}],"out":"exp(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"log","a":[{"C":10}]}],"out":"log(10)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"log","a":[{"C":2}]}],"out":"log(2)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"log","a":[{"S":"x"}]}],"out":"log(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"log10","a":[{"S":"x"}]}],"out":"log10(x)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"sec","a":[{"S":"x"}]}],"out":"sec(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"C":30}]}],"out":"sin(30)","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"O":"divide","op":"/","a":[{"S":"pi"},{"C":6}]}]}],"out":"sin(pi / 6)","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}],"out":"sin(x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"S":"t"}]}],"out":"sin(t)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"S":"theta"}]},{"parenthesis":"auto"}],"out":"sin(theta)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"S":"theta"}]}],"out":"sin(theta)","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"S":"x"}]}],"out":"sin(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"F":"sin","a":[{"S":"φ"}]}],"out":"sin(φ)","src":"src/engine/numberForms.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"C":2}]}],"out":"sqrt(2)","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"O":"divide","op":"/","a":[{"S":"A"},{"S":"pi"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt(A / pi)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"O":"divide","op":"/","a":[{"S":"E"},{"S":"m"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt(E / m)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"g"}],"i":true},{"S":"h"}],"i":true}]}],"out":"sqrt(2 g h)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"r"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt(r ^ 2 - y ^ 2)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt(a)","src":"src/engine/solve.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"S":"x"}]}],"out":"sqrt(x)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"F":"sqrt","a":[{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt(y)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true},{"O":"multiply","op":"*","a":[{"S":"b"},{"S":"x"}],"i":true}]},{"S":"c"}]}],"out":"a x ^ 2 + b x + c","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R1"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"R2"}]}]}],"out":"1 / R1 + 1 / R2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R_1"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"R_2"}]}]}],"out":"1 / R_1 + 1 / R_2","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":-0.6666666666666666},{"S":"y"}]},{"C":2}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-0.6666666666666666 * y + 2","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":-1.5},{"S":"x"}]},{"C":3}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-1.5 * x + 3","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"O":"multiply","op":"*","a":[{"C":3},{"S":"y"}],"i":true}]}],"out":"2 x + 3 y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"S":"b"}]}],"out":"2 x + b","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":3},{"S":"x"}],"i":true},{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}],"i":true}]}],"out":"3 x + 2 y","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"t"}]},{"F":"sin","a":[{"S":"t"}]}]},{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"t"},{"C":2}]},{"S":"pi"}]},{"F":"cos","a":[{"S":"t"}]}]},{"C":180}]}]},{"parenthesis":"auto"}],"out":"2 * t * sin(t) + t ^ 2 * pi * cos(t) / 180","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]},{"F":"sin","a":[{"S":"x"}]}]},{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"pi"}]},{"F":"cos","a":[{"S":"x"}]}]},{"C":180}]}]},{"parenthesis":"auto"}],"out":"2 * x * sin(x) + x ^ 2 * pi * cos(x) / 180","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]},{"F":"sin","a":[{"S":"x"}]}]},{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"F":"cos","a":[{"S":"x"}]}]}]},{"parenthesis":"auto"}],"out":"2 * x * sin(x) + x ^ 2 * cos(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"M"},{"S":"X"}],"i":true},{"S":"B"}]}],"out":"M X + B","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"x"}]},{"S":"b"}]}],"out":"a * x + b","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"x"}],"i":true},{"S":"b"}]}],"out":"m x + b","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"x"}]},{"S":"b"}]}],"out":"m * x + b","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"v"},{"S":"t"}],"i":true},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"divide","op":"/","a":[{"C":1},{"C":2}]},{"S":"a"}],"i":true},{"O":"pow","op":"^","a":[{"S":"t"},{"C":2}]}],"i":true}]}],"out":"v t + (1 / 2 a) t ^ 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}],"i":true},{"S":"x"}]}],"out":"x y + x","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]},{"S":"d"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"v ^ 2 + 2 * a * d","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"F":"sin","a":[{"S":"x"}]}]},{"parenthesis":"auto"}],"out":"x ^ 2 + sin(x)","src":"src/engine/work.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]}],"out":"x ^ 2 + y ^ 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"add","op":"+","a":[{"S":"v_0"},{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"t"}],"i":true}]}],"out":"v_0 + a t","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"C":1009}]}],"out":"1 / 1009","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"C":2}]}],"out":"1 / 2","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"C":999}]}],"out":"1 / 999","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]}]},{"parenthesis":"auto"}],"out":"1 / sqrt(1 - x ^ 2)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R1"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"R2"}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"1 / (1 / R1 + 1 / R2)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R_1"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"R_2"}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"1 / (1 / R_1 + 1 / R_2)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"O":"add","op":"+","a":[{"S":"a"},{"C":2}]}]}],"out":"1 / (a + 2)","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"O":"subtract","op":"-","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"R2"}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"1 / (1 / R - 1 / R2)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R"}]}],"out":"1 / R","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R_eq"}]}],"out":"1 / R_eq","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]},{"parenthesis":"auto"}],"out":"1 / x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":2},{"C":5}]}],"out":"2 / 5","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":2},{"S":"x"}]},{"parenthesis":"auto"}],"out":"2 / x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":3},{"C":2}]}],"out":"3 / 2","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":3},{"C":4}]}],"out":"3 / 4","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":3},{"C":5}]}],"out":"3 / 5","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"C":6},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"6 / a","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"F":"abs","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}]},{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}]},{"parenthesis":"auto"}],"out":"abs(x - 1) / (x - 1)","src":"src/engine/r4b.calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"F":"abs","a":[{"S":"x"}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"abs(x) / x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"F":"log","a":[{"S":"y"}]},{"F":"log","a":[{"C":2}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"log(y) / log(2)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"F":"log","a":[{"S":"y"}]},{"S":"k"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"log(y) / k","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]},{"O":"pow","op":"^","a":[{"S":"a"},{"C":2}]}]},{"C":1}]},{"O":"add","op":"+","a":[{"S":"a"},{"C":2}]}]}],"out":"(2 * a + a ^ 2 + 1) / (a + 2)","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"a"},{"C":4}]},{"O":"pow","op":"^","a":[{"S":"b"},{"C":2}]}]},{"O":"pow","op":"^","a":[{"S":"a"},{"C":6}]}]},{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"a"},{"C":3}]},{"O":"pow","op":"^","a":[{"S":"b"},{"C":2}]}]},{"O":"pow","op":"^","a":[{"S":"a"},{"C":5}]}]}]}],"out":"(a ^ 4 * b ^ 2 + a ^ 6) / (a ^ 3 * b ^ 2 + a ^ 5)","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"O":"pow","op":"^","a":[{"S":"b"},{"C":3}]}]},{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"a"},{"C":3}]},{"S":"b"}]}]},{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"O":"pow","op":"^","a":[{"S":"b"},{"C":2}]}]},{"O":"pow","op":"^","a":[{"S":"a"},{"C":3}]}]}]}],"out":"(a * b ^ 3 + a ^ 3 * b) / (a * b ^ 2 + a ^ 3)","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"add","op":"+","a":[{"O":"unaryMinus","op":"-","a":[{"S":"b"}]},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"b"},{"C":2}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":4},{"S":"a"}]},{"S":"c"}]}]}]}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(-b + sqrt(b ^ 2 - 4 * a * c)) / (2 * a)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"add","op":"+","a":[{"O":"unaryMinus","op":"-","a":[{"S":"v"}]},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]},{"S":"d"}]}]}]}]},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(-v + sqrt(v ^ 2 + 2 * a * d)) / a","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"C":180},{"S":"pi"}]},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]}]},{"parenthesis":"auto"}],"out":"180 / pi / sqrt(1 - x ^ 2)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"C":180},{"S":"pi"}]},{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"C":1}]}]},{"parenthesis":"auto"}],"out":"180 / pi / (x ^ 2 + 1)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"C":1},{"C":2}]},{"F":"sqrt","a":[{"S":"x"}]}]},{"parenthesis":"auto"}],"out":"1 / 2 / sqrt(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"C":1},{"F":"ln","a":[{"C":10}]}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"1 / ln(10) / x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]},{"F":"ln","a":[{"C":2}]}]},{"parenthesis":"auto"}],"out":"1 / x / ln(2)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"C":4}]},{"O":"pow","op":"^","a":[{"F":"sqrt","a":[{"S":"x"}]},{"C":3}]}]},{"parenthesis":"auto"}],"out":"-1 / 4 / sqrt(x) ^ 3","src":"src/engine/r4b.calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"divide","op":"/","a":[{"S":"y"},{"C":2}]},{"F":"sqrt","a":[{"S":"x"}]}]},{"parenthesis":"auto"}],"out":"y / 2 / sqrt(x)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":0.5},{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]}]},{"S":"Q"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"0.5 * v ^ 2 / Q","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":0.5},{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]}]},{"S":"g"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"0.5 * v ^ 2 / g","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":2},{"F":"atan","a":[{"S":"x"}]}]},{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"C":1}]}]},{"parenthesis":"auto"}],"out":"2 * atan(x) / (x ^ 2 + 1)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]},{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]}]},{"parenthesis":"auto"}],"out":"2 * x / (x ^ 2 + y ^ 2)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"pi"},{"C":2}]},{"F":"sin","a":[{"S":"x"}]}]},{"O":"unaryMinus","op":"-","a":[{"C":1}]}]},{"C":32400}]},{"parenthesis":"auto"}],"out":"pi ^ 2 * sin(x) * -1 / 32400","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"pi"},{"C":3}]},{"F":"cos","a":[{"S":"x"}]}]},{"O":"unaryMinus","op":"-","a":[{"C":1}]}]},{"C":5832000}]},{"parenthesis":"auto"}],"out":"pi ^ 3 * cos(x) * -1 / 5.832e+6","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"pi"},{"F":"sin","a":[{"S":"x"}]}]},{"O":"unaryMinus","op":"-","a":[{"C":1}]}]},{"C":180}]},{"parenthesis":"auto"}],"out":"pi * sin(x) * -1 / 180","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"pi"},{"S":"y"}]},{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}]},{"C":180}]},{"parenthesis":"auto"}],"out":"pi * y * cos(x * y) / 180","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"O":"divide","op":"/","a":[{"C":1},{"C":3}]}]},{"C":4}]},{"C":3}]},{"parenthesis":"auto"}],"out":"x ^ (1 / 3) * 4 / 3","src":"src/engine/r4b.calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":2}]},{"C":3}]}]},{"C":4}]},{"C":9}]},{"parenthesis":"auto"}],"out":"x ^ (-2 / 3) * 4 / 9","src":"src/engine/r4b.calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"unaryMinus","op":"-","a":[{"C":3}]},{"S":"y"}]},{"C":2}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-3 * y / 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"P"},{"S":"V"}]},{"O":"multiply","op":"*","a":[{"S":"R"},{"S":"n"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"P * V / (R * n)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"P"},{"S":"V"}]},{"O":"multiply","op":"*","a":[{"S":"n"},{"S":"R"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"P * V / (n * R)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"R1"},{"S":"R2"}]},{"O":"add","op":"+","a":[{"S":"R2"},{"S":"R1"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"R1 * R2 / (R2 + R1)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"R2"},{"S":"R"}]},{"O":"subtract","op":"-","a":[{"S":"R2"},{"S":"R"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"R2 * R / (R2 - R)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"R_1"},{"S":"R_2"}]},{"O":"add","op":"+","a":[{"S":"R_2"},{"S":"R_1"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"R_1 * R_2 / (R_2 + R_1)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"pi"},{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]}]}]},{"C":90}]},{"parenthesis":"auto"}],"out":"pi * cos(2 * x) / 90","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"pi"},{"F":"cos","a":[{"S":"x"}]}]},{"C":180}]},{"parenthesis":"auto"}],"out":"pi * cos(x) / 180","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"pi"},{"O":"pow","op":"^","a":[{"F":"sec","a":[{"S":"x"}]},{"C":2}]}]},{"C":180}]},{"parenthesis":"auto"}],"out":"pi * sec(x) ^ 2 / 180","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"Q"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"v ^ 2 / (2 * Q)","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"g"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"v ^ 2 / (2 * g)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"C":6},{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}]}]},{"C":3}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(6 - 2 * y) / 3","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"C":6},{"O":"multiply","op":"*","a":[{"C":3},{"S":"x"}]}]},{"C":2}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(6 - 3 * x) / 2","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"S":"b"},{"S":"a"}]},{"S":"c"}]},{"C":2}]}],"out":"(b + a - c) / 2","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"S":"c"},{"S":"a"}]},{"S":"b"}]},{"C":2}]}],"out":"(c + a - b) / 2","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"S":"c"},{"S":"b"}]},{"S":"a"}]},{"C":2}]}],"out":"(c + b - a) / 2","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"O":"unaryMinus","op":"-","a":[{"S":"b"}]},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"b"},{"C":2}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":4},{"S":"a"}]},{"S":"c"}]}]}]}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(-b - sqrt(b ^ 2 - 4 * a * c)) / (2 * a)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"O":"unaryMinus","op":"-","a":[{"S":"v"}]},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]},{"S":"d"}]}]}]}]},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(-v - sqrt(v ^ 2 + 2 * a * d)) / a","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"S":"Y"},{"S":"B"}]},{"S":"M"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(Y - B) / M","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"S":"c"},{"S":"b"}]},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(c - b) / a","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"S":"y"},{"S":"b"}]},{"C":2}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(y - b) / 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"S":"y"},{"S":"b"}]},{"S":"m"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(y - b) / m","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"subtract","op":"-","a":[{"S":"y"},{"S":"b"}]},{"S":"x"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"(y - b) / x","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"C":2}]}],"out":"-1 / 2","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"C":4}]}],"out":"-1 / 4","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"C":5}]}],"out":"-1 / 5","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":7}]},{"C":10}]}],"out":"-7 / 10","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"F"},{"S":"Q"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"F / Q","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"F"},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"F / a","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"F"},{"S":"m"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"F / m","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"c"},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"c / a","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"d"},{"S":"t"}]}],"out":"d / t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"d"},{"S":"v"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"d / v","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"y"},{"C":3}]},{"parenthesis":"auto","implicit":"hide"}],"out":"y / 3","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"y"},{"S":"x"}]}],"out":"y / x","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"divide","op":"/","a":[{"S":"z"},{"O":"add","op":"+","a":[{"S":"y"},{"C":1}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"z / (y + 1)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"factorial","op":"!","a":[{"C":5}]}],"out":"5!","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":-1.5},{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-1.5 * y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":0.3333333333333333},{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"0.3333333333333333 * y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":12},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"12 * x ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":24},{"S":"x"}]},{"parenthesis":"auto"}],"out":"24 * x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"S":"e"},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]}]}]},{"parenthesis":"auto"}],"out":"2 * e ^ (2 * x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"a"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"2 * a","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"t"}]},{"parenthesis":"auto"}],"out":"2 * t","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]},{"parenthesis":"auto"}],"out":"2 * x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":3},{"O":"pow","op":"^","a":[{"S":"t"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"3 * t ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":3},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"3 * x ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":4},{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]}]},{"parenthesis":"auto"}],"out":"4 * x ^ 3","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":4},{"S":"x"}]},{"parenthesis":"auto"}],"out":"4 * x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"x"}]},{"parenthesis":"auto"}],"out":"6 * x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"C":8},{"S":"x"}]},{"parenthesis":"auto"}],"out":"8 * x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":12},{"S":"y"}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"12 * y * x","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"S":"e"},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"2 * e ^ x ^ 2 * x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]}]},{"S":"y"}]},{"parenthesis":"auto"}],"out":"2 * x ^ 3 * y","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"S":"y"},{"C":3}]}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"2 * y ^ 3 * x","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"Q"}]},{"S":"h"}]}],"out":"2 * Q * h","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]},{"S":"y"}]},{"parenthesis":"auto"}],"out":"2 * x * y","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"2 * y * x","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":3},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"3 * x ^ 2 * y ^ 2","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":3},{"S":"y"}]},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"3 * y * x ^ 2","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":6},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"6 * y ^ 2 * x","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"x"}]},{"O":"pow","op":"^","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"C":1}]},{"C":2}]}]},{"parenthesis":"auto"}],"out":"6 * x * (x ^ 2 + 1) ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"x"}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"6 * x * y ^ 2","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"y"}]},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]},{"parenthesis":"auto"}],"out":"6 * y * x ^ 2","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"y"}]},{"S":"x"}]},{"parenthesis":"auto"}],"out":"6 * y * x","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"A"},{"S":"w"}]},{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"w"},{"S":"t"}]}]}]},{"parenthesis":"auto"}],"out":"A * w * cos(w * t)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"n"},{"S":"R"}],"i":true},{"S":"T"}],"i":true}],"out":"n R T","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]},{"F":"ln","a":[{"C":2}]}]},{"parenthesis":"auto"}],"out":"2 ^ x * ln(2)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]},{"S":"y"}]},{"parenthesis":"auto"}],"out":"e ^ (x * y) * y","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"S":"x"}]},{"O":"add","op":"+","a":[{"F":"ln","a":[{"S":"x"}]},{"C":1}]}]},{"parenthesis":"auto"}],"out":"x ^ x * (ln(x) + 1)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"P"},{"S":"V"}],"i":true}],"out":"P V","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"b"}]}],"out":"a * b","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"x"}]}],"out":"a * x","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"m"},{"O":"pow","op":"^","a":[{"S":"c"},{"C":2}]}],"i":true}],"out":"m c ^ 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"Q"}]}],"out":"m * Q","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"a"}],"i":true}],"out":"m a","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"pi"},{"O":"pow","op":"^","a":[{"S":"r"},{"C":2}]}],"i":true}],"out":"pi r ^ 2","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"r"},{"F":"cos","a":[{"S":"theta"}]}]},{"parenthesis":"auto"}],"out":"r * cos(theta)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"r"},{"F":"sin","a":[{"S":"theta"}]}],"i":true}],"out":"r sin(theta)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"x"},{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}]},{"parenthesis":"auto"}],"out":"x * cos(x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"multiply","op":"*","a":[{"S":"y"},{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}]},{"parenthesis":"auto"}],"out":"y * cos(x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"C":10},{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"10 ^ y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"C":2},{"C":10}]}],"out":"2 ^ 10","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]}],"out":"2 ^ x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"F":"sec","a":[{"S":"x"}]},{"C":2}]},{"parenthesis":"auto"}],"out":"sec(x) ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"C":1}]}},{"C":2}]}],"out":"(x + 1) ^ 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}]}]}],"out":"e ^ (2 * x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"O":"multiply","op":"*","a":[{"S":"k"},{"S":"theta"}]}]}],"out":"e ^ (k * theta)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}],"out":"e ^ (x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}],"out":"e ^ x ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"S":"k"},{"S":"x"}],"i":true}}]}],"out":"e ^ (k x)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]},{"parenthesis":"auto"}],"out":"e ^ x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]}],"out":"e ^ x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"e"},{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"e ^ y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"r"},{"C":2}]}],"out":"r ^ 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"u"},{"C":3}]},{"parenthesis":"auto"}],"out":"u ^ 3","src":"src/engine/r4b.calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]}],"out":"v ^ 2","src":"src/engine/unitSolve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"parenthesis":"auto"}],"out":"x ^ 2","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"out":"x ^ 2","src":"src/engine/solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]}],"out":"x ^ 3","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"x"},{"S":"x"}]}],"out":"x ^ x","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]},{"parenthesis":"auto","implicit":"hide"}],"out":"y ^ 2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"C":4},{"O":"multiply","op":"*","a":[{"C":4},{"O":"subtract","op":"-","a":[{"C":1},{"S":"y"}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"4 - 4 * (1 - y)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]},{"F":"sin","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}]}]},{"parenthesis":"auto"}],"out":"cos(x * y) - x * y * sin(x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"F":"cos","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"y"},{"S":"x"}]},{"F":"sin","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}]}]}]},{"parenthesis":"auto"}],"out":"cos(x * y) - y * x * sin(x * y)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"F":"sqrt","a":[{"S":"y"}]},{"C":1}]},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt(y) - 1","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":0.5},{"S":"y"}]},{"O":"multiply","op":"*","a":[{"C":0.5},{"S":"b"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"0.5 * y - 0.5 * b","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"b"},{"C":2}]},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":4},{"S":"a"}]},{"S":"c"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"b ^ 2 - 4 * a * c","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"subtract","op":"-","a":[{"S":"v"},{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"t"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"v - a * t","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":0.2}]}],"out":"-0.2","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":0.7}]}],"out":"-0.7","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-1","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":1}]}],"out":"-1","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":2}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-2","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":2}]}],"out":"-2","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"C":3}]}],"out":"-3","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"F":"cos","a":[{"S":"x"}]}]},{"parenthesis":"auto"}],"out":"-cos(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"F":"sin","a":[{"S":"x"}]}]},{"parenthesis":"auto"}],"out":"-sin(x)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"F":"sqrt","a":[{"O":"divide","op":"/","a":[{"S":"A"},{"S":"pi"}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-sqrt(A / pi)","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"F":"sqrt","a":[{"O":"divide","op":"/","a":[{"S":"E"},{"S":"m"}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-sqrt(E / m)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"r"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-sqrt(r ^ 2 - y ^ 2)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"F":"sqrt","a":[{"S":"a"}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-sqrt(a)","src":"src/engine/solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"O":"add","op":"+","a":[{"F":"sqrt","a":[{"S":"y"}]},{"C":1}]}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-(sqrt(y) + 1)","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"O":"divide","op":"/","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]},{"parenthesis":"auto"}],"out":"-(1 / x ^ 2)","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"O":"divide","op":"/","a":[{"O":"add","op":"+","a":[{"S":"a"},{"C":1}]},{"O":"add","op":"+","a":[{"S":"a"},{"C":2}]}]}]}],"out":"-((a + 1) / (a + 2))","src":"src/engine/system.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}]},{"O":"pow","op":"^","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]},{"C":2}]}]}]},{"parenthesis":"auto"}],"out":"-(2 * y / (x - y) ^ 2)","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"v"},{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"D"},{"S":"v"}]},{"O":"multiply","op":"*","a":[{"S":"L"},{"S":"γ"}]}]}]},{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"γ"},{"C":2}]}]},{"O":"divide","op":"/","a":[{"C":3},{"C":2}]}]},{"S":"m"}]}]}]},{"parenthesis":"auto"}],"out":"-(v * (D * v + L * γ) / ((v ^ 2 + γ ^ 2) ^ (3 / 2) * m))","src":"src/engine/partial.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"S":"b"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-b","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"S":"v"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-v","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"S":"y"}]},{"parenthesis":"auto","implicit":"hide"}],"out":"-y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"O":"unaryMinus","op":"-","a":[{"S":"y"}]}],"out":"-y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"P":{"O":"divide","op":"/","a":[{"C":1},{"C":2}]}}],"out":"(1 / 2)","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"P":{"O":"unaryMinus","op":"-","a":[{"C":1}]}}],"out":"(-1)","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"S":"A"}],"out":"A","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"S":"E"}],"out":"E","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"F"}],"out":"F","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"S":"Y"}],"out":"Y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"a"},{"parenthesis":"auto","implicit":"hide"}],"out":"a","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"a"}],"out":"a","src":"src/engine/solve.test.ts"}
+{"fn":"toString","args":[{"S":"abs"}],"out":"abs","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"asin"},{"parenthesis":"auto","implicit":"hide"}],"out":"asin","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"atan"}],"out":"atan","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"c"}],"out":"c","src":"src/engine/isolate.test.ts"}
+{"fn":"toString","args":[{"S":"cbrt"},{"parenthesis":"auto","implicit":"hide"}],"out":"cbrt","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"cos"},{"parenthesis":"auto"}],"out":"cos","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"cos"}],"out":"cos","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"cosh"},{"parenthesis":"auto"}],"out":"cosh","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"cosh"}],"out":"cosh","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"d"}],"out":"d","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"exp"},{"parenthesis":"auto"}],"out":"exp","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"exp"}],"out":"exp","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"log"}],"out":"log","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"log10"}],"out":"log10","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"pi"},{"parenthesis":"auto"}],"out":"pi","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"sec"}],"out":"sec","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"sin"},{"parenthesis":"auto"}],"out":"sin","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"toString","args":[{"S":"sin"}],"out":"sin","src":"src/engine/calculus.test.ts"}
+{"fn":"toString","args":[{"S":"sqrt"},{"parenthesis":"auto","implicit":"hide"}],"out":"sqrt","src":"src/engine/solve.test.ts"}
+{"fn":"toString","args":[{"S":"sqrt"}],"out":"sqrt","src":"src/lib/matrix.edge.test.ts"}
+{"fn":"toString","args":[{"S":"v"}],"out":"v","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"S":"y"},{"parenthesis":"auto","implicit":"hide"}],"out":"y","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"toString","args":[{"S":"y"}],"out":"y","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toString","args":[{"S":"z"}],"out":"z","src":"src/engine/isolate.test.ts"}
