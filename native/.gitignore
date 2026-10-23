@@ -1,0 +1,4 @@
+target/
+build/
+core/golden/.raw/
+core/golden/STATUS.md

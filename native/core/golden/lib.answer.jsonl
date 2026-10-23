@@ -1,0 +1,708 @@
+{"fn":"answerAmong","args":["(5 ± 1)",false],"out":"(5 ± 1)","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["-3",false],"out":"(-3)","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["-3",true],"out":"-3","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["16.4 ft",false],"out":"(16.4 ft)","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["1e+21",false],"out":"1e+21","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["2 + 3",false],"out":"(2 + 3)","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"answerAmong","args":["2 + 3",true],"out":"2 + 3","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"answerAmong","args":["2sqrt(2)",false],"out":"(2sqrt(2))","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["3.142",false],"out":"3.142","src":"src/lib/answer.test.ts"}
+{"fn":"answerAmong","args":["sin(30)",false],"out":"sin(30)","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"answerAmong","args":["sqrt(2)",false],"out":"sqrt(2)","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"answerAmong","args":["sqrt(2)/2",false],"out":"(sqrt(2)/2)","src":"src/lib/answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"display":"","exact":"sqrt(2)"}],"out":false,"src":"src/lib/r3a.answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"display":"0.866025403784","exact":"sqrt(3)/2"}],"out":true,"src":"src/lib/answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"display":"3.46410161514","exact":"2sqrt(3)"}],"out":true,"src":"src/lib/answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"display":"4","exact":"4"}],"out":false,"src":"src/lib/r3a.answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"display":"4"}],"out":false,"src":"src/lib/r3a.answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"display":"improper unit conversion","exact":"sqrt(2)"}],"out":false,"src":"src/lib/answer.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"1/2","kind":"expression","value":{"kind":"number","n":0.5},"display":"0.5"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"2*pi","kind":"expression","value":{"kind":"number","n":6.283185307179586},"display":"6.28318530718"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"2/3","kind":"expression","value":{"kind":"number","n":0.6666666666666666},"display":"0.666666666667"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"2032mm to ft","kind":"expression","value":{"kind":"number","n":6.666666666666666,"unit":"ft","unitId":"ft"},"display":"6.66666666667 ft","quantity":"6.666666666666666 ft"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"3/4","kind":"expression","value":{"kind":"number","n":0.75},"display":"0.75"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"5/6","kind":"expression","value":{"kind":"number","n":0.8333333333333334},"display":"0.833333333333"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"90 deg","kind":"expression","value":{"kind":"number","n":1.5707963267948966,"unit":"rad","unitId":"rad"},"display":"1.57079632679 rad","quantity":"1.5707963267948966 rad"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"pi","kind":"expression","value":{"kind":"number","n":3.141592653589793},"display":"3.14159265359"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"pi/2","kind":"expression","value":{"kind":"number","n":1.5707963267948966},"display":"1.57079632679"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"pi/3","kind":"expression","value":{"kind":"number","n":1.0471975511965979},"display":"1.0471975512"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"pi/4","kind":"expression","value":{"kind":"number","n":0.7853981633974483},"display":"0.785398163397"}],"out":false,"src":"src/engine/scientific.test.ts"}
+{"fn":"hasDualAnswer","args":[{"raw":"sin(pi/3)","kind":"expression","value":{"kind":"number","n":0.8660254037844386},"display":"0.866025403784","exact":"sqrt(3)/2"}],"out":true,"src":"src/engine/scientific.test.ts"}
+{"fn":"historyPickOn","args":["answer",{"start":0}],"out":0,"src":"src/lib/answer.test.ts"}
+{"fn":"historyPickOn","args":["answer",{"start":2}],"out":2,"src":"src/lib/answer.test.ts"}
+{"fn":"historyPickOn","args":["expr",{"start":2}],"out":0,"src":"src/lib/answer.test.ts"}
+{"fn":"historyPicks","args":[{"expr":"2+3","display":"5","n":5},"exact"],"out":{"answers":["5"],"start":1},"src":"src/lib/answer.test.ts"}
+{"fn":"historyPicks","args":[{"expr":"f(x) = x^2","display":"","kind":"function"},"exact"],"out":{"answers":[],"start":0},"src":"src/lib/answer.test.ts"}
+{"fn":"historyPicks","args":[{"expr":"solve sin(x) = 0.5","display":"30, 150","solve":{"variable":"x","roots":[30,150],"outcome":"roots"}},"exact"],"out":{"answers":["30","150"],"start":1},"src":"src/lib/answer.test.ts"}
+{"fn":"historyPicks","args":[{"expr":"solve x^2 = -1","display":"no real solution","solve":{"variable":"x","roots":[],"outcome":"none"}},"exact"],"out":{"answers":[],"start":0},"src":"src/lib/answer.test.ts"}
+{"fn":"historyPicks","args":[{"expr":"sqrt(2)","display":"1.41421356237","exact":"sqrt(2)","n":1.4142135623730951},"approx"],"out":{"answers":["sqrt(2)","1.41421356237"],"start":2},"src":"src/lib/answer.test.ts"}
+{"fn":"historyPicks","args":[{"expr":"sqrt(2)","display":"1.41421356237","exact":"sqrt(2)","n":1.4142135623730951},"exact"],"out":{"answers":["sqrt(2)","1.41421356237"],"start":1},"src":"src/lib/answer.test.ts"}
+{"fn":"historySideOf","args":[0],"out":"expr","src":"src/lib/answer.test.ts"}
+{"fn":"historySideOf","args":[1],"out":"answer","src":"src/lib/answer.test.ts"}
+{"fn":"historySideOf","args":[3],"out":"answer","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":[" IMPROPER UNIT CONVERSION "],"out":"","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["$1.00"],"out":"$1.00","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["$11.50",11.5],"out":"$11.50","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["$11.50"],"out":"$11.50","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["(sqrt(6)-sqrt(2))/4"],"out":"(sqrt(6)-sqrt(2))/4","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["-0.333333333333",-0.3333333333333333],"out":"-0.333333333333","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["-1",-1,4],"out":"-1","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["-1",-1],"out":"-1","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["-1,234.5"],"out":"-1234.5","src":"src/engine/prettyAnswer.test.ts"}
+{"fn":"insertableAnswer","args":["-1.41421356237",-1.4142135623730951],"out":"-1.41421356237","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["-1234.5"],"out":"-1234.5","src":"src/engine/prettyAnswer.test.ts"}
+{"fn":"insertableAnswer","args":["-3",-3],"out":"-3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["-3"],"out":"-3","src":"src/engine/prettyAnswer.test.ts"}
+{"fn":"insertableAnswer","args":["-5",-5],"out":"-5","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["-7/3",-2.3333333333333335],"out":"-7/3","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["0",0,4],"out":"0","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0",0],"out":"0","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.000001",0.000001,4],"out":"0.000001","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.000001",0.000001],"out":"0.000001","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.0508 m",0.0508],"out":"0.0508 m","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.0508 m",3],"out":"0.0508 m","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.25",0.25],"out":"0.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.333333333333",0.3333333333333333],"out":"0.333333333333","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.5",0.5],"out":"0.5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.523598775598",0.5235987755982989],"out":"0.523598775598","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.866025403784",0.8660254037844386,4],"out":"0.866","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["0.866025403784",0.8660254037844386],"out":"0.866025403784","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["1 cm",1],"out":"1 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1",1,4],"out":"1","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1",1],"out":"1","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1,200 m",1200],"out":"1200 m","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1,200",1200],"out":"1200","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1.2 m",1.2],"out":"1.2 m","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1.2 m",1],"out":"1.2 m","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1.2044e+24",1.2044e+24],"out":"1.2044e+24","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["1.25",1.25],"out":"1.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1.41421356237",1.4142135623730951],"out":"1.41421356237","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["1.5",1.5,4],"out":"1.5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1.5",1.5],"out":"1.5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1.609344 km",1.609344],"out":"1.609344 km","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["1/2",0.5],"out":"1/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1/2"],"out":"1/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1/8",0.125],"out":"1/8","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["10 cm",1],"out":"10 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["10",10,4],"out":"10","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["10",10],"out":"10","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["10.0 ± 0.7",10],"out":"(10.0 ± 0.7)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["10.25",10.25],"out":"10.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["100 kPa",7],"out":"100 kPa","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["100",100,4],"out":"100","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["100",100],"out":"100","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1000000000000",1000000000000,4],"out":"1e+12","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1000000000000",1000000000000],"out":"1e+12","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["10sqrt(2)"],"out":"10sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["10sqrt(3)"],"out":"10sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["10sqrt(5)"],"out":"10sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["11 cm",1],"out":"11 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["11.25",11.25],"out":"11.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["11sqrt(2)"],"out":"11sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["11sqrt(3)"],"out":"11sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["11sqrt(5)"],"out":"11sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["12 cm",1],"out":"12 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["12 lb",5],"out":"12 lb","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["12",12,4],"out":"12","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["12",12],"out":"12","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["12.25",12.25],"out":"12.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1200",1200,4],"out":"1200","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["1200",1200],"out":"1200","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["12:00 am"],"out":"12:00 am","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["12sqrt(2)"],"out":"12sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["12sqrt(3)"],"out":"12sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["12sqrt(5)"],"out":"12sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["13 cm",1],"out":"13 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["13.25",13.25],"out":"13.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["13sqrt(2)"],"out":"13sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["13sqrt(3)"],"out":"13sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["13sqrt(5)"],"out":"13sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["14 cm",1],"out":"14 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["14.25",14.25],"out":"14.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["14sqrt(2)"],"out":"14sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["14sqrt(3)"],"out":"14sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["14sqrt(5)"],"out":"14sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["15 cm",1],"out":"15 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["15",15],"out":"15","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["15.25",15.25],"out":"15.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["152.4 cm",152.4],"out":"152.4 cm","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["15sqrt(2)"],"out":"15sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["15sqrt(3)"],"out":"15sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["15sqrt(5)"],"out":"15sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["16 cm",1],"out":"16 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["16.25",16.25],"out":"16.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["16sqrt(2)"],"out":"16sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["16sqrt(3)"],"out":"16sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["16sqrt(5)"],"out":"16sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["17 cm",1],"out":"17 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["17.25",17.25],"out":"17.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["17sqrt(2)"],"out":"17sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["17sqrt(3)"],"out":"17sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["17sqrt(5)"],"out":"17sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["18 cm",1],"out":"18 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["18.25",18.25],"out":"18.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["180 deg",9],"out":"180 deg","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["18sqrt(2)"],"out":"18sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["18sqrt(3)"],"out":"18sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["18sqrt(5)"],"out":"18sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["19 cm",1],"out":"19 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["19.25",19.25],"out":"19.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["19sqrt(2)"],"out":"19sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["19sqrt(3)"],"out":"19sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["19sqrt(5)"],"out":"19sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["1e-9"],"out":"1e-9","src":"src/engine/prettyAnswer.test.ts"}
+{"fn":"insertableAnswer","args":["2 cm",1],"out":"2 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2",2,4],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2",2],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2+sqrt(3)"],"out":"2+sqrt(3)","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["2.25",2.25],"out":"2.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2.46e-11",2.46e-11,4],"out":"2.46e-11","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2.46e-11",2.46e-11],"out":"2.46e-11","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2.5 L",8],"out":"2.5 L","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2.999999",3,2],"out":"3","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["20 cm",1],"out":"20 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["20",20],"out":"20","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["20.25",20.25],"out":"20.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["20/3 ft",6.666666666666667],"out":"20/3 ft","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["20sqrt(2)"],"out":"20sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["20sqrt(3)"],"out":"20sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["20sqrt(5)"],"out":"20sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["21 cm",1],"out":"21 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["21.25",21.25],"out":"21.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["212 °F",212],"out":"212 °F","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["21sqrt(2)"],"out":"21sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["21sqrt(3)"],"out":"21sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["22 cm",1],"out":"22 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["22.25",22.25],"out":"22.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["22sqrt(2)"],"out":"22sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["22sqrt(3)"],"out":"22sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["23 cm",1],"out":"23 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["23.25",23.25],"out":"23.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["23sqrt(2)"],"out":"23sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["23sqrt(3)"],"out":"23sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["24 cm",1],"out":"24 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["24.25",24.25],"out":"24.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["24sqrt(2)"],"out":"24sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["24sqrt(3)"],"out":"24sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["25 cm",1],"out":"25 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["25",25],"out":"25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["25.25",25.25],"out":"25.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["25sqrt(2)"],"out":"25sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["25sqrt(3)"],"out":"25sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["26 cm",1],"out":"26 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["26.25",26.25],"out":"26.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["26sqrt(2)"],"out":"26sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["26sqrt(3)"],"out":"26sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["27 cm",1],"out":"27 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["27.25",27.25],"out":"27.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["27sqrt(2)"],"out":"27sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["27sqrt(3)"],"out":"27sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["28 cm",1],"out":"28 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["28.25",28.25],"out":"28.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["28sqrt(2)"],"out":"28sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["28sqrt(3)"],"out":"28sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["29 cm",1],"out":"29 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["29.25",29.25],"out":"29.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["29sqrt(2)"],"out":"29sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["29sqrt(3)"],"out":"29sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(11)"],"out":"2sqrt(11)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(13)"],"out":"2sqrt(13)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(2)"],"out":"2sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(3)",3.4641016151377544],"out":"2sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(3)"],"out":"2sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(5)"],"out":"2sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["2sqrt(7)"],"out":"2sqrt(7)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3 cm",1],"out":"3 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3",3],"out":"3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3,000,000,000"],"out":"3000000000","src":"src/engine/prettyAnswer.test.ts"}
+{"fn":"insertableAnswer","args":["3.048 m",3.048],"out":"3.048 m","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.141592653589793",3.141592653589793,4],"out":"3.142","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.141592653589793",3.141592653589793],"out":"3.14159265359","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.14159265359",3.141592653589793,4],"out":"3.142","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.14159265359",3.141592653589793,6],"out":"3.14159","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.14159265359",3.141592653589793],"out":"3.14159265359","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.25",3.25],"out":"3.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3.46410161514",3.4641016151377544,4],"out":"3.464","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3.46410161514",3.4641016151377544],"out":"3.46410161514","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3.5 kg",4],"out":"3.5 kg","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3/2 ft",1.5],"out":"3/2 ft","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3/4"],"out":"3/4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["30 cm",1],"out":"30 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["30.25",30.25],"out":"30.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["3000000000"],"out":"3000000000","src":"src/engine/prettyAnswer.test.ts"}
+{"fn":"insertableAnswer","args":["30sqrt(2)"],"out":"30sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["30sqrt(3)"],"out":"30sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["31 cm",1],"out":"31 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["31.25",31.25],"out":"31.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["31sqrt(2)"],"out":"31sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["32 cm",1],"out":"32 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["32.25",32.25],"out":"32.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["32sqrt(2)"],"out":"32sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["33 cm",1],"out":"33 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["33.25",33.25],"out":"33.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["33sqrt(2)"],"out":"33sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["34 cm",1],"out":"34 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["34.25",34.25],"out":"34.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["34sqrt(2)"],"out":"34sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["35 cm",1],"out":"35 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["35.25",35.25],"out":"35.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["35sqrt(2)"],"out":"35sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["36 cm",1],"out":"36 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["36.25",36.25],"out":"36.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["36sqrt(2)"],"out":"36sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["37 cm",1],"out":"37 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["37.25",37.25],"out":"37.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["37sqrt(2)"],"out":"37sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["38 cm",1],"out":"38 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["38.25",38.25],"out":"38.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["38sqrt(2)"],"out":"38sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["39 cm",1],"out":"39 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["39.25",39.25],"out":"39.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["39sqrt(2)"],"out":"39sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3e-9",3e-9],"out":"3e-9","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["3sqrt(10)"],"out":"3sqrt(10)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3sqrt(2)"],"out":"3sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3sqrt(3)"],"out":"3sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3sqrt(5)"],"out":"3sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["3sqrt(7)"],"out":"3sqrt(7)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["4 cm",1],"out":"4 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["4",4,4],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["4",4],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["4.25",4.25],"out":"4.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["40 cm",1],"out":"40 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["40.25",40.25],"out":"40.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["40sqrt(2)"],"out":"40sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["41 cm",1],"out":"41 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["41.25",41.25],"out":"41.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["42 cm",1],"out":"42 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["42.25",42.25],"out":"42.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["43 cm",1],"out":"43 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["43.25",43.25],"out":"43.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["4320000 J",4320000],"out":"4320000 J","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["44 cm",1],"out":"44 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["44.25",44.25],"out":"44.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["45 cm",1],"out":"45 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["45.25",45.25],"out":"45.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["46 cm",1],"out":"46 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["46.25",46.25],"out":"46.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["47 cm",1],"out":"47 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["47.25",47.25],"out":"47.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["48 cm",1],"out":"48 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["48.25",48.25],"out":"48.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["49 cm",1],"out":"49 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["49.25",49.25],"out":"49.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["4sqrt(2)"],"out":"4sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["4sqrt(3)"],"out":"4sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["4sqrt(5)"],"out":"4sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["5 cm",1],"out":"5 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["5",5],"out":"5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["5.25",5.25],"out":"5.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["5/8",0.625],"out":"5/8","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["5/8"],"out":"5/8","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["50 cm",1],"out":"50 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["50",50],"out":"50","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["50.25",50.25],"out":"50.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["50.8 mm",2],"out":"50.8 mm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["50.8 mm",50.8],"out":"50.8 mm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["51 cm",1],"out":"51 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["51.25",51.25],"out":"51.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["52 cm",1],"out":"52 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["52.25",52.25],"out":"52.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["53 cm",1],"out":"53 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["53.25",53.25],"out":"53.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["54 cm",1],"out":"54 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["54.25",54.25],"out":"54.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["55 cm",1],"out":"55 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["55.25",55.25],"out":"55.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["56 cm",1],"out":"56 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["56.25",56.25],"out":"56.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["57 cm",1],"out":"57 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["57.25",57.25],"out":"57.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["58 cm",1],"out":"58 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["58.25",58.25],"out":"58.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["59 cm",1],"out":"59 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["59.25",59.25],"out":"59.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["5sqrt(2)"],"out":"5sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["5sqrt(3)"],"out":"5sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["5sqrt(5)"],"out":"5sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["6 cm",1],"out":"6 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["6",6],"out":"6","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["6.25",6.25],"out":"6.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["60 cm",1],"out":"60 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["60 mph",10],"out":"60 mph","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["6sqrt(2)"],"out":"6sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["6sqrt(3)"],"out":"6sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["6sqrt(5)"],"out":"6sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["7 cm",1],"out":"7 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["7",7],"out":"7","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["7.25",7.25],"out":"7.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["7:55 pm"],"out":"7:55 pm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["7sqrt(2)"],"out":"7sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["7sqrt(3)"],"out":"7sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["7sqrt(5)"],"out":"7sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["8 cm",1],"out":"8 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["8",8],"out":"8","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["8.25",8.25],"out":"8.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["8sqrt(2)"],"out":"8sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["8sqrt(3)"],"out":"8sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["8sqrt(5)"],"out":"8sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["9 cm",1],"out":"9 cm","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["9",9],"out":"9","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["9.25",9.25],"out":"9.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["9.81 m/s",6],"out":"9.81 m/s","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["96.56 km/h",96.56064],"out":"96.56 km/h","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["99.25",99.25,4],"out":"99.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["99.25",99.25],"out":"99.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["9sqrt(2)"],"out":"9sqrt(2)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["9sqrt(3)"],"out":"9sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["9sqrt(5)"],"out":"9sqrt(5)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["Improper unit conversion"],"out":"","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["[1, 2, 3]"],"out":"[1, 2, 3]","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["improper unit conversion"],"out":"","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["pi/4"],"out":"pi/4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["pi/6 rad"],"out":"pi/6 rad","src":"src/lib/audit.input.test.ts"}
+{"fn":"insertableAnswer","args":["pi/6",0.5235987755982988],"out":"pi/6","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["pi/6"],"out":"pi/6","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["sqrt(2)"],"out":"sqrt(2)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["sqrt(2)/2"],"out":"sqrt(2)/2","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["sqrt(3)"],"out":"sqrt(3)","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["sqrt(3)/2"],"out":"sqrt(3)/2","src":"src/engine/scientific.test.ts"}
+{"fn":"insertableAnswer","args":["£3.50"],"out":"£3.50","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["€20"],"out":"€20","src":"src/lib/answer.test.ts"}
+{"fn":"insertableAnswer","args":["∞"],"out":"∞","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"-3","n":-3},"approx"],"out":"-3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"-3","n":-3},"exact"],"out":"-3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0","n":0},"approx"],"out":"0","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0","n":0},"exact"],"out":"0","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.25","exact":"1/4","n":0.25},"approx"],"out":"0.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.25","exact":"1/4","n":0.25},"exact"],"out":"1/4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.25","n":0.25},"exact"],"out":"0.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.33333333333","exact":"1/3","n":0.3333333333333333},"approx"],"out":"0.333333333333","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.33333333333","exact":"1/3","n":0.3333333333333333},"exact"],"out":"1/3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.333333333333","exact":"1/3","n":0.3333333333333333,"solve":{"variable":"x","roots":[0.3333333333333333],"outcome":"roots"}},"exact"],"out":"1/3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.5","exact":"1/2","n":0.5},"approx"],"out":"0.5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.5","exact":"1/2","n":0.5},"exact"],"out":"1/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.5","n":0.5},"approx"],"out":"0.5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.5","n":0.5},"exact"],"out":"0.5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.70710678118","exact":"sqrt(2)/2","n":0.7071067811865476},"approx"],"out":"0.707106781187","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.70710678118","exact":"sqrt(2)/2","n":0.7071067811865476},"exact"],"out":"sqrt(2)/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.78539816339","exact":"pi/4","n":0.7853981633974483},"approx"],"out":"0.785398163397","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.78539816339","exact":"pi/4","n":0.7853981633974483},"exact"],"out":"pi/4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"approx",4],"out":"0.866","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"approx"],"out":"0.866025403784","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"exact"],"out":"sqrt(3)/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1","n":1},"approx"],"out":"1","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1","n":1},"exact"],"out":"1","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1.25","n":1.25},"approx"],"out":"1.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1.25","n":1.25},"exact"],"out":"1.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1.57079632679","exact":"pi/2","n":1.5707963267948966},"approx"],"out":"1.57079632679","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1.57079632679","exact":"pi/2","n":1.5707963267948966},"exact"],"out":"pi/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1.73205080757","exact":"sqrt(3)","n":1.7320508075688772},"approx"],"out":"1.73205080757","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"1.73205080757","exact":"sqrt(3)","n":1.7320508075688772},"exact"],"out":"sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"10","n":10},"approx"],"out":"10","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"10","n":10},"exact"],"out":"10","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"10.0 ± 0.7","n":10,"meas":{"unc":0.7}},"approx"],"out":"(10.0 ± 0.7)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"10.25","n":10.25},"exact"],"out":"10.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"100","n":100},"approx"],"out":"100","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"100","n":100},"exact"],"out":"100","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"11.25","n":11.25},"exact"],"out":"11.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"12","n":12},"approx"],"out":"12","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"12","n":12},"exact"],"out":"12","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"12.25","n":12.25},"exact"],"out":"12.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"13.25","n":13.25},"exact"],"out":"13.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"14.25","n":14.25},"exact"],"out":"14.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"15","n":15},"approx"],"out":"15","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"15","n":15},"exact"],"out":"15","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"15.25","n":15.25},"exact"],"out":"15.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"16.25","n":16.25},"exact"],"out":"16.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"17.25","n":17.25},"exact"],"out":"17.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"18.25","n":18.25},"exact"],"out":"18.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"19.25","n":19.25},"exact"],"out":"19.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"2","n":2},"approx"],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"2","n":2},"exact"],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"2, 3","solve":{"variable":"x","roots":[2,3],"outcome":"roots"}},"approx"],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"2.25","n":2.25},"exact"],"out":"2.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"20","n":20},"approx"],"out":"20","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"20","n":20},"exact"],"out":"20","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"20.25","n":20.25},"exact"],"out":"20.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"21.25","n":21.25},"exact"],"out":"21.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"22.25","n":22.25},"exact"],"out":"22.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"23.25","n":23.25},"exact"],"out":"23.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"24.25","n":24.25},"exact"],"out":"24.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"25","n":25},"approx"],"out":"25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"25","n":25},"exact"],"out":"25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"25.25","n":25.25},"exact"],"out":"25.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"26.25","n":26.25},"exact"],"out":"26.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"27.25","n":27.25},"exact"],"out":"27.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"28.25","n":28.25},"exact"],"out":"28.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"29.25","n":29.25},"exact"],"out":"29.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3","n":3},"approx"],"out":"3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3","n":3},"exact"],"out":"3","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3.140","n":3.141592653589793,"meas":{"sig":4,"dp":3}},"approx"],"out":"3.140","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3.14159265359","exact":"pi","n":3.141592653589793},"approx"],"out":"3.14159265359","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3.14159265359","exact":"pi","n":3.141592653589793},"exact"],"out":"pi","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3.25","n":3.25},"exact"],"out":"3.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3.46410161514","exact":"2sqrt(3)","n":3.4641016151377544},"approx"],"out":"3.46410161514","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"3.46410161514","exact":"2sqrt(3)","n":3.4641016151377544},"exact"],"out":"2sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"30.25","n":30.25},"exact"],"out":"30.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"31.25","n":31.25},"exact"],"out":"31.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"32.25","n":32.25},"exact"],"out":"32.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"33.25","n":33.25},"exact"],"out":"33.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"34.25","n":34.25},"exact"],"out":"34.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"35.25","n":35.25},"exact"],"out":"35.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"36.25","n":36.25},"exact"],"out":"36.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"37.25","n":37.25},"exact"],"out":"37.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"38.25","n":38.25},"exact"],"out":"38.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"39.25","n":39.25},"exact"],"out":"39.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"4","n":4,"solve":{"variable":"x","roots":[4],"outcome":"roots"}},"approx"],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"4","n":4},"approx"],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"4","n":4},"exact"],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"4.25","n":4.25},"exact"],"out":"4.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"40.25","n":40.25},"exact"],"out":"40.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"41.25","n":41.25},"exact"],"out":"41.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"42.25","n":42.25},"exact"],"out":"42.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"43.25","n":43.25},"exact"],"out":"43.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"44.25","n":44.25},"exact"],"out":"44.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"45.25","n":45.25},"exact"],"out":"45.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"46.25","n":46.25},"exact"],"out":"46.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"47.25","n":47.25},"exact"],"out":"47.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"48.25","n":48.25},"exact"],"out":"48.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"49.25","n":49.25},"exact"],"out":"49.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"5","n":5},"approx"],"out":"5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"5","n":5},"exact"],"out":"5","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"5.00","n":5,"meas":{"sig":3,"dp":2}},"approx"],"out":"5.00","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"5.25","n":5.25},"exact"],"out":"5.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"50","n":50},"approx"],"out":"50","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"50","n":50},"exact"],"out":"50","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"50.25","n":50.25},"exact"],"out":"50.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"51.25","n":51.25},"exact"],"out":"51.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"52.25","n":52.25},"exact"],"out":"52.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"53.25","n":53.25},"exact"],"out":"53.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"54.25","n":54.25},"exact"],"out":"54.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"55.25","n":55.25},"exact"],"out":"55.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"56.25","n":56.25},"exact"],"out":"56.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"57.25","n":57.25},"exact"],"out":"57.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"58.25","n":58.25},"exact"],"out":"58.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"59.25","n":59.25},"exact"],"out":"59.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"6","n":6},"approx"],"out":"6","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"6","n":6},"exact"],"out":"6","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"6.25","n":6.25},"exact"],"out":"6.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"7","n":7},"approx"],"out":"7","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"7","n":7},"exact"],"out":"7","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"7.25","n":7.25},"exact"],"out":"7.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"7.8","n":7.75,"meas":{"sig":2,"dp":1}},"exact"],"out":"7.8","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"8","n":8},"approx"],"out":"8","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"8","n":8},"exact"],"out":"8","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"8.25","n":8.25},"exact"],"out":"8.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"9","n":9},"approx"],"out":"9","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"9","n":9},"exact"],"out":"9","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"9.25","n":9.25},"exact"],"out":"9.25","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"no real solution","solve":{"variable":"x","roots":[],"outcome":"none"}},"approx"],"out":"","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryAnswer","args":[{"display":"±1.41421356237","exact":"±sqrt(2)","solve":{"variable":"x","roots":[-1.4142135623730951,1.4142135623730951],"outcome":"roots"}},"exact"],"out":"-1.41421356237","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"display":"±1.41421356237","exact":"±sqrt(2)","solve":{"variable":"x","roots":[-1.4142135623730951,1.4142135623730951],"outcome":"roots"},"expr":"x^2 = 2"},"exact","answer"],"out":"-1.41421356237","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"2+2","display":"4","n":4},"exact","answer"],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"2+2","display":"4","n":4},"exact","expr"],"out":"2+2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"cos(30)","display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"approx","answer",4],"out":"0.866","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"cos(30)","display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"approx","answer"],"out":"0.866025403784","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"cos(30)","display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"approx","expr"],"out":"cos(30)","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"cos(30)","display":"0.866025403784","exact":"sqrt(3)/2","n":0.8660254037844386},"exact","answer"],"out":"sqrt(3)/2","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"ingenious","display":"adjective","kind":"definition"},"approx","expr"],"out":"ingenious","src":"src/lib/answer.test.ts"}
+{"fn":"insertableHistoryReuse","args":[{"expr":"ingenious","display":"adjective","kind":"definition"},"exact","answer"],"out":"ingenious","src":"src/lib/answer.test.ts"}
+{"fn":"normalizeHistoryInsert","args":["answer"],"out":"answer","src":"src/lib/answer.test.ts"}
+{"fn":"normalizeHistoryInsert","args":["expr"],"out":"expr","src":"src/lib/answer.test.ts"}
+{"fn":"normalizeHistoryInsert","args":["other"],"out":"expr","src":"src/lib/answer.test.ts"}
+{"fn":"normalizeHistoryInsert","args":[{"$undef":true}],"out":"expr","src":"src/lib/answer.test.ts"}
+{"fn":"prettyRoots","args":["-1000000, 2000000"],"out":"−1,000,000, 2,000,000","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"prettyRoots","args":["-2, 3, …"],"out":"−2, 3, …","src":"src/lib/answer.test.ts"}
+{"fn":"prettyRoots","args":["1234567"],"out":"1,234,567","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"prettyRoots","args":["±1000000"],"out":"±1,000,000","src":"src/lib/answer.test.ts"}
+{"fn":"solveRoots","args":[{"display":"2, 3","solve":{"variable":"x","roots":[2,3],"outcome":"roots"}}],"out":["2","3"],"src":"src/lib/answer.test.ts"}
+{"fn":"solveRoots","args":[{"display":"±1.41421356237","exact":"±sqrt(2)","solve":{"variable":"x","roots":[-1.4142135623730951,1.4142135623730951],"outcome":"roots"}}],"out":["-1.41421356237","1.41421356237"],"src":"src/lib/answer.test.ts"}
+{"fn":"solveRoots","args":[{"solve":{"variable":"x","roots":[4],"outcome":"roots"}}],"out":null,"src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["$11.50"],"out":"$11.50","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["(x, y) = (3 kg, 2 kg) or (x, y) = (2 kg, 3 kg)"],"out":"(x, y) = (3, 2) or (x, y) = (2, 3)","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["-40 °C"],"out":"-40","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["1.602176634e-19 J"],"out":"1.602176634e-19","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["1.75"],"out":"1.75","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["15 m²"],"out":"15","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["15%"],"out":"15%","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["19.62 ± 0.04 m/s"],"out":"19.62 ± 0.04","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["27.7777777778 m/s"],"out":"27.7777777778","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["3.28083989501e-9 ft"],"out":"3.28083989501e-9","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["3:45 PM"],"out":"3:45 PM","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["4,050,416.66667 ft"],"out":"4,050,416.66667","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["4700 Ω"],"out":"4700","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["5 ft 3 in"],"out":"5 ft 3 in","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["500 MPa"],"out":"500","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["500 N·m"],"out":"500","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["68 °F"],"out":"68","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["F = 19.6 N, m = 2 kg, a = 9.8 m/s²"],"out":"F = 19.6, m = 2, a = 9.8","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["T = P*V/(R*n)"],"out":"T = P*V/(R*n)","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["no solution"],"out":"no solution","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["units don't match"],"out":"units don't match","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["x = 6 m, y = 4 m"],"out":"x = 6, y = 4","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["x = ±2"],"out":"x = ±2","src":"src/lib/answer.test.ts"}
+{"fn":"unitlessAnswer","args":["±2"],"out":"±2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"","exact":"sqrt(2)"},"exact"],"out":"sqrt(2)","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0"},"approx"],"out":"0","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0"},"exact"],"out":"0","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.125","exact":"1/8"},"approx"],"out":"0.125","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.125","exact":"1/8"},"exact"],"out":"1/8","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.25","exact":"1/4"},"approx"],"out":"0.25","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.25","exact":"1/4"},"exact"],"out":"1/4","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.3333","exact":"1/3"},"approx"],"out":"0.3333","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.3333","exact":"1/3"},"exact"],"out":"1/3","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.375","exact":"3/8"},"approx"],"out":"0.375","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.375","exact":"3/8"},"exact"],"out":"3/8","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.5","exact":"1/2"},"approx"],"out":"0.5","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.5","exact":"1/2"},"exact"],"out":"1/2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.5236","exact":"pi/6"},"approx"],"out":"0.5236","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.5236","exact":"pi/6"},"exact"],"out":"pi/6","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.625","exact":"5/8"},"approx"],"out":"0.625","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.625","exact":"5/8"},"exact"],"out":"5/8","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.7071","exact":"sqrt(2)/2"},"approx"],"out":"0.7071","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.7071","exact":"sqrt(2)/2"},"exact"],"out":"sqrt(2)/2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.7854","exact":"pi/4"},"approx"],"out":"0.7854","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.7854","exact":"pi/4"},"exact"],"out":"pi/4","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.866025403784","exact":"sqrt(3)/2"},"approx"],"out":"0.866025403784","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.866025403784","exact":"sqrt(3)/2"},"exact"],"out":"sqrt(3)/2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.875","exact":"7/8"},"approx"],"out":"0.875","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"0.875","exact":"7/8"},"exact"],"out":"7/8","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1"},"approx"],"out":"1","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1"},"exact"],"out":"1","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1.0472","exact":"pi/3"},"approx"],"out":"1.0472","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1.0472","exact":"pi/3"},"exact"],"out":"pi/3","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1.5708","exact":"pi/2"},"approx"],"out":"1.5708","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1.5708","exact":"pi/2"},"exact"],"out":"pi/2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1.732","exact":"sqrt(3)"},"approx"],"out":"1.732","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"1.732","exact":"sqrt(3)"},"exact"],"out":"sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"10"},"approx"],"out":"10","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"10"},"exact"],"out":"10","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"10.0 ± 0.7","n":10,"meas":{"unc":0.7}},"exact"],"out":"10.0 ± 0.7","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"11"},"approx"],"out":"11","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"11"},"exact"],"out":"11","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"12"},"approx"],"out":"12","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"12"},"exact"],"out":"12","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"13"},"approx"],"out":"13","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"13"},"exact"],"out":"13","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"14"},"approx"],"out":"14","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"14"},"exact"],"out":"14","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"15"},"approx"],"out":"15","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"15"},"exact"],"out":"15","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"16"},"approx"],"out":"16","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"16"},"exact"],"out":"16","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"17"},"approx"],"out":"17","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"17"},"exact"],"out":"17","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"18"},"approx"],"out":"18","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"18"},"exact"],"out":"18","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"19"},"approx"],"out":"19","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"19"},"exact"],"out":"19","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"2"},"approx"],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"2"},"exact"],"out":"2","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"2.0944","exact":"2*pi/3"},"approx"],"out":"2.0944","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"2.0944","exact":"2*pi/3"},"exact"],"out":"2*pi/3","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"20"},"approx"],"out":"20","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"20"},"exact"],"out":"20","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"21"},"approx"],"out":"21","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"21"},"exact"],"out":"21","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"22"},"approx"],"out":"22","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"22"},"exact"],"out":"22","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"23"},"approx"],"out":"23","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"23"},"exact"],"out":"23","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"24"},"approx"],"out":"24","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"24"},"exact"],"out":"24","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"25"},"approx"],"out":"25","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"25"},"exact"],"out":"25","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"26"},"approx"],"out":"26","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"26"},"exact"],"out":"26","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"27"},"approx"],"out":"27","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"27"},"exact"],"out":"27","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"28"},"approx"],"out":"28","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"28"},"exact"],"out":"28","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"29"},"approx"],"out":"29","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"29"},"exact"],"out":"29","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"3"},"approx"],"out":"3","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"3"},"exact"],"out":"3","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"3.1416","exact":"pi"},"approx"],"out":"3.1416","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"3.1416","exact":"pi"},"exact"],"out":"pi","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"3.46410161514","exact":"2sqrt(3)"},"approx"],"out":"3.46410161514","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"3.46410161514","exact":"2sqrt(3)"},"exact"],"out":"2sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"30"},"approx"],"out":"30","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"30"},"exact"],"out":"30","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"31"},"approx"],"out":"31","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"31"},"exact"],"out":"31","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"32"},"approx"],"out":"32","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"32"},"exact"],"out":"32","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"33"},"approx"],"out":"33","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"33"},"exact"],"out":"33","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"34"},"approx"],"out":"34","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"34"},"exact"],"out":"34","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"35"},"approx"],"out":"35","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"35"},"exact"],"out":"35","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"36"},"approx"],"out":"36","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"36"},"exact"],"out":"36","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"37"},"approx"],"out":"37","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"37"},"exact"],"out":"37","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"38"},"approx"],"out":"38","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"38"},"exact"],"out":"38","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"39"},"approx"],"out":"39","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"39"},"exact"],"out":"39","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"4","exact":"4"},"exact"],"out":"4","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"4"},"approx"],"out":"4","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"4"},"exact"],"out":"4","src":"src/lib/r3a.answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"4.2426","exact":"3sqrt(2)"},"approx"],"out":"4.2426","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"4.2426","exact":"3sqrt(2)"},"exact"],"out":"3sqrt(2)","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"40"},"approx"],"out":"40","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"40"},"exact"],"out":"40","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"41"},"approx"],"out":"41","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"41"},"exact"],"out":"41","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"42"},"approx"],"out":"42","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"42"},"exact"],"out":"42","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"43"},"approx"],"out":"43","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"43"},"exact"],"out":"43","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"44"},"approx"],"out":"44","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"44"},"exact"],"out":"44","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"45"},"approx"],"out":"45","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"45"},"exact"],"out":"45","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"46"},"approx"],"out":"46","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"46"},"exact"],"out":"46","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"47"},"approx"],"out":"47","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"47"},"exact"],"out":"47","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"48"},"approx"],"out":"48","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"48"},"exact"],"out":"48","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"49"},"approx"],"out":"49","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"49"},"exact"],"out":"49","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"5"},"approx"],"out":"5","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"5"},"exact"],"out":"5","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"5.1962","exact":"3sqrt(3)"},"approx"],"out":"5.1962","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"5.1962","exact":"3sqrt(3)"},"exact"],"out":"3sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"50"},"approx"],"out":"50","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"50"},"exact"],"out":"50","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"51"},"approx"],"out":"51","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"51"},"exact"],"out":"51","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"52"},"approx"],"out":"52","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"52"},"exact"],"out":"52","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"53"},"approx"],"out":"53","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"53"},"exact"],"out":"53","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"54"},"approx"],"out":"54","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"54"},"exact"],"out":"54","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"55"},"approx"],"out":"55","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"55"},"exact"],"out":"55","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"56"},"approx"],"out":"56","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"56"},"exact"],"out":"56","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"57"},"approx"],"out":"57","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"57"},"exact"],"out":"57","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"58"},"approx"],"out":"58","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"58"},"exact"],"out":"58","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"59"},"approx"],"out":"59","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"59"},"exact"],"out":"59","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"6"},"approx"],"out":"6","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"6"},"exact"],"out":"6","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"6.9282","exact":"4sqrt(3)"},"approx"],"out":"6.9282","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"6.9282","exact":"4sqrt(3)"},"exact"],"out":"4sqrt(3)","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"7"},"approx"],"out":"7","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"7"},"exact"],"out":"7","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"8"},"approx"],"out":"8","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"8"},"exact"],"out":"8","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"9"},"approx"],"out":"9","src":"src/lib/answer.test.ts"}
+{"fn":"visibleAnswer","args":[{"display":"9"},"exact"],"out":"9","src":"src/lib/answer.test.ts"}

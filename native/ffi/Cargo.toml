@@ -1,0 +1,33 @@
+[package]
+name = "qcalc-ffi"
+description = "Q Calc's engine for Swift (and later C#/Kotlin) through UniFFI"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "qcalc_ffi"
+crate-type = ["staticlib", "lib"]
+
+[[bin]]
+# generates the Swift bindings from the built library: `cargo run -p qcalc-ffi --bin uniffi-bindgen -- generate ...`
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+
+[dependencies]
+qcalc-core = { path = "../core" }
+serde_json.workspace = true
+uniffi = { workspace = true, features = ["cli"] }
+
+[build-dependencies]
+uniffi = { workspace = true, features = ["build"] }
+
+[lints.rust]
+# UniFFI's generated scaffolding is the one place with unsafe code; everything handwritten here stays safe
+unsafe_code = "allow"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

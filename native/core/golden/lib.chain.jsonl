@@ -1,0 +1,62 @@
+{"fn":"ansWrittenOut","args":["2 + 2","5"],"out":"2 + 2","src":"src/lib/chain.test.ts"}
+{"fn":"ansWrittenOut","args":["ans","-3"],"out":"-3","src":"src/lib/chain.test.ts"}
+{"fn":"ansWrittenOut","args":["ans*3","0.333333333333"],"out":"0.333333333333*3","src":"src/lib/chain.test.ts"}
+{"fn":"ansWrittenOut","args":["ans^2","-3"],"out":"(-3)^2","src":"src/lib/chain.test.ts"}
+{"fn":"ansWrittenOut","args":["f(x) = x + ans","5"],"out":"f(x) = x + ans","src":"src/lib/chain.test.ts"}
+{"fn":"chainedExpr","args":["!"],"out":"ans!","src":"src/lib/chain.test.ts"}
+{"fn":"chainedExpr","args":["*2"],"out":"ans*2","src":"src/engine/audit2.cross.test.ts"}
+{"fn":"chainedExpr","args":["*3"],"out":"ans*3","src":"src/lib/chain.test.ts"}
+{"fn":"chainedExpr","args":["/2"],"out":"ans/2","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedExpr","args":["/4"],"out":"ans/4","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedExpr","args":["^2"],"out":"ans^2","src":"src/lib/chain.test.ts"}
+{"fn":"chainedExpr","args":["in kg"],"out":"ans in kg","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":[" in kg","26.5 lb"],"out":"26.5 lb in kg","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":[" to kg","26.5 lb"],"out":"26.5 lb to kg","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["*2","26"],"out":"26*2","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["*2","26.5 lb"],"out":"(26.5 lb)*2","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["*5","7"],"out":"7*5","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["+ 1","sqrt(3)/2"],"out":"sqrt(3)/2+ 1","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["+1","sqrt(3)/2"],"out":"sqrt(3)/2+1","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["+3","7"],"out":"7+3","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["/2","26.5 lb"],"out":"(26.5 lb)/2","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["/4","10 m"],"out":"(10 m)/4","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["^2","-3"],"out":"(-3)^2","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["^2","sqrt(3)/2"],"out":"(sqrt(3)/2)^2","src":"src/lib/chain.test.ts"}
+{"fn":"chainedHistoryExpr","args":["^3","-2"],"out":"(-2)^3","src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["   *2",{"plain":"26","unit":false}],"out":true,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":[" ",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["!",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["%5",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["*2",{"$undef":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["*2",{"plain":"","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["*2",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["*2",{"plain":"4","unit":false}],"out":true,"src":"src/engine/audit2.cross.test.ts"}
+{"fn":"chainsFromAnswer","args":["+5",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["-   7",{"plain":"26","unit":false}],"out":false,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["- 3",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["- x",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["-",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["-(2+3)",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["--3",{"plain":"26","unit":false}],"out":false,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["-3",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["/3",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["2*3",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["IN kg",{"plain":"26.5 lb","unit":true}],"out":true,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["TO kg",{"plain":"26.5 lb","unit":true}],"out":true,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["^2",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["^3",{"plain":"26","unit":false}],"out":true,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["in ",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["in kg",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["in kg",{"plain":"26.5 lb","unit":true}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["in",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["inch",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["into kg",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["sqrt(2)",{"plain":"26.5 lb","unit":true}],"out":false,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["to kg",{"plain":"26","unit":false}],"out":false,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["to kg",{"plain":"26.5 lb","unit":true}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["× 2",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["×5",{"plain":"26","unit":false}],"out":true,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["÷3",{"plain":"26","unit":false}],"out":true,"src":"src/lib/chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["÷5",{"plain":"26","unit":false}],"out":true,"src":"src/lib/audit2.chain.test.ts"}
+{"fn":"chainsFromAnswer","args":["−3",{"plain":"26","unit":false}],"out":false,"src":"src/lib/chain.test.ts"}

@@ -1,0 +1,309 @@
+{"fn":"afterTyping","args":["2..",3],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"afterTyping","args":["i",1],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["in",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["int",3],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["int0",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integ",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["intege",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["integer",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["integr",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integra",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral ",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral o",10],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of ",12],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x",13],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^",14],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 ",16],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 f",17],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 fr",18],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 fro",19],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from ",21],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from 0 ",23],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from 0 t",24],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from 0 to ",26],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from 0 to 1",27],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from 0 to",25],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from 0",22],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2 from",20],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of x^2",15],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral of",11],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["integral",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["inter",5],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["intere",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["interes",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["interest",8],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["intern",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["interna",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["internat",8],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["internati",9],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["internatio",10],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["internation",11],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["internationa",12],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["international",13],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["interv",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["interva",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["interval",8],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["p",1],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["pr",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["pro",3],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["produc",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["produce",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["producer",8],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["product",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["s",1],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["su",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["summa",5],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["summar",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["summary",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["summat",6],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["summati",7],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["summatio",8],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["summation",9],"out":null,"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["Π",1],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Π_n=",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Π_n=1",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Π_n=1^5 n",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Π_n=1^5",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Πn",2],"out":{"text":"Π_n","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Πu",2],"out":{"text":"Π_u","caret":3},"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["Σ ",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n",3],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, ",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n ",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n = ",11],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n = 1",12],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n = 1.",13],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n = 1..",14],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n = 1..1",15],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n = 1..10",16],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n =",10],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2, n",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ n^2,",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ",1],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ1",2],"out":{"text":"Σ_1","caret":3},"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 ",6],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 s",7],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 sq",8],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 sqr",9],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 √",7],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 √(",8],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 √(n",9],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4 √(n)",10],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_1^4",5],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["Σ_n",3],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^1",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^10 n",10],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^10 n^",11],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^10 n^2",12],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^10",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^4 n",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σ_n=1^4",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["Σm",2],"out":{"text":"Σ_m","caret":3},"src":"src/components/r3a.quickInput.test.ts"}
+{"fn":"afterTyping","args":["Σn",2],"out":{"text":"Σ_n","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ ",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x",3],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 ",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 f",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 fr",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 fro",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from ",11],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from 0 ",13],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from 0 t",14],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from 0 to ",16],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from 0 to 1",17],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from 0 to",15],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from 0",12],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2 from",10],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫ x^2",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫",1],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(",2],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x",3],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2, ",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2, 0",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2, 0, ",10],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2, 0, 1",11],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2, 0, 1)",12],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2, 0,",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫(x^2,",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫)",2],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"afterTyping","args":["∫,",2],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"afterTyping","args":["∫-",2],"out":{"text":"∫_-","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫0",2],"out":{"text":"∫_0","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫5",2],"out":{"text":"∫_5","caret":3},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"afterTyping","args":["∫^",2],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_",2],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_-1",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_-1.",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_-1..",6],"out":{"text":"∫_-1^","caret":5},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_-1^2 ",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_-1^2 x",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_-1^2",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0..",5],"out":{"text":"∫_0^","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.5",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.5.",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.5..",7],"out":{"text":"∫_0.5^","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.5^1 ",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.5^1 x",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0.5^1",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^",4],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^1 ",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^1 x",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^1 x^",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^1 x^2",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^1",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^2 x",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^2",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^p",5],"out":null,"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"afterTyping","args":["∫_0^{} x",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π",5],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/",6],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 ",8],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 c",9],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 co",10],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 cos",11],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 cos(",12],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 cos(x",13],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2 cos(x)",14],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫_0^π/2",7],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫e",2],"out":{"text":"∫_e","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"afterTyping","args":["∫x 5",2],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundKey","args":["2 + 3",2,"Delete"],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundKey","args":["2 + 3",5,"Backspace"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["Π_n=1",5,"ArrowRight"],"out":{"text":"Π_n=1^","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["Π_n=1^5",7,"ArrowRight"],"out":{"text":"Π_n=1^5 ","caret":8},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["Σ_1",3,"ArrowRight"],"out":{"text":"Σ_1^","caret":4},"src":"src/components/r3a.roundtrip.test.ts"}
+{"fn":"boundKey","args":["Σ_n=1",5,"ArrowRight"],"out":{"text":"Σ_n=1^","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["Σ_n=1",5,"Tab"],"out":{"text":"Σ_n=1^","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["Σ_n=1^10",8,"Tab"],"out":{"text":"Σ_n=1^10 ","caret":9},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["Σ_n=1^4",7,"ArrowRight"],"out":{"text":"Σ_n=1^4 ","caret":8},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫",0,"Delete"],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundKey","args":["∫",1,"Backspace"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_",2,"Backspace"],"out":{"text":"∫","caret":1},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0",3,"ArrowRight"],"out":{"text":"∫_0^","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0",3,"ArrowUp"],"out":{"text":"∫_0^","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0",3,"Backspace"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0",3,"Enter"],"out":{"text":"∫_0^","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0",3,"Tab"],"out":{"text":"∫_0^","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^",4," "],"out":{"text":"∫_0^","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^",4,"ArrowRight"],"out":{"text":"∫_0^{} ","caret":7},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^",4,"Backspace"],"out":{"text":"∫_0","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 ",6,"Backspace"],"out":{"text":"∫_0^1","caret":5},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",2,"Backspace"],"out":{"text":"∫_0^1 x","caret":0},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",3,"ArrowDown"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",3,"ArrowRight"],"out":{"text":"∫_0^1 x","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",3,"ArrowUp"],"out":{"text":"∫_0^1 x","caret":4},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",4,"Backspace"],"out":{"text":"∫_0^1 x","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",5,"ArrowDown"],"out":{"text":"∫_0^1 x","caret":3},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",5,"ArrowRight"],"out":{"text":"∫_0^1 x","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",7,"ArrowUp"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",7,"Backspace"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x",7,"Enter"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1 x^2",6,"Backspace"],"out":{"text":"∫_0^1 x^2","caret":5},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1",5,"ArrowRight"],"out":{"text":"∫_0^1 ","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1",5,"Backspace"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^1",5,"Tab"],"out":{"text":"∫_0^1 ","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^2",5,"ArrowRight"],"out":{"text":"∫_0^2 ","caret":6},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_0^sin(1",9,"ArrowRight"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_10^1 x",2,"ArrowUp"],"out":{"text":"∫_10^1 x","caret":5},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_10^1 x",3,"ArrowRight"],"out":null,"src":"src/lib/bounds.test.ts"}
+{"fn":"boundKey","args":["∫_{0}^{1} x",1,"Delete"],"out":{"text":"∫_{0}^{1} x","caret":3},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundKey","args":["∫_{0}^{1} x",4,"Delete"],"out":{"text":"∫_{0}^{1} x","caret":7},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundKey","args":["∫_{0}^{1} x",8,"Delete"],"out":{"text":"∫_{0}^{1} x","caret":9},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundKey","args":["∫_{0}^{1} x",9,"Backspace"],"out":{"text":"∫_{0}^{1} x","caret":8},"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["2 + 3"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["int0"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["integral of x"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["Π_n=1^5 n"],"out":[{"sign":0,"lower":{"start":2,"end":5},"upper":{"start":6,"end":7},"end":7}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["Σ n^2, n = 1..10"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["Σ(1, 2, 3)"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["Σ_i=1^3 Σ_j=1^3 i*j"],"out":[{"sign":0,"lower":{"start":2,"end":5},"upper":{"start":6,"end":7},"end":7},{"sign":8,"lower":{"start":10,"end":13},"upper":{"start":14,"end":15},"end":15}],"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundsIn","args":["Σ_n=1^(2+3) n"],"out":[{"sign":0,"lower":{"start":2,"end":5},"upper":{"start":7,"end":10},"end":11}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["Σ_n=1^10 n^2"],"out":[{"sign":0,"lower":{"start":2,"end":5},"upper":{"start":6,"end":8},"end":8}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["Σ_{n=1}^{10} n^2"],"out":[{"sign":0,"lower":{"start":3,"end":6},"upper":{"start":9,"end":11},"end":12}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫ x^2 from 0 to 1"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫"],"out":[{"sign":0,"lower":{"start":1,"end":1},"upper":null,"end":1}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫(x^2, 0, 1)"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫0.."],"out":[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":4},"end":4}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫0..1 x"],"out":[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫0..1 x^2"],"out":[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫0..∞ e^-x"],"out":[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_"],"out":[{"sign":0,"lower":{"start":2,"end":2},"upper":null,"end":2}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":null,"end":3}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":4},"end":4}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^1 x dx * Π_n=1^5 n"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":13,"lower":{"start":15,"end":18},"upper":{"start":19,"end":20},"end":20}],"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^1 x ∫_0^1 y"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^1 x"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^1 x^2"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^1x∫_0^1y"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":12},"end":12}],"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^2(x+1)"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^sin(1) x"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":10},"end":10}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^{} x"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":5,"end":5},"end":6}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_0^π/2 sin(x)"],"out":[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":7},"end":7}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_{-1}^{2^3} x"],"out":[{"sign":0,"lower":{"start":3,"end":5},"upper":{"start":8,"end":11},"end":12}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_{0}^{1} x"],"out":[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫_{0}^{1} x^2"],"out":[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],"src":"src/lib/bounds.test.ts"}
+{"fn":"boundsIn","args":["∫x^2 dx"],"out":[],"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],0],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],1],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],2],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],3],"out":true,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],4],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],5],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],6],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":1,"end":2},"upper":{"start":4,"end":5},"end":5}],7],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],0],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],10],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],11],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],12],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],13],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],14],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],15],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],1],"out":true,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],2],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],3],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],4],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],5],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],6],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],7],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],8],"out":false,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5},{"sign":8,"lower":{"start":10,"end":11},"upper":{"start":12,"end":13},"end":13}],9],"out":true,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],0],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],1],"out":true,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],2],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],3],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],4],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],5],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],6],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],7],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],0],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],10],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],11],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],1],"out":true,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],2],"out":true,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],3],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],4],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],5],"out":true,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],6],"out":true,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],7],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],8],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"isHidden","args":[[{"sign":0,"lower":{"start":3,"end":4},"upper":{"start":7,"end":8},"end":9}],9],"out":false,"src":"src/lib/bounds.test.ts"}
+{"fn":"snapOffset","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],1,-1,7],"out":0,"src":"src/lib/bounds.test.ts"}
+{"fn":"snapOffset","args":[[{"sign":0,"lower":{"start":2,"end":3},"upper":{"start":4,"end":5},"end":5}],1,1,7],"out":2,"src":"src/lib/bounds.test.ts"}
+{"fn":"wordToSign","args":["",0],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["2int",4],"out":{"text":"2∫","caret":2},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["5 + int",7],"out":{"text":"5 + ∫","caret":5},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["int x",3],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["int",3],"out":{"text":"∫","caret":1},"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["integral",8],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["into",4],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["sprint",6],"out":null,"src":"src/lib/r3a.bounds.test.ts"}
+{"fn":"wordToSign","args":["x_int",5],"out":null,"src":"src/lib/r3a.bounds.test.ts"}

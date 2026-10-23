@@ -1,0 +1,80 @@
+{"fn":"blankReason","args":["   ",{"$fn":"anon"}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["",{"$fn":"anon"}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["%%%",{"$fn":"anon"}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["*3",{"$fn":"anon"},{}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["1/0",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["12 15 9",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["12 kg in lb",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["12 kg in lb",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["12 kg in lbz",{"$fn":"anon"},{}],"out":{"start":9,"end":12},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["12 kg in lbz",{"$fn":"anon"}],"out":{"start":9,"end":12},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2 + 2 * 3",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["2 + 3)",{"$fn":"anon"}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2 +",{"$fn":"anon"}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2 3 +",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["2+",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2+",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["2+*3",{"$fn":"anon"},{}],"out":{"start":2,"end":3},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2+*3",{"$fn":"anon"}],"out":{"start":2,"end":3},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2+2",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2+2=",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2+2==",{"$fn":"anon"},{}],"out":{"start":4,"end":5},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2+2==",{"$fn":"anon"}],"out":{"start":4,"end":5},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2x+3=11",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2x+3=11=",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["2x+3==11",{"$fn":"anon"}],"out":{"start":5,"end":6},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["3 + foo * 2",{"$fn":"anon"},{}],"out":{"start":4,"end":7},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["3 + foo * 2",{"$fn":"anon"}],"out":{"start":4,"end":7},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["3 + foo",{"$fn":"anon"}],"out":{"start":4,"end":7},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["3 + sqrt(9) + zog",{"$fn":"anon"},{}],"out":{"start":14,"end":17},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["5 fl oz + qux",{"$fn":"anon"},{}],"out":{"start":10,"end":13},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["5 kg + 3 m",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["5 kg in zorts",{"$fn":"anon"},{}],"out":{"start":8,"end":13},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["5 m to kg",{"$fn":"anon"}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["5 m to kg",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["5 sq ft + zz",{"$fn":"anon"},{}],"out":{"start":10,"end":12},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["5 sq ft",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["5 zonks in kg",{"$fn":"anon"},{}],"out":{"start":2,"end":7},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["5//2",{"$fn":"anon"},{}],"out":{"start":2,"end":3},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["=2+3",{"$fn":"anon"},{}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["=2x+3=11",{"$fn":"anon"}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["a + b + c",{"$fn":"anon"},{"variables":["a","b","c"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["a + b = 10",{"$fn":"anon"},{}],"out":{"start":4,"end":5},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["foo + 1",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":{"start":0,"end":3},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["foo + bar",{"$fn":"anon"},{}],"out":{"start":0,"end":3},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["foo = 3 + 2",{"$fn":"anon"},{}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["hello world",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":{"start":0,"end":5},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["log(-1)",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["sin(",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["sqrt(-1",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":null,"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["sqrt(16) + 4",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["sqrt(2) + y",{"$fn":"anon"},{"variables":["y"]}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["sqrt(2)*",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["sum(1,2,",{"$fn":"anon"},{}],"out":{"start":7,"end":8},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["x + 1",{"$fn":{"kind":"evalNonBlank","options":{}}}],"out":{"start":0,"end":1},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"blankReason","args":["x + y = 10",{"$fn":"anon"},{}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["x + y = 10",{"$fn":"anon"}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["x^2 = -1",{"$fn":"anon"},{}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["x^2 = 4",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"blankReason","args":["x^2",{"$fn":"anon"},{"variables":["x"]}],"out":null,"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["x^2",{"$fn":"anon"},{}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["x^2",{"$fn":"anon"}],"out":{"start":0,"end":1},"src":"src/lib/blankReason.test.ts"}
+{"fn":"blankReason","args":["×3",{"$fn":"anon"},{}],"out":{"start":0,"end":1},"src":"src/lib/audit2.blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"   ","span":null}],"out":"type a calculation first, like 12 * 7","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"","span":null,"history":true}],"out":"nothing to save · ↑ brings back earlier ones","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"","span":null}],"out":"type a calculation first, like 12 * 7","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"%%%","span":null}],"out":"no answer for that · ? shows what you can type","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"12 kg in lbz","span":{"start":9,"end":12}}],"out":"can’t convert that to lbz","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"2 + 3)","span":null}],"out":"a ) has no ( to match","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"2 +","span":null}],"out":"unfinished: something goes after the +","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"2+*3","span":{"start":2,"end":3}}],"out":"check the extra *","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"2+2==","span":{"start":4,"end":5}}],"out":"unfinished: something goes after the =","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"3 + foo * 2","span":{"start":4,"end":7}}],"out":"“foo” isn’t a unit, function or name I know","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"3 + foo","span":{"start":4,"end":7}}],"out":"“foo” isn’t a unit, function or name I know","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"5 m to kg","span":null,"improper":true}],"out":"those units measure different things","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"graph","span":null,"bareGraph":true}],"out":"graph needs something to plot, like graph x^2","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"what is the weather","span":null,"naturalLanguage":true}],"out":"couldn’t read that as math · ? shows what works","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"x + y = 10","span":{"start":0,"end":1}}],"out":"2 unknowns: sys 2 solves equations together","src":"src/lib/blankReason.test.ts"}
+{"fn":"enterHint","args":[{"expr":"x^2","span":{"start":0,"end":1}}],"out":"x has no value yet · x = 5 sets it","src":"src/lib/blankReason.test.ts"}

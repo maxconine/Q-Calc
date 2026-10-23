@@ -1,0 +1,7 @@
+{"fn":"angleExponent","args":["2 + 3"],"out":0,"src":"src/engine/anglesUnits.test.ts"}
+{"fn":"angleExponent","args":["3 * acos(0.1) - 4"],"out":1,"src":"src/engine/anglesUnits.test.ts"}
+{"fn":"angleExponent","args":["asin(0.5) / acos(0.5)"],"out":0,"src":"src/engine/anglesUnits.test.ts"}
+{"fn":"angleExponent","args":["asin(0.5)^2"],"out":2,"src":"src/engine/anglesUnits.test.ts"}
+{"fn":"angleExponent","args":["asin(asin(0.5))"],"out":null,"src":"src/engine/anglesUnits.test.ts"}
+{"fn":"angleExponent","args":["asin(x)"],"out":1,"src":"src/engine/anglesUnits.test.ts"}
+{"fn":"angleExponent","args":["cos(asin(0.5))"],"out":0,"src":"src/engine/anglesUnits.test.ts"}

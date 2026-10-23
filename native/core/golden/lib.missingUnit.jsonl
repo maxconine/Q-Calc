@@ -1,0 +1,10 @@
+{"fn":"missingUnit","args":["(10 \"mA\" + 5 / 1 \"kohm\") / (1 / 1 \"kohm\" + 1 / (2 \"kohm\" + 4 \"kohm\")))",{"$fn":"anon"}],"out":{"at":12,"text":" \"V\"","filled":"(10 \"mA\" + 5 \"V\" / 1 \"kohm\") / (1 / 1 \"kohm\" + 1 / (2 \"kohm\" + 4 \"kohm\")))","hint":"5 has no unit · ↵ again makes it 5 V"},"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 V - 3 / 1.5 A",{"$fn":"anon"}],"out":{"at":8,"text":" W","filled":"10 V - 3 W / 1.5 A","hint":"3 has no unit · ↵ again makes it 3 W"},"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 m + 2 * 5 s",{"$fn":"anon"}],"out":null,"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 m to kg",{"$fn":"anon"}],"out":null,"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 mA + 5 / 1 kohm",{"$fn":"anon"}],"out":{"at":9,"text":" V","filled":"10 mA + 5 V / 1 kohm","hint":"5 has no unit · ↵ again makes it 5 V"},"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 mA + 5 / 2 kohm",{"$fn":"anon"}],"out":{"at":9,"text":" V","filled":"10 mA + 5 V / 2 kohm","hint":"5 has no unit · ↵ again makes it 5 V"},"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 mA + 5 V / 1 kohm^2",{"$fn":"anon"}],"out":null,"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["10 mA + 5 kohm",{"$fn":"anon"}],"out":null,"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["2 kg + 3 m",{"$fn":"anon"}],"out":null,"src":"src/lib/missingUnit.test.ts"}
+{"fn":"missingUnit","args":["5/1 kohm + 10 mA",{"$fn":"anon"}],"out":{"at":1,"text":" V","filled":"5 V/1 kohm + 10 mA","hint":"5 has no unit · ↵ again makes it 5 V"},"src":"src/lib/missingUnit.test.ts"}

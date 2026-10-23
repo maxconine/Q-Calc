@@ -1,0 +1,1165 @@
+{"fn":"defaultUnitsEqual","args":[{"length":"ft"},{"length":"ft"}],"out":true,"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"defaultUnitsEqual","args":[{"length":"ft"},{"length":"m"}],"out":false,"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"defaultUnitsEqual","args":[{"length":"ft"},{}],"out":false,"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"defaultUnitsEqual","args":[{},{"length":"ft"}],"out":false,"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"defaultUnitsEqual","args":[{},{}],"out":true,"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"inLadderUnit","args":[{"kind":"number","n":980,"unit":"N","unitId":"n"},"kilo_m"],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"inLadderUnit","args":[{"kind":"number","n":980,"unit":"N","unitId":"n"},"kilonewton"],"out":{"kind":"number","n":0.98,"unit":"kN","unitId":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"isImproperUnitConversion","args":["improper unit conversion"],"out":true,"src":"src/lib/missingUnit.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":["a string"],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[42],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[[1,2,3]],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[null],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"$undef":true}],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"acceleration":"gee"}],"out":{"acceleration":"gee"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"acceleration":"mps2"}],"out":{"acceleration":"mps2"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"angle":"deg"}],"out":{"angle":"deg"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"angle":"rad"}],"out":{"angle":"rad"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"angle":"rev"}],"out":{"angle":"rev"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"acre"}],"out":{"area":"acre"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"cm2"}],"out":{"area":"cm2"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"ha"}],"out":{"area":"ha"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"in2"}],"out":{"area":"in2"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"km2"}],"out":{"area":"km2"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"m2"}],"out":{"area":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"sqft"}],"out":{"area":"sqft"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"area":"yd2"}],"out":{"area":"yd2"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"energy":"btu"}],"out":{"energy":"btu"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"energy":"cal"}],"out":{"energy":"cal"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"energy":"j"}],"out":{"energy":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"energy":"kcal"}],"out":{"energy":"kcal"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"energy":"kj"}],"out":{"energy":"kj"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"energy":"kwh"}],"out":{"energy":"kwh"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"force":"kgf"}],"out":{"force":"kgf"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"force":"kilonewton"}],"out":{"force":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"force":"lbf"}],"out":{"force":"lbf"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"force":"n"}],"out":{"force":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"force":"ozf"}],"out":{"force":"ozf"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"frequency":"hz"}],"out":{"frequency":"hz"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"frequency":"rpm"}],"out":{"frequency":"rpm"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"cm"}],"out":{"length":"cm"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"ft"}],"out":{"length":"ft"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"furlongs-per-fortnight"}],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"in","mass":"nope","bogus":"kg"}],"out":{"length":"in"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"in"}],"out":{"length":"in"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"kg"}],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"km","mass":"not-a-unit"}],"out":{"length":"km"},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"km"}],"out":{"length":"km"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"m"}],"out":{"length":"m"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"mi"}],"out":{"length":"mi"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"mm"}],"out":{"length":"mm"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"length":"yd"}],"out":{"length":"yd"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"mass":"g"}],"out":{"mass":"g"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"mass":"kg"}],"out":{"mass":"kg"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"mass":"lb"}],"out":{"mass":"lb"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"mass":"oz"}],"out":{"mass":"oz"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"mass":"ton"}],"out":{"mass":"ton"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"mass":"tonne"}],"out":{"mass":"tonne"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"notADimension":"ft"}],"out":{},"src":"src/lib/audit2.settings.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"power":"hp"}],"out":{"power":"hp"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"power":"kw"}],"out":{"power":"kw"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"power":"w"}],"out":{"power":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"pressure":"atm"}],"out":{"pressure":"atm"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"pressure":"bar"}],"out":{"pressure":"bar"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"pressure":"kpa"}],"out":{"pressure":"kpa"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"pressure":"ksi"}],"out":{"pressure":"ksi"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"pressure":"mpa"}],"out":{"pressure":"mpa"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"pressure":"psi"}],"out":{"pressure":"psi"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"speed":"fps"}],"out":{"speed":"fps"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"speed":"kmh"}],"out":{"speed":"kmh"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"speed":"knot"}],"out":{"speed":"knot"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"speed":"mph"}],"out":{"speed":"mph"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"speed":"mps"}],"out":{"speed":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"temperature":"c"}],"out":{"temperature":"c"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"temperature":"f"}],"out":{"temperature":"f"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"temperature":"k"}],"out":{"temperature":"k"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"temperature":"r"}],"out":{"temperature":"r"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"time":"day"}],"out":{"time":"day"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"time":"hr"}],"out":{"time":"hr"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"time":"min"}],"out":{"time":"min"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"time":"s"}],"out":{"time":"s"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"floz"}],"out":{"volume":"floz"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"ft3"}],"out":{"volume":"ft3"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"in3"}],"out":{"volume":"in3"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"l"}],"out":{"volume":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"m3"}],"out":{"volume":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"ml"}],"out":{"volume":"ml"},"src":"src/engine/units.test.ts"}
+{"fn":"sanitizeDefaultUnits","args":[{"volume":"usgal"}],"out":{"volume":"usgal"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.017453292519943295 rad / s"],"out":{"si":0.017453292519943295,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.03490658503988659 rad / s"],"out":{"si":0.03490658503988659,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.0508 m²"],"out":{"si":0.0508,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.05235987755982989 rad / s"],"out":{"si":0.05235987755982989,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.06981317007977318 rad / s"],"out":{"si":0.06981317007977318,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.08726646259971647 rad / s"],"out":{"si":0.08726646259971647,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.1016 m²"],"out":{"si":0.1016,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.10471975511965978 rad / s"],"out":{"si":0.10471975511965978,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.12217304763960307 rad / s"],"out":{"si":0.12217304763960307,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.125 mi²"],"out":{"si":323748.513792,"dim":[0,2,0,0,0,0,0],"unitId":"sqmi"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.13962634015954636 rad / s"],"out":{"si":0.13962634015954636,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.15239999999999998 m²"],"out":{"si":0.15239999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.15707963267948966 rad / s"],"out":{"si":0.15707963267948966,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.17453292519943295 rad / s"],"out":{"si":0.17453292519943295,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.19198621771937624 rad / s"],"out":{"si":0.19198621771937624,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.2032 m²"],"out":{"si":0.2032,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.20943951023931956 rad / s"],"out":{"si":0.20943951023931956,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.22689280275926285 rad / s"],"out":{"si":0.22689280275926285,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.24434609527920614 rad / s"],"out":{"si":0.24434609527920614,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.254 m²"],"out":{"si":0.254,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.2617993877991494 rad / s"],"out":{"si":0.2617993877991494,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.2792526803190927 rad / s"],"out":{"si":0.2792526803190927,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.2908882086657216 rad / s"],"out":{"si":0.2908882086657216,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.29670597283903605 rad / s"],"out":{"si":0.29670597283903605,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.30479999999999996 m²"],"out":{"si":0.30479999999999996,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.3141592653589793 rad / s"],"out":{"si":0.3141592653589793,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.33161255787892263 rad / s"],"out":{"si":0.33161255787892263,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.3490658503988659 rad / s"],"out":{"si":0.3490658503988659,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.35559999999999997 m²"],"out":{"si":0.35559999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.3665191429188092 rad / s"],"out":{"si":0.3665191429188092,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.3839724354387525 rad / s"],"out":{"si":0.3839724354387525,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4014257279586958 rad / s"],"out":{"si":0.4014257279586958,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4064 m²"],"out":{"si":0.4064,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4188790204786391 rad / s"],"out":{"si":0.4188790204786391,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4363323129985824 rad / s"],"out":{"si":0.4363323129985824,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4537856055185257 rad / s"],"out":{"si":0.4537856055185257,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4572 m²"],"out":{"si":0.4572,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.47123889803846897 rad / s"],"out":{"si":0.47123889803846897,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.4886921905584123 rad / s"],"out":{"si":0.4886921905584123,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5 kg/L"],"out":{"si":500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5 m/s"],"out":{"si":0.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5061454830783556 rad / s"],"out":{"si":0.5061454830783556,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.508 m²"],"out":{"si":0.508,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5235987755982988 rad / s"],"out":{"si":0.5235987755982988,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5410520681182421 rad / s"],"out":{"si":0.5410520681182421,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5585053606381855 rad / s"],"out":{"si":0.5585053606381855,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5588 m²"],"out":{"si":0.5588,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5759586531581288 rad / s"],"out":{"si":0.5759586531581288,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.5934119456780721 rad / s"],"out":{"si":0.5934119456780721,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6095999999999999 m²"],"out":{"si":0.6095999999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6108652381980153 rad / s"],"out":{"si":0.6108652381980153,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6283185307179586 rad / s"],"out":{"si":0.6283185307179586,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6457718232379019 rad / s"],"out":{"si":0.6457718232379019,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6604 m²"],"out":{"si":0.6604,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6632251157578453 rad / s"],"out":{"si":0.6632251157578453,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6666666666666666 km/min"],"out":{"si":11.11111111111111,"dim":[0,1,-1,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6806784082777885 rad / s"],"out":{"si":0.6806784082777885,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.6981317007977318 rad / s"],"out":{"si":0.6981317007977318,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.7111999999999999 m²"],"out":{"si":0.7111999999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.7155849933176751 rad / s"],"out":{"si":0.7155849933176751,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.7330382858376184 rad / s"],"out":{"si":0.7330382858376184,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.7504915783575618 rad / s"],"out":{"si":0.7504915783575618,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.762 m²"],"out":{"si":0.762,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.767944870877505 rad / s"],"out":{"si":0.767944870877505,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.7853981633974483 rad / s"],"out":{"si":0.7853981633974483,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8028514559173916 rad / s"],"out":{"si":0.8028514559173916,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8128 m²"],"out":{"si":0.8128,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8203047484373349 rad / s"],"out":{"si":0.8203047484373349,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8377580409572782 rad / s"],"out":{"si":0.8377580409572782,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8552113334772214 rad / s"],"out":{"si":0.8552113334772214,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8635999999999999 m²"],"out":{"si":0.8635999999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8726646259971648 rad / s"],"out":{"si":0.8726646259971648,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.8901179185171081 rad / s"],"out":{"si":0.8901179185171081,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9075712110370514 rad / s"],"out":{"si":0.9075712110370514,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9144 m²"],"out":{"si":0.9144,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9250245035569946 rad / s"],"out":{"si":0.9250245035569946,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9424777960769379 rad / s"],"out":{"si":0.9424777960769379,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9599310885968813 rad / s"],"out":{"si":0.9599310885968813,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9652 m²"],"out":{"si":0.9652,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9773843811168246 rad / s"],"out":{"si":0.9773843811168246,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9948376736367679 rad / s"],"out":{"si":0.9948376736367679,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["0.9999999999999999 kL"],"out":{"si":0.9999999999999999,"dim":[0,3,0,0,0,0,0],"unitId":"stere"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 BTU/hr"],"out":{"si":0.2930710701722222,"dim":[1,2,-3,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 BTU/min"],"out":{"si":17.584264210333334,"dim":[1,2,-3,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 MV"],"out":{"si":1000000,"dim":[1,2,-3,-1,0,0,0],"unitId":"mega_volt"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 N"],"out":{"si":1,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 W"],"out":{"si":1,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 cal/g"],"out":{"si":4184,"dim":[0,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 cal/s"],"out":{"si":4.184,"dim":[1,2,-3,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 kJ"],"out":{"si":1000,"dim":[1,2,-2,0,0,0,0],"unitId":"kj"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 kN"],"out":{"si":1000,"dim":[1,1,-2,0,0,0,0],"unitId":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 kW"],"out":{"si":1000,"dim":[1,2,-3,0,0,0,0],"unitId":"kw"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 kg/L"],"out":{"si":1000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 kt"],"out":{"si":0.5144444444444445,"dim":[0,1,-1,0,0,0,0],"unitId":"knot"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 ly/yr"],"out":{"si":299792458,"dim":[0,1,-1,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 m/s"],"out":{"si":1,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 mN"],"out":{"si":0.001,"dim":[1,1,-2,0,0,0,0],"unitId":"milli_n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 m²"],"out":{"si":1,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 m³"],"out":{"si":1,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 t/m³"],"out":{"si":1000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 thm/d"],"out":{"si":1221.1294590509258,"dim":[1,2,-3,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1 yd³"],"out":{"si":0.764554857984,"dim":[0,3,0,0,0,0,0],"unitId":"yd3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0000000000000002 g/mL"],"out":{"si":1000.0000000000002,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0000000000000002 lb/ft³"],"out":{"si":16.018463373960145,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0122909661567112 rad / s"],"out":{"si":1.0122909661567112,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.016 m²"],"out":{"si":1.016,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.02 m³"],"out":{"si":1.02,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.028888888888889 m/s²"],"out":{"si":1.028888888888889,"dim":[0,1,-2,0,0,0,0],"unitId":"mps2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0297442586766545 rad / s"],"out":{"si":1.0297442586766545,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.04 m³"],"out":{"si":1.04,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0471975511965976 rad / s"],"out":{"si":1.0471975511965976,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.06 m³"],"out":{"si":1.06,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.064650843716541 rad / s"],"out":{"si":1.064650843716541,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0668 m²"],"out":{"si":1.0668,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.08 m³"],"out":{"si":1.08,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0821041362364843 rad / s"],"out":{"si":1.0821041362364843,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.0995574287564276 rad / s"],"out":{"si":1.0995574287564276,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1 m³"],"out":{"si":1.1,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.117010721276371 rad / s"],"out":{"si":1.117010721276371,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1176 m²"],"out":{"si":1.1176,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.12 m³"],"out":{"si":1.12,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1344640137963142 rad / s"],"out":{"si":1.1344640137963142,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1400000000000001 m³"],"out":{"si":1.1400000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1519173063162575 rad / s"],"out":{"si":1.1519173063162575,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.16 m³"],"out":{"si":1.16,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1683999999999999 m²"],"out":{"si":1.1683999999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1693705988362009 rad / s"],"out":{"si":1.1693705988362009,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.18 m³"],"out":{"si":1.18,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.1868238913561442 rad / s"],"out":{"si":1.1868238913561442,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2 kW"],"out":{"si":1200,"dim":[1,2,-3,0,0,0,0],"unitId":"kw"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2 m³"],"out":{"si":1.2,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2042771838760873 rad / s"],"out":{"si":1.2042771838760873,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2191999999999998 m²"],"out":{"si":1.2191999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.22 m³"],"out":{"si":1.22,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2217304763960306 rad / s"],"out":{"si":1.2217304763960306,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.239183768915974 rad / s"],"out":{"si":1.239183768915974,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.24 m³"],"out":{"si":1.24,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2566370614359172 rad / s"],"out":{"si":1.2566370614359172,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.26 m³"],"out":{"si":1.26,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.27 m²"],"out":{"si":1.27,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2740903539558606 rad / s"],"out":{"si":1.2740903539558606,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.28 m³"],"out":{"si":1.28,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.2915436464758039 rad / s"],"out":{"si":1.2915436464758039,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3 m³"],"out":{"si":1.3,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3089969389957472 rad / s"],"out":{"si":1.3089969389957472,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.32 m³"],"out":{"si":1.32,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3208 m²"],"out":{"si":1.3208,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3264502315156905 rad / s"],"out":{"si":1.3264502315156905,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.34 m³"],"out":{"si":1.34,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3439035240356338 rad / s"],"out":{"si":1.3439035240356338,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.36 m³"],"out":{"si":1.36,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.361356816555577 rad / s"],"out":{"si":1.361356816555577,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3716 m²"],"out":{"si":1.3716,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3788101090755203 rad / s"],"out":{"si":1.3788101090755203,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3800000000000001 m³"],"out":{"si":1.3800000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.3962634015954636 rad / s"],"out":{"si":1.3962634015954636,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4000000000000001 m³"],"out":{"si":1.4000000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.413716694115407 rad / s"],"out":{"si":1.413716694115407,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.42 m³"],"out":{"si":1.42,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4223999999999999 m²"],"out":{"si":1.4223999999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4311699866353502 rad / s"],"out":{"si":1.4311699866353502,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.44 m³"],"out":{"si":1.44,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4486232791552935 rad / s"],"out":{"si":1.4486232791552935,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.46 m³"],"out":{"si":1.46,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4660765716752369 rad / s"],"out":{"si":1.4660765716752369,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4731999999999998 m²"],"out":{"si":1.4731999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.48 m³"],"out":{"si":1.48,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4835298641951802 rad / s"],"out":{"si":1.4835298641951802,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.4924180856015513e-10 J"],"out":{"si":1.4924180856015513e-10,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5 W"],"out":{"si":1.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5 kg/L"],"out":{"si":1500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5 m/s"],"out":{"si":1.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5 m³"],"out":{"si":1.5,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5009831567151235 rad / s"],"out":{"si":1.5009831567151235,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5184364492350666 rad / s"],"out":{"si":1.5184364492350666,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.52 m³"],"out":{"si":1.52,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.524 m²"],"out":{"si":1.524,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.53588974175501 rad / s"],"out":{"si":1.53588974175501,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.54 m³"],"out":{"si":1.54,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5533430342749532 rad / s"],"out":{"si":1.5533430342749532,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.56 m³"],"out":{"si":1.56,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5707963267948966 rad / s"],"out":{"si":1.5707963267948966,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5748 m²"],"out":{"si":1.5748,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.58 m³"],"out":{"si":1.58,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.5882496193148399 rad / s"],"out":{"si":1.5882496193148399,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6 m³"],"out":{"si":1.6,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6057029118347832 rad / s"],"out":{"si":1.6057029118347832,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.62 m³"],"out":{"si":1.62,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6231562043547265 rad / s"],"out":{"si":1.6231562043547265,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6256 m²"],"out":{"si":1.6256,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6400000000000001 m³"],"out":{"si":1.6400000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6406094968746698 rad / s"],"out":{"si":1.6406094968746698,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6580627893946132 rad / s"],"out":{"si":1.6580627893946132,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6600000000000001 m³"],"out":{"si":1.6600000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6755160819145565 rad / s"],"out":{"si":1.6755160819145565,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.6764 m²"],"out":{"si":1.6764,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.68 m³"],"out":{"si":1.68,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.7 m³"],"out":{"si":1.7,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.72 m³"],"out":{"si":1.72,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.7271999999999998 m²"],"out":{"si":1.7271999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.74 m³"],"out":{"si":1.74,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.76 m³"],"out":{"si":1.76,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.778 m²"],"out":{"si":1.778,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.78 m³"],"out":{"si":1.78,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.8 m³"],"out":{"si":1.8,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.82 m³"],"out":{"si":1.82,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.8288 m²"],"out":{"si":1.8288,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.84 m³"],"out":{"si":1.84,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.86 m³"],"out":{"si":1.86,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.8796 m²"],"out":{"si":1.8796,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.8800000000000001 m³"],"out":{"si":1.8800000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.9000000000000001 m³"],"out":{"si":1.9000000000000001,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.92 m³"],"out":{"si":1.92,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.9304 m²"],"out":{"si":1.9304,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1.9811999999999999 m²"],"out":{"si":1.9811999999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 BTU"],"out":{"si":10550.5585262,"dim":[1,2,-2,0,0,0,0],"unitId":"btu"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 J"],"out":{"si":10,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 N"],"out":{"si":10,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 N·m"],"out":{"si":10,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 W"],"out":{"si":10,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 kg/L"],"out":{"si":10000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 kgf·m"],"out":{"si":98.06649999999999,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 m/s"],"out":{"si":10,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 m/s²"],"out":{"si":10,"dim":[0,1,-2,0,0,0,0],"unitId":"mps2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10 mC"],"out":{"si":0.01,"dim":[0,0,1,1,0,0,0],"unitId":"milli_coulomb"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10.000000000000002 lb/gal"],"out":{"si":1198.2642731689666,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10.438413361169102 m/s"],"out":{"si":10.438413361169102,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10.5 W"],"out":{"si":10.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10.5 kg/L"],"out":{"si":10500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["10.5 m/s"],"out":{"si":10.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 J"],"out":{"si":100,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 L"],"out":{"si":0.1,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 N"],"out":{"si":100,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 N·m"],"out":{"si":100,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 W"],"out":{"si":100,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 kJ"],"out":{"si":100000,"dim":[1,2,-2,0,0,0,0],"unitId":"kj"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 kN"],"out":{"si":100000,"dim":[1,1,-2,0,0,0,0],"unitId":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100 m³"],"out":{"si":100,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["100.00000000000001 L/hr"],"out":{"si":0.000027777777777777782,"dim":[0,3,-1,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1000.0000000000001 ft·lbf"],"out":{"si":1355.8179483314007,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["101.325 kN"],"out":{"si":101325,"dim":[1,1,-2,0,0,0,0],"unitId":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["102 J"],"out":{"si":102,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["102 N"],"out":{"si":102,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["102 N·m"],"out":{"si":102,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["102 W"],"out":{"si":102,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["104 J"],"out":{"si":104,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["104 N"],"out":{"si":104,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["104 N·m"],"out":{"si":104,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["104 W"],"out":{"si":104,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["106 J"],"out":{"si":106,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["106 N"],"out":{"si":106,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["106 N·m"],"out":{"si":106,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["106 W"],"out":{"si":106,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["108 J"],"out":{"si":108,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["108 N"],"out":{"si":108,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["108 N·m"],"out":{"si":108,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["108 W"],"out":{"si":108,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["11 W"],"out":{"si":11,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["11 kg/L"],"out":{"si":11000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["11 m/s"],"out":{"si":11,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["11.5 W"],"out":{"si":11.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["11.5 kg/L"],"out":{"si":11500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["11.5 m/s"],"out":{"si":11.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["110 J"],"out":{"si":110,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["110 N"],"out":{"si":110,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["110 N·m"],"out":{"si":110,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["110 W"],"out":{"si":110,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["112 J"],"out":{"si":112,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["112 N"],"out":{"si":112,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["112 N·m"],"out":{"si":112,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["112 W"],"out":{"si":112,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["114 J"],"out":{"si":114,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["114 N"],"out":{"si":114,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["114 N·m"],"out":{"si":114,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["114 W"],"out":{"si":114,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["116 J"],"out":{"si":116,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["116 N"],"out":{"si":116,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["116 N·m"],"out":{"si":116,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["116 W"],"out":{"si":116,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["118 J"],"out":{"si":118,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["118 N"],"out":{"si":118,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["118 N·m"],"out":{"si":118,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["118 W"],"out":{"si":118,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 C"],"out":{"si":12,"dim":[0,0,1,1,0,0,0],"unitId":"coulomb"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 J"],"out":{"si":12,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 N"],"out":{"si":12,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 N·m"],"out":{"si":12,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 W"],"out":{"si":12,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 kg/L"],"out":{"si":12000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12 m/s"],"out":{"si":12,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12.5 W"],"out":{"si":12.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12.5 kg/L"],"out":{"si":12500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["12.5 m/s"],"out":{"si":12.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["120 J"],"out":{"si":120,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["120 L"],"out":{"si":0.12,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["120 N"],"out":{"si":120,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["120 N·m"],"out":{"si":120,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["120 W"],"out":{"si":120,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["122 J"],"out":{"si":122,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["122 N"],"out":{"si":122,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["122 N·m"],"out":{"si":122,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["122 W"],"out":{"si":122,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["123.86053326315789 N"],"out":{"si":123.86053326315789,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["124 J"],"out":{"si":124,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["124 N"],"out":{"si":124,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["124 N·m"],"out":{"si":124,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["124 W"],"out":{"si":124,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["125.66370614359172 rad"],"out":{"si":125.66370614359172,"dim":[0,0,0,0,0,1,0],"unitId":"rad"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["126 J"],"out":{"si":126,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["126 N"],"out":{"si":126,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["126 N·m"],"out":{"si":126,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["126 W"],"out":{"si":126,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["128 J"],"out":{"si":128,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["128 N"],"out":{"si":128,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["128 N·m"],"out":{"si":128,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["128 W"],"out":{"si":128,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["13 W"],"out":{"si":13,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["13 kg/L"],"out":{"si":13000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["13 m/s"],"out":{"si":13,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["13.5 W"],"out":{"si":13.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["13.5 kg/L"],"out":{"si":13500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["13.5 m/s"],"out":{"si":13.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["130 J"],"out":{"si":130,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["130 N"],"out":{"si":130,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["130 N·m"],"out":{"si":130,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["130 W"],"out":{"si":130,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["132 J"],"out":{"si":132,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["132 N"],"out":{"si":132,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["132 N·m"],"out":{"si":132,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["132 W"],"out":{"si":132,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["134 J"],"out":{"si":134,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["134 N"],"out":{"si":134,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["134 N·m"],"out":{"si":134,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["134 W"],"out":{"si":134,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["136 J"],"out":{"si":136,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["136 N"],"out":{"si":136,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["136 N·m"],"out":{"si":136,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["136 W"],"out":{"si":136,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["138 J"],"out":{"si":138,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["138 N"],"out":{"si":138,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["138 N·m"],"out":{"si":138,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["138 W"],"out":{"si":138,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14 J"],"out":{"si":14,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14 N"],"out":{"si":14,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14 N·m"],"out":{"si":14,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14 W"],"out":{"si":14,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14 kg/L"],"out":{"si":14000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14 m/s"],"out":{"si":14,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14.5 W"],"out":{"si":14.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14.5 kg/L"],"out":{"si":14500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["14.5 m/s"],"out":{"si":14.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["140 J"],"out":{"si":140,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["140 L"],"out":{"si":0.14,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["140 N"],"out":{"si":140,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["140 N·m"],"out":{"si":140,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["140 W"],"out":{"si":140,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["142 J"],"out":{"si":142,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["142 N"],"out":{"si":142,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["142 N·m"],"out":{"si":142,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["142 W"],"out":{"si":142,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["144 J"],"out":{"si":144,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["144 N"],"out":{"si":144,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["144 N·m"],"out":{"si":144,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["144 W"],"out":{"si":144,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["146 J"],"out":{"si":146,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["146 N"],"out":{"si":146,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["146 N·m"],"out":{"si":146,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["146 W"],"out":{"si":146,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["148 J"],"out":{"si":148,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["148 N"],"out":{"si":148,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["148 N·m"],"out":{"si":148,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["148 W"],"out":{"si":148,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15 W"],"out":{"si":15,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15 kg/L"],"out":{"si":15000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15 m/s"],"out":{"si":15,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15.24 m²"],"out":{"si":15.24,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15.5 W"],"out":{"si":15.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15.5 kg/L"],"out":{"si":15500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["15.5 m/s"],"out":{"si":15.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["150 J"],"out":{"si":150,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["150 N"],"out":{"si":150,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["150 N·m"],"out":{"si":150,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["150 W"],"out":{"si":150,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["152 J"],"out":{"si":152,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["152 N"],"out":{"si":152,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["152 N·m"],"out":{"si":152,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["152 W"],"out":{"si":152,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["154 J"],"out":{"si":154,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["154 N"],"out":{"si":154,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["154 N·m"],"out":{"si":154,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["154 W"],"out":{"si":154,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["156 J"],"out":{"si":156,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["156 N"],"out":{"si":156,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["156 N·m"],"out":{"si":156,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["156 W"],"out":{"si":156,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["158 J"],"out":{"si":158,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["158 N"],"out":{"si":158,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["158 N·m"],"out":{"si":158,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["158 W"],"out":{"si":158,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16 J"],"out":{"si":16,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16 N"],"out":{"si":16,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16 N·m"],"out":{"si":16,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16 W"],"out":{"si":16,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16 kg/L"],"out":{"si":16000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16 m/s"],"out":{"si":16,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16.5 W"],"out":{"si":16.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16.5 kg/L"],"out":{"si":16500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16.5 m/s"],"out":{"si":16.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["16.666666666666668 ft³"],"out":{"si":0.47194744320000004,"dim":[0,3,0,0,0,0,0],"unitId":"ft3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["160 J"],"out":{"si":160,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["160 L"],"out":{"si":0.16,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["160 N"],"out":{"si":160,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["160 N·m"],"out":{"si":160,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["160 W"],"out":{"si":160,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["162 J"],"out":{"si":162,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["162 N"],"out":{"si":162,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["162 N·m"],"out":{"si":162,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["162 W"],"out":{"si":162,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["164 J"],"out":{"si":164,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["164 N"],"out":{"si":164,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["164 N·m"],"out":{"si":164,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["164 W"],"out":{"si":164,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["166 J"],"out":{"si":166,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["166 N"],"out":{"si":166,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["166 N·m"],"out":{"si":166,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["166 W"],"out":{"si":166,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["168 J"],"out":{"si":168,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["168 N"],"out":{"si":168,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["168 N·m"],"out":{"si":168,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["168 W"],"out":{"si":168,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["17 W"],"out":{"si":17,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["17 kg/L"],"out":{"si":17000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["17 m/s"],"out":{"si":17,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["17.5 W"],"out":{"si":17.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["17.5 kg/L"],"out":{"si":17500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["17.5 m/s"],"out":{"si":17.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["170 J"],"out":{"si":170,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["170 N"],"out":{"si":170,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["170 N·m"],"out":{"si":170,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["170 W"],"out":{"si":170,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["172 J"],"out":{"si":172,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["172 N"],"out":{"si":172,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["172 N·m"],"out":{"si":172,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["172 W"],"out":{"si":172,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["174 J"],"out":{"si":174,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["174 N"],"out":{"si":174,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["174 N·m"],"out":{"si":174,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["174 W"],"out":{"si":174,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["176 J"],"out":{"si":176,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["176 N"],"out":{"si":176,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["176 N·m"],"out":{"si":176,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["176 W"],"out":{"si":176,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["178 J"],"out":{"si":178,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["178 N"],"out":{"si":178,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["178 N·m"],"out":{"si":178,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["178 W"],"out":{"si":178,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["1799.9999999999998 ft·lbf"],"out":{"si":2440.4723069965203,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18 J"],"out":{"si":18,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18 N"],"out":{"si":18,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18 N·m"],"out":{"si":18,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18 W"],"out":{"si":18,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18 kg/L"],"out":{"si":18000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18 m/s"],"out":{"si":18,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18.5 W"],"out":{"si":18.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18.5 kg/L"],"out":{"si":18500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["18.5 m/s"],"out":{"si":18.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["180 J"],"out":{"si":180,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["180 L"],"out":{"si":0.18,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["180 N"],"out":{"si":180,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["180 N·m"],"out":{"si":180,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["180 W"],"out":{"si":180,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["182 J"],"out":{"si":182,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["182 N"],"out":{"si":182,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["182 N·m"],"out":{"si":182,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["182 W"],"out":{"si":182,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["184 J"],"out":{"si":184,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["184 N"],"out":{"si":184,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["184 N·m"],"out":{"si":184,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["184 W"],"out":{"si":184,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["186 J"],"out":{"si":186,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["186 N"],"out":{"si":186,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["186 N·m"],"out":{"si":186,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["186 W"],"out":{"si":186,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["188 J"],"out":{"si":188,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["188 N"],"out":{"si":188,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["188 N·m"],"out":{"si":188,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["188 W"],"out":{"si":188,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["19 W"],"out":{"si":19,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["19 kg/L"],"out":{"si":19000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["19 m/s"],"out":{"si":19,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["19.5 W"],"out":{"si":19.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["19.5 kg/L"],"out":{"si":19500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["19.5 m/s"],"out":{"si":19.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["190 J"],"out":{"si":190,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["190 N"],"out":{"si":190,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["190 N·m"],"out":{"si":190,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["190 W"],"out":{"si":190,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["192 J"],"out":{"si":192,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["192 N"],"out":{"si":192,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["192 N·m"],"out":{"si":192,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["192 W"],"out":{"si":192,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 J"],"out":{"si":2,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 N"],"out":{"si":2,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 N·m"],"out":{"si":2,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 W"],"out":{"si":2,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 kWh"],"out":{"si":7200000,"dim":[1,2,-2,0,0,0,0],"unitId":"kwh"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 kg/L"],"out":{"si":2000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2 m/s"],"out":{"si":2,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.0000000000000004 g/mL"],"out":{"si":2000.0000000000005,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.032 m²"],"out":{"si":2.032,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.0827999999999998 m²"],"out":{"si":2.0827999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.1336 m²"],"out":{"si":2.1336,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.1844 m²"],"out":{"si":2.1844,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.2352 m²"],"out":{"si":2.2352,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.27109855 kJ"],"out":{"si":2271.09855,"dim":[1,2,-2,0,0,0,0],"unitId":"kj"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.286 m²"],"out":{"si":2.286,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.3367999999999998 m²"],"out":{"si":2.3367999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.3876 m²"],"out":{"si":2.3876,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.4 kW"],"out":{"si":2400,"dim":[1,2,-3,0,0,0,0],"unitId":"kw"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.4383999999999997 m²"],"out":{"si":2.4383999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.4892 m²"],"out":{"si":2.4892,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.5 W"],"out":{"si":2.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.5 kg/L"],"out":{"si":2500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.5 m/s"],"out":{"si":2.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.54 m²"],"out":{"si":2.54,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.5907999999999998 m²"],"out":{"si":2.5907999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.6416 m²"],"out":{"si":2.6416,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.6923999999999997 m²"],"out":{"si":2.6923999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.7432 m²"],"out":{"si":2.7432,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.7777777777777777 m/s²"],"out":{"si":2.7777777777777777,"dim":[0,1,-2,0,0,0,0],"unitId":"mps2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.794 m²"],"out":{"si":2.794,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.8447999999999998 m²"],"out":{"si":2.8447999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.8956 m²"],"out":{"si":2.8956,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.9463999999999997 m²"],"out":{"si":2.9463999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2.9972 m²"],"out":{"si":2.9972,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 J"],"out":{"si":20,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 L"],"out":{"si":0.02,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 N"],"out":{"si":20,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 N·m"],"out":{"si":20,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 V"],"out":{"si":20,"dim":[1,2,-3,-1,0,0,0],"unitId":"volt"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 W"],"out":{"si":20,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 kg/L"],"out":{"si":20000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20 m/s"],"out":{"si":20,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20.5 W"],"out":{"si":20.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20.5 kg/L"],"out":{"si":20500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["20.5 m/s"],"out":{"si":20.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["200 L"],"out":{"si":0.2,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["200 kN"],"out":{"si":200000,"dim":[1,1,-2,0,0,0,0],"unitId":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["200 lbf"],"out":{"si":889.6443230520999,"dim":[1,1,-2,0,0,0,0],"unitId":"lbf"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["200.00000000000003 μW"],"out":{"si":0.0002,"dim":[1,2,-3,0,0,0,0],"unitId":"micro_w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2000.0000000000002 ft·lbf"],"out":{"si":2711.6358966628013,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["21 W"],"out":{"si":21,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["21 kg/L"],"out":{"si":21000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["21 m/s"],"out":{"si":21,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["21.5 W"],"out":{"si":21.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["21.5 kg/L"],"out":{"si":21500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["21.5 m/s"],"out":{"si":21.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22 J"],"out":{"si":22,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22 N"],"out":{"si":22,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22 N·m"],"out":{"si":22,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22 W"],"out":{"si":22,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22 kg/L"],"out":{"si":22000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22 m/s"],"out":{"si":22,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22.5 W"],"out":{"si":22.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22.5 kg/L"],"out":{"si":22500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["22.5 m/s"],"out":{"si":22.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["220 L"],"out":{"si":0.22,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["23 W"],"out":{"si":23,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["23 kg/L"],"out":{"si":23000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["23 m/s"],"out":{"si":23,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["23.5 W"],"out":{"si":23.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["23.5 kg/L"],"out":{"si":23500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["23.5 m/s"],"out":{"si":23.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24 J"],"out":{"si":24,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24 N"],"out":{"si":24,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24 N·m"],"out":{"si":24,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24 W"],"out":{"si":24,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24 kg/L"],"out":{"si":24000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24 m/s"],"out":{"si":24,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24.5 W"],"out":{"si":24.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24.5 kg/L"],"out":{"si":24500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["24.5 m/s"],"out":{"si":24.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["240 L"],"out":{"si":0.24,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["240 W"],"out":{"si":240,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25 W"],"out":{"si":25,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25 kg/L"],"out":{"si":25000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25 m/s"],"out":{"si":25,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25 mJ"],"out":{"si":0.025,"dim":[1,2,-2,0,0,0,0],"unitId":"nmm_torque"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25.5 W"],"out":{"si":25.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25.5 kg/L"],"out":{"si":25500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["25.5 m/s"],"out":{"si":25.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["250 W"],"out":{"si":250,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["2544.433579069377 BTU"],"out":{"si":2684519.5392,"dim":[1,2,-2,0,0,0,0],"unitId":"btu"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26 J"],"out":{"si":26,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26 N"],"out":{"si":26,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26 N·m"],"out":{"si":26,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26 W"],"out":{"si":26,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26 kg/L"],"out":{"si":26000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26 m/s"],"out":{"si":26,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26.5 W"],"out":{"si":26.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26.5 kg/L"],"out":{"si":26500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["26.5 m/s"],"out":{"si":26.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["260 L"],"out":{"si":0.26,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["27 W"],"out":{"si":27,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["27 kg/L"],"out":{"si":27000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["27 m/s"],"out":{"si":27,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["27.5 W"],"out":{"si":27.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["27.5 kg/L"],"out":{"si":27500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["27.5 m/s"],"out":{"si":27.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28 J"],"out":{"si":28,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28 N"],"out":{"si":28,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28 N·m"],"out":{"si":28,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28 W"],"out":{"si":28,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28 kg/L"],"out":{"si":28000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28 m/s"],"out":{"si":28,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28.5 W"],"out":{"si":28.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28.5 kg/L"],"out":{"si":28500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["28.5 m/s"],"out":{"si":28.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["280 L"],"out":{"si":0.28,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["29 W"],"out":{"si":29,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["29 kg/L"],"out":{"si":29000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["29 m/s"],"out":{"si":29,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["29.5 W"],"out":{"si":29.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["29.5 kg/L"],"out":{"si":29500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["29.5 m/s"],"out":{"si":29.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3 A"],"out":{"si":3,"dim":[0,0,0,1,0,0,0],"unitId":"amp"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3 W"],"out":{"si":3,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3 kg/L"],"out":{"si":3000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3 m/s"],"out":{"si":3,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.0012074999855436 ft·lbf"],"out":{"si":4.069090995147211,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.048 m²"],"out":{"si":3.048,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.0987999999999998 m²"],"out":{"si":3.0987999999999998,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.1496 m²"],"out":{"si":3.1496,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.2003999999999997 m²"],"out":{"si":3.2003999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.2512 m²"],"out":{"si":3.2512,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.302 m²"],"out":{"si":3.302,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.3528 m²"],"out":{"si":3.3528,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.4036 m²"],"out":{"si":3.4036,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.4543999999999997 m²"],"out":{"si":3.4543999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.5 W"],"out":{"si":3.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.5 kg/L"],"out":{"si":3500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.5 m/s"],"out":{"si":3.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.5052 m²"],"out":{"si":3.5052,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.556 m²"],"out":{"si":3.556,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.6068 m²"],"out":{"si":3.6068,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.6576 m²"],"out":{"si":3.6576,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.7083999999999997 m²"],"out":{"si":3.7083999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.7592 m²"],"out":{"si":3.7592,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.81 m²"],"out":{"si":3.81,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.8608 m²"],"out":{"si":3.8608,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.9116 m²"],"out":{"si":3.9116,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["3.9623999999999997 m²"],"out":{"si":3.9623999999999997,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30 J"],"out":{"si":30,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30 N"],"out":{"si":30,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30 N·m"],"out":{"si":30,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30 W"],"out":{"si":30,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30 kg/L"],"out":{"si":30000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30 m/s"],"out":{"si":30,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30.5 W"],"out":{"si":30.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30.5 kg/L"],"out":{"si":30500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["30.5 m/s"],"out":{"si":30.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["300 L"],"out":{"si":0.3,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["304800 m²"],"out":{"si":304800,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["31 W"],"out":{"si":31,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["31 kg/L"],"out":{"si":31000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["31 m/s"],"out":{"si":31,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["31.5 W"],"out":{"si":31.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["31.5 kg/L"],"out":{"si":31500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["31.5 m/s"],"out":{"si":31.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32 J"],"out":{"si":32,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32 N"],"out":{"si":32,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32 N·m"],"out":{"si":32,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32 W"],"out":{"si":32,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32 kg/L"],"out":{"si":32000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32 m/s"],"out":{"si":32,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32.5 W"],"out":{"si":32.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32.5 kg/L"],"out":{"si":32500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["32.5 m/s"],"out":{"si":32.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["320 L"],"out":{"si":0.32,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["33 W"],"out":{"si":33,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["33 kg/L"],"out":{"si":33000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["33 m/s"],"out":{"si":33,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["33.5 W"],"out":{"si":33.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["33.5 kg/L"],"out":{"si":33500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["33.5 m/s"],"out":{"si":33.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34 J"],"out":{"si":34,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34 N"],"out":{"si":34,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34 N·m"],"out":{"si":34,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34 W"],"out":{"si":34,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34 kg/L"],"out":{"si":34000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34 m/s"],"out":{"si":34,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34.5 W"],"out":{"si":34.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34.5 kg/L"],"out":{"si":34500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["34.5 m/s"],"out":{"si":34.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["340 L"],"out":{"si":0.34,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["35 W"],"out":{"si":35,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["35 kg/L"],"out":{"si":35000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["35 m/s"],"out":{"si":35,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["35.5 W"],"out":{"si":35.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["35.5 kg/L"],"out":{"si":35500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["35.5 m/s"],"out":{"si":35.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36 J"],"out":{"si":36,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36 N"],"out":{"si":36,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36 N·m"],"out":{"si":36,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36 W"],"out":{"si":36,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36 kg/L"],"out":{"si":36000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36 m/s"],"out":{"si":36,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36.5 W"],"out":{"si":36.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36.5 kg/L"],"out":{"si":36500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["36.5 m/s"],"out":{"si":36.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["360 L"],"out":{"si":0.36,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["37 W"],"out":{"si":37,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["37 kg/L"],"out":{"si":37000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["37 m/s"],"out":{"si":37,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["37.5 W"],"out":{"si":37.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["37.5 kg/L"],"out":{"si":37500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["37.5 m/s"],"out":{"si":37.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38 J"],"out":{"si":38,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38 N"],"out":{"si":38,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38 N·m"],"out":{"si":38,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38 W"],"out":{"si":38,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38 kg/L"],"out":{"si":38000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38 m/s"],"out":{"si":38,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38.5 W"],"out":{"si":38.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38.5 kg/L"],"out":{"si":38500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["38.5 m/s"],"out":{"si":38.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["380 L"],"out":{"si":0.38,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["39 W"],"out":{"si":39,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["39 kg/L"],"out":{"si":39000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["39 m/s"],"out":{"si":39,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["39.5 W"],"out":{"si":39.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["39.5 kg/L"],"out":{"si":39500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["39.5 m/s"],"out":{"si":39.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4 J"],"out":{"si":4,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4 N"],"out":{"si":4,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4 N·m"],"out":{"si":4,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4 W"],"out":{"si":4,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4 kg/L"],"out":{"si":4000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4 m/s"],"out":{"si":4,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.013199999999999 m²"],"out":{"si":4.013199999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.064 m²"],"out":{"si":4.064,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.1148 m²"],"out":{"si":4.1148,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.1655999999999995 m²"],"out":{"si":4.1655999999999995,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.2164 m²"],"out":{"si":4.2164,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.2672 m²"],"out":{"si":4.2672,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.318 m²"],"out":{"si":4.318,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.32 MJ"],"out":{"si":4320000,"dim":[1,2,-2,0,0,0,0],"unitId":"mnm_torque"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.3688 m²"],"out":{"si":4.3688,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.4196 m²"],"out":{"si":4.4196,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.4704 m²"],"out":{"si":4.4704,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.5 W"],"out":{"si":4.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.5 kg/L"],"out":{"si":4500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.5 m/s"],"out":{"si":4.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.521199999999999 m²"],"out":{"si":4.521199999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.572 m²"],"out":{"si":4.572,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.6228 m²"],"out":{"si":4.6228,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.6735999999999995 m²"],"out":{"si":4.6735999999999995,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.7244 m²"],"out":{"si":4.7244,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.7752 m²"],"out":{"si":4.7752,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.826 m²"],"out":{"si":4.826,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["4.876799999999999 m²"],"out":{"si":4.876799999999999,"dim":[0,2,0,0,0,0,0],"unitId":"m2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 J"],"out":{"si":40,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 L"],"out":{"si":0.04,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 N"],"out":{"si":40,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 N·m"],"out":{"si":40,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 W"],"out":{"si":40,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 kg/L"],"out":{"si":40000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40 m/s"],"out":{"si":40,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40.5 W"],"out":{"si":40.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40.5 kg/L"],"out":{"si":40500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["40.5 m/s"],"out":{"si":40.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["400 L"],"out":{"si":0.4,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["41 W"],"out":{"si":41,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["41 kg/L"],"out":{"si":41000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["41 m/s"],"out":{"si":41,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["41.5 W"],"out":{"si":41.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["41.5 kg/L"],"out":{"si":41500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["41.5 m/s"],"out":{"si":41.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42 J"],"out":{"si":42,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42 N"],"out":{"si":42,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42 N·m"],"out":{"si":42,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42 W"],"out":{"si":42,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42 kg/L"],"out":{"si":42000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42 m/s"],"out":{"si":42,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42.5 W"],"out":{"si":42.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42.5 kg/L"],"out":{"si":42500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["42.5 m/s"],"out":{"si":42.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["420 L"],"out":{"si":0.42,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43 W"],"out":{"si":43,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43 kg/L"],"out":{"si":43000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43 m/s"],"out":{"si":43,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43.5 W"],"out":{"si":43.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43.5 kg/L"],"out":{"si":43500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43.5 m/s"],"out":{"si":43.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["43560.00000000001 ft³"],"out":{"si":1233.4818375475202,"dim":[0,3,0,0,0,0,0],"unitId":"ft3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44 J"],"out":{"si":44,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44 N"],"out":{"si":44,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44 N·m"],"out":{"si":44,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44 W"],"out":{"si":44,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44 kg/L"],"out":{"si":44000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44 m/s"],"out":{"si":44,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44.5 W"],"out":{"si":44.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44.5 kg/L"],"out":{"si":44500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["44.5 m/s"],"out":{"si":44.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["440 L"],"out":{"si":0.44,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["444.82216152604997 N"],"out":{"si":444.82216152604997,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["45 W"],"out":{"si":45,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["45 kg/L"],"out":{"si":45000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["45 m/s"],"out":{"si":45,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["45.5 W"],"out":{"si":45.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["45.5 kg/L"],"out":{"si":45500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["45.5 m/s"],"out":{"si":45.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46 J"],"out":{"si":46,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46 N"],"out":{"si":46,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46 N·m"],"out":{"si":46,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46 W"],"out":{"si":46,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46 kg/L"],"out":{"si":46000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46 m/s"],"out":{"si":46,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46.5 W"],"out":{"si":46.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46.5 kg/L"],"out":{"si":46500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["46.5 m/s"],"out":{"si":46.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["460 L"],"out":{"si":0.46,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["47 W"],"out":{"si":47,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["47 kg/L"],"out":{"si":47000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["47 m/s"],"out":{"si":47,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["47.5 W"],"out":{"si":47.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["47.5 kg/L"],"out":{"si":47500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["47.5 m/s"],"out":{"si":47.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["48 J"],"out":{"si":48,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["48 N"],"out":{"si":48,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["48 N·m"],"out":{"si":48,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["48 W"],"out":{"si":48,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["48 kg/L"],"out":{"si":48000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["48 m/s"],"out":{"si":48,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["480 L"],"out":{"si":0.48,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["490.50000000000006 J"],"out":{"si":490.50000000000006,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5 A"],"out":{"si":5,"dim":[0,0,0,1,0,0,0],"unitId":"amp"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5 N·mm"],"out":{"si":0.005,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5 W"],"out":{"si":5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5 kg/L"],"out":{"si":5000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5 m/s"],"out":{"si":5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5 m³"],"out":{"si":5,"dim":[0,3,0,0,0,0,0],"unitId":"m3"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5.3644799999999995 m/s²"],"out":{"si":5.3644799999999995,"dim":[0,1,-2,0,0,0,0],"unitId":"mps2"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5.5 W"],"out":{"si":5.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5.5 kg/L"],"out":{"si":5500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["5.5 m/s"],"out":{"si":5.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 J"],"out":{"si":50,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 N"],"out":{"si":50,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 N·m"],"out":{"si":50,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 W"],"out":{"si":50,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 lbf·ft"],"out":{"si":67.79089741657002,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 mN"],"out":{"si":0.05,"dim":[1,1,-2,0,0,0,0],"unitId":"milli_n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["50 mph"],"out":{"si":22.352,"dim":[0,1,-1,0,0,0,0],"unitId":"mph"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["500 L"],"out":{"si":0.5,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["500 mW"],"out":{"si":0.5,"dim":[1,2,-3,0,0,0,0],"unitId":"milli_w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["52 J"],"out":{"si":52,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["52 N"],"out":{"si":52,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["52 N·m"],"out":{"si":52,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["52 W"],"out":{"si":52,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["520 L"],"out":{"si":0.52,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["54 J"],"out":{"si":54,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["54 N"],"out":{"si":54,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["54 N·m"],"out":{"si":54,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["54 W"],"out":{"si":54,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["540 L"],"out":{"si":0.54,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["56 J"],"out":{"si":56,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["56 N"],"out":{"si":56,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["56 N·m"],"out":{"si":56,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["56 W"],"out":{"si":56,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["560 L"],"out":{"si":0.56,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["58 J"],"out":{"si":58,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["58 N"],"out":{"si":58,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["58 N·m"],"out":{"si":58,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["58 W"],"out":{"si":58,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["580 L"],"out":{"si":0.58,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6 J"],"out":{"si":6,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6 N"],"out":{"si":6,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6 N·m"],"out":{"si":6,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6 W"],"out":{"si":6,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6 kg/L"],"out":{"si":6000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6 m/s"],"out":{"si":6,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6.283185307179586 rad / s"],"out":{"si":6.283185307179586,"dim":[0,0,-1,0,0,1,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6.5 W"],"out":{"si":6.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6.5 kg/L"],"out":{"si":6500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["6.5 m/s"],"out":{"si":6.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["60 J"],"out":{"si":60,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["60 L"],"out":{"si":0.06,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["60 N"],"out":{"si":60,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["60 N·m"],"out":{"si":60,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["60 W"],"out":{"si":60,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["600 L"],"out":{"si":0.6,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["62 J"],"out":{"si":62,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["62 N"],"out":{"si":62,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["62 N·m"],"out":{"si":62,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["62 W"],"out":{"si":62,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["620 L"],"out":{"si":0.62,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["64 J"],"out":{"si":64,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["64 N"],"out":{"si":64,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["64 N·m"],"out":{"si":64,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["64 W"],"out":{"si":64,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["64.348 lbf"],"out":{"si":286.2341644987826,"dim":[1,1,-2,0,0,0,0],"unitId":"lbf"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["640 L"],"out":{"si":0.64,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["66 J"],"out":{"si":66,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["66 N"],"out":{"si":66,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["66 N·m"],"out":{"si":66,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["66 W"],"out":{"si":66,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["660 L"],"out":{"si":0.66,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["68 J"],"out":{"si":68,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["68 N"],"out":{"si":68,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["68 N·m"],"out":{"si":68,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["68 W"],"out":{"si":68,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["680 L"],"out":{"si":0.68,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["7 W"],"out":{"si":7,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["7 kg/L"],"out":{"si":7000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["7 m/s"],"out":{"si":7,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["7.5 W"],"out":{"si":7.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["7.5 kg/L"],"out":{"si":7500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["7.5 m/s"],"out":{"si":7.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["70 J"],"out":{"si":70,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["70 N"],"out":{"si":70,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["70 N·m"],"out":{"si":70,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["70 W"],"out":{"si":70,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["700.0000000000001 L"],"out":{"si":0.7000000000000002,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["72 J"],"out":{"si":72,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["72 N"],"out":{"si":72,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["72 N·m"],"out":{"si":72,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["72 W"],"out":{"si":72,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["720 L"],"out":{"si":0.72,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["720 μJ"],"out":{"si":0.0007199999999999999,"dim":[1,2,-2,0,0,0,0],"unitId":"micro_j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["74 J"],"out":{"si":74,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["74 N"],"out":{"si":74,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["74 N·m"],"out":{"si":74,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["74 W"],"out":{"si":74,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["740 L"],"out":{"si":0.74,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["76 J"],"out":{"si":76,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["76 N"],"out":{"si":76,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["76 N·m"],"out":{"si":76,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["76 W"],"out":{"si":76,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["760 L"],"out":{"si":0.76,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["78 J"],"out":{"si":78,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["78 N"],"out":{"si":78,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["78 N·m"],"out":{"si":78,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["78 W"],"out":{"si":78,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["780 L"],"out":{"si":0.78,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8 J"],"out":{"si":8,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8 N"],"out":{"si":8,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8 N·m"],"out":{"si":8,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8 W"],"out":{"si":8,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8 kg/L"],"out":{"si":8000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8 m/s"],"out":{"si":8,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8.5 W"],"out":{"si":8.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8.5 kg/L"],"out":{"si":8500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["8.5 m/s"],"out":{"si":8.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["80 J"],"out":{"si":80,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["80 L"],"out":{"si":0.08,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["80 N"],"out":{"si":80,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["80 N·m"],"out":{"si":80,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["80 W"],"out":{"si":80,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["800 L"],"out":{"si":0.8,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["82 J"],"out":{"si":82,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["82 N"],"out":{"si":82,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["82 N·m"],"out":{"si":82,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["82 W"],"out":{"si":82,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["820.0000000000001 L"],"out":{"si":0.8200000000000002,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["84 J"],"out":{"si":84,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["84 N"],"out":{"si":84,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["84 N·m"],"out":{"si":84,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["84 W"],"out":{"si":84,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["840 L"],"out":{"si":0.84,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["86 J"],"out":{"si":86,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["86 N"],"out":{"si":86,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["86 N·m"],"out":{"si":86,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["86 W"],"out":{"si":86,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["860 L"],"out":{"si":0.86,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["88 J"],"out":{"si":88,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["88 N"],"out":{"si":88,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["88 N·m"],"out":{"si":88,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["88 W"],"out":{"si":88,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["880 L"],"out":{"si":0.88,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["89875517873681760 J"],"out":{"si":89875517873681760,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9 W"],"out":{"si":9,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9 kg/L"],"out":{"si":9000,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9 m/s"],"out":{"si":9,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9.5 W"],"out":{"si":9.5,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9.5 kg/L"],"out":{"si":9500,"dim":[1,-3,0,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9.5 m/s"],"out":{"si":9.5,"dim":[0,1,-1,0,0,0,0],"unitId":"mps"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9.999999999999998 gal/min"],"out":{"si":0.0006309019639999998,"dim":[0,3,-1,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["9.999999999999998 kip·ft"],"out":{"si":13558.179483314001,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["90 J"],"out":{"si":90,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["90 N"],"out":{"si":90,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["90 N·m"],"out":{"si":90,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["90 W"],"out":{"si":90,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["900 L"],"out":{"si":0.9,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["92 J"],"out":{"si":92,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["92 N"],"out":{"si":92,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["92 N·m"],"out":{"si":92,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["92 W"],"out":{"si":92,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["920 L"],"out":{"si":0.92,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["94 J"],"out":{"si":94,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["94 N"],"out":{"si":94,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["94 N·m"],"out":{"si":94,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["94 W"],"out":{"si":94,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["940.0000000000001 L"],"out":{"si":0.9400000000000002,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["96 J"],"out":{"si":96,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["96 N"],"out":{"si":96,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["96 N·m"],"out":{"si":96,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["96 W"],"out":{"si":96,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["960 L"],"out":{"si":0.96,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["98 J"],"out":{"si":98,"dim":[1,2,-2,0,0,0,0],"unitId":"j"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["98 N"],"out":{"si":98,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["98 N·m"],"out":{"si":98,"dim":[1,2,-2,0,0,0,0]},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["98 W"],"out":{"si":98,"dim":[1,2,-3,0,0,0,0],"unitId":"w"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["98.10000000000001 N"],"out":{"si":98.10000000000001,"dim":[1,1,-2,0,0,0,0],"unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"siQuantity","args":["980 L"],"out":{"si":0.98,"dim":[0,3,0,0,0,0,0],"unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":0.000001,"unit":"Mm","unitId":"mega_m"},1],"out":{"kind":"number","n":9.999999999999999e-10,"unit":"Gm","unitId":"giga_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":0.001,"unit":"km","unitId":"km"},1],"out":{"kind":"number","n":0.000001,"unit":"Mm","unitId":"mega_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":0.01,"unit":"s","unitId":"s","meas":{"sig":1,"dp":2}},-1],"out":{"kind":"number","n":10,"unit":"ms","unitId":"milli_s"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":0.098,"unit":"kN","unitId":"kilonewton","meas":{"sig":2,"dp":3}},-1],"out":{"kind":"number","n":98,"unit":"N","unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":0.098,"unit":"kN","unitId":"kilonewton","meas":{"sig":2,"dp":3}},1],"out":{"kind":"number","n":0.00009800000000000001,"unit":"MN","unitId":"mega_n"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":0.098,"unit":"kN","unitId":"kilonewton"},1],"out":{"kind":"number","n":0.00009800000000000001,"unit":"MN","unitId":"mega_n"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":1,"unit":"hr","unitId":"hr"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":1,"unit":"hr","unitId":"hr"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":1,"unit":"m","unitId":"m"},1],"out":{"kind":"number","n":0.001,"unit":"km","unitId":"km"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":1500,"unit":"eV","unitId":"ev"},1],"out":{"kind":"number","n":1.5,"unit":"keV","unitId":"kilo_ev"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2,"unit":"GB","unitId":"gb"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2,"unit":"GB","unitId":"gb"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2,"unit":"L","unitId":"l"},-1],"out":{"kind":"number","n":2000,"unit":"mL","unitId":"ml"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2,"unit":"in","unitId":"in"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2,"unit":"in","unitId":"in"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2.5,"unit":"kg","unitId":"kg","meas":{"sig":2,"dp":1}},-1],"out":{"kind":"number","n":2500,"unit":"g","unitId":"g"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2.5,"unit":"kg","unitId":"kg","meas":{"sig":2,"dp":1}},1],"out":{"kind":"number","n":0.0025,"unit":"t","unitId":"tonne"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2000,"unit":"Hz","unitId":"hz"},1],"out":{"kind":"number","n":2,"unit":"kHz","unitId":"kilo_hz"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":2000,"unit":"mL","unitId":"ml"},-1],"out":{"kind":"number","n":2000000,"unit":"μL","unitId":"micro_l"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":3,"unit":"cm","unitId":"cm"},-1],"out":{"kind":"number","n":30,"unit":"mm","unitId":"mm"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":3,"unit":"cm","unitId":"cm"},1],"out":{"kind":"number","n":0.03,"unit":"m","unitId":"m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":3,"unit":"ft","unitId":"ft"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":3,"unit":"ft","unitId":"ft"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":4,"unit":"lbs","unitId":"lb"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":4,"unit":"lbs","unitId":"lb"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":4700,"unit":"Ω","unitId":"ohm"},1],"out":{"kind":"number","n":4.7,"unit":"kΩ","unitId":"kilo_ohm"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":5,"unit":"kPa","unitId":"kpa"},1],"out":{"kind":"number","n":0.005,"unit":"MPa","unitId":"mpa"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":5,"unit":"°C","unitId":"c"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":5,"unit":"°C","unitId":"c"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":50.8,"unit":"mm","unitId":"mm","meas":{"sig":3,"dp":1}},1],"out":{"kind":"number","n":0.0508,"unit":"m","unitId":"m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":5},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":60,"unit":"mph","unitId":"mph"},-1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":60,"unit":"mph","unitId":"mph"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":9.999999999999997e-16,"unit":"Pm","unitId":"peta_m"},1],"out":{"kind":"number","n":9.999999999999997e-19,"unit":"Em","unitId":"exa_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":9.999999999999997e-19,"unit":"Em","unitId":"exa_m"},1],"out":{"kind":"number","n":9.999999999999997e-22,"unit":"Zm","unitId":"zetta_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":9.999999999999997e-22,"unit":"Zm","unitId":"zetta_m"},1],"out":{"kind":"number","n":9.999999999999997e-25,"unit":"Ym","unitId":"yotta_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":9.999999999999997e-25,"unit":"Ym","unitId":"yotta_m"},1],"out":null,"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":9.999999999999998e-13,"unit":"Tm","unitId":"tera_m"},1],"out":{"kind":"number","n":9.999999999999997e-16,"unit":"Pm","unitId":"peta_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":9.999999999999999e-10,"unit":"Gm","unitId":"giga_m"},1],"out":{"kind":"number","n":9.999999999999998e-13,"unit":"Tm","unitId":"tera_m"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":98,"unit":"N","unitId":"n"},-1],"out":{"kind":"number","n":98000,"unit":"mN","unitId":"milli_n"},"src":"src/engine/units.test.ts"}
+{"fn":"stepPrefix","args":[{"kind":"number","n":98,"unit":"N","unitId":"n"},1],"out":{"kind":"number","n":0.098,"unit":"kN","unitId":"kilonewton"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["0.01 s to s"],"out":{"kind":"number","n":0.01,"unit":"s","unitId":"s","meas":{"sig":1,"dp":2}},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["0.098 kN to kN"],"out":{"kind":"number","n":0.098,"unit":"kN","unitId":"kilonewton","meas":{"sig":2,"dp":3}},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["1 hr to hr"],"out":{"kind":"number","n":1,"unit":"hr","unitId":"hr"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["1 m to m"],"out":{"kind":"number","n":1,"unit":"m","unitId":"m"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["1500 eV to eV"],"out":{"kind":"number","n":1500,"unit":"eV","unitId":"ev"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["2 GB to GB"],"out":{"kind":"number","n":2,"unit":"GB","unitId":"gb"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["2 L to L"],"out":{"kind":"number","n":2,"unit":"L","unitId":"l"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["2 in to in"],"out":{"kind":"number","n":2,"unit":"in","unitId":"in"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["2.5 kg to kg"],"out":{"kind":"number","n":2.5,"unit":"kg","unitId":"kg","meas":{"sig":2,"dp":1}},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["2000 Hz to Hz"],"out":{"kind":"number","n":2000,"unit":"Hz","unitId":"hz"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["3 cm to cm"],"out":{"kind":"number","n":3,"unit":"cm","unitId":"cm"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["3 ft to ft"],"out":{"kind":"number","n":3,"unit":"ft","unitId":"ft"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["4 lbs to lbs"],"out":{"kind":"number","n":4,"unit":"lbs","unitId":"lb"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["4700 ohm to ohm"],"out":{"kind":"number","n":4700,"unit":"Ω","unitId":"ohm"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["5 kPa to kPa"],"out":{"kind":"number","n":5,"unit":"kPa","unitId":"kpa"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["5 °C to °C"],"out":{"kind":"number","n":5,"unit":"°C","unitId":"c"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["50.8 mm to mm"],"out":{"kind":"number","n":50.8,"unit":"mm","unitId":"mm","meas":{"sig":3,"dp":1}},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["60 mph to mph"],"out":{"kind":"number","n":60,"unit":"mph","unitId":"mph"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["98 N to N"],"out":{"kind":"number","n":98,"unit":"N","unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"tryConvert","args":["980 N to N"],"out":{"kind":"number","n":980,"unit":"N","unitId":"n"},"src":"src/engine/units.test.ts"}
+{"fn":"unitAlternatives","args":[{"kind":"number","n":0,"unit":"kg","unitId":"kg"}],"out":[],"src":"src/lib/answerForms.test.ts"}
+{"fn":"unitAlternatives","args":[{"kind":"number","n":0,"unit":"°C","unitId":"c"}],"out":[{"kind":"number","n":32,"unit":"°F","unitId":"f"},{"kind":"number","n":273.15,"unit":"K","unitId":"k"},{"kind":"number","n":491.66999999999996,"unit":"°R","unitId":"r"}],"src":"src/lib/answerForms.test.ts"}
+{"fn":"unitAlternatives","args":[{"kind":"number","n":5}],"out":[],"src":"src/lib/answerForms.test.ts"}

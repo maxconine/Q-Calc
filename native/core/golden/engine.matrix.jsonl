@@ -1,0 +1,2 @@
+{"fn":"looksLikeMatrix","args":["[1, 2, 3]"],"out":false,"src":"src/engine/matrix.test.ts"}
+{"fn":"looksLikeMatrix","args":["mean([1, 2, 3])"],"out":false,"src":"src/engine/matrix.test.ts"}

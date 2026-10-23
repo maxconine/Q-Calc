@@ -1,0 +1,12 @@
+{"fn":"parseFunctionDef","args":["f(2) = x"],"out":null,"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["f(pi) = 1"],"out":null,"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["f(x) = x^2"],"out":{"name":"f","params":["x"],"body":"x^2"},"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["f(x) ="],"out":null,"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["f(x, x) = x"],"out":null,"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["g(a, b) = a + b"],"out":{"name":"g","params":["a","b"],"body":"a + b"},"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["h() = 42"],"out":{"name":"h","params":[],"body":"42"},"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["sin(x) = x"],"out":null,"src":"src/engine/functions.test.ts"}
+{"fn":"parseFunctionDef","args":["x = 5"],"out":null,"src":"src/engine/functions.test.ts"}
+{"fn":"stripTrailingEquals","args":["3 !="],"out":"3 !=","src":"src/engine/solve.test.ts"}
+{"fn":"stripTrailingEquals","args":["3 <="],"out":"3 <=","src":"src/engine/solve.test.ts"}
+{"fn":"stripTrailingEquals","args":["="],"out":"=","src":"src/engine/solve.test.ts"}

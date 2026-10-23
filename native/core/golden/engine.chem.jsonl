@@ -1,0 +1,67 @@
+{"fn":"chemAnswer","args":["1 T -> G"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["100 C -> F"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["100 C to F"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["100 C → F"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["2 + 3 = 5"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["2 + 3"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["2a -> 2b"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["32 F -> C"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["5 km to mi"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["A = B"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["C = 5 F"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["CO = 3"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["CO2 = 44",{"$fn":"anon"}],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["CO2 = CO2"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["E = mc^2"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["F = ma"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["F(X) = X"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["Fe + O2 = Fe2O3",{"$fn":"anon"}],"out":null,"nondet":true,"now":1792752365929,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["H + CO"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H = 5"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H = CO"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H2 * 2 = H4"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H2 + O2 ->"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H2 +"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H2 / 2 -> H"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H2O - H2 -> O"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["H^2 -> H2"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["K = C + 273"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["KE = PE"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["N*m = J"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["PV = nRT"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["V = IR"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["W = F * d"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["X = Y + Z"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["a + b -> c"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["a -> b"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["f(x) = x + 1"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["h2 + o2 -> h2o"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["p = mv"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["x + y = 3"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["x = 5"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["x = y = z"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["x >= 3"],"out":null,"src":"src/engine/chem.test.ts"}
+{"fn":"chemAnswer","args":["y = mx + b"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemCopyText","args":["10²"],"out":"10²","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["2√3"],"out":"2√3","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["42"],"out":"42","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["5 cm"],"out":"5 cm","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["CuSO₄·5H₂O → CuSO₄ + 5 H₂O"],"out":"CuSO4·5H2O -> CuSO4 + 5 H2O","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["C₃H₈ + 5 O₂ → 3 CO₂ + 4 H₂O"],"out":"C3H8 + 5 O2 -> 3 CO2 + 4 H2O","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["MnO₄⁻ + 5 Fe²⁺ + 8 H⁺ → Mn²⁺ + 5 Fe³⁺ + 4 H₂O"],"out":"MnO4^- + 5 Fe^2+ + 8 H^+ -> Mn^2+ + 5 Fe^3+ + 4 H2O","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["underdetermined"],"out":"underdetermined","src":"src/engine/chem.test.ts"}
+{"fn":"chemCopyText","args":["x → y"],"out":"x → y","src":"src/engine/chem.test.ts"}
+{"fn":"isMolarMassInput","args":["H2O molar mass"],"out":true,"src":"src/engine/chem.test.ts"}
+{"fn":"isMolarMassInput","args":["H2O"],"out":false,"src":"src/engine/chem.test.ts"}
+{"fn":"isMolarMassInput","args":["molar mass of H2O"],"out":true,"src":"src/engine/chem.test.ts"}
+{"fn":"isMolarMassInput","args":["the molar mass of water"],"out":false,"src":"src/engine/chem.test.ts"}
+{"fn":"isReactionInput","args":["100 C -> F"],"out":false,"src":"src/engine/chem.test.ts"}
+{"fn":"isReactionInput","args":["5 -> 10"],"out":false,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"isReactionInput","args":["C3H8 + O2 -> CO2 + H2O"],"out":true,"src":"src/engine/chem.test.ts"}
+{"fn":"isReactionInput","args":["Fe + O2 = Fe2O3"],"out":false,"src":"src/engine/chem.test.ts"}
+{"fn":"isReactionInput","args":["H2 -> O2"],"out":true,"src":"src/engine/chem.test.ts"}
+{"fn":"isReactionInput","args":["a -> b -> c"],"out":false,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"isReactionInput","args":["x + y = 3"],"out":false,"src":"src/engine/chem.test.ts"}
+{"fn":"nullSpace","args":[[[{"$bigint":"1"},{"$bigint":"-1"}]],2],"out":[[{"$bigint":"1"},{"$bigint":"1"}]],"src":"src/engine/chem.test.ts"}
+{"fn":"nullSpace","args":[[[{"$bigint":"1"},{"$bigint":"0"}],[{"$bigint":"0"},{"$bigint":"1"}]],2],"out":[],"src":"src/engine/chem.test.ts"}
+{"fn":"nullSpace","args":[[[{"$bigint":"2"},{"$bigint":"4"},{"$bigint":"-6"}]],3],"out":[[{"$bigint":"-2"},{"$bigint":"1"},{"$bigint":"0"}],[{"$bigint":"3"},{"$bigint":"0"},{"$bigint":"1"}]],"src":"src/engine/chem.test.ts"}
