@@ -251,6 +251,7 @@ build_app() {
     "$MAC/Keybinds.swift" \
     "$MAC/UnitlessCopy.swift" \
     "$MAC/SettingsWindow.swift" \
+    "$MAC/SheetPlace.swift" \
     "$MAC/PeriodicWindow.swift" \
     "$MAC/IdentityWindow.swift" \
     "$MAC/Updates.swift" \

@@ -48,7 +48,9 @@ Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as y
   <img alt="Graph of x^3 - 3x with a max at (-1, 2) and a min at (1, -2)" src="docs/screenshots/graph.png" width="720">
 </picture>
 
-**Periodic table.** Type `periodic table`, then click an element to insert its atomic mass.
+**Periodic table.** Type `periodic table`, then click elements to build a formula (H, H, O is H₂O) and click it to insert its molar mass; a right click takes one away. A formula typed in the bar (`H2O`, `Ca(OH)2`, `molar mass of NaCl`) answers with its molar mass too.
+
+**Reference sheets.** `identities` (or `idt`) opens trig, logs, algebra, partial fractions and summation; `idt summation` opens it at that part, and `trig` at trig. `integrals`, `unit conversions` and `constants` (CODATA physical constants) open sheets of their own. A click copies a row.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/periodic-dark.png">

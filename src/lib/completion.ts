@@ -1,6 +1,7 @@
 import { GAS_CONSTANT_UNITS } from '../engine/chem'
 import { SCIENTIFIC_NAMES } from '../engine/scientific'
 import { isUnitName } from '../engine/units'
+import { IDENTITY_PARTS } from './identities'
 
 // ranked: the first name a prefix reaches is the one offered
 export const COMPLETION_FUNCTIONS = [
@@ -47,6 +48,10 @@ export function completionFor(text: string, names: CompletionNames = {}): string
     const hit = GAS_CONSTANT_UNITS.find((u) => u.length > gas[1]!.length && u.startsWith(gas[1]!.toLowerCase()))
     return hit ? hit.slice(gas[1]!.length) : ''
   }
+  // `idt in` finishes the part of the sheet to open, `integration`; one that's no part goes on to the usual picks
+  const part = text.match(/^\s*(?:identities|identity|idt)\s+([A-Za-z][A-Za-z ]*)$/i)?.[1]?.toLowerCase()
+  const hit = part && IDENTITY_PARTS.find((p) => p.length > part.length && p.startsWith(part))
+  if (hit) return hit.slice(part.length)
   const m =text.match(/(^|[^A-Za-z])([A-Za-z]{2,})$/)
   if (!m) return ''
   const word = m[2]!

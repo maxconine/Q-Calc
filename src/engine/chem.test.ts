@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { balance, chemAnswer, chemCopyText, isReactionInput, nullSpace, parseReaction } from './chem'
+import { balance, chemAnswer, chemCopyText, isMolarMassInput, isReactionInput, nullSpace, parseReaction } from './chem'
 import { evaluateLine, evaluateSheet } from './evaluate'
 
 const shown = (text: string) => evaluateLine(text).display
@@ -293,5 +293,51 @@ describe('chem R, the gas constant', () => {
 
   it('leaves an unknown unit blank', () => {
     expect(shown('chem R furlong')).toBe('')
+  })
+})
+
+describe('molar mass', () => {
+  it.each([
+    ['H2O', '18.015 g/mol'],
+    ['H₂O', '18.015 g/mol'],
+    ['CO2', '44.009 g/mol'],
+    ['Ca(OH)2', '74.092 g/mol'],
+    ['CuSO4·5H2O', '249.677 g/mol'],
+    ['CuSO4.5H2O', '249.677 g/mol'],
+    ['C6H12O6', '180.156 g/mol'],
+    ['K4[Fe(CN)6]', '368.345 g/mol'],
+    ['Al2(SO4)3', '342.132 g/mol'],
+    ['molar mass H2O', '18.015 g/mol'],
+    ['molar mass of NaCl', '58.44 g/mol'],
+    ['Molar Mass O2', '31.998 g/mol'],
+    ['molecular weight CH4', '16.043 g/mol'],
+    ['chem Fe', '55.845 g/mol'],
+    ['H2O molar mass', '18.015 g/mol'],
+    ['molar mass Tc', '98 g/mol'],
+  ])('%s', (input, want) => {
+    expect(shown(input)).toBe(want)
+  })
+
+  it('is a number the next line can use', () => {
+    expect(evaluateSheet(['H2O', 'ans * 2']).at(-1)!.value?.n).toBeCloseTo(36.03, 9)
+    expect(evaluateLine('molar mass NaCl').value?.n).toBe(58.44)
+  })
+
+  // on its own a formula needs a count or a bracket and two elements; a stored letter keeps the line math
+  it('leaves other lines alone', () => {
+    for (const t of ['NaCl', 'O2', 'V2', 'B2', 'H2', 'NaN', 'molar mass Xx', 'molar mass', 'molar mass 2', 'x2', 'm2']) {
+      expect(shown(t), t).not.toMatch(/g\/mol/)
+    }
+    expect(evaluateSheet(['H = 3', 'H2O']).at(-1)!.display).not.toMatch(/g\/mol/)
+    expect(evaluateSheet(['CO2 = 5', 'CO2']).at(-1)!.display).toBe('5')
+    expect(shown('m2')).toBe('1 m²')
+    expect(shown('H2O -> H2 + O2')).toBe('2 H₂O → 2 H₂ + O₂')
+  })
+
+  it('knows a line in words, so soulver never answers it', () => {
+    expect(isMolarMassInput('molar mass of H2O')).toBe(true)
+    expect(isMolarMassInput('H2O molar mass')).toBe(true)
+    expect(isMolarMassInput('H2O')).toBe(false)
+    expect(isMolarMassInput('the molar mass of water')).toBe(false)
   })
 })

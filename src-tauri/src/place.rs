@@ -106,9 +106,126 @@ pub fn resized(
     (x - room.side, y - room.top)
 }
 
+// how a reference sheet may give to fit beside the bar, as on the mac: an identity sheet scrolls, so it can get
+// shorter; the periodic table keeps its shape, so it scales
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Give {
+    Height(f64),
+    Scale(f64),
+}
+
+// the gap between the bar and a sheet beside it, logical
+pub const SHEET_MARGIN: f64 = 12.0;
+
+impl Area {
+    fn overlaps(&self, other: &Area) -> bool {
+        self.x < other.right() && other.x < self.right() && self.y < other.bottom() && other.y < self.bottom()
+    }
+}
+
+// a sheet where it is now would cover some of the bar, or sit off the bar's monitor
+pub fn needs_moving(sheet: Area, bar: Area, area: Area) -> bool {
+    sheet.overlaps(&bar) || !sheet.overlaps(&area)
+}
+
+// where a reference sheet opens: below the bar, else right, left or above, a margin clear of it and on its work area;
+// whole if it fits on any side, given a little if not, and when nothing fits even so, the side with the most room,
+// pulled onto the work area. physical pixels, y down; the frame it gets, as x, y, width, height
+pub fn beside(area: Area, bar: Area, width: f64, height: f64, margin: f64, give: Give) -> Area {
+    let (w, h) = (width.min(area.width), height.min(area.height));
+    // below, right, left, above: the room each side has
+    let rooms = [
+        (area.width, (area.bottom() - bar.bottom() - margin).max(0.0)),
+        ((area.right() - bar.right() - margin).max(0.0), area.height),
+        ((bar.x - margin - area.x).max(0.0), area.height),
+        (area.width, (bar.y - margin - area.y).max(0.0)),
+    ];
+    let place = |side: usize, w: f64, h: f64| {
+        let (x, y) = match side {
+            0 => (bar.x + (bar.width - w) / 2.0, bar.bottom() + margin),
+            1 => (bar.right() + margin, bar.y),
+            2 => (bar.x - margin - w, bar.y),
+            _ => (bar.x + (bar.width - w) / 2.0, bar.y - margin - h),
+        };
+        let (x, y) = fit(area, x, y, w, h);
+        Area { x, y, width: w, height: h }
+    };
+    if let Some(side) = rooms.iter().position(|&(rw, rh)| w <= rw && h <= rh) {
+        return place(side, w, h);
+    }
+    for (side, &(rw, rh)) in rooms.iter().enumerate() {
+        match give {
+            Give::Height(least) if w <= rw && rh >= least => return place(side, w, rh),
+            Give::Scale(least) if (rw / w).min(rh / h) >= least => {
+                let s = (rw / w).min(rh / h);
+                return place(side, w * s, h * s);
+            }
+            _ => {}
+        }
+    }
+    let share = |&(rw, rh): &(f64, f64)| (rw / w).min(rh / h);
+    let roomiest = (0..4).max_by(|&a, &b| share(&rooms[a]).total_cmp(&share(&rooms[b]))).unwrap_or(0);
+    place(roomiest, w, h)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // the bar where it opens on a 1920 × 1040 work area, and the periodic table's 860 × 520
+    const BAR: Area = Area { x: 620.0, y: 291.0, width: 680.0, height: 72.0 };
+
+    fn clear(sheet: Area, bar: Area, area: Area) {
+        assert!(!sheet.overlaps(&bar), "{sheet:?} covers the bar");
+        assert!(sheet.x >= area.x && sheet.y >= area.y && sheet.right() <= area.right() && sheet.bottom() <= area.bottom(), "{sheet:?} is off the screen");
+    }
+
+    #[test]
+    fn a_sheet_opens_under_the_bar() {
+        let r = beside(PRIMARY, BAR, 860.0, 520.0, 12.0, Give::Scale(0.6));
+        clear(r, BAR, PRIMARY);
+        assert_eq!((r.x, r.y), (530.0, 375.0));
+        assert_eq!((r.width, r.height), (860.0, 520.0));
+    }
+
+    #[test]
+    fn a_low_bar_has_it_beside_or_above() {
+        let low = Area { x: 100.0, y: 900.0, width: 680.0, height: 72.0 };
+        let r = beside(PRIMARY, low, 860.0, 520.0, 12.0, Give::Scale(0.6));
+        clear(r, low, PRIMARY);
+        assert_eq!(r.x, 792.0);
+        let right = Area { x: 1240.0, y: 900.0, ..low };
+        let l = beside(PRIMARY, right, 860.0, 520.0, 12.0, Give::Scale(0.6));
+        clear(l, right, PRIMARY);
+        assert_eq!(l.right(), 1228.0);
+    }
+
+    #[test]
+    fn a_tall_sheet_gets_shorter_and_the_table_smaller() {
+        // 1080p at 150%: 1920 × 1040 physical, the bar 1.5 times as big
+        let bar = Area { x: 450.0, y: 291.0, width: 1020.0, height: 108.0 };
+        let sheet = beside(PRIMARY, bar, 1110.0, 900.0, 18.0, Give::Height(360.0));
+        clear(sheet, bar, PRIMARY);
+        assert_eq!(sheet.height, 1040.0 - 399.0 - 18.0);
+        let table = beside(PRIMARY, bar, 1290.0, 780.0, 18.0, Give::Scale(0.6));
+        clear(table, bar, PRIMARY);
+        assert!((table.width / table.height - 1290.0 / 780.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn with_no_room_anywhere_it_stays_on_the_screen() {
+        let small = Area { x: 0.0, y: 0.0, width: 1000.0, height: 700.0 };
+        let mid = Area { x: 160.0, y: 300.0, width: 680.0, height: 72.0 };
+        let r = beside(small, mid, 860.0, 520.0, 12.0, Give::Height(520.0));
+        assert!(r.x >= 0.0 && r.y >= 0.0 && r.right() <= 1000.0 && r.bottom() <= 700.0);
+    }
+
+    #[test]
+    fn a_sheet_put_clear_of_the_bar_stays() {
+        assert!(needs_moving(Area { x: 600.0, y: 300.0, width: 860.0, height: 520.0 }, BAR, PRIMARY));
+        assert!(!needs_moving(Area { x: 600.0, y: 400.0, width: 860.0, height: 520.0 }, BAR, PRIMARY));
+        assert!(needs_moving(Area { x: 3000.0, y: 400.0, width: 860.0, height: 520.0 }, BAR, PRIMARY));
+    }
 
     #[test]
     fn a_dragged_width_stays_between_the_standard_and_the_monitor() {

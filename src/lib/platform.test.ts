@@ -108,18 +108,19 @@ describe('periodic table on windows', () => {
 describe('identity sheets on windows', () => {
   it('asks the host for a window by the sheet’s id', () => {
     const posted = stubHost('windows')
-    expect(openNativeIdentitySheet(IDENTITY_SHEET)).toBe(true)
-    expect(posted).toEqual([{ type: 'identities', id: 'identities', title: IDENTITY_SHEET.title }])
+    expect(openNativeIdentitySheet({ sheet: IDENTITY_SHEET, section: 4, hint: '' })).toBe(true)
+    expect(posted).toEqual([{ type: 'identities', id: 'identities', title: IDENTITY_SHEET.title, section: 4 }])
   })
 
   it('still goes to the mac window, with its runs drawn out', () => {
     const posted = stubHost()
-    expect(openNativeIdentitySheet(CALCULUS_SHEET)).toBe(true)
+    expect(openNativeIdentitySheet({ sheet: CALCULUS_SHEET, section: 1, hint: '' })).toBe(true)
     expect(posted).toHaveLength(1)
     const message = posted[0] as { type: string; id: string; title: string; sections: { groups: { items: { runs: unknown[]; copy: string }[] }[] }[] }
     expect(message.type).toBe('identities')
     expect(message.id).toBe('calculus')
     expect(message.title).toBe(CALCULUS_SHEET.title)
+    expect((message as unknown as { section: number }).section).toBe(1)
     const first = message.sections[0]!.groups[0]!.items[0]!
     expect(first.copy).toBe('d/dx x^n = n x^(n - 1)')
     expect(first.runs).toContainEqual({ text: 'n', shift: 'sup' })

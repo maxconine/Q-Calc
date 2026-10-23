@@ -1,4 +1,4 @@
-import { chemAnswer, gasConstant } from './chem'
+import { chemAnswer, gasConstant, molarMassAnswer } from './chem'
 import { splitLetters } from './letters'
 import { embedIntegrals, evaluateCalculus, type CalculusResult } from './calculus'
 import { joinDots } from './dots'
@@ -295,7 +295,16 @@ function evaluateLines(lines: SheetInputLine[] | string[], options: EvaluateOpti
       delete quantities.ans
       continue
     }
-    const chem = chemAnswer(trimmedLine, (name) => name in variables || name in quantities || name in functions)
+    const isName = (name: string) => name in variables || name in quantities || name in functions
+    const molar = molarMassAnswer(trimmedLine, isName)
+    if (molar) {
+      lastAns = molar.mass
+      delete measures.ans
+      delete quantities.ans
+      results.push({ raw, kind: 'expression', display: molar.display, value: num(molar.mass) })
+      continue
+    }
+    const chem = chemAnswer(trimmedLine, isName)
     if (chem != null) {
       results.push({ raw, kind: 'expression', display: chem, value: chem ? textVal(chem) : undefined })
       continue

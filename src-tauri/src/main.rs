@@ -298,10 +298,10 @@ fn host(window: WebviewWindow, message: Value) {
                 hide(&window);
             }
         }
-        Some("periodic") if overlay => open_sheet_later(app, &sheet::PERIODIC),
+        Some("periodic") if overlay => open_sheet_later(app, &sheet::PERIODIC, 0),
         Some("identities") if overlay => {
             if let Some(found) = message["id"].as_str().and_then(sheet::identities) {
-                open_sheet_later(app, found);
+                open_sheet_later(app, found, message["section"].as_u64().unwrap_or(0));
             }
         }
         // a periodic table tile: what it holds goes in the bar, which opens first if it's put away
@@ -713,20 +713,43 @@ fn hide(window: &WebviewWindow) {
 }
 
 // off the event loop's thread, as settings is: a window built on it never finishes
-fn open_sheet_later(app: &AppHandle, which: &'static sheet::Sheet) {
+fn open_sheet_later(app: &AppHandle, which: &'static sheet::Sheet, section: u64) {
     let app = app.clone();
-    thread::spawn(move || open_sheet(&app, which));
+    thread::spawn(move || open_sheet(&app, which, section));
+}
+
+// the bar's frame, its monitor's work area and that monitor's scale, while it's up, for a sheet to open clear of it
+fn bar_spot(app: &AppHandle) -> Option<(Area, Area, f64)> {
+    let main = app.get_webview_window("main").filter(|w| w.is_visible().unwrap_or(false))?;
+    let (position, size) = (main.outer_position().ok()?, main.outer_size().ok()?);
+    let (_, area, scale) = describe(&main.current_monitor().ok().flatten()?);
+    let bar = Area { x: position.x as f64, y: position.y as f64, width: size.width as f64, height: size.height as f64 };
+    Some((bar, area, scale))
+}
+
+// a sheet that would cover the bar, or is off its monitor, moves beside it; one put somewhere clear stays there
+fn keep_clear_of_bar(app: &AppHandle, window: &WebviewWindow, which: &sheet::Sheet) {
+    let Some((bar, area, scale)) = bar_spot(app) else { return };
+    let (Ok(position), Ok(size)) = (window.outer_position(), window.outer_size()) else { return };
+    let now = Area { x: position.x as f64, y: position.y as f64, width: size.width as f64, height: size.height as f64 };
+    if place::needs_moving(now, bar, area) {
+        let r = place::beside(area, bar, now.width, now.height, place::SHEET_MARGIN * scale, which.give(scale));
+        set_frame(window, (r.x, r.y), (r.width, r.height));
+    }
 }
 
 // a reference sheet in its own window, as on the mac: always on top, never taking the keys (so the bar keeps its caret
 // and stays up while it's clicked), and a second open brings the same one forward. it stays when the bar is put away
-fn open_sheet(app: &AppHandle, which: &sheet::Sheet) {
+fn open_sheet(app: &AppHandle, which: &sheet::Sheet, section: u64) {
     let label = which.label();
     with(app, |s| {
         s.sheets.retain(|l| l != &label);
         s.sheets.push(label.clone());
     });
     if let Some(window) = app.get_webview_window(&label) {
+        // asked for again, maybe at another part: the page scrolls there
+        let _ = window.eval(format!("window.__qcalcSection && window.__qcalcSection({section});"));
+        keep_clear_of_bar(app, &window, which);
         let _ = window.show();
         frame::raise_quietly(&window);
         keep_bar_on_top(app);
@@ -735,7 +758,7 @@ fn open_sheet(app: &AppHandle, which: &sheet::Sheet) {
     let theme = with(app, |s| window_theme(&s.store.settings.theme));
     let shown = app.get_webview_window("main").and_then(|w| w.theme().ok()).unwrap_or(Theme::Light);
     let earlier = with(app, |s| s.sheets.len().saturating_sub(1)) as f64;
-    let built = WebviewWindowBuilder::new(app, &label, WebviewUrl::App(which.url().into()))
+    let built = WebviewWindowBuilder::new(app, &label, WebviewUrl::App(which.url(section).into()))
         .title(which.title)
         .inner_size(which.size.0, which.size.1)
         .min_inner_size(which.min.0, which.min.1)
@@ -776,8 +799,13 @@ fn open_sheet(app: &AppHandle, which: &sheet::Sheet) {
         }
         _ => {}
     });
-    // centred on the screen the bar is on, each further sheet a little down and right of the one before
-    if let Some(monitor) = monitor_at_cursor(&window) {
+    // beside the bar, clear of it, while it's up; else centred on the screen the cursor is on, each further sheet a
+    // little down and right of the one before
+    if let Some((bar, area, scale)) = bar_spot(app) {
+        let (w, h) = (which.size.0 * scale, which.size.1 * scale);
+        let r = place::beside(area, bar, w, h, place::SHEET_MARGIN * scale, which.give(scale));
+        set_frame(&window, (r.x, r.y), (r.width, r.height));
+    } else if let Some(monitor) = monitor_at_cursor(&window) {
         let (_, area, scale) = describe(&monitor);
         let (w, h) = (which.size.0 * scale, which.size.1 * scale);
         let step = sheet::CASCADE * scale * earlier;

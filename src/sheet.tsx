@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useLayoutEffect, useRef } from 'react'
+import { StrictMode, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './windows.css'
@@ -44,10 +44,19 @@ function SheetPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
-  const which = sheetFromSearch(window.location.search)
+  const [which] = useState(() => sheetFromSearch(window.location.search))
+  const [section, setSection] = useState(which?.kind === 'identities' ? which.section : 0)
+  // asked for again at another part while it's open: the shell says which, and the sheet scrolls there
+  useEffect(() => {
+    const w = window as Window & { __qcalcSection?: (n: number) => void }
+    w.__qcalcSection = (n) => setSection(n)
+    return () => {
+      delete w.__qcalcSection
+    }
+  }, [])
   if (which?.kind === 'periodic') return <PeriodicWindow />
   const sheet = which?.kind === 'identities' ? identitySheetById(which.id) : null
-  return sheet ? <IdentityCard windowed sheet={sheet} onClose={close} /> : null
+  return sheet ? <IdentityCard windowed sheet={sheet} section={section} onClose={close} /> : null
 }
 
 document.documentElement.classList.add('sheet-window')

@@ -466,9 +466,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             case "eval":
                 pushSoulverResult(soulverPayload(from: dict))
             case "periodic":
-                periodic.show(PeriodicElement.list(from: dict["elements"]))
+                periodic.show(PeriodicElement.list(from: dict["elements"]), bar: barSpot())
             case "identities":
-                if let sheet = IdentitySheet(dict) { identityWindow(sheet.id).show(sheet) }
+                if let sheet = IdentitySheet(dict) {
+                    identityWindow(sheet.id).show(sheet, section: (dict["section"] as? NSNumber)?.intValue ?? 0, bar: barSpot())
+                }
             case "escapeLayer":
                 pageTakesEscape = dict["on"] as? Bool ?? false
             case "gameFullscreen":
@@ -489,6 +491,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 break
             }
         }
+    }
+
+    // the bar's frame and its screen's visible frame, for a reference sheet to open clear of it
+    private func barSpot() -> (frame: NSRect, visible: NSRect)? {
+        guard let panel, panel.isVisible, let screen = panel.screen ?? NSScreen.main else { return nil }
+        return (panel.frame, screen.visibleFrame)
     }
 
     private func identityWindow(_ id: String) -> IdentityWindowController {

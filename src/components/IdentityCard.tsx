@@ -26,17 +26,34 @@ function IdentityText({ show }: { show: string }) {
 
 // the browser build's stand-in for the mac app's identity sheet window; a click copies the line. `windowed`, it
 // fills a window of its own (the windows shell's), which has its own title bar to move and close it
-export function IdentityCard({ sheet, onClose, windowed = false }: { sheet: IdentitySheet; onClose: () => void; windowed?: boolean }) {
+export function IdentityCard({
+  sheet,
+  section = 0,
+  onClose,
+  windowed = false,
+}: {
+  sheet: IdentitySheet
+  section?: number
+  onClose: () => void
+  windowed?: boolean
+}) {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [copied, setCopied] = useState<Identity | null>(null)
   const copiedTimer = useRef(0)
   const dragStart = useRef<{ x: number; y: number; from: { x: number; y: number } } | null>(null)
+  const body = useRef<HTMLDivElement>(null)
   useEffect(() => () => window.clearTimeout(copiedTimer.current), [])
+  // opened at a part (`idt summation`): that section's title at the top of the scroll
+  useEffect(() => {
+    const box = body.current
+    const at = box?.children[section] as HTMLElement | undefined
+    if (box && at) box.scrollTop += at.getBoundingClientRect().top - box.getBoundingClientRect().top
+  }, [sheet, section])
 
   const sections = useMemo(
     () =>
       sheet.sections.map((s) => (
-        <section key={s.title} className="identity-section">
+        <section key={s.title} className={`identity-section${s.wide ? ' wide' : ''}`}>
           <h2 className="identity-section-title">{s.title}</h2>
           <div className="identity-groups">
             {s.groups.map((g) => (
@@ -58,7 +75,7 @@ export function IdentityCard({ sheet, onClose, windowed = false }: { sheet: Iden
                     <span className="identity-math">
                       {item.lead?.map((cell, i) => (
                         <span key={i} className="identity-lead" style={{ width: LEAD_WIDTHS[i] }}>
-                          {cell}
+                          <IdentityText show={cell} />
                         </span>
                       ))}
                       <IdentityText show={item.show} />
@@ -114,7 +131,9 @@ export function IdentityCard({ sheet, onClose, windowed = false }: { sheet: Iden
           {copied ? '✓ copied' : 'click to copy'}
         </span>
       </div>
-      <div className="identity-body">{sections}</div>
+      <div ref={body} className="identity-body">
+        {sections}
+      </div>
     </div>
   )
 }
