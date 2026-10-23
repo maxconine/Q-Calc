@@ -1,7 +1,7 @@
 {"fn":"derivativeAt","args":[{"$fn":"anon"},1],"out":{"value":0.5403023058681385,"err":9.992007221626409e-16},"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"gaussKronrod","args":[{"$fn":"anon"},0,1],"out":{"value":0.27777777777840895,"err":9.228024224133091e-13,"l1":0.27777777777840895},"src":"src/engine/calcNumeric.test.ts"}
-{"fn":"integrate","args":[{"$fn":"anon"},0,1],"out":{"value":0.3333333333333,"err":3.6627463319610233e-14},"nondet":true,"now":1792752363197,"src":"src/engine/calcNumeric.test.ts"}
-{"fn":"integrate","args":[{"$fn":"anon"},0,{"$f":"Infinity"}],"out":{"value":1,"err":4e-16},"nondet":true,"now":1792752363220,"src":"src/engine/calcNumeric.test.ts"}
+{"fn":"integrate","args":[{"$fn":"anon"},0,1],"out":{"value":0.3333333333333,"err":3.6627463319610233e-14},"nondet":true,"now":1792768568770,"src":"src/engine/calcNumeric.test.ts"}
+{"fn":"integrate","args":[{"$fn":"anon"},0,{"$f":"Infinity"}],"out":{"value":1,"err":4e-16},"nondet":true,"now":1792768568779,"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"integrate","args":[{"$fn":"anon"},1,0],"out":{"value":-0.5,"err":3.387439247522204e-15},"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"integrate","args":[{"$fn":"anon"},1,{"$f":"Infinity"}],"out":null,"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"integrate","args":[{"$fn":"anon"},2,2],"out":{"value":0,"err":0},"src":"src/engine/calcNumeric.test.ts"}
@@ -15,6 +15,6 @@
 {"fn":"justified","args":[2.0000000003,1e-9],"out":2,"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"justified","args":[3e-18,1e-17,1],"out":0,"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"justified","args":[{"$f":"NaN"},0],"out":null,"src":"src/engine/calcNumeric.test.ts"}
-{"fn":"limit","args":[{"$fn":"anon"},0,0],"out":{"value":1,"err":0},"nondet":true,"now":1792752363265,"src":"src/engine/calcNumeric.test.ts"}
-{"fn":"limit","args":[{"$fn":"anon"},0,1],"out":{"value":1,"err":0},"nondet":true,"now":1792752363300,"src":"src/engine/calcNumeric.test.ts"}
+{"fn":"limit","args":[{"$fn":"anon"},0,0],"out":{"value":1,"err":0},"nondet":true,"now":1792768568803,"src":"src/engine/calcNumeric.test.ts"}
+{"fn":"limit","args":[{"$fn":"anon"},0,1],"out":{"value":1,"err":0},"nondet":true,"now":1792768568806,"src":"src/engine/calcNumeric.test.ts"}
 {"fn":"limit","args":[{"$fn":"anon"},{"$f":"Infinity"},0],"out":{"value":2.718281828459,"err":4.4853010194856324e-14},"src":"src/engine/calcNumeric.test.ts"}

@@ -21,7 +21,11 @@ pub fn infer_parens(expr: &str) -> ParenFill {
     }
     let leading = (-min_depth) as usize;
     let trailing = (depth + leading as i64) as usize;
-    ParenFill { leading, trailing, filled: format!("{}{expr}{}", "(".repeat(leading), ")".repeat(trailing)) }
+    ParenFill {
+        leading,
+        trailing,
+        filled: format!("{}{expr}{}", "(".repeat(leading), ")".repeat(trailing)),
+    }
 }
 
 pub fn fill_parens(expr: &str) -> String {

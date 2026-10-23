@@ -103,11 +103,11 @@
       "nondet": 0
     },
     "eval.arithmetic": {
-      "records": 6947,
+      "records": 6911,
       "nondet": 0
     },
     "eval.blank": {
-      "records": 1444,
+      "records": 1317,
       "nondet": 0
     },
     "eval.calculus": {
@@ -119,15 +119,15 @@
       "nondet": 0
     },
     "eval.functions": {
-      "records": 4289,
+      "records": 4179,
       "nondet": 8
     },
     "eval.latex": {
-      "records": 214,
+      "records": 222,
       "nondet": 0
     },
     "eval.matrix": {
-      "records": 157,
+      "records": 422,
       "nondet": 0
     },
     "eval.measure": {

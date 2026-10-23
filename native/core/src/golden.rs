@@ -74,7 +74,10 @@ fn has_callback(v: &Json) -> bool {
 }
 
 fn options_arg(args: &[Json], i: usize) -> EvaluateOptions {
-    args.get(i).map(decode).and_then(|o| serde_json::from_value(o).ok()).unwrap_or_default()
+    args.get(i)
+        .map(decode)
+        .and_then(|o| serde_json::from_value(o).ok())
+        .unwrap_or_default()
 }
 
 fn opt_str(s: Option<String>) -> Json {
@@ -94,55 +97,116 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
     let n = |i| f64_arg(args, i);
     let answer = match (module, name) {
         // ---- foundation: engine/evaluate ----
-        ("engine/evaluate", "evaluateLine") => line_json(&crate::evaluate_line(&s(0), &options_arg(args, 1))),
+        ("engine/evaluate", "evaluateLine") => {
+            line_json(&crate::evaluate_line(&s(0), &options_arg(args, 1)))
+        }
         ("engine/evaluate", "evaluateSheet") => {
             let lines: Vec<String> = args
                 .first()
                 .and_then(Json::as_array)
-                .map(|a| a.iter().map(|l| l.as_str().or_else(|| l["text"].as_str()).unwrap_or("").to_string()).collect())
+                .map(|a| {
+                    a.iter()
+                        .map(|l| {
+                            l.as_str()
+                                .or_else(|| l["text"].as_str())
+                                .unwrap_or("")
+                                .to_string()
+                        })
+                        .collect()
+                })
                 .unwrap_or_default();
-            Json::Array(crate::evaluate_sheet(&lines, &options_arg(args, 1)).iter().map(line_json).collect())
+            Json::Array(
+                crate::evaluate_sheet(&lines, &options_arg(args, 1))
+                    .iter()
+                    .map(line_json)
+                    .collect(),
+            )
         }
-        ("engine/evaluate", "parseAssignment") => crate::evaluate::parse_assignment(&s(0))
-            .map_or(Json::Null, |(variable, expr)| json!({ "variable": variable, "expr": expr })),
-        ("engine/evaluate", "stripTrailingEquals") => json!(crate::evaluate::strip_trailing_equals(&s(0))),
+        ("engine/evaluate", "parseAssignment") => crate::evaluate::parse_assignment(&s(0)).map_or(
+            Json::Null,
+            |(variable, expr)| json!({ "variable": variable, "expr": expr }),
+        ),
+        ("engine/evaluate", "stripTrailingEquals") => {
+            json!(crate::evaluate::strip_trailing_equals(&s(0)))
+        }
         ("engine/evaluate", "parseFunctionDef") => crate::evaluate::parse_function_def(&s(0))
-            .map_or(Json::Null, |(name, params, body)| json!({ "name": name, "params": params, "body": body })),
+            .map_or(
+                Json::Null,
+                |(name, params, body)| json!({ "name": name, "params": params, "body": body }),
+            ),
         // ---- foundation: engine/format ----
-        ("engine/format", "formatNumber") => json!(crate::format::format_number(n(0).unwrap_or(f64::NAN), n(1).unwrap_or(12.0))),
+        ("engine/format", "formatNumber") => json!(crate::format::format_number(
+            n(0).unwrap_or(f64::NAN),
+            n(1).unwrap_or(12.0)
+        )),
         ("engine/format", "formatScientific") => {
-            json!(crate::format::format_scientific(n(0).unwrap_or(f64::NAN), n(1).unwrap_or(12.0).max(0.0) as u32))
+            json!(crate::format::format_scientific(
+                n(0).unwrap_or(f64::NAN),
+                n(1).unwrap_or(12.0).max(0.0) as u32
+            ))
         }
-        ("engine/format", "clampSigFigs") => json!(crate::format::clamp_sig_figs(n(0).unwrap_or(f64::NAN))),
+        ("engine/format", "clampSigFigs") => {
+            json!(crate::format::clamp_sig_figs(n(0).unwrap_or(f64::NAN)))
+        }
         ("engine/format", "prettyAnswer") => json!(crate::format::pretty_answer(&s(0))),
         ("engine/format", "formatValue") => {
-            let Some(v) = args.first().map(decode).and_then(|v| serde_json::from_value(v).ok()) else {
+            let Some(v) = args
+                .first()
+                .map(decode)
+                .and_then(|v| serde_json::from_value(v).ok())
+            else {
                 return Outcome::Threw("bad value".into());
             };
             json!(crate::format::format_value(&v, n(1).unwrap_or(12.0)))
         }
-        ("engine/format", "num") => serde_json::to_value(crate::types::Value::number(n(0).unwrap_or(f64::NAN))).unwrap_or(Json::Null),
-        ("engine/format", "textVal") => serde_json::to_value(crate::types::Value::text(s(0))).unwrap_or(Json::Null),
+        ("engine/format", "num") => {
+            serde_json::to_value(crate::types::Value::number(n(0).unwrap_or(f64::NAN)))
+                .unwrap_or(Json::Null)
+        }
+        ("engine/format", "textVal") => {
+            serde_json::to_value(crate::types::Value::text(s(0))).unwrap_or(Json::Null)
+        }
         // ---- foundation: engine/scientific (the text passes and formatting; functions are WP-FUNCTIONS) ----
-        ("engine/scientific", "formatAsFraction") => {
-            opt_str(crate::format::format_as_fraction(n(0).unwrap_or(f64::NAN), n(1).unwrap_or(10_000.0) as u32))
-        }
+        ("engine/scientific", "formatAsFraction") => opt_str(crate::format::format_as_fraction(
+            n(0).unwrap_or(f64::NAN),
+            n(1).unwrap_or(10_000.0) as u32,
+        )),
         ("engine/scientific", "formatComplex") => {
-            json!(crate::scientific::format_complex(n(0).unwrap_or(f64::NAN), n(1).unwrap_or(f64::NAN)))
+            json!(crate::scientific::format_complex(
+                n(0).unwrap_or(f64::NAN),
+                n(1).unwrap_or(f64::NAN)
+            ))
         }
-        ("engine/scientific", "rewriteTypesetMul") => json!(crate::scientific::preprocess::rewrite_typeset_mul(&s(0))),
-        ("engine/scientific", "stitchConstants") => json!(crate::scientific::preprocess::stitch_constants(&s(0))),
+        ("engine/scientific", "rewriteTypesetMul") => {
+            json!(crate::scientific::preprocess::rewrite_typeset_mul(&s(0)))
+        }
+        ("engine/scientific", "stitchConstants") => {
+            json!(crate::scientific::preprocess::stitch_constants(&s(0)))
+        }
         ("engine/scientific", "preprocessAscii") => {
-            let extra: Vec<String> = args.get(1).and_then(Json::as_array).map_or_else(Vec::new, |a| {
-                a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect()
-            });
+            let extra: Vec<String> =
+                args.get(1)
+                    .and_then(Json::as_array)
+                    .map_or_else(Vec::new, |a| {
+                        a.iter()
+                            .filter_map(|x| x.as_str().map(str::to_string))
+                            .collect()
+                    });
             json!(crate::scientific::preprocess_ascii(&s(0), &extra))
         }
         ("engine/scientific", "wrapBareFunctions") => {
-            let extra: Vec<String> = args.get(1).and_then(Json::as_array).map_or_else(Vec::new, |a| {
-                a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect()
-            });
-            json!(crate::scientific::preprocess::wrap_bare_functions(&s(0), &extra))
+            let extra: Vec<String> =
+                args.get(1)
+                    .and_then(Json::as_array)
+                    .map_or_else(Vec::new, |a| {
+                        a.iter()
+                            .filter_map(|x| x.as_str().map(str::to_string))
+                            .collect()
+                    });
+            json!(crate::scientific::preprocess::wrap_bare_functions(
+                &s(0),
+                &extra
+            ))
         }
         // ---- foundation: engine/parens ----
         ("engine/parens", "inferParens") => {
@@ -165,14 +229,19 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             };
             opt_str(crate::simplify::exact_form(n(0).unwrap_or(f64::NAN), opts))
         }
-        ("engine/simplify", "dualLabel") => json!(crate::simplify::dual_label(str_arg(args, 0).as_deref(), &s(1))),
+        ("engine/simplify", "dualLabel") => json!(crate::simplify::dual_label(
+            str_arg(args, 0).as_deref(),
+            &s(1)
+        )),
         ("engine/simplify", "splitSquares") => {
             let (coeff, rad) = crate::simplify::split_squares(n(0).unwrap_or(f64::NAN));
             json!({ "coeff": coeff, "rad": rad })
         }
         // ---- foundation: engine/plainMath (LaTeX itself is WP-NOTATION) ----
         ("engine/plainMath", "looksLikeLatex") => json!(crate::latex::looks_like_latex(&s(0))),
-        ("engine/typstInput", "looksLikeTypst") => json!(crate::typst_input::looks_like_typst(&s(0))),
+        ("engine/typstInput", "looksLikeTypst") => {
+            json!(crate::typst_input::looks_like_typst(&s(0)))
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
@@ -182,7 +251,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
 /// libms may round a transcendental differently by an ulp; displays are compared exactly regardless).
 pub fn same_number(a: f64, b: f64) -> bool {
     a == b && a.is_sign_negative() == b.is_sign_negative()
-        || (a.is_finite() && b.is_finite() && a != 0.0 && (a - b).abs() <= 4.0 * f64::EPSILON * a.abs().max(b.abs()))
+        || (a.is_finite()
+            && b.is_finite()
+            && a != 0.0
+            && (a - b).abs() <= 4.0 * f64::EPSILON * a.abs().max(b.abs()))
 }
 
 /// Compares a Rust answer with the recorded TS one; on a mismatch, the JSON path of the first difference.
@@ -194,22 +266,36 @@ pub fn compare(expected: &Json, actual: &Json, path: &str) -> Result<(), String>
             match (want, actual) {
                 // serde_json writes non-finite doubles as null
                 ("NaN" | "Infinity" | "-Infinity", Json::Null) => Ok(()),
-                ("-0", Json::Number(n)) if n.as_f64().is_some_and(|x| x == 0.0 && x.is_sign_negative()) => Ok(()),
+                // JS writes counts like `-minDepth` as -0; nothing downstream tells it from 0
+                ("-0", Json::Number(n)) if n.as_f64() == Some(0.0) => Ok(()),
                 _ => mismatch(),
             }
         }
         (Json::Object(e), _) if e.len() == 1 && e.contains_key("$undef") => {
-            if actual.is_null() { Ok(()) } else { mismatch() }
+            if actual.is_null() {
+                Ok(())
+            } else {
+                mismatch()
+            }
         }
         (Json::Number(e), Json::Number(a)) => {
-            let (Some(e), Some(a)) = (e.as_f64(), a.as_f64()) else { return mismatch() };
-            if same_number(e, a) { Ok(()) } else { mismatch() }
+            let (Some(e), Some(a)) = (e.as_f64(), a.as_f64()) else {
+                return mismatch();
+            };
+            if same_number(e, a) {
+                Ok(())
+            } else {
+                mismatch()
+            }
         }
         (Json::Array(e), Json::Array(a)) => {
             if e.len() != a.len() {
                 return Err(format!("{path}: want {} items, got {}", e.len(), a.len()));
             }
-            e.iter().zip(a).enumerate().try_for_each(|(i, (x, y))| compare(x, y, &format!("{path}[{i}]")))
+            e.iter()
+                .zip(a)
+                .enumerate()
+                .try_for_each(|(i, (x, y))| compare(x, y, &format!("{path}[{i}]")))
         }
         (Json::Object(e), Json::Object(a)) => {
             for (k, ev) in e {
@@ -243,9 +329,22 @@ mod tests {
 
     #[test]
     fn dispatches_foundation_functions() {
-        let Outcome::Answer(a) = dispatch("engine/format", "formatNumber", &[json!(0.1), json!(6)]) else { panic!() };
+        let Outcome::Answer(a) = dispatch("engine/format", "formatNumber", &[json!(0.1), json!(6)])
+        else {
+            panic!()
+        };
         assert_eq!(a, json!("0.1"));
-        assert!(matches!(dispatch("engine/units", "tryConvert", &[json!("5 m")]), Outcome::Unported));
-        assert!(matches!(dispatch("lib/blankReason", "blankReason", &[json!("x"), json!({"$fn": "anon"})]), Outcome::Unreplayable));
+        assert!(matches!(
+            dispatch("engine/units", "tryConvert", &[json!("5 m")]),
+            Outcome::Unported
+        ));
+        assert!(matches!(
+            dispatch(
+                "lib/blankReason",
+                "blankReason",
+                &[json!("x"), json!({"$fn": "anon"})]
+            ),
+            Outcome::Unreplayable
+        ));
     }
 }

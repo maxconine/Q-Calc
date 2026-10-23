@@ -12,7 +12,11 @@ use crate::jsre::{self, Lazy, Regex};
 pub fn names_pattern(names: &[String]) -> String {
     let mut sorted: Vec<&String> = names.iter().collect();
     sorted.sort_by_key(|n| std::cmp::Reverse(n.chars().count()));
-    sorted.iter().map(|n| fancy_regex::escape(n).into_owned()).collect::<Vec<_>>().join("|")
+    sorted
+        .iter()
+        .map(|n| fancy_regex::escape(n).into_owned())
+        .collect::<Vec<_>>()
+        .join("|")
 }
 
 fn js(pattern: &str, flags: &str) -> Regex {
@@ -33,13 +37,24 @@ fn g<'a>(c: &'a jsre::Caps<'a>, i: usize) -> &'a str {
 
 const WRAP_SKIP: &[&str] = &["pi", "tau", "inf", "infinity", "ans", "e", "mod", "catalan"];
 const ROOTS: &[&str] = &["sqrt", "cbrt", "nthroot"];
-const BARE_STOP: &[&str] = &["in", "to", "as", "of", "per", "and", "or", "xor", "not", "mod", "at", "for", "from", "over"];
+const BARE_STOP: &[&str] = &[
+    "in", "to", "as", "of", "per", "and", "or", "xor", "not", "mod", "at", "for", "from", "over",
+];
 const NOT_GLUED: &[&str] = &["mod", "re", "im", "pi", "tau", "inf", "infinity", "ans"];
 
 static GLUED_RE: Lazy = Lazy::new(|| {
-    let mut fns: Vec<&str> = NAMES.split('|').filter(|n| !NOT_GLUED.contains(n)).collect();
+    let mut fns: Vec<&str> = NAMES
+        .split('|')
+        .filter(|n| !NOT_GLUED.contains(n))
+        .collect();
     fns.sort_by_key(|n| std::cmp::Reverse(n.len()));
-    js(&format!(r"(?<![A-Za-z_])({})([A-Za-z]|theta|θ)(?![A-Za-z0-9_(])", fns.join("|")), "")
+    js(
+        &format!(
+            r"(?<![A-Za-z_])({})([A-Za-z]|theta|θ)(?![A-Za-z0-9_(])",
+            fns.join("|")
+        ),
+        "",
+    )
 });
 
 /// `logx` and `sinθ` mean log x and sin θ. x, y, z and θ always split; another letter only once it's defined,
@@ -62,7 +77,8 @@ struct Callable {
 
 /// Cached per user-function list, as in the TS.
 fn callable_names(extra: &[String]) -> std::sync::Arc<Callable> {
-    static CACHE: LazyLock<Mutex<HashMap<String, std::sync::Arc<Callable>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+    static CACHE: LazyLock<Mutex<HashMap<String, std::sync::Arc<Callable>>>> =
+        LazyLock::new(|| Mutex::new(HashMap::new()));
     let key = extra.join("|");
     if let Ok(cache) = CACHE.lock()
         && let Some(c) = cache.get(&key)
@@ -76,7 +92,10 @@ fn callable_names(extra: &[String]) -> std::sync::Arc<Callable> {
         .filter(|n| !WRAP_SKIP.contains(&n.to_lowercase().as_str()))
         .collect();
     names.sort_by_key(|n| std::cmp::Reverse(n.chars().count()));
-    let implicit = js(&format!(r"(\d)(\s*)({})(?![A-Za-z_])", names.join("|")), "i");
+    let implicit = js(
+        &format!(r"(\d)(\s*)({})(?![A-Za-z_])", names.join("|")),
+        "i",
+    );
     let c = std::sync::Arc::new(Callable { names, implicit });
     if let Ok(mut cache) = CACHE.lock() {
         if cache.len() > 64 {
@@ -89,10 +108,17 @@ fn callable_names(extra: &[String]) -> std::sync::Arc<Callable> {
 
 /// The argument of a bare function call (`sin 30`, `sin 2pi`); a power stays inside, so `log 10^3` is 3.
 static BARE_ATOM_RE: Lazy = Lazy::new(|| {
-    js(r"^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*", "i")
+    js(
+        r"^(?:pi|tau|e|\d+(?:\.\d+)?(?:e[+-]?\d+)?(?:\*(?:pi|tau|\(pi\)|\(tau\))(?![A-Za-z0-9_]))?)(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*",
+        "i",
+    )
 });
-static BARE_WORD_RE: Lazy =
-    Lazy::new(|| js(r"^([A-Za-z][A-Za-z0-9_]*)(?![A-Za-z0-9_(])(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*", ""));
+static BARE_WORD_RE: Lazy = Lazy::new(|| {
+    js(
+        r"^([A-Za-z][A-Za-z0-9_]*)(?![A-Za-z0-9_(])(?:\s*\^\s*(?:-?\d+(?:\.\d+)?(?![\d.])|\([^()]*\)))*",
+        "",
+    )
+});
 
 fn is_named(word: &str, names: &[String]) -> bool {
     let lower = word.to_lowercase();
@@ -105,7 +131,11 @@ fn is_word_char(c: char) -> bool {
 
 fn starts_with_ci(rest: &[char], name: &str) -> bool {
     let n: Vec<char> = name.chars().collect();
-    rest.len() >= n.len() && rest.iter().zip(&n).all(|(a, b)| a.to_lowercase().eq(b.to_lowercase()))
+    rest.len() >= n.len()
+        && rest
+            .iter()
+            .zip(&n)
+            .all(|(a, b)| a.to_lowercase().eq(b.to_lowercase()))
 }
 
 fn first_match_len(re: &Regex, s: &str) -> usize {
@@ -120,7 +150,9 @@ pub fn wrap_bare_functions(expr: &str, extra: &[String]) -> String {
     let callable = callable_names(extra);
     let names = &callable.names;
     let cs: Vec<char> = expr.chars().collect();
-    let text = |from: usize, to: usize| -> String { cs[from.min(cs.len())..to.min(cs.len())].iter().collect() };
+    let text = |from: usize, to: usize| -> String {
+        cs[from.min(cs.len())..to.min(cs.len())].iter().collect()
+    };
     let mut out = String::new();
     let mut i = 0;
     while i < cs.len() {
@@ -130,7 +162,10 @@ pub fn wrap_bare_functions(expr: &str, extra: &[String]) -> String {
             let rest = &cs[i..];
             let found = names.iter().find(|n| {
                 let len = n.chars().count();
-                starts_with_ci(rest, n) && rest.get(len).is_none_or(|c| !(c.is_ascii_alphabetic() || *c == '_'))
+                starts_with_ci(rest, n)
+                    && rest
+                        .get(len)
+                        .is_none_or(|c| !(c.is_ascii_alphabetic() || *c == '_'))
             });
             if let Some(name) = found {
                 let len = name.chars().count();
@@ -231,7 +266,9 @@ fn rewrite_percent_add(expr: &str) -> String {
     let mut s = expr.to_string();
     let mut at = 0;
     while at <= s.len() {
-        let Ok(Some(c)) = TERM.captures_from_pos(s.as_str(), at) else { break };
+        let Ok(Some(c)) = TERM.captures_from_pos(s.as_str(), at) else {
+            break;
+        };
         let Some(m) = c.get(0) else { break };
         let (start_m, end_m) = (m.start(), m.end());
         let start = group_start(&s, start_m);
@@ -273,7 +310,15 @@ fn rewrite_inverse_power(expr: &str) -> String {
     static RES: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
         INVERSE_POWER_FNS
             .iter()
-            .map(|(f, inv)| (js(&format!(r"(?<![A-Za-z]){f}\s*(?:\^\s*(?:-1|\(\s*-1\s*\))|⁻¹)"), "i"), *inv))
+            .map(|(f, inv)| {
+                (
+                    js(
+                        &format!(r"(?<![A-Za-z]){f}\s*(?:\^\s*(?:-1|\(\s*-1\s*\))|⁻¹)"),
+                        "i",
+                    ),
+                    *inv,
+                )
+            })
             .collect()
     });
     let mut s = expr.to_string();
@@ -304,20 +349,44 @@ fn closing(s: &str, open: usize) -> Option<usize> {
 /// `sin^2(x)`, `tan²(x)`, `ln^2(x)`: the function's answer to that power, as written in textbooks.
 fn rewrite_function_power(expr: &str) -> String {
     static BARE: Lazy = Lazy::new(|| {
-        js(&format!(r"(?<![A-Za-z])({POWER_FNS})\s*\^\s*(?:(\d+)|\(\s*(\d+)\s*\))\s+(\d+(?:\.\d+)?|pi|[A-Za-z])(?![A-Za-z0-9_.(])"), "i")
+        js(
+            &format!(
+                r"(?<![A-Za-z])({POWER_FNS})\s*\^\s*(?:(\d+)|\(\s*(\d+)\s*\))\s+(\d+(?:\.\d+)?|pi|[A-Za-z])(?![A-Za-z0-9_.(])"
+            ),
+            "i",
+        )
     });
-    static CALL: Lazy = Lazy::new(|| js(&format!(r"(?<![A-Za-z])({POWER_FNS})\s*\^\s*(?:(\d+)|\(\s*(\d+)\s*\))\s*\("), "i"));
+    static CALL: Lazy = Lazy::new(|| {
+        js(
+            &format!(r"(?<![A-Za-z])({POWER_FNS})\s*\^\s*(?:(\d+)|\(\s*(\d+)\s*\))\s*\("),
+            "i",
+        )
+    });
     let mut s = replace(&BARE, expr, |c| {
         let n = if c.get(2).is_some() { g(c, 2) } else { g(c, 3) };
         format!("({}({}))^{n}", g(c, 1), g(c, 4))
     });
     for _ in 0..20 {
-        let Ok(Some(c)) = CALL.captures(s.as_str()) else { break };
+        let Ok(Some(c)) = CALL.captures(s.as_str()) else {
+            break;
+        };
         let Some(m) = c.get(0) else { break };
         let open = m.end() - 1;
-        let Some(close) = closing(&s, open) else { break };
-        let n = if c.get(2).is_some() { g(&c, 2) } else { g(&c, 3) };
-        s = format!("{}({}{})^{n}{}", &s[..m.start()], g(&c, 1), &s[open..=close], &s[close + 1..]);
+        let Some(close) = closing(&s, open) else {
+            break;
+        };
+        let n = if c.get(2).is_some() {
+            g(&c, 2)
+        } else {
+            g(&c, 3)
+        };
+        s = format!(
+            "{}({}{})^{n}{}",
+            &s[..m.start()],
+            g(&c, 1),
+            &s[open..=close],
+            &s[close + 1..]
+        );
     }
     s
 }
@@ -325,7 +394,10 @@ fn rewrite_function_power(expr: &str) -> String {
 /// `sin(pi/6 rad)`: the unit is for the whole argument, not just the 6 it sits beside.
 fn wrap_angle_argument(expr: &str) -> String {
     static RE: Lazy = Lazy::new(|| {
-        js(r"(?<![A-Za-z])(sin|cos|tan|csc|sec|cot)\(\s*([^()]*?[/])([^()]*?)\s+(rad|rads|radian|radians|deg|degs|degree|degrees)\s*\)", "i")
+        js(
+            r"(?<![A-Za-z])(sin|cos|tan|csc|sec|cot)\(\s*([^()]*?[/])([^()]*?)\s+(rad|rads|radian|radians|deg|degs|degree|degrees)\s*\)",
+            "i",
+        )
     });
     static CONSTS: Lazy = Lazy::new(|| js(r"\b(?:pi|tau|e)\b", "i"));
     static LETTER: Lazy = Lazy::new(|| js(r"[A-Za-z]", ""));
@@ -351,12 +423,18 @@ fn lower_calls(expr: &str, extra: &[String]) -> String {
         if extra.iter().any(|e| e == m) {
             m.to_string()
         } else {
-            CANONICAL.get(&m.to_lowercase()).map_or_else(|| m.to_string(), |n| (*n).to_string())
+            CANONICAL
+                .get(&m.to_lowercase())
+                .map_or_else(|| m.to_string(), |n| (*n).to_string())
         }
     });
     replace(&CONST, &s, |c| {
         let m = g(c, 0);
-        if extra.iter().any(|e| e == m) { m.to_string() } else { m.to_lowercase() }
+        if extra.iter().any(|e| e == m) {
+            m.to_string()
+        } else {
+            m.to_lowercase()
+        }
     })
 }
 
@@ -366,7 +444,9 @@ fn rewrite_log10(expr: &str) -> String {
     let mut s = expr.to_string();
     let mut at = 0;
     while at <= s.len() {
-        let Ok(Some(m)) = RE.find_from_pos(s.as_str(), at) else { break };
+        let Ok(Some(m)) = RE.find_from_pos(s.as_str(), at) else {
+            break;
+        };
         let (start, end) = (m.start(), m.end());
         let open = end - 1;
         let b = s.as_bytes();
@@ -415,7 +495,12 @@ fn opening_index(s: &[char], close: usize, open_ch: char, close_ch: char) -> Opt
 fn rewrite_factorial(expr: &str) -> String {
     let mut s: Vec<char> = expr.chars().collect();
     for _ in 0..32 {
-        let Some(idx) = (0..s.len()).rev().find(|&i| s[i] == '!' && s.get(i + 1) != Some(&'=')) else { break };
+        let Some(idx) = (0..s.len())
+            .rev()
+            .find(|&i| s[i] == '!' && s.get(i + 1) != Some(&'='))
+        else {
+            break;
+        };
         let mut j = idx as isize - 1;
         while j >= 0 && s[j as usize] == ' ' {
             j -= 1;
@@ -426,7 +511,9 @@ fn rewrite_factorial(expr: &str) -> String {
         let j = j as usize;
         let c = s[j];
         let start = if c == ')' {
-            let Some(open) = opening_index(&s, j, '(', ')') else { break };
+            let Some(open) = opening_index(&s, j, '(', ')') else {
+                break;
+            };
             // `sqrt(4)!` takes the whole call, not just its parentheses
             let mut k = open;
             while k > 0 && is_word_char(s[k - 1]) {
@@ -437,7 +524,9 @@ fn rewrite_factorial(expr: &str) -> String {
             }
             k.min(open)
         } else if c == ']' {
-            let Some(open) = opening_index(&s, j, '[', ']') else { break };
+            let Some(open) = opening_index(&s, j, '[', ']') else {
+                break;
+            };
             open
         } else if c.is_ascii_digit() || c == '.' {
             // a sign belongs to the number only inside an exponent (`1e+5!`), never `2+3!`
@@ -479,13 +568,27 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static SUPERS: Lazy = Lazy::new(|| js(r"[⁻⁰¹²³⁴⁵⁶⁷⁸⁹]+", ""));
     static ABS: Lazy = Lazy::new(|| js(r"(?<![\d)\]!])\|([^|]+)\|", ""));
     static STARSTAR: Lazy = Lazy::new(|| js(r"\*\*", ""));
-    static POW_MOD: Lazy =
-        Lazy::new(|| js(r"(?<=(?:^|[(,+]|[\w)]\s*-)\s*)(\d+)\s*\^\s*(\d+)\s*mod\s*(\d+)(?![\d.]|\s*[(^!])", ""));
+    static POW_MOD: Lazy = Lazy::new(|| {
+        js(
+            r"(?<=(?:^|[(,+]|[\w)]\s*-)\s*)(\d+)\s*\^\s*(\d+)\s*mod\s*(\d+)(?![\d.]|\s*[(^!])",
+            "",
+        )
+    });
     static PCT_OF: Lazy = Lazy::new(|| js(r"(\d+(?:\.\d+)?)\s*%\s*of\b", "i"));
     static PCT: Lazy = Lazy::new(|| js(r"(\d+(?:\.\d+)?)\s*%", ""));
     static INF: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_])inf(?:inity)?(?![A-Za-z0-9_])", "i"));
-    static NCR: Lazy = Lazy::new(|| js(r"((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nCr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))", "i"));
-    static NPR: Lazy = Lazy::new(|| js(r"((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nPr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))", "i"));
+    static NCR: Lazy = Lazy::new(|| {
+        js(
+            r"((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nCr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))",
+            "i",
+        )
+    });
+    static NPR: Lazy = Lazy::new(|| {
+        js(
+            r"((?:\([^()]*\)|\d+(?:\.\d+)?))\s*nPr\s*((?:\([^()]*\)|\d+(?:\.\d+)?))",
+            "i",
+        )
+    });
     static NCR_CALL: Lazy = Lazy::new(|| js(r"\bnCr\s*\(", ""));
     static NPR_CALL: Lazy = Lazy::new(|| js(r"\bnPr\s*\(", ""));
     static N_CALL: Lazy = Lazy::new(|| js(r"\bn\s*\(", ""));
@@ -527,7 +630,9 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static IMAG: Lazy = Lazy::new(|| js(r"\bimag\b", ""));
 
     // `√x` roots a single letter; `√2` and `√(x + 1)` already read right
-    let s = replace(&ROOT_LETTER, &lower_calls(expr, extra), |c| format!("{}({})", g(c, 1), g(c, 2)));
+    let s = replace(&ROOT_LETTER, &lower_calls(expr, extra), |c| {
+        format!("{}({})", g(c, 1), g(c, 2))
+    });
     let s = rewrite_typeset_mul(&s)
         .replace('°', " deg")
         .replace('÷', "/")
@@ -542,17 +647,21 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     let s = replace(&SUPERS, &s, |c| {
         let digits: String = g(c, 0)
             .chars()
-            .map(|ch| match SUPERSCRIPT_DIGITS.chars().position(|d| d == ch) {
-                Some(0) => "-".to_string(),
-                Some(p) => (p - 1).to_string(),
-                None => String::new(),
-            })
+            .map(
+                |ch| match SUPERSCRIPT_DIGITS.chars().position(|d| d == ch) {
+                    Some(0) => "-".to_string(),
+                    Some(p) => (p - 1).to_string(),
+                    None => String::new(),
+                },
+            )
             .collect();
         format!("^({digits})")
     });
     let s = replace(&ABS, &s, |c| format!("abs({})", g(c, 1)));
     let s = lit(&STARSTAR, &s, "^");
-    let s = replace(&POW_MOD, &s, |c| format!("powmod({},{},{})", g(c, 1), g(c, 2), g(c, 3)));
+    let s = replace(&POW_MOD, &s, |c| {
+        format!("powmod({},{},{})", g(c, 1), g(c, 2), g(c, 3))
+    });
     let s = stitch_constants(&s);
     let s = replace(&PCT_OF, &s, |c| format!("({}/100)*", g(c, 1)));
     let s = rewrite_percent_add(&s);
@@ -567,8 +676,12 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     for (re, to) in HYPERBOLIC.iter() {
         s = lit(re, &s, to);
     }
-    let s = replace(&NCR, &s, |c| format!("combinations({},{})", g(c, 1), g(c, 2)));
-    let s = replace(&NPR, &s, |c| format!("permutations({},{})", g(c, 1), g(c, 2)));
+    let s = replace(&NCR, &s, |c| {
+        format!("combinations({},{})", g(c, 1), g(c, 2))
+    });
+    let s = replace(&NPR, &s, |c| {
+        format!("permutations({},{})", g(c, 1), g(c, 2))
+    });
     let s = lit(&NCR_CALL, &s, "combinations(");
     let mut s = lit(&NPR_CALL, &s, "permutations(");
     // `n` can be a user function; `count` is reserved, so it always counts
@@ -576,11 +689,15 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
         s = lit(&N_CALL, &s, "length(");
     }
     let s = lit(&COUNT_CALL, &s, "length(");
-    let s = replace(&RANGE, &s, |c| format!("inclusiveRange({},{})", g(c, 1), g(c, 2)));
+    let s = replace(&RANGE, &s, |c| {
+        format!("inclusiveRange({},{})", g(c, 1), g(c, 2))
+    });
     let s = lit(&IMAG, &lit(&REAL, &s, "re"), "im");
     let s = replace(&LOG_BASE, &s, |c| format!("log({}, {})", g(c, 2), g(c, 1)));
     let callable = callable_names(extra);
-    let s = replace(&callable.implicit, &s, |c| format!("{}*{}{}", g(c, 1), g(c, 2), g(c, 3)));
+    let s = replace(&callable.implicit, &s, |c| {
+        format!("{}*{}{}", g(c, 1), g(c, 2), g(c, 3))
+    });
     let s = wrap_bare_functions(&s, extra);
     // after wrapping, so bare `log 1000` is base 10 too
     let s = rewrite_log10(&s);
@@ -596,7 +713,12 @@ pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String>
     static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
     static PHI: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])phi(?![A-Za-z0-9_])", ""));
     static SCI: Lazy = Lazy::new(|| js(r"\d+(?:\.\d+)?e[+-]?\d+", "i"));
-    static MATHY: Lazy = Lazy::new(|| js(r"\d|pi|tau|ans|phi|\be\b|(?<![A-Za-z_])i(?![A-Za-z0-9_])", "i"));
+    static MATHY: Lazy = Lazy::new(|| {
+        js(
+            r"\d|pi|tau|ans|phi|\be\b|(?<![A-Za-z_])i(?![A-Za-z0-9_])",
+            "i",
+        )
+    });
     static WORDY: Lazy = Lazy::new(|| js(r"[a-zA-Z_$€£¥₹#?=\\]", ""));
     static IE: Lazy = Lazy::new(|| js(r"[iIeE]", ""));
     static PLAIN: Lazy = Lazy::new(|| js(r"^[\d\s+\-*/^().,eE!|[\]:]+$", ""));
@@ -610,9 +732,17 @@ pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String>
     }
     let fn_names: Vec<String> = ctx.functions.keys().cloned().collect();
     // a variable followed by `(` multiplies (`n(2+3)`), unless a function has the same name
-    let var_names: Vec<String> = ctx.variables.keys().filter(|n| !ctx.functions.contains_key(*n)).cloned().collect();
+    let var_names: Vec<String> = ctx
+        .variables
+        .keys()
+        .filter(|n| !ctx.functions.contains_key(*n))
+        .cloned()
+        .collect();
     if !var_names.is_empty() {
-        let re = js(&format!(r"(?<![A-Za-z0-9_])({})\s*\(", names_pattern(&var_names)), "");
+        let re = js(
+            &format!(r"(?<![A-Za-z0-9_])({})\s*\(", names_pattern(&var_names)),
+            "",
+        );
         src = replace(&re, &src, |c| format!("{}*(", g(c, 1)));
     }
     // φ is the golden ratio's letter too, unless it's a variable of its own
@@ -623,9 +753,21 @@ pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String>
     if let Some(ans) = ctx.ans {
         expr = lit(&ANS, &expr, &format!("({})", jsnum::to_string(ans)));
     }
-    let allow: Vec<String> = ctx.variables.keys().cloned().chain(fn_names.iter().cloned()).collect();
-    let allow_re = (!allow.is_empty())
-        .then(|| js(&format!(r"(?<![A-Za-z_])(?:{})(?![A-Za-z0-9_])", names_pattern(&allow)), "i"));
+    let allow: Vec<String> = ctx
+        .variables
+        .keys()
+        .cloned()
+        .chain(fn_names.iter().cloned())
+        .collect();
+    let allow_re = (!allow.is_empty()).then(|| {
+        js(
+            &format!(
+                r"(?<![A-Za-z_])(?:{})(?![A-Za-z0-9_])",
+                names_pattern(&allow)
+            ),
+            "i",
+        )
+    });
     let mut leftover = lit(&SCI, &lit(&PHI, &lit(&NAME_RE, &expr, ""), ""), "");
     if let Some(re) = &allow_re {
         leftover = lit(re, &leftover, "");
@@ -643,7 +785,8 @@ pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String>
     }
     // `pi = 3` would be an assignment, `3!!` reads as a double factorial as often as (3!)!, and `17 % 5` is a
     // remainder to a programmer, not 17% times 5
-    if jsre::test(&ASSIGN, &expr) || jsre::test(&DOUBLE_BANG, &src) || jsre::test(&REMAINDER, &src) {
+    if jsre::test(&ASSIGN, &expr) || jsre::test(&DOUBLE_BANG, &src) || jsre::test(&REMAINDER, &src)
+    {
         return None;
     }
     Some(expr)
@@ -689,7 +832,13 @@ mod tests {
         assert_eq!(preprocess_checked("3!!", &ctx), None);
         assert_eq!(preprocess_checked("17 % 5", &ctx), None);
         assert_eq!(preprocess_checked("hello", &ctx), None);
-        let with_ans = ScientificContext { ans: Some(0.5), ..ScientificContext::default() };
-        assert_eq!(preprocess_checked("ans*2", &with_ans).as_deref(), Some("(0.5)*2"));
+        let with_ans = ScientificContext {
+            ans: Some(0.5),
+            ..ScientificContext::default()
+        };
+        assert_eq!(
+            preprocess_checked("ans*2", &with_ans).as_deref(),
+            Some("(0.5)*2")
+        );
     }
 }

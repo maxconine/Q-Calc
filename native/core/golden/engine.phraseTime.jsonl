@@ -1,13 +1,13 @@
-{"fn":"formatClock","args":[-60],"out":"11:00 pm","now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"formatClock","args":[0],"out":"12:00 am","now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"formatClock","args":[1092],"out":"6:12 pm","now":1792752354406,"src":"src/engine/phrases.soulver.test.ts"}
-{"fn":"formatClock","args":[1392],"out":"11:12 pm","now":1792752354405,"src":"src/engine/phrases.soulver.test.ts"}
-{"fn":"formatClock","args":[432],"out":"7:12 am","now":1792752354405,"src":"src/engine/phrases.soulver.test.ts"}
-{"fn":"formatClock","args":[720],"out":"12:00 pm","now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"formatClock","args":[912],"out":"3:12 pm","now":1792752354406,"src":"src/engine/phrases.soulver.test.ts"}
-{"fn":"formatDuration","args":[120],"out":"2 hr","now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"formatDuration","args":[45],"out":"45 min","now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"parseClock","args":["7:05 p.m."],"out":1145,"now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"parseSpan","args":["1.5 days"],"out":null,"now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"parseSpan","args":["1.5 hr"],"out":{"minutes":90,"days":0,"months":0},"now":1792752354313,"src":"src/engine/phrases.test.ts"}
-{"fn":"parseSpan","args":["2 days 3 hr"],"out":null,"now":1792752354313,"src":"src/engine/phrases.test.ts"}
+{"fn":"formatClock","args":[-60],"out":"11:00 pm","now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"formatClock","args":[0],"out":"12:00 am","now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"formatClock","args":[1092],"out":"6:12 pm","now":1792768563559,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"formatClock","args":[1392],"out":"11:12 pm","now":1792768563557,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"formatClock","args":[432],"out":"7:12 am","now":1792768563556,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"formatClock","args":[720],"out":"12:00 pm","now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"formatClock","args":[912],"out":"3:12 pm","now":1792768563559,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"formatDuration","args":[120],"out":"2 hr","now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"formatDuration","args":[45],"out":"45 min","now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"parseClock","args":["7:05 p.m."],"out":1145,"now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"parseSpan","args":["1.5 days"],"out":null,"now":1792768563096,"src":"src/engine/phrases.test.ts"}
+{"fn":"parseSpan","args":["1.5 hr"],"out":{"minutes":90,"days":0,"months":0},"now":1792768563095,"src":"src/engine/phrases.test.ts"}
+{"fn":"parseSpan","args":["2 days 3 hr"],"out":null,"now":1792768563096,"src":"src/engine/phrases.test.ts"}

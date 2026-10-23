@@ -9,8 +9,11 @@ use super::lexer::{Lexer, NAMED_DELIMITERS, TokenType};
 
 /// Parses one expression the way `math.parse` does.
 pub fn parse(expression: &str) -> Result<Node, ParseError> {
-    let mut p = Parser { lx: Lexer::new(expression), depth: 0 };
-    p.lx.next()?;
+    let mut p = Parser {
+        lx: Lexer::new(expression),
+        depth: 0,
+    };
+    p.lx.advance()?;
     let node = p.block()?;
     if !p.lx.token.is_empty() {
         let message = if p.lx.token_type == TokenType::Delimiter {
@@ -56,7 +59,7 @@ impl Parser {
                 let visible = self.tok() != ";";
                 blocks.push((n, visible));
             }
-            self.lx.next()?;
+            self.lx.advance()?;
             if !matches!(self.tok(), "\n" | ";" | "") {
                 let n = self.assignment()?;
                 let visible = self.tok() != ";";
@@ -88,26 +91,50 @@ impl Parser {
             Node::Symbol(name) => {
                 self.lx.next_skip_newline()?;
                 let value = self.assignment()?;
-                Ok(Node::Assignment { target: Box::new(Node::Symbol(name)), index: None, value: Box::new(value) })
+                Ok(Node::Assignment {
+                    target: Box::new(Node::Symbol(name)),
+                    index: None,
+                    value: Box::new(value),
+                })
             }
             Node::Accessor { object, index, .. } => {
                 self.lx.next_skip_newline()?;
                 let value = self.assignment()?;
-                Ok(Node::Assignment { target: object, index: Some(index), value: Box::new(value) })
+                Ok(Node::Assignment {
+                    target: object,
+                    index: Some(index),
+                    value: Box::new(value),
+                })
             }
             Node::Function { callee, args } => {
-                let params: Option<Vec<String>> =
-                    args.iter().map(|a| if let Node::Symbol(s) = a { Some(s.clone()) } else { None }).collect();
+                let params: Option<Vec<String>> = args
+                    .iter()
+                    .map(|a| {
+                        if let Node::Symbol(s) = a {
+                            Some(s.clone())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
                 match (*callee, params) {
                     (Node::Symbol(name), Some(params)) => {
                         self.lx.next_skip_newline()?;
                         let body = self.assignment()?;
-                        Ok(Node::FunctionAssignment { name, params, body: Box::new(body) })
+                        Ok(Node::FunctionAssignment {
+                            name,
+                            params,
+                            body: Box::new(body),
+                        })
                     }
-                    _ => Err(self.lx.error("Invalid left hand side of assignment operator =")),
+                    _ => Err(self
+                        .lx
+                        .error("Invalid left hand side of assignment operator =")),
                 }
             }
-            _ => Err(self.lx.error("Invalid left hand side of assignment operator =")),
+            _ => Err(self
+                .lx
+                .error("Invalid left hand side of assignment operator =")),
         }
     }
 
@@ -119,12 +146,18 @@ impl Parser {
             self.lx.next_skip_newline()?;
             let then = self.assignment()?;
             if self.tok() != ":" {
-                return Err(self.lx.error("False part of conditional expression expected"));
+                return Err(self
+                    .lx
+                    .error("False part of conditional expression expected"));
             }
             self.lx.conditional_level = None;
             self.lx.next_skip_newline()?;
             let otherwise = self.assignment()?;
-            node = Node::Conditional { condition: Box::new(node), then: Box::new(then), otherwise: Box::new(otherwise) };
+            node = Node::Conditional {
+                condition: Box::new(node),
+                then: Box::new(then),
+                otherwise: Box::new(otherwise),
+            };
             self.lx.conditional_level = prev;
         }
         Ok(node)
@@ -230,7 +263,9 @@ impl Parser {
         let in_conditional = self.lx.conditional_level == Some(self.lx.nesting_level);
         let mut node = if self.tok() == ":" {
             if in_conditional {
-                return Err(self.lx.error("The true-expression of a conditional operator may not be empty"));
+                return Err(self
+                    .lx
+                    .error("The true-expression of a conditional operator may not be empty"));
             }
             number_node(1.0, "1")
         } else {
@@ -250,8 +285,16 @@ impl Parser {
             let start = Box::new(it.next().unwrap_or(Node::Constant(Constant::Undefined)));
             let second = it.next().unwrap_or(Node::Constant(Constant::Undefined));
             node = match it.next() {
-                Some(end) => Node::Range { start, end: Box::new(end), step: Some(Box::new(second)) },
-                None => Node::Range { start, end: Box::new(second), step: None },
+                Some(end) => Node::Range {
+                    start,
+                    end: Box::new(end),
+                    step: Some(Box::new(second)),
+                },
+                None => Node::Range {
+                    start,
+                    end: Box::new(second),
+                    step: None,
+                },
             };
         }
         Ok(node)
@@ -267,7 +310,13 @@ impl Parser {
             };
             self.lx.next_skip_newline()?;
             let right = self.multiply_divide()?;
-            let right = if matches!(right, Node::Operator { percentage: true, .. }) {
+            let right = if matches!(
+                right,
+                Node::Operator {
+                    percentage: true,
+                    ..
+                }
+            ) {
                 // `100 + 5%` is 100 + 100 * 5%
                 Node::op(Op::Multiply, vec![node.clone(), right])
             } else {
@@ -316,7 +365,12 @@ impl Parser {
             let last = self.rule2()?;
             last_is_constant = last.is_constant();
             last_blocks_number = blocks_number(&last);
-            node = Node::Operator { op: Op::Multiply, args: vec![node, last], implicit: true, percentage: false };
+            node = Node::Operator {
+                op: Op::Multiply,
+                args: vec![node, last],
+                implicit: true,
+                percentage: false,
+            };
         }
         Ok(node)
     }
@@ -415,7 +469,7 @@ impl Parser {
                 "'" => Op::CTranspose,
                 _ => break,
             };
-            self.lx.next()?;
+            self.lx.advance()?;
             node = Node::op(op, vec![node]);
             node = self.accessors(node)?;
         }
@@ -423,12 +477,13 @@ impl Parser {
     }
 
     fn symbol(&mut self) -> Parsed {
-        let named = self.lx.token_type == TokenType::Delimiter && NAMED_DELIMITERS.contains(&self.tok());
+        let named =
+            self.lx.token_type == TokenType::Delimiter && NAMED_DELIMITERS.contains(&self.tok());
         if self.lx.token_type != TokenType::Symbol && !named {
             return self.string();
         }
         let name = self.tok().to_string();
-        self.lx.next()?;
+        self.lx.advance()?;
         let node = match name.as_str() {
             "true" => Node::Constant(Constant::Bool(true)),
             "false" => Node::Constant(Constant::Bool(false)),
@@ -446,7 +501,7 @@ impl Parser {
             let mut optional = false;
             if self.tok() == "?." {
                 optional = true;
-                self.lx.next()?;
+                self.lx.advance()?;
             }
             let has_next = matches!(self.tok(), "(" | "[" | ".");
             if !(optional || has_next) {
@@ -458,22 +513,36 @@ impl Parser {
                     return Ok(node);
                 }
                 let args = self.call_args(")", "Parenthesis ) expected")?;
-                node = Node::Function { callee: Box::new(node), args };
+                node = Node::Function {
+                    callee: Box::new(node),
+                    args,
+                };
             } else if self.tok() == "[" {
                 let index = self.call_args("]", "Parenthesis ] expected")?;
-                node = Node::Accessor { object: Box::new(node), index, dot: false };
+                node = Node::Accessor {
+                    object: Box::new(node),
+                    index,
+                    dot: false,
+                };
             } else {
                 if !optional {
-                    self.lx.next()?;
+                    self.lx.advance()?;
                 }
-                let named = self.lx.token_type == TokenType::Delimiter && NAMED_DELIMITERS.contains(&self.tok());
+                let named = self.lx.token_type == TokenType::Delimiter
+                    && NAMED_DELIMITERS.contains(&self.tok());
                 if self.lx.token_type != TokenType::Symbol && !named {
                     let what = if optional { "optional chain" } else { "dot" };
-                    return Err(self.lx.error(&format!("Property name expected after {what}")));
+                    return Err(self
+                        .lx
+                        .error(&format!("Property name expected after {what}")));
                 }
                 let prop = Node::Constant(Constant::Str(self.tok().to_string()));
-                self.lx.next()?;
-                node = Node::Accessor { object: Box::new(node), index: vec![prop], dot: true };
+                self.lx.advance()?;
+                node = Node::Accessor {
+                    object: Box::new(node),
+                    index: vec![prop],
+                    dot: true,
+                };
             }
         }
     }
@@ -481,12 +550,12 @@ impl Parser {
     /// `( a, b )` or `[ a, b ]` after a callee, the opening bracket being the current token.
     fn call_args(&mut self, close: &str, missing: &str) -> Result<Vec<Node>, ParseError> {
         self.lx.nesting_level += 1;
-        self.lx.next()?;
+        self.lx.advance()?;
         let mut args = Vec::new();
         if self.tok() != close {
             args.push(self.assignment()?);
             while self.tok() == "," {
-                self.lx.next()?;
+                self.lx.advance()?;
                 args.push(self.assignment()?);
             }
         }
@@ -494,7 +563,7 @@ impl Parser {
             return Err(self.lx.error(missing));
         }
         self.lx.nesting_level -= 1;
-        self.lx.next()?;
+        self.lx.advance()?;
         Ok(args)
     }
 
@@ -513,13 +582,13 @@ impl Parser {
             return self.object();
         }
         self.lx.nesting_level += 1;
-        self.lx.next()?;
+        self.lx.advance()?;
         let array = if self.tok() != "]" {
             let row = self.row()?;
             if self.tok() == ";" {
                 let mut rows = vec![row];
                 while self.tok() == ";" {
-                    self.lx.next()?;
+                    self.lx.advance()?;
                     if self.tok() != "]" {
                         rows.push(self.row()?);
                     }
@@ -528,10 +597,13 @@ impl Parser {
                     return Err(self.lx.error("End of matrix ] expected"));
                 }
                 self.lx.nesting_level -= 1;
-                self.lx.next()?;
+                self.lx.advance()?;
                 let cols = row_len(&rows[0]);
                 if let Some(bad) = rows.iter().skip(1).find(|r| row_len(r) != cols) {
-                    return Err(self.lx.error(&format!("Column dimensions mismatch ({} !== {cols})", row_len(bad))));
+                    return Err(self.lx.error(&format!(
+                        "Column dimensions mismatch ({} !== {cols})",
+                        row_len(bad)
+                    )));
                 }
                 Node::Array(rows)
             } else {
@@ -539,12 +611,12 @@ impl Parser {
                     return Err(self.lx.error("End of matrix ] expected"));
                 }
                 self.lx.nesting_level -= 1;
-                self.lx.next()?;
+                self.lx.advance()?;
                 row
             }
         } else {
             self.lx.nesting_level -= 1;
-            self.lx.next()?;
+            self.lx.advance()?;
             Node::Array(Vec::new())
         };
         self.accessors(array)
@@ -553,7 +625,7 @@ impl Parser {
     fn row(&mut self) -> Parsed {
         let mut items = vec![self.assignment()?];
         while self.tok() == "," {
-            self.lx.next()?;
+            self.lx.advance()?;
             if !matches!(self.tok(), "]" | ";") {
                 items.push(self.assignment()?);
             }
@@ -574,8 +646,9 @@ impl Parser {
             return self.parentheses();
         }
         let text = self.tok().to_string();
-        self.lx.next()?;
-        let value = number_value(&text).ok_or_else(|| self.lx.error(&format!("Invalid number {text}")))?;
+        self.lx.advance()?;
+        let value =
+            number_value(&text).ok_or_else(|| self.lx.error(&format!("Invalid number {text}")))?;
         Ok(number_node(value, &text))
     }
 
@@ -588,13 +661,13 @@ impl Parser {
             });
         }
         self.lx.nesting_level += 1;
-        self.lx.next()?;
+        self.lx.advance()?;
         let inner = self.assignment()?;
         if self.tok() != ")" {
             return Err(self.lx.error("Parenthesis ) expected"));
         }
         self.lx.nesting_level -= 1;
-        self.lx.next()?;
+        self.lx.advance()?;
         self.accessors(Node::Parenthesis(Box::new(inner)))
     }
 }
@@ -613,7 +686,10 @@ fn row_len(row: &Node) -> usize {
 }
 
 fn number_node(value: f64, text: &str) -> Node {
-    Node::Constant(Constant::Number { value, text: text.to_string() })
+    Node::Constant(Constant::Number {
+        value,
+        text: text.to_string(),
+    })
 }
 
 /// A number token's value in mathjs `number` mode: decimal, or `0x`/`0b`/`0o` integers.
@@ -635,7 +711,9 @@ mod tests {
     use super::*;
 
     fn shape(s: &str) -> String {
-        parse(s).map(|n| n.to_string()).unwrap_or_else(|e| format!("error: {}", e.message))
+        parse(s)
+            .map(|n| n.to_string())
+            .unwrap_or_else(|e| format!("error: {}", e.message))
     }
 
     #[test]

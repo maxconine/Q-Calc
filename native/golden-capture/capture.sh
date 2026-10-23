@@ -8,5 +8,5 @@ rm -rf "$RAW"
 cd "$ROOT"
 # test failures don't stop the capture: a failing assertion still recorded what the engine said
 npx vitest run --config native/golden-capture/vitest.config.ts --reporter=dot "$@" || true
+# the raw calls stay in core/golden/.raw (gitignored), so merge.mjs can be rerun alone after changing areas
 node native/golden-capture/merge.mjs "$RAW" "$ROOT/native/core/golden"
-rm -rf "$RAW"

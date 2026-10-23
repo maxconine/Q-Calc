@@ -11,7 +11,11 @@ fn exact_digits(x: f64) -> (Vec<u8>, i32) {
     let bits = x.abs().to_bits();
     let exp_bits = ((bits >> 52) & 0x7ff) as i32;
     let frac = bits & ((1u64 << 52) - 1);
-    let (mant, exp2) = if exp_bits == 0 { (frac, -1074) } else { (frac | (1u64 << 52), exp_bits - 1075) };
+    let (mant, exp2) = if exp_bits == 0 {
+        (frac, -1074)
+    } else {
+        (frac | (1u64 << 52), exp_bits - 1075)
+    };
     let (int, scale) = if exp2 >= 0 {
         (BigUint::from(mant) << exp2 as usize, 0i32)
     } else {
@@ -68,7 +72,11 @@ fn shortest_digits(x: f64) -> (Vec<u8>, i32) {
     let s = format!("{:e}", x.abs());
     let (mant, exp) = s.split_once('e').unwrap_or((&s, "0"));
     let exp: i32 = exp.parse().unwrap_or(0);
-    let digits: Vec<u8> = mant.bytes().filter(u8::is_ascii_digit).map(|b| b - b'0').collect();
+    let digits: Vec<u8> = mant
+        .bytes()
+        .filter(u8::is_ascii_digit)
+        .map(|b| b - b'0')
+        .collect();
     (digits, exp + 1)
 }
 
@@ -89,7 +97,11 @@ fn sign(x: f64) -> &'static str {
 }
 
 fn exponent_text(e: i32) -> String {
-    if e < 0 { format!("e-{}", -e) } else { format!("e+{e}") }
+    if e < 0 {
+        format!("e-{}", -e)
+    } else {
+        format!("e+{e}")
+    }
 }
 
 /// `String(x)` / `x.toString()`.
@@ -110,7 +122,11 @@ pub fn to_string(x: f64) -> String {
     } else if -6 < n && n <= 0 {
         format!("0.{}{d}", "0".repeat((-n) as usize))
     } else {
-        let rest = if k > 1 { format!(".{}", &d[1..]) } else { String::new() };
+        let rest = if k > 1 {
+            format!(".{}", &d[1..])
+        } else {
+            String::new()
+        };
         format!("{}{rest}{}", &d[..1], exponent_text(n - 1))
     };
     format!("{}{body}", sign(x))
@@ -122,14 +138,22 @@ pub fn to_exponential(x: f64, f: usize) -> String {
         return s;
     }
     if x == 0.0 {
-        let frac = if f > 0 { format!(".{}", "0".repeat(f)) } else { String::new() };
+        let frac = if f > 0 {
+            format!(".{}", "0".repeat(f))
+        } else {
+            String::new()
+        };
         return format!("0{frac}e+0");
     }
     let (digits, point) = exact_digits(x);
     let (mut r, point) = round_half_up(&digits, point, f as i32 + 1);
     r.resize(f + 1, 0);
     let d = digits_text(&r);
-    let frac = if f > 0 { format!(".{}", &d[1..]) } else { String::new() };
+    let frac = if f > 0 {
+        format!(".{}", &d[1..])
+    } else {
+        String::new()
+    };
     format!("{}{}{frac}{}", sign(x), &d[..1], exponent_text(point - 1))
 }
 
@@ -139,7 +163,11 @@ pub fn to_precision(x: f64, p: usize) -> String {
         return s;
     }
     if x == 0.0 {
-        return if p > 1 { format!("0.{}", "0".repeat(p - 1)) } else { "0".into() };
+        return if p > 1 {
+            format!("0.{}", "0".repeat(p - 1))
+        } else {
+            "0".into()
+        };
     }
     let (digits, point) = exact_digits(x);
     let (mut r, point) = round_half_up(&digits, point, p as i32);
@@ -147,11 +175,19 @@ pub fn to_precision(x: f64, p: usize) -> String {
     let d = digits_text(&r);
     let e = point - 1;
     let body = if e < -6 || e >= p as i32 {
-        let frac = if p > 1 { format!(".{}", &d[1..]) } else { String::new() };
+        let frac = if p > 1 {
+            format!(".{}", &d[1..])
+        } else {
+            String::new()
+        };
         format!("{}{frac}{}", &d[..1], exponent_text(e))
     } else if e >= 0 {
         let whole = (e + 1) as usize;
-        if whole >= p { d } else { format!("{}.{}", &d[..whole], &d[whole..]) }
+        if whole >= p {
+            d
+        } else {
+            format!("{}.{}", &d[..whole], &d[whole..])
+        }
     } else {
         format!("0.{}{d}", "0".repeat((-e - 1) as usize))
     };
@@ -175,14 +211,26 @@ pub fn to_fixed(x: f64, f: usize) -> String {
         // the integer n with n / 10^f nearest |x|, as a digit string
         let len = (point + f as i32).max(0) as usize;
         r.resize(len, 0);
-        let n = if r.is_empty() { "0".to_string() } else { digits_text(&r) };
+        let n = if r.is_empty() {
+            "0".to_string()
+        } else {
+            digits_text(&r)
+        };
         n.trim_start_matches('0').to_string()
     };
-    let n = if text.is_empty() { "0".to_string() } else { text };
+    let n = if text.is_empty() {
+        "0".to_string()
+    } else {
+        text
+    };
     let body = if f == 0 {
         n
     } else {
-        let padded = if n.len() <= f { format!("{}{n}", "0".repeat(f + 1 - n.len())) } else { n };
+        let padded = if n.len() <= f {
+            format!("{}{n}", "0".repeat(f + 1 - n.len()))
+        } else {
+            n
+        };
         let at = padded.len() - f;
         format!("{}.{}", &padded[..at], &padded[at..])
     };
@@ -230,7 +278,11 @@ pub fn exact_ratio(x: f64) -> Option<(bool, BigUint, BigUint)> {
     let bits = x.abs().to_bits();
     let exp_bits = ((bits >> 52) & 0x7ff) as i32;
     let frac = bits & ((1u64 << 52) - 1);
-    let (mant, exp2) = if exp_bits == 0 { (frac, -1074) } else { (frac | (1u64 << 52), exp_bits - 1075) };
+    let (mant, exp2) = if exp_bits == 0 {
+        (frac, -1074)
+    } else {
+        (frac | (1u64 << 52), exp_bits - 1075)
+    };
     let (num, den) = if exp2 >= 0 {
         (BigUint::from(mant) << exp2 as usize, BigUint::one())
     } else {
@@ -241,7 +293,11 @@ pub fn exact_ratio(x: f64) -> Option<(bool, BigUint, BigUint)> {
 
 /// Exactly representable small integers, for loops that index by value.
 pub fn as_usize(x: f64) -> Option<usize> {
-    if is_integer(x) && x >= 0.0 { BigUint::from(x as u64).to_usize() } else { None }
+    if is_integer(x) && x >= 0.0 {
+        BigUint::from(x as u64).to_usize()
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

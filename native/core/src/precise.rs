@@ -66,11 +66,23 @@ pub fn parse_decimal(text: &str) -> Option<BigRational> {
         None => (false, mant.strip_prefix('+').unwrap_or(mant)),
     };
     let (whole, frac) = mant.split_once('.').unwrap_or((mant, ""));
-    if whole.is_empty() && frac.is_empty() || !whole.bytes().chain(frac.bytes()).all(|b| b.is_ascii_digit()) {
+    if whole.is_empty() && frac.is_empty()
+        || !whole
+            .bytes()
+            .chain(frac.bytes())
+            .all(|b| b.is_ascii_digit())
+    {
         return None;
     }
     let digits = format!("{whole}{frac}");
-    let int = BigInt::parse_bytes(if digits.is_empty() { b"0" } else { digits.as_bytes() }, 10)?;
+    let int = BigInt::parse_bytes(
+        if digits.is_empty() {
+            b"0"
+        } else {
+            digits.as_bytes()
+        },
+        10,
+    )?;
     let scale = exp - frac.len() as i64;
     if scale.abs() > 100_000 {
         return None;
@@ -99,7 +111,11 @@ pub fn to_f64(r: &BigRational) -> f64 {
 fn ratio_to_f64(num: &BigUint, den: &BigUint) -> f64 {
     // scale so the quotient has 54+ bits: one to round on, the rest exact, plus a sticky remainder
     let shift = den.bits() as i64 - num.bits() as i64 + 55;
-    let (n, d) = if shift >= 0 { (num << shift as usize, den.clone()) } else { (num.clone(), den << (-shift) as usize) };
+    let (n, d) = if shift >= 0 {
+        (num << shift as usize, den.clone())
+    } else {
+        (num.clone(), den << (-shift) as usize)
+    };
     let (q, rem) = n.div_rem(&d);
     // value = q * 2^-shift, with q having 55 or 56 bits
     let bits = q.bits() as i64;
@@ -128,7 +144,11 @@ fn ratio_to_f64(num: &BigUint, den: &BigUint) -> f64 {
 }
 
 fn int_arg(x: &BigRational) -> Result<i64, Abort> {
-    if x.is_integer() { x.to_integer().to_i64().ok_or(Abort::Unsupported) } else { Err(Abort::Unsupported) }
+    if x.is_integer() {
+        x.to_integer().to_i64().ok_or(Abort::Unsupported)
+    } else {
+        Err(Abort::Unsupported)
+    }
 }
 
 fn product(from: i64, to: i64) -> BigInt {
@@ -155,7 +175,10 @@ fn exact_root(x: &BigRational, n: u32) -> Option<BigRational> {
         (r.pow(n) == *v).then_some(r)
     };
     if x.is_negative() {
-        return (n % 2 == 1).then(|| exact_root(&-x, n)).flatten().map(|r| -r);
+        return (n % 2 == 1)
+            .then(|| exact_root(&-x, n))
+            .flatten()
+            .map(|r| -r);
     }
     Some(BigRational::new(root(x.numer())?, root(x.denom())?))
 }
@@ -190,13 +213,21 @@ impl Walker<'_> {
                 .map(|(_, exact, f)| (*f, exact.clone()))
                 .ok_or(Abort::Unsupported),
             Node::Operator { op, args, .. } => {
-                let values = args.iter().map(|a| self.walk(a)).collect::<Result<Vec<_>, _>>()?;
+                let values = args
+                    .iter()
+                    .map(|a| self.walk(a))
+                    .collect::<Result<Vec<_>, _>>()?;
                 let v = self.op(*op, values)?;
                 self.tick(v)
             }
             Node::Function { callee, args } => {
-                let Node::Symbol(name) = callee.as_ref() else { return Err(Abort::Unsupported) };
-                let values = args.iter().map(|a| self.walk(a)).collect::<Result<Vec<_>, _>>()?;
+                let Node::Symbol(name) = callee.as_ref() else {
+                    return Err(Abort::Unsupported);
+                };
+                let values = args
+                    .iter()
+                    .map(|a| self.walk(a))
+                    .collect::<Result<Vec<_>, _>>()?;
                 let v = self.call(name, values)?;
                 self.tick(v)
             }
@@ -242,13 +273,24 @@ impl Walker<'_> {
                     if b.is_negative() {
                         return Err(Abort::Unsupported);
                     }
-                    if b.is_zero() { BigRational::one() } else { a.clone() }
+                    if b.is_zero() {
+                        BigRational::one()
+                    } else {
+                        a.clone()
+                    }
                 } else {
                     let size = to_f64(b) * to_f64(&a.abs()).log10();
                     if !size.is_finite() || size.abs() > 400.0 || !b.is_integer() {
                         return Err(Abort::Unsupported);
                     }
                     let e = int_arg(b)?;
+                    // exact powers grow with the exponent (`(1+1e-15)^(1e15)`); decimal.js rounds as it goes, an exact
+                    // rational can't, so a power too big to hold exactly keeps the float (PORT(WP-PRECISE))
+                    let bits =
+                        (a.numer().bits() + a.denom().bits()).saturating_mul(e.unsigned_abs());
+                    if bits > 200_000 {
+                        return Err(Abort::Unsupported);
+                    }
                     let base = if e < 0 { a.recip() } else { a.clone() };
                     num_traits::pow(base, e.unsigned_abs() as usize)
                 }
@@ -271,18 +313,26 @@ impl Walker<'_> {
     }
 
     fn call(&mut self, name: &str, args: Vec<(f64, BigRational)>) -> Twin {
-        let product_work = if name == "factorial" { args.first().map_or(0, |(f, _)| (f / 5.0).ceil().max(0.0) as i64) } else { 0 };
+        let product_work = if name == "factorial" {
+            args.first()
+                .map_or(0, |(f, _)| (f / 5.0).ceil().max(0.0) as i64)
+        } else {
+            0
+        };
         *self.work -= CALL_COST + product_work;
         if *self.work < 0 {
             return Err(Abort::Budget);
         }
         match (name, args.as_slice()) {
             ("factorial", [(f, a)]) => Ok((float_factorial(*f), self.factorial(a)?)),
-            ("mod", [(fa, a), (fb, b)]) => {
-                Ok((float_modulo(*fa, *fb).map_err(|_| Abort::Unsupported)?, exact_mod(a, b)?))
-            }
+            ("mod", [(fa, a), (fb, b)]) => Ok((
+                float_modulo(*fa, *fb).map_err(|_| Abort::Unsupported)?,
+                exact_mod(a, b)?,
+            )),
             ("abs", [(f, a)]) => Ok((f.abs(), a.abs())),
-            ("sqrt", [(f, a)]) if !a.is_negative() => Ok((f.sqrt(), exact_root(a, 2).ok_or(Abort::Unsupported)?)),
+            ("sqrt", [(f, a)]) if !a.is_negative() => {
+                Ok((f.sqrt(), exact_root(a, 2).ok_or(Abort::Unsupported)?))
+            }
             ("cbrt", [(f, a)]) => Ok((f.cbrt(), exact_root(a, 3).ok_or(Abort::Unsupported)?)),
             _ => Err(Abort::Unsupported),
         }
@@ -302,25 +352,39 @@ pub fn verdict(text: &str, value: &Value, ctx: &ScientificContext) -> Verdict {
     }
     let f = value.n;
     // `ans` stays a name, not pasted digits, so it can be told apart from a typed number
-    let bare = ScientificContext { ans: None, ..ctx.clone() };
+    let bare = ScientificContext {
+        ans: None,
+        ..ctx.clone()
+    };
     let mut vars: Vec<(String, f64)> = ctx.variables.iter().map(|(k, v)| (k.clone(), *v)).collect();
     if let Some(a) = ctx.ans {
         vars.retain(|(k, _)| k != "ans");
         vars.push(("ans".into(), a));
     }
-    let Some(expr) = preprocess_checked(text, &bare) else { return Verdict::Kept(Kept::Unsupported) };
-    let Ok(tree) = parse(&expr) else { return Verdict::Kept(Kept::Unsupported) };
+    let Some(expr) = preprocess_checked(text, &bare) else {
+        return Verdict::Kept(Kept::Unsupported);
+    };
+    let Ok(tree) = parse(&expr) else {
+        return Verdict::Kept(Kept::Unsupported);
+    };
     let mut work = BUDGET;
     let run = |vars: &[(String, f64)], work: &mut i64| -> Result<(f64, BigRational), Kept> {
         let mut exact_vars = Vec::with_capacity(vars.len());
         for (k, v) in vars {
             // a variable enters as the digits `String(v)` writes; a non-finite one can't
-            match v.is_finite().then(|| parse_decimal(&jsnum::to_string(*v))).flatten() {
+            match v
+                .is_finite()
+                .then(|| parse_decimal(&jsnum::to_string(*v)))
+                .flatten()
+            {
                 Some(e) => exact_vars.push((k.clone(), e, *v)),
                 None => exact_vars.push((k.clone(), BigRational::zero(), f64::NAN)),
             }
         }
-        let mut w = Walker { vars: &exact_vars, work };
+        let mut w = Walker {
+            vars: &exact_vars,
+            work,
+        };
         w.walk(&tree).map_err(|e| match e {
             Abort::Budget => Kept::Budget,
             Abort::Unsupported => Kept::Unsupported,
@@ -343,12 +407,25 @@ pub fn verdict(text: &str, value: &Value, ctx: &ScientificContext) -> Verdict {
     }
     // a computed input like 1/3 is only known to the last bit of its double; the correction must survive that
     // bit moving either way, or `a*3 - 1` would turn a right 0 into -1e-16
-    let shaky: Vec<&str> = vars.iter().filter(|(_, v)| sig_digits(*v) > 15).map(|(k, _)| k.as_str()).collect();
+    let shaky: Vec<&str> = vars
+        .iter()
+        .filter(|(_, v)| sig_digits(*v) > 15)
+        .map(|(k, _)| k.as_str())
+        .collect();
     if !shaky.is_empty() {
         for dir in [1.0, -1.0] {
             let nudged: Vec<(String, f64)> = vars
                 .iter()
-                .map(|(k, v)| (k.clone(), if shaky.contains(&k.as_str()) { v * (1.0 + dir * f64::EPSILON) } else { *v }))
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        if shaky.contains(&k.as_str()) {
+                            v * (1.0 + dir * f64::EPSILON)
+                        } else {
+                            *v
+                        },
+                    )
+                })
                 .collect();
             let m = match run(&nudged, &mut work) {
                 Ok((_, e)) => {
@@ -396,7 +473,16 @@ mod tests {
 
     #[test]
     fn rationals_round_to_the_nearest_double() {
-        for s in ["0.1", "0.3", "1e-7", "123456789.123456789", "1e300", "5e-324", "2.2250738585072014e-308", "0.30000000000000004"] {
+        for s in [
+            "0.1",
+            "0.3",
+            "1e-7",
+            "123456789.123456789",
+            "1e300",
+            "5e-324",
+            "2.2250738585072014e-308",
+            "0.30000000000000004",
+        ] {
             assert_eq!(to_f64(&r(s)), s.parse::<f64>().unwrap(), "{s}");
         }
         assert_eq!(to_f64(&BigRational::new(1.into(), 3.into())), 1.0 / 3.0);
@@ -409,11 +495,23 @@ mod tests {
     fn corrects_float_artefacts() {
         let ctx = ScientificContext::default();
         let v = |n: f64| Value::number(n);
-        assert_eq!(verdict("0.1+0.2", &v(0.1 + 0.2), &ctx), Verdict::Corrected(0.3));
+        assert_eq!(
+            verdict("0.1+0.2", &v(0.1 + 0.2), &ctx),
+            Verdict::Corrected(0.3)
+        );
         assert_eq!(verdict("2+2", &v(4.0), &ctx), Verdict::Same);
-        assert_eq!(verdict("1e16+1-1e16", &v(0.0), &ctx), Verdict::Corrected(1.0));
-        let third = ScientificContext { ans: Some(1.0 / 3.0), ..ScientificContext::default() };
+        assert_eq!(
+            verdict("1e16+1-1e16", &v(0.0), &ctx),
+            Verdict::Corrected(1.0)
+        );
+        let third = ScientificContext {
+            ans: Some(1.0 / 3.0),
+            ..ScientificContext::default()
+        };
         // String(1/3) times 3 is 0.9999999999999999, and nudging ans moves it less than 1e-13
-        assert_eq!(verdict("ans*3", &v(1.0), &third), Verdict::Corrected(0.9999999999999999));
+        assert_eq!(
+            verdict("ans*3", &v(1.0), &third),
+            Verdict::Corrected(0.9999999999999999)
+        );
     }
 }

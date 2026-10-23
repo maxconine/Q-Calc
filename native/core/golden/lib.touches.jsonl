@@ -7,6 +7,6 @@
 {"fn":"lineCopyText","args":["x = 3+4",{"display":"7"},"approx"],"out":"x = 3+4 = 7","src":"src/lib/touches.test.ts"}
 {"fn":"lineCopyText","args":["x = 5",{"display":"5"},"approx"],"out":"x = 5","src":"src/lib/touches.test.ts"}
 {"fn":"lineCopyText","args":["x = x",{"display":"true for all x","solve":{"variable":"x","outcome":"all"}},"approx"],"out":"x = x, true for all x","src":"src/lib/r3a.touches.test.ts"}
-{"fn":"lineCopyText","args":["x^2 = -1",{"display":"no real solution","solve":{"variable":"x","outcome":"none"}},"approx"],"out":"x^2 = -1, no real solution","src":"src/lib/touches.test.ts"}
+{"fn":"lineCopyText","args":["x^2 = -1",{"display":"no real solution","solve":{"variable":"x","outcome":"none"}},"approx"],"out":"x^2 = -1, no real solution","src":"src/lib/r3a.touches.test.ts"}
 {"fn":"lineCopyText","args":["x^2 = 2",{"display":"±1.41421","exact":"±√2","solve":{"variable":"x","outcome":"roots"}},"approx"],"out":"x^2 = 2, x = ±√2 ≈ ±1.41421","src":"src/lib/touches.test.ts"}
 {"fn":"lineCopyText","args":["√8",{"display":"2.82843","exact":"2√2"},"approx"],"out":"√8 = 2√2 ≈ 2.82843","src":"src/lib/touches.test.ts"}

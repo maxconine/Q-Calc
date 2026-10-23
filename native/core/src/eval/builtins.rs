@@ -8,7 +8,7 @@ use super::{EvalError, EvalResult, Scope, Val};
 use crate::jsnum;
 
 /// The golden ratio, unless `phi` is a variable.
-pub const PHI: f64 = 1.618_033_988_749_895;
+pub const PHI: f64 = std::f64::consts::GOLDEN_RATIO;
 /// Catalan's constant as the TS writes it.
 pub const CATALAN: f64 = 0.915965594177219;
 
@@ -58,7 +58,11 @@ pub fn modulo(a: f64, b: f64) -> Result<f64, EvalError> {
     let m = b.abs();
     let r = ((a % b) + m) % m;
     // `1 mod 0.1` lands one float step short of 0.1
-    Ok(if near_integer(a / b).is_some() { 0.0 } else { r })
+    Ok(if near_integer(a / b).is_some() {
+        0.0
+    } else {
+        r
+    })
 }
 
 /// Exact n/d for x, or None when x isn't a fraction with a small denominator (like π or √2).
@@ -87,7 +91,11 @@ fn product(i: f64, n: f64) -> f64 {
 
 const GAMMA_G: f64 = 4.7421875;
 // copied digit for digit from mathjs, so the doubles are the ones it rounds to
-#[allow(clippy::excessive_precision, clippy::inconsistent_digit_grouping, clippy::unreadable_literal)]
+#[allow(
+    clippy::excessive_precision,
+    clippy::inconsistent_digit_grouping,
+    clippy::unreadable_literal
+)]
 const GAMMA_P: [f64; 15] = [
     0.99999999999999709182,
     57.156235665862923517,
@@ -110,7 +118,11 @@ const GAMMA_P: [f64; 15] = [
 pub fn gamma(n: f64) -> f64 {
     if jsnum::is_integer(n) {
         if n <= 0.0 {
-            return if n.is_finite() { f64::INFINITY } else { f64::NAN };
+            return if n.is_finite() {
+                f64::INFINITY
+            } else {
+                f64::NAN
+            };
         }
         if n > 171.0 {
             return f64::INFINITY;
@@ -130,7 +142,9 @@ pub fn gamma(n: f64) -> f64 {
         let five = four * n;
         return (2.0 * std::f64::consts::PI / n).sqrt()
             * (n / std::f64::consts::E).powf(n)
-            * (1.0 + 1.0 / (12.0 * n) + 1.0 / (288.0 * two) - 139.0 / (51840.0 * three) - 571.0 / (2_488_320.0 * four)
+            * (1.0 + 1.0 / (12.0 * n) + 1.0 / (288.0 * two)
+                - 139.0 / (51840.0 * three)
+                - 571.0 / (2_488_320.0 * four)
                 + 163_879.0 / (209_018_880.0 * five)
                 + 5_246_819.0 / (75_246_796_800.0 * five * n));
     }
@@ -167,7 +181,14 @@ fn sqrt(args: &[Val], scope: &Scope) -> EvalResult {
     let x = arg(args, 0);
     // with an i typed, the root of a negative is imaginary; in plain real maths it's undefined
     if x < 0.0 {
-        return Ok(if scope.complex_typed { Val::Complex { re: 0.0, im: (-x).sqrt() } } else { Val::Num(f64::NAN) });
+        return Ok(if scope.complex_typed {
+            Val::Complex {
+                re: 0.0,
+                im: (-x).sqrt(),
+            }
+        } else {
+            Val::Num(f64::NAN)
+        });
     }
     num(x.sqrt())
 }
@@ -180,15 +201,38 @@ fn abs(args: &[Val], _: &Scope) -> EvalResult {
 }
 
 const FOUNDATION: &[Builtin] = &[
-    Builtin { name: "factorial", max_args: 1, call: |a, _| num(factorial(arg(a, 0))) },
-    Builtin { name: "mod", max_args: 2, call: |a, _| num(modulo(arg(a, 0), arg(a, 1))?) },
-    Builtin { name: "abs", max_args: 1, call: abs },
-    Builtin { name: "sqrt", max_args: 1, call: sqrt },
-    Builtin { name: "cbrt", max_args: 1, call: |a, _| num(arg(a, 0).cbrt()) },
+    Builtin {
+        name: "factorial",
+        max_args: 1,
+        call: |a, _| num(factorial(arg(a, 0))),
+    },
+    Builtin {
+        name: "mod",
+        max_args: 2,
+        call: |a, _| num(modulo(arg(a, 0), arg(a, 1))?),
+    },
+    Builtin {
+        name: "abs",
+        max_args: 1,
+        call: abs,
+    },
+    Builtin {
+        name: "sqrt",
+        max_args: 1,
+        call: sqrt,
+    },
+    Builtin {
+        name: "cbrt",
+        max_args: 1,
+        call: |a, _| num(arg(a, 0).cbrt()),
+    },
 ];
 
 fn find(name: &str) -> Option<&'static Builtin> {
-    FOUNDATION.iter().chain(crate::scientific::functions::TABLE.iter()).find(|b| b.name == name)
+    FOUNDATION
+        .iter()
+        .chain(crate::scientific::functions::TABLE.iter())
+        .find(|b| b.name == name)
 }
 
 /// Whether `name` is a function in the engine's scope.

@@ -12,8 +12,9 @@ pub enum TokenType {
 }
 
 const DELIMITERS: &[&str] = &[
-    ",", "(", ")", "[", "]", "{", "}", "\"", "'", ";", "+", "-", "*", ".*", "/", "./", "%", "^", ".^", "~", "!", "&", "|",
-    "^|", "=", ":", "?", "?.", "??", "==", "!=", "<", ">", "<=", ">=", "<<", ">>", ">>>",
+    ",", "(", ")", "[", "]", "{", "}", "\"", "'", ";", "+", "-", "*", ".*", "/", "./", "%", "^",
+    ".^", "~", "!", "&", "|", "^|", "=", ":", "?", "?.", "??", "==", "!=", "<", ">", "<=", ">=",
+    "<<", ">>", ">>>",
 ];
 
 pub(crate) const NAMED_DELIMITERS: &[&str] = &["mod", "to", "in", "and", "xor", "or", "not"];
@@ -45,9 +46,9 @@ fn is_latin_or_greek(c: char) -> bool {
 // mathjs checks surrogate pairs for U+1D400–U+1D7FF less its unassigned holes; one Rust char is one code point
 fn is_math_symbol(c: char) -> bool {
     const HOLES: &[u32] = &[
-        0x1D455, 0x1D49D, 0x1D4A0, 0x1D4A1, 0x1D4A3, 0x1D4A4, 0x1D4A7, 0x1D4A8, 0x1D4AD, 0x1D4BA, 0x1D4BC, 0x1D4C4,
-        0x1D506, 0x1D50B, 0x1D50C, 0x1D515, 0x1D51D, 0x1D53A, 0x1D53F, 0x1D545, 0x1D547, 0x1D548, 0x1D549, 0x1D551,
-        0x1D6A6, 0x1D6A7, 0x1D7CC, 0x1D7CD,
+        0x1D455, 0x1D49D, 0x1D4A0, 0x1D4A1, 0x1D4A3, 0x1D4A4, 0x1D4A7, 0x1D4A8, 0x1D4AD, 0x1D4BA,
+        0x1D4BC, 0x1D4C4, 0x1D506, 0x1D50B, 0x1D50C, 0x1D515, 0x1D51D, 0x1D53A, 0x1D53F, 0x1D545,
+        0x1D547, 0x1D548, 0x1D549, 0x1D551, 0x1D6A6, 0x1D6A7, 0x1D7CC, 0x1D7CD,
     ];
     let u = c as u32;
     (0x1D400..=0x1D7FF).contains(&u) && !HOLES.contains(&u)
@@ -102,11 +103,14 @@ impl Lexer {
 
     pub fn error(&self, message: &str) -> ParseError {
         let col = (self.index + 1).saturating_sub(self.token.chars().count());
-        ParseError { message: format!("{message} (char {col})"), char: col }
+        ParseError {
+            message: format!("{message} (char {col})"),
+            char: col,
+        }
     }
 
     /// Reads the next token into `token` and `token_type`.
-    pub fn next(&mut self) -> Result<(), ParseError> {
+    pub fn advance(&mut self) -> Result<(), ParseError> {
         self.token_type = TokenType::Null;
         self.token.clear();
         loop {
@@ -139,7 +143,10 @@ impl Lexer {
             return Ok(());
         }
         let c2 = self.peek_str(2);
-        if c2.chars().count() == 2 && DELIMITERS.contains(&c2.as_str()) && (c2 != "?." || !is_digit(self.at(self.index + 2))) {
+        if c2.chars().count() == 2
+            && DELIMITERS.contains(&c2.as_str())
+            && (c2 != "?." || !is_digit(self.at(self.index + 2)))
+        {
             self.token_type = TokenType::Delimiter;
             self.take();
             self.take();
@@ -157,8 +164,11 @@ impl Lexer {
             while is_alpha(self.cur()) || is_digit(self.cur()) {
                 self.take();
             }
-            self.token_type =
-                if NAMED_DELIMITERS.contains(&self.token.as_str()) { TokenType::Delimiter } else { TokenType::Symbol };
+            self.token_type = if NAMED_DELIMITERS.contains(&self.token.as_str()) {
+                TokenType::Delimiter
+            } else {
+                TokenType::Symbol
+            };
             return Ok(());
         }
         self.token_type = TokenType::Unknown;
@@ -215,17 +225,26 @@ impl Lexer {
                     self.take();
                 }
                 if !is_digit(self.cur()) {
-                    return Err(self.error(&format!("Digit expected, got \"{}\"", self.cur().unwrap_or_default())));
+                    return Err(self.error(&format!(
+                        "Digit expected, got \"{}\"",
+                        self.cur().unwrap_or_default()
+                    )));
                 }
                 while is_digit(self.cur()) {
                     self.take();
                 }
                 if is_decimal_mark(self.cur(), self.next_char()) {
-                    return Err(self.error(&format!("Digit expected, got \"{}\"", self.cur().unwrap_or_default())));
+                    return Err(self.error(&format!(
+                        "Digit expected, got \"{}\"",
+                        self.cur().unwrap_or_default()
+                    )));
                 }
             } else if is_decimal_mark(self.next_char(), self.at(self.index + 2)) {
                 self.index += 1;
-                return Err(self.error(&format!("Digit expected, got \"{}\"", self.cur().unwrap_or_default())));
+                return Err(self.error(&format!(
+                    "Digit expected, got \"{}\"",
+                    self.cur().unwrap_or_default()
+                )));
             }
         }
         Ok(())
@@ -234,7 +253,7 @@ impl Lexer {
     /// The next token, skipping newlines.
     pub fn next_skip_newline(&mut self) -> Result<(), ParseError> {
         loop {
-            self.next()?;
+            self.advance()?;
             if self.token != "\n" {
                 return Ok(());
             }
@@ -260,7 +279,11 @@ impl Lexer {
                                 out.push(ch);
                                 self.index += 4;
                             }
-                            _ => return Err(self.error(&format!("Invalid unicode character \\u{hex}"))),
+                            _ => {
+                                return Err(
+                                    self.error(&format!("Invalid unicode character \\u{hex}"))
+                                );
+                            }
                         }
                     }
                     '"' | '\'' | '\\' | '/' => out.push(e),
@@ -280,7 +303,7 @@ impl Lexer {
             return Err(self.error(&format!("End of string {quote} expected")));
         }
         self.index += 1;
-        self.next()?;
+        self.advance()?;
         Ok(out)
     }
 }

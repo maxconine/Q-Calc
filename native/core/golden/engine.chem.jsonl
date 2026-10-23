@@ -15,7 +15,7 @@
 {"fn":"chemAnswer","args":["E = mc^2"],"out":null,"src":"src/engine/chem.test.ts"}
 {"fn":"chemAnswer","args":["F = ma"],"out":null,"src":"src/engine/audit2.chem.test.ts"}
 {"fn":"chemAnswer","args":["F(X) = X"],"out":null,"src":"src/engine/chem.test.ts"}
-{"fn":"chemAnswer","args":["Fe + O2 = Fe2O3",{"$fn":"anon"}],"out":null,"nondet":true,"now":1792752365929,"src":"src/engine/audit2.chem.test.ts"}
+{"fn":"chemAnswer","args":["Fe + O2 = Fe2O3",{"$fn":"anon"}],"out":null,"nondet":true,"now":1792768568184,"src":"src/engine/audit2.chem.test.ts"}
 {"fn":"chemAnswer","args":["H + CO"],"out":null,"src":"src/engine/chem.test.ts"}
 {"fn":"chemAnswer","args":["H = 5"],"out":null,"src":"src/engine/chem.test.ts"}
 {"fn":"chemAnswer","args":["H = CO"],"out":null,"src":"src/engine/chem.test.ts"}

@@ -9,7 +9,8 @@ rust-version.workspace = true
 
 [lib]
 name = "qcalc_ffi"
-crate-type = ["staticlib", "lib"]
+# staticlib for the app, cdylib only so uniffi-bindgen can read the metadata in library mode
+crate-type = ["staticlib", "cdylib", "lib"]
 
 [[bin]]
 # generates the Swift bindings from the built library: `cargo run -p qcalc-ffi --bin uniffi-bindgen -- generate ...`
@@ -18,11 +19,10 @@ path = "uniffi-bindgen.rs"
 
 [dependencies]
 qcalc-core = { path = "../core" }
+serde.workspace = true
 serde_json.workspace = true
 uniffi = { workspace = true, features = ["cli"] }
 
-[build-dependencies]
-uniffi = { workspace = true, features = ["build"] }
 
 [lints.rust]
 # UniFFI's generated scaffolding is the one place with unsafe code; everything handwritten here stays safe

@@ -31,7 +31,11 @@ pub struct ScientificContext {
 }
 
 fn chop(n: f64) -> f64 {
-    if n.is_finite() && n.abs() < 1e-12 { 0.0 } else { n }
+    if n.is_finite() && n.abs() < 1e-12 {
+        0.0
+    } else {
+        n
+    }
 }
 
 fn snap_int(n: f64) -> f64 {
@@ -42,18 +46,30 @@ fn snap_int(n: f64) -> f64 {
     if r == 0.0 {
         return n;
     }
-    if (n - r).abs() <= f64::EPSILON * r.abs().max(1.0) { r } else { n }
+    if (n - r).abs() <= f64::EPSILON * r.abs().max(1.0) {
+        r
+    } else {
+        n
+    }
 }
 
 /// `5 + 5i`, `3 - i`, `-2i`: the real part first, a coefficient of 1 left out.
 pub fn format_complex(re: f64, im: f64) -> String {
     let real = chop(re);
     let size = im.abs();
-    let unit = if (size - 1.0).abs() < 1e-12 { "i".to_string() } else { format!("{}i", format_number(snap_int(size), 12.0)) };
+    let unit = if (size - 1.0).abs() < 1e-12 {
+        "i".to_string()
+    } else {
+        format!("{}i", format_number(snap_int(size), 12.0))
+    };
     if real.abs() < 1e-12 {
         return if im < 0.0 { format!("-{unit}") } else { unit };
     }
-    format!("{} {} {unit}", format_number(snap_int(real), 12.0), if im < 0.0 { '-' } else { '+' })
+    format!(
+        "{} {} {unit}",
+        format_number(snap_int(real), 12.0),
+        if im < 0.0 { '-' } else { '+' }
+    )
 }
 
 const MAX_LIST_SHOWN: usize = 16;
@@ -71,10 +87,20 @@ fn list_entry(v: f64) -> String {
 /// `[1, 2, 3]`, or the first six and last four of a long list.
 pub fn format_list(values: &[f64]) -> String {
     if values.len() <= MAX_LIST_SHOWN {
-        return format!("[{}]", values.iter().map(|v| list_entry(*v)).collect::<Vec<_>>().join(", "));
+        return format!(
+            "[{}]",
+            values
+                .iter()
+                .map(|v| list_entry(*v))
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
     }
     let head: Vec<String> = values[..6].iter().map(|v| list_entry(*v)).collect();
-    let tail: Vec<String> = values[values.len() - 4..].iter().map(|v| list_entry(*v)).collect();
+    let tail: Vec<String> = values[values.len() - 4..]
+        .iter()
+        .map(|v| list_entry(*v))
+        .collect();
     format!("[{}, …, {}]", head.join(", "), tail.join(", "))
 }
 
@@ -87,7 +113,8 @@ fn flatten(v: &Val, out: &mut Vec<f64>) {
 
 /// A typed imaginary unit: `i`, `2i`, `(1+2i)`; never the i inside pi, sin or phi.
 pub fn typed_i(expr: &str) -> bool {
-    static RE: Lazy = Lazy::new(|| jsre::js(r"(?<![A-Za-z_])(?:\d+\.?\d*|\.\d+)?i(?![A-Za-z0-9_])", ""));
+    static RE: Lazy =
+        Lazy::new(|| jsre::js(r"(?<![A-Za-z_])(?:\d+\.?\d*|\.\d+)?i(?![A-Za-z0-9_])", ""));
     jsre::test(&RE, expr)
 }
 
@@ -104,7 +131,10 @@ fn finish(v: &Val, expr: &str) -> Option<Value> {
             } else if im.abs() > 1e-12 {
                 // a complex answer shows only when an i was typed; `sqrt(-1)` in plain real maths stays undefined
                 if typed_i(expr) {
-                    Value { complex: Some(Complex { re: *re, im: *im }), ..Value::text(format_complex(*re, *im)) }
+                    Value {
+                        complex: Some(Complex { re: *re, im: *im }),
+                        ..Value::text(format_complex(*re, *im))
+                    }
                 } else {
                     Value::text("undefined")
                 }
@@ -121,7 +151,11 @@ fn finish(v: &Val, expr: &str) -> Option<Value> {
     };
     if out.kind == ValueKind::Number && !out.n.is_finite() {
         static TYPED_INF: Lazy = Lazy::new(|| jsre::js(r"Infinity", ""));
-        return Some(Value::text(if jsre::test(&TYPED_INF, expr) { "undefined" } else { "overflow" }));
+        return Some(Value::text(if jsre::test(&TYPED_INF, expr) {
+            "undefined"
+        } else {
+            "overflow"
+        }));
     }
     Some(out)
 }
@@ -156,7 +190,9 @@ mod tests {
     use super::*;
 
     fn shown(s: &str) -> String {
-        eval_scientific(s, &ScientificContext::default()).map(|v| crate::format::format_value(&v, 12.0)).unwrap_or_default()
+        eval_scientific(s, &ScientificContext::default())
+            .map(|v| crate::format::format_value(&v, 12.0))
+            .unwrap_or_default()
     }
 
     #[test]

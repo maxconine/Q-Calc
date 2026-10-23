@@ -1,0 +1,19 @@
+{
+  "engine.evaluate": 12,
+  "engine.format": 9986,
+  "engine.parens": 746,
+  "engine.scientific": 1423,
+  "engine.simplify": 149,
+  "engine.typstInput": 3,
+  "eval.arithmetic": 6909,
+  "eval.blank": 1317,
+  "eval.calculus": 45,
+  "eval.functions": 1101,
+  "eval.latex": 63,
+  "eval.matrix": 150,
+  "eval.measure": 1728,
+  "eval.sheet": 3779,
+  "eval.solve": 4,
+  "eval.sums": 44,
+  "eval.units": 6
+}

@@ -119,7 +119,10 @@ impl Op {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Constant {
     /// A number with the text it was written as, so exact arithmetic can read `0.1` as 1/10.
-    Number { value: f64, text: String },
+    Number {
+        value: f64,
+        text: String,
+    },
     Str(String),
     Bool(bool),
     Null,
@@ -140,23 +143,54 @@ pub enum Node {
         percentage: bool,
     },
     /// A call; mathjs allows any callee, the engine only ever calls names.
-    Function { callee: Box<Node>, args: Vec<Node> },
+    Function {
+        callee: Box<Node>,
+        args: Vec<Node>,
+    },
     Parenthesis(Box<Node>),
     Array(Vec<Node>),
-    Range { start: Box<Node>, end: Box<Node>, step: Option<Box<Node>> },
-    Conditional { condition: Box<Node>, then: Box<Node>, otherwise: Box<Node> },
+    Range {
+        start: Box<Node>,
+        end: Box<Node>,
+        step: Option<Box<Node>>,
+    },
+    Conditional {
+        condition: Box<Node>,
+        then: Box<Node>,
+        otherwise: Box<Node>,
+    },
     /// `a < b <= c`.
-    Relational { ops: Vec<Op>, params: Vec<Node> },
-    Assignment { target: Box<Node>, index: Option<Vec<Node>>, value: Box<Node> },
-    FunctionAssignment { name: String, params: Vec<String>, body: Box<Node> },
+    Relational {
+        ops: Vec<Op>,
+        params: Vec<Node>,
+    },
+    Assignment {
+        target: Box<Node>,
+        index: Option<Vec<Node>>,
+        value: Box<Node>,
+    },
+    FunctionAssignment {
+        name: String,
+        params: Vec<String>,
+        body: Box<Node>,
+    },
     /// `a[1, 2]` or `a.b`.
-    Accessor { object: Box<Node>, index: Vec<Node>, dot: bool },
+    Accessor {
+        object: Box<Node>,
+        index: Vec<Node>,
+        dot: bool,
+    },
     Block(Vec<(Node, bool)>),
 }
 
 impl Node {
     pub(crate) fn op(op: Op, args: Vec<Node>) -> Node {
-        Node::Operator { op, args, implicit: false, percentage: false }
+        Node::Operator {
+            op,
+            args,
+            implicit: false,
+            percentage: false,
+        }
     }
 
     /// The name of a called symbol: `sqrt` in `sqrt(2)`.
@@ -178,9 +212,11 @@ impl Node {
     pub(crate) fn is_rule2(&self) -> bool {
         match self {
             Node::Constant(_) => true,
-            Node::Operator { op: Op::UnaryMinus | Op::UnaryPlus | Op::BitNot, args, .. } => {
-                args.len() == 1 && args[0].is_constant()
-            }
+            Node::Operator {
+                op: Op::UnaryMinus | Op::UnaryPlus | Op::BitNot,
+                args,
+                ..
+            } => args.len() == 1 && args[0].is_constant(),
             _ => false,
         }
     }
@@ -197,7 +233,9 @@ impl fmt::Display for Node {
             Node::Constant(Constant::Undefined) => write!(f, "undefined"),
             Node::Symbol(s) => write!(f, "{s}"),
             Node::Operator { op, args, .. } => match args.as_slice() {
-                [a] if matches!(op, Op::Factorial | Op::CTranspose) => write!(f, "({a}{})", op.symbol()),
+                [a] if matches!(op, Op::Factorial | Op::CTranspose) => {
+                    write!(f, "({a}{})", op.symbol())
+                }
                 [a] => write!(f, "({}{a})", op.symbol()),
                 [a, b] => write!(f, "({a} {} {b})", op.symbol()),
                 _ => write!(f, "{}(…)", op.name()),
@@ -227,10 +265,16 @@ impl fmt::Display for Node {
                 Some(s) => write!(f, "({start}:{s}:{end})"),
                 None => write!(f, "({start}:{end})"),
             },
-            Node::Conditional { condition, then, otherwise } => write!(f, "({condition} ? {then} : {otherwise})"),
+            Node::Conditional {
+                condition,
+                then,
+                otherwise,
+            } => write!(f, "({condition} ? {then} : {otherwise})"),
             Node::Relational { params, .. } => write!(f, "relational({} terms)", params.len()),
             Node::Assignment { target, value, .. } => write!(f, "({target} = {value})"),
-            Node::FunctionAssignment { name, params, body } => write!(f, "({name}({}) = {body})", params.join(", ")),
+            Node::FunctionAssignment { name, params, body } => {
+                write!(f, "({name}({}) = {body})", params.join(", "))
+            }
             Node::Accessor { object, index, .. } => write!(f, "{object}[{} items]", index.len()),
             Node::Block(items) => write!(f, "block({} items)", items.len()),
         }

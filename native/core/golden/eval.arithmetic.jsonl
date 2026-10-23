@@ -7,9 +7,6 @@
 {"fn":"evaluateLine","args":[" 8",{"angleMode":"rad"}],"out":{"raw":" 8","kind":"expression","value":{"kind":"number","n":8},"display":"8"},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":[" 8",{"fractionMode":true}],"out":{"raw":" 8","kind":"expression","value":{"kind":"number","n":8},"display":"8"},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":[" 8",{}],"out":{"raw":" 8","kind":"expression","value":{"kind":"number","n":8},"display":"8"},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":[" <6µ>[^µ#",{"angleMode":"rad"}],"out":{"raw":" <6µ>[^µ#","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":[" <6µ>[^µ#",{"fractionMode":true}],"out":{"raw":" <6µ>[^µ#","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":[" <6µ>[^µ#",{}],"out":{"raw":" <6µ>[^µ#","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["!",{"angleMode":"rad"}],"out":{"raw":"!","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["!",{"fractionMode":true}],"out":{"raw":"!","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["!",{}],"out":{"raw":"!","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
@@ -25,7 +22,6 @@
 {"fn":"evaluateLine","args":["$/\\√",{"angleMode":"rad"}],"out":{"raw":"$/\\√","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["$/\\√",{"fractionMode":true}],"out":{"raw":"$/\\√","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["$/\\√",{}],"out":{"raw":"$/\\√","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["$2^3$",{"angleMode":"deg"}],"out":{"raw":"$2^3$","kind":"expression","value":{"kind":"number","n":8},"display":"8"},"src":"src/engine/typstInput.test.ts"}
 {"fn":"evaluateLine","args":["${",{"angleMode":"rad"}],"out":{"raw":"${","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["${",{"fractionMode":true}],"out":{"raw":"${","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["${",{}],"out":{"raw":"${","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
@@ -1467,9 +1463,6 @@
 {"fn":"evaluateLine","args":["0.946353"],"out":{"raw":"0.946353","kind":"expression","value":{"kind":"number","n":0.946353},"display":"0.946353"},"src":"src/lib/identities.test.ts"}
 {"fn":"evaluateLine","args":["0/0",{}],"out":{"raw":"0/0","kind":"expression","value":{"kind":"text","n":0,"text":"undefined"},"display":"undefined"},"src":"src/engine/audit.arithmetic.test.ts"}
 {"fn":"evaluateLine","args":["0/0"],"out":{"raw":"0/0","kind":"expression","value":{"kind":"text","n":0,"text":"undefined"},"display":"undefined"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["05:?&?[4",{"angleMode":"rad"}],"out":{"raw":"05:?&?[4","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["05:?&?[4",{"fractionMode":true}],"out":{"raw":"05:?&?[4","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["05:?&?[4",{}],"out":{"raw":"05:?&?[4","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["0^-1"],"out":{"raw":"0^-1","kind":"expression","value":{"kind":"text","n":0,"text":"undefined"},"display":"undefined"},"src":"src/engine/scientific.test.ts"}
 {"fn":"evaluateLine","args":["0^0",{"angleMode":"deg"}],"out":{"raw":"0^0","kind":"expression","value":{"kind":"number","n":1},"display":"1"},"src":"src/engine/scientific.test.ts"}
 {"fn":"evaluateLine","args":["0^5",{"angleMode":"deg"}],"out":{"raw":"0^5","kind":"expression","value":{"kind":"number","n":0},"display":"0"},"src":"src/engine/scientific.test.ts"}
@@ -2109,9 +2102,6 @@
 {"fn":"evaluateLine","args":["2:30",{"angleMode":"rad"}],"out":{"raw":"2:30","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["2:30",{"fractionMode":true}],"out":{"raw":"2:30","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["2:30",{}],"out":{"raw":"2:30","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["2@+0[]7[~",{"angleMode":"rad"}],"out":{"raw":"2@+0[]7[~","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["2@+0[]7[~",{"fractionMode":true}],"out":{"raw":"2@+0[]7[~","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["2@+0[]7[~",{}],"out":{"raw":"2@+0[]7[~","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["2^",{"angleMode":"rad"}],"out":{"raw":"2^","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["2^",{"fractionMode":true}],"out":{"raw":"2^","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["2^",{}],"out":{"raw":"2^","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
@@ -2875,23 +2865,6 @@
 {"fn":"evaluateLine","args":["@",{"angleMode":"rad"}],"out":{"raw":"@","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["@",{"fractionMode":true}],"out":{"raw":"@","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["@",{}],"out":{"raw":"@","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[(:%",{"angleMode":"rad"}],"out":{"raw":"[(:%","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[(:%",{"fractionMode":true}],"out":{"raw":"[(:%","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[(:%",{}],"out":{"raw":"[(:%","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[0...4]",{"angleMode":"deg"}],"out":{"raw":"[0...4]","kind":"expression","value":{"kind":"text","n":0,"text":"[0, 1, 2, 3, 4]"},"display":"[0, 1, 2, 3, 4]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[1, 1/0, 3]"],"out":{"raw":"[1, 1/0, 3]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, undefined, 3]"},"display":"[1, undefined, 3]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[1,2",{"angleMode":"rad"}],"out":{"raw":"[1,2","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[1,2",{"fractionMode":true}],"out":{"raw":"[1,2","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[1,2",{}],"out":{"raw":"[1,2","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["[1,200]",{"angleMode":"deg"}],"out":{"raw":"[1,200]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, 200]"},"display":"[1, 200]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[1...10000]"],"out":{"raw":"[1...10000]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, 2, 3, 4, 5, 6, …, 9997, 9998, 9999, 10000]"},"display":"[1, 2, 3, 4, 5, 6, …, 9997, 9998, 9999, 10000]"},"src":"src/engine/functions.test.ts"}
-{"fn":"evaluateLine","args":["[1...10001]"],"out":{"raw":"[1...10001]","kind":"expression","display":""},"src":"src/engine/functions.test.ts"}
-{"fn":"evaluateLine","args":["[1...10]",{"angleMode":"deg"}],"out":{"raw":"[1...10]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"},"display":"[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[1...80]"],"out":{"raw":"[1...80]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, 2, 3, 4, 5, 6, …, 77, 78, 79, 80]"},"display":"[1, 2, 3, 4, 5, 6, …, 77, 78, 79, 80]"},"src":"src/engine/typeset.test.ts"}
-{"fn":"evaluateLine","args":["[2...2]",{"angleMode":"deg"}],"out":{"raw":"[2...2]","kind":"expression","value":{"kind":"text","n":0,"text":"[2]"},"display":"[2]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[5...8]",{"angleMode":"deg"}],"out":{"raw":"[5...8]","kind":"expression","value":{"kind":"text","n":0,"text":"[5, 6, 7, 8]"},"display":"[5, 6, 7, 8]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[9...12]",{"angleMode":"deg"}],"out":{"raw":"[9...12]","kind":"expression","value":{"kind":"text","n":0,"text":"[9, 10, 11, 12]"},"display":"[9, 10, 11, 12]"},"src":"src/engine/scientific.test.ts"}
-{"fn":"evaluateLine","args":["[[1,2],[3",{}],"out":{"raw":"[[1,2],[3","kind":"expression","display":""},"src":"src/lib/matrix.edge.test.ts"}
 {"fn":"evaluateLine","args":["\""],"out":{"raw":"\"","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\"8",{"angleMode":"rad"}],"out":{"raw":"\"8","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\"8",{"fractionMode":true}],"out":{"raw":"\"8","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
@@ -2902,9 +2875,6 @@
 {"fn":"evaluateLine","args":["\"~8µ",{"angleMode":"rad"}],"out":{"raw":"\"~8µ","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\"~8µ",{"fractionMode":true}],"out":{"raw":"\"~8µ","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\"~8µ",{}],"out":{"raw":"\"~8µ","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["\"√3][$=√",{"angleMode":"rad"}],"out":{"raw":"\"√3][$=√","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["\"√3][$=√",{"fractionMode":true}],"out":{"raw":"\"√3][$=√","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["\"√3][$=√",{}],"out":{"raw":"\"√3][$=√","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\\",{"angleMode":"rad"}],"out":{"raw":"\\","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\\",{"fractionMode":true}],"out":{"raw":"\\","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["\\",{}],"out":{"raw":"\\","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
@@ -2929,9 +2899,6 @@
 {"fn":"evaluateLine","args":["{°\\µ",{"angleMode":"rad"}],"out":{"raw":"{°\\µ","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["{°\\µ",{"fractionMode":true}],"out":{"raw":"{°\\µ","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["{°\\µ",{}],"out":{"raw":"{°\\µ","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["|#[",{"angleMode":"rad"}],"out":{"raw":"|#[","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["|#[",{"fractionMode":true}],"out":{"raw":"|#[","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"evaluateLine","args":["|#[",{}],"out":{"raw":"|#[","kind":"expression","display":""},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"evaluateLine","args":["|-3|",{"angleMode":"deg"}],"out":{"raw":"|-3|","kind":"expression","value":{"kind":"number","n":3},"display":"3"},"src":"src/engine/scientific.test.ts"}
 {"fn":"evaluateLine","args":["|-5|",{}],"out":{"raw":"|-5|","kind":"expression","value":{"kind":"number","n":5},"display":"5"},"src":"src/engine/audit.arithmetic.test.ts"}
 {"fn":"evaluateLine","args":["|2-5| + 1",{"angleMode":"deg"}],"out":{"raw":"|2-5| + 1","kind":"expression","value":{"kind":"number","n":4},"display":"4"},"src":"src/engine/scientific.test.ts"}
@@ -5305,7 +5272,7 @@
 {"fn":"evaluateSheet","args":[["2^0.5"],{"sigFigs":3,"fractionMode":false}],"out":[{"raw":"2^0.5","kind":"expression","value":{"kind":"number","n":1.4142135623730951},"display":"1.41"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["2^0.5"],{"sigFigs":6}],"out":[{"raw":"2^0.5","kind":"expression","value":{"kind":"number","n":1.4142135623730951},"display":"1.41421"}],"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"evaluateSheet","args":[["2^0.5"],{}],"out":[{"raw":"2^0.5","kind":"expression","value":{"kind":"number","n":1.4142135623730951},"display":"1.41421356237"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
-{"fn":"evaluateSheet","args":[["2^10"]],"out":[{"raw":"2^10","kind":"expression","value":{"kind":"number","n":1024},"display":"1024"}],"src":"src/lib/tour.test.ts"}
+{"fn":"evaluateSheet","args":[["2^10"]],"out":[{"raw":"2^10","kind":"expression","value":{"kind":"number","n":1024},"display":"1024"}],"src":"src/lib/phraseLive.test.ts"}
 {"fn":"evaluateSheet","args":[["2^1024"],{"fractionMode":true}],"out":[{"raw":"2^1024","kind":"expression","value":{"kind":"text","n":0,"text":"overflow"},"display":"overflow"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["2^1024"],{"sigFigs":16}],"out":[{"raw":"2^1024","kind":"expression","value":{"kind":"text","n":0,"text":"overflow"},"display":"overflow"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["2^1024"],{"sigFigs":3,"fractionMode":false}],"out":[{"raw":"2^1024","kind":"expression","value":{"kind":"text","n":0,"text":"overflow"},"display":"overflow"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
@@ -6571,7 +6538,7 @@
 {"fn":"evaluateSheet","args":[["8/2(2+2)"],{}],"out":[{"raw":"8/2(2+2)","kind":"expression","value":{"kind":"number","n":16},"display":"16"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["8/8-80.928 - 1 / 4-865+0.000000988 + .92"],{"sigFigs":3,"fractionMode":false}],"out":[{"raw":"8/8-80.928 - 1 / 4-865+0.000000988 + .92","kind":"expression","value":{"kind":"number","n":-944.257999012},"display":"-944"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["80 * 20%"]],"out":[{"raw":"80 * 20%","kind":"expression","value":{"kind":"number","n":16},"display":"16"}],"src":"src/lib/phraseLive.test.ts"}
-{"fn":"evaluateSheet","args":[["80 + 15%"]],"out":[{"raw":"80 + 15%","kind":"expression","value":{"kind":"number","n":92},"display":"92"}],"src":"src/lib/onboarding.test.ts"}
+{"fn":"evaluateSheet","args":[["80 + 15%"]],"out":[{"raw":"80 + 15%","kind":"expression","value":{"kind":"number","n":92},"display":"92"}],"src":"src/lib/phraseLive.test.ts"}
 {"fn":"evaluateSheet","args":[["80 - 20% - 10%"]],"out":[{"raw":"80 - 20% - 10%","kind":"expression","value":{"kind":"number","n":57.6},"display":"57.6"}],"src":"src/lib/phraseLive.test.ts"}
 {"fn":"evaluateSheet","args":[["80 - 20%"]],"out":[{"raw":"80 - 20%","kind":"expression","value":{"kind":"number","n":64},"display":"64"}],"src":"src/lib/phraseLive.test.ts"}
 {"fn":"evaluateSheet","args":[["80.645"],{"sigFigs":16}],"out":[{"raw":"80.645","kind":"expression","value":{"kind":"number","n":80.645},"display":"80.645"}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
@@ -6926,9 +6893,6 @@
 {"fn":"evaluateSheet","args":[["=5"],{"sigFigs":3,"fractionMode":false}],"out":[{"raw":"=5","kind":"expression","display":""}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["=5"],{"sigFigs":6}],"out":[{"raw":"=5","kind":"expression","display":""}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
 {"fn":"evaluateSheet","args":[["=5"],{}],"out":[{"raw":"=5","kind":"expression","display":""}],"src":"native/golden-capture/corpus/arithmetic.golden.ts"}
-{"fn":"evaluateSheet","args":[["[1,2,3] * 2"]],"out":[{"raw":"[1,2,3] * 2","kind":"expression","value":{"kind":"text","n":0,"text":"[2, 4, 6]"},"display":"[2, 4, 6]"}],"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"evaluateSheet","args":[["[1...5]"],{"angleMode":"deg"}],"out":[{"raw":"[1...5]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, 2, 3, 4, 5]"},"display":"[1, 2, 3, 4, 5]"}],"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"evaluateSheet","args":[["[1...5]"],{"angleMode":"rad"}],"out":[{"raw":"[1...5]","kind":"expression","value":{"kind":"text","n":0,"text":"[1, 2, 3, 4, 5]"},"display":"[1, 2, 3, 4, 5]"}],"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"evaluateSheet","args":[["√ 2"],{"angleMode":"deg"}],"out":[{"raw":"√ 2","kind":"expression","value":{"kind":"number","n":1.4142135623730951},"display":"1.41421356237","exact":"sqrt(2)"}],"src":"src/components/QuickInput.symbols.test.ts"}
 {"fn":"evaluateSheet","args":[["√(-1)"],{"angleMode":"deg"}],"out":[{"raw":"√(-1)","kind":"expression","value":{"kind":"text","n":0,"text":"undefined"},"display":"undefined"}],"src":"src/components/QuickInput.symbols.test.ts"}
 {"fn":"evaluateSheet","args":[["√(1/2)"],{"angleMode":"deg"}],"out":[{"raw":"√(1/2)","kind":"expression","value":{"kind":"number","n":0.7071067811865476},"display":"0.707106781187","exact":"sqrt(2)/2"}],"src":"src/components/QuickInput.symbols.test.ts"}

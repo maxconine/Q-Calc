@@ -21,7 +21,11 @@ pub fn format_scientific(n: f64, sig_figs: u32) -> String {
     let s = jsnum::to_exponential(n, sig_figs.saturating_sub(1) as usize);
     let Some(at) = s.find('e') else { return s };
     let (mant, exp) = s.split_at(at);
-    let mant = if mant.contains('.') { mant.trim_end_matches('0').trim_end_matches('.') } else { mant };
+    let mant = if mant.contains('.') {
+        mant.trim_end_matches('0').trim_end_matches('.')
+    } else {
+        mant
+    };
     format!("{mant}{exp}")
 }
 
@@ -127,7 +131,11 @@ pub fn format_as_fraction(n: f64, max_den: u32) -> Option<String> {
     }
     let g = int_gcd(best_n, best_d);
     let (p, q) = (jsnum::to_string(best_n / g), jsnum::to_string(best_d / g));
-    Some(if best_d == g { format!("{sign}{p}") } else { format!("{sign}{p}/{q}") })
+    Some(if best_d == g {
+        format!("{sign}{p}")
+    } else {
+        format!("{sign}{p}/{q}")
+    })
 }
 
 const MINUS: &str = "−";
@@ -135,21 +143,35 @@ const MINUS: &str = "−";
 /// Display only: groups the digits of a leading number and swaps hyphens for minus signs.
 /// Copy and insert keep using the plain ascii answer, which re-parses.
 pub fn pretty_answer(s: &str) -> String {
-    static LEAD_NUMBER: Lazy = Lazy::new(|| jsre::compile(r"^(-?)([$€£¥]?)([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(\.[0-9]+)?(e[+-]?[0-9]+)?(?=\s|$)"));
+    static LEAD_NUMBER: Lazy = Lazy::new(|| {
+        jsre::compile(
+            r"^(-?)([$€£¥]?)([0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(\.[0-9]+)?(e[+-]?[0-9]+)?(?=\s|$)",
+        )
+    });
     static MATH_ONLY: Lazy = Lazy::new(|| jsre::compile(r"^[0-9\s+\-*/^().,πe√i·×sqrt]+$"));
     static HYPHEN: Lazy = Lazy::new(|| jsre::compile(r"(^|[\s(])-(?=[\s0-9(π√sei])"));
     if let Ok(Some(m)) = LEAD_NUMBER.captures(s) {
         let whole = m.get(0).map_or(0, |w| w.end());
-        let sign = if jsre::group(&m, 1).is_empty() { "" } else { MINUS };
+        let sign = if jsre::group(&m, 1).is_empty() {
+            ""
+        } else {
+            MINUS
+        };
         let int = group_digits(&jsre::group(&m, 3).replace(',', ""));
         let exp = jsre::group(&m, 5).replacen('-', MINUS, 1);
-        return format!("{sign}{}{int}{}{exp}{}", jsre::group(&m, 2), jsre::group(&m, 4), &s[whole..]);
+        return format!(
+            "{sign}{}{int}{}{exp}{}",
+            jsre::group(&m, 2),
+            jsre::group(&m, 4),
+            &s[whole..]
+        );
     }
     if s == "-∞" {
         return format!("{MINUS}∞");
     }
     if jsre::test(&MATH_ONLY, s) {
-        return jsre::replace_all(&HYPHEN, s, |c| format!("{}{MINUS}", jsre::group(c, 1))).into_owned();
+        return jsre::replace_all(&HYPHEN, s, |c| format!("{}{MINUS}", jsre::group(c, 1)))
+            .into_owned();
     }
     s.to_string()
 }
@@ -160,7 +182,7 @@ fn group_digits(int: &str) -> String {
     }
     let mut out = String::new();
     for (i, ch) in int.chars().enumerate() {
-        if i > 0 && (int.len() - i) % 3 == 0 {
+        if i > 0 && (int.len() - i).is_multiple_of(3) {
             out.push(',');
         }
         out.push(ch);
@@ -188,7 +210,10 @@ mod tests {
     #[test]
     fn fractions() {
         assert_eq!(format_as_fraction(0.75, 10_000).as_deref(), Some("3/4"));
-        assert_eq!(format_as_fraction(-1.0 / 3.0, 10_000).as_deref(), Some("-1/3"));
+        assert_eq!(
+            format_as_fraction(-1.0 / 3.0, 10_000).as_deref(),
+            Some("-1/3")
+        );
         assert_eq!(format_as_fraction(4.0, 10_000).as_deref(), Some("4"));
         assert_eq!(format_as_fraction(std::f64::consts::PI, 10_000), None);
     }

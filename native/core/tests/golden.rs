@@ -4,6 +4,7 @@
 //! Environment:
 //! - `GOLDEN_AREA=eval.arithmetic` (comma-separated, prefix match) limits the run;
 //! - `GOLDEN_FAILS=20` prints that many failures per area (default 0);
+//! - `GOLDEN_TRACE=1` prints each call to stderr before running it;
 //! - the test fails only when an area drops below its floor in `golden/baseline.json`, so ports ratchet up
 //!   (`GOLDEN_UPDATE_BASELINE=1` raises the floors to the current pass counts).
 
@@ -38,6 +39,8 @@ fn wanted(area: &str) -> bool {
 
 fn replay(area: &str, path: &Path, show: usize) -> Tally {
     let module = module_of(area);
+    // GOLDEN_TRACE=1 names each call before it runs, to find one that hangs
+    let trace = std::env::var("GOLDEN_TRACE").is_ok_and(|v| v == "1");
     let mut t = Tally::default();
     let text = fs::read_to_string(path).unwrap_or_default();
     for line in text.lines().filter(|l| !l.is_empty()) {
@@ -52,6 +55,12 @@ fn replay(area: &str, path: &Path, show: usize) -> Tally {
         }
         let name = rec["fn"].as_str().unwrap_or("");
         let args = rec["args"].as_array().cloned().unwrap_or_default();
+        if trace {
+            eprintln!(
+                "[{area}] {name} {}",
+                serde_json::to_string(&args).unwrap_or_default()
+            );
+        }
         let outcome = std::panic::catch_unwind(|| dispatch(&module, name, &args))
             .unwrap_or_else(|_| Outcome::Threw("panicked".into()));
         let verdict = match (outcome, rec.get("throws")) {
@@ -73,7 +82,10 @@ fn replay(area: &str, path: &Path, show: usize) -> Tally {
             Err(why) => {
                 t.fail += 1;
                 if t.failures.len() < show {
-                    t.failures.push(format!("{name}({}) — {why}", serde_json::to_string(&args).unwrap_or_default()));
+                    t.failures.push(format!(
+                        "{name}({}) — {why}",
+                        serde_json::to_string(&args).unwrap_or_default()
+                    ));
                 }
             }
         }
@@ -82,13 +94,20 @@ fn replay(area: &str, path: &Path, show: usize) -> Tally {
 }
 
 fn pct(a: usize, b: usize) -> String {
-    if b == 0 { "—".into() } else { format!("{:.1}%", 100.0 * a as f64 / b as f64) }
+    if b == 0 {
+        "—".into()
+    } else {
+        format!("{:.1}%", 100.0 * a as f64 / b as f64)
+    }
 }
 
 #[test]
 fn golden_parity() {
     // deep fixtures (hundreds of nested brackets) need the stack an evaluation thread gets in the app
-    let run = std::thread::Builder::new().stack_size(256 << 20).spawn(parity).expect("spawn");
+    let run = std::thread::Builder::new()
+        .stack_size(256 << 20)
+        .spawn(parity)
+        .expect("spawn");
     if let Err(e) = run.join() {
         std::panic::resume_unwind(e);
     }
@@ -96,24 +115,46 @@ fn golden_parity() {
 
 fn parity() {
     let dir = golden_dir();
-    let show: usize = std::env::var("GOLDEN_FAILS").ok().and_then(|s| s.parse().ok()).unwrap_or(0);
+    let show: usize = std::env::var("GOLDEN_FAILS")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
     let mut files: Vec<PathBuf> = fs::read_dir(&dir)
-        .map(|rd| rd.filter_map(|e| e.ok().map(|e| e.path())).filter(|p| p.extension().is_some_and(|x| x == "jsonl")).collect())
+        .map(|rd| {
+            rd.filter_map(|e| e.ok().map(|e| e.path()))
+                .filter(|p| p.extension().is_some_and(|x| x == "jsonl"))
+                .collect()
+        })
         .unwrap_or_default();
     files.sort();
     let mut results: BTreeMap<String, Tally> = BTreeMap::new();
     for path in &files {
-        let area = path.file_stem().and_then(|s| s.to_str()).unwrap_or("").to_string();
+        let area = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_string();
         if wanted(&area) {
             results.insert(area.clone(), replay(&area, path, show));
         }
     }
 
-    let mut table = String::from("| area | fixtures | pass | fail | unported | skipped | pass rate (of replayed) |\n|---|---:|---:|---:|---:|---:|---:|\n");
+    let mut table = String::from(
+        "| area | fixtures | pass | fail | unported | skipped | pass rate (of replayed) |\n|---|---:|---:|---:|---:|---:|---:|\n",
+    );
     let mut sum = Tally::default();
     for (area, t) in &results {
         let replayed = t.pass + t.fail;
-        let _ = writeln!(table, "| {area} | {} | {} | {} | {} | {} | {} |", t.total, t.pass, t.fail, t.unported, t.skipped, pct(t.pass, replayed));
+        let _ = writeln!(
+            table,
+            "| {area} | {} | {} | {} | {} | {} | {} |",
+            t.total,
+            t.pass,
+            t.fail,
+            t.unported,
+            t.skipped,
+            pct(t.pass, replayed)
+        );
         sum.total += t.total;
         sum.pass += t.pass;
         sum.fail += t.fail;
@@ -143,8 +184,10 @@ fn parity() {
 
     // the ratchet: no area may fall below its recorded floor
     let baseline_path = dir.join("baseline.json");
-    let baseline: BTreeMap<String, usize> =
-        fs::read_to_string(&baseline_path).ok().and_then(|s| serde_json::from_str(&s).ok()).unwrap_or_default();
+    let baseline: BTreeMap<String, usize> = fs::read_to_string(&baseline_path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default();
     if std::env::var("GOLDEN_UPDATE_BASELINE").is_ok_and(|v| v == "1") {
         let mut next = baseline.clone();
         for (area, t) in &results {
@@ -152,7 +195,13 @@ fn parity() {
             *floor = (*floor).max(t.pass);
         }
         next.retain(|_, v| *v > 0);
-        let _ = fs::write(&baseline_path, format!("{}\n", serde_json::to_string_pretty(&next).unwrap_or_default()));
+        let _ = fs::write(
+            &baseline_path,
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&next).unwrap_or_default()
+            ),
+        );
     }
     let regressions: Vec<String> = baseline
         .iter()
@@ -161,5 +210,9 @@ fn parity() {
             (t.pass < *floor).then(|| format!("{area}: {} passing, floor {floor}", t.pass))
         })
         .collect();
-    assert!(regressions.is_empty(), "golden regressions:\n{}", regressions.join("\n"));
+    assert!(
+        regressions.is_empty(),
+        "golden regressions:\n{}",
+        regressions.join("\n")
+    );
 }

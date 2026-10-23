@@ -67,12 +67,21 @@ pub struct Value {
 impl Value {
     /// A plain number.
     pub fn number(n: f64) -> Self {
-        Value { kind: ValueKind::Number, n, ..Value::default() }
+        Value {
+            kind: ValueKind::Number,
+            n,
+            ..Value::default()
+        }
     }
 
     /// Text the engine wrote out, such as `undefined` or `overflow`.
     pub fn text(text: impl Into<String>) -> Self {
-        Value { kind: ValueKind::Text, n: 0.0, text: Some(text.into()), ..Value::default() }
+        Value {
+            kind: ValueKind::Text,
+            n: 0.0,
+            text: Some(text.into()),
+            ..Value::default()
+        }
     }
 }
 
@@ -165,12 +174,20 @@ pub struct LineResult {
 impl LineResult {
     /// A line with nothing in it.
     pub fn empty(raw: &str) -> Self {
-        LineResult { raw: raw.to_string(), kind: LineKind::Empty, ..LineResult::default() }
+        LineResult {
+            raw: raw.to_string(),
+            kind: LineKind::Empty,
+            ..LineResult::default()
+        }
     }
 
     /// A line the engine can't answer: shown blank.
     pub fn blank(raw: &str) -> Self {
-        LineResult { raw: raw.to_string(), kind: LineKind::Expression, ..LineResult::default() }
+        LineResult {
+            raw: raw.to_string(),
+            kind: LineKind::Expression,
+            ..LineResult::default()
+        }
     }
 }
 
@@ -223,12 +240,16 @@ mod tests {
             ..LineResult::default()
         };
         let json = serde_json::to_string(&r).unwrap();
-        assert_eq!(json, r#"{"raw":"2+3","kind":"expression","value":{"kind":"number","n":5.0},"display":"5"}"#);
+        assert_eq!(
+            json,
+            r#"{"raw":"2+3","kind":"expression","value":{"kind":"number","n":5.0},"display":"5"}"#
+        );
     }
 
     #[test]
     fn options_read_from_ts_json() {
-        let o: EvaluateOptions = serde_json::from_str(r#"{"angleMode":"rad","sigFigs":6,"variables":{"x":2}}"#).unwrap();
+        let o: EvaluateOptions =
+            serde_json::from_str(r#"{"angleMode":"rad","sigFigs":6,"variables":{"x":2}}"#).unwrap();
         assert_eq!(o.angle(), AngleMode::Rad);
         assert_eq!(o.sig_figs, Some(6.0));
         assert_eq!(o.variables.get("x"), Some(&2.0));

@@ -34,19 +34,33 @@ fn js(p: &str, f: &str) -> jsre::Regex {
 /// `what is 40% of 90?` becomes `40% of 90`.
 fn unwrap_question(text: &str) -> String {
     static TRAILING: Lazy = Lazy::new(|| js(r"\s*\?+\s*$", ""));
-    static LEADING: Lazy = Lazy::new(|| js(r"^(?:what(?:'s|\s+is|s)|how\s+much\s+is|calculate|compute)\s+", "i"));
+    static LEADING: Lazy = Lazy::new(|| {
+        js(
+            r"^(?:what(?:'s|\s+is|s)|how\s+much\s+is|calculate|compute)\s+",
+            "i",
+        )
+    });
     let src = text.trim();
     if src.is_empty() {
         return String::new();
     }
     let bare = jsre::replace_all(&TRAILING, src, |_| String::new());
-    let bare = jsre::replace_all(&LEADING, &bare, |_| String::new()).trim().to_string();
-    if bare.is_empty() { src.to_string() } else { bare }
+    let bare = jsre::replace_all(&LEADING, &bare, |_| String::new())
+        .trim()
+        .to_string();
+    if bare.is_empty() {
+        src.to_string()
+    } else {
+        bare
+    }
 }
 
 fn has_nlp_words(s: &str) -> bool {
     static NLP: Lazy = Lazy::new(|| {
-        js(r"\b(of|off|from|today|tomorrow|yesterday|tax|tip|people|nights|was|until|between|per|earnings|lunch|miles|weeks?|days?|hours?|months?)\b", "i")
+        js(
+            r"\b(of|off|from|today|tomorrow|yesterday|tax|tip|people|nights|was|until|between|per|earnings|lunch|miles|weeks?|days?|hours?|months?)\b",
+            "i",
+        )
     });
     static TEXT: Lazy = Lazy::new(|| js(r"\\text\{([^}]*)\}", ""));
     static MATHRM: Lazy = Lazy::new(|| js(r"\\mathrm\{([^}]*)\}", ""));
@@ -68,7 +82,10 @@ fn is_digit(c: Option<&char>) -> bool {
 /// A typed space between two numbers multiplies them (`3 4` is 12), outside a matrix, where it separates entries.
 fn multiply_spaced_numbers(s: &str) -> String {
     static ARGUMENT: Lazy = Lazy::new(|| {
-        js(r"(?<![A-Za-z])(?:sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot|ln|log)\s*(?:\^\s*[-−]?|_)\(?\d*\.?\d*\)?$", "i")
+        js(
+            r"(?<![A-Za-z])(?:sinh|cosh|tanh|csch|sech|coth|sin|cos|tan|csc|sec|cot|ln|log)\s*(?:\^\s*[-−]?|_)\(?\d*\.?\d*\)?$",
+            "i",
+        )
     });
     static WHOLE_END: Lazy = Lazy::new(|| js(r"(?<![\d.])\d+$", ""));
     static FRACTION_START: Lazy = Lazy::new(|| js(r"^\d+[/⁄]\d", ""));
@@ -96,7 +113,8 @@ fn multiply_spaced_numbers(s: &str) -> String {
             let argument = jsre::test(&ARGUMENT, &before);
             let mixed = jsre::test(&WHOLE_END, &before) && jsre::test(&FRACTION_START, &after);
             if !argument && !mixed && (is_digit(prev) || jsre::test(&POINT_END, &before)) {
-                let next_starts_number = is_digit(cs.get(k)) || (cs.get(k) == Some(&'.') && is_digit(cs.get(k + 1)));
+                let next_starts_number =
+                    is_digit(cs.get(k)) || (cs.get(k) == Some(&'.') && is_digit(cs.get(k + 1)));
                 if next_starts_number {
                     out.push('*');
                     i = k;
@@ -113,14 +131,29 @@ fn multiply_spaced_numbers(s: &str) -> String {
 /// `1,000,000` becomes `1000000`; commas inside a call's arguments and lists stay. `0xff`, `0b1010` and `0o17` are
 /// whole numbers. A pasted thin or no-break space groups thousands; a typed one only with the setting on.
 fn strip_thousands(s: &str) -> String {
-    static COMMAS: Lazy =
-        Lazy::new(|| js(r"(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)", ""));
-    static PASTED: Lazy = Lazy::new(|| js(&format!(r"(?<![\w.,])\d{{1,3}}(?:[{PASTED_SPACE}]\d{{3}})+(?!\d)"), ""));
-    static RADIX: Lazy = Lazy::new(|| js(r"(?<![\w.])0(?:x[0-9a-f]+|b[01]+|o[0-7]+)(?![\w.])", "i"));
+    static COMMAS: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z_][A-Za-z0-9_]*\([^()]*|\[[^\][]*)\b\d{1,3}(?:,\d{3})+\b(?!,?\d)",
+            "",
+        )
+    });
+    static PASTED: Lazy = Lazy::new(|| {
+        js(
+            &format!(r"(?<![\w.,])\d{{1,3}}(?:[{PASTED_SPACE}]\d{{3}})+(?!\d)"),
+            "",
+        )
+    });
+    static RADIX: Lazy =
+        Lazy::new(|| js(r"(?<![\w.])0(?:x[0-9a-f]+|b[01]+|o[0-7]+)(?![\w.])", "i"));
     static TYPED: Lazy = Lazy::new(|| js(r"(?<![\w.,])\d{1,3}(?: \d{3})+(?!\d)", ""));
     let joined = jsre::replace_all(&COMMAS, s, |c| jsre::group(c, 0).replace(',', "")).into_owned();
-    let joined = jsre::replace_all(&PASTED, &joined, |c| jsre::group(c, 0).chars().filter(|ch| !PASTED_SPACE.contains(*ch)).collect())
-        .into_owned();
+    let joined = jsre::replace_all(&PASTED, &joined, |c| {
+        jsre::group(c, 0)
+            .chars()
+            .filter(|ch| !PASTED_SPACE.contains(*ch))
+            .collect()
+    })
+    .into_owned();
     let joined = jsre::replace_all(&RADIX, &joined, |c| {
         let m = jsre::group(c, 0);
         let lower = m.to_ascii_lowercase();
@@ -148,7 +181,10 @@ const SUPERSCRIPT: &str = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 /// `3.00 × 10^8 m/s` becomes `3.00e8 m/s`, so the unit reads; only where nothing binds tighter on either side.
 fn fold_powers_of_ten(s: &str) -> String {
     static RE: Lazy = Lazy::new(|| {
-        js(r"(?<=(?:^|[-+*(,=−])\s*)(?<!\^\s*[-+−]\s*)(?<![\d.][eE][-+−])(\d+(?:\.\d*)?|\.\d+)\s*[×*·⋅]\s*10\s*(?:\^\s*(?:\(\s*([-−]?\d+)\s*\)|([-−]?\d+))|([⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))(?![\d.^!(%⁰¹²³⁴⁵⁶⁷⁸⁹⁻])", "")
+        js(
+            r"(?<=(?:^|[-+*(,=−])\s*)(?<!\^\s*[-+−]\s*)(?<![\d.][eE][-+−])(\d+(?:\.\d*)?|\.\d+)\s*[×*·⋅]\s*10\s*(?:\^\s*(?:\(\s*([-−]?\d+)\s*\)|([-−]?\d+))|([⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))(?![\d.^!(%⁰¹²³⁴⁵⁶⁷⁸⁹⁻])",
+            "",
+        )
     });
     jsre::replace_all(&RE, s, |c| {
         let power = if c.get(2).is_some() {
@@ -158,7 +194,17 @@ fn fold_powers_of_ten(s: &str) -> String {
         } else {
             jsre::group(c, 4)
                 .chars()
-                .map(|ch| if ch == '⁻' { "-".to_string() } else { SUPERSCRIPT.chars().position(|d| d == ch).unwrap_or(0).to_string() })
+                .map(|ch| {
+                    if ch == '⁻' {
+                        "-".to_string()
+                    } else {
+                        SUPERSCRIPT
+                            .chars()
+                            .position(|d| d == ch)
+                            .unwrap_or(0)
+                            .to_string()
+                    }
+                })
                 .collect()
         };
         format!("{}e{}", jsre::group(c, 1), power.replacen('−', "-", 1))
@@ -168,9 +214,19 @@ fn fold_powers_of_ten(s: &str) -> String {
 
 /// Typst and LaTeX to ascii, typeset operators, thousands separators and missing parens.
 pub fn normalize_math_text(text: &str) -> String {
-    let typst = if typst_input::looks_like_typst(text) { typst_input::typst_to_ascii(text) } else { text.to_string() };
-    let ascii = if latex::looks_like_latex(&typst) { latex::latex_to_ascii(&typst) } else { typst };
-    fill_parens(&fold_powers_of_ten(&strip_thousands(&rewrite_typeset_mul(&ascii))))
+    let typst = if typst_input::looks_like_typst(text) {
+        typst_input::typst_to_ascii(text)
+    } else {
+        text.to_string()
+    };
+    let ascii = if latex::looks_like_latex(&typst) {
+        latex::latex_to_ascii(&typst)
+    } else {
+        typst
+    };
+    fill_parens(&fold_powers_of_ten(&strip_thousands(&rewrite_typeset_mul(
+        &ascii,
+    ))))
 }
 
 /// Everything `tryPlainMath` reads besides the text.
@@ -201,16 +257,41 @@ pub fn try_plain_math(text: &str, ctx: &PlainContext) -> Option<Value> {
     if has_ans && let Some(a) = sci.ans {
         vars.insert("ans".into(), a);
     }
-    let leading = (has_ans && jsre::test(&LEADING_ANS, &filled))
-        .then(|| jsre::replace_all(&ANS_START, &filled, |_| jsnum::to_string(sci.ans.unwrap_or_default())).into_owned());
-    let first = if has_ans { jsre::replace_all(&ANS_WORD, &filled, |_| "ans".into()).into_owned() } else { filled.clone() };
-    let converted = units::try_convert(&first, &ctx.default_units, &vars, ctx.keep_units, sci.angle_mode).or_else(|| {
-        leading.as_ref().and_then(|l| units::try_convert(l, &ctx.default_units, &sci.variables, ctx.keep_units, sci.angle_mode))
+    let leading = (has_ans && jsre::test(&LEADING_ANS, &filled)).then(|| {
+        jsre::replace_all(&ANS_START, &filled, |_| {
+            jsnum::to_string(sci.ans.unwrap_or_default())
+        })
+        .into_owned()
+    });
+    let first = if has_ans {
+        jsre::replace_all(&ANS_WORD, &filled, |_| "ans".into()).into_owned()
+    } else {
+        filled.clone()
+    };
+    let converted = units::try_convert(
+        &first,
+        &ctx.default_units,
+        &vars,
+        ctx.keep_units,
+        sci.angle_mode,
+    )
+    .or_else(|| {
+        leading.as_ref().and_then(|l| {
+            units::try_convert(
+                l,
+                &ctx.default_units,
+                &sci.variables,
+                ctx.keep_units,
+                sci.angle_mode,
+            )
+        })
     });
     if converted.is_some() {
         return converted;
     }
-    let cleaned = jsre::replace_all(&PCT_OF, &src, |c| jsre::replace_all(&OF, jsre::group(c, 0), |_| String::new()).into_owned());
+    let cleaned = jsre::replace_all(&PCT_OF, &src, |c| {
+        jsre::replace_all(&OF, jsre::group(c, 0), |_| String::new()).into_owned()
+    });
     if has_nlp_words(&cleaned) && !latex::looks_like_latex(&src) {
         return None;
     }
@@ -223,7 +304,9 @@ mod tests {
     use super::*;
 
     fn shown(s: &str) -> String {
-        try_plain_math(s, &PlainContext::default()).map(|v| crate::format::format_value(&v, 16.0)).unwrap_or_default()
+        try_plain_math(s, &PlainContext::default())
+            .map(|v| crate::format::format_value(&v, 16.0))
+            .unwrap_or_default()
     }
 
     #[test]
@@ -236,7 +319,10 @@ mod tests {
         assert_eq!(normalize_math_text("3.00 × 10^8"), "3.00e8");
         assert_eq!(normalize_math_text("(2+3"), "(2+3)");
         assert_eq!(normalize_math_text("1\u{202f}000"), "1000");
-        assert_eq!(with_space_thousands(true, || normalize_math_text("1 000 000")), "1000000");
+        assert_eq!(
+            with_space_thousands(true, || normalize_math_text("1 000 000")),
+            "1000000"
+        );
     }
 
     #[test]

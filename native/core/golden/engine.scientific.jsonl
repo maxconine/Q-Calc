@@ -2427,7 +2427,7 @@
 {"fn":"evalScientific","args":["log10(9914.9 / 4264.2) + cos(4264.2 * 0.01)",{"angleMode":"deg"}],"out":{"kind":"number","n":1.1020514859113906},"src":"src/engine/precise.test.ts"}
 {"fn":"evalScientific","args":["log10(994.27 / 665.65) + exp(665.65 * 0.01)",{"angleMode":"deg"}],"out":{"kind":"number","n":777.9980425478907},"src":"src/engine/precise.test.ts"}
 {"fn":"evalScientific","args":["mean([1, 2, 3])"],"out":{"kind":"number","n":2},"src":"src/engine/precise.test.ts"}
-{"fn":"evalScientific","args":["random()"],"out":{"kind":"number","n":0.5582202924113701},"nondet":true,"now":1792752328098,"src":"src/engine/precise.test.ts"}
+{"fn":"evalScientific","args":["random()"],"out":{"kind":"number","n":0.655506669598957},"nondet":true,"now":1792768550295,"src":"src/engine/precise.test.ts"}
 {"fn":"evalScientific","args":["round(0.586 / 67.297) + tan(67.297 * 0.01)",{"angleMode":"rad"}],"out":{"kind":"number","n":0.7970997606464914},"src":"src/engine/precise.test.ts"}
 {"fn":"evalScientific","args":["round(0.9294 / 3.4618) + sinh(3.4618 * 0.01)",{"angleMode":"deg"}],"out":{"kind":"number","n":0.03462491481703772},"src":"src/engine/precise.test.ts"}
 {"fn":"evalScientific","args":["round(1.7181 / 90017) + sqrt(90017 * 0.01)",{"angleMode":"rad"}],"out":{"kind":"number","n":30.002833199549674},"src":"src/engine/precise.test.ts"}

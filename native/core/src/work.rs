@@ -20,7 +20,9 @@ pub struct WorkBudget {
 
 impl WorkBudget {
     pub fn new(units: u64) -> Self {
-        WorkBudget { until: DONE.with(Cell::get).saturating_add(units) }
+        WorkBudget {
+            until: DONE.with(Cell::get).saturating_add(units),
+        }
     }
 
     /// Whether the work done since the budget began is past it.

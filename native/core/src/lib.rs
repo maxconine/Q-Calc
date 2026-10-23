@@ -20,8 +20,8 @@ pub mod scientific;
 pub mod simplify;
 pub mod stubs;
 pub mod syntax;
-pub mod typst_input;
 pub mod types;
+pub mod typst_input;
 pub mod units;
 pub mod work;
 

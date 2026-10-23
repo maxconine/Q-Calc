@@ -81,8 +81,16 @@ fn format_pi(num: f64, den: f64) -> String {
     if n == 0.0 {
         return "0".into();
     }
-    let coeff = if n == 1.0 { String::new() } else { format!("{}*", s(n)) };
-    let den = if den == 1.0 { String::new() } else { format!("/{}", s(den)) };
+    let coeff = if n == 1.0 {
+        String::new()
+    } else {
+        format!("{}*", s(n))
+    };
+    let den = if den == 1.0 {
+        String::new()
+    } else {
+        format!("/{}", s(den))
+    };
     format!("{sign}{coeff}pi{den}")
 }
 
@@ -110,14 +118,22 @@ fn radical_term(coeff: f64, rad: f64) -> String {
         return s(coeff);
     }
     let core = format!("sqrt({})", s(rad));
-    if coeff == 1.0 { core } else { format!("{}{core}", s(coeff)) }
+    if coeff == 1.0 {
+        core
+    } else {
+        format!("{}{core}", s(coeff))
+    }
 }
 
 fn format_radical(sign: &str, coeff: f64, rad: f64, den: f64) -> String {
     let g = int_gcd(coeff, den);
     let (coeff, den) = (coeff / g, den / g);
     let core = radical_term(coeff, rad);
-    if den == 1.0 { format!("{sign}{core}") } else { format!("{sign}{core}/{}", s(den)) }
+    if den == 1.0 {
+        format!("{sign}{core}")
+    } else {
+        format!("{sign}{core}/{}", s(den))
+    }
 }
 
 fn format_unrationalized(sign: &str, num: (f64, f64), den: (f64, f64)) -> String {
@@ -128,17 +144,28 @@ fn format_unrationalized(sign: &str, num: (f64, f64), den: (f64, f64)) -> String
         return format!("{sign}{n}");
     }
     let d = radical_term(dc, den.1);
-    if dc != 1.0 && den.1 != 1.0 { format!("{sign}{n}/({d})") } else { format!("{sign}{n}/{d}") }
+    if dc != 1.0 && den.1 != 1.0 {
+        format!("{sign}{n}/({d})")
+    } else {
+        format!("{sign}{n}/{d}")
+    }
 }
 
 fn as_pi_multiple(n: f64, tol: Tol) -> Option<String> {
     let x = n / std::f64::consts::PI;
     let (fnum, fden) = to_fraction(x, 24, tol(x))?;
-    Some(if fnum == 0.0 { "0".into() } else { format_pi(fnum, fden) })
+    Some(if fnum == 0.0 {
+        "0".into()
+    } else {
+        format_pi(fnum, fden)
+    })
 }
 
 fn as_nested_radical(n: f64, tol: Tol) -> Option<String> {
-    nested().iter().find(|(_, v)| close(n, *v, tol)).map(|(t, _)| (*t).to_string())
+    nested()
+        .iter()
+        .find(|(_, v)| close(n, *v, tol))
+        .map(|(t, _)| (*t).to_string())
 }
 
 fn as_radical(n: f64, rationalize: bool, tol: Tol) -> Option<String> {
@@ -168,7 +195,11 @@ fn as_nice_fraction(n: f64, tol: Tol) -> Option<String> {
     if !NICE_DEN.contains(&fden) {
         return None;
     }
-    Some(if fnum == 0.0 { "0".into() } else { format!("{}/{}", s(fnum), s(fden)) })
+    Some(if fnum == 0.0 {
+        "0".into()
+    } else {
+        format!("{}/{}", s(fnum), s(fden))
+    })
 }
 
 /// The closed form is only shown beside the decimal for trig and square-root expressions.
@@ -229,11 +260,26 @@ mod tests {
     #[test]
     fn closed_forms() {
         let o = ExactFormOptions::default();
-        assert_eq!(exact_form(2.0 * 3f64.sqrt(), o).as_deref(), Some("2sqrt(3)"));
-        assert_eq!(exact_form(std::f64::consts::FRAC_PI_4, o).as_deref(), Some("pi/4"));
-        assert_eq!(exact_form(1.0 / 2f64.sqrt(), o).as_deref(), Some("sqrt(2)/2"));
-        let keep = ExactFormOptions { rationalize: Some(false), ..o };
-        assert_eq!(exact_form(1.0 / 2f64.sqrt(), keep).as_deref(), Some("1/sqrt(2)"));
+        assert_eq!(
+            exact_form(2.0 * 3f64.sqrt(), o).as_deref(),
+            Some("2sqrt(3)")
+        );
+        assert_eq!(
+            exact_form(std::f64::consts::FRAC_PI_4, o).as_deref(),
+            Some("pi/4")
+        );
+        assert_eq!(
+            exact_form(1.0 / 2f64.sqrt(), o).as_deref(),
+            Some("sqrt(2)/2")
+        );
+        let keep = ExactFormOptions {
+            rationalize: Some(false),
+            ..o
+        };
+        assert_eq!(
+            exact_form(1.0 / 2f64.sqrt(), keep).as_deref(),
+            Some("1/sqrt(2)")
+        );
         assert_eq!(exact_form(4.0, o).as_deref(), Some("4"));
         assert_eq!(exact_form(0.0005, o), None);
         assert!(wants_exact_form("sin(30)"));

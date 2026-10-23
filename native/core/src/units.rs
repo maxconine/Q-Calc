@@ -42,6 +42,8 @@ pub fn unit_alternatives(_value: &Value, _limit: usize) -> Vec<Value> {
 mod tests {
     #[test]
     fn improper_conversions_are_recognised() {
-        assert!(super::is_improper_unit_conversion(" Improper unit conversion "));
+        assert!(super::is_improper_unit_conversion(
+            " Improper unit conversion "
+        ));
     }
 }

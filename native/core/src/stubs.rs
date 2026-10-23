@@ -27,7 +27,11 @@ pub fn angle_exponent(_expr: &str) -> Option<i32> {
 }
 
 /// Each function call among typed units worked out to its number. PORT: `callsWorkedOut`.
-pub fn calls_worked_out(_expr: &str, _mode: AngleMode, _value: &dyn Fn(&str) -> Option<f64>) -> Option<String> {
+pub fn calls_worked_out(
+    _expr: &str,
+    _mode: AngleMode,
+    _value: &dyn Fn(&str) -> Option<f64>,
+) -> Option<String> {
     None
 }
 
@@ -71,7 +75,12 @@ pub fn parse_system_call(_line: &str) -> Option<SystemCall> {
     None
 }
 
-pub fn solve_system_call(_eqs: &[String], _guess: &str, _mode: AngleMode, _defaults: &DefaultUnits) -> Option<String> {
+pub fn solve_system_call(
+    _eqs: &[String],
+    _guess: &str,
+    _mode: AngleMode,
+    _defaults: &DefaultUnits,
+) -> Option<String> {
     None
 }
 
@@ -118,7 +127,11 @@ pub fn solve_equation(_eq: &str, _ctx: &SolveContext<'_>) -> Option<Solved> {
 }
 
 /// `formatSolve`: the display and exact form of a solve.
-pub fn format_solve(_solved: &Solved, _sig_figs: f64, _fraction_mode: bool) -> (String, Option<String>) {
+pub fn format_solve(
+    _solved: &Solved,
+    _sig_figs: f64,
+    _fraction_mode: bool,
+) -> (String, Option<String>) {
     (String::new(), None)
 }
 
@@ -130,11 +143,19 @@ pub struct UnitSolved {
     pub value: Option<Value>,
 }
 
-pub fn solve_with_units_one(_eq: &str, _variable: Option<&str>, _near: Option<&str>) -> Option<UnitSolved> {
+pub fn solve_with_units_one(
+    _eq: &str,
+    _variable: Option<&str>,
+    _near: Option<&str>,
+) -> Option<UnitSolved> {
     None
 }
 
-pub fn isolate_with_units(_eq: &str, _variable: &str, _variables: &BTreeMap<String, f64>) -> Option<String> {
+pub fn isolate_with_units(
+    _eq: &str,
+    _variable: &str,
+    _variables: &BTreeMap<String, f64>,
+) -> Option<String> {
     None
 }
 
@@ -158,7 +179,12 @@ pub fn looks_like_matrix(_expr: &str, _functions: &[String]) -> bool {
     false
 }
 
-pub fn matrix_answer(_expr: &str, _variables: &BTreeMap<String, f64>, _sig_figs: f64, _fraction_mode: bool) -> Option<MatrixAnswer> {
+pub fn matrix_answer(
+    _expr: &str,
+    _variables: &BTreeMap<String, f64>,
+    _sig_figs: f64,
+    _fraction_mode: bool,
+) -> Option<MatrixAnswer> {
     None
 }
 
@@ -198,9 +224,19 @@ pub fn evaluate_calculus(_expr: &str) -> Option<CalculusResult> {
     None
 }
 
-/// Integrals beside other terms folded to their values: Ok(None) when there are none, Err(()) when one failed.
-pub fn embed_integrals(_expr: &str) -> Result<Option<String>, ()> {
-    Ok(None)
+/// What folding the integrals beside other terms into their values did (`embedIntegrals`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Embedded {
+    /// No integral to fold.
+    Nothing,
+    /// An integral that couldn't be worked out: the line is blank.
+    Failed,
+    /// The line with an integral replaced by its value.
+    Rewritten(String),
+}
+
+pub fn embed_integrals(_expr: &str) -> Embedded {
+    Embedded::Nothing
 }
 
 // ---- WP-MEASURE (measure.ts) ----

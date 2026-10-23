@@ -29,7 +29,10 @@ function evalArea(rec) {
   if (has('engine/sums.sumAnswer')) return 'eval.sums'
   if (opts.sigFigMode || /±|∓|\+-|\\pm/.test(text) || has('engine/measure.measure')) return 'eval.measure'
   if (has('engine/units.tryConvert')) return 'eval.units'
-  if (/\\[A-Za-z]/.test(text) || has('engine/plainMath.latexToAscii')) return 'eval.latex'
+  if (/\\[A-Za-z]/.test(text) || has('engine/plainMath.latexToAscii') || /^\s*\$[^$]+\$\s*$/.test(text)) return 'eval.latex'
+  // lists and ranges (`[1...5]`, `[1,2,3] * 2`) are matrices and list functions, not plain arithmetic
+  if (/\.\.\./.test(text)) return 'eval.functions'
+  if (/\[/.test(text)) return 'eval.matrix'
   if (hasLetters(text)) return has('engine/scientific.evalScientific') ? 'eval.functions' : 'eval.blank'
   return 'eval.arithmetic'
 }

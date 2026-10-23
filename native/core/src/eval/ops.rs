@@ -13,7 +13,11 @@ fn scalar(v: &Val, op: Op) -> Result<f64, EvalError> {
         Val::Num(n) => Ok(*n),
         Val::Bool(b) => Ok(f64::from(u8::from(*b))),
         Val::Null => Ok(0.0),
-        other => Err(EvalError::Unsupported(format!("{} on {}", op.name(), kind(other)))),
+        other => Err(EvalError::Unsupported(format!(
+            "{} on {}",
+            op.name(),
+            kind(other)
+        ))),
     }
 }
 
@@ -46,7 +50,9 @@ pub fn real_pow(a: f64, b: f64) -> f64 {
     if a >= 0.0 || jsnum::is_integer(b) {
         return js_pow(a, b);
     }
-    let Some((n, d)) = as_ratio(b) else { return f64::NAN };
+    let Some((n, d)) = as_ratio(b) else {
+        return f64::NAN;
+    };
     if d % 2.0 == 0.0 {
         return f64::NAN;
     }
@@ -74,7 +80,10 @@ fn int32(x: f64, op: Op) -> Result<i64, EvalError> {
     if jsnum::is_integer(x) {
         Ok(x as i64)
     } else {
-        Err(EvalError::Other(format!("Integers expected in function {}", op.name())))
+        Err(EvalError::Other(format!(
+            "Integers expected in function {}",
+            op.name()
+        )))
     }
 }
 
@@ -112,7 +121,9 @@ pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
         Op::BitXor => Val::Num((int32(x, op)? ^ int32(y, op)?) as f64),
         Op::LeftShift => Val::Num(((int32(x, op)?) << (int32(y, op)?.clamp(0, 63))) as f64),
         Op::RightArithShift => Val::Num(((int32(x, op)?) >> (int32(y, op)?.clamp(0, 63))) as f64),
-        Op::RightLogShift => Val::Num(((int32(x, op)? as u64) >> (int32(y, op)?.clamp(0, 63))) as f64),
+        Op::RightLogShift => {
+            Val::Num(((int32(x, op)? as u64) >> (int32(y, op)?.clamp(0, 63))) as f64)
+        }
         _ => return Err(EvalError::Unsupported(op.name().into())),
     })
 }

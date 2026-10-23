@@ -32,7 +32,8 @@ pub fn js(pattern: &str, flags: &str) -> Regex {
 }
 
 // JS `\b` sits between an ASCII word character and anything else; Rust's would count θ as a word character
-const ASCII_BOUNDARY: &str = "(?:(?<=[A-Za-z0-9_])(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])(?=[A-Za-z0-9_]))";
+const ASCII_BOUNDARY: &str =
+    "(?:(?<=[A-Za-z0-9_])(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])(?=[A-Za-z0-9_]))";
 
 fn translate(pattern: &str, flags: &str) -> String {
     let mut out = String::with_capacity(pattern.len() + 8);
@@ -97,7 +98,9 @@ pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> Strin
     let mut last = 0;
     let mut changed = false;
     for caps in re.captures_iter(s) {
-        let Ok(caps) = caps else { return Cow::Borrowed(s) };
+        let Ok(caps) = caps else {
+            return Cow::Borrowed(s);
+        };
         let Some(m) = caps.get(0) else { continue };
         out.push_str(&s[last..m.start()]);
         out.push_str(&f(&caps));
@@ -128,7 +131,10 @@ mod tests {
     #[test]
     fn look_behind_rewrites_like_js() {
         static RE: Lazy = Lazy::new(|| compile(r"(?<![A-Za-z])pi(?![A-Za-z])"));
-        assert_eq!(replace_all(&RE, "2pi + spin", |_| "(pi)".into()), "2(pi) + spin");
+        assert_eq!(
+            replace_all(&RE, "2pi + spin", |_| "(pi)".into()),
+            "2(pi) + spin"
+        );
         assert!(test(&RE, "pi"));
     }
 

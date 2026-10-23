@@ -36,7 +36,7 @@
 {"fn":"chordLabel","args":["ctrl+,",true],"out":"Ctrl+,","src":"src/components/SettingsPage.test.ts"}
 {"fn":"chordLabel","args":["ctrl+alt+q",true],"out":"Ctrl+Alt+Q","src":"src/components/SettingsPage.test.ts"}
 {"fn":"chordLabel","args":["ctrl+alt+shift+cmd+k",false],"out":"⌃⌥⇧⌘K","src":"src/lib/keybinds.test.ts"}
-{"fn":"chordLabel","args":["ctrl+alt+space",true],"out":"Ctrl+Alt+Space","src":"src/lib/hostSettings.test.ts"}
+{"fn":"chordLabel","args":["ctrl+alt+space",true],"out":"Ctrl+Alt+Space","src":"src/components/KeybindSettings.test.ts"}
 {"fn":"chordLabel","args":["ctrl+c",true],"out":"Ctrl+C","src":"src/components/SettingsPage.test.ts"}
 {"fn":"chordLabel","args":["ctrl+d",true],"out":"Ctrl+D","src":"src/components/SettingsPage.test.ts"}
 {"fn":"chordLabel","args":["ctrl+k",true],"out":"Ctrl+K","src":"src/lib/hostSettings.test.ts"}

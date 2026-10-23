@@ -17,7 +17,10 @@ use crate::types::{AngleMode, UserFunction};
 pub enum Val {
     Num(f64),
     Bool(bool),
-    Complex { re: f64, im: f64 },
+    Complex {
+        re: f64,
+        im: f64,
+    },
     /// An array or matrix, nested as written.
     List(Vec<Val>),
     Str(String),
@@ -41,7 +44,11 @@ impl Val {
             },
             Val::Str(s) => {
                 let t = s.trim();
-                if t.is_empty() { 0.0 } else { t.parse().unwrap_or(f64::NAN) }
+                if t.is_empty() {
+                    0.0
+                } else {
+                    t.parse().unwrap_or(f64::NAN)
+                }
             }
             Val::Complex { .. } | Val::Function(_) | Val::Undefined => f64::NAN,
         }
@@ -167,11 +174,23 @@ pub fn evaluate(node: &Node, scope: &Scope) -> EvalResult {
             let Node::Symbol(name) = callee.as_ref() else {
                 return Err(EvalError::Unsupported("call of a non-name".into()));
             };
-            let values = args.iter().map(|a| evaluate(a, scope)).collect::<Result<Vec<_>, _>>()?;
+            let values = args
+                .iter()
+                .map(|a| evaluate(a, scope))
+                .collect::<Result<Vec<_>, _>>()?;
             call(name, &values, scope)
         }
-        Node::Array(items) => Ok(Val::List(items.iter().map(|a| evaluate(a, scope)).collect::<Result<_, _>>()?)),
-        Node::Conditional { condition, then, otherwise } => {
+        Node::Array(items) => Ok(Val::List(
+            items
+                .iter()
+                .map(|a| evaluate(a, scope))
+                .collect::<Result<_, _>>()?,
+        )),
+        Node::Conditional {
+            condition,
+            then,
+            otherwise,
+        } => {
             if evaluate(condition, scope)?.truthy() {
                 evaluate(then, scope)
             } else {
@@ -179,7 +198,10 @@ pub fn evaluate(node: &Node, scope: &Scope) -> EvalResult {
             }
         }
         Node::Relational { ops, params } => {
-            let values = params.iter().map(|p| evaluate(p, scope)).collect::<Result<Vec<_>, _>>()?;
+            let values = params
+                .iter()
+                .map(|p| evaluate(p, scope))
+                .collect::<Result<Vec<_>, _>>()?;
             for (i, op) in ops.iter().enumerate() {
                 if !ops::binary(*op, &values[i], &values[i + 1])?.truthy() {
                     return Ok(Val::Bool(false));
@@ -188,7 +210,9 @@ pub fn evaluate(node: &Node, scope: &Scope) -> EvalResult {
             Ok(Val::Bool(true))
         }
         Node::Range { .. } => Err(EvalError::Unsupported("range".into())),
-        Node::Assignment { .. } | Node::FunctionAssignment { .. } => Err(EvalError::Unsupported("assignment".into())),
+        Node::Assignment { .. } | Node::FunctionAssignment { .. } => {
+            Err(EvalError::Unsupported("assignment".into()))
+        }
         Node::Accessor { .. } => Err(EvalError::Unsupported("index".into())),
         Node::Block(_) => Err(EvalError::Unsupported("block".into())),
     }
@@ -227,7 +251,8 @@ pub fn call(name: &str, args: &[Val], scope: &Scope) -> EvalResult {
     if scope.variables.contains_key(name) {
         return Err(EvalError::Other(format!("{name} is not a function")));
     }
-    builtins::call_builtin(name, args, scope).unwrap_or_else(|| Err(EvalError::UndefinedFunction(name.to_string())))
+    builtins::call_builtin(name, args, scope)
+        .unwrap_or_else(|| Err(EvalError::UndefinedFunction(name.to_string())))
 }
 
 /// `userFunction` in the TS: the body is worked out as its own line, with the parameters as variables.
