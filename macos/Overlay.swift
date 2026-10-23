@@ -27,7 +27,7 @@ private func isCommandKey(_ event: NSEvent, _ letter: String, _ code: Int) -> Bo
     return !chars.unicodeScalars.allSatisfy({ $0.isASCII }) && event.keyCode == UInt16(code)
 }
 
-private func isCommandWCloseKey(_ event: NSEvent) -> Bool {
+func isCommandWCloseKey(_ event: NSEvent) -> Bool {
     isCommandKey(event, "w", kVK_ANSI_W)
 }
 
@@ -764,6 +764,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "soulver")
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+        // writing tools (and macos 26's "write with siri" prompt) would offer itself on every focused field; the
+        // property is only in the headers for a 15+ target, so it's set by key
+        if #available(macOS 15.0, *) {
+            config.setValue(NSWritingToolsBehavior.none.rawValue, forKey: "writingToolsBehavior")
+        }
         let settings = settingsJavaScriptObject()
         let theme = AppSettings.shared.theme
         let onboarding = AppSettings.shared.onboardingJSON()
@@ -1229,11 +1234,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 return nil
             }
             // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W.
-            // a reference sheet (identities, calculus, the periodic table) never takes the keys, so while one
-            // is up ⌘W closes the front one of those first
+            // a reference sheet (identities, calculus, the periodic table) never takes the keys while the bar is
+            // up, so while one is open ⌘W closes the front one of those first
             // a game's window closes back to the bar, as its red button does, and ⌘M minimises it
             if event.window === self.panel, isCommandWCloseKey(event) {
-                if let sheet = NSApp.orderedWindows.first(where: { $0 is PeriodicPanel && $0.isVisible }) {
+                if let sheet = PeriodicPanel.front() {
                     sheet.close()
                 } else if self.gameRestoreFrame != nil {
                     self.setGameWindow(false)
@@ -1792,6 +1797,7 @@ struct OverlayView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 22, weight: .regular, design: .default))
                 .focused($focused)
+                .noWritingTools()
                 .onSubmit { submit() }
             Text(copied ? "copied" : answer(for: text))
                 .font(.system(size: copied ? 13 : 22, weight: .regular, design: .default).monospacedDigit())
@@ -1867,6 +1873,19 @@ enum OverlayLog {
             handle.seekToEndOfFile()
             handle.write(Data(text.utf8))
             try? handle.close()
+        }
+    }
+}
+
+extension View {
+    // no writing tools, nor the "write with siri" prompt macos 26 puts beside a focused field
+    @ViewBuilder func noWritingTools() -> some View {
+        if #available(macOS 15.4, *) {
+            writingToolsBehavior(.disabled).writingToolsAffordanceVisibility(.hidden)
+        } else if #available(macOS 15.0, *) {
+            writingToolsBehavior(.disabled)
+        } else {
+            self
         }
     }
 }

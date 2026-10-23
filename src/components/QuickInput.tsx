@@ -662,6 +662,8 @@ export function QuickInput({
         autoCorrect="off"
         autoComplete="off"
         spellCheck={false}
+        // no inline writing suggestions; the shell turns writing tools off too
+        {...{ writingsuggestions: 'false' }}
         placeholder={showExample ? '' : 'Calculate'}
         style={prefixWidth ? { paddingLeft: prefixWidth } : undefined}
         onChange={(e) => {
