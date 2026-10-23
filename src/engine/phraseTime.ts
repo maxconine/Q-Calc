@@ -129,9 +129,146 @@ export function parseSpan(s: string): Span | null {
 
 type Roll = 'year' | 'future' | 'past'
 
+// holidays on fixed dates, without "day" and apostrophes: `christmas`, `new year's`, `valentine's day`
+const HOLIDAYS: Record<string, string> = {
+  christmas: 'december 25',
+  xmas: 'december 25',
+  'christmas eve': 'december 24',
+  'new year': 'january 1',
+  'new years': 'january 1',
+  'new years eve': 'december 31',
+  'new year eve': 'december 31',
+  halloween: 'october 31',
+  valentines: 'february 14',
+  'st patricks': 'march 17',
+  'fourth of july': 'july 4',
+  'independence': 'july 4',
+}
+
+// the clock in a city or a zone abbreviation, as the people there read it
+const ZONES: Record<string, string> = {
+  utc: 'UTC',
+  gmt: 'UTC',
+  est: 'America/New_York',
+  edt: 'America/New_York',
+  eastern: 'America/New_York',
+  cst: 'America/Chicago',
+  cdt: 'America/Chicago',
+  central: 'America/Chicago',
+  mst: 'America/Denver',
+  mdt: 'America/Denver',
+  mountain: 'America/Denver',
+  pst: 'America/Los_Angeles',
+  pdt: 'America/Los_Angeles',
+  pacific: 'America/Los_Angeles',
+  'new york': 'America/New_York',
+  nyc: 'America/New_York',
+  boston: 'America/New_York',
+  miami: 'America/New_York',
+  atlanta: 'America/New_York',
+  washington: 'America/New_York',
+  toronto: 'America/Toronto',
+  chicago: 'America/Chicago',
+  dallas: 'America/Chicago',
+  houston: 'America/Chicago',
+  'mexico city': 'America/Mexico_City',
+  denver: 'America/Denver',
+  phoenix: 'America/Phoenix',
+  'los angeles': 'America/Los_Angeles',
+  la: 'America/Los_Angeles',
+  'san francisco': 'America/Los_Angeles',
+  sf: 'America/Los_Angeles',
+  seattle: 'America/Los_Angeles',
+  vancouver: 'America/Vancouver',
+  honolulu: 'Pacific/Honolulu',
+  hawaii: 'Pacific/Honolulu',
+  'sao paulo': 'America/Sao_Paulo',
+  'são paulo': 'America/Sao_Paulo',
+  'buenos aires': 'America/Argentina/Buenos_Aires',
+  london: 'Europe/London',
+  dublin: 'Europe/Dublin',
+  lisbon: 'Europe/Lisbon',
+  paris: 'Europe/Paris',
+  madrid: 'Europe/Madrid',
+  barcelona: 'Europe/Madrid',
+  berlin: 'Europe/Berlin',
+  munich: 'Europe/Berlin',
+  amsterdam: 'Europe/Amsterdam',
+  brussels: 'Europe/Brussels',
+  zurich: 'Europe/Zurich',
+  rome: 'Europe/Rome',
+  milan: 'Europe/Rome',
+  vienna: 'Europe/Vienna',
+  stockholm: 'Europe/Stockholm',
+  oslo: 'Europe/Oslo',
+  copenhagen: 'Europe/Copenhagen',
+  helsinki: 'Europe/Helsinki',
+  warsaw: 'Europe/Warsaw',
+  prague: 'Europe/Prague',
+  athens: 'Europe/Athens',
+  istanbul: 'Europe/Istanbul',
+  moscow: 'Europe/Moscow',
+  cairo: 'Africa/Cairo',
+  johannesburg: 'Africa/Johannesburg',
+  lagos: 'Africa/Lagos',
+  nairobi: 'Africa/Nairobi',
+  dubai: 'Asia/Dubai',
+  mumbai: 'Asia/Kolkata',
+  delhi: 'Asia/Kolkata',
+  'new delhi': 'Asia/Kolkata',
+  bangalore: 'Asia/Kolkata',
+  bengaluru: 'Asia/Kolkata',
+  india: 'Asia/Kolkata',
+  karachi: 'Asia/Karachi',
+  bangkok: 'Asia/Bangkok',
+  jakarta: 'Asia/Jakarta',
+  singapore: 'Asia/Singapore',
+  'kuala lumpur': 'Asia/Kuala_Lumpur',
+  manila: 'Asia/Manila',
+  'hong kong': 'Asia/Hong_Kong',
+  shanghai: 'Asia/Shanghai',
+  beijing: 'Asia/Shanghai',
+  china: 'Asia/Shanghai',
+  taipei: 'Asia/Taipei',
+  seoul: 'Asia/Seoul',
+  tokyo: 'Asia/Tokyo',
+  japan: 'Asia/Tokyo',
+  sydney: 'Australia/Sydney',
+  melbourne: 'Australia/Melbourne',
+  brisbane: 'Australia/Brisbane',
+  perth: 'Australia/Perth',
+  auckland: 'Pacific/Auckland',
+}
+
+// `time in tokyo`, `what time is it in new york`, `time in pst`
+function cityTime(s: string, now: Date): PhraseAnswer | null {
+  const m = s.match(/^(?:(?:the )?(?:current )?time|what time is it|what time) (?:is it )?in (.+)$/)
+  const zone = m ? ZONES[m[1]!.trim()] : undefined
+  if (!zone) return null
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now)
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value)
+    const minutes = get('hour') * 60 + get('minute')
+    return Number.isFinite(minutes) ? { display: formatClock(minutes) } : null
+  } catch {
+    return null
+  }
+}
+
+// `10:30` or `9:05` as a time of day, which parseClock leaves alone because on its own it could be a duration
+function looseClock(s: string): number | null {
+  const m = s.trim().match(/^(\d{1,2}):(\d{2})$/)
+  if (!m) return null
+  const h = Number(m[1])
+  const min = Number(m[2])
+  return h <= 23 && min <= 59 ? h * 60 + min : null
+}
+
 // `today`, `next friday`, `monday`, `dec 25`, `25 december 2026`
 export function parseDay(s: string, today: Day, roll: Roll = 'year'): Day | null {
   const t = s.trim()
+  const holiday = HOLIDAYS[t.replace(/[’']/g, '').replace(/\s+day$/, '')]
+  if (holiday) return parseDay(holiday, today, roll)
   if (t === 'today') return today
   if (t === 'tomorrow') return addDays(today, 1)
   if (t === 'yesterday') return addDays(today, -1)
@@ -200,12 +337,20 @@ export function answerTimePhrase(s: string, now: Date): PhraseAnswer | null {
   if (clock != null) return { display: formatClock(clock) }
   const arith = s.match(new RegExp(`^(.+?)${PLUS}(.+)$`))
   if (arith) {
-    const t = parseClock(arith[1])
+    // with a span after it, `10:30` is a time of day whatever the hour
+    const t = parseClock(arith[1]) ?? looseClock(arith[1])
     const span = parseSpan(arith[3])
     if (t != null && span && span.minutes && !span.days && !span.months) {
       return { display: formatClock(t + (arith[2] === '+' ? span.minutes : -span.minutes)) }
     }
+    // `5pm - 9am`: how long from the second to the first, overnight wrapping
+    const a = parseClock(arith[1])
+    const b = parseClock(arith[3])
+    if (arith[2] === '-' && a != null && b != null && a > b) return { display: formatDuration(a - b) }
   }
+
+  const zone = cityTime(s, now)
+  if (zone) return zone
 
   // the length of time between two clock times; overnight wraps to the next day
   const range = s.match(/^(?:from\s+)?(.+?)\s+(?:to|until|till)\s+(.+)$/) ?? s.match(/^between\s+(.+?)\s+and\s+(.+)$/)
@@ -214,6 +359,13 @@ export function answerTimePhrase(s: string, now: Date): PhraseAnswer | null {
     const b = parseClock(range[2])
     if (a != null && b != null && a !== b) {
       return { display: formatDuration((b - a + 1440) % 1440) }
+    }
+    // `march 1 to may 1`: the days between two dates
+    const from = parseDay(range[1], today)
+    const to = parseDay(range[2], today)
+    if (from && to) {
+      const n = dayDiff(from, to)
+      return n > 0 ? { display: plural(n, 'day'), n } : null
     }
   }
 

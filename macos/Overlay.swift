@@ -140,7 +140,7 @@ private struct OverlayRoom: Equatable {
     static let closed = OverlayRoom()
 }
 
-final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
+final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     private var panel: OverlayPanel?
     private var web: OverlayWebView?
     private var fallback: NSView?
@@ -212,8 +212,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web?.evaluateJavaScript("if (window.__qcalcTutorial) window.__qcalcTutorial();")
     }
 
-    // off the main thread so a slow soulver evaluation never blocks typing
-    private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
     // the page has something open (pong) that esc should close before the panel hides
     private var pageTakesEscape = false
     // a game in a window of its own (⌃F in the page): the bar's frame from before, to go back to. nil when not
@@ -250,7 +248,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func preload() {
         if panel == nil { build() }
-        SoulverEval.warm()
+        // the ecb's rates for currency conversions, handed to the page as they arrive
+        ECBRates.shared.onChange = { [weak self] json in
+            self?.web?.evaluateJavaScript("window.__QCALC_RATES = \(json);")
+        }
+        ECBRates.shared.start()
     }
 
     func toggle(from source: String = "hotkey") {
@@ -468,10 +470,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "soulver" {
-            pushSoulverResult(soulverPayload(from: message.body))
-            return
-        }
         guard message.name == "qcalc" else { return }
         if let body = message.body as? String {
             handleMessage(body)
@@ -507,8 +505,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 applyWebOnboarding(dict)
             case "analytics":
                 AppSettings.shared.saveAnalytics(dict["stash"])
-            case "eval":
-                pushSoulverResult(soulverPayload(from: dict))
             case "periodic":
                 periodic.show(PeriodicElement.list(from: dict["elements"]), bar: barSpot())
             case "identities":
@@ -551,22 +547,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let controller = IdentityWindowController(id: id, cascade: identitySheets.count)
         identitySheets[id] = controller
         return controller
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage,
-        replyHandler: @escaping (Any?, String?) -> Void
-    ) {
-        guard message.name == "soulver" else {
-            replyHandler(nil, "unknown handler")
-            return
-        }
-        let body = message.body
-        soulverQueue.async { [self] in
-            let payload = soulverPayload(from: body)
-            DispatchQueue.main.async { replyHandler(payload, nil) }
-        }
     }
 
     // a page whose process ended (long sleeps, memory pressure) is fully transparent, so reload it
@@ -767,7 +747,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         // wiped every launch, so state that must survive (settings, onboarding, game saves) is kept in AppSettings
         config.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         config.userContentController.add(self, name: "qcalc")
-        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "soulver")
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
         // writing tools (and macos 26's "write with siri" prompt) would offer itself on every focused field; the
@@ -798,6 +777,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_NICKNAME = \(nickname);
             window.__QCALC_MESSAGING = \(Messages.shared.webJSON);
             window.__QCALC_GAME_SAVES = \(gameSaves);
+            window.__QCALC_RATES = \(ECBRates.shared.pageJSON);
             window.__QCALC_OS = "macOS \(os.majorVersion).\(os.minorVersion)";
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
@@ -1006,16 +986,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             let n = Int(body.dropFirst("sigFigs:".count)) ?? AppSettings.defaultSigFigs
             AppSettings.shared.setSignificantFigures(n, notifyWeb: false)
             return
-        }
-        if body.hasPrefix("eval:") {
-            let json = String(body.dropFirst("eval:".count))
-            pushSoulverResult(soulverPayload(from: json))
-            return
-        }
-        if body.hasPrefix("{"), let data = body.data(using: .utf8),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           dict["type"] as? String == "eval" || dict["expr"] != nil {
-            pushSoulverResult(soulverPayload(from: dict))
         }
     }
 
@@ -1708,53 +1678,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         AppSettings.shared.mergeOnboarding(incoming)
     }
 
-    private func soulverPayload(from body: Any) -> [String: Any] {
-        let dict = dictionary(from: body)
-        let id = intValue(dict["id"]) ?? 0
-        let expr = dict["expr"] as? String ?? ""
-        let sigFigs = intValue(dict["sigFigs"]) ?? AppSettings.shared.significantFigures
-        if let answer = SoulverEval.evaluate(
-            expr,
-            ans: doubleValue(dict["ans"]),
-            variables: stringKeyedDoubles(dict["variables"]),
-            sigFigs: sigFigs
-        ) {
-            var payload: [String: Any] = [
-                "id": id,
-                "expr": expr,
-                "display": answer.display,
-            ]
-            if let n = answer.number, n.isFinite {
-                payload["n"] = n
-            } else {
-                payload["n"] = NSNull()
-            }
-            return payload
-        }
-        return ["id": id, "expr": expr, "display": "", "n": NSNull()]
-    }
-
-    private func pushSoulverResult(_ payload: [String: Any]) {
-        guard JSONSerialization.isValidJSONObject(payload),
-              let data = try? JSONSerialization.data(withJSONObject: payload, options: []),
-              let json = String(data: data, encoding: .utf8)
-        else { return }
-        web?.evaluateJavaScript("window.__qcalcNativeResult && window.__qcalcNativeResult(\(json));")
-    }
-
-    private func dictionary(from body: Any) -> [String: Any] {
-        if let dict = body as? [String: Any] { return dict }
-        if let s = body as? String {
-            let json = s.hasPrefix("eval:") ? String(s.dropFirst("eval:".count)) : s
-            if let data = json.data(using: .utf8),
-               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                return obj
-            }
-            if !s.isEmpty, s != "eval:" { return ["expr": s] }
-        }
-        return [:]
-    }
-
     private func boolValue(_ any: Any?) -> Bool? {
         if let b = any as? Bool { return b }
         if let n = any as? NSNumber { return n.boolValue }
@@ -1786,15 +1709,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             return d.isFinite ? d : nil
         }
         return nil
-    }
-
-    private func stringKeyedDoubles(_ any: Any?) -> [String: Double] {
-        guard let dict = any as? [String: Any] else { return [:] }
-        var out: [String: Double] = [:]
-        for (key, value) in dict {
-            if let n = doubleValue(value) { out[key] = n }
-        }
-        return out
     }
 }
 
@@ -1831,7 +1745,6 @@ struct OverlayView: View {
     }
 
     private func answer(for text: String) -> String {
-        if let soulver = SoulverEval.evaluate(text) { return soulver.display }
         if let v = MathEval.evaluate(text) { return MathEval.format(v) }
         return ""
     }
