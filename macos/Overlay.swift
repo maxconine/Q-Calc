@@ -31,6 +31,12 @@ private func isCommandWCloseKey(_ event: NSEvent) -> Bool {
     isCommandKey(event, "w", kVK_ANSI_W)
 }
 
+private func isPlainEnterKey(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+    return flags.isEmpty && !event.isARepeat
+        && (event.keyCode == UInt16(kVK_Return) || event.keyCode == UInt16(kVK_ANSI_KeypadEnter))
+}
+
 private func copyToPasteboard(_ text: String) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
@@ -1226,6 +1232,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             }
             if isCommandVPasteKey(event) {
                 self.pasteIntoWeb()
+                return nil
+            }
+            // the periodic table never takes the keys, so while it has a formula ↵ in the bar puts that in instead of
+            // submitting the line; with none built ↵ is the bar's as usual
+            if event.window === self.panel, isPlainEnterKey(event), self.periodic.hasFormula,
+               (self.panel?.firstResponder as? NSTextInputClient)?.hasMarkedText() != true {
+                self.periodic.putFormulaIn()
                 return nil
             }
             // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W.
