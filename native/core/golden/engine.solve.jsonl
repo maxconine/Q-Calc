@@ -1,0 +1,45 @@
+{"fn":"isEquation","args":["2+3"],"out":false,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["2+3="],"out":false,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["2+3=5"],"out":true,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["2x+3=11"],"out":true,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["graph y = x"],"out":false,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["rent = 1850"],"out":false,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["solve x"],"out":true,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["x = 2x - 5"],"out":true,"src":"src/engine/solve.test.ts"}
+{"fn":"isEquation","args":["x = 5"],"out":false,"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["2x = 10"],"out":{"lhs":"2x","rhs":"10","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["2x+3=11"],"out":{"lhs":"2x+3","rhs":"11","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["3 cm = 12"],"out":{"lhs":"3 cm","rhs":"12","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["3x = 12 for x"],"out":{"lhs":"3x","rhs":"12","forVar":"x","explicit":true},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["e^x = 5"],"out":{"lhs":"e^x","rhs":"5","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["graph y = x"],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["solve x^2-4"],"out":{"lhs":"x^2-4","rhs":"0","explicit":true},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x != 3"],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x + y = 10"],"out":{"lhs":"x + y","rhs":"10","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x = 2x - 5 for x"],"out":{"lhs":"x","rhs":"2x - 5","forVar":"x","explicit":true},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x = 2x - 5"],"out":{"lhs":"x","rhs":"2x - 5","assignVar":"x","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x = 5"],"out":{"lhs":"x","rhs":"5","assignVar":"x","explicit":false},"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x ≤ 3"],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"parseEquation","args":["x^2 - 4 for x"],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"2x","rhs":"10","explicit":false},{"variables":{"x":5}}],"out":"x","src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"2x","rhs":"10","explicit":false},{}],"out":"x","src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"3 cm","rhs":"12","explicit":false},{}],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"e^x","rhs":"5","explicit":false},{}],"out":"x","src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"x + y","rhs":"10","explicit":false},{"variables":{"x":3,"y":1}}],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"x + y","rhs":"10","explicit":false},{"variables":{"x":3}}],"out":"y","src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"x","rhs":"2x - 5","assignVar":"x","explicit":false},{"variables":{"x":3}}],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"x","rhs":"2x - 5","forVar":"x","explicit":true},{"variables":{"x":3}}],"out":"x","src":"src/engine/solve.test.ts"}
+{"fn":"pickUnknown","args":[{"lhs":"x","rhs":"5","assignVar":"x","explicit":false},{}],"out":null,"src":"src/engine/solve.test.ts"}
+{"fn":"solveCall","args":["solve( 2x + 3 = 7 , x )"],"out":"solve 2x + 3 = 7 for x","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(a) + 1"],"out":"solve(a) + 1","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(f(a, b) = 0, a = -1)"],"out":"solve f(a, b) = 0 for a near -1","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(max(a, 2) = 3, a)"],"out":"solve max(a, 2) = 3 for a","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(x = 2, 3)"],"out":"solve(x = 2, 3)","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(x^2 - cos(x) = 0, x = 0.2)"],"out":"solve x^2 - cos(x) = 0 for x near 0.2","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(x^2 = 4)"],"out":"solve x^2 = 4","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveCall","args":["solve(x^2 = 4, x)"],"out":"solve x^2 = 4 for x","src":"src/engine/unitSolve.test.ts"}
+{"fn":"solveEquation","args":["cos(x) = x",{"angleMode":"rad"}],"out":{"info":{"variable":"x","roots":[0.7390851332151607],"outcome":"roots"},"evals":1744},"src":"src/engine/solve.test.ts"}
+{"fn":"solveEquation","args":["e^x = 5",{"angleMode":"deg"}],"out":{"info":{"variable":"x","roots":[1.6094379124341003],"outcome":"roots"},"evals":1450},"src":"src/engine/solve.test.ts"}
+{"fn":"solveEquation","args":["sin(x) = 0.5",{"angleMode":"deg"}],"out":{"info":{"variable":"x","roots":[30,150],"outcome":"roots"},"exact":[{"n":30,"d":1},{"n":150,"d":1}],"evals":1040},"src":"src/engine/solve.test.ts"}
+{"fn":"solveEquation","args":["x*sin(x) = 1",{"angleMode":"rad"}],"out":{"info":{"variable":"x","roots":[-2.772604708265991,-1.1141571408719302,1.1141571408719302,2.772604708265991],"outcome":"roots","more":true},"evals":2514},"src":"src/engine/solve.test.ts"}
+{"fn":"solveEquation","args":["x^3 = 2",{"angleMode":"deg"}],"out":{"info":{"variable":"x","roots":[1.2599210498948732],"outcome":"roots"},"evals":142},"src":"src/engine/solve.test.ts"}

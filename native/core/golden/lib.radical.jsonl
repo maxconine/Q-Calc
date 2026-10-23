@@ -1,0 +1,1881 @@
+{"fn":"answerParts","args":[""],"out":[],"src":"src/lib/r4c.radical.test.ts"}
+{"fn":"answerParts","args":["177.8 cm"],"out":["177.8 cm"],"src":"src/lib/r4c.radical.test.ts"}
+{"fn":"answerParts","args":["2sqrt(2) ≈ 2.82842712475"],"out":["2sqrt(2)"," ≈ ","2.82842712475"],"src":"src/lib/r4c.radical.test.ts"}
+{"fn":"answerParts","args":["x = ±sqrt(2) ≈ ±1.41421356237"],"out":["x = ","±sqrt(2)"," ≈ ","±1.41421356237"],"src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":[" ≈ "],"out":" ≈ ","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["(3 ± sqrt(5))/2"],"out":"(3 ± √5)/2","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["-sqrt(2)/2"],"out":"-√2/2","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["2.82842712475"],"out":"2.82842712475","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["2sqrt(2)"],"out":"2√2","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["2sqrt(3)/3"],"out":"2√3/3","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["3sqrt(2) + 1"],"out":"3√2 + 1","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["5 cm"],"out":"5 cm","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["5sqrt(41)/41"],"out":"5√41/41","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["9.53939201417"],"out":"9.53939201417","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["cbrt(2)"],"out":"∛2","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(10)/2"],"out":"√10/2","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(2 + sqrt(3))"],"out":"√(2 + √3)","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(2)^3"],"out":"√(2)^3","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(2)pi"],"out":"sqrt(2)pi","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(2)π"],"out":"√(2)π","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(3) + 1"],"out":"√3 + 1","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(3)"],"out":"√3","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["sqrt(x)"],"out":"sqrt(x)","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["x = "],"out":"x = ","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["±1.41421356237"],"out":"±1.41421356237","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["±sqrt(2)"],"out":"±√2","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["±sqrt(6)/2"],"out":"±√6/2","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["±sqrt(x)"],"out":"±sqrt(x)","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalAnswer","args":["−sqrt(2)/2"],"out":"−√2/2","src":"src/lib/radical.test.ts"}
+{"fn":"radicalAnswer","args":["∓sqrt(3)"],"out":"∓√3","src":"src/lib/r4c.radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16 3"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16 π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16!"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16%"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16(3)"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16*2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16+1"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16.5"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16/2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√162"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16^(2)"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16^2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16^π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16e"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16x"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16°"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16θ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16π^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16τ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16√4"],"out":[{"sign":2,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√16∞"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4 π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4%"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e42"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4^(2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4^π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4e"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4x"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4θ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4π^2"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4τ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4√4"],"out":[{"sign":2,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√1e4∞"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 3"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3 3"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3 π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3!"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3%"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3(3)"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3*2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3+1"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3.5"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3/2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 32"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3^(2)"],"out":[{"sign":2,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3^2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3^π"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3e"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3x"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3°"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3θ"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3π^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3τ"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3√4"],"out":[{"sign":2,"end":8},{"sign":8,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 ^ 3∞"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2 π"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2!"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2%"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2(3)"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π%"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π^(2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π^π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*πe"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*πx"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*πθ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*ππ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*ππ^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*πτ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π√4"],"out":[{"sign":2,"end":4},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2*π∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2+1"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5 π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5%"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.52"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5^(2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5^π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5e"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5x"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5θ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5π^2"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5τ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5√4"],"out":[{"sign":2,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2.5∞"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2/2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√22"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2) 3"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2) π"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)!"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)%"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)(3)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)*2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)+1"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2).5"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)/2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)^(2)"],"out":[{"sign":2,"end":14}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)^2"],"out":[{"sign":2,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)^π"],"out":[{"sign":2,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)e"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)x"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)°"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)θ"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)π"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)π^2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)τ"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)√4"],"out":[{"sign":2,"end":10},{"sign":10,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(1/2)∞"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^(2)"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1 3"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1 π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1!"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1%"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1(3)"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1*2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1+1"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1.5"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1/2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-12"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1^(2)"],"out":[{"sign":2,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1^2"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1^π"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1e"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1x"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1°"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1θ"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1π^2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1τ"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1√4"],"out":[{"sign":2,"end":7},{"sign":7,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^-1∞"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2 3"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2 π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2!"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2%"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2(3)"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2*2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2+1"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2.5"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2/2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^22"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2^(2)"],"out":[{"sign":2,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2^2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2^π"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2e"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2x"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2°"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2θ"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2π^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2τ"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2√4"],"out":[{"sign":2,"end":8},{"sign":8,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2^2∞"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π%"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π^(2)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π^π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2πe"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2πx"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2πθ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2ππ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2ππ^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2πτ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π√4"],"out":[{"sign":2,"end":6},{"sign":7,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^2π∞"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3 π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3%"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3.5"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^32"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3^(2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3^π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3e"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3x"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3θ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3π^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3τ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3√4"],"out":[{"sign":2,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^3∞"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π%"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π^(2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π^π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^πe"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^πx"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^πθ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^ππ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^ππ^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^πτ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π√4"],"out":[{"sign":2,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2^π∞"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2e"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi 3"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi!"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi%"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi(3)"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi*2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi+1"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi/2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi^(2)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi^π"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pie"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pix"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi°"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2piθ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2piπ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2piπ^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2piτ"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi√4"],"out":[{"sign":2,"end":4},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2pi∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2x"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2°"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2θ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π 3"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π!"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π%"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π(3)"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π*2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π+1"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π.5"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π/2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π^(2)"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π^2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π^π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2πe"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2πx"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π°"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2πθ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2ππ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2ππ^2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2πτ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π√4"],"out":[{"sign":2,"end":4},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2π∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ 3"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ π"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ!"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ%"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ(3)"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ*2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ+1"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ.5"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ/2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ^(2)"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ^2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ^π"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τe"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τx"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ°"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τθ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τπ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τπ^2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2ττ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ√4"],"out":[{"sign":2,"end":4},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2τ∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2√4"],"out":[{"sign":2,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√2∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1) 3"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1) π"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)!"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)%"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)(3)"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)*2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)+1"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1).5"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)/2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)^(2)"],"out":[{"sign":2,"end":14}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)^2"],"out":[{"sign":2,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)^π"],"out":[{"sign":2,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)e"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)x"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)°"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)θ"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)π"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)π^2"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)τ"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)√4"],"out":[{"sign":2,"end":10},{"sign":10,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√3^(1+1)∞"],"out":[{"sign":2,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4% 3"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4% π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%!"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%%"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%(3)"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%*2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%+1"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%.5"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%/2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%^(2)"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%^2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%^π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%e"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%x"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%°"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%θ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%π^2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%τ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%√4"],"out":[{"sign":2,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√4%∞"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9 3"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9 π"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9!"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9%"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9(3)"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9*2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9+1"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9.5"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9/2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91 3"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91 π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91!"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91%"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91(3)"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91*2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91+1"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91.5"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91/2"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√912"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91^(2)"],"out":[{"sign":2,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91^2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91^π"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91e"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91x"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91°"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91θ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91π^2"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91τ"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91√4"],"out":[{"sign":2,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√91∞"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√92"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9^(2)"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9^π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9e"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9x"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9°"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9θ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9π"],"out":[{"sign":2,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9π^2"],"out":[{"sign":2,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9τ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9√4"],"out":[{"sign":2,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√9∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π 3"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π π"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π!"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π%"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π(3)"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π*2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π+1"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π.5"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π/2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π^(2)"],"out":[{"sign":2,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π^2"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π^π"],"out":[{"sign":2,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√πe"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√πx"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π°"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√πθ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√ππ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√ππ^2"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√πτ"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π√4"],"out":[{"sign":2,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["1+√π∞"],"out":[{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16 3"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16 π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16!"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16%"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16(3)"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16*2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16+1"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16.5"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16/2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√162"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16^(2)"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16^2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16^π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16e"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16x"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16°"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16θ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16π^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16τ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16√4"],"out":[{"sign":1,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√16∞"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4 π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4%"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e42"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4^(2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4^π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4e"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4x"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4θ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4π^2"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4τ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4√4"],"out":[{"sign":1,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√1e4∞"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 3"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3 3"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3 π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3!"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3%"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3(3)"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3*2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3+1"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3.5"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3/2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 32"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3^(2)"],"out":[{"sign":1,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3^2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3^π"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3e"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3x"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3°"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3θ"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3π^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3τ"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3√4"],"out":[{"sign":1,"end":7},{"sign":7,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 ^ 3∞"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2 π"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2!"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2%"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2(3)"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π%"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π^(2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π^π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*πe"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*πx"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*πθ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*ππ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*ππ^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*πτ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π√4"],"out":[{"sign":1,"end":3},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2*π∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2+1"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5 π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5%"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.52"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5^(2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5^π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5e"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5x"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5θ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5π^2"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5τ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5√4"],"out":[{"sign":1,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2.5∞"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2/2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√22"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2) 3"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2) π"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)!"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)%"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)(3)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)*2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)+1"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2).5"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)/2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)^(2)"],"out":[{"sign":1,"end":13}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)^2"],"out":[{"sign":1,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)^π"],"out":[{"sign":1,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)e"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)x"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)°"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)θ"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)π"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)π^2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)τ"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)√4"],"out":[{"sign":1,"end":9},{"sign":9,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(1/2)∞"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^(2)"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1 3"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1 π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1!"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1%"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1(3)"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1*2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1+1"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1.5"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1/2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-12"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1^(2)"],"out":[{"sign":1,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1^2"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1^π"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1e"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1x"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1°"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1θ"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1π^2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1τ"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1√4"],"out":[{"sign":1,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^-1∞"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2 3"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2 π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2!"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2%"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2(3)"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2*2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2+1"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2.5"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2/2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^22"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2^(2)"],"out":[{"sign":1,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2^2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2^π"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2e"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2x"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2°"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2θ"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2π^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2τ"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2√4"],"out":[{"sign":1,"end":7},{"sign":7,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2^2∞"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π%"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π^(2)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π^π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2πe"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2πx"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2πθ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2ππ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2ππ^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2πτ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π√4"],"out":[{"sign":1,"end":5},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^2π∞"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3 π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3%"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3.5"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^32"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3^(2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3^π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3e"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3x"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3θ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3π^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3τ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3√4"],"out":[{"sign":1,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^3∞"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π%"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π^(2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π^π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^πe"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^πx"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^πθ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^ππ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^ππ^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^πτ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π√4"],"out":[{"sign":1,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2^π∞"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2e"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi 3"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi!"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi%"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi(3)"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi*2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi+1"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi/2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi^(2)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi^π"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pie"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pix"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi°"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2piθ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2piπ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2piπ^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2piτ"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi√4"],"out":[{"sign":1,"end":3},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2pi∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2x"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2°"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2θ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π 3"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π!"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π%"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π(3)"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π*2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π+1"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π.5"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π/2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π^(2)"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π^2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π^π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2πe"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2πx"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π°"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2πθ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2ππ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2ππ^2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2πτ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π√4"],"out":[{"sign":1,"end":3},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2π∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ 3"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ π"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ!"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ%"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ(3)"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ*2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ+1"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ.5"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ/2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ^(2)"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ^2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ^π"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τe"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τx"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ°"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τθ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τπ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τπ^2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2ττ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ√4"],"out":[{"sign":1,"end":3},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2τ∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2√4"],"out":[{"sign":1,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√2∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3+1"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1) 3"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1) π"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)!"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)%"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)(3)"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)*2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)+1"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1).5"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)/2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)^(2)"],"out":[{"sign":1,"end":13}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)^2"],"out":[{"sign":1,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)^π"],"out":[{"sign":1,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)e"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)x"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)°"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)θ"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)π"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)π^2"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)τ"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)√4"],"out":[{"sign":1,"end":9},{"sign":9,"end":11}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√3^(1+1)∞"],"out":[{"sign":1,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4% 3"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4% π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%!"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%%"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%(3)"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%*2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%+1"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%.5"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%/2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%^(2)"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%^2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%^π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%e"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%x"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%°"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%θ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%π^2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%τ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%√4"],"out":[{"sign":1,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√4%∞"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9 3"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9 π"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9!"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9%"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9(3)"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9*2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9+1"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9.5"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9/2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91 3"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91 π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91!"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91%"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91(3)"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91*2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91+1"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91.5"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91/2"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√912"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91^(2)"],"out":[{"sign":1,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91^2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91^π"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91e"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91x"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91°"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91θ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91π^2"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91τ"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91√4"],"out":[{"sign":1,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√91∞"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√92"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9^(2)"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9^π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9e"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9x"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9°"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9θ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9π"],"out":[{"sign":1,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9π^2"],"out":[{"sign":1,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9τ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9√4"],"out":[{"sign":1,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√9∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√x"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π 3"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π π"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π!"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π%"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π(3)"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π*2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π+1"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π.5"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π/2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π^(2)"],"out":[{"sign":1,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π^2"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π^π"],"out":[{"sign":1,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√πe"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√πx"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π°"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√πθ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√ππ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√ππ^2"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√πτ"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π√4"],"out":[{"sign":1,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["2√π∞"],"out":[{"sign":1,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["sqrt(4)"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√ 9"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√(1+√2)"],"out":[{"sign":0,"end":7},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√(2+"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√(2+(3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√(2+3)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√(4)^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√-4"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√.5"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16 π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16.5"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√162"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16^(2)"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16^π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16e"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16x"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16θ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16τ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16√16"],"out":[{"sign":0,"end":3},{"sign":3,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16√4"],"out":[{"sign":0,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√16∞"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4 π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4%"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e42"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4e"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4x"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4θ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4π^2"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4τ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√1e4∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3 3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3 π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3!"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3%"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3(3)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3*2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3+1"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3.5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3/2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 32"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3^(2)"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3^π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3e"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3x"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3°"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3θ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3τ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3√4"],"out":[{"sign":0,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 ^ 3∞"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2 π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*πe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*πx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*πθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*ππ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*ππ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*πτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π√4"],"out":[{"sign":0,"end":2},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2*π∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5 π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5%"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.52"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5e"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5x"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5θ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5π^2"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5τ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2.5∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√22"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2) 3"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2) π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)!"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)%"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)(3)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)*2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)+1"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2).5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)/2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)^(2)"],"out":[{"sign":0,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)^2"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)^π"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)e"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)x"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)°"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)θ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)π^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)τ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)√4"],"out":[{"sign":0,"end":8},{"sign":8,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(1/2)∞"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^(2)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1 3"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1 π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1!"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1%"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1(3)"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1*2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1+1"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1.5"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1/2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-12"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1^(2)"],"out":[{"sign":0,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1^2"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1^π"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1e"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1x"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1°"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1θ"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1π^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1τ"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1√4"],"out":[{"sign":0,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^-1∞"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2 3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2 π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2!"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2%"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2(3)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2*2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2+1"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2.5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2/2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^22"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2^(2)"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2^π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2e"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2x"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2°"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2θ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2τ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2√4"],"out":[{"sign":0,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2^2∞"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π^(2)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2πe"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2πx"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2πθ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2ππ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2ππ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2πτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π√4"],"out":[{"sign":0,"end":4},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^2π∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3 π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3%"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3.5"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^32"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3e"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3x"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3θ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3π^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3τ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^3∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^πe"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^πx"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^πθ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^ππ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^ππ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^πτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2^π∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2e"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pie"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pix"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2piθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2piπ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2piπ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2piτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi√4"],"out":[{"sign":0,"end":2},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2pi∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2x"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2θ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π.5"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π^(2)"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π^π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2πe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2πx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2πθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2ππ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2ππ^2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2πτ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π√4"],"out":[{"sign":0,"end":2},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2π∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ%"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ.5"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ^(2)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ^2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ^π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τπ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τπ^2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2ττ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ√4"],"out":[{"sign":0,"end":2},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2τ∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2√4"],"out":[{"sign":0,"end":2},{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√2∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1) 3"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1) π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)!"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)%"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)(3)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)*2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)+1"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1).5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)/2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)^(2)"],"out":[{"sign":0,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)^2"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)^π"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)e"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)x"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)°"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)θ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)π^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)τ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)√4"],"out":[{"sign":0,"end":8},{"sign":8,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√3^(1+1)∞"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4% 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4% π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%.5"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%^(2)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%^2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%^π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%e"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%x"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%θ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%π^2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%τ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%√4"],"out":[{"sign":0,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√4%∞"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9 π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91 π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91.5"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√912"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91^(2)"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91^π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91e"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91x"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91θ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91τ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91√4"],"out":[{"sign":0,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√91∞"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√92"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9^(2)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9e"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9x"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9θ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9π^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9τ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9√4"],"out":[{"sign":0,"end":2},{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√9∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√e"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√pi"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√sin(x)"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x y"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x%"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x2"],"out":[],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√x^3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√xy"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√xy+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√xπ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π%"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π.5"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π^(2)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√πe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√πx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√πθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√ππ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√ππ^2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√πτ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π√4"],"out":[{"sign":0,"end":2},{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["√π∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16 π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16.5"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛162"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16^(2)"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16^π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16e"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16x"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16θ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16τ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16√4"],"out":[{"sign":0,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛16∞"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4 π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4%"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e42"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4e"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4x"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4θ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4π^2"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4τ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛1e4∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3 3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3 π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3!"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3%"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3(3)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3*2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3+1"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3.5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3/2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 32"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3^(2)"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3^π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3e"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3x"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3°"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3θ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3τ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3√4"],"out":[{"sign":0,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 ^ 3∞"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2 π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*πe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*πx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*πθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*ππ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*ππ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*πτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π√4"],"out":[{"sign":0,"end":2},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2*π∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5 π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5%"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.52"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5e"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5x"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5θ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5π^2"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5τ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2.5∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛22"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛27"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2) 3"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2) π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)!"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)%"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)(3)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)*2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)+1"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2).5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)/2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)^(2)"],"out":[{"sign":0,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)^2"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)^π"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)e"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)x"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)°"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)θ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)π^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)τ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)√4"],"out":[{"sign":0,"end":8},{"sign":8,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(1/2)∞"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^(2)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1 3"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1 π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1!"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1%"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1(3)"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1*2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1+1"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1.5"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1/2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-12"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1^(2)"],"out":[{"sign":0,"end":9}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1^2"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1^π"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1e"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1x"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1°"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1θ"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1π^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1τ"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1√4"],"out":[{"sign":0,"end":5},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^-1∞"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2 3"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2 π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2!"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2%"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2(3)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2*2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2+1"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2.5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2/2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^22"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2^(2)"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2^π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2e"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2x"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2°"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2θ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2τ"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2√4"],"out":[{"sign":0,"end":6},{"sign":6,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2^2∞"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π^(2)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2πe"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2πx"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2πθ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2ππ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2ππ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2πτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π√4"],"out":[{"sign":0,"end":4},{"sign":5,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^2π∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3 π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3%"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3.5"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^32"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3e"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3x"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3θ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3π^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3τ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^3∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^πe"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^πx"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^πθ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^ππ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^ππ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^πτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π√4"],"out":[{"sign":0,"end":4},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2^π∞"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2e"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi 3"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi!"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi(3)"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi*2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi+1"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi/2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi^(2)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi^π"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pie"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pix"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi°"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2piθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2piπ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2piπ^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2piτ"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi√4"],"out":[{"sign":0,"end":2},{"sign":4,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2pi∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2x"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2θ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π.5"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π^(2)"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π^π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2πe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2πx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2πθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2ππ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2ππ^2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2πτ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π√4"],"out":[{"sign":0,"end":2},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2π∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ%"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ.5"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ^(2)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ^2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ^π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τπ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τπ^2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2ττ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ√4"],"out":[{"sign":0,"end":2},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2τ∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2√4"],"out":[{"sign":0,"end":2},{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛2∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1) 3"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1) π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)!"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)%"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)(3)"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)*2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)+1"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1).5"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)/2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)^(2)"],"out":[{"sign":0,"end":12}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)^2"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)^π"],"out":[{"sign":0,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)e"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)x"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)°"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)θ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)π"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)π^2"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)τ"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)√4"],"out":[{"sign":0,"end":8},{"sign":8,"end":10}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛3^(1+1)∞"],"out":[{"sign":0,"end":8}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4% 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4% π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%.5"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%^(2)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%^2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%^π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%e"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%x"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%θ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%π^2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%τ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%√4"],"out":[{"sign":0,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛4%∞"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛8x"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9 π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9%"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9.5"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91 3"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91 π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91!"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91%"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91(3)"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91*2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91+1"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91.5"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91/2"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛912"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91^(2)"],"out":[{"sign":0,"end":7}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91^π"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91e"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91x"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91°"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91θ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91π^2"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91τ"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91√4"],"out":[{"sign":0,"end":3},{"sign":3,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛91∞"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛92"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9^(2)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9e"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9x"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9θ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9π"],"out":[{"sign":0,"end":3}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9π^2"],"out":[{"sign":0,"end":5}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9τ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9√4"],"out":[{"sign":0,"end":2},{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛9∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛xy"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π 3"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π!"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π%"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π(3)"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π*2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π+1"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π.5"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π/2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π^(2)"],"out":[{"sign":0,"end":6}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π^2"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π^π"],"out":[{"sign":0,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛πe"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛πx"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π°"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛πθ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛ππ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛ππ^2"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛πτ"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π√4"],"out":[{"sign":0,"end":2},{"sign":2,"end":4}],"src":"src/lib/radical.test.ts"}
+{"fn":"radicalSpans","args":["∛π∞"],"out":[{"sign":0,"end":2}],"src":"src/lib/radical.test.ts"}

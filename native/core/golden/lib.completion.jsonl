@@ -1,0 +1,292 @@
+{"fn":"completionFor","args":[""],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["12 kg in po"],"out":"und","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["2 * are",{"functions":["area"]}],"out":"a(","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["2 + "],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["2 + co"],"out":"s(","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["2 a"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ab"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ac"],"out":"re","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 aco"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 acr"],"out":"e","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 am"],"out":"pere","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 amp"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ampe"],"out":"re","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ar"],"out":"csin(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 arc"],"out":"sin(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 arcc"],"out":"os(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 arcs"],"out":"in(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 arct"],"out":"an(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 as"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 asi"],"out":"n(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 at"],"out":"mosphere","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ata"],"out":"n(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 atm"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 atmo"],"out":"sphere","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 c"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ca"],"out":"lorie","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cal"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 calo"],"out":"rie","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ce"],"out":"ntimeter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cei"],"out":"l(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cel"],"out":"sius","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cels"],"out":"ius","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cen"],"out":"timeter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cent"],"out":"imeter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 co"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 com"],"out":"binations(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 comb"],"out":"inations(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cos"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 cu"],"out":"p","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 d"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 da"],"out":"y","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 de"],"out":"gree","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 deg"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 degr"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 e"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ex"],"out":"p(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 f"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fa"],"out":"hrenheit","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fac"],"out":"torial(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fact"],"out":"orial(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fah"],"out":"renheit","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fahr"],"out":"enheit","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fe"],"out":"et","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fee"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fl"],"out":"oor(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 flo"],"out":"or(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 floo"],"out":"r(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 fo"],"out":"ot","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 foo"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 g"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ga"],"out":"llon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gal"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gall"],"out":"on","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gc"],"out":"d(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gi"],"out":"gabyte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gig"],"out":"abyte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 giga"],"out":"byte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gr"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 gra"],"out":"m","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 h"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 he"],"out":"ctare","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hec"],"out":"tare","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hect"],"out":"are","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 her"],"out":"tz","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hert"],"out":"z","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ho"],"out":"ur","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hor"],"out":"sepower","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hors"],"out":"epower","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hou"],"out":"r","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hy"],"out":"pot(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hyp"],"out":"ot(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 hypo"],"out":"t(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 i"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 in"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 inc"],"out":"h","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 j"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 jo"],"out":"ule","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 jou"],"out":"le","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 joul"],"out":"e","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 k"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ke"],"out":"lvin","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 kel"],"out":"vin","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 kelv"],"out":"in","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ki"],"out":"logram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 kil"],"out":"ogram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 kilo"],"out":"gram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 kn"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 kno"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 l"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 lc"],"out":"f(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 li"],"out":"ter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 lit"],"out":"er","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 lite"],"out":"r","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 lo"],"out":"g(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 m"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ma"],"out":"x(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 me"],"out":"ter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mea"],"out":"n(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 med"],"out":"ian(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 medi"],"out":"an(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 meg"],"out":"abyte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mega"],"out":"byte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 met"],"out":"er","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mete"],"out":"r","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mi"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mil"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mill"],"out":"imeter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 min"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 minu"],"out":"te","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mo"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mon"],"out":"th","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 mont"],"out":"h","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 n"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ne"],"out":"wton","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 new"],"out":"ton","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 newt"],"out":"on","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 nt"],"out":"hRoot(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 nth"],"out":"Root(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 nthR"],"out":"oot(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 o"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ou"],"out":"nce","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 oun"],"out":"ce","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ounc"],"out":"e","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 p"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pa"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pas"],"out":"cal","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pasc"],"out":"al","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pe"],"out":"rmutations(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 per"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 perm"],"out":"utations(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pi"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pin"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 po"],"out":"und","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 pou"],"out":"nd","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 poun"],"out":"d","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 q"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 qu"],"out":"art","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 qua"],"out":"rt","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 quar"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 r"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ra"],"out":"dian","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 rad"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 radi"],"out":"an","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ro"],"out":"und(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 rou"],"out":"nd(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 roun"],"out":"d(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 s"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 se"],"out":"cond","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 sec"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 seco"],"out":"nd","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 si"],"out":"n(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 sin"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 sq"],"out":"rt","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 sqr"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 su"],"out":"m","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 t"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ta"],"out":"blespoon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 tab"],"out":"lespoon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 tabl"],"out":"espoon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 tan"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 te"],"out":"aspoon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 tea"],"out":"spoon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 teas"],"out":"poon","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ter"],"out":"abyte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 tera"],"out":"byte","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 v"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 vo"],"out":"lt","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 vol"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 w"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 wa"],"out":"tt","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 wat"],"out":"t","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 we"],"out":"ek","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 wee"],"out":"k","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 y"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ya"],"out":"rd","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 yar"],"out":"d","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 ye"],"out":"ar","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["2 yea"],"out":"r","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["20 cel"],"out":"sius","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["2sq"],"out":"rt","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["3 an"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["3 co"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["3 gr"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["3 hors"],"out":"epower","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["3 ki"],"out":"logram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["3 me"],"out":"ter","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["3 s"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["3 tab"],"out":"lespoon","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["3 x"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["5 + "],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["5 ce"],"out":"ntimeter","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["5 kg as ce"],"out":"il(","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["5 kg as"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["5 kg in ce"],"out":"ntimeter","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["5 kg in"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["5 kg per ce"],"out":"il(","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["5 kg to ce"],"out":"ntimeter","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["5 kg"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["5 kilo"],"out":"gram","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["5 kilob"],"out":"yte","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["5 met",{"variables":["method"]}],"out":"hod","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["5 mi"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["5 si"],"out":"n(","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["Periodic Table"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["a"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["an"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["and"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["ar"],"out":"csin(","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["as"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["ce"],"out":"il(","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["chem R a"],"out":"tm","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["chem R atm"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["chem R t"],"out":"orr","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["chem R x"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["chem r mm"],"out":"hg","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["cm"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["co"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["combin"],"out":"ations(","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["cos"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["e"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["fac"],"out":"torial(","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["gr"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["hyp"],"out":"ot(","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["identities pa"],"out":"rtial fractions","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["identities partial f"],"out":"ractions","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["identities trig"],"out":"","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["idt con"],"out":"stants","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["idt in"],"out":"tegration","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["idt su"],"out":"mmation","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["idt tr"],"out":"ig","src":"src/lib/identities.test.ts"}
+{"fn":"completionFor","args":["in"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["kg"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["ki"],"out":"logram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["ma",{"variables":["mass"]}],"out":"ss","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["mass",{"variables":["mass"]}],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["me"],"out":"an(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["mes",{"contacts":["max","maya"]}],"out":"sage","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["message ma",{"contacts":["max","maya"]}],"out":"x","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["message max 5 kilo",{"contacts":["max","maya"]}],"out":"","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["message max let’s go sq",{"contacts":["max","maya"]}],"out":"","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["message may",{"contacts":["max","maya"]}],"out":"a","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["message zo",{"contacts":["max","maya"]}],"out":"","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["message",{"contacts":["max","maya"]}],"out":"","src":"src/lib/messaging.test.ts"}
+{"fn":"completionFor","args":["meter",{"variables":["meter"]}],"out":"","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["meter"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["mod"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["of"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["or"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["periodic "],"out":"table","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["periodic ta"],"out":"ble","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["periodic table"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["periodic tea"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["permu"],"out":"tations(","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["pi"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["s"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["si",{"functions":["sigma"]}],"out":"gma(","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["sin"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["sin(an"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sin(co"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sin(gr"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sin(ki"],"out":"logram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sin(me"],"out":"an(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sin(s"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sin(x"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["sq",{"functions":["sqft"]}],"out":"ft(","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["sq"],"out":"rt","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["su"],"out":"m","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["to"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["x + an"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x + co"],"out":"s(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x + gr"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x + ki"],"out":"logram","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x + me"],"out":"an(","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x + s"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x + x"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["x"],"out":"","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"completionFor","args":["xqzz"],"out":"","src":"src/lib/audit2.completion.test.ts"}
+{"fn":"completionFor","args":["zzq"],"out":"","src":"src/lib/completion.test.ts"}
+{"fn":"completionFor","args":["θ*co"],"out":"s(","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["π+sq"],"out":"rt","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["π+x"],"out":"","src":"src/lib/r3a.completion.test.ts"}
+{"fn":"completionFor","args":["√sin"],"out":"","src":"src/lib/r3a.completion.test.ts"}

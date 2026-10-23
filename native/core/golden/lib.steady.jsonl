@@ -1,0 +1,18 @@
+{"fn":"isEditOf","args":["","2"],"out":false,"now":1792768571735,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["1","123456789"],"out":false,"now":1792768571299,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["12 * (3 + ) * 4","12 * (3 + 5) * 4"],"out":true,"now":1792768571735,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["12 + 345","12 + "],"out":true,"now":1792768571298,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["12 kg in l","12 kg in lb"],"out":true,"now":1792768571735,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["12 kg in lb","1 kg in lb"],"out":true,"now":1792768571301,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["12 kg in lb","2+2"],"out":false,"now":1792768571301,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["2","2"],"out":false,"now":1792768571735,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["2+","2"],"out":true,"now":1792768571735,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["2+2","2"],"out":true,"now":1792768571300,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["5+5","3+3"],"out":false,"now":1792768571299,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["9^","2+2"],"out":false,"now":1792768571735,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["aZZZ","abcd"],"out":false,"now":1792768571300,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["abxy","abcd"],"out":true,"now":1792768571300,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["sin(30) deg","sin(30) rad"],"out":true,"now":1792768571300,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["sqrt(2)*3+","sqrt(2)*3"],"out":true,"now":1792768571734,"src":"src/lib/steady.test.ts"}
+{"fn":"isEditOf","args":["sqrt(4)","sqrt(144)"],"out":true,"now":1792768571299,"src":"src/lib/audit2.steady.test.ts"}
+{"fn":"isEditOf","args":["x","12"],"out":false,"now":1792768571735,"src":"src/lib/steady.test.ts"}
