@@ -21,6 +21,7 @@ import { CopyUnitlessSettings } from './CopySettings'
 import { HistoryInsertSettings } from './HistoryInsertSettings'
 import { KeybindSettings } from './KeybindSettings'
 import { KeepWordsSettings } from './KeepWordsSettings'
+import { MessagingSettings } from './MessagingSettings'
 import { RationalizeSettings } from './RationalizeSettings'
 import { SpaceThousandsSettings } from './SpaceThousandsSettings'
 import { TypstCopySettings, TypstSettings } from './TypstSettings'
@@ -240,6 +241,9 @@ export function SettingsPage() {
         value={settings.shareUsage}
         onChange={set('shareUsage')}
       />
+
+      <h2 className="settings-heading">Messages</h2>
+      <MessagingSettings />
 
       <h2 className="settings-heading">Answers</h2>
       <ChoiceSetting

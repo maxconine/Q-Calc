@@ -558,6 +558,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             overlay?.showWhenReady(from: "shortcut warning")
         }
         Updates.shared.start()
+        // with a name set, the inbox waits for messages whether or not the bar is up
+        Messages.shared.start()
         scheduleHotKeyNudge()
     }
 

@@ -53,3 +53,27 @@
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
 }
+
+/* your messaging name: a text field and its save */
+.setting-name {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 0 var(--gutter) var(--sp-3);
+}
+.setting-text {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background-color: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--ink);
+  border-radius: var(--radius-s);
+  padding: 3px var(--sp-2);
+  font: inherit;
+  font-size: var(--fs-body);
+  line-height: 16px;
+}
+.setting-name .unit-reset {
+  margin: 0;
+}

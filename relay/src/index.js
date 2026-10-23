@@ -1,6 +1,7 @@
 import { DurableObject } from 'cloudflare:workers'
 import { cleanName, GAMES, ipKey, newRoomId, ROOM_ID, RoomList } from './directory.js'
 import { enqueue, GRACE_MS, LEFT, newSeats, otherSide, overdue, seatOf, SIDES } from './seats.js'
+import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFromProtocols, lapsed, LAPSE_MS, MAX_INBOX_SOCKETS } from './names.js'
 
 // the online link for q calc's two-player games. each game has a list of open rooms that the lobby watches;
 // a host opens a room, open or locked with a 6-digit code, and a guest picks it from the list (typing the code
@@ -20,6 +21,13 @@ import { enqueue, GRACE_MS, LEFT, newSeats, otherSide, overdue, seatOf, SIDES } 
 //   /join/<code>[?name=…]                  joins by the code alone: a locked listed room, or a code-only room
 //   /host                                  the code-only rooms of earlier releases, kept so they still pair
 //   /back/<room or code>?token=…          takes back a seat after a dropped link (seats.js)
+//   /inbox/<name>                          a name's messages as they come; the key rides as a protocol (names.js)
+//
+// and messaging's plain requests, each a json body (text/plain, so a page sends it without a preflight):
+//   POST /claim    {name, key}              holds a name for a key, or says it's taken
+//   POST /release  {name, key}              lets a name go
+//   POST /send     {from, key, to, text}    hands a message to the name's open inbox, if there is one: nothing
+//                                           is queued, so a name that's offline hears nothing
 //
 // a page that can take a seat back asks with resume=1; only when both sides did is a seat held. then `open`
 // carries the room and the side's token. a close other than 1000 (a lost link, a quit app)
@@ -50,13 +58,39 @@ const ROUTE = /^\/(rooms|host|join|back)\/([a-z0-9]+)$/
 
 const event = (e) => '!' + JSON.stringify(e)
 
-// a websocket that says why and closes at once; a browser can't read the status of a refused upgrade
-function refuse(reason) {
+// a websocket that says why and closes at once; a browser can't read the status of a refused upgrade. one that
+// offered a protocol must hear it back, or the browser drops the socket before reading why
+function refuse(reason, protocol) {
   const [client, server] = Object.values(new WebSocketPair())
   server.accept()
   server.send(event({ type: 'closed', reason }))
   server.close(1000, reason)
-  return new Response(null, { status: 101, webSocket: client })
+  return new Response(null, { status: 101, webSocket: client, ...(protocol ? { headers: { 'Sec-WebSocket-Protocol': protocol } } : {}) })
+}
+
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' }
+// a messaging body is a few hundred bytes
+const MAX_BODY = 4096
+
+function reply(body) {
+  return new Response(JSON.stringify(body), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } })
+}
+
+async function body(req) {
+  try {
+    const text = await req.text()
+    if (text.length > MAX_BODY) return null
+    const o = JSON.parse(text)
+    return o && typeof o === 'object' ? o : null
+  } catch {
+    return null
+  }
+}
+
+async function allowedKey(limiter, key) {
+  if (!limiter) return true
+  const { success } = await limiter.limit({ key })
+  return success
 }
 
 async function allowed(limiter, req) {
@@ -73,13 +107,58 @@ function directory(env, game) {
   return env.DIRECTORY.get(env.DIRECTORY.idFromName(game))
 }
 
+function inbox(env, name) {
+  return env.INBOX.get(env.INBOX.idFromName(name))
+}
+
 const upgrade = { headers: { Upgrade: 'websocket' } }
+
+// messaging's plain requests. the sender proves its name with its key, so nobody writes as someone else
+async function messaging(req, env, path) {
+  const o = await body(req)
+  if (!o) return reply({ status: 'bad' })
+  if (path === '/send') {
+    const from = cleanHandle(o.from)
+    const to = cleanHandle(o.to)
+    const text = cleanText(o.text)
+    if (!from || !to || !text || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
+    if (!(await allowed(env.MESSAGES, req)) || !(await allowedKey(env.SENDERS, from))) return reply({ status: 'too-many' })
+    if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
+    return reply({ status: await inbox(env, to).deliver(from, text) })
+  }
+  const name = cleanHandle(o.name)
+  if (!name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
+  if (!(await allowed(env.NAMES, req))) return reply({ status: 'too-many' })
+  const hash = await hashKey(o.key)
+  if (path === '/claim') return reply({ status: (await inbox(env, name).hold(hash)) ? 'ok' : 'taken' })
+  await inbox(env, name).release(hash)
+  return reply({ status: 'ok' })
+}
+
+const MESSAGING = new Set(['/claim', '/release', '/send'])
+const INBOX_ROUTE = /^\/inbox\/([a-z0-9_-]+)$/
 
 export default {
   async fetch(req, env) {
     const url = new URL(req.url)
     if (url.pathname === '/') return new Response('q calc relay\n')
+    if (MESSAGING.has(url.pathname)) {
+      if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
+      if (req.method === 'POST') return messaging(req, env, url.pathname)
+      return new Response('expected a post\n', { status: 405 })
+    }
     if (req.headers.get('Upgrade') !== 'websocket') return new Response('expected a websocket\n', { status: 426 })
+
+    const box = INBOX_ROUTE.exec(url.pathname)
+    if (box) {
+      const name = cleanHandle(box[1])
+      const offered = req.headers.get('Sec-WebSocket-Protocol') ?? ''
+      const key = keyFromProtocols(offered)
+      if (!name || !key) return refuse('gone', offered.includes(INBOX_PROTOCOL) ? INBOX_PROTOCOL : undefined)
+      if (!(await allowed(env.NAMES, req))) return refuse('too-many-tries', INBOX_PROTOCOL)
+      const q = new URLSearchParams({ name, hash: await hashKey(key) })
+      return inbox(env, name).fetch(`https://inbox/open?${q}`, upgrade)
+    }
 
     // before the room routes: a 6-digit code is not a room id
     const legacy = LEGACY_JOIN.exec(url.pathname)
@@ -601,5 +680,103 @@ export class Directory extends DurableObject {
       const next = list.nextExpiry()
       if (next != null) await this.ctx.storage.setAlarm(next)
     }
+  }
+}
+
+// one name's inbox: who holds the name (the hash of their key, and when they were last seen) and their app's
+// open sockets, which hibernate, so a waiting inbox costs nothing. a message is passed to the open sockets and
+// forgotten; with none open it's turned away, never kept
+export class Inbox extends DurableObject {
+  constructor(ctx, env) {
+    super(ctx, env)
+    ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair('ping', 'pong'))
+  }
+
+  open() {
+    return this.ctx.getWebSockets('owner').filter((ws) => ws.readyState === WebSocket.OPEN)
+  }
+
+  // over rpc: holds the name for this key, or keeps it held. false when another key holds it
+  async hold(hash) {
+    const now = Date.now()
+    const { ok, write } = holdName(await this.ctx.storage.get('claim'), hash, now)
+    if (write) {
+      await this.ctx.storage.put('claim', write)
+      await this.ctx.storage.setAlarm(now + LAPSE_MS)
+    }
+    return ok
+  }
+
+  // over rpc: the holder lets the name go; its sockets close
+  async release(hash) {
+    const held = await this.ctx.storage.get('claim')
+    if (held?.hash !== hash) return
+    await this.ctx.storage.deleteAll()
+    await this.ctx.storage.deleteAlarm()
+    for (const ws of this.open()) {
+      try {
+        ws.send(event({ type: 'closed', reason: 'released' }))
+        ws.close(1000, 'released')
+      } catch {
+        // already closing
+      }
+    }
+  }
+
+  // over rpc: 'delivered' when an open inbox took it, 'offline' when none is open, 'unknown' when nobody holds the name
+  async deliver(from, text) {
+    if (lapsed(await this.ctx.storage.get('claim'), Date.now())) return 'unknown'
+    const socks = this.open()
+    const frame = event({ type: 'message', from, text })
+    let sent = 0
+    for (const ws of socks) {
+      try {
+        ws.send(frame)
+        sent++
+      } catch {
+        // on its way out
+      }
+    }
+    return sent ? 'delivered' : 'offline'
+  }
+
+  async fetch(req) {
+    const p = new URL(req.url).searchParams
+    if (!(await this.hold(p.get('hash')))) return refuse('taken', INBOX_PROTOCOL)
+    const socks = this.open()
+    for (const ws of socks.slice(0, Math.max(0, socks.length - MAX_INBOX_SOCKETS + 1))) {
+      try {
+        ws.close(1000, 'replaced')
+      } catch {
+        // already closing
+      }
+    }
+    const [client, server] = Object.values(new WebSocketPair())
+    this.ctx.acceptWebSocket(server, ['owner'])
+    server.send(event({ type: 'inbox', name: p.get('name') }))
+    return new Response(null, { status: 101, webSocket: client, headers: { 'Sec-WebSocket-Protocol': INBOX_PROTOCOL } })
+  }
+
+  // an inbox only listens
+  webSocketMessage() {}
+
+  webSocketClose(ws) {
+    try {
+      ws.close(1000, 'done')
+    } catch {
+      // already closed
+    }
+  }
+
+  // a name nobody's used in LAPSE_MS goes; one whose app is still connected is still in use
+  async alarm() {
+    const held = await this.ctx.storage.get('claim')
+    if (!held) return
+    const now = Date.now()
+    if (this.open().length) {
+      await this.ctx.storage.put('claim', { ...held, seen: now })
+      await this.ctx.storage.setAlarm(now + LAPSE_MS)
+    } else if (lapsed(held, now)) await this.ctx.storage.deleteAll()
+    else await this.ctx.storage.setAlarm(held.seen + LAPSE_MS + 1)
   }
 }

@@ -24,7 +24,8 @@ const NAMES = new Set(`${SCIENTIFIC_NAMES}|e|in|to|as|of|per|and|or|mod`.toLower
 // a prefix on its own (`kilo`) still reads as the start of a longer unit
 const PREFIX_WORDS = new Set(['kilo', 'mega', 'giga', 'tera', 'milli', 'micro', 'nano', 'centi'])
 
-export type CompletionNames = { variables?: string[]; functions?: string[]; ans?: boolean }
+// contacts: the names `message` finishes, the ones accepted in settings
+export type CompletionNames = { variables?: string[]; functions?: string[]; ans?: boolean; contacts?: string[] }
 
 function isWholeWord(word: string, user: string[]): boolean {
   const lower = word.toLowerCase()
@@ -37,6 +38,15 @@ function isWholeWord(word: string, user: string[]): boolean {
  * After a number or `in`/`to` a unit is likelier than a function; elsewhere functions come first.
  */
 export function completionFor(text: string, names: CompletionNames = {}): string {
+  // `mes` finishes `message`, its name finishes from the accepted ones, and what's said is never completed
+  const typed = text.match(/^\s*([A-Za-z]{3,})$/)
+  if (typed && 'message'.startsWith(typed[1]!.toLowerCase())) return 'message'.slice(typed[1]!.length)
+  const to = text.match(/^\s*message\s+([a-z0-9_-]+)$/i)
+  if (to) {
+    const hit = (names.contacts ?? []).find((n) => n.length > to[1]!.length && n.startsWith(to[1]!.toLowerCase()))
+    return hit ? hit.slice(to[1]!.length) : ''
+  }
+  if (/^\s*message\s/i.test(text)) return ''
   // `periodic table` is a command, not a unit: `periodic ta` finishes it, and `table` never becomes `tablespoon`
   const periodic = text.match(/^\s*periodic\s+([A-Za-z]*)$/i)
   if (periodic) return 'table'.startsWith(periodic[1]!.toLowerCase()) ? 'table'.slice(periodic[1]!.length) : ''

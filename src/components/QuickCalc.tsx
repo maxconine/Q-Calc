@@ -120,6 +120,9 @@ import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
 import { identitySheetFor, isIdentityCommand, openNativeIdentitySheet, type IdentitySheet } from '../lib/identities'
 import { GREETING_REPLY, isGreeting } from '../lib/greeting'
+import { isMessageCommand, loadMessaging, messageHint, onMessagingChange, parseMessage, sendMessage, sendStatusText } from '../lib/messaging'
+import { relayUrl } from '../lib/peerOnline'
+import { MessageNotices } from './MessageNotices'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
@@ -335,6 +338,11 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   qRef.current = q
   const settingsRef = useRef(settings)
   settingsRef.current = settings
+  // your messaging name and who's accepted; settings (or the mac app) change it
+  const [messaging, setMessaging] = useState(loadMessaging)
+  const messagingRef = useRef(messaging)
+  messagingRef.current = messaging
+  useEffect(() => onMessagingChange(setMessaging), [])
   const draftAtRef = useRef(storedDraft?.savedAt ?? 0)
   const draftTimer = useRef(0)
   const evalIdRef = useRef(0)
@@ -481,8 +489,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const nativeMeas = useMemo(() => historyMeasures(scoped), [scoped])
   const nativeQty = useMemo(() => historyQuantities(scoped), [scoped])
   const completionNames = useMemo(
-    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null }),
-    [nativeVars, nativeFns, lastAns],
+    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null, contacts: messaging.accepted }),
+    [nativeVars, nativeFns, lastAns, messaging.accepted],
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
@@ -498,8 +506,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const graphCmd = isGraphCommand(q)
   const sysCmd = isSysCommand(q)
   const greeting = isGreeting(q)
-  // `periodic` and `hello` answer with a message, not a calculation
-  const periodicCmd = isPeriodicCommand(q) || greeting
+  const messageCmd = isMessageCommand(q)
+  // `periodic`, `hello` and `message` answer with a message, not a calculation
+  const periodicCmd = isPeriodicCommand(q) || greeting || messageCmd
   const identityCmd = identitySheetFor(q)
   // pong or connect 4
   const pongCmd = gameCommand(q)
@@ -1219,6 +1228,27 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     [resetToCalculate],
   )
 
+  // `message max hello` and ↵: the bar says how it went. sent, it clears; not sent, it stays for another go
+  const sendTyped = useCallback(() => {
+    const line = parseMessage(qRef.current)
+    const m = messagingRef.current
+    if (!line) return
+    if (relayUrl() && (!m.name || !m.key) && nativeHandler()) {
+      nativeHandler()?.postMessage({ type: 'openSettings' })
+      return
+    }
+    if (!relayUrl() || !m.name || !m.key || !line.name || !line.text) {
+      setHint(messageHint(line, m))
+      return
+    }
+    const typed = qRef.current
+    setHint(`sending to ${line.name}…`)
+    void sendMessage(m, line.name, line.text).then((status) => {
+      if (status === 'delivered' && qRef.current === typed) resetToCalculate()
+      setHint(sendStatusText(status, line.name))
+    })
+  }, [resetToCalculate])
+
   const onEnter = useCallback((alt = false) => {
     const opening = sysCommand(qRef.current)
     if (selected == null && opening && 'count' in opening && sysLinesRef.current?.length !== opening.count) {
@@ -1236,6 +1266,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       markTour(tourBit('help'))
       resetToCalculate()
     } else if (isGreeting(qRef.current)) resetToCalculate()
+    else if (selected == null && isMessageCommand(qRef.current)) sendTyped()
     else if (selected == null && isTutorialCommand(qRef.current)) startTutorial()
     else if (selected == null && isSkipCommand(qRef.current) && tourBasicsLeft()) {
       skipTutorial()
@@ -1268,7 +1299,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       setUnitFix(fix && { ...fix, q: qRef.current, caret })
       setHint(fix?.hint ?? blankEnterHint())
     }
-  }, [blankEnterHint, commit, offerUnit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryPick, insertHistoryOther, openHistorySystem, playGame, skipTutorial, startTutorial, tourBasicsLeft])
+  }, [blankEnterHint, commit, offerUnit, gamePick, markTour, resetToCalculate, selected, history, insertHistoryPick, insertHistoryOther, openHistorySystem, playGame, sendTyped, skipTutorial, startTutorial, tourBasicsLeft])
 
   const closeGame = useCallback(() => {
     pongOpenRef.current = null
@@ -1407,7 +1438,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
 
   useEffect(() => {
     // an equation js can't solve would come back from soulvercore as something else
-    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || gameCommand(q) || isGamesCommand(q) || isTutorialCommand(q) || isGreeting(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
+    if (!q.trim() || !hasNativeEval() || isGraphCommand(q) || isSysCommand(q) || isHelpCommand(q) || isPeriodicCommand(q) || isIdentityCommand(q) || gameCommand(q) || isGamesCommand(q) || isTutorialCommand(q) || isGreeting(q) || isMessageCommand(q) || isEquation(q) || isIsolateCommand(q) || parseSystemCall(q)) return
     // plain math is already answered in js; soulvercore is only needed for natural language
     if (chained || !looksLikeNaturalLanguage(q)) return
     // soulvercore has no ± (it answers `5 ± 2 * 3 ± 1` with 6); a blank beats that
@@ -1689,7 +1720,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : messageCmd ? messageHint(parseMessage(q)!, messaging) : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1735,6 +1766,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ) : step && !pongOpen && !helpShown && tourLineFits(step, q, Boolean(shownLive)) ? (
             <TourLine text={hostKeys(step.text)} progress={tourProgress(tourDone, nativeInfo.hotkey)} onSkip={skipTutorial} />
           ) : null}
+          <MessageNotices key={messaging.name} messaging={messaging} hidden={Boolean(pongOpen)} />
           {sysLines && sysParsed && 'count' in sysParsed && sysParsed.count === sysLines.length ? (
             <SystemPanel
               lines={sysLines}
