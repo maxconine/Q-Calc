@@ -1,4 +1,5 @@
-// natural-language phrases soulvercore answers on the mac, for hosts without it.
+// natural-language phrases, on every platform. they once came from soulvercore on the mac; phrases.soulver.test.ts
+// keeps what it answered.
 // every pattern matches the whole line; anything looser stays blank
 
 import {

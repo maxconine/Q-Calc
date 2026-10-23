@@ -6,7 +6,7 @@ import { looksLikeNaturalLanguage } from './nativeEval'
 
 type RatesWindow = { __QCALC_RATES?: unknown }
 
-// the mac always has soulvercore; the phrase layer is only for hosts without it
+// a host that answers phrases itself; none does now that the mac no longer has soulvercore, so the phrase layer runs everywhere
 export function hasSoulver(): boolean {
   return Boolean(nativeWindow()?.webkit?.messageHandlers?.soulver)
 }
