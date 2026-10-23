@@ -226,7 +226,9 @@ export function parseInboxFrame(data: unknown): InboxEvent | null {
   if (o?.type === 'closed' && (o.reason === 'taken' || o.reason === 'released')) return { type: 'state', state: 'taken' }
   if (o?.type === 'message') {
     const from = cleanName(o.from)
-    const text = typeof o.text === 'string' ? o.text.slice(0, TEXT_MAX) : ''
+    // controls and direction overrides go here too, whatever the relay did, so a line can't fake another sender's
+    // eslint-disable-next-line no-control-regex
+    const text = typeof o.text === 'string' ? o.text.replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u2028-\u202e\u2066-\u2069]+/g, ' ').slice(0, TEXT_MAX) : ''
     return from && text ? { type: 'message', from, text } : null
   }
   return null

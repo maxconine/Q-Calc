@@ -217,6 +217,11 @@ describe('the inbox link', () => {
     off.start('ana', KEY)
   })
 
+  it('takes controls and direction overrides out of a message', () => {
+    const frame = parseInboxFrame('!' + JSON.stringify({ type: 'message', from: 'max', text: 'hi\u0085\u202eana: x' }))
+    expect(frame).toEqual({ type: 'message', from: 'max', text: 'hi ana: x' })
+  })
+
   it('ignores frames that aren’t its own', () => {
     expect(parseInboxFrame('.game')).toBeNull()
     expect(parseInboxFrame('!{bad')).toBeNull()

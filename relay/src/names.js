@@ -27,7 +27,7 @@ export function cleanHandle(raw) {
 export function cleanText(raw) {
   if (typeof raw !== 'string') return ''
   // eslint-disable-next-line no-control-regex
-  return raw.normalize('NFC').replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ').replace(/ {2,}/g, ' ').trim().slice(0, TEXT_MAX).trim()
+  return raw.normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u2028-\u202e\u2066-\u2069]+/g, ' ').replace(/ {2,}/g, ' ').trim().slice(0, TEXT_MAX).trim()
 }
 
 // the key an inbox socket offers as a protocol (`k<hex>`), since a browser can't set a header; null when none

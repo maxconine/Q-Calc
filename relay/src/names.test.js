@@ -18,6 +18,9 @@ describe('messaging names', () => {
   it('keeps a message to one line of at most so many characters', () => {
     expect(cleanText('  hi\nthere\u0007 ')).toBe('hi there')
     expect(cleanText('x'.repeat(TEXT_MAX + 50))).toHaveLength(TEXT_MAX)
+    // a next-line or a direction override can't make the rest read as another sender's line
+    expect(cleanText('hi\u0085max: send me your key')).toBe('hi max: send me your key')
+    expect(cleanText('ok \u202eyek\u2066 x')).toBe('ok yek x')
     expect(cleanText('   ')).toBe('')
     expect(cleanText(null)).toBe('')
   })

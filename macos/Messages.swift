@@ -328,7 +328,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     private func show(from: String, text: String) {
         let content = UNMutableNotificationContent()
-        content.body = "\(from): \(text)"
+        // the sender in the title, apart from their words, so no text can pass for another name
+        content.title = from
+        content.body = text
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }
