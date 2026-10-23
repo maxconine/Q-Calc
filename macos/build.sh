@@ -240,6 +240,7 @@ build_app() {
     -framework SoulverCore \
     -framework Sparkle \
     -framework ServiceManagement \
+    -framework UserNotifications \
     -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
     -Xlinker -dead_strip \
     -module-cache-path "$STAGE/modules-$arch" \
@@ -256,6 +257,7 @@ build_app() {
     "$MAC/IdentityWindow.swift" \
     "$MAC/Updates.swift" \
     "$MAC/LoginItem.swift" \
+    "$MAC/Messages.swift" \
     "$MAC/QCalcApp.swift" \
     -o "$BIN"
   # local symbols only help a debugger

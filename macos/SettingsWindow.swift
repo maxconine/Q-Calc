@@ -361,6 +361,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         tabs.addTabViewItem(tab("Units", symbol: "ruler", size: NSSize(width: 500, height: 600)) {
             UnitSettingsView(settings: AppSettings.shared)
         })
+        tabs.addTabViewItem(tab("Messages", symbol: "message", size: NSSize(width: 500, height: 600)) {
+            MessagesSettingsView(messages: Messages.shared)
+        })
         return tabs
     }
 

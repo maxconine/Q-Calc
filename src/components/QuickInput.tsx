@@ -8,6 +8,7 @@ import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/b
 import { chainedExpr } from '../lib/chain'
 import { copyText, inputHighlight, keepEndInView, searchBarCopy } from '../lib/dom'
 import { knownWordSpans } from '../lib/knownWords'
+import { isMessageCommand } from '../lib/messaging'
 import { unitSpans, type UnitSpan } from '../lib/unitSpans'
 import { cleanPastedText } from '../lib/paste'
 import { commandHeld } from '../lib/platform'
@@ -166,6 +167,8 @@ export function joinPlusMinusAt(text: string, caret: number): string {
 // with a caret, the token right before it is left for the next keystroke to settle;
 // a typed `ans` stays a word, so the engine reads the last answer at full precision
 export function prettyTokens(text: string, caret?: number, keepWords = false): string {
+  // a message is said as typed: `pi` stays pi
+  if (isMessageCommand(text)) return text
   if (caret == null) return replaceTokens(text, false, keepWords)
   return replaceTokens(text.slice(0, caret), true, keepWords) + replaceTokens(text.slice(caret), false, keepWords)
 }
@@ -249,7 +252,9 @@ export function QuickInput({
     el.setSelectionRange(start, end)
   }
 
-  const { leading: leadingCount, trailing: trailingCount } = inferParens(value)
+  // `message max …` is words, not math: no faint parens, no painted units or functions
+  const plain = isMessageCommand(value)
+  const { leading: leadingCount, trailing: trailingCount } = plain ? { leading: 0, trailing: 0 } : inferParens(value)
   const prefix = leadingCount > 0 ? '('.repeat(leadingCount) : ''
   const suffix = trailingCount > 0 ? ')'.repeat(trailingCount) : ''
 
@@ -273,13 +278,13 @@ export function QuickInput({
   const fits = !input || input.scrollWidth <= input.clientWidth + 1
   const mark =
     squiggle && fits && squiggle.end <= value.length && !(completion && squiggle.end === completionAt) ? squiggle : null
-  const bounded = boundsIn(value).length > 0
+  const bounded = !plain && boundsIn(value).length > 0
   // a word the engine knows is painted from the ghost layer, so the input's own text steps aside
   // units are green and say what they are on hover; a word that's a unit there isn't also a function
   // in a derivative, an integral or a limit the letters are variables (`1/2 m xdot^2`), not units
   const units =
-    fits && !bounded && !isCalculusInput(value) ? unitSpans(value, completionNames?.variables, completionNames?.functions) : []
-  const words = (fits && !bounded ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []).filter(
+    fits && !bounded && !plain && !isCalculusInput(value) ? unitSpans(value, completionNames?.variables, completionNames?.functions) : []
+  const words = (fits && !bounded && !plain ? knownWordSpans(value, completionNames?.functions, completionNames?.ans) : []).filter(
     (w) => !units.some((u) => u.start < w.end && w.start < u.end),
   )
   // the faint unit sits inside the text, so the ghost layer paints all of it and the caret waits
@@ -323,7 +328,7 @@ export function QuickInput({
     const before = prettyTokens(raw.slice(0, cursor), caret, keepWordsRef.current)
     let next = prettyTokens(raw, caret, keepWordsRef.current)
     let pos = Math.min(before.length, next.length)
-    const slotted = typed ? afterTyping(next, pos) : null
+    const slotted = typed && !isMessageCommand(next) ? afterTyping(next, pos) : null
     if (slotted) ({ text: next, caret: pos } = slotted)
     caretPosRef.current = { start: pos, end: pos }
     setCaret({ at: pos, end: pos === next.length })
@@ -525,7 +530,7 @@ export function QuickInput({
       const at = el.selectionStart ?? el.value.length
       const edit =
         boundKey(el.value, at, e.key) ??
-        (!keepWordsRef.current && (e.key === 'Tab' || e.key === 'ArrowRight') ? wordToSign(el.value, at) : null)
+        (!keepWordsRef.current && !isMessageCommand(el.value) && (e.key === 'Tab' || e.key === 'ArrowRight') ? wordToSign(el.value, at) : null)
       if (edit) {
         e.preventDefault()
         applyEdit(el, edit)
@@ -564,7 +569,7 @@ export function QuickInput({
       // tab never moves focus out of the input. it fills in whatever → would (the faint `ans` of a chain, then the faint
       // parens); with nothing to fill it cycles the answer's forms
       e.preventDefault()
-      const filled = e.shiftKey ? null : chainFill(el) ?? autofillParens(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0)
+      const filled = e.shiftKey || isMessageCommand(el.value) ? null : chainFill(el) ?? autofillParens(el.value, el.selectionStart ?? 0, el.selectionEnd ?? 0)
       if (filled) commit(filled, filled.length)
       else onTabRef.current?.(e.shiftKey ? -1 : 1)
       return
@@ -599,7 +604,7 @@ export function QuickInput({
       commit(chained, chained.length)
       return
     }
-    const filled = autofillParens(el.value, start, end)
+    const filled = isMessageCommand(el.value) ? null : autofillParens(el.value, start, end)
     if (!filled) return
     e.preventDefault()
     commit(filled, filled.length)

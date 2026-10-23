@@ -14,6 +14,11 @@ class_name = "Room"
 name = "DIRECTORY"
 class_name = "Directory"
 
+# one inbox per messaging name: who holds it, and their app's open socket
+[[durable_objects.bindings]]
+name = "INBOX"
+class_name = "Inbox"
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["Room"]
@@ -21,6 +26,10 @@ new_sqlite_classes = ["Room"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["Directory"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Inbox"]
 
 # per ip (an ipv6 address's /64), so codes can't be guessed by brute force and rooms can't be hoarded
 [[ratelimits]]
@@ -37,3 +46,19 @@ simple = { limit = 10, period = 60 }
 name = "LISTS"
 namespace_id = "7303"
 simple = { limit = 30, period = 60 }
+
+# messaging: claiming names and opening inboxes, and sending, per ip; and sending per name, whatever the ip
+[[ratelimits]]
+name = "NAMES"
+namespace_id = "7304"
+simple = { limit = 20, period = 60 }
+
+[[ratelimits]]
+name = "MESSAGES"
+namespace_id = "7305"
+simple = { limit = 30, period = 60 }
+
+[[ratelimits]]
+name = "SENDERS"
+namespace_id = "7306"
+simple = { limit = 10, period = 60 }

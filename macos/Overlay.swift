@@ -228,6 +228,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // a game is open: clicking away or losing focus leaves the panel up
     private var gameOpen = false
     private static let nicknameKey = "qcalc.nickname"
+    private var messagingObserver: NSObjectProtocol?
 
     deinit {
         for monitor in [escapeMonitor, dragMonitor, clickAwayMonitor, clickAwayLocalMonitor].compactMap({ $0 }) {
@@ -235,6 +236,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let settingsObserver {
             NotificationCenter.default.removeObserver(settingsObserver)
+        }
+        if let messagingObserver {
+            NotificationCenter.default.removeObserver(messagingObserver)
         }
     }
 
@@ -522,6 +526,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 if let name = dict["name"] as? String, !name.isEmpty, name.count <= 64 {
                     UserDefaults.standard.set(name, forKey: Self.nicknameKey)
                 }
+            case "messaging":
+                Messages.shared.setLists(accepted: dict["accepted"] as? [String] ?? [], blocked: dict["blocked"] as? [String] ?? [])
             default:
                 break
             }
@@ -779,6 +785,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_ONBOARDING = \(onboarding);
             window.__QCALC_ANALYTICS = \(analytics);
             window.__QCALC_NICKNAME = \(nickname);
+            window.__QCALC_MESSAGING = \(Messages.shared.webJSON);
             window.__QCALC_GAME_SAVES = \(gameSaves);
             window.__QCALC_OS = "macOS \(os.majorVersion).\(os.minorVersion)";
             document.documentElement.dataset.theme = "\(theme)";
@@ -1559,6 +1566,17 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         ) { [weak self] _ in
             self?.applyWebAppearance()
             self?.pushSettingsToWeb()
+        }
+        // a new name or list: the page sends with the name and completes the accepted ones
+        messagingObserver = NotificationCenter.default.addObserver(
+            forName: .qcalcMessagingChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            let payload = Messages.shared.webJSON
+            self?.web?.evaluateJavaScript(
+                "window.__QCALC_MESSAGING = \(payload); if (window.__qcalcMessaging) window.__qcalcMessaging(\(payload));"
+            )
         }
     }
 

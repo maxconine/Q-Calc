@@ -22,6 +22,11 @@ describe('flattenPastedText', () => {
 })
 
 describe('prettyTokens', () => {
+  it('leaves a message as typed', () => {
+    expect(prettyTokens('message max pi and sum dot int +- ~', 36)).toBe('message max pi and sum dot int +- ~')
+    expect(prettyTokens('message max sqrt')).toBe('message max sqrt')
+  })
+
   it('replaces typed pi with π', () => {
     expect(prettyTokens('sin(pi/2)')).toBe('sin(π/2)')
     expect(prettyTokens('gcf(12, 18)')).toBe('gcf(12, 18)')
