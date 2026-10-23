@@ -233,6 +233,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var gameOpen = false
     private static let nicknameKey = "qcalc.nickname"
     private var messagingObserver: NSObjectProtocol?
+    private var inboxObserver: NSObjectProtocol?
 
     deinit {
         for monitor in [escapeMonitor, dragMonitor, clickAwayMonitor, clickAwayLocalMonitor].compactMap({ $0 }) {
@@ -243,6 +244,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         if let messagingObserver {
             NotificationCenter.default.removeObserver(messagingObserver)
+        }
+        if let inboxObserver {
+            NotificationCenter.default.removeObserver(inboxObserver)
         }
     }
 
@@ -280,6 +284,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func hide(because why: String = "asked") {
         wantVisible = false
+        tellMessagesBar()
         userMoving = false
         // the clock for moving the bar back runs from the last time it was in use
         if panel?.isVisible == true { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastHiddenKey) }
@@ -304,6 +309,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         // a hidden app's windows never come forward, and with no dock icon nothing else unhides it
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }
         wantVisible = true
+        tellMessagesBar()
         keepFallback = false
         shownAt = uptime()
         targetScreen = Self.screenWithPointer()?.frame
@@ -519,6 +525,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             case "game":
                 gameOpen = dict["open"] as? Bool ?? false
                 if !gameOpen { setGameWindow(false, fade: false) }
+                tellMessagesBar()
             case "gameSave":
                 if let key = dict["key"] as? String {
                     AppSettings.shared.saveGame(key, dict["value"] as? String)
@@ -530,6 +537,12 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 }
             case "messaging":
                 Messages.shared.setLists(accepted: dict["accepted"] as? [String] ?? [], blocked: dict["blocked"] as? [String] ?? [])
+            case "messagesSeen":
+                Messages.shared.seen((dict["ids"] as? [String] ?? []).prefix(64).map { $0 })
+            case "messageAnswer":
+                let from = Messages.clean(dict["from"] as? String ?? "")
+                guard !from.isEmpty else { break }
+                if dict["allow"] as? Bool == true { Messages.shared.allow(from) } else { Messages.shared.block(from) }
             default:
                 break
             }
@@ -1056,6 +1069,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web.evaluateJavaScript("""
         (function () {
           if (window.__qcalcReset) window.__qcalcReset();
+          if (window.__qcalcInbox) window.__qcalcInbox(\(Messages.shared.inboxJSON));
           var el = document.querySelector('.quick-plain');
           if (el) { el.focus(); if (window.__qcalcFocus) window.__qcalcFocus(); }
           if (window.__qcalcSize) window.__qcalcSize();
@@ -1545,6 +1559,20 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2, y: top + anchor - height))
     }
 
+    // messages go to the bar while it's up and no game has it, and to notifications otherwise
+    private func tellMessagesBar() {
+        let open = wantVisible && !gameOpen
+        let opened = open && !Messages.shared.barOpen
+        Messages.shared.barOpen = open
+        // a game closing hands the bar what came meanwhile; a show does it as the page resets
+        if opened, panel?.isVisible == true { pushInbox() }
+    }
+
+    private func pushInbox() {
+        guard Messages.shared.barOpen, panel?.isVisible == true else { return }
+        web?.evaluateJavaScript("if (window.__qcalcInbox) window.__qcalcInbox(\(Messages.shared.inboxJSON));")
+    }
+
     private func observeSettings() {
         guard settingsObserver == nil else { return }
         settingsObserver = NotificationCenter.default.addObserver(
@@ -1566,6 +1594,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 "window.__QCALC_MESSAGING = \(payload); if (window.__qcalcMessaging) window.__qcalcMessaging(\(payload));"
             )
         }
+        inboxObserver = NotificationCenter.default.addObserver(
+            forName: .qcalcInboxChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in self?.pushInbox() }
     }
 
     private func pushSettingsToWeb() {

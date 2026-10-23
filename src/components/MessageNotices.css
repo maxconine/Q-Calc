@@ -1,23 +1,50 @@
-.message-notices {
+/* under the composer, inside the bar's card, like the tape above it */
+.message-banner {
   position: relative;
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
-  margin-top: calc(-1 * var(--sp-2));
-  padding: 0 var(--gutter) var(--sp-3);
-  font-size: var(--fs-small);
+  border-top: 1px solid var(--line);
+  background: var(--bg-tape);
+  font-size: var(--fs-body);
   line-height: 18px;
 }
 
-.message-notice {
+.message-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  padding: var(--sp-2) var(--gutter) var(--sp-3);
+}
+
+.message-card + .message-card {
+  border-top: 1px solid var(--line);
+}
+
+.message-card-ask {
+  padding-bottom: var(--sp-2);
+}
+
+.message-card-head {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   min-width: 0;
+  min-height: 22px;
 }
 
-.message-notice-text {
+.message-card-from {
+  flex: none;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.message-card-asks {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -26,12 +53,67 @@
   color: var(--muted);
 }
 
-.message-notice-text b {
-  color: var(--answer);
-  font-weight: 500;
+.message-card-close {
+  margin-left: auto;
 }
 
-.message-notice-act {
+.message-card-text {
+  margin: 0;
+  color: var(--answer);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+
+.message-card-reply {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
+  margin: var(--sp-1) 0 0;
+}
+
+.message-card-field {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  padding: 4px var(--sp-2);
+  background: var(--control);
+  box-shadow: var(--control-shadow);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-small);
+  outline: none;
+}
+
+.message-card-field::placeholder {
+  color: var(--muted);
+}
+
+.message-card-field:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 0;
+}
+
+.message-card-note {
+  flex: none;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.message-card-sent {
+  color: var(--accent);
+}
+
+.message-card-act {
   flex: none;
   border: 0;
   border-radius: var(--radius-s);
@@ -39,10 +121,12 @@
   background: transparent;
   color: var(--muted);
   font: inherit;
+  font-size: var(--fs-small);
+  line-height: 22px;
   cursor: pointer;
 }
 
-.message-notice-act:hover {
+.message-card-act:hover {
   background: var(--fill-selected);
   color: var(--answer);
 }

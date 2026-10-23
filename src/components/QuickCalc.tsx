@@ -122,7 +122,7 @@ import { identityTargetFor, isIdentityCommand, openNativeIdentitySheet, type Ide
 import { GREETING_REPLY, isGreeting } from '../lib/greeting'
 import { isMessageCommand, loadMessaging, messageHint, onMessagingChange, parseMessage, sendMessage, sendStatusText } from '../lib/messaging'
 import { relayUrl } from '../lib/peerOnline'
-import { MessageNotices } from './MessageNotices'
+import { MessageNotices, type MessageNoticesHandle } from './MessageNotices'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
@@ -343,6 +343,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const messagingRef = useRef(messaging)
   messagingRef.current = messaging
   useEffect(() => onMessagingChange(setMessaging), [])
+  // message cards under the bar; esc closes them before it closes the bar
+  const bannerRef = useRef<MessageNoticesHandle>(null)
+  const [bannerOpen, setBannerOpen] = useState(false)
+  const focusBar = useCallback(() => mathRef.current?.focus(), [])
   const draftAtRef = useRef(storedDraft?.savedAt ?? 0)
   const draftTimer = useRef(0)
   const evalIdRef = useRef(0)
@@ -1047,6 +1051,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
+    bannerRef.current?.setShown(false)
     // a game kept open hears about it: it leaves full screen and pauses
     if (pongOpenRef.current && gameHoldRef.current?.()) window.dispatchEvent(new Event(GAME_HIDE_EVENT))
     else setPongOpen(null)
@@ -1310,7 +1315,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // lobby's list it closes the game back to the bar. false tells the mac app to hide; the page does not clear
   // the tape or the input first.
   const escapeLayer = useCallback((): boolean => {
-    if (!pongOpenRef.current) return false
+    if (!pongOpenRef.current) return Boolean(bannerRef.current?.close())
     if (!gameEscRef.current?.()) closeGame()
     return true
   }, [closeGame])
@@ -1318,11 +1323,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // so the mac app hands esc to the page while a game is up, and keeps the window up when it loses focus;
   // the windows shell reads the flag, since its esc listener runs before the page's
   useEffect(() => {
-    nativeHandler()?.postMessage({ type: 'escapeLayer', on: Boolean(pongOpen) })
     nativeHandler()?.postMessage({ type: 'game', open: Boolean(pongOpen) })
     calcWindow().__QCALC_GAME_OPEN = Boolean(pongOpen)
     if (!pongOpen) mathRef.current?.focus()
   }, [pongOpen])
+
+  useEffect(() => {
+    nativeHandler()?.postMessage({ type: 'escapeLayer', on: Boolean(pongOpen) || bannerOpen })
+  }, [pongOpen, bannerOpen])
 
   useEffect(() => {
     calcWindow().__qcalcEscape = escapeLayer
@@ -1490,6 +1498,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         onPrepare()
         beginShowing()
         beginTour()
+        bannerRef.current?.setShown(true)
       })
       size()
       requestAnimationFrame(size)
@@ -1766,7 +1775,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ) : step && !pongOpen && !helpShown && tourLineFits(step, q, Boolean(shownLive)) ? (
             <TourLine text={hostKeys(step.text)} progress={tourProgress(tourDone, nativeInfo.hotkey)} onSkip={skipTutorial} />
           ) : null}
-          <MessageNotices key={messaging.name} messaging={messaging} hidden={Boolean(pongOpen)} />
+          <MessageNotices
+            key={messaging.name}
+            messaging={messaging}
+            hidden={Boolean(pongOpen)}
+            handle={bannerRef}
+            onOpen={setBannerOpen}
+            onFocusBar={focusBar}
+          />
           {sysLines && sysParsed && 'count' in sysParsed && sysParsed.count === sysLines.length ? (
             <SystemPanel
               lines={sysLines}

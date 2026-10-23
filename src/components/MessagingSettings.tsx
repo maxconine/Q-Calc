@@ -82,7 +82,7 @@ export function MessagingSettings() {
           <input
             className="setting-text"
             aria-label="Your name"
-            placeholder="a name like max"
+            placeholder="your name"
             spellCheck={false}
             {...{ writingsuggestions: 'false' }}
             autoCapitalize="off"

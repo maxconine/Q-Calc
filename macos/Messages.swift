@@ -5,14 +5,17 @@ import UserNotifications
 
 extension Notification.Name {
     static let qcalcMessagingChanged = Notification.Name("QCalc.messagingChanged")
+    static let qcalcInboxChanged = Notification.Name("QCalc.inboxChanged")
 }
 
 // messages between q calc users, through the relay's inboxes (relay/src/index.js, Inbox). a name set in settings
 // is held on the relay by a key made here and kept in user defaults; with one set, a websocket waits on the
 // relay for messages, which hibernates there, so it costs next to nothing while nobody writes. without a name
-// nothing is open. an accepted name's message is a notification ("max: hello"); someone new is a request with
-// allow and block; a blocked name's messages are dropped unseen. nothing said is kept past the notification.
-// the page sends with the same name and key, handed to it as __QCALC_MESSAGING (src/lib/messaging.ts)
+// nothing is open. an accepted name's message waits in memory for the bar (MessageInbox), which shows it as a
+// card with a reply line, and is a notification (sender as the title) while the bar is away; someone new is a
+// request with allow and block; a blocked name's messages are dropped unseen. receiving needs notifications:
+// without them the inbox stays shut, so a sender is told it didn't arrive rather than it going unseen. the page
+// sends with the same name and key, handed to it as __QCALC_MESSAGING (src/lib/messaging.ts)
 final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, UNUserNotificationCenterDelegate {
     static let shared = Messages()
     static let relayHost = "qcalc-relay.maxconine.workers.dev"
@@ -25,7 +28,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     private static let retryMax: TimeInterval = 60
     static let textMax = 500
 
-    enum Link { case off, connecting, ready, taken, offline }
+    enum Link { case off, connecting, ready, taken, offline, paused }
+    // notification permission: unknown until asked
+    enum Alerts { case unknown, allowed, denied }
 
     @Published private(set) var name: String
     @Published private(set) var accepted: [String]
@@ -36,6 +41,11 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // why the last name change didn't take
     @Published private(set) var note = ""
     @Published private(set) var busy = false
+    @Published private(set) var alerts: Alerts = .unknown
+    // the bar is up (and no game has it): messages go to it, not to a notification
+    var barOpen = false {
+        didSet { if barOpen, !oldValue { refreshAlerts() } }
+    }
 
     private var key: String
     private lazy var session = URLSession(configuration: .default, delegate: self, delegateQueue: .main)
@@ -46,6 +56,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     private var lastHeard = Date()
     // what each asking name said last, in memory only, shown once they're allowed
     private var asking: [String: String] = [:]
+    private var inbox = MessageInbox()
 
     override init() {
         let defaults = UserDefaults.standard
@@ -77,8 +88,15 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(woke), name: NSWorkspace.didWakeNotification, object: nil
         )
-        if !name.isEmpty { askToNotify() }
-        connect()
+        // back from system settings, maybe with notifications turned on or off
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(refreshAlerts), name: NSApplication.didBecomeActiveNotification, object: nil
+        )
+        if name.isEmpty {
+            refreshAlerts()
+        } else {
+            needAlerts { [weak self] _ in self?.connect() }
+        }
     }
 
     // what settings says under the name
@@ -89,8 +107,17 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         case .ready: return "Receiving as \(name). Type message <name> <text> in the bar to send."
         case .taken: return "Someone else has \(name) now. Pick another name."
         case .offline: return "Receiving as \(name) once the relay can be reached."
+        case .paused: return "Paused while notifications are off for Q Calc."
         default: return "Connecting as \(name)…"
         }
+    }
+
+    // what the bar hasn't shown yet, for __qcalcInbox
+    var inboxJSON: String { inbox.json }
+
+    // the bar showed these
+    func seen(_ ids: [String]) {
+        inbox.seen(ids)
     }
 
     // what the page reads as __QCALC_MESSAGING
@@ -121,6 +148,18 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         }
         busy = true
         note = ""
+        // without notifications nothing would say a message came, so receiving isn't turned on
+        needAlerts { [weak self] allowed in
+            guard let self else { return }
+            if allowed {
+                self.claim(next)
+            } else {
+                self.busy = false
+            }
+        }
+    }
+
+    private func claim(_ next: String) {
         post("/claim", ["name": next, "key": key]) { [weak self] status in
             guard let self else { return }
             self.busy = false
@@ -130,7 +169,6 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
                 if !old.isEmpty, old != next { self.post("/release", ["name": old, "key": self.key]) { _ in } }
                 self.name = next
                 self.saveName()
-                self.askToNotify()
                 self.connect()
             case "taken": self.note = "\(next) is taken. Try another."
             case "too-many": self.note = "Too many tries. Wait a minute."
@@ -146,6 +184,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         name = ""
         asking = [:]
         requests = []
+        inbox.clear()
         saveName()
         connect()
     }
@@ -153,8 +192,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     func allow(_ who: String) {
         accepted = (accepted.filter { $0 != who } + [who]).sorted()
         blocked.removeAll { $0 == who }
+        inbox.answered(who, blocked: false)
         answered(who)
-        if let said = asking.removeValue(forKey: who) { show(from: who, text: said) }
+        if let said = asking.removeValue(forKey: who) { deliver(from: who, text: said) }
         requests = asking.keys.sorted()
     }
 
@@ -163,6 +203,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         accepted.removeAll { $0 == who }
         asking.removeValue(forKey: who)
         requests = asking.keys.sorted()
+        inbox.answered(who, blocked: true)
         answered(who)
     }
 
@@ -178,6 +219,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         let b = Array(Set(blocked.map(Self.clean).filter { !$0.isEmpty })).sorted()
         self.blocked = b
         self.accepted = Array(Set(accepted.map(Self.clean).filter { !$0.isEmpty && !b.contains($0) })).sorted()
+        for who in b { inbox.answered(who, blocked: true) }
         saveLists()
     }
 
@@ -220,6 +262,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         close()
         guard !name.isEmpty, !key.isEmpty, let url = URL(string: "wss://\(Self.relayHost)/inbox/\(name)") else {
             link = .off
+            return
+        }
+        guard alerts == .allowed else {
+            link = .paused
             return
         }
         link = .connecting
@@ -301,17 +347,17 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // asleep, the socket died quietly; awake, it's tried at once
     @objc private func woke() {
-        guard !name.isEmpty, link != .taken else { return }
+        guard !name.isEmpty, link != .taken, link != .paused else { return }
         retryWait = 3
         connect()
     }
 
     private func arrived(from raw: String, text raw2: String) {
         let from = Self.clean(raw)
-        let text = String(raw2.prefix(Self.textMax))
+        let text = MessageInbox.cleanText(raw2, max: Self.textMax)
         guard !from.isEmpty, !text.isEmpty, !blocked.contains(from) else { return }
         if accepted.contains(from) {
-            show(from: from, text: text)
+            deliver(from: from, text: text)
             return
         }
         // a name already asking isn't asked about again
@@ -319,6 +365,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         asking[from] = text
         requests = asking.keys.sorted()
         guard !asked else { return }
+        inbox.add(from: from, text: "", ask: true)
+        inboxChanged()
+        // the bar asks itself while it's up
+        guard !barOpen else { return }
         let content = UNMutableNotificationContent()
         content.body = "\(from) wants to message you. Allow?"
         content.categoryIdentifier = Self.requestCategory
@@ -326,17 +376,85 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "request-\(from)", content: content, trigger: nil))
     }
 
-    private func show(from: String, text: String) {
+    // kept for the bar whatever happens to the notification, which is only the alert while the bar is away
+    private func deliver(from: String, text: String) {
+        guard let item = inbox.add(from: from, text: text, ask: false) else { return }
+        inboxChanged()
+        guard !barOpen else { return }
         let content = UNMutableNotificationContent()
         // the sender in the title, apart from their words, so no text can pass for another name
         content.title = from
         content.body = text
         content.sound = .default
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: item.id, content: content, trigger: nil))
     }
 
-    private func askToNotify() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    private func inboxChanged() {
+        NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
+    }
+
+    private static func alerts(_ status: UNAuthorizationStatus) -> Alerts {
+        switch status {
+        case .notDetermined: return .unknown
+        case .denied: return .denied
+        default: return .allowed
+        }
+    }
+
+    // asks the first time; after that it's the answer given, or what system settings says now
+    private func needAlerts(_ done: @escaping (Bool) -> Void) {
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { settings in
+            guard settings.authorizationStatus == .notDetermined else {
+                let now = Self.alerts(settings.authorizationStatus)
+                DispatchQueue.main.async { [weak self] in
+                    self?.alerts = now
+                    done(now == .allowed)
+                }
+                return
+            }
+            center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                DispatchQueue.main.async { [weak self] in
+                    self?.alerts = granted ? .allowed : .denied
+                    done(granted)
+                }
+            }
+        }
+    }
+
+    // turned off in system settings, receiving pauses; turned back on, it picks up again
+    // with a name set, permission that was reset is asked for again
+    @objc func refreshAlerts() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let now = Self.alerts(settings.authorizationStatus)
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if now == .unknown, !self.name.isEmpty {
+                    self.needAlerts { [weak self] _ in self?.alertsChanged() }
+                    return
+                }
+                self.alerts = now
+                self.alertsChanged()
+            }
+        }
+    }
+
+    private func alertsChanged() {
+        guard !name.isEmpty else { return }
+        if alerts == .allowed, link == .paused {
+            retryWait = 3
+            connect()
+        } else if alerts != .allowed, link != .paused, link != .taken {
+            close()
+            link = .paused
+        }
+    }
+
+    func openNotificationSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        let pane = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)")
+        if let pane, NSWorkspace.shared.open(pane) { return }
+        if let old = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") { NSWorkspace.shared.open(old) }
     }
 
     func userNotificationCenter(
@@ -376,7 +494,7 @@ struct MessagesSettingsView: View {
             Section {
                 LabeledContent {
                     HStack {
-                        TextField("Your name", text: $draft, prompt: Text("a name like max"))
+                        TextField("Your name", text: $draft, prompt: Text("your name"))
                             .labelsHidden()
                             .noWritingTools()
                             .frame(width: 150)
@@ -387,6 +505,14 @@ struct MessagesSettingsView: View {
                 } label: {
                     Text("Your name")
                     Text(messages.status)
+                }
+                if messages.alerts == .denied {
+                    LabeledContent {
+                        Button("Open Settings") { messages.openNotificationSettings() }
+                    } label: {
+                        Text("Notifications")
+                        Text("Q Calc needs notifications to receive messages.")
+                    }
                 }
                 if !messages.name.isEmpty {
                     LabeledContent {
@@ -416,7 +542,10 @@ struct MessagesSettingsView: View {
             names("Blocked", messages.blocked, empty: "Nobody. A blocked name’s messages never show, and they aren’t told.", action: "Unblock")
         }
         .formStyle(.grouped)
-        .onAppear { draft = messages.name }
+        .onAppear {
+            draft = messages.name
+            messages.refreshAlerts()
+        }
     }
 
     private func names(_ title: String, _ list: [String], empty: String, action: String) -> some View {
