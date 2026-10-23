@@ -149,3 +149,34 @@ enum OverlayHealth {
         problems.map(\.rawValue).joined(separator: ", ")
     }
 }
+
+// the window a game opens in (⌃F): the panel's shape at its normal size (what the page says it is), as large as
+// fits in most of the screen with the title bar's strip on top, never smaller than that normal size, and centred
+// on the visible frame. here so it can be tested without a window
+enum GameWindow {
+    static let share: CGFloat = 0.8
+    // a 16:9 picture with a hud, for a page that didn't say
+    static let fallback = CGSize(width: 672, height: 460)
+
+    static func frame(visible: CGRect, natural: CGSize?, titlebar: CGFloat) -> CGRect {
+        let shape = sane(natural)
+        let fit = min(visible.width * share / shape.width, (visible.height * share - titlebar) / shape.height)
+        let scale = max(fit.isFinite ? fit : 1, 1)
+        let w = min((shape.width * scale).rounded(), visible.width)
+        let h = min((shape.height * scale).rounded() + titlebar, visible.height)
+        return CGRect(x: (visible.midX - w / 2).rounded(), y: (visible.midY - h / 2).rounded(), width: w, height: h)
+    }
+
+    // the smallest it resizes to: the normal size, or what the screen has
+    static func minSize(visible: CGRect, natural: CGSize?, titlebar: CGFloat) -> CGSize {
+        let shape = sane(natural)
+        return CGSize(width: min(shape.width, visible.width), height: min(shape.height + titlebar, visible.height))
+    }
+
+    private static func sane(_ natural: CGSize?) -> CGSize {
+        guard let natural, natural.width >= 100, natural.height >= 100, natural.width <= 4000, natural.height <= 4000 else {
+            return fallback
+        }
+        return natural
+    }
+}

@@ -16,15 +16,19 @@ private func isCommandVPasteKey(_ event: NSEvent) -> Bool {
     return event.charactersIgnoringModifiers?.lowercased() == "v"
 }
 
-// ⌘W by the layout's letter; a layout without latin letters falls back to the key where w sits on qwerty
-private func isCommandWCloseKey(_ event: NSEvent) -> Bool {
+// ⌘ and a letter by the layout's letter; a layout without latin letters falls back to the key where it sits on qwerty
+private func isCommandKey(_ event: NSEvent, _ letter: String, _ code: Int) -> Bool {
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
     guard flags.contains(.command), !flags.contains(.option), !flags.contains(.control), !flags.contains(.shift) else {
         return false
     }
     guard let chars = event.charactersIgnoringModifiers?.lowercased(), !chars.isEmpty else { return false }
-    if chars == "w" { return true }
-    return !chars.unicodeScalars.allSatisfy({ $0.isASCII }) && event.keyCode == UInt16(kVK_ANSI_W)
+    if chars == letter { return true }
+    return !chars.unicodeScalars.allSatisfy({ $0.isASCII }) && event.keyCode == UInt16(code)
+}
+
+private func isCommandWCloseKey(_ event: NSEvent) -> Bool {
+    isCommandKey(event, "w", kVK_ANSI_W)
 }
 
 private func copyToPasteboard(_ text: String) {
@@ -45,10 +49,19 @@ final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onResignKey: (() -> Void)?
     var onPaste: (() -> Void)?
+    // the close button, while a game has the panel as its window
+    var onClose: (() -> Void)?
     var ignoreResignKey = false
+    // a game's window (⌃F): an ordinary one, main while it's in front
+    var gameWindow = false
 
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
+    override var canBecomeMain: Bool { gameWindow }
+
+    override func performClose(_ sender: Any?) {
+        guard gameWindow, let onClose else { return super.performClose(sender) }
+        onClose()
+    }
 
     override func cancelOperation(_ sender: Any?) {
         onEscape?()
@@ -197,10 +210,21 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
     // the page has something open (pong) that esc should close before the panel hides
     private var pageTakesEscape = false
-    // a game filling the display (⌃F in the page): the bar's frame from before, to go back to. nil when not
+    // a game in a window of its own (⌃F in the page): the bar's frame from before, to go back to. nil when not
     private var gameRestoreFrame: NSRect?
-    // over the menu bar, the Dock and the menu bar's own status items, which sit at the bar's usual level
-    private static let gameFullscreenLevel = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
+    private static let barStyle: NSWindow.StyleMask = [.borderless, .fullSizeContentView, .nonactivatingPanel]
+    // a titled window whose page runs up under a clear title bar, the traffic lights over the page's top strip.
+    // still non-activating (the flag can't be reliably taken off a panel once made), so the app is activated by hand
+    private static let gameStyle: NSWindow.StyleMask = [
+        .titled, .closable, .miniaturizable, .resizable, .fullSizeContentView, .nonactivatingPanel,
+    ]
+    // the title bar's height, which the page keeps clear
+    private static let titlebarHeight: CGFloat = {
+        let content = NSRect(x: 0, y: 0, width: 400, height: 400)
+        return NSWindow.frameRect(forContentRect: content, styleMask: [.titled]).height - content.height
+    }()
+    // what was in front before a game's window activated q calc, handed the front back as the bar hides
+    private var appBeforeGame: NSRunningApplication?
     // a game is open: clicking away or losing focus leaves the panel up
     private var gameOpen = false
     private static let nicknameKey = "qcalc.nickname"
@@ -220,6 +244,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     func toggle(from source: String = "hotkey") {
+        // a game's window minimised, or behind another app's, comes forward rather than going
+        if let panel, gameRestoreFrame != nil, panel.isMiniaturized || (panel.isVisible && panel.isOnActiveSpace && !panel.isKeyWindow) {
+            if panel.isMiniaturized { panel.deminiaturize(nil) } else { focusGameWindow() }
+            return
+        }
         if let panel, OverlayHealth.hotkeyHides(snapshot(panel)) {
             hide(because: source)
             return
@@ -243,13 +272,18 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         // the clock for moving the bar back runs from the last time it was in use
         if panel?.isVisible == true { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastHiddenKey) }
         // before anything else, so the next show never finds the bar the size of the screen
-        setGameFullscreen(false, fade: false)
+        setGameWindow(false, fade: false)
         guard panel?.isVisible == true else { return }
         OverlayLog.note("hide \(showCount) (\(why)) after \(seconds(uptime() - shownAt))")
         notifyWebWillHide()
         panel?.ignoreResignKey = true
         panel?.orderOut(nil)
         panel?.alphaValue = 1
+        // not while settings is open, which is a window of q calc's own the user is in
+        if let app = appBeforeGame {
+            appBeforeGame = nil
+            if NSApp.isActive, NSApp.activationPolicy() == .accessory { app.activate(options: []) }
+        }
     }
 
     func show(from source: String = "menu") {
@@ -367,7 +401,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if panel?.contentView === fallback, let web, webReady, !keepFallback {
             panel?.contentView = web
         }
-        setGameFullscreen(false, fade: false)
+        setGameWindow(false, fade: false)
         sizeAnchorTop = 0
         applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
         position()
@@ -472,10 +506,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             case "escapeLayer":
                 pageTakesEscape = dict["on"] as? Bool ?? false
             case "gameFullscreen":
-                setGameFullscreen(dict["on"] as? Bool ?? false, fromPage: true)
+                let natural = doubleValue(dict["w"]).flatMap { w in doubleValue(dict["h"]).map { CGSize(width: w, height: $0) } }
+                setGameWindow(dict["on"] as? Bool ?? false, fromPage: true, natural: natural)
             case "game":
                 gameOpen = dict["open"] as? Bool ?? false
-                if !gameOpen { setGameFullscreen(false, fade: false) }
+                if !gameOpen { setGameWindow(false, fade: false) }
             case "gameSave":
                 if let key = dict["key"] as? String {
                     AppSettings.shared.saveGame(key, dict["value"] as? String)
@@ -520,7 +555,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         webReady = false
         pageTakesEscape = false
         gameOpen = false
-        setGameFullscreen(false, fade: false)
+        setGameWindow(false, fade: false)
         triedBundle = false
         triedDevServer = false
         loadQuickCalc(webView)
@@ -564,11 +599,17 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func makePanel() -> OverlayPanel {
         let panel = OverlayPanel(
             contentRect: NSRect(x: 0, y: 0, width: overlayWidth, height: overlayMinHeight),
-            styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
+            styleMask: Self.barStyle,
             backing: .buffered,
             defer: false
         )
+        // a minimised game window is closed when it's swapped out, so its dock tile goes; ordered out otherwise
+        panel.isReleasedWhenClosed = false
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.title = "Q Calc"
         panel.onEscape = { [weak self] in self?.hide(because: "esc") }
+        panel.onClose = { [weak self] in self?.setGameWindow(false) }
         panel.onResignKey = { [weak self] in self?.lostFocus() }
         panel.onPaste = { [weak self] in self?.pasteIntoWeb() }
         panel.isFloatingPanel = true
@@ -587,12 +628,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // a fresh panel around the same page, for when the old one stops coming forward (seen after a long sleep)
     private func replacePanel(_ why: String, quiet: Bool = false) {
         guard let old = panel else { return }
-        setGameFullscreen(false, fade: false)
+        setGameWindow(false, fade: false)
         if !quiet { OverlayLog.note("fresh panel (\(why))") }
         let content = old.contentView === fallback ? fallback : web
+        let minimised = old.isMiniaturized
         old.ignoreResignKey = true
         old.orderOut(nil)
         old.contentView = NSView()
+        if minimised { old.close() }
         let fresh = makePanel()
         fresh.contentView = content
         panel = fresh
@@ -605,7 +648,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func rebuildAll(_ why: String) {
         guard let old = web, let oldPanel = panel else { return }
         OverlayLog.note("fresh panel and page (\(why))")
-        setGameFullscreen(false, fade: false)
+        setGameWindow(false, fade: false)
         oldPanel.ignoreResignKey = true
         oldPanel.orderOut(nil)
         oldPanel.contentView = NSView()
@@ -648,11 +691,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         ) { [weak self] _ in
             self?.environmentChanged("display change", log: true)
         }
+        // a game's window back from the dock takes the keys again
+        NotificationCenter.default.addObserver(forName: NSWindow.didDeminiaturizeNotification, object: nil, queue: .main) { [weak self] note in
+            guard let self, let panel = self.panel, note.object as? NSWindow === panel else { return }
+            self.focusGameWindow()
+        }
     }
 
     private func environmentChanged(_ why: String, log: Bool) {
-        // the display the game covers changed shape or went away; the bar's own frame is the safe place to be
-        if log, gameRestoreFrame != nil { setGameFullscreen(false, fade: false) }
         if wantVisible {
             // shown just before the switch finished: the panel joins every space, but the switch took its focus
             if let panel, panel.isVisible, uptime() - shownAt < 2 {
@@ -897,7 +943,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             fallback = host
         }
         if let fallback, panel?.contentView !== fallback {
-            setGameFullscreen(false, fade: false)
+            setGameWindow(false, fade: false)
             OverlayLog.note("showing the plain bar instead of the page")
             panel?.contentView = fallback
             applySize(height: overlayMinHeight, anchorTop: 0, room: .closed)
@@ -1170,12 +1216,19 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W.
             // a reference sheet (identities, calculus, the periodic table) never takes the keys, so while one
             // is up ⌘W closes the front one of those first
+            // a game's window closes back to the bar, as its red button does, and ⌘M minimises it
             if event.window === self.panel, isCommandWCloseKey(event) {
                 if let sheet = NSApp.orderedWindows.first(where: { $0 is PeriodicPanel && $0.isVisible }) {
                     sheet.close()
+                } else if self.gameRestoreFrame != nil {
+                    self.setGameWindow(false)
                 } else {
                     self.hide(because: "⌘W")
                 }
+                return nil
+            }
+            if event.window === self.panel, self.gameRestoreFrame != nil, isCommandKey(event, "m", kVK_ANSI_M) {
+                self.panel?.miniaturize(nil)
                 return nil
             }
             // the settings key is the user's choice now, so the page reads it and posts openSettings
@@ -1186,9 +1239,9 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     // esc hides immediately, unless the page said it has a layer open; then the page closes that instead,
     // and a page that doesn't answer true still gets the panel hidden
     private func escape() {
-        // out of a fullscreen game first; the next esc is the game's or the bar's as usual
+        // out of a game's window first, back to the bar; the next esc is the game's or the bar's as usual
         if gameRestoreFrame != nil {
-            setGameFullscreen(false)
+            setGameWindow(false)
             return
         }
         guard pageTakesEscape, let web else {
@@ -1200,55 +1253,101 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
     }
 
-    // a game takes the whole display the bar is on, and gives it back. the frame moves in one step behind a
-    // short fade (the page needs a frame or two to lay out at the new size, and a window animating its frame
-    // would let a size report or a hide land halfway). `fromPage` is the page asking (⌃F); anything else is the
-    // shell leaving on its own (esc, the panel hiding), which the page is told so its state follows
-    private func setGameFullscreen(_ on: Bool, fromPage: Bool = false, fade: Bool = true) {
+    // a game gets a window of its own, large and centred on the bar's display, and gives it back. the same panel
+    // turns into an ordinary titled window (close, minimise, zoom, resizable, the system's corners and shadow) with
+    // the page running up under a clear title bar, and back into the bar after. the change happens in one step
+    // behind a short fade (the page needs a frame or two to lay out at the new size, and a window animating its
+    // frame would let a size report or a hide land halfway). `fromPage` is the page asking (⌃F), with its normal
+    // size for the window's shape; anything else is the shell leaving on its own (esc, the close button, the
+    // panel hiding), which the page is told so its state follows
+    private func setGameWindow(_ on: Bool, fromPage: Bool = false, fade: Bool = true, natural: CGSize? = nil) {
         guard let panel else {
             gameRestoreFrame = nil
             return
         }
         if on {
             guard gameRestoreFrame == nil else { return }
-            guard panel.isVisible, wantVisible, web != nil, panel.contentView === web,
+            guard panel.isVisible, wantVisible, let web, panel.contentView === web,
                   let screen = panel.screen ?? Self.screenWithPointer() else {
-                // not now (hidden, or the plain bar is up): the page mustn't think it's fullscreen
+                // not now (hidden, or the plain bar is up): the page mustn't think it has a window
                 tellPageGameFullscreen(false)
                 return
             }
             gameRestoreFrame = panel.frame
-            OverlayLog.note("game fullscreen on \(NSStringFromRect(screen.frame))")
-            panel.hasShadow = false
-            panel.isMovableByWindowBackground = false
-            panel.level = Self.gameFullscreenLevel
-            moveForGame(panel, to: screen.frame, fade: fade)
-            // the level change reorders the window; it stays the key one, with the page taking the keys
-            panel.makeKeyAndOrderFront(nil)
-            panel.makeFirstResponder(web)
+            let visible = screen.visibleFrame
+            let frame = GameWindow.frame(visible: visible, natural: natural, titlebar: Self.titlebarHeight)
+            OverlayLog.note("game window on \(NSStringFromRect(frame))")
+            // before the frame changes, so the page's first layout at the new size already keeps the strip clear
+            web.evaluateJavaScript("document.documentElement.style.setProperty('--game-fs-inset', '\(Int(Self.titlebarHeight))px')")
+            moveForGame(panel, to: frame, fade: fade) {
+                self.dressForGame(panel, true)
+                panel.minSize = GameWindow.minSize(visible: visible, natural: natural, titlebar: Self.titlebarHeight)
+            }
+            focusGameWindow()
             return
         }
         guard let frame = gameRestoreFrame else { return }
         gameRestoreFrame = nil
-        OverlayLog.note("game fullscreen off")
-        panel.level = .statusBar
-        panel.isMovableByWindowBackground = true
-        moveForGame(panel, to: frame, fade: fade && panel.isVisible)
-        if sizeRoom == .closed {
-            panel.hasShadow = true
-            panel.invalidateShadow()
+        OverlayLog.note("game window off")
+        web?.evaluateJavaScript("document.documentElement.style.removeProperty('--game-fs-inset')")
+        if panel.isMiniaturized {
+            // a minimised window can't be put back in place; a fresh panel takes the page where the bar was
+            web?.layer?.cornerRadius = 12
+            replacePanel("game window minimised", quiet: true)
+            self.panel?.setFrame(frame, display: false)
+        } else {
+            moveForGame(panel, to: frame, fade: fade && panel.isVisible) { self.dressForGame(panel, false) }
+            if sizeRoom == .closed { panel.invalidateShadow() }
+            if panel.isVisible { panel.makeKeyAndOrderFront(nil) }
         }
         if !fromPage { tellPageGameFullscreen(false) }
         // size reports were ignored meanwhile, so ask for the current one
         web?.evaluateJavaScript("if (window.__qcalcSize) window.__qcalcSize();")
     }
 
-    private func moveForGame(_ panel: OverlayPanel, to frame: NSRect, fade: Bool) {
+    // the panel as a game's window, or as the bar
+    private func dressForGame(_ panel: OverlayPanel, _ on: Bool) {
+        panel.gameWindow = on
+        panel.styleMask = on ? Self.gameStyle : Self.barStyle
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        // before the level, which isFloatingPanel sets too
+        panel.isFloatingPanel = !on
+        panel.level = on ? .normal : .statusBar
+        // one space, and the green button zooms rather than going full screen
+        panel.collectionBehavior = on ? [.fullScreenNone] : [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        panel.isMovableByWindowBackground = !on
+        // the system rounds a titled window's corners itself; a solid back, so they never show the desktop
+        panel.backgroundColor = on ? .windowBackgroundColor : .clear
+        panel.hasShadow = on || sizeRoom == .closed
+        if !on { panel.minSize = NSSize(width: 1, height: 1) }
+        web?.layer?.cornerRadius = on ? 0 : 12
+    }
+
+    // keys to the game, with the app in front, so the traffic lights are lit and the window takes the keys
+    private func focusGameWindow() {
+        guard let panel, gameRestoreFrame != nil else { return }
+        activateForGame()
+        panel.makeKeyAndOrderFront(nil)
+        panel.makeFirstResponder(web)
+    }
+
+    // the bar never activates the app; a game's window does, like any window, and the app that was in front
+    // gets it back when the bar goes
+    private func activateForGame() {
+        guard !NSApp.isActive else { return }
+        if appBeforeGame == nil { appBeforeGame = NSWorkspace.shared.frontmostApplication }
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    private func moveForGame(_ panel: OverlayPanel, to frame: NSRect, fade: Bool, change: () -> Void = {}) {
         guard fade, panel.isVisible, panel.alphaValue == 1, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            change()
             panel.setFrame(frame, display: true)
             return
         }
         panel.alphaValue = 0
+        change()
         panel.setFrame(frame, display: true)
         // a hide in the meantime sets the alpha back itself, and a show starts its own reveal
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak panel] in
@@ -1269,11 +1368,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private func installDragMonitor() {
         guard dragMonitor == nil else { return }
         dragMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
-            // nothing to move or widen while a game covers the display
-            guard let self, let panel = self.panel, panel.isVisible, event.window === panel, !self.overControl,
-                  self.gameRestoreFrame == nil else {
-                return event
-            }
+            guard let self, let panel = self.panel, panel.isVisible, event.window === panel else { return event }
+            // a game's window moves and resizes by its own frame; its title bar strip is page underneath, so a
+            // press there is taken here
+            if self.gameRestoreFrame != nil { return self.gameWindowPress(panel, event) }
+            guard !self.overControl else { return event }
             let p = event.locationInWindow
             let room = self.sizeRoom
             let size = panel.frame.size
@@ -1307,6 +1406,28 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             }
             return event
         }
+    }
+
+    // a press in a game's window: the app comes forward (the panel doesn't do that by itself), and the title bar
+    // strip drags the window, or zooms or minimises it on a double click as the system setting says
+    private func gameWindowPress(_ panel: OverlayPanel, _ event: NSEvent) -> NSEvent? {
+        activateForGame()
+        let p = event.locationInWindow
+        // the window's own edges, a few points in, still resize it
+        let edge: CGFloat = 5
+        guard let frameView = panel.contentView?.superview, p.y >= frameView.bounds.height - Self.titlebarHeight,
+              p.y < frameView.bounds.height - edge, p.x > edge, p.x < frameView.bounds.width - edge,
+              !(frameView.hitTest(p) is NSButton) else { return event }
+        if event.clickCount == 2 {
+            switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+            case "Minimize": panel.miniaturize(nil)
+            case "None": break
+            default: panel.zoom(nil)
+            }
+        } else {
+            panel.performDrag(with: event)
+        }
+        return nil
     }
 
     private func installClickAwayMonitors() {

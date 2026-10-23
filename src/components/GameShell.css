@@ -200,14 +200,14 @@
 }
 
 /* full screen (⌃F, f, the buttons): useGameFullscreen puts .game-fullscreen on the shell, which covers the
-   screen (GameFullscreen.css). the game area gets a definite size, centred, that each game scales inside;
+   window (GameFullscreen.css). the game area gets a definite size, centred, that each game scales inside;
    canvases keep their aspect and redraw at the larger size. ember lays itself out with the hook's
    game-fs-* classes instead */
 .game-shell.game-fullscreen {
   position: fixed;
 }
 .game-shell.game-fullscreen .game-area {
-  --game-h: calc(100vh - 2 * var(--game-fs-pad, 0px) * var(--game-fs-ui, 1));
+  --game-h: calc(100vh - var(--game-fs-inset, 0px) - 2 * var(--game-fs-pad, 0px) * var(--game-fs-ui, 1));
   /* the widest that still leaves room for a court's height; pong reads --crt-max-w */
   --crt-max-w: calc((var(--game-h) - 160px) * 640 / 260);
   flex: none;

@@ -625,7 +625,7 @@ html[data-theme="dark"] .ember {
 /* the select screen may be taller than a short display: its grid gives way and scrolls. lengths inside the
    zoomed screen are in its own (bar-size) pixels, so the window's height is divided back down */
 .game-fullscreen .ember-grid {
-  max-height: max(140px, calc((100vh - 2 * var(--game-fs-pad, 0px) * var(--game-fs-ui, 1)) / var(--game-fs-ui, 1) - 96px));
+  max-height: max(140px, calc((100vh - var(--game-fs-inset, 0px) - 2 * var(--game-fs-pad, 0px) * var(--game-fs-ui, 1)) / var(--game-fs-ui, 1) - 96px));
 }
 /* the hidden play column must stay out of the centred layout whatever width fullscreen gives a column */
 .ember .ember-game.ember-hidden {

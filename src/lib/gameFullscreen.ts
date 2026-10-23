@@ -1,11 +1,13 @@
 // fullscreen for the games (⌃F): the pure parts. the chord, the wording of its hint, and where a game's
-// picture sits on a screen that isn't its shape. useGameFullscreen does the rest; GAME_FULLSCREEN.md says how
-// a panel adopts it
+// picture sits on a screen that isn't its shape. in the apps it's a big window of the game's own rather than
+// the whole display. useGameFullscreen does the rest; GAME_FULLSCREEN.md says how a panel adopts it
 
 // on the panel's root while it fills the screen
 export const GAME_FULLSCREEN_CLASS = 'game-fullscreen'
 // on <html> meanwhile, for page-level rules (no scroll, no edge grips)
 export const GAME_FULLSCREEN_ROOT_CLASS = 'game-fullscreen-on'
+// the mac shell sets this on <html> to the title bar's height, the strip its traffic lights sit in
+export const GAME_FULLSCREEN_INSET_VAR = '--game-fs-inset'
 
 export type Size = { w: number; h: number }
 // a rect inside its container, and how many times the game's own size it is
@@ -30,10 +32,18 @@ export function isPlainEscape(e: Chord): boolean {
   return (e.key === 'Escape' || e.key === 'Esc') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
 }
 
-// macs write the control key as a glyph, like the rest of the app's hints
-export function fullscreenHint(mac: boolean, on = false): string {
+// macs write the control key as a glyph, like the rest of the app's hints. `windowed`: the apps open a big
+// window rather than the whole screen
+export function fullscreenHint(mac: boolean, on = false, windowed = false): string {
   const chord = mac ? '⌃F' : 'Ctrl+F'
+  if (windowed) return on ? `${chord} or esc back to the bar` : `${chord} big window`
   return on ? `${chord} or esc leaves fullscreen` : `${chord} fullscreen`
+}
+
+// what the button and the f key are called
+export function fullscreenLabel(on: boolean, windowed = false): string {
+  if (windowed) return on ? 'back to the bar' : 'big window'
+  return on ? 'leave full screen' : 'full screen'
 }
 
 // the windows shell says so itself; a browser is asked what it runs on
@@ -88,6 +98,12 @@ export function fullscreenLayout(viewport: Size, opts: FullscreenLayoutOptions):
   // the chrome's room is split evenly above and below the picture, which is how the css centres the column
   const stage = box.w ? { ...box, x: box.x + Math.floor(pad * ui), y: box.y + Math.floor(pad * ui + (chrome * ui) / 2) } : box
   return { viewport, stage, ui }
+}
+
+// the panel's own size at normal size, for the shell to give the game's window that shape
+export function naturalSize(opts: Pick<FullscreenLayoutOptions, 'base' | 'chrome' | 'pad'>): Size {
+  const { base, chrome = 0, pad = 0 } = opts
+  return { w: Math.round(base.w + 2 * pad), h: Math.round(base.h + chrome + 2 * pad) }
 }
 
 // the canvas's backing store for a css size: device pixels, so it's crisp on a retina screen, capped so a

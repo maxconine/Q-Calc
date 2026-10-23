@@ -18,6 +18,7 @@ import {
 import { loadNickname, randomNickname, saveNickname } from '../lib/nickname'
 import { closeReasonText, type PeerTransport, type RoomInfo } from '../lib/peer'
 import { useGameShell, useShellFullscreen } from '../lib/gameShellContext'
+import { fullscreenLabel } from '../lib/gameFullscreen'
 import { pauseGameClock, resumeGameClock } from '../lib/gameClock'
 import { FullscreenButton, GAME_HIDE_EVENT, GAME_SHOW_EVENT } from './GameShell'
 
@@ -353,6 +354,8 @@ function LobbyBody({
   // a key's worth, from a click
   onKey: (key: string) => void
 }) {
+  const fs = useShellFullscreen()
+  const fsLabel = fullscreenLabel(Boolean(fs?.on), Boolean(fs?.windowed))
   const back = (
     <button type="button" className="pong-link" onClick={() => onKey('Backspace')}>
       ⌫ back
@@ -405,7 +408,7 @@ function LobbyBody({
             {footer}
             <p className="pong-note">
               {options.length > 1 ? '↑↓ pick · ↵ play · ' : '↵ plays · '}
-              {backHint}f full screen
+              {backHint}f {fsLabel}
             </p>
             {note}
           </div>
@@ -469,7 +472,7 @@ function LobbyBody({
           ) : (
             <p className="pong-note">
               {together.length > 1 ? '↑↓ pick · ↵ play · ' : '↵ plays · '}
-              {backHint}f full screen
+              {backHint}f {fsLabel}
             </p>
           )}
           {footer}

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { backingSize, fullscreenHint, fullscreenLayout, isFullscreenChord, isPlainEscape, letterbox, macLike } from './gameFullscreen'
+import {
+  backingSize,
+  fullscreenHint,
+  fullscreenLabel,
+  fullscreenLayout,
+  isFullscreenChord,
+  isPlainEscape,
+  letterbox,
+  macLike,
+  naturalSize,
+} from './gameFullscreen'
 
 const key = (over: Partial<Parameters<typeof isFullscreenChord>[0]>) => ({
   ctrlKey: false,
@@ -65,6 +75,15 @@ describe('the hint', () => {
   it('says how to leave while fullscreen', () => {
     expect(fullscreenHint(true, true)).toBe('⌃F or esc leaves fullscreen')
     expect(fullscreenHint(false, true)).toBe('Ctrl+F or esc leaves fullscreen')
+  })
+
+  it('in the apps, says it opens a big window and goes back to the bar', () => {
+    expect(fullscreenHint(true, false, true)).toBe('⌃F big window')
+    expect(fullscreenHint(false, true, true)).toBe('Ctrl+F or esc back to the bar')
+    expect(fullscreenLabel(false, true)).toBe('big window')
+    expect(fullscreenLabel(true, true)).toBe('back to the bar')
+    expect(fullscreenLabel(false)).toBe('full screen')
+    expect(fullscreenLabel(true)).toBe('leave full screen')
   })
 
   it('knows a mac from the platform, and the windows shell from its own word', () => {
@@ -164,6 +183,13 @@ describe('the fullscreen layout', () => {
 
   it('has no picture on no screen', () => {
     expect(fullscreenLayout({ w: 0, h: 0 }, { base }).stage.w).toBe(0)
+  })
+})
+
+describe('the natural size', () => {
+  it('is the picture with the chrome and a margin each side, the shape the app window takes', () => {
+    expect(naturalSize({ base: { w: 640, h: 360 }, chrome: 96, pad: 12 })).toEqual({ w: 664, h: 480 })
+    expect(naturalSize({ base: { w: 640, h: 360 } })).toEqual({ w: 640, h: 360 })
   })
 })
 

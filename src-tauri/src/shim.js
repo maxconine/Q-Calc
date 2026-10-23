@@ -106,8 +106,8 @@
   function zone(e) {
     var t = e.target
     if (t && t.closest && t.closest('button, .tape')) return ''
-    // nothing to move or widen while a game covers the display
-    if (document.fullscreenElement) return ''
+    // nothing to move or widen while a game has the window: its own frame moves and sizes it
+    if (document.fullscreenElement || document.documentElement.classList.contains('game-fullscreen-on')) return ''
     var box = bar()
     var x = e.clientX
     var y = e.clientY

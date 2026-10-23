@@ -14,6 +14,7 @@ enum OverlayTest {
         recoveries()
         hotkey()
         focus()
+        gameWindow()
         print("overlay tests passed")
     }
 
@@ -112,5 +113,25 @@ enum OverlayTest {
     static func focus() {
         check(!OverlayHealth.focusLossHides(sinceShow: 0.1), "focus taken during a show keeps it up")
         check(OverlayHealth.focusLossHides(sinceShow: 2), "focus lost later hides it")
+    }
+
+    static func gameWindow() {
+        let visible = CGRect(x: 0, y: 0, width: 1512, height: 944)
+        let natural = CGSize(width: 672, height: 392)
+        let f = GameWindow.frame(visible: visible, natural: natural, titlebar: 28)
+        check(f.width <= visible.width * 0.8 + 1 && f.height <= visible.height * 0.8 + 1, "most of the screen, not all of it")
+        check(abs(f.width - visible.width * 0.8) < 1 || abs(f.height - visible.height * 0.8) < 1, "as large as that allows")
+        check(abs(f.width / (f.height - 28) - natural.width / natural.height) < 0.01, "the panel's shape below the title bar")
+        check(abs(f.midX - visible.midX) <= 1 && abs(f.midY - visible.midY) <= 1, "centred")
+        let other = CGRect(x: 1512, y: 100, width: 1920, height: 1055)
+        check(other.contains(GameWindow.frame(visible: other, natural: natural, titlebar: 28)), "on the display the bar is on")
+        let tiny = CGRect(x: 0, y: 0, width: 700, height: 420)
+        let small = GameWindow.frame(visible: tiny, natural: natural, titlebar: 28)
+        check(tiny.contains(small), "never off a small screen")
+        check(small.width >= min(natural.width, tiny.width), "never smaller than the panel where there's room")
+        check(GameWindow.frame(visible: visible, natural: nil, titlebar: 28).width > 0, "a shape for a page that didn't say")
+        check(GameWindow.frame(visible: visible, natural: CGSize(width: 0, height: 0), titlebar: 28).width > 0, "nor for a nonsense one")
+        let least = GameWindow.minSize(visible: visible, natural: natural, titlebar: 28)
+        check(least == CGSize(width: 672, height: 420), "resizes down to the normal size")
     }
 }

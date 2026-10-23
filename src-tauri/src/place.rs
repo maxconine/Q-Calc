@@ -106,9 +106,50 @@ pub fn resized(
     (x - room.side, y - room.top)
 }
 
+// the window a game opens in (ctrl+F), logical and inside its frame: the panel's shape at its normal size (what the
+// page says it is), as large as fits in most of the work area with windows' title bar and frame round it, and never
+// smaller than that normal size
+const GAME_SHARE: f64 = 0.8;
+const GAME_FRAME: (f64, f64) = (16.0, 40.0);
+// a 16:9 picture with a hud, for a page that didn't say
+const GAME_FALLBACK: (f64, f64) = (672.0, 460.0);
+
+fn game_shape(natural: Option<(f64, f64)>) -> (f64, f64) {
+    natural.filter(|&(w, h)| (100.0..=4000.0).contains(&w) && (100.0..=4000.0).contains(&h)).unwrap_or(GAME_FALLBACK)
+}
+
+pub fn game_window(area_width: f64, area_height: f64, natural: Option<(f64, f64)>) -> (f64, f64) {
+    let (w, h) = game_shape(natural);
+    let fit = ((area_width * GAME_SHARE - GAME_FRAME.0) / w).min((area_height * GAME_SHARE - GAME_FRAME.1) / h);
+    let scale = if fit.is_finite() { fit.max(1.0) } else { 1.0 };
+    ((w * scale).round().min(area_width - GAME_FRAME.0), (h * scale).round().min(area_height - GAME_FRAME.1))
+}
+
+// the smallest it resizes to: the normal size, or what the work area has
+pub fn game_window_min(area_width: f64, area_height: f64, natural: Option<(f64, f64)>) -> (f64, f64) {
+    let (w, h) = game_shape(natural);
+    (w.min(area_width - GAME_FRAME.0), h.min(area_height - GAME_FRAME.1))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_game_window_is_most_of_the_screen_in_the_panels_shape() {
+        let (w, h) = game_window(1920.0, 1040.0, Some((672.0, 392.0)));
+        assert!(w <= 1920.0 * 0.8 && h <= 1040.0 * 0.8);
+        assert!((w - (1920.0 * 0.8 - 16.0)).abs() < 1.0 || (h - (1040.0 * 0.8 - 40.0)).abs() < 1.0);
+        assert!((w / h - 672.0 / 392.0).abs() < 0.01);
+        // never smaller than the panel where there's room, never past a small screen
+        let (w, h) = game_window(800.0, 500.0, Some((672.0, 392.0)));
+        assert_eq!((w, h), (672.0, 392.0));
+        let (w, h) = game_window(600.0, 400.0, Some((672.0, 392.0)));
+        assert!(w <= 584.0 && h <= 360.0);
+        // a shape for a page that didn't say, or said nonsense
+        assert_eq!(game_window(1920.0, 1040.0, None), game_window(1920.0, 1040.0, Some((0.0, 0.0))));
+        assert_eq!(game_window_min(1920.0, 1040.0, Some((672.0, 392.0))), (672.0, 392.0));
+    }
 
     #[test]
     fn a_dragged_width_stays_between_the_standard_and_the_monitor() {
