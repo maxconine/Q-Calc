@@ -23,6 +23,8 @@ import type { UserFunction } from '../engine/types'
 const PLOT_PAD = { top: 12, right: 12, bottom: 28, left: 40 }
 const SVG_W = 652
 const SVG_H = 200
+// a contour plot keeps x and y at one scale
+const PLOT_ASPECT = (SVG_H - PLOT_PAD.top - PLOT_PAD.bottom) / (SVG_W - PLOT_PAD.left - PLOT_PAD.right)
 const MIN_DOMAIN_SPAN = 1e-6
 const MAX_DOMAIN_SPAN = 1e6
 // svg px within which the readout locks onto a root or extremum
@@ -114,12 +116,14 @@ type Feature = { x: number; y: number; kind: 'min' | 'max' | 'crit' | 'root' }
 export function GraphPanel({ input, functions, variables, ans, angleMode, onSelectX }: GraphPanelProps) {
   const clipId = useId()
   const home = useMemo(
-    () => graphHome(input, { functions, variables, ans, angleMode }),
+    () => graphHome(input, { functions, variables, ans, angleMode, aspect: PLOT_ASPECT }),
     [input, functions, variables, ans, angleMode],
   )
   const [domain, setDomain] = useState<[number, number]>(home)
   const [dragging, setDragging] = useState(false)
   const [hoverPx, setHoverPx] = useState<number | null>(null)
+  // only a contour plot reads it
+  const [hoverPy, setHoverPy] = useState(0)
   const dragRef = useRef<{ startPx: number; domain: [number, number]; moved: boolean } | null>(null)
   const plotRef = useRef<SVGSVGElement>(null)
 
@@ -141,7 +145,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
   }, [])
 
   const result = useMemo(
-    () => buildGraph(input, { domain, functions, variables, ans, angleMode }),
+    () => buildGraph(input, { domain, functions, variables, ans, angleMode, aspect: PLOT_ASPECT }),
     [input, domain, functions, variables, ans, angleMode],
   )
 
@@ -161,10 +165,25 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     [yScale.max, ySpan, plotH],
   )
   const pxToX = useCallback((px: number) => xMin + ((px - PLOT_PAD.left) / plotW) * xSpan, [xMin, plotW, xSpan])
+  const pyToY = (py: number) => yScale.max - ((py - PLOT_PAD.top) / plotH) * ySpan
 
   const curve = useMemo(
     () => (result ? pointsToPath(result.points, xToPx, yToPx, PLOT_PAD.top, plotBottom) : { d: '', dots: [] }),
     [result, xToPx, yToPx, plotBottom],
+  )
+  // each level's segments as one path, fainter for the low levels
+  const levels = useMemo(
+    () =>
+      result?.contours?.map((c, i, all) => {
+        const s = c.segments
+        let d = ''
+        for (let k = 0; k < s.length; k += 4) {
+          d += `M${xToPx(s[k]!).toFixed(1)} ${yToPx(s[k + 1]!).toFixed(1)}L${xToPx(s[k + 2]!).toFixed(1)} ${yToPx(s[k + 3]!).toFixed(1)}`
+        }
+        const at = c.at ? { x: xToPx(c.at.x), y: yToPx(c.at.y) } : null
+        return { key: c.level, d, at, label: c.label, opacity: all.length > 1 ? 0.35 + (0.65 * i) / (all.length - 1) : 1 }
+      }) ?? [],
+    [result, xToPx, yToPx],
   )
   const xTicks = graphTicks(xMin, xMax, angleUnit, 6)
   const yTicks = graphTicks(yScale.min, yScale.max)
@@ -184,11 +203,11 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
   ].filter((p) => inView(xToPx(p.x), yToPx(p.y)))
 
   // client coordinates to svg viewBox units, exact under any letterboxing
-  const toSvgX = useCallback((clientX: number, clientY: number) => {
+  const toSvg = useCallback((clientX: number, clientY: number) => {
     const svg = plotRef.current
     const ctm = svg?.getScreenCTM()
     if (!svg || !ctm) return null
-    return new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse()).x
+    return new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse())
   }, [])
 
   const zoomAt = useCallback(
@@ -221,7 +240,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
       e.stopPropagation()
       if (gesturing && e.ctrlKey) return
       const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1
-      const px = toSvgX(e.clientX, e.clientY)
+      const px = toSvg(e.clientX, e.clientY)?.x
       if (px == null) return
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && !e.ctrlKey) {
         panBy(e.deltaX * unit)
@@ -244,7 +263,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     const onGestureChange = (e: Event) => {
       e.preventDefault()
       const g = e as GestureEvent
-      const px = toSvgX(g.clientX, g.clientY)
+      const px = toSvg(g.clientX, g.clientY)?.x
       if (px == null || !(g.scale > 0)) return
       zoomAt(px, lastScale / g.scale)
       lastScale = g.scale
@@ -259,7 +278,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
       svg.removeEventListener('gesturestart', onGestureStart)
       svg.removeEventListener('gesturechange', onGestureChange)
     }
-  }, [panBy, zoomAt, toSvgX, result?.error])
+  }, [panBy, zoomAt, toSvg, result?.error])
 
   const snapAt = (px: number) =>
     features.reduce<Feature | null>((best, p) => {
@@ -270,7 +289,19 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
   let readout: { px: number; py: number | null; kind?: string; text: string } | null = null
   if (hoverPx != null && result && !result.error) {
     const deg = angleUnit === 'deg' ? '°' : ''
-    if (snapped) {
+    if (result.z) {
+      // a contour plot reads out the point under the pointer and f there
+      const x = roundToPixel(pxToX(hoverPx), xSpan / plotW)
+      const y = roundToPixel(pyToY(Math.max(PLOT_PAD.top, Math.min(plotBottom, hoverPy))), ySpan / plotH)
+      const z = result.z(x, y)
+      readout = {
+        px: hoverPx,
+        py: null,
+        text: `(${withMinus(formatCoord(x))}${deg}, ${withMinus(formatCoord(y))}${deg})${
+          result.intent.contour === 'levels' ? `  z = ${z == null ? '—' : withMinus(formatNumber(z, 6))}` : ''
+        }`,
+      }
+    } else if (snapped) {
       readout = {
         px: xToPx(snapped.x),
         py: yToPx(snapped.y),
@@ -293,21 +324,23 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
       if (e.button !== 0) return
-      const px = toSvgX(e.clientX, e.clientY)
+      const px = toSvg(e.clientX, e.clientY)?.x
       if (px == null) return
       e.currentTarget.setPointerCapture(e.pointerId)
       dragRef.current = { startPx: px, domain: [...domainRef.current] as [number, number], moved: false }
     },
-    [toSvgX],
+    [toSvg],
   )
 
   const onPointerMove = useCallback(
     (e: ReactPointerEvent<SVGSVGElement>) => {
-      const px = toSvgX(e.clientX, e.clientY)
-      if (px == null) return
+      const p = toSvg(e.clientX, e.clientY)
+      if (!p) return
+      const px = p.x
       const drag = dragRef.current
       if (!drag) {
         setHoverPx(px >= PLOT_PAD.left && px <= plotRight ? px : null)
+        setHoverPy(p.y)
         return
       }
       const dxPx = px - drag.startPx
@@ -321,7 +354,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
       const dx = -(dxPx / plotW) * (hi - lo)
       updateDomain(() => [lo + dx, hi + dx])
     },
-    [plotW, plotRight, toSvgX, updateDomain],
+    [plotW, plotRight, toSvg, updateDomain],
   )
 
   const selectX = useCallback((x: number) => onSelectX?.(formatCoord(x)), [onSelectX])
@@ -336,7 +369,7 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
     dragRef.current = null
     setDragging(false)
     // a click without a drag on a root or extremum copies its x
-    const px = toSvgX(e.clientX, e.clientY)
+    const px = toSvg(e.clientX, e.clientY)?.x
     const hit = drag && !drag.moved && e.type === 'pointerup' && px != null ? snapAt(px) : null
     if (hit) selectX(hit.x)
     if (px != null) setHoverPx(px >= PLOT_PAD.left && px <= plotRight ? px : null)
@@ -415,10 +448,18 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
             </text>
           ))}
           <g clipPath={`url(#${clipId})`}>
-            {readout ? (
+            {readout && !result?.z ? (
               <line className="graph-hover-line" x1={readout.px} y1={PLOT_PAD.top} x2={readout.px} y2={plotBottom} />
             ) : null}
             {curve.d ? <path className="graph-curve" d={curve.d} fill="none" /> : null}
+            {levels.map((c) => (c.d ? <path key={c.key} className="graph-contour" d={c.d} fill="none" strokeOpacity={c.opacity} /> : null))}
+            {levels.map((c) =>
+              c.at ? (
+                <text key={`l${c.key}`} className="graph-contour-label" x={c.at.x} y={c.at.y} textAnchor="middle" dominantBaseline="middle">
+                  {c.label}
+                </text>
+              ) : null,
+            )}
             {curve.dots.map((p) => (
               <circle key={`${p.x}`} className="graph-dot" cx={p.x} cy={p.y} r={2} />
             ))}
@@ -443,52 +484,54 @@ export function GraphPanel({ input, functions, variables, ans, angleMode, onSele
         </svg>
       )}
 
-      <div className="graph-detail">
-        <div className="graph-detail-label">Critical points</div>
-        {critical.length === 0 && !error ? (
-          <div className="graph-detail-empty">None in this domain</div>
-        ) : (
-          <ul className="graph-detail-list">
-            {critical.map((p, i) => (
-              <li key={`${p.kind}-${i}`}>
-                <button
-                  type="button"
-                  className="graph-detail-item"
-                  title="Copy x"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectX(p.x)}
-                >
-                  <span className="graph-kind">{kindLabel(p.kind)}</span>
-                  <span className="graph-coords">
-                    ({withMinus(formatCoord(p.x))}, {withMinus(formatCoord(p.y))})
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        {roots.length > 0 ? (
-          <>
-            <div className="graph-detail-label">Roots</div>
+      {result?.intent.contour ? null : (
+        <div className="graph-detail">
+          <div className="graph-detail-label">Critical points</div>
+          {critical.length === 0 && !error ? (
+            <div className="graph-detail-empty">None in this domain</div>
+          ) : (
             <ul className="graph-detail-list">
-              {roots.map((r, i) => (
-                <li key={`r-${i}`}>
+              {critical.map((p, i) => (
+                <li key={`${p.kind}-${i}`}>
                   <button
                     type="button"
                     className="graph-detail-item"
                     title="Copy x"
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => selectX(r.x)}
+                    onClick={() => selectX(p.x)}
                   >
-                    <span className="graph-kind">root</span>
-                    <span className="graph-coords">x = {withMinus(formatCoord(r.x))}</span>
+                    <span className="graph-kind">{kindLabel(p.kind)}</span>
+                    <span className="graph-coords">
+                      ({withMinus(formatCoord(p.x))}, {withMinus(formatCoord(p.y))})
+                    </span>
                   </button>
                 </li>
               ))}
             </ul>
-          </>
-        ) : null}
-      </div>
+          )}
+          {roots.length > 0 ? (
+            <>
+              <div className="graph-detail-label">Roots</div>
+              <ul className="graph-detail-list">
+                {roots.map((r, i) => (
+                  <li key={`r-${i}`}>
+                    <button
+                      type="button"
+                      className="graph-detail-item"
+                      title="Copy x"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectX(r.x)}
+                    >
+                      <span className="graph-kind">root</span>
+                      <span className="graph-coords">x = {withMinus(formatCoord(r.x))}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   )
 }

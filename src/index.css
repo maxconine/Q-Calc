@@ -1387,6 +1387,23 @@ html.quick-native .four-twenty.wide {
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
 }
+/* level curves: the curve's colour, faint for low levels */
+.graph-contour {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.graph-contour-label {
+  fill: var(--muted);
+  font-family: var(--font);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  paint-order: stroke;
+  stroke: var(--graph-plot);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
 .graph-dot {
   fill: var(--accent);
 }
