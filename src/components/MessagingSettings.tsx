@@ -84,6 +84,7 @@ export function MessagingSettings() {
             aria-label="Your name"
             placeholder="a name like max"
             spellCheck={false}
+            {...{ writingsuggestions: 'false' }}
             autoCapitalize="off"
             maxLength={20}
             value={draft}

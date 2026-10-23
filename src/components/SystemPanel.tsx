@@ -44,6 +44,7 @@ export function SystemPanel({ lines, onChange, onEnter, onFocusMain }: SystemPan
             className="sys-eq"
             value={line}
             spellCheck={false}
+            {...{ writingsuggestions: 'false' }}
             autoCapitalize="off"
             autoCorrect="off"
             placeholder={`equation ${i + 1}`}

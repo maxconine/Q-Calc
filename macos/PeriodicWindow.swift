@@ -36,10 +36,32 @@ struct PeriodicElement {
     }
 }
 
-// never key, so the overlay keeps focus and its caret while tiles are clicked
+// never key while the bar is up, so the overlay keeps focus and its caret while tiles are clicked; with the bar away
+// a click gives it the keys (without bringing q calc forward), so ⌘W closes it
 final class PeriodicPanel: NSPanel {
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { !NSApp.windows.contains { $0 is OverlayPanel && $0.isVisible } }
     override var canBecomeMain: Bool { false }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown || event.type == .rightMouseDown, !isKeyWindow, canBecomeKey { makeKey() }
+        super.sendEvent(event)
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if isCommandWCloseKey(event) {
+            close()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    // the front one showing; NSApp.orderedWindows leaves panels out
+    static func front() -> PeriodicPanel? {
+        (NSWindow.windowNumbers(options: []) ?? [])
+            .lazy
+            .compactMap { NSApp.window(withWindowNumber: $0.intValue) as? PeriodicPanel }
+            .first { $0.isVisible }
+    }
 }
 
 // lays the table out at one size and scales it to whatever the window is

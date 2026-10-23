@@ -378,6 +378,7 @@ struct MessagesSettingsView: View {
                     HStack {
                         TextField("Your name", text: $draft, prompt: Text("a name like max"))
                             .labelsHidden()
+                            .noWritingTools()
                             .frame(width: 150)
                             .onSubmit { messages.setName(draft) }
                         Button(messages.busy ? "Checking…" : "Save") { messages.setName(draft) }
