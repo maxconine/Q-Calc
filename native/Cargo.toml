@@ -10,6 +10,10 @@ repository = "https://github.com/maxconine/Q-Calc"
 rust-version = "1.99"
 
 [workspace.dependencies]
+# WP-PRECISE: decimal big floats (base 10, half-up rounding like decimal.js) for the precise twin
+dashu-base = { version = "0.6.1", default-features = false, features = ["std"] }
+dashu-float = { version = "0.6.2", default-features = false, features = ["std"] }
+dashu-int = { version = "0.6.2", default-features = false, features = ["std"] }
 fancy-regex = { version = "0.19", features = ["variable-lookbehinds"] }
 num-bigint = "0.4"
 num-integer = "0.1"

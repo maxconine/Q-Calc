@@ -6,6 +6,8 @@
 //! PORT(WP-PRECISE): a high-precision real backend for the transcendental twins (`TWINS` in the TS: trig, logs,
 //! non-integer powers, constants), with the `agrees` meaning check, `settle` for jumps, and user-function calls.
 
+pub mod real;
+
 use num_bigint::{BigInt, BigUint};
 use num_integer::Integer;
 use num_rational::BigRational;
