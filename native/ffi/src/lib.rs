@@ -71,9 +71,83 @@ pub(crate) fn evaluate_json_text(request: &str) -> Result<String, CoreError> {
     serde_json::to_string(&out).map_err(CoreError::bad)
 }
 
+// ---- WP-UNITS: the Settings unit choices (replaces `UnitCatalog` in `macos/UnitSettings.swift`) ----
+
+/// One unit a default-unit setting can pick.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitChoiceInfo {
+    pub id: String,
+    pub label: String,
+}
+
+/// One setting: the default unit for one dimension (`dim` is the stored key, `length`).
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitSettingItemInfo {
+    pub dim: String,
+    pub label: String,
+    pub units: Vec<UnitChoiceInfo>,
+}
+
+/// A Settings section of unit choices.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitSettingGroupInfo {
+    pub id: String,
+    pub title: String,
+    pub items: Vec<UnitSettingItemInfo>,
+}
+
+/// `UNIT_SETTING_GROUPS`: the default-unit choices Settings offers, in order. "Automatic" (no entry) is the UI's.
+#[uniffi::export]
+pub fn unit_setting_groups() -> Vec<UnitSettingGroupInfo> {
+    qcalc_core::units::UNIT_SETTING_GROUPS
+        .iter()
+        .map(|g| UnitSettingGroupInfo {
+            id: g.id.into(),
+            title: g.title.into(),
+            items: g
+                .items
+                .iter()
+                .map(|i| UnitSettingItemInfo {
+                    dim: i.dim.into(),
+                    label: i.label.into(),
+                    units: i
+                        .units
+                        .iter()
+                        .map(|u| UnitChoiceInfo {
+                            id: u.id.into(),
+                            label: u.label.into(),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+/// `sanitizeDefaultUnits`: only Settings dimensions, each with a unit of that dimension.
+#[uniffi::export]
+pub fn sanitize_default_units(
+    units: std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    qcalc_core::units::sanitize_default_units(&units.into_iter().collect())
+        .into_iter()
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unit_settings_come_from_the_core() {
+        let groups = unit_setting_groups();
+        assert_eq!(groups[0].items[0].units[0].id, "in");
+        let kept = sanitize_default_units(std::collections::HashMap::from([
+            ("length".to_string(), "ft".to_string()),
+            ("mass".to_string(), "ft".to_string()),
+        ]));
+        assert_eq!(kept.len(), 1);
+    }
 
     #[test]
     fn evaluates_through_the_ffi_types() {
