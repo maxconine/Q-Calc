@@ -9,7 +9,10 @@ enum DevSnapshot {
     /// so each picture sits on the window's own background colour.
     static func writeAll(to prefix: String) {
         for window in NSApp.windows where window.isVisible && window.className != "NSStatusBarWindow" {
-            guard let view = window.contentView?.superview ?? window.contentView, view.bounds.width > 4 else { continue }
+            // a titled panel's frame view draws over its content in a cache, so those take the content view
+            let frameView = window is NSPanel && !(window is OverlayPanel) && window.styleMask.contains(.titled) && !window.title.contains("Periodic")
+                ? window.contentView : (window.contentView?.superview ?? window.contentView)
+            guard let view = frameView, view.bounds.width > 4 else { continue }
             let bounds = view.bounds
             let image = NSImage(size: bounds.size)
             image.lockFocus()
@@ -19,7 +22,7 @@ enum DevSnapshot {
             }
             background.setFill()
             NSBezierPath(roundedRect: NSRect(origin: .zero, size: bounds.size), xRadius: 14, yRadius: 14).fill()
-            if !(window is NSPanel) || window is OverlayPanel || view.layer == nil {
+            if !window.title.contains("Periodic") || view.layer == nil {
                 // SwiftUI draws through cacheDisplay
                 guard let rep = view.bitmapImageRepForCachingDisplay(in: bounds) else { image.unlockFocus(); continue }
                 view.cacheDisplay(in: bounds, to: rep)
@@ -39,6 +42,14 @@ enum DevSnapshot {
                 .replacingOccurrences(of: " ", with: "-").replacingOccurrences(of: "/", with: "-").lowercased()
             }
             try? png.write(to: URL(fileURLWithPath: "\(prefix)-\(name).png"))
+            // the view tree beside it, for windows a picture can't show (or VoiceOver checks)
+            func tree(_ v: NSView, _ depth: Int) -> String {
+                let label = v.accessibilityLabel() ?? (v as? NSTextField)?.stringValue ?? ""
+                var line = String(repeating: "  ", count: depth) + "\(type(of: v)) \(NSStringFromRect(v.frame)) \(label)\n"
+                if depth < 6 { for s in v.subviews.prefix(40) { line += tree(s, depth + 1) } }
+                return line
+            }
+            try? tree(view, 0).write(toFile: "\(prefix)-\(name).txt", atomically: true, encoding: .utf8)
         }
     }
 
