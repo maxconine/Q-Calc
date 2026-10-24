@@ -204,13 +204,40 @@ pub fn map_children(n: &Node, f: &mut dyn FnMut(&Node) -> Node) -> Node {
 }
 
 /// mathjs's `node.transform(callback)`: `f` returns `Some(replacement)` to replace a node (its children are then
-/// not visited) or `None` to keep it and transform its children. The FunctionNode's callee is visited too, as in
-/// mathjs (check [`is_callee`]-style context in `f` if a symbol callee must stay).
+/// not visited) or `None` to keep it and transform its children. A FunctionNode's callee is visited too, as in
+/// mathjs; use [`transform_with`] to tell it apart.
 pub fn transform(n: &Node, f: &mut dyn FnMut(&Node) -> Option<Node>) -> Node {
-    if let Some(r) = f(n) {
-        return r;
+    transform_with(n, &mut |m, _| f(m))
+}
+
+/// [`transform`] whose callback also gets mathjs's `parent?.type === 'FunctionNode' && path === 'fn'`: true for a
+/// call's callee, which the engine's readers leave alone when they rename or replace variables.
+pub fn transform_with(n: &Node, f: &mut dyn FnMut(&Node, bool) -> Option<Node>) -> Node {
+    fn walk(n: &Node, callee: bool, f: &mut dyn FnMut(&Node, bool) -> Option<Node>) -> Node {
+        if let Some(r) = f(n, callee) {
+            return r;
+        }
+        match n {
+            Node::Function { callee, args } => Node::Function {
+                callee: Box::new(walk(callee, true, f)),
+                args: args.iter().map(|a| walk(a, false, f)).collect(),
+            },
+            _ => map_children(n, &mut |c| walk(c, false, f)),
+        }
     }
-    map_children(n, &mut |c| transform(c, f))
+    walk(n, false, f)
+}
+
+/// mathjs's `node.filter(callback)`: every node (parents first) the predicate accepts, with the callee flag of
+/// [`traverse`].
+pub fn filter(n: &Node, pred: &mut dyn FnMut(&Node, bool) -> bool) -> Vec<Node> {
+    let mut out = Vec::new();
+    traverse(n, &mut |m, callee| {
+        if pred(m, callee) {
+            out.push(m.clone());
+        }
+    });
+    out
 }
 
 /// mathjs's `node.traverse(callback)`: every node, parents first. The flag is true for a FunctionNode's callee
@@ -296,4 +323,33 @@ pub fn remove_parens(n: &Node) -> Node {
         Node::Parenthesis(c) => Some(remove_parens(c)),
         _ => None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn walks_tell_callees_apart() {
+        let n = parse("sin(x) + x * y").unwrap();
+        assert_eq!(symbols(&n), vec!["x", "y"]);
+        let renamed = transform_with(&n, &mut |m, callee| match m {
+            Node::Symbol(s) if !callee => Some(sym(&format!("{s}1"))),
+            _ => None,
+        });
+        assert_eq!(
+            to_string(&renamed, &PrintOptions::default()),
+            "sin(x1) + x1 * y1"
+        );
+        let all = filter(&n, &mut |m, _| matches!(m, Node::Symbol(_)));
+        assert_eq!(all.len(), 4);
+    }
+
+    #[test]
+    fn constructors_print_like_mathjs() {
+        let n = op(Op::Divide, vec![call("log", vec![sym("x")]), num(-2.5)]);
+        assert_eq!(to_string(&n, &PrintOptions::default()), "log(x) / -2.5");
+        let r = rationalize(&parse("1/(1/a + 1/b)").unwrap()).unwrap();
+        assert_eq!(to_string(&r, &PrintOptions::default()), "a * b / (b + a)");
+    }
 }
