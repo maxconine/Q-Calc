@@ -38,11 +38,7 @@ impl Val {
             Val::Num(n) => *n,
             Val::Bool(b) => f64::from(u8::from(*b)),
             Val::Null => 0.0,
-            Val::List(items) => match items.as_slice() {
-                [] => 0.0,
-                [one] => one.to_number(),
-                _ => f64::NAN,
-            },
+            Val::List(_) => f64::NAN, // WP-FUNCTIONS: Number(matrix) is NaN, even of `[5]` (mathjs's valueOf)
             Val::Str(s) => {
                 let t = s.trim();
                 if t.is_empty() {
