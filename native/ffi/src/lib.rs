@@ -1,165 +1,40 @@
 //! The engine's surface for the native UIs, through UniFFI (Swift now; C# or Kotlin later from the same crate).
+//! The frozen API is `native/QCalcCore/API.md`.
 //!
-//! Kept coarse: one call per keystroke, records in and out, no callbacks into the UI. Every typed record has a
-//! `json` twin (`evaluate_json`, `LineAnswer::json`) in the TS engine's exact shapes, so the UI can reach any
-//! field the typed records don't carry yet without waiting for an FFI change.
+//! Kept coarse: about one call per keystroke, records in and out, no callbacks into the UI. Every typed record
+//! has a JSON twin in the TS engine's exact shapes (`evaluate_json`, `LineAnswer::json`, `LiveAnswer::json`,
+//! `Engine::call_json`), so the UI can reach any field the typed records don't carry yet without an FFI change.
+//!
+//! - `engine.rs`: the `Engine` object and the per-keystroke flow
+//! - `records.rs`: records, enums, `CoreError`
+//! - `cancel.rs`: `CancelToken`
+//! - `worker.rs`: the 32 MB evaluation thread, the long-work pool, async futures
+//! - `history.rs`, `chain.rs`: the tape and chaining (ported from `src/lib`), the history file
+//! - `rates.rs`: the ECB rates cache
+//! - `bridge.rs`: typed calls over `qcalc_core::golden::dispatch`, for code other packages are porting
 
-use std::collections::HashMap;
+mod bridge;
+mod cancel;
+pub mod chain;
+mod engine;
+pub mod history;
+mod jsstr;
+mod rates;
+pub mod records;
+mod worker;
 
-use qcalc_core::types::{
-    AngleMode, EvaluateOptions, LineKind, LineResult, UserFunction, ValueKind,
-};
+pub use cancel::CancelToken;
+pub use engine::Engine;
+pub use records::*;
+
+use qcalc_core::types::EvaluateOptions;
 
 uniffi::setup_scaffolding!();
-
-/// Errors the FFI can return; evaluation itself never fails (an unreadable line is a blank answer).
-#[derive(Debug, uniffi::Error)]
-pub enum CoreError {
-    /// The JSON handed to `evaluate_json` wasn't an evaluate request.
-    BadRequest { message: String },
-}
-
-impl std::error::Error for CoreError {}
-
-impl std::fmt::Display for CoreError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CoreError::BadRequest { message } => write!(f, "bad request: {message}"),
-        }
-    }
-}
-
-/// A user function, `f(x) = x^2`.
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct UserFn {
-    pub params: Vec<String>,
-    pub body: String,
-}
-
-/// Settings and the sheet's context, as `EvaluateOptions` in the TS.
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct EvalOptions {
-    pub angle_radians: bool,
-    pub fraction_mode: bool,
-    pub sig_figs: u32,
-    pub sig_fig_mode: bool,
-    pub rationalize: bool,
-    pub space_thousands: bool,
-    pub ans: Option<f64>,
-    pub variables: HashMap<String, f64>,
-    pub functions: HashMap<String, UserFn>,
-    /// Unit-valued variables and `ans`, as text the unit reader reads back (`5 cm`).
-    pub quantities: HashMap<String, String>,
-    /// Display unit per dimension (`length` → `ft`).
-    pub default_units: HashMap<String, String>,
-}
 
 /// The settings a new user starts with (`defaultSettings()` in `src/lib/settings.ts`).
 #[uniffi::export]
 pub fn default_eval_options() -> EvalOptions {
-    EvalOptions {
-        angle_radians: false,
-        fraction_mode: false,
-        sig_figs: 6,
-        sig_fig_mode: false,
-        rationalize: true,
-        space_thousands: false,
-        ans: None,
-        variables: HashMap::new(),
-        functions: HashMap::new(),
-        quantities: HashMap::new(),
-        default_units: HashMap::new(),
-    }
-}
-
-impl From<EvalOptions> for EvaluateOptions {
-    fn from(o: EvalOptions) -> Self {
-        EvaluateOptions {
-            angle_mode: Some(if o.angle_radians {
-                AngleMode::Rad
-            } else {
-                AngleMode::Deg
-            }),
-            ans: o.ans,
-            variables: o.variables.into_iter().collect(),
-            functions: o
-                .functions
-                .into_iter()
-                .map(|(k, f)| {
-                    (
-                        k,
-                        UserFunction {
-                            params: f.params,
-                            body: f.body,
-                        },
-                    )
-                })
-                .collect(),
-            fraction_mode: Some(o.fraction_mode),
-            rationalize: Some(o.rationalize),
-            sig_figs: Some(f64::from(o.sig_figs)),
-            sig_fig_mode: Some(o.sig_fig_mode),
-            quantities: o.quantities.into_iter().collect(),
-            default_units: o.default_units.into_iter().collect(),
-            space_thousands: Some(o.space_thousands),
-            ..EvaluateOptions::default()
-        }
-    }
-}
-
-/// What a line was.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
-pub enum AnswerKind {
-    Empty,
-    Expression,
-    Assignment,
-    Function,
-    Solve,
-}
-
-/// One answered line.
-#[derive(Clone, Debug, uniffi::Record)]
-pub struct LineAnswer {
-    pub raw: String,
-    pub kind: AnswerKind,
-    /// What the answer slot shows; empty when the line is blank.
-    pub display: String,
-    /// The closed form beside the decimal (`2sqrt(3)`).
-    pub exact: Option<String>,
-    /// The number, when the answer is one (with `unit` if it has one).
-    pub number: Option<f64>,
-    pub unit: Option<String>,
-    /// The variable an assignment defined.
-    pub variable: Option<String>,
-    /// A unit answer as text the reader reads back, for chaining `ans`.
-    pub quantity: Option<String>,
-    /// The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
-    pub json: String,
-}
-
-fn answer(r: &LineResult) -> LineAnswer {
-    let number = r
-        .value
-        .as_ref()
-        .filter(|v| v.kind == ValueKind::Number)
-        .map(|v| v.n);
-    LineAnswer {
-        raw: r.raw.clone(),
-        kind: match r.kind {
-            LineKind::Empty => AnswerKind::Empty,
-            LineKind::Expression => AnswerKind::Expression,
-            LineKind::Assignment => AnswerKind::Assignment,
-            LineKind::Function => AnswerKind::Function,
-            LineKind::Solve => AnswerKind::Solve,
-        },
-        display: r.display.clone(),
-        exact: r.exact.clone(),
-        number,
-        unit: r.value.as_ref().and_then(|v| v.unit.clone()),
-        variable: r.variable.clone(),
-        quantity: r.quantity.clone(),
-        json: serde_json::to_string(r).unwrap_or_default(),
-    }
+    EvalOptions::default()
 }
 
 /// The engine's version.
@@ -168,36 +43,111 @@ pub fn core_version() -> String {
     qcalc_core::VERSION.to_string()
 }
 
-/// Every line of a sheet; each line sees what the lines above it defined.
+/// Every line of a sheet, on the caller's thread; each line sees what the lines above it defined.
+/// Prefer `Engine::evaluate`, which runs on the engine's 32 MB thread.
 #[uniffi::export]
 pub fn evaluate(lines: Vec<String>, options: EvalOptions) -> Vec<LineAnswer> {
     qcalc_core::evaluate_sheet(&lines, &options.into())
         .iter()
-        .map(answer)
+        .map(records::line_answer)
         .collect()
 }
 
 /// `{"lines": [...], "options": {...}}` in the TS shapes in, the TS engine's `LineResult[]` JSON out.
 #[uniffi::export]
 pub fn evaluate_json(request: String) -> Result<String, CoreError> {
+    evaluate_json_text(&request)
+}
+
+pub(crate) fn evaluate_json_text(request: &str) -> Result<String, CoreError> {
     #[derive(serde::Deserialize)]
     struct Request {
         lines: Vec<String>,
         #[serde(default)]
         options: EvaluateOptions,
     }
-    let req: Request = serde_json::from_str(&request).map_err(|e| CoreError::BadRequest {
-        message: e.to_string(),
-    })?;
+    let req: Request = serde_json::from_str(request).map_err(CoreError::bad)?;
     let out = qcalc_core::evaluate_sheet(&req.lines, &req.options);
-    serde_json::to_string(&out).map_err(|e| CoreError::BadRequest {
-        message: e.to_string(),
-    })
+    serde_json::to_string(&out).map_err(CoreError::bad)
+}
+
+// ---- WP-UNITS: the Settings unit choices (replaces `UnitCatalog` in `macos/UnitSettings.swift`) ----
+
+/// One unit a default-unit setting can pick.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitChoiceInfo {
+    pub id: String,
+    pub label: String,
+}
+
+/// One setting: the default unit for one dimension (`dim` is the stored key, `length`).
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitSettingItemInfo {
+    pub dim: String,
+    pub label: String,
+    pub units: Vec<UnitChoiceInfo>,
+}
+
+/// A Settings section of unit choices.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitSettingGroupInfo {
+    pub id: String,
+    pub title: String,
+    pub items: Vec<UnitSettingItemInfo>,
+}
+
+/// `UNIT_SETTING_GROUPS`: the default-unit choices Settings offers, in order. "Automatic" (no entry) is the UI's.
+#[uniffi::export]
+pub fn unit_setting_groups() -> Vec<UnitSettingGroupInfo> {
+    qcalc_core::units::UNIT_SETTING_GROUPS
+        .iter()
+        .map(|g| UnitSettingGroupInfo {
+            id: g.id.into(),
+            title: g.title.into(),
+            items: g
+                .items
+                .iter()
+                .map(|i| UnitSettingItemInfo {
+                    dim: i.dim.into(),
+                    label: i.label.into(),
+                    units: i
+                        .units
+                        .iter()
+                        .map(|u| UnitChoiceInfo {
+                            id: u.id.into(),
+                            label: u.label.into(),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+/// `sanitizeDefaultUnits`: only Settings dimensions, each with a unit of that dimension.
+#[uniffi::export]
+pub fn sanitize_default_units(
+    units: std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    qcalc_core::units::sanitize_default_units(&units.into_iter().collect())
+        .into_iter()
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unit_settings_come_from_the_core() {
+        let groups = unit_setting_groups();
+        assert_eq!(groups[0].items[0].units[0].id, "in");
+        let kept = sanitize_default_units(std::collections::HashMap::from([
+            ("length".to_string(), "ft".to_string()),
+            ("mass".to_string(), "ft".to_string()),
+        ]));
+        assert_eq!(kept.len(), 1);
+    }
 
     #[test]
     fn evaluates_through_the_ffi_types() {

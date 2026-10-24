@@ -29,6 +29,7 @@ fn kind(v: &Val) -> &'static str {
         Val::List(_) => "matrix",
         Val::Str(_) => "string",
         Val::Function(_) => "function",
+        Val::Unit(_) => "unit", // WP-UNITS
         Val::Null => "null",
         Val::Undefined => "undefined",
     }
@@ -92,6 +93,9 @@ pub fn unary(op: Op, a: &Val) -> EvalResult {
     if let Some(r) = super::complex::unary(op, a) {
         return r;
     } // WP-FUNCTIONS
+    if let Some(r) = crate::units::mathjs::unary(op, a) {
+        return r; // WP-UNITS
+    }
     match op {
         Op::Not => Ok(Val::Bool(!a.truthy())),
         Op::UnaryPlus => Ok(Val::Num(scalar(a, op)?)),
@@ -107,6 +111,9 @@ pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
         return r;
     } // WP-FUNCTIONS
     // PORT(WP-MATRIX): a list operand goes to `eval::matrix::binary` here, one line.
+    if let Some(r) = crate::units::mathjs::binary(op, a, b) {
+        return r; // WP-UNITS
+    }
     if op == Op::Xor {
         return Ok(Val::Bool(a.truthy() != b.truthy()));
     }

@@ -247,6 +247,11 @@ pub fn call_builtin(name: &str, args: &[Val], scope: &Scope) -> Option<EvalResul
     if b.max_args > 0 && args.len() > b.max_args {
         return Some(Err(EvalError::TooManyArguments(name.to_string())));
     }
+    // WP-UNITS: `unitSafe`, trig takes an angle unit in the calculator's mode, anything else throws
+    let args = &*match crate::units::mathjs::unit_safe(name, args, scope.angle_mode) {
+        Ok(a) => a,
+        Err(e) => return Some(Err(e)),
+    };
     if args.iter().any(|a| matches!(a, Val::Str(_))) {
         // a unit or string inside a scalar function: blank, as `unitSafe` throws
         return Some(Err(EvalError::Unsupported(format!("text in {name}"))));

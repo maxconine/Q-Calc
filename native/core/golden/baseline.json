@@ -7,15 +7,18 @@
   "engine.scientific": 4427,
   "engine.simplify": 149,
   "engine.typstInput": 3,
+  "engine.units": 1165,
   "eval.arithmetic": 6909,
   "eval.blank": 1317,
   "eval.calculus": 45,
-  "eval.functions": 3643,
+  "eval.functions": 4002,
   "eval.latex": 63,
   "eval.matrix": 261,
-  "eval.measure": 1742,
-  "eval.sheet": 3836,
+  "eval.measure": 1781,
+  "eval.sheet": 4086,
   "eval.solve": 4,
   "eval.sums": 44,
-  "eval.units": 6
+  "eval.units": 8979,
+  "lib.draft": 391,
+  "lib.unitSpans": 23
 }

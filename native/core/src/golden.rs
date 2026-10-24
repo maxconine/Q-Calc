@@ -246,6 +246,13 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
         ("engine/scientific", "evalScientific") => crate::scientific::functions::golden_eval(args),
         ("engine/angles", "angleExponent") => json!(crate::angles::angle_exponent(&s(0))),
         ("engine/dots", "joinDots") => json!(crate::dots::join_dots(&s(0))),
+        // ---- WP-UNITS: engine/units, lib/unitSpans, lib/draft (lib/missingUnit takes a test's closure) ----
+        ("engine/units" | "lib/unitSpans" | "lib/draft", _) => {
+            match crate::units::golden::dispatch(module, name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
@@ -339,7 +346,7 @@ mod tests {
         };
         assert_eq!(a, json!("0.1"));
         assert!(matches!(
-            dispatch("engine/units", "tryConvert", &[json!("5 m")]),
+            dispatch("engine/notAModule", "notAFunction", &[json!("5 m")]),
             Outcome::Unported
         ));
         assert!(matches!(
