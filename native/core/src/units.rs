@@ -2516,78 +2516,6 @@ pub fn si_value(
 }
 
 #[cfg(test)]
-mod debug_probe {
-    #[test]
-    fn probe_fns() {
-        let Ok(path) = std::env::var("PROBE_FNS") else {
-            return;
-        };
-        let text = std::fs::read_to_string(path).unwrap_or_default();
-        for line in text.lines() {
-            let mut parts = line.splitn(3, '\t');
-            let (Some(m), Some(name), Some(args)) = (parts.next(), parts.next(), parts.next())
-            else {
-                continue;
-            };
-            let args: Vec<serde_json::Value> = serde_json::from_str(args).unwrap_or_default();
-            let out = super::golden::dispatch(m, name, &args).unwrap_or(serde_json::Value::Null);
-            println!(
-                "{}",
-                serde_json::json!({ "mod": m, "name": name, "args": args, "out": out })
-            );
-        }
-    }
-
-    #[test]
-    fn probe() {
-        let Ok(path) = std::env::var("PROBE_FILE") else {
-            return;
-        };
-        let text = std::fs::read_to_string(path).unwrap_or_default();
-        let show = |v: Option<crate::types::Value>| match v {
-            None => "None".to_string(),
-            Some(v) => {
-                let m = v.meas.unwrap_or_default();
-                let f = |x: Option<f64>| x.map_or("-".into(), crate::jsnum::to_string);
-                format!(
-                    "{} {} {} {} {} {} {}",
-                    crate::jsnum::to_string(v.n),
-                    v.unit.unwrap_or_default(),
-                    v.unit_id.unwrap_or_default(),
-                    v.text.unwrap_or_default(),
-                    f(m.sig.map(f64::from)),
-                    f(m.dp.map(f64::from)),
-                    f(m.unc)
-                )
-            }
-        };
-        for line in text.lines() {
-            let (line, opts) = line.split_once('\t').unwrap_or((line, "{}"));
-            let o: crate::types::EvaluateOptions = serde_json::from_str(opts).unwrap_or_default();
-            let mut r = crate::evaluate_line(line, &o);
-            if line.contains(" || ") {
-                let lines: Vec<String> = line.split(" || ").map(str::to_string).collect();
-                let all = crate::evaluate_sheet(&lines, &o);
-                r.display = all
-                    .iter()
-                    .map(|x| format!("{}[{}]", x.display, x.quantity.clone().unwrap_or_default()))
-                    .collect::<Vec<_>>()
-                    .join(" ; ");
-                r.quantity = None;
-            }
-            let v = super::try_convert_opt(line, &o.default_units, &o.variables, false, None);
-            println!(
-                "{} => {} q={} | {}",
-                serde_json::to_string(line).unwrap_or_default(),
-                serde_json::to_string(&r.display).unwrap_or_default(),
-                r.quantity.unwrap_or_default(),
-                show(v)
-            );
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -2600,7 +2528,7 @@ mod tests {
     #[test]
     fn halfway_shortest_digits_take_the_even_one_as_js_does() {
         // 1024 pt^0.5 * 100 ha^3 lands exactly between two 17-digit spellings
-        assert_eq!(jsnum::to_string(2227468278904209.25), "2227468278904209.2");
+        assert_eq!(jsnum::to_string(2_227_468_278_904_209.0 + 0.25), "2227468278904209.2");
         assert_eq!(jsnum::to_string(0.1), "0.1");
     }
 
