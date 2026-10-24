@@ -126,7 +126,9 @@ pub fn unit_setting_groups() -> Vec<UnitSettingGroupInfo> {
 
 /// `sanitizeDefaultUnits`: only Settings dimensions, each with a unit of that dimension.
 #[uniffi::export]
-pub fn sanitize_default_units(units: HashMap<String, String>) -> HashMap<String, String> {
+pub fn sanitize_default_units(
+    units: std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
     qcalc_core::units::sanitize_default_units(&units.into_iter().collect())
         .into_iter()
         .collect()
@@ -140,7 +142,7 @@ mod tests {
     fn unit_settings_come_from_the_core() {
         let groups = unit_setting_groups();
         assert_eq!(groups[0].items[0].units[0].id, "in");
-        let kept = sanitize_default_units(HashMap::from([
+        let kept = sanitize_default_units(std::collections::HashMap::from([
             ("length".to_string(), "ft".to_string()),
             ("mass".to_string(), "ft".to_string()),
         ]));
