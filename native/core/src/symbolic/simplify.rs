@@ -1,5 +1,5 @@
 //! mathjs `simplify` (`function/algebra/simplify.js`, `simplify/util.js`, `simplify/wildcards.js`) and
-//! `simplifyCore`; `simplifyConstant` is in [`super::constant`]... (see `constant.rs`).
+//! `simplifyCore`; `simplifyConstant` is in [`super::constant`].
 //!
 //! The rule engine is ported whole, and so is mathjs's default rule list in its order, so any input simplifies
 //! the way mathjs simplifies it. The parts that make results depend on more than the rules:
@@ -367,7 +367,11 @@ const DEFAULT_RULES: &[Spec] = &[
     rule("n/n1^n2", "n*n1^-n2"),
     rule("n/n1", "n*n1^-1"),
     assume("(n1*n2)^n3", "n1^n3 * n2^n3", &[("multiply", C, true)]),
-    assume("(n1*n2)^(-1)", "n2^(-1) * n1^(-1)", &[("multiply", C, false)]),
+    assume(
+        "(n1*n2)^(-1)",
+        "n2^(-1) * n1^(-1)",
+        &[("multiply", C, false)],
+    ),
     assume("(n ^ n1) ^ n2", "n ^ (n1 * n2)", &[("divide", T, true)]),
     rule(" vd   * ( vd   * n1 + n2)", "vd^2       * n1 +  vd   * n2"),
     assume(
@@ -495,7 +499,10 @@ pub fn build_rules(specs: &[Spec]) -> Vec<Rule> {
                     // flatten + unflattenr on `makeNode([l, p])` also rewrites, in place, every subtree of `l`
                     // that becomes one of its arguments; `l` keeps those rewrites
                     l = rewrite_frontier(&l, &ctx);
-                    let el = unflatten_r(&flatten(&make_node(&l, vec![l.clone(), p.clone()]), &ctx), &ctx);
+                    let el = unflatten_r(
+                        &flatten(&make_node(&l, vec![l.clone(), p.clone()]), &ctx),
+                        &ctx,
+                    );
                     let er = make_node(&l, vec![r.clone(), p]);
                     if let Some(lp) = left {
                         let nc1 = (
@@ -757,38 +764,38 @@ fn js_name(n: &Node) -> Option<&str> {
 /// `_ruleMatch(rule, node, context, isSplit)`.
 fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec<Match>, SymError> {
     let mut res: Vec<Match> = vec![Vec::new()];
-    match (rule, node) {
-        (Node::Operator { op: ro, args: ra, .. }, Node::Operator { op: no, args: na, .. })
-        | (
-            Node::Function { args: ra, .. },
-            Node::Function { args: na, .. },
-        ) if matches!(
-            (rule, node),
-            (Node::Operator { .. }, Node::Operator { .. }) | (Node::Function { .. }, Node::Function { .. })
-        ) =>
-        {
-            let _ = (ro, no);
-            match (rule, node) {
-                (Node::Operator { op: a, .. }, Node::Operator { op: b, .. }) if a != b => {
-                    return Ok(Vec::new());
-                }
-                (Node::Function { .. }, Node::Function { .. })
-                    if function_name(rule) != function_name(node) =>
-                {
-                    return Ok(Vec::new());
-                }
-                _ => {}
+    let pair = match (rule, node) {
+        (
+            Node::Operator {
+                op: a, args: ra, ..
+            },
+            Node::Operator {
+                op: b, args: na, ..
+            },
+        ) => {
+            if a != b {
+                return Ok(Vec::new());
             }
+            Some((ra, na))
+        }
+        (Node::Function { args: ra, .. }, Node::Function { args: na, .. }) => {
+            if function_name(rule) != function_name(node) {
+                return Ok(Vec::new());
+            }
+            Some((ra, na))
+        }
+        _ => None,
+    };
+    match (rule, node) {
+        _ if pair.is_some() => {
+            let (ra, na) = pair.expect("checked");
             if (na.len() == 1 && ra.len() == 1)
                 || (!is_associative(node, ctx) && na.len() == ra.len())
                 || is_split
             {
                 let mut child_matches = Vec::new();
-                for i in 0..ra.len() {
-                    let Some(nchild) = na.get(i) else {
-                        break;
-                    };
-                    let m = rule_match(&ra[i], nchild, ctx, false)?;
+                for (rchild, nchild) in ra.iter().zip(na.iter()) {
+                    let m = rule_match(rchild, nchild, ctx, false)?;
                     if m.is_empty() {
                         break;
                     }
@@ -925,7 +932,9 @@ fn apply_rule(node: &Node, rule: &PatternRule, ctx: &Ctx) -> Result<(Node, bool)
         _ => node.clone(),
     };
     let mut repl = &rule.r;
-    let mut matches = rule_match(&rule.l, &res, &merged, false)?.into_iter().next();
+    let mut matches = rule_match(&rule.l, &res, &merged, false)?
+        .into_iter()
+        .next();
     if matches.is_none()
         && let Some((el, er)) = &rule.expanded
     {
@@ -990,7 +999,11 @@ pub fn simplify_text(text: &str) -> Result<Node, SymError> {
 }
 
 /// `math.simplify(expr, rules, {}, options)`.
-pub fn simplify_with(expr: &Node, rules: &[Rule], options: &SimplifyOptions) -> Result<Node, SymError> {
+pub fn simplify_with(
+    expr: &Node,
+    rules: &[Rule],
+    options: &SimplifyOptions,
+) -> Result<Node, SymError> {
     let ctx = Ctx::default();
     let mut res = remove_parens(&resolve(expr));
     let mut visited = HashSet::new();
@@ -1061,7 +1074,13 @@ pub fn operator_for(name: &str) -> Option<Op> {
 }
 
 fn is_always_boolean(n: &Node) -> bool {
-    matches!(n, Node::Operator { op: Op::And | Op::Not | Op::Or, .. })
+    matches!(
+        n,
+        Node::Operator {
+            op: Op::And | Op::Not | Op::Or,
+            ..
+        }
+    )
 }
 
 fn truthy(c: &Constant) -> bool {
@@ -1087,10 +1106,7 @@ pub fn simplify_core(node: &Node) -> Node {
         {
             return simplify_core(&args[0]);
         }
-        let kids = match node {
-            Node::Function { args, .. } => args.iter().collect::<Vec<_>>(),
-            other => super::children(other),
-        };
+        let kids = super::children(node);
         if kids.len() == 1 {
             return simplify_core(kids[0]);
         }
@@ -1122,10 +1138,7 @@ pub fn simplify_core(node: &Node) -> Node {
         }
     }
     let Node::Operator {
-        op,
-        args,
-        implicit,
-        ..
+        op, args, implicit, ..
     } = &node
     else {
         return match &node {

@@ -19,6 +19,8 @@ pub mod precise;
 pub mod scientific;
 pub mod simplify;
 pub mod stubs;
+// WP-SYMBOLIC
+pub mod symbolic;
 pub mod syntax;
 pub mod types;
 pub mod typst_input;

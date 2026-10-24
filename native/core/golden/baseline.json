@@ -15,5 +15,10 @@
   "eval.sheet": 3779,
   "eval.solve": 4,
   "eval.sums": 44,
-  "eval.units": 6
+  "eval.units": 6,
+  "symbolic.derivative": 104,
+  "symbolic.parse": 1677,
+  "symbolic.rationalize": 35,
+  "symbolic.simplify": 292,
+  "symbolic.toString": 275
 }

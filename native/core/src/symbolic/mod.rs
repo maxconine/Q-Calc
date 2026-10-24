@@ -17,11 +17,12 @@
 //! use qcalc_core::symbolic::{self, PrintOptions};
 //! let n = symbolic::parse("2x + 3x").unwrap();
 //! let s = symbolic::simplify(&n).unwrap();
-//! assert_eq!(symbolic::to_string(&s, &PrintOptions::default()), "5 x");
+//! assert_eq!(symbolic::to_string(&s, &PrintOptions::default()), "5 * x");
 //! let d = symbolic::derivative(&symbolic::parse("x^2").unwrap(), "x", true).unwrap();
 //! assert_eq!(symbolic::to_string(&d, &PrintOptions::default()), "2 * x");
 //! ```
 
+pub mod constant;
 pub mod derivative;
 pub mod fraction;
 pub mod json;
@@ -30,10 +31,12 @@ pub mod rationalize;
 pub mod simplify;
 
 pub use crate::syntax::{Constant, Node, Op};
+pub use constant::simplify_constant;
 pub use derivative::derivative;
+pub use derivative::derivative_text;
 pub use print::{Implicit, Parenthesis, PrintOptions, format_number, to_string};
 pub use rationalize::rationalize;
-pub use simplify::{SimplifyOptions, simplify, simplify_core, simplify_with};
+pub use simplify::{SimplifyOptions, simplify, simplify_core, simplify_text, simplify_with};
 
 /// A symbolic operation failed, with mathjs's message where the TS would have thrown.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -264,7 +267,9 @@ pub fn children(n: &Node) -> Vec<&Node> {
             v
         }
         Node::FunctionAssignment { body, .. } => vec![body],
-        Node::Accessor { object, index, .. } => std::iter::once(object.as_ref()).chain(index).collect(),
+        Node::Accessor { object, index, .. } => {
+            std::iter::once(object.as_ref()).chain(index).collect()
+        }
         Node::Block(items) => items.iter().map(|(n, _)| n).collect(),
         Node::Constant(_) | Node::Symbol(_) => Vec::new(),
     }

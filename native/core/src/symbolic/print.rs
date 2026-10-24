@@ -80,8 +80,115 @@ pub fn to_string(n: &Node, o: &PrintOptions) -> String {
             let a: Vec<String> = items.iter().map(|x| to_string(x, o)).collect();
             format!("[{}]", a.join(", "))
         }
-        // nodes the symbolic layer never prints; a bracketed rendering
+        Node::Block(items) => items
+            .iter()
+            .map(|(n, visible)| format!("{}{}", to_string(n, o), if *visible { "" } else { ";" }))
+            .collect::<Vec<_>>()
+            .join("\n"),
+        Node::Range { start, end, step } => {
+            let p = o.parenthesis.unwrap_or_default();
+            let prec = precedence(n, p, o.implicit, None);
+            let needs = |x: &Node| {
+                p == Parenthesis::All
+                    || precedence(x, p, o.implicit, None).is_some_and(|q| q <= prec.unwrap_or(0))
+            };
+            let part = |x: &Node| {
+                let s = to_string(x, o);
+                if needs(x) { format!("({s})") } else { s }
+            };
+            let mut s = part(start);
+            if let Some(st) = step {
+                s.push(':');
+                s.push_str(&part(st));
+            }
+            s.push(':');
+            s.push_str(&part(end));
+            s
+        }
+        Node::Conditional {
+            condition,
+            then,
+            otherwise,
+        } => {
+            let p = o.parenthesis.unwrap_or_default();
+            let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
+            let part = |x: &Node| {
+                let s = to_string(x, o);
+                let q = precedence(x, p, o.implicit, None);
+                if p == Parenthesis::All
+                    || matches!(x, Node::Operator { .. })
+                    || q.is_some_and(|q| q <= prec)
+                {
+                    format!("({s})")
+                } else {
+                    s
+                }
+            };
+            format!("{} ? {} : {}", part(condition), part(then), part(otherwise))
+        }
+        Node::Relational { ops, params } => {
+            let p = o.parenthesis.unwrap_or_default();
+            let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
+            let parts: Vec<String> = params
+                .iter()
+                .map(|x| {
+                    let q = precedence(x, p, o.implicit, None);
+                    if p == Parenthesis::All || q.is_some_and(|q| q <= prec) {
+                        format!("({})", to_string(x, o))
+                    } else {
+                        to_string(x, o)
+                    }
+                })
+                .collect();
+            let mut s = parts[0].clone();
+            for (i, op) in ops.iter().enumerate() {
+                s.push_str(&format!(" {} {}", op.symbol(), parts[i + 1]));
+            }
+            s
+        }
+        Node::Assignment { target, value, .. } => {
+            let p = o.parenthesis.unwrap_or_default();
+            let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
+            let mut v = to_string(value, o);
+            if p == Parenthesis::All
+                || precedence(value, p, o.implicit, None).is_some_and(|q| q <= prec)
+            {
+                v = format!("({v})");
+            }
+            format!("{} = {v}", to_string(target, o))
+        }
+        Node::FunctionAssignment { name, params, body } => {
+            let p = o.parenthesis.unwrap_or_default();
+            let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
+            let mut v = to_string(body, o);
+            if p == Parenthesis::All
+                || precedence(body, p, o.implicit, None).is_some_and(|q| q <= prec)
+            {
+                v = format!("({v})");
+            }
+            format!("{name}({}) = {v}", params.join(", "))
+        }
+        // accessors print through the debug rendering (the symbolic layer never meets one)
         other => other.to_string(),
+    }
+}
+
+/// mathjs's `node.type` name.
+pub fn type_name(n: &Node) -> &'static str {
+    match n {
+        Node::Constant(_) => "ConstantNode",
+        Node::Symbol(_) => "SymbolNode",
+        Node::Operator { .. } => "OperatorNode",
+        Node::Function { .. } => "FunctionNode",
+        Node::Parenthesis(_) => "ParenthesisNode",
+        Node::Array(_) => "ArrayNode",
+        Node::Range { .. } => "RangeNode",
+        Node::Conditional { .. } => "ConditionalNode",
+        Node::Relational { .. } => "RelationalNode",
+        Node::Assignment { .. } => "AssignmentNode",
+        Node::FunctionAssignment { .. } => "FunctionAssignmentNode",
+        Node::Accessor { .. } => "AccessorNode",
+        Node::Block(_) => "BlockNode",
     }
 }
 
@@ -129,7 +236,10 @@ pub fn format_number(value: f64) -> String {
     let text = if !(-3..5).contains(&exponent) {
         // toExponential(value) with no precision
         let first = coefficients[0];
-        let rest: String = coefficients[1..].iter().map(|d| char::from(b'0' + d)).collect();
+        let rest: String = coefficients[1..]
+            .iter()
+            .map(|d| char::from(b'0' + d))
+            .collect();
         let dot = if rest.is_empty() {
             String::new()
         } else {
@@ -198,7 +308,10 @@ fn split_number(value: f64) -> (&'static str, Vec<u8>, i64) {
         None => ("", text.clone()),
     };
     let (digits, exp_part) = match body.find('e') {
-        Some(i) => (body[..i].to_string(), body[i + 1..].parse::<i64>().unwrap_or(0)),
+        Some(i) => (
+            body[..i].to_string(),
+            body[i + 1..].parse::<i64>().unwrap_or(0),
+        ),
         None => (body.clone(), 0),
     };
     let mut exponent = exp_part;
@@ -257,7 +370,9 @@ fn group(id: &str) -> Option<usize> {
         | "OperatorNode:smallerEq"
         | "OperatorNode:largerEq"
         | "RelationalNode" => 8,
-        "OperatorNode:leftShift" | "OperatorNode:rightArithShift" | "OperatorNode:rightLogShift" => 9,
+        "OperatorNode:leftShift"
+        | "OperatorNode:rightArithShift"
+        | "OperatorNode:rightLogShift" => 9,
         "OperatorNode:to" => 10,
         "RangeNode" => 11,
         "OperatorNode:add" | "OperatorNode:subtract" => 12,
@@ -359,7 +474,11 @@ fn precedence(
     implicit: Option<Implicit>,
     parent: Option<&Node>,
 ) -> Option<usize> {
-    let node = if p != Parenthesis::Keep { content(n) } else { n };
+    let node = if p != Parenthesis::Keep {
+        content(n)
+    } else {
+        n
+    };
     let id = identifier(node);
     let mut prec = group(&id);
     if let Node::Operator {
@@ -391,7 +510,11 @@ fn precedence(
 
 /// `getAssociativity(node, parenthesis)`.
 fn associativity(n: &Node, p: Parenthesis) -> Option<Assoc> {
-    let node = if p != Parenthesis::Keep { content(n) } else { n };
+    let node = if p != Parenthesis::Keep {
+        content(n)
+    } else {
+        n
+    };
     let index = precedence(node, p, None, None)?;
     let id = identifier(node);
     if index == 14 {
@@ -457,14 +580,24 @@ fn calculate_parens(root: &Node, p: Parenthesis, implicit: Implicit, a: &[Node])
             let assoc_lhs = is_associative_with(root, &a[0], p);
             let lhs = match lhs_prec {
                 None => false,
-                Some(l) if Some(l) == prec && assoc == Some(Assoc::Right) && assoc_lhs != Some(true) => true,
+                Some(l)
+                    if Some(l) == prec
+                        && assoc == Some(Assoc::Right)
+                        && assoc_lhs != Some(true) =>
+                {
+                    true
+                }
                 Some(l) => prec.is_some_and(|r| l < r),
             };
             let rhs_prec = precedence(&a[1], p, Some(implicit), Some(root));
             let assoc_rhs = is_associative_with(root, &a[1], p);
             let rhs = match rhs_prec {
                 None => false,
-                Some(r) if Some(r) == prec && assoc == Some(Assoc::Left) && assoc_rhs != Some(true) => true,
+                Some(r)
+                    if Some(r) == prec && assoc == Some(Assoc::Left) && assoc_rhs != Some(true) =>
+                {
+                    true
+                }
                 Some(r) => prec.is_some_and(|x| r < x),
             };
             vec![lhs, rhs]
@@ -478,7 +611,13 @@ fn calculate_parens(root: &Node, p: Parenthesis, implicit: Implicit, a: &[Node])
                     let arg_assoc = associativity(x, p);
                     match arg_prec {
                         None => false,
-                        Some(ap) if Some(ap) == prec && assoc == arg_assoc && assoc_arg != Some(true) => true,
+                        Some(ap)
+                            if Some(ap) == prec
+                                && assoc == arg_assoc
+                                && assoc_arg != Some(true) =>
+                        {
+                            true
+                        }
                         Some(ap) => prec.is_some_and(|r| ap < r),
                     }
                 })
@@ -519,7 +658,10 @@ fn operator_text(n: &Node, o: &PrintOptions) -> String {
     let add_or_mul = id == "OperatorNode:add" || id == "OperatorNode:multiply";
     if a.is_empty() || (a.len() > 2 && !add_or_mul) {
         // fallback to a function call, arguments in the default format
-        let parts: Vec<String> = a.iter().map(|x| to_string(x, &PrintOptions::default())).collect();
+        let parts: Vec<String> = a
+            .iter()
+            .map(|x| to_string(x, &PrintOptions::default()))
+            .collect();
         return format!("{}({})", op.name(), parts.join(", "));
     }
     let parens = calculate_parens(n, p, implicit, a);

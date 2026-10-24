@@ -146,28 +146,21 @@ impl Fraction {
     }
 
     pub fn div(&self, o: &Fraction) -> Result<Fraction, FractionError> {
-        Fraction::new(
-            BigInt::from(self.s * o.s) * &self.n * &o.d,
-            &self.d * &o.n,
-        )
+        Fraction::new(BigInt::from(self.s * o.s) * &self.n * &o.d, &self.d * &o.n)
     }
 
     /// `pow(b)`: exact when the result is rational, `Ok(None)` when it isn't (a negative base under a
     /// fractional exponent, or a root that doesn't come out whole). Exponents too large to compute are an
     /// error here (the TS would run out of memory).
     pub fn pow(&self, e: &Fraction) -> Result<Option<Fraction>, FractionError> {
-        let exp = e
-            .n
-            .to_u32()
-            .filter(|x| *x <= 100_000)
-            .ok_or(FractionError("exponent too large"))?;
+        let exp =
+            e.n.to_u32()
+                .filter(|x| *x <= 100_000)
+                .ok_or(FractionError("exponent too large"))?;
         if e.d.is_one() {
             if e.s < 0 {
-                return Fraction::new(
-                    (BigInt::from(self.s) * &self.d).pow(exp),
-                    self.n.pow(exp),
-                )
-                .map(Some);
+                return Fraction::new((BigInt::from(self.s) * &self.d).pow(exp), self.n.pow(exp))
+                    .map(Some);
             }
             return Fraction::new(self.signed_n().pow(exp), self.d.pow(exp)).map(Some);
         }
@@ -235,7 +228,7 @@ fn factorize(n: &BigInt) -> Vec<(BigInt, u64)> {
         return out;
     }
     let mut n = n.clone();
-    let mut add = |p: &BigInt, out: &mut Vec<(BigInt, u64)>| {
+    let add = |p: &BigInt, out: &mut Vec<(BigInt, u64)>| {
         if let Some(e) = out.iter_mut().find(|(q, _)| q == p) {
             e.1 += 1;
         } else {
@@ -276,7 +269,10 @@ mod tests {
         let f = Fraction::from_f64(0.1).unwrap();
         assert_eq!((f.n.to_i64(), f.d.to_i64()), (Some(1), Some(10)));
         let pi = Fraction::from_f64(std::f64::consts::PI).unwrap();
-        assert_eq!((pi.n.to_i64(), pi.d.to_i64()), (Some(11985110), Some(3814979)));
+        assert_eq!(
+            (pi.n.to_i64(), pi.d.to_i64()),
+            (Some(11985110), Some(3814979))
+        );
         let ln2 = Fraction::from_f64(std::f64::consts::LN_2).unwrap();
         assert_ne!(ln2.value(), std::f64::consts::LN_2);
     }
@@ -288,9 +284,6 @@ mod tests {
         assert_eq!(four.pow(&half).unwrap(), Some(Fraction::from_int(2)));
         assert_eq!(Fraction::from_int(2).pow(&half).unwrap(), None);
         let inv = Fraction::from_int(-1);
-        assert_eq!(
-            four.pow(&inv).unwrap().map(|f| f.value()),
-            Some(0.25)
-        );
+        assert_eq!(four.pow(&inv).unwrap().map(|f| f.value()), Some(0.25));
     }
 }
