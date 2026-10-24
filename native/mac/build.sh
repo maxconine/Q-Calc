@@ -1,0 +1,190 @@
+#!/bin/zsh
+# Builds the native Q Calc (no web view for the calculator): the Rust core as a static library per architecture,
+# the UniFFI Swift bindings as their own module (QCalcFFI), the app for arm64 and x86_64, lipo'd into one
+# universal binary, and the bundle with Sparkle, the sheet data and (if built) the games bundle.
+#
+#   zsh native/mac/build.sh              # dev build: native/mac/dist/Q Calc Dev.app (com.maxconine.qcalc.native-dev)
+#   zsh native/mac/build.sh --run        # …and launch it (quitting an earlier dev build first, never the installed app)
+#   zsh native/mac/build.sh --arch=arm64 # one architecture only (faster while iterating)
+#   zsh native/mac/build.sh --skip-rust  # reuse native/build's libraries and bindings
+#   zsh native/mac/build.sh --release    # Q Calc's own bundle id, name, hotkey and Sparkle key (not for side-by-side use)
+#
+# Inputs it finds by itself, or from the environment:
+#   QCALC_SPARKLE_DIR  a Sparkle-2.10.0 release folder (default macos/vendor/Sparkle-2.10.0, fetched like macos/build.sh)
+#   QCALC_WEB_DIST     the web build with games.html (default dist/, from `npm run build`); without it games are off
+set -euo pipefail
+export COPYFILE_DISABLE=1
+
+MAC="$(cd "$(dirname "$0")" && pwd)"
+NATIVE="$(cd "$MAC/.." && pwd)"
+ROOT="$(cd "$NATIVE/.." && pwd)"
+OUT="$NATIVE/build"
+MIN_MACOS="13.5"
+SPARKLE_VERSION="2.10.0"
+SPARKLE_SHA256="c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c"
+SPARKLE="${QCALC_SPARKLE_DIR:-$ROOT/macos/vendor/Sparkle-${SPARKLE_VERSION}}"
+WEB_DIST="${QCALC_WEB_DIST:-$ROOT/dist}"
+SDK="$(xcrun --sdk macosx --show-sdk-path)"
+RUN=0
+SKIP_RUST=0
+RELEASE=0
+ARCHS=(arm64 x86_64)
+
+for arg in "$@"; do
+  case "$arg" in
+    --run) RUN=1 ;;
+    --skip-rust) SKIP_RUST=1 ;;
+    --release) RELEASE=1 ;;
+    --arch=*) ARCHS=("${arg#--arch=}") ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    *) echo "Unknown option: $arg" >&2; exit 1 ;;
+  esac
+done
+
+if (( RELEASE )); then
+  APP_NAME="Q Calc"
+else
+  APP_NAME="Q Calc Dev"
+fi
+DIST_APP="$MAC/dist/$APP_NAME.app"
+APP_VERSION="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$ROOT/package.json" | head -1)"
+
+# the shared AppKit/SwiftUI code the web-view app already has, compiled unchanged
+SHARED=(
+  AppSettings Keybinds UnitlessCopy LoginItem Updates SheetPlace MessageInbox Messages ECBRates
+  UnitSettings SettingsWindow PeriodicWindow IdentityWindow OverlayHealth
+)
+
+fetch_sparkle() {
+  [[ -d "$SPARKLE/Sparkle.framework" ]] && return
+  mkdir -p "$(dirname "$SPARKLE")"
+  local archive="$SPARKLE.tar.xz"
+  echo "Downloading Sparkle ${SPARKLE_VERSION}…"
+  curl -L --fail -o "$archive" \
+    "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+  [[ "$(shasum -a 256 "$archive" | awk '{print $1}')" == "$SPARKLE_SHA256" ]] || { echo "Sparkle checksum mismatch" >&2; exit 1; }
+  mkdir -p "$SPARKLE"
+  tar -xJf "$archive" -C "$SPARKLE"
+}
+
+# 1. the engine
+if (( ! SKIP_RUST )); then
+  zsh "$NATIVE/scripts/build-mac.sh" --no-test
+fi
+[[ -f "$OUT/swift/qcalc_ffi.swift" ]] || { echo "No Swift bindings in $OUT/swift; run without --skip-rust" >&2; exit 1; }
+fetch_sparkle
+
+STAGE="$(mktemp -d /tmp/qcalc-native.XXXXXX)"
+trap 'rm -rf "$STAGE"' EXIT
+APP="$STAGE/$APP_NAME.app"
+BIN="$APP/Contents/MacOS/QCalc"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
+
+SOURCES=("${(@f)$(find "$MAC/Sources" -name '*.swift' | sort)}")
+for f in "${SHARED[@]}"; do SOURCES+=("$ROOT/macos/$f.swift"); done
+
+THIN=()
+for arch in "${ARCHS[@]}"; do
+  echo "Building Q Calc for $arch…"
+  MOD="$OUT/mac/$arch"
+  mkdir -p "$MOD"
+  # 2. the bindings as their own module, so the app names them QCalcFFI.evaluate(…) and swapping to QCalcCore
+  #    (an import and one engine file) touches nothing else
+  xcrun swiftc -parse-as-library -O -whole-module-optimization \
+    -target "${arch}-apple-macos${MIN_MACOS}" -sdk "$SDK" \
+    -module-name QCalcFFI -emit-module -emit-module-path "$MOD/QCalcFFI.swiftmodule" \
+    -emit-library -static -o "$MOD/libQCalcFFI.a" \
+    -module-cache-path "$STAGE/modules-$arch" \
+    -Xcc "-fmodule-map-file=$OUT/swift/qcalc_ffiFFI.modulemap" -I "$OUT/swift" \
+    -swift-version 5 -suppress-warnings \
+    "$OUT/swift/qcalc_ffi.swift"
+  # 3. the app
+  xcrun swiftc -parse-as-library -O \
+    -target "${arch}-apple-macos${MIN_MACOS}" -sdk "$SDK" \
+    -swift-version 5 \
+    -module-name QCalcApp \
+    -module-cache-path "$STAGE/modules-$arch" \
+    -I "$MOD" -Xcc "-fmodule-map-file=$OUT/swift/qcalc_ffiFFI.modulemap" -I "$OUT/swift" \
+    -F "$SPARKLE" \
+    -L "$MOD" -lQCalcFFI -L "$OUT/$arch" -lqcalc_ffi \
+    -framework SwiftUI -framework AppKit -framework WebKit -framework Carbon -framework Sparkle \
+    -framework ServiceManagement -framework UserNotifications \
+    -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+    -Xlinker -dead_strip \
+    "${SOURCES[@]}" \
+    -o "$STAGE/QCalc-$arch"
+  THIN+=("$STAGE/QCalc-$arch")
+done
+lipo -create "${THIN[@]}" -output "$BIN"
+strip -x "$BIN"
+chmod +x "$BIN"
+
+# 4. the bundle
+PLIST="$APP/Contents/Info.plist"
+cp "$MAC/Info.plist" "$PLIST"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP_VERSION" "$PLIST"
+/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $APP_VERSION" "$PLIST"
+if (( RELEASE )); then
+  # the installed app's identity, feed and key: this build replaces macos/'s, so never run it beside one
+  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier com.maxconine.qcalc" "$PLIST"
+  /usr/libexec/PlistBuddy -c "Set :CFBundleName Q Calc" -c "Set :CFBundleDisplayName Q Calc" "$PLIST"
+  /usr/libexec/PlistBuddy -c "Delete :QCDevBuild" -c "Set :QCSupportFolder Q Calc" -c "Delete :QCDefaultHotKey" "$PLIST"
+  key="$(/usr/libexec/PlistBuddy -c "Print :SUPublicEDKey" "$ROOT/macos/Info.plist")"
+  /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $key" "$PLIST"
+  BUNDLE_ID=com.maxconine.qcalc
+else
+  # a dev build has the appcast but no key, so Updates.start() never starts Sparkle
+  BUNDLE_ID=com.maxconine.qcalc.native-dev
+fi
+
+ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
+rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
+cp "$MAC/Resources/sheets.json" "$APP/Contents/Resources/"
+
+icon_src="$ROOT/public/Qcalc_favi.png"
+if [[ -f "$icon_src" ]]; then
+  cp "$icon_src" "$APP/Contents/Resources/StatusIcon.png"
+  iconset="$STAGE/AppIcon.iconset"
+  mkdir -p "$iconset"
+  sips -s format png -z 1024 1024 "$icon_src" --out "$STAGE/icon.png" >/dev/null
+  for size in 16 32 128 256 512; do
+    sips -z $size $size "$STAGE/icon.png" --out "$iconset/icon_${size}x${size}.png" >/dev/null
+    sips -z $((size * 2)) $((size * 2)) "$STAGE/icon.png" --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+  done
+  iconutil -c icns "$iconset" -o "$APP/Contents/Resources/AppIcon.icns"
+fi
+
+# the games bundle: games.html and the assets it loads, nothing of the old calculator pages
+if [[ -f "$WEB_DIST/games.html" ]]; then
+  mkdir -p "$APP/Contents/Resources/web"
+  cp "$WEB_DIST/games.html" "$APP/Contents/Resources/web/"
+  [[ -d "$WEB_DIST/assets" ]] && ditto "$WEB_DIST/assets" "$APP/Contents/Resources/web/assets"
+  for extra in Qcalc_favi.png favicon.svg; do
+    [[ -f "$WEB_DIST/$extra" ]] && cp "$WEB_DIST/$extra" "$APP/Contents/Resources/web/"
+  done
+  echo "Bundled the games from $WEB_DIST"
+else
+  echo "warning: no $WEB_DIST/games.html (run npm run build); games and the 420/67/69 effects are off in this build" >&2
+fi
+
+# 5. sign, inside out, ad hoc (the release workflow signs for real)
+xattr -cr "$APP"
+sparkle="$APP/Contents/Frameworks/Sparkle.framework"
+codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Autoupdate"
+codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Updater.app"
+codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B"
+codesign --force --sign - --timestamp=none -o runtime "$sparkle"
+codesign --force --sign - --timestamp=none --identifier "$BUNDLE_ID" "$APP"
+codesign --verify --deep --strict "$APP"
+
+if (( RUN )); then
+  # only this build's own process; the installed Q Calc has another bundle id and is never touched
+  pkill -f "$DIST_APP/Contents/MacOS/QCalc" 2>/dev/null || true
+fi
+rm -rf "$DIST_APP"
+mkdir -p "$MAC/dist"
+ditto "$APP" "$DIST_APP"
+echo "Built $DIST_APP ($APP_VERSION, $(lipo -archs "$DIST_APP/Contents/MacOS/QCalc"), $(du -sh "$DIST_APP" | cut -f1))"
+if (( RUN )); then
+  open "$DIST_APP" --args --show
+fi
