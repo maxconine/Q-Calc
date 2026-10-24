@@ -242,6 +242,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
         ("engine/typstInput", "looksLikeTypst") => {
             json!(crate::typst_input::looks_like_typst(&s(0)))
         }
+        // ---- WP-FUNCTIONS: engine/scientific, engine/angles, engine/dots ----
+        ("engine/scientific", "evalScientific") => crate::scientific::functions::golden_eval(args),
+        ("engine/angles", "angleExponent") => json!(crate::angles::angle_exponent(&s(0))),
+        ("engine/dots", "joinDots") => json!(crate::dots::join_dots(&s(0))),
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)

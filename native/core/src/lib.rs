@@ -25,6 +25,11 @@ pub mod typst_input;
 pub mod units;
 pub mod work;
 
+// ---- WP-FUNCTIONS ----
+pub mod angles;
+pub mod dots;
+pub mod letters;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 

@@ -5,6 +5,7 @@
 //! Values are doubles, as in the TS; exact digits come afterwards from `crate::precise`.
 
 pub mod builtins;
+pub mod complex; // WP-FUNCTIONS
 pub mod ops;
 
 use std::collections::BTreeMap;
@@ -50,7 +51,8 @@ impl Val {
                     t.parse().unwrap_or(f64::NAN)
                 }
             }
-            Val::Complex { .. } | Val::Function(_) | Val::Undefined => f64::NAN,
+            Val::Complex { re, im } => complex::to_number(*re, *im), // WP-FUNCTIONS: Number(String(z))
+            Val::Function(_) | Val::Undefined => f64::NAN,
         }
     }
 

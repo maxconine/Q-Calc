@@ -195,7 +195,7 @@ fn sqrt(args: &[Val], scope: &Scope) -> EvalResult {
 
 fn abs(args: &[Val], _: &Scope) -> EvalResult {
     match args.first() {
-        Some(Val::Complex { re, im }) => num(re.hypot(*im)),
+        Some(Val::Complex { re, im }) => num(super::complex::abs(*re, *im)), // WP-FUNCTIONS
         _ => num(arg(args, 0).abs()),
     }
 }

@@ -11,29 +11,12 @@ use crate::types::{AngleMode, DefaultUnits, Meas, SolveInfo, TimeLetters, UserFu
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
-/// `\dot\theta`, `dot(theta)` and `θ̇` all as `thetadot`. PORT: `joinDots`.
-pub fn join_dots(text: &str) -> String {
-    text.to_string()
-}
-
-/// `xy` as `x y` when every letter is defined. PORT: `splitLetters`.
-pub fn split_letters(expr: &str, _known: &dyn Fn(&str) -> bool, _params: &[String]) -> String {
-    expr.to_string()
-}
-
-/// 1 for an angle (an inverse trig answer), 0 for a plain number, None when it can't tell. PORT: `angleExponent`.
-pub fn angle_exponent(_expr: &str) -> Option<i32> {
-    Some(0)
-}
-
-/// Each function call among typed units worked out to its number. PORT: `callsWorkedOut`.
-pub fn calls_worked_out(
-    _expr: &str,
-    _mode: AngleMode,
-    _value: &dyn Fn(&str) -> Option<f64>,
-) -> Option<String> {
-    None
-}
+// ported: `crate::dots`, `crate::letters`, `crate::angles` (the TS exponent is a number; `angle_exponent` here
+// keeps the stub's integer form, which is all `evaluate` compares)
+pub use crate::angles::angle_exponent_int as angle_exponent;
+pub use crate::angles::calls_worked_out;
+pub use crate::dots::join_dots;
+pub use crate::letters::split_letters;
 
 // ---- WP-CHEM (chem.ts) ----
 
