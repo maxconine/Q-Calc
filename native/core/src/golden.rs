@@ -249,6 +249,11 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
                 None => return Outcome::Unported,
             }
         }
+        // ---- WP-PRECISE: engine/precise ----
+        ("engine/precise", _) => match crate::precise::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
