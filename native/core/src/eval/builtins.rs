@@ -142,7 +142,7 @@ pub fn gamma(n: f64) -> f64 {
         let four = three * n;
         let five = four * n;
         return (2.0 * std::f64::consts::PI / n).sqrt()
-            * (n / std::f64::consts::E).powf(n)
+            * jsmath::pow(n / std::f64::consts::E, n) // WP-FUNCTIONS
             * (1.0 + 1.0 / (12.0 * n) + 1.0 / (288.0 * two)
                 - 139.0 / (51840.0 * three)
                 - 571.0 / (2_488_320.0 * four)
@@ -155,7 +155,7 @@ pub fn gamma(n: f64) -> f64 {
         x += p / (n + i as f64);
     }
     let t = n + GAMMA_G + 0.5;
-    (2.0 * std::f64::consts::PI).sqrt() * t.powf(n + 0.5) * jsmath::exp(-t) * x // WP-FUNCTIONS
+    (2.0 * std::f64::consts::PI).sqrt() * jsmath::pow(t, n + 0.5) * jsmath::exp(-t) * x // WP-FUNCTIONS
 }
 
 /// n! for integers, Γ(n+1) for other reals; negative integers are undefined.

@@ -22,6 +22,26 @@ fn ma(a: f64, b: f64, c: f64) -> f64 {
     a.mul_add(b, c)
 }
 
+/// `Math.pow` and `**`: V8's `math::pow` with `--use-std-math-pow` (on by default), which is the C library's
+/// `pow` (Apple's, on a Mac, which Rust's `powf` also calls) plus the cases its optimizing compilers inline:
+/// `x ** 2` is `x * x` and `x ** 0.5` is `sqrt(x + 0)`. ±1 to an infinite power and anything to NaN are NaN.
+pub fn pow(x: f64, y: f64) -> f64 {
+    if y.is_nan() || (y.is_infinite() && (x == 1.0 || x == -1.0)) {
+        return f64::NAN;
+    }
+    if y == 2.0 {
+        return x * x;
+    }
+    if y == 0.5 {
+        return if x.is_infinite() {
+            f64::INFINITY
+        } else {
+            (x + 0.0).sqrt()
+        };
+    }
+    x.powf(y)
+}
+
 fn hi(x: f64) -> i32 {
     (x.to_bits() >> 32) as i32
 }

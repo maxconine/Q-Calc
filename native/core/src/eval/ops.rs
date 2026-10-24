@@ -40,7 +40,7 @@ pub fn js_pow(a: f64, b: f64) -> f64 {
     if b.is_nan() || (a.abs() == 1.0 && b.is_infinite()) {
         return f64::NAN;
     }
-    a.powf(b)
+    crate::scientific::functions::jsmath::pow(a, b) // WP-FUNCTIONS: V8's Math.pow
 }
 
 /// An odd root of a negative is real: `(-8)^(1/3)` is -2 and `(-8)^(2/3)` is 4; an even one stays undefined.
