@@ -77,6 +77,24 @@ fn shortest_digits(x: f64) -> (Vec<u8>, i32) {
         .filter(u8::is_ascii_digit)
         .map(|b| b - b'0')
         .collect();
+    // WP-UNITS: when two shortest candidates are equally close (x is exactly halfway, `…209.25`), JS takes the
+    // even one (`…209.2`) where Rust rounds up (`…209.3`)
+    let k = digits.len();
+    if digits[k - 1] % 2 == 1 {
+        let mut even = digits.clone();
+        even[k - 1] -= 1;
+        // both round-trip only when they are about equally close; the exact expansion says whether it's a tie
+        if format!("0.{}e{}", digits_text(&even), exp + 1)
+            .parse::<f64>()
+            .ok()
+            == Some(x.abs())
+        {
+            let (exact, point) = exact_digits(x);
+            if point == exp + 1 && exact.len() == k + 1 && exact[k] == 5 && exact[..k] == even[..] {
+                return (even, exp + 1);
+            }
+        }
+    }
     (digits, exp + 1)
 }
 
