@@ -163,26 +163,126 @@ pub struct Prefix {
 }
 
 pub const PREFIXES: &[Prefix] = &[
-    Prefix { name: "yocto", names: &["yocto"], symbol: "y", factor: 1e-24 },
-    Prefix { name: "zepto", names: &["zepto"], symbol: "z", factor: 1e-21 },
-    Prefix { name: "atto", names: &["atto"], symbol: "a", factor: 1e-18 },
-    Prefix { name: "femto", names: &["femto"], symbol: "f", factor: 1e-15 },
-    Prefix { name: "pico", names: &["pico"], symbol: "p", factor: 1e-12 },
-    Prefix { name: "nano", names: &["nano"], symbol: "n", factor: 1e-9 },
-    Prefix { name: "micro", names: &["micro"], symbol: "μ", factor: 1e-6 },
-    Prefix { name: "milli", names: &["milli", "m"], symbol: "m", factor: 1e-3 },
-    Prefix { name: "centi", names: &["centi", "c"], symbol: "c", factor: 1e-2 },
-    Prefix { name: "deci", names: &["deci"], symbol: "d", factor: 1e-1 },
-    Prefix { name: "deka", names: &["deka", "deca"], symbol: "da", factor: 1e1 },
-    Prefix { name: "hecto", names: &["hecto"], symbol: "h", factor: 1e2 },
-    Prefix { name: "kilo", names: &["kilo", "k"], symbol: "k", factor: 1e3 },
-    Prefix { name: "mega", names: &["mega"], symbol: "M", factor: 1e6 },
-    Prefix { name: "giga", names: &["giga"], symbol: "G", factor: 1e9 },
-    Prefix { name: "tera", names: &["tera"], symbol: "T", factor: 1e12 },
-    Prefix { name: "peta", names: &["peta"], symbol: "P", factor: 1e15 },
-    Prefix { name: "exa", names: &["exa"], symbol: "E", factor: 1e18 },
-    Prefix { name: "zetta", names: &["zetta"], symbol: "Z", factor: 1e21 },
-    Prefix { name: "yotta", names: &["yotta"], symbol: "Y", factor: 1e24 },
+    Prefix {
+        name: "yocto",
+        names: &["yocto"],
+        symbol: "y",
+        factor: 1e-24,
+    },
+    Prefix {
+        name: "zepto",
+        names: &["zepto"],
+        symbol: "z",
+        factor: 1e-21,
+    },
+    Prefix {
+        name: "atto",
+        names: &["atto"],
+        symbol: "a",
+        factor: 1e-18,
+    },
+    Prefix {
+        name: "femto",
+        names: &["femto"],
+        symbol: "f",
+        factor: 1e-15,
+    },
+    Prefix {
+        name: "pico",
+        names: &["pico"],
+        symbol: "p",
+        factor: 1e-12,
+    },
+    Prefix {
+        name: "nano",
+        names: &["nano"],
+        symbol: "n",
+        factor: 1e-9,
+    },
+    Prefix {
+        name: "micro",
+        names: &["micro"],
+        symbol: "μ",
+        factor: 1e-6,
+    },
+    Prefix {
+        name: "milli",
+        names: &["milli", "m"],
+        symbol: "m",
+        factor: 1e-3,
+    },
+    Prefix {
+        name: "centi",
+        names: &["centi", "c"],
+        symbol: "c",
+        factor: 1e-2,
+    },
+    Prefix {
+        name: "deci",
+        names: &["deci"],
+        symbol: "d",
+        factor: 1e-1,
+    },
+    Prefix {
+        name: "deka",
+        names: &["deka", "deca"],
+        symbol: "da",
+        factor: 1e1,
+    },
+    Prefix {
+        name: "hecto",
+        names: &["hecto"],
+        symbol: "h",
+        factor: 1e2,
+    },
+    Prefix {
+        name: "kilo",
+        names: &["kilo", "k"],
+        symbol: "k",
+        factor: 1e3,
+    },
+    Prefix {
+        name: "mega",
+        names: &["mega"],
+        symbol: "M",
+        factor: 1e6,
+    },
+    Prefix {
+        name: "giga",
+        names: &["giga"],
+        symbol: "G",
+        factor: 1e9,
+    },
+    Prefix {
+        name: "tera",
+        names: &["tera"],
+        symbol: "T",
+        factor: 1e12,
+    },
+    Prefix {
+        name: "peta",
+        names: &["peta"],
+        symbol: "P",
+        factor: 1e15,
+    },
+    Prefix {
+        name: "exa",
+        names: &["exa"],
+        symbol: "E",
+        factor: 1e18,
+    },
+    Prefix {
+        name: "zetta",
+        names: &["zetta"],
+        symbol: "Z",
+        factor: 1e21,
+    },
+    Prefix {
+        name: "yotta",
+        names: &["yotta"],
+        symbol: "Y",
+        factor: 1e24,
+    },
 ];
 
 pub fn prefix_by_name(name: &str) -> Option<&'static Prefix> {
@@ -264,7 +364,11 @@ pub fn prefixed_label(prefix: &Prefix, base: &Unit) -> String {
         return format!("{}{}", prefix.symbol, base.symbol);
     }
     let word = word_names(base).first().map(|w| w.to_string());
-    format!("{}{}", prefix.name, word.unwrap_or_else(|| base.symbol.clone()))
+    format!(
+        "{}{}",
+        prefix.name,
+        word.unwrap_or_else(|| base.symbol.clone())
+    )
 }
 
 /// `prefixedUnit`: a prefixed copy of `base`, with no names of its own.
@@ -398,7 +502,14 @@ const BINARY_PREFIXES: [(&str, &str); 6] = [
     ("Ei", "exbi"),
 ];
 
-fn data(id: String, dim: Dim, symbol: String, to_base: f64, names: Vec<String>, cased: Vec<String>) -> Unit {
+fn data(
+    id: String,
+    dim: Dim,
+    symbol: String,
+    to_base: f64,
+    names: Vec<String>,
+    cased: Vec<String>,
+) -> Unit {
     Unit {
         id,
         dim,
@@ -417,7 +528,11 @@ fn data_units() -> Vec<Unit> {
     let mut out = Vec::new();
     for (p, word, f) in DATA_PREFIXES {
         let id = p.to_lowercase();
-        let byte_id = if id.is_empty() { "byte".to_string() } else { format!("{id}b") };
+        let byte_id = if id.is_empty() {
+            "byte".to_string()
+        } else {
+            format!("{id}b")
+        };
         out.push(data(
             byte_id,
             Dim::Digital,
@@ -430,17 +545,29 @@ fn data_units() -> Vec<Unit> {
         out.push(data(
             format!("{id}bit"),
             Dim::Digital,
-            if p.is_empty() { "bit".into() } else { format!("{p}b") },
+            if p.is_empty() {
+                "bit".into()
+            } else {
+                format!("{p}b")
+            },
             f / 8.0,
             vec![format!("{word}bit"), format!("{word}bits")],
-            if p.is_empty() { vec![] } else { vec![format!("{p}b")] },
+            if p.is_empty() {
+                vec![]
+            } else {
+                vec![format!("{p}b")]
+            },
         ));
         out.push(data(
             format!("{id}bps"),
             Dim::Datarate,
             format!("{p}bps"),
             f / 8.0,
-            vec![format!("{p}bps"), format!("{p}bit/s"), format!("{word}bits per second")],
+            vec![
+                format!("{p}bps"),
+                format!("{p}bit/s"),
+                format!("{word}bits per second"),
+            ],
             vec![format!("{p}b/s")],
         ));
         out.push(data(
@@ -459,7 +586,11 @@ fn data_units() -> Vec<Unit> {
             Dim::Digital,
             format!("{p}B"),
             1024f64.powf((i + 1) as f64),
-            vec![format!("{id}b"), format!("{word}byte"), format!("{word}bytes")],
+            vec![
+                format!("{id}b"),
+                format!("{word}byte"),
+                format!("{word}bytes"),
+            ],
             vec![],
         ));
     }
@@ -759,8 +890,38 @@ fn finished_list() -> Vec<Unit> {
         microfarad.names.push("uf".into());
     }
     // squared and cubed millimeters sit outside the prefix pass, so µL keeps its own name
-    units.push(unit_of(spec("mm2", Dim::Area, "mm²", 1e-6, "in2", &["mm2", "mm^2", "sq mm", "square millimeter", "square millimeters", "square millimetre", "square millimetres"])));
-    units.push(unit_of(spec("mm3", Dim::Volume, "mm³", 1e-6, "in3", &["mm3", "mm^3", "cu mm", "cubic millimeter", "cubic millimeters", "cubic millimetre", "cubic millimetres"])));
+    units.push(unit_of(spec(
+        "mm2",
+        Dim::Area,
+        "mm²",
+        1e-6,
+        "in2",
+        &[
+            "mm2",
+            "mm^2",
+            "sq mm",
+            "square millimeter",
+            "square millimeters",
+            "square millimetre",
+            "square millimetres",
+        ],
+    )));
+    units.push(unit_of(spec(
+        "mm3",
+        Dim::Volume,
+        "mm³",
+        1e-6,
+        "in3",
+        &[
+            "mm3",
+            "mm^3",
+            "cu mm",
+            "cubic millimeter",
+            "cubic millimeters",
+            "cubic millimetre",
+            "cubic millimetres",
+        ],
+    )));
     units
 }
 
@@ -815,13 +976,16 @@ fn build() -> Table {
     let alias_names = alias_index.iter().map(|a| a.alias.clone()).collect();
     let mut by_symbol: HashMap<String, Vec<UnitRef>> = HashMap::new();
     for u in &list {
-        by_symbol.entry(u.symbol.clone()).or_default().push(u.clone());
+        by_symbol
+            .entry(u.symbol.clone())
+            .or_default()
+            .push(u.clone());
     }
     let mut prefix_index: Vec<(String, &'static Prefix)> = PREFIXES
         .iter()
         .flat_map(|p| p.names.iter().map(move |n| (n.to_lowercase(), p)))
         .collect();
-    prefix_index.sort_by(|a, b| js_len(&b.0).cmp(&js_len(&a.0)));
+    prefix_index.sort_by_key(|p| std::cmp::Reverse(js_len(&p.0)));
     Table {
         list,
         by_id,

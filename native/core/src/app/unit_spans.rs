@@ -79,8 +79,10 @@ fn temperatures(text: &str, spans: Vec<Found>) -> Vec<Found> {
         .collect();
     letters.sort_unstable();
     letters.dedup();
-    let hot =
-        spans.iter().any(|u| TEMPERATURES.contains(&u.name.as_str())) || letters.len() == 2;
+    let hot = spans
+        .iter()
+        .any(|u| TEMPERATURES.contains(&u.name.as_str()))
+        || letters.len() == 2;
     if !hot {
         return spans;
     }
@@ -124,7 +126,9 @@ fn unit_place(text: &str, start: usize, found: &[Found]) -> bool {
             .any(|u| u.end == len || (u.end < len && jsre::test(&POWER, &text[u.end..len])));
     }
     // `10 km to mi`
-    PRIOR.captures(before).ok().flatten().is_some_and(|c| {
-        CONVERSION_WORDS.contains(&jsre::group(&c, 1).to_lowercase().as_str())
-    })
+    PRIOR
+        .captures(before)
+        .ok()
+        .flatten()
+        .is_some_and(|c| CONVERSION_WORDS.contains(&jsre::group(&c, 1).to_lowercase().as_str()))
 }

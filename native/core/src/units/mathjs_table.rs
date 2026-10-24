@@ -1,8 +1,14 @@
 //! Generated from mathjs 15.2.0 (`math.Unit.PREFIXES` and `math.Unit.UNITS` in number mode); do not edit by hand.
+//! Regenerate from the repo root: `node native/scripts/gen-mathjs-units.cjs > native/core/src/units/mathjs_table.rs`.
 
-#![allow(clippy::unreadable_literal, clippy::excessive_precision)]
+#![allow(
+    clippy::unreadable_literal,
+    clippy::excessive_precision,
+    clippy::approx_constant
+)]
 
 /// Prefix sets by name: each prefix and its factor.
+#[rustfmt::skip]
 pub const PREFIX_SETS: &[(&str, &[(&str, f64)])] = &[
     ("NONE", &[("", 1.0)]),
     ("SHORT", &[("", 1.0), ("da", 10.0), ("h", 100.0), ("k", 1000.0), ("M", 1000000.0), ("G", 1000000000.0), ("T", 1000000000000.0), ("P", 1000000000000000.0), ("E", 1000000000000000000.0), ("Z", 1e+21), ("Y", 1e+24), ("R", 1e+27), ("Q", 1e+30), ("d", 0.1), ("c", 0.01), ("m", 0.001), ("u", 0.000001), ("n", 1e-9), ("p", 1e-12), ("f", 1e-15), ("a", 1e-18), ("z", 1e-21), ("y", 1e-24), ("r", 1e-27), ("q", 1e-30)]),
@@ -20,6 +26,7 @@ pub const PREFIX_SETS: &[(&str, &[(&str, f64)])] = &[
 ];
 
 /// (name, value, offset, dimensions, prefix set), in mathjs's own order.
+#[rustfmt::skip]
 pub const UNITS: &[(&str, f64, f64, [f64; 9], &str)] = &[
     ("meter", 1.0, 0.0, [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "LONG"),
     ("inch", 0.0254, 0.0, [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "NONE"),

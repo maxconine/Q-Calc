@@ -5,15 +5,18 @@
   "engine.scientific": 1423,
   "engine.simplify": 149,
   "engine.typstInput": 3,
+  "engine.units": 1165,
   "eval.arithmetic": 6909,
   "eval.blank": 1317,
   "eval.calculus": 45,
   "eval.functions": 1101,
   "eval.latex": 63,
   "eval.matrix": 150,
-  "eval.measure": 1728,
-  "eval.sheet": 3779,
+  "eval.measure": 1767,
+  "eval.sheet": 4023,
   "eval.solve": 4,
   "eval.sums": 44,
-  "eval.units": 6
+  "eval.units": 8952,
+  "lib.draft": 391,
+  "lib.unitSpans": 23
 }

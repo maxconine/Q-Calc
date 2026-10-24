@@ -52,7 +52,9 @@ fn names_arg(args: &[Json], i: usize) -> Vec<String> {
 }
 
 fn js(v: Option<Value>) -> Json {
-    v.map_or(Json::Null, |v| serde_json::to_value(v).unwrap_or(Json::Null))
+    v.map_or(Json::Null, |v| {
+        serde_json::to_value(v).unwrap_or(Json::Null)
+    })
 }
 
 /// The answer to one recorded call, or None when the function isn't one of this package's.
@@ -73,9 +75,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Json> {
         )),
         ("engine/units", "readsAsUnit") => json!(super::reads_as_unit(&s(0))),
         ("engine/units", "isUnitName") => json!(super::is_unit_name(&s(0))),
-        ("engine/units", "unitInfo") => super::unit_info(&s(0)).map_or(Json::Null, |i| {
-            json!({ "symbol": i.symbol, "name": i.name })
-        }),
+        ("engine/units", "unitInfo") => super::unit_info(&s(0)).map_or(
+            Json::Null,
+            |i| json!({ "symbol": i.symbol, "name": i.name }),
+        ),
         ("engine/units", "quantityText") => match value_arg(args, 0) {
             Some(v) => json!(super::quantity_text_opt(&v, angle_arg(args, 1))),
             None => Json::Null,
@@ -92,14 +95,14 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Json> {
                 None => json!([]),
             }
         }
-        ("engine/units", "stepPrefix") => {
-            js(value_arg(args, 0).and_then(|v| super::step_prefix(&v, if n(1) > 0.0 { 1 } else { -1 })))
-        }
+        ("engine/units", "stepPrefix") => js(value_arg(args, 0)
+            .and_then(|v| super::step_prefix(&v, if n(1) > 0.0 { 1 } else { -1 }))),
         ("engine/units", "inLadderUnit") => {
             js(value_arg(args, 0).and_then(|v| super::in_ladder_unit(&v, &s(1))))
         }
-        ("engine/units", "siQuantity") => super::si_quantity(&s(0))
-            .map_or(Json::Null, |q| serde_json::to_value(q).unwrap_or(Json::Null)),
+        ("engine/units", "siQuantity") => super::si_quantity(&s(0)).map_or(Json::Null, |q| {
+            serde_json::to_value(q).unwrap_or(Json::Null)
+        }),
         ("engine/units", "siValue") => {
             let dim: Vec<f64> = args
                 .get(1)
@@ -120,9 +123,11 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Json> {
             &defaults_arg(args, 0),
             &defaults_arg(args, 1)
         )),
-        ("lib/unitSpans", "unitSpans") => json!(
-            crate::app::unit_spans::unit_spans(&s(0), &names_arg(args, 1), &names_arg(args, 2))
-        ),
+        ("lib/unitSpans", "unitSpans") => json!(crate::app::unit_spans::unit_spans(
+            &s(0),
+            &names_arg(args, 1),
+            &names_arg(args, 2)
+        )),
         ("lib/draft", "clampDraftSeconds") => json!(crate::app::draft::clamp_draft_seconds(n(0))),
         ("lib/draft", "hideAction") => {
             json!(crate::app::draft::hide_action(&s(0), &s(1), n(2)).as_str())

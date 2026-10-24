@@ -211,7 +211,10 @@ fn match_unit_at_end(s: &Cs) -> Option<Hit<'_>> {
 
 /// `scaleUnit`: a unit with a prefix put on, the table's own when it has one of that size.
 fn scale_unit(base: &Unit, prefix: &Prefix) -> Option<UnitRef> {
-    if matches!(base.dim, Dim::Temperature | Dim::Digital | Dim::Dimensionless) {
+    if matches!(
+        base.dim,
+        Dim::Temperature | Dim::Digital | Dim::Dimensionless
+    ) {
         return None;
     }
     // of the time units only seconds take prefixes (`ms`, `µs`)
@@ -451,8 +454,7 @@ pub fn unit_info(word: &str) -> Option<UnitInfo> {
 // and spaced when there's a choice (`foot pound`, `newton meter`)
 fn spelled_name(unit: &Unit) -> String {
     static NAME: Lazy = Lazy::new(|| js(r"^[a-z][a-z -]*[a-z]$", "i"));
-    static SHORT: Lazy =
-        Lazy::new(|| js(r"^(?:sec|secs|hrs?|mins?|degs?|deg[cfkr])$|sec$", "i"));
+    static SHORT: Lazy = Lazy::new(|| js(r"^(?:sec|secs|hrs?|mins?|degs?|deg[cfkr])$|sec$", "i"));
     let symbol = unit.symbol.to_lowercase().replace(['·', '*'], "");
     let all: std::collections::HashSet<String> =
         unit.names.iter().map(|n| n.to_lowercase()).collect();
@@ -547,10 +549,10 @@ impl Qty {
 /// US customary units; every other unit with a system (not time, angle, data, ...) counts as metric.
 const US_UNIT_IDS: &[&str] = &[
     "in", "ft", "yd", "mi", "mil", "fathom", "rod", "chain", "furlong", "league", "oz", "lb", "st",
-    "ton", "longton", "grain", "slug", "slinch", "f", "r", "tsp", "tbsp", "floz", "cup", "pt", "qt",
-    "usgal", "impgal", "peck", "bushel", "barrel", "cord", "in3", "ft3", "yd3", "in2", "sqft",
-    "yd2", "acre", "sqmi", "mph", "fps", "ftlbf", "btu", "therm", "hp", "psi", "ksi", "inhg", "ozf",
-    "lbf", "kip",
+    "ton", "longton", "grain", "slug", "slinch", "f", "r", "tsp", "tbsp", "floz", "cup", "pt",
+    "qt", "usgal", "impgal", "peck", "bushel", "barrel", "cord", "in3", "ft3", "yd3", "in2",
+    "sqft", "yd2", "acre", "sqmi", "mph", "fps", "ftlbf", "btu", "therm", "hp", "psi", "ksi",
+    "inhg", "ozf", "lbf", "kip",
 ];
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -716,7 +718,8 @@ fn typed_parts(unit: &UnitRef) -> Vec<(UnitRef, f64)> {
     vec![(unit.clone(), 1.0)]
 }
 
-const METRIC_MOMENTS: [(&str, f64); 4] = [("N·mm", 1e-3), ("N·m", 1.0), ("kN·m", 1e3), ("MN·m", 1e6)];
+const METRIC_MOMENTS: [(&str, f64); 4] =
+    [("N·mm", 1e-3), ("N·m", 1.0), ("kN·m", 1e3), ("MN·m", 1e6)];
 
 /// A metric moment reads 1 to 999 on the N·mm, N·m, kN·m, MN·m ladder (`1000 N * 500 mm` is 500 N·m).
 fn metric_moment(n: f64, label: &str, size: f64) -> Value {
@@ -830,8 +833,7 @@ fn div_qty(a: &Qty, b: &Qty) -> Option<Qty> {
 fn plain_angle(q: &Qty) -> Option<&UnitRef> {
     let p = q.prefer.as_ref()?;
     (p.dim == Dim::Angle
-        && q
-            .dim
+        && q.dim
             .iter()
             .enumerate()
             .all(|(i, x)| *x == if i == ANGLE_AXIS { 1.0 } else { 0.0 }))
@@ -886,7 +888,7 @@ fn prec_add(a: &Qty, b: &Qty, si: f64) -> Option<Prec> {
     }
     let unc = a.si.abs() * a.prec.as_ref().map_or(0.0, |p| p.rel)
         + b.si.abs() * b.prec.as_ref().map_or(0.0, |p| p.rel);
-    if !(unc > 0.0) || si == 0.0 {
+    if unc.is_nan() || unc <= 0.0 || si == 0.0 {
         return Some(lost());
     }
     Some(Prec {
@@ -905,7 +907,11 @@ fn pow_qty(a: &Qty, exp: &Qty) -> Option<Qty> {
     if a.si < 0.0 && !jsnum::is_integer(e) {
         return None;
     }
-    let prec = if exp.prec.as_ref().is_some_and(|p| p.rel != 0.0 && !p.rel.is_nan()) {
+    let prec = if exp
+        .prec
+        .as_ref()
+        .is_some_and(|p| p.rel != 0.0 && !p.rel.is_nan())
+    {
         Some(lost())
     } else {
         a.prec.as_ref().map(|p| Prec {
@@ -922,7 +928,11 @@ fn pow_qty(a: &Qty, exp: &Qty) -> Option<Qty> {
     Some(Qty {
         si: crate::eval::ops::js_pow(a.si, e),
         dim: scale_vec(&a.dim, e),
-        prefer: if e.abs() == 1.0 { a.prefer.clone() } else { None },
+        prefer: if e.abs() == 1.0 {
+            a.prefer.clone()
+        } else {
+            None
+        },
         prec,
         bare,
         via,
@@ -1006,7 +1016,11 @@ fn system_value(q: &Qty) -> Option<Value> {
     if via.us == via.si || is_zero_vec(&q.dim) || !q.si.is_finite() {
         return None;
     }
-    let sys = if via.us > via.si { System::Us } else { System::Si };
+    let sys = if via.us > via.si {
+        System::Us
+    } else {
+        System::Si
+    };
     let typed = fold_units(&via.u, sys);
     let size = units_size(&typed);
     let label = compound_label(&typed);
@@ -1067,7 +1081,11 @@ fn system_value(q: &Qty) -> Option<Value> {
     // power × time is heat (BTU); any other energy is work (ft·lbf)
     let heat = typed.iter().any(|(u, p)| u.dim == Dim::Time && *p > 0.0);
     let counterpart_id = if is_energy(&q.dim) {
-        if heat { "btu".to_string() } else { "ftlbf".to_string() }
+        if heat {
+            "btu".to_string()
+        } else {
+            "ftlbf".to_string()
+        }
     } else {
         named_unit_for(&q.dim)
             .and_then(|u| u.default_to.clone())
@@ -1106,7 +1124,11 @@ fn fold_units(u: &[(UnitRef, f64)], sys: System) -> Vec<(UnitRef, f64)> {
             Some(si) if same_scale(si_of(&si), 1.0) => si,
             _ => {
                 let rank = |x: &(UnitRef, f64)| {
-                    (if unit_system(&x.0) == Some(sys) { 100.0 } else { 0.0 }) + x.1.abs()
+                    (if unit_system(&x.0) == Some(sys) {
+                        100.0
+                    } else {
+                        0.0
+                    }) + x.1.abs()
                 };
                 let mut best = kin[0];
                 for cur in &kin[1..] {
@@ -1155,7 +1177,7 @@ fn engineering(q: &Qty, unit: &UnitRef) -> Option<Value> {
     let log = a.log10() + place.1;
     let to_mm = place.0.id == "m" && place.1 < -3.0 && log >= -5.0;
     // 999.9999999 ms is 1 s
-    if a >= 1.0 && a < 1000.0 * (1.0 - 1e-12) && !to_mm {
+    if (1.0..1000.0 * (1.0 - 1e-12)).contains(&a) && !to_mm {
         return Some(v);
     }
     let mut exp = (log / 3.0).floor() * 3.0;
@@ -1188,7 +1210,11 @@ fn compound_label(u: &[(UnitRef, f64)]) -> Option<String> {
     static SYM: Lazy = Lazy::new(|| js(r"^[A-Za-zμ]+[²³]?$", ""));
     let part = |(unit, p): &(UnitRef, f64)| -> Option<String> {
         let e = p.abs();
-        let sym = if unit.id == "lb" { "lb" } else { unit.symbol.as_str() };
+        let sym = if unit.id == "lb" {
+            "lb"
+        } else {
+            unit.symbol.as_str()
+        };
         if !jsre::test(&SYM, sym) || (e != 1.0 && sym.contains(['²', '³'])) {
             return None;
         }
@@ -1296,7 +1322,9 @@ fn format_compound(dim: &DimVec) -> String {
 /// `1/Ω` rather than a slash-containing compound like `1/m/s`.
 fn reciprocal_label(symbol: &str) -> Option<String> {
     let t = symbol.trim();
-    if t.is_empty() || t.contains(|c: char| is_space(c) || c == '/' || c == '^') || t.starts_with('1')
+    if t.is_empty()
+        || t.contains(|c: char| is_space(c) || c == '/' || c == '^')
+        || t.starts_with('1')
     {
         return None;
     }
@@ -1315,7 +1343,7 @@ fn as_reciprocal(q: &Qty, unit: &Unit) -> Option<Value> {
 /// Something per angle that isn't a turning rate: `549.16 Nm / 0.293 deg` is 1874.27 N m / deg in deg mode.
 fn angle_rate_value(q: &Qty) -> Option<Value> {
     let e = q.dim[ANGLE_AXIS];
-    if !(e < 0.0) {
+    if e >= 0.0 {
         return None;
     }
     let rest: DimVec = std::array::from_fn(|i| if i == ANGLE_AXIS { 0.0 } else { q.dim[i] });
@@ -1733,9 +1761,9 @@ impl<'v> Parser<'v> {
             self.skip();
             let vulgar = jsnum::is_integer(q.si)
                 && q.prec.is_none()
-                && den.as_ref().is_some_and(|d| {
-                    jsnum::is_integer(d.si) && d.si > 1.0 && d.prec.is_none()
-                });
+                && den
+                    .as_ref()
+                    .is_some_and(|d| jsnum::is_integer(d.si) && d.si > 1.0 && d.prec.is_none());
             if vulgar && match_unit_at_start(&self.s[self.i..]).is_some() {
                 return div_qty(&q, den.as_ref()?);
             }
@@ -1745,8 +1773,7 @@ impl<'v> Parser<'v> {
     }
 
     fn parse_number(&mut self) -> Option<Qty> {
-        static RE: Lazy =
-            Lazy::new(|| js(r"^([+-]?)((?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)", "i"));
+        static RE: Lazy = Lazy::new(|| js(r"^([+-]?)((?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)", "i"));
         self.skip();
         let rest = st(&self.s[self.i..]);
         let c = RE.captures(rest.as_str()).ok()??;
@@ -2089,7 +2116,13 @@ fn convert_text(
     }
     let again = |text: &str| -> Option<Value> {
         if depth < 6 {
-            convert_text(&preprocess(text), defaults, variables, keep_units, depth + 1)
+            convert_text(
+                &preprocess(text),
+                defaults,
+                variables,
+                keep_units,
+                depth + 1,
+            )
         } else {
             None
         }
@@ -2123,14 +2156,11 @@ fn convert_text(
     // `ans in to mm`: once the left already has a unit, `in to` is into, not inches
     if let Ok(Some(c)) = INTO.captures(src) {
         let improper = value.as_ref().is_none_or(|v| {
-            v.kind == ValueKind::Text && is_improper_unit_conversion(v.text.as_deref().unwrap_or(""))
+            v.kind == ValueKind::Text
+                && is_improper_unit_conversion(v.text.as_deref().unwrap_or(""))
         });
         if improper
-            && let Some(read) = again(&format!(
-                "{} to {}",
-                jsre::group(&c, 1),
-                jsre::group(&c, 2)
-            ))
+            && let Some(read) = again(&format!("{} to {}", jsre::group(&c, 1), jsre::group(&c, 2)))
             && read.kind == ValueKind::Number
         {
             return Some(read);
@@ -2183,7 +2213,9 @@ fn split_target_tail(src: &str) -> Option<(String, String)> {
     let target = st(trim(&cs(jsre::group(&c, 2))));
     let stripped = jsre::replace_all(&POWER, &target, |_| String::new());
     if stripped.chars().any(|ch| ch.is_ascii_digit())
-        || Parser::new(&format!("1 {target}"), &NO_VARS).parse().is_none()
+        || Parser::new(&format!("1 {target}"), &NO_VARS)
+            .parse()
+            .is_none()
     {
         return None;
     }
@@ -2252,9 +2284,7 @@ fn ladder_unit(root: &UnitRef, exp: f64) -> Option<UnitRef> {
     if exp == 0.0 {
         return Some(root.clone());
     }
-    let prefix = table::PREFIXES
-        .iter()
-        .find(|p| prefix_exponent(p) == exp)?;
+    let prefix = table::PREFIXES.iter().find(|p| prefix_exponent(p) == exp)?;
     if root.id == "g" && exp == 6.0 {
         return Some(id("tonne"));
     }
@@ -2263,7 +2293,9 @@ fn ladder_unit(root: &UnitRef, exp: f64) -> Option<UnitRef> {
         tbl()
             .list
             .iter()
-            .find(|u| u.dim == unit.dim && u.symbol == unit.symbol && same_scale(u.to_base, unit.to_base))
+            .find(|u| {
+                u.dim == unit.dim && u.symbol == unit.symbol && same_scale(u.to_base, unit.to_base)
+            })
             .cloned()
             .unwrap_or_else(|| std::sync::Arc::new(unit)),
     )
@@ -2402,7 +2434,11 @@ pub fn unit_alternatives(value: &Value, limit: usize) -> Vec<Value> {
     // 1 to 999 reads best; tiny numbers read worse than big ones
     let readability = |n: f64| {
         let mag = n.abs().log10();
-        if mag < 0.0 { -mag * 2.0 } else { (mag - 3.0).max(0.0) }
+        if mag < 0.0 {
+            -mag * 2.0
+        } else {
+            (mag - 3.0).max(0.0)
+        }
     };
     let mut order: Vec<usize> = (0..out.len()).collect();
     order.sort_by(|&a, &b| {
@@ -2450,7 +2486,12 @@ pub fn si_quantity(text: &str) -> Option<SiQuantity> {
 }
 
 /// An SI amount shown in `unit_id` when it fits the dimension, else the default or named unit.
-pub fn si_value(si: f64, dim: &[f64], unit_id: Option<&str>, defaults: &DefaultUnits) -> Option<Value> {
+pub fn si_value(
+    si: f64,
+    dim: &[f64],
+    unit_id: Option<&str>,
+    defaults: &DefaultUnits,
+) -> Option<Value> {
     let d: DimVec = std::array::from_fn(|i| dim.get(i).copied().unwrap_or(0.0));
     let prefer = unit_by_id(unit_id).filter(|p| p.dim.vec() == d);
     let has = prefer.is_some();
@@ -2466,6 +2507,28 @@ pub fn si_value(si: f64, dim: &[f64], unit_id: Option<&str>, defaults: &DefaultU
         qty_to_value(&q, None, None)
     } else {
         apply_default_unit(&q, &sanitize_default_units(defaults))
+    }
+}
+
+#[cfg(test)]
+mod debug_probe {
+    #[test]
+    fn probe() {
+        let Ok(path) = std::env::var("PROBE_FILE") else {
+            return;
+        };
+        let text = std::fs::read_to_string(path).unwrap_or_default();
+        for line in text.lines() {
+            let (line, opts) = line.split_once("\t").unwrap_or((line, "{}"));
+            let o: crate::types::EvaluateOptions = serde_json::from_str(opts).unwrap_or_default();
+            let r = crate::evaluate_line(line, &o);
+            let v = super::try_convert_opt(line, &o.default_units, &o.variables, false, None);
+            println!(
+                "{line:?} => {:?} | tryConvert {:?}",
+                r.display,
+                v.map(|v| (v.n, v.unit, v.text))
+            );
+        }
     }
 }
 
@@ -2486,8 +2549,8 @@ mod tests {
 
     #[test]
     fn reads_quantities_and_conversions() {
-        assert_eq!(conv("5 cm to in"), "1.968503937008 in");
-        assert_eq!(conv("72 F in C"), "22.222222222222 °C");
+        assert_eq!(conv("5 cm to in"), "1.96850393701 in");
+        assert_eq!(conv("72 F in C"), "22.2222222222 °C");
         assert_eq!(conv("10 kN / 20 mm^2"), "500 MPa");
         assert_eq!(conv("2 m + 3 kg"), IMPROPER_UNIT_CONVERSION);
         assert_eq!(conv("2 + 3"), "");

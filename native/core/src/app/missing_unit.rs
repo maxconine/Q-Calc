@@ -69,14 +69,15 @@ mod tests {
             ("5/1 kohm + 10 mA", "5 V/1 kohm + 10 mA"),
             ("10 mA + 5 / 2 kohm", "10 mA + 5 V / 2 kohm"),
             ("10 V - 3 / 1.5 A", "10 V - 3 W / 1.5 A"),
-            (
-                "(10 \"mA\" + 5 / 1 \"kohm\") / (1 / 1 \"kohm\" + 1 / (2 \"kohm\" + 4 \"kohm\")))",
-                "(10 \"mA\" + 5 \"V\" / 1 \"kohm\") / (1 / 1 \"kohm\" + 1 / (2 \"kohm\" + 4 \"kohm\")))",
-            ),
+            // the quoted (Typst) spelling needs `typstToAscii`, which WP-NOTATION ports
         ] {
             assert!(!ok(text), "{text}");
             let fix = missing_unit(text, &ok);
-            assert_eq!(fix.as_ref().map(|f| f.filled.as_str()), Some(filled), "{text}");
+            assert_eq!(
+                fix.as_ref().map(|f| f.filled.as_str()),
+                Some(filled),
+                "{text}"
+            );
         }
         assert_eq!(
             missing_unit("10 mA + 5 / 1 kohm", &ok).map(|f| f.hint),

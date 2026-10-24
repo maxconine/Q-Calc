@@ -110,7 +110,11 @@ pub const UNIT_SETTING_GROUPS: &[UnitSettingGroup] = &[
         items: &[UnitSettingItem {
             dim: "angle",
             label: "Angle",
-            units: &[c("deg", "Degree"), c("rad", "Radian"), c("rev", "Revolution")],
+            units: &[
+                c("deg", "Degree"),
+                c("rad", "Radian"),
+                c("rev", "Revolution"),
+            ],
         }],
     },
     UnitSettingGroup {
@@ -258,7 +262,9 @@ mod tests {
 
     #[test]
     fn sanitising_keeps_only_valid_choices() {
-        let out = sanitize_default_units_json(&json!({"length": "ft", "mass": "ft", "speed": 3, "digital": "kb"}));
+        let out = sanitize_default_units_json(
+            &json!({"length": "ft", "mass": "ft", "speed": 3, "digital": "kb"}),
+        );
         assert_eq!(out.len(), 1);
         assert_eq!(out.get("length").map(String::as_str), Some("ft"));
         assert!(sanitize_default_units_json(&json!("a string")).is_empty());

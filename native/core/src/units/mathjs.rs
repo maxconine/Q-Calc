@@ -51,7 +51,10 @@ fn find_unit(name: &str) -> Option<(Part, [f64; 9])> {
         offset: *offset,
     };
     if let Some(u) = UNITS.iter().find(|u| u.0 == name) {
-        let p = prefix_set(u.4).iter().find(|(n, _)| n.is_empty()).map_or(1.0, |p| p.1);
+        let p = prefix_set(u.4)
+            .iter()
+            .find(|(n, _)| n.is_empty())
+            .map_or(1.0, |p| p.1);
         return Some((part(u, p), u.3));
     }
     for u in UNITS {
@@ -241,7 +244,11 @@ pub fn has_unit(v: &Val) -> bool {
 const ANGLE_FNS: [&str; 6] = ["sin", "cos", "tan", "csc", "sec", "cot"];
 
 /// `unitSafe`'s unit rule: trig of one angle takes it in the calculator's mode; any other unit throws.
-pub fn unit_safe<'a>(name: &str, args: &'a [Val], mode: AngleMode) -> Result<Cow<'a, [Val]>, EvalError> {
+pub fn unit_safe<'a>(
+    name: &str,
+    args: &'a [Val],
+    mode: AngleMode,
+) -> Result<Cow<'a, [Val]>, EvalError> {
     if !args.iter().any(has_unit) {
         return Ok(Cow::Borrowed(args));
     }
@@ -263,13 +270,23 @@ mod tests {
         assert!(symbol("kohm").is_some());
         assert!(symbol("mrad").is_some());
         assert!(symbol("xyz").is_none());
-        let Some(Val::Unit(deg)) = symbol("deg") else { panic!() };
+        let Some(Val::Unit(deg)) = symbol("deg") else {
+            panic!()
+        };
         let Val::Unit(ninety) = multiply(&MathUnit::unitless(90.0), &deg) else {
             panic!()
         };
         assert_eq!(ninety.angle_in(AngleMode::Deg), Ok(90.0));
-        let Some(Val::Unit(m)) = symbol("m") else { panic!() };
-        assert_eq!(divide(&m, &m), Val::Num(1.0));
+        let Some(Val::Unit(m)) = symbol("m") else {
+            panic!()
+        };
+        let Val::Unit(four) = multiply(&MathUnit::unitless(4.0), &m) else {
+            panic!()
+        };
+        let Val::Unit(two) = multiply(&MathUnit::unitless(2.0), &m) else {
+            panic!()
+        };
+        assert_eq!(divide(&four, &two), Val::Num(2.0));
+        assert!(unit_safe("sqrt", &[Val::Unit(four)], AngleMode::Deg).is_err());
     }
-
 }

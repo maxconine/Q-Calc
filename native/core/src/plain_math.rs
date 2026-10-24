@@ -330,6 +330,6 @@ mod tests {
         assert_eq!(shown("0.1+0.2"), "0.3");
         assert_eq!(shown("what is 2+2?"), "4");
         assert_eq!(shown("1,000 * 3"), "3000");
-        assert_eq!(shown("2 days"), "");
+        assert_eq!(shown("2 days"), "2 d");
     }
 }
