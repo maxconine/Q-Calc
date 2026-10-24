@@ -251,6 +251,13 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             | "symbolic/parse",
             _,
         ) => return symbolic_dispatch(name, args),
+        // ---- WP-UNITS: engine/units, lib/unitSpans, lib/draft (lib/missingUnit takes a test's closure) ----
+        ("engine/units" | "lib/unitSpans" | "lib/draft", _) => {
+            match crate::units::golden::dispatch(module, name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
@@ -405,7 +412,7 @@ mod tests {
         };
         assert_eq!(a, json!("0.1"));
         assert!(matches!(
-            dispatch("engine/units", "tryConvert", &[json!("5 m")]),
+            dispatch("engine/notAModule", "notAFunction", &[json!("5 m")]),
             Outcome::Unported
         ));
         assert!(matches!(
