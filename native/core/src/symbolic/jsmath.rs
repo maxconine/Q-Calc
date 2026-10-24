@@ -3,6 +3,9 @@
 //! differs from fdlibm's by an ulp on some inputs (`tan(1)`, `tan(10)`); sin, cos, exp and log agreed on every
 //! corpus input and stay on the platform libm. Arguments past 2^19·π/2 fall back to the platform tan.
 
+// fdlibm's constants, digit for digit
+#![allow(clippy::excessive_precision, clippy::approx_constant)]
+
 fn high(x: f64) -> i32 {
     (x.to_bits() >> 32) as i32
 }
