@@ -24,6 +24,8 @@ pub mod types;
 pub mod typst_input;
 pub mod units;
 pub mod work;
+// ---- WP-UNITS ----
+pub mod app;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
