@@ -26,6 +26,8 @@ pub enum Val {
     Str(String),
     /// A function used as a value (`sin` alone); never an answer.
     Function(String),
+    /// WP-UNITS: a mathjs unit met inside a call (`sin(90 deg)`); never an answer.
+    Unit(crate::units::mathjs::MathUnit),
     Null,
     Undefined,
 }
@@ -51,6 +53,7 @@ impl Val {
                 }
             }
             Val::Complex { .. } | Val::Function(_) | Val::Undefined => f64::NAN,
+            Val::Unit(_) => f64::NAN, // WP-UNITS
         }
     }
 
@@ -63,6 +66,7 @@ impl Val {
             Val::List(items) => !items.is_empty(),
             Val::Str(s) => !s.is_empty(),
             Val::Function(_) => true,
+            Val::Unit(_) => true, // WP-UNITS
             Val::Null | Val::Undefined => false,
         }
     }
@@ -154,7 +158,9 @@ fn symbol(name: &str, scope: &Scope) -> EvalResult {
     if scope.functions.contains_key(name) || builtins::is_builtin(name) {
         return Ok(Val::Function(name.to_string()));
     }
-    math_constant(name).ok_or_else(|| EvalError::UndefinedSymbol(name.to_string()))
+    math_constant(name)
+        .or_else(|| crate::units::mathjs::symbol(name)) // WP-UNITS: a mathjs unit (`deg`, `m`)
+        .ok_or_else(|| EvalError::UndefinedSymbol(name.to_string()))
 }
 
 /// Evaluates `node` in `scope`.
@@ -259,6 +265,9 @@ pub fn call(name: &str, args: &[Val], scope: &Scope) -> EvalResult {
 fn call_user(name: &str, def: &UserFunction, args: &[Val], scope: &Scope) -> EvalResult {
     if args.len() > def.params.len() {
         return Err(EvalError::TooManyArguments(name.to_string()));
+    }
+    if args.iter().any(crate::units::mathjs::has_unit) {
+        return Err(EvalError::Other("unit in a user function".into())); // WP-UNITS
     }
     if scope.depth >= MAX_DEPTH {
         return Err(EvalError::TooDeep);
