@@ -59,11 +59,11 @@
 {"fn":"parse","args":["(1*10^1)"],"out":{"text":"(1 * 10 ^ 1)","tree":{"P":{"O":"multiply","op":"*","a":[{"C":1},{"O":"pow","op":"^","a":[{"C":10},{"C":1}]}]}}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["(1*10^3)"],"out":{"text":"(1 * 10 ^ 3)","tree":{"P":{"O":"multiply","op":"*","a":[{"C":1},{"O":"pow","op":"^","a":[{"C":10},{"C":3}]}]}}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["(1*10^4)"],"out":{"text":"(1 * 10 ^ 4)","tree":{"P":{"O":"multiply","op":"*","a":[{"C":1},{"O":"pow","op":"^","a":[{"C":10},{"C":4}]}]}}},"src":"src/engine/system.units.test.ts"}
-{"fn":"parse","args":["(1+1/x)^x"],"out":{"text":"(1 + 1 / x) ^ x","tree":{"O":"pow","op":"^","a":[{"P":{"O":"add","op":"+","a":[{"C":1},{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]}]}},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["(1+1/x)^x"],"out":{"text":"(1 + 1 / x) ^ x","tree":{"O":"pow","op":"^","a":[{"P":{"O":"add","op":"+","a":[{"C":1},{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]}]}},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["(1+2/x)^x"],"out":{"text":"(1 + 2 / x) ^ x","tree":{"O":"pow","op":"^","a":[{"P":{"O":"add","op":"+","a":[{"C":1},{"O":"divide","op":"/","a":[{"C":2},{"S":"x"}]}]}},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["(1, 10)"],"throws":"Parenthesis ) expected (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["(1, 2)"],"throws":"Parenthesis ) expected (char 3)","src":"src/engine/partial.test.ts"}
-{"fn":"parse","args":["(1-cos(x))/x^2"],"out":{"text":"(1 - cos(x)) / x ^ 2","tree":{"O":"divide","op":"/","a":[{"P":{"O":"subtract","op":"-","a":[{"C":1},{"F":"cos","a":[{"S":"x"}]}]}},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["(1-cos(x))/x^2"],"out":{"text":"(1 - cos(x)) / x ^ 2","tree":{"O":"divide","op":"/","a":[{"P":{"O":"subtract","op":"-","a":[{"C":1},{"F":"cos","a":[{"S":"x"}]}]}},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["(1..10)"],"throws":"Parenthesis ) expected (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["(1..3) + 1"],"throws":"Parenthesis ) expected (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["(1..4)"],"throws":"Parenthesis ) expected (char 4)","src":"src/engine/audit2.sums.test.ts"}
@@ -127,7 +127,7 @@
 {"fn":"parse","args":["(2468*x + 11356*y)-(9012)"],"out":{"text":"(2468 * x + 11356 * y) - (9012)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2468},{"S":"x"}]},{"O":"multiply","op":"*","a":[{"C":11356},{"S":"y"}]}]}},{"P":{"C":9012}}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["(2^21*3k^2)+2-44"],"out":{"text":"(2 ^ 21 * 3 k ^ 2) + 2 - 44","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"P":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":2},{"C":21}]},{"O":"multiply","op":"*","a":[{"C":3},{"O":"pow","op":"^","a":[{"S":"k"},{"C":2}]}],"i":true}]}},{"C":2}]},{"C":44}]}},"src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["(2^x * 4^y)-(32)"],"out":{"text":"(2 ^ x * 4 ^ y) - (32)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]},{"O":"pow","op":"^","a":[{"C":4},{"S":"y"}]}]}},{"P":{"C":32}}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["(2^x-1)/x"],"out":{"text":"(2 ^ x - 1) / x","tree":{"O":"divide","op":"/","a":[{"P":{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]},{"C":1}]}},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["(2^x-1)/x"],"out":{"text":"(2 ^ x - 1) / x","tree":{"O":"divide","op":"/","a":[{"P":{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]},{"C":1}]}},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["(2e1)"],"out":{"text":"(20)","tree":{"P":{"C":20}}},"src":"src/engine/unitSolve.test.ts"}
 {"fn":"parse","args":["(2x+1)/(x-3)"],"out":{"text":"(2 x + 1) / (x - 3)","tree":{"O":"divide","op":"/","a":[{"P":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":1}]}},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":3}]}}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["(3 x + 2 y) - (6)"],"out":{"text":"(3 x + 2 y) - (6)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":3},{"S":"x"}],"i":true},{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}],"i":true}]}},{"P":{"C":6}}]}},"src":"src/engine/isolate.test.ts"}
@@ -287,7 +287,7 @@
 {"fn":"parse","args":["(x + y)-(3 m)"],"out":{"text":"(x + y) - (3 m)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"O":"multiply","op":"*","a":[{"C":3},{"S":"m"}],"i":true}}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["(x + y)-(3)"],"out":{"text":"(x + y) - (3)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":3}}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["(x + y)-(3e6)"],"out":{"text":"(x + y) - (3e+6)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":3000000}}]}},"src":"src/engine/systemNumeric.test.ts"}
-{"fn":"parse","args":["(x + y)-(5)"],"out":{"text":"(x + y) - (5)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":5}}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["(x + y)-(5)"],"out":{"text":"(x + y) - (5)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":5}}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["(x + y)-(7)"],"out":{"text":"(x + y) - (7)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":7}}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["(x + y)-(90)"],"out":{"text":"(x + y) - (90)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":90}}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["(x + y)-(a)"],"out":{"text":"(x + y) - (a)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},{"P":{"S":"a"}}]}},"src":"src/engine/system.test.ts"}
@@ -300,7 +300,7 @@
 {"fn":"parse","args":["(x - y)-((2*10^2))"],"out":{"text":"(x - y) - ((2 * 10 ^ 2))","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"P":{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"C":10},{"C":2}]}]}}}]}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["(x - y)-((2*10^3))"],"out":{"text":"(x - y) - ((2 * 10 ^ 3))","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"P":{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"C":10},{"C":3}]}]}}}]}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["(x - y)-((__q1))"],"out":{"text":"(x - y) - ((__q1))","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"P":{"S":"__q1"}}}]}},"src":"src/engine/system.units.test.ts"}
-{"fn":"parse","args":["(x - y)-(1)"],"out":{"text":"(x - y) - (1)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":1}}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["(x - y)-(1)"],"out":{"text":"(x - y) - (1)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"C":1}}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["(x - y)-(2 kg)"],"out":{"text":"(x - y) - (2 kg)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"O":"multiply","op":"*","a":[{"C":2},{"S":"kg"}],"i":true}}]}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["(x - y)-(2 km)"],"out":{"text":"(x - y) - (2 km)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"O":"multiply","op":"*","a":[{"C":2},{"S":"km"}],"i":true}}]}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["(x - y)-(2 m)"],"out":{"text":"(x - y) - (2 m)","tree":{"O":"subtract","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},{"P":{"O":"multiply","op":"*","a":[{"C":2},{"S":"m"}],"i":true}}]}},"src":"src/engine/system.units.test.ts"}
@@ -387,13 +387,13 @@
 {"fn":"parse","args":["+8#"],"out":{"text":"+8","tree":{"O":"unaryPlus","op":"+","a":[{"C":8}]}},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["-(x-1)*(x-4)*(x-9)"],"out":{"text":"-(x - 1) * (x - 4) * (x - 9)","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"unaryMinus","op":"-","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}}]},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":4}]}}]},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":9}]}}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["-0.7320508075688773"],"out":{"text":"-0.7320508075688773","tree":{"O":"unaryMinus","op":"-","a":[{"C":0.7320508075688773}]}},"src":"src/engine/systemNumeric.test.ts"}
-{"fn":"parse","args":["-1"],"out":{"text":"-1","tree":{"O":"unaryMinus","op":"-","a":[{"C":1}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["-1"],"out":{"text":"-1","tree":{"O":"unaryMinus","op":"-","a":[{"C":1}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-1..2"],"throws":"Unexpected part \".2\" (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["-1..3"],"throws":"Unexpected part \".3\" (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["-1/m*(D γ - L v)/sqrt(γ^(2) + v^(2))"],"out":{"text":"-1 / m * (D γ - L v) / sqrt(γ ^ (2) + v ^ (2))","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"S":"m"}]},{"P":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"S":"D"},{"S":"γ"}],"i":true},{"O":"multiply","op":"*","a":[{"S":"L"},{"S":"v"}],"i":true}]}}]},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"γ"},{"P":{"C":2}}]},{"O":"pow","op":"^","a":[{"S":"v"},{"P":{"C":2}}]}]}]}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["-1/m*(D γ - L v)/sqrt(γ^2 + v^2)"],"out":{"text":"-1 / m * (D γ - L v) / sqrt(γ ^ 2 + v ^ 2)","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"S":"m"}]},{"P":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"S":"D"},{"S":"γ"}],"i":true},{"O":"multiply","op":"*","a":[{"S":"L"},{"S":"v"}],"i":true}]}}]},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"γ"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]}]}]}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["-1/m*(D*γ - L*v)/sqrt(γ^2 + v^2)"],"out":{"text":"-1 / m * (D * γ - L * v) / sqrt(γ ^ 2 + v ^ 2)","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"C":1}]},{"S":"m"}]},{"P":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"S":"D"},{"S":"γ"}]},{"O":"multiply","op":"*","a":[{"S":"L"},{"S":"v"}]}]}}]},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"γ"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"v"},{"C":2}]}]}]}]}},"src":"src/engine/partial.test.ts"}
-{"fn":"parse","args":["-10"],"out":{"text":"-10","tree":{"O":"unaryMinus","op":"-","a":[{"C":10}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["-10"],"out":{"text":"-10","tree":{"O":"unaryMinus","op":"-","a":[{"C":10}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-11"],"out":{"text":"-11","tree":{"O":"unaryMinus","op":"-","a":[{"C":11}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-13"],"out":{"text":"-13","tree":{"O":"unaryMinus","op":"-","a":[{"C":13}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-16"],"out":{"text":"-16","tree":{"O":"unaryMinus","op":"-","a":[{"C":16}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -401,7 +401,7 @@
 {"fn":"parse","args":["-19"],"out":{"text":"-19","tree":{"O":"unaryMinus","op":"-","a":[{"C":19}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-2"],"out":{"text":"-2","tree":{"O":"unaryMinus","op":"-","a":[{"C":2}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["-2..2"],"throws":"Unexpected part \".2\" (char 4)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["-20"],"out":{"text":"-20","tree":{"O":"unaryMinus","op":"-","a":[{"C":20}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["-20"],"out":{"text":"-20","tree":{"O":"unaryMinus","op":"-","a":[{"C":20}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-21"],"out":{"text":"-21","tree":{"O":"unaryMinus","op":"-","a":[{"C":21}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-25"],"out":{"text":"-25","tree":{"O":"unaryMinus","op":"-","a":[{"C":25}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-26"],"out":{"text":"-26","tree":{"O":"unaryMinus","op":"-","a":[{"C":26}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -411,15 +411,15 @@
 {"fn":"parse","args":["-3"],"out":{"text":"-3","tree":{"O":"unaryMinus","op":"-","a":[{"C":3}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["-3..3"],"throws":"Unexpected part \".3\" (char 4)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["-3x"],"out":{"text":"-3 x","tree":{"O":"multiply","op":"*","a":[{"O":"unaryMinus","op":"-","a":[{"C":3}]},{"S":"x"}],"i":true}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["-4"],"out":{"text":"-4","tree":{"O":"unaryMinus","op":"-","a":[{"C":4}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["-4"],"out":{"text":"-4","tree":{"O":"unaryMinus","op":"-","a":[{"C":4}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-4*x1 + 3*x2 - 2*x3 + x4"],"out":{"text":"-4 * x1 + 3 * x2 - 2 * x3 + x4","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"O":"unaryMinus","op":"-","a":[{"C":4}]},{"S":"x1"}]},{"O":"multiply","op":"*","a":[{"C":3},{"S":"x2"}]}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x3"}]}]},{"S":"x4"}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["-4..4"],"throws":"Unexpected part \".4\" (char 4)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["-5"],"out":{"text":"-5","tree":{"O":"unaryMinus","op":"-","a":[{"C":5}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["-5..5"],"throws":"Unexpected part \".5\" (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["-6"],"out":{"text":"-6","tree":{"O":"unaryMinus","op":"-","a":[{"C":6}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["-7"],"out":{"text":"-7","tree":{"O":"unaryMinus","op":"-","a":[{"C":7}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["-7"],"out":{"text":"-7","tree":{"O":"unaryMinus","op":"-","a":[{"C":7}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-8"],"out":{"text":"-8","tree":{"O":"unaryMinus","op":"-","a":[{"C":8}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["-9"],"out":{"text":"-9","tree":{"O":"unaryMinus","op":"-","a":[{"C":9}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["-9"],"out":{"text":"-9","tree":{"O":"unaryMinus","op":"-","a":[{"C":9}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["-A"],"out":{"text":"-A","tree":{"O":"unaryMinus","op":"-","a":[{"S":"A"}]}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["-cos(A) + 3*cos(B) - cos(C) + cos(D) - 3*cos(E)"],"out":{"text":"-cos(A) + 3 * cos(B) - cos(C) + cos(D) - 3 * cos(E)","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"unaryMinus","op":"-","a":[{"F":"cos","a":[{"S":"A"}]}]},{"O":"multiply","op":"*","a":[{"C":3},{"F":"cos","a":[{"S":"B"}]}]}]},{"F":"cos","a":[{"S":"C"}]}]},{"F":"cos","a":[{"S":"D"}]}]},{"O":"multiply","op":"*","a":[{"C":3},{"F":"cos","a":[{"S":"E"}]}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["-i95"],"out":{"text":"-i95","tree":{"O":"unaryMinus","op":"-","a":[{"S":"i95"}]}},"src":"src/engine/audit.garbage.test.ts"}
@@ -443,7 +443,7 @@
 {"fn":"parse","args":[".80"],"out":{"text":"0.8","tree":{"C":0.8}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":[".84"],"out":{"text":"0.84","tree":{"C":0.84}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["/"],"throws":"Value expected (char 1)","src":"src/engine/audit.garbage.test.ts"}
-{"fn":"parse","args":["0"],"out":{"text":"0","tree":{"C":0}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["0"],"out":{"text":"0","tree":{"C":0}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["0*x"],"out":{"text":"0 * x","tree":{"O":"multiply","op":"*","a":[{"C":0},{"S":"x"}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["0..0"],"throws":"Unexpected part \".0\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["0..3"],"throws":"Unexpected part \".3\" (char 3)","src":"src/engine/sums.test.ts"}
@@ -466,29 +466,29 @@
 {"fn":"parse","args":["0.1x*3"],"out":{"text":"0.1 x * 3","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":0.1},{"S":"x"}],"i":true},{"C":3}]}},"src":"src/engine/r3o.solve.test.ts"}
 {"fn":"parse","args":["0.2"],"out":{"text":"0.2","tree":{"C":0.2}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["0.2679491924311227"],"out":{"text":"0.2679491924311227","tree":{"C":0.2679491924311227}},"src":"src/engine/systemNumeric.test.ts"}
-{"fn":"parse","args":["0.3"],"out":{"text":"0.3","tree":{"C":0.3}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["0.3"],"out":{"text":"0.3","tree":{"C":0.3}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["0.333333333334x"],"out":{"text":"0.333333333334 x","tree":{"O":"multiply","op":"*","a":[{"C":0.333333333334},{"S":"x"}],"i":true}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["0.3x"],"out":{"text":"0.3 x","tree":{"O":"multiply","op":"*","a":[{"C":0.3},{"S":"x"}],"i":true}},"src":"src/engine/r3o.solve.test.ts"}
-{"fn":"parse","args":["0.4"],"out":{"text":"0.4","tree":{"C":0.4}},"src":"src/engine/solve.test.ts"}
+{"fn":"parse","args":["0.4"],"out":{"text":"0.4","tree":{"C":0.4}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["0.5 * (98/(10^1)) * t^2"],"out":{"text":"0.5 * (98 / (10 ^ 1)) * t ^ 2","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":0.5},{"P":{"O":"divide","op":"/","a":[{"C":98},{"P":{"O":"pow","op":"^","a":[{"C":10},{"C":1}]}}]}}]},{"O":"pow","op":"^","a":[{"S":"t"},{"C":2}]}]}},"src":"src/engine/unitSolve.test.ts"}
-{"fn":"parse","args":["0.5"],"out":{"text":"0.5","tree":{"C":0.5}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["0.7"],"out":{"text":"0.7","tree":{"C":0.7}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["0.5"],"out":{"text":"0.5","tree":{"C":0.5}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["0.7"],"out":{"text":"0.7","tree":{"C":0.7}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["0.862"],"out":{"text":"0.862","tree":{"C":0.862}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["0.9"],"out":{"text":"0.9","tree":{"C":0.9}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["0.9"],"out":{"text":"0.9","tree":{"C":0.9}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["1 + 1e-12"],"out":{"text":"1 + 1e-12","tree":{"O":"add","op":"+","a":[{"C":1},{"C":1e-12}]}},"src":"src/engine/r4b.calculus.test.ts"}
 {"fn":"parse","args":["1 kg"],"out":{"text":"1 kg","tree":{"O":"multiply","op":"*","a":[{"C":1},{"S":"kg"}],"i":true}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["1 km"],"out":{"text":"1 km","tree":{"O":"multiply","op":"*","a":[{"C":1},{"S":"km"}],"i":true}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["1 lb / 1 in^3"],"out":{"text":"1 lb / 1 in ^ 3","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":1},{"S":"lb"}],"i":true},{"O":"multiply","op":"*","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"in"},{"C":3}]}],"i":true}]}},"src":"src/engine/unitSystem.test.ts"}
-{"fn":"parse","args":["1 to 10 of n^2"],"out":{"text":"1 to 10 of n ^ 2","tree":{"O":"to","op":"to","a":[{"C":1},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":10},{"S":"of"}],"i":true},{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]}],"i":true}]}},"src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["1 to 10 of n^2"],"out":{"text":"1 to 10 of n ^ 2","tree":{"O":"to","op":"to","a":[{"C":1},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":10},{"S":"of"}],"i":true},{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]}],"i":true}]}},"src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["1 to 10"],"out":{"text":"1 to 10","tree":{"O":"to","op":"to","a":[{"C":1},{"C":10}]}},"src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1 to 100 of n^2"],"out":{"text":"1 to 100 of n ^ 2","tree":{"O":"to","op":"to","a":[{"C":1},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":100},{"S":"of"}],"i":true},{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]}],"i":true}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1 to"],"throws":"Unexpected end of expression (char 5)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["1"],"out":{"text":"1","tree":{"C":1}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["1"],"out":{"text":"1","tree":{"C":1}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["1.."],"throws":"Unexpected operator . (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1...10"],"throws":"Unexpected operator . (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..0"],"throws":"Unexpected part \".0\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["1..10 + 5"],"throws":"Unexpected part \".10\" (char 3)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["1..10"],"throws":"Unexpected part \".10\" (char 3)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["1..10"],"throws":"Unexpected part \".10\" (char 3)","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1..10, n^2"],"throws":"Unexpected part \".10\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..10.5"],"throws":"Unexpected part \".10\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..100"],"throws":"Unexpected part \".100\" (char 3)","src":"src/engine/sums.test.ts"}
@@ -498,8 +498,8 @@
 {"fn":"parse","args":["1..10^8"],"throws":"Unexpected part \".10\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["1..10^9"],"throws":"Unexpected part \".10\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..11"],"throws":"Unexpected part \".11\" (char 3)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["1..12"],"throws":"Unexpected part \".12\" (char 3)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["1..20"],"throws":"Unexpected part \".20\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
+{"fn":"parse","args":["1..12"],"throws":"Unexpected part \".12\" (char 3)","src":"src/components/QuickInput.sums.test.ts"}
+{"fn":"parse","args":["1..20"],"throws":"Unexpected part \".20\" (char 3)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["1..3"],"throws":"Unexpected part \".3\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..4"],"throws":"Unexpected part \".4\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..40"],"throws":"Unexpected part \".40\" (char 3)","src":"src/engine/sums.test.ts"}
@@ -511,10 +511,10 @@
 {"fn":"parse","args":["1..6"],"throws":"Unexpected part \".6\" (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["1..7"],"throws":"Unexpected part \".7\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["1..8"],"throws":"Unexpected part \".8\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
-{"fn":"parse","args":["1..9"],"throws":"Unexpected part \".9\" (char 3)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["1..Infinity"],"throws":"Unexpected operator . (char 3)","src":"src/lib/identities.test.ts"}
+{"fn":"parse","args":["1..9"],"throws":"Unexpected part \".9\" (char 3)","src":"src/components/QuickInput.sums.test.ts"}
+{"fn":"parse","args":["1..Infinity"],"throws":"Unexpected operator . (char 3)","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1..ans"],"throws":"Unexpected operator . (char 3)","src":"src/engine/audit2.cross.test.ts"}
-{"fn":"parse","args":["1..m"],"throws":"Unexpected operator . (char 3)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["1..m"],"throws":"Unexpected operator . (char 3)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["1..n"],"throws":"Unexpected operator . (char 3)","src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["1..top"],"throws":"Unexpected operator . (char 3)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["1.00"],"out":{"text":"1","tree":{"C":1}},"src":"src/engine/r4a.homework.test.ts"}
@@ -524,12 +524,12 @@
 {"fn":"parse","args":["1.3"],"out":{"text":"1.3","tree":{"C":1.3}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["1.5"],"out":{"text":"1.5","tree":{"C":1.5}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["1.7"],"out":{"text":"1.7","tree":{"C":1.7}},"src":"src/lib/identities.test.ts"}
-{"fn":"parse","args":["1/(1+x^2)"],"out":{"text":"1 / (1 + x ^ 2)","tree":{"O":"divide","op":"/","a":[{"C":1},{"P":{"O":"add","op":"+","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["1/(1+x^2)"],"out":{"text":"1 / (1 + x ^ 2)","tree":{"O":"divide","op":"/","a":[{"C":1},{"P":{"O":"add","op":"+","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["1/(x-2)"],"out":{"text":"1 / (x - 2)","tree":{"O":"divide","op":"/","a":[{"C":1},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":2}]}}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["1/(x^2+x+1)"],"out":{"text":"1 / (x ^ 2 + x + 1)","tree":{"O":"divide","op":"/","a":[{"C":1},{"P":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"x"}]},{"C":1}]}}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["1/2 m  Ξ ^2"],"out":{"text":"(1 / 2 m) Ξ ^ 2","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"divide","op":"/","a":[{"C":1},{"C":2}]},{"S":"m"}],"i":true},{"O":"pow","op":"^","a":[{"S":"Ξ"},{"C":2}]}],"i":true}},"src":"src/engine/timeDerivative.test.ts"}
 {"fn":"parse","args":["1/2"],"out":{"text":"1 / 2","tree":{"O":"divide","op":"/","a":[{"C":1},{"C":2}]}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["1/3"],"out":{"text":"1 / 3","tree":{"O":"divide","op":"/","a":[{"C":1},{"C":3}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["1/3"],"out":{"text":"1 / 3","tree":{"O":"divide","op":"/","a":[{"C":1},{"C":3}]}},"src":"src/engine/precise.test.ts"}
 {"fn":"parse","args":["1/4"],"out":{"text":"1 / 4","tree":{"O":"divide","op":"/","a":[{"C":1},{"C":4}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["1/R"],"out":{"text":"1 / R","tree":{"O":"divide","op":"/","a":[{"C":1},{"S":"R"}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["1/R1 + 1/R2 for R1"],"out":{"text":"1 / R1 + 1 / R2 for R1","tree":{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R1"}]},{"O":"divide","op":"/","a":[{"C":1},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"R2"},{"S":"for"}],"i":true},{"S":"R1"}],"i":true}]}]}},"src":"src/engine/isolate.solve.test.ts"}
@@ -539,10 +539,10 @@
 {"fn":"parse","args":["1/R_1+1/R_2"],"out":{"text":"1 / R_1 + 1 / R_2","tree":{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"R_1"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"R_2"}]}]}},"src":"src/engine/isolate.test.ts"}
 {"fn":"parse","args":["1/R_eq"],"out":{"text":"1 / R_eq","tree":{"O":"divide","op":"/","a":[{"C":1},{"S":"R_eq"}]}},"src":"src/engine/isolate.test.ts"}
 {"fn":"parse","args":["1/sqrt(1+x^2)"],"out":{"text":"1 / sqrt(1 + x ^ 2)","tree":{"O":"divide","op":"/","a":[{"C":1},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]}]}},"src":"src/engine/closedForm.test.ts"}
-{"fn":"parse","args":["1/sqrt(1-x^2)"],"out":{"text":"1 / sqrt(1 - x ^ 2)","tree":{"O":"divide","op":"/","a":[{"C":1},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["1/sqrt(1-x^2)"],"out":{"text":"1 / sqrt(1 - x ^ 2)","tree":{"O":"divide","op":"/","a":[{"C":1},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}]}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["1/sqrt(x)"],"out":{"text":"1 / sqrt(x)","tree":{"O":"divide","op":"/","a":[{"C":1},{"F":"sqrt","a":[{"S":"x"}]}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["1/x + 2/y - 1/z"],"out":{"text":"1 / x + 2 / y - 1 / z","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]},{"O":"divide","op":"/","a":[{"C":2},{"S":"y"}]}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["1/x"],"out":{"text":"1 / x","tree":{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["1/x"],"out":{"text":"1 / x","tree":{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["1/x^0.5 - 1/x^0.5"],"out":{"text":"1 / x ^ 0.5 - 1 / x ^ 0.5","tree":{"O":"subtract","op":"-","a":[{"O":"divide","op":"/","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":0.5}]}]},{"O":"divide","op":"/","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":0.5}]}]}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["1/x^2"],"out":{"text":"1 / x ^ 2","tree":{"O":"divide","op":"/","a":[{"C":1},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["10 - sum_(k)"],"out":{"text":"10 - sum_(k)","tree":{"O":"subtract","op":"-","a":[{"C":10},{"F":"sum_","a":[{"S":"k"}]}]}},"src":"src/engine/sums.test.ts"}
@@ -553,7 +553,7 @@
 {"fn":"parse","args":["10 m"],"out":{"text":"10 m","tree":{"O":"multiply","op":"*","a":[{"C":10},{"S":"m"}],"i":true}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["10 sq in"],"out":{"text":"10 sq in","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":10},{"S":"sq"}],"i":true},{"S":"in"}],"i":true}},"src":"src/engine/r4d.metamorphic.test.ts"}
 {"fn":"parse","args":["10 uF"],"out":{"text":"10 uF","tree":{"O":"multiply","op":"*","a":[{"C":10},{"S":"uF"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
-{"fn":"parse","args":["10"],"out":{"text":"10","tree":{"C":10}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["10"],"out":{"text":"10","tree":{"C":10}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["10*x1 - x2 + 2*x3 - x4 + x5"],"out":{"text":"10 * x1 - x2 + 2 * x3 - x4 + x5","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":10},{"S":"x1"}]},{"S":"x2"}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x3"}]}]},{"S":"x4"}]},{"S":"x5"}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["10..1"],"throws":"Unexpected part \".1\" (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["10.648"],"out":{"text":"10.648","tree":{"C":10.648}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -564,35 +564,35 @@
 {"fn":"parse","args":["1000x"],"out":{"text":"1000 x","tree":{"O":"multiply","op":"*","a":[{"C":1000},{"S":"x"}],"i":true}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["100x"],"out":{"text":"100 x","tree":{"O":"multiply","op":"*","a":[{"C":100},{"S":"x"}],"i":true}},"src":"src/engine/r4b.solve.test.ts"}
 {"fn":"parse","args":["1024"],"out":{"text":"1024","tree":{"C":1024}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["11"],"out":{"text":"11","tree":{"C":11}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["11"],"out":{"text":"11","tree":{"C":11}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1126"],"out":{"text":"1126","tree":{"C":1126}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["12 m/s"],"out":{"text":"12 m / s","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":12},{"S":"m"}],"i":true},{"S":"s"}]}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["12 x"],"out":{"text":"12 x","tree":{"O":"multiply","op":"*","a":[{"C":12},{"S":"x"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
-{"fn":"parse","args":["12"],"out":{"text":"12","tree":{"C":12}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["12"],"out":{"text":"12","tree":{"C":12}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["12*x1 - 6*x2 + 4*x3 - 30*x4"],"out":{"text":"12 * x1 - 6 * x2 + 4 * x3 - 30 * x4","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":12},{"S":"x1"}]},{"O":"multiply","op":"*","a":[{"C":6},{"S":"x2"}]}]},{"O":"multiply","op":"*","a":[{"C":4},{"S":"x3"}]}]},{"O":"multiply","op":"*","a":[{"C":30},{"S":"x4"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["12.01"],"out":{"text":"12.01","tree":{"C":12.01}},"src":"src/engine/letters.test.ts"}
 {"fn":"parse","args":["12.011"],"out":{"text":"12.011","tree":{"C":12.011}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["120"],"out":{"text":"120","tree":{"C":120}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["1234*x + 5678*y"],"out":{"text":"1234 * x + 5678 * y","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":1234},{"S":"x"}]},{"O":"multiply","op":"*","a":[{"C":5678},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["1240 eV nm"],"out":{"text":"1240 eV nm","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"C":1240},{"S":"eV"}],"i":true},{"S":"nm"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
-{"fn":"parse","args":["13"],"out":{"text":"13","tree":{"C":13}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["14"],"out":{"text":"14","tree":{"C":14}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["13"],"out":{"text":"13","tree":{"C":13}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["14"],"out":{"text":"14","tree":{"C":14}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["14.438"],"out":{"text":"14.438","tree":{"C":14.438}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1441"],"out":{"text":"1441","tree":{"C":1441}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["15"],"out":{"text":"15","tree":{"C":15}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["15"],"out":{"text":"15","tree":{"C":15}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["15.999"],"out":{"text":"15.999","tree":{"C":15.999}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["1542"],"out":{"text":"1542","tree":{"C":1542}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["16"],"out":{"text":"16","tree":{"C":16}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["16"],"out":{"text":"16","tree":{"C":16}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["16*a + 8*b + 4*c + 2*d + e"],"out":{"text":"16 * a + 8 * b + 4 * c + 2 * d + e","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":16},{"S":"a"}]},{"O":"multiply","op":"*","a":[{"C":8},{"S":"b"}]}]},{"O":"multiply","op":"*","a":[{"C":4},{"S":"c"}]}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"d"}]}]},{"S":"e"}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["16*a - 8*b + 4*c - 2*d + e"],"out":{"text":"16 * a - 8 * b + 4 * c - 2 * d + e","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":16},{"S":"a"}]},{"O":"multiply","op":"*","a":[{"C":8},{"S":"b"}]}]},{"O":"multiply","op":"*","a":[{"C":4},{"S":"c"}]}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"d"}]}]},{"S":"e"}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["17"],"out":{"text":"17","tree":{"C":17}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["18"],"out":{"text":"18","tree":{"C":18}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["17"],"out":{"text":"17","tree":{"C":17}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["18"],"out":{"text":"18","tree":{"C":18}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1848"],"out":{"text":"1848","tree":{"C":1848}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1850"],"out":{"text":"1850","tree":{"C":1850}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["19"],"out":{"text":"19","tree":{"C":19}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["19"],"out":{"text":"19","tree":{"C":19}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1903"],"out":{"text":"1903","tree":{"C":1903}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["1^(10) n^(2)"],"out":{"text":"1 ^ (10) n ^ (2)","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":1},{"P":{"C":10}}]},{"O":"pow","op":"^","a":[{"S":"n"},{"P":{"C":2}}]}],"i":true}},"src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["1^(10) n^2"],"out":{"text":"1 ^ (10) n ^ 2","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":1},{"P":{"C":10}}]},{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]}],"i":true}},"src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["1^(10) n^2"],"out":{"text":"1 ^ (10) n ^ 2","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":1},{"P":{"C":10}}]},{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]}],"i":true}},"src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["1^(1e1)"],"out":{"text":"1 ^ (10)","tree":{"O":"pow","op":"^","a":[{"C":1},{"P":{"C":10}}]}},"src":"src/lib/bounds.test.ts"}
 {"fn":"parse","args":["1^(5)"],"out":{"text":"1 ^ (5)","tree":{"O":"pow","op":"^","a":[{"C":1},{"P":{"C":5}}]}},"src":"src/lib/bounds.test.ts"}
 {"fn":"parse","args":["1^10 n^2"],"out":{"text":"1 ^ 10 n ^ 2","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":1},{"C":10}]},{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]}],"i":true}},"src":"src/lib/bounds.test.ts"}
@@ -625,7 +625,7 @@
 {"fn":"parse","args":["2 m"],"out":{"text":"2 m","tree":{"O":"multiply","op":"*","a":[{"C":2},{"S":"m"}],"i":true}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["2 m^3"],"out":{"text":"2 m ^ 3","tree":{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"S":"m"},{"C":3}]}],"i":true}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["2 x"],"out":{"text":"2 x","tree":{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["2"],"out":{"text":"2","tree":{"C":2}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["2"],"out":{"text":"2","tree":{"C":2}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["2(x - 3)"],"out":{"text":"2 (x - 3)","tree":{"O":"multiply","op":"*","a":[{"C":2},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":3}]}}],"i":true}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["2(x+1)"],"out":{"text":"2 (x + 1)","tree":{"O":"multiply","op":"*","a":[{"C":2},{"P":{"O":"add","op":"+","a":[{"S":"x"},{"C":1}]}}],"i":true}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["2*(Σ_k)"],"out":{"text":"2 * (Σ_k)","tree":{"O":"multiply","op":"*","a":[{"C":2},{"P":{"S":"Σ_k"}}]}},"src":"src/engine/sums.test.ts"}
@@ -659,54 +659,54 @@
 {"fn":"parse","args":["2*x2 + x3 - 2*x4 + 4*x5"],"out":{"text":"2 * x2 + x3 - 2 * x4 + 4 * x5","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x2"}]},{"S":"x3"}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x4"}]}]},{"O":"multiply","op":"*","a":[{"C":4},{"S":"x5"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["2+1"],"out":{"text":"2 + 1","tree":{"O":"add","op":"+","a":[{"C":2},{"C":1}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["2+3"],"out":{"text":"2 + 3","tree":{"O":"add","op":"+","a":[{"C":2},{"C":3}]}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["2..100"],"throws":"Unexpected part \".100\" (char 3)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["2..100"],"throws":"Unexpected part \".100\" (char 3)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["2..Infinity"],"throws":"Unexpected operator . (char 3)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["2.3"],"out":{"text":"2.3","tree":{"C":2.3}},"src":"src/lib/identities.test.ts"}
-{"fn":"parse","args":["2.5"],"out":{"text":"2.5","tree":{"C":2.5}},"src":"src/engine/audit.measure.test.ts"}
+{"fn":"parse","args":["2.5"],"out":{"text":"2.5","tree":{"C":2.5}},"src":"src/engine/glued.test.ts"}
 {"fn":"parse","args":["2.50"],"out":{"text":"2.5","tree":{"C":2.5}},"src":"src/engine/measure.test.ts"}
 {"fn":"parse","args":["2.7320508075688776"],"out":{"text":"2.7320508075688776","tree":{"C":2.7320508075688776}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["2/x - 1/y + 3/z"],"out":{"text":"2 / x - 1 / y + 3 / z","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"divide","op":"/","a":[{"C":2},{"S":"x"}]},{"O":"divide","op":"/","a":[{"C":1},{"S":"y"}]}]},{"O":"divide","op":"/","a":[{"C":3},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["2/x - 5/y"],"out":{"text":"2 / x - 5 / y","tree":{"O":"subtract","op":"-","a":[{"O":"divide","op":"/","a":[{"C":2},{"S":"x"}]},{"O":"divide","op":"/","a":[{"C":5},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["2/x"],"out":{"text":"2 / x","tree":{"O":"divide","op":"/","a":[{"C":2},{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["20 m/s"],"out":{"text":"20 m / s","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"C":20},{"S":"m"}],"i":true},{"S":"s"}]}},"src":"src/engine/system.units.test.ts"}
-{"fn":"parse","args":["20"],"out":{"text":"20","tree":{"C":20}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["20"],"out":{"text":"20","tree":{"C":20}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["200 GPa"],"out":{"text":"200 GPa","tree":{"O":"multiply","op":"*","a":[{"C":200},{"S":"GPa"}],"i":true}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["200 m"],"out":{"text":"200 m","tree":{"O":"multiply","op":"*","a":[{"C":200},{"S":"m"}],"i":true}},"src":"src/engine/system.units.test.ts"}
 {"fn":"parse","args":["2000000"],"out":{"text":"2e+6","tree":{"C":2000000}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["21"],"out":{"text":"21","tree":{"C":21}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["22"],"out":{"text":"22","tree":{"C":22}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["21"],"out":{"text":"21","tree":{"C":21}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["22"],"out":{"text":"22","tree":{"C":22}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["22.4"],"out":{"text":"22.4","tree":{"C":22.4}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["220"],"out":{"text":"220","tree":{"C":220}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["222222"],"out":{"text":"2.22222e+5","tree":{"C":222222}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["23"],"out":{"text":"23","tree":{"C":23}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["23"],"out":{"text":"23","tree":{"C":23}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["230"],"out":{"text":"230","tree":{"C":230}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["2355"],"out":{"text":"2355","tree":{"C":2355}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["24"],"out":{"text":"24","tree":{"C":24}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["24"],"out":{"text":"24","tree":{"C":24}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["2468*x + 11356*y"],"out":{"text":"2468 * x + 11356 * y","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2468},{"S":"x"}]},{"O":"multiply","op":"*","a":[{"C":11356},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["25"],"out":{"text":"25","tree":{"C":25}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["25"],"out":{"text":"25","tree":{"C":25}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["255"],"out":{"text":"255","tree":{"C":255}},"src":"src/engine/numberForms.test.ts"}
-{"fn":"parse","args":["26"],"out":{"text":"26","tree":{"C":26}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["26"],"out":{"text":"26","tree":{"C":26}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["26/5"],"out":{"text":"26 / 5","tree":{"O":"divide","op":"/","a":[{"C":26},{"C":5}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["27"],"out":{"text":"27","tree":{"C":27}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["27"],"out":{"text":"27","tree":{"C":27}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["273.15"],"out":{"text":"273.15","tree":{"C":273.15}},"src":"src/engine/r4a.homework.test.ts"}
-{"fn":"parse","args":["28"],"out":{"text":"28","tree":{"C":28}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["29"],"out":{"text":"29","tree":{"C":29}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["28"],"out":{"text":"28","tree":{"C":28}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["29"],"out":{"text":"29","tree":{"C":29}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["29e6 psi"],"out":{"text":"2.9e+7 psi","tree":{"O":"multiply","op":"*","a":[{"C":29000000},{"S":"psi"}],"i":true}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["2H + x"],"out":{"text":"2 H + x","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"H"}],"i":true},{"S":"x"}]}},"src":"src/engine/audit2.cross.test.ts"}
 {"fn":"parse","args":["2^x * 4^y"],"out":{"text":"2 ^ x * 4 ^ y","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]},{"O":"pow","op":"^","a":[{"C":4},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["2^x"],"out":{"text":"2 ^ x","tree":{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["2^x"],"out":{"text":"2 ^ x","tree":{"O":"pow","op":"^","a":[{"C":2},{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["2e-6 C"],"out":{"text":"2e-6 C","tree":{"O":"multiply","op":"*","a":[{"C":0.000002},{"S":"C"}],"i":true}},"src":"src/engine/r4a.decisions.test.ts"}
 {"fn":"parse","args":["2e20"],"out":{"text":"2e+20","tree":{"C":200000000000000000000}},"src":"src/engine/r3o.solve.test.ts"}
 {"fn":"parse","args":["2e4"],"out":{"text":"20000","tree":{"C":20000}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["2m"],"out":{"text":"2 m","tree":{"O":"multiply","op":"*","a":[{"C":2},{"S":"m"}],"i":true}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["2s + 1"],"out":{"text":"2 s + 1","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"s"}],"i":true},{"C":1}]}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["2x + -6"],"out":{"text":"2 x + -6","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"O":"unaryMinus","op":"-","a":[{"C":6}]}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["2x + 3"],"out":{"text":"2 x + 3","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":3}]}},"src":"src/engine/solve.test.ts"}
+{"fn":"parse","args":["2x + 3"],"out":{"text":"2 x + 3","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":3}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["2x + 3y"],"out":{"text":"2 x + 3 y","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"O":"multiply","op":"*","a":[{"C":3},{"S":"y"}],"i":true}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["2x + 6"],"out":{"text":"2 x + 6","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":6}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["2x + 9"],"out":{"text":"2 x + 9","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":9}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["2x - 5"],"out":{"text":"2 x - 5","tree":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":5}]}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["2x"],"out":{"text":"2 x","tree":{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}},"src":"src/engine/solve.test.ts"}
+{"fn":"parse","args":["2x"],"out":{"text":"2 x","tree":{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["2x+2"],"out":{"text":"2 x + 2","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":2}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["2x+3"],"out":{"text":"2 x + 3","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":3}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["2x^2 - 3x - 5"],"out":{"text":"2 x ^ 2 - 3 x - 5","tree":{"O":"subtract","op":"-","a":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":2},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true},{"O":"multiply","op":"*","a":[{"C":3},{"S":"x"}],"i":true}]},{"C":5}]}},"src":"src/engine/audit2.solve.test.ts"}
@@ -865,7 +865,7 @@
 {"fn":"parse","args":["3 μohm"],"out":{"text":"3 μohm","tree":{"O":"multiply","op":"*","a":[{"C":3},{"S":"μohm"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["3 μs"],"out":{"text":"3 μs","tree":{"O":"multiply","op":"*","a":[{"C":3},{"S":"μs"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["3 μΩ"],"out":{"text":"3 μΩ","tree":{"O":"multiply","op":"*","a":[{"C":3},{"S":"μΩ"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
-{"fn":"parse","args":["3"],"out":{"text":"3","tree":{"C":3}},"src":"src/engine/units.test.ts"}
+{"fn":"parse","args":["3"],"out":{"text":"3","tree":{"C":3}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["3(2x + 1)"],"out":{"text":"3 (2 x + 1)","tree":{"O":"multiply","op":"*","a":[{"C":3},{"P":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true},{"C":1}]}}],"i":true}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["3(x+2)"],"out":{"text":"3 (x + 2)","tree":{"O":"multiply","op":"*","a":[{"C":3},{"P":{"O":"add","op":"+","a":[{"S":"x"},{"C":2}]}}],"i":true}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["3*4"],"out":{"text":"3 * 4","tree":{"O":"multiply","op":"*","a":[{"C":3},{"C":4}]}},"src":"src/engine/numberForms.test.ts"}
@@ -889,7 +889,7 @@
 {"fn":"parse","args":["3/x + 3/y - 2/z"],"out":{"text":"3 / x + 3 / y - 2 / z","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":3},{"S":"x"}]},{"O":"divide","op":"/","a":[{"C":3},{"S":"y"}]}]},{"O":"divide","op":"/","a":[{"C":2},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["3/x + 4/y"],"out":{"text":"3 / x + 4 / y","tree":{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"C":3},{"S":"x"}]},{"O":"divide","op":"/","a":[{"C":4},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["3/x"],"out":{"text":"3 / x","tree":{"O":"divide","op":"/","a":[{"C":3},{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["30"],"out":{"text":"30","tree":{"C":30}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["30"],"out":{"text":"30","tree":{"C":30}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["30.603"],"out":{"text":"30.603","tree":{"C":30.603}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["3000000x"],"out":{"text":"3e+6 x","tree":{"O":"multiply","op":"*","a":[{"C":3000000},{"S":"x"}],"i":true}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["3139"],"out":{"text":"3139","tree":{"C":3139}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -914,7 +914,7 @@
 {"fn":"parse","args":["3x^2 - 2x"],"out":{"text":"3 x ^ 2 - 2 x","tree":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":3},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["3x^2"],"out":{"text":"3 x ^ 2","tree":{"O":"multiply","op":"*","a":[{"C":3},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["4 sum_(n)"],"out":{"text":"4 sum_(n)","tree":{"O":"multiply","op":"*","a":[{"C":4},{"F":"sum_","a":[{"S":"n"}]}],"i":true}},"src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["4"],"out":{"text":"4","tree":{"C":4}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["4"],"out":{"text":"4","tree":{"C":4}},"src":"src/lib/radical.test.ts"}
 {"fn":"parse","args":["4*cos(A) - cos(B) + 3*cos(C) + 2*cos(D) + cos(E)"],"out":{"text":"4 * cos(A) - cos(B) + 3 * cos(C) + 2 * cos(D) + cos(E)","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":4},{"F":"cos","a":[{"S":"A"}]}]},{"F":"cos","a":[{"S":"B"}]}]},{"O":"multiply","op":"*","a":[{"C":3},{"F":"cos","a":[{"S":"C"}]}]}]},{"O":"multiply","op":"*","a":[{"C":2},{"F":"cos","a":[{"S":"D"}]}]}]},{"F":"cos","a":[{"S":"E"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["4*sin(theta) - 9*cos(phi)"],"out":{"text":"4 * sin(theta) - 9 * cos(phi)","tree":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":4},{"F":"sin","a":[{"S":"theta"}]}]},{"O":"multiply","op":"*","a":[{"C":9},{"F":"cos","a":[{"S":"phi"}]}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["4*sqrt(x+1) + 5*sqrt(y-2)"],"out":{"text":"4 * sqrt(x + 1) + 5 * sqrt(y - 2)","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":4},{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"S":"x"},{"C":1}]}]}]},{"O":"multiply","op":"*","a":[{"C":5},{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"S":"y"},{"C":2}]}]}]}]}},"src":"src/engine/system.test.ts"}
@@ -951,8 +951,8 @@
 {"fn":"parse","args":["5 V"],"out":{"text":"5 V","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"V"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["5 cm"],"out":{"text":"5 cm","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"cm"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["5 kg"],"out":{"text":"5 kg","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"kg"}],"i":true}},"src":"src/engine/system.units.test.ts"}
-{"fn":"parse","args":["5 m"],"out":{"text":"5 m","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"m"}],"i":true}},"src":"src/engine/audit2.solve.test.ts"}
-{"fn":"parse","args":["5"],"out":{"text":"5","tree":{"C":5}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["5 m"],"out":{"text":"5 m","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"m"}],"i":true}},"src":"src/engine/unitSolve.test.ts"}
+{"fn":"parse","args":["5"],"out":{"text":"5","tree":{"C":5}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["5*x4"],"out":{"text":"5 * x4","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"x4"}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["5*x5"],"out":{"text":"5 * x5","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"x5"}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["5..2"],"throws":"Unexpected part \".2\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
@@ -981,7 +981,7 @@
 {"fn":"parse","args":["5x + 9"],"out":{"text":"5 x + 9","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":5},{"S":"x"}],"i":true},{"C":9}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["5x"],"out":{"text":"5 x","tree":{"O":"multiply","op":"*","a":[{"C":5},{"S":"x"}],"i":true}},"src":"src/engine/audit2.cross.test.ts"}
 {"fn":"parse","args":["5x^2"],"out":{"text":"5 x ^ 2","tree":{"O":"multiply","op":"*","a":[{"C":5},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["6"],"out":{"text":"6","tree":{"C":6}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["6"],"out":{"text":"6","tree":{"C":6}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["6*x + 9*y - 4*z"],"out":{"text":"6 * x + 9 * y - 4 * z","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"x"}]},{"O":"multiply","op":"*","a":[{"C":9},{"S":"y"}]}]},{"O":"multiply","op":"*","a":[{"C":4},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["6*x1 + 9*x2 + 12*x3 + 10*x4 + 8*x5"],"out":{"text":"6 * x1 + 9 * x2 + 12 * x3 + 10 * x4 + 8 * x5","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"x1"}]},{"O":"multiply","op":"*","a":[{"C":9},{"S":"x2"}]}]},{"O":"multiply","op":"*","a":[{"C":12},{"S":"x3"}]}]},{"O":"multiply","op":"*","a":[{"C":10},{"S":"x4"}]}]},{"O":"multiply","op":"*","a":[{"C":8},{"S":"x5"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["6*x1 - 9*x2 + 12*x3 - 15*x4"],"out":{"text":"6 * x1 - 9 * x2 + 12 * x3 - 15 * x4","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"C":6},{"S":"x1"}]},{"O":"multiply","op":"*","a":[{"C":9},{"S":"x2"}]}]},{"O":"multiply","op":"*","a":[{"C":12},{"S":"x3"}]}]},{"O":"multiply","op":"*","a":[{"C":15},{"S":"x4"}]}]}},"src":"src/engine/system.test.ts"}
@@ -991,7 +991,7 @@
 {"fn":"parse","args":["6.6e-34"],"out":{"text":"6.6e-34","tree":{"C":6.6e-34}},"src":"src/engine/r3o.solve.test.ts"}
 {"fn":"parse","args":["6.941"],"out":{"text":"6.941","tree":{"C":6.941}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["6/x"],"out":{"text":"6 / x","tree":{"O":"divide","op":"/","a":[{"C":6},{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["60"],"out":{"text":"60","tree":{"C":60}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["60"],"out":{"text":"60","tree":{"C":60}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["60.364"],"out":{"text":"60.364","tree":{"C":60.364}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["60.593"],"out":{"text":"60.593","tree":{"C":60.593}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["600"],"out":{"text":"600","tree":{"C":600}},"src":"src/engine/system.units.test.ts"}
@@ -1015,7 +1015,7 @@
 {"fn":"parse","args":["6x"],"out":{"text":"6 x","tree":{"O":"multiply","op":"*","a":[{"C":6},{"S":"x"}],"i":true}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["6x^2"],"out":{"text":"6 x ^ 2","tree":{"O":"multiply","op":"*","a":[{"C":6},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["7 - 2x"],"out":{"text":"7 - 2 x","tree":{"O":"subtract","op":"-","a":[{"C":7},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}]}},"src":"src/engine/audit2.solve.test.ts"}
-{"fn":"parse","args":["7"],"out":{"text":"7","tree":{"C":7}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["7"],"out":{"text":"7","tree":{"C":7}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["7*(pi)2"],"out":{"text":"7 * (pi) 2","tree":{"O":"multiply","op":"*","a":[{"C":7},{"O":"multiply","op":"*","a":[{"P":{"S":"pi"}},{"C":2}],"i":true}]}},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["7*(pi)3Ωi"],"out":{"text":"7 * (pi) 3 Ωi","tree":{"O":"multiply","op":"*","a":[{"C":7},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"P":{"S":"pi"}},{"C":3}],"i":true},{"S":"Ωi"}],"i":true}]}},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["7..7"],"throws":"Unexpected part \".7\" (char 3)","src":"src/engine/audit2.sums.test.ts"}
@@ -1030,7 +1030,7 @@
 {"fn":"parse","args":["7x + 10"],"out":{"text":"7 x + 10","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":7},{"S":"x"}],"i":true},{"C":10}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["7x + 2"],"out":{"text":"7 x + 2","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":7},{"S":"x"}],"i":true},{"C":2}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["7x^2"],"out":{"text":"7 x ^ 2","tree":{"O":"multiply","op":"*","a":[{"C":7},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["8"],"out":{"text":"8","tree":{"C":8}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["8"],"out":{"text":"8","tree":{"C":8}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["8*(Ω)"],"out":{"text":"8 * (Ω)","tree":{"O":"multiply","op":"*","a":[{"C":8},{"P":{"S":"Ω"}}]}},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["8.53e20"],"out":{"text":"8.53e+20","tree":{"C":853000000000000000000}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["8.575"],"out":{"text":"8.575","tree":{"C":8.575}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -1045,10 +1045,10 @@
 {"fn":"parse","args":["8x + 7"],"out":{"text":"8 x + 7","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"C":8},{"S":"x"}],"i":true},{"C":7}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["8x^2"],"out":{"text":"8 x ^ 2","tree":{"O":"multiply","op":"*","a":[{"C":8},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["9 V"],"out":{"text":"9 V","tree":{"O":"multiply","op":"*","a":[{"C":9},{"S":"V"}],"i":true}},"src":"src/engine/r4a.homework.test.ts"}
-{"fn":"parse","args":["9"],"out":{"text":"9","tree":{"C":9}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["9"],"out":{"text":"9","tree":{"C":9}},"src":"src/lib/radical.test.ts"}
 {"fn":"parse","args":["9.8"],"out":{"text":"9.8","tree":{"C":9.8}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["9/x"],"out":{"text":"9 / x","tree":{"O":"divide","op":"/","a":[{"C":9},{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"parse","args":["90"],"out":{"text":"90","tree":{"C":90}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["90"],"out":{"text":"90","tree":{"C":90}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["9000000"],"out":{"text":"9e+6","tree":{"C":9000000}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["9012"],"out":{"text":"9012","tree":{"C":9012}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["9119"],"out":{"text":"9119","tree":{"C":9119}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -1111,7 +1111,7 @@
 {"fn":"parse","args":["a x"],"out":{"text":"a x","tree":{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"x"}],"i":true}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["a x^2 + b x + c"],"out":{"text":"a x ^ 2 + b x + c","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true},{"O":"multiply","op":"*","a":[{"S":"b"},{"S":"x"}],"i":true}]},{"S":"c"}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["a x^2"],"out":{"text":"a x ^ 2","tree":{"O":"multiply","op":"*","a":[{"S":"a"},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["a"],"out":{"text":"a","tree":{"S":"a"}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["a"],"out":{"text":"a","tree":{"S":"a"}},"src":"src/engine/precise.test.ts"}
 {"fn":"parse","args":["a*b"],"out":{"text":"a * b","tree":{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"b"}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["a*x + 1"],"out":{"text":"a * x + 1","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"x"}]},{"C":1}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["a*x + b"],"out":{"text":"a * x + b","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"x"}]},{"S":"b"}]}},"src":"src/engine/isolate.test.ts"}
@@ -1125,7 +1125,7 @@
 {"fn":"parse","args":["abs(sin(x))"],"out":{"text":"abs(sin(x))","tree":{"F":"abs","a":[{"F":"sin","a":[{"S":"x"}]}]}},"src":"src/engine/r4b.solve.test.ts"}
 {"fn":"parse","args":["abs(x - 1)"],"out":{"text":"abs(x - 1)","tree":{"F":"abs","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}]}},"src":"src/engine/r4b.calculus.test.ts"}
 {"fn":"parse","args":["abs(x) + 2*y"],"out":{"text":"abs(x) + 2 * y","tree":{"O":"add","op":"+","a":[{"F":"abs","a":[{"S":"x"}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["abs(x)"],"out":{"text":"abs(x)","tree":{"F":"abs","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["abs(x)"],"out":{"text":"abs(x)","tree":{"F":"abs","a":[{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["abs(x)/x"],"out":{"text":"abs(x) / x","tree":{"O":"divide","op":"/","a":[{"F":"abs","a":[{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["abs(x-1)"],"out":{"text":"abs(x - 1)","tree":{"F":"abs","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["abs(x-3.3)"],"out":{"text":"abs(x - 3.3)","tree":{"F":"abs","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"C":3.3}]}]}},"src":"src/engine/r3o.calculus.test.ts"}
@@ -1133,14 +1133,14 @@
 {"fn":"parse","args":["ans"],"out":{"text":"ans","tree":{"S":"ans"}},"src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["asin(x)"],"out":{"text":"asin(x)","tree":{"F":"asin","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["atan(3/4)"],"out":{"text":"atan(3 / 4)","tree":{"F":"atan","a":[{"O":"divide","op":"/","a":[{"C":3},{"C":4}]}]}},"src":"src/engine/anglesUnits.test.ts"}
-{"fn":"parse","args":["atan(x)"],"out":{"text":"atan(x)","tree":{"F":"atan","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["atan(x)"],"out":{"text":"atan(x)","tree":{"F":"atan","a":[{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["atan(x)/x + x/7"],"out":{"text":"atan(x) / x + x / 7","tree":{"O":"add","op":"+","a":[{"O":"divide","op":"/","a":[{"F":"atan","a":[{"S":"x"}]},{"S":"x"}]},{"O":"divide","op":"/","a":[{"S":"x"},{"C":7}]}]}},"src":"src/engine/closedForm.test.ts"}
-{"fn":"parse","args":["atan(x)/x"],"out":{"text":"atan(x) / x","tree":{"O":"divide","op":"/","a":[{"F":"atan","a":[{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["atan(x)/x"],"out":{"text":"atan(x) / x","tree":{"O":"divide","op":"/","a":[{"F":"atan","a":[{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["atan(x)^2"],"out":{"text":"atan(x) ^ 2","tree":{"O":"pow","op":"^","a":[{"F":"atan","a":[{"S":"x"}]},{"C":2}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["b"],"out":{"text":"b","tree":{"S":"b"}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["b"],"out":{"text":"b","tree":{"S":"b"}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["b*x - a*y"],"out":{"text":"b * x - a * y","tree":{"O":"subtract","op":"-","a":[{"O":"multiply","op":"*","a":[{"S":"b"},{"S":"x"}]},{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"y"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["bar"],"out":{"text":"bar","tree":{"S":"bar"}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["c"],"out":{"text":"c","tree":{"S":"c"}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["c"],"out":{"text":"c","tree":{"S":"c"}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["c-"],"throws":"Unexpected end of expression (char 3)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["c0 + 2*c1 + 4*c2 + 8*c3"],"out":{"text":"c0 + 2 * c1 + 4 * c2 + 8 * c3","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"c0"},{"O":"multiply","op":"*","a":[{"C":2},{"S":"c1"}]}]},{"O":"multiply","op":"*","a":[{"C":4},{"S":"c2"}]}]},{"O":"multiply","op":"*","a":[{"C":8},{"S":"c3"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["c0 + 3*c1 + 9*c2 + 27*c3"],"out":{"text":"c0 + 3 * c1 + 9 * c2 + 27 * c3","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"c0"},{"O":"multiply","op":"*","a":[{"C":3},{"S":"c1"}]}]},{"O":"multiply","op":"*","a":[{"C":9},{"S":"c2"}]}]},{"O":"multiply","op":"*","a":[{"C":27},{"S":"c3"}]}]}},"src":"src/engine/system.test.ts"}
@@ -1156,7 +1156,7 @@
 {"fn":"parse","args":["cost"],"out":{"text":"cost","tree":{"S":"cost"}},"src":"src/engine/parens.test.ts"}
 {"fn":"parse","args":["d + e"],"out":{"text":"d + e","tree":{"O":"add","op":"+","a":[{"S":"d"},{"S":"e"}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["d - e"],"out":{"text":"d - e","tree":{"O":"subtract","op":"-","a":[{"S":"d"},{"S":"e"}]}},"src":"src/engine/systemNumeric.test.ts"}
-{"fn":"parse","args":["d"],"out":{"text":"d","tree":{"S":"d"}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["d"],"out":{"text":"d","tree":{"S":"d"}},"src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["d/dt t^(3/(10^12*10^3)) t"],"out":{"text":"d / dt t ^ (3 / (10 ^ 12 * 10 ^ 3)) t","tree":{"O":"divide","op":"/","a":[{"S":"d"},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"dt"},{"O":"pow","op":"^","a":[{"S":"t"},{"P":{"O":"divide","op":"/","a":[{"C":3},{"P":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":10},{"C":12}]},{"O":"pow","op":"^","a":[{"C":10},{"C":3}]}]}}]}}]}],"i":true},{"S":"t"}],"i":true}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["d/dt t^3 at t"],"out":{"text":"d / dt t ^ 3 at t","tree":{"O":"divide","op":"/","a":[{"S":"d"},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"dt"},{"O":"pow","op":"^","a":[{"S":"t"},{"C":3}]}],"i":true},{"S":"at"}],"i":true},{"S":"t"}],"i":true}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["d/dx x^(2/(10^12*10^3)) x"],"out":{"text":"d / dx x ^ (2 / (10 ^ 12 * 10 ^ 3)) x","tree":{"O":"divide","op":"/","a":[{"S":"d"},{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"dx"},{"O":"pow","op":"^","a":[{"S":"x"},{"P":{"O":"divide","op":"/","a":[{"C":2},{"P":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"C":10},{"C":12}]},{"O":"pow","op":"^","a":[{"C":10},{"C":3}]}]}}]}}]}],"i":true},{"S":"x"}],"i":true}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
@@ -1169,23 +1169,23 @@
 {"fn":"parse","args":["delta"],"out":{"text":"delta","tree":{"S":"delta"}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["derivative"],"out":{"text":"derivative","tree":{"S":"derivative"}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["dx"],"out":{"text":"dx","tree":{"S":"dx"}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["e"],"out":{"text":"e","tree":{"S":"e"}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["e"],"out":{"text":"e","tree":{"S":"e"}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["e2"],"out":{"text":"e2","tree":{"S":"e2"}},"src":"src/engine/r3o.letters.test.ts"}
 {"fn":"parse","args":["e^(-10000(x-0.3)^2)"],"out":{"text":"e ^ (-10000 (x - 0.3) ^ 2)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"O":"unaryMinus","op":"-","a":[{"C":10000}]},{"O":"pow","op":"^","a":[{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":0.3}]}},{"C":2}]}],"i":true}}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["e^(-t/(384/(10^6)))"],"out":{"text":"e ^ (-t / (384 / (10 ^ 6)))","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"S":"t"}]},{"P":{"O":"divide","op":"/","a":[{"C":384},{"P":{"O":"pow","op":"^","a":[{"C":10},{"C":6}]}}]}}]}}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["e^(-t/(__q0))"],"out":{"text":"e ^ (-t / (__q0))","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"divide","op":"/","a":[{"O":"unaryMinus","op":"-","a":[{"S":"t"}]},{"P":{"S":"__q0"}}]}}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["e^(-x) sin(x)"],"out":{"text":"e ^ (-x) sin(x)","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"S":"x"}]}}]},{"F":"sin","a":[{"S":"x"}]}],"i":true}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["e^(-x)"],"out":{"text":"e ^ (-x)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"S":"x"}]}}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["e^(-x^2)"],"out":{"text":"e ^ (-x ^ 2)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["e^(-x)"],"out":{"text":"e ^ (-x)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"S":"x"}]}}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["e^(-x^2)"],"out":{"text":"e ^ (-x ^ 2)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["e^(1/x)"],"out":{"text":"e ^ (1 / x)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"divide","op":"/","a":[{"C":1},{"S":"x"}]}}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["e^(2x)"],"out":{"text":"e ^ (2 x)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["e^(2x)"],"out":{"text":"e ^ (2 x)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["e^(k  theta )  Ξ"],"out":{"text":"e ^ (k theta) Ξ","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"S":"k"},{"S":"theta"}],"i":true}}]},{"S":"Ξ"}],"i":true}},"src":"src/engine/timeDerivative.test.ts"}
 {"fn":"parse","args":["e^(k theta )   Ξ"],"out":{"text":"e ^ (k theta) Ξ","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"S":"k"},{"S":"theta"}],"i":true}}]},{"S":"Ξ"}],"i":true}},"src":"src/engine/timeDerivative.test.ts"}
 {"fn":"parse","args":["e^(k theta )  Ξ"],"out":{"text":"e ^ (k theta) Ξ","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"S":"k"},{"S":"theta"}],"i":true}}]},{"S":"Ξ"}],"i":true}},"src":"src/engine/timeDerivative.test.ts"}
 {"fn":"parse","args":["e^(k x)"],"out":{"text":"e ^ (k x)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"S":"k"},{"S":"x"}],"i":true}}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["e^(x y)"],"out":{"text":"e ^ (x y)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}],"i":true}}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["e^(x^2)"],"out":{"text":"e ^ (x ^ 2)","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["e^x"],"out":{"text":"e ^ x","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["e^x"],"out":{"text":"e ^ x","tree":{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["e^x/x"],"out":{"text":"e ^ x / x","tree":{"O":"divide","op":"/","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["eps"],"out":{"text":"eps","tree":{"S":"eps"}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["eps*(500 mm)"],"out":{"text":"eps * (500 mm)","tree":{"O":"multiply","op":"*","a":[{"S":"eps"},{"P":{"O":"multiply","op":"*","a":[{"C":500},{"S":"mm"}],"i":true}}]}},"src":"src/engine/unitSystem.test.ts"}
@@ -1214,15 +1214,15 @@
 {"fn":"parse","args":["g(x)"],"out":{"text":"g(x)","tree":{"F":"g","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["g*(*)"],"throws":"Value expected (char 4)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["gfactorial(6)"],"out":{"text":"gfactorial(6)","tree":{"F":"gfactorial","a":[{"C":6}]}},"src":"src/engine/audit.garbage.test.ts"}
-{"fn":"parse","args":["h"],"out":{"text":"h","tree":{"S":"h"}},"src":"src/engine/unitSystem.test.ts"}
+{"fn":"parse","args":["h"],"out":{"text":"h","tree":{"S":"h"}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["h*c/lambda"],"out":{"text":"h * c / lambda","tree":{"O":"divide","op":"/","a":[{"O":"multiply","op":"*","a":[{"S":"h"},{"S":"c"}]},{"S":"lambda"}]}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["hc"],"out":{"text":"hc","tree":{"S":"hc"}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["height"],"out":{"text":"height","tree":{"S":"height"}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["i"],"out":{"text":"i","tree":{"S":"i"}},"src":"src/engine/numberForms.test.ts"}
+{"fn":"parse","args":["i"],"out":{"text":"i","tree":{"S":"i"}},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["int"],"out":{"text":"int","tree":{"S":"int"}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["integral"],"out":{"text":"integral","tree":{"S":"integral"}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["k * Σ(n, n)"],"out":{"text":"k * Σ(n, n)","tree":{"O":"multiply","op":"*","a":[{"S":"k"},{"F":"Σ","a":[{"S":"n"},{"S":"n"}]}]}},"src":"src/engine/audit2.sums.test.ts"}
-{"fn":"parse","args":["k"],"out":{"text":"k","tree":{"S":"k"}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["k"],"out":{"text":"k","tree":{"S":"k"}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["kk0~#21+'"],"throws":"Unexpected operator ~ (char 4)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["l"],"out":{"text":"l","tree":{"S":"l"}},"src":"src/engine/r3o.letters.test.ts"}
 {"fn":"parse","args":["l5[2x@/(o?)"],"throws":"Syntax error in part \"@/(o?)\" (char 6)","src":"src/engine/audit.garbage.test.ts"}
@@ -1236,11 +1236,11 @@
 {"fn":"parse","args":["ln(x y)"],"out":{"text":"ln(x y)","tree":{"F":"ln","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}],"i":true}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["ln(x) + y"],"out":{"text":"ln(x) + y","tree":{"O":"add","op":"+","a":[{"F":"ln","a":[{"S":"x"}]},{"S":"y"}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["ln(x) e^(-x)"],"out":{"text":"ln(x) e ^ (-x)","tree":{"O":"multiply","op":"*","a":[{"F":"ln","a":[{"S":"x"}]},{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"S":"x"}]}}]}],"i":true}},"src":"src/engine/closedForm.test.ts"}
-{"fn":"parse","args":["ln(x)"],"out":{"text":"ln(x)","tree":{"F":"ln","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["ln(x)"],"out":{"text":"ln(x)","tree":{"F":"ln","a":[{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["ln(x)/(1-x)"],"out":{"text":"ln(x) / (1 - x)","tree":{"O":"divide","op":"/","a":[{"F":"ln","a":[{"S":"x"}]},{"P":{"O":"subtract","op":"-","a":[{"C":1},{"S":"x"}]}}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["ln(x)/(x-1)"],"out":{"text":"ln(x) / (x - 1)","tree":{"O":"divide","op":"/","a":[{"F":"ln","a":[{"S":"x"}]},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["ln(x)/x"],"out":{"text":"ln(x) / x","tree":{"O":"divide","op":"/","a":[{"F":"ln","a":[{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["ln(x)ln(1-x)"],"out":{"text":"ln(x) ln(1 - x)","tree":{"O":"multiply","op":"*","a":[{"F":"ln","a":[{"S":"x"}]},{"F":"ln","a":[{"O":"subtract","op":"-","a":[{"C":1},{"S":"x"}]}]}],"i":true}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["ln(x)ln(1-x)"],"out":{"text":"ln(x) ln(1 - x)","tree":{"O":"multiply","op":"*","a":[{"F":"ln","a":[{"S":"x"}]},{"F":"ln","a":[{"O":"subtract","op":"-","a":[{"C":1},{"S":"x"}]}]}],"i":true}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["ln(x^2 + y^2)"],"out":{"text":"ln(x ^ 2 + y ^ 2)","tree":{"F":"ln","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["ln(x^2)"],"out":{"text":"ln(x ^ 2)","tree":{"F":"ln","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["log(x)"],"out":{"text":"log(x)","tree":{"F":"log","a":[{"S":"x"}]}},"src":"src/engine/systemNumeric.test.ts"}
@@ -1258,11 +1258,11 @@
 {"fn":"parse","args":["m"],"out":{"text":"m","tree":{"S":"m"}},"src":"src/engine/scientific.test.ts"}
 {"fn":"parse","args":["m*"],"throws":"Unexpected end of expression (char 3)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["m*a"],"out":{"text":"m * a","tree":{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"a"}]}},"src":"src/engine/system.units.test.ts"}
-{"fn":"parse","args":["m*x + b"],"out":{"text":"m * x + b","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"x"}]},{"S":"b"}]}},"src":"src/engine/audit2.solve.test.ts"}
+{"fn":"parse","args":["m*x + b"],"out":{"text":"m * x + b","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"m"},{"S":"x"}]},{"S":"b"}]}},"src":"src/engine/unitSolve.test.ts"}
 {"fn":"parse","args":["m/M"],"out":{"text":"m / M","tree":{"O":"divide","op":"/","a":[{"S":"m"},{"S":"M"}]}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["max(x, 1)"],"out":{"text":"max(x, 1)","tree":{"F":"max","a":[{"S":"x"},{"C":1}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["n R T"],"out":{"text":"n R T","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"n"},{"S":"R"}],"i":true},{"S":"T"}],"i":true}},"src":"src/engine/isolate.solve.test.ts"}
-{"fn":"parse","args":["n"],"out":{"text":"n","tree":{"S":"n"}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["n"],"out":{"text":"n","tree":{"S":"n"}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["n*(n+1)"],"out":{"text":"n * (n + 1)","tree":{"O":"multiply","op":"*","a":[{"S":"n"},{"P":{"O":"add","op":"+","a":[{"S":"n"},{"C":1}]}}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["o"],"out":{"text":"o","tree":{"S":"o"}},"src":"src/engine/r3o.letters.test.ts"}
 {"fn":"parse","args":["p - a A"],"out":{"text":"p - a A","tree":{"O":"subtract","op":"-","a":[{"S":"p"},{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"A"}],"i":true}]}},"src":"src/lib/identities.test.ts"}
@@ -1271,8 +1271,8 @@
 {"fn":"parse","args":["phi"],"out":{"text":"phi","tree":{"S":"phi"}},"src":"src/engine/numberForms.test.ts"}
 {"fn":"parse","args":["pi r^2"],"out":{"text":"pi r ^ 2","tree":{"O":"multiply","op":"*","a":[{"S":"pi"},{"O":"pow","op":"^","a":[{"S":"r"},{"C":2}]}],"i":true}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["pi x"],"out":{"text":"pi x","tree":{"O":"multiply","op":"*","a":[{"S":"pi"},{"S":"x"}],"i":true}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["pi"],"out":{"text":"pi","tree":{"S":"pi"}},"src":"src/engine/scientific.test.ts"}
-{"fn":"parse","args":["pi/2"],"out":{"text":"pi / 2","tree":{"O":"divide","op":"/","a":[{"S":"pi"},{"C":2}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["pi"],"out":{"text":"pi","tree":{"S":"pi"}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["pi/2"],"out":{"text":"pi / 2","tree":{"O":"divide","op":"/","a":[{"S":"pi"},{"C":2}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["pi/4"],"out":{"text":"pi / 4","tree":{"O":"divide","op":"/","a":[{"S":"pi"},{"C":4}]}},"src":"src/engine/scientific.test.ts"}
 {"fn":"parse","args":["pp0q0^2 + sin(pp0q0)"],"out":{"text":"pp0q0 ^ 2 + sin(pp0q0)","tree":{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"pp0q0"},{"C":2}]},{"F":"sin","a":[{"S":"pp0q0"}]}]}},"src":"src/engine/work.test.ts"}
 {"fn":"parse","args":["pp0q0^2 pp0q1"],"out":{"text":"pp0q0 ^ 2 pp0q1","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"pp0q0"},{"C":2}]},{"S":"pp0q1"}],"i":true}},"src":"src/engine/partial.test.ts"}
@@ -1286,8 +1286,8 @@
 {"fn":"parse","args":["q1"],"out":{"text":"q1","tree":{"S":"q1"}},"src":"src/engine/r4a.decisions.test.ts"}
 {"fn":"parse","args":["qty"],"out":{"text":"qty","tree":{"S":"qty"}},"src":"src/engine/scientific.test.ts"}
 {"fn":"parse","args":["r cos(φ)"],"out":{"text":"r cos(φ)","tree":{"O":"multiply","op":"*","a":[{"S":"r"},{"F":"cos","a":[{"S":"φ"}]}],"i":true}},"src":"src/engine/numberForms.test.ts"}
-{"fn":"parse","args":["r sin(theta)"],"out":{"text":"r sin(theta)","tree":{"O":"multiply","op":"*","a":[{"S":"r"},{"F":"sin","a":[{"S":"theta"}]}],"i":true}},"src":"src/engine/isolate.solve.test.ts"}
-{"fn":"parse","args":["r"],"out":{"text":"r","tree":{"S":"r"}},"src":"src/lib/identities.test.ts"}
+{"fn":"parse","args":["r sin(theta)"],"out":{"text":"r sin(theta)","tree":{"O":"multiply","op":"*","a":[{"S":"r"},{"F":"sin","a":[{"S":"theta"}]}],"i":true}},"src":"src/engine/partial.test.ts"}
+{"fn":"parse","args":["r"],"out":{"text":"r","tree":{"S":"r"}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["r^2"],"out":{"text":"r ^ 2","tree":{"O":"pow","op":"^","a":[{"S":"r"},{"C":2}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["radius"],"out":{"text":"radius","tree":{"S":"radius"}},"src":"src/engine/scientific.test.ts"}
 {"fn":"parse","args":["rate"],"out":{"text":"rate","tree":{"S":"rate"}},"src":"src/engine/scientific.test.ts"}
@@ -1305,8 +1305,8 @@
 {"fn":"parse","args":["sin(x y)"],"out":{"text":"sin(x y)","tree":{"F":"sin","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}],"i":true}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["sin(x) + cos(y)"],"out":{"text":"sin(x) + cos(y)","tree":{"O":"add","op":"+","a":[{"F":"sin","a":[{"S":"x"}]},{"F":"cos","a":[{"S":"y"}]}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["sin(x) + y"],"out":{"text":"sin(x) + y","tree":{"O":"add","op":"+","a":[{"F":"sin","a":[{"S":"x"}]},{"S":"y"}]}},"src":"src/engine/systemNumeric.test.ts"}
-{"fn":"parse","args":["sin(x)"],"out":{"text":"sin(x)","tree":{"F":"sin","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["sin(x)/x"],"out":{"text":"sin(x) / x","tree":{"O":"divide","op":"/","a":[{"F":"sin","a":[{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["sin(x)"],"out":{"text":"sin(x)","tree":{"F":"sin","a":[{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
+{"fn":"parse","args":["sin(x)/x"],"out":{"text":"sin(x) / x","tree":{"O":"divide","op":"/","a":[{"F":"sin","a":[{"S":"x"}]},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["sin(x)^2 + 1e-20"],"out":{"text":"sin(x) ^ 2 + 1e-20","tree":{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"F":"sin","a":[{"S":"x"}]},{"C":2}]},{"C":1e-20}]}},"src":"src/engine/r4b.solve.test.ts"}
 {"fn":"parse","args":["sin(x)^2"],"out":{"text":"sin(x) ^ 2","tree":{"O":"pow","op":"^","a":[{"F":"sin","a":[{"S":"x"}]},{"C":2}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["sin(x^2)"],"out":{"text":"sin(x ^ 2)","tree":{"F":"sin","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}]}},"src":"src/engine/closedForm.test.ts"}
@@ -1327,17 +1327,17 @@
 {"fn":"parse","args":["sqrt(x - 1) + 1"],"out":{"text":"sqrt(x - 1) + 1","tree":{"O":"add","op":"+","a":[{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}]},{"C":1}]}},"src":"src/engine/r4b.solve.test.ts"}
 {"fn":"parse","args":["sqrt(x) e^(-x)"],"out":{"text":"sqrt(x) e ^ (-x)","tree":{"O":"multiply","op":"*","a":[{"F":"sqrt","a":[{"S":"x"}]},{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"S":"x"}]}}]}],"i":true}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["sqrt(x) y"],"out":{"text":"sqrt(x) y","tree":{"O":"multiply","op":"*","a":[{"F":"sqrt","a":[{"S":"x"}]},{"S":"y"}],"i":true}},"src":"src/engine/partial.test.ts"}
-{"fn":"parse","args":["sqrt(x)"],"out":{"text":"sqrt(x)","tree":{"F":"sqrt","a":[{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["sqrt(x)"],"out":{"text":"sqrt(x)","tree":{"F":"sqrt","a":[{"S":"x"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["sqrt(x^2 + h^2)"],"out":{"text":"sqrt(x ^ 2 + h ^ 2)","tree":{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"h"},{"C":2}]}]}]}},"src":"src/engine/timeDerivative.test.ts"}
 {"fn":"parse","args":["sqrt(x^2+h^2)"],"out":{"text":"sqrt(x ^ 2 + h ^ 2)","tree":{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"h"},{"C":2}]}]}]}},"src":"src/engine/timeDerivative.test.ts"}
-{"fn":"parse","args":["sqrt(x^2+x)-x"],"out":{"text":"sqrt(x ^ 2 + x) - x","tree":{"O":"subtract","op":"-","a":[{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"x"}]}]},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["sqrt(x^2+x)-x"],"out":{"text":"sqrt(x ^ 2 + x) - x","tree":{"O":"subtract","op":"-","a":[{"F":"sqrt","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"x"}]}]},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["sqrt(x^2-2)"],"out":{"text":"sqrt(x ^ 2 - 2)","tree":{"F":"sqrt","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"C":2}]}]}},"src":"src/engine/r4b.solve.test.ts"}
 {"fn":"parse","args":["sqrt(Σ(n^3, n))"],"out":{"text":"sqrt(Σ(n ^ 3, n))","tree":{"F":"sqrt","a":[{"F":"Σ","a":[{"O":"pow","op":"^","a":[{"S":"n"},{"C":3}]},{"S":"n"}]}]}},"src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["strain"],"out":{"text":"strain","tree":{"S":"strain"}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["strain*(10 in)"],"out":{"text":"strain * (10 in)","tree":{"O":"multiply","op":"*","a":[{"S":"strain"},{"P":{"O":"multiply","op":"*","a":[{"C":10},{"S":"in"}],"i":true}}]}},"src":"src/engine/unitSystem.test.ts"}
 {"fn":"parse","args":["sum (-1)^(n+1)/n, n"],"throws":"Unexpected operator , (char 17)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["sum f(n), n"],"throws":"Unexpected operator , (char 9)","src":"src/components/QuickInput.sums.test.ts"}
-{"fn":"parse","args":["sum from n"],"out":{"text":"sum from n","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"sum"},{"S":"from"}],"i":true},{"S":"n"}],"i":true}},"src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["sum from n"],"out":{"text":"sum from n","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"sum"},{"S":"from"}],"i":true},{"S":"n"}],"i":true}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["sum sin(n*30), n"],"throws":"Unexpected operator , (char 14)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["sum sqrt(n), n"],"throws":"Unexpected operator , (char 12)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["sum(1)/n, n"],"throws":"Unexpected operator , (char 9)","src":"src/components/QuickInput.sums.test.ts"}
@@ -1350,7 +1350,7 @@
 {"fn":"parse","args":["sum(n^2, n)"],"out":{"text":"sum(n ^ 2, n)","tree":{"F":"sum","a":[{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]},{"S":"n"}]}},"src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["sum(pi)/n^2, n"],"throws":"Unexpected operator , (char 12)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["sum_(n)"],"out":{"text":"sum_(n)","tree":{"F":"sum_","a":[{"S":"n"}]}},"src":"src/engine/typstInput.test.ts"}
-{"fn":"parse","args":["sum_n"],"out":{"text":"sum_n","tree":{"S":"sum_n"}},"src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["sum_n"],"out":{"text":"sum_n","tree":{"S":"sum_n"}},"src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["t"],"out":{"text":"t","tree":{"S":"t"}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["t^2"],"out":{"text":"t ^ 2","tree":{"O":"pow","op":"^","a":[{"S":"t"},{"C":2}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["t^2* sin(t)"],"out":{"text":"t ^ 2 * sin(t)","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"t"},{"C":2}]},{"F":"sin","a":[{"S":"t"}]}]}},"src":"src/engine/timeDerivative.test.ts"}
@@ -1386,7 +1386,7 @@
 {"fn":"parse","args":["x * 2"],"out":{"text":"x * 2","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"C":2}]}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["x * y"],"out":{"text":"x * y","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["x + (1/2)*y + (1/3)*z"],"out":{"text":"x + (1 / 2) * y + (1 / 3) * z","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"x"},{"O":"multiply","op":"*","a":[{"P":{"O":"divide","op":"/","a":[{"C":1},{"C":2}]}},{"S":"y"}]}]},{"O":"multiply","op":"*","a":[{"P":{"O":"divide","op":"/","a":[{"C":1},{"C":3}]}},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["x + 1"],"out":{"text":"x + 1","tree":{"O":"add","op":"+","a":[{"S":"x"},{"C":1}]}},"src":"src/engine/solve.test.ts"}
+{"fn":"parse","args":["x + 1"],"out":{"text":"x + 1","tree":{"O":"add","op":"+","a":[{"S":"x"},{"C":1}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["x + 1e-13"],"out":{"text":"x + 1e-13","tree":{"O":"add","op":"+","a":[{"S":"x"},{"C":1e-13}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x + 1e20"],"out":{"text":"x + 1e+20","tree":{"O":"add","op":"+","a":[{"S":"x"},{"C":100000000000000000000}]}},"src":"src/engine/r3o.solve.test.ts"}
 {"fn":"parse","args":["x + 2"],"out":{"text":"x + 2","tree":{"O":"add","op":"+","a":[{"S":"x"},{"C":2}]}},"src":"src/engine/solve.test.ts"}
@@ -1397,14 +1397,14 @@
 {"fn":"parse","args":["x + a*y + z"],"out":{"text":"x + a * y + z","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"x"},{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"y"}]}]},{"S":"z"}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["x + sin(x)"],"out":{"text":"x + sin(x)","tree":{"O":"add","op":"+","a":[{"S":"x"},{"F":"sin","a":[{"S":"x"}]}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["x + y + a*z"],"out":{"text":"x + y + a * z","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]},{"O":"multiply","op":"*","a":[{"S":"a"},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["x + y + z"],"out":{"text":"x + y + z","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]},{"S":"z"}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["x + y"],"out":{"text":"x + y","tree":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["x + y + z"],"out":{"text":"x + y + z","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]},{"S":"z"}]}},"src":"src/engine/systemNumeric.test.ts"}
+{"fn":"parse","args":["x + y"],"out":{"text":"x + y","tree":{"O":"add","op":"+","a":[{"S":"x"},{"S":"y"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["x - 1"],"out":{"text":"x - 1","tree":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["x - 2*y + 3*z"],"out":{"text":"x - 2 * y + 3 * z","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"O":"multiply","op":"*","a":[{"C":2},{"S":"y"}]}]},{"O":"multiply","op":"*","a":[{"C":3},{"S":"z"}]}]}},"src":"src/engine/system.test.ts"}
 {"fn":"parse","args":["x - 9"],"out":{"text":"x - 9","tree":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":9}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["x - x"],"out":{"text":"x - x","tree":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"x"}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["x - y + z"],"out":{"text":"x - y + z","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]},{"S":"z"}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["x - y"],"out":{"text":"x - y","tree":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["x - y"],"out":{"text":"x - y","tree":{"O":"subtract","op":"-","a":[{"S":"x"},{"S":"y"}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["x / 4"],"out":{"text":"x / 4","tree":{"O":"divide","op":"/","a":[{"S":"x"},{"C":4}]}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["x ^ 2 - cos(x)"],"out":{"text":"x ^ 2 - cos(x)","tree":{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"F":"cos","a":[{"S":"x"}]}]}},"src":"src/engine/unitSolve.test.ts"}
 {"fn":"parse","args":["x e^(-x)"],"out":{"text":"x e ^ (-x)","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"O":"pow","op":"^","a":[{"S":"e"},{"P":{"O":"unaryMinus","op":"-","a":[{"S":"x"}]}}]}],"i":true}},"src":"src/engine/closedForm.test.ts"}
@@ -1420,7 +1420,7 @@
 {"fn":"parse","args":["x y"],"out":{"text":"x y","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"S":"y"}],"i":true}},"src":"src/engine/letters.test.ts"}
 {"fn":"parse","args":["x y^2 + x^3"],"out":{"text":"x y ^ 2 + x ^ 3","tree":{"O":"add","op":"+","a":[{"O":"multiply","op":"*","a":[{"S":"x"},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}],"i":true},{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]}]}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["x y^2"],"out":{"text":"x y ^ 2","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}],"i":true}},"src":"src/engine/partial.test.ts"}
-{"fn":"parse","args":["x"],"out":{"text":"x","tree":{"S":"x"}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["x"],"out":{"text":"x","tree":{"S":"x"}},"src":"src/lib/radical.test.ts"}
 {"fn":"parse","args":["x*(1+1e-13)"],"out":{"text":"x * (1 + 1e-13)","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"P":{"O":"add","op":"+","a":[{"C":1},{"C":1e-13}]}}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x*(x-1)"],"out":{"text":"x * (x - 1)","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"P":{"O":"subtract","op":"-","a":[{"S":"x"},{"C":1}]}}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x*3"],"out":{"text":"x * 3","tree":{"O":"multiply","op":"*","a":[{"S":"x"},{"C":3}]}},"src":"src/engine/solve.test.ts"}
@@ -1519,7 +1519,7 @@
 {"fn":"parse","args":["x^2 + 7x + 29"],"out":{"text":"x ^ 2 + 7 x + 29","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":7},{"S":"x"}],"i":true}]},{"C":29}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["x^2 + 8x + -6"],"out":{"text":"x ^ 2 + 8 x + -6","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":8},{"S":"x"}],"i":true}]},{"O":"unaryMinus","op":"-","a":[{"C":6}]}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["x^2 + x - 20"],"out":{"text":"x ^ 2 + x - 20","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"x"}]},{"C":20}]}},"src":"src/engine/audit2.solve.test.ts"}
-{"fn":"parse","args":["x^2 + y^2 + z^2"],"out":{"text":"x ^ 2 + y ^ 2 + z ^ 2","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]},{"O":"pow","op":"^","a":[{"S":"z"},{"C":2}]}]}},"src":"src/engine/system.test.ts"}
+{"fn":"parse","args":["x^2 + y^2 + z^2"],"out":{"text":"x ^ 2 + y ^ 2 + z ^ 2","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]},{"O":"pow","op":"^","a":[{"S":"z"},{"C":2}]}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["x^2 + y^2"],"out":{"text":"x ^ 2 + y ^ 2","tree":{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["x^2 - 10x + 21"],"out":{"text":"x ^ 2 - 10 x + 21","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":10},{"S":"x"}],"i":true}]},{"C":21}]}},"src":"src/engine/audit2.solve.test.ts"}
 {"fn":"parse","args":["x^2 - 16x + 64"],"out":{"text":"x ^ 2 - 16 x + 64","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":16},{"S":"x"}],"i":true}]},{"C":64}]}},"src":"src/engine/audit2.solve.test.ts"}
@@ -1534,7 +1534,7 @@
 {"fn":"parse","args":["x^2 - y"],"out":{"text":"x ^ 2 - y","tree":{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"y"}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["x^2 y"],"out":{"text":"x ^ 2 y","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"S":"y"}],"i":true}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["x^2 y^3"],"out":{"text":"x ^ 2 y ^ 3","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":3}]}],"i":true}},"src":"src/engine/partial.test.ts"}
-{"fn":"parse","args":["x^2"],"out":{"text":"x ^ 2","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["x^2"],"out":{"text":"x ^ 2","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["x^2* ln(x)"],"out":{"text":"x ^ 2 * ln(x)","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"F":"ln","a":[{"S":"x"}]}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["x^2* sin(x)"],"out":{"text":"x ^ 2 * sin(x)","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"F":"sin","a":[{"S":"x"}]}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["x^2+2x+1"],"out":{"text":"x ^ 2 + 2 x + 1","tree":{"O":"add","op":"+","a":[{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]},{"O":"multiply","op":"*","a":[{"C":2},{"S":"x"}],"i":true}]},{"C":1}]}},"src":"src/engine/solve.test.ts"}
@@ -1548,8 +1548,8 @@
 {"fn":"parse","args":["x^3 - 6x^2 + 11x - 6"],"out":{"text":"x ^ 3 - 6 x ^ 2 + 11 x - 6","tree":{"O":"subtract","op":"-","a":[{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]},{"O":"multiply","op":"*","a":[{"C":6},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}]},{"O":"multiply","op":"*","a":[{"C":11},{"S":"x"}],"i":true}]},{"C":6}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x^3 y"],"out":{"text":"x ^ 3 y","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]},{"S":"y"}],"i":true}},"src":"src/engine/partial.test.ts"}
 {"fn":"parse","args":["x^3 y^2"],"out":{"text":"x ^ 3 y ^ 2","tree":{"O":"multiply","op":"*","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]},{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}],"i":true}},"src":"src/engine/partial.test.ts"}
-{"fn":"parse","args":["x^3"],"out":{"text":"x ^ 3","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]}},"src":"src/engine/calculus.test.ts"}
-{"fn":"parse","args":["x^3/(e^x-1)"],"out":{"text":"x ^ 3 / (e ^ x - 1)","tree":{"O":"divide","op":"/","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]},{"P":{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]},{"C":1}]}}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["x^3"],"out":{"text":"x ^ 3","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]}},"src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"parse","args":["x^3/(e^x-1)"],"out":{"text":"x ^ 3 / (e ^ x - 1)","tree":{"O":"divide","op":"/","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":3}]},{"P":{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"e"},{"S":"x"}]},{"C":1}]}}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["x^4 - 5x^2 + 4"],"out":{"text":"x ^ 4 - 5 x ^ 2 + 4","tree":{"O":"add","op":"+","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":4}]},{"O":"multiply","op":"*","a":[{"C":5},{"O":"pow","op":"^","a":[{"S":"x"},{"C":2}]}],"i":true}]},{"C":4}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x^4"],"out":{"text":"x ^ 4","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"C":4}]}},"src":"src/engine/calculus.test.ts"}
 {"fn":"parse","args":["x^5 + x"],"out":{"text":"x ^ 5 + x","tree":{"O":"add","op":"+","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":5}]},{"S":"x"}]}},"src":"src/engine/isolate.solve.test.ts"}
@@ -1557,32 +1557,32 @@
 {"fn":"parse","args":["x^5 - x - 1"],"out":{"text":"x ^ 5 - x - 1","tree":{"O":"subtract","op":"-","a":[{"O":"subtract","op":"-","a":[{"O":"pow","op":"^","a":[{"S":"x"},{"C":5}]},{"S":"x"}]},{"C":1}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x^6"],"out":{"text":"x ^ 6","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"C":6}]}},"src":"src/engine/solve.test.ts"}
 {"fn":"parse","args":["x^pi"],"out":{"text":"x ^ pi","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"S":"pi"}]}},"src":"src/engine/closedForm.test.ts"}
-{"fn":"parse","args":["x^x"],"out":{"text":"x ^ x","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"S":"x"}]}},"src":"src/engine/calculus.test.ts"}
+{"fn":"parse","args":["x^x"],"out":{"text":"x ^ x","tree":{"O":"pow","op":"^","a":[{"S":"x"},{"S":"x"}]}},"src":"src/engine/closedForm.test.ts"}
 {"fn":"parse","args":["xy"],"out":{"text":"xy","tree":{"S":"xy"}},"src":"src/engine/solve.test.ts"}
-{"fn":"parse","args":["y + 1"],"out":{"text":"y + 1","tree":{"O":"add","op":"+","a":[{"S":"y"},{"C":1}]}},"src":"src/lib/history.test.ts"}
+{"fn":"parse","args":["y + 1"],"out":{"text":"y + 1","tree":{"O":"add","op":"+","a":[{"S":"y"},{"C":1}]}},"src":"src/engine/systemNumeric.test.ts"}
 {"fn":"parse","args":["y + z"],"out":{"text":"y + z","tree":{"O":"add","op":"+","a":[{"S":"y"},{"S":"z"}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["y"],"out":{"text":"y","tree":{"S":"y"}},"src":"src/engine/scientific.test.ts"}
+{"fn":"parse","args":["y"],"out":{"text":"y","tree":{"S":"y"}},"src":"src/lib/radical.test.ts"}
 {"fn":"parse","args":["y/x"],"out":{"text":"y / x","tree":{"O":"divide","op":"/","a":[{"S":"y"},{"S":"x"}]}},"src":"src/engine/isolate.solve.test.ts"}
 {"fn":"parse","args":["y^2"],"out":{"text":"y ^ 2","tree":{"O":"pow","op":"^","a":[{"S":"y"},{"C":2}]}},"src":"src/engine/r3o.letters.test.ts"}
 {"fn":"parse","args":["years"],"out":{"text":"years","tree":{"S":"years"}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["z + x"],"out":{"text":"z + x","tree":{"O":"add","op":"+","a":[{"S":"z"},{"S":"x"}]}},"src":"src/engine/system.test.ts"}
-{"fn":"parse","args":["z"],"out":{"text":"z","tree":{"S":"z"}},"src":"src/lib/history.test.ts"}
+{"fn":"parse","args":["z"],"out":{"text":"z","tree":{"S":"z"}},"src":"src/engine/r4a.homework.test.ts"}
 {"fn":"parse","args":["zz"],"out":{"text":"zz","tree":{"S":"zz"}},"src":"src/engine/audit.sheet.test.ts"}
 {"fn":"parse","args":["|(~#)"],"throws":"Value expected (char 1)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["|d\"0"],"throws":"Value expected (char 1)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["~gxn@m"],"throws":"Syntax error in part \"@m\" (char 5)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["µ*m-'[H"],"throws":"Syntax error in part \"µ*m-'[H\" (char 1)","src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["Π (1 - 1/(n+1)), n"],"throws":"Unexpected operator , (char 16)","src":"src/engine/audit2.sums.test.ts"}
-{"fn":"parse","args":["Π (1 - 1/n^2), n"],"throws":"Unexpected operator , (char 14)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Π (1 - 1/n^2), n"],"throws":"Unexpected operator , (char 14)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Π (1+1/n), n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Π (1+1/n^2), n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Π (n/(n+1)), n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Π 1, n"],"throws":"Unexpected operator , (char 4)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Π 2, n"],"throws":"Unexpected operator , (char 4)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["Π 3, n"],"throws":"Unexpected operator , (char 4)","src":"src/engine/audit2.sums.test.ts"}
-{"fn":"parse","args":["Π n, n"],"throws":"Unexpected operator , (char 4)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Π n, n"],"throws":"Unexpected operator , (char 4)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Π_n"],"out":{"text":"Π_n","tree":{"S":"Π_n"}},"src":"src/lib/bounds.test.ts"}
-{"fn":"parse","args":["Σ (-1)^(n+1)/n, n"],"throws":"Unexpected operator , (char 15)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ (-1)^(n+1)/n, n"],"throws":"Unexpected operator , (char 15)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ (-1)^(n+1)/n^2, n"],"throws":"Unexpected operator , (char 17)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ (-1)^(n+1)/sqrt(n), n"],"throws":"Unexpected operator , (char 21)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ (-1)^n * 2, n"],"throws":"Unexpected operator , (char 13)","src":"src/engine/audit2.sums.test.ts"}
@@ -1612,10 +1612,10 @@
 {"fn":"parse","args":["Σ 1/3^n + 1/2^n, n"],"throws":"Unexpected operator , (char 16)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ 1/factorial(n), n"],"throws":"Unexpected operator , (char 17)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ 1/ln(n), n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["Σ 1/n, n"],"throws":"Unexpected operator , (char 6)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ 1/n, n"],"throws":"Unexpected operator , (char 6)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ 1/n^0.9, n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["Σ 1/n^1.5, n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["Σ 1/n^2, n"],"throws":"Unexpected operator , (char 8)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ 1/n^2, n"],"throws":"Unexpected operator , (char 8)","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["Σ 1/n^3, n"],"throws":"Unexpected operator , (char 8)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ 1/n^4, n"],"throws":"Unexpected operator , (char 8)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ 1/n^6, n"],"throws":"Unexpected operator , (char 8)","src":"src/engine/audit2.sums.test.ts"}
@@ -1636,7 +1636,7 @@
 {"fn":"parse","args":["Σ cos(n*60), n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ cos(n*90), n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["Σ cube(n), n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/audit2.sums.test.ts"}
-{"fn":"parse","args":["Σ f(n), n"],"throws":"Unexpected operator , (char 7)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ f(n), n"],"throws":"Unexpected operator , (char 7)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ factorial(n), n"],"throws":"Unexpected operator , (char 15)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ from n"],"out":{"text":"Σ from n","tree":{"O":"multiply","op":"*","a":[{"O":"multiply","op":"*","a":[{"S":"Σ"},{"S":"from"}],"i":true},{"S":"n"}],"i":true}},"src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ i^2, i"],"throws":"Unexpected operator , (char 6)","src":"src/engine/sums.test.ts"}
@@ -1647,24 +1647,24 @@
 {"fn":"parse","args":["Σ n cm, n"],"throws":"Unexpected operator , (char 7)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ n"],"out":{"text":"Σ n","tree":{"O":"multiply","op":"*","a":[{"S":"Σ"},{"S":"n"}],"i":true}},"src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ n, e"],"throws":"Unexpected operator , (char 4)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["Σ n, n"],"throws":"Unexpected operator , (char 4)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ n, n"],"throws":"Unexpected operator , (char 4)","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"parse","args":["Σ n-1, n"],"throws":"Unexpected operator , (char 6)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["Σ n/2^n, n"],"throws":"Unexpected operator , (char 8)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["Σ n^2, n"],"throws":"Unexpected operator , (char 6)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ n^2, n"],"throws":"Unexpected operator , (char 6)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ n^2/2^n, n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ n^3, n"],"throws":"Unexpected operator , (char 6)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ n^5*0.9^n, n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ sin(n), n"],"throws":"Unexpected operator , (char 9)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ sin(n)/n^2, n"],"throws":"Unexpected operator , (char 13)","src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["Σ sin(n*30), n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ sin(n*30), n"],"throws":"Unexpected operator , (char 12)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ sin(n*45), n"],"throws":"Unexpected operator , (char 12)","src":"src/engine/audit2.sums.test.ts"}
-{"fn":"parse","args":["Σ sqrt(n), n"],"throws":"Unexpected operator , (char 10)","src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ sqrt(n), n"],"throws":"Unexpected operator , (char 10)","src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σ theta^2, theta"],"throws":"Unexpected operator , (char 10)","src":"src/engine/audit2.sums.test.ts"}
 {"fn":"parse","args":["Σ x^k/factorial(k), k"],"throws":"Unexpected operator , (char 19)","src":"src/lib/identities.test.ts"}
 {"fn":"parse","args":["Σ(1/n, n)"],"out":{"text":"Σ(1 / n, n)","tree":{"F":"Σ","a":[{"O":"divide","op":"/","a":[{"C":1},{"S":"n"}]},{"S":"n"}]}},"src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ(n^2, n)"],"out":{"text":"Σ(n ^ 2, n)","tree":{"F":"Σ","a":[{"O":"pow","op":"^","a":[{"S":"n"},{"C":2}]},{"S":"n"}]}},"src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Σ_(n)"],"out":{"text":"Σ_(n)","tree":{"F":"Σ_","a":[{"S":"n"}]}},"src":"src/engine/sums.test.ts"}
-{"fn":"parse","args":["Σ_n"],"out":{"text":"Σ_n","tree":{"S":"Σ_n"}},"src":"src/engine/sums.test.ts"}
+{"fn":"parse","args":["Σ_n"],"out":{"text":"Σ_n","tree":{"S":"Σ_n"}},"src":"src/components/QuickInput.sums.test.ts"}
 {"fn":"parse","args":["Σn^2, n"],"throws":"Unexpected operator , (char 5)","src":"src/engine/sums.test.ts"}
 {"fn":"parse","args":["Ω"],"out":{"text":"Ω","tree":{"S":"Ω"}},"src":"src/engine/audit.garbage.test.ts"}
 {"fn":"parse","args":["∂/∂x x^2 y at (x, y)"],"throws":"Syntax error in part \"∂/∂x x^2 y at (x, y)\" (char 1)","src":"src/engine/partial.test.ts"}

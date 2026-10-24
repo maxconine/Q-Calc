@@ -25,6 +25,7 @@
 pub mod constant;
 pub mod derivative;
 pub mod fraction;
+mod jsmath;
 pub mod json;
 pub mod print;
 pub mod rationalize;

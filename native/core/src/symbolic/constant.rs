@@ -103,6 +103,8 @@ fn fold(node: &Node, o: &SimplifyOptions) -> Result<Val, SymError> {
         Node::Constant(c) => Ok(match c {
             Constant::Number { value, .. } => exact_fraction(*value, o),
             Constant::Str(s) => Val::Str(s.clone()),
+            // `_toNumber(true)`: a boolean folds as the number 1 or 0
+            Constant::Bool(b) => exact_fraction(if *b { 1.0 } else { 0.0 }, o),
             _ => Val::Node(node.clone()),
         }),
         Node::Function { args, .. } if !matches!(function_name(node), "add" | "multiply") => {
@@ -401,10 +403,10 @@ fn num_unary(fname: &str, x: f64) -> Result<Val, SymError> {
         }
         "sin" => x.sin(),
         "cos" => x.cos(),
-        "tan" => x.tan(),
+        "tan" => super::jsmath::tan(x),
         "sec" => 1.0 / x.cos(),
         "csc" => 1.0 / x.sin(),
-        "cot" => 1.0 / x.tan(),
+        "cot" => 1.0 / super::jsmath::tan(x),
         "sinh" => x.sinh(),
         "cosh" => x.cosh(),
         "tanh" => x.tanh(),
