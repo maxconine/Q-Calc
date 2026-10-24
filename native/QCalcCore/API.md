@@ -280,8 +280,8 @@ struct HistoryRow {                          // the TS HistoryRow
 }
 enum HistoryKind { case definition, function, system }
 struct HistoryView {
-    var show: HistoryShow = .recent
-    var answerForm: AnswerForm = .exact
+    var show: HistoryShow                    // required: UniFFI can't default an enum field (settings: .recent)
+    var answerForm: AnswerForm               // required (settings default: .exact)
     var sigFigs: UInt32 = 6
     var nowMs: Int64 = 0
 }

@@ -559,9 +559,8 @@ pub enum AnswerForm {
 /// The settings `context_from_history` reads.
 #[derive(Clone, Copy, Debug, uniffi::Record)]
 pub struct HistoryView {
-    #[uniffi(default)]
+    // enum fields can't take a default in the Swift initializer (UniFFI 0.32), so these two are required
     pub show: HistoryShow,
-    #[uniffi(default)]
     pub answer_form: AnswerForm,
     #[uniffi(default = 6)]
     pub sig_figs: u32,
