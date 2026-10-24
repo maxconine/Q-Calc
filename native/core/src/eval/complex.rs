@@ -8,6 +8,7 @@
 
 use super::{EvalError, EvalResult, Val};
 use crate::jsnum;
+use crate::scientific::functions::jsmath;
 use crate::syntax::Op;
 
 /// complex.js `Complex.EPSILON`.
@@ -45,16 +46,16 @@ pub fn hypot(x: f64, y: f64) -> f64 {
 pub fn log_hypot(a: f64, b: f64) -> f64 {
     let (aa, ab) = (a.abs(), b.abs());
     if a == 0.0 {
-        return ab.ln();
+        return jsmath::ln(ab);
     }
     if b == 0.0 {
-        return aa.ln();
+        return jsmath::ln(aa);
     }
     if aa < 3000.0 && ab < 3000.0 {
-        return (a * a + b * b).ln() * 0.5;
+        return jsmath::ln(a * a + b * b) * 0.5;
     }
     let (a, b) = (a * 0.5, b * 0.5);
-    0.5 * (a * a + b * b).ln() + std::f64::consts::LN_2
+    0.5 * jsmath::ln(a * a + b * b) + std::f64::consts::LN_2
 }
 
 /// A complex number as complex.js holds it.
@@ -75,6 +76,8 @@ const INFINITY: C = C {
 const ZERO: C = C { re: 0.0, im: 0.0 };
 const ONE: C = C { re: 1.0, im: 0.0 };
 
+// complex.js's method names, so the port reads like it
+#[allow(clippy::should_implement_trait)]
 impl C {
     pub fn new(re: f64, im: f64) -> Self {
         C { re, im }
@@ -173,11 +176,11 @@ impl C {
         if self.is_zero() && z.re > 0.0 {
             return ZERO;
         }
-        let arg = self.im.atan2(self.re);
+        let arg = jsmath::atan2(self.im, self.re);
         let loh = log_hypot(self.re, self.im);
-        let re = (z.re * loh - z.im * arg).exp();
+        let re = jsmath::exp(z.re * loh - z.im * arg);
         let im = z.im * loh + z.re * arg;
-        C::new(re * im.cos(), re * im.sin())
+        C::new(re * jsmath::cos(im), re * jsmath::sin(im))
     }
 
     pub fn sqrt(self) -> C {
@@ -200,18 +203,18 @@ impl C {
     }
 
     pub fn exp(self) -> C {
-        let er = self.re.exp();
+        let er = jsmath::exp(self.re);
         if self.im == 0.0 {
             return C::new(er, 0.0);
         }
-        C::new(er * self.im.cos(), er * self.im.sin())
+        C::new(er * jsmath::cos(self.im), er * jsmath::sin(self.im))
     }
 
     pub fn log(self) -> C {
         if self.im == 0.0 && self.re > 0.0 {
-            return C::new(self.re.ln(), 0.0);
+            return C::new(jsmath::ln(self.re), 0.0);
         }
-        C::new(log_hypot(self.re, self.im), self.im.atan2(self.re))
+        C::new(log_hypot(self.re, self.im), jsmath::atan2(self.im, self.re))
     }
 
     pub fn abs(self) -> f64 {
@@ -219,7 +222,7 @@ impl C {
     }
 
     pub fn arg(self) -> f64 {
-        self.im.atan2(self.re)
+        jsmath::atan2(self.im, self.re)
     }
 
     pub fn neg(self) -> C {

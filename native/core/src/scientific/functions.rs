@@ -10,6 +10,8 @@
 //! coerce at all. Where the TS uses the strict forms, so does this port (`round(true)` is `true`, `csch(false)`
 //! is 1/0).
 
+pub mod jsmath;
+
 use std::f64::consts::PI;
 
 use crate::eval::builtins::{Builtin, as_ratio, near_integer};
@@ -168,10 +170,10 @@ fn tukey_quartile(data: &[f64], q: f64) -> f64 {
         return median_of(&s);
     }
     let len = s.len();
-    let (lower, upper) = if len % 2 == 0 {
+    let (lower, upper) = if len.is_multiple_of(2) {
         (&s[..len / 2], &s[len / 2..])
     } else {
-        ((&s[..(len - 1) / 2]), &s[(len + 1) / 2..])
+        (&s[..(len - 1) / 2], &s[len.div_ceil(2)..])
     };
     if q <= 1.0 {
         median_of(lower)
@@ -299,7 +301,7 @@ pub fn sin_cos(x: f64, scope: &Scope) -> (f64, f64) {
     let r = to_rad(x, scope);
     let noise = 1e-14 * r.abs();
     let snap = |v: f64| if v.abs() <= noise { 0.0 } else { v };
-    (snap(r.sin()), snap(r.cos()))
+    (snap(jsmath::sin(r)), snap(jsmath::cos(r)))
 }
 
 fn sin(a: &[Val], s: &Scope) -> EvalResult {
@@ -330,7 +332,7 @@ fn asin(a: &[Val], s: &Scope) -> EvalResult {
     num(if !(-1.0..=1.0).contains(&x) && !x.is_nan() {
         f64::NAN
     } else {
-        from_rad(x.asin(), s)
+        from_rad(jsmath::asin(x), s)
     })
 }
 fn acos(a: &[Val], s: &Scope) -> EvalResult {
@@ -338,7 +340,7 @@ fn acos(a: &[Val], s: &Scope) -> EvalResult {
     num(if !(-1.0..=1.0).contains(&x) && !x.is_nan() {
         f64::NAN
     } else {
-        from_rad(x.acos(), s)
+        from_rad(jsmath::acos(x), s)
     })
 }
 fn atan(a: &[Val], s: &Scope) -> EvalResult {
@@ -352,7 +354,7 @@ fn acsc(a: &[Val], s: &Scope) -> EvalResult {
     num(if x.abs() < 1.0 {
         f64::NAN
     } else {
-        from_rad((1.0 / x).asin(), s)
+        from_rad(jsmath::asin(1.0 / x), s)
     })
 }
 fn asec(a: &[Val], s: &Scope) -> EvalResult {
@@ -360,7 +362,7 @@ fn asec(a: &[Val], s: &Scope) -> EvalResult {
     num(if x.abs() < 1.0 {
         f64::NAN
     } else {
-        from_rad((1.0 / x).acos(), s)
+        from_rad(jsmath::acos(1.0 / x), s)
     })
 }
 fn acot(a: &[Val], s: &Scope) -> EvalResult {
@@ -369,7 +371,7 @@ fn acot(a: &[Val], s: &Scope) -> EvalResult {
         if strict_zero(a, 0) {
             PI / 2.0
         } else {
-            (1.0 / x).atan()
+            jsmath::atan(1.0 / x)
         },
         s,
     ))
@@ -381,33 +383,33 @@ fn csch(a: &[Val], _: &Scope) -> EvalResult {
     num(if strict_zero(a, 0) {
         f64::NAN
     } else {
-        1.0 / n(a, 0).sinh()
+        1.0 / jsmath::sinh(n(a, 0))
     })
 }
 fn coth(a: &[Val], _: &Scope) -> EvalResult {
     num(if strict_zero(a, 0) {
         f64::NAN
     } else {
-        1.0 / n(a, 0).tanh()
+        1.0 / jsmath::tanh(n(a, 0))
     })
 }
 fn acosh(a: &[Val], _: &Scope) -> EvalResult {
     let x = n(a, 0);
-    num(if x < 1.0 { f64::NAN } else { x.acosh() })
+    num(if x < 1.0 { f64::NAN } else { jsmath::acosh(x) })
 }
 fn atanh(a: &[Val], _: &Scope) -> EvalResult {
     let x = n(a, 0);
     num(if x <= -1.0 || x >= 1.0 {
         f64::NAN
     } else {
-        x.atanh()
+        jsmath::atanh(x)
     })
 }
 fn acsch(a: &[Val], _: &Scope) -> EvalResult {
     num(if strict_zero(a, 0) {
         f64::NAN
     } else {
-        (1.0 / n(a, 0)).asinh()
+        jsmath::asinh(1.0 / n(a, 0))
     })
 }
 fn asech(a: &[Val], _: &Scope) -> EvalResult {
@@ -415,7 +417,7 @@ fn asech(a: &[Val], _: &Scope) -> EvalResult {
     num(if x <= 0.0 || x > 1.0 {
         f64::NAN
     } else {
-        (1.0 / x).acosh()
+        jsmath::acosh(1.0 / x)
     })
 }
 fn acoth(a: &[Val], _: &Scope) -> EvalResult {
@@ -423,7 +425,7 @@ fn acoth(a: &[Val], _: &Scope) -> EvalResult {
     num(if x.abs() <= 1.0 {
         f64::NAN
     } else {
-        (1.0 / x).atanh()
+        jsmath::atanh(1.0 / x)
     })
 }
 
@@ -442,7 +444,7 @@ fn log(a: &[Val], _: &Scope) -> EvalResult {
             Some(Val::Num(_) | Val::Bool(_)) => {
                 let x = n(a, 0);
                 Ok(if x >= 0.0 {
-                    Val::Num(x.ln())
+                    Val::Num(jsmath::ln(x))
                 } else {
                     C::new(x, 0.0).log().val()
                 })
@@ -457,7 +459,7 @@ fn log(a: &[Val], _: &Scope) -> EvalResult {
             num(if x <= 0.0 || base <= 0.0 || one {
                 f64::NAN
             } else {
-                x.ln() / base.ln()
+                jsmath::ln(x) / jsmath::ln(base)
             })
         }
     }
@@ -582,7 +584,7 @@ fn zeta_series(s: f64) -> f64 {
     }
     // the functional equation reflects s below the series' reach
     let mut c = ops::real_pow(2.0, s) * ops::real_pow(PI, s - 1.0);
-    c *= ((PI / 2.0) * s).sin();
+    c *= jsmath::sin((PI / 2.0) * s);
     c *= crate::eval::builtins::gamma(1.0 - s);
     c * zeta_series(1.0 - s)
 }
@@ -822,7 +824,7 @@ fn corr(a: &[Val], _: &Scope) -> EvalResult {
         });
     }
     let xs = nums(a);
-    num(if xs.len() % 2 == 0 {
+    num(if xs.len().is_multiple_of(2) {
         let mid = xs.len() / 2;
         pearson(&xs[..mid], &xs[mid..])
     } else {
@@ -1077,11 +1079,11 @@ macro_rules! entry {
 /// Looked up after the foundation's own table in `crate::eval::builtins`.
 pub const TABLE: &[Builtin] = &[
     entry!("zeta", 1, zeta),
-    entry!("ln", 1, |a, _| positive_log(n(a, 0), f64::ln)),
-    entry!("log2", 1, |a, _| positive_log(n(a, 0), f64::log2)),
-    entry!("log10", 1, |a, _| positive_log(n(a, 0), f64::log10)),
+    entry!("ln", 1, |a, _| positive_log(n(a, 0), jsmath::ln)),
+    entry!("log2", 1, |a, _| positive_log(n(a, 0), jsmath::log2)),
+    entry!("log10", 1, |a, _| positive_log(n(a, 0), jsmath::log10)),
     entry!("log", 2, log),
-    entry!("exp", 1, |a, _| num(n(a, 0).exp())),
+    entry!("exp", 1, |a, _| num(jsmath::exp(n(a, 0)))),
     entry!("nthroot", 2, nth_root),
     entry!("nthRoot", 2, nth_root),
     entry!("sign", 1, |a, _| num(js_sign(n(a, 0)))),
@@ -1144,13 +1146,13 @@ pub const TABLE: &[Builtin] = &[
     entry!("arccsc", 1, acsc),
     entry!("arcsec", 1, asec),
     entry!("arccot", 1, acot),
-    entry!("sinh", 1, |a, _| num(n(a, 0).sinh())),
-    entry!("cosh", 1, |a, _| num(n(a, 0).cosh())),
-    entry!("tanh", 1, |a, _| num(n(a, 0).tanh())),
+    entry!("sinh", 1, |a, _| num(jsmath::sinh(n(a, 0)))),
+    entry!("cosh", 1, |a, _| num(jsmath::cosh(n(a, 0)))),
+    entry!("tanh", 1, |a, _| num(jsmath::tanh(n(a, 0)))),
     entry!("csch", 1, csch),
-    entry!("sech", 1, |a, _| num(1.0 / n(a, 0).cosh())),
+    entry!("sech", 1, |a, _| num(1.0 / jsmath::cosh(n(a, 0)))),
     entry!("coth", 1, coth),
-    entry!("asinh", 1, |a, _| num(n(a, 0).asinh())),
+    entry!("asinh", 1, |a, _| num(jsmath::asinh(n(a, 0)))),
     entry!("acosh", 1, acosh),
     entry!("atanh", 1, atanh),
     entry!("acsch", 1, acsch),
@@ -1211,6 +1213,24 @@ mod tests {
             Some(Ok(Val::Num(x))) => x,
             other => panic!("{name}: {other:?}"),
         }
+    }
+
+    #[test]
+    fn v8_math_bit_for_bit() {
+        // values Node 26 (V8 14.6, arm64) gives, where a correctly rounded or platform libm differs by an ulp
+        assert_eq!(
+            jsmath::sin(0.230_753_421_783_447_27),
+            0.228_711_040_232_516_4
+        );
+        assert_eq!(jsmath::sin(1.747_537_612_915_039), 0.984_421_874_091_603_5);
+        assert_eq!(
+            jsmath::ln(0.644_221_067_428_588_9),
+            -0.439_713_339_377_634_46
+        );
+        assert_eq!(jsmath::exp(57.264_252_757_933_95), 7.405_407_866_466_488e24);
+        assert_eq!(jsmath::exp(1.0), std::f64::consts::E);
+        assert_eq!(jsmath::log10(1000.0), 3.0);
+        assert_eq!(jsmath::tan(240.0 * PI / 180.0), 1.732_050_807_568_875_4);
     }
 
     #[test]

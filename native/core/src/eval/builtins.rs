@@ -6,6 +6,7 @@
 
 use super::{EvalError, EvalResult, Scope, Val};
 use crate::jsnum;
+use crate::scientific::functions::jsmath; // WP-FUNCTIONS: V8's Math.*
 
 /// The golden ratio, unless `phi` is a variable.
 pub const PHI: f64 = std::f64::consts::GOLDEN_RATIO;
@@ -130,7 +131,7 @@ pub fn gamma(n: f64) -> f64 {
         return product(1.0, n - 1.0);
     }
     if n < 0.5 {
-        return std::f64::consts::PI / ((std::f64::consts::PI * n).sin() * gamma(1.0 - n));
+        return std::f64::consts::PI / (jsmath::sin(std::f64::consts::PI * n) * gamma(1.0 - n)); // WP-FUNCTIONS
     }
     if n >= 171.35 {
         return f64::INFINITY;
@@ -154,7 +155,7 @@ pub fn gamma(n: f64) -> f64 {
         x += p / (n + i as f64);
     }
     let t = n + GAMMA_G + 0.5;
-    (2.0 * std::f64::consts::PI).sqrt() * t.powf(n + 0.5) * (-t).exp() * x
+    (2.0 * std::f64::consts::PI).sqrt() * t.powf(n + 0.5) * jsmath::exp(-t) * x // WP-FUNCTIONS
 }
 
 /// n! for integers, Γ(n+1) for other reals; negative integers are undefined.
@@ -224,7 +225,7 @@ const FOUNDATION: &[Builtin] = &[
     Builtin {
         name: "cbrt",
         max_args: 1,
-        call: |a, _| num(arg(a, 0).cbrt()),
+        call: |a, _| num(jsmath::cbrt(arg(a, 0))), // WP-FUNCTIONS: V8's Math.cbrt
     },
 ];
 
