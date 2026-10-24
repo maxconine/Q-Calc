@@ -255,7 +255,9 @@ private struct HistoryRowView: View {
 
     var selected: Bool { model.selected == index }
     private var answer: String {
-        AppSettings.shared.answerForm == "exact" && row.hasDual ? "\(Pretty.answer(row.exact!)) ≈ \(Pretty.answer(row.display))" : Pretty.answer(row.display)
+        let approx = Pretty.answer(row.display)
+        guard AppSettings.shared.answerForm == "exact", row.hasDual, let exact = row.exact else { return approx }
+        return Pretty.answer(exact) + " ≈ " + approx
     }
 
     var body: some View {
