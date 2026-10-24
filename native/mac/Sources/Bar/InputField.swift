@@ -10,6 +10,8 @@ final class BarTextView: NSTextView {
     var placeholder = "" { didSet { needsDisplay = true } }
     /// a faint `ans` ahead of the text while the line chains from the last answer
     var ghostLead = "" { didSet { if ghostLead != oldValue { updateInset() } } }
+    /// the completion ghost after the caret (completionFor)
+    var ghostTail = "" { didSet { if ghostTail != oldValue { needsDisplay = true } } }
 
     static let fontSize: CGFloat = 24
 
@@ -111,6 +113,11 @@ final class BarTextView: NSTextView {
         if !ghostLead.isEmpty {
             (ghostLead as NSString).draw(at: NSPoint(x: 0, y: 0), withAttributes: attrs)
         }
+        // the completion's rest, faint, right after the text while the caret is at the end
+        if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length, let lm = layoutManager, let tc = textContainer {
+            let used = lm.usedRect(for: tc)
+            (ghostTail as NSString).draw(at: NSPoint(x: textContainerInset.width + used.maxX, y: 0), withAttributes: attrs)
+        }
         if string.isEmpty, !placeholder.isEmpty {
             let x = textContainerInset.width
             (placeholder as NSString).draw(at: NSPoint(x: x, y: 0), withAttributes: attrs)
@@ -154,6 +161,11 @@ struct InputField: NSViewRepresentable {
             guard let text else { return "" }
             return (text.string as NSString).substring(with: text.selectedRange())
         }
+        model.caretAtEnd = { [weak text] in
+            guard let text else { return false }
+            let r = text.selectedRange()
+            return r.length == 0 && r.location == (text.string as NSString).length
+        }
         model.insertIntoField = { [weak text] piece in
             guard let text else { return }
             text.window?.makeFirstResponder(text)
@@ -171,6 +183,7 @@ struct InputField: NSViewRepresentable {
         }
         text.placeholder = placeholder
         text.ghostLead = model.chained ? "ans" : ""
+        text.ghostTail = model.completion ?? ""
         text.textColor = .labelColor
         // keep the caret in view as the line grows
         text.sizeToFit()

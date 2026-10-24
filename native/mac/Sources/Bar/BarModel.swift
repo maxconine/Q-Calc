@@ -1,4 +1,5 @@
 import AppKit
+import QCalcCore
 import Carbon
 import Combine
 import SwiftUI
@@ -24,6 +25,8 @@ struct GraphState: Equatable {
     var yMax: Double = 10
     var curves: [GraphCurve] = []
     var failed = false
+    /// not yet sampled: the engine's own y range (graphHome) may set the view
+    var fresh = true
 }
 
 /// Everything the bar shows and every key it takes. The SwiftUI views only draw this; AppKit (OverlayController)
@@ -32,7 +35,11 @@ struct GraphState: Equatable {
 final class BarModel: ObservableObject {
     // the line
     @Published var text = "" { didSet { if text != oldValue { textChanged() } } }
-    @Published private(set) var live = EngineAnswer.blank
+    @Published private(set) var live = LiveAnswer.blank
+    /// a closed form the engine's PSLQ search found after the answer (π²/6), shown in place of `live.exact`
+    @Published private(set) var upgradedExact: String?
+    /// the rest of the word being typed, drawn after the caret; Tab or → takes it
+    @Published private(set) var completion: String?
     /// the last real answer, dimmed, while the line is briefly unreadable (useSteadyAnswer)
     @Published private(set) var steady: String?
     @Published private(set) var chained = false
@@ -64,6 +71,8 @@ final class BarModel: ObservableObject {
     let settings = AppSettings.shared
     let history: HistoryStore
     let engine: EngineThread
+    /// the engine itself, only for its async calls (closed forms, graphs), which never block
+    let core: Engine
     let sheets = SheetData.shared
     let math: MathRenderer = PlainMathRenderer()
 
@@ -78,6 +87,7 @@ final class BarModel: ObservableObject {
     /// the input field, so the window can give it the keys
     var focusField: (() -> Void)?
     var fieldSelection: (() -> String)?
+    var caretAtEnd: (() -> Bool)?
 
     private var deleted: (row: HistoryRow, index: Int)?
     private var lastLiveText = ""
@@ -89,8 +99,9 @@ final class BarModel: ObservableObject {
     private var bag: Set<AnyCancellable> = []
     private static let draftKey = "qcalc.draft"
 
-    init(engine: EngineThread, history: HistoryStore) {
+    init(engine: EngineThread, core: Engine, history: HistoryStore) {
         self.engine = engine
+        self.core = core
         self.history = history
         rows = history.rows
         syncSettings()
@@ -123,29 +134,27 @@ final class BarModel: ObservableObject {
         evaluateLive()
     }
 
-    private var options: EngineOptions {
-        var o = EngineOptions.from(settings)
-        if let last = rows.last(where: { $0.kind != "function" && $0.kind != "definition" }) {
-            o.ans = last.n
-            o.ansQuantity = last.quantity
-        }
-        return o
-    }
+    private var options: EvalOptions { EvalOptions.from(settings) }
 
-    /// definitions in the rows you can see, ahead of the live line, so `x = 2` then `x^2` works
-    private var contextLines: [String] {
-        let start = history.scopeStart(show: settings.historyShow)
-        return rows[start...].filter(\.defines).map(\.expr)
+    /// What one keystroke asks the engine, built on the engine thread: the context comes from the rows the
+    /// history setting shows (contextFromHistory), and the engine says whether the line chains from `ans`.
+    private static func request(_ engine: Engine, text: String, rows: [HistoryRow], view: HistoryView, options: EvalOptions) -> LiveRequest {
+        let context = engine.contextFromHistory(rows: rows, view: view)
+        return LiveRequest(text: text, options: options, context: context,
+                           chained: engine.chains(text: text, context: context), nowMs: view.nowMs)
     }
 
     // MARK: - the live answer
 
-    private var lastAnswer: HistoryRow? { rows.last { $0.kind == nil && !$0.display.isEmpty } }
+    private var closedFormTask: Task<Void, Never>?
 
     private func textChanged() {
         formIndex = 0
         forms = []
         copied = false
+        completion = nil
+        upgradedExact = nil
+        closedFormTask?.cancel()
         if selected != nil, !text.isEmpty { selected = nil }
         gamesShown = BarCommand.of(text, sheets: sheets) == .games
         if !gamesShown { gamePick = 0 }
@@ -171,20 +180,42 @@ final class BarModel: ObservableObject {
             setLive(.blank, for: typed)
             return
         }
-        let last = lastAnswer
-        let chain = Chain.chains(typed, lastPlain: last?.display, lastHasUnit: last?.quantity != nil)
-        let line = chain ? Chain.expr(typed) : typed
-        let lines = contextLines + [line]
-        let options = self.options
-        engine.submit(.live, { engine in engine.evaluate(lines: lines, options: options).last ?? .blank }) { [weak self] answer in
+        let rows = self.rows, view = HistoryView.from(settings), options = self.options
+        engine.submit(.live, { engine -> (LiveAnswer, Bool) in
+            let request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
+            return (engine.live(request: request), request.chained)
+        }) { [weak self] answer, chain in
             guard let self, self.text == typed else { return }
             self.chained = chain
             if !answer.isBlank { self.hint = nil }
+            self.completion = answer.completion.flatMap { $0.isEmpty ? nil : $0 }
             self.setLive(answer, for: typed)
+            self.upgradeClosedForm(answer, for: typed)
         }
     }
 
-    private func setLive(_ answer: EngineAnswer, for typed: String) {
+    // the closed-form search runs on the engine's long-work pool; typing again cancels it (its CancelToken)
+    private func upgradeClosedForm(_ answer: LiveAnswer, for typed: String) {
+        closedFormTask?.cancel()
+        guard let job = answer.closedFormJob else { return }
+        let engine = core
+        closedFormTask = Task.detached(priority: .utility) { [weak self] in
+            guard let exact = try? await engine.closedForm(jobJson: job), !exact.isEmpty else { return }
+            await MainActor.run {
+                guard let self, self.text == typed else { return }
+                self.upgradedExact = exact
+            }
+        }
+    }
+
+    /// Accept the completion ghost (Tab, or → at the end of the line).
+    func acceptCompletion() -> Bool {
+        guard let completion, !completion.isEmpty else { return false }
+        insert(completion)
+        return true
+    }
+
+    private func setLive(_ answer: LiveAnswer, for typed: String) {
         if answer.isBlank, !live.isBlank, !typed.isEmpty, isEdit(of: lastLiveText, typed) {
             // keep the last real answer up, dimmed, while the edit is half-typed
             steady = shownAnswer
@@ -207,19 +238,23 @@ final class BarModel: ObservableObject {
     /// The answer the slot shows and ⌘C copies: the cycled form, else exact or approximate per the setting.
     var shownAnswer: String {
         if formIndex > 0, forms.indices.contains(formIndex) { return forms[formIndex] }
-        if settings.answerForm == "exact", let exact = live.exact, !exact.isEmpty { return exact }
+        if settings.answerForm == "exact", let exact, !exact.isEmpty { return exact }
         return live.display
     }
 
+    /// the closed form beside the decimal, upgraded by the PSLQ search when it found one
+    var exact: String? { upgradedExact ?? live.exact }
+
     var hasDual: Bool {
-        guard formIndex == 0, let exact = live.exact?.trimmingCharacters(in: .whitespaces), !exact.isEmpty else { return false }
+        guard formIndex == 0, let exact = exact?.trimmingCharacters(in: .whitespaces), !exact.isEmpty else { return false }
         return exact != live.display.trimmingCharacters(in: .whitespaces)
     }
 
-    func pretty(_ s: String) -> String { Pretty.answer(s) }
+    /// The engine's own pretty text for the live display; Pretty.answer (a port of prettyAnswer) for anything else.
+    func pretty(_ s: String) -> String { s == live.display && !live.pretty.isEmpty ? live.pretty : Pretty.answer(s) }
 
     // the 420 / 67 / 69 effects fire once as the answer arrives, and again only after it changes away
-    private func checkEffects(_ answer: EngineAnswer) {
+    private func checkEffects(_ answer: LiveAnswer) {
         guard let n = answer.number, answer.unit == nil else {
             effectArmed = true
             return
@@ -236,8 +271,8 @@ final class BarModel: ObservableObject {
 
     // MARK: - answer forms (Tab)
 
-    /// answerForms.ts until the core's answer_forms: the decimal, the exact form, a fraction and scientific,
-    /// each worked out on the engine thread
+    /// The engine's answerForms (bridged to lib/answerForms until WP-APP-LOGIC); while that answers nothing, the
+    /// same cycle built here: the decimal, the exact form, a fraction and scientific.
     func cycleForms(back: Bool = false) {
         guard !live.isBlank, let n = live.number else { return }
         if !forms.isEmpty {
@@ -245,20 +280,25 @@ final class BarModel: ObservableObject {
             return
         }
         let typed = text
-        let chain = chained
-        let line = chain ? Chain.expr(typed) : typed
-        let lines = contextLines + [line]
-        var asFraction = options
-        asFraction.fractionMode = true
-        let display = live.display, exact = live.exact, unit = live.unit
+        let rows = self.rows, view = HistoryView.from(settings), options = self.options
+        let display = live.display, exact = self.exact, unit = live.unit, valueJson = live.valueJson, meas = live.meas
         let figs = settings.significantFigures
         engine.submit(.forms, { engine -> [String] in
             var out = [display]
-            if let exact, !exact.isEmpty { out.append(exact) }
-            if let f = engine.evaluate(lines: lines, options: asFraction).last?.display, f.contains("/"),
-               f.filter(\.isNumber).count <= 8 { out.append(f) }
-            let mag = n == 0 ? 0 : Int(floor(log10(abs(n))))
-            if abs(mag) >= 3 { out.append(Pretty.scientific(n, sigFigs: figs) + (unit.map { " \($0)" } ?? "")) }
+            let source = FormSource(valueJson: valueJson ?? "", display: display, exact: exact, meas: meas,
+                                    sigFigs: options.sigFigs, sigFigMode: options.sigFigMode, rationalize: options.rationalize)
+            let views = valueJson == nil ? [] : engine.answerForms(source: source)
+            if !views.isEmpty {
+                out += views.map(\.display)
+            } else {
+                if let exact, !exact.isEmpty { out.append(exact) }
+                var asFraction = options
+                asFraction.fractionMode = true
+                let f = engine.live(request: Self.request(engine, text: typed, rows: rows, view: view, options: asFraction)).display
+                if f.contains("/"), f.filter(\.isNumber).count <= 8 { out.append(f) }
+                let mag = n == 0 ? 0 : Int(floor(log10(abs(n))))
+                if abs(mag) >= 3 { out.append(Pretty.scientific(n, sigFigs: figs) + (unit.map { " \($0)" } ?? "")) }
+            }
             var seen = Set<String>()
             return out.filter { seen.insert($0.trimmingCharacters(in: .whitespaces)).inserted && !$0.contains("undefined") }
         }) { [weak self] list in
@@ -276,7 +316,7 @@ final class BarModel: ObservableObject {
             return
         }
         if gamesShown {
-            let game = BarCommand.games[gamePick]
+            let game = BarCommand.gameList[gamePick]
             play(game.kind)
             return
         }
@@ -341,40 +381,31 @@ final class BarModel: ObservableObject {
     }
 
     /// Saves the line to the tape. A blank line says why rather than saving nothing.
-    @discardableResult
-    func commit() -> Bool {
+    /// Enter through `Engine.commit`: the row it saves (chains written out, definitions kept) and the new tape, or
+    /// the hint saying why nothing was saved. `leaving` is the bar hiding with "keep unfinished input" off.
+    func commit(leaving: Bool = false) {
         let typed = text
-        guard !typed.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        guard !live.isBlank, live.raw.hasSuffix(typed) || chained || live.raw == typed else {
-            hint = "nothing to save yet · finish the line, or esc to close"
-            return false
+        guard !typed.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let rows = self.rows, view = HistoryView.from(settings), options = self.options
+        engine.submit(.commit, { engine -> CommitResult in
+            engine.commit(request: Self.request(engine, text: typed, rows: rows, view: view, options: options), history: rows)
+        }) { [weak self] done in
+            guard let self else { return }
+            if done.saved {
+                self.history.replace(done.history)
+                self.rows = self.history.rows
+                self.deleted = nil
+                self.refreshRecent()
+                AppSettings.shared.mergeOnboarding(["commits": (AppSettings.shared.onboarding["commits"] ?? 0) + 1])
+            }
+            guard !leaving, self.text == typed else { return }
+            if done.saved {
+                self.hint = nil
+                self.text = done.input
+            } else {
+                self.hint = done.hint ?? "nothing to save yet · finish the line, or esc to close"
+            }
         }
-        let expr = chained ? Chain.historyExpr(typed, plain: lastAnswer?.display ?? "") : typed
-        var row = HistoryRow(id: HistoryRow.newID(), expr: expr, display: live.display, at: Date().timeIntervalSince1970 * 1000)
-        row.exact = live.exact
-        row.n = live.number
-        row.quantity = live.quantity
-        switch live.kind {
-        case .assignment: row.kind = "definition"
-        case .function:
-            row.kind = "function"
-            if let fn = Self.functionFields(live.json) { (row.fnName, row.fnParams, row.fnBody) = fn }
-        default: break
-        }
-        history.append(row)
-        rows = history.rows
-        deleted = nil
-        text = ""
-        hint = nil
-        refreshRecent()
-        AppSettings.shared.mergeOnboarding(["commits": (AppSettings.shared.onboarding["commits"] ?? 0) + 1])
-        return true
-    }
-
-    private static func functionFields(_ json: String) -> (String, [String], String)? {
-        guard let o = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
-              let name = o["fnName"] as? String else { return nil }
-        return (name, o["fnParams"] as? [String] ?? [], o["fnBody"] as? String ?? "")
     }
 
     // MARK: - the tape
@@ -398,7 +429,7 @@ final class BarModel: ObservableObject {
 
     func moveSelection(up: Bool) {
         if gamesShown {
-            gamePick = (gamePick + (up ? BarCommand.games.count - 1 : 1)) % BarCommand.games.count
+            gamePick = (gamePick + (up ? BarCommand.gameList.count - 1 : 1)) % BarCommand.gameList.count
             return
         }
         guard !rows.isEmpty else { return }
@@ -526,11 +557,17 @@ final class BarModel: ObservableObject {
             moveSelection(up: code == kVK_UpArrow)
             return true
         case kVK_LeftArrow, kVK_RightArrow:
-            guard flags.isEmpty, selected != nil else { return false }
-            pickSide(answer: code == kVK_RightArrow)
-            return true
+            guard flags.isEmpty else { return false }
+            if selected != nil {
+                pickSide(answer: code == kVK_RightArrow)
+                return true
+            }
+            // → at the end of the line takes the completion
+            if code == kVK_RightArrow, caretAtEnd?() ?? false { return acceptCompletion() }
+            return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
+            if !flags.contains(.shift), acceptCompletion() { return true }
             cycleForms(back: flags.contains(.shift))
             return true
         case kVK_Delete:
@@ -618,7 +655,7 @@ final class BarModel: ObservableObject {
         } else if draftSeconds > 0 {
             UserDefaults.standard.set(["expr": text, "savedAt": Date().timeIntervalSince1970 * 1000], forKey: Self.draftKey)
         } else {
-            if !live.isBlank { commit() }
+            if !live.isBlank { commit(leaving: true) }
             text = ""
         }
     }
@@ -673,17 +710,37 @@ final class BarModel: ObservableObject {
         sampleGraph()
     }
 
+    private var graphTask: Task<Void, Never>?
+
+    // Engine.graphAsync on the long-work pool, cancelled (CancelToken) by the next pan, zoom or keystroke. It's
+    // bridged to engine/graph's buildGraph, which answers nil until WP-GRAPH; then the JSON-hatch sampler fills in
     private func sampleGraph() {
         guard let g = graph else { return }
         let expr = g.expression, lo = g.xMin, hi = g.xMax
-        let context = contextLines, options = self.options
-        engine.submit(.graph, { engine in
-            engine.graph(expression: expr, xMin: lo, xMax: hi, samples: 241, context: context, options: options)
-        }) { [weak self] curves in
-            guard let self, var now = self.graph, now.expression == expr, now.xMin == lo else { return }
-            now.curves = curves ?? []
-            now.failed = curves == nil
-            self.graph = now
+        let rows = self.rows, view = HistoryView.from(settings), settings = self.options
+        let engine = core
+        graphTask?.cancel()
+        graphTask = Task.detached(priority: .userInitiated) { [weak self] in
+            let options = GraphOptions(domainLo: lo, domainHi: hi, sampleCount: 241)
+            var curves: [GraphCurve]?
+            var yRange: (Double, Double)?
+            if let result = try? await engine.graphAsync(input: "graph \(expr)", options: options, settings: settings),
+               result.error == nil, !result.points.isEmpty {
+                curves = [GraphCurve(label: result.label, points: result.points)]
+                if result.yMax > result.yMin { yRange = (result.yMin, result.yMax) }
+            } else if !Task.isCancelled {
+                let context = engine.contextFromHistory(rows: rows, view: view)
+                curves = GraphFallback.sample(engine, expression: expr, xMin: lo, xMax: hi, samples: 241, context: context, settings: settings)
+            }
+            if Task.isCancelled { return }
+            await MainActor.run {
+                guard let self, var now = self.graph, now.expression == expr, now.xMin == lo else { return }
+                now.curves = curves ?? []
+                now.failed = curves == nil
+                if let yRange, now.fresh { (now.yMin, now.yMax) = yRange }
+                now.fresh = false
+                self.graph = now
+            }
         }
     }
 

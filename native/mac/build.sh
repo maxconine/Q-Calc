@@ -49,12 +49,6 @@ fi
 DIST_APP="$MAC/dist/$APP_NAME.app"
 APP_VERSION="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$ROOT/package.json" | head -1)"
 
-# the shared AppKit/SwiftUI code the web-view app already has, compiled unchanged
-SHARED=(
-  AppSettings Keybinds UnitlessCopy LoginItem Updates SheetPlace MessageInbox Messages ECBRates
-  UnitSettings SettingsWindow PeriodicWindow IdentityWindow OverlayHealth
-)
-
 fetch_sparkle() {
   [[ -d "$SPARKLE/Sparkle.framework" ]] && return
   mkdir -p "$(dirname "$SPARKLE")"
@@ -71,8 +65,11 @@ fetch_sparkle() {
 if (( ! SKIP_RUST )); then
   zsh "$NATIVE/scripts/build-mac.sh" --no-test
 fi
-[[ -f "$OUT/swift/qcalc_ffi.swift" ]] || { echo "No Swift bindings in $OUT/swift; run without --skip-rust" >&2; exit 1; }
+[[ -d "$NATIVE/QCalcCore/qcalc_ffiFFI.xcframework" ]] || { echo "No QCalcCore xcframework; run without --skip-rust" >&2; exit 1; }
 fetch_sparkle
+export QCALC_SPARKLE_DIR="$SPARKLE"
+# Sources/Shared: symlinks to the macos/ files compiled unchanged
+zsh "$MAC/scripts/link-shared.sh"
 
 STAGE="$(mktemp -d /tmp/qcalc-native.XXXXXX)"
 trap 'rm -rf "$STAGE"' EXIT
@@ -80,42 +77,12 @@ APP="$STAGE/$APP_NAME.app"
 BIN="$APP/Contents/MacOS/QCalc"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 
-SOURCES=("${(@f)$(find "$MAC/Sources" -name '*.swift' | sort)}")
-for f in "${SHARED[@]}"; do SOURCES+=("$ROOT/macos/$f.swift"); done
-
-THIN=()
-for arch in "${ARCHS[@]}"; do
-  echo "Building Q Calc for $arch…"
-  MOD="$OUT/mac/$arch"
-  mkdir -p "$MOD"
-  # 2. the bindings as their own module, so the app names them QCalcFFI.evaluate(…) and swapping to QCalcCore
-  #    (an import and one engine file) touches nothing else
-  xcrun swiftc -parse-as-library -O -whole-module-optimization \
-    -target "${arch}-apple-macos${MIN_MACOS}" -sdk "$SDK" \
-    -module-name QCalcFFI -emit-module -emit-module-path "$MOD/QCalcFFI.swiftmodule" \
-    -emit-library -static -o "$MOD/libQCalcFFI.a" \
-    -module-cache-path "$STAGE/modules-$arch" \
-    -Xcc "-fmodule-map-file=$OUT/swift/qcalc_ffiFFI.modulemap" -I "$OUT/swift" \
-    -swift-version 5 -suppress-warnings \
-    "$OUT/swift/qcalc_ffi.swift"
-  # 3. the app
-  xcrun swiftc -parse-as-library -O \
-    -target "${arch}-apple-macos${MIN_MACOS}" -sdk "$SDK" \
-    -swift-version 5 \
-    -module-name QCalcApp \
-    -module-cache-path "$STAGE/modules-$arch" \
-    -I "$MOD" -Xcc "-fmodule-map-file=$OUT/swift/qcalc_ffiFFI.modulemap" -I "$OUT/swift" \
-    -F "$SPARKLE" \
-    -L "$MOD" -lQCalcFFI -L "$OUT/$arch" -lqcalc_ffi \
-    -framework SwiftUI -framework AppKit -framework WebKit -framework Carbon -framework Sparkle \
-    -framework ServiceManagement -framework UserNotifications \
-    -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
-    -Xlinker -dead_strip \
-    "${SOURCES[@]}" \
-    -o "$STAGE/QCalc-$arch"
-  THIN+=("$STAGE/QCalc-$arch")
-done
-lipo -create "${THIN[@]}" -output "$BIN"
+# 2. the app through SwiftPM, against the QCalcCore package (both architectures in one universal binary)
+SPM_ARGS=(--package-path "$MAC" -c release --scratch-path "$OUT/mac-spm")
+for arch in "${ARCHS[@]}"; do SPM_ARGS+=(--arch "$arch"); done
+echo "Building Q Calc for ${ARCHS[*]}…"
+swift build "${SPM_ARGS[@]}"
+cp "$(swift build "${SPM_ARGS[@]}" --show-bin-path)/QCalcMac" "$BIN"
 strip -x "$BIN"
 chmod +x "$BIN"
 

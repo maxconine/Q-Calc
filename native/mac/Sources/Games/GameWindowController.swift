@@ -83,7 +83,7 @@ final class GameWindowController: NSObject, NSWindowDelegate, WKScriptMessageHan
             backing: .buffered,
             defer: false
         )
-        window.title = BarCommand.games.first { $0.kind == kind }?.name ?? "Q Calc"
+        window.title = BarCommand.gameList.first { $0.kind == kind }?.name ?? "Q Calc"
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         window.delegate = self

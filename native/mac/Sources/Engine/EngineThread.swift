@@ -1,32 +1,33 @@
 import Foundation
+import QCalcCore
 
-// One thread owns the engine. It has a 32 MB stack because deep inputs recurse (ARCHITECTURE.md §5: a dispatch
-// thread's 512 KB overflows on the golden fixtures' nesting tests), and every engine call runs on it, never on the
-// main thread.
+// The one serial thread the bar calls the engine from, so the main thread never waits on maths. (QCalcCore hops
+// each call to its own 32 MB evaluation thread; this thread only waits for the answer.)
 //
 // Jobs come in lanes. A lane holds at most one waiting job: a newer one replaces it, so a burst of keystrokes
 // evaluates only the latest text, and the stale ones never run. Each job carries a generation; a result whose
 // generation is no longer the lane's newest is dropped before it reaches the main thread, so a slow answer can't
-// overwrite a newer one. When QCalcCore brings a CancelToken, `cancel` also flips the running job's token.
+// overwrite a newer one. Long work (closed forms, graphs) goes through QCalcCore's async calls with a CancelToken
+// instead, cancelled when the line changes.
 final class EngineThread {
-    enum Lane: Hashable { case live, forms, graph, misc }
+    enum Lane: Hashable { case live, forms, graph, commit, misc }
 
     private struct Job {
         let generation: Int
-        let work: (CalcEngine) -> Void
+        let work: (Engine) -> Void
     }
 
-    private let engine: CalcEngine
+    private let engine: Engine
     private let lock = NSCondition()
     private var waiting: [Lane: Job] = [:]
     private var order: [Lane] = []
     private var newest: [Lane: Int] = [:]
     private var thread: Thread?
 
-    init(engine: CalcEngine) {
+    init(engine: Engine) {
         self.engine = engine
         let thread = Thread { [weak self] in self?.run() }
-        thread.stackSize = 32 << 20
+        thread.stackSize = 4 << 20
         thread.name = "qcalc.engine"
         thread.qualityOfService = .userInteractive
         self.thread = thread
@@ -35,7 +36,7 @@ final class EngineThread {
 
     /// Runs `work` on the engine thread and hands its result to `done` on the main thread, unless a newer job was
     /// submitted to the same lane meanwhile.
-    func submit<T>(_ lane: Lane, _ work: @escaping (CalcEngine) -> T, done: @escaping (T) -> Void) {
+    func submit<T>(_ lane: Lane, _ work: @escaping (Engine) -> T, done: @escaping (T) -> Void) {
         lock.lock()
         let generation = (newest[lane] ?? 0) + 1
         newest[lane] = generation
@@ -62,7 +63,7 @@ final class EngineThread {
     }
 
     /// For the rare caller that must wait (tests, the launch timing): runs on the engine thread and blocks.
-    func sync<T>(_ work: @escaping (CalcEngine) -> T) -> T {
+    func sync<T>(_ work: @escaping (Engine) -> T) -> T {
         let done = DispatchSemaphore(value: 0)
         var out: T?
         lock.lock()

@@ -1,121 +1,58 @@
 import Foundation
+import QCalcCore
 
-/// One row of the tape, in the TS `HistoryRow` shape (src/lib/history.ts), so history.json is the file the core's
-/// persistableHistory/normalizeHistoryRow will read and write (ARCHITECTURE.md §8).
-struct HistoryRow: Codable, Equatable, Identifiable {
-    var id: String
-    var expr: String
-    var display: String
-    var exact: String?
-    var n: Double?
-    var quantity: String?
-    var kind: String?
-    var fnName: String?
-    var fnParams: [String]?
-    var fnBody: String?
-    /// commit time in ms
-    var at: Double?
-
-    var hasDual: Bool {
-        guard let exact = exact?.trimmingCharacters(in: .whitespaces), !exact.isEmpty else { return false }
-        return exact != display.trimmingCharacters(in: .whitespaces)
-    }
-
-    /// The row defines something later lines can use.
-    var defines: Bool { kind == "definition" || kind == "function" }
-
-    static func newID() -> String {
-        let ms = String(Int(Date().timeIntervalSince1970 * 1000), radix: 36)
-        let rand = String(UInt32.random(in: 0...UInt32.max), radix: 36)
-        return "\(ms)-\(rand.prefix(6))"
-    }
-}
-
-/// The tape and its file. MAX_HISTORY and the recent window are the TS's (history.ts, historyShow.ts).
+/// The tape: the engine loads, commits and saves it (`<dataDir>/history.json`, the TS HistoryRow JSON); this keeps
+/// the copy the views draw and works out which rows show (historyShow.ts).
 final class HistoryStore {
-    static let maxRows = 10
-    static let recentSeconds: TimeInterval = 5 * 60
+    static let recentMs: Int64 = 5 * 60 * 1000
     static let recentRows = 5
-    private static let maxDisplay = 96
-    private static let maxExpr = 240
 
     private(set) var rows: [HistoryRow] = []
-    private let url: URL
+    private let engine: Engine
     private let queue = DispatchQueue(label: "qcalc.history", qos: .utility)
 
-    init(directory: URL) {
-        url = directory.appendingPathComponent("history.json")
-        load()
+    init(engine: Engine) {
+        self.engine = engine
+        rows = engine.loadHistory()
     }
 
-    private struct File: Codable {
-        var version: Int
-        var rows: [HistoryRow]
-    }
-
-    private func load() {
-        guard let data = try? Data(contentsOf: url), let file = try? JSONDecoder().decode(File.self, from: data) else { return }
-        rows = Array(file.rows.suffix(Self.maxRows))
-    }
-
-    private func save() {
-        let file = File(version: 1, rows: rows)
-        let url = self.url
-        queue.async {
-            guard let data = try? JSONEncoder().encode(file) else { return }
-            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? data.write(to: url, options: .atomic)
-        }
-    }
-
-    func append(_ row: HistoryRow) {
-        var row = row
-        if row.display.count > Self.maxDisplay { row.display = String(row.display.prefix(Self.maxDisplay - 1)) + "…" }
-        if row.expr.count > Self.maxExpr { row.expr = String(row.expr.prefix(Self.maxExpr - 1)) + "…" }
-        // the same line again moves to the bottom rather than repeating
-        if let last = rows.last, last.expr == row.expr, last.display == row.display { rows.removeLast() }
-        rows.append(row)
-        if rows.count > Self.maxRows { rows.removeFirst(rows.count - Self.maxRows) }
-        save()
+    /// The history after a commit, or any edit; saved off the main thread.
+    func replace(_ next: [HistoryRow]) {
+        rows = next
+        let engine = self.engine
+        queue.async { _ = try? engine.saveHistory(rows: next) }
     }
 
     @discardableResult
     func remove(at index: Int) -> HistoryRow? {
         guard rows.indices.contains(index) else { return nil }
-        let row = rows.remove(at: index)
-        save()
+        var next = rows
+        let row = next.remove(at: index)
+        replace(next)
         return row
     }
 
     func insert(_ row: HistoryRow, at index: Int) {
-        rows.insert(row, at: min(max(0, index), rows.count))
-        save()
+        var next = rows
+        next.insert(row, at: min(max(0, index), next.count))
+        replace(next)
     }
 
-    func clear() {
-        rows = []
-        save()
-    }
+    func clear() { replace([]) }
+
+    private static func nowMs(_ now: Date) -> Int64 { Int64(now.timeIntervalSince1970 * 1000) }
 
     /// recentStart: the first row of the recent view (rows.count when none)
     func recentStart(now: Date = Date()) -> Int {
-        let nowMs = now.timeIntervalSince1970 * 1000
+        let t = Self.nowMs(now)
         var i = rows.count
-        while i > 0, rows.count - i < Self.recentRows, let at = rows[i - 1].at, at <= nowMs, nowMs - at <= Self.recentSeconds * 1000 {
-            i -= 1
-        }
+        while i > 0, rows.count - i < Self.recentRows, let at = rows[i - 1].at, at <= t, t - at <= Self.recentMs { i -= 1 }
         return i
     }
 
-    /// When the recent view next changes on its own.
+    /// nextRecentExpiry: when the recent view next changes on its own
     func nextRecentExpiry(now: Date = Date()) -> Date? {
-        let start = recentStart(now: now)
-        let ends = rows[start...].compactMap { $0.at.map { Date(timeIntervalSince1970: ($0 + Self.recentSeconds * 1000 + 1) / 1000) } }
+        let ends = rows[recentStart(now: now)...].compactMap { $0.at.map { Date(timeIntervalSince1970: Double($0 + Self.recentMs + 1) / 1000) } }
         return ends.min()
-    }
-
-    /// scopeStart: variables count only from rows you can see
-    func scopeStart(show: String, now: Date = Date()) -> Int {
-        show == "always" ? 0 : recentStart(now: now)
     }
 }

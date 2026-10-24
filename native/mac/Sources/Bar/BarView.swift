@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import QCalcCore
 
 /// The bar's size as SwiftUI lays it out: the whole height, and how far down the composer starts (so history
 /// grows up and panels grow down, as applySize did for the page).
@@ -312,7 +313,7 @@ private struct GamesSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(BarCommand.games.enumerated()), id: \.offset) { i, game in
+            ForEach(Array(BarCommand.gameList.enumerated()), id: \.offset) { i, game in
                 Button { model.onGame?(game.kind) } label: {
                     HStack {
                         Text(game.name).font(.system(size: 14, weight: .medium))

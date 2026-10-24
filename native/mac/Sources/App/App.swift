@@ -1,4 +1,5 @@
 import AppKit
+import QCalcCore
 import Carbon
 import SwiftUI
 
@@ -40,13 +41,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             forName: .qcalcSettingsChanged, object: nil, queue: .main
         ) { [weak self] _ in self?.refreshStatusItem() }
         // the engine gets its own thread and the tape its file; the bar is native, so it's ready as soon as it's made
-        let engine = EngineThread(engine: makeEngine())
-        let model = BarModel(engine: engine, history: HistoryStore(directory: AppInfo.supportDirectory))
+        let core = EngineFactory.make()
+        let engine = EngineThread(engine: core)
+        let model = BarModel(engine: engine, core: core, history: HistoryStore(engine: core))
+        // the ECB rates ECBRates.swift fetches, handed to the engine as they arrive (its cache lives in Q Calc's
+        // own folder, so the engine is given the JSON rather than reading <dataDir>/rates.json)
+        let feedRates: (String) -> Void = { json in engine.submit(.misc, { try? $0.setRates(ratesJson: json) }) { _ in } }
+        ECBRates.shared.onChange = feedRates
+        feedRates(ECBRates.shared.pageJSON)
         overlay = OverlayController(model: model)
         overlay?.onSettings = { [weak self] in self?.showSettings() }
         overlay?.preload()
         // the engine's first call pays for its lazy tables; do it now, off the main thread
-        engine.submit(.misc, { $0.evaluate(lines: ["1+1"], options: EngineOptions()) }) { _ in
+        engine.submit(.forms, { $0.evaluate(lines: ["1+1"], options: defaultEvalOptions()) }) { _ in
             OverlayLog.note(String(format: "engine warm %.0f ms after process start", AppInfo.sinceProcessStart * 1000))
         }
         if AppSettings.shared.claimFirstRun() {

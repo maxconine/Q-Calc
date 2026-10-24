@@ -139,7 +139,7 @@ enum BarCommand: Equatable {
     ]
 
     // games.ts GAMES, with each game's own `is…Command` rule
-    static let games: [(kind: String, name: String, blurb: String, re: NSRegularExpression)] = [
+    static let gameList: [(kind: String, name: String, blurb: String, re: NSRegularExpression)] = [
         ("pong", "pong", "first to 7 · vs the computer or anyone online", regex(#"^pong$"#, .caseInsensitive)),
         ("connect4", "connect 4", "four in a row · vs the computer or anyone online", regex(#"^connect[\s-]*(4|four)$"#, .caseInsensitive)),
         ("ultimate", "ultimate tic-tac-toe", "nine boards in one · vs the computer or anyone online", regex(#"^(ultimate([\s-]*(tic[\s-]*tac[\s-]*toe|ttt))?|uttt)$"#, .caseInsensitive)),
@@ -160,7 +160,7 @@ enum BarCommand: Equatable {
         if periodicRE.matches(t) { return .periodic }
         if let target = identityTarget(t, sheets: sheets) { return target }
         if lower == "games" || lower == "game" { return .games }
-        if let g = games.first(where: { $0.re.matches(t) }) { return .game(kind: g.kind, name: g.name) }
+        if let g = gameList.first(where: { $0.re.matches(t) }) { return .game(kind: g.kind, name: g.name) }
         if let m = messageRE.groups(raw) {
             let to = m[1] ?? nil ?? ""
             return .message(to: to, name: Messages.clean(to), text: String((m[2] ?? nil ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(Messages.textMax)))
