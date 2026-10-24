@@ -17,7 +17,8 @@ The Rust source is in `native/ffi/src/` (`engine.rs`, `records.rs`, `cancel.rs`,
 .target(name: "QCalcMac", dependencies: ["QCalcCore"])
 ```
 
-Build the binary first with `native/scripts/build-mac.sh` (or `--no-test`). It builds the Rust library for arm64
+Build the binary first with `native/scripts/build-mac.sh --no-test` (the full script also runs the Swift test on
+both architectures and `swift test` on this package). It builds the Rust library for arm64
 and x86_64, lipos them, regenerates `Sources/QCalcCore/qcalc_ffi.swift`, and writes
 `native/QCalcCore/qcalc_ffiFFI.xcframework` (gitignored), which `Package.swift` uses as a `binaryTarget`. The
 package's floor is macOS 13.5, the app's own.
@@ -55,14 +56,18 @@ if done.saved { history = done.history; _ = try? engine.saveHistory(rows: histor
 else if let hint = done.hint { hintLabel.stringValue = hint }
 ```
 
-`closedForm(jobJson:)` with no token is the `async` convenience in `QCalcCore+Async.swift`. It makes a
-`CancelToken` and cancels it when the Swift `Task` is cancelled. Each `…Async` call has the same convenience.
+`closedForm(jobJson:)` with no token is one of the conveniences in `QCalcCore+Async.swift`, alongside
+`liveAsync(request:)`, `evaluateAsync(lines:options:)`, `graphAsync(input:options:settings:)`,
+`Span.nsRange`/`TextSpan.nsRange` and `HistoryView.standard(sigFigs:now:)`. Each async convenience makes its
+own `CancelToken` and cancels it when the calling Swift `Task` is cancelled, and then the call throws
+`CoreError.Cancelled`.
 
 ## Threading
 
 - `Engine` is thread-safe (`Sendable`). Every call hops to the engine's own evaluation thread, which has a
-  **32 MB stack**, so deep inputs (the parser allows 512 levels of nesting) can't overflow a 512 KB dispatch
-  stack. Sync calls block the caller until the answer is ready, usually well under a millisecond per keystroke.
+  **32 MB stack**, so deep inputs can't overflow a 512 KB dispatch stack. The deepest input the parser reads,
+  250 nested parentheses, overflows a 512 KB thread when it is evaluated there directly, and the Swift test
+  sends it from one. Sync calls block the caller until the answer is ready, usually well under a millisecond per keystroke.
   Call them off the main thread anyway.
 - `…Async` calls run on a separate pool of two long-work threads, also with 32 MB stacks, so a long job never
   delays a keystroke. They take a `CancelToken`. A cancelled job throws `CoreError.Cancelled` at its next
@@ -228,7 +233,7 @@ struct LiveAnswer {
     var unit: String?
     var kind: AnswerKind
     var blank: Span?                         // where a blank answer stops reading
-    var completion: String?                  // the rest of the word being typed
+    var completion: String?                  // the rest of the word being typed (no contacts: call completion() for `message …`)
     var solve: SolveInfo?
     var closedFormJob: String?               // pass to closedForm(jobJson:)
     var timeLetters: TimeLetters?
@@ -246,7 +251,7 @@ struct CommitResult {
     var saved: Bool
     var row: HistoryRow?                     // the row saved (or refreshed, when it repeats the last one)
     var history: [HistoryRow]                // the history to keep and save
-    var input: String                        // what the bar holds now ("" after a save)
+    var input: String                        // what the bar holds now ("" after a save, the text when nothing saved)
     var hint: String?                        // when nothing was saved: why (`enterHint`)
     var json: String                         // the row as TS HistoryRow JSON
 }
