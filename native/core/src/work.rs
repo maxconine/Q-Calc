@@ -47,7 +47,10 @@ pub struct Cancelled;
 /// Runs `f` with `flag` as this thread's cancel flag: once it is set, the next [`spend`] or
 /// [`WorkBudget::over`] unwinds with a [`Cancelled`] panic payload. Nothing else changes, so an uncancelled run
 /// gives exactly the answer it would without a flag.
-pub fn with_cancel<R>(flag: std::sync::Arc<std::sync::atomic::AtomicBool>, f: impl FnOnce() -> R) -> R {
+pub fn with_cancel<R>(
+    flag: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    f: impl FnOnce() -> R,
+) -> R {
     struct Reset(Option<std::sync::Arc<std::sync::atomic::AtomicBool>>);
     impl Drop for Reset {
         fn drop(&mut self) {

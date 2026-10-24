@@ -32,7 +32,9 @@ fn is_date(s: &str) -> bool {
     b.len() == 10
         && b[4] == b'-'
         && b[7] == b'-'
-        && b.iter().enumerate().all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
+        && b.iter()
+            .enumerate()
+            .all(|(i, c)| i == 4 || i == 7 || c.is_ascii_digit())
 }
 
 /// Reads the cache file's JSON, field by field so one bad value can't throw the rest away; or a `{base, rates}`
@@ -132,17 +134,25 @@ mod tests {
         assert_eq!(r.table(at)["base"], "EUR");
         assert_eq!(r.table(at + 8 * DAY_MS), Json::Null);
         let s = status(Some(&r), at);
-        assert_eq!((s.currencies, s.fresh, s.date.as_deref()), (2, true, Some("2026-09-24")));
+        assert_eq!(
+            (s.currencies, s.fresh, s.date.as_deref()),
+            (2, true, Some("2026-09-24"))
+        );
     }
 
     #[test]
     fn page_tables_and_junk() {
-        let r = parse(r#"{"base":"EUR","rates":{"USD":1.25}}"#).unwrap().unwrap();
+        let r = parse(r#"{"base":"EUR","rates":{"USD":1.25}}"#)
+            .unwrap()
+            .unwrap();
         assert!(r.fresh(0));
         assert_eq!(parse(r#"{"checked":5}"#).unwrap(), None);
         assert!(parse("[1]").is_err());
         assert!(parse("nope").is_err());
         assert_eq!(parse(r#"{"date":"2026-09-24","rates":{}}"#).unwrap(), None);
-        assert_eq!(parse(r#"{"date":"yesterday","rates":{"USD":1}}"#).unwrap(), None);
+        assert_eq!(
+            parse(r#"{"date":"yesterday","rates":{"USD":1}}"#).unwrap(),
+            None
+        );
     }
 }

@@ -35,7 +35,9 @@ fn str_of<'a>(row: &'a Json, key: &str) -> Option<&'a str> {
 
 /// `typeof x === 'number' && Number.isFinite(x)` (JSON numbers are always finite; NaN arrives as null).
 fn finite_of(row: &Json, key: &str) -> Option<f64> {
-    row.get(key).and_then(Json::as_f64).filter(|n| n.is_finite())
+    row.get(key)
+        .and_then(Json::as_f64)
+        .filter(|n| n.is_finite())
 }
 
 /// `x != null`.
@@ -122,12 +124,17 @@ fn sanitize_solve(raw: Option<&Json>) -> Option<Json> {
     let s = raw.filter(|v| v.is_object())?;
     let variable = str_of(s, "variable")?;
     let mut chars = variable.chars();
-    let one = chars.next().filter(|c| c.is_ascii_alphabetic() || *c == 'θ');
+    let one = chars
+        .next()
+        .filter(|c| c.is_ascii_alphabetic() || *c == 'θ');
     if one.is_none() || chars.next().is_some() {
         return None;
     }
     let outcome = str_of(s, "outcome")?;
-    if !matches!(outcome, "roots" | "none" | "contradiction" | "noneFound" | "all") {
+    if !matches!(
+        outcome,
+        "roots" | "none" | "contradiction" | "noneFound" | "all"
+    ) {
         return None;
     }
     let roots = s.get("roots")?.as_array()?;
@@ -157,7 +164,10 @@ pub fn sanitize_meas(raw: Option<&Json>) -> Option<Json> {
     let r = raw.filter(|v| v.is_object())?;
     let digits = str_of(r, "uncDigits").filter(|d| {
         let b = d.as_bytes();
-        !b.is_empty() && b.len() <= 16 && (b'1'..=b'9').contains(&b[0]) && b.iter().all(u8::is_ascii_digit)
+        !b.is_empty()
+            && b.len() <= 16
+            && (b'1'..=b'9').contains(&b[0])
+            && b.iter().all(u8::is_ascii_digit)
     });
     let (sig, dp, unc) = (finite_of(r, "sig"), finite_of(r, "dp"), finite_of(r, "unc"));
     let mut out = Map::new();
@@ -187,7 +197,10 @@ fn slim_function_fields(row: &Json, kind: Option<&str>, expr: &str, out: &mut Ma
     } else {
         parse_function_def(jsstr::trim(expr))
     };
-    let Some(name) = fn_name.map(str::to_string).or_else(|| parsed.as_ref().map(|p| p.0.clone())) else {
+    let Some(name) = fn_name
+        .map(str::to_string)
+        .or_else(|| parsed.as_ref().map(|p| p.0.clone()))
+    else {
         return;
     };
     let params: Vec<Json> = match fn_params {
@@ -213,7 +226,10 @@ fn slim_function_fields(row: &Json, kind: Option<&str>, expr: &str, out: &mut Ma
 /// `slimHistoryRow`: the row as stored, or None when it holds nothing.
 pub fn slim_history_row(row: &Json) -> Option<Json> {
     let expr = slim_expr(str_of(row, "expr").unwrap_or(""));
-    let display = ellipsize(str_of(row, "display").unwrap_or(""), MAX_HISTORY_DISPLAY as i64);
+    let display = ellipsize(
+        str_of(row, "display").unwrap_or(""),
+        MAX_HISTORY_DISPLAY as i64,
+    );
     let exact = str_of(row, "exact")
         .filter(|e| !e.is_empty())
         .map(|e| ellipsize(e, MAX_HISTORY_EXACT as i64))
@@ -224,8 +240,18 @@ pub fn slim_history_row(row: &Json) -> Option<Json> {
     let kind = kind_of(row);
     let id = ellipsize(str_of(row, "id").unwrap_or(""), 48);
     let mut out = Map::new();
-    out.insert("id".into(), json!(if id.is_empty() { "row".to_string() } else { id }));
-    out.insert("expr".into(), json!(if kind == Some("system") { "sys" } else { expr.as_str() }));
+    out.insert(
+        "id".into(),
+        json!(if id.is_empty() { "row".to_string() } else { id }),
+    );
+    out.insert(
+        "expr".into(),
+        json!(if kind == Some("system") {
+            "sys"
+        } else {
+            expr.as_str()
+        }),
+    );
     out.insert("display".into(), json!(display));
     if let Some(exact) = exact {
         out.insert("exact".into(), json!(exact));
@@ -244,8 +270,15 @@ pub fn slim_history_row(row: &Json) -> Option<Json> {
         && let Some(q) = str_of(row, "quantity")
     {
         // never truncated: a cut-off quantity would parse as a different one
-        let room = if is_matrix_quantity(Some(q)) { MAX_MATRIX_LITERAL } else { MAX_HISTORY_EXPR };
-        out.insert("quantity".into(), json!(if len16(q) <= room { q } else { "" }));
+        let room = if is_matrix_quantity(Some(q)) {
+            MAX_MATRIX_LITERAL
+        } else {
+            MAX_HISTORY_EXPR
+        };
+        out.insert(
+            "quantity".into(),
+            json!(if len16(q) <= room { q } else { "" }),
+        );
     }
     if let Some(kind) = kind {
         out.insert("kind".into(), json!(kind));
@@ -269,9 +302,9 @@ pub fn slim_history_row(row: &Json) -> Option<Json> {
 
 /// `normalizeHistoryRow`: any stored row (legacy `latex` rows too) as a row, or None. A row that is `null`
 /// makes the TS throw, which `loadHistory` turns into an empty history; `Err` reports that.
-pub fn normalize_history_row(row: &Json, fallback_id: &str) -> Result<Option<Json>, ()> {
+pub fn normalize_history_row(row: &Json, fallback_id: &str) -> Result<Option<Json>, Throws> {
     if row.is_null() {
-        return Err(());
+        return Err(Throws);
     }
     let strings = |key: &str| -> Option<Json> {
         row.get(key)
@@ -279,11 +312,18 @@ pub fn normalize_history_row(row: &Json, fallback_id: &str) -> Result<Option<Jso
             .map(|a| Json::Array(a.iter().filter(|p| p.is_string()).cloned().collect()))
     };
     let mut r = Map::new();
-    let id = str_of(row, "id").filter(|id| !id.is_empty()).unwrap_or(fallback_id);
+    let id = str_of(row, "id")
+        .filter(|id| !id.is_empty())
+        .unwrap_or(fallback_id);
     r.insert("id".into(), json!(id));
-    let expr = str_of(row, "expr").or_else(|| str_of(row, "latex")).unwrap_or("");
+    let expr = str_of(row, "expr")
+        .or_else(|| str_of(row, "latex"))
+        .unwrap_or("");
     r.insert("expr".into(), json!(expr));
-    r.insert("display".into(), json!(str_of(row, "display").unwrap_or("")));
+    r.insert(
+        "display".into(),
+        json!(str_of(row, "display").unwrap_or("")),
+    );
     for key in ["exact", "fnName", "fnBody"] {
         if let Some(s) = str_of(row, key) {
             r.insert(key.into(), json!(s));
@@ -307,6 +347,10 @@ pub fn normalize_history_row(row: &Json, fallback_id: &str) -> Result<Option<Jso
     }
     Ok(slim_history_row(&Json::Object(r)))
 }
+
+/// Where the TS throws a `TypeError` (reading a field of `null`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Throws;
 
 // keyed so variable and function names stay in separate namespaces
 fn defined_name(row: &Json) -> Option<String> {
@@ -338,7 +382,9 @@ fn with_sticky_definitions(rows: &[Json]) -> Vec<Json> {
     let mut seen: BTreeSet<String> = recent.iter().filter_map(defined_name).collect();
     let mut kept = Vec::new();
     for row in rows[..start].iter().rev() {
-        let Some(name) = defined_name(row) else { continue };
+        let Some(name) = defined_name(row) else {
+            continue;
+        };
         if !seen.insert(name) {
             continue;
         }
@@ -356,7 +402,9 @@ pub fn persistable_history(rows: &[Json]) -> Vec<Json> {
         .filter_map(slim_history_row)
         .collect();
     let mut start = 0;
-    while start < out.len() && jsstr::json_len(&Json::Array(out[start..].to_vec())) > MAX_HISTORY_JSON {
+    while start < out.len()
+        && jsstr::json_len(&Json::Array(out[start..].to_vec())) > MAX_HISTORY_JSON
+    {
         start += 1;
     }
     out.drain(..start);
@@ -371,7 +419,10 @@ fn assignment_of(row: &Json) -> Option<String> {
 pub fn history_variables(rows: &[Json]) -> Vec<(String, f64)> {
     let mut vars: Vec<(String, f64)> = Vec::new();
     let remove = |vars: &mut Vec<(String, f64)>, name: &str| vars.retain(|(k, _)| k != name);
-    let set = |vars: &mut Vec<(String, f64)>, name: String, n: f64| match vars.iter_mut().find(|(k, _)| *k == name) {
+    let set = |vars: &mut Vec<(String, f64)>, name: String, n: f64| match vars
+        .iter_mut()
+        .find(|(k, _)| *k == name)
+    {
         Some(slot) => slot.1 = n,
         None => vars.push((name, n)),
     };
@@ -379,7 +430,9 @@ pub fn history_variables(rows: &[Json]) -> Vec<(String, f64)> {
         if is_row_of_kind(row) || truthy(row.get("solve")) {
             continue;
         }
-        let Some(variable) = assignment_of(row) else { continue };
+        let Some(variable) = assignment_of(row) else {
+            continue;
+        };
         if present(row, "quantity") {
             remove(&mut vars, &variable);
             continue;
@@ -408,7 +461,10 @@ pub fn history_variables(rows: &[Json]) -> Vec<(String, f64)> {
             ..EvaluateOptions::default()
         };
         let result = qcalc_core::evaluate_line(str_of(row, "expr").unwrap_or(""), &options);
-        if let Some(v) = result.value.filter(|v| v.kind == ValueKind::Number && v.n.is_finite()) {
+        if let Some(v) = result
+            .value
+            .filter(|v| v.kind == ValueKind::Number && v.n.is_finite())
+        {
             set(&mut vars, variable, v.n);
         }
     }
@@ -433,7 +489,9 @@ pub fn history_measures(rows: &[Json]) -> Map<String, Json> {
         if truthy(row.get("solve")) {
             continue;
         }
-        let Some(variable) = assignment_of(row) else { continue };
+        let Some(variable) = assignment_of(row) else {
+            continue;
+        };
         if truthy(row.get("meas")) && !present(row, "quantity") {
             out.insert(variable, row["meas"].clone());
         } else {
@@ -460,7 +518,9 @@ pub fn history_quantities(rows: &[Json]) -> Map<String, Json> {
         if truthy(row.get("solve")) {
             continue;
         }
-        let Some(variable) = assignment_of(row) else { continue };
+        let Some(variable) = assignment_of(row) else {
+            continue;
+        };
         if present(row, "quantity") {
             out.insert(variable, row["quantity"].clone());
         } else {
@@ -485,11 +545,20 @@ pub fn history_functions(rows: &[Json]) -> Map<String, Json> {
             && let Some(name) = str_of(row, "fnName").filter(|n| !n.is_empty())
             && present(row, "fnBody")
         {
-            let params = row.get("fnParams").filter(|p| p.is_array()).cloned().unwrap_or(json!([]));
-            fns.insert(name.to_string(), json!({ "params": params, "body": row["fnBody"] }));
+            let params = row
+                .get("fnParams")
+                .filter(|p| p.is_array())
+                .cloned()
+                .unwrap_or(json!([]));
+            fns.insert(
+                name.to_string(),
+                json!({ "params": params, "body": row["fnBody"] }),
+            );
             continue;
         }
-        if let Some((name, params, body)) = parse_function_def(jsstr::trim(str_of(row, "expr").unwrap_or(""))) {
+        if let Some((name, params, body)) =
+            parse_function_def(jsstr::trim(str_of(row, "expr").unwrap_or("")))
+        {
             fns.insert(name, json!({ "params": params, "body": body }));
         }
     }
@@ -499,7 +568,9 @@ pub fn history_functions(rows: &[Json]) -> Map<String, Json> {
 fn several_roots(row: &Json) -> bool {
     row.get("solve").is_some_and(|s| {
         s.get("outcome").and_then(Json::as_str) == Some("roots")
-            && s.get("roots").and_then(Json::as_array).is_some_and(|r| r.len() > 1)
+            && s.get("roots")
+                .and_then(Json::as_array)
+                .is_some_and(|r| r.len() > 1)
     })
 }
 
@@ -537,10 +608,16 @@ pub fn last_answer_row(rows: &[Json]) -> Option<&Json> {
             continue;
         }
         // nor a list of roots: the one wanted is clicked in the tape
-        if solve.is_some_and(|s| s.get("roots").and_then(Json::as_array).is_some_and(|r| r.len() > 1)) {
+        if solve.is_some_and(|s| {
+            s.get("roots")
+                .and_then(Json::as_array)
+                .is_some_and(|r| r.len() > 1)
+        }) {
             return None;
         }
-        if finite_of(row, "n").is_some() || !jsstr::trim(str_of(row, "display").unwrap_or("")).is_empty() {
+        if finite_of(row, "n").is_some()
+            || !jsstr::trim(str_of(row, "display").unwrap_or("")).is_empty()
+        {
             return Some(row);
         }
     }
@@ -574,7 +651,11 @@ pub fn recent_start(rows: &[Json], now: f64) -> usize {
 
 /// `scopeStart`: variables and functions only count from the rows you can see.
 pub fn scope_start(rows: &[Json], show: HistoryShow, now: f64) -> usize {
-    if show == HistoryShow::Always { 0 } else { recent_start(rows, now) }
+    if show == HistoryShow::Always {
+        0
+    } else {
+        recent_start(rows, now)
+    }
 }
 
 /// `nextRecentExpiry`: when the recent view next changes on its own.
@@ -607,12 +688,20 @@ pub fn meas_json(m: &MeasInfo) -> Json {
 
 pub fn meas_from_json(v: &Json) -> Option<MeasInfo> {
     let o = v.as_object()?;
-    let int = |k: &str| o.get(k).and_then(Json::as_f64).filter(|x| x.is_finite()).map(|x| x as i32);
+    let int = |k: &str| {
+        o.get(k)
+            .and_then(Json::as_f64)
+            .filter(|x| x.is_finite())
+            .map(|x| x as i32)
+    };
     Some(MeasInfo {
         sig: int("sig"),
         dp: int("dp"),
         unc: o.get("unc").and_then(Json::as_f64),
-        unc_digits: o.get("uncDigits").and_then(Json::as_str).map(str::to_string),
+        unc_digits: o
+            .get("uncDigits")
+            .and_then(Json::as_str)
+            .map(str::to_string),
     })
 }
 
@@ -627,7 +716,8 @@ fn outcome_str(o: SolveOutcome) -> &'static str {
 }
 
 pub fn solve_json(s: &SolveInfo) -> Json {
-    let mut out = json!({ "variable": s.variable, "roots": s.roots, "outcome": outcome_str(s.outcome) });
+    let mut out =
+        json!({ "variable": s.variable, "roots": s.roots, "outcome": outcome_str(s.outcome) });
     if s.more {
         out["more"] = Json::Bool(true);
     }
@@ -645,7 +735,12 @@ pub fn solve_from_json(v: &Json) -> Option<SolveInfo> {
     };
     Some(SolveInfo {
         variable: v.get("variable")?.as_str()?.to_string(),
-        roots: v.get("roots")?.as_array()?.iter().filter_map(Json::as_f64).collect(),
+        roots: v
+            .get("roots")?
+            .as_array()?
+            .iter()
+            .filter_map(Json::as_f64)
+            .collect(),
         outcome,
         more: v.get("more") == Some(&Json::Bool(true)),
     })
@@ -689,9 +784,12 @@ pub fn row_json(r: &HistoryRow) -> Json {
 pub fn row_from_json(v: &Json) -> HistoryRow {
     let s = |k: &str| str_of(v, k).map(str::to_string);
     let strings = |k: &str| {
-        v.get(k)
-            .and_then(Json::as_array)
-            .map(|a| a.iter().filter_map(Json::as_str).map(str::to_string).collect())
+        v.get(k).and_then(Json::as_array).map(|a| {
+            a.iter()
+                .filter_map(Json::as_str)
+                .map(str::to_string)
+                .collect()
+        })
     };
     HistoryRow {
         id: s("id").unwrap_or_default(),
@@ -721,13 +819,19 @@ pub fn new_row_id() -> String {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis() as u64);
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis() as u64);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
     // a splitmix of time and counter, so ids made in the same millisecond differ
     let mut z = now ^ n.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
     z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    format!("{}-{}", base36(now), &format!("{:0>6}", base36(z ^ (z >> 31)))[..6])
+    format!(
+        "{}-{}",
+        base36(now),
+        &format!("{:0>6}", base36(z ^ (z >> 31)))[..6]
+    )
 }
 
 fn base36(mut n: u64) -> String {
@@ -766,7 +870,7 @@ pub fn load_rows(text: &str) -> Vec<Json> {
             Ok(Some(r)) => out.push(r),
             Ok(None) => {}
             // TS quirk kept: one null row throws inside loadHistory's try, so the whole history loads empty
-            Err(()) => return Vec::new(),
+            Err(Throws) => return Vec::new(),
         }
     }
     persistable_history(&out)
@@ -791,7 +895,7 @@ mod tests {
 
     #[test]
     fn typed_rows_round_trip() {
-        let row = json!({"id": "a", "expr": "x = 2", "display": "2", "n": 2.0, "at": 5.0,
+        let row = json!({"id": "a", "expr": "x = 2", "display": "2", "n": 2.0, "at": 5,
             "solve": {"variable": "x", "roots": [1.0, 2.0], "outcome": "roots"}});
         let typed = row_from_json(&row);
         assert_eq!(typed.n, Some(2.0));
@@ -801,9 +905,13 @@ mod tests {
 
     #[test]
     fn loads_versioned_and_bare_files() {
-        let rows = load_rows(r#"{"version":1,"rows":[{"id":"1","expr":"2+2","display":"4","n":4}]}"#);
+        let rows =
+            load_rows(r#"{"version":1,"rows":[{"id":"1","expr":"2+2","display":"4","n":4}]}"#);
         assert_eq!(rows.len(), 1);
-        assert_eq!(load_rows(r#"[{"latex":"1+1","display":"2"}]"#)[0]["expr"], "1+1");
+        assert_eq!(
+            load_rows(r#"[{"latex":"1+1","display":"2"}]"#)[0]["expr"],
+            "1+1"
+        );
         assert!(load_rows(r#"[{"expr":"1+1","display":"2"}, null]"#).is_empty());
         assert!(load_rows("nope").is_empty());
         assert_ne!(new_row_id(), new_row_id());

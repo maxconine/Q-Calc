@@ -8,20 +8,14 @@ use serde_json::Value as Json;
 pub fn is_js_space(c: char) -> bool {
     matches!(
         c,
-        '\t' | '\n'
-            | '\u{0B}'
-            | '\u{0C}'
-            | '\r'
-            | ' '
-            | '\u{A0}'
-            | '\u{1680}'
-            | '\u{2000}'..='\u{200A}'
-            | '\u{2028}'
-            | '\u{2029}'
-            | '\u{202F}'
-            | '\u{205F}'
-            | '\u{3000}'
-            | '\u{FEFF}'
+        '\t' | '\n' | '\u{0B}' | '\u{0C}' | '\r' | ' ' | '\u{A0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200A}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202F}'
+                | '\u{205F}'
+                | '\u{3000}'
+                | '\u{FEFF}'
     )
 }
 
@@ -60,17 +54,22 @@ pub fn number(text: &str) -> Option<f64> {
         "-Infinity" => return Some(f64::NEG_INFINITY),
         _ => {}
     }
-    for (prefix, radix) in [("0x", 16), ("0X", 16), ("0o", 8), ("0O", 8), ("0b", 2), ("0B", 2)] {
+    for (prefix, radix) in [
+        ("0x", 16),
+        ("0X", 16),
+        ("0o", 8),
+        ("0O", 8),
+        ("0b", 2),
+        ("0B", 2),
+    ] {
         if let Some(digits) = t.strip_prefix(prefix) {
             if digits.is_empty() || !digits.chars().all(|c| c.is_digit(radix)) {
                 return None;
             }
             // exact up to 2^53, then rounded like JS (digit by digit is close enough for history displays)
-            return Some(
-                digits
-                    .chars()
-                    .fold(0.0, |acc, c| acc * f64::from(radix) + f64::from(c.to_digit(radix).unwrap_or(0))),
-            );
+            return Some(digits.chars().fold(0.0, |acc, c| {
+                acc * f64::from(radix) + f64::from(c.to_digit(radix).unwrap_or(0))
+            }));
         }
     }
     let body = t.strip_prefix(['+', '-']).unwrap_or(t);
@@ -159,7 +158,12 @@ mod tests {
     fn json_lengths_like_js() {
         let v = json!([{"id": "a\"b", "n": 1.0, "x": 0.1, "s": "π…\n", "ok": true}]);
         // [{"id":"a\"b","n":1,"x":0.1,"s":"π…\n","ok":true}]
-        assert_eq!(json_len(&v), r#"[{"id":"a\"b","n":1,"x":0.1,"s":"π…\n","ok":true}]"#.encode_utf16().count());
+        assert_eq!(
+            json_len(&v),
+            r#"[{"id":"a\"b","n":1,"x":0.1,"s":"π…\n","ok":true}]"#
+                .encode_utf16()
+                .count()
+        );
         assert_eq!(json_len(&json!("\u{1}")), 8);
     }
 

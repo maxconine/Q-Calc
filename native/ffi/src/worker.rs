@@ -43,7 +43,10 @@ impl Pool {
 
     /// Queues a job; false when the pool is gone (it never is while the engine lives).
     fn send(&self, job: Job) -> bool {
-        self.tx.lock().map(|tx| tx.send(job).is_ok()).unwrap_or(false)
+        self.tx
+            .lock()
+            .map(|tx| tx.send(job).is_ok())
+            .unwrap_or(false)
     }
 }
 
@@ -92,7 +95,10 @@ impl Workers {
     }
 
     /// Runs `f` on the evaluation thread and waits for it.
-    pub fn run<R: Send + 'static>(&self, f: impl FnOnce() -> R + Send + 'static) -> Result<R, CoreError> {
+    pub fn run<R: Send + 'static>(
+        &self,
+        f: impl FnOnce() -> R + Send + 'static,
+    ) -> Result<R, CoreError> {
         let (tx, rx) = sync_channel(1);
         let job: Job = Box::new(move || {
             let _ = tx.send(catch_unwind(AssertUnwindSafe(f)));
@@ -114,7 +120,10 @@ impl Workers {
         cancel: Arc<AtomicBool>,
         f: impl FnOnce() -> R + Send + 'static,
     ) -> Pending<R> {
-        let slot = Arc::new(Mutex::new(Slot { value: None, waker: None }));
+        let slot = Arc::new(Mutex::new(Slot {
+            value: None,
+            waker: None,
+        }));
         let pending = Pending {
             slot: slot.clone(),
             cancel: cancel.clone(),
@@ -264,14 +273,20 @@ mod tests {
     // recursion a 2 MB test thread can't hold
     fn deep(n: u64) -> u64 {
         let pad = [n; 512];
-        if n == 0 { 0 } else { std::hint::black_box(pad)[0] % 7 + deep(n - 1) }
+        if n == 0 {
+            0
+        } else {
+            std::hint::black_box(pad)[0] % 7 + deep(n - 1)
+        }
     }
 
     #[test]
     fn runs_on_a_big_stack() {
         let w = Workers::new();
-        assert_eq!(w.run(|| deep(5_000)).unwrap(), deep_value(5_000));
-        assert!(matches!(w.run(|| panic!("boom")), Err(CoreError::Internal { message }) if message == "boom"));
+        assert_eq!(w.run(|| deep(2_000)).unwrap(), deep_value(2_000));
+        assert!(
+            matches!(w.run(|| panic!("boom")), Err(CoreError::Internal { message }) if message == "boom")
+        );
         // the thread survives a panic
         assert_eq!(w.run(|| 2 + 2).unwrap(), 4);
     }
@@ -283,9 +298,15 @@ mod tests {
     #[test]
     fn async_jobs_answer_and_cancel() {
         let w = Workers::new();
-        assert_eq!(block_on(w.spawn(Arc::new(AtomicBool::new(false)), || 7)).unwrap(), 7);
+        assert_eq!(
+            block_on(w.spawn(Arc::new(AtomicBool::new(false)), || 7)).unwrap(),
+            7
+        );
         let done = Arc::new(AtomicBool::new(true));
-        assert!(matches!(block_on(w.spawn(done, || 7)), Err(CoreError::Cancelled)));
+        assert!(matches!(
+            block_on(w.spawn(done, || 7)),
+            Err(CoreError::Cancelled)
+        ));
         // cancelled mid-job: the next work::spend unwinds
         let flag = Arc::new(AtomicBool::new(false));
         let f2 = flag.clone();

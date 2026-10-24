@@ -58,7 +58,9 @@ pub fn chained_history_expr(q: &str, plain: &str) -> String {
 pub fn ans_written_out(expr: &str, plain: &str) -> String {
     static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
     static ALONE: Lazy = Lazy::new(|| js(r"^\s*ans\s*$", "i"));
-    if !jsre::test(&ANS, expr) || qcalc_core::evaluate::parse_function_def(jsstr::trim(expr)).is_some() {
+    if !jsre::test(&ANS, expr)
+        || qcalc_core::evaluate::parse_function_def(jsstr::trim(expr)).is_some()
+    {
         return expr.to_string();
     }
     let with = answer_among(plain, jsre::test(&ALONE, expr));
@@ -116,7 +118,8 @@ fn is_wrapped(s: &str) -> bool {
 
 /// `answerAmong`: an answer placed among other text keeps its value (`ans^2` with ans -3 is `(-3)^2`).
 pub fn answer_among(answer: &str, alone: bool) -> String {
-    static ATOM: Lazy = Lazy::new(|| js(r"^(?:(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|[A-Za-zπτ]+)$", "i"));
+    static ATOM: Lazy =
+        Lazy::new(|| js(r"^(?:(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|[A-Za-zπτ]+)$", "i"));
     static CALL_NAME: Lazy = Lazy::new(|| js(r"^[A-Za-z]\w*(?=\()", ""));
     let a = jsstr::trim(answer);
     if alone || a.is_empty() || jsre::test(&ATOM, a) || is_wrapped(&CALL_NAME.replace(a, "")) {
@@ -128,7 +131,8 @@ pub fn answer_among(answer: &str, alone: bool) -> String {
 /// `insertableAnswer`: the displayed magnitude at sig figs, never the engine's full-precision `n`.
 pub fn insertable_answer(display: &str, n: Option<f64>, sig_figs: f64) -> String {
     static GROUPING: Lazy = Lazy::new(|| js(r",(?=\d{3}(?:\D|$))", ""));
-    static PLAIN_NUMBER: Lazy = Lazy::new(|| js(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
+    static PLAIN_NUMBER: Lazy =
+        Lazy::new(|| js(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
     let stripped = jsre::replace_all(&GROUPING, display, |_| String::new());
     let plain = jsstr::trim(&stripped);
     if is_improper_unit_conversion(plain) {
@@ -152,7 +156,12 @@ fn roots_of(row: &Json) -> Option<Vec<f64>> {
     if s.get("outcome").and_then(Json::as_str) != Some("roots") {
         return None;
     }
-    let roots: Vec<f64> = s.get("roots")?.as_array()?.iter().filter_map(Json::as_f64).collect();
+    let roots: Vec<f64> = s
+        .get("roots")?
+        .as_array()?
+        .iter()
+        .filter_map(Json::as_f64)
+        .collect();
     (roots.len() >= 2).then_some(roots)
 }
 
@@ -175,13 +184,24 @@ pub fn insertable_history_answer(row: &Json, exact_form: bool, sig_figs: f64) ->
     if let Some(solved) = solve_insert(row, sig_figs) {
         return solved;
     }
-    let exact = row.get("exact").and_then(Json::as_str).filter(|e| !e.is_empty());
+    let exact = row
+        .get("exact")
+        .and_then(Json::as_str)
+        .filter(|e| !e.is_empty());
     if exact_form && let Some(exact) = exact {
         return insertable_answer(exact, None, 12.0);
     }
     let measured = row.get("meas").is_some_and(|m| !m.is_null());
-    let n = if measured { None } else { row.get("n").and_then(Json::as_f64) };
-    insertable_answer(row.get("display").and_then(Json::as_str).unwrap_or(""), n, sig_figs)
+    let n = if measured {
+        None
+    } else {
+        row.get("n").and_then(Json::as_f64)
+    };
+    insertable_answer(
+        row.get("display").and_then(Json::as_str).unwrap_or(""),
+        n,
+        sig_figs,
+    )
 }
 
 /// `isGraphCommand` (`src/engine/graph.ts`): true even for an incomplete command.
@@ -196,7 +216,10 @@ mod tests {
 
     #[test]
     fn chains_and_writes_out() {
-        let last = ChainAnswer { plain: "-3".into(), unit: false };
+        let last = ChainAnswer {
+            plain: "-3".into(),
+            unit: false,
+        };
         assert!(chains_from_answer("*2", Some(&last)));
         assert!(!chains_from_answer("-2", Some(&last)));
         assert_eq!(chained_expr(" in ft"), "ans in ft");

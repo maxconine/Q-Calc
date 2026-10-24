@@ -90,7 +90,13 @@ mod tests {
     #[test]
     fn unported_calls_are_blank() {
         assert_eq!(call("lib/nowhere", "nothing", &[]), None);
-        assert!(matches!(call_checked("lib/nowhere", "nothing", &[]), Err(CoreError::Unported { .. })));
-        assert_eq!(call("engine/format", "formatNumber", &[json!(0.5), json!(6)]), Some(json!("0.5")));
+        assert!(matches!(
+            call_checked("lib/nowhere", "nothing", &[]),
+            Err(CoreError::Unported { .. })
+        ));
+        assert_eq!(
+            call("engine/format", "formatNumber", &[json!(0.5), json!(6)]),
+            Some(json!("0.5"))
+        );
     }
 }

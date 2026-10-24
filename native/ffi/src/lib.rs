@@ -15,12 +15,12 @@
 
 mod bridge;
 mod cancel;
-mod chain;
+pub mod chain;
 mod engine;
 pub mod history;
 mod jsstr;
 mod rates;
-mod records;
+pub mod records;
 mod worker;
 
 pub use cancel::CancelToken;
