@@ -101,6 +101,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             overlay.model.cards.insert(BannerCard(id: "dev\(Int.random(in: 0...9999))", from: arg.isEmpty ? "max" : arg,
                                                   text: "lunch at noon? bring the 4.2 m tape", ask: false), at: 0)
         case "ask": overlay.model.cards.insert(BannerCard(id: "dev\(Int.random(in: 0...9999))", from: arg.isEmpty ? "sam" : arg, text: "", ask: true), at: 0)
+        case "snap": DevSnapshot.writeAll(to: arg)
+        case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
+        case "identities": overlay.model.text = "identities"; overlay.model.enter()
+        case "key": DevSnapshot.key(arg)
         default: NSLog("Q Calc dev: unknown command %@", command)
         }
         if verb == "card" || verb == "ask" { overlay.model.scheduleCardExpiry() }

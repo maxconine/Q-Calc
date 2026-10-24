@@ -208,7 +208,7 @@ enum BarCommand: Equatable {
         case .help: return "↵ shows what Q Calc understands"
         case .settings: return "↵ opens settings"
         case .tutorial: return "↵ starts the tutorial"
-        case .graph: return "graphs draw below the bar"
+        case .graph: return ""
         case .greeting: return ""
         }
     }

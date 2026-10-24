@@ -182,7 +182,7 @@ struct InputField: NSViewRepresentable {
             text.undoManager?.removeAllActions(withTarget: text.textStorage as Any)
         }
         text.placeholder = placeholder
-        text.ghostLead = model.chained ? "ans" : ""
+        text.ghostLead = ""
         text.ghostTail = model.completion ?? ""
         text.textColor = .labelColor
         // keep the caret in view as the line grows

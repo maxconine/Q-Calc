@@ -102,10 +102,29 @@ private struct Composer: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            InputField(model: model, placeholder: model.text.isEmpty && model.rows.isEmpty ? "Type math, like 2^10 or sqrt(2)" : "")
-                .frame(minWidth: 120, maxWidth: .infinity, minHeight: 34, maxHeight: 34)
-                .layoutPriority(1)
+            HStack(spacing: 1) {
+                // the faint `ans` a chained line continues from
+                if model.chained {
+                    Text("ans")
+                        .font(.system(size: BarTextView.fontSize))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityLabel("continues from the last answer")
+                }
+                ZStack(alignment: .leading) {
+                    if model.text.isEmpty {
+                        Text(model.rows.isEmpty ? "Type math, like 2^10 or sqrt(2)" : "")
+                            .font(.system(size: BarTextView.fontSize))
+                            .foregroundStyle(.tertiary)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                    InputField(model: model, placeholder: "")
+                }
+            }
+            .frame(minWidth: 120, maxWidth: .infinity, minHeight: 34, maxHeight: 34)
+            .layoutPriority(1)
             LiveAnswerView(model: model)
+                .layoutPriority(2)
             EdgeTools(model: model)
         }
         .padding(.leading, 18)
