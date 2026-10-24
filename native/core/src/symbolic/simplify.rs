@@ -886,80 +886,63 @@ fn substitute(repl: &Node, m: &Match, implicit: bool) -> Node {
     })
 }
 
-/// `applyRule(node, rule, context)`; the flag is mathjs's `res !== node`.
-fn apply_rule(node: &Node, rule: &PatternRule, ctx: &Ctx) -> Result<(Node, bool), SymError> {
+/// Applies `rule` to each item; `None` when no item changed.
+fn apply_all(items: &[Node], rule: &PatternRule, ctx: &Ctx) -> Result<Option<Vec<Node>>, SymError> {
+    let mut out: Option<Vec<Node>> = None;
+    for (i, a) in items.iter().enumerate() {
+        if let Some(n) = apply_rule(a, rule, ctx)? {
+            out.get_or_insert_with(|| items[..i].to_vec()).push(n);
+        } else if let Some(v) = out.as_mut() {
+            v.push(a.clone());
+        }
+    }
+    Ok(out)
+}
+
+/// `applyRule(node, rule, context)`: `None` when mathjs would return the same node (`res === node`).
+fn apply_rule(node: &Node, rule: &PatternRule, ctx: &Ctx) -> Result<Option<Node>, SymError> {
     if !rule.enabled {
-        return Ok((node.clone(), false));
+        return Ok(None);
     }
     let merged = rule.impose.merged(ctx);
-    let mut changed = false;
-    let mut res = match node {
+    let rebuilt: Option<Node> = match node {
         Node::Operator { args, .. } | Node::Function { args, .. } => {
-            let mut new_args = Vec::with_capacity(args.len());
-            for a in args {
-                let (n, c) = apply_rule(a, rule, ctx)?;
-                changed |= c;
-                new_args.push(n);
-            }
-            if changed {
-                with_args(node, new_args)
-            } else {
-                node.clone()
-            }
+            apply_all(args, rule, ctx)?.map(|a| with_args(node, a))
         }
-        Node::Parenthesis(c) => {
-            let (n, ch) = apply_rule(c, rule, ctx)?;
-            changed = ch;
-            if ch {
-                Node::Parenthesis(Box::new(n))
-            } else {
-                node.clone()
-            }
-        }
-        Node::Array(items) => {
-            let mut out = Vec::with_capacity(items.len());
-            for a in items {
-                let (n, c) = apply_rule(a, rule, ctx)?;
-                changed |= c;
-                out.push(n);
-            }
-            if changed {
-                Node::Array(out)
-            } else {
-                node.clone()
-            }
-        }
-        _ => node.clone(),
+        Node::Parenthesis(c) => apply_rule(c, rule, ctx)?.map(|n| Node::Parenthesis(Box::new(n))),
+        Node::Array(items) => apply_all(items, rule, ctx)?.map(Node::Array),
+        _ => None,
     };
+    let res: &Node = rebuilt.as_ref().unwrap_or(node);
     let mut repl = &rule.r;
-    let mut matches = rule_match(&rule.l, &res, &merged, false)?
-        .into_iter()
-        .next();
+    let mut matches = rule_match(&rule.l, res, &merged, false)?.into_iter().next();
     if matches.is_none()
         && let Some((el, er)) = &rule.expanded
     {
         repl = er;
-        matches = rule_match(el, &res, &merged, false)?.into_iter().next();
+        matches = rule_match(el, res, &merged, false)?.into_iter().next();
     }
     if matches.is_none()
         && let Some(((l1, r1), (l2, r2))) = &rule.expanded_nc
     {
         repl = r1;
-        matches = rule_match(l1, &res, &merged, false)?.into_iter().next();
+        matches = rule_match(l1, res, &merged, false)?.into_iter().next();
         if matches.is_none() {
             repl = r2;
-            matches = rule_match(l2, &res, &merged, false)?.into_iter().next();
+            matches = rule_match(l2, res, &merged, false)?.into_iter().next();
         }
     }
-    if let Some(m) = matches {
-        let implicit = matches!(res, Node::Operator { implicit: true, .. });
-        res = substitute(repl, &m, implicit);
-        changed = true;
+    let out = match matches {
+        Some(m) => {
+            let implicit = matches!(res, Node::Operator { implicit: true, .. });
+            Some(substitute(repl, &m, implicit))
+        }
+        None => rebuilt,
+    };
+    match out {
+        Some(n) if rule.repeat => Ok(Some(apply_rule(&n, rule, ctx)?.unwrap_or(n))),
+        other => Ok(other),
     }
-    if rule.repeat && changed {
-        res = apply_rule(&res, rule, ctx)?.0;
-    }
-    Ok((res, changed))
 }
 
 // ---- resolve and the loop
@@ -1020,7 +1003,7 @@ pub fn simplify_with(
                 Rule::Constant => simplify_constant(&res, options)?,
                 Rule::Pattern(p) => {
                     let flat = flatten(&res, &ctx);
-                    apply_rule(&flat, p, &ctx)?.0
+                    apply_rule(&flat, p, &ctx)?.unwrap_or(flat)
                 }
             };
             res = unflatten_l(&res, &ctx);
