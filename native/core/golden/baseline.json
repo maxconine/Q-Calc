@@ -1,5 +1,8 @@
 {
   "engine.angles": 7,
+  "engine.calcNumeric": 7,
+  "engine.calculus": 89,
+  "engine.closedForm": 41,
   "engine.currency": 14,
   "engine.dots": 16,
   "engine.evaluate": 12,
@@ -19,7 +22,7 @@
   "engine.units": 1165,
   "eval.arithmetic": 6910,
   "eval.blank": 1317,
-  "eval.calculus": 45,
+  "eval.calculus": 403,
   "eval.functions": 4144,
   "eval.latex": 63,
   "eval.matrix": 419,

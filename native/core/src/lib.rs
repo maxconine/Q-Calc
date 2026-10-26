@@ -47,6 +47,8 @@ pub mod solve;
 pub mod system;
 pub mod system_numeric;
 pub mod unit_solve;
+// ---- WP-CALCULUS ----
+pub mod calculus;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

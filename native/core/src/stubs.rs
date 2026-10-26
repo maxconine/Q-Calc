@@ -5,7 +5,7 @@
 //! Owners (see `native/PORTING_PLAN.md`): dots/letters/angles → WP-FUNCTIONS; chem → WP-CHEM; solve, isolate,
 //! system, unit solve → WP-SOLVE; calculus → WP-CALCULUS; matrix → WP-MATRIX; sums → WP-SUMS; measure → WP-MEASURE.
 
-use crate::types::{TimeLetters, Value};
+use crate::types::Value;
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
@@ -78,37 +78,11 @@ pub fn sum_answer(_expr: &str) -> Option<SumAnswer> {
 
 // ---- WP-CALCULUS (calculus.ts, calcNumeric.ts, closedForm.ts) ----
 
-#[derive(Clone, Debug)]
-pub struct CalculusResult {
-    pub value: Option<Value>,
-    pub exact: Option<String>,
-    /// The closed-form job the background search may upgrade (see ARCHITECTURE.md, "Long calculations").
-    pub job: Option<serde_json::Value>,
-    pub time: Option<TimeLetters>,
-}
-
-pub fn is_calculus_input(_text: &str) -> bool {
-    false
-}
-
-pub fn evaluate_calculus(_expr: &str) -> Option<CalculusResult> {
-    None
-}
-
-/// What folding the integrals beside other terms into their values did (`embedIntegrals`).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Embedded {
-    /// No integral to fold.
-    Nothing,
-    /// An integral that couldn't be worked out: the line is blank.
-    Failed,
-    /// The line with an integral replaced by its value.
-    Rewritten(String),
-}
-
-pub fn embed_integrals(_expr: &str) -> Embedded {
-    Embedded::Nothing
-}
+// ported: `crate::calculus`. `evaluate_calculus` and `embed_integrals` take the TS's context (variables,
+// functions, angle mode, d/dt letters), so their signatures gained a `&CalcContext`.
+pub use crate::calculus::{
+    CalcContext, CalculusResult, Embedded, embed_integrals, evaluate_calculus, is_calculus_input,
+};
 
 // ---- WP-MEASURE (measure.ts) ----
 
