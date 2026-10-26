@@ -4,3 +4,6 @@
 pub mod draft;
 pub mod missing_unit;
 pub mod unit_spans;
+
+// ---- WP-CHEM ----
+pub mod elements;

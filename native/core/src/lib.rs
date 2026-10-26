@@ -37,6 +37,10 @@ pub mod letters;
 // ---- WP-PHRASES ----
 pub mod phrases;
 
+// ---- WP-CHEM ----
+pub mod chem;
+pub mod jsstr;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 

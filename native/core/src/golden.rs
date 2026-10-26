@@ -275,6 +275,11 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
                 None => return Outcome::Unported,
             }
         }
+        // ---- WP-CHEM: engine/chem, lib/elements ----
+        ("engine/chem" | "lib/elements", _) => match crate::chem::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
