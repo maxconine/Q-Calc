@@ -244,6 +244,8 @@ private struct AnswerText: View {
     var body: some View {
         RadicalText(text: text, size: size, tracking: Theme.displayTracking(size), monospaced: true)
             .truncationMode(.tail)
+            // useFitFont: a long answer shrinks to fit before it is cut
+            .minimumScaleFactor(0.5)
     }
 }
 

@@ -5,6 +5,7 @@
 #
 #   zsh native/mac/build.sh              # dev build: native/mac/dist/Q Calc Dev.app (com.maxconine.qcalc.native-dev)
 #   zsh native/mac/build.sh --run        # …and launch it (quitting an earlier dev build first, never the installed app)
+#   zsh native/mac/build.sh --zip        # …and a zip to hand testers (native/mac/dist/Q-Calc-Dev-<version>-<commit>.zip)
 #   zsh native/mac/build.sh --arch=arm64 # one architecture only (faster while iterating)
 #   zsh native/mac/build.sh --skip-rust  # reuse native/build's libraries and bindings
 #   zsh native/mac/build.sh --release    # Q Calc's own bundle id, name, hotkey and Sparkle key (not for side-by-side use)
@@ -26,6 +27,7 @@ SPARKLE="${QCALC_SPARKLE_DIR:-$ROOT/macos/vendor/Sparkle-${SPARKLE_VERSION}}"
 WEB_DIST="${QCALC_WEB_DIST:-$ROOT/dist}"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 RUN=0
+ZIP=0
 SKIP_RUST=0
 RELEASE=0
 ARCHS=(arm64 x86_64)
@@ -33,6 +35,7 @@ ARCHS=(arm64 x86_64)
 for arg in "$@"; do
   case "$arg" in
     --run) RUN=1 ;;
+    --zip) ZIP=1 ;;
     --skip-rust) SKIP_RUST=1 ;;
     --release) RELEASE=1 ;;
     --arch=*) ARCHS=("${arg#--arch=}") ;;
@@ -68,6 +71,11 @@ fi
 [[ -d "$NATIVE/QCalcCore/qcalc_ffiFFI.xcframework" ]] || { echo "No QCalcCore xcframework; run without --skip-rust" >&2; exit 1; }
 fetch_sparkle
 export QCALC_SPARKLE_DIR="$SPARKLE"
+# the games bundle comes from the web build; make it when it's missing and the repo's node_modules are there
+if [[ ! -f "$WEB_DIST/games.html" && -d "$ROOT/node_modules" && -z "${QCALC_WEB_DIST:-}" ]]; then
+  echo "Building the games bundle (npm run build)…"
+  (cd "$ROOT" && npm run build >/dev/null)
+fi
 # Sources/Shared: symlinks to the macos/ files compiled unchanged
 zsh "$MAC/scripts/link-shared.sh"
 
@@ -157,6 +165,13 @@ rm -rf "$DIST_APP"
 mkdir -p "$MAC/dist"
 ditto "$APP" "$DIST_APP"
 echo "Built $DIST_APP ($APP_VERSION, $(lipo -archs "$DIST_APP/Contents/MacOS/QCalc"), $(du -sh "$DIST_APP" | cut -f1))"
+if (( ZIP )); then
+  # zipped from the stage, without Finder metadata, so the signature survives the trip to a tester
+  ZIP_PATH="$MAC/dist/$(echo "$APP_NAME" | tr ' ' '-')-$APP_VERSION-$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo local).zip"
+  rm -f "$ZIP_PATH"
+  ditto -c -k --norsrc --keepParent "$APP" "$ZIP_PATH"
+  echo "Packaged $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
+fi
 if (( RUN )); then
   open "$DIST_APP" --args --show
 fi
