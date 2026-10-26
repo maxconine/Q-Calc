@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::types::{AngleMode, DefaultUnits, Meas, SolveInfo, TimeLetters, UserFunction, Value};
+use crate::types::{AngleMode, DefaultUnits, SolveInfo, TimeLetters, UserFunction, Value};
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
@@ -149,27 +149,8 @@ pub fn clearly_units_blank(_eq: &str, _names: &[String]) -> bool {
 
 // ---- WP-MATRIX (matrix.ts) ----
 
-#[derive(Clone, Debug)]
-pub struct MatrixAnswer {
-    pub n: Option<f64>,
-    pub literal: Option<String>,
-    pub display: String,
-    pub exact: Option<String>,
-    pub message: bool,
-}
-
-pub fn looks_like_matrix(_expr: &str, _functions: &[String]) -> bool {
-    false
-}
-
-pub fn matrix_answer(
-    _expr: &str,
-    _variables: &BTreeMap<String, f64>,
-    _sig_figs: f64,
-    _fraction_mode: bool,
-) -> Option<MatrixAnswer> {
-    None
-}
+// ported: `matrix_answer` now takes `MatrixOptions` (the TS passes functions and a scalar reader too)
+pub use crate::matrix::{MatrixAnswer, MatrixOptions, looks_like_matrix, matrix_answer};
 
 // ---- WP-SUMS (sums.ts) ----
 
@@ -224,24 +205,9 @@ pub fn embed_integrals(_expr: &str) -> Embedded {
 
 // ---- WP-MEASURE (measure.ts) ----
 
-pub fn has_plus_minus(text: &str) -> bool {
-    text.contains('±') || text.contains('∓')
-}
-
-/// A value with its sig figs and ±.
-#[derive(Clone, Debug)]
-pub struct Measured {
-    pub v: f64,
-    pub meas: Meas,
-}
-
-pub fn measure(_expr: &str, _measures: &BTreeMap<String, Meas>) -> Option<Measured> {
-    None
-}
-
-pub fn format_measured(_n: f64, _meas: &Meas, _sig_fig_mode: bool) -> Option<String> {
-    None
-}
+// ported: `measure` takes the TS's `MeasureContext` (ans, angle mode, variables, functions, measures), and
+// `Measured.meas` is optional, as `meas?` is in the TS
+pub use crate::measure::{MeasureContext, Measured, format_measured, has_plus_minus, measure};
 
 // ---- WP-PHRASES: `mergeLiveAnswer` needs `isMolarMassInput` (chem.ts); WP-CHEM may move it into chem.rs ----
 

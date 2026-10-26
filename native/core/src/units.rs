@@ -952,7 +952,7 @@ fn prec_meas(n: f64, p: Option<&Prec>) -> Option<Meas> {
     }
     let mut out = Meas::default();
     if p.sig.is_finite() {
-        out.sig = Some(p.sig as u32);
+        out.sig = Some(p.sig as i32); // WP-MEASURE: Meas.sig is i32
         let dp = if n == 0.0 {
             p.sig - 1.0
         } else {

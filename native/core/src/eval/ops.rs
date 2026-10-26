@@ -93,6 +93,9 @@ pub fn unary(op: Op, a: &Val) -> EvalResult {
     if let Some(r) = super::complex::unary(op, a) {
         return r;
     } // WP-FUNCTIONS
+    if let Some(r) = super::matrix::unary(op, a) {
+        return r; // WP-MATRIX
+    }
     if let Some(r) = crate::units::mathjs::unary(op, a) {
         return r; // WP-UNITS
     }
@@ -110,7 +113,9 @@ pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
     if let Some(r) = super::complex::binary(op, a, b) {
         return r;
     } // WP-FUNCTIONS
-    // PORT(WP-MATRIX): a list operand goes to `eval::matrix::binary` here, one line.
+    if let Some(r) = super::matrix::binary(op, a, b) {
+        return r; // WP-MATRIX
+    }
     if let Some(r) = crate::units::mathjs::binary(op, a, b) {
         return r; // WP-UNITS
     }

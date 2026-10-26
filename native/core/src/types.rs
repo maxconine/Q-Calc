@@ -28,7 +28,7 @@ pub enum ValueKind {
 #[serde(rename_all = "camelCase")]
 pub struct Meas {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sig: Option<u32>,
+    pub sig: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dp: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

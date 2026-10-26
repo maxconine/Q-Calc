@@ -279,6 +279,16 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
                 None => return Outcome::Unported,
             }
         }
+        // ---- WP-MATRIX: engine/matrix ----
+        ("engine/matrix", _) => match crate::matrix::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
+        // ---- WP-MEASURE: engine/measure ----
+        ("engine/measure", _) => match crate::measure::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)

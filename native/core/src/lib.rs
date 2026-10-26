@@ -36,6 +36,11 @@ pub mod letters;
 
 // ---- WP-PHRASES ----
 pub mod phrases;
+// ---- WP-MATRIX ----
+pub mod matrix;
+
+// ---- WP-MEASURE ----
+pub mod measure;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
