@@ -7,3 +7,8 @@ pub mod unit_spans;
 
 // ---- WP-CHEM ----
 pub mod elements;
+
+// ---- WP-NOTATION ----
+pub mod bounds;
+pub mod radical;
+pub mod typst_math;

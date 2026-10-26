@@ -280,6 +280,21 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             Some(answer) => answer,
             None => return Outcome::Unported,
         },
+        // ---- WP-NOTATION: LaTeX and Typst in, lib/typstMath, lib/radical, lib/bounds ----
+        ("engine/plainMath", "latexToAscii") => json!(crate::latex::latex_to_ascii(&s(0))),
+        ("engine/plainMath", "tryPlainMath") if args.len() == 1 => serde_json::to_value(
+            crate::plain_math::try_plain_math(&s(0), &Default::default()),
+        )
+        .unwrap_or(Json::Null),
+        ("engine/typstInput", "typstToAscii") => {
+            json!(crate::typst_input::typst_to_ascii(&s(0)))
+        }
+        ("lib/typstMath" | "lib/radical" | "lib/bounds", _) => {
+            match crate::app::typst_math::golden_dispatch(name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
