@@ -98,12 +98,26 @@ extension BarModel {
     /// a system row in the tape reopens its fields (openHistorySystem)
     func openHistorySystem(_ i: Int) {
         guard rows.indices.contains(i), rows[i].kind == .system, let eqs = rows[i].equations, !eqs.isEmpty else { return }
-        let lines = Array(eqs.prefix(5))
+        openSystem(Array(eqs.prefix(5)))
+    }
+
+    /// the system fields, opened with these equations (openSystem)
+    func openSystem(_ lines: [String]) {
         selected = nil
         sysLines = lines
         setField?("sys \(lines.count)")
         sysLines = lines
         solveSystemLive()
+    }
+
+    /// pasteSystem: two to five equations pasted (pastedEquations of the cleaned text) open as a system, after the
+    /// fields before the one pasted into; anything else is plain text (false)
+    func pasteSystem(_ raw: String, keeping before: [String] = []) -> Bool {
+        guard raw.range(of: #"[\r\n;]"#, options: .regularExpression) != nil,
+              let clean = logic.string("lib/paste", "cleanPastedText", [raw]),
+              let lines = logic.call("engine/system", "pastedEquations", [clean]) as? [String] else { return false }
+        openSystem(Array((before + lines).prefix(5)))
+        return true
     }
 }
 
@@ -129,6 +143,7 @@ struct SysAnswer: Equatable {
 struct SystemPanel: View {
     @ObservedObject var model: BarModel
     @FocusState private var focused: Int?
+    @State private var paste = PasteWatch()
 
     var body: some View {
         VStack(spacing: 2) {
@@ -166,8 +181,39 @@ struct SystemPanel: View {
         .onChange(of: model.sysFocus) { f in
             if let f { focused = f; model.sysFocus = nil }
         }
-        .onAppear { focused = model.sysFocus ?? 0 }
+        .onAppear {
+            focused = model.sysFocus ?? 0
+            // ⌘V of several equations into field i fills the system from there on (onPasteLines)
+            paste.start { [weak model] in
+                guard let model, let i = paste.field, let raw = NSPasteboard.general.string(forType: .string) else { return false }
+                return model.pasteSystem(raw, keeping: Array((model.sysLines ?? []).prefix(i)))
+            }
+        }
+        .onDisappear { paste.stop() }
+        .onChange(of: focused) { paste.field = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("System of equations")
     }
+}
+
+/// ⌘V while a system field has the keys, offered to `take` first
+final class PasteWatch {
+    var field: Int?
+    private var monitor: Any?
+
+    func start(_ take: @escaping () -> Bool) {
+        stop()
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard self?.field != nil, mods == .command, event.charactersIgnoringModifiers?.lowercased() == "v" else { return event }
+            return take() ? nil : event
+        }
+    }
+
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
+    }
+
+    deinit { stop() }
 }
