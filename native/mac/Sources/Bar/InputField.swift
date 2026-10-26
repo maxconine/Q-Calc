@@ -20,6 +20,31 @@ final class BarTextView: NSTextView {
         .kern: Theme.displayTracking(fontSize),
     ]
 
+    /// What each √ or ∛ takes (UTF-16 ranges): a bracketed group, or a run of digits, letters and π.
+    static func radicandRanges(_ s: String) -> [NSRange] {
+        let u = Array((s as NSString).description.utf16)
+        var out: [NSRange] = []
+        let root: Set<UInt16> = [0x221A, 0x221B]
+        var i = 0
+        while i < u.count {
+            defer { i += 1 }
+            guard root.contains(u[i]), i + 1 < u.count else { continue }
+            var j = i + 1
+            if u[j] == 0x28 {
+                var depth = 0
+                while j < u.count {
+                    if u[j] == 0x28 { depth += 1 }
+                    if u[j] == 0x29 { depth -= 1; if depth == 0 { j += 1; break } }
+                    j += 1
+                }
+            } else {
+                while j < u.count, let c = UnicodeScalar(u[j]), CharacterSet.alphanumerics.contains(c) || u[j] == 0x2E { j += 1 }
+            }
+            if j > i + 1 { out.append(NSRange(location: i + 1, length: j - i - 1)) }
+        }
+        return out
+    }
+
     /// The whole line in the field's look, after any programmatic change.
     func restyle() {
         guard let storage = textStorage, storage.length > 0 else { return }
@@ -174,6 +199,16 @@ final class BarTextView: NSTextView {
         let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         if !ghostLead.isEmpty {
             (ghostLead as NSString).draw(at: NSPoint(x: 0, y: 0), withAttributes: attrs)
+        }
+        // a radical's bar over what it takes, as Radical.tsx draws it in the web input
+        if let lm = layoutManager, let tc = textContainer {
+            Theme.ink.setFill()
+            for range in Self.radicandRanges(string) {
+                let glyphs = lm.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+                var rect = lm.boundingRect(forGlyphRange: glyphs, in: tc)
+                rect = rect.offsetBy(dx: textContainerInset.width, dy: textContainerInset.height)
+                NSRect(x: rect.minX, y: rect.minY + Self.fontSize * 0.14, width: rect.width, height: 1.3).fill()
+            }
         }
         // the completion's rest, faint, right after the text while the caret is at the end
         if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length, let lm = layoutManager, let tc = textContainer {

@@ -594,20 +594,21 @@ private struct HelpSheet: View {
         .accessibilityLabel("Shortcuts")
     }
 
+    // a subgrid in the web: the key column is as wide as its widest key, and every label lines up after it
     private func column(_ rows: [(String, String)], keyWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
-                HStack(spacing: 12) {
+                GridRow {
                     Text(r.0).font(.system(size: Theme.body, weight: .medium)).tracking(0.02 * Theme.body)
                         .foregroundStyle(Color.qInk).lineLimit(1).fixedSize()
                         .frame(minWidth: keyWidth, alignment: .leading)
                     Text(r.1).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).lineLimit(1)
                 }
-                .padding(.horizontal, 8)
                 .frame(height: 28)
                 .accessibilityElement(children: .combine)
             }
         }
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
