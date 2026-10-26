@@ -18,5 +18,10 @@
   "eval.sums": 44,
   "eval.units": 8952,
   "lib.draft": 391,
-  "lib.unitSpans": 23
+  "lib.unitSpans": 23,
+  "symbolic.derivative": 1432,
+  "symbolic.parse": 1677,
+  "symbolic.rationalize": 816,
+  "symbolic.simplify": 2011,
+  "symbolic.toString": 4219
 }
