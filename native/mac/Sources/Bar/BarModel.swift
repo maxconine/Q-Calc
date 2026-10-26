@@ -725,6 +725,13 @@ final class BarModel: ObservableObject {
         hint = "history cleared"
     }
 
+    /// a d/dt chip: move the letter to the other side (EvalOptions.timeVarying), and answer again
+    func setTimeVarying(_ letter: String, _ varying: Bool) {
+        timeVarying[letter] = varying
+        evaluateLive()
+        focusField?()
+    }
+
     // MARK: - SI prefix (⌥↑ ⌥↓)
 
     @Published private(set) var prefixShown: String?

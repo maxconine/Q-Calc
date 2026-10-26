@@ -72,6 +72,9 @@ struct BarView: View {
     }
 
     @ViewBuilder private var below: some View {
+        if let letters = model.live.timeLetters, !letters.varying.isEmpty || !letters.constant.isEmpty, model.graph == nil {
+            TimeLetterChips(model: model, letters: letters)
+        }
         if let hint = model.hint, !hint.isEmpty {
             // .composer-hint: 12 pt muted, tucked 12 pt up into the composer's bottom padding
             Text(hint)
@@ -195,6 +198,14 @@ struct LiveAnswerView: View {
                 .foregroundStyle(Color.qMuted.opacity(0.5))
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
                 .accessibilityHidden(true)
+        } else if let solve = model.live.solve, solve.outcome != .roots {
+            // a solve with no roots says so, as a message
+            Text(model.live.display)
+                .font(.system(size: Theme.body))
+                .foregroundStyle(Color.qMuted)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+        } else if let solve = model.live.solve, solve.roots.count > 1, !model.hasDual {
+            SolveRoots(model: model, solve: solve)
         } else if model.live.improper {
             Text(model.live.display)
                 .font(.system(size: Theme.body))
@@ -214,6 +225,100 @@ struct LiveAnswerView: View {
                 .id(model.formIndex)
                 .transition(.opacity)
         }
+    }
+}
+
+/// .live-roots: the letter (copies them all), then each root its own copy at full precision, `, …` when there are more
+private struct SolveRoots: View {
+    @ObservedObject var model: BarModel
+    let solve: SolveInfo
+
+    var body: some View {
+        let figs = AppSettings.shared.significantFigures
+        let shown = model.live.display.components(separatedBy: ", ").filter { $0 != "…" }
+        let labels = shown.count == solve.roots.count ? shown : solve.roots.map { String(format: "%.\(figs)g", $0) }
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Button {
+                model.copyAnswer(model.live.display)
+            } label: {
+                Text("\(solve.variable) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
+                    .padding(.horizontal, 2).padding(.trailing, 0.2 * Theme.answerPart)
+            }
+            .buttonStyle(.plain)
+            .help("Copy all the solutions")
+            ForEach(Array(solve.roots.enumerated()), id: \.offset) { k, root in
+                if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
+                RootButton(model: model, shown: Pretty.answer(labels[k]), copy: String(format: "%.17g", root))
+            }
+            if solve.more { Text(", …").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Solutions")
+    }
+}
+
+private struct RootButton: View {
+    @ObservedObject var model: BarModel
+    let shown: String
+    let copy: String
+    @State private var hover = false
+    var body: some View {
+        Button { model.copyAnswer(copy) } label: {
+            AnswerText(text: shown, size: Theme.display)
+                .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
+                .padding(.vertical, 2).padding(.horizontal, 3)
+                .background(RoundedRectangle(cornerRadius: 4).fill(hover ? Color.qAnswer.opacity(0.12) : .clear))
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help("Copy this solution")
+        .accessibilityLabel("Solution \(shown)")
+    }
+}
+
+/// .time-letters: under a d/dt, which letters changed with time and which stayed constant; a chip moves one across
+struct TimeLetterChips: View {
+    @ObservedObject var model: BarModel
+    let letters: TimeLetters
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if !letters.varying.isEmpty {
+                Text("changing with time").foregroundStyle(Color.qMuted).padding(.trailing, 2)
+                ForEach(letters.varying, id: \.self) { chip($0, varying: true) }
+            }
+            if !letters.varying.isEmpty, !letters.constant.isEmpty { Text("·").foregroundStyle(Color.qMuted) }
+            if !letters.constant.isEmpty {
+                Text("constant").foregroundStyle(Color.qMuted).padding(.trailing, 2)
+                ForEach(letters.constant, id: \.self) { chip($0, varying: false) }
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: Theme.small))
+        .frame(minHeight: 18)
+        .padding(.horizontal, Theme.gutter)
+        .padding(.bottom, 12)
+        .padding(.top, -12)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Which letters change with time")
+    }
+
+    private func chip(_ letter: String, varying: Bool) -> some View {
+        let locked = letters.locked.contains(letter)
+        return Button { model.setTimeVarying(letter, !varying) } label: {
+            Text(letter)
+                .foregroundStyle(varying ? Color.qAccent : Color.qMuted)
+                .frame(minWidth: 22 - 14)
+                .padding(.horizontal, 7)
+                .frame(height: 20)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(varying ? Color.qAccent.opacity(0.14) : Color.qFillHover))
+                .opacity(locked ? 0.75 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(locked)
+        .help(locked ? "\(letter) is written with a dot, so it changes with time"
+              : varying ? "Treat \(letter) as a constant" : "Treat \(letter) as changing with time")
+        .accessibilityLabel("\(letter): \(varying ? "changing with time" : "constant")\(locked ? "" : ". Click to switch")")
     }
 }
 

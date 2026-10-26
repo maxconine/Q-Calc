@@ -12,6 +12,17 @@ struct GraphPanel: View {
     @State private var dragStart: CGPoint?
     @State private var lastZoom: CGFloat = 1
     @State private var resetHover = false
+    /// the pointer over the plot, in plot (viewBox) units
+    @State private var hoverX: Double?
+
+    /// y on the curve at x: the engine's graphY when WP-GRAPH answers it, else between the two nearest samples
+    private func curveY(at x: Double) -> Double? {
+        guard let pts = state.curves.first?.points, pts.count > 1 else { return nil }
+        guard let i = pts.firstIndex(where: { $0.x >= x }), i > 0 else { return nil }
+        let a = pts[i - 1], b = pts[i]
+        guard let ya = a.y, let yb = b.y, b.x > a.x else { return nil }
+        return ya + (yb - ya) * (x - a.x) / (b.x - a.x)
+    }
 
     private static let svgW: CGFloat = 652, svgH: CGFloat = 200
     private static let pad = (top: CGFloat(12), right: CGFloat(12), bottom: CGFloat(28), left: CGFloat(40))
@@ -124,6 +135,13 @@ struct GraphPanel: View {
                 }
                 .onEnded { _ in lastZoom = 1 })
             .onTapGesture(count: 2) { model.homeGraph() }
+            // the readout: a hairline, a dot on the curve and (x, y) at the pointer (GraphPanel.tsx readout)
+            .onContinuousHover { phase in
+                switch phase {
+                case let .active(p): hoverX = Double(p.x / scale)
+                case .ended: hoverX = nil
+                }
+            }
             .accessibilityLabel(summary)
         }
         .aspectRatio(Self.svgW / Self.svgH, contentMode: .fit)
@@ -134,6 +152,10 @@ struct GraphPanel: View {
         let ys = state.curves.flatMap { $0.points.compactMap(\.y) }
         guard let lo = ys.min(), let hi = ys.max() else { return "Graph of \(label), nothing to draw" }
         return "Graph of \(label) from x \(fmt(state.xMin)) to \(fmt(state.xMax)), y from \(fmt(lo)) to \(fmt(hi))"
+    }
+
+    private func fmt4(_ v: Double) -> String {
+        Pretty.answer(String(format: "%.4g", abs(v) < 1e-9 ? 0 : v))
     }
 
     private func fmt(_ v: Double) -> String {
@@ -183,6 +205,21 @@ struct GraphPanel: View {
                 lastY = v
             }
             clip.stroke(path, with: .color(.qAccent), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        }
+        if let hx = hoverX, hx >= Double(p.left), hx <= Double(right) {
+            let x = g.xMin + (hx - Double(p.left)) / Double(plotW) * (g.xMax - g.xMin)
+            var line = Path()
+            line.move(to: CGPoint(x: hx, y: p.top)); line.addLine(to: CGPoint(x: hx, y: bottom))
+            ctx.stroke(line, with: .color(Color.qInk.opacity(0.22)), lineWidth: 1)
+            if let y = curveY(at: x), py(y) >= p.top, py(y) <= bottom {
+                let dot = Path(ellipseIn: CGRect(x: hx - 3.5, y: py(y) - 3.5, width: 7, height: 7))
+                ctx.fill(dot, with: .color(.qAccent))
+                ctx.stroke(dot, with: .color(Self.plotBg), lineWidth: 1.5)
+                let label = "(\(fmt4(x)), \(fmt4(y)))"
+                let onRight = hx > Double(p.left) + Double(plotW) * 0.62
+                ctx.draw(Text(label).font(.system(size: 11).monospacedDigit()).foregroundColor(.qInk),
+                         at: CGPoint(x: hx + (onRight ? -8 : 8), y: p.top + 13), anchor: onRight ? .trailing : .leading)
+            }
         }
         // .graph-mark: roots and critical points, rings of the plot colour with an accent edge
         let marks = g.roots.map { CGPoint(x: px($0), y: py(0)) } + g.critical.map { CGPoint(x: px($0.x), y: py($0.y)) }
