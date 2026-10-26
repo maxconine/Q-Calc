@@ -341,6 +341,17 @@ impl<'o> Sheet<'o> {
         }
     }
 
+    // WP-MEASURE: the TS `ctx` that `measure` reads
+    fn measure_ctx(&self) -> stubs::MeasureContext<'_> {
+        stubs::MeasureContext {
+            ans: self.last_ans,
+            angle_mode: self.angle_mode,
+            variables: Some(&self.variables),
+            functions: Some(&self.functions),
+            measures: Some(&self.measures),
+        }
+    }
+
     fn plain(&self, keep_units: bool) -> PlainContext {
         PlainContext {
             sci: self.sci(),
@@ -781,7 +792,7 @@ impl<'o> Sheet<'o> {
             sum = stubs::sum_answer(&expr);
         }
         let m = if plus_minus {
-            stubs::measure(&expr, &self.measures)
+            stubs::measure(&expr, &self.measure_ctx())
         } else {
             None
         };
@@ -847,9 +858,9 @@ impl<'o> Sheet<'o> {
         } else if value.unit.is_some() || value.meas.is_some() {
             value.meas.clone()
         } else {
-            stubs::measure(&expr, &self.measures)
+            stubs::measure(&expr, &self.measure_ctx())
                 .filter(|m| (m.v - value.n).abs() <= 1e-9 * value.n.abs().max(1.0))
-                .map(|m| m.meas)
+                .and_then(|m| m.meas)
         };
         // a ± that went in and didn't come out would show a bare number as if exact
         if meas.as_ref().and_then(|m| m.unc).is_none_or(|u| u == 0.0)
