@@ -8,6 +8,7 @@ enum MessagesTest {
         queue()
         asks()
         clean()
+        recent()
         print("messages tests passed")
     }
 
@@ -50,5 +51,11 @@ enum MessagesTest {
         check(MessageInbox.cleanText("hi\nmax: no", max: 500) == "hi max: no", "a new line can't start a fake sender's line")
         check(MessageInbox.cleanText("a\u{202E}b\u{0085}c", max: 500) == "a b c", "direction overrides and c1 controls become spaces")
         check(MessageInbox.cleanText(String(repeating: "x", count: 600), max: 500).count == 500, "long text is cut")
+    }
+
+    static func recent() {
+        let lower: (String) -> String = { $0.count >= 2 ? $0.lowercased() : "" }
+        check(MessageInbox.recent(["Zoe", "bob", "zoe", "x", "amy"], max: 2, clean: lower) == ["zoe", "bob"],
+              "who was sent to: each name once, the latest first, at most a few")
     }
 }

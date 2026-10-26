@@ -537,6 +537,8 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 }
             case "messaging":
                 Messages.shared.setLists(accepted: dict["accepted"] as? [String] ?? [], blocked: dict["blocked"] as? [String] ?? [])
+            case "messageSent":
+                Messages.shared.noteSent(dict["to"] as? String ?? "")
             case "messagesSeen":
                 Messages.shared.seen((dict["ids"] as? [String] ?? []).prefix(64).map { $0 })
             case "messageAnswer":
