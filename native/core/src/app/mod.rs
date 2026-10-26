@@ -32,3 +32,10 @@ pub mod steady;
 pub mod touches;
 pub mod tour;
 pub mod undo;
+// ---- WP-CHEM ----
+pub mod elements;
+
+// ---- WP-NOTATION ----
+pub mod bounds;
+pub mod radical;
+pub mod typst_math;

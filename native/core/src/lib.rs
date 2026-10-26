@@ -50,6 +50,10 @@ pub mod unit_solve;
 // ---- WP-CALCULUS ----
 pub mod calculus;
 
+// ---- WP-CHEM ----
+pub mod chem;
+pub mod jsstr;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 

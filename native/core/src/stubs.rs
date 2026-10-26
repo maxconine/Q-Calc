@@ -18,30 +18,8 @@ pub use crate::letters::split_letters;
 
 // ---- WP-CHEM (chem.ts) ----
 
-#[derive(Clone, Debug)]
-pub struct GasConstant {
-    pub n: f64,
-    pub unit: String,
-}
-
-pub fn gas_constant(_text: &str) -> Option<GasConstant> {
-    None
-}
-
-#[derive(Clone, Debug)]
-pub struct MolarMass {
-    pub mass: f64,
-    pub display: String,
-}
-
-pub fn molar_mass_answer(_text: &str, _is_name: &dyn Fn(&str) -> bool) -> Option<MolarMass> {
-    None
-}
-
-/// A formula or reaction's answer; Some("") is a chemistry line left blank on purpose.
-pub fn chem_answer(_text: &str, _is_name: &dyn Fn(&str) -> bool) -> Option<String> {
-    None
-}
+// ported: `crate::chem`
+pub use crate::chem::{GasConstant, MolarMass, chem_answer, gas_constant, molar_mass_answer};
 
 // ---- WP-SOLVE (solve.ts, isolate.ts, system.ts, unitSolve.ts) ----
 
@@ -90,18 +68,5 @@ pub use crate::calculus::{
 // `Measured.meas` is optional, as `meas?` is in the TS
 pub use crate::measure::{MeasureContext, Measured, format_measured, has_plus_minus, measure};
 
-// ---- WP-PHRASES: `mergeLiveAnswer` needs `isMolarMassInput` (chem.ts); WP-CHEM may move it into chem.rs ----
-
-/// Whether a line asks for a molar mass in words: `molar mass H2O`, `H2O molar mass`. PORT: `isMolarMassInput`.
-pub fn is_molar_mass_input(text: &str) -> bool {
-    use crate::jsre::{self, Lazy};
-    static ASK: Lazy = Lazy::new(|| {
-        jsre::js(
-            r"^(?:molar\s+mass|molecular\s+(?:weight|mass)|formula\s+(?:weight|mass)|chem)(?:\s+of)?\s+(\S+)$",
-            "i",
-        )
-    });
-    static AFTER: Lazy = Lazy::new(|| jsre::js(r"^(\S+)\s+molar\s+mass$", "i"));
-    let t = crate::phrases::js_trim(text);
-    jsre::test(&ASK, t) || jsre::test(&AFTER, t)
-}
+// ---- WP-PHRASES: `mergeLiveAnswer` needs `isMolarMassInput` (chem.ts), ported by WP-CHEM ----
+pub use crate::chem::is_molar_mass_input;
