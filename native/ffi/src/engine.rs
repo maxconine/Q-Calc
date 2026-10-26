@@ -203,6 +203,7 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
         },
         contour: v.get("contours").is_some_and(Json::is_array)
             || intent.get("contour").is_some_and(|c| !c.is_null()),
+        contour_levels: intent.get("contour").and_then(Json::as_str) == Some("levels"), // WP-GRAPH
         contours,
         error: v.get("error").and_then(Json::as_str).map(str::to_string),
         json: json.to_string(),
@@ -989,6 +990,119 @@ impl Engine {
                 "evaluateGraphZ",
                 &[
                     json!(expression),
+                    json!(x),
+                    json!(y),
+                    graph_options_json(&options, &settings),
+                ],
+            )
+            .and_then(|v| v.as_f64())
+        })
+    }
+
+    // ---- WP-GRAPH: what GraphPanel needs besides `graph` ----
+
+    /// The x window a graph opens on (`graphHome`): ±10 (±360 for trig in degrees), narrowed to the roots and
+    /// extrema or framed by the bounds. Pass the panel's `aspect`.
+    pub fn graph_home(
+        &self,
+        input: String,
+        options: GraphOptions,
+        settings: EvalOptions,
+    ) -> GraphWindow {
+        let fallback = GraphWindow {
+            lo: -10.0,
+            hi: 10.0,
+        };
+        self.on(fallback, move |_| {
+            call(
+                "engine/graph",
+                "graphHome",
+                &[json!(input), graph_options_json(&options, &settings)],
+            )
+            .and_then(|v| {
+                Some(GraphWindow {
+                    lo: v.get(0)?.as_f64()?,
+                    hi: v.get(1)?.as_f64()?,
+                })
+            })
+            .unwrap_or(fallback)
+        })
+    }
+
+    /// Axis ticks (`graphTicks`): the x axis with the result's `angle_unit` and a target of 6, the y axis with
+    /// none and 5, as the panel draws them.
+    pub fn graph_ticks(
+        &self,
+        lo: f64,
+        hi: f64,
+        unit: Option<AngleUnit>,
+        target: u32,
+    ) -> Vec<GraphTick> {
+        self.on(Vec::new(), move |_| {
+            let unit = match unit {
+                Some(AngleUnit::Deg) => json!("deg"),
+                Some(AngleUnit::Rad) => json!("rad"),
+                None => Json::Null,
+            };
+            call(
+                "engine/graph",
+                "graphTicks",
+                &[json!(lo), json!(hi), unit, json!(target)],
+            )
+            .and_then(|v| {
+                v.as_array().map(|a| {
+                    a.iter()
+                        .filter_map(|t| {
+                            Some(GraphTick {
+                                value: t.get("value")?.as_f64()?,
+                                label: t.get("label")?.as_str()?.to_string(),
+                            })
+                        })
+                        .collect()
+                })
+            })
+            .unwrap_or_default()
+        })
+    }
+
+    /// The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
+    /// a contour plot. Cheap: it compiles without sampling.
+    pub fn graph_readout_y(
+        &self,
+        input: String,
+        x: f64,
+        options: GraphOptions,
+        settings: EvalOptions,
+    ) -> Option<f64> {
+        self.on(None, move |_| {
+            call(
+                "engine/graph",
+                "graphReadoutY",
+                &[
+                    json!(input),
+                    json!(x),
+                    graph_options_json(&options, &settings),
+                ],
+            )
+            .and_then(|v| v.as_f64())
+        })
+    }
+
+    /// A contour plot's `z(x, y)` inside its bounds (`buildGraph(input, …).z`); None for a curve.
+    pub fn graph_readout_z(
+        &self,
+        input: String,
+        x: f64,
+        y: f64,
+        options: GraphOptions,
+        settings: EvalOptions,
+    ) -> Option<f64> {
+        self.on(None, move |_| {
+            call(
+                "engine/graph",
+                "graphReadoutZ",
+                &[
+                    json!(input),
                     json!(x),
                     json!(y),
                     graph_options_json(&options, &settings),

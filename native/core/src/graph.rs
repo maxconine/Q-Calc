@@ -6,6 +6,9 @@
 //! The readouts the TS returns as closures (`y`, `z`) are [`GraphReadout`] here: [`GraphResult::y_at`] and
 //! [`GraphResult::z_at`] answer exactly what `result.y(x)` and `result.z(x, y)` do.
 
+// `!(x > y)` is the TS test, true for NaN too
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 
@@ -490,15 +493,12 @@ fn peel_bounds(text: &str) -> Peeled {
         open = Some(inner);
         rest = trim_end_commas(&rest[..at]);
     }
-    loop {
-        let Some((inner, at)) = GROUP.captures(rest.as_str()).ok().flatten().map(|g| {
-            (
-                jsre::group(&g, 1).to_string(),
-                g.get(0).map_or(0, |m| m.start()),
-            )
-        }) else {
-            break;
-        };
+    while let Some((inner, at)) = GROUP.captures(rest.as_str()).ok().flatten().map(|g| {
+        (
+            jsre::group(&g, 1).to_string(),
+            g.get(0).map_or(0, |m| m.start()),
+        )
+    }) {
         if !jsre::test(&CMP_CHAR, &inner) {
             break;
         }
@@ -1408,6 +1408,72 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
     })
 }
 
+/// What `buildGraph(input, options).y` / `.z` evaluate, without sampling: for a readout under the pointer, so
+/// the UI needn't rebuild the graph per hover. Native only (the TS keeps the closures).
+pub fn graph_readout(input: &str, options: &GraphOptions) -> GraphReadout {
+    let Some(intent) = parse_graph_intent(input, &options.functions, &options.variables) else {
+        return GraphReadout::None;
+    };
+    if intent.expression.is_empty() || intent.bounds_error.is_some() {
+        return GraphReadout::None;
+    }
+    let mut base = options.clone();
+    if let Some(d) = &intent.function_def {
+        base.functions.insert(
+            d.name.clone(),
+            UserFunction {
+                params: d.params.clone(),
+                body: d.body.clone(),
+            },
+        );
+    }
+    let mode = options.angle_mode.unwrap_or(AngleMode::Rad);
+    let (expression, bounds) = (intent.expression, intent.bounds);
+    if intent.contour.is_some() {
+        GraphReadout::Surface {
+            expression,
+            options: base,
+            mode,
+            bounds,
+        }
+    } else {
+        GraphReadout::Curve {
+            expression,
+            options: base,
+            mode,
+            bounds,
+        }
+    }
+}
+
+/// `result.y(x)` for `input`'s graph.
+pub fn readout_y(input: &str, options: &GraphOptions, x: f64) -> Option<f64> {
+    readout_result(graph_readout(input, options)).y_at(x)
+}
+
+/// `result.z?.(x, y)` for `input`'s graph.
+pub fn readout_z(input: &str, options: &GraphOptions, x: f64, y: f64) -> Option<f64> {
+    readout_result(graph_readout(input, options)).z_at(x, y)
+}
+
+fn readout_result(readout: GraphReadout) -> GraphResult {
+    GraphResult {
+        intent: GraphIntent::new("", ""),
+        points: Vec::new(),
+        domain: DEFAULT_GRAPH_DOMAIN,
+        y_scale: YScale {
+            min: -10.0,
+            max: 10.0,
+        },
+        critical_points: Vec::new(),
+        roots: Vec::new(),
+        angle_unit: None,
+        contours: None,
+        error: None,
+        readout,
+    }
+}
+
 /// A 1, 2 or 5 × 10ⁿ step at or above (`ceil`) or at or below (`floor`) `raw`.
 fn nice_step(raw: f64, ceil: bool) -> f64 {
     let mag = jsmath::pow(10.0, jsmath::log10(raw).floor());
@@ -2151,6 +2217,35 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
             ))
         }
         "withMinus" => json!(with_minus(&s(0))),
+        // native only: `buildGraph(input, options).y(x)` and `.z(x, y)` without sampling
+        "graphReadoutY" => opt_num(readout_y(&s(0), &opts(2), n(1)?)),
+        "graphReadoutZ" => opt_num(readout_z(&s(0), &opts(3), n(1)?, n(2)?)),
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn readouts_follow_the_bounds() {
+        let o = GraphOptions::default();
+        assert_eq!(readout_y("graph x^2 {0 < x < 3}", &o, 2.0), Some(4.0));
+        assert_eq!(readout_y("graph x^2 {0 < x < 3}", &o, 5.0), None);
+        assert_eq!(readout_z("graph x^2 + y^2", &o, 1.0, 2.0), Some(5.0));
+        assert_eq!(readout_y("graph x^2 + y^2", &o, 1.0), None);
+        let g = build_graph("graph (x-1)(x+2)", &o).unwrap();
+        assert_eq!(g.roots, vec![-2.0, 1.0]);
+        assert_eq!(g.y_at(3.0), Some(10.0));
+    }
+
+    #[test]
+    fn ticks() {
+        let labels: Vec<String> = graph_ticks(-1.0, 1.0, None, 5.0)
+            .into_iter()
+            .map(|t| t.label)
+            .collect();
+        assert_eq!(labels, ["−1", "−0.5", "0", "0.5", "1"]);
+    }
 }
