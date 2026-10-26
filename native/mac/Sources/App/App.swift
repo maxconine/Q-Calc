@@ -75,7 +75,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         // dev builds only: scripts drive the bar without the hotkey (native/mac/scripts/drive.sh)
         if AppInfo.isDev {
-            DistributedNotificationCenter.default().addObserver(forName: Notification.Name("com.maxconine.qcalc.native-dev.command"), object: nil, queue: .main) { [weak self] note in
+            DistributedNotificationCenter.default().addObserver(forName: Notification.Name("\(Bundle.main.bundleIdentifier ?? "com.maxconine.qcalc.native-dev").command"), object: nil, queue: .main) { [weak self] note in
                 self?.devCommand(note.object as? String ?? "")
             }
         }
@@ -109,6 +109,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
         case "identities": overlay.model.text = "identities"; overlay.model.enter()
         case "key": DevSnapshot.key(arg)
+        case "bench": DevBench.run(spec: arg, model: overlay.model)
         // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i
         case "paste":
             if let i = Int(arg), let raw = NSPasteboard.general.string(forType: .string) {

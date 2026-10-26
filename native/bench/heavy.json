@@ -1,0 +1,101 @@
+[
+ {
+  "name": "closed-form integral",
+  "kind": "sheet",
+  "lines": [
+   "integral of x^2 sin(x) from 0 to pi"
+  ]
+ },
+ {
+  "name": "improper integral",
+  "kind": "sheet",
+  "lines": [
+   "integral of e^(-x^2) from -inf to inf"
+  ]
+ },
+ {
+  "name": "nonlinear system",
+  "kind": "sheet",
+  "lines": [
+   "solve({x^2 + y^2 = 4, x^2 - y = 2}, x = 1, y = 1)"
+  ]
+ },
+ {
+  "name": "unit chain",
+  "kind": "sheet",
+  "lines": [
+   "3 ft + 7 in + 25 cm + 1.2 m + 3 yd to mm"
+  ]
+ },
+ {
+  "name": "dense graph",
+  "kind": "graph",
+  "input": "graph sin(1/x) + sin(40x)"
+ },
+ {
+  "name": "long sheet (60 lines)",
+  "kind": "sheet",
+  "lines": [
+   "a1 = 1.5 m",
+   "a2 = 2.5 m",
+   "a3 = 3.5 m",
+   "a4 = 4.5 m",
+   "a5 = 5.5 m",
+   "a6 = 6.5 m",
+   "a7 = 7.5 m",
+   "a8 = 8.5 m",
+   "a9 = 9.5 m",
+   "a10 = 10.5 m",
+   "a11 = 11.5 m",
+   "a12 = 12.5 m",
+   "a13 = 13.5 m",
+   "a14 = 14.5 m",
+   "a15 = 15.5 m",
+   "a16 = 16.5 m",
+   "a17 = 17.5 m",
+   "a18 = 18.5 m",
+   "a19 = 19.5 m",
+   "a20 = 20.5 m",
+   "b1 = a1 * 2 + sqrt(1) m",
+   "b2 = a2 * 3 + sqrt(2) m",
+   "b3 = a3 * 4 + sqrt(3) m",
+   "b4 = a4 * 5 + sqrt(4) m",
+   "b5 = a5 * 6 + sqrt(5) m",
+   "b6 = a6 * 7 + sqrt(6) m",
+   "b7 = a7 * 8 + sqrt(7) m",
+   "b8 = a8 * 9 + sqrt(8) m",
+   "b9 = a9 * 10 + sqrt(9) m",
+   "b10 = a10 * 11 + sqrt(10) m",
+   "b11 = a11 * 12 + sqrt(11) m",
+   "b12 = a12 * 13 + sqrt(12) m",
+   "b13 = a13 * 14 + sqrt(13) m",
+   "b14 = a14 * 15 + sqrt(14) m",
+   "b15 = a15 * 16 + sqrt(15) m",
+   "b16 = a16 * 17 + sqrt(16) m",
+   "b17 = a17 * 18 + sqrt(17) m",
+   "b18 = a18 * 19 + sqrt(18) m",
+   "b19 = a19 * 20 + sqrt(19) m",
+   "b20 = a20 * 21 + sqrt(20) m",
+   "b1 / a1 + sin(1°)",
+   "(b2 + a2) to ft",
+   "b3 / a3 + sin(3°)",
+   "(b4 + a4) to ft",
+   "b5 / a5 + sin(5°)",
+   "(b6 + a6) to ft",
+   "b7 / a7 + sin(7°)",
+   "(b8 + a8) to ft",
+   "b9 / a9 + sin(9°)",
+   "(b10 + a10) to ft",
+   "b11 / a11 + sin(11°)",
+   "(b12 + a12) to ft",
+   "b13 / a13 + sin(13°)",
+   "(b14 + a14) to ft",
+   "b15 / a15 + sin(15°)",
+   "(b16 + a16) to ft",
+   "b17 / a17 + sin(17°)",
+   "(b18 + a18) to ft",
+   "b19 / a19 + sin(19°)",
+   "(b20 + a20) to ft"
+  ]
+ }
+]
