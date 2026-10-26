@@ -173,20 +173,8 @@ pub fn matrix_answer(
 
 // ---- WP-SUMS (sums.ts) ----
 
-/// `Σ` spellings as the one form `sumAnswer` reads.
-pub fn normalize_sums(expr: &str) -> String {
-    expr.to_string()
-}
-
-#[derive(Clone, Debug)]
-pub struct SumAnswer {
-    pub value: Value,
-    pub exact: Option<String>,
-}
-
-pub fn sum_answer(_expr: &str) -> Option<SumAnswer> {
-    None
-}
+// ported: `crate::sums` (`sum_answer` takes the TS `SumContext`, and its value may be None, as in the TS)
+pub use crate::sums::{SumAnswer, SumContext, normalize_sums, sum_answer};
 
 // ---- WP-CALCULUS (calculus.ts, calcNumeric.ts, closedForm.ts) ----
 

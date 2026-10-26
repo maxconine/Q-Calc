@@ -763,7 +763,15 @@ impl<'o> Sheet<'o> {
             }
         }
         if calc.is_none() {
-            sum = stubs::sum_answer(&expr);
+            // WP-SUMS: the TS passes `{ ...ctx, defaultUnits, rationalize }`
+            sum = stubs::sum_answer(
+                &expr,
+                &stubs::SumContext {
+                    sci: self.sci(),
+                    default_units: self.options.default_units.clone(),
+                    rationalize: self.options.rationalize,
+                },
+            );
         }
         let m = if plus_minus {
             stubs::measure(&expr, &self.measures)
@@ -775,7 +783,7 @@ impl<'o> Sheet<'o> {
         } else if let Some(m) = &m {
             value = Some(Value::number(m.v));
         } else if let Some(s) = &sum {
-            value = Some(s.value.clone());
+            value = s.value.clone(); // WP-SUMS
         } else {
             value = try_plain_math(&expr, &self.plain(variable.is_some()));
         }
