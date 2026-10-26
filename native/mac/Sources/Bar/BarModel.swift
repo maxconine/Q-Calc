@@ -68,6 +68,18 @@ final class BarModel: ObservableObject {
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
     @Published private(set) var completion: String?
     @Published private(set) var decorations = Decorations()
+    // onboarding and the walkthrough (Tour.swift)
+    @Published var example: ExampleShown?
+    @Published var tourLine: TourLineShown?
+    var replay: Int?
+    var rotation: (on: Bool, tick: Int) = (false, 0)
+    var rotationTimer: Timer?
+    var pauseTimer: Timer?
+    var ghostExample: String?
+    var ghostPlain: String?
+    var hintGhost: (hint: String, expr: String, plain: Bool)?
+    /// the first run's lead example, `Press ⌃⌥Space anytime`
+    var firstRunHotkey: String?
     /// d/dt letters the user moved by hand (TimeLetters.tsx); sent as EvalOptions.timeVarying
     @Published var timeVarying: [String: Bool] = [:]
     /// the last real answer, dimmed, while the line is briefly unreadable (useSteadyAnswer)
@@ -170,7 +182,7 @@ final class BarModel: ObservableObject {
         evaluateLive()
     }
 
-    private var options: EvalOptions { EvalOptions.from(settings) }
+    var options: EvalOptions { EvalOptions.from(settings) }
 
     /// What one keystroke asks the engine, built on the engine thread: the context comes from the rows the
     /// history setting shows (contextFromHistory), and the engine says whether the line chains from `ans`.
@@ -206,7 +218,9 @@ final class BarModel: ObservableObject {
         if !gamesShown { gamePick = nil }
         helpShown = false
         if text.isEmpty { hint = nil }
+        if !text.isEmpty { dismissRotation() }
         evaluateLive()
+        refreshTour()
     }
 
     func evaluateLive() {
@@ -255,6 +269,8 @@ final class BarModel: ObservableObject {
             self.decorations = deco
             self.setLive(answer, for: typed)
             self.squiggleLater(typed)
+            self.pauseHintLater()
+            self.refreshTour()
             self.upgradeClosedForm(answer, for: typed)
         }
     }
@@ -480,7 +496,10 @@ final class BarModel: ObservableObject {
             onSettings?()
         case .tutorial:
             clearLine()
-            onTutorial?()
+            startTutorial()
+        case .skip:
+            clearLine()
+            skipTutorial()
         case .graph:
             break
         case .greeting:
@@ -516,7 +535,7 @@ final class BarModel: ObservableObject {
             return
         }
         let rows = self.rows, view = HistoryView.from(settings), options = self.options, thread = engine
-        let improper = live.improper, history = !rows.isEmpty
+        let improper = live.improper, history = !rows.isEmpty, facts = hintFacts(typed)
         engine.submit(.commit, { engine -> (CommitResult, String?, (at: Int, text: String, filled: String)?, NSRange?) in
             let request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
             let done = engine.commit(request: request, history: rows)
@@ -571,7 +590,7 @@ final class BarModel: ObservableObject {
             }
             guard !leaving, self.text == typed else { return }
             if done.saved {
-                self.hint = nil
+                self.hint = self.onboardingAfterCommit(expr: typed, facts: facts, solve: done.row?.solve != nil, graph: typed.lowercased().hasPrefix("graph"))
                 self.text = done.input
             } else {
                 self.hint = done.hint ?? "nothing to save yet · finish the line, or esc to close"
@@ -944,6 +963,7 @@ final class BarModel: ObservableObject {
         pullInbox()
         AppSettings.shared.mergeOnboarding(["opens": (AppSettings.shared.onboarding["opens"] ?? 0) + 1])
         track("open")
+        beginShowing()
     }
 
     func willHide() {

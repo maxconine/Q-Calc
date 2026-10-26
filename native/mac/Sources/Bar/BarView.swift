@@ -75,7 +75,26 @@ struct BarView: View {
         if let letters = model.live.timeLetters, !letters.varying.isEmpty || !letters.constant.isEmpty, model.graph == nil {
             TimeLetterChips(model: model, letters: letters)
         }
-        if let hint = model.hint, !hint.isEmpty {
+        if model.hint == nil, let line = model.tourLine {
+            // .tour-line: the step, `n/m` at 70%, and an underlined skip, clear of the clear button's corner
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(line.text).lineLimit(1).truncationMode(.tail)
+                Text("\(line.at)/\(line.of)").monospacedDigit().opacity(0.7)
+                Spacer(minLength: 0)
+                Button("skip") { model.skipTutorial() }
+                    .buttonStyle(.plain)
+                    .underline()
+                    .help("skip the tutorial (or type skip)")
+            }
+            .font(.system(size: Theme.small))
+            .foregroundStyle(Color.qMuted)
+            .padding(.leading, Theme.gutter)
+            .padding(.trailing, Theme.gutter + 44)
+            .padding(.bottom, 12)
+            .padding(.top, -12)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Tutorial step \(line.at) of \(line.of): \(line.text)")
+        } else if let hint = model.hint, !hint.isEmpty {
             // .composer-hint: 12 pt muted, tucked 12 pt up into the composer's bottom padding
             Text(hint)
                 .font(.system(size: Theme.small))
@@ -158,7 +177,16 @@ private struct Composer: View {
                     .accessibilityLabel("continues from the last answer")
             }
             ZStack(alignment: .leading) {
-                if model.text.isEmpty {
+                if model.text.isEmpty, let example = model.example {
+                    // .quick-example: the rotating example, muted, fading in and out over 2.5 s
+                    ExampleFade(id: example.id) {
+                        RadicalText(text: Symbols.pretty(example.expr, caret: (example.expr as NSString).length, keepWords: false).text,
+                                    size: Theme.display, tracking: Theme.displayTracking(Theme.display))
+                            .foregroundStyle(Color.qMuted)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityLabel("Example: \(example.expr)")
+                } else if model.text.isEmpty {
                     // .quick-plain::placeholder: muted at 80%
                     Text("Calculate")
                         .font(.system(size: Theme.display))
@@ -185,7 +213,15 @@ struct LiveAnswerView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let message = model.commandMessage, !message.isEmpty {
+        if model.text.isEmpty, let example = model.example, !example.answer.isEmpty, !model.copied {
+            // .live-example: the example's answer, muted at 70%, fading with it
+            ExampleFade(id: example.id) {
+                AnswerText(text: Pretty.answer(example.answer), size: Theme.display)
+                    .foregroundStyle(Color.qMuted.opacity(0.7))
+                    .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+            }
+            .accessibilityHidden(true)
+        } else if let message = model.commandMessage, !message.isEmpty {
             // .live.message: what a command does, 13 pt muted, in the answer's place
             Text(message)
                 .font(.system(size: Theme.body))
@@ -319,6 +355,34 @@ struct TimeLetterChips: View {
         .help(locked ? "\(letter) is written with a dot, so it changes with time"
               : varying ? "Treat \(letter) as a constant" : "Treat \(letter) as changing with time")
         .accessibilityLabel("\(letter): \(varying ? "changing with time" : "constant")\(locked ? "" : ". Click to switch")")
+    }
+}
+
+/// qcalc-example: 0 → 1 over the first tenth, held, → 0 over the last tenth of EXAMPLE_MS (2.5 s); still with
+/// reduced motion. A new `id` starts it again.
+private struct ExampleFade<Content: View>: View {
+    let id: Int
+    @ViewBuilder var content: Content
+    @State private var opacity: Double = reduceMotion ? 1 : 0
+    @State private var shownID: Int?
+
+    var body: some View {
+        content
+            .opacity(opacity)
+            .onAppear { run() }
+            .onChange(of: id) { _ in run() }
+    }
+
+    private func run() {
+        guard !reduceMotion else { return }
+        shownID = id
+        opacity = 0
+        withAnimation(.easeInOut(duration: 0.25)) { opacity = 1 }
+        let mine = id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.25) {
+            guard shownID == mine, mine >= 0 else { return }
+            withAnimation(.easeInOut(duration: 0.25)) { opacity = 0 }
+        }
     }
 }
 

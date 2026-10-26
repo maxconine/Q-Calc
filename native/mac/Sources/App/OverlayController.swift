@@ -346,10 +346,10 @@ final class OverlayController: NSObject {
         }
     }
 
+    // the first run leads the examples with `Press <shortcut> anytime` (exampleList's firstRunHotkey)
     func showFirstRun() {
+        model.firstRunHotkey = AppSettings.shared.activeHotKey?.title
         show(from: "first run")
-        model.hint = "Type math, like 2^10 or sqrt(2). Press ↵ to keep it; esc to close. "
-            + "\(AppSettings.shared.activeHotKey.map { "\($0.title) opens Q Calc from any app." } ?? "")"
     }
 
     func showTips() {
@@ -359,8 +359,7 @@ final class OverlayController: NSObject {
 
     func showTutorial() {
         show(from: "tutorial")
-        // the tour (tour.ts / onboarding.ts) moves into the core with WP-APP-LOGIC; until then one line of tips
-        model.hint = "Try: 2^10 ↵ · then * 3 (it continues from the answer) · ↑ to walk the history · Tab for other forms · graph sin(x)"
+        model.startTutorial()
     }
 
     // MARK: - size and place

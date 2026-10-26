@@ -115,6 +115,7 @@ enum BarCommand: Equatable {
     case help
     case settings
     case tutorial
+    case skip
     case graph(String)
     case greeting
 
@@ -166,7 +167,8 @@ enum BarCommand: Equatable {
         }
         if lower == "help" || lower == "?" { return .help }
         if lower == "settings" || lower == "preferences" { return .settings }
-        if lower == "tutorial" { return .tutorial }
+        if lower == "tutorial" || lower == "tour" { return .tutorial }
+        if lower.range(of: #"^skip(\s+(tutorial|tour))?$"#, options: .regularExpression) != nil { return .skip }
         if lower == "hi" || lower == "hello" || lower == "hey" { return .greeting }
         if let g = graphRE.groups(t), let body = g[1] ?? nil { return .graph(body) }
         return nil
@@ -207,6 +209,7 @@ enum BarCommand: Equatable {
         case .help: return ""
         case .settings: return "↵ opens settings"
         case .tutorial: return "start the tutorial"
+        case .skip: return ""
         case .graph: return ""
         case .greeting: return ""
         }
