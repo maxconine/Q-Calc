@@ -30,11 +30,14 @@ HEAVY_LINES = ["integral of x^2 sin(x) from 0 to pi", "integral of e^(-x^2) from
 
 # ---- the page's channel ----
 commands, replies = queue.Queue(), queue.Queue()
+STARTED = []  # every app process this started, killed on the way out whatever happens
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))
 
 
 class Channel(BaseHTTPRequestHandler):
-    def log_message(self, *a):
-        pass
+    def log_message(self, fmt, *a):
+        if os.environ.get("QCALC_BENCH_DEBUG"):
+            print(time.strftime("%H:%M:%S"), fmt % a, file=sys.stderr, flush=True)
 
     def reply(self, body):
         data = json.dumps(body).encode()
@@ -46,6 +49,9 @@ class Channel(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if self.path.startswith("/sleep"):
+            time.sleep(int(self.path.split("ms=")[1]) / 1000)
+            return self.reply({})
         try:
             self.reply(commands.get(timeout=45))
         except queue.Empty:
@@ -84,6 +90,12 @@ def cpu_seconds(pids):
     return total
 
 
+def age_s(etime):
+    days, _, clock = etime.rpartition("-")
+    parts = [int(p) for p in clock.split(":")]
+    return int(days or 0) * 86400 + sum(v * 60 ** i for i, v in enumerate(reversed(parts)))
+
+
 def to_mb(num, unit):
     return float(num) * {"B": 1 / 2**20, "KB": 1 / 1024, "MB": 1, "GB": 1024}[unit.upper()]
 
@@ -94,11 +106,11 @@ def memory(pids):
     for pid in pids:
         fp = subprocess.run(["footprint", "-p", str(pid)], capture_output=True, text=True).stdout
         m = re.search(r"phys_footprint:\s*([\d.]+)\s*([KMG]?B)", fp)
-        rss = subprocess.run(["ps", "-o", "rss=,comm=", "-p", str(pid)], capture_output=True, text=True).stdout.split(None, 1)
+        rss = subprocess.run(["ps", "-o", "rss=,etime=,comm=", "-p", str(pid)], capture_output=True, text=True).stdout.split(None, 2)
         if not rss:
             continue
-        each[pid] = dict(footprint=to_mb(*m.groups()) if m else None, rss=int(rss[0]) / 1024,
-                         name=os.path.basename(rss[1].strip()))
+        each[pid] = dict(footprint=to_mb(*m.groups()) if m else None, rss=int(rss[0]) / 1024, age=age_s(rss[1]),
+                         name=os.path.basename(rss[2].strip()))
     return dict(footprint=sum(v["footprint"] or 0 for v in each.values()), rss=sum(v["rss"] for v in each.values()),
                 processes=list(each.values()))
 
@@ -133,8 +145,12 @@ def prepare(kind, work, port):
             f.write(html.replace("<head>", '<head>\n    <script src="./bench.js"></script>', 1))
     with open(plist, "wb") as f:
         plistlib.dump(info, f)
-    subprocess.run(["codesign", "--force", "--sign", "-", "--timestamp=none", "--identifier", a["id"], app],
-                   check=True, capture_output=True)
+    # codesign refuses the Documents folder's provenance xattrs, as macos/build.sh notes
+    subprocess.run(["xattr", "-cr", app], check=True)
+    signed = subprocess.run(["codesign", "--force", "--sign", "-", "--timestamp=none", "--identifier", a["id"], app],
+                            capture_output=True, text=True)
+    if signed.returncode:
+        sys.exit(f"codesign {app}: {signed.stderr}")
     d = a["id"]
     subprocess.run(["defaults", "delete", d], capture_output=True)
     defaults(d, "qcalc.firstRunDone", "-bool", "true")
@@ -166,6 +182,7 @@ class Running:
         exe = f"{app}/Contents/MacOS/QCalc"
         self.spawn = time.time() * 1000
         self.proc = subprocess.Popen([exe], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        STARTED.append(self.proc)
         self.lines = queue.Queue()
         threading.Thread(target=lambda: [self.lines.put(l) for l in self.proc.stderr], daemon=True).start()
 
@@ -355,6 +372,11 @@ def main():
                 json.dump(result, f)
             cleanup(kind)
     finally:
+        for proc in STARTED:
+            if proc.poll() is None:
+                proc.kill()
+        for kind in APPS:
+            cleanup(kind)
         shutil.rmtree(work, ignore_errors=True)
         server.shutdown()
     subprocess.run([sys.executable, f"{HERE}/summarize.py", "app", args.out])

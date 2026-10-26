@@ -17,7 +17,11 @@
       ch.port2.postMessage(0)
     })
   }
-  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms) }) }
+  // the bar hides on any click elsewhere, and WebKit throttles a hidden page's timers (up to minutes), so the
+  // pace comes from the bench script answering after `ms` instead of from setTimeout
+  function sleep(ms) {
+    return fetch(BASE + '/sleep?ms=' + ms).catch(function () {})
+  }
   function field() { return document.querySelector('.quick-plain') }
   var setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
   function setText(text) {
