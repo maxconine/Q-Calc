@@ -6,6 +6,9 @@
 //! Text positions are byte offsets into one string at a time; every character the scans test is ASCII, so they
 //! agree with the TS's UTF-16 indexes wherever it matters.
 
+// `!(x > 0.0)` is the TS test, true for NaN too
+#![allow(clippy::neg_cmp_op_on_partial_ord)]
+
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_rational::BigRational;
