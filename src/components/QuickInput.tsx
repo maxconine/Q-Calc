@@ -54,6 +54,8 @@ interface Props {
   // the name after `message`, once the relay says it's someone's: it's painted green
   recipient?: string
   onSelection?: (range: CaretRange) => void
+  /** A multi-line paste; true when it was taken (equations opened as a system) and the field should leave it. */
+  onPasteLines?: (text: string) => boolean
 }
 
 // letters around a word make it part of a longer word (`pint`, `infinity`); digits before it are a coefficient (`2pi`)
@@ -193,6 +195,7 @@ export function QuickInput({
   completionNames,
   recipient,
   onSelection,
+  onPasteLines,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLSpanElement>(null)
@@ -716,7 +719,12 @@ export function QuickInput({
           rememberHighlight(e.currentTarget)
         }}
         onPaste={(e) => {
-          const text = flattenPastedText(e.clipboardData?.getData('text/plain') ?? '')
+          const pasted = e.clipboardData?.getData('text/plain') ?? ''
+          if (/[\r\n;]/.test(pasted) && onPasteLines?.(pasted)) {
+            e.preventDefault()
+            return
+          }
+          const text = flattenPastedText(pasted)
           if (!text) return
           e.preventDefault()
           const el = e.currentTarget
