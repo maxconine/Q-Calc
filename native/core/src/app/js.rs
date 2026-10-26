@@ -261,5 +261,9 @@ mod tests {
         assert_eq!(index16("a👋b", 5), 3);
         assert_eq!(trim("\u{FEFF} x \u{A0}"), "x");
         assert_eq!(expand_replacement("$$5 $&", "ans", 0, 3), "$5 ans");
+        assert_eq!(iso_date(0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(iso_date(1_790_287_960_000), "2026-09-24T22:12:40.000Z");
+        assert_eq!(iso_date(-1), "1969-12-31T23:59:59.999Z");
+        assert_eq!(iso_date(951_782_400_123), "2000-02-29T00:00:00.123Z");
     }
 }

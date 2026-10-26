@@ -4,7 +4,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::js as jstr;
-use crate::format::{clamp_sig_figs, format_as_fraction, format_number, format_scientific, format_value};
+use crate::format::{
+    clamp_sig_figs, format_as_fraction, format_number, format_scientific, format_value,
+};
 use crate::jsre::{self, Lazy, js};
 use crate::simplify::{ExactFormOptions, exact_form};
 use crate::types::{AngleMode, EvaluateOptions, Meas, Value, ValueKind};
@@ -69,7 +71,8 @@ fn digit_count(s: &str) -> usize {
 }
 
 fn has_unc(m: Option<&Meas>) -> bool {
-    m.and_then(|m| m.unc).is_some_and(|u| u != 0.0 && !u.is_nan())
+    m.and_then(|m| m.unc)
+        .is_some_and(|u| u != 0.0 && !u.is_nan())
 }
 
 /// The other ways Tab can show an answer, in cycle order; the answer as shown is not included.
@@ -131,7 +134,11 @@ pub fn answer_forms(src: &FormSource) -> Vec<AnswerView> {
     {
         add(with_unit(exact, unit), None);
     }
-    let mag = if n == 0.0 { 0.0 } else { n.abs().log10().floor() };
+    let mag = if n == 0.0 {
+        0.0
+    } else {
+        n.abs().log10().floor()
+    };
     if mag.abs() >= 3.0 {
         add(
             with_unit(format_scientific(n, clamp_sig_figs(sig_figs)), unit),

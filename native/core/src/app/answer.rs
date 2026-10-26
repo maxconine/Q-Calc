@@ -3,11 +3,11 @@
 
 use serde::{Deserialize, Serialize};
 
-use serde_json::Value as Json;
 use crate::app::js as jstr;
 use crate::format::{DEFAULT_SIG_FIGS, format_number, pretty_answer};
 use crate::jsre::{self, Lazy, js};
 use crate::units::is_improper_unit_conversion;
+use serde_json::Value as Json;
 
 const DEFAULT: f64 = DEFAULT_SIG_FIGS as f64;
 
@@ -19,7 +19,8 @@ fn strip_grouping_commas(s: &str) -> String {
 /// What a live answer inserts: the displayed magnitude at `sig_figs`, never the engine's full-precision `n`; a ±
 /// answer in parentheses, so `ans*2` doesn't bind to the uncertainty alone; a unit or text answer as shown.
 pub fn insertable_answer(display: &str, n: Option<f64>, sig_figs: f64) -> String {
-    static PLAIN_NUMBER: Lazy = Lazy::new(|| js(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
+    static PLAIN_NUMBER: Lazy =
+        Lazy::new(|| js(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
     let stripped = strip_grouping_commas(display);
     let plain = jstr::trim(&stripped);
     if is_improper_unit_conversion(plain) {

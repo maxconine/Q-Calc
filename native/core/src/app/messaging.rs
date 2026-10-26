@@ -191,9 +191,7 @@ pub fn clean_message_text(raw: &Json) -> String {
     let Some(s) = raw.as_str() else {
         return String::new();
     };
-    let bad = |c: char| {
-        matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
-    };
+    let bad = |c: char| matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}');
     let mut out = String::with_capacity(s.len());
     let mut in_run = false;
     for c in s.chars() {
@@ -252,11 +250,19 @@ mod tests {
 
     #[test]
     fn cleans_and_parses() {
-        assert_eq!(clean_message_text(&json!("a\u{85}b\u{2066}c\u{0}d")), "a b c d");
+        assert_eq!(
+            clean_message_text(&json!("a\u{85}b\u{2066}c\u{0}d")),
+            "a b c d"
+        );
         assert_eq!(clean_message_text(&json!(5)), "");
         let line = parse_message("message Max hi there").unwrap();
-        assert_eq!((line.name.as_str(), line.text.as_str()), ("max", "hi there"));
-        let m = sanitize_messaging(&json!({"name": "Ana", "accepted": ["max", "spam"], "blocked": ["spam"]}));
+        assert_eq!(
+            (line.name.as_str(), line.text.as_str()),
+            ("max", "hi there")
+        );
+        let m = sanitize_messaging(
+            &json!({"name": "Ana", "accepted": ["max", "spam"], "blocked": ["spam"]}),
+        );
         assert_eq!(m.accepted, vec!["max"]);
         assert_eq!(arrival(&m, "spam"), Arrival::Drop);
     }

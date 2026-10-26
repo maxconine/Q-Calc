@@ -7,7 +7,6 @@
 //! Owners (`native/PORTING_PLAN.md`): units → WP-UNITS, chem → WP-CHEM, isolate/system →
 //! WP-SOLVE, graph → WP-GRAPH, phrases/nativeEval → WP-PHRASES, typstMath → WP-NOTATION.
 
-
 use serde_json::{Value as Json, json};
 
 use crate::golden::{Outcome, dispatch};
@@ -28,7 +27,9 @@ fn undef() -> Json {
 
 // ---- WP-UNITS (units.ts) ----
 
-pub use crate::units::{in_ladder_unit, is_unit_name, sanitize_default_units_json as sanitize_default_units};
+pub use crate::units::{
+    in_ladder_unit, is_unit_name, sanitize_default_units_json as sanitize_default_units,
+};
 
 // ---- WP-CHEM (chem.ts) ----
 
@@ -97,7 +98,11 @@ pub struct SystemAnswer {
 }
 
 /// `solveLive` (system.ts).
-pub fn solve_live(lines: &[String], defaults: &DefaultUnits, angle_mode: AngleMode) -> Option<SystemAnswer> {
+pub fn solve_live(
+    lines: &[String],
+    defaults: &DefaultUnits,
+    angle_mode: AngleMode,
+) -> Option<SystemAnswer> {
     let a = call(
         "engine/system",
         "solveLive",
@@ -144,7 +149,11 @@ pub fn parse_graph_intent(
         &[json!(input), json!({ "functions": functions })],
     )?;
     Some(GraphIntent {
-        label: i.get("label").and_then(Json::as_str).unwrap_or("").to_string(),
+        label: i
+            .get("label")
+            .and_then(Json::as_str)
+            .unwrap_or("")
+            .to_string(),
         function_def: i
             .get("functionDef")
             .and_then(|f| serde_json::from_value(f.clone()).ok()),
@@ -212,7 +221,8 @@ pub fn answer_phrase(expr: &str, now_ms: f64, sig_figs: f64, rates: &Json) -> Op
 
 /// `typstPreviewUseful` (typstMath.ts): the typeset preview shows something the bar doesn't.
 pub fn typst_preview_useful(expr: &str) -> bool {
-    call("lib/typstMath", "typstPreviewUseful", &[json!(expr)]).and_then(|v| v.as_bool()) == Some(true)
+    call("lib/typstMath", "typstPreviewUseful", &[json!(expr)]).and_then(|v| v.as_bool())
+        == Some(true)
 }
 
 /// `typstAnswer`, written out in full: `exact ≈ approx`, or whichever there is.

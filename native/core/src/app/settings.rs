@@ -153,7 +153,8 @@ pub fn merge_settings(partial: &Json, base: &Settings) -> Settings {
         history_insert: get("historyInsert").map_or(base.history_insert, normalize_history_insert),
         history_show: get("historyShow").map_or(base.history_show, normalize_history_show),
         sig_figs: get("sigFigs").map_or(base.sig_figs, |v| clamp_sig_figs(num(v))),
-        draft_seconds: get("draftSeconds").map_or(base.draft_seconds, |v| clamp_draft_seconds(num(v))),
+        draft_seconds: get("draftSeconds")
+            .map_or(base.draft_seconds, |v| clamp_draft_seconds(num(v))),
         default_units: get("defaultUnits")
             .map_or_else(|| base.default_units.clone(), sanitize_default_units),
         theme: get("theme").map_or(base.theme, normalize_theme),

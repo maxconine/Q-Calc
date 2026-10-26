@@ -6,7 +6,8 @@ use serde_json::Value as Json;
 
 use crate::app::js as jstr;
 use crate::app::messaging::{
-    Arrival, Messaging, SendStatus, TEXT_MAX, arrival, clean_message_text, clean_name, send_status_text,
+    Arrival, Messaging, SendStatus, TEXT_MAX, arrival, clean_message_text, clean_name,
+    send_status_text,
 };
 use crate::jsre::{self, Lazy, js};
 
@@ -65,8 +66,12 @@ pub fn parse_native_inbox(raw: &Json) -> Vec<BannerCard> {
             } else {
                 item.get("text").map(clean_message_text).unwrap_or_default()
             };
-            (!from.is_empty() && (ask || !jstr::trim(&text).is_empty()))
-                .then_some(BannerCard { id, from, text, ask })
+            (!from.is_empty() && (ask || !jstr::trim(&text).is_empty())).then_some(BannerCard {
+                id,
+                from,
+                text,
+                ask,
+            })
         })
         .collect()
 }
@@ -130,13 +135,25 @@ mod tests {
     fn cards_like_the_ts_tests() {
         let cards = add_cards(
             &[],
-            ["1", "2", "3", "4", "5"].iter().map(|id| card(id, "max", "hi", false)).collect(),
+            ["1", "2", "3", "4", "5"]
+                .iter()
+                .map(|id| card(id, "max", "hi", false))
+                .collect(),
             BANNER_SHOWN,
         );
-        assert_eq!(cards.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(), ["5", "4", "3"]);
+        assert_eq!(
+            cards.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(),
+            ["5", "4", "3"]
+        );
         let asking = add_card(&[], card("a", "new", "", true), BANNER_SHOWN);
-        assert_eq!(add_card(&asking, card("b", "new", "", true), BANNER_SHOWN), asking);
-        assert_eq!(add_card(&asking, card("c", "new", "hello", false), BANNER_SHOWN).len(), 2);
+        assert_eq!(
+            add_card(&asking, card("b", "new", "", true), BANNER_SHOWN),
+            asking
+        );
+        assert_eq!(
+            add_card(&asking, card("c", "new", "hello", false), BANNER_SHOWN).len(),
+            2
+        );
 
         let me = Messaging {
             name: "ana".into(),
@@ -150,7 +167,10 @@ mod tests {
             card("3", "new", "", true),
             card("4", "spam", "hi", false),
         ];
-        let kept: Vec<String> = drop_answered(&cards, &me).into_iter().map(|c| c.id).collect();
+        let kept: Vec<String> = drop_answered(&cards, &me)
+            .into_iter()
+            .map(|c| c.id)
+            .collect();
         assert_eq!(kept, ["1", "3"]);
 
         let inbox = parse_native_inbox(&json!([
@@ -163,7 +183,10 @@ mod tests {
         ]));
         assert_eq!(
             inbox,
-            [card("n1", "max", "hi sam: give me your key", false), card("n2", "new", "", true)]
+            [
+                card("n1", "max", "hi sam: give me your key", false),
+                card("n2", "new", "", true)
+            ]
         );
         assert!(parse_native_inbox(&json!("nope")).is_empty());
 

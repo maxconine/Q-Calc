@@ -260,7 +260,9 @@ fn rule(bit: u32, f: &HintFacts) -> Option<(HintOn, String)> {
             (HintOn::Commit, format!("use {v} in later calculations"))
         }
         // not on first run, which already has the hotkey to teach
-        512 if flag(f.native) && f.opens.unwrap_or(0) >= 2 => (HintOn::Open, "⌘, opens settings".into()),
+        512 if flag(f.native) && f.opens.unwrap_or(0) >= 2 => {
+            (HintOn::Open, "⌘, opens settings".into())
+        }
         _ => return None,
     })
 }

@@ -8,10 +8,11 @@ use serde_json::{Map, Value as Json, json};
 use crate::records::{HistoryKind, HistoryRow, HistoryShow, MeasInfo, SolveInfo, SolveOutcome};
 
 pub use qcalc_core::app::history::{
-    MAX_HISTORY, MAX_HISTORY_DISPLAY, MAX_HISTORY_EXACT, MAX_HISTORY_EXPR, MAX_HISTORY_JSON, Throws, ellipsize,
-    file_text, history_functions, history_measures, history_quantities, history_variables, is_complex_quantity,
-    is_literal_quantity, is_matrix_quantity, last_answer_row, last_history_number, normalize_history_row,
-    persistable_history, sanitize_meas, slim_history_row,
+    MAX_HISTORY, MAX_HISTORY_DISPLAY, MAX_HISTORY_EXACT, MAX_HISTORY_EXPR, MAX_HISTORY_JSON,
+    Throws, ellipsize, file_text, history_functions, history_measures, history_quantities,
+    history_variables, is_complex_quantity, is_literal_quantity, is_matrix_quantity,
+    last_answer_row, last_history_number, normalize_history_row, persistable_history,
+    sanitize_meas, slim_history_row,
 };
 pub use qcalc_core::app::history_show::{RECENT_MS, RECENT_ROWS, next_recent_expiry, recent_start};
 
@@ -20,7 +21,9 @@ fn str_of<'a>(row: &'a Json, key: &str) -> Option<&'a str> {
 }
 
 fn finite_of(row: &Json, key: &str) -> Option<f64> {
-    row.get(key).and_then(Json::as_f64).filter(|n| n.is_finite())
+    row.get(key)
+        .and_then(Json::as_f64)
+        .filter(|n| n.is_finite())
 }
 
 fn kind_of(row: &Json) -> Option<&'static str> {

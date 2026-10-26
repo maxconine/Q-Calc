@@ -19,7 +19,10 @@ pub fn is_edit_of(next: &str, prev: &str) -> bool {
         head += 1;
     }
     let mut tail = 0;
-    while tail < a.len() - head && tail < b.len() - head && a[a.len() - 1 - tail] == b[b.len() - 1 - tail] {
+    while tail < a.len() - head
+        && tail < b.len() - head
+        && a[a.len() - 1 - tail] == b[b.len() - 1 - tail]
+    {
         tail += 1;
     }
     head + tail >= b.len().div_ceil(2)

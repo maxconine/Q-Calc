@@ -56,10 +56,7 @@ impl KeyAction {
     }
 
     pub fn label(self) -> &'static str {
-        KEY_ACTIONS
-            .iter()
-            .find(|a| a.0 == self)
-            .map_or("", |a| a.1)
+        KEY_ACTIONS.iter().find(|a| a.0 == self).map_or("", |a| a.1)
     }
 }
 
@@ -333,7 +330,17 @@ fn reserved(chord: &str, windows: bool) -> Option<&'static str> {
     }
     if set.is_empty()
         && [
-            "escape", "enter", "tab", "up", "down", "left", "right", "backspace", "delete", "home", "end",
+            "escape",
+            "enter",
+            "tab",
+            "up",
+            "down",
+            "left",
+            "right",
+            "backspace",
+            "delete",
+            "home",
+            "end",
         ]
         .contains(&key)
     {
@@ -424,7 +431,10 @@ pub fn held_label(mods: &str, windows: bool) -> String {
     if windows {
         format!(
             "{}+…",
-            down.iter().map(|m| windows_name(m)).collect::<Vec<_>>().join("+")
+            down.iter()
+                .map(|m| windows_name(m))
+                .collect::<Vec<_>>()
+                .join("+")
         )
     } else {
         format!("{}…", down.iter().map(|m| mac_glyph(m)).collect::<String>())
@@ -432,7 +442,12 @@ pub fn held_label(mods: &str, windows: bool) -> String {
 }
 
 /// Why a chord can't be used, or None when it can. Typing keys need ctrl, alt or ⌘ so they don't eat the input.
-pub fn chord_problem(chord: &str, action: KeyAction, binds: &Keybinds, windows: bool) -> Option<String> {
+pub fn chord_problem(
+    chord: &str,
+    action: KeyAction,
+    binds: &Keybinds,
+    windows: bool,
+) -> Option<String> {
     static FKEY: Lazy = Lazy::new(|| js(r"^f[0-9]{1,2}$", ""));
     if !is_chord(chord) {
         return Some("Press a key".into());
@@ -442,7 +457,11 @@ pub fn chord_problem(chord: &str, action: KeyAction, binds: &Keybinds, windows: 
     if !fkey && !mods.contains(&"ctrl") && !mods.contains(&"alt") && !mods.contains(&"cmd") {
         return Some(format!(
             "Add {} so typing still works",
-            if windows { "Ctrl or Alt" } else { "⌘, ⌃ or ⌥" }
+            if windows {
+                "Ctrl or Alt"
+            } else {
+                "⌘, ⌃ or ⌥"
+            }
         ));
     }
     if windows && let Some(own) = windows_keeps(chord) {
@@ -452,7 +471,10 @@ pub fn chord_problem(chord: &str, action: KeyAction, binds: &Keybinds, windows: 
         ));
     }
     if let Some(kept) = reserved(chord, windows) {
-        return Some(format!("{} is kept for {kept}", chord_label(chord, windows)));
+        return Some(format!(
+            "{} is kept for {kept}",
+            chord_label(chord, windows)
+        ));
     }
     for (other, label) in KEY_ACTIONS {
         if other != action && keybind_for(binds, other, windows) == chord {
@@ -487,7 +509,9 @@ pub fn sanitize_keybinds(raw: &Json) -> Keybinds {
         let Some(action) = KeyAction::from_id(id).filter(|a| *a != KeyAction::Show) else {
             continue;
         };
-        let Some(value) = value.as_str() else { continue };
+        let Some(value) = value.as_str() else {
+            continue;
+        };
         let chord = value.to_lowercase();
         if chord.is_empty() {
             out.insert(action, String::new());

@@ -83,7 +83,11 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             return Some(Outcome::Unreplayable);
         };
         let text = raw.first().and_then(Json::as_str).unwrap_or("");
-        let names: Names = raw.get(2).map(decode).and_then(|n| of(&n)).unwrap_or_default();
+        let names: Names = raw
+            .get(2)
+            .map(decode)
+            .and_then(|n| of(&n))
+            .unwrap_or_default();
         return Some(Outcome::Answer(opt(blank_reason(text, &ok, &names))));
     }
     let args: Vec<Json> = raw.iter().map(decode).collect();
@@ -113,7 +117,12 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             } else {
                 HistoryInsert::Answer
             };
-            json!(ans::insertable_history_reuse(&a(0), form(&a(1)), insert, sig(3)))
+            json!(ans::insertable_history_reuse(
+                &a(0),
+                form(&a(1)),
+                insert,
+                sig(3)
+            ))
         }
         ("lib/answer", "normalizeHistoryInsert") => to(&ans::normalize_history_insert(&a(0))),
         ("lib/answer", "prettyRoots") => json!(ans::pretty_roots(&s(0))),
@@ -143,7 +152,11 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         // ---- lib/chain ----
         ("lib/chain", "chainsFromAnswer") => {
             let last: Option<ChainAnswer> = a(1).as_object().map(|o| ChainAnswer {
-                plain: o.get("plain").and_then(Json::as_str).unwrap_or("").to_string(),
+                plain: o
+                    .get("plain")
+                    .and_then(Json::as_str)
+                    .unwrap_or("")
+                    .to_string(),
                 unit: o.get("unit").and_then(Json::as_bool).unwrap_or(false),
             });
             json!(chain::chains_from_answer(&s(0), last.as_ref()))
@@ -179,13 +192,17 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/history", "lastHistoryNumber") => opt(h::last_history_number(&rows(&a(0)))),
         // ---- lib/historyShow ----
         ("lib/historyShow", "normalizeHistoryShow") => to(&hs::normalize_history_show(&a(0))),
-        ("lib/historyShow", "recentStart") => json!(hs::recent_start(&rows(&a(0)), n(1).unwrap_or(0.0))),
+        ("lib/historyShow", "recentStart") => {
+            json!(hs::recent_start(&rows(&a(0)), n(1).unwrap_or(0.0)))
+        }
         ("lib/historyShow", "scopeStart") => json!(hs::scope_start(
             &rows(&a(0)),
             hs::normalize_history_show(&a(1)),
             n(2).unwrap_or(0.0)
         )),
-        ("lib/historyShow", "nextRecentExpiry") => opt(hs::next_recent_expiry(&rows(&a(0)), n(1).unwrap_or(0.0))),
+        ("lib/historyShow", "nextRecentExpiry") => {
+            opt(hs::next_recent_expiry(&rows(&a(0)), n(1).unwrap_or(0.0)))
+        }
         // ---- lib/identities ----
         ("lib/identities", "identityLabel") => {
             let lead: Vec<String> = of(&a(1)).unwrap_or_default();
@@ -224,7 +241,9 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             Some(act) => json!(kb::keybind_for(&keybinds(&a(0)), act, b(2))),
             None => return Some(Outcome::Unported),
         },
-        ("lib/keybinds", "keybindsEqual") => json!(kb::keybinds_equal(&keybinds(&a(0)), &keybinds(&a(1)))),
+        ("lib/keybinds", "keybindsEqual") => {
+            json!(kb::keybinds_equal(&keybinds(&a(0)), &keybinds(&a(1))))
+        }
         ("lib/keybinds", "missedKeyText") => json!(kb::missed_key_text(&s(0))),
         ("lib/keybinds", "sanitizeKeybinds") => kb::keybinds_json(&kb::sanitize_keybinds(&a(0))),
         ("lib/keybinds", "setKeybind") => match action(&a(1)) {
@@ -235,11 +254,19 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         // ---- lib/knownWords ----
         ("lib/knownWords", "knownWordSpans") => {
             let fns: Vec<String> = of(&a(1)).unwrap_or_default();
-            to(&crate::app::known_words::known_word_spans(&s(0), &fns, b(2)))
+            to(&crate::app::known_words::known_word_spans(
+                &s(0),
+                &fns,
+                b(2),
+            ))
         }
         // ---- lib/onboarding ----
-        ("lib/onboarding", "advanceRotation") => to(&ob::advance_rotation(of(&a(0)).unwrap_or_default())),
-        ("lib/onboarding", "dismissRotation") => to(&ob::dismiss_rotation(of(&a(0)).unwrap_or_default())),
+        ("lib/onboarding", "advanceRotation") => {
+            to(&ob::advance_rotation(of(&a(0)).unwrap_or_default()))
+        }
+        ("lib/onboarding", "dismissRotation") => {
+            to(&ob::dismiss_rotation(of(&a(0)).unwrap_or_default()))
+        }
         ("lib/onboarding", "startRotation") => to(&ob::start_rotation(b(0))),
         ("lib/onboarding", "rotationItem") => {
             let r: Rotation = of(&a(0)).unwrap_or_default();
@@ -260,7 +287,10 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         }
         ("lib/onboarding", "exampleList") => to(&ob::example_list(a(0).as_str())),
         ("lib/onboarding", "examplesActive") => json!(ob::examples_active(&onboarding(&a(0)))),
-        ("lib/onboarding", "mergeOnboarding") => to(&ob::merge_onboarding(&onboarding(&a(0)), &onboarding(&a(1)))),
+        ("lib/onboarding", "mergeOnboarding") => to(&ob::merge_onboarding(
+            &onboarding(&a(0)),
+            &onboarding(&a(1)),
+        )),
         ("lib/onboarding", "pickHint") => {
             let facts: HintFacts = of(&a(1)).unwrap_or_default();
             let on: HintOn = of(&a(2)).unwrap_or_default();
@@ -274,13 +304,17 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         // ---- lib/settings ----
         ("lib/settings", "defaultSettings") => st::default_settings().to_json(),
         ("lib/settings", "mergeSettings") => st::merge_settings(&a(0), &settings(&a(1))).to_json(),
-        ("lib/settings", "settingsEqual") => json!(st::settings_equal(&settings(&a(0)), &settings(&a(1)))),
+        ("lib/settings", "settingsEqual") => {
+            json!(st::settings_equal(&settings(&a(0)), &settings(&a(1))))
+        }
         ("lib/settings", "mergeNativeInfo") => {
             let base: NativeInfo = of(&a(1)).unwrap_or_default();
             to(&st::merge_native_info(&a(0), &base))
         }
         ("lib/settings", "toggleAngleMode") => st::toggle_angle_mode(&settings(&a(0))).to_json(),
-        ("lib/settings", "toggleFractionMode") => st::toggle_fraction_mode(&settings(&a(0))).to_json(),
+        ("lib/settings", "toggleFractionMode") => {
+            st::toggle_fraction_mode(&settings(&a(0))).to_json()
+        }
         ("lib/settings", "toggleSigFigMode") => st::toggle_sig_fig_mode(&settings(&a(0))).to_json(),
         // ---- lib/steady ----
         ("lib/steady", "isEditOf") => json!(crate::app::steady::is_edit_of(&s(0), &s(1))),
@@ -303,7 +337,12 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/undo", "editKind") => opt(un::edit_kind(a(0).as_str())),
         ("lib/undo", "recordEdit") => {
             let next: UndoState = of(&a(1)).unwrap_or_default();
-            to(&un::record_edit(&undo_of(&a(0)), next, of(&a(2)), n(3).unwrap_or(0.0)))
+            to(&un::record_edit(
+                &undo_of(&a(0)),
+                next,
+                of(&a(2)),
+                n(3).unwrap_or(0.0),
+            ))
         }
         ("lib/undo", "breakRun") => to(&un::break_run(&undo_of(&a(0)))),
         ("lib/undo", "undo") => opt(un::undo(&undo_of(&a(0)))),

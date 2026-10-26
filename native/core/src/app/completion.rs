@@ -12,24 +12,104 @@ use crate::scientific::NAMES as SCIENTIFIC_NAMES;
 
 /// Ranked: the first name a prefix reaches is the one offered.
 pub const COMPLETION_FUNCTIONS: &[&str] = &[
-    "sqrt", "sin", "cos", "tan", "log", "abs", "exp", "floor", "ceil", "round", "factorial", "asin", "acos", "atan",
-    "sinh", "cosh", "tanh", "arcsin", "arccos", "arctan", "gcd", "gcf", "lcf", "lcm", "mean", "median", "sum", "max",
-    "min", "nthRoot", "hypot", "combinations", "permutations",
+    "sqrt",
+    "sin",
+    "cos",
+    "tan",
+    "log",
+    "abs",
+    "exp",
+    "floor",
+    "ceil",
+    "round",
+    "factorial",
+    "asin",
+    "acos",
+    "atan",
+    "sinh",
+    "cosh",
+    "tanh",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "gcd",
+    "gcf",
+    "lcf",
+    "lcm",
+    "mean",
+    "median",
+    "sum",
+    "max",
+    "min",
+    "nthRoot",
+    "hypot",
+    "combinations",
+    "permutations",
 ];
 
 pub const COMPLETION_UNITS: &[&str] = &[
-    "kilogram", "kilometer", "meter", "centimeter", "millimeter", "mile", "minute", "milliliter", "milligram", "gram",
-    "pound", "ounce", "inch", "feet", "foot", "yard", "liter", "gallon", "quart", "pint", "cup", "tablespoon",
-    "teaspoon", "second", "hour", "day", "week", "month", "year", "celsius", "fahrenheit", "kelvin", "joule",
-    "calorie", "kilocalorie", "watt", "kilowatt", "newton", "pascal", "atmosphere", "degree", "radian", "kilobyte",
-    "megabyte", "gigabyte", "terabyte", "acre", "hectare", "hertz", "knot", "horsepower", "volt", "ampere",
+    "kilogram",
+    "kilometer",
+    "meter",
+    "centimeter",
+    "millimeter",
+    "mile",
+    "minute",
+    "milliliter",
+    "milligram",
+    "gram",
+    "pound",
+    "ounce",
+    "inch",
+    "feet",
+    "foot",
+    "yard",
+    "liter",
+    "gallon",
+    "quart",
+    "pint",
+    "cup",
+    "tablespoon",
+    "teaspoon",
+    "second",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "year",
+    "celsius",
+    "fahrenheit",
+    "kelvin",
+    "joule",
+    "calorie",
+    "kilocalorie",
+    "watt",
+    "kilowatt",
+    "newton",
+    "pascal",
+    "atmosphere",
+    "degree",
+    "radian",
+    "kilobyte",
+    "megabyte",
+    "gigabyte",
+    "terabyte",
+    "acre",
+    "hectare",
+    "hertz",
+    "knot",
+    "horsepower",
+    "volt",
+    "ampere",
 ];
 
 // these become √ and Σ, which read their argument without parens
 const NO_PAREN: [&str; 2] = ["sqrt", "sum"];
 
 // a prefix on its own (`kilo`) still reads as the start of a longer unit
-const PREFIX_WORDS: [&str; 8] = ["kilo", "mega", "giga", "tera", "milli", "micro", "nano", "centi"];
+const PREFIX_WORDS: [&str; 8] = [
+    "kilo", "mega", "giga", "tera", "milli", "micro", "nano", "centi",
+];
 
 /// The user's names: variables and functions finish first, contacts finish `message <name>`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,7 +144,11 @@ fn is_whole_word(word: &str, user: &[&String]) -> bool {
 }
 
 /// The rest of `prefix` among `list`, longer than it (`find` order).
-fn finish<'a>(list: impl IntoIterator<Item = &'a str>, prefix: &str, lower: bool) -> Option<&'a str> {
+fn finish<'a>(
+    list: impl IntoIterator<Item = &'a str>,
+    prefix: &str,
+    lower: bool,
+) -> Option<&'a str> {
     let p = if lower {
         prefix.to_lowercase()
     } else {
@@ -88,7 +172,12 @@ pub fn completion_for(text: &str, names: &CompletionNames) -> String {
     static MESSAGE: Lazy = Lazy::new(|| js(r"^\s*message\s", "i"));
     static PERIODIC: Lazy = Lazy::new(|| js(r"^\s*periodic\s+([A-Za-z]*)$", "i"));
     static GAS: Lazy = Lazy::new(|| js(r"^\s*chem\s+r\s+([A-Za-z]+)$", "i"));
-    static PART: Lazy = Lazy::new(|| js(r"^\s*(?:identities|identity|idt)\s+([A-Za-z][A-Za-z ]*)$", "i"));
+    static PART: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(?:identities|identity|idt)\s+([A-Za-z][A-Za-z ]*)$",
+            "i",
+        )
+    });
     static WORD: Lazy = Lazy::new(|| js(r"(^|[^A-Za-z])([A-Za-z]{2,})$", ""));
     static UNIT_SPOT: Lazy = Lazy::new(|| js(r"(?:\d|\)|\b(?:in|to))\s*$", "i"));
     let cap = |re: &jsre::Regex| {

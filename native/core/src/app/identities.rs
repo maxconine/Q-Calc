@@ -52,17 +52,13 @@ pub const LEAD_WIDTHS: [u32; 2] = [64, 28];
 
 /// All four sheets, in the TS order.
 pub fn sheets() -> &'static [IdentitySheet] {
-    static SHEETS: LazyLock<Vec<IdentitySheet>> = LazyLock::new(|| {
-        serde_json::from_str(include_str!("identities.json")).unwrap_or_default()
-    });
+    static SHEETS: LazyLock<Vec<IdentitySheet>> =
+        LazyLock::new(|| serde_json::from_str(include_str!("identities.json")).unwrap_or_default());
     &SHEETS
 }
 
 fn sheet(id: &str) -> &'static IdentitySheet {
-    sheets()
-        .iter()
-        .find(|s| s.id == id)
-        .unwrap_or(&sheets()[0])
+    sheets().iter().find(|s| s.id == id).unwrap_or(&sheets()[0])
 }
 
 /// The sheet with this id (the Windows sheet window's page is told only the id).
@@ -78,20 +74,64 @@ struct Part {
 }
 
 const PARTS: [Part; 9] = [
-    Part { names: r"^trig(?:onometry|onometric)?$", sheet: "identities", section: "Trig" },
-    Part { names: r"^(?:logs?|logarithms?|exponents?)$", sheet: "identities", section: "Logs and exponents" },
-    Part { names: r"^algebra$", sheet: "identities", section: "Algebra" },
-    Part { names: r"^(?:integration|integrals?|antiderivatives?)$", sheet: "calculus", section: "Integrals" },
-    Part { names: r"^(?:partial(?: fractions?)?|pf)$", sheet: "identities", section: "Partial fractions" },
-    Part { names: r"^(?:summations?|sums?|series|sigma)$", sheet: "identities", section: "Summation" },
-    Part { names: r"^(?:derivatives?|differentiation)$", sheet: "calculus", section: "Derivatives" },
-    Part { names: r"^(?:(?:physical )?constants?|codata)$", sheet: "constants", section: "CODATA 2022" },
-    Part { names: r"^(?:conversions?|units?|prefixes)$", sheet: "conversions", section: "Metric prefixes" },
+    Part {
+        names: r"^trig(?:onometry|onometric)?$",
+        sheet: "identities",
+        section: "Trig",
+    },
+    Part {
+        names: r"^(?:logs?|logarithms?|exponents?)$",
+        sheet: "identities",
+        section: "Logs and exponents",
+    },
+    Part {
+        names: r"^algebra$",
+        sheet: "identities",
+        section: "Algebra",
+    },
+    Part {
+        names: r"^(?:integration|integrals?|antiderivatives?)$",
+        sheet: "calculus",
+        section: "Integrals",
+    },
+    Part {
+        names: r"^(?:partial(?: fractions?)?|pf)$",
+        sheet: "identities",
+        section: "Partial fractions",
+    },
+    Part {
+        names: r"^(?:summations?|sums?|series|sigma)$",
+        sheet: "identities",
+        section: "Summation",
+    },
+    Part {
+        names: r"^(?:derivatives?|differentiation)$",
+        sheet: "calculus",
+        section: "Derivatives",
+    },
+    Part {
+        names: r"^(?:(?:physical )?constants?|codata)$",
+        sheet: "constants",
+        section: "CODATA 2022",
+    },
+    Part {
+        names: r"^(?:conversions?|units?|prefixes)$",
+        sheet: "conversions",
+        section: "Metric prefixes",
+    },
 ];
 
 /// The subfields `identities` takes, in completion's order.
 pub const IDENTITY_PARTS: [&str; 9] = [
-    "trig", "logs", "algebra", "integration", "partial fractions", "summation", "derivatives", "constants", "conversions",
+    "trig",
+    "logs",
+    "algebra",
+    "integration",
+    "partial fractions",
+    "summation",
+    "derivatives",
+    "constants",
+    "conversions",
 ];
 
 /// Where a bar line opens on ↵: a sheet, the index of the section to show first, and what the bar says.
@@ -108,7 +148,11 @@ fn at(sheet_id: &str, section_title: Option<&str>) -> IdentityTarget {
         .and_then(|t| sheet.sections.iter().position(|s| s.title == t))
         .unwrap_or(0);
     let hint = if section > 0 {
-        format!("{}: {}", sheet.hint, sheet.sections[section].title.to_lowercase())
+        format!(
+            "{}: {}",
+            sheet.hint,
+            sheet.sections[section].title.to_lowercase()
+        )
     } else {
         sheet.hint.clone()
     };
@@ -127,16 +171,28 @@ pub fn identity_target_for(text: &str) -> Option<IdentityTarget> {
     static PARTIAL: Lazy = Lazy::new(|| js(r"^partial fractions$", "i"));
     static IDT: Lazy = Lazy::new(|| js(r"^idt$", "i"));
     static IDENTITY_WORDS: Lazy = Lazy::new(|| {
-        js(r"^(?:(?:trig(?:onometric|onometry)?|log(?:arithm(?:ic)?)?|exponent|algebra(?:ic)?|math)\s+)?identit(?:y|ies)$", "i")
+        js(
+            r"^(?:(?:trig(?:onometric|onometry)?|log(?:arithm(?:ic)?)?|exponent|algebra(?:ic)?|math)\s+)?identit(?:y|ies)$",
+            "i",
+        )
     });
     static CONVERSION_WORDS: Lazy = Lazy::new(|| {
-        js(r"^(?:(?:(?:unit|metric)\s+)?conversions?(?:\s+(?:table|sheet|factors))?|(?:(?:metric|si)\s+)?prefix(?:es)?(?:\s+table)?|metric(?:\s+(?:table|system))?|units?\s+(?:table|sheet))$", "i")
+        js(
+            r"^(?:(?:(?:unit|metric)\s+)?conversions?(?:\s+(?:table|sheet|factors))?|(?:(?:metric|si)\s+)?prefix(?:es)?(?:\s+table)?|metric(?:\s+(?:table|system))?|units?\s+(?:table|sheet))$",
+            "i",
+        )
     });
     static CALCULUS_WORDS: Lazy = Lazy::new(|| {
-        js(r"^(?:(?:common\s+)?(?:derivatives?|integrals?)|calculus(?:\s+(?:identities|sheet|rules))?|derivative\s+rules)$", "i")
+        js(
+            r"^(?:(?:common\s+)?(?:derivatives?|integrals?)|calculus(?:\s+(?:identities|sheet|rules))?|derivative\s+rules)$",
+            "i",
+        )
     });
     static CONSTANTS_WORDS: Lazy = Lazy::new(|| {
-        js(r"^(?:(?:physical|physics|fundamental)\s+)?constants(?:\s+(?:table|sheet))?$|^codata$", "i")
+        js(
+            r"^(?:(?:physical|physics|fundamental)\s+)?constants(?:\s+(?:table|sheet))?$|^codata$",
+            "i",
+        )
     });
     static PART_RES: LazyLock<Vec<jsre::Regex>> =
         LazyLock::new(|| PARTS.iter().map(|p| js(p.names, "")).collect());
@@ -245,7 +301,12 @@ pub fn identity_runs(show: &str) -> Vec<Run> {
 
 /// The plain text a screen reader gets for a line.
 pub fn identity_label(show: &str, lead: &[String]) -> String {
-    let plain = |t: &str| identity_runs(t).into_iter().map(|r| r.text).collect::<String>();
+    let plain = |t: &str| {
+        identity_runs(t)
+            .into_iter()
+            .map(|r| r.text)
+            .collect::<String>()
+    };
     lead.iter()
         .map(String::as_str)
         .chain(std::iter::once(show))

@@ -28,7 +28,9 @@ pub fn line_copy_text(
         };
     }
     // `x = 5` already says its answer
-    let after_eq = line.rfind('=').map_or_else(|| line.to_string(), |i| skip16(line, len16(&line[..i]) + 1));
+    let after_eq = line
+        .rfind('=')
+        .map_or_else(|| line.to_string(), |i| skip16(line, len16(&line[..i]) + 1));
     if line.contains('=') && jstr::trim(&after_eq) == shown_trim {
         return line.to_string();
     }

@@ -9,23 +9,24 @@ use crate::jsre::{self, Lazy, js};
 use crate::scientific::NAMES as SCIENTIFIC_NAMES;
 
 fn names() -> &'static (BTreeSet<String>, Vec<String>) {
-    static NAMES: std::sync::LazyLock<(BTreeSet<String>, Vec<String>)> = std::sync::LazyLock::new(|| {
-        let set: BTreeSet<String> = SCIENTIFIC_NAMES
-            .split('|')
-            .filter(|n| !["pi", "tau", "inf", "infinity", "ans"].contains(n))
-            .map(str::to_lowercase)
-            .collect();
-        // insertion order of the TS Set, then a stable sort by length: the first of equal-length names wins
-        let mut seen = BTreeSet::new();
-        let mut longest: Vec<String> = SCIENTIFIC_NAMES
-            .split('|')
-            .filter(|n| !["pi", "tau", "inf", "infinity", "ans"].contains(n))
-            .map(str::to_lowercase)
-            .filter(|n| seen.insert(n.clone()))
-            .collect();
-        longest.sort_by_key(|n| std::cmp::Reverse(n.len()));
-        (set, longest)
-    });
+    static NAMES: std::sync::LazyLock<(BTreeSet<String>, Vec<String>)> =
+        std::sync::LazyLock::new(|| {
+            let set: BTreeSet<String> = SCIENTIFIC_NAMES
+                .split('|')
+                .filter(|n| !["pi", "tau", "inf", "infinity", "ans"].contains(n))
+                .map(str::to_lowercase)
+                .collect();
+            // insertion order of the TS Set, then a stable sort by length: the first of equal-length names wins
+            let mut seen = BTreeSet::new();
+            let mut longest: Vec<String> = SCIENTIFIC_NAMES
+                .split('|')
+                .filter(|n| !["pi", "tau", "inf", "infinity", "ans"].contains(n))
+                .map(str::to_lowercase)
+                .filter(|n| seen.insert(n.clone()))
+                .collect();
+            longest.sort_by_key(|n| std::cmp::Reverse(n.len()));
+            (set, longest)
+        });
     &NAMES
 }
 

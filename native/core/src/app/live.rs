@@ -36,9 +36,13 @@ use crate::app::answer::{
 };
 use crate::app::answer_forms::{FormSource, answer_forms};
 use crate::app::blank_reason::{EnterFacts, Names, Span, blank_reason, enter_hint};
-use crate::app::chain::{ChainAnswer, ans_written_out, chained_expr, chained_history_expr, chains_from_answer};
+use crate::app::chain::{
+    ChainAnswer, ans_written_out, chained_expr, chained_history_expr, chains_from_answer,
+};
 use crate::app::completion::{CompletionNames, completion_for};
-use crate::app::games::{GAMES_HINT, PERIODIC_HINT, game_command, game_hint, is_games_command, is_periodic_command};
+use crate::app::games::{
+    GAMES_HINT, PERIODIC_HINT, game_command, game_hint, is_games_command, is_periodic_command,
+};
 use crate::app::greeting::{GREETING_REPLY, is_greeting};
 use crate::app::history as hist;
 use crate::app::history_show::{HistoryShow, scope_start};
@@ -57,7 +61,8 @@ use crate::format::{DEFAULT_SIG_FIGS, format_value};
 use crate::jsre::{self, Lazy, js};
 use crate::simplify::dual_label;
 use crate::types::{
-    EvaluateOptions, LineKind, LineResult, Meas, SolveInfo, SolveOutcome, UserFunction, Value, ValueKind,
+    EvaluateOptions, LineKind, LineResult, Meas, SolveInfo, SolveOutcome, UserFunction, Value,
+    ValueKind,
 };
 use crate::units::is_improper_unit_conversion;
 
@@ -108,8 +113,13 @@ pub enum LiveCommand {
     Greeting,
     Message,
     /// `identities …`: the sheet id and the section to open at.
-    Identity { sheet: String, section: usize },
-    Game { game: crate::app::games::GameKind },
+    Identity {
+        sheet: String,
+        section: usize,
+    },
+    Game {
+        game: crate::app::games::GameKind,
+    },
     Games,
     Tutorial,
     Help,
@@ -173,13 +183,19 @@ pub struct LiveAnswer {
 
 /// `soulverAngleSafe` (lib/nativeEval.ts): in degree mode a phrase never answers anything with trig in it.
 fn angle_safe(expr: &str, options: &EvaluateOptions) -> bool {
-    static TRIG: Lazy = Lazy::new(|| js(r"(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan|sec|csc|cot)(?![A-Za-z])", "i"));
+    static TRIG: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan|sec|csc|cot)(?![A-Za-z])",
+            "i",
+        )
+    });
     options.angle() == crate::types::AngleMode::Rad || !jsre::test(&TRIG, expr)
 }
 
 /// `mergeLiveAnswer` with no native answer (the Mac no longer has SoulverCore): the engine's, or blank.
 fn merge_live_answer(expr: &str, js_display: &str, js_n: Option<f64>) -> (String, Option<f64>) {
-    static SUM_LINE: Lazy = Lazy::new(|| js(r"[Σ∑Π∏]|^\s*\\?(?:sum|prod|product)(?![A-Za-z0-9])", "i"));
+    static SUM_LINE: Lazy =
+        Lazy::new(|| js(r"[Σ∑Π∏]|^\s*\\?(?:sum|prod|product)(?![A-Za-z0-9])", "i"));
     if jstr::trim(expr).is_empty() {
         return (String::new(), None);
     }
@@ -198,7 +214,12 @@ fn merge_live_answer(expr: &str, js_display: &str, js_n: Option<f64>) -> (String
 
 /// `withPhraseAnswer` (lib/phraseLive.ts): a phrase beats the engine on natural language and otherwise only fills
 /// a blank. Returns the phrase's answer when it wins.
-fn phrase_answer(req: &LiveRequest, js_display: &str, enabled: bool, sig_figs: f64) -> Option<(String, Option<f64>)> {
+fn phrase_answer(
+    req: &LiveRequest,
+    js_display: &str,
+    enabled: bool,
+    sig_figs: f64,
+) -> Option<(String, Option<f64>)> {
     let expr = req.text.as_str();
     if !enabled || jstr::trim(expr).is_empty() || crate::stubs::is_calculus_input(expr) {
         return None;
@@ -212,7 +233,11 @@ fn phrase_answer(req: &LiveRequest, js_display: &str, enabled: bool, sig_figs: f
 /// The squiggle's and ↵'s evaluator: whether a piece of text answers (through `ans` when the line chains).
 pub fn evaluates(options: &EvaluateOptions, chained: bool) -> impl Fn(&str) -> bool + '_ {
     move |text: &str| {
-        let text = if chained { chained_expr(text) } else { text.to_string() };
+        let text = if chained {
+            chained_expr(text)
+        } else {
+            text.to_string()
+        };
         crate::evaluate_sheet(&[text], options)
             .first()
             .is_some_and(|r| !r.display.is_empty())
@@ -242,7 +267,11 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let tutorial = is_tutorial_command(q);
     let help = is_help_command(q);
     let games = is_games_command(q);
-    let intent = if graph_cmd { parse_graph_intent(q, &o.functions) } else { None };
+    let intent = if graph_cmd {
+        parse_graph_intent(q, &o.functions)
+    } else {
+        None
+    };
     let function_def = intent.as_ref().and_then(|i| i.function_def.clone());
     let mut options = o.clone();
     if let Some(d) = &function_def {
@@ -257,7 +286,8 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
 
     // `isolate x` or `solve for x` alone works on the equation in the row before
     let isolated = isolate_previous(q, req.last_expr.as_deref());
-    let chained = !graph_cmd && isolated.is_none() && chains_from_answer(q, req.chain_answer.as_ref());
+    let chained =
+        !graph_cmd && isolated.is_none() && chains_from_answer(q, req.chain_answer.as_ref());
     let plain = req.chain_answer.as_ref().map(|c| c.plain.as_str());
     let tape = match plain {
         Some(p) if chained => chained_history_expr(q, p),
@@ -268,9 +298,20 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         None if chained => tape.clone(),
         None => String::new(),
     });
-    let typst_expr = if chained { chained_expr(q) } else { q.to_string() };
-    let a_command = graph_cmd || sys_cmd || periodic_cmd || identity.is_some() || pong.is_some() || tutorial;
-    let expr = isolated.clone().unwrap_or_else(|| if chained { chained_expr(q) } else { q.to_string() });
+    let typst_expr = if chained {
+        chained_expr(q)
+    } else {
+        q.to_string()
+    };
+    let a_command =
+        graph_cmd || sys_cmd || periodic_cmd || identity.is_some() || pong.is_some() || tutorial;
+    let expr = isolated.clone().unwrap_or_else(|| {
+        if chained {
+            chained_expr(q)
+        } else {
+            q.to_string()
+        }
+    });
     let line = (!a_command).then(|| {
         crate::evaluate_sheet(std::slice::from_ref(&expr), &options)
             .pop()
@@ -294,7 +335,8 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         .map(|a| a.display.clone())
         .or_else(|| sys_hint.clone())
         .unwrap_or_default();
-    let sys_message = sys_cmd && (sys_answer.as_ref().is_some_and(|a| a.message) || sys_hint.is_some());
+    let sys_message =
+        sys_cmd && (sys_answer.as_ref().is_some_and(|a| a.message) || sys_hint.is_some());
 
     let js_display = if graph_cmd {
         intent
@@ -302,7 +344,8 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
             .filter(|i| !i.label.is_empty())
             .map_or_else(String::new, |i| format!("graph {}", i.label))
     } else if !jstr::trim(q).is_empty() {
-        line.as_ref().map_or_else(String::new, |l| l.display.clone())
+        line.as_ref()
+            .map_or_else(String::new, |l| l.display.clone())
     } else {
         String::new()
     };
@@ -310,7 +353,9 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let js_n = if graph_cmd || sys_cmd {
         None
     } else {
-        line_value.filter(|v| v.kind == ValueKind::Number).map(|v| v.n)
+        line_value
+            .filter(|v| v.kind == ValueKind::Number)
+            .map(|v| v.n)
     };
     let native_usable = !a_command && !chained && angle_safe(q, o);
     let (mut merged_display, mut merged_n) = merge_live_answer(q, &js_display, js_n);
@@ -320,7 +365,8 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         phrase = true;
     }
     // ⌥↑/⌥↓ re-expresses the engine's answer on its SI prefix ladder; what's shown is what's copied and saved
-    let js_value = line_value.filter(|_| !graph_cmd && !js_display.is_empty() && merged_display == js_display);
+    let js_value =
+        line_value.filter(|_| !graph_cmd && !js_display.is_empty() && merged_display == js_display);
     let stepped = match (&req.prefix_unit, js_value) {
         (Some(u), Some(v)) => in_ladder_unit(v, u),
         _ => None,
@@ -328,11 +374,14 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let base_display = stepped
         .as_ref()
         .map_or_else(|| merged_display.clone(), |s| format_value(s, sig_figs));
-    let base_exact = if graph_cmd || stepped.is_some() || jstr::trim(q).is_empty() || js_display.is_empty() {
-        None
-    } else {
-        line.as_ref().and_then(|l| l.exact.clone()).or_else(|| req.closed_form.clone())
-    };
+    let base_exact =
+        if graph_cmd || stepped.is_some() || jstr::trim(q).is_empty() || js_display.is_empty() {
+            None
+        } else {
+            line.as_ref()
+                .and_then(|l| l.exact.clone())
+                .or_else(|| req.closed_form.clone())
+        };
     // Tab re-expresses the answer; the form shown is what's copied and saved
     let form_value = stepped.clone().or_else(|| js_value.cloned());
     let tab_form = match (&form_value, req.tab) {
@@ -351,9 +400,15 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         _ => None,
     };
     let display = if sys_cmd {
-        if sys_message { String::new() } else { sys_shown.clone() }
+        if sys_message {
+            String::new()
+        } else {
+            sys_shown.clone()
+        }
     } else {
-        tab_form.as_ref().map_or_else(|| base_display.clone(), |f| f.display.clone())
+        tab_form
+            .as_ref()
+            .map_or_else(|| base_display.clone(), |f| f.display.clone())
     };
     let number = if sys_cmd {
         None
@@ -365,7 +420,11 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         merged_n
     };
     let exact = if sys_cmd {
-        if sys_message { None } else { sys_answer.as_ref().and_then(|a| a.exact.clone()) }
+        if sys_message {
+            None
+        } else {
+            sys_answer.as_ref().and_then(|a| a.exact.clone())
+        }
     } else if tab_form.is_some() {
         None
     } else {
@@ -453,11 +512,17 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         || identity.is_some()
         || tutorial
         || pong.is_some()
-        || solve.as_ref().is_some_and(|s| s.outcome != SolveOutcome::Roots);
+        || solve
+            .as_ref()
+            .is_some_and(|s| s.outcome != SolveOutcome::Roots);
     let sides = Sides {
         exact: match &exact {
             Some(e) if !e.is_empty() => {
-                if solve.is_some() { e.clone() } else { insertable_answer(e, None, f64::from(DEFAULT_SIG_FIGS)) }
+                if solve.is_some() {
+                    e.clone()
+                } else {
+                    insertable_answer(e, None, f64::from(DEFAULT_SIG_FIGS))
+                }
             }
             _ => String::new(),
         },
@@ -470,9 +535,13 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         },
     };
     let roots = solve.as_ref().and_then(|s| {
-        solve_roots(&json!({ "solve": serde_json::to_value(s).unwrap_or(Json::Null) }), sig_figs)
+        solve_roots(
+            &json!({ "solve": serde_json::to_value(s).unwrap_or(Json::Null) }),
+            sig_figs,
+        )
     });
-    let typst_shown = req.typst_preview && !a_command && !help && !games && typst_preview_useful(&typst_expr);
+    let typst_shown =
+        req.typst_preview && !a_command && !help && !games && typst_preview_useful(&typst_expr);
     let typst_ans = if graph_cmd
         || periodic_cmd
         || identity.is_some()
@@ -525,8 +594,14 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         message,
         unit: stepped_or_js.and_then(|v| v.unit.clone()),
         value: form_value,
-        meas: line.as_ref().filter(|_| from_js).and_then(|l| l.meas.clone()),
-        quantity: line.as_ref().filter(|_| js_value.is_some()).and_then(|l| l.quantity.clone()),
+        meas: line
+            .as_ref()
+            .filter(|_| from_js)
+            .and_then(|l| l.meas.clone()),
+        quantity: line
+            .as_ref()
+            .filter(|_| js_value.is_some())
+            .and_then(|l| l.quantity.clone()),
         solve,
         roots_of,
         roots,
@@ -597,11 +672,15 @@ pub fn context_from_history(
     let chain_answer = hist::last_answer_row(rows).and_then(|last| {
         let plain = insertable_history_answer(last, answer_form, sig_figs);
         let quantity = last.get("quantity").and_then(Json::as_str);
-        let n_ok = last.get("n").and_then(Json::as_f64).is_some_and(f64::is_finite);
+        let n_ok = last
+            .get("n")
+            .and_then(Json::as_f64)
+            .is_some_and(f64::is_finite);
         // a chain needs the last answer row to be the one `ans` means
         (!plain.is_empty() && (n_ok || hist::is_literal_quantity(quantity))).then(|| ChainAnswer {
             plain,
-            unit: last.get("quantity").is_some_and(|q| !q.is_null()) && !hist::is_literal_quantity(quantity),
+            unit: last.get("quantity").is_some_and(|q| !q.is_null())
+                && !hist::is_literal_quantity(quantity),
         })
     });
     LiveContext {
@@ -662,7 +741,11 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         live.tape_expr.clone()
     };
     let fn_def = live.function_def.clone().or_else(|| {
-        parse_function_def(jstr::trim(&expr)).map(|(name, params, body)| FunctionDef { name, params, body })
+        parse_function_def(jstr::trim(&expr)).map(|(name, params, body)| FunctionDef {
+            name,
+            params,
+            body,
+        })
     });
     let is_graph = is_graph_command(&expr);
     let written = sys_now
@@ -700,7 +783,11 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         let span = if graph || jstr::trim(q).is_empty() {
             None
         } else {
-            blank_reason(q, &evaluates(&req.options, live.chained), &names_of(&req.options))
+            blank_reason(
+                q,
+                &evaluates(&req.options, live.chained),
+                &names_of(&req.options),
+            )
         };
         return unsaved(Some(enter_hint(&EnterFacts {
             expr: q.to_string(),
@@ -734,7 +821,10 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
     match &fn_def {
         Some(f) => {
             let text = fn_def_text(f);
-            row.insert("expr".into(), json!(if is_graph { text.clone() } else { expr.clone() }));
+            row.insert(
+                "expr".into(),
+                json!(if is_graph { text.clone() } else { expr.clone() }),
+            );
             row.insert("display".into(), json!(text));
             row.insert("kind".into(), json!("function"));
             row.insert("fnName".into(), json!(f.name));
@@ -744,7 +834,11 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         None => {
             row.insert("expr".into(), json!(expr));
             row.insert("display".into(), json!(shown));
-            if let Some(e) = live.exact.as_ref().filter(|e| **e != shown && !e.is_empty()) {
+            if let Some(e) = live
+                .exact
+                .as_ref()
+                .filter(|e| **e != shown && !e.is_empty())
+            {
                 row.insert("exact".into(), json!(e));
             }
             if let Some(n) = live.number.filter(|n| n.is_finite()) {
@@ -757,11 +851,17 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
                 row.insert("quantity".into(), json!(q));
             }
             if let Some(s) = &live.solve {
-                row.insert("solve".into(), serde_json::to_value(s).unwrap_or(Json::Null));
+                row.insert(
+                    "solve".into(),
+                    serde_json::to_value(s).unwrap_or(Json::Null),
+                );
             }
             if let Some(lines) = sys_now {
                 row.insert("kind".into(), json!("system"));
-                row.insert("equations".into(), json!(lines.iter().take(5).collect::<Vec<_>>()));
+                row.insert(
+                    "equations".into(),
+                    json!(lines.iter().take(5).collect::<Vec<_>>()),
+                );
             }
         }
     }
@@ -773,7 +873,9 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
     let system = next.get("kind").and_then(Json::as_str) == Some("system");
     let same_system = system && last.and_then(|l| l.get("equations")) == next.get("equations");
     let same = last.is_some_and(|l| {
-        l.get("expr") == next.get("expr") && l.get("display") == next.get("display") && (!system || same_system)
+        l.get("expr") == next.get("expr")
+            && l.get("display") == next.get("display")
+            && (!system || same_system)
     });
     let (saved_row, history) = if same {
         let mut refreshed = last.cloned().unwrap_or(Json::Null);
@@ -815,9 +917,15 @@ mod tests {
     #[test]
     fn answers_chains_and_commands() {
         let a = live(&req("2+3"));
-        assert_eq!((a.slot.as_str(), a.shown.as_str(), a.message), ("5", "5", false));
+        assert_eq!(
+            (a.slot.as_str(), a.shown.as_str(), a.message),
+            ("5", "5", false)
+        );
         let mut chain = req("*2");
-        chain.chain_answer = Some(ChainAnswer { plain: "-3".into(), unit: false });
+        chain.chain_answer = Some(ChainAnswer {
+            plain: "-3".into(),
+            unit: false,
+        });
         chain.options.ans = Some(-3.0);
         let c = live(&chain);
         assert!(c.chained);
@@ -840,8 +948,17 @@ mod tests {
         assert_eq!(again.history[0]["id"], "a");
         let blank = commit(&req("2+"), &[], "c");
         assert!(!blank.saved);
-        assert_eq!(blank.hint.as_deref(), Some("unfinished: something goes after the +"));
-        let ctx = context_from_history(&done.history, HistoryShow::Always, 0.0, AnswerForm::Exact, 6.0);
+        assert_eq!(
+            blank.hint.as_deref(),
+            Some("unfinished: something goes after the +")
+        );
+        let ctx = context_from_history(
+            &done.history,
+            HistoryShow::Always,
+            0.0,
+            AnswerForm::Exact,
+            6.0,
+        );
         assert_eq!(ctx.ans, Some(5.0));
         assert_eq!(ctx.chain_answer.map(|c| c.plain), Some("5".into()));
     }

@@ -18,7 +18,6 @@ pub enum HistoryShow {
 pub const RECENT_MS: f64 = 5.0 * 60.0 * 1000.0;
 pub const RECENT_ROWS: usize = 5;
 
-
 pub fn normalize_history_show(value: &Json) -> HistoryShow {
     match value.as_str() {
         Some("always") => HistoryShow::Always,
@@ -59,4 +58,3 @@ pub fn next_recent_expiry(rows: &[Json], now: f64) -> Option<f64> {
         .map(|at| at + RECENT_MS + 1.0)
         .reduce(f64::min)
 }
-

@@ -22,7 +22,6 @@ pub const MAX_HISTORY_DISPLAY: usize = 96;
 pub const MAX_HISTORY_EXACT: usize = 72;
 pub const MAX_HISTORY_JSON: usize = 16_384;
 
-
 // ---- small JS helpers over loose JSON ----
 
 fn str_of<'a>(row: &'a Json, key: &str) -> Option<&'a str> {
@@ -652,4 +651,3 @@ pub fn load_rows(text: &str, new_id: &mut dyn FnMut() -> String) -> Vec<Json> {
 pub fn file_text(rows: &[Json]) -> String {
     serde_json::to_string(&json!({ "version": 1, "rows": rows })).unwrap_or_default()
 }
-

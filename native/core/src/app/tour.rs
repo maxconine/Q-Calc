@@ -58,7 +58,13 @@ pub fn tour_steps(hotkey: &str) -> Vec<TourStep> {
             true,
             &format!("try it: {hotkey} hides me, {hotkey} again brings me back"),
         ),
-        step(TourId::Arithmetic, 1 << 15, "12 * 7", false, "type 12 * 7 and press ↵"),
+        step(
+            TourId::Arithmetic,
+            1 << 15,
+            "12 * 7",
+            false,
+            "type 12 * 7 and press ↵",
+        ),
         step(
             TourId::Units,
             1 << 16,
@@ -86,7 +92,13 @@ pub fn tour_steps(hotkey: &str) -> Vec<TourStep> {
 /// One per open once the basics are done, and only for what hasn't been used already.
 pub fn tour_extras() -> Vec<TourStep> {
     vec![
-        step(TourId::Solve, 1 << 19, "x^2 = 2", false, "you can also solve: type x^2 = 2"),
+        step(
+            TourId::Solve,
+            1 << 19,
+            "x^2 = 2",
+            false,
+            "you can also solve: type x^2 = 2",
+        ),
         step(
             TourId::Graph,
             1 << 20,
@@ -101,7 +113,13 @@ pub fn tour_extras() -> Vec<TourStep> {
             true,
             "periodic ↵ opens the periodic table",
         ),
-        step(TourId::Help, 1 << 22, "?", true, "? lists everything else, any time"),
+        step(
+            TourId::Help,
+            1 << 22,
+            "?",
+            true,
+            "? lists everything else, any time",
+        ),
     ]
 }
 
@@ -137,8 +155,15 @@ pub fn enrol_tour(s: &Onboarding, native: bool) -> Onboarding {
     if s.done || !native {
         return with(s.hints | TOUR_OFF);
     }
-    let known = (if s.opens >= 2 { tour_bit(TourId::Hotkey) } else { 0 })
-        | (if s.commits > 0 { tour_bit(TourId::Arithmetic) } else { 0 });
+    let known = (if s.opens >= 2 {
+        tour_bit(TourId::Hotkey)
+    } else {
+        0
+    }) | (if s.commits > 0 {
+        tour_bit(TourId::Arithmetic)
+    } else {
+        0
+    });
     with(s.hints | TOUR_ON | known)
 }
 

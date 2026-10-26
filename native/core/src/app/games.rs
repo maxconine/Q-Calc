@@ -31,14 +31,54 @@ pub struct Game {
 
 /// What `games` lists, in order.
 pub const GAMES: [Game; 8] = [
-    Game { kind: GameKind::Pong, name: "pong", blurb: "first to 7 · vs the computer or anyone online", hint: "↵ play pong" },
-    Game { kind: GameKind::Connect4, name: "connect 4", blurb: "four in a row · vs the computer or anyone online", hint: "↵ play connect 4" },
-    Game { kind: GameKind::Ultimate, name: "ultimate tic-tac-toe", blurb: "nine boards in one · vs the computer or anyone online", hint: "↵ play ultimate tic-tac-toe" },
-    Game { kind: GameKind::Ember, name: "ember & frost", blurb: "co-op puzzle platformer · one keyboard or online", hint: "↵ play ember & frost" },
-    Game { kind: GameKind::Crack, name: "crack", blurb: "crack the safe · tap when the dial hits the dot", hint: "↵ crack the safe" },
-    Game { kind: GameKind::Equal, name: "equal", blurb: "guess the hidden equation · daily or practice", hint: "↵ play equal" },
-    Game { kind: GameKind::Numbers, name: "24 / countdown", blurb: "make the number · two modes against the clock", hint: "↵ play 24 or countdown" },
-    Game { kind: GameKind::Trails, name: "trails", blurb: "leave a trail, don’t hit one · solo, one keyboard or online", hint: "↵ play trails" },
+    Game {
+        kind: GameKind::Pong,
+        name: "pong",
+        blurb: "first to 7 · vs the computer or anyone online",
+        hint: "↵ play pong",
+    },
+    Game {
+        kind: GameKind::Connect4,
+        name: "connect 4",
+        blurb: "four in a row · vs the computer or anyone online",
+        hint: "↵ play connect 4",
+    },
+    Game {
+        kind: GameKind::Ultimate,
+        name: "ultimate tic-tac-toe",
+        blurb: "nine boards in one · vs the computer or anyone online",
+        hint: "↵ play ultimate tic-tac-toe",
+    },
+    Game {
+        kind: GameKind::Ember,
+        name: "ember & frost",
+        blurb: "co-op puzzle platformer · one keyboard or online",
+        hint: "↵ play ember & frost",
+    },
+    Game {
+        kind: GameKind::Crack,
+        name: "crack",
+        blurb: "crack the safe · tap when the dial hits the dot",
+        hint: "↵ crack the safe",
+    },
+    Game {
+        kind: GameKind::Equal,
+        name: "equal",
+        blurb: "guess the hidden equation · daily or practice",
+        hint: "↵ play equal",
+    },
+    Game {
+        kind: GameKind::Numbers,
+        name: "24 / countdown",
+        blurb: "make the number · two modes against the clock",
+        hint: "↵ play 24 or countdown",
+    },
+    Game {
+        kind: GameKind::Trails,
+        name: "trails",
+        blurb: "leave a trail, don’t hit one · solo, one keyboard or online",
+        hint: "↵ play trails",
+    },
 ];
 
 fn squashed(text: &str) -> String {
@@ -49,14 +89,27 @@ fn squashed(text: &str) -> String {
 fn is(kind: GameKind, text: &str) -> bool {
     static PONG: Lazy = Lazy::new(|| js(r"^pong$", "i"));
     static CONNECT4: Lazy = Lazy::new(|| js(r"^connect[\s-]*(4|four)$", "i"));
-    static ULTIMATE: Lazy = Lazy::new(|| js(r"^(ultimate([\s-]*(tic[\s-]*tac[\s-]*toe|ttt))?|uttt)$", "i"));
+    static ULTIMATE: Lazy = Lazy::new(|| {
+        js(
+            r"^(ultimate([\s-]*(tic[\s-]*tac[\s-]*toe|ttt))?|uttt)$",
+            "i",
+        )
+    });
     static EMBER: Lazy = Lazy::new(|| {
         let and = r"(?: ?[&+] ?| and )";
-        js(&format!(r"^(?:ember(?:{and}frost)?|frost{and}ember|fire(?:{and}| )ice)$"), "i")
+        js(
+            &format!(r"^(?:ember(?:{and}frost)?|frost{and}ember|fire(?:{and}| )ice)$"),
+            "i",
+        )
     });
     static CRACK: Lazy = Lazy::new(|| js(r"^(?:crack(?: the safe)?|safe ?crack(?:er|ing)?)$", "i"));
     static EQUAL: Lazy = Lazy::new(|| js(r"^(?:equal|nerdle)$", "i"));
-    static NUMBERS: Lazy = Lazy::new(|| js(r"^(?:24 ?game|game of 24|count ?down|numbers game|24 ?\/ ?countdown)$", "i"));
+    static NUMBERS: Lazy = Lazy::new(|| {
+        js(
+            r"^(?:24 ?game|game of 24|count ?down|numbers game|24 ?\/ ?countdown)$",
+            "i",
+        )
+    });
     static TRAILS: Lazy = Lazy::new(|| js(r"^(?:trails?|cycles)$", "i"));
     let t = jstr::trim(text);
     match kind {
