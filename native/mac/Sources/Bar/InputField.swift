@@ -120,8 +120,15 @@ final class BarTextView: NSTextView {
 
     private func updateInset() {
         let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: [.font: font!]).width + 2
-        textContainerInset = NSSize(width: lead, height: 0)
+        // the line sits in the middle of its 36 pt box, as the web input's does
+        let line = layoutManager?.defaultLineHeight(for: font!) ?? Self.fontSize * 1.2
+        textContainerInset = NSSize(width: lead, height: max(0, (bounds.height - line) / 2))
         needsDisplay = true
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        updateInset()
     }
 
     override var acceptsFirstResponder: Bool { true }
@@ -171,7 +178,7 @@ final class BarTextView: NSTextView {
         // the completion's rest, faint, right after the text while the caret is at the end
         if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length, let lm = layoutManager, let tc = textContainer {
             let used = lm.usedRect(for: tc)
-            (ghostTail as NSString).draw(at: NSPoint(x: textContainerInset.width + used.maxX, y: 0), withAttributes: attrs)
+            (ghostTail as NSString).draw(at: NSPoint(x: textContainerInset.width + used.maxX, y: textContainerInset.height), withAttributes: attrs)
         }
         if string.isEmpty, !placeholder.isEmpty {
             let x = textContainerInset.width
@@ -203,8 +210,8 @@ struct InputField: NSViewRepresentable {
             guard let model else { return }
             if !model.escape() { model.onHide?("esc") }
         }
-        text.minSize = NSSize(width: 0, height: 32)
-        text.frame = NSRect(x: 0, y: 0, width: 400, height: 32)
+        text.minSize = NSSize(width: 0, height: 36)
+        text.frame = NSRect(x: 0, y: 0, width: 400, height: 36)
         text.autoresizingMask = [.height]
         scroll.documentView = text
         context.coordinator.text = text

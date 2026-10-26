@@ -31,7 +31,7 @@ final class WebReference: NSObject, WKScriptMessageHandler, WKNavigationDelegate
         document.documentElement.style.setProperty('--bar-width', '680px');
         window.__QCALC_SETTINGS = { sigFigs: 6, theme: "\(theme)", angleMode: "deg", answerForm: "exact", historyShow: "recent", copyUnitless: true, rationalize: true, typstPreview: true, keybinds: {}, hotkey: "⌃⌥Space", hotkeyFailed: false };
         window.__QCALC_ONBOARDING = { opens: 9, commits: 9, hints: 2147483647, done: 1 };
-        window.__QCALC_MESSAGING = { name: "", key: "", accepted: [], blocked: [] };
+        window.__QCALC_MESSAGING = { name: "you", key: "0000", accepted: ["max"], blocked: [] };
         window.__QCALC_GAME_SAVES = {};
         window.__QCALC_RATES = null;
         document.documentElement.dataset.theme = "\(theme)";

@@ -46,7 +46,7 @@ struct BarView: View {
             below
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.qBg)
+        .background(Color.qBg.opacity(0.9))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
         .fixedSize(horizontal: false, vertical: true)
         .reportHeight(HeightKey.self)
@@ -110,7 +110,7 @@ private struct TapeBox<Content: View>: View {
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.qBgTape)
+            .background(Color.qBgTape.opacity(0.9))
             .overlay(alignment: .bottom) { Rectangle().fill(Color.qLine).frame(height: 1) }
     }
 }
@@ -138,7 +138,6 @@ private struct Composer: View {
             .frame(width: geo.size.width, height: Theme.composerHeight)
         }
         .frame(height: Theme.composerHeight)
-        .background(Color.qBg)
         .overlay { EdgeTools(model: model, shown: hover || model.edgeFocus) }
         .onHover { hover = $0 }
     }
@@ -183,7 +182,14 @@ struct LiveAnswerView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if model.live.isBlank, let steady = model.steady {
+        if let message = model.commandMessage, !message.isEmpty {
+            // .live.message: what a command does, 13 pt muted, in the answer's place
+            Text(message)
+                .font(.system(size: Theme.body))
+                .foregroundStyle(Color.qMuted)
+                .truncationMode(.head)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+        } else if model.live.isBlank, let steady = model.steady {
             // .live-steady: never the answer's colour, gone after a pause
             AnswerText(text: model.pretty(steady), size: Theme.display)
                 .foregroundStyle(Color.qMuted.opacity(0.5))
@@ -236,9 +242,7 @@ private struct AnswerText: View {
     let text: String
     let size: CGFloat
     var body: some View {
-        Text(text)
-            .font(.system(size: size).monospacedDigit())
-            .tracking(Theme.displayTracking(size))
+        RadicalText(text: text, size: size, tracking: Theme.displayTracking(size), monospaced: true)
             .truncationMode(.tail)
     }
 }
@@ -424,22 +428,21 @@ private struct HistoryRowView: View {
 
     private var selected: Bool { model.selected == index }
     // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
-    private var picked: Int? { selected ? (model.pickAnswer ? 1 : 0) : nil }
+    private var picked: Int? { selected ? model.pick : nil }
 
     var body: some View {
         // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners
         GeometryReader { geo in
             HStack(spacing: 12) {
                 Button { model.insertFromRow(index, answer: false) } label: {
-                    Text(Pretty.radicals(row.expr))
-                        .font(.system(size: Theme.body))
+                    RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
                         .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .padding(.vertical, 4)
                         .padding(.horizontal, picked == 0 ? 4 : 0)
-                        .background(PickedMark(on: picked == 0))
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(PickedMark(on: picked == 0))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -476,15 +479,15 @@ private struct HistoryRowView: View {
             HStack(spacing: 6) {
                 answer(Pretty.answer(exact), insert: true, picked: picked == 1)
                 Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                answer(Pretty.answer(row.display), insert: true, picked: false)
+                answer(Pretty.answer(row.display), insert: true, picked: picked == 2)
             }
         } else {
-            answer(Pretty.answer(row.display), insert: true, picked: picked == 1)
+            answer(Pretty.answer(row.display), insert: true, picked: picked == 1, fill: true)
         }
     }
 
-    private func answer(_ text: String, insert: Bool, picked: Bool) -> some View {
-        AnswerCell(text: text, picked: picked) { model.insertFromRow(index, answer: true) }
+    private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false) -> some View {
+        AnswerCell(text: text, picked: picked, fill: fill) { model.insertFromRow(index, answer: true) }
             .onDrag { NSItemProvider(object: row.display as NSString) }
     }
 }
@@ -493,19 +496,21 @@ private struct HistoryRowView: View {
 private struct AnswerCell: View {
     let text: String
     let picked: Bool
+    /// a lone answer is the whole column (display: block), so its pick ring is too
+    var fill = false
     let action: () -> Void
     @State private var hover = false
     var body: some View {
         Button(action: action) {
-            Text(text)
-                .font(.system(size: Theme.row).monospacedDigit())
-                .tracking(-0.015 * Theme.row)
+            RadicalText(text: text, size: Theme.row, tracking: -0.015 * Theme.row, monospaced: true)
                 .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .padding(.vertical, 4)
                 .padding(.horizontal, picked ? 4 : 0)
+                .frame(maxWidth: fill ? .infinity : nil, alignment: .trailing)
                 .background(PickedMark(on: picked))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
@@ -535,15 +540,17 @@ private struct GamesSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(BarCommand.gameList.enumerated()), id: \.offset) { i, game in
                 Button { model.onGame?(game.kind) } label: {
+                    // .cheat-row.game-row: 28 pt, the name column as wide as the longest name
                     HStack(spacing: 12) {
-                        Text(game.name).font(.system(size: Theme.body, weight: .medium)).foregroundStyle(Color.qInk)
-                            .frame(minWidth: 96, alignment: .leading)
-                        Text(game.blurb).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted)
+                        Text(game.name).font(.system(size: Theme.body, weight: .medium)).tracking(0.02 * Theme.body)
+                            .foregroundStyle(Color.qInk).lineLimit(1).fixedSize()
+                            .frame(width: 126, alignment: .leading)
+                        Text(game.blurb).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).lineLimit(1)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 8)
-                    .frame(height: Theme.tapeRow)
-                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(i == model.gamePick ? Color.qFillSelected : .clear))
+                    .frame(height: 28)
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(i == model.gamePick ? Color.qFillHover : .clear))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -553,36 +560,52 @@ private struct GamesSheet: View {
     }
 }
 
+/// `?` / `help`: the cheat sheet (cheatSheet + hostCheats), its keys following the user's keybinds
 private struct HelpSheet: View {
-    // the keys (hostCheats) and what they do, in the cheat sheet's two columns
-    private let left: [(String, String)] = [
-        ("↵", "save to history"), ("↑ ↓", "walk the history"), ("⌥↵", "insert the other half"),
-        ("Tab", "other forms of the answer"), ("⌘C", "copy the answer"), ("⇧⌘C", "copy the whole line"),
-    ]
+    @ObservedObject private var settings = AppSettings.shared
+
+    private func key(_ action: String) -> String { KeyActions.title(KeyActions.chord(action, in: settings.keybinds)) }
+
+    private var left: [(String, String)] {
+        [
+            ((settings.activeHotKey ?? settings.hotKey).title, "show / hide"),
+            ("↵", "save"), ("↑", "history"),
+            ([key("copyAnswer"), key("copyLine")].filter { !$0.isEmpty }.joined(separator: " "), "copy answer / line"),
+            ("⌥↑ ⌥↓", "unit prefix"),
+            (key("angle"), "degrees / radians"), (key("fraction"), "fractions"), (key("sigFigs"), "sig figs from input"),
+            (key("clear"), "clear history"), (key("settings"), "settings"), ("esc", "hide"),
+        ]
+    }
+
     private let right: [(String, String)] = [
-        ("2^10 · sqrt(2)", "powers and roots"), ("x = 4", "variables for later lines"),
-        ("* 3", "continue from the answer"), ("graph sin(x)", "a curve under the bar"),
-        ("periodic", "the periodic table"), ("games", "games to play"),
+        ("ft to cm", "units"), ("80 + 15%", "percent"), ("+/- -/+", "± ∓ uncertainty"), ("x = 5", "variables"),
+        ("x^2 = 2", "solve"), ("sys 2", "systems"), ("graph x^2", "plot"), ("GCF LCM", "factors"),
+        ("sum n, n=1..9", "Σ sums"), ("tutorial", "the walkthrough"), ("?", "this list"),
     ]
 
     var body: some View {
+        // .cheats: two columns 24 pt apart; key columns at least 64 and 96 pt plus 8, 12 pt to the label
         HStack(alignment: .top, spacing: 24) {
-            column(left, keyWidth: 72)
-            column(right, keyWidth: 104)
+            column(left, keyWidth: 64)
+            column(right, keyWidth: 96)
         }
         .padding(.vertical, 8)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Shortcuts")
     }
 
     private func column(_ rows: [(String, String)], keyWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(rows, id: \.0) { r in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
                 HStack(spacing: 12) {
-                    Text(r.0).font(.system(size: Theme.small, weight: .medium)).foregroundStyle(Color.qInk)
-                        .frame(width: keyWidth, alignment: .leading)
-                    Text(r.1).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                    Text(r.0).font(.system(size: Theme.body, weight: .medium)).tracking(0.02 * Theme.body)
+                        .foregroundStyle(Color.qInk).lineLimit(1).fixedSize()
+                        .frame(minWidth: keyWidth, alignment: .leading)
+                    Text(r.1).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).lineLimit(1)
                 }
                 .padding(.horizontal, 8)
                 .frame(height: 28)
+                .accessibilityElement(children: .combine)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -51,6 +51,7 @@ struct GraphPanel: View {
                     .padding(.vertical, 12)
             } else {
                 plot
+                details
             }
         }
         .padding(.top, 12)
@@ -64,7 +65,40 @@ struct GraphPanel: View {
     }
 
     private var label: String { state.curves.first?.label ?? Pretty.radicals(state.expression) }
-    private var atHome: Bool { state.xMin == -10 && state.xMax == 10 && state.yMin == -10 && state.yMax == 10 }
+    private var atHome: Bool {
+        guard state.xMin == -10, state.xMax == 10 else { return false }
+        guard let home = state.homeY else { return true }
+        return state.yMin == home.0 && state.yMax == home.1
+    }
+
+    private func kindName(_ k: CriticalKind) -> String {
+        switch k {
+        case .min: return "min"
+        case .max: return "max"
+        default: return "critical"
+        }
+    }
+
+    // .graph-detail: "Critical points", then a chip per point (kind in caption muted, the point in ink)
+    @ViewBuilder private var details: some View {
+        if !state.critical.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Critical points").font(.system(size: Theme.caption, weight: .semibold)).foregroundStyle(Color.qMuted)
+                    .padding(.top, 12)
+                HStack(spacing: 4) {
+                    ForEach(Array(state.critical.enumerated()), id: \.offset) { _, c in
+                        HStack(spacing: 6) {
+                            Text(kindName(c.kind)).font(.system(size: Theme.caption, weight: .medium)).foregroundStyle(Color.qMuted)
+                            Text("(\(fmt(c.x)), \(fmt(c.y)))").font(.system(size: Theme.small).monospacedDigit()).foregroundStyle(Color.qInk)
+                        }
+                        .padding(.vertical, 3).padding(.horizontal, 8)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk.opacity(0.06)))
+                    }
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
 
     private var plot: some View {
         GeometryReader { geo in
@@ -149,6 +183,13 @@ struct GraphPanel: View {
                 lastY = v
             }
             clip.stroke(path, with: .color(.qAccent), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+        }
+        // .graph-mark: roots and critical points, rings of the plot colour with an accent edge
+        let marks = g.roots.map { CGPoint(x: px($0), y: py(0)) } + g.critical.map { CGPoint(x: px($0.x), y: py($0.y)) }
+        for m in marks where m.x >= p.left && m.x <= right && m.y >= p.top && m.y <= bottom {
+            let ring = Path(ellipseIn: CGRect(x: m.x - 2.75, y: m.y - 2.75, width: 5.5, height: 5.5))
+            clip.fill(ring, with: .color(Self.plotBg))
+            clip.stroke(ring, with: .color(.qAccent), lineWidth: 1.5)
         }
     }
 

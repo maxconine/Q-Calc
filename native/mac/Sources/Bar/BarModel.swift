@@ -27,6 +27,15 @@ struct GraphState: Equatable {
     var failed = false
     /// not yet sampled: the engine's own y range (graphHome) may set the view
     var fresh = true
+    /// from the engine's GraphResult (WP-GRAPH): roots and critical points, marked on the curve and listed below
+    var roots: [Double] = []
+    var critical: [CriticalPoint] = []
+    var homeY: (Double, Double)?
+
+    static func == (a: GraphState, b: GraphState) -> Bool {
+        a.expression == b.expression && a.xMin == b.xMin && a.xMax == b.xMax && a.yMin == b.yMin && a.yMax == b.yMax
+            && a.curves == b.curves && a.failed == b.failed && a.roots == b.roots && a.critical == b.critical
+    }
 }
 
 /// Everything the bar shows and every key it takes. The SwiftUI views only draw this; AppKit (OverlayController)
@@ -34,7 +43,9 @@ struct GraphState: Equatable {
 /// main thread on maths.
 final class BarModel: ObservableObject {
     // the line
-    @Published var text = "" { didSet { if text != oldValue { textChanged() } } }
+    @Published var text = "" { didSet { if text != oldValue { textChanged(from: oldValue) } } }
+    /// what a command line says in the answer slot (`periodic table`, `↵ play pong`), as .live.message does
+    @Published private(set) var commandMessage: String?
     @Published private(set) var live = LiveAnswer.blank
     /// a closed form the engine's PSLQ search found after the answer (π²/6), shown in place of `live.exact`
     @Published private(set) var upgradedExact: String?
@@ -151,7 +162,14 @@ final class BarModel: ObservableObject {
 
     private var closedFormTask: Task<Void, Never>?
 
-    private func textChanged() {
+    private func textChanged(from old: String) {
+        // typing past `?` or `help` keeps just the new text (afterHelpInput)
+        let was = old.trimmingCharacters(in: .whitespaces).lowercased()
+        if was == "?" || was == "help", text.count > old.count, text.hasPrefix(old) {
+            text = String(text.dropFirst(old.count))
+            return
+        }
+        commandMessage = nil
         formIndex = 0
         forms = []
         copied = false
@@ -170,13 +188,15 @@ final class BarModel: ObservableObject {
         let typed = text
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
-            hint = command.hint(messaging: Messages.shared)
+            commandMessage = command.hint(messaging: Messages.shared)
+            helpShown = command == .help
             if case let .graph(body) = command { showGraph(body) } else { graph = nil }
             setLive(.blank, for: typed)
             engine.cancel(.live)
             return
         }
         graph = nil
+        commandMessage = nil
         if typed.trimmingCharacters(in: .whitespaces).isEmpty {
             engine.cancel(.live)
             chained = false
@@ -357,7 +377,8 @@ final class BarModel: ObservableObject {
                 if status == "delivered" { self.clearLine(keepHint: true) }
             }
         case .help:
-            helpShown = true
+            helpShown = false
+            text = ""
         case .settings:
             clearLine()
             onSettings?()
@@ -780,20 +801,31 @@ final class BarModel: ObservableObject {
             let options = GraphOptions(domainLo: lo, domainHi: hi, sampleCount: 241)
             var curves: [GraphCurve]?
             var yRange: (Double, Double)?
+            var roots: [Double] = [], critical: [CriticalPoint] = []
             if let result = try? await engine.graphAsync(input: "graph \(expr)", options: options, settings: settings),
                result.error == nil, !result.points.isEmpty {
                 curves = [GraphCurve(label: result.label, points: result.points)]
                 if result.yMax > result.yMin { yRange = (result.yMin, result.yMax) }
+                roots = result.roots
+                critical = result.criticalPoints
             } else if !Task.isCancelled {
                 let context = engine.contextFromHistory(rows: rows, view: view)
                 curves = GraphFallback.sample(engine, expression: expr, xMin: lo, xMax: hi, samples: 241, context: context, settings: settings)
+                // the home view's y range fits the curve, as graphHome's does, with a tenth spare each side
+                let ys = curves?.flatMap { $0.points.compactMap(\.y) } ?? []
+                if let a = ys.min(), let b = ys.max() {
+                    let span = max(b - a, 1e-9)
+                    yRange = (a - span * 0.1, b + span * 0.1)
+                }
             }
             if Task.isCancelled { return }
             await MainActor.run {
                 guard let self, var now = self.graph, now.expression == expr, now.xMin == lo else { return }
                 now.curves = curves ?? []
                 now.failed = curves == nil
-                if let yRange, now.fresh { (now.yMin, now.yMax) = yRange }
+                now.roots = roots
+                now.critical = critical
+                if let yRange, now.fresh { (now.yMin, now.yMax) = yRange; now.homeY = yRange }
                 now.fresh = false
                 self.graph = now
             }

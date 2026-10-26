@@ -57,7 +57,6 @@ enum Pretty {
         var t = shortRoot.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "√$1")
         t = t.replacingOccurrences(of: "sqrt(", with: "√(")
         t = t.replacingOccurrences(of: "pi", with: "π")
-        t = t.replacingOccurrences(of: "*", with: "×")
         return t
     }
 
@@ -194,10 +193,10 @@ enum BarCommand: Equatable {
     /// The hint under the bar while this command is typed.
     func hint(messaging: Messages) -> String {
         switch self {
-        case .periodic: return "↵ opens the periodic table"
-        case let .identities(_, _, hint): return "↵ opens the \(hint)"
+        case .periodic: return "periodic table"
+        case let .identities(_, _, hint): return hint
         case .games: return "↑↓ pick · ↵ play · or type a name"
-        case let .game(_, name): return name == "crack" ? "↵ crack the safe" : "↵ play \(name)"
+        case let .game(kind, name): return kind == "crack" ? "↵ crack the safe" : kind == "numbers" ? "↵ play 24 or countdown" : "↵ play \(name)"
         case let .message(to, name, text):
             if messaging.name.isEmpty { return "set your name in settings to send messages · ↵ opens settings" }
             if messaging.link == .paused { return "notifications are off for Q Calc, so messages are paused · ↵ opens settings" }
@@ -205,9 +204,9 @@ enum BarCommand: Equatable {
             if name.isEmpty { return "a name is 2–20 letters, digits, - or _" }
             if text.isEmpty { return "then what to say to \(name)" }
             return "↵ sends to \(name)"
-        case .help: return "↵ shows what Q Calc understands"
+        case .help: return ""
         case .settings: return "↵ opens settings"
-        case .tutorial: return "↵ starts the tutorial"
+        case .tutorial: return "start the tutorial"
         case .graph: return ""
         case .greeting: return ""
         }

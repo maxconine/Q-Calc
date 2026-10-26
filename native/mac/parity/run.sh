@@ -29,8 +29,8 @@ WEB[banner]="js:window.__qcalcInbox && window.__qcalcInbox($CARD)|wait:300"
 NATIVE[banner]="card:max|ask:sam"
 WEB[games]="insert:games"
 NATIVE[games]="type:games"
-WEB[help]="insert:?|key:Enter"
-NATIVE[help]="type:?|key:enter"
+WEB[help]="insert:?"
+NATIVE[help]="type:?"
 
 scenarios=("$@")
 (( ${#scenarios} )) || scenarios=(live dual history select graph banner games help)
