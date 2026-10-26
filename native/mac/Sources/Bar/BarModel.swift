@@ -16,6 +16,22 @@ struct BannerCard: Identifiable, Equatable {
     var shownAt = Date()
 }
 
+/// What the input draws over its text.
+struct Decorations: Equatable {
+    var leadingParens = 0
+    var trailingParens = 0
+    var units: [NSRange] = []
+    var words: [NSRange] = []
+    var squiggle: NSRange?
+    /// a unit offered where a number was owed one (missingUnit): drawn muted after the number
+    var offer: (at: Int, text: String)?
+
+    static func == (a: Decorations, b: Decorations) -> Bool {
+        a.leadingParens == b.leadingParens && a.trailingParens == b.trailingParens && a.units == b.units
+            && a.words == b.words && a.squiggle == b.squiggle && a.offer?.at == b.offer?.at && a.offer?.text == b.offer?.text
+    }
+}
+
 /// The graph panel under the bar: a range, and the curves the engine sampled over it.
 struct GraphState: Equatable {
     var expression: String
@@ -51,6 +67,9 @@ final class BarModel: ObservableObject {
     @Published private(set) var upgradedExact: String?
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
     @Published private(set) var completion: String?
+    @Published private(set) var decorations = Decorations()
+    /// d/dt letters the user moved by hand (TimeLetters.tsx); sent as EvalOptions.timeVarying
+    @Published var timeVarying: [String: Bool] = [:]
     /// the last real answer, dimmed, while the line is briefly unreadable (useSteadyAnswer)
     @Published private(set) var steady: String?
     @Published private(set) var chained = false
@@ -102,6 +121,8 @@ final class BarModel: ObservableObject {
     var focusField: (() -> Void)?
     var fieldSelection: (() -> String)?
     var caretAtEnd: (() -> Bool)?
+    /// replaces the whole line as typing would (symbols, undo), for scripted input
+    var setField: ((String) -> Void)?
 
     private var deleted: (row: HistoryRow, index: Int)?
     private var lastLiveText = ""
@@ -170,6 +191,7 @@ final class BarModel: ObservableObject {
             return
         }
         commandMessage = nil
+        unitOffer = nil
         formIndex = 0
         forms = []
         copied = false
@@ -197,6 +219,7 @@ final class BarModel: ObservableObject {
         }
         graph = nil
         commandMessage = nil
+        unitOffer = nil
         if typed.trimmingCharacters(in: .whitespaces).isEmpty {
             engine.cancel(.live)
             chained = false
@@ -204,16 +227,81 @@ final class BarModel: ObservableObject {
             return
         }
         let rows = self.rows, view = HistoryView.from(settings), options = self.options
-        engine.submit(.live, { engine -> (LiveAnswer, Bool) in
-            let request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
-            return (engine.live(request: request), request.chained)
-        }) { [weak self] answer, chain in
+        let thread = engine
+        let keepWords = settings.keepWords
+        let timeVarying = self.timeVarying
+        engine.submit(.live, { engine -> (LiveAnswer, Bool, Decorations, String?) in
+            var request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
+            request.options.timeVarying = timeVarying
+            let answer = engine.live(request: request)
+            let deco = Self.decorations(thread.logic, engine: engine, request: request, answer: answer, keepWords: keepWords)
+            // completionFor: the engine's when it answers, else the TS through the app-logic bundle
+            var completion = answer.completion
+            if completion?.isEmpty ?? true {
+                let names: [String: Any] = ["variables": Array(request.context.variables.keys), "functions": Array(request.context.functions.keys),
+                                            "ans": request.context.ans != nil]
+                completion = thread.logic.string("lib/completion", "completionFor", [typed, names])
+            }
+            return (answer, request.chained, deco, completion)
+        }) { [weak self] answer, chain, deco, completion in
             guard let self, self.text == typed else { return }
             self.chained = chain
             if !answer.isBlank { self.hint = nil }
-            self.completion = answer.completion.flatMap { $0.isEmpty ? nil : $0 }
+            self.completion = completion.flatMap { $0.isEmpty ? nil : $0 }
+            self.decorations = deco
             self.setLive(answer, for: typed)
+            self.squiggleLater(typed)
             self.upgradeClosedForm(answer, for: typed)
+        }
+    }
+
+    /// What the input draws over the text (QuickInput.tsx): grey inferred parens (inferParens), unit and known-word
+    /// colours (unitSpans, knownWordSpans) and, for a blank answer, where it stops reading (blankReason).
+    private static func decorations(_ logic: AppLogic, engine: Engine, request: LiveRequest, answer: LiveAnswer, keepWords: Bool) -> Decorations {
+        let text = request.text
+        var d = Decorations()
+        if let fill = logic.call("engine/parens", "inferParens", [text]) as? [String: Any] {
+            d.leadingParens = (fill["leading"] as? NSNumber)?.intValue ?? 0
+            d.trailingParens = (fill["trailing"] as? NSNumber)?.intValue ?? 0
+        }
+        let variables = Array(request.context.variables.keys), functions = Array(request.context.functions.keys)
+        d.units = logic.spans("lib/unitSpans", "unitSpans", [text, variables, functions])
+        d.words = logic.spans("lib/knownWords", "knownWordSpans", [text, functions, request.context.ans != nil])
+        return d
+    }
+
+    /// blankReason with `ok` answered by the engine (chained as the line is); runs on the engine thread
+    private static func blankSpan(_ logic: AppLogic, engine: Engine, request: LiveRequest) -> NSRange? {
+        logic.ok = { piece in
+            var r = request
+            r.text = request.chained ? Chain.expr(piece) : piece
+            r.chained = false
+            return !engine.live(request: r).isBlank
+        }
+        defer { logic.ok = { _ in false } }
+        let names: [String: Any] = ["variables": Array(request.context.variables.keys), "functions": Array(request.context.functions.keys)]
+        return logic.spans("lib/blankReason", "blankReason", [request.text, names]).first
+    }
+
+    private var squiggleTimer: Timer?
+    /// the line a unit was offered for, and what ↵ again makes it
+    private var unitOffer: (typed: String, filled: String)?
+
+    // the squiggle shows once typing has paused 700 ms on a blank line (SQUIGGLE_IDLE_MS), never for commands
+    private func squiggleLater(_ typed: String) {
+        squiggleTimer?.invalidate()
+        guard live.isBlank, !typed.trimmingCharacters(in: .whitespaces).isEmpty, BarCommand.of(typed, sheets: sheets) == nil else { return }
+        squiggleTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: false) { [weak self] _ in
+            guard let self, self.text == typed, self.live.isBlank else { return }
+            let rows = self.rows, view = HistoryView.from(self.settings), options = self.options, thread = self.engine
+            self.engine.submit(.forms, { engine -> NSRange? in
+                let request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
+                if thread.logic.bool("lib/nativeEval", "looksLikeNaturalLanguage", [typed]) { return nil }
+                return Self.blankSpan(thread.logic, engine: engine, request: request)
+            }) { [weak self] span in
+                guard let self, self.text == typed, self.live.isBlank else { return }
+                self.decorations.squiggle = span
+            }
         }
     }
 
@@ -411,11 +499,57 @@ final class BarModel: ObservableObject {
     func commit(leaving: Bool = false) {
         let typed = text
         guard !typed.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let rows = self.rows, view = HistoryView.from(settings), options = self.options
-        engine.submit(.commit, { engine -> CommitResult in
-            engine.commit(request: Self.request(engine, text: typed, rows: rows, view: view, options: options), history: rows)
-        }) { [weak self] done in
+        // ↵ again on an offered unit takes it (missingUnit's `filled`)
+        if !leaving, let offer = unitOffer, offer.typed == typed {
+            unitOffer = nil
+            decorations.offer = nil
+            hint = nil
+            setField?(offer.filled)
+            return
+        }
+        let rows = self.rows, view = HistoryView.from(settings), options = self.options, thread = engine
+        let improper = live.improper, history = !rows.isEmpty
+        engine.submit(.commit, { engine -> (CommitResult, String?, (at: Int, text: String, filled: String)?, NSRange?) in
+            let request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
+            let done = engine.commit(request: request, history: rows)
+            guard !done.saved else { return (done, nil, nil, nil) }
+            // units that don't add up because one number has none: the unit it was owed, offered (offerUnit)
+            if improper {
+                thread.logic.ok = { piece in
+                    var r = request
+                    r.text = request.chained ? Chain.expr(piece) : piece
+                    r.chained = false
+                    let a = engine.live(request: r)
+                    return !a.isBlank && !a.improper
+                }
+                defer { thread.logic.ok = { _ in false } }
+                if let fix = thread.logic.call("lib/missingUnit", "missingUnit", [typed]) as? [String: Any],
+                   let at = (fix["at"] as? NSNumber)?.intValue, let text = fix["text"] as? String, let filled = fix["filled"] as? String {
+                    return (done, fix["hint"] as? String, (at, text, filled), nil)
+                }
+            }
+            // enter that saved nothing says why (enterHint), and the squiggle shows where
+            let graph = typed.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("graph")
+            let span = graph ? nil : Self.blankSpan(thread.logic, engine: engine, request: request)
+            let facts: [String: Any] = [
+                "expr": typed, "span": span.map { ["start": $0.location, "end": NSMaxRange($0)] } ?? NSNull(),
+                "improper": improper, "naturalLanguage": thread.logic.bool("lib/nativeEval", "looksLikeNaturalLanguage", [typed]),
+                "bareGraph": typed.trimmingCharacters(in: .whitespaces).lowercased() == "graph", "history": history,
+            ]
+            let hint = done.hint ?? thread.logic.string("lib/blankReason", "enterHint", [facts])
+            return (done, hint, nil, span)
+        }) { [weak self] result in
             guard let self else { return }
+            let (done, failHint, offer, span) = result
+            if !done.saved, !leaving, self.text == typed {
+                self.hint = failHint ?? "nothing to save yet · finish the line, or esc to close"
+                if let offer {
+                    self.unitOffer = (typed, offer.filled)
+                    self.decorations.offer = (offer.at, offer.text)
+                }
+                if let span { self.decorations.squiggle = span }
+                return
+            }
             if done.saved {
                 self.history.replace(done.history)
                 self.rows = self.history.rows
@@ -577,6 +711,49 @@ final class BarModel: ObservableObject {
         hint = "history cleared"
     }
 
+    // MARK: - undo (undo.ts: typing runs merge within UNDO_RUN_MS, symbol swaps don't break them)
+
+    /// the main thread's app logic (undo, onboarding, tour, analytics, typst copy)
+    lazy var logic = AppLogic(engine: core)
+    private var undoState: Any = [String: Any]()
+    private var undoReady = false
+
+    func resetUndo() {
+        undoState = logic.call("lib/undo", "undoStart", [text]) ?? [String: Any]()
+        undoReady = true
+    }
+
+    func recordEdit(_ value: String, start: Int, end: Int, kind inputType: String?) {
+        if !undoReady { resetUndo() }
+        let kind = logic.call("lib/undo", "editKind", [inputType ?? NSNull()]) ?? NSNull()
+        let state: [String: Any] = ["value": value, "start": start, "end": end]
+        if let next = logic.call("lib/undo", "recordEdit", [undoState, state, kind, Date().timeIntervalSince1970 * 1000]) {
+            undoState = next
+        }
+    }
+
+    func breakUndoRun() {
+        guard undoReady, let next = logic.call("lib/undo", "breakRun", [undoState]) else { return }
+        undoState = next
+    }
+
+    private func applyUndo(_ fn: String) -> Bool {
+        if !undoReady { resetUndo() }
+        guard let next = logic.call("lib/undo", fn, [undoState]) as? [String: Any],
+              let current = next["current"] as? [String: Any], let value = current["value"] as? String else { return false }
+        undoState = next
+        let start = (current["start"] as? NSNumber)?.intValue ?? (value as NSString).length
+        let end = (current["end"] as? NSNumber)?.intValue ?? start
+        restoreField?(value, NSRange(location: start, length: max(0, end - start)))
+        return true
+    }
+
+    func undoText() -> Bool { applyUndo("undo") }
+    func redoText() -> Bool { applyUndo("redo") }
+
+    /// puts a value and selection back without recording it as an edit
+    var restoreField: ((String, NSRange) -> Void)?
+
     // MARK: - copy
 
     func copyAnswer(_ value: String? = nil) {
@@ -651,7 +828,8 @@ final class BarModel: ObservableObject {
             if flags == [.command], selected != nil { return deleteSelected() }
             return false
         case kVK_ANSI_Z:
-            if flags == [.command], text.isEmpty { return undoDelete() }
+            if flags == [.command] { return undoDelete() || undoText() }
+            if flags == [.command, .shift] { return redoText() }
             return false
         default:
             return false

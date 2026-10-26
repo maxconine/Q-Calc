@@ -12,6 +12,35 @@ final class BarTextView: NSTextView {
     var ghostLead = "" { didSet { if ghostLead != oldValue { updateInset() } } }
     /// the completion ghost after the caret (completionFor)
     var ghostTail = "" { didSet { if ghostTail != oldValue { needsDisplay = true } } }
+    /// the InputEvent.inputType of the edit in progress (undo.ts editKind)
+    var editKind: String?
+    var trailingParens = 0 { didSet { if trailingParens != oldValue { needsDisplay = true } } }
+    var squiggle: NSRange? { didSet { if squiggle != oldValue { needsDisplay = true } } }
+    /// .quick-offered: a unit offered after a number (missingUnit), drawn muted in a gap opened after it
+    var offer: (at: Int, text: String)? {
+        didSet {
+            guard offer?.at != oldValue?.at || offer?.text != oldValue?.text else { return }
+            restyle()
+            if let offer, offer.at > 0, offer.at <= (string as NSString).length, let storage = textStorage {
+                let width = (offer.text as NSString).size(withAttributes: Self.attributes).width
+                storage.addAttribute(.kern, value: Theme.displayTracking(Self.fontSize) + width, range: NSRange(location: offer.at - 1, length: 1))
+            }
+            needsDisplay = true
+        }
+    }
+    private var coloured: (units: [NSRange], words: [NSRange]) = ([], [])
+
+    /// .quick-unit in the accent, .quick-word in accent mixed 85% with ink: temporary attributes, so typing and
+    /// undo never see them
+    func colour(units: [NSRange], words: [NSRange]) {
+        guard units != coloured.units || words != coloured.words, let lm = layoutManager else { return }
+        coloured = (units, words)
+        let all = NSRange(location: 0, length: (string as NSString).length)
+        lm.removeTemporaryAttribute(.foregroundColor, forCharacterRange: all)
+        let word = Theme.accent.blended(withFraction: 0.15, of: Theme.ink) ?? Theme.accent
+        for r in words where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: word, forCharacterRange: r) }
+        for r in units where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: Theme.accent, forCharacterRange: r) }
+    }
 
     static let fontSize: CGFloat = 24
     static let attributes: [NSAttributedString.Key: Any] = [
@@ -75,11 +104,18 @@ final class BarTextView: NSTextView {
                 return
             }
         }
+        editKind = "insertText"
         super.insertText(insert, replacementRange: replacementRange)
     }
 
     // backspace in `[]` takes both; a +- that meets at the caret becomes ± (joinPlusMinusAt)
+    override func deleteForward(_ sender: Any?) {
+        editKind = "deleteContentForward"
+        super.deleteForward(sender)
+    }
+
     override func deleteBackward(_ sender: Any?) {
+        editKind = "deleteContentBackward"
         let sel = selectedRange()
         if let b = Symbols.bracketKey(string, start: sel.location, end: sel.location + sel.length, key: "backspace") {
             replace(with: b.text, selection: NSRange(location: b.caret, length: 0))
@@ -114,7 +150,7 @@ final class BarTextView: NSTextView {
     private func configure() {
         isRichText = false
         importsGraphics = false
-        allowsUndo = true
+        allowsUndo = false // undo.ts runs the undo (BarModel.undoText), as the web input does
         usesFindBar = false
         isAutomaticQuoteSubstitutionEnabled = false
         isAutomaticDashSubstitutionEnabled = false
@@ -187,6 +223,7 @@ final class BarTextView: NSTextView {
     override func pasteAsPlainText(_ sender: Any?) { pastePlain() }
 
     private func pastePlain() {
+        editKind = "insertFromPaste"
         guard let raw = NSPasteboard.general.string(forType: .string) else { return }
         let clean = raw.replacingOccurrences(of: #"\s*[\r\n]+\s*"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
@@ -197,8 +234,28 @@ final class BarTextView: NSTextView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
+        // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
+        let inferred: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
         if !ghostLead.isEmpty {
-            (ghostLead as NSString).draw(at: NSPoint(x: 0, y: 0), withAttributes: attrs)
+            (ghostLead as NSString).draw(at: NSPoint(x: 0, y: textContainerInset.height), withAttributes: inferred)
+        }
+        // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
+        if let squiggle, let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
+            let glyphs = lm.glyphRange(forCharacterRange: squiggle, actualCharacterRange: nil)
+            let rect = lm.boundingRect(forGlyphRange: glyphs, in: tc).offsetBy(dx: textContainerInset.width, dy: textContainerInset.height)
+            let path = NSBezierPath()
+            let y = rect.maxY + 1, step: CGFloat = 2
+            var x = rect.minX
+            path.move(to: NSPoint(x: x, y: y))
+            var up = true
+            while x < rect.maxX {
+                x += step
+                path.line(to: NSPoint(x: min(x, rect.maxX), y: y + (up ? -1.5 : 0)))
+                up.toggle()
+            }
+            path.lineWidth = 1
+            Theme.muted.withAlphaComponent(0.7).setStroke()
+            path.stroke()
         }
         // a radical's bar over what it takes, as Radical.tsx draws it in the web input
         if let lm = layoutManager, let tc = textContainer {
@@ -211,9 +268,23 @@ final class BarTextView: NSTextView {
             }
         }
         // the completion's rest, faint, right after the text while the caret is at the end
-        if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length, let lm = layoutManager, let tc = textContainer {
+        if let offer, offer.at > 0, offer.at <= (string as NSString).length, let lm = layoutManager, let tc = textContainer {
+            let glyph = lm.glyphIndexForCharacter(at: offer.at - 1)
+            let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
+            let width = (offer.text as NSString).size(withAttributes: Self.attributes).width
+            let muted: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
+            (offer.text as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height), withAttributes: muted)
+        }
+        if let lm = layoutManager, let tc = textContainer {
             let used = lm.usedRect(for: tc)
-            (ghostTail as NSString).draw(at: NSPoint(x: textContainerInset.width + used.maxX, y: textContainerInset.height), withAttributes: attrs)
+            var x = textContainerInset.width + used.maxX
+            if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length {
+                (ghostTail as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: attrs)
+                x += (ghostTail as NSString).size(withAttributes: attrs).width
+            }
+            if trailingParens > 0 {
+                (String(repeating: ")", count: trailingParens) as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
+            }
         }
         if string.isEmpty, !placeholder.isEmpty {
             let x = textContainerInset.width
@@ -258,6 +329,16 @@ struct InputField: NSViewRepresentable {
             guard let text else { return "" }
             return (text.string as NSString).substring(with: text.selectedRange())
         }
+        model.restoreField = { [weak text, weak model] value, sel in
+            guard let text else { return }
+            text.string = value
+            text.restyle()
+            text.setSelectedRange(sel)
+            if model?.text != value { model?.text = value }
+        }
+        model.setField = { [weak text] value in
+            text?.replace(with: value, selection: NSRange(location: (value as NSString).length, length: 0))
+        }
         model.caretAtEnd = { [weak text] in
             guard let text else { return false }
             let r = text.selectedRange()
@@ -277,10 +358,15 @@ struct InputField: NSViewRepresentable {
             text.string = model.text
             text.restyle()
             text.setSelectedRange(NSRange(location: (model.text as NSString).length, length: 0))
-            text.undoManager?.removeAllActions(withTarget: text.textStorage as Any)
+            model.resetUndo()
         }
         text.placeholder = placeholder
-        text.ghostLead = ""
+        let deco = model.decorations
+        text.ghostLead = String(repeating: "(", count: deco.leadingParens)
+        text.trailingParens = deco.trailingParens
+        text.squiggle = deco.squiggle
+        text.offer = deco.offer
+        text.colour(units: deco.units, words: deco.words)
         text.ghostTail = model.completion ?? ""
         text.insertionPointColor = Theme.ink
         // keep the caret in view as the line grows
@@ -295,6 +381,12 @@ struct InputField: NSViewRepresentable {
 
         init(model: BarModel) { self.model = model }
 
+        // a click or an arrow key ends the typing run (breakRun)
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard let text, text.editKind == nil else { return }
+            model.breakUndoRun()
+        }
+
         func textDidChange(_ notification: Notification) {
             guard let text else { return }
             // typed words become symbols as they're finished (prettyTokens), unless "keep words" is on
@@ -308,6 +400,9 @@ struct InputField: NSViewRepresentable {
                 }
             }
             if model.text != text.string { model.text = text.string }
+            let sel = text.selectedRange()
+            model.recordEdit(text.string, start: sel.location, end: NSMaxRange(sel), kind: text.editKind)
+            text.editKind = nil
             text.sizeToFit()
             text.scrollRangeToVisible(text.selectedRange())
         }

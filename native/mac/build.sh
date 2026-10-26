@@ -119,7 +119,7 @@ fi
 
 ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
-cp "$MAC/Resources/sheets.json" "$APP/Contents/Resources/"
+cp "$MAC/Resources/sheets.json" "$MAC/Resources/applogic.js" "$APP/Contents/Resources/"
 
 icon_src="$ROOT/public/Qcalc_favi.png"
 if [[ -f "$icon_src" ]]; then

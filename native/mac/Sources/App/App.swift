@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "hide": overlay.hide(because: "dev")
         case "settings": showSettings()
         case "theme": AppSettings.shared.setTheme(arg, notifyWeb: true)
-        case "type": overlay.model.text = ""; overlay.model.insert(arg)
+        case "type": overlay.model.setField?(arg)
         case "enter": overlay.model.enter()
         case "up": overlay.model.moveSelection(up: true)
         case "down": overlay.model.moveSelection(up: false)
