@@ -11,6 +11,7 @@
 //! - `worker.rs`: the 32 MB evaluation thread, the long-work pool, async futures
 //! - `history.rs`, `chain.rs`: the tape and chaining (ported from `src/lib`), the history file
 //! - `rates.rs`: the ECB rates cache
+//! - `name_check.rs`: `NameCheck`, the relay's word on the name after `message`
 //! - `bridge.rs`: typed calls over `qcalc_core::golden::dispatch`, for code other packages are porting
 
 mod bridge;
@@ -19,6 +20,7 @@ pub mod chain;
 mod engine;
 pub mod history;
 mod jsstr;
+mod name_check;
 mod rates;
 pub mod records;
 #[cfg(feature = "typst")]
@@ -27,6 +29,7 @@ mod worker;
 
 pub use cancel::CancelToken;
 pub use engine::Engine;
+pub use name_check::NameCheck;
 pub use records::*;
 
 use qcalc_core::types::EvaluateOptions;

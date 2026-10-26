@@ -21,6 +21,15 @@ extension Notification.Name {
 final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, UNUserNotificationCenterDelegate {
     static let shared = Messages()
     static let relayHost = "qcalc-relay.maxconine.workers.dev"
+    // the relay over https, or a local one (`wrangler dev`) named by QCALC_RELAY_URL for testing; only a loopback
+    // address is taken, so nothing outside can point the name and key elsewhere
+    static let relayBase: String = {
+        let local = ProcessInfo.processInfo.environment["QCALC_RELAY_URL"] ?? ""
+        if let url = URL(string: local), url.scheme == "http", ["localhost", "127.0.0.1"].contains(url.host ?? "") {
+            return local.hasSuffix("/") ? String(local.dropLast()) : local
+        }
+        return "https://\(relayHost)"
+    }()
     private static let nameKey = "qcalc.messaging.name"
     private static let keyKey = "qcalc.messaging.key"
     private static let acceptedKey = "qcalc.messaging.accepted"
@@ -260,7 +269,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // json in, the relay's status out; text/plain like the page's, though only a page needs that
     private func post(_ path: String, _ body: [String: String], done: @escaping (String) -> Void) {
-        guard let url = URL(string: "https://\(Self.relayHost)\(path)") else { return done("network") }
+        guard let url = URL(string: "\(Self.relayBase)\(path)") else { return done("network") }
         var request = URLRequest(url: url, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
@@ -285,6 +294,16 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         }
     }
 
+    // whether anyone holds a name (lookupName in src/lib/messaging.ts): true or false from the relay, nil when it
+    // can't say (offline, too many asks, your own name lapsed), so the bar says nothing rather than something wrong
+    func lookup(_ raw: String, done: @escaping (Bool?) -> Void) {
+        let who = Self.clean(raw)
+        guard !name.isEmpty, !key.isEmpty, !who.isEmpty else { return done(nil) }
+        post("/lookup", ["from": name, "key": key, "name": who]) { status in
+            done(status == "found" ? true : status == "unknown" ? false : nil)
+        }
+    }
+
     // what the bar says once a message has gone, or hasn't (sendStatusText in src/lib/messaging.ts)
     static func sendStatusText(_ status: String, to: String) -> String {
         switch status {
@@ -301,7 +320,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // the inbox: one socket while a name is set, none otherwise
     private func connect() {
         close()
-        guard !name.isEmpty, !key.isEmpty, let url = URL(string: "wss://\(Self.relayHost)/inbox/\(name)") else {
+        guard !name.isEmpty, !key.isEmpty, let url = URL(string: Self.relayBase.replacingOccurrences(of: "http", with: "ws", options: .anchored) + "/inbox/\(name)") else {
             link = .off
             return
         }

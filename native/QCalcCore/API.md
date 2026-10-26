@@ -115,6 +115,22 @@ final class CancelToken {
 }
 ```
 
+## `NameCheck`
+
+The relay's word on the name after `message` (`src/lib/nameCheck.ts`). The shell waits `nameCheckDelayMs()` after
+typing rests, asks `POST /lookup` when `start` says to, and hands back `finish`. Times are ms since the epoch.
+
+```swift
+func nameCheckDelayMs() -> UInt32
+final class NameCheck {
+    init()
+    func cached(name: String, nowMs: Double) -> Bool?           // nil: nothing fresh, so say nothing
+    func start(name: String, nowMs: Double) -> Bool             // ask now (no fresh answer, none out)
+    func finish(name: String, found: Bool?, nowMs: Double)      // nil (offline…) keeps nothing
+    func noteSend(name: String, status: String, nowMs: Double)  // delivered/offline: found; unknown: not
+}
+```
+
 ## `Engine`
 
 ```swift

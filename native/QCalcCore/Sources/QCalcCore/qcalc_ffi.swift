@@ -1552,6 +1552,202 @@ public func FfiConverterTypeEngine_lower(_ value: Engine) -> UInt64 {
 
 
 
+
+
+/**
+ * The relay's answers about names, kept a while. Times are ms since the epoch.
+ */
+public protocol NameCheckProtocol: AnyObject, Sendable {
+    
+    /**
+     * The kept answer, or nil when there's none still fresh.
+     */
+    func cached(name: String, nowMs: Double)  -> Bool?
+    
+    /**
+     * The ask came back: true or false from the relay, nil when it couldn't say (kept as nothing).
+     */
+    func finish(name: String, found: Bool?, nowMs: Double) 
+    
+    /**
+     * What a send's status said about the name (`delivered`, `offline`, `unknown`…, as the relay spells it).
+     */
+    func noteSend(name: String, status: String, nowMs: Double) 
+    
+    /**
+     * Whether to ask the relay now: no fresh answer and no ask already out. A yes waits for `finish`.
+     */
+    func start(name: String, nowMs: Double)  -> Bool
+    
+}
+/**
+ * The relay's answers about names, kept a while. Times are ms since the epoch.
+ */
+open class NameCheck: NameCheckProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_namecheck(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_namecheck_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_namecheck(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * The kept answer, or nil when there's none still fresh.
+     */
+open func cached(name: String, nowMs: Double) -> Bool?  {
+    return try!  FfiConverterOptionBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_namecheck_cached(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterDouble.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The ask came back: true or false from the relay, nil when it couldn't say (kept as nothing).
+     */
+open func finish(name: String, found: Bool?, nowMs: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_namecheck_finish(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterOptionBool.lower(found),
+        FfiConverterDouble.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * What a send's status said about the name (`delivered`, `offline`, `unknown`…, as the relay spells it).
+     */
+open func noteSend(name: String, status: String, nowMs: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_namecheck_note_send(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterString.lower(status),
+        FfiConverterDouble.lower(nowMs),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * Whether to ask the relay now: no fresh answer and no ask already out. A yes waits for `finish`.
+     */
+open func start(name: String, nowMs: Double) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_namecheck_start(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(name),
+        FfiConverterDouble.lower(nowMs),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNameCheck: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = NameCheck
+
+    public static func lift(_ handle: UInt64) throws -> NameCheck {
+        return NameCheck(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: NameCheck) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NameCheck {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: NameCheck, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNameCheck_lift(_ handle: UInt64) throws -> NameCheck {
+    return try FfiConverterTypeNameCheck.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNameCheck_lower(_ value: NameCheck) -> UInt64 {
+    return FfiConverterTypeNameCheck.lower(value)
+}
+
+
+
+
 /**
  * One form in the Tab cycle; `value_json` when it is a different quantity of units (26.5 lb as 423 oz).
  */
@@ -5502,6 +5698,30 @@ fileprivate struct FfiConverterOptionDouble: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionBool: FfiConverterRustBuffer {
+    typealias SwiftType = Bool?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterBool.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterBool.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     typealias SwiftType = String?
 
@@ -6503,6 +6723,16 @@ public func unitSettingGroups() -> [UnitSettingGroupInfo]  {
 })
 }
 /**
+ * How long typing rests before a name is asked about, in ms.
+ */
+public func nameCheckDelayMs() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_name_check_delay_ms(uniffiCallStatus
+    )
+})
+}
+/**
  * Settings plus history context in one `EvalOptions`; the context wins where both say something.
  */
 public func mergedOptions(options: EvalOptions, context: EvalContext) -> EvalOptions  {
@@ -6546,6 +6776,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_unit_setting_groups() != 15277) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_name_check_delay_ms() != 2694) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_merged_options() != 32156) {
@@ -6662,10 +6895,25 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_engine_typst_source() != 62253) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_namecheck_cached() != 7918) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_namecheck_finish() != 61457) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_namecheck_note_send() != 37118) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_namecheck_start() != 54000) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_constructor_canceltoken_new() != 60269) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_engine_new() != 6302) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_namecheck_new() != 46157) {
         return InitializationResult.apiChecksumMismatch
     }
 
