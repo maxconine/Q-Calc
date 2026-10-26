@@ -114,7 +114,11 @@ final class BarTextView: NSTextView {
             if let upper, upper.length > 0 { storage.setAttributes(up, range: upper) }
             // the upper limit sits over the lower: the lower's last character pulls the pen back under it
             let lw = width(lower), uw = upper.map(width) ?? Self.fontSize * 0.62 * 0.56
-            if lower.length > 0 { storage.addAttribute(.kern, value: -lw, range: NSRange(location: NSMaxRange(lower) - 1, length: 1)) }
+            let upperTyped = (upper?.length ?? 0) > 0
+            if lower.length > 0 {
+                // with no upper text yet the lower keeps its width (the upper's hole is drawn over it)
+                storage.addAttribute(.kern, value: upperTyped ? -lw : 2, range: NSRange(location: NSMaxRange(lower) - 1, length: 1))
+            }
             if let upper, upper.length > 0 { storage.addAttribute(.kern, value: max(0, lw - uw) + 2, range: NSRange(location: NSMaxRange(upper) - 1, length: 1)) }
             if lower.length == 0 { holes.append((lower, false, sign)) }
             if upper == nil || upper?.length == 0 { holes.append((upper ?? NSRange(location: end, length: 0), true, sign)) }

@@ -877,6 +877,7 @@ private struct CardView: View {
                         .overlay(RoundedRectangle(cornerRadius: Theme.radiusS)
                             .strokeBorder(focused ? Color.qAccent : Color.black.opacity(0.12), lineWidth: focused ? 2 : 0.5))
                         .noWritingTools()
+                        .tint(Color.qInk)
                         .focused($focused)
                         .onSubmit { model.sendReply(card.id) }
                         .disabled(card.reply == .sent)

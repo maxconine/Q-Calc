@@ -145,6 +145,7 @@ struct SystemPanel: View {
                     .overlay(RoundedRectangle(cornerRadius: Theme.radiusS)
                         .strokeBorder(focused == i ? Color.qAccent.opacity(0.55) : .clear, lineWidth: 1))
                     .noWritingTools()
+                    .tint(Color.qInk)
                     .autocorrectionDisabled()
                     .focused($focused, equals: i)
                     .onSubmit { model.sysEnter(i) }
