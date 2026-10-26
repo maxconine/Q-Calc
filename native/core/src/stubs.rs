@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::types::{AngleMode, DefaultUnits, Meas, SolveInfo, TimeLetters, UserFunction, Value};
+use crate::types::{AngleMode, DefaultUnits, Meas, SolveInfo, TimeLetters, Value};
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
@@ -86,37 +86,8 @@ pub fn parse_named_solve(_line: &str) -> Option<NamedSolve> {
     None
 }
 
-/// What a solve found, and how it shows.
-#[derive(Clone, Debug)]
-pub struct Solved {
-    pub info: SolveInfo,
-}
-
-#[derive(Clone, Debug)]
-pub struct SolveContext<'a> {
-    pub ans: Option<f64>,
-    pub angle_mode: AngleMode,
-    pub variables: &'a BTreeMap<String, f64>,
-    pub functions: &'a BTreeMap<String, UserFunction>,
-    pub rationalize: Option<bool>,
-}
-
-pub fn is_equation(_text: &str) -> bool {
-    false
-}
-
-pub fn solve_equation(_eq: &str, _ctx: &SolveContext<'_>) -> Option<Solved> {
-    None
-}
-
-/// `formatSolve`: the display and exact form of a solve.
-pub fn format_solve(
-    _solved: &Solved,
-    _sig_figs: f64,
-    _fraction_mode: bool,
-) -> (String, Option<String>) {
-    (String::new(), None)
-}
+// ported: `crate::solve`
+pub use crate::solve::{SolveContext, Solved, format_solve, is_equation, solve_equation};
 
 /// An equation with units, solved in SI: Some(display, info, value).
 #[derive(Clone, Debug)]
