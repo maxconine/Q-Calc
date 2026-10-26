@@ -242,3 +242,19 @@ pub fn measure(_expr: &str, _measures: &BTreeMap<String, Meas>) -> Option<Measur
 pub fn format_measured(_n: f64, _meas: &Meas, _sig_fig_mode: bool) -> Option<String> {
     None
 }
+
+// ---- WP-PHRASES: `mergeLiveAnswer` needs `isMolarMassInput` (chem.ts); WP-CHEM may move it into chem.rs ----
+
+/// Whether a line asks for a molar mass in words: `molar mass H2O`, `H2O molar mass`. PORT: `isMolarMassInput`.
+pub fn is_molar_mass_input(text: &str) -> bool {
+    use crate::jsre::{self, Lazy};
+    static ASK: Lazy = Lazy::new(|| {
+        jsre::js(
+            r"^(?:molar\s+mass|molecular\s+(?:weight|mass)|formula\s+(?:weight|mass)|chem)(?:\s+of)?\s+(\S+)$",
+            "i",
+        )
+    });
+    static AFTER: Lazy = Lazy::new(|| jsre::js(r"^(\S+)\s+molar\s+mass$", "i"));
+    let t = crate::phrases::js_trim(text);
+    jsre::test(&ASK, t) || jsre::test(&AFTER, t)
+}
