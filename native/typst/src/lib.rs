@@ -16,13 +16,22 @@
 //! | `engine()` loads the WASM and fonts once | [`Renderer::new`] (fonts and library once per process) |
 //! | `warmupTypst` typesets `$ x^2 $` after 400 ms | [`Renderer::warm_up`] / [`Renderer::warm_up_in_background`] |
 //! | `svgCache`, 48 sources | document cache of 48 sources, plus pixmap and path caches |
-//! | `compiler.reset()` every 200 compiles | `typst::comemo::evict` after every compile, keeping 30 compiles of memos |
+//! | `compiler.reset()` every 200 compiles | `typst::comemo::evict` after every compile, keeping 10 compiles of memos |
 //! | `cleanSvg` black → `currentColor` | opaque black → the requested colour ([`recolor`]); `Foreground` in paths |
 //! | one compile at a time, newest wins | one compile at a time (a mutex); the UI drops stale generations |
 //! | `.typst-preview svg { max-height: 72px; max-width: 100% }` | [`RenderOptions::max_width_pt`]/`max_height_pt` |
 //!
 //! A compile error (mid-edit input) is an `Err`; the web preview then keeps the last good render, dimmed, and the
 //! UI does the same with the last image it got.
+//!
+//! Parity (`tests/web_parity.rs`): of 1262 preview documents built from the golden inputs, the same 1236
+//! compile as with typst.ts, at the same page size, and the other 26 fail with the same first error.
+//!
+//! Cost (`scripts/measure.sh`, arm64, release, stripped, through the Swift bindings): +26.9 MB linked per
+//! architecture (13 MB code, 10 MB data: Typst's bundled ICU, hyphenation and syntax tables plus the 2.2 MB of
+//! fonts), 12.6 MB gzipped; the typst.ts WASM the web preview loads is 29.3 MB (11 MB gzipped). A new renderer
+//! costs 2 ms and its first render 4 ms; after that a keystroke's compile and render is 0.07 ms median, 0.7 ms
+//! worst, and 1262 new sources take 0.12 ms median, 0.7 ms max. Memory settles near 33 MB after 50,000 renders.
 
 mod recolor;
 pub mod vector;
@@ -48,9 +57,11 @@ const DOCUMENT_CACHE: usize = 48;
 /// colours of the newest few sources, so fewer are kept.
 const IMAGE_CACHE: usize = 16;
 const VECTOR_CACHE: usize = 48;
-/// comemo memos unused for this many compiles are dropped (typst-cli's watch mode keeps 10). The web preview
+/// comemo memos unused for this many compiles are dropped, as in typst-cli's watch mode. Rendering memoises each
+/// glyph bitmap per subpixel position, so this bounds memory: about 40 MB after thousands of distinct renders,
+/// against 43 MB at 30 (measured by `examples/typst_memory.rs`). The web preview
 /// instead resets the compiler every 200 compiles.
-const EVICT_AGE: usize = 30;
+const EVICT_AGE: usize = 10;
 
 /// Why a source gave no picture.
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -156,15 +156,20 @@ print(String(format: "corpus: %d sources (%d errors) in %.0f ms, median %.2f ms,
              corpus.count, corpusErrors, total, percentile(corpus, 0.5), percentile(corpus, 0.9), percentile(corpus, 0.99), corpus.max()!))
 print(String(format: "memory (phys_footprint): start %.1f MB, after first render %.1f MB, after the corpus %.1f MB",
              base, afterFirst, footprintMB()))
-for _ in 0..<3 {
-    for line in lines {
+// memory over a long session: every pass compiles all 1262 sources again (the caches hold 48)
+var passes: [String] = []
+for pass in 1...40 {
+    autoreleasepool { for line in lines {
         let obj = try! JSONSerialization.jsonObject(with: Data(line.utf8)) as! [String: Any]
-        _ = try? typst.render(source: obj["doc"] as! String, options: opts(dark))
-    }
+        _ = try? typst.render(source: obj["doc"] as! String, options: opts(pass % 2 == 0 ? light : dark))
+    } }
+    if pass % 5 == 0 { passes.append(String(format: "%d: %.1f", pass, footprintMB())) }
 }
-print(String(format: "memory after 3 more passes (%d renders): %.1f MB", lines.count * 3, footprintMB()))
+print("memory after further passes of the corpus (pass: MB): \(passes.joined(separator: ", "))")
 typst.clearCaches()
 print(String(format: "memory after clearCaches(): %.1f MB", footprintMB()))
+malloc_zone_pressure_relief(nil, 0)
+print(String(format: "after malloc_zone_pressure_relief (free pages returned): %.1f MB", footprintMB()))
 
 let showcase = doc("frac(x^2 + 1, sqrt(2)) + sum_(k=1)^n k^2 = mat(1, 2; 3, 4) quad arrow.r.double quad x = plus.minus 2")
 let img = try! typst.render(source: showcase, options: opts(light))

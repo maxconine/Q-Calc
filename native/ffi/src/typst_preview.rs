@@ -82,7 +82,9 @@ pub struct TypstImage {
 pub enum TypstPaint {
     /// The UI's text colour (the document's black).
     Foreground,
-    Color { color: TypstColor },
+    Color {
+        color: TypstColor,
+    },
 }
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
