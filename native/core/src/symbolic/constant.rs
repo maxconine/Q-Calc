@@ -9,6 +9,12 @@
 //! signature (`sqrt`, `sin`, …) throws on Fractions and is retried the same way; a non-real answer (`sqrt(-2)`,
 //! `(-8)^(1/3)` through Fraction.js) is a Complex, which can't become a node, so simplify throws. A function
 //! mathjs doesn't have (`ln`) stays a call.
+//!
+//! Known divergence: a folded transcendental call (`asin(0.5)`, `log(3)`, `cbrt(2.5)`) uses the platform libm,
+//! while V8's `Math` is fdlibm, so about one random constant call in a hundred prints a different last digit
+//! (only `tan` is ported, in `jsmath.rs`). The engine hides constant calls from `simplify` (calculus's `k0__`,
+//! isolate's `__held0`), so this reaches only isolate's `rationalize` candidate, which loses to an exact form
+//! whenever it shows a decimal. A shared fdlibm port would close it.
 
 use super::fraction::{Fraction, big_to_f64};
 use super::simplify::{Ctx, SimplifyOptions, all_children, is_associative, make_node};
