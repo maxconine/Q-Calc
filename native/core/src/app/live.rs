@@ -230,8 +230,14 @@ fn phrase_answer(
     if !js_display.is_empty() && !looks_like_natural_language(expr) {
         return None;
     }
-    answer_phrase(expr, req.now_ms, sig_figs, &req.rates, req.time_zone.as_deref())
-        .map(|p| (p.display, p.n))
+    answer_phrase(
+        expr,
+        req.now_ms,
+        sig_figs,
+        &req.rates,
+        req.time_zone.as_deref(),
+    )
+    .map(|p| (p.display, p.n))
 }
 
 /// The squiggle's and ↵'s evaluator: whether a piece of text answers (through `ans` when the line chains).

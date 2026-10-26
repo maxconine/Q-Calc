@@ -226,16 +226,17 @@ typst.ts (the Typst compiler built to WASM) into SVG inside the web view.
 
 Typst is written in Rust, so the native app uses it directly. A `qcalc-typst` crate depends on `typst`,
 `typst-render` and the math fonts from `typst-assets` (New Computer Modern Math). It compiles the
-`typstDocument` source in memory and renders the page to an RGBA pixmap at the screen's backing scale. Swift
-wraps the pixmap in a `CGImage` and shows it in the preview row. PNG/pixmap output is chosen over SVG because
-`NSImage` can't draw SVG reliably on macOS 13.5. Typst's `comemo` caching makes keystroke-to-keystroke
-recompiles cheap. The crate warms up on a background thread at launch (the TS `warmupTypst`), and the preview
-falls back to plain text until the first render lands.
+`typstDocument` source in memory and lays the page out as vector paths in page points (`TypstRenderer.paths`;
+an RGBA pixmap, `render`, is there too). The Mac app draws the paths in a SwiftUI `Canvas` in the text colour
+(`Sources/Bar/MathText.swift`), so light and dark need no second compile and nothing is rasterised twice.
+Typst's `comemo` caching makes keystroke-to-keystroke recompiles cheap. The renderer warms up on its own queue at
+launch (the TS `warmupTypst`); the row shows exactly when the web app's does (`typstShown`: the setting, no
+command panel, `typstPreviewUseful`), and mid-edit input Typst rejects keeps the last picture, dimmed.
 
-Cost and fallback: typst adds roughly 8–15 MB to the binary and heavy compile time, so it sits behind a
-`qcalc-ffi` feature and can ship one release after the engine. If size rules it out, the fallback is a native
-SwiftUI math view (fractions, radicals, scripts, bounds) driven by the same structure `previewMath` builds, with
-no new dependency. The Typst *source* generation (`typstMath.ts`, `radical.ts`, `bounds.ts`) is engine logic in
+Cost: typst adds about 27 MB per architecture to the stripped binary (measured by
+`native/typst/scripts/measure.sh`; the web preview's typst.ts WASM it replaces was 29 MB) and heavy compile time.
+It sits behind the `qcalc-ffi` feature `typst`, which `native/mac/build.sh` turns on
+(`QCALC_FFI_FEATURES=typst` for `native/scripts/build-mac.sh`). The Typst *source* generation (`typstMath.ts`, `radical.ts`, `bounds.ts`) is engine logic in
 both designs (WP-NOTATION), and the copy-as-Typst setting (`typstCopy`) uses it directly.
 
 ## 7. Games: an on-demand web view
@@ -292,8 +293,9 @@ fetching and passes the JSON to `Engine::set_rates`.
   `-Xcc -fmodule-map-file=native/build/swift/qcalc_ffiFFI.modulemap -I native/build/swift`, and link
   `-L native/build/<arch> -lqcalc_ffi`. Each per-arch app links its own thin library, matching the per-arch
   packaging. `MathEval.swift` and `math_test.swift` are deleted.
-- **Web assets:** `npm run build` shrinks to the games entry (`games.html`). `Contents/Resources/web` holds only
-  the game bundle. `quick.html`, `settings.html` and `sheet.html` are no longer loaded.
+- **Web assets:** only the games entry (`games.html`), built on its own by `native/mac/games.vite.config.ts`.
+  `Contents/Resources/web` holds only the game bundle; no calculator page, chunk or WASM ships, and no script
+  runs outside a game's web view (the app logic that ran in JavaScriptCore is in the core now).
 - **Frameworks:** SoulverCore is already gone. Sparkle is unchanged. WebKit stays linked (system framework, no
   cost until a game creates a view).
 - **Signing:** unchanged. The engine is a static library inside the main binary, so there is no new bundle to sign.

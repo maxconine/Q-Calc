@@ -56,9 +56,9 @@ panel over the bar and tear down after the animation.
 
 `games.html` is a Vite entry (`games.html`, `src/games.tsx`) that mounts the existing `GameShell` and game panels
 with today's bridge messages (`game`, `gameSave`, `nickname`, `copy`, `escapeLayer`, `gameFullscreen`, plus
-`effectDone`). `npm run build` writes it to `dist/` with the other entries; `build.sh` runs that when `dist/games.html`
-is missing and `node_modules` exists, and copies only `games.html`, `assets/` and the icons into the app. Without it
-the app still builds, and games say the build has none.
+`effectDone`). `build.sh` builds that entry alone (`games.vite.config.ts`, into `native/build/games-web`) when
+`node_modules` exists, and copies it into the app: none of the calculator's pages, chunks or the typst.ts WASM.
+Without it the app still builds, and games say the build has none.
 
 ## Development tools
 

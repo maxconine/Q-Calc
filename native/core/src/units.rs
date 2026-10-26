@@ -21,6 +21,7 @@ use std::f64::consts::PI;
 
 use crate::jsnum;
 use crate::jsre::{self, Lazy};
+use crate::scientific::functions::jsmath;
 use crate::types::{AngleMode, DefaultUnits, Meas, Value, ValueKind};
 
 pub use settings::{
@@ -615,7 +616,8 @@ fn mul_via(a: &Qty, b: &Qty, sign: f64) -> Option<Via> {
 }
 
 fn units_size(u: &[(UnitRef, f64)]) -> f64 {
-    u.iter().fold(1.0, |f, (unit, p)| f * si_of(unit).powf(*p))
+    u.iter()
+        .fold(1.0, |f, (unit, p)| f * jsmath::pow(si_of(unit), *p))
 }
 
 /// Products, quotients and powers: fewest sig figs, relative uncertainties add.
@@ -715,7 +717,7 @@ fn typed_parts(unit: &UnitRef) -> Vec<(UnitRef, f64)> {
             .iter()
             .find(|u| u.dim == Dim::Length && u.symbol == head)
             && unit.dim == want
-            && same_scale(si_of(len).powf(power), si_of(unit))
+            && same_scale(jsmath::pow(si_of(len), power), si_of(unit))
         {
             return vec![(len.clone(), power)];
         }
@@ -956,7 +958,7 @@ fn prec_meas(n: f64, p: Option<&Prec>) -> Option<Meas> {
         let dp = if n == 0.0 {
             p.sig - 1.0
         } else {
-            p.sig - 1.0 - n.abs().log10().floor()
+            p.sig - 1.0 - jsmath::log10(n.abs()).floor()
         };
         out.dp = Some(dp as i32);
     }
@@ -1160,7 +1162,7 @@ fn ladder_at(dim: &DimVec, size: f64) -> Option<UnitRef> {
         if root.dim.vec() != *dim {
             continue;
         }
-        let exp = (size / si_of(&root)).log10();
+        let exp = jsmath::log10(size / si_of(&root));
         let k = jsnum::round(exp);
         if (exp - k).abs() < 1e-9 && k % 3.0 == 0.0 && in_engineering_range(&root, k) {
             return ladder_unit(&root, k);
@@ -1179,7 +1181,7 @@ fn engineering(q: &Qty, unit: &UnitRef) -> Option<Value> {
     if a == 0.0 {
         return Some(v);
     }
-    let log = a.log10() + place.1;
+    let log = jsmath::log10(a) + place.1;
     let to_mm = place.0.id == "m" && place.1 < -3.0 && log >= -5.0;
     // 999.9999999 ms is 1 s
     if (1.0..1000.0 * (1.0 - 1e-12)).contains(&a) && !to_mm {
@@ -2246,7 +2248,7 @@ const PREFIX_ROOTS: [&str; 16] = [
 ];
 
 fn prefix_exponent(p: &Prefix) -> f64 {
-    jsnum::round(p.factor.log10())
+    jsnum::round(jsmath::log10(p.factor))
 }
 
 /// Table units by id, plus the `kilo_n`-style ids of prefixed units synthesized on the fly.
@@ -2275,7 +2277,7 @@ fn ladder_place(unit: &Unit) -> Option<(UnitRef, f64)> {
         if root.dim != unit.dim {
             continue;
         }
-        let exp = (unit.to_base / root.to_base).log10();
+        let exp = jsmath::log10(unit.to_base / root.to_base);
         let k = jsnum::round(exp);
         if (exp - k).abs() < 1e-9 {
             return Some((root, k));
@@ -2309,7 +2311,7 @@ fn ladder_unit(root: &UnitRef, exp: f64) -> Option<UnitRef> {
 fn move_on_ladder(value: &Value, from: &(UnitRef, f64), exp: f64) -> Option<Value> {
     let to = ladder_unit(&from.0, exp)?;
     let shift = from.1 - exp;
-    let scale = 10f64.powf(shift.abs());
+    let scale = jsmath::pow(10.0, shift.abs());
     let n = if shift >= 0.0 {
         value.n * scale
     } else {
@@ -2446,7 +2448,7 @@ pub fn unit_alternatives(value: &Value, limit: usize) -> Vec<Value> {
     }
     // 1 to 999 reads best; tiny numbers read worse than big ones
     let readability = |n: f64| {
-        let mag = n.abs().log10();
+        let mag = jsmath::log10(n.abs());
         if mag < 0.0 {
             -mag * 2.0
         } else {

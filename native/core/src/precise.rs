@@ -21,6 +21,7 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 
 use crate::eval::{Scope, Val, builtins, ops};
 use crate::jsnum;
+use crate::scientific::functions::jsmath;
 use crate::scientific::{ScientificContext, preprocess_checked};
 use crate::syntax::{Constant, Node, Op, parse};
 use crate::types::{AngleMode, Value, ValueKind};
@@ -882,7 +883,7 @@ impl BigBackend<'_> {
                     }
                     return Ok(if b.is_zero() { Real::one() } else { a.clone() });
                 }
-                if (b.to_f64() * a.to_f64().abs().log10()).abs() > 400.0 {
+                if (b.to_f64() * jsmath::log10(a.to_f64().abs())).abs() > 400.0 {
                     return abort();
                 }
                 d.pow(a, b)
@@ -1385,7 +1386,7 @@ mod tests {
         );
         // the TS is exact only to 48 digits, then 80: past that the float answer stands
         assert_eq!(verdict("1e100+1-1e100", &v(0.0), &ctx), Verdict::Same);
-        let pow = 1.000_000_000_000_001_f64.powf(1e15);
+        let pow = jsmath::pow(1.000_000_000_000_001, 1e15);
         assert_eq!(
             verdict("(1+1e-15)^(1e15)", &v(pow), &ctx),
             Verdict::Corrected(2.718_281_828_459_043_8)

@@ -1220,3 +1220,19 @@ pub fn atanh(x: f64) -> f64 {
     };
     if hx >= 0 { t } else { -t }
 }
+
+#[cfg(test)]
+mod v8_tan {
+    // V8's Math.tan digits (fdlibm), which a folded tan(1) prints; the platform tan is an ulp off on some
+    #[test]
+    fn matches_v8() {
+        assert_eq!(super::tan(1.0), 1.5574077246549023);
+        assert_eq!(super::tan(10.0), 0.6483608274590866);
+        assert_eq!(super::tan(2.5f64.sqrt()), -96.68494328539326);
+        assert_eq!(super::tan(0.5), 0.5463024898437905);
+        assert_eq!(super::tan(-3.0), 0.1425465430742778);
+        assert_eq!(super::tan(1e5), -0.035771662952898776);
+        assert_eq!(super::tan(2.0), -2.185039863261519);
+        assert_eq!(super::tan(4.7), 80.71276296747477);
+    }
+}

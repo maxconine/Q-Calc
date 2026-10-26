@@ -465,6 +465,22 @@ fileprivate final class UniffiHandleMap<T>: @unchecked Sendable {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
+    typealias FfiType = UInt8
+    typealias SwiftType = UInt8
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -497,6 +513,22 @@ fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
     typealias FfiType = Int64
     typealias SwiftType = Int64
@@ -507,6 +539,22 @@ fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
 
     public static func write(_ value: Int64, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterFloat: FfiConverterPrimitive {
+    typealias FfiType = Float
+    typealias SwiftType = Float
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Float {
+        return try lift(readFloat(&buf))
+    }
+
+    public static func write(_ value: Float, into buf: inout [UInt8]) {
+        writeFloat(&buf, lower(value))
     }
 }
 
@@ -593,6 +641,24 @@ fileprivate struct FfiConverterString: FfiConverter {
         let len = Int32(value.utf8.count)
         writeInt(&buf, len)
         writeBytes(&buf, value.utf8)
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
     }
 }
 
@@ -762,6 +828,12 @@ public protocol EngineProtocol: AnyObject, Sendable {
     func blankReason(text: String, options: EvalOptions, names: CompletionNames)  -> Span?
     
     /**
+     * Where the bar's blank line stops reading (`blankReason`), each piece evaluated as `live` would with the
+     * request's context and chaining; None when the line is empty or reads.
+     */
+    func blankSpan(request: LiveRequest)  -> Span?
+    
+    /**
      * Any ported TS function by module and name (`lib/completion`, `completionFor`), its arguments a JSON array
      * in the TS shapes; the answer as JSON.
      */
@@ -892,6 +964,11 @@ public protocol EngineProtocol: AnyObject, Sendable {
     func loadHistory()  -> [HistoryRow]
     
     /**
+     * The unit a number was owed when a sum's units don't add up (`missingUnit`), or None.
+     */
+    func missingUnit(request: LiveRequest)  -> UnitOffer?
+    
+    /**
      * TS `HistoryRow[]` JSON (legacy rows too, or the history file's envelope) to the slimmed rows' JSON.
      */
     func normalizeHistory(rowsJson: String)  -> String
@@ -1018,6 +1095,20 @@ open func blankReason(text: String, options: EvalOptions, names: CompletionNames
         FfiConverterString.lower(text),
         FfiConverterTypeEvalOptions_lower(options),
         FfiConverterTypeCompletionNames_lower(names),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Where the bar's blank line stops reading (`blankReason`), each piece evaluated as `live` would with the
+     * request's context and chaining; None when the line is empty or reads.
+     */
+open func blankSpan(request: LiveRequest) -> Span?  {
+    return try!  FfiConverterOptionTypeSpan.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_blank_span(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeLiveRequest_lower(request),uniffiCallStatus
     )
 })
 }
@@ -1403,6 +1494,19 @@ open func loadHistory() -> [HistoryRow]  {
 }
     
     /**
+     * The unit a number was owed when a sum's units don't add up (`missingUnit`), or None.
+     */
+open func missingUnit(request: LiveRequest) -> UnitOffer?  {
+    return try!  FfiConverterOptionTypeUnitOffer.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_missing_unit(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeLiveRequest_lower(request),uniffiCallStatus
+    )
+})
+}
+    
+    /**
      * TS `HistoryRow[]` JSON (legacy rows too, or the history file's envelope) to the slimmed rows' JSON.
      */
 open func normalizeHistory(rowsJson: String) -> String  {
@@ -1547,6 +1651,218 @@ public func FfiConverterTypeEngine_lift(_ handle: UInt64) throws -> Engine {
 #endif
 public func FfiConverterTypeEngine_lower(_ value: Engine) -> UInt64 {
     return FfiConverterTypeEngine.lower(value)
+}
+
+
+
+
+
+
+/**
+ * Compiles and draws preview documents. Thread-safe; calls are serialised inside.
+ */
+public protocol TypstRendererProtocol: AnyObject, Sendable {
+    
+    /**
+     * Drop cached documents, images, paths and Typst's memos (memory pressure).
+     */
+    func clearCaches() 
+    
+    /**
+     * The page's size in points, or why it doesn't compile.
+     */
+    func pageSize(source: String) throws  -> TypstSize
+    
+    func paths(source: String) throws  -> TypstPaths
+    
+    func render(source: String, options: TypstRenderOptions) throws  -> TypstImage
+    
+    func stats()  -> TypstStats
+    
+    /**
+     * Typeset `$ x^2 $` so the first keystroke is fast (`warmupTypst`); call off the main thread at launch.
+     * Returns the milliseconds it took.
+     */
+    func warmUp()  -> Double
+    
+}
+/**
+ * Compiles and draws preview documents. Thread-safe; calls are serialised inside.
+ */
+open class TypstRenderer: TypstRendererProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_typstrenderer(self.handle, $0) }
+    }
+    /**
+     * Fonts and Typst's library are built once per process (a few ms).
+     */
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_typstrenderer_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_typstrenderer(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * Drop cached documents, images, paths and Typst's memos (memory pressure).
+     */
+open func clearCaches()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_typstrenderer_clear_caches(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * The page's size in points, or why it doesn't compile.
+     */
+open func pageSize(source: String)throws  -> TypstSize  {
+    return try  FfiConverterTypeTypstSize_lift(try rustCallWithError(FfiConverterTypeTypstError_lift) {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_typstrenderer_page_size(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(source),uniffiCallStatus
+    )
+})
+}
+    
+open func paths(source: String)throws  -> TypstPaths  {
+    return try  FfiConverterTypeTypstPaths_lift(try rustCallWithError(FfiConverterTypeTypstError_lift) {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_typstrenderer_paths(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(source),uniffiCallStatus
+    )
+})
+}
+    
+open func render(source: String, options: TypstRenderOptions)throws  -> TypstImage  {
+    return try  FfiConverterTypeTypstImage_lift(try rustCallWithError(FfiConverterTypeTypstError_lift) {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_typstrenderer_render(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(source),
+        FfiConverterTypeTypstRenderOptions_lower(options),uniffiCallStatus
+    )
+})
+}
+    
+open func stats() -> TypstStats  {
+    return try!  FfiConverterTypeTypstStats_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_typstrenderer_stats(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Typeset `$ x^2 $` so the first keystroke is fast (`warmupTypst`); call off the main thread at launch.
+     * Returns the milliseconds it took.
+     */
+open func warmUp() -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_typstrenderer_warm_up(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstRenderer: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = TypstRenderer
+
+    public static func lift(_ handle: UInt64) throws -> TypstRenderer {
+        return TypstRenderer(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: TypstRenderer) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstRenderer {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: TypstRenderer, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstRenderer_lift(_ handle: UInt64) throws -> TypstRenderer {
+    return try FfiConverterTypeTypstRenderer.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstRenderer_lower(_ value: TypstRenderer) -> UInt64 {
+    return FfiConverterTypeTypstRenderer.lower(value)
 }
 
 
@@ -2066,16 +2382,26 @@ public struct EngineConfig: Equatable, Hashable {
      * Where `history.json` and `rates.json` live (`~/Library/Application Support/Q Calc`); none means no files.
      */
     public var dataDir: String?
+    /**
+     * The IANA zone the user's clock reads in (`TimeZone.current.identifier`), for time phrases; none reads
+     * times in America/Los_Angeles, as the TS recordings did.
+     */
+    public var timeZone: String?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(isWindows: Bool = false, locale: String = "en_US", 
         /**
          * Where `history.json` and `rates.json` live (`~/Library/Application Support/Q Calc`); none means no files.
-         */dataDir: String? = nil) {
+         */dataDir: String? = nil, 
+        /**
+         * The IANA zone the user's clock reads in (`TimeZone.current.identifier`), for time phrases; none reads
+         * times in America/Los_Angeles, as the TS recordings did.
+         */timeZone: String? = nil) {
         self.isWindows = isWindows
         self.locale = locale
         self.dataDir = dataDir
+        self.timeZone = timeZone
     }
 
     
@@ -2096,7 +2422,8 @@ public struct FfiConverterTypeEngineConfig: FfiConverterRustBuffer {
             try EngineConfig(
                 isWindows: FfiConverterBool.read(from: &buf), 
                 locale: FfiConverterString.read(from: &buf), 
-                dataDir: FfiConverterOptionString.read(from: &buf)
+                dataDir: FfiConverterOptionString.read(from: &buf), 
+                timeZone: FfiConverterOptionString.read(from: &buf)
         )
     }
 
@@ -2104,6 +2431,7 @@ public struct FfiConverterTypeEngineConfig: FfiConverterRustBuffer {
         FfiConverterBool.write(value.isWindows, into: &buf)
         FfiConverterString.write(value.locale, into: &buf)
         FfiConverterOptionString.write(value.dataDir, into: &buf)
+        FfiConverterOptionString.write(value.timeZone, into: &buf)
     }
 }
 
@@ -4213,6 +4541,565 @@ public func FfiConverterTypeTimeLetters_lower(_ value: TimeLetters) -> RustBuffe
 
 
 /**
+ * A clip path (nonzero), inside its parent's.
+ */
+public struct TypstClip: Equatable, Hashable {
+    public var verbs: Data
+    public var points: [Float]
+    public var parent: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(verbs: Data, points: [Float], parent: UInt32?) {
+        self.verbs = verbs
+        self.points = points
+        self.parent = parent
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstClip: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstClip: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstClip {
+        return
+            try TypstClip(
+                verbs: FfiConverterData.read(from: &buf), 
+                points: FfiConverterSequenceFloat.read(from: &buf), 
+                parent: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstClip, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.verbs, into: &buf)
+        FfiConverterSequenceFloat.write(value.points, into: &buf)
+        FfiConverterOptionUInt32.write(value.parent, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstClip_lift(_ buf: RustBuffer) throws -> TypstClip {
+    return try FfiConverterTypeTypstClip.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstClip_lower(_ value: TypstClip) -> RustBuffer {
+    return FfiConverterTypeTypstClip.lower(value)
+}
+
+
+/**
+ * Straight (not premultiplied) sRGB.
+ */
+public struct TypstColor: Equatable, Hashable {
+    public var r: UInt8
+    public var g: UInt8
+    public var b: UInt8
+    public var a: UInt8
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(r: UInt8, g: UInt8, b: UInt8, a: UInt8) {
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstColor: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstColor: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstColor {
+        return
+            try TypstColor(
+                r: FfiConverterUInt8.read(from: &buf), 
+                g: FfiConverterUInt8.read(from: &buf), 
+                b: FfiConverterUInt8.read(from: &buf), 
+                a: FfiConverterUInt8.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstColor, into buf: inout [UInt8]) {
+        FfiConverterUInt8.write(value.r, into: &buf)
+        FfiConverterUInt8.write(value.g, into: &buf)
+        FfiConverterUInt8.write(value.b, into: &buf)
+        FfiConverterUInt8.write(value.a, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstColor_lift(_ buf: RustBuffer) throws -> TypstColor {
+    return try FfiConverterTypeTypstColor.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstColor_lower(_ value: TypstColor) -> RustBuffer {
+    return FfiConverterTypeTypstColor.lower(value)
+}
+
+
+/**
+ * A premultiplied RGBA image (`CGImageAlphaInfo.premultipliedLast`, sRGB, `width * 4` bytes a row).
+ */
+public struct TypstImage: Equatable, Hashable {
+    public var width: UInt32
+    public var height: UInt32
+    /**
+     * Pixels per point used, after fitting; show it at `width / pixelPerPt` points.
+     */
+    public var scale: Float
+    public var widthPt: Float
+    public var heightPt: Float
+    public var rgba: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(width: UInt32, height: UInt32, 
+        /**
+         * Pixels per point used, after fitting; show it at `width / pixelPerPt` points.
+         */scale: Float, widthPt: Float, heightPt: Float, rgba: Data) {
+        self.width = width
+        self.height = height
+        self.scale = scale
+        self.widthPt = widthPt
+        self.heightPt = heightPt
+        self.rgba = rgba
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstImage: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstImage: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstImage {
+        return
+            try TypstImage(
+                width: FfiConverterUInt32.read(from: &buf), 
+                height: FfiConverterUInt32.read(from: &buf), 
+                scale: FfiConverterFloat.read(from: &buf), 
+                widthPt: FfiConverterFloat.read(from: &buf), 
+                heightPt: FfiConverterFloat.read(from: &buf), 
+                rgba: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstImage, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.width, into: &buf)
+        FfiConverterUInt32.write(value.height, into: &buf)
+        FfiConverterFloat.write(value.scale, into: &buf)
+        FfiConverterFloat.write(value.widthPt, into: &buf)
+        FfiConverterFloat.write(value.heightPt, into: &buf)
+        FfiConverterData.write(value.rgba, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstImage_lift(_ buf: RustBuffer) throws -> TypstImage {
+    return try FfiConverterTypeTypstImage.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstImage_lower(_ value: TypstImage) -> RustBuffer {
+    return FfiConverterTypeTypstImage.lower(value)
+}
+
+
+/**
+ * One painted path in page points (y down). `verbs`: 0 move (1 point), 1 line (1), 2 quad (2), 3 cubic (3),
+ * 4 close (0); `points` are x, y pairs in order.
+ */
+public struct TypstPath: Equatable, Hashable {
+    public var verbs: Data
+    public var points: [Float]
+    public var paint: TypstPaint
+    public var style: TypstStyle
+    /**
+     * Index into `TypstPaths.clips` of the clip it is drawn inside.
+     */
+    public var clip: UInt32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(verbs: Data, points: [Float], paint: TypstPaint, style: TypstStyle, 
+        /**
+         * Index into `TypstPaths.clips` of the clip it is drawn inside.
+         */clip: UInt32?) {
+        self.verbs = verbs
+        self.points = points
+        self.paint = paint
+        self.style = style
+        self.clip = clip
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstPath: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstPath: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstPath {
+        return
+            try TypstPath(
+                verbs: FfiConverterData.read(from: &buf), 
+                points: FfiConverterSequenceFloat.read(from: &buf), 
+                paint: FfiConverterTypeTypstPaint.read(from: &buf), 
+                style: FfiConverterTypeTypstStyle.read(from: &buf), 
+                clip: FfiConverterOptionUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstPath, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.verbs, into: &buf)
+        FfiConverterSequenceFloat.write(value.points, into: &buf)
+        FfiConverterTypeTypstPaint.write(value.paint, into: &buf)
+        FfiConverterTypeTypstStyle.write(value.style, into: &buf)
+        FfiConverterOptionUInt32.write(value.clip, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstPath_lift(_ buf: RustBuffer) throws -> TypstPath {
+    return try FfiConverterTypeTypstPath.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstPath_lower(_ value: TypstPath) -> RustBuffer {
+    return FfiConverterTypeTypstPath.lower(value)
+}
+
+
+public struct TypstPaths: Equatable, Hashable {
+    public var widthPt: Float
+    public var heightPt: Float
+    /**
+     * The page's background; none for the preview (`fill: none`).
+     */
+    public var background: TypstPaint?
+    public var paths: [TypstPath]
+    public var clips: [TypstClip]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(widthPt: Float, heightPt: Float, 
+        /**
+         * The page's background; none for the preview (`fill: none`).
+         */background: TypstPaint?, paths: [TypstPath], clips: [TypstClip]) {
+        self.widthPt = widthPt
+        self.heightPt = heightPt
+        self.background = background
+        self.paths = paths
+        self.clips = clips
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstPaths: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstPaths: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstPaths {
+        return
+            try TypstPaths(
+                widthPt: FfiConverterFloat.read(from: &buf), 
+                heightPt: FfiConverterFloat.read(from: &buf), 
+                background: FfiConverterOptionTypeTypstPaint.read(from: &buf), 
+                paths: FfiConverterSequenceTypeTypstPath.read(from: &buf), 
+                clips: FfiConverterSequenceTypeTypstClip.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstPaths, into buf: inout [UInt8]) {
+        FfiConverterFloat.write(value.widthPt, into: &buf)
+        FfiConverterFloat.write(value.heightPt, into: &buf)
+        FfiConverterOptionTypeTypstPaint.write(value.background, into: &buf)
+        FfiConverterSequenceTypeTypstPath.write(value.paths, into: &buf)
+        FfiConverterSequenceTypeTypstClip.write(value.clips, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstPaths_lift(_ buf: RustBuffer) throws -> TypstPaths {
+    return try FfiConverterTypeTypstPaths.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstPaths_lower(_ value: TypstPaths) -> RustBuffer {
+    return FfiConverterTypeTypstPaths.lower(value)
+}
+
+
+public struct TypstRenderOptions: Equatable, Hashable {
+    /**
+     * The backing scale factor (2 on Retina): one Typst point is one UI point, as in the web view.
+     */
+    public var pixelPerPt: Float
+    /**
+     * Shrink to fit this width in points (`max-width: 100%`); 0 = no limit.
+     */
+    public var maxWidthPt: Float
+    /**
+     * Shrink to fit this height in points (the web preview's 72); 0 = no limit.
+     */
+    public var maxHeightPt: Float
+    /**
+     * The text colour: what the document's black becomes.
+     */
+    public var color: TypstColor
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The backing scale factor (2 on Retina): one Typst point is one UI point, as in the web view.
+         */pixelPerPt: Float, 
+        /**
+         * Shrink to fit this width in points (`max-width: 100%`); 0 = no limit.
+         */maxWidthPt: Float, 
+        /**
+         * Shrink to fit this height in points (the web preview's 72); 0 = no limit.
+         */maxHeightPt: Float, 
+        /**
+         * The text colour: what the document's black becomes.
+         */color: TypstColor) {
+        self.pixelPerPt = pixelPerPt
+        self.maxWidthPt = maxWidthPt
+        self.maxHeightPt = maxHeightPt
+        self.color = color
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstRenderOptions: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstRenderOptions: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstRenderOptions {
+        return
+            try TypstRenderOptions(
+                pixelPerPt: FfiConverterFloat.read(from: &buf), 
+                maxWidthPt: FfiConverterFloat.read(from: &buf), 
+                maxHeightPt: FfiConverterFloat.read(from: &buf), 
+                color: FfiConverterTypeTypstColor.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstRenderOptions, into buf: inout [UInt8]) {
+        FfiConverterFloat.write(value.pixelPerPt, into: &buf)
+        FfiConverterFloat.write(value.maxWidthPt, into: &buf)
+        FfiConverterFloat.write(value.maxHeightPt, into: &buf)
+        FfiConverterTypeTypstColor.write(value.color, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstRenderOptions_lift(_ buf: RustBuffer) throws -> TypstRenderOptions {
+    return try FfiConverterTypeTypstRenderOptions.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstRenderOptions_lower(_ value: TypstRenderOptions) -> RustBuffer {
+    return FfiConverterTypeTypstRenderOptions.lower(value)
+}
+
+
+public struct TypstSize: Equatable, Hashable {
+    public var widthPt: Float
+    public var heightPt: Float
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(widthPt: Float, heightPt: Float) {
+        self.widthPt = widthPt
+        self.heightPt = heightPt
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstSize: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstSize: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstSize {
+        return
+            try TypstSize(
+                widthPt: FfiConverterFloat.read(from: &buf), 
+                heightPt: FfiConverterFloat.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstSize, into buf: inout [UInt8]) {
+        FfiConverterFloat.write(value.widthPt, into: &buf)
+        FfiConverterFloat.write(value.heightPt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstSize_lift(_ buf: RustBuffer) throws -> TypstSize {
+    return try FfiConverterTypeTypstSize.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstSize_lower(_ value: TypstSize) -> RustBuffer {
+    return FfiConverterTypeTypstSize.lower(value)
+}
+
+
+public struct TypstStats: Equatable, Hashable {
+    public var compiles: UInt64
+    public var compileErrors: UInt64
+    public var cacheHits: UInt64
+    public var lastCompileMs: Double
+    public var warm: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(compiles: UInt64, compileErrors: UInt64, cacheHits: UInt64, lastCompileMs: Double, warm: Bool) {
+        self.compiles = compiles
+        self.compileErrors = compileErrors
+        self.cacheHits = cacheHits
+        self.lastCompileMs = lastCompileMs
+        self.warm = warm
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TypstStats: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstStats: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstStats {
+        return
+            try TypstStats(
+                compiles: FfiConverterUInt64.read(from: &buf), 
+                compileErrors: FfiConverterUInt64.read(from: &buf), 
+                cacheHits: FfiConverterUInt64.read(from: &buf), 
+                lastCompileMs: FfiConverterDouble.read(from: &buf), 
+                warm: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TypstStats, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.compiles, into: &buf)
+        FfiConverterUInt64.write(value.compileErrors, into: &buf)
+        FfiConverterUInt64.write(value.cacheHits, into: &buf)
+        FfiConverterDouble.write(value.lastCompileMs, into: &buf)
+        FfiConverterBool.write(value.warm, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstStats_lift(_ buf: RustBuffer) throws -> TypstStats {
+    return try FfiConverterTypeTypstStats.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstStats_lower(_ value: TypstStats) -> RustBuffer {
+    return FfiConverterTypeTypstStats.lower(value)
+}
+
+
+/**
  * One unit a default-unit setting can pick.
  */
 public struct UnitChoiceInfo: Equatable, Hashable {
@@ -4266,6 +5153,71 @@ public func FfiConverterTypeUnitChoiceInfo_lift(_ buf: RustBuffer) throws -> Uni
 #endif
 public func FfiConverterTypeUnitChoiceInfo_lower(_ value: UnitChoiceInfo) -> RustBuffer {
     return FfiConverterTypeUnitChoiceInfo.lower(value)
+}
+
+
+/**
+ * `missingUnit`'s offer: the unit `text` goes in at UTF-16 `at`, giving `filled`; `hint` says so.
+ */
+public struct UnitOffer: Equatable, Hashable {
+    public var at: UInt32
+    public var text: String
+    public var filled: String
+    public var hint: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(at: UInt32, text: String, filled: String, hint: String) {
+        self.at = at
+        self.text = text
+        self.filled = filled
+        self.hint = hint
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitOffer: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitOffer: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitOffer {
+        return
+            try UnitOffer(
+                at: FfiConverterUInt32.read(from: &buf), 
+                text: FfiConverterString.read(from: &buf), 
+                filled: FfiConverterString.read(from: &buf), 
+                hint: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitOffer, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.at, into: &buf)
+        FfiConverterString.write(value.text, into: &buf)
+        FfiConverterString.write(value.filled, into: &buf)
+        FfiConverterString.write(value.hint, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitOffer_lift(_ buf: RustBuffer) throws -> UnitOffer {
+    return try FfiConverterTypeUnitOffer.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitOffer_lower(_ value: UnitOffer) -> RustBuffer {
+    return FfiConverterTypeUnitOffer.lower(value)
 }
 
 
@@ -5403,6 +6355,392 @@ public func FfiConverterTypeSpanKind_lower(_ value: SpanKind) -> RustBuffer {
 }
 
 
+
+public 
+enum TypstError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    /**
+     * Typst rejected the source (mid-edit input): its first error, then hints.
+     */
+    case Compile(message: String
+    )
+    /**
+     * Typst panicked; the renderer reset itself.
+     */
+    case Crashed(message: String
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension TypstError: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstError: FfiConverterRustBuffer {
+    typealias SwiftType = TypstError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Compile(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .Crashed(
+            message: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TypstError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Compile(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .Crashed(message):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(message, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstError_lift(_ buf: RustBuffer) throws -> TypstError {
+    return try FfiConverterTypeTypstError.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstError_lower(_ value: TypstError) -> RustBuffer {
+    return FfiConverterTypeTypstError.lower(value)
+}
+
+
+
+public enum TypstLineCap: Equatable, Hashable {
+    
+    case butt
+    case round
+    case square
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension TypstLineCap: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstLineCap: FfiConverterRustBuffer {
+    typealias SwiftType = TypstLineCap
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstLineCap {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .butt
+        
+        case 2: return .round
+        
+        case 3: return .square
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TypstLineCap, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .butt:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .round:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .square:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstLineCap_lift(_ buf: RustBuffer) throws -> TypstLineCap {
+    return try FfiConverterTypeTypstLineCap.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstLineCap_lower(_ value: TypstLineCap) -> RustBuffer {
+    return FfiConverterTypeTypstLineCap.lower(value)
+}
+
+
+
+
+public enum TypstLineJoin: Equatable, Hashable {
+    
+    case miter
+    case round
+    case bevel
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension TypstLineJoin: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstLineJoin: FfiConverterRustBuffer {
+    typealias SwiftType = TypstLineJoin
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstLineJoin {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .miter
+        
+        case 2: return .round
+        
+        case 3: return .bevel
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TypstLineJoin, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .miter:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .round:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .bevel:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstLineJoin_lift(_ buf: RustBuffer) throws -> TypstLineJoin {
+    return try FfiConverterTypeTypstLineJoin.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstLineJoin_lower(_ value: TypstLineJoin) -> RustBuffer {
+    return FfiConverterTypeTypstLineJoin.lower(value)
+}
+
+
+
+
+public enum TypstPaint: Equatable, Hashable {
+    
+    /**
+     * The UI's text colour (the document's black).
+     */
+    case foreground
+    case color(color: TypstColor
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension TypstPaint: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstPaint: FfiConverterRustBuffer {
+    typealias SwiftType = TypstPaint
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstPaint {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .foreground
+        
+        case 2: return .color(color: try FfiConverterTypeTypstColor.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TypstPaint, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .foreground:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .color(color):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeTypstColor.write(color, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstPaint_lift(_ buf: RustBuffer) throws -> TypstPaint {
+    return try FfiConverterTypeTypstPaint.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstPaint_lower(_ value: TypstPaint) -> RustBuffer {
+    return FfiConverterTypeTypstPaint.lower(value)
+}
+
+
+
+
+public enum TypstStyle: Equatable, Hashable {
+    
+    case fill(evenOdd: Bool
+    )
+    case stroke(width: Float, cap: TypstLineCap, join: TypstLineJoin, miterLimit: Float, dash: [Float], dashPhase: Float
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension TypstStyle: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTypstStyle: FfiConverterRustBuffer {
+    typealias SwiftType = TypstStyle
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TypstStyle {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .fill(evenOdd: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 2: return .stroke(width: try FfiConverterFloat.read(from: &buf), cap: try FfiConverterTypeTypstLineCap.read(from: &buf), join: try FfiConverterTypeTypstLineJoin.read(from: &buf), miterLimit: try FfiConverterFloat.read(from: &buf), dash: try FfiConverterSequenceFloat.read(from: &buf), dashPhase: try FfiConverterFloat.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TypstStyle, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .fill(evenOdd):
+            writeInt(&buf, Int32(1))
+            FfiConverterBool.write(evenOdd, into: &buf)
+            
+        
+        case let .stroke(width,cap,join,miterLimit,dash,dashPhase):
+            writeInt(&buf, Int32(2))
+            FfiConverterFloat.write(width, into: &buf)
+            FfiConverterTypeTypstLineCap.write(cap, into: &buf)
+            FfiConverterTypeTypstLineJoin.write(join, into: &buf)
+            FfiConverterFloat.write(miterLimit, into: &buf)
+            FfiConverterSequenceFloat.write(dash, into: &buf)
+            FfiConverterFloat.write(dashPhase, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstStyle_lift(_ buf: RustBuffer) throws -> TypstStyle {
+    return try FfiConverterTypeTypstStyle.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTypstStyle_lower(_ value: TypstStyle) -> RustBuffer {
+    return FfiConverterTypeTypstStyle.lower(value)
+}
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -5766,6 +7104,30 @@ fileprivate struct FfiConverterOptionTypeTimeLetters: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeUnitOffer: FfiConverterRustBuffer {
+    typealias SwiftType = UnitOffer?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeUnitOffer.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeUnitOffer.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeAngleUnit: FfiConverterRustBuffer {
     typealias SwiftType = AngleUnit?
 
@@ -5814,6 +7176,30 @@ fileprivate struct FfiConverterOptionTypeHistoryKind: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeTypstPaint: FfiConverterRustBuffer {
+    typealias SwiftType = TypstPaint?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeTypstPaint.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeTypstPaint.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]?
 
@@ -5832,6 +7218,31 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
         case 1: return try FfiConverterSequenceString.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceFloat: FfiConverterRustBuffer {
+    typealias SwiftType = [Float]
+
+    public static func write(_ value: [Float], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterFloat.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Float] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Float]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterFloat.read(from: &buf))
+        }
+        return seq
     }
 }
 
@@ -6188,6 +7599,56 @@ fileprivate struct FfiConverterSequenceTypeTextSpan: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeTypstClip: FfiConverterRustBuffer {
+    typealias SwiftType = [TypstClip]
+
+    public static func write(_ value: [TypstClip], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTypstClip.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TypstClip] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TypstClip]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTypstClip.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeTypstPath: FfiConverterRustBuffer {
+    typealias SwiftType = [TypstPath]
+
+    public static func write(_ value: [TypstPath], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTypstPath.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TypstPath] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TypstPath]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTypstPath.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeUnitChoiceInfo: FfiConverterRustBuffer {
     typealias SwiftType = [UnitChoiceInfo]
 
@@ -6514,6 +7975,16 @@ public func mergedOptions(options: EvalOptions, context: EvalContext) -> EvalOpt
     )
 })
 }
+/**
+ * The fonts' licence (SIL OFL 1.1), for the About window.
+ */
+public func typstFontNotice() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_typst_font_notice(uniffiCallStatus
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -6551,6 +8022,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_func_merged_options() != 32156) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_func_typst_font_notice() != 34357) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_canceltoken_cancel() != 3997) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6561,6 +8035,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_blank_reason() != 36750) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_blank_span() != 31354) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_call_json() != 27565) {
@@ -6638,6 +8115,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_engine_load_history() != 34087) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_engine_missing_unit() != 16358) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_engine_normalize_history() != 40090) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -6662,10 +8142,31 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_engine_typst_source() != 62253) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_typstrenderer_clear_caches() != 61621) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_typstrenderer_page_size() != 12090) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_typstrenderer_paths() != 47506) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_typstrenderer_render() != 65031) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_typstrenderer_stats() != 18187) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_typstrenderer_warm_up() != 30186) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_constructor_canceltoken_new() != 60269) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_engine_new() != 6302) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_typstrenderer_new() != 54897) {
         return InitializationResult.apiChecksumMismatch
     }
 

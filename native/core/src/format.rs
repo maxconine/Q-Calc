@@ -2,6 +2,7 @@
 
 use crate::jsnum;
 use crate::jsre::{self, Lazy};
+use crate::scientific::functions::jsmath;
 use crate::types::{Value, ValueKind};
 
 pub const DEFAULT_SIG_FIGS: u32 = 12;
@@ -44,7 +45,7 @@ pub fn format_number(n: f64, sig_figs: f64) -> String {
         return "0".into();
     }
     let figs = clamp_sig_figs(sig_figs);
-    let mag = n.abs().log10().floor();
+    let mag = jsmath::log10(n.abs()).floor();
     if !(-6.0..12.0).contains(&mag) {
         return format_scientific(n, figs);
     }

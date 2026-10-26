@@ -354,16 +354,37 @@ mod tests {
     fn sorts_a_calculation_into_one_bucket() {
         let kind = |v: Json| calc_kind(&serde_json::from_value(v).unwrap());
         assert_eq!(kind(json!({ "expr": "2+2" })), "calc.arith");
-        assert_eq!(kind(json!({ "expr": "sys", "system": true })), "calc.system");
-        assert_eq!(kind(json!({ "expr": "graph sin(x)", "graph": true })), "calc.graph");
-        assert_eq!(kind(json!({ "expr": "f(x) = x^2", "fn": true })), "calc.function");
-        assert_eq!(kind(json!({ "expr": "x^2 = 4", "solve": true })), "calc.solve");
-        assert_eq!(kind(json!({ "expr": "a = 3", "assign": true })), "calc.assign");
+        assert_eq!(
+            kind(json!({ "expr": "sys", "system": true })),
+            "calc.system"
+        );
+        assert_eq!(
+            kind(json!({ "expr": "graph sin(x)", "graph": true })),
+            "calc.graph"
+        );
+        assert_eq!(
+            kind(json!({ "expr": "f(x) = x^2", "fn": true })),
+            "calc.function"
+        );
+        assert_eq!(
+            kind(json!({ "expr": "x^2 = 4", "solve": true })),
+            "calc.solve"
+        );
+        assert_eq!(
+            kind(json!({ "expr": "a = 3", "assign": true })),
+            "calc.assign"
+        );
         assert_eq!(kind(json!({ "expr": "d/dx x^2" })), "calc.calculus");
         assert_eq!(kind(json!({ "expr": "int(x, x, 0, 1)" })), "calc.calculus");
         assert_eq!(kind(json!({ "expr": "det([[1,2],[3,4]])" })), "calc.matrix");
-        assert_eq!(kind(json!({ "expr": "5 km to mi", "unit": true })), "calc.units");
-        assert_eq!(kind(json!({ "expr": "20% of 50", "native": true })), "calc.words");
+        assert_eq!(
+            kind(json!({ "expr": "5 km to mi", "unit": true })),
+            "calc.units"
+        );
+        assert_eq!(
+            kind(json!({ "expr": "20% of 50", "native": true })),
+            "calc.words"
+        );
         assert_eq!(kind(json!({ "expr": "*2", "chained": true })), "calc.chain");
     }
 }

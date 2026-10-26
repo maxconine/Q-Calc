@@ -132,7 +132,10 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         )));
     }
     if module == "lib/analytics" {
-        return Some(crate::app::analytics::golden_dispatch(name, raw).map_or(Outcome::Unported, Outcome::Answer));
+        return Some(
+            crate::app::analytics::golden_dispatch(name, raw)
+                .map_or(Outcome::Unported, Outcome::Answer),
+        );
     }
     let args: Vec<Json> = raw.iter().map(decode).collect();
     let a = |i: usize| args.get(i).cloned().unwrap_or(Json::Null);

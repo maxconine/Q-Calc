@@ -154,31 +154,6 @@ fn slim_equations(raw: Option<&Json>) -> Option<Json> {
     (!lines.is_empty()).then_some(Json::Array(lines))
 }
 
-/// `sanitizeMeas` (`src/engine/measure.ts`; WP-MEASURE's, needed here first).
-pub fn sanitize_meas(raw: Option<&Json>) -> Option<Json> {
-    let r = raw.filter(|v| v.is_object())?;
-    let digits = str_of(r, "uncDigits").filter(|d| {
-        let b = d.as_bytes();
-        !b.is_empty()
-            && b.len() <= 16
-            && (b'1'..=b'9').contains(&b[0])
-            && b.iter().all(u8::is_ascii_digit)
-    });
-    let (sig, dp, unc) = (finite_of(r, "sig"), finite_of(r, "dp"), finite_of(r, "unc"));
-    let mut out = Map::new();
-    if let (Some(sig), Some(dp)) = (sig, dp) {
-        out.insert("sig".into(), json!(sig));
-        out.insert("dp".into(), json!(dp));
-    }
-    if let Some(unc) = unc.filter(|u| *u > 0.0) {
-        out.insert("unc".into(), json!(unc));
-        if let Some(d) = digits {
-            out.insert("uncDigits".into(), json!(d));
-        }
-    }
-    (out.contains_key("sig") || out.contains_key("unc")).then_some(Json::Object(out))
-}
-
 fn slim_function_fields(row: &Json, kind: Option<&str>, expr: &str, out: &mut Map<String, Json>) {
     if kind != Some("function") {
         return;
@@ -257,7 +232,7 @@ pub fn slim_history_row(row: &Json) -> Option<Json> {
         out.insert("n".into(), json!(n));
     }
     if kind.is_none()
-        && let Some(meas) = sanitize_meas(row.get("meas"))
+        && let Some(meas) = row.get("meas").and_then(crate::measure::sanitize_meas)
     {
         out.insert("meas".into(), meas);
     }
