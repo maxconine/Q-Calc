@@ -169,7 +169,8 @@ enum BarCommand: Equatable {
         if lower == "settings" || lower == "preferences" { return .settings }
         if lower == "tutorial" || lower == "tour" { return .tutorial }
         if lower.range(of: #"^skip(\s+(tutorial|tour))?$"#, options: .regularExpression) != nil { return .skip }
-        if lower == "hi" || lower == "hello" || lower == "hey" { return .greeting }
+        // greeting.ts: `hello` gets a hi back (not `hi` or `hey`, which could be someone's variable)
+        if lower.range(of: #"^(hello|hello there|hiya|howdy)\s*[!.]*$"#, options: .regularExpression) != nil { return .greeting }
         if let g = graphRE.groups(t), let body = g[1] ?? nil { return .graph(body) }
         return nil
     }
@@ -193,7 +194,7 @@ enum BarCommand: Equatable {
         case .tutorial: return "start the tutorial"
         case .skip: return ""
         case .graph: return ""
-        case .greeting: return ""
+        case .greeting: return "hi 👋"
         }
     }
 }

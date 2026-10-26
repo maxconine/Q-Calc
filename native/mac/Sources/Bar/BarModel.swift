@@ -493,7 +493,7 @@ final class BarModel: ObservableObject {
         case .graph:
             break
         case .greeting:
-            hint = "hi! type some maths, like 2^10 or sqrt(2), and press ↵"
+            clearLine()
         }
     }
 
