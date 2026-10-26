@@ -6,6 +6,7 @@
 
 pub mod builtins;
 pub mod complex; // WP-FUNCTIONS
+pub mod matrix; // WP-MATRIX
 pub mod ops;
 
 use std::collections::BTreeMap;

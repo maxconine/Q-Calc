@@ -522,15 +522,30 @@ impl<'o> Sheet<'o> {
             self.quantities.remove(variable);
             self.measures.remove(variable);
         }
+        // WP-MATRIX: an entry like `sin(30)` is read by the calculator (`scalar` in the TS)
+        let scalar_ctx = PlainContext {
+            sci: self.sci(),
+            default_units: Default::default(),
+            keep_units: false,
+        };
+        let scalar = |text: &str| {
+            try_plain_math(text, &scalar_ctx)
+                .filter(|v| v.kind == ValueKind::Number && v.unit.is_none())
+                .map(|v| v.n)
+        };
         if !unit_self
             && let Some(m) = stubs::matrix_answer(
                 &with_quantities(
                     assign.as_ref().map_or(&trimmed, |(_, e)| e),
                     &self.quantities,
                 ),
-                &self.variables,
-                self.sig_figs,
-                self.fraction_mode,
+                &stubs::MatrixOptions {
+                    variables: &self.variables,
+                    sig_figs: self.sig_figs,
+                    fraction_mode: self.fraction_mode,
+                    functions: &fn_names,
+                    scalar: Some(&scalar),
+                },
             )
         {
             return self.matrix_line(raw, m, assign.as_ref().map(|(v, _)| v.as_str()));

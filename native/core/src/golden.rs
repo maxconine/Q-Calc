@@ -267,6 +267,11 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             Some(answer) => answer,
             None => return Outcome::Unported,
         },
+        // ---- WP-MATRIX: engine/matrix ----
+        ("engine/matrix", _) => match crate::matrix::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
