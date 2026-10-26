@@ -2,6 +2,7 @@ target/
 build/
 core/golden/.raw/
 core/golden/STATUS.md
+mac/dist/
 QCalcCore/qcalc_ffiFFI.xcframework/
 QCalcCore/.build/
 QCalcCore/.swiftpm/

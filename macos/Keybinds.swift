@@ -143,7 +143,11 @@ struct GlobalHotKey: Equatable {
     var menuModifiers: NSEvent.ModifierFlags { chord.menuModifiers }
     var menuKey: String { KeyNames.menuKey(chord.key) }
 
-    static let standard = GlobalHotKey("ctrl+alt+space")!
+    // a build can ship another default (the native dev build has its own, so it runs beside the installed app)
+    static let standard: GlobalHotKey = {
+        let custom = Bundle.main.object(forInfoDictionaryKey: "QCDefaultHotKey") as? String
+        return custom.flatMap { GlobalHotKey($0) } ?? GlobalHotKey("ctrl+alt+space")!
+    }()
 
     // what 2.0 stored: one of four preset ids
     private static let presetIDs = [

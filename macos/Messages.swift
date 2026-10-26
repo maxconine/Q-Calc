@@ -257,6 +257,32 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         }.resume()
     }
 
+    // a message from the bar, with this app's name and key; the relay's status comes back as sendMessage's does in
+    // src/lib/messaging.ts ("delivered", "offline", "unknown", "not-yours", "too-many", "bad", else "network")
+    func send(to raw: String, text raw2: String, done: @escaping (String) -> Void) {
+        let to = Self.clean(raw)
+        let text = MessageInbox.cleanText(raw2, max: Self.textMax)
+        guard !name.isEmpty, !key.isEmpty else { return done("not-yours") }
+        guard !to.isEmpty, !text.isEmpty else { return done("bad") }
+        post("/send", ["from": name, "key": key, "to": to, "text": text]) { status in
+            let known: Set<String> = ["delivered", "offline", "unknown", "not-yours", "too-many", "bad"]
+            done(known.contains(status) ? status : "network")
+        }
+    }
+
+    // what the bar says once a message has gone, or hasn't (sendStatusText in src/lib/messaging.ts)
+    static func sendStatusText(_ status: String, to: String) -> String {
+        switch status {
+        case "delivered": return "sent to \(to)"
+        case "offline": return "\(to) isn’t on q calc right now · not sent"
+        case "unknown": return "nobody’s called \(to) · not sent"
+        case "not-yours": return "your name’s been taken · pick another in settings"
+        case "too-many": return "that’s a lot of messages · try again in a minute"
+        case "bad": return "that message couldn’t be sent"
+        default: return "couldn’t reach the relay · not sent"
+        }
+    }
+
     // the inbox: one socket while a name is set, none otherwise
     private func connect() {
         close()

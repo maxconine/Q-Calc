@@ -230,6 +230,7 @@ build_app() {
     "$MAC/LoginItem.swift" \
     "$MAC/MessageInbox.swift" \
     "$MAC/Messages.swift" \
+    "$MAC/AppSettings.swift" \
     "$MAC/QCalcApp.swift" \
     -o "$BIN"
   # local symbols only help a debugger
