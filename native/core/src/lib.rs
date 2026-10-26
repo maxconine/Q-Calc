@@ -41,6 +41,12 @@ pub mod matrix;
 
 // ---- WP-MEASURE ----
 pub mod measure;
+// ---- WP-SOLVE ----
+pub mod isolate;
+pub mod solve;
+pub mod system;
+pub mod system_numeric;
+pub mod unit_solve;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

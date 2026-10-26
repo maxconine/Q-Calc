@@ -5,9 +5,7 @@
 //! Owners (see `native/PORTING_PLAN.md`): dots/letters/angles → WP-FUNCTIONS; chem → WP-CHEM; solve, isolate,
 //! system, unit solve → WP-SOLVE; calculus → WP-CALCULUS; matrix → WP-MATRIX; sums → WP-SUMS; measure → WP-MEASURE.
 
-use std::collections::BTreeMap;
-
-use crate::types::{AngleMode, DefaultUnits, SolveInfo, TimeLetters, UserFunction, Value};
+use crate::types::{TimeLetters, Value};
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
@@ -47,105 +45,14 @@ pub fn chem_answer(_text: &str, _is_name: &dyn Fn(&str) -> bool) -> Option<Strin
 
 // ---- WP-SOLVE (solve.ts, isolate.ts, system.ts, unitSolve.ts) ----
 
-/// `solve({…}, x = 1)`: the equations and the guess text.
-#[derive(Clone, Debug)]
-pub struct SystemCall {
-    pub equations: Vec<String>,
-    pub guess_text: String,
-}
-
-pub fn parse_system_call(_line: &str) -> Option<SystemCall> {
-    None
-}
-
-pub fn solve_system_call(
-    _eqs: &[String],
-    _guess: &str,
-    _mode: AngleMode,
-    _defaults: &DefaultUnits,
-) -> Option<String> {
-    None
-}
-
-/// `isolate x in …`: the rearranged formula's display.
-pub fn isolate_variable(_text: &str, _known: Option<&BTreeMap<String, f64>>) -> Option<String> {
-    None
-}
-
-/// `solve x in …` / `… for x`.
-#[derive(Clone, Debug)]
-pub struct NamedSolve {
-    pub variable: String,
-    pub eq: String,
-    pub numeric: String,
-    pub isolate: String,
-    pub near: Option<String>,
-}
-
-pub fn parse_named_solve(_line: &str) -> Option<NamedSolve> {
-    None
-}
-
-/// What a solve found, and how it shows.
-#[derive(Clone, Debug)]
-pub struct Solved {
-    pub info: SolveInfo,
-}
-
-#[derive(Clone, Debug)]
-pub struct SolveContext<'a> {
-    pub ans: Option<f64>,
-    pub angle_mode: AngleMode,
-    pub variables: &'a BTreeMap<String, f64>,
-    pub functions: &'a BTreeMap<String, UserFunction>,
-    pub rationalize: Option<bool>,
-}
-
-pub fn is_equation(_text: &str) -> bool {
-    false
-}
-
-pub fn solve_equation(_eq: &str, _ctx: &SolveContext<'_>) -> Option<Solved> {
-    None
-}
-
-/// `formatSolve`: the display and exact form of a solve.
-pub fn format_solve(
-    _solved: &Solved,
-    _sig_figs: f64,
-    _fraction_mode: bool,
-) -> (String, Option<String>) {
-    (String::new(), None)
-}
-
-/// An equation with units, solved in SI: Some(display, info, value).
-#[derive(Clone, Debug)]
-pub struct UnitSolved {
-    pub display: String,
-    pub info: Option<SolveInfo>,
-    pub value: Option<Value>,
-}
-
-pub fn solve_with_units_one(
-    _eq: &str,
-    _variable: Option<&str>,
-    _near: Option<&str>,
-) -> Option<UnitSolved> {
-    None
-}
-
-pub fn isolate_with_units(
-    _eq: &str,
-    _variable: &str,
-    _variables: &BTreeMap<String, f64>,
-) -> Option<String> {
-    None
-}
-
-/// Unit texts that clearly are units (m, s) and won't rearrange.
-pub fn clearly_units_blank(_eq: &str, _names: &[String]) -> bool {
-    false
-}
+// ported: `crate::solve`, `crate::isolate`, `crate::system` (the guess is a name → text list, as the TS record)
+pub use crate::isolate::{NamedSolve, isolate_variable, parse_named_solve};
+pub use crate::solve::{SolveContext, Solved, format_solve, is_equation, solve_equation};
+pub use crate::system::{SystemCall, parse_system_call, solve_system_call};
+// `solveWithUnitsOne` takes the TS ctx (solve context, stored names, default units, sig figs)
+pub use crate::unit_solve::{
+    UnitCtx, UnitSolved, clearly_units_blank, isolate_with_units, solve_with_units_one,
+};
 
 // ---- WP-MATRIX (matrix.ts) ----
 

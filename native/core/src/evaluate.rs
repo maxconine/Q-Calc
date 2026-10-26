@@ -651,7 +651,27 @@ impl<'o> Sheet<'o> {
         variable: Option<&str>,
         near: Option<&str>,
     ) -> Option<LineResult> {
-        let u = stubs::solve_with_units_one(eq, variable, near)?;
+        // ---- WP-SOLVE: solveWithUnitsOne's ctx ----
+        let names: Vec<String> = (self.variables.keys())
+            .chain(self.quantities.keys())
+            .chain(self.functions.keys())
+            .cloned()
+            .collect();
+        let ctx = stubs::UnitCtx {
+            solve: SolveContext {
+                ans: self.last_ans,
+                angle_mode: self.angle_mode,
+                variables: &self.variables,
+                functions: &self.functions,
+                rationalize: self.options.rationalize,
+            },
+            variable,
+            near,
+            names: &names,
+            defaults: &self.options.default_units,
+            sig_figs: self.sig_figs,
+        };
+        let u = stubs::solve_with_units_one(eq, &ctx)?;
         let Some(info) = u.info else {
             return Some(LineResult {
                 display: u.display,

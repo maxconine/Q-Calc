@@ -289,6 +289,13 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             Some(answer) => answer,
             None => return Outcome::Unported,
         },
+        // ---- WP-SOLVE: engine/solve, engine/isolate, engine/system ----
+        ("engine/solve" | "engine/isolate" | "engine/system", _) => {
+            match crate::solve::golden_dispatch_module(module, name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)

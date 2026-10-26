@@ -120,7 +120,8 @@ pub fn typed_i(expr: &str) -> bool {
 
 /// `fromMathjs` and `finish`: a mathjs value as an answer. NaN is undefined; an infinity is a result too big for a
 /// double, unless a typed ∞ went in.
-fn finish(v: &Val, expr: &str) -> Option<Value> {
+pub fn finish(v: &Val, expr: &str) -> Option<Value> {
+    // WP-SOLVE: pub for compileScientific
     let out = match v {
         Val::Num(n) if n.is_nan() => Value::text("undefined"),
         Val::Num(n) => Value::number(snap_int(*n)),
