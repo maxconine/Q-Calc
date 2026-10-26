@@ -1416,6 +1416,24 @@ mod tests {
     }
 
     #[test]
+    fn hard_inputs_finish_quickly() {
+        let ctx = ScientificContext::default();
+        let start = std::time::Instant::now();
+        for (text, f) in [
+            ("1e-999999999+1", 1.0),
+            ("floor(1e-999999999)", 0.0),
+            ("170!", 7.257_415_615_307_998e306),
+            ("1e300*1e300/1e300", 1e300),
+            ("2^0.5^0.5^0.5", 1.5),
+            ("(1+1e-15)^(1e15)", 3.035),
+            ("0.1^300", 1e-300),
+        ] {
+            let _ = verdict(text, &v(f), &ctx);
+        }
+        assert!(start.elapsed().as_secs() < 5);
+    }
+
+    #[test]
     fn settles_jumps_at_short_decimals() {
         let (lo, hi) = (dec(32), dec(48));
         let third = Pair {

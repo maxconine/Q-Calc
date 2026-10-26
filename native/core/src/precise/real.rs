@@ -148,7 +148,15 @@ fn round_to_exp(sig: &IBig, exp: isize, dir: i8, keep: isize, mode: Rounding) ->
         return Rep::new(sig.clone(), exp);
     }
     // the nudge, as a change of magnitude
-    let s: i8 = if neg { -dir } else { dir };
+    let mut s: i8 = if neg { -dir } else { dir };
+    // far below a tenth of the last kept digit, every mode rounds as it would for any such amount: stand in a
+    // single digit there rather than scale the value by a huge power of ten
+    let (m, exp) = if exp + (digit_count(&m) as isize) < keep - 1 {
+        s = 0;
+        (UBig::ONE, keep - 2)
+    } else {
+        (m, exp)
+    };
     // one digit below the kept ones at least, then one more that carries the nudge
     let low = exp.min(keep - 1);
     let mut m = m * pow10((exp - low) as usize);
@@ -802,9 +810,19 @@ impl Ctx {
             return Real::zero();
         };
         let exact = Ctx::new(0);
-        let total = values[1..]
-            .iter()
-            .fold(first.clone(), |acc, v| exact.add_exact(&acc, v));
+        // exact unless the exponents are too far apart to line up; then far more digits than kept are as good
+        let wide = self.with_precision(self.precision * 2 + 40);
+        let total = values[1..].iter().fold(first.clone(), |acc, v| {
+            let gap = match (acc.parts(), v.parts()) {
+                (Some((_, a)), Some((_, b))) => (a - b).abs(),
+                _ => 0,
+            };
+            if gap > MAX_QUOTIENT_DIGITS {
+                wide.add(&acc, v)
+            } else {
+                exact.add_exact(&acc, v)
+            }
+        });
         self.round(&total)
     }
 
@@ -842,10 +860,16 @@ impl Ctx {
         if ea - eb > MAX_QUOTIENT_DIGITS {
             return Real::NAN;
         }
-        // x / y = n / d exactly, with n and d integers
-        let e = ea.min(eb);
-        let n = sa.unsigned_abs() * pow10((ea - e) as usize);
-        let d = sb.unsigned_abs() * pow10((eb - e) as usize);
+        // x / y = n / d exactly, with n and d integers; a quotient far below 1 rounds as 1/10 would
+        let (n, d) = if eb - ea > MAX_QUOTIENT_DIGITS {
+            (UBig::ONE, UBig::from(10u8))
+        } else {
+            let e = ea.min(eb);
+            (
+                sa.unsigned_abs() * pow10((ea - e) as usize),
+                sb.unsigned_abs() * pow10((eb - e) as usize),
+            )
+        };
         let (mut q, r) = n.div_rem(&d);
         let qneg = x.is_neg() != y.is_neg();
         let bump = match self.modulo {
@@ -1378,6 +1402,21 @@ mod tests {
             }
         }
         eprintln!("{bad} of {total} differ");
+    }
+
+    #[test]
+    fn far_apart_exponents_stay_cheap() {
+        let d = Ctx::new(32);
+        let tiny = r("1e-999999999");
+        assert_eq!(tiny.to_dp(2, Rounding::HalfUp).to_string(), "0");
+        assert_eq!(tiny.to_dp(2, Rounding::Up).to_string(), "0.01");
+        assert_eq!(tiny.ceil().to_string(), "1");
+        assert_eq!(d.add(&tiny, &r("1")).to_string(), "1");
+        assert_eq!(d.sum(&[tiny.clone(), r("1")]).to_string(), "1");
+        assert_eq!(d.modulo(&tiny, &r("3")).to_string(), "1e-999999999");
+        let euclid = d.with_modulo(Modulo::Euclid);
+        assert_eq!(euclid.modulo(&tiny.neg(), &r("3")).to_string(), "3");
+        assert!(d.modulo(&r("1e999999999"), &r("3")).is_nan());
     }
 
     #[test]
