@@ -335,7 +335,6 @@ impl Renderer {
     pub fn warm_up(&self) -> f64 {
         let started = Instant::now();
         let _ = self.render(WARMUP_SOURCE, &RenderOptions::default());
-        // keep the warm-up out of the caches' way: it is never a real preview
         let mut inner = self.lock();
         inner.stats.warm = true;
         started.elapsed().as_secs_f64() * 1e3

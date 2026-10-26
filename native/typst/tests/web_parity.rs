@@ -1,7 +1,7 @@
 //! The native preview against the web one. `corpus.jsonl` holds 1262 preview documents (`typstDocument` over
 //! the golden inputs, with the answers the bar typesets beside them), each compiled by typst.ts, the web
-//! preview's own WASM Typst, with whether it compiled and the SVG's size. Regenerate it with the WP-TYPST-RENDER
-//! script described in `native/typst/README` section of the crate docs when `typstMath.ts` changes.
+//! preview's own WASM Typst, with whether it compiled, its first error and the SVG's size. Regenerate it with
+//! `native/typst/scripts/gen-corpus.ts` when `typstMath.ts` or the golden fixtures change.
 
 use qcalc_typst::{Error, Renderer};
 

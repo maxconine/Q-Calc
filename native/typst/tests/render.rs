@@ -20,7 +20,11 @@ fn macros_are_the_web_preamble() {
     let start = "export const TYPST_PREAMBLE = `";
     let from = ts.find(start).unwrap() + start.len();
     let to = from + ts[from..].find('`').unwrap();
-    assert_eq!(MACROS, &ts[from..to], "macros.typ drifted from TYPST_PREAMBLE");
+    assert_eq!(
+        MACROS,
+        &ts[from..to],
+        "macros.typ drifted from TYPST_PREAMBLE"
+    );
 }
 
 #[test]
@@ -39,18 +43,16 @@ fn renders_in_the_text_colour_for_light_and_dark() {
     assert_eq!(light.height, (light.height_pt * 2.0).round() as u32);
     assert_eq!((light.width, light.height), (dark.width, dark.height));
     let mut inked = 0;
-    let mut hist = std::collections::BTreeMap::new();
-    for p in light.rgba.chunks(4) {
-        *hist.entry(p[3] / 16).or_insert(0) += 1;
-    }
-    eprintln!("{hist:?} {:?}", light.rgba.chunks(4).max_by_key(|p| p[3]));
+    let unpremultiply = |p: &[u8], c: usize| (p[c] as u32 * 255 / p[3] as u32) as u8;
     for (l, d) in light.rgba.chunks(4).zip(dark.rgba.chunks(4)) {
-        // same coverage; colour is the requested one, premultiplied
+        // same coverage; colour is the requested one, premultiplied (pixglyph's coverage tops out at 254)
         assert!(l[3].abs_diff(d[3]) <= 1);
-        if l[3] == 255 {
+        if l[3] >= 250 && d[3] >= 250 {
             inked += 1;
-            assert_eq!(&l[..3], &LIGHT[..3]);
-            assert_eq!(&d[..3], &DARK[..3]);
+            for c in 0..3 {
+                assert!(unpremultiply(l, c).abs_diff(LIGHT[c]) <= 2, "{l:?}");
+                assert!(unpremultiply(d, c).abs_diff(DARK[c]) <= 2, "{d:?}");
+            }
         }
         for c in 0..3 {
             assert!(l[c] <= l[3] && d[c] <= d[3], "premultiplied");
@@ -77,16 +79,20 @@ fn other_colours_stay_as_written() {
     let red = img
         .rgba
         .chunks(4)
-        .filter(|p| p[3] == 255 && p[..3] == [255, 0, 0])
+        .filter(|p| p[3] >= 250 && p[0] >= 250 && p[1] == 0)
         .count();
     let fg = img
         .rgba
         .chunks(4)
-        .filter(|p| p[3] == 255 && p[..3] == DARK[..3])
+        .filter(|p| p[3] >= 250 && p[1] >= 240)
         .count();
     assert!(red > 20 && fg > 20, "red {red}, foreground {fg}");
     let v = r.vector(&src).unwrap();
-    assert!(v.items.iter().any(|i| i.paint == Paint::Rgba([255, 0, 0, 255])));
+    assert!(
+        v.items
+            .iter()
+            .any(|i| i.paint == Paint::Rgba([255, 0, 0, 255]))
+    );
     assert!(v.items.iter().any(|i| i.paint == Paint::Foreground));
 }
 
@@ -248,8 +254,9 @@ fn rasterise(v: &Vector, scale: f32) -> sk::Pixmap {
     pm
 }
 
-/// The paths are the pixmap: filled at the same scale, they cover the same pixels as typst-render's
-/// rasteriser (pixglyph for glyphs), up to anti-aliasing.
+/// The paths are the pixmap. At 8 px/pt (144 ppem) typst-render fills glyph outlines with tiny-skia instead of
+/// pixglyph, so filling the paths with tiny-skia must give the same pixels. (At 2-3 px/pt pixglyph's
+/// anti-aliasing differs from tiny-skia's on about 5% of the ink, with the same total ink.)
 #[test]
 fn vector_paths_match_the_pixmap() {
     let r = Renderer::new();
@@ -263,7 +270,7 @@ fn vector_paths_match_the_pixmap() {
         let v: serde_json::Value = serde_json::from_str(line).unwrap();
         let src = v["doc"].as_str().unwrap();
         let Ok(vector) = r.vector(src) else { continue };
-        let scale = 3.0;
+        let scale = 8.0;
         let img = r
             .render(
                 src,
@@ -277,18 +284,36 @@ fn vector_paths_match_the_pixmap() {
             .unwrap();
         let pm = rasterise(&vector, scale);
         assert_eq!((pm.width(), pm.height()), (img.width, img.height));
-        let (mut diff, mut ink) = (0u64, 0u64);
+        let (mut diff, mut ink, mut vink, mut flips, mut solid) = (0u64, 0u64, 0u64, 0u64, 0u64);
         for (a, b) in pm.data().chunks(4).zip(img.rgba.chunks(4)) {
             diff += a[3].abs_diff(b[3]) as u64;
             ink += b[3] as u64;
+            vink += a[3] as u64;
+            if (a[3] > 127) != (b[3] > 127) {
+                flips += 1;
+            }
+            if b[3] > 127 {
+                solid += 1;
+            }
         }
         assert!(ink > 0, "{src}");
         // the share of the ink that differs
         let off = diff as f64 / ink as f64;
         worst = worst.max(off);
-        assert!(off < 0.05, "{}: {:.1}% of the ink differs", v["expr"], off * 100.0);
+        // what is left is typst-render drawing rectangles (fraction bars) without anti-aliasing
+        assert!(
+            off < 0.01,
+            "{}: {:.2}% of the ink differs",
+            v["expr"],
+            off * 100.0
+        );
+        assert!((vink as f64 / ink as f64 - 1.0).abs() < 0.005);
+        assert!(flips * 100 < solid, "{}", v["expr"]);
         checked += 1;
     }
-    println!("{checked} pages: at most {:.2}% of the ink differs", worst * 100.0);
+    println!(
+        "{checked} pages: at most {:.2}% of the ink differs",
+        worst * 100.0
+    );
     assert!(checked > 250);
 }

@@ -7,8 +7,6 @@
 //! [`Paint::Foreground`], so the UI fills them with the label colour and they follow light and dark mode without
 //! another compile.
 
-use std::sync::Arc;
-
 use ttf_parser::{GlyphId, OutlineBuilder};
 use typst::layout::{Abs, Frame, FrameItem, Page, Point, Transform};
 use typst::text::TextItem;
@@ -447,6 +445,3 @@ pub(crate) fn page_vector(page: &Page) -> Vector {
     walker.frame(&page.frame, Affine::IDENTITY, None);
     walker.out
 }
-
-/// Shared, immutable result.
-pub type SharedVector = Arc<Vector>;
