@@ -1,14 +1,30 @@
-//! What the app logic calls in other packages' modules, collected in one place so each can be swapped for the real
-//! port when it lands (replace the body with a call, or the item with a `pub use`). Each keeps the TS name and
-//! signature. Most answer "not mine" like the stubs in `crate::stubs`; the few that are one-line TS predicates or
-//! constants are written out in full, so the bar already behaves right for them.
+//! What the app logic calls in other packages' modules, collected in one place. Each keeps the TS name and
+//! signature. Ports that have landed are `pub use`d; the rest go through the golden dispatch table
+//! (`crate::golden::dispatch`, under their TS module and name, as the FFI bridge does), so they answer as soon as
+//! their package registers them there and give their blank answer until then. The few that are one-line TS
+//! predicates or constants are written out in full.
 //!
 //! Owners (`native/PORTING_PLAN.md`): units → WP-UNITS, chem → WP-CHEM, isolate/system →
 //! WP-SOLVE, graph → WP-GRAPH, phrases/nativeEval → WP-PHRASES, typstMath → WP-NOTATION.
 
 
+use serde_json::{Value as Json, json};
+
+use crate::golden::{Outcome, dispatch};
 use crate::jsre::{self, Lazy, js};
 use crate::types::{AngleMode, DefaultUnits};
+
+/// The answer of a TS function some package registered in the golden dispatch, or None while none has.
+fn call(module: &str, name: &str, args: &[Json]) -> Option<Json> {
+    match dispatch(module, name, args) {
+        Outcome::Answer(a) => Some(a),
+        _ => None,
+    }
+}
+
+fn undef() -> Json {
+    json!({ "$undef": true })
+}
 
 // ---- WP-UNITS (units.ts) ----
 
@@ -19,22 +35,25 @@ pub use crate::units::{in_ladder_unit, is_unit_name, sanitize_default_units_json
 /// The units `chem R …` takes, in completion's order (a constant of chem.ts).
 pub const GAS_CONSTANT_UNITS: [&str; 6] = ["atm", "bar", "torr", "mmhg", "cal", "si"];
 
-/// `isMolarMassInput`. PORT: chem.ts.
-pub fn is_molar_mass_input(_text: &str) -> bool {
-    false
+/// `isMolarMassInput` (chem.ts).
+pub fn is_molar_mass_input(text: &str) -> bool {
+    call("engine/chem", "isMolarMassInput", &[json!(text)]).and_then(|v| v.as_bool()) == Some(true)
 }
 
-/// `isReactionInput`. PORT: chem.ts.
-pub fn is_reaction_input(_text: &str) -> bool {
-    false
+/// `isReactionInput` (chem.ts).
+pub fn is_reaction_input(text: &str) -> bool {
+    call("engine/chem", "isReactionInput", &[json!(text)]).and_then(|v| v.as_bool()) == Some(true)
 }
 
 // ---- WP-SOLVE (isolate.ts, system.ts) ----
 
 /// `isolatePrevious`: `isolate x` or `solve for x` alone, rewritten to work on the previous row's equation.
-/// PORT: isolate.ts.
-pub fn isolate_previous(_text: &str, _previous: Option<&str>) -> Option<String> {
-    None
+/// (isolate.ts)
+pub fn isolate_previous(text: &str, previous: Option<&str>) -> Option<String> {
+    let prev = previous.map_or_else(undef, |p| json!(p));
+    call("engine/isolate", "isolatePrevious", &[json!(text), prev])?
+        .as_str()
+        .map(str::to_string)
 }
 
 /// What `sys`, `sys 3` or `system 7` asks for.
@@ -77,13 +96,18 @@ pub struct SystemAnswer {
     pub message: bool,
 }
 
-/// `solveLive`. PORT: system.ts.
-pub fn solve_live(
-    _lines: &[String],
-    _defaults: &DefaultUnits,
-    _angle_mode: AngleMode,
-) -> Option<SystemAnswer> {
-    None
+/// `solveLive` (system.ts).
+pub fn solve_live(lines: &[String], defaults: &DefaultUnits, angle_mode: AngleMode) -> Option<SystemAnswer> {
+    let a = call(
+        "engine/system",
+        "solveLive",
+        &[json!(lines), json!(defaults), json!(angle_mode)],
+    )?;
+    Some(SystemAnswer {
+        display: a.get("display")?.as_str()?.to_string(),
+        exact: a.get("exact").and_then(Json::as_str).map(str::to_string),
+        message: a.get("message") == Some(&Json::Bool(true)),
+    })
 }
 
 // ---- WP-GRAPH (graph.ts) ----
@@ -109,12 +133,22 @@ pub struct GraphIntent {
     pub function_def: Option<FunctionDef>,
 }
 
-/// `parseGraphIntent`. PORT: graph.ts.
+/// `parseGraphIntent` (graph.ts), the parts the bar reads.
 pub fn parse_graph_intent(
-    _input: &str,
-    _functions: &std::collections::BTreeMap<String, crate::types::UserFunction>,
+    input: &str,
+    functions: &std::collections::BTreeMap<String, crate::types::UserFunction>,
 ) -> Option<GraphIntent> {
-    None
+    let i = call(
+        "engine/graph",
+        "parseGraphIntent",
+        &[json!(input), json!({ "functions": functions })],
+    )?;
+    Some(GraphIntent {
+        label: i.get("label").and_then(Json::as_str).unwrap_or("").to_string(),
+        function_def: i
+            .get("functionDef")
+            .and_then(|f| serde_json::from_value(f.clone()).ok()),
+    })
 }
 
 // ---- WP-PHRASES (phrases.ts, lib/nativeEval.ts) ----
@@ -160,17 +194,25 @@ pub struct PhraseAnswer {
     pub n: Option<f64>,
 }
 
-/// `answerPhrase(expr, { now, sigFigs, rates })`. The rates are the engine's own (`Engine::set_rates`), so they
-/// aren't a parameter here. PORT: phrases.ts.
-pub fn answer_phrase(_expr: &str, _now_ms: f64, _sig_figs: f64) -> Option<PhraseAnswer> {
-    None
+/// `answerPhrase(expr, { now, rates, sigFigs })` (phrases.ts); `rates` is the TS `CurrencyRates` table or null.
+pub fn answer_phrase(expr: &str, now_ms: f64, sig_figs: f64, rates: &Json) -> Option<PhraseAnswer> {
+    let options = json!({
+        "now": { "$date": crate::app::js::iso_date(now_ms as i64) },
+        "rates": rates,
+        "sigFigs": sig_figs,
+    });
+    let a = call("engine/phrases", "answerPhrase", &[json!(expr), options])?;
+    Some(PhraseAnswer {
+        display: a.get("display")?.as_str()?.to_string(),
+        n: a.get("n").and_then(Json::as_f64),
+    })
 }
 
 // ---- WP-NOTATION (lib/typstMath.ts) ----
 
-/// `typstPreviewUseful`: the typeset preview shows something the bar doesn't. PORT: typstMath.ts.
-pub fn typst_preview_useful(_expr: &str) -> bool {
-    false
+/// `typstPreviewUseful` (typstMath.ts): the typeset preview shows something the bar doesn't.
+pub fn typst_preview_useful(expr: &str) -> bool {
+    call("lib/typstMath", "typstPreviewUseful", &[json!(expr)]).and_then(|v| v.as_bool()) == Some(true)
 }
 
 /// `typstAnswer`, written out in full: `exact ≈ approx`, or whichever there is.

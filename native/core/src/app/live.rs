@@ -94,6 +94,8 @@ pub struct LiveRequest {
     pub contacts: Vec<String>,
     /// Milliseconds since the epoch, for phrases (`now`).
     pub now_ms: f64,
+    /// Currency rates for phrases, as the TS `CurrencyRates` table (null without any).
+    pub rates: Json,
 }
 
 /// A line that answers with a message or opens something, rather than calculating.
@@ -196,14 +198,15 @@ fn merge_live_answer(expr: &str, js_display: &str, js_n: Option<f64>) -> (String
 
 /// `withPhraseAnswer` (lib/phraseLive.ts): a phrase beats the engine on natural language and otherwise only fills
 /// a blank. Returns the phrase's answer when it wins.
-fn phrase_answer(expr: &str, js_display: &str, enabled: bool, sig_figs: f64, now_ms: f64) -> Option<(String, Option<f64>)> {
+fn phrase_answer(req: &LiveRequest, js_display: &str, enabled: bool, sig_figs: f64) -> Option<(String, Option<f64>)> {
+    let expr = req.text.as_str();
     if !enabled || jstr::trim(expr).is_empty() || crate::stubs::is_calculus_input(expr) {
         return None;
     }
     if !js_display.is_empty() && !looks_like_natural_language(expr) {
         return None;
     }
-    answer_phrase(expr, now_ms, sig_figs).map(|p| (p.display, p.n))
+    answer_phrase(expr, req.now_ms, sig_figs, &req.rates).map(|p| (p.display, p.n))
 }
 
 /// The squiggle's and ↵'s evaluator: whether a piece of text answers (through `ans` when the line chains).
@@ -312,7 +315,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let native_usable = !a_command && !chained && angle_safe(q, o);
     let (mut merged_display, mut merged_n) = merge_live_answer(q, &js_display, js_n);
     let mut phrase = false;
-    if let Some((d, n)) = phrase_answer(q, &js_display, native_usable && req.phrases, sig_figs, req.now_ms) {
+    if let Some((d, n)) = phrase_answer(req, &js_display, native_usable && req.phrases, sig_figs) {
         (merged_display, merged_n) = (d, n);
         phrase = true;
     }
