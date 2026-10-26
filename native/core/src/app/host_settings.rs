@@ -298,7 +298,7 @@ pub fn spot_choices(current: u32) -> Vec<(u32, String)> {
         .map(|(i, l)| (*i, (*l).to_string()))
         .collect();
     if !SPOT_CHOICES.iter().any(|c| c.0 == current) {
-        let label = if current % 60 == 0 {
+        let label = if current.is_multiple_of(60) {
             format!("{} minutes", current / 60)
         } else {
             format!("{current} seconds")
