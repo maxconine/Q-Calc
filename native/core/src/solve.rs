@@ -2118,6 +2118,7 @@ pub fn golden_dispatch_module(module: &str, name: &str, args: &[Json]) -> Option
     match module {
         "engine/solve" => golden_dispatch(name, args),
         "engine/isolate" => crate::isolate::golden_dispatch(name, args),
+        "engine/system" => crate::system::golden_dispatch(name, args),
         _ => None,
     }
 }

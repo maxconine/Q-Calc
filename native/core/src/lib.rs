@@ -37,6 +37,7 @@ pub mod letters;
 // ---- WP-SOLVE ----
 pub mod isolate;
 pub mod solve;
+pub mod system;
 pub mod system_numeric;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};

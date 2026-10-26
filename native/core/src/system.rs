@@ -15,8 +15,10 @@ use serde_json::{Value as Json, json};
 
 use crate::format::{format_number, format_value};
 use crate::jsre::{self, Lazy, js};
-use crate::symbolic::{self, Node, Op, PrintOptions};
-use crate::system_numeric::{Guess, guess_number, no_overrides, plain_number, solve_numeric_system};
+use crate::symbolic::{self, Node, PrintOptions};
+use crate::system_numeric::{
+    Guess, guess_number, no_overrides, plain_number, solve_numeric_system,
+};
 use crate::types::{AngleMode, DefaultUnits, Value};
 use crate::units::{SiQuantity, reads_as_unit, si_quantity, si_value};
 
@@ -120,7 +122,10 @@ fn rat(n: BigInt, d: BigInt) -> Rat {
         };
     }
     let g = bgcd(&n, &d);
-    Rat { n: n / &g, d: d / g }
+    Rat {
+        n: n / &g,
+        d: d / g,
+    }
 }
 
 fn ri(n: i64) -> Rat {
@@ -722,7 +727,13 @@ fn deg_of(p: &Mono) -> i64 {
         return -1;
     }
     p.keys()
-        .map(|k| if k.is_empty() { 0 } else { k.parse().unwrap_or(0) })
+        .map(|k| {
+            if k.is_empty() {
+                0
+            } else {
+                k.parse().unwrap_or(0)
+            }
+        })
         .max()
         .unwrap_or(-1)
 }
@@ -814,10 +825,7 @@ fn pdiv1(a: &Mono, b: &Mono) -> Mono {
 
 fn rf_cancel(r: &Rf, params: &[String]) -> Rf {
     let mut out = rf_norm(&r.n, &r.d);
-    if params.len() == 1
-        && !out.n.is_empty()
-        && !(out.d.len() == 1 && out.d.has(&String::new()))
-    {
+    if params.len() == 1 && !out.n.is_empty() && !(out.d.len() == 1 && out.d.has(&String::new())) {
         let g = poly_gcd1(&out.n, &out.d);
         if deg_of(&g) > 0 {
             out = rf_norm(&pdiv1(&out.n, &g), &pdiv1(&out.d, &g));
@@ -827,7 +835,10 @@ fn rf_cancel(r: &Rf, params: &[String]) -> Rf {
 }
 
 fn rf_add(a: &Rf, b: &Rf) -> Rf {
-    rf_norm(&padd(&pmul(&a.n, &b.d), &pmul(&b.n, &a.d)), &pmul(&a.d, &b.d))
+    rf_norm(
+        &padd(&pmul(&a.n, &b.d), &pmul(&b.n, &a.d)),
+        &pmul(&a.d, &b.d),
+    )
 }
 fn rf_sub(a: &Rf, b: &Rf) -> Rf {
     rf_add(
@@ -870,11 +881,7 @@ fn poly_str(p: &Mono, params: &[String]) -> String {
             .filter(|(_, e)| **e != 0)
             .map(|(i, e)| {
                 let name = params.get(i).cloned().unwrap_or_default();
-                if *e == 1 {
-                    name
-                } else {
-                    format!("{name}^{e}")
-                }
+                if *e == 1 { name } else { format!("{name}^{e}") }
             })
             .collect();
         let mon = factors.join("*");
@@ -915,9 +922,11 @@ fn rf_str(a: &Rf, params: &[String]) -> String {
     let raw = format!("{num}/{den}");
     static WS: Lazy = Lazy::new(|| js(r"\s+", ""));
     match symbolic::simplify_text(&raw) {
-        Ok(n) => jsre::replace_all(&WS, &symbolic::to_string(&n, &PrintOptions::default()), |_| {
-            " ".into()
-        })
+        Ok(n) => jsre::replace_all(
+            &WS,
+            &symbolic::to_string(&n, &PrintOptions::default()),
+            |_| " ".into(),
+        )
         .into_owned(),
         Err(_) => raw,
     }
@@ -1181,7 +1190,11 @@ fn preferred(name: &str) -> bool {
 fn classify(names: &[String]) -> (Vec<String>, Vec<String>) {
     let pref: Vec<String> = names.iter().filter(|n| preferred(n)).cloned().collect();
     if !pref.is_empty() && pref.len() < names.len() {
-        let params = names.iter().filter(|n| !pref.contains(n)).cloned().collect();
+        let params = names
+            .iter()
+            .filter(|n| !pref.contains(n))
+            .cloned()
+            .collect();
         return (pref, params);
     }
     (names.to_vec(), Vec::new())
@@ -1525,12 +1538,7 @@ fn exp_side(node: &Node, unknowns: &[String]) -> Option<OMap<BigInt, AffRat>> {
         }
         true
     }
-    fn walk(
-        n: &Node,
-        sign: i32,
-        acc: &mut OMap<BigInt, AffRat>,
-        unknowns: &[String],
-    ) -> bool {
+    fn walk(n: &Node, sign: i32, acc: &mut OMap<BigInt, AffRat>, unknowns: &[String]) -> bool {
         let n = unwrap(n);
         if let Some(c) = const_rat(n) {
             if c.n.is_negative() {
@@ -1750,7 +1758,13 @@ fn qmul(a: &Quad, b: &Quad) -> Option<Quad> {
 
 fn qdegree(q: &Quad) -> usize {
     q.keys()
-        .map(|k| if k.is_empty() { 0 } else { k.split(',').count() })
+        .map(|k| {
+            if k.is_empty() {
+                0
+            } else {
+                k.split(',').count()
+            }
+        })
         .max()
         .unwrap_or(0)
 }
@@ -1967,7 +1981,13 @@ fn try_quadratic(diffs: &[&Node], variables: &[String]) -> Option<SystemResult> 
         .map(|t| {
             variables
                 .iter()
-                .map(|n| rstr(&eval_aff(expr.get(n).unwrap_or(&aff(&RAT, None)), &free_name, t)))
+                .map(|n| {
+                    rstr(&eval_aff(
+                        expr.get(n).unwrap_or(&aff(&RAT, None)),
+                        &free_name,
+                        t,
+                    ))
+                })
                 .collect()
         })
         .collect();
@@ -2000,7 +2020,11 @@ struct SqrtSlot {
     shift: Rat,
 }
 
-fn walk_sqrt(node: &Node, unknowns: &[String], slots: &mut OMap<String, SqrtSlot>) -> Option<AffRat> {
+fn walk_sqrt(
+    node: &Node,
+    unknowns: &[String],
+    slots: &mut OMap<String, SqrtSlot>,
+) -> Option<AffRat> {
     let node = unwrap(node);
     if let Some(c) = const_rat(node) {
         return Some(aff(&RAT, Some(c)));
@@ -2161,7 +2185,11 @@ fn try_abs(texts: &[String], variables: &[String]) -> Option<SystemResult> {
                 s
             })
             .collect();
-        let Some(parsed) = signed.iter().map(|s| prep_eq(s)).collect::<Option<Vec<_>>>() else {
+        let Some(parsed) = signed
+            .iter()
+            .map(|s| prep_eq(s))
+            .collect::<Option<Vec<_>>>()
+        else {
             continue;
         };
         let diffs: Vec<&Node> = parsed.iter().map(|p| &p.diff).collect();
@@ -2595,7 +2623,7 @@ fn quantity_re() -> &'static jsre::Regex {
 fn si_rat_text(x: f64) -> Option<String> {
     static RE: Lazy = Lazy::new(|| js(r"^(\d+)(?:\.(\d+))?(?:e([+-]\d+))?$", ""));
     let p = crate::jsnum::to_precision(x.abs(), 15);
-    let c = RE.captures(&p).ok().flatten()?;
+    let c = RE.captures(p.as_str()).ok().flatten()?;
     let frac = jsre::group(&c, 2).trim_end_matches('0').to_string();
     let joined = format!("{}{frac}", jsre::group(&c, 1));
     let mut digits = {
@@ -2644,7 +2672,7 @@ pub fn prep_units(lines: &[String], unknowns: &[String]) -> Option<UnitPrep> {
     let mut bare: Vec<String> = unknowns.to_vec();
     for line in lines {
         let stripped = jsre::replace_all(q, line, |_| " ".into());
-        for m in WORD.find_iter(&stripped).flatten() {
+        for m in WORD.find_iter(&*stripped).flatten() {
             if !bare.iter().any(|b| b == m.as_str()) {
                 bare.push(m.as_str().to_string());
             }
@@ -2658,7 +2686,7 @@ pub fn prep_units(lines: &[String], unknowns: &[String]) -> Option<UnitPrep> {
         let mut p = String::new();
         let mut mk = String::new();
         let mut at = 0;
-        for c in q.captures_iter(line).flatten() {
+        for c in q.captures_iter(line.as_str()).flatten() {
             let Some(unit_text) = kept_unit(jsre::group(&c, 3), &bare) else {
                 continue;
             };
@@ -2689,12 +2717,8 @@ pub fn prep_units(lines: &[String], unknowns: &[String]) -> Option<UnitPrep> {
 }
 
 fn kept_unit(text: &str, bare: &[String]) -> Option<String> {
-    static RE: std::sync::LazyLock<jsre::Regex> = std::sync::LazyLock::new(|| {
-        js(
-            &format!(r"(^|\s*[*/·]\s*)({UNIT_WORD})({UNIT_POW})"),
-            "",
-        )
-    });
+    static RE: std::sync::LazyLock<jsre::Regex> =
+        std::sync::LazyLock::new(|| js(&format!(r"(^|\s*[*/·]\s*)({UNIT_WORD})({UNIT_POW})"), ""));
     let mut parts: Vec<(String, bool)> = Vec::new();
     let mut pos = 0;
     while pos <= text.len() {
@@ -2748,7 +2772,10 @@ struct Infer<'a> {
 
 impl Infer<'_> {
     fn known(&self, name: &str) -> Option<Dim> {
-        if let Some(i) = name.strip_prefix("__q").and_then(|k| k.parse::<usize>().ok()) {
+        if let Some(i) = name
+            .strip_prefix("__q")
+            .and_then(|k| k.parse::<usize>().ok())
+        {
             return self.quantities.get(i).map(|q| q.dim.clone());
         }
         if let Some(d) = self.assigned.get(&name.to_string()) {
@@ -3001,12 +3028,7 @@ pub fn infer_dims(
     Some(inf.assigned.e)
 }
 
-fn show_si(
-    exact: &str,
-    d: &[f64],
-    prep: &UnitPrep,
-    defaults: &DefaultUnits,
-) -> Option<String> {
+fn show_si(exact: &str, d: &[f64], prep: &UnitPrep, defaults: &DefaultUnits) -> Option<String> {
     let node = crate::syntax::parse(exact).ok()?;
     let n = plain_number(&node, &|_| None, &no_overrides)?;
     let value = if dims_equal(d, &zero_dim()) {
@@ -3125,7 +3147,9 @@ fn si_guesses(texts: &[(String, String)]) -> Option<Guess> {
     texts
         .iter()
         .map(|(name, text)| {
-            let v = si_quantity(text).map(|q| q.si).or_else(|| guess_number(text))?;
+            let v = si_quantity(text)
+                .map(|q| q.si)
+                .or_else(|| guess_number(text))?;
             Some((name.clone(), v))
         })
         .collect()
@@ -3301,7 +3325,11 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
             }
             json!({ "equations": c.equations, "guessText": g })
         }),
-        "solveLive" => answer_json(solve_live(&strings(args.first()), &defaults(1), mode_arg(args.get(2)))),
+        "solveLive" => answer_json(solve_live(
+            &strings(args.first()),
+            &defaults(1),
+            mode_arg(args.get(2)),
+        )),
         "solveSystem" => {
             let o = args.get(1).map(crate::golden::decode).unwrap_or(Json::Null);
             let mode = mode_arg(o.get("angleMode"));

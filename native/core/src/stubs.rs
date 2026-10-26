@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::types::{AngleMode, DefaultUnits, Meas, SolveInfo, TimeLetters, Value};
+use crate::types::{Meas, SolveInfo, TimeLetters, Value};
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
@@ -47,29 +47,10 @@ pub fn chem_answer(_text: &str, _is_name: &dyn Fn(&str) -> bool) -> Option<Strin
 
 // ---- WP-SOLVE (solve.ts, isolate.ts, system.ts, unitSolve.ts) ----
 
-/// `solve({…}, x = 1)`: the equations and the guess text.
-#[derive(Clone, Debug)]
-pub struct SystemCall {
-    pub equations: Vec<String>,
-    pub guess_text: String,
-}
-
-pub fn parse_system_call(_line: &str) -> Option<SystemCall> {
-    None
-}
-
-pub fn solve_system_call(
-    _eqs: &[String],
-    _guess: &str,
-    _mode: AngleMode,
-    _defaults: &DefaultUnits,
-) -> Option<String> {
-    None
-}
-
-// ported: `crate::solve`, `crate::isolate`
+// ported: `crate::solve`, `crate::isolate`, `crate::system` (the guess is a name → text list, as the TS record)
 pub use crate::isolate::{NamedSolve, isolate_variable, parse_named_solve};
 pub use crate::solve::{SolveContext, Solved, format_solve, is_equation, solve_equation};
+pub use crate::system::{SystemCall, parse_system_call, solve_system_call};
 
 /// An equation with units, solved in SI: Some(display, info, value).
 #[derive(Clone, Debug)]
