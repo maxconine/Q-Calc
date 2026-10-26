@@ -4,7 +4,7 @@ import { chemCopyText, isReactionInput } from '../engine/chem'
 import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
-import { isSysCommand, parseSystemCall, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
+import { isSysCommand, parseSystemCall, pastedEquations, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
 import { isIsolateCommand, isolatePrevious } from '../engine/isolate'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
@@ -82,6 +82,7 @@ import {
   type NativeLive,
 } from '../lib/nativeEval'
 import { QuickInput, flattenPastedText, prettyTokens, type QuickInputHandle } from './QuickInput'
+import { cleanPastedText } from '../lib/paste'
 import {
   advanceRotation,
   afterHelpInput,
@@ -901,10 +902,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setTapeOpen(tapeRestRef.current)
   }, [])
 
-  const openHistorySystem = useCallback((index: number) => {
-    const row = history[index]
-    const lines = row?.kind === 'system' ? row.equations?.slice(0, 5) : undefined
-    if (!lines?.length) return
+  // the system fields, opened with these equations (a history row, or lines pasted from a worksheet)
+  const openSystem = useCallback((lines: string[]) => {
     const text = `sys ${lines.length}`
     sysLinesRef.current = lines
     qRef.current = text
@@ -914,7 +913,27 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setTapeOpen(false)
     setCopied(false)
     mathRef.current?.setValue(text)
-  }, [history])
+  }, [])
+
+  const openHistorySystem = useCallback(
+    (index: number) => {
+      const row = history[index]
+      const lines = row?.kind === 'system' ? row.equations?.slice(0, 5) : undefined
+      if (lines?.length) openSystem(lines)
+    },
+    [history, openSystem],
+  )
+
+  // a paste of two to five equations opens them as a system; anything else is plain text
+  const pasteSystem = useCallback(
+    (text: string, before: string[] = []): boolean => {
+      const lines = pastedEquations(cleanPastedText(text))
+      if (!lines) return false
+      openSystem([...before, ...lines].slice(0, 5))
+      return true
+    },
+    [openSystem],
+  )
 
   const insertHistoryExpr = useCallback(
     (index: number) => {
@@ -1508,10 +1527,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       if (typeof text !== 'string' || !text) return
       // a field of the page's own (a game's input, a settings box) takes the paste, not the hidden bar
       const active = document.activeElement
+      // equations pasted into the bar or a system field fill the system, from that field on
+      if (active instanceof HTMLInputElement && active.classList.contains('sys-eq')) {
+        const at = [...document.querySelectorAll('.sys-eq')].indexOf(active)
+        if (pasteSystem(text, (sysLinesRef.current ?? []).slice(0, Math.max(at, 0)))) return
+      }
       if ((active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && !active.classList.contains('quick-plain')) {
         if (!document.execCommand('insertText', false, text)) active.setRangeText(text, active.selectionStart ?? active.value.length, active.selectionEnd ?? active.value.length, 'end')
         return
       }
+      if (pasteSystem(text)) return
       mathRef.current?.insert(flattenPastedText(text))
       mathRef.current?.focus()
     }
@@ -1585,7 +1610,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       for (const t of focusTimers) window.clearTimeout(t)
       ro?.disconnect()
     }
-  }, [beginShowing, beginTour, insertPlain, markTour, touringNow, onPrepare, onWillHide, startTutorial])
+  }, [beginShowing, beginTour, insertPlain, markTour, touringNow, onPrepare, onWillHide, pasteSystem, startTutorial])
 
   useTapeWheel(rootRef, tapeRef, {
     longInput: () => {
@@ -1751,6 +1776,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               recipient={recipientFound ? messageTo : undefined}
               onSelection={onInputSel}
               onTab={onTab}
+              onPasteLines={pasteSystem}
             />
             {selDisplay ? (
               <span className="live live-selection" aria-live="polite">
@@ -1827,6 +1853,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                 else commit()
               }}
               onFocusMain={() => mathRef.current?.focus()}
+              onPasteLines={(index, text) => pasteSystem(text, (sysLinesRef.current ?? []).slice(0, index))}
             />
           ) : null}
           {graphCmd ? (
