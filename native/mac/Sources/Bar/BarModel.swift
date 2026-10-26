@@ -226,7 +226,15 @@ final class BarModel: ObservableObject {
         }
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
-            commandMessage = command.hint(messaging: Messages.shared)
+            var found: Bool?
+            if case let .message(_, name, _) = command {
+                found = recipientFound(name)
+                messageLine(typed, name: name, found: found)
+                checkName(name)
+            } else {
+                nameCheckTimer?.invalidate()
+            }
+            commandMessage = command.hint(messaging: Messages.shared, found: found)
             if command == .help, !helpShown { track("help") }
             helpShown = command == .help
             if case let .graph(body) = command { showGraph(body) } else { graph = nil }
@@ -467,7 +475,7 @@ final class BarModel: ObservableObject {
             play(kind)
         case let .message(_, name, said):
             let m = Messages.shared
-            if m.name.isEmpty || m.link == .paused {
+            if m.name.isEmpty {
                 onSettings?()
                 return
             }
@@ -475,6 +483,9 @@ final class BarModel: ObservableObject {
             hint = "sending to \(name)…"
             m.send(to: name, text: said) { [weak self] status in
                 guard let self else { return }
+                // a send says whether the name is anyone's too, and who was sent to finishes first next time
+                self.nameCheck.noteSend(name: name, status: status, nowMs: Self.nowMs)
+                if status == "delivered" { m.noteSent(name) }
                 self.hint = Messages.sendStatusText(status, to: name)
                 if status == "delivered" { self.clearLine(keepHint: true) }
             }
@@ -995,6 +1006,53 @@ final class BarModel: ObservableObject {
         }
     }
 
+
+    // MARK: - the message line (nameCheck.ts, messaging.ts)
+
+    /// the relay's answers about names, kept a while (core's name_check)
+    private let nameCheck = NameCheck()
+    private var nameCheckTimer: Timer?
+
+    private static var nowMs: Double { Date().timeIntervalSince1970 * 1000 }
+
+    /// whether the name after `message` is anyone's: nil until the relay has said, and whenever it can't (no name
+    /// of your own, the relay out of reach), so the bar never calls a name missing that the relay didn't
+    private func recipientFound(_ name: String) -> Bool? {
+        let m = Messages.shared
+        guard !name.isEmpty, !m.name.isEmpty, m.link != .offline else { return nil }
+        return nameCheck.cached(name: name, nowMs: Self.nowMs)
+    }
+
+    /// asks the relay about the name once typing has rested, unless it's known or already being asked
+    private func checkName(_ name: String) {
+        nameCheckTimer?.invalidate()
+        guard !name.isEmpty, !Messages.shared.name.isEmpty, Messages.shared.link != .offline, recipientFound(name) == nil else { return }
+        nameCheckTimer = Timer.scheduledTimer(withTimeInterval: Double(nameCheckDelayMs()) / 1000, repeats: false) { [weak self] _ in
+            guard let self, self.nameCheck.start(name: name, nowMs: Self.nowMs) else { return }
+            Messages.shared.lookup(name) { [weak self] found in
+                guard let self else { return }
+                self.nameCheck.finish(name: name, found: found, nowMs: Self.nowMs)
+                if found != nil, case let .message(_, now, _)? = BarCommand.of(self.text, sheets: self.sheets), now == name {
+                    self.evaluateLive()
+                }
+            }
+        }
+    }
+
+    /// the name painted green once it's someone's, and Tab finishing the names you've sent to first
+    private func messageLine(_ typed: String, name: String, found: Bool?) {
+        var deco = Decorations()
+        if found == true, let span = logic.call("lib/messaging", "messageNameSpan", [typed]) as? [String: Any],
+           let start = span["start"] as? Int, let end = span["end"] as? Int, end <= (typed as NSString).length {
+            let range = NSRange(location: start, length: end - start)
+            if (typed as NSString).substring(with: range).lowercased() == name { deco.units = [range] }
+        }
+        decorations = deco
+        let messaging = (try? JSONSerialization.jsonObject(with: Data(Messages.shared.webJSON.utf8))) ?? [:]
+        let contacts = logic.call("lib/messaging", "messageContacts", [messaging]) as? [String] ?? []
+        let rest = logic.string("lib/completion", "completionFor", [typed, ["contacts": contacts]])
+        completion = rest.flatMap { $0.isEmpty ? nil : $0 }
+    }
 
     // MARK: - message cards
 
