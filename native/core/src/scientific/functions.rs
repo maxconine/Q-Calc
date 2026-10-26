@@ -465,8 +465,35 @@ fn log(a: &[Val], _: &Scope) -> EvalResult {
     }
 }
 
-/// mathjs `nthRoot(a, root = 2)`.
+/// mathjs `nthRoot(a, root = 2)`, elementwise over a matrix on either side (`nthroot(180, [5])` is `[2.8…]`).
 fn nth_root(a: &[Val], _: &Scope) -> EvalResult {
+    nth_root_each(a)
+}
+
+fn nth_root_each(a: &[Val]) -> EvalResult {
+    let each = |items: &[Val], f: &dyn Fn(&Val) -> EvalResult| -> EvalResult {
+        Ok(Val::List(items.iter().map(f).collect::<Result<_, _>>()?))
+    };
+    match a {
+        [Val::List(xs)] => each(xs, &|x| nth_root_each(std::slice::from_ref(x))),
+        [Val::List(xs), Val::List(rs)] => {
+            if xs.len() != rs.len() {
+                return Err(EvalError::Other("Dimension mismatch in nthRoot".into()));
+            }
+            Ok(Val::List(
+                xs.iter()
+                    .zip(rs)
+                    .map(|(x, r)| nth_root_each(&[x.clone(), r.clone()]))
+                    .collect::<Result<_, _>>()?,
+            ))
+        }
+        [Val::List(xs), r] => each(xs, &|x| nth_root_each(&[x.clone(), r.clone()])),
+        [x, Val::List(rs)] => each(rs, &|r| nth_root_each(&[x.clone(), r.clone()])),
+        _ => nth_root_scalar(a),
+    }
+}
+
+fn nth_root_scalar(a: &[Val]) -> EvalResult {
     let typed = |v: &Val| match v {
         Val::Num(_) | Val::Bool(_) => Ok(v.to_number()),
         _ => Err(EvalError::Other(
@@ -546,6 +573,15 @@ fn nearly_equal(a: f64, b: f64) -> bool {
 
 fn smaller_eq(a: f64, b: f64) -> bool {
     a <= b || nearly_equal(a, b)
+}
+
+/// The scope's `factorial`: a number (or `true`, `null`, nothing) goes through the TS function; a complex or a
+/// list reaches `math.gamma(n + 1)` as the string JS's `+` makes of it, which mathjs rejects.
+pub fn factorial_call(a: &[Val], _: &Scope) -> EvalResult {
+    match a.first() {
+        Some(Val::Complex { .. } | Val::List(_) | Val::Function(_)) => Err(type_error("gamma")),
+        _ => num(crate::eval::builtins::factorial(n(a, 0))),
+    }
 }
 
 /// mathjs `factorial` of a number: gamma(n + 1).
@@ -860,6 +896,16 @@ fn deep(values: &[Val]) -> Vec<Val> {
     out
 }
 
+/// What a mathjs statistic walks: one list's every entry (`std([1, 2, 3])`), or the arguments themselves
+/// (`std(1, 2, 3)`), where a list among them is a single matrix value that the arithmetic meets whole, as
+/// `deepForEach` over an Array of Matrices does.
+fn collection(a: &[Val]) -> Vec<Val> {
+    match a {
+        [Val::List(_)] => deep(a),
+        _ => a.to_vec(),
+    }
+}
+
 fn add_all(values: &[Val]) -> EvalResult {
     let mut sum: Option<Val> = None;
     for v in values {
@@ -885,7 +931,14 @@ fn sum(a: &[Val], _: &Scope) -> EvalResult {
 
 /// mathjs `prod`.
 fn prod(a: &[Val], _: &Scope) -> EvalResult {
-    let values = deep(a);
+    if matches!(a, [Val::List(_), Val::Num(_) | Val::Bool(_)]) {
+        return Err(EvalError::Other("prod(A, dim) is not yet supported".into()));
+    }
+    let values = collection(a);
+    if values.iter().any(|v| matches!(v, Val::List(_))) {
+        // `multiplyScalar` of a matrix
+        return Err(type_error("multiplyScalar"));
+    }
     if values.is_empty() {
         return Err(EvalError::Other(
             "Cannot calculate prod of an empty array".into(),
@@ -900,10 +953,13 @@ fn prod(a: &[Val], _: &Scope) -> EvalResult {
 
 /// mathjs `variance` with the default (unbiased) normalisation.
 fn variance_val(a: &[Val]) -> EvalResult {
-    if matches!(a, [Val::List(_), _, ..]) {
+    if matches!(
+        a,
+        [Val::List(_), Val::Num(_) | Val::Bool(_)] | [Val::List(_), _, Val::Str(_)]
+    ) {
         return Err(EvalError::Unsupported("variance along a dimension".into()));
     }
-    let values = deep(a);
+    let values = collection(a);
     if values.is_empty() {
         return Err(EvalError::Other(
             "Function variance requires one or more parameters (0 provided)".into(),
@@ -1019,16 +1075,17 @@ fn arg(a: &[Val], _: &Scope) -> EvalResult {
     part(a, |z| Val::Num(z.arg()), "arg")
 }
 
-/// mathjs `range(start, end[, step][, includeEnd])` over numbers.
+/// mathjs `range(start, end[, step][, includeEnd])` over numbers, through the expression parser's transform, which
+/// includes the end unless a last boolean says otherwise: `range(0, 3)` is `[0, 1, 2, 3]` there.
 fn range(a: &[Val], _: &Scope) -> EvalResult {
     let number = |v: &Val| match v {
         Val::Num(x) => Ok(*x),
         _ => Err(type_error("range")),
     };
     let (start, end, step, include) = match a {
-        [s, e] => (number(s)?, number(e)?, 1.0, false),
+        [s, e] => (number(s)?, number(e)?, 1.0, true),
         [s, e, Val::Bool(inc)] => (number(s)?, number(e)?, 1.0, *inc),
-        [s, e, st] => (number(s)?, number(e)?, number(st)?, false),
+        [s, e, st] => (number(s)?, number(e)?, number(st)?, true),
         [s, e, st, Val::Bool(inc)] => (number(s)?, number(e)?, number(st)?, *inc),
         _ => return Err(type_error("range")),
     };

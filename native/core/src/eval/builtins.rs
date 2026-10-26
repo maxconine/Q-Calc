@@ -205,7 +205,7 @@ const FOUNDATION: &[Builtin] = &[
     Builtin {
         name: "factorial",
         max_args: 1,
-        call: |a, _| num(factorial(arg(a, 0))),
+        call: crate::scientific::functions::factorial_call, // WP-FUNCTIONS: complex and lists throw
     },
     Builtin {
         name: "mod",
