@@ -51,7 +51,11 @@ pub fn negate(n: &T) -> Option<T> {
 }
 
 fn wrap(x: &Printed, min: u8) -> String {
-    if x.prec < min { format!("({})", x.s) } else { x.s.clone() }
+    if x.prec < min {
+        format!("({})", x.s)
+    } else {
+        x.s.clone()
+    }
 }
 
 fn factors(n: &T, out: &mut Vec<T>) {
@@ -109,7 +113,11 @@ fn is_integer(v: f64) -> bool {
 
 pub fn pretty(n: &T) -> Printed {
     match &**n {
-        N::Const(v) => p(number_text(*v), if *v < 0.0 { UNARY } else { ATOM }, Kind::Num),
+        N::Const(v) => p(
+            number_text(*v),
+            if *v < 0.0 { UNARY } else { ATOM },
+            Kind::Num,
+        ),
         N::Sym(s) => p(
             match s.as_str() {
                 "pi" => "π".into(),
@@ -236,8 +244,16 @@ fn operator(n: &T, o: Op, args: &[T]) -> Printed {
                 prev = Some(Kind::Num);
             }
             for x in &parts {
-                let t = if x.prec < POWER && x.kind != Kind::Call { format!("({})", x.s) } else { x.s.clone() };
-                let kind = if t.starts_with('(') { Kind::Group } else { x.kind };
+                let t = if x.prec < POWER && x.kind != Kind::Call {
+                    format!("({})", x.s)
+                } else {
+                    x.s.clone()
+                };
+                let kind = if t.starts_with('(') {
+                    Kind::Group
+                } else {
+                    x.kind
+                };
                 let one_letter = {
                     let mut cs = t.chars();
                     match (cs.next(), cs.next()) {
@@ -252,10 +268,17 @@ fn operator(n: &T, o: Op, args: &[T]) -> Printed {
                 };
                 // `2x`, `2(x + 1)`, `2√x` and `πx` sit tight; everything else is spaced
                 let tight = (prev == Some(Kind::Num)
-                    && (kind == Kind::Sym || kind == Kind::Group || t.starts_with('√') || t.starts_with('∛')))
+                    && (kind == Kind::Sym
+                        || kind == Kind::Group
+                        || t.starts_with('√')
+                        || t.starts_with('∛')))
                     || (prev == Some(Kind::Sym) && one_letter);
                 // `x (x + 1)` would read back as a call to x
-                let sep = if prev == Some(Kind::Sym) && kind == Kind::Group { "·" } else { " " };
+                let sep = if prev == Some(Kind::Sym) && kind == Kind::Group {
+                    "·"
+                } else {
+                    " "
+                };
                 if prev.is_none() || tight {
                     s.push_str(&t);
                 } else {
@@ -267,7 +290,15 @@ fn operator(n: &T, o: Op, args: &[T]) -> Printed {
             if coeff < 0.0 {
                 p(format!("-{s}"), UNARY, Kind::Other)
             } else {
-                p(s, PRODUCT, if prev == Some(Kind::Num) { Kind::Num } else { Kind::Other })
+                p(
+                    s,
+                    PRODUCT,
+                    if prev == Some(Kind::Num) {
+                        Kind::Num
+                    } else {
+                        Kind::Other
+                    },
+                )
             }
         }
         Op::Divide => {
@@ -279,36 +310,60 @@ fn operator(n: &T, o: Op, args: &[T]) -> Printed {
             }
             let flipped = negate(&top);
             let numer = pretty(flipped.as_ref().unwrap_or(&top));
-            let den = pretty(&if bottoms.len() > 1 { op(Op::Multiply, bottoms) } else { bottoms.remove(0) });
-            let den_s = if den.prec <= PRODUCT || (den.kind == Kind::Num && den.s.starts_with('-')) {
+            let den = pretty(&if bottoms.len() > 1 {
+                op(Op::Multiply, bottoms)
+            } else {
+                bottoms.remove(0)
+            });
+            let den_s = if den.prec <= PRODUCT || (den.kind == Kind::Num && den.s.starts_with('-'))
+            {
                 format!("({})", den.s)
             } else {
                 den.s
             };
             let s = format!("{}/{den_s}", wrap(&numer, PRODUCT));
-            if flipped.is_some() { p(format!("-{s}"), UNARY, Kind::Other) } else { p(s, PRODUCT, Kind::Other) }
+            if flipped.is_some() {
+                p(format!("-{s}"), UNARY, Kind::Other)
+            } else {
+                p(s, PRODUCT, Kind::Other)
+            }
         }
         Op::Pow => {
             let base = pretty(&args[0]);
             let ex = &args[1];
-            let base_text = if base.prec <= POWER || (base.kind == Kind::Num && base.s.starts_with('-')) {
-                format!("({})", base.s)
-            } else {
-                base.s.clone()
-            };
+            let base_text =
+                if base.prec <= POWER || (base.kind == Kind::Num && base.s.starts_with('-')) {
+                    format!("({})", base.s)
+                } else {
+                    base.s.clone()
+                };
             let int_ex = match &**ex {
                 N::Const(v) if is_integer(*v) => Some(*v),
-                N::Op(Op::UnaryMinus, a) => a[0].const_value().filter(|v| is_integer(*v)).map(|v| -v),
+                N::Op(Op::UnaryMinus, a) => {
+                    a[0].const_value().filter(|v| is_integer(*v)).map(|v| -v)
+                }
                 _ => None,
             };
-            let kind = if base.kind == Kind::Sym && base.s != "e" { Kind::Sym } else { Kind::Call };
+            let kind = if base.kind == Kind::Sym && base.s != "e" {
+                Kind::Sym
+            } else {
+                Kind::Call
+            };
             if let Some(k) = int_ex
                 && k.abs() < 1000.0
             {
-                return p(format!("{base_text}{}", superscript(&jsnum::to_string(k))), POWER, kind);
+                return p(
+                    format!("{base_text}{}", superscript(&jsnum::to_string(k))),
+                    POWER,
+                    kind,
+                );
             }
             let e = pretty(ex);
-            let es = if e.prec == ATOM && e.kind != Kind::Call { e.s } else { format!("({})", e.s) };
+            let es = if e.prec == ATOM && e.kind != Kind::Call {
+                e.s
+            } else {
+                format!("({})", e.s)
+            };
             p(format!("{base_text}^{es}"), POWER, kind)
         }
         _ => p(text(n), SUM, Kind::Other),

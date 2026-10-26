@@ -92,7 +92,9 @@ pub fn from_node(n: &Node) -> Option<T> {
         Node::Constant(Constant::Number { value, .. }) => constant(*value),
         Node::Symbol(s) => symbol(s),
         Node::Parenthesis(c) => return from_node(c),
-        Node::Operator { op: o, args, .. } => op(*o, args.iter().map(from_node).collect::<Option<_>>()?),
+        Node::Operator { op: o, args, .. } => {
+            op(*o, args.iter().map(from_node).collect::<Option<_>>()?)
+        }
         Node::Function { args, .. } => call(
             symbolic::function_name(n),
             args.iter().map(from_node).collect::<Option<_>>()?,
@@ -110,7 +112,10 @@ pub fn text(n: &T) -> String {
 pub fn text_auto(n: &T) -> String {
     symbolic::to_string(
         &to_node(n),
-        &PrintOptions { parenthesis: Some(symbolic::Parenthesis::Auto), implicit: None },
+        &PrintOptions {
+            parenthesis: Some(symbolic::Parenthesis::Auto),
+            implicit: None,
+        },
     )
 }
 
@@ -172,7 +177,16 @@ impl Deriv<'_> {
         let func: T = match (name, args.len()) {
             ("cbrt", _) => {
                 div_out = true;
-                mul(constant(3.0), op(Op::Pow, vec![arg0.clone(), op(Op::Divide, vec![constant(2.0), constant(3.0)])]))
+                mul(
+                    constant(3.0),
+                    op(
+                        Op::Pow,
+                        vec![
+                            arg0.clone(),
+                            op(Op::Divide, vec![constant(2.0), constant(3.0)]),
+                        ],
+                    ),
+                )
             }
             ("sqrt" | "nthRoot", 1) => {
                 div_out = true;
@@ -290,7 +304,10 @@ impl Deriv<'_> {
         if negative {
             chain = op(Op::UnaryMinus, vec![chain]);
         }
-        Ok(op(if div_out { Op::Divide } else { Op::Multiply }, vec![chain, func]))
+        Ok(op(
+            if div_out { Op::Divide } else { Op::Multiply },
+            vec![chain, func],
+        ))
     }
 
     fn operator(&self, node: &T, o: Op, args: &[T]) -> DR {
@@ -300,16 +317,25 @@ impl Deriv<'_> {
         let pow = |a: T, b: T| op(Op::Pow, vec![a, b]);
         let mul = |a: T, b: T| op(Op::Multiply, vec![a, b]);
         match (o, args.len()) {
-            (Op::Add | Op::UnaryPlus, _) => {
-                Ok(op(o, args.iter().map(|a| self.derive(a)).collect::<Result<_, _>>()?))
-            }
+            (Op::Add | Op::UnaryPlus, _) => Ok(op(
+                o,
+                args.iter()
+                    .map(|a| self.derive(a))
+                    .collect::<Result<_, _>>()?,
+            )),
             (Op::UnaryMinus, 1) => Ok(op(o, vec![self.derive(&args[0])?])),
             (Op::Subtract, 2) => Ok(op(o, vec![self.derive(&args[0])?, self.derive(&args[1])?])),
             (Op::Multiply, _) => {
-                let constant_terms: Vec<T> = args.iter().filter(|a| self.is_const(a)).cloned().collect();
+                let constant_terms: Vec<T> =
+                    args.iter().filter(|a| self.is_const(a)).cloned().collect();
                 if !constant_terms.is_empty() {
-                    let varying: Vec<T> = args.iter().filter(|a| !self.is_const(a)).cloned().collect();
-                    let rest = if varying.len() == 1 { varying[0].clone() } else { op(Op::Multiply, varying) };
+                    let varying: Vec<T> =
+                        args.iter().filter(|a| !self.is_const(a)).cloned().collect();
+                    let rest = if varying.len() == 1 {
+                        varying[0].clone()
+                    } else {
+                        op(Op::Multiply, varying)
+                    };
                     let mut out = constant_terms;
                     out.push(self.derive(&rest)?);
                     return Ok(op(Op::Multiply, out));
@@ -319,7 +345,11 @@ impl Deriv<'_> {
                 for outer in args {
                     let mut factors = Vec::with_capacity(args.len());
                     for inner in args {
-                        factors.push(if Rc::ptr_eq(inner, outer) { self.derive(inner)? } else { inner.clone() });
+                        factors.push(if Rc::ptr_eq(inner, outer) {
+                            self.derive(inner)?
+                        } else {
+                            inner.clone()
+                        });
                     }
                     terms.push(op(Op::Multiply, factors));
                 }
@@ -333,7 +363,10 @@ impl Deriv<'_> {
                 if self.is_const(a0) {
                     return Ok(mul(
                         op(Op::UnaryMinus, vec![a0.clone()]),
-                        op(Op::Divide, vec![self.derive(a1)?, pow(a1.clone(), constant(2.0))]),
+                        op(
+                            Op::Divide,
+                            vec![self.derive(a1)?, pow(a1.clone(), constant(2.0))],
+                        ),
                     ));
                 }
                 Ok(op(
@@ -341,7 +374,10 @@ impl Deriv<'_> {
                     vec![
                         op(
                             Op::Subtract,
-                            vec![mul(self.derive(a0)?, a1.clone()), mul(a0.clone(), self.derive(a1)?)],
+                            vec![
+                                mul(self.derive(a0)?, a1.clone()),
+                                mul(a0.clone(), self.derive(a1)?),
+                            ],
                         ),
                         pow(a1.clone(), constant(2.0)),
                     ],
@@ -353,7 +389,10 @@ impl Deriv<'_> {
                     if base.const_value().is_some() && (is_zero_const(base) || is_one_const(base)) {
                         return Ok(constant(0.0));
                     }
-                    return Ok(mul(node.clone(), mul(call("log", vec![base.clone()]), self.derive(ex)?)));
+                    return Ok(mul(
+                        node.clone(),
+                        mul(call("log", vec![base.clone()]), self.derive(ex)?),
+                    ));
                 }
                 if self.is_const(ex) {
                     if ex.const_value().is_some() {
@@ -364,7 +403,10 @@ impl Deriv<'_> {
                             return self.derive(base);
                         }
                     }
-                    let lowered = pow(base.clone(), op(Op::Subtract, vec![ex.clone(), constant(1.0)]));
+                    let lowered = pow(
+                        base.clone(),
+                        op(Op::Subtract, vec![ex.clone(), constant(1.0)]),
+                    );
                     return Ok(mul(ex.clone(), mul(self.derive(base)?, lowered)));
                 }
                 Ok(mul(
@@ -372,7 +414,10 @@ impl Deriv<'_> {
                     op(
                         Op::Add,
                         vec![
-                            mul(self.derive(base)?, op(Op::Divide, vec![ex.clone(), base.clone()])),
+                            mul(
+                                self.derive(base)?,
+                                op(Op::Divide, vec![ex.clone(), base.clone()]),
+                            ),
                             mul(self.derive(ex)?, call("log", vec![base.clone()])),
                         ],
                     ),
@@ -391,10 +436,10 @@ enum V {
     Cx(C),
 }
 
-/// The value of `n` with `scope`'s letters, as mathjs's number-mode `compile().evaluate()` gives it: Ok(Some(x))
-/// for a number, Ok(None) for a non-number (a complex result), Err for a throw.
-pub fn evaluate(n: &T, scope: &[(String, f64)]) -> Result<Option<f64>, ()> {
-    Ok(match eval(n, scope)? {
+/// The value of `n` with `scope`'s letters, as mathjs's number-mode `compile().evaluate()` gives it: Some(Some(x))
+/// for a number, Some(None) for a non-number (a complex result), None for a throw.
+pub fn evaluate(n: &T, scope: &[(String, f64)]) -> Option<Option<f64>> {
+    Some(match eval(n, scope).ok()? {
         V::Num(x) => Some(x),
         V::Cx(_) => None,
     })
@@ -416,7 +461,10 @@ fn eval(n: &T, scope: &[(String, f64)]) -> Result<V, ()> {
             },
         },
         N::Op(o, args) => {
-            let vals = args.iter().map(|a| eval(a, scope)).collect::<Result<Vec<_>, _>>()?;
+            let vals = args
+                .iter()
+                .map(|a| eval(a, scope))
+                .collect::<Result<Vec<_>, _>>()?;
             let as_c = |v: V| match v {
                 V::Num(x) => C::new(x, 0.0),
                 V::Cx(c) => c,
@@ -428,7 +476,9 @@ fn eval(n: &T, scope: &[(String, f64)]) -> Result<V, ()> {
                 (Op::Add, [V::Num(a), V::Num(b)]) => V::Num(a + b),
                 (Op::Subtract, [V::Num(a), V::Num(b)]) => V::Num(a - b),
                 (Op::Multiply, [V::Num(a), V::Num(b)]) => V::Num(a * b),
-                (Op::Divide, [V::Num(a), V::Num(b)]) => V::Num(if *b == 0.0 { f64::NAN } else { a / b }),
+                (Op::Divide, [V::Num(a), V::Num(b)]) => {
+                    V::Num(if *b == 0.0 { f64::NAN } else { a / b })
+                }
                 (Op::Pow, [V::Num(a), V::Num(b)]) => V::Num(crate::eval::ops::real_pow(*a, *b)),
                 (Op::Add, [a, b]) => V::Cx(as_c(*a).add(as_c(*b))),
                 (Op::Subtract, [a, b]) => V::Cx(as_c(*a).sub(as_c(*b))),
@@ -452,12 +502,23 @@ fn eval(n: &T, scope: &[(String, f64)]) -> Result<V, ()> {
             }
         }
         N::Call(name, args) => {
-            let vals = args.iter().map(|a| eval(a, scope)).collect::<Result<Vec<_>, _>>()?;
-            let Some(&first) = vals.first() else { return Err(()) };
+            let vals = args
+                .iter()
+                .map(|a| eval(a, scope))
+                .collect::<Result<Vec<_>, _>>()?;
+            let Some(&first) = vals.first() else {
+                return Err(());
+            };
             let x = match first {
                 V::Num(x) => x,
                 // abs of a complex number is a number; anything else of one stays complex
-                V::Cx(c) => return Ok(if name == "abs" { V::Num(c.abs()) } else { V::Cx(C::new(f64::NAN, 0.0)) }),
+                V::Cx(c) => {
+                    return Ok(if name == "abs" {
+                        V::Num(c.abs())
+                    } else {
+                        V::Cx(C::new(f64::NAN, 0.0))
+                    });
+                }
             };
             let inv = |v: f64| 1.0 / v;
             match name.as_str() {
@@ -486,15 +547,27 @@ fn eval(n: &T, scope: &[(String, f64)]) -> Result<V, ()> {
                 "atanh" if (-1.0..=1.0).contains(&x) => V::Num(jsmath::atanh(x)),
                 "acosh" | "atanh" => cx(f64::NAN),
                 "sqrt" | "nthRoot" if vals.len() == 1 => {
-                    if x >= 0.0 { V::Num(x.sqrt()) } else { cx(f64::NAN) }
+                    if x >= 0.0 {
+                        V::Num(x.sqrt())
+                    } else {
+                        cx(f64::NAN)
+                    }
                 }
                 "cbrt" => V::Num(jsmath::cbrt(x)),
                 "exp" => V::Num(jsmath::exp(x)),
                 "log" if vals.len() == 1 => {
-                    if x >= 0.0 { V::Num(jsmath::ln(x)) } else { cx(f64::NAN) }
+                    if x >= 0.0 {
+                        V::Num(jsmath::ln(x))
+                    } else {
+                        cx(f64::NAN)
+                    }
                 }
                 "log10" => {
-                    if x >= 0.0 { V::Num(jsmath::log10(x)) } else { cx(f64::NAN) }
+                    if x >= 0.0 {
+                        V::Num(jsmath::log10(x))
+                    } else {
+                        cx(f64::NAN)
+                    }
                 }
                 "abs" => V::Num(x.abs()),
                 _ => return Err(()),

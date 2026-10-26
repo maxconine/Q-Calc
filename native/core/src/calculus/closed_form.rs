@@ -62,8 +62,12 @@ impl Ast {
             Ast::Num(v) => json!({"t": "num", "v": v}),
             Ast::Var => json!({"t": "var"}),
             Ast::Const(n) => json!({"t": "const", "name": n}),
-            Ast::Op(o, a) => json!({"t": "op", "op": o, "a": a.iter().map(Ast::to_json).collect::<Vec<_>>()}),
-            Ast::Fn(n, a) => json!({"t": "fn", "name": n, "a": a.iter().map(Ast::to_json).collect::<Vec<_>>()}),
+            Ast::Op(o, a) => {
+                json!({"t": "op", "op": o, "a": a.iter().map(Ast::to_json).collect::<Vec<_>>()})
+            }
+            Ast::Fn(n, a) => {
+                json!({"t": "fn", "name": n, "a": a.iter().map(Ast::to_json).collect::<Vec<_>>()})
+            }
         }
     }
 
@@ -74,13 +78,22 @@ impl Ast {
             Ast::Num(v) => format!("{{\"t\":\"num\",\"v\":{}}}", js_string(v)),
             Ast::Var => "{\"t\":\"var\"}".into(),
             Ast::Const(n) => format!("{{\"t\":\"const\",\"name\":{}}}", js_string(n)),
-            Ast::Op(o, a) => format!("{{\"t\":\"op\",\"op\":{},\"a\":[{}]}}", js_string(o), list(a)),
-            Ast::Fn(n, a) => format!("{{\"t\":\"fn\",\"name\":{},\"a\":[{}]}}", js_string(n), list(a)),
+            Ast::Op(o, a) => format!(
+                "{{\"t\":\"op\",\"op\":{},\"a\":[{}]}}",
+                js_string(o),
+                list(a)
+            ),
+            Ast::Fn(n, a) => format!(
+                "{{\"t\":\"fn\",\"name\":{},\"a\":[{}]}}",
+                js_string(n),
+                list(a)
+            ),
         }
     }
 
     pub fn from_json(j: &Json) -> Option<Ast> {
-        let kids = || -> Option<Vec<Ast>> { j.get("a")?.as_array()?.iter().map(Ast::from_json).collect() };
+        let kids =
+            || -> Option<Vec<Ast>> { j.get("a")?.as_array()?.iter().map(Ast::from_json).collect() };
         Some(match j.get("t")?.as_str()? {
             "num" => Ast::Num(match j.get("v")? {
                 Json::String(s) => s.clone(),
@@ -174,7 +187,9 @@ impl Job {
                 to: Bound::from_json(j.get("to")?)?,
                 side: num_of(j.get("side")).unwrap_or(0.0) as i32,
             },
-            "value" => JobKind::Value { at: Ast::from_json(j.get("at")?)? },
+            "value" => JobKind::Value {
+                at: Ast::from_json(j.get("at")?)?,
+            },
             _ => return None,
         };
         Some(Job {
@@ -201,7 +216,11 @@ impl Job {
                 to.to_js()
             ),
             JobKind::Value { at } => {
-                format!("\"kind\":\"value\",\"f\":{},\"at\":{}", self.f.to_js(), at.to_js())
+                format!(
+                    "\"kind\":\"value\",\"f\":{},\"at\":{}",
+                    self.f.to_js(),
+                    at.to_js()
+                )
             }
         };
         format!("{{{body},\"rad\":{}}}", self.rad)
@@ -374,7 +393,11 @@ fn compile(ast: &Ast, c: &Ctx) -> Option<Expr> {
 /// `power`: 0 to a positive power is 0, otherwise 0^x and a negative base to a fraction are NaN.
 fn power(c: &Ctx, base: &Real, ex: &Real) -> Real {
     if base.is_zero() {
-        return if ex.is_pos() && !ex.is_zero() { Real::zero() } else { Real::NAN };
+        return if ex.is_pos() && !ex.is_zero() {
+            Real::zero()
+        } else {
+            Real::NAN
+        };
     }
     if base.is_neg() && !ex.is_integer() {
         return Real::NAN;
@@ -398,7 +421,11 @@ fn power(c: &Ctx, base: &Real, ex: &Real) -> Real {
 fn exp(c: &Ctx, x: &Real) -> Real {
     let r = c.exp(x);
     if r.is_nan() && x.is_finite() {
-        return if x.is_neg() { Real::zero() } else { Real::infinity(false) };
+        return if x.is_neg() {
+            Real::zero()
+        } else {
+            Real::infinity(false)
+        };
     }
     r
 }
@@ -424,7 +451,11 @@ impl Expr {
                     }
                     Op::Div => {
                         let d = b.map_or(Real::NAN, |b| b.eval(c, x));
-                        if d.is_zero() { Real::NAN } else { c.div(&a.eval(c, x), &d) }
+                        if d.is_zero() {
+                            Real::NAN
+                        } else {
+                            c.div(&a.eval(c, x), &d)
+                        }
                     }
                     Op::Pow => power(c, &a.eval(c, x), &b.map_or(Real::NAN, |b| b.eval(c, x))),
                     Op::Neg => a.eval(c, x).neg(),
@@ -519,7 +550,11 @@ fn std_node(kind: RuleKind, w: usize, level: u32, i: usize) -> Std {
         while list.len() <= i {
             let c = ctx(w);
             let half_pi = c.div(&c.pi(), &int(2));
-            let k = if level == 0 { list.len() + 1 } else { 2 * list.len() + 1 };
+            let k = if level == 0 {
+                list.len() + 1
+            } else {
+                2 * list.len() + 1
+            };
             let tt = c.div(&int(k as i64), &Real::from_f64(2f64.powi(level as i32)));
             let et = c.exp(&tt);
             let one = Real::one();
@@ -536,7 +571,11 @@ fn std_node(kind: RuleKind, w: usize, level: u32, i: usize) -> Std {
                         w: c.div(&c.mul(&half_pi, &ch), &c.mul(&cosh_u, &cosh_u)),
                     }
                 }
-                RuleKind::Exp => Std { p: eu, q: ieu, w: c.mul(&half_pi, &ch) },
+                RuleKind::Exp => Std {
+                    p: eu,
+                    q: ieu,
+                    w: c.mul(&half_pi, &ch),
+                },
                 RuleKind::Sinh => Std {
                     p: c.div(&c.sub(&eu, &ieu), &int(2)),
                     q: Real::zero(),
@@ -555,8 +594,17 @@ struct QNode {
 }
 
 enum RuleMap {
-    Tanh { a: Real, b: Real, r: Real, floor: Real },
-    Exp { a: Real, flip: bool, floor: Real },
+    Tanh {
+        a: Real,
+        b: Real,
+        r: Real,
+        floor: Real,
+    },
+    Exp {
+        a: Real,
+        flip: bool,
+        floor: Real,
+    },
     Sinh,
 }
 
@@ -577,20 +625,42 @@ impl Rule {
                 }
                 let w = c.mul(r, &n.w);
                 [
-                    Some(QNode { x: c.sub(b, &dist), w: w.clone() }),
-                    Some(QNode { x: c.add(a, &dist), w }),
+                    Some(QNode {
+                        x: c.sub(b, &dist),
+                        w: w.clone(),
+                    }),
+                    Some(QNode {
+                        x: c.add(a, &dist),
+                        w,
+                    }),
                 ]
             }
             RuleMap::Exp { a, flip, floor } => {
                 let at = |y: &Real| if *flip { c.sub(a, y) } else { c.add(a, y) };
                 [
-                    Some(QNode { x: at(&n.p), w: c.mul(&n.w, &n.p) }),
-                    if n.q.lt(floor) { None } else { Some(QNode { x: at(&n.q), w: c.mul(&n.w, &n.q) }) },
+                    Some(QNode {
+                        x: at(&n.p),
+                        w: c.mul(&n.w, &n.p),
+                    }),
+                    if n.q.lt(floor) {
+                        None
+                    } else {
+                        Some(QNode {
+                            x: at(&n.q),
+                            w: c.mul(&n.w, &n.q),
+                        })
+                    },
                 ]
             }
             RuleMap::Sinh => [
-                Some(QNode { x: n.p.clone(), w: n.w.clone() }),
-                Some(QNode { x: n.p.neg(), w: n.w.clone() }),
+                Some(QNode {
+                    x: n.p.clone(),
+                    w: n.w.clone(),
+                }),
+                Some(QNode {
+                    x: n.p.neg(),
+                    w: n.w.clone(),
+                }),
             ],
         }
     }
@@ -599,10 +669,16 @@ impl Rule {
 fn tanh_sinh(a: Real, b: Real, c: &Ctx, w: usize) -> Rule {
     let half_pi = c.div(&c.pi(), &int(2));
     let r = c.div(&c.sub(&b, &a), &int(2));
-    let floor = c.mul(&pow10(c, -(w as i64)), &Real::max_of(&[a.abs(), b.abs(), Real::one()]));
+    let floor = c.mul(
+        &pow10(c, -(w as i64)),
+        &Real::max_of(&[a.abs(), b.abs(), Real::one()]),
+    );
     Rule {
         kind: RuleKind::Tanh,
-        center: QNode { x: c.div(&c.add(&a, &b), &int(2)), w: c.mul(&r, &half_pi) },
+        center: QNode {
+            x: c.div(&c.add(&a, &b), &int(2)),
+            w: c.mul(&r, &half_pi),
+        },
         map: RuleMap::Tanh { a, b, r, floor },
     }
 }
@@ -610,18 +686,43 @@ fn tanh_sinh(a: Real, b: Real, c: &Ctx, w: usize) -> Rule {
 /// [a, ∞) as x = a + y, or (-∞, a] as x = a - y, with y = exp(π/2 sinh t).
 fn exp_sinh(a: Real, flip: bool, c: &Ctx, w: usize) -> Rule {
     let half_pi = c.div(&c.pi(), &int(2));
-    let floor = c.mul(&pow10(c, -(w as i64)), &Real::max_of(&[a.abs(), Real::one()]));
-    let x = if flip { c.sub(&a, &Real::one()) } else { c.add(&a, &Real::one()) };
-    Rule { kind: RuleKind::Exp, center: QNode { x, w: half_pi }, map: RuleMap::Exp { a, flip, floor } }
+    let floor = c.mul(
+        &pow10(c, -(w as i64)),
+        &Real::max_of(&[a.abs(), Real::one()]),
+    );
+    let x = if flip {
+        c.sub(&a, &Real::one())
+    } else {
+        c.add(&a, &Real::one())
+    };
+    Rule {
+        kind: RuleKind::Exp,
+        center: QNode { x, w: half_pi },
+        map: RuleMap::Exp { a, flip, floor },
+    }
 }
 
 fn sinh_sinh(c: &Ctx) -> Rule {
     let half_pi = c.div(&c.pi(), &int(2));
-    Rule { kind: RuleKind::Sinh, center: QNode { x: Real::zero(), w: half_pi }, map: RuleMap::Sinh }
+    Rule {
+        kind: RuleKind::Sinh,
+        center: QNode {
+            x: Real::zero(),
+            w: half_pi,
+        },
+        map: RuleMap::Sinh,
+    }
 }
 
 /// Refines until two levels agree; the error roughly squares each level.
-fn quadrature(f: &Expr, rule: &Rule, c: &Ctx, digits: usize, w: usize, clock: &mut Clock) -> R<Option<Real>> {
+fn quadrature(
+    f: &Expr,
+    rule: &Rule,
+    c: &Ctx,
+    digits: usize,
+    w: usize,
+    clock: &mut Clock,
+) -> R<Option<Real>> {
     let tiny = pow10(c, -(w as i64));
     let cv = f.eval(c, &rule.center.x);
     if !cv.is_finite() {
@@ -725,12 +826,13 @@ fn integral_at(f: &Ast, a: &Bound, b: &Bound, digits: usize, clock: &mut Clock) 
     // a 1/√ singularity at a nonzero end loses half the working digits to the sliver past the last node
     let w = 2 * digits + 8;
     let c = ctx(w);
-    let Some(fx) = compile(f, &c) else { return Ok(None) };
+    let Some(fx) = compile(f, &c) else {
+        return Ok(None);
+    };
     let (Some(lo), Some(hi)) = (bound_of(a, &c), bound_of(b, &c)) else {
         return Ok(None);
     };
-    let swapped = rank(&lo) > rank(&hi)
-        || matches!((&lo, &hi), (B::V(x), B::V(y)) if x.gt(y));
+    let swapped = rank(&lo) > rank(&hi) || matches!((&lo, &hi), (B::V(x), B::V(y)) if x.gt(y));
     if swapped {
         return Ok(integral_at(f, b, a, digits, clock)?.map(|v| v.neg()));
     }
@@ -780,14 +882,23 @@ fn limit_at(f: &Ast, to: &Bound, side: i32, digits: usize) -> Option<Real> {
             extrapolated(&|h| fx.eval(&c, &c.div(&s, h)))
         }
         B::V(t) => {
-            let sides: Vec<i64> = if side == 0 { vec![1, -1] } else { vec![i64::from(side)] };
+            let sides: Vec<i64> = if side == 0 {
+                vec![1, -1]
+            } else {
+                vec![i64::from(side)]
+            };
             let mut vals = Vec::new();
             for s in sides {
-                vals.push(extrapolated(&|h| fx.eval(&c, &c.add(&t, &c.mul(h, &int(s)))))?);
+                vals.push(extrapolated(&|h| {
+                    fx.eval(&c, &c.add(&t, &c.mul(h, &int(s))))
+                })?);
             }
             if vals.len() == 2 {
                 let gap = c.sub(&vals[0], &vals[1]).abs();
-                let tol = c.mul(&pow10(&c, -(digits as i64 - 3)), &Real::max_of(&[Real::one(), vals[0].abs()]));
+                let tol = c.mul(
+                    &pow10(&c, -(digits as i64 - 3)),
+                    &Real::max_of(&[Real::one(), vals[0].abs()]),
+                );
                 if gap.gt(&tol) {
                     return None;
                 }
@@ -824,11 +935,18 @@ fn zeta3(c: &Ctx, w: usize) -> Real {
     let tiny = pow10(c, -(w as i64) - 2);
     for k in 1i64..10_000 {
         let term = c.div(&Real::one(), &c.mul(&binom, &int(k * k * k)));
-        sum = if k % 2 == 1 { c.add(&sum, &term) } else { c.sub(&sum, &term) };
+        sum = if k % 2 == 1 {
+            c.add(&sum, &term)
+        } else {
+            c.sub(&sum, &term)
+        };
         if term.lt(&tiny) {
             break;
         }
-        binom = c.div(&c.mul(&binom, &int(2 * (k + 1) * (2 * k + 1))), &int((k + 1) * (k + 1)));
+        binom = c.div(
+            &c.mul(&binom, &int(2 * (k + 1) * (2 * k + 1))),
+            &int((k + 1) * (k + 1)),
+        );
     }
     c.div(&c.mul(&sum, &int(5)), &int(2))
 }
@@ -844,10 +962,16 @@ fn catalan(c: &Ctx, w: usize) -> Real {
         if term.lt(&tiny) {
             break;
         }
-        ratio = c.div(&c.mul(&ratio, &int((n + 1) * (n + 1))), &int((2 * n + 1) * (2 * n + 2)));
+        ratio = c.div(
+            &c.mul(&ratio, &int((n + 1) * (n + 1))),
+            &int((2 * n + 1) * (2 * n + 2)),
+        );
     }
     let ln = c.ln(&c.add(&c.sqrt(&int(3)), &int(2)));
-    c.add(&c.mul(&c.div(&c.pi(), &int(8)), &ln), &c.div(&c.mul(&sum, &int(3)), &int(8)))
+    c.add(
+        &c.mul(&c.div(&c.pi(), &int(8)), &ln),
+        &c.div(&c.mul(&sum, &int(3)), &int(8)),
+    )
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -889,7 +1013,10 @@ fn atom_value(v: Value, c: &Ctx, w: usize) -> Real {
                 c.pow(&pi(), &int(k))
             }
         }
-        Value::InvPi(k) => c.div(&Real::one(), &if k == 1 { pi() } else { c.pow(&pi(), &int(k)) }),
+        Value::InvPi(k) => c.div(
+            &Real::one(),
+            &if k == 1 { pi() } else { c.pow(&pi(), &int(k)) },
+        ),
         Value::Root(n) => c.sqrt(&int(n)),
         Value::PiRoot(n) => c.mul(&pi(), &c.sqrt(&int(n))),
         Value::SqrtPi => c.sqrt(&pi()),
@@ -934,16 +1061,21 @@ fn atom(id: &str) -> Atom {
         "zeta3" => ("ζ(3)", None, Value::Zeta3),
         _ => ("catalan", None, Value::Catalan),
     };
-    Atom { id: id.into(), text: text.into(), inverse: inverse.map(str::to_string), value }
+    Atom {
+        id: id.into(),
+        text: text.into(),
+        inverse: inverse.map(str::to_string),
+        value,
+    }
 }
 
 /// Tried in order; the first relation that verifies wins, so simpler bases come first.
 fn families() -> Vec<(Vec<Atom>, f64)> {
     let mut out: Vec<(Vec<Atom>, f64)> = vec![(Vec::new(), 1e6)];
     for a in [
-        "pi", "pi2", "invpi", "sqrt2", "sqrt3", "ln2", "e", "inve", "sqrtpi", "pi3", "pi4", "invpi2", "sqrt5",
-        "sqrt6", "pisqrt2", "pisqrt3", "sqrt2pi", "e2", "ln3", "ln5", "ln2sq", "piln2", "lnsilver", "zeta3",
-        "catalan",
+        "pi", "pi2", "invpi", "sqrt2", "sqrt3", "ln2", "e", "inve", "sqrtpi", "pi3", "pi4",
+        "invpi2", "sqrt5", "sqrt6", "pisqrt2", "pisqrt3", "sqrt2pi", "e2", "ln3", "ln5", "ln2sq",
+        "piln2", "lnsilver", "zeta3", "catalan",
     ] {
         out.push((vec![atom(a)], 1e4));
     }
@@ -965,13 +1097,20 @@ fn families() -> Vec<(Vec<Atom>, f64)> {
     ] {
         out.push((pair.iter().map(|a| atom(a)).collect(), 1e3));
     }
-    out.push((["pi", "pi2", "ln2", "ln2sq", "piln2"].iter().map(|a| atom(a)).collect(), 200.0));
+    out.push((
+        ["pi", "pi2", "ln2", "ln2sq", "piln2"]
+            .iter()
+            .map(|a| atom(a))
+            .collect(),
+        200.0,
+    ));
     out
 }
 
 // ---- PSLQ
 
-/// Integer relation among `xs` with every coefficient at most `bound`, or None.
+/// Integer relation among `xs` with every coefficient at most `bound`, or None. Indexed as the TS indexes.
+#[allow(clippy::needless_range_loop)]
 fn pslq(xs: &[Real], c: &Ctx, digits: usize, bound: f64, clock: &mut Clock) -> R<Option<Vec<f64>>> {
     let n = xs.len();
     if n < 2 {
@@ -1008,7 +1147,11 @@ fn pslq(xs: &[Real], c: &Ctx, digits: usize, bound: f64, clock: &mut Clock) -> R
     let mut bm: Vec<Vec<Real>> = (0..n)
         .map(|i| (0..n).map(|j| int(i64::from(i == j))).collect())
         .collect();
-    let reduce = |i: usize, j: usize, y: &mut Vec<Real>, hm: &mut Vec<Vec<Real>>, bm: &mut Vec<Vec<Real>>| {
+    let reduce = |i: usize,
+                  j: usize,
+                  y: &mut Vec<Real>,
+                  hm: &mut Vec<Vec<Real>>,
+                  bm: &mut Vec<Vec<Real>>| {
         if hm[j][j].is_zero() {
             return;
         }
@@ -1131,7 +1274,11 @@ fn term_text(t: &Term) -> String {
         ps
     };
     let body = format!("{lead}{}", atom.text);
-    if t.q == 1.0 { body } else { format!("{body}/{qs}") }
+    if t.q == 1.0 {
+        body
+    } else {
+        format!("{body}/{qs}")
+    }
 }
 
 /// x = -(c1·1 + c2·a2 + …)/c0, as `2 - π²/6`.
@@ -1151,7 +1298,11 @@ fn format_relation(rel: &[f64], atoms: &[Atom]) -> Option<String> {
             q = -q;
         }
         let g = gcd(p, q);
-        terms.push(Term { p: p / g, q: q / g, atom: if i == 0 { None } else { Some(&atoms[i - 1]) } });
+        terms.push(Term {
+            p: p / g,
+            q: q / g,
+            atom: if i == 0 { None } else { Some(&atoms[i - 1]) },
+        });
     }
     if terms.is_empty() {
         return Some("0".into());
@@ -1193,13 +1344,18 @@ fn holds(rel: &[f64], values: &[Real], c: &Ctx, digits: usize) -> bool {
             scale = t.abs();
         }
     }
-    sum.abs().lte(&c.mul(&scale, &pow10(c, -(digits as i64 - 5))))
+    sum.abs()
+        .lte(&c.mul(&scale, &pow10(c, -(digits as i64 - 5))))
 }
 
 fn mentions_fn(ast: &Ast, names: &[&str]) -> bool {
     match ast {
         Ast::Fn(n, _) if names.contains(&n.as_str()) => true,
-        Ast::Op(o, a) if o == "^" && matches!(a.first(), Some(Ast::Const(e)) if e == "e") && names.contains(&"exp") => {
+        Ast::Op(o, a)
+            if o == "^"
+                && matches!(a.first(), Some(Ast::Const(e)) if e == "e")
+                && names.contains(&"exp") =>
+        {
             true
         }
         Ast::Op(_, a) | Ast::Fn(_, a) => a.iter().any(|x| mentions_fn(x, names)),
@@ -1230,20 +1386,48 @@ fn context_families<'a>(job: &'a Job) -> Vec<(Vec<Atom>, f64)> {
         if job.rad && mentions_fn(&job.f, &["sin", "cos", "tan", "sec", "csc", "cot"]) {
             out.push((
                 vec![
-                    Atom { id: format!("sin{cs}"), text: format!("sin({cs})"), inverse: None, value: Value::Sin(k) },
-                    Atom { id: format!("cos{cs}"), text: format!("cos({cs})"), inverse: None, value: Value::Cos(k) },
+                    Atom {
+                        id: format!("sin{cs}"),
+                        text: format!("sin({cs})"),
+                        inverse: None,
+                        value: Value::Sin(k),
+                    },
+                    Atom {
+                        id: format!("cos{cs}"),
+                        text: format!("cos({cs})"),
+                        inverse: None,
+                        value: Value::Cos(k),
+                    },
                 ],
                 1e3,
             ));
         }
         if mentions_fn(&job.f, &["exp"]) && k.abs() != 1 && k.abs() != 2 {
-            let text = if k < 0 { format!("e^({cs})") } else { format!("e^{cs}") };
-            out.push((vec![Atom { id: format!("exp{cs}"), text, inverse: None, value: Value::E(k) }], 1e3));
+            let text = if k < 0 {
+                format!("e^({cs})")
+            } else {
+                format!("e^{cs}")
+            };
+            out.push((
+                vec![Atom {
+                    id: format!("exp{cs}"),
+                    text,
+                    inverse: None,
+                    value: Value::E(k),
+                }],
+                1e3,
+            ));
         }
         let integral = matches!(job.kind, JobKind::Integral { .. });
-        if (integral || mentions_fn(&job.f, &["log", "log10"])) && k > 1 && ![2, 3, 5].contains(&k) {
+        if (integral || mentions_fn(&job.f, &["log", "log10"])) && k > 1 && ![2, 3, 5].contains(&k)
+        {
             out.push((
-                vec![Atom { id: format!("ln{cs}"), text: format!("ln({cs})"), inverse: None, value: Value::Ln(k) }],
+                vec![Atom {
+                    id: format!("ln{cs}"),
+                    text: format!("ln({cs})"),
+                    inverse: None,
+                    value: Value::Ln(k),
+                }],
                 1e3,
             ));
         }
@@ -1285,7 +1469,9 @@ fn identify(job: &Job, clock: &mut Clock) -> R<Option<String>> {
     for (atoms, bound) in families().into_iter().chain(context_families(job)) {
         let mut basis = vec![x1.clone(), Real::one()];
         basis.extend(atoms.iter().map(|a| value(a, &d1, w1)));
-        let Some(rel) = pslq(&basis, &d1, SEARCH_DIGITS, bound, clock)? else { continue };
+        let Some(rel) = pslq(&basis, &d1, SEARCH_DIGITS, bound, clock)? else {
+            continue;
+        };
         if rel[0] == 0.0 {
             continue;
         }
@@ -1305,7 +1491,9 @@ static KNOWN: std::sync::LazyLock<std::sync::Mutex<HashMap<String, Option<String
     std::sync::LazyLock::new(Default::default);
 
 fn known() -> std::sync::MutexGuard<'static, HashMap<String, Option<String>>> {
-    KNOWN.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    KNOWN
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// `knownClosedForm`: None when not asked yet; Some(None) when the search looked and found nothing.
@@ -1334,14 +1522,24 @@ mod tests {
     #[test]
     #[ignore]
     fn tick_census() {
-        let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/engine.closedForm.jsonl")).unwrap();
+        let text = std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/golden/engine.closedForm.jsonl"
+        ))
+        .unwrap();
         for line in text.lines() {
             let r: Json = serde_json::from_str(line).unwrap();
             let j = Job::from_json(&r["args"][0]).unwrap();
             let mut clock = Clock { left: u64::MAX };
             let t0 = std::time::Instant::now();
             let got = identify(&j, &mut clock).ok().flatten();
-            eprintln!("ticks {:>8} {:>6}ms want {} got {:?}", u64::MAX - clock.left, t0.elapsed().as_millis(), r["out"], got);
+            eprintln!(
+                "ticks {:>8} {:>6}ms want {} got {:?}",
+                u64::MAX - clock.left,
+                t0.elapsed().as_millis(),
+                r["out"],
+                got
+            );
         }
     }
 

@@ -48,7 +48,13 @@ impl Pows {
         self.0.iter().map(|(k, e)| (k.as_str(), *e))
     }
     fn filtered(&self) -> Pows {
-        Pows(self.0.iter().filter(|(_, e)| !is_whole(*e) || jsnum::round(*e) != 0.0).cloned().collect())
+        Pows(
+            self.0
+                .iter()
+                .filter(|(_, e)| !is_whole(*e) || jsnum::round(*e) != 0.0)
+                .cloned()
+                .collect(),
+        )
     }
 }
 
@@ -59,7 +65,10 @@ struct Term {
 }
 
 fn term(c: f64) -> Term {
-    Term { c, p: Pows::default() }
+    Term {
+        c,
+        p: Pows::default(),
+    }
 }
 
 struct Atom {
@@ -95,7 +104,8 @@ fn sum_key(terms: &[Term]) -> String {
     let mut keys: Vec<String> = terms
         .iter()
         .map(|t| {
-            let c = jsnum::to_string(jsnum::parse(&jsnum::to_precision(t.c, 12)).unwrap_or(f64::NAN));
+            let c =
+                jsnum::to_string(jsnum::parse(&jsnum::to_precision(t.c, 12)).unwrap_or(f64::NAN));
             format!("{c}:{}", term_key(&t.p))
         })
         .collect();
@@ -128,7 +138,11 @@ fn combine(terms: Vec<Term>) -> Res<Vec<Term>> {
             None => out.push((key, Term { c: t.c, p })),
         }
     }
-    let kept: Vec<Term> = out.into_iter().map(|(_, t)| t).filter(|t| t.c.abs() > 1e-12 * scale).collect();
+    let kept: Vec<Term> = out
+        .into_iter()
+        .map(|(_, t)| t)
+        .filter(|t| t.c.abs() > 1e-12 * scale)
+        .collect();
     if kept.len() > MAX_TERMS {
         return Err(TooBig);
     }
@@ -145,7 +159,11 @@ fn mul_term(a: &Term, b: &Term) -> Term {
 }
 
 fn mul_sum(a: &[Term], b: &[Term]) -> Res<Vec<Term>> {
-    combine(a.iter().flat_map(|x| b.iter().map(move |y| mul_term(x, y))).collect())
+    combine(
+        a.iter()
+            .flat_map(|x| b.iter().map(move |y| mul_term(x, y)))
+            .collect(),
+    )
 }
 
 fn whole_power(a: &[Term], k: i64) -> Res<Vec<Term>> {
@@ -189,20 +207,36 @@ fn degree(t: &Term) -> f64 {
 }
 
 fn product(fs: Vec<T>) -> T {
-    if fs.len() == 1 { fs.into_iter().next().expect("one") } else { op(Op::Multiply, fs) }
+    if fs.len() == 1 {
+        fs.into_iter().next().expect("one")
+    } else {
+        op(Op::Multiply, fs)
+    }
 }
 
 /// The recursive `gcd` of `together`: `b ? gcd(b, a % b) : |a|`.
 fn gcd(a: f64, b: f64) -> f64 {
-    if b != 0.0 && !b.is_nan() { gcd(b, a % b) } else { a.abs() }
+    if b != 0.0 && !b.is_nan() {
+        gcd(b, a % b)
+    } else {
+        a.abs()
+    }
 }
 
 fn order_terms(a: &Term, b: &Term) -> std::cmp::Ordering {
     let d = degree(b) - degree(a);
     if d != 0.0 && !d.is_nan() {
-        return if d < 0.0 { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater };
+        return if d < 0.0 {
+            std::cmp::Ordering::Less
+        } else {
+            std::cmp::Ordering::Greater
+        };
     }
-    if term_key(&a.p) < term_key(&b.p) { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater }
+    if term_key(&a.p) < term_key(&b.p) {
+        std::cmp::Ordering::Less
+    } else {
+        std::cmp::Ordering::Greater
+    }
 }
 
 #[derive(Default)]
@@ -212,8 +246,13 @@ struct Terms {
 
 impl Terms {
     fn atom(&mut self, key: &str, node: T, e: f64, sum: Option<Vec<Term>>) -> Vec<Term> {
-        self.atoms.entry(key.to_string()).or_insert(Atom { node, sum });
-        vec![Term { c: 1.0, p: Pows::one(key, e) }]
+        self.atoms
+            .entry(key.to_string())
+            .or_insert(Atom { node, sum });
+        vec![Term {
+            c: 1.0,
+            p: Pows::one(key, e),
+        }]
     }
 
     fn of(&mut self, n: &T) -> Res<Vec<Term>> {
@@ -222,7 +261,11 @@ impl Terms {
                 if !v.is_finite() {
                     return Err(TooBig);
                 }
-                Ok(if *v == 0.0 { Vec::new() } else { vec![term(*v)] })
+                Ok(if *v == 0.0 {
+                    Vec::new()
+                } else {
+                    vec![term(*v)]
+                })
             }
             N::Sym(s) => Ok(self.atom(s, n.clone(), 1.0, None)),
             N::Call(name, a) => {
@@ -245,7 +288,11 @@ impl Terms {
                     all.extend(self.of(&a[1])?.into_iter().map(|t| Term { c: -t.c, ..t }));
                     combine(all)
                 }
-                Op::UnaryMinus => Ok(self.of(&a[0])?.into_iter().map(|t| Term { c: -t.c, ..t }).collect()),
+                Op::UnaryMinus => Ok(self
+                    .of(&a[0])?
+                    .into_iter()
+                    .map(|t| Term { c: -t.c, ..t })
+                    .collect()),
                 Op::UnaryPlus => self.of(&a[0]),
                 Op::Multiply => {
                     let mut acc = self.of(&a[0])?;
@@ -290,11 +337,16 @@ impl Terms {
             let t = &base[0];
             if is_whole(k) {
                 let p = Pows(t.p.iter().map(|(a, e)| (a.to_string(), e * k)).collect());
-                return Ok(vec![Term { c: jsmath::pow(t.c, k), p }]);
+                return Ok(vec![Term {
+                    c: jsmath::pow(t.c, k),
+                    p,
+                }]);
             }
             // (x²)^(1/2) is |x|, not x
             if t.c > 0.0
-                && t.p.iter().all(|(_, e)| !is_whole(e) || jsnum::round(e) % 2.0 != 0.0 || is_whole(e * k))
+                && t.p
+                    .iter()
+                    .all(|(_, e)| !is_whole(e) || jsnum::round(e) % 2.0 != 0.0 || is_whole(e * k))
             {
                 let mut out = vec![term(jsmath::pow(t.c, k))];
                 let pows: Vec<(String, f64)> = t.p.0.clone();
@@ -304,7 +356,10 @@ impl Terms {
                         let inner = self.atoms.get(&a).map(|x| x.node.clone()).ok_or(TooBig)?;
                         self.atom(&format!("abs({a})"), call("abs", vec![inner]), e * k, None)
                     } else {
-                        vec![Term { c: 1.0, p: Pows::one(&a, e * k) }]
+                        vec![Term {
+                            c: 1.0,
+                            p: Pows::one(&a, e * k),
+                        }]
                     };
                     out = mul_sum(&out, &piece)?;
                 }
@@ -327,14 +382,23 @@ impl Terms {
             // |v|² prints as v²
             let node_of = |key: &str| self.atoms.get(key).map(|a| a.node.clone()).ok_or(TooBig);
             let base = match inner {
-                Some(i) if !i.is_empty() && self.atoms.contains_key(i) && is_whole(e) && jsnum::round(e) % 2.0 == 0.0 => {
+                Some(i)
+                    if !i.is_empty()
+                        && self.atoms.contains_key(i)
+                        && is_whole(e)
+                        && jsnum::round(e) % 2.0 == 0.0 =>
+                {
                     node_of(i)?
                 }
                 _ => node_of(&k)?,
             };
             if is_whole(e) {
                 let r = jsnum::round(e);
-                out.push(if r == 1.0 { base } else { op(Op::Pow, vec![base, constant(r)]) });
+                out.push(if r == 1.0 {
+                    base
+                } else {
+                    op(Op::Pow, vec![base, constant(r)])
+                });
             } else if (e - 0.5).abs() < 1e-9 {
                 out.push(call("sqrt", vec![base]));
             } else {
@@ -355,7 +419,9 @@ impl Terms {
         sorted.sort_by(order_terms);
         let mut parts = Vec::new();
         for t in &sorted {
-            let fs = self.factor_nodes(&t.p)?.unwrap_or_else(|| vec![constant(f64::NAN)]);
+            let fs = self
+                .factor_nodes(&t.p)?
+                .unwrap_or_else(|| vec![constant(f64::NAN)]);
             let c = t.c.abs();
             let body = if fs.is_empty() {
                 constant(c)
@@ -370,7 +436,11 @@ impl Terms {
         }
         let mut it = parts.into_iter();
         let (neg, body) = it.next().ok_or(TooBig)?;
-        let mut out = if neg { op(Op::UnaryMinus, vec![body]) } else { body };
+        let mut out = if neg {
+            op(Op::UnaryMinus, vec![body])
+        } else {
+            body
+        };
         for (neg, body) in it {
             out = op(if neg { Op::Subtract } else { Op::Add }, vec![out, body]);
         }
@@ -397,7 +467,8 @@ fn run(n: &T) -> Res<Option<T>> {
                 let mut p = t.p.clone();
                 for (k, e) in t.p.iter() {
                     let abs = format!("abs({k})");
-                    if terms.atoms.contains_key(&abs) && is_whole(e) && jsnum::round(e) % 2.0 == 0.0 {
+                    if terms.atoms.contains_key(&abs) && is_whole(e) && jsnum::round(e) % 2.0 == 0.0
+                    {
                         p.delete(k);
                         let next = p.get(&abs).unwrap_or(0.0) + e;
                         p.set(&abs, next);
@@ -433,11 +504,33 @@ fn run(n: &T) -> Res<Option<T>> {
                 Some(inner) if (1.0..=MAX_EXPAND).contains(&whole) => {
                     expanded = mul_sum(&expanded, &whole_power(&inner, whole as i64)?)?;
                     if rest.abs() > 1e-9 {
-                        expanded = expanded.iter().map(|x| mul_term(x, &Term { c: 1.0, p: Pows::one(k, rest) })).collect();
+                        expanded = expanded
+                            .iter()
+                            .map(|x| {
+                                mul_term(
+                                    x,
+                                    &Term {
+                                        c: 1.0,
+                                        p: Pows::one(k, rest),
+                                    },
+                                )
+                            })
+                            .collect();
                     }
                 }
                 _ => {
-                    expanded = expanded.iter().map(|x| mul_term(x, &Term { c: 1.0, p: Pows::one(k, e) })).collect();
+                    expanded = expanded
+                        .iter()
+                        .map(|x| {
+                            mul_term(
+                                x,
+                                &Term {
+                                    c: 1.0,
+                                    p: Pows::one(k, e),
+                                },
+                            )
+                        })
+                        .collect();
                 }
             }
         }
@@ -451,9 +544,16 @@ fn run(n: &T) -> Res<Option<T>> {
     // what every numerator term shares comes out front, and cancels against the denominator
     let mut outer = Pows::default();
     for (k, _) in top[0].p.iter() {
-        let least = top.iter().map(|t| t.p.get(k).unwrap_or(0.0)).fold(f64::INFINITY, |m, x| {
-            if m.is_nan() || x.is_nan() { f64::NAN } else { m.min(x) }
-        });
+        let least = top
+            .iter()
+            .map(|t| t.p.get(k).unwrap_or(0.0))
+            .fold(f64::INFINITY, |m, x| {
+                if m.is_nan() || x.is_nan() {
+                    f64::NAN
+                } else {
+                    m.min(x)
+                }
+            });
         if least > 1e-9 {
             outer.set(k, least);
         }
@@ -493,7 +593,13 @@ fn run(n: &T) -> Res<Option<T>> {
     ordered.sort_by(order_terms);
     let sign = if ordered[0].c < 0.0 { -1.0 } else { 1.0 };
     let scale = (sign * g) / l;
-    top = top.into_iter().map(|t| Term { c: jsnum::round(t.c / scale), p: t.p }).collect();
+    top = top
+        .into_iter()
+        .map(|t| Term {
+            c: jsnum::round(t.c / scale),
+            p: t.p,
+        })
+        .collect();
     let (mut p_out, q_out) = to_fraction(scale.abs()).unwrap_or((0.0, 0.0));
     if q_out == 0.0 || q_out.is_nan() {
         return Ok(None);
@@ -517,7 +623,8 @@ fn run(n: &T) -> Res<Option<T>> {
         p_out *= t.c.abs();
     }
 
-    let (Some(upper), Some(lower)) = (terms.factor_nodes(&outer)?, terms.factor_nodes(&bottom)?) else {
+    let (Some(upper), Some(lower)) = (terms.factor_nodes(&outer)?, terms.factor_nodes(&bottom)?)
+    else {
         return Ok(None);
     };
     let mut num_factors = Vec::new();
@@ -537,5 +644,9 @@ fn run(n: &T) -> Res<Option<T>> {
     if !den_factors.is_empty() {
         out = op(Op::Divide, vec![out, product(den_factors)]);
     }
-    Ok(Some(if sign < 0.0 { op(Op::UnaryMinus, vec![out]) } else { out }))
+    Ok(Some(if sign < 0.0 {
+        op(Op::UnaryMinus, vec![out])
+    } else {
+        out
+    }))
 }

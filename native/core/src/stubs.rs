@@ -192,7 +192,9 @@ pub fn sum_answer(_expr: &str) -> Option<SumAnswer> {
 
 // ported: `crate::calculus`. `evaluate_calculus` and `embed_integrals` take the TS's context (variables,
 // functions, angle mode, d/dt letters), so their signatures gained a `&CalcContext`.
-pub use crate::calculus::{CalcContext, CalculusResult, Embedded, embed_integrals, evaluate_calculus, is_calculus_input};
+pub use crate::calculus::{
+    CalcContext, CalculusResult, Embedded, embed_integrals, evaluate_calculus, is_calculus_input,
+};
 
 // ---- WP-MEASURE (measure.ts) ----
 

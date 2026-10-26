@@ -48,7 +48,11 @@ pub struct CalcContext {
 // ---- text helpers (the TS indexes strings; these index chars)
 
 fn re(pattern: &str, flags: &str) -> jsre::Regex {
-    let p = if flags.contains('s') { format!("(?s){pattern}") } else { pattern.to_string() };
+    let p = if flags.contains('s') {
+        format!("(?s){pattern}")
+    } else {
+        pattern.to_string()
+    };
     jsre::js(&p, if flags.contains('i') { "i" } else { "" })
 }
 
@@ -81,9 +85,24 @@ fn word_char(c: char) -> bool {
 #[derive(Clone, Debug)]
 enum Intent {
     /// One variable per differentiation, innermost first; `""` means pick one from the body.
-    Derivative { body: String, vars: Vec<String>, at: Option<String>, partial: bool },
-    Integral { body: String, v: Option<String>, lower: String, upper: String },
-    Limit { body: String, v: String, to: String, side: i32 },
+    Derivative {
+        body: String,
+        vars: Vec<String>,
+        at: Option<String>,
+        partial: bool,
+    },
+    Integral {
+        body: String,
+        v: Option<String>,
+        lower: String,
+        upper: String,
+    },
+    Limit {
+        body: String,
+        v: String,
+        to: String,
+        side: i32,
+    },
 }
 
 fn order_of(s: Option<&str>) -> Option<usize> {
@@ -115,7 +134,9 @@ fn split_at(s: &str) -> (String, Option<String>) {
         None => (s.trim().to_string(), None),
         Some(i) => {
             let tail = cut(&c, i, c.len());
-            let at = jsre::replace_all(&LEAD, &tail, |_| String::new()).trim().to_string();
+            let at = jsre::replace_all(&LEAD, &tail, |_| String::new())
+                .trim()
+                .to_string();
             (cut(&c, 0, i).trim().to_string(), Some(at))
         }
     }
@@ -180,7 +201,10 @@ fn scan_bound(s: &str) -> Option<(String, String)> {
     let c = chars(t);
     if t.starts_with('{') {
         let close = closing_paren(&c, 0)?;
-        return Some((cut(&c, 1, close), cut(&c, close + 1, c.len()).trim().to_string()));
+        return Some((
+            cut(&c, 1, close),
+            cut(&c, close + 1, c.len()).trim().to_string(),
+        ));
     }
     let mut depth = 0;
     let mut i = 0;
@@ -213,9 +237,10 @@ fn scan_bound(s: &str) -> Option<(String, String)> {
 fn strip_differential(body: &str) -> (String, Option<String>) {
     static DIFF: Lazy = Lazy::new(|| re(r"^(.*?)(?:\s*\*)?\s*\bd([A-Za-z])\s*$", "s"));
     match caps(&DIFF, body) {
-        Some(m) if !g(&m, 1).unwrap_or("").trim().is_empty() => {
-            (g(&m, 1).unwrap_or("").trim().to_string(), g(&m, 2).map(str::to_string))
-        }
+        Some(m) if !g(&m, 1).unwrap_or("").trim().is_empty() => (
+            g(&m, 1).unwrap_or("").trim().to_string(),
+            g(&m, 2).map(str::to_string),
+        ),
         _ => (body.trim().to_string(), None),
     }
 }
@@ -224,9 +249,18 @@ fn integral_from_args(args: &[String]) -> Option<Intent> {
     static LETTER: Lazy = Lazy::new(|| re(r"^[A-Za-z]$", ""));
     if args.len() == 3 && args.iter().all(|a| !a.is_empty()) {
         let (body, v) = strip_differential(&args[0]);
-        return Some(Intent::Integral { body, v, lower: args[1].clone(), upper: args[2].clone() });
+        return Some(Intent::Integral {
+            body,
+            v,
+            lower: args[1].clone(),
+            upper: args[2].clone(),
+        });
     }
-    if args.len() == 4 && jsre::test(&LETTER, &args[1]) && !args[0].is_empty() && !args[2].is_empty() && !args[3].is_empty()
+    if args.len() == 4
+        && jsre::test(&LETTER, &args[1])
+        && !args[0].is_empty()
+        && !args[2].is_empty()
+        && !args[3].is_empty()
     {
         return Some(Intent::Integral {
             body: args[0].clone(),
@@ -254,7 +288,12 @@ const SIGN: &str = r"^(?:∫|int(?=_|\s|[^A-Za-z\s(]\S*\.\.))";
 fn parse_integral(text: &str, functions: &BTreeMap<String, UserFunction>) -> Option<Intent> {
     static CALL: Lazy = Lazy::new(|| re(r"^(?:int|integral|integrate|∫)\s*\((.*)\)$", "is"));
     static NAME: Lazy = Lazy::new(|| re(r"^[A-Za-z]+", ""));
-    static WORDS: Lazy = Lazy::new(|| re(r"^(?:the\s+)?(?:integral|integrate)\s+(?:of\s+)?(.+)$", "is"));
+    static WORDS: Lazy = Lazy::new(|| {
+        re(
+            r"^(?:the\s+)?(?:integral|integrate)\s+(?:of\s+)?(.+)$",
+            "is",
+        )
+    });
     static FROM: Lazy = Lazy::new(|| re(r"^from\s+(.+?)\s+to\s+(.+?)\s+of\s+(.+)$", "is"));
     static SIGN_RE: Lazy = Lazy::new(|| re(SIGN, "i"));
     static UNDER: Lazy = Lazy::new(|| re(r"^_\s*", ""));
@@ -282,7 +321,12 @@ fn parse_integral(text: &str, functions: &BTreeMap<String, UserFunction>) -> Opt
         };
         let (body, lower, upper) = ft?;
         let (body, v) = strip_differential(&body);
-        return Some(Intent::Integral { body, v, lower, upper });
+        return Some(Intent::Integral {
+            body,
+            v,
+            lower,
+            upper,
+        });
     }
     // the word works as the sign too, for anyone who keeps typed words as text
     let sign = SIGN_RE.find(text).ok().flatten()?;
@@ -328,7 +372,12 @@ fn parse_integral(text: &str, functions: &BTreeMap<String, UserFunction>) -> Opt
         return None;
     }
     let (body, v) = strip_differential(&body);
-    Some(Intent::Integral { body, v, lower: lower.trim().to_string(), upper: upper.trim().to_string() })
+    Some(Intent::Integral {
+        body,
+        v,
+        lower: lower.trim().to_string(),
+        upper: upper.trim().to_string(),
+    })
 }
 
 /// First `)` `]` or `}` that the integral itself did not open, else the end of the line.
@@ -385,12 +434,20 @@ fn differential_cut(c: &[char], from: usize, limit: usize) -> Option<usize> {
     None
 }
 
-fn locate_integral(c: &[char], at: usize, functions: &BTreeMap<String, UserFunction>) -> Option<(usize, usize)> {
+fn locate_integral(
+    c: &[char],
+    at: usize,
+    functions: &BTreeMap<String, UserFunction>,
+) -> Option<(usize, usize)> {
     static CALL: Lazy = Lazy::new(|| re(r"^(?:int|integral|integrate|∫)\s*\(", "i"));
     static SIGN_RE: Lazy = Lazy::new(|| re(SIGN, "i"));
     static WORD: Lazy = Lazy::new(|| re(r"^(?:the\s+)?(?:integral|integrate)\b", "i"));
-    static EITHER: Lazy =
-        Lazy::new(|| re(r"^(?:the\s+)?(?:integral|integrate)\b|^(?:∫|int(?=_|\s|[^A-Za-z\s(]\S*\.\.))", "i"));
+    static EITHER: Lazy = Lazy::new(|| {
+        re(
+            r"^(?:the\s+)?(?:integral|integrate)\b|^(?:∫|int(?=_|\s|[^A-Za-z\s(]\S*\.\.))",
+            "i",
+        )
+    });
     let slice = cut(c, at, c.len());
     if let Some(m) = CALL.find(&slice).ok().flatten() {
         let open = at + m.as_str().chars().count() - 1;
@@ -464,7 +521,7 @@ pub fn embed_integrals(expr: &str, ctx: &CalcContext) -> Embedded {
             _ => return Embedded::Failed,
         }
     }
-    ready.sort_by(|a, b| b.0.cmp(&a.0));
+    ready.sort_by_key(|r| std::cmp::Reverse(r.0));
     let mut text = c;
     for (s, e, n) in ready {
         let mut next: Vec<char> = text[..s].to_vec();
@@ -480,7 +537,10 @@ fn parse_side(to: &str) -> (String, i32) {
     match caps(&SIDE, to) {
         Some(m) if !g(&m, 1).unwrap_or("").trim().is_empty() => {
             let s = g(&m, 2).unwrap_or(if g(&m, 3) == Some("⁺") { "+" } else { "-" });
-            (g(&m, 1).unwrap_or("").trim().to_string(), if s == "+" { 1 } else { -1 })
+            (
+                g(&m, 1).unwrap_or("").trim().to_string(),
+                if s == "+" { 1 } else { -1 },
+            )
         }
         _ => (to.to_string(), 0),
     }
@@ -491,12 +551,18 @@ const ARROW: &str = r"(?:->|→|\\to\b)";
 fn parse_limit(text: &str) -> Option<Intent> {
     static WORDS: Lazy = Lazy::new(|| {
         re(
-            &format!(r"^(?:the\s+)?limit\s+of\s+(.+?)\s+as\s+([A-Za-z])\s*(?:{ARROW}|approaches\s)\s*(.+)$"),
+            &format!(
+                r"^(?:the\s+)?limit\s+of\s+(.+?)\s+as\s+([A-Za-z])\s*(?:{ARROW}|approaches\s)\s*(.+)$"
+            ),
             "is",
         )
     });
-    static LIM: Lazy =
-        Lazy::new(|| re(&format!(r"^lim(?:it)?\s*(?:_\s*)?([({{]?)\s*([A-Za-z])\s*{ARROW}\s*(.*)$"), "s"));
+    static LIM: Lazy = Lazy::new(|| {
+        re(
+            &format!(r"^lim(?:it)?\s*(?:_\s*)?([({{]?)\s*([A-Za-z])\s*{ARROW}\s*(.*)$"),
+            "s",
+        )
+    });
     if let Some(w) = caps(&WORDS, text) {
         let (to, side) = parse_side(g(&w, 3).unwrap_or("").trim());
         return Some(Intent::Limit {
@@ -567,8 +633,12 @@ fn parse_derivative(
     functions: &BTreeMap<String, UserFunction>,
     variables: &BTreeMap<String, f64>,
 ) -> Option<Intent> {
-    static ORDINARY: Lazy =
-        Lazy::new(|| re(&format!(r"^d{ORDER}\s*\/\s*d({VAR}){ORDER}(?![A-Za-z0-9_α-ωΑ-Ω])(.*)$"), "s"));
+    static ORDINARY: Lazy = Lazy::new(|| {
+        re(
+            &format!(r"^d{ORDER}\s*\/\s*d({VAR}){ORDER}(?![A-Za-z0-9_α-ωΑ-Ω])(.*)$"),
+            "s",
+        )
+    });
     static PARTIAL: Lazy = Lazy::new(|| {
         re(
             &format!(
@@ -577,10 +647,17 @@ fn parse_derivative(
             "s",
         )
     });
-    static WORDS: Lazy =
-        Lazy::new(|| re(r"^(?:the\s+)?(?:(second|2nd)\s+)?(?:partial\s+)?derivative\s+of\s+(.+)$", "is"));
+    static WORDS: Lazy = Lazy::new(|| {
+        re(
+            r"^(?:the\s+)?(?:(second|2nd)\s+)?(?:partial\s+)?derivative\s+of\s+(.+)$",
+            "is",
+        )
+    });
     static WRT: Lazy = Lazy::new(|| {
-        re(&format!(r"^(.+?)\s+(?:with\s+respect\s+to|wrt|w\.r\.t\.?)\s+({VAR})$"), "is")
+        re(
+            &format!(r"^(.+?)\s+(?:with\s+respect\s+to|wrt|w\.r\.t\.?)\s+({VAR})$"),
+            "is",
+        )
     });
     static PRIME: Lazy = Lazy::new(|| re(r"^([A-Za-z][A-Za-z0-9]*)\s*('+|′+|″)\s*\((.+)\)$", "s"));
     static ONE_LETTER: Lazy = Lazy::new(|| re(r"^[A-Za-z]$", ""));
@@ -616,7 +693,12 @@ fn parse_derivative(
         if body.is_empty() {
             return None;
         }
-        return Some(Intent::Derivative { body: strip_outer_parens(&body), vars, at, partial: true });
+        return Some(Intent::Derivative {
+            body: strip_outer_parens(&body),
+            vars,
+            at,
+            partial: true,
+        });
     }
     if let Some(w) = caps(&WORDS, text) {
         let (sbody, sat) = split_at(g(&w, 2).unwrap_or(""));
@@ -630,7 +712,12 @@ fn parse_derivative(
         }
         let var = wrt.as_ref().and_then(|x| g(x, 2)).unwrap_or("").to_string();
         let n = if g(&w, 1).is_some() { 2 } else { 1 };
-        return Some(Intent::Derivative { body, vars: vec![var; n], at: sat, partial: false });
+        return Some(Intent::Derivative {
+            body,
+            vars: vec![var; n],
+            at: sat,
+            partial: false,
+        });
     }
     let prime = caps(&PRIME, text)?;
     let name = g(&prime, 1)?;
@@ -639,7 +726,11 @@ fn parse_derivative(
         return None;
     }
     let marks = g(&prime, 2)?;
-    let order = if marks == "″" { 2 } else { marks.chars().count() };
+    let order = if marks == "″" {
+        2
+    } else {
+        marks.chars().count()
+    };
     if order > 3 {
         return None;
     }
@@ -694,8 +785,9 @@ const TRIG: [&str; 6] = ["sin", "cos", "tan", "sec", "csc", "cot"];
 const INVERSE_TRIG: [&str; 6] = ["asin", "acos", "atan", "asec", "acsc", "acot"];
 /// Functions both mathjs `derivative` and the closed-form evaluator understand.
 const SMOOTH: [&str; 27] = [
-    "sin", "cos", "tan", "sec", "csc", "cot", "asin", "acos", "atan", "asec", "acsc", "acot", "sinh", "cosh",
-    "tanh", "sech", "csch", "coth", "asinh", "acosh", "atanh", "sqrt", "cbrt", "nthRoot", "exp", "log", "log10",
+    "sin", "cos", "tan", "sec", "csc", "cot", "asin", "acos", "atan", "asec", "acsc", "acot",
+    "sinh", "cosh", "tanh", "sech", "csch", "coth", "asinh", "acosh", "atanh", "sqrt", "cbrt",
+    "nthRoot", "exp", "log", "log10",
 ];
 
 fn smooth(name: &str) -> bool {
@@ -733,7 +825,9 @@ fn convert(n: &crate::syntax::Node, ctx: &TreeCtx) -> Option<T> {
     use crate::syntax::{Constant, Node};
     match n {
         Node::Parenthesis(c) => convert(c, ctx),
-        Node::Constant(Constant::Number { value, .. }) => value.is_finite().then(|| constant(*value)),
+        Node::Constant(Constant::Number { value, .. }) => {
+            value.is_finite().then(|| constant(*value))
+        }
         Node::Symbol(name) => {
             if ctx.bound.as_deref() == Some(name) || ctx.keep.contains(name) {
                 return Some(symbol(name));
@@ -744,20 +838,40 @@ fn convert(n: &crate::syntax::Node, ctx: &TreeCtx) -> Option<T> {
             if name == "tau" {
                 return Some(op(Op::Multiply, vec![constant(2.0), symbol("pi")]));
             }
-            ctx.sci.variables.get(name).filter(|v| v.is_finite()).map(|v| constant(*v))
+            ctx.sci
+                .variables
+                .get(name)
+                .filter(|v| v.is_finite())
+                .map(|v| constant(*v))
         }
         Node::Operator { op: o, args, .. } => {
             if !matches!(
                 o,
-                Op::Add | Op::Subtract | Op::Multiply | Op::Divide | Op::Pow | Op::UnaryMinus | Op::UnaryPlus
+                Op::Add
+                    | Op::Subtract
+                    | Op::Multiply
+                    | Op::Divide
+                    | Op::Pow
+                    | Op::UnaryMinus
+                    | Op::UnaryPlus
             ) {
                 return None;
             }
-            let a = args.iter().map(|x| convert(x, ctx)).collect::<Option<Vec<_>>>()?;
-            Some(if *o == Op::UnaryPlus { a.into_iter().next()? } else { op(*o, a) })
+            let a = args
+                .iter()
+                .map(|x| convert(x, ctx))
+                .collect::<Option<Vec<_>>>()?;
+            Some(if *o == Op::UnaryPlus {
+                a.into_iter().next()?
+            } else {
+                op(*o, a)
+            })
         }
         Node::Function { args, .. } => {
-            let a = args.iter().map(|x| convert(x, ctx)).collect::<Option<Vec<_>>>()?;
+            let a = args
+                .iter()
+                .map(|x| convert(x, ctx))
+                .collect::<Option<Vec<_>>>()?;
             convert_call(crate::symbolic::function_name(n), a, ctx)
         }
         _ => None,
@@ -772,7 +886,10 @@ fn convert_call(f: &str, args: Vec<T>, ctx: &TreeCtx) -> Option<T> {
     if name == "log" && args.len() == 2 {
         return Some(op(
             Op::Divide,
-            vec![call("log", vec![args[0].clone()]), call("log", vec![args[1].clone()])],
+            vec![
+                call("log", vec![args[0].clone()]),
+                call("log", vec![args[1].clone()]),
+            ],
         ));
     }
     if !smooth(name) {
@@ -780,7 +897,10 @@ fn convert_call(f: &str, args: Vec<T>, ctx: &TreeCtx) -> Option<T> {
     }
     if deg_mode(ctx.sci) {
         if TRIG.contains(&name) {
-            return Some(call(name, vec![op(Op::Multiply, vec![args.first()?.clone(), symbol(DEG)])]));
+            return Some(call(
+                name,
+                vec![op(Op::Multiply, vec![args.first()?.clone(), symbol(DEG)])],
+            ));
         }
         if INVERSE_TRIG.contains(&name) {
             return Some(op(Op::Divide, vec![call(name, args), symbol(DEG)]));
@@ -795,13 +915,20 @@ fn inline(def: &UserFunction, args: Vec<T>, ctx: &TreeCtx) -> Option<T> {
     if args.len() != def.params.len() {
         return None;
     }
-    let placeholders: Vec<String> = (0..def.params.len()).map(|i| format!("pp{}q{i}", ctx.depth)).collect();
+    let placeholders: Vec<String> = (0..def.params.len())
+        .map(|i| format!("pp{}q{i}", ctx.depth))
+        .collect();
     let mut body = def.body.clone();
     for (i, p) in def.params.iter().enumerate() {
         let r = re(&format!("(?<![A-Za-z0-9_]){p}(?![A-Za-z0-9_])"), "");
         body = jsre::replace_all(&r, &body, |_| placeholders[i].clone()).into_owned();
     }
-    let inner = TreeCtx { sci: ctx.sci, bound: None, depth: ctx.depth + 1, keep: placeholders.clone() };
+    let inner = TreeCtx {
+        sci: ctx.sci,
+        bound: None,
+        depth: ctx.depth + 1,
+        keep: placeholders.clone(),
+    };
     let tree = to_tree(&body, &inner)?;
     let map: Vec<(String, T)> = placeholders.into_iter().zip(args).collect();
     Some(substitute(&tree, &map))
@@ -858,7 +985,10 @@ fn to_user_angles(n: &T, deg: bool) -> Option<T> {
                 let inner = to_user_angles(&a.args()[0], deg)?;
                 return Some(call(name, vec![inner]));
             }
-            let inner = args.iter().map(|x| to_user_angles(x, deg)).collect::<Option<Vec<_>>>()?;
+            let inner = args
+                .iter()
+                .map(|x| to_user_angles(x, deg))
+                .collect::<Option<Vec<_>>>()?;
             let back = call(name, inner);
             // a radian inverse trig value is the user's degrees value times deg__
             if deg && INVERSE_TRIG.contains(&name.as_str()) {
@@ -867,7 +997,10 @@ fn to_user_angles(n: &T, deg: bool) -> Option<T> {
             Some(back)
         }
         N::Op(o, args) => {
-            let a = args.iter().map(|x| to_user_angles(x, deg)).collect::<Option<Vec<_>>>()?;
+            let a = args
+                .iter()
+                .map(|x| to_user_angles(x, deg))
+                .collect::<Option<Vec<_>>>()?;
             Some(op(*o, a))
         }
         _ => Some(n.clone()),
@@ -922,7 +1055,10 @@ fn simplify_keeping_constants(n: &T, v: Option<&str>) -> Option<T> {
 fn engine_text(n: &T) -> String {
     fn rename(x: &T) -> T {
         match &**x {
-            N::Call(name, a) => call(if name == "log" { "ln" } else { name }, a.iter().map(rename).collect()),
+            N::Call(name, a) => call(
+                if name == "log" { "ln" } else { name },
+                a.iter().map(rename).collect(),
+            ),
             N::Op(o, a) => op(*o, a.iter().map(rename).collect()),
             _ => x.clone(),
         }
@@ -943,9 +1079,12 @@ fn same_value(a: &T, b: &T) -> bool {
     symbol_names(b, &mut names);
     let mut compared = 0;
     for sample in &TIDY_SAMPLES {
-        let scope: Vec<(String, f64)> =
-            names.iter().enumerate().map(|(i, n)| (n.clone(), sample[i % sample.len()])).collect();
-        let (Ok(x), Ok(y)) = (tree::evaluate(a, &scope), tree::evaluate(b, &scope)) else {
+        let scope: Vec<(String, f64)> = names
+            .iter()
+            .enumerate()
+            .map(|(i, n)| (n.clone(), sample[i % sample.len()]))
+            .collect();
+        let (Some(x), Some(y)) = (tree::evaluate(a, &scope), tree::evaluate(b, &scope)) else {
             return false;
         };
         let (Some(x), Some(y)) = (x, y) else { continue };
@@ -970,7 +1109,11 @@ fn tidy(n: T) -> T {
     if !same_value(&n, &t) {
         return n;
     }
-    if js_len(&pretty(&t).s) < js_len(&pretty(&n).s) { t } else { n }
+    if js_len(&pretty(&t).s) < js_len(&pretty(&n).s) {
+        t
+    } else {
+        n
+    }
 }
 
 struct Derived {
@@ -997,7 +1140,11 @@ fn snap_int(n: f64) -> f64 {
     if r == 0.0 {
         return n;
     }
-    if (n - r).abs() <= f64::EPSILON * r.abs().max(1.0) { r } else { n }
+    if (n - r).abs() <= f64::EPSILON * r.abs().max(1.0) {
+        r
+    } else {
+        n
+    }
 }
 
 /// `compileScientific(text, ctx, v)` read as a real function: the number it gives, else NaN.
@@ -1017,11 +1164,19 @@ impl Compiled {
         let mut scope = crate::scientific::scope_for(&expr, &ctx);
         // compileScientific runs outside evalScientific, where no typed i is in force
         scope.complex_typed = false;
-        Some(Compiled { node, scope: RefCell::new(scope), var: var.to_string(), cost: 5 + js_len(&expr) as u64 })
+        Some(Compiled {
+            node,
+            scope: RefCell::new(scope),
+            var: var.to_string(),
+            cost: 5 + js_len(&expr) as u64,
+        })
     }
 
     fn call(&self, x: f64) -> f64 {
-        self.scope.borrow_mut().variables.insert(self.var.clone(), x);
+        self.scope
+            .borrow_mut()
+            .variables
+            .insert(self.var.clone(), x);
         crate::work::spend(self.cost);
         let scope = self.scope.borrow().clone();
         let n = match crate::eval::evaluate(&self.node, &scope) {
@@ -1054,7 +1209,12 @@ fn body_fn(body: &str, sci: &ScientificContext, v: &str) -> Option<RealFn> {
         jsre::test(&r, body)
     });
     if calls_user {
-        let ctx = TreeCtx { sci, bound: Some(v.to_string()), depth: 0, keep: Vec::new() };
+        let ctx = TreeCtx {
+            sci,
+            bound: Some(v.to_string()),
+            depth: 0,
+            keep: Vec::new(),
+        };
         if let Some(t) = to_tree(body, &ctx)
             && let Some(user) = to_user_angles(&t, deg_mode(sci))
         {
@@ -1071,9 +1231,15 @@ static INFINITY: Lazy = Lazy::new(|| re(r"^([+-]?)\s*(?:∞|inf|infty|infinity)$
 
 fn bound_value(text: &str, sci: &ScientificContext) -> Option<f64> {
     if let Some(m) = caps(&INFINITY, text.trim()) {
-        return Some(if g(&m, 1) == Some("-") { f64::NEG_INFINITY } else { f64::INFINITY });
+        return Some(if g(&m, 1) == Some("-") {
+            f64::NEG_INFINITY
+        } else {
+            f64::INFINITY
+        });
     }
-    eval_scientific(text, sci).filter(|r| r.kind == ValueKind::Number && r.n.is_finite()).map(|r| r.n)
+    eval_scientific(text, sci)
+        .filter(|r| r.kind == ValueKind::Number && r.n.is_finite())
+        .map(|r| r.n)
 }
 
 fn job_ast(n: &T, v: Option<&str>) -> Option<Ast> {
@@ -1085,13 +1251,19 @@ fn job_ast(n: &T, v: Option<&str>) -> Option<Ast> {
             } else if s == "pi" || s == "e" {
                 Some(Ast::Const(s.clone()))
             } else if s == DEG {
-                Some(Ast::Op("/".into(), vec![Ast::Const("pi".into()), Ast::Num("180".into())]))
+                Some(Ast::Op(
+                    "/".into(),
+                    vec![Ast::Const("pi".into()), Ast::Num("180".into())],
+                ))
             } else {
                 None
             }
         }
         N::Op(o, a) => {
-            let args = a.iter().map(|x| job_ast(x, v)).collect::<Option<Vec<_>>>()?;
+            let args = a
+                .iter()
+                .map(|x| job_ast(x, v))
+                .collect::<Option<Vec<_>>>()?;
             let s = match o {
                 Op::UnaryMinus => "neg",
                 Op::Add => "+",
@@ -1104,7 +1276,10 @@ fn job_ast(n: &T, v: Option<&str>) -> Option<Ast> {
             Some(Ast::Op(s.into(), args))
         }
         N::Call(name, a) => {
-            let args = a.iter().map(|x| job_ast(x, v)).collect::<Option<Vec<_>>>()?;
+            let args = a
+                .iter()
+                .map(|x| job_ast(x, v))
+                .collect::<Option<Vec<_>>>()?;
             Some(Ast::Fn(name.clone(), args))
         }
     }
@@ -1112,20 +1287,46 @@ fn job_ast(n: &T, v: Option<&str>) -> Option<Ast> {
 
 fn bound_ast(text: &str, ctx: &TreeCtx) -> Option<Bound> {
     if let Some(m) = caps(&INFINITY, text.trim()) {
-        return Some(if g(&m, 1) == Some("-") { Bound::NegInf } else { Bound::Inf });
+        return Some(if g(&m, 1) == Some("-") {
+            Bound::NegInf
+        } else {
+            Bound::Inf
+        });
     }
-    let t = to_tree(text, &TreeCtx { bound: None, ..ctx.clone() })?;
+    let t = to_tree(
+        text,
+        &TreeCtx {
+            bound: None,
+            ..ctx.clone()
+        },
+    )?;
     job_ast(&t, None).map(Bound::Ast)
 }
 
-fn with_job(value: f64, err: f64, draft: Option<(Ast, JobKind)>, sci: &ScientificContext) -> CalculusResult {
-    let mut result = CalculusResult { value: Some(Value::number(value)), ..CalculusResult::default() };
+fn with_job(
+    value: f64,
+    err: f64,
+    draft: Option<(Ast, JobKind)>,
+    sci: &ScientificContext,
+) -> CalculusResult {
+    let mut result = CalculusResult {
+        value: Some(Value::number(value)),
+        ..CalculusResult::default()
+    };
     // integers already are their own closed form
-    let Some((f, kind)) = draft else { return result };
+    let Some((f, kind)) = draft else {
+        return result;
+    };
     if !value.is_finite() || jsnum::is_integer(value) || value.abs() > 1e12 {
         return result;
     }
-    let job = Job { f, kind, approx: value, err, rad: sci.angle_mode == AngleMode::Rad };
+    let job = Job {
+        f,
+        kind,
+        approx: value,
+        err,
+        rad: sci.angle_mode == AngleMode::Rad,
+    };
     if let Some(known) = closed_form::known_closed_form(&job.key()) {
         result.exact = known.filter(|e| !e.is_empty());
         return result;
@@ -1140,7 +1341,8 @@ fn free_letters(body: &str, sci: &ScientificContext) -> Vec<String> {
     for m in FREE.captures_iter(body).flatten() {
         let c = g(&m, 1).unwrap_or("").to_string();
         // a bare function name isn't a variable: after f(x) = x², ∫0..3 f isn't ∫0..3 f df
-        if c == "e" || c == "i" || sci.variables.contains_key(&c) || sci.functions.contains_key(&c) {
+        if c == "e" || c == "i" || sci.variables.contains_key(&c) || sci.functions.contains_key(&c)
+        {
             continue;
         }
         if !found.contains(&c) {
@@ -1183,20 +1385,28 @@ fn agrees_numerically(f: &dyn Fn(f64) -> f64, df: &dyn Fn(f64) -> f64, points: &
 const CHECK_POINTS: [f64; 8] = [0.7, 1.3, 2.9, -0.6, 4.2, 11.5, 0.2, -3.1];
 
 static SYMBOL_RE: Lazy = Lazy::new(|| re(&format!(r"(?<![{LETTER}])({VAR})(?![{LETTER}(])"), ""));
-static WORD_RE: Lazy =
-    Lazy::new(|| re(&format!(r"(?<![{LETTER}\\.])[A-Za-zα-ωΑ-Ω]{{2,}}(?![{LETTER}.]|\s*\()"), ""));
+static WORD_RE: Lazy = Lazy::new(|| {
+    re(
+        &format!(r"(?<![{LETTER}\\.])[A-Za-zα-ωΑ-Ω]{{2,}}(?![{LETTER}.]|\s*\()"),
+        "",
+    )
+});
 
 fn whole_word(w: &str) -> bool {
     let lower = w.to_lowercase();
     NAMES.to_lowercase().split('|').any(|n| n == lower)
-        || ["e", "i", "theta", "mod", "deg", "rad", "and", "or", "not", "xor"].contains(&lower.as_str())
+        || [
+            "e", "i", "theta", "mod", "deg", "rad", "and", "or", "not", "xor",
+        ]
+        .contains(&lower.as_str())
 }
 
 /// `Lv` in a derivative is L times v: an unknown word of letters is a product of one-letter constants.
 fn split_symbols(body: &str, sci: &ScientificContext) -> String {
     jsre::replace_all(&WORD_RE, body, |m| {
         let word = g(m, 0).unwrap_or("");
-        if whole_word(word) || sci.variables.contains_key(word) || sci.functions.contains_key(word) {
+        if whole_word(word) || sci.variables.contains_key(word) || sci.functions.contains_key(word)
+        {
             return word.to_string();
         }
         word.chars().map(String::from).collect::<Vec<_>>().join(" ")
@@ -1209,7 +1419,8 @@ fn free_symbols(body: &str, sci: &ScientificContext) -> Vec<String> {
     let mut found: Vec<String> = Vec::new();
     for m in SYMBOL_RE.captures_iter(body).flatten() {
         let c = g(&m, 1).unwrap_or("").to_string();
-        if c == "e" || c == "i" || sci.variables.contains_key(&c) || sci.functions.contains_key(&c) {
+        if c == "e" || c == "i" || sci.variables.contains_key(&c) || sci.functions.contains_key(&c)
+        {
             continue;
         }
         if !found.contains(&c) {
@@ -1247,11 +1458,23 @@ fn read_point(text: &str, vars: &[String]) -> Option<Vec<(String, String)>> {
     }
     let parts: Vec<String> = split_args(t)
         .iter()
-        .flat_map(|p| AND.split(p).filter_map(Result::ok).map(|s| s.trim().to_string()).collect::<Vec<_>>())
+        .flat_map(|p| {
+            AND.split(p)
+                .filter_map(Result::ok)
+                .map(|s| s.trim().to_string())
+                .collect::<Vec<_>>()
+        })
         .collect();
     let pairs: Vec<Option<(String, String)>> = parts
         .iter()
-        .map(|p| caps(&NAMED, p).map(|m| (g(&m, 1).unwrap_or("").to_string(), g(&m, 2).unwrap_or("").trim().to_string())))
+        .map(|p| {
+            caps(&NAMED, p).map(|m| {
+                (
+                    g(&m, 1).unwrap_or("").to_string(),
+                    g(&m, 2).unwrap_or("").trim().to_string(),
+                )
+            })
+        })
         .collect();
     if pairs.iter().all(Option::is_some) {
         let mut out: Vec<(String, String)> = Vec::new();
@@ -1284,7 +1507,10 @@ fn run_derivative(
 ) -> Option<CalculusResult> {
     let sci = &ctx.sci;
     // d/dt of letters that aren't t (`x sin θ`) is a time derivative: they move with time
-    if !partial && at.is_none() && vars.len() <= 2 && vars.iter().all(|v| v == "t")
+    if !partial
+        && at.is_none()
+        && vars.len() <= 2
+        && vars.iter().all(|v| v == "t")
         && let Some(timed) = run_time_derivative(body, vars.len(), ctx)
     {
         return Some(timed);
@@ -1303,7 +1529,16 @@ fn run_derivative(
             }
         }
     };
-    let vars: Vec<String> = vars.iter().map(|v| if v.is_empty() { first.clone() } else { v.clone() }).collect();
+    let vars: Vec<String> = vars
+        .iter()
+        .map(|v| {
+            if v.is_empty() {
+                first.clone()
+            } else {
+                v.clone()
+            }
+        })
+        .collect();
     let point = match at {
         None => Vec::new(),
         Some(a) => read_point(a, &vars)?,
@@ -1315,15 +1550,20 @@ fn run_derivative(
         }
     }
     if symbols.len() == 1 {
-        let at_text = point.iter().find(|(k, _)| *k == first).map(|(_, v)| v.as_str());
+        let at_text = point
+            .iter()
+            .find(|(k, _)| *k == first)
+            .map(|(_, v)| v.as_str());
         return run_ordinary(&body, &first, vars.len(), at_text, sci);
     }
     run_partial(&body, &vars, &symbols, &point, sci)
 }
 
 /// Sample values for the letters held constant while a partial derivative is checked.
-const SAMPLE_SETS: [[f64; 7]; 2] =
-    [[0.83, 1.37, -0.61, 2.21, 0.47, 1.93, -1.28], [1.61, -0.74, 0.58, 1.12, -1.45, 0.91, 2.67]];
+const SAMPLE_SETS: [[f64; 7]; 2] = [
+    [0.83, 1.37, -0.61, 2.21, 0.47, 1.93, -1.28],
+    [1.61, -0.74, 0.58, 1.12, -1.45, 0.91, 2.67],
+];
 
 fn with_vars(sci: &ScientificContext, extra: &[(String, f64)]) -> ScientificContext {
     let mut s = sci.clone();
@@ -1343,7 +1583,15 @@ fn run_partial(
     sci: &ScientificContext,
 ) -> Option<CalculusResult> {
     let deg = deg_mode(sci);
-    let t = to_tree(body, &TreeCtx { sci, bound: None, depth: 0, keep: symbols.to_vec() })?;
+    let t = to_tree(
+        body,
+        &TreeCtx {
+            sci,
+            bound: None,
+            depth: 0,
+            keep: symbols.to_vec(),
+        },
+    )?;
     let mut current = t;
     let mut user: Option<T> = None;
     let mut texts = vec![body.to_string()];
@@ -1390,9 +1638,15 @@ fn run_partial(
             }
             r = Some(v);
         }
-        return Some(CalculusResult { value: r, ..CalculusResult::default() });
+        return Some(CalculusResult {
+            value: r,
+            ..CalculusResult::default()
+        });
     }
-    let map: Vec<(String, T)> = values.iter().map(|(n, v)| (n.clone(), constant(*v))).collect();
+    let map: Vec<(String, T)> = values
+        .iter()
+        .map(|(n, v)| (n.clone(), constant(*v)))
+        .collect();
     let at = substitute(&user, &map);
     // simplify would make (v²)^(3/2) into v³
     let simplified = match together(&at) {
@@ -1403,7 +1657,10 @@ fn run_partial(
 }
 
 fn text_result(s: String) -> CalculusResult {
-    CalculusResult { value: Some(Value::text(s)), ..CalculusResult::default() }
+    CalculusResult {
+        value: Some(Value::text(s)),
+        ..CalculusResult::default()
+    }
 }
 
 fn run_ordinary(
@@ -1413,7 +1670,12 @@ fn run_ordinary(
     at_text: Option<&str>,
     sci: &ScientificContext,
 ) -> Option<CalculusResult> {
-    let tctx = TreeCtx { sci, bound: Some(v.to_string()), depth: 0, keep: Vec::new() };
+    let tctx = TreeCtx {
+        sci,
+        bound: Some(v.to_string()),
+        depth: 0,
+        keep: Vec::new(),
+    };
     let t = to_tree(body, &tctx);
     let f = real_fn(body, sci, v)?;
     let at = match at_text {
@@ -1460,7 +1722,13 @@ fn run_ordinary(
                 if !value.is_finite() {
                     return None;
                 }
-                let at_tree = to_tree(at_text?, &TreeCtx { bound: None, ..tctx.clone() });
+                let at_tree = to_tree(
+                    at_text?,
+                    &TreeCtx {
+                        bound: None,
+                        ..tctx.clone()
+                    },
+                );
                 let d_ast = job_ast(&steps.tree, Some(v));
                 let at_ast = at_tree.and_then(|x| job_ast(&x, None));
                 let draft = match (d_ast, at_ast) {
@@ -1493,7 +1761,10 @@ fn numeric_derivative(f: &dyn Fn(f64) -> f64, a: f64) -> Option<CalculusResult> 
         return None;
     }
     let value = justified(est.value, est.err, Some(est.value.abs().max(1.0)))?;
-    Some(CalculusResult { value: Some(Value::number(value)), ..CalculusResult::default() })
+    Some(CalculusResult {
+        value: Some(Value::number(value)),
+        ..CalculusResult::default()
+    })
 }
 
 fn run_integral(
@@ -1509,7 +1780,12 @@ fn run_integral(
     let b = bound_value(upper, sci);
     let (f, a, b) = (f?, a?, b?);
     let est = integrate(&f, a, b)?;
-    let tctx = TreeCtx { sci, bound: Some(v.clone()), depth: 0, keep: Vec::new() };
+    let tctx = TreeCtx {
+        sci,
+        bound: Some(v.clone()),
+        depth: 0,
+        keep: Vec::new(),
+    };
     let f_ast = to_tree(body, &tctx).and_then(|t| job_ast(&t, Some(&v)));
     let lo = bound_ast(lower, &tctx);
     let hi = bound_ast(upper, &tctx);
@@ -1520,15 +1796,29 @@ fn run_integral(
     Some(with_job(est.value, est.err, draft, sci))
 }
 
-fn run_limit(body: &str, v: &str, to: &str, side: i32, sci: &ScientificContext) -> Option<CalculusResult> {
+fn run_limit(
+    body: &str,
+    v: &str,
+    to: &str,
+    side: i32,
+    sci: &ScientificContext,
+) -> Option<CalculusResult> {
     let f = body_fn(body, sci, v);
     let to_v = bound_value(to, sci);
     let (f, to_v) = (f?, to_v?);
     let est = limit(&f, to_v, side)?;
     if !est.value.is_finite() {
-        return Some(CalculusResult { value: Some(Value::number(est.value)), ..CalculusResult::default() });
+        return Some(CalculusResult {
+            value: Some(Value::number(est.value)),
+            ..CalculusResult::default()
+        });
     }
-    let tctx = TreeCtx { sci, bound: Some(v.to_string()), depth: 0, keep: Vec::new() };
+    let tctx = TreeCtx {
+        sci,
+        bound: Some(v.to_string()),
+        depth: 0,
+        keep: Vec::new(),
+    };
     let f_ast = to_tree(body, &tctx).and_then(|t| job_ast(&t, Some(v)));
     let to_ast = bound_ast(to, &tctx);
     let draft = match (f_ast, to_ast) {
@@ -1542,8 +1832,18 @@ fn run_limit(body: &str, v: &str, to: &str, side: i32, sci: &ScientificContext) 
 pub fn evaluate_calculus(text: &str, ctx: &CalcContext) -> Option<CalculusResult> {
     let intent = parse_calculus(text, &ctx.sci.functions, &ctx.sci.variables)?;
     let out = match &intent {
-        Intent::Derivative { body, vars, at, partial } => run_derivative(body, vars, at.as_deref(), *partial, ctx),
-        Intent::Integral { body, v, lower, upper } => run_integral(body, v.as_deref(), lower, upper, &ctx.sci),
+        Intent::Derivative {
+            body,
+            vars,
+            at,
+            partial,
+        } => run_derivative(body, vars, at.as_deref(), *partial, ctx),
+        Intent::Integral {
+            body,
+            v,
+            lower,
+            upper,
+        } => run_integral(body, v.as_deref(), lower, upper, &ctx.sci),
         Intent::Limit { body, v, to, side } => run_limit(body, v, to, *side, &ctx.sci),
     };
     Some(out.unwrap_or_default())
@@ -1552,9 +1852,17 @@ pub fn evaluate_calculus(text: &str, ctx: &CalcContext) -> Option<CalculusResult
 // ---- time derivatives: d/dt (x sin θ) = ẋ sin θ + x cos θ θ̇
 
 /// The physics convention: positions and angles move, other letters are constants.
-const VARYING_BY_DEFAULT: [&str; 12] = ["x", "y", "z", "r", "s", "q", "u", "v", "w", "theta", "φ", "ψ"];
-const GREEK_WORDS: [(&str, &str); 6] =
-    [("phi", "φ"), ("psi", "ψ"), ("omega", "ω"), ("alpha", "α"), ("beta", "β"), ("gamma", "γ")];
+const VARYING_BY_DEFAULT: [&str; 12] = [
+    "x", "y", "z", "r", "s", "q", "u", "v", "w", "theta", "φ", "ψ",
+];
+const GREEK_WORDS: [(&str, &str); 6] = [
+    ("phi", "φ"),
+    ("psi", "ψ"),
+    ("omega", "ω"),
+    ("alpha", "α"),
+    ("beta", "β"),
+    ("gamma", "γ"),
+];
 // stand-ins for ẋ, θ̈ and the rest while mathjs works: Greek capitals nobody types
 const STAND_INS: [&str; 11] = ["Ξ", "Ψ", "Γ", "Λ", "Υ", "Ζ", "Η", "Ι", "Κ", "Μ", "Ν"];
 const MARKS: [&str; 4] = ["", "\u{307}", "\u{308}", "\u{20db}"];
@@ -1565,40 +1873,63 @@ fn greek_word(w: &str) -> Option<&'static str> {
 
 /// A letter as the answer shows it: θ for theta.
 fn shown_letter(name: &str) -> String {
-    if name == "theta" { "θ".into() } else { name.to_string() }
+    if name == "theta" {
+        "θ".into()
+    } else {
+        name.to_string()
+    }
 }
 
 /// d/dt or d²/dt² of an expression whose letters move with time. None when there's nothing to move.
 fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<CalculusResult> {
     static GREEK: Lazy = Lazy::new(|| re(r"\b(phi|psi|omega|alpha|beta|gamma)\b", ""));
     static DOTTED: Lazy = Lazy::new(|| {
-        re(r"(?<![A-Za-z])(theta|phi|psi|omega|alpha|beta|gamma|[A-Za-zθφψωαβγ])(d{1,3})ot(?![A-Za-z])", "")
+        re(
+            r"(?<![A-Za-z])(theta|phi|psi|omega|alpha|beta|gamma|[A-Za-zθφψωαβγ])(d{1,3})ot(?![A-Za-z])",
+            "",
+        )
     });
     static THETA: Lazy = Lazy::new(|| re("theta", ""));
     static EXPLICIT_T: Lazy = Lazy::new(|| re(r"(?<![A-Za-z])t(?![A-Za-z(])", ""));
     let sci = &ctx.sci;
     let padded = format!(" {text} ");
-    let body = jsre::replace_all(&GREEK, &padded, |m| greek_word(g(m, 1).unwrap_or("")).unwrap_or("").to_string())
-        .into_owned();
-    let mut free: Vec<&str> = STAND_INS.iter().copied().filter(|c| !body.contains(c)).collect();
+    let body = jsre::replace_all(&GREEK, &padded, |m| {
+        greek_word(g(m, 1).unwrap_or("")).unwrap_or("").to_string()
+    })
+    .into_owned();
+    let mut free: Vec<&str> = STAND_INS
+        .iter()
+        .copied()
+        .filter(|c| !body.contains(c))
+        .collect();
     // each dotted name, and each derivative of a moving letter, gets a stand-in (insertion-ordered)
     let mut stands: Vec<(String, String, usize)> = Vec::new();
-    let mut stand_for = |base: &str, k: usize, stands: &mut Vec<(String, String, usize)>| -> Option<String> {
-        if let Some((c, _, _)) = stands.iter().find(|(_, b, o)| b == base && *o == k) {
-            return Some(c.clone());
-        }
-        if free.is_empty() {
-            return None;
-        }
-        let c = free.remove(0).to_string();
-        stands.push((c.clone(), base.to_string(), k));
-        Some(c)
-    };
+    let mut stand_for =
+        |base: &str, k: usize, stands: &mut Vec<(String, String, usize)>| -> Option<String> {
+            if let Some((c, _, _)) = stands.iter().find(|(_, b, o)| b == base && *o == k) {
+                return Some(c.clone());
+            }
+            if free.is_empty() {
+                return None;
+            }
+            let c = free.remove(0).to_string();
+            stands.push((c.clone(), base.to_string(), k));
+            Some(c)
+        };
     let mut missing = false;
     let body = jsre::replace_all(&DOTTED, &body, |m| {
         let base = g(m, 1).unwrap_or("");
         let ds = g(m, 2).unwrap_or("").chars().count();
-        let name = greek_word(base).map_or_else(|| if base == "θ" { "theta".to_string() } else { base.to_string() }, str::to_string);
+        let name = greek_word(base).map_or_else(
+            || {
+                if base == "θ" {
+                    "theta".to_string()
+                } else {
+                    base.to_string()
+                }
+            },
+            str::to_string,
+        );
         match stand_for(&name, ds, &mut stands) {
             Some(c) => format!(" {c} "),
             None => {
@@ -1613,8 +1944,10 @@ fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<Ca
     }
     // `ktheta` is k times θ, not six letters
     let split = split_symbols(&jsre::replace_all(&THETA, &body, |_| " theta ".into()), sci);
-    let letters: Vec<String> =
-        free_symbols(&split, sci).into_iter().filter(|n| !STAND_INS.contains(&n.as_str()) && n != "t").collect();
+    let letters: Vec<String> = free_symbols(&split, sci)
+        .into_iter()
+        .filter(|n| !STAND_INS.contains(&n.as_str()) && n != "t")
+        .collect();
     let mut dotted_bases: Vec<String> = Vec::new();
     for (_, b, _) in &stands {
         if !dotted_bases.contains(b) {
@@ -1640,11 +1973,27 @@ fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<Ca
     let mut keep = letters.clone();
     keep.extend(stands.iter().map(|(c, _, _)| c.clone()));
     keep.push("t".into());
-    let mut t = to_tree(&split, &TreeCtx { sci: &rsci, bound: None, depth: 0, keep })?;
+    let mut t = to_tree(
+        &split,
+        &TreeCtx {
+            sci: &rsci,
+            bound: None,
+            depth: 0,
+            keep,
+        },
+    )?;
     // a letter only ever written dotted (`1/2 m xdot^2`) moves too, and is listed so
-    let only_dotted: Vec<String> = dotted_bases.iter().filter(|b| !moving.contains(b)).cloned().collect();
+    let only_dotted: Vec<String> = dotted_bases
+        .iter()
+        .filter(|b| !moving.contains(b))
+        .cloned()
+        .collect();
     let time = TimeLetters {
-        varying: moving.iter().chain(&only_dotted).map(|n| shown_letter(n)).collect(),
+        varying: moving
+            .iter()
+            .chain(&only_dotted)
+            .map(|n| shown_letter(n))
+            .collect(),
         constant: still.iter().map(|n| shown_letter(n)).collect(),
         locked: dotted_bases.iter().map(|n| shown_letter(n)).collect(),
     };
@@ -1655,22 +2004,32 @@ fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<Ca
         if explicit_t && now.iter().any(|s| s == "t") {
             terms.push(tree::derivative(&t, "t").ok()?);
         }
-        let qs: Vec<String> = moving.iter().cloned().chain(stands.iter().map(|(c, _, _)| c.clone())).collect();
+        let qs: Vec<String> = moving
+            .iter()
+            .cloned()
+            .chain(stands.iter().map(|(c, _, _)| c.clone()))
+            .collect();
         for q in qs {
             if !now.contains(&q) {
                 continue;
             }
-            let known = stands.iter().find(|(c, _, _)| *c == q).map(|(_, b, o)| (b.clone(), *o));
+            let known = stands
+                .iter()
+                .find(|(c, _, _)| *c == q)
+                .map(|(_, b, o)| (b.clone(), *o));
             let (base, k) = known.unwrap_or_else(|| (q.clone(), 0));
             let next = stand_for(&base, k + 1, &mut stands);
-            let Some(next) = next else { return None };
+            let next = next?;
             if k + 1 >= MARKS.len() {
                 return None;
             }
             let d = tree::derivative(&t, &q).ok()?;
             terms.push(op(Op::Multiply, vec![d, symbol(&next)]));
         }
-        let sum = terms.into_iter().reduce(|a, b| op(Op::Add, vec![a, b])).unwrap_or_else(|| constant(0.0));
+        let sum = terms
+            .into_iter()
+            .reduce(|a, b| op(Op::Add, vec![a, b]))
+            .unwrap_or_else(|| constant(0.0));
         t = tidy(simplify_keeping_constants(&sum, None)?);
     }
     let mut shown = pretty(&t).s;
@@ -1680,7 +2039,11 @@ fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<Ca
     use unicode_normalization::UnicodeNormalization;
     // one character where there is one (ẋ, not x and a combining dot); θ̇ has none and keeps its mark
     let nfc: String = shown.nfc().collect();
-    Some(CalculusResult { value: Some(Value::text(nfc)), time: Some(time), ..CalculusResult::default() })
+    Some(CalculusResult {
+        value: Some(Value::text(nfc)),
+        time: Some(time),
+        ..CalculusResult::default()
+    })
 }
 
 #[cfg(test)]
@@ -1688,22 +2051,42 @@ mod tests {
     use crate::types::{AngleMode, EvaluateOptions};
 
     fn sheet(lines: &[&str]) -> Vec<String> {
-        let options = EvaluateOptions { angle_mode: Some(AngleMode::Rad), ..EvaluateOptions::default() };
+        let options = EvaluateOptions {
+            angle_mode: Some(AngleMode::Rad),
+            ..EvaluateOptions::default()
+        };
         let lines: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
-        crate::evaluate_sheet(&lines, &options).into_iter().map(|r| r.display).collect()
+        crate::evaluate_sheet(&lines, &options)
+            .into_iter()
+            .map(|r| r.display)
+            .collect()
     }
 
     /// Measured in the TS: a parameter used twice in a product is one mathjs node, so its derivative is blank.
     #[test]
     fn user_functions_differentiate_as_the_ts_does() {
         assert_eq!(
-            sheet(&["f(t) = t*t", "d/dx f(x)", "f'(3)", "f'(x)", "∫0..1 f(x)", "d/dx f(x)^2", "f''(x)"])[1..],
+            sheet(&[
+                "f(t) = t*t",
+                "d/dx f(x)",
+                "f'(3)",
+                "f'(x)",
+                "∫0..1 f(x)",
+                "d/dx f(x)^2",
+                "f''(x)"
+            ])[1..],
             ["", "", "", "0.333333333333", "", ""]
         );
-        assert_eq!(sheet(&["g(t)=t*sin(t)", "g'(x)", "g'(2)"])[1..], ["sin(x) + x cos(x)", "0.0770037537314"]);
+        assert_eq!(
+            sheet(&["g(t)=t*sin(t)", "g'(x)", "g'(2)"])[1..],
+            ["sin(x) + x cos(x)", "0.0770037537314"]
+        );
         assert_eq!(sheet(&["h(t)=t*t*t", "h'(x)", "h'(2)"])[1..], ["", ""]);
         assert_eq!(sheet(&["k(t)=t^2*t", "k'(x)"])[1..], ["3x²"]);
-        assert_eq!(sheet(&["p(a,b)=a*b", "d/dx p(x,x)", "∂/∂x p(x,y)"])[1..], ["2x", "y"]);
+        assert_eq!(
+            sheet(&["p(a,b)=a*b", "d/dx p(x,x)", "∂/∂x p(x,y)"])[1..],
+            ["2x", "y"]
+        );
     }
 }
 
@@ -1714,13 +2097,22 @@ mod probe {
     #[test]
     #[ignore]
     fn calc_probe() {
-        let Ok(path) = std::env::var("CALC_PROBE") else { return };
+        let Ok(path) = std::env::var("CALC_PROBE") else {
+            return;
+        };
         let text = std::fs::read_to_string(path).unwrap();
-        let sheets: Vec<(Vec<String>, crate::types::EvaluateOptions)> = serde_json::from_str(&text).unwrap();
+        let sheets: Vec<(Vec<String>, crate::types::EvaluateOptions)> =
+            serde_json::from_str(&text).unwrap();
         for (lines, o) in sheets {
-            let out: Vec<(String, Option<String>)> =
-                crate::evaluate_sheet(&lines, &o).into_iter().map(|r| (r.display, r.exact)).collect();
-            println!("{} => {}", serde_json::to_string(&lines).unwrap(), serde_json::to_string(&out).unwrap());
+            let out: Vec<(String, Option<String>)> = crate::evaluate_sheet(&lines, &o)
+                .into_iter()
+                .map(|r| (r.display, r.exact))
+                .collect();
+            println!(
+                "{} => {}",
+                serde_json::to_string(&lines).unwrap(),
+                serde_json::to_string(&out).unwrap()
+            );
         }
     }
 }

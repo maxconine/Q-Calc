@@ -115,38 +115,81 @@ fn sweep(
         let t = sign * k as f64 * h;
         k += if odd { 2 } else { 1 };
         if t.abs() > 7.0 {
-            return Side { sum, l1, cut: None, ok: false };
+            return Side {
+                sum,
+                l1,
+                cut: None,
+                ok: false,
+            };
         }
         let Some(n) = node(t) else {
             // far out on an infinite range the terms must already have died away
             if last.dist == f64::INFINITY {
-                return Side { sum, l1, cut: None, ok: negligible };
+                return Side {
+                    sum,
+                    l1,
+                    cut: None,
+                    ok: negligible,
+                };
             }
-            return Side { sum, l1, cut: Some(last), ok: true };
+            return Side {
+                sum,
+                l1,
+                cut: Some(last),
+                ok: true,
+            };
         };
         if spent(budget) {
-            return Side { sum, l1, cut: None, ok: false };
+            return Side {
+                sum,
+                l1,
+                cut: None,
+                ok: false,
+            };
         }
         let fx = f(n.x);
         if !fx.is_finite() {
             if negligible && n.dist == f64::INFINITY {
-                return Side { sum, l1, cut: None, ok: true };
+                return Side {
+                    sum,
+                    l1,
+                    cut: None,
+                    ok: true,
+                };
             }
             // 0/0 or x/0 right at an end: the cut's tail estimate keeps it honest
             if n.dist < 1e-12 && last.dist > 0.0 {
-                return Side { sum, l1, cut: Some(last), ok: true };
+                return Side {
+                    sum,
+                    l1,
+                    cut: Some(last),
+                    ok: true,
+                };
             }
-            return Side { sum, l1, cut: None, ok: false };
+            return Side {
+                sum,
+                l1,
+                cut: None,
+                ok: false,
+            };
         }
         let term = n.w * fx;
         sum += term;
         l1 += term.abs();
-        last = Cut { f: fx, dist: n.dist };
+        last = Cut {
+            f: fx,
+            dist: n.dist,
+        };
         negligible = term.abs() <= 1e-15 * l1;
         if term.abs() <= 1e-18 * l1 || n.w == 0.0 {
             small += 1;
             if small >= 3 && t.abs() > 2.0 {
-                return Side { sum, l1, cut: None, ok: true };
+                return Side {
+                    sum,
+                    l1,
+                    cut: None,
+                    ok: true,
+                };
             }
         } else {
             small = 0;
@@ -191,7 +234,11 @@ fn exp_sinh_rule(a: f64) -> Rule {
             if !x.is_finite() || !w.is_finite() || x == a {
                 return None;
             }
-            Some(NodeW { x, w, dist: if t < 0.0 { e } else { f64::INFINITY } })
+            Some(NodeW {
+                x,
+                w,
+                dist: if t < 0.0 { e } else { f64::INFINITY },
+            })
         }),
     }
 }
@@ -207,7 +254,11 @@ fn sinh_sinh_rule() -> Rule {
             if !x.is_finite() || !w.is_finite() {
                 return None;
             }
-            Some(NodeW { x, w, dist: f64::INFINITY })
+            Some(NodeW {
+                x,
+                w,
+                dist: f64::INFINITY,
+            })
         }),
     }
 }
@@ -257,11 +308,19 @@ fn double_exponential(f: RealFn, rule: &Rule, budget: &mut Budget) -> Option<Siz
         prev = value;
         // convergence is quadratic: once two levels agree this closely the newer one is at roundoff
         if level >= 3 && diff <= 1e-14 * scale {
-            return Some(Sized { value, err: diff.max(4e-16 * scale) + tail(&cuts), l1: scale });
+            return Some(Sized {
+                value,
+                err: diff.max(4e-16 * scale) + tail(&cuts),
+                l1: scale,
+            });
         }
     }
     if diff <= 1e-9 * scale {
-        return Some(Sized { value: prev, err: diff + tail(&cuts), l1: scale });
+        return Some(Sized {
+            value: prev,
+            err: diff + tail(&cuts),
+            l1: scale,
+        });
     }
     None
 }
@@ -315,7 +374,11 @@ fn gk15(f: RealFn, a: f64, b: f64) -> Option<Panel> {
     let mut g = 0.0;
     let mut l1 = 0.0;
     for i in 0..8 {
-        let xs: &[f64] = if i == 7 { &[c] } else { &[c - r * GK_X[i], c + r * GK_X[i]] };
+        let xs: &[f64] = if i == 7 {
+            &[c]
+        } else {
+            &[c - r * GK_X[i], c + r * GK_X[i]]
+        };
         for &x in xs {
             let fx = f(x);
             if !fx.is_finite() {
@@ -330,7 +393,13 @@ fn gk15(f: RealFn, a: f64, b: f64) -> Option<Panel> {
     }
     let value = k * r;
     let gauss = g * r;
-    Some(Panel { a, b, value, err: (value - gauss).abs(), l1: l1 * r.abs() })
+    Some(Panel {
+        a,
+        b,
+        value,
+        err: (value - gauss).abs(),
+        l1: l1 * r.abs(),
+    })
 }
 
 /// Adaptive Gauss–Kronrod 7/15, splitting the worst panel until the total error is small enough.
@@ -357,7 +426,11 @@ pub fn gauss_kronrod(
             }
         }
         if err <= (1e-11 * l1).max(1e-300) {
-            return Some(Sized { value: total, err: err.max(4e-16 * l1), l1 });
+            return Some(Sized {
+                value: total,
+                err: err.max(4e-16 * l1),
+                l1,
+            });
         }
         if n % 16 == 0 && over() {
             return None;
@@ -378,7 +451,11 @@ fn finite(f: RealFn, a: f64, b: f64, budget: &mut Budget) -> Option<Sized> {
     let est = double_exponential(f, &tanh_sinh_rule(a, b), budget);
     // a spike or kink the double exponential rule stepped over shows up as disagreement here
     let work = budget.work;
-    let max = if est.is_some() { 200 } else { (MAX_EVALS / 30) as usize };
+    let max = if est.is_some() {
+        200
+    } else {
+        (MAX_EVALS / 30) as usize
+    };
     let gk = gauss_kronrod(f, a, b, max, &|| work.over());
     // a check that only ever saw zeros has checked nothing
     let check = gk.filter(|g| g.l1 > 0.0);
@@ -491,13 +568,22 @@ pub fn integrate(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
         return None;
     }
     if a == b {
-        return Some(Estimate { value: 0.0, err: 0.0 });
+        return Some(Estimate {
+            value: 0.0,
+            err: 0.0,
+        });
     }
     if a > b {
         let r = integrate(f, b, a)?;
-        return Some(Estimate { value: -r.value, err: r.err });
+        return Some(Estimate {
+            value: -r.value,
+            err: r.err,
+        });
     }
-    let mut budget = Budget { evals: MAX_EVALS, work: WorkBudget::new(MAX_WORK) };
+    let mut budget = Budget {
+        evals: MAX_EVALS,
+        work: WorkBudget::new(MAX_WORK),
+    };
     let est = if a == f64::NEG_INFINITY && b == f64::INFINITY {
         double_exponential(f, &sinh_sinh_rule(), &mut budget)
     } else if b == f64::INFINITY {
@@ -509,7 +595,11 @@ pub fn integrate(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
         let mut ends = vec![a];
         ends.extend(peaks(f, a, b, &mut budget));
         ends.push(b);
-        let mut est = Some(Sized { value: 0.0, err: 0.0, l1: 0.0 });
+        let mut est = Some(Sized {
+            value: 0.0,
+            err: 0.0,
+            l1: 0.0,
+        });
         let mut i = 1;
         while i < ends.len() {
             let Some(e) = est else { break };
@@ -531,7 +621,10 @@ pub fn integrate(f: RealFn, a: f64, b: f64) -> Option<Estimate> {
     }
     let value = justified(est.value, est.err, Some(est.l1))?;
     // err covers the rounding too, so the shown value is within err of the truth
-    Some(Estimate { value, err: est.err + (value - est.value).abs() })
+    Some(Estimate {
+        value,
+        err: est.err + (value - est.value).abs(),
+    })
 }
 
 /// Neville extrapolation of g(h) to h = 0 over h, h/2, h/4, …, stopping once roundoff wins.
@@ -546,7 +639,9 @@ fn extrapolate(vals: &[f64]) -> Option<Estimate> {
             while j <= prev.len().min(8) {
                 let next = row[j - 1] + (row[j - 1] - prev[j - 1]) / (fac - 1.0);
                 row.push(next);
-                let err = (row[j] - row[j - 1]).abs().max((row[j] - prev[j - 1]).abs());
+                let err = (row[j] - row[j - 1])
+                    .abs()
+                    .max((row[j] - prev[j - 1]).abs());
                 // JS `err < best.err` is false for NaN, as here
                 if best.is_none_or(|b| err < b.err) {
                     best = Some(Estimate { value: row[j], err });
@@ -574,7 +669,10 @@ fn settles(vals: &[f64]) -> Option<Estimate> {
     let tail = &vals[vals.len() - 12..];
     let last = tail[tail.len() - 1];
     let err = js_max(tail.iter().map(|v| (v - last).abs()));
-    Some(Estimate { value: last, err: err * 2.0 })
+    Some(Estimate {
+        value: last,
+        err: err * 2.0,
+    })
 }
 
 /// `Math.max(...xs)`: NaN if any is NaN.
@@ -623,7 +721,10 @@ fn aitken(v: &[f64]) -> Option<Estimate> {
         let w = &acc[k..k + 6];
         let spread = js_max(w.iter().copied()) - js_min(w.iter().copied());
         if best.is_none_or(|b| spread * 2.0 < b.err) {
-            best = Some(Estimate { value: w[5], err: spread * 2.0 });
+            best = Some(Estimate {
+                value: w[5],
+                err: spread * 2.0,
+            });
         }
         k += 1;
     }
@@ -689,7 +790,10 @@ fn diverges(vals: &[f64]) -> Option<f64> {
     }
     let last = head[head.len() - 1].abs();
     // an overflow or tan at its pole is undefined, so a blowup can end in NaN
-    if rest.iter().any(|&v| v != sign * f64::INFINITY && !v.is_nan()) {
+    if rest
+        .iter()
+        .any(|&v| v != sign * f64::INFINITY && !v.is_nan())
+    {
         return None;
     }
     if rest.iter().any(|v| v.is_nan()) && last < 1e6 {
@@ -723,7 +827,11 @@ fn one_sided(f: RealFn, to: f64, side: f64) -> Option<Estimate> {
             f(js_sign(to) / h)
         }
     };
-    let mut h = if fin { 0.125 * to.abs().max(1.0) } else { 0.125 };
+    let mut h = if fin {
+        0.125 * to.abs().max(1.0)
+    } else {
+        0.125
+    };
     let mut vals = Vec::with_capacity(LIMIT_STEPS);
     for _ in 0..LIMIT_STEPS {
         vals.push(g(h));
@@ -750,7 +858,10 @@ fn one_sided(f: RealFn, to: f64, side: f64) -> Option<Estimate> {
             return Some(b);
         }
     }
-    diverges(&vals).map(|inf| Estimate { value: inf, err: 0.0 })
+    diverges(&vals).map(|inf| Estimate {
+        value: inf,
+        err: 0.0,
+    })
 }
 
 /// side 0 is two-sided; both sides must agree or there's no limit.
@@ -786,7 +897,10 @@ pub fn limit(f: RealFn, to: f64, side: i32) -> Option<Estimate> {
         return Some(est);
     }
     let value = justified(est.value, est.err, Some(est.value.abs().max(1.0)))?;
-    Some(Estimate { value, err: est.err + (value - est.value).abs() })
+    Some(Estimate {
+        value,
+        err: est.err + (value - est.value).abs(),
+    })
 }
 
 /// Ridders' method: central differences extrapolated as the step shrinks.
@@ -832,13 +946,19 @@ mod tests {
     #[test]
     fn integrates_and_differentiates() {
         let sq = |x: f64| x * x;
-        assert_eq!(integrate(&sq, 0.0, 1.0).map(|e| e.value), Some(0.3333333333333));
+        assert_eq!(
+            integrate(&sq, 0.0, 1.0).map(|e| e.value),
+            Some(0.3333333333333)
+        );
         let e = |x: f64| jsmath::exp(-x);
-        assert_eq!(integrate(&e, 0.0, f64::INFINITY).map(|e| e.value), Some(1.0));
+        assert_eq!(
+            integrate(&e, 0.0, f64::INFINITY).map(|e| e.value),
+            Some(1.0)
+        );
         let d = derivative_at(&jsmath::sin, 1.0).unwrap();
         assert!((d.value - jsmath::cos(1.0)).abs() < 1e-12);
         let s = |x: f64| jsmath::sin(x) / x;
         assert_eq!(limit(&s, 0.0, 0).map(|e| e.value), Some(1.0));
-        assert_eq!(justified(1.5707963158666323, 3.9e-8, None), Some(1.570796));
+        assert_eq!(justified(2.0000000003, 1e-9, None), Some(2.0));
     }
 }
