@@ -267,6 +267,14 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             Some(answer) => answer,
             None => return Outcome::Unported,
         },
+        // ---- WP-PHRASES: engine/phrases, phraseTime, currency, lib/nativeEval ----
+        ("engine/phrases" | "engine/phraseTime" | "engine/currency" | "lib/nativeEval", _) => {
+            match crate::phrases::golden::dispatch(module, name, args) {
+                Some(Ok(answer)) => answer,
+                Some(Err(e)) => return Outcome::Threw(e),
+                None => return Outcome::Unported,
+            }
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)

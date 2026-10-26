@@ -34,6 +34,9 @@ pub mod angles;
 pub mod dots;
 pub mod letters;
 
+// ---- WP-PHRASES ----
+pub mod phrases;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 
