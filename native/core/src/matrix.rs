@@ -30,6 +30,9 @@ pub struct MatrixAnswer {
     pub message: bool,
 }
 
+/// The calculator's reading of an entry's text as a plain number.
+pub type ScalarReader<'a> = dyn Fn(&str) -> Option<f64> + 'a;
+
 /// `MatrixOptions`.
 #[allow(missing_debug_implementations)]
 pub struct MatrixOptions<'a> {
@@ -39,7 +42,7 @@ pub struct MatrixOptions<'a> {
     /// The user's own function names, which win over `det(…)` and friends.
     pub functions: &'a [String],
     /// The calculator's reading of a plain-number entry (`sin(30)`, `sqrt(2)`); None when it can't.
-    pub scalar: Option<&'a dyn Fn(&str) -> Option<f64>>,
+    pub scalar: Option<&'a ScalarReader<'a>>,
 }
 
 type Grid = Vec<Vec<f64>>;
@@ -395,7 +398,9 @@ fn inv(a: M) -> R<M> {
         return err("no inverse (determinant is 0)");
     }
     let out: Grid = e.m.iter().map(|r| r[n..].to_vec()).collect();
-    if !(condition(&sq, &out) <= MAX_CONDITION) {
+    // `!(cond <= MAX)`: a NaN condition fails too
+    let cond = condition(&sq, &out);
+    if cond.is_nan() || cond > MAX_CONDITION {
         return err("no inverse (nearly singular: too close to determinant 0 to trust)");
     }
     Ok(M::Grid(out))
