@@ -3,6 +3,7 @@
   "engine.dots": 16,
   "engine.evaluate": 12,
   "engine.format": 9986,
+  "engine.graph": 2309,
   "engine.parens": 746,
   "engine.precise": 1356,
   "engine.scientific": 4427,

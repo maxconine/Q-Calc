@@ -37,6 +37,9 @@ pub mod letters;
 // ---- WP-SUMS ----
 pub mod sums;
 
+// ---- WP-GRAPH ----
+pub mod graph;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 

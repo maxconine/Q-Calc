@@ -267,6 +267,11 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             Some(answer) => answer,
             None => return Outcome::Unported,
         },
+        // ---- WP-GRAPH: engine/graph ----
+        ("engine/graph", _) => match crate::graph::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         // ---- WP-SUMS: engine/sums ----
         ("engine/sums", _) => match crate::sums::golden_dispatch(name, args) {
             Some(answer) => answer,
