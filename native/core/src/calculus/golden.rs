@@ -69,7 +69,7 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Json> {
         }
         ("engine/closedForm", "identifyJob") => {
             let ticks = f64_arg(args, 1).map_or(closed_form::DEFAULT_TICKS, |ms| {
-                (ms.max(0.0) as u64).saturating_mul(closed_form::TICKS_PER_MS)
+                (ms.max(0.0) as u64).saturating_mul(closed_form::DEFAULT_TICKS) / closed_form::DEFAULT_MS
             });
             job().and_then(|j| closed_form::identify_job(&j, ticks)).map_or(Json::Null, Json::String)
         }

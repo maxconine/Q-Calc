@@ -214,12 +214,12 @@ impl Job {
 const SEARCH_DIGITS: usize = 24;
 const VERIFY_DIGITS: usize = 40;
 
-/// Ticks the default search may take, in place of the TS's 8000 ms. Measured on the fixtures: the slowest answer
-/// the TS finds in time (`∫0..∞ x³/(eˣ - 1)`, π⁴/15) needs a few thousand.
-pub const DEFAULT_TICKS: u64 = 200_000;
+/// Ticks the default search may take, in place of the TS's 8000 ms. On the fixtures every search, found or not,
+/// ends within 1,800 ticks (`tick_census`), well under half a second here; this leaves ten times that.
+pub const DEFAULT_TICKS: u64 = 20_000;
 
-/// Ticks per millisecond when a caller gives the TS's millisecond budget.
-pub const TICKS_PER_MS: u64 = 25;
+/// The TS's default budget in milliseconds, which [`DEFAULT_TICKS`] stands in for.
+pub const DEFAULT_MS: u64 = 8_000;
 
 struct OutOfWork;
 
@@ -379,7 +379,28 @@ fn power(c: &Ctx, base: &Real, ex: &Real) -> Real {
     if base.is_neg() && !ex.is_integer() {
         return Real::NAN;
     }
-    c.pow(base, ex)
+    let r = c.pow(base, ex);
+    if r.is_nan() && base.is_finite() && ex.is_finite() {
+        // past `Real`'s exponent range; decimal.js (maxE/minE ±9e15) gives 0 or ±Infinity
+        let grows = c.ln(&base.abs()).is_neg() == ex.is_neg();
+        let odd = base.is_neg() && !c.modulo(ex, &int(2)).is_zero();
+        return match (grows, odd) {
+            (true, false) => Real::infinity(false),
+            (true, true) => Real::infinity(true),
+            (false, false) => Real::zero(),
+            (false, true) => Real::neg_zero(),
+        };
+    }
+    r
+}
+
+/// `Dc.exp(x)`, with decimal.js's underflow to 0 and overflow to Infinity where `Real` runs out of exponent.
+fn exp(c: &Ctx, x: &Real) -> Real {
+    let r = c.exp(x);
+    if r.is_nan() && x.is_finite() {
+        return if x.is_neg() { Real::zero() } else { Real::infinity(false) };
+    }
+    r
 }
 
 impl Expr {
@@ -459,7 +480,7 @@ impl Expr {
                             c.pow(&v, &inv(&n))
                         }
                     }
-                    Fun::Exp => c.exp(&v),
+                    Fun::Exp => exp(c, &v),
                     Fun::Log => guard(v.is_pos() && !v.is_zero(), &|| c.ln(&v)),
                     Fun::Log10 => guard(v.is_pos() && !v.is_zero(), &|| c.log10(&v)),
                     Fun::Abs => v.abs(),
@@ -1311,13 +1332,27 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
+    fn tick_census() {
+        let text = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/golden/engine.closedForm.jsonl")).unwrap();
+        for line in text.lines() {
+            let r: Json = serde_json::from_str(line).unwrap();
+            let j = Job::from_json(&r["args"][0]).unwrap();
+            let mut clock = Clock { left: u64::MAX };
+            let t0 = std::time::Instant::now();
+            let got = identify(&j, &mut clock).ok().flatten();
+            eprintln!("ticks {:>8} {:>6}ms want {} got {:?}", u64::MAX - clock.left, t0.elapsed().as_millis(), r["out"], got);
+        }
+    }
+
+    #[test]
     fn gaussian_over_the_line_is_root_pi() {
         let j = job(
             r#"{"kind":"integral","f":{"t":"op","op":"^","a":[{"t":"const","name":"e"},{"t":"op","op":"neg","a":[{"t":"op","op":"^","a":[{"t":"var"},{"t":"num","v":"2"}]}]}]},"a":"-inf","b":"inf","approx":1.772453850906,"err":4.838780418572304e-13,"rad":true}"#,
         );
         let mut clock = Clock { left: u64::MAX };
         let x = value_of(&j, VERIFY_DIGITS, &mut clock).ok().flatten();
-        eprintln!("value {:?} ticks {}", x.map(|v| v.to_js_string()), u64::MAX - clock.left);
+        assert!(x.is_some() && u64::MAX - clock.left < 1_000);
         assert_eq!(identify_job(&j, DEFAULT_TICKS).as_deref(), Some("√π"));
     }
 }

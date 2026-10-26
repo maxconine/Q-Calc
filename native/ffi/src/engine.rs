@@ -1016,8 +1016,16 @@ impl Engine {
         cancel: Arc<CancelToken>,
     ) -> Result<Option<String>, CoreError> {
         let job: Json = serde_json::from_str(&job_json).map_err(CoreError::bad)?;
+        // WP-CALCULUS: `closedForm.worker.ts` plus `lib/closedForm.ts`'s cache; budgeted by work, not time
         self.long(cancel, move |_| {
-            opt_string(call("engine/closedForm", "identifyJob", &[job]))
+            use qcalc_core::calculus::closed_form;
+            let job = closed_form::Job::from_json(&job)?;
+            if let Some(known) = closed_form::known_closed_form(&job.key()) {
+                return known;
+            }
+            let exact = closed_form::identify_job(&job, closed_form::DEFAULT_TICKS);
+            closed_form::remember_closed_form(&job, exact.clone());
+            exact
         })
         .await
     }

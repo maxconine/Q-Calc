@@ -1682,3 +1682,45 @@ fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<Ca
     let nfc: String = shown.nfc().collect();
     Some(CalculusResult { value: Some(Value::text(nfc)), time: Some(time), ..CalculusResult::default() })
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::types::{AngleMode, EvaluateOptions};
+
+    fn sheet(lines: &[&str]) -> Vec<String> {
+        let options = EvaluateOptions { angle_mode: Some(AngleMode::Rad), ..EvaluateOptions::default() };
+        let lines: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
+        crate::evaluate_sheet(&lines, &options).into_iter().map(|r| r.display).collect()
+    }
+
+    /// Measured in the TS: a parameter used twice in a product is one mathjs node, so its derivative is blank.
+    #[test]
+    fn user_functions_differentiate_as_the_ts_does() {
+        assert_eq!(
+            sheet(&["f(t) = t*t", "d/dx f(x)", "f'(3)", "f'(x)", "∫0..1 f(x)", "d/dx f(x)^2", "f''(x)"])[1..],
+            ["", "", "", "0.333333333333", "", ""]
+        );
+        assert_eq!(sheet(&["g(t)=t*sin(t)", "g'(x)", "g'(2)"])[1..], ["sin(x) + x cos(x)", "0.0770037537314"]);
+        assert_eq!(sheet(&["h(t)=t*t*t", "h'(x)", "h'(2)"])[1..], ["", ""]);
+        assert_eq!(sheet(&["k(t)=t^2*t", "k'(x)"])[1..], ["3x²"]);
+        assert_eq!(sheet(&["p(a,b)=a*b", "d/dx p(x,x)", "∂/∂x p(x,y)"])[1..], ["2x", "y"]);
+    }
+}
+
+#[cfg(test)]
+mod probe {
+    /// `CALC_PROBE=sheets.json cargo test calc_probe -- --ignored --nocapture` prints each sheet's displays, in the
+    /// format of a TS run of the same file, for comparing the two by hand.
+    #[test]
+    #[ignore]
+    fn calc_probe() {
+        let Ok(path) = std::env::var("CALC_PROBE") else { return };
+        let text = std::fs::read_to_string(path).unwrap();
+        let sheets: Vec<(Vec<String>, crate::types::EvaluateOptions)> = serde_json::from_str(&text).unwrap();
+        for (lines, o) in sheets {
+            let out: Vec<(String, Option<String>)> =
+                crate::evaluate_sheet(&lines, &o).into_iter().map(|r| (r.display, r.exact)).collect();
+            println!("{} => {}", serde_json::to_string(&lines).unwrap(), serde_json::to_string(&out).unwrap());
+        }
+    }
+}
