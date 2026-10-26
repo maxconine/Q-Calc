@@ -12,6 +12,7 @@ pub mod blank_reason;
 pub mod chain;
 pub mod completion;
 pub mod games;
+pub mod golden;
 pub mod greeting;
 pub mod history;
 pub mod history_show;
