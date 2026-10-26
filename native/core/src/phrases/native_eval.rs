@@ -49,7 +49,10 @@ pub fn native_eval_payload(req: &Json) -> Json {
     let mut out = Map::new();
     out.insert("type".into(), json!("eval"));
     out.insert("id".into(), req.get("id").cloned().unwrap_or(Json::Null));
-    out.insert("expr".into(), req.get("expr").cloned().unwrap_or(Json::Null));
+    out.insert(
+        "expr".into(),
+        req.get("expr").cloned().unwrap_or(Json::Null),
+    );
     let finite = |k: &str| req.get(k).and_then(Json::as_f64).filter(|n| n.is_finite());
     if finite("sigFigs").is_some() {
         out.insert("sigFigs".into(), req["sigFigs"].clone());
@@ -117,8 +120,12 @@ pub fn usable_native_display(display: &str) -> String {
 
 /// SoulverCore's trig was always in radians, so in degree mode it must not answer anything with trig in it.
 pub fn soulver_angle_safe(expr: &str, angle_mode: &str) -> bool {
-    static TRIG_CALL: Lazy =
-        Lazy::new(|| js_re(r"(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan|sec|csc|cot)(?![A-Za-z])", "i"));
+    static TRIG_CALL: Lazy = Lazy::new(|| {
+        js_re(
+            r"(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan|sec|csc|cot)(?![A-Za-z])",
+            "i",
+        )
+    });
     angle_mode == "rad" || !test_i(&TRIG_CALL, expr)
 }
 
@@ -207,7 +214,9 @@ pub fn native_reply_to_live(reply: &Json, expected_id: &Json, current_expr: &str
     let mut out = live(&display, n);
     out["expr"] = json!(current_expr);
     let definition = reply.get("kind").and_then(Json::as_str) == Some("definition")
-        || ["term", "pos", "body"].iter().any(|k| truthy_str(reply, k).is_some());
+        || ["term", "pos", "body"]
+            .iter()
+            .any(|k| truthy_str(reply, k).is_some());
     if definition {
         out["kind"] = json!("definition");
         for k in ["term", "pos", "pronunciation", "body"] {
@@ -229,14 +238,20 @@ mod tests {
         assert!(!looks_like_natural_language("(1+2)*3"));
         assert!(looks_like_dictionary_query("Apple"));
         assert!(!looks_like_dictionary_query("72 f"));
-        assert_eq!(usable_native_display("  Error: incompatible units"), IMPROPER_UNIT_CONVERSION);
+        assert_eq!(
+            usable_native_display("  Error: incompatible units"),
+            IMPROPER_UNIT_CONVERSION
+        );
         assert_eq!(usable_native_display("  Error: ∞/m  "), "");
         let native = json!({"expr": "$10 + 15%", "display": "ok", "n": 1});
         assert_eq!(
             merge_live_answer("$10 + 15%", "", &Json::Null, &native),
             json!({"display": "ok", "n": 1})
         );
-        assert_eq!(merge_live_answer("Σ(k, 1, 3)", "", &json!(6), &native), json!({"display": ""}));
+        assert_eq!(
+            merge_live_answer("Σ(k, 1, 3)", "", &json!(6), &native),
+            json!({"display": ""})
+        );
         assert!(!soulver_angle_safe("what is sin(30)", "deg"));
         assert!(soulver_angle_safe("sinh(1) per day", "deg"));
     }

@@ -41,7 +41,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Result<Json, 
         ("engine/phrases", "answerPhrase") => {
             let o = args.get(1).cloned().unwrap_or(Json::Null);
             let now = o.get("now").and_then(date_arg).unwrap_or(RECORDED_NOW_MS);
-            let zone = o.get("timeZone").and_then(Json::as_str).unwrap_or(RECORDED_ZONE);
+            let zone = o
+                .get("timeZone")
+                .and_then(Json::as_str)
+                .unwrap_or(RECORDED_ZONE);
             let tz = time_zone(zone)?;
             let rates = o.get("rates").and_then(CurrencyRates::from_json);
             let options = PhraseOptions {
@@ -58,12 +61,18 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Result<Json, 
         ("engine/phraseTime", "formatClock") => json!(time::format_clock(n(0))),
         ("engine/phraseTime", "formatDuration") => json!(time::format_duration(n(0))),
         ("engine/phraseTime", "parseClock") => opt_num(time::parse_clock(&s(0))),
-        ("engine/phraseTime", "parseSpan") => time::parse_span(&s(0)).map_or(Json::Null, |sp| {
-            json!({ "minutes": sp.minutes, "days": sp.days, "months": sp.months })
-        }),
+        ("engine/phraseTime", "parseSpan") => time::parse_span(&s(0)).map_or(
+            Json::Null,
+            |sp| json!({ "minutes": sp.minutes, "days": sp.days, "months": sp.months }),
+        ),
         ("engine/currency", "convertCurrency") => {
             let table = CurrencyRates::from_json(&arg(3));
-            opt_num(currency::convert_currency(n(0), &s(1), &s(2), table.as_ref()))
+            opt_num(currency::convert_currency(
+                n(0),
+                &s(1),
+                &s(2),
+                table.as_ref(),
+            ))
         }
         ("engine/currency", "formatMoney") => json!(currency::format_money(n(0), &s(1))),
         ("engine/currency", "isRatesTable") => json!(currency::is_rates_table(&arg(0))),
@@ -72,11 +81,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Option<Result<Json, 
             args.get(1).and_then(Json::as_bool).unwrap_or(false),
         )),
         ("engine/currency", "parseNumber") => opt_num(currency::parse_number(&s(0))),
-        ("engine/currency", "currencyWord") => currency::currency_word(
-            &s(0),
-            args.get(1).and_then(Json::as_bool).unwrap_or(false),
-        )
-        .map_or(Json::Null, |c| json!(c)),
+        ("engine/currency", "currencyWord") => {
+            currency::currency_word(&s(0), args.get(1).and_then(Json::as_bool).unwrap_or(false))
+                .map_or(Json::Null, |c| json!(c))
+        }
         ("lib/nativeEval", "looksLikeNaturalLanguage") => {
             json!(native_eval::looks_like_natural_language(&s(0)))
         }

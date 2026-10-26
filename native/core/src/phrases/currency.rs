@@ -57,8 +57,8 @@ pub struct Money {
 
 // only major codes: a wider list starts colliding with unit names
 const CODES: [&str; 25] = [
-    "USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "INR", "MXN", "NZD", "SEK", "NOK", "DKK", "HKD",
-    "SGD", "KRW", "BRL", "ZAR", "PLN", "CZK", "HUF", "TRY", "ILS", "THB",
+    "USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "INR", "MXN", "NZD", "SEK", "NOK",
+    "DKK", "HKD", "SGD", "KRW", "BRL", "ZAR", "PLN", "CZK", "HUF", "TRY", "ILS", "THB",
 ];
 
 pub(super) fn symbol(s: &str) -> Option<Currency> {
@@ -218,7 +218,8 @@ pub fn is_rates_table(v: &Json) -> bool {
         return false;
     };
     o.get("base").is_some_and(Json::is_string)
-        && o.get("rates").is_some_and(|r| r.is_object() || r.is_array())
+        && o.get("rates")
+            .is_some_and(|r| r.is_object() || r.is_array())
 }
 
 pub fn format_money(n: f64, currency: &str) -> String {
@@ -241,8 +242,10 @@ mod tests {
     use serde_json::json;
 
     fn rates() -> CurrencyRates {
-        CurrencyRates::from_json(&json!({"base": "EUR", "rates": {"USD": 1.25, "GBP": 0.8, "JPY": 160, "CAD": 1.5}}))
-            .unwrap()
+        CurrencyRates::from_json(
+            &json!({"base": "EUR", "rates": {"USD": 1.25, "GBP": 0.8, "JPY": 160, "CAD": 1.5}}),
+        )
+        .unwrap()
     }
 
     #[test]
@@ -255,7 +258,10 @@ mod tests {
             })
         );
         assert_eq!(parse_money("20€", false).unwrap().currency, Some("EUR"));
-        assert_eq!(parse_money("20 us dollars", false).unwrap().currency, Some("USD"));
+        assert_eq!(
+            parse_money("20 us dollars", false).unwrap().currency,
+            Some("USD")
+        );
         assert_eq!(parse_money("5 pounds", false), None);
         assert_eq!(parse_money("5 pounds", true).unwrap().currency, Some("GBP"));
         assert_eq!(parse_money("5 kg", false), None);
@@ -273,8 +279,10 @@ mod tests {
         assert_eq!(convert_currency(1.0, "USD", "XYZ", Some(&r)), None);
         assert_eq!(convert_currency(1.0, "USD", "GBP", None), None);
         // a lower-case key is read too, and `??` only falls through on a nullish rate
-        let lower = CurrencyRates::from_json(&json!({"base": "EUR", "rates": {"usd": 2, "GBP": null, "gbp": 4}}))
-            .unwrap();
+        let lower = CurrencyRates::from_json(
+            &json!({"base": "EUR", "rates": {"usd": 2, "GBP": null, "gbp": 4}}),
+        )
+        .unwrap();
         assert_eq!(convert_currency(2.0, "USD", "GBP", Some(&lower)), Some(4.0));
     }
 
@@ -285,6 +293,9 @@ mod tests {
         assert_eq!(format_money(1234.5, "JPY"), "¥1235");
         assert_eq!(format_money(3.0, "CHF"), "3.00 CHF");
         // kept quirk: SHOWN_SYMBOL is a plain object
-        assert_eq!(format_money(3.0, "toString"), "function toString() { [native code] }3.00");
+        assert_eq!(
+            format_money(3.0, "toString"),
+            "function toString() { [native code] }3.00"
+        );
     }
 }

@@ -87,7 +87,11 @@ fn full_year(y: f64) -> f64 {
         return f64::NAN;
     }
     let yi = y.trunc();
-    if (0.0..=99.0).contains(&yi) { 1900.0 + yi } else { y }
+    if (0.0..=99.0).contains(&yi) {
+        1900.0 + yi
+    } else {
+        y
+    }
 }
 
 // a time value moved into the range the tz database covers: the earliest offset before it, whole 400-year
@@ -207,7 +211,10 @@ mod tests {
     fn local_dates_like_v8() {
         let tz = la();
         // new Date(2026, 8, 24, 15, 12) is 22:12Z in summer time
-        assert_eq!(local_date(&tz, 2026.0, 8.0, 24.0, 15.0, 12.0), 1_790_287_920_000.0);
+        assert_eq!(
+            local_date(&tz, 2026.0, 8.0, 24.0, 15.0, 12.0),
+            1_790_287_920_000.0
+        );
         // 2:30 on the spring-forward night is moved to 3:30
         let t = local_date(&tz, 2026.0, 2.0, 8.0, 2.0, 30.0);
         assert_eq!(local_fields(&tz, t).hours, 3.0);
@@ -217,9 +224,15 @@ mod tests {
         // overflowing fields roll, years 0-99 are 1900s, and out of range is NaN
         let f = local_fields(&tz, local_date(&tz, 2026.0, 0.0, 32.0, 0.0, 0.0));
         assert_eq!((f.month, f.date), (1.0, 1.0));
-        assert_eq!(local_fields(&tz, local_date(&tz, 50.0, 0.0, 1.0, 0.0, 0.0)).year, 1950.0);
+        assert_eq!(
+            local_fields(&tz, local_date(&tz, 50.0, 0.0, 1.0, 0.0, 0.0)).year,
+            1950.0
+        );
         assert!(local_date(&tz, 300_000.0, 0.0, 1.0, 0.0, 0.0).is_nan());
-        assert_eq!(local_fields(&tz, local_date(&tz, 200_000.0, 6.0, 1.0, 12.0, 0.0)).hours, 12.0);
+        assert_eq!(
+            local_fields(&tz, local_date(&tz, 200_000.0, 6.0, 1.0, 12.0, 0.0)).hours,
+            12.0
+        );
         assert_eq!(utc_date(1970.0, 0.0, 2.0), MS_DAY);
         assert_eq!(fields_in(0.0, 0.0).day, 4.0);
     }

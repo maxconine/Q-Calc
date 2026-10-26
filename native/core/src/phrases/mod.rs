@@ -83,11 +83,21 @@ pub fn time_zone(name: &str) -> Option<TimeZone> {
 // ---- JS text helpers ----
 
 // JS `\s` (and `String.prototype.trim`): Unicode spaces and line ends plus U+FEFF, without U+0085
-const JS_SPACE: &str = r"\t\n\x0B\x0C\r \xA0\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}";
+const JS_SPACE: &str =
+    r"\t\n\x0B\x0C\r \xA0\x{1680}\x{2000}-\x{200A}\x{2028}\x{2029}\x{202F}\x{205F}\x{3000}\x{FEFF}";
 
 fn is_js_space(c: char) -> bool {
-    matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}'
-        | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
+    matches!(
+        c,
+        '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'
+            ..='\u{200a}'
+                | '\u{2028}'
+                | '\u{2029}'
+                | '\u{202f}'
+                | '\u{205f}'
+                | '\u{3000}'
+                | '\u{feff}'
+    )
 }
 
 /// `s.trim()`.
@@ -140,7 +150,11 @@ pub(crate) fn ascii_fold_safe(s: &str) -> Cow<'_, str> {
 }
 
 /// `s.replace(re, f)` without the `g` flag.
-pub fn replace_first<'t>(re: &Regex, s: &'t str, f: impl FnOnce(&Caps<'_>) -> String) -> Cow<'t, str> {
+pub fn replace_first<'t>(
+    re: &Regex,
+    s: &'t str,
+    f: impl FnOnce(&Caps<'_>) -> String,
+) -> Cow<'t, str> {
     match re.captures(s) {
         Ok(Some(caps)) => {
             let m = caps.get(0).expect("group 0");
@@ -188,7 +202,11 @@ fn g<'t>(m: &Caps<'t>, i: usize) -> &'t str {
 
 // ---- phrases.ts ----
 
-const PCT: &str = concat!(r"(", r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+", r")\s*%");
+const PCT: &str = concat!(
+    r"(",
+    r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?|\.\d+",
+    r")\s*%"
+);
 const LABEL: &str = r"(?:\s+(?:for\s+)?(?:lunch|dinner|breakfast|brunch|drinks|coffee))?";
 
 fn normalize(expr: &str) -> String {
@@ -344,22 +362,28 @@ fn percent_phrase(s: &str, sig_figs: f64) -> Option<PhraseAnswer> {
     }
     if let Some(m) = caps(&ON_OF, s) {
         let p = parse_number(g(&m, 1))?;
-        let factor = if g(&m, 2) == "on" { 1.0 + p / 100.0 } else { p / 100.0 };
+        let factor = if g(&m, 2) == "on" {
+            1.0 + p / 100.0
+        } else {
+            p / 100.0
+        };
         return scaled_base(g(&m, 3), factor, sig_figs);
     }
     if let Some(m) = caps(&SIGNED, s) {
         let p = parse_number(g(&m, 3))?;
-        let factor = if g(&m, 2) == "+" { 1.0 + p / 100.0 } else { 1.0 - p / 100.0 };
+        let factor = if g(&m, 2) == "+" {
+            1.0 + p / 100.0
+        } else {
+            1.0 - p / 100.0
+        };
         return scaled_base(g(&m, 1), factor, sig_figs);
     }
     // part and whole, in any of the three usual orders
-    let ratio = caps(&ASKED, s)
-        .map(|m| (g(&m, 1), g(&m, 2)))
-        .or_else(|| {
-            caps(&STATED, s)
-                .or_else(|| caps(&AS, s))
-                .map(|m| (g(&m, 2), g(&m, 1)))
-        });
+    let ratio = caps(&ASKED, s).map(|m| (g(&m, 1), g(&m, 2))).or_else(|| {
+        caps(&STATED, s)
+            .or_else(|| caps(&AS, s))
+            .map(|m| (g(&m, 2), g(&m, 1)))
+    });
     if let Some((whole_text, part_text)) = ratio {
         let whole = parse_money(whole_text, false)?;
         let part = parse_money(part_text, false)?;
@@ -503,7 +527,10 @@ fn word_math(s: &str, raw: &str, sig_figs: f64) -> Option<PhraseAnswer> {
             [
                 (r"\b(?:the )?square root of\b", "sqrt "),
                 (r"\b(?:the )?cube root of\b", "cbrt "),
-                (r"\b(?:to the power of|raised to the power of|raised to)\b", "^"),
+                (
+                    r"\b(?:to the power of|raised to the power of|raised to)\b",
+                    "^",
+                ),
                 (r"\bto the (\d+)(?:st|nd|rd|th)(?: power)?\b", "^$1"),
                 (r"\bsquared\b", "^2"),
                 (r"\bcubed\b", "^3"),
@@ -541,7 +568,9 @@ fn word_math(s: &str, raw: &str, sig_figs: f64) -> Option<PhraseAnswer> {
         ..EvaluateOptions::default()
     };
     let v = crate::evaluate_line(&text, &options).value?;
-    if v.kind != ValueKind::Number || v.unit.as_deref().is_some_and(|u| !u.is_empty()) || !v.n.is_finite()
+    if v.kind != ValueKind::Number
+        || v.unit.as_deref().is_some_and(|u| !u.is_empty())
+        || !v.n.is_finite()
     {
         return None;
     }
@@ -554,6 +583,42 @@ fn word_math(s: &str, raw: &str, sig_figs: f64) -> Option<PhraseAnswer> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn phrase(expr: &str) -> Answered {
+        let tz = time_zone("America/Los_Angeles").unwrap();
+        let rates = CurrencyRates::new(
+            "EUR",
+            &[("USD".to_string(), 1.25), ("GBP".to_string(), 0.8)].into(),
+        );
+        let options = PhraseOptions {
+            now_ms: golden::RECORDED_NOW_MS,
+            time_zone: &tz,
+            rates: Some(&rates),
+            sig_figs: None,
+        };
+        try_answer_phrase(expr, &options)
+    }
+
+    fn shown(expr: &str) -> String {
+        phrase(expr).unwrap().map(|a| a.display).unwrap_or_default()
+    }
+
+    #[test]
+    fn answers_like_the_ts() {
+        assert_eq!(shown("$60 + 18% tip split 3 ways"), "$23.60");
+        assert_eq!(shown("$100 in gbp"), "£64.00");
+        assert_eq!(shown("days until christmas"), "92 days");
+        assert_eq!(shown("3 hours from now"), "6:12 pm");
+        assert_eq!(shown("time in tokyo"), "7:12 am");
+        assert_eq!(shown("next fri"), "Fri 25 Sep 2026");
+        // kept quirks: plain-object lookups find Object.prototype's members
+        assert!(phrase("constructor").is_err());
+        assert_eq!(
+            shown("5 constructor"),
+            "5.00 function Object() { [native code] }"
+        );
+        assert_eq!(shown("next constructor"), "undefined NaN undefined NaN");
+    }
 
     #[test]
     fn js_space_and_dot() {

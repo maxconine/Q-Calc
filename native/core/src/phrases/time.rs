@@ -27,10 +27,26 @@ pub struct Span {
 }
 
 const WEEKDAYS: [&str; 7] = [
-    "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
 ];
 const MONTHS: [&str; 12] = [
-    "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
     "december",
 ];
 const WD: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -186,7 +202,11 @@ pub fn parse_clock(s: &str) -> Option<f64> {
     let num = |x: &str| jsnum::parse(x).unwrap_or(f64::NAN);
     if let Some(m) = caps(&AMPM, t) {
         let h = num(g(&m, 1));
-        let min = if m.get(2).is_some() { num(g(&m, 2)) } else { 0.0 };
+        let min = if m.get(2).is_some() {
+            num(g(&m, 2))
+        } else {
+            0.0
+        };
         if !(1.0..=12.0).contains(&h) || min > 59.0 {
             return None;
         }
@@ -292,9 +312,8 @@ fn holiday(key: &str) -> Option<&'static str> {
 fn zone(key: &str) -> Option<&'static str> {
     Some(match key {
         "utc" | "gmt" => "UTC",
-        "est" | "edt" | "eastern" | "new york" | "nyc" | "boston" | "miami" | "atlanta" | "washington" => {
-            "America/New_York"
-        }
+        "est" | "edt" | "eastern" | "new york" | "nyc" | "boston" | "miami" | "atlanta"
+        | "washington" => "America/New_York",
         "cst" | "cdt" | "central" | "chicago" | "dallas" | "houston" => "America/Chicago",
         "mst" | "mdt" | "mountain" | "denver" => "America/Denver",
         "pst" | "pdt" | "pacific" | "los angeles" | "la" | "san francisco" | "sf" | "seattle" => {
@@ -369,7 +388,9 @@ fn city_time(s: &str, now: f64) -> Option<PhraseAnswer> {
         return None;
     }
     let f = local_fields(&tz, now);
-    Some(PhraseAnswer::shown(format_clock(f.hours * 60.0 + f.minutes)))
+    Some(PhraseAnswer::shown(format_clock(
+        f.hours * 60.0 + f.minutes,
+    )))
 }
 
 // `10:30` or `9:05` as a time of day, which parseClock leaves alone because on its own it could be a duration
@@ -388,10 +409,16 @@ fn parse_day(tz: &TimeZone, s: &str, today: Day, roll: Roll) -> Result<Option<Da
     static DAY_WORD: Lazy = Lazy::new(|| js_re(r"\s+day$", ""));
     static WEEKDAY: Lazy = Lazy::new(|| js_re(r"^(?:(next|last)\s+)?([a-z]+)$", ""));
     static MD: Lazy = Lazy::new(|| {
-        js_re(r"^([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?$", "")
+        js_re(
+            r"^([a-z]+)\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{4}))?$",
+            "",
+        )
     });
     static DM: Lazy = Lazy::new(|| {
-        js_re(r"^(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([a-z]+)\.?(?:,?\s+(\d{4}))?$", "")
+        js_re(
+            r"^(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([a-z]+)\.?(?:,?\s+(\d{4}))?$",
+            "",
+        )
     });
     let t = js_trim(s);
     let unquoted = jsre::replace_all(&QUOTES, t, |_| String::new());
@@ -451,7 +478,13 @@ fn parse_day(tz: &TimeZone, s: &str, today: Day, roll: Roll) -> Result<Option<Da
             let cand = Day { y, m, d };
             let ok = d <= days_in_month(tz, y, m);
             let c = compare_days(cand, today);
-            if ok && (if roll == Roll::Future { c >= 0.0 } else { c <= 0.0 }) {
+            if ok
+                && (if roll == Roll::Future {
+                    c >= 0.0
+                } else {
+                    c <= 0.0
+                })
+            {
                 return Ok(Some(cand));
             }
             y += step;
@@ -506,9 +539,12 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
     static RANGE: Lazy = Lazy::new(|| re(r"^(?:from\s+)?(.+?)\s+(?:to|until|till)\s+(.+)$"));
     static BETWEEN_CLOCKS: Lazy = Lazy::new(|| re(r"^between\s+(.+?)\s+and\s+(.+)$"));
     static UNTIL: Lazy = Lazy::new(|| re(r"^(?:(?:how long|time)\s+)?(?:until|till)\s+(.+)$"));
-    static COUNT: Lazy = Lazy::new(|| re(r"^(?:how many\s+)?days?\s+(until|till|to|since)\s+(.+)$"));
-    static BETWEEN: Lazy = Lazy::new(|| re(r"^(?:how many\s+)?days?\s+between\s+(.+?)\s+and\s+(.+)$"));
-    static FROM_TO: Lazy = Lazy::new(|| re(r"^(?:how many\s+)?days?\s+from\s+(.+?)\s+(?:to|until)\s+(.+)$"));
+    static COUNT: Lazy =
+        Lazy::new(|| re(r"^(?:how many\s+)?days?\s+(until|till|to|since)\s+(.+)$"));
+    static BETWEEN: Lazy =
+        Lazy::new(|| re(r"^(?:how many\s+)?days?\s+between\s+(.+?)\s+and\s+(.+)$"));
+    static FROM_TO: Lazy =
+        Lazy::new(|| re(r"^(?:how many\s+)?days?\s+from\s+(.+?)\s+(?:to|until)\s+(.+)$"));
     static SIGNED: Lazy = Lazy::new(|| re(r"^(?:how many\s+)?days?\s+from"));
     static AGO: Lazy = Lazy::new(|| re(r"^(.+?)\s+ago$"));
     static FROM_NOW: Lazy = Lazy::new(|| re(r"^(.+?)\s+from\s+now$"));
@@ -533,7 +569,11 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
             && span.days == 0.0
             && span.months == 0.0
         {
-            let m = if op == "+" { span.minutes } else { -span.minutes };
+            let m = if op == "+" {
+                span.minutes
+            } else {
+                -span.minutes
+            };
             return shown(format_clock(t + m));
         }
         // `5pm - 9am`: how long from the second to the first
@@ -575,7 +615,9 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
         let f = local_fields(tz, now);
         let cur = f.hours * 60.0 + f.minutes + f.seconds / 60.0;
         let left = jsnum::round((t - cur + 1440.0) % 1440.0);
-        return Ok((left > 0.0 && left < 1440.0).then(|| PhraseAnswer::shown(format_duration(left))));
+        return Ok(
+            (left > 0.0 && left < 1440.0).then(|| PhraseAnswer::shown(format_duration(left)))
+        );
     }
 
     // counting days
@@ -627,7 +669,9 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
         let day = parse_day(tz, g(&a, 3), today, Roll::Year)?;
         if let (Some(span), Some(day)) = (span, day) {
             let sign = if g(&a, 2) == "before" { -1.0 } else { 1.0 };
-            return Ok(shift_day(tz, day, span, sign).map(|d| PhraseAnswer::shown(format_date(tz, d))));
+            return Ok(
+                shift_day(tz, day, span, sign).map(|d| PhraseAnswer::shown(format_date(tz, d)))
+            );
         }
     }
 
@@ -640,7 +684,9 @@ pub fn answer_time_phrase(s: &str, now: f64, tz: &TimeZone) -> Answered {
         let span = parse_span(g(a, 3));
         if let (Some(day), Some(span)) = (day, span) {
             let sign = if g(a, 2) == "+" { 1.0 } else { -1.0 };
-            return Ok(shift_day(tz, day, span, sign).map(|d| PhraseAnswer::shown(format_date(tz, d))));
+            return Ok(
+                shift_day(tz, day, span, sign).map(|d| PhraseAnswer::shown(format_date(tz, d)))
+            );
         }
     }
     Ok(None)
@@ -662,7 +708,10 @@ mod tests {
         assert_eq!(parse_span("1.5 days"), None);
         assert_eq!(parse_span("1.5 hr").map(|s| s.minutes), Some(90.0));
         assert_eq!(parse_span("2 days 3 hr"), None);
-        assert_eq!(parse_span("1 year and 2 months").map(|s| s.months), Some(14.0));
+        assert_eq!(
+            parse_span("1 year and 2 months").map(|s| s.months),
+            Some(14.0)
+        );
         assert_eq!(parse_span("an hour, 5 min").map(|s| s.minutes), Some(65.0));
         assert_eq!(parse_span("1 hr 1 hr"), None);
     }
@@ -675,7 +724,9 @@ mod tests {
             m: 8.0,
             d: 24.0,
         };
-        let day = parse_day(&tz, "constructor 5", today, Roll::Year).unwrap().unwrap();
+        let day = parse_day(&tz, "constructor 5", today, Roll::Year)
+            .unwrap()
+            .unwrap();
         assert_eq!(format_date(&tz, day), "undefined 5 undefined 2026");
         assert!(parse_day(&tz, "constructor", today, Roll::Year).is_err());
     }

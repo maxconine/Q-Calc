@@ -217,7 +217,14 @@ fn rate_times(s: &str) -> Option<Sum> {
         let v = value(&per, 1);
         let k = parse_number(jsre::group(&per, 6));
         return match (v, k) {
-            (Some(v @ Val { currency: Some(c), .. }), Some(k)) => Some(Sum {
+            (
+                Some(
+                    v @ Val {
+                        currency: Some(c), ..
+                    },
+                ),
+                Some(k),
+            ) => Some(Sum {
                 n: v.n * k,
                 currency: Some(c),
             }),
@@ -228,7 +235,14 @@ fn rate_times(s: &str) -> Option<Sum> {
         let k = parse_number(jsre::group(&at, 1));
         let v = value(&at, 2);
         return match (v, k) {
-            (Some(v @ Val { currency: Some(c), .. }), Some(k)) => Some(Sum {
+            (
+                Some(
+                    v @ Val {
+                        currency: Some(c), ..
+                    },
+                ),
+                Some(k),
+            ) => Some(Sum {
                 n: v.n * k,
                 currency: Some(c),
             }),
@@ -251,10 +265,7 @@ pub fn money_math(s: &str) -> Option<Sum> {
         Token::Value(v) => Some(v),
         _ => None,
     });
-    if !values
-        .clone()
-        .any(|v| v.currency.is_some() || v.scaled)
-    {
+    if !values.clone().any(|v| v.currency.is_some() || v.scaled) {
         return None;
     }
     // `$5 $6`: two amounts with nothing between them aren't a sum
@@ -278,8 +289,14 @@ mod tests {
     #[test]
     fn sums_money_and_shorthand() {
         assert_eq!(sum("$45.50 + $12.25"), Some((57.75, Some("USD"))));
-        assert_eq!(sum("$100 + 10% + 5%").map(|s| (s.0 * 100.0).round()), Some(11550.0));
-        assert_eq!(sum("my rent is $1500 + utilities $200"), Some((1700.0, Some("USD"))));
+        assert_eq!(
+            sum("$100 + 10% + 5%").map(|s| (s.0 * 100.0).round()),
+            Some(11550.0)
+        );
+        assert_eq!(
+            sum("my rent is $1500 + utilities $200"),
+            Some((1700.0, Some("USD")))
+        );
         assert_eq!(sum("1.5k + 500"), Some((2000.0, None)));
         assert_eq!(sum("$1.5m / 3"), Some((500000.0, Some("USD"))));
         assert_eq!(sum("5 m + 3"), None);

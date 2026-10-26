@@ -63,7 +63,9 @@ pub struct Daily {
 
 fn cubes<'a, 'input>(node: Node<'a, 'input>) -> impl Iterator<Item = Node<'a, 'input>> {
     node.children().filter(|n| {
-        n.is_element() && n.tag_name().name() == "Cube" && n.tag_name().namespace() == Some(EUROFXREF)
+        n.is_element()
+            && n.tag_name().name() == "Cube"
+            && n.tag_name().namespace() == Some(EUROFXREF)
     })
 }
 
@@ -120,8 +122,15 @@ impl Cache {
                 .filter_map(|(code, n)| finite_positive(n).map(|n| (code.clone(), n)))
                 .collect::<BTreeMap<_, _>>()
         });
-        let date = v["date"].as_str().filter(|d| is_date(d)).map(str::to_string);
-        let seconds = |k: &str| v[k].as_f64().filter(|n| n.is_finite() && *n >= 0.0).unwrap_or(0.0);
+        let date = v["date"]
+            .as_str()
+            .filter(|d| is_date(d))
+            .map(str::to_string);
+        let seconds = |k: &str| {
+            v[k].as_f64()
+                .filter(|n| n.is_finite() && *n >= 0.0)
+                .unwrap_or(0.0)
+        };
         Cache {
             checked: seconds("checked"),
             fetched: seconds("fetched"),
@@ -194,7 +203,12 @@ pub trait Fetch {
 
 /// Asks the ECB when a day has passed since the last try, and writes the cache back. Returns the cache and
 /// whether its page value changed. `now_s` is the clock when the fetch began, `done_s` when it ended.
-pub fn refresh(path: &Path, now_s: f64, fetch: &dyn Fetch, done_s: impl FnOnce() -> f64) -> (Cache, bool) {
+pub fn refresh(
+    path: &Path,
+    now_s: f64,
+    fetch: &dyn Fetch,
+    done_s: impl FnOnce() -> f64,
+) -> (Cache, bool) {
     let mut cache = Cache::load(path);
     if !cache.due(now_s) {
         return (cache, false);
@@ -288,7 +302,11 @@ mod tests {
     const DAILY: &str = include_str!("fixtures/eurofxref-daily.xml");
 
     fn with_cubes(cubes: &str) -> String {
-        DAILY.split_once("<Cube time").map(|(head, _)| head).unwrap().to_string()
+        DAILY
+            .split_once("<Cube time")
+            .map(|(head, _)| head)
+            .unwrap()
+            .to_string()
             + "<Cube time='2026-09-24'>"
             + cubes
             + "</Cube></Cube></gesmes:Envelope>"
@@ -312,7 +330,10 @@ mod tests {
              <Cube currency='NOK' rate='inf'/><Cube currency='DKK' rate='NaN'/><Cube currency='PLN' rate=' 4.3'/>\
              <Cube currency='HUF' rate='3.'/><Cube currency='CZK'/><Cube rate='2.0'/><Cube currency='EUR' rate='1'/>",
         );
-        assert_eq!(parse_xml(&xml).unwrap().rates, BTreeMap::from([("USD".to_string(), 1.1)]));
+        assert_eq!(
+            parse_xml(&xml).unwrap().rates,
+            BTreeMap::from([("USD".to_string(), 1.1)])
+        );
         assert_eq!(rate(&"9".repeat(400)), None);
     }
 
@@ -321,10 +342,18 @@ mod tests {
         assert_eq!(parse_xml(""), None);
         assert_eq!(parse_xml("<html>busy</html>"), None);
         assert_eq!(parse_xml(&DAILY.replace("</gesmes:Envelope>", "")), None);
-        assert_eq!(parse_xml(&DAILY.replace("eurofxref\"", "eurofxrefs\"")), None);
-        assert_eq!(parse_xml(&DAILY.replace("time='2026-09-24'", "time='yesterday'")), None);
         assert_eq!(
-            parse_xml(&with_cubes("<Cube currency='USD' rate='1.1'/><Cube currency='USD' rate='1.2'/>")),
+            parse_xml(&DAILY.replace("eurofxref\"", "eurofxrefs\"")),
+            None
+        );
+        assert_eq!(
+            parse_xml(&DAILY.replace("time='2026-09-24'", "time='yesterday'")),
+            None
+        );
+        assert_eq!(
+            parse_xml(&with_cubes(
+                "<Cube currency='USD' rate='1.1'/><Cube currency='USD' rate='1.2'/>"
+            )),
             None
         );
         let two_days = DAILY.replacen(
@@ -347,7 +376,10 @@ mod tests {
             r#"{ "checked": 5.5, "date": "2026-09-24", "rates": { "USD": 1.1, "usd": 2, "XAU": -1, "EUR": 1, "GBP": "0.8" } }"#,
         );
         assert_eq!(junk.checked, 5.5);
-        assert_eq!(junk.rates.unwrap().rates, BTreeMap::from([("USD".to_string(), 1.1)]));
+        assert_eq!(
+            junk.rates.unwrap().rates,
+            BTreeMap::from([("USD".to_string(), 1.1)])
+        );
         assert_eq!(Cache::from_json("{}"), Cache::default());
     }
 
@@ -418,7 +450,9 @@ mod tests {
         assert!(!r.fresh(at - 1000));
         assert_eq!(r.table(at)["base"], "EUR");
         assert_eq!(r.currency_rates(at).unwrap().rates.len(), 2);
-        let page = parse_json(r#"{"base":"EUR","rates":{"USD":1.25}}"#).unwrap().unwrap();
+        let page = parse_json(r#"{"base":"EUR","rates":{"USD":1.25}}"#)
+            .unwrap()
+            .unwrap();
         assert!(page.fresh(0));
         assert_eq!(parse_json(r#"{"checked":5}"#).unwrap(), None);
         assert!(parse_json("[1]").is_err());
