@@ -15,6 +15,7 @@ use crate::app::identities as idt;
 use crate::app::keybinds::{self as kb, KeyAction, KeyEventLike, Keybinds};
 use crate::app::onboarding::{self as ob, Example, HintFacts, HintOn, Onboarding, Rotation};
 use crate::app::settings::{self as st, NativeInfo, Settings};
+use crate::app::tour as tr;
 use crate::app::undo::{self as un, Undo, UndoState};
 use crate::format::DEFAULT_SIG_FIGS;
 use crate::golden::{Outcome, decode};
@@ -65,6 +66,33 @@ fn eval_non_blank(tag: &Json) -> Option<impl Fn(&str) -> bool> {
     })
 }
 
+/// A tour bitmask (`done`), as JS numbers come.
+fn bits(v: &Json) -> u32 {
+    v.as_f64().map_or(0, |n| n as u32)
+}
+
+/// A recorded `evalNonBlank` tag as an evaluator that gives the display of a piece that reads, else None.
+fn eval_line(tag: &Json) -> Option<impl Fn(&str) -> Option<String>> {
+    let t = tag.get("$fn")?;
+    if t.get("kind")?.as_str()? != "evalNonBlank" {
+        return None;
+    }
+    let options: EvaluateOptions = of(&decode(t.get("options")?)).unwrap_or_default();
+    let chained = t.get("chained") == Some(&Json::Bool(true));
+    Some(move |text: &str| {
+        let text = if chained {
+            chain::chained_expr(text)
+        } else {
+            text.to_string()
+        };
+        crate::evaluate_sheet(&[text], &options)
+            .into_iter()
+            .next()
+            .map(|r| r.display)
+            .filter(|d| !d.is_empty())
+    })
+}
+
 fn keybinds(v: &Json) -> Keybinds {
     kb::keybinds_from_json(v)
 }
@@ -89,6 +117,22 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             .and_then(|n| of(&n))
             .unwrap_or_default();
         return Some(Outcome::Answer(opt(blank_reason(text, &ok, &names))));
+    }
+    if module == "lib/missingUnit" && name == "missingUnit" {
+        // the bar's offer: a piece is fine when it reads and isn't an improper unit conversion
+        let Some(reads) = raw.get(1).and_then(eval_line) else {
+            return Some(Outcome::Unreplayable);
+        };
+        let text = raw.first().and_then(Json::as_str).unwrap_or("");
+        let ok = |piece: &str| {
+            reads(piece).is_some_and(|d| !crate::units::is_improper_unit_conversion(&d))
+        };
+        return Some(Outcome::Answer(opt(
+            crate::app::missing_unit::missing_unit(text, &ok),
+        )));
+    }
+    if module == "lib/analytics" {
+        return Some(crate::app::analytics::golden_dispatch(name, raw).map_or(Outcome::Unported, Outcome::Answer));
     }
     let args: Vec<Json> = raw.iter().map(decode).collect();
     let a = |i: usize| args.get(i).cloned().unwrap_or(Json::Null);
@@ -347,6 +391,32 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/undo", "breakRun") => to(&un::break_run(&undo_of(&a(0)))),
         ("lib/undo", "undo") => opt(un::undo(&undo_of(&a(0)))),
         ("lib/undo", "redo") => opt(un::redo(&undo_of(&a(0)))),
+        // ---- lib/tour ----
+        ("lib/tour", "TOUR_ON") => json!(tr::TOUR_ON),
+        ("lib/tour", "TOUR_OFF") => json!(tr::TOUR_OFF),
+        ("lib/tour", "TOUR_OPENS") => json!(tr::TOUR_OPENS),
+        ("lib/tour", "TOUR_ALL") => json!(tr::TOUR_ALL),
+        ("lib/tour", "TOUR_DONE_HINT") => json!(tr::TOUR_DONE_HINT),
+        ("lib/tour", "TUTORIAL_HINT") => json!(tr::TUTORIAL_HINT),
+        ("lib/tour", "tourSteps") => to(&tr::tour_steps(&s(0))),
+        ("lib/tour", "TOUR_EXTRAS") => to(&tr::tour_extras()),
+        ("lib/tour", "tourBit") => json!(of::<tr::TourId>(&a(0)).map_or(0, tr::tour_bit)),
+        ("lib/tour", "enrolTour") => to(&tr::enrol_tour(&onboarding(&a(0)), b(1))),
+        ("lib/tour", "tourRunning") => json!(tr::tour_running(&onboarding(&a(0)))),
+        ("lib/tour", "tourStep") => opt(tr::tour_step(bits(&a(0)), &s(1))),
+        ("lib/tour", "tourProgress") => to(&tr::tour_progress(bits(&a(0)), &s(1))),
+        ("lib/tour", "tourExtra") => opt(tr::tour_extra(bits(&a(0)), &s(1))),
+        ("lib/tour", "tourUsed") => json!(tr::tour_used(&of(&a(0)).unwrap_or_default())),
+        ("lib/tour", "tourLineFits") => match of::<tr::TourStep>(&a(0)) {
+            Some(step) => json!(tr::tour_line_fits(&step, &s(1), b(2))),
+            None => Json::Bool(false),
+        },
+        ("lib/tour", "isTutorialCommand") => json!(tr::is_tutorial_command(&s(0))),
+        ("lib/tour", "isSkipCommand") => json!(tr::is_skip_command(&s(0))),
+        // ---- constants the hosts read ----
+        ("lib/onboarding", "EXAMPLE_MS") => json!(ob::EXAMPLE_MS),
+        ("lib/onboarding", "HINT_PAUSE_MS") => json!(ob::HINT_PAUSE_MS),
+        ("lib/undo", "UNDO_RUN_MS") => json!(un::UNDO_RUN_MS),
         _ => return None,
     };
     Some(Outcome::Answer(answer))

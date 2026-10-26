@@ -49,6 +49,6 @@ enum EngineFactory {
     static func make() -> Engine {
         let dir = AppInfo.supportDirectory
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return Engine(config: EngineConfig(isWindows: false, locale: Locale.current.identifier, dataDir: dir.path))
+        return Engine(config: EngineConfig(isWindows: false, locale: Locale.current.identifier, dataDir: dir.path, timeZone: TimeZone.current.identifier))
     }
 }

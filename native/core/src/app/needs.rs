@@ -204,12 +204,22 @@ pub struct PhraseAnswer {
 }
 
 /// `answerPhrase(expr, { now, rates, sigFigs })` (phrases.ts); `rates` is the TS `CurrencyRates` table or null.
-pub fn answer_phrase(expr: &str, now_ms: f64, sig_figs: f64, rates: &Json) -> Option<PhraseAnswer> {
-    let options = json!({
+pub fn answer_phrase(
+    expr: &str,
+    now_ms: f64,
+    sig_figs: f64,
+    rates: &Json,
+    time_zone: Option<&str>,
+) -> Option<PhraseAnswer> {
+    let mut options = json!({
         "now": { "$date": crate::app::js::iso_date(now_ms as i64) },
         "rates": rates,
         "sigFigs": sig_figs,
     });
+    // an unknown zone name would make the phrase layer answer nothing; keep the default then
+    if let Some(zone) = time_zone.filter(|z| crate::phrases::time_zone(z).is_some()) {
+        options["timeZone"] = json!(zone);
+    }
     let a = call("engine/phrases", "answerPhrase", &[json!(expr), options])?;
     Some(PhraseAnswer {
         display: a.get("display")?.as_str()?.to_string(),

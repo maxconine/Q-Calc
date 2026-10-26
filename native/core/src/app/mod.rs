@@ -6,6 +6,7 @@ pub mod missing_unit;
 pub mod unit_spans;
 
 // ---- WP-APP-LOGIC ----
+pub mod analytics;
 pub mod answer;
 pub mod answer_forms;
 pub mod blank_reason;
