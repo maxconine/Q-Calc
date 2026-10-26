@@ -1715,6 +1715,7 @@ dependencies = [
 name = "qcalc-typst"
 version = "0.1.0"
 dependencies = [
+ "ttf-parser",
  "typst",
  "typst-render",
 ]

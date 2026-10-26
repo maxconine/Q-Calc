@@ -12,6 +12,8 @@ rust-version.workspace = true
 # both previews lay out the same source the same way. Moving to a newer Typst is a separate, checked change.
 typst = "=0.14.2"
 typst-render = "=0.14.2"
+# the glyph outlines for the path output (the version typst 0.14.2 uses)
+ttf-parser = "0.25"
 
 [lints]
 workspace = true
