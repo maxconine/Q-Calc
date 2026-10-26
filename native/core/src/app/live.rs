@@ -95,6 +95,8 @@ pub struct LiveRequest {
     /// Messaging state and whether a relay is configured, for `message …` lines.
     pub messaging: Messaging,
     pub relay: bool,
+    /// The relay's word on the name after `message` (`NameCheck`): `None` until it has said, or when it can't.
+    pub recipient_found: Option<bool>,
     /// Accepted contacts, which `message <name>` completes.
     pub contacts: Vec<String>,
     /// Milliseconds since the epoch, for phrases (`now`).
@@ -491,7 +493,9 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     } else if greeting {
         GREETING_REPLY.into()
     } else if message_cmd {
-        parse_message(q).map_or_else(String::new, |l| message_hint(&l, &req.messaging, req.relay))
+        parse_message(q).map_or_else(String::new, |l| {
+            message_hint(&l, &req.messaging, req.relay, req.recipient_found)
+        })
     } else if periodic_cmd {
         PERIODIC_HINT.into()
     } else if let Some(h) = &identity_slot {
