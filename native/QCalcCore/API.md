@@ -146,6 +146,14 @@ final class Engine {
     func graphY(expression: String, x: Double, options: GraphOptions, settings: EvalOptions) -> Double?
     /// z at (x, y) for a contour plot's readout.
     func graphZ(expression: String, x: Double, y: Double, options: GraphOptions, settings: EvalOptions) -> Double?
+    /// The readout under the pointer as GraphPanel shows it (`result.y(x)` / `result.z(x, y)`): cut to the
+    /// graph's `{…}` bounds, with the graph's own angle mode. Cheap (compiles, doesn't sample).
+    func graphReadoutY(input: String, x: Double, options: GraphOptions, settings: EvalOptions) -> Double?
+    func graphReadoutZ(input: String, x: Double, y: Double, options: GraphOptions, settings: EvalOptions) -> Double?
+    /// The x window a graph opens on (`graphHome`); pass the panel's aspect.
+    func graphHome(input: String, options: GraphOptions, settings: EvalOptions) -> GraphWindow
+    /// Axis ticks (`graphTicks`): x with `result.angleUnit` and target 6, y with nil and 5.
+    func graphTicks(lo: Double, hi: Double, unit: AngleUnit?, target: UInt32) -> [GraphTick]
     func typstSource(expr: String, answer: String, solvedFor: String) -> String?   // typstDocument
     /// The closed-form search (PSLQ) for `LiveAnswer.closedFormJob`; nil when none is found.
     func closedForm(jobJson: String, cancel: CancelToken) async throws -> String?
@@ -311,6 +319,8 @@ struct AnswerView { var display: String; var valueJson: String? = nil }
 
 struct GraphOptions { var domainLo: Double? = nil; var domainHi: Double? = nil; var sampleCount: UInt32? = nil
                       var findRoots: Bool = true; var aspect: Double? = nil }
+struct GraphTick { var value: Double; var label: String }   // `−0.5`, `π/2`, `90°`
+struct GraphWindow { var lo: Double; var hi: Double }
 struct GraphResult {
     var label: String                        // `x^3`, `f(x)`, `y = x^3`
     var expression: String                   // in x (and y for a contour plot)
@@ -323,6 +333,7 @@ struct GraphResult {
     var angleUnit: AngleUnit?                // nil when the curve doesn't depend on the angle mode
     var contours: [ContourLevel]
     var contour: Bool                        // a function of x and y
+    var contourLevels: Bool                  // labelled level curves with a z readout (not an `f = g` curve)
     var error: String?
     var json: String                         // the TS GraphResult (without its functions)
 }

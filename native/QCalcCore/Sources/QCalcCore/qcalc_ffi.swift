@@ -824,6 +824,29 @@ public protocol EngineProtocol: AnyObject, Sendable {
     func graphAsync(input: String, options: GraphOptions, settings: EvalOptions, cancel: CancelToken) async throws  -> GraphResult?
     
     /**
+     * The x window a graph opens on (`graphHome`): ±10 (±360 for trig in degrees), narrowed to the roots and
+     * extrema or framed by the bounds. Pass the panel's `aspect`.
+     */
+    func graphHome(input: String, options: GraphOptions, settings: EvalOptions)  -> GraphWindow
+    
+    /**
+     * The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
+     * a contour plot. Cheap: it compiles without sampling.
+     */
+    func graphReadoutY(input: String, x: Double, options: GraphOptions, settings: EvalOptions)  -> Double?
+    
+    /**
+     * A contour plot's `z(x, y)` inside its bounds (`buildGraph(input, …).z`); None for a curve.
+     */
+    func graphReadoutZ(input: String, x: Double, y: Double, options: GraphOptions, settings: EvalOptions)  -> Double?
+    
+    /**
+     * Axis ticks (`graphTicks`): the x axis with the result's `angle_unit` and a target of 6, the y axis with
+     * none and 5, as the panel draws them.
+     */
+    func graphTicks(lo: Double, hi: Double, unit: AngleUnit?, target: UInt32)  -> [GraphTick]
+    
+    /**
      * y at any x (`evaluateGraphY`), for the readout between samples.
      */
     func graphY(expression: String, x: Double, options: GraphOptions, settings: EvalOptions)  -> Double?
@@ -1181,6 +1204,73 @@ open func graphAsync(input: String, options: GraphOptions, settings: EvalOptions
             liftFunc: FfiConverterOptionTypeGraphResult.lift,
             errorHandler: FfiConverterTypeCoreError_lift
         )
+}
+    
+    /**
+     * The x window a graph opens on (`graphHome`): ±10 (±360 for trig in degrees), narrowed to the roots and
+     * extrema or framed by the bounds. Pass the panel's `aspect`.
+     */
+open func graphHome(input: String, options: GraphOptions, settings: EvalOptions) -> GraphWindow  {
+    return try!  FfiConverterTypeGraphWindow_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_graph_home(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(input),
+        FfiConverterTypeGraphOptions_lower(options),
+        FfiConverterTypeEvalOptions_lower(settings),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
+     * a contour plot. Cheap: it compiles without sampling.
+     */
+open func graphReadoutY(input: String, x: Double, options: GraphOptions, settings: EvalOptions) -> Double?  {
+    return try!  FfiConverterOptionDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_graph_readout_y(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(input),
+        FfiConverterDouble.lower(x),
+        FfiConverterTypeGraphOptions_lower(options),
+        FfiConverterTypeEvalOptions_lower(settings),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * A contour plot's `z(x, y)` inside its bounds (`buildGraph(input, …).z`); None for a curve.
+     */
+open func graphReadoutZ(input: String, x: Double, y: Double, options: GraphOptions, settings: EvalOptions) -> Double?  {
+    return try!  FfiConverterOptionDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_graph_readout_z(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(input),
+        FfiConverterDouble.lower(x),
+        FfiConverterDouble.lower(y),
+        FfiConverterTypeGraphOptions_lower(options),
+        FfiConverterTypeEvalOptions_lower(settings),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Axis ticks (`graphTicks`): the x axis with the result's `angle_unit` and a target of 6, the y axis with
+     * none and 5, as the panel draws them.
+     */
+open func graphTicks(lo: Double, hi: Double, unit: AngleUnit?, target: UInt32) -> [GraphTick]  {
+    return try!  FfiConverterSequenceTypeGraphTick.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_graph_ticks(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(lo),
+        FfiConverterDouble.lower(hi),
+        FfiConverterOptionTypeAngleUnit.lower(unit),
+        FfiConverterUInt32.lower(target),uniffiCallStatus
+    )
+})
 }
     
     /**
@@ -2540,6 +2630,10 @@ public struct GraphResult: Equatable, Hashable {
      * A function of x and y, drawn as level curves.
      */
     public var contour: Bool
+    /**
+     * WP-GRAPH: level curves with labels and a z readout (`contour: 'levels'`); false for an `f = g` curve.
+     */
+    public var contourLevels: Bool
     public var error: String?
     public var json: String
 
@@ -2548,7 +2642,10 @@ public struct GraphResult: Equatable, Hashable {
     public init(label: String, expression: String, functionDef: FunctionDef?, points: [GraphPoint], domainLo: Double, domainHi: Double, yMin: Double, yMax: Double, criticalPoints: [CriticalPoint], roots: [Double], angleUnit: AngleUnit?, contours: [ContourLevel], 
         /**
          * A function of x and y, drawn as level curves.
-         */contour: Bool, error: String?, json: String) {
+         */contour: Bool, 
+        /**
+         * WP-GRAPH: level curves with labels and a z readout (`contour: 'levels'`); false for an `f = g` curve.
+         */contourLevels: Bool, error: String?, json: String) {
         self.label = label
         self.expression = expression
         self.functionDef = functionDef
@@ -2562,6 +2659,7 @@ public struct GraphResult: Equatable, Hashable {
         self.angleUnit = angleUnit
         self.contours = contours
         self.contour = contour
+        self.contourLevels = contourLevels
         self.error = error
         self.json = json
     }
@@ -2595,6 +2693,7 @@ public struct FfiConverterTypeGraphResult: FfiConverterRustBuffer {
                 angleUnit: FfiConverterOptionTypeAngleUnit.read(from: &buf), 
                 contours: FfiConverterSequenceTypeContourLevel.read(from: &buf), 
                 contour: FfiConverterBool.read(from: &buf), 
+                contourLevels: FfiConverterBool.read(from: &buf), 
                 error: FfiConverterOptionString.read(from: &buf), 
                 json: FfiConverterString.read(from: &buf)
         )
@@ -2614,6 +2713,7 @@ public struct FfiConverterTypeGraphResult: FfiConverterRustBuffer {
         FfiConverterOptionTypeAngleUnit.write(value.angleUnit, into: &buf)
         FfiConverterSequenceTypeContourLevel.write(value.contours, into: &buf)
         FfiConverterBool.write(value.contour, into: &buf)
+        FfiConverterBool.write(value.contourLevels, into: &buf)
         FfiConverterOptionString.write(value.error, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
     }
@@ -2632,6 +2732,120 @@ public func FfiConverterTypeGraphResult_lift(_ buf: RustBuffer) throws -> GraphR
 #endif
 public func FfiConverterTypeGraphResult_lower(_ value: GraphResult) -> RustBuffer {
     return FfiConverterTypeGraphResult.lower(value)
+}
+
+
+/**
+ * One axis tick (`graphTicks`): its value and its label (`−0.5`, `π/2`, `90°`).
+ */
+public struct GraphTick: Equatable, Hashable {
+    public var value: Double
+    public var label: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(value: Double, label: String) {
+        self.value = value
+        self.label = label
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GraphTick: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGraphTick: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GraphTick {
+        return
+            try GraphTick(
+                value: FfiConverterDouble.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GraphTick, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.value, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphTick_lift(_ buf: RustBuffer) throws -> GraphTick {
+    return try FfiConverterTypeGraphTick.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphTick_lower(_ value: GraphTick) -> RustBuffer {
+    return FfiConverterTypeGraphTick.lower(value)
+}
+
+
+/**
+ * The x window a graph opens on (`graphHome`).
+ */
+public struct GraphWindow: Equatable, Hashable {
+    public var lo: Double
+    public var hi: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(lo: Double, hi: Double) {
+        self.lo = lo
+        self.hi = hi
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GraphWindow: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGraphWindow: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GraphWindow {
+        return
+            try GraphWindow(
+                lo: FfiConverterDouble.read(from: &buf), 
+                hi: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GraphWindow, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.lo, into: &buf)
+        FfiConverterDouble.write(value.hi, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphWindow_lift(_ buf: RustBuffer) throws -> GraphWindow {
+    return try FfiConverterTypeGraphWindow.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGraphWindow_lower(_ value: GraphWindow) -> RustBuffer {
+    return FfiConverterTypeGraphWindow.lower(value)
 }
 
 
@@ -3995,6 +4209,185 @@ public func FfiConverterTypeTimeLetters_lift(_ buf: RustBuffer) throws -> TimeLe
 #endif
 public func FfiConverterTypeTimeLetters_lower(_ value: TimeLetters) -> RustBuffer {
     return FfiConverterTypeTimeLetters.lower(value)
+}
+
+
+/**
+ * One unit a default-unit setting can pick.
+ */
+public struct UnitChoiceInfo: Equatable, Hashable {
+    public var id: String
+    public var label: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, label: String) {
+        self.id = id
+        self.label = label
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitChoiceInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitChoiceInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitChoiceInfo {
+        return
+            try UnitChoiceInfo(
+                id: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitChoiceInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitChoiceInfo_lift(_ buf: RustBuffer) throws -> UnitChoiceInfo {
+    return try FfiConverterTypeUnitChoiceInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitChoiceInfo_lower(_ value: UnitChoiceInfo) -> RustBuffer {
+    return FfiConverterTypeUnitChoiceInfo.lower(value)
+}
+
+
+/**
+ * A Settings section of unit choices.
+ */
+public struct UnitSettingGroupInfo: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    public var items: [UnitSettingItemInfo]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, items: [UnitSettingItemInfo]) {
+        self.id = id
+        self.title = title
+        self.items = items
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitSettingGroupInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitSettingGroupInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitSettingGroupInfo {
+        return
+            try UnitSettingGroupInfo(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                items: FfiConverterSequenceTypeUnitSettingItemInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitSettingGroupInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterSequenceTypeUnitSettingItemInfo.write(value.items, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingGroupInfo_lift(_ buf: RustBuffer) throws -> UnitSettingGroupInfo {
+    return try FfiConverterTypeUnitSettingGroupInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingGroupInfo_lower(_ value: UnitSettingGroupInfo) -> RustBuffer {
+    return FfiConverterTypeUnitSettingGroupInfo.lower(value)
+}
+
+
+/**
+ * One setting: the default unit for one dimension (`dim` is the stored key, `length`).
+ */
+public struct UnitSettingItemInfo: Equatable, Hashable {
+    public var dim: String
+    public var label: String
+    public var units: [UnitChoiceInfo]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(dim: String, label: String, units: [UnitChoiceInfo]) {
+        self.dim = dim
+        self.label = label
+        self.units = units
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitSettingItemInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitSettingItemInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitSettingItemInfo {
+        return
+            try UnitSettingItemInfo(
+                dim: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf), 
+                units: FfiConverterSequenceTypeUnitChoiceInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitSettingItemInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.dim, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterSequenceTypeUnitChoiceInfo.write(value.units, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingItemInfo_lift(_ buf: RustBuffer) throws -> UnitSettingItemInfo {
+    return try FfiConverterTypeUnitSettingItemInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingItemInfo_lower(_ value: UnitSettingItemInfo) -> RustBuffer {
+    return FfiConverterTypeUnitSettingItemInfo.lower(value)
 }
 
 
@@ -5620,6 +6013,31 @@ fileprivate struct FfiConverterSequenceTypeGraphPoint: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeGraphTick: FfiConverterRustBuffer {
+    typealias SwiftType = [GraphTick]
+
+    public static func write(_ value: [GraphTick], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGraphTick.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GraphTick] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GraphTick]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGraphTick.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeHistoryRow: FfiConverterRustBuffer {
     typealias SwiftType = [HistoryRow]
 
@@ -5762,6 +6180,81 @@ fileprivate struct FfiConverterSequenceTypeTextSpan: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeTextSpan.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUnitChoiceInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UnitChoiceInfo]
+
+    public static func write(_ value: [UnitChoiceInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnitChoiceInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UnitChoiceInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UnitChoiceInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnitChoiceInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUnitSettingGroupInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UnitSettingGroupInfo]
+
+    public static func write(_ value: [UnitSettingGroupInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnitSettingGroupInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UnitSettingGroupInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UnitSettingGroupInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnitSettingGroupInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUnitSettingItemInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UnitSettingItemInfo]
+
+    public static func write(_ value: [UnitSettingItemInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnitSettingItemInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UnitSettingItemInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UnitSettingItemInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnitSettingItemInfo.read(from: &buf))
         }
         return seq
     }
@@ -5989,6 +6482,27 @@ public func evaluateJson(request: String)throws  -> String  {
 })
 }
 /**
+ * `sanitizeDefaultUnits`: only Settings dimensions, each with a unit of that dimension.
+ */
+public func sanitizeDefaultUnits(units: [String: String]) -> [String: String]  {
+    return try!  FfiConverterDictionaryStringString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_sanitize_default_units(
+        FfiConverterDictionaryStringString.lower(units),uniffiCallStatus
+    )
+})
+}
+/**
+ * `UNIT_SETTING_GROUPS`: the default-unit choices Settings offers, in order. "Automatic" (no entry) is the UI's.
+ */
+public func unitSettingGroups() -> [UnitSettingGroupInfo]  {
+    return try!  FfiConverterSequenceTypeUnitSettingGroupInfo.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_unit_setting_groups(uniffiCallStatus
+    )
+})
+}
+/**
  * Settings plus history context in one `EvalOptions`; the context wins where both say something.
  */
 public func mergedOptions(options: EvalOptions, context: EvalContext) -> EvalOptions  {
@@ -6026,6 +6540,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_evaluate_json() != 64081) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_sanitize_default_units() != 18631) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_unit_setting_groups() != 15277) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_merged_options() != 32156) {
@@ -6077,6 +6597,18 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_graph_async() != 46337) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_graph_home() != 47656) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_graph_readout_y() != 6433) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_graph_readout_z() != 43595) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_graph_ticks() != 33558) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_graph_y() != 33861) {
