@@ -1,0 +1,17 @@
+[package]
+name = "qcalc-typst"
+description = "Q Calc's typeset maths preview: compiles the Typst source typstMath builds and renders it natively"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Pinned to the Typst the web preview runs (typst.ts 0.7.0 bundles typst 0.14.x and typst-assets 0.14.2), so
+# both previews lay out the same source the same way. Moving to a newer Typst is a separate, checked change.
+typst = "=0.14.2"
+typst-render = "=0.14.2"
+
+[lints]
+workspace = true
