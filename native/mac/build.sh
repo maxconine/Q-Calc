@@ -78,11 +78,16 @@ BIN="$APP/Contents/MacOS/QCalc"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 
 # 2. the app through SwiftPM, against the QCalcCore package (both architectures in one universal binary)
-SPM_ARGS=(--package-path "$MAC" -c release --scratch-path "$OUT/mac-spm")
-for arch in "${ARCHS[@]}"; do SPM_ARGS+=(--arch "$arch"); done
-echo "Building Q Calc for ${ARCHS[*]}…"
-swift build "${SPM_ARGS[@]}"
-cp "$(swift build "${SPM_ARGS[@]}" --show-bin-path)/QCalcMac" "$BIN"
+# one native build per architecture, lipo'd: SwiftPM's multi-arch (xcbuild) path links the static xcframework
+# as a dynamic product and can't find it
+THIN=()
+for arch in "${ARCHS[@]}"; do
+  echo "Building Q Calc for $arch…"
+  SPM_ARGS=(--package-path "$MAC" -c release --scratch-path "$OUT/mac-spm-$arch" --triple "${arch}-apple-macosx${MIN_MACOS}")
+  swift build "${SPM_ARGS[@]}"
+  THIN+=("$(swift build "${SPM_ARGS[@]}" --show-bin-path)/QCalcMac")
+done
+lipo -create "${THIN[@]}" -output "$BIN"
 strip -x "$BIN"
 chmod +x "$BIN"
 
