@@ -53,6 +53,11 @@ pub mod calculus;
 // ---- WP-CHEM ----
 pub mod chem;
 pub mod jsstr;
+// ---- WP-SUMS ----
+pub mod sums;
+
+// ---- WP-GRAPH ----
+pub mod graph;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

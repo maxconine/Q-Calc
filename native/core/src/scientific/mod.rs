@@ -1,5 +1,6 @@
 //! The scientific layer (`src/engine/scientific.ts`): typed maths → mathjs syntax → a value.
 
+pub mod compile; // WP-SUMS: compileScientific, compileScientific2, parseScientific
 pub mod functions;
 pub mod preprocess;
 

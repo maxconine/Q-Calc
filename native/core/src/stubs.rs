@@ -5,8 +5,6 @@
 //! Owners (see `native/PORTING_PLAN.md`): dots/letters/angles → WP-FUNCTIONS; chem → WP-CHEM; solve, isolate,
 //! system, unit solve → WP-SOLVE; calculus → WP-CALCULUS; matrix → WP-MATRIX; sums → WP-SUMS; measure → WP-MEASURE.
 
-use crate::types::Value;
-
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
 // ported: `crate::dots`, `crate::letters`, `crate::angles` (the TS exponent is a number; `angle_exponent` here
@@ -39,20 +37,8 @@ pub use crate::matrix::{MatrixAnswer, MatrixOptions, looks_like_matrix, matrix_a
 
 // ---- WP-SUMS (sums.ts) ----
 
-/// `Σ` spellings as the one form `sumAnswer` reads.
-pub fn normalize_sums(expr: &str) -> String {
-    expr.to_string()
-}
-
-#[derive(Clone, Debug)]
-pub struct SumAnswer {
-    pub value: Value,
-    pub exact: Option<String>,
-}
-
-pub fn sum_answer(_expr: &str) -> Option<SumAnswer> {
-    None
-}
+// ported: `crate::sums` (`sum_answer` takes the TS `SumContext`, and its value may be None, as in the TS)
+pub use crate::sums::{SumAnswer, SumContext, normalize_sums, sum_answer};
 
 // ---- WP-CALCULUS (calculus.ts, calcNumeric.ts, closedForm.ts) ----
 
