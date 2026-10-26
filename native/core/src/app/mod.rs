@@ -16,6 +16,7 @@ pub mod golden;
 pub mod greeting;
 pub mod history;
 pub mod history_show;
+pub mod host_settings;
 pub mod identities;
 pub mod js;
 pub mod keybinds;
