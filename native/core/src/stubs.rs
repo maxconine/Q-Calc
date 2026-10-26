@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::types::{Meas, SolveInfo, TimeLetters, Value};
+use crate::types::{Meas, TimeLetters, Value};
 
 // ---- WP-FUNCTIONS (dots.ts, letters.ts, angles.ts) ----
 
@@ -51,35 +51,10 @@ pub fn chem_answer(_text: &str, _is_name: &dyn Fn(&str) -> bool) -> Option<Strin
 pub use crate::isolate::{NamedSolve, isolate_variable, parse_named_solve};
 pub use crate::solve::{SolveContext, Solved, format_solve, is_equation, solve_equation};
 pub use crate::system::{SystemCall, parse_system_call, solve_system_call};
-
-/// An equation with units, solved in SI: Some(display, info, value).
-#[derive(Clone, Debug)]
-pub struct UnitSolved {
-    pub display: String,
-    pub info: Option<SolveInfo>,
-    pub value: Option<Value>,
-}
-
-pub fn solve_with_units_one(
-    _eq: &str,
-    _variable: Option<&str>,
-    _near: Option<&str>,
-) -> Option<UnitSolved> {
-    None
-}
-
-pub fn isolate_with_units(
-    _eq: &str,
-    _variable: &str,
-    _variables: &BTreeMap<String, f64>,
-) -> Option<String> {
-    None
-}
-
-/// Unit texts that clearly are units (m, s) and won't rearrange.
-pub fn clearly_units_blank(_eq: &str, _names: &[String]) -> bool {
-    false
-}
+// `solveWithUnitsOne` takes the TS ctx (solve context, stored names, default units, sig figs)
+pub use crate::unit_solve::{
+    UnitCtx, UnitSolved, clearly_units_blank, isolate_with_units, solve_with_units_one,
+};
 
 // ---- WP-MATRIX (matrix.ts) ----
 
