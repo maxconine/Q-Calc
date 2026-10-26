@@ -40,7 +40,7 @@ pub fn js_pow(a: f64, b: f64) -> f64 {
     if b.is_nan() || (a.abs() == 1.0 && b.is_infinite()) {
         return f64::NAN;
     }
-    a.powf(b)
+    crate::scientific::functions::jsmath::pow(a, b) // WP-FUNCTIONS: V8's Math.pow
 }
 
 /// An odd root of a negative is real: `(-8)^(1/3)` is -2 and `(-8)^(2/3)` is 4; an even one stays undefined.
@@ -90,6 +90,9 @@ fn int32(x: f64, op: Op) -> Result<i64, EvalError> {
 
 pub fn unary(op: Op, a: &Val) -> EvalResult {
     // PORT(WP-FUNCTIONS / WP-MATRIX): complex and list operands dispatch here, as in `binary`.
+    if let Some(r) = super::complex::unary(op, a) {
+        return r;
+    } // WP-FUNCTIONS
     if let Some(r) = crate::units::mathjs::unary(op, a) {
         return r; // WP-UNITS
     }
@@ -104,6 +107,9 @@ pub fn unary(op: Op, a: &Val) -> EvalResult {
 
 pub fn binary(op: Op, a: &Val, b: &Val) -> EvalResult {
     // PORT(WP-FUNCTIONS): a complex operand goes to `eval::complex::binary` here, one line.
+    if let Some(r) = super::complex::binary(op, a, b) {
+        return r;
+    } // WP-FUNCTIONS
     // PORT(WP-MATRIX): a list operand goes to `eval::matrix::binary` here, one line.
     if let Some(r) = crate::units::mathjs::binary(op, a, b) {
         return r; // WP-UNITS

@@ -251,6 +251,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             | "symbolic/parse",
             _,
         ) => return symbolic_dispatch(name, args),
+        // ---- WP-FUNCTIONS: engine/scientific, engine/angles, engine/dots ----
+        ("engine/scientific", "evalScientific") => crate::scientific::functions::golden_eval(args),
+        ("engine/angles", "angleExponent") => json!(crate::angles::angle_exponent(&s(0))),
+        ("engine/dots", "joinDots") => json!(crate::dots::join_dots(&s(0))),
         // ---- WP-UNITS: engine/units, lib/unitSpans, lib/draft (lib/missingUnit takes a test's closure) ----
         ("engine/units" | "lib/unitSpans" | "lib/draft", _) => {
             match crate::units::golden::dispatch(module, name, args) {

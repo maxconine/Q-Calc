@@ -5,6 +5,7 @@
 //! Values are doubles, as in the TS; exact digits come afterwards from `crate::precise`.
 
 pub mod builtins;
+pub mod complex; // WP-FUNCTIONS
 pub mod ops;
 
 use std::collections::BTreeMap;
@@ -39,11 +40,7 @@ impl Val {
             Val::Num(n) => *n,
             Val::Bool(b) => f64::from(u8::from(*b)),
             Val::Null => 0.0,
-            Val::List(items) => match items.as_slice() {
-                [] => 0.0,
-                [one] => one.to_number(),
-                _ => f64::NAN,
-            },
+            Val::List(_) => f64::NAN, // WP-FUNCTIONS: Number(matrix) is NaN, even of `[5]` (mathjs's valueOf)
             Val::Str(s) => {
                 let t = s.trim();
                 if t.is_empty() {
@@ -52,7 +49,8 @@ impl Val {
                     t.parse().unwrap_or(f64::NAN)
                 }
             }
-            Val::Complex { .. } | Val::Function(_) | Val::Undefined => f64::NAN,
+            Val::Complex { re, im } => complex::to_number(*re, *im), // WP-FUNCTIONS: Number(String(z))
+            Val::Function(_) | Val::Undefined => f64::NAN,
             Val::Unit(_) => f64::NAN, // WP-UNITS
         }
     }
