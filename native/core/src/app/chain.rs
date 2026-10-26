@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::answer::answer_among;
-use crate::app::js;
+use crate::app::js as jstr;
 use crate::evaluate::parse_function_def;
 use crate::jsre::{self, Lazy, js};
 
@@ -36,7 +36,7 @@ fn starts_convert(q: &str) -> bool {
 /// The line evaluated: through the engine's own `ans`, which keeps full precision and the unit.
 pub fn chained_expr(q: &str) -> String {
     if starts_convert(q) {
-        format!("ans {}", js::trim_start(q))
+        format!("ans {}", jstr::trim_start(q))
     } else {
         format!("ans{q}")
     }
@@ -46,7 +46,7 @@ pub fn chained_expr(q: &str) -> String {
 pub fn chained_history_expr(q: &str, plain: &str) -> String {
     static PLAIN_UNSIGNED: Lazy = Lazy::new(|| js(r"^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
     static LOOSE: Lazy = Lazy::new(|| js(r"^[+\-−]", ""));
-    let rest = js::trim_start(q);
+    let rest = jstr::trim_start(q);
     if starts_convert(rest) {
         return format!("{plain} {rest}");
     }
@@ -62,14 +62,14 @@ pub fn chained_history_expr(q: &str, plain: &str) -> String {
 pub fn ans_written_out(expr: &str, plain: &str) -> String {
     static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
     static ALONE: Lazy = Lazy::new(|| js(r"^\s*ans\s*$", "i"));
-    if !jsre::test(&ANS, expr) || parse_function_def(js::trim(expr)).is_some() {
+    if !jsre::test(&ANS, expr) || parse_function_def(jstr::trim(expr)).is_some() {
         return expr.to_string();
     }
     let among = answer_among(plain, jsre::test(&ALONE, expr));
     // a replacement string, as JS reads one: `$$`, `$&`, `` $` `` and `$'` are patterns (a `$` answer can hold them)
     jsre::replace_all(&ANS, expr, |c| {
         let m = c.get(0).map_or(0..0, |m| m.range());
-        js::expand_replacement(&among, expr, m.start, m.end)
+        jstr::expand_replacement(&among, expr, m.start, m.end)
     })
     .into_owned()
 }

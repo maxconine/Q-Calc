@@ -3,53 +3,16 @@
 //! signature. Most answer "not mine" like the stubs in `crate::stubs`; the few that are one-line TS predicates or
 //! constants are written out in full, so the bar already behaves right for them.
 //!
-//! Owners (`native/PORTING_PLAN.md`): units → WP-UNITS, measure → WP-MEASURE, chem → WP-CHEM, isolate/system →
+//! Owners (`native/PORTING_PLAN.md`): units → WP-UNITS, chem → WP-CHEM, isolate/system →
 //! WP-SOLVE, graph → WP-GRAPH, phrases/nativeEval → WP-PHRASES, typstMath → WP-NOTATION.
 
-use serde_json::Value as Json;
 
 use crate::jsre::{self, Lazy, js};
-use crate::types::{AngleMode, DefaultUnits, Meas, Value};
+use crate::types::{AngleMode, DefaultUnits};
 
 // ---- WP-UNITS (units.ts) ----
 
-/// `isUnitName`: a word the unit table knows by name or symbol. PORT: units.ts.
-pub fn is_unit_name(_word: &str) -> bool {
-    false
-}
-
-/// `sanitizeDefaultUnits`: only known dimensions, each with a unit of that dimension. PORT: units.ts.
-pub fn sanitize_default_units(_raw: &Json) -> DefaultUnits {
-    DefaultUnits::new()
-}
-
-/// `inLadderUnit`: the value re-expressed in another unit of its SI prefix ladder. PORT: units.ts.
-pub fn in_ladder_unit(_value: &Value, _unit_id: &str) -> Option<Value> {
-    None
-}
-
-// ---- WP-MEASURE (measure.ts) ----
-
-/// `sanitizeMeas` for metadata read back from history JSON: sig and dp only as a pair, a positive ± with the
-/// typed digits only when they're plain digits; nothing worth storing is None. Written out in full (it is the
-/// whole of `storedMeas`); WP-MEASURE's port replaces it.
-pub fn sanitize_meas(raw: Option<&Meas>) -> Option<Meas> {
-    static DIGITS: Lazy = Lazy::new(|| js(r"^[1-9]\d{0,15}$", ""));
-    let r = raw?;
-    let mut out = Meas::default();
-    if let (Some(sig), Some(dp)) = (r.sig, r.dp) {
-        out.sig = Some(sig);
-        out.dp = Some(dp);
-    }
-    if let Some(unc) = r.unc.filter(|u| u.is_finite() && *u > 0.0) {
-        out.unc = Some(unc);
-        out.unc_digits = r
-            .unc_digits
-            .clone()
-            .filter(|d| jsre::test(&DIGITS, d));
-    }
-    (out.sig.is_some() || out.unc.is_some()).then_some(out)
-}
+pub use crate::units::{in_ladder_unit, is_unit_name, sanitize_default_units_json as sanitize_default_units};
 
 // ---- WP-CHEM (chem.ts) ----
 
@@ -92,7 +55,7 @@ pub fn sys_command(text: &str) -> Option<SysCommand> {
             "how many equations? sys2, sys3… up to sys5".into(),
         ));
     };
-    let n: f64 = crate::app::js::number(m.as_str());
+    let n = crate::app::js::number(m.as_str()).unwrap_or(f64::NAN);
     if !(1.0..=5.0).contains(&n) || n.fract() != 0.0 {
         return Some(SysCommand::Hint("up to 5 equations".into()));
     }
@@ -244,22 +207,5 @@ mod tests {
         assert!(looks_like_natural_language("$5 + $3"));
         assert!(looks_like_natural_language("3pm + 2 hours"));
         assert!(!looks_like_natural_language("2 + 2"));
-    }
-
-    #[test]
-    fn stored_meas() {
-        let m = Meas {
-            sig: Some(3),
-            dp: None,
-            unc: Some(0.2),
-            unc_digits: Some("02".into()),
-        };
-        assert_eq!(
-            sanitize_meas(Some(&m)),
-            Some(Meas {
-                unc: Some(0.2),
-                ..Meas::default()
-            })
-        );
     }
 }

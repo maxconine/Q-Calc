@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::app::js;
+use crate::app::js as jstr;
 use crate::format::{clamp_sig_figs, format_as_fraction, format_number, format_scientific, format_value};
 use crate::jsre::{self, Lazy, js};
 use crate::simplify::{ExactFormOptions, exact_form};
@@ -103,7 +103,7 @@ pub fn answer_forms(src: &FormSource) -> Vec<AnswerView> {
     let dual = src
         .exact
         .as_deref()
-        .is_some_and(|e| !e.is_empty() && js::trim(e) != js::trim(&src.display));
+        .is_some_and(|e| !e.is_empty() && jstr::trim(e) != jstr::trim(&src.display));
     add(with_unit(format_number(n, sig_figs), unit), None);
     // a dual answer can also be taken one side at a time
     if dual {
@@ -142,10 +142,10 @@ pub fn answer_forms(src: &FormSource) -> Vec<AnswerView> {
         add(format_value(&alt, sig_figs), Some(alt));
     }
 
-    let shown = (!dual).then(|| js::trim(&src.display).to_string());
+    let shown = (!dual).then(|| jstr::trim(&src.display).to_string());
     let mut seen: Vec<String> = Vec::new();
     out.retain(|form| {
-        let key = js::trim(&form.display).to_string();
+        let key = jstr::trim(&form.display).to_string();
         if shown.as_ref() == Some(&key) || seen.contains(&key) || jsre::test(&NOT_SHOWN, &key) {
             return false;
         }

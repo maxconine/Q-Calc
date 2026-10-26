@@ -3,11 +3,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::app::history::{HistoryRow, RowKind};
-use crate::app::js;
+use serde_json::Value as Json;
+use crate::app::js as jstr;
 use crate::format::{DEFAULT_SIG_FIGS, format_number, pretty_answer};
 use crate::jsre::{self, Lazy, js};
-use crate::types::{SolveInfo, SolveOutcome};
 use crate::units::is_improper_unit_conversion;
 
 const DEFAULT: f64 = DEFAULT_SIG_FIGS as f64;
@@ -22,7 +21,7 @@ fn strip_grouping_commas(s: &str) -> String {
 pub fn insertable_answer(display: &str, n: Option<f64>, sig_figs: f64) -> String {
     static PLAIN_NUMBER: Lazy = Lazy::new(|| js(r"^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$", ""));
     let stripped = strip_grouping_commas(display);
-    let plain = js::trim(&stripped);
+    let plain = jstr::trim(&stripped);
     if is_improper_unit_conversion(plain) {
         return String::new();
     }
@@ -62,7 +61,7 @@ pub fn answer_among(answer: &str, alone: bool) -> String {
     static ATOM: Lazy =
         Lazy::new(|| js(r"^(?:(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?|[A-Za-zπτ]+)$", "i"));
     static CALL: Lazy = Lazy::new(|| js(r"^[A-Za-z]\w*(?=\()", ""));
-    let a = js::trim(answer);
+    let a = jstr::trim(answer);
     if alone
         || a.is_empty()
         || jsre::test(&ATOM, a)
@@ -102,7 +101,7 @@ pub fn unitless_answer(text: &str) -> String {
         )
     });
     jsre::replace_all(&NUMBER_WITH_UNIT, text, |c| {
-        format!("{}{}", jsre::group(c, 1), js::trim(jsre::group(c, 2)))
+        format!("{}{}", jsre::group(c, 1), jstr::trim(jsre::group(c, 2)))
     })
     .into_owned()
 }
@@ -140,33 +139,56 @@ pub fn normalize_history_insert(value: &serde_json::Value) -> HistoryInsert {
     }
 }
 
-fn roots_of(solve: Option<&SolveInfo>) -> Option<&SolveInfo> {
-    solve.filter(|s| s.outcome == SolveOutcome::Roots)
+fn str_of<'a>(row: &'a Json, key: &str) -> Option<&'a str> {
+    row.get(key).and_then(Json::as_str)
 }
 
-/// A solved row's roots as each one inserts, when it has more than one; None for any other row.
-pub fn solve_roots(solve: Option<&SolveInfo>, sig_figs: f64) -> Option<Vec<String>> {
-    let s = roots_of(solve)?;
-    if s.roots.len() < 2 {
+fn solve_of(row: &Json) -> Option<&Json> {
+    row.get("solve").filter(|s| s.is_object())
+}
+
+fn outcome_of(row: &Json) -> Option<&str> {
+    solve_of(row)?.get("outcome").and_then(Json::as_str)
+}
+
+fn roots_of(row: &Json) -> Option<Vec<f64>> {
+    if outcome_of(row) != Some("roots") {
         return None;
     }
-    Some(s.roots.iter().map(|r| format_number(*r, sig_figs)).collect())
+    let roots: Vec<f64> = solve_of(row)?
+        .get("roots")?
+        .as_array()?
+        .iter()
+        .filter_map(Json::as_f64)
+        .collect();
+    (roots.len() >= 2).then_some(roots)
+}
+
+/// A solved row's roots as each one inserts, when it has more than one; None for any other row. Rows are the TS
+/// `HistoryRow` JSON, as in [`crate::app::history`].
+pub fn solve_roots(row: &Json, sig_figs: f64) -> Option<Vec<String>> {
+    roots_of(row).map(|r| r.into_iter().map(|x| format_number(x, sig_figs)).collect())
 }
 
 /// A solved row with several roots inserts its first one (each root in the tape is its own button), never the
 /// whole list; a message row inserts nothing (`Some("")`); None for any other row.
-pub fn solve_insert(solve: Option<&SolveInfo>, sig_figs: f64) -> Option<String> {
-    let s = solve?;
-    if s.outcome != SolveOutcome::Roots {
+pub fn solve_insert(row: &Json, sig_figs: f64) -> Option<String> {
+    solve_of(row)?;
+    if outcome_of(row) != Some("roots") {
         return Some(String::new());
     }
-    solve_roots(Some(s), sig_figs).and_then(|r| r.into_iter().next())
+    solve_roots(row, sig_figs).and_then(|r| r.into_iter().next())
+}
+
+/// `hasDualAnswer` of a row.
+pub fn row_has_dual_answer(row: &Json) -> bool {
+    has_dual_answer(str_of(row, "display").unwrap_or(""), str_of(row, "exact"))
 }
 
 /// Whether a row shows two answers, `exact ≈ approx`.
 pub fn has_dual_answer(display: &str, exact: Option<&str>) -> bool {
-    let display = js::trim(display);
-    let Some(exact) = exact.map(js::trim) else {
+    let display = jstr::trim(display);
+    let Some(exact) = exact.map(jstr::trim) else {
         return false;
     };
     if display.is_empty() || exact.is_empty() || exact == display {
@@ -184,18 +206,23 @@ pub fn visible_answer<'a>(display: &'a str, exact: Option<&'a str>, form: Answer
 }
 
 /// What a history row's answer inserts.
-pub fn insertable_history_answer(row: &HistoryRow, form: AnswerForm, sig_figs: f64) -> String {
-    if let Some(solved) = solve_insert(row.solve.as_ref(), sig_figs) {
+pub fn insertable_history_answer(row: &Json, form: AnswerForm, sig_figs: f64) -> String {
+    if let Some(solved) = solve_insert(row, sig_figs) {
         return solved;
     }
     if form == AnswerForm::Exact
-        && let Some(e) = row.exact.as_deref().filter(|e| !e.is_empty())
+        && let Some(e) = str_of(row, "exact").filter(|e| !e.is_empty())
     {
         return insertable_answer(e, None, DEFAULT);
     }
     // a measured answer inserts as shown (`5.00`), not re-rounded from `n`
-    let n = if row.meas.is_some() { None } else { row.n };
-    insertable_answer(&row.display, n, sig_figs)
+    let measured = row.get("meas").is_some_and(|m| !m.is_null());
+    let n = if measured {
+        None
+    } else {
+        row.get("n").and_then(Json::as_f64)
+    };
+    insertable_answer(str_of(row, "display").unwrap_or(""), n, sig_figs)
 }
 
 /// The side of the history rows ← and → last chose: ↑ and ↓ keep to it from row to row.
@@ -236,14 +263,14 @@ pub struct HistoryPicks {
 
 /// The expression (pick 0), then each answer the row shows, as each inserts: a solve's roots one by one, the exact
 /// value and then the approximation, or the one answer.
-pub fn history_picks(row: &HistoryRow, form: AnswerForm, sig_figs: f64) -> HistoryPicks {
+pub fn history_picks(row: &Json, form: AnswerForm, sig_figs: f64) -> HistoryPicks {
     let none = HistoryPicks {
         answers: Vec::new(),
         start: 0,
     };
-    match row.kind {
-        Some(RowKind::Function | RowKind::System) => return none,
-        Some(RowKind::Definition) => {
+    match str_of(row, "kind") {
+        Some("function" | "system") => return none,
+        Some("definition") => {
             return HistoryPicks {
                 answers: vec![insertable_history_reuse(
                     row,
@@ -254,25 +281,21 @@ pub fn history_picks(row: &HistoryRow, form: AnswerForm, sig_figs: f64) -> Histo
                 start: 1,
             };
         }
-        None => {}
+        _ => {}
     }
-    if row
-        .solve
-        .as_ref()
-        .is_some_and(|s| s.outcome != SolveOutcome::Roots)
-    {
+    if solve_of(row).is_some() && outcome_of(row) != Some("roots") {
         return none;
     }
-    if let Some(roots) = solve_roots(row.solve.as_ref(), sig_figs) {
+    if let Some(roots) = solve_roots(row, sig_figs) {
         return HistoryPicks {
             answers: roots,
             start: 1,
         };
     }
-    if has_dual_answer(&row.display, row.exact.as_deref()) {
+    if row_has_dual_answer(row) {
         return HistoryPicks {
             answers: vec![
-                insertable_answer(row.exact.as_deref().unwrap_or(""), None, DEFAULT),
+                insertable_answer(str_of(row, "exact").unwrap_or(""), None, DEFAULT),
                 insertable_history_answer(row, AnswerForm::Approx, sig_figs),
             ],
             start: if form == AnswerForm::Exact { 1 } else { 2 },
@@ -286,13 +309,13 @@ pub fn history_picks(row: &HistoryRow, form: AnswerForm, sig_figs: f64) -> Histo
 
 /// What ↵ on a highlighted history row inserts; clicks always insert the side they hit.
 pub fn insertable_history_reuse(
-    row: &HistoryRow,
+    row: &Json,
     form: AnswerForm,
     insert: HistoryInsert,
     sig_figs: f64,
 ) -> String {
-    if row.kind == Some(RowKind::Definition) || insert == HistoryInsert::Expr {
-        return row.expr.clone();
+    if str_of(row, "kind") == Some("definition") || insert == HistoryInsert::Expr {
+        return str_of(row, "expr").unwrap_or("").to_string();
     }
     insertable_history_answer(row, form, sig_figs)
 }

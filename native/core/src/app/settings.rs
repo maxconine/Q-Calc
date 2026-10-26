@@ -14,17 +14,11 @@ use crate::types::{AngleMode, DefaultUnits, EvaluateOptions};
 /// What a new user's answers round to; the engine's own fallback (`DEFAULT_SIG_FIGS`) stays 12 for its callers.
 pub const DEFAULT_SETTINGS_SIG_FIGS: u32 = 6;
 
-pub const DEFAULT_DRAFT_SECONDS: u32 = 60;
-pub const MIN_DRAFT_SECONDS: f64 = 0.0;
-pub const MAX_DRAFT_SECONDS: f64 = 3600.0;
+pub const DEFAULT_DRAFT_SECONDS: u32 = crate::app::draft::DEFAULT_DRAFT_SECONDS as u32;
 
-/// How long a hidden bar keeps its input: whole seconds up to an hour, 60 when unreadable (`clampDraftSeconds`,
-/// lib/draft.ts; WP-UNITS owns the rest of that module).
+/// `clampDraftSeconds` (WP-UNITS's `app/draft.rs`) as whole seconds.
 pub fn clamp_draft_seconds(n: f64) -> u32 {
-    if !n.is_finite() || n < MIN_DRAFT_SECONDS {
-        return DEFAULT_DRAFT_SECONDS;
-    }
-    crate::jsnum::round(n).min(MAX_DRAFT_SECONDS) as u32
+    crate::app::draft::clamp_draft_seconds(n) as u32
 }
 
 /// The colour scheme.

@@ -229,7 +229,7 @@ pub fn tour_line_fits(step: &TourStep, typed: &str, answer: bool) -> bool {
     }
     let squash = |t: &str| {
         t.chars()
-            .filter(|c| !crate::app::js::is_space(*c))
+            .filter(|c| !crate::app::js::is_js_space(*c))
             .collect::<String>()
             .to_lowercase()
     };

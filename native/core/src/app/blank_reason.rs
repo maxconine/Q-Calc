@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::app::js::{self, index16, len16, slice16};
+use crate::app::js::{self as jstr, index16, len16, slice16};
 use crate::jsre::{self, Lazy, js};
 use crate::scientific::NAMES as SCIENTIFIC_NAMES;
 
@@ -51,7 +51,7 @@ fn known() -> &'static BTreeSet<String> {
 /// `ok` says whether a piece of text evaluates. None when there's no confident answer; a single operator at the end
 /// is unfinished, not wrong, so it's never flagged.
 pub fn blank_reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> {
-    if js::trim(expr).is_empty() || ok(expr) {
+    if jstr::trim(expr).is_empty() || ok(expr) {
         return None;
     }
     // `2x+3==11` would solve without its second `=`, so that's what's wrong, not the x
@@ -118,7 +118,7 @@ fn unreachable_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
 fn stray_operator(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
     let units: Vec<u16> = expr.encode_utf16().collect();
     let unit_char = |i: usize| units.get(i).and_then(|&u| char::from_u32(u32::from(u)));
-    let last = len16(js::trim_end(expr)) as isize - 1;
+    let last = len16(jstr::trim_end(expr)) as isize - 1;
     let mut i = 0usize;
     while (i as isize) <= last {
         let Some(ch) = unit_char(i).filter(|&c| is_operator(c)) else {
@@ -127,8 +127,8 @@ fn stray_operator(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
         };
         let before = slice16(expr, 0, i);
         let after_text = slice16(expr, i + 1, usize::MAX);
-        let after = js::trim_start(&after_text);
-        let leading = js::trim_end(&before).is_empty() && !can_lead(ch);
+        let after = jstr::trim_start(&after_text);
+        let leading = jstr::trim_end(&before).is_empty() && !can_lead(ch);
         let first_after = after.chars().next().filter(|c| c.len_utf16() == 1);
         let doubled = first_after.is_some_and(|c| is_operator(c) && !can_lead(c));
         let trailing = i as isize == last && (ch == '=' || ch == ',');
@@ -190,7 +190,7 @@ pub fn enter_hint(f: &EnterFacts) -> String {
     static E_OR_I: Lazy = Lazy::new(|| js(r"\b(?:e|i)\b", ""));
     static UNKNOWNS: Lazy = Lazy::new(|| js(r"(?<![A-Za-z])[A-Za-z](?![A-Za-z(])", ""));
     let flag = |b: Option<bool>| b == Some(true);
-    let expr = js::trim(&f.expr);
+    let expr = jstr::trim(&f.expr);
     if expr.is_empty() {
         return if flag(f.history) {
             "nothing to save · ↑ brings back earlier ones"
@@ -225,7 +225,7 @@ pub fn enter_hint(f: &EnterFacts) -> String {
             && is_operator(c)
             && len16(&word) == 1
         {
-            return if span.end >= len16(js::trim_end(&f.expr)) {
+            return if span.end >= len16(jstr::trim_end(&f.expr)) {
                 format!("unfinished: something goes after the {word}")
             } else {
                 format!("check the extra {word}")
@@ -237,7 +237,7 @@ pub fn enter_hint(f: &EnterFacts) -> String {
         if len16(&word) == 1 {
             let stripped = jsre::replace_all(&E_OR_I, expr, |_| String::new());
             let unknowns: BTreeSet<String> = UNKNOWNS
-                .find_iter(&stripped)
+                .find_iter(&*stripped)
                 .filter_map(Result::ok)
                 .map(|m| m.as_str().to_lowercase())
                 .collect();
