@@ -18,6 +18,15 @@ final class EngineThread {
     }
 
     private let engine: Engine
+    /// the app logic for jobs on this thread (blankReason and friends call back into the engine); only touched
+    /// from inside a job
+    private var threadLogic: AppLogic?
+    var logic: AppLogic {
+        if let threadLogic { return threadLogic }
+        let made = AppLogic(engine: engine)
+        threadLogic = made
+        return made
+    }
     private let lock = NSCondition()
     private var waiting: [Lane: Job] = [:]
     private var order: [Lane] = []

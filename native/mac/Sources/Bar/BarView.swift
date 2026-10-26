@@ -72,7 +72,29 @@ struct BarView: View {
     }
 
     @ViewBuilder private var below: some View {
-        if let hint = model.hint, !hint.isEmpty {
+        if let letters = model.live.timeLetters, !letters.varying.isEmpty || !letters.constant.isEmpty, model.graph == nil {
+            TimeLetterChips(model: model, letters: letters)
+        }
+        if model.hint == nil, let line = model.tourLine {
+            // .tour-line: the step, `n/m` at 70%, and an underlined skip, clear of the clear button's corner
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(line.text).lineLimit(1).truncationMode(.tail)
+                Text("\(line.at)/\(line.of)").monospacedDigit().opacity(0.7)
+                Spacer(minLength: 0)
+                Button("skip") { model.skipTutorial() }
+                    .buttonStyle(.plain)
+                    .underline()
+                    .help("skip the tutorial (or type skip)")
+            }
+            .font(.system(size: Theme.small))
+            .foregroundStyle(Color.qMuted)
+            .padding(.leading, Theme.gutter)
+            .padding(.trailing, Theme.gutter + 44)
+            .padding(.bottom, 12)
+            .padding(.top, -12)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Tutorial step \(line.at) of \(line.of): \(line.text)")
+        } else if let hint = model.hint, !hint.isEmpty {
             // .composer-hint: 12 pt muted, tucked 12 pt up into the composer's bottom padding
             Text(hint)
                 .font(.system(size: Theme.small))
@@ -92,6 +114,9 @@ struct BarView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 8)
+        }
+        if model.sysLines != nil {
+            SystemPanel(model: model)
         }
         if let graph = model.graph {
             GraphPanel(model: model, state: graph)
@@ -155,7 +180,16 @@ private struct Composer: View {
                     .accessibilityLabel("continues from the last answer")
             }
             ZStack(alignment: .leading) {
-                if model.text.isEmpty {
+                if model.text.isEmpty, let example = model.example {
+                    // .quick-example: the rotating example, muted, fading in and out over 2.5 s
+                    ExampleFade(id: example.id) {
+                        RadicalText(text: Symbols.pretty(example.expr, caret: (example.expr as NSString).length, keepWords: false).text,
+                                    size: Theme.display, tracking: Theme.displayTracking(Theme.display))
+                            .foregroundStyle(Color.qMuted)
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityLabel("Example: \(example.expr)")
+                } else if model.text.isEmpty {
                     // .quick-plain::placeholder: muted at 80%
                     Text("Calculate")
                         .font(.system(size: Theme.display))
@@ -182,7 +216,24 @@ struct LiveAnswerView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if let message = model.commandMessage, !message.isEmpty {
+        if model.text.isEmpty, let example = model.example, !example.answer.isEmpty, !model.copied {
+            // .live-example: the example's answer, muted at 70%, fading with it
+            ExampleFade(id: example.id) {
+                AnswerText(text: Pretty.answer(example.answer), size: Theme.display)
+                    .foregroundStyle(Color.qMuted.opacity(0.7))
+                    .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+            }
+            .accessibilityHidden(true)
+        } else if model.sysLines != nil, let sys = model.sysAnswer {
+            // the system's solution, or why there is none
+            if sys.message {
+                Text(sys.display).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted)
+                    .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+            } else {
+                AnswerButton(model: model, shown: Pretty.answer(sys.display), copy: sys.display, size: Theme.display,
+                             help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
+            }
+        } else if let message = model.commandMessage, !message.isEmpty {
             // .live.message: what a command does, 13 pt muted, in the answer's place
             Text(message)
                 .font(.system(size: Theme.body))
@@ -195,6 +246,14 @@ struct LiveAnswerView: View {
                 .foregroundStyle(Color.qMuted.opacity(0.5))
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
                 .accessibilityHidden(true)
+        } else if let solve = model.live.solve, solve.outcome != .roots {
+            // a solve with no roots says so, as a message
+            Text(model.live.display)
+                .font(.system(size: Theme.body))
+                .foregroundStyle(Color.qMuted)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+        } else if let solve = model.live.solve, solve.roots.count > 1, !model.hasDual {
+            SolveRoots(model: model, solve: solve)
         } else if model.live.improper {
             Text(model.live.display)
                 .font(.system(size: Theme.body))
@@ -213,6 +272,128 @@ struct LiveAnswerView: View {
                          help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
                 .id(model.formIndex)
                 .transition(.opacity)
+        }
+    }
+}
+
+/// .live-roots: the letter (copies them all), then each root its own copy at full precision, `, …` when there are more
+private struct SolveRoots: View {
+    @ObservedObject var model: BarModel
+    let solve: SolveInfo
+
+    var body: some View {
+        let figs = AppSettings.shared.significantFigures
+        let shown = model.live.display.components(separatedBy: ", ").filter { $0 != "…" }
+        let labels = shown.count == solve.roots.count ? shown : solve.roots.map { String(format: "%.\(figs)g", $0) }
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
+            Button {
+                model.copyAnswer(model.live.display)
+            } label: {
+                Text("\(solve.variable) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
+                    .padding(.horizontal, 2).padding(.trailing, 0.2 * Theme.answerPart)
+            }
+            .buttonStyle(.plain)
+            .help("Copy all the solutions")
+            ForEach(Array(solve.roots.enumerated()), id: \.offset) { k, root in
+                if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
+                RootButton(model: model, shown: Pretty.answer(labels[k]), copy: String(format: "%.17g", root))
+            }
+            if solve.more { Text(", …").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Solutions")
+    }
+}
+
+private struct RootButton: View {
+    @ObservedObject var model: BarModel
+    let shown: String
+    let copy: String
+    @State private var hover = false
+    var body: some View {
+        Button { model.copyAnswer(copy) } label: {
+            AnswerText(text: shown, size: Theme.display)
+                .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
+                .padding(.vertical, 2).padding(.horizontal, 3)
+                .background(RoundedRectangle(cornerRadius: 4).fill(hover ? Color.qAnswer.opacity(0.12) : .clear))
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help("Copy this solution")
+        .accessibilityLabel("Solution \(shown)")
+    }
+}
+
+/// .time-letters: under a d/dt, which letters changed with time and which stayed constant; a chip moves one across
+struct TimeLetterChips: View {
+    @ObservedObject var model: BarModel
+    let letters: TimeLetters
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if !letters.varying.isEmpty {
+                Text("changing with time").foregroundStyle(Color.qMuted).padding(.trailing, 2)
+                ForEach(letters.varying, id: \.self) { chip($0, varying: true) }
+            }
+            if !letters.varying.isEmpty, !letters.constant.isEmpty { Text("·").foregroundStyle(Color.qMuted) }
+            if !letters.constant.isEmpty {
+                Text("constant").foregroundStyle(Color.qMuted).padding(.trailing, 2)
+                ForEach(letters.constant, id: \.self) { chip($0, varying: false) }
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: Theme.small))
+        .frame(minHeight: 18)
+        .padding(.horizontal, Theme.gutter)
+        .padding(.bottom, 12)
+        .padding(.top, -12)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Which letters change with time")
+    }
+
+    private func chip(_ letter: String, varying: Bool) -> some View {
+        let locked = letters.locked.contains(letter)
+        return Button { model.setTimeVarying(letter, !varying) } label: {
+            Text(letter)
+                .foregroundStyle(varying ? Color.qAccent : Color.qMuted)
+                .frame(minWidth: 22 - 14)
+                .padding(.horizontal, 7)
+                .frame(height: 20)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(varying ? Color.qAccent.opacity(0.14) : Color.qFillHover))
+                .opacity(locked ? 0.75 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(locked)
+        .help(locked ? "\(letter) is written with a dot, so it changes with time"
+              : varying ? "Treat \(letter) as a constant" : "Treat \(letter) as changing with time")
+        .accessibilityLabel("\(letter): \(varying ? "changing with time" : "constant")\(locked ? "" : ". Click to switch")")
+    }
+}
+
+/// qcalc-example: 0 → 1 over the first tenth, held, → 0 over the last tenth of EXAMPLE_MS (2.5 s); still with
+/// reduced motion. A new `id` starts it again.
+private struct ExampleFade<Content: View>: View {
+    let id: Int
+    @ViewBuilder var content: Content
+    @State private var opacity: Double = reduceMotion ? 1 : 0
+    @State private var shownID: Int?
+
+    var body: some View {
+        content
+            .opacity(opacity)
+            .onAppear { run() }
+            .onChange(of: id) { _ in run() }
+    }
+
+    private func run() {
+        guard !reduceMotion else { return }
+        shownID = id
+        opacity = 0
+        withAnimation(.easeInOut(duration: 0.25)) { opacity = 1 }
+        let mine = id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.25) {
+            guard shownID == mine, mine >= 0 else { return }
+            withAnimation(.easeInOut(duration: 0.25)) { opacity = 0 }
         }
     }
 }
@@ -696,6 +877,7 @@ private struct CardView: View {
                         .overlay(RoundedRectangle(cornerRadius: Theme.radiusS)
                             .strokeBorder(focused ? Color.qAccent : Color.black.opacity(0.12), lineWidth: focused ? 2 : 0.5))
                         .noWritingTools()
+                        .tint(Color.qInk)
                         .focused($focused)
                         .onSubmit { model.sendReply(card.id) }
                         .disabled(card.reply == .sent)
