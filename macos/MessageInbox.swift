@@ -46,6 +46,12 @@ struct MessageInbox {
         return String(data: data, encoding: .utf8) ?? "[]"
     }
 
+    // who was sent to, the latest first: names only, each once, at most `max`
+    static func recent(_ raw: [String], max: Int, clean: (String) -> String) -> [String] {
+        var seen = Set<String>()
+        return Array(raw.map(clean).filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(max))
+    }
+
     // as the relay and the page do: controls and direction overrides become spaces, so no text can pass for
     // another sender's line
     static func cleanText(_ raw: String, max: Int) -> String {

@@ -28,6 +28,10 @@ import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFrom
 //   POST /release  {name, key}              lets a name go
 //   POST /send     {from, key, to, text}    hands a message to the name's open inbox, if there is one: nothing
 //                                           is queued, so a name that's offline hears nothing
+//   POST /lookup   {from, key, name}        whether anyone holds a name: 'found' or 'unknown', which is all a
+//                                           send already says. a sender's own name and key, as for /send, and
+//                                           counted per address and per sender. blocks live in each app, so
+//                                           nothing here knows of them
 //
 // a page that can take a seat back asks with resume=1; only when both sides did is a seat held. then `open`
 // carries the room and the side's token. a close other than 1000 (a lost link, a quit app)
@@ -126,6 +130,16 @@ async function messaging(req, env, path) {
     if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
     return reply({ status: await inbox(env, to).deliver(from, text) })
   }
+  if (path === '/lookup') {
+    const from = cleanHandle(o.from)
+    const name = cleanHandle(o.name)
+    if (!from || !name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
+    if (!(await allowedKey(env.LOOKUPS, ipKey(req.headers.get('cf-connecting-ip')))) || !(await allowedKey(env.LOOKUPS, `name:${from}`))) {
+      return reply({ status: 'too-many' })
+    }
+    if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
+    return reply({ status: (await inbox(env, name).known()) ? 'found' : 'unknown' })
+  }
   const name = cleanHandle(o.name)
   if (!name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
   if (!(await allowed(env.NAMES, req))) return reply({ status: 'too-many' })
@@ -135,7 +149,7 @@ async function messaging(req, env, path) {
   return reply({ status: 'ok' })
 }
 
-const MESSAGING = new Set(['/claim', '/release', '/send'])
+const MESSAGING = new Set(['/claim', '/release', '/send', '/lookup'])
 const INBOX_ROUTE = /^\/inbox\/([a-z0-9_-]+)$/
 
 export default {
@@ -721,6 +735,11 @@ export class Inbox extends DurableObject {
         // already closing
       }
     }
+  }
+
+  // over rpc: whether anyone holds the name, read only, so a lookup neither claims nor keeps a name alive
+  async known() {
+    return !lapsed(await this.ctx.storage.get('claim'), Date.now())
   }
 
   // over rpc: 'delivered' when an open inbox took it, 'offline' when none is open, 'unknown' when nobody holds the name

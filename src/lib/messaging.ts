@@ -20,7 +20,10 @@ const RETRY_MS = 3_000
 const RETRY_MAX = 60_000
 export const INBOX_PROTOCOL = 'qcalc-inbox'
 
-export type Messaging = { name: string; key: string; accepted: string[]; blocked: string[] }
+// recent: who you've sent to, the latest first, for `message` to finish their names
+export type Messaging = { name: string; key: string; accepted: string[]; blocked: string[]; recent: string[] }
+
+export const RECENT_MAX = 12
 
 type MessagingWindow = NativeWindow & { __QCALC_MESSAGING?: unknown; __qcalcMessaging?: (m: unknown) => void }
 
@@ -38,7 +41,31 @@ export function sanitizeMessaging(raw: unknown): Messaging {
   const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}
   const key = typeof o.key === 'string' && /^[0-9a-f]{64}$/.test(o.key) ? o.key : ''
   const blocked = names(o.blocked)
-  return { name: cleanName(o.name), key, accepted: names(o.accepted).filter((n) => !blocked.includes(n)), blocked }
+  const recent = Array.isArray(o.recent) ? [...new Set(o.recent.map(cleanName).filter(Boolean))].slice(0, RECENT_MAX) : []
+  return { name: cleanName(o.name), key, accepted: names(o.accepted).filter((n) => !blocked.includes(n)), blocked, recent }
+}
+
+// a name sent to goes to the front of the recent ones
+export function withRecent(m: Messaging, to: string): Messaging {
+  const name = cleanName(to)
+  if (!name) return m
+  return { ...m, recent: [name, ...m.recent.filter((n) => n !== name)].slice(0, RECENT_MAX) }
+}
+
+// kept where the lists are: the mac app's user defaults (the page's storage is wiped every launch), or local storage
+export function rememberRecipient(to: string): void {
+  const name = cleanName(to)
+  if (!name) return
+  if (nativeMessaging()) {
+    nativeHandler()?.postMessage({ type: 'messageSent', to: name })
+    return
+  }
+  saveMessaging(withRecent(loadMessaging(), name))
+}
+
+// the names `message` finishes: who you've sent to, the latest first, then the rest of the accepted ones
+export function messageContacts(m: Messaging): string[] {
+  return [...m.recent, ...m.accepted.filter((n) => !m.recent.includes(n))]
 }
 
 export function newKey(bytes = crypto.getRandomValues(new Uint8Array(32))): string {
@@ -136,12 +163,20 @@ export function parseMessage(text: string): MessageLine | null {
   return { to, name: cleanName(to), text: (m[2] ?? '').trim().slice(0, TEXT_MAX) }
 }
 
-// what the bar says while a message is typed
-export function messageHint(line: MessageLine, m: Messaging, relay = Boolean(relayUrl())): string {
+// where the name sits in `message <name> …`, for the bar to paint it
+export function messageNameSpan(text: string): { start: number; end: number } | null {
+  const m = /^(\s*message\s+)(\S+)/i.exec(text)
+  return m ? { start: m[1]!.length, end: m[1]!.length + m[2]!.length } : null
+}
+
+// what the bar says while a message is typed. `found` is the relay's word on the name: false when nobody holds
+// it, null while it's being asked or can't be (offline), so a name is never called missing without the relay
+export function messageHint(line: MessageLine, m: Messaging, relay = Boolean(relayUrl()), found: boolean | null = null): string {
   if (!relay) return 'messages need the online relay'
   if (!m.name || !m.key) return 'set your name in settings to send messages · ↵ opens settings'
   if (!line.to) return 'message <name> <what to say>'
   if (!line.name) return 'a name is 2–20 letters, digits, - or _'
+  if (found === false) return 'username not found'
   if (!line.text) return `then what to say to ${line.name}`
   return `↵ sends to ${line.name}`
 }
@@ -192,6 +227,14 @@ const SEND_STATUSES = new Set<string>(['delivered', 'offline', 'unknown', 'not-y
 export async function sendMessage(m: Messaging, to: string, text: string, post: Post = fetch, base = relayHttp()): Promise<SendStatus> {
   const status = await call('/send', { from: m.name, key: m.key, to, text }, post, base)
   return SEND_STATUSES.has(status) ? (status as SendStatus) : 'network'
+}
+
+// whether anyone holds a name: true or false from the relay, null when it can't say (offline, too many asks, your
+// own name lapsed), so the bar says nothing rather than something wrong
+export async function lookupName(m: Messaging, name: string, post: Post = fetch, base = relayHttp()): Promise<boolean | null> {
+  if (!m.name || !m.key || !cleanName(name)) return null
+  const status = await call('/lookup', { from: m.name, key: m.key, name: cleanName(name) }, post, base)
+  return status === 'found' ? true : status === 'unknown' ? false : null
 }
 
 export type ClaimStatus = 'ok' | 'taken' | 'too-many' | 'bad' | 'network'

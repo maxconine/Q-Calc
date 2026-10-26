@@ -120,7 +120,8 @@ import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
 import { identityTargetFor, isIdentityCommand, openNativeIdentitySheet, type IdentityTarget } from '../lib/identities'
 import { GREETING_REPLY, isGreeting } from '../lib/greeting'
-import { isMessageCommand, loadMessaging, messageHint, onMessagingChange, parseMessage, sendMessage, sendStatusText } from '../lib/messaging'
+import { isMessageCommand, loadMessaging, lookupName, messageContacts, messageHint, onMessagingChange, parseMessage, rememberRecipient, sendMessage, sendStatusText } from '../lib/messaging'
+import { CHECK_DELAY_MS, NameCheck } from '../lib/nameCheck'
 import { relayUrl } from '../lib/peerOnline'
 import { MessageNotices, type MessageNoticesHandle } from './MessageNotices'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
@@ -343,6 +344,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const messagingRef = useRef(messaging)
   messagingRef.current = messaging
   useEffect(() => onMessagingChange(setMessaging), [])
+  // whether the name after `message` is anyone's, asked of the relay once typing rests
+  const nameCheck = useMemo(() => new NameCheck((name) => lookupName(messagingRef.current, name)), [])
+  const [nameChecked, setNameChecked] = useState<{ name: string; found: boolean } | null>(null)
   // message cards under the bar; esc closes them before it closes the bar
   const bannerRef = useRef<MessageNoticesHandle>(null)
   const [bannerOpen, setBannerOpen] = useState(false)
@@ -493,8 +497,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const nativeMeas = useMemo(() => historyMeasures(scoped), [scoped])
   const nativeQty = useMemo(() => historyQuantities(scoped), [scoped])
   const completionNames = useMemo(
-    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null, contacts: messaging.accepted }),
-    [nativeVars, nativeFns, lastAns, messaging.accepted],
+    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null, contacts: messageContacts(messaging) }),
+    [nativeVars, nativeFns, lastAns, messaging],
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
@@ -511,9 +515,30 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const sysCmd = isSysCommand(q)
   const greeting = isGreeting(q)
   const messageCmd = isMessageCommand(q)
+  const messageLine = messageCmd ? parseMessage(q) : null
+  const messageTo = messageLine?.name ?? ''
+  const canLookUp = Boolean(messageTo && relayUrl() && messaging.name && messaging.key)
+  // null until the relay has said, and whenever it can't (offline): never a "not found" it didn't give
+  const recipientFound = !canLookUp
+    ? null
+    : (nameCheck.cached(messageTo) ?? (nameChecked?.name === messageTo ? nameChecked.found : null))
   // `periodic`, `hello` and `message` answer with a message, not a calculation
   const periodicCmd = isPeriodicCommand(q) || greeting || messageCmd
   const identityCmd = useMemo(() => identityTargetFor(q), [q])
+  useEffect(() => {
+    if (!canLookUp || nameCheck.cached(messageTo) != null) return
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+    let live = true
+    const t = window.setTimeout(() => {
+      void nameCheck.check(messageTo).then((found) => {
+        if (live && found != null) setNameChecked({ name: messageTo, found })
+      })
+    }, CHECK_DELAY_MS)
+    return () => {
+      live = false
+      window.clearTimeout(t)
+    }
+  }, [canLookUp, messageTo, nameCheck, messaging.name])
   // pong or connect 4
   const pongCmd = gameCommand(q)
   const tutorialCmd = isTutorialCommand(q)
@@ -1244,16 +1269,20 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return
     }
     if (!relayUrl() || !m.name || !m.key || !line.name || !line.text) {
-      setHint(messageHint(line, m))
+      setHint(messageHint(line, m, undefined, line.name ? nameCheck.cached(line.name) : null))
       return
     }
     const typed = qRef.current
     setHint(`sending to ${line.name}…`)
     void sendMessage(m, line.name, line.text).then((status) => {
+      // a send says whether the name is anyone's too
+      if (status === 'delivered' || status === 'offline') nameCheck.note(line.name, true)
+      if (status === 'unknown') nameCheck.note(line.name, false)
+      if (status === 'delivered') rememberRecipient(line.name)
       if (status === 'delivered' && qRef.current === typed) resetToCalculate()
       setHint(sendStatusText(status, line.name))
     })
-  }, [resetToCalculate])
+  }, [resetToCalculate, nameCheck])
 
   const onEnter = useCallback((alt = false) => {
     const opening = sysCommand(qRef.current)
@@ -1719,6 +1748,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               squiggle={squiggle?.q === q && !display ? squiggle.span : null}
               suggest={unitFix?.q === q ? unitFix : null}
               completionNames={completionNames}
+              recipient={recipientFound ? messageTo : undefined}
               onSelection={onInputSel}
               onTab={onTab}
             />
@@ -1730,7 +1760,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : messageCmd ? messageHint(parseMessage(q)!, messaging) : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : messageCmd ? messageHint(messageLine!, messaging, undefined, recipientFound) : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
