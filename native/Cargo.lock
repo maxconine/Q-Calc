@@ -1706,6 +1706,7 @@ name = "qcalc-ffi"
 version = "0.1.0"
 dependencies = [
  "qcalc-core",
+ "qcalc-typst",
  "serde",
  "serde_json",
  "uniffi",

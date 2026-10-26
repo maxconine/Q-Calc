@@ -22,6 +22,11 @@ qcalc-core = { path = "../core" }
 serde.workspace = true
 serde_json.workspace = true
 uniffi = { workspace = true, features = ["cli"] }
+qcalc-typst = { path = "../typst", optional = true } # WP-TYPST-RENDER
+
+[features]
+# WP-TYPST-RENDER: the typeset maths preview (`TypstRenderer`), about +N MB; see native/typst/MEASUREMENTS.md
+typst = ["dep:qcalc-typst"]
 
 
 [lints.rust]

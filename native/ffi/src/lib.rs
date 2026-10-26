@@ -20,6 +20,8 @@ mod engine;
 pub mod history;
 mod jsstr;
 mod rates;
+#[cfg(feature = "typst")]
+mod typst_preview; // WP-TYPST-RENDER
 pub mod records;
 mod worker;
 
