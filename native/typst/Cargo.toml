@@ -20,4 +20,5 @@ workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+qcalc-core = { path = "../core" }
 tiny-skia = "0.11"

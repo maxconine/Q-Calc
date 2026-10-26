@@ -3999,6 +3999,185 @@ public func FfiConverterTypeTimeLetters_lower(_ value: TimeLetters) -> RustBuffe
 
 
 /**
+ * One unit a default-unit setting can pick.
+ */
+public struct UnitChoiceInfo: Equatable, Hashable {
+    public var id: String
+    public var label: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, label: String) {
+        self.id = id
+        self.label = label
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitChoiceInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitChoiceInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitChoiceInfo {
+        return
+            try UnitChoiceInfo(
+                id: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitChoiceInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitChoiceInfo_lift(_ buf: RustBuffer) throws -> UnitChoiceInfo {
+    return try FfiConverterTypeUnitChoiceInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitChoiceInfo_lower(_ value: UnitChoiceInfo) -> RustBuffer {
+    return FfiConverterTypeUnitChoiceInfo.lower(value)
+}
+
+
+/**
+ * A Settings section of unit choices.
+ */
+public struct UnitSettingGroupInfo: Equatable, Hashable {
+    public var id: String
+    public var title: String
+    public var items: [UnitSettingItemInfo]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, title: String, items: [UnitSettingItemInfo]) {
+        self.id = id
+        self.title = title
+        self.items = items
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitSettingGroupInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitSettingGroupInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitSettingGroupInfo {
+        return
+            try UnitSettingGroupInfo(
+                id: FfiConverterString.read(from: &buf), 
+                title: FfiConverterString.read(from: &buf), 
+                items: FfiConverterSequenceTypeUnitSettingItemInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitSettingGroupInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterSequenceTypeUnitSettingItemInfo.write(value.items, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingGroupInfo_lift(_ buf: RustBuffer) throws -> UnitSettingGroupInfo {
+    return try FfiConverterTypeUnitSettingGroupInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingGroupInfo_lower(_ value: UnitSettingGroupInfo) -> RustBuffer {
+    return FfiConverterTypeUnitSettingGroupInfo.lower(value)
+}
+
+
+/**
+ * One setting: the default unit for one dimension (`dim` is the stored key, `length`).
+ */
+public struct UnitSettingItemInfo: Equatable, Hashable {
+    public var dim: String
+    public var label: String
+    public var units: [UnitChoiceInfo]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(dim: String, label: String, units: [UnitChoiceInfo]) {
+        self.dim = dim
+        self.label = label
+        self.units = units
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension UnitSettingItemInfo: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeUnitSettingItemInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UnitSettingItemInfo {
+        return
+            try UnitSettingItemInfo(
+                dim: FfiConverterString.read(from: &buf), 
+                label: FfiConverterString.read(from: &buf), 
+                units: FfiConverterSequenceTypeUnitChoiceInfo.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: UnitSettingItemInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.dim, into: &buf)
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterSequenceTypeUnitChoiceInfo.write(value.units, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingItemInfo_lift(_ buf: RustBuffer) throws -> UnitSettingItemInfo {
+    return try FfiConverterTypeUnitSettingItemInfo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeUnitSettingItemInfo_lower(_ value: UnitSettingItemInfo) -> RustBuffer {
+    return FfiConverterTypeUnitSettingItemInfo.lower(value)
+}
+
+
+/**
  * A user function, `f(x) = x^2`.
  */
 public struct UserFn: Equatable, Hashable {
@@ -5770,6 +5949,81 @@ fileprivate struct FfiConverterSequenceTypeTextSpan: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeUnitChoiceInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UnitChoiceInfo]
+
+    public static func write(_ value: [UnitChoiceInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnitChoiceInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UnitChoiceInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UnitChoiceInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnitChoiceInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUnitSettingGroupInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UnitSettingGroupInfo]
+
+    public static func write(_ value: [UnitSettingGroupInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnitSettingGroupInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UnitSettingGroupInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UnitSettingGroupInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnitSettingGroupInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeUnitSettingItemInfo: FfiConverterRustBuffer {
+    typealias SwiftType = [UnitSettingItemInfo]
+
+    public static func write(_ value: [UnitSettingItemInfo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUnitSettingItemInfo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UnitSettingItemInfo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UnitSettingItemInfo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUnitSettingItemInfo.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryStringDouble: FfiConverterRustBuffer {
     public static func write(_ value: [String: Double], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -5989,6 +6243,27 @@ public func evaluateJson(request: String)throws  -> String  {
 })
 }
 /**
+ * `sanitizeDefaultUnits`: only Settings dimensions, each with a unit of that dimension.
+ */
+public func sanitizeDefaultUnits(units: [String: String]) -> [String: String]  {
+    return try!  FfiConverterDictionaryStringString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_sanitize_default_units(
+        FfiConverterDictionaryStringString.lower(units),uniffiCallStatus
+    )
+})
+}
+/**
+ * `UNIT_SETTING_GROUPS`: the default-unit choices Settings offers, in order. "Automatic" (no entry) is the UI's.
+ */
+public func unitSettingGroups() -> [UnitSettingGroupInfo]  {
+    return try!  FfiConverterSequenceTypeUnitSettingGroupInfo.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_unit_setting_groups(uniffiCallStatus
+    )
+})
+}
+/**
  * Settings plus history context in one `EvalOptions`; the context wins where both say something.
  */
 public func mergedOptions(options: EvalOptions, context: EvalContext) -> EvalOptions  {
@@ -6026,6 +6301,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_evaluate_json() != 64081) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_sanitize_default_units() != 18631) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_unit_setting_groups() != 15277) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_merged_options() != 32156) {

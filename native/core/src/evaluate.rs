@@ -341,6 +341,17 @@ impl<'o> Sheet<'o> {
         }
     }
 
+    // WP-MEASURE: the TS `ctx` that `measure` reads
+    fn measure_ctx(&self) -> stubs::MeasureContext<'_> {
+        stubs::MeasureContext {
+            ans: self.last_ans,
+            angle_mode: self.angle_mode,
+            variables: Some(&self.variables),
+            functions: Some(&self.functions),
+            measures: Some(&self.measures),
+        }
+    }
+
     fn plain(&self, keep_units: bool) -> PlainContext {
         PlainContext {
             sci: self.sci(),
@@ -522,15 +533,30 @@ impl<'o> Sheet<'o> {
             self.quantities.remove(variable);
             self.measures.remove(variable);
         }
+        // WP-MATRIX: an entry like `sin(30)` is read by the calculator (`scalar` in the TS)
+        let scalar_ctx = PlainContext {
+            sci: self.sci(),
+            default_units: Default::default(),
+            keep_units: false,
+        };
+        let scalar = |text: &str| {
+            try_plain_math(text, &scalar_ctx)
+                .filter(|v| v.kind == ValueKind::Number && v.unit.is_none())
+                .map(|v| v.n)
+        };
         if !unit_self
             && let Some(m) = stubs::matrix_answer(
                 &with_quantities(
                     assign.as_ref().map_or(&trimmed, |(_, e)| e),
                     &self.quantities,
                 ),
-                &self.variables,
-                self.sig_figs,
-                self.fraction_mode,
+                &stubs::MatrixOptions {
+                    variables: &self.variables,
+                    sig_figs: self.sig_figs,
+                    fraction_mode: self.fraction_mode,
+                    functions: &fn_names,
+                    scalar: Some(&scalar),
+                },
             )
         {
             return self.matrix_line(raw, m, assign.as_ref().map(|(v, _)| v.as_str()));
@@ -625,7 +651,27 @@ impl<'o> Sheet<'o> {
         variable: Option<&str>,
         near: Option<&str>,
     ) -> Option<LineResult> {
-        let u = stubs::solve_with_units_one(eq, variable, near)?;
+        // ---- WP-SOLVE: solveWithUnitsOne's ctx ----
+        let names: Vec<String> = (self.variables.keys())
+            .chain(self.quantities.keys())
+            .chain(self.functions.keys())
+            .cloned()
+            .collect();
+        let ctx = stubs::UnitCtx {
+            solve: SolveContext {
+                ans: self.last_ans,
+                angle_mode: self.angle_mode,
+                variables: &self.variables,
+                functions: &self.functions,
+                rationalize: self.options.rationalize,
+            },
+            variable,
+            near,
+            names: &names,
+            defaults: &self.options.default_units,
+            sig_figs: self.sig_figs,
+        };
+        let u = stubs::solve_with_units_one(eq, &ctx)?;
         let Some(info) = u.info else {
             return Some(LineResult {
                 display: u.display,
@@ -737,14 +783,19 @@ impl<'o> Sheet<'o> {
         let mut value: Option<Value>;
         let mut calc: Option<stubs::CalculusResult> = None;
         let mut sum: Option<stubs::SumAnswer> = None;
+        // WP-CALCULUS: calculus reads the sheet's context
+        let calc_ctx = stubs::CalcContext {
+            sci: self.sci(),
+            time_varying: self.options.time_varying.clone(),
+        };
         if !plus_minus {
-            calc = stubs::evaluate_calculus(&expr);
+            calc = stubs::evaluate_calculus(&expr, &calc_ctx);
             // a scalar or other term beside an integral is not a calculus line, so the integral is folded in
             for _ in 0..8 {
                 if calc.as_ref().is_some_and(|c| c.value.is_some()) {
                     break;
                 }
-                match stubs::embed_integrals(&expr) {
+                match stubs::embed_integrals(&expr, &calc_ctx) {
                     stubs::Embedded::Failed => {
                         calc = Some(stubs::CalculusResult {
                             value: None,
@@ -757,7 +808,7 @@ impl<'o> Sheet<'o> {
                     stubs::Embedded::Nothing => break,
                     stubs::Embedded::Rewritten(next) => {
                         expr = next;
-                        calc = stubs::evaluate_calculus(&expr);
+                        calc = stubs::evaluate_calculus(&expr, &calc_ctx);
                     }
                 }
             }
@@ -766,7 +817,7 @@ impl<'o> Sheet<'o> {
             sum = stubs::sum_answer(&expr);
         }
         let m = if plus_minus {
-            stubs::measure(&expr, &self.measures)
+            stubs::measure(&expr, &self.measure_ctx())
         } else {
             None
         };
@@ -832,9 +883,9 @@ impl<'o> Sheet<'o> {
         } else if value.unit.is_some() || value.meas.is_some() {
             value.meas.clone()
         } else {
-            stubs::measure(&expr, &self.measures)
+            stubs::measure(&expr, &self.measure_ctx())
                 .filter(|m| (m.v - value.n).abs() <= 1e-9 * value.n.abs().max(1.0))
-                .map(|m| m.meas)
+                .and_then(|m| m.meas)
         };
         // a ± that went in and didn't come out would show a bare number as if exact
         if meas.as_ref().and_then(|m| m.unc).is_none_or(|u| u == 0.0)

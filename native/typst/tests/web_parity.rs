@@ -39,6 +39,28 @@ fn web_rounding(pt: f32) -> f64 {
     (pt as f64).ceil()
 }
 
+/// The core's port of `typstMath` (WP-NOTATION) builds the documents the native app renders: the same text as
+/// the TS for every corpus case, and the same macros.
+#[test]
+fn the_core_builds_the_same_documents() {
+    use qcalc_core::app::typst_math::{TYPST_PREAMBLE, typst_document};
+    assert_eq!(qcalc_typst::MACROS, TYPST_PREAMBLE);
+    let text = include_str!("corpus.jsonl");
+    let mut differ = Vec::new();
+    for line in text.lines().filter(|l| !l.is_empty()) {
+        let v: serde_json::Value = serde_json::from_str(line).unwrap();
+        let s = |k: &str| v[k].as_str().unwrap();
+        let got = typst_document(s("expr"), s("answer"), s("solvedFor"));
+        if got.as_deref() != Some(s("doc")) {
+            differ.push(format!("{:?}: {got:?}", s("expr")));
+        }
+    }
+    for d in differ.iter().take(10) {
+        println!("  {d}");
+    }
+    assert!(differ.is_empty(), "{} documents differ", differ.len());
+}
+
 #[test]
 fn compiles_what_the_web_compiles_at_the_same_size() {
     let renderer = Renderer::new();

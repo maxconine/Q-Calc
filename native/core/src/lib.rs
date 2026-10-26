@@ -34,6 +34,26 @@ pub mod angles;
 pub mod dots;
 pub mod letters;
 
+// ---- WP-PHRASES ----
+pub mod phrases;
+// ---- WP-MATRIX ----
+pub mod matrix;
+
+// ---- WP-MEASURE ----
+pub mod measure;
+// ---- WP-SOLVE ----
+pub mod isolate;
+pub mod solve;
+pub mod system;
+pub mod system_numeric;
+pub mod unit_solve;
+// ---- WP-CALCULUS ----
+pub mod calculus;
+
+// ---- WP-CHEM ----
+pub mod chem;
+pub mod jsstr;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 

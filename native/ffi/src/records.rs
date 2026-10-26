@@ -88,7 +88,7 @@ pub struct MeasInfo {
 impl From<&Meas> for MeasInfo {
     fn from(m: &Meas) -> Self {
         MeasInfo {
-            sig: m.sig.map(|s| s as i32),
+            sig: m.sig, // WP-MEASURE: Meas.sig is i32
             dp: m.dp,
             unc: m.unc,
             unc_digits: m.unc_digits.clone(),
@@ -99,7 +99,7 @@ impl From<&Meas> for MeasInfo {
 impl From<&MeasInfo> for Meas {
     fn from(m: &MeasInfo) -> Self {
         Meas {
-            sig: m.sig.and_then(|s| u32::try_from(s).ok()),
+            sig: m.sig, // WP-MEASURE: Meas.sig is i32
             dp: m.dp,
             unc: m.unc,
             unc_digits: m.unc_digits.clone(),

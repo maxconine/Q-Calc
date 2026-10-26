@@ -186,7 +186,10 @@ impl TypstRenderer {
     #[uniffi::constructor]
     pub fn new() -> Arc<Self> {
         Arc::new(Self {
-            inner: Arc::new(Renderer::new()),
+            // the macros from the core's typstMath port, the same text `typst_source` documents import
+            inner: Arc::new(Renderer::with_macros(
+                qcalc_core::app::typst_math::TYPST_PREAMBLE,
+            )),
         })
     }
 
