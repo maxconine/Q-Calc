@@ -10,7 +10,7 @@ import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
 import { inferParens } from '../engine/parens'
 import { dualLabel } from '../engine/simplify'
-import { inLadderUnit, isImproperUnitConversion, stepPrefix } from '../engine/units'
+import { canStepPrefix, inLadderUnit, isImproperUnitConversion, stepPrefix } from '../engine/units'
 import type { SolveInfo, UserFunction, Value } from '../engine/types'
 import { useClosedForm } from '../lib/closedForm'
 import { applyTheme } from '../lib/theme'
@@ -638,6 +638,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       answer: display,
       variable: fromJs && live?.kind === 'assignment' ? live.variable : undefined,
       unit: Boolean(steppableRef.current?.unit),
+      prefix: canStepPrefix(steppableRef.current),
       chained,
       angleMode: settings.angleMode,
       fractionMode: settings.fractionMode,

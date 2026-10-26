@@ -3,7 +3,7 @@ import { expectQty, shown } from './audit.helpers'
 import { evaluateLine, evaluateSheet } from './evaluate'
 import { formatValue } from './format'
 import type { Value } from './types'
-import { inLadderUnit, sanitizeDefaultUnits, siQuantity, stepPrefix, tryConvert, UNIT_SETTING_GROUPS } from './units'
+import { canStepPrefix, inLadderUnit, sanitizeDefaultUnits, siQuantity, stepPrefix, tryConvert, UNIT_SETTING_GROUPS } from './units'
 
 type Case = {
   name: string
@@ -2224,6 +2224,20 @@ describe('stepPrefix', () => {
     for (let i = 0; i < 8; i++) v = up(v)
     expect(show(v)).toBe('1e-24 Ym')
     expect(up(v)).toBeNull()
+  })
+
+  it('canStepPrefix: only values on a prefix ladder, so no ⌥↑ hint after an inverse trig answer', () => {
+    expect(canStepPrefix(at('98 N to N'))).toBe(true)
+    expect(canStepPrefix(at('2.5 kg to kg'))).toBe(true)
+    for (const text of ['30 deg to deg', '0.5 rad to rad', '5 °C to °C', '3 mi to mi']) expect(canStepPrefix(at(text)), text).toBe(false)
+    for (const mode of ['deg', 'rad'] as const) {
+      for (const expr of ['asin(0.5)', 'acos(0.2)', 'atan(1)']) {
+        const value = evaluateSheet([expr], { angleMode: mode })[0]!.value
+        expect(canStepPrefix(value ?? undefined), `${expr} ${mode}`).toBe(false)
+      }
+    }
+    expect(canStepPrefix({ kind: 'number', n: 5 })).toBe(false)
+    expect(canStepPrefix(undefined)).toBe(false)
   })
 
   it('re-expresses a value in a unit from the same ladder', () => {
