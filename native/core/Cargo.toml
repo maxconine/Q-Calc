@@ -8,6 +8,9 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+dashu-base.workspace = true
+dashu-float.workspace = true
+dashu-int.workspace = true
 fancy-regex.workspace = true
 num-bigint.workspace = true
 num-integer.workspace = true
