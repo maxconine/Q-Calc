@@ -10,6 +10,7 @@ struct Case {
     doc: String,
     web_ok: bool,
     web_size: (f64, f64),
+    web_error: String,
 }
 
 fn corpus() -> Vec<Case> {
@@ -27,14 +28,15 @@ fn corpus() -> Vec<Case> {
                     web["width"].as_f64().unwrap_or(0.0),
                     web["height"].as_f64().unwrap_or(0.0),
                 ),
+                web_error: web["error"].as_str().unwrap_or("").to_string(),
             }
         })
         .collect()
 }
 
-/// typst.ts writes the page size rounded to whole points (`width="93.000"`).
+/// typst.ts writes the page size rounded up to whole points (`width="93.000"` for 92.4 pt).
 fn web_rounding(pt: f32) -> f64 {
-    (pt as f64).round()
+    (pt as f64).ceil()
 }
 
 #[test]
@@ -56,7 +58,16 @@ fn compiles_what_the_web_compiles_at_the_same_size() {
                     ));
                 }
             }
-            (Err(Error::Compile { .. }), false) => {}
+            // the same first error the web's diagnostics give
+            (Err(Error::Compile { message }), false) => {
+                let first = message.lines().next().unwrap_or("");
+                if first != case.web_error {
+                    mismatched.push(format!(
+                        "{:?}: native error {first:?}, web {:?}",
+                        case.expr, case.web_error
+                    ));
+                }
+            }
             (native, web) => mismatched.push(format!(
                 "{:?}: native {native:?}, web compiled: {web}",
                 case.expr
