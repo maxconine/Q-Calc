@@ -594,7 +594,7 @@ fn is_typed(unc: f64, digits: Option<&str>) -> bool {
 /// `10.0 ± 0.7`: the uncertainty at one sig fig, or two when it leads with a 1 (`5.0 ± 0.14`), the value to the
 /// same place. A ± still as typed keeps exactly its typed digits (`10 ± 1`, `2.00 ± 0.35`).
 pub fn format_uncertain(v: f64, unc: f64, unc_digits: Option<&str>) -> Option<String> {
-    if !v.is_finite() || !(unc > 0.0) || !unc.is_finite() {
+    if !v.is_finite() || unc.is_nan() || unc <= 0.0 || !unc.is_finite() {
         return None;
     }
     static LEADS_ONE: Lazy = Lazy::new(|| js(r"^[0.]*1", ""));
