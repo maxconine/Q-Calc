@@ -90,6 +90,10 @@ fn line_json(r: &LineResult) -> Json {
 
 /// Replays one call of TS function `name` from `module` with recorder-encoded `args`.
 pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
+    // ---- WP-APP-LOGIC: src/lib modules, with blankReason's evalNonBlank callback rebuilt ----
+    if let Some(out) = crate::app::golden::dispatch(module, name, args) {
+        return out;
+    }
     if args.iter().any(has_callback) {
         return Outcome::Unreplayable;
     }
