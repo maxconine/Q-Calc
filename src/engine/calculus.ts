@@ -534,7 +534,9 @@ function inline(def: UserFunction, args: N[], ctx: TreeCtx): N | null {
 }
 
 function substitute(n: N, map: Record<string, N>): N {
-  if (n.type === 'SymbolNode' && n.name! in map) return map[n.name!]!
+  // a fresh copy at each use: mathjs's product rule tells factors apart by identity, so a shared node made
+  // f(t) = t*t differentiate as 1*1 + 1*1
+  if (n.type === 'SymbolNode' && n.name! in map) return asN(asMath(map[n.name!]!).cloneDeep())
   if (n.type === 'OperatorNode') return op(n.op!, fnName(n), n.args!.map((a) => substitute(a, map)))
   if (n.type === 'FunctionNode') return call(fnName(n), n.args!.map((a) => substitute(a, map)))
   return n
