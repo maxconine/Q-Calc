@@ -7,6 +7,8 @@
 //! TS throws (a zero denominator, a singular radical) a thread-local flag is set instead and the public entry
 //! points answer None, as the throw leaves nothing behind.
 
+#![allow(clippy::needless_range_loop)] // index loops mirror the TS
+
 use std::cell::{Cell, RefCell};
 
 use num_bigint::BigInt;
@@ -429,14 +431,14 @@ impl RadField {
         }
         out
     }
-    fn from_sqrt(&self, a: &Rat) -> Option<Vec<Rat>> {
+    fn sqrt_of(&self, a: &Rat) -> Option<Vec<Rat>> {
         let s = sqrt_rat(a)?;
         let i = self.idx(&s.rad);
         let mut out = vec![r0(); self.n()];
         out[i] = s.c;
         Some(out)
     }
-    fn from_rat(&self, a: &Rat) -> Vec<Rat> {
+    fn rat_of(&self, a: &Rat) -> Vec<Rat> {
         let mut out = vec![r0(); self.n()];
         out[0] = a.clone();
         out
@@ -1263,7 +1265,9 @@ fn walk_aff<F: Field>(
 }
 
 /// Gauss–Jordan: the pivot columns and reduced rows, or None for inconsistent.
-fn eliminate<F: Field>(rows: &[Vec<F::C>], f: &F) -> Option<(Vec<usize>, Vec<Vec<F::C>>)> {
+type Reduced<C> = (Vec<usize>, Vec<Vec<C>>);
+
+fn eliminate<F: Field>(rows: &[Vec<F::C>], f: &F) -> Option<Reduced<F::C>> {
     let mut a: Vec<Vec<F::C>> = rows.to_vec();
     let m = a.len();
     if m == 0 {
@@ -1420,10 +1424,10 @@ fn const_rad(node: &Node, field: &RadField) -> Option<Vec<Rat>> {
     if fn_name(node) == Some("sqrt") {
         let arg = *args_of(node).first()?;
         let r = const_rat(arg)?;
-        return field.from_sqrt(&r);
+        return field.sqrt_of(&r);
     }
     if let Some(p) = const_rat(node) {
-        return Some(field.from_rat(&p));
+        return Some(field.rat_of(&p));
     }
     let (op, args) = op_of(node)?;
     if (op == "-" || op == "+") && args.len() == 1 {

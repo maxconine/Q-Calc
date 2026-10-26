@@ -69,13 +69,12 @@ pub fn parse_isolate(text: &str) -> Option<IsolateCmd> {
             jsre::group(&c, 1).to_string(),
             jsre::group(&c, 2).to_string(),
         )
-    } else if let Some(c) = caps(&TRAIL, &s) {
+    } else {
+        let c = caps(&TRAIL, &s)?;
         (
             jsre::group(&c, 2).to_string(),
             jsre::group(&c, 1).to_string(),
         )
-    } else {
-        return None;
     };
     let body = body.trim();
     if jsre::test(&REJECT, body) {
@@ -119,7 +118,8 @@ pub fn parse_named_solve(text: &str) -> Option<NamedSolve> {
                 jsre::group(&c, 2).to_string(),
                 jsre::group(&c, 1).to_string(),
             )
-        } else if let Some(c) = caps(&FOR_TRAIL, &s) {
+        } else {
+            let c = caps(&FOR_TRAIL, &s)?;
             if c.get(1).is_none() && !jsre::group(&c, 2).contains('=') {
                 return None;
             }
@@ -127,8 +127,6 @@ pub fn parse_named_solve(text: &str) -> Option<NamedSolve> {
                 jsre::group(&c, 3).to_string(),
                 jsre::group(&c, 2).to_string(),
             )
-        } else {
-            return None;
         };
     if variable.is_empty() || eq.is_empty() {
         return None;
@@ -445,11 +443,11 @@ fn unwind(node: &N, others: Vec<N>, v: &str) -> Option<Vec<N>> {
                                     .flat_map(|y| [root(y.clone()), neg(root(y))])
                                     .collect();
                             }
-                            Some(k) if k == 3.0 => {
+                            Some(3.0) => {
                                 others =
                                     others.into_iter().map(|y| call("cbrt", vec![y])).collect();
                             }
-                            Some(k) if k == 0.5 => {
+                            Some(0.5) => {
                                 others = others.into_iter().map(|y| bin('^', y, c(2.0))).collect();
                             }
                             _ => {

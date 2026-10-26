@@ -452,7 +452,7 @@ impl Budget {
         }
         let e = self.evals.get() + 1;
         self.evals.set(e);
-        if e > MAX_EVALS || (e % 64 == 0 && self.work.over()) {
+        if e > MAX_EVALS || (e.is_multiple_of(64) && self.work.over()) {
             self.failed.set(true);
             return false;
         }
@@ -1323,7 +1323,7 @@ impl Solver<'_> {
         let lo = pair.first().copied().unwrap_or(f64::NAN);
         let hi = pair.get(1).copied().unwrap_or(f64::NAN);
         let gap = hi - lo;
-        if !(gap > 0.0) {
+        if gap.is_nan() || gap <= 0.0 {
             return None;
         }
         let ys: Vec<Option<f64>> = [lo - gap, (lo + hi) / 2.0, hi + gap]

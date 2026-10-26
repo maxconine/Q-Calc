@@ -6,6 +6,8 @@
 //! negative square root is a Complex, which mathjs never turns back into a number by itself. Values here are a
 //! double or a complex; any complex answer is "not a number", as `typeof r !== 'number'` says in the TS.
 
+#![allow(clippy::needless_range_loop)] // index loops mirror the TS
+
 use serde_json::{Value as Json, json};
 
 use crate::eval::complex::C;
@@ -238,7 +240,8 @@ fn mathjs_fn(name: &str, args: &[Pv]) -> Res {
     }
 }
 
-/// `node.compile().evaluate(scope)` on the plain `math` instance.
+/// `node.compile().evaluate(scope)` on the plain `math` instance; Err is any throw.
+#[allow(clippy::result_unit_err)]
 pub fn eval_plain(node: &Node, vars: &dyn Fn(&str) -> Option<f64>, fns: Overrides<'_>) -> Res {
     match node {
         Node::Constant(Constant::Number { value, .. }) => Ok(Pv::R(*value)),
