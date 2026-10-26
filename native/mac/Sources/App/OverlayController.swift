@@ -87,7 +87,10 @@ final class OverlayController: NSObject {
         self.model = model
         super.init()
         model.onHide = { [weak self] why in self?.hide(because: why) }
-        model.onSettings = { [weak self] in self?.onSettings?() }
+        model.onSettings = { [weak self] in
+            track("settings.open")
+            self?.onSettings?()
+        }
         model.onPeriodic = { [weak self] in
             guard let self else { return }
             self.periodic.show(SheetData.shared.elements, bar: self.barSpot())

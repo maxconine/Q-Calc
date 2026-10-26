@@ -165,6 +165,7 @@ final class BarModel: ObservableObject {
 
     private func settingsChanged() {
         syncSettings()
+        if settings.shareUsage != lastShareUsage { lastShareUsage = settings.shareUsage; Analytics.shared.setSharing(settings.shareUsage) }
         refreshRecent()
         evaluateLive()
     }
@@ -193,6 +194,8 @@ final class BarModel: ObservableObject {
         commandMessage = nil
         unitOffer = nil
         formIndex = 0
+        prefixShown = nil
+        prefixValue = nil
         forms = []
         copied = false
         completion = nil
@@ -211,6 +214,7 @@ final class BarModel: ObservableObject {
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
             commandMessage = command.hint(messaging: Messages.shared)
+            if command == .help, !helpShown { track("help") }
             helpShown = command == .help
             if case let .graph(body) = command { showGraph(body) } else { graph = nil }
             setLive(.blank, for: typed)
@@ -284,6 +288,7 @@ final class BarModel: ObservableObject {
     }
 
     private var squiggleTimer: Timer?
+    private lazy var lastShareUsage = AppSettings.shared.shareUsage
     /// the line a unit was offered for, and what ↵ again makes it
     private var unitOffer: (typed: String, filled: String)?
 
@@ -348,6 +353,7 @@ final class BarModel: ObservableObject {
 
     /// The answer the slot shows and ⌘C copies: the cycled form, else exact or approximate per the setting.
     var shownAnswer: String {
+        if let prefixShown { return prefixShown }
         if formIndex > 0, forms.indices.contains(formIndex) { return forms[formIndex] }
         if settings.answerForm == "exact", let exact, !exact.isEmpty { return exact }
         return live.display
@@ -386,6 +392,7 @@ final class BarModel: ObservableObject {
     /// same cycle built here: the decimal, the exact form, a fraction and scientific.
     func cycleForms(back: Bool = false) {
         guard !live.isBlank, let n = live.number else { return }
+        track("form.tab")
         if !forms.isEmpty {
             formIndex = (formIndex + (back ? forms.count - 1 : 1)) % forms.count
             return
@@ -444,6 +451,7 @@ final class BarModel: ObservableObject {
         case .periodic:
             clearLine()
             onPeriodic?()
+            track("periodic")
         case let .identities(id, section, _):
             clearLine()
             onIdentities?(id, section)
@@ -543,6 +551,7 @@ final class BarModel: ObservableObject {
             let (done, failHint, offer, span) = result
             if !done.saved, !leaving, self.text == typed {
                 self.hint = failHint ?? "nothing to save yet · finish the line, or esc to close"
+                track(offer != nil ? "error.unit" : "error.blank")
                 if let offer {
                     self.unitOffer = (typed, offer.filled)
                     self.decorations.offer = (offer.at, offer.text)
@@ -556,6 +565,9 @@ final class BarModel: ObservableObject {
                 self.deleted = nil
                 self.refreshRecent()
                 AppSettings.shared.mergeOnboarding(["commits": (AppSettings.shared.onboarding["commits"] ?? 0) + 1])
+                Analytics.shared.trackCalc(expr: typed, graph: typed.lowercased().hasPrefix("graph"), fn: done.row?.kind == .function,
+                                           solve: done.row?.solve != nil, assign: done.row?.kind == .definition,
+                                           unit: done.row?.quantity != nil, chained: self.chained)
             }
             guard !leaving, self.text == typed else { return }
             if done.saved {
@@ -672,6 +684,7 @@ final class BarModel: ObservableObject {
     }
 
     private func finishRowInsert(_ piece: String) {
+        track("history.insert")
         selected = nil
         tapeOpen = false
         insert(piece)
@@ -695,6 +708,7 @@ final class BarModel: ObservableObject {
 
     func undoDelete() -> Bool {
         guard let d = deleted else { return false }
+        track("history.undo")
         history.insert(d.row, at: d.index)
         rows = history.rows
         deleted = nil
@@ -709,6 +723,21 @@ final class BarModel: ObservableObject {
         selected = nil
         tapeOpen = false
         hint = "history cleared"
+    }
+
+    // MARK: - SI prefix (⌥↑ ⌥↓)
+
+    @Published private(set) var prefixShown: String?
+    private var prefixValue: Any?
+
+    /// onPrefixStep: the answer one SI prefix up or down (stepPrefix), shown until the line changes
+    func stepPrefix(_ dir: Int) {
+        let base: Any? = prefixValue ?? live.valueJson.flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) }
+        guard let base, let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
+              next["unitId"] != nil else { return }
+        prefixValue = next
+        prefixShown = logic.string("engine/format", "formatValue", [next, settings.significantFigures])
+        track("prefix.step")
     }
 
     // MARK: - undo (undo.ts: typing runs merge within UNDO_RUN_MS, symbol swaps don't break them)
@@ -759,6 +788,7 @@ final class BarModel: ObservableObject {
     func copyAnswer(_ value: String? = nil) {
         let shown = value ?? shownAnswer
         guard !shown.isEmpty else { return }
+        track("copy.answer")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(UnitlessCopy.copied(shown), forType: .string)
         flashCopied()
@@ -766,6 +796,7 @@ final class BarModel: ObservableObject {
 
     func copyLine() {
         guard !live.isBlank else { return }
+        track("copy.line")
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString("\(text) = \(shownAnswer)", forType: .string)
         flashCopied()
@@ -807,6 +838,11 @@ final class BarModel: ObservableObject {
             enter(option: flags.contains(.option))
             return true
         case kVK_UpArrow, kVK_DownArrow:
+            // ⌥↑ / ⌥↓ step the answer's SI prefix (stepPrefix)
+            if flags == [.option] {
+                stepPrefix(code == kVK_UpArrow ? 1 : -1)
+                return true
+            }
             guard flags.isEmpty else { return false }
             moveSelection(up: code == kVK_UpArrow)
             return true
@@ -900,6 +936,7 @@ final class BarModel: ObservableObject {
         restoreDraft()
         pullInbox()
         AppSettings.shared.mergeOnboarding(["opens": (AppSettings.shared.onboarding["opens"] ?? 0) + 1])
+        track("open")
     }
 
     func willHide() {

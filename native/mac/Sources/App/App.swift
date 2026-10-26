@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         overlay = OverlayController(model: model)
         overlay?.onSettings = { [weak self] in self?.showSettings() }
         overlay?.preload()
+        Analytics.shared.start(logic: model.logic)
         // the engine's first call pays for its lazy tables; do it now, off the main thread
         engine.submit(.forms, { $0.evaluate(lines: ["1+1"], options: defaultEvalOptions()) }) { _ in
             OverlayLog.note(String(format: "engine warm %.0f ms after process start", AppInfo.sinceProcessStart * 1000))

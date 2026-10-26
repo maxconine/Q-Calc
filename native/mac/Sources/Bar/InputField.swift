@@ -209,6 +209,11 @@ final class BarTextView: NSTextView {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard window?.firstResponder === self, !hasMarkedText() else { return super.performKeyEquivalent(with: event) }
         if onKey?(event) == true { return true }
+        // the bar has no Edit menu, so the editing keys are the field's own
+        if isCommandKey(event, "c", 8) { copy(nil); return true }
+        if isCommandKey(event, "x", 7) { cut(nil); return true }
+        if isCommandKey(event, "v", 9) { paste(nil); return true }
+        if isCommandKey(event, "a", 0) { selectAll(nil); return true }
         return super.performKeyEquivalent(with: event)
     }
 
@@ -217,6 +222,22 @@ final class BarTextView: NSTextView {
     override func insertTab(_ sender: Any?) {}
     override func insertBacktab(_ sender: Any?) {}
     override func cancelOperation(_ sender: Any?) { onEscape?() }
+
+    /// what a copy from the field puts on the pasteboard (copiedEquation: Typst math when "Copy Typst compatible" is on)
+    var formatCopy: ((String) -> String)?
+
+    override func copy(_ sender: Any?) {
+        let selected = (string as NSString).substring(with: selectedRange())
+        guard !selected.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(formatCopy?(selected) ?? selected, forType: .string)
+    }
+
+    override func cut(_ sender: Any?) {
+        copy(sender)
+        editKind = "deleteByCut"
+        insertText("", replacementRange: selectedRange())
+    }
 
     // plain text only, one line (cleanPastedText collapses line breaks)
     override func paste(_ sender: Any?) { pastePlain() }
@@ -328,6 +349,10 @@ struct InputField: NSViewRepresentable {
         model.fieldSelection = { [weak text] in
             guard let text else { return "" }
             return (text.string as NSString).substring(with: text.selectedRange())
+        }
+        text.formatCopy = { [weak model] s in
+            guard let model, AppSettings.shared.typstCopy else { return s }
+            return model.logic.string("lib/typstMath", "copiedEquation", [s, true]) ?? s
         }
         model.restoreField = { [weak text, weak model] value, sel in
             guard let text else { return }
