@@ -88,7 +88,7 @@ pub struct MeasInfo {
 impl From<&Meas> for MeasInfo {
     fn from(m: &Meas) -> Self {
         MeasInfo {
-            sig: m.sig.map(|s| s as i32),
+            sig: m.sig, // WP-MEASURE: Meas.sig is i32
             dp: m.dp,
             unc: m.unc,
             unc_digits: m.unc_digits.clone(),
@@ -99,7 +99,7 @@ impl From<&Meas> for MeasInfo {
 impl From<&MeasInfo> for Meas {
     fn from(m: &MeasInfo) -> Self {
         Meas {
-            sig: m.sig.and_then(|s| u32::try_from(s).ok()),
+            sig: m.sig, // WP-MEASURE: Meas.sig is i32
             dp: m.dp,
             unc: m.unc,
             unc_digits: m.unc_digits.clone(),
@@ -724,6 +724,8 @@ pub struct GraphResult {
     pub contours: Vec<ContourLevel>,
     /// A function of x and y, drawn as level curves.
     pub contour: bool,
+    /// WP-GRAPH: level curves with labels and a z readout (`contour: 'levels'`); false for an `f = g` curve.
+    pub contour_levels: bool,
     pub error: Option<String>,
     pub json: String,
 }
@@ -836,4 +838,20 @@ pub struct HintFacts {
 pub struct Hint {
     pub bit: u32,
     pub text: String,
+}
+
+// ---- WP-GRAPH ----
+
+/// One axis tick (`graphTicks`): its value and its label (`−0.5`, `π/2`, `90°`).
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct GraphTick {
+    pub value: f64,
+    pub label: String,
+}
+
+/// The x window a graph opens on (`graphHome`).
+#[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
+pub struct GraphWindow {
+    pub lo: f64,
+    pub hi: f64,
 }

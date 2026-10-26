@@ -1,27 +1,37 @@
 //! The `Engine` object (ARCHITECTURE.md §4, `native/QCalcCore/API.md`). Every call hops to the engine's
 //! 32 MB evaluation thread (`worker.rs`); the async calls go to the long-work pool with a `CancelToken`.
 //!
-//! The per-keystroke flow (`live`, `commit`, `chains`) follows `src/components/QuickCalc.tsx` (≈ lines 480–700
-//! and `commit`) until WP-APP-LOGIC's `app/live.rs` takes it over. Calls into code other packages are porting go
-//! through `bridge.rs` and answer as soon as those packages register their functions.
+//! The per-keystroke flow (`live`, `commit`, `chains`, `context_from_history`) is the core's
+//! `qcalc_core::app::live`; this file converts the records. Calls into code other packages are porting go through
+//! `bridge.rs` (and the core's `app::needs`) and answer as soon as those packages register their functions.
 
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 use qcalc_core::format::pretty_answer;
-use qcalc_core::jsre::{self, Lazy, js};
 use qcalc_core::simplify::dual_label;
-use qcalc_core::types::{EvaluateOptions, LineKind};
-use qcalc_core::units::is_improper_unit_conversion;
-use serde_json::{Map, Value as Json, json};
+use qcalc_core::types::EvaluateOptions;
+use serde_json::{Value as Json, json};
 
 use crate::bridge::{self, call};
 use crate::cancel::CancelToken;
-use crate::chain::{
-    ans_written_out, chained_expr, chained_history_expr, chains_from_answer,
-    insertable_history_answer, is_graph_command,
-};
-use crate::history::{self as hist, is_literal_quantity};
+use crate::chain::is_graph_command;
+use crate::history as hist;
+use qcalc_core::app::answer::AnswerForm as CoreForm;
+use qcalc_core::app::blank_reason as blank;
+use qcalc_core::app::chain as core_chain;
+use qcalc_core::app::completion;
+use qcalc_core::app::history_show::HistoryShow as CoreShow;
+use qcalc_core::app::live;
+use qcalc_core::types::LineResult;
+
+/// A core span as the record.
+fn span(s: blank::Span) -> Span {
+    Span {
+        start: s.start as u32,
+        end: s.end as u32,
+    }
+}
 use crate::jsstr;
 use crate::rates::{self, Rates};
 use crate::records::*;
@@ -42,31 +52,12 @@ pub(crate) struct State {
 
 // ---- small conversions ----
 
-fn options_json(o: &EvalOptions) -> Json {
-    serde_json::to_value(EvaluateOptions::from(o)).unwrap_or(Json::Null)
-}
-
-fn names_json(n: &CompletionNames) -> Json {
-    json!({ "variables": n.variables, "functions": n.functions, "ans": n.ans, "contacts": n.contacts })
-}
-
-fn undef() -> Json {
-    json!({ "$undef": true })
-}
-
 fn opt_string(v: Option<Json>) -> Option<String> {
     v.and_then(|v| v.as_str().map(str::to_string))
 }
 
 fn u32_of(v: &Json, key: &str) -> Option<u32> {
     v.get(key)?.as_f64().filter(|x| *x >= 0.0).map(|x| x as u32)
-}
-
-fn span_of(v: &Json) -> Option<Span> {
-    Some(Span {
-        start: u32_of(v, "start")?,
-        end: u32_of(v, "end")?,
-    })
 }
 
 fn graph_options_json(o: &GraphOptions, settings: &EvalOptions) -> Json {
@@ -203,26 +194,11 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
         },
         contour: v.get("contours").is_some_and(Json::is_array)
             || intent.get("contour").is_some_and(|c| !c.is_null()),
+        contour_levels: intent.get("contour").and_then(Json::as_str) == Some("levels"), // WP-GRAPH
         contours,
         error: v.get("error").and_then(Json::as_str).map(str::to_string),
         json: json.to_string(),
     })
-}
-
-/// `soulverAngleSafe` (`src/lib/nativeEval.ts`): a phrase can't be trusted with trig in degrees.
-fn angle_safe(expr: &str, radians: bool) -> bool {
-    static TRIG_CALL: Lazy = Lazy::new(|| {
-        js(
-            r"(?<![A-Za-z])(?:a|arc)?(?:sin|cos|tan|sec|csc|cot)(?![A-Za-z])",
-            "i",
-        )
-    });
-    radians || !jsre::test(&TRIG_CALL, expr)
-}
-
-/// `fnDefText` (`QuickCalc.tsx`).
-fn fn_def_text(f: &FunctionDef) -> String {
-    format!("{}({}) = {}", f.name, f.params.join(", "), f.body)
 }
 
 impl State {
@@ -242,54 +218,38 @@ impl State {
             .unwrap_or(Json::Null)
     }
 
-    // ---- bridged pieces ----
+    // ---- the bar: `qcalc_core::app::live` ----
 
-    fn looks_like_natural_language(&self, text: &str) -> bool {
-        call("lib/nativeEval", "looksLikeNaturalLanguage", &[json!(text)])
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false)
-    }
-
-    fn isolate_previous(&self, text: &str, previous: Option<&str>) -> Option<String> {
-        let prev = previous.map_or_else(undef, |p| json!(p));
-        opt_string(call(
-            "engine/isolate",
-            "isolatePrevious",
-            &[json!(text), prev],
-        ))
-    }
-
-    /// `withPhraseAnswer` (`src/lib/phraseLive.ts`) with the bar's merge (`mergeLiveAnswer`, no native answer).
-    fn phrase(
-        &self,
-        expr: &str,
-        js_display: &str,
-        sig_figs: u32,
-        now_ms: i64,
-    ) -> Option<(String, Option<f64>)> {
-        if jsstr::trim(expr).is_empty() || qcalc_core::stubs::is_calculus_input(expr) {
-            return None;
+    /// The core's request for one keystroke: settings and context merged, the chain and last row from the context.
+    fn core_request(&self, req: &LiveRequest) -> live::LiveRequest {
+        let settings = merge(&req.options, &req.context);
+        live::LiveRequest {
+            text: req.text.clone(),
+            options: (&settings).into(),
+            chain_answer: req
+                .context
+                .chain_answer
+                .as_ref()
+                .map(|c| core_chain::ChainAnswer {
+                    plain: c.plain.clone(),
+                    unit: c.unit,
+                }),
+            last_expr: req.context.last_expr.clone(),
+            phrases: req.phrases,
+            now_ms: req.now_ms as f64,
+            rates: self.rates_table(req.now_ms),
+            ..live::LiveRequest::default()
         }
-        if !js_display.is_empty() && !self.looks_like_natural_language(expr) {
-            return None;
-        }
-        let options = json!({
-            "now": bridge::date(now_ms),
-            "rates": self.rates_table(now_ms),
-            "sigFigs": sig_figs,
-        });
-        let answer = call("engine/phrases", "answerPhrase", &[json!(expr), options])?;
-        let display = answer.get("display")?.as_str()?.to_string();
-        Some((display, answer.get("n").and_then(Json::as_f64)))
     }
 
     pub(crate) fn completion(&self, text: &str, names: &CompletionNames) -> Option<String> {
-        opt_string(call(
-            "lib/completion",
-            "completionFor",
-            &[json!(text), names_json(names)],
-        ))
-        .filter(|s| !s.is_empty())
+        let names = completion::CompletionNames {
+            variables: names.variables.clone(),
+            functions: names.functions.clone(),
+            ans: names.ans,
+            contacts: names.contacts.clone(),
+        };
+        Some(completion::completion_for(text, &names)).filter(|s| !s.is_empty())
     }
 
     fn blank_reason_with(
@@ -302,288 +262,95 @@ impl State {
         if jsstr::trim(text).is_empty() {
             return None;
         }
-        let ok = bridge::eval_non_blank(&options_json(options), chained);
-        let names = json!({ "variables": names.variables, "functions": names.functions });
-        call("lib/blankReason", "blankReason", &[json!(text), ok, names])
-            .as_ref()
-            .and_then(span_of)
+        let options: EvaluateOptions = options.into();
+        let names = blank::Names {
+            variables: names.variables.clone(),
+            functions: names.functions.clone(),
+        };
+        blank::blank_reason(text, &live::evaluates(&options, chained), &names).map(span)
     }
-
-    fn context_names(context: &EvalContext, functions: &[String]) -> CompletionNames {
-        let mut fns: Vec<String> = context.functions.keys().cloned().collect();
-        fns.extend(functions.iter().cloned());
-        fns.sort();
-        fns.dedup();
-        let mut vars: Vec<String> = context.variables.keys().cloned().collect();
-        vars.sort();
-        CompletionNames {
-            variables: vars,
-            functions: fns,
-            ans: context.ans.is_some(),
-            contacts: Vec::new(),
-        }
-    }
-
-    // ---- the bar ----
 
     pub(crate) fn chains(&self, text: &str, context: &EvalContext) -> bool {
+        let chain = context
+            .chain_answer
+            .as_ref()
+            .map(|c| core_chain::ChainAnswer {
+                plain: c.plain.clone(),
+                unit: c.unit,
+            });
         !is_graph_command(text)
-            && self
-                .isolate_previous(text, context.last_expr.as_deref())
+            && qcalc_core::app::needs::isolate_previous(text, context.last_expr.as_deref())
                 .is_none()
-            && chains_from_answer(text, context.chain_answer.as_ref())
+            && core_chain::chains_from_answer(text, chain.as_ref())
     }
 
     pub(crate) fn live(&self, req: &LiveRequest) -> LiveAnswer {
-        let q = req.text.as_str();
-        let graph = is_graph_command(q);
-        let isolated = self.isolate_previous(q, req.context.last_expr.as_deref());
-        let chained = req.chained && !graph && isolated.is_none();
-        let expr = isolated.unwrap_or_else(|| {
-            if chained {
-                chained_expr(q)
-            } else {
-                q.to_string()
-            }
-        });
-        let settings = merge(&req.options, &req.context);
-        if graph {
-            // the graph panel labels the curve; the answer slot stays empty (`graph(…)` draws it)
-            return LiveAnswer::blank(&expr);
-        }
-        let r = qcalc_core::evaluate_line(&expr, &(&settings).into());
-        let js_display = if jsstr::trim(q).is_empty() {
+        let a = live::live(&self.core_request(req));
+        // the graph panel labels the curve; the answer slot stays empty
+        let graph = matches!(a.command, Some(live::LiveCommand::Graph));
+        let display = if graph {
             String::new()
         } else {
-            r.display.clone()
+            a.display.clone()
         };
-        let js_n = if js_display.is_empty() {
-            None
-        } else {
-            number_of(&r)
-        };
-        let phrase = (req.phrases && !chained && angle_safe(q, settings.angle_radians))
-            .then(|| self.phrase(q, &js_display, settings.sig_figs, req.now_ms))
-            .flatten();
-        let (display, number, from_phrase) = match phrase {
-            Some((d, n)) => (d, n, true),
-            None => (js_display.clone(), js_n, false),
-        };
-        let exact = if js_display.is_empty() {
-            None
-        } else {
-            r.exact.clone()
-        };
-        let from_js = !display.is_empty() && display == js_display;
-        let value = r.value.as_ref().filter(|_| from_js);
-        let blank = if display.is_empty()
-            && !jsstr::trim(q).is_empty()
-            && !self.looks_like_natural_language(q)
-        {
-            let names = Self::context_names(&req.context, &[]);
-            self.blank_reason_with(q, &settings, &names, chained)
-        } else {
-            None
-        };
+        let line = a.line.as_ref();
+        let from_js = !display.is_empty() && line.is_some_and(|l| l.display == display);
+        let from_line = |f: bool| line.filter(|_| f);
         LiveAnswer {
             pretty: pretty_answer(&display),
-            dual_label: dual_label(exact.as_deref(), &display),
-            exact,
-            number,
-            unit: value.and_then(|v| v.unit.clone()),
-            kind: if from_js {
-                r.kind.into()
-            } else {
-                AnswerKind::Expression
-            },
-            blank,
-            completion: self.completion(q, &Self::context_names(&req.context, &[])),
-            solve: r
-                .solve
-                .as_ref()
-                .filter(|_| from_js && r.kind == LineKind::Solve)
-                .map(SolveInfo::from),
-            closed_form_job: r
-                .closed_form
+            dual_label: dual_label(a.exact.as_deref(), &display),
+            exact: a.exact.clone(),
+            number: a.number,
+            unit: a.unit.clone(),
+            kind: from_line(from_js).map_or(AnswerKind::Expression, |l| l.kind.into()),
+            blank: a.squiggle.map(span),
+            completion: Some(a.completion.clone()).filter(|c| !c.is_empty()),
+            solve: a.solve.as_ref().map(SolveInfo::from),
+            closed_form_job: from_line(from_js)
+                .and_then(|l| l.closed_form.as_ref())
+                .map(Json::to_string),
+            time_letters: from_line(from_js)
+                .and_then(|l| l.time.as_ref())
+                .map(TimeLetters::from),
+            quantity: a.quantity.clone(),
+            variable: a.facts.variable.clone(),
+            meas: a.meas.as_ref().map(MeasInfo::from),
+            value_json: a
+                .value
                 .as_ref()
                 .filter(|_| from_js)
-                .map(Json::to_string),
-            time_letters: r.time.as_ref().filter(|_| from_js).map(TimeLetters::from),
-            quantity: r.quantity.clone().filter(|_| from_js),
-            variable: r
-                .variable
-                .clone()
-                .filter(|_| from_js && r.kind == LineKind::Assignment),
-            meas: r.meas.as_ref().filter(|_| from_js).map(MeasInfo::from),
-            value_json: value.and_then(|v| serde_json::to_string(v).ok()),
-            expr,
-            phrase: from_phrase,
-            improper: is_improper_unit_conversion(&display),
-            json: serde_json::to_string(&r).unwrap_or_default(),
+                .and_then(|v| serde_json::to_string(v).ok()),
+            expr: a.expr.clone(),
+            phrase: a.phrase,
+            improper: a.improper,
+            json: line.map_or_else(
+                || serde_json::to_string(&LineResult::blank(&a.expr)).unwrap_or_default(),
+                |l| serde_json::to_string(l).unwrap_or_default(),
+            ),
             display,
         }
     }
 
-    /// Enter (`commit` in `QuickCalc.tsx`, minus analytics, onboarding and the `sys` editor).
+    /// Enter: `qcalc_core::app::live::commit` with a fresh row id.
     pub(crate) fn commit(&self, req: &LiveRequest, history: &[HistoryRow]) -> CommitResult {
         let rows: Vec<Json> = history.iter().map(hist::row_json).collect();
-        let live = self.live(req);
-        let q = req.text.as_str();
-        let graph_q = is_graph_command(q);
-        let isolated = self.isolate_previous(q, req.context.last_expr.as_deref());
-        let chain = req.context.chain_answer.as_ref();
-        let chained = req.chained && !graph_q && isolated.is_none();
-        let tape = match chain {
-            Some(c) if chained => chained_history_expr(q, &c.plain),
-            _ => q.to_string(),
-        };
-        let written = isolated.unwrap_or_else(|| match chain {
-            Some(c) => ans_written_out(&tape, &c.plain),
-            None if chained => tape.clone(),
-            None => String::new(),
-        });
-        let expr = if written.is_empty() {
-            q.to_string()
+        let done = live::commit(&self.core_request(req), &rows, &hist::new_row_id());
+        let input = if done.saved {
+            String::new()
         } else {
-            written
-        };
-        let graph_fn = if graph_q {
-            let functions = json!({ "functions": EvaluateOptions::from(&merge(&req.options, &req.context)).functions });
-            call("engine/graph", "parseGraphIntent", &[json!(q), functions])
-                .and_then(|i| function_def_of(i.get("functionDef")))
-        } else {
-            None
-        };
-        let fn_def = graph_fn.or_else(|| {
-            qcalc_core::evaluate::parse_function_def(jsstr::trim(&expr))
-                .map(|(name, params, body)| FunctionDef { name, params, body })
-        });
-        let is_graph = is_graph_command(&expr);
-        let shown = if live.display.is_empty() {
-            fn_def.as_ref().map(fn_def_text).unwrap_or_default()
-        } else {
-            live.display.clone()
-        };
-        let unchanged = |hint: Option<String>| CommitResult {
-            saved: false,
-            row: None,
-            history: history.to_vec(),
-            input: q.to_string(),
-            hint,
-            json: "null".into(),
-        };
-        if jsstr::trim(&expr).is_empty() || shown.is_empty() || is_improper_unit_conversion(&shown)
-        {
-            return unchanged(self.enter_hint(req, &live, !rows.is_empty()));
-        }
-        // inline `graph f(x)=…` registers the function; plain `graph expr` is not saved
-        if is_graph && fn_def.is_none() {
-            return CommitResult {
-                saved: true,
-                row: None,
-                history: history.to_vec(),
-                input: String::new(),
-                hint: None,
-                json: "null".into(),
-            };
-        }
-        let mut row = Map::new();
-        row.insert("id".into(), json!(hist::new_row_id()));
-        match &fn_def {
-            Some(f) => {
-                let text = fn_def_text(f);
-                row.insert(
-                    "expr".into(),
-                    json!(if is_graph { text.clone() } else { expr.clone() }),
-                );
-                row.insert("display".into(), json!(text));
-                row.insert("kind".into(), json!("function"));
-                row.insert("fnName".into(), json!(f.name));
-                row.insert("fnParams".into(), json!(f.params));
-                row.insert("fnBody".into(), json!(f.body));
-            }
-            None => {
-                row.insert("expr".into(), json!(expr));
-                row.insert("display".into(), json!(shown));
-                if let Some(e) = live.exact.as_ref().filter(|e| **e != shown) {
-                    row.insert("exact".into(), json!(e));
-                }
-                if let Some(n) = live.number.filter(|n| n.is_finite()) {
-                    row.insert("n".into(), json!(n));
-                }
-                if let Some(m) = &live.meas {
-                    row.insert("meas".into(), hist::meas_json(m));
-                }
-                if let Some(q) = &live.quantity {
-                    row.insert("quantity".into(), json!(q));
-                }
-                if let Some(s) = &live.solve {
-                    row.insert("solve".into(), hist::solve_json(s));
-                }
-            }
-        }
-        let Some(mut next) = hist::slim_history_row(&Json::Object(row)) else {
-            return unchanged(None);
-        };
-        next["at"] = json!(req.now_ms);
-        let last = rows.last();
-        let same = last.is_some_and(|l| {
-            l.get("expr") == next.get("expr")
-                && l.get("display") == next.get("display")
-                && next.get("kind").and_then(Json::as_str) != Some("system")
-        });
-        let (saved_row, kept) = if same {
-            let mut refreshed = last.cloned().unwrap_or(Json::Null);
-            refreshed["at"] = json!(req.now_ms);
-            let mut kept = rows[..rows.len() - 1].to_vec();
-            kept.push(refreshed.clone());
-            (refreshed, kept)
-        } else {
-            let mut all = rows.clone();
-            all.push(next.clone());
-            (next, hist::persistable_history(&all))
+            req.text.clone()
         };
         CommitResult {
-            saved: true,
-            json: saved_row.to_string(),
-            row: Some(hist::row_from_json(&saved_row)),
-            history: kept.iter().map(hist::row_from_json).collect(),
-            input: String::new(),
-            hint: None,
+            saved: done.saved,
+            json: done
+                .row
+                .as_ref()
+                .map_or_else(|| "null".into(), Json::to_string),
+            row: done.row.as_ref().map(hist::row_from_json),
+            history: done.history.iter().map(hist::row_from_json).collect(),
+            input,
+            hint: done.hint,
         }
-    }
-
-    /// `blankEnterHint` (`QuickCalc.tsx`): why Enter saved nothing.
-    fn enter_hint(
-        &self,
-        req: &LiveRequest,
-        live: &LiveAnswer,
-        has_history: bool,
-    ) -> Option<String> {
-        static BARE_GRAPH: Lazy = Lazy::new(|| js(r"^\s*graph\s*$", "i"));
-        let q = req.text.as_str();
-        let graph = is_graph_command(q);
-        let settings = merge(&req.options, &req.context);
-        let chained = req.chained && !graph;
-        let span = if graph || jsstr::trim(q).is_empty() {
-            None
-        } else {
-            self.blank_reason_with(
-                q,
-                &settings,
-                &Self::context_names(&req.context, &[]),
-                chained,
-            )
-        };
-        let facts = json!({
-            "expr": q,
-            "span": span.map_or(Json::Null, |s| json!({ "start": s.start, "end": s.end })),
-            "improper": is_improper_unit_conversion(&live.display),
-            "naturalLanguage": self.looks_like_natural_language(q),
-            "bareGraph": graph && jsre::test(&BARE_GRAPH, q),
-            "history": has_history,
-        });
-        opt_string(call("lib/blankReason", "enterHint", &[facts]))
     }
 
     // ---- history ----
@@ -594,56 +361,49 @@ impl State {
         view: &HistoryView,
     ) -> EvalContext {
         let rows: Vec<Json> = rows.iter().map(hist::row_json).collect();
-        let scoped = &rows[hist::scope_start(&rows, view.show, view.now_ms as f64)..];
-        let functions = hist::history_functions(scoped)
-            .into_iter()
-            .filter_map(|(name, f)| {
-                let params = f
-                    .get("params")?
-                    .as_array()?
-                    .iter()
-                    .filter_map(Json::as_str)
-                    .map(str::to_string)
-                    .collect();
-                let body = f.get("body")?.as_str()?.to_string();
-                Some((name, UserFn { params, body }))
-            })
-            .collect();
-        let chain_answer = hist::last_answer_row(&rows).and_then(|last| {
-            let plain = insertable_history_answer(
-                last,
-                view.answer_form == AnswerForm::Exact,
-                f64::from(view.sig_figs),
-            );
-            let quantity = last.get("quantity").and_then(Json::as_str);
-            let n_ok = last
-                .get("n")
-                .and_then(Json::as_f64)
-                .is_some_and(f64::is_finite);
-            (!plain.is_empty() && (n_ok || is_literal_quantity(quantity))).then(|| ChainAnswer {
-                plain,
-                unit: last.get("quantity").is_some_and(|q| !q.is_null())
-                    && !is_literal_quantity(quantity),
-            })
-        });
+        let show = match view.show {
+            HistoryShow::Recent => CoreShow::Recent,
+            HistoryShow::Always => CoreShow::Always,
+            HistoryShow::Arrow => CoreShow::Arrow,
+        };
+        let form = match view.answer_form {
+            AnswerForm::Exact => CoreForm::Exact,
+            AnswerForm::Approx => CoreForm::Approx,
+        };
+        let c = live::context_from_history(
+            &rows,
+            show,
+            view.now_ms as f64,
+            form,
+            f64::from(view.sig_figs),
+        );
         EvalContext {
-            ans: hist::last_history_number(&rows),
-            variables: hist::history_variables(scoped).into_iter().collect(),
-            functions,
-            measures: hist::history_measures(scoped)
+            ans: c.ans,
+            variables: c.variables.into_iter().collect(),
+            functions: c
+                .functions
                 .into_iter()
-                .filter_map(|(k, m)| Some((k, hist::meas_from_json(&m)?)))
+                .map(|(k, f)| {
+                    (
+                        k,
+                        UserFn {
+                            params: f.params,
+                            body: f.body,
+                        },
+                    )
+                })
                 .collect(),
-            quantities: hist::history_quantities(scoped)
-                .into_iter()
-                .filter_map(|(k, q)| Some((k, q.as_str()?.to_string())))
+            measures: c
+                .measures
+                .iter()
+                .map(|(k, m)| (k.clone(), MeasInfo::from(m)))
                 .collect(),
-            chain_answer,
-            last_expr: rows
-                .last()
-                .and_then(|r| r.get("expr"))
-                .and_then(Json::as_str)
-                .map(str::to_string),
+            quantities: c.quantities.into_iter().collect(),
+            chain_answer: c.chain_answer.map(|a| ChainAnswer {
+                plain: a.plain,
+                unit: a.unit,
+            }),
+            last_expr: c.last_expr,
         }
     }
 
@@ -998,6 +758,119 @@ impl Engine {
         })
     }
 
+    // ---- WP-GRAPH: what GraphPanel needs besides `graph` ----
+
+    /// The x window a graph opens on (`graphHome`): ±10 (±360 for trig in degrees), narrowed to the roots and
+    /// extrema or framed by the bounds. Pass the panel's `aspect`.
+    pub fn graph_home(
+        &self,
+        input: String,
+        options: GraphOptions,
+        settings: EvalOptions,
+    ) -> GraphWindow {
+        let fallback = GraphWindow {
+            lo: -10.0,
+            hi: 10.0,
+        };
+        self.on(fallback, move |_| {
+            call(
+                "engine/graph",
+                "graphHome",
+                &[json!(input), graph_options_json(&options, &settings)],
+            )
+            .and_then(|v| {
+                Some(GraphWindow {
+                    lo: v.get(0)?.as_f64()?,
+                    hi: v.get(1)?.as_f64()?,
+                })
+            })
+            .unwrap_or(fallback)
+        })
+    }
+
+    /// Axis ticks (`graphTicks`): the x axis with the result's `angle_unit` and a target of 6, the y axis with
+    /// none and 5, as the panel draws them.
+    pub fn graph_ticks(
+        &self,
+        lo: f64,
+        hi: f64,
+        unit: Option<AngleUnit>,
+        target: u32,
+    ) -> Vec<GraphTick> {
+        self.on(Vec::new(), move |_| {
+            let unit = match unit {
+                Some(AngleUnit::Deg) => json!("deg"),
+                Some(AngleUnit::Rad) => json!("rad"),
+                None => Json::Null,
+            };
+            call(
+                "engine/graph",
+                "graphTicks",
+                &[json!(lo), json!(hi), unit, json!(target)],
+            )
+            .and_then(|v| {
+                v.as_array().map(|a| {
+                    a.iter()
+                        .filter_map(|t| {
+                            Some(GraphTick {
+                                value: t.get("value")?.as_f64()?,
+                                label: t.get("label")?.as_str()?.to_string(),
+                            })
+                        })
+                        .collect()
+                })
+            })
+            .unwrap_or_default()
+        })
+    }
+
+    /// The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
+    /// a contour plot. Cheap: it compiles without sampling.
+    pub fn graph_readout_y(
+        &self,
+        input: String,
+        x: f64,
+        options: GraphOptions,
+        settings: EvalOptions,
+    ) -> Option<f64> {
+        self.on(None, move |_| {
+            call(
+                "engine/graph",
+                "graphReadoutY",
+                &[
+                    json!(input),
+                    json!(x),
+                    graph_options_json(&options, &settings),
+                ],
+            )
+            .and_then(|v| v.as_f64())
+        })
+    }
+
+    /// A contour plot's `z(x, y)` inside its bounds (`buildGraph(input, …).z`); None for a curve.
+    pub fn graph_readout_z(
+        &self,
+        input: String,
+        x: f64,
+        y: f64,
+        options: GraphOptions,
+        settings: EvalOptions,
+    ) -> Option<f64> {
+        self.on(None, move |_| {
+            call(
+                "engine/graph",
+                "graphReadoutZ",
+                &[
+                    json!(input),
+                    json!(x),
+                    json!(y),
+                    graph_options_json(&options, &settings),
+                ],
+            )
+            .and_then(|v| v.as_f64())
+        })
+    }
+
     /// The Typst document for the preview (`typstDocument`).
     pub fn typst_source(&self, expr: String, answer: String, solved_for: String) -> Option<String> {
         self.on(None, move |_| {
@@ -1016,8 +889,16 @@ impl Engine {
         cancel: Arc<CancelToken>,
     ) -> Result<Option<String>, CoreError> {
         let job: Json = serde_json::from_str(&job_json).map_err(CoreError::bad)?;
+        // WP-CALCULUS: `closedForm.worker.ts` plus `lib/closedForm.ts`'s cache; budgeted by work, not time
         self.long(cancel, move |_| {
-            opt_string(call("engine/closedForm", "identifyJob", &[job]))
+            use qcalc_core::calculus::closed_form;
+            let job = closed_form::Job::from_json(&job)?;
+            if let Some(known) = closed_form::known_closed_form(&job.key()) {
+                return known;
+            }
+            let exact = closed_form::identify_job(&job, closed_form::DEFAULT_TICKS);
+            closed_form::remember_closed_form(&job, exact.clone());
+            exact
         })
         .await
     }

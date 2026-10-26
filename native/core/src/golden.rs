@@ -90,6 +90,10 @@ fn line_json(r: &LineResult) -> Json {
 
 /// Replays one call of TS function `name` from `module` with recorder-encoded `args`.
 pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
+    // ---- WP-APP-LOGIC: src/lib modules, with blankReason's evalNonBlank callback rebuilt ----
+    if let Some(out) = crate::app::golden::dispatch(module, name, args) {
+        return out;
+    }
     if args.iter().any(has_callback) {
         return Outcome::Unreplayable;
     }
@@ -275,6 +279,60 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
                 None => return Outcome::Unported,
             }
         }
+        // ---- WP-MATRIX: engine/matrix ----
+        ("engine/matrix", _) => match crate::matrix::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
+        // ---- WP-MEASURE: engine/measure ----
+        ("engine/measure", _) => match crate::measure::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
+        // ---- WP-SOLVE: engine/solve, engine/isolate, engine/system ----
+        ("engine/solve" | "engine/isolate" | "engine/system", _) => {
+            match crate::solve::golden_dispatch_module(module, name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
+        // ---- WP-CALCULUS: engine/calculus, engine/calcNumeric, engine/closedForm ----
+        ("engine/calculus" | "engine/calcNumeric" | "engine/closedForm", _) => {
+            match crate::calculus::golden::dispatch(module, name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
+        // ---- WP-CHEM: engine/chem, lib/elements ----
+        ("engine/chem" | "lib/elements", _) => match crate::chem::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
+        // ---- WP-NOTATION: LaTeX and Typst in, lib/typstMath, lib/radical, lib/bounds ----
+        ("engine/plainMath", "latexToAscii") => json!(crate::latex::latex_to_ascii(&s(0))),
+        ("engine/plainMath", "tryPlainMath") if args.len() == 1 => serde_json::to_value(
+            crate::plain_math::try_plain_math(&s(0), &Default::default()),
+        )
+        .unwrap_or(Json::Null),
+        ("engine/typstInput", "typstToAscii") => {
+            json!(crate::typst_input::typst_to_ascii(&s(0)))
+        }
+        ("lib/typstMath" | "lib/radical" | "lib/bounds", _) => {
+            match crate::app::typst_math::golden_dispatch(name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
+        // ---- WP-GRAPH: engine/graph ----
+        ("engine/graph", _) => match crate::graph::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
+        // ---- WP-SUMS: engine/sums ----
+        ("engine/sums", _) => match crate::sums::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
