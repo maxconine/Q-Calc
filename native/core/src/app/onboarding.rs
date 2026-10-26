@@ -196,6 +196,8 @@ pub struct HintFacts {
     pub answer: Option<String>,
     pub variable: Option<String>,
     pub unit: Option<bool>,
+    /// ⌥↑/⌥↓ would move the answer along a prefix ladder (not degrees, miles or °C).
+    pub prefix: Option<bool>,
     /// The input carries on from the last answer.
     pub chained: Option<bool>,
     pub angle_mode: Option<AngleMode>,
@@ -247,7 +249,7 @@ fn rule(bit: u32, f: &HintFacts) -> Option<(HintOn, String)> {
             };
             (HintOn::Pause, text.into())
         }
-        64 if flag(f.unit) => (HintOn::Pause, "⌥↑ ⌥↓ step the unit prefix".into()),
+        64 if flag(f.prefix) => (HintOn::Pause, "⌥↑ ⌥↓ step the unit prefix".into()),
         128 if !flag(f.fraction_mode)
             && jsre::test(&DIVISION, &f.expr)
             && jsre::test(&DECIMAL, f.answer.as_deref().unwrap_or("")) =>

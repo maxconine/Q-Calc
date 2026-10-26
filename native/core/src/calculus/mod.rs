@@ -937,12 +937,22 @@ fn inline(def: &UserFunction, args: Vec<T>, ctx: &TreeCtx) -> Option<T> {
 fn substitute(n: &T, map: &[(String, T)]) -> T {
     match &**n {
         N::Sym(s) => match map.iter().find(|(k, _)| k == s) {
-            Some((_, v)) => v.clone(),
+            // a fresh copy at each use, as calculus.ts's cloneDeep: the product rule tells factors apart by
+            // identity, so a shared node made f(t) = t*t differentiate as 1*1 + 1*1
+            Some((_, v)) => deep_copy(v),
             None => n.clone(),
         },
         N::Op(o, a) => op(*o, a.iter().map(|x| substitute(x, map)).collect()),
         N::Call(name, a) => call(name, a.iter().map(|x| substitute(x, map)).collect()),
         N::Const(_) => n.clone(),
+    }
+}
+
+fn deep_copy(n: &T) -> T {
+    match &**n {
+        N::Op(o, a) => op(*o, a.iter().map(deep_copy).collect()),
+        N::Call(name, a) => call(name, a.iter().map(deep_copy).collect()),
+        N::Sym(_) | N::Const(_) => std::rc::Rc::new((**n).clone()),
     }
 }
 
@@ -2064,7 +2074,7 @@ mod tests {
 
     /// Measured in the TS: a parameter used twice in a product is one mathjs node, so its derivative is blank.
     #[test]
-    fn user_functions_differentiate_as_the_ts_does() {
+    fn user_functions_differentiate_like_their_expanded_body() {
         assert_eq!(
             sheet(&[
                 "f(t) = t*t",
@@ -2075,13 +2085,13 @@ mod tests {
                 "d/dx f(x)^2",
                 "f''(x)"
             ])[1..],
-            ["", "", "", "0.333333333333", "", ""]
+            ["2x", "6", "2x", "0.333333333333", "4x³", "2"]
         );
         assert_eq!(
             sheet(&["g(t)=t*sin(t)", "g'(x)", "g'(2)"])[1..],
             ["sin(x) + x cos(x)", "0.0770037537314"]
         );
-        assert_eq!(sheet(&["h(t)=t*t*t", "h'(x)", "h'(2)"])[1..], ["", ""]);
+        assert_eq!(sheet(&["h(t)=t*t*t", "h'(x)", "h'(2)"])[1..], ["3x²", "12"]);
         assert_eq!(sheet(&["k(t)=t^2*t", "k'(x)"])[1..], ["3x²"]);
         assert_eq!(
             sheet(&["p(a,b)=a*b", "d/dx p(x,x)", "∂/∂x p(x,y)"])[1..],

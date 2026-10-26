@@ -45,14 +45,14 @@
 {"fn":"pickHint","args":[0,{"expr":"2+2"}],"out":{"bit":256,"text":"↑ brings it back"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"1/3 + 1/4","answer":"0.583333333333","fractionMode":true},"pause"],"out":null,"now":1792768565218,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"1/3 + 1/4","answer":"0.583333333333"},"pause"],"out":{"bit":128,"text":"⌃F shows fractions"},"now":1792768565218,"src":"src/lib/onboarding.test.ts"}
-{"fn":"pickHint","args":[16,{"expr":"100 W * 2 hr","unit":true},"pause"],"out":{"bit":64,"text":"⌥↑ ⌥↓ step the unit prefix"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
+{"fn":"pickHint","args":[16,{"expr":"100 W * 2 hr","unit":true,"prefix":true},"pause"],"out":{"bit":64,"text":"⌥↑ ⌥↓ step the unit prefix"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"2+2","answer":"4"},"pause"],"out":null,"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"8/2","answer":"4"},"pause"],"out":null,"now":1792768565218,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"asin(1)"},"pause"],"out":{"bit":32,"text":"degrees · ⌃D for radians"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"cosine(1)"},"pause"],"out":null,"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"sin(30)","angleMode":"deg"},"pause"],"out":{"bit":32,"text":"degrees · ⌃D for radians"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[16,{"expr":"sin(30)","angleMode":"rad"},"pause"],"out":{"bit":32,"text":"radians · ⌃D for degrees"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
-{"fn":"pickHint","args":[256,{"expr":"100 W * 2 hr","unit":true}],"out":null,"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
+{"fn":"pickHint","args":[256,{"expr":"100 W * 2 hr","unit":true,"prefix":true}],"out":null,"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[256,{"expr":"2+2"}],"out":null,"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[256,{"expr":"r = 5","variable":"r"}],"out":{"bit":2,"text":"use r in later calculations"},"now":1792768565217,"src":"src/lib/onboarding.test.ts"}
 {"fn":"pickHint","args":[512,{"expr":"","native":true,"opens":3},"open"],"out":null,"now":1792768565218,"src":"src/lib/onboarding.test.ts"}

@@ -467,6 +467,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
             .filter(|l| from_js && l.kind == LineKind::Assignment)
             .and_then(|l| l.variable.clone()),
         unit: Some(stepped_or_js.is_some_and(|v| v.unit.as_deref().is_some_and(|u| !u.is_empty()))),
+        prefix: Some(crate::units::can_step_prefix(stepped_or_js)),
         chained: Some(chained),
         angle_mode: Some(o.angle()),
         fraction_mode: Some(o.fraction_mode == Some(true)),

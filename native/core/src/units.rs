@@ -2319,6 +2319,14 @@ fn move_on_ladder(value: &Value, from: &(UnitRef, f64), exp: f64) -> Option<Valu
 }
 
 /// One engineering step (×10³) up or down the SI prefixes: `98 N` → `0.098 kN`.
+/// `canStepPrefix`: whether ⌥↑ or ⌥↓ would move the value along a prefix ladder (degrees, miles and °C have none).
+pub fn can_step_prefix(value: Option<&Value>) -> bool {
+    value.is_some_and(|v| {
+        v.unit.as_deref().is_some_and(|u| !u.is_empty())
+            && (step_prefix(v, 1).is_some() || step_prefix(v, -1).is_some())
+    })
+}
+
 pub fn step_prefix(value: &Value, dir: i32) -> Option<Value> {
     if value.kind != ValueKind::Number || !value.n.is_finite() {
         return None;
