@@ -5,7 +5,7 @@ import SwiftUI
 // The graph under the bar, laid out as GraphPanel.tsx draws its SVG (.graph in src/index.css): a head with the
 // label, the domain and "reset", then a 652 × 200 plot (padding 12/12/28/40) on the plot colour, grid lines at
 // ink 5%, axes at ink 18%, 10 pt muted ticks and a 2 pt accent curve. Drag pans, pinch or scroll zooms, and the
-// engine re-samples (Engine.graphAsync, until WP-GRAPH the evaluate_json sampler in EngineService.swift).
+// engine re-samples (Engine.graphAsync, graphHome, graphTicks, graphReadoutY; GraphModel.swift).
 struct GraphPanel: View {
     @ObservedObject var model: BarModel
     let state: GraphState
@@ -15,14 +15,8 @@ struct GraphPanel: View {
     /// the pointer over the plot, in plot (viewBox) units
     @State private var hoverX: Double?
 
-    /// y on the curve at x: the engine's graphY when WP-GRAPH answers it, else between the two nearest samples
-    private func curveY(at x: Double) -> Double? {
-        guard let pts = state.curves.first?.points, pts.count > 1 else { return nil }
-        guard let i = pts.firstIndex(where: { $0.x >= x }), i > 0 else { return nil }
-        let a = pts[i - 1], b = pts[i]
-        guard let ya = a.y, let yb = b.y, b.x > a.x else { return nil }
-        return ya + (yb - ya) * (x - a.x) / (b.x - a.x)
-    }
+    /// y on the curve at x, as the readout shows it (the engine's graphReadoutY)
+    private func curveY(at x: Double) -> Double? { model.graphReadout(x) }
 
     private static let svgW: CGFloat = 652, svgH: CGFloat = 200
     private static let pad = (top: CGFloat(12), right: CGFloat(12), bottom: CGFloat(28), left: CGFloat(40))
@@ -40,6 +34,9 @@ struct GraphPanel: View {
                 Text("[\(fmt(state.xMin)), \(fmt(state.xMax))]")
                     .font(.system(size: Theme.small).monospacedDigit())
                     .foregroundStyle(Color.qMuted)
+                if let unit = state.angleUnit {
+                    Text(unit).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                }
                 Spacer(minLength: 0)
                 Button { model.homeGraph() } label: {
                     Text("reset")
@@ -55,7 +52,13 @@ struct GraphPanel: View {
                 .onHover { resetHover = $0 }
                 .help("Reset view")
             }
-            if state.failed {
+            if let error = state.error {
+                // .graph-error
+                Text(error)
+                    .font(.system(size: Theme.body))
+                    .foregroundStyle(Color.qMuted)
+                    .padding(.vertical, 12)
+            } else if state.failed {
                 Text("can’t graph \(state.expression)")
                     .font(.system(size: Theme.body))
                     .foregroundStyle(Color.qMuted)
@@ -75,12 +78,8 @@ struct GraphPanel: View {
         .accessibilityLabel("Graph of \(label)")
     }
 
-    private var label: String { state.curves.first?.label ?? Pretty.radicals(state.expression) }
-    private var atHome: Bool {
-        guard state.xMin == -10, state.xMax == 10 else { return false }
-        guard let home = state.homeY else { return true }
-        return state.yMin == home.0 && state.yMax == home.1
-    }
+    private var label: String { state.label.isEmpty ? Pretty.radicals(state.expression) : state.label }
+    private var atHome: Bool { state.atHome }
 
     private func kindName(_ k: CriticalKind) -> String {
         switch k {
@@ -171,16 +170,18 @@ struct GraphPanel: View {
         func py(_ y: Double) -> CGFloat { p.top + CGFloat((g.yMax - y) / (g.yMax - g.yMin)) * plotH }
         ctx.fill(Path(roundedRect: CGRect(x: p.left, y: p.top, width: plotW, height: plotH), cornerRadius: 4), with: .color(Self.plotBg))
         let grid = Color.qInk.opacity(0.05), axis = Color.qInk.opacity(0.18)
-        let xs = ticks(g.xMin, g.xMax, count: 8), ys = ticks(g.yMin, g.yMax, count: 5)
-        for x in xs {
-            var l = Path(); l.move(to: CGPoint(x: px(x), y: p.top)); l.addLine(to: CGPoint(x: px(x), y: bottom))
+        // the engine's graphTicks: x angle-aware (π/2 steps for a radian curve), y plain
+        for t in g.xTicks where t.value >= g.xMin && t.value <= g.xMax {
+            var l = Path(); l.move(to: CGPoint(x: px(t.value), y: p.top)); l.addLine(to: CGPoint(x: px(t.value), y: bottom))
             ctx.stroke(l, with: .color(grid), lineWidth: 1)
-            ctx.draw(Text(fmt(x)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted), at: CGPoint(x: px(x), y: Self.svgH - 12), anchor: .center)
+            ctx.draw(Text(Pretty.answer(t.label)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted),
+                     at: CGPoint(x: px(t.value), y: Self.svgH - 12), anchor: .center)
         }
-        for y in ys {
-            var l = Path(); l.move(to: CGPoint(x: p.left, y: py(y))); l.addLine(to: CGPoint(x: right, y: py(y)))
+        for t in g.yTicks where t.value >= g.yMin && t.value <= g.yMax {
+            var l = Path(); l.move(to: CGPoint(x: p.left, y: py(t.value))); l.addLine(to: CGPoint(x: right, y: py(t.value)))
             ctx.stroke(l, with: .color(grid), lineWidth: 1)
-            ctx.draw(Text(fmt(y)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted), at: CGPoint(x: p.left - 6, y: py(y)), anchor: .trailing)
+            ctx.draw(Text(Pretty.answer(t.label)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted),
+                     at: CGPoint(x: p.left - 6, y: py(t.value)), anchor: .trailing)
         }
         if py(0) >= p.top, py(0) <= bottom {
             var a = Path(); a.move(to: CGPoint(x: p.left, y: py(0))); a.addLine(to: CGPoint(x: right, y: py(0)))

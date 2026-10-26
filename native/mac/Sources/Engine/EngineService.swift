@@ -44,68 +44,11 @@ extension HistoryRow: Identifiable {
     }
 }
 
-/// Points of one curve.
-struct GraphCurve: Equatable {
-    var label: String
-    var points: [GraphPoint]
-}
 
 enum EngineFactory {
     static func make() -> Engine {
         let dir = AppInfo.supportDirectory
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return Engine(config: EngineConfig(isWindows: false, locale: Locale.current.identifier, dataDir: dir.path))
-    }
-}
-
-/// Graph sampling until WP-GRAPH registers `buildGraph`: `Engine.graph` is bridged and answers nil until then,
-/// so this samples y = f(x) through the `evaluateJson` escape hatch: one sheet of `x = …` then the curve.
-enum GraphFallback {
-    static func sample(_ engine: Engine, expression: String, xMin: Double, xMax: Double, samples: Int,
-                       context: EvalContext, settings: EvalOptions) -> [GraphCurve]? {
-        let body = expression.trimmingCharacters(in: .whitespaces)
-        guard !body.isEmpty, samples > 1, xMax > xMin else { return nil }
-        let rhs: String = {
-            if let eq = body.firstIndex(of: "="), body.lowercased().hasPrefix("y") || body.contains("(x)") {
-                return String(body[body.index(after: eq)...]).trimmingCharacters(in: .whitespaces)
-            }
-            return body
-        }()
-        var lines: [String] = []
-        var xs: [Double] = []
-        for i in 0..<samples {
-            let x = xMin + (xMax - xMin) * Double(i) / Double(samples - 1)
-            xs.append(x)
-            lines.append("x = \(x)")
-            lines.append(rhs)
-        }
-        var functions: [String: Any] = [:]
-        for (name, fn) in context.functions { functions[name] = ["params": fn.params, "body": fn.body] }
-        var variables: [String: Any] = [:]
-        for (name, v) in context.variables where name != "x" { variables[name] = v }
-        var opts: [String: Any] = [
-            "angleMode": settings.angleRadians ? "rad" : "deg", "sigFigs": 16, "rationalize": false,
-            "functions": functions, "variables": variables,
-        ]
-        if let ans = context.ans { opts["ans"] = ans }
-        guard let data = try? JSONSerialization.data(withJSONObject: ["lines": lines, "options": opts]),
-              let request = String(data: data, encoding: .utf8),
-              let reply = try? engine.evaluateJson(request: request),
-              let rows = try? JSONSerialization.jsonObject(with: Data(reply.utf8)) as? [[String: Any]],
-              rows.count == samples * 2
-        else { return nil }
-        var points: [GraphPoint] = []
-        var any = false
-        for (i, x) in xs.enumerated() {
-            let value = rows[i * 2 + 1]["value"] as? [String: Any]
-            var y: Double?
-            if value?["kind"] as? String == "number", value?["unit"] == nil,
-               let n = (value?["n"] as? NSNumber)?.doubleValue, n.isFinite {
-                y = n
-                any = true
-            }
-            points.append(GraphPoint(x: x, y: y))
-        }
-        return any ? [GraphCurve(label: rhs, points: points)] : nil
     }
 }

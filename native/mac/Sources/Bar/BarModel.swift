@@ -33,26 +33,6 @@ struct Decorations: Equatable {
 }
 
 /// The graph panel under the bar: a range, and the curves the engine sampled over it.
-struct GraphState: Equatable {
-    var expression: String
-    var xMin: Double = -10
-    var xMax: Double = 10
-    var yMin: Double = -10
-    var yMax: Double = 10
-    var curves: [GraphCurve] = []
-    var failed = false
-    /// not yet sampled: the engine's own y range (graphHome) may set the view
-    var fresh = true
-    /// from the engine's GraphResult (WP-GRAPH): roots and critical points, marked on the curve and listed below
-    var roots: [Double] = []
-    var critical: [CriticalPoint] = []
-    var homeY: (Double, Double)?
-
-    static func == (a: GraphState, b: GraphState) -> Bool {
-        a.expression == b.expression && a.xMin == b.xMin && a.xMax == b.xMax && a.yMin == b.yMin && a.yMax == b.yMax
-            && a.curves == b.curves && a.failed == b.failed && a.roots == b.roots && a.critical == b.critical
-    }
-}
 
 /// Everything the bar shows and every key it takes. The SwiftUI views only draw this; AppKit (OverlayController)
 /// owns the window. The engine is only ever called through `engine` (its own thread); nothing here blocks the
@@ -106,7 +86,7 @@ final class BarModel: ObservableObject {
     @Published private(set) var gamePick: Int?
     @Published private(set) var helpShown = false
     // panels below
-    @Published private(set) var graph: GraphState?
+    @Published var graph: GraphState?
     @Published var cards: [BannerCard] = []
     @Published var cardsHovered = false
     /// keyboard focus is on an edge tool (Full Keyboard Access), which shows them as hover does
@@ -122,7 +102,7 @@ final class BarModel: ObservableObject {
     let engine: EngineThread
     /// the engine itself, only for its async calls (closed forms, graphs), which never block
     let core: Engine
-    let sheets = SheetData.shared
+    let sheets: SheetData = SheetData.shared
     let math: MathRenderer = PlainMathRenderer()
 
     // what the bar asks of its window
@@ -323,6 +303,7 @@ final class BarModel: ObservableObject {
     }
 
     private var squiggleTimer: Timer?
+    var graphTask: Task<Void, Never>?
     private lazy var lastShareUsage = AppSettings.shared.shareUsage
     /// the line a unit was offered for, and what ↵ again makes it
     private var unitOffer: (typed: String, filled: String)?
@@ -423,35 +404,24 @@ final class BarModel: ObservableObject {
 
     // MARK: - answer forms (Tab)
 
-    /// The engine's answerForms (bridged to lib/answerForms until WP-APP-LOGIC); while that answers nothing, the
-    /// same cycle built here: the decimal, the exact form, a fraction and scientific.
+    /// Tab: the engine's answerForms for the answer as shown, cycled (useAnswerForms)
     func cycleForms(back: Bool = false) {
-        guard !live.isBlank, let n = live.number else { return }
+        guard !live.isBlank, live.valueJson != nil else { return }
         track("form.tab")
         if !forms.isEmpty {
             formIndex = (formIndex + (back ? forms.count - 1 : 1)) % forms.count
             return
         }
         let typed = text
-        let rows = self.rows, view = HistoryView.from(settings), options = self.options
-        let display = live.display, exact = self.exact, unit = live.unit, valueJson = live.valueJson, meas = live.meas
-        let figs = settings.significantFigures
+        let options = self.options
+        let display = live.display, exact = self.exact, valueJson = live.valueJson, meas = live.meas
         engine.submit(.forms, { engine -> [String] in
             var out = [display]
             let source = FormSource(valueJson: valueJson ?? "", display: display, exact: exact, meas: meas,
                                     sigFigs: options.sigFigs, sigFigMode: options.sigFigMode, rationalize: options.rationalize)
             let views = valueJson == nil ? [] : engine.answerForms(source: source)
-            if !views.isEmpty {
-                out += views.map(\.display)
-            } else {
-                if let exact, !exact.isEmpty { out.append(exact) }
-                var asFraction = options
-                asFraction.fractionMode = true
-                let f = engine.live(request: Self.request(engine, text: typed, rows: rows, view: view, options: asFraction)).display
-                if f.contains("/"), f.filter(\.isNumber).count <= 8 { out.append(f) }
-                let mag = n == 0 ? 0 : Int(floor(log10(abs(n))))
-                if abs(mag) >= 3 { out.append(Pretty.scientific(n, sigFigs: figs) + (unit.map { " \($0)" } ?? "")) }
-            }
+            // the engine's answerForms (WP-APP-LOGIC): the other ways Tab shows this answer
+            out += views.map(\.display)
             var seen = Set<String>()
             return out.filter { seen.insert($0.trimmingCharacters(in: .whitespaces)).inserted && !$0.contains("undefined") }
         }) { [weak self] list in
@@ -1025,84 +995,6 @@ final class BarModel: ObservableObject {
         }
     }
 
-    // MARK: - graph (placeholder until the GRAPH package)
-
-    func showGraph(_ body: String) {
-        var state = graph?.expression == body ? graph! : GraphState(expression: body)
-        state.expression = body
-        graph = state
-        sampleGraph()
-    }
-
-    func panGraph(dx: Double, dy: Double) {
-        guard var g = graph else { return }
-        let w = g.xMax - g.xMin, h = g.yMax - g.yMin
-        g.xMin -= dx * w; g.xMax -= dx * w
-        g.yMin += dy * h; g.yMax += dy * h
-        graph = g
-        sampleGraph()
-    }
-
-    func zoomGraph(_ factor: Double) {
-        guard var g = graph, factor.isFinite, factor > 0 else { return }
-        let cx = (g.xMin + g.xMax) / 2, cy = (g.yMin + g.yMax) / 2
-        let w = (g.xMax - g.xMin) * factor / 2, h = (g.yMax - g.yMin) * factor / 2
-        guard w > 1e-9, w < 1e9 else { return }
-        g.xMin = cx - w; g.xMax = cx + w; g.yMin = cy - h; g.yMax = cy + h
-        graph = g
-        sampleGraph()
-    }
-
-    func homeGraph() {
-        guard let g = graph else { return }
-        graph = GraphState(expression: g.expression)
-        sampleGraph()
-    }
-
-    private var graphTask: Task<Void, Never>?
-
-    // Engine.graphAsync on the long-work pool, cancelled (CancelToken) by the next pan, zoom or keystroke. It's
-    // bridged to engine/graph's buildGraph, which answers nil until WP-GRAPH; then the JSON-hatch sampler fills in
-    private func sampleGraph() {
-        guard let g = graph else { return }
-        let expr = g.expression, lo = g.xMin, hi = g.xMax
-        let rows = self.rows, view = HistoryView.from(settings), settings = self.options
-        let engine = core
-        graphTask?.cancel()
-        graphTask = Task.detached(priority: .userInitiated) { [weak self] in
-            let options = GraphOptions(domainLo: lo, domainHi: hi, sampleCount: 241)
-            var curves: [GraphCurve]?
-            var yRange: (Double, Double)?
-            var roots: [Double] = [], critical: [CriticalPoint] = []
-            if let result = try? await engine.graphAsync(input: "graph \(expr)", options: options, settings: settings),
-               result.error == nil, !result.points.isEmpty {
-                curves = [GraphCurve(label: result.label, points: result.points)]
-                if result.yMax > result.yMin { yRange = (result.yMin, result.yMax) }
-                roots = result.roots
-                critical = result.criticalPoints
-            } else if !Task.isCancelled {
-                let context = engine.contextFromHistory(rows: rows, view: view)
-                curves = GraphFallback.sample(engine, expression: expr, xMin: lo, xMax: hi, samples: 241, context: context, settings: settings)
-                // the home view's y range fits the curve, as graphHome's does, with a tenth spare each side
-                let ys = curves?.flatMap { $0.points.compactMap(\.y) } ?? []
-                if let a = ys.min(), let b = ys.max() {
-                    let span = max(b - a, 1e-9)
-                    yRange = (a - span * 0.1, b + span * 0.1)
-                }
-            }
-            if Task.isCancelled { return }
-            await MainActor.run {
-                guard let self, var now = self.graph, now.expression == expr, now.xMin == lo else { return }
-                now.curves = curves ?? []
-                now.failed = curves == nil
-                now.roots = roots
-                now.critical = critical
-                if let yRange, now.fresh { (now.yMin, now.yMax) = yRange; now.homeY = yRange }
-                now.fresh = false
-                self.graph = now
-            }
-        }
-    }
 
     // MARK: - message cards
 

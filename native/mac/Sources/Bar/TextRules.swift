@@ -158,7 +158,7 @@ enum BarCommand: Equatable {
         let lower = t.lowercased()
         if lower.isEmpty { return nil }
         if periodicRE.matches(t) { return .periodic }
-        if let target = identityTarget(t, sheets: sheets) { return target }
+        if let target = sheets.target(t) { return .identities(id: target.id, section: target.section, hint: target.hint) }
         if lower == "games" || lower == "game" { return .games }
         if let g = gameList.first(where: { $0.re.matches(t) }) { return .game(kind: g.kind, name: g.name) }
         if let m = messageRE.groups(raw) {
@@ -171,24 +171,6 @@ enum BarCommand: Equatable {
         if lower.range(of: #"^skip(\s+(tutorial|tour))?$"#, options: .regularExpression) != nil { return .skip }
         if lower == "hi" || lower == "hello" || lower == "hey" { return .greeting }
         if let g = graphRE.groups(t), let body = g[1] ?? nil { return .graph(body) }
-        return nil
-    }
-
-    private static func identityTarget(_ t: String, sheets: SheetData) -> BarCommand? {
-        func at(_ id: String, _ sectionTitle: String) -> BarCommand? {
-            guard let sheet = sheets.sheet(id) else { return nil }
-            let section = sectionTitle.isEmpty ? 0 : (sheet.sectionTitles.firstIndex { $0.caseInsensitiveCompare(sectionTitle) == .orderedSame } ?? 0)
-            let hint = section > 0 ? "\(sheet.hint): \(sheet.sectionTitles[section].lowercased())" : sheet.hint
-            return .identities(id: id, section: section, hint: hint)
-        }
-        let part = partCommand.groups(t)?[1].flatMap { $0 }?.lowercased()
-        if let part, let named = parts.first(where: { $0.0.matches(part) }) { return at(named.1, named.2) }
-        if t.lowercased() == "trig" { return at("identities", "Trig") }
-        if t.lowercased() == "partial fractions" { return at("identities", "Partial fractions") }
-        if identityWords.matches(t) || t.lowercased() == "idt" { return at("identities", "") }
-        if calculusWords.matches(t) { return at("calculus", "") }
-        if conversionWords.matches(t) { return at("conversions", "") }
-        if constantsWords.matches(t) { return at("constants", "") }
         return nil
     }
 

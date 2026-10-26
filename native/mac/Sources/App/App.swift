@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         ) { [weak self] _ in self?.refreshStatusItem() }
         // the engine gets its own thread and the tape its file; the bar is native, so it's ready as soon as it's made
         let core = EngineFactory.make()
+        SheetData.shared = SheetData(engine: core, logic: AppLogic(engine: core))
         let engine = EngineThread(engine: core)
         let model = BarModel(engine: engine, core: core, history: HistoryStore(engine: core))
         // the ECB rates ECBRates.swift fetches, handed to the engine as they arrive (its cache lives in Q Calc's
