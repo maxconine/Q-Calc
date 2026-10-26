@@ -19,6 +19,8 @@ pub mod precise;
 pub mod scientific;
 pub mod simplify;
 pub mod stubs;
+// WP-SYMBOLIC
+pub mod symbolic;
 pub mod syntax;
 pub mod types;
 pub mod typst_input;
@@ -26,6 +28,11 @@ pub mod units;
 pub mod work;
 // ---- WP-UNITS ----
 pub mod app;
+
+// ---- WP-FUNCTIONS ----
+pub mod angles;
+pub mod dots;
+pub mod letters;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

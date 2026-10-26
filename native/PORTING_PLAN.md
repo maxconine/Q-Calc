@@ -23,6 +23,12 @@ signature. A work package (WP) replaces stubs with ports and turns its golden ar
    and `cargo test --workspace`.
 5. **Don't touch the TS** except through the coordinator. If the spec looks wrong, record it in your report.
 
+6. **Work lean (tokens are the bottleneck).** Read only the file ranges you need, filter command output
+   (`grep`, `tail`, `GOLDEN_AREA=…`), don't re-read files you already have, and keep reports short:
+   pass rates, remaining failures by cause, files touched outside yours, branch and commits.
+7. **Commit WIP often**; a usage limit can stop you at any moment. Never push.
+8. **Scratchpad is shared**: prefix scratch files with your WP name, and only run scripts you wrote.
+
 Blank answers count as passes (an unported reader leaves the line blank, which is right for the blank cases),
 so judge progress against `baseline.json`, not against 0%.
 

@@ -242,6 +242,19 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
         ("engine/typstInput", "looksLikeTypst") => {
             json!(crate::typst_input::looks_like_typst(&s(0)))
         }
+        // ---- WP-SYMBOLIC: mathjs simplify / derivative / rationalize / toString / parse ----
+        (
+            "symbolic/simplify"
+            | "symbolic/derivative"
+            | "symbolic/rationalize"
+            | "symbolic/toString"
+            | "symbolic/parse",
+            _,
+        ) => return symbolic_dispatch(name, args),
+        // ---- WP-FUNCTIONS: engine/scientific, engine/angles, engine/dots ----
+        ("engine/scientific", "evalScientific") => crate::scientific::functions::golden_eval(args),
+        ("engine/angles", "angleExponent") => json!(crate::angles::angle_exponent(&s(0))),
+        ("engine/dots", "joinDots") => json!(crate::dots::join_dots(&s(0))),
         // ---- WP-UNITS: engine/units, lib/unitSpans, lib/draft (lib/missingUnit takes a test's closure) ----
         ("engine/units" | "lib/unitSpans" | "lib/draft", _) => {
             match crate::units::golden::dispatch(module, name, args) {
@@ -249,9 +262,75 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
                 None => return Outcome::Unported,
             }
         }
+        // ---- WP-PRECISE: engine/precise ----
+        ("engine/precise", _) => match crate::precise::golden_dispatch(name, args) {
+            Some(answer) => answer,
+            None => return Outcome::Unported,
+        },
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)
+}
+
+/// WP-SYMBOLIC: replays a recorded mathjs symbolic call (trees in `symbolic::json`'s format).
+fn symbolic_dispatch(name: &str, args: &[Json]) -> Outcome {
+    use crate::symbolic::{self, PrintOptions, json as tree};
+    let node_arg = |i: usize| -> Result<symbolic::Node, Outcome> {
+        match args.get(i) {
+            Some(Json::String(text)) => symbolic::parse(text).map_err(|e| Outcome::Threw(e.0)),
+            Some(j) => tree::from_tree(j).map_err(|_| Outcome::Unreplayable),
+            None => Err(Outcome::Unreplayable),
+        }
+    };
+    let node_out = |r: Result<symbolic::Node, symbolic::SymError>| match r {
+        Ok(n) => Outcome::Answer(json!({
+            "text": symbolic::to_string(&n, &PrintOptions::default()),
+            "tree": tree::to_tree(&n),
+        })),
+        Err(e) => Outcome::Threw(e.0),
+    };
+    let n = match node_arg(0) {
+        Ok(n) => n,
+        Err(o) => return o,
+    };
+    match name {
+        "parse" => node_out(Ok(n)),
+        "simplify" if args.len() == 1 => node_out(symbolic::simplify(&n)),
+        "rationalize" if args.len() == 1 => node_out(symbolic::rationalize(&n)),
+        "derivative" => {
+            let var = args.get(1).and_then(|v| {
+                v.as_str()
+                    .map(str::to_string)
+                    .or_else(|| v.get("S").and_then(Json::as_str).map(str::to_string))
+            });
+            let Some(var) = var else {
+                return Outcome::Unreplayable;
+            };
+            let simplify = args
+                .get(2)
+                .and_then(|o| o.get("simplify"))
+                .and_then(Json::as_bool)
+                .unwrap_or(true);
+            node_out(symbolic::derivative_text(&n, &var, simplify))
+        }
+        "toString" => {
+            let o = args.get(1);
+            let field = |k: &str| o.and_then(|o| o.get(k)).and_then(Json::as_str);
+            let opts = PrintOptions {
+                parenthesis: field("parenthesis").map(|p| match p {
+                    "auto" => symbolic::Parenthesis::Auto,
+                    "all" => symbolic::Parenthesis::All,
+                    _ => symbolic::Parenthesis::Keep,
+                }),
+                implicit: field("implicit").map(|p| match p {
+                    "show" => symbolic::Implicit::Show,
+                    _ => symbolic::Implicit::Hide,
+                }),
+            };
+            Outcome::Answer(json!(symbolic::to_string(&n, &opts)))
+        }
+        _ => Outcome::Unreplayable,
+    }
 }
 
 /// Whether two doubles are the same answer: equal, or within 4 units in the last place (the TS and Rust
