@@ -22,6 +22,12 @@ qcalc-core = { path = "../core" }
 serde.workspace = true
 serde_json.workspace = true
 uniffi = { workspace = true, features = ["cli"] }
+qcalc-typst = { path = "../typst", optional = true } # WP-TYPST-RENDER
+
+[features]
+# WP-TYPST-RENDER: the typeset maths preview (`TypstRenderer`); +27 MB per architecture, stripped (the web
+# preview's typst.ts WASM it replaces is 29 MB). Measured by native/typst/scripts/measure.sh.
+typst = ["dep:qcalc-typst"]
 
 
 [lints.rust]

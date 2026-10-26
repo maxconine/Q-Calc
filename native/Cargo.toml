@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
-members = ["core", "ffi"]
+members = ["core", "ffi",
+  "typst", # WP-TYPST-RENDER
+]
 
 [workspace.package]
 version = "0.1.0"

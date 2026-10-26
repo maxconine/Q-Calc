@@ -21,6 +21,8 @@ pub mod history;
 mod jsstr;
 mod rates;
 pub mod records;
+#[cfg(feature = "typst")]
+mod typst_preview; // WP-TYPST-RENDER
 mod worker;
 
 pub use cancel::CancelToken;
