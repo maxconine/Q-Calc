@@ -2,14 +2,13 @@
 
 use crate::app::answer::{AnswerForm, has_dual_answer, visible_answer};
 use crate::app::js::{self as jstr, len16, skip16};
-use crate::types::{SolveInfo, SolveOutcome};
 
-/// `lineCopyText(expr, { display, exact, solve }, form)`.
+/// `lineCopyText(expr, { display, exact, solve }, form)`; `solve` is the solve's variable and outcome.
 pub fn line_copy_text(
     expr: &str,
     display: &str,
     exact: Option<&str>,
-    solve: Option<&SolveInfo>,
+    solve: Option<(&str, &str)>,
     form: AnswerForm,
 ) -> String {
     let line = jstr::trim(expr);
@@ -21,9 +20,9 @@ pub fn line_copy_text(
     if line.is_empty() || shown_trim.is_empty() {
         return shown_trim.to_string();
     }
-    if let Some(s) = solve {
-        return if s.outcome == SolveOutcome::Roots {
-            format!("{line}, {} = {shown}", s.variable)
+    if let Some((variable, outcome)) = solve {
+        return if outcome == "roots" {
+            format!("{line}, {variable} = {shown}")
         } else {
             format!("{line}, {shown}")
         };

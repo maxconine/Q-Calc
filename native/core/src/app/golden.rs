@@ -122,6 +122,8 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             ))
         }
         // ---- lib/answerForms ----
+        // a non-finite value arrives as null (recorder encoding): no forms either way
+        ("lib/answerForms", "answerForms") if !a(0)["value"]["n"].is_number() => json!([]),
         ("lib/answerForms", "answerForms") => match of(&a(0)) {
             Some(src) => to(&crate::app::answer_forms::answer_forms(&src)),
             None => return Some(Outcome::Threw("bad form source".into())),
@@ -186,8 +188,12 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/identities", "identitySheetFor") => opt(idt::identity_sheet_for(&s(0))),
         ("lib/identities", "identityTargetFor") => opt(idt::identity_target_for(&s(0))),
         ("lib/identities", "isIdentityCommand") => json!(idt::is_identity_command(&s(0))),
-        // the recorder ran without a Mac host, so nothing opened; the payload itself is `native_identity_sheet`
-        ("lib/identities", "openNativeIdentitySheet") => json!(false),
+        // the recorded tests ran with a host stub, which took the payload: true. Here the payload is built
+        // (`native_identity_sheet`) and the Mac app is the host
+        ("lib/identities", "openNativeIdentitySheet") => match of::<idt::IdentityTarget>(&a(0)) {
+            Some(t) => json!(!idt::native_identity_sheet(&t).id.is_empty()),
+            None => return Some(Outcome::Threw("bad target".into())),
+        },
         // ---- lib/keybinds ----
         ("lib/keybinds", "actionForEvent") => {
             let e: KeyEventLike = of(&a(0)).unwrap_or_default();
@@ -278,7 +284,10 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
                 &s(0),
                 line.get("display").and_then(Json::as_str).unwrap_or(""),
                 line.get("exact").and_then(Json::as_str),
-                line.get("solve").and_then(|v| of(v)).as_ref(),
+                line.get("solve").map(|v| (
+                    v.get("variable").and_then(Json::as_str).unwrap_or(""),
+                    v.get("outcome").and_then(Json::as_str).unwrap_or("")
+                )),
                 form(&a(2))
             ))
         }
