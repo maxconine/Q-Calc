@@ -95,7 +95,7 @@ pub fn is_graph_command(input: &str) -> bool {
 }
 
 /// A function a `graph f(x) = …` line defines.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FunctionDef {
     pub name: String,
     pub params: Vec<String>,

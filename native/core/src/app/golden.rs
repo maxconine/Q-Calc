@@ -51,8 +51,15 @@ fn eval_non_blank(tag: &Json) -> Option<impl Fn(&str) -> bool> {
         return None;
     }
     let options: EvaluateOptions = of(&decode(t.get("options")?)).unwrap_or_default();
+    // the bar's squiggle evaluates a chained line through `ans` (`chained: true`, from the FFI bridge)
+    let chained = t.get("chained") == Some(&Json::Bool(true));
     Some(move |text: &str| {
-        crate::evaluate_sheet(&[text.to_string()], &options)
+        let text = if chained {
+            chain::chained_expr(text)
+        } else {
+            text.to_string()
+        };
+        crate::evaluate_sheet(&[text], &options)
             .first()
             .is_some_and(|r| !r.display.is_empty())
     })
