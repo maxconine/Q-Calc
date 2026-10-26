@@ -267,6 +267,13 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
             Some(answer) => answer,
             None => return Outcome::Unported,
         },
+        // ---- WP-CALCULUS: engine/calculus, engine/calcNumeric, engine/closedForm ----
+        ("engine/calculus" | "engine/calcNumeric" | "engine/closedForm", _) => {
+            match crate::calculus::golden::dispatch(module, name, args) {
+                Some(answer) => answer,
+                None => return Outcome::Unported,
+            }
+        }
         _ => return Outcome::Unported,
     };
     Outcome::Answer(answer)

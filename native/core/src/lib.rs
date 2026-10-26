@@ -34,6 +34,9 @@ pub mod angles;
 pub mod dots;
 pub mod letters;
 
+// ---- WP-CALCULUS ----
+pub mod calculus;
+
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};
 

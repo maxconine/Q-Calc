@@ -737,14 +737,19 @@ impl<'o> Sheet<'o> {
         let mut value: Option<Value>;
         let mut calc: Option<stubs::CalculusResult> = None;
         let mut sum: Option<stubs::SumAnswer> = None;
+        // WP-CALCULUS: calculus reads the sheet's context
+        let calc_ctx = stubs::CalcContext {
+            sci: self.sci(),
+            time_varying: self.options.time_varying.clone(),
+        };
         if !plus_minus {
-            calc = stubs::evaluate_calculus(&expr);
+            calc = stubs::evaluate_calculus(&expr, &calc_ctx);
             // a scalar or other term beside an integral is not a calculus line, so the integral is folded in
             for _ in 0..8 {
                 if calc.as_ref().is_some_and(|c| c.value.is_some()) {
                     break;
                 }
-                match stubs::embed_integrals(&expr) {
+                match stubs::embed_integrals(&expr, &calc_ctx) {
                     stubs::Embedded::Failed => {
                         calc = Some(stubs::CalculusResult {
                             value: None,
@@ -757,7 +762,7 @@ impl<'o> Sheet<'o> {
                     stubs::Embedded::Nothing => break,
                     stubs::Embedded::Rewritten(next) => {
                         expr = next;
-                        calc = stubs::evaluate_calculus(&expr);
+                        calc = stubs::evaluate_calculus(&expr, &calc_ctx);
                     }
                 }
             }

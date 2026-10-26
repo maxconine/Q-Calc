@@ -1301,3 +1301,23 @@ pub fn remember_closed_form(job: &Job, exact: Option<String>) {
 pub fn forget_closed_forms() {
     known().clear();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn job(text: &str) -> Job {
+        Job::from_json(&serde_json::from_str(text).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn gaussian_over_the_line_is_root_pi() {
+        let j = job(
+            r#"{"kind":"integral","f":{"t":"op","op":"^","a":[{"t":"const","name":"e"},{"t":"op","op":"neg","a":[{"t":"op","op":"^","a":[{"t":"var"},{"t":"num","v":"2"}]}]}]},"a":"-inf","b":"inf","approx":1.772453850906,"err":4.838780418572304e-13,"rad":true}"#,
+        );
+        let mut clock = Clock { left: u64::MAX };
+        let x = value_of(&j, VERIFY_DIGITS, &mut clock).ok().flatten();
+        eprintln!("value {:?} ticks {}", x.map(|v| v.to_js_string()), u64::MAX - clock.left);
+        assert_eq!(identify_job(&j, DEFAULT_TICKS).as_deref(), Some("√π"));
+    }
+}
