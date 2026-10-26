@@ -2528,7 +2528,10 @@ mod tests {
     #[test]
     fn halfway_shortest_digits_take_the_even_one_as_js_does() {
         // 1024 pt^0.5 * 100 ha^3 lands exactly between two 17-digit spellings
-        assert_eq!(jsnum::to_string(2_227_468_278_904_209.0 + 0.25), "2227468278904209.2");
+        assert_eq!(
+            jsnum::to_string(2_227_468_278_904_209.0 + 0.25),
+            "2227468278904209.2"
+        );
         assert_eq!(jsnum::to_string(0.1), "0.1");
     }
 
