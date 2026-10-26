@@ -1,0 +1,265 @@
+//! What the app logic calls in other packages' modules, collected in one place so each can be swapped for the real
+//! port when it lands (replace the body with a call, or the item with a `pub use`). Each keeps the TS name and
+//! signature. Most answer "not mine" like the stubs in `crate::stubs`; the few that are one-line TS predicates or
+//! constants are written out in full, so the bar already behaves right for them.
+//!
+//! Owners (`native/PORTING_PLAN.md`): units → WP-UNITS, measure → WP-MEASURE, chem → WP-CHEM, isolate/system →
+//! WP-SOLVE, graph → WP-GRAPH, phrases/nativeEval → WP-PHRASES, typstMath → WP-NOTATION.
+
+use serde_json::Value as Json;
+
+use crate::jsre::{self, Lazy, js};
+use crate::types::{AngleMode, DefaultUnits, Meas, Value};
+
+// ---- WP-UNITS (units.ts) ----
+
+/// `isUnitName`: a word the unit table knows by name or symbol. PORT: units.ts.
+pub fn is_unit_name(_word: &str) -> bool {
+    false
+}
+
+/// `sanitizeDefaultUnits`: only known dimensions, each with a unit of that dimension. PORT: units.ts.
+pub fn sanitize_default_units(_raw: &Json) -> DefaultUnits {
+    DefaultUnits::new()
+}
+
+/// `inLadderUnit`: the value re-expressed in another unit of its SI prefix ladder. PORT: units.ts.
+pub fn in_ladder_unit(_value: &Value, _unit_id: &str) -> Option<Value> {
+    None
+}
+
+// ---- WP-MEASURE (measure.ts) ----
+
+/// `sanitizeMeas` for metadata read back from history JSON: sig and dp only as a pair, a positive ± with the
+/// typed digits only when they're plain digits; nothing worth storing is None. Written out in full (it is the
+/// whole of `storedMeas`); WP-MEASURE's port replaces it.
+pub fn sanitize_meas(raw: Option<&Meas>) -> Option<Meas> {
+    static DIGITS: Lazy = Lazy::new(|| js(r"^[1-9]\d{0,15}$", ""));
+    let r = raw?;
+    let mut out = Meas::default();
+    if let (Some(sig), Some(dp)) = (r.sig, r.dp) {
+        out.sig = Some(sig);
+        out.dp = Some(dp);
+    }
+    if let Some(unc) = r.unc.filter(|u| u.is_finite() && *u > 0.0) {
+        out.unc = Some(unc);
+        out.unc_digits = r
+            .unc_digits
+            .clone()
+            .filter(|d| jsre::test(&DIGITS, d));
+    }
+    (out.sig.is_some() || out.unc.is_some()).then_some(out)
+}
+
+// ---- WP-CHEM (chem.ts) ----
+
+/// The units `chem R …` takes, in completion's order (a constant of chem.ts).
+pub const GAS_CONSTANT_UNITS: [&str; 6] = ["atm", "bar", "torr", "mmhg", "cal", "si"];
+
+/// `isMolarMassInput`. PORT: chem.ts.
+pub fn is_molar_mass_input(_text: &str) -> bool {
+    false
+}
+
+/// `isReactionInput`. PORT: chem.ts.
+pub fn is_reaction_input(_text: &str) -> bool {
+    false
+}
+
+// ---- WP-SOLVE (isolate.ts, system.ts) ----
+
+/// `isolatePrevious`: `isolate x` or `solve for x` alone, rewritten to work on the previous row's equation.
+/// PORT: isolate.ts.
+pub fn isolate_previous(_text: &str, _previous: Option<&str>) -> Option<String> {
+    None
+}
+
+/// What `sys`, `sys 3` or `system 7` asks for.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SysCommand {
+    /// Open this many equation fields.
+    Count(usize),
+    /// Say this instead (no count, or too many).
+    Hint(String),
+}
+
+/// `sysCommand`, written out in full (seven lines of system.ts).
+pub fn sys_command(text: &str) -> Option<SysCommand> {
+    static RE: Lazy = Lazy::new(|| js(r"^sys(?:tem)?\s*(\d+)?\s*$", "i"));
+    let c = RE.captures(text.trim()).ok()??;
+    let Some(m) = c.get(1) else {
+        return Some(SysCommand::Hint(
+            "how many equations? sys2, sys3… up to sys5".into(),
+        ));
+    };
+    let n: f64 = crate::app::js::number(m.as_str());
+    if !(1.0..=5.0).contains(&n) || n.fract() != 0.0 {
+        return Some(SysCommand::Hint("up to 5 equations".into()));
+    }
+    Some(SysCommand::Count(n as usize))
+}
+
+/// `isSysCommand`, written out in full.
+pub fn is_sys_command(text: &str) -> bool {
+    static RE: Lazy = Lazy::new(|| js(r"^\s*sys(?:tem)?(?:\s|\d|$)", "i"));
+    jsre::test(&RE, text) && sys_command(text).is_some()
+}
+
+/// `SystemAnswer`: what the `sys` fields solve to.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SystemAnswer {
+    pub display: String,
+    pub exact: Option<String>,
+    /// A message ("no solution"), not an answer.
+    pub message: bool,
+}
+
+/// `solveLive`. PORT: system.ts.
+pub fn solve_live(
+    _lines: &[String],
+    _defaults: &DefaultUnits,
+    _angle_mode: AngleMode,
+) -> Option<SystemAnswer> {
+    None
+}
+
+// ---- WP-GRAPH (graph.ts) ----
+
+/// `isGraphCommand`, written out in full.
+pub fn is_graph_command(input: &str) -> bool {
+    static RE: Lazy = Lazy::new(|| js(r"^\s*graph(?:\s|$)", "i"));
+    jsre::test(&RE, input)
+}
+
+/// A function a `graph f(x) = …` line defines.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct FunctionDef {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: String,
+}
+
+/// The parts of `GraphIntent` the bar reads.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct GraphIntent {
+    pub label: String,
+    pub function_def: Option<FunctionDef>,
+}
+
+/// `parseGraphIntent`. PORT: graph.ts.
+pub fn parse_graph_intent(
+    _input: &str,
+    _functions: &std::collections::BTreeMap<String, crate::types::UserFunction>,
+) -> Option<GraphIntent> {
+    None
+}
+
+// ---- WP-PHRASES (phrases.ts, lib/nativeEval.ts) ----
+
+/// `looksLikeNaturalLanguage`, written out in full: money, clock times, dates and phrase words, never calculus.
+pub fn looks_like_natural_language(expr: &str) -> bool {
+    static ONLY: std::sync::LazyLock<Vec<jsre::Regex>> = std::sync::LazyLock::new(|| {
+        [
+            (r"[$€£¥₹]", ""),
+            (
+                r"\b(?:usd|eur|gbp|jpy|cad|aud|chf|cny|inr|mxn|dollars?|euros?|yen)\b",
+                "i",
+            ),
+            (r"(?:\d|\b)(?:am|pm)\b", "i"),
+            (r"\d{1,2}:\d{2}", ""),
+            (
+                r"\b(?:today|tomorrow|yesterday|ago|until|since|between|from now|time in)\b",
+                "i",
+            ),
+            (r"\b(?:mon|tues|wednes|thurs|fri|satur|sun)day\b", "i"),
+            (
+                r"\b(?:january|february|march|april|june|july|august|september|october|november|december)\b",
+                "i",
+            ),
+            (r"%\s*(?:off|on)\b|\bas an? %|\bwhat %", "i"),
+            (r"\b(?:tip|lunch|dinner|people|person|nights|percent)\b", "i"),
+        ]
+        .iter()
+        .map(|(p, f)| js(p, f))
+        .collect()
+    });
+    let t = crate::app::js::trim(expr);
+    if t.is_empty() || crate::stubs::is_calculus_input(t) {
+        return false;
+    }
+    ONLY.iter().any(|re| jsre::test(re, t))
+}
+
+/// A phrase's answer (`answerPhrase`).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct PhraseAnswer {
+    pub display: String,
+    pub n: Option<f64>,
+}
+
+/// `answerPhrase(expr, { now, sigFigs, rates })`. The rates are the engine's own (`Engine::set_rates`), so they
+/// aren't a parameter here. PORT: phrases.ts.
+pub fn answer_phrase(_expr: &str, _now_ms: f64, _sig_figs: f64) -> Option<PhraseAnswer> {
+    None
+}
+
+// ---- WP-NOTATION (lib/typstMath.ts) ----
+
+/// `typstPreviewUseful`: the typeset preview shows something the bar doesn't. PORT: typstMath.ts.
+pub fn typst_preview_useful(_expr: &str) -> bool {
+    false
+}
+
+/// `typstAnswer`, written out in full: `exact ≈ approx`, or whichever there is.
+pub fn typst_answer(exact: Option<&str>, display: &str) -> String {
+    let pretty = exact.map_or("", crate::app::js::trim);
+    let shown = crate::app::js::trim(display);
+    if !pretty.is_empty() && !shown.is_empty() && pretty != shown {
+        return format!("{pretty} ≈ {shown}");
+    }
+    if pretty.is_empty() {
+        shown.to_string()
+    } else {
+        pretty.to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sys_commands() {
+        assert_eq!(sys_command(" sys3 "), Some(SysCommand::Count(3)));
+        assert!(matches!(sys_command("system"), Some(SysCommand::Hint(_))));
+        assert!(matches!(sys_command("sys 9"), Some(SysCommand::Hint(_))));
+        assert!(is_sys_command("sys 2"));
+        assert!(!is_sys_command("system of"));
+        assert!(is_graph_command("graph x"));
+        assert!(!is_graph_command("graphs"));
+    }
+
+    #[test]
+    fn natural_language() {
+        assert!(looks_like_natural_language("$5 + $3"));
+        assert!(looks_like_natural_language("3pm + 2 hours"));
+        assert!(!looks_like_natural_language("2 + 2"));
+    }
+
+    #[test]
+    fn stored_meas() {
+        let m = Meas {
+            sig: Some(3),
+            dp: None,
+            unc: Some(0.2),
+            unc_digits: Some("02".into()),
+        };
+        assert_eq!(
+            sanitize_meas(Some(&m)),
+            Some(Meas {
+                unc: Some(0.2),
+                ..Meas::default()
+            })
+        );
+    }
+}
