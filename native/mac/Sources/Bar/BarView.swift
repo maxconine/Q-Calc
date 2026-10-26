@@ -115,6 +115,9 @@ struct BarView: View {
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 8)
         }
+        if model.sysLines != nil {
+            SystemPanel(model: model)
+        }
         if let graph = model.graph {
             GraphPanel(model: model, state: graph)
         }
@@ -221,6 +224,15 @@ struct LiveAnswerView: View {
                     .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
             }
             .accessibilityHidden(true)
+        } else if model.sysLines != nil, let sys = model.sysAnswer {
+            // the system's solution, or why there is none
+            if sys.message {
+                Text(sys.display).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted)
+                    .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+            } else {
+                AnswerButton(model: model, shown: Pretty.answer(sys.display), copy: sys.display, size: Theme.display,
+                             help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
+            }
         } else if let message = model.commandMessage, !message.isEmpty {
             // .live.message: what a command does, 13 pt muted, in the answer's place
             Text(message)

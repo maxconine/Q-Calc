@@ -68,6 +68,10 @@ final class BarModel: ObservableObject {
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
     @Published private(set) var completion: String?
     @Published private(set) var decorations = Decorations()
+    // `sys N` (Systems.swift)
+    @Published var sysLines: [String]?
+    @Published var sysAnswer: SysAnswer?
+    @Published var sysFocus: Int?
     // onboarding and the walkthrough (Tour.swift)
     @Published var example: ExampleShown?
     @Published var tourLine: TourLineShown?
@@ -90,8 +94,8 @@ final class BarModel: ObservableObject {
     @Published private(set) var copied = false
     @Published var hint: String?
     // the tape
-    @Published private(set) var rows: [HistoryRow] = []
-    @Published private(set) var selected: Int?
+    @Published var rows: [HistoryRow] = []
+    @Published var selected: Int?
     /// which half of the selected row ↵ inserts: false the expression, true the answer
     /// the part of the selected row ← → picked: 0 its expression, 1… its answers (historyPicks)
     @Published private(set) var pick = 1
@@ -225,6 +229,21 @@ final class BarModel: ObservableObject {
 
     func evaluateLive() {
         let typed = text
+        // `sys`: a hint until there's a count; the panel's own answer once its fields are open
+        let sys = SysCommand.of(typed)
+        if case let .count(n) = sys, sysLines?.count == n {
+            commandMessage = nil
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
+        if sysLines != nil { sysLines = nil; sysAnswer = nil }
+        if case let .hint(h) = sys {
+            commandMessage = h
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
             commandMessage = command.hint(messaging: Messages.shared)
@@ -455,6 +474,7 @@ final class BarModel: ObservableObject {
             play(game.kind)
             return
         }
+        if case let .count(n) = SysCommand.of(text), enterSystem(n) { return }
         if let command = BarCommand.of(text, sheets: sheets) {
             run(command)
             return
@@ -681,6 +701,7 @@ final class BarModel: ObservableObject {
     func enterOnRow(_ i: Int, other: Bool) {
         guard rows.indices.contains(i) else { return }
         let row = rows[i]
+        if row.kind == .system { openHistorySystem(i); return }
         if other {
             let expr = row.kind == .definition || row.kind == .function || settings.historyInsert == "answer"
             insertFromRow(i, answer: !expr)
@@ -698,6 +719,10 @@ final class BarModel: ObservableObject {
     func insertFromRow(_ i: Int, answer: Bool) {
         guard rows.indices.contains(i) else { return }
         let row = rows[i]
+        if row.kind == .system {
+            openHistorySystem(i)
+            return
+        }
         let piece = answer && row.kind != .definition ? (settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display) : row.expr
         finishRowInsert(piece)
     }
@@ -925,6 +950,11 @@ final class BarModel: ObservableObject {
 
     /// Esc closes the innermost layer; false means nothing was open, so the bar hides.
     func escape() -> Bool {
+        if sysLines != nil {
+            closeSystem()
+            text = ""
+            return true
+        }
         if replyFocused != nil {
             replyFocused = nil
             focusField?()
