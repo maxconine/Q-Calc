@@ -2117,6 +2117,7 @@ impl CtxArg {
 pub fn golden_dispatch_module(module: &str, name: &str, args: &[Json]) -> Option<Json> {
     match module {
         "engine/solve" => golden_dispatch(name, args),
+        "engine/isolate" => crate::isolate::golden_dispatch(name, args),
         _ => None,
     }
 }

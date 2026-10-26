@@ -35,7 +35,9 @@ pub mod dots;
 pub mod letters;
 
 // ---- WP-SOLVE ----
+pub mod isolate;
 pub mod solve;
+pub mod system_numeric;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

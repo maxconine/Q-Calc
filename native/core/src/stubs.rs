@@ -67,26 +67,8 @@ pub fn solve_system_call(
     None
 }
 
-/// `isolate x in …`: the rearranged formula's display.
-pub fn isolate_variable(_text: &str, _known: Option<&BTreeMap<String, f64>>) -> Option<String> {
-    None
-}
-
-/// `solve x in …` / `… for x`.
-#[derive(Clone, Debug)]
-pub struct NamedSolve {
-    pub variable: String,
-    pub eq: String,
-    pub numeric: String,
-    pub isolate: String,
-    pub near: Option<String>,
-}
-
-pub fn parse_named_solve(_line: &str) -> Option<NamedSolve> {
-    None
-}
-
-// ported: `crate::solve`
+// ported: `crate::solve`, `crate::isolate`
+pub use crate::isolate::{NamedSolve, isolate_variable, parse_named_solve};
 pub use crate::solve::{SolveContext, Solved, format_solve, is_equation, solve_equation};
 
 /// An equation with units, solved in SI: Some(display, info, value).
