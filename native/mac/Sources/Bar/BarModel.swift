@@ -51,17 +51,20 @@ final class BarModel: ObservableObject {
     @Published private(set) var rows: [HistoryRow] = []
     @Published private(set) var selected: Int?
     /// which half of the selected row ↵ inserts: false the expression, true the answer
-    @Published private(set) var pickAnswer = false
+    /// the part of the selected row ← → picked: 0 its expression, 1… its answers (historyPicks)
+    @Published private(set) var pick = 1
     @Published private(set) var tapeOpen = false
     @Published private(set) var recentFrom = 0
     // sheets above the bar
     @Published private(set) var gamesShown = false
-    @Published private(set) var gamePick = 0
+    @Published private(set) var gamePick: Int?
     @Published private(set) var helpShown = false
     // panels below
     @Published private(set) var graph: GraphState?
     @Published var cards: [BannerCard] = []
     @Published var cardsHovered = false
+    /// keyboard focus is on an edge tool (Full Keyboard Access), which shows them as hover does
+    @Published var edgeFocus = false
     @Published var replyFocused: String?
     // settings mirrored for the views
     @Published private(set) var angleRad = false
@@ -157,7 +160,7 @@ final class BarModel: ObservableObject {
         closedFormTask?.cancel()
         if selected != nil, !text.isEmpty { selected = nil }
         gamesShown = BarCommand.of(text, sheets: sheets) == .games
-        if !gamesShown { gamePick = 0 }
+        if !gamesShown { gamePick = nil }
         helpShown = false
         if text.isEmpty { hint = nil }
         evaluateLive()
@@ -312,11 +315,12 @@ final class BarModel: ObservableObject {
 
     func enter(option: Bool = false) {
         if let i = selected, rows.indices.contains(i) {
-            insertFromRow(i, answer: option ? !pickAnswer : pickAnswer)
+            enterOnRow(i, other: option)
             return
         }
         if gamesShown {
-            let game = BarCommand.gameList[gamePick]
+            guard let g = gamePick else { commit(); return }
+            let game = BarCommand.gameList[g]
             play(game.kind)
             return
         }
@@ -427,29 +431,59 @@ final class BarModel: ObservableObject {
         }
     }
 
+    /// historyPicks (src/lib/answer.ts): what ← → step through on a row after its expression, as each inserts, and
+    /// the pick ↑ lands on.
+    func picks(_ row: HistoryRow) -> (answers: [String], start: Int) {
+        if row.kind == .function || row.kind == .system { return ([], 0) }
+        if row.kind == .definition { return ([row.expr], 1) }
+        if let solve = row.solve {
+            guard solve.outcome == .roots else { return ([], 0) }
+            return (solve.roots.map { String(format: "%.\(max(1, settings.significantFigures))g", $0) }, 1)
+        }
+        if row.hasDual, let exact = row.exact { return ([exact, row.display], settings.answerForm == "exact" ? 1 : 2) }
+        return ([settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display], 1)
+    }
+
+    /// ↑ ↓ keep to the side ← → last chose (historyPickOn)
+    private var sideIsExpr = false
+
+    private func land(on i: Int) {
+        selected = i
+        pick = sideIsExpr ? 0 : picks(rows[i]).start
+    }
+
     func moveSelection(up: Bool) {
         if gamesShown {
-            gamePick = (gamePick + (up ? BarCommand.gameList.count - 1 : 1)) % BarCommand.gameList.count
+            // in the games list ↑ starts at the game nearest the bar and climbs; ↓ past the last leaves it
+            let last = BarCommand.gameList.count - 1
+            if up { gamePick = gamePick.map { max(0, $0 - 1) } ?? last } else if let g = gamePick { gamePick = g >= last ? nil : g + 1 }
             return
         }
+        if helpShown { helpShown = false }
         guard !rows.isEmpty else { return }
-        if let i = selected {
-            if up {
-                selected = max(0, i - 1)
-            } else if i + 1 < rows.count {
-                selected = i + 1
-            } else {
-                selected = nil
-                if settings.historyShow != "always" { tapeOpen = false }
-            }
-        } else if up {
+        if up {
+            let fresh = !tapeOpen || selected == nil
+            if fresh { sideIsExpr = false }
             tapeOpen = true
-            selected = rows.count - 1
-            pickAnswer = settings.historyInsert == "answer"
+            land(on: fresh ? rows.count - 1 : max(0, selected! - 1))
+        } else {
+            guard tapeOpen else { return }
+            guard let i = selected, i < rows.count - 1 else {
+                selected = nil
+                focusField?()
+                return
+            }
+            land(on: i + 1)
         }
     }
 
-    func pickSide(answer: Bool) { pickAnswer = answer }
+    /// ← → on a highlighted row (onSide)
+    func pickSide(_ dir: Int) {
+        guard let i = selected, rows.indices.contains(i) else { return }
+        let next = min(picks(rows[i]).answers.count, max(0, pick + dir))
+        sideIsExpr = next == 0
+        pick = next
+    }
 
     func select(_ i: Int?) {
         selected = i
@@ -457,10 +491,32 @@ final class BarModel: ObservableObject {
 
     var historySelected: Bool { selected != nil }
 
+    /// ↵ on a highlighted row: whatever ← → picked (insertHistoryPick); ⌥↵ the other half (insertHistoryOther)
+    func enterOnRow(_ i: Int, other: Bool) {
+        guard rows.indices.contains(i) else { return }
+        let row = rows[i]
+        if other {
+            let expr = row.kind == .definition || row.kind == .function || settings.historyInsert == "answer"
+            insertFromRow(i, answer: !expr)
+            return
+        }
+        let answers = picks(row).answers
+        if pick > 0, !answers.isEmpty {
+            finishRowInsert(answers[min(pick, answers.count) - 1])
+        } else {
+            insertFromRow(i, answer: false)
+        }
+    }
+
+    /// A click on a row's half (clicks insert the side they hit).
     func insertFromRow(_ i: Int, answer: Bool) {
         guard rows.indices.contains(i) else { return }
         let row = rows[i]
-        let piece = answer ? (settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display) : row.expr
+        let piece = answer && row.kind != .definition ? (settings.answerForm == "exact" ? (row.exact ?? row.display) : row.display) : row.expr
+        finishRowInsert(piece)
+    }
+
+    private func finishRowInsert(_ piece: String) {
         selected = nil
         tapeOpen = false
         insert(piece)
@@ -559,7 +615,7 @@ final class BarModel: ObservableObject {
         case kVK_LeftArrow, kVK_RightArrow:
             guard flags.isEmpty else { return false }
             if selected != nil {
-                pickSide(answer: code == kVK_RightArrow)
+                pickSide(code == kVK_RightArrow ? 1 : -1)
                 return true
             }
             // → at the end of the line takes the completion

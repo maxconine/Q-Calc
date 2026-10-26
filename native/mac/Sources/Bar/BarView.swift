@@ -1,6 +1,10 @@
 import AppKit
-import SwiftUI
 import QCalcCore
+import SwiftUI
+
+// The bar, laid out as the web app's .spotlight is (src/index.css): the tape above, the 72 pt composer, then the
+// hint, the graph and the message cards, on one solid --bg card with 12 pt corners. Every size, colour and
+// spacing here comes from that CSS (Theme.swift).
 
 /// The bar's size as SwiftUI lays it out: the whole height, and how far down the composer starts (so history
 /// grows up and panels grow down, as applySize did for the page).
@@ -25,10 +29,14 @@ private extension View {
     }
 }
 
+private let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+
 struct BarView: View {
     @ObservedObject var model: BarModel
     @ObservedObject private var settings = AppSettings.shared
     var onSize: (BarSize) -> Void
+    @State private var anchor: CGFloat = 0
+    @State private var lastHeight: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,6 +46,8 @@ struct BarView: View {
             below
         }
         .frame(maxWidth: .infinity, alignment: .top)
+        .background(Color.qBg)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
         .fixedSize(horizontal: false, vertical: true)
         .reportHeight(HeightKey.self)
         .onPreferenceChange(HeightKey.self) { h in
@@ -48,44 +58,42 @@ struct BarView: View {
             anchor = a
             onSize(BarSize(height: lastHeight, anchorTop: a))
         }
-        .animation(NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .easeOut(duration: 0.12), value: model.rows.count)
     }
 
-    @State private var anchor: CGFloat = 0
-    @State private var lastHeight: CGFloat = 0
-
-    // what sits above the line: the cheat sheet, the games list, or the tape
+    // what sits above the line (.tape): the cheat sheet, the games list, or the history
     @ViewBuilder private var above: some View {
         if model.helpShown {
-            HelpSheet()
-            Divider().opacity(0.5)
+            TapeBox { HelpSheet() }
         } else if model.gamesShown {
-            GamesSheet(model: model)
-            Divider().opacity(0.5)
+            TapeBox { GamesSheet(model: model) }
         } else if !model.visibleRange.isEmpty {
-            HistoryTape(model: model)
-            Divider().opacity(0.5)
+            TapeBox { HistoryTape(model: model) }
         }
     }
 
     @ViewBuilder private var below: some View {
         if let hint = model.hint, !hint.isEmpty {
+            // .composer-hint: 12 pt muted, tucked 12 pt up into the composer's bottom padding
             Text(hint)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .font(.system(size: Theme.small))
+                .lineSpacing(2)
+                .foregroundStyle(Color.qMuted)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18)
-                .padding(.bottom, 8)
+                .padding(.horizontal, Theme.gutter)
+                .padding(.bottom, 12)
+                .padding(.top, -12)
                 .accessibilityLabel(hint)
         }
-        if settings.typstPreview, model.graph == nil, !model.live.isBlank, MathPreview.useful(model.text) {
+        if settings.typstPreview, model.graph == nil, !model.live.isBlank, MathPreview.useful(model.text),
+           model.math.render(expression: model.text, answer: model.shownAnswer, scale: 2, dark: false) != nil {
             MathPreview(expression: model.text, answer: model.shownAnswer, renderer: model.math)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 8)
         }
         if let graph = model.graph {
-            Divider().opacity(0.5)
             GraphPanel(model: model, state: graph)
         }
         if !model.cards.isEmpty {
@@ -94,42 +102,72 @@ struct BarView: View {
     }
 }
 
-// MARK: - the line and its answer
+/// .tape: the tape's own colour, a hairline under it, 6 pt by 8 pt in
+private struct TapeBox<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        content
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.qBgTape)
+            .overlay(alignment: .bottom) { Rectangle().fill(Color.qLine).frame(height: 1) }
+    }
+}
+
+// MARK: - the line and its answer (.composer)
 
 private struct Composer: View {
     @ObservedObject var model: BarModel
-    @ObservedObject private var settings = AppSettings.shared
+    @State private var hover = false
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            HStack(spacing: 1) {
-                // the faint `ans` a chained line continues from
-                if model.chained {
-                    Text("ans")
-                        .font(.system(size: BarTextView.fontSize))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityLabel("continues from the last answer")
-                }
-                ZStack(alignment: .leading) {
-                    if model.text.isEmpty {
-                        Text(model.rows.isEmpty ? "Type math, like 2^10 or sqrt(2)" : "")
-                            .font(.system(size: BarTextView.fontSize))
-                            .foregroundStyle(.tertiary)
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
-                    }
-                    InputField(model: model, placeholder: "")
-                }
+        // grid-template-columns: minmax(33%, 1fr) minmax(120px, max-content); gap 12; padding 8 16
+        GeometryReader { geo in
+            let inner = geo.size.width - Theme.gutter * 2
+            HStack(alignment: .center, spacing: 12) {
+                field
+                    .frame(minWidth: inner * 0.33, maxWidth: .infinity, minHeight: 36, maxHeight: 36)
+                    .layoutPriority(1)
+                LiveAnswerView(model: model)
+                    .frame(minWidth: 120, alignment: .trailing)
+                    .layoutPriority(2)
             }
-            .frame(minWidth: 120, maxWidth: .infinity, minHeight: 34, maxHeight: 34)
-            .layoutPriority(1)
-            LiveAnswerView(model: model)
-                .layoutPriority(2)
-            EdgeTools(model: model)
+            .padding(.vertical, 8)
+            .padding(.horizontal, Theme.gutter)
+            .frame(width: geo.size.width, height: Theme.composerHeight)
         }
-        .padding(.leading, 18)
-        .padding(.trailing, 10)
-        .frame(height: 64)
+        .frame(height: Theme.composerHeight)
+        .background(Color.qBg)
+        .overlay { EdgeTools(model: model, shown: hover || model.edgeFocus) }
+        .onHover { hover = $0 }
+    }
+
+    private var field: some View {
+        HStack(spacing: 0) {
+            // .quick-chain: the faint `ans` a chained line continues from
+            if model.chained {
+                Text("ans")
+                    .font(.system(size: Theme.display))
+                    .tracking(Theme.displayTracking(Theme.display))
+                    .foregroundStyle(Color.qMuted)
+                    .opacity(0.75)
+                    .padding(.trailing, 0.22 * Theme.display)
+                    .accessibilityLabel("continues from the last answer")
+            }
+            ZStack(alignment: .leading) {
+                if model.text.isEmpty {
+                    // .quick-plain::placeholder: muted at 80%
+                    Text("Calculate")
+                        .font(.system(size: Theme.display))
+                        .tracking(Theme.displayTracking(Theme.display))
+                        .foregroundStyle(Color.qMuted.opacity(0.8))
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+                InputField(model: model, placeholder: "")
+            }
+        }
     }
 }
 
@@ -137,47 +175,101 @@ struct LiveAnswerView: View {
     @ObservedObject var model: BarModel
 
     var body: some View {
-        Group {
-            if model.copied {
-                Label("Copied", systemImage: "checkmark")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .transition(.opacity)
-                    .accessibilityLabel("Copied")
-            } else if model.live.isBlank, let steady = model.steady {
-                Text(model.pretty(steady))
-                    .font(answerFont)
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
-            } else if model.hasDual, let exact = model.live.exact {
-                HStack(spacing: 6) {
-                    part(Pretty.answer(exact), copy: exact, help: "Copy exact value")
-                    Text("≈").font(answerFont).foregroundStyle(.secondary).accessibilityHidden(true)
-                    part(Pretty.answer(model.live.display), copy: model.live.display, help: "Copy approximation")
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Answer")
-            } else if !model.live.isBlank {
-                part(model.pretty(model.shownAnswer), copy: model.shownAnswer, help: "Copy to clipboard · ⌘C also copies")
-            }
+        HStack(spacing: 0) {
+            if model.copied { CopiedCheck() }
+            content
         }
         .lineLimit(1)
-        .minimumScaleFactor(0.45)
-        .animation(.easeOut(duration: 0.12), value: model.copied)
     }
 
-    private var answerFont: Font { .system(size: 24, weight: .regular).monospacedDigit() }
+    @ViewBuilder private var content: some View {
+        if model.live.isBlank, let steady = model.steady {
+            // .live-steady: never the answer's colour, gone after a pause
+            AnswerText(text: model.pretty(steady), size: Theme.display)
+                .foregroundStyle(Color.qMuted.opacity(0.5))
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                .accessibilityHidden(true)
+        } else if model.live.improper {
+            Text(model.live.display)
+                .font(.system(size: Theme.body))
+                .foregroundStyle(Color.qMuted)
+        } else if model.hasDual, let exact = model.exact {
+            // .live-dual: two 20 pt halves around a 17 pt ≈, each its own copy
+            HStack(spacing: 0) {
+                AnswerButton(model: model, shown: Pretty.answer(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
+                Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
+                AnswerButton(model: model, shown: model.pretty(model.live.display), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Answer")
+        } else if !model.live.isBlank {
+            AnswerButton(model: model, shown: model.pretty(model.shownAnswer), copy: model.shownAnswer, size: Theme.display,
+                         help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
+                .id(model.formIndex)
+                .transition(.opacity)
+        }
+    }
+}
 
-    private func part(_ shown: String, copy: String, help: String) -> some View {
+/// .live-check: "✓ copied", hanging left of the answer, in for 120 ms, held, gone by 1.2 s
+private struct CopiedCheck: View {
+    @State private var opacity: Double = reduceMotion ? 1 : 0
+    var body: some View {
+        Text("✓ copied")
+            .font(.system(size: Theme.caption, weight: .medium))
+            .tracking(0.02 * Theme.caption)
+            .foregroundStyle(Color.qAccentHover)
+            .padding(.vertical, 2).padding(.horizontal, 7)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qBg))
+            .padding(.trailing, 6)
+            .opacity(opacity)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeOut(duration: 0.12)) { opacity = 1 }
+                withAnimation(.easeOut(duration: 0.48).delay(0.72)) { opacity = 0 }
+            }
+            .accessibilityLabel("Copied")
+    }
+}
+
+private struct AnswerText: View {
+    let text: String
+    let size: CGFloat
+    var body: some View {
+        Text(text)
+            .font(.system(size: size).monospacedDigit())
+            .tracking(Theme.displayTracking(size))
+            .truncationMode(.tail)
+    }
+}
+
+/// .live: the answer as a button — answer colour, hover lightens it and fills behind, 6 pt corners
+private struct AnswerButton: View {
+    @ObservedObject var model: BarModel
+    let shown: String
+    let copy: String
+    let size: CGFloat
+    let help: String
+    let trailingPad: CGFloat
+    @State private var hover = false
+
+    var body: some View {
         Button {
             model.copyAnswer(copy)
             model.focusField?()
         } label: {
-            Text(shown)
-                .font(answerFont)
-                .foregroundStyle(Color.accentColor)
+            AnswerText(text: shown, size: size)
+                .foregroundStyle(model.copied || hover ? Color.qAnswerHover : Color.qAnswer)
+                .padding(.vertical, 2)
+                .padding(.horizontal, 8)
+                .frame(minWidth: size == Theme.display ? 88 : 0, minHeight: 32, alignment: .trailing)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(hover ? Color.qAnswer.opacity(0.09) : .clear))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
+        .onHover { hover = $0 }
+        .animation(.easeOut(duration: 0.12), value: hover)
         .help(help)
         .accessibilityLabel("Answer \(shown)")
         .accessibilityHint("Copies it")
@@ -185,84 +277,141 @@ struct LiveAnswerView: View {
     }
 }
 
-// the toggles at the bar's end (EdgeTools.tsx), each with its key in the tooltip
+// MARK: - edge tools (EdgeTools.tsx): settings top left, deg · a/b · sf top right, clear bottom right; shown on hover
+
 private struct EdgeTools: View {
     @ObservedObject var model: BarModel
     @ObservedObject private var settings = AppSettings.shared
+    let shown: Bool
 
     var body: some View {
-        HStack(spacing: 2) {
-            tool(model.angleRad ? "rad" : "deg", on: model.angleRad, action: "angle", label: model.angleRad ? "Radians" : "Degrees") {
-                model.toggleAngle()
+        ZStack {
+            EdgeTool(label: "Settings", tip: tip("Open settings", "settings"), tipAbove: false, active: false, alignLeft: true, action: { model.onSettings?() }) {
+                Image(systemName: "gearshape.fill").font(.system(size: 10.5, weight: .medium))
             }
-            tool("a/b", on: model.fractions, action: "fraction", label: "Fractions") { model.toggleFractions() }
-            tool("sf", on: model.sigFigMode, action: "sigFigs", label: "Sig figs from input") { model.toggleSigFigMode() }
-            icon("trash", action: "clear", label: "Clear history") { model.clearHistory() }
-                .disabled(model.rows.isEmpty)
-            icon("gearshape", action: "settings", label: "Settings") { model.onSettings?() }
+            .padding(.horizontal, -3)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.leading, 6)
+
+            HStack(spacing: 0) {
+                EdgeTool(label: model.angleRad ? "Radians" : "Degrees",
+                         tip: tip(model.angleRad ? "Radians · click for degrees" : "Degrees · click for radians", "angle"),
+                         tipAbove: false, active: true, action: { model.toggleAngle() }) {
+                    Text(model.angleRad ? "rad" : "deg")
+                }
+                EdgeTool(label: "Fraction results \(model.fractions ? "on" : "off")",
+                         tip: tip("Answers as fractions: \(model.fractions ? "on" : "off")", "fraction"),
+                         tipAbove: false, active: model.fractions, action: { model.toggleFractions() }) {
+                    // .edge-frac-mark: a over b, 6.5 pt, with a 7 pt bar
+                    VStack(spacing: 0.5) {
+                        Text("a")
+                        Rectangle().frame(width: 7, height: 1)
+                        Text("b")
+                    }
+                    .font(.system(size: 6.5, weight: .semibold))
+                    .padding(.vertical, -2)
+                }
+                EdgeTool(label: "Significant figures from input \(model.sigFigMode ? "on" : "off")",
+                         tip: tip("Sig figs from what you type: \(model.sigFigMode ? "on" : "off")", "sigFigs"),
+                         tipAbove: false, active: model.sigFigMode, action: { model.toggleSigFigMode() }) {
+                    Text("sf")
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            .padding(.trailing, 6)
+
+            EdgeTool(label: "Clear history and variables", tip: tip("Clear history and variables", "clear"), tipAbove: true, active: false, action: { model.clearHistory() }) {
+                Text("clear")
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            .padding(.trailing, 6)
         }
+        .opacity(shown ? 1 : 0)
+        .animation(.easeInOut(duration: 0.15), value: shown)
     }
 
-    private func keyTitle(_ action: String) -> String {
-        KeyActions.title(KeyActions.chord(action, in: settings.keybinds))
-    }
-
-    private func tip(_ label: String, _ action: String) -> String {
-        let key = keyTitle(action)
-        return key.isEmpty ? label : "\(label) · \(key)"
-    }
-
-    private func tool(_ title: String, on: Bool, action: String, label: String, run: @escaping () -> Void) -> some View {
-        Button(action: { run(); model.focusField?() }) {
-            Text(title)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .frame(minWidth: 26, minHeight: 22)
-                .foregroundStyle(on ? Color.accentColor : Color.secondary)
-                .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor.opacity(0.14) : Color.clear))
-        }
-        .buttonStyle(.plain)
-        .help(tip(label, action))
-        .accessibilityLabel(label)
-        .accessibilityValue(on ? "on" : "off")
-    }
-
-    private func icon(_ symbol: String, action: String, label: String, run: @escaping () -> Void) -> some View {
-        Button(action: { run(); model.focusField?() }) {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .medium))
-                .frame(width: 24, height: 22)
-                .foregroundStyle(.secondary)
-        }
-        .buttonStyle(.plain)
-        .help(tip(label, action))
-        .accessibilityLabel(label)
+    private func tip(_ text: String, _ action: String) -> String {
+        let key = KeyActions.title(KeyActions.chord(action, in: settings.keybinds))
+        return key.isEmpty ? text : "\(text) · \(key)"
     }
 }
 
-// MARK: - the tape
+/// .edge-tool: 11 pt medium, 0.02 em tracking, padding 4 × 9, muted at 72% (an active toggle the answer colour),
+/// with its tip after a 450 ms rest
+private struct EdgeTool<Label: View>: View {
+    let label: String
+    let tip: String
+    let tipAbove: Bool
+    let active: Bool
+    var alignLeft = false
+    let action: () -> Void
+    @ViewBuilder var content: Label
+    @State private var hover = false
+    @State private var tipShown = false
+    @State private var pressed = false
+
+    var body: some View {
+        Button(action: action) {
+            content
+                .font(.system(size: Theme.caption, weight: .medium))
+                .tracking(0.02 * Theme.caption)
+                .foregroundStyle(active || (hover && alignLeft) ? Color.qAnswer : hover ? Color.qMuted : Color.qMuted.opacity(0.72))
+                .padding(.vertical, 4)
+                .padding(.horizontal, alignLeft ? 6 : 9)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(pressed ? Color.qFillSelected : hover ? Color.qFillHover : .clear))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { on in
+            hover = on
+            tipShown = false
+            if on { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { if hover { tipShown = true } } }
+        }
+        .animation(.easeOut(duration: 0.12), value: hover)
+        .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {
+            if tipShown {
+                // ::after: ink pill with --bg text, 4 pt off the button
+                Text(tip)
+                    .font(.system(size: Theme.caption, weight: .medium))
+                    .foregroundStyle(Color.qBg)
+                    .fixedSize()
+                    .padding(.vertical, 4).padding(.horizontal, 7)
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk))
+                    .alignmentGuide(tipAbove ? .top : .bottom) { d in tipAbove ? d[.bottom] + 4 : d[.top] - 4 }
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
+        }
+        .accessibilityLabel(label)
+        .accessibilityHint(tip)
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+}
+
+// MARK: - the tape (HistoryTape.tsx)
 
 private struct HistoryTape: View {
     @ObservedObject var model: BarModel
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView(.vertical, showsIndicators: false) {
+            ScrollView(.vertical, showsIndicators: model.visibleRange.count > Theme.tapeVisible) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.visibleRange), id: \.self) { i in
-                        HistoryRowView(model: model, index: i, row: model.rows[i])
-                            .id(i)
+                        HistoryRowView(model: model, index: i, row: model.rows[i]).id(i)
                     }
                 }
-                .padding(.vertical, 6)
             }
-            .frame(maxHeight: CGFloat(min(model.visibleRange.count, 6)) * 34 + 12)
+            .frame(height: CGFloat(min(model.visibleRange.count, Theme.tapeVisible)) * Theme.tapeRow)
             .onChange(of: model.selected) { i in
-                if let i { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(i) } }
+                if let i { proxy.scrollTo(i) }
             }
-            .onAppear { proxy.scrollTo(model.rows.count - 1) }
+            .onAppear { proxy.scrollTo(model.rows.count - 1, anchor: .bottom) }
+            .onChange(of: model.rows.count) { _ in proxy.scrollTo(model.rows.count - 1, anchor: .bottom) }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("History")
+        .accessibilityLabel("Calculation history")
     }
 }
 
@@ -271,46 +420,41 @@ private struct HistoryRowView: View {
     let index: Int
     let row: HistoryRow
     @State private var hover = false
+    @State private var exprHover = false
 
-    var selected: Bool { model.selected == index }
-    private var answer: String {
-        let approx = Pretty.answer(row.display)
-        guard AppSettings.shared.answerForm == "exact", row.hasDual, let exact = row.exact else { return approx }
-        return Pretty.answer(exact) + " ≈ " + approx
-    }
+    private var selected: Bool { model.selected == index }
+    // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
+    private var picked: Int? { selected ? (model.pickAnswer ? 1 : 0) : nil }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Button { model.insertFromRow(index, answer: false) } label: {
-                Text(row.expr)
-                    .foregroundStyle(selected && !model.pickAnswer ? Color.primary : Color.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .padding(.horizontal, 4)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(selected && !model.pickAnswer ? Color.accentColor.opacity(0.18) : .clear))
+        // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners
+        GeometryReader { geo in
+            HStack(spacing: 12) {
+                Button { model.insertFromRow(index, answer: false) } label: {
+                    Text(Pretty.radicals(row.expr))
+                        .font(.system(size: Theme.body))
+                        .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, picked == 0 ? 4 : 0)
+                        .background(PickedMark(on: picked == 0))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { exprHover = $0 }
+                .help("Insert the expression")
+                .accessibilityLabel("Expression \(row.expr)")
+
+                answers
+                    .frame(minWidth: 120, maxWidth: max(120, (geo.size.width - 16) * 0.46), alignment: .trailing)
             }
-            .buttonStyle(.plain)
-            .help("Insert the expression")
-            .accessibilityLabel("Expression \(row.expr)")
-            Spacer(minLength: 8)
-            Text("=").foregroundStyle(.tertiary).accessibilityHidden(true)
-            Button { model.insertFromRow(index, answer: true) } label: {
-                Text(answer)
-                    .foregroundStyle(selected && model.pickAnswer ? Color.primary : Color.accentColor.opacity(0.9))
-                    .lineLimit(1)
-                    .padding(.horizontal, 4)
-                    .background(RoundedRectangle(cornerRadius: 5).fill(selected && model.pickAnswer ? Color.accentColor.opacity(0.18) : .clear))
-            }
-            .buttonStyle(.plain)
-            .help("Insert the answer")
-            .accessibilityLabel("Answer \(answer)")
-            .onDrag { NSItemProvider(object: row.display as NSString) }
+            .padding(.horizontal, 8)
+            .frame(height: Theme.tapeRow)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(selected ? Color.qFillSelected : hover ? Color.qFillHover : .clear))
         }
-        .font(.system(size: 15).monospacedDigit())
-        .padding(.horizontal, 14)
-        .frame(height: 34)
-        .background(RoundedRectangle(cornerRadius: 8).fill(selected ? Color.primary.opacity(0.07) : hover ? Color.primary.opacity(0.04) : .clear))
-        .padding(.horizontal, 6)
+        .frame(height: Theme.tapeRow)
         .onHover { hover = $0 }
         .contextMenu {
             Button("Copy Expression") { model.copyRow(row, answer: false) }
@@ -325,9 +469,64 @@ private struct HistoryRowView: View {
         .accessibilityLabel("\(row.expr) equals \(row.display)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
+
+    @ViewBuilder private var answers: some View {
+        if row.hasDual, let exact = row.exact {
+            // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
+            HStack(spacing: 6) {
+                answer(Pretty.answer(exact), insert: true, picked: picked == 1)
+                Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
+                answer(Pretty.answer(row.display), insert: true, picked: false)
+            }
+        } else {
+            answer(Pretty.answer(row.display), insert: true, picked: picked == 1)
+        }
+    }
+
+    private func answer(_ text: String, insert: Bool, picked: Bool) -> some View {
+        AnswerCell(text: text, picked: picked) { model.insertFromRow(index, answer: true) }
+            .onDrag { NSItemProvider(object: row.display as NSString) }
+    }
 }
 
-// MARK: - sheets above the bar
+/// .tape-a: 17 pt answer colour, -0.015 em, lighter on hover
+private struct AnswerCell: View {
+    let text: String
+    let picked: Bool
+    let action: () -> Void
+    @State private var hover = false
+    var body: some View {
+        Button(action: action) {
+            Text(text)
+                .font(.system(size: Theme.row).monospacedDigit())
+                .tracking(-0.015 * Theme.row)
+                .foregroundStyle(hover ? Color.qAnswerHover : Color.qAnswer)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .padding(.vertical, 4)
+                .padding(.horizontal, picked ? 4 : 0)
+                .background(PickedMark(on: picked))
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help("Insert the answer")
+        .accessibilityLabel("Answer \(text)")
+    }
+}
+
+/// .tape-row.selected .picked: a 1 pt ring and a tint, both the answer colour
+private struct PickedMark: View {
+    let on: Bool
+    var body: some View {
+        if on {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.qAnswer.opacity(0.14))
+                .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Color.qAnswer.opacity(0.55), lineWidth: 1))
+        }
+    }
+}
+
+// MARK: - sheets above the bar (.cheats)
 
 private struct GamesSheet: View {
     @ObservedObject var model: BarModel
@@ -336,67 +535,95 @@ private struct GamesSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(BarCommand.gameList.enumerated()), id: \.offset) { i, game in
                 Button { model.onGame?(game.kind) } label: {
-                    HStack {
-                        Text(game.name).font(.system(size: 14, weight: .medium))
-                        Spacer()
-                        Text(game.blurb).font(.system(size: 12)).foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        Text(game.name).font(.system(size: Theme.body, weight: .medium)).foregroundStyle(Color.qInk)
+                            .frame(minWidth: 96, alignment: .leading)
+                        Text(game.blurb).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted)
+                        Spacer(minLength: 0)
                     }
-                    .padding(.horizontal, 14)
-                    .frame(height: 30)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(i == model.gamePick ? Color.accentColor.opacity(0.16) : .clear))
+                    .padding(.horizontal, 8)
+                    .frame(height: Theme.tapeRow)
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(i == model.gamePick ? Color.qFillSelected : .clear))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Play \(game.name), \(game.blurb)")
             }
         }
-        .padding(6)
     }
 }
 
 private struct HelpSheet: View {
-    private let rows: [(String, String)] = [
-        ("2^10 · sqrt(2) · 5!", "arithmetic, powers, roots, factorials"),
-        ("x = 4 · f(x) = x^2", "variables and functions, used by later lines"),
-        ("* 3 at the start", "continues from the last answer"),
-        ("graph sin(x)", "draws a curve under the bar"),
-        ("periodic · identities", "reference sheets in their own windows"),
-        ("games · pong", "games, in a window of their own"),
-        ("message <name> hi", "messages to other Q Calc users"),
-        ("↑ ↓ · ↵ · ⌥↵", "walk the history, insert a row or its other half"),
-        ("Tab", "cycle the answer's forms"),
-        ("⌘C · ⇧⌘C", "copy the answer, or the whole line"),
+    // the keys (hostCheats) and what they do, in the cheat sheet's two columns
+    private let left: [(String, String)] = [
+        ("↵", "save to history"), ("↑ ↓", "walk the history"), ("⌥↵", "insert the other half"),
+        ("Tab", "other forms of the answer"), ("⌘C", "copy the answer"), ("⇧⌘C", "copy the whole line"),
+    ]
+    private let right: [(String, String)] = [
+        ("2^10 · sqrt(2)", "powers and roots"), ("x = 4", "variables for later lines"),
+        ("* 3", "continue from the answer"), ("graph sin(x)", "a curve under the bar"),
+        ("periodic", "the periodic table"), ("games", "games to play"),
     ]
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 6) {
+        HStack(alignment: .top, spacing: 24) {
+            column(left, keyWidth: 72)
+            column(right, keyWidth: 104)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func column(_ rows: [(String, String)], keyWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
             ForEach(rows, id: \.0) { r in
-                GridRow {
-                    Text(r.0).font(.system(size: 13, design: .monospaced))
-                    Text(r.1).font(.system(size: 13)).foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    Text(r.0).font(.system(size: Theme.small, weight: .medium)).foregroundStyle(Color.qInk)
+                        .frame(width: keyWidth, alignment: .leading)
+                    Text(r.1).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
                 }
+                .padding(.horizontal, 8)
+                .frame(height: 28)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-// MARK: - message cards (MessageNotices.tsx)
+// MARK: - message cards (MessageNotices.tsx, .message-banner)
 
 private struct MessageCards: View {
     @ObservedObject var model: BarModel
 
     var body: some View {
-        VStack(spacing: 6) {
-            ForEach(model.cards) { card in
+        VStack(spacing: 0) {
+            ForEach(Array(model.cards.enumerated()), id: \.element.id) { i, card in
+                if i > 0 { Rectangle().fill(Color.qLine).frame(height: 1) }
                 CardView(model: model, card: card)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.bottom, 10)
+        .font(.system(size: Theme.body))
+        .background(Color.qBgTape)
+        .overlay(alignment: .top) { Rectangle().fill(Color.qLine).frame(height: 1) }
         .onHover { model.cardsHovered = $0 }
+    }
+}
+
+private struct CardAct: View {
+    let title: String
+    let action: () -> Void
+    @State private var hover = false
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: Theme.small))
+                .foregroundStyle(hover ? Color.qAnswer : Color.qMuted)
+                .padding(.horizontal, 8)
+                .frame(height: 22)
+                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(hover ? Color.qFillSelected : .clear))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
     }
 }
 
@@ -405,48 +632,61 @@ private struct CardView: View {
     let card: BannerCard
     @FocusState private var focused: Bool
 
+    private static let control = Color(nsColor: NSColor(name: nil) { a in
+        a.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(srgbRed: 0x58 / 255, green: 0x58 / 255, blue: 0x5c / 255, alpha: 1) : .white
+    })
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(card.from).font(.system(size: 13, weight: .semibold))
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(card.from).fontWeight(.semibold).foregroundStyle(Color.qInk).lineLimit(1)
                 if card.ask {
-                    Text("wants to message you").font(.system(size: 13)).foregroundStyle(.secondary)
+                    Text("wants to message you").foregroundStyle(Color.qMuted).lineLimit(1)
+                    Spacer(minLength: 0)
+                    CardAct(title: "Allow") { model.answerAsk(card.id, allow: true) }
+                    CardAct(title: "Block") { model.answerAsk(card.id, allow: false) }
                 } else {
-                    Text(card.text).font(.system(size: 13)).textSelection(.enabled).lineLimit(3)
+                    Spacer(minLength: 0)
+                    CardAct(title: "×") { model.dismissCard(card.id) }.accessibilityLabel("Dismiss")
                 }
-                Spacer()
-                Button { model.dismissCard(card.id) } label: { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .help("Dismiss")
-                    .accessibilityLabel("Dismiss message from \(card.from)")
             }
-            if card.ask {
-                HStack {
-                    Button("Allow") { model.answerAsk(card.id, allow: true) }
-                    Button("Block") { model.answerAsk(card.id, allow: false) }
-                }
-                .controlSize(.small)
-            } else {
-                HStack {
-                    TextField("Reply to \(card.from)", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }))
-                        .textFieldStyle(.roundedBorder)
+            .frame(minHeight: 22)
+            if !card.ask {
+                Text(card.text)
+                    .foregroundStyle(Color.qAnswer)
+                    .lineLimit(4)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 8) {
+                    TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }),
+                              prompt: Text("Reply to \(card.from)").foregroundColor(.qMuted))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: Theme.small))
+                        .foregroundStyle(Color.qInk)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 8)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Self.control)
+                            .shadow(color: .black.opacity(0.1), radius: 1, y: 1))
+                        .overlay(RoundedRectangle(cornerRadius: Theme.radiusS)
+                            .strokeBorder(focused ? Color.qAccent : Color.black.opacity(0.12), lineWidth: focused ? 2 : 0.5))
                         .noWritingTools()
                         .focused($focused)
                         .onSubmit { model.sendReply(card.id) }
-                        .disabled(card.reply == .sending || card.reply == .sent)
+                        .disabled(card.reply == .sent)
                         .accessibilityLabel("Reply to \(card.from)")
                     switch card.reply {
-                    case .sending: ProgressView().controlSize(.small)
-                    case .sent: Text("sent").font(.system(size: 12)).foregroundStyle(.secondary)
-                    case let .failed(note): Text(note).font(.system(size: 11)).foregroundStyle(.red).lineLimit(1)
+                    case .sending: Text("sending…").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                    case .sent: Text("sent").font(.system(size: Theme.small)).foregroundStyle(Color.qAccent)
+                    case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1)
                     case .idle: EmptyView()
                     }
                 }
+                .padding(.top, 4)
             }
         }
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.06)))
+        .padding(.top, 8)
+        .padding(.horizontal, Theme.gutter)
+        .padding(.bottom, card.ask ? 8 : 12)
         .onChange(of: focused) { on in
             if on { model.replyFocused = card.id } else if model.replyFocused == card.id { model.replyFocused = nil }
         }

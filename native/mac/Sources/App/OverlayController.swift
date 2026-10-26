@@ -31,8 +31,8 @@ final class OverlayPanel: NSPanel {
     }
 }
 
-/// Vibrancy behind the bar, rounded like Spotlight; the SwiftUI bar sits on it.
-private final class BarBackground: NSVisualEffectView {
+/// The panel's content: clear and rounded as the web view was; the SwiftUI bar sits on it.
+private final class BarBackground: NSView {
     override var mouseDownCanMoveWindow: Bool { true }
 }
 
@@ -153,13 +153,11 @@ final class OverlayController: NSObject {
         panel.becomesKeyOnlyIfNeeded = false
         panel.setAccessibilityLabel("Q Calc")
 
+        // the web view's layer: clear, 12 pt corners (makeWebView); the bar paints its own solid --bg card
         let background = BarBackground()
-        background.material = .popover
-        background.blendingMode = .behindWindow
-        background.state = .active
         background.wantsLayer = true
-        background.layer?.cornerRadius = 14
-        background.layer?.cornerCurve = .continuous
+        background.layer?.backgroundColor = NSColor.clear.cgColor
+        background.layer?.cornerRadius = Theme.radius
         background.layer?.masksToBounds = true
         background.autoresizingMask = [.width, .height]
 

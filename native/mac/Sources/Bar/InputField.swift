@@ -14,6 +14,59 @@ final class BarTextView: NSTextView {
     var ghostTail = "" { didSet { if ghostTail != oldValue { needsDisplay = true } } }
 
     static let fontSize: CGFloat = 24
+    static let attributes: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: fontSize, weight: .regular),
+        .foregroundColor: Theme.ink,
+        .kern: Theme.displayTracking(fontSize),
+    ]
+
+    /// The whole line in the field's look, after any programmatic change.
+    func restyle() {
+        guard let storage = textStorage, storage.length > 0 else { return }
+        storage.setAttributes(Self.attributes, range: NSRange(location: 0, length: storage.length))
+    }
+
+    /// Replaces the line, putting the caret (and selection) where asked; one undo step.
+    func replace(with text: String, selection: NSRange) {
+        let all = NSRange(location: 0, length: (string as NSString).length)
+        if shouldChangeText(in: all, replacementString: text) {
+            textStorage?.replaceCharacters(in: all, with: NSAttributedString(string: text, attributes: Self.attributes))
+            didChangeText()
+        }
+        setSelectedRange(selection)
+    }
+
+    // `[` pairs, `]` steps over, `(`/`[`/`{` over a selection wraps it (bracketKey, wrapSelection)
+    override func insertText(_ insert: Any, replacementRange: NSRange) {
+        let typed = (insert as? String) ?? (insert as? NSAttributedString)?.string ?? ""
+        let sel = selectedRange()
+        if !hasMarkedText(), replacementRange.location == NSNotFound, ["[", "]", "(", "{"].contains(typed) {
+            if let w = Symbols.wrap(string, start: sel.location, end: sel.location + sel.length, key: typed) {
+                replace(with: w.text, selection: NSRange(location: w.start, length: w.end - w.start))
+                return
+            }
+            if let b = Symbols.bracketKey(string, start: sel.location, end: sel.location + sel.length, key: typed) {
+                replace(with: b.text, selection: NSRange(location: b.caret, length: 0))
+                return
+            }
+        }
+        super.insertText(insert, replacementRange: replacementRange)
+    }
+
+    // backspace in `[]` takes both; a +- that meets at the caret becomes ± (joinPlusMinusAt)
+    override func deleteBackward(_ sender: Any?) {
+        let sel = selectedRange()
+        if let b = Symbols.bracketKey(string, start: sel.location, end: sel.location + sel.length, key: "backspace") {
+            replace(with: b.text, selection: NSRange(location: b.caret, length: 0))
+            return
+        }
+        super.deleteBackward(sender)
+        let ns = string as NSString
+        let c = selectedRange().location
+        if c > 0, c < ns.length, ns.substring(with: NSRange(location: c - 1, length: 2)) == "+-" {
+            replace(with: ns.substring(to: c - 1) + "±" + ns.substring(from: c + 1), selection: NSRange(location: c, length: 0))
+        }
+    }
 
     override init(frame: NSRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
@@ -54,10 +107,12 @@ final class BarTextView: NSTextView {
         isVerticallyResizable = false
         maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: 40)
         drawsBackground = false
+        // .quick-field: 24 pt regular, -0.021 em, the ink colour, and an ink caret (caret-color: var(--ink))
         font = .systemFont(ofSize: Self.fontSize, weight: .regular)
-        textColor = .labelColor
-        insertionPointColor = .controlAccentColor
-        typingAttributes = [.font: font!, .foregroundColor: NSColor.labelColor]
+        textColor = Theme.ink
+        insertionPointColor = Theme.ink
+        typingAttributes = Self.attributes
+        selectedTextAttributes = [.backgroundColor: NSColor.selectedTextBackgroundColor]
         setAccessibilityLabel("Calculation")
         setAccessibilityHelp("Type maths; the answer appears as you type. Return saves it to the history.")
         setAccessibilityRole(.textField)
@@ -109,7 +164,7 @@ final class BarTextView: NSTextView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: NSColor.tertiaryLabelColor]
+        let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         if !ghostLead.isEmpty {
             (ghostLead as NSString).draw(at: NSPoint(x: 0, y: 0), withAttributes: attrs)
         }
@@ -178,13 +233,14 @@ struct InputField: NSViewRepresentable {
         guard let text = context.coordinator.text else { return }
         if text.string != model.text {
             text.string = model.text
+            text.restyle()
             text.setSelectedRange(NSRange(location: (model.text as NSString).length, length: 0))
             text.undoManager?.removeAllActions(withTarget: text.textStorage as Any)
         }
         text.placeholder = placeholder
         text.ghostLead = ""
         text.ghostTail = model.completion ?? ""
-        text.textColor = .labelColor
+        text.insertionPointColor = Theme.ink
         // keep the caret in view as the line grows
         text.sizeToFit()
         text.frame.size.width = max(scroll.contentSize.width, text.frame.width)
@@ -199,6 +255,16 @@ struct InputField: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard let text else { return }
+            // typed words become symbols as they're finished (prettyTokens), unless "keep words" is on
+            if !text.hasMarkedText() {
+                let caret = text.selectedRange().location
+                let pretty = Symbols.pretty(text.string, caret: caret, keepWords: AppSettings.shared.keepWords)
+                if pretty.text != text.string {
+                    text.textStorage?.replaceCharacters(in: NSRange(location: 0, length: (text.string as NSString).length),
+                                                        with: NSAttributedString(string: pretty.text, attributes: BarTextView.attributes))
+                    text.setSelectedRange(NSRange(location: pretty.caret, length: 0))
+                }
+            }
             if model.text != text.string { model.text = text.string }
             text.sizeToFit()
             text.scrollRangeToVisible(text.selectedRange())

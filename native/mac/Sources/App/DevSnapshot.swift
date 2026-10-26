@@ -20,8 +20,11 @@ enum DevSnapshot {
             (window.appearance ?? NSApp.effectiveAppearance).performAsCurrentDrawingAppearance {
                 background = NSColor(cgColor: NSColor.windowBackgroundColor.cgColor) ?? .windowBackgroundColor
             }
-            background.setFill()
-            NSBezierPath(roundedRect: NSRect(origin: .zero, size: bounds.size), xRadius: 14, yRadius: 14).fill()
+            // the bar paints its own card; other windows get their background colour behind the capture
+            if !(window is OverlayPanel) {
+                background.setFill()
+                NSBezierPath(roundedRect: NSRect(origin: .zero, size: bounds.size), xRadius: 10, yRadius: 10).fill()
+            }
             if !window.title.contains("Periodic") || view.layer == nil {
                 // SwiftUI draws through cacheDisplay
                 guard let rep = view.bitmapImageRepForCachingDisplay(in: bounds) else { image.unlockFocus(); continue }
