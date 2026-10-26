@@ -6,6 +6,7 @@
 
 use super::{EvalError, EvalResult, Scope, Val};
 use crate::jsnum;
+use crate::scientific::functions::jsmath; // WP-FUNCTIONS: V8's Math.*
 
 /// The golden ratio, unless `phi` is a variable.
 pub const PHI: f64 = std::f64::consts::GOLDEN_RATIO;
@@ -130,7 +131,7 @@ pub fn gamma(n: f64) -> f64 {
         return product(1.0, n - 1.0);
     }
     if n < 0.5 {
-        return std::f64::consts::PI / ((std::f64::consts::PI * n).sin() * gamma(1.0 - n));
+        return std::f64::consts::PI / (jsmath::sin(std::f64::consts::PI * n) * gamma(1.0 - n)); // WP-FUNCTIONS
     }
     if n >= 171.35 {
         return f64::INFINITY;
@@ -141,7 +142,7 @@ pub fn gamma(n: f64) -> f64 {
         let four = three * n;
         let five = four * n;
         return (2.0 * std::f64::consts::PI / n).sqrt()
-            * (n / std::f64::consts::E).powf(n)
+            * jsmath::pow(n / std::f64::consts::E, n) // WP-FUNCTIONS
             * (1.0 + 1.0 / (12.0 * n) + 1.0 / (288.0 * two)
                 - 139.0 / (51840.0 * three)
                 - 571.0 / (2_488_320.0 * four)
@@ -154,7 +155,7 @@ pub fn gamma(n: f64) -> f64 {
         x += p / (n + i as f64);
     }
     let t = n + GAMMA_G + 0.5;
-    (2.0 * std::f64::consts::PI).sqrt() * t.powf(n + 0.5) * (-t).exp() * x
+    (2.0 * std::f64::consts::PI).sqrt() * jsmath::pow(t, n + 0.5) * jsmath::exp(-t) * x // WP-FUNCTIONS
 }
 
 /// n! for integers, Γ(n+1) for other reals; negative integers are undefined.
@@ -195,7 +196,7 @@ fn sqrt(args: &[Val], scope: &Scope) -> EvalResult {
 
 fn abs(args: &[Val], _: &Scope) -> EvalResult {
     match args.first() {
-        Some(Val::Complex { re, im }) => num(re.hypot(*im)),
+        Some(Val::Complex { re, im }) => num(super::complex::abs(*re, *im)), // WP-FUNCTIONS
         _ => num(arg(args, 0).abs()),
     }
 }
@@ -204,7 +205,7 @@ const FOUNDATION: &[Builtin] = &[
     Builtin {
         name: "factorial",
         max_args: 1,
-        call: |a, _| num(factorial(arg(a, 0))),
+        call: crate::scientific::functions::factorial_call, // WP-FUNCTIONS: complex and lists throw
     },
     Builtin {
         name: "mod",
@@ -224,7 +225,7 @@ const FOUNDATION: &[Builtin] = &[
     Builtin {
         name: "cbrt",
         max_args: 1,
-        call: |a, _| num(arg(a, 0).cbrt()),
+        call: |a, _| num(jsmath::cbrt(arg(a, 0))), // WP-FUNCTIONS: V8's Math.cbrt
     },
 ];
 
@@ -246,6 +247,11 @@ pub fn call_builtin(name: &str, args: &[Val], scope: &Scope) -> Option<EvalResul
     if b.max_args > 0 && args.len() > b.max_args {
         return Some(Err(EvalError::TooManyArguments(name.to_string())));
     }
+    // WP-UNITS: `unitSafe`, trig takes an angle unit in the calculator's mode, anything else throws
+    let args = &*match crate::units::mathjs::unit_safe(name, args, scope.angle_mode) {
+        Ok(a) => a,
+        Err(e) => return Some(Err(e)),
+    };
     if args.iter().any(|a| matches!(a, Val::Str(_))) {
         // a unit or string inside a scalar function: blank, as `unitSafe` throws
         return Some(Err(EvalError::Unsupported(format!("text in {name}"))));
