@@ -12,7 +12,7 @@ pub use qcalc_core::app::history::{
     Throws, ellipsize, file_text, history_functions, history_measures, history_quantities,
     history_variables, is_complex_quantity, is_literal_quantity, is_matrix_quantity,
     last_answer_row, last_history_number, normalize_history_row, persistable_history,
-    sanitize_meas, slim_history_row,
+    slim_history_row,
 };
 pub use qcalc_core::app::history_show::{RECENT_MS, RECENT_ROWS, next_recent_expiry, recent_start};
 

@@ -7,6 +7,8 @@ import SwiftUI
 final class BarTextView: NSTextView {
     var onKey: ((NSEvent) -> Bool)?
     var onEscape: (() -> Void)?
+    /// a paste with line breaks or `;`: true when it was taken (equations opened as a system)
+    var onPasteLines: ((String) -> Bool)?
     var placeholder = "" { didSet { needsDisplay = true } }
     /// a faint `ans` ahead of the text while the line chains from the last answer
     var ghostLead = "" { didSet { if ghostLead != oldValue { updateInset() } } }
@@ -331,6 +333,7 @@ final class BarTextView: NSTextView {
     private func pastePlain() {
         editKind = "insertFromPaste"
         guard let raw = NSPasteboard.general.string(forType: .string) else { return }
+        if onPasteLines?(raw) == true { return }
         let clean = raw.replacingOccurrences(of: #"\s*[\r\n]+\s*"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
         insertText(clean, replacementRange: selectedRange())
@@ -419,6 +422,7 @@ struct InputField: NSViewRepresentable {
         let text = BarTextView()
         text.delegate = context.coordinator
         text.onKey = { [weak model] event in model?.key(event) ?? false }
+        text.onPasteLines = { [weak model] raw in model?.pasteSystem(raw) ?? false }
         text.onEscape = { [weak model] in
             guard let model else { return }
             if !model.escape() { model.onHide?("esc") }

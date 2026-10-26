@@ -238,6 +238,7 @@ impl State {
             phrases: req.phrases,
             now_ms: req.now_ms as f64,
             rates: self.rates_table(req.now_ms),
+            time_zone: self.config.time_zone.clone(),
             ..live::LiveRequest::default()
         }
     }
@@ -268,6 +269,45 @@ impl State {
             functions: names.functions.clone(),
         };
         blank::blank_reason(text, &live::evaluates(&options, chained), &names).map(span)
+    }
+
+    /// `req` with `piece` in place of its text, chained as the line is (what `ok` evaluates for the bar).
+    fn piece(req: &LiveRequest, piece: &str) -> LiveRequest {
+        let mut r = req.clone();
+        r.text = if req.chained {
+            core_chain::chained_expr(piece)
+        } else {
+            piece.to_string()
+        };
+        r.chained = false;
+        r
+    }
+
+    /// `blankReason` for the bar's line, each piece read by `live` with the line's own context.
+    pub(crate) fn blank_span(&self, req: &LiveRequest) -> Option<Span> {
+        if jsstr::trim(&req.text).is_empty() {
+            return None;
+        }
+        let names = blank::Names {
+            variables: req.context.variables.keys().cloned().collect(),
+            functions: req.context.functions.keys().cloned().collect(),
+        };
+        let ok = |p: &str| !jsstr::trim(&self.live(&Self::piece(req, p)).display).is_empty();
+        blank::blank_reason(&req.text, &ok, &names).map(span)
+    }
+
+    /// `missingUnit` for the bar's line: a piece is fine when it reads and isn't an improper conversion.
+    pub(crate) fn missing_unit(&self, req: &LiveRequest) -> Option<UnitOffer> {
+        let ok = |p: &str| {
+            let a = self.live(&Self::piece(req, p));
+            !jsstr::trim(&a.display).is_empty() && !a.improper
+        };
+        qcalc_core::app::missing_unit::missing_unit(&req.text, &ok).map(|f| UnitOffer {
+            at: f.at as u32,
+            text: f.text,
+            filled: f.filled,
+            hint: f.hint,
+        })
     }
 
     pub(crate) fn chains(&self, text: &str, context: &EvalContext) -> bool {
@@ -685,6 +725,17 @@ impl Engine {
         })
     }
 
+    /// Where the bar's blank line stops reading (`blankReason`), each piece evaluated as `live` would with the
+    /// request's context and chaining; None when the line is empty or reads.
+    pub fn blank_span(&self, request: LiveRequest) -> Option<Span> {
+        self.on(None, move |s| s.blank_span(&request))
+    }
+
+    /// The unit a number was owed when a sum's units don't add up (`missingUnit`), or None.
+    pub fn missing_unit(&self, request: LiveRequest) -> Option<UnitOffer> {
+        self.on(None, move |s| s.missing_unit(&request))
+    }
+
     /// Units, known words, radicals and bounds in the input, by start.
     pub fn spans(&self, text: String, names: CompletionNames) -> Vec<TextSpan> {
         self.on(Vec::new(), move |s| s.spans(&text, &names))
@@ -1060,6 +1111,7 @@ mod tests {
             is_windows: false,
             locale: "en_US".into(),
             data_dir: None,
+            time_zone: None,
         })
     }
 
@@ -1159,6 +1211,7 @@ mod tests {
             is_windows: false,
             locale: "en_US".into(),
             data_dir: Some(dir.to_string_lossy().into_owned()),
+            time_zone: None,
         });
         assert!(e.load_history().is_empty());
         let rows = e.commit(request("2^10"), Vec::new()).history;

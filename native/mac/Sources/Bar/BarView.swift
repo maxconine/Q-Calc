@@ -108,9 +108,8 @@ struct BarView: View {
                 .padding(.top, -12)
                 .accessibilityLabel(hint)
         }
-        if settings.typstPreview, model.graph == nil, !model.live.isBlank, MathPreview.useful(model.text),
-           model.math.render(expression: model.text, answer: model.shownAnswer, scale: 2, dark: false) != nil {
-            MathPreview(expression: model.text, answer: model.shownAnswer, renderer: model.math)
+        if let typeset = model.typeset {
+            MathPreview(typeset: typeset)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 8)

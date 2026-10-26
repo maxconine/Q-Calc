@@ -109,6 +109,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
         case "identities": overlay.model.text = "identities"; overlay.model.enter()
         case "key": DevSnapshot.key(arg)
+        // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i
+        case "paste":
+            if let i = Int(arg), let raw = NSPasteboard.general.string(forType: .string) {
+                _ = overlay.model.pasteSystem(raw, keeping: Array((overlay.model.sysLines ?? []).prefix(i)))
+            } else {
+                let window = NSApp.windows.first { $0 is OverlayPanel && $0.isVisible }
+                _ = window?.firstResponder?.tryToPerform(#selector(NSText.paste(_:)), with: nil)
+            }
         default: NSLog("Q Calc dev: unknown command %@", command)
         }
         if verb == "card" || verb == "ask" { overlay.model.scheduleCardExpiry() }

@@ -1,9 +1,10 @@
 import Foundation
+import Security
 
 /// Anonymous usage counts, as src/lib/analytics.ts keeps them: a stash of daily counts per event (`bump`), sent every
 /// six hours (`dueToSend`, `usagePayload`, `afterSend`) while "Share anonymous usage" is on, forgotten when it's
 /// turned off. The stash lives where the web app's did (UserDefaults `qcalc.analytics` through AppSettings). The
-/// counting rules are the TS's, through AppLogic; dev builds count but never send.
+/// counting rules are the TS's, ported to the engine (through AppLogic); dev builds count but never send.
 final class Analytics {
     static let shared = Analytics()
     private var logic: AppLogic?
@@ -17,7 +18,20 @@ final class Analytics {
     }
 
     private var enabled: Bool { AppSettings.shared.shareUsage && logic != nil }
-    private var day: String { logic?.string("lib/analytics", "localDay", []) ?? "" }
+    private var day: String {
+        let now = Date()
+        return logic?.string("lib/analytics", "localDay", [now.timeIntervalSince1970 * 1000,
+                                                             TimeZone.current.secondsFromGMT(for: now) / 60]) ?? ""
+    }
+
+    /// newInstallId: 16 random bytes as 32 hex digits
+    private static func newInstallId() -> String {
+        var bytes = [UInt8](repeating: 0, count: 16)
+        if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
+            return UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        }
+        return bytes.map { String(format: "%02x", $0) }.joined()
+    }
 
     /// setUsageSharing: on starts (or resumes) the stash with `launch` (and `update` after a new version)
     func setSharing(_ on: Bool) {
@@ -36,7 +50,7 @@ final class Analytics {
                 next = logic.call("lib/analytics", "bump", [next, "update", day]) ?? next
             }
         } else {
-            next = ["id": logic.string("lib/analytics", "newInstallId", []) ?? UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased(),
+            next = ["id": Self.newInstallId(),
                     "version": version, "sentAt": 0, "days": [String: Any]()]
         }
         if var d = next as? [String: Any] { d["version"] = version; next = d }

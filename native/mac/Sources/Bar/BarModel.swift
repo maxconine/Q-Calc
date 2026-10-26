@@ -44,7 +44,7 @@ final class BarModel: ObservableObject {
     @Published private(set) var commandMessage: String?
     @Published private(set) var live = LiveAnswer.blank
     /// a closed form the engine's PSLQ search found after the answer (π²/6), shown in place of `live.exact`
-    @Published private(set) var upgradedExact: String?
+    @Published private(set) var upgradedExact: String? { didSet { if upgradedExact != oldValue { refreshTypeset() } } }
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
     @Published private(set) var completion: String?
     @Published private(set) var decorations = Decorations()
@@ -69,8 +69,8 @@ final class BarModel: ObservableObject {
     /// the last real answer, dimmed, while the line is briefly unreadable (useSteadyAnswer)
     @Published private(set) var steady: String?
     @Published private(set) var chained = false
-    @Published private(set) var forms: [String] = []
-    @Published private(set) var formIndex = 0
+    @Published private(set) var forms: [String] = [] { didSet { if forms != oldValue { refreshTypeset() } } }
+    @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
     @Published var hint: String?
     // the tape
@@ -103,7 +103,10 @@ final class BarModel: ObservableObject {
     /// the engine itself, only for its async calls (closed forms, graphs), which never block
     let core: Engine
     let sheets: SheetData = SheetData.shared
-    let math: MathRenderer = PlainMathRenderer()
+    /// the typeset preview row (MathText.swift); nil hides it
+    @Published private(set) var typeset: Typeset?
+    private lazy var typesetter = MathTypesetter(engine: core)
+    private var typesetAsked: TypesetRequest?
 
     // what the bar asks of its window
     var onHide: ((String) -> Void)?
@@ -297,17 +300,11 @@ final class BarModel: ObservableObject {
         return d
     }
 
-    /// blankReason with `ok` answered by the engine (chained as the line is); runs on the engine thread
-    private static func blankSpan(_ logic: AppLogic, engine: Engine, request: LiveRequest) -> NSRange? {
-        logic.ok = { piece in
-            var r = request
-            r.text = request.chained ? Chain.expr(piece) : piece
-            r.chained = false
-            return !engine.live(request: r).isBlank
-        }
-        defer { logic.ok = { _ in false } }
-        let names: [String: Any] = ["variables": Array(request.context.variables.keys), "functions": Array(request.context.functions.keys)]
-        return logic.spans("lib/blankReason", "blankReason", [request.text, names]).first
+    /// blankReason, each piece read by the engine as the line is (its context, chained as it is); runs on the
+    /// engine thread
+    private static func blankSpan(engine: Engine, request: LiveRequest) -> NSRange? {
+        guard let s = engine.blankSpan(request: request), s.end > s.start else { return nil }
+        return NSRange(location: Int(s.start), length: Int(s.end - s.start))
     }
 
     private var squiggleTimer: Timer?
@@ -326,7 +323,7 @@ final class BarModel: ObservableObject {
             self.engine.submit(.forms, { engine -> NSRange? in
                 let request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
                 if thread.logic.bool("lib/nativeEval", "looksLikeNaturalLanguage", [typed]) { return nil }
-                return Self.blankSpan(thread.logic, engine: engine, request: request)
+                return Self.blankSpan(engine: engine, request: request)
             }) { [weak self] span in
                 guard let self, self.text == typed, self.live.isBlank else { return }
                 self.decorations.squiggle = span
@@ -367,6 +364,39 @@ final class BarModel: ObservableObject {
         live = answer
         if !answer.isBlank { lastLiveText = typed }
         checkEffects(answer)
+        refreshTypeset()
+    }
+
+    /// The typeset row exactly when the web app shows it (QuickCalc.tsx `typstShown`): the setting on, no command or
+    /// panel of its own (graph, sys, periodic, sheets, games, help, the tutorial), and Typst would show something
+    /// the bar doesn't (`typstPreviewUseful`). The answer beside it is the one the slot shows, nothing for a message.
+    func refreshTypeset() {
+        let command = BarCommand.of(text, sheets: sheets)
+        guard settings.typstPreview, !text.trimmingCharacters(in: .whitespaces).isEmpty, command == nil,
+              SysCommand.of(text) == nil, sysLines == nil, graph == nil, !helpShown, !gamesShown else {
+            typesetAsked = nil
+            typeset = nil
+            return
+        }
+        let solve = live.solve
+        let rootsOf = solve?.outcome == .roots ? solve?.variable ?? "" : ""
+        let tabbed = formIndex > 0 && forms.indices.contains(formIndex)
+        let request = TypesetRequest(
+            expr: chained ? Chain.expr(text) : text,
+            exact: prefixShown != nil || tabbed ? nil : exact,
+            display: prefixShown ?? (tabbed ? forms[formIndex] : live.display),
+            solvedFor: rootsOf,
+            message: solve != nil && rootsOf.isEmpty)
+        guard request != typesetAsked else { return }
+        typesetAsked = request
+        typesetter.typeset(request) { [weak self] outcome in
+            guard let self, self.typesetAsked == request else { return }
+            switch outcome {
+            case .hidden: self.typeset = nil
+            case let .drawn(paths, doc): self.typeset = Typeset(paths: paths, doc: doc)
+            case let .failed(doc): if self.typeset?.doc != doc { self.typeset?.stale = true }
+            }
+        }
     }
 
     // isEditOf: one line typed on from, or backed off to, the other
@@ -543,22 +573,13 @@ final class BarModel: ObservableObject {
             guard !done.saved else { return (done, nil, nil, nil) }
             // units that don't add up because one number has none: the unit it was owed, offered (offerUnit)
             if improper {
-                thread.logic.ok = { piece in
-                    var r = request
-                    r.text = request.chained ? Chain.expr(piece) : piece
-                    r.chained = false
-                    let a = engine.live(request: r)
-                    return !a.isBlank && !a.improper
-                }
-                defer { thread.logic.ok = { _ in false } }
-                if let fix = thread.logic.call("lib/missingUnit", "missingUnit", [typed]) as? [String: Any],
-                   let at = (fix["at"] as? NSNumber)?.intValue, let text = fix["text"] as? String, let filled = fix["filled"] as? String {
-                    return (done, fix["hint"] as? String, (at, text, filled), nil)
+                if let fix = engine.missingUnit(request: request) {
+                    return (done, fix.hint, (Int(fix.at), fix.text, fix.filled), nil)
                 }
             }
             // enter that saved nothing says why (enterHint), and the squiggle shows where
             let graph = typed.trimmingCharacters(in: .whitespaces).lowercased().hasPrefix("graph")
-            let span = graph ? nil : Self.blankSpan(thread.logic, engine: engine, request: request)
+            let span = graph ? nil : Self.blankSpan(engine: engine, request: request)
             let facts: [String: Any] = [
                 "expr": typed, "span": span.map { ["start": $0.location, "end": NSMaxRange($0)] } ?? NSNull(),
                 "improper": improper, "naturalLanguage": thread.logic.bool("lib/nativeEval", "looksLikeNaturalLanguage", [typed]),
@@ -759,7 +780,7 @@ final class BarModel: ObservableObject {
 
     // MARK: - SI prefix (⌥↑ ⌥↓)
 
-    @Published private(set) var prefixShown: String?
+    @Published private(set) var prefixShown: String? { didSet { if prefixShown != oldValue { refreshTypeset() } } }
     private var prefixValue: Any?
 
     /// onPrefixStep: the answer one SI prefix up or down (stepPrefix), shown until the line changes

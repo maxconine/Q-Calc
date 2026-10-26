@@ -1137,6 +1137,49 @@ struct Parsed {
     diff: Node,
 }
 
+// systemNumeric's scope adds these to mathjs's functions
+const OWN_FNS: [&str; 4] = ["ln", "arcsin", "arccos", "arctan"];
+
+// `typeof math[name] === 'function'` for the TS's mathjs instance (`create(all, { number: 'number' })`), its
+// prototype chain included (`toString`, `valueOf`…), names that can start a call only
+const MATHJS_FUNCTIONS: &str = "\
+AccessorNode ArgumentsError ArrayNode AssignmentNode BigNumber BlockNode Chain Complex \
+ConditionalNode ConstantNode DenseMatrix DimensionError FibonacciHeap Fraction \
+FunctionAssignmentNode FunctionNode Help ImmutableDenseMatrix Index IndexError IndexNode Matrix Node \
+ObjectNode OperatorNode ParenthesisNode Parser Range RangeNode RelationalNode ResultSet Spa \
+SparseMatrix SymbolNode Unit abs acos acosh acot acoth acsc acsch add addScalar and apply arg asec \
+asech asin asinh atan atan2 atanh bellNumbers bernoulli bigint bignumber bin bitAnd bitNot bitOr \
+bitXor boolean catalan cbrt ceil chain clone column combinations combinationsWithRep compare \
+compareNatural compareText compile complex composition concat config conj constructor corr cos cosh \
+cot coth count create createUnit cross csc csch ctranspose cube cumsum deepEqual den derivative det \
+diag diff distance divide divideScalar dot dotDivide dotMultiply dotPow eigs emit equal equalScalar \
+equalText erf evaluate exp expm expm1 factorial factory fft filter fix flatten floor forEach format \
+fraction freqz gamma gcd getMatrixDataType hasNumericValue hasOwnProperty help hex hypot identity \
+ifft im import index intersect inv invmod isAccessorNode isArray isArrayNode isAssignmentNode \
+isBigInt isBigNumber isBlockNode isBoolean isBounded isChain isCollection isComplex \
+isConditionalNode isConstantNode isDate isDenseMatrix isFinite isFraction isFunction \
+isFunctionAssignmentNode isFunctionNode isHelp isIndex isIndexNode isInteger isMap isMatrix isNaN \
+isNegative isNode isNull isNumber isNumeric isObject isObjectNode isObjectWrappingMap isOperatorNode \
+isParenthesisNode isPartitionedMap isPositive isPrime isPrototypeOf isRange isRangeNode isRegExp \
+isRelationalNode isResultSet isSparseMatrix isString isSymbolNode isUndefined isUnit isZero \
+kldivergence kron larger largerEq lcm leafCount leftShift lgamma log log10 log1p log2 lsolve \
+lsolveAll lup lusolve lyap mad map mapSlices matrix matrixFromColumns matrixFromFunction \
+matrixFromRows max mean median min mod mode multinomial multiply multiplyScalar norm not nthRoot \
+nthRoots nullish num number numeric oct off on once ones or parse parser partitionSelect \
+permutations pickRandom pinv polynomialRoot pow print prod propertyIsEnumerable qr quantileSeq \
+random randomInt range rationalize re replacer reshape resize resolve reviver rightArithShift \
+rightLogShift rotate rotationMatrix round row schur sec sech setCartesian setDifference setDistinct \
+setIntersect setIsSubset setMultiplicity setPowerset setSize setSymDifference setUnion sign simplify \
+simplifyConstant simplifyCore sin sinh size slu smaller smallerEq solveODE sort sparse splitUnit \
+sqrt sqrtm square squeeze std stirlingS2 string subset subtract subtractScalar sum sylvester \
+symbolicEqual tan tanh to toBest toLocaleString toString trace transpose typeOf typed unaryMinus \
+unaryPlus unequal unit usolve usolveAll valueOf variance xgcd xor zeros zeta zpk2tf \
+";
+
+fn is_mathjs_function(name: &str) -> bool {
+    MATHJS_FUNCTIONS.split_whitespace().any(|n| n == name)
+}
+
 fn prep_eq(text: &str) -> Option<Parsed> {
     static ABS: Lazy = Lazy::new(|| js(r"(?<![\d)\]!])\|([^|]+)\|", ""));
     static DEC: Lazy = Lazy::new(|| js(r"(\d+)\.(\d+)", ""));
@@ -1155,6 +1198,18 @@ fn prep_eq(text: &str) -> Option<Parsed> {
     .into_owned();
     let s = jsre::replace_all(&JUXT, &s, |c| format!("{}*", jsre::group(c, 1))).into_owned();
     let s = jsre::replace_all(&CLOSE, &s, |_| ")*".into()).into_owned();
+    // `B_y(5)` from a statics sheet is B_y times 5: only a function name (mathjs's, or the solver's own ln and
+    // arcsin…) is a call
+    static CALL: Lazy = Lazy::new(|| js(r"(?<![\w.])([A-Za-z][A-Za-z0-9_]*)\s*\(", ""));
+    let s = jsre::replace_all(&CALL, &s, |c| {
+        let name = jsre::group(c, 1);
+        if OWN_FNS.contains(&name) || is_mathjs_function(name) {
+            jsre::group(c, 0).to_string()
+        } else {
+            format!("{name}*(")
+        }
+    })
+    .into_owned();
     let parts: Vec<&str> = s.split('=').collect();
     if parts.len() != 2 {
         return None;
@@ -3307,6 +3362,45 @@ fn answer_json(a: Option<SystemAnswer>) -> Json {
     })
 }
 
+/// Lines pasted from a worksheet as a system (`pastedEquations`): 2 to 5 lines (or `;`-separated), each an
+/// equation or, like a moment sum, an expression taken as `= 0`. None when the paste isn't a system, so it goes in
+/// the field as plain text.
+pub fn pasted_equations(text: &str) -> Option<Vec<String>> {
+    static DIGIT: Lazy = Lazy::new(|| js(r"\d", ""));
+    static OP: Lazy = Lazy::new(|| js(r"[-+*/^]", ""));
+    static LETTER: Lazy = Lazy::new(|| js(r"[A-Za-z]", ""));
+    let lines: Vec<String> = text
+        .replace("\r\n", "\n")
+        .split(['\r', '\n', ';'])
+        .map(|l| crate::app::js::trim(l).to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
+    if !(2..=5).contains(&lines.len()) || !lines.iter().any(|l| l.contains('=')) {
+        return None;
+    }
+    // a line with no = has to look like a sum, not words (mathjs would read `hello there` as hello*there)
+    if lines
+        .iter()
+        .any(|l| !l.contains('=') && !(jsre::test(&DIGIT, l) && jsre::test(&OP, l)))
+    {
+        return None;
+    }
+    let equations: Vec<String> = lines
+        .into_iter()
+        .map(|l| {
+            if l.contains('=') {
+                l
+            } else {
+                format!("{l} = 0")
+            }
+        })
+        .collect();
+    equations
+        .iter()
+        .all(|eq| prep_eq(eq).is_some() && jsre::test(&LETTER, eq))
+        .then_some(equations)
+}
+
 pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
     let st = |i: usize| crate::golden::str_arg(args, i).unwrap_or_default();
     let defaults = |i: usize| -> DefaultUnits {
@@ -3322,6 +3416,7 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
             Some(Err(h)) => json!({ "hint": h }),
         },
         "isSysCommand" => json!(is_sys_command(&st(0))),
+        "pastedEquations" => pasted_equations(&st(0)).map_or(Json::Null, |l| json!(l)),
         "parseSystemCall" => parse_system_call(&st(0)).map_or(Json::Null, |c| {
             let mut g = serde_json::Map::new();
             for (k, v) in c.guess_text {
@@ -3369,4 +3464,56 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
         }
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod worksheet_tests {
+    use super::*;
+
+    fn live(lines: &[&str]) -> String {
+        let lines: Vec<String> = lines.iter().map(|l| l.to_string()).collect();
+        answer_json(solve_live(&lines, &DefaultUnits::default(), AngleMode::Deg))["display"]
+            .as_str()
+            .unwrap_or("")
+            .to_string()
+    }
+
+    #[test]
+    fn a_name_before_parentheses_multiplies_unless_mathjs_knows_it() {
+        assert_eq!(
+            live(&["20(7.5)-B_y(5)+40(2) = 0", "B_y+D_y = 60"]),
+            "B_y = 46, D_y = 14"
+        );
+        assert_eq!(live(&["x(2) = 6", "y = x + 1"]), "x = 3, y = 4");
+        assert_eq!(live(&["sqrt(x) = 3", "y = x"]), "x = 9, y = 9");
+        assert_eq!(live(&["ln(x) = 0", "y = x + 1"]), "x = 1, y = 2");
+    }
+
+    #[test]
+    fn a_pasted_system_one_equation_per_line() {
+        let v = |a: &[&str]| Some(a.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+        assert_eq!(
+            pasted_equations("20(7.5)-B_y(5)+40(2)\nB_y+D_y = 60"),
+            v(&["20(7.5)-B_y(5)+40(2) = 0", "B_y+D_y = 60"])
+        );
+        assert_eq!(
+            pasted_equations("x + y = 3\r\n\r\nx - y = 1\n"),
+            v(&["x + y = 3", "x - y = 1"])
+        );
+        assert_eq!(
+            pasted_equations("x + y = 3; x - y = 1"),
+            v(&["x + y = 3", "x - y = 1"])
+        );
+    }
+
+    #[test]
+    fn anything_else_is_plain_text() {
+        assert_eq!(pasted_equations("x + y = 3"), None);
+        assert_eq!(pasted_equations("2 + 3\n4 + 5"), None);
+        assert_eq!(
+            pasted_equations("a = 1\nb = 2\nc = 3\nd = 4\ne = 5\nf = 6"),
+            None
+        );
+        assert_eq!(pasted_equations("hello there\nx = 2"), None);
+    }
 }

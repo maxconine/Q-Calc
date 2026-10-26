@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Builds the native Q Calc (no web view for the calculator): the Rust core as a static library per architecture,
 # the UniFFI Swift bindings as their own module (QCalcFFI), the app for arm64 and x86_64, lipo'd into one
-# universal binary, and the bundle with Sparkle, the sheet data and (if built) the games bundle.
+# universal binary, and the bundle with Sparkle and (if built) the games bundle, the app's only web code.
 #
 #   zsh native/mac/build.sh              # dev build: native/mac/dist/Q Calc Dev.app (com.maxconine.qcalc.native-dev)
 #   zsh native/mac/build.sh --run        # …and launch it (quitting an earlier dev build first, never the installed app)
@@ -12,7 +12,9 @@
 #
 # Inputs it finds by itself, or from the environment:
 #   QCALC_SPARKLE_DIR  a Sparkle-2.10.0 release folder (default macos/vendor/Sparkle-2.10.0, fetched like macos/build.sh)
-#   QCALC_WEB_DIST     the web build with games.html (default dist/, from `npm run build`); without it games are off
+#   QCALC_GAMES_WEB    a built games bundle (games.html and its assets); by default it is built into
+#                      native/build/games-web from games.vite.config.ts when node_modules is there; without one
+#                      games and the 420/67/69 effects are off
 set -euo pipefail
 export COPYFILE_DISABLE=1
 
@@ -24,7 +26,7 @@ MIN_MACOS="13.5"
 SPARKLE_VERSION="2.10.0"
 SPARKLE_SHA256="c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c"
 SPARKLE="${QCALC_SPARKLE_DIR:-$ROOT/macos/vendor/Sparkle-${SPARKLE_VERSION}}"
-WEB_DIST="${QCALC_WEB_DIST:-$ROOT/dist}"
+GAMES_WEB="${QCALC_GAMES_WEB:-$OUT/games-web}"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 RUN=0
 ZIP=0
@@ -66,15 +68,16 @@ fetch_sparkle() {
 
 # 1. the engine
 if (( ! SKIP_RUST )); then
-  zsh "$NATIVE/scripts/build-mac.sh" --no-test
+  # typst: the typeset preview (TypstRenderer in the generated Swift)
+  QCALC_FFI_FEATURES="${QCALC_FFI_FEATURES:-typst}" zsh "$NATIVE/scripts/build-mac.sh" --no-test
 fi
 [[ -d "$NATIVE/QCalcCore/qcalc_ffiFFI.xcframework" ]] || { echo "No QCalcCore xcframework; run without --skip-rust" >&2; exit 1; }
 fetch_sparkle
 export QCALC_SPARKLE_DIR="$SPARKLE"
-# the games bundle comes from the web build; make it when it's missing and the repo's node_modules are there
-if [[ ! -f "$WEB_DIST/games.html" && -d "$ROOT/node_modules" && -z "${QCALC_WEB_DIST:-}" ]]; then
-  echo "Building the games bundle (npm run build)…"
-  (cd "$ROOT" && npm run build >/dev/null)
+# the games bundle: games.html alone (none of the calculator's pages), when the repo's node_modules are there
+if [[ -z "${QCALC_GAMES_WEB:-}" && -x "$ROOT/node_modules/.bin/vite" ]]; then
+  echo "Building the games bundle…"
+  (cd "$ROOT" && QCALC_GAMES_OUT="$GAMES_WEB" node_modules/.bin/vite build --config native/mac/games.vite.config.ts >/dev/null)
 fi
 # Sources/Shared: symlinks to the macos/ files compiled unchanged
 zsh "$MAC/scripts/link-shared.sh"
@@ -119,7 +122,6 @@ fi
 
 ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" "$APP/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices"
-cp "$MAC/Resources/applogic.js" "$APP/Contents/Resources/"
 
 icon_src="$ROOT/public/Qcalc_favi.png"
 if [[ -f "$icon_src" ]]; then
@@ -134,17 +136,12 @@ if [[ -f "$icon_src" ]]; then
   iconutil -c icns "$iconset" -o "$APP/Contents/Resources/AppIcon.icns"
 fi
 
-# the games bundle: games.html and the assets it loads, nothing of the old calculator pages
-if [[ -f "$WEB_DIST/games.html" ]]; then
-  mkdir -p "$APP/Contents/Resources/web"
-  cp "$WEB_DIST/games.html" "$APP/Contents/Resources/web/"
-  [[ -d "$WEB_DIST/assets" ]] && ditto "$WEB_DIST/assets" "$APP/Contents/Resources/web/assets"
-  for extra in Qcalc_favi.png favicon.svg; do
-    [[ -f "$WEB_DIST/$extra" ]] && cp "$WEB_DIST/$extra" "$APP/Contents/Resources/web/"
-  done
-  echo "Bundled the games from $WEB_DIST"
+# the games bundle: games.html and the assets it loads, nothing of the calculator's pages
+if [[ -f "$GAMES_WEB/games.html" ]]; then
+  ditto "$GAMES_WEB" "$APP/Contents/Resources/web"
+  echo "Bundled the games from $GAMES_WEB"
 else
-  echo "warning: no $WEB_DIST/games.html (run npm run build); games and the 420/67/69 effects are off in this build" >&2
+  echo "warning: no $GAMES_WEB/games.html (needs node_modules); games and the 420/67/69 effects are off in this build" >&2
 fi
 
 # 5. sign, inside out, ad hoc (the release workflow signs for real)

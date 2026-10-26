@@ -74,7 +74,7 @@ extension BarModel {
     func skipTutorial() {
         if replay != nil {
             replay = nil
-        } else if let off = logic.call("lib/tour", "tourBit", ["off"]) as? NSNumber {
+        } else if let off = logic.call("lib/tour", "TOUR_OFF", []) as? NSNumber {
             // TOUR_OFF
             markTour(off.intValue)
         }

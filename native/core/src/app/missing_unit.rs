@@ -3,7 +3,7 @@
 use crate::jsre::{self, Lazy};
 
 /// The fix offered: where the unit goes, the text put there, the filled line and the hint.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
 pub struct UnitFix {
     /// UTF-16 index, as the TS reports it.
     pub at: usize,

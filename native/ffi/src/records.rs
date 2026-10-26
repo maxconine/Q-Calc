@@ -63,6 +63,10 @@ pub struct EngineConfig {
     /// Where `history.json` and `rates.json` live (`~/Library/Application Support/Q Calc`); none means no files.
     #[uniffi(default)]
     pub data_dir: Option<String>,
+    /// The IANA zone the user's clock reads in (`TimeZone.current.identifier`), for time phrases; none reads
+    /// times in America/Los_Angeles, as the TS recordings did.
+    #[uniffi(default)]
+    pub time_zone: Option<String>,
 }
 
 /// A user function, `f(x) = x^2`.
@@ -315,6 +319,15 @@ impl From<LineKind> for AnswerKind {
 pub struct Span {
     pub start: u32,
     pub end: u32,
+}
+
+/// `missingUnit`'s offer: the unit `text` goes in at UTF-16 `at`, giving `filled`; `hint` says so.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct UnitOffer {
+    pub at: u32,
+    pub text: String,
+    pub filled: String,
+    pub hint: String,
 }
 
 /// How a solve ended.

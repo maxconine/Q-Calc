@@ -103,6 +103,9 @@ pub struct LiveRequest {
     pub now_ms: f64,
     /// Currency rates for phrases, as the TS `CurrencyRates` table (null without any).
     pub rates: Json,
+    /// The IANA zone the user's clock reads in, for time phrases (`timeZone`); None reads it as the TS
+    /// recordings did, in America/Los_Angeles.
+    pub time_zone: Option<String>,
 }
 
 /// A line that answers with a message or opens something, rather than calculating.
@@ -229,7 +232,14 @@ fn phrase_answer(
     if !js_display.is_empty() && !looks_like_natural_language(expr) {
         return None;
     }
-    answer_phrase(expr, req.now_ms, sig_figs, &req.rates).map(|p| (p.display, p.n))
+    answer_phrase(
+        expr,
+        req.now_ms,
+        sig_figs,
+        &req.rates,
+        req.time_zone.as_deref(),
+    )
+    .map(|p| (p.display, p.n))
 }
 
 /// The squiggle's and ↵'s evaluator: whether a piece of text answers (through `ans` when the line chains).

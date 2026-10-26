@@ -3,7 +3,7 @@
 #   zsh native/mac/scripts/drive.sh show "type:2^10" enter "snap:/tmp/shots/light" hide
 # Commands: show, hide, settings, theme:<system|light|dark>, type:<text>, enter, up, down, tab, esc,
 # key:<chord> (a real key event: key:enter, key:cmd+w), periodic, identities, card[:<from>], ask[:<from>],
-# snap:<path prefix> (a PNG per visible window), sleep:<seconds>.
+# paste[:<system field>], snap:<path prefix> (a PNG per visible window), sleep:<seconds>.
 for cmd in "$@"; do
   if [[ "$cmd" == sleep:* ]]; then
     sleep "${cmd#sleep:}"

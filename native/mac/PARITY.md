@@ -61,7 +61,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | "✓ copied" flash | ✅ | caption, accent-hover, 1.2 s |
 | Closed-form upgrade | ✅ | `Engine.closedForm` with a CancelToken, cancelled by the next keystroke |
 | Solve display: letter, roots each clickable, messages | ✅ | `x =` copies all, each root copies at full precision, `, …` past the shown ones; no-root outcomes as a message |
-| Typeset preview row | ⏳ | hook `MathText.swift`; waits on `qcalc-typst` (the row stays hidden rather than showing a plain-text stand-in) |
+| Typeset preview row | ✅ | `qcalc-typst` paths drawn in `--ink` (`MathText.swift`), shown exactly when `typstShown` is (setting, no command panel, `typstPreviewUseful` of the chained line); the answer is the shown form (`typstAnswer`), a solve's letter after ⇒, nothing for a message; rejected mid-edit input keeps the last picture at 40% |
 | Command messages in the answer slot (`periodic table`, `↵ play pong`, message hints) | ✅ | as `.live.message` |
 
 ## 4. History tape
@@ -87,7 +87,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Games list | ✅ | `games` pair (↑ from the bottom, ↓ off the end) |
 | Edge tools with key tooltips | ✅ | hover-only, ink pills after 450 ms |
 | Message cards with reply, ask cards, 10 s auto-hide, held on hover/focus/draft | ✅ | `banner` pair; expiry verified at 11 s |
-| Tour line and onboarding hints | ✅ | open, pause (1.5 s) and commit hints (`pickHint`), the walkthrough’s line with `n/m` and skip, `tutorial` / `skip`, extras on later opens |
+| Tour line and onboarding hints | ✅ | open, pause (1.5 s) and commit hints (`pickHint`), the walkthrough’s line with `n/m` and skip, `tutorial` / `skip`, extras on later opens; skip sets `TOUR_OFF` (it asked for `tourBit("off")`, which is 0, so skipping did nothing) |
 | Greeting reply | ✅ | `hello` (not `hi`) answers `hi 👋` in the answer slot; ↵ clears |
 | `message <name> …` send | ✅ | `Messages.send` (added to the shared Messages.swift) |
 
@@ -134,12 +134,12 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 
 ## Where the logic runs
 
-Every rule above is the TS's own. The Rust engine answers what it has ported (through `Engine` and
-`Engine.callJson`). A few `src/lib` functions it doesn't register yet (`bounds` `afterTyping`/`boundKey`/
-`wordToSign`/`isHidden`/`snapOffset`, `blankReason`, `missingUnit`, `tour`, `analytics`, `typstMath`
-`copiedEquation`) run as the TS itself in JavaScriptCore (`Resources/applogic.js`, built by `applogic/build.sh`): an
-in-process interpreter, not a web view. `AppLogic.call` tries the engine first, so each moves to Rust with no change.
+Every rule above is the TS's own, ported to the Rust core and answered through `Engine` (typed calls) or
+`Engine.callJson` (`AppLogic.call`, module and name as in `src/lib`). Nothing runs as script: JavaScriptCore and the
+`applogic.js` bundle are gone. `blankReason` and `missingUnit` take their `ok` callback inside the engine
+(`Engine.blankSpan`, `Engine.missingUnit`, each piece read by `live` with the line's context); `lib/tour`,
+`lib/analytics` and the constants the bar reads are in the core's dispatch. The host keeps only what is the
+platform's: the install id's random bytes and the clock's zone offset for `localDay`.
 
-Still waiting: the typeset preview row needs a Typst renderer (`qcalc-typst`). The engine gives the Typst source
-(`typstSource`) and `MathText.swift` is the hook; the row stays hidden until then rather than showing something
-different from today's.
+The only web code in the app is the games bundle (`games.html`, built alone by `games.vite.config.ts`), loaded in a
+web view only while a game or an effect is up.

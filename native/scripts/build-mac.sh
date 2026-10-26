@@ -3,7 +3,8 @@
 # bindings UniFFI generates, the QCalcCore Swift package's xcframework, and the Swift tests, which it then runs.
 #
 #   native/scripts/build-mac.sh            # both architectures, run both tests (x86_64 under Rosetta) and the package's
-#   native/scripts/build-mac.sh --no-test  # libraries, bindings and the xcframework only (what macos/build.sh calls)
+#   native/scripts/build-mac.sh --no-test  # libraries, bindings and the xcframework only (what mac/build.sh calls)
+#   QCALC_FFI_FEATURES=typst …             # cargo features for qcalc-ffi (mac/build.sh sets typst: the preview)
 #
 # Output in native/build/: <arch>/libqcalc_ffi.a, universal/libqcalc_ffi.a, swift/{qcalc_ffi.swift,
 # qcalc_ffiFFI.h, qcalc_ffiFFI.modulemap}, swift-test-<arch>. In native/QCalcCore/: Sources/QCalcCore/qcalc_ffi.swift
@@ -24,7 +25,7 @@ cd "$NATIVE"
 mkdir -p "$OUT/swift" "$OUT/universal"
 for arch in arm64 x86_64; do
   echo "Building qcalc-ffi for $arch…"
-  "$CARGO" build -p qcalc-ffi --release --target "${TRIPLE[$arch]}" --lib
+  "$CARGO" build -p qcalc-ffi --release --target "${TRIPLE[$arch]}" --lib ${QCALC_FFI_FEATURES:+--features=$QCALC_FFI_FEATURES}
   mkdir -p "$OUT/$arch"
   cp "target/${TRIPLE[$arch]}/release/libqcalc_ffi.a" "$OUT/$arch/"
 done

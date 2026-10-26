@@ -409,10 +409,10 @@ fn num_unary(fname: &str, x: f64) -> Result<Val, SymError> {
         }
         "sin" => x.sin(),
         "cos" => x.cos(),
-        "tan" => super::jsmath::tan(x),
+        "tan" => crate::scientific::functions::jsmath::tan(x),
         "sec" => 1.0 / x.cos(),
         "csc" => 1.0 / x.sin(),
-        "cot" => 1.0 / super::jsmath::tan(x),
+        "cot" => 1.0 / crate::scientific::functions::jsmath::tan(x),
         "sinh" => x.sinh(),
         "cosh" => x.cosh(),
         "tanh" => x.tanh(),
