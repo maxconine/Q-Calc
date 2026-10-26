@@ -17,3 +17,7 @@ ttf-parser = "0.25"
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tiny-skia = "0.11"
