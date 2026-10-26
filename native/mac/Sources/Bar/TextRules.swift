@@ -176,7 +176,8 @@ enum BarCommand: Equatable {
     }
 
     /// The hint under the bar while this command is typed.
-    func hint(messaging: Messages) -> String {
+    /// `found` is the relay's word on a `message` name (NameCheck): nil until it has said, or when it can't.
+    func hint(messaging: Messages, found: Bool? = nil) -> String {
         switch self {
         case .periodic: return "periodic table"
         case let .identities(_, _, hint): return hint
@@ -184,9 +185,9 @@ enum BarCommand: Equatable {
         case let .game(kind, name): return kind == "crack" ? "↵ crack the safe" : kind == "numbers" ? "↵ play 24 or countdown" : "↵ play \(name)"
         case let .message(to, name, text):
             if messaging.name.isEmpty { return "set your name in settings to send messages · ↵ opens settings" }
-            if messaging.link == .paused { return "notifications are off for Q Calc, so messages are paused · ↵ opens settings" }
             if to.isEmpty { return "message <name> <what to say>" }
             if name.isEmpty { return "a name is 2–20 letters, digits, - or _" }
+            if found == false { return "username not found" }
             if text.isEmpty { return "then what to say to \(name)" }
             return "↵ sends to \(name)"
         case .help: return ""

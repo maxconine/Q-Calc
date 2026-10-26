@@ -10,6 +10,8 @@ use crate::jsre::{self, Lazy, js};
 
 pub const TEXT_MAX: usize = 500;
 pub const INBOX_PROTOCOL: &str = "qcalc-inbox";
+/// How many recent recipients are kept.
+pub const RECENT_MAX: usize = 12;
 
 /// The user's name, its key, and who they accept and block.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,6 +20,9 @@ pub struct Messaging {
     pub key: String,
     pub accepted: Vec<String>,
     pub blocked: Vec<String>,
+    /// Who you've sent to, the latest first, for `message` to finish their names.
+    #[serde(default)]
+    pub recent: Vec<String>,
 }
 
 /// A name as typed, lowercased; "" when it can't be one.
@@ -58,12 +63,48 @@ pub fn sanitize_messaging(raw: &Json) -> Messaging {
         .into_iter()
         .filter(|n| !blocked.contains(n))
         .collect();
+    let mut recent: Vec<String> = Vec::new();
+    for n in raw
+        .get("recent")
+        .and_then(Json::as_array)
+        .into_iter()
+        .flatten()
+        .map(clean_name)
+    {
+        if !n.is_empty() && !recent.contains(&n) {
+            recent.push(n);
+        }
+    }
+    recent.truncate(RECENT_MAX);
     Messaging {
         name: raw.get("name").map(clean_name).unwrap_or_default(),
         key,
         accepted,
         blocked,
+        recent,
     }
+}
+
+/// A name sent to goes to the front of the recent ones; a name that can't be one changes nothing.
+pub fn with_recent(m: &Messaging, to: &str) -> Messaging {
+    let name = clean_name(&Json::String(to.to_string()));
+    if name.is_empty() {
+        return m.clone();
+    }
+    let mut recent = vec![name.clone()];
+    recent.extend(m.recent.iter().filter(|n| **n != name).cloned());
+    recent.truncate(RECENT_MAX);
+    Messaging {
+        recent,
+        ..m.clone()
+    }
+}
+
+/// The names `message` finishes: who you've sent to, the latest first, then the rest of the accepted ones.
+pub fn message_contacts(m: &Messaging) -> Vec<String> {
+    let mut out = m.recent.clone();
+    out.extend(m.accepted.iter().filter(|n| !m.recent.contains(n)).cloned());
+    out
 }
 
 /// How a message from someone arrives.
@@ -139,8 +180,18 @@ pub fn parse_message(text: &str) -> Option<MessageLine> {
     })
 }
 
-/// What the bar says while a message is typed. `relay` is whether an online relay is configured.
-pub fn message_hint(line: &MessageLine, m: &Messaging, relay: bool) -> String {
+/// Where the name sits in `message <name> …` (UTF-16 offsets), for the bar to paint it.
+pub fn message_name_span(text: &str) -> Option<(usize, usize)> {
+    static RE: Lazy = Lazy::new(|| js(r"^(\s*message\s+)(\S+)", "i"));
+    let c = RE.captures(text).ok()??;
+    let start = jstr::len16(jsre::group(&c, 1));
+    Some((start, start + jstr::len16(jsre::group(&c, 2))))
+}
+
+/// What the bar says while a message is typed. `relay` is whether an online relay is configured; `found` is the
+/// relay's word on the name: `Some(false)` when nobody holds it, `None` while it's being asked or can't be
+/// (offline), so a name is never called missing without the relay.
+pub fn message_hint(line: &MessageLine, m: &Messaging, relay: bool, found: Option<bool>) -> String {
     if !relay {
         return "messages need the online relay".into();
     }
@@ -152,6 +203,9 @@ pub fn message_hint(line: &MessageLine, m: &Messaging, relay: bool) -> String {
     }
     if line.name.is_empty() {
         return "a name is 2–20 letters, digits, - or _".into();
+    }
+    if found == Some(false) {
+        return "username not found".into();
     }
     if line.text.is_empty() {
         return format!("then what to say to {}", line.name);
@@ -265,5 +319,70 @@ mod tests {
         );
         assert_eq!(m.accepted, vec!["max"]);
         assert_eq!(arrival(&m, "spam"), Arrival::Drop);
+    }
+
+    fn me() -> Messaging {
+        Messaging {
+            name: "ana".into(),
+            key: "ab".repeat(32),
+            accepted: vec!["max".into()],
+            blocked: vec!["spam".into()],
+            recent: vec![],
+        }
+    }
+
+    #[test]
+    fn says_not_found_only_when_the_relay_said_so() {
+        let me = me();
+        let line = parse_message("message zed hi").unwrap();
+        assert_eq!(
+            message_hint(&line, &me, true, Some(false)),
+            "username not found"
+        );
+        let bare = parse_message("message zed").unwrap();
+        assert_eq!(
+            message_hint(&bare, &me, true, Some(false)),
+            "username not found"
+        );
+        assert_eq!(message_hint(&line, &me, true, None), "↵ sends to zed");
+        assert_eq!(message_hint(&line, &me, true, Some(true)), "↵ sends to zed");
+        let short = parse_message("message z hi").unwrap();
+        assert!(message_hint(&short, &me, true, Some(false)).contains("2–20 letters"));
+    }
+
+    #[test]
+    fn finds_the_name_to_paint() {
+        assert_eq!(message_name_span("message Max hi"), Some((8, 11)));
+        assert_eq!(message_name_span("  message  max"), Some((11, 14)));
+        assert_eq!(message_name_span("message "), None);
+    }
+
+    #[test]
+    fn keeps_recent_recipients_first() {
+        use crate::app::completion::{CompletionNames, completion_for};
+        let mut m = with_recent(&with_recent(&with_recent(&me(), "Zoe"), "bob"), "zoe");
+        assert_eq!(m.recent, vec!["zoe", "bob"]);
+        assert_eq!(with_recent(&m, "x"), m);
+        let both = Messaging {
+            accepted: vec!["bob".into(), "max".into()],
+            ..m.clone()
+        };
+        assert_eq!(message_contacts(&both), vec!["zoe", "bob", "max"]);
+        for i in 0..20 {
+            m = with_recent(&m, &format!("n{i}"));
+        }
+        assert_eq!(m.recent.len(), RECENT_MAX);
+        assert_eq!(m.recent[0], "n19");
+        let stored = sanitize_messaging(&json!({"recent": ["Zoe", "zoe", "x", "bob", 3]}));
+        assert_eq!(stored.recent, vec!["zoe", "bob"]);
+        let names = CompletionNames {
+            contacts: message_contacts(&Messaging {
+                recent: vec!["bea".into(), "bob".into()],
+                accepted: vec!["bo".into()],
+                ..m
+            }),
+            ..CompletionNames::default()
+        };
+        assert_eq!(completion_for("message b", &names), "ea");
     }
 }

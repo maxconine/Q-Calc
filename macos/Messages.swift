@@ -12,29 +12,44 @@ extension Notification.Name {
 // is held on the relay by a key made here and kept in user defaults; with one set, a websocket waits on the
 // relay for messages, which hibernates there, so it costs next to nothing while nobody writes. without a name
 // nothing is open. an accepted name's message waits in memory for the bar (MessageInbox), which shows it as a
-// card with a reply line, and is a notification (sender as the title) while the bar is away; someone new is a
-// request with allow and block; a blocked name's messages are dropped unseen. receiving needs notifications:
-// without them the inbox stays shut, so a sender is told it didn't arrive rather than it going unseen. the page
-// sends with the same name and key, handed to it as __QCALC_MESSAGING (src/lib/messaging.ts)
+// card under the bar with a reply line, at once while the bar is up and on its next open otherwise; while the bar
+// is away it's a notification too (sender as the title), when q calc may post them. someone new is a request with
+// allow and block; a blocked name's messages are dropped unseen. the inbox opens whether or not notifications are
+// allowed: they're only the alert, and an app that can't get them (an ad hoc signed build may never be asked)
+// would otherwise never receive at all. the page sends with the same name and key, handed to it as
+// __QCALC_MESSAGING (src/lib/messaging.ts), along with who you've sent to lately, for the bar to finish names
 final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, UNUserNotificationCenterDelegate {
     static let shared = Messages()
     static let relayHost = "qcalc-relay.maxconine.workers.dev"
+    // the relay over https, or a local one (`wrangler dev`) named by QCALC_RELAY_URL for testing; only a loopback
+    // address is taken, so nothing outside can point the name and key elsewhere
+    static let relayBase: String = {
+        let local = ProcessInfo.processInfo.environment["QCALC_RELAY_URL"] ?? ""
+        if let url = URL(string: local), url.scheme == "http", ["localhost", "127.0.0.1"].contains(url.host ?? "") {
+            return local.hasSuffix("/") ? String(local.dropLast()) : local
+        }
+        return "https://\(relayHost)"
+    }()
     private static let nameKey = "qcalc.messaging.name"
     private static let keyKey = "qcalc.messaging.key"
     private static let acceptedKey = "qcalc.messaging.accepted"
     private static let blockedKey = "qcalc.messaging.blocked"
+    private static let recentKey = "qcalc.messaging.recent"
+    static let recentMax = 12
     private static let requestCategory = "qcalc.messageRequest"
     private static let pingSeconds: TimeInterval = 30
     private static let retryMax: TimeInterval = 60
     static let textMax = 500
 
-    enum Link { case off, connecting, ready, taken, offline, paused }
+    enum Link { case off, connecting, ready, taken, offline }
     // notification permission: unknown until asked
     enum Alerts { case unknown, allowed, denied }
 
     @Published private(set) var name: String
     @Published private(set) var accepted: [String]
     @Published private(set) var blocked: [String]
+    // who you've sent to, the latest first
+    private(set) var recent: [String]
     @Published private(set) var link: Link = .off
     // names that asked and haven't been answered, for settings to answer too
     @Published private(set) var requests: [String] = []
@@ -57,6 +72,8 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // what each asking name said last, in memory only, shown once they're allowed
     private var asking: [String: String] = [:]
     private var inbox = MessageInbox()
+    // permission is asked for once a launch; an app that can't be asked isn't asked on every open
+    private var askedAlerts = false
 
     override init() {
         let defaults = UserDefaults.standard
@@ -64,6 +81,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         name = Self.clean(defaults.string(forKey: Self.nameKey) ?? "")
         accepted = (defaults.stringArray(forKey: Self.acceptedKey) ?? []).map(Self.clean).filter { !$0.isEmpty }
         blocked = (defaults.stringArray(forKey: Self.blockedKey) ?? []).map(Self.clean).filter { !$0.isEmpty }
+        recent = MessageInbox.recent(defaults.stringArray(forKey: Self.recentKey) ?? [], max: Self.recentMax, clean: Self.clean)
         super.init()
     }
 
@@ -92,10 +110,13 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         NotificationCenter.default.addObserver(
             self, selector: #selector(refreshAlerts), name: NSApplication.didBecomeActiveNotification, object: nil
         )
+        // the inbox doesn't wait on the permission prompt, which may never be answered
+        connect()
         if name.isEmpty {
             refreshAlerts()
         } else {
-            needAlerts { [weak self] _ in self?.connect() }
+            askedAlerts = true
+            needAlerts { _ in }
         }
     }
 
@@ -107,7 +128,6 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         case .ready: return "Receiving as \(name). Type message <name> <text> in the bar to send."
         case .taken: return "Someone else has \(name) now. Pick another name."
         case .offline: return "Receiving as \(name) once the relay can be reached."
-        case .paused: return "Paused while notifications are off for Q Calc."
         default: return "Connecting as \(name)…"
         }
     }
@@ -122,7 +142,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // what the page reads as __QCALC_MESSAGING
     var webJSON: String {
-        let payload: [String: Any] = ["name": name, "key": key, "accepted": accepted, "blocked": blocked]
+        let payload: [String: Any] = ["name": name, "key": key, "accepted": accepted, "blocked": blocked, "recent": recent]
         let data = (try? JSONSerialization.data(withJSONObject: payload, options: [])) ?? Data("{}".utf8)
         return String(data: data, encoding: .utf8) ?? "{}"
     }
@@ -148,15 +168,19 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         }
         busy = true
         note = ""
-        // without notifications nothing would say a message came, so receiving isn't turned on
-        needAlerts { [weak self] allowed in
-            guard let self else { return }
-            if allowed {
-                self.claim(next)
-            } else {
-                self.busy = false
-            }
-        }
+        claim(next)
+        // notifications say a message came while the bar is away; without them it waits for the bar
+        askedAlerts = true
+        needAlerts { _ in }
+    }
+
+    // the page sent to them
+    func noteSent(_ raw: String) {
+        let who = Self.clean(raw)
+        guard !who.isEmpty else { return }
+        recent = Array(([who] + recent.filter { $0 != who }).prefix(Self.recentMax))
+        UserDefaults.standard.set(recent, forKey: Self.recentKey)
+        changed()
     }
 
     private func claim(_ next: String) {
@@ -245,7 +269,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // json in, the relay's status out; text/plain like the page's, though only a page needs that
     private func post(_ path: String, _ body: [String: String], done: @escaping (String) -> Void) {
-        guard let url = URL(string: "https://\(Self.relayHost)\(path)") else { return done("network") }
+        guard let url = URL(string: "\(Self.relayBase)\(path)") else { return done("network") }
         var request = URLRequest(url: url, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.setValue("text/plain", forHTTPHeaderField: "Content-Type")
@@ -270,6 +294,16 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         }
     }
 
+    // whether anyone holds a name (lookupName in src/lib/messaging.ts): true or false from the relay, nil when it
+    // can't say (offline, too many asks, your own name lapsed), so the bar says nothing rather than something wrong
+    func lookup(_ raw: String, done: @escaping (Bool?) -> Void) {
+        let who = Self.clean(raw)
+        guard !name.isEmpty, !key.isEmpty, !who.isEmpty else { return done(nil) }
+        post("/lookup", ["from": name, "key": key, "name": who]) { status in
+            done(status == "found" ? true : status == "unknown" ? false : nil)
+        }
+    }
+
     // what the bar says once a message has gone, or hasn't (sendStatusText in src/lib/messaging.ts)
     static func sendStatusText(_ status: String, to: String) -> String {
         switch status {
@@ -286,12 +320,8 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // the inbox: one socket while a name is set, none otherwise
     private func connect() {
         close()
-        guard !name.isEmpty, !key.isEmpty, let url = URL(string: "wss://\(Self.relayHost)/inbox/\(name)") else {
+        guard !name.isEmpty, !key.isEmpty, let url = URL(string: Self.relayBase.replacingOccurrences(of: "http", with: "ws", options: .anchored) + "/inbox/\(name)") else {
             link = .off
-            return
-        }
-        guard alerts == .allowed else {
-            link = .paused
             return
         }
         link = .connecting
@@ -373,7 +403,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // asleep, the socket died quietly; awake, it's tried at once
     @objc private func woke() {
-        guard !name.isEmpty, link != .taken, link != .paused else { return }
+        guard !name.isEmpty, link != .taken else { return }
         retryWait = 3
         connect()
     }
@@ -455,24 +485,13 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
             let now = Self.alerts(settings.authorizationStatus)
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                if now == .unknown, !self.name.isEmpty {
-                    self.needAlerts { [weak self] _ in self?.alertsChanged() }
+                if now == .unknown, !self.name.isEmpty, !self.askedAlerts {
+                    self.askedAlerts = true
+                    self.needAlerts { _ in }
                     return
                 }
                 self.alerts = now
-                self.alertsChanged()
             }
-        }
-    }
-
-    private func alertsChanged() {
-        guard !name.isEmpty else { return }
-        if alerts == .allowed, link == .paused {
-            retryWait = 3
-            connect()
-        } else if alerts != .allowed, link != .paused, link != .taken {
-            close()
-            link = .paused
         }
     }
 
@@ -537,7 +556,7 @@ struct MessagesSettingsView: View {
                         Button("Open Settings") { messages.openNotificationSettings() }
                     } label: {
                         Text("Notifications")
-                        Text("Q Calc needs notifications to receive messages.")
+                        Text("Off. Messages wait under the bar for the next time you open it.")
                     }
                 }
                 if !messages.name.isEmpty {

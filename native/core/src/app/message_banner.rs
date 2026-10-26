@@ -160,6 +160,7 @@ mod tests {
             key: "ab".repeat(32),
             accepted: vec!["max".into()],
             blocked: vec!["spam".into()],
+            recent: vec![],
         };
         let cards = [
             card("1", "max", "hi", false),

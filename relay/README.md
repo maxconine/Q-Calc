@@ -38,6 +38,7 @@ Typing `message max hello` in the bar sends "hello" to whoever holds the name ma
 | `POST /claim {name, key}` | `ok` holds the name for this key; `taken` means another key holds it. |
 | `POST /release {name, key}` | Lets the name go if this key holds it, and closes its inbox. |
 | `POST /send {from, key, to, text}` | `delivered`, `offline` (no open inbox), `unknown` (nobody holds the name), `not-yours` (the key doesn't hold `from`). A text is up to 500 characters, kept on one line. |
+| `POST /lookup {from, key, name}` | `found` or `unknown`, whether anyone holds `name` (what a send already says); `not-yours`, `too-many` (`LOOKUPS`, 60 a minute per address and per sender), `bad`. Read only: it never claims `name` or keeps it from lapsing. The bar checks a name as `message <name>` is typed. |
 
 Each POST takes a JSON body sent as `text/plain`, so a page can send it without a CORS preflight. Each answers `{status}`, and `bad` or `too-many` apply to any of them.
 
@@ -87,7 +88,7 @@ Nothing else needs setting up and no data moves. To check it, open two copies of
 
 ### Deploying messages
 
-This adds the `Inbox` Durable Object class as a new `v3` migration, and `v1` and `v2` are unchanged. It also adds the `NAMES`, `MESSAGES` and `SENDERS` rate limiters and the `/inbox`, `/claim`, `/release` and `/send` routes. Nothing that games use changes. Until it's deployed, a new app's name can't be saved (settings says the relay can't be reached), and `message` says it couldn't reach the relay. Nothing else breaks.
+This adds the `Inbox` Durable Object class as a new `v3` migration, and `v1` and `v2` are unchanged. It also adds the `NAMES`, `MESSAGES` and `SENDERS` rate limiters and the `/inbox`, `/claim`, `/release` and `/send` routes. Nothing that games use changes. The later `/lookup` route needs the `LOOKUPS` rate limiter too; until that's deployed the bar's name check says nothing (no green, no "not found"). Until it's deployed, a new app's name can't be saved (settings says the relay can't be reached), and `message` says it couldn't reach the relay. Nothing else breaks.
 
 ```bash
 cd relay

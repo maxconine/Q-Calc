@@ -13,6 +13,7 @@ use crate::app::history as h;
 use crate::app::history_show as hs;
 use crate::app::identities as idt;
 use crate::app::keybinds::{self as kb, KeyAction, KeyEventLike, Keybinds};
+use crate::app::messaging as msg;
 use crate::app::onboarding::{self as ob, Example, HintFacts, HintOn, Onboarding, Rotation};
 use crate::app::settings::{self as st, NativeInfo, Settings};
 use crate::app::tour as tr;
@@ -31,6 +32,11 @@ fn to<T: serde::Serialize>(v: &T) -> Json {
 
 fn opt<T: serde::Serialize>(v: Option<T>) -> Json {
     v.map_or(Json::Null, |v| to(&v))
+}
+
+/// A `Messaging` as the TS passes it (lists in their own order), or sanitized when it isn't one.
+fn messaging(v: &Json) -> msg::Messaging {
+    of(v).unwrap_or_else(|| msg::sanitize_messaging(v))
 }
 
 fn form(v: &Json) -> AnswerForm {
@@ -215,6 +221,25 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/completion", "completionFor") => {
             let names: CompletionNames = of(&a(1)).unwrap_or_default();
             json!(completion_for(&s(0), &names))
+        }
+        // ---- lib/messaging (the pure parts; the relay calls stay in the shells) ----
+        ("lib/messaging", "sanitizeMessaging") => to(&msg::sanitize_messaging(&a(0))),
+        ("lib/messaging", "withRecent") => to(&msg::with_recent(&messaging(&a(0)), &s(1))),
+        ("lib/messaging", "messageContacts") => json!(msg::message_contacts(&messaging(&a(0)))),
+        ("lib/messaging", "isMessageCommand") => json!(msg::is_message_command(&s(0))),
+        ("lib/messaging", "parseMessage") => opt(msg::parse_message(&s(0))),
+        ("lib/messaging", "messageNameSpan") => {
+            opt(msg::message_name_span(&s(0))
+                .map(|(start, end)| json!({"start": start, "end": end})))
+        }
+        ("lib/messaging", "messageHint") => {
+            let line: msg::MessageLine = of(&a(0)).unwrap_or_default();
+            json!(msg::message_hint(
+                &line,
+                &messaging(&a(1)),
+                b(2),
+                a(3).as_bool()
+            ))
         }
         // ---- lib/history ----
         ("lib/history", "ellipsize") => json!(h::ellipsize(&s(0), n(1).unwrap_or(0.0) as i64)),

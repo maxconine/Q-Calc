@@ -25,6 +25,7 @@ pub mod known_words;
 pub mod live;
 pub mod message_banner;
 pub mod messaging;
+pub mod name_check;
 pub mod needs;
 pub mod onboarding;
 pub mod paste;

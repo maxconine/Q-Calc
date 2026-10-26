@@ -732,6 +732,10 @@ html.quick-native .four-twenty.wide {
 .quick-unit {
   color: var(--accent);
 }
+/* `message max …` once the relay says max is someone's: the same green */
+.quick-recipient {
+  color: var(--accent);
+}
 /* what the unit under the pointer is (`Nm → newton meter`), above it since the bar ends just below the text */
 .quick-unit-tip {
   position: absolute;

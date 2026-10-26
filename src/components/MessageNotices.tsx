@@ -20,6 +20,7 @@ import {
   InboxLink,
   loadMessaging,
   nativeMessaging,
+  rememberRecipient,
   saveMessaging,
   sendMessage,
   TEXT_MAX,
@@ -246,6 +247,7 @@ function MessageCard({ card, hover, onClose }: { card: BannerCard; hover: boolea
     if (!text || sending || sent) return
     setReply({ kind: 'sending' })
     const status = await sendMessage(loadMessaging(), card.from, text)
+    if (status === 'delivered') rememberRecipient(card.from)
     setReply(replyState(status, card.from))
   }
 

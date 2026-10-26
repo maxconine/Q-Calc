@@ -291,3 +291,48 @@ describe('sending', () => {
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*')
   })
 })
+
+describe('looking a name up', () => {
+  it('says whether anyone holds a name, as a send would, without claiming it or keeping it alive', async () => {
+    const r = relay()
+    await r.post('/claim', { name: 'max', key: KEY_A })
+    expect(await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'Max' })).toBe('found')
+    expect(await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'nobody' })).toBe('unknown')
+    expect(r.box('nobody').ctx.data.size).toBe(0)
+    const seen = r.box('max').ctx.data.get('claim').seen
+    vi.setSystemTime(LAPSE_MS / 2)
+    await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'max' })
+    expect(r.box('max').ctx.data.get('claim').seen).toBe(seen)
+  })
+
+  it('says the same whether or not the name has an open inbox, so nothing about who is reading shows', async () => {
+    const r = relay()
+    await r.post('/claim', { name: 'max', key: KEY_A })
+    const before = await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'max' })
+    await r.connect('max', KEY_A)
+    expect(await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'max' })).toBe(before)
+  })
+
+  it('says a lapsed name is unknown', async () => {
+    const r = relay()
+    await r.post('/claim', { name: 'max', key: KEY_A })
+    vi.setSystemTime(LAPSE_MS + 1)
+    expect(await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'max' })).toBe('unknown')
+  })
+
+  it('needs the asker’s own name and key', async () => {
+    const r = relay()
+    await r.post('/claim', { name: 'ana', key: KEY_B })
+    expect(await r.post('/lookup', { from: 'ana', key: KEY_A, name: 'ana' })).toBe('not-yours')
+    expect(await r.post('/lookup', { key: KEY_A, name: 'ana' })).toBe('bad')
+    expect(await r.post('/lookup', { from: 'ana', key: KEY_B, name: 'a' })).toBe('bad')
+  })
+
+  it('counts lookups per address and per asker', async () => {
+    const r = relay({ LOOKUPS: limiter(2) })
+    const look = () => r.post('/lookup', { from: 'ana', key: KEY_B, name: 'max' })
+    expect(await look()).toBe('unknown')
+    expect(await look()).toBe('unknown')
+    expect(await look()).toBe('too-many')
+  })
+})

@@ -13,7 +13,7 @@ import {
 import { cleanMessageText, TEXT_MAX, type Messaging } from './messaging'
 
 const card = (id: string, from = 'max', text = 'hi', ask = false): BannerCard => ({ id, from, text, ask })
-const me: Messaging = { name: 'ana', key: 'ab'.repeat(32), accepted: ['max'], blocked: ['spam'] }
+const me: Messaging = { name: 'ana', key: 'ab'.repeat(32), accepted: ['max'], blocked: ['spam'], recent: [] }
 
 describe('message banner cards', () => {
   it('puts the newest on top and keeps only a few', () => {
