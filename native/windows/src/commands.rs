@@ -570,3 +570,37 @@ mod tests {
         assert_eq!(game_rows().next().map(|r| r.0), Some("pong"));
     }
 }
+
+#[cfg(test)]
+mod timing {
+    /// `cargo test --release -p qcalc-win parse_cost -- --ignored --nocapture`: what reading a keystroke's line
+    /// as a command costs.
+    #[test]
+    #[ignore]
+    fn parse_cost() {
+        let inputs = [
+            "2+2", "sin(90)", "72 f to c", "1/3 + 1/6", "sqrt(2)*pi", "5 km in miles", "3x+2=11",
+            "(1+2)*(3+4)/5^2", "20% of 80", "e^(i pi)+1",
+        ];
+        let mut prefixes = Vec::new();
+        for i in inputs {
+            for n in 1..=i.len() {
+                if i.is_char_boundary(n) {
+                    prefixes.push(&i[..n]);
+                }
+            }
+        }
+        for p in &prefixes {
+            let _ = super::parse(p);
+        }
+        let t = std::time::Instant::now();
+        let rounds = 20;
+        for _ in 0..rounds {
+            for p in &prefixes {
+                std::hint::black_box(super::parse(p));
+            }
+        }
+        let per = t.elapsed().as_secs_f64() * 1e6 / (rounds * prefixes.len()) as f64;
+        println!("parse: {per:.2} µs a keystroke over {} lines", prefixes.len());
+    }
+}
