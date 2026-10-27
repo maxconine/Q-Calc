@@ -666,6 +666,18 @@ impl Ui<'_> {
         unsafe { self.rt.SetTransform(&next) };
     }
 
+    /// What canvas.rs draws with: the target, its device context (when it is one), and the factories.
+    pub fn parts(&self) -> (&ID2D1RenderTarget, Option<&ID2D1DeviceContext>, &ID2D1Factory, &IDWriteFactory) {
+        (self.rt, self.dc.as_ref(), self.d2d, self.dw)
+    }
+
+    /// Puts the target's transform back to this frame's current one (after a canvas set its own).
+    pub fn sync_transform(&self) {
+        let t = self.top();
+        // SAFETY: inside a draw
+        unsafe { self.rt.SetTransform(&t) };
+    }
+
     pub fn pop_transform(&mut self) {
         if self.transforms.len() > 1 {
             self.transforms.pop();

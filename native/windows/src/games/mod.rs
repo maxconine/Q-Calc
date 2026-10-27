@@ -10,6 +10,7 @@
 //! - Nothing is made until a game opens (the Direct2D factory and hardware target, fonts, saves, the relay link),
 //!   and closing the window drops all of it.
 
+mod canvas;
 mod connect4;
 mod crack;
 mod equal;
@@ -24,6 +25,7 @@ mod shell;
 mod store;
 mod svg;
 mod theme;
+mod trails;
 mod ultimate;
 mod widgets;
 
@@ -146,13 +148,14 @@ pub struct GameDef {
 }
 
 /// The games, in the order the games list shows them. Ember & frost and trails slot in here (README.md).
-pub static GAMES: [&GameDef; 6] = [
+pub static GAMES: [&GameDef; 7] = [
     &pong::DEF,
     &connect4::DEF,
     &ultimate::DEF,
     &crack::DEF,
     &equal::DEF,
     &numbers::DEF,
+    &trails::DEF,
 ];
 
 fn no_sub(_: &GameStore) -> String {
@@ -1182,6 +1185,6 @@ mod tests {
         assert_eq!(hint("crack").as_deref(), Some("↵ crack the safe"));
         assert_eq!(hint("countdown").as_deref(), Some("↵ play 24 or countdown"));
         assert_eq!(hint("connect 4").as_deref(), Some("↵ play connect 4"));
-        assert_eq!(list().len(), 6);
+        assert_eq!(list().len(), 7);
     }
 }
