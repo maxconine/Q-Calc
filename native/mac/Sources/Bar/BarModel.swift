@@ -271,6 +271,13 @@ final class BarModel: ObservableObject {
         let typed = text
         // `sys`: a hint until there's a count; the panel's own answer once its fields are open
         let sys = SysCommand.of(typed)
+        // native only: the fields open the moment the count is typed (the page waits for ↵), the caret in the
+        // first; a new count keeps what's typed in the fields it still has
+        if case let .count(n) = sys, sysLines?.count != n {
+            let kept = Array((sysLines ?? []).prefix(n))
+            sysLines = kept + Array(repeating: "", count: n - kept.count)
+            sysFocus = 0
+        }
         if case let .count(n) = sys, sysLines?.count == n {
             commandMessage = nil
             setLive(.blank, for: typed)
@@ -451,6 +458,10 @@ final class BarModel: ObservableObject {
         let lead = (fill["leading"] as? NSNumber)?.intValue ?? 0, trail = (fill["trailing"] as? NSNumber)?.intValue ?? 0
         guard lead + trail > 0 else { return false }
         let filled = String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
+        // the grey ones go now, not when the engine next answers: drawn over the typed ones meanwhile, the line
+        // looked shifted with its paren missing
+        decorations.leadingParens = 0
+        decorations.trailingParens = 0
         if let setField { setField(filled) } else { text = filled }
         return true
     }

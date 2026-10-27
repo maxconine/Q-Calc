@@ -43,6 +43,18 @@ extension BarModel {
         solveSystemLive()
     }
 
+    /// → at the end of an equation types in the parens it would be read with (inferParens), as → and Tab do on
+    /// the bar; false when there's nothing to add, or the caret isn't at the end, so → moves as usual
+    func fillSysParens(_ i: Int) -> Bool {
+        guard let lines = sysLines, lines.indices.contains(i),
+              let editor = NSApp.keyWindow?.firstResponder as? NSTextView,
+              editor.selectedRange() == NSRange(location: (editor.string as NSString).length, length: 0),
+              let fill = logic.call("engine/parens", "inferParens", [lines[i]]) as? [String: Any],
+              let filled = fill["filled"] as? String, filled != lines[i] else { return false }
+        setSysLine(i, filled)
+        return true
+    }
+
     /// ↵ in an equation: the next one, or save from the last
     func sysEnter(_ i: Int) {
         guard let lines = sysLines else { return }
@@ -122,12 +134,17 @@ extension BarModel {
 }
 
 private extension View {
-    /// ↑ ↓ between equations (and ↑ from the first back to the bar); key presses need macOS 14, so on 13 Tab
-    /// moves between them instead
-    @ViewBuilder func arrowKeys(up: @escaping () -> Void, down: @escaping () -> Void) -> some View {
+    /// ↑ ↓ between equations (and ↑ from the first back to the bar), Tab / ⇧Tab round them, → at the end fills
+    /// parens; key presses need macOS 14, so on 12 and 13 Tab moves between them by the key view loop instead
+    @ViewBuilder func arrowKeys(up: @escaping () -> Void, down: @escaping () -> Void, tab: @escaping (Bool) -> Void,
+                                right: @escaping () -> Bool) -> some View {
         if #available(macOS 14.0, *) {
             self.onKeyPress(.upArrow) { up(); return .handled }
                 .onKeyPress(.downArrow) { down(); return .handled }
+                .onKeyPress(.tab, phases: .down) { press in tab(press.modifiers.contains(.shift)); return .handled }
+                // ⇧Tab can come as the back-tab character rather than Tab with shift
+                .onKeyPress(KeyEquivalent("\u{19}"), phases: .down) { _ in tab(true); return .handled }
+                .onKeyPress(.rightArrow) { right() ? .handled : .ignored }
         } else {
             self
         }
@@ -169,6 +186,12 @@ struct SystemPanel: View {
                         if i == 0 { model.focusField?() } else { focused = i - 1 }
                     }, down: {
                         if i + 1 < (model.sysLines?.count ?? 0) { focused = i + 1 }
+                    }, tab: { back in
+                        // Tab / ⇧Tab go round the equations (native only)
+                        let n = model.sysLines?.count ?? 1
+                        focused = (i + (back ? n - 1 : 1)) % n
+                    }, right: {
+                        model.fillSysParens(i)
                     })
                     .accessibilityLabel("Equation \(i + 1)")
             }

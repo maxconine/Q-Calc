@@ -279,11 +279,22 @@ final class BarTextView: NSTextView {
         setAccessibilityRole(.textField)
     }
 
+    /// the grey leading parens, a view of their own: drawn by the text view itself they sat in the inset, which
+    /// the text view doesn't repaint, so a new one never showed and an old one stayed after the line was cleared
+    private let leadView = GhostLeadView()
+
     private func updateInset() {
         let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: [.font: font!]).width + 2
         // the line sits in the middle of its 36 pt box, as the web input's does
         let line = layoutManager?.defaultLineHeight(for: font!) ?? Self.fontSize * 1.2
         textContainerInset = NSSize(width: lead, height: max(0, (bounds.height - line) / 2))
+        if leadView.superview == nil { addSubview(leadView) }
+        leadView.text = ghostLead
+        leadView.attributes = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
+        leadView.y = textContainerInset.height
+        leadView.frame = NSRect(x: 0, y: 0, width: lead, height: bounds.height)
+        leadView.isHidden = ghostLead.isEmpty
+        leadView.needsDisplay = true
         needsDisplay = true
     }
 
@@ -383,9 +394,6 @@ final class BarTextView: NSTextView {
         let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
         let inferred: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
-        if !ghostLead.isEmpty {
-            (ghostLead as NSString).draw(at: NSPoint(x: 0, y: textContainerInset.height), withAttributes: inferred)
-        }
         // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
         if let squiggle, let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
             let glyphs = lm.glyphRange(forCharacterRange: squiggle, actualCharacterRange: nil)
@@ -542,6 +550,12 @@ struct InputField: NSViewRepresentable {
         // sizeToFit makes the height the line plus both insets, and the inset centres the line in that height, so it
         // grew to 72 pt in the 36 pt clip: with text the caret is scrolled into view, empty it sat half below the clip
         text.frame.size.height = scroll.contentSize.height
+        // a line that fits starts at the left edge again (a grey ( going, or the line getting shorter, could leave
+        // it scrolled with its first characters cut off)
+        if text.frame.width <= scroll.contentSize.width, scroll.contentView.bounds.origin.x != 0 {
+            scroll.contentView.scroll(to: .zero)
+            scroll.reflectScrolledClipView(scroll.contentView)
+        }
         text.scrollRangeToVisible(text.selectedRange())
     }
 
@@ -601,5 +615,19 @@ struct InputField: NSViewRepresentable {
             text.sizeToFit()
             text.scrollRangeToVisible(text.selectedRange())
         }
+    }
+}
+
+/// The grey `(`s the engine would add in front of the line, at the text view's left edge (BarTextView.leadView)
+final class GhostLeadView: NSView {
+    var text = ""
+    var attributes: [NSAttributedString.Key: Any] = [:]
+    var y: CGFloat = 0
+
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        (text as NSString).draw(at: NSPoint(x: 0, y: y), withAttributes: attributes)
     }
 }
