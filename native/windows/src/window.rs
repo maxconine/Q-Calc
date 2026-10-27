@@ -262,6 +262,8 @@ impl Bar {
     pub fn paint(&mut self, gfx: &Gfx, theme: &Theme, model: &BarModel) -> Result<()> {
         let layout = self.layout.clone();
         let focused = self.focused || !self.visible;
+        let crt = crate::effects::crt_theme(model);
+        let (theme, scale) = (crt.as_ref().unwrap_or(theme), self.scale());
         let field_view = &mut self.field_view;
         self.surface.draw(gfx, theme, |c: &mut Canvas| {
             c.clear(theme.bg);
@@ -306,6 +308,7 @@ impl Bar {
             {
                 c.text(&l, r.x, r.y, theme.muted);
             }
+            crate::effects::paint_bar(c, model, &layout, scale);
         })
     }
 

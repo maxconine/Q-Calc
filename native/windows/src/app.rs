@@ -681,6 +681,9 @@ impl App {
             WM_CLOSE => self.ops.push(Op::Hide),
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
+                if crate::effects::key_down(self, vk, lp.0) {
+                    return Some(LRESULT(0));
+                }
                 let host = self.bar.hwnd;
                 let outcome = self
                     .model
@@ -836,6 +839,7 @@ impl App {
     /// After every message: lay out and repaint if the model changed; save settings; write the clipboard.
     fn after(&mut self) {
         if self.model.take_changed() {
+            crate::effects::after(self);
             let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
             let resized = (layout.height - self.bar.layout.height).abs() > 0.1
                 || (layout.anchor - self.bar.layout.anchor).abs() > 0.1;

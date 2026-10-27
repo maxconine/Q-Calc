@@ -74,6 +74,8 @@ pub struct BarModel {
     changed: bool,
     /// the clipboard text an action wants written (app.rs writes it)
     pub to_clipboard: Option<String>,
+    /// the easter eggs' gates, settle and CRT look (effects.rs)
+    pub eggs: crate::effects::Eggs,
 }
 
 impl BarModel {
@@ -93,6 +95,7 @@ impl BarModel {
             settings_dirty: false,
             changed: true,
             to_clipboard: None,
+            eggs: crate::effects::Eggs::default(),
         }
     }
 
