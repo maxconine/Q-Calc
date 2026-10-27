@@ -267,6 +267,21 @@ pub fn take() -> [Option<f64>; STAGES] {
     [None; STAGES]
 }
 
+/// Times a showing (Op::Show, from prepare_show to the uncloak) into `show_ms` (perf builds only).
+pub struct ShowTimer(pub std::time::Instant);
+
+static SHOWS: std::sync::Mutex<Vec<f64>> = std::sync::Mutex::new(Vec::new());
+
+impl Drop for ShowTimer {
+    fn drop(&mut self) {
+        if cfg!(feature = "perf")
+            && let Ok(mut s) = SHOWS.lock()
+        {
+            s.push(self.0.elapsed().as_secs_f64() * 1000.0);
+        }
+    }
+}
+
 /// The bench pipe's diagnostics commands.
 #[cfg(windows)]
 pub fn cmd(cmd: &str) -> Option<serde_json::Value> {
@@ -275,6 +290,7 @@ pub fn cmd(cmd: &str) -> Option<serde_json::Value> {
         "vm" => Some(vm()),
         #[cfg(feature = "perf")]
         "threads" => Some(threads()),
+        "shows" => Some(serde_json::json!(SHOWS.lock().map(|s| s.clone()).unwrap_or_default())),
         _ => None,
     }
 }

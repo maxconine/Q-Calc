@@ -153,6 +153,8 @@ pub struct EngineThread {
     typst: Mutex<Option<Sender<TypstJob>>>,
     /// tells the UI thread a result is ready (app.rs posts WM_ENGINE)
     notify: Arc<dyn Fn() + Send + Sync>,
+    /// `warm_up` ran
+    warmed: std::sync::atomic::AtomicBool,
 }
 
 impl EngineThread {
@@ -190,6 +192,7 @@ impl EngineThread {
         EngineThread {
             shared,
             typst: Mutex::new(None),
+            warmed: std::sync::atomic::AtomicBool::new(false),
             notify,
         }
     }
@@ -271,6 +274,43 @@ impl EngineThread {
         drop(q);
         self.shared.wake.notify_one();
         generation
+    }
+
+    /// The engine's first evaluation is the slow one (its lazy tables and ~150 regexes, ~20 ms and ~4.8 MB): run
+    /// once, off the UI thread, when the bar first shows (or at launch when it shows then), so an app started into
+    /// the tray at sign-in holds none of it until it is used. A keystroke comes well after the showing's ~10 ms.
+    pub fn warm_up(&self) {
+        if self.warmed.swap(true, Ordering::Relaxed) {
+            return;
+        }
+        self.submit(Lane::Misc, |cx| {
+            let t = Instant::now();
+            let _ = cx.engine.reload_rates();
+            let _ = cx.engine.evaluate(
+                vec!["2+2".into(), "sin(90)".into(), "72 f to c".into()],
+                qcalc_ffi::default_eval_options(),
+            );
+            // and a keystroke's own path (the live answer's checks, phrases, the field's decorations), whose
+            // first run cost the first two keys after a showing ~7 ms each
+            for text in ["2+", "2+2", "5 km in miles"] {
+                let context = EvalContext::default();
+                let chained = cx.engine.chains(text.into(), context.clone());
+                let answer = cx.engine.live(qcalc_ffi::LiveRequest {
+                    text: text.into(),
+                    options: qcalc_ffi::default_eval_options(),
+                    context: context.clone(),
+                    chained,
+                    now_ms: crate::model::now_ms(),
+                    phrases: true,
+                });
+                let _ = crate::line::decorate(text, &context, &answer);
+            }
+            qlog!(
+                "engine warmed in {:.1} ms",
+                t.elapsed().as_secs_f64() * 1000.0
+            );
+            None
+        });
     }
 
     /// Makes a lane's waiting and running jobs stale (the line was cleared, a command took over).

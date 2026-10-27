@@ -54,7 +54,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{HSTRING, PCWSTR, w};
 
 use crate::bench::{self, Run, Step, Wait};
-use crate::engine::{EngineThread, Lane, Rows};
+use crate::engine::{EngineThread, Rows};
 use crate::hotkey::{self, Hotkey};
 use crate::input::ime;
 use crate::keys::Mods;
@@ -235,20 +235,10 @@ pub fn run() -> i32 {
             };
         },
     );
-    // the first evaluation is the slow one (≈17 ms): done now, off the UI thread
-    engine.submit(Lane::Misc, |cx| {
-        let t = Instant::now();
-        let _ = cx.engine.reload_rates();
-        let _ = cx.engine.evaluate(
-            vec!["2+2".into(), "sin(90)".into(), "72 f to c".into()],
-            qcalc_ffi::default_eval_options(),
-        );
-        qlog!(
-            "engine warmed in {:.1} ms",
-            t.elapsed().as_secs_f64() * 1000.0
-        );
-        None
-    });
+    // the first evaluation is the slow one: now if the bar shows now, else with its first showing (engine.rs)
+    if !args.autostart || first_run {
+        engine.warm_up();
+    }
     crate::migrate::history(&engine);
     history::load(&engine);
 
@@ -480,6 +470,7 @@ pub fn poke(f: impl FnOnce(&mut App)) {
 fn run_op(op: Op) {
     match op {
         Op::Show => {
+            let _show_ms = crate::perf::ShowTimer(Instant::now());
             let Some(Some((hwnd, x, y, w, h))) = with_app(|a| a.prepare_show()) else {
                 return;
             };
@@ -1023,6 +1014,7 @@ impl App {
             crate::place::MIN_WIDTH as f32
         };
         if !self.bar.visible {
+            self.engine.warm_up();
             // the line outlives a hide only for draftSeconds (draft.json); the open counts for the examples
             crate::line::will_show(&mut self.model, &mut self.store.onboarding, &self.engine);
             self.model.hint = self.notice.clone();
