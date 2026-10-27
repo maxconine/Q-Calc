@@ -71,7 +71,6 @@ Both are end-to-end encrypted by the native app: the relay can't read a clip or 
 | Offers one sender has out | 50 |
 | R2 writes (class A) a day, whole relay | 10,000 |
 | R2 reads (class B) a day, whole relay | 50,000 |
-| A name's first 10 minutes | It can't offer or upload files, to slow throwaway names |
 
 Room comes back when a file is downloaded, taken back, turned down or expired. A sender's day of uploads isn't given back. A Cron Trigger runs every hour. It lets lapsed offers go, returns unused grants, aborts stale uploads and deletes expired files. Expiry is also checked on every read.
 
@@ -174,7 +173,7 @@ This adds the `Ledger` Durable Object class as a new `v4` migration, and `v1` to
    npx wrangler deploy              # applies v4, binds the bucket, the limiters and the hourly cron
    ```
 
-The bucket stays private. Don't give it a public `r2.dev` URL or a custom domain, since the Worker is the only way in. The cron trigger shows under Workers → `qcalc-relay` → Settings → Triggers. Nothing else needs setting up and no data moves. To check it, set different names in two copies of the new app, wait 10 minutes, and send `paste to <other name>`. Then send a file. The other copy shows it, and once it's allowed, Save puts it in Downloads.
+The bucket stays private. Don't give it a public `r2.dev` URL or a custom domain, since the Worker is the only way in. The cron trigger shows under Workers → `qcalc-relay` → Settings → Triggers. Nothing else needs setting up and no data moves. To check it, set different names in two copies of the new app and send `paste to <other name>`. Then send a file. The other copy shows it, and once it's allowed, Save puts it in Downloads.
 
 ### Deploying end-to-end clips and files
 
@@ -193,7 +192,7 @@ Files cost R2 storage and operations, plus Worker and Durable Object requests. R
 - **One file.** A file up to 50 MiB takes 3 class A operations (start, one part, finish) and 1 class B (the download). A 1 GiB file takes 23 class A, for its 21 parts, and 1 class B. It also takes about 3 Durable Object requests per part, for the sender's name check, the ledger before and the ledger after, plus a few for the offer, accept, start, finish and download.
 - **Storage.** The bucket's pending bytes are capped at 8 GiB, reserved from the moment a file is accepted, unfinished parts included. Each file lives at most 24 hours after it's uploaded. Even with the bucket full all month, storage stays at 8 GB-month, under the free 10.
 - **Operations.** The ledger allows 10,000 class A operations a day across the whole relay, about 300,000 a month, and 50,000 class B a day, about 1.5 million a month. Both are well under the free tier however many names or addresses send. When a day's budget is spent, accepting, uploading or downloading answers `relay-full` until the next UTC day.
-- **The worst case.** Someone set on running it up would need two names they control, each 10 minutes old. Their address can start 20 uploads an hour, and each name can move 5 GiB a day. However many names and addresses they spread across, the whole relay stops at 8 GiB stored and 10,000 writes and 50,000 reads a day, so the R2 bill stays at $0. What they can use up is other people's room for files for the rest of that day. The 10,000 writes a day also hold Durable Object requests from files to roughly 30,000 a day, which leaves most of the free plan's 100,000 a day for messages and games. Offers and accepts that never become uploads cost one Durable Object request each and no R2 operations, and they're held by `UPLOADS` (10 a minute per address and per name), `FILE_GETS` (30 a minute per address) and the cap of 50 offers out per sender.
+- **The worst case.** Someone set on running it up would need two names they control (a name can send files as soon as it's claimed; `NEW_NAME_MS` in `files.js` brings back a wait). Their address can start 20 uploads an hour, and each name can move 5 GiB a day. However many names and addresses they spread across, the whole relay stops at 8 GiB stored and 10,000 writes and 50,000 reads a day, so the R2 bill stays at $0. What they can use up is other people's room for files for the rest of that day. The 10,000 writes a day also hold Durable Object requests from files to roughly 30,000 a day, which leaves most of the free plan's 100,000 a day for messages and games. Offers and accepts that never become uploads cost one Durable Object request each and no R2 operations, and they're held by `UPLOADS` (10 a minute per address and per name), `FILE_GETS` (30 a minute per address) and the cap of 50 offers out per sender.
 
 ## Local testing
 

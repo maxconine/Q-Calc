@@ -605,6 +605,11 @@ final class OverlayController: NSObject {
                 self.periodic.putFormulaIn()
                 return nil
             }
+            // ⌘V with files copied sends them, in a thread or on a line that names someone; otherwise it pastes
+            if event.modifierFlags.intersection([.command, .option, .control, .shift]) == [.command],
+               event.keyCode == UInt16(kVK_ANSI_V), !composing, self.model.pasteFiles() {
+                return nil
+            }
             // ⌘W closes the front reference sheet first (sheets never take the keys while the bar is up), else
             // hides the bar
             if isCommandWCloseKey(event) {

@@ -259,7 +259,7 @@ final class BarModel: ObservableObject {
         helpShown = false
         // the conversations list is picked from with the line empty; typing leaves it
         if case .list = messagesPanel, !text.isEmpty { messagesPanel = nil }
-        if text.isEmpty { hint = nil }
+        if text.isEmpty { hint = nil; decorations = Decorations() }
         if !text.isEmpty { dismissRotation() }
         evaluateLive()
         refreshTour()
@@ -338,6 +338,8 @@ final class BarModel: ObservableObject {
         if typed.trimmingCharacters(in: .whitespaces).isEmpty {
             engine.cancel(.live)
             chained = false
+            // no grey parens left over from the line that was just deleted
+            decorations = Decorations()
             setLive(.blank, for: typed)
             return
         }
@@ -437,6 +439,17 @@ final class BarModel: ObservableObject {
     func acceptCompletion() -> Bool {
         guard let completion, !completion.isEmpty else { return false }
         insert(completion)
+        return true
+    }
+
+    /// Type in the grey parens the engine would add (inferParens), both ends: Tab, or → at the end of the line
+    /// (native only)
+    func acceptParens() -> Bool {
+        guard let fill = logic.call("engine/parens", "inferParens", [text]) as? [String: Any] else { return false }
+        let lead = (fill["leading"] as? NSNumber)?.intValue ?? 0, trail = (fill["trailing"] as? NSNumber)?.intValue ?? 0
+        guard lead + trail > 0 else { return false }
+        let filled = String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
+        if let setField { setField(filled) } else { text = filled }
         return true
     }
 
@@ -605,9 +618,9 @@ final class BarModel: ObservableObject {
         }
     }
 
-    // MARK: - answer forms (Tab)
+    // MARK: - answer forms (⌃E)
 
-    /// Tab: the engine's answerForms for the answer as shown, cycled (useAnswerForms)
+    /// ⌃E (⌃⇧E back; Tab on the page, native moved it so Tab fills parens): the engine's answerForms for the answer as shown, cycled (useAnswerForms)
     func cycleForms(back: Bool = false) {
         guard !live.isBlank, live.valueJson != nil else { return }
         track("form.tab")
@@ -623,7 +636,7 @@ final class BarModel: ObservableObject {
             let source = FormSource(valueJson: valueJson ?? "", display: display, exact: exact, meas: meas,
                                     sigFigs: options.sigFigs, sigFigMode: options.sigFigMode, rationalize: options.rationalize)
             let views = valueJson == nil ? [] : engine.answerForms(source: source)
-            // the engine's answerForms (WP-APP-LOGIC): the other ways Tab shows this answer
+            // the engine's answerForms (WP-APP-LOGIC): the other ways ⌃E shows this answer
             out += views.map(\.display)
             var seen = Set<String>()
             return out.filter { seen.insert($0.trimmingCharacters(in: .whitespaces)).inserted && !$0.contains("undefined") }
@@ -1124,11 +1137,15 @@ final class BarModel: ObservableObject {
                 return true
             }
             // → at the end of the line takes the completion
-            if code == kVK_RightArrow, caretAtEnd?() ?? false { return acceptCompletion() }
+            if code == kVK_RightArrow, caretAtEnd?() ?? false { return acceptCompletion() || acceptParens() }
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
-            if !flags.contains(.shift), fillTourStep() || acceptCompletion() || tabToCard() { return true }
+            if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
+            return true
+        case kVK_ANSI_E:
+            // the answer's other forms (base, exponent, fraction…), which Tab cycles on the page
+            guard flags == [.control] || flags == [.control, .shift] else { return false }
             cycleForms(back: flags.contains(.shift))
             return true
         case kVK_Delete:
@@ -1398,7 +1415,7 @@ final class BarModel: ObservableObject {
     }
 
     /// Tab on an empty line with a message card up moves to the newest card's reply line (native only: the line
-    /// keeps Tab for completion and answer forms, so the keyboard had no way into a card before it went)
+    /// keeps Tab for completion and parens, so the keyboard had no way into a card before it went)
     func tabToCard() -> Bool {
         guard text.isEmpty, let card = cards.first(where: { !$0.ask && $0.reply != .sent }) else { return false }
         cardFocusRequest = card.id

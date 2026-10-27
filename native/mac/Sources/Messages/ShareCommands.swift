@@ -163,6 +163,17 @@ extension BarModel {
         return true
     }
 
+    /// ⌘V with files copied (Finder's Copy): in a thread they go to that person, and on a line that names someone
+    /// (`message max2`, `send file to max2`) to them, as a drop there would (native only). false leaves ⌘V to paste
+    /// the text as usual, so copied files pasted on any other line paste their names.
+    func pasteFiles() -> Bool {
+        let urls = NSPasteboard.general.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        guard !urls.isEmpty else { return false }
+        if case let .thread(who) = messagesPanel { return dropFiles(urls, to: who) }
+        guard dropTarget(count: urls.count) != nil else { return false }
+        return dropFiles(urls, to: nil)
+    }
+
     /// file urls from a SwiftUI drop, all of them, in the order they were dragged
     func dropProviders(_ providers: [NSItemProvider], to who: String?) -> Bool {
         let items = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }

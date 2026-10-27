@@ -196,8 +196,7 @@ function ledger(env) {
   return env.LEDGER.get(env.LEDGER.idFromName('files'))
 }
 
-// a name newer than NEW_NAME_MS can't send files. only local testing shortens it (wrangler dev --var
-// NEW_NAME_MS:0); the deployed relay sets no such var
+// a name newer than NEW_NAME_MS can't send files (0 now, so none waits); a NEW_NAME_MS var overrides it
 async function seasoned(env, from) {
   const wait = /^[0-9]+$/.test(env.NEW_NAME_MS ?? '') ? Number(env.NEW_NAME_MS) : NEW_NAME_MS
   return Date.now() - (await inbox(env, from).since()) >= wait

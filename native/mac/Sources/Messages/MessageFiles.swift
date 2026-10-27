@@ -199,8 +199,9 @@ final class MessageFiles: NSObject, ObservableObject {
     /// the clipboard to `to`: text as a clip (a text file past 64 KB), a copied file or an image as a file
     func sendClipboard(to: String, done: @escaping (String) -> Void) {
         let pb = NSPasteboard.general
-        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], let url = urls.first {
-            return sendFile(url, to: to, done: done)
+        // every copied file goes, not just the first
+        if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty {
+            return urls.forEach { sendFile($0, to: to, done: done) }
         }
         if let text = pb.string(forType: .string), !text.isEmpty {
             if text.utf8.count <= Self.clipMax { return sendClip(text, to: to, done: done) }

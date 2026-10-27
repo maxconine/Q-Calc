@@ -341,11 +341,18 @@ describe('offering a file', () => {
     expect([...r.ledger().ctx.data.keys()]).toEqual([])
   })
 
-  it('won’t take files from a name claimed in the last 10 minutes', async () => {
+  it('takes files from a name claimed just now', async () => {
     const r = relay()
     await r.connect('max', KEY_A)
     await r.connect('ana', KEY_B)
-    vi.setSystemTime(NEW_NAME_MS - 1)
+    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer() })).status).not.toBe('new-name')
+  })
+
+  it('won’t take files from a name newer than a NEW_NAME_MS var', async () => {
+    const r = relay({ NEW_NAME_MS: '600000' })
+    await r.connect('max', KEY_A)
+    await r.connect('ana', KEY_B)
+    vi.setSystemTime(600000 - 1)
     expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer() })).status).toBe('new-name')
   })
 

@@ -33,8 +33,9 @@ export const STALE_UPLOAD_MS = 2 * HOUR_MS
 export const UPLOAD_MAX_MS = DAY_MS
 // an uploaded file nobody downloaded goes after this
 export const STORED_TTL_MS = DAY_MS
-// a name this new can't send files, so throwaway names can't
-export const NEW_NAME_MS = 10 * 60 * 1000
+// a name this new can't send files. 0: a name can send files as soon as it's claimed (the per-address, per-name
+// and whole-bucket caps are what hold spam); raise it to slow throwaway names again
+export const NEW_NAME_MS = 0
 
 // the ledger's hard caps. pending is what's granted, being uploaded or waiting to be downloaded
 export const CAPS = {
