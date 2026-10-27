@@ -27,6 +27,10 @@ libm = "0.2" # WP-FUNCTIONS: fdlibm, the algorithms behind V8's Math.*
 jiff = { version = "0.2", default-features = false, features = ["std", "tzdb-bundle-always"] }
 roxmltree = "0.20"
 
+[features]
+# jsre asserts that its prefilter never rules out a text the pattern matches (for the fuzz harness)
+check-prefilter = []
+
 [lints]
 workspace = true
 

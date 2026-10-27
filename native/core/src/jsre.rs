@@ -266,7 +266,14 @@ fn cannot_match(re: &Regex, s: &str) -> bool {
             }
             cache.insert(key, Prefilter::of(pattern));
         }
-        cache.get(&key).is_some_and(|p| p.rules_out(s))
+        let out = cache.get(&key).is_some_and(|p| p.rules_out(s));
+        // the fuzz harness builds with this to check, on every call, that a ruled-out text really can't match
+        #[cfg(feature = "check-prefilter")]
+        assert!(
+            !(out && re.is_match(s).unwrap_or(false)),
+            "prefilter ruled out a match: {pattern:?} on {s:?}"
+        );
+        out
     })
 }
 
