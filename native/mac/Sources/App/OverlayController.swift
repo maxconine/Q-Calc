@@ -201,6 +201,10 @@ final class OverlayController: NSObject {
         workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.environmentChanged("wake")
         }
+        // Increase Contrast / Reduce Transparency switched: the bar redraws with Theme's other colours
+        workspace.addObserver(forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.model.objectWillChange.send()
+        }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             self?.environmentChanged("display change")
         }
@@ -214,9 +218,22 @@ final class OverlayController: NSObject {
         }
     }
 
+    /// dev builds (`drive.sh contrast:on`): the bar drawn as with Increase Contrast on, to picture it
+    var devContrast = false {
+        didSet {
+            Theme.devContrast = devContrast
+            applyAppearance()
+            model.objectWillChange.send()
+        }
+    }
+
     private func applyAppearance() {
         // the Konami CRT reads as phosphor on black: it always draws on the dark bar
         panel?.appearance = model.crt ? NSAppearance(named: .darkAqua) : AppSettings.shared.nsAppearance
+        if devContrast, let panel {
+            let dark = panel.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            panel.appearance = NSAppearance(named: dark ? .accessibilityHighContrastDarkAqua : .accessibilityHighContrastAqua)
+        }
         if let background = panel?.contentView { CRTLook.apply(model.crt, to: background) }
     }
 

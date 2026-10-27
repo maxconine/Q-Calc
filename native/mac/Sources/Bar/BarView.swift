@@ -47,7 +47,7 @@ struct BarView: View {
             below
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.qBg.opacity(0.9))
+        .background(Color.qBg.opacity(Theme.panelOpacity))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
         // a file dropped on the bar goes to whoever the line names (Messages/ShareCommands.swift); a thread
         // under it takes its own drops
@@ -145,7 +145,7 @@ private struct TapeBox<Content: View>: View {
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.qBgTape.opacity(0.9))
+            .background(Color.qBgTape.opacity(Theme.panelOpacity))
             .overlay(alignment: .bottom) { Rectangle().fill(Color.qLine).frame(height: 1) }
     }
 }

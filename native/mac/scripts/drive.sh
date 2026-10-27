@@ -4,7 +4,8 @@
 # Commands: show, hide, settings, theme:<system|light|dark>, type:<text>, enter, up, down, tab, esc,
 # key:<chord> (a real key event: key:enter, key:cmd+w), periodic, identities, card[:<from>], ask[:<from>],
 # paste[:<system field>], snap:<path prefix> (a PNG per visible window), sleep:<seconds>, keys:<text> (typed into the
-# focused field), click:<x>,<y> (in the bar, points from its top-left), settings[:<tab index>], forget:<name>.
+# focused field), click:<x>,<y> (in the bar, points from its top-left), settings[:<tab index>], forget:<name>,
+# contrast:on|off (the bar in the Increase Contrast appearance).
 # QCALC_DEV_ID=<bundle id> drives a copy of the dev build re-signed under another id instead.
 for cmd in "$@"; do
   if [[ "$cmd" == sleep:* ]]; then
