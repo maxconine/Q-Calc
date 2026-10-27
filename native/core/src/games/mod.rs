@@ -17,7 +17,7 @@ pub mod fullscreen;
 pub mod hello;
 pub mod lobby;
 pub mod nickname;
-// pub mod numbers;
+pub mod numbers;
 pub mod peer;
 pub mod peer_online;
 pub mod pong;
