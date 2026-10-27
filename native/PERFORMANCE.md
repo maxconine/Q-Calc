@@ -228,3 +228,41 @@ Tried and dropped, with no measured win:
 ### After the native games merge (2026-10-26, arm64, native only)
 
 Keystroke median 1.64 ms (p99 8.1), warm launch 180 ms (bar mounted 143 ms), footprint idle 28 MB / after typing 42 MB / after graph 65 MB, one process, 0% idle CPU, 43.7 MB on disk. The web build is unchanged from the baseline above (91 MB idle, 396 MB after a graph, 12 ms keystrokes).
+
+### Rounds 3 and 4 (overnight 2026-10-27, arm64, native only)
+
+Same M4 Pro, load 6 to 20 from other agents' builds. Every change was measured against the build before it, both
+saved and run back to back twice, interleaved (`app_bench.py --only native --runs 1`, with
+`QCALC_BENCH_NATIVE_APP` pointing at the saved copy). Snapshots (`snap` dev command) were compared pixel by pixel.
+
+New in the bench:
+- **Peak footprint while graphing**, sampled every 0.2 s from the graph line being typed to the 3 s sample.
+- **Typed into the field**: the same 269 inputs typed a character at a time through the text view (`field` in
+  DevBench: insertText, so auto-pairs, symbol swaps, undo and the field's updates all run), timed from before the
+  insert to the answer landing. Setting `model.text` (the older keystroke row) skips all of that.
+
+| change | measured | kept? |
+|---|---|---|
+| graph plot drawn into a CPU bitmap handed to the layer, not a Canvas (round 3, carried over) | peak while graphing 195-197 → 62-65 MB; after the graph 68/157 → 62-64 MB | kept |
+| engine regexes without the fully compiled DFA (round 3, carried over) | keystroke 1.71/1.76 → 1.77/1.90 ms, after typing 41 → 40 MB, ready unchanged | reverted: no win beyond noise in the app |
+| undo in Swift (undo.ts line for line) instead of three `callJson` round trips a keystroke | typed into the field 1.92/2.07/2.10 → 1.59-1.80 ms | kept |
+| dev builds read `QCALC_PI_DAY` once (the composer read the whole environment on every redraw) | keystroke 1.66/1.79 → 1.57/1.31 ms; field 1.71/1.72 → 1.64/1.39 ms (dev builds only) | kept |
+| `malloc_zone_pressure_relief` 2 s after typing or a graph lands | no change in any footprint row | reverted |
+| `lto = "fat"` | binary within 2 KB of thin | reverted |
+| plot bitmap in the screen's pixel format and colour space (BGRA, the window's space) | after the graph 64/64 → 57/57 MB, peak 64 → 57-59 MB; sRGB BGRA alone saved nothing | kept |
+| pong's court as Core Animation layers, not a Canvas in a TimelineView | playing pong 167-173 → 32 MB | kept |
+| `opt-level = "z"` for the Typst dependencies the preview never runs (images, PDF, WASM, bibliographies) | binary 42.2 → 45.1 MB (bigger) | reverted |
+| `strip` instead of `strip -x` | executable 42.2 → 40.5 MB, on disk 44.4 → 42.9 MB | kept |
+
+Where the time goes now:
+- **A keystroke typed into the field** (sample of the bench copy, unstripped binary): the main thread is about
+  half busy. SwiftUI's graph update is about half of that, as in round 2; the text view's own insert and
+  `textDidChange` about a fifth; Core Animation's commit about a tenth. The engine thread is busy about 18% of
+  the time, nearly all of it waiting for `Engine.live` on the evaluation thread.
+- **First launch after an install or update** (the "cold" row) is about 390 ms before `main`, against 7.5 ms
+  warm. A test binary shows that time grows with the binary's size, about 6 ms a MB (95 ms for a 50 KB binary,
+  340-400 ms for one padded to 42 MB), so it is the system reading the new binary, not our code.
+- **Memory after typing** (+15 MB over the shown bar): about half is regexes compiled on first use (Thompson
+  NFAs, dense and one-pass DFAs, lazy-DFA caches); the rest is SwiftUI and AppKit.
+- **File encryption** (FileCrypt, 256 MB of random bytes): about 1.5 GB/s each way, far beyond the relay's
+  upload, so it was left alone.
