@@ -61,6 +61,7 @@ def app(d):
                        ("mem_typed", "after typing session"), ("mem_graph", "after graph")):
         row(f"footprint, {label} (MB)", lambda r, k=key: spread([s[k]["footprint"] for s in r["sessions"]]))
         row(f"RSS, {label} (MB)", lambda r, k=key: spread([s[k]["rss"] for s in r["sessions"]]))
+    row("footprint, peak while graphing (MB)", lambda r: spread([s.get("mem_graph_peak") for s in r["sessions"]]))
     row("processes", lambda r: str(len(r["sessions"][0]["mem_graph"]["processes"])))
     row("idle CPU, bar hidden (% of a core)", lambda r: spread([s["cpu_idle"] for s in r["sessions"]], "{:.2f}"))
     row("CPU while typing, 40 ms/key (% of a core)", lambda r: spread([s["cpu_typing"] for s in r["sessions"]], "{:.1f}"))
