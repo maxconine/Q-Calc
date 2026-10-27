@@ -119,8 +119,104 @@ fn translate(pattern: &str, flags: &str) -> String {
     out
 }
 
+/// `pattern` with its look-arounds taken out (and atomic groups made plain): a pattern that matches wherever
+/// `pattern` does, and more, which the `regex` crate's automata run without backtracking. None when it can't be
+/// made (a backreference, or something left that doesn't compile).
+fn loosened(pattern: &str) -> Option<Regex> {
+    let b = pattern.as_bytes();
+    let mut out = String::with_capacity(pattern.len());
+    let mut i = 0;
+    let mut in_class = false;
+    // the index just past the group opening at `start` (its `(`), skipping escapes and classes
+    let group_end = |start: usize| -> Option<usize> {
+        let (mut depth, mut k, mut class) = (0usize, start, false);
+        while k < b.len() {
+            match b[k] {
+                b'\\' => k += 1,
+                b'[' if !class => class = true,
+                b']' if class => class = false,
+                b'(' if !class => depth += 1,
+                b')' if !class => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(k + 1);
+                    }
+                }
+                _ => {}
+            }
+            k += 1;
+        }
+        None
+    };
+    while i < b.len() {
+        let rest = &pattern[i..];
+        if b[i] == b'\\' {
+            let next = *b.get(i + 1)?;
+            if next.is_ascii_digit() && next != b'0' || next == b'k' {
+                return None;
+            }
+            let len = 1 + rest[1..].chars().next()?.len_utf8();
+            out.push_str(&rest[..len]);
+            i += len;
+            continue;
+        }
+        if in_class {
+            in_class = b[i] != b']';
+        } else if b[i] == b'[' {
+            in_class = true;
+        } else if ["(?=", "(?!", "(?<=", "(?<!"]
+            .iter()
+            .any(|p| rest.starts_with(p))
+        {
+            i = group_end(i)?;
+            continue;
+        } else if rest.starts_with("(?>") {
+            out.push_str("(?:");
+            i += 3;
+            continue;
+        }
+        let c = rest.chars().next()?;
+        out.push(c);
+        i += c.len_utf8();
+    }
+    Regex::new(&out).ok()
+}
+
+/// A regex's pattern and its [`loosened`] form, by the regex's address.
+type Loose = (String, Option<std::rc::Rc<Regex>>);
+
+/// A quick test that `re` can't match `s`: its [`loosened`] pattern doesn't. Kept per thread by the pattern.
+fn cannot_match(re: &Regex, s: &str) -> bool {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    thread_local! {
+        static LOOSE: RefCell<HashMap<usize, Loose>> =
+            RefCell::new(HashMap::new());
+    }
+    let pattern = re.as_str();
+    let key = re as *const Regex as usize;
+    let loose = LOOSE.with(|cache| {
+        if let Some((p, l)) = cache.borrow().get(&key)
+            && p == pattern
+        {
+            return l.clone();
+        }
+        let l = loosened(pattern).map(std::rc::Rc::new);
+        let mut cache = cache.borrow_mut();
+        if cache.len() >= 4096 {
+            cache.clear();
+        }
+        cache.insert(key, (pattern.to_string(), l.clone()));
+        l
+    });
+    loose.is_some_and(|l| matches!(l.is_match(s), Ok(false)))
+}
+
 /// `s.replace(re, f)` with the `g` flag. A regex that runs out of backtracking budget leaves the text as it was.
 pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> String) -> Cow<'t, str> {
+    if cannot_match(re, s) {
+        return Cow::Borrowed(s);
+    }
     let mut f = f;
     let mut out = String::new();
     let mut last = 0;
@@ -144,7 +240,7 @@ pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> Strin
 
 /// `re.test(s)`; a regex that runs out of budget counts as no match.
 pub fn test(re: &Regex, s: &str) -> bool {
-    re.is_match(s).unwrap_or(false)
+    !cannot_match(re, s) && re.is_match(s).unwrap_or(false)
 }
 
 /// The text of group `i`, or "" when it didn't take part (JS gives `undefined`, which the TS mostly treats as "").
@@ -164,6 +260,21 @@ mod tests {
             "2(pi) + spin"
         );
         assert!(test(&RE, "pi"));
+    }
+
+    #[test]
+    fn loosened_patterns_drop_look_arounds_only() {
+        let l = |p: &str| loosened(p).map(|r| r.as_str().to_string());
+        assert_eq!(l(r"(?<![A-Za-z])pi(?![A-Za-z(])").as_deref(), Some("pi"));
+        assert_eq!(l(r"a(?=b(c))d|(?<=x)e").as_deref(), Some("ad|e"));
+        assert_eq!(l(r"[(?=]x\(?=y").as_deref(), Some(r"[(?=]x\(?=y"));
+        assert_eq!(l(r"(?>ab)+(?<n>c)").as_deref(), Some("(?:ab)+(?<n>c)"));
+        assert_eq!(l(r"(a)\1"), None);
+        // the quick test never turns a match into none
+        let re = js(r"\bsin\b(?=\s*\()", "i");
+        assert!(test(&re, "2 SIN (x)"));
+        assert!(!test(&re, "sinx(1)"));
+        assert_eq!(replace_all(&re, "cos(1)", |_| "s".into()), "cos(1)");
     }
 
     #[test]
