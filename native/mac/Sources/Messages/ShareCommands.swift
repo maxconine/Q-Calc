@@ -75,26 +75,61 @@ extension BarModel {
         }
     }
 
+    /// where a drop on the bar goes with the line as it is (the core's dropTarget): `message <name> [text]` or
+    /// `send file to <name>` names who; `hint` says so, or why it can't go; nil when the line names nobody
+    func dropTarget(count: Int) -> (name: String, text: String, hint: String)? {
+        let messaging = (try? JSONSerialization.jsonObject(with: Data(Messages.shared.webJSON.utf8))) ?? [:]
+        let ask = { (found: Any) in self.logic.call("lib/messaging", "dropTarget", [self.text, messaging, true, found, count]) as? [String: Any] }
+        guard var o = ask(NSNull()) else { return nil }
+        // the relay's word on the name, when it's had one, as `message` uses it
+        if let name = o["name"] as? String, !name.isEmpty, recipientFound(name) == false, let again = ask(false) { o = again }
+        let hint = o["hint"] as? String ?? ""
+        guard !hint.isEmpty else { return nil }
+        return (o["name"] as? String ?? "", o["text"] as? String ?? "", hint)
+    }
+
+    /// while files are dragged over the bar, the hint says where they'll go (or what's wrong with the name)
+    func dragHover(_ over: Bool, count: Int = 1) {
+        if over, let target = dropTarget(count: max(1, count)) {
+            if dragHint == nil { dragHint = hint ?? "" }
+            hint = target.hint
+        } else if let before = dragHint {
+            dragHint = nil
+            hint = before.isEmpty ? nil : before
+        }
+    }
+
     /// files dropped on the bar (to nil: whoever the line names) or on a thread (to them); true when taken
     @discardableResult
     func dropFiles(_ urls: [URL], to who: String?) -> Bool {
-        guard let url = urls.first(where: \.isFileURL) else { return false }
+        let files = urls.filter(\.isFileURL)
+        guard let url = files.first else { return false }
         let say: (String) -> Void = { [weak self] note in
             guard let self else { return }
             if let who, self.messagesPanel == .thread(who) { self.threadReply = .failed(note) } else { self.hint = note }
         }
         if let who {
-            MessageFiles.shared.sendFile(url, to: who, done: say)
+            files.forEach { MessageFiles.shared.sendFile($0, to: who, done: say) }
             return true
         }
-        let named: String = {
-            if let share = shareCommand(text), !share.name.isEmpty { return share.name }
-            if case let .message(_, name, _)? = BarCommand.of(text, sheets: sheets) { return name }
-            return ""
-        }()
-        if !named.isEmpty, !Messages.shared.name.isEmpty {
+        let target = dropTarget(count: files.count)
+        dragHint = nil
+        if let target, !target.name.isEmpty {
+            // `message max2 here you go` and a drop: the words go as a message, and each file as it would by
+            // `send file to max2`
             clearLine()
-            MessageFiles.shared.sendFile(url, to: named, done: say)
+            if !target.text.isEmpty {
+                Messages.shared.send(to: target.name, text: target.text) { status in
+                    if status == "delivered" { Messages.shared.noteSent(target.name) }
+                    if status != "delivered" { say(Messages.sendStatusText(status, to: target.name)) }
+                }
+            }
+            files.forEach { MessageFiles.shared.sendFile($0, to: target.name, done: say) }
+            return true
+        }
+        if let target {
+            // a message or share line whose name can't take it yet: say why, and leave the line as it is
+            hint = target.hint
             return true
         }
         // no name yet: the line asks for one, and ↵ sends it
@@ -104,14 +139,25 @@ extension BarModel {
         return true
     }
 
-    /// file urls from a SwiftUI drop
+    /// file urls from a SwiftUI drop, all of them, in the order they were dragged
     func dropProviders(_ providers: [NSItemProvider], to who: String?) -> Bool {
-        guard let p = providers.first(where: { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }) else { return false }
-        p.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { [weak self] item, _ in
-            let url = (item as? Data).flatMap { URL(dataRepresentation: $0, relativeTo: nil) } ?? item as? URL
-            DispatchQueue.main.async {
-                if let url { self?.dropFiles([url], to: who) }
+        let items = providers.filter { $0.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) }
+        guard !items.isEmpty else { return false }
+        var urls = [URL?](repeating: nil, count: items.count)
+        let group = DispatchGroup()
+        for (i, p) in items.enumerated() {
+            group.enter()
+            p.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { item, _ in
+                let url = (item as? Data).flatMap { URL(dataRepresentation: $0, relativeTo: nil) } ?? item as? URL
+                DispatchQueue.main.async {
+                    urls[i] = url
+                    group.leave()
+                }
             }
+        }
+        group.notify(queue: .main) { [weak self] in
+            let got = urls.compactMap { $0 }
+            if !got.isEmpty { self?.dropFiles(got, to: who) }
         }
         return true
     }

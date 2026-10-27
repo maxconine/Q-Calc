@@ -112,6 +112,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         )
         // the inbox doesn't wait on the permission prompt, which may never be answered
         connect()
+        #if QCALC_NATIVE
+        if !name.isEmpty { ShareKeys.shared.publish() }
+        #endif
         if name.isEmpty {
             refreshAlerts()
         } else {
@@ -194,6 +197,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
                 self.name = next
                 self.saveName()
                 self.connect()
+                #if QCALC_NATIVE
+                // the native app's end-to-end key goes with the name (ShareKeys.swift)
+                ShareKeys.shared.publish()
+                #endif
             case "taken": self.note = "\(next) is taken. Try another."
             case "too-many": self.note = "Too many tries. Wait a minute."
             default: self.note = "Couldn’t reach the relay. Try again."
@@ -635,6 +642,7 @@ struct MessagesSettingsView: View {
             names("Blocked", messages.blocked, empty: "Nobody. A blocked name’s messages never show, and they aren’t told.", action: "Unblock")
             #if QCALC_NATIVE
             MessageFilesSection()
+            MessagePrivacySection()
             MessageHistorySection()
             #endif
         }

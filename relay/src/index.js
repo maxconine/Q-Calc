@@ -1,8 +1,8 @@
 import { DurableObject } from 'cloudflare:workers'
 import { cleanName, GAMES, ipKey, newRoomId, ROOM_ID, RoomList } from './directory.js'
 import { enqueue, GRACE_MS, LEFT, newSeats, otherSide, overdue, seatOf, SIDES } from './seats.js'
-import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFromProtocols, lapsed, LAPSE_MS, MAX_INBOX_SOCKETS } from './names.js'
-import { CLIP_MAX, cleanClip, cleanOffer, declaredLength, disposition, FALLBACK, fileKey, NEW_NAME_MS, PART_BYTES, partCount, randomHex, rangeStart } from './files.js'
+import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFromProtocols, lapsed, LAPSE_MS, MAX_INBOX_SOCKETS, withPub } from './names.js'
+import { cleanSealedClip, cleanSealedOffer, declaredLength, disposition, FALLBACK, fileKey, NEW_NAME_MS, PART_BYTES, partCount, rangeStart, SEALED_CLIP_MAX } from './files.js'
 
 export { Ledger } from './ledger.js'
 
@@ -31,17 +31,20 @@ export { Ledger } from './ledger.js'
 //   POST /release  {name, key}              lets a name go
 //   POST /send     {from, key, to, text}    hands a message to the name's open inbox, if there is one: nothing
 //                                           is queued, so a name that's offline hears nothing
-//                  {…, kind: 'clip', clip}  clipboard text, up to 64 KB, passed on as it is
-//                  {…, kind: 'file', file}  offers a file {name, size, bytes, type, sha256, key}: nothing is
-//                                           stored until its recipient accepts. answers {status, id}
-//   POST /lookup   {from, key, name}        whether anyone holds a name: 'found' or 'unknown', which is all a
-//                                           send already says. a sender's own name and key, as for /send, and
-//                                           counted per address and per sender. blocks live in each app, so
-//                                           nothing here knows of them
-//   an inbox hears {type: 'message', from, text} and, for a clip or an offer, kind and clip or file {id, name,
-//   size, bytes, type, sha256, key, expires}; text is then a line an app that only knows text messages shows
+//                  {…, kind: 'clip', clip}  a sealed clip {id, epk, sealed}, passed on as it is
+//                  {…, kind: 'file', file}  offers a file {id, epk, sealed, bytes}: its facts are sealed for the
+//                                           recipient, and nothing is stored until they accept. answers {status, id}
+//   POST /lookup   {from, key, name}        whether anyone holds a name: 'found' (with the name's public key,
+//                                           `pub`, '' when it has none) or 'unknown', which is all a send already
+//                                           says. a sender's own name and key, as for /send, and counted per
+//                                           address and per sender. blocks live in each app, so nothing here
+//                                           knows of them
+//   POST /pubkey   {name, key, pub}         publishes the name's x25519 public key, for end-to-end files and clips
+//   an inbox hears {type: 'message', from, text} and, for a clip or an offer, kind and clip {id, epk, sealed} or
+//   file {id, epk, sealed, bytes, expires}; text is then a line an app that only knows text messages shows
 //   instead. a file's progress comes as {type: 'file', event: 'accepted' | 'ready' | 'cancelled' | 'declined',
-//   id, …}
+//   id, …}. text messages are passed on as they are, so older apps can read them; clips and files are sealed
+//   by the apps and can't be read here (native/PRIVACY.md). nothing on these routes is logged
 //
 // and files (files.js, ledger.js), where who's asking rides in headers (x-qcalc-name, x-qcalc-key), never the url:
 //   POST   /file/<id>/accept     the recipient accepts; the sender, if online, hears `accepted` with a grant
@@ -98,8 +101,8 @@ function reply(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } })
 }
 
-// a clip is up to 64 KB, which json can make up to six times longer
-const MAX_SEND_BODY = CLIP_MAX * 6 + MAX_BODY
+// a sealed clip is up to 64 KB as base64url, which json leaves as it is
+const MAX_SEND_BODY = SEALED_CLIP_MAX + MAX_BODY
 
 async function body(req, max = MAX_BODY) {
   try {
@@ -151,13 +154,19 @@ async function messaging(req, env, path) {
       return reply({ status: 'too-many' })
     }
     if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
-    return reply({ status: (await inbox(env, name).known()) ? 'found' : 'unknown' })
+    const card = await inbox(env, name).card()
+    return reply(card.known ? { status: 'found', pub: card.pub } : { status: 'unknown' })
   }
   const name = cleanHandle(o.name)
   if (!name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
   if (!(await allowed(env.NAMES, req))) return reply({ status: 'too-many' })
   const hash = await hashKey(o.key)
   if (path === '/claim') return reply({ status: (await inbox(env, name).hold(hash)) ? 'ok' : 'taken' })
+  // only the name's own key can publish its public key; anyone else hears not-yours, as /send says
+  if (path === '/pubkey') {
+    if (typeof o.pub !== 'string') return reply({ status: 'bad' })
+    return reply({ status: await inbox(env, name).publish(hash, o.pub) })
+  }
   await inbox(env, name).release(hash)
   return reply({ status: 'ok' })
 }
@@ -169,12 +178,14 @@ function said(o) {
     const text = cleanText(o.text)
     return text ? { kind, text, extra: {} } : null
   }
+  // a clip or an offer is sealed by the sender's app; a plain one (an older build's) is turned away, so nothing
+  // readable ever passes through
   if (kind === 'clip') {
-    const clip = cleanClip(o.clip)
+    const clip = cleanSealedClip(o.clip)
     return clip ? { kind, text: FALLBACK.clip, extra: { kind, clip } } : null
   }
   if (kind === 'file') {
-    const offer = cleanOffer(o.file)
+    const offer = cleanSealedOffer(o.file)
     if (offer === 'too-big') return 'too-big'
     return offer ? { kind, text: FALLBACK.file, extra: { kind }, offer } : null
   }
@@ -203,11 +214,12 @@ async function send(req, env, o) {
   if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
   if (what.kind !== 'file') return reply({ status: await inbox(env, to).deliver(from, what.text, what.extra) })
   if (!(await seasoned(env, from))) return reply({ status: 'new-name' })
-  // the offer goes on its way with its key; the ledger keeps only who, to whom and how long
-  const id = randomHex()
+  // the sealed offer goes on its way; the ledger keeps only who, to whom and how long, under the id the sender
+  // drew (one that's already out is turned away)
+  const { id } = what.offer
   const offered = await ledger(env).offer({ id, from, to, bytes: what.offer.bytes })
   if (offered.status !== 'ok') return reply({ status: offered.status })
-  what.extra.file = { id, ...what.offer, expires: offered.expires }
+  what.extra.file = { ...what.offer, expires: offered.expires }
   const status = await inbox(env, to).deliver(from, what.text, what.extra)
   if (status !== 'delivered') await ledger(env).remove(id)
   return reply(status === 'delivered' ? { status, id, expires: offered.expires } : { status })
@@ -269,15 +281,16 @@ async function accept(env, id, name) {
   if (granted.status !== 'ok') return answer(granted.status)
   const heard = await notify(env, granted.from, { event: 'accepted', id, to: name, grant: granted.grant, bytes: granted.bytes, partBytes: PART_BYTES })
   if (heard === 'delivered') return answer('ok')
-  await ledger(env).revert(id)
+  // only this grant: if the offer was taken back meanwhile, or accepted again, nothing newer is undone
+  await ledger(env).revert(id, granted.grant)
   return answer('sender-offline')
 }
 
 async function start(req, env, id, name) {
-  const ip = await hashKey(ipKey(req.headers.get('cf-connecting-ip')))
   if (!(await allowed(env.UPLOADS, req)) || !(await allowedKey(env.UPLOADS, `name:${name}`))) return answer('too-many')
   if (!(await seasoned(env, name))) return answer('new-name')
-  const s = await ledger(env).start(id, name, req.headers.get('X-QCalc-Grant') ?? '', ip)
+  // the ledger counts the address under a salted tag for the hour and keeps nothing of it
+  const s = await ledger(env).start(id, name, req.headers.get('X-QCalc-Grant') ?? '', ipKey(req.headers.get('cf-connecting-ip')))
   if (s.status !== 'ok') return answer(s.status)
   const more = { partBytes: PART_BYTES, parts: partCount(s.bytes), done: s.parts }
   if (s.uploadId) return answer('ok', more)
@@ -306,14 +319,16 @@ async function part(req, env, id, name, n) {
   }
   if (p.status !== 'ok') return answer(p.status)
   const body = length === 0 || !req.body ? new Uint8Array(0) : typeof FixedLengthStream === 'function' ? req.body.pipeThrough(new FixedLengthStream(length)) : req.body
+  let kept
   try {
     const done = await env.FILES.resumeMultipartUpload(fileKey(id), p.uploadId).uploadPart(n, body)
-    await ledger(env).partDone(id, n, done.etag)
+    kept = await ledger(env).partDone(id, n, done.etag)
   } catch {
-    // a part cut short is tried again
+    // a part cut short, or longer than it said, is tried again; FixedLengthStream ends it either way
     return answer('failed')
   }
-  return answer('ok')
+  // taken back or turned down while it was on its way: the upload's already aborted
+  return answer(kept ? 'ok' : 'gone')
 }
 
 async function finish(env, id, name) {
@@ -325,7 +340,11 @@ async function finish(env, id, name) {
     return answer('failed')
   }
   const s = await ledger(env).stored(id)
-  if (!s) return answer('gone')
+  if (!s) {
+    // taken back or turned down while its parts were being put together: what was just made goes too
+    await env.FILES.delete(fileKey(id)).catch(() => {})
+    return answer('gone')
+  }
   await notify(env, s.to, { event: 'ready', id, from: name, expires: s.expires })
   return answer('ok', { expires: s.expires })
 }
@@ -409,7 +428,7 @@ async function sweep(env) {
   }
 }
 
-const MESSAGING = new Set(['/claim', '/release', '/send', '/lookup'])
+const MESSAGING = new Set(['/claim', '/release', '/send', '/lookup', '/pubkey'])
 const INBOX_ROUTE = /^\/inbox\/([a-z0-9_-]+)$/
 
 export default {
@@ -1005,6 +1024,25 @@ export class Inbox extends DurableObject {
   // over rpc: whether anyone holds the name, read only, so a lookup neither claims nor keeps a name alive
   async known() {
     return !lapsed(await this.ctx.storage.get('claim'), Date.now())
+  }
+
+  // over rpc: whether anyone holds the name and, if so, the public key their app published ('' for none)
+  async card() {
+    const claim = await this.ctx.storage.get('claim')
+    if (lapsed(claim, Date.now())) return { known: false, pub: '' }
+    return { known: true, pub: claim.pub ?? '' }
+  }
+
+  // over rpc: the holder publishes their app's public key. 'ok', 'not-yours' (another key holds the name, or
+  // nobody does: claim it first) or 'bad' (not a key)
+  async publish(hash, pub) {
+    const now = Date.now()
+    const claim = await this.ctx.storage.get('claim')
+    if (lapsed(claim, now) || claim.hash !== hash) return 'not-yours'
+    const next = withPub(claim, hash, pub, now)
+    if (!next) return 'bad'
+    if (claim.pub !== pub) await this.ctx.storage.put('claim', next)
+    return 'ok'
   }
 
   // over rpc: when the name's holder first claimed it (0 for a claim older than this was kept)

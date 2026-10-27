@@ -294,7 +294,40 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         )),
         ("lib/messaging", "cleanClip") => opt(msg::clean_clip(&a(0))),
         ("lib/messaging", "clipPreview") => json!(msg::clip_preview(&s(0))),
-        ("lib/messaging", "cleanOffer") => opt(msg::clean_offer(&a(0))),
+        // native only: end-to-end keys for clips and files
+        ("lib/messaging", "cleanSealedOffer") => opt(msg::clean_sealed_offer(&a(0))),
+        ("lib/messaging", "cleanSealedClip") => opt(msg::clean_sealed_clip(&a(0))),
+        ("lib/messaging", "cleanPublicKey") => opt(msg::clean_public_key(&a(0))),
+        ("lib/messaging", "safetyCode") => opt(msg::safety_code(&s(0), &s(1))),
+        ("lib/messaging", "shareContext") => {
+            opt(msg::share_context(&s(0), &s(1), &s(2), &s(3), &s(4), &s(5)))
+        }
+        ("lib/messaging", "sealFileFacts") => opt(msg::seal_file_facts(
+            &s(0),
+            &s(1),
+            n(2).unwrap_or(-1.0).max(0.0) as u64,
+            &s(3),
+            &s(4),
+        )),
+        ("lib/messaging", "openFileFacts") => opt(msg::open_file_facts(
+            &s(0),
+            n(1).unwrap_or(0.0).max(0.0) as u64,
+        )),
+        ("lib/messaging", "pinState") => json!(msg::pin_state(&a(0), &s(1), &s(2))),
+        ("lib/messaging", "privacyNotice") => json!(msg::privacy_notice()),
+        ("lib/messaging", "privacySettingsText") => json!(msg::privacy_settings_text()),
+        ("lib/messaging", "lockTooltip") => json!(msg::lock_tooltip(&s(0))),
+        ("lib/messaging", "keyChangedText") => json!(msg::key_changed_text(&s(0))),
+        ("lib/messaging", "keyChangedDetail") => json!(msg::key_changed_detail(&s(0))),
+        ("lib/messaging", "safetyCodeText") => json!(msg::safety_code_text(&s(0), &s(1))),
+        ("lib/messaging", "safetyCodeDetail") => json!(msg::safety_code_detail(&s(0))),
+        ("lib/messaging", "dropTarget") => json!(msg::drop_target(
+            &s(0),
+            &messaging(&a(1)),
+            b(2),
+            a(3).as_bool(),
+            n(4).unwrap_or(1.0).max(0.0) as u32
+        )),
         ("lib/messaging", "autoAccept") => json!(msg::auto_accept(
             &messaging(&a(0)),
             &s(1),

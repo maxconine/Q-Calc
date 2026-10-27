@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import worker, { Inbox, Ledger } from './index.js'
-import { CAPS, cleanClip, cleanFilename, cleanOffer, cleanType, CLIP_MAX, FALLBACK, NEW_NAME_MS, OFFER_TTL_MS, PART_BYTES, partCount, partLength, rangeStart, STALE_UPLOAD_MS, STORED_TTL_MS } from './files.js'
+import { BYTES_MAX, CAPS, cleanSealedClip, cleanSealedOffer, FALLBACK, fileKey, NEW_NAME_MS, OFFER_TTL_MS, PART_BYTES, partCount, partLength, rangeStart, SEALED_CLIP_MAX, SEALED_FILE_MAX, STALE_UPLOAD_MS, STORED_TTL_MS } from './files.js'
 
 // files and clips through the worker, its inboxes and its ledger, against the same kind of stand-in for the
 // workers runtime as inbox.test.js, plus a bucket that keeps what's put in it
@@ -102,6 +102,7 @@ class Bucket {
     return this.resumeMultipartUpload(k, id)
   }
   resumeMultipartUpload(k, id) {
+    const bucket = this
     const uploads = this.uploads
     const objects = this.objects
     return {
@@ -122,6 +123,7 @@ class Bucket {
         }
         objects.set(k, all)
         uploads.delete(id)
+        await bucket.onComplete?.()
       },
       async abort() {
         uploads.delete(id)
@@ -132,8 +134,12 @@ class Bucket {
 
 const KEY_A = 'a1'.repeat(32)
 const KEY_B = 'b2'.repeat(32)
-const AES = 'A'.repeat(43)
-const SHA = 'c3'.repeat(32)
+const KEY_E = 'e5'.repeat(32)
+// an x25519 public key (32 bytes, base64url) and a sealed box the relay can't open and doesn't try to
+const EPK = 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA'
+const BOX = 'c2VhbGVk'.repeat(8)
+let nextId = 1
+const newId = () => (nextId++).toString(16).padStart(32, '0')
 
 function stub(cls, env, map) {
   return {
@@ -178,7 +184,8 @@ function relay(limits = {}) {
 const heard = (ws) => ws.peer.sent.filter((s) => s[0] === '!').map((s) => JSON.parse(s.slice(1)))
 const last = (ws) => heard(ws).at(-1)
 const status = async (res) => (await res.json()).status
-const offer = (o = {}) => ({ name: 'notes.pdf', size: 5, bytes: 21, type: 'application/pdf', sha256: SHA, key: AES, ...o })
+const offer = (o = {}) => ({ id: newId(), epk: EPK, sealed: BOX, bytes: 21, ...o })
+const sealedClip = (o = {}) => ({ id: newId(), epk: EPK, sealed: BOX, ...o })
 
 // ana (an older name) and max, both online
 async function pair() {
@@ -196,7 +203,7 @@ async function offered(r, o = offer()) {
 
 // an offer accepted and uploaded in one part
 async function uploaded(r, ana, bytes = new Uint8Array(21).fill(7)) {
-  const id = await offered(r, offer({ bytes: bytes.length, size: Math.min(5, bytes.length) }))
+  const id = await offered(r, offer({ bytes: bytes.length }))
   await r.file('POST', `/file/${id}/accept`, 'max', KEY_A)
   const { grant } = last(ana)
   await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant })
@@ -216,32 +223,35 @@ afterEach(() => {
 })
 
 describe('the plain rules', () => {
-  it('keeps a file name to its last part, without controls, direction marks or leading dots', () => {
-    expect(cleanFilename('../../etc/passwd')).toBe('passwd')
-    expect(cleanFilename('C:\\Users\\me\\a.txt')).toBe('a.txt')
-    expect(cleanFilename('.hidden')).toBe('hidden')
-    expect(cleanFilename('evil\u202Etxt.exe')).toBe('evil_txt.exe')
-    expect(cleanFilename('a\nb:c')).toBe('a_b_c')
-    expect(cleanFilename('...')).toBe('file')
-    expect(cleanFilename(42)).toBe('file')
-    const long = cleanFilename('x'.repeat(300) + '.tar.gz')
-    expect(Array.from(long)).toHaveLength(120)
-    expect(long.endsWith('.gz')).toBe(true)
+  it('takes a sealed offer only with an id, an ephemeral key, a sealed box and a length', () => {
+    const o = offer()
+    expect(cleanSealedOffer(o)).toEqual({ id: o.id, epk: EPK, sealed: BOX, bytes: 21 })
+    expect(cleanSealedOffer(offer({ bytes: BYTES_MAX + 1 }))).toBe('too-big')
+    expect(cleanSealedOffer(offer({ bytes: 2 ** 53 }))).toBe(null)
+    expect(cleanSealedOffer(offer({ bytes: 15 }))).toBeNull()
+    expect(cleanSealedOffer(offer({ bytes: -1 }))).toBeNull()
+    expect(cleanSealedOffer(offer({ bytes: 1.5 }))).toBeNull()
+    expect(cleanSealedOffer(offer({ bytes: '21' }))).toBeNull()
+    expect(cleanSealedOffer(offer({ id: '../../f/' + '0'.repeat(24) }))).toBeNull()
+    expect(cleanSealedOffer(offer({ id: 'A'.repeat(32) }))).toBeNull()
+    expect(cleanSealedOffer(offer({ epk: 'short' }))).toBeNull()
+    // a key with bits past its 32 bytes isn't one
+    expect(cleanSealedOffer(offer({ epk: EPK.slice(0, 42) + 'B' }))).toBeNull()
+    expect(cleanSealedOffer(offer({ sealed: 'a+b/'.repeat(16) }))).toBeNull()
+    expect(cleanSealedOffer(offer({ sealed: 'Q'.repeat(SEALED_FILE_MAX + 1) }))).toBeNull()
+    expect(cleanSealedOffer(offer({ sealed: 'Q'.repeat(8) }))).toBeNull()
   })
 
-  it('keeps a media type only when it is one', () => {
-    expect(cleanType('Image/PNG; charset=x')).toBe('image/png')
-    expect(cleanType('text/html<script>')).toBe('application/octet-stream')
-    expect(cleanType(undefined)).toBe('application/octet-stream')
+  it('takes a sealed clip up to a 64 KB clip’s box, and never a plain one', () => {
+    expect(cleanSealedClip(sealedClip({ sealed: 'Q'.repeat(SEALED_CLIP_MAX) }))).not.toBeNull()
+    expect(cleanSealedClip(sealedClip({ sealed: 'Q'.repeat(SEALED_CLIP_MAX + 1) }))).toBeNull()
+    expect(cleanSealedClip('line one\nline two')).toBeNull()
+    expect(cleanSealedClip(null)).toBeNull()
   })
 
-  it('takes an offer only with its facts, its hash and its key', () => {
-    expect(cleanOffer(offer())).toEqual({ name: 'notes.pdf', size: 5, bytes: 21, type: 'application/pdf', sha256: SHA, key: AES })
-    expect(cleanOffer(offer({ size: 2 ** 30 + 1, bytes: 2 ** 30 + 17 }))).toBe('too-big')
-    expect(cleanOffer(offer({ sha256: 'nope' }))).toBeNull()
-    expect(cleanOffer(offer({ key: 'short' }))).toBeNull()
-    expect(cleanOffer(offer({ bytes: 4 }))).toBeNull()
-    expect(cleanOffer(offer({ size: 1.5 }))).toBeNull()
+  it('makes an r2 key only from a file id', () => {
+    expect(fileKey('ab'.repeat(16))).toBe('f/' + 'ab'.repeat(16))
+    for (const bad of ['../x', 'ab'.repeat(16) + '/../y', '', 'AB'.repeat(16), undefined]) expect(() => fileKey(bad)).toThrow()
   })
 
   it('cuts an upload into equal parts but the last', () => {
@@ -260,50 +270,66 @@ describe('the plain rules', () => {
     expect(rangeStart('bytes=0-3', 10)).toBeNull()
   })
 
-  it('keeps a clip as it is, up to 64 KB of utf-8', () => {
-    expect(cleanClip(' a\n\tb ')).toBe(' a\n\tb ')
-    expect(cleanClip('é'.repeat(CLIP_MAX / 2))).toBe('é'.repeat(CLIP_MAX / 2))
-    expect(cleanClip('é'.repeat(CLIP_MAX / 2 + 1))).toBe('')
-    expect(cleanClip('')).toBe('')
-  })
 })
 
 describe('clips', () => {
-  it('pass through as they are, with a line for apps that only know text', async () => {
+  it('pass through sealed, with a line for apps that only know text', async () => {
     const { r, max } = await pair()
-    const clip = 'line one\n\tline two  '
+    const clip = sealedClip()
     expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'clip', clip })).status).toBe('delivered')
     expect(last(max)).toEqual({ type: 'message', from: 'ana', text: FALLBACK.clip, kind: 'clip', clip })
-    expect(JSON.stringify([...r.boxes.get('max').ctx.data.values()])).not.toContain('line one')
+    expect(JSON.stringify([...r.boxes.get('max').ctx.data.values()])).not.toContain(BOX)
   })
 
-  it('turn away one that’s too big or empty', async () => {
+  it('turn away one that’s plain, too big or empty', async () => {
     const { r } = await pair()
-    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'clip', clip: 'x'.repeat(CLIP_MAX + 1) })).status).toBe('bad')
-    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'clip', clip: '' })).status).toBe('bad')
+    const send = (clip) => r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'clip', clip })
+    expect((await send('line one\nline two')).status).toBe('bad')
+    expect((await send(sealedClip({ sealed: 'Q'.repeat(SEALED_CLIP_MAX + 4) }))).status).toBe('bad')
+    expect((await send('')).status).toBe('bad')
     expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'nope', text: 'hi' })).status).toBe('bad')
   })
 })
 
 describe('offering a file', () => {
-  it('tells the recipient with the file’s facts and key, and stores nothing', async () => {
+  it('passes the sealed offer on under the sender’s id, and stores nothing', async () => {
     const { r, max } = await pair()
-    const res = await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer({ name: '../x/notes.pdf' }) })
+    const o = offer()
+    const res = await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: { ...o, name: 'notes.pdf', key: 'A'.repeat(43) } })
     expect(res.status).toBe('delivered')
-    expect(res.id).toMatch(/^[0-9a-f]{32}$/)
+    expect(res.id).toBe(o.id)
+    // only the sealed parts go on: anything plain the sender added is dropped
     expect(last(max)).toEqual({
       type: 'message',
       from: 'ana',
       text: FALLBACK.file,
       kind: 'file',
-      file: { id: res.id, name: 'notes.pdf', size: 5, bytes: 21, type: 'application/pdf', sha256: SHA, key: AES, expires: NEW_NAME_MS + OFFER_TTL_MS },
+      file: { id: o.id, epk: EPK, sealed: BOX, bytes: 21, expires: NEW_NAME_MS + OFFER_TTL_MS },
     })
     expect(await r.ledger().totals()).toEqual({ total: 0 })
-    // the ledger never holds the key or the name
+    // the ledger keeps who, to whom and how long, and nothing sealed
     const kept = JSON.stringify([...r.ledger().ctx.data.values()])
-    expect(kept).not.toContain(AES)
+    expect(kept).not.toContain(BOX)
+    expect(kept).not.toContain(EPK)
     expect(kept).not.toContain('notes')
     expect(r.env.FILES.objects.size + r.env.FILES.uploads.size).toBe(0)
+  })
+
+  it('turns away a plain offer, whatever it says', async () => {
+    const { r } = await pair()
+    const plain = { name: 'notes.pdf', size: 5, bytes: 21, type: 'application/pdf', sha256: 'c3'.repeat(32), key: 'A'.repeat(43) }
+    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: plain })).status).toBe('bad')
+  })
+
+  it('won’t take an id that’s already out, so nobody can take over another file', async () => {
+    const { r } = await pair()
+    const o = offer()
+    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: o })).status).toBe('delivered')
+    await r.connect('eve', KEY_E)
+    vi.setSystemTime(2 * NEW_NAME_MS)
+    expect((await r.post('/send', { from: 'eve', key: KEY_E, to: 'max', kind: 'file', file: o })).status).toBe('bad')
+    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: o })).status).toBe('bad')
+    expect((await r.ledger().file(o.id)).from).toBe('ana')
   })
 
   it('keeps nothing of an offer nobody heard', async () => {
@@ -325,8 +351,8 @@ describe('offering a file', () => {
 
   it('turns away a file over 1 GB, or an offer that isn’t one', async () => {
     const { r } = await pair()
-    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer({ size: 2 ** 30 + 1, bytes: 2 ** 31 }) })).status).toBe('too-big')
-    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer({ key: undefined }) })).status).toBe('bad')
+    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer({ bytes: 2 ** 31 }) })).status).toBe('too-big')
+    expect((await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer({ epk: undefined }) })).status).toBe('bad')
     expect((await r.post('/send', { from: 'ana', key: KEY_A, to: 'max', kind: 'file', file: offer() })).status).toBe('not-yours')
   })
 
@@ -384,7 +410,7 @@ describe('accepting and uploading', () => {
   it('puts parts together in order, each exactly its length, and aborts an upload that goes over', async () => {
     const { r, max, ana } = await pair()
     const bytes = PART_BYTES + 10
-    const id = await offered(r, offer({ size: 1, bytes }))
+    const id = await offered(r, offer({ bytes }))
     await r.file('POST', `/file/${id}/accept`, 'max', KEY_A)
     await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': last(ana).grant })
     expect(await status(await r.file('PUT', `/file/${id}/part/2`, 'ana', KEY_B, { 'Content-Length': '10' }, new Uint8Array(10).fill(2)))).toBe('ok')
@@ -560,5 +586,300 @@ describe('the hourly sweep', () => {
     expect(await status(await r.file('POST', `/file/${lapsing}/accept`, 'max', KEY_A))).toBe('gone')
     expect(await status(await r.file('POST', `/file/${unused}/accept`, 'max', KEY_A))).toBe('gone')
     expect([...r.ledger().ctx.data.keys()]).toEqual([])
+  })
+})
+
+describe('authorization, guessing, replays, sizes and races', () => {
+  // ana sends to max; eve has a name of her own and tries everything on their file
+  async function three() {
+    const p = await pair()
+    await p.r.connect('eve', KEY_E)
+    vi.setSystemTime(2 * NEW_NAME_MS)
+    return p
+  }
+  const routes = (id) => [
+    ['POST', `/file/${id}/accept`],
+    ['POST', `/file/${id}/start`],
+    ['PUT', `/file/${id}/part/1`],
+    ['POST', `/file/${id}/finish`],
+    ['GET', `/file/${id}`],
+    ['DELETE', `/file/${id}`],
+  ]
+  const as = (r, name, key, [method, path], h = {}) =>
+    r.file(method, path, name, key, method === 'PUT' ? { 'Content-Length': '21', ...h } : h, method === 'PUT' ? new Uint8Array(21) : null)
+
+  it('lets only the sender start, upload, finish or take back, and only the recipient accept, download or decline', async () => {
+    const { r, ana } = await three()
+    const id = await offered(r)
+    // eve, at every step, on every route: the same answer as a file that doesn't exist
+    const eve = async () => {
+      for (const route of routes(id)) expect(await status(await as(r, 'eve', KEY_E, route, { 'X-QCalc-Grant': 'f'.repeat(32) }))).toBe('gone')
+    }
+    await eve()
+    expect(await status(await r.file('POST', `/file/${id}/accept`, 'ana', KEY_B))).toBe('gone')
+    expect(await status(await r.file('POST', `/file/${id}/accept`, 'max', KEY_A))).toBe('ok')
+    const { grant } = last(ana)
+    await eve()
+    // the recipient can't use the sender's grant, upload, or finish
+    expect(await status(await r.file('POST', `/file/${id}/start`, 'max', KEY_A, { 'X-QCalc-Grant': grant }))).toBe('gone')
+    expect(await status(await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant }))).toBe('ok')
+    expect(await status(await as(r, 'max', KEY_A, ['PUT', `/file/${id}/part/1`]))).toBe('gone')
+    expect(await status(await as(r, 'ana', KEY_B, ['PUT', `/file/${id}/part/1`]))).toBe('ok')
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'max', KEY_A))).toBe('gone')
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('ok')
+    await eve()
+    // the sender can't download it
+    expect(await status(await r.file('GET', `/file/${id}`, 'ana', KEY_B))).toBe('gone')
+    // a right name with the wrong key is nobody
+    expect(await status(await r.file('GET', `/file/${id}`, 'max', KEY_E))).toBe('not-yours')
+    expect(r.env.FILES.objects.size).toBe(1)
+  })
+
+  it('answers a guessed id exactly as someone else’s, so ids can’t be probed', async () => {
+    const { r } = await three()
+    const id = await offered(r)
+    const guess = 'f'.repeat(32)
+    for (const [i, route] of routes(guess).entries()) {
+      const theirs = await as(r, 'eve', KEY_E, routes(id)[i])
+      const nobody = await as(r, 'eve', KEY_E, route)
+      expect([nobody.status, await status(nobody)]).toEqual([theirs.status, await status(theirs)])
+    }
+    // what isn't an id never reaches the ledger or the bucket: a dotted path is resolved away from /file/
+    // altogether, and anything else is gone
+    const before = JSON.stringify([...r.ledger().ctx.data])
+    for (const path of ['/file/../f/x', '/file/' + 'A'.repeat(32), '/file/' + 'a'.repeat(31), `/file/${id}/part/1/../../x`, `/file/${id}%2f..`, `/file/${id}/part/1%2f..%2f..`]) {
+      const res = await r.file('GET', path, 'max', KEY_A)
+      expect([404, 426]).toContain(res.status)
+    }
+    expect(JSON.stringify([...r.ledger().ctx.data])).toBe(before)
+    expect(r.env.FILES.objects.size + r.env.FILES.uploads.size).toBe(0)
+  })
+
+  it('takes a grant once, and never one that was taken back', async () => {
+    const r = relay()
+    await r.connect('max', KEY_A)
+    let ana = await r.connect('ana', KEY_B)
+    vi.setSystemTime(NEW_NAME_MS)
+    const id = await offered(r)
+    // accepted while ana's away: the grant she never heard of is taken back
+    ana.peer.readyState = 3
+    expect(await status(await r.file('POST', `/file/${id}/accept`, 'max', KEY_A))).toBe('sender-offline')
+    const stale = (await r.ledger().file(id)).grant
+    expect(stale).toBeUndefined()
+    ana = await r.connect('ana', KEY_B)
+    expect(await status(await r.file('POST', `/file/${id}/accept`, 'max', KEY_A))).toBe('ok')
+    const { grant } = last(ana)
+    // accepting twice doesn't hand out a second grant
+    expect(await status(await r.file('POST', `/file/${id}/accept`, 'max', KEY_A))).toBe('busy')
+    expect(heard(ana).filter((e) => e.event === 'accepted')).toHaveLength(1)
+    expect(await status(await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant }))).toBe('ok')
+    expect((await r.ledger().file(id)).grant).toBeUndefined()
+    // once the file's in, the grant can't start it again
+    await as(r, 'ana', KEY_B, ['PUT', `/file/${id}/part/1`])
+    await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B)
+    expect(await status(await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant }))).toBe('done')
+    // and a file taken back is gone for good, grant or not
+    await r.file('DELETE', `/file/${id}`, 'ana', KEY_B)
+    expect(await status(await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant }))).toBe('gone')
+    expect(await status(await r.file('POST', `/file/${id}/accept`, 'max', KEY_A))).toBe('gone')
+  })
+
+  it('turns away parts that are too long, too short, unsized or out of place', async () => {
+    const { r, max, ana } = await pair()
+    const begin = async (bytes = 21) => {
+      const id = await offered(r, offer({ bytes }))
+      await r.file('POST', `/file/${id}/accept`, 'max', KEY_A)
+      await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': last(ana).grant })
+      return id
+    }
+    const put = (id, n, h, body = new Uint8Array(21)) => r.file('PUT', `/file/${id}/part/${n}`, 'ana', KEY_B, h, body)
+    let id = await begin()
+    // no length, or one that isn't a number of bytes up to a part's, is bad before anything's counted
+    for (const len of [undefined, '', '-1', '21.0', '0x15', '1e3', String(PART_BYTES + 1), '9'.repeat(13)]) {
+      expect(await status(await put(id, 1, len == null ? {} : { 'Content-Length': len }))).toBe('bad')
+    }
+    expect((await r.ledger().file(id)).tries).toBe(0)
+    // a part number past the end, or 0, ends the upload, as a wrong length does
+    expect(await status(await put(id, 99999, { 'Content-Length': '21' }))).toBe('over')
+    expect(last(max)).toEqual({ type: 'file', event: 'cancelled', id, from: 'ana' })
+    id = await begin()
+    expect(await status(await put(id, 0, { 'Content-Length': '21' }))).toBe('over')
+    id = await begin()
+    expect(await status(await put(id, 1, { 'Content-Length': '20' }, new Uint8Array(20)))).toBe('over')
+
+    // a body shorter or longer than it said: the runtime's FixedLengthStream ends it, nothing is kept, and the
+    // part can go again
+    globalThis.FixedLengthStream = class {
+        constructor(n) {
+          let seen = 0
+          const t = new TransformStream({
+            transform(chunk, c) {
+              seen += chunk.length
+              if (seen > n) throw new Error('too long')
+              c.enqueue(chunk)
+            },
+            flush() {
+              if (seen !== n) throw new Error('too short')
+            },
+          })
+          this.readable = t.readable
+          this.writable = t.writable
+        }
+      }
+    try {
+      id = await begin()
+      const stream = (n) => new NodeResponse(new Uint8Array(n)).body
+      expect(await status(await put(id, 1, { 'Content-Length': '21' }, stream(5)))).toBe('failed')
+      expect(await status(await put(id, 1, { 'Content-Length': '21' }, stream(40)))).toBe('failed')
+      expect(Object.keys((await r.ledger().file(id)).parts)).toEqual([])
+      expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('incomplete')
+      expect(await status(await put(id, 1, { 'Content-Length': '21' }, stream(21)))).toBe('ok')
+      expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('ok')
+      expect([...r.env.FILES.objects.values()].at(-1).length).toBe(21)
+    } finally {
+      delete globalThis.FixedLengthStream
+    }
+  })
+
+  it('keeps the size math in safe integers', async () => {
+    const { r } = await pair()
+    const send = (bytes) => r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'file', file: offer({ bytes }) })
+    expect((await send(2 ** 53 + 2)).status).toBe('bad')
+    expect((await send(Number.MAX_VALUE)).status).toBe('bad')
+    expect((await send(BYTES_MAX + 1)).status).toBe('too-big')
+    expect((await send(BYTES_MAX)).status).toBe('delivered')
+    expect(partCount(BYTES_MAX)).toBe(21)
+    expect(partLength(BYTES_MAX, 21)).toBe(BYTES_MAX - 20 * PART_BYTES)
+    expect(partLength(BYTES_MAX, 2 ** 53)).toBeNull()
+    expect(rangeStart('bytes=9999999999999-', 21)).toBeNull()
+    expect(rangeStart('bytes=99999999999-', 21)).toBeNull()
+  })
+
+  it('lets a take-back win a race with an accept the sender never heard', async () => {
+    const r = relay()
+    await r.connect('max', KEY_A)
+    const ana = await r.connect('ana', KEY_B)
+    vi.setSystemTime(NEW_NAME_MS)
+    const id = await offered(r)
+    // the grant is made, then the file's taken back before the accept's own revert runs
+    const granted = await r.ledger().grant(id, 'max')
+    expect(await r.file('DELETE', `/file/${id}`, 'ana', KEY_B).then(status)).toBe('ok')
+    await r.ledger().revert(id, granted.grant)
+    expect(await r.ledger().totals()).toEqual({ total: 0 })
+    expect([...r.ledger().ctx.data.keys()].filter((k) => k.startsWith('file:') || k.startsWith('pend:') || k.startsWith('offers:'))).toEqual([])
+    // a revert for an old grant never undoes a newer one
+    const id2 = await offered(r)
+    const first = await r.ledger().grant(id2, 'max')
+    await r.ledger().revert(id2, first.grant)
+    const second = await r.ledger().grant(id2, 'max')
+    await r.ledger().revert(id2, first.grant)
+    expect((await r.ledger().file(id2)).grant).toBe(second.grant)
+    expect(ana.peer.readyState).toBe(1)
+  })
+
+  it('leaves nothing in the bucket when a file’s taken back mid-part or while it’s being put together', async () => {
+    const { r, max, ana } = await pair()
+    const id = await offered(r)
+    await r.file('POST', `/file/${id}/accept`, 'max', KEY_A)
+    await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': last(ana).grant })
+    await as(r, 'ana', KEY_B, ['PUT', `/file/${id}/part/1`])
+    r.env.FILES.onComplete = async () => {
+      r.env.FILES.onComplete = null
+      await r.file('DELETE', `/file/${id}`, 'max', KEY_A)
+    }
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('gone')
+    expect(r.env.FILES.objects.size).toBe(0)
+    expect(heard(max).some((e) => e.event === 'ready')).toBe(false)
+    expect(await r.ledger().totals()).toEqual({ total: 0 })
+
+    // a part that lands after its file was turned down isn't kept
+    const id2 = await offered(r)
+    await r.file('POST', `/file/${id2}/accept`, 'max', KEY_A)
+    await r.file('POST', `/file/${id2}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': last(ana).grant })
+    const upload = r.env.FILES.resumeMultipartUpload.bind(r.env.FILES)
+    r.env.FILES.resumeMultipartUpload = (k, u) => {
+      const up = upload(k, u)
+      return {
+        ...up,
+        uploadPart: async (n, body) => {
+          await r.file('DELETE', `/file/${id2}`, 'max', KEY_A)
+          return up.uploadPart(n, body)
+        },
+      }
+    }
+    // r2 refuses a part for an aborted upload ('failed'); if it took it anyway, the ledger doesn't ('gone')
+    expect(['failed', 'gone']).toContain(await status(await as(r, 'ana', KEY_B, ['PUT', `/file/${id2}/part/1`])))
+    expect(await r.ledger().file(id2)).toBeNull()
+    expect(r.env.FILES.uploads.size + r.env.FILES.objects.size).toBe(0)
+  })
+
+  it('keeps no address, only a tag under a salt that goes with its hour', async () => {
+    const { r, ana } = await pair()
+    const start = async () => {
+      const id = await offered(r)
+      await r.file('POST', `/file/${id}/accept`, 'max', KEY_A)
+      return status(await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': last(ana).grant }))
+    }
+    const tags = () => [...r.ledger().ctx.data.keys()].filter((k) => k.startsWith('ip:'))
+    expect(await start()).toBe('ok')
+    const [first] = tags()
+    const all = JSON.stringify([...r.ledger().ctx.data])
+    expect(all).not.toContain('1.2.3.4')
+    // not the plain hash of the address either, which anyone could work out
+    const plain = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('1.2.3.4'))), (b) => b.toString(16).padStart(2, '0')).join('')
+    expect(all).not.toContain(plain)
+    // the next hour, the old tag and its salt are gone at the next start, and the new tag doesn't match
+    vi.setSystemTime(NEW_NAME_MS + 60 * 60 * 1000)
+    expect(await start()).toBe('ok')
+    expect(tags()).toHaveLength(1)
+    expect(tags()[0].split(':')[1]).not.toBe(first.split(':')[1])
+    expect([...r.ledger().ctx.data.keys()].filter((k) => k.startsWith('salt:'))).toHaveLength(1)
+  })
+})
+
+describe('public keys', () => {
+  const PUB = 'ISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A'
+  it('are published by the name’s own key and read back with a lookup', async () => {
+    const { r } = await pair()
+    expect((await r.post('/pubkey', { name: 'ana', key: KEY_A, pub: PUB })).status).toBe('not-yours')
+    expect((await r.post('/pubkey', { name: 'ana', key: KEY_B, pub: 'nope' })).status).toBe('bad')
+    expect((await r.post('/pubkey', { name: 'ana', key: KEY_B, pub: PUB.slice(0, 42) + 'B' })).status).toBe('bad')
+    expect(await r.post('/lookup', { from: 'max', key: KEY_A, name: 'ana' })).toEqual({ status: 'found', pub: '' })
+    expect((await r.post('/pubkey', { name: 'ana', key: KEY_B, pub: PUB })).status).toBe('ok')
+    expect(await r.post('/lookup', { from: 'max', key: KEY_A, name: 'ana' })).toEqual({ status: 'found', pub: PUB })
+    // nobody's name: no key, and nothing more than a lookup always said
+    expect(await r.post('/lookup', { from: 'max', key: KEY_A, name: 'zed' })).toEqual({ status: 'unknown' })
+    expect((await r.post('/pubkey', { name: 'zed', key: KEY_E, pub: PUB })).status).toBe('not-yours')
+  })
+
+  it('stay with their holder, and go when the name does', async () => {
+    const { r } = await pair()
+    await r.post('/pubkey', { name: 'ana', key: KEY_B, pub: PUB })
+    // a day on, ana's app keeps the name alive, and the key with it
+    vi.setSystemTime(NEW_NAME_MS + 2 * 24 * 60 * 60 * 1000)
+    await r.post('/claim', { name: 'ana', key: KEY_B })
+    expect((await r.post('/lookup', { from: 'max', key: KEY_A, name: 'ana' })).pub).toBe(PUB)
+    // let go, the name's someone else's, with no key until they publish one
+    await r.post('/release', { name: 'ana', key: KEY_B })
+    await r.post('/claim', { name: 'ana', key: KEY_E })
+    expect(await r.post('/lookup', { from: 'max', key: KEY_A, name: 'ana' })).toEqual({ status: 'found', pub: '' })
+  })
+})
+
+describe('logging', () => {
+  it('logs nothing on the file routes, so no name, address or file fact is written anywhere', async () => {
+    const spies = ['log', 'info', 'warn', 'error', 'debug'].map((m) => vi.spyOn(console, m).mockImplementation(() => {}))
+    try {
+      const { r, ana } = await pair()
+      const id = await uploaded(r, ana)
+      await readAll((await r.file('GET', `/file/${id}`, 'max', KEY_A)).body)
+      await r.file('DELETE', `/file/${'f'.repeat(32)}`, 'max', KEY_A)
+      await r.file('PUT', `/file/${id}/part/1`, 'eve', KEY_E, { 'Content-Length': '1' }, new Uint8Array(1))
+      await r.post('/send', { from: 'ana', key: KEY_B, to: 'max', kind: 'clip', clip: sealedClip() })
+      await r.settle()
+      for (const spy of spies) expect(spy).not.toHaveBeenCalled()
+    } finally {
+      for (const spy of spies) spy.mockRestore()
+    }
   })
 })

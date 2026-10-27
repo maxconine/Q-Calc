@@ -1,18 +1,22 @@
 // the plain parts of sending files and clips, kept apart from the workers runtime so they can be tested.
 //
+// both are end-to-end encrypted by the apps (native/PRIVACY.md): the relay sees a file's encrypted length, who
+// sent it to whom and when, and never its name, type, hash, key or contents; a clip it sees only as a sealed box.
+//
 // a file is offered first, through the inbox, and nothing is stored unless its recipient accepts it. accepting
 // asks the ledger (ledger.js) for room, under hard caps per recipient, per sender, per address and for the
 // whole bucket; the ledger then grants the sender one upload of exactly the offered length. the sender's app
-// encrypts the file (aes-256-gcm, its key riding only inside the offer message) and uploads it to r2 as a
+// encrypts the file (aes-256-gcm, its key sealed for the recipient alone inside the offer) and uploads it to r2 as a
 // multipart upload in PART_BYTES parts, each its own request so every one stays under the free plan's 100 MB
-// body limit. the file waits for its one recipient under an id nobody can guess, and goes once it's been
+// body limit. the file waits for its one recipient under an id the sender drew (128 random bits), and goes once it's been
 // downloaded, taken back or turned down, or STORED_TTL_MS after it was uploaded.
 //
-// a clip is clipboard text that rides through the inbox like a message and, like one, is never kept
+// a clip is sealed clipboard text that rides through the inbox like a message and, like one, is never kept
 
 // the most a file can be, encrypted: 1 GiB of plain bytes and gcm's 16-byte tag per chunk of the app's
 export const FILE_MAX = 1024 * 1024 * 1024
-export const BYTES_MAX = FILE_MAX + 1024 * 1024
+// (1024 chunks of 1 MiB, each with its tag: exactly what the app sends for a 1 GiB file)
+export const BYTES_MAX = FILE_MAX + 16 * 1024
 // each part but the last is exactly this long (r2 wants equal parts of at least 5 MiB), so 1 GiB is 21 parts
 export const PART_BYTES = 50 * 1024 * 1024
 // tries per part, all told, before an upload is given up
@@ -54,13 +58,18 @@ export const CAPS = {
 export const FILE_PREFIX = 'f/'
 // 16 random bytes, as hex
 export const FILE_ID = /^[0-9a-f]{32}$/
-export const SHA256 = /^[0-9a-f]{64}$/
-// an aes-256 key, base64url without padding
-export const AES_KEY = /^[A-Za-z0-9_-]{43}$/
+// an x25519 public key, 32 bytes as base64url without padding (its last character carries two zero bits)
+export const PUBLIC_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/
+const BOX = /^[A-Za-z0-9_-]+$/
 // a clip is up to this many bytes of utf-8
 export const CLIP_MAX = 64 * 1024
-const NAME_MAX = 120
-const OCTETS = 'application/octet-stream'
+// a sealed box: a 12-byte nonce, at least a byte, and a 16-byte tag; a file's facts are well under 2 KB, and a
+// clip's box is at most its 64 KB with the nonce and tag, all in base64url
+const SEALED_MIN = 40
+export const SEALED_FILE_MAX = 4096
+export const SEALED_CLIP_MAX = Math.ceil((CLIP_MAX + 28) / 3) * 4
+// an empty file, encrypted, is one 16-byte tag
+export const BYTES_MIN = 16
 
 // what an app that only knows text messages shows instead
 export const FALLBACK = {
@@ -72,45 +81,42 @@ export function randomHex(bytes = 16) {
   return Array.from(crypto.getRandomValues(new Uint8Array(bytes)), (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-export const fileKey = (id) => FILE_PREFIX + id
-
-// a file's name as the sender's app gave it: its last path part, without control or direction characters,
-// path separators, or leading dots, at most NAME_MAX characters with its extension kept; 'file' when nothing's
-// left
-export function cleanFilename(raw) {
-  if (typeof raw !== 'string') return 'file'
-  let name = raw.normalize('NFC')
-  name = name.split(/[/\\]/).pop()
-  // eslint-disable-next-line no-control-regex
-  name = name.replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2066-\u2069\ufeff:]+/g, '_')
-  name = name.replace(/^[\s.]+/, '').replace(/\s+$/, '')
-  const chars = Array.from(name)
-  if (chars.length > NAME_MAX) {
-    const dot = name.lastIndexOf('.')
-    const ext = dot > 0 ? Array.from(name.slice(dot)) : []
-    name = ext.length > 1 && ext.length <= 16 ? chars.slice(0, NAME_MAX - ext.length).join('').trimEnd() + ext.join('') : chars.slice(0, NAME_MAX).join('').trimEnd()
-  }
-  return name || 'file'
-}
-
-// a media type like image/png, without parameters; application/octet-stream when it isn't one
-export function cleanType(raw) {
-  if (typeof raw !== 'string') return OCTETS
-  const type = raw.split(';')[0].trim().toLowerCase()
-  return /^[a-z0-9][a-z0-9!#$&^_.+-]{0,63}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,63}$/.test(type) ? type : OCTETS
+// the r2 key for a file: only ever an id of 32 hex characters under FILE_PREFIX, whatever reaches here, so no
+// path or key can be smuggled into the bucket
+export function fileKey(id) {
+  if (typeof id !== 'string' || !FILE_ID.test(id)) throw new Error('not a file id')
+  return FILE_PREFIX + id
 }
 
 const count = (n, max) => Number.isSafeInteger(n) && n >= 0 && n <= max
 
-// an offer as the sender's app made it: the facts the recipient sees, or 'too-big', or null when it isn't one.
-// size is the plain length, bytes the encrypted length that's uploaded and counted
-export function cleanOffer(raw) {
+// a sealed share's parts, as the sender's app made them: an id it drew (16 random bytes as hex), its ephemeral
+// x25519 public key and the sealed box (base64url). the relay can't open the box and doesn't try; it only checks
+// that each part is the shape and size it should be
+function cleanSealed(raw, max) {
   if (!raw || typeof raw !== 'object') return null
-  const { size, bytes, sha256, key } = raw
-  if (!Number.isSafeInteger(size) || !Number.isSafeInteger(bytes) || size < 0 || bytes < size) return null
-  if (size > FILE_MAX || bytes > BYTES_MAX) return 'too-big'
-  if (typeof sha256 !== 'string' || !SHA256.test(sha256) || typeof key !== 'string' || !AES_KEY.test(key)) return null
-  return { name: cleanFilename(raw.name), size, bytes, type: cleanType(raw.type), sha256, key }
+  const { id, epk, sealed } = raw
+  if (typeof id !== 'string' || !FILE_ID.test(id)) return null
+  if (typeof epk !== 'string' || !PUBLIC_KEY.test(epk)) return null
+  if (typeof sealed !== 'string' || sealed.length < SEALED_MIN || sealed.length > max || !BOX.test(sealed)) return null
+  return { id, epk, sealed }
+}
+
+// a file's offer: its id, ephemeral key and sealed facts, and the encrypted length the relay has to hold. 'too-big'
+// past a 1 GiB file's length, null when it isn't one. the file's name, type, size, hash and key are all inside
+// the sealed box, so none of them ever reaches the relay
+export function cleanSealedOffer(raw) {
+  if (!raw || typeof raw !== 'object') return null
+  const { bytes } = raw
+  if (!Number.isSafeInteger(bytes) || bytes < BYTES_MIN) return null
+  if (bytes > BYTES_MAX) return 'too-big'
+  const sealed = cleanSealed(raw, SEALED_FILE_MAX)
+  return sealed ? { ...sealed, bytes } : null
+}
+
+// a clip: its id, ephemeral key and the sealed clipboard text, which is never more than a clip's 64 KB
+export function cleanSealedClip(raw) {
+  return cleanSealed(raw, SEALED_CLIP_MAX)
 }
 
 // how many parts an upload of this many bytes takes, and how long part n (from 1) must be
@@ -134,12 +140,6 @@ export function rangeStart(raw, bytes) {
   if (!m) return null
   const n = Number(m[1])
   return n < bytes ? n : null
-}
-
-// a clip as it was copied, or '' when it's empty or too big
-export function cleanClip(raw) {
-  if (typeof raw !== 'string' || !raw.length) return ''
-  return new TextEncoder().encode(raw).length <= CLIP_MAX ? raw : ''
 }
 
 // a content-disposition that names the file without letting it mean anything else

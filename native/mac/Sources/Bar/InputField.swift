@@ -41,6 +41,29 @@ final class BarTextView: NSTextView {
         return super.performDragOperation(sender)
     }
 
+    /// files over the line: the hint says where they'll go (native only, ShareCommands.swift)
+    var onDragFiles: ((Bool, Int) -> Void)?
+
+    private func fileCount(_ sender: NSDraggingInfo) -> Int {
+        (sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []).count
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let n = fileCount(sender)
+        if n > 0 { onDragFiles?(true, n) }
+        return super.draggingEntered(sender)
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        onDragFiles?(false, 0)
+        super.draggingExited(sender)
+    }
+
+    override func concludeDragOperation(_ sender: NSDraggingInfo?) {
+        onDragFiles?(false, 0)
+        super.concludeDragOperation(sender)
+    }
+
     /// .quick-unit in the accent, .quick-word in accent mixed 85% with ink: temporary attributes, so typing and
     /// undo never see them
     func colour(units: [NSRange], words: [NSRange]) {
@@ -439,6 +462,7 @@ struct InputField: NSViewRepresentable {
         text.onKey = { [weak model] event in model?.key(event) ?? false }
         text.onPasteLines = { [weak model] raw in model?.pasteSystem(raw) ?? false }
         text.onDropFiles = { [weak model] urls in model?.dropFiles(urls, to: nil) ?? false }
+        text.onDragFiles = { [weak model] over, n in model?.dragHover(over, count: n) }
         text.onEscape = { [weak model] in
             guard let model else { return }
             if !model.escape() { model.onHide?("esc") }

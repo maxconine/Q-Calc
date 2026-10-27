@@ -4,13 +4,17 @@ import Foundation
 import UniformTypeIdentifiers
 import UserNotifications
 
-// Clips and files between names (native only; relay/README.md, "Files and clips"). A clip is clipboard text that
-// rides the inbox like a message. A file is offered first: the recipient's app shows its name and size, and only
-// when they press Save (or their settings take it on their own) does the relay let the sender upload it, which
-// this app does in the background, encrypted (FileCrypt), in the relay's parts, while it keeps running. Then the
-// recipient's app downloads it, checks it, and saves it to Downloads under a name nothing else has, quarantined,
-// shown in Finder and never opened. Someone not accepted yet is a request: their file shows, but Save waits until
-// they're allowed. Everything about a file on its way (its key, its grant, its progress) is in memory only.
+// Clips and files between names (native only; relay/README.md, "Files and clips", and native/PRIVACY.md). Both are
+// end-to-end encrypted: a clip, and a file's facts (its name, type, size, SHA-256 and its own AES key), are sealed
+// for the recipient alone (ShareCrypt, with the keys ShareKeys keeps and pins), so the relay sees only who sent
+// to whom, an id, the encrypted length and when. A clip rides the inbox like a message. A file is offered first:
+// the recipient's app opens the facts and shows its name and size, and only when they press Save (or their
+// settings take it on their own) does the relay let the sender upload it, which this app does in the background,
+// encrypted (FileCrypt), in the relay's parts, while it keeps running. Then the recipient's app downloads it,
+// decrypts it beside Downloads, checks its size and hash, and moves it into Downloads under a name nothing else
+// has, quarantined and not executable (SafeSave). It's never opened, previewed or run. Someone not accepted yet
+// is a request: their file shows, but Save waits until they're allowed. Everything about a file on its way (its
+// key, its grant, its progress) is in memory only.
 final class MessageFiles: NSObject, ObservableObject {
     static let shared = MessageFiles()
     static let clipMax = 64 * 1024
@@ -49,11 +53,11 @@ final class MessageFiles: NSObject, ObservableObject {
         var cancelled = false
     }
 
-    /// what a recipient's app holds for a download: the offer, with its key
+    /// what a recipient's app holds for a download: the opened facts, with the file's key
     private struct Incoming {
-        let offer: [String: Any]
         let key: String
         let sha256: String
+        let size: UInt64
         let bytes: UInt64
         let expires: Double
         var auto = false
@@ -62,6 +66,10 @@ final class MessageFiles: NSObject, ObservableObject {
 
     private var outgoing: [String: Outgoing] = [:]
     private var incoming: [String: Incoming] = [:]
+    /// share ids already taken in, so one replayed by the relay is ignored
+    private var seenIds = Set<String>()
+    /// what came from someone whose key changed, opened once it's trusted (ShareKeys.trust)
+    private var heldForKey: [(from: String, event: [String: Any])] = []
     /// shares from names not accepted yet, to show once they are: (from, clip or file id)
     private var held: [(from: String, clip: String?, file: ThreadFile?)] = []
     /// cards for the bar that it hasn't taken yet
@@ -110,8 +118,10 @@ final class MessageFiles: NSObject, ObservableObject {
         core("shareStatusText", [status, to, what, name]) ?? Messages.sendStatusText(status, to: to)
     }
 
-    /// a file name kept to its last part, with nothing in it that means anything to a path
+    /// a file name kept to its last part, with nothing in it that means anything to a path or hides what it is
+    /// (the core's cleanFilename; this is only its stand-in before the core is up)
     static func safeName(_ raw: String) -> String {
+        if let clean = shared.logic?.string("lib/messaging", "cleanFilename", [raw]) { return clean }
         let last = raw.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last.map(String.init) ?? ""
         let cleaned = last.replacingOccurrences(of: "[\\x{0000}-\\x{001f}\\x{007f}-\\x{009f}\\x{200b}-\\x{200f}\\x{2028}-\\x{202e}\\x{2066}-\\x{2069}\\x{feff}:]+", with: "_", options: .regularExpression)
             .replacingOccurrences(of: "^[\\s.]+", with: "", options: .regularExpression)
@@ -210,14 +220,53 @@ final class MessageFiles: NSObject, ObservableObject {
         let to = Messages.clean(raw)
         let m = Messages.shared
         guard !m.name.isEmpty else { return done(shareStatus("not-yours", to: to, what: "clip")) }
-        send(["from": m.name, "key": m.relayKey, "to": to, "kind": "clip", "clip": clip]) { [weak self] status, _ in
+        PrivacyNotice.shared.firstShare()
+        recipientKey(to, what: "clip", done: done) { [weak self] theirs, theirText in
             guard let self else { return }
-            if status == "delivered" {
-                m.noteSent(to)
-                MessageHistory.shared.addShare(with: to, mine: true, summary: self.clipSummary(clip), clip: clip)
+            let id = ShareCrypt.newId()
+            guard let sealed = self.seal(Data(clip.utf8), kind: "clip", to: to, id: id, theirs: theirs, theirText: theirText) else {
+                return done(self.shareStatus("bad", to: to, what: "clip"))
             }
-            done(self.shareStatus(status, to: to, what: "clip"))
+            let body: [String: Any] = ["from": m.name, "key": m.relayKey, "to": to, "kind": "clip",
+                                       "clip": ["id": id, "epk": sealed.epk, "sealed": sealed.sealed]]
+            self.send(body) { status, _ in
+                if status == "delivered" {
+                    m.noteSent(to)
+                    MessageHistory.shared.addShare(with: to, mine: true, summary: self.clipSummary(clip), clip: clip)
+                }
+                done(self.shareStatus(status, to: to, what: "clip"))
+            }
         }
+    }
+
+    // MARK: - sealing
+
+    /// `to`'s key, checked against their pin, before anything's sealed for them; `done` hears why not, if not
+    private func recipientKey(_ to: String, what: String, done: @escaping (String) -> Void,
+                              then: @escaping (ShareCrypt.PublicKey, String) -> Void) {
+        ShareKeys.shared.keyFor(sending: to) { [weak self] found in
+            guard let self else { return }
+            switch found {
+            case let .key(theirs, text): then(theirs, text)
+            case .changed: done(self.shareStatus("key-changed", to: to, what: what))
+            case .none: done(self.shareStatus("no-key", to: to, what: what))
+            case .unknown: done(self.shareStatus("unknown", to: to, what: what))
+            case let .offline(status): done(self.shareStatus(status == "not-yours" ? status : "network", to: to, what: what))
+            }
+        }
+    }
+
+    /// the core's context for a share between two names, which the seal is bound to
+    private func context(_ kind: String, from: String, to: String, id: String, fromKey: String, toKey: String) -> String? {
+        core("shareContext", [kind, from, to, id, fromKey, toKey])
+    }
+
+    private func seal(_ plain: Data, kind: String, to: String, id: String, theirs: ShareCrypt.PublicKey,
+                      theirText: String) -> (epk: String, sealed: String)? {
+        let keys = ShareKeys.shared
+        guard let me = keys.privateKey,
+              let ctx = context(kind, from: Messages.shared.name, to: to, id: id, fromKey: keys.publicText, toKey: theirText) else { return nil }
+        return try? ShareCrypt.seal(plain, me: me, to: theirs, context: ctx)
     }
 
     private func clipSummary(_ clip: String) -> String {
@@ -237,6 +286,15 @@ final class MessageFiles: NSObject, ObservableObject {
         guard size <= Self.fileMax else { return done(shareStatus("too-big", to: to, what: "file")) }
         let name = cleanName(url.lastPathComponent)
         let type = values?.typeIdentifier.flatMap { UTType($0)?.preferredMIMEType } ?? "application/octet-stream"
+        PrivacyNotice.shared.firstShare()
+        recipientKey(to, what: "file", done: done) { [weak self] theirs, theirText in
+            self?.encryptAndOffer(url, name: name, type: type, size: size, to: to, theirs: theirs, theirText: theirText, done: done)
+        }
+    }
+
+    private func encryptAndOffer(_ url: URL, name: String, type: String, size: UInt64, to: String,
+                                 theirs: ShareCrypt.PublicKey, theirText: String, done: @escaping (String) -> Void) {
+        let m = Messages.shared
         let key = FileCrypt.newKey()
         let sealed = Self.temp.appendingPathComponent(UUID().uuidString)
         done("encrypting \(name)…")
@@ -251,10 +309,17 @@ final class MessageFiles: NSObject, ObservableObject {
                 return
             }
             let bytes = FileCrypt.encryptedLength(size)
-            let file: [String: Any] = ["name": name, "size": size, "bytes": bytes, "type": type, "sha256": sha, "key": FileCrypt.encode(key)]
             DispatchQueue.main.async {
+                // the name, type, size, hash and key, sealed for `to` alone under an id drawn here
+                let id = ShareCrypt.newId()
+                guard let facts = self.core("sealFileFacts", [name, type, size, sha, FileCrypt.encode(key)]),
+                      let box = self.seal(Data(facts.utf8), kind: "file", to: to, id: id, theirs: theirs, theirText: theirText) else {
+                    try? FileManager.default.removeItem(at: sealed)
+                    return done(self.shareStatus("bad", to: to, what: "file", name: name))
+                }
+                let file: [String: Any] = ["id": id, "epk": box.epk, "sealed": box.sealed, "bytes": bytes]
                 self.send(["from": m.name, "key": m.relayKey, "to": to, "kind": "file", "file": file]) { status, o in
-                    guard status == "delivered", let id = o["id"] as? String else {
+                    guard status == "delivered", o["id"] as? String == id else {
                         try? FileManager.default.removeItem(at: sealed)
                         return done(self.shareStatus(status, to: to, what: "file", name: name))
                     }
@@ -388,29 +453,93 @@ final class MessageFiles: NSObject, ObservableObject {
             if let offer = event["file"] as? [String: Any], let id = offer["id"] as? String, !from.isEmpty { call("/file/\(id)", method: "DELETE") { _, _ in } }
             return
         }
-        let accepted = m.accepted.contains(from)
-        switch event["kind"] as? String {
-        case "clip":
-            guard let clip = logic?.call("lib/messaging", "cleanClip", [event["clip"] ?? NSNull()]) as? String ?? (event["clip"] as? String).flatMap({ $0.utf8.count <= Self.clipMax && !$0.isEmpty ? $0 : nil }) else { return }
-            if accepted { show(from: from, clip: clip, file: nil) } else { ask(from: from, clip: clip, file: nil) }
-        case "file":
-            guard let raw = event["file"] as? [String: Any],
-                  let o = logic?.call("lib/messaging", "cleanOffer", [raw]) as? [String: Any],
-                  let id = o["id"] as? String, let name = o["name"] as? String,
-                  let size = (o["size"] as? NSNumber)?.uint64Value, let bytes = (o["bytes"] as? NSNumber)?.uint64Value,
-                  let key = o["key"] as? String, let sha = o["sha256"] as? String,
-                  bytes == FileCrypt.encryptedLength(size), FileCrypt.decode(key) != nil else { return }
-            let file = ThreadFile(id: id, name: name, size: size)
-            incoming[id] = Incoming(offer: o, key: key, sha256: sha, bytes: bytes, expires: (o["expires"] as? NSNumber)?.doubleValue ?? 0)
-            transfers[id] = Transfer(id: id, mine: false, who: from, name: name, size: size, state: accepted ? "received" : "request")
-            if accepted {
-                show(from: from, clip: nil, file: file)
-                autoAccept(id, from: from, size: size)
+        // only sealed shares are taken (a plain clip or offer from an older copy is ignored), each id once
+        let kind = event["kind"] as? String ?? ""
+        let fn = kind == "clip" ? "cleanSealedClip" : kind == "file" ? "cleanSealedOffer" : ""
+        guard !fn.isEmpty, let share = logic?.call("lib/messaging", fn, [event[kind] ?? NSNull()]) as? [String: Any],
+              let id = share["id"] as? String, let epk = share["epk"] as? String, let sealed = share["sealed"] as? String,
+              !seenIds.contains(id) else { return }
+        openShare(kind: kind, from: from, id: id, epk: epk, sealed: sealed, event: event) { [weak self] plain in
+            guard let self, self.seenIds.insert(id).inserted else { return }
+            if kind == "clip" {
+                self.received(clip: plain, from: from)
             } else {
-                ask(from: from, clip: nil, file: file)
+                self.received(facts: plain, id: id, share: share, from: from)
             }
-        default:
-            break
+        }
+    }
+
+    /// a sealed share from `from`, opened with their pinned key (pinned now, the first time). One that doesn't
+    /// open is checked against the relay: if their key has changed it waits for Trust New Key in their thread;
+    /// otherwise it's dropped, and a file's offer is turned down so the relay lets it go
+    private func openShare(kind: String, from: String, id: String, epk: String, sealed: String, event: [String: Any],
+                           then: @escaping (Data) -> Void) {
+        let keys = ShareKeys.shared
+        let turnDown = { [weak self] in if kind == "file" { self?.call("/file/\(id)", method: "DELETE") { _, _ in } } }
+        let holdForKey = { [weak self] in
+            guard let self else { return }
+            if !self.heldForKey.contains(where: { ($0.event[kind] as? [String: Any])?["id"] as? String == id }) {
+                self.heldForKey.append((from, event))
+            }
+            NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
+        }
+        keys.keyFor(receiving: from) { [weak self] found in
+            guard let self else { return }
+            switch found {
+            case let .key(theirs, theirText):
+                if let me = keys.privateKey,
+                   let ctx = self.context(kind, from: from, to: Messages.shared.name, id: id, fromKey: theirText, toKey: keys.publicText),
+                   let plain = try? ShareCrypt.open(sealed, epk: epk, me: me, from: theirs, context: ctx) {
+                    return then(plain)
+                }
+                keys.recheck(from) { changed in if changed { holdForKey() } else { turnDown() } }
+            case .changed:
+                holdForKey()
+            case .none, .unknown:
+                turnDown()
+            case .offline:
+                // their key couldn't be fetched the first time: tried again a little later, a few times
+                let tries = (event["retries"] as? Int) ?? 0
+                guard tries < 3 else { return }
+                var again = event
+                again["retries"] = tries + 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + Double(10 << tries)) { [weak self] in self?.heard(again) }
+            }
+        }
+    }
+
+    /// shares held while `who`'s key had changed, opened now it's trusted
+    func retryHeld(from who: String) {
+        let theirs = heldForKey.filter { $0.from == who }
+        heldForKey.removeAll { $0.from == who }
+        theirs.forEach { heard($0.event) }
+    }
+
+    private func received(clip plain: Data, from: String) {
+        guard let text = String(data: plain, encoding: .utf8),
+              let clip = logic?.call("lib/messaging", "cleanClip", [text]) as? String else { return }
+        if Messages.shared.accepted.contains(from) { show(from: from, clip: clip, file: nil) } else { ask(from: from, clip: clip, file: nil) }
+    }
+
+    /// a file's facts, checked again here: the size against the limit and the length the relay holds
+    private func received(facts plain: Data, id: String, share: [String: Any], from: String) {
+        guard let bytes = (share["bytes"] as? NSNumber)?.uint64Value, let text = String(data: plain, encoding: .utf8),
+              let o = logic?.call("lib/messaging", "openFileFacts", [text, bytes]) as? [String: Any],
+              let name = o["name"] as? String, let size = (o["size"] as? NSNumber)?.uint64Value,
+              let key = o["key"] as? String, let sha = o["sha256"] as? String,
+              size <= Self.fileMax, bytes == FileCrypt.encryptedLength(size), FileCrypt.decode(key) != nil else {
+            call("/file/\(id)", method: "DELETE") { _, _ in }
+            return
+        }
+        let accepted = Messages.shared.accepted.contains(from)
+        let file = ThreadFile(id: id, name: name, size: size)
+        incoming[id] = Incoming(key: key, sha256: sha, size: size, bytes: bytes, expires: (share["expires"] as? NSNumber)?.doubleValue ?? 0)
+        transfers[id] = Transfer(id: id, mine: false, who: from, name: name, size: size, state: accepted ? "received" : "request")
+        if accepted {
+            show(from: from, clip: nil, file: file)
+            autoAccept(id, from: from, size: size)
+        } else {
+            ask(from: from, clip: nil, file: file)
         }
     }
 
@@ -471,6 +600,7 @@ final class MessageFiles: NSObject, ObservableObject {
     func save(_ id: String) {
         // only an accepted name's, and only one that isn't on its way or saved already
         guard let t = transfers[id], !t.mine, Messages.shared.accepted.contains(t.who), t.state == "received" || t.state == "failed" else { return }
+        PrivacyNotice.shared.firstShare()
         guard let inc = incoming[id] else { return update(id) { $0.state = "lost"; $0.error = nil } }
         if inc.expires > 0, inc.expires < Date().timeIntervalSince1970 * 1000 {
             return update(id) { $0.state = "failed"; $0.error = self.errorText("expired", who: t.who) }
@@ -522,7 +652,10 @@ final class MessageFiles: NSObject, ObservableObject {
             }
             self.work.async { self.open(id, sealed: sealed, inc: inc, name: t.name, who: t.who) }
         }
-        observers[id, default: []].append(task.progress.observe(\.fractionCompleted) { [weak self] p, _ in
+        let most = Int64(inc.bytes)
+        observers[id, default: []].append(task.progress.observe(\.fractionCompleted) { [weak self, weak task] p, _ in
+            // never more than the length that was offered, whatever the relay sends
+            if p.completedUnitCount > most { task?.cancel() }
             let pct = Int((p.fractionCompleted * 100).rounded(.down))
             DispatchQueue.main.async { self?.update(id) { if $0.state == "downloading" { $0.percent = pct } } }
         })
@@ -530,52 +663,32 @@ final class MessageFiles: NSObject, ObservableObject {
         task.resume()
     }
 
-    /// on the work queue: decrypt, check, and put it in Downloads under a name nothing has, quarantined
+    /// on the work queue: decrypted beside Downloads, checked (its length, its size and its hash), made not
+    /// executable and quarantined, then moved into Downloads under a name nothing has (SafeSave). Nothing partial
+    /// is ever left, and it's never opened or shown: Show in Finder is the user's to press
     private func open(_ id: String, sealed: URL, inc: Incoming, name: String, who: String) {
         defer { try? FileManager.default.removeItem(at: sealed) }
-        let plain = Self.temp.appendingPathComponent(UUID().uuidString)
-        let result: Result<URL, FileCrypt.Failure>
+        let result: Result<URL, SafeSave.Failure>
         do {
-            guard let key = FileCrypt.decode(inc.key) else { throw FileCrypt.Failure.corrupt }
-            try FileCrypt.decrypt(sealed, to: plain, key: key, sha256: inc.sha256)
-            result = .success(try place(plain, name: name))
+            guard let key = FileCrypt.decode(inc.key),
+                  let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { throw SafeSave.Failure.disk }
+            let numbered: (String, Int) -> String = { [weak self] safe, n in
+                Self.safeName(self?.logic?.string("lib/messaging", "numberedName", [safe, n]) ?? "\(n) \(safe)")
+            }
+            result = .success(try SafeSave.save(sealed, key: key, sha256: inc.sha256, size: inc.size, name: Self.safeName(name),
+                                                into: downloads, numbered: numbered, maxSize: Self.fileMax))
         } catch {
-            try? FileManager.default.removeItem(at: plain)
-            result = .failure(error as? FileCrypt.Failure ?? .disk)
+            result = .failure(error as? SafeSave.Failure ?? .disk)
         }
         DispatchQueue.main.async {
             switch result {
             case let .success(url):
                 self.update(id) { $0.state = "saved"; $0.saved = url }
                 self.incoming.removeValue(forKey: id)
-                if !inc.auto { NSWorkspace.shared.activateFileViewerSelecting([url]) }
             case let .failure(why):
-                self.update(id) { $0.state = "failed"; $0.error = self.errorText(why == .corrupt ? "corrupt" : "disk", who: who) }
+                self.update(id) { $0.state = "failed"; $0.error = self.errorText(why == .disk ? "disk" : "corrupt", who: who) }
             }
         }
-    }
-
-    private func place(_ plain: URL, name: String) throws -> URL {
-        let fm = FileManager.default
-        guard let downloads = fm.urls(for: .downloadsDirectory, in: .userDomainMask).first else { throw FileCrypt.Failure.disk }
-        let safe = Self.safeName(name)
-        for n in 1...999 {
-            let candidate = n == 1 ? safe : (logic?.string("lib/messaging", "numberedName", [safe, n]) ?? "\(n) \(safe)")
-            let dest = downloads.appendingPathComponent(Self.safeName(candidate), isDirectory: false)
-            // a name nothing has; moveItem never replaces, so a race loses only a try
-            guard dest.deletingLastPathComponent().standardized == downloads.standardized, !fm.fileExists(atPath: dest.path) else { continue }
-            if (try? fm.moveItem(at: plain, to: dest)) != nil {
-                Self.quarantine(dest)
-                return dest
-            }
-        }
-        throw FileCrypt.Failure.disk
-    }
-
-    /// marks a saved file as downloaded from elsewhere, so Gatekeeper asks before anything of it runs
-    static func quarantine(_ url: URL) {
-        let value = String(format: "0081;%08lx;Q Calc;%@", Int(Date().timeIntervalSince1970), UUID().uuidString)
-        _ = value.withCString { v in url.withUnsafeFileSystemRepresentation { p in setxattr(p, "com.apple.quarantine", v, strlen(v), 0, 0) } }
     }
 
     func reveal(_ id: String) {
