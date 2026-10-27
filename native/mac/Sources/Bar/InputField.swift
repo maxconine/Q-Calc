@@ -505,6 +505,9 @@ struct InputField: NSViewRepresentable {
         // keep the caret in view as the line grows
         text.sizeToFit()
         text.frame.size.width = max(scroll.contentSize.width, text.frame.width)
+        // sizeToFit makes the height the line plus both insets, and the inset centres the line in that height, so it
+        // grew to 72 pt in the 36 pt clip: with text the caret is scrolled into view, empty it sat half below the clip
+        text.frame.size.height = scroll.contentSize.height
         text.scrollRangeToVisible(text.selectedRange())
     }
 
