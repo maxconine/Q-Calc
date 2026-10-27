@@ -386,7 +386,7 @@ pub fn thread_reply_prompt(name: &str, named: bool) -> String {
     if named {
         format!("Message {name}")
     } else {
-        "set your name in settings to reply · ↵ opens settings".into()
+        "set your name to reply · ↵ opens settings".into()
     }
 }
 
@@ -1209,7 +1209,7 @@ mod tests {
         assert_eq!(thread_reply_prompt("max", true), "Message max");
         assert_eq!(
             thread_reply_prompt("max", false),
-            "set your name in settings to reply · ↵ opens settings"
+            "set your name to reply · ↵ opens settings"
         );
     }
 
