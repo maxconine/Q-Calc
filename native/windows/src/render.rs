@@ -530,6 +530,12 @@ impl Canvas<'_> {
         self.paint(c)
     }
 
+    /// A brush of its own in `c`, for a text layout's drawing effects (a coloured range in one draw).
+    pub fn own_brush(&self, c: Color) -> Option<ID2D1SolidColorBrush> {
+        // SAFETY: a brush from our live target
+        unsafe { self.rt.CreateSolidColorBrush(&c, None) }.ok()
+    }
+
     pub fn clear(&self, c: Color) {
         // SAFETY: inside BeginDraw/EndDraw
         unsafe { self.rt.Clear(Some(&c)) };

@@ -249,6 +249,10 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
             vec![spec(slot.clone(), Font::Display, Ink::Answer, Some(slot), (PAD_X, 0.0))]
         };
     }
+    // Alt+↑/↓ stepped the answer's SI prefix (line.rs): that reading, copyable, until the line changes
+    if let Some(p) = &m.line.prefix_shown {
+        return vec![spec(p.clone(), Font::Display, Ink::Answer, Some(p.clone()), (PAD_X, 0.0))];
+    }
     let live = m.live.as_ref();
     let blank = live.is_none_or(is_blank);
     if blank {

@@ -32,7 +32,7 @@ use windows::Win32::System::Threading::{CreateMutexW, GetCurrentProcess};
 use windows::Win32::UI::HiDpi::{
     DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
 };
-use windows::Win32::UI::Input::Ime::GCS_RESULTSTR;
+use windows::Win32::UI::Input::Ime::{GCS_COMPSTR, GCS_RESULTSTR};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, SetFocus, VK_CONTROL, VK_LWIN, VK_MENU, VK_RETURN,
     VK_RWIN, VK_SHIFT,
@@ -44,11 +44,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
     RegisterClassExW, RegisterWindowMessageW, SMTO_ABORTIFHUNG, SW_HIDE, SWP_NOACTIVATE,
     SWP_NOZORDER, SWP_SHOWWINDOW, SendMessageTimeoutW, SetCursor, SetForegroundWindow, SetTimer,
     SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_APP, WM_CHAR,
-    WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_DPICHANGED, WM_ENDSESSION, WM_ERASEBKGND, WM_HOTKEY,
-    WM_IME_COMPOSITION, WM_IME_STARTCOMPOSITION, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT, WM_POWERBROADCAST, WM_SETCURSOR, WM_SETTINGCHANGE,
-    WM_SIZE, WM_SYSCHAR, WM_SYSKEYDOWN, WM_TIMER, WM_WTSSESSION_CHANGE, WNDCLASSEXW,
-    WS_EX_TOOLWINDOW, WS_POPUP,
+    WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_DPICHANGED, WM_ENDSESSION, WM_ERASEBKGND,
+    WM_EXITSIZEMOVE, WM_HOTKEY, WM_IME_COMPOSITION, WM_IME_ENDCOMPOSITION, WM_IME_SETCONTEXT,
+    WM_IME_STARTCOMPOSITION, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_MOVE, WM_NCHITTEST, WM_PAINT, WM_POWERBROADCAST,
+    WM_SETCURSOR, WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCHAR, WM_SYSKEYDOWN, WM_TIMER,
+    WM_WTSSESSION_CHANGE, WNDCLASSEXW, WS_EX_TOOLWINDOW, WS_POPUP,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -680,6 +681,16 @@ impl App {
                 self.model.touch();
             }
             WM_CLOSE => self.ops.push(Op::Hide),
+            // the input's one-shot timers: the caret's blink, the examples, the squiggle (line.rs)
+            WM_TIMER if crate::line::timer(self, wp.0) => {}
+            // dragged by the background, widened from the edges, remembered per monitor (drag.rs)
+            WM_NCHITTEST => return Some(LRESULT(crate::drag::nc_hit_test(self, lp) as isize)),
+            WM_SIZING => {
+                crate::drag::sizing(self, wp, lp);
+                return Some(LRESULT(1));
+            }
+            WM_MOVE => crate::drag::moved(self),
+            WM_EXITSIZEMOVE => crate::drag::remember(self),
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
                 if crate::effects::key_down(self, vk, lp.0) {
@@ -705,19 +716,37 @@ impl App {
             WM_CHAR => self.model.char16(wp.0 as u16, &self.engine),
             // Alt+letter isn't the bar's: no beep
             WM_SYSCHAR => {}
+            // the composition is drawn inline (input.rs), not in the IME's own window
+            WM_IME_SETCONTEXT => {
+                // SAFETY: the default for our own window, without ISC_SHOWUICOMPOSITIONWINDOW
+                return Some(unsafe {
+                    DefWindowProcW(hwnd, msg, wp, LPARAM(lp.0 & !0x8000_0000isize))
+                });
+            }
             WM_IME_STARTCOMPOSITION => {
                 self.place_ime();
-                return None;
+                return Some(LRESULT(0));
+            }
+            WM_IME_ENDCOMPOSITION => {
+                self.bar.field_view.composition = None;
+                self.model.touch();
+                return Some(LRESULT(0));
             }
             WM_IME_COMPOSITION => {
                 if lp.0 as u32 & GCS_RESULTSTR.0 != 0 {
+                    self.bar.field_view.composition = None;
                     if let Some(text) = ime::result(hwnd) {
                         self.model.insert_text(&text, &self.engine);
                     }
-                    return Some(LRESULT(0));
+                }
+                if lp.0 as u32 & GCS_COMPSTR.0 != 0 {
+                    let (text, cursor) = ime::composition(hwnd);
+                    self.bar.field_view.composition =
+                        (!text.is_empty()).then_some(crate::input::Composition { text, cursor });
+                    self.model.touch();
                 }
                 self.place_ime();
-                return None;
+                return Some(LRESULT(0));
             }
             WM_LBUTTONDOWN | WM_LBUTTONDBLCLK => {
                 let (x, y) = self.dips(lp);
@@ -790,7 +819,10 @@ impl App {
     }
 
     fn click(&mut self, x: f32, y: f32, double: bool) {
-        if crate::systems::click(self, x, y, double, mods().shift) || crate::graph::click(self, x, y, double) {
+        if crate::line::click_chip(&mut self.model, x, y, &self.engine)
+            || crate::systems::click(self, x, y, double, mods().shift)
+            || crate::graph::click(self, x, y, double)
+        {
             return;
         }
         let l = &self.bar.layout;
@@ -872,6 +904,7 @@ impl App {
             self.store.settings = self.model.settings.clone();
             self.save_store();
         }
+        crate::line::after(self);
         if let Some(text) = self.model.to_clipboard.take()
             && !clip::set(self.bar.hwnd, &text)
         {
@@ -942,16 +975,8 @@ impl App {
             crate::place::MIN_WIDTH as f32
         };
         if !self.bar.visible {
-            // the line outlives a hide only for draftSeconds
-            let keep = self.store.settings.draft_seconds as u64;
-            if self
-                .hidden_at
-                .is_some_and(|t| t.elapsed().as_secs() >= keep)
-                && !self.model.field.text().is_empty()
-            {
-                self.model.field.reset("");
-                self.model.text_changed(&self.engine);
-            }
+            // the line outlives a hide only for draftSeconds (draft.json); the open counts for the examples
+            crate::line::will_show(&mut self.model, &mut self.store.onboarding, &self.engine);
             self.model.hint = self.notice.clone();
             self.model.tape.hotkey = self.store.hotkey.clone();
             self.model.field.select_all();
@@ -981,6 +1006,7 @@ impl App {
     }
 
     fn after_hide(&mut self) {
+        crate::line::will_hide(&mut self.model, &self.engine);
         self.bar.visible = false;
         self.bar.focused = false;
         self.bar.selecting = false;
@@ -1089,7 +1115,7 @@ impl App {
                 expect,
             } => {
                 run.current_input = input;
-                run.wait = Wait::Answer(expect);
+                run.wait = Wait::Answer(expect, self.model.field.text().to_string());
                 run.t0 = Instant::now();
                 for u in units {
                     // SAFETY: posting typed characters to our bar, as the keyboard would

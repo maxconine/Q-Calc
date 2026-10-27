@@ -58,6 +58,8 @@ pub enum Lane {
     System,
     /// the typeset row's source (typst_row.rs)
     Typeset,
+    /// the input's own asks (line.rs): the squiggle after a pause, the SI prefix step, the examples' answers
+    Input,
     /// history load / save, warm-up and anything that must not be dropped: never replaced, never stale
     Misc,
 }

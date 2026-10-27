@@ -10,6 +10,7 @@ mod keys;
 mod log;
 mod place;
 mod store;
+mod text_rules;
 
 #[cfg(windows)]
 mod answer;
@@ -22,6 +23,8 @@ mod cheats;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
+mod drag;
+#[cfg(windows)]
 mod effects;
 #[cfg(windows)]
 mod engine;
@@ -33,6 +36,8 @@ mod graph;
 mod history;
 #[cfg(windows)]
 mod input;
+#[cfg(windows)]
+mod line;
 #[cfg(windows)]
 mod messaging;
 #[cfg(windows)]
