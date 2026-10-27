@@ -177,6 +177,11 @@ pub fn slot(m: &BarModel) -> Option<String> {
     }))
 }
 
+/// The slot says why there's no solution (drawn muted).
+pub fn slot_is_message(m: &BarModel) -> bool {
+    m.systems.as_ref().and_then(|s| s.answer.as_ref()).is_some_and(|a| a.message)
+}
+
 // ---- opening, solving, saving ----
 
 /// The line changed: the panel stays only while the line says `sys N` for its N; rows that changed are solved.

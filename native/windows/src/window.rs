@@ -310,7 +310,7 @@ impl Bar {
             } else {
                 field_view.paint(c, &model.field, layout.field, focused, placeholder);
             }
-            let stale = model.live_for != model.field.text();
+            let stale = model.live_for != model.field.text() || crate::systems::slot_is_message(model);
             answer::paint(c, &layout.answer_text, layout.answer, stale);
             if let (Some(r), Some(hint)) = (layout.hint, model.hint.as_ref())
                 && let Some(l) = c.gfx.layout_in(
