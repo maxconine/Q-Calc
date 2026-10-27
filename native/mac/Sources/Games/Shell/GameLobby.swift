@@ -543,13 +543,15 @@ private struct Caret: View {
 /// FlowRow where there is one (macOS 13), and on 12 the same rows built from measured sizes.
 struct WrapRow<Content: View>: View {
     var spacing: CGFloat
+    /// rows start at the left (`justify-content: flex-start`) rather than centred
+    var leading = false
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         if #available(macOS 13, *) {
-            FlowRow(spacing: spacing) { content() }
+            FlowRow(spacing: spacing, leading: leading) { content() }
         } else {
-            _VariadicView.Tree(FlowRoot(spacing: spacing)) { content() }
+            _VariadicView.Tree(FlowRoot(spacing: spacing, leading: leading)) { content() }
         }
     }
 }
@@ -558,6 +560,7 @@ struct WrapRow<Content: View>: View {
 @available(macOS 13, *)
 struct FlowRow: Layout {
     var spacing: CGFloat
+    var leading = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let rows = arrange(proposal.width ?? .infinity, subviews)
@@ -569,7 +572,7 @@ struct FlowRow: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var y = bounds.minY
         for row in arrange(bounds.width, subviews) {
-            var x = bounds.midX - row.width / 2
+            var x = leading ? bounds.minX : bounds.midX - row.width / 2
             for i in row.items {
                 let s = subviews[i].sizeThatFits(.unspecified)
                 subviews[i].place(at: CGPoint(x: x, y: y + (row.height - s.height) / 2), proposal: .unspecified)
@@ -601,20 +604,22 @@ struct FlowRow: Layout {
 /// then the buttons go into centred rows by the same rule as `FlowRow.arrange`.
 private struct FlowRoot: _VariadicView_MultiViewRoot {
     var spacing: CGFloat
+    var leading = false
 
     func body(children: _VariadicView.Children) -> some View {
-        FlowRows(children: children, spacing: spacing)
+        FlowRows(children: children, spacing: spacing, leading: leading)
     }
 }
 
 private struct FlowRows: View {
     let children: _VariadicView.Children
     let spacing: CGFloat
+    var leading = false
     @State private var sizes: [Int: CGSize] = [:]
     @State private var width: CGFloat = .infinity
 
     var body: some View {
-        VStack(spacing: spacing) {
+        VStack(alignment: leading ? .leading : .center, spacing: spacing) {
             ForEach(Array(rows().enumerated()), id: \.offset) { _, row in
                 HStack(alignment: .center, spacing: spacing) {
                     ForEach(row, id: \.self) { i in
@@ -625,7 +630,7 @@ private struct FlowRows: View {
                 }
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: leading ? .leading : .center)
         .background(GeometryReader { g in Color.clear.preference(key: FlowWidth.self, value: g.size.width) })
         .onPreferenceChange(FlowSizes.self) { sizes = $0 }
         .onPreferenceChange(FlowWidth.self) { width = $0 }

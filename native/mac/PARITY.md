@@ -83,7 +83,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Feature | Status | Notes |
 |---|---|---|
 | Graph: head, plot, grid, ticks, curve, pan, zoom, reset | ✅ | `graph` pair: same layout, colours and sizes |
-| Graph: home view, roots and critical points, hover readout | ✅ | `graphHome`, `graphTicks`, `graphReadoutY`, `GraphResult` roots and critical points; graph pair matches |
+| Graph: home view, roots and critical points, hover readout | ✅ | `graphHome`, `graphTicks`, `graphReadoutY`, `GraphResult` roots and critical points; graph pair matches. Fixed against GraphPanel.tsx: the critical-point chips wrap onto more rows (`flex-wrap`; an HStack had squeezed six of them into columns a character wide on a narrow bar), are buttons that copy x (`Copy x`), and show 8 figures ungrouped (`formatCoord`); no points says `None in this domain`; the ticks are the engine's labels as given (they had read `50,000` beside `−50000`). Pictured at 340 pt |
 | Systems panel (`sys`) | ✅ | `sys N` opens N fields (`sysCommand`), solved live by `engine/system` `solveLive`, ↵ / ↑ ↓ between fields (arrows need macOS 14; Tab on 13), saved as a `system` row |
 | Cheat sheet (`?`, `help`) | ✅ | `help` pair, keys follow the keybinds. **Native only:** the things-to-type column also lists `messages`, `paste to max`, `send file to max` and `konami` before `?` (core `native_type_cheats`); a bar too narrow for both columns' labels (they ended in "…" at 340 pt) shows one column that scrolls past 12 rows (macOS 13+; 12 keeps two). Pictured light and dark at 680 and 340 pt |
 | Games list | ✅ | `games` pair (↑ from the bottom, ↓ off the end) |
