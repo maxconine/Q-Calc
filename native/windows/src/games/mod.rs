@@ -467,6 +467,9 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
     Ok(())
 }
 
+/// gfx.rs `warm_gpu` is done (wParam 1: it worked).
+const WM_GPU: u32 = relay::WM_SOCK + 1;
+
 fn set_dark(hwnd: HWND, dark: bool) {
     let v = BOOL::from(dark);
     // SAFETY: an attribute on our window, pointing at a live local
@@ -598,6 +601,11 @@ impl Win {
                 self.paint();
                 // SAFETY: our window
                 let _ = unsafe { ValidateRect(Some(self.hwnd), None) };
+                // the first frame is software; once it's up, the GPU driver loads on its own thread (it would hold
+                // the loader lock the first frame needs) and the hardware target follows
+                if self.launched_at.is_some() && self.gfx.wants_gpu() {
+                    gfx::warm_gpu(self.hwnd, WM_GPU);
+                }
                 if let Some(t0) = self.launched_at.take() {
                     qlog!(
                         "games: {} first frame {:.1} ms after the bar's ↵ ({:.1} ms since this process started, {} target)",
@@ -742,6 +750,11 @@ impl Win {
                 }
                 _ => return None,
             },
+            WM_GPU => {
+                // SAFETY: this message's lParam, taken once here
+                let device = unsafe { gfx::take_device(lp.0) };
+                self.gfx.gpu_ready(device);
+            }
             relay::WM_SOCK => {
                 // SAFETY: a WM_SOCK lParam, taken once here
                 let e = unsafe { relay::take(lp) };
