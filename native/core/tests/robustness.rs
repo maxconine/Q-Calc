@@ -116,3 +116,17 @@ fn graph_options_from_an_odd_panel_stay_bounded() {
         assert_eq!(sample_graph("x", &count(161.0)).len(), 161);
     });
 }
+
+#[test]
+fn choosing_from_more_than_doubles_count() {
+    on_engine_stack(|| {
+        // counting up to n by 1 never ends past 2^53 (mathjs hangs the same way)
+        assert_eq!(show("nCr(999999999999999999999, 4)"), "4.16666666667e+82");
+        assert_eq!(show("nCr(1e16, 2)"), "5e+31");
+        // halving n − k + 1 … n never got down to one factor: a stack overflow, the app gone
+        assert_eq!(show("nPr(1e17, 100)"), "overflow");
+        assert_eq!(show("nPr(1e20, 3)"), "1e+60");
+        assert_eq!(show("nCr(50,25)"), "1.26410606438e+14");
+        assert_eq!(show("nPr(10, 3)"), "720");
+    });
+}

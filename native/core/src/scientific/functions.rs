@@ -657,6 +657,9 @@ fn zeta(a: &[Val], _: &Scope) -> EvalResult {
 
 // ---- combinatorics ----
 
+/// Past 2^53 not every integer is a double, so a count that steps by 1 stops moving.
+const EXACT_INTEGERS: f64 = 9_007_199_254_740_992.0;
+
 /// mathjs `product(i, n)`: split in halves.
 fn product(i: f64, n: f64) -> f64 {
     if n < i {
@@ -664,6 +667,15 @@ fn product(i: f64, n: f64) -> f64 {
     }
     if n == i {
         return n;
+    }
+    if n >= EXACT_INTEGERS {
+        // the halves would stop shrinking (`nPr(1e17, 100)` recursed until the stack overflowed; mathjs too):
+        // the factors one by one, as many as there are, which is past any double long before it is many
+        let count = (n - i + 1.0).floor();
+        if count > 1100.0 {
+            return f64::INFINITY;
+        }
+        return (0..count as u32).map(|j| n - f64::from(j)).product();
     }
     let half = ((n + i) as i64 >> 1) as f64;
     product(i, half) * product(half + 1.0, n)
@@ -729,6 +741,11 @@ fn combinations(a: &[Val], _: &Scope) -> EvalResult {
         if k.min(n - k) > 1100.0 {
             return f64::INFINITY;
         }
+        // the balanced loop counts up to n by 1, which never gets there past 2^53 (`nCr(1e21, 4)` hung, in
+        // mathjs too); the running product needs only min(k, n − k) steps
+        if n >= EXACT_INTEGERS {
+            return combinations_float(n, k);
+        }
         let v = combinations_number(n, k);
         if v.is_nan() {
             combinations_float(n, k)
@@ -743,6 +760,10 @@ fn permutations(a: &[Val], _: &Scope) -> EvalResult {
         // k factors of at least 1, and more than 170 of them is past any double
         if k > 170.0 && n - k + 1.0 >= 1.0 {
             return f64::INFINITY;
+        }
+        // past 2^53, n − k + 1 rounds to n and the factors can't be counted from it
+        if n >= EXACT_INTEGERS {
+            return (0..k as u32).map(|j| n - f64::from(j)).product();
         }
         product(n - k + 1.0, n)
     })
