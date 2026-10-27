@@ -228,7 +228,7 @@ pub fn is_equation(text: &str) -> bool {
     let Some(v) = &eq.assign_var else {
         return true;
     };
-    let re = jsre::compile(&format!(
+    let re = jsre::compile_cached(&format!(
         "(?<![A-Za-z_])(?:{})(?![A-Za-z0-9_])",
         names_pattern(std::slice::from_ref(v))
     ));
@@ -292,7 +292,7 @@ fn call_pattern(fn_names: &[String]) -> String {
 }
 
 fn ambiguous_call(side: &str, fn_names: &[String]) -> bool {
-    let re = jsre::compile(&format!(
+    let re = jsre::compile_cached(&format!(
         r"(?<![A-Za-z_])(?:{})\s+[0-9]+(?:\.[0-9]+)?\s*(?:[A-Za-z]|θ)(?![A-Za-z])",
         call_pattern(fn_names)
     ));
@@ -301,7 +301,7 @@ fn ambiguous_call(side: &str, fn_names: &[String]) -> bool {
 
 pub fn normalize_side(side: &str, fn_names: &[String]) -> String {
     let s = ungroup_before_letter(&normalize_math_text(side));
-    let re = jsre::compile(&format!(
+    let re = jsre::compile_cached(&format!(
         r"(?<![A-Za-z_])({})\s+([A-Za-z]|θ)(?![A-Za-z0-9_(^!])",
         call_pattern(fn_names)
     ));

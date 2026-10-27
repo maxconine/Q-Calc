@@ -104,7 +104,7 @@ fn with_quantities(expr: &str, quantities: &BTreeMap<String, String>) -> String 
         return expr.to_string();
     }
     let names: Vec<String> = quantities.keys().cloned().collect();
-    let re = js(
+    let re = jsre::js_cached(
         &format!(
             r"(?<![A-Za-z_])(?:{})(?![A-Za-z0-9_])",
             names_pattern(&names)

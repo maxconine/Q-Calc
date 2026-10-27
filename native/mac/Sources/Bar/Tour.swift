@@ -26,8 +26,11 @@ extension BarModel {
 
     func onboardingState() -> [String: Any] {
         let o = settings.onboarding
+        if let memo = onboardingMemo, memo.raw == o { return memo.state }
         let raw: [String: Any] = ["opens": o["opens"] ?? 0, "commits": o["commits"] ?? 0, "hints": o["hints"] ?? 0, "done": (o["done"] ?? 0) > 0]
-        return logic.call("lib/onboarding", "sanitizeOnboarding", [raw]) as? [String: Any] ?? raw
+        let state = logic.call("lib/onboarding", "sanitizeOnboarding", [raw]) as? [String: Any] ?? raw
+        onboardingMemo = (o, state, nil)
+        return state
     }
 
     private func save(_ o: [String: Any]) {
@@ -39,7 +42,14 @@ extension BarModel {
 
     // ---- the walkthrough
 
-    func touringNow() -> Bool { replay != nil || logic.bool("lib/tour", "tourRunning", [onboardingState()]) }
+    func touringNow() -> Bool {
+        if replay != nil { return true }
+        let state = onboardingState()
+        if let running = onboardingMemo?.running { return running }
+        let running = logic.bool("lib/tour", "tourRunning", [state])
+        onboardingMemo?.running = running
+        return running
+    }
 
     private var tourDone: Int { replay ?? hints }
 

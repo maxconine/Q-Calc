@@ -66,10 +66,18 @@ final class SheetData {
     }
 
     /// identityTargetFor: the sheet a bar line opens on ↵, the section to show first, and what the bar says
+    /// the last line asked about and its answer: BarCommand.of asks several times a keystroke for the same text
+    private var lastTarget: (text: String, target: (id: String, section: Int, hint: String)?)?
+
     func target(_ text: String) -> (id: String, section: Int, hint: String)? {
-        guard let t = logic.call("lib/identities", "identityTargetFor", [text]) as? [String: Any],
-              let sheet = t["sheet"] as? [String: Any], let id = sheet["id"] as? String else { return nil }
-        return (id, (t["section"] as? NSNumber)?.intValue ?? 0, t["hint"] as? String ?? "")
+        if let last = lastTarget, last.text == text { return last.target }
+        var found: (id: String, section: Int, hint: String)?
+        if let t = logic.call("lib/identities", "identityTargetFor", [text]) as? [String: Any],
+           let sheet = t["sheet"] as? [String: Any], let id = sheet["id"] as? String {
+            found = (id, (t["section"] as? NSNumber)?.intValue ?? 0, t["hint"] as? String ?? "")
+        }
+        lastTarget = (text, found)
+        return found
     }
 
     func identitySheet(_ id: String) -> IdentitySheet? {
