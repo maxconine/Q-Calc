@@ -584,6 +584,16 @@ impl Canvas<'_> {
         };
     }
 
+    /// The render target, for drawing the helpers here don't cover (geometries, strokes, layers).
+    pub fn rt(&self) -> &ID2D1HwndRenderTarget {
+        self.rt
+    }
+
+    /// The frame's one brush, recoloured.
+    pub fn brush(&self, c: Color) -> &ID2D1SolidColorBrush {
+        self.paint(c)
+    }
+
     /// Clips what follows to `r` until `pop_clip`.
     pub fn push_clip(&self, r: Rect) {
         // SAFETY: paired with pop_clip by the caller, inside a draw

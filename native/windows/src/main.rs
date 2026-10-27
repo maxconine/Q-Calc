@@ -18,6 +18,8 @@ mod app;
 #[cfg(windows)]
 mod bench;
 #[cfg(windows)]
+mod cheats;
+#[cfg(windows)]
 mod clip;
 #[cfg(windows)]
 mod effects;
