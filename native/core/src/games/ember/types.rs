@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// goes in the online hello: both sides must run the same rules and the same levels
 pub const EMBER_VERSION: f64 = 2.0;
@@ -91,7 +91,7 @@ pub const IN_DOWN: i64 = 8;
 /// [fire, frost]
 pub type Inputs = [i64; 2];
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Element {
     Fire,
@@ -128,6 +128,12 @@ pub const T_DARK: Tile = 10;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Cond(pub Vec<String>);
 
+impl Serialize for Cond {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(s)
+    }
+}
+
 impl<'de> Deserialize<'de> for Cond {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         #[derive(Deserialize)]
@@ -143,7 +149,7 @@ impl<'de> Deserialize<'de> for Cond {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Dir {
     Up,
@@ -163,7 +169,7 @@ impl Dir {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Aim {
     Up,
@@ -192,7 +198,7 @@ impl Aim {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum Slant {
     #[serde(rename = "/")]
     Slash,
@@ -210,7 +216,7 @@ impl Slant {
 }
 
 /// whose gravity a switch flips
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Who {
     Fire,
@@ -221,13 +227,13 @@ pub enum Who {
     Other,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Xy {
     pub x: f64,
     pub y: f64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Deserialize, Serialize)]
 pub struct Rect {
     pub x: f64,
     pub y: f64,
@@ -430,7 +436,7 @@ pub struct LevelDef {
     pub stages: Vec<StageDef>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Gem {
     pub x: f64,
     pub y: f64,
@@ -438,8 +444,9 @@ pub struct Gem {
 }
 
 /// a plate's or button's strip
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Strip {
+    #[serde(flatten)]
     pub r: Rect,
     pub ch: String,
     pub ceil: bool,
@@ -447,22 +454,25 @@ pub struct Strip {
     pub ticks: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct LeverDef {
+    #[serde(flatten)]
     pub r: Rect,
     pub ch: String,
     pub on: bool,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct GateDef {
+    #[serde(flatten)]
     pub r: Rect,
     pub open: Cond,
     pub dir: Dir,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct MoverDef {
+    #[serde(flatten)]
     pub r: Rect,
     pub to: Xy,
     pub when: Option<Cond>,
@@ -470,14 +480,15 @@ pub struct MoverDef {
     pub speed: f64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct FanDef {
     /// the whole column the fan blows through, fan tile included
+    #[serde(flatten)]
     pub r: Rect,
     pub when: Option<Cond>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct EmitterDef {
     pub x: f64,
     pub y: f64,
@@ -485,35 +496,37 @@ pub struct EmitterDef {
     pub when: Option<Cond>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct MirrorDef {
     pub x: f64,
     pub y: f64,
     pub slant: Slant,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct SensorDef {
+    #[serde(flatten)]
     pub r: Rect,
     pub ch: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct PortalDef {
+    #[serde(flatten)]
     pub r: Rect,
     pub pair: String,
     /// index of the paired portal
     pub other: usize,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct SignDef {
     pub x: f64,
     pub y: f64,
     pub text: String,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct CheckpointDef {
     /// the middle of the flag's foot (bottom centre of its tile)
     pub x: f64,
@@ -521,20 +534,22 @@ pub struct CheckpointDef {
     pub zone: Rect,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct LampDef {
+    #[serde(flatten)]
     pub r: Rect,
     /// 0 for a plain toggle, else how long a press lasts
     pub ticks: i64,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct GswitchDef {
+    #[serde(flatten)]
     pub r: Rect,
     pub who: Who,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct CannonDef {
     pub x: f64,
     pub y: f64,
@@ -555,9 +570,10 @@ pub struct Lookup {
 }
 
 /// a compiled stage, in px. arrays keep map order (row-major) then StageDef.things order
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Stage {
     pub index: usize,
+    #[serde(skip)]
     pub def: StageDef,
     pub cols: usize,
     pub rows: usize,
@@ -593,6 +609,7 @@ pub struct Stage {
     pub locks: Vec<Rect>,
     pub cannons: Vec<CannonDef>,
     pub darks: Vec<Rect>,
+    #[serde(skip)]
     pub lookup: Lookup,
 }
 

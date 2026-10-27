@@ -124,6 +124,11 @@ pub fn event_json(out: &mut String, e: &GameEvent) {
 }
 
 pub fn state_json(out: &mut String, s: &GameState) {
+    state_json_with(out, s, true);
+}
+
+/// with_saved false writes the checkpoint snapshot as null, for drawing
+pub fn state_json_with(out: &mut String, s: &GameState, with_saved: bool) {
     let _ = write!(
         out,
         "{{\"tick\":{},\"phase\":\"{}\",\"phaseT\":{},\"deaths\":{},\"stage\":{},\"banked\":",
@@ -186,8 +191,8 @@ pub fn state_json(out: &mut String, s: &GameState) {
     if !s.is_snapshot {
         out.push_str(",\"saved\":");
         match &s.saved {
-            Some(snap) => state_json(out, snap),
-            None => out.push_str("null"),
+            Some(snap) if with_saved => state_json(out, snap),
+            _ => out.push_str("null"),
         }
     }
     out.push_str(",\"on\":");
@@ -210,6 +215,13 @@ pub fn state_json(out: &mut String, s: &GameState) {
 pub fn to_json(s: &GameState) -> String {
     let mut out = String::with_capacity(2048);
     state_json(&mut out, s);
+    out
+}
+
+/// a state for drawing: its JSON without the checkpoint snapshot
+pub fn view_json(s: &GameState) -> String {
+    let mut out = String::with_capacity(2048);
+    state_json_with(&mut out, s, false);
     out
 }
 

@@ -18,6 +18,7 @@ mod bridge;
 mod cancel;
 pub mod chain;
 mod engine;
+mod games;
 pub mod history;
 mod jsstr;
 mod name_check;
@@ -25,10 +26,11 @@ mod rates;
 pub mod records;
 #[cfg(feature = "typst")]
 mod typst_preview; // WP-TYPST-RENDER
-mod worker;
+mod worker; // the games and the 420/67/69 effects
 
 pub use cancel::CancelToken;
 pub use engine::Engine;
+pub use games::*;
 pub use name_check::NameCheck;
 pub use records::*;
 

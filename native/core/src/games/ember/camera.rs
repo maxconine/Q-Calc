@@ -25,22 +25,29 @@ fn place(mid: f64, size: f64, limit: f64) -> f64 {
 
 /// where the camera wants to be for this state. dead players count where they fell
 pub fn camera_for(stage: &Stage, s: &GameState, aspect: f64) -> Camera {
-    let (bw, bh) = base_view(aspect);
     let [a, b] = &s.players;
-    let x0 = a.x.min(b.x);
-    let x1 = a.x.max(b.x) + PLAYER_W;
-    let y0 = a.y.min(b.y);
-    let y1 = a.y.max(b.y) + PLAYER_H;
+    camera_at(stage.w, stage.h, (a.x, a.y), (b.x, b.y), aspect)
+}
+
+/// cameraFor from what it reads: the stage's size and the players' top-left corners
+pub fn camera_at(stage_w: f64, stage_h: f64, a: (f64, f64), b: (f64, f64), aspect: f64) -> Camera {
+    let (bw, bh) = base_view(aspect);
+    let x0 = a.0.min(b.0);
+    let x1 = a.0.max(b.0) + PLAYER_W;
+    let y0 = a.1.min(b.1);
+    let y1 = a.1.max(b.1) + PLAYER_H;
+    // how many views wide the frame has to be to hold both with their margins
     let need = 1f64
         .max((x1 - x0 + 2.0 * CAM_MARGIN_X) / bw)
         .max((y1 - y0 + 2.0 * CAM_MARGIN_Y) / bh);
-    let whole = 1f64.max(stage.w / bw).max(stage.h / bh);
+    // never wider than the whole stage needs, nor than the widest zoom
+    let whole = 1f64.max(stage_w / bw).max(stage_h / bh);
     let k = need.min(whole).min(1.0 / CAM_MIN_ZOOM);
     let w = bw * k;
     let h = bh * k;
     Camera {
-        x: place((x0 + x1) / 2.0, w, stage.w),
-        y: place((y0 + y1) / 2.0, h, stage.h),
+        x: place((x0 + x1) / 2.0, w, stage_w),
+        y: place((y0 + y1) / 2.0, h, stage_h),
         w,
         h,
         zoom: 1.0 / k,

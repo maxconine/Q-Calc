@@ -5,6 +5,7 @@
 pub mod camera;
 pub mod engine;
 pub mod json;
+pub mod panel;
 pub mod progress;
 pub mod protocol;
 pub mod session;

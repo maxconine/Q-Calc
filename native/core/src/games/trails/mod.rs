@@ -2,6 +2,7 @@
 //! trail or the other cycle ends your round; the last one moving takes it, and first to WIN_ROUNDS takes the
 //! match. Pure and deterministic: the panel owns the clock, keys and drawing, and feeds rand in for the computer.
 
+pub mod arena;
 pub mod net;
 pub mod session;
 
