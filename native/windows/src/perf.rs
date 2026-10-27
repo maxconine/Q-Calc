@@ -273,8 +273,96 @@ pub fn cmd(cmd: &str) -> Option<serde_json::Value> {
     match cmd {
         #[cfg(feature = "perf")]
         "vm" => Some(vm()),
+        #[cfg(feature = "perf")]
+        "threads" => Some(threads()),
         _ => None,
     }
+}
+
+/// The process's threads by name (SetThreadDescription, which Rust's names use), unnamed ones counted.
+#[cfg(all(windows, feature = "perf"))]
+fn threads() -> serde_json::Value {
+    use windows::Win32::Foundation::CloseHandle;
+    use windows::Win32::System::Diagnostics::ToolHelp::{
+        CreateToolhelp32Snapshot, TH32CS_SNAPTHREAD, THREADENTRY32, Thread32First, Thread32Next,
+    };
+    use windows::Win32::System::Threading::{
+        GetThreadDescription, OpenThread, THREAD_QUERY_INFORMATION,
+        THREAD_QUERY_LIMITED_INFORMATION,
+    };
+    #[link(name = "ntdll")]
+    unsafe extern "system" {
+        fn NtQueryInformationThread(
+            h: windows::Win32::Foundation::HANDLE,
+            class: u32,
+            info: *mut std::ffi::c_void,
+            len: u32,
+            ret: *mut u32,
+        ) -> i32;
+    }
+    /// The module a thread started in (ThreadQuerySetWin32StartAddress).
+    fn start_module(h: windows::Win32::Foundation::HANDLE) -> Option<String> {
+        use windows::Win32::System::LibraryLoader::{
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            GetModuleFileNameW, GetModuleHandleExW,
+        };
+        let mut addr = 0usize;
+        // SAFETY: out pointers are live locals; the module handle isn't kept
+        unsafe {
+            if NtQueryInformationThread(h, 9, (&mut addr as *mut usize).cast(), 8, std::ptr::null_mut()) != 0 {
+                return None;
+            }
+            let mut m = windows::Win32::Foundation::HMODULE::default();
+            GetModuleHandleExW(
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                windows::core::PCWSTR(addr as *const u16),
+                &mut m,
+            )
+            .ok()?;
+            let mut buf = [0u16; 260];
+            let n = GetModuleFileNameW(Some(m), &mut buf) as usize;
+            let path = String::from_utf16_lossy(&buf[..n]);
+            Some(path.rsplit('\\').next().unwrap_or("").to_string())
+        }
+    }
+    let pid = std::process::id();
+    let mut names: Vec<String> = Vec::new();
+    // SAFETY: a snapshot walked and closed here; each thread handle is closed after its query
+    unsafe {
+        let Ok(snap) = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) else {
+            return serde_json::json!({});
+        };
+        let mut e = THREADENTRY32 {
+            dwSize: std::mem::size_of::<THREADENTRY32>() as u32,
+            ..Default::default()
+        };
+        let mut ok = Thread32First(snap, &mut e).is_ok();
+        while ok {
+            if e.th32OwnerProcessID == pid {
+                let name = OpenThread(
+                    THREAD_QUERY_LIMITED_INFORMATION | THREAD_QUERY_INFORMATION,
+                    false,
+                    e.th32ThreadID,
+                )
+                .ok()
+                .and_then(|h| {
+                    let d = GetThreadDescription(h)
+                        .ok()
+                        .and_then(|p| p.to_string().ok())
+                        .filter(|d| !d.is_empty())
+                        .or_else(|| start_module(h).map(|m| format!("({m})")));
+                    let _ = CloseHandle(h);
+                    d
+                })
+                .unwrap_or_else(|| "(unnamed)".into());
+                names.push(name);
+            }
+            ok = Thread32Next(snap, &mut e).is_ok();
+        }
+        let _ = CloseHandle(snap);
+    }
+    names.sort();
+    serde_json::json!({ "count": names.len(), "names": names })
 }
 
 /// The address space, VMMap's way: committed memory by type, private regions by allocation base with what's
