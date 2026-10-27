@@ -446,6 +446,10 @@ private struct LobbyBody: View {
                 .padding(.vertical, 6)
                 .padding(.horizontal, GameMetrics.sp3)
                 .insetRing(colors.accent.mix(0.55, .clear), width: 1, radius: GameMetrics.radiusS)
+                // .lobby-rename aria-label="nickname"
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("nickname")
+                .accessibilityValue(draft)
                 PongNote("↵ keep · tab picks another · esc back")
             }
         case .game, .local:
@@ -487,6 +491,9 @@ private struct RoomList: View {
         .frame(width: 360)
         .frame(maxHeight: 5 * (GameMetrics.tapeRow + 2))
         .fixedSize(horizontal: false, vertical: rooms.count <= 5)
+        // role="listbox" aria-label="rooms"
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("rooms")
     }
 }
 
@@ -514,6 +521,9 @@ private struct RoomRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
+        // the page's option: the host, the game, and its lock's aria-label (locked / open), selected when picked
+        .accessibilityLabel("\(room.name), \(game), \(room.locked ? "locked" : "open")")
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 

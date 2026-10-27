@@ -167,6 +167,7 @@ relay.
 | Equal: daily (same answer as the web for each date) and practice, tiles, flip, shake, keypad marks, stats, share | ✅ | daily answers and practice deals match the TS |
 | 24 / countdown: deals, parser, live line, faint parens, clock bar, tiles, stats, large numbers in the lobby | ✅ | solutions and deals match the TS for the same seed |
 | Sound | ✅ | none of these six has any (only ember does) |
+| VoiceOver labels | 🟡 | the page's `aria-label`s, which the port had dropped: the room list is "rooms", each room reads host, game and "locked" / "open" (selected when picked), the code tiles read as "room code" and their digits, the rename box as "nickname" and its draft, the paused card as a "paused" modal. Built and run; SwiftUI's tree isn't readable from inside the app without an assistive client, so not listened to |
 | Reduce Motion | 🟡 | the page's `prefers-reduced-motion` rules, which the port had missed: no `.pong-wait` pulse, no `.lobby-caret` blink (it stays shown), no equal shake or flip, no crack shake, click or pop (`GameMotion.reduced`). Built; not seen with the setting on (it's a system setting this loop doesn't change) |
 
 ## Where the logic runs

@@ -313,6 +313,10 @@ private struct PausedCard: View {
             .background(colors.bg.color)
             .clipShape(RoundedRectangle(cornerRadius: GameMetrics.radius))
             .boxShadow(colors.cardShadow, radius: GameMetrics.radius)
+            // role="dialog" aria-label="paused"
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("paused")
+            .accessibilityAddTraits(.isModal)
         }
     }
 }

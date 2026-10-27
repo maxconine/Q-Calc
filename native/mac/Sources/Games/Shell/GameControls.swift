@@ -197,6 +197,10 @@ struct PongCode: View {
                     .insetRing(entry ? (caret == i ? colors.accent.mix(0.55, .clear) : colors.line) : .clear, width: 1, radius: GameMetrics.radiusS)
             }
         }
+        // .pong-code aria-label="room code", read as its digits rather than one tile at a time
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("room code")
+        .accessibilityValue(digits.filter { !$0.isEmpty }.joined(separator: " "))
     }
 }
 
