@@ -218,6 +218,23 @@ check("Task.cancel() stops the engine call", await task.value)
 // the engine still answers after cancelled jobs
 check("after cancelling", engine.live(request: request("2+2")).display, "4")
 
+// ---- the games: ember & frost, trails and the 420/67/69 gates ----
+
+let eggs = EggGate()
+check("420 fires once", eggs.settle(n: 420) == .smoke && eggs.settle(n: 420) == nil && eggs.settle(n: 69) == .fold)
+check("smoke has its puffs", smokePuffs().count == 22)
+let ember = EmberMatch.local(now: 0, progress: nil)
+check("ember has its levels", ember.levels().count >= 7)
+ember.play()
+var frameSeen: EmberFrame?
+for i in 1...30 { frameSeen = ember.tick(now: Double(i) * 1000 / 60) }
+check("ember plays", frameSeen?.screen ?? "", "play")
+check("ember draws a state", frameSeen?.stateJson?.contains("\"players\"") ?? false)
+check("ember's stage crosses as json", ember.stageJson(level: 0, stage: 0)?.contains("\"tiles\"") ?? false)
+check("the camera", emberCameraFor(stageW: 640, stageH: 360, ax: 40, ay: 300, bx: 560, by: 300, aspect: 16.0 / 9).map { String($0) }.joined(separator: " "), "0.0 0.0 640.0 360.0 1.0")
+let trails = TrailsMatch.local(vs: 3, now: 0, seed: 7)
+check("trails counts in", trails.tick(now: 0)?.banner ?? "", "3")
+
 // ---- per keystroke cost ----
 
 let start = Date()

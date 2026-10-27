@@ -442,7 +442,7 @@ struct EmberSelect: View {
                 .onChange(of: level) { l in withAnimation { proxy.scrollTo(l) } }
             }
             if cards.indices.contains(shown) { detail(shown, cards[shown]) }
-            let note = model.frame?.note.map { "\($0) · " } ?? ""
+            let note = (model.frame?.note ?? nil).map { "\($0) · " } ?? ""
             let you = model.frame?.me.map { $0 == 0 ? "you’re ember · " : "you’re frost · " } ?? ""
             PongNote("\(note)\(you)every level is open · arrows or WASD pick · ↵ play · M \(muted ? "unmute" : "mute") · \(gameFullscreenHint(false)) · esc back")
         }
