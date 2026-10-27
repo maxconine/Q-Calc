@@ -36,8 +36,10 @@ use crate::qlog;
 
 pub const STACK_BYTES: usize = 32 * 1024 * 1024;
 
-/// How long the bar stays hidden before the engine frees its compiled regexes (`release`).
-const RELEASE_AFTER: std::time::Duration = std::time::Duration::from_secs(5);
+/// How long the bar stays hidden before the engine frees its compiled regexes (`release`): at once (once the jobs
+/// waiting are done). A delay of 5 s, so a quick reopen kept them, left the e2e suite's reading 0.8 s after a hide
+/// 3.8 MB higher (PERFORMANCE.md); the warm-up after a showing goes behind keystrokes, so a reopen costs little.
+const RELEASE_AFTER: std::time::Duration = std::time::Duration::ZERO;
 
 /// What the UI thread runs with a result.
 pub type Done = Box<dyn FnOnce(&mut App) + Send>;
@@ -352,7 +354,7 @@ impl EngineThread {
 
     /// The bar hid: after RELEASE_AFTER with no showing, the engine's compiled regexes (~6-9 MB with their caches,
     /// PERFORMANCE.md) are freed on the engine thread between jobs, and the next showing's `warm_up` compiles the
-    /// keystroke path's again. A showing within that time keeps them.
+    /// keystroke path's again. A showing before the engine thread gets to it keeps them.
     ///
     /// On the UI thread, from the hide (app.rs `after_hide`), where no regex of the core's is in use: the UI
     /// thread's own compiled regexes go at once.
