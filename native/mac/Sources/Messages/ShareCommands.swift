@@ -124,6 +124,12 @@ extension BarModel {
             if !all.isEmpty { dragHint = nil; say(MessageFiles.shared.errorText("folder", who: who ?? "")) }
             return !all.isEmpty
         }
+        // a drop past what the relay takes in an hour goes not at all, rather than mostly failing one by one
+        if let tooMany = logic.string("lib/messaging", "dropCountText", [files.count]), !tooMany.isEmpty {
+            dragHint = nil
+            say(tooMany)
+            return true
+        }
         if let who {
             files.forEach { MessageFiles.shared.sendFile($0, to: who, done: say) }
             return true

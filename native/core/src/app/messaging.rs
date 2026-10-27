@@ -596,6 +596,19 @@ pub fn file_error_text(status: &str, who: &str) -> String {
     }
 }
 
+/// The most files one drop sends: the relay starts 20 uploads an hour per address (relay/src/files.js `CAPS`), so a
+/// bigger drop would mostly fail one by one with `that’s a lot of sending`.
+pub const DROP_MAX: u32 = 20;
+
+/// Why a drop of `count` files doesn't go (empty when it can): past `DROP_MAX`, nothing is sent.
+pub fn drop_count_text(count: u32) -> String {
+    if count > DROP_MAX {
+        format!("that’s {count} files · up to {DROP_MAX} at a time, or zip them into one")
+    } else {
+        String::new()
+    }
+}
+
 /// What the bar calls files dropped on it while the line asks for a name (`send a.pdf to <name>`): the one
 /// file's clean name, or how many there are.
 pub fn dropped_label(first: &str, count: u32) -> String {
@@ -1142,6 +1155,9 @@ pub fn drop_target(
     if found == Some(false) {
         return why("username not found".into());
     }
+    if count > DROP_MAX {
+        return why(drop_count_text(count));
+    }
     let what = if count > 1 {
         format!("{count} files ")
     } else {
@@ -1210,6 +1226,16 @@ mod tests {
         assert_eq!(
             thread_reply_prompt("max", false),
             "set your name to reply · ↵ opens settings"
+        );
+    }
+
+    #[test]
+    fn a_huge_drop_is_refused_whole() {
+        assert_eq!(drop_count_text(1), "");
+        assert_eq!(drop_count_text(DROP_MAX), "");
+        assert_eq!(
+            drop_count_text(21),
+            "that’s 21 files · up to 20 at a time, or zip them into one"
         );
     }
 

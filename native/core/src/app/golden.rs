@@ -290,6 +290,9 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             json!(msg::encrypted_len(n(0).unwrap_or(0.0).max(0.0) as u64))
         }
         ("lib/messaging", "cleanFilename") => json!(msg::clean_filename(&s(0))),
+        ("lib/messaging", "dropCountText") => {
+            json!(msg::drop_count_text(a(0).as_u64().unwrap_or(0) as u32))
+        }
         ("lib/messaging", "droppedLabel") => {
             json!(msg::dropped_label(&s(0), a(1).as_u64().unwrap_or(1) as u32))
         }
