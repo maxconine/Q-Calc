@@ -26,6 +26,11 @@ Measured on this machine (4K at 150%, release build): keystroke median 1.03 ms, 
 keystrokes over 10 inputs); warm launch to the first frame 41-49 ms (median 43); hidden after use 14.7 MB private
 working set, 0.4 MB after the trim (private bytes 17.7 MB); 0 ms CPU over 5 s idle, shown or hidden.
 
+With the sheets, messaging and the tour merged (same machine, shared with other builds, A/B against the build
+before): keystroke median 0.85 ms for a returning user (0.80 before); during the walkthrough's first opens 1.2 ms
+(0.82 before), all of it the first keystroke of a line, when the tour's line under the bar goes and the window
+shrinks; hidden after use 17.4-18.5 MB private working set (16.8 before), 0.4-2 MB after the trim.
+
 Rules that keep them: never evaluate on the UI thread; never block the UI thread on the engine; repaint only
 when the model changed; no timer while idle (one-shot timers only, an animation's timer stops with it); make
 COM objects and text layouts once and cache them (render.rs `Fonts`, input.rs `FieldView`'s layout cache).
@@ -44,9 +49,13 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `engine.rs` | the engine thread (32 MB stack) and the Typst thread, lanes, generations, `Done` closures, the history-context cache |
 | `model.rs` | `BarModel` (BarModel.swift port): the line, live answer, chaining, commit, tape selection, in-bar actions |
 | `input.rs` | `Field` (text, caret, selection, word moves, undo, paste, WM_CHAR surrogates), `FieldView` (drawing, scroll, hit test), `ime` |
-| `answer.rs` | the live answer view (and later: fit font, forms, closed forms, steady answer) |
-| `history.rs` | the tape view and its persistence (engine `load_history` / `save_history`) |
-| `keys.rs` | the in-bar keybind router (`settings.keybinds` over the Windows defaults) |
+| `answer.rs` | the live answer view: fit font, Tab's forms, closed forms, the steady answer, the copied flash |
+| `history.rs` | the tape view, its keys and clicks, and its persistence (engine `load_history` / `save_history`) |
+| `cheats.rs` | `?` / `help`: the cheat sheet where the tape is |
+| `line.rs` | the input line's side: decorations, squiggle, completion, the draft, the empty bar's rotating examples (and counting opens), the d/dt chips, the caret's blink |
+| `text_rules.rs` | typing rules: words to symbols, bracket pairing and wrapping, flattened pastes |
+| `drag.rs` | moving and widening the bar, remembered per monitor |
+| `keys.rs` | the in-bar keybind router (`settings.keybinds` over the Windows defaults); `close_front_sheet` for Ctrl+W |
 | `hotkey.rs` | the global shortcut: chord parsing, RegisterHotKey with retries, re-registration triggers, the "held by X" guess |
 | `autostart.rs` | the Run entry: only an installed build writes it, always pointing at itself with `--autostart` |
 | `store.rs` | settings.json (`Store`, the Tauri shape), `config_dir`, `Draft` |
@@ -55,19 +64,27 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `bench.rs` | the dev bench: spec, steps, stats, the named pipe, memory counters |
 | `log.rs` | the log file, ms since process creation, the panic hook |
 | `settings_window.rs` | the settings window (drawn with render.rs; made on first open, dropped on close); `set_messages_hook` for the Messages page |
-| `graph.rs`, `systems.rs`, `typst_row.rs`, `messaging.rs` | stubs: panels under the composer |
-| `sheets.rs` | stub: periodic table and identity sheets (their own windows) |
-| `effects.rs` | stub: the easter-egg effects |
-| `games/` | the native games in a window of their own (games/README.md): `open(kind)`, `command`/`hint` for the bar |
+| `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`) |
+| `systems.rs` | `sys2`…`sys5`: equation rows under the composer, solved live, saved as one row |
+| `typst_row.rs` | the typeset maths row under the composer |
+| `commands.rs` | the word commands that aren't maths (`periodic`, `idt …`, `constants`, `games` and a game's name, `message`, `tutorial`, `skip`, `hello`): their words in the answer slot, ↵ runs them, the games list above the bar |
+| `sheets.rs` | the periodic table and identity sheets, each a no-activate window beside the bar; `close_front` for Ctrl+W |
+| `messaging.rs` | messages through the relay: the `message` line, the cards under the bar, the name; registers settings' Messages page (`set_messages_hook`) |
+| `relay.rs` | the relay over WinHTTP: messaging's POSTs and inbox socket, and the games' sockets (`Socket::open_url`) |
+| `tour.rs` | onboarding and the walkthrough: the tour's line, its step example in the empty bar (in place of line.rs's), hints; `will_show` runs after line.rs counted the open |
+| `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf, clear) and their tips |
+| `later.rs` | keyed one-shot timers that run a closure on the UI thread |
+| `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
+| `games/` | the native games in a window of their own (games/README.md): `open(kind)`, `command`/`hint` for the bar; online play over relay.rs |
 | `update.rs` | self-update: `latest-native.json` on the GitHub release, minisign-verified with the Tauri updater's key, installed while away |
 | `rates.rs` | the ECB daily rates (the core's rules) on a background thread, into `rates.json` and the engine |
 | `analytics.rs` | the usage counts (the core's rules), `track(app, event)` |
 | `bg.rs` | background threads' way back to the UI thread (`post`), and `start` for the background jobs after the first frame |
-| `net.rs` | HTTPS over WinHTTP for the background jobs |
+| `net.rs` | HTTPS GETs over WinHTTP for the background jobs |
 | `migrate.rs` | the Tauri app's history out of its WebView2 LevelDB, once |
 | `installer/` | the NSIS installer (`qcalc.nsi`) and `build.ps1` (installer, signature, feed) |
 
-Each stub's doc comment names its Mac / Tauri spec and the hooks it should use.
+Each module's doc comment names its Mac / Tauri spec.
 
 ## Threading model
 
@@ -137,8 +154,5 @@ retries run out does the tray say which launcher likely holds the chord.
 
 ## Known gaps (next agents)
 
-Everything in the stubs; commands (`help`, `games`, `periodic`, `graph`, `sys`, `message`...); answer forms (Tab),
-closed forms, the steady answer, decorations and squiggles, completion ghost text; dragging / widening the bar
-(and remembering the spot: `store.positions` is read but not yet written); the draft across restarts (store.rs
-`Draft` is ready); migrating history out of the Tauri app's WebView2 localStorage; a blinking caret; Mica /
-acrylic backdrop; accessibility (UI Automation); the settings window.
+The games ember & frost and trails (win-games2; the games list says they aren't in yet); Mica / acrylic backdrop;
+accessibility (UI Automation).
