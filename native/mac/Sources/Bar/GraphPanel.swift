@@ -322,9 +322,13 @@ private struct PlotCanvas: NSViewRepresentable {
         /// The plot at `scale` pixels a point, in the view's appearance, y down.
         func image(scale: CGFloat) -> CGImage? {
             let w = Int((bounds.width * scale).rounded(.up)), h = Int((bounds.height * scale).rounded(.up))
-            guard let drawing, w > 0, h > 0, let space = CGColorSpace(name: CGColorSpace.sRGB),
+            // the screen's own pixel format and colour space (BGRA, premultiplied), so Core Animation shows the
+            // image as it is instead of keeping a converted copy beside it
+            guard let drawing, w > 0, h > 0,
+                  let space = window?.colorSpace?.cgColorSpace ?? CGColorSpace(name: CGColorSpace.sRGB),
                   let cg = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: space,
-                                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+                                     bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+            else { return nil }
             cg.translateBy(x: 0, y: CGFloat(h))
             cg.scaleBy(x: scale, y: -scale)
             NSGraphicsContext.saveGraphicsState()
