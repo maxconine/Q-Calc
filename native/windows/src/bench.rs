@@ -113,8 +113,9 @@ pub fn summary(ms: &[f64]) -> (f64, f64, f64) {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Wait {
     None,
-    /// the live answer for this text, painted
-    Answer(String),
+    /// the live answer for this text, painted; or (the input's rules turned it into symbols) for whatever the
+    /// keystroke made of the line before it (the second string)
+    Answer(String, String),
     /// a commit: the line no longer this text (or a hint showed)
     Commit(String),
 }
@@ -154,7 +155,10 @@ impl Run {
     /// After a paint: whether the awaited thing is on screen now (then the next step may go).
     pub fn painted(&mut self, model: &BarModel) -> bool {
         match &self.wait {
-            Wait::Answer(text) if model.field.text() == text && model.live_for == *text => {
+            Wait::Answer(text, before)
+                if model.live_for == model.field.text()
+                    && (model.field.text() == text || model.field.text() != before) =>
+            {
                 self.ms.push(self.t0.elapsed().as_secs_f64() * 1000.0);
                 self.idx.push(self.current_input);
                 self.wait = Wait::None;

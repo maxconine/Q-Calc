@@ -36,7 +36,7 @@ use windows::core::{BOOL, Result, w};
 use crate::input::FieldView;
 use crate::model::BarModel;
 use crate::place::{self, Area};
-use crate::render::{Canvas, Gfx, Rect, Surface, Theme, size, with_alpha};
+use crate::render::{Canvas, Gfx, Rect, Surface, Theme, size};
 use crate::{answer, history};
 
 /// Where things are, DIPs from the window's top-left.
@@ -52,6 +52,8 @@ pub struct BarLayout {
     pub answer: Rect,
     pub answer_text: String,
     pub hint: Option<Rect>,
+    /// the d/dt chips under a time derivative (line.rs)
+    pub letters: Option<Rect>,
 }
 
 /// A monitor: its store key (`\\.\DISPLAY1`, as Tauri named it), work area (physical px) and scale.
@@ -239,6 +241,12 @@ impl Bar {
             36.0,
         );
         let mut height = anchor + size::COMPOSER;
+        let lh = crate::line::letters_height(model);
+        let letters = (lh > 0.0).then(|| {
+            let r = Rect::new(size::GUTTER, height - 12.0, inner, lh);
+            height += lh;
+            r
+        });
         let hint = model.hint.as_ref().filter(|h| !h.is_empty()).map(|_| {
             // .composer-hint: 12 muted, tucked 12 up into the composer's bottom padding
             let r = Rect::new(size::GUTTER, height - 12.0, inner, 18.0);
@@ -255,6 +263,7 @@ impl Bar {
             answer,
             answer_text,
             hint,
+            letters,
         }
     }
 
@@ -266,32 +275,9 @@ impl Bar {
         self.surface.draw(gfx, theme, |c: &mut Canvas| {
             c.clear(theme.bg);
             history::paint(c, model, layout.tape_rows.clone());
-            let placeholder = "Calculate";
-            if model.chained && !model.field.text().is_empty() {
-                // .quick-chain: the faint `ans` a chained line continues from
-                if let Some(l) = c
-                    .gfx
-                    .layout("ans", &c.gfx.fonts.display, 0.0, layout.field.h)
-                {
-                    let (w, _) = crate::render::measure(&l);
-                    c.text_plain(
-                        &l,
-                        layout.field.x,
-                        layout.field.y,
-                        with_alpha(theme.muted, 0.75),
-                    );
-                    let f = Rect::new(
-                        layout.field.x + w + 5.0,
-                        layout.field.y,
-                        layout.field.w - w - 5.0,
-                        layout.field.h,
-                    );
-                    field_view.paint(c, &model.field, f, focused, placeholder);
-                } else {
-                    field_view.paint(c, &model.field, layout.field, focused, placeholder);
-                }
-            } else {
-                field_view.paint(c, &model.field, layout.field, focused, placeholder);
+            crate::line::paint_field(c, field_view, model, layout.field, layout.composer, focused);
+            if let Some(r) = layout.letters {
+                crate::line::paint_letters(c, model, r);
             }
             let stale = model.live_for != model.field.text();
             answer::paint(c, &layout.answer_text, layout.answer, stale);

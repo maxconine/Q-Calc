@@ -74,6 +74,8 @@ pub struct BarModel {
     changed: bool,
     /// the clipboard text an action wants written (app.rs writes it)
     pub to_clipboard: Option<String>,
+    /// the input line's decorations, completion, draft, examples, chips (line.rs)
+    pub line: crate::line::LineState,
 }
 
 impl BarModel {
@@ -93,6 +95,7 @@ impl BarModel {
             settings_dirty: false,
             changed: true,
             to_clipboard: None,
+            line: crate::line::LineState::default(),
         }
     }
 
@@ -125,6 +128,7 @@ impl BarModel {
                 .iter()
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect::<HashMap<_, _>>(),
+            time_varying: self.line.time_varying.clone(),
             ..EvalOptions::default()
         }
     }
@@ -157,6 +161,7 @@ impl BarModel {
             self.tape_open = false;
         }
         self.changed = true;
+        crate::line::text_changed(self);
         self.evaluate_live(engine);
     }
 
@@ -180,12 +185,18 @@ impl BarModel {
             let answer = cx.engine.live(LiveRequest {
                 text: typed.clone(),
                 options,
-                context,
+                context: context.clone(),
                 chained,
                 now_ms: now,
                 phrases: true,
             });
-            done(move |app| app.model.set_live(&typed, answer, chained))
+            let (deco, completion) = crate::line::decorate(&typed, &context, &answer);
+            done(move |app| {
+                app.model.set_live(&typed, answer, chained);
+                if app.model.field.text() == typed {
+                    crate::line::landed(&mut app.model, &typed, deco, completion);
+                }
+            })
         });
     }
 
@@ -202,6 +213,9 @@ impl BarModel {
 
     /// The answer as the slot shows it ("" for none).
     pub fn answer_text(&self) -> String {
+        if let Some(p) = &self.line.prefix_shown {
+            return p.clone();
+        }
         let Some(a) = &self.live else {
             return String::new();
         };
@@ -231,6 +245,9 @@ impl BarModel {
 
     /// Saves the line to the tape through `Engine::commit`; a blank line says why rather than saving nothing.
     pub fn commit(&mut self, engine: &EngineThread) {
+        if crate::line::before_enter(self, engine) {
+            return;
+        }
         let typed = self.field.text().to_string();
         if typed.trim().is_empty() {
             return;
@@ -239,6 +256,7 @@ impl BarModel {
         let now = now_ms();
         let view = self.view(now);
         let options = self.options();
+        let improper = self.live.as_ref().is_some_and(|a| a.improper);
         engine.submit(Lane::Commit, move |cx| {
             let context = cx.context(&rows, view);
             let chained = cx.engine.chains(typed.clone(), context.clone());
@@ -250,7 +268,12 @@ impl BarModel {
                 now_ms: now,
                 phrases: true,
             };
-            let result = cx.engine.commit(request, rows.rows.to_vec());
+            let result = cx.engine.commit(request.clone(), rows.rows.to_vec());
+            let (offer, span) = if result.saved {
+                (None, None)
+            } else {
+                crate::line::after_failed_commit(&cx.engine, &request, improper)
+            };
             done(move |app| {
                 let saved = result.saved;
                 if saved {
@@ -270,6 +293,7 @@ impl BarModel {
                         "nothing to save yet · finish the line, or esc to close".into()
                     }));
                     m.changed = true;
+                    crate::line::show_failed_commit(m, &typed, offer, span);
                 }
             })
         });
@@ -392,6 +416,9 @@ impl BarModel {
         if let Some(action) = self.keybinds.action(mods, vk) {
             return self.perform(action, engine);
         }
+        if let Some(outcome) = crate::line::key_down(self, vk, mods, engine) {
+            return outcome;
+        }
         let shift = mods.shift;
         match vk {
             ESC => {
@@ -437,7 +464,7 @@ impl BarModel {
             }
             0x56 if ctrl => {
                 if let Some(text) = clipboard() {
-                    self.field.paste(&text);
+                    crate::line::paste(self, &text);
                 }
             }
             0x5A if ctrl && shift => {
@@ -467,8 +494,7 @@ impl BarModel {
 
     /// Text from the IME or a paste.
     pub fn insert_text(&mut self, text: &str, engine: &EngineThread) {
-        self.field.insert(text);
-        self.field.break_run();
+        self.field.compose(text);
         self.text_changed(engine);
     }
 
