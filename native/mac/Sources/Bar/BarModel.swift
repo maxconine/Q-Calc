@@ -821,6 +821,8 @@ final class BarModel: ObservableObject {
     }
 
     func breakUndoRun() {
+        // breakRun leaves a state with no run as it is, so that one isn't sent over (each caret move asks)
+        if let state = undoState as? [String: Any], state["run"] == nil || state["run"] is NSNull { return }
         guard undoReady, let next = logic.call("lib/undo", "breakRun", [undoState]) else { return }
         undoState = next
     }
