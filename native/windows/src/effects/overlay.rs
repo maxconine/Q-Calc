@@ -1031,7 +1031,33 @@ fn run(spec: Spec, shared: &Shared) -> Result<()> {
     );
     drop(scene);
     drop(dib);
+    drop(factory);
+    give_back();
     Ok(())
+}
+
+/// Asks the heaps to decommit what the effect freed, so private bytes fall back too.
+fn give_back() {
+    use windows::Win32::System::Memory::{HeapOptimizeResources, HeapSetInformation};
+    /// HEAP_OPTIMIZE_RESOURCES_INFORMATION (heapapi.h), version 1
+    #[repr(C)]
+    struct Optimize {
+        version: u32,
+        flags: u32,
+    }
+    let info = Optimize {
+        version: 1,
+        flags: 0,
+    };
+    // SAFETY: a documented process-wide request with a live, correctly sized struct
+    let _ = unsafe {
+        HeapSetInformation(
+            None,
+            HeapOptimizeResources,
+            Some((&info as *const Optimize).cast()),
+            std::mem::size_of::<Optimize>(),
+        )
+    };
 }
 
 #[cfg(test)]
