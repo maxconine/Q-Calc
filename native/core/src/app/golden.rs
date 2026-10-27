@@ -241,6 +241,21 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
                 a(3).as_bool()
             ))
         }
+        // native only (no TS counterpart): the conversation commands and the message threads
+        ("lib/messaging", "parseMessagesCommand") => opt(msg::parse_messages_command(&s(0))),
+        ("lib/messaging", "messagesHint") => match msg::parse_messages_command(&s(0)) {
+            Some(cmd) => json!(msg::messages_hint(&cmd)),
+            None => Json::Null,
+        },
+        ("lib/messaging", "threadContacts") => {
+            let history: Vec<String> = of(&a(0)).unwrap_or_default();
+            json!(msg::thread_contacts(&history, &messaging(&a(1))))
+        }
+        ("lib/messaging", "messagesCompletion") => {
+            let contacts: Vec<String> = of(&a(1)).unwrap_or_default();
+            json!(msg::messages_completion(&s(0), &contacts))
+        }
+        ("lib/messaging", "threadEmptyText") => json!(msg::thread_empty_text(&s(0))),
         // ---- lib/history ----
         ("lib/history", "ellipsize") => json!(h::ellipsize(&s(0), n(1).unwrap_or(0.0) as i64)),
         ("lib/history", "isMatrixQuantity") => json!(h::is_matrix_quantity(a(0).as_str())),

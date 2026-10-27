@@ -297,10 +297,169 @@ pub fn parse_inbox_frame(data: &str) -> Option<InboxEvent> {
     }
 }
 
+/// A conversation command (native only): `messages` lists who you've talked with; `messages <name>`,
+/// `messages with <name>` and `open messages with <name>` open that thread.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+pub enum ThreadCommand {
+    List,
+    /// `to` as typed ("" while it's still to come), `name` cleaned ("" when it can't be a name).
+    Open { to: String, name: String },
+}
+
+/// The bar's conversation commands; anything after the name means it's not one.
+pub fn parse_messages_command(text: &str) -> Option<ThreadCommand> {
+    static LIST: Lazy = Lazy::new(|| js(r"^\s*(?:open\s+)?messages\s*$", "i"));
+    static OPEN: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(?:open\s+)?messages\s+(?:with(?:\s+|$))?(\S*)\s*$",
+            "i",
+        )
+    });
+    if jsre::test(&LIST, text) {
+        return Some(ThreadCommand::List);
+    }
+    let c = OPEN.captures(text).ok()??;
+    let to = jsre::group(&c, 1).to_string();
+    Some(ThreadCommand::Open {
+        name: clean_name(&Json::String(to.clone())),
+        to,
+    })
+}
+
+/// What the bar says while a conversation command is typed.
+pub fn messages_hint(cmd: &ThreadCommand) -> String {
+    match cmd {
+        ThreadCommand::List => "↵ your conversations".into(),
+        ThreadCommand::Open { to, .. } if to.is_empty() => "messages with <name>".into(),
+        ThreadCommand::Open { name, .. } if name.is_empty() => {
+            "a name is 2–20 letters, digits, - or _".into()
+        }
+        ThreadCommand::Open { name, .. } => format!("↵ opens messages with {name}"),
+    }
+}
+
+/// The names the conversation commands finish: who's in the history (latest first), then who you've sent to
+/// lately, then the rest of the accepted ones, each once.
+pub fn thread_contacts(history: &[String], m: &Messaging) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for n in history
+        .iter()
+        .map(|n| clean_name(&Json::String(n.clone())))
+        .chain(message_contacts(m))
+    {
+        if !n.is_empty() && !out.contains(&n) {
+            out.push(n);
+        }
+    }
+    out
+}
+
+/// Tab after `messages`, `messages with` or `open messages with`: the rest of a name from `contacts`, else the
+/// rest of `with` after a bare `messages`.
+pub fn messages_completion(text: &str, contacts: &[String]) -> String {
+    static TO: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(open\s+)?messages\s+(with\s+)?([a-z0-9_-]+)$",
+            "i",
+        )
+    });
+    let Some(c) = TO.captures(text).ok().flatten() else {
+        return String::new();
+    };
+    let typed = jsre::group(&c, 3);
+    let lower = typed.to_lowercase();
+    if let Some(n) = contacts
+        .iter()
+        .find(|n| jstr::len16(n) > jstr::len16(typed) && n.starts_with(&lower))
+    {
+        return jstr::skip16(n, jstr::len16(typed));
+    }
+    if jsre::group(&c, 2).is_empty() && "with".starts_with(&lower) && lower != "with" {
+        return format!("{} ", jstr::skip16("with", jstr::len16(typed)));
+    }
+    String::new()
+}
+
+/// What an empty thread says: nobody's name, or none of their messages yet.
+pub fn thread_empty_text(name: &str) -> String {
+    if name.is_empty() {
+        "no messages yet · message <name> <text> starts one".into()
+    } else {
+        format!("no messages with {name} yet")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn reads_the_conversation_commands() {
+        let open = |to: &str, name: &str| {
+            Some(ThreadCommand::Open {
+                to: to.into(),
+                name: name.into(),
+            })
+        };
+        assert_eq!(parse_messages_command("messages"), Some(ThreadCommand::List));
+        assert_eq!(
+            parse_messages_command("  Open Messages "),
+            Some(ThreadCommand::List)
+        );
+        assert_eq!(parse_messages_command("messages Max"), open("Max", "max"));
+        assert_eq!(
+            parse_messages_command("messages with max2"),
+            open("max2", "max2")
+        );
+        assert_eq!(
+            parse_messages_command("open messages with max"),
+            open("max", "max")
+        );
+        assert_eq!(parse_messages_command("open messages max"), open("max", "max"));
+        assert_eq!(parse_messages_command("messages with"), open("", ""));
+        assert_eq!(parse_messages_command("messages with "), open("", ""));
+        assert_eq!(parse_messages_command("messages x"), open("x", ""));
+        assert_eq!(parse_messages_command("messages max hi"), None);
+        assert_eq!(parse_messages_command("message max hi"), None);
+        assert_eq!(parse_messages_command("messagesmax"), None);
+        assert_eq!(parse_messages_command("open max"), None);
+        // `message with max` is still a message to someone called `with`
+        assert!(parse_message("message with max").is_some());
+        assert_eq!(parse_messages_command("message with max"), None);
+    }
+
+    #[test]
+    fn hints_and_empty_threads() {
+        let hint = |t: &str| messages_hint(&parse_messages_command(t).unwrap());
+        assert_eq!(hint("messages"), "↵ your conversations");
+        assert_eq!(hint("messages with"), "messages with <name>");
+        assert_eq!(hint("messages z"), "a name is 2–20 letters, digits, - or _");
+        assert_eq!(hint("messages with Max"), "↵ opens messages with max");
+        assert_eq!(thread_empty_text("max2"), "no messages with max2 yet");
+        assert!(thread_empty_text("").starts_with("no messages yet"));
+    }
+
+    #[test]
+    fn finishes_names_from_the_history_first() {
+        let m = Messaging {
+            recent: vec!["bob".into(), "zoe".into()],
+            accepted: vec!["bea".into(), "max".into()],
+            ..me()
+        };
+        let contacts = thread_contacts(&["Zed".into(), "bob".into(), "!".into()], &m);
+        assert_eq!(contacts, vec!["zed", "bob", "zoe", "bea", "max"]);
+        assert_eq!(messages_completion("messages z", &contacts), "ed");
+        assert_eq!(messages_completion("messages with b", &contacts), "ob");
+        assert_eq!(messages_completion("open messages with ma", &contacts), "x");
+        assert_eq!(messages_completion("messages B", &contacts), "ob");
+        assert_eq!(messages_completion("messages w", &contacts), "ith ");
+        assert_eq!(messages_completion("messages with", &contacts), "");
+        assert_eq!(messages_completion("messages max", &contacts), "");
+        assert_eq!(messages_completion("messages max ", &contacts), "");
+        assert_eq!(messages_completion("message b", &contacts), "");
+    }
 
     #[test]
     fn cleans_and_parses() {
