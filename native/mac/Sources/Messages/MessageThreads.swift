@@ -358,6 +358,14 @@ private struct ThreadView: View {
                     .onAppear { if let last = lines.last { proxy.scrollTo(last.id, anchor: .bottom) } }
                     .onChange(of: lines.last?.id) { id in
                         if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .bottom) } }
+                        // their new line lands here, not as a card, so VoiceOver hears it as it would a card
+                        if let last = lines.last, last.id == id, !last.mine {
+                            let kind = last.clip != nil ? "clip" : last.file != nil ? "file" : "text"
+                            if let said = model.logic.string("lib/messaging", "cardAnnouncement",
+                                                             [name, kind, last.file?.name ?? last.text]) {
+                                BarModel.announce(said)
+                            }
+                        }
                     }
                 }
                 .accessibilityElement(children: .contain)
