@@ -262,10 +262,13 @@ New in the bench:
 | crack's dial drawn by Core Graphics into one bitmap (`CGCanvas`, the plot's approach) | each press: 34-36 → 157-160 MB for 1-4 s before, flat at 29 MB after; steady 35 → 29 MB; the ready dial within 2/255 | kept |
 | connect 4's board through `CGCanvas` | starting a game: peak 161 → 32 MB, steady 39 → 31 MB; the board within 2/255 | kept |
 | ultimate's slate through `CGCanvas` | starting a game: peak 163 → 33 MB, steady 40 → 31 MB; the board differs only where the chalk-in animation is caught at another moment (as two runs of the old build do) | kept |
+| the 420 smoke's puff images dropped when the effect ends (they were cached for good) | after one 420: 63 → 30 MB (idle before it 24); while it plays, unchanged | kept |
+| one Core Image context for all of the smoke's puffs | the smoke's peak 160 → 259 MB | reverted |
+| ember's level pictures dropped when the game closes (a static cache) | open the level picker, close the game: 47.5 → 37.2 MB | kept |
 
-Before and after: the build this night started from (`native` at 405b057) against the last commit. Two
-invocations each with `--runs 2`, interleaved, so each cell is the median over four sessions (launches: 6 cold
-and 10 warm).
+Before and after: the build this night started from (`native` at 405b057) against the last commit. Three
+invocations each with `--runs 2`, interleaved, so each cell spans six sessions (launches: 9 cold and 15
+warm); the last pair was run on the final commit and agrees with the first two.
 
 | | before | after |
 |---|---|---|
@@ -283,6 +286,7 @@ and 10 warm).
 | idle CPU | 0% | 0% |
 | playing pong vs the computer | 167-173 MB | 32 MB |
 | crack, connect 4, ultimate: peak while playing | 157-163 MB | 29-33 MB |
+| after one 420 smoke / after visiting ember's levels | 63 / 47.5 MB | 30 / 37.2 MB |
 | app on disk | 44.4 MB | 42.8 MB |
 
 The before build has no `field` mode, so its "typed into the field" row in the raw JSON is the set-text path again.
