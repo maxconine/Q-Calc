@@ -161,15 +161,17 @@ struct Cut {
 /// Top-level matches of `re` (a comma, or a word like ` for `).
 fn top_matches(s: &str, re: &Regex) -> Vec<Cut> {
     let mut out = Vec::new();
+    // the bracket depth before each match, counted on from the last one (matches come in order)
+    let (mut depth, mut counted) = (0i64, 0);
     for m in re.find_iter(s).flatten() {
-        let mut depth = 0i64;
-        for ch in s[..m.start()].chars() {
+        for ch in s[counted..m.start()].chars() {
             if "([{".contains(ch) {
                 depth += 1;
             } else if ")]}".contains(ch) {
                 depth -= 1;
             }
         }
+        counted = m.start();
         if depth == 0 {
             out.push(Cut {
                 at: m.start(),
