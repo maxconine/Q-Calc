@@ -90,11 +90,9 @@ struct MathPreview: View {
         let paths = typeset.paths
         let w = CGFloat(paths.widthPt), h = CGFloat(paths.heightPt)
         FitLayout(width: w, height: h) {
-            Canvas { ctx, size in
-                let s = size.width / max(w, 1)
-                ctx.scaleBy(x: s, y: s)
-                MathPreview.draw(paths, in: ctx)
-            }
+            // an AppKit view, not a Canvas: a Canvas renders into GPU surfaces that SwiftUI keeps per size, about
+            // 100 MB of them after a session of typing
+            PathsView(paths: paths, width: w)
         }
         .opacity(typeset.stale ? 0.4 : 1)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: typeset.stale)
@@ -141,6 +139,77 @@ struct MathPreview: View {
             }
         }
         return p
+    }
+
+    /// The page's paths drawn at 1 pt a point, scaled to the view's width.
+    private struct PathsView: NSViewRepresentable {
+        let paths: TypstPaths
+        let width: CGFloat
+
+        func makeNSView(context: Context) -> PathsNSView { PathsNSView() }
+
+        func updateNSView(_ view: PathsNSView, context: Context) {
+            view.paths = paths
+            view.pageWidth = width
+            view.needsDisplay = true
+        }
+    }
+
+    final class PathsNSView: NSView {
+        var paths: TypstPaths?
+        var pageWidth: CGFloat = 1
+
+        override var isFlipped: Bool { true }
+        // the row isn't interactive (the panel still drags by its background)
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func draw(_ dirtyRect: NSRect) {
+            guard let paths, let cg = NSGraphicsContext.current?.cgContext else { return }
+            let s = bounds.width / max(pageWidth, 1)
+            cg.scaleBy(x: s, y: s)
+            MathPreview.draw(paths, in: cg)
+        }
+    }
+
+    /// `draw(_:in:)` for a GraphicsContext, on a CGContext: the same clips, paints, fills and strokes.
+    static func draw(_ paths: TypstPaths, in cg: CGContext) {
+        let clips = paths.clips.map { path($0.verbs, $0.points).cgPath }
+        for item in paths.paths {
+            cg.saveGState()
+            defer { cg.restoreGState() }
+            var chain: [Int] = []
+            var at = item.clip.map(Int.init)
+            while let c = at, clips.indices.contains(c), !chain.contains(c) {
+                chain.append(c)
+                at = paths.clips[c].parent.map(Int.init)
+            }
+            for c in chain.reversed() {
+                cg.addPath(clips[c])
+                cg.clip()
+            }
+            let color: CGColor
+            switch item.paint {
+            case .foreground: color = Theme.ink.cgColor
+            case .color(let c):
+                color = CGColor(srgbRed: CGFloat(c.r) / 255, green: CGFloat(c.g) / 255, blue: CGFloat(c.b) / 255, alpha: CGFloat(c.a) / 255)
+            }
+            cg.addPath(path(item.verbs, item.points).cgPath)
+            switch item.style {
+            case .fill(let evenOdd):
+                cg.setFillColor(color)
+                cg.fillPath(using: evenOdd ? .evenOdd : .winding)
+            case let .stroke(width, cap, join, miterLimit, dash, dashPhase):
+                cg.setStrokeColor(color)
+                cg.setLineWidth(CGFloat(width))
+                let lineCap: CGLineCap = switch cap { case .butt: .butt; case .round: .round; case .square: .square }
+                let lineJoin: CGLineJoin = switch join { case .miter: .miter; case .round: .round; case .bevel: .bevel }
+                cg.setLineCap(lineCap)
+                cg.setLineJoin(lineJoin)
+                cg.setMiterLimit(CGFloat(miterLimit))
+                if !dash.isEmpty { cg.setLineDash(phase: CGFloat(dashPhase), lengths: dash.map { CGFloat($0) }) }
+                cg.strokePath()
+            }
+        }
     }
 
     static func draw(_ paths: TypstPaths, in base: GraphicsContext) {

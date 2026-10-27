@@ -129,8 +129,31 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Chaining from `ans` | ✅ | `Engine.chains` |
 | Copy unitless by default; copy as Typst | ✅ | `copiedEquation` on copies from the field when “Copy Typst compatible” is on |
 | Degrees, 6 sig figs, rationalize by default; same UserDefaults keys | ✅ | |
-| Games in an on-demand web view | ✅ | `parity/game-lifecycle.sh`: WebContent 1 → 2 with pong open → 1 after closing |
+| Games in an on-demand web view | ✅ | only ember & frost and trails now (another package is porting them); `parity/game-lifecycle.sh` still checks the web view comes and goes |
 | 420 / 67 / 69 effects | 🟡 | click-through web view over the bar, torn down after 3.6 s; the effect pages reuse the components, not pixel-compared |
+
+## 10. Native games
+
+Six games run without a web view: their rules, computers and online sessions are the TS ported one-to-one to
+`native/core/src/games/` (with the TS tests ported beside them), drawn in SwiftUI (`Sources/Games/<Game>/`) inside the
+native shell (`Sources/Games/Shell/`, see its README). Checked in the dev build against the web bundle
+(`native/build/games-web/games.html`, the same CSS) side by side, dark theme; online against the web page over the real
+relay.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Shell: the 680 card at the window's top left, esc (full screen → lobby step → pause / "esc again to leave" → close), paused card, corner full-screen button, pause on focus loss | ✅ | `GameShellModel`, `escAction`/`pausedKey` from the core; esc, arm and leave checked in an online connect 4 |
+| Full screen as the big window (⌃F, f, the buttons), boards growing with `--game-h` | 🟡 | window zoom as before; pong court, connect 4 board and the crack dial take the larger size; not pictured |
+| Lobby: start / vs computer / vs a friend screens, host open or locked, join by list or code, rename, ⌫ back, codes, notes | ✅ | the core's `lobby_*` (lobby.ts and its tests); room list, open host and join seen against the web page |
+| Relay link: rooms socket, host/join, pings, seat kept through a dropped link, step away / come back, retries on wake | ✅ | the core's `RelayPeer` (peerOnline.ts and its tests) run over URLSessionWebSocketTask; native ↔ web connect 4 played both ways |
+| Saves (`qcalc-equal`, `qcalc-numbers`, `qcalc-crack`, `qcalc-c4-ghost`, `qcalc-host-locked`) and the nickname | ✅ | the same AppSettings store and strings the web page mirrored, so saves carry over |
+| Pong: court, paddles, serve, computer at three levels, online legs and clock, rematch | ✅ | the solo frame-for-frame digest of the TS test passes, so solo plays exactly as before; online simulation tests pass |
+| Connect 4: board, held disc slide, fall, preview (G), win line, computer, online, rematch | ✅ | |
+| Ultimate: chalk slate, marks, draw-in, open boards, trail, cursor, computer, online | ✅ | chalk paths equal the TS's to the character |
+| Crack: dial, needle, dot, pop, shake, click, best level | ✅ | |
+| Equal: daily (same answer as the web for each date) and practice, tiles, flip, shake, keypad marks, stats, share | ✅ | daily answers and practice deals match the TS |
+| 24 / countdown: deals, parser, live line, faint parens, clock bar, tiles, stats, large numbers in the lobby | ✅ | solutions and deals match the TS for the same seed |
+| Sound | ✅ | none of these six has any (only ember does) |
 
 ## Where the logic runs
 
@@ -142,4 +165,5 @@ Every rule above is the TS's own, ported to the Rust core and answered through `
 platform's: the install id's random bytes and the clock's zone offset for `localDay`.
 
 The only web code in the app is the games bundle (`games.html`, built alone by `games.vite.config.ts`), loaded in a
-web view only while a game or an effect is up.
+web view only while ember & frost, trails or an effect is up; the other six games are native (section 10). The bundle
+goes once those are ported too.

@@ -162,7 +162,11 @@ private struct Composer: View {
             .frame(width: geo.size.width, height: Theme.composerHeight)
         }
         .frame(height: Theme.composerHeight)
-        .overlay { EdgeTools(model: model, shown: hover || model.edgeFocus) }
+        .overlay {
+            EdgeTools(model: model, angleRad: model.angleRad, fractions: model.fractions, sigFigMode: model.sigFigMode,
+                      shown: hover || model.edgeFocus)
+                .equatable()
+        }
         .onHover { hover = $0 }
     }
 
@@ -465,10 +469,18 @@ private struct AnswerButton: View {
 
 // MARK: - edge tools (EdgeTools.tsx): settings top left, deg · a/b · sf top right, clear bottom right; shown on hover
 
-private struct EdgeTools: View {
-    @ObservedObject var model: BarModel
+/// Not observing the model: the tools redraw when a toggle or the shortcuts change, not on every keystroke.
+private struct EdgeTools: View, Equatable {
+    let model: BarModel
+    let angleRad: Bool
+    let fractions: Bool
+    let sigFigMode: Bool
     @ObservedObject private var settings = AppSettings.shared
     let shown: Bool
+
+    static func == (a: Self, b: Self) -> Bool {
+        a.angleRad == b.angleRad && a.fractions == b.fractions && a.sigFigMode == b.sigFigMode && a.shown == b.shown
+    }
 
     var body: some View {
         ZStack {
@@ -480,14 +492,14 @@ private struct EdgeTools: View {
             .padding(.leading, 6)
 
             HStack(spacing: 0) {
-                EdgeTool(label: model.angleRad ? "Radians" : "Degrees",
-                         tip: tip(model.angleRad ? "Radians · click for degrees" : "Degrees · click for radians", "angle"),
+                EdgeTool(label: angleRad ? "Radians" : "Degrees",
+                         tip: tip(angleRad ? "Radians · click for degrees" : "Degrees · click for radians", "angle"),
                          tipAbove: false, active: true, action: { model.toggleAngle() }) {
-                    Text(model.angleRad ? "rad" : "deg")
+                    Text(angleRad ? "rad" : "deg")
                 }
-                EdgeTool(label: "Fraction results \(model.fractions ? "on" : "off")",
-                         tip: tip("Answers as fractions: \(model.fractions ? "on" : "off")", "fraction"),
-                         tipAbove: false, active: model.fractions, action: { model.toggleFractions() }) {
+                EdgeTool(label: "Fraction results \(fractions ? "on" : "off")",
+                         tip: tip("Answers as fractions: \(fractions ? "on" : "off")", "fraction"),
+                         tipAbove: false, active: fractions, action: { model.toggleFractions() }) {
                     // .edge-frac-mark: a over b, 6.5 pt, with a 7 pt bar
                     VStack(spacing: 0.5) {
                         Text("a")
@@ -497,9 +509,9 @@ private struct EdgeTools: View {
                     .font(.system(size: 6.5, weight: .semibold))
                     .padding(.vertical, -2)
                 }
-                EdgeTool(label: "Significant figures from input \(model.sigFigMode ? "on" : "off")",
-                         tip: tip("Sig figs from what you type: \(model.sigFigMode ? "on" : "off")", "sigFigs"),
-                         tipAbove: false, active: model.sigFigMode, action: { model.toggleSigFigMode() }) {
+                EdgeTool(label: "Significant figures from input \(sigFigMode ? "on" : "off")",
+                         tip: tip("Sig figs from what you type: \(sigFigMode ? "on" : "off")", "sigFigs"),
+                         tipAbove: false, active: sigFigMode, action: { model.toggleSigFigMode() }) {
                     Text("sf")
                 }
             }
@@ -585,7 +597,10 @@ private struct HistoryTape: View {
             ScrollView(.vertical, showsIndicators: model.visibleRange.count > Theme.tapeVisible) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.visibleRange), id: \.self) { i in
-                        HistoryRowView(model: model, index: i, row: model.rows[i]).id(i)
+                        HistoryRowView(model: model, index: i, row: model.rows[i], selected: model.selected == i,
+                                       picked: model.selected == i ? model.pick : nil)
+                            .equatable()
+                            .id(i)
                     }
                 }
             }
@@ -601,16 +616,20 @@ private struct HistoryTape: View {
     }
 }
 
-private struct HistoryRowView: View {
-    @ObservedObject var model: BarModel
+/// Not observing the model: a row redraws only when what it shows changes (`.equatable()`), not on every keystroke.
+private struct HistoryRowView: View, Equatable {
+    let model: BarModel
     let index: Int
     let row: HistoryRow
+    let selected: Bool
+    // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
+    let picked: Int?
     @State private var hover = false
     @State private var exprHover = false
 
-    private var selected: Bool { model.selected == index }
-    // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
-    private var picked: Int? { selected ? model.pick : nil }
+    static func == (a: Self, b: Self) -> Bool {
+        a.index == b.index && a.row == b.row && a.selected == b.selected && a.picked == b.picked
+    }
 
     var body: some View {
         // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners

@@ -245,6 +245,38 @@ for ch in "sqrt(2)*(3+4)/7-1.5^2" {
 }
 print(String(format: "21 keystrokes through Engine.live in %.2f ms", Date().timeIntervalSince(start) * 1000))
 
+// ---- WP-GAMES: the game shell and the six native games ----
+
+let ctx = LobbyContext(online: true, codeOnly: false, codeLength: 6, solo: 3, together: 0, peerWord: "computer")
+let start1 = lobbyKey(state: lobbyHome(screen: .start, note: nil), key: "1", ctx: ctx, lockedPref: false, name: "teal otter")
+check("lobby: 1 is vs computer", String(describing: start1.state), String(describing: lobbyHome(screen: .solo, note: nil)))
+check("esc pauses a local game", String(describing: gameEscAction(mode: .local, fullscreen: false, paused: false, armedAt: nil, idle: false, now: 0)), "pause")
+check("clean nickname", cleanNickname(raw: "  teal   otter "), "teal otter")
+let gclock = GameClock()
+gclock.pause(mono: 1000)
+check("the game clock stands still while paused", gclock.now(mono: 6000) == 1000)
+let relay = RelayPeer(base: "wss://relay.test/")
+relay.host(game: "pong", name: "teal otter", locked: true, now: 0)
+if case let .open(_, url)? = relay.takeCommands().first {
+    check("relay host url", url, "wss://relay.test/host/pong?name=teal+otter&locked=1&resume=1")
+} else {
+    check("relay host opens a socket", false)
+}
+let c4 = Connect4Game(role: .host, now: 0, solo: .easy)
+check("connect 4 solo drop", c4.play(col: 3, now: 10))
+check("connect 4 computer answers", c4.tick(now: 600).moves == 2)
+let ut = UltimateGame(role: .host, now: 0, solo: .normal)
+check("ultimate solo move", ut.play(cell: 40, now: 0))
+check("chalk line as the page drew it", utChalkLine(ax: 0, ay: 0, bx: 100, by: 0, seed: 1, amp: 1.1), "M-0.7 0.5C33.3 -0.2 66.7 1.1 101.1 0.2")
+let pongGame = PongGame(role: .host, now: 0, solo: .hard)
+check("pong solo starts", pongGame.tick(now: 16).started)
+let dial = crackStart(level: 3, now: 0, angle: 0, dir: 1)
+check("crack waits for a press", crackPress(state: dial, now: 0).event == .start)
+check("equal's daily", equalDailyAnswer(date: "2026-10-09"), "9/3+8=11")
+check("equal guess problem", equalGuessProblem(guess: "12+35=48") ?? "", "that doesn’t add up")
+check("24 checks", numbersSolves24(text: "(7 - 8/8) * 4", nums: [4, 7, 8, 8]))
+check("countdown points", String(numbersPoints(target: 500, value: 495)), "7")
+
 if failures > 0 {
     print("\(failures) failed")
     exit(1)

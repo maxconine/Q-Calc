@@ -50,7 +50,9 @@ struct Pos {
 }
 
 fn three_of(marks: &[i8], base: usize, who: i8) -> bool {
-    LINES.iter().any(|[a, b, c]| marks[base + a] == who && marks[base + b] == who && marks[base + c] == who)
+    LINES
+        .iter()
+        .any(|[a, b, c]| marks[base + a] == who && marks[base + b] == who && marks[base + c] == who)
 }
 
 impl Pos {
@@ -69,7 +71,13 @@ impl Pos {
             };
         }
         let result = s.winner.map_or(if s.draw { 3 } else { 0 }, side);
-        Pos { cells, boards, turn: if s.turn == me { 1 } else { 2 }, forced: s.forced.map_or(-1, |f| f as i32), result }
+        Pos {
+            cells,
+            boards,
+            turn: if s.turn == me { 1 } else { 2 },
+            forced: s.forced.map_or(-1, |f| f as i32),
+            result,
+        }
     }
 
     fn moves(&self, out: &mut Vec<usize>) {
@@ -108,7 +116,11 @@ impl Pos {
             return;
         }
         let next = cell % SIZE;
-        self.forced = if self.boards[next] != 0 { -1 } else { next as i32 };
+        self.forced = if self.boards[next] != 0 {
+            -1
+        } else {
+            next as i32
+        };
         self.turn = 3 - who;
     }
 }
@@ -127,7 +139,15 @@ struct Node {
 fn node(mv: usize, parent: Option<usize>, by: i8, pos: &Pos) -> Node {
     let mut untried = vec![];
     pos.moves(&mut untried);
-    Node { mv, parent, by, kids: vec![], untried, wins: 0.0, visits: 0.0 }
+    Node {
+        mv,
+        parent,
+        by,
+        kids: vec![],
+        untried,
+        wins: 0.0,
+        visits: 0.0,
+    }
 }
 
 fn pick(rand: Rand, n: usize) -> usize {
@@ -156,7 +176,13 @@ fn winning_cell(pos: &Pos) -> Option<usize> {
 }
 
 /// The cell the computer takes, playing me; None when it isn't its turn or there's nothing to take.
-pub fn bot_cell(s: &UtState, me: Side, skill: UtSkill, rand: Rand, clock: &mut dyn FnMut() -> f64) -> Option<usize> {
+pub fn bot_cell(
+    s: &UtState,
+    me: Side,
+    skill: UtSkill,
+    rand: Rand,
+    clock: &mut dyn FnMut() -> f64,
+) -> Option<usize> {
     let legal = legal_cells(s);
     if is_over(s) || s.turn != me || legal.is_empty() {
         return None;
@@ -270,21 +296,42 @@ mod tests {
         s.turn = Side::Guest;
         s.forced = Some(2);
         for skill in [UtSkill::Normal, UtSkill::Hard] {
-            assert_eq!(bot_cell(&s, Side::Guest, skill, &mut seeded(1), &mut fast()), Some(cell_in(2, 2)));
+            assert_eq!(
+                bot_cell(&s, Side::Guest, skill, &mut seeded(1), &mut fast()),
+                Some(cell_in(2, 2))
+            );
         }
     }
 
     #[test]
     fn moves_on_its_turn_to_legal_cells() {
         let s = play(&new_game(Side::Host), cell_in(4, 4) as f64, Side::Host).unwrap();
-        assert_eq!(bot_cell(&s, Side::Host, UtSkill::Hard, &mut seeded(2), &mut fast()), None);
-        let c = bot_cell(&s, Side::Guest, UtSkill::Normal, &mut seeded(3), &mut fast()).unwrap();
+        assert_eq!(
+            bot_cell(&s, Side::Host, UtSkill::Hard, &mut seeded(2), &mut fast()),
+            None
+        );
+        let c = bot_cell(
+            &s,
+            Side::Guest,
+            UtSkill::Normal,
+            &mut seeded(3),
+            &mut fast(),
+        )
+        .unwrap();
         assert!(legal_cells(&s).contains(&c));
         let t0 = std::time::Instant::now();
-        bot_cell(&new_game(Side::Host), Side::Host, UtSkill::Normal, &mut seeded(4), &mut || 0.0);
+        bot_cell(
+            &new_game(Side::Host),
+            Side::Host,
+            UtSkill::Normal,
+            &mut seeded(4),
+            &mut || 0.0,
+        );
         assert!(t0.elapsed().as_secs_f64() < 2.0);
         let s = new_game(Side::Guest);
-        assert!(legal_cells(&s).contains(&bot_cell(&s, Side::Guest, UtSkill::Easy, &mut seeded(7), &mut fast()).unwrap()));
+        assert!(legal_cells(&s).contains(
+            &bot_cell(&s, Side::Guest, UtSkill::Easy, &mut seeded(7), &mut fast()).unwrap()
+        ));
     }
 
     #[test]

@@ -73,10 +73,18 @@ pub struct PongState {
 
 // Math.min / Math.max: NaN wins
 pub(crate) fn jmin(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() { f64::NAN } else { a.min(b) }
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.min(b)
+    }
 }
 pub(crate) fn jmax(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) }
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.max(b)
+    }
 }
 fn clamp(v: f64, lo: f64, hi: f64) -> f64 {
     jmin(hi, jmax(lo, v))
@@ -101,7 +109,12 @@ pub fn move_paddle(y: f64, dir: f64, dt: f64) -> f64 {
 }
 
 pub fn centre_ball() -> Ball {
-    Ball { x: COURT_W / 2.0, y: COURT_H / 2.0, vx: 0.0, vy: 0.0 }
+    Ball {
+        x: COURT_W / 2.0,
+        y: COURT_H / 2.0,
+        vx: 0.0,
+        vy: 0.0,
+    }
 }
 
 pub fn new_game(serve_dir: f64) -> PongState {
@@ -119,7 +132,12 @@ pub fn new_game(serve_dir: f64) -> PongState {
 /// rand in [0, 1) picks the serve angle.
 pub fn serve(dir: f64, rand: Rand) -> Ball {
     let angle = (rand() * 2.0 - 1.0) * MAX_SERVE_ANGLE;
-    Ball { x: COURT_W / 2.0, y: COURT_H / 2.0, vx: libm::cos(angle) * SERVE_SPEED * dir, vy: libm::sin(angle) * SERVE_SPEED }
+    Ball {
+        x: COURT_W / 2.0,
+        y: COURT_H / 2.0,
+        vx: libm::cos(angle) * SERVE_SPEED * dir,
+        vy: libm::sin(angle) * SERVE_SPEED,
+    }
 }
 
 /// The return angle follows where the ball met the paddle: centre sends it flat, the edges steep.
@@ -128,7 +146,11 @@ pub fn bounce_off(ball: Ball, paddle_y: f64, dir: f64) -> Ball {
     let offset = clamp((ball.y - paddle_y) / reach, -1.0, 1.0);
     let speed = jmin(MAX_SPEED, js_hypot(ball.vx, ball.vy) * SPEED_UP);
     let angle = offset * MAX_BOUNCE;
-    Ball { vx: libm::cos(angle) * speed * dir, vy: libm::sin(angle) * speed, ..ball }
+    Ball {
+        vx: libm::cos(angle) * speed * dir,
+        vy: libm::sin(angle) * speed,
+        ..ball
+    }
 }
 
 pub fn overlaps_paddle(y: f64, paddle_y: f64) -> bool {
@@ -145,10 +167,20 @@ pub fn step(s: PongState, dt: f64, rand: Rand) -> PongState {
         if serve_in > 0.0 {
             return PongState { serve_in, ..s };
         }
-        return PongState { phase: Phase::Play, serve_in: 0.0, ball: serve(s.serve_dir, rand), ..s };
+        return PongState {
+            phase: Phase::Play,
+            serve_in: 0.0,
+            ball: serve(s.serve_dir, rand),
+            ..s
+        };
     }
     let half = BALL_SIZE / 2.0;
-    let Ball { mut x, mut y, vx, mut vy } = s.ball;
+    let Ball {
+        mut x,
+        mut y,
+        vx,
+        mut vy,
+    } = s.ball;
     let px = x;
     x += vx * dt;
     y += vy * dt;
@@ -163,10 +195,32 @@ pub fn step(s: PongState, dt: f64, rand: Rand) -> PongState {
     let left_face = PADDLE_INSET + PADDLE_W;
     let right_face = COURT_W - PADDLE_INSET - PADDLE_W;
     // only the face that faces the court, and only as the ball crosses it
-    if vx < 0.0 && px - half >= left_face && x - half < left_face && overlaps_paddle(y, s.paddles[0]) {
-        ball = bounce_off(Ball { x: left_face + half, ..ball }, s.paddles[0], 1.0);
-    } else if vx > 0.0 && px + half <= right_face && x + half > right_face && overlaps_paddle(y, s.paddles[1]) {
-        ball = bounce_off(Ball { x: right_face - half, ..ball }, s.paddles[1], -1.0);
+    if vx < 0.0
+        && px - half >= left_face
+        && x - half < left_face
+        && overlaps_paddle(y, s.paddles[0])
+    {
+        ball = bounce_off(
+            Ball {
+                x: left_face + half,
+                ..ball
+            },
+            s.paddles[0],
+            1.0,
+        );
+    } else if vx > 0.0
+        && px + half <= right_face
+        && x + half > right_face
+        && overlaps_paddle(y, s.paddles[1])
+    {
+        ball = bounce_off(
+            Ball {
+                x: right_face - half,
+                ..ball
+            },
+            s.paddles[1],
+            -1.0,
+        );
     }
     if ball.x + half < 0.0 {
         return point(s, Side::Guest);
@@ -178,7 +232,11 @@ pub fn step(s: PongState, dt: f64, rand: Rand) -> PongState {
 }
 
 fn point(s: PongState, scorer: Side) -> PongState {
-    let score = if scorer == Side::Host { [s.score[0] + 1, s.score[1]] } else { [s.score[0], s.score[1] + 1] };
+    let score = if scorer == Side::Host {
+        [s.score[0] + 1, s.score[1]]
+    } else {
+        [s.score[0], s.score[1] + 1]
+    };
     let won = score[0] >= WIN_SCORE || score[1] >= WIN_SCORE;
     PongState {
         score,
@@ -216,7 +274,14 @@ pub struct Snapshot {
 }
 
 pub fn snapshot_of(s: &PongState, at: f64) -> Snapshot {
-    Snapshot { at, ball: s.ball, paddles: s.paddles, score: s.score, phase: s.phase, winner: s.winner }
+    Snapshot {
+        at,
+        ball: s.ball,
+        paddles: s.paddles,
+        score: s.score,
+        phase: s.phase,
+        winner: s.winner,
+    }
 }
 
 // ---- online play. each side judges its own paddle: while the ball heads toward a side, that side alone decides
@@ -284,7 +349,12 @@ pub fn fly(b: Ball, s: f64) -> Ball {
     let span = COURT_H - 2.0 * half;
     let m = (((b.y - half + b.vy * s) % (2.0 * span)) + 2.0 * span) % (2.0 * span);
     let down = m <= span;
-    Ball { x: b.x + b.vx * s, y: half + if down { m } else { 2.0 * span - m }, vx: b.vx, vy: if down { b.vy } else { -b.vy } }
+    Ball {
+        x: b.x + b.vx * s,
+        y: half + if down { m } else { 2.0 * span - m },
+        vx: b.vx,
+        vy: if down { b.vy } else { -b.vy },
+    }
 }
 
 /// Seconds until the ball's centre reaches x; 0 if it's already there or past.
@@ -309,11 +379,28 @@ pub struct Stamp {
 #[derive(Clone, Debug, PartialEq)]
 pub enum PongMsg {
     /// ok: the sender has already heard the other side's hi. g: sent as `pong`.
-    Hi { v: f64, g: bool, ok: bool, stamp: Stamp },
+    Hi {
+        v: f64,
+        g: bool,
+        ok: bool,
+        stamp: Stamp,
+    },
     /// A paddle at shared time at and the way it's going; game and n: the newest leg the sender has.
-    P { at: f64, y: f64, d: f64, game: u64, n: u64, stamp: Stamp },
-    L { leg: Leg, stamp: Stamp },
-    Again { stamp: Stamp },
+    P {
+        at: f64,
+        y: f64,
+        d: f64,
+        game: u64,
+        n: u64,
+        stamp: Stamp,
+    },
+    L {
+        leg: Leg,
+        stamp: Stamp,
+    },
+    Again {
+        stamp: Stamp,
+    },
     Bye,
 }
 
@@ -339,7 +426,12 @@ fn stamp_out(s: &Stamp, f: &mut Vec<(&'static str, Out)>) {
 pub fn wire_leg(l: &Leg) -> Leg {
     Leg {
         at: round1(l.at),
-        ball: Ball { x: round1(l.ball.x), y: round1(l.ball.y), vx: round1(l.ball.vx), vy: round1(l.ball.vy) },
+        ball: Ball {
+            x: round1(l.ball.x),
+            y: round1(l.ball.y),
+            vx: round1(l.ball.vx),
+            vy: round1(l.ball.vy),
+        },
         ..*l
     }
 }
@@ -348,16 +440,46 @@ pub fn encode_pong(msg: &PongMsg) -> String {
     let t = |s: &str| ("t", Out::S(s.into()));
     let mut f: Vec<(&str, Out)> = vec![];
     match msg {
-        PongMsg::P { at, y, d, game, n, stamp } => {
-            f.extend([t("p"), ("at", Out::N(round1(*at))), ("y", Out::N(round1(*y))), ("d", Out::N(*d)), ("r", Out::N(*game as f64)), ("n", Out::N(*n as f64))]);
+        PongMsg::P {
+            at,
+            y,
+            d,
+            game,
+            n,
+            stamp,
+        } => {
+            f.extend([
+                t("p"),
+                ("at", Out::N(round1(*at))),
+                ("y", Out::N(round1(*y))),
+                ("d", Out::N(*d)),
+                ("r", Out::N(*game as f64)),
+                ("n", Out::N(*n as f64)),
+            ]);
             stamp_out(stamp, &mut f);
         }
         PongMsg::L { leg, stamp } => {
             let l = wire_leg(leg);
             let k = KINDS.iter().position(|k| *k == l.kind).unwrap_or(0) as f64;
-            let b = Out::A(vec![Out::N(l.ball.x), Out::N(l.ball.y), Out::N(l.ball.vx), Out::N(l.ball.vy)]);
-            let s = Out::A(vec![Out::N(f64::from(l.score[0])), Out::N(f64::from(l.score[1]))]);
-            f.extend([t("l"), ("r", Out::N(l.game as f64)), ("n", Out::N(l.n as f64)), ("at", Out::N(l.at)), ("k", Out::N(k)), ("b", b), ("s", s)]);
+            let b = Out::A(vec![
+                Out::N(l.ball.x),
+                Out::N(l.ball.y),
+                Out::N(l.ball.vx),
+                Out::N(l.ball.vy),
+            ]);
+            let s = Out::A(vec![
+                Out::N(f64::from(l.score[0])),
+                Out::N(f64::from(l.score[1])),
+            ]);
+            f.extend([
+                t("l"),
+                ("r", Out::N(l.game as f64)),
+                ("n", Out::N(l.n as f64)),
+                ("at", Out::N(l.at)),
+                ("k", Out::N(k)),
+                ("b", b),
+                ("s", s),
+            ]);
             stamp_out(stamp, &mut f);
         }
         PongMsg::Hi { v, g, ok, stamp } => {
@@ -381,7 +503,9 @@ pub fn encode_pong(msg: &PongMsg) -> String {
 
 // Number.isInteger(v) && v >= 0 && v < 1e9
 fn pcount(v: Option<&Json>) -> Option<u64> {
-    finite(v).filter(|n| n.fract() == 0.0 && *n >= 0.0 && *n < 1e9).map(|n| n as u64)
+    finite(v)
+        .filter(|n| n.fract() == 0.0 && *n >= 0.0 && *n < 1e9)
+        .map(|n| n as u64)
 }
 
 fn numbers(v: Option<&Json>, n: usize) -> Option<Vec<f64>> {
@@ -389,11 +513,17 @@ fn numbers(v: Option<&Json>, n: usize) -> Option<Vec<f64>> {
     if a.len() != n {
         return None;
     }
-    a.iter().map(|x| x.as_f64().filter(|f| f.is_finite())).collect()
+    a.iter()
+        .map(|x| x.as_f64().filter(|f| f.is_finite()))
+        .collect()
 }
 
 fn read_stamp(o: &serde_json::Map<String, Json>) -> Stamp {
-    Stamp { c: finite(o.get("c")), e: finite(o.get("e")), h: finite(o.get("h")) }
+    Stamp {
+        c: finite(o.get("c")),
+        e: finite(o.get("e")),
+        h: finite(o.get("h")),
+    }
 }
 
 /// Anything malformed is None: this is text from another machine. Another game's hello comes back as Other.
@@ -404,14 +534,26 @@ pub fn decode_pong(raw: &str) -> Option<PongIn> {
         return Some(PongIn::Other(other.into()));
     }
     let msg = match o.get("t").and_then(Json::as_str)? {
-        "hi" => PongMsg::Hi { v: finite(o.get("v"))?, g: false, ok: o.get("ok") == Some(&Json::Bool(true)), stamp: read_stamp(o) },
+        "hi" => PongMsg::Hi {
+            v: finite(o.get("v"))?,
+            g: false,
+            ok: o.get("ok") == Some(&Json::Bool(true)),
+            stamp: read_stamp(o),
+        },
         "p" => {
             let at = finite(o.get("at"))?;
             let y = finite(o.get("y"))?;
             let d = finite(o.get("d")).filter(|d| *d == -1.0 || *d == 0.0 || *d == 1.0)?;
             let game = pcount(o.get("r"))?;
             let n = pcount(o.get("n"))?;
-            PongMsg::P { at, y: clamp_paddle(y), d, game, n, stamp: read_stamp(o) }
+            PongMsg::P {
+                at,
+                y: clamp_paddle(y),
+                d,
+                game,
+                n,
+                stamp: read_stamp(o),
+            }
         }
         "l" => {
             let game = pcount(o.get("r"))?;
@@ -420,7 +562,11 @@ pub fn decode_pong(raw: &str) -> Option<PongIn> {
             let b = numbers(o.get("b"), 4)?;
             let s = numbers(o.get("s"), 2)?;
             let k = finite(o.get("k"))?;
-            let kind = if k.fract() == 0.0 && (0.0..3.0).contains(&k) { KINDS[k as usize] } else { return None };
+            let kind = if k.fract() == 0.0 && (0.0..3.0).contains(&k) {
+                KINDS[k as usize]
+            } else {
+                return None;
+            };
             // a ball in flight has to be going somewhere, or nobody would ever judge it
             if kind != LegKind::Over && b[2].abs() < 1.0 {
                 return None;
@@ -432,10 +578,25 @@ pub fn decode_pong(raw: &str) -> Option<PongIn> {
                 vx: clamp(b[2], -MAX_SPEED, MAX_SPEED),
                 vy: clamp(b[3], -MAX_SPEED, MAX_SPEED),
             };
-            let score = [clamp(s[0].floor(), 0.0, 99.0) as u32, clamp(s[1].floor(), 0.0, 99.0) as u32];
-            PongMsg::L { leg: Leg { game, n, at, kind, ball, score }, stamp: read_stamp(o) }
+            let score = [
+                clamp(s[0].floor(), 0.0, 99.0) as u32,
+                clamp(s[1].floor(), 0.0, 99.0) as u32,
+            ];
+            PongMsg::L {
+                leg: Leg {
+                    game,
+                    n,
+                    at,
+                    kind,
+                    ball,
+                    score,
+                },
+                stamp: read_stamp(o),
+            }
         }
-        "again" => PongMsg::Again { stamp: read_stamp(o) },
+        "again" => PongMsg::Again {
+            stamp: read_stamp(o),
+        },
         "bye" => PongMsg::Bye,
         _ => return None,
     };
@@ -454,7 +615,10 @@ pub struct HostClock {
 
 impl Default for HostClock {
     fn default() -> Self {
-        HostClock { trips: vec![], rough: f64::NEG_INFINITY }
+        HostClock {
+            trips: vec![],
+            rough: f64::NEG_INFINITY,
+        }
     }
 }
 
@@ -462,9 +626,11 @@ impl HostClock {
     pub fn heard(&mut self, s: &Stamp, now: f64) {
         let Some(c) = s.c else { return };
         self.rough = jmax(self.rough, c - now);
-        let (Some(e), Some(h)) = (s.e, s.h) else { return };
+        let (Some(e), Some(h)) = (s.e, s.h) else {
+            return;
+        };
         let rtt = now - e - h;
-        if !(rtt >= 0.0 && rtt < 10_000.0) {
+        if !(0.0..10_000.0).contains(&rtt) {
             return;
         }
         self.trips.push((rtt, c + rtt / 2.0 - now));
@@ -484,7 +650,11 @@ impl HostClock {
         if let Some(b) = best {
             return b.1;
         }
-        if self.rough.is_finite() { self.rough } else { 0.0 }
+        if self.rough.is_finite() {
+            self.rough
+        } else {
+            0.0
+        }
     }
 }
 
@@ -501,7 +671,14 @@ pub struct FarPaddle {
 
 impl Default for FarPaddle {
     fn default() -> Self {
-        FarPaddle { y: COURT_H / 2.0, d: 0.0, at: 0.0, seen: f64::NEG_INFINITY, off: 0.0, off_at: 0.0 }
+        FarPaddle {
+            y: COURT_H / 2.0,
+            d: 0.0,
+            at: 0.0,
+            seen: f64::NEG_INFINITY,
+            off: 0.0,
+            off_at: 0.0,
+        }
     }
 }
 
@@ -587,15 +764,33 @@ pub fn landing_y(ball: &Ball, x: f64) -> f64 {
 
 /// One frame of the computer's paddle. it heads for where the ball will land once the ball is near enough, and
 /// drifts back to the middle while the ball goes the other way.
-pub fn bot_step(s: &PongState, y: f64, mind: BotMind, skill: Skill, dt: f64, rand: Rand) -> (f64, BotMind) {
+pub fn bot_step(
+    s: &PongState,
+    y: f64,
+    mind: BotMind,
+    skill: Skill,
+    dt: f64,
+    rand: Rand,
+) -> (f64, BotMind) {
     let (reach, speed, miss) = skill.bot();
     let coming = s.phase == Phase::Play && s.ball.vx > 0.0;
     // a new rally toward it: decide how well this one goes
     let pace = js_hypot(s.ball.vx, s.ball.vy) / SERVE_SPEED;
-    let next = if coming && !mind.coming { BotMind { aim: (rand() * 2.0 - 1.0) * miss * pace * PADDLE_H, coming } } else { BotMind { coming, ..mind } };
+    let next = if coming && !mind.coming {
+        BotMind {
+            aim: (rand() * 2.0 - 1.0) * miss * pace * PADDLE_H,
+            coming,
+        }
+    } else {
+        BotMind { coming, ..mind }
+    };
     let face = COURT_W - PADDLE_INSET - PADDLE_W;
     let seen = coming && s.ball.x >= face - reach * COURT_W;
-    let target = if seen { landing_y(&s.ball, face - BALL_SIZE / 2.0) + next.aim } else { COURT_H / 2.0 };
+    let target = if seen {
+        landing_y(&s.ball, face - BALL_SIZE / 2.0) + next.aim
+    } else {
+        COURT_H / 2.0
+    };
     let gap = target - y;
     // a dead zone, so it doesn't shiver once it's there
     if gap.abs() < 2.0 {
@@ -614,7 +809,11 @@ mod tests {
         || 0.5
     }
     fn playing(f: impl FnOnce(&mut PongState)) -> PongState {
-        let mut s = PongState { phase: Phase::Play, serve_in: 0.0, ..new_game(1.0) };
+        let mut s = PongState {
+            phase: Phase::Play,
+            serve_in: 0.0,
+            ..new_game(1.0)
+        };
         f(&mut s);
         s
     }
@@ -638,8 +837,16 @@ mod tests {
     fn paddles_and_serves() {
         assert_eq!(clamp_paddle(-50.0), PADDLE_H / 2.0);
         assert_eq!(clamp_paddle(COURT_H + 50.0), COURT_H - PADDLE_H / 2.0);
-        assert!(close(move_paddle(100.0, 1.0, 0.1), 100.0 + PADDLE_SPEED * 0.1, 2));
-        assert!(close(move_paddle(100.0, -3.0, 0.1), 100.0 - PADDLE_SPEED * 0.1, 2));
+        assert!(close(
+            move_paddle(100.0, 1.0, 0.1),
+            100.0 + PADDLE_SPEED * 0.1,
+            2
+        ));
+        assert!(close(
+            move_paddle(100.0, -3.0, 0.1),
+            100.0 - PADDLE_SPEED * 0.1,
+            2
+        ));
         assert_eq!(move_paddle(100.0, 0.0, 0.1), 100.0);
         let s = step(new_game(-1.0), SERVE_PAUSE_S / 2.0, &mut half());
         assert_eq!(s.phase, Phase::Serve);
@@ -653,9 +860,17 @@ mod tests {
 
     #[test]
     fn steps() {
-        let next = step(playing(|s| s.ball = ball(300.0, BALL_SIZE / 2.0 + 1.0, 0.0, -300.0)), STEP_S, &mut half());
+        let next = step(
+            playing(|s| s.ball = ball(300.0, BALL_SIZE / 2.0 + 1.0, 0.0, -300.0)),
+            STEP_S,
+            &mut half(),
+        );
         assert!(next.ball.vy > 0.0 && next.ball.y >= BALL_SIZE / 2.0);
-        let low = step(playing(|s| s.ball = ball(300.0, COURT_H - BALL_SIZE / 2.0 - 1.0, 0.0, 300.0)), STEP_S, &mut half());
+        let low = step(
+            playing(|s| s.ball = ball(300.0, COURT_H - BALL_SIZE / 2.0 - 1.0, 0.0, 300.0)),
+            STEP_S,
+            &mut half(),
+        );
         assert!(low.ball.vy < 0.0);
         let face = PADDLE_INSET + PADDLE_W;
         let s = playing(|s| {
@@ -663,18 +878,32 @@ mod tests {
             s.paddles = [130.0, 130.0];
         });
         let next = step(s, STEP_S, &mut half());
-        assert!(close(next.ball.vx, 400.0 * 1.06, 2) && close(next.ball.vy, 0.0, 2) && close(next.ball.x, face + BALL_SIZE / 2.0, 2));
+        assert!(
+            close(next.ball.vx, 400.0 * 1.06, 2)
+                && close(next.ball.vy, 0.0, 2)
+                && close(next.ball.x, face + BALL_SIZE / 2.0, 2)
+        );
         let rface = COURT_W - PADDLE_INSET - PADDLE_W;
-        let next = step(playing(|s| {
-            s.ball = ball(rface - BALL_SIZE / 2.0 - 1.0, 150.0, 400.0, 0.0);
-            s.paddles = [130.0, 130.0];
-        }), STEP_S, &mut half());
+        let next = step(
+            playing(|s| {
+                s.ball = ball(rface - BALL_SIZE / 2.0 - 1.0, 150.0, 400.0, 0.0);
+                s.paddles = [130.0, 130.0];
+            }),
+            STEP_S,
+            &mut half(),
+        );
         assert!(next.ball.vx < 0.0 && next.ball.vy > 0.0);
-        let s = step_for(playing(|s| {
-            s.ball = ball(60.0, 30.0, -500.0, 0.0);
-            s.paddles = [220.0, 130.0];
-        }), 0.5);
-        assert_eq!((s.score, s.phase, s.serve_dir), ([0, 1], Phase::Serve, -1.0));
+        let s = step_for(
+            playing(|s| {
+                s.ball = ball(60.0, 30.0, -500.0, 0.0);
+                s.paddles = [220.0, 130.0];
+            }),
+            0.5,
+        );
+        assert_eq!(
+            (s.score, s.phase, s.serve_dir),
+            ([0, 1], Phase::Serve, -1.0)
+        );
         assert_eq!((s.ball.x, s.ball.y), (COURT_W / 2.0, COURT_H / 2.0));
         let s = playing(|s| {
             s.ball = ball(PADDLE_INSET - 2.0, 130.0, 300.0, 0.0);
@@ -690,16 +919,24 @@ mod tests {
             assert!(step_for(s, 0.05).ball.vx > 0.0);
             x += 0.37;
         }
-        let s = step_for(playing(|s| {
-            s.score = [WIN_SCORE - 1, 3];
-            s.ball = ball(COURT_W - 20.0, 30.0, 600.0, 0.0);
-            s.paddles = [130.0, 220.0];
-        }), 0.2);
+        let s = step_for(
+            playing(|s| {
+                s.score = [WIN_SCORE - 1, 3];
+                s.ball = ball(COURT_W - 20.0, 30.0, 600.0, 0.0);
+                s.paddles = [130.0, 220.0];
+            }),
+            0.2,
+        );
         assert_eq!((s.phase, s.winner), (Phase::Over, Some(Side::Host)));
         assert_eq!(step_for(s, 1.0), s);
         let (_, carry) = advance(new_game(1.0), 0.0, STEP_S * 2.5, &mut half());
         assert!(close(carry, STEP_S * 0.5, 6));
-        let (long, _) = advance(playing(|s| s.ball = ball(320.0, 130.0, 100.0, 0.0)), 0.0, 10.0, &mut half());
+        let (long, _) = advance(
+            playing(|s| s.ball = ball(320.0, 130.0, 100.0, 0.0)),
+            0.0,
+            10.0,
+            &mut half(),
+        );
         assert!(close(long.ball.x, 320.0 + 100.0 * 0.25, 0));
         let b = bounce_off(ball(0.0, 200.0, -MAX_SPEED, 0.0), 100.0, 1.0);
         assert!(close(b.vy.atan2(b.vx), MAX_BOUNCE, 2) && close(b.vx.hypot(b.vy), MAX_SPEED, 2));
@@ -717,16 +954,53 @@ mod tests {
         }
         let b = fly(b0, 60.0 * STEP_S);
         assert!(close(b.x, s.ball.x, 6) && close(b.y, s.ball.y, 6) && b.vy == s.ball.vy);
-        assert!(close(seconds_to(&ball(100.0, 0.0, 200.0, 0.0), GUEST_FACE_X), (GUEST_FACE_X - 100.0) / 200.0, 6));
-        assert!(close(seconds_to(&ball(100.0, 0.0, -200.0, 0.0), HOST_FACE_X), (100.0 - HOST_FACE_X) / 200.0, 6));
+        assert!(close(
+            seconds_to(&ball(100.0, 0.0, 200.0, 0.0), GUEST_FACE_X),
+            (GUEST_FACE_X - 100.0) / 200.0,
+            6
+        ));
+        assert!(close(
+            seconds_to(&ball(100.0, 0.0, -200.0, 0.0), HOST_FACE_X),
+            (100.0 - HOST_FACE_X) / 200.0,
+            6
+        ));
         assert_eq!(seconds_to(&ball(10.0, 0.0, -200.0, 0.0), HOST_FACE_X), 0.0);
-        let leg = Leg { game: 2, n: 5, at: 1234.56, kind: LegKind::Play, ball: ball(100.123, 50.46, -300.04, 12.5), score: [3, 6] };
-        let msg = decode_pong(&encode_pong(&PongMsg::L { leg, stamp: Stamp { c: Some(99.99), ..Default::default() } }));
-        assert_eq!(msg, Some(PongIn::Msg(PongMsg::L { leg: wire_leg(&leg), stamp: Stamp { c: Some(100.0), ..Default::default() } })));
+        let leg = Leg {
+            game: 2,
+            n: 5,
+            at: 1234.56,
+            kind: LegKind::Play,
+            ball: ball(100.123, 50.46, -300.04, 12.5),
+            score: [3, 6],
+        };
+        let msg = decode_pong(&encode_pong(&PongMsg::L {
+            leg,
+            stamp: Stamp {
+                c: Some(99.99),
+                ..Default::default()
+            },
+        }));
+        assert_eq!(
+            msg,
+            Some(PongIn::Msg(PongMsg::L {
+                leg: wire_leg(&leg),
+                stamp: Stamp {
+                    c: Some(100.0),
+                    ..Default::default()
+                }
+            }))
+        );
         let w = wire_leg(&leg);
         assert_eq!((w.at, w.ball), (1234.6, ball(100.1, 50.5, -300.0, 12.5)));
         assert!(newer(&Leg { n: 6, ..leg }, Some(&leg)));
-        assert!(newer(&Leg { game: 3, n: 0, ..leg }, Some(&leg)));
+        assert!(newer(
+            &Leg {
+                game: 3,
+                n: 0,
+                ..leg
+            },
+            Some(&leg)
+        ));
         assert!(!newer(&leg, Some(&leg)));
         assert!(!newer(&Leg { n: 4, ..leg }, Some(&leg)));
         assert!(newer(&leg, None));
@@ -739,36 +1013,93 @@ mod tests {
     fn the_wire() {
         let st = |c, e, h| Stamp { c, e, h };
         for m in [
-            PongMsg::Hi { v: 2.0, g: false, ok: false, stamp: Stamp::default() },
-            PongMsg::Hi { v: 2.0, g: false, ok: true, stamp: st(Some(5.0), Some(1.5), Some(2.0)) },
-            PongMsg::Again { stamp: st(Some(7.0), None, None) },
+            PongMsg::Hi {
+                v: 2.0,
+                g: false,
+                ok: false,
+                stamp: Stamp::default(),
+            },
+            PongMsg::Hi {
+                v: 2.0,
+                g: false,
+                ok: true,
+                stamp: st(Some(5.0), Some(1.5), Some(2.0)),
+            },
+            PongMsg::Again {
+                stamp: st(Some(7.0), None, None),
+            },
             PongMsg::Bye,
-            PongMsg::P { at: 10.5, y: 120.0, d: -1.0, game: 1, n: 4, stamp: Stamp::default() },
+            PongMsg::P {
+                at: 10.5,
+                y: 120.0,
+                d: -1.0,
+                game: 1,
+                n: 4,
+                stamp: Stamp::default(),
+            },
         ] {
             assert_eq!(decode_pong(&encode_pong(&m)), Some(PongIn::Msg(m.clone())));
         }
         assert_eq!(
-            encode_pong(&PongMsg::Hi { v: 2.0, g: true, ok: true, stamp: st(Some(1000.04), Some(5.0), Some(2.25)) }),
+            encode_pong(&PongMsg::Hi {
+                v: 2.0,
+                g: true,
+                ok: true,
+                stamp: st(Some(1000.04), Some(5.0), Some(2.25))
+            }),
             r#"{"t":"hi","v":2,"g":"pong","ok":true,"c":1000,"e":5,"h":2.3}"#
         );
-        let Some(PongIn::Msg(PongMsg::P { y, .. })) = decode_pong(r#"{"t":"p","at":1,"y":99999,"d":0,"r":0,"n":0}"#) else { panic!() };
-        assert_eq!(y, COURT_H - PADDLE_H / 2.0);
-        let Some(PongIn::Msg(PongMsg::L { leg, .. })) = decode_pong(r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[9999,-5,1e300,-1e300],"s":[-3,400.7]}"#)
+        let Some(PongIn::Msg(PongMsg::P { y, .. })) =
+            decode_pong(r#"{"t":"p","at":1,"y":99999,"d":0,"r":0,"n":0}"#)
         else {
             panic!()
         };
-        assert_eq!((leg.ball, leg.score), (ball(COURT_W + BALL_SIZE, BALL_SIZE / 2.0, MAX_SPEED, -MAX_SPEED), [0, 99]));
-        assert_eq!(decode_pong(r#"{"t":"hi","v":1,"ok":"yes","c":"x"}"#), Some(PongIn::Msg(PongMsg::Hi { v: 1.0, g: false, ok: false, stamp: Stamp::default() })));
+        assert_eq!(y, COURT_H - PADDLE_H / 2.0);
+        let Some(PongIn::Msg(PongMsg::L { leg, .. })) = decode_pong(
+            r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[9999,-5,1e300,-1e300],"s":[-3,400.7]}"#,
+        ) else {
+            panic!()
+        };
+        assert_eq!(
+            (leg.ball, leg.score),
+            (
+                ball(COURT_W + BALL_SIZE, BALL_SIZE / 2.0, MAX_SPEED, -MAX_SPEED),
+                [0, 99]
+            )
+        );
+        assert_eq!(
+            decode_pong(r#"{"t":"hi","v":1,"ok":"yes","c":"x"}"#),
+            Some(PongIn::Msg(PongMsg::Hi {
+                v: 1.0,
+                g: false,
+                ok: false,
+                stamp: Stamp::default()
+            }))
+        );
         for raw in [
-            "", "nope", "null", "[]", r#"{"t":"x"}"#, r#"{"t":"p"}"#, r#"{"t":"p","y":3}"#, r#"{"t":"hi"}"#,
-            r#"{"t":"s","at":1,"b":[1,2,3,4],"p":[0,0],"s":[0,0],"ph":1}"#, r#"{"t":"p","at":1,"y":3,"d":2,"r":0,"n":0}"#,
-            r#"{"t":"p","at":1,"y":3,"d":0,"r":-1,"n":0}"#, r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,3],"s":[0,0]}"#,
-            r#"{"t":"l","r":1,"n":1,"at":1,"k":7,"b":[1,2,3,4],"s":[0,0]}"#, r#"{"t":"l","r":1,"n":1.5,"at":1,"k":0,"b":[1,2,3,4],"s":[0,0]}"#,
-            r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,3,null],"s":[0,0]}"#, r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,0,4],"s":[0,0]}"#,
+            "",
+            "nope",
+            "null",
+            "[]",
+            r#"{"t":"x"}"#,
+            r#"{"t":"p"}"#,
+            r#"{"t":"p","y":3}"#,
+            r#"{"t":"hi"}"#,
+            r#"{"t":"s","at":1,"b":[1,2,3,4],"p":[0,0],"s":[0,0],"ph":1}"#,
+            r#"{"t":"p","at":1,"y":3,"d":2,"r":0,"n":0}"#,
+            r#"{"t":"p","at":1,"y":3,"d":0,"r":-1,"n":0}"#,
+            r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,3],"s":[0,0]}"#,
+            r#"{"t":"l","r":1,"n":1,"at":1,"k":7,"b":[1,2,3,4],"s":[0,0]}"#,
+            r#"{"t":"l","r":1,"n":1.5,"at":1,"k":0,"b":[1,2,3,4],"s":[0,0]}"#,
+            r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,3,null],"s":[0,0]}"#,
+            r#"{"t":"l","r":1,"n":1,"at":1,"k":0,"b":[1,2,0,4],"s":[0,0]}"#,
         ] {
             assert_eq!(decode_pong(raw), None, "{raw}");
         }
-        assert_eq!(decode_pong(r#"{"t":"c4","v":1}"#), Some(PongIn::Other("connect 4".into())));
+        assert_eq!(
+            decode_pong(r#"{"t":"c4","v":1}"#),
+            Some(PongIn::Other("connect 4".into()))
+        );
     }
 
     #[test]
@@ -799,17 +1130,38 @@ mod tests {
 
     #[test]
     fn the_computer() {
-        assert!(close(landing_y(&ball(100.0, 100.0, 100.0, 10.0), 200.0), 110.0, 2));
+        assert!(close(
+            landing_y(&ball(100.0, 100.0, 100.0, 10.0), 200.0),
+            110.0,
+            2
+        ));
         let h = BALL_SIZE / 2.0;
-        assert!(close(landing_y(&ball(0.0, COURT_H - h - 50.0, 100.0, 150.0), 100.0), COURT_H - h - 100.0, 2));
-        assert!(close(landing_y(&ball(0.0, h + 50.0, 100.0, -150.0), 100.0), h + 100.0, 2));
+        assert!(close(
+            landing_y(&ball(0.0, COURT_H - h - 50.0, 100.0, 150.0), 100.0),
+            COURT_H - h - 100.0,
+            2
+        ));
+        assert!(close(
+            landing_y(&ball(0.0, h + 50.0, 100.0, -150.0), 100.0),
+            h + 100.0,
+            2
+        ));
         let mut r = mulberry32(7);
         for _ in 0..500 {
-            let b = ball(0.0, r() * COURT_H, 50.0 + r() * 600.0, (r() * 2.0 - 1.0) * 900.0);
+            let b = ball(
+                0.0,
+                r() * COURT_H,
+                50.0 + r() * 600.0,
+                (r() * 2.0 - 1.0) * 900.0,
+            );
             let y = landing_y(&b, COURT_W);
             assert!(y >= h - 1e-9 && y <= COURT_H - h + 1e-9);
         }
-        let play = |b| PongState { phase: Phase::Play, ball: b, ..new_game(1.0) };
+        let play = |b| PongState {
+            phase: Phase::Play,
+            ball: b,
+            ..new_game(1.0)
+        };
         let s = play(ball(300.0, 200.0, -300.0, 0.0));
         let (mut y, mut mind) = (30.0, BotMind::default());
         for _ in 0..200 {
@@ -818,14 +1170,32 @@ mod tests {
         assert!(close(y, COURT_H / 2.0, 0));
         let s = play(ball(FACE - 20.0, 40.0, 300.0, 0.0));
         let before = COURT_H / 2.0;
-        let (mut y, mut mind) = bot_step(&s, before, BotMind::default(), Skill::Hard, 0.01, &mut half());
+        let (mut y, mut mind) = bot_step(
+            &s,
+            before,
+            BotMind::default(),
+            Skill::Hard,
+            0.01,
+            &mut half(),
+        );
         assert!(close(before - y, 4.2, 2));
         for _ in 0..200 {
             (y, mind) = bot_step(&s, y, mind, Skill::Hard, STEP_S, &mut half());
         }
         assert!((y - clamp_paddle(40.0)).abs() < 2.5);
         let s = play(ball(60.0, 40.0, 300.0, 0.0));
-        assert_eq!(bot_step(&s, COURT_H / 2.0, BotMind::default(), Skill::Easy, 0.01, &mut half()).0, COURT_H / 2.0);
+        assert_eq!(
+            bot_step(
+                &s,
+                COURT_H / 2.0,
+                BotMind::default(),
+                Skill::Easy,
+                0.01,
+                &mut half()
+            )
+            .0,
+            COURT_H / 2.0
+        );
     }
 
     fn points_against(skill: Skill, games: usize, seed: u32) -> (u32, u32) {
@@ -837,7 +1207,14 @@ mod tests {
             let mut i = 0;
             while i < 120 * 60 * 10 && s.phase != Phase::Over {
                 (bot, mind) = bot_step(&s, bot, mind, skill, STEP_S, &mut rand);
-                s = step(PongState { paddles: [clamp_paddle(s.ball.y), bot], ..s }, STEP_S, &mut rand);
+                s = step(
+                    PongState {
+                        paddles: [clamp_paddle(s.ball.y), bot],
+                        ..s
+                    },
+                    STEP_S,
+                    &mut rand,
+                );
                 i += 1;
             }
             won += s.score[0];
@@ -850,12 +1227,22 @@ mod tests {
         let mut rand = mulberry32(seed);
         let mut returns = 0.0;
         for _ in 0..rallies {
-            let mut s = PongState { serve_in: 0.0, ..new_game(1.0) };
+            let mut s = PongState {
+                serve_in: 0.0,
+                ..new_game(1.0)
+            };
             let (mut bot, mut mind) = (COURT_H / 2.0, BotMind::default());
             let mut was = false;
             for _ in 0..120 * 120 {
                 (bot, mind) = bot_step(&s, bot, mind, skill, STEP_S, &mut rand);
-                let next = step(PongState { paddles: [clamp_paddle(s.ball.y), bot], ..s }, STEP_S, &mut rand);
+                let next = step(
+                    PongState {
+                        paddles: [clamp_paddle(s.ball.y), bot],
+                        ..s
+                    },
+                    STEP_S,
+                    &mut rand,
+                );
                 if next.score[0] != s.score[0] {
                     break;
                 }
@@ -876,6 +1263,9 @@ mod tests {
             assert_eq!(points_against(k, 12, 42).0, 12 * WIN_SCORE);
         }
         let [easy, normal, hard] = Skill::ALL.map(|k| rally_length(k, 300, 9));
-        assert!(easy < normal && normal < hard && easy > 1.0, "{easy} {normal} {hard}");
+        assert!(
+            easy < normal && normal < hard && easy > 1.0,
+            "{easy} {normal} {hard}"
+        );
     }
 }

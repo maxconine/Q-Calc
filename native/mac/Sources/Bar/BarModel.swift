@@ -124,6 +124,9 @@ final class BarModel: ObservableObject {
     var setField: ((String) -> Void)?
     /// dev builds only: told each time the live answer lands for a typed line (DevBench's keystroke timing)
     var onLive: ((String) -> Void)?
+    /// sanitizeOnboarding and tourRunning for the stored onboarding state they were worked out from (Tour.swift):
+    /// both pure, and asked on every keystroke
+    var onboardingMemo: (raw: [String: Int], state: [String: Any], running: Bool?)?
 
     private var deleted: (row: HistoryRow, index: Int)?
     private var lastLiveText = ""
@@ -814,6 +817,8 @@ final class BarModel: ObservableObject {
     }
 
     func breakUndoRun() {
+        // breakRun leaves a state with no run as it is, so that one isn't sent over (each caret move asks)
+        if let state = undoState as? [String: Any], state["run"] == nil || state["run"] is NSNull { return }
         guard undoReady, let next = logic.call("lib/undo", "breakRun", [undoState]) else { return }
         undoState = next
     }

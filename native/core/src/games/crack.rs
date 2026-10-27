@@ -73,7 +73,11 @@ fn wrap(a: f64) -> f64 {
 // a fresh dot somewhere ahead of the needle in its direction, never within MIN_GAP of it
 fn place_dot(s: CrackState, rand: Rand) -> CrackState {
     let ahead = MIN_GAP + rand() * (MAX_AHEAD - MIN_GAP);
-    CrackState { ahead, dot: wrap(s.angle + s.dir * ahead), ..s }
+    CrackState {
+        ahead,
+        dot: wrap(s.angle + s.dir * ahead),
+        ..s
+    }
 }
 
 /// A level waiting for its first press; the needle keeps where it was.
@@ -113,9 +117,21 @@ pub fn tick(s: CrackState, now: f64, rand: Rand) -> Step {
     }
     let dt = MAX_STEP_MS.min((now - s.at).max(0.0)) / 1000.0;
     let mv = speed_for(s.level) * dt;
-    let next = CrackState { angle: wrap(s.angle + s.dir * mv), ahead: s.ahead - mv, at: now, ..s };
+    let next = CrackState {
+        angle: wrap(s.angle + s.dir * mv),
+        ahead: s.ahead - mv,
+        at: now,
+        ..s
+    };
     if next.ahead < -HIT_WINDOW {
-        return (CrackState { phase: CrackPhase::Fail, since: now, ..next }, Some(CrackEvent::Miss));
+        return (
+            CrackState {
+                phase: CrackPhase::Fail,
+                since: now,
+                ..next
+            },
+            Some(CrackEvent::Miss),
+        );
     }
     (next, None)
 }
@@ -123,7 +139,15 @@ pub fn tick(s: CrackState, now: f64, rand: Rand) -> Step {
 /// Space / ↵ / a click. in ready it starts the needle; in play it's a hit over the dot and a miss anywhere else.
 pub fn press(s: CrackState, now: f64, rand: Rand) -> Step {
     if s.phase == CrackPhase::Ready {
-        return (CrackState { phase: CrackPhase::Play, at: now, since: now, ..s }, Some(CrackEvent::Start));
+        return (
+            CrackState {
+                phase: CrackPhase::Play,
+                at: now,
+                since: now,
+                ..s
+            },
+            Some(CrackEvent::Start),
+        );
     }
     if s.phase != CrackPhase::Play {
         return (s, None);
@@ -133,13 +157,33 @@ pub fn press(s: CrackState, now: f64, rand: Rand) -> Step {
         return (cur, event);
     }
     if !over_dot(&cur) {
-        return (CrackState { phase: CrackPhase::Fail, since: now, ..cur }, Some(CrackEvent::Miss));
+        return (
+            CrackState {
+                phase: CrackPhase::Fail,
+                since: now,
+                ..cur
+            },
+            Some(CrackEvent::Miss),
+        );
     }
     let left = cur.left - 1;
     if left == 0 {
-        return (CrackState { left, ahead: 0.0, phase: CrackPhase::Clear, since: now, ..cur }, Some(CrackEvent::Clear));
+        return (
+            CrackState {
+                left,
+                ahead: 0.0,
+                phase: CrackPhase::Clear,
+                since: now,
+                ..cur
+            },
+            Some(CrackEvent::Clear),
+        );
     }
-    let flipped = CrackState { left, dir: -cur.dir, ..cur };
+    let flipped = CrackState {
+        left,
+        dir: -cur.dir,
+        ..cur
+    };
     (place_dot(flipped, rand), Some(CrackEvent::Hit))
 }
 
@@ -148,7 +192,11 @@ pub const BEST_KEY: &str = "qcalc-crack";
 
 pub fn parse_best(raw: Option<&str>) -> u32 {
     let n = raw.and_then(crate::app::js::number).unwrap_or(f64::NAN);
-    if n.fract() == 0.0 && (1.0..=9999.0).contains(&n) { n as u32 } else { 1 }
+    if n.fract() == 0.0 && (1.0..=9999.0).contains(&n) {
+        n as u32
+    } else {
+        1
+    }
 }
 
 #[cfg(test)]
@@ -179,7 +227,12 @@ mod tests {
     }
 
     fn playing(level: u32) -> CrackState {
-        press(start_level(level, 0.0, &mut fixed(0.5), 0.0, 1.0), 0.0, &mut fixed(0.5)).0
+        press(
+            start_level(level, 0.0, &mut fixed(0.5), 0.0, 1.0),
+            0.0,
+            &mut fixed(0.5),
+        )
+        .0
     }
 
     #[test]
@@ -196,7 +249,9 @@ mod tests {
             }
         }
         assert!((start_level(1, 0.0, &mut fixed(0.0), 0.0, 1.0).dot - MIN_GAP).abs() < 1e-9);
-        assert!((start_level(1, 0.0, &mut fixed(0.0), 0.0, -1.0).dot - (TAU - MIN_GAP)).abs() < 1e-9);
+        assert!(
+            (start_level(1, 0.0, &mut fixed(0.0), 0.0, -1.0).dot - (TAU - MIN_GAP)).abs() < 1e-9
+        );
     }
 
     #[test]
@@ -213,7 +268,10 @@ mod tests {
         assert_eq!(e, Some(CrackEvent::Miss));
         assert_eq!(r.phase, CrackPhase::Fail);
         assert_eq!(r.left, 3);
-        assert_eq!(press(playing(2), 10.0, &mut fixed(0.5)).1, Some(CrackEvent::Miss));
+        assert_eq!(
+            press(playing(2), 10.0, &mut fixed(0.5)).1,
+            Some(CrackEvent::Miss)
+        );
     }
 
     #[test]
@@ -226,7 +284,10 @@ mod tests {
         assert!(gap(r.dot, r.angle) >= MIN_GAP - 1e-9);
         let later = tick(r, r.at + 40.0, &mut fixed(0.2)).0;
         let moved = later.angle - r.angle;
-        assert_eq!((if moved.abs() > PI { -moved } else { moved }).signum(), -1.0);
+        assert_eq!(
+            (if moved.abs() > PI { -moved } else { moved }).signum(),
+            -1.0
+        );
     }
 
     #[test]
@@ -242,9 +303,15 @@ mod tests {
         assert!(r.ahead > -HIT_WINDOW);
         let failed = press(playing(3), 10.0, &mut fixed(0.5)).0;
         assert_eq!(press(failed, 20.0, &mut fixed(0.5)).1, None);
-        assert_eq!(tick(failed, 10.0 + FAIL_MS - 1.0, &mut fixed(0.5)).0.phase, CrackPhase::Fail);
+        assert_eq!(
+            tick(failed, 10.0 + FAIL_MS - 1.0, &mut fixed(0.5)).0.phase,
+            CrackPhase::Fail
+        );
         let back = tick(failed, 10.0 + FAIL_MS, &mut fixed(0.5)).0;
-        assert_eq!((back.phase, back.level, back.left), (CrackPhase::Ready, 3, 3));
+        assert_eq!(
+            (back.phase, back.level, back.left),
+            (CrackPhase::Ready, 3, 3)
+        );
     }
 
     #[test]
@@ -253,13 +320,26 @@ mod tests {
         for i in 0..3 {
             s = run_to(s, 0.0);
             let (r, e) = press(s, s.at, &mut fixed(0.5));
-            assert_eq!(e, Some(if i < 2 { CrackEvent::Hit } else { CrackEvent::Clear }));
+            assert_eq!(
+                e,
+                Some(if i < 2 {
+                    CrackEvent::Hit
+                } else {
+                    CrackEvent::Clear
+                })
+            );
             s = r;
         }
         assert_eq!((s.phase, s.left), (CrackPhase::Clear, 0));
-        assert_eq!(tick(s, s.since + CLEAR_MS - 1.0, &mut fixed(0.5)).0.phase, CrackPhase::Clear);
+        assert_eq!(
+            tick(s, s.since + CLEAR_MS - 1.0, &mut fixed(0.5)).0.phase,
+            CrackPhase::Clear
+        );
         let next = tick(s, s.since + CLEAR_MS, &mut fixed(0.5)).0;
-        assert_eq!((next.phase, next.level, next.left), (CrackPhase::Ready, 4, 4));
+        assert_eq!(
+            (next.phase, next.level, next.left),
+            (CrackPhase::Ready, 4, 4)
+        );
         assert_eq!(speed_for(1), BASE_SPEED);
         for n in 1..60 {
             assert!(speed_for(n + 1) >= speed_for(n));
@@ -267,7 +347,14 @@ mod tests {
         assert!(speed_for(2) - speed_for(1) < 0.2);
         assert_eq!(speed_for(1000), MAX_SPEED);
         assert_eq!(parse_best(Some("7")), 7);
-        for raw in [None, Some(""), Some("x"), Some("0"), Some("-2"), Some("2.5")] {
+        for raw in [
+            None,
+            Some(""),
+            Some("x"),
+            Some("0"),
+            Some("-2"),
+            Some("2.5"),
+        ] {
             assert_eq!(parse_best(raw), 1);
         }
     }

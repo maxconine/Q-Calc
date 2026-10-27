@@ -145,3 +145,82 @@ Two shared files are still written:
 - Both apps may refresh the ECB rates cache in `~/Library/Application Support/Q Calc/` (`ECBRates.swift`).
 
 Nothing else of the installed app is read or changed.
+
+## Iteration log
+
+2026-10-26, same M4 Pro, with two other agents building games on the machine (load average 6 to 50). Every number
+here comes from bench copies run back to back in the same session, each variant twice and interleaved. The
+keystroke rows are DevBench's in-process timing.
+- **Per change:** 120 of the golden inputs (about 1,865 keystrokes), typed after the 20-line session.
+- **Before and after (the last table):** the full 269 inputs (4,056 keystrokes) and 5 warm launches per run.
+
+Where the time went: `sample` of the bench copy with the unstripped binary, symbolicated against the SwiftPM
+dSYM. At baseline the main thread was about 95% busy during the bench and the engine thread about 16%. About 60%
+of the main thread was the SwiftUI graph update: every subview observed the whole `BarModel`, so each
+`@Published` set redrew every history row and the edge tools. Another 8% was the main thread's `callJson` calls,
+which waited on the single evaluation thread behind the keystroke's own evaluation.
+
+| change | keystroke median | p90 | p99 | heavy lines |
+|---|---|---|---|---|
+| history rows don't observe the model (`HistoryRowView` takes values and is `.equatable()`) | 4.0 → 2.4 ms | 6.3 → 4.4 | 8.3 → 6.7 | 5.7 → 3.2 ms |
+| `call_json` gets its own logic thread; boundsIn/afterTyping skipped with no ∫ Σ Π; onboarding, tour and identity target kept per input | 2.2 → 2.1 ms | 4.1 → 4.0 | 6.4 → 6.2 | ≈ |
+| runtime-built regexes (variable and function names: preprocess, `with_quantities`, solve) compiled once per pattern | 2.3 → 2.1 ms | 4.3 → 4.0 | 6.7 → 6.2 | ≈ |
+| edge tools don't observe the model (values in, `.equatable()`) | 2.0 → 1.4 ms | 4.2 → 3.3 | 7.5 → 5.8 | 3.3 → 2.4 ms |
+| `breakRun` not sent when there's no run to break | 1.44 → 1.37 ms | 3.3 → 3.0 | 5.5 → 5.2 | 2.1 → 1.9 ms |
+
+Before and after (the baseline build against the last commit; two runs each):
+
+| | before | after |
+|---|---|---|
+| keystroke to live answer: median / p90 / p99 | 3.8 / 6.0 / 8.2 ms | 1.3–1.6 / 3.0–3.8 / 5.2–6.8 ms |
+| heavy lines, median | 5.2–6.2 ms | 1.9–2.5 ms |
+| warm launch to ready (median of 5) | 121 ms | 122 ms |
+
+What's left:
+- **The SwiftUI update is still the largest cost, at about 55% of the main thread.** Composer, `LiveAnswerView`
+  and `InputField` still observe the whole model and redraw on any `@Published` set. A keystroke also makes two
+  graph updates: one when the text changes and one when the answer lands. Splitting the model into smaller
+  observable pieces is the next step, and a larger change.
+- **`applySize`** (about 6%): `setFrame` relayouts the hosting view whenever the bar's height changes, as it does
+  when the typeset row comes and goes.
+- **Memory isn't explained by the engine.** Footprint after the typing session flips between about 48 and 136 MB
+  from run to run, on both builds. The difference is "Owned physical footprint (unmapped) (graphics)": 94–114 MB in
+  45–50 regions, which are window backing surfaces. The engine's heap (MALLOC_SMALL) is 30–46 MB. It is likely
+  tied to resizing the panel on every height change. Not fixed here.
+- **Launch didn't change.** Warm, with probes:
+  - dyld to `main`: 8 ms.
+  - `main` to `applicationWillFinishLaunching`: 44 ms (AppKit).
+  - Status item, hotkey and log to the engine: 23 ms.
+  - Engine, model and overlay preload: 7 ms.
+  - Engine warm-up: 30 ms more, which is the Rust first call.
+- **Not touched:** the Rust first call and the binary size.
+
+### Round 2
+
+Same method. The machine was busier (load 7 to 12), so latency figures are noisier than in round 1.
+
+**The graphics footprint was the typeset row, not the panel's resizes.** With the typeset preview turned off, a
+session stays at 37–41 MB. The row drew its Typst paths in a SwiftUI `Canvas`, which renders into GPU surfaces
+that SwiftUI keeps, one per size. The row now draws the same paths in an AppKit view through Core Graphics
+(`MathPreview.PathsNSView`). A snapshot of the row in dark mode looks the same.
+
+| | before | after |
+|---|---|---|
+| footprint after the 20-line typing session (several sessions) | 48–143 MB | 41 MB |
+| footprint after the graph | 70–155 MB | 64 MB |
+| footprint after the keystroke bench | 168–187 MB | 46–65 MB |
+| keystroke median (same load, back to back) | 1.79 ms | 1.81 ms |
+
+Tried and dropped, with no measured win:
+- **Making `LiveAnswerView` and `InputField` `.equatable()` over snapshots of what they read** (a light split of
+  `BarModel`): 1.29–1.41 against 1.30–1.33 ms.
+  - Their data changes on every keystroke, so they have to redraw anyway.
+  - What's left is the two graph updates per keystroke: one when the text changes, one when the answer lands.
+    Merging them means holding back the text's updates until the answer comes, which changes when things appear on
+    screen. I didn't do it.
+- **Starting the engine warm-up before the status item:** ready went from 147 to 155 ms (median of 5).
+  - The ~35 ms between the bar being mounted and "engine warm" is the main thread's first render after
+    `applicationDidFinishLaunching`, not the engine. The engine's reply is delivered on the main queue.
+- **The status item:** finer probes put the 23–26 ms launch step all in
+  `NSStatusBar.system.statusItem(withLength:)`, a window-server call. Deferring it would only move it later. I left
+  it.

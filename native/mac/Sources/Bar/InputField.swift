@@ -86,6 +86,12 @@ final class BarTextView: NSTextView {
     // ---- ∫ Σ Π limits (Bounds.tsx, lib/bounds.ts): drawn small beside the sign, upper over lower; the `_ ^ ..`
     //      and braces between them hidden; the caret never stops in those
 
+    /// Whether `s` has a ∫ Σ Π sign (BOUND_SIGNS): without one, boundsIn is empty and afterTyping does nothing, so
+    /// the engine isn't asked.
+    static func hasBoundSign(_ s: String) -> Bool {
+        s.unicodeScalars.contains { $0 == "∫" || $0 == "Σ" || $0 == "∑" || $0 == "Π" || $0 == "∏" }
+    }
+
     /// boundsIn(text): {sign, lower {start, end}, upper {start, end} | null, end}
     var limits: [[String: Any]] = [] { didSet { styleBounds() } }
     private var holes: [(slot: NSRange, upper: Bool, sign: Int)] = []
@@ -458,7 +464,7 @@ struct InputField: NSViewRepresentable {
             guard let text else { return }
             text.string = value
             text.restyle()
-            text.limits = model?.logic.call("lib/bounds", "boundsIn", [value]) as? [[String: Any]] ?? []
+            text.limits = BarTextView.hasBoundSign(value) ? model?.logic.call("lib/bounds", "boundsIn", [value]) as? [[String: Any]] ?? [] : []
             text.setSelectedRange(sel)
             if model?.text != value { model?.text = value }
         }
@@ -483,7 +489,7 @@ struct InputField: NSViewRepresentable {
         if text.string != model.text {
             text.string = model.text
             text.restyle()
-            text.limits = model.logic.call("lib/bounds", "boundsIn", [model.text]) as? [[String: Any]] ?? []
+            text.limits = BarTextView.hasBoundSign(model.text) ? model.logic.call("lib/bounds", "boundsIn", [model.text]) as? [[String: Any]] ?? [] : []
             text.setSelectedRange(NSRange(location: (model.text as NSString).length, length: 0))
             model.resetUndo()
         }
@@ -539,7 +545,7 @@ struct InputField: NSViewRepresentable {
                 // afterTyping: a sign then a character starts its lower limit, `..` in it moves to the upper
                 let typedChar = text.editKind == "insertText"
                 let message = text.string.lowercased().trimmingCharacters(in: .whitespaces).hasPrefix("message")
-                if typedChar, !message,
+                if typedChar, !message, BarTextView.hasBoundSign(text.string),
                    let edit = model.logic.call("lib/bounds", "afterTyping", [text.string, text.selectedRange().location]) as? [String: Any],
                    let value = edit["text"] as? String, let caret = (edit["caret"] as? NSNumber)?.intValue {
                     text.textStorage?.replaceCharacters(in: NSRange(location: 0, length: (text.string as NSString).length),
@@ -547,7 +553,7 @@ struct InputField: NSViewRepresentable {
                     text.setSelectedRange(NSRange(location: caret, length: 0))
                 }
             }
-            text.limits = model.logic.call("lib/bounds", "boundsIn", [text.string]) as? [[String: Any]] ?? []
+            text.limits = BarTextView.hasBoundSign(text.string) ? model.logic.call("lib/bounds", "boundsIn", [text.string]) as? [[String: Any]] ?? [] : []
             if model.text != text.string { model.text = text.string }
             let sel = text.selectedRange()
             model.recordEdit(text.string, start: sel.location, end: NSMaxRange(sel), kind: text.editKind)

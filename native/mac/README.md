@@ -48,8 +48,10 @@ What it does:
 
 ## Games and the 420 / 67 / 69 effects
 
-The calculator never makes a web view. A game (`pong`, `connect 4`, `ultimate`, `ember`, `crack`, `equal`,
-`numbers`, `trails`, or a row of `games`) opens a window with one `WKWebView` (`Sources/Games/GameWindowController.swift`)
+The calculator never makes a web view. Pong, connect 4, ultimate, crack, equal and 24 / countdown are native: their
+rules are in the Rust core (`native/core/src/games/`) and they draw in SwiftUI inside the shell in
+`Sources/Games/Shell/` (its README says how a game plugs in; `Sources/Games/NativeGames.swift` lists them). The games
+not ported yet (`ember`, `trails`) open a window with one `WKWebView` (`Sources/Games/GameWindowController.swift`)
 loading `Contents/Resources/web/games.html#<kind>`; closing the window releases it and the WebContent process exits
 (`parity/game-lifecycle.sh` checks this). The effects load `games.html?x=…#smoke|arms|fold` in a click-through
 panel over the bar and tear down after the animation.

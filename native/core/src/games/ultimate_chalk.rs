@@ -33,8 +33,21 @@ fn wobble(a: Pt, b: Pt, amp: f64, r: &mut dyn FnMut() -> f64) -> String {
     let o1 = jit(r);
     let o2 = jit(r);
     let c1 = (a.0 + dx / 3.0 + nx * o1, a.1 + dy / 3.0 + ny * o1);
-    let c2 = (a.0 + 2.0 * dx / 3.0 + nx * o2, a.1 + 2.0 * dy / 3.0 + ny * o2);
-    format!("M{} {}C{} {} {} {} {} {}", f(s0), f(s1), f(c1.0), f(c1.1), f(c2.0), f(c2.1), f(e0), f(e1))
+    let c2 = (
+        a.0 + 2.0 * dx / 3.0 + nx * o2,
+        a.1 + 2.0 * dy / 3.0 + ny * o2,
+    );
+    format!(
+        "M{} {}C{} {} {} {} {} {}",
+        f(s0),
+        f(s1),
+        f(c1.0),
+        f(c1.1),
+        f(c2.0),
+        f(c2.1),
+        f(e0),
+        f(e1)
+    )
 }
 
 // a loop around (cx, cy) that isn't quite round and runs a little past where it started
@@ -58,12 +71,21 @@ fn chalk_loop(cx: f64, cy: f64, radius: f64, r: &mut dyn FnMut() -> f64) -> Stri
         let p3 = pts[(i + 2).min(pts.len() - 1)];
         let c1 = (p1.0 + (p2.0 - p0.0) / 6.0, p1.1 + (p2.1 - p0.1) / 6.0);
         let c2 = (p2.0 - (p3.0 - p1.0) / 6.0, p2.1 - (p3.1 - p1.1) / 6.0);
-        d += &format!("C{} {} {} {} {} {}", f(c1.0), f(c1.1), f(c2.0), f(c2.1), f(p2.0), f(p2.1));
+        d += &format!(
+            "C{} {} {} {} {} {}",
+            f(c1.0),
+            f(c1.1),
+            f(c2.0),
+            f(c2.1),
+            f(p2.0),
+            f(p2.1)
+        );
     }
     d
 }
 
-static CACHE: LazyLock<Mutex<HashMap<String, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static CACHE: LazyLock<Mutex<HashMap<String, String>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 fn cached(key: String, make: impl FnOnce() -> String) -> String {
     if let Some(d) = CACHE.lock().ok().and_then(|c| c.get(&key).cloned()) {
@@ -90,14 +112,26 @@ pub fn chalk_mark(kind: char, x: f64, y: f64, size: f64, seed: f64) -> String {
         if kind == 'o' {
             return chalk_loop(x + size / 2.0, y + size / 2.0, size / 2.0 - pad, &mut r);
         }
-        wobble((x + pad, y + pad), (x + size - pad, y + size - pad), amp, &mut r)
-            + &wobble((x + size - pad, y + pad), (x + pad, y + size - pad), amp, &mut r)
+        wobble(
+            (x + pad, y + pad),
+            (x + size - pad, y + size - pad),
+            amp,
+            &mut r,
+        ) + &wobble(
+            (x + size - pad, y + pad),
+            (x + pad, y + size - pad),
+            amp,
+            &mut r,
+        )
     })
 }
 
 /// A chalk line from a to b.
 pub fn chalk_line(a: Pt, b: Pt, seed: f64, amp: f64) -> String {
-    cached(format!("l{},{},{},{},{seed},{amp}", a.0, a.1, b.0, b.1), || wobble(a, b, amp, &mut mulberry32(seed_of(seed))))
+    cached(
+        format!("l{},{},{},{},{seed},{amp}", a.0, a.1, b.0, b.1),
+        || wobble(a, b, amp, &mut mulberry32(seed_of(seed))),
+    )
 }
 
 /// A rough box around (x, y, w, h): four strokes that don't quite meet.
@@ -119,8 +153,14 @@ mod tests {
     // from the TS (node, components/ultimateChalk.ts)
     #[test]
     fn matches_the_page() {
-        assert_eq!(chalk_line((0.0, 0.0), (100.0, 0.0), 1.0, 1.1), "M-0.7 0.5C33.3 -0.2 66.7 1.1 101.1 0.2");
-        assert_eq!(chalk_mark('x', 0.0, 0.0, 30.0, 4.0), "M6.8 7.6C13.2 11.8 18.1 16.9 23.1 22.6M23.4 7C17.6 12.6 11.8 16.8 6.7 23.9");
+        assert_eq!(
+            chalk_line((0.0, 0.0), (100.0, 0.0), 1.0, 1.1),
+            "M-0.7 0.5C33.3 -0.2 66.7 1.1 101.1 0.2"
+        );
+        assert_eq!(
+            chalk_mark('x', 0.0, 0.0, 30.0, 4.0),
+            "M6.8 7.6C13.2 11.8 18.1 16.9 23.1 22.6M23.4 7C17.6 12.6 11.8 16.8 6.7 23.9"
+        );
         assert_eq!(
             chalk_mark('o', 30.0, 60.0, 30.0, 17.0),
             "M50.8 79.6C50.3 79.9 48.8 81.2 47.7 81.5C46.5 81.9 45.1 82 44 81.8C42.8 81.6 41.8 80.8 40.8 80.2C39.8 79.5 38.6 78.8 38.1 77.9C37.6 76.9 37.6 75.6 37.8 74.5C37.9 73.4 38.4 72.4 39 71.4C39.6 70.5 40.5 69.4 41.5 68.9C42.5 68.5 43.9 68.4 45 68.4C46.2 68.5 47.3 68.9 48.4 69.4C49.4 69.8 50.7 70.4 51.3 71.3C51.9 72.2 52.1 73.5 52.1 74.6C52.1 75.7 52 76.9 51.5 77.8C51 78.7 50.1 79.7 49.2 80.3C48.2 80.8 46.4 81.1 45.9 81.2"
@@ -129,6 +169,9 @@ mod tests {
             chalk_box(-4.0, -4.0, 98.0, 98.0, 300.0),
             "M-5 -3.9C28.7 -2.9 61.3 -5 94.2 -4M93.9 -4C93.1 28.7 94.8 61.3 94.2 94.4M94.5 94.1C61.3 94.8 28.7 94.2 -4.4 93.6M-4.3 94.6C-4.8 61.3 -3 28.7 -3.6 -4.3"
         );
-        assert_eq!(chalk_line((96.0, -4.0), (96.0, 306.0), 101.0, 1.6), "M95.6 -4.9C96.9 99.3 97.4 202.7 95.7 306.9");
+        assert_eq!(
+            chalk_line((96.0, -4.0), (96.0, 306.0), 101.0, 1.6),
+            "M95.6 -4.9C96.9 99.3 97.4 202.7 95.7 306.9"
+        );
     }
 }

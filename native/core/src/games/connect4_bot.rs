@@ -56,7 +56,12 @@ static WINDOWS: LazyLock<Vec<[usize; LINE]>> = LazyLock::new(|| {
                 if end_c < 0 || end_c >= COLS as i32 || end_r < 0 || end_r >= ROWS as i32 {
                     continue;
                 }
-                out.push(std::array::from_fn(|k| cell_at((col + dc * k as i32) as usize, (row + dr * k as i32) as usize)));
+                out.push(std::array::from_fn(|k| {
+                    cell_at(
+                        (col + dc * k as i32) as usize,
+                        (row + dr * k as i32) as usize,
+                    )
+                }));
             }
         }
     }
@@ -64,8 +69,11 @@ static WINDOWS: LazyLock<Vec<[usize; LINE]>> = LazyLock::new(|| {
 });
 
 // the windows through each cell, so a move is checked for a win without scanning the whole board
-static THROUGH: LazyLock<Vec<Vec<[usize; LINE]>>> =
-    LazyLock::new(|| (0..CELLS).map(|i| WINDOWS.iter().filter(|w| w.contains(&i)).copied().collect()).collect());
+static THROUGH: LazyLock<Vec<Vec<[usize; LINE]>>> = LazyLock::new(|| {
+    (0..CELLS)
+        .map(|i| WINDOWS.iter().filter(|w| w.contains(&i)).copied().collect())
+        .collect()
+});
 
 // a search that ran out of time; the last depth that finished stands
 struct OutOfTime;
@@ -95,7 +103,13 @@ impl<'c> Search<'c> {
                 *h += 1;
             }
         }
-        Search { board, heights, nodes: 0, deadline: f64::INFINITY, clock: None }
+        Search {
+            board,
+            heights,
+            nodes: 0,
+            deadline: f64::INFINITY,
+            clock: None,
+        }
     }
 
     fn can_play(&self, col: usize) -> bool {
@@ -107,7 +121,9 @@ impl<'c> Search<'c> {
         let i = cell_at(col, self.heights[col]);
         self.heights[col] += 1;
         self.board[i] = who;
-        THROUGH[i].iter().any(|w| w.iter().all(|&j| self.board[j] == who))
+        THROUGH[i]
+            .iter()
+            .any(|w| w.iter().all(|&j| self.board[j] == who))
     }
 
     fn undo(&mut self, col: usize) {
@@ -156,7 +172,14 @@ impl<'c> Search<'c> {
 
     // negamax with alpha-beta: the best score `who` can force from here, looking `depth` moves ahead. a win found
     // sooner scores higher, so the computer takes the quick one and puts off a loss
-    fn negamax(&mut self, depth: usize, mut alpha: f64, beta: f64, who: i8, moves: usize) -> Result<f64, OutOfTime> {
+    fn negamax(
+        &mut self,
+        depth: usize,
+        mut alpha: f64,
+        beta: f64,
+        who: i8,
+        moves: usize,
+    ) -> Result<f64, OutOfTime> {
         // the clock is only read every so often; reading it is slower than a node
         self.nodes += 1;
         if self.nodes & 1023 == 0 && self.now() > self.deadline {
@@ -177,7 +200,8 @@ impl<'c> Search<'c> {
             let v = if won {
                 Ok(WIN + depth as f64)
             } else {
-                self.negamax(depth - 1, -beta, -alpha, -who, moves + 1).map(|x| -x)
+                self.negamax(depth - 1, -beta, -alpha, -who, moves + 1)
+                    .map(|x| -x)
             };
             self.undo(col);
             let v = v?;
@@ -196,7 +220,10 @@ impl<'c> Search<'c> {
 }
 
 fn legal(s: &C4State) -> Vec<usize> {
-    ORDER.into_iter().filter(|&col| s.board[cell_at(col, ROWS - 1)].is_none()).collect()
+    ORDER
+        .into_iter()
+        .filter(|&col| s.board[cell_at(col, ROWS - 1)].is_none())
+        .collect()
 }
 
 // a column that wins at once for who, or None
@@ -228,7 +255,12 @@ fn loose_column(cols: &[usize], rand: Rand) -> usize {
 }
 
 // the best columns looking `depth` moves ahead, best first in `cols`' order; ties are all kept, so games differ
-fn best_columns(search: &mut Search, cols: &[usize], depth: usize, moves: usize) -> Result<(Vec<usize>, f64), OutOfTime> {
+fn best_columns(
+    search: &mut Search,
+    cols: &[usize],
+    depth: usize,
+    moves: usize,
+) -> Result<(Vec<usize>, f64), OutOfTime> {
     let mut best = f64::NEG_INFINITY;
     let mut picks = vec![];
     for &col in cols {
@@ -238,7 +270,9 @@ fn best_columns(search: &mut Search, cols: &[usize], depth: usize, moves: usize)
         let v = if won {
             Ok(WIN + depth as f64 + 1.0)
         } else {
-            search.negamax(depth - 1, f64::NEG_INFINITY, -(best - 1.0), -1, moves + 1).map(|x| -x)
+            search
+                .negamax(depth - 1, f64::NEG_INFINITY, -(best - 1.0), -1, moves + 1)
+                .map(|x| -x)
         };
         search.undo(col);
         let v = v?;
@@ -253,7 +287,13 @@ fn best_columns(search: &mut Search, cols: &[usize], depth: usize, moves: usize)
 }
 
 /// The column the computer drops in, playing as `me`; None when the game is over or it isn't its turn.
-pub fn bot_column(s: &C4State, me: Side, skill: C4Skill, rand: Rand, clock: &mut dyn FnMut() -> f64) -> Option<usize> {
+pub fn bot_column(
+    s: &C4State,
+    me: Side,
+    skill: C4Skill,
+    rand: Rand,
+    clock: &mut dyn FnMut() -> f64,
+) -> Option<usize> {
     let cols = legal(s);
     if is_over(s) || s.turn != me || cols.is_empty() {
         return None;
@@ -291,7 +331,9 @@ pub fn bot_column(s: &C4State, me: Side, skill: C4Skill, rand: Rand, clock: &mut
     while depth <= skill.depth() && depth <= CELLS - s.moves {
         let mut order = picks.clone();
         order.extend(cols.iter().filter(|c| !picks.contains(c)));
-        let Ok((found, best)) = best_columns(&mut search, &order, depth, s.moves) else { break };
+        let Ok((found, best)) = best_columns(&mut search, &order, depth, s.moves) else {
+            break;
+        };
         picks = found;
         if best.abs() >= WIN {
             break;
@@ -316,11 +358,17 @@ mod tests {
     fn takes_a_win_and_blocks_a_four() {
         let s = play(&[0, 6, 1, 6, 2, 5]);
         for k in [C4Skill::Normal, C4Skill::Hard] {
-            assert_eq!(bot_column(&s, Side::Host, k, &mut mulberry32(1), &mut real_clock()), Some(3));
+            assert_eq!(
+                bot_column(&s, Side::Host, k, &mut mulberry32(1), &mut real_clock()),
+                Some(3)
+            );
         }
         let s = play(&[0, 6, 1, 6, 2]);
         for k in [C4Skill::Normal, C4Skill::Hard] {
-            assert_eq!(bot_column(&s, Side::Guest, k, &mut mulberry32(1), &mut real_clock()), Some(3));
+            assert_eq!(
+                bot_column(&s, Side::Guest, k, &mut mulberry32(1), &mut real_clock()),
+                Some(3)
+            );
         }
     }
 
@@ -334,18 +382,39 @@ mod tests {
                     t += 40.0;
                     t
                 };
-                assert_ne!(bot_column(&full, Side::Host, k, &mut mulberry32(i), &mut fast), Some(0));
+                assert_ne!(
+                    bot_column(&full, Side::Host, k, &mut mulberry32(i), &mut fast),
+                    Some(0)
+                );
             }
         }
-        assert_eq!(bot_column(&new_board(Side::Host), Side::Guest, C4Skill::Hard, &mut mulberry32(1), &mut real_clock()), None);
+        assert_eq!(
+            bot_column(
+                &new_board(Side::Host),
+                Side::Guest,
+                C4Skill::Hard,
+                &mut mulberry32(1),
+                &mut real_clock()
+            ),
+            None
+        );
     }
 
     #[test]
     fn stops_on_time_and_still_finds_the_win() {
-        assert!(BOT_BUDGET_MS < super::super::connect4_session::BOT_THINK_MS);
+        const { assert!(BOT_BUDGET_MS < super::super::connect4_session::BOT_THINK_MS) };
         for s in [new_board(Side::Host), play(&[3, 3, 2, 4])] {
             let t = std::time::Instant::now();
-            assert!(bot_column(&s, Side::Host, C4Skill::Hard, &mut mulberry32(3), &mut real_clock()).is_some());
+            assert!(
+                bot_column(
+                    &s,
+                    Side::Host,
+                    C4Skill::Hard,
+                    &mut mulberry32(3),
+                    &mut real_clock()
+                )
+                .is_some()
+            );
             assert!(t.elapsed().as_secs_f64() * 1000.0 < BOT_BUDGET_MS + 100.0);
         }
         let mut t = 0.0;
@@ -354,7 +423,10 @@ mod tests {
             t += 1e6;
             t
         };
-        assert_eq!(bot_column(&s, Side::Host, C4Skill::Hard, &mut mulberry32(5), &mut slow), Some(3));
+        assert_eq!(
+            bot_column(&s, Side::Host, C4Skill::Hard, &mut mulberry32(5), &mut slow),
+            Some(3)
+        );
     }
 
     fn matchup(a: C4Skill, b: C4Skill, games: usize, seed: u32) -> (usize, usize, usize) {
