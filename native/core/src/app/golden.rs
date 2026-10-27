@@ -450,6 +450,7 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             json!([keys, typed])
         }
         ("lib/onboarding", "nativeCheats") => json!(ob::native_type_cheats()),
+        ("lib/onboarding", "konamiHint") => json!(crate::games::eggs::konami_hint(b(0))),
         ("lib/onboarding", "modeAnnouncement") => json!(ob::mode_announcement(&s(0), b(1))),
         ("lib/onboarding", "emptyOnboarding") => to(&ob::empty_onboarding()),
         ("lib/onboarding", "exampleAnswer") => {

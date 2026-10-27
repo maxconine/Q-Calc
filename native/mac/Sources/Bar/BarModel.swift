@@ -298,6 +298,18 @@ final class BarModel: ObservableObject {
         }
         // a file dropped on the bar waits only while the line asks for its name
         MessageFiles.shared.pendingDrop = []
+        // the Konami code typed out says what ↵ does, as a command does
+        if isKonamiLine(text: typed) {
+            nameCheckTimer?.invalidate()
+            graph = nil
+            helpShown = false
+            decorations = Decorations()
+            completion = nil
+            commandMessage = logic.string("lib/onboarding", "konamiHint", [crt])
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
             var found: Bool?
