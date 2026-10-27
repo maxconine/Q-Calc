@@ -238,11 +238,27 @@ mod ui {
 
     /// The line under the bar and the example the step shows, after anything that moves the tour.
     pub fn refresh(m: &mut BarModel, engine: &EngineThread) {
-        let typed = m.field.text().to_string();
+        // the usual keystroke: no walkthrough, nothing of it shown
+        let t = &m.tour;
+        if t.replay.is_none()
+            && !core_tour::tour_running(&t.o)
+            && t.line.is_none()
+            && t.hint_ghost.is_none()
+            && t.ghost_example.is_none()
+            && t.ghost_plain.is_none()
+            && t.example.is_none()
+        {
+            return;
+        }
         let answered = m.live.as_ref().is_some_and(|a| !a.display.is_empty());
-        let keybinds = m.keybinds.clone();
-        let hint = m.hint.clone();
-        let t = &mut m.tour;
+        let BarModel {
+            field,
+            keybinds,
+            hint,
+            tour: t,
+            ..
+        } = &mut *m;
+        let typed = field.text();
         let before = (
             t.line.clone(),
             t.ghost_example.clone(),
@@ -250,9 +266,9 @@ mod ui {
         );
         if let Some(step) = step_now(&t.o, t.replay, &t.hotkey) {
             let progress = core_tour::tour_progress(t.replay.unwrap_or(t.o.hints), &t.hotkey);
-            let fits = core_tour::tour_line_fits(&step, &typed, answered);
+            let fits = core_tour::tour_line_fits(&step, typed, answered);
             t.line = fits.then(|| Line {
-                text: winify(&step.text, &keybinds),
+                text: winify(&step.text, keybinds),
                 at: progress.at,
                 of: progress.of,
             });
