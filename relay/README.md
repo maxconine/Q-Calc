@@ -31,7 +31,8 @@ Typing `message max hello` in the bar sends "hello" to whoever holds the name ma
 - **Receiving.** With a name set, the app keeps one WebSocket open to that name's inbox. The Mac app holds it natively whether or not the bar is up. Windows and the browser hold it while the bar's page runs. The key is offered as a WebSocket protocol, never in the URL. The socket hibernates on the relay, so a waiting inbox costs nothing.
 - **Who gets through.** The lists live only in the app. A message from a name you've accepted shows as it is. Someone new's first message shows only as a request, "ana wants to message you", with Allow and Block. Further messages from them don't ask again. Allowing them shows the last thing they said. A blocked name's messages are dropped without being shown. Accepted and blocked names can be edited in settings.
 - **Sending.** The sender proves their own name with their key, so nobody can write as someone else. Nothing is queued. A message reaches the name's open inbox or is turned away, and the sender's bar says which: sent, not online, or nobody's called that. The sender is never told whether they're accepted or blocked.
-- **What's kept.** Per name, only the key's hash and a last-seen time, and those only until the name lapses or is let go. Messages pass through and are forgotten. No IP addresses are kept.
+- **What's kept.** Per name, only the key's hash, a last-seen time and, from the native app, its public key, and those only until the name lapses or is let go. Messages pass through and are forgotten. No IP addresses are kept.
+- **Not end-to-end.** Text messages are passed on as they are, so every copy of Q Calc, old or new, can read them. Clips and files are end-to-end encrypted ([below](#files-and-clips), and [native/PRIVACY.md](../native/PRIVACY.md)).
 
 | Route | What it does |
 | --- | --- |
@@ -39,26 +40,29 @@ Typing `message max hello` in the bar sends "hello" to whoever holds the name ma
 | `POST /claim {name, key}` | `ok` holds the name for this key; `taken` means another key holds it. |
 | `POST /release {name, key}` | Lets the name go if this key holds it, and closes its inbox. |
 | `POST /send {from, key, to, text}` | `delivered`, `offline` (no open inbox), `unknown` (nobody holds the name), `not-yours` (the key doesn't hold `from`). A text is up to 500 characters, kept on one line. |
-| `POST /lookup {from, key, name}` | `found` or `unknown`, whether anyone holds `name` (what a send already says); `not-yours`, `too-many` (`LOOKUPS`, 60 a minute per address and per sender), `bad`. Read only: it never claims `name` or keeps it from lapsing. The bar checks a name as `message <name>` is typed. |
+| `POST /lookup {from, key, name}` | `found` with `pub` (the name's public key, `''` when it has none) or `unknown`, whether anyone holds `name` (what a send already says); `not-yours`, `too-many` (`LOOKUPS`, 60 a minute per address and per sender), `bad`. Read only: it never claims `name` or keeps it from lapsing. The bar checks a name as `message <name>` is typed. |
+| `POST /pubkey {name, key, pub}` | `ok` publishes the name's X25519 public key (32 bytes, base64url) for end-to-end clips and files; `not-yours` when the key doesn't hold the name, `bad` when `pub` isn't a key. A new holder of a lapsed name starts without one. |
 
 Each POST takes a JSON body sent as `text/plain`, so a page can send it without a CORS preflight. Each answers `{status}`, and `bad` or `too-many` apply to any of them.
 
 ## Files and clips
 
-`paste to max` shares what's on your clipboard with max, and `send file to max` (or dropping a file on the bar) sends a file. Both go only between names, with the same Allow and Block as messages.
+`paste to max` shares what's on your clipboard with max, and `send file to max` (or dropping files on the bar while it says `message max…` or `send file to max`) sends a file. Both go only between names, with the same Allow and Block as messages.
 
-- **Clips.** A clip is clipboard text up to 64 KB, sent through `/send` with `kind: 'clip'` and passed on as it is, newlines and all. Like a message, it reaches an open inbox or is turned away, and it's never kept.
-- **Offers.** A file is never sent straight away. The sender's app first sends an offer through `/send` with `kind: 'file'` and the file's name, plain size, encrypted length (`bytes`), type, SHA-256 and key. The relay gives it a random 128-bit id, notes it in the ledger and passes it on. An offer holds no room and nothing is stored. One nobody accepts lapses after 7 days.
+Both are end-to-end encrypted by the native app: the relay can't read a clip or a file, or a file's name, type, size, hash or key. It sees who sent to whom, when, and a file's encrypted length. [native/PRIVACY.md](../native/PRIVACY.md) has the details, what's kept and for how long, and the limits.
+
+- **Clips.** A clip is clipboard text up to 64 KB, sealed for its recipient and sent through `/send` with `kind: 'clip'` and `clip: {id, epk, sealed}`: an id the sender drew, its ephemeral public key and the sealed box. The relay checks only their shape and size. Like a message, it reaches an open inbox or is turned away, and it's never kept. A plain clip is turned away.
+- **Offers.** A file is never sent straight away. The sender's app first sends an offer through `/send` with `kind: 'file'` and `file: {id, epk, sealed, bytes}`: a random 128-bit id it drew, its ephemeral public key, the file's facts sealed for the recipient (name, type, size, SHA-256 and the file's own key), and the encrypted length the relay has to hold. An id that's already out is turned away. The relay notes the offer in the ledger and passes it on. An offer holds no room and nothing is stored. One nobody accepts lapses after 7 days.
 - **Accepting.** The recipient's app accepts with `POST /file/<id>/accept`. The ledger reserves the file's full length against the caps below and grants the sender one upload of exactly that length, for that sender and that recipient. The sender must be online to hear `accepted`. If they aren't, the reservation is given back and the recipient can accept again later. A grant the sender doesn't start within an hour gives its room back too. The app can accept on its own for accepted names under a size you set (off by default).
 - **Uploading.** The sender starts with the grant, which can't be used again, and uploads the file as an R2 multipart upload through the Worker in 50 MiB parts. Every request stays under the Free plan's 100 MB body limit. Every part must be exactly as long as its place in the file, so no byte goes past what was granted, and a part that isn't ends the upload. A part that fails is tried again, up to 3 tries per part in all, and coming back to `/start` says which parts are in. An upload with no part for 2 hours, or unfinished after a day, is aborted. When it's finished the recipient hears `ready`.
 - **Downloading.** Only the recipient can download it, with `Range: bytes=N-` to pick up where a cut-short download stopped. It goes as soon as its last byte has been passed on. It's served as `application/octet-stream` with `Content-Disposition: attachment` and `nosniff`. Either side can take it back or turn it down at any point, and the other side hears `cancelled` or `declined`. A file nobody downloads goes 24 hours after it was uploaded.
-- **Encryption.** The sender's app encrypts the file with AES-256-GCM under a fresh random key before uploading it. The key travels only inside the offer message. It's never written to R2 or the ledger, and the relay never stores it. The recipient's app checks the SHA-256 after decrypting. This isn't full end-to-end encryption. The relay passes messages on, offers included, so whoever runs the relay could read a key in passing. It does mean what sits in the bucket can't be read on its own.
-- **On the Mac.** A received file is saved to Downloads under a new name if one's taken, marked with `com.apple.quarantine`, and shown in Finder. It's never opened or run. Files from someone who hasn't been accepted show in their request but can't be saved until they are.
-- **The ledger.** One Durable Object holds every file's state and what it reserves: who sent it to whom, its length and where it's got to, never its name, type or key. A sender's address is kept only as a SHA-256 hash, and only for the hour it's counted in. Its caps are hard, not just rate limits:
+- **Encryption.** The sender's app encrypts the file with AES-256-GCM under a fresh random key before uploading it. That key travels only inside the sealed facts, which only the recipient's app can open: each name's app has an X25519 key pair, publishes the public half with `/pubkey`, and seals with HKDF-SHA256 over two agreements bound to both names, the id and both keys. Each app pins a contact's key the first time and refuses to send if it changes; each thread shows a safety code to compare. The recipient's app checks the length, size and SHA-256 after decrypting.
+- **On the Mac.** A received file is decrypted next to Downloads, checked, made non-executable and quarantined (`com.apple.quarantine`), then moved into Downloads under a new name if one's taken. It's never opened, previewed or run, and it's shown in Finder only when you ask. Files from someone who hasn't been accepted show in their request but can't be saved until they are.
+- **The ledger.** One Durable Object holds every file's state and what it reserves: who sent it to whom, its length and where it's got to. It never sees a name, type or key. An address is never kept: an upload's start counts against a SHA-256 tag of the address under a random salt drawn for that hour, and the salt and the tags go when the hour ends. Each ledger call runs without another in between, and the steps around it are checked for races: a take-back during an accept, a part or a finish leaves nothing behind. Its caps are hard, not just rate limits:
 
 | Cap | Limit |
 | --- | --- |
-| One file | 1 GiB (plus GCM's tags) |
+| One file | 1 GiB (plus GCM's 16-byte tag per 1 MiB chunk) |
 | Pending for one recipient (accepted, uploading or waiting) | 2 GiB |
 | Pending from one sender | 2 GiB |
 | Uploaded by one sender in a day (counted when accepted) | 5 GiB |
@@ -73,8 +77,8 @@ Room comes back when a file is downloaded, taken back, turned down or expired. A
 
 | Route | Who | What it does |
 | --- | --- | --- |
-| `POST /send {…, kind: 'clip', clip}` | sender | `delivered`, `offline`, `unknown`, as for a message. The inbox hears `message {from, text, kind: 'clip', clip}` |
-| `POST /send {…, kind: 'file', file: {name, size, bytes, type, sha256, key}}` | sender | `delivered` with `{id, expires}`, or `offline`, `unknown`, `new-name`, `too-big`, `too-many`. The inbox hears `message {from, text, kind: 'file', file: {id, name, size, bytes, type, sha256, key, expires}}` |
+| `POST /send {…, kind: 'clip', clip: {id, epk, sealed}}` | sender | `delivered`, `offline`, `unknown`, as for a message. The inbox hears `message {from, text, kind: 'clip', clip}` |
+| `POST /send {…, kind: 'file', file: {id, epk, sealed, bytes}}` | sender | `delivered` with `{id, expires}`, or `offline`, `unknown`, `new-name`, `too-big`, `too-many`, `bad` (also for an id that's out already). The inbox hears `message {from, text, kind: 'file', file: {id, epk, sealed, bytes, expires}}` |
 | `POST /file/<id>/accept` | recipient | `ok` (the sender hears `file {event: 'accepted', id, to, grant, bytes, partBytes}`), `sender-offline`, `recipient-full`, `sender-full`, `daily-limit`, `relay-full`, `busy`, `expired`, `gone` |
 | `POST /file/<id>/start` (`X-QCalc-Grant`) | sender | `ok {partBytes, parts, done}`. Again without the grant, it says which parts are in. Also `not-accepted`, `too-many`, `new-name`, `expired` |
 | `PUT /file/<id>/part/<n>` | sender | One part, exactly `partBytes` long except the last. `ok`, `failed` (try again), `over` (the upload's ended) |
@@ -82,7 +86,7 @@ Room comes back when a file is downloaded, taken back, turned down or expired. A
 | `GET /file/<id>` (`Range: bytes=N-`) | recipient | The encrypted bytes, or `not-ready`, `expired`, `gone` |
 | `DELETE /file/<id>` | either | `ok`. The other side hears `file {event: 'cancelled', id, from}` or `file {event: 'declined', id, to}` |
 
-Every `/file` request carries the asker's name and key in `X-QCalc-Name` and `X-QCalc-Key`, never in the URL, and answers JSON `{status}` with a matching HTTP status. An app that only knows text messages shows a clip or an offer as a plain message, "shared their clipboard — update Q Calc to see it" or "sent you a file — update Q Calc to open it". It ignores `file` events.
+Every `/file` request carries the asker's name and key in `X-QCalc-Name` and `X-QCalc-Key`, never in the URL, and answers JSON `{status}` with a matching HTTP status. Only the sender can start, upload, finish or take back a file, and only the recipient can accept, download or turn it down. Anyone else, and an id that doesn't exist, hears the same `gone`, so ids can't be probed. A grant works once. An R2 key is only ever `f/` and a 32-hex id. A part must declare its length, which must be exactly its place's; a body that's shorter or longer is cut off by `FixedLengthStream` and tried again. An app that only knows text messages shows a clip or an offer as a plain message, "shared their clipboard — update Q Calc to see it" or "sent you a file — update Q Calc to open it". It ignores `file` events.
 
 ## Coming back to a game
 
@@ -171,6 +175,12 @@ This adds the `Ledger` Durable Object class as a new `v4` migration, and `v1` to
    ```
 
 The bucket stays private. Don't give it a public `r2.dev` URL or a custom domain, since the Worker is the only way in. The cron trigger shows under Workers → `qcalc-relay` → Settings → Triggers. Nothing else needs setting up and no data moves. To check it, set different names in two copies of the new app, wait 10 minutes, and send `paste to <other name>`. Then send a file. The other copy shows it, and once it's allowed, Save puts it in Downloads.
+
+### Deploying end-to-end clips and files
+
+This adds `/pubkey`, a public key on each name's existing claim, sealed clips and offers on `/send`, salted address tags in the ledger and `[observability] enabled = false`. There's no new class, binding, migration, limiter or secret. `npx wrangler deploy` is all it takes.
+
+Once it's deployed, a native build from before end-to-end encryption gets `bad` for a clip or a file, and says it couldn't be sent. Text messages, games and the web app don't change. A new native build on the old relay can't publish its key (`/pubkey` is a 404), so it says the other person "needs a newer q calc". Deploy the relay first, then ship the app.
 
 ## Cost
 
