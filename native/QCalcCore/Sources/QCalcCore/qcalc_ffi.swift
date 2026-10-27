@@ -2535,6 +2535,11 @@ public func FfiConverterTypeGameClock_lower(_ value: GameClock) -> UInt64 {
 public protocol KonamiGateProtocol: AnyObject, Sendable {
     
     /**
+     * how many keys of the code the last keys spell
+     */
+    func progress()  -> UInt32
+    
+    /**
      * one key down; true when it completes the code
      */
     func push(key: KonamiKey)  -> Bool
@@ -2603,6 +2608,18 @@ public convenience init() {
 
     
 
+    
+    /**
+     * how many keys of the code the last keys spell
+     */
+open func progress() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_konamigate_progress(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
     
     /**
      * one key down; true when it completes the code
@@ -15743,6 +15760,17 @@ public func isBarrelRoll(text: String) -> Bool  {
 })
 }
 /**
+ * the whole line is the Konami code typed out, or `konami`
+ */
+public func isKonamiLine(text: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_is_konami_line(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
  * March 14
  */
 public func isPiDay(month: UInt32, day: UInt32) -> Bool  {
@@ -16270,6 +16298,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_func_is_barrel_roll() != 56324) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_func_is_konami_line() != 10739) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_func_is_pi_day() != 33327) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16619,6 +16650,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_embermatch_toggle_mute() != 31229) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_konamigate_progress() != 64677) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_konamigate_push() != 25437) {

@@ -367,7 +367,7 @@ final class BarModel: ObservableObject {
     private func squiggleLater(_ typed: String) {
         squiggleTimer?.invalidate()
         guard live.isBlank, !typed.trimmingCharacters(in: .whitespaces).isEmpty, BarCommand.of(typed, sheets: sheets) == nil,
-              !isBarrelRoll(text: typed) else { return }
+              !isBarrelRoll(text: typed), !isKonamiLine(text: typed) else { return }
         squiggleTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: false) { [weak self] _ in
             guard let self, self.text == typed, self.live.isBlank else { return }
             let rows = self.rows, view = HistoryView.from(self.settings), options = self.options, thread = self.engine
@@ -531,9 +531,13 @@ final class BarModel: ObservableObject {
             let c = event.charactersIgnoringModifiers?.lowercased()
             key = !mods.isEmpty ? .other : c == "b" ? .b : c == "a" ? .a : .other
         }
+        let before = konamiGate.progress()
         if konamiGate.push(key: key) {
             crt.toggle()
             OverlayLog.note("konami: crt \(crt ? "on" : "off")")
+        } else if before >= 4, konamiGate.progress() <= before {
+            // how far a try got, and the key that broke it, to tell a missed key from one the bar never saw
+            OverlayLog.note("konami: \(before)/10, then \(key) (key code \(event.keyCode))")
         }
     }
 
@@ -593,6 +597,13 @@ final class BarModel: ObservableObject {
         if isBarrelRoll(text: text) {
             effectSettle?.fire()
             effectLine = nil
+            clearLine()
+            return
+        }
+        // the code typed out (or `konami`) toggles the CRT look as the keys do, and saves nothing
+        if isKonamiLine(text: text) {
+            crt.toggle()
+            OverlayLog.note("konami (typed): crt \(crt ? "on" : "off")")
             clearLine()
             return
         }
