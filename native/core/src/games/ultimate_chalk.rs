@@ -24,7 +24,7 @@ fn wobble(a: Pt, b: Pt, amp: f64, r: &mut dyn FnMut() -> f64) -> String {
     };
     let (ux, uy) = (dx / len, dy / len);
     let (nx, ny) = (-uy, ux);
-    let mut jit = |r: &mut dyn FnMut() -> f64| (r() - 0.5) * 2.0 * amp;
+    let jit = |r: &mut dyn FnMut() -> f64| (r() - 0.5) * 2.0 * amp;
     // the TS evaluates these left to right: r() for the overshoot, then jit() for the normal
     let s0 = a.0 - ux * r() * amp + nx * jit(r) * 0.5;
     let s1 = a.1 - uy * r() * amp + ny * jit(r) * 0.5;
