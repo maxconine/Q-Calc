@@ -1068,6 +1068,9 @@ impl App {
         unsafe { SetTimer(Some(self.host), TIMER_TRIM, TRIM_AFTER_MS, None) };
         // what only a showing needs goes now (the layouts, the Typst thread): ~3.5 MB back, remade as needed
         crate::answer::trim_hidden(self);
+        // the swap chain and the WARP device too (~2.5 MB, and D3D10Warp unloads): a showing makes them in ~4 ms
+        self.bar.surface.release();
+        self.gfx.drop_flip_device();
     }
 
     /// The bar has been hidden a while: give memory back (the working set; a hardware render target too).

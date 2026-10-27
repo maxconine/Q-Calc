@@ -339,7 +339,7 @@ impl Gfx {
     }
 
     /// The device was lost: the next flip surface makes a new one.
-    fn drop_flip_device(&self) {
+    pub fn drop_flip_device(&self) {
         *self.flip.borrow_mut() = None;
     }
 
