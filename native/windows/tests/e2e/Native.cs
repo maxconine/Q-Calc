@@ -209,6 +209,27 @@ namespace QCalcE2E
             Press(x, y, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP);
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        struct CURSORINFO { public int cbSize; public int flags; public IntPtr hCursor; public int x; public int y; }
+        [DllImport("user32.dll")] static extern bool GetCursorInfo(ref CURSORINFO ci);
+        [DllImport("user32.dll")] static extern IntPtr LoadCursorW(IntPtr instance, IntPtr name);
+        [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr hWnd);
+
+        // the pointer moved there with nothing pressed (hover)
+        public static void MoveTo(int x, int y)
+        {
+            SetCursorPos(x, y);
+            INPUT move = new INPUT(); move.type = INPUT_MOUSE; move.u.mi.dwFlags = 0x0001; // MOUSEEVENTF_MOVE, 0 0
+            Send(new List<INPUT> { move });
+        }
+
+        // the system cursor showing now is the hand (IDC_HAND)
+        public static bool CursorIsHand()
+        {
+            CURSORINFO ci = new CURSORINFO(); ci.cbSize = Marshal.SizeOf(typeof(CURSORINFO));
+            return GetCursorInfo(ref ci) && ci.hCursor == LoadCursorW(IntPtr.Zero, (IntPtr)32649);
+        }
+
         public static void RightClick(int x, int y)
         {
             Press(x, y, 0x0008, 0x0010);

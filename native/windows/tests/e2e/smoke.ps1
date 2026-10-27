@@ -495,6 +495,24 @@ Invoke-Check 'C1' 'ctrl+c copies the answer' 'required' {
     @{ Pass = $ok; Detail = "clipboard after Ctrl+C: '$(Get-Clip)'" }
 }
 
+# the pointer over the answer (hover.rs): the hand, and after a rest the system tooltip saying what a click does
+Invoke-Check 'U1' 'the answer shows the hand and a tooltip under the pointer' 'required' {
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '6*7'
+    Read-Answer '^42$' | Out-Null
+    $h = Get-Bar
+    $r = $N::Rect($h)
+    $s = $N::GetDpiForWindow($h) / 96.0
+    # the answer sits at the composer's right (16 in), the composer the bar's bottom 72 DIPs
+    $N::MoveTo([int]($r.Right - 30 * $s), [int]($r.Bottom - 36 * $s))
+    $hand = Wait-Until { $N::CursorIsHand() } 1500
+    $tip = Wait-Until { @($N::WindowsOfClass([int[]]@($script:proc.Id), 'tooltips_class32') | Where-Object { $N::IsWindowVisible($_) }).Count -gt 0 } 2500
+    $N::MoveTo([int]($r.Left + 40 * $s), [int]($r.Bottom - 36 * $s))
+    $gone = Wait-Until { @($N::WindowsOfClass([int[]]@($script:proc.Id), 'tooltips_class32') | Where-Object { $N::IsWindowVisible($_) }).Count -eq 0 } 1500
+    @{ Pass = ($hand -and $tip -and $gone); Detail = "hand over the answer: $hand; tooltip after a rest: $tip; gone when the pointer left: $gone" }
+}
+
 # the draft: an unfinished line outlives a hide and a restart (draftSeconds 60)
 Invoke-Check 'T6' 'history and the draft survive a restart' 'required' {
     Show-QCalc | Out-Null
