@@ -132,7 +132,14 @@ thread_local! {
 
 /// How many clicks a click at `now` (ms) and (x, y) makes, given the run so far: within the double-click time and
 /// box of the last it adds one, else it starts a new run.
-pub fn click_count(last: (i64, f32, f32, u32), now: i64, x: f32, y: f32, ms: i64, slop: f32) -> u32 {
+pub fn click_count(
+    last: (i64, f32, f32, u32),
+    now: i64,
+    x: f32,
+    y: f32,
+    ms: i64,
+    slop: f32,
+) -> u32 {
     let (at, lx, ly, n) = last;
     if n > 0 && now - at <= ms && (x - lx).abs() <= slop && (y - ly).abs() <= slop {
         n + 1
@@ -176,9 +183,9 @@ mod tip {
 
     use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows::Win32::UI::Controls::{
-        SetWindowTheme, TTTOOLINFOW, TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW,
-        TTM_SETMAXTIPWIDTH, TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTM_UPDATETIPTEXTW,
-        TTS_ALWAYSTIP, TTS_NOPREFIX,
+        SetWindowTheme, TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW, TTM_SETMAXTIPWIDTH,
+        TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTM_UPDATETIPTEXTW, TTS_ALWAYSTIP, TTS_NOPREFIX,
+        TTTOOLINFOW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateWindowExW, SendMessageW, WINDOW_STYLE, WS_EX_TOPMOST, WS_POPUP,
@@ -257,7 +264,11 @@ mod tip {
         unsafe {
             let _ = SetWindowTheme(
                 tip,
-                if dark { w!("DarkMode_Explorer") } else { w!("Explorer") },
+                if dark {
+                    w!("DarkMode_Explorer")
+                } else {
+                    w!("Explorer")
+                },
                 PCWSTR::null(),
             );
             SendMessageW(
@@ -266,7 +277,12 @@ mod tip {
                 Some(WPARAM(0)),
                 Some(LPARAM(&ti as *const _ as isize)),
             );
-            SendMessageW(tip, TTM_TRACKPOSITION, Some(WPARAM(0)), Some(LPARAM(pos as isize)));
+            SendMessageW(
+                tip,
+                TTM_TRACKPOSITION,
+                Some(WPARAM(0)),
+                Some(LPARAM(pos as isize)),
+            );
             SendMessageW(
                 tip,
                 TTM_TRACKACTIVATE,
@@ -337,10 +353,19 @@ mod tests {
         assert_eq!(first, 1);
         let second = click_count((1000, 50.0, 20.0, 1), 1200, 51.0, 20.0, 500, 3.0);
         assert_eq!(second, 2);
-        assert_eq!(click_count((1200, 51.0, 20.0, 2), 1500, 51.0, 21.0, 500, 3.0), 3);
+        assert_eq!(
+            click_count((1200, 51.0, 20.0, 2), 1500, 51.0, 21.0, 500, 3.0),
+            3
+        );
         // too late, or too far, starts again
-        assert_eq!(click_count((1200, 51.0, 20.0, 2), 1800, 51.0, 20.0, 500, 3.0), 1);
-        assert_eq!(click_count((1200, 51.0, 20.0, 2), 1300, 80.0, 20.0, 500, 3.0), 1);
+        assert_eq!(
+            click_count((1200, 51.0, 20.0, 2), 1800, 51.0, 20.0, 500, 3.0),
+            1
+        );
+        assert_eq!(
+            click_count((1200, 51.0, 20.0, 2), 1300, 80.0, 20.0, 500, 3.0),
+            1
+        );
     }
 
     #[test]

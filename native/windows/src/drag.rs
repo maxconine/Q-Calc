@@ -129,7 +129,8 @@ pub fn dpi_changed(app: &mut App, lp: LPARAM) {
         y: (r.top + r.bottom) / 2,
     });
     let scale = monitor.scale();
-    app.bar.width = place::fitted_width(f64::from(app.bar.width), monitor.area.width / scale) as f32;
+    app.bar.width =
+        place::fitted_width(f64::from(app.bar.width), monitor.area.width / scale) as f32;
     app.bar.composer_at = (
         r.left,
         r.top + (f64::from(app.bar.layout.anchor) * scale).round() as i32,

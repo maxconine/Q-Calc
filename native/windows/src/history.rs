@@ -693,7 +693,10 @@ pub fn tip(row: &HistoryRow, cells: &[Cell], k: usize, form: AnswerForm) -> Opti
             let dual = cells.iter().any(|c| c.text == "≈");
             Some(if dual {
                 // the ≈ splits the exact side (before it) from the approximation (after)
-                let approx = cells.iter().position(|c| c.text == "≈").is_some_and(|q| k > q);
+                let approx = cells
+                    .iter()
+                    .position(|c| c.text == "≈")
+                    .is_some_and(|q| k > q);
                 if approx && roots {
                     "Insert this solution at the cursor"
                 } else if approx {
@@ -1084,12 +1087,21 @@ mod tests {
         let one = row("2+2", "4", None);
         let c = cells(&one, f, 6.0, HistoryInsert::Expr);
         assert_eq!(tip(&one, &c, 0, f), Some("Insert expression at the cursor"));
-        assert_eq!(tip(&one, &c, 1, f), Some("Insert approximation at the cursor"));
+        assert_eq!(
+            tip(&one, &c, 1, f),
+            Some("Insert approximation at the cursor")
+        );
         let dual = row("sqrt(2)", "1.41421", Some("√2"));
         let c = cells(&dual, f, 6.0, HistoryInsert::Expr);
-        assert_eq!(tip(&dual, &c, 1, f), Some("Insert exact value at the cursor"));
+        assert_eq!(
+            tip(&dual, &c, 1, f),
+            Some("Insert exact value at the cursor")
+        );
         assert_eq!(tip(&dual, &c, 2, f), None);
-        assert_eq!(tip(&dual, &c, 3, f), Some("Insert approximation at the cursor"));
+        assert_eq!(
+            tip(&dual, &c, 3, f),
+            Some("Insert approximation at the cursor")
+        );
         let mut solve = row("x^2=4", "-2, 2", None);
         solve.solve = Some(SolveInfo {
             variable: "x".into(),
@@ -1099,7 +1111,10 @@ mod tests {
         });
         let c = cells(&solve, f, 6.0, HistoryInsert::Expr);
         assert_eq!(tip(&solve, &c, 1, f), Some("Copy all the solutions"));
-        assert_eq!(tip(&solve, &c, 2, f), Some("Insert this solution at the cursor"));
+        assert_eq!(
+            tip(&solve, &c, 2, f),
+            Some("Insert this solution at the cursor")
+        );
         assert_eq!(tip(&solve, &c, 3, f), None);
         let mut sys = row("x+y=3; x-y=1", "x = 2, y = 1", None);
         sys.kind = Some(HistoryKind::System);

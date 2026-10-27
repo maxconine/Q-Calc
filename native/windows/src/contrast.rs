@@ -50,7 +50,11 @@ pub fn active() -> bool {
 
 /// A COLORREF (0x00BBGGRR) as 0xRRGGBB.
 pub fn rgb_of(colorref: u32) -> u32 {
-    let (r, g, b) = (colorref & 0xff, (colorref >> 8) & 0xff, (colorref >> 16) & 0xff);
+    let (r, g, b) = (
+        colorref & 0xff,
+        (colorref >> 8) & 0xff,
+        (colorref >> 16) & 0xff,
+    );
     (r << 16) | (g << 8) | b
 }
 

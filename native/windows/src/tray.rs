@@ -346,7 +346,11 @@ impl Tray {
                 }
             }
             // Show is what a click on the icon does: bold, as Windows marks a tray menu's default
-            let _ = windows::Win32::UI::WindowsAndMessaging::SetMenuDefaultItem(menu, CMD_SHOW as u32, 0);
+            let _ = windows::Win32::UI::WindowsAndMessaging::SetMenuDefaultItem(
+                menu,
+                CMD_SHOW as u32,
+                0,
+            );
             let mut pt = POINT::default();
             let _ = GetCursorPos(&mut pt);
             // the menu closes when clicked away only if its owner is in front

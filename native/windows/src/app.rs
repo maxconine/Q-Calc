@@ -842,9 +842,9 @@ impl App {
                 }
                 let s = self.bar.scale();
                 let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
-                let panel =
-                    crate::graph::cursor(self, x, y).or_else(|| crate::systems::cursor(self, x, y))
-                        .or_else(|| crate::hover::cursor(self, x, y));
+                let panel = crate::graph::cursor(self, x, y)
+                    .or_else(|| crate::systems::cursor(self, x, y))
+                    .or_else(|| crate::hover::cursor(self, x, y));
                 let over = self.bar.layout.field.contains(x, y);
                 // SAFETY: system cursors
                 unsafe {

@@ -56,9 +56,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SetForegroundWindow, SetWindowPos, ShowWindow, TPM_RETURNCMD, TPM_TOPALIGN, TrackPopupMenu,
     WA_INACTIVE, WM_ACTIVATE, WM_CHAR, WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND,
     WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
-    WM_MOUSEWHEEL, WM_PAINT,
-    WM_SETCURSOR, WM_SETICON, WM_SIZE, WM_SYSCHAR, WM_SYSCOMMAND, WM_SYSKEYDOWN, WM_SYSKEYUP,
-    WNDCLASSEXW, WS_EX_APPWINDOW, WS_OVERLAPPEDWINDOW,
+    WM_MOUSEWHEEL, WM_PAINT, WM_SETCURSOR, WM_SETICON, WM_SIZE, WM_SYSCHAR, WM_SYSCOMMAND,
+    WM_SYSKEYDOWN, WM_SYSKEYUP, WNDCLASSEXW, WS_EX_APPWINDOW, WS_OVERLAPPEDWINDOW,
 };
 use windows::core::{BOOL, HSTRING, PCWSTR, w};
 
@@ -2290,10 +2289,11 @@ fn on_message(w: &mut Win, app: &mut App, msg: u32, wp: WPARAM, lp: LPARAM) -> O
             // SAFETY: we hold the capture; WM_CAPTURECHANGED comes back while we're borrowed and gets the default
             let _ = unsafe { windows::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture() };
         }
-        WM_LBUTTONDOWN if {
-            let s = w.scale();
-            w.on_bar_strip(lo(lp.0) as f32 / s)
-        } =>
+        WM_LBUTTONDOWN
+            if {
+                let s = w.scale();
+                w.on_bar_strip(lo(lp.0) as f32 / s)
+            } =>
         {
             // the scrollbar: hold the thumb, or page toward the click on the track
             let y = hi(lp.0) as f32 / w.scale();
