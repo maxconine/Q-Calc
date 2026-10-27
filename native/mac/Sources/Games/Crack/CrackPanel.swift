@@ -93,6 +93,9 @@ private struct CrackGame: View {
                     VStack(spacing: 0) {
                         CrackDial(s: model.s, pop: model.pop, phaseAt: model.phaseAt, colors: colors)
                             .frame(width: dialSize, height: dialSize)
+                            // CrackPanel.tsx's dial aria-label
+                            .accessibilityElement()
+                            .accessibilityLabel("level \(model.s.level), \(model.s.left) to go")
                             .contentShape(Rectangle())
                             .gesture(DragGesture(minimumDistance: 0)
                                 .onChanged { _ in

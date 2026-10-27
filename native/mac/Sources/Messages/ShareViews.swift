@@ -168,7 +168,8 @@ struct MessageFilesSection: View {
     var body: some View {
         Section("Files") {
             QLabeled {
-                Picker("", selection: $limit) {
+                // the hidden label is still what VoiceOver reads for the pop-up
+                Picker("Save files without asking", selection: $limit) {
                     ForEach(Self.options, id: \.1) { Text($0.0).tag($0.1) }
                 }
                 .labelsHidden()

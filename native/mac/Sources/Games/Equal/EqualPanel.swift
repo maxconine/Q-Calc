@@ -148,6 +148,8 @@ private struct EqualGame: View {
             VStack(spacing: 0) {
                 head
                 grid(guesses, over: over)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("guesses")
                     .padding(.top, GameMetrics.sp3)
                     .padding(.bottom, GameMetrics.sp2)
                 if over { summary(guesses) } else { keypad(guesses) }
@@ -275,8 +277,8 @@ private struct EqualGame: View {
                             EqualKey(label: glyph(k), mark: keys[String(k)], fill: keys[String(k)].map(fill)) { m.press(String(k)) }
                         }
                         if r == 1 {
-                            EqualKey(label: "⌫", wide: true) { m.press("Backspace") }
-                            EqualKey(label: "↵", wide: true) { m.press("Enter") }
+                            EqualKey(label: "⌫", wide: true) { m.press("Backspace") }.accessibilityLabel("delete")
+                            EqualKey(label: "↵", wide: true) { m.press("Enter") }.accessibilityLabel("enter")
                         }
                     }
                 }

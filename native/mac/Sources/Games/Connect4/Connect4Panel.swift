@@ -135,6 +135,8 @@ struct Connect4GameView: View {
                 .liveRegion(status(v, myTurn: myTurn))
             Connect4Board(view: v, role: role, cursor: myTurn ? col : nil, ghost: ghostOn && aiming,
                           onHover: { c in col = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("board")
             PongNote("← → or 1–7 to pick · ↵ drop · G \(ghostOn ? "hides" : "shows") the preview · \(skillName.map { "\($0) · " } ?? "")esc leaves")
         }
         .gameKeys(shell) { key in

@@ -305,6 +305,7 @@ private struct NumbersGame: View {
                 .focused($focused)
                 .disabled(r.over != nil)
                 .noWritingTools()
+                .accessibilityLabel("your expression")
                 .padding(.leading, GameMetrics.sp3)
                 .padding(.trailing, 44)
             if !ghost.isEmpty {
