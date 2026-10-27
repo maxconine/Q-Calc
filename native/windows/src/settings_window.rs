@@ -55,7 +55,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetCursor,
     SetForegroundWindow, SetWindowPos, ShowWindow, TPM_RETURNCMD, TPM_TOPALIGN, TrackPopupMenu,
     WA_INACTIVE, WM_ACTIVATE, WM_CHAR, WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND,
-    WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT,
+    WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE,
+    WM_MOUSEWHEEL, WM_PAINT,
     WM_SETCURSOR, WM_SETICON, WM_SIZE, WM_SYSCHAR, WM_SYSCOMMAND, WM_SYSKEYDOWN, WM_SYSKEYUP,
     WNDCLASSEXW, WS_EX_APPWINDOW, WS_OVERLAPPEDWINDOW,
 };
@@ -854,6 +855,10 @@ struct Win {
     scroll: f32,
     /// a wheel notch's glide: from, to, started (history.rs's ease)
     glide: Option<(f32, f32, std::time::Instant)>,
+    /// the scrollbar's thumb is held: where in it (DIPs from its top)
+    grab: Option<f32>,
+    /// the pointer is over the scrollbar's strip (it widens)
+    over_bar: bool,
     layout: Option<Layout>,
     dirty: bool,
     hover: Option<Target>,
@@ -1406,6 +1411,13 @@ impl Win {
         self.invalidate();
     }
 
+    /// Whether window DIP x is on the scrollbar's strip (the right 14 DIPs, while the page scrolls).
+    fn on_bar_strip(&self, x: f32) -> bool {
+        self.layout
+            .as_ref()
+            .is_some_and(|l| l.content > l.height && x >= self.client().0 - 14.0)
+    }
+
     /// The wheel: a notch glides 60 DIPs (on from where a glide under way is going); a touchpad's steps go as they
     /// come.
     fn wheel(&mut self, delta: f32) {
@@ -1548,6 +1560,7 @@ impl Win {
         let Some(l) = &self.layout else { return };
         let scroll = self.scroll;
         let hover = self.hover;
+        let wide = self.over_bar || self.grab.is_some();
         let recording = self.recording.is_some();
         let editing = self.editing.as_ref().map(|(id, f)| (id.clone(), f.clone()));
         let fonts = &self.fonts;
@@ -1639,15 +1652,14 @@ impl Win {
                 outline(c, r, 8.0, 2.0, theme.accent, card_bg);
             }
             c.pop_clip();
-            // the scrollbar, when the page is taller than the window
-            if l.content > l.height {
-                let track = l.height - 16.0;
-                let thumb = (track * l.height / l.content).max(28.0);
-                let at = 8.0 + (track - thumb) * scroll / (l.content - l.height);
+            // the scrollbar, when the page is taller than the window; wider under the pointer or held, as
+            // Windows 11's own
+            if let Some((at, thumb)) = thumb_of(l.content, l.height, scroll) {
+                let (w, a) = if wide { (6.0, 0.75) } else { (4.0, 0.5) };
                 c.fill_round(
-                    Rect::new(c.width - 8.0, at, 4.0, thumb),
-                    2.0,
-                    with_alpha(theme.muted, 0.5),
+                    Rect::new(c.width - 4.0 - w, at, w, thumb),
+                    w / 2.0,
+                    with_alpha(theme.muted, a),
                 );
             }
         });
@@ -2012,6 +2024,8 @@ fn show_now() {
             page: Page::General,
             scroll: 0.0,
             glide: None,
+            grab: None,
+            over_bar: false,
             layout: None,
             dirty: true,
             hover: None,
@@ -2133,6 +2147,26 @@ fn hi(v: isize) -> i32 {
 }
 
 /// Runs `f` on the window's state, unless it is missing or busy (a message sent back while it is borrowed).
+/// The scrollbar's thumb, (top, height) in window DIPs, for a page `content` tall in a window `height` tall,
+/// scrolled `scroll`; None when the page fits.
+pub fn thumb_of(content: f32, height: f32, scroll: f32) -> Option<(f32, f32)> {
+    if content <= height {
+        return None;
+    }
+    let track = height - 16.0;
+    let thumb = (track * height / content).max(28.0);
+    Some((8.0 + (track - thumb) * scroll / (content - height), thumb))
+}
+
+/// The scroll that puts the thumb's top at `top` (`thumb_of` turned around), clamped to the page.
+pub fn scroll_for(content: f32, height: f32, top: f32) -> f32 {
+    let Some((_, thumb)) = thumb_of(content, height, 0.0) else {
+        return 0.0;
+    };
+    let room = (height - 16.0 - thumb).max(1.0);
+    ((top - 8.0) / room * (content - height)).clamp(0.0, content - height)
+}
+
 fn with_win<R>(f: impl FnOnce(&mut Win) -> R) -> Option<R> {
     WIN.with(|cell| {
         let mut slot = cell.try_borrow_mut().ok()?;
@@ -2228,10 +2262,55 @@ fn on_message(w: &mut Win, app: &mut App, msg: u32, wp: WPARAM, lp: LPARAM) -> O
         WM_CLOSE => w.pending.push(Pending::Destroy),
         WM_MOUSEMOVE => {
             let s = w.scale();
-            let t = w.hit(lo(lp.0) as f32 / s, hi(lp.0) as f32 / s);
+            let (x, y) = (lo(lp.0) as f32 / s, hi(lp.0) as f32 / s);
+            // the thumb held: the page follows it
+            if let (Some(grab), Some(l)) = (w.grab, &w.layout) {
+                let next = scroll_for(l.content, l.height, y - grab);
+                if (next - w.scroll).abs() > 0.01 {
+                    w.glide = None;
+                    w.scroll = next;
+                    w.invalidate();
+                }
+                return Some(LRESULT(0));
+            }
+            let over = w.on_bar_strip(x);
+            if over != w.over_bar {
+                w.over_bar = over;
+                w.invalidate();
+            }
+            let t = w.hit(x, y);
             if t != w.hover {
                 w.hover = t;
                 w.invalidate();
+            }
+        }
+        WM_LBUTTONUP if w.grab.is_some() => {
+            w.grab = None;
+            w.invalidate();
+            // SAFETY: we hold the capture; WM_CAPTURECHANGED comes back while we're borrowed and gets the default
+            let _ = unsafe { windows::Win32::UI::Input::KeyboardAndMouse::ReleaseCapture() };
+        }
+        WM_LBUTTONDOWN if {
+            let s = w.scale();
+            w.on_bar_strip(lo(lp.0) as f32 / s)
+        } =>
+        {
+            // the scrollbar: hold the thumb, or page toward the click on the track
+            let y = hi(lp.0) as f32 / w.scale();
+            let Some(l) = &w.layout else {
+                return Some(LRESULT(0));
+            };
+            let (content, height) = (l.content, l.height);
+            if let Some((at, thumb)) = thumb_of(content, height, w.scroll) {
+                if y >= at && y < at + thumb {
+                    w.grab = Some(y - at);
+                    w.glide = None;
+                    // SAFETY: our window
+                    unsafe { windows::Win32::UI::Input::KeyboardAndMouse::SetCapture(w.hwnd) };
+                    w.invalidate();
+                } else {
+                    w.scroll_by(if y < at { -height * 0.9 } else { height * 0.9 });
+                }
             }
         }
         WM_LBUTTONDOWN => {
@@ -2433,6 +2512,23 @@ pub fn debug() -> Value {
 mod tests {
     use super::*;
     use qcalc_core::app::host_settings::conflict_text;
+
+    #[test]
+    fn the_scrollbar_thumb_and_back() {
+        assert_eq!(thumb_of(500.0, 600.0, 0.0), None);
+        let (top, h) = thumb_of(1200.0, 600.0, 0.0).unwrap();
+        assert_eq!(top, 8.0);
+        assert!((h - 292.0).abs() < 0.01);
+        let (bottom_top, _) = thumb_of(1200.0, 600.0, 600.0).unwrap();
+        assert!((bottom_top + h - 592.0).abs() < 0.01);
+        // dragging the thumb to a spot scrolls to what puts it there, clamped
+        for s in [0.0, 150.0, 600.0] {
+            let (t, _) = thumb_of(1200.0, 600.0, s).unwrap();
+            assert!((scroll_for(1200.0, 600.0, t) - s).abs() < 0.01);
+        }
+        assert_eq!(scroll_for(1200.0, 600.0, -50.0), 0.0);
+        assert_eq!(scroll_for(1200.0, 600.0, 5000.0), 600.0);
+    }
 
     #[test]
     fn a_probe_names_the_owner_and_a_free_chord() {
