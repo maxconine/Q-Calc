@@ -1,5 +1,6 @@
-//! The notification-area icon: Show Q Calc / Settings… / Quit Q Calc, a click shows the bar, and the balloon
-//! notices (the hotkey held after retries ran out).
+//! The notification-area icon: its menu (Show Q Calc, Settings…, Tips…, Tutorial, Check for Updates…, Quit Q Calc,
+//! and the shortcut's warning when it couldn't be had, as the Tauri app's and the Mac's menus), a click shows the
+//! bar, and the balloon notices (the hotkey held after retries ran out).
 //!
 //! The icon is src-tauri/icons/icon.ico, built into the binary: a black glyph, made white for a dark taskbar
 //! (`SystemUsesLightTheme`), redone when the taskbar's colour changes (WM_SETTINGCHANGE "ImmersiveColorSet") and
@@ -29,6 +30,84 @@ const UID: u32 = 1;
 pub const CMD_SHOW: usize = 1;
 pub const CMD_SETTINGS: usize = 2;
 pub const CMD_QUIT: usize = 3;
+pub const CMD_TIPS: usize = 4;
+pub const CMD_TUTORIAL: usize = 5;
+pub const CMD_UPDATES: usize = 6;
+/// the shortcut warning: picking it opens the keybinds in settings
+pub const CMD_HOTKEY: usize = 7;
+
+/// What the menu shows besides its fixed items.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct MenuState {
+    /// "Alt+Space is taken · pick another…", once the shortcut's retries ran out
+    pub hotkey_warning: Option<String>,
+}
+
+impl MenuState {
+    pub fn of(app: &crate::app::App) -> MenuState {
+        let hk = &app.hotkey;
+        MenuState {
+            hotkey_warning: hk.gave_up.then(|| {
+                let keys = crate::hotkey::title(&hk.wanted);
+                match &hk.active {
+                    Some(other) if *other != hk.wanted => format!(
+                        "{keys} is taken · {} opens Q Calc",
+                        crate::hotkey::title(other)
+                    ),
+                    _ => format!("{keys} is taken · pick another…"),
+                }
+            }),
+        }
+    }
+}
+
+/// The menu's items in order: (command, label), command 0 a separator; the warning first when there is one.
+pub fn items(state: &MenuState) -> Vec<(usize, String)> {
+    let mut out = Vec::new();
+    if let Some(w) = &state.hotkey_warning {
+        out.push((CMD_HOTKEY, format!("⚠ {w}")));
+        out.push((0, String::new()));
+    }
+    for (cmd, label) in [
+        (CMD_SHOW, "Show Q Calc"),
+        (CMD_SETTINGS, "Settings…"),
+        (CMD_TIPS, "Tips…"),
+        (CMD_TUTORIAL, "Tutorial"),
+        (CMD_UPDATES, "Check for Updates…"),
+        (0, ""),
+        (CMD_QUIT, "Quit Q Calc"),
+    ] {
+        out.push((cmd, label.to_string()));
+    }
+    out
+}
+
+/// A picked command, on the UI thread with the app (app.rs, after the modal menu).
+pub fn picked(app: &mut crate::app::App, cmd: Option<usize>) {
+    use crate::app::Op;
+    use crate::settings_window::{self, Page};
+    match cmd {
+        Some(CMD_SHOW) => app.ops.push(Op::Show),
+        Some(CMD_SETTINGS) => settings_window::open(app),
+        Some(CMD_TIPS) => show_with(app, "help"),
+        Some(CMD_TUTORIAL) => show_with(app, "tutorial"),
+        Some(CMD_UPDATES) => {
+            crate::update::ask_check();
+            settings_window::open_page(app, Page::Updates);
+        }
+        Some(CMD_HOTKEY) => settings_window::open_page(app, Page::Keybinds),
+        Some(CMD_QUIT) => app.ops.push(Op::Quit),
+        _ => {}
+    }
+}
+
+/// Tips and the tutorial: the bar opens holding the command that shows them (the Mac's showTips puts `help` in
+/// the line; the tutorial is `tutorial`, as the settings row says). The commands themselves are the bar's.
+pub fn show_with(app: &mut crate::app::App, command: &str) {
+    app.ops.push(crate::app::Op::Show);
+    app.model.field.reset(command);
+    app.text_changed();
+}
 
 /// The PNG of the ICO entry nearest `px` (at least it, if any is).
 pub fn ico_entry(ico: &[u8], px: u32) -> Option<&[u8]> {
@@ -247,19 +326,18 @@ impl Tray {
     }
 
     /// The menu at the pointer; the command picked, if any. Modal: call it outside the app's borrow.
-    pub fn menu(hwnd: HWND) -> Option<usize> {
-        // SAFETY: the menu is destroyed below; strings are static
+    pub fn menu(hwnd: HWND, state: &MenuState) -> Option<usize> {
+        crate::settings_window::dark_menus(crate::render::system_dark());
+        // SAFETY: the menu is destroyed below; the strings outlive the calls
         unsafe {
             let menu = CreatePopupMenu().ok()?;
-            let _ = AppendMenuW(menu, MF_STRING, CMD_SHOW, windows::core::w!("Show Q Calc"));
-            let _ = AppendMenuW(
-                menu,
-                MF_STRING,
-                CMD_SETTINGS,
-                windows::core::w!("Settings…"),
-            );
-            let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
-            let _ = AppendMenuW(menu, MF_STRING, CMD_QUIT, windows::core::w!("Quit Q Calc"));
+            for (cmd, label) in items(state) {
+                if cmd == 0 {
+                    let _ = AppendMenuW(menu, MF_SEPARATOR, 0, None);
+                } else {
+                    let _ = AppendMenuW(menu, MF_STRING, cmd, &HSTRING::from(label));
+                }
+            }
             let mut pt = POINT::default();
             let _ = GetCursorPos(&mut pt);
             // the menu closes when clicked away only if its owner is in front
@@ -294,6 +372,35 @@ impl Drop for Tray {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_menu_has_every_item_and_the_warning_first() {
+        let labels = |s: &MenuState| items(s).into_iter().map(|(_, l)| l).collect::<Vec<_>>();
+        assert_eq!(
+            labels(&MenuState::default()),
+            [
+                "Show Q Calc",
+                "Settings…",
+                "Tips…",
+                "Tutorial",
+                "Check for Updates…",
+                "",
+                "Quit Q Calc"
+            ]
+        );
+        let warned = MenuState {
+            hotkey_warning: Some("Alt+Space is taken · pick another…".into()),
+        };
+        let all = items(&warned);
+        assert_eq!(
+            all[0],
+            (
+                CMD_HOTKEY,
+                "⚠ Alt+Space is taken · pick another…".to_string()
+            )
+        );
+        assert_eq!((all[1].0, all.len()), (0, 9));
+    }
 
     #[test]
     fn the_ico_entry_nearest_the_size() {

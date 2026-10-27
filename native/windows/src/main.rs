@@ -12,11 +12,15 @@ mod place;
 mod store;
 
 #[cfg(windows)]
+mod analytics;
+#[cfg(windows)]
 mod answer;
 #[cfg(windows)]
 mod app;
 #[cfg(windows)]
 mod bench;
+#[cfg(windows)]
+mod bg;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
@@ -34,7 +38,11 @@ mod input;
 #[cfg(windows)]
 mod messaging;
 #[cfg(windows)]
+mod migrate;
+#[cfg(windows)]
 mod model;
+#[cfg(windows)]
+mod net;
 #[cfg(windows)]
 mod rates;
 #[cfg(windows)]

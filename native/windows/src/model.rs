@@ -254,6 +254,7 @@ impl BarModel {
             done(move |app| {
                 let saved = result.saved;
                 if saved {
+                    crate::analytics::track_row(app, &typed, result.row.as_ref(), chained);
                     app.set_history(result.history);
                 }
                 let m = &mut app.model;
