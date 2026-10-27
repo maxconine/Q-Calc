@@ -74,6 +74,10 @@ pub struct BarModel {
     changed: bool,
     /// the clipboard text an action wants written (app.rs writes it)
     pub to_clipboard: Option<String>,
+    /// the graph panel (graph.rs), while the line is `graph …`
+    pub graph: Option<crate::graph::GraphState>,
+    /// the `sys N` rows (systems.rs), once ↵ opened them
+    pub systems: Option<crate::systems::SysState>,
 }
 
 impl BarModel {
@@ -93,6 +97,8 @@ impl BarModel {
             settings_dirty: false,
             changed: true,
             to_clipboard: None,
+            graph: None,
+            systems: None,
         }
     }
 
@@ -161,6 +167,8 @@ impl BarModel {
     }
 
     pub fn evaluate_live(&mut self, engine: &EngineThread) {
+        crate::systems::follow(self, engine);
+        crate::graph::follow(self, engine);
         let typed = self.field.text().to_string();
         if typed.trim().is_empty() {
             engine.cancel(Lane::Live);
@@ -202,6 +210,9 @@ impl BarModel {
 
     /// The answer as the slot shows it ("" for none).
     pub fn answer_text(&self) -> String {
+        if let Some(s) = crate::systems::slot(self) {
+            return s;
+        }
         let Some(a) = &self.live else {
             return String::new();
         };
@@ -350,6 +361,9 @@ impl BarModel {
 
     /// ↵ on a row, or a click on one of its halves: the piece goes in at the caret.
     pub fn insert_row(&mut self, i: usize, answer: bool) {
+        if crate::systems::reopen(self, i) {
+            return;
+        }
         let Some(row) = self.rows.rows.get(i).cloned() else {
             return;
         };
@@ -382,6 +396,10 @@ impl BarModel {
         const RIGHT: u32 = 0x27;
         const DOWN: u32 = 0x28;
         const DELETE: u32 = 0x2E;
+        let clipboard = match crate::systems::key_down(self, vk, mods, engine, clipboard) {
+            Ok(outcome) => return outcome,
+            Err(clipboard) => clipboard,
+        };
         let before = self.field.text().to_string();
         let ctrl = mods.ctrl && !mods.alt;
         // copying a selection beats the copy-answer shortcut on the same chord
@@ -399,6 +417,9 @@ impl BarModel {
                     self.tape_open = false;
                     self.selected = None;
                     self.changed = true;
+                    return Outcome::Handled;
+                }
+                if crate::graph::escape(self, engine) {
                     return Outcome::Handled;
                 }
                 return Outcome::Hide;
@@ -460,6 +481,9 @@ impl BarModel {
 
     /// WM_CHAR.
     pub fn char16(&mut self, unit: u16, engine: &EngineThread) {
+        if crate::systems::char16(self, unit, engine) {
+            return;
+        }
         if self.field.char16(unit) {
             self.text_changed(engine);
         }
@@ -467,6 +491,9 @@ impl BarModel {
 
     /// Text from the IME or a paste.
     pub fn insert_text(&mut self, text: &str, engine: &EngineThread) {
+        if crate::systems::insert_text(self, text, engine) {
+            return;
+        }
         self.field.insert(text);
         self.field.break_run();
         self.text_changed(engine);

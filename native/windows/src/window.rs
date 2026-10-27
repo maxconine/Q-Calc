@@ -52,6 +52,10 @@ pub struct BarLayout {
     pub answer: Rect,
     pub answer_text: String,
     pub hint: Option<Rect>,
+    /// the `sys` rows' panel (systems.rs)
+    pub systems: Option<Rect>,
+    /// the graph panel (graph.rs)
+    pub graph: Option<Rect>,
 }
 
 /// A monitor: its store key (`\\.\DISPLAY1`, as Tauri named it), work area (physical px) and scale.
@@ -245,6 +249,16 @@ impl Bar {
             height += 18.0;
             r
         });
+        let systems = model.systems.as_ref().map(|s| {
+            let r = Rect::new(0.0, height, width, crate::systems::height(s));
+            height += r.h;
+            r
+        });
+        let graph = model.graph.as_ref().map(|g| {
+            let r = Rect::new(0.0, height, width, crate::graph::height(gfx, g, width));
+            height += r.h;
+            r
+        });
         BarLayout {
             width,
             height,
@@ -255,13 +269,16 @@ impl Bar {
             answer,
             answer_text,
             hint,
+            systems,
+            graph,
         }
     }
 
     /// One frame of the bar as laid out.
     pub fn paint(&mut self, gfx: &Gfx, theme: &Theme, model: &BarModel) -> Result<()> {
         let layout = self.layout.clone();
-        let focused = self.focused || !self.visible;
+        let window_focused = self.focused || !self.visible;
+        let focused = window_focused && !crate::systems::focused(model);
         let field_view = &mut self.field_view;
         self.surface.draw(gfx, theme, |c: &mut Canvas| {
             c.clear(theme.bg);
@@ -305,6 +322,12 @@ impl Bar {
                 )
             {
                 c.text(&l, r.x, r.y, theme.muted);
+            }
+            if let (Some(r), Some(s)) = (layout.systems, &model.systems) {
+                crate::systems::paint(c, s, r, window_focused);
+            }
+            if let (Some(r), Some(g)) = (layout.graph, &model.graph) {
+                crate::graph::paint(c, g, r);
             }
         })
     }

@@ -46,7 +46,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_APP, WM_CHAR,
     WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_DPICHANGED, WM_ENDSESSION, WM_ERASEBKGND, WM_HOTKEY,
     WM_IME_COMPOSITION, WM_IME_STARTCOMPOSITION, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_POWERBROADCAST, WM_SETCURSOR, WM_SETTINGCHANGE,
+    WM_LBUTTONUP, WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT, WM_POWERBROADCAST, WM_SETCURSOR, WM_SETTINGCHANGE,
     WM_SIZE, WM_SYSCHAR, WM_SYSKEYDOWN, WM_TIMER, WM_WTSSESSION_CHANGE, WNDCLASSEXW,
     WS_EX_TOOLWINDOW, WS_POPUP,
 };
@@ -715,6 +715,10 @@ impl App {
                 self.click(x, y, msg == WM_LBUTTONDBLCLK);
             }
             WM_MOUSEMOVE => {
+                let (x, y) = self.dips(lp);
+                if crate::systems::mouse_move(self, x, y) || crate::graph::mouse_move(self, x, y) {
+                    return Some(LRESULT(0));
+                }
                 if self.bar.selecting {
                     let (x, y) = self.dips(lp);
                     let pos = self.bar.field_view.hit(x, y);
@@ -723,11 +727,23 @@ impl App {
                 }
             }
             WM_LBUTTONUP => {
+                let (x, y) = self.dips(lp);
+                if crate::systems::mouse_up(self) || crate::graph::mouse_up(self, x, y) {
+                    return Some(LRESULT(0));
+                }
                 if self.bar.selecting {
                     self.bar.selecting = false;
                     // SAFETY: we hold the capture
                     let _ = unsafe { ReleaseCapture() };
                 }
+            }
+            WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
+                if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
+                    return None;
+                }
+            }
+            windows::Win32::UI::Controls::WM_MOUSELEAVE => {
+                crate::graph::leave(self);
             }
             WM_SETCURSOR => {
                 if (lp.0 & 0xffff) as u32 != 1 {
@@ -740,14 +756,12 @@ impl App {
                     let _ = ScreenToClient(hwnd, &mut pt);
                 }
                 let s = self.bar.scale();
-                let over = self
-                    .bar
-                    .layout
-                    .field
-                    .contains(pt.x as f32 / s, pt.y as f32 / s);
+                let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
+                let panel = crate::graph::cursor(self, x, y).or_else(|| crate::systems::cursor(self, x, y));
+                let over = self.bar.layout.field.contains(x, y);
                 // SAFETY: system cursors
                 unsafe {
-                    if let Ok(c) = LoadCursorW(None, if over { IDC_IBEAM } else { IDC_ARROW }) {
+                    if let Ok(c) = LoadCursorW(None, panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW })) {
                         SetCursor(Some(c));
                     }
                 }
@@ -764,6 +778,9 @@ impl App {
     }
 
     fn click(&mut self, x: f32, y: f32, double: bool) {
+        if crate::systems::click(self, x, y, double, mods().shift) || crate::graph::click(self, x, y, double) {
+            return;
+        }
         let l = &self.bar.layout;
         if l.field.contains(x, y)
             || (y >= l.composer.y && y < l.composer.bottom() && x < l.answer.x)
@@ -1195,6 +1212,7 @@ impl App {
                     "text": self.model.field.text(), "answer": self.model.answer_text(), "liveFor": self.model.live_for,
                     "hint": self.model.hint, "rows": rows, "visible": self.bar.visible, "focused": self.bar.focused,
                     "frame": [r.left, r.top, r.right, r.bottom], "hotkey": self.hotkey.active,
+                    "graph": crate::graph::debug(&self.model), "systems": crate::systems::debug(&self.model),
                 }));
             }
             "mem" => {

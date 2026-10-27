@@ -520,6 +520,16 @@ impl Canvas<'_> {
         self.brush
     }
 
+    /// The render target, for views that draw geometry (graph.rs, systems.rs); only inside the frame.
+    pub fn target(&self) -> &ID2D1HwndRenderTarget {
+        self.rt
+    }
+
+    /// The frame's one brush, recoloured to `c`.
+    pub fn brush(&self, c: Color) -> &ID2D1SolidColorBrush {
+        self.paint(c)
+    }
+
     pub fn clear(&self, c: Color) {
         // SAFETY: inside BeginDraw/EndDraw
         unsafe { self.rt.Clear(Some(&c)) };
