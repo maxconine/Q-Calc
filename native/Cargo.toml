@@ -2,6 +2,7 @@
 resolver = "3"
 members = ["core", "ffi",
   "typst", # WP-TYPST-RENDER
+  "windows", # the native Windows app (qcalc-win)
 ]
 
 [workspace.package]
