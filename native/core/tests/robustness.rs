@@ -130,3 +130,11 @@ fn choosing_from_more_than_doubles_count() {
         assert_eq!(show("nPr(10, 3)"), "720");
     });
 }
+
+#[test]
+fn gcd_of_an_infinity_ends() {
+    // the port looped on `b != 0` where JS `while (b)` also stops at NaN (∞ % 1): a hang the TS never had
+    assert_eq!(show("lcm(-2^1023, 1e300, 0.1)"), "overflow");
+    assert_eq!(show("gcd(1e308*10, 4)"), "undefined");
+    assert_eq!(show("lcm(4, 6)"), "12");
+}

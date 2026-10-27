@@ -87,7 +87,8 @@ pub fn format_value(value: &Value, sig_figs: f64) -> String {
 /// GCD of the truncated magnitudes; 0 only when both are 0.
 pub fn int_gcd(a: f64, b: f64) -> f64 {
     let (mut a, mut b) = (a.trunc().abs(), b.trunc().abs());
-    while b != 0.0 {
+    // JS `while (b)`: NaN (from an infinite argument) is falsy and ends it too; `b != 0.0` alone looped forever
+    while b != 0.0 && !b.is_nan() {
         (a, b) = (b, a % b);
     }
     a
