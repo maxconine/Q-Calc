@@ -34,8 +34,28 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_WORD_WRAPPING_NO_WRAP, DWriteCreateFactory, IDWriteFactory, IDWriteFontCollection,
     IDWriteTextFormat, IDWriteTextLayout,
 };
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
-use windows::core::{BOOL, HSTRING, Result};
+use windows::Win32::Foundation::{E_FAIL, HMODULE};
+use windows::Win32::Graphics::Direct2D::{
+    D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
+    D2D1_DEVICE_CONTEXT_OPTIONS_NONE, ID2D1Bitmap1, ID2D1Device, ID2D1DeviceContext,
+    ID2D1Factory1, ID2D1RenderTarget,
+};
+use windows::Win32::Graphics::Direct2D::Common::D2D1_ALPHA_MODE_IGNORE;
+use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_WARP;
+use windows::Win32::Graphics::Direct3D11::{
+    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_SINGLETHREADED, D3D11_SDK_VERSION,
+    D3D11CreateDevice, ID3D11Device,
+};
+use windows::Win32::Graphics::Dxgi::Common::{
+    DXGI_ALPHA_MODE_IGNORE, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
+};
+use windows::Win32::Graphics::Dxgi::{
+    DXGI_ERROR_DEVICE_REMOVED, DXGI_ERROR_DEVICE_RESET, DXGI_MWA_NO_ALT_ENTER,
+    DXGI_MWA_NO_WINDOW_CHANGES, DXGI_PRESENT, DXGI_SCALING_NONE, DXGI_SWAP_CHAIN_DESC1,
+    DXGI_SWAP_CHAIN_FLAG, DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_USAGE_RENDER_TARGET_OUTPUT,
+    IDXGIDevice, IDXGIFactory2, IDXGISurface, IDXGISwapChain1,
+};
+use windows::core::{BOOL, HSTRING, Interface, Result};
 use windows_numerics::Vector2;
 
 /// The theme's sizes (Theme.swift: --fs-*, --radius*, --gutter, --tape-row-height, composer 72).
@@ -216,6 +236,17 @@ pub struct Gfx {
     pub d2d: ID2D1Factory,
     pub dw: IDWriteFactory,
     pub fonts: Fonts,
+    /// the WARP device flip surfaces draw with, made by the first one
+    flip: std::cell::RefCell<Option<FlipDevice>>,
+}
+
+/// A WARP (software) D3D11 device, its DXGI factory and the D2D device on it, shared by every flip `Surface`.
+/// The window targets already ran on WARP inside Direct2D, so this loads nothing new.
+#[derive(Clone)]
+struct FlipDevice {
+    d3d: ID3D11Device,
+    factory: IDXGIFactory2,
+    d2d: ID2D1Device,
 }
 
 fn has_family(fonts: &IDWriteFontCollection, name: &str) -> bool {
@@ -267,7 +298,46 @@ impl Gfx {
             family: family.into(),
             text_family: text_family.into(),
         };
-        Ok(Gfx { d2d, dw, fonts })
+        Ok(Gfx {
+            d2d,
+            dw,
+            fonts,
+            flip: std::cell::RefCell::new(None),
+        })
+    }
+
+    fn flip_device(&self) -> Result<FlipDevice> {
+        if let Some(d) = self.flip.borrow().as_ref() {
+            return Ok(d.clone());
+        }
+        let mut d3d = None;
+        // SAFETY: plain device creation into a live out pointer; the casts and lookups are on live objects
+        let dev = unsafe {
+            D3D11CreateDevice(
+                None,
+                D3D_DRIVER_TYPE_WARP,
+                HMODULE::default(),
+                // Direct2D needs BGRA; only the UI thread draws
+                D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_SINGLETHREADED,
+                None,
+                D3D11_SDK_VERSION,
+                Some(&mut d3d),
+                None,
+                None,
+            )?;
+            let d3d: ID3D11Device = d3d.ok_or_else(|| windows::core::Error::from(E_FAIL))?;
+            let dxgi: IDXGIDevice = d3d.cast()?;
+            let factory: IDXGIFactory2 = dxgi.GetAdapter()?.GetParent()?;
+            let d2d = self.d2d.cast::<ID2D1Factory1>()?.CreateDevice(&dxgi)?;
+            FlipDevice { d3d, factory, d2d }
+        };
+        *self.flip.borrow_mut() = Some(dev.clone());
+        Ok(dev)
+    }
+
+    /// The device was lost: the next flip surface makes a new one.
+    fn drop_flip_device(&self) {
+        *self.flip.borrow_mut() = None;
     }
 
     /// A layout of one line of `text` (no wrapping), vertically centred in `h`. `max_w` 0 means unbounded.
@@ -375,12 +445,28 @@ pub fn hardware() -> bool {
     std::env::var("QCALC_D2D").is_ok_and(|v| v.eq_ignore_ascii_case("hardware"))
 }
 
+/// What a `Surface` draws into.
+enum Target {
+    /// Direct2D's own window target (software unless `hardware()`)
+    Hwnd(ID2D1HwndRenderTarget),
+    /// a device context on the shared WARP device, into a flip-model swap chain (`Surface::flip`)
+    Flip(Flip),
+}
+
+struct Flip {
+    chain: IDXGISwapChain1,
+    ctx: ID2D1DeviceContext,
+    /// the back buffer as the context's target, for buffers of `size`; made again after a resize
+    bitmap: Option<(ID2D1Bitmap1, (u32, u32))>,
+}
+
 /// A window's render target, made when first needed and kept across hides.
 pub struct Surface {
     hwnd: HWND,
-    rt: Option<(ID2D1HwndRenderTarget, ID2D1SolidColorBrush)>,
+    rt: Option<(Target, ID2D1SolidColorBrush)>,
     pub dpi: f32,
     pub px: (u32, u32),
+    flip: bool,
 }
 
 impl Surface {
@@ -390,6 +476,19 @@ impl Surface {
             rt: None,
             dpi: dpi as f32,
             px: (1, 1),
+            flip: false,
+        }
+    }
+
+    /// A surface that presents through a flip-model swap chain on the shared WARP device (render.rs `FlipDevice`)
+    /// rather than an `ID2D1HwndRenderTarget`: the same software rasteriser, but a frame is handed to DWM in about
+    /// half the time (no GDI blit; PERFORMANCE.md). For windows without child windows (the bar).
+    /// `QCALC_D2D=hwnd` (or `hardware`) keeps the window target.
+    pub fn new_flip(hwnd: HWND, dpi: u32) -> Surface {
+        let flip = std::env::var("QCALC_D2D").map_or(true, |v| v.is_empty());
+        Surface {
+            flip,
+            ..Surface::new(hwnd, dpi)
         }
     }
 
@@ -404,6 +503,18 @@ impl Surface {
     fn ensure(&mut self, gfx: &Gfx) -> Result<()> {
         if self.rt.is_some() {
             return Ok(());
+        }
+        if self.flip {
+            match self.make_flip(gfx) {
+                Ok(t) => {
+                    self.rt = Some(t);
+                    return Ok(());
+                }
+                Err(e) => {
+                    crate::qlog!("flip surface unavailable ({e}); drawing with a window target");
+                    self.flip = false;
+                }
+            }
         }
         let props = D2D1_RENDER_TARGET_PROPERTIES {
             r#type: if hardware() {
@@ -435,14 +546,61 @@ impl Surface {
             rt.SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
             rt.CreateSolidColorBrush(&rgb(0, 1.0), None)
         }?;
-        self.rt = Some((rt, brush));
+        self.rt = Some((Target::Hwnd(rt), brush));
         Ok(())
+    }
+
+    /// A swap chain for our window on the shared device, and a device context to draw into it.
+    fn make_flip(&self, gfx: &Gfx) -> Result<(Target, ID2D1SolidColorBrush)> {
+        let dev = gfx.flip_device()?;
+        let desc = DXGI_SWAP_CHAIN_DESC1 {
+            Width: self.px.0.max(1),
+            Height: self.px.1.max(1),
+            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            SampleDesc: DXGI_SAMPLE_DESC {
+                Count: 1,
+                Quality: 0,
+            },
+            BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+            BufferCount: 2,
+            // a buffer the window outgrew isn't stretched (as the window target's wasn't)
+            Scaling: DXGI_SCALING_NONE,
+            SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+            AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+            ..Default::default()
+        };
+        // SAFETY: the device and window are live; the descriptions are locals
+        unsafe {
+            let chain = dev
+                .factory
+                .CreateSwapChainForHwnd(&dev.d3d, self.hwnd, &desc, None, None)?;
+            // no Alt+Enter full screen, no DXGI watching the window's messages
+            let _ = dev.factory.MakeWindowAssociation(
+                self.hwnd,
+                DXGI_MWA_NO_ALT_ENTER | DXGI_MWA_NO_WINDOW_CHANGES,
+            );
+            let ctx = dev
+                .d2d
+                .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)?;
+            ctx.SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+            ctx.SetDpi(self.dpi, self.dpi);
+            let brush = ctx.CreateSolidColorBrush(&rgb(0, 1.0), None)?;
+            Ok((
+                Target::Flip(Flip {
+                    chain,
+                    ctx,
+                    bitmap: None,
+                }),
+                brush,
+            ))
+        }
     }
 
     /// The window's client size changed (physical pixels).
     pub fn resize(&mut self, w: u32, h: u32) {
         self.px = (w.max(1), h.max(1));
-        if let Some((rt, _)) = &self.rt {
+        // a swap chain's buffers follow at the next draw
+        if let Some((Target::Hwnd(rt), _)) = &self.rt {
             let size = D2D_SIZE_U {
                 width: self.px.0,
                 height: self.px.1,
@@ -456,9 +614,14 @@ impl Surface {
 
     pub fn set_dpi(&mut self, dpi: u32) {
         self.dpi = dpi as f32;
-        if let Some((rt, _)) = &self.rt {
+        if let Some((t, _)) = &self.rt {
             // SAFETY: a live target
-            unsafe { rt.SetDpi(self.dpi, self.dpi) };
+            unsafe {
+                match t {
+                    Target::Hwnd(rt) => rt.SetDpi(self.dpi, self.dpi),
+                    Target::Flip(f) => f.ctx.SetDpi(self.dpi, self.dpi),
+                }
+            }
         }
     }
 
@@ -475,26 +638,79 @@ impl Surface {
         paint: impl FnOnce(&mut Canvas),
     ) -> Result<()> {
         self.ensure(gfx)?;
-        let Some((rt, brush)) = &self.rt else {
+        let px = self.px;
+        let Some((t, brush)) = &mut self.rt else {
             return Ok(());
         };
-        let scale = self.scale();
+        let rt: &ID2D1RenderTarget = match t {
+            Target::Hwnd(rt) => rt,
+            Target::Flip(f) => {
+                if f.bitmap.as_ref().is_none_or(|b| b.1 != px) {
+                    // SAFETY: the old target is let go before the buffers are resized; the new one wraps buffer 0,
+                    // which D3D11 keeps pointing at the back buffer across presents
+                    unsafe {
+                        f.ctx.SetTarget(None);
+                        f.bitmap = None;
+                        let (w, h) = (px.0.max(1), px.1.max(1));
+                        if f.chain.GetDesc1().is_ok_and(|d| (d.Width, d.Height) != (w, h)) {
+                            f.chain.ResizeBuffers(
+                                0,
+                                w,
+                                h,
+                                DXGI_FORMAT_UNKNOWN,
+                                DXGI_SWAP_CHAIN_FLAG(0),
+                            )?;
+                        }
+                        let buffer: IDXGISurface = f.chain.GetBuffer(0)?;
+                        let props = D2D1_BITMAP_PROPERTIES1 {
+                            pixelFormat: D2D1_PIXEL_FORMAT {
+                                format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                                alphaMode: D2D1_ALPHA_MODE_IGNORE,
+                            },
+                            dpiX: self.dpi,
+                            dpiY: self.dpi,
+                            bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET
+                                | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+                            ..Default::default()
+                        };
+                        let bitmap = f.ctx.CreateBitmapFromDxgiSurface(&buffer, Some(&props))?;
+                        f.ctx.SetTarget(&bitmap);
+                        f.bitmap = Some((bitmap, px));
+                    }
+                }
+                // SAFETY: a live context
+                unsafe { f.ctx.SetDpi(self.dpi, self.dpi) };
+                &f.ctx
+            }
+        };
+        let scale = self.dpi / 96.0;
         let mut canvas = Canvas {
             rt,
             brush,
             gfx,
             theme,
-            width: self.px.0 as f32 / scale,
-            height: self.px.1 as f32 / scale,
+            width: px.0 as f32 / scale,
+            height: px.1 as f32 / scale,
         };
         // SAFETY: Begin/EndDraw on a live target, paired
         unsafe { rt.BeginDraw() };
         paint(&mut canvas);
         // SAFETY: as above
-        let end = unsafe { rt.EndDraw(None, None) };
-        if let Err(e) = &end
-            && e.code() == D2DERR_RECREATE_TARGET
+        let mut end = unsafe { rt.EndDraw(None, None) };
+        if end.is_ok()
+            && let Target::Flip(f) = t
         {
+            // SAFETY: a live swap chain; no vsync wait, as D2D1_PRESENT_OPTIONS_IMMEDIATELY
+            end = unsafe { f.chain.Present(0, DXGI_PRESENT(0)) }.ok();
+        }
+        if let Err(e) = &end
+            && (e.code() == D2DERR_RECREATE_TARGET
+                || e.code() == DXGI_ERROR_DEVICE_REMOVED
+                || e.code() == DXGI_ERROR_DEVICE_RESET)
+        {
+            if matches!(t, Target::Flip(_)) {
+                gfx.drop_flip_device();
+            }
             self.rt = None;
             return Ok(());
         }
@@ -504,7 +720,7 @@ impl Surface {
 
 /// What a view paints with: DIP coordinates, the theme, text layouts.
 pub struct Canvas<'a> {
-    rt: &'a ID2D1HwndRenderTarget,
+    rt: &'a ID2D1RenderTarget,
     brush: &'a ID2D1SolidColorBrush,
     pub gfx: &'a Gfx,
     pub theme: &'a Theme,
@@ -521,7 +737,7 @@ impl Canvas<'_> {
     }
 
     /// The render target, for views that draw geometry (graph.rs, systems.rs); only inside the frame.
-    pub fn target(&self) -> &ID2D1HwndRenderTarget {
+    pub fn target(&self) -> &ID2D1RenderTarget {
         self.rt
     }
 
@@ -601,7 +817,7 @@ impl Canvas<'_> {
     }
 
     /// The render target, for drawing the helpers here don't cover (geometries, strokes, layers).
-    pub fn rt(&self) -> &ID2D1HwndRenderTarget {
+    pub fn rt(&self) -> &ID2D1RenderTarget {
         self.rt
     }
 
@@ -620,7 +836,7 @@ impl Canvas<'_> {
     }
 
     /// The target and the brush, for a view that draws geometry itself (effects.rs's Pi Day slice).
-    pub fn raw(&self) -> (&ID2D1HwndRenderTarget, &ID2D1SolidColorBrush) {
+    pub fn raw(&self) -> (&ID2D1RenderTarget, &ID2D1SolidColorBrush) {
         (self.rt, self.brush)
     }
 }
