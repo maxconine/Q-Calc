@@ -638,7 +638,7 @@ impl App {
                     // SAFETY: WM_SETTINGCHANGE's lParam is a NUL-terminated string when set
                     unsafe { PCWSTR(lp.0 as *const u16).to_string() }.unwrap_or_default()
                 };
-                if what == "ImmersiveColorSet" {
+                if what == "ImmersiveColorSet" || wp.0 == crate::contrast::SPI_SETHIGHCONTRAST {
                     self.theme = Theme::for_setting(&self.store.settings.theme);
                     self.bar.set_dark(self.theme.dark);
                     self.tray.refresh_icon();
@@ -681,6 +681,7 @@ impl App {
             }
             WM_DPICHANGED => {
                 self.bar.surface.set_dpi((wp.0 & 0xffff) as u32);
+                crate::drag::dpi_changed(self, lp);
                 self.model.touch();
                 self.ops.push(Op::Reframe);
             }
@@ -841,8 +842,9 @@ impl App {
                 }
                 let s = self.bar.scale();
                 let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
-                let panel =
-                    crate::graph::cursor(self, x, y).or_else(|| crate::systems::cursor(self, x, y));
+                let panel = crate::graph::cursor(self, x, y)
+                    .or_else(|| crate::systems::cursor(self, x, y))
+                    .or_else(|| crate::hover::cursor(self, x, y));
                 let over = self.bar.layout.field.contains(x, y);
                 // SAFETY: system cursors
                 unsafe {

@@ -142,11 +142,11 @@ impl Theme {
 
     /// `settings.theme`: "light", "dark", or "system" (the apps' light/dark setting).
     pub fn for_setting(setting: &str) -> Theme {
-        Theme::new(match setting {
+        crate::contrast::apply(Theme::new(match setting {
             "light" => false,
             "dark" => true,
             _ => system_dark(),
-        })
+        }))
     }
 }
 

@@ -115,6 +115,29 @@ pub fn remember(app: &mut App) {
     app.model.touch();
 }
 
+/// WM_DPICHANGED (dragged onto a monitor of another scale, or the scale changed): Windows' suggested frame (`lp`)
+/// says where the bar now is, so the reframe that follows sizes it for the new scale on the new monitor instead of
+/// fitting it back onto the old one.
+pub fn dpi_changed(app: &mut App, lp: LPARAM) {
+    if lp.0 == 0 {
+        return;
+    }
+    // SAFETY: WM_DPICHANGED's lParam is a live RECT for this message
+    let r = unsafe { *(lp.0 as *const RECT) };
+    let monitor = window::monitor_at(windows::Win32::Foundation::POINT {
+        x: (r.left + r.right) / 2,
+        y: (r.top + r.bottom) / 2,
+    });
+    let scale = monitor.scale();
+    app.bar.width =
+        place::fitted_width(f64::from(app.bar.width), monitor.area.width / scale) as f32;
+    app.bar.composer_at = (
+        r.left,
+        r.top + (f64::from(app.bar.layout.anchor) * scale).round() as i32,
+    );
+    app.bar.monitor = Some(monitor);
+}
+
 /// WM_NCLBUTTONDBLCLK on the background: the bar goes back to where it opens by default on this monitor (the
 /// Mac's double-click to put back); the spot for the monitor is forgotten, the width kept.
 pub fn put_back(app: &mut App) {

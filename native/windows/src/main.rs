@@ -4,6 +4,8 @@
 #![allow(dead_code)]
 
 // pure logic: compiles (and is tested) everywhere
+#[cfg(windows)]
+mod a11y;
 mod autostart;
 mod commands;
 mod edge;
@@ -30,6 +32,8 @@ mod cheats;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
+mod contrast;
+#[cfg(windows)]
 mod drag;
 #[cfg(windows)]
 mod effects;
@@ -41,6 +45,8 @@ mod games;
 mod graph;
 #[cfg(windows)]
 mod history;
+#[cfg(windows)]
+mod hover;
 #[cfg(windows)]
 mod input;
 #[cfg(windows)]

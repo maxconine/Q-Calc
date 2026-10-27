@@ -41,6 +41,8 @@ pub const CMD_HOTKEY: usize = 7;
 pub struct MenuState {
     /// "Alt+Space is taken · pick another…", once the shortcut's retries ran out
     pub hotkey_warning: Option<String>,
+    /// the shortcut that opens the bar ("Alt+Space"), shown beside Show Q Calc as a menu's accelerator is
+    pub shortcut: Option<String>,
 }
 
 impl MenuState {
@@ -57,6 +59,7 @@ impl MenuState {
                     _ => format!("{keys} is taken · pick another…"),
                 }
             }),
+            shortcut: hk.active.as_deref().map(crate::hotkey::title),
         }
     }
 }
@@ -77,7 +80,11 @@ pub fn items(state: &MenuState) -> Vec<(usize, String)> {
         (0, ""),
         (CMD_QUIT, "Quit Q Calc"),
     ] {
-        out.push((cmd, label.to_string()));
+        let label = match (&state.shortcut, cmd) {
+            (Some(keys), CMD_SHOW) if !keys.is_empty() => format!("{label}\t{keys}"),
+            _ => label.to_string(),
+        };
+        out.push((cmd, label));
     }
     out
 }
@@ -338,6 +345,12 @@ impl Tray {
                     let _ = AppendMenuW(menu, MF_STRING, cmd, &HSTRING::from(label));
                 }
             }
+            // Show is what a click on the icon does: bold, as Windows marks a tray menu's default
+            let _ = windows::Win32::UI::WindowsAndMessaging::SetMenuDefaultItem(
+                menu,
+                CMD_SHOW as u32,
+                0,
+            );
             let mut pt = POINT::default();
             let _ = GetCursorPos(&mut pt);
             // the menu closes when clicked away only if its owner is in front
@@ -390,6 +403,7 @@ mod tests {
         );
         let warned = MenuState {
             hotkey_warning: Some("Alt+Space is taken · pick another…".into()),
+            ..MenuState::default()
         };
         let all = items(&warned);
         assert_eq!(
@@ -400,6 +414,12 @@ mod tests {
             )
         );
         assert_eq!((all[1].0, all.len()), (0, 9));
+        // the shortcut sits right-aligned beside Show, as a menu's accelerator
+        let keyed = MenuState {
+            shortcut: Some("Alt+Space".into()),
+            ..MenuState::default()
+        };
+        assert_eq!(items(&keyed)[0].1, "Show Q Calc\tAlt+Space");
     }
 
     #[test]

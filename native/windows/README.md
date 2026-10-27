@@ -76,6 +76,9 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `messaging.rs` | messages through the relay: the `message` line, the cards under the bar, the name; registers settings' Messages page (`set_messages_hook`) |
 | `relay.rs` | the relay over WinHTTP: messaging's POSTs and inbox socket, and the games' sockets (`Socket::open_url`) |
 | `tour.rs` | onboarding and the walkthrough: the tour's line, its step example in the empty bar (in place of line.rs's), hints; `will_show` runs after line.rs counted the open |
+| `hover.rs` | the pointer over the tape and the answer: the row and cell lit, the hand cursor, the system tooltip after a 450 ms rest; triple-click selects the line |
+| `contrast.rs` | contrast themes: the theme from the system colours while one is on (`QCALC_CONTRAST=1` to look without one) |
+| `a11y.rs` | with a screen reader on, the bar's name is the line and its answer, with a name-change event (`QCALC_READER=1` for the test) |
 | `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf, clear) and their tips |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
@@ -162,4 +165,5 @@ retries run out does the tray say which launcher likely holds the chord.
 ## Known gaps (next agents)
 
 The games ember & frost and trails (win-games2; the games list says they aren't in yet); Mica / acrylic backdrop;
-accessibility (UI Automation).
+a full UI Automation tree (a11y.rs only names the bar: the tape's rows, the caret and selection aren't exposed);
+a fade on showing (the Mac's 0.1 s: a flip swap chain can't be a layered window, so it needs DirectComposition).
