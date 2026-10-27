@@ -233,7 +233,7 @@ private struct EqualGame: View {
     private func shake(_ t: Double) -> CGFloat {
         let frames: [(Double, Double)] = [(0, 0), (0.2, -6), (0.4, 6), (0.6, -4), (0.8, 3), (1, 0)]
         let u = t / 0.36
-        guard u >= 0, u < 1 else { return 0 }
+        guard u >= 0, u < 1, !GameMotion.reduced else { return 0 }
         for i in 1..<frames.count where u <= frames[i].0 {
             let k = (u - frames[i - 1].0) / (frames[i].0 - frames[i - 1].0)
             return frames[i - 1].1 + (frames[i].1 - frames[i - 1].1) * cssEase(k, 0.25, 0.1, 0.25, 1)
@@ -244,7 +244,7 @@ private struct EqualGame: View {
     private func tile(_ c: Character?, mark mk: EqualMark?, flip: Double) -> some View {
         let shape = RoundedRectangle(cornerRadius: GameMetrics.radiusS)
         // equal-flip: rotateX 90° → 0, ease, 0.42 s, held at 90° until its delay
-        let angle = 90 * (1 - cssEase(flip, 0.25, 0.1, 0.25, 1))
+        let angle = GameMotion.reduced ? 0 : 90 * (1 - cssEase(flip, 0.25, 0.1, 0.25, 1))
         return Text(c.map(glyph) ?? "")
             .font(.gameDigits(GameMetrics.fsRow, .semibold))
             .foregroundColor(mk != nil ? .white : colors.ink.color)

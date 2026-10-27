@@ -523,7 +523,8 @@ private struct Caret: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.5)) { ctx in
-            let on = Int(ctx.date.timeIntervalSinceReferenceDate * 2) % 2 == 0
+            // .lobby-caret's blink stops under Reduce Motion, the caret left showing
+            let on = GameMotion.reduced || Int(ctx.date.timeIntervalSinceReferenceDate * 2) % 2 == 0
             Rectangle().fill(colors.accent.color).frame(width: 1, height: GameMetrics.fsBody * 1.1).opacity(on ? 1 : 0)
         }
     }

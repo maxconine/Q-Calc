@@ -164,6 +164,7 @@ relay.
 | Equal: daily (same answer as the web for each date) and practice, tiles, flip, shake, keypad marks, stats, share | ✅ | daily answers and practice deals match the TS |
 | 24 / countdown: deals, parser, live line, faint parens, clock bar, tiles, stats, large numbers in the lobby | ✅ | solutions and deals match the TS for the same seed |
 | Sound | ✅ | none of these six has any (only ember does) |
+| Reduce Motion | 🟡 | the page's `prefers-reduced-motion` rules, which the port had missed: no `.pong-wait` pulse, no `.lobby-caret` blink (it stays shown), no equal shake or flip, no crack shake, click or pop (`GameMotion.reduced`). Built; not seen with the setting on (it's a system setting this loop doesn't change) |
 
 ## Where the logic runs
 

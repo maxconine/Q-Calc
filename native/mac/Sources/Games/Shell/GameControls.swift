@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // The pieces every game panel is built from, as src/index.css draws them (.pong, .pong-head, .pong-button,
@@ -133,13 +134,20 @@ struct PongNote: View {
     }
 }
 
+/// The games' `@media (prefers-reduced-motion: reduce)` rules: Reduce Motion stops the pulse, the caret's blink,
+/// equal's shake and flip, and crack's shake, click and pop, as the page does.
+enum GameMotion {
+    static var reduced: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+}
+
 /// `.pong-wait`: opacity down to 0.45 and back every 1.6 s.
 struct PongWait: ViewModifier {
     let on: Bool
     @State private var dim = false
 
     func body(content: Content) -> some View {
-        if on {
+        // `@media (prefers-reduced-motion: reduce) { .pong-wait { animation: none } }`
+        if on, !GameMotion.reduced {
             TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
                 let t = ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.6) / 1.6
                 // ease-in-out between 1 and 0.45, lowest half way

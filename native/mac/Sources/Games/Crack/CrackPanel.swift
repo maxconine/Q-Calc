@@ -157,7 +157,7 @@ private struct CrackDial: View {
             let k = size.width / 200
             ctx.scaleBy(x: k, y: k)
             // a miss shakes the whole dial
-            if s.phase == .fail { ctx.translateBy(x: Self.shake(since), y: 0) }
+            if s.phase == .fail, !GameMotion.reduced { ctx.translateBy(x: Self.shake(since), y: 0) }
             let p = { (a: Double, r: Double) in CGPoint(x: Self.c + r * sin(a), y: Self.c - r * cos(a)) }
             let circle = { (r: Double) in Path(ellipseIn: CGRect(x: Self.c - r, y: Self.c - r, width: 2 * r, height: 2 * r)) }
 
@@ -173,7 +173,7 @@ private struct CrackDial: View {
 
             // the tick ring; a clear turns it a click, like a tumbler giving
             var ticks = ctx
-            if s.phase == .clear {
+            if s.phase == .clear, !GameMotion.reduced {
                 let turn = 27 * Self.clickEase(min(1, since / 0.5))
                 ticks.translateBy(x: Self.c, y: Self.c)
                 ticks.rotate(by: .degrees(turn))
@@ -194,7 +194,7 @@ private struct CrackDial: View {
                 ctx.fill(Path(ellipseIn: CGRect(x: d.x - Self.dotR, y: d.y - Self.dotR, width: 2 * Self.dotR, height: 2 * Self.dotR)),
                          with: .color(dotColor.color))
             }
-            if let pop {
+            if let pop, !GameMotion.reduced {
                 let t = (now - pop.at) / 0.35
                 if t < 1 {
                     let eased = Self.easeOut(t)
