@@ -1,4 +1,4 @@
-﻿//! A game runs in a process of its own: `qcalc.exe --game <kind>`, the same exe. The bar's process never loads
+//! A game runs in a process of its own: `qcalc.exe --game <kind>`, the same exe. The bar's process never loads
 //! Direct3D, the GPU driver or a game's heap, and closing the game window ends its process, so everything a game
 //! used goes back to the system (in the bar's process ~28 MB of driver and heap stayed committed after a game).
 //!
@@ -65,7 +65,7 @@ pub fn ms_since(t0: i64) -> f64 {
     (qpc() - t0) as f64 / 1000.0
 }
 
-fn find(kind: &str) -> Option<HWND> {
+pub fn find(kind: &str) -> Option<HWND> {
     // SAFETY: plain lookup by class
     unsafe { FindWindowW(&HSTRING::from(class_name(kind)), None) }
         .ok()

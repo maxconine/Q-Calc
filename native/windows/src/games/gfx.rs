@@ -181,6 +181,8 @@ pub struct Gfx {
 enum Gpu {
     Off,
     Warming,
+    /// `warm_gpu` is on it
+    Asked,
     Ready(ID3D11Device),
 }
 
@@ -310,13 +312,17 @@ impl Gfx {
     }
 
     /// Whether `warm_gpu` should run (the GPU isn't switched off and has no device yet).
-    pub fn wants_gpu(&self) -> bool {
-        matches!(self.gpu, Gpu::Warming)
+    pub fn wants_gpu(&mut self) -> bool {
+        let ask = matches!(self.gpu, Gpu::Warming);
+        if ask {
+            self.gpu = Gpu::Asked;
+        }
+        ask
     }
 
     /// `warm_gpu` is done: with a device, the next frame goes to a hardware target on it.
     pub fn gpu_ready(&mut self, device: Option<ID3D11Device>) {
-        if matches!(self.gpu, Gpu::Warming) {
+        if matches!(self.gpu, Gpu::Warming | Gpu::Asked) {
             self.gpu = match device {
                 Some(d) => {
                     self.target = None;

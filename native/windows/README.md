@@ -58,7 +58,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `graph.rs`, `systems.rs`, `typst_row.rs`, `messaging.rs` | stubs: panels under the composer |
 | `sheets.rs` | stub: periodic table and identity sheets (their own windows) |
 | `effects.rs` | stub: the easter-egg effects |
-| `games/` | the native games in a window of their own (games/README.md): `open(kind)`, `command`/`hint` for the bar |
+| `games/` | the native games, each in a window and a process of its own (`qcalc.exe --game <kind>`, games/README.md): `open(kind)`, `is_open`, `command`/`hint` for the bar |
 | `update.rs`, `rates.rs` | stubs: self-update, the ECB rates fetch |
 
 Each stub's doc comment names its Mac / Tauri spec and the hooks it should use.

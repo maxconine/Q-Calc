@@ -355,6 +355,11 @@ pub fn open(kind: &str) {
     process::launch(kind);
 }
 
+/// Whether a game window is up (each game is a process of its own, found by its window class).
+pub fn is_open() -> bool {
+    GAMES.iter().any(|g| process::find(g.kind).is_some())
+}
+
 /// `qcalc.exe --game <kind>`: the game's process (main.rs runs it before anything of the bar).
 pub use process::child_main;
 
@@ -608,7 +613,7 @@ impl Win {
                 let _ = unsafe { ValidateRect(Some(self.hwnd), None) };
                 // the first frame is software; once it's up, the GPU driver loads on its own thread (it would hold
                 // the loader lock the first frame needs) and the hardware target follows
-                if self.launched_at.is_some() && self.gfx.wants_gpu() {
+                if self.gfx.wants_gpu() {
                     gfx::warm_gpu(self.hwnd, WM_GPU);
                 }
                 if let Some(t0) = self.launched_at.take() {
