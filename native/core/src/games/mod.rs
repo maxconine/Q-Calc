@@ -8,10 +8,10 @@
 //! as a state machine whose sockets and timers the shell runs.
 
 pub mod clock;
-// pub mod connect4;
-// pub mod connect4_bot;
-// pub mod connect4_session;
-// pub mod crack;
+pub mod connect4;
+pub mod connect4_bot;
+pub mod connect4_session;
+pub mod crack;
 // pub mod equal;
 pub mod fullscreen;
 pub mod hello;
@@ -24,10 +24,10 @@ pub mod peer_online;
 // pub mod pong_session;
 pub mod saves;
 pub mod shell;
-// pub mod ultimate;
-// pub mod ultimate_bot;
-// pub mod ultimate_chalk;
-// pub mod ultimate_session;
+pub mod ultimate;
+pub mod ultimate_bot;
+pub mod ultimate_chalk;
+pub mod ultimate_session;
 
 use serde_json::Value as Json;
 

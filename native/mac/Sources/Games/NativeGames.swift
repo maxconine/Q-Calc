@@ -5,6 +5,8 @@ import SwiftUI
 enum NativeGames {
     static func view(_ kind: String) -> AnyView? {
         switch kind {
+        case "crack": return AnyView(CrackPanel())
+        case "connect4": return AnyView(Connect4Panel())
         default: return nil
         }
     }

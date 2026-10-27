@@ -3,11 +3,10 @@ import SwiftUI
 
 /// A native game's window: the same window the web view had (titled, transparent title bar, sized by
 /// `GameWindow.frame`), holding `GameShellView` around the game's view. Keys go to the shell (`GameShellModel.handle`)
-/// before AppKit sees them, as the page's window listeners did; ⌘ shortcuts (⌘W, ⌘Q) still reach the menu.
+/// before AppKit sees them (`GameNSWindow`), as the page's window listeners did; ⌘ shortcuts (⌘W, ⌘Q) still reach the menu.
 final class NativeGameWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var shell: GameShellModel?
-    private var monitor: Any?
     private var unzoomed: NSRect?
     var onClose: (() -> Void)?
 
@@ -19,7 +18,7 @@ final class NativeGameWindowController: NSObject, NSWindowDelegate {
         self.shell = shell
         let root = GameShellView(shell: shell) { view(shell) }
         let host = NSHostingView(rootView: root)
-        let window = NSWindow(
+        let window = GameNSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
@@ -41,15 +40,14 @@ final class NativeGameWindowController: NSObject, NSWindowDelegate {
         shell.onClose = { [weak self] in DispatchQueue.main.async { self?.close() } }
         shell.onFullscreen = { [weak self] on in self?.zoom(on) }
         self.window = window
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
-            guard let self, let window = self.window, event.window === window, let shell = self.shell else { return event }
+        window.keys = { [weak shell] event in
+            guard let shell else { return false }
             let key = GameKey(event: event)
             // the app's own shortcuts
-            if key.meta { return event }
-            // a text field of the game's (24's input) types for itself unless the game takes the key first
-            let typing = window.firstResponder is NSTextView
-            if shell.handle(key) { return nil }
-            return typing ? event : nil
+            if key.meta { return false }
+            if shell.handle(key) { return true }
+            // a text field of the game's (24's input) types for itself; nothing else beeps
+            return !(window.firstResponder is NSTextView)
         }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
@@ -81,12 +79,21 @@ final class NativeGameWindowController: NSObject, NSWindowDelegate {
     }
 
     private func teardown() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
         window?.contentView = nil
         window = nil
         shell = nil
         OverlayLog.note("game closed (native)")
         onClose?()
+    }
+}
+
+/// Hands every key to the shell before AppKit does, as the page's window listeners had them first (a window's
+/// sendEvent sees real and synthesised events alike). `keys` returns true when the key was taken.
+final class GameNSWindow: NSWindow {
+    var keys: ((NSEvent) -> Bool)?
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown || event.type == .keyUp, keys?(event) == true { return }
+        super.sendEvent(event)
     }
 }

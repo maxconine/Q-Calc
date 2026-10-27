@@ -255,6 +255,8 @@ struct GameShellView<Content: View>: View {
                 }
             }
         }
+        // the page ran under the title bar too; the traffic lights sit over the card's corner as they did
+        .ignoresSafeArea()
         .environment(\.gameColors, colors)
         .environmentObject(shell)
         .foregroundColor(colors.ink.color)

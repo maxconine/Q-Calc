@@ -19,6 +19,7 @@ mod cancel;
 pub mod chain;
 mod engine;
 mod games; // WP-GAMES
+mod games_play; // WP-GAMES
 pub mod history;
 mod jsstr;
 mod name_check;

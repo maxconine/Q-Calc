@@ -59,12 +59,14 @@ enum DevSnapshot {
     /// A key press, as `enter`, `up`, `down`, `tab`, `escape`, `cmd+w`, `cmd+c`, `ctrl+d`…, to the key window.
     static func key(_ chord: String) {
         guard let parsed = Chord(chord), let code = KeyNames.byName[parsed.key],
-              let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }) else { return }
+              let window = NSApp.keyWindow ?? NSApp.windows.first(where: { $0 is GameNSWindow && $0.isVisible })
+                ?? NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }) else { return }
         let chars: String = {
             switch parsed.key {
             case "enter": return "\r"
             case "tab": return "\t"
             case "escape": return "\u{1b}"
+            case "space": return " "
             case "up": return String(Character(UnicodeScalar(NSUpArrowFunctionKey)!))
             case "down": return String(Character(UnicodeScalar(NSDownArrowFunctionKey)!))
             case "left": return String(Character(UnicodeScalar(NSLeftArrowFunctionKey)!))
