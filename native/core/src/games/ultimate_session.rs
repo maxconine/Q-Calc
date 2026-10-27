@@ -1,10 +1,13 @@
 //! `src/lib/ultimateSession.ts`: one side of a game, without the page. The board feeds it cells, messages and
 //! times; what it sends the other side waits in `take_sent`.
 
-use super::ultimate::{UT_VERSION, UtIn, UtMsg, UtState, can_play, decode_ut, encode_ut, first_for, is_over, new_game, play};
-use super::ultimate_bot::{UtSkill, bot_cell};
 pub use super::connect4_session::{Again, Clock};
 use super::hello::{LinkedGame, other_game_note};
+use super::ultimate::{
+    UT_VERSION, UtIn, UtMsg, UtState, can_play, decode_ut, encode_ut, first_for, is_over, new_game,
+    play,
+};
+use super::ultimate_bot::{UtSkill, bot_cell};
 use super::{Random, Side};
 
 // hi goes out this often until the other side's hi comes in, since its board may not have been listening yet
@@ -55,12 +58,21 @@ pub struct UltimateSession {
 
 impl std::fmt::Debug for UltimateSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("UltimateSession").field("role", &self.role).field("state", &self.state).finish_non_exhaustive()
+        f.debug_struct("UltimateSession")
+            .field("role", &self.role)
+            .field("state", &self.state)
+            .finish_non_exhaustive()
     }
 }
 
 impl UltimateSession {
-    pub fn new(role: Side, now: f64, solo: Option<UtSkill>, rand: Box<dyn FnMut() -> f64 + Send>, clock: Clock) -> UltimateSession {
+    pub fn new(
+        role: Side,
+        now: f64,
+        solo: Option<UtSkill>,
+        rand: Box<dyn FnMut() -> f64 + Send>,
+        clock: Clock,
+    ) -> UltimateSession {
         let mut s = UltimateSession {
             game: 0,
             state: new_game(first_for(0)),
@@ -92,7 +104,13 @@ impl UltimateSession {
     pub fn with_defaults(role: Side, now: f64, solo: Option<UtSkill>) -> UltimateSession {
         let mut r = Random::from_entropy();
         let t0 = std::time::Instant::now();
-        UltimateSession::new(role, now, solo, Box::new(move || r.next_f64()), Box::new(move || t0.elapsed().as_secs_f64() * 1000.0))
+        UltimateSession::new(
+            role,
+            now,
+            solo,
+            Box::new(move || r.next_f64()),
+            Box::new(move || t0.elapsed().as_secs_f64() * 1000.0),
+        )
     }
 
     /// What's waiting to go to the other side, oldest first.
@@ -102,11 +120,20 @@ impl UltimateSession {
 
     // solo: if it's the computer's turn, it moves after a moment
     fn bot_turn(&mut self, now: f64) {
-        self.bot_at = if self.solo.is_some() && !is_over(&self.state) && self.state.turn != self.role { Some(now + BOT_THINK_MS) } else { None };
+        self.bot_at =
+            if self.solo.is_some() && !is_over(&self.state) && self.state.turn != self.role {
+                Some(now + BOT_THINK_MS)
+            } else {
+                None
+            };
     }
 
     fn hi(&mut self) {
-        self.post(&UtMsg::Hi { v: UT_VERSION, g: true, ok: self.greeted });
+        self.post(&UtMsg::Hi {
+            v: UT_VERSION,
+            g: true,
+            ok: self.greeted,
+        });
     }
 
     fn post(&mut self, m: &UtMsg) {
@@ -126,7 +153,9 @@ impl UltimateSession {
     }
 
     fn apply(&mut self, cell: usize, who: Side) -> bool {
-        let Some(next) = play(&self.state, cell as f64, who) else { return false };
+        let Some(next) = play(&self.state, cell as f64, who) else {
+            return false;
+        };
         if let Some(w) = next.winner {
             self.wins[if w == Side::Host { 0 } else { 1 }] += 1;
         }
@@ -154,7 +183,11 @@ impl UltimateSession {
             self.bot_turn(now);
             return true;
         }
-        self.post(&UtMsg::Move { g: self.game, n, c: cell });
+        self.post(&UtMsg::Move {
+            g: self.game,
+            n,
+            c: cell,
+        });
         self.last_sent = now;
         true
     }
@@ -279,11 +312,17 @@ mod tests {
 
     fn session(role: Side, solo: Option<UtSkill>) -> UltimateSession {
         let mut t = 0.0;
-        let mut r = crate::games::mulberry32(9);
-        UltimateSession::new(role, 0.0, solo, Box::new(move || r()), Box::new(move || {
-            t += 20.0;
-            t
-        }))
+        let r = crate::games::mulberry32(9);
+        UltimateSession::new(
+            role,
+            0.0,
+            solo,
+            Box::new(r),
+            Box::new(move || {
+                t += 20.0;
+                t
+            }),
+        )
     }
 
     fn flush(host: &mut UltimateSession, guest: &mut UltimateSession, now: f64) {
@@ -315,14 +354,21 @@ mod tests {
         assert_eq!(guest.view().state.forced, Some(2));
         assert!(guest.play(cell_in(2, 4), 4.0));
         flush(&mut host, &mut guest, 5.0);
-        assert_eq!((host.view().state.moves, host.view().state.forced), (2, Some(4)));
+        assert_eq!(
+            (host.view().state.moves, host.view().state.forced),
+            (2, Some(4))
+        );
     }
 
     #[test]
     fn ignores_stale_or_made_up_moves() {
         let (mut host, mut guest) = (session(Side::Host, None), session(Side::Guest, None));
         flush(&mut host, &mut guest, 1.0);
-        for m in [UtMsg::Move { g: 0, n: 0, c: 5 }, UtMsg::Move { g: 0, n: 3, c: 5 }, UtMsg::Move { g: 1, n: 0, c: 5 }] {
+        for m in [
+            UtMsg::Move { g: 0, n: 0, c: 5 },
+            UtMsg::Move { g: 0, n: 3, c: 5 },
+            UtMsg::Move { g: 1, n: 0, c: 5 },
+        ] {
             host.receive(&encode_ut(&m), 2.0);
         }
         assert_eq!(host.view().state.moves, 0);
@@ -334,7 +380,10 @@ mod tests {
         a.receive(r#"{"t":"c4","v":1}"#, 1.0);
         assert!(a.view().ended.unwrap().contains("connect 4"));
         let mut b = session(Side::Host, None);
-        assert_eq!(b.tick(UT_SILENCE_MS + 1.0).ended.as_deref(), Some("lost the connection"));
+        assert_eq!(
+            b.tick(UT_SILENCE_MS + 1.0).ended.as_deref(),
+            Some("lost the connection")
+        );
     }
 
     #[test]
@@ -345,7 +394,10 @@ mod tests {
         assert_eq!(s.tick(BOT_THINK_MS - 1.0).state.moves, 1);
         let v = s.tick(BOT_THINK_MS);
         assert_eq!(v.state.moves, 2);
-        assert_eq!(v.state.cells[36..45].iter().filter(|c| c.is_some()).count(), 2);
+        assert_eq!(
+            v.state.cells[36..45].iter().filter(|c| c.is_some()).count(),
+            2
+        );
         assert!(!v.thinking);
     }
 }

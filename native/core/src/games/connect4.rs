@@ -32,11 +32,24 @@ pub struct C4State {
 
 /// Game numbers count from 0; the host goes first in even ones.
 pub fn first_for(game: u64) -> Side {
-    if game % 2 == 0 { Side::Host } else { Side::Guest }
+    if game.is_multiple_of(2) {
+        Side::Host
+    } else {
+        Side::Guest
+    }
 }
 
 pub fn new_board(first: Side) -> C4State {
-    C4State { board: vec![None; CELLS], first, turn: first, moves: 0, last: None, winner: None, line: None, draw: false }
+    C4State {
+        board: vec![None; CELLS],
+        first,
+        turn: first,
+        moves: 0,
+        last: None,
+        winner: None,
+        line: None,
+        draw: false,
+    }
 }
 
 pub fn cell_at(col: usize, row: usize) -> usize {
@@ -69,7 +82,9 @@ const DIRS: [(i32, i32); 4] = [(1, 0), (0, 1), (1, 1), (1, -1)];
 
 /// Every cell in a row of LINE or more through the cell at (col, row), all of its colour; empty when there isn't one.
 pub fn line_through(board: &[Cell], col: usize, row: usize) -> Vec<usize> {
-    let Some(who) = board[cell_at(col, row)] else { return vec![] };
+    let Some(who) = board[cell_at(col, row)] else {
+        return vec![];
+    };
     let mut out = std::collections::BTreeSet::new();
     for (dc, dr) in DIRS {
         let mut run = vec![cell_at(col, row)];
@@ -103,25 +118,47 @@ pub fn drop(s: &C4State, col: f64, who: Side) -> Option<C4State> {
     board[last] = Some(who);
     let moves = s.moves + 1;
     let line = line_through(&board, col, row);
-    let base = C4State { board, moves, last: Some(last), ..s.clone() };
+    let base = C4State {
+        board,
+        moves,
+        last: Some(last),
+        ..s.clone()
+    };
     if !line.is_empty() {
-        return Some(C4State { winner: Some(who), line: Some(line), ..base });
+        return Some(C4State {
+            winner: Some(who),
+            line: Some(line),
+            ..base
+        });
     }
     if moves == CELLS {
         return Some(C4State { draw: true, ..base });
     }
-    Some(C4State { turn: who.other(), ..base })
+    Some(C4State {
+        turn: who.other(),
+        ..base
+    })
 }
 
 /// The wire. every type starts c4 so a pong court on the other end ignores it; bye is the one both games share.
 #[derive(Clone, Debug, PartialEq)]
 pub enum C4Msg {
     /// ok: the sender has already heard the other side's hi, so it needs no answer. g: sent as `connect4`.
-    Hi { v: f64, g: bool, ok: bool },
+    Hi {
+        v: f64,
+        g: bool,
+        ok: bool,
+    },
     /// Move n (counting from 0) of game g drops in column c.
-    Move { g: u64, n: usize, c: usize },
+    Move {
+        g: u64,
+        n: usize,
+        c: usize,
+    },
     /// Asks for a rematch once game g is over.
-    Again { g: u64 },
+    Again {
+        g: u64,
+    },
     /// Keeps the link from looking dead while someone thinks.
     Keep,
     Bye,
@@ -147,7 +184,12 @@ pub fn encode_c4(msg: &C4Msg) -> String {
             }
             stringify(&f)
         }
-        C4Msg::Move { g, n, c } => stringify(&[t("c4m"), ("g", Out::N(*g as f64)), ("n", Out::N(*n as f64)), ("c", Out::N(*c as f64))]),
+        C4Msg::Move { g, n, c } => stringify(&[
+            t("c4m"),
+            ("g", Out::N(*g as f64)),
+            ("n", Out::N(*n as f64)),
+            ("c", Out::N(*c as f64)),
+        ]),
         C4Msg::Again { g } => stringify(&[t("c4a"), ("g", Out::N(*g as f64))]),
         C4Msg::Keep => stringify(&[t("c4k")]),
         C4Msg::Bye => stringify(&[t("bye")]),
@@ -165,14 +207,24 @@ pub fn decode_c4(raw: &str) -> Option<C4In> {
         return Some(C4In::Other(other.into()));
     }
     let msg = match o.get("t").and_then(Json::as_str)? {
-        "c4" => C4Msg::Hi { v: finite(o.get("v"))?, g: false, ok: o.get("ok") == Some(&Json::Bool(true)) },
+        "c4" => C4Msg::Hi {
+            v: finite(o.get("v"))?,
+            g: false,
+            ok: o.get("ok") == Some(&Json::Bool(true)),
+        },
         "c4m" => {
             let g = count(o.get("g"), 1e6)?;
             let n = count(o.get("n"), 1e6).filter(|n| *n < CELLS as f64)?;
             let c = finite(o.get("c")).filter(|c| valid_column(*c))?;
-            C4Msg::Move { g: g as u64, n: n as usize, c: c as usize }
+            C4Msg::Move {
+                g: g as u64,
+                n: n as usize,
+                c: c as usize,
+            }
         }
-        "c4a" => C4Msg::Again { g: count(o.get("g"), 1e6)? as u64 },
+        "c4a" => C4Msg::Again {
+            g: count(o.get("g"), 1e6)? as u64,
+        },
         "c4k" => C4Msg::Keep,
         "bye" => C4Msg::Bye,
         _ => return None,
@@ -188,14 +240,15 @@ pub(crate) mod tests {
     pub fn play(cols: &[usize]) -> C4State {
         let mut s = new_board(Side::Host);
         for &c in cols {
-            s = drop(&s, c as f64, s.turn).unwrap_or_else(|| panic!("column {c} refused after {} moves", s.moves));
+            s = drop(&s, c as f64, s.turn)
+                .unwrap_or_else(|| panic!("column {c} refused after {} moves", s.moves));
         }
         s
     }
 
     pub const DRAW: [usize; 42] = [
-        0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 2, 3, 2, 3, 2, 3, 3, 2, 3, 2, 3, 2, 4, 5, 4, 5, 4, 5, 5, 4, 5, 4, 5, 4, 6,
-        6, 6, 6, 6, 6,
+        0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 2, 3, 2, 3, 2, 3, 3, 2, 3, 2, 3, 2, 4, 5, 4, 5, 4, 5,
+        5, 4, 5, 4, 5, 4, 6, 6, 6, 6, 6, 6,
     ];
 
     #[test]
@@ -205,7 +258,10 @@ pub(crate) mod tests {
         assert!(s.board.iter().all(Option::is_none));
         assert_eq!(s.turn, Side::Guest);
         assert!(!is_over(&s));
-        assert_eq!([0, 1, 2, 3].map(first_for), [Side::Host, Side::Guest, Side::Host, Side::Guest]);
+        assert_eq!(
+            [0, 1, 2, 3].map(first_for),
+            [Side::Host, Side::Guest, Side::Host, Side::Guest]
+        );
         let s = drop(&new_board(Side::Host), 3.0, Side::Host).unwrap();
         assert_eq!(s.board[cell_at(3, 0)], Some(Side::Host));
         assert_eq!(s.turn, Side::Guest);
@@ -233,12 +289,23 @@ pub(crate) mod tests {
         assert_eq!(s.winner, Some(Side::Guest));
         assert_eq!(s.line, Some([0, 1, 2, 3].map(|r| cell_at(1, r)).to_vec()));
         let s = play(&[0, 1, 1, 2, 2, 3, 2, 3, 3, 6, 3]);
-        assert_eq!(s.line, Some(vec![cell_at(0, 0), cell_at(1, 1), cell_at(2, 2), cell_at(3, 3)]));
+        assert_eq!(
+            s.line,
+            Some(vec![
+                cell_at(0, 0),
+                cell_at(1, 1),
+                cell_at(2, 2),
+                cell_at(3, 3)
+            ])
+        );
         let s = play(&[3, 2, 2, 1, 1, 0, 1, 0, 0, 6, 0]);
         let mut want = vec![cell_at(3, 0), cell_at(2, 1), cell_at(1, 2), cell_at(0, 3)];
         want.sort();
         assert_eq!(s.line, Some(want));
-        assert_eq!(play(&[0, 0, 1, 1, 3, 3, 4, 4, 2]).line.map(|l| l.len()), Some(5));
+        assert_eq!(
+            play(&[0, 0, 1, 1, 3, 3, 4, 4, 2]).line.map(|l| l.len()),
+            Some(5)
+        );
         assert_eq!(play(&[0, 0, 1, 1, 2]).winner, None);
         let won = play(&[0, 0, 1, 1, 2, 2, 3]);
         assert_eq!(drop(&won, 5.0, Side::Guest), None);
@@ -254,8 +321,16 @@ pub(crate) mod tests {
     #[test]
     fn the_wire() {
         let msgs = [
-            C4Msg::Hi { v: C4_VERSION, g: false, ok: false },
-            C4Msg::Hi { v: C4_VERSION, g: false, ok: true },
+            C4Msg::Hi {
+                v: C4_VERSION,
+                g: false,
+                ok: false,
+            },
+            C4Msg::Hi {
+                v: C4_VERSION,
+                g: false,
+                ok: true,
+            },
             C4Msg::Move { g: 2, n: 5, c: 6 },
             C4Msg::Again { g: 3 },
             C4Msg::Keep,
@@ -265,17 +340,53 @@ pub(crate) mod tests {
             assert_eq!(decode_c4(&encode_c4(&m)), Some(C4In::Msg(m.clone())));
         }
         assert!(encode_c4(&C4Msg::Move { g: 0, n: 10, c: 3 }).len() < 40);
-        assert_eq!(encode_c4(&C4Msg::Hi { v: 1.0, g: true, ok: true }), r#"{"t":"c4","v":1,"g":"connect4","ok":true}"#);
-        assert_eq!(decode_c4(r#"{"t":"hi","v":1}"#), Some(C4In::Other("pong".into())));
-        assert_eq!(decode_c4(r#"{"t":"hi","v":1,"u":3}"#), Some(C4In::Other("ember".into())));
-        assert_eq!(decode_c4(r#"{"t":"ut","v":1,"g":"ultimate"}"#), Some(C4In::Other("ultimate".into())));
+        assert_eq!(
+            encode_c4(&C4Msg::Hi {
+                v: 1.0,
+                g: true,
+                ok: true
+            }),
+            r#"{"t":"c4","v":1,"g":"connect4","ok":true}"#
+        );
+        assert_eq!(
+            decode_c4(r#"{"t":"hi","v":1}"#),
+            Some(C4In::Other("pong".into()))
+        );
+        assert_eq!(
+            decode_c4(r#"{"t":"hi","v":1,"u":3}"#),
+            Some(C4In::Other("ember".into()))
+        );
+        assert_eq!(
+            decode_c4(r#"{"t":"ut","v":1,"g":"ultimate"}"#),
+            Some(C4In::Other("ultimate".into()))
+        );
         let pad = format!(r#"{{"t":"c4k","pad":"{}"}}"#, "x".repeat(300));
         let junk = [
-            "", "nope", "{", "null", "42", "\"c4m\"", "[]", r#"[{"t":"c4k"}]"#, "{}", r#"{"t":"who"}"#, r#"{"t":"c4"}"#,
-            r#"{"t":"c4","v":"1"}"#, r#"{"t":"c4m"}"#, r#"{"t":"c4m","g":0,"n":0}"#, r#"{"t":"c4m","g":0,"n":0,"c":7}"#,
-            r#"{"t":"c4m","g":0,"n":0,"c":-1}"#, r#"{"t":"c4m","g":0,"n":0,"c":1.5}"#, r#"{"t":"c4m","g":0,"n":0,"c":"3"}"#,
-            r#"{"t":"c4m","g":0,"n":0,"c":null}"#, r#"{"t":"c4m","g":-1,"n":0,"c":3}"#, r#"{"t":"c4m","g":0,"n":42,"c":3}"#,
-            r#"{"t":"c4m","g":0,"n":1e9,"c":3}"#, r#"{"t":"c4m","g":0.5,"n":0,"c":3}"#, r#"{"t":"c4a"}"#, r#"{"t":"c4a","g":"0"}"#,
+            "",
+            "nope",
+            "{",
+            "null",
+            "42",
+            "\"c4m\"",
+            "[]",
+            r#"[{"t":"c4k"}]"#,
+            "{}",
+            r#"{"t":"who"}"#,
+            r#"{"t":"c4"}"#,
+            r#"{"t":"c4","v":"1"}"#,
+            r#"{"t":"c4m"}"#,
+            r#"{"t":"c4m","g":0,"n":0}"#,
+            r#"{"t":"c4m","g":0,"n":0,"c":7}"#,
+            r#"{"t":"c4m","g":0,"n":0,"c":-1}"#,
+            r#"{"t":"c4m","g":0,"n":0,"c":1.5}"#,
+            r#"{"t":"c4m","g":0,"n":0,"c":"3"}"#,
+            r#"{"t":"c4m","g":0,"n":0,"c":null}"#,
+            r#"{"t":"c4m","g":-1,"n":0,"c":3}"#,
+            r#"{"t":"c4m","g":0,"n":42,"c":3}"#,
+            r#"{"t":"c4m","g":0,"n":1e9,"c":3}"#,
+            r#"{"t":"c4m","g":0.5,"n":0,"c":3}"#,
+            r#"{"t":"c4a"}"#,
+            r#"{"t":"c4a","g":"0"}"#,
             pad.as_str(),
         ];
         for j in junk {

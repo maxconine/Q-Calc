@@ -181,7 +181,11 @@ pub fn generate(rand: Rand) -> String {
     for _ in 0..100_000 {
         let right_len = pick(rand, &[1, 2, 2, 2, 3, 3]);
         let left_len = LEN - 1 - right_len;
-        let ops = if left_len >= 5 { pick(rand, &[1, 1, 2, 2]) } else { pick(rand, &[1]) };
+        let ops = if left_len >= 5 {
+            pick(rand, &[1, 1, 2, 2])
+        } else {
+            pick(rand, &[1])
+        };
         let mut digits = left_len as i32 - ops as i32;
         if digits < ops as i32 + 1 {
             continue;
@@ -198,7 +202,11 @@ pub fn generate(rand: Rand) -> String {
         }
         let nums: Vec<String> = lens.iter().map(|&d| number(rand, d)).collect();
         let signs: Vec<char> = (0..ops).map(|_| pick(rand, &OPS)).collect();
-        if signs.iter().enumerate().any(|(i, op)| (*op == '*' || *op == '/') && (nums[i + 1] == "1" || nums[i] == "1")) {
+        if signs
+            .iter()
+            .enumerate()
+            .any(|(i, op)| (*op == '*' || *op == '/') && (nums[i + 1] == "1" || nums[i] == "1"))
+        {
             continue;
         }
         let mut left = nums[0].clone();
@@ -206,7 +214,9 @@ pub fn generate(rand: Rand) -> String {
             left.push(*op);
             left += &nums[i + 1];
         }
-        let Some(value) = evaluate(&left) else { continue };
+        let Some(value) = evaluate(&left) else {
+            continue;
+        };
         if value <= 0.0 {
             continue;
         }
@@ -252,14 +262,18 @@ pub fn date_key(y: i64, m: i64, d: i64) -> String {
 }
 
 pub fn day_before(key: &str) -> String {
-    let Some((y, m, d)) = parse_key(key) else { return key.to_string() };
+    let Some((y, m, d)) = parse_key(key) else {
+        return key.to_string();
+    };
     let (y, m, d) = civil_from_days(days_from_civil(y, m, d) - 1);
     date_key(y, m, d)
 }
 
 /// Puzzle numbers count from the first day, 2026-01-01.
 pub fn daily_number(key: &str) -> i64 {
-    let Some((y, m, d)) = parse_key(key) else { return 0 };
+    let Some((y, m, d)) = parse_key(key) else {
+        return 0;
+    };
     days_from_civil(y, m, d) - days_from_civil(2026, 1, 1) + 1
 }
 
@@ -298,7 +312,14 @@ pub struct EqualStats {
 
 impl Default for EqualStats {
     fn default() -> Self {
-        EqualStats { played: 0, wins: 0, streak: 0, best: 0, last_win: None, dist: vec![0; TRIES] }
+        EqualStats {
+            played: 0,
+            wins: 0,
+            streak: 0,
+            best: 0,
+            last_win: None,
+            dist: vec![0; TRIES],
+        }
     }
 }
 
@@ -317,14 +338,23 @@ pub fn is_done(guesses: &[String], answer: &str) -> bool {
 }
 
 /// A finished daily, into the stats. a win the day after a win keeps the streak going.
-pub fn record_daily(stats: &EqualStats, date: &str, guesses: &[String], answer: &str) -> EqualStats {
+pub fn record_daily(
+    stats: &EqualStats,
+    date: &str,
+    guesses: &[String],
+    answer: &str,
+) -> EqualStats {
     let won = is_won(guesses, answer);
     let mut dist = stats.dist.clone();
     if won && let Some(d) = dist.get_mut(guesses.len() - 1) {
         *d += 1;
     }
     let streak = if won {
-        if stats.last_win.as_deref() == Some(day_before(date).as_str()) { stats.streak + 1 } else { 1 }
+        if stats.last_win.as_deref() == Some(day_before(date).as_str()) {
+            stats.streak + 1
+        } else {
+            1
+        }
     } else {
         0
     };
@@ -333,7 +363,11 @@ pub fn record_daily(stats: &EqualStats, date: &str, guesses: &[String], answer: 
         wins: stats.wins + u32::from(won),
         streak,
         best: stats.best.max(streak),
-        last_win: if won { Some(date.to_string()) } else { stats.last_win.clone() },
+        last_win: if won {
+            Some(date.to_string())
+        } else {
+            stats.last_win.clone()
+        },
         dist,
     }
 }
@@ -341,7 +375,11 @@ pub fn record_daily(stats: &EqualStats, date: &str, guesses: &[String], answer: 
 /// The streak as it stands today: it lapses once a day goes by without a win.
 pub fn current_streak(stats: &EqualStats, today: &str) -> u32 {
     let lw = stats.last_win.as_deref();
-    if lw == Some(today) || lw == Some(day_before(today).as_str()) { stats.streak } else { 0 }
+    if lw == Some(today) || lw == Some(day_before(today).as_str()) {
+        stats.streak
+    } else {
+        0
+    }
 }
 
 /// The save under `qcalc-equal`.
@@ -350,7 +388,9 @@ pub const SAVE_KEY: &str = "qcalc-equal";
 /// `loadSave()` from the stored text.
 pub fn load_save(raw: Option<&str>) -> EqualSave {
     let fallback = EqualSave::default();
-    let Some(raw) = raw.and_then(|r| serde_json::from_str::<Json>(r).ok()) else { return fallback };
+    let Some(raw) = raw.and_then(|r| serde_json::from_str::<Json>(r).ok()) else {
+        return fallback;
+    };
     let n = |v: Option<&Json>, d: u32| v.and_then(Json::as_f64).map_or(d, |f| f.max(0.0) as u32);
     let s = raw.get("stats");
     let g = |k: &str| s.and_then(|s| s.get(k));
@@ -368,14 +408,26 @@ pub fn load_save(raw: Option<&str>) -> EqualSave {
         stats.dist = d.iter().map(|x| n(Some(x), 0)).collect();
     }
     let daily = match raw.get("daily") {
-        Some(d) => match (d.get("date").and_then(Json::as_str), d.get("guesses").and_then(Json::as_array)) {
+        Some(d) => match (
+            d.get("date").and_then(Json::as_str),
+            d.get("guesses").and_then(Json::as_array),
+        ) {
             (Some(date), Some(gs)) => {
                 // a guess that isn't text made the TS throw, and load nothing
                 if gs.iter().any(|g| !g.is_string()) {
                     return fallback;
                 }
-                let guesses = gs.iter().filter_map(Json::as_str).filter(|g| is_valid_equation(g)).take(TRIES).map(String::from).collect();
-                Some(DailyGame { date: date.into(), guesses })
+                let guesses = gs
+                    .iter()
+                    .filter_map(Json::as_str)
+                    .filter(|g| is_valid_equation(g))
+                    .take(TRIES)
+                    .map(String::from)
+                    .collect();
+                Some(DailyGame {
+                    date: date.into(),
+                    guesses,
+                })
             }
             _ => None,
         },
@@ -386,7 +438,10 @@ pub fn load_save(raw: Option<&str>) -> EqualSave {
 
 /// `JSON.stringify(save)`.
 pub fn save_json(save: &EqualSave) -> String {
-    let daily = save.daily.as_ref().map_or(Json::Null, |d| json!({ "date": d.date, "guesses": d.guesses }));
+    let daily = save.daily.as_ref().map_or(
+        Json::Null,
+        |d| json!({ "date": d.date, "guesses": d.guesses }),
+    );
     let s = &save.stats;
     // serde_json keeps keys sorted; the page reads them by name, so the order doesn't matter
     json!({
@@ -399,7 +454,11 @@ pub fn save_json(save: &EqualSave) -> String {
 // ---- sharing
 
 pub fn share_text(guesses: &[String], answer: &str, title: &str) -> String {
-    let tries = if is_won(guesses, answer) { guesses.len().to_string() } else { "X".into() };
+    let tries = if is_won(guesses, answer) {
+        guesses.len().to_string()
+    } else {
+        "X".into()
+    };
     let mut lines = vec![format!("{title} {tries}/{TRIES}"), String::new()];
     for g in guesses {
         lines.push(
@@ -451,7 +510,10 @@ mod tests {
         for e in ["7/2", "5/0", "7/2*2"] {
             assert_eq!(evaluate(e), None);
         }
-        for g in ["12+35=47", "9*8-3=69", "100/4=25", "2+3*4=14", "36/4-2=7", "13-9*1=4", "1-9+10=2", "12-3*4=0", "9-12/4=6", "8/2*3=12"] {
+        for g in [
+            "12+35=47", "9*8-3=69", "100/4=25", "2+3*4=14", "36/4-2=7", "13-9*1=4", "1-9+10=2",
+            "12-3*4=0", "9-12/4=6", "8/2*3=12",
+        ] {
             assert_eq!(guess_problem(g), None, "{g}");
         }
         for (g, p) in [
@@ -486,7 +548,10 @@ mod tests {
         assert_eq!(s("9*9-9=72", "9*8-3=69"), "GGYG.G..");
         assert_eq!(s("21+12=33", "11+11=22"), "YGGGYG..");
         let k = key_marks(&["21+35=56".into(), "12+35=47".into()], "12+35=47");
-        assert_eq!((k[&'1'], k[&'6'], k[&'+']), (Mark::Hit, Mark::Miss, Mark::Hit));
+        assert_eq!(
+            (k[&'1'], k[&'6'], k[&'+']),
+            (Mark::Hit, Mark::Miss, Mark::Hit)
+        );
     }
 
     #[test]
@@ -515,8 +580,17 @@ mod tests {
         assert_eq!(daily_answer("2027-01-01"), "6*6+4=40");
         let mut r = mulberry32(42);
         let five: Vec<String> = (0..5).map(|_| generate(&mut r)).collect();
-        assert_eq!(five.join(" "), "8*29=232 4*63=252 21+73=94 6*88=528 6*8+4=52");
-        let days = ["2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12", "2027-01-01"];
+        assert_eq!(
+            five.join(" "),
+            "8*29=232 4*63=252 21+73=94 6*88=528 6*8+4=52"
+        );
+        let days = [
+            "2026-10-09",
+            "2026-10-10",
+            "2026-10-11",
+            "2026-10-12",
+            "2027-01-01",
+        ];
         let set: std::collections::HashSet<_> = days.iter().map(|d| daily_answer(d)).collect();
         assert_eq!(set.len(), days.len());
         assert_eq!(daily_number("2026-01-01"), 1);
@@ -529,21 +603,53 @@ mod tests {
     fn stats_saves_and_sharing() {
         let a = "12+35=47";
         let g = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-        let st = record_daily(&EqualStats::default(), "2026-10-07", &g(&["21+35=56", a]), a);
-        assert_eq!((st.played, st.wins, st.streak, st.best, st.last_win.as_deref(), st.dist[1]), (1, 1, 1, 1, Some("2026-10-07"), 1));
+        let st = record_daily(
+            &EqualStats::default(),
+            "2026-10-07",
+            &g(&["21+35=56", a]),
+            a,
+        );
+        assert_eq!(
+            (
+                st.played,
+                st.wins,
+                st.streak,
+                st.best,
+                st.last_win.as_deref(),
+                st.dist[1]
+            ),
+            (1, 1, 1, 1, Some("2026-10-07"), 1)
+        );
         let st = record_daily(&st, "2026-10-08", &g(&[a]), a);
         assert_eq!(st.streak, 2);
         assert_eq!(current_streak(&st, "2026-10-09"), 2);
         assert_eq!(current_streak(&st, "2026-10-10"), 0);
         let lost = record_daily(&st, "2026-10-09", &g(&["21+35=56"; 6]), a);
-        assert_eq!((lost.played, lost.wins, lost.streak, lost.best), (3, 2, 0, 2));
+        assert_eq!(
+            (lost.played, lost.wins, lost.streak, lost.best),
+            (3, 2, 0, 2)
+        );
         assert_eq!(record_daily(&st, "2026-10-11", &g(&[a]), a).streak, 1);
-        let save = EqualSave { daily: Some(DailyGame { date: "2026-10-08".into(), guesses: g(&[a, "nope"]) }), stats: st };
+        let save = EqualSave {
+            daily: Some(DailyGame {
+                date: "2026-10-08".into(),
+                guesses: g(&[a, "nope"]),
+            }),
+            stats: st,
+        };
         let back = load_save(Some(&save_json(&save)));
         assert_eq!(back.daily.unwrap().guesses, g(&[a]));
         assert_eq!(back.stats, save.stats);
         assert_eq!(load_save(Some("junk")), EqualSave::default());
-        assert_eq!(share_text(&g(&["21+35=56", a]), a, "equal #282"), "equal #282 2/6\n\n🟨🟨🟩🟩🟩🟩⬛⬛\n🟩🟩🟩🟩🟩🟩🟩🟩");
-        assert_eq!(share_text(&g(&["21+35=56"; 6]), a, "equal").split('\n').next(), Some("equal X/6"));
+        assert_eq!(
+            share_text(&g(&["21+35=56", a]), a, "equal #282"),
+            "equal #282 2/6\n\n🟨🟨🟩🟩🟩🟩⬛⬛\n🟩🟩🟩🟩🟩🟩🟩🟩"
+        );
+        assert_eq!(
+            share_text(&g(&["21+35=56"; 6]), a, "equal")
+                .split('\n')
+                .next(),
+            Some("equal X/6")
+        );
     }
 }

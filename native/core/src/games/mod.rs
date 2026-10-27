@@ -173,7 +173,11 @@ pub fn js_hypot(a: f64, b: f64) -> f64 {
     if a.is_infinite() || b.is_infinite() {
         return f64::INFINITY;
     }
-    let max = if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) };
+    let max = if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.max(b)
+    };
     if max.is_nan() {
         return f64::NAN;
     }

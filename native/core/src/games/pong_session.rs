@@ -80,12 +80,20 @@ pub struct PongSession {
 
 impl std::fmt::Debug for PongSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PongSession").field("role", &self.role).field("leg", &self.leg).finish_non_exhaustive()
+        f.debug_struct("PongSession")
+            .field("role", &self.role)
+            .field("leg", &self.leg)
+            .finish_non_exhaustive()
     }
 }
 
 impl PongSession {
-    pub fn new(role: Side, now: f64, rand: Box<dyn FnMut() -> f64 + Send>, solo: Option<Skill>) -> PongSession {
+    pub fn new(
+        role: Side,
+        now: f64,
+        rand: Box<dyn FnMut() -> f64 + Send>,
+        solo: Option<Skill>,
+    ) -> PongSession {
         let mut rand = rand;
         let game = new_game(if rand() < 0.5 { 1.0 } else { -1.0 });
         let mut s = PongSession {
@@ -107,7 +115,11 @@ impl PongSession {
             missed: false,
             guess: None,
             guessed: false,
-            ease: Ease { x: 0.0, y: 0.0, at: 0.0 },
+            ease: Ease {
+                x: 0.0,
+                y: 0.0,
+                at: 0.0,
+            },
             far: FarPaddle::default(),
             clock: HostClock::default(),
             offset: 0.0,
@@ -141,13 +153,28 @@ impl PongSession {
     }
 
     fn hi(&mut self, now: f64) {
-        self.post(PongMsg::Hi { v: PONG_VERSION, g: true, ok: self.greeted, stamp: Stamp::default() }, now);
+        self.post(
+            PongMsg::Hi {
+                v: PONG_VERSION,
+                g: true,
+                ok: self.greeted,
+                stamp: Stamp::default(),
+            },
+            now,
+        );
     }
 
     fn post(&mut self, mut m: PongMsg, now: f64) {
-        let stamp = Stamp { c: Some(now), e: self.echo.map(|e| e.0), h: self.echo.map(|e| now - e.1) };
+        let stamp = Stamp {
+            c: Some(now),
+            e: self.echo.map(|e| e.0),
+            h: self.echo.map(|e| now - e.1),
+        };
         match &mut m {
-            PongMsg::Hi { stamp: s, .. } | PongMsg::P { stamp: s, .. } | PongMsg::L { stamp: s, .. } | PongMsg::Again { stamp: s } => *s = stamp,
+            PongMsg::Hi { stamp: s, .. }
+            | PongMsg::P { stamp: s, .. }
+            | PongMsg::L { stamp: s, .. }
+            | PongMsg::Again { stamp: s } => *s = stamp,
             PongMsg::Bye => {}
         }
         self.sent.push(encode_pong(&m));
@@ -161,17 +188,29 @@ impl PongSession {
 
     // the shared clock: the host's own, the guest's guess at it
     fn shared(&self, now: f64) -> f64 {
-        if self.role == Side::Host { now } else { now + self.offset }
+        if self.role == Side::Host {
+            now
+        } else {
+            now + self.offset
+        }
     }
 
     // guest: moves the offset in use toward the clock's best guess, by at most SLEW of ms
     fn follow(&mut self, ms: f64) {
         let gap = self.clock.offset() - self.offset;
-        self.offset += if self.leg.is_none() || gap.abs() > SLEW_MAX_MS { gap } else { jmin(ms * SLEW, jmax(-ms * SLEW, gap)) };
+        self.offset += if self.leg.is_none() || gap.abs() > SLEW_MAX_MS {
+            gap
+        } else {
+            jmin(ms * SLEW, jmax(-ms * SLEW, gap))
+        };
     }
 
     fn over(&self) -> bool {
-        if self.solo.is_some() { self.game.phase == Phase::Over } else { self.leg.is_some_and(|l| l.kind == LegKind::Over) }
+        if self.solo.is_some() {
+            self.game.phase == Phase::Over
+        } else {
+            self.leg.is_some_and(|l| l.kind == LegKind::Over)
+        }
     }
 
     fn restart(&mut self, now: f64) {
@@ -188,7 +227,14 @@ impl PongSession {
     }
 
     fn serve_leg(&mut self, game: u64, n: u64, from: f64, dir: f64, score: [u32; 2]) -> Leg {
-        Leg { game, n, at: from + SERVE_PAUSE_S * 1000.0, kind: LegKind::Serve, ball: serve(dir, &mut *self.rand), score }
+        Leg {
+            game,
+            n,
+            at: from + SERVE_PAUSE_S * 1000.0,
+            kind: LegKind::Serve,
+            ball: serve(dir, &mut *self.rand),
+            score,
+        }
     }
 
     /// A paddle key went down or up.
@@ -216,7 +262,12 @@ impl PongSession {
             return;
         }
         self.again.mine = true;
-        self.post(PongMsg::Again { stamp: Stamp::default() }, self.last_tick);
+        self.post(
+            PongMsg::Again {
+                stamp: Stamp::default(),
+            },
+            self.last_tick,
+        );
         if self.role == Side::Host && self.again.theirs {
             self.restart(self.last_tick);
         }
@@ -229,7 +280,12 @@ impl PongSession {
         let Some(m) = decode_pong(text) else { return };
         self.heard = now;
         let stamp = match &m {
-            PongIn::Msg(PongMsg::Hi { stamp, .. } | PongMsg::P { stamp, .. } | PongMsg::L { stamp, .. } | PongMsg::Again { stamp }) => Some(*stamp),
+            PongIn::Msg(
+                PongMsg::Hi { stamp, .. }
+                | PongMsg::P { stamp, .. }
+                | PongMsg::L { stamp, .. }
+                | PongMsg::Again { stamp },
+            ) => Some(*stamp),
             _ => None,
         };
         if let Some(stamp) = stamp {
@@ -264,7 +320,9 @@ impl PongSession {
                     self.produce(leg, now);
                 }
             }
-            PongIn::Msg(PongMsg::P { at, y, d, game, n, .. }) => {
+            PongIn::Msg(PongMsg::P {
+                at, y, d, game, n, ..
+            }) => {
                 let t = self.shared(now);
                 self.far.report(y, d, at, t, now);
                 // still behind on a leg sent from here, well after it should have landed: send it again
@@ -275,7 +333,13 @@ impl PongSession {
                     && t - self.resent_at > RESEND_MS
                 {
                     self.resent_at = t;
-                    self.post(PongMsg::L { leg, stamp: Stamp::default() }, now);
+                    self.post(
+                        PongMsg::L {
+                            leg,
+                            stamp: Stamp::default(),
+                        },
+                        now,
+                    );
                 }
             }
             PongIn::Msg(PongMsg::L { leg, .. }) => self.take(leg, now),
@@ -302,7 +366,13 @@ impl PongSession {
         let w = wire_leg(&leg);
         self.set_leg(w);
         self.leg_mine = true;
-        self.post(PongMsg::L { leg: w, stamp: Stamp::default() }, now);
+        self.post(
+            PongMsg::L {
+                leg: w,
+                stamp: Stamp::default(),
+            },
+            now,
+        );
     }
 
     fn set_leg(&mut self, leg: Leg) {
@@ -332,7 +402,11 @@ impl PongSession {
         if fresh {
             self.again = Again::default();
         }
-        self.ease = Ease { x: 0.0, y: 0.0, at: now };
+        self.ease = Ease {
+            x: 0.0,
+            y: 0.0,
+            at: now,
+        };
         let after = self.shown(t, now);
         if fresh || before.1 != Phase::Play || after.1 != Phase::Play {
             return;
@@ -346,7 +420,9 @@ impl PongSession {
 
     // the ball as drawn at shared time t, our time now
     fn shown(&self, t: f64, now: f64) -> (Ball, Phase) {
-        let Some(leg) = self.leg else { return (centre_ball(), Phase::Serve) };
+        let Some(leg) = self.leg else {
+            return (centre_ball(), Phase::Serve);
+        };
         if leg.kind == LegKind::Over {
             return (centre_ball(), Phase::Over);
         }
@@ -355,7 +431,11 @@ impl PongSession {
         }
         let ball = if let Some(g) = self.guess {
             // a guessed return stops at this side's face: only a real leg is judged here
-            let face = if self.role == Side::Host { HOST_FACE_X } else { GUEST_FACE_X };
+            let face = if self.role == Side::Host {
+                HOST_FACE_X
+            } else {
+                GUEST_FACE_X
+            };
             let stop = g.at + seconds_to(&g.ball, face) * 1000.0;
             fly(g.ball, (jmin(t, stop) - g.at) / 1000.0)
         } else {
@@ -363,7 +443,14 @@ impl PongSession {
         };
         let k = fade(now - self.ease.at);
         let half = BALL_SIZE / 2.0;
-        (Ball { x: ball.x + self.ease.x * k, y: jmin(COURT_H - half, jmax(half, ball.y + self.ease.y * k)), ..ball }, Phase::Play)
+        (
+            Ball {
+                x: ball.x + self.ease.x * k,
+                y: jmin(COURT_H - half, jmax(half, ball.y + self.ease.y * k)),
+                ..ball
+            },
+            Phase::Play,
+        )
     }
 
     // the ball heading here: hit or miss, against this paddle as it is now
@@ -383,21 +470,58 @@ impl PongSession {
             let b = fly(leg.ball, (cross - leg.at) / 1000.0);
             if overlaps_paddle(b.y, self.mine_y) {
                 let ball = bounce_off(Ball { x: face, ..b }, self.mine_y, dir);
-                self.produce(Leg { n: leg.n + 1, at: cross, kind: LegKind::Play, ball, ..leg }, now);
+                self.produce(
+                    Leg {
+                        n: leg.n + 1,
+                        at: cross,
+                        kind: LegKind::Play,
+                        ball,
+                        ..leg
+                    },
+                    now,
+                );
                 return;
             }
             self.missed = true;
         }
-        let out = leg.at + seconds_to(&leg.ball, if host { -BALL_SIZE / 2.0 } else { COURT_W + BALL_SIZE / 2.0 }) * 1000.0;
+        let out = leg.at
+            + seconds_to(
+                &leg.ball,
+                if host {
+                    -BALL_SIZE / 2.0
+                } else {
+                    COURT_W + BALL_SIZE / 2.0
+                },
+            ) * 1000.0;
         if t < out {
             return;
         }
-        let score = if host { [leg.score[0], leg.score[1] + 1] } else { [leg.score[0] + 1, leg.score[1]] };
+        let score = if host {
+            [leg.score[0], leg.score[1] + 1]
+        } else {
+            [leg.score[0] + 1, leg.score[1]]
+        };
         if winner_of(score).is_some() {
-            self.produce(Leg { n: leg.n + 1, at: out, kind: LegKind::Over, ball: centre_ball(), score, ..leg }, now);
+            self.produce(
+                Leg {
+                    n: leg.n + 1,
+                    at: out,
+                    kind: LegKind::Over,
+                    ball: centre_ball(),
+                    score,
+                    ..leg
+                },
+                now,
+            );
         } else {
             // served back toward this side, which lost the point
-            let next = self.serve_leg(leg.game, leg.n + 1, out, if host { -1.0 } else { 1.0 }, score);
+            let next = self.serve_leg(
+                leg.game,
+                leg.n + 1,
+                out,
+                if host { -1.0 } else { 1.0 },
+                score,
+            );
             self.produce(next, now);
         }
     }
@@ -405,7 +529,11 @@ impl PongSession {
     // the ball heading away: once it reaches the far face, guess the far side's bounce from its paddle as drawn here
     fn guess_far(&mut self, t: f64, now: f64) {
         let Some(leg) = self.leg else { return };
-        if leg.kind == LegKind::Over || self.guessed || towards(&leg.ball) == self.role || t < leg.at {
+        if leg.kind == LegKind::Over
+            || self.guessed
+            || towards(&leg.ball) == self.role
+            || t < leg.at
+        {
             return;
         }
         let host = self.role == Side::Host;
@@ -418,7 +546,11 @@ impl PongSession {
         let b = fly(leg.ball, (cross - leg.at) / 1000.0);
         let far_y = self.far.shown(t, now);
         if overlaps_paddle(b.y, far_y) {
-            self.guess = Some(Leg { at: cross, ball: bounce_off(Ball { x: face, ..b }, far_y, if host { -1.0 } else { 1.0 }), ..leg });
+            self.guess = Some(Leg {
+                at: cross,
+                ball: bounce_off(Ball { x: face, ..b }, far_y, if host { -1.0 } else { 1.0 }),
+                ..leg
+            });
         }
     }
 
@@ -439,10 +571,20 @@ impl PongSession {
         let d = (if self.held_down { 1.0 } else { 0.0 }) - (if self.held_up { 1.0 } else { 0.0 });
         self.mine_y = move_paddle(self.mine_y, d, dt);
         if let Some(skill) = self.solo {
-            let (y, mind) = bot_step(&self.game, self.their_y, self.bot, skill, dt, &mut *self.rand);
+            let (y, mind) = bot_step(
+                &self.game,
+                self.their_y,
+                self.bot,
+                skill,
+                dt,
+                &mut *self.rand,
+            );
             self.their_y = y;
             self.bot = mind;
-            self.game = PongState { paddles: [self.mine_y, self.their_y], ..self.game };
+            self.game = PongState {
+                paddles: [self.mine_y, self.their_y],
+                ..self.game
+            };
             let (g, carry) = advance(self.game, self.carry, dt, &mut *self.rand);
             self.game = g;
             self.carry = carry;
@@ -460,9 +602,24 @@ impl PongSession {
         let (ball, phase) = self.shown(t, now);
         let theirs = self.far.shown(t, now);
         let score = self.leg.map_or([0, 0], |l| l.score);
-        let winner = if phase == Phase::Over { winner_of(score) } else { None };
-        let paddles = if self.role == Side::Host { [self.mine_y, theirs] } else { [theirs, self.mine_y] };
-        self.view(Some(Snapshot { at: t, ball, paddles, score, phase, winner }))
+        let winner = if phase == Phase::Over {
+            winner_of(score)
+        } else {
+            None
+        };
+        let paddles = if self.role == Side::Host {
+            [self.mine_y, theirs]
+        } else {
+            [theirs, self.mine_y]
+        };
+        self.view(Some(Snapshot {
+            at: t,
+            ball,
+            paddles,
+            score,
+            phase,
+            winner,
+        }))
     }
 
     // this paddle, when its way changes or it has strayed from where the other side would carry it, and as a keepalive
@@ -476,11 +633,26 @@ impl PongSession {
         }
         self.sent_paddle = (self.mine_y, d, now);
         let (game, n) = self.leg.map_or((0, 0), |l| (l.game, l.n));
-        self.post(PongMsg::P { at: t, y: self.mine_y, d, game, n, stamp: Stamp::default() }, now);
+        self.post(
+            PongMsg::P {
+                at: t,
+                y: self.mine_y,
+                d,
+                game,
+                n,
+                stamp: Stamp::default(),
+            },
+            now,
+        );
     }
 
     fn view(&self, snap: Option<Snapshot>) -> SessionView {
-        SessionView { snap, started: self.started, again: self.again, ended: self.ended.clone() }
+        SessionView {
+            snap,
+            started: self.started,
+            again: self.again,
+            ended: self.ended.clone(),
+        }
     }
 }
 
@@ -524,9 +696,13 @@ mod tests {
     }
 
     // one fixed sequence both sessions draw from, as the TS test's single closure: serves go out at an angle
-    fn rand_seq(r: &std::sync::Arc<std::sync::atomic::AtomicUsize>) -> Box<dyn FnMut() -> f64 + Send> {
+    fn rand_seq(
+        r: &std::sync::Arc<std::sync::atomic::AtomicUsize>,
+    ) -> Box<dyn FnMut() -> f64 + Send> {
         let r = r.clone();
-        Box::new(move || [0.9, 0.1, 0.8, 0.2][r.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 4])
+        Box::new(move || {
+            [0.9, 0.1, 0.8, 0.2][r.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 4]
+        })
     }
 
     impl Pair {
@@ -538,7 +714,20 @@ mod tests {
             let hv = host.tick(now);
             let gv = guest.tick(now + o.skew);
             let net = Box::new(seeded(if o.seed == 0 { 1 } else { o.seed }));
-            let mut p = Pair { host, guest, now, o, net, dropped: 0, legs_to_guest: 0, queue: vec![], sent: vec![], last: [0.0, 0.0], hv, gv };
+            let mut p = Pair {
+                host,
+                guest,
+                now,
+                o,
+                net,
+                dropped: 0,
+                legs_to_guest: 0,
+                queue: vec![],
+                sent: vec![],
+                last: [0.0, 0.0],
+                hv,
+                gv,
+            };
             p.route();
             p
         }
@@ -588,10 +777,16 @@ mod tests {
                 self.now += 1000.0 / fps;
                 let now = self.now;
                 if !cut {
-                    let (due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.queue).into_iter().partition(|m| m.0 <= now);
+                    let (due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.queue)
+                        .into_iter()
+                        .partition(|m| m.0 <= now);
                     self.queue = rest;
                     for (_, to, text) in due {
-                        if to == Side::Host { self.host.receive(&text, now) } else { self.guest.receive(&text, now + self.o.skew) }
+                        if to == Side::Host {
+                            self.host.receive(&text, now)
+                        } else {
+                            self.guest.receive(&text, now + self.o.skew)
+                        }
                         self.route();
                     }
                 } else {
@@ -613,10 +808,19 @@ mod tests {
         s.paddles[if side == Side::Host { 0 } else { 1 }]
     }
     fn face_of(side: Side) -> f64 {
-        if side == Side::Host { HOST_FACE_X } else { GUEST_FACE_X }
+        if side == Side::Host {
+            HOST_FACE_X
+        } else {
+            GUEST_FACE_X
+        }
     }
     fn coming(s: &Snapshot, side: Side) -> bool {
-        s.phase == Phase::Play && if side == Side::Host { s.ball.vx < 0.0 } else { s.ball.vx > 0.0 }
+        s.phase == Phase::Play
+            && if side == Side::Host {
+                s.ball.vx < 0.0
+            } else {
+                s.ball.vx > 0.0
+            }
     }
 
     // a player who watches only its own screen
@@ -631,7 +835,14 @@ mod tests {
 
     impl Player {
         fn new(side: Side, lazy: f64, spare: f64) -> Player {
-            Player { side, lazy, spare, was: false, aim: 0.0, idle: false }
+            Player {
+                side,
+                lazy,
+                spare,
+                was: false,
+                aim: 0.0,
+                idle: false,
+            }
         }
         fn play(&mut self, v: &SessionView, s: &mut PongSession, rand: &mut dyn FnMut() -> f64) {
             let Some(snap) = v.snap else { return };
@@ -645,7 +856,8 @@ mod tests {
             if now && !self.idle {
                 let want = landing_y(&snap.ball, face_of(self.side)) - self.aim;
                 let due = seconds_to(&snap.ball, face_of(self.side)) * 1000.0;
-                if due <= (want - mine(&snap, self.side)).abs() / PADDLE_SPEED * 1000.0 + self.spare {
+                if due <= (want - mine(&snap, self.side)).abs() / PADDLE_SPEED * 1000.0 + self.spare
+                {
                     gap = want - mine(&snap, self.side);
                 }
             }
@@ -671,24 +883,46 @@ mod tests {
                 && coming(&prev, side)
             {
                 let face = face_of(side);
-                let hit = snap.phase == Phase::Play && !coming(&snap, side) && snap.score == prev.score;
-                let past = coming(&snap, side) && if side == Side::Guest { snap.ball.x > face + 0.01 } else { snap.ball.x < face - 0.01 };
-                if hit || (past && if side == Side::Guest { prev.ball.x <= face } else { prev.ball.x >= face }) {
+                let hit =
+                    snap.phase == Phase::Play && !coming(&snap, side) && snap.score == prev.score;
+                let past = coming(&snap, side)
+                    && if side == Side::Guest {
+                        snap.ball.x > face + 0.01
+                    } else {
+                        snap.ball.x < face - 0.01
+                    };
+                if hit
+                    || (past
+                        && if side == Side::Guest {
+                            prev.ball.x <= face
+                        } else {
+                            prev.ball.x >= face
+                        })
+                {
                     let y = fly(prev.ball, seconds_to(&prev.ball, face)).y;
                     let off = (y - mine(&snap, side)).abs();
-                    if hit { self.hits += 1 } else { self.misses += 1 }
+                    if hit {
+                        self.hits += 1
+                    } else {
+                        self.misses += 1
+                    }
                     if off < reach - 1.5 && !hit {
-                        self.wrong.push(format!("in place ({off:.1} off) but missed"));
+                        self.wrong
+                            .push(format!("in place ({off:.1} off) but missed"));
                     }
                     if off > reach + 1.5 && hit {
-                        self.wrong.push(format!("out of place ({off:.1} off) but hit"));
+                        self.wrong
+                            .push(format!("out of place ({off:.1} off) but hit"));
                     }
                 }
             }
             if let Some(was) = self.prev.map(|p| p.score)
                 && snap.score != was
             {
-                let mut up = [snap.score[0] as i64 - was[0] as i64, snap.score[1] as i64 - was[1] as i64];
+                let mut up = [
+                    snap.score[0] as i64 - was[0] as i64,
+                    snap.score[1] as i64 - was[1] as i64,
+                ];
                 up.sort();
                 if up != [0, 1] && snap.score != [0, 0] {
                     self.scores.push(format!("{was:?} → {:?}", snap.score));
@@ -714,7 +948,10 @@ mod tests {
                 gp.play(&gv, &mut p.guest, &mut rand);
                 hr.watch(Side::Host, hv.snap);
                 gr.watch(Side::Guest, gv.snap);
-                if over_at < 0.0 && hv.snap.is_some_and(|s| s.phase == Phase::Over) && gv.snap.is_some_and(|s| s.phase == Phase::Over) {
+                if over_at < 0.0
+                    && hv.snap.is_some_and(|s| s.phase == Phase::Over)
+                    && gv.snap.is_some_and(|s| s.phase == Phase::Over)
+                {
                     over_at = p.now;
                 }
             },
@@ -725,7 +962,11 @@ mod tests {
 
     #[test]
     fn waits_for_both_courts_then_serves() {
-        let mut g = Pair::new(LinkOpts { lag: 5.0, drop_first: 2, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            drop_first: 2,
+            ..Default::default()
+        });
         assert!(!g.hv.started);
         g.run(1000.0, |_| {}, false);
         assert!(g.hv.started && g.gv.started);
@@ -735,7 +976,11 @@ mod tests {
 
     #[test]
     fn both_sides_fly_the_same_ball() {
-        let mut g = Pair::new(LinkOpts { lag: 60.0, skew: 12_345.6, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 60.0,
+            skew: 12_345.6,
+            ..Default::default()
+        });
         g.run(1500.0, |_| {}, false);
         let (h, gs) = (g.hv.snap.unwrap(), g.gv.snap.unwrap());
         assert_eq!(gs.phase, Phase::Play);
@@ -753,23 +998,63 @@ mod tests {
     #[test]
     fn what_each_side_sees_counts_and_the_scores_agree() {
         let cases = [
-            LinkOpts { lag: 0.0, ..Default::default() },
-            LinkOpts { lag: 60.0, skew: -4321.0, ..Default::default() },
-            LinkOpts { lag: 150.0, skew: 98_765.0, ..Default::default() },
-            LinkOpts { lag: 60.0, jitter: 40.0, skew: 777.0, seed: 2, ..Default::default() },
-            LinkOpts { lag: 150.0, jitter: 30.0, stall: Some((9000.0, 300.0)), seed: 3, ..Default::default() },
-            LinkOpts { lag: 20.0, jitter: 120.0, seed: 4, ..Default::default() },
+            LinkOpts {
+                lag: 0.0,
+                ..Default::default()
+            },
+            LinkOpts {
+                lag: 60.0,
+                skew: -4321.0,
+                ..Default::default()
+            },
+            LinkOpts {
+                lag: 150.0,
+                skew: 98_765.0,
+                ..Default::default()
+            },
+            LinkOpts {
+                lag: 60.0,
+                jitter: 40.0,
+                skew: 777.0,
+                seed: 2,
+                ..Default::default()
+            },
+            LinkOpts {
+                lag: 150.0,
+                jitter: 30.0,
+                stall: Some((9000.0, 300.0)),
+                seed: 3,
+                ..Default::default()
+            },
+            LinkOpts {
+                lag: 20.0,
+                jitter: 120.0,
+                seed: 4,
+                ..Default::default()
+            },
         ];
         for (i, o) in cases.into_iter().enumerate() {
             let (g, host, guest, over_at) = play_match(o, 150_000.0);
-            assert!(over_at > 0.0, "case {i}: {:?} {:?} {} {} {}", g.hv.snap, g.gv.snap, host.hits, guest.hits, g.sent.len());
+            assert!(
+                over_at > 0.0,
+                "case {i}: {:?} {:?} {} {} {}",
+                g.hv.snap,
+                g.gv.snap,
+                host.hits,
+                guest.hits,
+                g.sent.len()
+            );
             for r in [&host, &guest] {
                 assert!(r.wrong.is_empty(), "case {i}: {:?}", r.wrong);
                 assert!(r.scores.is_empty(), "case {i}: {:?}", r.scores);
                 assert!(r.hits > 5, "case {i}");
             }
             let (h, gs) = (g.hv.snap.unwrap(), g.gv.snap.unwrap());
-            assert_eq!(host.misses + guest.misses, h.score[0] + h.score[1], "case {i}");
+            assert_eq!(
+                host.misses + guest.misses,
+                h.score[0] + h.score[1],
+                "case {i}"
+            );
             assert_eq!(h.score, gs.score);
             assert_eq!(h.score.iter().max().copied(), Some(WIN_SCORE));
             assert_eq!(gs.winner, h.winner);
@@ -778,7 +1063,11 @@ mod tests {
 
     #[test]
     fn a_guest_who_gets_there_keeps_the_rally_going() {
-        let mut g = Pair::new(LinkOpts { lag: 150.0, skew: 50.0, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 150.0,
+            skew: 50.0,
+            ..Default::default()
+        });
         let mut rand = seeded(5);
         let mut hp = Player::new(Side::Host, 0.0, 25.0);
         let mut gp = Player::new(Side::Guest, 0.0, 25.0);
@@ -797,10 +1086,27 @@ mod tests {
 
     #[test]
     fn sends_fewer_messages_and_resends_a_lost_leg() {
-        let (g, _, _, over_at) = play_match(LinkOpts { lag: 60.0, ..Default::default() }, 150_000.0);
-        let n = g.sent.iter().filter(|m| m.0 > 3000.0 && m.0 < over_at).count() as f64;
+        let (g, _, _, over_at) = play_match(
+            LinkOpts {
+                lag: 60.0,
+                ..Default::default()
+            },
+            150_000.0,
+        );
+        let n = g
+            .sent
+            .iter()
+            .filter(|m| m.0 > 3000.0 && m.0 < over_at)
+            .count() as f64;
         assert!(n / ((over_at - 3000.0) / 1000.0) < 30.0);
-        let (g, _, _, _) = play_match(LinkOpts { lag: 40.0, drop_leg_to_guest: Some(1), ..Default::default() }, 150_000.0);
+        let (g, _, _, _) = play_match(
+            LinkOpts {
+                lag: 40.0,
+                drop_leg_to_guest: Some(1),
+                ..Default::default()
+            },
+            150_000.0,
+        );
         assert!(g.legs_to_guest > 2);
         assert_eq!(g.hv.snap.unwrap().phase, Phase::Over);
         assert_eq!(g.gv.snap.unwrap().score, g.hv.snap.unwrap().score);
@@ -808,7 +1114,11 @@ mod tests {
 
     #[test]
     fn plays_to_the_win_and_rematches() {
-        let mut g = Pair::new(LinkOpts { lag: 80.0, jitter: 20.0, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 80.0,
+            jitter: 20.0,
+            ..Default::default()
+        });
         g.host.key(true, true);
         g.guest.key(false, true);
         g.run(60_000.0, |_| {}, false);
@@ -819,13 +1129,25 @@ mod tests {
         g.guest.rematch();
         g.route();
         g.run(300.0, |_| {}, false);
-        assert_eq!(g.hv.again, Again { mine: false, theirs: true });
+        assert_eq!(
+            g.hv.again,
+            Again {
+                mine: false,
+                theirs: true
+            }
+        );
         assert_eq!(g.hv.snap.unwrap().phase, Phase::Over);
         g.host.rematch();
         g.route();
         g.run(400.0, |_| {}, false);
-        assert_eq!((g.hv.snap.unwrap().score, g.gv.snap.unwrap().score), ([0, 0], [0, 0]));
-        assert_eq!((g.gv.again, g.hv.again), (Again::default(), Again::default()));
+        assert_eq!(
+            (g.hv.snap.unwrap().score, g.gv.snap.unwrap().score),
+            ([0, 0], [0, 0])
+        );
+        assert_eq!(
+            (g.gv.again, g.hv.again),
+            (Again::default(), Again::default())
+        );
         g.run(60_000.0, |_| {}, false);
         assert_eq!(g.hv.snap.unwrap().phase, Phase::Over);
         assert_eq!(g.gv.snap.unwrap().score, g.hv.snap.unwrap().score);
@@ -833,15 +1155,26 @@ mod tests {
 
     #[test]
     fn rematch_asks_only_count_at_the_end() {
-        let mut g = Pair::new(LinkOpts { lag: 5.0, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            ..Default::default()
+        });
         g.run(1500.0, |_| {}, false);
         g.guest.rematch();
         g.route();
         g.run(200.0, |_| {}, false);
         assert!(!g.hv.again.theirs);
-        let mut g = Pair::new(LinkOpts { lag: 5.0, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            ..Default::default()
+        });
         g.run(1500.0, |_| {}, false);
-        g.host.receive(&encode_pong(&PongMsg::Again { stamp: Stamp::default() }), 2500.0);
+        g.host.receive(
+            &encode_pong(&PongMsg::Again {
+                stamp: Stamp::default(),
+            }),
+            2500.0,
+        );
         g.host.key(true, true);
         g.guest.key(false, true);
         g.run(60_000.0, |_| {}, false);
@@ -855,61 +1188,121 @@ mod tests {
 
     #[test]
     fn the_link_ending() {
-        let mut g = Pair::new(LinkOpts { lag: 5.0, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            ..Default::default()
+        });
         g.run(1500.0, |_| {}, false);
         g.run(SILENCE_MS + 500.0, |_| {}, true);
         assert_eq!(g.hv.ended.as_deref(), Some("lost the connection"));
         assert_eq!(g.gv.ended.as_deref(), Some("lost the connection"));
-        let mut g = Pair::new(LinkOpts { lag: 5.0, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            ..Default::default()
+        });
         g.run(1500.0, |_| {}, false);
         g.host.receive(&encode_pong(&PongMsg::Bye), 3000.0);
         g.run(100.0, |_| {}, false);
         assert_eq!(g.hv.ended.as_deref(), Some("your friend left"));
-        let mut old = Pair::new(LinkOpts { lag: 5.0, guest_version: Some(PONG_VERSION - 1.0), ..Default::default() });
+        let mut old = Pair::new(LinkOpts {
+            lag: 5.0,
+            guest_version: Some(PONG_VERSION - 1.0),
+            ..Default::default()
+        });
         old.run(500.0, |_| {}, false);
-        assert_eq!(old.hv.ended.as_deref(), Some("your friend needs to update Q Calc to play"));
+        assert_eq!(
+            old.hv.ended.as_deref(),
+            Some("your friend needs to update Q Calc to play")
+        );
         assert_eq!(old.gv.ended.as_deref(), Some("your friend left"));
-        let mut later = Pair::new(LinkOpts { lag: 5.0, guest_version: Some(PONG_VERSION + 1.0), ..Default::default() });
+        let mut later = Pair::new(LinkOpts {
+            lag: 5.0,
+            guest_version: Some(PONG_VERSION + 1.0),
+            ..Default::default()
+        });
         later.run(500.0, |_| {}, false);
-        assert_eq!(later.hv.ended.as_deref(), Some("update Q Calc to play your friend"));
+        assert_eq!(
+            later.hv.ended.as_deref(),
+            Some("update Q Calc to play your friend")
+        );
         let mut s = PongSession::new(Side::Guest, 0.0, Box::new(|| 0.5), None);
-        s.receive(r#"{"t":"s","at":1,"b":[1,2,3,4],"p":[0,0],"s":[0,0],"ph":1}"#, 10.0);
+        s.receive(
+            r#"{"t":"s","at":1,"b":[1,2,3,4],"p":[0,0],"s":[0,0],"ph":1}"#,
+            10.0,
+        );
         s.receive(r#"{"t":"p","y":40}"#, 10.0);
         assert!(!s.tick(20.0).started);
         s.receive(r#"{"t":"hi","v":1,"g":"pong"}"#, 30.0);
-        assert_eq!(s.tick(40.0).ended.as_deref(), Some("your friend needs to update Q Calc to play"));
-        assert_eq!(decode_pong(s.take_sent().last().unwrap()), Some(PongIn::Msg(PongMsg::Bye)));
+        assert_eq!(
+            s.tick(40.0).ended.as_deref(),
+            Some("your friend needs to update Q Calc to play")
+        );
+        assert_eq!(
+            decode_pong(s.take_sent().last().unwrap()),
+            Some(PongIn::Msg(PongMsg::Bye))
+        );
     }
 
     #[test]
     fn hellos() {
-        let mut g = Pair::new(LinkOpts { lag: 5.0, drop_first_hi_to_host: true, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            drop_first_hi_to_host: true,
+            ..Default::default()
+        });
         g.run(2000.0, |_| {}, false);
         assert!(g.hv.started);
         assert_eq!(g.hv.snap.unwrap().phase, Phase::Play);
-        let mut g = Pair::new(LinkOpts { lag: 5.0, drop_first: 1, ..Default::default() });
+        let mut g = Pair::new(LinkOpts {
+            lag: 5.0,
+            drop_first: 1,
+            ..Default::default()
+        });
         g.run(3000.0, |_| {}, false);
-        assert!(!g.sent.iter().any(|m| m.0 > 2500.0 && m.2.contains("\"hi\"")));
+        assert!(
+            !g.sent
+                .iter()
+                .any(|m| m.0 > 2500.0 && m.2.contains("\"hi\""))
+        );
     }
 
     #[test]
     fn the_message_rate_and_the_paddle_message() {
         for fps in [60.0, 120.0, 144.0] {
-            let mut g = Pair::new(LinkOpts { lag: 5.0, fps, ..Default::default() });
+            let mut g = Pair::new(LinkOpts {
+                lag: 5.0,
+                fps,
+                ..Default::default()
+            });
             g.guest.key(false, true);
             g.run(3000.0, |_| {}, false);
-            let n = g.sent.iter().filter(|m| m.0 > 2000.0 && m.0 <= 3000.0).count();
+            let n = g
+                .sent
+                .iter()
+                .filter(|m| m.0 > 2000.0 && m.0 <= 3000.0)
+                .count();
             assert!((8..=12).contains(&n), "{fps} fps: {n}");
         }
         let mut s = PongSession::new(Side::Guest, 0.0, Box::new(|| 0.5), None);
-        s.receive(&encode_pong(&PongMsg::Hi { v: PONG_VERSION, g: false, ok: true, stamp: Stamp::default() }), 0.0);
+        s.receive(
+            &encode_pong(&PongMsg::Hi {
+                v: PONG_VERSION,
+                g: false,
+                ok: true,
+                stamp: Stamp::default(),
+            }),
+            0.0,
+        );
         s.key(false, true);
         let mut t = 16.0;
         while t < 2000.0 {
             s.tick(t);
             t += 16.0;
         }
-        let Some(PongIn::Msg(PongMsg::P { y, d, .. })) = decode_pong(s.take_sent().last().unwrap()) else { panic!() };
+        let Some(PongIn::Msg(PongMsg::P { y, d, .. })) = decode_pong(s.take_sent().last().unwrap())
+        else {
+            panic!()
+        };
         assert_eq!((y, d), (COURT_H - PADDLE_H / 2.0, 1.0));
     }
 
@@ -930,7 +1323,10 @@ mod tests {
         s.rematch();
         now += 1000.0 / 60.0;
         v = s.tick(now);
-        assert_eq!((v.snap.unwrap().phase, v.snap.unwrap().score), (Phase::Serve, [0, 0]));
+        assert_eq!(
+            (v.snap.unwrap().phase, v.snap.unwrap().score),
+            (Phase::Serve, [0, 0])
+        );
         assert!(s.take_sent().is_empty());
     }
 
@@ -938,7 +1334,11 @@ mod tests {
     // play exactly the same
     #[test]
     fn solo_frame_for_frame() {
-        for (skill, digest) in [(Skill::Easy, 827_484_971i32), (Skill::Normal, 1_301_697_141), (Skill::Hard, -1_500_791_610)] {
+        for (skill, digest) in [
+            (Skill::Easy, 827_484_971i32),
+            (Skill::Normal, 1_301_697_141),
+            (Skill::Hard, -1_500_791_610),
+        ] {
             let mut game = PongSession::new(Side::Host, 0.0, Box::new(seeded(11)), Some(skill));
             let mut now = 0.0;
             let mut h: i32 = 0;
@@ -951,8 +1351,18 @@ mod tests {
                 }
                 now += 1000.0 / 60.0;
                 let s = game.tick(now).snap.unwrap();
-                for n in [s.ball.x, s.ball.y, s.paddles[0], s.paddles[1], f64::from(s.score[0]), f64::from(s.score[1]), s.phase.name().len() as f64] {
-                    h = h.wrapping_mul(31).wrapping_add(crate::games::js_round(n * 1000.0) as i64 as i32);
+                for n in [
+                    s.ball.x,
+                    s.ball.y,
+                    s.paddles[0],
+                    s.paddles[1],
+                    f64::from(s.score[0]),
+                    f64::from(s.score[1]),
+                    s.phase.name().len() as f64,
+                ] {
+                    h = h
+                        .wrapping_mul(31)
+                        .wrapping_add(crate::games::js_round(n * 1000.0) as i64 as i32);
                 }
                 if s.phase == Phase::Over {
                     game.rematch();

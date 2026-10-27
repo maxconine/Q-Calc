@@ -39,7 +39,10 @@ fn gcd(a: f64, b: f64) -> f64 {
 pub fn frac(n: f64, d: f64) -> Frac {
     let (n, d) = if d < 0.0 { (-n, -d) } else { (n, d) };
     let g = gcd(n, d);
-    Frac { n: n / g + 0.0, d: d / g }
+    Frac {
+        n: n / g + 0.0,
+        d: d / g,
+    }
 }
 
 fn add(a: Frac, b: Frac) -> Frac {
@@ -65,7 +68,11 @@ fn num(n: f64) -> String {
 
 pub fn frac_text(f: Frac) -> String {
     let neg = if f.n < 0.0 { "−" } else { "" };
-    if f.d == 1.0 { format!("{neg}{}", num(f.n.abs())) } else { format!("{neg}{}/{}", num(f.n.abs()), num(f.d)) }
+    if f.d == 1.0 {
+        format!("{neg}{}", num(f.n.abs()))
+    } else {
+        format!("{neg}{}/{}", num(f.n.abs()), num(f.d))
+    }
 }
 
 // ---- expressions as the solvers write them: fewest brackets, the game's own symbols
@@ -97,7 +104,13 @@ struct Built {
 
 fn join(a: &Built, op: Op, b: &Built) -> Built {
     let loose = |x: &Built| matches!(x.op, Some(Op::Add | Op::Sub));
-    let wrap = |x: &Built, need: bool| if need { format!("({})", x.e) } else { x.e.clone() };
+    let wrap = |x: &Built, need: bool| {
+        if need {
+            format!("({})", x.e)
+        } else {
+            x.e.clone()
+        }
+    };
     let mut left = a.e.clone();
     let mut right = b.e.clone();
     match op {
@@ -112,7 +125,10 @@ fn join(a: &Built, op: Op, b: &Built) -> Built {
         }
         Op::Add => {}
     }
-    Built { e: format!("{left} {} {right}", op.sym()), op: Some(op) }
+    Built {
+        e: format!("{left} {} {right}", op.sym()),
+        op: Some(op),
+    }
 }
 
 // ---- 24
@@ -122,12 +138,18 @@ pub fn solve24(nums: &[f64], target: f64) -> Option<String> {
     let goal = frac(target, 1.0);
     fn rec(items: Vec<(Frac, Built)>, goal: Frac) -> Option<String> {
         if items.len() == 1 {
-            return (items[0].0.n == goal.n && items[0].0.d == goal.d).then(|| items[0].1.e.clone());
+            return (items[0].0.n == goal.n && items[0].0.d == goal.d)
+                .then(|| items[0].1.e.clone());
         }
         for i in 0..items.len() {
             for j in i + 1..items.len() {
                 let (a, b) = (&items[i], &items[j]);
-                let rest: Vec<(Frac, Built)> = items.iter().enumerate().filter(|(k, _)| *k != i && *k != j).map(|(_, x)| x.clone()).collect();
+                let rest: Vec<(Frac, Built)> = items
+                    .iter()
+                    .enumerate()
+                    .filter(|(k, _)| *k != i && *k != j)
+                    .map(|(_, x)| x.clone())
+                    .collect();
                 let mut next = vec![
                     (add(a.0, b.0), join(&a.1, Op::Add, &b.1)),
                     (mul(a.0, b.0), join(&a.1, Op::Mul, &b.1)),
@@ -151,7 +173,20 @@ pub fn solve24(nums: &[f64], target: f64) -> Option<String> {
         }
         None
     }
-    rec(nums.iter().map(|&n| (frac(n, 1.0), Built { e: num(n), op: None })).collect(), goal)
+    rec(
+        nums.iter()
+            .map(|&n| {
+                (
+                    frac(n, 1.0),
+                    Built {
+                        e: num(n),
+                        op: None,
+                    },
+                )
+            })
+            .collect(),
+        goal,
+    )
 }
 
 fn pick(rand: Rand, n: usize) -> usize {
@@ -179,10 +214,16 @@ pub struct Best {
 /// The closest anyone can get to target (exact when it's reachable), with one way to get there.
 pub fn solve_countdown(nums: &[f64], target: f64) -> Best {
     let first = nums.first().copied().unwrap_or(0.0);
-    let mut best = Best { value: first, expr: num(first) };
+    let mut best = Best {
+        value: first,
+        expr: num(first),
+    };
     for &n in nums {
         if (n - target).abs() < (best.value - target).abs() {
-            best = Best { value: n, expr: num(n) };
+            best = Best {
+                value: n,
+                expr: num(n),
+            };
         }
     }
     let mut seen = HashSet::new();
@@ -202,7 +243,12 @@ pub fn solve_countdown(nums: &[f64], target: f64) -> Best {
                 if a.0 < b.0 {
                     (a, b) = (b, a);
                 }
-                let rest: Vec<(f64, Built)> = items.iter().enumerate().filter(|(k, _)| *k != i && *k != j).map(|(_, x)| x.clone()).collect();
+                let rest: Vec<(f64, Built)> = items
+                    .iter()
+                    .enumerate()
+                    .filter(|(k, _)| *k != i && *k != j)
+                    .map(|(_, x)| x.clone())
+                    .collect();
                 let mut next = vec![(a.0 + b.0, join(&a.1, Op::Add, &b.1))];
                 if b.0 != 1.0 {
                     next.push((a.0 * b.0, join(&a.1, Op::Mul, &b.1)));
@@ -215,7 +261,10 @@ pub fn solve_countdown(nums: &[f64], target: f64) -> Best {
                 }
                 for c in next {
                     if (c.0 - target).abs() < (best.value - target).abs() {
-                        *best = Best { value: c.0, expr: c.1.e.clone() };
+                        *best = Best {
+                            value: c.0,
+                            expr: c.1.e.clone(),
+                        };
                     }
                     if best.value == target {
                         return;
@@ -230,7 +279,22 @@ pub fn solve_countdown(nums: &[f64], target: f64) -> Best {
             }
         }
     }
-    rec(nums.iter().map(|&n| (n, Built { e: num(n), op: None })).collect(), target, &mut best, &mut seen);
+    rec(
+        nums.iter()
+            .map(|&n| {
+                (
+                    n,
+                    Built {
+                        e: num(n),
+                        op: None,
+                    },
+                )
+            })
+            .collect(),
+        target,
+        &mut best,
+        &mut seen,
+    );
     best
 }
 
@@ -258,7 +322,11 @@ pub fn deal_countdown(large: f64, rand: Rand) -> (Vec<f64>, f64, Best) {
             return (nums, target, best);
         }
         if tries >= 30 {
-            let t = if (101.0..=999.0).contains(&best.value) { best.value } else { target };
+            let t = if (101.0..=999.0).contains(&best.value) {
+                best.value
+            } else {
+                target
+            };
             return (nums, t, best);
         }
         tries += 1;
@@ -354,7 +422,11 @@ impl Parser {
         }
     }
 
-    fn level(&mut self, ops: &[Op], next: fn(&mut Parser) -> Result<Node, String>) -> Result<Node, String> {
+    fn level(
+        &mut self,
+        ops: &[Op],
+        next: fn(&mut Parser) -> Result<Node, String>,
+    ) -> Result<Node, String> {
         let mut node = next(self)?;
         loop {
             match self.toks.get(self.at) {
@@ -410,11 +482,20 @@ pub fn parse_expr(text: &str) -> Parsed {
     if toks.is_empty() {
         return Parsed::Empty;
     }
-    let mut p = Parser { toks, at: 0, ran_out: false, used: vec![] };
+    let mut p = Parser {
+        toks,
+        at: 0,
+        ran_out: false,
+        used: vec![],
+    };
     match p.expr() {
         Ok(node) => {
             if let Some(tok) = p.toks.get(p.at) {
-                return Parsed::Error(if *tok == Tok::Close { "a ( is missing".into() } else { "an operator is missing".into() });
+                return Parsed::Error(if *tok == Tok::Close {
+                    "a ( is missing".into()
+                } else {
+                    "an operator is missing".into()
+                });
             }
             Parsed::Ok(node, p.used)
         }
@@ -463,12 +544,19 @@ pub fn numbers_problem(used: &[f64], nums: &[f64], all: bool) -> Option<String> 
                 left.remove(at);
             }
             None => {
-                return Some(if nums.contains(&n) { format!("{} is used too often", num(n)) } else { format!("{} isn’t one of the numbers", num(n)) });
+                return Some(if nums.contains(&n) {
+                    format!("{} is used too often", num(n))
+                } else {
+                    format!("{} isn’t one of the numbers", num(n))
+                });
             }
         }
     }
     if all && !left.is_empty() {
-        return Some(format!("use {} too", left.iter().map(|n| num(*n)).collect::<Vec<_>>().join(", ")));
+        return Some(format!(
+            "use {} too",
+            left.iter().map(|n| num(*n)).collect::<Vec<_>>().join(", ")
+        ));
     }
     None
 }
@@ -485,13 +573,29 @@ pub struct Check {
 
 pub fn check_expr(text: &str, nums: &[f64], mode: Mode) -> Check {
     match parse_expr(text) {
-        Parsed::Empty | Parsed::Partial => Check { value: None, problem: None, valid: false },
-        Parsed::Error(m) => Check { value: None, problem: Some(m), valid: false },
+        Parsed::Empty | Parsed::Partial => Check {
+            value: None,
+            problem: None,
+            valid: false,
+        },
+        Parsed::Error(m) => Check {
+            value: None,
+            problem: Some(m),
+            valid: false,
+        },
         Parsed::Ok(node, used) => match eval(&node, mode == Mode::Countdown) {
-            Err(m) => Check { value: None, problem: Some(m), valid: false },
+            Err(m) => Check {
+                value: None,
+                problem: Some(m),
+                valid: false,
+            },
             Ok(v) => {
                 let problem = numbers_problem(&used, nums, mode == Mode::TwentyFour);
-                Check { value: Some(v), valid: problem.is_none(), problem }
+                Check {
+                    value: Some(v),
+                    valid: problem.is_none(),
+                    problem,
+                }
             }
         },
     }
@@ -553,11 +657,23 @@ pub const FRESH_STATS: NumbersStats = NumbersStats {
 
 /// `loadStats()` from the stored text.
 pub fn load_stats(raw: Option<&str>) -> NumbersStats {
-    let saved = raw.and_then(|r| serde_json::from_str::<Json>(r).ok()).unwrap_or(Json::Null);
-    let n = |k: &str, d: f64| saved.get(k).and_then(Json::as_f64).filter(|v| v.is_finite() && *v >= 0.0).unwrap_or(d);
+    let saved = raw
+        .and_then(|r| serde_json::from_str::<Json>(r).ok())
+        .unwrap_or(Json::Null);
+    let n = |k: &str, d: f64| {
+        saved
+            .get(k)
+            .and_then(Json::as_f64)
+            .filter(|v| v.is_finite() && *v >= 0.0)
+            .unwrap_or(d)
+    };
     let f = FRESH_STATS;
     NumbersStats {
-        mode: if saved.get("mode").and_then(Json::as_str) == Some("countdown") { Mode::Countdown } else { Mode::TwentyFour },
+        mode: if saved.get("mode").and_then(Json::as_str) == Some("countdown") {
+            Mode::Countdown
+        } else {
+            Mode::TwentyFour
+        },
         large: n("large", f.large),
         streak24: n("streak24", f.streak24),
         best24: n("best24", f.best24),
@@ -582,12 +698,27 @@ pub fn stats_json(s: &NumbersStats) -> String {
 /// A 24 round ends: solved keeps the streak going, anything else (time, giving up) ends it.
 pub fn record24(s: &NumbersStats, solved: bool) -> NumbersStats {
     let streak24 = if solved { s.streak24 + 1.0 } else { 0.0 };
-    NumbersStats { streak24, best24: s.best24.max(streak24), solved24: s.solved24 + if solved { 1.0 } else { 0.0 }, ..*s }
+    NumbersStats {
+        streak24,
+        best24: s.best24.max(streak24),
+        solved24: s.solved24 + if solved { 1.0 } else { 0.0 },
+        ..*s
+    }
 }
 
 pub fn record_countdown(s: &NumbersStats, points: u32) -> NumbersStats {
-    let exact_streak = if points == 10 { s.exact_streak + 1.0 } else { 0.0 };
-    NumbersStats { rounds: s.rounds + 1.0, points: s.points + f64::from(points), exact_streak, best_exact: s.best_exact.max(exact_streak), ..*s }
+    let exact_streak = if points == 10 {
+        s.exact_streak + 1.0
+    } else {
+        0.0
+    };
+    NumbersStats {
+        rounds: s.rounds + 1.0,
+        points: s.points + f64::from(points),
+        exact_streak,
+        best_exact: s.best_exact.max(exact_streak),
+        ..*s
+    }
 }
 
 #[cfg(test)]
@@ -609,11 +740,23 @@ mod tests {
 
     #[test]
     fn solves_24() {
-        for nums in [[4.0, 7.0, 8.0, 8.0], [1.0, 5.0, 5.0, 5.0], [3.0, 3.0, 8.0, 8.0], [6.0, 6.0, 6.0, 6.0], [1.0, 2.0, 3.0, 4.0], [13.0, 13.0, 13.0, 12.0]] {
+        for nums in [
+            [4.0, 7.0, 8.0, 8.0],
+            [1.0, 5.0, 5.0, 5.0],
+            [3.0, 3.0, 8.0, 8.0],
+            [6.0, 6.0, 6.0, 6.0],
+            [1.0, 2.0, 3.0, 4.0],
+            [13.0, 13.0, 13.0, 12.0],
+        ] {
             let way = solve24(&nums, TARGET_24).unwrap();
             assert!(solves24(&way, &nums), "{way}");
         }
-        for nums in [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 2.0], [13.0, 13.0, 13.0, 13.0], [1.0, 1.0, 5.0, 9.0]] {
+        for nums in [
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 2.0],
+            [13.0, 13.0, 13.0, 13.0],
+            [1.0, 1.0, 5.0, 9.0],
+        ] {
             assert_eq!(solve24(&nums, TARGET_24), None);
         }
         let mut rng = seeded(7);
@@ -624,12 +767,28 @@ mod tests {
             assert!(solves24(&solution, &nums));
         }
         // from the TS (node, lib/numbers.ts)
-        assert_eq!(solve24(&[4.0, 7.0, 8.0, 8.0], TARGET_24).as_deref(), Some("8 × (4 + 7 − 8)"));
-        assert_eq!(solve_countdown(&[25.0, 50.0, 75.0, 100.0, 3.0, 6.0], 952.0).expr, "(75 × 3 × (100 + 6) − 50) ÷ 25");
+        assert_eq!(
+            solve24(&[4.0, 7.0, 8.0, 8.0], TARGET_24).as_deref(),
+            Some("8 × (4 + 7 − 8)")
+        );
+        assert_eq!(
+            solve_countdown(&[25.0, 50.0, 75.0, 100.0, 3.0, 6.0], 952.0).expr,
+            "(75 × 3 × (100 + 6) − 50) ÷ 25"
+        );
         let mut r = seeded(7);
-        assert_eq!(deal24(&mut r), (vec![4.0, 12.0, 8.0, 13.0], "8 × (4 + 12 − 13)".to_string()));
+        assert_eq!(
+            deal24(&mut r),
+            (vec![4.0, 12.0, 8.0, 13.0], "8 × (4 + 12 − 13)".to_string())
+        );
         let (nums, target, best) = deal_countdown(2.0, &mut r);
-        assert_eq!((nums, target, best.expr.as_str()), (vec![25.0, 100.0, 8.0, 2.0, 3.0, 10.0], 975.0, "(100 − 25) × (10 + 3)"));
+        assert_eq!(
+            (nums, target, best.expr.as_str()),
+            (
+                vec![25.0, 100.0, 8.0, 2.0, 3.0, 10.0],
+                975.0,
+                "(100 − 25) × (10 + 3)"
+            )
+        );
     }
 
     #[test]
@@ -639,32 +798,104 @@ mod tests {
         assert!(solves24("4x(7-8/8)", &[8.0, 8.0, 7.0, 4.0]));
         assert!(solves24("8 / (3 - 8/3)", &[3.0, 3.0, 8.0, 8.0]));
         let n = [4.0, 7.0, 8.0, 8.0];
-        assert!(check_expr("6*4", &n, Mode::TwentyFour).problem.unwrap().contains("isn’t one"));
-        assert!(check_expr("8+8+8", &n, Mode::TwentyFour).problem.unwrap().contains("too often"));
-        assert!(check_expr("8*8", &n, Mode::TwentyFour).problem.unwrap().contains("use 4, 7 too"));
-        assert!(check_expr("84-7-8", &n, Mode::TwentyFour).problem.unwrap().contains("84"));
+        assert!(
+            check_expr("6*4", &n, Mode::TwentyFour)
+                .problem
+                .unwrap()
+                .contains("isn’t one")
+        );
+        assert!(
+            check_expr("8+8+8", &n, Mode::TwentyFour)
+                .problem
+                .unwrap()
+                .contains("too often")
+        );
+        assert!(
+            check_expr("8*8", &n, Mode::TwentyFour)
+                .problem
+                .unwrap()
+                .contains("use 4, 7 too")
+        );
+        assert!(
+            check_expr("84-7-8", &n, Mode::TwentyFour)
+                .problem
+                .unwrap()
+                .contains("84")
+        );
         assert!(!solves24("8*3", &n));
-        for t in ["2^3", "4!", "alert(1)", "2**3", "Math.max(1)", "3 % 2", "1e3"] {
-            assert!(check_expr(t, &[1.0, 2.0, 3.0, 4.0], Mode::TwentyFour).problem.is_some(), "{t}");
+        for t in [
+            "2^3",
+            "4!",
+            "alert(1)",
+            "2**3",
+            "Math.max(1)",
+            "3 % 2",
+            "1e3",
+        ] {
+            assert!(
+                check_expr(t, &[1.0, 2.0, 3.0, 4.0], Mode::TwentyFour)
+                    .problem
+                    .is_some(),
+                "{t}"
+            );
         }
         assert!(matches!(parse_expr("-4 + 28"), Parsed::Error(_)));
         assert!(matches!(parse_expr("4 4"), Parsed::Error(_)));
         assert!(matches!(parse_expr("4 + )"), Parsed::Error(_)));
-        assert!(check_expr("4/(2-2)", &[4.0, 2.0, 2.0, 1.0], Mode::TwentyFour).problem.unwrap().contains("divide by 0"));
+        assert!(
+            check_expr("4/(2-2)", &[4.0, 2.0, 2.0, 1.0], Mode::TwentyFour)
+                .problem
+                .unwrap()
+                .contains("divide by 0")
+        );
         for t in ["", "4 +", "(4 + 7", "(4 + 7) *", "(("] {
             let c = check_expr(t, &n, Mode::TwentyFour);
             assert_eq!((c.problem, c.valid), (None, false), "{t}");
         }
-        assert_eq!(check_expr("4 + 7", &n, Mode::TwentyFour).value, f(11.0, 1.0));
+        assert_eq!(
+            check_expr("4 + 7", &n, Mode::TwentyFour).value,
+            f(11.0, 1.0)
+        );
         let nums = [100.0, 50.0, 3.0, 6.0, 7.0, 1.0];
         assert!(check_expr("100 * 7 - 50", &nums, Mode::Countdown).valid);
-        assert!(check_expr("100 + 100", &nums, Mode::Countdown).problem.unwrap().contains("too often"));
-        assert!(check_expr("7 / 3", &nums, Mode::Countdown).problem.unwrap().contains("whole"));
-        assert!(check_expr("(7 / 3) * 6", &nums, Mode::Countdown).problem.unwrap().contains("whole"));
-        assert!(check_expr("3 - 7 + 100", &nums, Mode::Countdown).problem.unwrap().contains("above 0"));
-        assert!(check_expr("7 - 7", &[7.0, 7.0], Mode::Countdown).problem.unwrap().contains("above 0"));
-        assert_eq!(check_expr("(7 / 3) * 6", &[7.0, 3.0, 6.0, 1.0], Mode::TwentyFour).value, f(14.0, 1.0));
-        assert_eq!(used_tiles("8 + 8 * 12", &[8.0, 12.0, 8.0, 3.0]), vec![true, true, true, false]);
+        assert!(
+            check_expr("100 + 100", &nums, Mode::Countdown)
+                .problem
+                .unwrap()
+                .contains("too often")
+        );
+        assert!(
+            check_expr("7 / 3", &nums, Mode::Countdown)
+                .problem
+                .unwrap()
+                .contains("whole")
+        );
+        assert!(
+            check_expr("(7 / 3) * 6", &nums, Mode::Countdown)
+                .problem
+                .unwrap()
+                .contains("whole")
+        );
+        assert!(
+            check_expr("3 - 7 + 100", &nums, Mode::Countdown)
+                .problem
+                .unwrap()
+                .contains("above 0")
+        );
+        assert!(
+            check_expr("7 - 7", &[7.0, 7.0], Mode::Countdown)
+                .problem
+                .unwrap()
+                .contains("above 0")
+        );
+        assert_eq!(
+            check_expr("(7 / 3) * 6", &[7.0, 3.0, 6.0, 1.0], Mode::TwentyFour).value,
+            f(14.0, 1.0)
+        );
+        assert_eq!(
+            used_tiles("8 + 8 * 12", &[8.0, 12.0, 8.0, 3.0]),
+            vec![true, true, true, false]
+        );
     }
 
     #[test]
@@ -672,16 +903,27 @@ mod tests {
         let nums = [25.0, 50.0, 75.0, 100.0, 3.0, 6.0];
         let best = solve_countdown(&nums, 952.0);
         assert_eq!(best.value, 952.0);
-        assert_eq!(check_expr(&best.expr, &nums, Mode::Countdown).value, f(952.0, 1.0));
+        assert_eq!(
+            check_expr(&best.expr, &nums, Mode::Countdown).value,
+            f(952.0, 1.0)
+        );
         assert_eq!(solve_countdown(&[1.0; 6], 500.0).value, 9.0);
         let mut rng = seeded(3);
         for large in 0..=4 {
             let (nums, target, best) = deal_countdown(f64::from(large), &mut rng);
             assert_eq!(nums.len(), 6);
-            assert_eq!(nums.iter().filter(|n| LARGE.contains(n)).count(), large as usize);
+            assert_eq!(
+                nums.iter().filter(|n| LARGE.contains(n)).count(),
+                large as usize
+            );
             assert!((101.0..=999.0).contains(&target));
             assert_eq!(best.value, target);
-            assert_eq!(check_expr(&best.expr, &nums, Mode::Countdown).value.map(|v| v.n), Some(target));
+            assert_eq!(
+                check_expr(&best.expr, &nums, Mode::Countdown)
+                    .value
+                    .map(|v| v.n),
+                Some(target)
+            );
         }
         assert_eq!(countdown_points(500.0, Some(500.0)), 10);
         assert_eq!(countdown_points(500.0, Some(495.0)), 7);
@@ -698,9 +940,15 @@ mod tests {
         let s = record24(&s, false);
         assert_eq!((s.streak24, s.best24, s.solved24), (0.0, 2.0, 2.0));
         let c = record_countdown(&record_countdown(&FRESH_STATS, 10), 7);
-        assert_eq!((c.rounds, c.points, c.exact_streak, c.best_exact), (2.0, 17.0, 0.0, 1.0));
+        assert_eq!(
+            (c.rounds, c.points, c.exact_streak, c.best_exact),
+            (2.0, 17.0, 0.0, 1.0)
+        );
         assert_eq!(record_countdown(&c, 10).exact_streak, 1.0);
         assert_eq!(load_stats(Some(&stats_json(&c))), c);
-        assert_eq!(load_stats(Some("{\"mode\":\"countdown\",\"large\":-1}")).large, 2.0);
+        assert_eq!(
+            load_stats(Some("{\"mode\":\"countdown\",\"large\":-1}")).large,
+            2.0
+        );
     }
 }

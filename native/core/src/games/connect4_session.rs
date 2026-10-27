@@ -1,7 +1,10 @@
 //! `src/lib/connect4Session.ts`: one side of a game, without the page. The board feeds it columns, messages and
 //! times; what it sends the other side waits in `take_sent`.
 
-use super::connect4::{C4In, C4Msg, C4State, C4_VERSION, can_drop, decode_c4, drop, encode_c4, first_for, is_over, new_board};
+use super::connect4::{
+    C4_VERSION, C4In, C4Msg, C4State, can_drop, decode_c4, drop, encode_c4, first_for, is_over,
+    new_board,
+};
 use super::connect4_bot::{C4Skill, bot_column};
 use super::hello::{LinkedGame, other_game_note};
 use super::{Random, Side};
@@ -63,12 +66,21 @@ pub struct Connect4Session {
 
 impl std::fmt::Debug for Connect4Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Connect4Session").field("role", &self.role).field("state", &self.state).finish_non_exhaustive()
+        f.debug_struct("Connect4Session")
+            .field("role", &self.role)
+            .field("state", &self.state)
+            .finish_non_exhaustive()
     }
 }
 
 impl Connect4Session {
-    pub fn new(role: Side, now: f64, solo: Option<C4Skill>, rand: Box<dyn FnMut() -> f64 + Send>, clock: Clock) -> Connect4Session {
+    pub fn new(
+        role: Side,
+        now: f64,
+        solo: Option<C4Skill>,
+        rand: Box<dyn FnMut() -> f64 + Send>,
+        clock: Clock,
+    ) -> Connect4Session {
         let mut s = Connect4Session {
             game: 0,
             state: new_board(first_for(0)),
@@ -100,7 +112,13 @@ impl Connect4Session {
     pub fn with_defaults(role: Side, now: f64, solo: Option<C4Skill>) -> Connect4Session {
         let mut r = Random::from_entropy();
         let t0 = std::time::Instant::now();
-        Connect4Session::new(role, now, solo, Box::new(move || r.next_f64()), Box::new(move || t0.elapsed().as_secs_f64() * 1000.0))
+        Connect4Session::new(
+            role,
+            now,
+            solo,
+            Box::new(move || r.next_f64()),
+            Box::new(move || t0.elapsed().as_secs_f64() * 1000.0),
+        )
     }
 
     /// What's waiting to go to the other side, oldest first.
@@ -110,11 +128,20 @@ impl Connect4Session {
 
     // solo: if it's the computer's turn, it moves after a moment
     fn bot_turn(&mut self, now: f64) {
-        self.bot_at = if self.solo.is_some() && !is_over(&self.state) && self.state.turn != self.role { Some(now + BOT_THINK_MS) } else { None };
+        self.bot_at =
+            if self.solo.is_some() && !is_over(&self.state) && self.state.turn != self.role {
+                Some(now + BOT_THINK_MS)
+            } else {
+                None
+            };
     }
 
     fn hi(&mut self) {
-        self.post(&C4Msg::Hi { v: C4_VERSION, g: true, ok: self.greeted });
+        self.post(&C4Msg::Hi {
+            v: C4_VERSION,
+            g: true,
+            ok: self.greeted,
+        });
     }
 
     fn post(&mut self, m: &C4Msg) {
@@ -134,7 +161,9 @@ impl Connect4Session {
     }
 
     fn apply(&mut self, col: usize, who: Side) -> bool {
-        let Some(next) = drop(&self.state, col as f64, who) else { return false };
+        let Some(next) = drop(&self.state, col as f64, who) else {
+            return false;
+        };
         if let Some(w) = next.winner {
             self.wins[if w == Side::Host { 0 } else { 1 }] += 1;
         }
@@ -162,7 +191,11 @@ impl Connect4Session {
             self.bot_turn(now);
             return true;
         }
-        self.post(&C4Msg::Move { g: self.game, n, c: col });
+        self.post(&C4Msg::Move {
+            g: self.game,
+            n,
+            c: col,
+        });
         self.last_sent = now;
         true
     }
@@ -283,17 +316,17 @@ impl Connect4Session {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::games::connect4::{CELLS, cell_at, tests::DRAW};
+    use crate::games::connect4::{cell_at, tests::DRAW};
     use crate::games::mulberry32;
 
     fn session(role: Side, now: f64, solo: Option<C4Skill>, seed: u32) -> Connect4Session {
-        let mut r = mulberry32(seed);
+        let r = mulberry32(seed);
         let mut t = 0.0;
         Connect4Session::new(
             role,
             now,
             solo,
-            Box::new(move || r()),
+            Box::new(r),
             Box::new(move || {
                 t += 40.0;
                 t
@@ -321,7 +354,17 @@ mod tests {
             let mut guest = session(Side::Guest, now, None, 2);
             let hv = host.tick(now);
             let gv = guest.tick(now);
-            let mut p = Pair { host, guest, now, lag, queue: vec![], hv, gv, guest_version: None, drop_first_hi_to_host: false };
+            let mut p = Pair {
+                host,
+                guest,
+                now,
+                lag,
+                queue: vec![],
+                hv,
+                gv,
+                guest_version: None,
+                drop_first_hi_to_host: false,
+            };
             p.route();
             p
         }
@@ -348,10 +391,16 @@ mod tests {
                     self.queue.clear();
                 }
                 let now = self.now;
-                let (due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.queue).into_iter().partition(|m| m.0 <= now);
+                let (due, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.queue)
+                    .into_iter()
+                    .partition(|m| m.0 <= now);
                 self.queue = rest;
                 for (_, to, text) in due {
-                    if to == Side::Host { self.host.receive(&text, now) } else { self.guest.receive(&text, now) }
+                    if to == Side::Host {
+                        self.host.receive(&text, now)
+                    } else {
+                        self.guest.receive(&text, now)
+                    }
                 }
                 self.hv = self.host.tick(now);
                 self.gv = self.guest.tick(now);
@@ -364,7 +413,11 @@ mod tests {
         fn moves(&mut self, cols: &[usize]) {
             for &c in cols {
                 let turn = self.host.view().state.turn;
-                let ok = if turn == Side::Host { self.host.play(c, self.now) } else { self.guest.play(c, self.now) };
+                let ok = if turn == Side::Host {
+                    self.host.play(c, self.now)
+                } else {
+                    self.guest.play(c, self.now)
+                };
                 assert!(ok, "column {c}");
                 self.route();
                 self.run(self.lag + 100.0, false);
@@ -408,7 +461,11 @@ mod tests {
         g.run(200.0, false);
         let before = g.host.view();
         let now = g.now;
-        for m in [C4Msg::Move { g: 0, n: 0, c: 2 }, C4Msg::Move { g: 1, n: 0, c: 2 }, C4Msg::Move { g: 0, n: 3, c: 2 }] {
+        for m in [
+            C4Msg::Move { g: 0, n: 0, c: 2 },
+            C4Msg::Move { g: 1, n: 0, c: 2 },
+            C4Msg::Move { g: 0, n: 3, c: 2 },
+        ] {
             g.host.receive(&encode_c4(&m), now);
         }
         g.host.receive(r#"{"t":"c4m","g":0,"n":0,"c":9}"#, now);
@@ -418,10 +475,12 @@ mod tests {
         assert_eq!(g.host.view().state.turn, Side::Host);
         assert!(!g.host.play(0, g.now));
         g.host.play(1, g.now);
-        g.host.receive(&encode_c4(&C4Msg::Move { g: 0, n: 7, c: 0 }), g.now);
+        g.host
+            .receive(&encode_c4(&C4Msg::Move { g: 0, n: 7, c: 0 }), g.now);
         assert_eq!(g.host.view().state.moves, 7);
         assert_eq!(g.host.view().state.turn, Side::Guest);
-        g.host.receive(&encode_c4(&C4Msg::Move { g: 0, n: 1, c: 4 }), g.now);
+        g.host
+            .receive(&encode_c4(&C4Msg::Move { g: 0, n: 1, c: 4 }), g.now);
         assert_eq!(g.host.view().state.moves, 7);
     }
 
@@ -437,12 +496,21 @@ mod tests {
         g.guest.rematch(g.now);
         g.route();
         g.run(100.0, false);
-        assert_eq!(g.hv.again, Again { mine: false, theirs: true });
+        assert_eq!(
+            g.hv.again,
+            Again {
+                mine: false,
+                theirs: true
+            }
+        );
         g.host.rematch(g.now);
         g.route();
         g.run(100.0, false);
         for v in [&g.hv, &g.gv] {
-            assert_eq!((v.state.moves, v.state.turn, v.again, v.wins), (0, Side::Guest, Again::default(), [1, 0]));
+            assert_eq!(
+                (v.state.moves, v.state.turn, v.again, v.wins),
+                (0, Side::Guest, Again::default(), [1, 0])
+            );
         }
         assert!(!g.host.play(3, g.now));
         assert!(g.guest.play(3, g.now));
@@ -459,7 +527,10 @@ mod tests {
         g.route();
         g.run(500.0, false);
         assert_eq!((g.hv.state.moves, g.gv.state.moves), (0, 0));
-        assert_eq!((g.hv.state.turn, g.gv.state.turn), (Side::Guest, Side::Guest));
+        assert_eq!(
+            (g.hv.state.turn, g.gv.state.turn),
+            (Side::Guest, Side::Guest)
+        );
     }
 
     #[test]
@@ -500,7 +571,10 @@ mod tests {
         let mut g = Pair::new(5.0);
         g.guest_version = Some(C4_VERSION + 1.0);
         g.run(500.0, false);
-        assert_eq!(g.hv.ended.as_deref(), Some("update both Q Calcs to play each other"));
+        assert_eq!(
+            g.hv.ended.as_deref(),
+            Some("update both Q Calcs to play each other")
+        );
         assert_eq!(g.gv.ended.as_deref(), Some("your friend left"));
         let mut s = session(Side::Guest, 0.0, None, 1);
         s.take_sent();
@@ -530,9 +604,11 @@ mod tests {
         }
         s.rematch(now);
         let next = s.view();
-        assert_eq!((next.state.moves, next.state.first, next.thinking), (0, Side::Guest, true));
+        assert_eq!(
+            (next.state.moves, next.state.first, next.thinking),
+            (0, Side::Guest, true)
+        );
         assert_eq!(s.tick(now + BOT_THINK_MS).state.moves, 1);
         assert!(s.take_sent().is_empty());
-        assert!(CELLS > 0);
     }
 }

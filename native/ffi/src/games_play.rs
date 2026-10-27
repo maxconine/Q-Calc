@@ -3,7 +3,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use qcalc_core::games::{connect4, connect4_bot, connect4_session, crack, equal, numbers, pong, pong_session, ultimate, ultimate_bot, ultimate_chalk, ultimate_session};
+use qcalc_core::games::{
+    connect4, connect4_bot, connect4_session, crack, equal, numbers, pong, pong_session, ultimate,
+    ultimate_bot, ultimate_chalk, ultimate_session,
+};
 
 use crate::games::{GameSide, lock, math_random};
 
@@ -63,7 +66,9 @@ impl From<connect4_session::C4View> for C4View {
             line: s.line.iter().flatten().map(|&i| i as u32).collect(),
             draw: s.draw,
             over: connect4::is_over(s),
-            landing: (0..connect4::COLS).map(|c| connect4::landing_row(s, c as f64).map_or(-1, |r| r as i32)).collect(),
+            landing: (0..connect4::COLS)
+                .map(|c| connect4::landing_row(s, c as f64).map_or(-1, |r| r as i32))
+                .collect(),
             started: v.started,
             wins_host: v.wins[0],
             wins_guest: v.wins[1],
@@ -87,8 +92,14 @@ pub struct Connect4Game {
 impl Connect4Game {
     #[uniffi::constructor]
     pub fn new(role: GameSide, now: f64, solo: Option<C4Skill>) -> Arc<Self> {
-        let s = connect4_session::Connect4Session::with_defaults(role.into(), now, solo.map(Into::into));
-        Arc::new(Connect4Game { inner: Mutex::new(s) })
+        let s = connect4_session::Connect4Session::with_defaults(
+            role.into(),
+            now,
+            solo.map(Into::into),
+        );
+        Arc::new(Connect4Game {
+            inner: Mutex::new(s),
+        })
     }
 
     pub fn play(&self, col: u32, now: f64) -> bool {
@@ -210,7 +221,13 @@ impl PongGame {
             PongSkill::Normal => pong::Skill::Normal,
             PongSkill::Hard => pong::Skill::Hard,
         });
-        Arc::new(PongGame { inner: Mutex::new(pong_session::PongSession::with_defaults(role.into(), now, solo)) })
+        Arc::new(PongGame {
+            inner: Mutex::new(pong_session::PongSession::with_defaults(
+                role.into(),
+                now,
+                solo,
+            )),
+        })
     }
 
     /// The up or down key went down (`held`) or up.
@@ -303,7 +320,9 @@ impl From<ultimate_session::UtView> for UtView {
                     })
                 })
                 .collect(),
-            open: (0..ultimate::SIZE).map(|b| ultimate::board_open(s, b)).collect(),
+            open: (0..ultimate::SIZE)
+                .map(|b| ultimate::board_open(s, b))
+                .collect(),
             first: s.first.into(),
             turn: s.turn.into(),
             moves: s.moves as u32,
@@ -335,8 +354,14 @@ pub struct UltimateGame {
 impl UltimateGame {
     #[uniffi::constructor]
     pub fn new(role: GameSide, now: f64, solo: Option<UtSkill>) -> Arc<Self> {
-        let s = ultimate_session::UltimateSession::with_defaults(role.into(), now, solo.map(Into::into));
-        Arc::new(UltimateGame { inner: Mutex::new(s) })
+        let s = ultimate_session::UltimateSession::with_defaults(
+            role.into(),
+            now,
+            solo.map(Into::into),
+        );
+        Arc::new(UltimateGame {
+            inner: Mutex::new(s),
+        })
     }
 
     pub fn play(&self, cell: u32, now: f64) -> bool {
@@ -422,13 +447,27 @@ pub struct EqualSave {
 
 impl From<equal::EqualStats> for EqualStats {
     fn from(s: equal::EqualStats) -> Self {
-        EqualStats { played: s.played, wins: s.wins, streak: s.streak, best: s.best, last_win: s.last_win, dist: s.dist }
+        EqualStats {
+            played: s.played,
+            wins: s.wins,
+            streak: s.streak,
+            best: s.best,
+            last_win: s.last_win,
+            dist: s.dist,
+        }
     }
 }
 
 impl From<EqualStats> for equal::EqualStats {
     fn from(s: EqualStats) -> Self {
-        equal::EqualStats { played: s.played, wins: s.wins, streak: s.streak, best: s.best, last_win: s.last_win, dist: s.dist }
+        equal::EqualStats {
+            played: s.played,
+            wins: s.wins,
+            streak: s.streak,
+            best: s.best,
+            last_win: s.last_win,
+            dist: s.dist,
+        }
     }
 }
 
@@ -440,13 +479,22 @@ pub fn equal_guess_problem(guess: String) -> Option<String> {
 
 #[uniffi::export]
 pub fn equal_score(guess: String, answer: String) -> Vec<EqualMark> {
-    equal::score(&guess, &answer).into_iter().map(mark).collect()
+    equal::score(&guess, &answer)
+        .into_iter()
+        .map(mark)
+        .collect()
 }
 
 /// `keyMarks`: each key's best mark so far, keyed by the character.
 #[uniffi::export]
-pub fn equal_key_marks(guesses: Vec<String>, answer: String) -> std::collections::HashMap<String, EqualMark> {
-    equal::key_marks(&guesses, &answer).into_iter().map(|(c, m)| (c.to_string(), mark(m))).collect()
+pub fn equal_key_marks(
+    guesses: Vec<String>,
+    answer: String,
+) -> std::collections::HashMap<String, EqualMark> {
+    equal::key_marks(&guesses, &answer)
+        .into_iter()
+        .map(|(c, m)| (c.to_string(), mark(m)))
+        .collect()
 }
 
 /// A practice puzzle (`generate(Math.random)`).
@@ -467,7 +515,12 @@ pub fn equal_daily_number(date: String) -> i64 {
 }
 
 #[uniffi::export]
-pub fn equal_record_daily(stats: EqualStats, date: String, guesses: Vec<String>, answer: String) -> EqualStats {
+pub fn equal_record_daily(
+    stats: EqualStats,
+    date: String,
+    guesses: Vec<String>,
+    answer: String,
+) -> EqualStats {
     equal::record_daily(&stats.into(), &date, &guesses, &answer).into()
 }
 
@@ -480,13 +533,22 @@ pub fn equal_current_streak(stats: EqualStats, today: String) -> u32 {
 #[uniffi::export]
 pub fn equal_load_save(raw: Option<String>) -> EqualSave {
     let s = equal::load_save(raw.as_deref());
-    EqualSave { daily: s.daily.map(|d| EqualDaily { date: d.date, guesses: d.guesses }), stats: s.stats.into() }
+    EqualSave {
+        daily: s.daily.map(|d| EqualDaily {
+            date: d.date,
+            guesses: d.guesses,
+        }),
+        stats: s.stats.into(),
+    }
 }
 
 #[uniffi::export]
 pub fn equal_save_json(save: EqualSave) -> String {
     equal::save_json(&equal::EqualSave {
-        daily: save.daily.map(|d| equal::DailyGame { date: d.date, guesses: d.guesses }),
+        daily: save.daily.map(|d| equal::DailyGame {
+            date: d.date,
+            guesses: d.guesses,
+        }),
         stats: save.stats.into(),
     })
 }
@@ -527,11 +589,21 @@ pub fn numbers_deal(mode: NumbersMode, large: f64) -> NumbersDeal {
     match mode {
         NumbersMode::TwentyFour => {
             let (nums, solution) = numbers::deal24(&mut math_random);
-            NumbersDeal { nums, target: numbers::TARGET_24, solution, best_value: numbers::TARGET_24 }
+            NumbersDeal {
+                nums,
+                target: numbers::TARGET_24,
+                solution,
+                best_value: numbers::TARGET_24,
+            }
         }
         NumbersMode::Countdown => {
             let (nums, target, best) = numbers::deal_countdown(large, &mut math_random);
-            NumbersDeal { nums, target, solution: best.expr, best_value: best.value }
+            NumbersDeal {
+                nums,
+                target,
+                solution: best.expr,
+                best_value: best.value,
+            }
         }
     }
 }
@@ -551,7 +623,14 @@ pub struct NumbersCheck {
 pub fn numbers_check(text: String, nums: Vec<f64>, mode: NumbersMode) -> NumbersCheck {
     let c = numbers::check_expr(&text, &nums, mode.into());
     let v = c.value.unwrap_or(numbers::Frac { n: 0.0, d: 1.0 });
-    NumbersCheck { has_value: c.value.is_some(), n: v.n, d: v.d, value_text: numbers::frac_text(v), problem: c.problem, valid: c.valid }
+    NumbersCheck {
+        has_value: c.value.is_some(),
+        n: v.n,
+        d: v.d,
+        value_text: numbers::frac_text(v),
+        problem: c.problem,
+        valid: c.valid,
+    }
 }
 
 #[uniffi::export]
@@ -601,7 +680,11 @@ impl From<numbers::NumbersStats> for NumbersStats {
 impl From<NumbersStats> for numbers::NumbersStats {
     fn from(s: NumbersStats) -> Self {
         numbers::NumbersStats {
-            mode: if s.countdown { numbers::Mode::Countdown } else { numbers::Mode::TwentyFour },
+            mode: if s.countdown {
+                numbers::Mode::Countdown
+            } else {
+                numbers::Mode::TwentyFour
+            },
             large: s.large,
             streak24: s.streak24,
             best24: s.best24,
@@ -698,7 +781,17 @@ impl From<crack::CrackState> for CrackState {
             crack::CrackPhase::Fail => CrackPhase::Fail,
             crack::CrackPhase::Clear => CrackPhase::Clear,
         };
-        CrackState { level: s.level, left: s.left, angle: s.angle, dir: s.dir, dot: s.dot, ahead: s.ahead, phase, at: s.at, since: s.since }
+        CrackState {
+            level: s.level,
+            left: s.left,
+            angle: s.angle,
+            dir: s.dir,
+            dot: s.dot,
+            ahead: s.ahead,
+            phase,
+            at: s.at,
+            since: s.since,
+        }
     }
 }
 
@@ -710,7 +803,17 @@ impl From<CrackState> for crack::CrackState {
             CrackPhase::Fail => crack::CrackPhase::Fail,
             CrackPhase::Clear => crack::CrackPhase::Clear,
         };
-        crack::CrackState { level: s.level, left: s.left, angle: s.angle, dir: s.dir, dot: s.dot, ahead: s.ahead, phase, at: s.at, since: s.since }
+        crack::CrackState {
+            level: s.level,
+            left: s.left,
+            angle: s.angle,
+            dir: s.dir,
+            dot: s.dot,
+            ahead: s.ahead,
+            phase,
+            at: s.at,
+            since: s.since,
+        }
     }
 }
 

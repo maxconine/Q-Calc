@@ -41,11 +41,24 @@ pub struct UtState {
 }
 
 /// Every three in a row on a 3×3 grid.
-pub const LINES: [[usize; 3]; 8] = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+pub const LINES: [[usize; 3]; 8] = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+];
 
 /// Game numbers count from 0; the host goes first in even ones.
 pub fn first_for(game: u64) -> Side {
-    if game % 2 == 0 { Side::Host } else { Side::Guest }
+    if game.is_multiple_of(2) {
+        Side::Host
+    } else {
+        Side::Guest
+    }
 }
 
 pub fn new_game(first: Side) -> UtState {
@@ -88,7 +101,11 @@ pub fn board_open(s: &UtState, b: usize) -> bool {
 }
 
 pub fn can_play(s: &UtState, cell: f64, who: Side) -> bool {
-    !is_over(s) && s.turn == who && valid_cell(cell) && s.cells[cell as usize].is_none() && board_open(s, board_of(cell as usize))
+    !is_over(s)
+        && s.turn == who
+        && valid_cell(cell)
+        && s.cells[cell as usize].is_none()
+        && board_open(s, board_of(cell as usize))
 }
 
 /// Every cell the side to move may take.
@@ -112,7 +129,10 @@ pub fn legal_cells(s: &UtState) -> Vec<usize> {
 
 // the three in a row of who's marks through spot, or None
 fn line_of<T: PartialEq>(marks: &[T], who: &T, spot: usize) -> Option<Vec<usize>> {
-    LINES.iter().find(|l| l.contains(&spot) && l.iter().all(|&k| marks[k] == *who)).map(|l| l.to_vec())
+    LINES
+        .iter()
+        .find(|l| l.contains(&spot) && l.iter().all(|&k| marks[k] == *who))
+        .map(|l| l.to_vec())
 }
 
 /// Who takes cell; None when it isn't theirs to take (wrong turn, taken or closed cell, game over).
@@ -133,26 +153,59 @@ pub fn play(s: &UtState, cell: f64, who: Side) -> Option<UtState> {
     }
     let moves = s.moves + 1;
     let won_board = boards[b] == Some(BoardMark::Won(who));
-    let base = UtState { cells, boards: boards.clone(), moves, last: Some(cell), ..s.clone() };
+    let base = UtState {
+        cells,
+        boards: boards.clone(),
+        moves,
+        last: Some(cell),
+        ..s.clone()
+    };
     if won_board && let Some(line) = line_of(&boards, &Some(BoardMark::Won(who)), b) {
-        return Some(UtState { forced: None, winner: Some(who), line: Some(line), ..base });
+        return Some(UtState {
+            forced: None,
+            winner: Some(who),
+            line: Some(line),
+            ..base
+        });
     }
     if boards.iter().all(Option::is_some) {
-        return Some(UtState { forced: None, draw: true, ..base });
+        return Some(UtState {
+            forced: None,
+            draw: true,
+            ..base
+        });
     }
     let next = spot_of(cell);
-    Some(UtState { turn: who.other(), forced: if boards[next].is_none() { Some(next) } else { None }, ..base })
+    Some(UtState {
+        turn: who.other(),
+        forced: if boards[next].is_none() {
+            Some(next)
+        } else {
+            None
+        },
+        ..base
+    })
 }
 
 /// The wire. every type starts ut so pong and connect 4 on the other end ignore it; bye is the one all share.
 #[derive(Clone, Debug, PartialEq)]
 pub enum UtMsg {
     /// ok: the sender has already heard the other side's hi. g: sent as `ultimate`.
-    Hi { v: f64, g: bool, ok: bool },
+    Hi {
+        v: f64,
+        g: bool,
+        ok: bool,
+    },
     /// Move n (counting from 0) of game g takes cell c.
-    Move { g: u64, n: usize, c: usize },
+    Move {
+        g: u64,
+        n: usize,
+        c: usize,
+    },
     /// Asks for a rematch once game g is over.
-    Again { g: u64 },
+    Again {
+        g: u64,
+    },
     /// Keeps the link from looking dead while someone thinks.
     Keep,
     Bye,
@@ -177,7 +230,12 @@ pub fn encode_ut(msg: &UtMsg) -> String {
             }
             stringify(&f)
         }
-        UtMsg::Move { g, n, c } => stringify(&[t("utm"), ("g", Out::N(*g as f64)), ("n", Out::N(*n as f64)), ("c", Out::N(*c as f64))]),
+        UtMsg::Move { g, n, c } => stringify(&[
+            t("utm"),
+            ("g", Out::N(*g as f64)),
+            ("n", Out::N(*n as f64)),
+            ("c", Out::N(*c as f64)),
+        ]),
         UtMsg::Again { g } => stringify(&[t("uta"), ("g", Out::N(*g as f64))]),
         UtMsg::Keep => stringify(&[t("utk")]),
         UtMsg::Bye => stringify(&[t("bye")]),
@@ -195,14 +253,24 @@ pub fn decode_ut(raw: &str) -> Option<UtIn> {
         return Some(UtIn::Other(other.into()));
     }
     let msg = match o.get("t").and_then(Json::as_str)? {
-        "ut" => UtMsg::Hi { v: finite(o.get("v"))?, g: false, ok: o.get("ok") == Some(&Json::Bool(true)) },
+        "ut" => UtMsg::Hi {
+            v: finite(o.get("v"))?,
+            g: false,
+            ok: o.get("ok") == Some(&Json::Bool(true)),
+        },
         "utm" => {
             let g = count(o.get("g"), 1e6)?;
             let n = count(o.get("n"), 1e6).filter(|n| *n < CELLS as f64)?;
             let c = finite(o.get("c")).filter(|c| valid_cell(*c))?;
-            UtMsg::Move { g: g as u64, n: n as usize, c: c as usize }
+            UtMsg::Move {
+                g: g as u64,
+                n: n as usize,
+                c: c as usize,
+            }
         }
-        "uta" => UtMsg::Again { g: count(o.get("g"), 1e6)? as u64 },
+        "uta" => UtMsg::Again {
+            g: count(o.get("g"), 1e6)? as u64,
+        },
         "utk" => UtMsg::Keep,
         "bye" => UtMsg::Bye,
         _ => return None,
@@ -217,7 +285,8 @@ mod tests {
     fn run(moves: &[(usize, usize)]) -> UtState {
         let mut s = new_game(Side::Host);
         for &(b, k) in moves {
-            s = play(&s, cell_in(b, k) as f64, s.turn).unwrap_or_else(|| panic!("move {b},{k} refused"));
+            s = play(&s, cell_in(b, k) as f64, s.turn)
+                .unwrap_or_else(|| panic!("move {b},{k} refused"));
         }
         s
     }
@@ -247,7 +316,10 @@ mod tests {
         assert_eq!(t.forced, None);
         assert!(!can_play(&t, f(cell_in(0, 6)), Side::Guest));
         assert!(can_play(&t, f(cell_in(8, 8)), Side::Guest));
-        assert_eq!([0, 1, 2, 3].map(first_for), [Side::Host, Side::Guest, Side::Host, Side::Guest]);
+        assert_eq!(
+            [0, 1, 2, 3].map(first_for),
+            [Side::Host, Side::Guest, Side::Host, Side::Guest]
+        );
     }
 
     #[test]
@@ -261,14 +333,32 @@ mod tests {
         s.cells[cell_in(2, 1)] = Some(Side::Host);
         s.forced = Some(2);
         let won = play(&s, f(cell_in(2, 2)), Side::Host).unwrap();
-        assert_eq!((won.winner, won.line.clone()), (Some(Side::Host), Some(vec![0, 1, 2])));
+        assert_eq!(
+            (won.winner, won.line.clone()),
+            (Some(Side::Host), Some(vec![0, 1, 2]))
+        );
         assert!(is_over(&won) && legal_cells(&won).is_empty());
-        let drawn = UtState { boards: vec![h, d, None, None, None, None, None, None, None], ..s.clone() };
-        assert_eq!(play(&drawn, f(cell_in(2, 2)), Side::Host).unwrap().winner, None);
+        let drawn = UtState {
+            boards: vec![h, d, None, None, None, None, None, None, None],
+            ..s.clone()
+        };
+        assert_eq!(
+            play(&drawn, f(cell_in(2, 2)), Side::Host).unwrap().winner,
+            None
+        );
 
         let mut s = new_game(Side::Host);
         s.boards = vec![h, g, h, h, g, g, g, h, None];
-        let marks = [Side::Host, Side::Guest, Side::Host, Side::Host, Side::Guest, Side::Guest, Side::Guest, Side::Host];
+        let marks = [
+            Side::Host,
+            Side::Guest,
+            Side::Host,
+            Side::Host,
+            Side::Guest,
+            Side::Guest,
+            Side::Guest,
+            Side::Host,
+        ];
         for (i, m) in marks.iter().enumerate() {
             s.cells[72 + i] = Some(*m);
         }
@@ -280,8 +370,16 @@ mod tests {
     #[test]
     fn the_wire() {
         for m in [
-            UtMsg::Hi { v: 1.0, g: false, ok: false },
-            UtMsg::Hi { v: 1.0, g: false, ok: true },
+            UtMsg::Hi {
+                v: 1.0,
+                g: false,
+                ok: false,
+            },
+            UtMsg::Hi {
+                v: 1.0,
+                g: false,
+                ok: true,
+            },
             UtMsg::Move { g: 2, n: 5, c: 80 },
             UtMsg::Again { g: 0 },
             UtMsg::Keep,
@@ -289,12 +387,25 @@ mod tests {
         ] {
             assert_eq!(decode_ut(&encode_ut(&m)), Some(UtIn::Msg(m.clone())));
         }
-        assert_eq!(decode_ut(r#"{"t":"hi","v":3}"#), Some(UtIn::Other("pong".into())));
-        assert_eq!(decode_ut(r#"{"t":"c4","v":1}"#), Some(UtIn::Other("connect 4".into())));
+        assert_eq!(
+            decode_ut(r#"{"t":"hi","v":3}"#),
+            Some(UtIn::Other("pong".into()))
+        );
+        assert_eq!(
+            decode_ut(r#"{"t":"c4","v":1}"#),
+            Some(UtIn::Other("connect 4".into()))
+        );
         let pad = format!(r#"{{"t":"utk","x":"{}"}}"#, "a".repeat(300));
         for raw in [
-            "", "nope", "[]", "null", r#"{"t":"utm","g":0,"n":0,"c":81}"#, r#"{"t":"utm","g":0,"n":0,"c":1.5}"#,
-            r#"{"t":"utm","g":-1,"n":0,"c":0}"#, r#"{"t":"ut"}"#, pad.as_str(),
+            "",
+            "nope",
+            "[]",
+            "null",
+            r#"{"t":"utm","g":0,"n":0,"c":81}"#,
+            r#"{"t":"utm","g":0,"n":0,"c":1.5}"#,
+            r#"{"t":"utm","g":-1,"n":0,"c":0}"#,
+            r#"{"t":"ut"}"#,
+            pad.as_str(),
         ] {
             assert_eq!(decode_ut(raw), None, "{raw}");
         }
