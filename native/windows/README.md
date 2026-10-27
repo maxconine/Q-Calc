@@ -18,9 +18,9 @@ is unaffected.
 
 | what | target | how it's measured |
 |---|---|---|
-| keystroke → top answer painted | < 1.6 ms median | the bench (`--bench`, pipe), in-process, WM_CHAR post → EndDraw |
-| idle memory, bar hidden after use | < 25 MB private working set | Task Manager "Memory"; `scripts/bench.ps1 -Mem` |
-| warm launch → ready | < 150 ms | the `ready ... since process start` log line |
+| keystroke → top answer painted | < 0.8 ms median | the bench (`--bench`, pipe), in-process, WM_CHAR post → EndDraw |
+| idle memory, bar hidden after use | < 12.5 MB private working set | Task Manager "Memory"; `scripts/bench.ps1 -Mem` |
+| warm launch → ready | < 75 ms | the `ready ... since process start` log line |
 
 Measured on this machine (4K at 150%, release build): keystroke median 1.03 ms, p90 1.54, p99 2.24 (460
 keystrokes over 10 inputs); warm launch to the first frame 41-49 ms (median 43); hidden after use 14.7 MB private
