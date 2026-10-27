@@ -52,6 +52,10 @@ pub enum Lane {
     Forms,
     /// graph sampling (graph.rs)
     Graph,
+    /// the graph's readout under the pointer (graph.rs)
+    GraphReadout,
+    /// the `sys` rows' live solution (systems.rs)
+    System,
     /// the typeset row's source (typst_row.rs)
     Typeset,
     /// history load / save, warm-up and anything that must not be dropped: never replaced, never stale
