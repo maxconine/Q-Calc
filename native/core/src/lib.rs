@@ -64,3 +64,5 @@ pub use types::{EvaluateOptions, LineResult, Value};
 
 /// The engine's version, for bug reports and the FFI handshake.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+// ---- WP-GAMES ----
+pub mod games;

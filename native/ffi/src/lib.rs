@@ -18,6 +18,7 @@ mod bridge;
 mod cancel;
 pub mod chain;
 mod engine;
+mod games; // WP-GAMES
 pub mod history;
 mod jsstr;
 mod name_check;

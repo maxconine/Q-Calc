@@ -481,6 +481,22 @@ fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterUInt32: FfiConverterPrimitive {
     typealias FfiType = UInt32
     typealias SwiftType = UInt32
@@ -1659,6 +1675,184 @@ public func FfiConverterTypeEngine_lower(_ value: Engine) -> UInt64 {
 
 
 /**
+ * The clock games run on (`gameClock.ts`): pausing stops it. `mono` is a monotonic ms clock, `wall` `Date.now()`.
+ */
+public protocol GameClockProtocol: AnyObject, Sendable {
+    
+    func date(mono: Double, wall: Double)  -> Double
+    
+    func now(mono: Double)  -> Double
+    
+    func pause(mono: Double) 
+    
+    func paused()  -> Bool
+    
+    func resume(mono: Double) 
+    
+}
+/**
+ * The clock games run on (`gameClock.ts`): pausing stops it. `mono` is a monotonic ms clock, `wall` `Date.now()`.
+ */
+open class GameClock: GameClockProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_gameclock(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_gameclock_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_gameclock(handle, $0) }
+    }
+
+    
+
+    
+open func date(mono: Double, wall: Double) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_gameclock_date(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(mono),
+        FfiConverterDouble.lower(wall),uniffiCallStatus
+    )
+})
+}
+    
+open func now(mono: Double) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_gameclock_now(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(mono),uniffiCallStatus
+    )
+})
+}
+    
+open func pause(mono: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_gameclock_pause(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(mono),uniffiCallStatus
+    )
+}
+}
+    
+open func paused() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_gameclock_paused(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func resume(mono: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_gameclock_resume(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(mono),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameClock: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = GameClock
+
+    public static func lift(_ handle: UInt64) throws -> GameClock {
+        return GameClock(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: GameClock) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameClock {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: GameClock, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameClock_lift(_ handle: UInt64) throws -> GameClock {
+    return try FfiConverterTypeGameClock.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameClock_lower(_ value: GameClock) -> UInt64 {
+    return FfiConverterTypeGameClock.lower(value)
+}
+
+
+
+
+
+
+/**
  * The relay's answers about names, kept a while. Times are ms since the epoch.
  */
 public protocol NameCheckProtocol: AnyObject, Sendable {
@@ -1847,6 +2041,326 @@ public func FfiConverterTypeNameCheck_lift(_ handle: UInt64) throws -> NameCheck
 #endif
 public func FfiConverterTypeNameCheck_lower(_ value: NameCheck) -> UInt64 {
     return FfiConverterTypeNameCheck.lower(value)
+}
+
+
+
+
+
+
+/**
+ * `OnlinePeer` in `src/lib/peerOnline.ts`, without its sockets and timers: after every call the shell runs
+ * `take_commands`, hands `take_events` to whoever subscribed, and calls `tick` by `next_deadline`. `now` is
+ * `Date.now()`.
+ */
+public protocol RelayPeerProtocol: AnyObject, Sendable {
+    
+    func close() 
+    
+    func closed(id: UInt64, now: Double) 
+    
+    func comeBack(now: Double) 
+    
+    func host(game: String, name: String, locked: Bool, now: Double) 
+    
+    func join(roomId: String, code: String, name: String, now: Double) 
+    
+    func message(id: UInt64, text: String, now: Double) 
+    
+    func nextDeadline()  -> Double?
+    
+    func opened(id: UInt64, now: Double) 
+    
+    func pageHide() 
+    
+    func retryNow(now: Double) 
+    
+    func send(data: String) 
+    
+    func stepAway(now: Double) 
+    
+    func takeCommands()  -> [RelaySocketCmd]
+    
+    func takeEvents()  -> [GamePeerEvent]
+    
+    func tick(now: Double) 
+    
+    func unwatch() 
+    
+    func watch(game: String, now: Double) 
+    
+}
+/**
+ * `OnlinePeer` in `src/lib/peerOnline.ts`, without its sockets and timers: after every call the shell runs
+ * `take_commands`, hands `take_events` to whoever subscribed, and calls `tick` by `next_deadline`. `now` is
+ * `Date.now()`.
+ */
+open class RelayPeer: RelayPeerProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_relaypeer(self.handle, $0) }
+    }
+public convenience init(base: String) {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_relaypeer_new(
+        FfiConverterString.lower(base),uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_relaypeer(handle, $0) }
+    }
+
+    
+
+    
+open func close()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_close(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func closed(id: UInt64, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_closed(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(id),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func comeBack(now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_come_back(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func host(game: String, name: String, locked: Bool, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_host(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(game),
+        FfiConverterString.lower(name),
+        FfiConverterBool.lower(locked),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func join(roomId: String, code: String, name: String, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_join(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(roomId),
+        FfiConverterString.lower(code),
+        FfiConverterString.lower(name),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func message(id: UInt64, text: String, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_message(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(id),
+        FfiConverterString.lower(text),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func nextDeadline() -> Double?  {
+    return try!  FfiConverterOptionDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_next_deadline(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func opened(id: UInt64, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_opened(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt64.lower(id),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func pageHide()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_page_hide(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func retryNow(now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_retry_now(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func send(data: String)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_send(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(data),uniffiCallStatus
+    )
+}
+}
+    
+open func stepAway(now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_step_away(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func takeCommands() -> [RelaySocketCmd]  {
+    return try!  FfiConverterSequenceTypeRelaySocketCmd.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_take_commands(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func takeEvents() -> [GamePeerEvent]  {
+    return try!  FfiConverterSequenceTypeGamePeerEvent.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_take_events(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func tick(now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_tick(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func unwatch()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_unwatch(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func watch(game: String, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_relaypeer_watch(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(game),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRelayPeer: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = RelayPeer
+
+    public static func lift(_ handle: UInt64) throws -> RelayPeer {
+        return RelayPeer(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: RelayPeer) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RelayPeer {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: RelayPeer, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelayPeer_lift(_ handle: UInt64) throws -> RelayPeer {
+    return try FfiConverterTypeRelayPeer.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelayPeer_lower(_ value: RelayPeer) -> UInt64 {
+    return FfiConverterTypeRelayPeer.lower(value)
 }
 
 
@@ -2996,6 +3510,196 @@ public func FfiConverterTypeFunctionDef_lift(_ buf: RustBuffer) throws -> Functi
 #endif
 public func FfiConverterTypeFunctionDef_lower(_ value: FunctionDef) -> RustBuffer {
     return FfiConverterTypeFunctionDef.lower(value)
+}
+
+
+public struct GameBox: Equatable, Hashable {
+    public var x: Double
+    public var y: Double
+    public var w: Double
+    public var h: Double
+    public var scale: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(x: Double, y: Double, w: Double, h: Double, scale: Double) {
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.scale = scale
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GameBox: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameBox: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameBox {
+        return
+            try GameBox(
+                x: FfiConverterDouble.read(from: &buf), 
+                y: FfiConverterDouble.read(from: &buf), 
+                w: FfiConverterDouble.read(from: &buf), 
+                h: FfiConverterDouble.read(from: &buf), 
+                scale: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GameBox, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.x, into: &buf)
+        FfiConverterDouble.write(value.y, into: &buf)
+        FfiConverterDouble.write(value.w, into: &buf)
+        FfiConverterDouble.write(value.h, into: &buf)
+        FfiConverterDouble.write(value.scale, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameBox_lift(_ buf: RustBuffer) throws -> GameBox {
+    return try FfiConverterTypeGameBox.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameBox_lower(_ value: GameBox) -> RustBuffer {
+    return FfiConverterTypeGameBox.lower(value)
+}
+
+
+public struct GameFullscreenLayout: Equatable, Hashable {
+    /**
+     * Where the picture goes, inside the viewport.
+     */
+    public var stage: GameBox
+    /**
+     * How much larger the hud and text are drawn.
+     */
+    public var ui: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Where the picture goes, inside the viewport.
+         */stage: GameBox, 
+        /**
+         * How much larger the hud and text are drawn.
+         */ui: Double) {
+        self.stage = stage
+        self.ui = ui
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GameFullscreenLayout: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameFullscreenLayout: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameFullscreenLayout {
+        return
+            try GameFullscreenLayout(
+                stage: FfiConverterTypeGameBox.read(from: &buf), 
+                ui: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GameFullscreenLayout, into buf: inout [UInt8]) {
+        FfiConverterTypeGameBox.write(value.stage, into: &buf)
+        FfiConverterDouble.write(value.ui, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameFullscreenLayout_lift(_ buf: RustBuffer) throws -> GameFullscreenLayout {
+    return try FfiConverterTypeGameFullscreenLayout.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameFullscreenLayout_lower(_ value: GameFullscreenLayout) -> RustBuffer {
+    return FfiConverterTypeGameFullscreenLayout.lower(value)
+}
+
+
+public struct GameRoom: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    public var locked: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, locked: Bool) {
+        self.id = id
+        self.name = name
+        self.locked = locked
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GameRoom: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameRoom: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameRoom {
+        return
+            try GameRoom(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                locked: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GameRoom, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterBool.write(value.locked, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameRoom_lift(_ buf: RustBuffer) throws -> GameRoom {
+    return try FfiConverterTypeGameRoom.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameRoom_lower(_ value: GameRoom) -> RustBuffer {
+    return FfiConverterTypeGameRoom.lower(value)
 }
 
 
@@ -4339,6 +5043,137 @@ public func FfiConverterTypeLiveRequest_lift(_ buf: RustBuffer) throws -> LiveRe
 #endif
 public func FfiConverterTypeLiveRequest_lower(_ value: LiveRequest) -> RustBuffer {
     return FfiConverterTypeLiveRequest.lower(value)
+}
+
+
+/**
+ * `LobbyCtx`: the link (`online`, `code_only`, `code_length`, `peer_word`) and the game's local options.
+ */
+public struct LobbyContext: Equatable, Hashable {
+    public var online: Bool
+    public var codeOnly: Bool
+    public var codeLength: UInt32
+    public var solo: UInt32
+    public var together: UInt32
+    public var peerWord: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(online: Bool, codeOnly: Bool, codeLength: UInt32, solo: UInt32, together: UInt32, peerWord: String) {
+        self.online = online
+        self.codeOnly = codeOnly
+        self.codeLength = codeLength
+        self.solo = solo
+        self.together = together
+        self.peerWord = peerWord
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LobbyContext: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLobbyContext: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LobbyContext {
+        return
+            try LobbyContext(
+                online: FfiConverterBool.read(from: &buf), 
+                codeOnly: FfiConverterBool.read(from: &buf), 
+                codeLength: FfiConverterUInt32.read(from: &buf), 
+                solo: FfiConverterUInt32.read(from: &buf), 
+                together: FfiConverterUInt32.read(from: &buf), 
+                peerWord: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LobbyContext, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.online, into: &buf)
+        FfiConverterBool.write(value.codeOnly, into: &buf)
+        FfiConverterUInt32.write(value.codeLength, into: &buf)
+        FfiConverterUInt32.write(value.solo, into: &buf)
+        FfiConverterUInt32.write(value.together, into: &buf)
+        FfiConverterString.write(value.peerWord, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyContext_lift(_ buf: RustBuffer) throws -> LobbyContext {
+    return try FfiConverterTypeLobbyContext.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyContext_lower(_ value: LobbyContext) -> RustBuffer {
+    return FfiConverterTypeLobbyContext.lower(value)
+}
+
+
+public struct LobbyStep: Equatable, Hashable {
+    public var state: LobbyState
+    public var effect: LobbyEffect?
+    public var handled: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: LobbyState, effect: LobbyEffect?, handled: Bool) {
+        self.state = state
+        self.effect = effect
+        self.handled = handled
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension LobbyStep: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLobbyStep: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LobbyStep {
+        return
+            try LobbyStep(
+                state: FfiConverterTypeLobbyState.read(from: &buf), 
+                effect: FfiConverterOptionTypeLobbyEffect.read(from: &buf), 
+                handled: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: LobbyStep, into buf: inout [UInt8]) {
+        FfiConverterTypeLobbyState.write(value.state, into: &buf)
+        FfiConverterOptionTypeLobbyEffect.write(value.effect, into: &buf)
+        FfiConverterBool.write(value.handled, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyStep_lift(_ buf: RustBuffer) throws -> LobbyStep {
+    return try FfiConverterTypeLobbyStep.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyStep_lower(_ value: LobbyStep) -> RustBuffer {
+    return FfiConverterTypeLobbyStep.lower(value)
 }
 
 
@@ -6146,6 +6981,442 @@ public func FfiConverterTypeElementCategory_lower(_ value: ElementCategory) -> R
 
 
 
+public enum GameEscAction: Equatable, Hashable {
+    
+    case unfullscreen
+    case lobby
+    case pause
+    case arm
+    case leave
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GameEscAction: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameEscAction: FfiConverterRustBuffer {
+    typealias SwiftType = GameEscAction
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameEscAction {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .unfullscreen
+        
+        case 2: return .lobby
+        
+        case 3: return .pause
+        
+        case 4: return .arm
+        
+        case 5: return .leave
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GameEscAction, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .unfullscreen:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .lobby:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .pause:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .arm:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .leave:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameEscAction_lift(_ buf: RustBuffer) throws -> GameEscAction {
+    return try FfiConverterTypeGameEscAction.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameEscAction_lower(_ value: GameEscAction) -> RustBuffer {
+    return FfiConverterTypeGameEscAction.lower(value)
+}
+
+
+
+
+public enum GamePausedKey: Equatable, Hashable {
+    
+    case pass
+    case fullscreen
+    case resume
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GamePausedKey: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGamePausedKey: FfiConverterRustBuffer {
+    typealias SwiftType = GamePausedKey
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GamePausedKey {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .pass
+        
+        case 2: return .fullscreen
+        
+        case 3: return .resume
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GamePausedKey, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .pass:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .fullscreen:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .resume:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGamePausedKey_lift(_ buf: RustBuffer) throws -> GamePausedKey {
+    return try FfiConverterTypeGamePausedKey.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGamePausedKey_lower(_ value: GamePausedKey) -> RustBuffer {
+    return FfiConverterTypeGamePausedKey.lower(value)
+}
+
+
+
+/**
+ * `PeerEvent` in `src/lib/peer.ts`.
+ */
+
+public enum GamePeerEvent: Equatable, Hashable {
+    
+    case rooms(rooms: [GameRoom], offline: Bool, codeOnly: Bool
+    )
+    case hosting(code: String, renewed: Bool
+    )
+    case pairing
+    case `open`(role: GameSide, peer: String, resumed: Bool
+    )
+    case away(who: PeerWho
+    )
+    case back(who: PeerWho
+    )
+    case message(data: String
+    )
+    case closed(reason: PeerCloseReason
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GamePeerEvent: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGamePeerEvent: FfiConverterRustBuffer {
+    typealias SwiftType = GamePeerEvent
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GamePeerEvent {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .rooms(rooms: try FfiConverterSequenceTypeGameRoom.read(from: &buf), offline: try FfiConverterBool.read(from: &buf), codeOnly: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 2: return .hosting(code: try FfiConverterString.read(from: &buf), renewed: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 3: return .pairing
+        
+        case 4: return .`open`(role: try FfiConverterTypeGameSide.read(from: &buf), peer: try FfiConverterString.read(from: &buf), resumed: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 5: return .away(who: try FfiConverterTypePeerWho.read(from: &buf)
+        )
+        
+        case 6: return .back(who: try FfiConverterTypePeerWho.read(from: &buf)
+        )
+        
+        case 7: return .message(data: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .closed(reason: try FfiConverterTypePeerCloseReason.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GamePeerEvent, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .rooms(rooms,offline,codeOnly):
+            writeInt(&buf, Int32(1))
+            FfiConverterSequenceTypeGameRoom.write(rooms, into: &buf)
+            FfiConverterBool.write(offline, into: &buf)
+            FfiConverterBool.write(codeOnly, into: &buf)
+            
+        
+        case let .hosting(code,renewed):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(code, into: &buf)
+            FfiConverterBool.write(renewed, into: &buf)
+            
+        
+        case .pairing:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .`open`(role,peer,resumed):
+            writeInt(&buf, Int32(4))
+            FfiConverterTypeGameSide.write(role, into: &buf)
+            FfiConverterString.write(peer, into: &buf)
+            FfiConverterBool.write(resumed, into: &buf)
+            
+        
+        case let .away(who):
+            writeInt(&buf, Int32(5))
+            FfiConverterTypePeerWho.write(who, into: &buf)
+            
+        
+        case let .back(who):
+            writeInt(&buf, Int32(6))
+            FfiConverterTypePeerWho.write(who, into: &buf)
+            
+        
+        case let .message(data):
+            writeInt(&buf, Int32(7))
+            FfiConverterString.write(data, into: &buf)
+            
+        
+        case let .closed(reason):
+            writeInt(&buf, Int32(8))
+            FfiConverterTypePeerCloseReason.write(reason, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGamePeerEvent_lift(_ buf: RustBuffer) throws -> GamePeerEvent {
+    return try FfiConverterTypeGamePeerEvent.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGamePeerEvent_lower(_ value: GamePeerEvent) -> RustBuffer {
+    return FfiConverterTypeGamePeerEvent.lower(value)
+}
+
+
+
+
+public enum GameShellMode: Equatable, Hashable {
+    
+    case lobby
+    case local
+    case online
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GameShellMode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameShellMode: FfiConverterRustBuffer {
+    typealias SwiftType = GameShellMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameShellMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .lobby
+        
+        case 2: return .local
+        
+        case 3: return .online
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GameShellMode, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .lobby:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .local:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .online:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameShellMode_lift(_ buf: RustBuffer) throws -> GameShellMode {
+    return try FfiConverterTypeGameShellMode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameShellMode_lower(_ value: GameShellMode) -> RustBuffer {
+    return FfiConverterTypeGameShellMode.lower(value)
+}
+
+
+
+
+public enum GameSide: Equatable, Hashable {
+    
+    case host
+    case guest
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension GameSide: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGameSide: FfiConverterRustBuffer {
+    typealias SwiftType = GameSide
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GameSide {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .host
+        
+        case 2: return .guest
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: GameSide, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .host:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .guest:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameSide_lift(_ buf: RustBuffer) throws -> GameSide {
+    return try FfiConverterTypeGameSide.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGameSide_lower(_ value: GameSide) -> RustBuffer {
+    return FfiConverterTypeGameSide.lower(value)
+}
+
+
+
+
 public enum HintTrigger: Equatable, Hashable {
     
     /**
@@ -6375,6 +7646,590 @@ public func FfiConverterTypeHistoryShow_lift(_ buf: RustBuffer) throws -> Histor
 #endif
 public func FfiConverterTypeHistoryShow_lower(_ value: HistoryShow) -> RustBuffer {
     return FfiConverterTypeHistoryShow.lower(value)
+}
+
+
+
+
+public enum LobbyEffect: Equatable, Hashable {
+    
+    case host(locked: Bool
+    )
+    case join(room: GameRoom, code: String
+    )
+    case cancel
+    case rename(name: String
+    )
+    case fullscreen
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LobbyEffect: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLobbyEffect: FfiConverterRustBuffer {
+    typealias SwiftType = LobbyEffect
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LobbyEffect {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .host(locked: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 2: return .join(room: try FfiConverterTypeGameRoom.read(from: &buf), code: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .cancel
+        
+        case 4: return .rename(name: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .fullscreen
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LobbyEffect, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .host(locked):
+            writeInt(&buf, Int32(1))
+            FfiConverterBool.write(locked, into: &buf)
+            
+        
+        case let .join(room,code):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeGameRoom.write(room, into: &buf)
+            FfiConverterString.write(code, into: &buf)
+            
+        
+        case .cancel:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .rename(name):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(name, into: &buf)
+            
+        
+        case .fullscreen:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyEffect_lift(_ buf: RustBuffer) throws -> LobbyEffect {
+    return try FfiConverterTypeLobbyEffect.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyEffect_lower(_ value: LobbyEffect) -> RustBuffer {
+    return FfiConverterTypeLobbyEffect.lower(value)
+}
+
+
+
+
+public enum LobbyScreen: Equatable, Hashable {
+    
+    case start
+    case solo
+    case friend
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LobbyScreen: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLobbyScreen: FfiConverterRustBuffer {
+    typealias SwiftType = LobbyScreen
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LobbyScreen {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .start
+        
+        case 2: return .solo
+        
+        case 3: return .friend
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LobbyScreen, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .start:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .solo:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .friend:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyScreen_lift(_ buf: RustBuffer) throws -> LobbyScreen {
+    return try FfiConverterTypeLobbyScreen.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyScreen_lower(_ value: LobbyScreen) -> RustBuffer {
+    return FfiConverterTypeLobbyScreen.lower(value)
+}
+
+
+
+/**
+ * `LobbyState` in `src/lib/lobby.ts`.
+ */
+
+public enum LobbyState: Equatable, Hashable {
+    
+    case home(screen: LobbyScreen, rooms: [GameRoom], pick: UInt32, note: String?, offline: Bool
+    )
+    case setup(locked: Bool
+    )
+    case hosting(locked: Bool, code: String?, renewed: Bool
+    )
+    case code(room: GameRoom, digits: String, note: String?
+    )
+    case pairing(room: GameRoom
+    )
+    case rename(draft: String, from: LobbyScreen
+    )
+    case game(role: GameSide, peer: String
+    )
+    case local(option: UInt32
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LobbyState: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLobbyState: FfiConverterRustBuffer {
+    typealias SwiftType = LobbyState
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LobbyState {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .home(screen: try FfiConverterTypeLobbyScreen.read(from: &buf), rooms: try FfiConverterSequenceTypeGameRoom.read(from: &buf), pick: try FfiConverterUInt32.read(from: &buf), note: try FfiConverterOptionString.read(from: &buf), offline: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 2: return .setup(locked: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 3: return .hosting(locked: try FfiConverterBool.read(from: &buf), code: try FfiConverterOptionString.read(from: &buf), renewed: try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 4: return .code(room: try FfiConverterTypeGameRoom.read(from: &buf), digits: try FfiConverterString.read(from: &buf), note: try FfiConverterOptionString.read(from: &buf)
+        )
+        
+        case 5: return .pairing(room: try FfiConverterTypeGameRoom.read(from: &buf)
+        )
+        
+        case 6: return .rename(draft: try FfiConverterString.read(from: &buf), from: try FfiConverterTypeLobbyScreen.read(from: &buf)
+        )
+        
+        case 7: return .game(role: try FfiConverterTypeGameSide.read(from: &buf), peer: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .local(option: try FfiConverterUInt32.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LobbyState, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .home(screen,rooms,pick,note,offline):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeLobbyScreen.write(screen, into: &buf)
+            FfiConverterSequenceTypeGameRoom.write(rooms, into: &buf)
+            FfiConverterUInt32.write(pick, into: &buf)
+            FfiConverterOptionString.write(note, into: &buf)
+            FfiConverterBool.write(offline, into: &buf)
+            
+        
+        case let .setup(locked):
+            writeInt(&buf, Int32(2))
+            FfiConverterBool.write(locked, into: &buf)
+            
+        
+        case let .hosting(locked,code,renewed):
+            writeInt(&buf, Int32(3))
+            FfiConverterBool.write(locked, into: &buf)
+            FfiConverterOptionString.write(code, into: &buf)
+            FfiConverterBool.write(renewed, into: &buf)
+            
+        
+        case let .code(room,digits,note):
+            writeInt(&buf, Int32(4))
+            FfiConverterTypeGameRoom.write(room, into: &buf)
+            FfiConverterString.write(digits, into: &buf)
+            FfiConverterOptionString.write(note, into: &buf)
+            
+        
+        case let .pairing(room):
+            writeInt(&buf, Int32(5))
+            FfiConverterTypeGameRoom.write(room, into: &buf)
+            
+        
+        case let .rename(draft,from):
+            writeInt(&buf, Int32(6))
+            FfiConverterString.write(draft, into: &buf)
+            FfiConverterTypeLobbyScreen.write(from, into: &buf)
+            
+        
+        case let .game(role,peer):
+            writeInt(&buf, Int32(7))
+            FfiConverterTypeGameSide.write(role, into: &buf)
+            FfiConverterString.write(peer, into: &buf)
+            
+        
+        case let .local(option):
+            writeInt(&buf, Int32(8))
+            FfiConverterUInt32.write(option, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyState_lift(_ buf: RustBuffer) throws -> LobbyState {
+    return try FfiConverterTypeLobbyState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLobbyState_lower(_ value: LobbyState) -> RustBuffer {
+    return FfiConverterTypeLobbyState.lower(value)
+}
+
+
+
+
+public enum PeerCloseReason: Equatable, Hashable {
+    
+    case wrongCode
+    case busy
+    case unreachable
+    case lost
+    case bye
+    case network
+    case tooManyTries
+    case expired
+    case gone
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PeerCloseReason: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePeerCloseReason: FfiConverterRustBuffer {
+    typealias SwiftType = PeerCloseReason
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PeerCloseReason {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .wrongCode
+        
+        case 2: return .busy
+        
+        case 3: return .unreachable
+        
+        case 4: return .lost
+        
+        case 5: return .bye
+        
+        case 6: return .network
+        
+        case 7: return .tooManyTries
+        
+        case 8: return .expired
+        
+        case 9: return .gone
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PeerCloseReason, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .wrongCode:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .busy:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .unreachable:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .lost:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .bye:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .network:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .tooManyTries:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .expired:
+            writeInt(&buf, Int32(8))
+        
+        
+        case .gone:
+            writeInt(&buf, Int32(9))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePeerCloseReason_lift(_ buf: RustBuffer) throws -> PeerCloseReason {
+    return try FfiConverterTypePeerCloseReason.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePeerCloseReason_lower(_ value: PeerCloseReason) -> RustBuffer {
+    return FfiConverterTypePeerCloseReason.lower(value)
+}
+
+
+
+
+public enum PeerWho: Equatable, Hashable {
+    
+    case peer
+    case selfSide
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PeerWho: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePeerWho: FfiConverterRustBuffer {
+    typealias SwiftType = PeerWho
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PeerWho {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .peer
+        
+        case 2: return .selfSide
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PeerWho, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .peer:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .selfSide:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePeerWho_lift(_ buf: RustBuffer) throws -> PeerWho {
+    return try FfiConverterTypePeerWho.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePeerWho_lower(_ value: PeerWho) -> RustBuffer {
+    return FfiConverterTypePeerWho.lower(value)
+}
+
+
+
+/**
+ * What the shell does with its websockets.
+ */
+
+public enum RelaySocketCmd: Equatable, Hashable {
+    
+    case `open`(id: UInt64, url: String
+    )
+    case send(id: UInt64, text: String
+    )
+    case close(id: UInt64, code: UInt16
+    )
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension RelaySocketCmd: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeRelaySocketCmd: FfiConverterRustBuffer {
+    typealias SwiftType = RelaySocketCmd
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RelaySocketCmd {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .`open`(id: try FfiConverterUInt64.read(from: &buf), url: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .send(id: try FfiConverterUInt64.read(from: &buf), text: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .close(id: try FfiConverterUInt64.read(from: &buf), code: try FfiConverterUInt16.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RelaySocketCmd, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .`open`(id,url):
+            writeInt(&buf, Int32(1))
+            FfiConverterUInt64.write(id, into: &buf)
+            FfiConverterString.write(url, into: &buf)
+            
+        
+        case let .send(id,text):
+            writeInt(&buf, Int32(2))
+            FfiConverterUInt64.write(id, into: &buf)
+            FfiConverterString.write(text, into: &buf)
+            
+        
+        case let .close(id,code):
+            writeInt(&buf, Int32(3))
+            FfiConverterUInt64.write(id, into: &buf)
+            FfiConverterUInt16.write(code, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelaySocketCmd_lift(_ buf: RustBuffer) throws -> RelaySocketCmd {
+    return try FfiConverterTypeRelaySocketCmd.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeRelaySocketCmd_lower(_ value: RelaySocketCmd) -> RustBuffer {
+    return FfiConverterTypeRelaySocketCmd.lower(value)
 }
 
 
@@ -7228,6 +9083,30 @@ fileprivate struct FfiConverterOptionTypeIdentitySheet: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeLobbyStep: FfiConverterRustBuffer {
+    typealias SwiftType = LobbyStep?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeLobbyStep.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeLobbyStep.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeMeasInfo: FfiConverterRustBuffer {
     typealias SwiftType = MeasInfo?
 
@@ -7388,6 +9267,30 @@ fileprivate struct FfiConverterOptionTypeHistoryKind: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeHistoryKind.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeLobbyEffect: FfiConverterRustBuffer {
+    typealias SwiftType = LobbyEffect?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeLobbyEffect.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeLobbyEffect.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -7611,6 +9514,31 @@ fileprivate struct FfiConverterSequenceTypeElement: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeElement.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeGameRoom: FfiConverterRustBuffer {
+    typealias SwiftType = [GameRoom]
+
+    public static func write(_ value: [GameRoom], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGameRoom.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GameRoom] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GameRoom]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGameRoom.read(from: &buf))
         }
         return seq
     }
@@ -7944,6 +9872,56 @@ fileprivate struct FfiConverterSequenceTypeUnitSettingItemInfo: FfiConverterRust
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeGamePeerEvent: FfiConverterRustBuffer {
+    typealias SwiftType = [GamePeerEvent]
+
+    public static func write(_ value: [GamePeerEvent], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeGamePeerEvent.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [GamePeerEvent] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [GamePeerEvent]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeGamePeerEvent.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeRelaySocketCmd: FfiConverterRustBuffer {
+    typealias SwiftType = [RelaySocketCmd]
+
+    public static func write(_ value: [RelaySocketCmd], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeRelaySocketCmd.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [RelaySocketCmd] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [RelaySocketCmd]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeRelaySocketCmd.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryStringDouble: FfiConverterRustBuffer {
     public static func write(_ value: [String: Double], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -8183,6 +10161,249 @@ public func unitSettingGroups() -> [UnitSettingGroupInfo]  {
     )
 })
 }
+public func cleanNickname(raw: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_clean_nickname(
+        FfiConverterString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * How long "esc again to leave" waits, in ms.
+ */
+public func gameArmMs() -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_arm_ms(uniffiCallStatus
+    )
+})
+}
+/**
+ * `escAction` in `src/lib/gameShell.ts`.
+ */
+public func gameEscAction(mode: GameShellMode, fullscreen: Bool, paused: Bool, armedAt: Double?, idle: Bool, now: Double) -> GameEscAction  {
+    return try!  FfiConverterTypeGameEscAction_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_esc_action(
+        FfiConverterTypeGameShellMode_lower(mode),
+        FfiConverterBool.lower(fullscreen),
+        FfiConverterBool.lower(paused),
+        FfiConverterOptionDouble.lower(armedAt),
+        FfiConverterBool.lower(idle),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+/**
+ * What the full-screen button and f are called (`fullscreenLabel`); the Mac app is `windowed`.
+ */
+public func gameFullscreenLabel(on: Bool, windowed: Bool) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_fullscreen_label(
+        FfiConverterBool.lower(on),
+        FfiConverterBool.lower(windowed),uniffiCallStatus
+    )
+})
+}
+/**
+ * `fullscreenLayout(viewport, { base, chrome, pad, maxUi, integer })`.
+ */
+public func gameFullscreenLayout(viewW: Double, viewH: Double, baseW: Double, baseH: Double, chrome: Double, pad: Double, maxUi: Double, integer: Bool) -> GameFullscreenLayout  {
+    return try!  FfiConverterTypeGameFullscreenLayout_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_fullscreen_layout(
+        FfiConverterDouble.lower(viewW),
+        FfiConverterDouble.lower(viewH),
+        FfiConverterDouble.lower(baseW),
+        FfiConverterDouble.lower(baseH),
+        FfiConverterDouble.lower(chrome),
+        FfiConverterDouble.lower(pad),
+        FfiConverterDouble.lower(maxUi),
+        FfiConverterBool.lower(integer),uniffiCallStatus
+    )
+})
+}
+/**
+ * ⌃F and nothing else (`isFullscreenChord`); `code` is the qwerty key's name (`KeyF`).
+ */
+public func gameIsFullscreenChord(key: String, code: String, ctrl: Bool, meta: Bool, alt: Bool, shift: Bool) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_is_fullscreen_chord(
+        FfiConverterString.lower(key),
+        FfiConverterString.lower(code),
+        FfiConverterBool.lower(ctrl),
+        FfiConverterBool.lower(meta),
+        FfiConverterBool.lower(alt),
+        FfiConverterBool.lower(shift),uniffiCallStatus
+    )
+})
+}
+/**
+ * `letterbox(container, base, { integer })`.
+ */
+public func gameLetterbox(w: Double, h: Double, baseW: Double, baseH: Double, integer: Bool) -> GameBox  {
+    return try!  FfiConverterTypeGameBox_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_letterbox(
+        FfiConverterDouble.lower(w),
+        FfiConverterDouble.lower(h),
+        FfiConverterDouble.lower(baseW),
+        FfiConverterDouble.lower(baseH),
+        FfiConverterBool.lower(integer),uniffiCallStatus
+    )
+})
+}
+/**
+ * `pausedKey`: what a key does while the paused card is up.
+ */
+public func gamePausedKey(key: String, meta: Bool, ctrl: Bool, alt: Bool) -> GamePausedKey  {
+    return try!  FfiConverterTypeGamePausedKey_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_paused_key(
+        FfiConverterString.lower(key),
+        FfiConverterBool.lower(meta),
+        FfiConverterBool.lower(ctrl),
+        FfiConverterBool.lower(alt),uniffiCallStatus
+    )
+})
+}
+/**
+ * The keys a game keeps between launches (`GAME_SAVE_KEYS`), and the most each may hold.
+ */
+public func gameSaveKeys() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_save_keys(uniffiCallStatus
+    )
+})
+}
+public func gameSaveMax() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_game_save_max(uniffiCallStatus
+    )
+})
+}
+public func lobbyBack(state: LobbyState, ctx: LobbyContext) -> LobbyStep?  {
+    return try!  FfiConverterOptionTypeLobbyStep.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_back(
+        FfiConverterTypeLobbyState_lower(state),
+        FfiConverterTypeLobbyContext_lower(ctx),uniffiCallStatus
+    )
+})
+}
+public func lobbyEvent(state: LobbyState, event: GamePeerEvent, ctx: LobbyContext) -> LobbyState  {
+    return try!  FfiConverterTypeLobbyState_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_event(
+        FfiConverterTypeLobbyState_lower(state),
+        FfiConverterTypeGamePeerEvent_lower(event),
+        FfiConverterTypeLobbyContext_lower(ctx),uniffiCallStatus
+    )
+})
+}
+public func lobbyFirstScreen(online: Bool, solo: UInt32, together: UInt32) -> LobbyScreen  {
+    return try!  FfiConverterTypeLobbyScreen_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_first_screen(
+        FfiConverterBool.lower(online),
+        FfiConverterUInt32.lower(solo),
+        FfiConverterUInt32.lower(together),uniffiCallStatus
+    )
+})
+}
+public func lobbyHoldsLink(state: LobbyState) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_holds_link(
+        FfiConverterTypeLobbyState_lower(state),uniffiCallStatus
+    )
+})
+}
+/**
+ * `homeScreen(screen, note)`.
+ */
+public func lobbyHome(screen: LobbyScreen, note: String?) -> LobbyState  {
+    return try!  FfiConverterTypeLobbyState_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_home(
+        FfiConverterTypeLobbyScreen_lower(screen),
+        FfiConverterOptionString.lower(note),uniffiCallStatus
+    )
+})
+}
+public func lobbyJoinRoom(room: GameRoom) -> LobbyStep  {
+    return try!  FfiConverterTypeLobbyStep_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_join_room(
+        FfiConverterTypeGameRoom_lower(room),uniffiCallStatus
+    )
+})
+}
+/**
+ * A plain key on the lobby; tab on the rename screen offers a fresh random nickname.
+ */
+public func lobbyKey(state: LobbyState, key: String, ctx: LobbyContext, lockedPref: Bool, name: String) -> LobbyStep  {
+    return try!  FfiConverterTypeLobbyStep_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_key(
+        FfiConverterTypeLobbyState_lower(state),
+        FfiConverterString.lower(key),
+        FfiConverterTypeLobbyContext_lower(ctx),
+        FfiConverterBool.lower(lockedPref),
+        FfiConverterString.lower(name),uniffiCallStatus
+    )
+})
+}
+public func lobbyOptionScreen(option: UInt32, solo: UInt32) -> LobbyScreen  {
+    return try!  FfiConverterTypeLobbyScreen_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_lobby_option_screen(
+        FfiConverterUInt32.lower(option),
+        FfiConverterUInt32.lower(solo),uniffiCallStatus
+    )
+})
+}
+/**
+ * `closeReasonText(reason, word)`.
+ */
+public func peerCloseText(reason: PeerCloseReason, word: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_peer_close_text(
+        FfiConverterTypePeerCloseReason_lower(reason),
+        FfiConverterString.lower(word),uniffiCallStatus
+    )
+})
+}
+public func randomNickname() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_random_nickname(uniffiCallStatus
+    )
+})
+}
+public func relayCodeLength() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_relay_code_length(uniffiCallStatus
+    )
+})
+}
+/**
+ * The relay this build talks to, and how long its room codes are.
+ */
+public func relayDefaultUrl() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_relay_default_url(uniffiCallStatus
+    )
+})
+}
 /**
  * How long typing rests before a name is asked about, in ms.
  */
@@ -8247,6 +10468,72 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_unit_setting_groups() != 15277) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_clean_nickname() != 1458) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_arm_ms() != 51220) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_esc_action() != 8017) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_fullscreen_label() != 10824) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_fullscreen_layout() != 53354) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_is_fullscreen_chord() != 34634) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_letterbox() != 9953) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_paused_key() != 61032) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_save_keys() != 15960) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_game_save_max() != 16152) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_back() != 40687) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_event() != 34303) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_first_screen() != 46904) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_holds_link() != 59161) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_home() != 37042) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_join_room() != 33131) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_key() != 56713) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_lobby_option_screen() != 48707) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_peer_close_text() != 29127) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_random_nickname() != 59977) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_relay_code_length() != 30555) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_relay_default_url() != 46987) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_name_check_delay_ms() != 2694) {
@@ -8375,6 +10662,72 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_engine_typst_source() != 62253) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_gameclock_date() != 117) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_gameclock_now() != 34878) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_gameclock_pause() != 13502) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_gameclock_paused() != 6932) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_gameclock_resume() != 209) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_close() != 28311) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_closed() != 23727) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_come_back() != 9095) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_host() != 2671) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_join() != 46045) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_message() != 13367) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_next_deadline() != 18711) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_opened() != 29989) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_page_hide() != 11226) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_retry_now() != 7172) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_send() != 33490) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_step_away() != 27002) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_take_commands() != 10250) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_take_events() != 58920) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_tick() != 28589) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_unwatch() != 22175) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_relaypeer_watch() != 36154) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_namecheck_cached() != 7918) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8409,6 +10762,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_engine_new() != 6302) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_gameclock_new() != 14350) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_relaypeer_new() != 49739) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_namecheck_new() != 46157) {
