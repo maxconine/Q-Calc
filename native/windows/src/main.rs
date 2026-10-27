@@ -30,6 +30,8 @@ mod cheats;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
+mod contrast;
+#[cfg(windows)]
 mod drag;
 #[cfg(windows)]
 mod effects;

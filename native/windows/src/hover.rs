@@ -125,6 +125,45 @@ pub fn key_down() {
     }
 }
 
+thread_local! {
+    /// the field's run of clicks: when the last one came, where (window DIPs), and how many
+    static CLICKS: Cell<(i64, f32, f32, u32)> = const { Cell::new((0, 0.0, 0.0, 0)) };
+}
+
+/// How many clicks a click at `now` (ms) and (x, y) makes, given the run so far: within the double-click time and
+/// box of the last it adds one, else it starts a new run.
+pub fn click_count(last: (i64, f32, f32, u32), now: i64, x: f32, y: f32, ms: i64, slop: f32) -> u32 {
+    let (at, lx, ly, n) = last;
+    if n > 0 && now - at <= ms && (x - lx).abs() <= slop && (y - ly).abs() <= slop {
+        n + 1
+    } else {
+        1
+    }
+}
+
+/// A click in the line: the third in a row selects all of it (as a browser's input did in the Tauri app, and the
+/// Mac's field). True when it took the click.
+pub fn triple_click(app: &mut App, x: f32, y: f32) -> bool {
+    if !app.bar.layout.field.contains(x, y) {
+        CLICKS.with(|c| c.set((0, 0.0, 0.0, 0)));
+        return false;
+    }
+    use windows::Win32::UI::Input::KeyboardAndMouse::GetDoubleClickTime;
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXDOUBLECLK};
+    let now = crate::model::now_ms();
+    // SAFETY: plain queries
+    let (ms, slop) = unsafe { (GetDoubleClickTime(), GetSystemMetrics(SM_CXDOUBLECLK)) };
+    let slop = slop.max(4) as f32 / app.bar.scale();
+    let n = click_count(CLICKS.with(Cell::get), now, x, y, i64::from(ms), slop);
+    CLICKS.with(|c| c.set((now, x, y, n)));
+    if n == 3 {
+        app.model.field.select_all();
+        app.model.touch();
+        return true;
+    }
+    false
+}
+
 /// The bar hid.
 pub fn will_hide() {
     SPOT.with(|s| s.set(None));
@@ -289,6 +328,19 @@ mod tests {
         assert_eq!(piece_tip(&roots, 2), None);
         // a message copies nothing
         assert_eq!(piece_tip(&[(false, true, "")], 0), None);
+    }
+
+    #[test]
+    fn clicks_in_a_row() {
+        use super::click_count;
+        let first = click_count((0, 0.0, 0.0, 0), 1000, 50.0, 20.0, 500, 3.0);
+        assert_eq!(first, 1);
+        let second = click_count((1000, 50.0, 20.0, 1), 1200, 51.0, 20.0, 500, 3.0);
+        assert_eq!(second, 2);
+        assert_eq!(click_count((1200, 51.0, 20.0, 2), 1500, 51.0, 21.0, 500, 3.0), 3);
+        // too late, or too far, starts again
+        assert_eq!(click_count((1200, 51.0, 20.0, 2), 1800, 51.0, 20.0, 500, 3.0), 1);
+        assert_eq!(click_count((1200, 51.0, 20.0, 2), 1300, 80.0, 20.0, 500, 3.0), 1);
     }
 
     #[test]

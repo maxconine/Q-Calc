@@ -852,6 +852,8 @@ struct Win {
     fonts: Formats,
     page: Page,
     scroll: f32,
+    /// a wheel notch's glide: from, to, started (history.rs's ease)
+    glide: Option<(f32, f32, std::time::Instant)>,
     layout: Option<Layout>,
     dirty: bool,
     hover: Option<Target>,
@@ -1398,9 +1400,45 @@ impl Win {
     }
 
     fn scroll_by(&mut self, dy: f32) {
+        self.glide = None;
         self.scroll += dy;
         self.clamp_scroll();
         self.invalidate();
+    }
+
+    /// The wheel: a notch glides 60 DIPs (on from where a glide under way is going); a touchpad's steps go as they
+    /// come.
+    fn wheel(&mut self, delta: f32) {
+        let from = self.glide.map_or(self.scroll, |g| g.1);
+        if delta.abs() < 120.0 || crate::history::reduced_motion() {
+            self.scroll_by(-delta / 120.0 * 60.0);
+            return;
+        }
+        let to = from - delta / 120.0 * 60.0;
+        let max = self
+            .layout
+            .as_ref()
+            .map_or(0.0, |l| (l.content - l.height).max(0.0));
+        self.glide = Some((self.scroll, to.clamp(0.0, max), std::time::Instant::now()));
+        self.glide_step();
+    }
+
+    /// One frame of the glide, the next on a one-shot timer; the last ends it.
+    fn glide_step(&mut self) {
+        let Some((from, to, at)) = self.glide else {
+            return;
+        };
+        let t = at.elapsed().as_secs_f32() * 1000.0 / 140.0;
+        self.scroll = crate::history::glide_at(from, to, t);
+        self.clamp_scroll();
+        self.invalidate();
+        if t >= 1.0 {
+            self.glide = None;
+            return;
+        }
+        crate::later::free("settings-glide", 8, || {
+            with_win(|w| w.glide_step());
+        });
     }
 
     fn move_focus(&mut self, back: bool) {
@@ -1973,6 +2011,7 @@ fn show_now() {
             fonts,
             page: Page::General,
             scroll: 0.0,
+            glide: None,
             layout: None,
             dirty: true,
             hover: None,
@@ -2213,7 +2252,7 @@ fn on_message(w: &mut Win, app: &mut App, msg: u32, wp: WPARAM, lp: LPARAM) -> O
         }
         WM_MOUSEWHEEL => {
             let delta = hi(wp.0 as isize) as f32;
-            w.scroll_by(-delta / 120.0 * 60.0);
+            w.wheel(delta);
         }
         WM_SETCURSOR => {
             if (lp.0 & 0xffff) as u32 != 1 {

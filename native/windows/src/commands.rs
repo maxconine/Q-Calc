@@ -416,7 +416,8 @@ mod ui {
     /// A click in the bar: the edge tools, the tour's skip, the cards, the games list. True when taken.
     pub fn click(app: &mut App, x: f32, y: f32) -> bool {
         crate::hover::key_down();
-        crate::edge::click(app, x, y)
+        crate::hover::triple_click(app, x, y)
+            || crate::edge::click(app, x, y)
             || tour::click(app, x, y)
             || messaging::click(app, x, y)
             || click_game(app, x, y)

@@ -74,6 +74,8 @@ pub struct TapeState {
     deleted: Option<(HistoryRow, usize, u64)>,
     /// DIPs the tape is scrolled up from its newest row
     pub scroll: f32,
+    /// a wheel notch's glide: from, to, and when it started (`wheel`, `glide_step`)
+    glide: Option<(f32, f32, std::time::Instant)>,
     /// `?` / `help`: the cheat sheet shows where the tape is (cheats.rs)
     pub help: bool,
     /// the global shortcut, for the cheat sheet's first row
@@ -131,6 +133,7 @@ pub fn land(m: &mut BarModel, fresh: bool) {
     // the row in sight: scroll the least that shows it
     let visible = m.visible(now_ms());
     if visible.contains(&i) {
+        m.tape.glide = None;
         let k = visible.len().min(size::TAPE_VISIBLE) as f32;
         let from_bottom = (visible.end - 1 - i) as f32 * size::TAPE_ROW;
         let s = &mut m.tape.scroll;
@@ -761,11 +764,65 @@ pub fn wheel(app: &mut App, wp: WPARAM, lp: LPARAM) {
         return;
     }
     let max = (t.visible.len() - size::TAPE_VISIBLE) as f32 * size::TAPE_ROW;
-    let next = (t.scroll + delta / 120.0 * size::TAPE_ROW).clamp(0.0, max);
-    if (next - app.model.tape.scroll).abs() > 0.01 {
-        app.model.tape.scroll = next;
-        app.model.touch();
+    let tape = &mut app.model.tape;
+    // a notch adds to where a glide under way is going, not to where it is
+    let from = tape.glide.map_or(tape.scroll, |g| g.1);
+    let next = (from + delta / 120.0 * size::TAPE_ROW).clamp(0.0, max);
+    if (next - from).abs() <= 0.01 {
+        return;
     }
+    // a touchpad's small steps are smooth already; a mouse wheel's notch glides
+    if delta.abs() < 120.0 || reduced_motion() {
+        tape.glide = None;
+        tape.scroll = next;
+        app.model.touch();
+        return;
+    }
+    tape.glide = Some((tape.scroll, next, std::time::Instant::now()));
+    glide_step(app);
+}
+
+/// How long a notch's glide takes.
+const GLIDE_MS: f32 = 140.0;
+
+/// Where a glide is after `t` of its time (0..1): ease-out cubic.
+pub fn glide_at(from: f32, to: f32, t: f32) -> f32 {
+    let t = t.clamp(0.0, 1.0);
+    from + (to - from) * (1.0 - (1.0 - t).powi(3))
+}
+
+/// One frame of the glide; the next is a one-shot timer, and the last ends it (no timer while idle).
+fn glide_step(app: &mut App) {
+    let Some((from, to, at)) = app.model.tape.glide else {
+        return;
+    };
+    let t = at.elapsed().as_secs_f32() * 1000.0 / GLIDE_MS;
+    app.model.tape.scroll = glide_at(from, to, t);
+    app.model.touch();
+    if t >= 1.0 || !app.bar.visible {
+        app.model.tape.scroll = to;
+        app.model.tape.glide = None;
+        return;
+    }
+    crate::later::after("tape-glide", 8, glide_step);
+}
+
+/// Windows' "Animation effects" off (Settings > Accessibility > Visual effects): no glides or fades.
+pub fn reduced_motion() -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SPI_GETCLIENTAREAANIMATION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+    };
+    let mut on = windows::core::BOOL(1);
+    // SAFETY: a live out BOOL
+    let ok = unsafe {
+        SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION,
+            0,
+            Some((&mut on as *mut windows::core::BOOL).cast()),
+            SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+        )
+    };
+    ok.is_ok() && !on.as_bool()
 }
 
 // ---- paint ----
@@ -1008,6 +1065,17 @@ mod tests {
         key(&mut m, 0x1B, none);
         assert!(!m.tape.help);
         engine.shutdown();
+    }
+
+    #[test]
+    fn a_glide_eases_out_and_lands() {
+        assert_eq!(glide_at(0.0, 36.0, 0.0), 0.0);
+        assert_eq!(glide_at(0.0, 36.0, 1.0), 36.0);
+        assert_eq!(glide_at(0.0, 36.0, 2.0), 36.0);
+        // most of the way by half time, and never past
+        let half = glide_at(0.0, 36.0, 0.5);
+        assert!(half > 30.0 && half < 36.0, "{half}");
+        assert!(glide_at(36.0, 0.0, 0.5) < 6.0);
     }
 
     #[test]
