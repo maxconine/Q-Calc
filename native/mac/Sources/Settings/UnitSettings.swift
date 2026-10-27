@@ -12,7 +12,7 @@ struct UnitSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent {
+                QLabeled {
                     Button("Reset") { settings.resetDefaultUnits(notifyWeb: true) }
                         .disabled(settings.defaultUnits.isEmpty)
                 } label: {
@@ -34,7 +34,7 @@ struct UnitSettingsView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+        .groupedForm()
         .onAppear {
             // settings written by an older build may name units the engine no longer offers there
             let clean = sanitizeDefaultUnits(units: settings.defaultUnits)

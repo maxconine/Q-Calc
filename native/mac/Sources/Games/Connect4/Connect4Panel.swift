@@ -221,13 +221,10 @@ private struct Connect4Board: View {
         .onChange(of: cursor) { _ in settle() }
         .frame(width: size, height: size)
         .contentShape(Rectangle())
-        .onContinuousHover { phase in
-            switch phase {
-            case let .active(p): onHover(column(p.x, size))
-            case .ended: onLeave()
-            }
+        .pointerHover { p in
+            if let p { onHover(column(p.x, size)) } else { onLeave() }
         }
-        .gesture(SpatialTapGesture().onEnded { e in onPick(column(e.location.x, size)) })
+        .spatialTap { p in onPick(column(p.x, size)) }
         .frame(maxWidth: .infinity)
     }
 

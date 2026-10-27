@@ -537,7 +537,7 @@ struct MessagesSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent {
+                QLabeled {
                     HStack {
                         TextField("Your name", text: $draft, prompt: Text("your name"))
                             .labelsHidden()
@@ -552,7 +552,7 @@ struct MessagesSettingsView: View {
                     Text(messages.status)
                 }
                 if messages.alerts == .denied {
-                    LabeledContent {
+                    QLabeled {
                         Button("Open Settings") { messages.openNotificationSettings() }
                     } label: {
                         Text("Notifications")
@@ -560,7 +560,7 @@ struct MessagesSettingsView: View {
                     }
                 }
                 if !messages.name.isEmpty {
-                    LabeledContent {
+                    QLabeled {
                         Button("Turn Off") {
                             messages.turnOff()
                             draft = ""
@@ -574,7 +574,7 @@ struct MessagesSettingsView: View {
             if !messages.requests.isEmpty {
                 Section("Asking to message you") {
                     ForEach(messages.requests, id: \.self) { who in
-                        LabeledContent(who) {
+                        QLabeled(who) {
                             HStack {
                                 Button("Allow") { messages.allow(who) }
                                 Button("Block") { messages.block(who) }
@@ -586,7 +586,7 @@ struct MessagesSettingsView: View {
             names("Accepted", messages.accepted, empty: "Nobody yet. Anyone new’s first message asks you.", action: "Remove")
             names("Blocked", messages.blocked, empty: "Nobody. A blocked name’s messages never show, and they aren’t told.", action: "Unblock")
         }
-        .formStyle(.grouped)
+        .groupedForm()
         .onAppear {
             draft = messages.name
             messages.refreshAlerts()
@@ -599,7 +599,7 @@ struct MessagesSettingsView: View {
                 Text(empty).foregroundStyle(.secondary)
             }
             ForEach(list, id: \.self) { who in
-                LabeledContent(who) {
+                QLabeled(who) {
                     Button(action) { messages.forget(who) }
                 }
             }

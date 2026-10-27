@@ -135,12 +135,7 @@ struct GraphPanel: View {
                 .onEnded { _ in lastZoom = 1 })
             .onTapGesture(count: 2) { model.homeGraph() }
             // the readout: a hairline, a dot on the curve and (x, y) at the pointer (GraphPanel.tsx readout)
-            .onContinuousHover { phase in
-                switch phase {
-                case let .active(p): hoverX = Double(p.x / scale)
-                case .ended: hoverX = nil
-                }
-            }
+            .pointerHover { p in hoverX = p.map { Double($0.x / scale) } }
             .accessibilityLabel(summary)
         }
         .aspectRatio(Self.svgW / Self.svgH, contentMode: .fit)

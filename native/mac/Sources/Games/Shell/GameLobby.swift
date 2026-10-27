@@ -351,7 +351,7 @@ private struct LobbyBody: View {
                 let solo = model.solo
                 PongBody {
                     PongLine(c.blurb)
-                    FlowRow(spacing: GameMetrics.sp3) {
+                    WrapRow(spacing: GameMetrics.sp3) {
                         ForEach(Array(together.enumerated()), id: \.offset) { i, option in
                             PongButton(option, kbd: "\(i + 1)", on: model.link == nil && i == pick) { model.set(.local(option: UInt32(solo + i))) }
                         }
@@ -529,7 +529,22 @@ private struct Caret: View {
     }
 }
 
+/// FlowRow where there is one (macOS 13), and on 12 the same rows built from measured sizes.
+struct WrapRow<Content: View>: View {
+    var spacing: CGFloat
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        if #available(macOS 13, *) {
+            FlowRow(spacing: spacing) { content() }
+        } else {
+            _VariadicView.Tree(FlowRoot(spacing: spacing)) { content() }
+        }
+    }
+}
+
 /// Buttons in a row that wraps onto the next line when the panel is narrow (`flex-wrap: wrap`), centred.
+@available(macOS 13, *)
 struct FlowRow: Layout {
     var spacing: CGFloat
 
@@ -569,4 +584,71 @@ struct FlowRow: Layout {
         if !cur.items.isEmpty { rows.append(cur) }
         return rows
     }
+}
+
+/// FlowRow on macOS 12 (no Layout protocol): each button's size and the row's width are measured a pass later,
+/// then the buttons go into centred rows by the same rule as `FlowRow.arrange`.
+private struct FlowRoot: _VariadicView_MultiViewRoot {
+    var spacing: CGFloat
+
+    func body(children: _VariadicView.Children) -> some View {
+        FlowRows(children: children, spacing: spacing)
+    }
+}
+
+private struct FlowRows: View {
+    let children: _VariadicView.Children
+    let spacing: CGFloat
+    @State private var sizes: [Int: CGSize] = [:]
+    @State private var width: CGFloat = .infinity
+
+    var body: some View {
+        VStack(spacing: spacing) {
+            ForEach(Array(rows().enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .center, spacing: spacing) {
+                    ForEach(row, id: \.self) { i in
+                        children[i].fixedSize().background(GeometryReader { g in
+                            Color.clear.preference(key: FlowSizes.self, value: [i: g.size])
+                        })
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(GeometryReader { g in Color.clear.preference(key: FlowWidth.self, value: g.size.width) })
+        .onPreferenceChange(FlowSizes.self) { sizes = $0 }
+        .onPreferenceChange(FlowWidth.self) { width = $0 }
+    }
+
+    private func rows() -> [[Int]] {
+        var rows: [[Int]] = []
+        var cur: [Int] = []
+        var curWidth: CGFloat = 0
+        for i in children.indices {
+            let w = sizes[i]?.width ?? 0
+            let add = cur.isEmpty ? w : curWidth + spacing + w
+            if !cur.isEmpty && add > width {
+                rows.append(cur)
+                cur = [i]
+                curWidth = w
+            } else {
+                cur.append(i)
+                curWidth = add
+            }
+        }
+        if !cur.isEmpty { rows.append(cur) }
+        return rows
+    }
+}
+
+private struct FlowSizes: PreferenceKey {
+    static var defaultValue: [Int: CGSize] = [:]
+    static func reduce(value: inout [Int: CGSize], nextValue: () -> [Int: CGSize]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
+private struct FlowWidth: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }

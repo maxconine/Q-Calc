@@ -271,18 +271,18 @@ private struct UltimateBoard: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.white.opacity(0.06), lineWidth: 1))
         .contentShape(Rectangle())
-        .onContinuousHover { phase in
-            switch phase {
-            case let .active(p):
+        .pointerHover { p in
+            if let p {
                 let c = cellAt(p, size)
                 if c >= 0 { onHover(c) }
-            case .ended: onLeave()
+            } else {
+                onLeave()
             }
         }
-        .gesture(SpatialTapGesture().onEnded { e in
-            let c = cellAt(e.location, size)
+        .spatialTap { p in
+            let c = cellAt(p, size)
             if c >= 0 { onPick(c) }
-        })
+        }
         .onChange(of: view.rev) { _ in settle() }
         .onChange(of: live) { _ in settle() }
         .frame(maxWidth: .infinity)

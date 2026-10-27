@@ -89,10 +89,14 @@ struct MathPreview: View {
     var body: some View {
         let paths = typeset.paths
         let w = CGFloat(paths.widthPt), h = CGFloat(paths.heightPt)
-        FitLayout(width: w, height: h) {
+        Group {
             // an AppKit view, not a Canvas: a Canvas renders into GPU surfaces that SwiftUI keeps per size, about
             // 100 MB of them after a session of typing
-            PathsView(paths: paths, width: w)
+            if #available(macOS 13, *) {
+                FitLayout(width: w, height: h) { PathsView(paths: paths, width: w) }
+            } else {
+                FitFrame(width: w, height: h) { PathsView(paths: paths, width: w) }
+            }
         }
         .opacity(typeset.stale ? 0.4 : 1)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: typeset.stale)
@@ -102,6 +106,7 @@ struct MathPreview: View {
     private let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
 
     /// The page at 1 pt a point, shrunk to the width offered and 72 pt high, centred at the top.
+    @available(macOS 13, *)
     private struct FitLayout: Layout {
         let width: CGFloat
         let height: CGFloat
@@ -120,6 +125,31 @@ struct MathPreview: View {
             subviews.first?.place(at: CGPoint(x: bounds.midX, y: bounds.minY), anchor: .top,
                                   proposal: ProposedViewSize(width: width * s, height: height * s))
         }
+    }
+
+    /// FitLayout on macOS 12 (no Layout protocol): the same scale from the width the row is given, measured a pass
+    /// later, so a new width settles one frame after it arrives.
+    private struct FitFrame<Content: View>: View {
+        let width: CGFloat
+        let height: CGFloat
+        @ViewBuilder let content: () -> Content
+        @State private var available: CGFloat?
+
+        var body: some View {
+            let s = min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
+            content()
+                .frame(width: width * s, height: height * s)
+                .frame(maxWidth: .infinity, alignment: .top)
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: AvailableWidth.self, value: g.size.width)
+                })
+                .onPreferenceChange(AvailableWidth.self) { available = $0 }
+        }
+    }
+
+    private struct AvailableWidth: PreferenceKey {
+        static var defaultValue: CGFloat = 0
+        static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
     }
 
     static func path(_ verbs: Data, _ points: [Float]) -> Path {

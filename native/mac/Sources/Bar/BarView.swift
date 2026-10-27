@@ -797,21 +797,65 @@ private struct HelpSheet: View {
 
     // a subgrid in the web: the key column is as wide as its widest key, and every label lines up after it
     private func column(_ rows: [(String, String)], keyWidth: CGFloat) -> some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 0) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
-                GridRow {
-                    Text(r.0).font(.system(size: Theme.body, weight: .medium)).tracking(0.02 * Theme.body)
-                        .foregroundStyle(Color.qInk).lineLimit(1).fixedSize()
-                        .frame(minWidth: keyWidth, alignment: .leading)
-                    Text(r.1).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).lineLimit(1)
+        Group {
+            if #available(macOS 13, *) {
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
+                        GridRow {
+                            key(r.0).frame(minWidth: keyWidth, alignment: .leading)
+                            label(r.1)
+                        }
+                        .frame(height: 28)
+                        .accessibilityElement(children: .combine)
+                    }
                 }
-                .frame(height: 28)
-                .accessibilityElement(children: .combine)
+            } else {
+                KeyColumn(rows: rows, keyWidth: keyWidth, key: key, label: label)
             }
         }
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    private func key(_ s: String) -> some View {
+        Text(s).font(.system(size: Theme.body, weight: .medium)).tracking(0.02 * Theme.body)
+            .foregroundStyle(Color.qInk).lineLimit(1).fixedSize()
+    }
+
+    private func label(_ s: String) -> some View {
+        Text(s).font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).lineLimit(1)
+    }
+}
+
+/// The shortcuts Grid on macOS 12 (no Grid): rows of key and label, the key column as wide as its widest key
+/// (measured a pass later) and at least `keyWidth`.
+private struct KeyColumn<Key: View, Label: View>: View {
+    let rows: [(String, String)]
+    let keyWidth: CGFloat
+    let key: (String) -> Key
+    let label: (String) -> Label
+    @State private var widest: CGFloat = 0
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, r in
+                HStack(spacing: 12) {
+                    key(r.0)
+                        .background(GeometryReader { g in Color.clear.preference(key: WidestKey.self, value: g.size.width) })
+                        .frame(minWidth: max(keyWidth, widest), alignment: .leading)
+                    label(r.1)
+                }
+                .frame(height: 28)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .onPreferenceChange(WidestKey.self) { widest = $0 }
+    }
+}
+
+private struct WidestKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 // MARK: - message cards (MessageNotices.tsx, .message-banner)
