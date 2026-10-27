@@ -455,10 +455,15 @@ pub fn share_hint(
     if !relay {
         return "messages need the online relay".into();
     }
-    if m.name.is_empty() || m.key.is_empty() {
-        return "set your name in settings to send messages · ↵ opens settings".into();
-    }
     let clip = cmd.what == "clip";
+    if m.name.is_empty() || m.key.is_empty() {
+        // what this line does, not `message`'s words
+        return if clip {
+            "set your name in settings to share your clipboard · ↵ opens settings".into()
+        } else {
+            "set your name in settings to send files · ↵ opens settings".into()
+        };
+    }
     if cmd.to.is_empty() {
         return if clip {
             "paste to <name> · shares what you’ve copied".into()
@@ -1144,6 +1149,21 @@ pub fn auto_accept(m: &Messaging, from: &str, size: u64, limit: u64) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn a_share_line_with_no_name_says_what_it_needs_one_for() {
+        let none = Messaging::default();
+        let file = parse_share_command("send file to max").unwrap();
+        let clip = parse_share_command("paste to max").unwrap();
+        assert_eq!(
+            share_hint(&file, &none, true, None, ""),
+            "set your name in settings to send files · ↵ opens settings"
+        );
+        assert_eq!(
+            share_hint(&clip, &none, true, None, ""),
+            "set your name in settings to share your clipboard · ↵ opens settings"
+        );
+    }
 
     #[test]
     fn says_when_theres_no_name_rather_than_a_taken_one() {
