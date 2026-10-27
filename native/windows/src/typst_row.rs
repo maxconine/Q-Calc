@@ -237,13 +237,10 @@ struct Built {
     clips: Vec<ID2D1PathGeometry>,
 }
 
-/// The hidden trim: the picture goes, and Typst's own caches on its thread.
+/// The hidden trim: the picture goes, and Typst's thread with all its caches (it starts again when needed).
 pub fn trim(engine: &EngineThread) {
     PICTURE.with(|p| p.borrow_mut().take());
-    engine.typst(|r| {
-        r.clear_caches();
-        None
-    });
+    engine.stop_typst();
 }
 
 fn v(points: &[f32], i: usize) -> Vector2 {

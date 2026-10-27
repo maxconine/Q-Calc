@@ -1074,6 +1074,8 @@ impl App {
         }
         // SAFETY: our host's timer (one-shot: trim() kills it)
         unsafe { SetTimer(Some(self.host), TIMER_TRIM, TRIM_AFTER_MS, None) };
+        // what only a showing needs goes now (the layouts, the Typst thread): ~3.5 MB back, remade as needed
+        crate::answer::trim_hidden(self);
     }
 
     /// The bar has been hidden a while: give memory back (the working set; a hardware render target too).

@@ -17,8 +17,10 @@
 //! `Cx` also keeps per-thread caches: the history's `EvalContext` (recomputed only when the rows or the history
 //! settings change, or a second has passed, since `recent` depends on the clock).
 //!
-//! The typeset preview's `TypstRenderer` lives on its own thread (`typst()`), warmed at launch, so a Typst compile
-//! never delays a keystroke's answer. typst_row.rs owns what is drawn from it.
+//! The typeset preview's `TypstRenderer` lives on its own thread (`typst()`), so a Typst compile never delays a
+//! keystroke's answer. The thread starts with the first typeset and ends when the bar hides (`stop_typst`): the
+//! renderer's fonts and caches and its deep stack are ~2.5 MB the idle app needn't hold (PERFORMANCE.md).
+//! typst_row.rs owns what is drawn from it.
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -146,13 +148,15 @@ struct Shared {
 /// The UI's handle on the engine thread.
 pub struct EngineThread {
     shared: Arc<Shared>,
-    /// the window that gets WM_ENGINE (as an integer: HWND isn't Send)
-    typst: Sender<TypstJob>,
+    /// the Typst thread's queue, while it runs
+    typst: Mutex<Option<Sender<TypstJob>>>,
+    /// tells the UI thread a result is ready (app.rs posts WM_ENGINE)
+    notify: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl EngineThread {
-    /// Starts the engine thread (and the Typst thread) and warms both off the UI thread. `notify` is called on
-    /// those threads whenever a result is ready (app.rs posts WM_ENGINE).
+    /// Starts the engine thread. `notify` is called on the engine's threads whenever a result is ready (app.rs
+    /// posts WM_ENGINE). The Typst thread starts with the first typeset (`typst`).
     pub fn start(config: EngineConfig, notify: impl Fn() + Send + Sync + 'static) -> EngineThread {
         let notify: Arc<dyn Fn() + Send + Sync> = Arc::new(notify);
         let shared = Arc::new(Shared {
@@ -179,20 +183,39 @@ impl EngineThread {
                 run(&s, &mut cx, &*n);
             })
             .expect("the engine thread");
+        EngineThread {
+            shared,
+            typst: Mutex::new(None),
+            notify,
+        }
+    }
 
+    /// The Typst thread, started (and its renderer made and warmed) by the first job that needs it.
+    fn typst_sender(&self) -> Option<Sender<TypstJob>> {
+        let mut slot = self.typst.lock().ok()?;
+        if let Some(tx) = slot.as_ref() {
+            return Some(tx.clone());
+        }
         let (tx, rx) = channel::<TypstJob>();
-        let s = shared.clone();
+        let (s, notify) = (self.shared.clone(), self.notify.clone());
         std::thread::Builder::new()
             .name("qcalc-typst".into())
             .stack_size(STACK_BYTES)
             .spawn(move || {
                 let t = Instant::now();
+                // Typst parallelises with rayon, whose global pool would start a thread per core (24 here, each
+                // holding its stack for good) for documents this small: one does (PERFORMANCE.md)
+                let _ = rayon::ThreadPoolBuilder::new()
+                    .num_threads(1)
+                    .thread_name(|_| "qcalc-typst-pool".into())
+                    .build_global();
                 let typst = TypstRenderer::new();
                 let ms = typst.warm_up();
                 qlog!(
                     "typst warmed in {:.1} ms (warm_up says {ms:.1} ms)",
                     t.elapsed().as_secs_f64() * 1000.0
                 );
+                // until stop_typst lets go of the sender: then the renderer, its caches and the stack go
                 while let Ok(job) = rx.recv() {
                     if let Some(d) = job(&typst) {
                         if let Ok(mut r) = s.results.lock() {
@@ -201,9 +224,20 @@ impl EngineThread {
                         notify();
                     }
                 }
+                // Typst's memos are process-wide: the renderer's drop alone would leave them
+                typst.clear_caches();
             })
-            .expect("the typst thread");
-        EngineThread { shared, typst: tx }
+            .ok()?;
+        *slot = Some(tx.clone());
+        Some(tx)
+    }
+
+    /// Ends the Typst thread once its queued jobs are done (the bar hid): the renderer's fonts and caches and the
+    /// thread's stack (deep compiles commit ~1 MB of it) are given back; the next typeset starts it again.
+    pub fn stop_typst(&self) {
+        if let Ok(mut slot) = self.typst.lock() {
+            *slot = None;
+        }
     }
 
     /// Queues `work` on `lane`; its `Done` runs on the UI thread if it is still the lane's newest by then.
@@ -246,7 +280,9 @@ impl EngineThread {
 
     /// Work for the Typst thread (typst_row.rs). Its results are never stale-checked; check your own state.
     pub fn typst(&self, work: impl FnOnce(&TypstRenderer) -> Option<Done> + Send + 'static) {
-        let _ = self.typst.send(Box::new(work));
+        if let Some(tx) = self.typst_sender() {
+            let _ = tx.send(Box::new(work));
+        }
     }
 
     /// On the UI thread (WM_ENGINE): the results whose generation is still their lane's newest.
