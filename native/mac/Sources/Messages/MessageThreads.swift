@@ -63,7 +63,8 @@ extension BarModel {
         let name = Messages.clean(who)
         guard !name.isEmpty else { return }
         if messagesPanel != .thread(name) {
-            threadDraft = ""
+            keepThreadDraft()
+            threadDraft = ThreadDrafts.shared.take(name)
             threadReply = .idle
         }
         messagesPanel = .thread(name)
@@ -74,10 +75,16 @@ extension BarModel {
 
     func threadOpen(with who: String) -> Bool { messagesPanel == .thread(who) }
 
+    /// an unsent reply waits for the thread to open again (esc, ⌘W, × or hiding the bar no longer loses it)
+    private func keepThreadDraft() {
+        if case let .thread(name) = messagesPanel { ThreadDrafts.shared.keep(threadDraft, for: name) }
+    }
+
     /// closes the list or the thread; false when neither was open
     @discardableResult
     func closeMessages(refocus: Bool = true) -> Bool {
         guard messagesPanel != nil else { return false }
+        keepThreadDraft()
         messagesPanel = nil
         threadDraft = ""
         threadReply = .idle
@@ -127,6 +134,18 @@ extension BarModel {
             }
         }
     }
+}
+
+/// Unsent thread replies by name, for this run of the app only (never written to disk).
+final class ThreadDrafts {
+    static let shared = ThreadDrafts()
+    private var drafts: [String: String] = [:]
+
+    func keep(_ draft: String, for name: String) {
+        drafts[name] = draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : draft
+    }
+
+    func take(_ name: String) -> String { drafts.removeValue(forKey: name) ?? "" }
 }
 
 // MARK: - the views
@@ -336,8 +355,21 @@ private struct ThreadView: View {
         .contentShape(Rectangle())
         // a file dropped on a thread goes to them (ShareCommands.swift)
         .onDrop(of: [.fileURL], isTargeted: nil) { model.dropProviders($0, to: name) }
-        .onAppear { DispatchQueue.main.async { focused = true } }
-        .onChange(of: name) { _ in DispatchQueue.main.async { focused = true } }
+        .onAppear { focusReply() }
+        .onChange(of: name) { _ in focusReply() }
+    }
+
+    /// the reply line takes the keys with the caret after a kept draft (focusing selects it all, and the next key
+    /// would replace it)
+    private func focusReply() {
+        DispatchQueue.main.async {
+            focused = true
+            DispatchQueue.main.async {
+                guard let editor = NSApp.windows.first(where: { $0 is OverlayPanel })?.firstResponder as? NSTextView,
+                      editor.isFieldEditor else { return }
+                editor.moveToEndOfDocument(nil)
+            }
+        }
     }
 
     /// a line says who and when when the sender changes, or 5 minutes have passed
