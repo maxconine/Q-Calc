@@ -1763,9 +1763,11 @@ fn infinite(spec: &Spec, index: &str, a: f64, ctx: &SumContext) -> SumAnswer {
 }
 
 fn factorial_of(n: f64) -> f64 {
-    let mut f = 1.0;
+    let mut f = 1.0_f64;
     let mut k = 2.0;
-    while k <= n {
+    // past 170! it's ∞ and stays ∞: stop there (counting on to n took 4.5 s from 1e9, days from 1e15, in the TS
+    // too; and past 2^53 the count stops moving)
+    while k <= n && f.is_finite() {
         f *= k;
         k += 1.0;
     }

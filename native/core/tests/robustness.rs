@@ -174,6 +174,14 @@ fn powers_with_negligible_exponents_are_quick() {
 }
 
 #[test]
+fn infinite_sums_from_far_out_end() {
+    // the shape check computed n! by counting to n: 4.5 s from 1e9 (TS too), weeks from 1e15
+    assert_eq!(show("sum(1/k^2, k, 1e9, inf)"), "1.0000000005e-9");
+    assert_eq!(show("sum(1/k^2, k, 1e15, inf)"), "1e-15");
+    assert_eq!(show("sum(1/k!, k, 0, inf)"), "2.71828182846");
+}
+
+#[test]
 fn unit_offers_share_one_simplify_budget() {
     use qcalc_core::app::missing_unit::missing_unit;
     on_engine_stack(|| {
