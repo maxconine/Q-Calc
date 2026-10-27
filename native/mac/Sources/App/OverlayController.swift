@@ -88,6 +88,7 @@ final class OverlayController: NSObject {
         self.model = model
         super.init()
         model.onHide = { [weak self] why in self?.hide(because: why) }
+        model.onShow = { [weak self] why in self?.show(from: why) }
         model.onSettings = { [weak self] in
             track("settings.open")
             self?.onSettings?()

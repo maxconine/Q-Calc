@@ -139,6 +139,8 @@ final class BarModel: ObservableObject {
 
     // what the bar asks of its window
     var onHide: ((String) -> Void)?
+    /// the bar back up (after the file picker took the focus and hid it)
+    var onShow: ((String) -> Void)?
     var onSettings: (() -> Void)?
     /// settings at the Messages tab, where the name is set (native only; the web-view app opens General)
     var onMessagesSettings: (() -> Void)?

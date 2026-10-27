@@ -56,9 +56,17 @@ extension BarModel {
             return
         }
         clearLine()
-        pickFile { url in
+        // the picker takes the focus, so the bar hides; it comes back after, on the thread with them, where the
+        // file's line says how it's going (before, its statuses went to a hidden bar)
+        pickFile { [weak self] url in
+            guard let self else { return }
+            self.onShow?("file picker")
             guard let url else { return }
-            MessageFiles.shared.sendFile(url, to: name, done: say)
+            self.openThread(name)
+            MessageFiles.shared.sendFile(url, to: name) { [weak self] note in
+                guard let self else { return }
+                if self.messagesPanel == .thread(name) { self.threadReply = .failed(note) } else { self.hint = note }
+            }
         }
     }
 
