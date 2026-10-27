@@ -7,21 +7,51 @@ import QuartzCore
 // it as the web view's had), drawn with Core Animation from the components' own numbers and keyframes
 // (FourTwentySmoke.tsx, SixtySevenArms.tsx, SixtyNineFold.tsx and their rules in index.css). The puffs and how
 // long each effect stays come from the core (smokePuffs, eggPlayMs). It tears itself down when the effect ends.
+//
+// Native-only (no web counterpart; native/core/src/games/eggs.rs has their gates): the black hole that swallows
+// an x/0 answer (`void`), Euler's confetti and note (`euler`), Pi Day's digits (`pidigits`) and the barrel roll
+// (`roll`). Each is under 2.5 s, never takes a click or a key, and with Reduce Motion is static or skipped.
 
 final class EggOverlay {
+    /// the effect panel's title (never shown; dev snapshots find it by this)
+    static let title = "Q Calc effect"
     private var panel: NSPanel?
     private var timer: Timer?
     /// the room around the bar, as the web view's panel had
     private let room: CGFloat = 200
     private static var puffImages: [String: CGImage] = [:]
+    /// the effect up now
+    private var kind: String?
+    /// the black hole hides the real answer while its copy falls in (BarModel.answerVeiled)
+    var onVeil: ((Bool) -> Void)?
+    private var veiled = false
+    private var veilTimer: Timer?
+    /// the bar the barrel roll hid while its picture spins
+    private weak var rolled: NSWindow?
 
-    func play(_ kind: String, over bar: NSWindow) {
+    /// the line changed under an effect tied to its answer: end it now
+    func interrupt() {
+        if let kind, ["void", "pidigits", "roll"].contains(kind) { stop() }
+    }
+
+    func play(_ kind: String, over bar: NSWindow, answer: (frame: CGRect, text: String)? = nil) {
         stop()
+        let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        // the barrel roll is all motion: Reduce Motion skips it
+        if kind == "roll" && reduce { return }
+        var room = self.room
+        if kind == "roll" {
+            // the whole bar turning needs its half-diagonal of room on every side
+            let w = bar.frame.width, h = bar.frame.height
+            room = max(room, (w * w + h * h).squareRoot() / 2 - min(w, h) / 2 + 24)
+        }
         let frame = bar.frame.insetBy(dx: -room, dy: -room)
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
+        panel.title = Self.title
+        panel.setAccessibilityElement(false)
         panel.ignoresMouseEvents = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -35,25 +65,58 @@ final class EggOverlay {
         panel.contentView = host
         // the bar, where the page drew it: (room, room) from the top left, at the bar's size
         let barRect = CGRect(x: room, y: room, width: bar.frame.width, height: bar.frame.height)
-        let reduce = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         let dark = bar.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         let now = CACurrentMediaTime()
+        // the answer, where the bar drew it, in this layer's terms
+        let answerRect = (answer?.frame ?? .zero).offsetBy(dx: room, dy: room)
+        let answerText = answer?.text ?? ""
+        let ms: Double
         switch kind {
-        case "smoke": smoke(root, barRect, reduce, now, scale: bar.backingScaleFactor)
-        case "arms": arms(root, barRect, reduce, now)
-        default: fold(root, barRect, reduce, now, dark: dark)
+        case "smoke", "arms", "fold":
+            switch kind {
+            case "smoke": smoke(root, barRect, reduce, now, scale: bar.backingScaleFactor)
+            case "arms": arms(root, barRect, reduce, now)
+            default: fold(root, barRect, reduce, now, dark: dark)
+            }
+            ms = eggPlayMs(kind: kind == "smoke" ? .smoke : kind == "arms" ? .arms : .fold)
+        case "void":
+            guard answer?.frame.width ?? 0 > 0 else { return }
+            void(root, answerRect, answerText, reduce, now, bar: bar)
+            ms = lineEggPlayMs(kind: .void)
+        case "euler":
+            euler(root, barRect, answer?.frame.width ?? 0 > 0 ? answerRect : .zero, reduce, now, bar: bar)
+            ms = lineEggPlayMs(kind: .euler)
+        case "pidigits":
+            guard answer?.frame.width ?? 0 > 0 else { return }
+            piDigits(root, barRect, answerRect, reduce, now, bar: bar)
+            ms = lineEggPlayMs(kind: .piDigits)
+        case "roll":
+            guard roll(root, barRect, now, bar: bar) else { return }
+            ms = lineEggPlayMs(kind: .barrelRoll)
+        default: return
         }
         panel.orderFrontRegardless()
         bar.addChildWindow(panel, ordered: .above)
         self.panel = panel
-        let egg: EggKind = kind == "smoke" ? .smoke : kind == "arms" ? .arms : .fold
-        timer = Timer.scheduledTimer(withTimeInterval: eggPlayMs(kind: egg) / 1000 + 0.3, repeats: false) { [weak self] _ in self?.stop() }
+        self.kind = kind
+        timer = Timer.scheduledTimer(withTimeInterval: ms / 1000 + (kind == "roll" ? 0 : 0.3), repeats: false) { [weak self] _ in self?.stop() }
         OverlayLog.note("effect \(kind) (native)")
     }
 
     func stop() {
         timer?.invalidate()
         timer = nil
+        veilTimer?.invalidate()
+        veilTimer = nil
+        if veiled {
+            veiled = false
+            onVeil?(false)
+        }
+        if let rolled {
+            rolled.alphaValue = 1
+            self.rolled = nil
+        }
+        kind = nil
         guard let panel else { return }
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
@@ -291,5 +354,325 @@ final class EggOverlay {
             group.isRemovedOnCompletion = false
             t.add(group, forKey: "spin")
         }
+    }
+
+    // ---- native-only: the black hole (x/0), Euler's identity, Pi Day's digits, the barrel roll
+
+    /// a theme colour as the bar's appearance draws it
+    private static func resolved(_ colour: NSColor, in window: NSWindow) -> CGColor {
+        var out = colour.cgColor
+        window.effectiveAppearance.performAsCurrentDrawingAppearance { out = colour.cgColor }
+        return out
+    }
+
+    private static let answerFont = NSFont.monospacedDigitSystemFont(ofSize: Theme.display, weight: .regular)
+
+    /// the answer's text as the slot draws it: right-aligned in its frame, centred on it
+    private static func answerTextRect(_ text: String, in frame: CGRect) -> CGRect {
+        let size = (text as NSString).size(withAttributes: [.font: answerFont])
+        let w = min(ceil(size.width), frame.width), h = ceil(size.height)
+        return CGRect(x: frame.maxX - w, y: frame.midY - h / 2, width: w, height: h)
+    }
+
+    private static func keyframes(_ path: String, _ values: [Any], _ times: [NSNumber],
+                                  _ timing: CAMediaTimingFunctionName = .easeInEaseOut) -> CAKeyframeAnimation {
+        let k = CAKeyframeAnimation(keyPath: path)
+        k.values = values
+        k.keyTimes = times
+        k.timingFunctions = Array(repeating: CAMediaTimingFunction(name: timing), count: max(values.count - 1, 1))
+        return k
+    }
+
+    private static func group(_ animations: [CAAnimation], begin: CFTimeInterval, duration: CFTimeInterval) -> CAAnimationGroup {
+        let g = CAAnimationGroup()
+        g.animations = animations
+        g.beginTime = begin
+        g.duration = duration
+        g.fillMode = .both
+        g.isRemovedOnCompletion = false
+        return g
+    }
+
+    /// x/0: a small black hole opens on the answer, its copy spirals in, the hole closes, and the answer (the real
+    /// one, never changed) fades back. Reduce Motion: a still hole beside the answer, fading in and out.
+    private func void(_ root: CALayer, _ answer: CGRect, _ text: String, _ reduce: Bool, _ now: CFTimeInterval, bar: NSWindow) {
+        let textRect = Self.answerTextRect(text, in: answer)
+        let r: CGFloat = reduce ? 8 : 12
+        let centre = reduce ? CGPoint(x: textRect.minX - r - 10, y: answer.midY) : CGPoint(x: textRect.midX, y: answer.midY)
+        let hole = CALayer()
+        hole.bounds = CGRect(x: 0, y: 0, width: 4 * r, height: 4 * r)
+        hole.position = centre
+        // the disk: a warm dashed ring that turns, round a black core with a violet glow (so it reads on dark too)
+        let ring = CAShapeLayer()
+        ring.frame = hole.bounds
+        ring.path = CGPath(ellipseIn: hole.bounds.insetBy(dx: r * 0.55, dy: r * 0.55), transform: nil)
+        ring.fillColor = nil
+        ring.strokeColor = CGColor(srgbRed: 1, green: 0.62, blue: 0.25, alpha: 0.85)
+        ring.lineWidth = 2
+        ring.lineDashPattern = [5, 3, 2, 3]
+        ring.shadowColor = CGColor(srgbRed: 1, green: 0.5, blue: 0.2, alpha: 1)
+        ring.shadowOpacity = 0.8
+        ring.shadowRadius = 3
+        ring.shadowOffset = .zero
+        hole.addSublayer(ring)
+        let core = CALayer()
+        core.bounds = CGRect(x: 0, y: 0, width: 2 * r, height: 2 * r)
+        core.position = CGPoint(x: 2 * r, y: 2 * r)
+        core.cornerRadius = r
+        core.backgroundColor = CGColor(gray: 0, alpha: 1)
+        core.shadowColor = CGColor(srgbRed: 0.55, green: 0.3, blue: 1, alpha: 1)
+        core.shadowOpacity = 0.9
+        core.shadowRadius = 5
+        core.shadowOffset = .zero
+        hole.addSublayer(core)
+        root.addSublayer(hole)
+        if reduce {
+            hole.opacity = 0
+            hole.add(Self.group([Self.keyframes("opacity", [0, 1, 1, 0], [0, 0.2, 0.8, 1])], begin: now, duration: 1.4), forKey: "void")
+            return
+        }
+        // the answer's copy, where the slot drew it; the real one hides under it until the hole closes
+        let copy = CATextLayer()
+        copy.string = NSAttributedString(string: text, attributes: [
+            .font: Self.answerFont, .foregroundColor: NSColor(cgColor: Self.resolved(Theme.answer, in: bar)) ?? .labelColor,
+            .kern: Theme.displayTracking(Theme.display),
+        ])
+        copy.contentsScale = root.contentsScale
+        copy.alignmentMode = .right
+        copy.bounds = CGRect(origin: .zero, size: textRect.size)
+        copy.position = CGPoint(x: textRect.midX, y: textRect.midY)
+        root.insertSublayer(copy, below: hole)
+        veiled = true
+        onVeil?(true)
+        veilTimer = Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { [weak self] _ in
+            guard let self, self.veiled else { return }
+            self.veiled = false
+            self.onVeil?(false)
+        }
+        let open = NSValue(caTransform3D: CATransform3DIdentity)
+        let shut = NSValue(caTransform3D: CATransform3DMakeScale(0.01, 0.01, 1))
+        hole.transform = CATransform3DMakeScale(0.01, 0.01, 1)
+        hole.add(Self.group([
+            Self.keyframes("transform", [shut, open, open, NSValue(caTransform3D: CATransform3DMakeScale(1.25, 1.25, 1)), shut], [0, 0.18, 0.66, 0.74, 0.86]),
+            Self.keyframes("opacity", [1, 1, 0], [0, 0.86, 1]),
+        ], begin: now, duration: 1.7), forKey: "void")
+        let spin = CABasicAnimation(keyPath: "transform.rotation.z")
+        spin.fromValue = 0
+        spin.toValue = 4 * CGFloat.pi
+        spin.duration = 1.7
+        spin.beginTime = now
+        spin.fillMode = .both
+        spin.isRemovedOnCompletion = false
+        ring.add(spin, forKey: "turn")
+        // the copy: drawn in on a tightening spiral, smaller and fainter
+        let fall = CAKeyframeAnimation(keyPath: "position")
+        let start = copy.position
+        let span = hypot(start.x - centre.x, start.y - centre.y) + 14
+        fall.values = (0...12).map { i -> NSValue in
+            let t = CGFloat(i) / 12
+            let angle = t * 2.2 * .pi
+            let reach = span * 0.35 * sin(t * .pi)
+            return NSValue(point: NSPoint(x: start.x + (centre.x - start.x) * t * t + reach * cos(angle),
+                                          y: start.y + (centre.y - start.y) * t * t + reach * sin(angle)))
+        }
+        fall.calculationMode = .cubic
+        let small = CATransform3DRotate(CATransform3DMakeScale(0.05, 0.05, 1), 2.4 * .pi, 0, 0, 1)
+        let shrink = Self.keyframes("transform", [open, NSValue(caTransform3D: small)], [0, 1], .easeIn)
+        let fade = Self.keyframes("opacity", [1, 1, 0], [0, 0.6, 1], .easeIn)
+        copy.add(Self.group([fall, shrink, fade], begin: now + 0.28, duration: 0.85), forKey: "fall")
+    }
+
+    private static func confettiImage(_ colour: CGColor) -> CGImage? {
+        guard let ctx = CGContext(data: nil, width: 8, height: 4, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        ctx.setFillColor(colour)
+        ctx.fill(CGRect(x: 0, y: 0, width: 8, height: 4))
+        return ctx.makeImage()
+    }
+
+    /// a small note in a pill of the bar's own colour, just under the bar, so it reads on any desktop
+    private func note(_ root: CALayer, _ text: String, under bar: CGRect, centreX: CGFloat, window: NSWindow,
+                      begin: CFTimeInterval, duration: CFTimeInterval) {
+        let font = NSFont.systemFont(ofSize: Theme.small)
+        let size = (text as NSString).size(withAttributes: [.font: font])
+        let pill = CALayer()
+        pill.bounds = CGRect(x: 0, y: 0, width: ceil(size.width) + 16, height: ceil(size.height) + 6)
+        let x = min(max(centreX, bar.minX + pill.bounds.width / 2), bar.maxX - pill.bounds.width / 2)
+        pill.position = CGPoint(x: x, y: bar.maxY + 6 + pill.bounds.height / 2)
+        pill.cornerRadius = pill.bounds.height / 2
+        pill.backgroundColor = Self.resolved(Theme.bg, in: window).copy(alpha: 0.9)
+        let label = CATextLayer()
+        label.string = NSAttributedString(string: text, attributes: [
+            .font: font, .foregroundColor: NSColor(cgColor: Self.resolved(Theme.muted, in: window)) ?? .secondaryLabelColor,
+        ])
+        label.contentsScale = root.contentsScale
+        label.alignmentMode = .center
+        label.frame = CGRect(x: 0, y: 3, width: pill.bounds.width, height: ceil(size.height))
+        pill.addSublayer(label)
+        pill.opacity = 0
+        root.addSublayer(pill)
+        pill.add(Self.group([Self.keyframes("opacity", [0, 0.9, 0.9, 0], [0, 0.15, 0.8, 1])], begin: begin, duration: duration), forKey: "note")
+    }
+
+    /// e^(iπ)+1: a short burst of confetti off the answer, and a faint note under the bar. Reduce Motion: the note.
+    private func euler(_ root: CALayer, _ bar: CGRect, _ answer: CGRect, _ reduce: Bool, _ now: CFTimeInterval, bar window: NSWindow) {
+        let from = answer.width > 0 ? CGPoint(x: answer.maxX - 24, y: answer.midY) : CGPoint(x: bar.midX, y: bar.minY + Theme.composerHeight / 2)
+        note(root, "the most beautiful equation", under: bar, centreX: from.x, window: window,
+             begin: now + (reduce ? 0 : 0.25), duration: reduce ? 2.2 : 2.1)
+        guard !reduce else { return }
+        let emitter = CAEmitterLayer()
+        emitter.frame = root.bounds
+        emitter.emitterPosition = from
+        emitter.emitterShape = .point
+        emitter.beginTime = now
+        let colours: [CGColor] = [
+            CGColor(srgbRed: 0.39, green: 0.83, blue: 0.57, alpha: 1), CGColor(srgbRed: 1, green: 0.78, blue: 0.2, alpha: 1),
+            CGColor(srgbRed: 0.98, green: 0.4, blue: 0.45, alpha: 1), CGColor(srgbRed: 0.4, green: 0.6, blue: 1, alpha: 1),
+            CGColor(srgbRed: 0.75, green: 0.5, blue: 1, alpha: 1),
+        ]
+        emitter.emitterCells = colours.map { c in
+            let cell = CAEmitterCell()
+            cell.contents = Self.confettiImage(c)
+            cell.birthRate = 110
+            cell.lifetime = 1.5
+            cell.lifetimeRange = 0.3
+            cell.velocity = 190
+            cell.velocityRange = 70
+            // up and out (the layer is flipped: -y is up), falling back under gravity
+            cell.emissionLongitude = -.pi / 2
+            cell.emissionRange = .pi * 0.8
+            cell.yAcceleration = 330
+            cell.spin = 3
+            cell.spinRange = 8
+            cell.scale = 0.9
+            cell.scaleRange = 0.4
+            cell.alphaSpeed = -0.6
+            return cell
+        }
+        root.addSublayer(emitter)
+        // a burst: the cells are born for a tenth of a second, then fall
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { emitter.birthRate = 0 }
+    }
+
+    /// `pi` on March 14: π's digits roll out under the answer, as many as fit, then fade. Reduce Motion: they
+    /// fade in whole.
+    private func piDigits(_ root: CALayer, _ bar: CGRect, _ answer: CGRect, _ reduce: Bool, _ now: CFTimeInterval, bar window: NSWindow) {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: Theme.caption, weight: .regular)
+        let digits = Array(QCalcCore.piDigits())
+        // 3.14159 26535 89793 …: grouped by five after the point
+        var text = String(digits.prefix(2))
+        for (i, d) in digits.dropFirst(2).enumerated() {
+            if i > 0 && i % 5 == 0 { text += " " }
+            text.append(d)
+        }
+        let charWidth = ("0" as NSString).size(withAttributes: [.font: font]).width
+        let room = answer.maxX - bar.minX - Theme.gutter
+        var shown = text
+        while CGFloat(shown.count) * charWidth > room, let space = shown.lastIndex(of: " ") { shown = String(shown[..<space]) }
+        let size = (shown as NSString).size(withAttributes: [.font: font])
+        let label = CATextLayer()
+        label.string = NSAttributedString(string: shown, attributes: [
+            .font: font, .foregroundColor: NSColor(cgColor: Self.resolved(Theme.muted, in: window)) ?? .secondaryLabelColor,
+        ])
+        label.contentsScale = root.contentsScale
+        let w = ceil(size.width), h = ceil(size.height)
+        label.frame = CGRect(x: answer.maxX - w, y: min(answer.maxY + 1, bar.minY + Theme.composerHeight - h - 1), width: w, height: h)
+        root.addSublayer(label)
+        label.opacity = 0
+        let fade = Self.keyframes("opacity", [0, 1, 1, 0], reduce ? [0, 0.15, 0.78, 1] : [0, 0.04, 0.78, 1])
+        label.add(Self.group([fade], begin: now, duration: 2.3), forKey: "digits")
+        guard !reduce else { return }
+        // a mask that opens a digit at a time from the left: the first seven (3.14159, the answer) at once
+        let mask = CALayer()
+        mask.backgroundColor = CGColor(gray: 0, alpha: 1)
+        mask.anchorPoint = .zero
+        mask.bounds = CGRect(x: 0, y: 0, width: w, height: h)
+        mask.position = .zero
+        label.mask = mask
+        let n = max(shown.count, 8)
+        let open = CAKeyframeAnimation(keyPath: "bounds.size.width")
+        open.values = (7...n).map { CGFloat($0) * charWidth as NSNumber }
+        open.keyTimes = (7...n).map { NSNumber(value: Double($0 - 7) / Double(n - 7)) }
+        open.calculationMode = .discrete
+        open.beginTime = now + 0.1
+        open.duration = min(1.2, 0.03 * Double(n))
+        open.fillMode = .both
+        open.isRemovedOnCompletion = false
+        mask.add(open, forKey: "roll")
+    }
+
+    /// do a barrel roll: a picture of the bar turns once in the room around it while the bar itself hides (it
+    /// still has the keys; typing ends the roll). Never under Reduce Motion.
+    private func roll(_ root: CALayer, _ bar: CGRect, _ now: CFTimeInterval, bar window: NSWindow) -> Bool {
+        guard let view = window.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return false }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        guard let image = rep.cgImage else { return false }
+        let picture = CALayer()
+        picture.frame = bar
+        picture.contents = image
+        picture.contentsGravity = .resize
+        picture.shadowColor = CGColor(gray: 0, alpha: 1)
+        picture.shadowOpacity = 0.25
+        picture.shadowRadius = 12
+        picture.shadowOffset = CGSize(width: 0, height: 6)
+        root.addSublayer(picture)
+        window.alphaValue = 0
+        rolled = window
+        let turn = CAKeyframeAnimation(keyPath: "transform")
+        turn.values = [0.0, 0.5, 1.0].map { t -> NSValue in
+            let s: CGFloat = t == 0.5 ? 0.9 : 1
+            return NSValue(caTransform3D: CATransform3DRotate(CATransform3DMakeScale(s, s, 1), CGFloat(t) * 2 * .pi * 0.999, 0, 0, 1))
+        }
+        turn.keyTimes = [0, 0.5, 1]
+        turn.timingFunctions = [CAMediaTimingFunction(name: .easeIn), CAMediaTimingFunction(name: .easeOut)]
+        picture.add(Self.group([turn], begin: now, duration: 1.0), forKey: "roll")
+        return true
+    }
+}
+
+/// The Konami code's look, for the run only: the bar in green phosphor on black, glowing, under scanlines. The
+/// colours go through a Core Image filter on the bar's content (so the field and the answers turn with it); the
+/// lines are a click-through layer on top. Nothing moves, so Reduce Motion needs nothing.
+enum CRTLook {
+    private final class Scanlines: NSView {
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override var mouseDownCanMoveWindow: Bool { true }
+    }
+
+    static func apply(_ on: Bool, to view: NSView) {
+        view.subviews.filter { $0 is Scanlines }.forEach { $0.removeFromSuperview() }
+        guard on else {
+            view.contentFilters = []
+            return
+        }
+        view.wantsLayer = true
+        view.layerUsesCoreImageFilters = true
+        // the light in each pixel, as phosphor green on near black
+        let tint = CIFilter(name: "CIColorMatrix")
+        func row(_ k: CGFloat) -> CIVector { CIVector(x: 0.3 * k, y: 0.59 * k, z: 0.11 * k, w: 0) }
+        tint?.setValue(row(0.3), forKey: "inputRVector")
+        tint?.setValue(row(1.15), forKey: "inputGVector")
+        tint?.setValue(row(0.5), forKey: "inputBVector")
+        tint?.setValue(CIVector(x: -0.02, y: -0.07, z: -0.03, w: 0), forKey: "inputBiasVector")
+        let glow = CIFilter(name: "CIBloom")
+        glow?.setValue(3, forKey: kCIInputRadiusKey)
+        glow?.setValue(0.6, forKey: kCIInputIntensityKey)
+        view.contentFilters = [tint, glow].compactMap { $0 }
+        OverlayLog.note("crt look: \(view.layer?.filters?.count ?? 0) filters on the bar")
+        let lines = Scanlines(frame: view.bounds)
+        lines.autoresizingMask = [.width, .height]
+        lines.wantsLayer = true
+        let rep = CAReplicatorLayer()
+        rep.frame = CGRect(x: 0, y: 0, width: 4000, height: 2400)
+        rep.instanceCount = 800
+        rep.instanceTransform = CATransform3DMakeTranslation(0, 3, 0)
+        let line = CALayer()
+        line.frame = CGRect(x: 0, y: 0, width: 4000, height: 1)
+        line.backgroundColor = CGColor(gray: 0, alpha: 0.28)
+        rep.addSublayer(line)
+        lines.layer?.addSublayer(rep)
+        lines.layer?.masksToBounds = true
+        lines.setAccessibilityElement(false)
+        view.addSubview(lines)
     }
 }

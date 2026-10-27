@@ -1,5 +1,6 @@
 //! The 420 smoke, 67 arms and 69 fold that play over the bar when the answer settles on that number
-//! (`src/lib/fourTwenty.ts`, `sixtySeven.ts`, `sixtyNine.ts`, `smokeRoom.ts`, and the hooks' timings).
+//! (`src/lib/fourTwenty.ts`, `sixtySeven.ts`, `sixtyNine.ts`, `smokeRoom.ts`, and the hooks' timings), and the
+//! native-only line eggs (divide by zero, Euler's identity, Pi Day, the barrel roll) and the Konami code.
 
 /// Which effect an answer plays.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -198,9 +199,406 @@ impl Puff {
     }
 }
 
+// ---- native-only eggs (no web counterpart): read from the line and its answer, not the number alone
+
+/// An effect the typed line sets off, as the bar settles on it (the same 200 ms wait as 420/67/69).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LineEgg {
+    /// `x/0`: a small black hole swallows the answer, which then comes back
+    Void,
+    /// `e^(iπ)+1`: a confetti burst and a faint note
+    Euler,
+    /// `pi` on March 14: more digits roll out under the answer
+    PiDigits,
+    /// `do a barrel roll`: the bar spins once
+    BarrelRoll,
+}
+
+impl LineEgg {
+    pub const ALL: [LineEgg; 4] = [
+        LineEgg::Void,
+        LineEgg::Euler,
+        LineEgg::PiDigits,
+        LineEgg::BarrelRoll,
+    ];
+
+    /// how long the effect stays up, ms (each at most 2.5 s)
+    pub fn play_ms(self) -> f64 {
+        match self {
+            LineEgg::Void => 1900.0,
+            LineEgg::Euler => 2400.0,
+            LineEgg::PiDigits => 2500.0,
+            LineEgg::BarrelRoll => 1100.0,
+        }
+    }
+
+    /// does this line (and the answer the bar shows for it) set the effect off
+    pub fn matches(self, text: &str, display: &str, number: Option<f64>, pi_day: bool) -> bool {
+        match self {
+            LineEgg::Void => divides_by_zero(text, display),
+            LineEgg::Euler => is_euler(text, display, number),
+            LineEgg::PiDigits => pi_day && is_just_pi(text) && number == Some(std::f64::consts::PI),
+            LineEgg::BarrelRoll => is_barrel_roll(text),
+        }
+    }
+}
+
+/// The line with spaces, `*`, `·` and `×` gone, `π` as `pi`, and braces as parentheses.
+fn squeeze(text: &str) -> String {
+    text.chars()
+        .filter(|c| !c.is_whitespace() && !matches!(c, '*' | '·' | '×' | '⋅'))
+        .map(|c| match c {
+            '{' | '[' => '(',
+            '}' | ']' => ')',
+            '−' => '-',
+            c => c,
+        })
+        .collect::<String>()
+        .replace('π', "pi")
+}
+
+/// An answer that is undefined or infinite, from a division whose divisor is a literal zero (`1/0`, `5 ÷ (0)`,
+/// `2/0.0`), not one that only works out to zero (`1/(2-2)`).
+pub fn divides_by_zero(text: &str, display: &str) -> bool {
+    let shown = display.trim();
+    let blown = shown == "undefined" || shown.contains('∞') || shown.contains("Infinity");
+    if !blown {
+        return false;
+    }
+    let s: Vec<char> = squeeze(text).chars().collect();
+    for (i, &c) in s.iter().enumerate() {
+        if c != '/' && c != '÷' {
+            continue;
+        }
+        let mut j = i + 1;
+        let mut opened = 0;
+        while j < s.len() && s[j] == '(' {
+            opened += 1;
+            j += 1;
+        }
+        if j < s.len() && (s[j] == '-' || s[j] == '+') {
+            j += 1;
+        }
+        let start = j;
+        while j < s.len() && s[j] == '0' {
+            j += 1;
+        }
+        if j == start {
+            continue;
+        }
+        if j < s.len() && s[j] == '.' {
+            j += 1;
+            while j < s.len() && s[j] == '0' {
+                j += 1;
+            }
+        }
+        let mut closed = 0;
+        while closed < opened && j < s.len() && s[j] == ')' {
+            closed += 1;
+            j += 1;
+        }
+        let next = s.get(j).copied();
+        let ends = match next {
+            None => true,
+            Some(n) => !(n.is_ascii_digit() || n == '.' || n.is_alphabetic() || n == '('),
+        };
+        if closed == opened && ends {
+            return true;
+        }
+    }
+    false
+}
+
+/// Euler's identity: `e^(iπ)+1`, `1+e^(iπ)`, `e^(iπ)+1=0`, `e^(iπ)=-1` and `e^(iπ)` itself, with `πi` for `iπ`.
+/// The bare forms count when the answer is what the identity says, or when there is none (the engine leaves
+/// `e^(i π)` blank today), never on another number or an error; the equation forms need no answer.
+pub fn is_euler(text: &str, display: &str, number: Option<f64>) -> bool {
+    let s = squeeze(text);
+    let s = s
+        .strip_prefix("exp")
+        .map_or(s.clone(), |r| format!("e^{r}"));
+    const POWERS: [&str; 4] = ["e^(ipi)", "e^(pii)", "e^(i(pi))", "e^((pi)i)"];
+    let close = |want: f64| match number {
+        Some(n) => (n - want).abs() < 1e-9,
+        None => display.trim().is_empty(),
+    };
+    POWERS.iter().any(|p| {
+        let sum = [format!("{p}+1"), format!("1+{p}")];
+        if sum.contains(&s) {
+            return close(0.0);
+        }
+        if s == *p {
+            return close(-1.0);
+        }
+        let equations = [
+            format!("{p}+1=0"),
+            format!("1+{p}=0"),
+            format!("0={p}+1"),
+            format!("0=1+{p}"),
+            format!("{p}=-1"),
+            format!("-1={p}"),
+        ];
+        equations.contains(&s)
+    })
+}
+
+/// the whole line is `pi` or `π`
+pub fn is_just_pi(text: &str) -> bool {
+    let t = text.trim();
+    t.eq_ignore_ascii_case("pi") || t == "π"
+}
+
+/// the whole line is `do a barrel roll` (any case, extra spaces, a closing `!` or `.`)
+pub fn is_barrel_roll(text: &str) -> bool {
+    let t = text.trim().trim_end_matches(['!', '.']).to_lowercase();
+    t.split_whitespace().collect::<Vec<_>>() == ["do", "a", "barrel", "roll"]
+}
+
+/// March 14, by the local calendar
+pub fn is_pi_day(month: u32, day: u32) -> bool {
+    month == 3 && day == 14
+}
+
+/// π to 50 places, for the digits that roll out under the answer
+pub const PI_DIGITS: &str = "3.14159265358979323846264338327950288419716939937510";
+
+/// The line eggs' gates, one per effect, each like the 420 gate: fires once when the settled line sets it off,
+/// and re-arms only after a settled line that doesn't.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct LineEggGates {
+    armed: [bool; 4],
+}
+
+impl Default for LineEggGates {
+    fn default() -> Self {
+        Self { armed: [true; 4] }
+    }
+}
+
+impl LineEggGates {
+    /// the settled line and its answer; the effect to play, if any (the first that fires)
+    pub fn settle(
+        &mut self,
+        text: &str,
+        display: &str,
+        number: Option<f64>,
+        pi_day: bool,
+    ) -> Option<LineEgg> {
+        let mut out = None;
+        for (i, egg) in LineEgg::ALL.iter().enumerate() {
+            let hit = egg.matches(text, display, number, pi_day);
+            if hit && self.armed[i] && out.is_none() {
+                out = Some(*egg);
+            }
+            self.armed[i] = !hit;
+        }
+        out
+    }
+}
+
+/// A key as the Konami code reads it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum KonamiKey {
+    Up,
+    Down,
+    Left,
+    Right,
+    B,
+    A,
+    Other,
+}
+
+/// ↑↑↓↓←→←→BA
+pub const KONAMI: [KonamiKey; 10] = {
+    use KonamiKey::*;
+    [Up, Up, Down, Down, Left, Right, Left, Right, B, A]
+};
+
+/// Watches the keys for the Konami code; every completed code toggles (the caller keeps the state).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct KonamiTracker {
+    /// how much of the code the last keys spell
+    at: usize,
+}
+
+impl KonamiTracker {
+    /// one key down; true when it completes the code
+    pub fn push(&mut self, key: KonamiKey) -> bool {
+        // the longest prefix of the code that the keys so far end with (↑↑↑ still holds ↑↑)
+        let mut at = self.at;
+        loop {
+            if KONAMI[at] == key {
+                at += 1;
+                break;
+            }
+            if at == 0 {
+                break;
+            }
+            at = Self::fallback(at);
+        }
+        if at == KONAMI.len() {
+            self.at = 0;
+            return true;
+        }
+        self.at = at;
+        false
+    }
+
+    /// the longest proper prefix of KONAMI[..at] that is also its suffix
+    fn fallback(at: usize) -> usize {
+        (1..at)
+            .rev()
+            .find(|&k| KONAMI[..k] == KONAMI[at - k..at])
+            .unwrap_or(0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn divide_by_zero_needs_a_literal_zero_and_a_blown_answer() {
+        for t in [
+            "1/0", "-1/0", "5 / 0", "0/0", "2/0.0", "3/(0)", "1/0*0", "7 ÷ 0", "1/(−0)", "1/[0]",
+        ] {
+            assert!(divides_by_zero(t, "undefined"), "{t}");
+        }
+        assert!(divides_by_zero("1/0", "∞"));
+        assert!(divides_by_zero("1/0", "-Infinity"));
+        for t in ["1/(2-2)", "1/0.5", "1/05", "1/0x", "1/0pi", "10", "0/1"] {
+            assert!(!divides_by_zero(t, "undefined"), "{t}");
+        }
+        assert!(!divides_by_zero("1/0", "0"));
+        assert!(!divides_by_zero("1/0", ""));
+    }
+
+    #[test]
+    fn euler_reads_the_identity_in_its_forms() {
+        for t in [
+            "e^(i pi)+1",
+            "e^(iπ) + 1",
+            "e^(i*pi)+1",
+            "1 + e^(πi)",
+            "e^{i pi}+1",
+            "exp(i pi)+1",
+        ] {
+            assert!(is_euler(t, "0", Some(0.0)), "{t}");
+        }
+        assert!(is_euler("e^(iπ)", "-1", Some(-1.0)));
+        assert!(is_euler("e^(i π)+1", "", None));
+        assert!(is_euler("e^(i pi)", "-1", Some(-1.0 + 1e-16)));
+        for t in [
+            "e^(iπ)+1=0",
+            "e^(i pi) = -1",
+            "-1 = e^(πi)",
+            "0 = 1 + e^(i*pi)",
+        ] {
+            assert!(is_euler(t, "", None), "{t}");
+        }
+        // a bare form whose answer isn't the identity's (a misread line) never fires
+        assert!(!is_euler("exp(iπ)+1", "undefined", None));
+        assert!(!is_euler("e^(iπ)", "0", Some(0.0)));
+        for t in ["e^(i pi)+2", "e^(pi)+1", "e^(2 i pi)+1", "e^(iπ)+1=1"] {
+            assert!(!is_euler(t, "0", Some(0.0)), "{t}");
+        }
+    }
+
+    #[test]
+    fn pi_and_the_barrel_roll_are_the_whole_line() {
+        assert!(is_just_pi("pi") && is_just_pi(" π ") && is_just_pi("PI"));
+        assert!(!is_just_pi("2pi") && !is_just_pi("pi/2"));
+        for t in [
+            "do a barrel roll",
+            "Do A Barrel Roll!",
+            "  do  a barrel roll. ",
+        ] {
+            assert!(is_barrel_roll(t), "{t}");
+        }
+        for t in ["do a barrel roll now", "barrel roll", "do a barrel"] {
+            assert!(!is_barrel_roll(t), "{t}");
+        }
+        assert!(is_pi_day(3, 14));
+        assert!(!is_pi_day(3, 15) && !is_pi_day(4, 14));
+        assert!(PI_DIGITS.starts_with("3.14159265358979"));
+        assert_eq!(PI_DIGITS.len(), 52);
+    }
+
+    #[test]
+    fn line_gates_fire_once_per_answer() {
+        let pi = Some(std::f64::consts::PI);
+        let mut g = LineEggGates::default();
+        assert_eq!(
+            g.settle("1/0", "undefined", None, false),
+            Some(LineEgg::Void)
+        );
+        assert_eq!(g.settle("1/0", "undefined", None, false), None);
+        // still dividing by zero: no second black hole while the line stays that way
+        assert_eq!(g.settle("1/00", "undefined", None, false), None);
+        assert_eq!(g.settle("1/", "", None, false), None);
+        assert_eq!(
+            g.settle("1/0", "undefined", None, false),
+            Some(LineEgg::Void)
+        );
+        assert_eq!(g.settle("pi", "3.14159", pi, false), None);
+        assert_eq!(g.settle("pi", "3.14159", pi, true), Some(LineEgg::PiDigits));
+        assert_eq!(g.settle("pi", "3.14159", pi, true), None);
+        assert_eq!(
+            g.settle("do a barrel roll", "", None, false),
+            Some(LineEgg::BarrelRoll)
+        );
+        assert_eq!(g.settle("do a barrel roll", "", None, false), None);
+        assert_eq!(
+            g.settle("e^(iπ)+1", "0", Some(0.0), false),
+            Some(LineEgg::Euler)
+        );
+        assert_eq!(g.settle("", "", None, false), None);
+        assert_eq!(
+            g.settle("do a barrel roll!", "", None, false),
+            Some(LineEgg::BarrelRoll)
+        );
+        for e in LineEgg::ALL {
+            assert!(e.play_ms() <= 2500.0);
+        }
+    }
+
+    #[test]
+    fn konami_toggles_on_each_whole_code() {
+        use KonamiKey::*;
+        let mut k = KonamiTracker::default();
+        let run =
+            |k: &mut KonamiTracker, keys: &[KonamiKey]| keys.iter().filter(|&&x| k.push(x)).count();
+        assert_eq!(run(&mut k, &KONAMI), 1);
+        assert_eq!(run(&mut k, &KONAMI), 1);
+        // an extra ↑ first still counts (↑↑↑↓↓…)
+        assert_eq!(run(&mut k, &[Up]), 0);
+        assert_eq!(run(&mut k, &KONAMI), 1);
+        // a wrong key part way resets it
+        assert_eq!(
+            run(
+                &mut k,
+                &[Up, Up, Down, Other, Down, Left, Right, Left, Right, B, A]
+            ),
+            0
+        );
+        assert_eq!(
+            run(
+                &mut k,
+                &[Up, Up, Down, Down, Left, Right, Left, Right, A, B]
+            ),
+            0
+        );
+        // and the code after a near miss still works
+        assert_eq!(
+            run(
+                &mut k,
+                &[
+                    Up, Up, Down, Down, Up, Up, Down, Down, Left, Right, Left, Right, B, A
+                ]
+            ),
+            1
+        );
+    }
 
     // fourTwenty.test.ts, sixtyNine.test.ts, sixtySeven.test.ts: the same cases for each number
     fn run(target: f64, answers: &[Option<f64>]) -> usize {

@@ -155,12 +155,22 @@ private struct Composer: View {
                 LiveAnswerView(model: model)
                     .frame(minWidth: 120, alignment: .trailing)
                     .layoutPriority(2)
+                    // where the black hole and the π digits find the answer (window content, top-left origin)
+                    .background(GeometryReader { g in
+                        Color.clear
+                            .onAppear { model.answerFrame = g.frame(in: .global) }
+                            .onChange(of: g.frame(in: .global)) { model.answerFrame = $0 }
+                    })
             }
             .padding(.vertical, 8)
             .padding(.horizontal, Theme.gutter)
             .frame(width: geo.size.width, height: Theme.composerHeight)
         }
         .frame(height: Theme.composerHeight)
+        .overlay(alignment: .leading) {
+            // Pi Day (native only): a small slice of pie in the gutter beside the line, all March 14
+            if BarModel.piDay { PieSlice().padding(.leading, 3).offset(y: -1) }
+        }
         .overlay {
             EdgeTools(model: model, angleRad: model.angleRad, fractions: model.fractions, sigFigMode: model.sigFigMode,
                       shown: hover || model.edgeFocus)
@@ -206,6 +216,28 @@ private struct Composer: View {
     }
 }
 
+/// Pi Day's slice: a 60° wedge with its crust, muted, never in the way of a click
+private struct PieSlice: View {
+    var body: some View {
+        ZStack {
+            Path { p in
+                p.move(to: CGPoint(x: 1, y: 8.5))
+                p.addArc(center: CGPoint(x: 1, y: 8.5), radius: 8.5, startAngle: .degrees(-60), endAngle: .degrees(0), clockwise: false)
+                p.closeSubpath()
+            }
+            .fill(Color(red: 0.93, green: 0.72, blue: 0.42))
+            Path { p in
+                p.addArc(center: CGPoint(x: 1, y: 8.5), radius: 7.8, startAngle: .degrees(-60), endAngle: .degrees(0), clockwise: false)
+            }
+            .stroke(Color(red: 0.72, green: 0.45, blue: 0.2), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+        }
+        .frame(width: 10, height: 9)
+        .opacity(0.75)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 struct LiveAnswerView: View {
     @ObservedObject var model: BarModel
 
@@ -215,6 +247,9 @@ struct LiveAnswerView: View {
             content
         }
         .lineLimit(1)
+        // the black hole has it for a moment (EggOverlay `void`); the answer underneath never changes
+        .opacity(model.answerVeiled ? 0 : 1)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.answerVeiled)
     }
 
     @ViewBuilder private var content: some View {
