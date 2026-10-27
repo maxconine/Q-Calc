@@ -26,3 +26,7 @@ roxmltree = "0.20"
 
 [lints]
 workspace = true
+
+[[example]]
+name = "engine_bench"
+path = "../bench/engine_bench.rs"

@@ -122,6 +122,8 @@ final class BarModel: ObservableObject {
     var caretAtEnd: (() -> Bool)?
     /// replaces the whole line as typing would (symbols, undo), for scripted input
     var setField: ((String) -> Void)?
+    /// dev builds only: told each time the live answer lands for a typed line (DevBench's keystroke timing)
+    var onLive: ((String) -> Void)?
 
     private var deleted: (row: HistoryRow, index: Int)?
     private var lastLiveText = ""
@@ -365,6 +367,7 @@ final class BarModel: ObservableObject {
         if !answer.isBlank { lastLiveText = typed }
         checkEffects(answer)
         refreshTypeset()
+        onLive?(typed)
     }
 
     /// The typeset row exactly when the web app shows it (QuickCalc.tsx `typstShown`): the setting on, no command or
