@@ -15,6 +15,132 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+/// FUZZ_NUMERIC set: every input is a function or operator at extreme numbers (`nCr(1e21, 4)`).
+fn numeric() -> bool {
+    static NUMERIC: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *NUMERIC.get_or_init(|| std::env::var_os("FUZZ_NUMERIC").is_some())
+}
+
+const EXTREMES: &[&str] = &[
+    "0",
+    "-0",
+    "1",
+    "-1",
+    "2",
+    "0.5",
+    "-0.5",
+    "3.7",
+    "170",
+    "171",
+    "1000",
+    "10000",
+    "1e6",
+    "1e9",
+    "1e15",
+    "9007199254740992",
+    "9007199254740993",
+    "1e16",
+    "1e17",
+    "1e20",
+    "1e21",
+    "1e100",
+    "1e300",
+    "-1e300",
+    "1e308",
+    "1e-300",
+    "5e-324",
+    "1e-10",
+    "pi",
+    "e",
+    "i",
+    "2+3i",
+    "-i",
+    "inf",
+    "-inf",
+    "NaN",
+    "[1,2,3]",
+    "[]",
+    "1 m",
+    "(1/3)",
+    "2^1023",
+    "-2^1023",
+    "999999999999999999999",
+    "0.1",
+    "123456789",
+    "-123456789",
+    "1e-5",
+    "45°",
+];
+
+const FORMS: &[&str] = &[
+    "{a}!",
+    "{a}!!",
+    "{a}^{b}",
+    "{a}^{b}^{c}",
+    "{a} mod {b}",
+    "{a} nCr {b}",
+    "{a} nPr {b}",
+    "{a}/{b}",
+    "{a} % of {b}",
+    "{a}%",
+    "{a} to hex",
+    "{a} in binary",
+    "{a} to octal",
+    "sum(1/k^2, k, 1, {a})",
+    "sum(k, k, {a}, {b})",
+    "∫ sin(x) dx from {a} to {b}",
+    "integral of x^2 from {a} to {b}",
+    "Σ_(n=1)^{a} n",
+    "d/dx sin(x) at x={a}",
+    "solve x^2 = {a}",
+    "solve {a}x + {b} = 0",
+    "{a} m to ft",
+    "{a} kg in lb",
+    "{a} °C to °F",
+    "{a} USD in EUR",
+    "{a} days from now",
+    "{a} seconds in years",
+    "round({a}, {b})",
+    "{a} sig figs",
+    "[{a},{b};{c},1]^-1",
+    "det([{a},{b};{c},{a}])",
+    "[{a},{b}]*[{c};{a}]",
+    "range({a}, {b})",
+    "{a}:{b}",
+    "lim x->{a} sin(x)/x",
+    "gcd({a}, {b})",
+    "lcm({a}, {b}, {c})",
+    "{a} as fraction",
+    "{a} ± {b}",
+    "sqrt({a}) to {b} sig figs",
+    "graph y = {a}x + {b}",
+    "x = {a}",
+    "f(x) = {a}x",
+    "{a}e{b}",
+    "10^{a}",
+    "log({a}, {b})",
+];
+
+/// One of [`FORMS`], or a function from the engine's scope, at numbers from [`EXTREMES`].
+fn numeric_case(r: &mut Rng) -> String {
+    let mut pick = || *r.pick(EXTREMES);
+    let (a, b, c) = (pick(), pick(), pick());
+    if r.chance(50) {
+        let names: Vec<&str> = qcalc_core::scientific::NAMES.split('|').collect();
+        let f = *r.pick(&names);
+        let args = match r.below(4) {
+            0 => a.to_string(),
+            1 | 2 => format!("{a}, {b}"),
+            _ => format!("{a}, {b}, {c}"),
+        };
+        return format!("{f}({args})");
+    }
+    r.pick(FORMS)
+        .replace("{a}", a)
+        .replace("{b}", b)
+        .replace("{c}", c)
+}
+
 /// FUZZ_SHORT set: inputs stay under 300 characters, the lengths people type.
 fn short() -> bool {
     static SHORT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
@@ -834,7 +960,8 @@ fn main() {
         .spawn(move || {
             let mut r = Rng(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1);
             for _ in 0..cases {
-                let input = match r.below(10) {
+                let input = match if numeric() { 99 } else { r.below(10) } {
+                    99 => numeric_case(&mut r),
                     0 => pathological(&mut r),
                     1 => {
                         let n = 1 + r.below(12);
