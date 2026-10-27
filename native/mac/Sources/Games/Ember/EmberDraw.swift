@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import QCalcCore
 
 // emberDraw.ts on Canvas2D: tiles, pools, mechanics, the two characters, particles, glow and the dark. It draws
 // ONE stage; world units throughout, one transform maps the camera's rect onto the canvas, and the backdrop and
@@ -546,7 +547,7 @@ final class EmberRenderer {
             mip = -1
         }
         let v = view
-        let bv = emberBaseView(W / H)
+        let bv = baseViewOf(W / H)
         let k1 = W / bv.0
         mip = mipFor(v.k / k1, mip)
         let kb = k1 * MIPS[mip]
@@ -880,8 +881,8 @@ final class EmberRenderer {
             pos[i] = EPoint(x: px[i], y: py[i])
         }
 
-        let target = emberCameraFor(level.w, level.h, px[0], py[0], px[1], py[1], W / H)
-        let eased = emberEaseCamera(cam, target, dt * 60)
+        let target = camFor(level.w, level.h, px[0], py[0], px[1], py[1], W / H)
+        let eased = camEase(cam, target, dt * 60)
         cam = eased
 
         var sx = 0.0, sy = 0.0
@@ -1129,15 +1130,15 @@ final class EmberRenderer {
 }
 
 /// the camera from Rust (emberCamera.ts)
-func emberCameraFor(_ w: Double, _ h: Double, _ ax: Double, _ ay: Double, _ bx: Double, _ by: Double, _ aspect: Double) -> Cam {
+func camFor(_ w: Double, _ h: Double, _ ax: Double, _ ay: Double, _ bx: Double, _ by: Double, _ aspect: Double) -> Cam {
     Cam(emberCameraFor(stageW: w, stageH: h, ax: ax, ay: ay, bx: bx, by: by, aspect: aspect)) ?? Cam(x: 0, y: 0, w: 640, h: 360, zoom: 1)
 }
 
-func emberEaseCamera(_ from: Cam?, _ to: Cam, _ ticks: Double) -> Cam {
+func camEase(_ from: Cam?, _ to: Cam, _ ticks: Double) -> Cam {
     Cam(emberEaseCamera(from: from?.list ?? [], to: to.list, ticks: ticks)) ?? to
 }
 
-func emberBaseView(_ aspect: Double) -> (Double, Double) {
+func baseViewOf(_ aspect: Double) -> (Double, Double) {
     let v = emberBaseView(aspect: aspect)
     return v.count >= 2 ? (v[0], v[1]) : (640, 360)
 }

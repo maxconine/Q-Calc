@@ -192,7 +192,7 @@ final class EmberModel: ObservableObject {
         synth.play(f.sounds)
         if f.playing, let cur = EmberJSON.state(f.stateJson), let st = stage(f.level, cur.stage) {
             let prev = EmberJSON.state(f.prevJson)
-            draw = EmberDrawInput(level: st, prev: prev, cur: cur, world: EmberWorldNow(tiles: f.tiles, beams: f.beams, gates: f.gates),
+            draw = EmberDrawInput(level: st, prev: prev, cur: cur, world: EmberWorldNow(tiles: [UInt8](f.tiles), beams: f.beams, gates: f.gates),
                                   alpha: f.alpha, events: (draw?.events ?? []) + EmberJSON.events(f.eventsJson), nowMs: GameTime.now(),
                                   opts: DrawOpts(me: f.me.map(Int.init), reduceMotion: reduceMotion))
         } else {
