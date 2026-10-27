@@ -42,7 +42,7 @@ fn main() {
         now_ms: now,
     };
     let t = Instant::now();
-    let context = engine.context_from_history(rows.clone(), view.clone());
+    let context = engine.context_from_history(rows.clone(), view);
     eprintln!("rows {} context {:.3} ms", rows.len(), t.elapsed().as_secs_f64() * 1000.0);
     let options = qcalc_ffi::default_eval_options();
     let core_options = qcalc_core::EvaluateOptions::default();

@@ -489,7 +489,7 @@ fn vm() -> serde_json::Value {
     }
     let mut regions: Vec<(usize, (usize, usize, bool, usize))> =
         by_base.into_iter().filter(|(_, v)| v.0 > 0).collect();
-    regions.sort_by(|a, b| b.1.3.cmp(&a.1.3));
+    regions.sort_by_key(|r| std::cmp::Reverse(r.1.3));
     let label = |base: usize, v: &(usize, usize, bool, usize)| {
         if heap_bases.contains(&base) {
             "heap"
@@ -526,7 +526,7 @@ fn vm() -> serde_json::Value {
         }).unwrap_or_default(),
         "big": on::BIGS.lock().map(|b| {
             let mut v: Vec<_> = b.iter().map(|e| (e.1, e.2.clone())).collect();
-            v.sort_by(|a, b| b.0.cmp(&a.0));
+            v.sort_by_key(|e| std::cmp::Reverse(e.0));
             v.into_iter().map(|(n, w)| serde_json::json!({"size": n, "at": w})).collect::<Vec<_>>()
         }).unwrap_or_default(),
     })
