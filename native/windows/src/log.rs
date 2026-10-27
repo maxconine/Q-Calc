@@ -135,3 +135,13 @@ pub fn tell(text: &str) {
 pub fn tell(text: &str) {
     eprintln!("{text}");
 }
+
+/// `-<name>` when QCALC_INSTANCE is set, else empty: a dev copy run with it takes its own single-instance mutex and
+/// bench pipe (`qcalc-bench-<name>`), so several test copies can run side by side without handing off to each other.
+pub fn instance_suffix() -> &'static str {
+    static SUFFIX: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    SUFFIX.get_or_init(|| match std::env::var("QCALC_INSTANCE") {
+        Ok(name) if !name.is_empty() => format!("-{name}"),
+        _ => String::new(),
+    })
+}
