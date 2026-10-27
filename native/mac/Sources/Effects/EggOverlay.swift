@@ -117,6 +117,9 @@ final class EggOverlay {
             self.rolled = nil
         }
         kind = nil
+        // the puffs are made again for the next 420: kept, they held ~35 MB (Core Image's and Core Animation's
+        // copies) for good after the first
+        Self.puffImages.removeAll()
         guard let panel else { return }
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
