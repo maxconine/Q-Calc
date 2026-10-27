@@ -704,6 +704,7 @@ impl App {
                 } else {
                     self.bar.focused = true;
                 }
+                ime::forget();
                 self.model.touch();
             }
             WM_CLOSE => self.ops.push(Op::Hide),
@@ -763,6 +764,7 @@ impl App {
                 });
             }
             WM_IME_STARTCOMPOSITION => {
+                ime::forget();
                 self.place_ime();
                 return Some(LRESULT(0));
             }
@@ -897,7 +899,7 @@ impl App {
     fn place_ime(&self) {
         let s = self.bar.scale();
         let r = self.bar.layout.field;
-        ime::place(
+        ime::place_if_moved(
             self.bar.hwnd,
             (self.bar.field_view.caret_at * s) as i32,
             ((r.y + r.h - 6.0) * s) as i32,
