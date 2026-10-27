@@ -304,7 +304,10 @@ pub fn parse_inbox_frame(data: &str) -> Option<InboxEvent> {
 pub enum ThreadCommand {
     List,
     /// `to` as typed ("" while it's still to come), `name` cleaned ("" when it can't be a name).
-    Open { to: String, name: String },
+    Open {
+        to: String,
+        name: String,
+    },
 }
 
 /// The bar's conversation commands; anything after the name means it's not one.
@@ -358,12 +361,7 @@ pub fn thread_contacts(history: &[String], m: &Messaging) -> Vec<String> {
 /// Tab after `messages`, `messages with` or `open messages with`: the rest of a name from `contacts`, else the
 /// rest of `with` after a bare `messages`.
 pub fn messages_completion(text: &str, contacts: &[String]) -> String {
-    static TO: Lazy = Lazy::new(|| {
-        js(
-            r"^\s*(open\s+)?messages\s+(with\s+)?([a-z0-9_-]+)$",
-            "i",
-        )
-    });
+    static TO: Lazy = Lazy::new(|| js(r"^\s*(open\s+)?messages\s+(with\s+)?([a-z0-9_-]+)$", "i"));
     let Some(c) = TO.captures(text).ok().flatten() else {
         return String::new();
     };
@@ -403,7 +401,10 @@ mod tests {
                 name: name.into(),
             })
         };
-        assert_eq!(parse_messages_command("messages"), Some(ThreadCommand::List));
+        assert_eq!(
+            parse_messages_command("messages"),
+            Some(ThreadCommand::List)
+        );
         assert_eq!(
             parse_messages_command("  Open Messages "),
             Some(ThreadCommand::List)
@@ -417,7 +418,10 @@ mod tests {
             parse_messages_command("open messages with max"),
             open("max", "max")
         );
-        assert_eq!(parse_messages_command("open messages max"), open("max", "max"));
+        assert_eq!(
+            parse_messages_command("open messages max"),
+            open("max", "max")
+        );
         assert_eq!(parse_messages_command("messages with"), open("", ""));
         assert_eq!(parse_messages_command("messages with "), open("", ""));
         assert_eq!(parse_messages_command("messages x"), open("x", ""));

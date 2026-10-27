@@ -91,7 +91,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         switch verb {
         case "show": overlay.show(from: "dev")
         case "hide": overlay.hide(because: "dev")
-        case "settings": showSettings()
+        case "settings":
+            showSettings()
+            // settings:<tab index> opens that tab (2 is Messages)
+            if let i = Int(arg), let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first,
+               tabs.tabViewItems.indices.contains(i) { tabs.selectedTabViewItemIndex = i }
         case "theme": AppSettings.shared.setTheme(arg, notifyWeb: true)
         case "type": overlay.model.setField?(arg)
         case "enter": overlay.model.enter()
@@ -113,6 +117,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // (points from its top-left)
         case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView)?.insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
         case "click": DevSnapshot.click(arg)
+        // what settings' Remove / Unblock does for a name
+        case "forget": Messages.shared.forget(arg)
         case "bench": DevBench.run(spec: arg, model: overlay.model)
         // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i
         case "paste":

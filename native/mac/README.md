@@ -82,6 +82,8 @@ Sources/Bar       BarModel (state and keys), BarView, InputField (NSTextView), G
                   RadicalText, MathText (the Typst hook)
 Sources/Engine    EngineService (QCalcCore glue, graph fallback), EngineThread (lanes, newest wins)
 Sources/Games     GameWindowController, EffectOverlay
+Sources/Messages  MessageHistory (each conversation, kept in messages.json), MessageThreads (`messages`, the thread
+                  view under the bar, the settings History rows); native only
 Sources/Settings  UnitSettings (choices from the engine)
 Sources/Sheets    SheetData
 Sources/Shared    symlinks into macos/
