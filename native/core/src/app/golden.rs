@@ -445,6 +445,7 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             let [keys, typed] = ob::cheat_sheet(a(0).as_str(), b(1), labels.as_ref());
             json!([keys, typed])
         }
+        ("lib/onboarding", "nativeCheats") => json!(ob::native_type_cheats()),
         ("lib/onboarding", "emptyOnboarding") => to(&ob::empty_onboarding()),
         ("lib/onboarding", "exampleAnswer") => {
             let line: Option<LineResult> = of(&a(0));

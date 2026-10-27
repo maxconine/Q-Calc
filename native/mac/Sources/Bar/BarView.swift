@@ -69,7 +69,7 @@ struct BarView: View {
     // what sits above the line (.tape): the cheat sheet, the games list, or the history
     @ViewBuilder private var above: some View {
         if model.helpShown {
-            TapeBox { HelpSheet() }
+            TapeBox { HelpSheet(logic: model.logic) }
         } else if model.gamesShown {
             TapeBox { GamesSheet(model: model) }
         } else if !model.visibleRange.isEmpty {
@@ -809,6 +809,7 @@ private struct GamesSheet: View {
 
 /// `?` / `help`: the cheat sheet (cheatSheet + hostCheats), its keys following the user's keybinds
 private struct HelpSheet: View {
+    let logic: AppLogic
     @ObservedObject private var settings = AppSettings.shared
 
     private func key(_ action: String) -> String { KeyActions.title(KeyActions.chord(action, in: settings.keybinds)) }
@@ -824,21 +825,45 @@ private struct HelpSheet: View {
         ]
     }
 
-    private let right: [(String, String)] = [
-        ("ft to cm", "units"), ("80 + 15%", "percent"), ("+/- -/+", "± ∓ uncertainty"), ("x = 5", "variables"),
-        ("x^2 = 2", "solve"), ("sys 2", "systems"), ("graph x^2", "plot"), ("GCF LCM", "factors"),
-        ("sum n, n=1..9", "Σ sums"), ("tutorial", "the walkthrough"), ("?", "this list"),
-    ]
+    /// the web's things to type with the Mac app's own (messages, sharing, konami) before `?` (core `nativeCheats`)
+    private var right: [(String, String)] {
+        if let rows = logic.call("lib/onboarding", "nativeCheats", []) as? [[String]], !rows.isEmpty {
+            // the page collapses the core's double spaces (`GCF  LCM`), so this does too
+            return rows.compactMap { $0.count == 2 ? ($0[0].replacingOccurrences(of: "  ", with: " "), $0[1]) : nil }
+        }
+        return [
+            ("ft to cm", "units"), ("80 + 15%", "percent"), ("+/- -/+", "± ∓ uncertainty"), ("x = 5", "variables"),
+            ("x^2 = 2", "solve"), ("sys 2", "systems"), ("graph x^2", "plot"), ("GCF LCM", "factors"),
+            ("sum n, n=1..9", "Σ sums"), ("tutorial", "the walkthrough"), ("?", "this list"),
+        ]
+    }
 
     var body: some View {
+        Group {
+            if #available(macOS 13, *) {
+                // native only: a bar too narrow for both columns' labels (they'd end in "…" at 340 pt) lists them
+                // in one column, the keys first, scrolling past 12 rows
+                ViewThatFits(in: .horizontal) {
+                    twoColumns
+                    ScrollView(.vertical) { column(left + right, keyWidth: 96).padding(.vertical, 8) }
+                        // past 12 rows, half of the 12th shows, so it reads as more below
+                        .frame(height: left.count + right.count > 12 ? 11.5 * 28 + 8 : CGFloat(left.count + right.count) * 28 + 16)
+                }
+            } else {
+                twoColumns
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Shortcuts")
+    }
+
+    private var twoColumns: some View {
         // .cheats: two columns 24 pt apart; key columns at least 64 and 96 pt plus 8, 12 pt to the label
         HStack(alignment: .top, spacing: 24) {
             column(left, keyWidth: 64)
             column(right, keyWidth: 96)
         }
         .padding(.vertical, 8)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Shortcuts")
     }
 
     // a subgrid in the web: the key column is as wide as its widest key, and every label lines up after it

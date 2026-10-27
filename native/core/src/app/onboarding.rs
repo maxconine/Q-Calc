@@ -332,6 +332,24 @@ const CHEAT_TYPE: [(&str, &str); 11] = [
     ("?", "this list"),
 ];
 
+/// The Mac app's own things to type (native only; the web app has no messages, sharing or CRT look), listed in
+/// `?` before its last row.
+pub const NATIVE_CHEATS: [(&str, &str); 4] = [
+    ("messages", "your conversations"),
+    ("paste to max", "share what’s copied"),
+    ("send file to max", "share a file"),
+    ("konami", "an old look"),
+];
+
+/// The `?` sheet's things-to-type column in the Mac app: the web's rows with `NATIVE_CHEATS` before `?`.
+pub fn native_type_cheats() -> Vec<CheatRow> {
+    let own = |(a, b): &(&str, &str)| (a.to_string(), b.to_string());
+    let mut rows: Vec<CheatRow> = CHEAT_TYPE.iter().map(own).collect();
+    let at = rows.len() - 1;
+    rows.splice(at..at, NATIVE_CHEATS.iter().map(own));
+    rows
+}
+
 fn row_actions(label: &str) -> Option<&'static [KeyAction]> {
     Some(match label {
         "copy answer / line" => &[KeyAction::CopyAnswer, KeyAction::CopyLine],
@@ -378,4 +396,27 @@ pub fn cheat_sheet(
             .collect();
     }
     [keys, CHEAT_TYPE.iter().map(own).collect()]
+}
+
+#[cfg(test)]
+mod native_cheat_tests {
+    use super::*;
+
+    #[test]
+    fn native_rows_sit_before_the_last() {
+        let rows = native_type_cheats();
+        assert_eq!(rows.len(), CHEAT_TYPE.len() + NATIVE_CHEATS.len());
+        assert_eq!(rows.last().unwrap().0, "?");
+        // the web's own column is unchanged
+        assert_eq!(cheat_sheet(None, true, None)[1].len(), CHEAT_TYPE.len());
+    }
+
+    #[test]
+    fn native_rows_are_commands_the_app_reads() {
+        use crate::app::messaging::{parse_messages_command, parse_share_command};
+        assert!(parse_messages_command("messages").is_some());
+        assert!(parse_share_command("paste to max").is_some());
+        assert!(parse_share_command("send file to max").is_some());
+        assert!(crate::games::eggs::is_konami_line("konami"));
+    }
 }

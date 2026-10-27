@@ -83,7 +83,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Graph: head, plot, grid, ticks, curve, pan, zoom, reset | ✅ | `graph` pair: same layout, colours and sizes |
 | Graph: home view, roots and critical points, hover readout | ✅ | `graphHome`, `graphTicks`, `graphReadoutY`, `GraphResult` roots and critical points; graph pair matches |
 | Systems panel (`sys`) | ✅ | `sys N` opens N fields (`sysCommand`), solved live by `engine/system` `solveLive`, ↵ / ↑ ↓ between fields (arrows need macOS 14; Tab on 13), saved as a `system` row |
-| Cheat sheet (`?`, `help`) | ✅ | `help` pair, keys follow the keybinds |
+| Cheat sheet (`?`, `help`) | ✅ | `help` pair, keys follow the keybinds. **Native only:** the things-to-type column also lists `messages`, `paste to max`, `send file to max` and `konami` before `?` (core `native_type_cheats`); a bar too narrow for both columns' labels (they ended in "…" at 340 pt) shows one column that scrolls past 12 rows (macOS 13+; 12 keeps two). Pictured light and dark at 680 and 340 pt |
 | Games list | ✅ | `games` pair (↑ from the bottom, ↓ off the end) |
 | Edge tools with key tooltips | ✅ | hover-only, ink pills after 450 ms |
 | Message cards with reply, ask cards, 10 s auto-hide, held on hover/focus/draft | ✅ | `banner` pair; expiry verified at 11 s |
