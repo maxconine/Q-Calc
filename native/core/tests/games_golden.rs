@@ -218,6 +218,124 @@ fn every_walkthrough_matches_the_ts_step_for_step() {
     }
 }
 
+/// emberEngine.test.ts, emberProtocol.test.ts and emberCamera.test.ts: every engine call they made, replayed
+fn replay_calls(name: &str) -> usize {
+    use qcalc_core::games::ember::engine::{Carry, init_state, respawn};
+    use qcalc_core::games::ember::json::state_from_json;
+    use std::collections::{HashMap, HashSet};
+    let defs: Vec<qcalc_core::games::ember::LevelDef> =
+        serde_json::from_value(read(&format!("ember-calls/{name}.defs.json"))).unwrap();
+    let levels: Vec<Option<Level>> = defs.iter().map(|d| compile_level(d).ok()).collect();
+    let text = std::fs::read_to_string(dir().join(format!("ember-calls/{name}.jsonl"))).unwrap();
+    let lines: Vec<Value> = text
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    // the states some later call starts from by reference
+    let mut wanted: HashSet<u64> = HashSet::new();
+    for l in &lines {
+        let a = l.as_array().unwrap();
+        if a[0] == "r" {
+            wanted.insert(a[1].as_u64().unwrap() - 1);
+        } else if (a[2] == "step" || a[2] == "respawn") && a[4].is_u64() {
+            wanted.insert(a[4].as_u64().unwrap());
+        }
+    }
+    let mut kept: HashMap<u64, GameState> = HashMap::new();
+    let mut checked = 0;
+    let input = |v: &Value| [v[0].as_i64().unwrap(), v[1].as_i64().unwrap()];
+    for l in &lines {
+        let a = l.as_array().unwrap();
+        if a[0] == "r" {
+            let first = a[1].as_u64().unwrap();
+            let level = levels[a[2].as_u64().unwrap() as usize].as_ref().unwrap();
+            let n = a[3].as_u64().unwrap();
+            let keys = input(&a[4]);
+            let hs: HashMap<u64, &str> = a[5]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|h| (h[0].as_u64().unwrap(), h[1].as_str().unwrap()))
+                .collect();
+            let mut s = kept
+                .get(&(first - 1))
+                .unwrap_or_else(|| panic!("{name}: no state {}", first - 1))
+                .clone();
+            for k in 0..n {
+                s = step(level, &s, keys);
+                if let Some(h) = hs.get(&k) {
+                    assert_eq!(
+                        state_hash(&s),
+                        *h,
+                        "{name}: call {} (a run from {first})\n{}",
+                        first + k,
+                        to_json(&s)
+                    );
+                    checked += 1;
+                }
+                if wanted.contains(&(first + k)) {
+                    kept.insert(first + k, s.clone());
+                }
+            }
+            continue;
+        }
+        let id = a[1].as_u64().unwrap();
+        let Some(level) = levels[a[3].as_u64().unwrap() as usize].as_ref() else {
+            continue;
+        };
+        let from = |v: &Value| -> GameState {
+            if let Some(r) = v.as_u64() {
+                kept.get(&r)
+                    .unwrap_or_else(|| panic!("{name}: no state {r}"))
+                    .clone()
+            } else {
+                state_from_json(v).unwrap()
+            }
+        };
+        let (out, want) = match a[2].as_str().unwrap() {
+            "step" => (step(level, &from(&a[4]), input(&a[5])), &a[6]),
+            "respawn" => (respawn(level, &from(&a[4])), &a[5]),
+            "init" => (init_state(level, a[4].as_i64().unwrap()), &a[5]),
+            _ => {
+                let carry = a[5].as_object().map(|o| Carry {
+                    tick: o["tick"].as_i64().unwrap(),
+                    deaths: o["deaths"].as_i64().unwrap(),
+                    banked: [
+                        o["banked"][0].as_i64().unwrap(),
+                        o["banked"][1].as_i64().unwrap(),
+                    ],
+                });
+                (
+                    start_stage(level, a[4].as_u64().unwrap() as usize, carry),
+                    &a[6],
+                )
+            }
+        };
+        assert_eq!(
+            state_hash(&out),
+            want.as_str().unwrap(),
+            "{name}: call {id} ({})\n{}",
+            a[2],
+            to_json(&out)
+        );
+        checked += 1;
+        if wanted.contains(&id) {
+            kept.insert(id, out);
+        }
+    }
+    checked
+}
+
+#[test]
+fn the_engine_tests_calls_replay() {
+    for name in ["emberEngine", "emberProtocol", "emberCamera"] {
+        let n = replay_calls(name);
+        eprintln!("{name}: {n} calls checked");
+        assert!(n > 0, "{name}");
+    }
+}
+
 #[test]
 fn the_small_helpers_match() {
     let fx = read("ember-helpers.json");

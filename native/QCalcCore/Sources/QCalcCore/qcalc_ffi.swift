@@ -1024,6 +1024,488 @@ public func FfiConverterTypeConnect4Game_lower(_ value: Connect4Game) -> UInt64 
 
 
 /**
+ * The three gates: fires once per settled 420, 67 or 69, and again only after the answer was something else.
+ */
+public protocol EggGateProtocol: AnyObject, Sendable {
+    
+    /**
+     * the answer as it settled (nil when it isn't a plain number): the effect to play, if any
+     */
+    func settle(n: Double?)  -> EggKind?
+    
+}
+/**
+ * The three gates: fires once per settled 420, 67 or 69, and again only after the answer was something else.
+ */
+open class EggGate: EggGateProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_egggate(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_egggate_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_egggate(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * the answer as it settled (nil when it isn't a plain number): the effect to play, if any
+     */
+open func settle(n: Double?) -> EggKind?  {
+    return try!  FfiConverterOptionTypeEggKind.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_egggate_settle(
+            self.uniffiCloneHandle(),
+        FfiConverterOptionDouble.lower(n),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEggGate: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = EggGate
+
+    public static func lift(_ handle: UInt64) throws -> EggGate {
+        return EggGate(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: EggGate) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EggGate {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: EggGate, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEggGate_lift(_ handle: UInt64) throws -> EggGate {
+    return try FfiConverterTypeEggGate.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEggGate_lower(_ value: EggGate) -> UInt64 {
+    return FfiConverterTypeEggGate.lower(value)
+}
+
+
+
+
+
+
+/**
+ * An ember & frost game, local (both on one keyboard) or online (the host is ember), with the panel's hud and
+ * the progress file.
+ */
+public protocol EmberMatchProtocol: AnyObject, Sendable {
+    
+    /**
+     * held keys: local per player (0 ember, 1 frost), online this side's character
+     */
+    func keys(player: UInt8, bits: Int64) 
+    
+    func leave() 
+    
+    /**
+     * every level for the select screen, with the best saved for it
+     */
+    func levels()  -> [EmberLevelCard]
+    
+    func menu() 
+    
+    func next() 
+    
+    func pick(index: Int64) 
+    
+    func play() 
+    
+    /**
+     * the progress file as saveProgress writes it, under the save key `ember_save_key()`
+     */
+    func progressJson()  -> String
+    
+    func receive(text: String, now: Double) 
+    
+    func release() 
+    
+    func restart() 
+    
+    func retry() 
+    
+    /**
+     * a compiled stage as the TS's JSON (the renderer's `Stage`), nil when there's no such stage
+     */
+    func stageJson(level: UInt32, stage: UInt32)  -> String?
+    
+    func takeOutbox()  -> [String]
+    
+    func tick(now: Double)  -> EmberFrame?
+    
+    /**
+     * M: the mute switch, kept in the progress file
+     */
+    func toggleMute() 
+    
+}
+/**
+ * An ember & frost game, local (both on one keyboard) or online (the host is ember), with the panel's hud and
+ * the progress file.
+ */
+open class EmberMatch: EmberMatchProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_embermatch(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_embermatch(handle, $0) }
+    }
+
+    
+    /**
+     * both characters on one keyboard. `progress`: the saved progress file, if any
+     */
+public static func local(now: Double, progress: String?) -> EmberMatch  {
+    return try!  FfiConverterTypeEmberMatch_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_embermatch_local(
+        FfiConverterDouble.lower(now),
+        FfiConverterOptionString.lower(progress),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * host plays ember (fire), guest frost
+     */
+public static func online(host: Bool, now: Double, progress: String?) -> EmberMatch  {
+    return try!  FfiConverterTypeEmberMatch_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_embermatch_online(
+        FfiConverterBool.lower(host),
+        FfiConverterDouble.lower(now),
+        FfiConverterOptionString.lower(progress),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+    /**
+     * held keys: local per player (0 ember, 1 frost), online this side's character
+     */
+open func keys(player: UInt8, bits: Int64)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_keys(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt8.lower(player),
+        FfiConverterInt64.lower(bits),uniffiCallStatus
+    )
+}
+}
+    
+open func leave()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_leave(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * every level for the select screen, with the best saved for it
+     */
+open func levels() -> [EmberLevelCard]  {
+    return try!  FfiConverterSequenceTypeEmberLevelCard.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_levels(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func menu()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_menu(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func next()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_next(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func pick(index: Int64)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_pick(
+            self.uniffiCloneHandle(),
+        FfiConverterInt64.lower(index),uniffiCallStatus
+    )
+}
+}
+    
+open func play()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_play(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * the progress file as saveProgress writes it, under the save key `ember_save_key()`
+     */
+open func progressJson() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_progress_json(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func receive(text: String, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_receive(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(text),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func release()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_release(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func restart()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_restart(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func retry()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_retry(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * a compiled stage as the TS's JSON (the renderer's `Stage`), nil when there's no such stage
+     */
+open func stageJson(level: UInt32, stage: UInt32) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_stage_json(
+            self.uniffiCloneHandle(),
+        FfiConverterUInt32.lower(level),
+        FfiConverterUInt32.lower(stage),uniffiCallStatus
+    )
+})
+}
+    
+open func takeOutbox() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_take_outbox(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func tick(now: Double) -> EmberFrame?  {
+    return try!  FfiConverterOptionTypeEmberFrame.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_tick(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * M: the mute switch, kept in the progress file
+     */
+open func toggleMute()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_embermatch_toggle_mute(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberMatch: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = EmberMatch
+
+    public static func lift(_ handle: UInt64) throws -> EmberMatch {
+        return EmberMatch(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: EmberMatch) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberMatch {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: EmberMatch, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberMatch_lift(_ handle: UInt64) throws -> EmberMatch {
+    return try FfiConverterTypeEmberMatch.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberMatch_lower(_ value: EmberMatch) -> UInt64 {
+    return FfiConverterTypeEmberMatch.lower(value)
+}
+
+
+
+
+
+
+/**
  * The engine: settings-independent state (rates, its threads), shared by every call.
  */
 public protocol EngineProtocol: AnyObject, Sendable {
@@ -2760,6 +3242,239 @@ public func FfiConverterTypeRelayPeer_lower(_ value: RelayPeer) -> UInt64 {
 
 
 /**
+ * A trails match: against the computer or a friend on one keyboard, or online.
+ */
+public protocol TrailsMatchProtocol: AnyObject, Sendable {
+    
+    func key(key: TrailsKey, `repeat`: Bool, now: Double) 
+    
+    /**
+     * tell the other side we're going
+     */
+    func leave() 
+    
+    /**
+     * a message from the link
+     */
+    func receive(text: String, now: Double) 
+    
+    /**
+     * the head line under the name: 'one keyboard', 'vs the computer · hard'
+     */
+    func sub()  -> String
+    
+    /**
+     * messages to send, oldest first
+     */
+    func takeOutbox()  -> [String]
+    
+    func tick(now: Double)  -> TrailsFrame?
+    
+}
+/**
+ * A trails match: against the computer or a friend on one keyboard, or online.
+ */
+open class TrailsMatch: TrailsMatchProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_trailsmatch(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_trailsmatch(handle, $0) }
+    }
+
+    
+    /**
+     * `vs`: the lobby's choice, 0 easy, 1 normal, 2 hard, 3 two players on one keyboard
+     */
+public static func local(vs: UInt32, now: Double, seed: UInt64) -> TrailsMatch  {
+    return try!  FfiConverterTypeTrailsMatch_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_trailsmatch_local(
+        FfiConverterUInt32.lower(vs),
+        FfiConverterDouble.lower(now),
+        FfiConverterUInt64.lower(seed),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * the host is the left cycle; `peer` is the friend's name for the lines
+     */
+public static func online(host: Bool, peer: String, now: Double) -> TrailsMatch  {
+    return try!  FfiConverterTypeTrailsMatch_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_trailsmatch_online(
+        FfiConverterBool.lower(host),
+        FfiConverterString.lower(peer),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+open func key(key: TrailsKey, `repeat`: Bool, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_trailsmatch_key(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeTrailsKey_lower(key),
+        FfiConverterBool.lower(`repeat`),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * tell the other side we're going
+     */
+open func leave()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_trailsmatch_leave(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * a message from the link
+     */
+open func receive(text: String, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_trailsmatch_receive(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(text),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+    /**
+     * the head line under the name: 'one keyboard', 'vs the computer · hard'
+     */
+open func sub() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_trailsmatch_sub(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * messages to send, oldest first
+     */
+open func takeOutbox() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_trailsmatch_take_outbox(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func tick(now: Double) -> TrailsFrame?  {
+    return try!  FfiConverterOptionTypeTrailsFrame.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_trailsmatch_tick(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTrailsMatch: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = TrailsMatch
+
+    public static func lift(_ handle: UInt64) throws -> TrailsMatch {
+        return TrailsMatch(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: TrailsMatch) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TrailsMatch {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: TrailsMatch, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsMatch_lift(_ handle: UInt64) throws -> TrailsMatch {
+    return try FfiConverterTypeTrailsMatch.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsMatch_lower(_ value: TrailsMatch) -> UInt64 {
+    return FfiConverterTypeTrailsMatch.lower(value)
+}
+
+
+
+
+
+
+/**
  * Compiles and draws preview documents. Thread-safe; calls are serialised inside.
  */
 public protocol TypstRendererProtocol: AnyObject, Sendable {
@@ -3943,6 +4658,708 @@ public func FfiConverterTypeElement_lift(_ buf: RustBuffer) throws -> Element {
 #endif
 public func FfiConverterTypeElement_lower(_ value: Element) -> RustBuffer {
     return FfiConverterTypeElement.lower(value)
+}
+
+
+public struct EmberBest: Equatable, Hashable {
+    public var stars: UInt32
+    public var secs: Double?
+    public var secsText: String?
+    public var gems: UInt32
+    public var deaths: Int64?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(stars: UInt32, secs: Double?, secsText: String?, gems: UInt32, deaths: Int64?) {
+        self.stars = stars
+        self.secs = secs
+        self.secsText = secsText
+        self.gems = gems
+        self.deaths = deaths
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmberBest: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberBest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberBest {
+        return
+            try EmberBest(
+                stars: FfiConverterUInt32.read(from: &buf), 
+                secs: FfiConverterOptionDouble.read(from: &buf), 
+                secsText: FfiConverterOptionString.read(from: &buf), 
+                gems: FfiConverterUInt32.read(from: &buf), 
+                deaths: FfiConverterOptionInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmberBest, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.stars, into: &buf)
+        FfiConverterOptionDouble.write(value.secs, into: &buf)
+        FfiConverterOptionString.write(value.secsText, into: &buf)
+        FfiConverterUInt32.write(value.gems, into: &buf)
+        FfiConverterOptionInt64.write(value.deaths, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberBest_lift(_ buf: RustBuffer) throws -> EmberBest {
+    return try FfiConverterTypeEmberBest.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberBest_lower(_ value: EmberBest) -> RustBuffer {
+    return FfiConverterTypeEmberBest.lower(value)
+}
+
+
+public struct EmberFrame: Equatable, Hashable {
+    /**
+     * wait, select, play
+     */
+    public var screen: String
+    public var level: UInt32
+    /**
+     * online: the character this side plays
+     */
+    public var me: UInt8?
+    /**
+     * online: the line the lobby shows once the link is over ("" for none)
+     */
+    public var ended: String?
+    public var note: String?
+    public var alpha: Double
+    public var playing: Bool
+    /**
+     * the state to draw and the one a step before, as the TS's JSON (the checkpoint snapshot left out)
+     */
+    public var stateJson: String?
+    public var prevJson: String?
+    /**
+     * everything that happened since the last tick, as the TS's JSON list
+     */
+    public var eventsJson: String
+    /**
+     * every tile of the stage as it behaves now (frozen water, lights, crumbled blocks), row-major
+     */
+    public var tiles: Data
+    /**
+     * the light beams, x1 y1 x2 y2 each
+     */
+    public var beams: [Double]
+    /**
+     * every gate where it has slid to, x y w h each
+     */
+    public var gates: [Double]
+    public var hud: EmberHud
+    /**
+     * the renderer forgets its particles and camera: a level began, or began again
+     */
+    public var resetRenderer: Bool
+    /**
+     * the progress file changed (a finish, the mute switch): save `progress_json`
+     */
+    public var progressChanged: Bool
+    public var muted: Bool
+    /**
+     * this frame's sounds, one list per event (empty when muted)
+     */
+    public var sounds: [EmberVoice]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * wait, select, play
+         */screen: String, level: UInt32, 
+        /**
+         * online: the character this side plays
+         */me: UInt8?, 
+        /**
+         * online: the line the lobby shows once the link is over ("" for none)
+         */ended: String?, note: String?, alpha: Double, playing: Bool, 
+        /**
+         * the state to draw and the one a step before, as the TS's JSON (the checkpoint snapshot left out)
+         */stateJson: String?, prevJson: String?, 
+        /**
+         * everything that happened since the last tick, as the TS's JSON list
+         */eventsJson: String, 
+        /**
+         * every tile of the stage as it behaves now (frozen water, lights, crumbled blocks), row-major
+         */tiles: Data, 
+        /**
+         * the light beams, x1 y1 x2 y2 each
+         */beams: [Double], 
+        /**
+         * every gate where it has slid to, x y w h each
+         */gates: [Double], hud: EmberHud, 
+        /**
+         * the renderer forgets its particles and camera: a level began, or began again
+         */resetRenderer: Bool, 
+        /**
+         * the progress file changed (a finish, the mute switch): save `progress_json`
+         */progressChanged: Bool, muted: Bool, 
+        /**
+         * this frame's sounds, one list per event (empty when muted)
+         */sounds: [EmberVoice]) {
+        self.screen = screen
+        self.level = level
+        self.me = me
+        self.ended = ended
+        self.note = note
+        self.alpha = alpha
+        self.playing = playing
+        self.stateJson = stateJson
+        self.prevJson = prevJson
+        self.eventsJson = eventsJson
+        self.tiles = tiles
+        self.beams = beams
+        self.gates = gates
+        self.hud = hud
+        self.resetRenderer = resetRenderer
+        self.progressChanged = progressChanged
+        self.muted = muted
+        self.sounds = sounds
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmberFrame: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberFrame: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberFrame {
+        return
+            try EmberFrame(
+                screen: FfiConverterString.read(from: &buf), 
+                level: FfiConverterUInt32.read(from: &buf), 
+                me: FfiConverterOptionUInt8.read(from: &buf), 
+                ended: FfiConverterOptionString.read(from: &buf), 
+                note: FfiConverterOptionString.read(from: &buf), 
+                alpha: FfiConverterDouble.read(from: &buf), 
+                playing: FfiConverterBool.read(from: &buf), 
+                stateJson: FfiConverterOptionString.read(from: &buf), 
+                prevJson: FfiConverterOptionString.read(from: &buf), 
+                eventsJson: FfiConverterString.read(from: &buf), 
+                tiles: FfiConverterData.read(from: &buf), 
+                beams: FfiConverterSequenceDouble.read(from: &buf), 
+                gates: FfiConverterSequenceDouble.read(from: &buf), 
+                hud: FfiConverterTypeEmberHud.read(from: &buf), 
+                resetRenderer: FfiConverterBool.read(from: &buf), 
+                progressChanged: FfiConverterBool.read(from: &buf), 
+                muted: FfiConverterBool.read(from: &buf), 
+                sounds: FfiConverterSequenceTypeEmberVoice.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmberFrame, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.screen, into: &buf)
+        FfiConverterUInt32.write(value.level, into: &buf)
+        FfiConverterOptionUInt8.write(value.me, into: &buf)
+        FfiConverterOptionString.write(value.ended, into: &buf)
+        FfiConverterOptionString.write(value.note, into: &buf)
+        FfiConverterDouble.write(value.alpha, into: &buf)
+        FfiConverterBool.write(value.playing, into: &buf)
+        FfiConverterOptionString.write(value.stateJson, into: &buf)
+        FfiConverterOptionString.write(value.prevJson, into: &buf)
+        FfiConverterString.write(value.eventsJson, into: &buf)
+        FfiConverterData.write(value.tiles, into: &buf)
+        FfiConverterSequenceDouble.write(value.beams, into: &buf)
+        FfiConverterSequenceDouble.write(value.gates, into: &buf)
+        FfiConverterTypeEmberHud.write(value.hud, into: &buf)
+        FfiConverterBool.write(value.resetRenderer, into: &buf)
+        FfiConverterBool.write(value.progressChanged, into: &buf)
+        FfiConverterBool.write(value.muted, into: &buf)
+        FfiConverterSequenceTypeEmberVoice.write(value.sounds, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberFrame_lift(_ buf: RustBuffer) throws -> EmberFrame {
+    return try FfiConverterTypeEmberFrame.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberFrame_lower(_ value: EmberFrame) -> RustBuffer {
+    return FfiConverterTypeEmberFrame.lower(value)
+}
+
+
+public struct EmberHud: Equatable, Hashable {
+    /**
+     * play, dead, clear, won; nil off the play screen
+     */
+    public var phase: String?
+    public var deaths: Int64
+    public var stage: UInt32
+    public var stages: UInt32
+    public var cp: Int64
+    public var cps: UInt32
+    public var gems: [Int64]
+    public var total: [Int64]
+    public var keys: Int64
+    /**
+     * the clock has passed the target time
+     */
+    public var over: Bool
+    public var bannerId: UInt64
+    /**
+     * hint, flag, back, ouch
+     */
+    public var bannerKind: String?
+    public var bannerTitle: String?
+    public var bannerText: String
+    public var showBanner: Bool
+    public var entry: UInt64
+    public var score: EmberScoreView?
+    /**
+     * the clock, 0:07.4, and the target, 0:45
+     */
+    public var clock: String
+    public var parText: String
+    public var levelName: String
+    /**
+     * the win card: its line, what this finish beat, and the keys line
+     */
+    public var winLine: String
+    public var winNew: String?
+    public var winFoot: String
+    /**
+     * "stage 2 clear", "stage 3 of 4 is next"
+     */
+    public var clearTitle: String
+    public var clearNote: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * play, dead, clear, won; nil off the play screen
+         */phase: String?, deaths: Int64, stage: UInt32, stages: UInt32, cp: Int64, cps: UInt32, gems: [Int64], total: [Int64], keys: Int64, 
+        /**
+         * the clock has passed the target time
+         */over: Bool, bannerId: UInt64, 
+        /**
+         * hint, flag, back, ouch
+         */bannerKind: String?, bannerTitle: String?, bannerText: String, showBanner: Bool, entry: UInt64, score: EmberScoreView?, 
+        /**
+         * the clock, 0:07.4, and the target, 0:45
+         */clock: String, parText: String, levelName: String, 
+        /**
+         * the win card: its line, what this finish beat, and the keys line
+         */winLine: String, winNew: String?, winFoot: String, 
+        /**
+         * "stage 2 clear", "stage 3 of 4 is next"
+         */clearTitle: String, clearNote: String) {
+        self.phase = phase
+        self.deaths = deaths
+        self.stage = stage
+        self.stages = stages
+        self.cp = cp
+        self.cps = cps
+        self.gems = gems
+        self.total = total
+        self.keys = keys
+        self.over = over
+        self.bannerId = bannerId
+        self.bannerKind = bannerKind
+        self.bannerTitle = bannerTitle
+        self.bannerText = bannerText
+        self.showBanner = showBanner
+        self.entry = entry
+        self.score = score
+        self.clock = clock
+        self.parText = parText
+        self.levelName = levelName
+        self.winLine = winLine
+        self.winNew = winNew
+        self.winFoot = winFoot
+        self.clearTitle = clearTitle
+        self.clearNote = clearNote
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmberHud: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberHud: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberHud {
+        return
+            try EmberHud(
+                phase: FfiConverterOptionString.read(from: &buf), 
+                deaths: FfiConverterInt64.read(from: &buf), 
+                stage: FfiConverterUInt32.read(from: &buf), 
+                stages: FfiConverterUInt32.read(from: &buf), 
+                cp: FfiConverterInt64.read(from: &buf), 
+                cps: FfiConverterUInt32.read(from: &buf), 
+                gems: FfiConverterSequenceInt64.read(from: &buf), 
+                total: FfiConverterSequenceInt64.read(from: &buf), 
+                keys: FfiConverterInt64.read(from: &buf), 
+                over: FfiConverterBool.read(from: &buf), 
+                bannerId: FfiConverterUInt64.read(from: &buf), 
+                bannerKind: FfiConverterOptionString.read(from: &buf), 
+                bannerTitle: FfiConverterOptionString.read(from: &buf), 
+                bannerText: FfiConverterString.read(from: &buf), 
+                showBanner: FfiConverterBool.read(from: &buf), 
+                entry: FfiConverterUInt64.read(from: &buf), 
+                score: FfiConverterOptionTypeEmberScoreView.read(from: &buf), 
+                clock: FfiConverterString.read(from: &buf), 
+                parText: FfiConverterString.read(from: &buf), 
+                levelName: FfiConverterString.read(from: &buf), 
+                winLine: FfiConverterString.read(from: &buf), 
+                winNew: FfiConverterOptionString.read(from: &buf), 
+                winFoot: FfiConverterString.read(from: &buf), 
+                clearTitle: FfiConverterString.read(from: &buf), 
+                clearNote: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmberHud, into buf: inout [UInt8]) {
+        FfiConverterOptionString.write(value.phase, into: &buf)
+        FfiConverterInt64.write(value.deaths, into: &buf)
+        FfiConverterUInt32.write(value.stage, into: &buf)
+        FfiConverterUInt32.write(value.stages, into: &buf)
+        FfiConverterInt64.write(value.cp, into: &buf)
+        FfiConverterUInt32.write(value.cps, into: &buf)
+        FfiConverterSequenceInt64.write(value.gems, into: &buf)
+        FfiConverterSequenceInt64.write(value.total, into: &buf)
+        FfiConverterInt64.write(value.keys, into: &buf)
+        FfiConverterBool.write(value.over, into: &buf)
+        FfiConverterUInt64.write(value.bannerId, into: &buf)
+        FfiConverterOptionString.write(value.bannerKind, into: &buf)
+        FfiConverterOptionString.write(value.bannerTitle, into: &buf)
+        FfiConverterString.write(value.bannerText, into: &buf)
+        FfiConverterBool.write(value.showBanner, into: &buf)
+        FfiConverterUInt64.write(value.entry, into: &buf)
+        FfiConverterOptionTypeEmberScoreView.write(value.score, into: &buf)
+        FfiConverterString.write(value.clock, into: &buf)
+        FfiConverterString.write(value.parText, into: &buf)
+        FfiConverterString.write(value.levelName, into: &buf)
+        FfiConverterString.write(value.winLine, into: &buf)
+        FfiConverterOptionString.write(value.winNew, into: &buf)
+        FfiConverterString.write(value.winFoot, into: &buf)
+        FfiConverterString.write(value.clearTitle, into: &buf)
+        FfiConverterString.write(value.clearNote, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberHud_lift(_ buf: RustBuffer) throws -> EmberHud {
+    return try FfiConverterTypeEmberHud.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberHud_lower(_ value: EmberHud) -> RustBuffer {
+    return FfiConverterTypeEmberHud.lower(value)
+}
+
+
+/**
+ * a level on the select screen
+ */
+public struct EmberLevelCard: Equatable, Hashable {
+    public var id: String
+    public var name: String
+    public var stages: UInt32
+    public var difficulty: UInt32
+    /**
+     * '3 stages · 8 screens'
+     */
+    public var length: String
+    public var par: Double
+    public var parText: String
+    public var gemTotal: UInt32
+    public var best: EmberBest?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, name: String, stages: UInt32, difficulty: UInt32, 
+        /**
+         * '3 stages · 8 screens'
+         */length: String, par: Double, parText: String, gemTotal: UInt32, best: EmberBest?) {
+        self.id = id
+        self.name = name
+        self.stages = stages
+        self.difficulty = difficulty
+        self.length = length
+        self.par = par
+        self.parText = parText
+        self.gemTotal = gemTotal
+        self.best = best
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmberLevelCard: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberLevelCard: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberLevelCard {
+        return
+            try EmberLevelCard(
+                id: FfiConverterString.read(from: &buf), 
+                name: FfiConverterString.read(from: &buf), 
+                stages: FfiConverterUInt32.read(from: &buf), 
+                difficulty: FfiConverterUInt32.read(from: &buf), 
+                length: FfiConverterString.read(from: &buf), 
+                par: FfiConverterDouble.read(from: &buf), 
+                parText: FfiConverterString.read(from: &buf), 
+                gemTotal: FfiConverterUInt32.read(from: &buf), 
+                best: FfiConverterOptionTypeEmberBest.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmberLevelCard, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.name, into: &buf)
+        FfiConverterUInt32.write(value.stages, into: &buf)
+        FfiConverterUInt32.write(value.difficulty, into: &buf)
+        FfiConverterString.write(value.length, into: &buf)
+        FfiConverterDouble.write(value.par, into: &buf)
+        FfiConverterString.write(value.parText, into: &buf)
+        FfiConverterUInt32.write(value.gemTotal, into: &buf)
+        FfiConverterOptionTypeEmberBest.write(value.best, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberLevelCard_lift(_ buf: RustBuffer) throws -> EmberLevelCard {
+    return try FfiConverterTypeEmberLevelCard.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberLevelCard_lower(_ value: EmberLevelCard) -> RustBuffer {
+    return FfiConverterTypeEmberLevelCard.lower(value)
+}
+
+
+public struct EmberScoreView: Equatable, Hashable {
+    public var secs: Double
+    public var gems: [Int64]
+    public var total: [Int64]
+    public var stars: Int64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(secs: Double, gems: [Int64], total: [Int64], stars: Int64) {
+        self.secs = secs
+        self.gems = gems
+        self.total = total
+        self.stars = stars
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmberScoreView: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberScoreView: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberScoreView {
+        return
+            try EmberScoreView(
+                secs: FfiConverterDouble.read(from: &buf), 
+                gems: FfiConverterSequenceInt64.read(from: &buf), 
+                total: FfiConverterSequenceInt64.read(from: &buf), 
+                stars: FfiConverterInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmberScoreView, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.secs, into: &buf)
+        FfiConverterSequenceInt64.write(value.gems, into: &buf)
+        FfiConverterSequenceInt64.write(value.total, into: &buf)
+        FfiConverterInt64.write(value.stars, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberScoreView_lift(_ buf: RustBuffer) throws -> EmberScoreView {
+    return try FfiConverterTypeEmberScoreView.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberScoreView_lower(_ value: EmberScoreView) -> RustBuffer {
+    return FfiConverterTypeEmberScoreView.lower(value)
+}
+
+
+/**
+ * one note or hiss of a sound, starting `at` seconds in (see emberSound.ts)
+ */
+public struct EmberVoice: Equatable, Hashable {
+    public var at: Double
+    /**
+     * a tone, else filtered noise
+     */
+    public var tone: Bool
+    public var freq: Double
+    public var dur: Double
+    public var vol: Double
+    /**
+     * tones: 0 sine, 1 square, 2 triangle, 3 sawtooth
+     */
+    public var wave: UInt8
+    public var glideTo: Double?
+    public var q: Double
+    public var sweepTo: Double?
+    /**
+     * noise: 0 bandpass, 1 lowpass, 2 highpass
+     */
+    public var filter: UInt8
+    /**
+     * where in the 0.6 s noise loop it starts
+     */
+    public var offset: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(at: Double, 
+        /**
+         * a tone, else filtered noise
+         */tone: Bool, freq: Double, dur: Double, vol: Double, 
+        /**
+         * tones: 0 sine, 1 square, 2 triangle, 3 sawtooth
+         */wave: UInt8, glideTo: Double?, q: Double, sweepTo: Double?, 
+        /**
+         * noise: 0 bandpass, 1 lowpass, 2 highpass
+         */filter: UInt8, 
+        /**
+         * where in the 0.6 s noise loop it starts
+         */offset: Double) {
+        self.at = at
+        self.tone = tone
+        self.freq = freq
+        self.dur = dur
+        self.vol = vol
+        self.wave = wave
+        self.glideTo = glideTo
+        self.q = q
+        self.sweepTo = sweepTo
+        self.filter = filter
+        self.offset = offset
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EmberVoice: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEmberVoice: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EmberVoice {
+        return
+            try EmberVoice(
+                at: FfiConverterDouble.read(from: &buf), 
+                tone: FfiConverterBool.read(from: &buf), 
+                freq: FfiConverterDouble.read(from: &buf), 
+                dur: FfiConverterDouble.read(from: &buf), 
+                vol: FfiConverterDouble.read(from: &buf), 
+                wave: FfiConverterUInt8.read(from: &buf), 
+                glideTo: FfiConverterOptionDouble.read(from: &buf), 
+                q: FfiConverterDouble.read(from: &buf), 
+                sweepTo: FfiConverterOptionDouble.read(from: &buf), 
+                filter: FfiConverterUInt8.read(from: &buf), 
+                offset: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EmberVoice, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.at, into: &buf)
+        FfiConverterBool.write(value.tone, into: &buf)
+        FfiConverterDouble.write(value.freq, into: &buf)
+        FfiConverterDouble.write(value.dur, into: &buf)
+        FfiConverterDouble.write(value.vol, into: &buf)
+        FfiConverterUInt8.write(value.wave, into: &buf)
+        FfiConverterOptionDouble.write(value.glideTo, into: &buf)
+        FfiConverterDouble.write(value.q, into: &buf)
+        FfiConverterOptionDouble.write(value.sweepTo, into: &buf)
+        FfiConverterUInt8.write(value.filter, into: &buf)
+        FfiConverterDouble.write(value.offset, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberVoice_lift(_ buf: RustBuffer) throws -> EmberVoice {
+    return try FfiConverterTypeEmberVoice.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEmberVoice_lower(_ value: EmberVoice) -> RustBuffer {
+    return FfiConverterTypeEmberVoice.lower(value)
 }
 
 
@@ -6754,6 +8171,97 @@ public func FfiConverterTypeRatesStatus_lower(_ value: RatesStatus) -> RustBuffe
 
 
 /**
+ * One puff of the 420 smoke. `at`: where along the bar's top, 0–1, or -1 its left edge, -2 its right.
+ */
+public struct SmokePuff: Equatable, Hashable {
+    public var at: Double
+    public var x: Double
+    public var y: Double
+    public var w: Double
+    public var h: Double
+    /**
+     * seconds
+     */
+    public var delay: Double
+    public var drift: Double
+    public var rise: Double
+    public var sway: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(at: Double, x: Double, y: Double, w: Double, h: Double, 
+        /**
+         * seconds
+         */delay: Double, drift: Double, rise: Double, sway: Double) {
+        self.at = at
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.delay = delay
+        self.drift = drift
+        self.rise = rise
+        self.sway = sway
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SmokePuff: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSmokePuff: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SmokePuff {
+        return
+            try SmokePuff(
+                at: FfiConverterDouble.read(from: &buf), 
+                x: FfiConverterDouble.read(from: &buf), 
+                y: FfiConverterDouble.read(from: &buf), 
+                w: FfiConverterDouble.read(from: &buf), 
+                h: FfiConverterDouble.read(from: &buf), 
+                delay: FfiConverterDouble.read(from: &buf), 
+                drift: FfiConverterDouble.read(from: &buf), 
+                rise: FfiConverterDouble.read(from: &buf), 
+                sway: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SmokePuff, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.at, into: &buf)
+        FfiConverterDouble.write(value.x, into: &buf)
+        FfiConverterDouble.write(value.y, into: &buf)
+        FfiConverterDouble.write(value.w, into: &buf)
+        FfiConverterDouble.write(value.h, into: &buf)
+        FfiConverterDouble.write(value.delay, into: &buf)
+        FfiConverterDouble.write(value.drift, into: &buf)
+        FfiConverterDouble.write(value.rise, into: &buf)
+        FfiConverterDouble.write(value.sway, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSmokePuff_lift(_ buf: RustBuffer) throws -> SmokePuff {
+    return try FfiConverterTypeSmokePuff.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSmokePuff_lower(_ value: SmokePuff) -> RustBuffer {
+    return FfiConverterTypeSmokePuff.lower(value)
+}
+
+
+/**
  * A solve's unknown and roots.
  */
 public struct SolveInfo: Equatable, Hashable {
@@ -7008,6 +8516,210 @@ public func FfiConverterTypeTimeLetters_lift(_ buf: RustBuffer) throws -> TimeLe
 #endif
 public func FfiConverterTypeTimeLetters_lower(_ value: TimeLetters) -> RustBuffer {
     return FfiConverterTypeTimeLetters.lower(value)
+}
+
+
+public struct TrailsCycleView: Equatable, Hashable {
+    public var x: Int32
+    public var y: Int32
+    public var dir: UInt8
+    /**
+     * the turn it's about to take
+     */
+    public var next: UInt8?
+    public var alive: Bool
+    /**
+     * cell indexes from the start to the head
+     */
+    public var path: [Int32]
+    public var crashX: Int32?
+    public var crashY: Int32?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(x: Int32, y: Int32, dir: UInt8, 
+        /**
+         * the turn it's about to take
+         */next: UInt8?, alive: Bool, 
+        /**
+         * cell indexes from the start to the head
+         */path: [Int32], crashX: Int32?, crashY: Int32?) {
+        self.x = x
+        self.y = y
+        self.dir = dir
+        self.next = next
+        self.alive = alive
+        self.path = path
+        self.crashX = crashX
+        self.crashY = crashY
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TrailsCycleView: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTrailsCycleView: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TrailsCycleView {
+        return
+            try TrailsCycleView(
+                x: FfiConverterInt32.read(from: &buf), 
+                y: FfiConverterInt32.read(from: &buf), 
+                dir: FfiConverterUInt8.read(from: &buf), 
+                next: FfiConverterOptionUInt8.read(from: &buf), 
+                alive: FfiConverterBool.read(from: &buf), 
+                path: FfiConverterSequenceInt32.read(from: &buf), 
+                crashX: FfiConverterOptionInt32.read(from: &buf), 
+                crashY: FfiConverterOptionInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TrailsCycleView, into buf: inout [UInt8]) {
+        FfiConverterInt32.write(value.x, into: &buf)
+        FfiConverterInt32.write(value.y, into: &buf)
+        FfiConverterUInt8.write(value.dir, into: &buf)
+        FfiConverterOptionUInt8.write(value.next, into: &buf)
+        FfiConverterBool.write(value.alive, into: &buf)
+        FfiConverterSequenceInt32.write(value.path, into: &buf)
+        FfiConverterOptionInt32.write(value.crashX, into: &buf)
+        FfiConverterOptionInt32.write(value.crashY, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsCycleView_lift(_ buf: RustBuffer) throws -> TrailsCycleView {
+    return try FfiConverterTypeTrailsCycleView.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsCycleView_lower(_ value: TrailsCycleView) -> RustBuffer {
+    return FfiConverterTypeTrailsCycleView.lower(value)
+}
+
+
+public struct TrailsFrame: Equatable, Hashable {
+    public var cycles: [TrailsCycleView]
+    /**
+     * the round has a result
+     */
+    public var over: Bool
+    /**
+     * how far the heads are into the next cell, 0–1
+     */
+    public var t: Double
+    public var crashMs: Double?
+    public var score: [UInt32]
+    public var names: [String]
+    public var banner: String
+    public var big: Bool
+    public var note: String
+    /**
+     * online: the line the lobby shows once the game is over for good ("" for none)
+     */
+    public var ended: String?
+    /**
+     * back to the lobby's menu
+     */
+    public var toMenu: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(cycles: [TrailsCycleView], 
+        /**
+         * the round has a result
+         */over: Bool, 
+        /**
+         * how far the heads are into the next cell, 0–1
+         */t: Double, crashMs: Double?, score: [UInt32], names: [String], banner: String, big: Bool, note: String, 
+        /**
+         * online: the line the lobby shows once the game is over for good ("" for none)
+         */ended: String?, 
+        /**
+         * back to the lobby's menu
+         */toMenu: Bool) {
+        self.cycles = cycles
+        self.over = over
+        self.t = t
+        self.crashMs = crashMs
+        self.score = score
+        self.names = names
+        self.banner = banner
+        self.big = big
+        self.note = note
+        self.ended = ended
+        self.toMenu = toMenu
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension TrailsFrame: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTrailsFrame: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TrailsFrame {
+        return
+            try TrailsFrame(
+                cycles: FfiConverterSequenceTypeTrailsCycleView.read(from: &buf), 
+                over: FfiConverterBool.read(from: &buf), 
+                t: FfiConverterDouble.read(from: &buf), 
+                crashMs: FfiConverterOptionDouble.read(from: &buf), 
+                score: FfiConverterSequenceUInt32.read(from: &buf), 
+                names: FfiConverterSequenceString.read(from: &buf), 
+                banner: FfiConverterString.read(from: &buf), 
+                big: FfiConverterBool.read(from: &buf), 
+                note: FfiConverterString.read(from: &buf), 
+                ended: FfiConverterOptionString.read(from: &buf), 
+                toMenu: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: TrailsFrame, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeTrailsCycleView.write(value.cycles, into: &buf)
+        FfiConverterBool.write(value.over, into: &buf)
+        FfiConverterDouble.write(value.t, into: &buf)
+        FfiConverterOptionDouble.write(value.crashMs, into: &buf)
+        FfiConverterSequenceUInt32.write(value.score, into: &buf)
+        FfiConverterSequenceString.write(value.names, into: &buf)
+        FfiConverterString.write(value.banner, into: &buf)
+        FfiConverterBool.write(value.big, into: &buf)
+        FfiConverterString.write(value.note, into: &buf)
+        FfiConverterOptionString.write(value.ended, into: &buf)
+        FfiConverterBool.write(value.toMenu, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsFrame_lift(_ buf: RustBuffer) throws -> TrailsFrame {
+    return try FfiConverterTypeTrailsFrame.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsFrame_lower(_ value: TrailsFrame) -> RustBuffer {
+    return FfiConverterTypeTrailsFrame.lower(value)
 }
 
 
@@ -8657,6 +10369,88 @@ public func FfiConverterTypeCriticalKind_lift(_ buf: RustBuffer) throws -> Criti
 #endif
 public func FfiConverterTypeCriticalKind_lower(_ value: CriticalKind) -> RustBuffer {
     return FfiConverterTypeCriticalKind.lower(value)
+}
+
+
+
+
+public enum EggKind: Equatable, Hashable {
+    
+    /**
+     * 420: smoke rolls off the bar
+     */
+    case smoke
+    /**
+     * 67: two hands weigh it up
+     */
+    case arms
+    /**
+     * 69: the digits fold
+     */
+    case fold
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension EggKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEggKind: FfiConverterRustBuffer {
+    typealias SwiftType = EggKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EggKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .smoke
+        
+        case 2: return .arms
+        
+        case 3: return .fold
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: EggKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .smoke:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .arms:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .fold:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEggKind_lift(_ buf: RustBuffer) throws -> EggKind {
+    return try FfiConverterTypeEggKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEggKind_lower(_ value: EggKind) -> RustBuffer {
+    return FfiConverterTypeEggKind.lower(value)
 }
 
 
@@ -10495,6 +12289,95 @@ public func FfiConverterTypeSpanKind_lower(_ value: SpanKind) -> RustBuffer {
 
 
 
+
+public enum TrailsKey: Equatable, Hashable {
+    
+    /**
+     * WASD: 0 up, 1 right, 2 down, 3 left
+     */
+    case wasd(dir: UInt8
+    )
+    case arrow(dir: UInt8
+    )
+    case enter
+    case back
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension TrailsKey: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeTrailsKey: FfiConverterRustBuffer {
+    typealias SwiftType = TrailsKey
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TrailsKey {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .wasd(dir: try FfiConverterUInt8.read(from: &buf)
+        )
+        
+        case 2: return .arrow(dir: try FfiConverterUInt8.read(from: &buf)
+        )
+        
+        case 3: return .enter
+        
+        case 4: return .back
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TrailsKey, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .wasd(dir):
+            writeInt(&buf, Int32(1))
+            FfiConverterUInt8.write(dir, into: &buf)
+            
+        
+        case let .arrow(dir):
+            writeInt(&buf, Int32(2))
+            FfiConverterUInt8.write(dir, into: &buf)
+            
+        
+        case .enter:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .back:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsKey_lift(_ buf: RustBuffer) throws -> TrailsKey {
+    return try FfiConverterTypeTrailsKey.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeTrailsKey_lower(_ value: TrailsKey) -> RustBuffer {
+    return FfiConverterTypeTrailsKey.lower(value)
+}
+
+
+
 public 
 enum TypstError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
@@ -11032,6 +12915,30 @@ public func FfiConverterTypeUtSkill_lower(_ value: UtSkill) -> RustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionUInt8: FfiConverterRustBuffer {
+    typealias SwiftType = UInt8?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterUInt8.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterUInt8.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionUInt32: FfiConverterRustBuffer {
     typealias SwiftType = UInt32?
 
@@ -11192,6 +13099,78 @@ fileprivate struct FfiConverterOptionTypeChainAnswer: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeChainAnswer.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEmberBest: FfiConverterRustBuffer {
+    typealias SwiftType = EmberBest?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEmberBest.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEmberBest.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEmberFrame: FfiConverterRustBuffer {
+    typealias SwiftType = EmberFrame?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEmberFrame.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEmberFrame.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEmberScoreView: FfiConverterRustBuffer {
+    typealias SwiftType = EmberScoreView?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEmberScoreView.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEmberScoreView.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -11464,6 +13443,30 @@ fileprivate struct FfiConverterOptionTypeTimeLetters: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeTrailsFrame: FfiConverterRustBuffer {
+    typealias SwiftType = TrailsFrame?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeTrailsFrame.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeTrailsFrame.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeUnitOffer: FfiConverterRustBuffer {
     typealias SwiftType = UnitOffer?
 
@@ -11552,6 +13555,30 @@ fileprivate struct FfiConverterOptionTypeCrackEvent: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeCrackEvent.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeEggKind: FfiConverterRustBuffer {
+    typealias SwiftType = EggKind?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEggKind.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEggKind.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -11802,6 +13829,31 @@ fileprivate struct FfiConverterSequenceInt32: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceInt64: FfiConverterRustBuffer {
+    typealias SwiftType = [Int64]
+
+    public static func write(_ value: [Int64], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterInt64.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Int64] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Int64]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterInt64.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceFloat: FfiConverterRustBuffer {
     typealias SwiftType = [Float]
 
@@ -11994,6 +14046,56 @@ fileprivate struct FfiConverterSequenceTypeElement: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeElement.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEmberLevelCard: FfiConverterRustBuffer {
+    typealias SwiftType = [EmberLevelCard]
+
+    public static func write(_ value: [EmberLevelCard], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEmberLevelCard.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EmberLevelCard] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EmberLevelCard]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEmberLevelCard.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeEmberVoice: FfiConverterRustBuffer {
+    typealias SwiftType = [EmberVoice]
+
+    public static func write(_ value: [EmberVoice], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEmberVoice.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EmberVoice] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EmberVoice]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEmberVoice.read(from: &buf))
         }
         return seq
     }
@@ -12202,6 +14304,31 @@ fileprivate struct FfiConverterSequenceTypeLineAnswer: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeSmokePuff: FfiConverterRustBuffer {
+    typealias SwiftType = [SmokePuff]
+
+    public static func write(_ value: [SmokePuff], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeSmokePuff.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [SmokePuff] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [SmokePuff]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeSmokePuff.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeTextSpan: FfiConverterRustBuffer {
     typealias SwiftType = [TextSpan]
 
@@ -12219,6 +14346,31 @@ fileprivate struct FfiConverterSequenceTypeTextSpan: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeTextSpan.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeTrailsCycleView: FfiConverterRustBuffer {
+    typealias SwiftType = [TrailsCycleView]
+
+    public static func write(_ value: [TrailsCycleView], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeTrailsCycleView.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [TrailsCycleView] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [TrailsCycleView]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeTrailsCycleView.read(from: &buf))
         }
         return seq
     }
@@ -12986,6 +15138,111 @@ public func relayDefaultUrl() -> String  {
 })
 }
 /**
+ * how long an effect stays up, ms
+ */
+public func eggPlayMs(kind: EggKind) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_egg_play_ms(
+        FfiConverterTypeEggKind_lower(kind),uniffiCallStatus
+    )
+})
+}
+/**
+ * how long an answer must rest on 420, 67 or 69 before its effect plays, ms
+ */
+public func eggSettleMs() -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_egg_settle_ms(uniffiCallStatus
+    )
+})
+}
+/**
+ * emberCamera.ts baseView: w h
+ */
+public func emberBaseView(aspect: Double) -> [Double]  {
+    return try!  FfiConverterSequenceDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_ember_base_view(
+        FfiConverterDouble.lower(aspect),uniffiCallStatus
+    )
+})
+}
+/**
+ * emberCamera.ts cameraFor, for the players as drawn: x y w h zoom
+ */
+public func emberCameraFor(stageW: Double, stageH: Double, ax: Double, ay: Double, bx: Double, by: Double, aspect: Double) -> [Double]  {
+    return try!  FfiConverterSequenceDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_ember_camera_for(
+        FfiConverterDouble.lower(stageW),
+        FfiConverterDouble.lower(stageH),
+        FfiConverterDouble.lower(ax),
+        FfiConverterDouble.lower(ay),
+        FfiConverterDouble.lower(bx),
+        FfiConverterDouble.lower(by),
+        FfiConverterDouble.lower(aspect),uniffiCallStatus
+    )
+})
+}
+/**
+ * emberCamera.ts easeCamera: from (empty for none) toward `to` over `ticks` steps
+ */
+public func emberEaseCamera(from: [Double], to: [Double], ticks: Double) -> [Double]  {
+    return try!  FfiConverterSequenceDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_ember_ease_camera(
+        FfiConverterSequenceDouble.lower(from),
+        FfiConverterSequenceDouble.lower(to),
+        FfiConverterDouble.lower(ticks),uniffiCallStatus
+    )
+})
+}
+/**
+ * the running clock and best times: 0:07.4
+ */
+public func emberFmtTime(secs: Double) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_ember_fmt_time(
+        FfiConverterDouble.lower(secs),uniffiCallStatus
+    )
+})
+}
+/**
+ * the select grid's arrows
+ */
+public func emberGridStep(from: Int64, dx: Int64, dy: Int64, count: Int64, cols: Int64) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_ember_grid_step(
+        FfiConverterInt64.lower(from),
+        FfiConverterInt64.lower(dx),
+        FfiConverterInt64.lower(dy),
+        FfiConverterInt64.lower(count),
+        FfiConverterInt64.lower(cols),uniffiCallStatus
+    )
+})
+}
+/**
+ * the save key ember's progress lives under (the web build's localStorage key)
+ */
+public func emberSaveKey() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_ember_save_key(uniffiCallStatus
+    )
+})
+}
+public func smokePuffs() -> [SmokePuff]  {
+    return try!  FfiConverterSequenceTypeSmokePuff.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_smoke_puffs(uniffiCallStatus
+    )
+})
+}
+/**
  * `HIT_WINDOW`, for the dot's drawn size.
  */
 public func crackHitWindow() -> Double  {
@@ -13446,6 +15703,33 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_func_relay_default_url() != 46987) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_func_egg_play_ms() != 18444) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_egg_settle_ms() != 27574) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_ember_base_view() != 15349) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_ember_camera_for() != 34209) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_ember_ease_camera() != 48236) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_ember_fmt_time() != 25735) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_ember_grid_step() != 12993) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_ember_save_key() != 8851) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_smoke_puffs() != 23175) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_func_crack_hit_window() != 21364) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -13734,6 +16018,75 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_relaypeer_watch() != 36154) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_egggate_settle() != 50634) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_keys() != 21684) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_leave() != 58276) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_levels() != 59684) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_menu() != 18703) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_next() != 22658) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_pick() != 14128) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_play() != 53585) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_progress_json() != 19413) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_receive() != 29870) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_release() != 57291) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_restart() != 54472) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_retry() != 52285) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_stage_json() != 51064) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_take_outbox() != 33413) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_tick() != 31461) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_embermatch_toggle_mute() != 31229) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_trailsmatch_key() != 28235) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_trailsmatch_leave() != 60895) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_trailsmatch_receive() != 58741) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_trailsmatch_sub() != 42533) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_trailsmatch_take_outbox() != 33217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_trailsmatch_tick() != 39846) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_connect4game_play() != 24832) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -13831,6 +16184,21 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_relaypeer_new() != 49739) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_egggate_new() != 9178) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_embermatch_local() != 36177) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_embermatch_online() != 14436) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_trailsmatch_local() != 3400) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_trailsmatch_online() != 49691) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_connect4game_new() != 33470) {

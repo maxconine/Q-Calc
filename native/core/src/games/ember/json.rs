@@ -235,3 +235,144 @@ pub fn state_hash(s: &GameState) -> String {
     }
     format!("{h:08x}")
 }
+
+// ---- and back: a state from the TS's JSON (the golden replays of the engine tests' own calls)
+
+use serde_json::Value;
+
+fn f(v: &Value, k: &str) -> f64 {
+    v.get(k).and_then(Value::as_f64).unwrap_or(0.0)
+}
+fn i(v: &Value, k: &str) -> i64 {
+    f(v, k) as i64
+}
+fn b(v: &Value, k: &str) -> bool {
+    v.get(k).and_then(Value::as_bool).unwrap_or(false)
+}
+fn arr<T>(v: &Value, k: &str, each: impl Fn(&Value) -> T) -> Vec<T> {
+    v.get(k)
+        .and_then(Value::as_array)
+        .map_or(vec![], |a| a.iter().map(each).collect())
+}
+
+fn event_from(v: &Value) -> Option<GameEvent> {
+    let k = *KINDS
+        .iter()
+        .find(|k| Some(k.name()) == v.get("k").and_then(Value::as_str))?;
+    let o = |key: &str| v.get(key).and_then(Value::as_f64);
+    Some(GameEvent {
+        k,
+        p: o("p").map(|p| p as usize),
+        tile: o("tile").map(|t| t as i64),
+        i: o("i").map(|t| t as i64),
+        on: v.get("on").and_then(Value::as_bool),
+        x: o("x"),
+        y: o("y"),
+        cause: v
+            .get("cause")
+            .and_then(Value::as_str)
+            .and_then(|c| CAUSES.iter().find(|x| x.name() == c).copied()),
+        v: o("v"),
+        grav: o("grav").map(|g| g as i64),
+        el: v.get("el").and_then(Value::as_str).map(|e| {
+            if e == "fire" {
+                Element::Fire
+            } else {
+                Element::Frost
+            }
+        }),
+        stage: o("stage").map(|s| s as i64),
+        cp: o("cp").map(|c| c as i64),
+    })
+}
+
+/// a state as the TS wrote it (JSON.parse(JSON.stringify(s))); None when it isn't one
+pub fn state_from_json(v: &Value) -> Option<GameState> {
+    let phase = match v.get("phase")?.as_str()? {
+        "dead" => Phase::Dead,
+        "clear" => Phase::Clear,
+        "won" => Phase::Won,
+        _ => Phase::Play,
+    };
+    let player = |p: &Value| Player {
+        x: f(p, "x"),
+        y: f(p, "y"),
+        vx: f(p, "vx"),
+        vy: f(p, "vy"),
+        ground: b(p, "ground"),
+        face: i(p, "face"),
+        alive: b(p, "alive"),
+        in_door: b(p, "inDoor"),
+        coyote: i(p, "coyote"),
+        buffer: i(p, "buffer"),
+        prev_in: i(p, "prevIn"),
+        portal_cd: i(p, "portalCd"),
+        gems: i(p, "gems"),
+        grav: i(p, "grav"),
+        air: i(p, "air"),
+        cannon: i(p, "cannon"),
+        fly: i(p, "fly"),
+        cannon_cd: i(p, "cannonCd"),
+    };
+    let ps = v.get("players")?.as_array()?;
+    let banked = arr(v, "banked", |x| x.as_f64().unwrap_or(0.0) as i64);
+    let bools = |k: &str| arr(v, k, |x| x.as_bool().unwrap_or(false));
+    let ints = |k: &str| arr(v, k, |x| x.as_f64().unwrap_or(0.0) as i64);
+    let nums = |k: &str| arr(v, k, |x| x.as_f64().unwrap_or(0.0));
+    Some(GameState {
+        tick: i(v, "tick"),
+        phase,
+        phase_t: i(v, "phaseT"),
+        deaths: i(v, "deaths"),
+        stage: i(v, "stage") as usize,
+        banked: [
+            banked.first().copied().unwrap_or(0),
+            banked.get(1).copied().unwrap_or(0),
+        ],
+        players: [player(ps.first()?), player(ps.get(1)?)],
+        taken: bools("taken"),
+        levers: bools("levers"),
+        buttons: ints("buttons"),
+        gates: nums("gates"),
+        movers: arr(v, "movers", |m| MoverState {
+            x: f(m, "x"),
+            y: f(m, "y"),
+            t: f(m, "t"),
+            dir: i(m, "dir"),
+        }),
+        boxes: arr(v, "boxes", |m| BoxState {
+            x: f(m, "x"),
+            y: f(m, "y"),
+            vx: f(m, "vx"),
+            vy: f(m, "vy"),
+        }),
+        ice: nums("ice"),
+        thin: ints("thin"),
+        mirrors: arr(v, "mirrors", |m| {
+            if m.as_str() == Some("\\") {
+                Slant::Back
+            } else {
+                Slant::Slash
+            }
+        }),
+        lit: b(v, "lit"),
+        lit_t: i(v, "litT"),
+        arrows: ints("arrows"),
+        crumble: ints("crumble"),
+        keys: i(v, "keys"),
+        key_taken: bools("keyTaken"),
+        locks: bools("locks"),
+        cannons: ints("cannons"),
+        cp: i(v, "cp"),
+        saved: v
+            .get("saved")
+            .filter(|s| !s.is_null())
+            .and_then(state_from_json)
+            .map(std::sync::Arc::new),
+        on: arr(v, "on", |c| c.as_str().unwrap_or("").to_string()),
+        events: arr(v, "events", event_from).into_iter().flatten().collect(),
+        plates: v.get("plates").map(|_| bools("plates")),
+        sensors: v.get("sensors").map(|_| bools("sensors")),
+        is_snapshot: v.get("events").is_none() && v.get("saved").is_none(),
+    })
+}
