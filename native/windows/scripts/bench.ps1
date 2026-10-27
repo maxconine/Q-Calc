@@ -23,7 +23,7 @@ param(
 )
 
 function Send-QCalc([hashtable]$Request, [int]$TimeoutMs = 120000) {
-  $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', 'qcalc-bench', [System.IO.Pipes.PipeDirection]::InOut)
+  $pipe = New-Object System.IO.Pipes.NamedPipeClientStream('.', $(if ($env:QCALC_INSTANCE) { "qcalc-bench-$env:QCALC_INSTANCE" } else { 'qcalc-bench' }), [System.IO.Pipes.PipeDirection]::InOut)
   $pipe.Connect(5000)
   $writer = New-Object System.IO.StreamWriter($pipe)
   $writer.AutoFlush = $true
