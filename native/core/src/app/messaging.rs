@@ -505,6 +505,8 @@ pub fn share_status_text(status: &str, to: &str, what: &str, name: &str) -> Stri
         "too-big" if clip => "that’s too much to paste · not sent".into(),
         "too-big" => "that file’s over 1 GB · not sent".into(),
         "new-name" => "a new name can send files 10 minutes after it’s set".into(),
+        "key-changed" => format!("{to}’s security key changed · not sent"),
+        "no-key" => format!("{to} needs a newer q calc to get files · not sent"),
         "bad" if clip => "that clipboard couldn’t be sent".into(),
         "bad" => "that file couldn’t be sent".into(),
         _ => send_status_text(SendStatus::Network, to),
@@ -554,6 +556,9 @@ pub fn file_error_text(status: &str, who: &str) -> String {
         "new-name" => "a new name can send files 10 minutes after it’s set".into(),
         "not-yours" => send_status_text(SendStatus::NotYours, who),
         "corrupt" => "it didn’t arrive intact · not saved".into(),
+        "key-changed" => key_changed_text(who),
+        "sealed" => "it couldn’t be opened · not saved".into(),
+        "no-key" => format!("{who} needs a newer q calc to get files"),
         "disk" => "couldn’t write it to downloads".into(),
         "unreadable" => "couldn’t read that file".into(),
         _ => "couldn’t reach the relay · try again".into(),
@@ -584,28 +589,47 @@ pub fn encrypted_len(size: u64) -> u64 {
     size + TAG_BYTES * size.div_ceil(CHUNK_BYTES).max(1)
 }
 
-/// A file's name kept to its last path part, without controls, direction marks, separators or leading dots, at
-/// most 120 characters with its extension kept; "file" when nothing's left. The relay does the same, and this
-/// app does it again before anything touches the disk.
+/// A file's name kept to its last path part, safe to show and to save: NFC, no path separators, no leading dots
+/// or spaces, no controls, direction marks, invisible or formatting characters (each run becomes `_`), runs of
+/// spaces as one, no trailing dots or spaces, at most 120 characters with its extension kept so it always shows;
+/// "file" when nothing's left. The sender cleans it before sealing it, and this app does it again after opening
+/// it, before anything touches the disk.
 pub fn clean_filename(raw: &str) -> String {
-    let last = raw.rsplit(['/', '\\']).next().unwrap_or("");
-    let bad = |c: char| matches!(c, '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{200b}'..='\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}' | '\u{feff}' | ':');
+    use unicode_normalization::UnicodeNormalization;
+    let nfc: String = raw.nfc().collect();
+    let last = nfc.rsplit(['/', '\\']).next().unwrap_or("");
+    let bad = |c: char| {
+        matches!(c,
+            '\u{0}'..='\u{1f}' | '\u{7f}'..='\u{9f}' | '\u{ad}' | '\u{34f}' | '\u{61c}' | '\u{115f}' | '\u{1160}'
+            | '\u{17b4}' | '\u{17b5}' | '\u{180b}'..='\u{180f}' | '\u{200b}'..='\u{200f}' | '\u{2028}'..='\u{202e}'
+            | '\u{2060}'..='\u{206f}' | '\u{3164}' | '\u{feff}' | '\u{ffa0}' | '\u{fff9}'..='\u{fffb}'
+            | '\u{1d173}'..='\u{1d17a}' | '\u{e0000}'..='\u{e0fff}' | ':')
+    };
     let mut out = String::new();
     let mut in_run = false;
+    let mut in_space = false;
     for c in last.chars() {
         if bad(c) {
             if !in_run {
                 out.push('_');
             }
             in_run = true;
+            in_space = false;
+        } else if c.is_whitespace() {
+            if !in_space {
+                out.push(' ');
+            }
+            in_space = true;
+            in_run = false;
         } else {
             out.push(c);
             in_run = false;
+            in_space = false;
         }
     }
     let out = out
         .trim_start_matches(|c: char| c == '.' || c.is_whitespace())
-        .trim_end();
+        .trim_end_matches(|c: char| c == '.' || c.is_whitespace());
     let chars: Vec<char> = out.chars().collect();
     if chars.len() <= FILE_NAME_MAX {
         return if out.is_empty() {
@@ -657,60 +681,430 @@ pub fn clip_preview(clip: &str) -> String {
     clean_message_text(&Json::String(first.to_string()))
 }
 
-/// A file offered in a message, as the app keeps it.
+// ---- end-to-end keys (native only; FileCrypt.swift and ShareCrypt.swift do the crypto, native/PRIVACY.md) ----
+//
+// Each app has an X25519 key pair; the public half is published with the name on the relay and pinned by each
+// contact the first time it's used. A file's or a clip's facts (for a file: its name, type, size, SHA-256 and
+// its own AES-256 key) are sealed with AES-256-GCM under a key from HKDF-SHA256 over two X25519 agreements,
+// a fresh ephemeral key's with the recipient's and the sender's own with the recipient's, so only the recipient
+// can open it and only the sender could have made it. The HKDF info, which is also the GCM associated data, is
+// `share_context`: the version, the kind, both names, the id and both public keys. The relay sees only the id,
+// the sealed bytes and, for a file, the encrypted length it has to hold.
+
+/// What every derivation and seal is bound to first, so a new scheme can't be confused with this one.
+pub const SHARE_VERSION: &str = "qcalc-share-v1";
+/// The longest sealed box the relay passes, in base64url: a file's facts are well under 2 KB.
+pub const SEALED_FILE_MAX: usize = 4096;
+/// A clip's sealed box: a 12-byte nonce, up to CLIP_MAX bytes and a 16-byte tag, in base64url.
+pub const SEALED_CLIP_MAX: usize = (CLIP_MAX + 28).div_ceil(3) * 4;
+
+/// SHA-256 (FIPS 180-4), for the safety code; the core has no crypto crates and needs nothing else.
+pub fn sha256(data: &[u8]) -> [u8; 32] {
+    const K: [u32; 64] = [
+        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4,
+        0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe,
+        0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f,
+        0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
+        0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc,
+        0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+        0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116,
+        0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+        0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7,
+        0xc67178f2,
+    ];
+    let mut h: [u32; 8] = [
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
+        0x5be0cd19,
+    ];
+    let mut msg = data.to_vec();
+    let bits = (data.len() as u64).wrapping_mul(8);
+    msg.push(0x80);
+    while msg.len() % 64 != 56 {
+        msg.push(0);
+    }
+    msg.extend_from_slice(&bits.to_be_bytes());
+    for block in msg.as_chunks::<64>().0 {
+        let mut w = [0u32; 64];
+        for (i, word) in block.as_chunks::<4>().0.iter().enumerate() {
+            w[i] = u32::from_be_bytes(*word);
+        }
+        for i in 16..64 {
+            let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
+            let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
+            w[i] = w[i - 16]
+                .wrapping_add(s0)
+                .wrapping_add(w[i - 7])
+                .wrapping_add(s1);
+        }
+        let mut v = h;
+        for i in 0..64 {
+            let s1 = v[4].rotate_right(6) ^ v[4].rotate_right(11) ^ v[4].rotate_right(25);
+            let ch = (v[4] & v[5]) ^ (!v[4] & v[6]);
+            let t1 = v[7]
+                .wrapping_add(s1)
+                .wrapping_add(ch)
+                .wrapping_add(K[i])
+                .wrapping_add(w[i]);
+            let s0 = v[0].rotate_right(2) ^ v[0].rotate_right(13) ^ v[0].rotate_right(22);
+            let maj = (v[0] & v[1]) ^ (v[0] & v[2]) ^ (v[1] & v[2]);
+            let t2 = s0.wrapping_add(maj);
+            v = [
+                t1.wrapping_add(t2),
+                v[0],
+                v[1],
+                v[2],
+                v[3].wrapping_add(t1),
+                v[4],
+                v[5],
+                v[6],
+            ];
+        }
+        for (a, b) in h.iter_mut().zip(v) {
+            *a = a.wrapping_add(b);
+        }
+    }
+    let mut out = [0u8; 32];
+    for (i, word) in h.iter().enumerate() {
+        out[i * 4..i * 4 + 4].copy_from_slice(&word.to_be_bytes());
+    }
+    out
+}
+
+/// base64url without padding, as the apps write keys and sealed boxes; None for anything else.
+pub fn b64url_decode(s: &str) -> Option<Vec<u8>> {
+    let val = |c: u8| match c {
+        b'A'..=b'Z' => Some(c - b'A'),
+        b'a'..=b'z' => Some(c - b'a' + 26),
+        b'0'..=b'9' => Some(c - b'0' + 52),
+        b'-' => Some(62),
+        b'_' => Some(63),
+        _ => None,
+    };
+    if s.len() % 4 == 1 {
+        return None;
+    }
+    let mut out = Vec::with_capacity(s.len() * 3 / 4);
+    let mut acc: u32 = 0;
+    let mut n = 0;
+    for c in s.bytes() {
+        acc = (acc << 6) | u32::from(val(c)?);
+        n += 6;
+        if n >= 8 {
+            n -= 8;
+            out.push((acc >> n) as u8);
+        }
+    }
+    // the leftover bits must be zero, so each key has one spelling
+    (acc & ((1 << n) - 1) == 0).then_some(out)
+}
+
+/// A published X25519 public key: 32 bytes in base64url (43 characters), not all zero; None otherwise.
+pub fn clean_public_key(raw: &Json) -> Option<String> {
+    let s = raw.as_str()?;
+    if s.len() != 43 {
+        return None;
+    }
+    let bytes = b64url_decode(s)?;
+    (bytes.len() == 32 && bytes.iter().any(|b| *b != 0)).then(|| s.to_string())
+}
+
+/// The safety code two people compare out loud: six groups of five digits from SHA-256 over both public keys,
+/// smaller first, so both Macs show the same code. None when either isn't a key.
+pub fn safety_code(a: &str, b: &str) -> Option<String> {
+    let ka = b64url_decode(&clean_public_key(&Json::String(a.into()))?)?;
+    let kb = b64url_decode(&clean_public_key(&Json::String(b.into()))?)?;
+    let (lo, hi) = if ka <= kb { (ka, kb) } else { (kb, ka) };
+    let mut input = format!("{SHARE_VERSION} safety code\n").into_bytes();
+    input.extend_from_slice(&lo);
+    input.extend_from_slice(&hi);
+    let d = sha256(&input);
+    let groups: Vec<String> = d
+        .as_chunks::<5>()
+        .0
+        .iter()
+        .take(6)
+        .map(|c| {
+            let v = c.iter().fold(0u64, |v, b| (v << 8) | u64::from(*b));
+            format!("{:05}", v % 100_000)
+        })
+        .collect();
+    Some(groups.join(" "))
+}
+
+/// What a seal is bound to (the HKDF info and the GCM associated data): the version, `file` or `clip`, the
+/// sender's and recipient's names, the id and both public keys, one per line. None when any isn't one, so a
+/// seal is never made over something the other side would read differently.
+pub fn share_context(
+    kind: &str,
+    from: &str,
+    to: &str,
+    id: &str,
+    from_key: &str,
+    to_key: &str,
+) -> Option<String> {
+    static ID: Lazy = Lazy::new(|| js(r"^[0-9a-f]{32}$", ""));
+    let name = |n: &str| Some(clean_name(&Json::String(n.into()))).filter(|c| c == n);
+    let key = |k: &str| clean_public_key(&Json::String(k.into()));
+    if !matches!(kind, "file" | "clip") || !jsre::test(&ID, id) {
+        return None;
+    }
+    Some(format!(
+        "{SHARE_VERSION}\n{kind}\n{}\n{}\n{id}\n{}\n{}",
+        name(from)?,
+        name(to)?,
+        key(from_key)?,
+        key(to_key)?
+    ))
+}
+
+/// A sealed share as the relay passes it on: its id, the sender's ephemeral public key and the sealed box, and
+/// for a file the encrypted length the relay holds and when the offer lapses.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct FileOffer {
+pub struct SealedShare {
     pub id: String,
-    pub name: String,
-    pub size: u64,
+    pub epk: String,
+    pub sealed: String,
+    #[serde(default)]
     pub bytes: u64,
-    #[serde(rename = "type")]
-    pub kind: String,
-    pub sha256: String,
-    pub key: String,
+    #[serde(default)]
     pub expires: f64,
 }
 
-/// An offer from the relay checked again: an id, a clean name, sizes that add up, a hash and a key.
-pub fn clean_offer(raw: &Json) -> Option<FileOffer> {
+fn clean_sealed(raw: &Json, max: usize) -> Option<SealedShare> {
     static ID: Lazy = Lazy::new(|| js(r"^[0-9a-f]{32}$", ""));
-    static SHA: Lazy = Lazy::new(|| js(r"^[0-9a-f]{64}$", ""));
-    static KEY: Lazy = Lazy::new(|| js(r"^[A-Za-z0-9_-]{43}$", ""));
+    static BOX: Lazy = Lazy::new(|| js(r"^[A-Za-z0-9_-]+$", ""));
+    let str_of = |k: &str| raw.get(k).and_then(Json::as_str).unwrap_or("");
+    let id = str_of("id");
+    let sealed = str_of("sealed");
+    let epk = clean_public_key(raw.get("epk")?)?;
+    // a nonce, a tag and at least a byte between them
+    let fits = (40..=max).contains(&sealed.len()) && jsre::test(&BOX, sealed);
+    if !jsre::test(&ID, id) || !fits || b64url_decode(sealed).is_none() {
+        return None;
+    }
+    Some(SealedShare {
+        id: id.into(),
+        epk,
+        sealed: sealed.into(),
+        bytes: 0,
+        expires: raw.get("expires").and_then(Json::as_f64).unwrap_or(0.0),
+    })
+}
+
+/// A file's offer from the relay checked again: an id, an ephemeral key, a sealed box of the right size and an
+/// encrypted length no more than a 1 GiB file's. Its facts are inside the box.
+pub fn clean_sealed_offer(raw: &Json) -> Option<SealedShare> {
+    let bytes = raw.get("bytes").and_then(Json::as_u64)?;
+    if !(encrypted_len(0)..=encrypted_len(FILE_MAX)).contains(&bytes) {
+        return None;
+    }
+    Some(SealedShare {
+        bytes,
+        ..clean_sealed(raw, SEALED_FILE_MAX)?
+    })
+}
+
+/// A clip from the relay checked again: an id, an ephemeral key and a sealed box no bigger than a clip's.
+pub fn clean_sealed_clip(raw: &Json) -> Option<SealedShare> {
+    clean_sealed(raw, SEALED_CLIP_MAX)
+}
+
+/// A file's facts, as the sender seals them and the recipient reads them once opened.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct FileFacts {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    pub size: u64,
+    pub sha256: String,
+    /// the file's own AES-256 key, base64url
+    pub key: String,
+}
+
+fn clean_type(raw: &str) -> String {
     static TYPE: Lazy = Lazy::new(|| {
         js(
             r"^[a-z0-9][a-z0-9!#$&^_.+-]{0,63}/[a-z0-9][a-z0-9!#$&^_.+-]{0,63}$",
             "",
         )
     });
-    let str_of = |k: &str| raw.get(k).and_then(Json::as_str).unwrap_or("");
-    let id = str_of("id");
-    let sha256 = str_of("sha256");
-    let key = str_of("key");
-    let size = raw.get("size").and_then(Json::as_u64)?;
-    let bytes = raw.get("bytes").and_then(Json::as_u64)?;
-    if !jsre::test(&ID, id)
-        || !jsre::test(&SHA, sha256)
-        || !jsre::test(&KEY, key)
+    let kind = jstr::trim(raw.split(';').next().unwrap_or("")).to_lowercase();
+    if jsre::test(&TYPE, &kind) {
+        kind
+    } else {
+        "application/octet-stream".into()
+    }
+}
+
+/// What the sender seals for a file: its facts as one line of JSON, the name and type cleaned first. None when
+/// the size is over 1 GiB or the hash or key isn't one.
+pub fn seal_file_facts(
+    name: &str,
+    kind: &str,
+    size: u64,
+    sha256: &str,
+    key: &str,
+) -> Option<String> {
+    let facts = FileFacts {
+        name: clean_filename(name),
+        kind: clean_type(kind),
+        size,
+        sha256: sha256.into(),
+        key: key.into(),
+    };
+    let json = serde_json::to_string(
+        &serde_json::json!({"v": 1, "name": facts.name, "type": facts.kind,
+        "size": facts.size, "sha256": facts.sha256, "key": facts.key}),
+    )
+    .ok()?;
+    open_file_facts(&json, encrypted_len(size)).map(|_| json)
+}
+
+/// A file's facts once opened, checked again on the receiving side: version 1, a clean name and type, a size no
+/// more than 1 GiB whose encrypted length is exactly what the relay holds, a SHA-256 and a key. None otherwise.
+pub fn open_file_facts(plain: &str, bytes: u64) -> Option<FileFacts> {
+    static SHA: Lazy = Lazy::new(|| js(r"^[0-9a-f]{64}$", ""));
+    static KEY: Lazy = Lazy::new(|| js(r"^[A-Za-z0-9_-]{43}$", ""));
+    let o: Json = serde_json::from_str(plain).ok()?;
+    let str_of = |k: &str| o.get(k).and_then(Json::as_str).unwrap_or("");
+    let size = o.get("size").and_then(Json::as_u64)?;
+    let (sha256, key) = (str_of("sha256"), str_of("key"));
+    let key_ok = jsre::test(&KEY, key) && b64url_decode(key).is_some_and(|k| k.len() == 32);
+    if o.get("v").and_then(Json::as_u64) != Some(1)
         || size > FILE_MAX
-        || bytes != encrypted_len(size)
+        || encrypted_len(size) != bytes
+        || !jsre::test(&SHA, sha256)
+        || !key_ok
     {
         return None;
     }
-    let kind = str_of("type").to_lowercase();
-    Some(FileOffer {
-        id: id.into(),
+    Some(FileFacts {
         name: clean_filename(str_of("name")),
+        kind: clean_type(str_of("type")),
         size,
-        bytes,
-        kind: if jsre::test(&TYPE, &kind) {
-            kind
-        } else {
-            "application/octet-stream".into()
-        },
         sha256: sha256.into(),
         key: key.into(),
-        expires: raw.get("expires").and_then(Json::as_f64).unwrap_or(0.0),
     })
+}
+
+/// Where a contact's key stands against the one pinned for them: `new` (nothing pinned yet: pin it), `same`, or
+/// `changed` (refuse to send or open until it's trusted), or `bad` when it isn't a key.
+pub fn pin_state(pins: &Json, who: &str, key: &str) -> &'static str {
+    let Some(key) = clean_public_key(&Json::String(key.into())) else {
+        return "bad";
+    };
+    match pins.get(who).and_then(clean_public_key) {
+        None => "new",
+        Some(p) if p == key => "same",
+        Some(_) => "changed",
+    }
+}
+
+/// The bar's one-line notice, the first time you send or save a file or clip, until it's dismissed.
+pub fn privacy_notice() -> String {
+    "files and clipboard shares are end-to-end encrypted · q calc’s relay can’t read them, only who sent to \
+     whom, the size and when · files are deleted after download or within 24 hours"
+        .into()
+}
+
+/// Settings › Messages › Privacy: the notice, and what the safety code is for.
+pub fn privacy_settings_text() -> Vec<String> {
+    vec![
+        "Files and clipboard shares are end-to-end encrypted. Q Calc’s relay can’t read them; it only sees who \
+         sent to whom, the size and when. Files are deleted after download or within 24 hours."
+            .into(),
+        "Each contact has a safety code in their thread’s info (ⓘ). Compare it with them out loud or in person: \
+         if it’s the same on both Macs, nobody is in between. If someone’s key changes, Q Calc stops sending to \
+         them until you trust the new one."
+            .into(),
+        "Text messages aren’t end-to-end encrypted, so older copies of Q Calc can still read them. The relay \
+         passes them on and doesn’t keep them."
+            .into(),
+    ]
+}
+
+/// The lock beside a file or a clip in the thread.
+pub fn lock_tooltip(who: &str) -> String {
+    format!("end-to-end encrypted · only you and {who} can open it")
+}
+
+/// The line a thread shows while a contact's key has changed, and what to do about it.
+pub fn key_changed_text(who: &str) -> String {
+    format!("{who}’s security key changed")
+}
+
+pub fn key_changed_detail(who: &str) -> String {
+    format!(
+        "nothing goes to or from {who} until you trust it · compare the new safety code with {who} first"
+    )
+}
+
+/// A thread's info: the safety code, or why there isn't one yet.
+pub fn safety_code_text(who: &str, code: &str) -> String {
+    if code.is_empty() {
+        format!("no safety code with {who} yet · it shows once {who} has a key")
+    } else {
+        format!("safety code with {who}: {code}")
+    }
+}
+
+pub fn safety_code_detail(who: &str) -> String {
+    format!("compare it with {who} out loud · if it’s the same on both macs, nobody’s in between")
+}
+
+/// What a drop on the bar does with the line as it is: the name the files go to and any message typed after
+/// it, or (name "") why they can't go, in the words `message` uses. Lines that are neither a message nor a share
+/// command give nothing (`hint` ""), and the bar asks for a name as before.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DropTarget {
+    pub name: String,
+    pub text: String,
+    pub hint: String,
+}
+
+pub fn drop_target(
+    line: &str,
+    m: &Messaging,
+    relay: bool,
+    found: Option<bool>,
+    count: u32,
+) -> DropTarget {
+    let (to, name, text) = if let Some(share) = parse_share_command(line) {
+        (share.to, share.name, String::new())
+    } else if let Some(msg) = parse_message(line) {
+        (msg.to, msg.name, msg.text)
+    } else {
+        return DropTarget::default();
+    };
+    let why = |hint: String| DropTarget {
+        hint,
+        ..DropTarget::default()
+    };
+    if !relay {
+        return why("messages need the online relay".into());
+    }
+    if m.name.is_empty() || m.key.is_empty() {
+        return why("set your name in settings to send files".into());
+    }
+    if to.is_empty() {
+        return why("message <name> first, then drop to send it".into());
+    }
+    if name.is_empty() {
+        return why("a name is 2–20 letters, digits, - or _".into());
+    }
+    if found == Some(false) {
+        return why("username not found".into());
+    }
+    let what = if count > 1 {
+        format!("{count} files ")
+    } else {
+        String::new()
+    };
+    DropTarget {
+        hint: format!("drop to send {what}to {name}"),
+        name,
+        text,
+    }
 }
 
 /// Whether an offer is taken without asking: only from an accepted name, only under the size set in settings
@@ -1086,6 +1480,19 @@ mod share_tests {
         let long = clean_filename(&format!("{}.tar.gz", "x".repeat(300)));
         assert_eq!(long.chars().count(), 120);
         assert!(long.ends_with(".gz"));
+        // invisible and formatting characters, nfc, runs of spaces, trailing dots
+        assert_eq!(clean_filename("a\u{2060}b\u{e0041}.txt"), "a_b_.txt");
+        assert_eq!(clean_filename("cafe\u{301}.txt"), "caf\u{e9}.txt");
+        assert_eq!(
+            clean_filename("photo.jpg      \u{3000}  .exe"),
+            "photo.jpg .exe"
+        );
+        assert_eq!(clean_filename("report.pdf. . ."), "report.pdf");
+        assert_eq!(clean_filename("\u{200b}.bashrc"), "_.bashrc");
+        assert_eq!(clean_filename("..\\..\\x.app"), "x.app");
+        let long_ext = clean_filename(&format!("{}.exe", "\u{e9}".repeat(200)));
+        assert_eq!(long_ext.chars().count(), 120);
+        assert!(long_ext.ends_with(".exe"));
         assert_eq!(numbered_name("notes.pdf", 1), "notes.pdf");
         assert_eq!(numbered_name("notes.pdf", 2), "notes 2.pdf");
         assert_eq!(numbered_name("README", 3), "README 3");
@@ -1103,28 +1510,231 @@ mod share_tests {
         );
     }
 
+    const KA: &str = "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA";
+    const KB: &str = "ISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0A";
+
+    fn hex(d: &[u8]) -> String {
+        d.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
     #[test]
-    fn checks_an_offer_again() {
-        let good = json!({"id": "ab".repeat(16), "name": "../a.pdf", "size": 5, "bytes": 21, "type": "Application/PDF",
-                          "sha256": "cd".repeat(32), "key": "A".repeat(43), "expires": 9.0});
-        let o = clean_offer(&good).unwrap();
+    fn hashes_as_sha256_does() {
         assert_eq!(
-            (o.name.as_str(), o.kind.as_str(), o.size, o.bytes),
-            ("a.pdf", "application/pdf", 5, 21)
+            hex(&sha256(b"")),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
+        assert_eq!(
+            hex(&sha256(b"abc")),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        assert_eq!(
+            hex(&sha256(&[b'a'; 1000])),
+            "41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3"
+        );
+    }
+
+    #[test]
+    fn reads_keys_in_base64url_only() {
+        assert_eq!(b64url_decode(KA).unwrap(), (1..=32).collect::<Vec<u8>>());
+        assert_eq!(b64url_decode("").unwrap(), Vec::<u8>::new());
+        assert!(b64url_decode("AQ+D").is_none());
+        assert!(b64url_decode("AQ==").is_none());
+        assert!(b64url_decode("A").is_none());
+        // leftover bits must be zero, so a key has one spelling
+        assert!(b64url_decode("AR").is_none());
+        assert_eq!(clean_public_key(&json!(KA)), Some(KA.into()));
+        assert_eq!(clean_public_key(&json!("A".repeat(43))), None);
+        assert_eq!(clean_public_key(&json!(&KA[..42])), None);
+        assert_eq!(clean_public_key(&json!(3)), None);
+    }
+
+    #[test]
+    fn derives_one_safety_code_on_both_sides() {
+        let code = safety_code(KA, KB).unwrap();
+        assert_eq!(code, "61110 50086 04472 66800 58278 65420");
+        assert_eq!(safety_code(KB, KA).unwrap(), code);
+        assert_eq!(code.split(' ').count(), 6);
+        assert!(safety_code(KA, "nope").is_none());
+        // a different key, a different code
+        let other = "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyE";
+        assert_ne!(safety_code(other, KB).unwrap(), code);
+    }
+
+    #[test]
+    fn binds_a_seal_to_both_names_the_id_and_both_keys() {
+        let id = "ab".repeat(16);
+        assert_eq!(
+            share_context("file", "ana", "max2", &id, KA, KB).unwrap(),
+            format!("qcalc-share-v1\nfile\nana\nmax2\n{id}\n{KA}\n{KB}")
+        );
+        assert!(share_context("clip", "ana", "max2", &id, KA, KB).is_some());
+        assert!(share_context("text", "ana", "max2", &id, KA, KB).is_none());
+        assert!(share_context("file", "Ana", "max2", &id, KA, KB).is_none());
+        assert!(share_context("file", "ana\nmax", "max2", &id, KA, KB).is_none());
+        assert!(share_context("file", "ana", "max2", "../x", KA, KB).is_none());
+        assert!(share_context("file", "ana", "max2", &id, KA, "x").is_none());
+    }
+
+    #[test]
+    fn checks_a_sealed_offer_and_clip_again() {
+        let sealed = "Q".repeat(64);
+        let good = json!({"id": "ab".repeat(16), "epk": KA, "sealed": sealed, "bytes": 21, "expires": 9.0});
+        let o = clean_sealed_offer(&good).unwrap();
+        assert_eq!((o.bytes, o.expires, o.epk.as_str()), (21, 9.0, KA));
         let with = |k: &str, v: Json| {
             let mut g = good.clone();
             g[k] = v;
-            clean_offer(&g)
+            clean_sealed_offer(&g)
         };
-        assert!(with("bytes", json!(22)).is_none());
-        assert!(with("id", json!("nope")).is_none());
-        assert!(with("key", json!("short")).is_none());
-        assert!(with("size", json!(-1)).is_none());
+        assert!(with("bytes", json!(15)).is_none());
+        assert!(with("bytes", json!(encrypted_len(FILE_MAX) + 1)).is_none());
+        assert!(with("bytes", json!(-1)).is_none());
+        assert!(with("bytes", json!(1.5)).is_none());
+        assert!(with("id", json!("../../etc")).is_none());
+        assert!(with("epk", json!("short")).is_none());
+        assert!(with("sealed", json!("Q".repeat(SEALED_FILE_MAX + 4))).is_none());
+        assert!(with("sealed", json!("a+b/".repeat(16))).is_none());
+        assert!(with("sealed", json!("Q".repeat(8))).is_none());
+        // a plain offer, key and all, isn't one any more
+        let plain = json!({"id": "ab".repeat(16), "name": "a.pdf", "size": 5, "bytes": 21,
+                           "sha256": "cd".repeat(32), "key": "A".repeat(43)});
+        assert!(clean_sealed_offer(&plain).is_none());
+        let clip = json!({"id": "cd".repeat(16), "epk": KB, "sealed": "Q".repeat(SEALED_CLIP_MAX)});
+        assert!(clean_sealed_clip(&clip).is_some());
+        let big =
+            json!({"id": "cd".repeat(16), "epk": KB, "sealed": "Q".repeat(SEALED_CLIP_MAX + 4)});
+        assert!(clean_sealed_clip(&big).is_none());
+        assert!(clean_sealed_clip(&json!("a plain clip")).is_none());
+    }
+
+    #[test]
+    fn seals_and_rechecks_a_files_facts() {
+        let key = "A".repeat(43);
+        let sha = "cd".repeat(32);
+        let plain = seal_file_facts(
+            "../x/notes\u{202e}fdp.exe",
+            "Application/PDF; x=1",
+            5,
+            &sha,
+            &key,
+        )
+        .unwrap();
+        let f = open_file_facts(&plain, 21).unwrap();
+        assert_eq!(
+            (f.name.as_str(), f.kind.as_str(), f.size),
+            ("notes_fdp.exe", "application/pdf", 5)
+        );
+        // the size the relay holds has to match the sealed size exactly
+        assert!(open_file_facts(&plain, 22).is_none());
+        assert!(seal_file_facts("a", "x", FILE_MAX + 1, &sha, &key).is_none());
+        assert!(seal_file_facts("a", "x", 5, "nope", &key).is_none());
+        let with = |k: &str, v: Json| {
+            let mut o: Json = serde_json::from_str(&plain).unwrap();
+            o[k] = v;
+            open_file_facts(&o.to_string(), 21)
+        };
+        assert!(with("v", json!(2)).is_none());
+        assert!(with("size", json!(FILE_MAX + 1)).is_none());
+        assert!(with("key", json!("B".repeat(42))).is_none());
+        assert_eq!(with("name", json!(".hidden/..")).unwrap().name, "file");
         assert_eq!(
             with("type", json!("text/html<x>")).unwrap().kind,
             "application/octet-stream"
         );
+        assert!(open_file_facts("not json", 21).is_none());
+    }
+
+    #[test]
+    fn pins_a_key_on_first_use() {
+        let pins = json!({"max2": KA});
+        assert_eq!(pin_state(&pins, "max2", KA), "same");
+        assert_eq!(pin_state(&pins, "max2", KB), "changed");
+        assert_eq!(pin_state(&pins, "ana", KB), "new");
+        assert_eq!(pin_state(&pins, "ana", "x"), "bad");
+        assert_eq!(pin_state(&json!(null), "ana", KB), "new");
+    }
+
+    #[test]
+    fn tells_users_plainly() {
+        assert!(
+            privacy_notice().starts_with("files and clipboard shares are end-to-end encrypted")
+        );
+        assert!(privacy_notice().contains("within 24 hours"));
+        assert_eq!(privacy_notice(), privacy_notice().to_lowercase());
+        let settings = privacy_settings_text();
+        assert!(settings[0].starts_with(
+            "Files and clipboard shares are end-to-end encrypted. Q Calc’s relay can’t read them; it only sees who sent to whom, the size and when."
+        ));
+        assert!(settings[1].contains("safety code"));
+        assert!(settings[2].contains("Text messages aren’t end-to-end encrypted"));
+        assert_eq!(
+            lock_tooltip("max2"),
+            "end-to-end encrypted · only you and max2 can open it"
+        );
+        assert_eq!(key_changed_text("max2"), "max2’s security key changed");
+        assert_eq!(
+            share_status_text("key-changed", "max2", "file", "a"),
+            "max2’s security key changed · not sent"
+        );
+        assert_eq!(
+            file_error_text("key-changed", "max2"),
+            "max2’s security key changed"
+        );
+        assert_eq!(
+            share_status_text("no-key", "max2", "clip", ""),
+            "max2 needs a newer q calc to get files · not sent"
+        );
+        assert_eq!(
+            safety_code_text("max2", "1 2"),
+            "safety code with max2: 1 2"
+        );
+        assert!(safety_code_text("max2", "").starts_with("no safety code"));
+    }
+
+    #[test]
+    fn sends_a_drop_to_the_name_on_the_line() {
+        let m = me();
+        let drop = |line: &str, found: Option<bool>, n: u32| drop_target(line, &m, true, found, n);
+        let to = |name: &str, text: &str, hint: &str| DropTarget {
+            name: name.into(),
+            text: text.into(),
+            hint: hint.into(),
+        };
+        assert_eq!(
+            drop("message max2", None, 1),
+            to("max2", "", "drop to send to max2")
+        );
+        assert_eq!(
+            drop("message Max2 here you go ", Some(true), 1),
+            to("max2", "here you go", "drop to send to max2")
+        );
+        assert_eq!(
+            drop("message max2 hi", None, 3),
+            to("max2", "hi", "drop to send 3 files to max2")
+        );
+        assert_eq!(
+            drop("send file to max2", None, 1),
+            to("max2", "", "drop to send to max2")
+        );
+        assert_eq!(
+            drop("message", None, 1),
+            to("", "", "message <name> first, then drop to send it")
+        );
+        assert_eq!(
+            drop("message x", None, 1),
+            to("", "", "a name is 2–20 letters, digits, - or _")
+        );
+        assert_eq!(
+            drop("message zed", Some(false), 1),
+            to("", "", "username not found")
+        );
+        assert_eq!(drop("2+2", None, 1), DropTarget::default());
+        assert_eq!(drop("", None, 1), DropTarget::default());
+        let off = drop_target("message max2", &Messaging::default(), true, None, 1);
+        assert_eq!(off.hint, "set your name in settings to send files");
+        assert!(off.name.is_empty());
+        let no_relay = drop_target("message max2", &m, false, None, 1);
+        assert_eq!(no_relay.hint, "messages need the online relay");
     }
 
     #[test]
