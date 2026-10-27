@@ -1,13 +1,13 @@
 import CryptoKit
 import Foundation
 
-/// How a file is encrypted for the relay (native only; relay/README.md, "Files and clips"). A fresh AES-256 key
-/// per file, sent only inside the offer message. The file is cut into chunks of `chunk` plain bytes (one chunk,
+/// How a file is encrypted for the relay (native only; native/PRIVACY.md). A fresh AES-256 key per file, which
+/// travels only inside the offer's facts, sealed for the recipient alone (ShareCrypt). The file is cut into chunks of `chunk` plain bytes (one chunk,
 /// maybe empty, at least), and each is sealed with AES-GCM on its own: the nonce is the chunk's index (4 zero
 /// bytes and 8 big-endian), and the associated data is the index and whether it's the last chunk, so chunks
 /// can't be reordered, dropped or cut off the end. The upload is each chunk's ciphertext and 16-byte tag in
-/// order, `encryptedLength(size)` bytes in all. The SHA-256 of the plain bytes rides in the offer and is checked
-/// after decrypting.
+/// order, `encryptedLength(size)` bytes in all. The SHA-256 of the plain bytes rides in the sealed facts and is
+/// checked after decrypting.
 enum FileCrypt {
     static let chunk = 1024 * 1024
     static let tag = 16
@@ -80,11 +80,13 @@ enum FileCrypt {
         return hex(hash.finalize())
     }
 
-    /// `source` opened into `dest`, checked against `sha256`; throws `corrupt` when anything doesn't match.
-    static func decrypt(_ source: URL, to dest: URL, key: SymmetricKey, sha256: String) throws {
+    /// `source` opened into `dest`, checked against `sha256` and, when given, the plain `size` the sender sealed
+    /// (the download must be exactly its encrypted length); throws `corrupt` when anything doesn't match.
+    static func decrypt(_ source: URL, to dest: URL, key: SymmetricKey, sha256: String, size expected: UInt64? = nil) throws {
         guard let size = (try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize, let input = try? FileHandle(forReadingFrom: source) else {
             throw Failure.corrupt
         }
+        if let expected, UInt64(size) != encryptedLength(expected) { throw Failure.corrupt }
         defer { try? input.close() }
         guard FileManager.default.createFile(atPath: dest.path, contents: nil), let output = try? FileHandle(forWritingTo: dest) else { throw Failure.disk }
         defer { try? output.close() }
@@ -92,6 +94,7 @@ enum FileCrypt {
         let total = UInt64(size)
         let chunks = max(1, (total + sealed - 1) / sealed)
         var hash = SHA256()
+        var written: UInt64 = 0
         for i in 0..<chunks {
             let plain = try autoreleasepool { () throws -> Data in
                 let data = (try? input.read(upToCount: Int(sealed))) ?? Data()
@@ -101,12 +104,15 @@ enum FileCrypt {
                 return plain
             }
             hash.update(data: plain)
+            written += UInt64(plain.count)
+            if let expected, written > expected { throw Failure.corrupt }
             do {
                 try output.write(contentsOf: plain)
             } catch {
                 throw Failure.disk
             }
         }
+        if let expected, written != expected { throw Failure.corrupt }
         guard hex(hash.finalize()) == sha256 else { throw Failure.corrupt }
     }
 }
