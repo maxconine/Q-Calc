@@ -1,0 +1,23 @@
+{"fn":"formatSig","args":[0.000123,2,5],"out":"0.00012","src":"src/engine/measure.test.ts"}
+{"fn":"formatSig","args":[100,3,0],"out":"1.00e2","src":"src/engine/measure.test.ts"}
+{"fn":"formatSig","args":[5,3,2],"out":"5.00","src":"src/engine/measure.test.ts"}
+{"fn":"formatUncertain","args":[10,1,"1"],"out":"10 ± 1","src":"src/engine/measure.test.ts"}
+{"fn":"formatUncertain","args":[10,1.2,"1"],"out":"10.0 ± 1.2","src":"src/engine/measure.test.ts"}
+{"fn":"formatUncertain","args":[10,1],"out":"10.0 ± 1.0","src":"src/engine/measure.test.ts"}
+{"fn":"formatUncertain","args":[8.2,0.30000000000000004],"out":"8.2 ± 0.3","src":"src/engine/measure.test.ts"}
+{"fn":"formatUncertain","args":[9.96,0.74],"out":"10.0 ± 0.7","src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["0.0025"],"out":{"v":0.0025,"sig":2,"dp":4,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["1.00e2"],"out":{"v":100,"sig":3,"dp":0,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["2"],"out":{"v":2,"sig":{"$f":"Infinity"},"dp":{"$f":"Infinity"},"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["2."],"out":{"v":2,"sig":1,"dp":0,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["2.50"],"out":{"v":2.5,"sig":3,"dp":2,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["300"],"out":{"v":300,"sig":{"$f":"Infinity"},"dp":{"$f":"Infinity"},"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["300."],"out":{"v":300,"sig":3,"dp":0,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["6.02e23"],"out":{"v":6.02e+23,"sig":3,"dp":-21,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"literalMeas","args":["6e23"],"out":{"v":6e+23,"sig":1,"dp":-23,"unc":0},"src":"src/engine/measure.test.ts"}
+{"fn":"measure","args":["hello"],"out":null,"src":"src/engine/measure.test.ts"}
+{"fn":"sanitizeMeas","args":[{"unc":1,"uncDigits":"1"}],"out":{"unc":1,"uncDigits":"1"},"src":"src/engine/measure.test.ts"}
+{"fn":"sanitizeMeas","args":[{"unc":1,"uncDigits":"x"}],"out":{"unc":1},"src":"src/engine/measure.test.ts"}
+{"fn":"typedDigits","args":["0.10"],"out":"10","src":"src/engine/measure.test.ts"}
+{"fn":"typedDigits","args":["10"],"out":"1","src":"src/engine/measure.test.ts"}
+{"fn":"typedDigits","args":["1e-1"],"out":"1","src":"src/engine/measure.test.ts"}

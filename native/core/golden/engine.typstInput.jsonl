@@ -1,0 +1,9 @@
+{"fn":"looksLikeTypst","args":["2 ast 3"],"out":true,"src":"src/engine/typstInput.test.ts"}
+{"fn":"looksLikeTypst","args":["2 dot 3"],"out":true,"src":"src/engine/typstInput.test.ts"}
+{"fn":"looksLikeTypst","args":["dot([1, 2], [3, 4])"],"out":false,"src":"src/engine/typstInput.test.ts"}
+{"fn":"typstToAscii","args":["$10 for lunch + 15% tip"],"out":"$10 for lunch + 15% tip","src":"src/engine/typstInput.test.ts"}
+{"fn":"typstToAscii","args":["2 ast 3"],"out":"2*3","src":"src/engine/typstInput.test.ts"}
+{"fn":"typstToAscii","args":["2 dot 3"],"out":"2*3","src":"src/engine/typstInput.test.ts"}
+{"fn":"typstToAscii","args":["2*3+4"],"out":"2*3+4","src":"src/engine/typstInput.test.ts"}
+{"fn":"typstToAscii","args":["2+2"],"out":"2+2","src":"src/engine/typstInput.test.ts"}
+{"fn":"typstToAscii","args":["sin(90)"],"out":"sin(90)","src":"src/engine/typstInput.test.ts"}

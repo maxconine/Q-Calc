@@ -34,6 +34,10 @@ export { Ledger } from './ledger.js'
 //                  {…, kind: 'clip', clip}  clipboard text, up to 64 KB, passed on as it is
 //                  {…, kind: 'file', file}  offers a file {name, size, bytes, type, sha256, key}: nothing is
 //                                           stored until its recipient accepts. answers {status, id}
+//   POST /lookup   {from, key, name}        whether anyone holds a name: 'found' or 'unknown', which is all a
+//                                           send already says. a sender's own name and key, as for /send, and
+//                                           counted per address and per sender. blocks live in each app, so
+//                                           nothing here knows of them
 //   an inbox hears {type: 'message', from, text} and, for a clip or an offer, kind and clip or file {id, name,
 //   size, bytes, type, sha256, key, expires}; text is then a line an app that only knows text messages shows
 //   instead. a file's progress comes as {type: 'file', event: 'accepted' | 'ready' | 'cancelled' | 'declined',
@@ -139,6 +143,16 @@ async function messaging(req, env, path) {
   const o = await body(req, path === '/send' ? MAX_SEND_BODY : MAX_BODY)
   if (!o) return reply({ status: 'bad' })
   if (path === '/send') return send(req, env, o)
+  if (path === '/lookup') {
+    const from = cleanHandle(o.from)
+    const name = cleanHandle(o.name)
+    if (!from || !name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
+    if (!(await allowedKey(env.LOOKUPS, ipKey(req.headers.get('cf-connecting-ip')))) || !(await allowedKey(env.LOOKUPS, `name:${from}`))) {
+      return reply({ status: 'too-many' })
+    }
+    if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
+    return reply({ status: (await inbox(env, name).known()) ? 'found' : 'unknown' })
+  }
   const name = cleanHandle(o.name)
   if (!name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
   if (!(await allowed(env.NAMES, req))) return reply({ status: 'too-many' })
@@ -395,7 +409,7 @@ async function sweep(env) {
   }
 }
 
-const MESSAGING = new Set(['/claim', '/release', '/send'])
+const MESSAGING = new Set(['/claim', '/release', '/send', '/lookup'])
 const INBOX_ROUTE = /^\/inbox\/([a-z0-9_-]+)$/
 
 export default {
@@ -986,6 +1000,11 @@ export class Inbox extends DurableObject {
         // already closing
       }
     }
+  }
+
+  // over rpc: whether anyone holds the name, read only, so a lookup neither claims nor keeps a name alive
+  async known() {
+    return !lapsed(await this.ctx.storage.get('claim'), Date.now())
   }
 
   // over rpc: when the name's holder first claimed it (0 for a claim older than this was kept)

@@ -1,0 +1,16 @@
+{"fn":"joinDots","args":["2 dot 3"],"out":"2 dot 3","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["5 Å"],"out":"5 Å","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["5 Ångström in m"],"out":"5 Ångström in m","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["\\ddot{x}"],"out":" xddot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["\\dot\\theta"],"out":" thetadot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["café"],"out":"café","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["dot([1, 2], [3, 4])"],"out":"dot([1, 2], [3, 4])","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["dot(theta)"],"out":" thetadot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["dot.double(x)"],"out":" xddot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["e^{k\\theta}\\,\\dot\\theta"],"out":"e^{k\\theta}\\, thetadot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["naïve"],"out":"naïve","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["x dot y"],"out":"x dot y","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["θ²θ̇"],"out":"θ² thetadot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["θ̇"],"out":" thetadot ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["ẋ sin θ"],"out":" xdot  sin θ","src":"src/engine/dots.test.ts"}
+{"fn":"joinDots","args":["ẍ"],"out":" xddot ","src":"src/engine/dots.test.ts"}

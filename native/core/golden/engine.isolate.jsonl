@@ -1,0 +1,50 @@
+{"fn":"isIsolateCommand","args":["$10 for lunch"],"out":false,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isIsolateCommand","args":["solve x in y = mx + b"],"out":true,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["isolate b","isolate x in y = mx + b"],"out":"isolate b in y = mx + b","src":"src/engine/isolate.test.ts"}
+{"fn":"isolatePrevious","args":["isolate b","solve y = mx + b for x"],"out":"isolate b in y = mx + b","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["isolate x in y = x","a = b"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"isolatePrevious","args":["isolate x","2 + 3"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"isolatePrevious","args":["isolate x","y = mx + b"],"out":"isolate x in y = mx + b","src":"src/engine/isolate.test.ts"}
+{"fn":"isolatePrevious","args":["isolate x",{"$undef":true}],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"isolatePrevious","args":["solve for m","y = mx + b"],"out":"solve y = mx + b for m","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve for x","2 + 3"],"out":null,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve for x","2x + 3 = 11"],"out":"solve 2x + 3 = 11 for x","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve for x","f(x) = x^2"],"out":null,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve for x","graph y = x"],"out":null,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve for x","y = mx + b"],"out":"solve y = mx + b for x","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve for x",{"$undef":true}],"out":null,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve x","isolate x in y = mx + b"],"out":"solve y = mx + b for x","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolatePrevious","args":["solve x","y = mx + b, solve m"],"out":"solve y = mx + b for x","src":"src/engine/isolate.solve.test.ts"}
+{"fn":"isolateVariable","args":["E = mc^2, isolate c"],"out":{"variable":"c","display":"c = ±sqrt(E/m)","forms":["sqrt(E/m)","-sqrt(E/m)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["PV = nRT isolate T"],"out":{"variable":"T","display":"T = P*V/(R*n)","forms":["P*V/(R*n)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate R in 1/R = 1/R1 + 1/R2"],"out":{"variable":"R","display":"R = R1*R2/(R2 + R1)","forms":["R1*R2/(R2 + R1)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate R_(eq) in 1/R_(eq) = 1/R_(1) + 1/R_(2)"],"out":{"variable":"R_eq","display":"R_eq = R_1*R_2/(R_2 + R_1)","forms":["R_1*R_2/(R_2 + R_1)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate R_eq in 1/R_eq = 1/R_1 + 1/R_2"],"out":{"variable":"R_eq","display":"R_eq = R_1*R_2/(R_2 + R_1)","forms":["R_1*R_2/(R_2 + R_1)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate R_{eq} in 1/R_{eq} = 1/R_{1} + 1/R_{2}"],"out":{"variable":"R_eq","display":"R_eq = R_1*R_2/(R_2 + R_1)","forms":["R_1*R_2/(R_2 + R_1)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate h: v = sqrt(2gh)"],"out":{"variable":"h","display":"h = v^2/(2g)","forms":["v^2/(2g)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate m in F = ma"],"out":{"variable":"m","display":"m = F/a","forms":["F/a"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate r in A = pi r^2"],"out":{"variable":"r","display":"r = ±sqrt(A/pi)","forms":["sqrt(A/pi)","-sqrt(A/pi)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate t in d = v t + 1/2 a t^2"],"out":{"variable":"t","display":"t = (-v ± sqrt(v^2 + 2a*d))/a","forms":["(-v + sqrt(v^2 + 2a*d))/a","(-v - sqrt(v^2 + 2a*d))/a"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in 3x + 2y = 6"],"out":{"variable":"x","display":"x = (6 - 2y)/3","forms":["(6 - 2y)/3"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in a x^2 + b x + c = 0"],"out":{"variable":"x","display":"x = (-b ± sqrt(b^2 - 4a*c))/(2a)","forms":["(-b + sqrt(b^2 - 4a*c))/(2a)","(-b - sqrt(b^2 - 4a*c))/(2a)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in a*x + b = c"],"out":{"variable":"x","display":"x = (c - b)/a","forms":["(c - b)/a"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in sin(x) = y"],"out":{"variable":"x","display":"x = asin(y)","forms":["asin(y)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in x + sin(x) = y"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in x^5 + x = y"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in xy + x = z"],"out":{"variable":"x","display":"x = z/(y + 1)","forms":["z/(y + 1)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in y = 2^x"],"out":{"variable":"x","display":"x = ln(y)/ln(2)","forms":["ln(y)/ln(2)"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate x in y = e^(kx)"],"out":{"variable":"x","display":"x = ln(y)/k","forms":["ln(y)/k"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate y in 3x + 2y = 6"],"out":{"variable":"y","display":"y = (6 - 3x)/2","forms":["(6 - 3x)/2"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["isolate z in a + b = c"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"isolateVariable","args":["y = mx + b isolate x"],"out":{"variable":"x","display":"x = (y - b)/m","forms":["(y - b)/m"]},"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["E = mc^2, isolate c"],"out":{"variable":"c","lhs":"E","rhs":"mc^2"},"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["PV = nRT isolate T"],"out":{"variable":"T","lhs":"PV","rhs":"nRT"},"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["isolate h: v = sqrt(2gh)"],"out":{"variable":"h","lhs":"v","rhs":"sqrt(2gh)"},"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["isolate x in 2x + 3y"],"out":{"variable":"x","lhs":"2x + 3y","rhs":"0"},"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["isolate x in a*x + b = c"],"out":{"variable":"x","lhs":"a*x + b","rhs":"c"},"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["isolate x in x < y"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["isolate x in x = y = z"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"parseIsolate","args":["isolate x"],"out":null,"src":"src/engine/isolate.test.ts"}
+{"fn":"parseNamedSolve","args":["$10 for lunch"],"out":null,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"parseNamedSolve","args":["5 for x"],"out":null,"src":"src/engine/isolate.solve.test.ts"}
+{"fn":"parseNamedSolve","args":["graph y = mx for x"],"out":null,"src":"src/engine/isolate.solve.test.ts"}

@@ -8,7 +8,7 @@ import { afterTyping, boundKey, boundsIn, wordToSign, type Edit } from '../lib/b
 import { chainedExpr } from '../lib/chain'
 import { copyText, inputHighlight, keepEndInView, searchBarCopy } from '../lib/dom'
 import { knownWordSpans } from '../lib/knownWords'
-import { isMessageCommand } from '../lib/messaging'
+import { isMessageCommand, messageNameSpan } from '../lib/messaging'
 import { unitSpans, type UnitSpan } from '../lib/unitSpans'
 import { cleanPastedText } from '../lib/paste'
 import { commandHeld } from '../lib/platform'
@@ -51,7 +51,11 @@ interface Props {
   // a unit a number was owed, faint where it would go; ↵ writes it in
   suggest?: { at: number; text: string } | null
   completionNames?: CompletionNames
+  // the name after `message`, once the relay says it's someone's: it's painted green
+  recipient?: string
   onSelection?: (range: CaretRange) => void
+  /** A multi-line paste; true when it was taken (equations opened as a system) and the field should leave it. */
+  onPasteLines?: (text: string) => boolean
 }
 
 // letters around a word make it part of a longer word (`pint`, `infinity`); digits before it are a coefficient (`2pi`)
@@ -189,7 +193,9 @@ export function QuickInput({
   squiggle = null,
   suggest = null,
   completionNames,
+  recipient,
   onSelection,
+  onPasteLines,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const prefixRef = useRef<HTMLSpanElement>(null)
@@ -291,7 +297,9 @@ export function QuickInput({
   const offered = suggest && fits && !bounded && suggest.at <= value.length ? { ...suggest, className: 'quick-offered' } : null
   // a completion inside the text pushes what follows along, so the ghost layer paints that too
   const inlined = offered ?? (midCompletion && fits && !bounded ? midCompletion : null)
-  const painted = words.length > 0 || units.length > 0 || inlined != null
+  const named = plain && recipient && fits ? messageNameSpan(value) : null
+  const recipientSpan = named && value.slice(named.start, named.end).toLowerCase() === recipient ? named : null
+  const painted = words.length > 0 || units.length > 0 || inlined != null || recipientSpan != null
 
   // the first label waits for a short rest; once one shows, the next unit's (or an edited unit's) shows at once
   const hoverUnit = (x: number, now = false) => {
@@ -635,7 +643,7 @@ export function QuickInput({
           />
         ) : (
           <span className={painted ? 'quick-ghost-text quick-ghost-painted' : 'quick-ghost-text'}>
-            {paintText(value, mark, words, units, inlined)}
+            {paintText(value, mark, words, units, inlined, recipientSpan)}
           </span>
         )}
         {completion && !midCompletion ? <span className="quick-inferred quick-completion">{completion}</span> : null}
@@ -662,6 +670,8 @@ export function QuickInput({
         autoCorrect="off"
         autoComplete="off"
         spellCheck={false}
+        // no inline writing suggestions; the shell turns writing tools off too
+        {...{ writingsuggestions: 'false' }}
         placeholder={showExample ? '' : 'Calculate'}
         style={prefixWidth ? { paddingLeft: prefixWidth } : undefined}
         onChange={(e) => {
@@ -709,7 +719,12 @@ export function QuickInput({
           rememberHighlight(e.currentTarget)
         }}
         onPaste={(e) => {
-          const text = flattenPastedText(e.clipboardData?.getData('text/plain') ?? '')
+          const pasted = e.clipboardData?.getData('text/plain') ?? ''
+          if (/[\r\n;]/.test(pasted) && onPasteLines?.(pasted)) {
+            e.preventDefault()
+            return
+          }
+          const text = flattenPastedText(pasted)
           if (!text) return
           e.preventDefault()
           const el = e.currentTarget
@@ -732,9 +747,10 @@ function paintText(
   words: Span[],
   units: UnitSpan[] = [],
   inlined: { at: number; text: string; className: string } | null = null,
+  recipient: Span | null = null,
 ): ReactNode[] {
   const clear = (w: Span) => !mark || w.end <= mark.start || w.start >= mark.end
-  const cuts: Span[] = [...words.filter(clear), ...units.filter(clear), ...(mark ? [mark] : [])]
+  const cuts: Span[] = [...words.filter(clear), ...units.filter(clear), ...(mark ? [mark] : []), ...(recipient ? [recipient] : [])]
   cuts.sort((a, b) => a.start - b.start)
   const out: ReactNode[] = []
   const seen = new Map<string, number>()
@@ -752,6 +768,8 @@ function paintText(
     const text = value.slice(cut.start, cut.end)
     if (cut === mark) {
       out.push(<span key="squiggle" className="quick-squiggle">{text}</span>)
+    } else if (cut === recipient) {
+      out.push(<span key="recipient" className="quick-recipient">{text}</span>)
     } else if ('name' in cut) {
       const n = seen.get(text) ?? 0
       seen.set(text, n + 1)

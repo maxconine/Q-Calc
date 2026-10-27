@@ -27,8 +27,14 @@ private func isCommandKey(_ event: NSEvent, _ letter: String, _ code: Int) -> Bo
     return !chars.unicodeScalars.allSatisfy({ $0.isASCII }) && event.keyCode == UInt16(code)
 }
 
-private func isCommandWCloseKey(_ event: NSEvent) -> Bool {
+func isCommandWCloseKey(_ event: NSEvent) -> Bool {
     isCommandKey(event, "w", kVK_ANSI_W)
+}
+
+private func isPlainEnterKey(_ event: NSEvent) -> Bool {
+    let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+    return flags.isEmpty && !event.isARepeat
+        && (event.keyCode == UInt16(kVK_Return) || event.keyCode == UInt16(kVK_ANSI_KeypadEnter))
 }
 
 private func copyToPasteboard(_ text: String) {
@@ -134,7 +140,7 @@ private struct OverlayRoom: Equatable {
     static let closed = OverlayRoom()
 }
 
-final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply {
+final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
     private var panel: OverlayPanel?
     private var web: OverlayWebView?
     private var fallback: NSView?
@@ -206,8 +212,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web?.evaluateJavaScript("if (window.__qcalcTutorial) window.__qcalcTutorial();")
     }
 
-    // off the main thread so a slow soulver evaluation never blocks typing
-    private let soulverQueue = DispatchQueue(label: "qcalc.soulver", qos: .userInitiated)
     // the page has something open (pong) that esc should close before the panel hides
     private var pageTakesEscape = false
     // a game in a window of its own (⌃F in the page): the bar's frame from before, to go back to. nil when not
@@ -229,6 +233,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     private var gameOpen = false
     private static let nicknameKey = "qcalc.nickname"
     private var messagingObserver: NSObjectProtocol?
+    private var inboxObserver: NSObjectProtocol?
 
     deinit {
         for monitor in [escapeMonitor, dragMonitor, clickAwayMonitor, clickAwayLocalMonitor].compactMap({ $0 }) {
@@ -240,11 +245,18 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         if let messagingObserver {
             NotificationCenter.default.removeObserver(messagingObserver)
         }
+        if let inboxObserver {
+            NotificationCenter.default.removeObserver(inboxObserver)
+        }
     }
 
     func preload() {
         if panel == nil { build() }
-        SoulverEval.warm()
+        // the ecb's rates for currency conversions, handed to the page as they arrive
+        ECBRates.shared.onChange = { [weak self] json in
+            self?.web?.evaluateJavaScript("window.__QCALC_RATES = \(json);")
+        }
+        ECBRates.shared.start()
     }
 
     func toggle(from source: String = "hotkey") {
@@ -272,6 +284,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
 
     func hide(because why: String = "asked") {
         wantVisible = false
+        tellMessagesBar()
         userMoving = false
         // the clock for moving the bar back runs from the last time it was in use
         if panel?.isVisible == true { UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: Self.lastHiddenKey) }
@@ -296,6 +309,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         // a hidden app's windows never come forward, and with no dock icon nothing else unhides it
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }
         wantVisible = true
+        tellMessagesBar()
         keepFallback = false
         shownAt = uptime()
         targetScreen = Self.screenWithPointer()?.frame
@@ -462,10 +476,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        if message.name == "soulver" {
-            pushSoulverResult(soulverPayload(from: message.body))
-            return
-        }
         guard message.name == "qcalc" else { return }
         if let body = message.body as? String {
             handleMessage(body)
@@ -501,8 +511,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 applyWebOnboarding(dict)
             case "analytics":
                 AppSettings.shared.saveAnalytics(dict["stash"])
-            case "eval":
-                pushSoulverResult(soulverPayload(from: dict))
             case "periodic":
                 periodic.show(PeriodicElement.list(from: dict["elements"]), bar: barSpot())
             case "identities":
@@ -517,6 +525,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             case "game":
                 gameOpen = dict["open"] as? Bool ?? false
                 if !gameOpen { setGameWindow(false, fade: false) }
+                tellMessagesBar()
             case "gameSave":
                 if let key = dict["key"] as? String {
                     AppSettings.shared.saveGame(key, dict["value"] as? String)
@@ -528,6 +537,14 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 }
             case "messaging":
                 Messages.shared.setLists(accepted: dict["accepted"] as? [String] ?? [], blocked: dict["blocked"] as? [String] ?? [])
+            case "messageSent":
+                Messages.shared.noteSent(dict["to"] as? String ?? "")
+            case "messagesSeen":
+                Messages.shared.seen((dict["ids"] as? [String] ?? []).prefix(64).map { $0 })
+            case "messageAnswer":
+                let from = Messages.clean(dict["from"] as? String ?? "")
+                guard !from.isEmpty else { break }
+                if dict["allow"] as? Bool == true { Messages.shared.allow(from) } else { Messages.shared.block(from) }
             default:
                 break
             }
@@ -545,22 +562,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         let controller = IdentityWindowController(id: id, cascade: identitySheets.count)
         identitySheets[id] = controller
         return controller
-    }
-
-    func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage,
-        replyHandler: @escaping (Any?, String?) -> Void
-    ) {
-        guard message.name == "soulver" else {
-            replyHandler(nil, "unknown handler")
-            return
-        }
-        let body = message.body
-        soulverQueue.async { [self] in
-            let payload = soulverPayload(from: body)
-            DispatchQueue.main.async { replyHandler(payload, nil) }
-        }
     }
 
     // a page whose process ended (long sleeps, memory pressure) is fully transparent, so reload it
@@ -761,9 +762,13 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         // wiped every launch, so state that must survive (settings, onboarding, game saves) is kept in AppSettings
         config.websiteDataStore = WKWebsiteDataStore.nonPersistent()
         config.userContentController.add(self, name: "qcalc")
-        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "soulver")
         config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
         config.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+        // writing tools (and macos 26's "write with siri" prompt) would offer itself on every focused field; the
+        // property is only in the headers for a 15+ target, so it's set by key
+        if #available(macOS 15.0, *) {
+            config.setValue(NSWritingToolsBehavior.none.rawValue, forKey: "writingToolsBehavior")
+        }
         let settings = settingsJavaScriptObject()
         let theme = AppSettings.shared.theme
         let onboarding = AppSettings.shared.onboardingJSON()
@@ -787,6 +792,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             window.__QCALC_NICKNAME = \(nickname);
             window.__QCALC_MESSAGING = \(Messages.shared.webJSON);
             window.__QCALC_GAME_SAVES = \(gameSaves);
+            window.__QCALC_RATES = \(ECBRates.shared.pageJSON);
             window.__QCALC_OS = "macOS \(os.majorVersion).\(os.minorVersion)";
             document.documentElement.dataset.theme = "\(theme)";
             window.__qcalcNativeResult = window.__qcalcNativeResult || function (reply) {
@@ -996,16 +1002,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
             AppSettings.shared.setSignificantFigures(n, notifyWeb: false)
             return
         }
-        if body.hasPrefix("eval:") {
-            let json = String(body.dropFirst("eval:".count))
-            pushSoulverResult(soulverPayload(from: json))
-            return
-        }
-        if body.hasPrefix("{"), let data = body.data(using: .utf8),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           dict["type"] as? String == "eval" || dict["expr"] != nil {
-            pushSoulverResult(soulverPayload(from: dict))
-        }
     }
 
     private func pasteIntoWeb() {
@@ -1075,6 +1071,7 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         web.evaluateJavaScript("""
         (function () {
           if (window.__qcalcReset) window.__qcalcReset();
+          if (window.__qcalcInbox) window.__qcalcInbox(\(Messages.shared.inboxJSON));
           var el = document.querySelector('.quick-plain');
           if (el) { el.focus(); if (window.__qcalcFocus) window.__qcalcFocus(); }
           if (window.__qcalcSize) window.__qcalcSize();
@@ -1228,12 +1225,19 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 self.pasteIntoWeb()
                 return nil
             }
+            // the periodic table never takes the keys, so while it has a formula ↵ in the bar puts that in instead of
+            // submitting the line; with none built ↵ is the bar's as usual
+            if event.window === self.panel, isPlainEnterKey(event), self.periodic.hasFormula,
+               (self.panel?.firstResponder as? NSTextInputClient)?.hasMarkedText() != true {
+                self.periodic.putFormulaIn()
+                return nil
+            }
             // ⌘W closes the bar like any window, whatever layer the page has open; settings keeps its own ⌘W.
-            // a reference sheet (identities, calculus, the periodic table) never takes the keys, so while one
-            // is up ⌘W closes the front one of those first
+            // a reference sheet (identities, calculus, the periodic table) never takes the keys while the bar is
+            // up, so while one is open ⌘W closes the front one of those first
             // a game's window closes back to the bar, as its red button does, and ⌘M minimises it
             if event.window === self.panel, isCommandWCloseKey(event) {
-                if let sheet = NSApp.orderedWindows.first(where: { $0 is PeriodicPanel && $0.isVisible }) {
+                if let sheet = PeriodicPanel.front() {
                     sheet.close()
                 } else if self.gameRestoreFrame != nil {
                     self.setGameWindow(false)
@@ -1557,6 +1561,20 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         panel.setFrameOrigin(NSPoint(x: visible.midX - panel.frame.width / 2, y: top + anchor - height))
     }
 
+    // messages go to the bar while it's up and no game has it, and to notifications otherwise
+    private func tellMessagesBar() {
+        let open = wantVisible && !gameOpen
+        let opened = open && !Messages.shared.barOpen
+        Messages.shared.barOpen = open
+        // a game closing hands the bar what came meanwhile; a show does it as the page resets
+        if opened, panel?.isVisible == true { pushInbox() }
+    }
+
+    private func pushInbox() {
+        guard Messages.shared.barOpen, panel?.isVisible == true else { return }
+        web?.evaluateJavaScript("if (window.__qcalcInbox) window.__qcalcInbox(\(Messages.shared.inboxJSON));")
+    }
+
     private func observeSettings() {
         guard settingsObserver == nil else { return }
         settingsObserver = NotificationCenter.default.addObserver(
@@ -1578,6 +1596,11 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
                 "window.__QCALC_MESSAGING = \(payload); if (window.__qcalcMessaging) window.__qcalcMessaging(\(payload));"
             )
         }
+        inboxObserver = NotificationCenter.default.addObserver(
+            forName: .qcalcInboxChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in self?.pushInbox() }
     }
 
     private func pushSettingsToWeb() {
@@ -1690,53 +1713,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         AppSettings.shared.mergeOnboarding(incoming)
     }
 
-    private func soulverPayload(from body: Any) -> [String: Any] {
-        let dict = dictionary(from: body)
-        let id = intValue(dict["id"]) ?? 0
-        let expr = dict["expr"] as? String ?? ""
-        let sigFigs = intValue(dict["sigFigs"]) ?? AppSettings.shared.significantFigures
-        if let answer = SoulverEval.evaluate(
-            expr,
-            ans: doubleValue(dict["ans"]),
-            variables: stringKeyedDoubles(dict["variables"]),
-            sigFigs: sigFigs
-        ) {
-            var payload: [String: Any] = [
-                "id": id,
-                "expr": expr,
-                "display": answer.display,
-            ]
-            if let n = answer.number, n.isFinite {
-                payload["n"] = n
-            } else {
-                payload["n"] = NSNull()
-            }
-            return payload
-        }
-        return ["id": id, "expr": expr, "display": "", "n": NSNull()]
-    }
-
-    private func pushSoulverResult(_ payload: [String: Any]) {
-        guard JSONSerialization.isValidJSONObject(payload),
-              let data = try? JSONSerialization.data(withJSONObject: payload, options: []),
-              let json = String(data: data, encoding: .utf8)
-        else { return }
-        web?.evaluateJavaScript("window.__qcalcNativeResult && window.__qcalcNativeResult(\(json));")
-    }
-
-    private func dictionary(from body: Any) -> [String: Any] {
-        if let dict = body as? [String: Any] { return dict }
-        if let s = body as? String {
-            let json = s.hasPrefix("eval:") ? String(s.dropFirst("eval:".count)) : s
-            if let data = json.data(using: .utf8),
-               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                return obj
-            }
-            if !s.isEmpty, s != "eval:" { return ["expr": s] }
-        }
-        return [:]
-    }
-
     private func boolValue(_ any: Any?) -> Bool? {
         if let b = any as? Bool { return b }
         if let n = any as? NSNumber { return n.boolValue }
@@ -1769,15 +1745,6 @@ final class OverlayController: NSObject, WKNavigationDelegate, WKScriptMessageHa
         }
         return nil
     }
-
-    private func stringKeyedDoubles(_ any: Any?) -> [String: Double] {
-        guard let dict = any as? [String: Any] else { return [:] }
-        var out: [String: Double] = [:]
-        for (key, value) in dict {
-            if let n = doubleValue(value) { out[key] = n }
-        }
-        return out
-    }
 }
 
 struct OverlayView: View {
@@ -1792,6 +1759,7 @@ struct OverlayView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 22, weight: .regular, design: .default))
                 .focused($focused)
+                .noWritingTools()
                 .onSubmit { submit() }
             Text(copied ? "copied" : answer(for: text))
                 .font(.system(size: copied ? 13 : 22, weight: .regular, design: .default).monospacedDigit())
@@ -1812,7 +1780,6 @@ struct OverlayView: View {
     }
 
     private func answer(for text: String) -> String {
-        if let soulver = SoulverEval.evaluate(text) { return soulver.display }
         if let v = MathEval.evaluate(text) { return MathEval.format(v) }
         return ""
     }
@@ -1867,6 +1834,19 @@ enum OverlayLog {
             handle.seekToEndOfFile()
             handle.write(Data(text.utf8))
             try? handle.close()
+        }
+    }
+}
+
+extension View {
+    // no writing tools, nor the "write with siri" prompt macos 26 puts beside a focused field
+    @ViewBuilder func noWritingTools() -> some View {
+        if #available(macOS 15.4, *) {
+            writingToolsBehavior(.disabled).writingToolsAffordanceVisibility(.hidden)
+        } else if #available(macOS 15.0, *) {
+            writingToolsBehavior(.disabled)
+        } else {
+            self
         }
     }
 }

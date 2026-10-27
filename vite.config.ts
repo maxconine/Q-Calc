@@ -24,6 +24,8 @@ export default defineConfig({
         quick: resolve(root, 'quick.html'),
         settings: resolve(root, 'settings.html'),
         sheet: resolve(root, 'sheet.html'),
+        // the native Mac app's on-demand game web view (src/games.tsx)
+        games: resolve(root, 'games.html'),
       },
     },
   },

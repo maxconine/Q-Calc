@@ -1,0 +1,10 @@
+{"fn":"latexToAscii","args":["2\\sin\\theta\\cos\\theta"],"out":"2 sin(theta) cos(theta)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["L\\cos^2\\theta"],"out":"L cos(theta)^(2)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["\\cos^2(\\theta)"],"out":"cos(theta)^(2)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["\\sin 30"],"out":"sin(30)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["\\sin^2 x"],"out":"sin(x)^(2)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["\\sin^{-1}(0.5)"],"out":"asin(0.5)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["\\sqrt{16}+2^{8}"],"out":"sqrt(16)+2^(8)","src":"src/engine/typeset.test.ts"}
+{"fn":"latexToAscii","args":["x\\sin\\theta"],"out":"x sin(theta)","src":"src/engine/timeDerivative.test.ts"}
+{"fn":"latexToAscii","args":["x_{1}+1"],"out":"x_1+1","src":"src/engine/typstInput.test.ts"}
+{"fn":"tryPlainMath","args":["\\frac{3}{4}"],"out":{"kind":"number","n":0.75},"src":"src/engine/typeset.test.ts"}

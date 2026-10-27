@@ -345,6 +345,7 @@ function NumbersGame({ mode, large, onMenu, onClose }: { mode: Mode; large: numb
             value={text}
             readOnly={Boolean(over)}
             spellCheck={false}
+            {...{ writingsuggestions: 'false' }}
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"

@@ -1,0 +1,89 @@
+{"fn":"actionForEvent","args":[{"key":"Backspace","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},true],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"Backspace","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":true},{},true],"out":"clear","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"C","ctrlKey":false,"metaKey":true,"altKey":false,"shiftKey":true},{},false],"out":"copyLine","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"c","code":"KeyI","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},false],"out":"clear","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"c","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{"clear":""},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"c","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},false],"out":"clear","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"c","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},true],"out":"copyAnswer","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"c","ctrlKey":true,"metaKey":false,"altKey":true,"shiftKey":false},{},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"d","code":"KeyD","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{"angle":"ctrl+alt+r"},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"d","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},false],"out":"angle","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"d","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},true],"out":"angle","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"f","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},false],"out":"fraction","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"f","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},true],"out":"fraction","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"j","code":"KeyC","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"r","code":"KeyR","ctrlKey":true,"metaKey":false,"altKey":true,"shiftKey":false},{"angle":"ctrl+alt+r"},false],"out":"angle","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"s","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},false],"out":"sigFigs","src":"src/lib/keybinds.test.ts"}
+{"fn":"actionForEvent","args":[{"key":"s","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false},{},true],"out":"sigFigs","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":" ","code":"Space","ctrlKey":true,"metaKey":false,"altKey":true,"shiftKey":false}],"out":"ctrl+alt+space","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":",","code":"Comma","ctrlKey":false,"metaKey":true,"altKey":false,"shiftKey":false}],"out":"cmd+,","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"@","code":"KeyQ","ctrlKey":true,"metaKey":false,"altKey":true,"shiftKey":false}],"out":"ctrl+alt+q","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"Backspace","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":true}],"out":"ctrl+shift+backspace","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"C","code":"KeyC","ctrlKey":false,"metaKey":true,"altKey":false,"shiftKey":true}],"out":"shift+cmd+c","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"Meta","code":"MetaLeft","ctrlKey":false,"metaKey":true,"altKey":false,"shiftKey":false}],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"Shift","ctrlKey":false,"metaKey":false,"altKey":false,"shiftKey":true}],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"a","code":"KeyQ","ctrlKey":false,"metaKey":true,"altKey":false,"shiftKey":false}],"out":"cmd+a","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"c","code":"KeyI","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false}],"out":"ctrl+c","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"j","code":"KeyC","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false}],"out":"ctrl+j","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"ç","code":"KeyC","ctrlKey":false,"metaKey":false,"altKey":true,"shiftKey":false}],"out":"alt+c","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"с","code":"KeyC","ctrlKey":true,"metaKey":false,"altKey":false,"shiftKey":false}],"out":"ctrl+c","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordFromEvent","args":[{"key":"∂","code":"KeyD","ctrlKey":false,"metaKey":false,"altKey":true,"shiftKey":false}],"out":"alt+d","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordLabel","args":["",false],"out":"","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordLabel","args":["alt+q",true],"out":"Alt+Q","src":"src/lib/hostSettings.test.ts"}
+{"fn":"chordLabel","args":["alt+space",true],"out":"Alt+Space","src":"src/lib/hostSettings.test.ts"}
+{"fn":"chordLabel","args":["cmd+,",false],"out":"⌘,","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordLabel","args":["cmd+e",true],"out":"Win+E","src":"src/lib/hostSettings.test.ts"}
+{"fn":"chordLabel","args":["ctrl+,",true],"out":"Ctrl+,","src":"src/components/SettingsPage.test.ts"}
+{"fn":"chordLabel","args":["ctrl+alt+q",true],"out":"Ctrl+Alt+Q","src":"src/components/SettingsPage.test.ts"}
+{"fn":"chordLabel","args":["ctrl+alt+shift+cmd+k",false],"out":"⌃⌥⇧⌘K","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordLabel","args":["ctrl+alt+space",true],"out":"Ctrl+Alt+Space","src":"src/components/KeybindSettings.test.ts"}
+{"fn":"chordLabel","args":["ctrl+c",true],"out":"Ctrl+C","src":"src/components/SettingsPage.test.ts"}
+{"fn":"chordLabel","args":["ctrl+d",true],"out":"Ctrl+D","src":"src/components/SettingsPage.test.ts"}
+{"fn":"chordLabel","args":["ctrl+k",true],"out":"Ctrl+K","src":"src/lib/hostSettings.test.ts"}
+{"fn":"chordLabel","args":["ctrl+plus",true],"out":"Ctrl++","src":"src/lib/hostSettings.test.ts"}
+{"fn":"chordLabel","args":["ctrl+s",true],"out":"Ctrl+S","src":"src/components/SettingsPage.test.ts"}
+{"fn":"chordLabel","args":["ctrl+shift+backspace",true],"out":"Ctrl+Shift+Backspace","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordLabel","args":["ctrl+shift+c",true],"out":"Ctrl+Shift+C","src":"src/components/SettingsPage.test.ts"}
+{"fn":"chordProblem","args":["alt+space","show",{},true],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["alt+tab","show",{},true],"out":"Alt+Tab is kept by Windows for switching windows","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["cmd+l","show",{},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["cmd+l","show",{},true],"out":"Win+L is kept by Windows for locking the PC","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["cmd+v","angle",{},false],"out":"⌘V is kept for paste","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["ctrl+alt+space","angle",{},false],"out":"⌃⌥Space already does show / hide q calc","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["ctrl+d","angle",{},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["ctrl+f","angle",{},false],"out":"⌃F already does fractions","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["ctrl+z","angle",{},true],"out":"Ctrl+Z is kept for undo","src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["f5","angle",{},false],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"chordProblem","args":["shift+d","angle",{},false],"out":"Add ⌘, ⌃ or ⌥ so typing still works","src":"src/lib/keybinds.test.ts"}
+{"fn":"defaultKeybind","args":["show",true],"out":"alt+space","src":"src/components/KeybindSettings.test.ts"}
+{"fn":"heldLabel","args":["",true],"out":"","src":"src/lib/keybinds.test.ts"}
+{"fn":"heldLabel","args":["alt+ctrl",true],"out":"Ctrl+Alt+…","src":"src/lib/keybinds.test.ts"}
+{"fn":"heldLabel","args":["cmd",true],"out":"Win+…","src":"src/lib/keybinds.test.ts"}
+{"fn":"heldLabel","args":["ctrl+alt",false],"out":"⌃⌥…","src":"src/lib/keybinds.test.ts"}
+{"fn":"keybindFor","args":[{"clear":""},"clear",false],"out":"","src":"src/lib/keybinds.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"angle",true],"out":"ctrl+d","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"clear",true],"out":"ctrl+shift+backspace","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"copyAnswer",true],"out":"ctrl+c","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"copyLine",true],"out":"ctrl+shift+c","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"fraction",true],"out":"ctrl+alt+q","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"settings",true],"out":"ctrl+,","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"show",true],"out":"alt+space","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindFor","args":[{"fraction":"ctrl+alt+q"},"sigFigs",true],"out":"ctrl+s","src":"src/components/SettingsPage.test.ts"}
+{"fn":"keybindsEqual","args":[{"angle":"ctrl+r"},{"angle":"ctrl+r"}],"out":true,"src":"src/lib/keybinds.test.ts"}
+{"fn":"keybindsEqual","args":[{"angle":"ctrl+r"},{}],"out":false,"src":"src/lib/keybinds.test.ts"}
+{"fn":"missedKeyText","args":[""],"out":"","src":"src/lib/keybinds.test.ts"}
+{"fn":"missedKeyText","args":["alt"],"out":"Only Alt came through. If you pressed a key with it, another app has that shortcut (PowerToys Run uses Alt+Space): change it there, or pick another here.","src":"src/lib/keybinds.test.ts"}
+{"fn":"missedKeyText","args":["ctrl+alt"],"out":"Only Ctrl+Alt came through. If you pressed a key with them, another app has that shortcut (PowerToys Run uses Alt+Space): change it there, or pick another here.","src":"src/lib/keybinds.test.ts"}
+{"fn":"sanitizeKeybinds","args":["ctrl+d"],"out":{},"src":"src/lib/keybinds.test.ts"}
+{"fn":"sanitizeKeybinds","args":[{"angle":"CMD+CTRL+R","clear":"","nope":"ctrl+x","fraction":"ctrl+","show":"ctrl+space"}],"out":{"angle":"ctrl+cmd+r","clear":""},"src":"src/lib/keybinds.test.ts"}
+{"fn":"setKeybind","args":[{"angle":"ctrl+r"},"angle","ctrl+d",false],"out":{},"src":"src/lib/keybinds.test.ts"}
+{"fn":"setKeybind","args":[{},"angle","ctrl+alt+r",false],"out":{"angle":"ctrl+alt+r"},"src":"src/lib/keybinds.test.ts"}
+{"fn":"setKeybind","args":[{},"clear","",false],"out":{"clear":""},"src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["alt+space"],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["cmd+3"],"out":"opening taskbar apps","src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["cmd+l"],"out":"locking the PC","src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["cmd+shift+s"],"out":"screenshots","src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["constructor"],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["ctrl+alt+delete"],"out":"the security screen","src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["ctrl+cmd+k"],"out":null,"src":"src/lib/keybinds.test.ts"}
+{"fn":"windowsKeeps","args":["shift+cmd+left"],"out":"snapping windows","src":"src/lib/keybinds.test.ts"}

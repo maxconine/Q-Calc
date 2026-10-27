@@ -1,0 +1,23 @@
+{"fn":"unitSpans","args":["1.2*10^3 Nm / (28*10^9 Pa)",{"$undef":true},{"$undef":true}],"out":[{"start":9,"end":11,"name":"newton meter"},{"start":23,"end":25,"name":"pascal"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["10 km in mi",{"$undef":true},{"$undef":true}],"out":[{"start":3,"end":5,"name":"kilometer"},{"start":9,"end":11,"name":"mile"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["10 km to mi",{"$undef":true},{"$undef":true}],"out":[{"start":3,"end":5,"name":"kilometer"},{"start":9,"end":11,"name":"mile"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["2 F * 3 V",{"$undef":true},{"$undef":true}],"out":[{"start":2,"end":3,"name":"farad"},{"start":8,"end":9,"name":"volt"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["2 g",[],["g"]],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["2 m",["m"],{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["2 pi",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["20 C to F",{"$undef":true},{"$undef":true}],"out":[{"start":3,"end":4,"name":"celsius"},{"start":8,"end":9,"name":"fahrenheit"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["20 °C to F",{"$undef":true},{"$undef":true}],"out":[{"start":3,"end":5,"name":"celsius"},{"start":9,"end":10,"name":"fahrenheit"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["3 e",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["3 nm",{"$undef":true},{"$undef":true}],"out":[{"start":2,"end":4,"name":"nanometer"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["5 in",{"$undef":true},{"$undef":true}],"out":[{"start":2,"end":4,"name":"inch"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["5 m",{"$undef":true},{"$undef":true}],"out":[{"start":2,"end":3,"name":"meter"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["50/hr",{"$undef":true},{"$undef":true}],"out":[{"start":3,"end":5,"name":"hour"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["5m",{"$undef":true},{"$undef":true}],"out":[{"start":1,"end":2,"name":"meter"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["9.8 m/s^2 * 3 kg",{"$undef":true},{"$undef":true}],"out":[{"start":4,"end":5,"name":"meter"},{"start":6,"end":7,"name":"second"},{"start":14,"end":16,"name":"kilogram"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["9.8 m/s^2",{"$undef":true},{"$undef":true}],"out":[{"start":4,"end":5,"name":"meter"},{"start":6,"end":7,"name":"second"}],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["f(x) = x^2",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["hello",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["m = 5",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["min(3, 4)",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["sin(30)",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}
+{"fn":"unitSpans","args":["x + 2",{"$undef":true},{"$undef":true}],"out":[],"src":"src/lib/unitSpans.test.ts"}

@@ -94,3 +94,9 @@ simple = { limit = 10, period = 60 }
 name = "FILE_GETS"
 namespace_id = "7309"
 simple = { limit = 30, period = 60 }
+
+# the bar's name check as you type `message <name>`: per ip and per sender name, under one namespace
+[[ratelimits]]
+name = "LOOKUPS"
+namespace_id = "7307"
+simple = { limit = 60, period = 60 }

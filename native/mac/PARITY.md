@@ -1,0 +1,211 @@
+# Parity: native app vs the current app
+
+Every row of `native/MAC_UI_PLAN.md`, checked against the native dev build. Pictures of the same input in both apps,
+light and dark, are in `parity-screenshots/<scenario>-<theme>-{current,native}.png` (`parity/run.sh`): `live`, `dual`,
+`history`, `select`, `graph`, `banner`, `games`, `help`. The "current" pictures are the web-view app's own page
+(`dist/quick.html` with its boot flags, `parity/WebReference.swift`), so they are pixel-true to what users see.
+
+Status: **✅ verified** in the native build (driven by `scripts/drive.sh` and pictured, or read back from the app's
+view tree), **🟡 ported** (the code is there and builds, not exercised end to end here), **⏳ waits** on an engine
+package (the native side is wired and lights up when it lands), **❌ missing** (not built yet; listed, not dropped).
+
+All look values come from `src/index.css` (`Sources/Bar/Theme.swift`): `--bg` at 90% with the tape at 90% `--bg-tape`
+(no blur, as today), 12 pt corners, 72 pt composer with 8 × 16 padding, 24 pt input and answer at −0.021 em, 20 pt
+dual halves around a 17 pt ≈, 36 pt tape rows (13 pt muted expression, 17 pt answer at −0.015 em, 5 visible),
+edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink caret.
+
+## 1. The bar window
+
+| Feature | Status | Notes |
+|---|---|---|
+| Borderless non-activating panel, status-bar level, all spaces | ✅ | `OverlayController.makePanel` (Overlay.swift's) |
+| Height from content, composer anchored (tape grows up, panels down) | ✅ | `BarSize` → `applySize`; pictures in `history`, `graph` |
+| Remembered position per screen, width, reset after `placeResetMinutes` | 🟡 | same code and keys as Overlay.swift |
+| Drag top/bottom strips, double-click to put back | 🟡 | same monitor |
+| Edge resize grips (8 pt), width clamped | 🟡 | same `trackResize` |
+| Click away / focus loss hides; Esc closes layers first | ✅ | Esc order: reply field, cards, sheets, selection, then hide |
+| Health checks and recovery | ✅ | OverlayHealth verdicts; seen recovering while the display slept |
+| Solid card, 90% opacity, 12 pt corners, system shadow | ✅ | all pairs |
+
+## 2. The input line
+
+| Feature | Status | Notes |
+|---|---|---|
+| Typed words become symbols (`sqrt`→√ …), "Keep words" | ✅ | `Symbols.swift` (WORD_SYMBOLS, AT_ONCE, LONGER_WORDS, SHORTCUT_SYMBOLS); `dual` pair |
+| Inferred grey parens (`inferParens`, `autofillParens`) | ✅ | engine `inferParens`, drawn muted before and after the text |
+| Completion ghost, Tab / → accepts | ✅ | `LiveAnswer.completion`, else engine `completionFor` (`foo` → `foot`) |
+| `[` pairing, `]` step-over, backspace in `[]`, wrap a selection, `+-` → ± | ✅ | `Symbols.bracketKey/wrap`, `BarTextView` |
+| Unit / known-word colouring, blank-reason squiggle, missing-unit offer | ✅ | `unitSpans`, `knownWordSpans` as temporary colours; `blankReason` after 700 ms idle and on a failed ↵ (`enterHint`); `missingUnit` drawn muted after the number, ↵ again takes it (`10 mA + 5 / 1 kohm`) |
+| Radicals drawn over their argument | ✅ | bar over the radicand in the field, tape and answer (`RadicalText`) |
+| Σ/∫ bounds slots | ✅ | `boundsIn`: limits drawn small beside the sign (upper over lower, hidden `_ ^ ..`, holes for empty ones); caret snaps (`snapOffset`); `afterTyping`, `boundKey` (→ Tab space ^ ↑ ↓ ↵ ⌫) and `wordToSign` |
+| Faint `ans` while chaining | ✅ | `history` pair |
+| Example rotation in the empty field | ✅ | `exampleList`, every 2.5 s with the fade, answers evaluated live, until the first keystroke (`Tour.swift`) |
+| ↑/↓ history, ←/→ pick a side | ✅ | the web's pick model (`historyPicks`, side kept row to row); `select` pair |
+| ⌥↑/⌥↓ unit prefix step | ✅ | engine `stepPrefix` + `formatValue` |
+| Undo by typing runs | ✅ | the web’s `undo.ts` model (runs merge within 1 s, ⌘Z / ⇧⌘Z), NSTextView undo off |
+| ⌘A/⌘X/⌘V, plain one-line paste | ✅ | `BarTextView.paste` |
+| Space-thousands, typed-space multiply | ✅ | engine option |
+| d/dt letters panel | ✅ | chips from `LiveAnswer.timeLetters`; a click moves a letter (`EvalOptions.timeVarying`) |
+| Draft kept across hides (`qcalc.draft`) | ✅ | |
+| Writing Tools / "Write with Siri" off on every field | ✅ | `writingToolsBehavior = .none`, `.noWritingTools()`, inline predictions off |
+
+## 3. The live answer
+
+| Feature | Status | Notes |
+|---|---|---|
+| Pretty answer, dual exact ≈ decimal, answer form setting | ✅ | `live`, `dual` pairs |
+| Tab cycles forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile |
+| Steady answer while briefly invalid | ✅ | |
+| Fit font | ✅ | shrinks to half before truncating |
+| Click copies (unitless setting), each half its own copy, drag out | ✅ | |
+| "✓ copied" flash | ✅ | caption, accent-hover, 1.2 s |
+| Closed-form upgrade | ✅ | `Engine.closedForm` with a CancelToken, cancelled by the next keystroke |
+| Solve display: letter, roots each clickable, messages | ✅ | `x =` copies all, each root copies at full precision, `, …` past the shown ones; no-root outcomes as a message |
+| Typeset preview row | ✅ | `qcalc-typst` paths drawn in `--ink` (`MathText.swift`), shown exactly when `typstShown` is (setting, no command panel, `typstPreviewUseful` of the chained line); the answer is the shown form (`typstAnswer`), a solve's letter after ⇒, nothing for a message; rejected mid-edit input keeps the last picture at 40% |
+| Command messages in the answer slot (`periodic table`, `↵ play pong`, message hints) | ✅ | as `.live.message` |
+
+## 4. History tape
+
+| Feature | Status | Notes |
+|---|---|---|
+| Rows, newest at the bottom, recent / always / only on ↑ | ✅ | `history` pair; recent window 5 min, 5 rows |
+| Selection, picks, ↵ inserts the pick, ⌥↵ the other half | ✅ | |
+| ⌘⌫ deletes the row, ⌘Z restores it | ✅ | |
+| Clear history (⌃C, edge tool) | ✅ | |
+| Matrix / complex / solve rows; a system row reopens its panel | ✅ | engine displays; a `sys` row reopens its equations |
+| Scrolling | ✅ | native |
+| Persistence `history.json` | ✅ | `Engine.loadHistory/saveHistory` in `~/Library/Application Support/Q Calc Dev/` |
+
+## 5. Panels in the bar
+
+| Feature | Status | Notes |
+|---|---|---|
+| Graph: head, plot, grid, ticks, curve, pan, zoom, reset | ✅ | `graph` pair: same layout, colours and sizes |
+| Graph: home view, roots and critical points, hover readout | ✅ | `graphHome`, `graphTicks`, `graphReadoutY`, `GraphResult` roots and critical points; graph pair matches |
+| Systems panel (`sys`) | ✅ | `sys N` opens N fields (`sysCommand`), solved live by `engine/system` `solveLive`, ↵ / ↑ ↓ between fields (arrows need macOS 14; Tab on 13), saved as a `system` row |
+| Cheat sheet (`?`, `help`) | ✅ | `help` pair, keys follow the keybinds |
+| Games list | ✅ | `games` pair (↑ from the bottom, ↓ off the end) |
+| Edge tools with key tooltips | ✅ | hover-only, ink pills after 450 ms |
+| Message cards with reply, ask cards, 10 s auto-hide, held on hover/focus/draft | ✅ | `banner` pair; expiry verified at 11 s |
+| Tour line and onboarding hints | ✅ | open, pause (1.5 s) and commit hints (`pickHint`), the walkthrough’s line with `n/m` and skip, `tutorial` / `skip`, extras on later opens; skip sets `TOUR_OFF` (it asked for `tourBit("off")`, which is 0, so skipping did nothing) |
+| Greeting reply | ✅ | `hello` (not `hi`) answers `hi 👋` in the answer slot; ↵ clears |
+| `message <name> …` send | ✅ | `Messages.send` (added to the shared Messages.swift) |
+| **Native-only addition:** message history | ✅ | not in the web app. `Messages/MessageHistory.swift`: every message the relay delivered (`send`) and every message shown from an accepted name (`deliver`) is kept per contact with its time and direction in `<support folder>/messages.json`, the newest 200 each, read and written on a background queue. Requests nobody answered and blocked names never reach it; an allowed request's message does. Hooks in the shared `Messages.swift` sit under `#if QCALC_NATIVE` (defined only by `native/mac/Package.swift`), so the web-view app is unchanged. Checked with two re-signed dev copies on a local relay (`wrangler dev`): both sides' files, the 200 cap and a bad name dropped from a seeded file |
+| **Native-only addition:** `messages`, `messages <name>`, `messages with <name>`, `open messages with <name>` | ✅ | not in the web app. Parsed by the core (`parse_messages_command`, `messages_hint`, `messages_completion`, `thread_contacts`, `thread_empty_text` in `messaging.rs`, with tests; `lib/messaging` arms in `golden.rs`). Hints `↵ your conversations` / `↵ opens messages with max`; Tab finishes names from the history, then recent recipients, then accepted ones (`messages with ma` → `max2`). Bare `messages` lists conversations latest first (name, last line with `you:` for yours, time), ↑↓ and ↵ pick. Pictured in light and dark |
+| **Native-only addition:** thread view | ✅ | not in the web app. `Messages/MessageThreads.swift`, drawn like the cards (`--bg-tape`, hairline, gutter, 13 pt lines, 12 pt muted captions, 36 pt list rows, the cards' reply field). It shows the newest lines and scrolls back (260 pt tall at most). Its reply line sends through `Messages.send` and shows the cards' statuses (`sending…`, `sent`, `nobody’s called nobody9 · not sent`). Esc or ⌘W closes it before the bar; a new message from that person lands in the open thread, not as a card; a click on a message card's name or words opens its thread (the card's words are no longer selectable for that; the thread's are). An empty or unknown thread says `no messages with nobody9 yet`. Settings → Messages gets a History section with Clear Message History… (with a confirmation), and Remove / Unblock deletes that name's thread. The confirmation dialog's click wasn't driven, nor was scrolling back by wheel |
+
+## 6. Sheets and windows
+
+| Feature | Status | Notes |
+|---|---|---|
+| Periodic table (formula, clear button, ↵ puts the mass in and starts over) | ✅ | shared `PeriodicWindow.swift`; data `sheets.json` |
+| Identity / calculus / conversions / constants sheets | ✅ | shared `IdentityWindow.swift`; view tree read back (picture capture can't draw its labels) |
+| ⌘W closes the front sheet, then the bar | ✅ | driven: ⌘W closed the identity sheet with the table still up |
+| Settings: General, Units (choices from the engine), Messages, keybinds sheet | ✅ | shared SwiftUI; `Units` uses `unitSettingGroups()` |
+| Menu bar item, hotkey, nudges | ✅ | shared code; dev hotkey ⌃⌥⇧Space |
+| Sparkle (same appcast and key in `--release`; off in dev), open at login, unitless copy, ECB rates | ✅ | rates handed to `Engine.setRates` |
+| First run, tips, tutorial entry points | ✅ | first run leads the examples with the shortcut; tutorial from settings and the menu starts the walkthrough |
+| Usage analytics | ✅ | `analytics.ts` counting (`bump`, `calcKind`, `dueToSend`, `usagePayload`) at the web’s events; release builds send, dev builds only count |
+| Theme system / light / dark | ✅ | all pairs in both |
+
+## 7. Keyboard map
+
+| Keys | Status |
+|---|---|
+| ↵ commit / insert pick / commands | ✅ |
+| ⌥↵ other half | ✅ |
+| Esc layers then hide | ✅ |
+| ↑ / ↓ history, games list | ✅ |
+| ← / → picks; → accepts completion at the end | ✅ |
+| Tab / ⇧Tab completion, answer forms | ✅ |
+| ⌥↑ / ⌥↓ prefix | ✅ |
+| ⌘⌫ delete row | ✅ |
+| ⌘Z / ⇧⌘Z | ✅ (typing runs, and a deleted row) |
+| ⌘C ⇧⌘C ⌃D ⌃F ⌃S ⌃C ⌘, (rebindable) | ✅ |
+| ⌘W sheet, else hide | ✅ |
+
+## 8–9. Behaviour kept, games and effects
+
+| Feature | Status | Notes |
+|---|---|---|
+| Answer as you type, blank lines blank | ✅ | |
+| Chaining from `ans` | ✅ | `Engine.chains` |
+| Copy unitless by default; copy as Typst | ✅ | `copiedEquation` on copies from the field when “Copy Typst compatible” is on |
+| Degrees, 6 sig figs, rationalize by default; same UserDefaults keys | ✅ | |
+| Games in an on-demand web view | ✅ | only ember & frost and trails now (another package is porting them); `parity/game-lifecycle.sh` still checks the web view comes and goes |
+| 420 / 67 / 69 effects | 🟡 | native now (`Effects/EggOverlay.swift`): a click-through panel over the bar, Core Animation layers with the components' numbers and keyframes (22 puffs from the core, blurred 18 px; the two hands' weigh keyframes and cubic-béziers; the 6 and 9 spinning), reduced-motion variants; fires after the 200 ms settle through the core's `EggGate` (seen firing in the dev build: `effect smoke (native)`), torn down after `eggPlayMs`. The moving picture isn't captured by `drive.sh snap` (presentation layers), so not pixel-compared |
+| **Native-only addition:** divide by zero | ✅ | not in the web app. `x/0` (a literal zero divisor, answer `undefined`/`∞`; core `divides_by_zero`) settles 200 ms, then a small black hole opens on the answer, a copy of it spirals in, the hole closes and the real answer fades back (1.7 s; the slot only hides it, `BarModel.answerVeiled`). Typing on ends it. Reduce Motion: a still hole beside the answer. Pictured mid-fall in light and dark via `drive.sh snap` (effect panel rendered from its presentation layers) |
+| **Native-only addition:** Euler's identity | 🟡 | `e^(iπ)+1`, `1+e^(πi)`, `e^(iπ)`, `…=0`, `…=-1` (core `is_euler`; bare forms need answer 0/−1, or none, since the engine leaves `e^(i π)` blank) give a confetti burst (CAEmitterLayer, 0.1 s of births) and a pill under the bar, "the most beautiful equation" (2.4 s). Note pictured light and dark; confetti fires but an emitter can't be pictured from inside the app. Reduce Motion: the note only |
+| **Native-only addition:** Pi Day | ✅ | March 14 (local): a small pie slice in the composer's left gutter; `pi`/`π` alone rolls π to 50 places out under the answer, as many groups as fit (2.3 s). Other days: neither (checked). Dev builds: `QCALC_PI_DAY=1` makes any day Pi Day. Reduce Motion: the digits fade in whole |
+| **Native-only addition:** Konami code | 🟡 | ↑↑↓↓←→←→BA in the bar (`OverlayPanel.sendEvent` sees each key, the field still gets it; core `KonamiTracker`) toggles a green-phosphor CRT look for the run only (never saved): dark bar, a Core Image colour matrix + bloom on the content, 1 px scanlines every 3 px. Toggling on/off and the scanlines checked in light and dark; the CI tint itself isn't in `drive.sh snap` pictures (cacheDisplay skips content filters), only that 2 filters are attached |
+| **Native-only addition:** do a barrel roll | ✅ | the whole line `do a barrel roll` (any case, `!`/`.`) settles and a picture of the bar spins 360° once (1 s) while the bar hides; ↵ rolls at once if needed and clears the line without saving or a hint; no squiggle. Typing on ends it. Reduce Motion: skipped. Pictured mid-turn in dark |
+| Ember & Frost | ✅ | native (`Games/Ember`): rules, levels, sessions, wire, hud logic and the sound score in Rust (`core/src/games/ember`); every shipped walkthrough (≈27 000 steps) and the engine tests' own ≈60 000 calls give the TS's state hash (`tests/games_golden.rs`); the wire text, camera, beams, score and solver match too. `emberDraw.ts`/`emberFx.ts` ported line for line onto `Canvas2D` (the canvas API over Core Graphics, drawn asynchronously by Core Animation each display frame); select grid with thumbnails, hud, banners, win card, light and dark pictured in the dev build; WebAudio's tones and filtered noise re-synthesised (`EmberSynth`). Online over the shell's `RelayTransport` (same messages as the web build) not played against a second machine here |
+| Trails | ✅ | native (`Games/Trails`): round, bots, lockstep session and the arena's rounds/lines in Rust (bots move for move with the TS); the arena drawn as the page's canvas (glows as Core Graphics shadows); vs the computer pictured in the dev build; online not played against a second machine here |
+
+## 10. Native games
+
+Six games run without a web view: their rules, computers and online sessions are the TS ported one-to-one to
+`native/core/src/games/` (with the TS tests ported beside them), drawn in SwiftUI (`Sources/Games/<Game>/`) inside the
+native shell (`Sources/Games/Shell/`, see its README). Checked in the dev build against the web bundle
+(`native/build/games-web/games.html`, the same CSS) side by side, dark theme; online against the web page over the real
+relay.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Shell: the 680 card at the window's top left, esc (full screen → lobby step → pause / "esc again to leave" → close), paused card, corner full-screen button, pause on focus loss | ✅ | `GameShellModel`, `escAction`/`pausedKey` from the core; esc, arm and leave checked in an online connect 4 |
+| Full screen as the big window (⌃F, f, the buttons), boards growing with `--game-h` | 🟡 | window zoom as before; pong court, connect 4 board and the crack dial take the larger size; not pictured |
+| Lobby: start / vs computer / vs a friend screens, host open or locked, join by list or code, rename, ⌫ back, codes, notes | ✅ | the core's `lobby_*` (lobby.ts and its tests); room list, open host and join seen against the web page |
+| Relay link: rooms socket, host/join, pings, seat kept through a dropped link, step away / come back, retries on wake | ✅ | the core's `RelayPeer` (peerOnline.ts and its tests) run over URLSessionWebSocketTask; native ↔ web connect 4 played both ways |
+| Saves (`qcalc-equal`, `qcalc-numbers`, `qcalc-crack`, `qcalc-c4-ghost`, `qcalc-host-locked`) and the nickname | ✅ | the same AppSettings store and strings the web page mirrored, so saves carry over |
+| Pong: court, paddles, serve, computer at three levels, online legs and clock, rematch | ✅ | the solo frame-for-frame digest of the TS test passes, so solo plays exactly as before; online simulation tests pass |
+| Connect 4: board, held disc slide, fall, preview (G), win line, computer, online, rematch | ✅ | |
+| Ultimate: chalk slate, marks, draw-in, open boards, trail, cursor, computer, online | ✅ | chalk paths equal the TS's to the character |
+| Crack: dial, needle, dot, pop, shake, click, best level | ✅ | |
+| Equal: daily (same answer as the web for each date) and practice, tiles, flip, shake, keypad marks, stats, share | ✅ | daily answers and practice deals match the TS |
+| 24 / countdown: deals, parser, live line, faint parens, clock bar, tiles, stats, large numbers in the lobby | ✅ | solutions and deals match the TS for the same seed |
+| Sound | ✅ | none of these six has any (only ember does) |
+
+## Where the logic runs
+
+Every rule above is the TS's own, ported to the Rust core and answered through `Engine` (typed calls) or
+`Engine.callJson` (`AppLogic.call`, module and name as in `src/lib`). Nothing runs as script: JavaScriptCore and the
+`applogic.js` bundle are gone. `blankReason` and `missingUnit` take their `ok` callback inside the engine
+(`Engine.blankSpan`, `Engine.missingUnit`, each piece read by `live` with the line's context); `lib/tour`,
+`lib/analytics` and the constants the bar reads are in the core's dispatch. The host keeps only what is the
+platform's: the install id's random bytes and the clock's zone offset for `localDay`.
+
+The only web code in the app is the games bundle (`games.html`, built alone by `games.vite.config.ts`), loaded in a
+web view only while ember & frost, trails or an effect is up; the other six games are native (section 10). The bundle
+goes once those are ported too.
+
+## macOS 12 (Monterey)
+
+The native app's floor is macOS 12.0, universal (arm64 + x86_64): `Package.swift` (both packages), `Info.plist`
+`LSMinimumSystemVersion`, `build.sh` `MIN_MACOS` (the SwiftPM triple) and `scripts/build-mac.sh`
+`MACOSX_DEPLOYMENT_TARGET` (cargo, so every object in `libqcalc_ffi.a` says `minos 12.0` or lower). Most of the app
+is one code path that Monterey has. Where macOS 13 added the API the app uses, there is a fork: on 13 and later it is
+the same API as before, so those Macs look and behave exactly as the rows above say; on 12 it is the closest
+Monterey stand-in. Every fork:
+
+| Where | 13+ (unchanged) | macOS 12 | What differs on 12 |
+|---|---|---|---|
+| Typeset preview row (`MathText.swift` `FitLayout`) | `Layout` | `FitFrame`: the same scale from the row's width, read through a `GeometryReader` preference | the width is measured a pass later, so after the bar is resized the preview settles a frame late |
+| Shortcuts list `?` (`BarView.swift` `column`) | `Grid` | `KeyColumn`: rows of key and label, the key column as wide as its widest key (≥ 64 / 96 pt), measured by preference | same layout, a frame later |
+| Game lobby buttons (`GameLobby.swift` `WrapRow`) | `FlowRow` (`Layout`) | `FlowRows`: buttons measured by preference, then centred rows by `FlowRow`'s rule | same rows, a frame later; buttons are rebuilt when they move between rows |
+| Graph readout, Connect 4 and Ultimate hover (`Compat12.swift` `pointerHover`) | `onContinuousHover` | a tracking area in an AppKit view over the board/plot that never takes clicks | the graph readout doesn't follow the pointer while a drag (pan) is in progress |
+| Connect 4 and Ultimate clicks (`spatialTap`) | `SpatialTapGesture` | `DragGesture(minimumDistance: 0)` that counts as a tap when it ends within 4 pt | a press that wanders up to 4 pt still counts |
+| Edge tools' 0.02 em tracking, the system fields' display tracking (`viewTracking`) | `View.tracking` | none (12 has `tracking` on `Text` only) | the rad/deg/sf/clear labels and the equation fields use the font's own spacing (≈0.2 pt a glyph) |
+| Settings rows (`macos/Compat.swift` `QLabeled`, shared with the web-view app) | `LabeledContent` | title, grey callout subtitle lines and the control trailing, in an `HStack` | close to the grouped form's row; spacing is SwiftUI's, not the form's |
+| Settings forms (`groupedForm`) | `.formStyle(.grouped)` | Monterey's plain `Form` with 20 pt margins | no grouped cards behind the sections; section titles are plain headers |
+| Settings tab size (`macos/SettingsWindow.swift`) | `sizingOptions = [.preferredContentSize]` | `preferredContentSize` set to the tab's fixed size | none (each tab's content is a fixed frame) |
+| Open at login (`macos/LoginItem.swift`) | `SMAppService.mainApp` | a launch agent, `~/Library/LaunchAgents/<bundle id>.login.plist`, running `open -a <the app>` at login | it isn't listed under Login Items (Monterey shows no launch agents there); moving the app after turning it on needs it turned off and on again |
+
+Forks that were already there and only take the older path on 12 too: the bar's `NSHostingView.sizingOptions = []`
+(13; on 12 the hosting view keeps its default sizing constraints inside the autoresizing card), ↑ ↓ between system
+equations (`onKeyPress`, 14; Tab moves between them on 12 and 13), the input's inline prediction (14) and Writing Tools
+(15) switches.
+
+Unverified: no macOS 12 machine or VM was available, so every 12 column above is built against the SDK with the
+compiler's availability checks (no errors at `arm64/x86_64-apple-macosx12.0`) but not run. On this Mac (macOS 26)
+the 13+ paths were spot-checked after the change: the live answer and typeset row, the graph, `?`, the periodic table,
+settings (General) and Connect 4's lobby and board.

@@ -8,8 +8,13 @@ import {
   forgetSender,
   InboxLink,
   isMessageCommand,
+  lookupName,
+  messageContacts,
   messageHint,
+  messageNameSpan,
   newKey,
+  RECENT_MAX,
+  withRecent,
   parseInboxFrame,
   parseMessage,
   sanitizeMessaging,
@@ -20,7 +25,7 @@ import {
 } from './messaging'
 
 const KEY = 'ab'.repeat(32)
-const me: Messaging = { name: 'ana', key: KEY, accepted: ['max'], blocked: ['spam'] }
+const me: Messaging = { name: 'ana', key: KEY, accepted: ['max'], blocked: ['spam'], recent: [] }
 
 describe('messaging names and lists', () => {
   it('takes the same names the relay does, lowercased', () => {
@@ -36,8 +41,9 @@ describe('messaging names and lists', () => {
       key: KEY,
       accepted: ['max'],
       blocked: ['bob'],
+      recent: [],
     })
-    expect(sanitizeMessaging({ key: 'nope' })).toEqual({ name: '', key: '', accepted: [], blocked: [] })
+    expect(sanitizeMessaging({ key: 'nope' })).toEqual({ name: '', key: '', accepted: [], blocked: [], recent: [] })
     expect(sanitizeMessaging(null).name).toBe('')
   })
 
@@ -80,6 +86,33 @@ describe('the message command', () => {
     expect(hint('message max hi')).toBe('↵ sends to max')
   })
 
+  it('says a name is nobody’s only when the relay said so', () => {
+    const line = parseMessage('message zed hi')!
+    expect(messageHint(line, me, true, false)).toBe('username not found')
+    expect(messageHint(parseMessage('message zed')!, me, true, false)).toBe('username not found')
+    expect(messageHint(line, me, true, null)).toBe('↵ sends to zed')
+    expect(messageHint(line, me, true, true)).toBe('↵ sends to zed')
+    expect(messageHint(parseMessage('message z hi')!, me, true, false)).toMatch(/2–20 letters/)
+  })
+
+  it('finds the name in the line to paint it', () => {
+    expect(messageNameSpan('message Max hi')).toEqual({ start: 8, end: 11 })
+    expect(messageNameSpan('  message  max')).toEqual({ start: 11, end: 14 })
+    expect(messageNameSpan('message ')).toBeNull()
+  })
+
+  it('keeps who you sent to, the latest first, and completes them before the other accepted names', () => {
+    let m = withRecent(withRecent(withRecent(me, 'Zoe'), 'bob'), 'zoe')
+    expect(m.recent).toEqual(['zoe', 'bob'])
+    expect(withRecent(m, 'x')).toBe(m)
+    expect(messageContacts({ ...m, accepted: ['bob', 'max'] })).toEqual(['zoe', 'bob', 'max'])
+    for (let i = 0; i < 20; i++) m = withRecent(m, `n${i}`)
+    expect(m.recent).toHaveLength(RECENT_MAX)
+    expect(m.recent[0]).toBe('n19')
+    expect(sanitizeMessaging({ recent: ['Zoe', 'zoe', 'x', 'bob', 3] }).recent).toEqual(['zoe', 'bob'])
+    expect(completionFor('message b', { contacts: messageContacts({ ...m, recent: ['bea', 'bob'], accepted: ['bo'] }) })).toBe('ea')
+  })
+
   it('says how a send went without saying whether you’re accepted', () => {
     expect(sendStatusText('delivered', 'max')).toBe('sent to max')
     expect(sendStatusText('offline', 'max')).toMatch(/max isn’t on q calc right now · not sent/)
@@ -119,6 +152,29 @@ describe('sending', () => {
     expect(await sendMessage(me, 'max', 'hi', down, 'https://relay.test')).toBe('network')
     expect(await sendMessage(me, 'max', 'hi', async () => ({ json: async () => ({ status: 'what' }) }), 'https://relay.test')).toBe('network')
     expect(await sendMessage(me, 'max', 'hi', down, '')).toBe('network')
+  })
+
+  it('looks a name up with the sender’s own name and key, and says nothing it wasn’t told', async () => {
+    const answer = (status: unknown) => vi.fn(async () => ({ json: async () => ({ status }) }))
+    const found = answer('found')
+    expect(await lookupName(me, 'Max', found, 'https://relay.test')).toBe(true)
+    expect(found).toHaveBeenCalledWith('https://relay.test/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ from: 'ana', key: KEY, name: 'max' }),
+    })
+    expect(await lookupName(me, 'zed', answer('unknown'), 'https://relay.test')).toBe(false)
+    for (const status of ['too-many', 'not-yours', 'bad', undefined]) {
+      expect(await lookupName(me, 'zed', answer(status), 'https://relay.test')).toBeNull()
+    }
+    const down = vi.fn(async () => {
+      throw new Error('offline')
+    })
+    expect(await lookupName(me, 'zed', down, 'https://relay.test')).toBeNull()
+    const unasked = answer('found')
+    expect(await lookupName({ ...me, key: '' }, 'zed', unasked, 'https://relay.test')).toBeNull()
+    expect(await lookupName(me, 'z', unasked, 'https://relay.test')).toBeNull()
+    expect(unasked).not.toHaveBeenCalled()
   })
 })
 

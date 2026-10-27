@@ -1,10 +1,12 @@
-import { useMemo, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
 import { ELEMENTS, formulaOfPicks, gridCell, type Element } from '../lib/elements'
+import { takesFormulaEnter } from '../lib/periodic'
 import './PeriodicCard.css'
 
 // the browser build's stand-in for the mac app's periodic table window; `windowed`, it fills a window of its own (the
 // windows shell's), which has its own title bar to move and close it. each click adds an atom to one formula (H, H, O
-// is H₂O), a right click or a click on its part takes one away, and a click on the formula puts its molar mass in the bar
+// is H₂O), a right click or a click on its part takes one away, and a click on the formula or ↵ puts its molar mass in the
+// bar and starts the next one
 // the last of an element picked comes off
 const dropped = (symbol: string) => (picks: string[]) => {
   const at = picks.lastIndexOf(symbol)
@@ -18,6 +20,25 @@ export function PeriodicCard({ onPick, onClose, windowed = false }: { onPick: (t
   const dragStart = useRef<{ x: number; y: number; from: { x: number; y: number } } | null>(null)
   const formula = useMemo(() => formulaOfPicks(picks), [picks])
   // built only when the picks change, so a drag, a hover or a keystroke in the overlay doesn't re-render all 118 tiles
+  // the formula goes in and the table starts over, open for the next one
+  const putIn = () => {
+    if (!formula) return false
+    onPick(formula.mass)
+    setPicks([])
+    return true
+  }
+  const putInRef = useRef(putIn)
+  putInRef.current = putIn
+  // ahead of the bar's own ↵, so a formula going in doesn't also submit the line; with none built ↵ is the bar's
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!takesFormulaEnter(e) || !putInRef.current()) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [])
   const counts = useMemo(() => new Map(formula?.parts.map((p) => [p.symbol, p.count])), [formula])
   const tiles = useMemo(
     () =>
@@ -93,7 +114,7 @@ export function PeriodicCard({ onPick, onClose, windowed = false }: { onPick: (t
         <div className="periodic-formula" aria-live="polite">
           {formula ? (
             <>
-              <button type="button" className="periodic-formula-main" title="Put the molar mass in the bar" onClick={() => onPick(formula.mass)}>
+              <button type="button" className="periodic-formula-main" title="Put the molar mass in the bar (↵)" onClick={putIn}>
                 <span className="periodic-formula-name">{formula.formula}</span>
                 <span className="periodic-formula-mass">{formula.mass} g/mol</span>
               </button>
@@ -103,8 +124,8 @@ export function PeriodicCard({ onPick, onClose, windowed = false }: { onPick: (t
                     {p.text} {p.mass}
                   </button>
                 ))}
-                <button type="button" className="periodic-formula-clear" aria-label="Clear the formula" onClick={() => setPicks([])}>
-                  ×
+                <button type="button" className="periodic-formula-clear" title="Clear the formula" onClick={() => setPicks([])}>
+                  Clear
                 </button>
               </span>
             </>

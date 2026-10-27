@@ -6,11 +6,6 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MAC="$ROOT/macos"
 DIST_APP="$MAC/dist/Q Calc.app"
 VENDOR="$MAC/vendor"
-SOULVER_VERSION="3.5.1"
-SOULVER_SHA256="36e51abc2d22b2f1000ceeb4468cfa9ce74f4cf3fb79097f7f3e004b7bf9e7c7"
-XC="$VENDOR/SoulverCore.xcframework"
-ZIP="$VENDOR/SoulverCore.xcframework.zip"
-SLICE="$XC/macos-arm64_x86_64"
 SPARKLE_VERSION="2.10.0"
 SPARKLE_SHA256="c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c"
 SPARKLE="$VENDOR/Sparkle-${SPARKLE_VERSION}"
@@ -60,7 +55,7 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
-# a separate app per architecture, each carrying only its own slices, back to ventura. 13.5 is soulvercore's own minimum
+# a separate app per architecture, each carrying only its own slices, back to ventura
 MIN_MACOS="13.5"
 HOST_ARCH="$(uname -m)"
 if [[ -n "$ONLY_ARCH" ]]; then
@@ -83,23 +78,6 @@ feed() { [[ "$1" == arm64 ]] && echo appcast.xml || echo appcast-intel.xml; }
 require xcrun "Install Xcode 26 or later, then run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer"
 require swiftc "Install Xcode 26 or later from the Mac App Store."
 require npm "Install Node.js 20 or later from https://nodejs.org or: brew install node"
-
-fetch_soulver() {
-  mkdir -p "$VENDOR"
-  if [[ -d "$XC" ]]; then
-    return
-  fi
-  echo "Downloading SoulverCore ${SOULVER_VERSION}…"
-  curl -L --fail -o "$ZIP" \
-    "https://github.com/soulverteam/SoulverCore/releases/download/${SOULVER_VERSION}/SoulverCore.xcframework.zip"
-  local got
-  got="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
-  if [[ "$got" != "$SOULVER_SHA256" ]]; then
-    echo "SoulverCore checksum mismatch: $got" >&2
-    exit 1
-  fi
-  unzip -q -o "$ZIP" -d "$VENDOR"
-}
 
 # the full release, not just the framework: the workflow signs the zip with bin/sign_update
 fetch_sparkle() {
@@ -173,9 +151,6 @@ sign_app() {
   echo "Signing…"
   # ditto carries FinderInfo and File Provider xattrs over from the synced Documents folder
   xattr -cr "$APP"
-  local framework="$APP/Contents/Frameworks/SoulverCore.framework"
-  codesign --force --sign - --timestamp=none "$framework/Versions/A"
-  codesign --force --sign - --timestamp=none "$framework"
   # inside out: helpers first, then the framework that seals them
   local sparkle="$APP/Contents/Frameworks/Sparkle.framework"
   codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Autoupdate"
@@ -194,7 +169,6 @@ copy_app() {
   ditto "$APP" "$dest"
 }
 
-fetch_soulver
 fetch_sparkle
 
 echo "Building web assets…"
@@ -213,7 +187,7 @@ thin_app() {
   done
 }
 
-# Apple Dictionary — to restore, add "$MAC/DictionaryLookup.swift" \ after SoulverEval.swift.
+# Apple Dictionary — to restore, add "$MAC/DictionaryLookup.swift" \ after MathEval.swift.
 build_app() {
   local arch="$1"
   APP="$STAGE/$arch/Q Calc.app"
@@ -221,7 +195,6 @@ build_app() {
   echo "Building for $arch…"
   mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/Frameworks"
 
-  ditto "$SLICE/SoulverCore.framework" "$APP/Contents/Frameworks/SoulverCore.framework"
   # the xpc services are only for sandboxed apps
   ditto "$SPARKLE/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
   rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" \
@@ -231,13 +204,11 @@ build_app() {
     -O \
     -target "${arch}-apple-macos${MIN_MACOS}" \
     -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
-    -F "$SLICE" \
     -F "$SPARKLE" \
     -framework SwiftUI \
     -framework AppKit \
     -framework WebKit \
     -framework Carbon \
-    -framework SoulverCore \
     -framework Sparkle \
     -framework ServiceManagement \
     -framework UserNotifications \
@@ -245,19 +216,22 @@ build_app() {
     -Xlinker -dead_strip \
     -module-cache-path "$STAGE/modules-$arch" \
     "$MAC/MathEval.swift" \
-    "$MAC/SoulverEval.swift" \
+    "$MAC/ECBRates.swift" \
     "$MAC/OverlayHealth.swift" \
     "$MAC/Overlay.swift" \
     "$MAC/UnitSettings.swift" \
     "$MAC/Keybinds.swift" \
     "$MAC/UnitlessCopy.swift" \
     "$MAC/SettingsWindow.swift" \
+    "$MAC/Compat.swift" \
     "$MAC/SheetPlace.swift" \
     "$MAC/PeriodicWindow.swift" \
     "$MAC/IdentityWindow.swift" \
     "$MAC/Updates.swift" \
     "$MAC/LoginItem.swift" \
+    "$MAC/MessageInbox.swift" \
     "$MAC/Messages.swift" \
+    "$MAC/AppSettings.swift" \
     "$MAC/QCalcApp.swift" \
     -o "$BIN"
   # local symbols only help a debugger

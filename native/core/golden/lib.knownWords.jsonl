@@ -1,0 +1,14 @@
+{"fn":"knownWordSpans","args":["2sin(30) + log 100",{"$undef":true},true],"out":[{"start":1,"end":4},{"start":11,"end":14}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["ans*2",[],false],"out":[],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["ans*2",{"$undef":true},true],"out":[{"start":0,"end":3}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["answer",{"$undef":true},true],"out":[],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["area(3)",["area"],true],"out":[{"start":0,"end":4}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["area(3)",{"$undef":true},true],"out":[],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["cost",{"$undef":true},true],"out":[],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["logx=2",{"$undef":true},true],"out":[{"start":0,"end":3}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["sine",{"$undef":true},true],"out":[],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["sinh(1)",{"$undef":true},true],"out":[{"start":0,"end":4}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["sintheta",{"$undef":true},true],"out":[{"start":0,"end":3}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["sinθ",{"$undef":true},true],"out":[{"start":0,"end":3}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["sqrt(2) + ln(e) + atan2(1,1) + log10(5)",{"$undef":true},true],"out":[{"start":0,"end":4},{"start":10,"end":12},{"start":18,"end":23},{"start":31,"end":36}],"src":"src/lib/knownWords.test.ts"}
+{"fn":"knownWordSpans","args":["x + y",{"$undef":true},true],"out":[],"src":"src/lib/knownWords.test.ts"}

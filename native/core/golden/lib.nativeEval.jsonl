@@ -1,0 +1,657 @@
+{"fn":"looksLikeDictionaryQuery","args":["  "],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":[""],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["$10 for lunch + 15% tip"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["2+2"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["72 f"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["Apple"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["Define: apple"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["a"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["define ingenious"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["definition of New York"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["hello"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["ingenious"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["it's"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["serendipity"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["sin(90)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["today"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["tomorrow"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["well-being"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["what does pi mean"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeDictionaryQuery","args":["what is 40% of 90"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["   "],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":[""],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["$10 for lunch + 15% tip"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["$20 lunch + 20% tip"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["$50 in euros"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["(1+2)*3"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["0.5 + 0.25"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1 = 2"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1 Therm / 1 day"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1 hr to min"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1 kW * 2 hr"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1 kg * 2 m/s^2"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1 m + 2 m"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1.5e4"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10 N * 5 m"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10 am"],"out":true,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10 c + 10 c"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10 mod 3"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10% on 200"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["100 J / 2 s"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["100 kg to lb"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["100 minus 20%"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10:30 pm - 15 min"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["10^-3"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["12 V * 2 A"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["15% of 200"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["15% of 80"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["17 % 5"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["1e3"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2 + 3 * 4"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2 in"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2 nights * $100"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2+2"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["20 m * 2 in"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["20% off 40"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["20% off 50"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["20%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2:30 + 1:45"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2^10"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["2^8"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3 days"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3 ft to m"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3 hours ago"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3 people * $20"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3 weeks from today"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3 weeks in days"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3!!"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3*4"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3:45pm + 4 hr 10 min"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3:45pm + 4 hr"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["3pm EST in PST"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5 km to mi"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5 miles per hour"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5 min + 3 s"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5 per person"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5 pounds to kg"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5 µ"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5! / 3"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5!"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["50 - 10% of 20"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["50 USD in EUR"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["50 W * 1 day"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["50 as a % of 200"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["5pm - 9am"],"out":true,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["72 f in c"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["80 * 20%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["80 + 15%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["80 - 20% - 10%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["80 - 20%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["9:00am + 1 hr"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["9am + 5 hours"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["9am to 5pm"],"out":true,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["abs(-3)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["ans * 2"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["between 1 and 2"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["cos(0)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["days until christmas"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["from 2 to 3"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["from 3 to 5"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["integral of x^2 from 0 to 1"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["integral of x^2 from 0"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["june 5 to july 1"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["log(100)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["lunch 12"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["max(3 m, 2)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["mean(1,2,3)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["nCr(5,2)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["percent of 50"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["pi = 3"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["pi*2"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sin(90)"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(0)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(1)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(10)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(11)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(12)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(13)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(14)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(15)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(16)"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(17)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(18)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(19)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(2)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(3)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(4)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(5)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(6)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(7)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(8)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["sqrt(9)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["tan(45)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["time in Tokyo"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["tip 18%"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["tip of 15% on 80"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["today + 1 day"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["tomorrow - 2 hours"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["until 6pm"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 0% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 1% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 10% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 11% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 12% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 13% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 14% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 15% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 15% of 200"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 16% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 17% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 18% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 19% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 2% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 3% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 4% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 40% of 90"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 5% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 6% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 7% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 8% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is 9% of 100"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["what is sqrt(2)"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["x + 2 = 5"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["x = 4"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["yesterday + 1"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["£5 + tip"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["¥1000"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["€20 + tax"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["₹50 + 10%"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"looksLikeNaturalLanguage","args":["∫ x from 0 to 1"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["   ","4",4,{"expr":"2+2","display":"4","n":4}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["  ","",{"$undef":true},{"expr":"2+2","display":"4","n":4}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":[" ","4",4,{"expr":"2+2","display":"4","n":4}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["","4",4,{"expr":"2+2","display":"4","n":4}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["$10 + 15%","",{"$undef":true},{"expr":"$10 + 15%","display":"ok","n":1}],"out":{"display":"ok","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["$10 for lunch + 15% tip","",{"$undef":true},{"expr":"$10 for lunch + 15% tip","display":"$11.50","n":11.5}],"out":{"display":"$11.50","n":11.5},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["$20 in euros and change","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["$20 in euros","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["$5 for lunch + 10% tip","1",1,{"expr":"$5 for lunch + 10% tip","display":"9","n":9}],"out":{"display":"9","n":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["$60 + 18% tip","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["% change from 80 to 100","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["0.5 + 0.25","0.75",0.75,null],"out":{"display":"0.75","n":0.75},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 = 2","",{"$undef":true},{"expr":"1 = 2","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 J to m","",{"$undef":true},{"expr":"1 J to m","display":"Error: incompatible units"}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 Therm / 1 day","4 J",4,{"expr":"1 Therm / 1 day","display":"9 kWh","n":9}],"out":{"display":"4 J","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 hr to min","60 min",60,null],"out":{"display":"60 min","n":60},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 kW * 2 hr","2 kWh",2,null],"out":{"display":"2 kWh","n":2},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 kW * 2 hr","4 J",4,{"expr":"1 kW * 2 hr","display":"9 kWh","n":9}],"out":{"display":"4 J","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1 m","",{"$undef":true},{"expr":"other","display":"9","n":9}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1/3","1",1,{"expr":"1/3","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 N * 5 m","4 J",4,{"expr":"10 N * 5 m","display":"9 kWh","n":9}],"out":{"display":"4 J","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 am","10 am",10,null],"out":{"display":"10 am","n":10},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 c + 10 c","",{"$undef":true},{"expr":"10 c + 10 c","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 kg","",{"$undef":true},{"expr":"other","display":"9","n":9}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 m to kg","",{"$undef":true},{"expr":"10 m to kg","display":"Error: incompatible units"}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 meters to kilograms","",{"$undef":true},{"expr":"10 meters to kilograms","display":"Error: incompatible units"}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10 mod 3","1",1,null],"out":{"display":"1","n":1},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["100 kg to lb","220.462262185 lbs",220.46226218487757,null],"out":{"display":"220.462262185 lbs","n":220.46226218487757},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["100 minus 20%","",{"$undef":true},{"expr":"100 minus 20%","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["10^3","1",1,{"expr":"10^3","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["15% of 200","",{"$undef":true},{"expr":"15% of 200","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["15% of 80","12",12,null],"out":{"display":"12","n":12},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["17 % 5","",{"$undef":true},{"expr":"17 % 5","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["1e3","1000",1000,null],"out":{"display":"1000","n":1000},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2 in to cm","",{"$undef":true},{"expr":"65 kg in lb","display":"143.3 lb","n":143.3}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2 kg to m","",{"$undef":true},{"expr":"2 kg to m","display":"Error: incompatible units"}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+0","0",0,{"expr":"2+0","display":"9","n":9}],"out":{"display":"0","n":0},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+1","1",1,{"expr":"2+1","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+10","10",10,{"expr":"2+10","display":"9","n":9}],"out":{"display":"10","n":10},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+11","11",11,{"expr":"2+11","display":"9","n":9}],"out":{"display":"11","n":11},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+12","12",12,{"expr":"2+12","display":"9","n":9}],"out":{"display":"12","n":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+13","13",13,{"expr":"2+13","display":"9","n":9}],"out":{"display":"13","n":13},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+14","14",14,{"expr":"2+14","display":"9","n":9}],"out":{"display":"14","n":14},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+15","15",15,{"expr":"2+15","display":"9","n":9}],"out":{"display":"15","n":15},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+16","16",16,{"expr":"2+16","display":"9","n":9}],"out":{"display":"16","n":16},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+17","17",17,{"expr":"2+17","display":"9","n":9}],"out":{"display":"17","n":17},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+18","18",18,{"expr":"2+18","display":"9","n":9}],"out":{"display":"18","n":18},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+19","19",19,{"expr":"2+19","display":"9","n":9}],"out":{"display":"19","n":19},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+2","",{"$undef":true},{"expr":"other","display":"9","n":9}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+2","1",1,{"expr":"2+2","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+2","2",2,{"expr":"2+2","display":"9","n":9}],"out":{"display":"2","n":2},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+2","4",4,null],"out":{"display":"4","n":4},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+2","4",4,{"expr":"2+2","display":"4.00","n":4}],"out":{"display":"4","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+20","20",20,{"expr":"2+20","display":"9","n":9}],"out":{"display":"20","n":20},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+21","21",21,{"expr":"2+21","display":"9","n":9}],"out":{"display":"21","n":21},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+22","22",22,{"expr":"2+22","display":"9","n":9}],"out":{"display":"22","n":22},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+23","23",23,{"expr":"2+23","display":"9","n":9}],"out":{"display":"23","n":23},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+24","24",24,{"expr":"2+24","display":"9","n":9}],"out":{"display":"24","n":24},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+25","25",25,{"expr":"2+25","display":"9","n":9}],"out":{"display":"25","n":25},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+26","26",26,{"expr":"2+26","display":"9","n":9}],"out":{"display":"26","n":26},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+27","27",27,{"expr":"2+27","display":"9","n":9}],"out":{"display":"27","n":27},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+28","28",28,{"expr":"2+28","display":"9","n":9}],"out":{"display":"28","n":28},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+29","29",29,{"expr":"2+29","display":"9","n":9}],"out":{"display":"29","n":29},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+3","3",3,{"expr":"2+3","display":"9","n":9}],"out":{"display":"3","n":3},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+30","30",30,{"expr":"2+30","display":"9","n":9}],"out":{"display":"30","n":30},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+31","31",31,{"expr":"2+31","display":"9","n":9}],"out":{"display":"31","n":31},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+32","32",32,{"expr":"2+32","display":"9","n":9}],"out":{"display":"32","n":32},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+33","33",33,{"expr":"2+33","display":"9","n":9}],"out":{"display":"33","n":33},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+34","34",34,{"expr":"2+34","display":"9","n":9}],"out":{"display":"34","n":34},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+35","35",35,{"expr":"2+35","display":"9","n":9}],"out":{"display":"35","n":35},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+36","36",36,{"expr":"2+36","display":"9","n":9}],"out":{"display":"36","n":36},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+37","37",37,{"expr":"2+37","display":"9","n":9}],"out":{"display":"37","n":37},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+38","38",38,{"expr":"2+38","display":"9","n":9}],"out":{"display":"38","n":38},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+39","39",39,{"expr":"2+39","display":"9","n":9}],"out":{"display":"39","n":39},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+4","4",4,{"expr":"2+4","display":"9","n":9}],"out":{"display":"4","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+40","40",40,{"expr":"2+40","display":"9","n":9}],"out":{"display":"40","n":40},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+41","41",41,{"expr":"2+41","display":"9","n":9}],"out":{"display":"41","n":41},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+42","42",42,{"expr":"2+42","display":"9","n":9}],"out":{"display":"42","n":42},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+43","43",43,{"expr":"2+43","display":"9","n":9}],"out":{"display":"43","n":43},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+44","44",44,{"expr":"2+44","display":"9","n":9}],"out":{"display":"44","n":44},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+45","45",45,{"expr":"2+45","display":"9","n":9}],"out":{"display":"45","n":45},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+46","46",46,{"expr":"2+46","display":"9","n":9}],"out":{"display":"46","n":46},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+47","47",47,{"expr":"2+47","display":"9","n":9}],"out":{"display":"47","n":47},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+48","48",48,{"expr":"2+48","display":"9","n":9}],"out":{"display":"48","n":48},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+49","49",49,{"expr":"2+49","display":"9","n":9}],"out":{"display":"49","n":49},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+5","5",5,{"expr":"2+5","display":"9","n":9}],"out":{"display":"5","n":5},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+50","50",50,{"expr":"2+50","display":"9","n":9}],"out":{"display":"50","n":50},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+51","51",51,{"expr":"2+51","display":"9","n":9}],"out":{"display":"51","n":51},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+52","52",52,{"expr":"2+52","display":"9","n":9}],"out":{"display":"52","n":52},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+53","53",53,{"expr":"2+53","display":"9","n":9}],"out":{"display":"53","n":53},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+54","54",54,{"expr":"2+54","display":"9","n":9}],"out":{"display":"54","n":54},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+55","55",55,{"expr":"2+55","display":"9","n":9}],"out":{"display":"55","n":55},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+56","56",56,{"expr":"2+56","display":"9","n":9}],"out":{"display":"56","n":56},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+57","57",57,{"expr":"2+57","display":"9","n":9}],"out":{"display":"57","n":57},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+58","58",58,{"expr":"2+58","display":"9","n":9}],"out":{"display":"58","n":58},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+59","59",59,{"expr":"2+59","display":"9","n":9}],"out":{"display":"59","n":59},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+6","6",6,{"expr":"2+6","display":"9","n":9}],"out":{"display":"6","n":6},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+7","7",7,{"expr":"2+7","display":"9","n":9}],"out":{"display":"7","n":7},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+8","8",8,{"expr":"2+8","display":"9","n":9}],"out":{"display":"8","n":8},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2+9","9",9,{"expr":"2+9","display":"9","n":9}],"out":{"display":"9","n":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20 m * 2 in","1.016 m²",1.016,null],"out":{"display":"1.016 m²","n":1.016},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20 m * 2 in","4 J",4,{"expr":"20 m * 2 in","display":"9 kWh","n":9}],"out":{"display":"4 J","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20% off 50","",{"$undef":true},{"expr":"20% off 50","display":"ok","n":1}],"out":{"display":"ok","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20% off 50","1",1,{"expr":"20% off 50","display":"9","n":9}],"out":{"display":"9","n":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20% off 80","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20% off 80","",{"$undef":true},{"expr":"20% off 80","display":"64.00","n":64}],"out":{"display":"64.00","n":64},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["20%","0.2",0.2,null],"out":{"display":"0.2","n":0.2},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2^10","1024",1024,null],"out":{"display":"1024","n":1024},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["2^8","1",1,{"expr":"2^8","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3 days","3 d",3,null],"out":{"display":"3 d","n":3},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3 ft to m","0.9144 m",0.9144000000000001,null],"out":{"display":"0.9144 m","n":0.9144000000000001},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3 weeks from today","1",1,{"expr":"3 weeks from today","display":"9","n":9}],"out":{"display":"9","n":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3 weeks in days","21 d",21,null],"out":{"display":"21 d","n":21},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3!!","",{"$undef":true},{"expr":"3!!","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3(4+5)","1",1,{"expr":"3(4+5)","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3:45pm + 1 hr","",{"$undef":true},{"expr":"3:45pm + 1 hr","display":"ok","n":1}],"out":{"display":"ok","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["3:45pm + 4 hr","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["40 is what % of 90","1",1,{"expr":"40 is what % of 90","display":"9","n":9}],"out":{"display":"9","n":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5 miles per hour","",{"$undef":true},{"expr":"5 miles per hour","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5 min + 3 s","5.05 min",5.05,null],"out":{"display":"5.05 min","n":5.05},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5 people","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5 pounds to kg","",{"$undef":true},{"expr":"5 pounds to kg","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5 µ","",{"$undef":true},{"expr":"5 µ","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5! / 3","40",40,null],"out":{"display":"40","n":40},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["5!","1",1,{"expr":"5!","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["50 - 10% of 20","48",48,null],"out":{"display":"48","n":48},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["50 W * 1 day","4 J",4,{"expr":"50 W * 1 day","display":"9 kWh","n":9}],"out":{"display":"4 J","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["50 W * 1 day","4.32 MJ",4.32,null],"out":{"display":"4.32 MJ","n":4.32},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["50 W * 1 day","4320000 J",4320000,{"expr":"50 W * 1 day","display":"1.2 kWh","n":1.2}],"out":{"display":"4320000 J","n":4320000},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["60 / 3 people","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["60 split 3 ways","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["80 * 20%","16",16,null],"out":{"display":"16","n":16},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["80 + 15%","92",92,null],"out":{"display":"92","n":92},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["80 - 20% - 10%","57.6",57.6,null],"out":{"display":"57.6","n":57.6},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["80 - 20%","64",64,null],"out":{"display":"64","n":64},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["9am to 5pm","0.0000018 5pm",0.0000018000000000000003,null],"out":{"display":"0.0000018 5pm","n":0.0000018000000000000003},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["\t","4",4,{"expr":"2+2","display":"4","n":4}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["between 1 and 2","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["days until","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["from 3 to 5","",{"$undef":true},{"expr":"from 3 to 5","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["log(100)","1",1,{"expr":"log(100)","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["lunch","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["lunch","",{"$undef":true},{"expr":"lunch","display":"lunch\nnoun\na meal eaten in the middle of the day","kind":"definition","term":"lunch","pos":"noun"}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["max(3 m, 2)","",{"$undef":true},{"expr":"max(3 m, 2)","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["next friday","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["next week","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["pi = 3","",{"$undef":true},{"expr":"pi = 3","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["pi","3.14159",3.141592653589793,{"expr":"pi","display":"pi\nnoun\nthe sixteenth letter","kind":"definition","term":"pi","pos":"noun"}],"out":{"display":"3.14159","n":3.141592653589793},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["pi*2","1",1,{"expr":"pi*2","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["serendipity","",{"$undef":true},{"expr":"serendipity","display":"serendipity\nnoun\nthe occurrence of events by chance","kind":"definition","term":"serendipity","pos":"noun"}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["sin(30)","",{"$undef":true},{"expr":"other","display":"9","n":9}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["sin(90)","1",1,null],"out":{"display":"1","n":1},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["sin(90)","1",1,{"expr":"sin(90)","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["sqrt(16)","4",4,null],"out":{"display":"4","n":4},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["sqrt(2)","1",1,{"expr":"sqrt(2)","display":"9","n":9}],"out":{"display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["sum from n = 1 to 3 of n","6",6,{"expr":"sum from n = 1 to 3 of n","display":"42","n":42}],"out":{"display":"6","n":6},"src":"src/components/QuickInput.sums.test.ts"}
+{"fn":"mergeLiveAnswer","args":["tip 18%","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["tip of 15% on 80","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["tip of 15% on 80","1",1,{"expr":"tip of 15% on 80","display":"92","n":92}],"out":{"display":"92","n":92},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["tomorrow","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["until","",{"$undef":true},null],"out":{"display":""},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["what is 15% of 200","",{"$undef":true},{"expr":"what is 15% of 200","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["what is 40% of 90","36",36,null],"out":{"display":"36","n":36},"src":"src/lib/phraseLive.test.ts"}
+{"fn":"mergeLiveAnswer","args":["what is sqrt(2)","",{"$undef":true},{"expr":"what is sqrt(2)","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["x + 2 = 5","",{"$undef":true},{"expr":"x + 2 = 5","display":"2","n":2}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["Σ n, n = 1..10^20","",{"$undef":true},{"expr":"Σ n, n = 1..10^20","display":"42","n":42}],"out":{"display":""},"src":"src/components/QuickInput.sums.test.ts"}
+{"fn":"mergeLiveAnswer","args":["∫0..1 1/x","",{"$undef":true},{"expr":"∫0..1 1/x","display":"0","n":0}],"out":{"display":""},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"mergeLiveAnswer","args":["∫0..1 x","0.5",0.5,{"expr":"∫0..1 x","display":"0","n":0}],"out":{"display":"0.5","n":0.5},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeDefinition","args":[{"expr":"2+2","display":"4","n":4},"2+2"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeDefinition","args":[{"expr":"serendipity","display":"serendipity\nnoun\nthe occurrence of events by chance","kind":"definition","term":"serendipity","pos":"noun","body":"the occurrence of events by chance"},"apple"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeDefinition","args":[{"expr":"serendipity","display":"serendipity\nnoun\nthe occurrence of events by chance","kind":"definition","term":"serendipity","pos":"noun","body":"the occurrence of events by chance"},"serendipity"],"out":{"expr":"serendipity","display":"serendipity\nnoun\nthe occurrence of events by chance","kind":"definition","term":"serendipity","pos":"noun","body":"the occurrence of events by chance"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":0,"expr":"e0","ans":0,"sigFigs":4}],"out":{"type":"eval","id":0,"expr":"e0","sigFigs":4,"ans":0},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":-4,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":-4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":0,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":0},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":1,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":10,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":10},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":1000000,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":1000000},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":2,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":2},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":3.141592653589793,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":3.141592653589793},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":3.5,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":3.5},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":36,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":36},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"ans","ans":99,"sigFigs":8}],"out":{"type":"eval","id":1,"expr":"ans","sigFigs":8,"ans":99},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"e1","ans":1,"sigFigs":4}],"out":{"type":"eval","id":1,"expr":"e1","sigFigs":4,"ans":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"what is 40% of 90","sigFigs":12}],"out":{"type":"eval","id":1,"expr":"what is 40% of 90","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":16}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":16},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":2}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":2},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":3}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":3},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":4}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":6}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":6},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":1,"expr":"x","sigFigs":8}],"out":{"type":"eval","id":1,"expr":"x","sigFigs":8},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":10,"expr":"e10","ans":10,"sigFigs":4}],"out":{"type":"eval","id":10,"expr":"e10","sigFigs":4,"ans":10},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":10,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":10,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":11,"expr":"e11","ans":11,"sigFigs":4}],"out":{"type":"eval","id":11,"expr":"e11","sigFigs":4,"ans":11},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":11,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":11,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":12,"expr":"e12","ans":12,"sigFigs":4}],"out":{"type":"eval","id":12,"expr":"e12","sigFigs":4,"ans":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":12,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":12,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":13,"expr":"e13","ans":13,"sigFigs":4}],"out":{"type":"eval","id":13,"expr":"e13","sigFigs":4,"ans":13},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":13,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":13,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":14,"expr":"e14","ans":14,"sigFigs":4}],"out":{"type":"eval","id":14,"expr":"e14","sigFigs":4,"ans":14},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":14,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":14,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":15,"expr":"e15","ans":15,"sigFigs":4}],"out":{"type":"eval","id":15,"expr":"e15","sigFigs":4,"ans":15},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":15,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":15,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":16,"expr":"e16","ans":16,"sigFigs":4}],"out":{"type":"eval","id":16,"expr":"e16","sigFigs":4,"ans":16},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":16,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":16,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":17,"expr":"e17","ans":17,"sigFigs":4}],"out":{"type":"eval","id":17,"expr":"e17","sigFigs":4,"ans":17},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":17,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":17,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":18,"expr":"e18","ans":18,"sigFigs":4}],"out":{"type":"eval","id":18,"expr":"e18","sigFigs":4,"ans":18},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":18,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":18,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":19,"expr":"e19","ans":19,"sigFigs":4}],"out":{"type":"eval","id":19,"expr":"e19","sigFigs":4,"ans":19},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":19,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":19,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":2,"expr":"ans + 1","ans":36,"sigFigs":12}],"out":{"type":"eval","id":2,"expr":"ans + 1","sigFigs":12,"ans":36},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":2,"expr":"e2","ans":2,"sigFigs":4}],"out":{"type":"eval","id":2,"expr":"e2","sigFigs":4,"ans":2},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":2,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":2,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":20,"expr":"e20","ans":20,"sigFigs":4}],"out":{"type":"eval","id":20,"expr":"e20","sigFigs":4,"ans":20},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":20,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":20,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":21,"expr":"e21","ans":21,"sigFigs":4}],"out":{"type":"eval","id":21,"expr":"e21","sigFigs":4,"ans":21},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":21,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":21,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":22,"expr":"e22","ans":22,"sigFigs":4}],"out":{"type":"eval","id":22,"expr":"e22","sigFigs":4,"ans":22},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":22,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":22,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":23,"expr":"e23","ans":23,"sigFigs":4}],"out":{"type":"eval","id":23,"expr":"e23","sigFigs":4,"ans":23},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":23,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":23,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":24,"expr":"e24","ans":24,"sigFigs":4}],"out":{"type":"eval","id":24,"expr":"e24","sigFigs":4,"ans":24},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":24,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":24,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":25,"expr":"e25","ans":25,"sigFigs":4}],"out":{"type":"eval","id":25,"expr":"e25","sigFigs":4,"ans":25},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":25,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":25,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":26,"expr":"e26","ans":26,"sigFigs":4}],"out":{"type":"eval","id":26,"expr":"e26","sigFigs":4,"ans":26},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":26,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":26,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":27,"expr":"e27","ans":27,"sigFigs":4}],"out":{"type":"eval","id":27,"expr":"e27","sigFigs":4,"ans":27},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":27,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":27,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":28,"expr":"e28","ans":28,"sigFigs":4}],"out":{"type":"eval","id":28,"expr":"e28","sigFigs":4,"ans":28},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":28,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":28,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":29,"expr":"e29","ans":29,"sigFigs":4}],"out":{"type":"eval","id":29,"expr":"e29","sigFigs":4,"ans":29},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":29,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":29,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":3,"expr":"e3","ans":3,"sigFigs":4}],"out":{"type":"eval","id":3,"expr":"e3","sigFigs":4,"ans":3},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":3,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":3,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":30,"expr":"e30","ans":30,"sigFigs":4}],"out":{"type":"eval","id":30,"expr":"e30","sigFigs":4,"ans":30},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":30,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":30,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":31,"expr":"e31","ans":31,"sigFigs":4}],"out":{"type":"eval","id":31,"expr":"e31","sigFigs":4,"ans":31},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":31,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":31,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":32,"expr":"e32","ans":32,"sigFigs":4}],"out":{"type":"eval","id":32,"expr":"e32","sigFigs":4,"ans":32},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":32,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":32,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":33,"expr":"e33","ans":33,"sigFigs":4}],"out":{"type":"eval","id":33,"expr":"e33","sigFigs":4,"ans":33},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":33,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":33,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":34,"expr":"e34","ans":34,"sigFigs":4}],"out":{"type":"eval","id":34,"expr":"e34","sigFigs":4,"ans":34},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":34,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":34,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":35,"expr":"e35","ans":35,"sigFigs":4}],"out":{"type":"eval","id":35,"expr":"e35","sigFigs":4,"ans":35},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":35,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":35,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":36,"expr":"e36","ans":36,"sigFigs":4}],"out":{"type":"eval","id":36,"expr":"e36","sigFigs":4,"ans":36},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":36,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":36,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":37,"expr":"e37","ans":37,"sigFigs":4}],"out":{"type":"eval","id":37,"expr":"e37","sigFigs":4,"ans":37},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":37,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":37,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":38,"expr":"e38","ans":38,"sigFigs":4}],"out":{"type":"eval","id":38,"expr":"e38","sigFigs":4,"ans":38},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":38,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":38,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":39,"expr":"e39","ans":39,"sigFigs":4}],"out":{"type":"eval","id":39,"expr":"e39","sigFigs":4,"ans":39},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":39,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":39,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":4,"expr":"e4","ans":4,"sigFigs":4}],"out":{"type":"eval","id":4,"expr":"e4","sigFigs":4,"ans":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":4,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":4,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":40,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":40,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":5,"expr":"e5","ans":5,"sigFigs":4}],"out":{"type":"eval","id":5,"expr":"e5","sigFigs":4,"ans":5},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":5,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":5,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":6,"expr":"e6","ans":6,"sigFigs":4}],"out":{"type":"eval","id":6,"expr":"e6","sigFigs":4,"ans":6},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":6,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":6,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":7,"expr":"2+2"}],"out":{"type":"eval","id":7,"expr":"2+2"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":7,"expr":"a"}],"out":{"type":"eval","id":7,"expr":"a"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":7,"expr":"b"}],"out":{"type":"eval","id":7,"expr":"b"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":7,"expr":"e7","ans":7,"sigFigs":4}],"out":{"type":"eval","id":7,"expr":"e7","sigFigs":4,"ans":7},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":7,"expr":"what is 40% of 90"}],"out":{"type":"eval","id":7,"expr":"what is 40% of 90"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":7,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":7,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":8,"expr":"e8","ans":8,"sigFigs":4}],"out":{"type":"eval","id":8,"expr":"e8","sigFigs":4,"ans":8},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":8,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":8,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":9,"expr":"e9","ans":9,"sigFigs":4}],"out":{"type":"eval","id":9,"expr":"e9","sigFigs":4,"ans":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeEvalPayload","args":[{"id":9,"expr":"x","sigFigs":12}],"out":{"type":"eval","id":9,"expr":"x","sigFigs":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":0,"expr":"e0","display":"0","n":0},0,"e0"],"out":{"expr":"e0","display":"0","n":0},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"1 J to m","display":"Error: incompatible units","n":null},1,"1 J to m"],"out":{"expr":"1 J to m","display":"improper unit conversion"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"1 m","display":"1","n":1},1,"1 m!"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"10 m to kg","display":"Error: incompatible units","n":null},1,"10 m to kg"],"out":{"expr":"10 m to kg","display":"improper unit conversion"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"10 meters to kilograms","display":"Error: incompatible units","n":null},1,"10 meters to kilograms"],"out":{"expr":"10 meters to kilograms","display":"improper unit conversion"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"10^1000 m to nm","display":"Error: ∞","n":null},1,"10^1000 m to nm"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"2 kg to s","display":"Error: incompatible units","n":null},1,"2 kg to s"],"out":{"expr":"2 kg to s","display":"improper unit conversion"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"2+2","display":"  ","n":4},1,"2+2"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"2+2","display":"1","n":1},1,"2+2!"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"2+2","display":"4","n":4},1,"2+3"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"2+2","display":"4","n":4},2,"2+2"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"a","display":"1","n":1},1,"a!"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"b","display":"1","n":1},1,"b!"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"e1","display":"1","n":1},1,"e1"],"out":{"expr":"e1","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"ingenious","display":"ingenious\nadjective\nclever","term":"ingenious","pos":"adjective"},1,"ingenious"],"out":{"expr":"ingenious","display":"ingenious\nadjective\nclever","kind":"definition","term":"ingenious","pos":"adjective"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"sin(90)","display":"1","n":1},1,"sin(90)!"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"  ","n":1},1,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":" ","n":1},1,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"","n":1},1,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"1","n":1},1,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"1","n":1},2,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"Error: boom","n":null},1,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"Error: ∞","n":null},1,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1,"expr":"x","display":"error: overflow","n":null},1,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":10,"expr":"e10","display":"10","n":10},10,"e10"],"out":{"expr":"e10","display":"10","n":10},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":10,"expr":"x","display":"1","n":1},10,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":10,"expr":"x","display":"1","n":1},11,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":100,"expr":"x","display":"1","n":1},100,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":1000,"expr":"x","display":"1","n":1},1000,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":11,"expr":"e11","display":"11","n":11},11,"e11"],"out":{"expr":"e11","display":"11","n":11},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":12,"expr":"e12","display":"12","n":12},12,"e12"],"out":{"expr":"e12","display":"12","n":12},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":13,"expr":"e13","display":"13","n":13},13,"e13"],"out":{"expr":"e13","display":"13","n":13},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":14,"expr":"e14","display":"14","n":14},14,"e14"],"out":{"expr":"e14","display":"14","n":14},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":15,"expr":"e15","display":"15","n":15},15,"e15"],"out":{"expr":"e15","display":"15","n":15},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":16,"expr":"e16","display":"16","n":16},16,"e16"],"out":{"expr":"e16","display":"16","n":16},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":17,"expr":"e17","display":"17","n":17},17,"e17"],"out":{"expr":"e17","display":"17","n":17},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":18,"expr":"e18","display":"18","n":18},18,"e18"],"out":{"expr":"e18","display":"18","n":18},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":19,"expr":"e19","display":"19","n":19},19,"e19"],"out":{"expr":"e19","display":"19","n":19},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":2,"expr":"e2","display":"2","n":2},2,"e2"],"out":{"expr":"e2","display":"2","n":2},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":2,"expr":"x","display":"1","n":1},2,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":2,"expr":"x","display":"1","n":1},3,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":20,"expr":"e20","display":"20","n":20},20,"e20"],"out":{"expr":"e20","display":"20","n":20},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":21,"expr":"e21","display":"21","n":21},21,"e21"],"out":{"expr":"e21","display":"21","n":21},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":22,"expr":"e22","display":"22","n":22},22,"e22"],"out":{"expr":"e22","display":"22","n":22},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":23,"expr":"e23","display":"23","n":23},23,"e23"],"out":{"expr":"e23","display":"23","n":23},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":24,"expr":"e24","display":"24","n":24},24,"e24"],"out":{"expr":"e24","display":"24","n":24},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":25,"expr":"e25","display":"25","n":25},25,"e25"],"out":{"expr":"e25","display":"25","n":25},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":26,"expr":"e26","display":"26","n":26},26,"e26"],"out":{"expr":"e26","display":"26","n":26},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":27,"expr":"e27","display":"27","n":27},27,"e27"],"out":{"expr":"e27","display":"27","n":27},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":28,"expr":"e28","display":"28","n":28},28,"e28"],"out":{"expr":"e28","display":"28","n":28},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":29,"expr":"e29","display":"29","n":29},29,"e29"],"out":{"expr":"e29","display":"29","n":29},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":3,"expr":"3:45pm + 4 hr","display":"7:55 pm","n":null},3,"3:45pm + 4 hr"],"out":{"expr":"3:45pm + 4 hr","display":"7:55 pm"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":3,"expr":"e3","display":"3","n":3},3,"e3"],"out":{"expr":"e3","display":"3","n":3},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":3,"expr":"x","display":"1","n":1},3,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":3,"expr":"x","display":"1","n":1},4,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":30,"expr":"e30","display":"30","n":30},30,"e30"],"out":{"expr":"e30","display":"30","n":30},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":31,"expr":"e31","display":"31","n":31},31,"e31"],"out":{"expr":"e31","display":"31","n":31},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":32,"expr":"e32","display":"32","n":32},32,"e32"],"out":{"expr":"e32","display":"32","n":32},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":33,"expr":"e33","display":"33","n":33},33,"e33"],"out":{"expr":"e33","display":"33","n":33},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":34,"expr":"e34","display":"34","n":34},34,"e34"],"out":{"expr":"e34","display":"34","n":34},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":35,"expr":"e35","display":"35","n":35},35,"e35"],"out":{"expr":"e35","display":"35","n":35},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":36,"expr":"e36","display":"36","n":36},36,"e36"],"out":{"expr":"e36","display":"36","n":36},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":37,"expr":"e37","display":"37","n":37},37,"e37"],"out":{"expr":"e37","display":"37","n":37},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":38,"expr":"e38","display":"38","n":38},38,"e38"],"out":{"expr":"e38","display":"38","n":38},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":39,"expr":"e39","display":"39","n":39},39,"e39"],"out":{"expr":"e39","display":"39","n":39},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":4,"expr":"define apple","display":"apple\nnoun\na fruit","n":null,"kind":"definition","term":"apple","pos":"noun","pronunciation":"ˈap(ə)l","body":"a fruit"},4,"define apple"],"out":{"expr":"define apple","display":"apple\nnoun\na fruit","kind":"definition","term":"apple","pos":"noun","pronunciation":"ˈap(ə)l","body":"a fruit"},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":4,"expr":"e4","display":"4","n":4},4,"e4"],"out":{"expr":"e4","display":"4","n":4},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":4,"expr":"x","display":"1","n":1},4,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":4,"expr":"x","display":"1","n":1},5,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":40,"expr":"e40","display":"40","n":40},40,"e40"],"out":{"expr":"e40","display":"40","n":40},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":41,"expr":"e41","display":"41","n":41},41,"e41"],"out":{"expr":"e41","display":"41","n":41},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":42,"expr":"e42","display":"42","n":42},42,"e42"],"out":{"expr":"e42","display":"42","n":42},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":43,"expr":"e43","display":"43","n":43},43,"e43"],"out":{"expr":"e43","display":"43","n":43},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":44,"expr":"e44","display":"44","n":44},44,"e44"],"out":{"expr":"e44","display":"44","n":44},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":45,"expr":"e45","display":"45","n":45},45,"e45"],"out":{"expr":"e45","display":"45","n":45},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":46,"expr":"e46","display":"46","n":46},46,"e46"],"out":{"expr":"e46","display":"46","n":46},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":47,"expr":"e47","display":"47","n":47},47,"e47"],"out":{"expr":"e47","display":"47","n":47},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":48,"expr":"e48","display":"48","n":48},48,"e48"],"out":{"expr":"e48","display":"48","n":48},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":49,"expr":"e49","display":"49","n":49},49,"e49"],"out":{"expr":"e49","display":"49","n":49},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":5,"expr":"e5","display":"5","n":5},5,"e5"],"out":{"expr":"e5","display":"5","n":5},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":5,"expr":"x","display":"1","n":1},5,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":5,"expr":"x","display":"1","n":1},6,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":50,"expr":"e50","display":"50","n":50},50,"e50"],"out":{"expr":"e50","display":"50","n":50},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":51,"expr":"e51","display":"51","n":51},51,"e51"],"out":{"expr":"e51","display":"51","n":51},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":52,"expr":"e52","display":"52","n":52},52,"e52"],"out":{"expr":"e52","display":"52","n":52},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":53,"expr":"e53","display":"53","n":53},53,"e53"],"out":{"expr":"e53","display":"53","n":53},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":54,"expr":"e54","display":"54","n":54},54,"e54"],"out":{"expr":"e54","display":"54","n":54},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":55,"expr":"e55","display":"55","n":55},55,"e55"],"out":{"expr":"e55","display":"55","n":55},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":56,"expr":"e56","display":"56","n":56},56,"e56"],"out":{"expr":"e56","display":"56","n":56},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":57,"expr":"e57","display":"57","n":57},57,"e57"],"out":{"expr":"e57","display":"57","n":57},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":58,"expr":"e58","display":"58","n":58},58,"e58"],"out":{"expr":"e58","display":"58","n":58},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":59,"expr":"e59","display":"59","n":59},59,"e59"],"out":{"expr":"e59","display":"59","n":59},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":6,"expr":"e6","display":"6","n":6},6,"e6"],"out":{"expr":"e6","display":"6","n":6},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":60,"expr":"e60","display":"60","n":60},60,"e60"],"out":{"expr":"e60","display":"60","n":60},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":61,"expr":"e61","display":"61","n":61},61,"e61"],"out":{"expr":"e61","display":"61","n":61},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":62,"expr":"e62","display":"62","n":62},62,"e62"],"out":{"expr":"e62","display":"62","n":62},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":63,"expr":"e63","display":"63","n":63},63,"e63"],"out":{"expr":"e63","display":"63","n":63},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":64,"expr":"e64","display":"64","n":64},64,"e64"],"out":{"expr":"e64","display":"64","n":64},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":65,"expr":"e65","display":"65","n":65},65,"e65"],"out":{"expr":"e65","display":"65","n":65},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":66,"expr":"e66","display":"66","n":66},66,"e66"],"out":{"expr":"e66","display":"66","n":66},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":67,"expr":"e67","display":"67","n":67},67,"e67"],"out":{"expr":"e67","display":"67","n":67},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":68,"expr":"e68","display":"68","n":68},68,"e68"],"out":{"expr":"e68","display":"68","n":68},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":69,"expr":"e69","display":"69","n":69},69,"e69"],"out":{"expr":"e69","display":"69","n":69},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":7,"expr":"e7","display":"7","n":7},7,"e7"],"out":{"expr":"e7","display":"7","n":7},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":8,"expr":"e8","display":"8","n":8},8,"e8"],"out":{"expr":"e8","display":"8","n":8},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":8,"expr":"x","display":"1","n":1},9,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":9,"expr":"e9","display":"9","n":9},9,"e9"],"out":{"expr":"e9","display":"9","n":9},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":9,"expr":"x","display":"1","n":1},10,"x"],"out":null,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"nativeReplyToLive","args":[{"id":99,"expr":"x","display":"1","n":1},99,"x"],"out":{"expr":"x","display":"1","n":1},"src":"src/lib/nativeEval.test.ts"}
+{"fn":"soulverAngleSafe","args":["arctan(1) per day","deg"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"soulverAngleSafe","args":["sinh(1) per day","deg"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"soulverAngleSafe","args":["tip of 15% on 80","deg"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"soulverAngleSafe","args":["what is sin(30)","deg"],"out":false,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"soulverAngleSafe","args":["what is sin(30)","rad"],"out":true,"src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["   "],"out":"","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["  Error: ∞/m  "],"out":"","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["  improper unit conversion  "],"out":"improper unit conversion","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":[""],"out":"","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["$11.50"],"out":"$11.50","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["0 m"],"out":"0 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["1 A"],"out":"1 A","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["1 m"],"out":"1 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["1.2 m"],"out":"1.2 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["10 m"],"out":"10 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["11 m"],"out":"11 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["12 ft"],"out":"12 ft","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["12 m"],"out":"12 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["13 m"],"out":"13 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["14 m"],"out":"14 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["15 m"],"out":"15 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["16 m"],"out":"16 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["17 m"],"out":"17 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["18 m"],"out":"18 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["19 m"],"out":"19 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["2 m"],"out":"2 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["20 m"],"out":"20 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["21 m"],"out":"21 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["22 m"],"out":"22 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["23 m"],"out":"23 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["24 m"],"out":"24 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["25 m"],"out":"25 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["25.4 cm"],"out":"25.4 cm","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["26 m"],"out":"26 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["27 m"],"out":"27 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["28 m"],"out":"28 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["29 m"],"out":"29 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["3 kg"],"out":"3 kg","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["3 m"],"out":"3 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["3.14"],"out":"3.14","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["30 m"],"out":"30 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["31 m"],"out":"31 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["32 m"],"out":"32 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["33 m"],"out":"33 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["34 m"],"out":"34 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["35 m"],"out":"35 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["36 m"],"out":"36 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["37 m"],"out":"37 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["38 m"],"out":"38 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["39 m"],"out":"39 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["4 m"],"out":"4 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["4"],"out":"4","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["40 m"],"out":"40 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["41 m"],"out":"41 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["42 m"],"out":"42 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["43 m"],"out":"43 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["44 m"],"out":"44 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["45 m"],"out":"45 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["46 m"],"out":"46 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["47 m"],"out":"47 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["48 m"],"out":"48 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["49 m"],"out":"49 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["5 V"],"out":"5 V","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["5 m"],"out":"5 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["50 m"],"out":"50 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["51 m"],"out":"51 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["52 m"],"out":"52 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["53 m"],"out":"53 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["54 m"],"out":"54 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["55 m"],"out":"55 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["56 m"],"out":"56 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["57 m"],"out":"57 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["58 m"],"out":"58 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["59 m"],"out":"59 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["6 m"],"out":"6 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["60 m"],"out":"60 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["61 m"],"out":"61 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["62 m"],"out":"62 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["63 m"],"out":"63 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["64 m"],"out":"64 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["65 m"],"out":"65 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["66 m"],"out":"66 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["67 m"],"out":"67 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["68 m"],"out":"68 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["69 m"],"out":"69 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["7 m"],"out":"7 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["70 m"],"out":"70 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["71 m"],"out":"71 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["72 m"],"out":"72 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["73 m"],"out":"73 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["74 m"],"out":"74 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["75 m"],"out":"75 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["76 m"],"out":"76 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["77 m"],"out":"77 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["78 m"],"out":"78 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["79 m"],"out":"79 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["7:55 pm"],"out":"7:55 pm","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["8 m"],"out":"8 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["9 m"],"out":"9 m","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["9.8 m/s^2"],"out":"9.8 m/s^2","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["Error: incompatible units"],"out":"improper unit conversion","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["Error: ∞"],"out":"","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["error: divide by zero"],"out":"","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["error: incompatible units"],"out":"improper unit conversion","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["error: overflow"],"out":"","src":"src/lib/nativeEval.test.ts"}
+{"fn":"usableNativeDisplay","args":["improper unit conversion"],"out":"improper unit conversion","src":"src/lib/nativeEval.test.ts"}
