@@ -84,7 +84,8 @@ struct BarView: View {
         if model.hint == nil, let line = model.tourLine {
             // .tour-line: the step, `n/m` at 70%, and an underlined skip, clear of the clear button's corner
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(line.text).lineLimit(1).truncationMode(.tail)
+                // native only: a narrow bar wraps the step to a second line rather than cutting off what to type
+                Text(line.text).lineLimit(2).truncationMode(.tail).fixedSize(horizontal: false, vertical: true)
                 if line.fillable { Text("· tab fills it").lineLimit(1).opacity(0.7) }
                 Text("\(line.at)/\(line.of)").monospacedDigit().opacity(0.7)
                 Spacer(minLength: 0)
