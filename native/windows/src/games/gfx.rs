@@ -6,9 +6,9 @@
 
 use std::collections::HashMap;
 
-use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HWND};
+use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HMODULE, HWND};
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW,
+    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW,
     D2D1_FIGURE_END_OPEN, D2D1_GRADIENT_STOP, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
@@ -18,7 +18,9 @@ use windows::Win32::Graphics::Direct2D::{
     D2D1_FEATURE_LEVEL_DEFAULT, D2D1_GAMMA_2_2, D2D1_HWND_RENDER_TARGET_PROPERTIES,
     D2D1_LINE_JOIN_ROUND, D2D1_PRESENT_OPTIONS_IMMEDIATELY, D2D1_QUADRATIC_BEZIER_SEGMENT,
     D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
-    D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+    D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
+    D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_RENDER_TARGET_TYPE_SOFTWARE, ID2D1DeviceContext, ID2D1Factory1,
+    ID2D1RenderTarget,
     D2D1_RENDER_TARGET_USAGE_NONE, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
     D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1CreateFactory, ID2D1Factory, ID2D1HwndRenderTarget,
     ID2D1SolidColorBrush, ID2D1StrokeStyle,
@@ -31,8 +33,17 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_WORD_WRAPPING_WRAP, DWriteCreateFactory, IDWriteFactory,
     IDWriteFontCollection, IDWriteTextFormat, IDWriteTextLayout,
 };
-use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
-use windows::core::{BOOL, HSTRING, Result};
+use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
+use windows::Win32::Graphics::Direct3D11::{D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION, D3D11CreateDevice, ID3D11Device};
+use windows::Win32::Graphics::Dxgi::Common::{
+    DXGI_ALPHA_MODE_IGNORE, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
+};
+use windows::Win32::Graphics::Dxgi::{
+    DXGI_ERROR_DEVICE_REMOVED, DXGI_ERROR_DEVICE_RESET, DXGI_MWA_NO_ALT_ENTER, DXGI_PRESENT, DXGI_SCALING_STRETCH,
+    DXGI_SWAP_CHAIN_DESC1, DXGI_SWAP_CHAIN_FLAG, DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_USAGE_RENDER_TARGET_OUTPUT,
+    IDXGIDevice, IDXGIFactory2, IDXGISurface, IDXGISwapChain1,
+};
+use windows::core::{BOOL, HSTRING, Interface, Result};
 use windows_numerics::{Matrix3x2, Vector2};
 
 use super::svg::{Poly, Pt};
@@ -127,15 +138,26 @@ pub struct Frame {
 
 type LayoutKey = (String, (u32, bool, Face), u32, Align, bool);
 
+/// Where a frame goes: a software HWND target (the first frames, while the GPU warms), or a Direct2D device context
+/// over a flip-model swap chain of the D3D11 device `warm_gpu` made off the UI thread.
+enum Out {
+    Hwnd(ID2D1HwndRenderTarget),
+    Swap {
+        dc: ID2D1DeviceContext,
+        chain: IDXGISwapChain1,
+    },
+}
+
 struct Target {
-    rt: ID2D1HwndRenderTarget,
+    rt: ID2D1RenderTarget,
+    out: Out,
     brush: ID2D1SolidColorBrush,
 }
 
 /// The window's drawing state, made with the window and dropped with it.
 pub struct Gfx {
     hwnd: HWND,
-    d2d: ID2D1Factory,
+    d2d: ID2D1Factory1,
     dw: IDWriteFactory,
     target: Option<Target>,
     round: Option<ID2D1StrokeStyle>,
@@ -149,6 +171,66 @@ pub struct Gfx {
     pub dpi: f32,
     pub px: (u32, u32),
     pub hardware: bool,
+    /// the GPU: off (QCALC_D2D=software, or it failed), warming (the first frames are software while `warm_gpu`
+    /// makes the D3D device on its own thread, ~170 ms), or its device, ready for the next target
+    gpu: Gpu,
+    /// bumps each time the target is made again: anything made on it (offscreen canvases) is stale
+    pub generation: u32,
+}
+
+enum Gpu {
+    Off,
+    Warming,
+    /// `warm_gpu` is on it
+    Asked,
+    Ready(ID3D11Device),
+}
+
+/// Makes the D3D11 device (the GPU driver's load and the device itself, ~170 ms) off the UI thread; `notify` gets
+/// `msg` with the device in lParam (`take_device`), or 0 when there's no GPU to have.
+pub fn warm_gpu(notify: HWND, msg: u32) {
+    let to = notify.0 as usize;
+    let _ = std::thread::Builder::new().name("qcalc-gpu-warm".into()).spawn(move || {
+        use windows::Win32::Foundation::{LPARAM, WPARAM};
+        use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
+        let t = std::time::Instant::now();
+        let mut device = None;
+        // SAFETY: plain device creation into a live out slot
+        let made = unsafe {
+            D3D11CreateDevice(
+                None,
+                D3D_DRIVER_TYPE_HARDWARE,
+                HMODULE::default(),
+                D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+                None,
+                D3D11_SDK_VERSION,
+                Some(&mut device),
+                None,
+                None,
+            )
+        };
+        let raw = match (made, device) {
+            (Ok(()), Some(d)) => d.into_raw() as isize,
+            _ => 0,
+        };
+        crate::qlog!(
+            "games: the GPU's device made in {:.1} ms{}",
+            t.elapsed().as_secs_f64() * 1000.0,
+            if raw == 0 { " (failed: software from here)" } else { "" }
+        );
+        // SAFETY: posting to the game window from a worker thread; the window's thread takes the device (or, if
+        // the window is gone, the reference leaks with this short-lived process)
+        let _ = unsafe { PostMessageW(Some(HWND(to as *mut _)), msg, WPARAM(0), LPARAM(raw)) };
+    });
+}
+
+/// The device a `warm_gpu` message carries.
+///
+/// # Safety
+/// `lp` must be the lParam of that message, taken once.
+pub unsafe fn take_device(lp: isize) -> Option<ID3D11Device> {
+    // SAFETY: the pointer `warm_gpu` gave up with into_raw, adopted once
+    (lp != 0).then(|| unsafe { ID3D11Device::from_raw(lp as *mut _) })
 }
 
 fn has_family(fonts: &IDWriteFontCollection, name: &str) -> bool {
@@ -167,7 +249,7 @@ fn d2d_rect(r: Rect) -> D2D_RECT_F {
     }
 }
 
-fn color(c: Rgba) -> D2D1_COLOR_F {
+pub(super) fn color(c: Rgba) -> D2D1_COLOR_F {
     D2D1_COLOR_F {
         r: c.r,
         g: c.g,
@@ -179,11 +261,10 @@ fn color(c: Rgba) -> D2D1_COLOR_F {
 fn v(p: Pt) -> Vector2 {
     Vector2 { X: p.0, Y: p.1 }
 }
-
 impl Gfx {
     pub fn new(hwnd: HWND, dpi: u32) -> Result<Gfx> {
         // SAFETY: plain factory creation; the options outlive the call
-        let d2d: ID2D1Factory = unsafe {
+        let d2d: ID2D1Factory1 = unsafe {
             D2D1CreateFactory(
                 D2D1_FACTORY_TYPE_SINGLE_THREADED,
                 Some(&D2D1_FACTORY_OPTIONS::default()),
@@ -216,7 +297,13 @@ impl Gfx {
             layouts: HashMap::new(),
             dpi: dpi as f32,
             px: (1, 1),
-            hardware: true,
+            hardware: false,
+            gpu: if std::env::var("QCALC_D2D").is_ok_and(|v| v.eq_ignore_ascii_case("software")) {
+                Gpu::Off
+            } else {
+                Gpu::Warming
+            },
+            generation: 0,
         })
     }
 
@@ -224,17 +311,53 @@ impl Gfx {
         self.dpi / 96.0
     }
 
+    /// Whether `warm_gpu` should run (the GPU isn't switched off and has no device yet).
+    pub fn wants_gpu(&mut self) -> bool {
+        let ask = matches!(self.gpu, Gpu::Warming);
+        if ask {
+            self.gpu = Gpu::Asked;
+        }
+        ask
+    }
+
+    /// `warm_gpu` is done: with a device, the next frame goes to a hardware target on it.
+    pub fn gpu_ready(&mut self, device: Option<ID3D11Device>) {
+        if matches!(self.gpu, Gpu::Warming | Gpu::Asked) {
+            self.gpu = match device {
+                Some(d) => {
+                    self.target = None;
+                    Gpu::Ready(d)
+                }
+                None => Gpu::Off,
+            };
+        }
+    }
+
     pub fn resize(&mut self, w: u32, h: u32) {
         self.px = (w.max(1), h.max(1));
-        if let Some(t) = &self.target {
-            let size = D2D_SIZE_U {
-                width: self.px.0,
-                height: self.px.1,
-            };
-            // SAFETY: a live target
-            if unsafe { t.rt.Resize(&size) }.is_err() {
-                self.target = None;
+        let ok = match self.target.as_ref().map(|t| &t.out) {
+            None => true,
+            Some(Out::Hwnd(rt)) => {
+                let size = D2D_SIZE_U {
+                    width: self.px.0,
+                    height: self.px.1,
+                };
+                // SAFETY: a live target
+                unsafe { rt.Resize(&size) }.is_ok()
             }
+            Some(Out::Swap { dc, chain }) => {
+                // SAFETY: the target bitmap lets go of the buffers before they're resized, then is made again
+                unsafe {
+                    dc.SetTarget(None);
+                    chain
+                        .ResizeBuffers(0, self.px.0, self.px.1, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG(0))
+                        .and_then(|()| self.swap_bitmap(dc, chain))
+                        .is_ok()
+                }
+            }
+        };
+        if !ok {
+            self.target = None;
         }
     }
 
@@ -246,51 +369,115 @@ impl Gfx {
         }
     }
 
+    /// The swap chain's back buffer as the device context's target.
+    fn swap_bitmap(&self, dc: &ID2D1DeviceContext, chain: &IDXGISwapChain1) -> Result<()> {
+        // SAFETY: plain calls on live objects; the props outlive the call
+        unsafe {
+            let surface: IDXGISurface = chain.GetBuffer(0)?;
+            let props = D2D1_BITMAP_PROPERTIES1 {
+                pixelFormat: D2D1_PIXEL_FORMAT {
+                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                    alphaMode: D2D1_ALPHA_MODE_IGNORE,
+                },
+                dpiX: self.dpi,
+                dpiY: self.dpi,
+                bitmapOptions: D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
+                colorContext: std::mem::ManuallyDrop::new(None),
+            };
+            let bitmap = dc.CreateBitmapFromDxgiSurface(&surface, Some(&props))?;
+            dc.SetTarget(&bitmap);
+            dc.SetDpi(self.dpi, self.dpi);
+        }
+        Ok(())
+    }
+
+    /// A device context over a swap chain for the window, on the warmed device (a few ms on the UI thread).
+    fn make_swap(&self, device: &ID3D11Device) -> Result<(ID2D1RenderTarget, Out)> {
+        // SAFETY: plain creation calls on live objects; the descriptions outlive the calls
+        unsafe {
+            let dxgi: IDXGIDevice = device.cast()?;
+            let d2d_device = self.d2d.CreateDevice(&dxgi)?;
+            let dc = d2d_device.CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)?;
+            let adapter = dxgi.GetAdapter()?;
+            let factory: IDXGIFactory2 = adapter.GetParent()?;
+            let desc = DXGI_SWAP_CHAIN_DESC1 {
+                Width: self.px.0,
+                Height: self.px.1,
+                Format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                Stereo: BOOL(0),
+                SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+                BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+                BufferCount: 2,
+                Scaling: DXGI_SCALING_STRETCH,
+                SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
+                AlphaMode: DXGI_ALPHA_MODE_IGNORE,
+                Flags: 0,
+            };
+            let chain = factory.CreateSwapChainForHwnd(device, self.hwnd, &desc, None, None)?;
+            // Alt+Enter is the window's, not DXGI's
+            let _ = factory.MakeWindowAssociation(self.hwnd, DXGI_MWA_NO_ALT_ENTER);
+            self.swap_bitmap(&dc, &chain)?;
+            Ok((dc.cast()?, Out::Swap { dc, chain }))
+        }
+    }
+
     fn ensure(&mut self) -> Result<()> {
         if self.target.is_some() {
             return Ok(());
         }
-        let make = |hardware: bool| {
-            let props = D2D1_RENDER_TARGET_PROPERTIES {
-                r#type: if hardware {
-                    D2D1_RENDER_TARGET_TYPE_DEFAULT
-                } else {
-                    D2D1_RENDER_TARGET_TYPE_SOFTWARE
-                },
-                pixelFormat: D2D1_PIXEL_FORMAT {
-                    format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
-                },
-                dpiX: self.dpi,
-                dpiY: self.dpi,
-                usage: D2D1_RENDER_TARGET_USAGE_NONE,
-                minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
-            };
-            let hwnd_props = D2D1_HWND_RENDER_TARGET_PROPERTIES {
-                hwnd: self.hwnd,
-                pixelSize: D2D_SIZE_U {
-                    width: self.px.0,
-                    height: self.px.1,
-                },
-                presentOptions: D2D1_PRESENT_OPTIONS_IMMEDIATELY,
-            };
-            // SAFETY: the property structs outlive the call; the window is ours and live
-            unsafe { self.d2d.CreateHwndRenderTarget(&props, &hwnd_props) }
+        let t = std::time::Instant::now();
+        let swap = match &self.gpu {
+            Gpu::Ready(device) => match self.make_swap(device) {
+                Ok(s) => Some(s),
+                Err(e) => {
+                    crate::qlog!("games: no hardware target ({e}); software from here");
+                    None
+                }
+            },
+            _ => None,
         };
-        // the GPU when there is one (QCALC_D2D=software tries without)
-        let want_hw = !std::env::var("QCALC_D2D").is_ok_and(|v| v.eq_ignore_ascii_case("software"));
-        let (rt, hardware) = match want_hw.then(|| make(true)) {
-            Some(Ok(rt)) => (rt, true),
-            _ => (make(false)?, false),
+        let (rt, out, hardware) = match swap {
+            Some((rt, out)) => {
+                crate::qlog!("games: hardware target made in {:.1} ms", t.elapsed().as_secs_f64() * 1000.0);
+                (rt, out, true)
+            }
+            None => {
+                if matches!(self.gpu, Gpu::Ready(_)) {
+                    self.gpu = Gpu::Off;
+                }
+                let props = D2D1_RENDER_TARGET_PROPERTIES {
+                    r#type: D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+                    pixelFormat: D2D1_PIXEL_FORMAT {
+                        format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                        alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                    },
+                    dpiX: self.dpi,
+                    dpiY: self.dpi,
+                    usage: D2D1_RENDER_TARGET_USAGE_NONE,
+                    minLevel: D2D1_FEATURE_LEVEL_DEFAULT,
+                };
+                let hwnd_props = D2D1_HWND_RENDER_TARGET_PROPERTIES {
+                    hwnd: self.hwnd,
+                    pixelSize: D2D_SIZE_U {
+                        width: self.px.0,
+                        height: self.px.1,
+                    },
+                    presentOptions: D2D1_PRESENT_OPTIONS_IMMEDIATELY,
+                };
+                // SAFETY: the property structs outlive the call; the window is ours and live
+                let rt = unsafe { self.d2d.CreateHwndRenderTarget(&props, &hwnd_props) }?;
+                (rt.cast()?, Out::Hwnd(rt), false)
+            }
         };
         self.hardware = hardware;
+        self.generation = self.generation.wrapping_add(1);
         // SAFETY: a live target
         let brush = unsafe {
             rt.SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
             rt.SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
             rt.CreateSolidColorBrush(&color(Rgba::CLEAR), None)
         }?;
-        self.target = Some(Target { rt, brush });
+        self.target = Some(Target { rt, out, brush });
         Ok(())
     }
 
@@ -313,8 +500,9 @@ impl Gfx {
             },
             dashOffset: 0.0,
         };
+        let f: &ID2D1Factory = &self.d2d;
         // SAFETY: the props outlive the call
-        unsafe { self.d2d.CreateStrokeStyle(&props, dashes) }
+        unsafe { f.CreateStrokeStyle(&props, dashes) }
     }
 
     /// One frame. A lost device drops the target; the next frame makes a new one.
@@ -338,8 +526,13 @@ impl Gfx {
         let Some(tg) = &self.target else {
             return Ok(Frame::default());
         };
+        let dc = match &tg.out {
+            Out::Swap { dc, .. } => Some(dc.clone()),
+            Out::Hwnd(rt) => rt.cast::<ID2D1DeviceContext>().ok(),
+        };
         let mut ui = Ui {
             rt: &tg.rt,
+            dc,
             brush: &tg.brush,
             d2d: &self.d2d,
             dw: &self.dw,
@@ -359,6 +552,8 @@ impl Gfx {
             alpha: 1.0,
             transforms: vec![Matrix3x2::identity()],
             next_frame: false,
+            generation: self.generation,
+            hardware: self.hardware,
         };
         // SAFETY: paired Begin/EndDraw on a live target
         unsafe { tg.rt.BeginDraw() };
@@ -366,13 +561,21 @@ impl Gfx {
         let hits = std::mem::take(&mut ui.hits);
         let next = ui.next_frame;
         drop(ui);
-        // SAFETY: as above
-        let end = unsafe { tg.rt.EndDraw(None, None) };
-        if let Err(e) = &end
-            && e.code() == D2DERR_RECREATE_TARGET
-        {
-            self.target = None;
-            return Ok(Frame { hits, next: true });
+        // SAFETY: as above; a swap chain then shows the frame (no vsync wait: DwmFlush paces the next)
+        let end = unsafe {
+            tg.rt.EndDraw(None, None).and_then(|()| match &tg.out {
+                Out::Swap { chain, .. } => chain.Present(0, DXGI_PRESENT(0)).ok(),
+                Out::Hwnd(_) => Ok(()),
+            })
+        };
+        if let Err(e) = &end {
+            let lost = [D2DERR_RECREATE_TARGET, DXGI_ERROR_DEVICE_REMOVED, DXGI_ERROR_DEVICE_RESET];
+            if lost.contains(&e.code()) {
+                crate::qlog!("games: the device was lost ({e}); software from here");
+                self.target = None;
+                self.gpu = Gpu::Off;
+                return Ok(Frame { hits, next: true });
+            }
         }
         end?;
         Ok(Frame { hits, next })
@@ -381,7 +584,12 @@ impl Gfx {
 
 /// What a frame paints with. Coordinates are DIPs (the target's DPI is the monitor's).
 pub struct Ui<'a> {
-    rt: &'a ID2D1HwndRenderTarget,
+    rt: &'a ID2D1RenderTarget,
+    /// the same target as a device context (command lists, effects, composite modes), when it is one
+    pub dc: Option<ID2D1DeviceContext>,
+    /// the target's generation (Gfx::generation) and whether it's the GPU's
+    pub generation: u32,
+    pub hardware: bool,
     brush: &'a ID2D1SolidColorBrush,
     d2d: &'a ID2D1Factory,
     dw: &'a IDWriteFactory,
@@ -462,6 +670,18 @@ impl Ui<'_> {
         self.transforms.push(next);
         // SAFETY: inside a draw
         unsafe { self.rt.SetTransform(&next) };
+    }
+
+    /// What canvas.rs draws with: the target, its device context (when it is one), and the factories.
+    pub fn parts(&self) -> (&ID2D1RenderTarget, Option<&ID2D1DeviceContext>, &ID2D1Factory, &IDWriteFactory) {
+        (self.rt, self.dc.as_ref(), self.d2d, self.dw)
+    }
+
+    /// Puts the target's transform back to this frame's current one (after a canvas set its own).
+    pub fn sync_transform(&self) {
+        let t = self.top();
+        // SAFETY: inside a draw
+        unsafe { self.rt.SetTransform(&t) };
     }
 
     pub fn pop_transform(&mut self) {

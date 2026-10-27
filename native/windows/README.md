@@ -75,7 +75,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf, clear) and their tips |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
-| `games/` | the native games in a window of their own (games/README.md): `open(kind)`, `command`/`hint` for the bar; online play over relay.rs |
+| `games/` | the native games, each in a window and a process of its own (`qcalc.exe --game <kind>`, games/README.md): `open(kind)`, `is_open`, `command`/`hint` for the bar; online play over relay.rs |
 | `update.rs` | self-update: `latest-native.json` on the GitHub release, minisign-verified with the Tauri updater's key, installed while away |
 | `rates.rs` | the ECB daily rates (the core's rules) on a background thread, into `rates.json` and the engine |
 | `analytics.rs` | the usage counts (the core's rules), `track(app, event)` |
