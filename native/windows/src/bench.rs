@@ -192,7 +192,6 @@ pub mod pipe {
         PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE, PIPE_WAIT,
     };
     use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
-    use windows::core::w;
 
     use crate::qlog;
 
@@ -211,7 +210,10 @@ pub mod pipe {
                     // SAFETY: a fresh pipe instance each loop, closed below
                     let pipe = unsafe {
                         CreateNamedPipeW(
-                            w!(r"\\.\pipe\qcalc-bench"),
+                            &windows::core::HSTRING::from(format!(
+                                r"\\.\pipe\qcalc-bench{}",
+                                crate::log::instance_suffix()
+                            )),
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE
                                 | PIPE_READMODE_BYTE
