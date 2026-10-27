@@ -585,7 +585,10 @@ private struct HistoryTape: View {
             ScrollView(.vertical, showsIndicators: model.visibleRange.count > Theme.tapeVisible) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(model.visibleRange), id: \.self) { i in
-                        HistoryRowView(model: model, index: i, row: model.rows[i]).id(i)
+                        HistoryRowView(model: model, index: i, row: model.rows[i], selected: model.selected == i,
+                                       picked: model.selected == i ? model.pick : nil)
+                            .equatable()
+                            .id(i)
                     }
                 }
             }
@@ -601,16 +604,20 @@ private struct HistoryTape: View {
     }
 }
 
-private struct HistoryRowView: View {
-    @ObservedObject var model: BarModel
+/// Not observing the model: a row redraws only when what it shows changes (`.equatable()`), not on every keystroke.
+private struct HistoryRowView: View, Equatable {
+    let model: BarModel
     let index: Int
     let row: HistoryRow
+    let selected: Bool
+    // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
+    let picked: Int?
     @State private var hover = false
     @State private var exprHover = false
 
-    private var selected: Bool { model.selected == index }
-    // which part ← → picked: 0 the expression, 1 the first answer, 2 the second of a dual
-    private var picked: Int? { selected ? model.pick : nil }
+    static func == (a: Self, b: Self) -> Bool {
+        a.index == b.index && a.row == b.row && a.selected == b.selected && a.picked == b.picked
+    }
 
     var body: some View {
         // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners
