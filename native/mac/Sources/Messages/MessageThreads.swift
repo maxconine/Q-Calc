@@ -405,8 +405,22 @@ private struct ThreadLine: View {
             }
         }
         .padding(.bottom, 2)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(line.mine ? "you" : name), \(ThreadTime.full(line.at)): \(line.text)")
+        .modifier(ThreadLineAccessibility(label: "\(line.mine ? "you" : name), \(ThreadTime.full(line.at)): \(line.text)",
+                                          plain: line.clip == nil && line.file == nil))
+    }
+}
+
+/// A words-only line reads as one element. A clip or a file keeps its own label (state, size) and its buttons
+/// (Copy, Save, Take Back) as separate elements, which a combined line would fold into its label and hide.
+private struct ThreadLineAccessibility: ViewModifier {
+    let label: String
+    let plain: Bool
+    func body(content: Content) -> some View {
+        if plain {
+            content.accessibilityElement(children: .combine).accessibilityLabel(label)
+        } else {
+            content.accessibilityElement(children: .contain)
+        }
     }
 }
 

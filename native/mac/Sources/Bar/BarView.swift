@@ -1057,5 +1057,7 @@ private struct CardView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(card.ask ? "\(card.from) wants to message you" : "Message from \(card.from): \(card.text)")
+        // the click on the name or words that opens the thread, for VoiceOver and Full Keyboard Access
+        .accessibilityAction(named: "Open messages with \(card.from)") { if !card.ask { model.openThread(card.from) } }
     }
 }

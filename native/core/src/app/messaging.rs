@@ -389,6 +389,18 @@ pub fn thread_empty_text(name: &str) -> String {
     }
 }
 
+/// What VoiceOver says when a card arrives (native only): the cards come and go on their own, and nothing moves
+/// the VoiceOver cursor to them. `kind` is `ask`, `clip`, `file` (with its name in `text`) or the message's words.
+pub fn card_announcement(from: &str, kind: &str, text: &str) -> String {
+    match kind {
+        "ask" => format!("{from} wants to message you"),
+        "clip" => format!("{from} shared their clipboard"),
+        "file" if text.is_empty() => format!("{from} sent a file"),
+        "file" => format!("{from} sent {text}"),
+        _ => format!("message from {from}: {text}"),
+    }
+}
+
 // ---- clips and files (native only; relay/src/files.js has the relay's side) ----
 
 /// The most clipboard text a clip carries, in UTF-8 bytes; past it the clipboard goes as a text file.
@@ -1128,6 +1140,29 @@ pub fn auto_accept(m: &Messaging, from: &str, size: u64, limit: u64) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn names_what_was_dropped() {
+        assert_eq!(dropped_label("a.pdf", 1), "a.pdf");
+        assert_eq!(dropped_label("a.pdf", 3), "3 files");
+        assert_eq!(file_error_text("folder", "max"), "a folder can’t be sent · zip it first");
+        let m = Messaging {
+            name: "me".into(),
+            key: "k".into(),
+            ..Messaging::default()
+        };
+        let p = parse_share_command("send file to max").unwrap();
+        assert_eq!(share_hint(&p, &m, true, None, &dropped_label("x", 2)), "↵ offers 2 files to max");
+    }
+
+    #[test]
+    fn says_what_a_card_is() {
+        assert_eq!(card_announcement("max", "ask", ""), "max wants to message you");
+        assert_eq!(card_announcement("max", "clip", ""), "max shared their clipboard");
+        assert_eq!(card_announcement("max", "file", "a.pdf"), "max sent a.pdf");
+        assert_eq!(card_announcement("max", "file", ""), "max sent a file");
+        assert_eq!(card_announcement("max", "text", "hi"), "message from max: hi");
+    }
 
     #[test]
     fn reads_the_conversation_commands() {

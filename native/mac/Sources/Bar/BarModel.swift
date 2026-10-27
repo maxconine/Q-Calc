@@ -75,7 +75,10 @@ final class BarModel: ObservableObject {
     @Published private(set) var forms: [String] = [] { didSet { if forms != oldValue { refreshTypeset() } } }
     @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
-    @Published var hint: String?
+    /// the status line under the bar; VoiceOver hears each new one, since nothing moves its focus there
+    @Published var hint: String? {
+        didSet { if let hint, !hint.isEmpty, hint != oldValue { Self.announce(hint) } }
+    }
     /// the hint from before files were dragged over the bar, put back when they leave (Messages/ShareCommands.swift)
     var dragHint: String?
     // the tape
@@ -101,7 +104,16 @@ final class BarModel: ObservableObject {
     /// one thread, its reply line's words and how its last send went
     @Published var messagesPanel: MessagesPanel?
     @Published var threadDraft = ""
-    @Published var threadReply = BannerCard.Reply.idle
+    @Published var threadReply = BannerCard.Reply.idle {
+        didSet {
+            guard threadReply != oldValue else { return }
+            switch threadReply {
+            case .sent: Self.announce("sent")
+            case let .failed(note): Self.announce(note)
+            default: break
+            }
+        }
+    }
     // settings mirrored for the views
     @Published private(set) var angleRad = false
     @Published private(set) var fractions = false
@@ -990,6 +1002,13 @@ final class BarModel: ObservableObject {
         flashCopied()
     }
 
+    /// a status VoiceOver reads out without moving its cursor
+    static func announce(_ text: String, high: Bool = false) {
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+                             userInfo: [.announcement: text,
+                                        .priority: (high ? NSAccessibilityPriorityLevel.high : .medium).rawValue])
+    }
+
     private func flashCopied() {
         copied = true
         copiedTimer?.invalidate()
@@ -1213,6 +1232,7 @@ final class BarModel: ObservableObject {
               let rows = try? JSONSerialization.jsonObject(with: Data(Messages.shared.inboxJSON.utf8)) as? [[String: Any]]
         else { return }
         var ids: [String] = []
+        let before = Set(cards.map(\.id))
         for o in rows {
             guard let id = o["id"] as? String, let from = o["from"] as? String else { continue }
             ids.append(id)
@@ -1229,6 +1249,12 @@ final class BarModel: ObservableObject {
             cards.insert(card, at: 0)
         }
         if cards.count > 3 { cards = Array(cards.prefix(3)) }
+        // VoiceOver hears each new card (they hide on their own after 10 s)
+        for card in cards.reversed() where !before.contains(card.id) {
+            let kind = card.ask ? "ask" : card.clip != nil ? "clip" : card.file != nil ? "file" : "text"
+            let said = card.file?.name ?? card.text
+            if let line = logic.string("lib/messaging", "cardAnnouncement", [card.from, kind, said]) { Self.announce(line) }
+        }
         if !ids.isEmpty { Messages.shared.seen(ids) }
         scheduleCardExpiry()
     }
@@ -1273,6 +1299,7 @@ final class BarModel: ObservableObject {
         Messages.shared.send(to: card.from, text: said) { [weak self] status in
             guard let self, let j = self.cards.firstIndex(where: { $0.id == id }) else { return }
             if status == "delivered" {
+                Self.announce("sent")
                 self.cards[j].reply = .sent
                 self.cards[j].draft = ""
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
@@ -1283,7 +1310,9 @@ final class BarModel: ObservableObject {
                     }
                 }
             } else {
-                self.cards[j].reply = .failed(Messages.sendStatusText(status, to: card.from))
+                let note = Messages.sendStatusText(status, to: card.from)
+                Self.announce(note)
+                self.cards[j].reply = .failed(note)
             }
         }
     }
@@ -1292,6 +1321,8 @@ final class BarModel: ObservableObject {
         guard let card = cards.first(where: { $0.id == id }) else { return }
         if allow { Messages.shared.allow(card.from) } else { Messages.shared.block(card.from) }
         cards.removeAll { $0.id == id }
+        // Allow / Block had the keyboard (Full Keyboard Access, VoiceOver) and is gone: the line takes it back
+        focusField?()
     }
 
     func dismissCard(_ id: String) {
