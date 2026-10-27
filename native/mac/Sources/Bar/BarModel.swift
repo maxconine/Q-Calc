@@ -1019,9 +1019,26 @@ final class BarModel: ObservableObject {
 
     // MARK: - toggles
 
-    func toggleAngle() { settings.setAngleMode(angleRad ? "deg" : "rad", notifyWeb: true) }
-    func toggleFractions() { settings.setFractionMode(!fractions, notifyWeb: true) }
-    func toggleSigFigMode() { settings.setSigFigMode(!sigFigMode, notifyWeb: true) }
+    func toggleAngle() {
+        let rad = !angleRad
+        settings.setAngleMode(rad ? "rad" : "deg", notifyWeb: true)
+        announceMode("angle", rad)
+    }
+    func toggleFractions() {
+        let on = !fractions
+        settings.setFractionMode(on, notifyWeb: true)
+        announceMode("fraction", on)
+    }
+    func toggleSigFigMode() {
+        let on = !sigFigMode
+        settings.setSigFigMode(on, notifyWeb: true)
+        announceMode("sigFigs", on)
+    }
+
+    /// VoiceOver hears where a toggle left the mode (native only; the edge tools showing it are hidden off hover)
+    private func announceMode(_ action: String, _ on: Bool) {
+        if let line = logic.string("lib/onboarding", "modeAnnouncement", [action, on]), !line.isEmpty { Self.announce(line) }
+    }
 
     // MARK: - keys
 

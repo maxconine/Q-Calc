@@ -350,6 +350,19 @@ pub fn native_type_cheats() -> Vec<CheatRow> {
     rows
 }
 
+/// What VoiceOver says after ⌃D, ⌃F or ⌃S (native only): the edge tools that show the mode are hidden until
+/// hovered, so the switch is otherwise silent. `on` is radians for `angle`.
+pub fn mode_announcement(action: &str, on: bool) -> String {
+    let state = if on { "on" } else { "off" };
+    match action {
+        "angle" if on => "radians".into(),
+        "angle" => "degrees".into(),
+        "fraction" => format!("fractions {state}"),
+        "sigFigs" => format!("sig figs from input {state}"),
+        _ => String::new(),
+    }
+}
+
 fn row_actions(label: &str) -> Option<&'static [KeyAction]> {
     Some(match label {
         "copy answer / line" => &[KeyAction::CopyAnswer, KeyAction::CopyLine],
@@ -409,6 +422,18 @@ mod native_cheat_tests {
         assert_eq!(rows.last().unwrap().0, "?");
         // the web's own column is unchanged
         assert_eq!(cheat_sheet(None, true, None)[1].len(), CHEAT_TYPE.len());
+    }
+
+    #[test]
+    fn says_which_mode_a_toggle_left() {
+        assert_eq!(mode_announcement("angle", true), "radians");
+        assert_eq!(mode_announcement("angle", false), "degrees");
+        assert_eq!(mode_announcement("fraction", true), "fractions on");
+        assert_eq!(
+            mode_announcement("sigFigs", false),
+            "sig figs from input off"
+        );
+        assert_eq!(mode_announcement("clear", true), "");
     }
 
     #[test]
