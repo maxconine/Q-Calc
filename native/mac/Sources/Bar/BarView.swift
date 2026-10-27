@@ -107,7 +107,9 @@ struct BarView: View {
                 .font(.system(size: Theme.small))
                 .lineSpacing(2)
                 .foregroundStyle(Color.qMuted)
-                .lineLimit(1)
+                // native only: two lines on a narrow bar (the page cuts it at one), so a why or a how isn't lost
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Theme.gutter)
