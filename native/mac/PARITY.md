@@ -57,6 +57,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Pretty answer, dual exact ≈ decimal, answer form setting | ✅ | `live`, `dual` pairs |
 | Tab cycles forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile |
 | Steady answer while briefly invalid | ✅ | |
+| Selected part answered on its own (`selDisplay`, `.live.live-selection`) | ✅ | was missing: selecting `3*4` in `2 + 3*4` shows a muted `12` in the answer slot until the selection goes (evaluated alone, no history; not for the whole line, a graph, or a part that reads as its value), read out as the page's `aria-live` is; its own engine lane. Pictured |
 | Fit font | ✅ | shrinks to half before truncating |
 | Click copies (unitless setting), each half its own copy, drag out | ✅ | |
 | "✓ copied" flash | ✅ | caption, accent-hover, 1.2 s |

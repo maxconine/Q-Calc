@@ -266,7 +266,13 @@ struct LiveAnswerView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if model.text.isEmpty, let example = model.example, !example.answer.isEmpty, !model.copied {
+        if let part = model.selectionAnswer, !model.text.isEmpty {
+            // .live.live-selection: the selected part's answer, muted, not a button
+            AnswerText(text: model.pretty(part), size: Theme.display)
+                .foregroundStyle(Color.qMuted)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                .accessibilityLabel("Selection: \(part)")
+        } else if model.text.isEmpty, let example = model.example, !example.answer.isEmpty, !model.copied {
             // .live-example: the example's answer, muted at 70%, fading with it
             ExampleFade(id: example.id) {
                 AnswerText(text: Pretty.answer(example.answer), size: Theme.display)

@@ -106,6 +106,8 @@ final class BarModel: ObservableObject {
     /// the message threads under the bar (native only, Messages/MessageThreads.swift): the conversations list or
     /// one thread, its reply line's words and how its last send went
     @Published var messagesPanel: MessagesPanel?
+    /// the selected part of the line's own answer (inputSelected)
+    @Published var selectionAnswer: String?
     @Published var threadDraft = ""
     @Published var threadReply = BannerCard.Reply.idle {
         didSet {
@@ -418,6 +420,30 @@ final class BarModel: ObservableObject {
         guard let completion, !completion.isEmpty else { return false }
         insert(completion)
         return true
+    }
+
+    /// selDisplay (QuickCalc.tsx): part of the line selected is evaluated alone, with no history, and shown muted
+    /// in the answer slot (`.live.live-selection`, aria-live), unless it's the whole line, a graph's, or reads the
+    /// same as its value. Nil otherwise.
+    func inputSelected(_ line: String, _ range: NSRange) {
+        let ns = line as NSString
+        let part = range.length > 0 && NSMaxRange(range) <= ns.length
+            ? ns.substring(with: range).trimmingCharacters(in: .whitespaces) : ""
+        guard !part.isEmpty, part != line.trimmingCharacters(in: .whitespaces), graph == nil else {
+            if selectionAnswer != nil { selectionAnswer = nil }
+            engine.cancel(.selection)
+            return
+        }
+        let view = HistoryView.from(settings), options = self.options
+        engine.submit(.selection, { engine -> String? in
+            let answer = engine.live(request: Self.request(engine, text: part, rows: [], view: view, options: options))
+            let shown = answer.display
+            return shown.isEmpty || shown == part || answer.improper ? nil : shown
+        }) { [weak self] shown in
+            guard let self, self.text == line else { return }
+            self.selectionAnswer = shown
+            if let shown { Self.announce(shown) }
+        }
     }
 
     private func setLive(_ answer: LiveAnswer, for typed: String) {
