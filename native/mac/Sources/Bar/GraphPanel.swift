@@ -116,7 +116,7 @@ struct GraphPanel: View {
             // an AppKit view drawing through Core Graphics, not a Canvas: a Canvas renders each redraw into a new
             // GPU surface that SwiftUI keeps for a while, 130 MB of them while a graph line is typed
             Color.clear
-                .background(PlotCanvas { cg in
+                .background(PlotCanvas(key: PlotKey(state: state, hoverX: hoverX, scale: scale)) { cg in
                     cg.scaleBy(x: scale, y: scale)
                     draw(cg)
                 })
@@ -274,22 +274,34 @@ struct GraphPanel: View {
     }
 }
 
+private struct PlotKey: Equatable {
+    let state: GraphState
+    let hoverX: Double?
+    let scale: CGFloat
+}
+
 /// The plot's drawing surface: an NSView that draws through `draw` into a bitmap of its own and hands that to its
 /// layer as contents, and lets every event through to the SwiftUI gestures above it. Drawing into the layer's
 /// backing store instead (or a SwiftUI Canvas) costs 110-145 MB of GPU surfaces for a few seconds each time the
 /// panel opens, and ~9 MB held after; a bitmap is one ~2 MB image.
 private struct PlotCanvas: NSViewRepresentable {
+    /// everything the drawing reads besides the appearance: the panel redraws on any change to the bar's model,
+    /// and drawing the plot costs ~10 ms, so it's drawn again only when this changes
+    let key: PlotKey
     let draw: (CGContext) -> Void
 
     func makeNSView(context: Context) -> PlotNSView { PlotNSView() }
 
     func updateNSView(_ view: PlotNSView, context: Context) {
         view.drawing = draw
+        guard view.key != key else { return }
+        view.key = key
         view.needsDisplay = true
     }
 
     final class PlotNSView: NSView {
         var drawing: ((CGContext) -> Void)?
+        var key: PlotKey?
 
         override init(frame: NSRect) {
             super.init(frame: frame)
