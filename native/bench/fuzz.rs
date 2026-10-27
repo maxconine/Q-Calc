@@ -744,6 +744,14 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
                 std::hint::black_box(messaging::clean_sealed_offer(&v));
                 std::hint::black_box(messaging::sanitize_messaging(&v));
             }
+            // relay frames and stored settings shaped like the real ones
+            let doc = random_json(r, input, 0);
+            std::hint::black_box(messaging::parse_inbox_frame(&doc.to_string()));
+            std::hint::black_box(messaging::sanitize_messaging(&doc));
+            std::hint::black_box(messaging::clean_sealed_offer(&doc));
+            std::hint::black_box(messaging::clean_sealed_clip(&doc));
+            std::hint::black_box(messaging::clean_public_key(&doc));
+            std::hint::black_box(messaging::clean_clip(&doc));
             "messaging"
         }
         11 => {
