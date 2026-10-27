@@ -79,6 +79,7 @@ struct BarView: View {
             // .tour-line: the step, `n/m` at 70%, and an underlined skip, clear of the clear button's corner
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(line.text).lineLimit(1).truncationMode(.tail)
+                if line.fillable { Text("· tab fills it").lineLimit(1).opacity(0.7) }
                 Text("\(line.at)/\(line.of)").monospacedDigit().opacity(0.7)
                 Spacer(minLength: 0)
                 Button { model.skipTutorial() } label: { Text("skip").underline() }

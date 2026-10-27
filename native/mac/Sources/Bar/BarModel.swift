@@ -1006,7 +1006,7 @@ final class BarModel: ObservableObject {
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
-            if !flags.contains(.shift), acceptCompletion() { return true }
+            if !flags.contains(.shift), fillTourStep() || acceptCompletion() { return true }
             cycleForms(back: flags.contains(.shift))
             return true
         case kVK_Delete:

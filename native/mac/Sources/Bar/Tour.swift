@@ -17,6 +17,8 @@ struct TourLineShown: Equatable {
     var text: String
     var at: Int
     var of: Int
+    /// Tab would type the step's line (fillTourStep)
+    var fillable = false
 }
 
 extension BarModel {
@@ -62,6 +64,14 @@ extension BarModel {
     /// the walkthrough owns the line under the bar until its basics are done
     func tourBasicsLeft() -> Bool { touringNow() && tourStepNow() != nil }
 
+    /// Tab during the walkthrough types the step's line for you, while what's typed is still the start of it
+    /// (native only; the web bar's Tab only takes completions and cycles forms)
+    func fillTourStep() -> Bool {
+        guard tourLine?.fillable == true, let expr = tourStepNow()?["expr"] as? String else { return false }
+        if expr.hasPrefix(text) { insert(String(expr.dropFirst(text.count))) } else { text = expr }
+        return true
+    }
+
     func markTour(_ bits: Int) {
         guard bits != 0 else { return }
         if hints & bits != bits {
@@ -98,8 +108,10 @@ extension BarModel {
         if let step = tourStepNow(), let stepText = step["text"] as? String {
             let progress = logic.call("lib/tour", "tourProgress", [tourDone, hotkeyTitle]) as? [String: Any]
             let fits = logic.bool("lib/tour", "tourLineFits", [step, text, !live.isBlank])
+            let expr = step["expr"] as? String ?? ""
             tourLine = fits ? TourLineShown(text: stepText, at: (progress?["at"] as? NSNumber)?.intValue ?? 0,
-                                            of: (progress?["of"] as? NSNumber)?.intValue ?? 0) : nil
+                                            of: (progress?["of"] as? NSNumber)?.intValue ?? 0,
+                                            fillable: (step["id"] as? String) != "hotkey" && !expr.isEmpty && text != expr) : nil
             ghostExample = (step["plain"] as? Bool) == true ? nil : step["expr"] as? String
             ghostPlain = (step["plain"] as? Bool) == true ? step["expr"] as? String : nil
         } else {
