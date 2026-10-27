@@ -104,7 +104,8 @@ pub fn newer(offered: &str, running: &str) -> bool {
 
 /// The manifest's entry for `platform`, checked.
 pub fn offer(manifest: &str, platform: &str) -> Result<Offer, String> {
-    let v: Value = serde_json::from_str(manifest).map_err(|_| "the update feed isn't JSON")?;
+    let v: Value = serde_json::from_str(manifest.trim_start_matches('\u{feff}'))
+        .map_err(|_| "the update feed isn't JSON")?;
     let version = v["version"]
         .as_str()
         .filter(|s| parse_version(s).is_some())
@@ -581,6 +582,8 @@ mod tests {
         assert!(o.url.ends_with("x64-native-setup.exe"));
         assert!(offer(m, "windows-aarch64").is_err());
         assert!(offer("<html>", "windows-x86_64").is_err());
+        // a byte-order mark (PowerShell 5's UTF-8) is fine
+        assert!(offer(&format!("\u{feff}{m}"), "windows-x86_64").is_ok());
         assert!(offer(&m.replace("https://", "http://"), "windows-x86_64").is_err());
         assert!(offer(&m.replace("\"c2ln\"", "\"\""), "windows-x86_64").is_err());
         assert!(offer(&m.replace("2.1.0\", \"pub", "two\", \"pub"), "windows-x86_64").is_err());

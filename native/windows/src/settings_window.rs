@@ -1038,7 +1038,7 @@ impl Win {
                     .iter()
                     .map(|(_, l)| text_w(gfx, l, &f.hint))
                     .fold(0.0, f32::max);
-                ((widest + 44.0).clamp(220.0, 300.0), 30.0)
+                ((widest + 44.0).clamp(190.0, 300.0), 30.0)
             }
             Control::Button { label, .. } => ((text_w(gfx, label, &f.hint) + 32.0).max(88.0), 30.0),
             Control::Key { label, .. } => ((text_w(gfx, label, &f.hint) + 28.0).max(150.0) + 34.0, 30.0),

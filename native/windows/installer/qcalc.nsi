@@ -72,22 +72,23 @@ Var Fresh
 ; Closes the qcalc.exe started from $INSTDIR, if one runs, and waits until its file can be replaced.
 !macro CloseRunning un
 Function ${un}CloseRunning
+  ; a running exe can be renamed, and on current Windows even deleted, while it keeps running, so the files can't
+  ; tell: ask for the process by its exact path (the self-update has already quit; a hand install may find it open)
+  ${If} ${FileExists} "$INSTDIR\qcalc.exe"
+    ; the 64-bit PowerShell: a 32-bit one (this installer's own kind) can't read a 64-bit process's path
+    StrCpy $4 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+    ${IfNot} ${FileExists} $4
+      StrCpy $4 "powershell"
+    ${EndIf}
+    nsExec::ExecToStack `"$4" -NoProfile -NonInteractive -Command "$$p = Get-Process qcalc -ErrorAction SilentlyContinue | Where-Object { $$_.Path -eq '$INSTDIR\qcalc.exe' }; $$p | Stop-Process -Force; $$p | Wait-Process -Timeout 5 -ErrorAction SilentlyContinue"`
+    Pop $0
+    Pop $2
+  ${EndIf}
   StrCpy $1 0
   ${Do}
-    ClearErrors
-    ${If} ${FileExists} "$INSTDIR\qcalc.exe"
-      Rename "$INSTDIR\qcalc.exe" "$INSTDIR\qcalc.exe.old"
-      ${IfNot} ${Errors}
-        Delete "$INSTDIR\qcalc.exe.old"
-        ${Break}
-      ${EndIf}
-    ${Else}
+    Delete "$INSTDIR\qcalc.exe"
+    ${IfNot} ${FileExists} "$INSTDIR\qcalc.exe"
       ${Break}
-    ${EndIf}
-    ${If} $1 == 0
-      ; still running (the update quits by itself first; a hand install may find it open): exactly this path
-      nsExec::Exec `powershell -NoProfile -NonInteractive -Command "Get-Process qcalc -ErrorAction SilentlyContinue | Where-Object { $$_.Path -eq '$INSTDIR\qcalc.exe' } | Stop-Process -Force"`
-      Pop $0
     ${EndIf}
     IntOp $1 $1 + 1
     ${If} $1 > 50
