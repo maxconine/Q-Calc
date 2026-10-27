@@ -319,5 +319,5 @@ Found on the way, not fixed:
   so `CGCanvas` is what a new per-frame game picture should use.
 - **The settings window** goes to ~174 MB for about 1.5 s as it opens and holds 52 MB while open (idle 24). It is
   `Sources/Shared/SettingsWindow.swift`, shared with the web-view app, so it was left alone.
-- Ember's level picker shows "Optional(nil)" at the start of its note (`EmberPanel.swift`, the `note` line).
+- ~~Ember's level picker shows "Optional(nil)" at the start of its note~~ (fixed: the note is read straight off the frame, not through `?? nil`, which made `$0` an optional).
   This is a display bug, not performance, and it was left for the games work.
