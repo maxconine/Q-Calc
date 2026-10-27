@@ -63,7 +63,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Closed-form upgrade | ✅ | `Engine.closedForm` with a CancelToken, cancelled by the next keystroke |
 | Solve display: letter, roots each clickable, messages | ✅ | `x =` copies all, each root copies at full precision, `, …` past the shown ones; no-root outcomes as a message |
 | Typeset preview row | ✅ | `qcalc-typst` paths drawn in `--ink` (`MathText.swift`), shown exactly when `typstShown` is (setting, no command panel, `typstPreviewUseful` of the chained line); the answer is the shown form (`typstAnswer`), a solve's letter after ⇒, nothing for a message; rejected mid-edit input keeps the last picture at 40% |
-| Command messages in the answer slot (`periodic table`, `↵ play pong`, message hints) | ✅ | as `.live.message` |
+| Command messages in the answer slot (`periodic table`, `↵ play pong`, message hints) | ✅ | as `.live.message`; cut at the end like the page (`text-overflow: ellipsis`; it had been cut at the start, so a narrow bar showed `…essages · ↵ opens settings` and not why). **Native only:** hovering one, or the hint under the line, shows it whole |
 
 ## 4. History tape
 

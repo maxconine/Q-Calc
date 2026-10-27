@@ -112,6 +112,7 @@ struct BarView: View {
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 12)
                 .padding(.top, -12)
+                .help(hint)
                 .accessibilityLabel(hint)
         }
         // the one-time line on what's end-to-end encrypted (Messages/ShareViews.swift)
@@ -287,8 +288,10 @@ struct LiveAnswerView: View {
             Text(message)
                 .font(.system(size: Theme.body))
                 .foregroundStyle(Color.qMuted)
-                .truncationMode(.head)
+                .truncationMode(.tail)  // .live: text-overflow: ellipsis, so the start (what is wrong) stays
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                // a narrow bar cuts its end off; the pointer shows it whole (native only)
+                .help(message)
         } else if model.live.isBlank, let steady = model.steady {
             // .live-steady: never the answer's colour, gone after a pause
             AnswerText(text: model.pretty(steady), size: Theme.display)
