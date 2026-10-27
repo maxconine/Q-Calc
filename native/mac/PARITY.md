@@ -169,3 +169,35 @@ platform's: the install id's random bytes and the clock's zone offset for `local
 The only web code in the app is the games bundle (`games.html`, built alone by `games.vite.config.ts`), loaded in a
 web view only while ember & frost, trails or an effect is up; the other six games are native (section 10). The bundle
 goes once those are ported too.
+
+## macOS 12 (Monterey)
+
+The native app's floor is macOS 12.0, universal (arm64 + x86_64): `Package.swift` (both packages), `Info.plist`
+`LSMinimumSystemVersion`, `build.sh` `MIN_MACOS` (the SwiftPM triple) and `scripts/build-mac.sh`
+`MACOSX_DEPLOYMENT_TARGET` (cargo, so every object in `libqcalc_ffi.a` says `minos 12.0` or lower). Most of the app
+is one code path that Monterey has. Where macOS 13 added the API the app uses, there is a fork: on 13 and later it is
+the same API as before, so those Macs look and behave exactly as the rows above say; on 12 it is the closest
+Monterey stand-in. Every fork:
+
+| Where | 13+ (unchanged) | macOS 12 | What differs on 12 |
+|---|---|---|---|
+| Typeset preview row (`MathText.swift` `FitLayout`) | `Layout` | `FitFrame`: the same scale from the row's width, read through a `GeometryReader` preference | the width is measured a pass later, so after the bar is resized the preview settles a frame late |
+| Shortcuts list `?` (`BarView.swift` `column`) | `Grid` | `KeyColumn`: rows of key and label, the key column as wide as its widest key (≥ 64 / 96 pt), measured by preference | same layout, a frame later |
+| Game lobby buttons (`GameLobby.swift` `WrapRow`) | `FlowRow` (`Layout`) | `FlowRows`: buttons measured by preference, then centred rows by `FlowRow`'s rule | same rows, a frame later; buttons are rebuilt when they move between rows |
+| Graph readout, Connect 4 and Ultimate hover (`Compat12.swift` `pointerHover`) | `onContinuousHover` | a tracking area in an AppKit view over the board/plot that never takes clicks | the graph readout doesn't follow the pointer while a drag (pan) is in progress |
+| Connect 4 and Ultimate clicks (`spatialTap`) | `SpatialTapGesture` | `DragGesture(minimumDistance: 0)` that counts as a tap when it ends within 4 pt | a press that wanders up to 4 pt still counts |
+| Edge tools' 0.02 em tracking, the system fields' display tracking (`viewTracking`) | `View.tracking` | none (12 has `tracking` on `Text` only) | the rad/deg/sf/clear labels and the equation fields use the font's own spacing (≈0.2 pt a glyph) |
+| Settings rows (`macos/Compat.swift` `QLabeled`, shared with the web-view app) | `LabeledContent` | title, grey callout subtitle lines and the control trailing, in an `HStack` | close to the grouped form's row; spacing is SwiftUI's, not the form's |
+| Settings forms (`groupedForm`) | `.formStyle(.grouped)` | Monterey's plain `Form` with 20 pt margins | no grouped cards behind the sections; section titles are plain headers |
+| Settings tab size (`macos/SettingsWindow.swift`) | `sizingOptions = [.preferredContentSize]` | `preferredContentSize` set to the tab's fixed size | none (each tab's content is a fixed frame) |
+| Open at login (`macos/LoginItem.swift`) | `SMAppService.mainApp` | a launch agent, `~/Library/LaunchAgents/<bundle id>.login.plist`, running `open -a <the app>` at login | it isn't listed under Login Items (Monterey shows no launch agents there); moving the app after turning it on needs it turned off and on again |
+
+Forks that were already there and only take the older path on 12 too: the bar's `NSHostingView.sizingOptions = []`
+(13; on 12 the hosting view keeps its default sizing constraints inside the autoresizing card), ↑ ↓ between system
+equations (`onKeyPress`, 14; Tab moves between them on 12 and 13), the input's inline prediction (14) and Writing Tools
+(15) switches.
+
+Unverified: no macOS 12 machine or VM was available, so every 12 column above is built against the SDK with the
+compiler's availability checks (no errors at `arm64/x86_64-apple-macosx12.0`) but not run. On this Mac (macOS 26)
+the 13+ paths were spot-checked after the change: the live answer and typeset row, the graph, `?`, the periodic table,
+settings (General) and Connect 4's lobby and board.
