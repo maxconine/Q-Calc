@@ -39,7 +39,14 @@ pub static DEF: GameDef = GameDef {
     online: Some(|role, peer, env| Box::new(Trails::online(role, peer, env))),
     sub: |_| "first to 3 rounds".into(),
     footer: Some(|ui, x, y, width, _env| {
-        w::note(ui, x + width / 2.0, y, width, "vs the computer or online, steer with WASD or the arrows · two players: WASD and arrows", false)
+        w::note(
+            ui,
+            x + width / 2.0,
+            y,
+            width,
+            "vs the computer or online, steer with WASD or the arrows · two players: WASD and arrows",
+            false,
+        )
     }),
     lobby_key: None,
     own_head: false,
@@ -70,7 +77,10 @@ impl Trails {
     fn local(option: usize, env: &mut Env) -> Trails {
         let vs = VS[option.min(VS.len() - 1)];
         let seed = (env.rand() * 9e15) as u64 | 1;
-        Trails::make(Game::Local(Box::new(LocalArena::new(vs, env.now(), seed))), Some(option))
+        Trails::make(
+            Game::Local(Box::new(LocalArena::new(vs, env.now(), seed))),
+            Some(option),
+        )
     }
 
     fn online(role: Side, peer: String, _env: &mut Env) -> Trails {
@@ -87,12 +97,25 @@ impl Trails {
             }),
             t.mono(),
         );
-        t.game = Game::Online { session: Box::new(session), out, peer, me: if host { 0 } else { 1 } };
+        t.game = Game::Online {
+            session: Box::new(session),
+            out,
+            peer,
+            me: if host { 0 } else { 1 },
+        };
         t
     }
 
     fn make(game: Game, vs: Option<usize>) -> Trails {
-        Trails { game, vs, origin: Instant::now(), view: None, last_frame: 0.0, done: false, res: None }
+        Trails {
+            game,
+            vs,
+            origin: Instant::now(),
+            view: None,
+            last_frame: 0.0,
+            done: false,
+            res: None,
+        }
     }
 
     fn mono(&self) -> f64 {
@@ -132,7 +155,9 @@ impl Trails {
         self.last_frame = self.mono();
         let v = match &mut self.game {
             Game::Local(a) => a.tick(now),
-            Game::Online { session, peer, me, .. } => {
+            Game::Online {
+                session, peer, me, ..
+            } => {
                 let mut v = online_view(session.tick(now), *me, peer);
                 if v.ended.as_deref() == Some("") {
                     v.to_menu = true;
@@ -164,13 +189,34 @@ impl Play for Trails {
         let c = ui.c;
         let mut yy = y;
         if let Some(vs) = self.vs {
-            let sub = if vs >= 3 { "one keyboard".to_string() } else { format!("vs the computer · {}", LEVELS[vs]) };
+            let sub = if vs >= 3 {
+                "one keyboard".to_string()
+            } else {
+                format!("vs the computer · {}", LEVELS[vs])
+            };
             yy += w::head(ui, x, yy, width, "trails", &sub, env.shell.fullscreen) + m::SP2;
         }
-        let Some(v) = self.view.clone() else { return yy - y };
+        let Some(v) = self.view.clone() else {
+            return yy - y;
+        };
         let rival = rival(c.dark);
-        let rival_c = Rgba { r: (rival.0 / 255.0) as f32, g: (rival.1 / 255.0) as f32, b: (rival.2 / 255.0) as f32, a: 1.0 };
-        yy += w::score(ui, x, yy, width, &v.names[0], &v.names[1], (v.score[0], v.score[1]), c.accent, rival_c);
+        let rival_c = Rgba {
+            r: (rival.0 / 255.0) as f32,
+            g: (rival.1 / 255.0) as f32,
+            b: (rival.2 / 255.0) as f32,
+            a: 1.0,
+        };
+        yy += w::score(
+            ui,
+            x,
+            yy,
+            width,
+            &v.names[0],
+            &v.names[1],
+            (v.score[0], v.score[1]),
+            c.accent,
+            rival_c,
+        );
         yy += m::SP2;
         let cw = match env.stage {
             Some(s) => width.min(((s.game_h - 140.0) * 640.0 / 260.0).max(0.0)),
@@ -193,10 +239,21 @@ impl Play for Trails {
             ui.sync_transform();
         }
         if !v.banner.is_empty() {
-            let f = if v.big { Font::digits(m::FS_DISPLAY, true) } else { Font::BODY };
+            let f = if v.big {
+                Font::digits(m::FS_DISPLAY, true)
+            } else {
+                Font::BODY
+            };
             let (tw, th) = ui.measure(&v.banner, f);
-            let bw = (tw + 2.0 * m::SP3).max(if v.big { 44.0 } else { 0.0 }).min(area.w - 2.0 * m::SP3);
-            let r = Rect::new(area.x + (area.w - bw) / 2.0, area.y + (area.h - th - 12.0) / 2.0, bw, th + 12.0);
+            let bw = (tw + 2.0 * m::SP3)
+                .max(if v.big { 44.0 } else { 0.0 })
+                .min(area.w - 2.0 * m::SP3);
+            let r = Rect::new(
+                area.x + (area.w - bw) / 2.0,
+                area.y + (area.h - th - 12.0) / 2.0,
+                bw,
+                th + 12.0,
+            );
             ui.card_shadow(r, m::RADIUS_S);
             ui.round(r, m::RADIUS_S, c.bg.opacity(0.92));
             ui.text_center(&v.banner, f, r.x + r.w / 2.0, r.y + 6.0, c.ink);
@@ -210,13 +267,28 @@ impl Play for Trails {
         if !k.down || !k.plain() || k.key == "Escape" {
             return false;
         }
-        let bar = k.is_char() || k.key == "Enter" || k.key.starts_with("Arrow") || k.key == "Backspace";
+        let bar =
+            k.is_char() || k.key == "Enter" || k.key.starts_with("Arrow") || k.key == "Backspace";
         if !bar {
             return false;
         }
-        let key = if k.is_char() { k.lower() } else { k.key.clone() };
-        let wasd = |s: &str| ["w", "d", "s", "a"].iter().position(|x| *x == s).map(|i| i as u8);
-        let arrows = |s: &str| ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft"].iter().position(|x| *x == s).map(|i| i as u8);
+        let key = if k.is_char() {
+            k.lower()
+        } else {
+            k.key.clone()
+        };
+        let wasd = |s: &str| {
+            ["w", "d", "s", "a"]
+                .iter()
+                .position(|x| *x == s)
+                .map(|i| i as u8)
+        };
+        let arrows = |s: &str| {
+            ["ArrowUp", "ArrowRight", "ArrowDown", "ArrowLeft"]
+                .iter()
+                .position(|x| *x == s)
+                .map(|i| i as u8)
+        };
         let ak = if key == "Backspace" {
             Some(ArenaKey::Back)
         } else if key == "Enter" {
@@ -258,7 +330,9 @@ impl Play for Trails {
                 }
                 self.flush(env);
             }
-            PeerEvent::Closed { reason } => self.finish(Some(close_reason_text(*reason, OnlinePeer::PEER_WORD)), env),
+            PeerEvent::Closed { reason } => {
+                self.finish(Some(close_reason_text(*reason, OnlinePeer::PEER_WORD)), env)
+            }
             _ => {}
         }
     }
@@ -290,11 +364,19 @@ impl Play for Trails {
 type Rgb = (f64, f64, f64);
 
 fn rgb(c: Rgba) -> Rgb {
-    (f64::from(c.r) * 255.0, f64::from(c.g) * 255.0, f64::from(c.b) * 255.0)
+    (
+        f64::from(c.r) * 255.0,
+        f64::from(c.g) * 255.0,
+        f64::from(c.b) * 255.0,
+    )
 }
 
 fn rival(dark: bool) -> Rgb {
-    if dark { (255.0, 154.0, 92.0) } else { (212.0, 82.0, 15.0) }
+    if dark {
+        (255.0, 154.0, 92.0)
+    } else {
+        (212.0, 82.0, 15.0)
+    }
 }
 
 fn trgba(c: Rgb, a: f64) -> Col {
@@ -302,7 +384,11 @@ fn trgba(c: Rgb, a: f64) -> Col {
 }
 
 fn hot(c: Rgb, k: f64) -> Rgb {
-    (js_round(c.0 + (255.0 - c.0) * k), js_round(c.1 + (255.0 - c.1) * k), js_round(c.2 + (255.0 - c.2) * k))
+    (
+        js_round(c.0 + (255.0 - c.0) * k),
+        js_round(c.1 + (255.0 - c.1) * k),
+        js_round(c.2 + (255.0 - c.2) * k),
+    )
 }
 
 const DX: [f64; 4] = [0.0, 1.0, 0.0, -1.0];
@@ -322,11 +408,29 @@ fn trails_draw(ctx: &mut Canvas, r: &ArenaView, dark: bool, ink: Rgb, mine: Rgb,
     ctx.fill();
 
     for x in 1..TCOLS as i32 {
-        ctx.fill_style(trgba(ink, if x % 4 != 0 { if dark { 0.035 } else { 0.04 } } else if dark { 0.08 } else { 0.09 }));
+        ctx.fill_style(trgba(
+            ink,
+            if x % 4 != 0 {
+                if dark { 0.035 } else { 0.04 }
+            } else if dark {
+                0.08
+            } else {
+                0.09
+            },
+        ));
         ctx.fill_rect(js_round(f64::from(x) * c), 0.0, dpr, ht);
     }
     for y in 1..TROWS as i32 {
-        ctx.fill_style(trgba(ink, if y % 4 != 0 { if dark { 0.035 } else { 0.04 } } else if dark { 0.08 } else { 0.09 }));
+        ctx.fill_style(trgba(
+            ink,
+            if y % 4 != 0 {
+                if dark { 0.035 } else { 0.04 }
+            } else if dark {
+                0.08
+            } else {
+                0.09
+            },
+        ));
         ctx.fill_rect(0.0, js_round(f64::from(y) * c), wd, dpr);
     }
 
@@ -344,7 +448,12 @@ fn trails_draw(ctx: &mut Canvas, r: &ArenaView, dark: bool, ink: Rgb, mine: Rgb,
     ctx.stroke();
 
     let over = r.round.result.is_some();
-    let centre = |i: i32| ((f64::from(i % COLS) + 0.5) * c, (f64::from(i / COLS) + 0.5) * c);
+    let centre = |i: i32| {
+        (
+            (f64::from(i % COLS) + 0.5) * c,
+            (f64::from(i / COLS) + 0.5) * c,
+        )
+    };
     let head_at = |cy: &Cycle| {
         let glide = if cy.alive && !over { r.t } else { 0.0 };
         let next = cy.queue.first().copied();
@@ -352,9 +461,18 @@ fn trails_draw(ctx: &mut Canvas, r: &ArenaView, dark: bool, ink: Rgb, mine: Rgb,
             Some(n) if (n + 2) % 4 != cy.dir => n,
             _ => cy.dir,
         } as usize;
-        ((f64::from(cy.x) + 0.5 + DX[dir] * glide) * c, (f64::from(cy.y) + 0.5 + DY[dir] * glide) * c)
+        (
+            (f64::from(cy.x) + 0.5 + DX[dir] * glide) * c,
+            (f64::from(cy.y) + 0.5 + DY[dir] * glide) * c,
+        )
     };
-    let wall = |ctx: &mut Canvas, cy: &Cycle, from: usize, width: f64, style: Col, blur: f64, glow: Col| {
+    let wall = |ctx: &mut Canvas,
+                cy: &Cycle,
+                from: usize,
+                width: f64,
+                style: Col,
+                blur: f64,
+                glow: Col| {
         let mut pts: Vec<(f64, f64)> = cy.path.iter().skip(from).map(|&i| centre(i)).collect();
         if pts.is_empty() {
             return;
@@ -380,7 +498,15 @@ fn trails_draw(ctx: &mut Canvas, r: &ArenaView, dark: bool, ink: Rgb, mine: Rgb,
     for (p, cy) in r.round.cycles.iter().enumerate() {
         let col = color_of(p);
         let dim = if cy.alive { 1.0 } else { 0.55 };
-        wall(ctx, cy, 0, c * 1.2, trgba(col, (if dark { 0.16 } else { 0.12 }) * dim), 0.0, Col::CLEAR);
+        wall(
+            ctx,
+            cy,
+            0,
+            c * 1.2,
+            trgba(col, (if dark { 0.16 } else { 0.12 }) * dim),
+            0.0,
+            Col::CLEAR,
+        );
         wall(
             ctx,
             cy,
@@ -390,9 +516,25 @@ fn trails_draw(ctx: &mut Canvas, r: &ArenaView, dark: bool, ink: Rgb, mine: Rgb,
             if dark { 10.0 * dpr } else { 4.0 * dpr },
             trgba(col, if dark { 0.8 } else { 0.45 }),
         );
-        wall(ctx, cy, 0, dpr.max(c * 0.18), trgba(hot(col, if dark { 0.65 } else { 0.45 }), 0.9 * dim), 0.0, Col::CLEAR);
+        wall(
+            ctx,
+            cy,
+            0,
+            dpr.max(c * 0.18),
+            trgba(hot(col, if dark { 0.65 } else { 0.45 }), 0.9 * dim),
+            0.0,
+            Col::CLEAR,
+        );
         if cy.alive {
-            wall(ctx, cy, cy.path.len().saturating_sub(HOT_CELLS), c * 0.62, trgba(hot(col, 0.3), 0.55), 0.0, Col::CLEAR);
+            wall(
+                ctx,
+                cy,
+                cy.path.len().saturating_sub(HOT_CELLS),
+                c * 0.62,
+                trgba(hot(col, 0.3), 0.55),
+                0.0,
+                Col::CLEAR,
+            );
         }
     }
     for (p, cy) in r.round.cycles.iter().enumerate() {
@@ -402,13 +544,30 @@ fn trails_draw(ctx: &mut Canvas, r: &ArenaView, dark: bool, ink: Rgb, mine: Rgb,
     }
     for (p, cy) in r.round.cycles.iter().enumerate() {
         if !cy.alive {
-            trails_burst(ctx, cy, color_of(p), c, dpr, r.crash_ms.unwrap_or(BURST_MS), dark);
+            trails_burst(
+                ctx,
+                cy,
+                color_of(p),
+                c,
+                dpr,
+                r.crash_ms.unwrap_or(BURST_MS),
+                dark,
+            );
         }
     }
 }
 
 #[allow(clippy::too_many_arguments)]
-fn trails_head(ctx: &mut Canvas, cy: &Cycle, col: Rgb, at: (f64, f64), c: f64, dpr: f64, now: f64, dark: bool) {
+fn trails_head(
+    ctx: &mut Canvas,
+    cy: &Cycle,
+    col: Rgb,
+    at: (f64, f64),
+    c: f64,
+    dpr: f64,
+    now: f64,
+    dark: bool,
+) {
     let (x, y) = at;
     let pulse = 0.5 + 0.5 * (now / 160.0).sin();
     let mut halo = Gradient::radial(x, y, 0.0, x, y, c * (2.3 + 0.45 * pulse));
@@ -416,7 +575,14 @@ fn trails_head(ctx: &mut Canvas, cy: &Cycle, col: Rgb, at: (f64, f64), c: f64, d
     halo.stop(1.0, trgba(col, 0.0));
     ctx.fill_style(halo);
     ctx.begin_path();
-    ctx.arc(x, y, c * (2.3 + 0.45 * pulse), 0.0, std::f64::consts::PI * 2.0, false);
+    ctx.arc(
+        x,
+        y,
+        c * (2.3 + 0.45 * pulse),
+        0.0,
+        std::f64::consts::PI * 2.0,
+        false,
+    );
     ctx.fill();
     ctx.save();
     ctx.translate(x, y);
@@ -429,7 +595,16 @@ fn trails_head(ctx: &mut Canvas, cy: &Cycle, col: Rgb, at: (f64, f64), c: f64, d
     ctx.set_shadow(0.0, Col::CLEAR);
     ctx.fill_style(trgba(hot(col, 0.85), 0.95));
     ctx.begin_path();
-    ctx.ellipse(0.0, -c * 0.42, c * 0.28, c * 0.22, 0.0, 0.0, std::f64::consts::PI * 2.0, false);
+    ctx.ellipse(
+        0.0,
+        -c * 0.42,
+        c * 0.28,
+        c * 0.22,
+        0.0,
+        0.0,
+        std::f64::consts::PI * 2.0,
+        false,
+    );
     ctx.fill();
     ctx.restore();
 }
@@ -458,13 +633,19 @@ fn trails_burst(ctx: &mut Canvas, cy: &Cycle, col: Rgb, c: f64, dpr: f64, ms: f6
     }
     ctx.set_line_cap(Cap::Round);
     for n in 0..14 {
-        let seed = ((f64::from(cy.x) * 31.0 + f64::from(cy.y) * 17.0 + f64::from(n) * 7.3) * 12.9898).sin() * 43758.5453;
+        let seed = ((f64::from(cy.x) * 31.0 + f64::from(cy.y) * 17.0 + f64::from(n) * 7.3)
+            * 12.9898)
+            .sin()
+            * 43758.5453;
         let rnd = seed - seed.floor();
         let a = f64::from(n) / 14.0 * tau + rnd * 0.6;
         let reach = c * (1.6 + rnd * 2.6) * eased;
         let len = c * (0.5 + rnd * 0.6) * fade;
         let (sx, sy) = (bx + a.cos() * reach, by + a.sin() * reach);
-        ctx.stroke_style(trgba(if n % 3 != 0 { col } else { hot(col, 0.7) }, fade.max(0.0)));
+        ctx.stroke_style(trgba(
+            if n % 3 != 0 { col } else { hot(col, 0.7) },
+            fade.max(0.0),
+        ));
         ctx.set_line_width(dpr.max(c * 0.12));
         ctx.begin_path();
         ctx.move_to(sx, sy);

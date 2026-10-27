@@ -85,7 +85,12 @@ pub fn paint(c: &Canvas, m: &BarModel, h: f32) {
                 c.text(&l, x0, y, t.ink);
             }
             if let Some((l, _)) = text(c.gfx, label) {
-                c.push_clip(Rect::new(x0 + key_w + 12.0, y, (col_w - key_w - 28.0).max(0.0), ROW));
+                c.push_clip(Rect::new(
+                    x0 + key_w + 12.0,
+                    y,
+                    (col_w - key_w - 28.0).max(0.0),
+                    ROW,
+                ));
                 c.text(&l, x0 + key_w + 12.0, y, t.muted);
                 c.pop_clip();
             }

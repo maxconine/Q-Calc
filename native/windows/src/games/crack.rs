@@ -4,7 +4,8 @@
 use std::time::Instant;
 
 use qcalc_core::games::crack::{
-    BEST_KEY, CrackEvent, CrackPhase, CrackState, HIT_WINDOW, Step, parse_best, press, start_level, tick,
+    BEST_KEY, CrackEvent, CrackPhase, CrackState, HIT_WINDOW, Step, parse_best, press, start_level,
+    tick,
 };
 
 use super::gfx::{Align, Font, Hit, Rect, Ui};
@@ -118,7 +119,11 @@ impl Crack {
     }
 
     fn note(&self) -> String {
-        let restart = if self.s.level > 1 { " · 1 back to level 1" } else { "" };
+        let restart = if self.s.level > 1 {
+            " · 1 back to level 1"
+        } else {
+            ""
+        };
         if self.s.phase == CrackPhase::Ready {
             format!("space, ↵ or a click starts the needle{restart} · esc leaves")
         } else {
@@ -137,13 +142,30 @@ impl Crack {
         const TRACK: f32 = 76.0;
         const TICK: f32 = 58.0;
         let dot_r = (76.0 * HIT_WINDOW * 0.85).round() as f32;
-        let dot = if c.dark { Rgba::hex(0xffd23f, 1.0) } else { Rgba::hex(0xe9a800, 1.0) };
-        let miss = if c.dark { Rgba::hex(0xff6b5c, 1.0) } else { Rgba::hex(0xd93a2b, 1.0) };
+        let dot = if c.dark {
+            Rgba::hex(0xffd23f, 1.0)
+        } else {
+            Rgba::hex(0xe9a800, 1.0)
+        };
+        let miss = if c.dark {
+            Rgba::hex(0xff6b5c, 1.0)
+        } else {
+            Rgba::hex(0xd93a2b, 1.0)
+        };
         // a miss shakes the whole dial (crack-shake: 0.4 s, ease-in-out)
         let shake = if s.phase == CrackPhase::Fail {
-            keyframes(since / 0.4, &[(0.0, 0.0), (0.15, -7.0), (0.35, 6.0), (0.55, -4.0), (0.75, 2.0), (1.0, 0.0)], |t| {
-                ease(t, 0.42, 0.0, 0.58, 1.0)
-            }) as f32
+            keyframes(
+                since / 0.4,
+                &[
+                    (0.0, 0.0),
+                    (0.15, -7.0),
+                    (0.35, 6.0),
+                    (0.55, -4.0),
+                    (0.75, 2.0),
+                    (1.0, 0.0),
+                ],
+                |t| ease(t, 0.42, 0.0, 0.58, 1.0),
+            ) as f32
         } else {
             0.0
         };
@@ -198,8 +220,18 @@ impl Crack {
             CrackPhase::Clear => c.accent,
             _ => c.ink,
         };
-        ui.line(p(s.angle, TRACK - 13.0), p(s.angle, TRACK + 13.0), 5.0, needle, true);
-        let big = if s.phase == CrackPhase::Clear { "open".to_string() } else { s.level.to_string() };
+        ui.line(
+            p(s.angle, TRACK - 13.0),
+            p(s.angle, TRACK + 13.0),
+            5.0,
+            needle,
+            true,
+        );
+        let big = if s.phase == CrackPhase::Clear {
+            "open".to_string()
+        } else {
+            s.level.to_string()
+        };
         let small = match s.phase {
             CrackPhase::Clear => format!("level {} cracked", s.level),
             CrackPhase::Fail => "missed".to_string(),
@@ -207,10 +239,30 @@ impl Crack {
         };
         let bf = Font::digits(30.0, true);
         let (_, bh) = ui.measure(&big, bf);
-        ui.text_in(&big, bf, 0.0, C + 4.0 - bh * 0.8, 200.0, Align::Center, if turned { c.accent } else { c.ink });
+        ui.text_in(
+            &big,
+            bf,
+            0.0,
+            C + 4.0 - bh * 0.8,
+            200.0,
+            Align::Center,
+            if turned { c.accent } else { c.ink },
+        );
         let sf = Font::new(11.0);
         let (_, sh) = ui.measure(&small, sf);
-        ui.text_in(&small, sf, 0.0, C + 24.0 - sh * 0.8, 200.0, Align::Center, if s.phase == CrackPhase::Fail { miss } else { c.muted });
+        ui.text_in(
+            &small,
+            sf,
+            0.0,
+            C + 24.0 - sh * 0.8,
+            200.0,
+            Align::Center,
+            if s.phase == CrackPhase::Fail {
+                miss
+            } else {
+                c.muted
+            },
+        );
         ui.pop_transform();
     }
 
@@ -233,11 +285,29 @@ impl Play for Crack {
         // the head: crack, the best, esc
         let (nw, nh) = ui.measure("crack", Font::bold(m::FS_BODY));
         let hh = nh.max(22.0);
-        ui.text("crack", Font::bold(m::FS_BODY), x, yy + (hh - nh) / 2.0, c.ink);
+        ui.text(
+            "crack",
+            Font::bold(m::FS_BODY),
+            x,
+            yy + (hh - nh) / 2.0,
+            c.ink,
+        );
         let sub = format!("best level {}", self.best);
         let (_, sh) = ui.measure(&sub, Font::SMALL);
-        ui.text(&sub, Font::SMALL, x + nw + m::SP3, yy + (hh - sh) / 2.0 + 1.0, c.muted);
-        w::esc_button(ui, x + width + m::SP2, yy + (hh - sh - 6.0) / 2.0, "esc", Hit::Esc);
+        ui.text(
+            &sub,
+            Font::SMALL,
+            x + nw + m::SP3,
+            yy + (hh - sh) / 2.0 + 1.0,
+            c.muted,
+        );
+        w::esc_button(
+            ui,
+            x + width + m::SP2,
+            yy + (hh - sh - 6.0) / 2.0,
+            "esc",
+            Hit::Esc,
+        );
         yy += hh + m::SP2;
         let size = match env.stage {
             Some(s) => (s.width - 2.0 * m::GUTTER).min(s.game_h - 160.0).max(200.0),

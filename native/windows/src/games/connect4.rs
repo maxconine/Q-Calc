@@ -15,7 +15,11 @@ use super::theme::{Rgba, ease, ease_out, m};
 use super::widgets as w;
 use super::{Env, GameDef, Play};
 
-const SKILLS: [(&str, C4Skill); 3] = [("easy", C4Skill::Easy), ("normal", C4Skill::Normal), ("hard", C4Skill::Hard)];
+const SKILLS: [(&str, C4Skill); 3] = [
+    ("easy", C4Skill::Easy),
+    ("normal", C4Skill::Normal),
+    ("hard", C4Skill::Hard),
+];
 /// whether the landing preview shows at all; G flips it, and it's kept for next time
 const GHOST_KEY: &str = "qcalc-c4-ghost";
 
@@ -33,7 +37,14 @@ pub static DEF: GameDef = GameDef {
     prompt: "play the computer",
     options: &["easy", "normal", "hard"],
     together: &[],
-    local: |i, env| Box::new(Connect4::new(None, Side::Host, Some(SKILLS[i.min(2)].1), env)),
+    local: |i, env| {
+        Box::new(Connect4::new(
+            None,
+            Side::Host,
+            Some(SKILLS[i.min(2)].1),
+            env,
+        ))
+    },
     online: Some(|role, peer, env| Box::new(Connect4::new(Some(peer), role, None, env))),
     sub: super::no_sub,
     footer: None,
@@ -55,7 +66,14 @@ fn cy(row: usize) -> f32 {
     LANE + (5 - row) as f32 * CELL + CELL / 2.0
 }
 
-pub(super) fn status_over(won: Option<Side>, role: Side, peer: &str, solo: bool, mine: bool, theirs: bool) -> String {
+pub(super) fn status_over(
+    won: Option<Side>,
+    role: Side,
+    peer: &str,
+    solo: bool,
+    mine: bool,
+    theirs: bool,
+) -> String {
     let who = match won {
         Some(s) if s == role => "you win".to_string(),
         Some(_) => format!("{peer} wins"),
@@ -161,7 +179,14 @@ impl Connect4 {
             return format!("waiting for {peer}…");
         }
         if is_over(s) {
-            return status_over(s.winner, self.role, peer, self.solo.is_some(), v.again.mine, v.again.theirs);
+            return status_over(
+                s.winner,
+                self.role,
+                peer,
+                self.solo.is_some(),
+                v.again.mine,
+                v.again.theirs,
+            );
         }
         if v.thinking {
             return if s.moves == 0 {
@@ -172,9 +197,17 @@ impl Connect4 {
         }
         let mine = self.my_turn();
         if s.moves == 0 {
-            return if mine { "you go first".into() } else { format!("{peer} goes first") };
+            return if mine {
+                "you go first".into()
+            } else {
+                format!("{peer} goes first")
+            };
         }
-        if mine { "your turn".into() } else { format!("{peer}’s turn") }
+        if mine {
+            "your turn".into()
+        } else {
+            format!("{peer}’s turn")
+        }
     }
 
     fn column(&self, x: f32) -> usize {
@@ -246,7 +279,12 @@ impl Connect4 {
             // the held disc slides between columns (transition: cx 90ms ease-out)
             let t = ((now - self.held.2) / 0.09).min(1.0);
             let x = cx(self.held.1) + (cx(to) - cx(self.held.1)) * ease_out(t) as f32;
-            ui.circle(x, LANE / 2.0, R, c.accent.opacity(if full { 0.25 } else { 0.9 }));
+            ui.circle(
+                x,
+                LANE / 2.0,
+                R,
+                c.accent.opacity(if full { 0.25 } else { 0.9 }),
+            );
         }
         ui.pop_transform();
     }
@@ -257,9 +295,25 @@ impl Play for Connect4 {
         let c = ui.c;
         let mut yy = y;
         let v = &self.view;
-        let name = |side: Side| if side == self.role { "you".to_string() } else { self.peer.clone() };
+        let name = |side: Side| {
+            if side == self.role {
+                "you".to_string()
+            } else {
+                self.peer.clone()
+            }
+        };
         let col = |side: Side| if side == self.role { c.accent } else { c.muted };
-        yy += w::score(ui, x, yy, width, &name(Side::Host), &name(Side::Guest), (v.wins[0], v.wins[1]), col(Side::Host), col(Side::Guest));
+        yy += w::score(
+            ui,
+            x,
+            yy,
+            width,
+            &name(Side::Host),
+            &name(Side::Guest),
+            (v.wins[0], v.wins[1]),
+            col(Side::Host),
+            col(Side::Guest),
+        );
         yy += m::SP2;
         let status = self.status();
         let lit = self.my_turn() || (v.state.winner == Some(self.role));
@@ -270,7 +324,15 @@ impl Play for Connect4 {
             ui.set_alpha(a)
         };
         let (_, sh) = ui.measure(&status, Font::BODY);
-        ui.text_in(&status, Font::BODY, x, yy, width, super::gfx::Align::Center, if lit { c.accent } else { c.ink });
+        ui.text_in(
+            &status,
+            Font::BODY,
+            x,
+            yy,
+            width,
+            super::gfx::Align::Center,
+            if lit { c.accent } else { c.ink },
+        );
         ui.set_alpha(was);
         yy += sh + m::SP2;
         // .c4-board: 300 wide (aspect 1); full screen grows it to min(100%, --game-h − 200)
@@ -312,7 +374,8 @@ impl Play for Connect4 {
         } else if k.lower() == "g" {
             if !k.repeat {
                 self.ghost = !self.ghost;
-                env.store.set(GHOST_KEY, Some(if self.ghost { "on" } else { "off" }));
+                env.store
+                    .set(GHOST_KEY, Some(if self.ghost { "on" } else { "off" }));
             }
         } else if k.key == "Enter" || k.key == " " {
             if !k.repeat {
@@ -357,7 +420,9 @@ impl Play for Connect4 {
                 self.game.receive(data, env.now());
                 self.sync(env);
             }
-            PeerEvent::Closed { reason } => self.finish(Some(close_reason_text(*reason, "computer")), env),
+            PeerEvent::Closed { reason } => {
+                self.finish(Some(close_reason_text(*reason, "computer")), env)
+            }
             _ => {}
         }
     }

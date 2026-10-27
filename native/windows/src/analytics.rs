@@ -235,12 +235,7 @@ fn maybe_send(_app: &mut App) {
                 s.sending = false;
                 match (&s.stash, ok) {
                     (Some(current), true) => {
-                        s.stash = Some(after_send(
-                            current,
-                            &sent,
-                            &today(),
-                            now_ms() as f64,
-                        ));
+                        s.stash = Some(after_send(current, &sent, &today(), now_ms() as f64));
                         true
                     }
                     _ => false,
@@ -289,7 +284,10 @@ mod tests {
     fn install_ids_are_32_hex_digits_and_differ() {
         let (a, b) = (new_install_id(), new_install_id());
         assert_eq!(a.len(), 32);
-        assert!(a.bytes().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+        assert!(
+            a.bytes()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        );
         assert_ne!(a, b);
     }
 
@@ -343,16 +341,26 @@ mod tests {
             solve: None,
             at: None,
         };
-        assert_eq!(calc_kind(&facts("2+2", Some(&row(None, None)), false)), "calc.arith");
+        assert_eq!(
+            calc_kind(&facts("2+2", Some(&row(None, None)), false)),
+            "calc.arith"
+        );
         assert_eq!(
             calc_kind(&facts("3 ft to m", Some(&row(None, Some("length"))), false)),
             "calc.units"
         );
         assert_eq!(
-            calc_kind(&facts("x = 4", Some(&row(Some(HistoryKind::Definition), None)), false)),
+            calc_kind(&facts(
+                "x = 4",
+                Some(&row(Some(HistoryKind::Definition), None)),
+                false
+            )),
             "calc.assign"
         );
         assert_eq!(calc_kind(&facts("graph x^2", None, false)), "calc.graph");
-        assert_eq!(calc_kind(&facts("+ 3", Some(&row(None, None)), true)), "calc.chain");
+        assert_eq!(
+            calc_kind(&facts("+ 3", Some(&row(None, None)), true)),
+            "calc.chain"
+        );
     }
 }

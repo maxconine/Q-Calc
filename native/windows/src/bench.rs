@@ -216,8 +216,22 @@ impl Run {
         if !self.stages.is_empty() {
             // each stage's median µs since WM_CHAR, over the keystrokes that reached it
             let names = [
-                "char", "submitted", "textPainted", "jobStart", "context", "chains", "live", "decorated",
-                "posted", "engine", "applied", "laidout", "paintStart", "endDraw", "post", "seen",
+                "char",
+                "submitted",
+                "textPainted",
+                "jobStart",
+                "context",
+                "chains",
+                "live",
+                "decorated",
+                "posted",
+                "engine",
+                "applied",
+                "laidout",
+                "paintStart",
+                "endDraw",
+                "post",
+                "seen",
             ];
             let mut st = serde_json::Map::new();
             for (i, name) in names.iter().enumerate() {

@@ -15,7 +15,11 @@ use super::theme::m;
 use super::widgets as w;
 use super::{Env, GameDef, Play};
 
-const SKILLS: [(&str, Skill); 3] = [("easy", Skill::Easy), ("normal", Skill::Normal), ("hard", Skill::Hard)];
+const SKILLS: [(&str, Skill); 3] = [
+    ("easy", Skill::Easy),
+    ("normal", Skill::Normal),
+    ("hard", Skill::Hard),
+];
 
 pub static DEF: GameDef = GameDef {
     kind: "pong",
@@ -133,9 +137,25 @@ impl Play for Pong {
         let c = ui.c;
         let mut yy = y;
         let score = self.view.snap.map_or((0, 0), |s| (s.score[0], s.score[1]));
-        let me = |side: Side| if side == self.role { "you".to_string() } else { self.peer.clone() };
+        let me = |side: Side| {
+            if side == self.role {
+                "you".to_string()
+            } else {
+                self.peer.clone()
+            }
+        };
         let col = |side: Side| if side == self.role { c.accent } else { c.muted };
-        yy += w::score(ui, x, yy, width, &me(Side::Host), &me(Side::Guest), score, col(Side::Host), col(Side::Guest));
+        yy += w::score(
+            ui,
+            x,
+            yy,
+            width,
+            &me(Side::Host),
+            &me(Side::Guest),
+            score,
+            col(Side::Host),
+            col(Side::Guest),
+        );
         yy += m::SP2;
         // the court: full width, or in full screen as wide as leaves room for its height
         let cw = match env.stage {
@@ -157,13 +177,15 @@ impl Play for Pong {
         };
         let mut dy = 4.0;
         while dy < COURT_H {
-            ui.fill(rect(COURT_W / 2.0 - 1.0, dy, 2.0, 8.0), c.muted.opacity(0.35));
+            ui.fill(
+                rect(COURT_W / 2.0 - 1.0, dy, 2.0, 8.0),
+                c.muted.opacity(0.35),
+            );
             dy += 16.0;
         }
-        let (ph, pg) = self
-            .view
-            .snap
-            .map_or((COURT_H / 2.0, COURT_H / 2.0), |s| (s.paddles[0], s.paddles[1]));
+        let (ph, pg) = self.view.snap.map_or((COURT_H / 2.0, COURT_H / 2.0), |s| {
+            (s.paddles[0], s.paddles[1])
+        });
         for (side, py) in [(Side::Host, ph), (Side::Guest, pg)] {
             let px0 = if side == Side::Host {
                 PADDLE_INSET
@@ -176,7 +198,15 @@ impl Play for Pong {
         if let Some(s) = self.view.snap
             && s.phase == Phase::Play
         {
-            ui.fill(rect(s.ball.x - BALL_SIZE / 2.0, s.ball.y - BALL_SIZE / 2.0, BALL_SIZE, BALL_SIZE), c.ink);
+            ui.fill(
+                rect(
+                    s.ball.x - BALL_SIZE / 2.0,
+                    s.ball.y - BALL_SIZE / 2.0,
+                    BALL_SIZE,
+                    BALL_SIZE,
+                ),
+                c.ink,
+            );
         }
         ui.pop_transform();
         ui.unclip();
@@ -191,7 +221,14 @@ impl Play for Pong {
             .solo
             .and_then(|s| SKILLS.iter().find(|(_, k)| *k == s))
             .map_or(String::new(), |(n, _)| format!("{n} · "));
-        yy += w::note(ui, x + width / 2.0, yy, width, &format!("↑↓ or W S to move · {skill}esc leaves"), false);
+        yy += w::note(
+            ui,
+            x + width / 2.0,
+            yy,
+            width,
+            &format!("↑↓ or W S to move · {skill}esc leaves"),
+            false,
+        );
         let _ = Font::BODY;
         yy - y
     }
@@ -222,7 +259,9 @@ impl Play for Pong {
                 self.game.receive(data, env.now());
                 self.flush(env);
             }
-            PeerEvent::Closed { reason } => self.finish(Some(close_reason_text(*reason, "computer")), env),
+            PeerEvent::Closed { reason } => {
+                self.finish(Some(close_reason_text(*reason, "computer")), env)
+            }
             _ => {}
         }
     }

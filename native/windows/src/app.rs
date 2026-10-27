@@ -47,9 +47,9 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_DPICHANGED, WM_ENDSESSION, WM_ERASEBKGND,
     WM_EXITSIZEMOVE, WM_HOTKEY, WM_IME_COMPOSITION, WM_IME_ENDCOMPOSITION, WM_IME_SETCONTEXT,
     WM_IME_STARTCOMPOSITION, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_MOVE, WM_NCHITTEST, WM_PAINT, WM_POWERBROADCAST,
-    WM_SETCURSOR, WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCHAR, WM_SYSKEYDOWN, WM_TIMER,
-    WM_WTSSESSION_CHANGE, WNDCLASSEXW, WS_EX_TOOLWINDOW, WS_POPUP,
+    WM_MOUSEHWHEEL, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_MOVE, WM_NCHITTEST, WM_PAINT,
+    WM_POWERBROADCAST, WM_SETCURSOR, WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCHAR,
+    WM_SYSKEYDOWN, WM_TIMER, WM_WTSSESSION_CHANGE, WNDCLASSEXW, WS_EX_TOOLWINDOW, WS_POPUP,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -167,7 +167,13 @@ pub fn run() -> i32 {
 
     // one Q Calc: a second launch hands its arguments to the first (which shows the bar) and leaves
     // SAFETY: the handle stays open for the process's life (that is the point)
-    let mutex = unsafe { CreateMutexW(None, true, &HSTRING::from(format!("{MUTEX}{}", crate::log::instance_suffix()))) };
+    let mutex = unsafe {
+        CreateMutexW(
+            None,
+            true,
+            &HSTRING::from(format!("{MUTEX}{}", crate::log::instance_suffix())),
+        )
+    };
     // SAFETY: plain query right after the call
     if mutex.is_ok() && unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
         forward(&argv);
@@ -715,7 +721,9 @@ impl App {
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
-                if crate::effects::key_down(self, vk, lp.0) || crate::commands::key_down(self, vk, mods()) {
+                if crate::effects::key_down(self, vk, lp.0)
+                    || crate::commands::key_down(self, vk, mods())
+                {
                     return Some(LRESULT(0));
                 }
                 let host = self.bar.hwnd;
@@ -833,11 +841,15 @@ impl App {
                 }
                 let s = self.bar.scale();
                 let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
-                let panel = crate::graph::cursor(self, x, y).or_else(|| crate::systems::cursor(self, x, y));
+                let panel =
+                    crate::graph::cursor(self, x, y).or_else(|| crate::systems::cursor(self, x, y));
                 let over = self.bar.layout.field.contains(x, y);
                 // SAFETY: system cursors
                 unsafe {
-                    if let Ok(c) = LoadCursorW(None, panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW })) {
+                    if let Ok(c) = LoadCursorW(
+                        None,
+                        panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW }),
+                    ) {
                         SetCursor(Some(c));
                     }
                 }

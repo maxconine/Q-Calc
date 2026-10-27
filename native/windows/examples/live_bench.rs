@@ -18,8 +18,16 @@ fn main() {
     let inputs: Vec<String> = match args.get(1) {
         Some(p) => serde_json::from_str(&std::fs::read_to_string(p).unwrap()).unwrap(),
         None => [
-            "2+2", "sin(90)", "72 f to c", "1/3 + 1/6", "sqrt(2)*pi", "5 km in miles", "3x+2=11",
-            "(1+2)*(3+4)/5^2", "20% of 80", "e^(i pi)+1",
+            "2+2",
+            "sin(90)",
+            "72 f to c",
+            "1/3 + 1/6",
+            "sqrt(2)*pi",
+            "5 km in miles",
+            "3x+2=11",
+            "(1+2)*(3+4)/5^2",
+            "20% of 80",
+            "e^(i pi)+1",
         ]
         .map(String::from)
         .to_vec(),
@@ -43,7 +51,11 @@ fn main() {
     };
     let t = Instant::now();
     let context = engine.context_from_history(rows.clone(), view);
-    eprintln!("rows {} context {:.3} ms", rows.len(), t.elapsed().as_secs_f64() * 1000.0);
+    eprintln!(
+        "rows {} context {:.3} ms",
+        rows.len(),
+        t.elapsed().as_secs_f64() * 1000.0
+    );
     let options = qcalc_ffi::default_eval_options();
     let core_options = qcalc_core::EvaluateOptions::default();
     let (mut chains, mut live, mut sheet, mut ctx) = (vec![], vec![], vec![], vec![]);
@@ -89,7 +101,12 @@ fn main() {
         }
         println!();
     }
-    for (name, v) in [("context clone", &mut ctx), ("chains", &mut chains), ("live", &mut live), ("evaluate_sheet", &mut sheet)] {
+    for (name, v) in [
+        ("context clone", &mut ctx),
+        ("chains", &mut chains),
+        ("live", &mut live),
+        ("evaluate_sheet", &mut sheet),
+    ] {
         let n = v.len();
         println!(
             "{name:>15}: n {n} median {:.1} us p90 {:.1} p99 {:.1}",

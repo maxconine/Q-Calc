@@ -21,7 +21,11 @@ use super::theme::{Rgba, ease_out, m};
 use super::widgets as w;
 use super::{Env, GameDef, Play};
 
-const SKILLS: [(&str, UtSkill); 3] = [("easy", UtSkill::Easy), ("normal", UtSkill::Normal), ("hard", UtSkill::Hard)];
+const SKILLS: [(&str, UtSkill); 3] = [
+    ("easy", UtSkill::Easy),
+    ("normal", UtSkill::Normal),
+    ("hard", UtSkill::Hard),
+];
 
 pub static DEF: GameDef = GameDef {
     kind: "ultimate",
@@ -49,7 +53,14 @@ pub static DEF: GameDef = GameDef {
     prompt: "play the computer",
     options: &["easy", "normal", "hard"],
     together: &[],
-    local: |i, env| Box::new(Ultimate::new(None, Side::Host, Some(SKILLS[i.min(2)].1), env)),
+    local: |i, env| {
+        Box::new(Ultimate::new(
+            None,
+            Side::Host,
+            Some(SKILLS[i.min(2)].1),
+            env,
+        ))
+    },
     online: Some(|role, peer, env| Box::new(Ultimate::new(Some(peer), role, None, env))),
     sub: super::no_sub,
     footer: None,
@@ -100,7 +111,11 @@ const MINE: Rgba = Rgba::hex(0x6ee69e, 1.0);
 const THEIRS: Rgba = Rgba::hex(0xff9a5c, 1.0);
 
 fn theirs_name(dark: bool) -> Rgba {
-    if dark { Rgba::hex(0xff9a5c, 1.0) } else { Rgba::hex(0xd4520f, 1.0) }
+    if dark {
+        Rgba::hex(0xff9a5c, 1.0)
+    } else {
+        Rgba::hex(0xd4520f, 1.0)
+    }
 }
 
 /// The cell under a point on the board (svg units from the slate's corner), or None in a gap or off it.
@@ -117,7 +132,11 @@ fn cell_at(x: f64, y: f64) -> Option<usize> {
     if ix >= BOARD || iy >= BOARD || ix < 0.0 || iy < 0.0 {
         return None;
     }
-    Some(((row * 3.0 + col) as usize) * 9 + (iy / CELL).floor() as usize * 3 + (ix / CELL).floor() as usize)
+    Some(
+        ((row * 3.0 + col) as usize) * 9
+            + (iy / CELL).floor() as usize * 3
+            + (ix / CELL).floor() as usize,
+    )
 }
 
 struct Ultimate {
@@ -149,14 +168,36 @@ impl Ultimate {
         let mut lines = Vec::new();
         for k in [1.0, 2.0] {
             let p = k * (BOARD + GAP) - GAP / 2.0;
-            lines.push((svg::parse(&chalk_line((p, -4.0), (p, GW + 4.0), 100.0 + k, 1.6)), true));
-            lines.push((svg::parse(&chalk_line((-4.0, p), (GW + 4.0, p), 200.0 + k, 1.6)), true));
+            lines.push((
+                svg::parse(&chalk_line((p, -4.0), (p, GW + 4.0), 100.0 + k, 1.6)),
+                true,
+            ));
+            lines.push((
+                svg::parse(&chalk_line((-4.0, p), (GW + 4.0, p), 200.0 + k, 1.6)),
+                true,
+            ));
         }
         for b in 0..9 {
             for k in [1.0, 2.0] {
                 let s = (b * 10) as f64 + k;
-                lines.push((svg::parse(&chalk_line((bx(b) + k * CELL, by(b) + 5.0), (bx(b) + k * CELL, by(b) + BOARD - 5.0), s, 1.1)), false));
-                lines.push((svg::parse(&chalk_line((bx(b) + 5.0, by(b) + k * CELL), (bx(b) + BOARD - 5.0, by(b) + k * CELL), s + 5.0, 1.1)), false));
+                lines.push((
+                    svg::parse(&chalk_line(
+                        (bx(b) + k * CELL, by(b) + 5.0),
+                        (bx(b) + k * CELL, by(b) + BOARD - 5.0),
+                        s,
+                        1.1,
+                    )),
+                    false,
+                ));
+                lines.push((
+                    svg::parse(&chalk_line(
+                        (bx(b) + 5.0, by(b) + k * CELL),
+                        (bx(b) + BOARD - 5.0, by(b) + k * CELL),
+                        s + 5.0,
+                        1.1,
+                    )),
+                    false,
+                ));
             }
         }
         let mut u = Ultimate {
@@ -227,7 +268,14 @@ impl Ultimate {
             return format!("waiting for {peer}…");
         }
         if is_over(s) {
-            return status_over(s.winner, self.role, peer, self.solo.is_some(), v.again.mine, v.again.theirs);
+            return status_over(
+                s.winner,
+                self.role,
+                peer,
+                self.solo.is_some(),
+                v.again.mine,
+                v.again.theirs,
+            );
         }
         if v.thinking {
             return if s.moves == 0 {
@@ -245,14 +293,21 @@ impl Ultimate {
             };
         }
         if mine {
-            if s.forced.is_none() { "your turn · play anywhere".into() } else { "your turn".into() }
+            if s.forced.is_none() {
+                "your turn · play anywhere".into()
+            } else {
+                "your turn".into()
+            }
         } else {
             format!("{peer}’s turn")
         }
     }
 
     fn path(&mut self, kind: u8, i: usize, make: impl FnOnce() -> String) -> Poly {
-        self.paths.entry((kind, i)).or_insert_with(|| svg::parse(&make())).clone()
+        self.paths
+            .entry((kind, i))
+            .or_insert_with(|| svg::parse(&make()))
+            .clone()
     }
 
     fn draw(&mut self, ui: &mut Ui, r: Rect) {
@@ -270,10 +325,29 @@ impl Ultimate {
         // the slate: dark in both themes, a soft light top left and a shadow bottom right, and the inset shading
         ui.clip(r);
         ui.round(r, 14.0, Rgba::hex(0x1f2a25, 1.0));
-        ui.glow(r.x + r.w * 0.85, r.y + r.h * 0.95, r.w * 0.9, r.h * 0.7, Rgba::hex(0, 0.28), 0.6);
-        ui.glow(r.x + r.w * 0.3, r.y + r.h * 0.15, r.w * 1.2, r.h * 0.9, Rgba::hex(0xffffff, 0.06), 0.6);
+        ui.glow(
+            r.x + r.w * 0.85,
+            r.y + r.h * 0.95,
+            r.w * 0.9,
+            r.h * 0.7,
+            Rgba::hex(0, 0.28),
+            0.6,
+        );
+        ui.glow(
+            r.x + r.w * 0.3,
+            r.y + r.h * 0.15,
+            r.w * 1.2,
+            r.h * 0.9,
+            Rgba::hex(0xffffff, 0.06),
+            0.6,
+        );
         for (i, a) in [(1.0, 0.12), (3.0, 0.07), (6.0, 0.04)] {
-            ui.ring(Rect::new(r.x, r.y + 2.0, r.w, r.h), 14.0, i, Rgba::hex(0, a));
+            ui.ring(
+                Rect::new(r.x, r.y + 2.0, r.w, r.h),
+                14.0,
+                i,
+                Rgba::hex(0, a),
+            );
         }
         ui.unclip();
         ui.ring(r, 14.0, 1.0, Rgba::hex(0xffffff, 0.06));
@@ -293,7 +367,11 @@ impl Ultimate {
             ui.circle(x as f32, y as f32, rad as f32, CHALK.opacity(0.07));
         }
         for (p, big) in &self.lines {
-            ui.poly(p, if *big { 3.2 } else { 1.4 }, CHALK.opacity(if *big { 0.85 } else { 0.3 }));
+            ui.poly(
+                p,
+                if *big { 3.2 } else { 1.4 },
+                CHALK.opacity(if *big { 0.85 } else { 0.3 }),
+            );
         }
         let zone = s.forced.or(self.picked);
         // the boards you may play in, chalked round as your turn comes
@@ -303,9 +381,21 @@ impl Ultimate {
                 if !qcalc_core::games::ultimate::board_open(s, b) {
                     continue;
                 }
-                let p = self.path(0, b, || chalk_box(bx(b) - 4.0, by(b) - 4.0, BOARD + 8.0, BOARD + 8.0, (300 + b) as f64));
+                let p = self.path(0, b, || {
+                    chalk_box(
+                        bx(b) - 4.0,
+                        by(b) - 4.0,
+                        BOARD + 8.0,
+                        BOARD + 8.0,
+                        (300 + b) as f64,
+                    )
+                });
                 let on = zone == Some(b);
-                ui.poly(&p.trim(t), if on { 2.4 } else { 1.5 }, MINE.opacity(if on { 1.0 } else { 0.45 }));
+                ui.poly(
+                    &p.trim(t),
+                    if on { 2.4 } else { 1.5 },
+                    MINE.opacity(if on { 1.0 } else { 0.45 }),
+                );
             }
         }
         let last = s.last;
@@ -317,21 +407,52 @@ impl Ultimate {
             let (x1, y1) = (cx(l) + CELL / 2.0, cy(l) + CELL / 2.0);
             let (x2, y2) = (bx(f) + BOARD / 2.0, by(f) + BOARD / 2.0);
             let bend = 0.18;
-            let ctrl = ((x1 + x2) / 2.0 - (y2 - y1) * bend, (y1 + y2) / 2.0 + (x2 - x1) * bend);
+            let ctrl = (
+                (x1 + x2) / 2.0 - (y2 - y1) * bend,
+                (y1 + y2) / 2.0 + (x2 - x1) * bend,
+            );
             let o = 0.6 * ease_out(((now - self.last.1 - 0.15) / 0.3).clamp(0.0, 1.0));
-            ui.dashed_curve((x1 as f32, y1 as f32), (ctrl.0 as f32, ctrl.1 as f32), (x2 as f32, y2 as f32), 1.6, 0.5, 6.0, MINE.opacity(o as f32));
+            ui.dashed_curve(
+                (x1 as f32, y1 as f32),
+                (ctrl.0 as f32, ctrl.1 as f32),
+                (x2 as f32, y2 as f32),
+                1.6,
+                0.5,
+                6.0,
+                MINE.opacity(o as f32),
+            );
         }
         if self.my_turn() && self.aiming {
             let c = self.cursor;
             let ok = can_play(s, c as f64, self.role);
-            let rr = Rect::new((cx(c) + 3.0) as f32, (cy(c) + 3.0) as f32, (CELL - 6.0) as f32, (CELL - 6.0) as f32);
-            ui.round(rr, 7.0, if ok { MINE.opacity(0.2) } else { CHALK.opacity(0.06) });
+            let rr = Rect::new(
+                (cx(c) + 3.0) as f32,
+                (cy(c) + 3.0) as f32,
+                (CELL - 6.0) as f32,
+                (CELL - 6.0) as f32,
+            );
+            ui.round(
+                rr,
+                7.0,
+                if ok {
+                    MINE.opacity(0.2)
+                } else {
+                    CHALK.opacity(0.06)
+                },
+            );
         }
         // the pieces
         let role = self.role;
         let tone = |who: Side| if who == role { MINE } else { THEIRS };
         let since = now - self.last.1;
-        let ink = |ui: &mut Ui, p: &Poly, color: Rgba, glow: f32, glow_op: f32, core: f32, dim: bool, fresh: Option<(f64, f64)>| {
+        let ink = |ui: &mut Ui,
+                   p: &Poly,
+                   color: Rgba,
+                   glow: f32,
+                   glow_op: f32,
+                   core: f32,
+                   dim: bool,
+                   fresh: Option<(f64, f64)>| {
             let mut t = 1.0;
             if let Some((dur, delay)) = fresh {
                 t = ease_out(((since - delay) / dur).clamp(0.0, 1.0));
@@ -347,24 +468,54 @@ impl Ultimate {
         };
         for b in 0..9 {
             if let Some(BoardMark::Won(_)) = s.boards[b] {
-                ui.ellipse((bx(b) + BOARD / 2.0) as f32, (by(b) + BOARD / 2.0) as f32, (BOARD / 2.0) as f32, (BOARD / 2.3) as f32, CHALK.opacity(0.045));
+                ui.ellipse(
+                    (bx(b) + BOARD / 2.0) as f32,
+                    (by(b) + BOARD / 2.0) as f32,
+                    (BOARD / 2.0) as f32,
+                    (BOARD / 2.3) as f32,
+                    CHALK.opacity(0.045),
+                );
             }
         }
         for i in 0..81 {
             let Some(who) = s.cells[i] else { continue };
             let kind = mark_of(who);
-            let p = self.path(if kind == 'x' { 1 } else { 2 }, i, || chalk_mark(kind, cx(i), cy(i), CELL, i as f64));
+            let p = self.path(if kind == 'x' { 1 } else { 2 }, i, || {
+                chalk_mark(kind, cx(i), cy(i), CELL, i as f64)
+            });
             let fresh = (Some(i) == last).then_some((0.32, 0.0));
-            ink(ui, &p, tone(who), 7.0, 0.2, 2.7, s.boards[i / 9].is_some(), fresh);
+            ink(
+                ui,
+                &p,
+                tone(who),
+                7.0,
+                0.2,
+                2.7,
+                s.boards[i / 9].is_some(),
+                fresh,
+            );
         }
         let won: Vec<usize> = s.line.clone().unwrap_or_default();
         for b in 0..9 {
-            let Some(BoardMark::Won(who)) = s.boards[b] else { continue };
+            let Some(BoardMark::Won(who)) = s.boards[b] else {
+                continue;
+            };
             let kind = mark_of(who);
-            let p = self.path(if kind == 'x' { 3 } else { 4 }, b, || chalk_mark(kind, bx(b), by(b), BOARD, (50 + b) as f64));
+            let p = self.path(if kind == 'x' { 3 } else { 4 }, b, || {
+                chalk_mark(kind, bx(b), by(b), BOARD, (50 + b) as f64)
+            });
             // a decided board holding the last move was decided by it
             let fresh = last.is_some_and(|l| l / 9 == b).then_some((0.56, 0.12));
-            ink(ui, &p, tone(who), 16.0, 0.16, 6.5, !won.is_empty() && !won.contains(&b), fresh);
+            ink(
+                ui,
+                &p,
+                tone(who),
+                16.0,
+                0.16,
+                6.5,
+                !won.is_empty() && !won.contains(&b),
+                fresh,
+            );
         }
         if won.len() == 3
             && let Some(winner) = s.winner
@@ -379,7 +530,16 @@ impl Ultimate {
                 999.0,
                 2.5,
             ));
-            ink(ui, &p, tone(winner), 14.0, 0.3, 4.0, false, Some((0.5, 0.65)));
+            ink(
+                ui,
+                &p,
+                tone(winner),
+                14.0,
+                0.3,
+                4.0,
+                false,
+                Some((0.5, 0.65)),
+            );
         }
         ui.pop_transform();
     }
@@ -390,8 +550,20 @@ impl Play for Ultimate {
         let c = ui.c;
         let mut yy = y;
         let v = &self.view;
-        let who = |side: Side| if side == self.role { "you".to_string() } else { self.peer.clone() };
-        let tone = |side: Side| if side == self.role { c.accent } else { theirs_name(c.dark) };
+        let who = |side: Side| {
+            if side == self.role {
+                "you".to_string()
+            } else {
+                self.peer.clone()
+            }
+        };
+        let tone = |side: Side| {
+            if side == self.role {
+                c.accent
+            } else {
+                theirs_name(c.dark)
+            }
+        };
         yy += w::score(
             ui,
             x,
@@ -414,7 +586,15 @@ impl Play for Ultimate {
         };
         let f = Font::chalk(12.0);
         let (_, sh) = ui.measure(&status, f);
-        ui.text_in(&status, f, x, yy, width, Align::Center, if lit { c.accent } else { c.ink });
+        ui.text_in(
+            &status,
+            f,
+            x,
+            yy,
+            width,
+            Align::Center,
+            if lit { c.accent } else { c.ink },
+        );
         ui.set_alpha(was);
         yy += sh + m::SP2;
         let size = 340.0;
@@ -428,8 +608,19 @@ impl Play for Ultimate {
             .solo
             .and_then(|s| SKILLS.iter().find(|(_, k)| *k == s))
             .map_or(String::new(), |(n, _)| format!("{n} · "));
-        let lead = if self.my_turn() && zone.is_none() { "1–9 pick a board" } else { "1–9 or arrows pick a cell" };
-        yy += w::note(ui, x + width / 2.0, yy, width, &format!("{lead} · ↵ play · {skill}esc leaves"), false);
+        let lead = if self.my_turn() && zone.is_none() {
+            "1–9 pick a board"
+        } else {
+            "1–9 or arrows pick a cell"
+        };
+        yy += w::note(
+            ui,
+            x + width / 2.0,
+            yy,
+            width,
+            &format!("{lead} · ↵ play · {skill}esc leaves"),
+            false,
+        );
         yy - y
     }
 
@@ -438,7 +629,12 @@ impl Play for Ultimate {
             return false;
         }
         let state = self.game.view().state;
-        let n = k.key.parse::<usize>().ok().filter(|n| (1..=9).contains(n)).map(|n| n - 1);
+        let n = k
+            .key
+            .parse::<usize>()
+            .ok()
+            .filter(|n| (1..=9).contains(n))
+            .map(|n| n - 1);
         let step = match k.key.as_str() {
             "ArrowUp" => Some((8, 0)),
             "ArrowDown" => Some((1, 0)),
@@ -447,7 +643,10 @@ impl Play for Ultimate {
             _ => None,
         };
         if let Some((dr, dc)) = step {
-            self.cursor = at_grid((grid_row(self.cursor) + dr) % 9, (grid_col(self.cursor) + dc) % 9);
+            self.cursor = at_grid(
+                (grid_row(self.cursor) + dr) % 9,
+                (grid_col(self.cursor) + dc) % 9,
+            );
             self.aiming = true;
         } else if let Some(n) = n {
             if let Some(zone) = state.forced.or(self.picked) {
@@ -479,7 +678,10 @@ impl Play for Ultimate {
 
     fn pointer(&mut self, _id: u32, x: f32, y: f32, press: bool, env: &mut Env) {
         let k = f64::from(self.board.w) / SPAN;
-        let Some(cell) = cell_at(f64::from(x - self.board.x) / k, f64::from(y - self.board.y) / k) else {
+        let Some(cell) = cell_at(
+            f64::from(x - self.board.x) / k,
+            f64::from(y - self.board.y) / k,
+        ) else {
             return;
         };
         if press {
@@ -536,6 +738,10 @@ mod tests {
         assert_eq!(cell_at(PAD + BOARD + 2.0, PAD + 1.0), None);
         let mid = PAD + BOARD + GAP + BOARD / 2.0;
         assert_eq!(cell_at(mid, mid), Some(4 * 9 + 4));
-        assert!(!svg::parse(&chalk_mark('x', 0.0, 0.0, CELL, 1.0)).parts.is_empty());
+        assert!(
+            !svg::parse(&chalk_mark('x', 0.0, 0.0, CELL, 1.0))
+                .parts
+                .is_empty()
+        );
     }
 }

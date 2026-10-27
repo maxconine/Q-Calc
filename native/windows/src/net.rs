@@ -58,11 +58,7 @@ fn open(what: &str) -> Result<Handle, String> {
         let _ = WinHttpSetTimeouts(session.0, 15_000, 15_000, 30_000, 30_000);
         // gzip / deflate, decoded by WinHTTP (WINHTTP_DECOMPRESSION_FLAG_ALL)
         let flags = 3u32.to_le_bytes();
-        let _ = WinHttpSetOption(
-            Some(session.0),
-            WINHTTP_OPTION_DECOMPRESSION,
-            Some(&flags),
-        );
+        let _ = WinHttpSetOption(Some(session.0), WINHTTP_OPTION_DECOMPRESSION, Some(&flags));
     }
     Ok(session)
 }
@@ -104,7 +100,10 @@ fn request(
             return Err(last_error("request"));
         }
         let (headers, data): (Vec<u16>, &[u8]) = match body {
-            Some((kind, data)) => (format!("Content-Type: {kind}\r\n").encode_utf16().collect(), data),
+            Some((kind, data)) => (
+                format!("Content-Type: {kind}\r\n").encode_utf16().collect(),
+                data,
+            ),
             None => (Vec::new(), &[]),
         };
         let len = data.len() as u32;

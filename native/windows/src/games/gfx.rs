@@ -8,22 +8,26 @@ use std::collections::HashMap;
 
 use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HMODULE, HWND};
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_FIGURE_BEGIN_HOLLOW,
-    D2D1_FIGURE_END_OPEN, D2D1_GRADIENT_STOP, D2D1_PIXEL_FORMAT,
+    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F,
+    D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D1_GRADIENT_STOP, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
-    D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND,
-    D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
-    D2D1_ELLIPSE, D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_SINGLE_THREADED,
-    D2D1_FEATURE_LEVEL_DEFAULT, D2D1_GAMMA_2_2, D2D1_HWND_RENDER_TARGET_PROPERTIES,
-    D2D1_LINE_JOIN_ROUND, D2D1_PRESENT_OPTIONS_IMMEDIATELY, D2D1_QUADRATIC_BEZIER_SEGMENT,
+    D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET,
+    D2D1_BITMAP_PROPERTIES1, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND, D2D1_DASH_STYLE_CUSTOM,
+    D2D1_DASH_STYLE_SOLID, D2D1_DEVICE_CONTEXT_OPTIONS_NONE,
+    D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT, D2D1_ELLIPSE, D2D1_EXTEND_MODE_CLAMP,
+    D2D1_FACTORY_OPTIONS, D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_FEATURE_LEVEL_DEFAULT,
+    D2D1_GAMMA_2_2, D2D1_HWND_RENDER_TARGET_PROPERTIES, D2D1_LINE_JOIN_ROUND,
+    D2D1_PRESENT_OPTIONS_IMMEDIATELY, D2D1_QUADRATIC_BEZIER_SEGMENT,
     D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_RENDER_TARGET_PROPERTIES,
-    D2D1_BITMAP_OPTIONS_CANNOT_DRAW, D2D1_BITMAP_OPTIONS_TARGET, D2D1_BITMAP_PROPERTIES1,
-    D2D1_DEVICE_CONTEXT_OPTIONS_NONE, D2D1_RENDER_TARGET_TYPE_SOFTWARE, ID2D1DeviceContext, ID2D1Factory1,
-    ID2D1RenderTarget,
-    D2D1_RENDER_TARGET_USAGE_NONE, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
-    D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1CreateFactory, ID2D1Factory, ID2D1HwndRenderTarget,
+    D2D1_RENDER_TARGET_TYPE_SOFTWARE, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_ROUNDED_RECT,
+    D2D1_STROKE_STYLE_PROPERTIES, D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1CreateFactory,
+    ID2D1DeviceContext, ID2D1Factory, ID2D1Factory1, ID2D1HwndRenderTarget, ID2D1RenderTarget,
     ID2D1SolidColorBrush, ID2D1StrokeStyle,
+};
+use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
+use windows::Win32::Graphics::Direct3D11::{
+    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION, D3D11CreateDevice, ID3D11Device,
 };
 use windows::Win32::Graphics::DirectWrite::{
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL,
@@ -33,15 +37,14 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_WORD_WRAPPING_NO_WRAP, DWRITE_WORD_WRAPPING_WRAP, DWriteCreateFactory, IDWriteFactory,
     IDWriteFontCollection, IDWriteTextFormat, IDWriteTextLayout,
 };
-use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_HARDWARE;
-use windows::Win32::Graphics::Direct3D11::{D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_SDK_VERSION, D3D11CreateDevice, ID3D11Device};
 use windows::Win32::Graphics::Dxgi::Common::{
     DXGI_ALPHA_MODE_IGNORE, DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_FORMAT_UNKNOWN, DXGI_SAMPLE_DESC,
 };
 use windows::Win32::Graphics::Dxgi::{
-    DXGI_ERROR_DEVICE_REMOVED, DXGI_ERROR_DEVICE_RESET, DXGI_MWA_NO_ALT_ENTER, DXGI_PRESENT, DXGI_SCALING_STRETCH,
-    DXGI_SWAP_CHAIN_DESC1, DXGI_SWAP_CHAIN_FLAG, DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_USAGE_RENDER_TARGET_OUTPUT,
-    IDXGIDevice, IDXGIFactory2, IDXGISurface, IDXGISwapChain1,
+    DXGI_ERROR_DEVICE_REMOVED, DXGI_ERROR_DEVICE_RESET, DXGI_MWA_NO_ALT_ENTER, DXGI_PRESENT,
+    DXGI_SCALING_STRETCH, DXGI_SWAP_CHAIN_DESC1, DXGI_SWAP_CHAIN_FLAG,
+    DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL, DXGI_USAGE_RENDER_TARGET_OUTPUT, IDXGIDevice, IDXGIFactory2,
+    IDXGISurface, IDXGISwapChain1,
 };
 use windows::core::{BOOL, HSTRING, Interface, Result};
 use windows_numerics::{Matrix3x2, Vector2};
@@ -190,38 +193,44 @@ enum Gpu {
 /// `msg` with the device in lParam (`take_device`), or 0 when there's no GPU to have.
 pub fn warm_gpu(notify: HWND, msg: u32) {
     let to = notify.0 as usize;
-    let _ = std::thread::Builder::new().name("qcalc-gpu-warm".into()).spawn(move || {
-        use windows::Win32::Foundation::{LPARAM, WPARAM};
-        use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
-        let t = std::time::Instant::now();
-        let mut device = None;
-        // SAFETY: plain device creation into a live out slot
-        let made = unsafe {
-            D3D11CreateDevice(
-                None,
-                D3D_DRIVER_TYPE_HARDWARE,
-                HMODULE::default(),
-                D3D11_CREATE_DEVICE_BGRA_SUPPORT,
-                None,
-                D3D11_SDK_VERSION,
-                Some(&mut device),
-                None,
-                None,
-            )
-        };
-        let raw = match (made, device) {
-            (Ok(()), Some(d)) => d.into_raw() as isize,
-            _ => 0,
-        };
-        crate::qlog!(
-            "games: the GPU's device made in {:.1} ms{}",
-            t.elapsed().as_secs_f64() * 1000.0,
-            if raw == 0 { " (failed: software from here)" } else { "" }
-        );
-        // SAFETY: posting to the game window from a worker thread; the window's thread takes the device (or, if
-        // the window is gone, the reference leaks with this short-lived process)
-        let _ = unsafe { PostMessageW(Some(HWND(to as *mut _)), msg, WPARAM(0), LPARAM(raw)) };
-    });
+    let _ = std::thread::Builder::new()
+        .name("qcalc-gpu-warm".into())
+        .spawn(move || {
+            use windows::Win32::Foundation::{LPARAM, WPARAM};
+            use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
+            let t = std::time::Instant::now();
+            let mut device = None;
+            // SAFETY: plain device creation into a live out slot
+            let made = unsafe {
+                D3D11CreateDevice(
+                    None,
+                    D3D_DRIVER_TYPE_HARDWARE,
+                    HMODULE::default(),
+                    D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+                    None,
+                    D3D11_SDK_VERSION,
+                    Some(&mut device),
+                    None,
+                    None,
+                )
+            };
+            let raw = match (made, device) {
+                (Ok(()), Some(d)) => d.into_raw() as isize,
+                _ => 0,
+            };
+            crate::qlog!(
+                "games: the GPU's device made in {:.1} ms{}",
+                t.elapsed().as_secs_f64() * 1000.0,
+                if raw == 0 {
+                    " (failed: software from here)"
+                } else {
+                    ""
+                }
+            );
+            // SAFETY: posting to the game window from a worker thread; the window's thread takes the device (or, if
+            // the window is gone, the reference leaks with this short-lived process)
+            let _ = unsafe { PostMessageW(Some(HWND(to as *mut _)), msg, WPARAM(0), LPARAM(raw)) };
+        });
 }
 
 /// The device a `warm_gpu` message carries.
@@ -350,7 +359,13 @@ impl Gfx {
                 unsafe {
                     dc.SetTarget(None);
                     chain
-                        .ResizeBuffers(0, self.px.0, self.px.1, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG(0))
+                        .ResizeBuffers(
+                            0,
+                            self.px.0,
+                            self.px.1,
+                            DXGI_FORMAT_UNKNOWN,
+                            DXGI_SWAP_CHAIN_FLAG(0),
+                        )
                         .and_then(|()| self.swap_bitmap(dc, chain))
                         .is_ok()
                 }
@@ -405,7 +420,10 @@ impl Gfx {
                 Height: self.px.1,
                 Format: DXGI_FORMAT_B8G8R8A8_UNORM,
                 Stereo: BOOL(0),
-                SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+                SampleDesc: DXGI_SAMPLE_DESC {
+                    Count: 1,
+                    Quality: 0,
+                },
                 BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
                 BufferCount: 2,
                 Scaling: DXGI_SCALING_STRETCH,
@@ -438,7 +456,10 @@ impl Gfx {
         };
         let (rt, out, hardware) = match swap {
             Some((rt, out)) => {
-                crate::qlog!("games: hardware target made in {:.1} ms", t.elapsed().as_secs_f64() * 1000.0);
+                crate::qlog!(
+                    "games: hardware target made in {:.1} ms",
+                    t.elapsed().as_secs_f64() * 1000.0
+                );
                 (rt, out, true)
             }
             None => {
@@ -569,7 +590,11 @@ impl Gfx {
             })
         };
         if let Err(e) = &end {
-            let lost = [D2DERR_RECREATE_TARGET, DXGI_ERROR_DEVICE_REMOVED, DXGI_ERROR_DEVICE_RESET];
+            let lost = [
+                D2DERR_RECREATE_TARGET,
+                DXGI_ERROR_DEVICE_REMOVED,
+                DXGI_ERROR_DEVICE_RESET,
+            ];
             if lost.contains(&e.code()) {
                 crate::qlog!("games: the device was lost ({e}); software from here");
                 self.target = None;
@@ -673,7 +698,14 @@ impl Ui<'_> {
     }
 
     /// What canvas.rs draws with: the target, its device context (when it is one), and the factories.
-    pub fn parts(&self) -> (&ID2D1RenderTarget, Option<&ID2D1DeviceContext>, &ID2D1Factory, &IDWriteFactory) {
+    pub fn parts(
+        &self,
+    ) -> (
+        &ID2D1RenderTarget,
+        Option<&ID2D1DeviceContext>,
+        &ID2D1Factory,
+        &IDWriteFactory,
+    ) {
         (self.rt, self.dc.as_ref(), self.d2d, self.dw)
     }
 
@@ -718,7 +750,10 @@ impl Ui<'_> {
     pub fn hit(&mut self, r: Rect, hit: Hit) {
         let (x0, y0) = self.to_window(r.x, r.y);
         let (x1, y1) = self.to_window(r.right(), r.bottom());
-        self.hits.push((Rect::new(x0.min(x1), y0.min(y1), (x1 - x0).abs(), (y1 - y0).abs()), hit));
+        self.hits.push((
+            Rect::new(x0.min(x1), y0.min(y1), (x1 - x0).abs(), (y1 - y0).abs()),
+            hit,
+        ));
     }
 
     /// Whether the pointer is over `r` (current space).
@@ -822,7 +857,11 @@ impl Ui<'_> {
 
     pub fn line(&self, a: Pt, b: Pt, width: f32, c: Rgba, round: bool) {
         let brush = self.paint(c);
-        let style = if round { self.round_style } else { self.flat_style };
+        let style = if round {
+            self.round_style
+        } else {
+            self.flat_style
+        };
         // SAFETY: inside a draw
         unsafe { self.rt.DrawLine(v(a), v(b), brush, width, style) };
     }
@@ -857,8 +896,18 @@ impl Ui<'_> {
 
     /// A quadratic curve, dashed (`dash` and `gap` in DIPs) with round caps.
     #[allow(clippy::too_many_arguments)]
-    pub fn dashed_curve(&mut self, a: Pt, ctrl: Pt, b: Pt, width: f32, dash: f32, gap: f32, c: Rgba) {
-        let key = ((dash * 100.0) as u32) << 16 | (gap * 100.0) as u32 ^ ((width * 10.0) as u32) << 24;
+    pub fn dashed_curve(
+        &mut self,
+        a: Pt,
+        ctrl: Pt,
+        b: Pt,
+        width: f32,
+        dash: f32,
+        gap: f32,
+        c: Rgba,
+    ) {
+        let key =
+            ((dash * 100.0) as u32) << 16 | (gap * 100.0) as u32 ^ ((width * 10.0) as u32) << 24;
         if !self.dashes.contains_key(&key) {
             // custom dashes are in stroke widths
             let d = [dash / width, gap / width];
@@ -916,8 +965,10 @@ impl Ui<'_> {
             },
         ];
         // SAFETY: the stops outlive the call; plain resource creation on a live target
-        let Ok(coll) = (unsafe { self.rt.CreateGradientStopCollection(&stops, D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP) })
-        else {
+        let Ok(coll) = (unsafe {
+            self.rt
+                .CreateGradientStopCollection(&stops, D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP)
+        }) else {
             return;
         };
         let props = D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES {
@@ -943,8 +994,17 @@ impl Ui<'_> {
 
     /// --control-shadow under a control (a hairline ring and a 1 px drop).
     pub fn control_shadow(&self, r: Rect, radius: f32) {
-        self.round(Rect::new(r.x, r.y + 1.0, r.w, r.h), radius, self.c.control_drop());
-        self.outline(r.inset(-0.25, -0.25), radius + 0.25, 0.5, self.c.control_ring());
+        self.round(
+            Rect::new(r.x, r.y + 1.0, r.w, r.h),
+            radius,
+            self.c.control_drop(),
+        );
+        self.outline(
+            r.inset(-0.25, -0.25),
+            radius + 0.25,
+            0.5,
+            self.c.control_ring(),
+        );
     }
 
     /// --shadow-card under a floating card or pill.
@@ -952,12 +1012,22 @@ impl Ui<'_> {
         for (i, k) in [(3.0, 0.35), (2.0, 0.6), (1.0, 1.0)] {
             let grow = i * 0.6;
             self.round(
-                Rect::new(r.x - grow, r.y + 1.0 - grow + i * 0.3, r.w + 2.0 * grow, r.h + 2.0 * grow),
+                Rect::new(
+                    r.x - grow,
+                    r.y + 1.0 - grow + i * 0.3,
+                    r.w + 2.0 * grow,
+                    r.h + 2.0 * grow,
+                ),
                 radius + grow,
                 self.c.card_drop().opacity(k * 0.6),
             );
         }
-        self.outline(r.inset(-0.25, -0.25), radius + 0.25, 0.5, self.c.card_ring());
+        self.outline(
+            r.inset(-0.25, -0.25),
+            radius + 0.25,
+            0.5,
+            self.c.card_ring(),
+        );
     }
 
     // ---- text
@@ -994,7 +1064,14 @@ impl Ui<'_> {
     }
 
     /// A cached layout: one line (`wrap` 0) or wrapped to `wrap` DIPs, aligned in that width.
-    fn layout(&mut self, text: &str, f: Font, wrap: f32, align: Align, trim: bool) -> Option<IDWriteTextLayout> {
+    fn layout(
+        &mut self,
+        text: &str,
+        f: Font,
+        wrap: f32,
+        align: Align,
+        trim: bool,
+    ) -> Option<IDWriteTextLayout> {
         let key: LayoutKey = (text.to_string(), f.key(), (wrap * 4.0) as u32, align, trim);
         if let Some(l) = self.layouts.get(&key) {
             return Some(l.clone());
@@ -1089,7 +1166,16 @@ impl Ui<'_> {
 
     /// Wrapped to `w`; returns the height it took.
     #[allow(clippy::too_many_arguments)]
-    pub fn text_wrap(&mut self, text: &str, f: Font, x: f32, y: f32, w: f32, align: Align, c: Rgba) -> f32 {
+    pub fn text_wrap(
+        &mut self,
+        text: &str,
+        f: Font,
+        x: f32,
+        y: f32,
+        w: f32,
+        align: Align,
+        c: Rgba,
+    ) -> f32 {
         let Some(l) = self.layout(text, f, w.max(1.0), align, false) else {
             return 0.0;
         };

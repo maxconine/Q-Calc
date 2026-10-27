@@ -76,7 +76,12 @@ fn written(lines: &[String]) -> String {
 
 /// The history row a system saves as (`expr` `sys`, the equations, what the slot showed), or None when there's
 /// nothing to save. `last` is the tape's last row: the same system twice in a row saves once.
-fn row_for(lines: &[String], shown: &str, now: i64, last: Option<&HistoryRow>) -> Option<Option<HistoryRow>> {
+fn row_for(
+    lines: &[String],
+    shown: &str,
+    now: i64,
+    last: Option<&HistoryRow>,
+) -> Option<Option<HistoryRow>> {
     let shown = shown.trim();
     if written(lines).is_empty() || shown.is_empty() {
         return None;
@@ -179,7 +184,10 @@ pub fn slot(m: &BarModel) -> Option<String> {
 
 /// The slot says why there's no solution (drawn muted).
 pub fn slot_is_message(m: &BarModel) -> bool {
-    m.systems.as_ref().and_then(|s| s.answer.as_ref()).is_some_and(|a| a.message)
+    m.systems
+        .as_ref()
+        .and_then(|s| s.answer.as_ref())
+        .is_some_and(|a| a.message)
 }
 
 // ---- opening, solving, saving ----
@@ -225,11 +233,15 @@ pub fn open_with(app: &mut App, equations: Vec<String>) {
 /// A history row of kind `system` reopens its equations (openHistorySystem). True when row `i` is one and it
 /// opened: the caller then runs `text_changed`, which solves them.
 pub fn reopen(m: &mut BarModel, i: usize) -> bool {
-    let Some(row) = m.rows.rows.get(i) else { return false };
+    let Some(row) = m.rows.rows.get(i) else {
+        return false;
+    };
     if row.kind != Some(HistoryKind::System) {
         return false;
     }
-    let Some(eqs) = row.equations.clone().filter(|e| !e.is_empty()) else { return false };
+    let Some(eqs) = row.equations.clone().filter(|e| !e.is_empty()) else {
+        return false;
+    };
     let eqs: Vec<String> = eqs.into_iter().take(MAX_ROWS).collect();
     m.selected = None;
     m.tape_open = false;
@@ -245,7 +257,11 @@ fn solve(m: &mut BarModel, engine: &EngineThread) {
     let Some(s) = &mut m.systems else { return };
     s.unsolved = false;
     let lines = s.lines();
-    let angle = if m.settings.angle_mode == "rad" { "rad" } else { "deg" };
+    let angle = if m.settings.angle_mode == "rad" {
+        "rad"
+    } else {
+        "deg"
+    };
     let args = serde_json::json!([lines, m.settings.default_units, angle]).to_string();
     engine.submit(Lane::System, move |cx| {
         let answer = cx
@@ -275,8 +291,16 @@ fn commit(m: &mut BarModel, engine: &EngineThread) {
     let Some(s) = &m.systems else { return };
     let lines = s.lines();
     let message = s.answer.as_ref().is_some_and(|a| a.message);
-    let shown = s.answer.as_ref().map(|a| a.display.clone()).unwrap_or_default();
-    let row = if message { None } else { row_for(&lines, &shown, now_ms(), m.rows.rows.last()) };
+    let shown = s
+        .answer
+        .as_ref()
+        .map(|a| a.display.clone())
+        .unwrap_or_default();
+    let row = if message {
+        None
+    } else {
+        row_for(&lines, &shown, now_ms(), m.rows.rows.last())
+    };
     let Some(row) = row else {
         m.hint = Some("nothing to save yet · finish the equations, or esc to close".into());
         m.touch();
@@ -309,13 +333,21 @@ fn paste_lines(m: &mut BarModel, engine: &EngineThread, raw: String, at: Option<
     engine.submit(Lane::Misc, move |cx| {
         let clean = cx
             .engine
-            .call_json("lib/paste".into(), "cleanPastedText".into(), serde_json::json!([raw]).to_string())
+            .call_json(
+                "lib/paste".into(),
+                "cleanPastedText".into(),
+                serde_json::json!([raw]).to_string(),
+            )
             .ok()
             .and_then(|j| serde_json::from_str::<String>(&j).ok())
             .unwrap_or_else(|| raw.clone());
         let lines = cx
             .engine
-            .call_json("engine/system".into(), "pastedEquations".into(), serde_json::json!([clean]).to_string())
+            .call_json(
+                "engine/system".into(),
+                "pastedEquations".into(),
+                serde_json::json!([clean]).to_string(),
+            )
             .ok()
             .and_then(|j| serde_json::from_str::<Option<Vec<String>>>(&j).ok())
             .flatten();
@@ -387,7 +419,9 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
         let opening = count(m.field.text());
         return match vk {
             ENTER if plain && m.selected.is_none() => {
-                let Some(Ok(n)) = opening else { return Err(clipboard) };
+                let Some(Ok(n)) = opening else {
+                    return Err(clipboard);
+                };
                 match &mut m.systems {
                     Some(s) if s.rows.len() == n => {
                         // nothing typed yet: ↵ goes down to the first equation rather than saving an empty system
@@ -464,7 +498,9 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
         }
         _ => {}
     }
-    let Some(s) = &mut m.systems else { return Err(clipboard) };
+    let Some(s) = &mut m.systems else {
+        return Err(clipboard);
+    };
     let f = &mut s.rows[i];
     if ctrl && !mods.shift && vk == 0x43 && f.has_selection() {
         m.to_clipboard = Some(f.selected_text().to_string());
@@ -539,8 +575,12 @@ fn edited(m: &mut BarModel, engine: &EngineThread, i: usize, before: &str) {
 
 /// WM_CHAR while a row has the keys: true when it took it.
 pub fn char16(m: &mut BarModel, unit: u16, engine: &EngineThread) -> bool {
-    let Some(i) = m.systems.as_ref().and_then(|s| s.focus) else { return false };
-    let Some(s) = &mut m.systems else { return false };
+    let Some(i) = m.systems.as_ref().and_then(|s| s.focus) else {
+        return false;
+    };
+    let Some(s) = &mut m.systems else {
+        return false;
+    };
     let before = s.rows[i].text().to_string();
     s.rows[i].char16(unit);
     edited(m, engine, i, &before);
@@ -549,8 +589,12 @@ pub fn char16(m: &mut BarModel, unit: u16, engine: &EngineThread) -> bool {
 
 /// The IME's text while a row has the keys.
 pub fn insert_text(m: &mut BarModel, text: &str, engine: &EngineThread) -> bool {
-    let Some(i) = m.systems.as_ref().and_then(|s| s.focus) else { return false };
-    let Some(s) = &mut m.systems else { return false };
+    let Some(i) = m.systems.as_ref().and_then(|s| s.focus) else {
+        return false;
+    };
+    let Some(s) = &mut m.systems else {
+        return false;
+    };
     let before = s.rows[i].text().to_string();
     s.rows[i].insert(text);
     s.rows[i].break_run();
@@ -599,8 +643,13 @@ pub fn paint(c: &Canvas, s: &SysState, r: Rect, window_focused: bool) {
             radiusX: size::RADIUS_CARD,
             radiusY: size::RADIUS_CARD,
         };
-        let edge = if t.dark { crate::render::rgb(0xffffff, 0.08) } else { crate::render::rgb(0, 0.1) };
-        c.target().DrawRoundedRectangle(&rr, c.brush(edge), 0.5, None);
+        let edge = if t.dark {
+            crate::render::rgb(0xffffff, 0.08)
+        } else {
+            crate::render::rgb(0, 0.1)
+        };
+        c.target()
+            .DrawRoundedRectangle(&rr, c.brush(edge), 0.5, None);
     }
     let mut views = s.views.borrow_mut();
     views.resize_with(s.rows.len(), RowView::default);
@@ -621,15 +670,34 @@ pub fn paint(c: &Canvas, s: &SysState, r: Rect, window_focused: bool) {
                     radiusX: size::RADIUS_S,
                     radiusY: size::RADIUS_S,
                 };
-                c.target().DrawRoundedRectangle(&ring, c.brush(with_alpha(t.accent, 0.55)), 1.0, None);
+                c.target().DrawRoundedRectangle(
+                    &ring,
+                    c.brush(with_alpha(t.accent, 0.55)),
+                    1.0,
+                    None,
+                );
             }
         }
         let text = rr.inset(ROW_PAD_X, 0.0);
-        paint_row(c, f, view, text, has && window_focused, &format!("equation {}", i + 1));
+        paint_row(
+            c,
+            f,
+            view,
+            text,
+            has && window_focused,
+            &format!("equation {}", i + 1),
+        );
     }
 }
 
-fn paint_row(c: &Canvas, f: &Field, view: &mut RowView, r: Rect, caret_on: bool, placeholder: &str) {
+fn paint_row(
+    c: &Canvas,
+    f: &Field,
+    view: &mut RowView,
+    r: Rect,
+    caret_on: bool,
+    placeholder: &str,
+) {
     let t = c.theme;
     let font = &c.gfx.fonts.row;
     c.push_clip(Rect::new(r.x - 2.0, r.y, r.w + 4.0, r.h));
@@ -668,8 +736,15 @@ fn paint_row(c: &Canvas, f: &Field, view: &mut RowView, r: Rect, caret_on: bool,
     let x0 = r.x - view.scroll;
     if f.has_selection() {
         let (a, b) = f.selection();
-        let (xa, xb) = (caret_x(&layout, f.to_utf16(a)), caret_x(&layout, f.to_utf16(b)));
-        c.fill_round(Rect::new(x0 + xa, r.y + r.h * 0.5 - 11.0, xb - xa, 22.0), 3.0, t.selection);
+        let (xa, xb) = (
+            caret_x(&layout, f.to_utf16(a)),
+            caret_x(&layout, f.to_utf16(b)),
+        );
+        c.fill_round(
+            Rect::new(x0 + xa, r.y + r.h * 0.5 - 11.0, xb - xa, 22.0),
+            3.0,
+            t.selection,
+        );
     }
     if !f.text().is_empty() {
         c.text(&layout, x0, r.y, t.ink);
@@ -677,14 +752,23 @@ fn paint_row(c: &Canvas, f: &Field, view: &mut RowView, r: Rect, caret_on: bool,
     if caret_on {
         let mid = r.y + r.h * 0.5;
         let half = size::ROW * 0.62;
-        c.line(x0 + caret + 0.5, mid - half, x0 + caret + 0.5, mid + half, 1.5, t.ink);
+        c.line(
+            x0 + caret + 0.5,
+            mid - half,
+            x0 + caret + 0.5,
+            mid + half,
+            1.5,
+            t.ink,
+        );
     }
     c.pop_clip();
 }
 
 /// The UTF-16 position in row `i` under window point (x, y), from its last layout.
 fn hit_row(app: &App, i: usize, x: f32, y: f32) -> u32 {
-    let (Some(r), Some(s)) = (app.bar.layout.systems, &app.model.systems) else { return 0 };
+    let (Some(r), Some(s)) = (app.bar.layout.systems, &app.model.systems) else {
+        return 0;
+    };
     let views = s.views.borrow();
     let Some(view) = views.get(i) else { return 0 };
     let text = row_rect(r, i).inset(ROW_PAD_X, 0.0);
@@ -706,7 +790,9 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool, shift: bool) -> bool {
     if let Some(i) = row_at(app, x, y) {
         let pos = hit_row(app, i, x, y);
         let hwnd = app.bar.hwnd;
-        let Some(s) = &mut app.model.systems else { return true };
+        let Some(s) = &mut app.model.systems else {
+            return true;
+        };
         s.focus = Some(i);
         let f = &mut s.rows[i];
         if double {
@@ -744,7 +830,13 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool, shift: bool) -> bool {
 
 /// A drag-select in a row.
 pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
-    let Some(i) = app.model.systems.as_ref().filter(|s| s.selecting).and_then(|s| s.focus) else {
+    let Some(i) = app
+        .model
+        .systems
+        .as_ref()
+        .filter(|s| s.selecting)
+        .and_then(|s| s.focus)
+    else {
         return false;
     };
     let pos = hit_row(app, i, x, y);
@@ -756,7 +848,9 @@ pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
 }
 
 pub fn mouse_up(app: &mut App) -> bool {
-    let Some(s) = &mut app.model.systems else { return false };
+    let Some(s) = &mut app.model.systems else {
+        return false;
+    };
     if !std::mem::take(&mut s.selecting) {
         return false;
     }
@@ -772,7 +866,9 @@ pub fn cursor(app: &App, x: f32, y: f32) -> Option<windows::core::PCWSTR> {
 
 /// A one-line summary for the bench pipe's `state`.
 pub fn debug(m: &BarModel) -> serde_json::Value {
-    let Some(s) = &m.systems else { return serde_json::Value::Null };
+    let Some(s) = &m.systems else {
+        return serde_json::Value::Null;
+    };
     serde_json::json!({
         "rows": s.lines(), "focus": s.focus,
         "answer": s.answer.as_ref().map(|a| a.display.clone()), "message": s.answer.as_ref().is_some_and(|a| a.message),
@@ -788,7 +884,10 @@ mod tests {
         assert_eq!(count("sys2"), Some(Ok(2)));
         assert_eq!(count(" sys 3 "), Some(Ok(3)));
         assert_eq!(count("System 5"), Some(Ok(5)));
-        assert_eq!(count("SYS"), Some(Err("how many equations? sys2, sys3… up to sys5")));
+        assert_eq!(
+            count("SYS"),
+            Some(Err("how many equations? sys2, sys3… up to sys5"))
+        );
         assert_eq!(count("sys 6"), Some(Err("up to 5 equations")));
         assert_eq!(count("sys 0"), Some(Err("up to 5 equations")));
         assert_eq!(count("sys x"), None);
@@ -803,13 +902,21 @@ mod tests {
         let lines = vec!["x + y = 3".to_string(), " x - y = 1 ".to_string()];
         assert!(row_for(&lines, "", 5, None).is_none());
         assert!(row_for(&["".into(), " ".into()], "x = 2", 5, None).is_none());
-        let row = row_for(&lines, "x = 2, y = 1", 5, None).flatten().expect("a row");
+        let row = row_for(&lines, "x = 2, y = 1", 5, None)
+            .flatten()
+            .expect("a row");
         assert_eq!(row.expr, "sys");
         assert_eq!(row.kind, Some(HistoryKind::System));
-        assert_eq!(row.equations.as_deref(), Some(&["x + y = 3".to_string(), "x - y = 1".to_string()][..]));
+        assert_eq!(
+            row.equations.as_deref(),
+            Some(&["x + y = 3".to_string(), "x - y = 1".to_string()][..])
+        );
         assert_eq!(row.id, "5-sys");
         assert_eq!(written(&lines), "x + y = 3; x - y = 1");
         // the same again right after: nothing new
-        assert!(matches!(row_for(&lines, "x = 2, y = 1", 6, Some(&row)), Some(None)));
+        assert!(matches!(
+            row_for(&lines, "x = 2, y = 1", 6, Some(&row)),
+            Some(None)
+        ));
     }
 }

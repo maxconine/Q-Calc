@@ -16,12 +16,14 @@ use std::time::Instant;
 use qcalc_core::games::Side;
 use qcalc_core::games::ember::engine::stage_of;
 use qcalc_core::games::ember::panel::{GRID_COLS, Hud, PanelTracker, grid_step, win_lines};
-use qcalc_core::games::ember::progress::{SAVE_KEY, finished_count, first_unfinished, parse_progress, progress_json};
+use qcalc_core::games::ember::progress::{
+    SAVE_KEY, finished_count, first_unfinished, parse_progress, progress_json,
+};
 use qcalc_core::games::ember::session::{EmberGame, GuestGame, HostGame, LocalGame, Screen};
 use qcalc_core::games::ember::sound::{SoundGate, voices};
 use qcalc_core::games::ember::{
-    Catalog, EMBER_HINT, GameEvent, GameState, IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, Phase, fmt_par, fmt_time,
-    is_ember_command, level_difficulty, level_length, shipped,
+    Catalog, EMBER_HINT, GameEvent, GameState, IN_DOWN, IN_LEFT, IN_RIGHT, IN_UP, Phase, fmt_par,
+    fmt_time, is_ember_command, level_difficulty, level_length, shipped,
 };
 use qcalc_core::games::fullscreen::fullscreen_hint;
 use qcalc_core::games::peer::{PeerEvent, close_reason_text};
@@ -56,15 +58,27 @@ pub static DEF: GameDef = GameDef {
 };
 
 fn fire(dark: bool) -> Rgba {
-    if dark { Rgba::hex(0xff8a47, 1.0) } else { Rgba::hex(0xe8641c, 1.0) }
+    if dark {
+        Rgba::hex(0xff8a47, 1.0)
+    } else {
+        Rgba::hex(0xe8641c, 1.0)
+    }
 }
 
 fn frost(dark: bool) -> Rgba {
-    if dark { Rgba::hex(0x5fcdf2, 1.0) } else { Rgba::hex(0x1f93c6, 1.0) }
+    if dark {
+        Rgba::hex(0x5fcdf2, 1.0)
+    } else {
+        Rgba::hex(0x1f93c6, 1.0)
+    }
 }
 
 fn star(dark: bool) -> Rgba {
-    if dark { Rgba::hex(0xffc44d, 1.0) } else { Rgba::hex(0xf0a81a, 1.0) }
+    if dark {
+        Rgba::hex(0xffc44d, 1.0)
+    } else {
+        Rgba::hex(0xf0a81a, 1.0)
+    }
 }
 
 /// the head's line: how far the saved progress has got
@@ -73,7 +87,11 @@ fn sub_line(store: &GameStore) -> String {
     let progress = parse_progress(store.get(SAVE_KEY));
     let ids: Vec<&str> = cat.defs.iter().map(|d| d.id.as_str()).collect();
     let done = finished_count(&progress, &ids);
-    if done > 0 { format!("{done} of {} levels done", cat.len()) } else { String::new() }
+    if done > 0 {
+        format!("{done} of {} levels done", cat.len())
+    } else {
+        String::new()
+    }
 }
 
 fn kbd(ui: &mut Ui, x: f32, y: f32, k: &str) -> f32 {
@@ -83,7 +101,13 @@ fn kbd(ui: &mut Ui, x: f32, y: f32, k: &str) -> f32 {
     let r = Rect::new(x + 2.0, y, bw, 18.0f32.max(th));
     ui.round(r, 4.0, c.bg_tape);
     ui.ring(r, 4.0, 1.0, c.line);
-    ui.text(k, Font::CAPTION, r.x + (bw - tw) / 2.0, r.y + (r.h - th) / 2.0, c.ink);
+    ui.text(
+        k,
+        Font::CAPTION,
+        r.x + (bw - tw) / 2.0,
+        r.y + (r.h - th) / 2.0,
+        c.ink,
+    );
     bw + 2.0
 }
 
@@ -91,11 +115,24 @@ fn kbd(ui: &mut Ui, x: f32, y: f32, k: &str) -> f32 {
 fn controls(ui: &mut Ui, x: f32, y: f32, width: f32, _env: &mut Env) -> f32 {
     let c = ui.c;
     let count = shipped().len();
-    let text = format!("{count} long levels, every one open: lights out, gravity upside down, trampolines, keys, and checkpoints on the way.");
+    let text = format!(
+        "{count} long levels, every one open: lights out, gravity upside down, trampolines, keys, and checkpoints on the way."
+    );
     let tw = width.min(460.0);
-    let mut h = ui.text_wrap(&text, Font::SMALL, x + (width - tw) / 2.0, y, tw, Align::Center, c.muted) + m::SP3;
+    let mut h = ui.text_wrap(
+        &text,
+        Font::SMALL,
+        x + (width - tw) / 2.0,
+        y,
+        tw,
+        Align::Center,
+        c.muted,
+    ) + m::SP3;
     // one row: ember's keys, frost's, and the use key, measured then centred
-    let groups: [(&str, Rgba, &[&str]); 2] = [("ember ", fire(c.dark), &["W", "A", "S", "D"]), ("frost ", frost(c.dark), &["←", "↑", "→", "↓"])];
+    let groups: [(&str, Rgba, &[&str]); 2] = [
+        ("ember ", fire(c.dark), &["W", "A", "S", "D"]),
+        ("frost ", frost(c.dark), &["←", "↑", "→", "↓"]),
+    ];
     let bold = Font::bold(m::FS_SMALL);
     let kw = |ui: &mut Ui, k: &str| (ui.measure(k, Font::CAPTION).0 + 6.0).max(18.0) + 2.0;
     let mut total = 0.0;
@@ -107,7 +144,10 @@ fn controls(ui: &mut Ui, x: f32, y: f32, width: f32, _env: &mut Env) -> f32 {
         total += m::SP4;
     }
     let tail = " use a lever, lamp or switch";
-    total += kw(ui, "S") + ui.measure(" / ", Font::SMALL).0 + kw(ui, "↓") + ui.measure(tail, Font::SMALL).0;
+    total += kw(ui, "S")
+        + ui.measure(" / ", Font::SMALL).0
+        + kw(ui, "↓")
+        + ui.measure(tail, Font::SMALL).0;
     let mut xx = x + (width - total) / 2.0;
     let ry = y + h;
     let (_, th) = ui.measure("ember", bold);
@@ -163,12 +203,17 @@ fn cards(cat: &Catalog, tracker: &PanelTracker) -> Vec<Card> {
                 par: d.par,
                 par_text: fmt_par(d.par),
                 gem_total: totals[0] + totals[1],
-                best: tracker.progress.levels.get(&d.id).filter(|b| b.completed).map(|b| Best {
-                    stars: b.stars,
-                    secs_text: b.secs.map(fmt_time),
-                    gems: b.gems,
-                    deaths: b.deaths,
-                }),
+                best: tracker
+                    .progress
+                    .levels
+                    .get(&d.id)
+                    .filter(|b| b.completed)
+                    .map(|b| Best {
+                        stars: b.stars,
+                        secs_text: b.secs.map(fmt_time),
+                        gems: b.gems,
+                        deaths: b.deaths,
+                    }),
             }
         })
         .collect()
@@ -285,7 +330,11 @@ impl Ember {
             tip_at: (0, 0.0),
             scroll: 0.0,
         };
-        e.screen = if e.online { Screen::Wait } else { Screen::Select };
+        e.screen = if e.online {
+            Screen::Wait
+        } else {
+            Screen::Select
+        };
         e.tick(env);
         e
     }
@@ -320,7 +369,8 @@ impl Ember {
         }
         let hud = self.tracker.frame(&self.cat, &v);
         if self.tracker.progress_changed {
-            env.store.set(SAVE_KEY, Some(&progress_json(&self.tracker.progress)));
+            env.store
+                .set(SAVE_KEY, Some(&progress_json(&self.tracker.progress)));
             self.cards = cards(&self.cat, &self.tracker);
         }
         self.muted = self.tracker.progress.muted;
@@ -401,7 +451,14 @@ impl Ember {
     fn pick(&mut self, dx: i64, dy: i64) {
         let level = self.level;
         let base = self.asked.filter(|a| a.0 == level).map_or(level, |a| a.1);
-        let next = grid_step(base as i64, dx, dy, self.cards.len() as i64, GRID_COLS as i64).max(0) as usize;
+        let next = grid_step(
+            base as i64,
+            dx,
+            dy,
+            self.cards.len() as i64,
+            GRID_COLS as i64,
+        )
+        .max(0) as usize;
         if next == base {
             return;
         }
@@ -414,9 +471,20 @@ impl Ember {
         self.game.play();
     }
 
-    fn thumb(&mut self, g: &Canvas, res: &Res, i: usize, dark: bool, k: f64) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap> {
+    fn thumb(
+        &mut self,
+        g: &Canvas,
+        res: &Res,
+        i: usize,
+        dark: bool,
+        k: f64,
+    ) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap> {
         let key = (i, dark);
-        if self.thumbs.get(&key).is_some_and(|t| t.generation != g.generation || (t.w - 144.0 * k).abs() > 0.5) {
+        if self
+            .thumbs
+            .get(&key)
+            .is_some_and(|t| t.generation != g.generation || (t.w - 144.0 * k).abs() > 0.5)
+        {
             self.thumbs.remove(&key);
         }
         if !self.thumbs.contains_key(&key) {
@@ -450,7 +518,15 @@ impl Ember {
         w::fullscreen_button(ui, fs_x, y + (h - 22.0) / 2.0, fs, false);
         if !sub.is_empty() {
             let sx = xx + m::SP3;
-            ui.text_in(sub, Font::SMALL, sx, ty + 1.0, (fs_x - m::SP3 - sx).max(0.0), Align::Left, c.muted);
+            ui.text_in(
+                sub,
+                Font::SMALL,
+                sx,
+                ty + 1.0,
+                (fs_x - m::SP3 - sx).max(0.0),
+                Align::Left,
+                c.muted,
+            );
         }
         h
     }
@@ -460,7 +536,11 @@ impl Ember {
         let f = Font::new(size);
         let mut xx = x;
         for i in 0..3 {
-            let col = if i < n { star(c.dark) } else { c.muted.opacity(0.45) };
+            let col = if i < n {
+                star(c.dark)
+            } else {
+                c.muted.opacity(0.45)
+            };
             xx += ui.text("★", f, xx, y, col) + 1.0;
         }
         xx - x
@@ -469,7 +549,11 @@ impl Ember {
     fn pips(ui: &mut Ui, x: f32, y: f32, n: u32) -> f32 {
         let c = ui.c;
         for i in 0..5 {
-            let col = if i < n { fire(c.dark) } else { c.muted.opacity(0.3) };
+            let col = if i < n {
+                fire(c.dark)
+            } else {
+                c.muted.opacity(0.3)
+            };
             ui.round(Rect::new(x + i as f32 * 5.0, y, 3.0, 9.0), 1.0, col);
         }
         23.0
@@ -507,7 +591,10 @@ impl Ember {
             ui.clip(grid);
             let k = (2.0 * (ui.px_per_dip.round()).max(1.0)).min(4.0) as f64;
             for (i, card) in self.cards.clone().iter().enumerate() {
-                let (cx, cy) = (x + (i % cols) as f32 * (cw + gap), yy + (i / cols) as f32 * (card_h + gap) - self.scroll);
+                let (cx, cy) = (
+                    x + (i % cols) as f32 * (cw + gap),
+                    yy + (i / cols) as f32 * (card_h + gap) - self.scroll,
+                );
                 let r = Rect::new(cx, cy, cw, card_h);
                 if r.bottom() < grid.y || r.y > grid.bottom() {
                     continue;
@@ -533,7 +620,18 @@ impl Ember {
                     g.draw_image(img.as_ref(), 0.0, 0.0, g.width, g.height);
                     // the thumbnail's rounded corners
                     let rad = 4.0 * f64::from(ui.px_per_dip);
-                    corners(&mut g, rad, Col::rgba(0.0, 0.0, 0.0, 0.0), rgba_col(if on { c.bg.mix(0.92, c.ink) } else if hover { c.bg.mix(0.95, c.ink) } else { c.bg }));
+                    corners(
+                        &mut g,
+                        rad,
+                        Col::rgba(0.0, 0.0, 0.0, 0.0),
+                        rgba_col(if on {
+                            c.bg.mix(0.92, c.ink)
+                        } else if hover {
+                            c.bg.mix(0.95, c.ink)
+                        } else {
+                            c.bg
+                        }),
+                    );
                     g.finish();
                 }
                 ui.sync_transform();
@@ -542,7 +640,12 @@ impl Ember {
                     let label = format!("{} stages", card.stages);
                     let f = Font::new(10.0);
                     let (lw, lh) = ui.measure(&label, f);
-                    let pill = Rect::new(tr.right() - lw - 10.0 - 3.0, tr.bottom() - 15.0 - 3.0, lw + 10.0, 15.0);
+                    let pill = Rect::new(
+                        tr.right() - lw - 10.0 - 3.0,
+                        tr.bottom() - 15.0 - 3.0,
+                        lw + 10.0,
+                        15.0,
+                    );
                     ui.round(pill, 7.5, c.bg.opacity(0.82));
                     ui.text(&label, f, pill.x + 5.0, pill.y + (15.0 - lh) / 2.0, c.ink);
                 }
@@ -550,10 +653,24 @@ impl Ember {
                 let num = format!("{}", i + 1);
                 let fd = Font::digits(m::FS_SMALL, true);
                 let nw = ui.text(&num, fd, cx + 5.0, ny, c.muted);
-                ui.text_in(&format!(" {}", card.name), Font::digits(m::FS_SMALL, false), cx + 5.0 + nw, ny, cw - 10.0 - nw, Align::Left, c.ink);
+                ui.text_in(
+                    &format!(" {}", card.name),
+                    Font::digits(m::FS_SMALL, false),
+                    cx + 5.0 + nw,
+                    ny,
+                    cw - 10.0 - nw,
+                    Align::Left,
+                    c.ink,
+                );
                 let sy = ny + 17.0 + 3.0;
                 let mut sx = cx + 5.0;
-                sx += Self::stars(ui, sx, sy, card.best.as_ref().map_or(0, |b| b.stars), m::FS_CAPTION) + m::SP2;
+                sx += Self::stars(
+                    ui,
+                    sx,
+                    sy,
+                    card.best.as_ref().map_or(0, |b| b.stars),
+                    m::FS_CAPTION,
+                ) + m::SP2;
                 if let Some(t) = card.best.as_ref().and_then(|b| b.secs_text.clone()) {
                     ui.text(&t, Font::digits(m::FS_CAPTION, false), sx, sy, c.muted);
                 }
@@ -568,7 +685,11 @@ impl Ember {
         if let Some(card) = self.cards.get(shown).cloned() {
             yy += self.detail(ui, x, yy, width, shown, &card) + m::SP2;
         }
-        let note = self.note.as_ref().map(|n| format!("{n} · ")).unwrap_or_default();
+        let note = self
+            .note
+            .as_ref()
+            .map(|n| format!("{n} · "))
+            .unwrap_or_default();
         let you = match self.me {
             Some(0) => "you’re ember · ",
             Some(_) => "you’re frost · ",
@@ -588,22 +709,43 @@ impl Ember {
         let f = Font::digits(m::FS_SMALL, false);
         let fb = Font::digits(m::FS_SMALL, true);
         // the parts, measured, then centred
-        let mut parts: Vec<(String, Font, Rgba)> = vec![(format!("{}", i + 1), fb, c.muted), (format!(" {}", card.name), fb, c.ink)];
-        let mut tail: Vec<(String, Font, Rgba)> = vec![(card.length.clone(), f, c.muted), (format!("target {}", card.par_text), f, c.muted)];
+        let mut parts: Vec<(String, Font, Rgba)> = vec![
+            (format!("{}", i + 1), fb, c.muted),
+            (format!(" {}", card.name), fb, c.ink),
+        ];
+        let mut tail: Vec<(String, Font, Rgba)> = vec![
+            (card.length.clone(), f, c.muted),
+            (format!("target {}", card.par_text), f, c.muted),
+        ];
         let mut best_stars = None;
         match &card.best {
             Some(b) => {
-                tail.push((format!("best {}", b.secs_text.clone().unwrap_or_else(|| "–".into())), f, c.ink));
+                tail.push((
+                    format!("best {}", b.secs_text.clone().unwrap_or_else(|| "–".into())),
+                    f,
+                    c.ink,
+                ));
                 best_stars = Some(b.stars);
                 if card.gem_total > 0 {
-                    tail.push((format!("gems {}/{}", b.gems.min(card.gem_total), card.gem_total), f, c.muted));
+                    tail.push((
+                        format!("gems {}/{}", b.gems.min(card.gem_total), card.gem_total),
+                        f,
+                        c.muted,
+                    ));
                 }
                 if let Some(d) = b.deaths {
                     tail.push((qcalc_core::games::ember::panel::deaths_text(d), f, c.muted));
                 }
             }
             None => tail.push((
-                format!("not finished yet{}", if card.gem_total > 0 { format!(" · {} gems", card.gem_total) } else { String::new() }),
+                format!(
+                    "not finished yet{}",
+                    if card.gem_total > 0 {
+                        format!(" · {} gems", card.gem_total)
+                    } else {
+                        String::new()
+                    }
+                ),
                 f,
                 c.muted,
             )),
@@ -650,8 +792,22 @@ impl Ember {
         let cx = r.x + r.w / 2.0;
         let cy = r.y + r.h / 2.0;
         ui.push_transform(k, cx - cx * k, cy - cy * k);
-        ui.round(r, 9.0, if on { c.accent.opacity(0.16) } else { c.fill_track() });
-        ui.text(text, f, r.x + 6.0, r.y + (18.0 - th) / 2.0, if on { c.accent } else { c.muted });
+        ui.round(
+            r,
+            9.0,
+            if on {
+                c.accent.opacity(0.16)
+            } else {
+                c.fill_track()
+            },
+        );
+        ui.text(
+            text,
+            f,
+            r.x + 6.0,
+            r.y + (18.0 - th) / 2.0,
+            if on { c.accent } else { c.muted },
+        );
         ui.pop_transform();
         r.w
     }
@@ -672,23 +828,52 @@ impl Ember {
             let ty = yy + (row - th) / 2.0;
             // the clock at the right first, so the rest knows its room
             let fd = Font::digits(m::FS_SMALL, true);
-            let par = if card.is_some() { format!(" / {}", fmt_par(card.as_ref().map_or(0.0, |c| c.par))) } else { String::new() };
+            let par = if card.is_some() {
+                format!(" / {}", fmt_par(card.as_ref().map_or(0.0, |c| c.par)))
+            } else {
+                String::new()
+            };
             let (cw1, _) = ui.measure(&h.clock, fd);
             let (cw2, _) = ui.measure(&par, Font::digits(m::FS_SMALL, false));
             let clock_x = x + width - cw1 - cw2;
-            ui.text(&h.clock, fd, clock_x, ty, if h.over { c.muted } else { c.ink });
-            ui.text(&par, Font::digits(m::FS_SMALL, false), clock_x + cw1, ty, c.muted);
+            ui.text(
+                &h.clock,
+                fd,
+                clock_x,
+                ty,
+                if h.over { c.muted } else { c.ink },
+            );
+            ui.text(
+                &par,
+                Font::digits(m::FS_SMALL, false),
+                clock_x + cw1,
+                ty,
+                c.muted,
+            );
             let mut xx = x;
             let num = format!("{}", self.level + 1);
             xx += ui.text(&num, fb, xx, ty, c.muted);
-            let name = format!(" {}", self.cat.defs.get(self.level).map_or("", |d| d.name.as_str()));
+            let name = format!(
+                " {}",
+                self.cat
+                    .defs
+                    .get(self.level)
+                    .map_or("", |d| d.name.as_str())
+            );
             let (nw, _) = ui.measure(&name, f);
             let nw = nw.min(220.0);
             ui.text_in(&name, f, xx, ty, nw, Align::Left, c.ink);
             xx += nw + m::SP3;
             let cy = yy + (row - 18.0) / 2.0;
             if h.stages > 1 {
-                xx += self.chip(ui, xx, cy, &format!("stage {}/{}", h.stage + 1, h.stages), false, 0.0) + m::SP3;
+                xx += self.chip(
+                    ui,
+                    xx,
+                    cy,
+                    &format!("stage {}/{}", h.stage + 1, h.stages),
+                    false,
+                    0.0,
+                ) + m::SP3;
             }
             if h.cps > 0 {
                 let on = h.cp >= 0;
@@ -707,7 +892,14 @@ impl Ember {
                 if on && e < 0.7 {
                     ui.animate();
                 }
-                xx += self.chip(ui, xx, cy, &format!("⚑ {}/{}", (h.cp + 1).max(0), h.cps), on, pop) + m::SP3;
+                xx += self.chip(
+                    ui,
+                    xx,
+                    cy,
+                    &format!("⚑ {}/{}", (h.cp + 1).max(0), h.cps),
+                    on,
+                    pop,
+                ) + m::SP3;
             }
             let total = h.total[0] + h.total[1];
             if total > 0 {
@@ -723,10 +915,20 @@ impl Ember {
                 xx += m::SP3;
             }
             if h.deaths > 0 {
-                xx += ui.text(&qcalc_core::games::ember::panel::deaths_text(h.deaths), f, xx, ty, c.muted) + m::SP3;
+                xx += ui.text(
+                    &qcalc_core::games::ember::panel::deaths_text(h.deaths),
+                    f,
+                    xx,
+                    ty,
+                    c.muted,
+                ) + m::SP3;
             }
             if let Some(me) = self.me {
-                let (word, col) = if me == 0 { ("you’re ember", fire(dark)) } else { ("you’re frost", frost(dark)) };
+                let (word, col) = if me == 0 {
+                    ("you’re ember", fire(dark))
+                } else {
+                    ("you’re frost", frost(dark))
+                };
                 ui.text(word, fb, xx, ty, col);
             }
             yy += row + m::SP2;
@@ -767,7 +969,10 @@ impl Ember {
                             alpha: self.alpha,
                             events: &events,
                             now_ms: env.now(),
-                            opts: DrawOpts { me: self.me, reduce_motion: false },
+                            opts: DrawOpts {
+                                me: self.me,
+                                reduce_motion: false,
+                            },
                         };
                         r.draw(&mut g, &input);
                     }
@@ -787,10 +992,18 @@ impl Ember {
         yy += ch + m::SP2;
         let line = format!(
             "{} · S/↓ use · R checkpoint · ⇧R restart level · M {} · {}{}",
-            if self.online { "WASD or arrows" } else { "ember WASD · frost arrows" },
+            if self.online {
+                "WASD or arrows"
+            } else {
+                "ember WASD · frost arrows"
+            },
             if self.muted { "unmute" } else { "mute" },
             fullscreen_hint(false, env.shell.fullscreen, true),
-            if env.shell.fullscreen { "" } else { " · esc levels" }
+            if env.shell.fullscreen {
+                ""
+            } else {
+                " · esc levels"
+            }
         );
         let (_, lh) = ui.measure(&line, Font::SMALL);
         ui.text_in(&line, Font::SMALL, x, yy, width, Align::Center, c.muted);
@@ -812,7 +1025,11 @@ impl Ember {
                 let k = (e / 0.18).min(1.0);
                 (k, 4.0 * (1.0 - k))
             } else {
-                let d = if matches!(b.kind, BannerKind::Flag | BannerKind::Back) { 2.4 } else { 4.2 };
+                let d = if matches!(b.kind, BannerKind::Flag | BannerKind::Back) {
+                    2.4
+                } else {
+                    4.2
+                };
                 let p = e / d;
                 if p < 0.08 {
                     let k = p / 0.08;
@@ -826,7 +1043,11 @@ impl Ember {
             if o > 0.0 {
                 ui.animate();
                 let flag = b.kind == BannerKind::Flag;
-                let fbase = if flag { Font::bold(m::FS_BODY) } else { Font::BODY };
+                let fbase = if flag {
+                    Font::bold(m::FS_BODY)
+                } else {
+                    Font::BODY
+                };
                 let mut runs: Vec<(String, Font, Rgba)> = Vec::new();
                 let ink = if flag { c.accent } else { c.ink };
                 if flag {
@@ -840,7 +1061,14 @@ impl Ember {
                 }
                 runs.push((b.text.clone(), fbase, ink));
                 let was = ui.set_alpha(o as f32);
-                pill_runs(ui, area.x + area.w / 2.0, area.y + m::SP3 + dy as f32, area.w - 2.0 * m::SP3, &runs, true);
+                pill_runs(
+                    ui,
+                    area.x + area.w / 2.0,
+                    area.y + m::SP3 + dy as f32,
+                    area.w - 2.0 * m::SP3,
+                    &runs,
+                    true,
+                );
                 ui.set_alpha(was);
             }
         }
@@ -848,27 +1076,62 @@ impl Ember {
         if phase == Some(Phase::Clear) {
             let e = t - self.card_at.1;
             let title = format!("stage {} clear", h.stage + 1);
-            let note = if h.stage + 2 >= h.stages { "the last stage is next".to_string() } else { format!("stage {} of {} is next", h.stage + 2, h.stages) };
-            self.win_card(ui, area, e, &title, None, &[], &[(note, Font::SMALL, c.muted)]);
+            let note = if h.stage + 2 >= h.stages {
+                "the last stage is next".to_string()
+            } else {
+                format!("stage {} of {} is next", h.stage + 2, h.stages)
+            };
+            self.win_card(
+                ui,
+                area,
+                e,
+                &title,
+                None,
+                &[],
+                &[(note, Font::SMALL, c.muted)],
+            );
         }
         if phase == Some(Phase::Won)
             && let (Some(sc), Some(card)) = (&h.score, card)
         {
             let e = t - self.card_at.1;
             let par = self.cat.defs.get(self.level).map_or(card.par, |d| d.par);
-            let (_, new, foot) = win_lines(sc, par, h.deaths, h.fresh.as_ref(), self.level + 1 >= self.cat.len());
+            let (_, new, foot) = win_lines(
+                sc,
+                par,
+                h.deaths,
+                h.fresh.as_ref(),
+                self.level + 1 >= self.cat.len(),
+            );
             let got = sc.gems[0] + sc.gems[1];
             let all = sc.total[0] + sc.total[1];
             let fd = Font::digits(m::FS_BODY, false);
             let fdb = Font::digits(m::FS_BODY, true);
             let fast = sc.secs <= par;
-            let mut line: Vec<(String, Font, Rgba)> =
-                vec![(fmt_time(sc.secs), if fast { fdb } else { fd }, if fast { c.accent } else { c.ink }), (format!(" / {}", card.par_text), fd, c.muted)];
+            let mut line: Vec<(String, Font, Rgba)> = vec![
+                (
+                    fmt_time(sc.secs),
+                    if fast { fdb } else { fd },
+                    if fast { c.accent } else { c.ink },
+                ),
+                (format!(" / {}", card.par_text), fd, c.muted),
+            ];
             if all > 0 {
                 line.push((" · ".into(), fd, c.ink));
-                line.push((format!("gems {got}/{all}"), if got == all { fdb } else { fd }, if got == all { c.accent } else { c.ink }));
+                line.push((
+                    format!("gems {got}/{all}"),
+                    if got == all { fdb } else { fd },
+                    if got == all { c.accent } else { c.ink },
+                ));
             }
-            line.push((format!(" · {}", qcalc_core::games::ember::panel::deaths_text(h.deaths)), fd, c.ink));
+            line.push((
+                format!(
+                    " · {}",
+                    qcalc_core::games::ember::panel::deaths_text(h.deaths)
+                ),
+                fd,
+                c.ink,
+            ));
             let mut rest: Vec<(String, Font, Rgba)> = Vec::new();
             if let Some(n) = new {
                 rest.push((n, Font::bold(m::FS_SMALL), c.accent));
@@ -878,11 +1141,22 @@ impl Ember {
         }
         if let Some(note) = &self.note {
             let (_, th) = ui.measure(note, Font::SMALL);
-            pill_runs(ui, area.x + area.w / 2.0, area.bottom() - m::SP3 - th - 10.0, area.w - 2.0 * m::SP3, &[(note.clone(), Font::SMALL, c.muted)], true);
+            pill_runs(
+                ui,
+                area.x + area.w / 2.0,
+                area.bottom() - m::SP3 - th - 10.0,
+                area.w - 2.0 * m::SP3,
+                &[(note.clone(), Font::SMALL, c.muted)],
+                true,
+            );
         }
         // the full-screen tip in the corner: there for a few seconds, then gone
         let e = t - self.tip_at.1;
-        let o = if e < 5.0 { 1.0 } else { 1.0 - ((e - 5.0) / 0.6).min(1.0) };
+        let o = if e < 5.0 {
+            1.0
+        } else {
+            1.0 - ((e - 5.0) / 0.6).min(1.0)
+        };
         if o > 0.0 {
             if o < 1.0 || e < 5.0 {
                 ui.animate();
@@ -890,7 +1164,12 @@ impl Ember {
             let tip = fullscreen_hint(false, env.shell.fullscreen, true);
             let f = Font::CAPTION;
             let (tw, th) = ui.measure(&tip, f);
-            let r = Rect::new(area.right() - m::SP2 - tw - 2.0 * m::SP2, area.bottom() - m::SP2 - th - 4.0, tw + 2.0 * m::SP2, th + 4.0);
+            let r = Rect::new(
+                area.right() - m::SP2 - tw - 2.0 * m::SP2,
+                area.bottom() - m::SP2 - th - 4.0,
+                tw + 2.0 * m::SP2,
+                th + 4.0,
+            );
             let was = ui.set_alpha(o as f32);
             ui.round(r, r.h / 2.0, c.bg.opacity(0.78));
             ui.text(&tip, f, r.x + m::SP2, r.y + 2.0, c.muted);
@@ -900,7 +1179,16 @@ impl Ember {
 
     /// EmberCard: springs in; a gradient title, the stars, a line, and the rest
     #[allow(clippy::too_many_arguments)]
-    fn win_card(&self, ui: &mut Ui, area: Rect, e: f64, title: &str, stars: Option<i64>, line: &[(String, Font, Rgba)], rest: &[(String, Font, Rgba)]) {
+    fn win_card(
+        &self,
+        ui: &mut Ui,
+        area: Rect,
+        e: f64,
+        title: &str,
+        stars: Option<i64>,
+        line: &[(String, Font, Rgba)],
+        rest: &[(String, Font, Rgba)],
+    ) {
         let c = ui.c;
         let k = spring(e, 260.0, 18.0);
         if e < 2.0 {
@@ -909,10 +1197,21 @@ impl Ember {
         let tf = Font::bold(18.0);
         let (ttw, tth) = ui.measure(title, tf);
         let line_w: f32 = line.iter().map(|p| ui.measure(&p.0, p.1).0).sum();
-        let line_h = if line.is_empty() { 0.0 } else { ui.measure("Ag", Font::digits(m::FS_BODY, false)).1 };
+        let line_h = if line.is_empty() {
+            0.0
+        } else {
+            ui.measure("Ag", Font::digits(m::FS_BODY, false)).1
+        };
         let rest_sizes: Vec<(f32, f32)> = rest.iter().map(|p| ui.measure(&p.0, p.1)).collect();
         let star_h = if stars.is_some() { 40.0 } else { 0.0 };
-        let mut wdt = ttw.max(line_w).max(rest_sizes.iter().map(|s| s.0).fold(0.0, f32::max)).max(if stars.is_some() { 3.0 * 30.0 + 12.0 } else { 0.0 });
+        let mut wdt = ttw
+            .max(line_w)
+            .max(rest_sizes.iter().map(|s| s.0).fold(0.0, f32::max))
+            .max(if stars.is_some() {
+                3.0 * 30.0 + 12.0
+            } else {
+                0.0
+            });
         wdt = (wdt + 2.0 * m::SP5).max(260.0).min(area.w - 16.0);
         let mut ht = m::SP4 + tth;
         if stars.is_some() {
@@ -925,7 +1224,12 @@ impl Ember {
             ht += m::SP2 + s.1;
         }
         ht += m::SP4;
-        let r = Rect::new(area.x + (area.w - wdt) / 2.0, area.y + (area.h - ht) / 2.0, wdt, ht);
+        let r = Rect::new(
+            area.x + (area.w - wdt) / 2.0,
+            area.y + (area.h - ht) / 2.0,
+            wdt,
+            ht,
+        );
         let scale = 0.9 + 0.1 * k as f32;
         let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
         let was = ui.set_alpha((k as f32).clamp(0.0, 1.0));
@@ -933,7 +1237,11 @@ impl Ember {
         // a soft drop under the card
         for i in 0..4 {
             let g = 2.0 + i as f32 * 3.0;
-            ui.round(Rect::new(r.x - g / 2.0, r.y + 6.0, r.w + g, r.h + g / 2.0), 10.0 + g, Rgba::hex(0x000000, 0.03));
+            ui.round(
+                Rect::new(r.x - g / 2.0, r.y + 6.0, r.w + g, r.h + g / 2.0),
+                10.0 + g,
+                Rgba::hex(0x000000, 0.03),
+            );
         }
         ui.card_shadow(r, 10.0);
         ui.round(r, 10.0, c.bg.opacity(0.92));
@@ -949,8 +1257,16 @@ impl Ember {
             let mut sx = cx - total / 2.0;
             for i in 0..3 {
                 let got = i < n;
-                let col = if got { star(c.dark) } else { c.muted.opacity(0.45) };
-                let p = if got { spring(e - 0.18 - f64::from(i as i32) * 0.16, 300.0, 12.0) } else { 1.0 };
+                let col = if got {
+                    star(c.dark)
+                } else {
+                    c.muted.opacity(0.45)
+                };
+                let p = if got {
+                    spring(e - 0.18 - f64::from(i as i32) * 0.16, 300.0, 12.0)
+                } else {
+                    1.0
+                };
                 if got && p < 1.2 && e < 3.0 {
                     ui.animate();
                 }
@@ -987,7 +1303,12 @@ impl Ember {
 }
 
 fn rgba_col(c: Rgba) -> Col {
-    Col::rgba(f64::from(c.r) * 255.0, f64::from(c.g) * 255.0, f64::from(c.b) * 255.0, f64::from(c.a))
+    Col::rgba(
+        f64::from(c.r) * 255.0,
+        f64::from(c.g) * 255.0,
+        f64::from(c.b) * 255.0,
+        f64::from(c.a),
+    )
 }
 
 /// The four corners outside a rounded rect of radius `r`, filled with `outside` (the window's background), so a
@@ -1015,7 +1336,14 @@ fn corners(g: &mut Canvas, r: f64, _inside: Col, outside: Col) {
 }
 
 /// A capsule of runs centred on cx with its top at y (the banner, the note).
-fn pill_runs(ui: &mut Ui, cx: f32, y: f32, max_w: f32, runs: &[(String, Font, Rgba)], shadow: bool) {
+fn pill_runs(
+    ui: &mut Ui,
+    cx: f32,
+    y: f32,
+    max_w: f32,
+    runs: &[(String, Font, Rgba)],
+    shadow: bool,
+) {
     let c = ui.c;
     let sizes: Vec<(f32, f32)> = runs.iter().map(|p| ui.measure(&p.0, p.1)).collect();
     let tw: f32 = sizes.iter().map(|s| s.0).sum();
@@ -1026,7 +1354,12 @@ fn pill_runs(ui: &mut Ui, cx: f32, y: f32, max_w: f32, runs: &[(String, Font, Rg
         ui.card_shadow(r, r.h / 2.0);
     }
     ui.round(r, r.h / 2.0, c.bg);
-    ui.clip(Rect::new(r.x + m::SP3, r.y, (w - 2.0 * m::SP3).max(0.0), r.h));
+    ui.clip(Rect::new(
+        r.x + m::SP3,
+        r.y,
+        (w - 2.0 * m::SP3).max(0.0),
+        r.h,
+    ));
     let mut x = r.x + m::SP3;
     for (p, s) in runs.iter().zip(&sizes) {
         x += ui.text(&p.0, p.1, x, r.y + 5.0 + (th - s.1), p.2);
@@ -1083,7 +1416,13 @@ fn gems(ui: &mut Ui, x: f32, y: f32, row: f32, got: [i64; 2], total: [i64; 2], d
         if total[k] > 0 {
             gem_glyph(ui, xx, cy, col, got[k] == total[k]);
             xx += 7.0 + 5.0;
-            xx += ui.text(&format!("{}/{}", got[k], total[k]), fd, xx, cy - th / 2.0, col) + m::SP2;
+            xx += ui.text(
+                &format!("{}/{}", got[k], total[k]),
+                fd,
+                xx,
+                cy - th / 2.0,
+                col,
+            ) + m::SP2;
         }
     }
     xx - x
@@ -1102,7 +1441,11 @@ impl Play for Ember {
         if self.done {
             return 0.0;
         }
-        let sub = if self.online { format!("with {}", self.peer) } else { "same keyboard".to_string() };
+        let sub = if self.online {
+            format!("with {}", self.peer)
+        } else {
+            "same keyboard".to_string()
+        };
         match self.screen {
             Screen::Play => {
                 ui.animate();
@@ -1113,13 +1456,30 @@ impl Play for Ember {
                 h + self.paint_select(ui, x, y + h, width, env)
             }
             Screen::Wait => {
-                let mut h = self.head(ui, x, y, width, if self.online { &sub } else { "" }, env.shell.fullscreen);
-                let text = if self.online { format!("waiting for {}…", self.peer) } else { "getting ready…".to_string() };
+                let mut h = self.head(
+                    ui,
+                    x,
+                    y,
+                    width,
+                    if self.online { &sub } else { "" },
+                    env.shell.fullscreen,
+                );
+                let text = if self.online {
+                    format!("waiting for {}…", self.peer)
+                } else {
+                    "getting ready…".to_string()
+                };
                 let (_, th) = ui.measure(&text, Font::BODY);
                 let a = w::wait_alpha(ui);
                 let was = ui.set_alpha(a);
                 let c = ui.c;
-                ui.text_center(&text, Font::BODY, x + width / 2.0, y + h + (168.0 - th) / 2.0, c.muted);
+                ui.text_center(
+                    &text,
+                    Font::BODY,
+                    x + width / 2.0,
+                    y + h + (168.0 - th) / 2.0,
+                    c.muted,
+                );
                 ui.set_alpha(was);
                 h += 168.0;
                 h
@@ -1147,7 +1507,8 @@ impl Play for Ember {
             self.held.insert(k.code.clone());
             self.push();
         }
-        let bar_key = k.is_char() || k.key == "Enter" || k.key.starts_with("Arrow") || k.key == "Backspace";
+        let bar_key =
+            k.is_char() || k.key == "Enter" || k.key.starts_with("Arrow") || k.key == "Backspace";
         if screen == Screen::Select {
             if let Some((_, b)) = mv {
                 match b {
@@ -1190,7 +1551,9 @@ impl Play for Ember {
             }
         } else if key == "m" {
             self.tracker.toggle_mute();
-        } else if (k.key == "Enter" || k.key == " ") && self.hud.as_ref().and_then(|h| h.phase) == Some(Phase::Won) {
+        } else if (k.key == "Enter" || k.key == " ")
+            && self.hud.as_ref().and_then(|h| h.phase) == Some(Phase::Won)
+        {
             self.game.next();
         }
         self.flush(env);
@@ -1210,7 +1573,9 @@ impl Play for Ember {
                 self.game.receive(data, env.now());
                 self.flush(env);
             }
-            PeerEvent::Closed { reason } => self.finish(Some(close_reason_text(*reason, OnlinePeer::PEER_WORD)), env),
+            PeerEvent::Closed { reason } => {
+                self.finish(Some(close_reason_text(*reason, OnlinePeer::PEER_WORD)), env)
+            }
             _ => {}
         }
     }

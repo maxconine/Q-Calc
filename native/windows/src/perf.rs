@@ -162,14 +162,18 @@ mod on {
 
     /// Live allocations of at least `BIG` bytes, with where they were made (QCALC_PERF_BIG=1).
     const BIG: usize = 64 * 1024;
-    pub static BIGS: std::sync::Mutex<Vec<(usize, usize, String)>> = std::sync::Mutex::new(Vec::new());
+    pub static BIGS: std::sync::Mutex<Vec<(usize, usize, String)>> =
+        std::sync::Mutex::new(Vec::new());
     static TRACK: OnceLock<bool> = OnceLock::new();
     thread_local! {
         static INSIDE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     }
 
     fn track_big(p: *mut u8, n: usize) {
-        if n < BIG || p.is_null() || !*TRACK.get_or_init(|| std::env::var_os("QCALC_PERF_BIG").is_some()) {
+        if n < BIG
+            || p.is_null()
+            || !*TRACK.get_or_init(|| std::env::var_os("QCALC_PERF_BIG").is_some())
+        {
             return;
         }
         if INSIDE.with(|i| i.replace(true)) {
@@ -178,7 +182,12 @@ mod on {
         let bt = std::backtrace::Backtrace::force_capture().to_string();
         let frames: Vec<&str> = bt
             .lines()
-            .filter(|l| l.trim_start().chars().next().is_some_and(|c| c.is_ascii_digit()))
+            .filter(|l| {
+                l.trim_start()
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_ascii_digit())
+            })
             .map(|l| l.split_once(": ").map_or(l, |(_, f)| f))
             .filter(|f| {
                 !f.starts_with("std::")
@@ -290,7 +299,9 @@ pub fn cmd(cmd: &str) -> Option<serde_json::Value> {
         "vm" => Some(vm()),
         #[cfg(feature = "perf")]
         "threads" => Some(threads()),
-        "shows" => Some(serde_json::json!(SHOWS.lock().map(|s| s.clone()).unwrap_or_default())),
+        "shows" => Some(serde_json::json!(
+            SHOWS.lock().map(|s| s.clone()).unwrap_or_default()
+        )),
         _ => None,
     }
 }
@@ -325,12 +336,20 @@ fn threads() -> serde_json::Value {
         let mut addr = 0usize;
         // SAFETY: out pointers are live locals; the module handle isn't kept
         unsafe {
-            if NtQueryInformationThread(h, 9, (&mut addr as *mut usize).cast(), 8, std::ptr::null_mut()) != 0 {
+            if NtQueryInformationThread(
+                h,
+                9,
+                (&mut addr as *mut usize).cast(),
+                8,
+                std::ptr::null_mut(),
+            ) != 0
+            {
                 return None;
             }
             let mut m = windows::Win32::Foundation::HMODULE::default();
             GetModuleHandleExW(
-                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS
+                    | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 windows::core::PCWSTR(addr as *const u16),
                 &mut m,
             )

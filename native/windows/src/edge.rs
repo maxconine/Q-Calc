@@ -90,7 +90,9 @@ impl Tool {
             Tool::Clear => "Clear history and variables".to_string(),
         };
         match keybinds.chord_for(self.action()) {
-            Some(chord) if !chord.is_empty() => format!("{text} · {}", crate::hotkey::title(&chord)),
+            Some(chord) if !chord.is_empty() => {
+                format!("{text} · {}", crate::hotkey::title(&chord))
+            }
             _ => text,
         }
     }

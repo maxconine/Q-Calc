@@ -61,7 +61,8 @@ pub fn game_id(kind: GameKind) -> &'static str {
 /// core's precompiled ones.
 pub fn parse(raw: &str) -> Option<Command> {
     let trimmed = raw.trim();
-    if trimmed.is_empty() || !trimmed.bytes().any(|b| b.is_ascii_alphabetic()) || !could_be(trimmed) {
+    if trimmed.is_empty() || !trimmed.bytes().any(|b| b.is_ascii_alphabetic()) || !could_be(trimmed)
+    {
         return None;
     }
     // a command is a few words; a long line is maths (or a message, checked on the raw text below)
@@ -113,10 +114,47 @@ pub fn parse(raw: &str) -> Option<Command> {
 /// rules' regexes (compiled at their first use, a few hundred KB) are never asked. Keep in step with the core's
 /// `games`, `identities`, `messaging`, `tour` and `greeting` rules.
 const STEMS: [&str; 41] = [
-    "periodic", "identit", "idt", "trig", "log", "exponent", "algebra", "math", "conversion", "unit", "metric",
-    "si", "prefix", "common", "derivative", "differentiation", "integra", "antiderivative", "calculus", "physic",
-    "fundamental", "constant", "codata", "partial", "game", "pong", "connect", "ultimate", "uttt", "ember",
-    "frost", "fire", "crack", "safe", "equal", "nerdle", "24", "count", "numbers", "trail", "cycles",
+    "periodic",
+    "identit",
+    "idt",
+    "trig",
+    "log",
+    "exponent",
+    "algebra",
+    "math",
+    "conversion",
+    "unit",
+    "metric",
+    "si",
+    "prefix",
+    "common",
+    "derivative",
+    "differentiation",
+    "integra",
+    "antiderivative",
+    "calculus",
+    "physic",
+    "fundamental",
+    "constant",
+    "codata",
+    "partial",
+    "game",
+    "pong",
+    "connect",
+    "ultimate",
+    "uttt",
+    "ember",
+    "frost",
+    "fire",
+    "crack",
+    "safe",
+    "equal",
+    "nerdle",
+    "24",
+    "count",
+    "numbers",
+    "trail",
+    "cycles",
 ];
 
 const MORE_STEMS: [&str; 6] = ["message", "tutorial", "tour", "skip", "hello", "hiya"];
@@ -128,7 +166,11 @@ fn could_be(trimmed: &str) -> bool {
         .flat_map(char::to_lowercase)
         .collect();
     !first.is_empty()
-        && (STEMS.iter().chain(&MORE_STEMS).any(|s| first.starts_with(s)) || first == "howdy")
+        && (STEMS
+            .iter()
+            .chain(&MORE_STEMS)
+            .any(|s| first.starts_with(s))
+            || first == "howdy")
 }
 
 /// The words in the answer slot while `command` is typed (`BarCommand.hint`). `message` is the message line's
@@ -206,7 +248,8 @@ mod ui {
             messaging::check_name(name);
         }
         // a game's `↵ play pong` shows here in the slot, so not again in the hint (games::hint, model.rs)
-        if matches!(command, Command::Game(_)) && m.hint.is_some() && m.hint == games::hint(&typed) {
+        if matches!(command, Command::Game(_)) && m.hint.is_some() && m.hint == games::hint(&typed)
+        {
             m.hint = None;
         }
         m.command = Some(Shown { command, message });
@@ -570,13 +613,31 @@ mod tests {
         assert_eq!(parse("skip"), Some(Command::Skip));
         assert_eq!(parse("hello!"), Some(Command::Greeting));
         assert_eq!(parse("Game of 24"), Some(Command::Game(GameKind::Numbers)));
-        assert_eq!(parse("24 / countdown"), Some(Command::Game(GameKind::Numbers)));
+        assert_eq!(
+            parse("24 / countdown"),
+            Some(Command::Game(GameKind::Numbers))
+        );
         assert_eq!(parse("fire and ice"), Some(Command::Game(GameKind::Ember)));
-        assert!(matches!(parse("physical constants"), Some(Command::Identities { .. })));
-        assert!(matches!(parse("si prefixes"), Some(Command::Identities { .. })));
-        assert!(matches!(parse("units table"), Some(Command::Identities { .. })));
-        assert!(matches!(parse("common integrals"), Some(Command::Identities { .. })));
-        assert!(matches!(parse("logarithm identities"), Some(Command::Identities { .. })));
+        assert!(matches!(
+            parse("physical constants"),
+            Some(Command::Identities { .. })
+        ));
+        assert!(matches!(
+            parse("si prefixes"),
+            Some(Command::Identities { .. })
+        ));
+        assert!(matches!(
+            parse("units table"),
+            Some(Command::Identities { .. })
+        ));
+        assert!(matches!(
+            parse("common integrals"),
+            Some(Command::Identities { .. })
+        ));
+        assert!(matches!(
+            parse("logarithm identities"),
+            Some(Command::Identities { .. })
+        ));
         assert_eq!(parse("howdy"), Some(Command::Greeting));
         assert_eq!(parse("tour"), Some(Command::Tutorial));
         // maths, and the other packages' commands, aren't ours
@@ -625,8 +686,16 @@ mod timing {
     #[ignore]
     fn parse_cost() {
         let inputs = [
-            "2+2", "sin(90)", "72 f to c", "1/3 + 1/6", "sqrt(2)*pi", "5 km in miles", "3x+2=11",
-            "(1+2)*(3+4)/5^2", "20% of 80", "e^(i pi)+1",
+            "2+2",
+            "sin(90)",
+            "72 f to c",
+            "1/3 + 1/6",
+            "sqrt(2)*pi",
+            "5 km in miles",
+            "3x+2=11",
+            "(1+2)*(3+4)/5^2",
+            "20% of 80",
+            "e^(i pi)+1",
         ];
         let mut prefixes = Vec::new();
         for i in inputs {
@@ -647,6 +716,9 @@ mod timing {
             }
         }
         let per = t.elapsed().as_secs_f64() * 1e6 / (rounds * prefixes.len()) as f64;
-        println!("parse: {per:.2} µs a keystroke over {} lines", prefixes.len());
+        println!(
+            "parse: {per:.2} µs a keystroke over {} lines",
+            prefixes.len()
+        );
     }
 }

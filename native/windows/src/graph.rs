@@ -143,7 +143,9 @@ pub fn runs(points: &[GraphPoint], window: [f64; 4]) -> Runs {
     let mut lines = Vec::new();
     let mut dots = Vec::new();
     let mut run: Vec<(f32, f32)> = Vec::new();
-    let flush = |run: &mut Vec<(f32, f32)>, lines: &mut Vec<Vec<(f32, f32)>>, dots: &mut Vec<(f32, f32)>| {
+    let flush = |run: &mut Vec<(f32, f32)>,
+                 lines: &mut Vec<Vec<(f32, f32)>>,
+                 dots: &mut Vec<(f32, f32)>| {
         match run.len() {
             0 => {}
             1 => dots.push(run[0]),
@@ -218,8 +220,18 @@ pub struct Sample {
 }
 
 impl Sample {
-    fn new(r: GraphResult, lo: f64, hi: f64, x_ticks: Vec<GraphTick>, y_ticks: Vec<GraphTick>) -> Sample {
-        let (y0, y1) = if r.y_max > r.y_min { (r.y_min, r.y_max) } else { (-10.0, 10.0) };
+    fn new(
+        r: GraphResult,
+        lo: f64,
+        hi: f64,
+        x_ticks: Vec<GraphTick>,
+        y_ticks: Vec<GraphTick>,
+    ) -> Sample {
+        let (y0, y1) = if r.y_max > r.y_min {
+            (r.y_min, r.y_max)
+        } else {
+            (-10.0, 10.0)
+        };
         Sample {
             serial: SERIAL.fetch_add(1, Ordering::Relaxed),
             window: [lo, hi, y0, y1],
@@ -305,9 +317,8 @@ impl GraphState {
     }
 
     pub fn at_home(&self) -> bool {
-        self.home.is_none_or(|(lo, hi)| {
-            (self.x_min - lo).abs() < 1e-9 && (self.x_max - hi).abs() < 1e-9
-        })
+        self.home
+            .is_none_or(|(lo, hi)| (self.x_min - lo).abs() < 1e-9 && (self.x_max - hi).abs() < 1e-9)
     }
 
     fn label(&self) -> String {
@@ -337,10 +348,13 @@ impl GraphState {
 
     /// Roots and extrema inside the plot, as (x, y, kind).
     fn features(&self) -> Vec<(f64, f64, &'static str)> {
-        let Some(s) = &self.sample else { return Vec::new() };
+        let Some(s) = &self.sample else {
+            return Vec::new();
+        };
         let inside = |x: f64, y: f64| {
             let (vx, vy) = (self.vx(x), self.vy(y));
-            (PAD_LEFT..=PAD_LEFT + PLOT_W).contains(&vx) && (PAD_TOP..=PAD_TOP + PLOT_H).contains(&vy)
+            (PAD_LEFT..=PAD_LEFT + PLOT_W).contains(&vx)
+                && (PAD_TOP..=PAD_TOP + PLOT_H).contains(&vy)
         };
         s.roots
             .iter()
@@ -432,7 +446,11 @@ fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
         );
         let sample = result.map(|r| {
             let x_ticks = cx.engine.graph_ticks(lo, hi, r.angle_unit, 6);
-            let (y0, y1) = if r.y_max > r.y_min { (r.y_min, r.y_max) } else { (-10.0, 10.0) };
+            let (y0, y1) = if r.y_max > r.y_min {
+                (r.y_min, r.y_max)
+            } else {
+                (-10.0, 10.0)
+            };
             let y_ticks = cx.engine.graph_ticks(y0, y1, None, 5);
             Sample::new(r, lo, hi, x_ticks, y_ticks)
         });
@@ -480,7 +498,9 @@ pub fn zoom(m: &mut BarModel, engine: &EngineThread, factor: f64, t: f64) {
 }
 
 pub fn home(m: &mut BarModel, engine: &EngineThread) {
-    let Some((lo, hi)) = m.graph.as_ref().and_then(|g| g.home) else { return };
+    let Some((lo, hi)) = m.graph.as_ref().and_then(|g| g.home) else {
+        return;
+    };
     set_window(m, engine, lo, hi);
 }
 
@@ -496,7 +516,9 @@ pub fn escape(m: &mut BarModel, engine: &EngineThread) -> bool {
 
 /// A one-line summary for the bench pipe's `state`.
 pub fn debug(m: &BarModel) -> serde_json::Value {
-    let Some(g) = &m.graph else { return serde_json::Value::Null };
+    let Some(g) = &m.graph else {
+        return serde_json::Value::Null;
+    };
     let s = g.sample.as_ref();
     serde_json::json!({
         "expression": g.expression, "window": [g.x_min, g.x_max, g.y_min, g.y_max], "home": g.home.map(|h| [h.0, h.1]),
@@ -515,9 +537,9 @@ mod view {
     use super::*;
     use crate::app::App;
     use crate::render::{Canvas, Color, Gfx, Rect, measure, size, with_alpha};
-    use windows::Win32::Foundation::{POINT, WPARAM, LPARAM};
+    use windows::Win32::Foundation::{LPARAM, POINT, WPARAM};
     use windows::Win32::Graphics::Direct2D::Common::{
-        D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN, D2D_RECT_F,
+        D2D_RECT_F, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_OPEN,
     };
     use windows::Win32::Graphics::Direct2D::{
         D2D1_CAP_STYLE_ROUND, D2D1_DASH_STYLE_SOLID, D2D1_ELLIPSE, D2D1_LINE_JOIN_ROUND,
@@ -687,14 +709,20 @@ mod view {
             // .graph-detail: critical points (or "None in this domain"), then roots, as chips
             if let Some(s) = sample.filter(|s| !s.contour) {
                 y += 8.0;
-                let section = |title: &str, items: Vec<(&'static str, String, f64)>, y: &mut f32, geo: &mut Geo, empty: bool| {
+                let section = |title: &str,
+                               items: Vec<(&'static str, String, f64)>,
+                               y: &mut f32,
+                               geo: &mut Geo,
+                               empty: bool| {
                     *y += 12.0;
                     if let Some((l, _)) = lay(gfx, title, &res.caption, 14.0) {
                         geo.titles.push((*y, l));
                     }
                     *y += 14.0 + 6.0;
                     if items.is_empty() {
-                        if empty && let Some((l, _)) = lay(gfx, "None in this domain", &f.small, 16.0) {
+                        if empty
+                            && let Some((l, _)) = lay(gfx, "None in this domain", &f.small, 16.0)
+                        {
                             geo.empty = Some((*y, l));
                             *y += 16.0;
                         }
@@ -708,12 +736,20 @@ mod view {
                             Some((kl, kw, cl, cw, x))
                         })
                         .collect();
-                    let widths: Vec<f32> = built.iter().map(|b| 8.0 + b.1 + 6.0 + b.3 + 8.0).collect();
+                    let widths: Vec<f32> =
+                        built.iter().map(|b| 8.0 + b.1 + 6.0 + b.3 + 8.0).collect();
                     let places = wrap(&widths, inner, CHIP_GAP);
                     let lines = places.last().map_or(0, |p| p.1 + 1);
-                    for ((kl, kw, cl, _, x), ((cx, line), w)) in built.into_iter().zip(places.into_iter().zip(widths)) {
+                    for ((kl, kw, cl, _, x), ((cx, line), w)) in
+                        built.into_iter().zip(places.into_iter().zip(widths))
+                    {
                         geo.chips.push(Chip {
-                            rect: Rect::new(size::GUTTER + cx, *y + line as f32 * (CHIP_H + CHIP_GAP), w, CHIP_H),
+                            rect: Rect::new(
+                                size::GUTTER + cx,
+                                *y + line as f32 * (CHIP_H + CHIP_GAP),
+                                w,
+                                CHIP_H,
+                            ),
                             kind: kl,
                             kind_w: kw,
                             coords: cl,
@@ -727,7 +763,11 @@ mod view {
                     .critical
                     .iter()
                     .map(|c| {
-                        (kind_name(c.kind), format!("({}{deg}, {})", fmt_g(c.x, 8), fmt_g(c.y, 8)), c.x)
+                        (
+                            kind_name(c.kind),
+                            format!("({}{deg}, {})", fmt_g(c.x, 8), fmt_g(c.y, 8)),
+                            c.x,
+                        )
                     })
                     .collect();
                 section("Critical points", crit, &mut y, &mut geo, s.error.is_none());
@@ -774,12 +814,18 @@ mod view {
                     .0
                     .iter()
                     .map(|q| {
-                        let p = |x: f64, y: f64| (((x - x0) / (x1 - x0)) as f32, ((y1 - y) / (y1 - y0)) as f32);
+                        let p = |x: f64, y: f64| {
+                            (((x - x0) / (x1 - x0)) as f32, ((y1 - y) / (y1 - y0)) as f32)
+                        };
                         [p(q[0], q[1]), p(q[2], q[3])]
                     })
                     .collect();
                 let geo = path(gfx, segs.iter().map(|s| s.as_slice()))?;
-                let opacity = if n > 1 { 0.35 + 0.65 * i as f32 / (n - 1) as f32 } else { 1.0 };
+                let opacity = if n > 1 {
+                    0.35 + 0.65 * i as f32 / (n - 1) as f32
+                } else {
+                    1.0
+                };
                 Some((geo, opacity))
             })
             .collect();
@@ -794,7 +840,10 @@ mod view {
     }
 
     /// One path geometry of open polylines.
-    fn path<'a>(gfx: &Gfx, lines: impl Iterator<Item = &'a [(f32, f32)]>) -> Option<ID2D1PathGeometry> {
+    fn path<'a>(
+        gfx: &Gfx,
+        lines: impl Iterator<Item = &'a [(f32, f32)]>,
+    ) -> Option<ID2D1PathGeometry> {
         // SAFETY: a fresh geometry, opened, filled and closed here; the points are locals
         unsafe {
             let geo = gfx.d2d.CreatePathGeometry().ok()?;
@@ -802,7 +851,9 @@ mod view {
             let mut any = false;
             let mut pts: Vec<Vector2> = Vec::new();
             for line in lines {
-                let Some((&(u, v), rest)) = line.split_first() else { continue };
+                let Some((&(u, v), rest)) = line.split_first() else {
+                    continue;
+                };
                 if rest.is_empty() {
                     continue;
                 }
@@ -819,7 +870,13 @@ mod view {
     }
 
     /// A cached one-line layout of `s` in format `f` (tick and contour labels: the same strings every frame).
-    fn text(c: &Canvas, g: &GraphState, s: &str, f: &IDWriteTextFormat, h: f32) -> Option<(IDWriteTextLayout, f32)> {
+    fn text(
+        c: &Canvas,
+        g: &GraphState,
+        s: &str,
+        f: &IDWriteTextFormat,
+        h: f32,
+    ) -> Option<(IDWriteTextLayout, f32)> {
         let serial = g.sample.as_ref().map_or(0, |s| s.serial);
         let mut cache = g.cache.borrow_mut();
         if cache.texts_serial != serial {
@@ -863,7 +920,9 @@ mod view {
     /// The panel in `r` (window DIPs).
     pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
         let Some(res) = res(c.gfx) else { return };
-        let Some(geo) = geo(c.gfx, g, r.w) else { return };
+        let Some(geo) = geo(c.gfx, g, r.w) else {
+            return;
+        };
         let t = c.theme;
         c.fill(r, t.bg_tape);
         c.fill(Rect::new(r.x, r.y, r.w, 1.0), t.line);
@@ -893,7 +952,13 @@ mod view {
             x += w + 12.0;
         }
         if let Some(unit) = g.sample.as_ref().and_then(|s| s.unit)
-            && let Some((l, _)) = text(c, g, if unit == AngleUnit::Rad { "rad" } else { "deg" }, &c.gfx.fonts.small, HEAD_H)
+            && let Some((l, _)) = text(
+                c,
+                g,
+                if unit == AngleUnit::Rad { "rad" } else { "deg" },
+                &c.gfx.fonts.small,
+                HEAD_H,
+            )
         {
             c.text(&l, x, hy, t.muted);
         }
@@ -922,7 +987,12 @@ mod view {
             c.text(m, r.x + size::GUTTER, r.y + BODY_Y + 12.0, t.muted);
         }
         if let Some(svg) = geo.svg {
-            plot(c, g, &res, Rect::new(r.x + svg.x, r.y + svg.y, svg.w, svg.h));
+            plot(
+                c,
+                g,
+                &res,
+                Rect::new(r.x + svg.x, r.y + svg.y, svg.w, svg.h),
+            );
         }
         for (y, l) in &geo.titles {
             c.text(l, r.x + size::GUTTER, r.y + y, t.muted);
@@ -931,13 +1001,32 @@ mod view {
             c.text(l, r.x + size::GUTTER, r.y + y, t.muted);
         }
         for chip in &geo.chips {
-            let cr = Rect::new(r.x + chip.rect.x, r.y + chip.rect.y, chip.rect.w, chip.rect.h);
+            let cr = Rect::new(
+                r.x + chip.rect.x,
+                r.y + chip.rect.y,
+                chip.rect.w,
+                chip.rect.h,
+            );
             let over = hover.is_some_and(|(hx, hy)| chip.rect.contains(hx, hy));
             // .graph-detail-item: fill-track, accent 12% on hover
-            let fill = if over { with_alpha(t.accent, 0.12) } else { with_alpha(t.ink, 0.06) };
+            let fill = if over {
+                with_alpha(t.accent, 0.12)
+            } else {
+                with_alpha(t.ink, 0.06)
+            };
             c.fill_round(cr, size::RADIUS_S, fill);
-            c.text(&chip.kind, cr.x + 8.0, cr.y, if over { t.accent } else { t.muted });
-            c.text(&chip.coords, cr.x + 8.0 + chip.kind_w + 6.0, cr.y, if over { t.accent } else { t.ink });
+            c.text(
+                &chip.kind,
+                cr.x + 8.0,
+                cr.y,
+                if over { t.accent } else { t.muted },
+            );
+            c.text(
+                &chip.coords,
+                cr.x + 8.0 + chip.kind_w + 6.0,
+                cr.y,
+                if over { t.accent } else { t.ink },
+            );
         }
     }
 
@@ -946,13 +1035,23 @@ mod view {
     fn plot(c: &Canvas, g: &GraphState, res: &Res, svg: Rect) {
         let t = c.theme;
         let s = svg.w / SVG_W;
-        let (left, top, pw, ph) = (svg.x + PAD_LEFT * s, svg.y + PAD_TOP * s, PLOT_W * s, PLOT_H * s);
+        let (left, top, pw, ph) = (
+            svg.x + PAD_LEFT * s,
+            svg.y + PAD_TOP * s,
+            PLOT_W * s,
+            PLOT_H * s,
+        );
         let (right, bottom) = (left + pw, top + ph);
         let px = |x: f64| svg.x + g.vx(x) * s;
         let py = |y: f64| svg.y + g.vy(y) * s;
         let bg = plot_bg(c);
         let rr = D2D1_ROUNDED_RECT {
-            rect: D2D_RECT_F { left, top, right, bottom },
+            rect: D2D_RECT_F {
+                left,
+                top,
+                right,
+                bottom,
+            },
             radiusX: 4.0,
             radiusY: 4.0,
         };
@@ -962,14 +1061,22 @@ mod view {
         let axis = with_alpha(t.ink, 0.18);
         let crisp = |v: f32| (v * 2.0).round() / 2.0 + 0.25;
         if let Some(sample) = &g.sample {
-            for tk in sample.x_ticks.iter().filter(|tk| tk.value >= g.x_min && tk.value <= g.x_max) {
+            for tk in sample
+                .x_ticks
+                .iter()
+                .filter(|tk| tk.value >= g.x_min && tk.value <= g.x_max)
+            {
                 let x = crisp(px(tk.value));
                 c.line(x, top, x, bottom, 1.0, grid);
                 if let Some((l, w)) = text(c, g, &tk.label.replace('-', "−"), &res.tick, 12.0) {
                     c.text_plain(&l, x - w / 2.0, svg.y + (SVG_H - 12.0) * s - 8.0, t.muted);
                 }
             }
-            for tk in sample.y_ticks.iter().filter(|tk| tk.value >= g.y_min && tk.value <= g.y_max) {
+            for tk in sample
+                .y_ticks
+                .iter()
+                .filter(|tk| tk.value >= g.y_min && tk.value <= g.y_max)
+            {
                 let y = crisp(py(tk.value));
                 c.line(left, y, right, y, 1.0, grid);
                 if let Some((l, w)) = text(c, g, &tk.label.replace('-', "−"), &res.tick, 12.0) {
@@ -1008,7 +1115,8 @@ mod view {
                 // SAFETY: inside the frame; the matrix is a local and the geometry lives in the cache
                 unsafe {
                     if let Ok(xf) = c.gfx.d2d.CreateTransformedGeometry(geo, &m) {
-                        c.target().DrawGeometry(&xf, c.brush(color), width, res.round.as_ref());
+                        c.target()
+                            .DrawGeometry(&xf, c.brush(color), width, res.round.as_ref());
                     }
                 }
             };
@@ -1025,10 +1133,16 @@ mod view {
             }
             // level labels on a halo of the plot colour
             for lv in &sample.contours {
-                let (Some(ax), Some(ay)) = (lv.at_x, lv.at_y) else { continue };
+                let (Some(ax), Some(ay)) = (lv.at_x, lv.at_y) else {
+                    continue;
+                };
                 let (x, y) = (px(ax), py(ay));
                 if let Some((l, w)) = text(c, g, &lv.label.replace('-', "−"), &res.tick, 12.0) {
-                    c.fill_round(Rect::new(x - w / 2.0 - 2.0, y - 6.0, w + 4.0, 12.0), 3.0, bg);
+                    c.fill_round(
+                        Rect::new(x - w / 2.0 - 2.0, y - 6.0, w + 4.0, 12.0),
+                        3.0,
+                        bg,
+                    );
                     c.text_plain(&l, x - w / 2.0, y - 6.0, t.muted);
                 }
             }
@@ -1055,14 +1169,20 @@ mod view {
                 _ => px(r.x),
             };
             let on_right = rx > left + pw * 0.62;
-            let kind = r.kind.and_then(|k| text(c, g, &format!("{k} "), &res.readout, 14.0));
+            let kind = r
+                .kind
+                .and_then(|k| text(c, g, &format!("{k} "), &res.readout, 14.0));
             let main = lay(c.gfx, &r.text, &res.readout, 14.0);
             if let Some((l, w)) = main {
                 let kw = kind.as_ref().map_or(0.0, |k| k.1);
                 let total = kw + w;
                 let x0 = if on_right { rx - 7.0 - total } else { rx + 7.0 };
                 let y0 = top + 13.0 * s - 10.0;
-                c.fill_round(Rect::new(x0 - 2.0, y0, total + 4.0, 14.0), 3.0, with_alpha(bg, 0.9));
+                c.fill_round(
+                    Rect::new(x0 - 2.0, y0, total + 4.0, 14.0),
+                    3.0,
+                    with_alpha(bg, 0.9),
+                );
                 if let Some((k, _)) = &kind {
                     c.text_plain(k, x0, y0, t.muted);
                 }
@@ -1103,8 +1223,14 @@ mod view {
         if !r.contains(x, y) {
             return false;
         }
-        let Some((p, svg)) = locate(app, x, y) else { return true };
-        let geo = app.model.graph.as_ref().and_then(|g| g.cache.borrow().geo.as_ref().map(|(_, geo)| geo.clone()));
+        let Some((p, svg)) = locate(app, x, y) else {
+            return true;
+        };
+        let geo = app
+            .model
+            .graph
+            .as_ref()
+            .and_then(|g| g.cache.borrow().geo.as_ref().map(|(_, geo)| geo.clone()));
         let Some(geo) = geo else { return true };
         if let Some(i) = geo.buttons.iter().position(|b| b.contains(p.0, p.1)) {
             match i {
@@ -1147,9 +1273,13 @@ mod view {
 
     /// The pointer moved over the bar: drag the window, or follow the readout and the buttons' hover.
     pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
-        let Some(g) = &app.model.graph else { return false };
+        let Some(g) = &app.model.graph else {
+            return false;
+        };
         if let Some(drag) = g.drag {
-            let Some((_, Some((_, vx, _)))) = locate(app, x, y) else { return true };
+            let Some((_, Some((_, vx, _)))) = locate(app, x, y) else {
+                return true;
+            };
             let dx = vx - drag.start;
             if !drag.moved && dx.abs() < 3.0 {
                 return true;
@@ -1157,7 +1287,10 @@ mod view {
             let (lo, hi) = drag.domain;
             let shift = -f64::from(dx / PLOT_W) * (hi - lo);
             if let Some(g) = &mut app.model.graph {
-                g.drag = Some(Drag { moved: true, ..drag });
+                g.drag = Some(Drag {
+                    moved: true,
+                    ..drag
+                });
                 g.hover = None;
             }
             set_window(&mut app.model, &app.engine, lo + shift, hi + shift);
@@ -1176,7 +1309,9 @@ mod view {
         }
         app.model.touch();
         match svg {
-            Some((_, vx, vy)) if in_plot(vx, vy.clamp(PAD_TOP, PAD_TOP + PLOT_H)) => readout(app, vx, vy),
+            Some((_, vx, vy)) if in_plot(vx, vy.clamp(PAD_TOP, PAD_TOP + PLOT_H)) => {
+                readout(app, vx, vy)
+            }
             _ => {
                 if let Some(g) = &mut app.model.graph {
                     g.readout = None;
@@ -1200,8 +1335,12 @@ mod view {
 
     /// The readout for the pointer at viewBox (vx, vy): a snapped point at once, else the engine's y (or z).
     fn readout(app: &mut App, vx: f32, vy: f32) {
-        let Some(g) = &mut app.model.graph else { return };
-        let Some(sample) = g.sample.clone() else { return };
+        let Some(g) = &mut app.model.graph else {
+            return;
+        };
+        let Some(sample) = g.sample.clone() else {
+            return;
+        };
         if sample.error.is_some() {
             return;
         }
@@ -1213,14 +1352,28 @@ mod view {
             let y = round_to_pixel(g.y_at(vy), (g.y_max - g.y_min) / f64::from(PLOT_H));
             let point = format!("({}{deg}, {}{deg})", fmt_g(x, 8), fmt_g(y, 8));
             if !sample.levels {
-                g.readout = Some(Readout { x, y: Some(y), kind: None, text: point, contour: true });
+                g.readout = Some(Readout {
+                    x,
+                    y: Some(y),
+                    kind: None,
+                    text: point,
+                    contour: true,
+                });
                 return;
             }
             let (input, window) = (g.input(), (g.x_min, g.x_max));
             ask(app, move |cx, settings| {
-                let z = cx.engine.graph_readout_z(input, x, y, options(window), settings);
+                let z = cx
+                    .engine
+                    .graph_readout_z(input, x, y, options(window), settings);
                 let text = format!("{point}  z = {}", z.map_or("—".into(), |z| fmt_g(z, 6)));
-                Readout { x, y: Some(y), kind: None, text, contour: true }
+                Readout {
+                    x,
+                    y: Some(y),
+                    kind: None,
+                    text,
+                    contour: true,
+                }
             });
             return;
         }
@@ -1237,9 +1390,21 @@ mod view {
         }
         let (input, window) = (g.input(), (g.x_min, g.x_max));
         ask(app, move |cx, settings| {
-            let y = cx.engine.graph_readout_y(input, x, options(window), settings);
-            let text = format!("({}{deg}, {})", fmt_g(x, 8), y.map_or("—".into(), |y| fmt_g(y, 6)));
-            Readout { x, y, kind: None, text, contour: false }
+            let y = cx
+                .engine
+                .graph_readout_y(input, x, options(window), settings);
+            let text = format!(
+                "({}{deg}, {})",
+                fmt_g(x, 8),
+                y.map_or("—".into(), |y| fmt_g(y, 6))
+            );
+            Readout {
+                x,
+                y,
+                kind: None,
+                text,
+                contour: false,
+            }
         });
     }
 
@@ -1259,7 +1424,9 @@ mod view {
         f: impl FnOnce(&mut crate::engine::Cx, qcalc_ffi::EvalOptions) -> Readout + Send + 'static,
     ) {
         let m = &app.model;
-        let Some(expr) = m.graph.as_ref().map(|g| g.expression.clone()) else { return };
+        let Some(expr) = m.graph.as_ref().map(|g| g.expression.clone()) else {
+            return;
+        };
         let rows = m.rows.clone();
         let view = m.view(now_ms());
         let options = m.options();
@@ -1281,7 +1448,9 @@ mod view {
 
     /// The press ended: a drag stops; a click without one on a snapped point copies its x.
     pub fn mouse_up(app: &mut App, x: f32, y: f32) -> bool {
-        let Some(drag) = app.model.graph.as_mut().and_then(|g| g.drag.take()) else { return false };
+        let Some(drag) = app.model.graph.as_mut().and_then(|g| g.drag.take()) else {
+            return false;
+        };
         // SAFETY: we hold the capture
         let _ = unsafe { ReleaseCapture() };
         if !drag.moved
@@ -1297,7 +1466,9 @@ mod view {
 
     /// The pointer left the bar (WM_MOUSELEAVE) or the panel.
     pub fn leave(app: &mut App) -> bool {
-        let Some(g) = &mut app.model.graph else { return false };
+        let Some(g) = &mut app.model.graph else {
+            return false;
+        };
         if g.hover.is_some() || g.readout.is_some() {
             g.hover = None;
             g.readout = None;
@@ -1321,14 +1492,18 @@ mod view {
         let _ = unsafe { ScreenToClient(app.bar.hwnd, &mut pt) };
         let s = app.bar.scale();
         let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
-        let Some((_, Some((svg, vx, _)))) = locate(app, x, y) else { return false };
+        let Some((_, Some((svg, vx, _)))) = locate(app, x, y) else {
+            return false;
+        };
         let Some(r) = panel(app) else { return false };
         if !svg.contains(x - r.x, y - r.y) {
             return false;
         }
         let delta = f64::from(((wp.0 >> 16) & 0xffff) as u16 as i16);
         let ctrl = wp.0 & 0x0008 != 0;
-        let Some(g) = &app.model.graph else { return false };
+        let Some(g) = &app.model.graph else {
+            return false;
+        };
         // a notch (120) as a browser's 100 px of deltaY
         let px = -delta / 120.0 * 100.0;
         if horizontal {
@@ -1353,12 +1528,18 @@ mod view {
         let g = app.model.graph.as_ref()?;
         let (p, svg) = locate(app, x, y)?;
         let geo = g.cache.borrow().geo.as_ref().map(|(_, geo)| geo.clone())?;
-        if geo.buttons.iter().any(|b| b.contains(p.0, p.1)) || geo.chips.iter().any(|c| c.rect.contains(p.0, p.1)) {
+        if geo.buttons.iter().any(|b| b.contains(p.0, p.1))
+            || geo.chips.iter().any(|c| c.rect.contains(p.0, p.1))
+        {
             return Some(IDC_HAND);
         }
         match svg {
             Some((svg, vx, vy)) if svg.contains(p.0, p.1) && in_plot(vx, vy) => {
-                Some(if g.drag.is_none() && g.snap(vx).is_some() { IDC_HAND } else { IDC_SIZEWE })
+                Some(if g.drag.is_none() && g.snap(vx).is_some() {
+                    IDC_HAND
+                } else {
+                    IDC_SIZEWE
+                })
             }
             _ => Some(IDC_ARROW),
         }
@@ -1372,7 +1553,10 @@ mod tests {
     #[test]
     fn graph_commands() {
         assert_eq!(command("graph x^3").as_deref(), Some("x^3"));
-        assert_eq!(command("  GRAPH   sin(x)  +  1 ").as_deref(), Some("sin(x) + 1"));
+        assert_eq!(
+            command("  GRAPH   sin(x)  +  1 ").as_deref(),
+            Some("sin(x) + 1")
+        );
         assert_eq!(command("plot f").as_deref(), Some("f"));
         assert_eq!(command("graph f(x) = x^2").as_deref(), Some("f(x) = x^2"));
         assert_eq!(command("graph"), None);
@@ -1437,7 +1621,10 @@ mod tests {
 
     #[test]
     fn chips_wrap() {
-        assert_eq!(wrap(&[50.0, 50.0, 50.0], 120.0, 4.0), vec![(0.0, 0), (54.0, 0), (0.0, 1)]);
+        assert_eq!(
+            wrap(&[50.0, 50.0, 50.0], 120.0, 4.0),
+            vec![(0.0, 0), (54.0, 0), (0.0, 1)]
+        );
         assert_eq!(wrap(&[200.0], 120.0, 4.0), vec![(0.0, 0)]);
     }
 }

@@ -172,7 +172,12 @@ impl Keybinds {
     pub fn cheat_sheet(&self, hotkey_label: &str) -> [Vec<(String, String)>; 2] {
         let labels: BTreeMap<kb::KeyAction, String> = kb::KEY_ACTIONS
             .iter()
-            .map(|(a, _)| (*a, kb::chord_label(&kb::keybind_for(&self.binds, *a, true), true)))
+            .map(|(a, _)| {
+                (
+                    *a,
+                    kb::chord_label(&kb::keybind_for(&self.binds, *a, true), true),
+                )
+            })
             .collect();
         let [keys, typed] =
             qcalc_core::app::onboarding::cheat_sheet(Some(hotkey_label), true, Some(&labels));
@@ -274,7 +279,10 @@ mod tests {
         );
         assert_eq!(k.action(CTRL_SHIFT, 0x08), None);
         assert_eq!(k.action(CTRL_SHIFT, 0x46), Some(KeyAction::Fraction));
-        assert_eq!(k.chord_for(KeyAction::Fraction).as_deref(), Some("ctrl+shift+f"));
+        assert_eq!(
+            k.chord_for(KeyAction::Fraction).as_deref(),
+            Some("ctrl+shift+f")
+        );
         assert_eq!(k.chord_for(KeyAction::Clear), None);
         assert_eq!(k.label(KeyAction::Angle), "Ctrl+Alt+R");
         assert_eq!(chord(CTRL_SHIFT, 0x43).as_deref(), Some("ctrl+shift+c"));

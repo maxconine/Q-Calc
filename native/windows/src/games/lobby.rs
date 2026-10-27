@@ -4,8 +4,8 @@
 //! starts it takes the panel (`play`) and talks to the link itself; when it ends it hands back a line to show.
 
 use qcalc_core::games::lobby::{
-    LobbyCtx, LobbyEffect, LobbyState, Screen, first_screen, home_screen, join_room,
-    lobby_back, lobby_event, lobby_key, option_screen,
+    LobbyCtx, LobbyEffect, LobbyState, Screen, first_screen, home_screen, join_room, lobby_back,
+    lobby_event, lobby_key, option_screen,
 };
 use qcalc_core::games::nickname::random_nickname;
 use qcalc_core::games::peer::{CloseReason, PeerEvent, RoomInfo, Who, close_reason_text};
@@ -61,7 +61,11 @@ impl Lobby {
     }
 
     fn first(&self) -> Screen {
-        first_screen(self.online(), self.def.options.len(), self.def.together.len())
+        first_screen(
+            self.online(),
+            self.def.options.len(),
+            self.def.together.len(),
+        )
     }
 
     /// Hooks the lobby to the shell and the link once the window is up.
@@ -73,7 +77,10 @@ impl Lobby {
     pub fn set(&mut self, next: LobbyState, env: &mut Env) {
         let was = std::mem::replace(&mut self.state, next);
         let same_game = matches!((&was, &self.state), (LobbyState::Local { option: a }, LobbyState::Local { option: b }) if a == b)
-            || matches!((&was, &self.state), (LobbyState::Game { .. }, LobbyState::Game { .. }));
+            || matches!(
+                (&was, &self.state),
+                (LobbyState::Game { .. }, LobbyState::Game { .. })
+            );
         if !same_game {
             if let Some(mut p) = self.play.take() {
                 p.closing(env);
@@ -114,7 +121,8 @@ impl Lobby {
         let now = env.wall();
         match effect {
             LobbyEffect::Host { locked } => {
-                env.store.set(LOCKED_KEY, Some(if locked { "1" } else { "0" }));
+                env.store
+                    .set(LOCKED_KEY, Some(if locked { "1" } else { "0" }));
                 let name = env.nickname();
                 if let Some(r) = env.relay_mut() {
                     r.peer.host(self.def.kind, &name, locked, now);
@@ -196,7 +204,14 @@ impl Lobby {
     pub fn click_key(&mut self, key: &str, env: &mut Env) {
         let name = env.nickname();
         let random = random_nickname(&mut || env.rand.next_f64());
-        let step = lobby_key(&self.state, key, &self.ctx(), Self::locked_pref(env), &name, &random);
+        let step = lobby_key(
+            &self.state,
+            key,
+            &self.ctx(),
+            Self::locked_pref(env),
+            &name,
+            &random,
+        );
         self.set(step.state, env);
         self.run(step.effect, env);
     }
@@ -246,7 +261,10 @@ impl Lobby {
 
     /// Keys on the lobby's own screens (they would otherwise reach nothing); a running game's go to it.
     pub fn key(&mut self, k: &GameKey, env: &mut Env) -> bool {
-        if matches!(self.state, LobbyState::Game { .. } | LobbyState::Local { .. }) {
+        if matches!(
+            self.state,
+            LobbyState::Game { .. } | LobbyState::Local { .. }
+        ) {
             return self.play.as_mut().is_some_and(|p| p.key(k, env));
         }
         if !k.down || !k.plain() || k.key == "Escape" {
@@ -260,7 +278,14 @@ impl Lobby {
         }
         let name = env.nickname();
         let random = random_nickname(&mut || env.rand.next_f64());
-        let step = lobby_key(&self.state, &k.key, &self.ctx(), Self::locked_pref(env), &name, &random);
+        let step = lobby_key(
+            &self.state,
+            &k.key,
+            &self.ctx(),
+            Self::locked_pref(env),
+            &name,
+            &random,
+        );
         if k.repeat && step.effect.is_some() {
             return true;
         }
@@ -283,7 +308,15 @@ impl Lobby {
             LobbyState::Game { peer, .. } => {
                 let mut h = 0.0;
                 if !self.def.own_head {
-                    h += w::head(ui, x, y, width, self.def.name, &format!("with {peer}"), env.shell.fullscreen);
+                    h += w::head(
+                        ui,
+                        x,
+                        y,
+                        width,
+                        self.def.name,
+                        &format!("with {peer}"),
+                        env.shell.fullscreen,
+                    );
                 }
                 if let Some(p) = &mut self.play {
                     h += p.paint(ui, x, y + h, width, env);
@@ -311,7 +344,15 @@ impl Lobby {
     }
 
     /// `.pong-body`: a centred column 12 apart, at least 168 high.
-    fn body(&mut self, ui: &mut Ui, state: &LobbyState, x: f32, y: f32, width: f32, env: &mut Env) -> f32 {
+    fn body(
+        &mut self,
+        ui: &mut Ui,
+        state: &LobbyState,
+        x: f32,
+        y: f32,
+        width: f32,
+        env: &mut Env,
+    ) -> f32 {
         let cx = x + width / 2.0;
         let mut col = Col {
             y: y + m::SP3,
@@ -363,7 +404,9 @@ impl Lobby {
                             you(&mut v, &nick);
                             col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
                         } else {
-                            col.add(ui, |ui, y| w::note(ui, cx, y, width, "←→ pick · ↵ go", false));
+                            col.add(ui, |ui, y| {
+                                w::note(ui, cx, y, width, "←→ pick · ↵ go", false)
+                            });
                         }
                     }
                     Screen::Solo => {
@@ -382,14 +425,26 @@ impl Lobby {
                             let mut h = 0.0;
                             if !def.prompt.is_empty() {
                                 let c = ui.c.muted;
-                                h += ui.text_wrap(def.prompt, Font::CAPTION, x, y, width, Align::Center, c) + m::SP2;
+                                h += ui.text_wrap(
+                                    def.prompt,
+                                    Font::CAPTION,
+                                    x,
+                                    y,
+                                    width,
+                                    Align::Center,
+                                    c,
+                                ) + m::SP2;
                             }
                             h + w::button_row(ui, cx, y + h, width, &items, false)
                         });
                         if let Some(footer) = def.footer {
                             col.add(ui, |ui, y| footer(ui, x, y, width, env));
                         }
-                        let mut v = vec![Run::plain(if def.options.len() > 1 { "↑↓ pick · ↵ play · " } else { "↵ plays · " })];
+                        let mut v = vec![Run::plain(if def.options.len() > 1 {
+                            "↑↓ pick · ↵ play · "
+                        } else {
+                            "↵ plays · "
+                        })];
                         back_runs(&mut v);
                         v.push(Run::plain(&fs_label));
                         col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
@@ -424,22 +479,42 @@ impl Lobby {
                         col.add(ui, |ui, y| w::button_row(ui, cx, y, width, &items, false));
                         if self.online() {
                             if self.code_only {
-                                let mut v = vec![Run::plain("no room list from the game server yet, so rooms go by code · ")];
+                                let mut v = vec![Run::plain(
+                                    "no room list from the game server yet, so rooms go by code · ",
+                                )];
                                 back_runs(&mut v);
                                 you(&mut v, &nick);
                                 col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
                             } else {
                                 col.add(ui, |ui, y| {
                                     let muted = ui.c.muted;
-                                    let mut h = ui.text_wrap("rooms open now", Font::CAPTION, x, y, width, Align::Center, muted) + m::SP2;
+                                    let mut h = ui.text_wrap(
+                                        "rooms open now",
+                                        Font::CAPTION,
+                                        x,
+                                        y,
+                                        width,
+                                        Align::Center,
+                                        muted,
+                                    ) + m::SP2;
                                     if *offline {
-                                        let t = close_reason_text(CloseReason::Network, OnlinePeer::PEER_WORD);
+                                        let t = close_reason_text(
+                                            CloseReason::Network,
+                                            OnlinePeer::PEER_WORD,
+                                        );
                                         h += w::note(ui, cx, y + h, width, &t, true);
                                     } else if !rooms.is_empty() {
                                         h += room_list(ui, cx, y + h, rooms, *pick, def.name);
                                     } else {
                                         h += m::SP2
-                                            + w::note(ui, cx, y + h + m::SP2, width, &format!("nobody’s hosting {} right now", def.name), false)
+                                            + w::note(
+                                                ui,
+                                                cx,
+                                                y + h + m::SP2,
+                                                width,
+                                                &format!("nobody’s hosting {} right now", def.name),
+                                                false,
+                                            )
                                             + m::SP2;
                                     }
                                     h += m::SP2;
@@ -453,7 +528,11 @@ impl Lobby {
                                 });
                             }
                         } else {
-                            let mut v = vec![Run::plain(if def.together.len() > 1 { "↑↓ pick · ↵ play · " } else { "↵ plays · " })];
+                            let mut v = vec![Run::plain(if def.together.len() > 1 {
+                                "↑↓ pick · ↵ play · "
+                            } else {
+                                "↵ plays · "
+                            })];
                             back_runs(&mut v);
                             v.push(Run::plain(&fs_label));
                             col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
@@ -468,7 +547,9 @@ impl Lobby {
                 }
             }
             LobbyState::Setup { locked } => {
-                col.add(ui, |ui, y| w::line(ui, cx, y, width, &format!("host a room as {nick}")));
+                col.add(ui, |ui, y| {
+                    w::line(ui, cx, y, width, &format!("host a room as {nick}"))
+                });
                 let items = [
                     ButtonSpec {
                         title: "open",
@@ -489,10 +570,18 @@ impl Lobby {
                 } else {
                     format!("anyone who opens {} can join", def.name)
                 };
-                let v = [Run::plain(&who), Run::plain(" · ↵ host · "), Run::link("⌫ back", Hit::Key("Backspace".into()))];
+                let v = [
+                    Run::plain(&who),
+                    Run::plain(" · ↵ host · "),
+                    Run::link("⌫ back", Hit::Key("Backspace".into())),
+                ];
                 col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
             }
-            LobbyState::Hosting { locked, code, renewed } => {
+            LobbyState::Hosting {
+                locked,
+                code,
+                renewed,
+            } => {
                 if *locked {
                     let shown: Vec<String> = match code {
                         Some(c) if !c.is_empty() => c.chars().map(|c| c.to_string()).collect(),
@@ -501,25 +590,55 @@ impl Lobby {
                     col.add(ui, |ui, y| w::code(ui, cx, y, &shown, false, false, None));
                     let line = format!(
                         "{}{}",
-                        if *renewed { "too many wrong codes, so here’s a new one. " } else { "" },
-                        if self.code_only {
-                            format!("send your friend this code · on their Q Calc: type {}, J, then the code", def.name)
+                        if *renewed {
+                            "too many wrong codes, so here’s a new one. "
                         } else {
-                            format!("send your friend this code · they pick {nick} in the {} list", def.name)
+                            ""
+                        },
+                        if self.code_only {
+                            format!(
+                                "send your friend this code · on their Q Calc: type {}, J, then the code",
+                                def.name
+                            )
+                        } else {
+                            format!(
+                                "send your friend this code · they pick {nick} in the {} list",
+                                def.name
+                            )
                         }
                     );
                     col.add(ui, |ui, y| w::line(ui, cx, y, width, &line));
                 } else {
-                    let v = [Run::plain("your room is open · it’s listed as "), Run { text: &nick, hit: None, ink: true, bold: true }];
+                    let v = [
+                        Run::plain("your room is open · it’s listed as "),
+                        Run {
+                            text: &nick,
+                            hit: None,
+                            ink: true,
+                            bold: true,
+                        },
+                    ];
                     let ink = ui.c.ink;
                     col.add(ui, |ui, y| w::runs(ui, cx, y, Font::BODY, ink, &v));
                 }
-                col.add(ui, |ui, y| w::note(ui, cx, y, width, "waiting for someone to join…", true));
+                col.add(ui, |ui, y| {
+                    w::note(ui, cx, y, width, "waiting for someone to join…", true)
+                });
                 let v = [Run::link("⌫ back", Hit::Key("Backspace".into()))];
                 col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
             }
             LobbyState::Code { room, digits, note } => {
-                code_screen(ui, &mut col, cx, width, n, room, digits, note.as_deref(), false);
+                code_screen(
+                    ui,
+                    &mut col,
+                    cx,
+                    width,
+                    n,
+                    room,
+                    digits,
+                    note.as_deref(),
+                    false,
+                );
             }
             LobbyState::Pairing { room } => {
                 if room.locked {
@@ -537,7 +656,9 @@ impl Lobby {
                 }
             }
             LobbyState::Rename { draft, .. } => {
-                col.add(ui, |ui, y| w::line(ui, cx, y, width, "what the room lists call you"));
+                col.add(ui, |ui, y| {
+                    w::line(ui, cx, y, width, "what the room lists call you")
+                });
                 col.add(ui, |ui, y| {
                     let c = ui.c;
                     let (tw, th) = ui.measure(draft, Font::BODY);
@@ -549,11 +670,28 @@ impl Lobby {
                     // .lobby-caret: a 1 px accent bar blinking once a second
                     ui.animate();
                     if (ui.t * 2.0) as i64 % 2 == 0 {
-                        ui.fill(Rect::new(tx + tw + 1.0, r.y + (r.h - m::FS_BODY * 1.1) / 2.0, 1.0, m::FS_BODY * 1.1), c.accent);
+                        ui.fill(
+                            Rect::new(
+                                tx + tw + 1.0,
+                                r.y + (r.h - m::FS_BODY * 1.1) / 2.0,
+                                1.0,
+                                m::FS_BODY * 1.1,
+                            ),
+                            c.accent,
+                        );
                     }
                     r.h
                 });
-                col.add(ui, |ui, y| w::note(ui, cx, y, width, "↵ keep · tab picks another · esc back", false));
+                col.add(ui, |ui, y| {
+                    w::note(
+                        ui,
+                        cx,
+                        y,
+                        width,
+                        "↵ keep · tab picks another · esc back",
+                        false,
+                    )
+                });
             }
             LobbyState::Game { .. } | LobbyState::Local { .. } => {}
         }
@@ -635,7 +773,10 @@ fn code_screen(
     } else {
         note.map_or(format!("type the {n} digits · "), |t| format!("{t} · "))
     };
-    let v = [Run::plain(&first), Run::link("⌫ back", Hit::Key("Backspace".into()))];
+    let v = [
+        Run::plain(&first),
+        Run::link("⌫ back", Hit::Key("Backspace".into())),
+    ];
     col.add(ui, |ui, y| note_runs(ui, cx, y, &v));
 }
 
@@ -660,10 +801,32 @@ fn room_list(ui: &mut Ui, cx: f32, y: f32, rooms: &[RoomInfo], pick: usize, game
         let ty = yy + (m::TAPE_ROW - gh) / 2.0;
         let name_w = width - 2.0 * m::SP3 - gw - lock_w - 2.0 * m::SP3;
         let (_, nh) = ui.measure(&r.name, Font::BODY);
-        ui.text_in(&r.name, Font::BODY, x + m::SP3, yy + (m::TAPE_ROW - nh) / 2.0, name_w, Align::Left, c.ink);
-        ui.text(game, Font::SMALL, x + width - m::SP3 - lock_w - m::SP3 - gw, ty, c.muted);
+        ui.text_in(
+            &r.name,
+            Font::BODY,
+            x + m::SP3,
+            yy + (m::TAPE_ROW - nh) / 2.0,
+            name_w,
+            Align::Left,
+            c.ink,
+        );
+        ui.text(
+            game,
+            Font::SMALL,
+            x + width - m::SP3 - lock_w - m::SP3 - gw,
+            ty,
+            c.muted,
+        );
         if r.locked {
-            ui.text_in("🔒", Font::SMALL, x + width - m::SP3 - lock_w, ty, lock_w, Align::Right, c.ink);
+            ui.text_in(
+                "🔒",
+                Font::SMALL,
+                x + width - m::SP3 - lock_w,
+                ty,
+                lock_w,
+                Align::Right,
+                c.ink,
+            );
         }
         ui.hit(rect, Hit::Join(i));
         yy += m::TAPE_ROW + 2.0;
@@ -692,13 +855,40 @@ mod tests {
             peer_word: "computer".into(),
         };
         let s = home_screen(first_screen(true, 3, 0), None);
-        assert!(matches!(s, LobbyState::Home { screen: Screen::Start, .. }));
+        assert!(matches!(
+            s,
+            LobbyState::Home {
+                screen: Screen::Start,
+                ..
+            }
+        ));
         let solo = step_of(&s, "1", &ctx);
-        assert!(matches!(solo, LobbyState::Home { screen: Screen::Solo, .. }));
+        assert!(matches!(
+            solo,
+            LobbyState::Home {
+                screen: Screen::Solo,
+                ..
+            }
+        ));
         let friend = step_of(&s, "2", &ctx);
-        assert!(matches!(friend, LobbyState::Home { screen: Screen::Friend, .. }));
-        assert!(matches!(step_of(&friend, "j", &ctx), LobbyState::Code { .. }));
+        assert!(matches!(
+            friend,
+            LobbyState::Home {
+                screen: Screen::Friend,
+                ..
+            }
+        ));
+        assert!(matches!(
+            step_of(&friend, "j", &ctx),
+            LobbyState::Code { .. }
+        ));
         // ⌫ goes back to the choice
-        assert!(matches!(step_of(&solo, "Backspace", &ctx), LobbyState::Home { screen: Screen::Start, .. }));
+        assert!(matches!(
+            step_of(&solo, "Backspace", &ctx),
+            LobbyState::Home {
+                screen: Screen::Start,
+                ..
+            }
+        ));
     }
 }

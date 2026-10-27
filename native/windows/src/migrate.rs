@@ -212,12 +212,7 @@ pub fn read_table(file: &[u8], newest: &mut Newest) -> Option<()> {
             };
             let trailer = u64::from_le_bytes(ikey[split..].try_into().ok()?);
             let (seq, kind) = (trailer >> 8, trailer & 0xff);
-            note(
-                newest,
-                &ikey[..split],
-                seq,
-                (kind == 1).then_some(value),
-            );
+            note(newest, &ikey[..split], seq, (kind == 1).then_some(value));
         }
     }
     Some(())
@@ -281,10 +276,7 @@ pub fn local_storage(newest: &Newest, key: &str) -> Option<String> {
 /// Where the Tauri app's web view kept localStorage.
 pub fn tauri_leveldb() -> Option<PathBuf> {
     let local = std::env::var_os("LOCALAPPDATA")?;
-    Some(
-        PathBuf::from(local)
-            .join(r"com.maxconine.qcalc\EBWebView\Default\Local Storage\leveldb"),
-    )
+    Some(PathBuf::from(local).join(r"com.maxconine.qcalc\EBWebView\Default\Local Storage\leveldb"))
 }
 
 /// The Tauri page's history JSON, if it left one.
@@ -406,7 +398,17 @@ mod tests {
     #[test]
     fn snappy_literals_and_copies() {
         // "abcabcabcabcX": literal "abc", copy offset 3 length 9, literal "X"
-        let src = [13u8, 2 << 2, b'a', b'b', b'c', 1 | ((9 - 4) << 2), 3, 0, b'X'];
+        let src = [
+            13u8,
+            2 << 2,
+            b'a',
+            b'b',
+            b'c',
+            1 | ((9 - 4) << 2),
+            3,
+            0,
+            b'X',
+        ];
         assert_eq!(snappy(&src).unwrap(), b"abcabcabcabcX");
         assert!(snappy(&[5u8, 0, b'a']).is_none());
     }
@@ -460,7 +462,10 @@ mod tests {
         assert_eq!(local_storage(&db, "qcalc-history").as_deref(), Some("[1]"));
         // a newer log write beats the table's
         read_log(
-            &record(1, &batch_bytes(7, &[(&key("qcalc-history"), Some(b"\x01[2]"))])),
+            &record(
+                1,
+                &batch_bytes(7, &[(&key("qcalc-history"), Some(b"\x01[2]"))]),
+            ),
             &mut db,
         );
         assert_eq!(local_storage(&db, "qcalc-history").as_deref(), Some("[2]"));

@@ -22,8 +22,8 @@ use std::ops::Range;
 use qcalc_core::app::answer::{self as core_answer, AnswerForm, HistoryInsert};
 use qcalc_ffi::{HistoryKind, HistoryRow, SolveOutcome};
 use windows::Win32::Foundation::{LPARAM, POINT, WPARAM};
-use windows::Win32::Graphics::Direct2D::D2D1_ROUNDED_RECT;
 use windows::Win32::Graphics::Direct2D::Common::D2D_RECT_F;
+use windows::Win32::Graphics::Direct2D::D2D1_ROUNDED_RECT;
 use windows::Win32::Graphics::DirectWrite::{IDWriteTextFormat, IDWriteTextLayout};
 use windows::Win32::Graphics::Gdi::ScreenToClient;
 
@@ -178,8 +178,10 @@ pub fn enter_row(m: &mut BarModel, engine: &EngineThread, alt: bool) {
         return;
     }
     let piece = if alt {
-        let expr = matches!(row.kind, Some(HistoryKind::Definition | HistoryKind::Function))
-            || m.settings.history_insert == "answer";
+        let expr = matches!(
+            row.kind,
+            Some(HistoryKind::Definition | HistoryKind::Function)
+        ) || m.settings.history_insert == "answer";
         if expr {
             row.expr.clone()
         } else {
@@ -366,7 +368,11 @@ pub fn cells(row: &HistoryRow, form: AnswerForm, figs: f64, insert: HistoryInser
             out.push(cell(
                 approx,
                 Look::Answer,
-                Act::Insert(core_answer::insertable_history_answer(&j, AnswerForm::Approx, figs)),
+                Act::Insert(core_answer::insertable_history_answer(
+                    &j,
+                    AnswerForm::Approx,
+                    figs,
+                )),
                 Some(2),
             ));
         }
@@ -378,7 +384,10 @@ pub fn cells(row: &HistoryRow, form: AnswerForm, figs: f64, insert: HistoryInser
     }
     // one answer: a definition's word, a solve's list or message as written, else the pretty answer
     let shown = core_answer::visible_answer(&row.display, row.exact.as_deref(), form);
-    let message = row.solve.as_ref().is_some_and(|s| s.outcome != SolveOutcome::Roots);
+    let message = row
+        .solve
+        .as_ref()
+        .is_some_and(|s| s.outcome != SolveOutcome::Roots);
     let text = if row.kind == Some(HistoryKind::Definition) {
         shown.to_string()
     } else if row.solve.is_some() {
@@ -390,7 +399,9 @@ pub fn cells(row: &HistoryRow, form: AnswerForm, figs: f64, insert: HistoryInser
         out.push(cell(s, Look::Quiet, Act::None, None));
     }
     let act = if row.kind == Some(HistoryKind::Definition) {
-        Act::Insert(core_answer::insertable_history_reuse(&j, form, insert, figs))
+        Act::Insert(core_answer::insertable_history_reuse(
+            &j, form, insert, figs,
+        ))
     } else {
         Act::Insert(core_answer::insertable_history_answer(&j, form, figs))
     };
@@ -439,7 +450,10 @@ pub fn layout(model: &BarModel, visible: Range<usize>) -> TapeLayout {
     let first_from_bottom = (scroll / size::TAPE_ROW).floor() as usize;
     let last_from_bottom = ((scroll + k as f32 * size::TAPE_ROW) / size::TAPE_ROW).ceil() as usize;
     let end = visible.end - first_from_bottom.min(n);
-    let start = visible.end.saturating_sub(last_from_bottom).max(visible.start);
+    let start = visible
+        .end
+        .saturating_sub(last_from_bottom)
+        .max(visible.start);
     TapeLayout {
         drawn: start..end,
         scroll,
@@ -607,7 +621,14 @@ fn view(gfx: &Gfx, m: &BarModel, row: &HistoryRow, w: f32) -> Option<RowView> {
 }
 
 /// The cell under a point: its row and what it does.
-pub fn hit(gfx: &Gfx, m: &BarModel, width: f32, t: &TapeLayout, x: f32, y: f32) -> Option<(usize, Act)> {
+pub fn hit(
+    gfx: &Gfx,
+    m: &BarModel,
+    width: f32,
+    t: &TapeLayout,
+    x: f32,
+    y: f32,
+) -> Option<(usize, Act)> {
     if !window(t).contains(x, y) {
         return None;
     }
@@ -769,7 +790,12 @@ mod tests {
 
     #[test]
     fn one_answer() {
-        let c = cells(&row("2+2", "4", None), AnswerForm::Exact, 6.0, HistoryInsert::Expr);
+        let c = cells(
+            &row("2+2", "4", None),
+            AnswerForm::Exact,
+            6.0,
+            HistoryInsert::Expr,
+        );
         assert_eq!(
             acts(&c),
             [
@@ -851,14 +877,8 @@ mod tests {
             row("255 in hex", "0xFF", None),
         ]);
         let none = Mods::default();
-        let alt = Mods {
-            alt: true,
-            ..none
-        };
-        let ctrl = Mods {
-            ctrl: true,
-            ..none
-        };
+        let alt = Mods { alt: true, ..none };
+        let ctrl = Mods { ctrl: true, ..none };
         let key = |m: &mut BarModel, vk: u32, mods: Mods| m.key_down(vk, mods, &engine, || None);
         // ↑ lands on the newest row's answer; ↵ inserts it
         key(&mut m, UP, none);

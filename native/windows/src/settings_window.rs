@@ -28,12 +28,11 @@
 use std::cell::{Cell, RefCell};
 
 use qcalc_core::app::host_settings::{
-    HostInfo, HotkeyVerdict, UpdateState, draft_choices, hotkey_note, spot_choices,
-    update_line,
+    HostInfo, HotkeyVerdict, UpdateState, draft_choices, hotkey_note, spot_choices, update_line,
 };
 use qcalc_core::app::keybinds::{
-    self as kb, KEY_ACTIONS, KeyAction, chord_label, chord_problem, default_keybind,
-    keybind_for, missed_key_text,
+    self as kb, KEY_ACTIONS, KeyAction, chord_label, chord_problem, default_keybind, keybind_for,
+    missed_key_text,
 };
 use serde_json::{Value, json};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
@@ -46,14 +45,14 @@ use windows::Win32::Graphics::Dwm::{DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowA
 use windows::Win32::Graphics::Gdi::{ClientToScreen, InvalidateRect, ValidateRect};
 use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyState, MOD_NOREPEAT, RegisterHotKey, UnregisterHotKey, HOT_KEY_MODIFIERS, VK_CONTROL,
+    GetKeyState, HOT_KEY_MODIFIERS, MOD_NOREPEAT, RegisterHotKey, UnregisterHotKey, VK_CONTROL,
     VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     AppendMenuW, CREATESTRUCTW, CW_USEDEFAULT, CreatePopupMenu, CreateWindowExW, DefWindowProcW,
-    DestroyIcon, DestroyMenu, DestroyWindow, GetClientRect, HICON, ICON_BIG, ICON_SMALL,
-    IDC_ARROW, IDC_IBEAM, IsIconic, LoadCursorW, MF_CHECKED, MF_STRING, MINMAXINFO,
-    RegisterClassExW, SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetCursor,
+    DestroyIcon, DestroyMenu, DestroyWindow, GetClientRect, HICON, ICON_BIG, ICON_SMALL, IDC_ARROW,
+    IDC_IBEAM, IsIconic, LoadCursorW, MF_CHECKED, MF_STRING, MINMAXINFO, RegisterClassExW,
+    SW_RESTORE, SW_SHOW, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetCursor,
     SetForegroundWindow, SetWindowPos, ShowWindow, TPM_RETURNCMD, TPM_TOPALIGN, TrackPopupMenu,
     WA_INACTIVE, WM_ACTIVATE, WM_CHAR, WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND,
     WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT,
@@ -751,9 +750,12 @@ fn free(hwnd: HWND, chord: &str) -> bool {
 }
 
 fn probe_now(app: &App, hwnd: HWND, chord: &str) -> HotkeyVerdict {
-    probe(chord, app.hotkey.active.as_deref(), |c| free(hwnd, c), |c| {
-        hotkey::guess(c, &hotkey::running_launchers())
-    })
+    probe(
+        chord,
+        app.hotkey.active.as_deref(),
+        |c| free(hwnd, c),
+        |c| hotkey::guess(c, &hotkey::running_launchers()),
+    )
 }
 
 /// A new show / hide chord: tried first; kept only when it is Q Calc's.
@@ -818,7 +820,10 @@ impl Formats {
 enum Target {
     Nav(Page),
     /// an item's control; `part` is a choice's index (or 1 for a key's reset arrow)
-    Control { item: usize, part: usize },
+    Control {
+        item: usize,
+        part: usize,
+    },
 }
 
 /// One laid-out item (content coordinates, before scrolling).
@@ -892,12 +897,19 @@ fn wrap(gfx: &Gfx, text: &str, f: &IDWriteTextFormat, w: f32) -> Option<(IDWrite
     Some((l, h))
 }
 
-fn one_line(gfx: &Gfx, text: &str, f: &IDWriteTextFormat, w: f32, h: f32) -> Option<IDWriteTextLayout> {
+fn one_line(
+    gfx: &Gfx,
+    text: &str,
+    f: &IDWriteTextFormat,
+    w: f32,
+    h: f32,
+) -> Option<IDWriteTextLayout> {
     gfx.layout_in(text, f, w, h, DWRITE_TEXT_ALIGNMENT_CENTER)
 }
 
 fn text_w(gfx: &Gfx, text: &str, f: &IDWriteTextFormat) -> f32 {
-    gfx.layout(text, f, 0.0, 20.0).map_or(0.0, |l| measure(&l).0)
+    gfx.layout(text, f, 0.0, 20.0)
+        .map_or(0.0, |l| measure(&l).0)
 }
 
 impl Win {
@@ -921,9 +933,10 @@ impl Win {
     /// Lays the page out again when something changed.
     fn ensure_layout(&mut self, app: &App) {
         let (w, h) = self.client();
-        let stale = self.layout.as_ref().is_none_or(|l| {
-            (l.width - w).abs() > 0.5 || (l.height - h).abs() > 0.5
-        });
+        let stale = self
+            .layout
+            .as_ref()
+            .is_none_or(|l| (l.width - w).abs() > 0.5 || (l.height - h).abs() > 0.5);
         if !self.dirty && !stale {
             return;
         }
@@ -963,7 +976,10 @@ impl Win {
                     y += th + 12.0;
                 }
                 Item::Row {
-                    title, hint, control, ..
+                    title,
+                    hint,
+                    control,
+                    ..
                 } => {
                     let (ctl_w, ctl_h) = self.control_size(gfx, control);
                     let tw = (cw - 2.0 * ROW_PAD - ctl_w - 16.0).max(120.0);
@@ -973,13 +989,19 @@ impl Win {
                     } else {
                         wrap(gfx, hint, &f.hint, tw)
                     };
-                    let text_h = t.as_ref().map_or(18.0, |t| t.1)
-                        + hh.as_ref().map_or(0.0, |h| 2.0 + h.1);
+                    let text_h =
+                        t.as_ref().map_or(18.0, |t| t.1) + hh.as_ref().map_or(0.0, |h| 2.0 + h.1);
                     let row_h = text_h.max(ctl_h) + 2.0 * ROW_PAD;
                     let card = Rect::new(x0, y, cw, row_h.max(56.0));
                     let ty = card.y + (card.h - text_h) / 2.0;
-                    let title_rect = Rect::new(x0 + ROW_PAD, ty, tw, t.as_ref().map_or(18.0, |t| t.1));
-                    let hint_rect = Rect::new(x0 + ROW_PAD, title_rect.bottom() + 2.0, tw, hh.as_ref().map_or(0.0, |h| h.1));
+                    let title_rect =
+                        Rect::new(x0 + ROW_PAD, ty, tw, t.as_ref().map_or(18.0, |t| t.1));
+                    let hint_rect = Rect::new(
+                        x0 + ROW_PAD,
+                        title_rect.bottom() + 2.0,
+                        tw,
+                        hh.as_ref().map_or(0.0, |h| h.1),
+                    );
                     let ctl = Rect::new(
                         card.right() - ROW_PAD - ctl_w,
                         card.y + (card.h - ctl_h) / 2.0,
@@ -1003,7 +1025,13 @@ impl Win {
             .enumerate()
             .map(|(k, p)| {
                 let r = Rect::new(12.0, PAD + 50.0 + k as f32 * 40.0, NAV_W - 24.0, 36.0);
-                let l = gfx.layout_in(p.nav(), &f.nav, r.w - 28.0, r.h, DWRITE_TEXT_ALIGNMENT_LEADING);
+                let l = gfx.layout_in(
+                    p.nav(),
+                    &f.nav,
+                    r.w - 28.0,
+                    r.h,
+                    DWRITE_TEXT_ALIGNMENT_LEADING,
+                );
                 (*p, r, l)
             })
             .collect();
@@ -1041,12 +1069,19 @@ impl Win {
                 ((widest + 44.0).clamp(190.0, 300.0), 30.0)
             }
             Control::Button { label, .. } => ((text_w(gfx, label, &f.hint) + 32.0).max(88.0), 30.0),
-            Control::Key { label, .. } => ((text_w(gfx, label, &f.hint) + 28.0).max(150.0) + 34.0, 30.0),
+            Control::Key { label, .. } => {
+                ((text_w(gfx, label, &f.hint) + 28.0).max(150.0) + 34.0, 30.0)
+            }
             Control::Text { .. } => (240.0, 30.0),
         }
     }
 
-    fn control_parts(&self, gfx: &Gfx, c: &Control, r: Rect) -> Vec<(Rect, Option<IDWriteTextLayout>, usize)> {
+    fn control_parts(
+        &self,
+        gfx: &Gfx,
+        c: &Control,
+        r: Rect,
+    ) -> Vec<(Rect, Option<IDWriteTextLayout>, usize)> {
         let f = &self.fonts;
         match c {
             Control::None => Vec::new(),
@@ -1069,7 +1104,13 @@ impl Win {
                     .iter()
                     .find(|(i, _)| i == value)
                     .map_or(value.as_str(), |(_, l)| l.as_str());
-                let l = gfx.layout_in(label, &f.hint, r.w - 36.0, r.h, DWRITE_TEXT_ALIGNMENT_LEADING);
+                let l = gfx.layout_in(
+                    label,
+                    &f.hint,
+                    r.w - 36.0,
+                    r.h,
+                    DWRITE_TEXT_ALIGNMENT_LEADING,
+                );
                 vec![(r, l, 0)]
             }
             Control::Button { label, .. } => vec![(r, one_line(gfx, label, &f.hint, r.w, r.h), 0)],
@@ -1087,8 +1128,18 @@ impl Win {
                     .editing
                     .as_ref()
                     .map_or(value.as_str(), |(_, field)| field.text());
-                let text = if shown.is_empty() { placeholder.as_str() } else { shown };
-                let l = gfx.layout_in(text, &f.hint, r.w - 20.0, r.h, DWRITE_TEXT_ALIGNMENT_LEADING);
+                let text = if shown.is_empty() {
+                    placeholder.as_str()
+                } else {
+                    shown
+                };
+                let l = gfx.layout_in(
+                    text,
+                    &f.hint,
+                    r.w - 20.0,
+                    r.h,
+                    DWRITE_TEXT_ALIGNMENT_LEADING,
+                );
                 vec![(r, l, 0)]
             }
         }
@@ -1109,13 +1160,22 @@ impl Win {
         for (i, laid) in l.laid.iter().enumerate() {
             let enabled = !matches!(
                 &l.items[i],
-                Item::Row { control: Control::Button { enabled: false, .. }, .. }
+                Item::Row {
+                    control: Control::Button { enabled: false, .. },
+                    ..
+                }
             );
             if !enabled {
                 continue;
             }
             for (r, _, part) in &laid.parts {
-                out.push((Target::Control { item: i, part: *part }, *r));
+                out.push((
+                    Target::Control {
+                        item: i,
+                        part: *part,
+                    },
+                    *r,
+                ));
             }
         }
         out
@@ -1306,7 +1366,8 @@ impl Win {
                     }
                     Control::Button { enabled: true, .. } => changed(app, self, &id, Value::Null),
                     Control::Key { .. } => {
-                        if let Some(action) = KeyAction::from_id(&id["key:".len().min(id.len())..]) {
+                        if let Some(action) = KeyAction::from_id(&id["key:".len().min(id.len())..])
+                        {
                             if part == 1 {
                                 self.stop_recording(app);
                                 self.note.clear();
@@ -1420,7 +1481,10 @@ impl Win {
             }
             0x09 => self.move_focus(m.2),
             0x20 | 0x0D => {
-                if let Some(t) = self.focus.and_then(|i| self.focusables().get(i).map(|f| f.0)) {
+                if let Some(t) = self
+                    .focus
+                    .and_then(|i| self.focusables().get(i).map(|f| f.0))
+                {
                     self.activate(app, t);
                 }
             }
@@ -1466,7 +1530,11 @@ impl Win {
                 let on = *p == page;
                 if on {
                     c.fill_round(*r, 6.0, theme.fill_selected);
-                    c.fill_round(Rect::new(r.x, r.y + 9.0, 3.0, r.h - 18.0), 1.5, theme.accent);
+                    c.fill_round(
+                        Rect::new(r.x, r.y + 9.0, 3.0, r.h - 18.0),
+                        1.5,
+                        theme.accent,
+                    );
                 } else if hover == Some(Target::Nav(*p)) {
                     c.fill_round(*r, 6.0, theme.fill_hover);
                 }
@@ -1494,7 +1562,12 @@ impl Win {
                     }
                     Item::Note(_, warn) => {
                         if let Some((t, r)) = &laid.hint {
-                            c.text(t, r.x, r.y + dy, if *warn { theme.accent } else { theme.muted });
+                            c.text(
+                                t,
+                                r.x,
+                                r.y + dy,
+                                if *warn { theme.accent } else { theme.muted },
+                            );
                         }
                     }
                     Item::Row { id, control, .. } => {
@@ -1506,8 +1579,20 @@ impl Win {
                         if let Some((t, r)) = &laid.hint {
                             c.text(t, r.x, r.y + dy, theme.muted);
                         }
-                        let editing_this = editing.as_ref().filter(|(e, _)| e == id).map(|(_, f)| f);
-                        draw_control(c, &theme, control, &laid.parts, dy, hover, i, recording, editing_this, fonts);
+                        let editing_this =
+                            editing.as_ref().filter(|(e, _)| e == id).map(|(_, f)| f);
+                        draw_control(
+                            c,
+                            &theme,
+                            control,
+                            &laid.parts,
+                            dy,
+                            hover,
+                            i,
+                            recording,
+                            editing_this,
+                            fonts,
+                        );
                     }
                 }
             }
@@ -1521,7 +1606,11 @@ impl Win {
                 let track = l.height - 16.0;
                 let thumb = (track * l.height / l.content).max(28.0);
                 let at = 8.0 + (track - thumb) * scroll / (l.content - l.height);
-                c.fill_round(Rect::new(c.width - 8.0, at, 4.0, thumb), 2.0, with_alpha(theme.muted, 0.5));
+                c.fill_round(
+                    Rect::new(c.width - 8.0, at, 4.0, thumb),
+                    2.0,
+                    with_alpha(theme.muted, 0.5),
+                );
             }
         });
         if let Err(e) = result {
@@ -1534,9 +1623,17 @@ impl Win {
 fn outline(cv: &Canvas, r: Rect, radius: f32, stroke: f32, c: D2D1_COLOR_F, inside: D2D1_COLOR_F) {
     // four bars around the rect keep the inside untouched
     cv.fill_round(Rect::new(r.x, r.y, r.w, stroke), stroke / 2.0, c);
-    cv.fill_round(Rect::new(r.x, r.bottom() - stroke, r.w, stroke), stroke / 2.0, c);
+    cv.fill_round(
+        Rect::new(r.x, r.bottom() - stroke, r.w, stroke),
+        stroke / 2.0,
+        c,
+    );
     cv.fill_round(Rect::new(r.x, r.y, stroke, r.h), stroke / 2.0, c);
-    cv.fill_round(Rect::new(r.right() - stroke, r.y, stroke, r.h), stroke / 2.0, c);
+    cv.fill_round(
+        Rect::new(r.right() - stroke, r.y, stroke, r.h),
+        stroke / 2.0,
+        c,
+    );
     let _ = (radius, inside);
 }
 
@@ -1576,25 +1673,60 @@ fn draw_control(
         Control::Toggle(on) => {
             let r = at(&parts[0].0);
             if *on {
-                c.fill_round(r, r.h / 2.0, if hovered(0) { theme.accent_hover } else { theme.accent });
+                c.fill_round(
+                    r,
+                    r.h / 2.0,
+                    if hovered(0) {
+                        theme.accent_hover
+                    } else {
+                        theme.accent
+                    },
+                );
                 let k = Rect::new(r.right() - r.h + 4.0, r.y + 4.0, r.h - 8.0, r.h - 8.0);
-                c.fill_round(k, k.h / 2.0, if theme.dark { render::rgb(0x1d1d1f, 1.0) } else { render::rgb(0xffffff, 1.0) });
+                c.fill_round(
+                    k,
+                    k.h / 2.0,
+                    if theme.dark {
+                        render::rgb(0x1d1d1f, 1.0)
+                    } else {
+                        render::rgb(0xffffff, 1.0)
+                    },
+                );
             } else {
-                boxed(c, r, r.h / 2.0, theme.muted, if hovered(0) { theme.fill_hover } else { field_bg });
+                boxed(
+                    c,
+                    r,
+                    r.h / 2.0,
+                    theme.muted,
+                    if hovered(0) {
+                        theme.fill_hover
+                    } else {
+                        field_bg
+                    },
+                );
                 let k = Rect::new(r.x + 5.0, r.y + 5.0, r.h - 10.0, r.h - 10.0);
                 c.fill_round(k, k.h / 2.0, theme.muted);
             }
         }
         Control::Seg { options, value } => {
             if let (Some(first), Some(last)) = (parts.first(), parts.last()) {
-                let whole = Rect::new(first.0.x - 2.0, first.0.y - 2.0 + dy, last.0.right() - first.0.x + 4.0, first.0.h + 4.0);
+                let whole = Rect::new(
+                    first.0.x - 2.0,
+                    first.0.y - 2.0 + dy,
+                    last.0.right() - first.0.x + 4.0,
+                    first.0.h + 4.0,
+                );
                 boxed(c, whole, 7.0, border, field_bg);
             }
             for (r, label, k) in parts {
                 let r = at(r);
                 let on = options.get(*k).is_some_and(|(i, _)| i == value);
                 if on {
-                    c.fill_round(r, 5.0, with_alpha(theme.accent, if theme.dark { 0.32 } else { 0.16 }));
+                    c.fill_round(
+                        r,
+                        5.0,
+                        with_alpha(theme.accent, if theme.dark { 0.32 } else { 0.16 }),
+                    );
                 } else if hovered(*k) {
                     c.fill_round(r, 5.0, theme.fill_hover);
                 }
@@ -1606,7 +1738,17 @@ fn draw_control(
         Control::Select { .. } => {
             let (r, label, _) = &parts[0];
             let r = at(r);
-            boxed(c, r, 6.0, border, if hovered(0) { theme.fill_selected } else { field_bg });
+            boxed(
+                c,
+                r,
+                6.0,
+                border,
+                if hovered(0) {
+                    theme.fill_selected
+                } else {
+                    field_bg
+                },
+            );
             if let Some(t) = label {
                 c.text(t, r.x + 12.0, r.y, theme.ink);
             }
@@ -1626,10 +1768,21 @@ fn draw_control(
             };
             boxed(c, r, 6.0, border, fill);
             if let Some(t) = label {
-                c.text(t, r.x, r.y, if *enabled { theme.ink } else { with_alpha(theme.muted, 0.6) });
+                c.text(
+                    t,
+                    r.x,
+                    r.y,
+                    if *enabled {
+                        theme.ink
+                    } else {
+                        with_alpha(theme.muted, 0.6)
+                    },
+                );
             }
         }
-        Control::Key { recording: this, .. } => {
+        Control::Key {
+            recording: this, ..
+        } => {
             for (r, label, k) in parts {
                 let r = at(r);
                 if *k == 1 {
@@ -1642,7 +1795,17 @@ fn draw_control(
                     continue;
                 }
                 let edge = if *this { theme.accent } else { border };
-                boxed(c, r, 6.0, edge, if hovered(0) && !recording { theme.fill_selected } else { field_bg });
+                boxed(
+                    c,
+                    r,
+                    6.0,
+                    edge,
+                    if hovered(0) && !recording {
+                        theme.fill_selected
+                    } else {
+                        field_bg
+                    },
+                );
                 if let Some(t) = label {
                     c.text(t, r.x, r.y, if *this { theme.accent } else { theme.ink });
                 }
@@ -1651,13 +1814,31 @@ fn draw_control(
         Control::Text { .. } => {
             let (r, label, _) = &parts[0];
             let r = at(r);
-            boxed(c, r, 6.0, if editing.is_some() { theme.accent } else { border }, field_bg);
+            boxed(
+                c,
+                r,
+                6.0,
+                if editing.is_some() {
+                    theme.accent
+                } else {
+                    border
+                },
+                field_bg,
+            );
             if let Some(t) = label {
                 let empty = editing.is_some_and(|f| f.text().is_empty());
-                c.text(t, r.x + 10.0, r.y, if empty { theme.muted } else { theme.ink });
+                c.text(
+                    t,
+                    r.x + 10.0,
+                    r.y,
+                    if empty { theme.muted } else { theme.ink },
+                );
                 if let Some(f) = editing {
                     let x = render::caret_x(t, f.to_utf16(f.caret()));
-                    c.fill(Rect::new(r.x + 10.0 + x, r.y + 7.0, 1.5, r.h - 14.0), theme.ink);
+                    c.fill(
+                        Rect::new(r.x + 10.0 + x, r.y + 7.0, 1.5, r.h - 14.0),
+                        theme.ink,
+                    );
                 }
             }
         }
@@ -1729,7 +1910,10 @@ pub fn open_page(app: &mut App, page: Page) {
 
 /// Opens the page whose sidebar name is `name` ("updates"), else the one it was on (the bench pipe's `settings`).
 pub fn open_named(app: &mut App, name: &str) {
-    match Page::ALL.iter().find(|p| p.nav().eq_ignore_ascii_case(name)) {
+    match Page::ALL
+        .iter()
+        .find(|p| p.nav().eq_ignore_ascii_case(name))
+    {
         Some(p) => open_page(app, *p),
         None => open(app),
     }
@@ -1806,7 +1990,8 @@ fn show_now() {
         let mut r = RECT::default();
         // SAFETY: our window
         let _ = unsafe { GetClientRect(hwnd, &mut r) };
-        win.surface.resize((r.right - r.left) as u32, (r.bottom - r.top) as u32);
+        win.surface
+            .resize((r.right - r.left) as u32, (r.bottom - r.top) as u32);
         analytics::track(app, "settings.open");
         Some((win, dpi))
     });
@@ -1821,7 +2006,12 @@ fn show_now() {
         if let Some(icon) = tray::icon(px as u32, false) {
             // SAFETY: our window; the icon is kept until the window goes
             unsafe {
-                SendMessageW(hwnd, WM_SETICON, Some(WPARAM(kind as usize)), Some(LPARAM(icon.0 as isize)));
+                SendMessageW(
+                    hwnd,
+                    WM_SETICON,
+                    Some(WPARAM(kind as usize)),
+                    Some(LPARAM(icon.0 as isize)),
+                );
             }
             win.icons.push(icon);
         }
@@ -1829,7 +2019,10 @@ fn show_now() {
     let monitor = crate::window::cursor_monitor();
     let a = &monitor.area;
     let s = monitor.scale() as f32;
-    let (w, h) = ((SIZE.0 * s) as i32, ((SIZE.1 * s) as i32).min(a.height as i32 - 40));
+    let (w, h) = (
+        (SIZE.0 * s) as i32,
+        ((SIZE.1 * s) as i32).min(a.height as i32 - 40),
+    );
     let x = a.x as i32 + (a.width as i32 - w) / 2;
     let y = a.y as i32 + (a.height as i32 - h) / 2;
     WIN.with(|cell| *cell.borrow_mut() = Some(win));
@@ -1969,7 +2162,8 @@ fn on_message(w: &mut Win, app: &mut App, msg: u32, wp: WPARAM, lp: LPARAM) -> O
         }
         WM_ERASEBKGND => return Some(LRESULT(1)),
         WM_SIZE => {
-            w.surface.resize(lo(lp.0) as u32 & 0xffff, hi(lp.0) as u32 & 0xffff);
+            w.surface
+                .resize(lo(lp.0) as u32 & 0xffff, hi(lp.0) as u32 & 0xffff);
             w.invalidate();
         }
         WM_DPICHANGED => {
@@ -2067,9 +2261,9 @@ fn on_message(w: &mut Win, app: &mut App, msg: u32, wp: WPARAM, lp: LPARAM) -> O
 /// The work that sends messages back: choice lists, closing, a DPI move.
 fn run_pending() {
     loop {
-        let Some(Some((hwnd, job))) = with_win(|w| {
-            (!w.pending.is_empty()).then(|| (w.hwnd, w.pending.remove(0)))
-        }) else {
+        let Some(Some((hwnd, job))) =
+            with_win(|w| (!w.pending.is_empty()).then(|| (w.hwnd, w.pending.remove(0))))
+        else {
             return;
         };
         match job {
@@ -2081,7 +2275,15 @@ fn run_pending() {
             Pending::Move(r) => {
                 // SAFETY: our window
                 let _ = unsafe {
-                    SetWindowPos(hwnd, None, r.left, r.top, r.right - r.left, r.bottom - r.top, SWP_NOZORDER | SWP_NOACTIVATE)
+                    SetWindowPos(
+                        hwnd,
+                        None,
+                        r.left,
+                        r.top,
+                        r.right - r.left,
+                        r.bottom - r.top,
+                        SWP_NOZORDER | SWP_NOACTIVATE,
+                    )
                 };
             }
             Pending::Menu {
@@ -2090,7 +2292,8 @@ fn run_pending() {
                 options,
                 value,
             } => {
-                let Some((scale, scroll, dark)) = with_win(|w| (w.scale(), w.scroll, w.dark)) else {
+                let Some((scale, scroll, dark)) = with_win(|w| (w.scale(), w.scroll, w.dark))
+                else {
                     return;
                 };
                 dark_menus(dark);
@@ -2103,10 +2306,22 @@ fn run_pending() {
                     let _ = ClientToScreen(hwnd, &mut pt);
                     let Ok(menu) = CreatePopupMenu() else { return };
                     for (k, (id, label)) in options.iter().enumerate() {
-                        let flags = if *id == value { MF_STRING | MF_CHECKED } else { MF_STRING };
+                        let flags = if *id == value {
+                            MF_STRING | MF_CHECKED
+                        } else {
+                            MF_STRING
+                        };
                         let _ = AppendMenuW(menu, flags, k + 1, &HSTRING::from(label.as_str()));
                     }
-                    let cmd = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_TOPALIGN, pt.x, pt.y, None, hwnd, None);
+                    let cmd = TrackPopupMenu(
+                        menu,
+                        TPM_RETURNCMD | TPM_TOPALIGN,
+                        pt.x,
+                        pt.y,
+                        None,
+                        hwnd,
+                        None,
+                    );
                     let _ = DestroyMenu(menu);
                     cmd.0 as usize
                 };
@@ -2199,12 +2414,20 @@ mod tests {
             conflict_text(&v),
             "Alt+Space is used by PowerToys Run. Change it in PowerToys → PowerToys Run → Activation shortcut, or pick another here. Alt+Q is free."
         );
-        let v = probe("ctrl+k", None, free, |_| panic!("no owner for a free chord"));
+        let v = probe("ctrl+k", None, free, |_| {
+            panic!("no owner for a free chord")
+        });
         assert!(v.free && v.owner.is_empty() && v.suggest.is_empty());
         // Q Calc's own active chord isn't taken, and isn't offered
         assert!(probe("alt+space", Some("alt+space"), |_| false, |_| None).free);
         assert_eq!(
-            probe("ctrl+j", Some("alt+q"), |c| c == "alt+q" || c == "ctrl+alt+q", |_| None).suggest,
+            probe(
+                "ctrl+j",
+                Some("alt+q"),
+                |c| c == "alt+q" || c == "ctrl+alt+q",
+                |_| None
+            )
+            .suggest,
             "ctrl+alt+q"
         );
         let v = probe("ctrl+", None, |_| true, |_| None);
@@ -2222,8 +2445,14 @@ mod tests {
 
     #[test]
     fn hints_name_the_key() {
-        assert_eq!(with_key("Show answers as fractions", "Ctrl+F"), "Show answers as fractions · Ctrl+F");
-        assert_eq!(with_key("Match the precision you typed", ""), "Match the precision you typed.");
+        assert_eq!(
+            with_key("Show answers as fractions", "Ctrl+F"),
+            "Show answers as fractions · Ctrl+F"
+        );
+        assert_eq!(
+            with_key("Match the precision you typed", ""),
+            "Match the precision you typed."
+        );
         let mut s = store::Settings::default();
         assert_eq!(key_chord_title("fraction", &s), "Ctrl+F");
         s.merge(&json!({ "keybinds": { "fraction": "ctrl+alt+r", "angle": "" } }));
@@ -2234,7 +2463,12 @@ mod tests {
     #[test]
     fn every_page_has_a_title_and_the_sidebar_order_is_fixed() {
         let names: Vec<&str> = Page::ALL.iter().map(|p| p.nav()).collect();
-        assert_eq!(names, ["General", "Answers", "Units", "Keybinds", "Messages", "Updates"]);
+        assert_eq!(
+            names,
+            [
+                "General", "Answers", "Units", "Keybinds", "Messages", "Updates"
+            ]
+        );
         assert_eq!(Page::Updates.title(), "Software update");
     }
 }

@@ -15,9 +15,9 @@ use std::time::{Duration, Instant};
 use qcalc_ffi::SmokePuff;
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, POINT, RECT, SIZE, WPARAM};
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F,
-    D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED,
-    D2D1_FIGURE_END_OPEN, D2D1_PIXEL_FORMAT, D2D1_BEZIER_SEGMENT,
+    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_IGNORE, D2D1_ALPHA_MODE_PREMULTIPLIED,
+    D2D1_BEZIER_SEGMENT, D2D1_COLOR_F, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
+    D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
     D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BITMAP_BRUSH_PROPERTIES,
@@ -25,11 +25,10 @@ use windows::Win32::Graphics::Direct2D::{
     D2D1_CAP_STYLE_ROUND, D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID,
     D2D1_DRAW_TEXT_OPTIONS_NONE, D2D1_ELLIPSE, D2D1_EXTEND_MODE_CLAMP, D2D1_FACTORY_OPTIONS,
     D2D1_FACTORY_TYPE_SINGLE_THREADED, D2D1_FEATURE_LEVEL_DEFAULT, D2D1_LINE_JOIN_ROUND,
-    D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RENDER_TARGET_PROPERTIES,
-    D2D1_RENDER_TARGET_TYPE_SOFTWARE, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_ROUNDED_RECT,
-    D2D1_STROKE_STYLE_PROPERTIES, D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1CreateFactory,
-    ID2D1Bitmap, ID2D1BitmapBrush, ID2D1DCRenderTarget, ID2D1Factory, ID2D1PathGeometry,
-    ID2D1SolidColorBrush, ID2D1StrokeStyle,
+    D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_RENDER_TARGET_PROPERTIES, D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+    D2D1_RENDER_TARGET_USAGE_NONE, D2D1_ROUNDED_RECT, D2D1_STROKE_STYLE_PROPERTIES,
+    D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE, D2D1CreateFactory, ID2D1Bitmap, ID2D1BitmapBrush,
+    ID2D1DCRenderTarget, ID2D1Factory, ID2D1PathGeometry, ID2D1SolidColorBrush, ID2D1StrokeStyle,
 };
 use windows::Win32::Graphics::DirectWrite::{
     DWRITE_FACTORY_TYPE_SHARED, DWRITE_FONT_FEATURE, DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES,
@@ -48,9 +47,9 @@ use windows::Win32::Graphics::Gdi::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CreateWindowExW, DefWindowProcW, DestroyWindow, DispatchMessageW, GetWindowRect,
-    IsWindowVisible, MSG, PM_REMOVE, PeekMessageW, RegisterClassExW, SW_SHOWNOACTIVATE,
-    ShowWindow, TranslateMessage, ULW_ALPHA, UpdateLayeredWindow, WNDCLASSEXW, WS_EX_LAYERED,
-    WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
+    IsWindowVisible, MSG, PM_REMOVE, PeekMessageW, RegisterClassExW, SW_SHOWNOACTIVATE, ShowWindow,
+    TranslateMessage, ULW_ALPHA, UpdateLayeredWindow, WNDCLASSEXW, WS_EX_LAYERED, WS_EX_NOACTIVATE,
+    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_EX_TRANSPARENT, WS_POPUP,
 };
 use windows::core::{BOOL, HSTRING, Result, w};
 use windows_numerics::{Matrix3x2, Vector2};
@@ -195,15 +194,15 @@ impl Dib {
                 ..Default::default()
             };
             let mut bits = std::ptr::null_mut();
-            let bitmap = match CreateDIBSection(Some(mem), &info, DIB_RGB_COLORS, &mut bits, None, 0)
-            {
-                Ok(b) => b,
-                Err(e) => {
-                    let _ = DeleteDC(mem);
-                    ReleaseDC(None, screen);
-                    return Err(e);
-                }
-            };
+            let bitmap =
+                match CreateDIBSection(Some(mem), &info, DIB_RGB_COLORS, &mut bits, None, 0) {
+                    Ok(b) => b,
+                    Err(e) => {
+                        let _ = DeleteDC(mem);
+                        ReleaseDC(None, screen);
+                        return Err(e);
+                    }
+                };
             let old = SelectObject(mem, bitmap.into());
             Ok(Dib {
                 screen,
@@ -390,7 +389,12 @@ fn measure(layout: &IDWriteTextLayout) -> (f64, f64) {
     )
 }
 
-fn geometry(factory: &ID2D1Factory, segs: &[Seg], mirror: bool, filled: bool) -> Result<ID2D1PathGeometry> {
+fn geometry(
+    factory: &ID2D1Factory,
+    segs: &[Seg],
+    mirror: bool,
+    filled: bool,
+) -> Result<ID2D1PathGeometry> {
     let mx = |x: f32| f64::from(if mirror { shapes::HAND_W - x } else { x });
     let p = |x: f32, y: f32| v(mx(x), f64::from(y));
     // SAFETY: building a geometry we own; the sink is closed before use
@@ -459,7 +463,14 @@ fn stroke(factory: &ID2D1Factory, cap: bool, dashes: Option<&[f32]>) -> Result<I
     unsafe { factory.CreateStrokeStyle(&props, dashes) }
 }
 
-fn bitmap(rt: &ID2D1DCRenderTarget, px: &[u8], w: u32, h: u32, dpi: f32, opaque: bool) -> Result<ID2D1Bitmap> {
+fn bitmap(
+    rt: &ID2D1DCRenderTarget,
+    px: &[u8],
+    w: u32,
+    h: u32,
+    dpi: f32,
+    opaque: bool,
+) -> Result<ID2D1Bitmap> {
     let props = D2D1_BITMAP_PROPERTIES {
         pixelFormat: D2D1_PIXEL_FORMAT {
             format: DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -475,7 +486,10 @@ fn bitmap(rt: &ID2D1DCRenderTarget, px: &[u8], w: u32, h: u32, dpi: f32, opaque:
     // SAFETY: px holds h rows of w BGRA pixels and outlives the call (D2D copies it)
     unsafe {
         rt.CreateBitmap(
-            D2D_SIZE_U { width: w, height: h },
+            D2D_SIZE_U {
+                width: w,
+                height: h,
+            },
             Some(px.as_ptr().cast()),
             w * 4,
             &props,
@@ -530,13 +544,16 @@ impl Scene {
             }
             Kind::Arms => {
                 let palm = shapes::parse(shapes::PALM);
-                let hand = |mirror: bool| -> Result<(ID2D1PathGeometry, Vec<(ID2D1PathGeometry, f32)>)> {
-                    let fingers = shapes::FINGERS
-                        .iter()
-                        .map(|(d, w)| Ok((geometry(factory, &shapes::parse(d), mirror, false)?, *w)))
-                        .collect::<Result<Vec<_>>>()?;
-                    Ok((geometry(factory, &palm, mirror, true)?, fingers))
-                };
+                let hand =
+                    |mirror: bool| -> Result<(ID2D1PathGeometry, Vec<(ID2D1PathGeometry, f32)>)> {
+                        let fingers = shapes::FINGERS
+                            .iter()
+                            .map(|(d, w)| {
+                                Ok((geometry(factory, &shapes::parse(d), mirror, false)?, *w))
+                            })
+                            .collect::<Result<Vec<_>>>()?;
+                        Ok((geometry(factory, &palm, mirror, true)?, fingers))
+                    };
                 Res::Arms {
                     hands: [hand(false)?, hand(true)?],
                     round: stroke(factory, true, None)?,
@@ -544,7 +561,15 @@ impl Scene {
             }
             Kind::Fold => {
                 let one = |s: &str| -> Result<(IDWriteTextLayout, f64)> {
-                    let l = text_layout(&dw, s, &spec.family, 28.0, DWRITE_FONT_WEIGHT_MEDIUM, 0.0, 28.0)?;
+                    let l = text_layout(
+                        &dw,
+                        s,
+                        &spec.family,
+                        28.0,
+                        DWRITE_FONT_WEIGHT_MEDIUM,
+                        0.0,
+                        28.0,
+                    )?;
                     let w = measure(&l).0.ceil();
                     Ok((l, w))
                 };
@@ -552,8 +577,21 @@ impl Scene {
             }
             Kind::Void => {
                 let a = spec.answer;
-                let inner = Rect::new(a.x + room as f32 + 8.0, a.y + room as f32, (a.w - 16.0).max(1.0), a.h);
-                let copy = text_layout(&dw, &spec.answer_text, &spec.family, 24.0, DWRITE_FONT_WEIGHT_REGULAR, inner.w, inner.h)?;
+                let inner = Rect::new(
+                    a.x + room as f32 + 8.0,
+                    a.y + room as f32,
+                    (a.w - 16.0).max(1.0),
+                    a.h,
+                );
+                let copy = text_layout(
+                    &dw,
+                    &spec.answer_text,
+                    &spec.family,
+                    24.0,
+                    DWRITE_FONT_WEIGHT_REGULAR,
+                    inner.w,
+                    inner.h,
+                )?;
                 // as answer.rs lays the slot out: trailing, cut with an ellipsis
                 // SAFETY: setters on a live layout
                 unsafe {
@@ -586,7 +624,15 @@ impl Scene {
                 }
             }
             Kind::Euler => {
-                let note = text_layout(&dw, anim::NOTE_TEXT, &spec.text_family, 12.0, DWRITE_FONT_WEIGHT_REGULAR, 0.0, 18.0)?;
+                let note = text_layout(
+                    &dw,
+                    anim::NOTE_TEXT,
+                    &spec.text_family,
+                    12.0,
+                    DWRITE_FONT_WEIGHT_REGULAR,
+                    0.0,
+                    18.0,
+                )?;
                 let (w, _) = measure(&note);
                 let seed = Instant::now().elapsed().subsec_nanos() as u64 ^ 0x9e37_79b9_7f4a_7c15;
                 Res::Euler {
@@ -598,14 +644,30 @@ impl Scene {
             Kind::PiDigits => {
                 let a = spec.answer;
                 let right = f64::from(a.right() - 8.0) + room;
-                let zero = text_layout(&dw, "0", &spec.text_family, 11.0, DWRITE_FONT_WEIGHT_REGULAR, 0.0, 15.0)?;
+                let zero = text_layout(
+                    &dw,
+                    "0",
+                    &spec.text_family,
+                    11.0,
+                    DWRITE_FONT_WEIGHT_REGULAR,
+                    0.0,
+                    15.0,
+                )?;
                 tabular(&dw, &zero, 1);
                 let char_w = measure(&zero).0;
                 let all = anim::grouped(&spec.pi);
                 let room_w = right - (f64::from(bar.x) + 16.0);
                 let shown = anim::fitted(&all, char_w, room_w).to_string();
                 let count = shown.chars().count();
-                let layout = text_layout(&dw, &shown, &spec.text_family, 11.0, DWRITE_FONT_WEIGHT_REGULAR, 0.0, 15.0)?;
+                let layout = text_layout(
+                    &dw,
+                    &shown,
+                    &spec.text_family,
+                    11.0,
+                    DWRITE_FONT_WEIGHT_REGULAR,
+                    0.0,
+                    15.0,
+                )?;
                 tabular(&dw, &layout, count as u32);
                 let (w, h) = measure(&layout);
                 let (w, h) = (w.ceil(), h.ceil().max(15.0));
@@ -621,7 +683,9 @@ impl Scene {
             }
             Kind::Roll => {
                 let Some((px, w, h)) = &spec.picture else {
-                    return Err(windows::core::Error::from_hresult(windows::core::HRESULT(-1)));
+                    return Err(windows::core::Error::from_hresult(windows::core::HRESULT(
+                        -1,
+                    )));
                 };
                 let bmp = bitmap(&rt, px, *w, *h, spec.dpi, true)?;
                 let props = D2D1_BITMAP_BRUSH_PROPERTIES {
@@ -644,7 +708,12 @@ impl Scene {
     }
 
     fn bar(&self) -> Rect {
-        Rect::new(self.room as f32, self.room as f32, self.spec.bar_w, self.spec.bar_h)
+        Rect::new(
+            self.room as f32,
+            self.room as f32,
+            self.spec.bar_w,
+            self.spec.bar_h,
+        )
     }
 
     fn color(&self, c: D2D1_COLOR_F) -> &ID2D1SolidColorBrush {
@@ -705,11 +774,18 @@ impl Scene {
                 }
                 Res::Arms { hands, round } => {
                     // the bar's top 72 px, clipped (overflow hidden)
-                    rt.PushAxisAlignedClip(&rect(bx, by, bw, 72.0), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+                    rt.PushAxisAlignedClip(
+                        &rect(bx, by, bw, 72.0),
+                        D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+                    );
                     for (i, (palm, fingers)) in hands.iter().enumerate() {
                         let right = i == 1;
                         let (ty, deg, opacity) = anim::hand(t, right, reduce);
-                        let left = if right { bw / 2.0 + 48.0 } else { bw / 2.0 - 92.0 };
+                        let left = if right {
+                            bw / 2.0 + 48.0
+                        } else {
+                            bw / 2.0 - 92.0
+                        };
                         let (ox, oy) = (
                             f64::from(shapes::HAND_W) * if right { 0.8 } else { 0.2 },
                             f64::from(shapes::HAND_H) * 0.7,
@@ -718,7 +794,8 @@ impl Scene {
                             .then(Aff::rotate(deg.to_radians()))
                             .then(Aff::translate(bx + left + ox, by + ty + oy));
                         // a soft shadow under it, then a dark rim (drop-shadows 0 1px 3px .3 and 0 0 1px .65)
-                        for (dy, grow, a) in [(1.0, 4.0, 0.12 * opacity), (0.0, 2.0, 0.5 * opacity)] {
+                        for (dy, grow, a) in [(1.0, 4.0, 0.12 * opacity), (0.0, 2.0, 0.5 * opacity)]
+                        {
                             self.set(place.then(Aff::translate(0.0, dy)));
                             let b = self.color(rgba(0.0, 0.0, 0.0, a));
                             rt.DrawGeometry(palm, b, grow as f32, Some(round));
@@ -728,7 +805,12 @@ impl Scene {
                             }
                         }
                         self.set(place);
-                        let b = self.color(rgba(0xe4 as f32 / 255.0, 0xe4 as f32 / 255.0, 0xea as f32 / 255.0, opacity));
+                        let b = self.color(rgba(
+                            0xe4 as f32 / 255.0,
+                            0xe4 as f32 / 255.0,
+                            0xea as f32 / 255.0,
+                            opacity,
+                        ));
                         rt.FillGeometry(palm, b, None);
                         for (f, w) in fingers {
                             rt.DrawGeometry(f, b, *w, Some(round));
@@ -741,7 +823,11 @@ impl Scene {
                     for (i, (layout, w)) in digits.iter().enumerate() {
                         let spin = if i == 0 { 1.0 } else { -1.0 };
                         let (deg, opacity) = anim::digit(t, spin, reduce);
-                        let x = if i == 0 { bx + bw * 0.14 } else { bx + bw - bw * 0.14 - w };
+                        let x = if i == 0 {
+                            bx + bw * 0.14
+                        } else {
+                            bx + bw - bw * 0.14 - w
+                        };
                         let y = by + bh / 2.0;
                         let (cx, cy) = (x + w / 2.0, y + 14.0);
                         self.set(Aff::about(cx, cy, 1.0, deg.to_radians(), cx, cy));
@@ -749,7 +835,12 @@ impl Scene {
                         rt.DrawTextLayout(v(x, y), layout, b, D2D1_DRAW_TEXT_OPTIONS_NONE);
                     }
                 }
-                Res::Void { copy, inner, text, dashed } => {
+                Res::Void {
+                    copy,
+                    inner,
+                    text,
+                    dashed,
+                } => {
                     let r = if reduce { 8.0 } else { 12.0 };
                     let mid_y = f64::from(inner.y + inner.h / 2.0);
                     let (cx, cy) = if reduce {
@@ -763,7 +854,15 @@ impl Scene {
                         if cover > 0.0 {
                             let a = self.spec.answer;
                             let b = self.color(faded(self.spec.bg, cover));
-                            rt.FillRectangle(&rect(f64::from(a.x) + self.room, f64::from(a.y) + self.room, f64::from(a.w), f64::from(a.h)), b);
+                            rt.FillRectangle(
+                                &rect(
+                                    f64::from(a.x) + self.room,
+                                    f64::from(a.y) + self.room,
+                                    f64::from(a.w),
+                                    f64::from(a.h),
+                                ),
+                                b,
+                            );
                         }
                         // the spiral starts where the slot drew the text and ends in the hole, on its centre
                         let start = (f64::from(text.x + text.w / 2.0), mid_y);
@@ -771,7 +870,12 @@ impl Scene {
                         if o > 0.0 {
                             self.set(Aff::about(start.0, start.1, s, turn, x, y));
                             let b = self.color(faded(self.spec.answer_color, o));
-                            rt.DrawTextLayout(v(f64::from(inner.x), f64::from(inner.y)), copy, b, D2D1_DRAW_TEXT_OPTIONS_NONE);
+                            rt.DrawTextLayout(
+                                v(f64::from(inner.x), f64::from(inner.y)),
+                                copy,
+                                b,
+                                D2D1_DRAW_TEXT_OPTIONS_NONE,
+                            );
                         }
                     }
                     let (scale, opacity, ring_turn) = anim::hole(t, reduce);
@@ -779,23 +883,52 @@ impl Scene {
                         let ring_r = (1.45 * r) as f32;
                         // the warm disk: a glow, then the dashed ring turning
                         self.set(Aff::about(cx, cy, scale, ring_turn, cx, cy));
-                        let e = D2D1_ELLIPSE { point: v(cx, cy), radiusX: ring_r, radiusY: ring_r };
-                        rt.DrawEllipse(&e, self.color(rgba(1.0, 0.5, 0.2, 0.22 * opacity)), 6.0, None);
-                        rt.DrawEllipse(&e, self.color(rgba(1.0, 0.62, 0.25, 0.85 * opacity)), 2.0, Some(dashed));
+                        let e = D2D1_ELLIPSE {
+                            point: v(cx, cy),
+                            radiusX: ring_r,
+                            radiusY: ring_r,
+                        };
+                        rt.DrawEllipse(
+                            &e,
+                            self.color(rgba(1.0, 0.5, 0.2, 0.22 * opacity)),
+                            6.0,
+                            None,
+                        );
+                        rt.DrawEllipse(
+                            &e,
+                            self.color(rgba(1.0, 0.62, 0.25, 0.85 * opacity)),
+                            2.0,
+                            Some(dashed),
+                        );
                         // the core: black with a violet glow
                         self.set(Aff::about(cx, cy, scale, 0.0, cx, cy));
                         for (grow, a) in [(5.0, 0.12), (3.0, 0.2), (1.5, 0.35)] {
-                            let g = D2D1_ELLIPSE { point: v(cx, cy), radiusX: (r + grow) as f32, radiusY: (r + grow) as f32 };
+                            let g = D2D1_ELLIPSE {
+                                point: v(cx, cy),
+                                radiusX: (r + grow) as f32,
+                                radiusY: (r + grow) as f32,
+                            };
                             rt.FillEllipse(&g, self.color(rgba(0.55, 0.3, 1.0, a * opacity)));
                         }
-                        let core = D2D1_ELLIPSE { point: v(cx, cy), radiusX: r as f32, radiusY: r as f32 };
+                        let core = D2D1_ELLIPSE {
+                            point: v(cx, cy),
+                            radiusX: r as f32,
+                            radiusY: r as f32,
+                        };
                         rt.FillEllipse(&core, self.color(rgba(0.0, 0.0, 0.0, opacity)));
                     }
                 }
-                Res::Euler { note, note_size, bits } => {
+                Res::Euler {
+                    note,
+                    note_size,
+                    bits,
+                } => {
                     let a = self.spec.answer;
                     let (fx, fy) = if a.w > 0.0 {
-                        (f64::from(a.right()) + self.room - 24.0, f64::from(a.y + a.h / 2.0) + self.room)
+                        (
+                            f64::from(a.right()) + self.room - 24.0,
+                            f64::from(a.y + a.h / 2.0) + self.room,
+                        )
                     } else {
                         (bx + bw / 2.0, by + f64::from(self.spec.composer.y) + 36.0)
                     };
@@ -803,28 +936,62 @@ impl Scene {
                     let o = anim::note(t, reduce);
                     if o > 0.0 {
                         let (pw, ph) = *note_size;
-                        let x = fx.clamp(bx + pw / 2.0, (bx + bw - pw / 2.0).max(bx + pw / 2.0)) - pw / 2.0;
+                        let x = fx.clamp(bx + pw / 2.0, (bx + bw - pw / 2.0).max(bx + pw / 2.0))
+                            - pw / 2.0;
                         let y = by + bh + 6.0;
-                        let pill = D2D1_ROUNDED_RECT { rect: rect(x, y, pw, ph), radiusX: (ph / 2.0) as f32, radiusY: (ph / 2.0) as f32 };
+                        let pill = D2D1_ROUNDED_RECT {
+                            rect: rect(x, y, pw, ph),
+                            radiusX: (ph / 2.0) as f32,
+                            radiusY: (ph / 2.0) as f32,
+                        };
                         rt.FillRoundedRectangle(&pill, self.color(faded(self.spec.bg, 0.9 * o)));
-                        rt.DrawTextLayout(v(x + 8.0, y + 3.0), note, self.color(faded(self.spec.muted, o)), D2D1_DRAW_TEXT_OPTIONS_NONE);
+                        rt.DrawTextLayout(
+                            v(x + 8.0, y + 3.0),
+                            note,
+                            self.color(faded(self.spec.muted, o)),
+                            D2D1_DRAW_TEXT_OPTIONS_NONE,
+                        );
                     }
                     if !reduce {
                         for bit in bits {
                             let Some(at) = bit.at(t) else { continue };
                             let (r, g, b) = anim::CONFETTI[bit.colour];
-                            self.set(Aff::about(0.0, 0.0, bit.scale, at.turn, fx + at.dx, fy + at.dy));
-                            rt.FillRectangle(&rect(-4.0, -2.0, 8.0, 4.0), self.color(rgba(r, g, b, at.opacity)));
+                            self.set(Aff::about(
+                                0.0,
+                                0.0,
+                                bit.scale,
+                                at.turn,
+                                fx + at.dx,
+                                fy + at.dy,
+                            ));
+                            rt.FillRectangle(
+                                &rect(-4.0, -2.0, 8.0, 4.0),
+                                self.color(rgba(r, g, b, at.opacity)),
+                            );
                         }
                     }
                 }
-                Res::PiDigits { layout, size, char_w, count, at } => {
+                Res::PiDigits {
+                    layout,
+                    size,
+                    char_w,
+                    count,
+                    at,
+                } => {
                     let o = anim::digits_opacity(t, reduce);
                     if o > 0.0 {
                         let shown = anim::digits_shown(t, *count, reduce);
                         let w = (shown as f64 * char_w).min(size.0);
-                        rt.PushAxisAlignedClip(&rect(at.0 - 1.0, at.1, w + 1.0, size.1), D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
-                        rt.DrawTextLayout(v(at.0, at.1), layout, self.color(faded(self.spec.muted, o)), D2D1_DRAW_TEXT_OPTIONS_NONE);
+                        rt.PushAxisAlignedClip(
+                            &rect(at.0 - 1.0, at.1, w + 1.0, size.1),
+                            D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+                        );
+                        rt.DrawTextLayout(
+                            v(at.0, at.1),
+                            layout,
+                            self.color(faded(self.spec.muted, o)),
+                            D2D1_DRAW_TEXT_OPTIONS_NONE,
+                        );
                         rt.PopAxisAlignedClip();
                     }
                 }
@@ -836,12 +1003,20 @@ impl Scene {
                     for k in 0..4 {
                         let g = 3.0 * f64::from(k);
                         self.set(place.then(Aff::translate(0.0, 6.0)));
-                        let r = D2D1_ROUNDED_RECT { rect: rect(bx - g, by - g, bw + 2.0 * g, bh + 2.0 * g), radiusX: (8.0 + g) as f32, radiusY: (8.0 + g) as f32 };
+                        let r = D2D1_ROUNDED_RECT {
+                            rect: rect(bx - g, by - g, bw + 2.0 * g, bh + 2.0 * g),
+                            radiusX: (8.0 + g) as f32,
+                            radiusY: (8.0 + g) as f32,
+                        };
                         rt.FillRoundedRectangle(&r, self.color(rgba(0.0, 0.0, 0.0, 0.06)));
                     }
                     self.set(place);
                     picture.SetTransform(&Aff::translate(bx, by).m());
-                    let r = D2D1_ROUNDED_RECT { rect: rect(bx, by, bw, bh), radiusX: 8.0, radiusY: 8.0 };
+                    let r = D2D1_ROUNDED_RECT {
+                        rect: rect(bx, by, bw, bh),
+                        radiusX: 8.0,
+                        radiusY: 8.0,
+                    };
                     rt.FillRoundedRectangle(&r, picture);
                 }
             }
@@ -859,7 +1034,13 @@ fn tabular(dw: &IDWriteFactory, layout: &IDWriteTextLayout, len: u32) {
                 nameTag: DWRITE_FONT_FEATURE_TAG_TABULAR_FIGURES,
                 parameter: 1,
             });
-            let _ = layout.SetTypography(&t, DWRITE_TEXT_RANGE { startPosition: 0, length: len.max(1) });
+            let _ = layout.SetTypography(
+                &t,
+                DWRITE_TEXT_RANGE {
+                    startPosition: 0,
+                    length: len.max(1),
+                },
+            );
         }
     }
 }
@@ -889,11 +1070,19 @@ fn run(spec: Spec, shared: &Shared) -> Result<()> {
     let kind = spec.kind;
     // SAFETY: plain factory creation, released when this returns
     let factory: ID2D1Factory = unsafe {
-        D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, Some(&D2D1_FACTORY_OPTIONS::default()))
+        D2D1CreateFactory(
+            D2D1_FACTORY_TYPE_SINGLE_THREADED,
+            Some(&D2D1_FACTORY_OPTIONS::default()),
+        )
     }?;
     let scene = Scene::new(spec, &factory, room)?;
     let dib = Dib::new(w, h)?;
-    let bind = RECT { left: 0, top: 0, right: w, bottom: h };
+    let bind = RECT {
+        left: 0,
+        top: 0,
+        right: w,
+        bottom: h,
+    };
     // SAFETY: the DIB's DC outlives the target's use of it (scene drops before dib)
     unsafe { scene.rt.BindDC(dib.mem, &bind) }?;
     // SAFETY: a class with our trivial wndproc (registering twice fails harmlessly) and a window we destroy below
@@ -1015,7 +1204,10 @@ fn run(spec: Spec, shared: &Shared) -> Result<()> {
             }
         }
     }
-    if kind == Kind::Roll && shared.cloaked.load(Ordering::SeqCst) && !shared.cancel.load(Ordering::SeqCst) {
+    if kind == Kind::Roll
+        && shared.cloaked.load(Ordering::SeqCst)
+        && !shared.cancel.load(Ordering::SeqCst)
+    {
         cloak(bar.0 as usize, false);
     }
     // SAFETY: our own window, on its own thread
@@ -1026,7 +1218,11 @@ fn run(spec: Spec, shared: &Shared) -> Result<()> {
         "effect {} down after {:.0} ms: {frames} frames, {:.2} ms a frame{}",
         kind.name(),
         t0.elapsed().as_secs_f64() * 1000.0,
-        if frames > 0 { draw_ms / f64::from(frames) } else { 0.0 },
+        if frames > 0 {
+            draw_ms / f64::from(frames)
+        } else {
+            0.0
+        },
         if hidden { " (bar hidden)" } else { "" }
     );
     drop(scene);
@@ -1068,7 +1264,12 @@ mod tests {
     fn transforms_compose_in_order() {
         let a = Aff::translate(10.0, 0.0).then(Aff::scale(2.0));
         // (1, 1) → (11, 1) → (22, 2)
-        let p = |m: Aff, x: f32, y: f32| (x * m.0[0] + y * m.0[2] + m.0[4], x * m.0[1] + y * m.0[3] + m.0[5]);
+        let p = |m: Aff, x: f32, y: f32| {
+            (
+                x * m.0[0] + y * m.0[2] + m.0[4],
+                x * m.0[1] + y * m.0[3] + m.0[5],
+            )
+        };
         assert_eq!(p(a, 1.0, 1.0), (22.0, 2.0));
         // a quarter turn clockwise on screen: right becomes down
         let (x, y) = p(Aff::rotate(std::f64::consts::FRAC_PI_2), 1.0, 0.0);

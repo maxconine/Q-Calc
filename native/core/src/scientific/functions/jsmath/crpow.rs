@@ -160,10 +160,19 @@ pub(super) fn pow_pos(x: f64, y: f64) -> f64 {
     if p < -746.0 {
         return 0.0;
     }
-    let t = add(two_prod(y, l.hi), Dd { hi: y * l.lo, lo: 0.0 });
+    let t = add(
+        two_prod(y, l.hi),
+        Dd {
+            hi: y * l.lo,
+            lo: 0.0,
+        },
+    );
     // e^t = 2^n·e^r, |r| <= ln2/2
     let n = (t.hi / LN2.hi).round();
-    let r = add(t, scale(add(two_prod(n, LN2.hi), two_prod(n, LN2.lo)), -1.0));
+    let r = add(
+        t,
+        scale(add(two_prod(n, LN2.hi), two_prod(n, LN2.lo)), -1.0),
+    );
     let v = add_d(expm1_small(r), 1.0);
     round_scaled(v, n as i32)
 }

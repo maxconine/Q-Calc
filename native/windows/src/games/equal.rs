@@ -5,8 +5,8 @@
 use std::time::Instant;
 
 use qcalc_core::games::equal::{
-    self, DailyGame, EqualSave, LEN, Mark, SAVE_KEY, TRIES, current_streak, daily_answer, daily_number,
-    guess_problem, key_marks, load_save, record_daily, save_json, score, share_text,
+    self, DailyGame, EqualSave, LEN, Mark, SAVE_KEY, TRIES, current_streak, daily_answer,
+    daily_number, guess_problem, key_marks, load_save, record_daily, save_json, score, share_text,
 };
 
 use super::gfx::{Align, Font, Hit, Rect, Ui};
@@ -215,9 +215,17 @@ impl Equal {
 
     fn colors(dark: bool) -> (Rgba, Rgba, Rgba) {
         if dark {
-            (Rgba::hex(0x3f9e64, 1.0), Rgba::hex(0xc7a33a, 1.0), Rgba::hex(0x545458, 1.0))
+            (
+                Rgba::hex(0x3f9e64, 1.0),
+                Rgba::hex(0xc7a33a, 1.0),
+                Rgba::hex(0x545458, 1.0),
+            )
         } else {
-            (Rgba::hex(0x2e8b57, 1.0), Rgba::hex(0xc9a227, 1.0), Rgba::hex(0x8e8e93, 1.0))
+            (
+                Rgba::hex(0x2e8b57, 1.0),
+                Rgba::hex(0xc9a227, 1.0),
+                Rgba::hex(0x8e8e93, 1.0),
+            )
         }
     }
 
@@ -235,18 +243,42 @@ impl Equal {
         let streak = current_streak(&self.save.stats, &self.today);
         let (nw, nh) = ui.measure("equal", Font::bold(m::FS_BODY));
         let h = nh.max(22.0);
-        ui.text("equal", Font::bold(m::FS_BODY), x, y + (h - nh) / 2.0, c.ink);
+        ui.text(
+            "equal",
+            Font::bold(m::FS_BODY),
+            x,
+            y + (h - nh) / 2.0,
+            c.ink,
+        );
         let sub = if self.daily() {
             format!("#{} · streak {streak}", daily_number(&self.today))
         } else {
             "practice".into()
         };
         let (_, sh) = ui.measure(&sub, Font::SMALL);
-        ui.text(&sub, Font::SMALL, x + nw + m::SP3, y + (h - sh) / 2.0 + 1.0, c.muted);
-        let esc_w = w::esc_button(ui, x + width + m::SP2, y + (h - sh - 6.0) / 2.0, "esc", Hit::Esc);
+        ui.text(
+            &sub,
+            Font::SMALL,
+            x + nw + m::SP3,
+            y + (h - sh) / 2.0 + 1.0,
+            c.muted,
+        );
+        let esc_w = w::esc_button(
+            ui,
+            x + width + m::SP2,
+            y + (h - sh - 6.0) / 2.0,
+            "esc",
+            Hit::Esc,
+        );
         // the daily / practice switch
-        let labels = [("daily", false, ACT_DAILY_TAB), ("practice", true, ACT_PRACTICE_TAB)];
-        let sizes: Vec<(f32, f32)> = labels.iter().map(|(t, _, _)| ui.measure(t, Font::CAPTION)).collect();
+        let labels = [
+            ("daily", false, ACT_DAILY_TAB),
+            ("practice", true, ACT_PRACTICE_TAB),
+        ];
+        let sizes: Vec<(f32, f32)> = labels
+            .iter()
+            .map(|(t, _, _)| ui.measure(t, Font::CAPTION))
+            .collect();
         let seg_w: f32 = sizes.iter().map(|s| s.0 + 2.0 * m::SP2).sum::<f32>() + 4.0;
         let seg_h = sizes[0].1 + 4.0 + 4.0;
         let right = x + width + m::SP2 - esc_w - (m::SP3 - m::SP2);
@@ -260,7 +292,13 @@ impl Equal {
                 ui.control_shadow(r, 4.0);
                 ui.round(r, 4.0, c.control);
             }
-            ui.text(t, Font::CAPTION, r.x + m::SP2, r.y + 2.0, if on { c.ink } else { c.muted });
+            ui.text(
+                t,
+                Font::CAPTION,
+                r.x + m::SP2,
+                r.y + 2.0,
+                if on { c.ink } else { c.muted },
+            );
             ui.hit(r, Hit::Act(*act));
             sx += r.w;
         }
@@ -293,9 +331,18 @@ impl Equal {
             let marks = done.then(|| score(&guesses[r], &answer));
             // equal-shake: 0.36 s through ±6, ±4, 3 px
             let dx = if current {
-                keyframes((now - self.shake_at) / 0.36, &[(0.0, 0.0), (0.2, -6.0), (0.4, 6.0), (0.6, -4.0), (0.8, 3.0), (1.0, 0.0)], |k| {
-                    ease(k, 0.25, 0.1, 0.25, 1.0)
-                }) as f32
+                keyframes(
+                    (now - self.shake_at) / 0.36,
+                    &[
+                        (0.0, 0.0),
+                        (0.2, -6.0),
+                        (0.4, 6.0),
+                        (0.6, -4.0),
+                        (0.8, 3.0),
+                        (1.0, 0.0),
+                    ],
+                    |k| ease(k, 0.25, 0.1, 0.25, 1.0),
+                ) as f32
             } else {
                 0.0
             };
@@ -309,7 +356,9 @@ impl Equal {
                 } else {
                     1.0
                 };
-                let squash = (std::f64::consts::FRAC_PI_2 * (1.0 - ease(flip, 0.25, 0.1, 0.25, 1.0))).cos() as f32;
+                let squash = (std::f64::consts::FRAC_PI_2
+                    * (1.0 - ease(flip, 0.25, 0.1, 0.25, 1.0)))
+                .cos() as f32;
                 let hh = th * squash;
                 let tile = Rect::new(x, yy + (th - hh) / 2.0, tw, hh);
                 match mark {
@@ -329,7 +378,13 @@ impl Equal {
                     let s = glyph(ch).to_string();
                     let (gw, gh) = ui.measure(&s, f);
                     ui.push_transform(1.0, 0.0, 0.0);
-                    ui.text(&s, f, x + (tw - gw) / 2.0, yy + (th - gh) / 2.0, if mark.is_some() { Rgba::WHITE } else { c.ink });
+                    ui.text(
+                        &s,
+                        f,
+                        x + (tw - gw) / 2.0,
+                        yy + (th - gh) / 2.0,
+                        if mark.is_some() { Rgba::WHITE } else { c.ink },
+                    );
                     ui.pop_transform();
                 }
                 x += tw + gap;
@@ -347,7 +402,10 @@ impl Equal {
         let left = TRIES - guesses.len();
         let mut yy = y;
         let line = if self.note.is_empty() {
-            format!("{left} {} left", if left == 1 { "guess" } else { "guesses" })
+            format!(
+                "{left} {} left",
+                if left == 1 { "guess" } else { "guesses" }
+            )
         } else {
             self.note.clone()
         };
@@ -358,7 +416,14 @@ impl Equal {
         for (ri, row) in KEY_ROWS.iter().enumerate() {
             let mut keys: Vec<(String, u32, Option<Mark>, bool)> = row
                 .chars()
-                .map(|k| (glyph(k).to_string(), k as u32, marks.get(&k).copied(), false))
+                .map(|k| {
+                    (
+                        glyph(k).to_string(),
+                        k as u32,
+                        marks.get(&k).copied(),
+                        false,
+                    )
+                })
                 .collect();
             if ri == 1 {
                 keys.push(("⌫".into(), ACT_BACK, None, true));
@@ -366,7 +431,9 @@ impl Equal {
             }
             let widths: Vec<f32> = keys
                 .iter()
-                .map(|(l, _, _, wide)| (ui.measure(l, f).0 + 2.0 * m::SP1).max(if *wide { 46.0 } else { 30.0 }))
+                .map(|(l, _, _, wide)| {
+                    (ui.measure(l, f).0 + 2.0 * m::SP1).max(if *wide { 46.0 } else { 30.0 })
+                })
                 .collect();
             let total: f32 = widths.iter().sum::<f32>() + 5.0 * (keys.len() as f32 - 1.0);
             let mut kx = cx - total / 2.0;
@@ -378,11 +445,25 @@ impl Equal {
                     Some(mk) => ui.round(r, m::RADIUS_S, Self::fill(*mk, dark)),
                     None => {
                         ui.control_shadow(r, m::RADIUS_S);
-                        ui.round(r, m::RADIUS_S, if hover { c.control.mix(0.92, c.ink) } else { c.control });
+                        ui.round(
+                            r,
+                            m::RADIUS_S,
+                            if hover {
+                                c.control.mix(0.92, c.ink)
+                            } else {
+                                c.control
+                            },
+                        );
                     }
                 }
                 let (lw, lh) = ui.measure(label, f);
-                ui.text(label, f, r.x + (r.w - lw) / 2.0, r.y + (r.h - lh) / 2.0, if mark.is_some() { Rgba::WHITE } else { c.ink });
+                ui.text(
+                    label,
+                    f,
+                    r.x + (r.w - lw) / 2.0,
+                    r.y + (r.h - lh) / 2.0,
+                    if mark.is_some() { Rgba::WHITE } else { c.ink },
+                );
                 ui.set_alpha(was);
                 ui.hit(r, Hit::Act(*act));
                 kx += kw + 5.0;
@@ -390,7 +471,14 @@ impl Equal {
             yy += 30.0 + 5.0;
         }
         yy += m::SP2 - 5.0;
-        yy += w::note(ui, cx, yy, width, "green: right spot · yellow: elsewhere · grey: not in it · D daily · P practice · esc leaves", false);
+        yy += w::note(
+            ui,
+            cx,
+            yy,
+            width,
+            "green: right spot · yellow: elsewhere · grey: not in it · D daily · P practice · esc leaves",
+            false,
+        );
         yy - y
     }
 
@@ -415,8 +503,18 @@ impl Equal {
         let tone = if self.won() { c.accent } else { c.ink };
         let first = format!("{lead} · the answer was ");
         let runs = [
-            w::Run { text: &first, hit: None, ink: false, bold: false },
-            w::Run { text: &answer, hit: None, ink: true, bold: true },
+            w::Run {
+                text: &first,
+                hit: None,
+                ink: false,
+                bold: false,
+            },
+            w::Run {
+                text: &answer,
+                hit: None,
+                ink: true,
+                bold: true,
+            },
         ];
         yy += w::runs(ui, cx, yy, Font::digits(m::FS_BODY, false), tone, &runs) + m::SP2;
         if self.daily() {
@@ -429,13 +527,33 @@ impl Equal {
         let copy = if self.copied { "copied" } else { "copy result" };
         let items = if self.daily() {
             vec![
-                w::ButtonSpec { title: copy, kbd: Some("C".into()), on: false, hit: Hit::Act(ACT_COPY) },
-                w::ButtonSpec { title: "practice", kbd: Some("P".into()), on: false, hit: Hit::Act(ACT_PRACTICE) },
+                w::ButtonSpec {
+                    title: copy,
+                    kbd: Some("C".into()),
+                    on: false,
+                    hit: Hit::Act(ACT_COPY),
+                },
+                w::ButtonSpec {
+                    title: "practice",
+                    kbd: Some("P".into()),
+                    on: false,
+                    hit: Hit::Act(ACT_PRACTICE),
+                },
             ]
         } else {
             vec![
-                w::ButtonSpec { title: copy, kbd: Some("C".into()), on: false, hit: Hit::Act(ACT_COPY) },
-                w::ButtonSpec { title: "next puzzle", kbd: Some("↵".into()), on: false, hit: Hit::Act(ACT_NEXT) },
+                w::ButtonSpec {
+                    title: copy,
+                    kbd: Some("C".into()),
+                    on: false,
+                    hit: Hit::Act(ACT_COPY),
+                },
+                w::ButtonSpec {
+                    title: "next puzzle",
+                    kbd: Some("↵".into()),
+                    on: false,
+                    hit: Hit::Act(ACT_NEXT),
+                },
             ]
         };
         yy += w::button_row(ui, cx, yy, width, &items, false);

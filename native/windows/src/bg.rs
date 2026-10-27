@@ -39,14 +39,8 @@ pub fn post(f: impl FnOnce(&mut App) + Send + 'static) {
     let host = HOST.load(Ordering::Relaxed);
     if host != 0 {
         // SAFETY: posting to our host window from a worker thread
-        let _ = unsafe {
-            PostMessageW(
-                Some(HWND(host as *mut _)),
-                message(),
-                WPARAM(0),
-                LPARAM(0),
-            )
-        };
+        let _ =
+            unsafe { PostMessageW(Some(HWND(host as *mut _)), message(), WPARAM(0), LPARAM(0)) };
     }
 }
 

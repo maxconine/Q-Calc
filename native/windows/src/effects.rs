@@ -42,10 +42,12 @@ use windows::Win32::Graphics::Gdi::{
     DIB_RGB_COLORS, DeleteDC, DeleteObject, GetDC, ReleaseDC, SRCCOPY, SelectObject,
 };
 use windows::Win32::System::SystemInformation::GetLocalTime;
-use windows::Win32::UI::Input::KeyboardAndMouse::{GetKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
-    GetClientRect, KillTimer, SPI_GETCLIENTAREAANIMATION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS,
-    SW_HIDE, SetTimer, ShowWindowAsync, SystemParametersInfoW,
+    GetClientRect, KillTimer, SPI_GETCLIENTAREAANIMATION, SW_HIDE,
+    SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SetTimer, ShowWindowAsync, SystemParametersInfoW,
 };
 use windows::core::BOOL;
 use windows_numerics::{Matrix3x2, Vector2};
@@ -94,7 +96,9 @@ pub struct Eggs {
 
 impl std::fmt::Debug for Eggs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Eggs").field("crt", &self.crt).finish_non_exhaustive()
+        f.debug_struct("Eggs")
+            .field("crt", &self.crt)
+            .finish_non_exhaustive()
     }
 }
 
@@ -111,8 +115,7 @@ pub fn after(app: &mut App) {
         stop(&mut m.eggs, bar);
     }
     let display = m.live.as_ref().map_or("", |a| a.display.as_str());
-    if m
-        .eggs
+    if m.eggs
         .seen
         .as_ref()
         .is_some_and(|(t, d)| *t == m.live_for && d == display)
@@ -254,10 +257,18 @@ thread_local! {
 fn pie(c: &Canvas) -> Option<(ID2D1PathGeometry, ID2D1PathGeometry, ID2D1StrokeStyle)> {
     let f = &c.gfx.d2d;
     let pt = |x: f32, y: f32| Vector2 { X: x, Y: y };
-    let arc = |r: f32, deg: f32| pt(1.0 + r * deg.to_radians().cos(), 8.5 + r * deg.to_radians().sin());
+    let arc = |r: f32, deg: f32| {
+        pt(
+            1.0 + r * deg.to_radians().cos(),
+            8.5 + r * deg.to_radians().sin(),
+        )
+    };
     let seg = |r: f32| D2D1_ARC_SEGMENT {
         point: arc(r, 0.0),
-        size: windows::Win32::Graphics::Direct2D::Common::D2D_SIZE_F { width: r, height: r },
+        size: windows::Win32::Graphics::Direct2D::Common::D2D_SIZE_F {
+            width: r,
+            height: r,
+        },
         rotationAngle: 0.0,
         sweepDirection: D2D1_SWEEP_DIRECTION_CLOCKWISE,
         arcSize: D2D1_ARC_SIZE_SMALL,
@@ -298,7 +309,10 @@ pub fn paint_bar(c: &mut Canvas, model: &BarModel, layout: &BarLayout, scale: f3
             if let Some((wedge, crust, round)) = cell.get_or_init(|| pie(c)) {
                 let (rt, brush) = c.raw();
                 // the slice is 10 × 9, 3 in from the left, centred on the composer and 1 up
-                let (x, y) = (3.0, layout.composer.y + (layout.composer.h - 9.0) / 2.0 - 1.0);
+                let (x, y) = (
+                    3.0,
+                    layout.composer.y + (layout.composer.h - 9.0) / 2.0 - 1.0,
+                );
                 let mut before = Matrix3x2::default();
                 // SAFETY: inside the bar's draw; the transform is put back
                 unsafe {
@@ -307,9 +321,19 @@ pub fn paint_bar(c: &mut Canvas, model: &BarModel, layout: &BarLayout, scale: f3
                     m.M31 += x;
                     m.M32 += y;
                     rt.SetTransform(&m);
-                    brush.SetColor(&crate::render::Color { r: 0.93, g: 0.72, b: 0.42, a: 0.75 });
+                    brush.SetColor(&crate::render::Color {
+                        r: 0.93,
+                        g: 0.72,
+                        b: 0.42,
+                        a: 0.75,
+                    });
                     rt.FillGeometry(wedge, brush, None);
-                    brush.SetColor(&crate::render::Color { r: 0.72, g: 0.45, b: 0.2, a: 0.75 });
+                    brush.SetColor(&crate::render::Color {
+                        r: 0.72,
+                        g: 0.45,
+                        b: 0.2,
+                        a: 0.75,
+                    });
                     rt.DrawGeometry(crust, brush, 1.4, Some(round));
                     rt.SetTransform(&before);
                 }
@@ -356,15 +380,28 @@ pub fn key_down(app: &mut App, vk: u32, lp: isize) -> bool {
             eggs.crt = !eggs.crt;
             app.bar.set_dark(eggs.crt || app.theme.dark);
             app.model.touch();
-            crate::qlog!("konami: crt {}", if app.model.eggs.crt { "on" } else { "off" });
+            crate::qlog!(
+                "konami: crt {}",
+                if app.model.eggs.crt { "on" } else { "off" }
+            );
         }
     }
-    if vk == 0x0D && !chord && !down(VK_SHIFT.0) && app.model.selected.is_none() && is_barrel_roll(app.model.field.text().to_string()) {
+    if vk == 0x0D
+        && !chord
+        && !down(VK_SHIFT.0)
+        && app.model.selected.is_none()
+        && is_barrel_roll(app.model.field.text().to_string())
+    {
         let eggs = &mut app.model.eggs;
-        let rolling = eggs.playing.as_ref().is_some_and(|p| p.kind == Kind::Roll && !p.shared.done.load(Ordering::SeqCst));
+        let rolling = eggs
+            .playing
+            .as_ref()
+            .is_some_and(|p| p.kind == Kind::Roll && !p.shared.done.load(Ordering::SeqCst));
         if !rolling {
             let text = app.model.field.text().to_string();
-            if eggs.lines.settle(text, String::new(), None, pi_day()) == Some(LineEggKind::BarrelRoll) {
+            if eggs.lines.settle(text, String::new(), None, pi_day())
+                == Some(LineEggKind::BarrelRoll)
+            {
                 play(app, Kind::Roll);
             }
         }
@@ -423,7 +460,9 @@ fn capture(bar: HWND) -> Option<(Vec<u8>, u32, u32)> {
             Ok(dib) => {
                 let old = SelectObject(mem, dib.into());
                 let ok = BitBlt(mem, 0, 0, w, h, Some(dc), 0, 0, SRCCOPY).is_ok();
-                let px = ok.then(|| std::slice::from_raw_parts(bits as *const u8, (w * h * 4) as usize).to_vec());
+                let px = ok.then(|| {
+                    std::slice::from_raw_parts(bits as *const u8, (w * h * 4) as usize).to_vec()
+                });
                 SelectObject(mem, old);
                 let _ = DeleteObject(dib.into());
                 px.map(|px| (px, w as u32, h as u32))
@@ -449,7 +488,9 @@ fn play(app: &mut App, kind: Kind) {
         return;
     }
     let l = &app.bar.layout;
-    if matches!(kind, Kind::Void | Kind::PiDigits) && (l.answer.w <= 0.0 || l.answer_text.is_empty()) {
+    if matches!(kind, Kind::Void | Kind::PiDigits)
+        && (l.answer.w <= 0.0 || l.answer_text.is_empty())
+    {
         return;
     }
     let picture = if kind == Kind::Roll {
@@ -488,13 +529,25 @@ fn play(app: &mut App, kind: Kind) {
         answer_color: theme.answer,
         family: app.gfx.fonts.family.clone(),
         text_family: app.gfx.fonts.text_family.clone(),
-        puffs: if kind == Kind::Smoke { smoke_puffs() } else { Vec::new() },
-        pi: if kind == Kind::PiDigits { pi_digits() } else { String::new() },
+        puffs: if kind == Kind::Smoke {
+            smoke_puffs()
+        } else {
+            Vec::new()
+        },
+        pi: if kind == Kind::PiDigits {
+            pi_digits()
+        } else {
+            String::new()
+        },
         picture,
     };
     if let Some(shared) = overlay::spawn(spec) {
         app.model.eggs.playing = Some(Playing { shared, kind });
-        crate::qlog!("effect {} (native){}", kind.name(), if reduce { ", reduced motion" } else { "" });
+        crate::qlog!(
+            "effect {} (native){}",
+            kind.name(),
+            if reduce { ", reduced motion" } else { "" }
+        );
     }
 }
 

@@ -3,8 +3,8 @@
 //! against the clock. The rules are the core's `numbers`; the faint parens are the bar's own (`parens`).
 
 use qcalc_core::games::numbers::{
-    self, Mode, NumbersStats, STATS_KEY, check_expr, countdown_points, deal24, deal_countdown, frac_text,
-    load_stats, record_countdown, record24, solves24, stats_json, used_tiles,
+    self, Mode, NumbersStats, STATS_KEY, check_expr, countdown_points, deal_countdown, deal24,
+    frac_text, load_stats, record_countdown, record24, solves24, stats_json, used_tiles,
 };
 use qcalc_core::parens::{autofill_parens, fill_parens, infer_parens};
 
@@ -113,7 +113,11 @@ struct Numbers {
 impl Numbers {
     fn new(countdown: bool, env: &mut Env) -> Numbers {
         let mut s = load(&env.store);
-        s.mode = if countdown { Mode::Countdown } else { Mode::TwentyFour };
+        s.mode = if countdown {
+            Mode::Countdown
+        } else {
+            Mode::TwentyFour
+        };
         // the mode the lobby picked is kept as the next default
         save(&mut env.store, &s);
         let round = Self::deal(countdown, s.large, env);
@@ -128,7 +132,11 @@ impl Numbers {
     }
 
     fn deal(countdown: bool, large: f64, env: &mut Env) -> Round {
-        let secs = if countdown { SECONDS_COUNTDOWN } else { SECONDS_24 };
+        let secs = if countdown {
+            SECONDS_COUNTDOWN
+        } else {
+            SECONDS_24
+        };
         let deadline = env.date() + secs * 1000.0;
         if countdown {
             let (nums, target, best) = deal_countdown(large, &mut || env.rand());
@@ -156,7 +164,11 @@ impl Numbers {
     }
 
     fn mode(&self) -> Mode {
-        if self.round.countdown { Mode::Countdown } else { Mode::TwentyFour }
+        if self.round.countdown {
+            Mode::Countdown
+        } else {
+            Mode::TwentyFour
+        }
     }
 
     fn filled(&self) -> String {
@@ -175,7 +187,11 @@ impl Numbers {
     fn start(&mut self, env: &mut Env) {
         let countdown = self.round.countdown;
         self.update(env, |s| NumbersStats {
-            mode: if countdown { Mode::Countdown } else { Mode::TwentyFour },
+            mode: if countdown {
+                Mode::Countdown
+            } else {
+                Mode::TwentyFour
+            },
             ..*s
         });
         self.round = Self::deal(countdown, self.stats.large, env);
@@ -218,16 +234,24 @@ impl Numbers {
             } else if let Some(v) = c.value {
                 self.note = format!("that’s {}, not 24", frac_text(v));
             } else {
-                self.note = if blank { "type an expression".into() } else { "not finished".into() };
+                self.note = if blank {
+                    "type an expression".into()
+                } else {
+                    "not finished".into()
+                };
             }
             return;
         }
         match c.value {
             Some(v) if c.valid => self.finish("locked", Some(v.n / v.d), env),
             _ => {
-                self.note = c
-                    .problem
-                    .unwrap_or_else(|| if blank { "type an expression".into() } else { "not finished".into() });
+                self.note = c.problem.unwrap_or_else(|| {
+                    if blank {
+                        "type an expression".into()
+                    } else {
+                        "not finished".into()
+                    }
+                });
             }
         }
     }
@@ -280,7 +304,12 @@ impl Numbers {
                 if off == 0.0 {
                     format!("exactly {}!", num(r.target))
                 } else {
-                    format!("{}{}, {} away", if how == "time" { "time’s up · " } else { "" }, num(v), num(off))
+                    format!(
+                        "{}{}, {} away",
+                        if how == "time" { "time’s up · " } else { "" },
+                        num(v),
+                        num(off)
+                    )
                 }
             } else if how == "time" {
                 "time’s up · nothing locked in".to_string()
@@ -309,7 +338,10 @@ impl Play for Numbers {
         // the head
         let s = &self.stats;
         let sub = if r.countdown {
-            format!("{} pts in {} · exact run {} · best {}", s.points, s.rounds, s.exact_streak, s.best_exact)
+            format!(
+                "{} pts in {} · exact run {} · best {}",
+                s.points, s.rounds, s.exact_streak, s.best_exact
+            )
         } else {
             format!("streak {} · best {}", s.streak24, s.best24)
         };
@@ -318,9 +350,27 @@ impl Play for Numbers {
         let hh = nh.max(22.0);
         ui.text(name, Font::bold(m::FS_BODY), x, yy + (hh - nh) / 2.0, c.ink);
         let (_, sh) = ui.measure(&sub, Font::SMALL);
-        ui.text(&sub, Font::digits(m::FS_SMALL, false), x + nw + m::SP3, yy + (hh - sh) / 2.0 + 1.0, c.muted);
-        let ew = w::esc_button(ui, x + width + m::SP2, yy + (hh - sh - 6.0) / 2.0, "esc leaves", Hit::Esc);
-        w::esc_button(ui, x + width + m::SP2 - ew - (m::SP3 - m::SP2), yy + (hh - sh - 6.0) / 2.0, "modes", Hit::Act(ACT_MENU));
+        ui.text(
+            &sub,
+            Font::digits(m::FS_SMALL, false),
+            x + nw + m::SP3,
+            yy + (hh - sh) / 2.0 + 1.0,
+            c.muted,
+        );
+        let ew = w::esc_button(
+            ui,
+            x + width + m::SP2,
+            yy + (hh - sh - 6.0) / 2.0,
+            "esc leaves",
+            Hit::Esc,
+        );
+        w::esc_button(
+            ui,
+            x + width + m::SP2 - ew - (m::SP3 - m::SP2),
+            yy + (hh - sh - 6.0) / 2.0,
+            "modes",
+            Hit::Act(ACT_MENU),
+        );
         yy += hh + m::SP3;
         // the target
         let label = if r.countdown { "target" } else { "make" };
@@ -334,17 +384,35 @@ impl Play for Numbers {
         yy += th + m::SP2;
         // the tiles
         let taken = used_tiles(&self.text, &r.nums);
-        let (tile_w, tile_f) = if r.countdown { (46.0, Font::digits(18.0, true)) } else { (52.0, Font::digits(20.0, true)) };
+        let (tile_w, tile_f) = if r.countdown {
+            (46.0, Font::digits(18.0, true))
+        } else {
+            (52.0, Font::digits(20.0, true))
+        };
         let n = r.nums.len() as f32;
         let mut tx = cx - (n * tile_w + (n - 1.0) * m::SP2) / 2.0;
         for (i, v) in r.nums.iter().enumerate() {
             let rect = Rect::new(tx, yy, tile_w, 44.0);
-            let was = ui.set_alpha(if taken.get(i).copied().unwrap_or(false) { 0.3 } else { 1.0 });
+            let was = ui.set_alpha(if taken.get(i).copied().unwrap_or(false) {
+                0.3
+            } else {
+                1.0
+            });
             ui.control_shadow(rect, m::RADIUS_S);
             ui.round(rect, m::RADIUS_S, c.control);
             let t = num(*v);
             let (vw, vh) = ui.measure(&t, tile_f);
-            ui.text(&t, tile_f, rect.x + (tile_w - vw) / 2.0, rect.y + (44.0 - vh) / 2.0, if *v >= 25.0 && r.countdown { c.accent } else { c.ink });
+            ui.text(
+                &t,
+                tile_f,
+                rect.x + (tile_w - vw) / 2.0,
+                rect.y + (44.0 - vh) / 2.0,
+                if *v >= 25.0 && r.countdown {
+                    c.accent
+                } else {
+                    c.ink
+                },
+            );
             ui.set_alpha(was);
             if r.over.is_none() {
                 ui.hit(rect, Hit::Act(i as u32));
@@ -353,25 +421,42 @@ impl Play for Numbers {
         }
         yy += 44.0 + m::SP2;
         // the clock
-        let total = if r.countdown { SECONDS_COUNTDOWN } else { SECONDS_24 } * 1000.0;
+        let total = if r.countdown {
+            SECONDS_COUNTDOWN
+        } else {
+            SECONDS_24
+        } * 1000.0;
         let left = (r.deadline - self.now).max(0.0);
         let bar = Rect::new(cx - 160.0, yy, 320.0, 3.0);
         ui.round(bar, 2.0, c.fill_track());
         if r.over.is_none() {
             let fw = (bar.w as f64 * left / total) as f32;
-            ui.round(Rect::new(bar.x, bar.y, fw, 3.0), 1.5, if left < 10_000.0 { BAD } else { c.accent });
+            ui.round(
+                Rect::new(bar.x, bar.y, fw, 3.0),
+                1.5,
+                if left < 10_000.0 { BAD } else { c.accent },
+            );
         }
         yy += 3.0 + m::SP2;
         // the entry
         let field = Rect::new(cx - 160.0, yy, 320.0, 34.0);
         ui.round(field, m::RADIUS_S, c.bg_tape);
-        ui.ring(field, m::RADIUS_S, 1.0, if r.over.is_none() { c.ring() } else { c.line });
+        ui.ring(
+            field,
+            m::RADIUS_S,
+            1.0,
+            if r.over.is_none() { c.ring() } else { c.line },
+        );
         let ef = Font::digits(16.0, false);
         let (_, eh) = ui.measure("0", ef);
         let ty = field.y + (34.0 - eh) / 2.0;
         let text_x = field.x + m::SP3;
         if self.text.is_empty() && r.over.is_none() {
-            let hint = if r.countdown { "e.g. 100 × 7 − 25" } else { "e.g. (8 − 2) × 4" };
+            let hint = if r.countdown {
+                "e.g. 100 × 7 − 25"
+            } else {
+                "e.g. (8 − 2) × 4"
+            };
             ui.text(hint, ef, text_x, ty, c.muted.opacity(0.6));
         }
         let tw = ui.text(&self.text, ef, text_x, ty, c.ink);
@@ -384,22 +469,50 @@ impl Play for Numbers {
             let (bw, _) = ui.measure(&before, ef);
             ui.fill(Rect::new(text_x + bw, ty + 1.0, 1.0, eh - 2.0), c.accent);
             let secs = format!("{}s", (left / 1000.0).ceil());
-            ui.text_in(&secs, Font::digits(m::FS_SMALL, false), field.x, field.y + (34.0 - 14.0) / 2.0, field.w - m::SP3, Align::Right, c.muted);
+            ui.text_in(
+                &secs,
+                Font::digits(m::FS_SMALL, false),
+                field.x,
+                field.y + (34.0 - 14.0) / 2.0,
+                field.w - m::SP3,
+                Align::Right,
+                c.muted,
+            );
         }
         yy += 34.0 + m::SP2;
         // the live line
-        let (live, bad) = if r.over.is_some() { (String::new(), false) } else { self.live() };
+        let (live, bad) = if r.over.is_some() {
+            (String::new(), false)
+        } else {
+            self.live()
+        };
         let lf = Font::digits(m::FS_BODY, false);
         let (_, llh) = ui.measure("0", lf);
         if !live.is_empty() {
-            ui.text_in(&live, lf, x, yy, width, Align::Center, if bad { BAD } else { c.muted });
+            ui.text_in(
+                &live,
+                lf,
+                x,
+                yy,
+                width,
+                Align::Center,
+                if bad { BAD } else { c.muted },
+            );
         }
         yy += llh;
         if r.over.is_some() {
             let (text, won, solution) = self.result();
             yy += m::SP2;
             let (_, rh) = ui.measure(&text, Font::digits(m::FS_BODY, true));
-            ui.text_in(&text, Font::digits(m::FS_BODY, true), x, yy, width, Align::Center, if won { c.accent } else { c.ink });
+            ui.text_in(
+                &text,
+                Font::digits(m::FS_BODY, true),
+                x,
+                yy,
+                width,
+                Align::Center,
+                if won { c.accent } else { c.ink },
+            );
             yy += rh + 2.0;
             if let Some(sol) = solution {
                 yy += ui.text_wrap(&sol, lf, x, yy, width, Align::Center, c.muted);
@@ -451,7 +564,12 @@ impl Play for Numbers {
         }
         let len = self.text.chars().count();
         if k.key == "Tab" || k.key == "ArrowRight" {
-            let caret16 = self.text.chars().take(self.caret).map(char::len_utf16).sum::<usize>();
+            let caret16 = self
+                .text
+                .chars()
+                .take(self.caret)
+                .map(char::len_utf16)
+                .sum::<usize>();
             if let Some(written) = autofill_parens(&self.text, caret16, caret16) {
                 self.text = written;
                 self.caret = self.text.chars().count();
@@ -500,8 +618,17 @@ impl Play for Numbers {
             i => {
                 if let Some(v) = self.round.nums.get(i as usize).copied() {
                     // a tile goes in; after a number it comes with a +
-                    let after_digit = self.text.chars().take(self.caret).last().is_some_and(|c| c.is_ascii_digit());
-                    let piece = if after_digit { format!(" + {}", num(v)) } else { num(v) };
+                    let after_digit = self
+                        .text
+                        .chars()
+                        .take(self.caret)
+                        .last()
+                        .is_some_and(|c| c.is_ascii_digit());
+                    let piece = if after_digit {
+                        format!(" + {}", num(v))
+                    } else {
+                        num(v)
+                    };
                     self.insert(&piece);
                 }
             }
@@ -534,7 +661,11 @@ impl Play for Numbers {
     fn closing(&mut self, env: &mut Env) {
         if self.round.over.is_none() {
             let s = load(&env.store);
-            let s = if self.round.countdown { record_countdown(&s, 0) } else { record24(&s, false) };
+            let s = if self.round.countdown {
+                record_countdown(&s, 0)
+            } else {
+                record24(&s, false)
+            };
             save(&mut env.store, &s);
             self.round.over = Some(("gave up", None, 0));
         }

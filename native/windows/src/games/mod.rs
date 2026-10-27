@@ -39,23 +39,26 @@ use qcalc_core::games::peer::PeerEvent;
 use qcalc_core::games::shell::{EscAction, ShellMode};
 use qcalc_core::games::{Random, Side};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
-use windows::Win32::Graphics::Dwm::{DWMWA_USE_IMMERSIVE_DARK_MODE, DwmFlush, DwmSetWindowAttribute};
+use windows::Win32::Graphics::Dwm::{
+    DWMWA_USE_IMMERSIVE_DARK_MODE, DwmFlush, DwmSetWindowAttribute,
+};
 use windows::Win32::Graphics::Gdi::{InvalidateRect, ValidateRect};
 use windows::Win32::UI::HiDpi::{AdjustWindowRectExForDpi, GetDpiForWindow};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent, VK_CONTROL,
-    VK_MENU, VK_SHIFT,
+    GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
+    VK_CONTROL, VK_MENU, VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CS_DBLCLKS, CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_STYLE, GetClientRect, GetWindowLongPtrW, GetWindowRect,
-    ICON_BIG, ICON_SMALL, IDC_ARROW, IsIconic, IsWindowVisible, KillTimer, LoadCursorW, MINMAXINFO,
-    RegisterClassExW, SW_SHOW, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW,
-    SetForegroundWindow, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
-    WA_INACTIVE, WINDOW_STYLE, WM_ACTIVATE, WM_CHAR, WM_CLOSE, WM_DESTROY, WM_DPICHANGED,
-    WM_ERASEBKGND, WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_SETICON, WM_SETTINGCHANGE, WM_SIZE,
-    WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER, WNDCLASSEXW, WS_CAPTION, WS_EX_APPWINDOW,
-    WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_SYSMENU, WS_VISIBLE,
+    CS_DBLCLKS, CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_STYLE, GetClientRect,
+    GetWindowLongPtrW, GetWindowRect, ICON_BIG, ICON_SMALL, IDC_ARROW, IsIconic, IsWindowVisible,
+    KillTimer, LoadCursorW, MINMAXINFO, RegisterClassExW, SW_SHOW, SWP_FRAMECHANGED,
+    SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW, SetForegroundWindow, SetTimer, SetWindowLongPtrW,
+    SetWindowPos, SetWindowTextW, ShowWindow, WA_INACTIVE, WINDOW_STYLE, WM_ACTIVATE, WM_CHAR,
+    WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND, WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP,
+    WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_SETICON,
+    WM_SETTINGCHANGE, WM_SIZE, WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER, WNDCLASSEXW,
+    WS_CAPTION, WS_EX_APPWINDOW, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_SYSMENU,
+    WS_VISIBLE,
 };
 use windows::core::{BOOL, HSTRING, PCWSTR, w};
 
@@ -166,7 +169,10 @@ fn no_sub(_: &GameStore) -> String {
 
 /// A line as the commands read it: trimmed, spaces collapsed, lower case.
 pub fn normalize(raw: &str) -> String {
-    raw.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+    raw.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
 }
 
 /// The game a bar line names (`pong`, `connect 4`, `24 game`…).
@@ -181,7 +187,10 @@ pub fn command(text: &str) -> Option<&'static str> {
 /// What the bar says under a game's command (`↵ play pong`).
 pub fn hint(text: &str) -> Option<String> {
     let kind = command(text)?;
-    GAMES.iter().find(|g| g.kind == kind).map(|g| g.hint.to_string())
+    GAMES
+        .iter()
+        .find(|g| g.kind == kind)
+        .map(|g| g.hint.to_string())
 }
 
 /// The games for a list (kind, title).
@@ -298,7 +307,8 @@ const TIMER_TICK: usize = 1;
 const TIMER_ARM: usize = 2;
 const TIMER_RELAY: usize = 3;
 const TIMER_FRAME: usize = 4;
-const NORMAL_STYLE: WINDOW_STYLE = WINDOW_STYLE(WS_OVERLAPPED.0 | WS_CAPTION.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0);
+const NORMAL_STYLE: WINDOW_STYLE =
+    WINDOW_STYLE(WS_OVERLAPPED.0 | WS_CAPTION.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0);
 
 struct Win {
     hwnd: HWND,
@@ -373,7 +383,10 @@ fn theme_setting() -> String {
 
 fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
     let Some(def) = GAMES.iter().copied().find(|g| g.kind == kind) else {
-        return Err(windows::core::Error::new(windows::core::HRESULT(0x8007_0057u32 as i32), "no such game"));
+        return Err(windows::core::Error::new(
+            windows::core::HRESULT(0x8007_0057u32 as i32),
+            "no such game",
+        ));
     };
     let t = Instant::now();
     let monitor = crate::window::cursor_monitor();
@@ -473,7 +486,10 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
         let _ = SetForegroundWindow(hwnd);
     }
     run_ops();
-    qlog!("games: {kind} opened in {:.1} ms", t.elapsed().as_secs_f64() * 1000.0);
+    qlog!(
+        "games: {kind} opened in {:.1} ms",
+        t.elapsed().as_secs_f64() * 1000.0
+    );
     Ok(())
 }
 
@@ -497,7 +513,14 @@ fn set_icons(hwnd: HWND, dpi: u32, dark: bool) {
     for (which, px) in [(ICON_SMALL, 16 * dpi / 96), (ICON_BIG, 32 * dpi / 96)] {
         if let Some(icon) = crate::tray::icon(px, dark) {
             // SAFETY: our window; the icon stays for its life (a few KB, freed with the process)
-            unsafe { SendMessageW(hwnd, WM_SETICON, Some(WPARAM(which as usize)), Some(LPARAM(icon.0 as isize))) };
+            unsafe {
+                SendMessageW(
+                    hwnd,
+                    WM_SETICON,
+                    Some(WPARAM(which as usize)),
+                    Some(LPARAM(icon.0 as isize)),
+                )
+            };
         }
     }
 }
@@ -568,7 +591,13 @@ fn run_ops() {
         for op in ops {
             match op {
                 Op::Pos(hwnd, x, y, w, h, frame) => {
-                    let flags = SWP_NOZORDER | SWP_NOACTIVATE | if frame { SWP_FRAMECHANGED } else { Default::default() };
+                    let flags = SWP_NOZORDER
+                        | SWP_NOACTIVATE
+                        | if frame {
+                            SWP_FRAMECHANGED
+                        } else {
+                            Default::default()
+                        };
                     // SAFETY: our window
                     let _ = unsafe { SetWindowPos(hwnd, None, x, y, w, h, flags) };
                 }
@@ -622,20 +651,32 @@ impl Win {
                         self.lobby.def.kind,
                         process::ms_since(t0),
                         crate::log::since_start_ms(),
-                        if self.gfx.hardware { "hardware" } else { "software" }
+                        if self.gfx.hardware {
+                            "hardware"
+                        } else {
+                            "software"
+                        }
                     );
                 }
                 self.next_frame();
             }
             WM_ERASEBKGND => return Some(LRESULT(1)),
             WM_SIZE => {
-                self.gfx.resize(lo(lp.0) as u32 & 0xffff, hi(lp.0) as u32 & 0xffff);
+                self.gfx
+                    .resize(lo(lp.0) as u32 & 0xffff, hi(lp.0) as u32 & 0xffff);
             }
             WM_DPICHANGED => {
                 self.gfx.set_dpi((wp.0 & 0xffff) as u32);
                 // SAFETY: lParam is the suggested rect for this message
                 let r = unsafe { *(lp.0 as *const RECT) };
-                push(Op::Pos(self.hwnd, r.left, r.top, r.right - r.left, r.bottom - r.top, false));
+                push(Op::Pos(
+                    self.hwnd,
+                    r.left,
+                    r.top,
+                    r.right - r.left,
+                    r.bottom - r.top,
+                    false,
+                ));
                 if self.normal_at.is_some() && !self.env.shell.fullscreen {
                     self.normal_at = Some((r.left, r.top));
                 }
@@ -801,7 +842,11 @@ impl Win {
     }
 
     fn hit_at(&self, x: f32, y: f32) -> Option<(Rect, Hit)> {
-        self.hits.iter().rev().find(|(r, _)| r.contains(x, y)).cloned()
+        self.hits
+            .iter()
+            .rev()
+            .find(|(r, _)| r.contains(x, y))
+            .cloned()
     }
 
     fn click(&mut self, x: f32, y: f32) {
@@ -882,7 +927,14 @@ impl Win {
             EscAction::Arm => {
                 self.env.shell.armed_at = Some(now);
                 // SAFETY: our window's one-shot timer
-                unsafe { SetTimer(Some(self.hwnd), TIMER_ARM, qcalc_core::games::shell::ARM_MS as u32, None) };
+                unsafe {
+                    SetTimer(
+                        Some(self.hwnd),
+                        TIMER_ARM,
+                        qcalc_core::games::shell::ARM_MS as u32,
+                        None,
+                    )
+                };
             }
             EscAction::Leave => {
                 self.env.resume();
@@ -909,8 +961,18 @@ impl Win {
     fn fullscreen_min(&self) -> (i32, i32) {
         let mon = self.monitor();
         let s = mon.scale();
-        let (w, h) = crate::place::game_window_min(mon.area.width / s, mon.area.height / s, Some((f64::from(m::PANEL_W), 392.0)));
-        outer(self.hwnd, WS_OVERLAPPEDWINDOW, w as f32, h as f32, self.dpi())
+        let (w, h) = crate::place::game_window_min(
+            mon.area.width / s,
+            mon.area.height / s,
+            Some((f64::from(m::PANEL_W), 392.0)),
+        );
+        outer(
+            self.hwnd,
+            WS_OVERLAPPEDWINDOW,
+            w as f32,
+            h as f32,
+            self.dpi(),
+        )
     }
 
     /// Full screen: a big centred, decorated, resizable window at 80% of the screen; off, the card's own size.
@@ -927,7 +989,11 @@ impl Win {
             self.normal_at = Some((r.left, r.top));
             let mon = self.monitor();
             let s = mon.scale();
-            let (cw, ch) = crate::place::game_window(mon.area.width / s, mon.area.height / s, Some((f64::from(m::PANEL_W), 392.0)));
+            let (cw, ch) = crate::place::game_window(
+                mon.area.width / s,
+                mon.area.height / s,
+                Some((f64::from(m::PANEL_W), 392.0)),
+            );
             let (w, h) = outer(self.hwnd, WS_OVERLAPPEDWINDOW, cw as f32, ch as f32, dpi);
             let x = (mon.area.x + (mon.area.width - f64::from(w)) / 2.0) as i32;
             let y = (mon.area.y + (mon.area.height - f64::from(h)) / 2.0) as i32;
@@ -968,7 +1034,11 @@ impl Win {
             for e in &events {
                 self.lobby.heard(e, &mut self.env);
             }
-            if events.is_empty() && self.env.sent.is_empty() && self.env.end.is_none() && !self.env.escape {
+            if events.is_empty()
+                && self.env.sent.is_empty()
+                && self.env.end.is_none()
+                && !self.env.escape
+            {
                 break;
             }
         }
@@ -1024,13 +1094,21 @@ impl Win {
         let content_h = self.content_h;
         let colors = self.colors;
         let mouse = self.mouse;
-        let Win { gfx, lobby, env, .. } = self;
+        let Win {
+            gfx, lobby, env, ..
+        } = self;
         let mut new_h = content_h;
         let frame = gfx.draw(colors, mouse, t, |ui| {
             let c = ui.c;
             ui.clear(c.bg);
             let (area_x, area_w, top) = if fs {
-                let l = fullscreen_layout(Size { w: f64::from(ui.w), h: f64::from(ui.h) }, &FullscreenLayoutOptions::new(Size { w: 640.0, h: 360.0 }));
+                let l = fullscreen_layout(
+                    Size {
+                        w: f64::from(ui.w),
+                        h: f64::from(ui.h),
+                    },
+                    &FullscreenLayoutOptions::new(Size { w: 640.0, h: 360.0 }),
+                );
                 let pad = 16.0 * l.ui as f32;
                 let game_h = (ui.h - 2.0 * pad).max(0.0);
                 let w = (ui.w - 2.0 * pad).min(game_h * 1.8).max(0.0);
@@ -1047,13 +1125,32 @@ impl Win {
             let area = Rect::new(area_x, top, area_w, new_h);
             // a game on this computer gets the full-screen button in the corner
             if env.shell.mode == ShellMode::Local {
-                widgets::fullscreen_button(ui, area.right() - 6.0 - 24.0, area.bottom() - 6.0 - 22.0, fs, true);
+                widgets::fullscreen_button(
+                    ui,
+                    area.right() - 6.0 - 24.0,
+                    area.bottom() - 6.0 - 22.0,
+                    fs,
+                    true,
+                );
             }
             if env.shell.paused {
-                paused_card(ui, if fs { Rect::new(0.0, 0.0, ui.w, ui.h) } else { area }, fs);
+                paused_card(
+                    ui,
+                    if fs {
+                        Rect::new(0.0, 0.0, ui.w, ui.h)
+                    } else {
+                        area
+                    },
+                    fs,
+                );
             }
             if env.shell.armed_at.is_some() {
-                widgets::toast(ui, area.x + area.w / 2.0, area.y + m::SP3, "esc again to leave");
+                widgets::toast(
+                    ui,
+                    area.x + area.w / 2.0,
+                    area.y + m::SP3,
+                    "esc again to leave",
+                );
             }
         });
         self.last_frame = Instant::now();
@@ -1076,7 +1173,13 @@ impl Win {
                 let _ = unsafe { GetWindowRect(self.hwnd, &mut r) };
                 let mon = self.monitor();
                 let max_h = (mon.area.height / mon.scale()) as f32 - 40.0;
-                let (w, h) = outer(self.hwnd, NORMAL_STYLE, m::PANEL_W, new_h.min(max_h), self.dpi());
+                let (w, h) = outer(
+                    self.hwnd,
+                    NORMAL_STYLE,
+                    m::PANEL_W,
+                    new_h.min(max_h),
+                    self.dpi(),
+                );
                 push(Op::Pos(self.hwnd, r.left, r.top, w, h, false));
             } else {
                 self.animating = true;
@@ -1091,7 +1194,8 @@ impl Win {
             return;
         }
         // SAFETY: plain queries on our window
-        let shown = unsafe { IsWindowVisible(self.hwnd).as_bool() && !IsIconic(self.hwnd).as_bool() };
+        let shown =
+            unsafe { IsWindowVisible(self.hwnd).as_bool() && !IsIconic(self.hwnd).as_bool() };
         if !shown {
             return;
         }
@@ -1139,7 +1243,12 @@ fn paused_card(ui: &mut Ui, area: Rect, fs: bool) {
     let bw = b1 + m::SP3 + b2;
     let w = tw.max(sw).max(bw) + 2.0 * m::SP5;
     let h = m::SP4 + th + m::SP2 + sh + m::SP2 + m::SP2 + bh + m::SP4;
-    let r = Rect::new(area.x + (area.w - w) / 2.0, area.y + (area.h - h) / 2.0, w, h);
+    let r = Rect::new(
+        area.x + (area.w - w) / 2.0,
+        area.y + (area.h - h) / 2.0,
+        w,
+        h,
+    );
     ui.card_shadow(r, m::RADIUS);
     ui.round(r, m::RADIUS, c.bg);
     let cx = r.x + w / 2.0;
@@ -1149,8 +1258,24 @@ fn paused_card(ui: &mut Ui, area: Rect, fs: bool) {
     ui.text_center(sub, gfx::Font::SMALL, cx, y, c.muted);
     y += sh + 2.0 * m::SP2;
     let x0 = cx - bw / 2.0;
-    widgets::button(ui, Rect::new(x0, y, b1, bh), "resume", Some("↵"), false, false, Hit::Resume);
-    widgets::button(ui, Rect::new(x0 + b1 + m::SP3, y, b2, bh), label, Some("F"), false, false, Hit::Fullscreen);
+    widgets::button(
+        ui,
+        Rect::new(x0, y, b1, bh),
+        "resume",
+        Some("↵"),
+        false,
+        false,
+        Hit::Resume,
+    );
+    widgets::button(
+        ui,
+        Rect::new(x0 + b1 + m::SP3, y, b2, bh),
+        label,
+        Some("F"),
+        false,
+        false,
+        Hit::Fullscreen,
+    );
 }
 
 #[cfg(test)]
@@ -1186,7 +1311,16 @@ mod tests {
         ] {
             assert_eq!(command(line), Some(kind), "{line}");
         }
-        for line in ["", "pong 2", "connect", "24", "crack 2", "ultimate tac", "games", "2+2"] {
+        for line in [
+            "",
+            "pong 2",
+            "connect",
+            "24",
+            "crack 2",
+            "ultimate tac",
+            "games",
+            "2+2",
+        ] {
             assert_eq!(command(line), None, "{line}");
         }
         assert_eq!(hint("crack").as_deref(), Some("↵ crack the safe"));

@@ -4,8 +4,8 @@
 use std::f64::consts::PI;
 
 use qcalc_core::games::ember::{
-    Element, GameState, ONEWAY_H, PLAYER_H, PLAYER_W, POOL_SINK, Phase, Player, RUN_SPEED, Stage, T_GOO, T_LAVA,
-    T_LIGHT, T_ONEWAY, T_THIN, T_TRAMP, T_WALL, T_WATER, T_CRUMBLE, TILE,
+    Element, GameState, ONEWAY_H, PLAYER_H, PLAYER_W, POOL_SINK, Phase, Player, RUN_SPEED, Stage,
+    T_CRUMBLE, T_GOO, T_LAVA, T_LIGHT, T_ONEWAY, T_THIN, T_TRAMP, T_WALL, T_WATER, TILE,
 };
 
 use super::draw::*;
@@ -13,14 +13,26 @@ use super::fx::*;
 use crate::games::canvas::{Baseline, Canvas, Cap, Col, Gradient, Join, TextAlign};
 
 impl Renderer {
-    pub fn draw_player(&mut self, g: &mut Canvas, i: usize, cur: &GameState, t: f64, dt: f64, opts: DrawOpts) {
+    pub fn draw_player(
+        &mut self,
+        g: &mut Canvas,
+        i: usize,
+        cur: &GameState,
+        t: f64,
+        dt: f64,
+        opts: DrawOpts,
+    ) {
         let pl = cur.players[i];
         let (x, y) = (self.px[i], self.py[i]);
         let gv = if pl.grav == -1 { -1.0 } else { 1.0 };
         self.vy_rel = pl.vy * gv;
         let mut an = self.anims[i];
         animate(&mut an, &pl, self.vy_rel, t, dt);
-        an.flip = if opts.reduce_motion { if gv < 0.0 { 1.0 } else { 0.0 } } else { approach(an.flip, if gv < 0.0 { 1.0 } else { 0.0 }, 16.0, dt) };
+        an.flip = if opts.reduce_motion {
+            if gv < 0.0 { 1.0 } else { 0.0 }
+        } else {
+            approach(an.flip, if gv < 0.0 { 1.0 } else { 0.0 }, 16.0, dt)
+        };
         an.aura = approach(an.aura, if gv < 0.0 { 1.0 } else { 0.0 }, 8.0, dt);
         let fire = i == 0;
         let cx = x + PLAYER_W / 2.0;
@@ -34,7 +46,11 @@ impl Renderer {
         let p = self.pal;
         let cy = y + PLAYER_H / 2.0;
         let moving = pl.vx.abs() > 30.0;
-        let bob = if pl.ground && moving { an.run.sin().abs() * 1.6 } else { 0.0 };
+        let bob = if pl.ground && moving {
+            an.run.sin().abs() * 1.6
+        } else {
+            0.0
+        };
         let breathe = 1.0 + (t * 3.1 + i as f64).sin() * 0.025;
         let sy = (1.0 + an.sq) * breathe;
         let sx = 1.0 - an.sq * 0.55;
@@ -45,7 +61,11 @@ impl Renderer {
             cy,
             if fire { 30.0 } else { 26.0 },
             css1(if fire { p.fire } else { p.frost }),
-            if fire { 0.55 + 0.08 * (t * 13.0).sin() } else { 0.42 },
+            if fire {
+                0.55 + 0.08 * (t * 13.0).sin()
+            } else {
+                0.42
+            },
         );
         if an.aura > 0.02 {
             self.glow(g, cx, cy, 30.0, css1(GRAV), 0.5 * an.aura);
@@ -72,7 +92,12 @@ impl Renderer {
             g.set_line_join(Join::Round);
             g.set_line_width(1.6);
             for s in [-1.0, 1.0] {
-                let ay = cy + if opts.reduce_motion { 0.0 } else { -((t * 14.0 + if s > 0.0 { 8.0 } else { 0.0 }) % 16.0) + 8.0 };
+                let ay = cy
+                    + if opts.reduce_motion {
+                        0.0
+                    } else {
+                        -((t * 14.0 + if s > 0.0 { 8.0 } else { 0.0 }) % 16.0) + 8.0
+                    };
                 g.set_alpha(an.aura * (1.0 - (ay - cy).abs() / 10.0));
                 g.begin_path();
                 g.move_to(cx + s * 13.0 - 2.6, ay + 1.6);
@@ -93,7 +118,14 @@ impl Renderer {
                 let kd = f64::from(k);
                 g.set_alpha(0.34 - kd * 0.07);
                 g.begin_path();
-                g.arc(cx - pl.vx / sp * kd * 7.0, cy - pl.vy / sp * kd * 7.0, 7.5 - kd * 1.2, 0.0, TAU, false);
+                g.arc(
+                    cx - pl.vx / sp * kd * 7.0,
+                    cy - pl.vy / sp * kd * 7.0,
+                    7.5 - kd * 1.2,
+                    0.0,
+                    TAU,
+                    false,
+                );
                 g.fill();
             }
             g.set_alpha(1.0);
@@ -119,8 +151,16 @@ impl Renderer {
         g.restore();
 
         if pl.air > 0 {
-            let col = if p.dark { ARROW } else { mix(ARROW, BLACK, 0.2) };
-            let pulse = if opts.reduce_motion { 0.5 } else { 0.5 + 0.5 * (t * 9.0).sin() };
+            let col = if p.dark {
+                ARROW
+            } else {
+                mix(ARROW, BLACK, 0.2)
+            };
+            let pulse = if opts.reduce_motion {
+                0.5
+            } else {
+                0.5 + 0.5 * (t * 9.0).sin()
+            };
             self.begin_glow(g);
             self.glow(g, cx, feet + gv * 4.0, 13.0, css1(ARROW), 0.5 + 0.3 * pulse);
             self.end_glow(g);
@@ -133,7 +173,11 @@ impl Renderer {
             g.stroke_style(css1(mix(ARROW, BLACK, 0.55)));
             g.set_line_width(3.0);
             g.stroke();
-            g.stroke_style(css1(if p.dark { mix(ARROW, WHITE, 0.4) } else { WHITE }));
+            g.stroke_style(css1(if p.dark {
+                mix(ARROW, WHITE, 0.4)
+            } else {
+                WHITE
+            }));
             g.set_line_width(1.5);
             g.stroke();
             g.restore();
@@ -147,7 +191,13 @@ impl Renderer {
         let up = |d: f64| feet - gv * d;
         let face = pl.face as f64;
         let less = if opts.reduce_motion { 0.3 } else { 1.0 };
-        let rate = (if pl.fly > 0 { 70.0 } else if moving || !pl.ground { 26.0 } else { 0.0 }) * less;
+        let rate = (if pl.fly > 0 {
+            70.0
+        } else if moving || !pl.ground {
+            26.0
+        } else {
+            0.0
+        }) * less;
         self.anims[i].trail += rate * dt;
         self.anims[i].ambient += (if fire { 7.0 } else { 3.0 }) * less * dt;
         while self.anims[i].trail >= 1.0 {
@@ -187,12 +237,51 @@ impl Renderer {
         while self.anims[i].ambient >= 1.0 {
             self.anims[i].ambient -= 1.0;
             if fire {
-                self.parts.spawn(PK_SPARK, C_FIRE2, cx + rand(-3.0, 3.0), up(22.0 + bob), rand(-8.0, 8.0), gv * rand(-45.0, -25.0), rand(0.35, 0.6), rand(0.5, 0.9), gv * -20.0, 1.0, true, 0.0);
+                self.parts.spawn(
+                    PK_SPARK,
+                    C_FIRE2,
+                    cx + rand(-3.0, 3.0),
+                    up(22.0 + bob),
+                    rand(-8.0, 8.0),
+                    gv * rand(-45.0, -25.0),
+                    rand(0.35, 0.6),
+                    rand(0.5, 0.9),
+                    gv * -20.0,
+                    1.0,
+                    true,
+                    0.0,
+                );
             } else {
-                self.parts.spawn(PK_STAR, C_WHITE, cx + rand(-7.0, 7.0), up(rand(6.0, 24.0)), 0.0, gv * -3.0, 0.45, rand(1.8, 2.6), 0.0, 0.0, true, 0.0);
+                self.parts.spawn(
+                    PK_STAR,
+                    C_WHITE,
+                    cx + rand(-7.0, 7.0),
+                    up(rand(6.0, 24.0)),
+                    0.0,
+                    gv * -3.0,
+                    0.45,
+                    rand(1.8, 2.6),
+                    0.0,
+                    0.0,
+                    true,
+                    0.0,
+                );
             }
             if gv < 0.0 && !opts.reduce_motion && rnd() < 0.6 {
-                self.parts.spawn(PK_CHEV, C_GRAV, cx + rand(-10.0, 10.0), cy + rand(-4.0, 12.0), 0.0, -rand(30.0, 60.0), 0.5, 2.0, 0.0, 0.0, true, 0.0);
+                self.parts.spawn(
+                    PK_CHEV,
+                    C_GRAV,
+                    cx + rand(-10.0, 10.0),
+                    cy + rand(-4.0, 12.0),
+                    0.0,
+                    -rand(30.0, 60.0),
+                    0.5,
+                    2.0,
+                    0.0,
+                    0.0,
+                    true,
+                    0.0,
+                );
             }
         }
 
@@ -217,7 +306,13 @@ impl Renderer {
 
     fn eyes(&self, g: &mut Canvas, an: &PAnim, t: f64, y: f64, ink: Col, happy: bool) {
         let lx = an.look * 1.7;
-        let ly = if self.vy_rel < -60.0 { -0.7 } else if self.vy_rel > 200.0 { 0.6 } else { 0.0 };
+        let ly = if self.vy_rel < -60.0 {
+            -0.7
+        } else if self.vy_rel > 200.0 {
+            0.6
+        } else {
+            0.0
+        };
         let blink = t < an.blink_until;
         for s in [-1.0, 1.0] {
             let ex = s * 2.9 + lx;
@@ -233,7 +328,16 @@ impl Renderer {
             }
             g.fill_style(ink);
             g.begin_path();
-            g.ellipse(ex, ey, 1.25, if blink { 0.3 } else { 2.0 }, 0.0, 0.0, TAU, false);
+            g.ellipse(
+                ex,
+                ey,
+                1.25,
+                if blink { 0.3 } else { 2.0 },
+                0.0,
+                0.0,
+                TAU,
+                false,
+            );
             g.fill();
             if !blink {
                 g.fill_style(Col::rgba(255.0, 255.0, 255.0, 0.95));
@@ -255,7 +359,12 @@ impl Renderer {
             let bx = s * 6.0;
             g.begin_path();
             g.move_to(bx - 2.6, -9.0);
-            g.quadratic_curve_to(bx + s * 2.5, -11.0 - h * 0.4, bx + s * 2.2 + tip_x * 0.2, -10.0 - h);
+            g.quadratic_curve_to(
+                bx + s * 2.5,
+                -11.0 - h * 0.4,
+                bx + s * 2.2 + tip_x * 0.2,
+                -10.0 - h,
+            );
             g.quadratic_curve_to(bx + s * 0.5, -10.0, bx + 2.6, -8.0);
             g.close_path();
             g.fill();
@@ -268,7 +377,13 @@ impl Renderer {
         }
         g.fill_style(fire);
         g.fill();
-        flame(g, 5.8, -6.6, tip_x * 0.75, -19.0 - (t * 19.0 + 2.0).sin() * 1.2);
+        flame(
+            g,
+            5.8,
+            -6.6,
+            tip_x * 0.75,
+            -19.0 - (t * 19.0 + 2.0).sin() * 1.2,
+        );
         g.fill_style(css1(p.fire2));
         g.fill();
         flame(g, 3.4, -4.8, tip_x * 0.5, -12.5 - (t * 23.0).sin() * 0.8);
@@ -298,7 +413,11 @@ impl Renderer {
         let edge = css1(p.frost);
         let pale = mix(p.frost2, WHITE, 0.55);
         let shimmer = (t * 0.6) % 3.0;
-        let spikes: [(f64, f64, f64, f64); 3] = [(-5.5, -15.0, -0.5, 7.5), (5.5, -15.0, 0.5, 7.5), (0.0, -17.0, 0.0, 10.0 + an.sq.max(0.0) * 5.0)];
+        let spikes: [(f64, f64, f64, f64); 3] = [
+            (-5.5, -15.0, -0.5, 7.5),
+            (5.5, -15.0, 0.5, 7.5),
+            (0.0, -17.0, 0.0, 10.0 + an.sq.max(0.0) * 5.0),
+        ];
         for (k, &(bx, by, ang, len)) in spikes.iter().enumerate() {
             let tx = bx + ang.sin() * len - an.tilt * 8.0;
             let ty = by - ang.cos() * len;
@@ -311,7 +430,14 @@ impl Renderer {
             g.line_to(bx + nx, by + ny);
             g.close_path();
             g.fill();
-            g.fill_style(css(if (shimmer - k as f64).abs() < 0.4 { WHITE } else { pale }, 0.9));
+            g.fill_style(css(
+                if (shimmer - k as f64).abs() < 0.4 {
+                    WHITE
+                } else {
+                    pale
+                },
+                0.9,
+            ));
             g.begin_path();
             g.move_to(bx - nx, by - ny);
             g.line_to(tx, ty);
@@ -399,7 +525,12 @@ fn animate(an: &mut PAnim, pl: &Player, vy_rel: f64, t: f64, dt: f64) {
     if pl.ground {
         an.run += dt * pl.vx.abs() * 0.085;
     }
-    an.tilt = approach(an.tilt, clamp(pl.vx / RUN_SPEED, -1.0, 1.0) * 0.12, 10.0, dt);
+    an.tilt = approach(
+        an.tilt,
+        clamp(pl.vx / RUN_SPEED, -1.0, 1.0) * 0.12,
+        10.0,
+        dt,
+    );
     an.look = approach(an.look, pl.face as f64, 12.0, dt);
     if t > an.blink_at {
         an.blink_until = t + 0.11;
@@ -411,7 +542,14 @@ fn flame(g: &mut Canvas, r: f64, cy: f64, tip_x: f64, tip_y: f64) {
     g.begin_path();
     g.move_to(r, cy);
     g.arc(0.0, cy, r, 0.0, PI, false);
-    g.bezier_curve_to(-r, cy - r * 0.95, tip_x - r * 0.45, tip_y + r * 1.1, tip_x, tip_y);
+    g.bezier_curve_to(
+        -r,
+        cy - r * 0.95,
+        tip_x - r * 0.45,
+        tip_y + r * 1.1,
+        tip_x,
+        tip_y,
+    );
     g.bezier_curve_to(tip_x + r * 0.45, tip_y + r * 1.1, r, cy - r * 0.95, r, cy);
     g.close_path();
 }
@@ -430,7 +568,14 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
     g.set_transform(k, 0.0, 0.0, k, ox, oy);
     let mut sky = Gradient::linear(0.0, 0.0, 0.0, level.h);
     sky.stop(0.0, css1(mix(p.bg, p.tape, 0.15)));
-    sky.stop(1.0, css1(if p.dark { mix(p.tape, BLACK, 0.12) } else { mix(p.tape, p.wall, 0.15) }));
+    sky.stop(
+        1.0,
+        css1(if p.dark {
+            mix(p.tape, BLACK, 0.12)
+        } else {
+            mix(p.tape, p.wall, 0.15)
+        }),
+    );
     g.fill_style(sky);
     g.fill_rect(0.0, 0.0, level.w, level.h);
     paint_walls(g, level, &p, false, None);
@@ -443,7 +588,11 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         let ty = (i - tx) / level.cols;
         let (x, y) = (tx as f64 * TILE, ty as f64 * TILE);
         if t == T_LAVA || t == T_WATER || t == T_GOO || t == T_THIN {
-            let top = if ty > 0 && level.tiles[i - level.cols] == t { 0.0 } else { POOL_SINK };
+            let top = if ty > 0 && level.tiles[i - level.cols] == t {
+                0.0
+            } else {
+                POOL_SINK
+            };
             g.fill_style(css1(match t {
                 T_LAVA => LAVA_MID,
                 T_WATER => WATER_TOP,
@@ -465,7 +614,10 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         } else {
             let sun = t == T_LIGHT;
             let there = sun != level.dark;
-            g.fill_style(css(if sun { SUN } else { MOON }, if there { 0.95 } else { 0.3 }));
+            g.fill_style(css(
+                if sun { SUN } else { MOON },
+                if there { 0.95 } else { 0.3 },
+            ));
             g.fill_rect(x + 1.0, y + 1.0, TILE - 2.0, TILE - 2.0);
         }
     }
@@ -485,7 +637,18 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         solid(g, r.x, r.y, r.w, r.h, ICE_BOT);
     }
     for gt in &level.gates {
-        solid(g, gt.r.x, gt.r.y, gt.r.w, gt.r.h, if p.dark { mix(METAL, BLACK, 0.2) } else { METAL });
+        solid(
+            g,
+            gt.r.x,
+            gt.r.y,
+            gt.r.w,
+            gt.r.h,
+            if p.dark {
+                mix(METAL, BLACK, 0.2)
+            } else {
+                METAL
+            },
+        );
     }
     for l in &level.locks {
         solid(g, l.x, l.y, l.w, l.h, mix(METAL, BLACK, 0.35));
@@ -498,7 +661,14 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         solid(g, b.x, b.y, TILE, TILE, WOOD);
     }
     for f in &level.fans {
-        solid(g, f.r.x, f.r.y + f.r.h - TILE, f.r.w, TILE, mix(METAL, BLACK, 0.3));
+        solid(
+            g,
+            f.r.x,
+            f.r.y + f.r.h - TILE,
+            f.r.w,
+            TILE,
+            mix(METAL, BLACK, 0.3),
+        );
     }
     let mut pairs: Vec<&str> = Vec::new();
     for pt in &level.portals {
@@ -511,14 +681,41 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         };
         g.fill_style(css1(PORTAL_COLORS[k2 % PORTAL_COLORS.len()]));
         g.begin_path();
-        g.ellipse(pt.r.x + pt.r.w / 2.0, pt.r.y + pt.r.h / 2.0, pt.r.w / 2.0 - 1.0, pt.r.h / 2.0 - 1.0, 0.0, 0.0, TAU, false);
+        g.ellipse(
+            pt.r.x + pt.r.w / 2.0,
+            pt.r.y + pt.r.h / 2.0,
+            pt.r.w / 2.0 - 1.0,
+            pt.r.h / 2.0 - 1.0,
+            0.0,
+            0.0,
+            TAU,
+            false,
+        );
         g.fill();
     }
     for pl in &level.plates {
-        solid(g, pl.r.x, if pl.ceil { pl.r.y } else { pl.r.y + pl.r.h - 4.0 }, pl.r.w, 4.0, rgb_of(channel_color(&pl.ch)));
+        solid(
+            g,
+            pl.r.x,
+            if pl.ceil {
+                pl.r.y
+            } else {
+                pl.r.y + pl.r.h - 4.0
+            },
+            pl.r.w,
+            4.0,
+            rgb_of(channel_color(&pl.ch)),
+        );
     }
     for b in &level.buttons {
-        solid(g, b.r.x + 3.0, if b.ceil { b.r.y } else { b.r.y + b.r.h - 5.0 }, b.r.w - 6.0, 5.0, rgb_of(channel_color(&b.ch)));
+        solid(
+            g,
+            b.r.x + 3.0,
+            if b.ceil { b.r.y } else { b.r.y + b.r.h - 5.0 },
+            b.r.w - 6.0,
+            5.0,
+            rgb_of(channel_color(&b.ch)),
+        );
     }
     for c in &level.cannons {
         let mut len = c.vx.hypot(c.vy);
@@ -526,7 +723,13 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
             len = 1.0;
         }
         dot(g, c.x, c.y, 8.0, mix(METAL, BLACK, 0.3));
-        dot(g, c.x + c.vx / len * 8.0, c.y + c.vy / len * 8.0, 5.0, mix(METAL, BLACK, 0.3));
+        dot(
+            g,
+            c.x + c.vx / len * 8.0,
+            c.y + c.vy / len * 8.0,
+            5.0,
+            mix(METAL, BLACK, 0.3),
+        );
     }
     for s in &level.gswitches {
         dot(g, s.r.x + s.r.w / 2.0, s.r.y + s.r.h / 2.0, 6.0 * um, GRAV);
@@ -553,7 +756,13 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
     for (i, d) in level.doors.iter().enumerate() {
         let c = if i == 0 { p.fire } else { p.frost };
         let e = (u.min(2.5) - 1.0) * 6.0;
-        arch_path(g, d.x - 2.0 - e, d.y - 2.0 - 2.0 * e, d.w + 4.0 + 2.0 * e, d.h + 2.0 + 2.0 * e);
+        arch_path(
+            g,
+            d.x - 2.0 - e,
+            d.y - 2.0 - 2.0 * e,
+            d.w + 4.0 + 2.0 * e,
+            d.h + 2.0 + 2.0 * e,
+        );
         g.fill_style(css1(c));
         g.fill();
         arch_path(g, d.x + 2.0, d.y + 2.0, d.w - 4.0, d.h - 2.0);
@@ -566,11 +775,20 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         let s = 1.4 * u.min(2.5);
         g.scale(s, s);
         gem_path(g, 1.0);
-        g.fill_style(css1(if gm.el == Element::Fire { p.fire } else { p.frost }));
+        g.fill_style(css1(if gm.el == Element::Fire {
+            p.fire
+        } else {
+            p.frost
+        }));
         g.fill();
         g.restore();
     }
-    let hero = |i: usize| (level.spawns[i].x + PLAYER_W / 2.0, level.spawns[i].y + PLAYER_H - 9.0);
+    let hero = |i: usize| {
+        (
+            level.spawns[i].x + PLAYER_W / 2.0,
+            level.spawns[i].y + PLAYER_H - 9.0,
+        )
+    };
     if level.dark {
         g.save();
         g.begin_path();
@@ -598,7 +816,13 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
     }
     for i in 0..2 {
         let h = hero(i);
-        dot(g, h.0, h.1, 8.0 * u.min(2.5), if i == 0 { p.fire } else { p.frost });
+        dot(
+            g,
+            h.0,
+            h.1,
+            8.0 * u.min(2.5),
+            if i == 0 { p.fire } else { p.frost },
+        );
     }
     g.reset_transform();
     let n = stages.min(6);
@@ -607,13 +831,28 @@ pub fn draw_thumb(g: &mut Canvas, level: &Stage, stages: usize, dark: bool) {
         let gap = r * 3.2;
         let bw = gap * (n - 1) as f64 + r * 4.0;
         let by = ch - r * 2.6;
-        g.fill_style(if p.dark { Col::rgba(0.0, 0.0, 0.0, 0.6) } else { Col::rgba(255.0, 255.0, 255.0, 0.78) });
+        g.fill_style(if p.dark {
+            Col::rgba(0.0, 0.0, 0.0, 0.6)
+        } else {
+            Col::rgba(255.0, 255.0, 255.0, 0.78)
+        });
         rr(g, cw / 2.0 - bw / 2.0, by - r * 1.8, bw, r * 3.6, r * 1.8);
         g.fill();
         for i in 0..n {
-            g.fill_style(if i == 0 { css1(p.ink) } else { css(p.ink, 0.32) });
+            g.fill_style(if i == 0 {
+                css1(p.ink)
+            } else {
+                css(p.ink, 0.32)
+            });
             g.begin_path();
-            g.arc(cw / 2.0 - gap * (n - 1) as f64 / 2.0 + i as f64 * gap, by, if i == 0 { r } else { r * 0.8 }, 0.0, TAU, false);
+            g.arc(
+                cw / 2.0 - gap * (n - 1) as f64 / 2.0 + i as f64 * gap,
+                by,
+                if i == 0 { r } else { r * 0.8 },
+                0.0,
+                TAU,
+                false,
+            );
             g.fill();
         }
     }

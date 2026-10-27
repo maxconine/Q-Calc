@@ -157,7 +157,10 @@ pub fn pretty_text(s: &str) -> String {
 
 pub fn radicals_if_math(s: &str) -> String {
     const MATH: &str = "0123456789 \t+-−*/^().,πe√i·×sqrt";
-    if s.is_empty() || !s.chars().all(|c| MATH.contains(c)) || (!s.contains("sqrt(") && !s.contains("pi")) {
+    if s.is_empty()
+        || !s.chars().all(|c| MATH.contains(c))
+        || (!s.contains("sqrt(") && !s.contains("pi"))
+    {
         return s.to_string();
     }
     radicals(s)
@@ -226,7 +229,13 @@ pub struct Spec {
     pub pad: (f32, f32),
 }
 
-fn spec(text: impl Into<String>, font: Font, ink: Ink, copy: Option<String>, pad: (f32, f32)) -> Spec {
+fn spec(
+    text: impl Into<String>,
+    font: Font,
+    ink: Ink,
+    copy: Option<String>,
+    pad: (f32, f32),
+) -> Spec {
     Spec {
         text: text.into(),
         font,
@@ -246,12 +255,24 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
         return if crate::systems::slot_is_message(m) {
             vec![spec(slot, Font::Body, Ink::Muted, None, (PAD_X, 0.0))]
         } else {
-            vec![spec(slot.clone(), Font::Display, Ink::Answer, Some(slot), (PAD_X, 0.0))]
+            vec![spec(
+                slot.clone(),
+                Font::Display,
+                Ink::Answer,
+                Some(slot),
+                (PAD_X, 0.0),
+            )]
         };
     }
     // Alt+↑/↓ stepped the answer's SI prefix (line.rs): that reading, copyable, until the line changes
     if let Some(p) = &m.line.prefix_shown {
-        return vec![spec(p.clone(), Font::Display, Ink::Answer, Some(p.clone()), (PAD_X, 0.0))];
+        return vec![spec(
+            p.clone(),
+            Font::Display,
+            Ink::Answer,
+            Some(p.clone()),
+            (PAD_X, 0.0),
+        )];
     }
     let live = m.live.as_ref();
     let blank = live.is_none_or(is_blank);
@@ -260,7 +281,13 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
         if let Some(s) = &m.answer.steady
             && !m.field.text().trim().is_empty()
         {
-            return vec![spec(pretty(m, s), Font::Display, Ink::Steady, None, (PAD_X, 0.0))];
+            return vec![spec(
+                pretty(m, s),
+                Font::Display,
+                Ink::Steady,
+                None,
+                (PAD_X, 0.0),
+            )];
         }
         return Vec::new();
     }
@@ -277,7 +304,11 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
             let labels: Vec<String> = if parts.len() == solve.roots.len() {
                 parts.iter().map(|p| p.to_string()).collect()
             } else {
-                solve.roots.iter().map(|r| format_number(*r, figs)).collect()
+                solve
+                    .roots
+                    .iter()
+                    .map(|r| format_number(*r, figs))
+                    .collect()
             };
             let mut out = vec![spec(
                 format!("{} =", solve.variable),
@@ -326,7 +357,13 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
         && let Some(e) = exact(m)
     {
         // .live-dual: two 20 pt halves around a 17 pt ≈, each its own copy
-        out.push(spec(pretty_text(e), Font::Part, Ink::Answer, Some(e.to_string()), (PAD_X, PAD_X)));
+        out.push(spec(
+            pretty_text(e),
+            Font::Part,
+            Ink::Answer,
+            Some(e.to_string()),
+            (PAD_X, PAD_X),
+        ));
         out.push(spec("≈", Font::Row, Ink::Muted, None, (0.0, 0.0)));
         out.push(spec(
             pretty(m, &a.display),
@@ -338,7 +375,13 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
         return out;
     }
     let shown = shown_answer(m);
-    out.push(spec(pretty(m, &shown), Font::Display, Ink::Answer, Some(shown), (PAD_X, 0.0)));
+    out.push(spec(
+        pretty(m, &shown),
+        Font::Display,
+        Ink::Answer,
+        Some(shown),
+        (PAD_X, 0.0),
+    ));
     out
 }
 
@@ -429,7 +472,13 @@ fn tabular(gfx: &Gfx) -> Option<IDWriteTypography> {
 }
 
 /// A one-line layout of `text` at `font` × `scale`, cut with an ellipsis at `cut` DIPs (0: not cut), and its width.
-fn text_layout(gfx: &Gfx, text: &str, font: Font, scale: f32, cut: f32) -> Option<(IDWriteTextLayout, f32)> {
+fn text_layout(
+    gfx: &Gfx,
+    text: &str,
+    font: Font,
+    scale: f32,
+    cut: f32,
+) -> Option<(IDWriteTextLayout, f32)> {
     let key = (scale.to_bits(), cut.to_bits());
     if let Some(hit) = LAYOUTS.with(|c| {
         c.borrow()
@@ -647,7 +696,14 @@ struct Wake2Host(usize);
 impl Wake for Wake2Host {
     fn wake(self: Arc<Self>) {
         // SAFETY: posting to our host window from whichever thread finished the work
-        let _ = unsafe { PostMessageW(Some(HWND(self.0 as *mut _)), WM_ENGINE, WPARAM(0), LPARAM(0)) };
+        let _ = unsafe {
+            PostMessageW(
+                Some(HWND(self.0 as *mut _)),
+                WM_ENGINE,
+                WPARAM(0),
+                LPARAM(0),
+            )
+        };
     }
 }
 
@@ -655,7 +711,9 @@ impl Wake for Wake2Host {
 pub fn poll(app: &mut App) {
     let host = app.host.0 as usize;
     let m = &mut app.model;
-    let Some(c) = &mut m.answer.closed else { return };
+    let Some(c) = &mut m.answer.closed else {
+        return;
+    };
     let waker = Waker::from(Arc::new(Wake2Host(host)));
     let Poll::Ready(found) = c.job.future.as_mut().poll(&mut Context::from_waker(&waker)) else {
         return;
@@ -760,7 +818,8 @@ pub fn copy_line(m: &mut BarModel) {
     if live_of(m).is_none() {
         return;
     }
-    let line = qcalc_core::app::typst_math::copied_equation(m.field.text().trim(), m.settings.typst_copy);
+    let line =
+        qcalc_core::app::typst_math::copied_equation(m.field.text().trim(), m.settings.typst_copy);
     m.to_clipboard = Some(format!("{line} = {}", shown_answer(m)));
     flash(m);
 }
@@ -768,7 +827,10 @@ pub fn copy_line(m: &mut BarModel) {
 /// The field's selection, copied as Typst when that setting is on (`copiedEquation`).
 pub fn copy_selection(m: &mut BarModel) {
     let sel = m.field.selected_text().to_string();
-    m.to_clipboard = Some(qcalc_core::app::typst_math::copied_equation(&sel, m.settings.typst_copy));
+    m.to_clipboard = Some(qcalc_core::app::typst_math::copied_equation(
+        &sel,
+        m.settings.typst_copy,
+    ));
 }
 
 fn flash(m: &mut BarModel) {
@@ -874,7 +936,9 @@ mod tests {
     fn forms_list_dedupes() {
         let l = forms_list(
             "0.5".into(),
-            ["1/2", " 0.5", "undefined m", "5e-1"].into_iter().map(String::from),
+            ["1/2", " 0.5", "undefined m", "5e-1"]
+                .into_iter()
+                .map(String::from),
         );
         assert_eq!(l, ["0.5", "1/2", "5e-1"]);
     }
@@ -944,7 +1008,10 @@ mod tests {
         let mut m = model("2+", live("", None));
         m.answer.steady = Some("4".into());
         let s = specs(&m);
-        assert_eq!((s[0].text.as_str(), s[0].ink, s[0].copy.is_none()), ("4", Ink::Steady, true));
+        assert_eq!(
+            (s[0].text.as_str(), s[0].ink, s[0].copy.is_none()),
+            ("4", Ink::Steady, true)
+        );
         m.field.reset("");
         assert!(specs(&m).is_empty());
     }
@@ -973,7 +1040,10 @@ mod tests {
             more: false,
         });
         let s = specs(&model("x^2=-4", a));
-        assert_eq!((s.len(), s[0].font, s[0].copy.is_none()), (1, Font::Body, true));
+        assert_eq!(
+            (s.len(), s[0].font, s[0].copy.is_none()),
+            (1, Font::Body, true)
+        );
     }
 
     #[test]

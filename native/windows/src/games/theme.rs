@@ -152,8 +152,10 @@ pub fn ease(t: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
     if t >= 1.0 {
         return 1.0;
     }
-    let bx = |s: f64| 3.0 * x1 * s * (1.0 - s) * (1.0 - s) + 3.0 * x2 * s * s * (1.0 - s) + s * s * s;
-    let by = |s: f64| 3.0 * y1 * s * (1.0 - s) * (1.0 - s) + 3.0 * y2 * s * s * (1.0 - s) + s * s * s;
+    let bx =
+        |s: f64| 3.0 * x1 * s * (1.0 - s) * (1.0 - s) + 3.0 * x2 * s * s * (1.0 - s) + s * s * s;
+    let by =
+        |s: f64| 3.0 * y1 * s * (1.0 - s) * (1.0 - s) + 3.0 * y2 * s * s * (1.0 - s) + s * s * s;
     let (mut lo, mut hi, mut s) = (0.0, 1.0, t);
     for _ in 0..30 {
         s = (lo + hi) / 2.0;

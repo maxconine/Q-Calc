@@ -20,16 +20,18 @@ use qcalc_ffi::{
     SolveOutcome, TypstLineCap, TypstLineJoin, TypstPaint, TypstPaths, TypstRenderer, TypstStyle,
 };
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_F, D2D1_BEZIER_SEGMENT, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
-    D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING,
+    D2D_RECT_F, D2D_SIZE_F, D2D1_BEZIER_SEGMENT, D2D1_FIGURE_BEGIN_FILLED,
+    D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN,
+    D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING,
 };
 use windows::Win32::Graphics::Direct2D::{
-    D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_CAP_STYLE, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND,
-    D2D1_CAP_STYLE_SQUARE, D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_LAYER_OPTIONS_NONE,
-    D2D1_LAYER_PARAMETERS, D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER_OR_BEVEL,
-    D2D1_LINE_JOIN_ROUND, D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_STROKE_STYLE_PROPERTIES,
-    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, ID2D1Bitmap,
-    ID2D1Geometry, ID2D1PathGeometry, ID2D1RenderTarget, ID2D1SolidColorBrush, ID2D1StrokeStyle,
+    D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+    D2D1_CAP_STYLE, D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_SQUARE,
+    D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID,
+    D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS, D2D1_LINE_JOIN_BEVEL,
+    D2D1_LINE_JOIN_MITER_OR_BEVEL, D2D1_LINE_JOIN_ROUND, D2D1_QUADRATIC_BEZIER_SEGMENT,
+    D2D1_STROKE_STYLE_PROPERTIES, ID2D1Bitmap, ID2D1Geometry, ID2D1PathGeometry, ID2D1RenderTarget,
+    ID2D1SolidColorBrush, ID2D1StrokeStyle,
 };
 use windows::core::Interface;
 use windows_numerics::{Matrix3x2, Vector2};
@@ -202,10 +204,9 @@ pub fn compile(m: &mut BarModel, engine: &EngineThread) {
 }
 /// The row's height in a bar `width` wide (0 when hidden).
 pub fn height(m: &BarModel, width: f32) -> f32 {
-    m.typeset
-        .shown
-        .as_ref()
-        .map_or(0.0, |t| fit(&t.paths, width).1 * t.paths.height_pt + PAD_BOTTOM)
+    m.typeset.shown.as_ref().map_or(0.0, |t| {
+        fit(&t.paths, width).1 * t.paths.height_pt + PAD_BOTTOM
+    })
 }
 
 /// (scale, the same) the page shrunk to the width offered and 72 high, never grown.
@@ -251,7 +252,13 @@ fn v(points: &[f32], i: usize) -> Vector2 {
 }
 
 /// `MathPreview.path`: verbs 0 move, 1 line, 2 quad, 3 cubic, 4 close.
-fn geometry(gfx: &Gfx, verbs: &[u8], points: &[f32], fill: bool, even_odd: bool) -> Option<ID2D1PathGeometry> {
+fn geometry(
+    gfx: &Gfx,
+    verbs: &[u8],
+    points: &[f32],
+    fill: bool,
+    even_odd: bool,
+) -> Option<ID2D1PathGeometry> {
     // SAFETY: a new geometry from our factory, its sink opened, fed and closed here
     unsafe {
         let g = gfx.d2d.CreatePathGeometry().ok()?;
@@ -406,10 +413,7 @@ fn build(gfx: &Gfx, t: &Typeset) -> Built {
             })
         })
         .collect();
-    Built {
-        items,
-        clips,
-    }
+    Built { items, clips }
 }
 
 fn color(paint: TypstPaint, ink: Color, alpha: f32) -> Color {
@@ -443,7 +447,9 @@ fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Buil
         for item in &built.items {
             let mut pushed = 0;
             for &k in &item.clips {
-                let Some(g) = built.clips.get(k) else { continue };
+                let Some(g) = built.clips.get(k) else {
+                    continue;
+                };
                 let mask: ID2D1Geometry = g.clone().into();
                 let params = D2D1_LAYER_PARAMETERS {
                     contentBounds: D2D_RECT_F {
@@ -466,7 +472,9 @@ fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Buil
             brush.SetColor(&color(item.paint, ink, 1.0));
             match &item.style {
                 Style::Fill => rt.FillGeometry(&item.geometry, brush, None),
-                Style::Stroke(w, style) => rt.DrawGeometry(&item.geometry, brush, *w, style.as_ref()),
+                Style::Stroke(w, style) => {
+                    rt.DrawGeometry(&item.geometry, brush, *w, style.as_ref())
+                }
             }
             for _ in 0..pushed {
                 rt.PopLayer();
@@ -520,7 +528,12 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
     let ink = c.theme.ink;
     let key = (
         t.doc.clone(),
-        [ink.r.to_bits(), ink.g.to_bits(), ink.b.to_bits(), ink.a.to_bits()],
+        [
+            ink.r.to_bits(),
+            ink.g.to_bits(),
+            ink.b.to_bits(),
+            ink.a.to_bits(),
+        ],
         c.rt().as_raw() as usize,
         s.to_bits(),
     );

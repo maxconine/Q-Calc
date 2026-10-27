@@ -16,7 +16,11 @@ pub fn wait_alpha(ui: &mut Ui) -> f32 {
 
 /// A `.pong-button`'s size: 34 high and at least 112 wide; `choice` is the lobby's first pair (46, 148, 17 px).
 pub fn button_size(ui: &mut Ui, title: &str, kbd: Option<&str>, choice: bool) -> (f32, f32) {
-    let f = if choice { Font::new(m::FS_ROW) } else { Font::BODY };
+    let f = if choice {
+        Font::new(m::FS_ROW)
+    } else {
+        Font::BODY
+    };
     let (tw, _) = ui.measure(title, f);
     let kw = kbd.map_or(0.0, |k| ui.measure(k, Font::CAPTION).0 + m::SP2);
     let w = (tw + kw + 12.0).max(if choice { 148.0 } else { 112.0 });
@@ -24,15 +28,35 @@ pub fn button_size(ui: &mut Ui, title: &str, kbd: Option<&str>, choice: bool) ->
 }
 
 /// A `.pong-button` in `r`; `on` rings it in accent.
-pub fn button(ui: &mut Ui, r: Rect, title: &str, kbd: Option<&str>, on: bool, choice: bool, hit: Hit) {
+pub fn button(
+    ui: &mut Ui,
+    r: Rect,
+    title: &str,
+    kbd: Option<&str>,
+    on: bool,
+    choice: bool,
+    hit: Hit,
+) {
     let c = ui.c;
     let hover = ui.hover(r);
     ui.control_shadow(r, m::RADIUS_S);
-    ui.round(r, m::RADIUS_S, if hover { c.control.mix(0.94, c.ink) } else { c.control });
+    ui.round(
+        r,
+        m::RADIUS_S,
+        if hover {
+            c.control.mix(0.94, c.ink)
+        } else {
+            c.control
+        },
+    );
     if on {
         ui.ring(r, m::RADIUS_S, 1.5, c.ring());
     }
-    let f = if choice { Font::new(m::FS_ROW) } else { Font::BODY };
+    let f = if choice {
+        Font::new(m::FS_ROW)
+    } else {
+        Font::BODY
+    };
     let (tw, th) = ui.measure(title, f);
     let (kw, kh) = kbd.map_or((0.0, 0.0), |k| ui.measure(k, Font::CAPTION));
     let total = tw + if kbd.is_some() { m::SP2 + kw } else { 0.0 };
@@ -40,7 +64,13 @@ pub fn button(ui: &mut Ui, r: Rect, title: &str, kbd: Option<&str>, on: bool, ch
     ui.text(title, f, x, r.y + (r.h - th) / 2.0, c.ink);
     if let Some(k) = kbd {
         // baselines line up: the caption sits a little lower in its box
-        ui.text(k, Font::CAPTION, x + tw + m::SP2, r.y + (r.h - kh) / 2.0 + 0.5, c.muted);
+        ui.text(
+            k,
+            Font::CAPTION,
+            x + tw + m::SP2,
+            r.y + (r.h - kh) / 2.0 + 0.5,
+            c.muted,
+        );
     }
     ui.hit(r, hit);
 }
@@ -53,7 +83,14 @@ pub struct ButtonSpec<'a> {
     pub hit: Hit,
 }
 
-pub fn button_row(ui: &mut Ui, cx: f32, y: f32, max_w: f32, items: &[ButtonSpec], choice: bool) -> f32 {
+pub fn button_row(
+    ui: &mut Ui,
+    cx: f32,
+    y: f32,
+    max_w: f32,
+    items: &[ButtonSpec],
+    choice: bool,
+) -> f32 {
     let gap = m::SP3;
     let sizes: Vec<(f32, f32)> = items
         .iter()
@@ -83,7 +120,15 @@ pub fn button_row(ui: &mut Ui, cx: f32, y: f32, max_w: f32, items: &[ButtonSpec]
         let mut x = cx - w / 2.0;
         for &i in row {
             let b = &items[i];
-            button(ui, Rect::new(x, yy, sizes[i].0, sizes[i].1), b.title, b.kbd.as_deref(), b.on, choice, b.hit.clone());
+            button(
+                ui,
+                Rect::new(x, yy, sizes[i].0, sizes[i].1),
+                b.title,
+                b.kbd.as_deref(),
+                b.on,
+                choice,
+                b.hit.clone(),
+            );
             x += sizes[i].0 + gap;
         }
         yy += h + if ri + 1 < rows.len() { gap } else { 0.0 };
@@ -100,7 +145,13 @@ pub fn esc_button(ui: &mut Ui, right: f32, y: f32, title: &str, hit: Hit) -> f32
     if hover {
         ui.round(r, m::RADIUS_S, c.fill_hover());
     }
-    ui.text(title, Font::SMALL, r.x + m::SP2, r.y + 3.0, if hover { c.ink } else { c.muted });
+    ui.text(
+        title,
+        Font::SMALL,
+        r.x + m::SP2,
+        r.y + 3.0,
+        if hover { c.ink } else { c.muted },
+    );
     ui.hit(r, hit);
     r.w
 }
@@ -110,13 +161,27 @@ pub fn fullscreen_glyph(ui: &mut Ui, x: f32, y: f32, size: f32, on: bool, c: Rgb
     let k = size / 16.0;
     let p = |px: f32, py: f32| (x + px * k, y + py * k);
     let corners: [[(f32, f32); 3]; 4] = if on {
-        [[(6., 2.), (6., 6.), (2., 6.)], [(10., 2.), (10., 6.), (14., 6.)], [(6., 14.), (6., 10.), (2., 10.)], [(10., 14.), (10., 10.), (14., 10.)]]
+        [
+            [(6., 2.), (6., 6.), (2., 6.)],
+            [(10., 2.), (10., 6.), (14., 6.)],
+            [(6., 14.), (6., 10.), (2., 10.)],
+            [(10., 14.), (10., 10.), (14., 10.)],
+        ]
     } else {
-        [[(2., 6.), (2., 2.), (6., 2.)], [(14., 6.), (14., 2.), (10., 2.)], [(2., 10.), (2., 14.), (6., 14.)], [(14., 10.), (14., 14.), (10., 14.)]]
+        [
+            [(2., 6.), (2., 2.), (6., 2.)],
+            [(14., 6.), (14., 2.), (10., 2.)],
+            [(2., 10.), (2., 14.), (6., 14.)],
+            [(14., 10.), (14., 14.), (10., 14.)],
+        ]
     };
     for cn in corners {
         let poly = super::svg::Poly {
-            parts: vec![vec![p(cn[0].0, cn[0].1), p(cn[1].0, cn[1].1), p(cn[2].0, cn[2].1)]],
+            parts: vec![vec![
+                p(cn[0].0, cn[0].1),
+                p(cn[1].0, cn[1].1),
+                p(cn[2].0, cn[2].1),
+            ]],
         };
         ui.poly(&poly, 1.5, c);
     }
@@ -131,7 +196,14 @@ pub fn fullscreen_button(ui: &mut Ui, x: f32, y: f32, on: bool, corner: bool) {
     if hover {
         ui.round(r, m::RADIUS_S, c.fill_hover());
     }
-    fullscreen_glyph(ui, x + 5.5, y + 4.5, 13.0, on, if hover { c.ink } else { c.muted });
+    fullscreen_glyph(
+        ui,
+        x + 5.5,
+        y + 4.5,
+        13.0,
+        on,
+        if hover { c.ink } else { c.muted },
+    );
     ui.set_alpha(was);
     ui.hit(r, Hit::Fullscreen);
 }
@@ -148,7 +220,15 @@ pub fn head(ui: &mut Ui, x: f32, y: f32, w: f32, name: &str, sub: &str, fullscre
     let fs_x = right - esc_w - 24.0;
     fullscreen_button(ui, fs_x, y + (h - 22.0) / 2.0, fullscreen, false);
     let sub_x = x + nw + m::SP3;
-    ui.text_in(sub, Font::SMALL, sub_x, y + (h - sh) / 2.0 + 1.0, (fs_x - m::SP3 - sub_x).max(0.0), Align::Left, c.muted);
+    ui.text_in(
+        sub,
+        Font::SMALL,
+        sub_x,
+        y + (h - sh) / 2.0 + 1.0,
+        (fs_x - m::SP3 - sub_x).max(0.0),
+        Align::Left,
+        c.muted,
+    );
     h
 }
 
@@ -209,8 +289,15 @@ impl<'a> Run<'a> {
 
 /// Runs on one line, centred on cx, in `f` (muted unless a run says ink); `base` colours the plain runs.
 pub fn runs(ui: &mut Ui, cx: f32, y: f32, f: Font, base: Rgba, parts: &[Run]) -> f32 {
-    let fonts: Vec<Font> = parts.iter().map(|r| if r.bold { Font { bold: true, ..f } } else { f }).collect();
-    let sizes: Vec<(f32, f32)> = parts.iter().zip(&fonts).map(|(r, f)| ui.measure(r.text, *f)).collect();
+    let fonts: Vec<Font> = parts
+        .iter()
+        .map(|r| if r.bold { Font { bold: true, ..f } } else { f })
+        .collect();
+    let sizes: Vec<(f32, f32)> = parts
+        .iter()
+        .zip(&fonts)
+        .map(|(r, f)| ui.measure(r.text, *f))
+        .collect();
     let total: f32 = sizes.iter().map(|s| s.0).sum();
     let h = sizes.iter().map(|s| s.1).fold(0.0, f32::max);
     let mut x = cx - total / 2.0;
@@ -234,7 +321,15 @@ pub fn runs(ui: &mut Ui, cx: f32, y: f32, f: Font, base: Rgba, parts: &[Run]) ->
 
 /// `.pong-code`: digits in 44 × 54 tiles centred on cx; `entry` frames them for typing with the caret's tile
 /// ringed, `busy` greys them while joining. Returns its height.
-pub fn code(ui: &mut Ui, cx: f32, y: f32, digits: &[String], entry: bool, busy: bool, caret: Option<usize>) -> f32 {
+pub fn code(
+    ui: &mut Ui,
+    cx: f32,
+    y: f32,
+    digits: &[String],
+    entry: bool,
+    busy: bool,
+    caret: Option<usize>,
+) -> f32 {
     let c = ui.c;
     let n = digits.len() as f32;
     let w = n * 44.0 + (n - 1.0).max(0.0) * m::SP2;
@@ -244,7 +339,12 @@ pub fn code(ui: &mut Ui, cx: f32, y: f32, digits: &[String], entry: bool, busy: 
         let r = Rect::new(x, y, 44.0, 54.0);
         ui.round(r, m::RADIUS_S, c.bg_tape);
         if entry {
-            ui.ring(r, m::RADIUS_S, 1.0, if caret == Some(i) { c.ring() } else { c.line });
+            ui.ring(
+                r,
+                m::RADIUS_S,
+                1.0,
+                if caret == Some(i) { c.ring() } else { c.line },
+            );
         }
         let color = if busy {
             c.muted
@@ -262,7 +362,17 @@ pub fn code(ui: &mut Ui, cx: f32, y: f32, digits: &[String], entry: bool, busy: 
 
 /// `.pong-score`: the two names either side of the score. Returns its height.
 #[allow(clippy::too_many_arguments)]
-pub fn score(ui: &mut Ui, x: f32, y: f32, w: f32, left: &str, right: &str, s: (u32, u32), lc: Rgba, rc: Rgba) -> f32 {
+pub fn score(
+    ui: &mut Ui,
+    x: f32,
+    y: f32,
+    w: f32,
+    left: &str,
+    right: &str,
+    s: (u32, u32),
+    lc: Rgba,
+    rc: Rgba,
+) -> f32 {
     let c = ui.c;
     let f = Font::digits(m::FS_DISPLAY, true);
     let a = format!("{} ", s.0);
@@ -292,7 +402,15 @@ pub fn toast(ui: &mut Ui, cx: f32, y: f32, text: &str) {
     let r = Rect::new(cx - w / 2.0, y, w, th + 10.0);
     ui.card_shadow(r, r.h / 2.0);
     ui.round(r, r.h / 2.0, c.bg);
-    ui.text_in(text, Font::SMALL, r.x + m::SP3, r.y + 5.0, w - 2.0 * m::SP3, Align::Center, c.ink);
+    ui.text_in(
+        text,
+        Font::SMALL,
+        r.x + m::SP3,
+        r.y + 5.0,
+        w - 2.0 * m::SP3,
+        Align::Center,
+        c.ink,
+    );
 }
 
 /// A banner pill in 13 px (pong's "first to 7"), centred in `area`.
@@ -300,8 +418,21 @@ pub fn banner(ui: &mut Ui, area: Rect, text: &str) {
     let c = ui.c;
     let (tw, th) = ui.measure(text, Font::BODY);
     let w = (tw + 2.0 * m::SP3).min(area.w - 2.0 * m::SP3);
-    let r = Rect::new(area.x + (area.w - w) / 2.0, area.y + (area.h - th - 10.0) / 2.0, w, th + 10.0);
+    let r = Rect::new(
+        area.x + (area.w - w) / 2.0,
+        area.y + (area.h - th - 10.0) / 2.0,
+        w,
+        th + 10.0,
+    );
     ui.card_shadow(r, r.h / 2.0);
     ui.round(r, r.h / 2.0, c.bg);
-    ui.text_in(text, Font::BODY, r.x + m::SP3, r.y + 5.0, w - 2.0 * m::SP3, Align::Center, c.ink);
+    ui.text_in(
+        text,
+        Font::BODY,
+        r.x + m::SP3,
+        r.y + 5.0,
+        w - 2.0 * m::SP3,
+        Align::Center,
+        c.ink,
+    );
 }

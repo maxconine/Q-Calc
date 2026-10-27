@@ -34,7 +34,22 @@ struct Live {
 
 impl Live {
     fn new(v: Voice, start: f64) -> Live {
-        Live { v, start, phase: 0.0, noise_pos: 0, b0: 0.0, b1: 0.0, b2: 0.0, a1: 0.0, a2: 0.0, x1: 0.0, x2: 0.0, y1: 0.0, y2: 0.0, coeff_at: -1 }
+        Live {
+            v,
+            start,
+            phase: 0.0,
+            noise_pos: 0,
+            b0: 0.0,
+            b1: 0.0,
+            b2: 0.0,
+            a1: 0.0,
+            a2: 0.0,
+            x1: 0.0,
+            x2: 0.0,
+            y1: 0.0,
+            y2: 0.0,
+            coeff_at: -1,
+        }
     }
 }
 
@@ -80,7 +95,12 @@ impl Mixer {
                 (f64::from(s) / f64::from(u32::MAX) * 2.0 - 1.0) as f32
             })
             .collect();
-        Mixer { rate, clock: 0.0, voices: Vec::new(), noise }
+        Mixer {
+            rate,
+            clock: 0.0,
+            voices: Vec::new(),
+            noise,
+        }
     }
 
     pub fn play(&mut self, list: &[Voice]) {
@@ -99,7 +119,9 @@ impl Mixer {
     }
 
     fn set_filter(&self, l: &mut Live, f: f64) {
-        let Voice::Hiss { q, filter, .. } = l.v else { return };
+        let Voice::Hiss { q, filter, .. } = l.v else {
+            return;
+        };
         let w0 = 2.0 * std::f64::consts::PI * f.min(self.rate / 2.0 - 1.0) / self.rate;
         let (sw, cw) = w0.sin_cos();
         let (b0, b1, b2, a0, a1, a2);
@@ -145,7 +167,20 @@ impl Mixer {
         let mut voices = std::mem::take(&mut self.voices);
         let mut k = 0;
         while k < voices.len() {
-            let mut l = std::mem::replace(&mut voices[k], Live::new(Voice::Tone { at: 0.0, freq: 0.0, dur: 0.0, vol: 0.0, wave: Wave::Sine, glide_to: None }, 0.0));
+            let mut l = std::mem::replace(
+                &mut voices[k],
+                Live::new(
+                    Voice::Tone {
+                        at: 0.0,
+                        freq: 0.0,
+                        dur: 0.0,
+                        vol: 0.0,
+                        wave: Wave::Sine,
+                        glide_to: None,
+                    },
+                    0.0,
+                ),
+            );
             let dur = match l.v {
                 Voice::Tone { dur, .. } | Voice::Hiss { dur, .. } => dur,
             };
@@ -157,7 +192,14 @@ impl Mixer {
                     continue;
                 }
                 let s = match l.v {
-                    Voice::Tone { freq, dur, vol, wave, glide_to, .. } => {
+                    Voice::Tone {
+                        freq,
+                        dur,
+                        vol,
+                        wave,
+                        glide_to,
+                        ..
+                    } => {
                         let f = glide_to.map_or(freq, |g| exp_ramp(freq, g, t, dur));
                         l.phase += f * dt;
                         l.phase -= l.phase.floor();
@@ -184,7 +226,14 @@ impl Mixer {
                         };
                         s * envelope(vol, dur, t, 0.008)
                     }
-                    Voice::Hiss { dur, vol, freq, sweep_to, offset, .. } => {
+                    Voice::Hiss {
+                        dur,
+                        vol,
+                        freq,
+                        sweep_to,
+                        offset,
+                        ..
+                    } => {
                         let step = (t * self.rate) as i64;
                         if step / 32 != l.coeff_at {
                             l.coeff_at = step / 32;
@@ -257,11 +306,13 @@ impl Synth {
         let stop = Arc::new(AtomicBool::new(false));
         let shared: Arc<Mutex<Option<Mixer>>> = Arc::new(Mutex::new(None));
         let (s, m) = (stop.clone(), shared.clone());
-        let thread = std::thread::Builder::new().name("qcalc-ember-sound".into()).spawn(move || {
-            if let Err(e) = wasapi::run(&s, &m) {
-                crate::qlog!("ember: no sound ({e})");
-            }
-        });
+        let thread = std::thread::Builder::new()
+            .name("qcalc-ember-sound".into())
+            .spawn(move || {
+                if let Err(e) = wasapi::run(&s, &m) {
+                    crate::qlog!("ember: no sound ({e})");
+                }
+            });
         if let Ok(t) = thread {
             self.thread = Some(t);
             self.stop = Some(stop);
@@ -287,15 +338,16 @@ impl Drop for Synth {
     }
 }
 mod wasapi {
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicBool, Ordering};
 
     use windows::Win32::Media::Audio::{
-        AUDCLNT_SHAREMODE_SHARED, IAudioClient, IAudioRenderClient, IMMDeviceEnumerator, MMDeviceEnumerator,
-        WAVEFORMATEX, WAVEFORMATEXTENSIBLE, eConsole, eRender,
+        AUDCLNT_SHAREMODE_SHARED, IAudioClient, IAudioRenderClient, IMMDeviceEnumerator,
+        MMDeviceEnumerator, WAVEFORMATEX, WAVEFORMATEXTENSIBLE, eConsole, eRender,
     };
     use windows::Win32::System::Com::{
-        CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize,
+        CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree,
+        CoUninitialize,
     };
     use windows::core::{GUID, Result};
 
@@ -311,7 +363,8 @@ mod wasapi {
         unsafe {
             CoInitializeEx(None, COINIT_MULTITHREADED).ok()?;
             let out = (|| -> Result<()> {
-                let devices: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+                let devices: IMMDeviceEnumerator =
+                    CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
                 let device = devices.GetDefaultAudioEndpoint(eRender, eConsole)?;
                 let client: IAudioClient = device.Activate(CLSCTX_ALL, None)?;
                 let fmt = client.GetMixFormat()?;
@@ -330,7 +383,10 @@ mod wasapi {
                 CoTaskMemFree(Some(fmt as *const _));
                 init?;
                 if !(float && bits == 32) && bits != 16 {
-                    return Err(windows::core::Error::new(windows::core::HRESULT(-1), "an output format the synth doesn't write"));
+                    return Err(windows::core::Error::new(
+                        windows::core::HRESULT(-1),
+                        "an output format the synth doesn't write",
+                    ));
                 }
                 let size = client.GetBufferSize()? as usize;
                 let render: IAudioRenderClient = client.GetService()?;
@@ -351,14 +407,20 @@ mod wasapi {
                         }
                         let buf = render.GetBuffer(frames as u32)?;
                         if float && bits == 32 {
-                            let dst = std::slice::from_raw_parts_mut(buf.cast::<f32>(), frames * channels);
+                            let dst = std::slice::from_raw_parts_mut(
+                                buf.cast::<f32>(),
+                                frames * channels,
+                            );
                             for (f, s) in mono[..frames].iter().enumerate() {
                                 for c in 0..channels {
                                     dst[f * channels + c] = *s;
                                 }
                             }
                         } else {
-                            let dst = std::slice::from_raw_parts_mut(buf.cast::<i16>(), frames * channels);
+                            let dst = std::slice::from_raw_parts_mut(
+                                buf.cast::<i16>(),
+                                frames * channels,
+                            );
                             for (f, s) in mono[..frames].iter().enumerate() {
                                 let v = (s.clamp(-1.0, 1.0) * 32767.0) as i16;
                                 for c in 0..channels {
@@ -386,14 +448,30 @@ mod tests {
     #[test]
     fn a_tone_sounds_and_ends() {
         let mut m = Mixer::new(48_000.0);
-        m.play(&[Voice::Tone { at: 0.0, freq: 440.0, dur: 0.05, vol: 0.5, wave: Wave::Sine, glide_to: None }]);
+        m.play(&[Voice::Tone {
+            at: 0.0,
+            freq: 440.0,
+            dur: 0.05,
+            vol: 0.5,
+            wave: Wave::Sine,
+            glide_to: None,
+        }]);
         let mut buf = vec![0f32; 4800];
         m.render(&mut buf);
         assert!(buf.iter().any(|s| s.abs() > 0.01));
         assert!(buf.iter().all(|s| s.abs() <= 1.0));
         m.render(&mut buf);
         assert!(m.idle());
-        m.play(&[Voice::Hiss { at: 0.0, dur: 0.05, vol: 0.5, freq: 1200.0, q: 1.0, sweep_to: Some(300.0), filter: Filter::Bandpass, offset: 0.1 }]);
+        m.play(&[Voice::Hiss {
+            at: 0.0,
+            dur: 0.05,
+            vol: 0.5,
+            freq: 1200.0,
+            q: 1.0,
+            sweep_to: Some(300.0),
+            filter: Filter::Bandpass,
+            offset: 0.1,
+        }]);
         m.render(&mut buf);
         assert!(buf.iter().any(|s| s.abs() > 0.0001));
     }

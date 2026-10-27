@@ -265,7 +265,9 @@ impl Socket {
             )
             .ok()?;
             if let Some(p) = protocol {
-                let header: Vec<u16> = format!("Sec-WebSocket-Protocol: {p}").encode_utf16().collect();
+                let header: Vec<u16> = format!("Sec-WebSocket-Protocol: {p}")
+                    .encode_utf16()
+                    .collect();
                 WinHttpAddRequestHeaders(r.0, &header, WINHTTP_ADDREQ_FLAG_ADD).ok()?;
             }
             WinHttpSendRequest(r.0, None, None, 0, 0, 0).ok()?;
@@ -392,7 +394,10 @@ mod tests {
         assert_eq!((b.secure, b.host.as_str(), b.port), (true, RELAY_HOST, 443));
         assert_eq!(p, "/rooms/pong?name=a b");
         let (b, p) = ws_url("ws://127.0.0.1:8787/host").unwrap();
-        assert_eq!((b.secure, b.host.as_str(), b.port, p.as_str()), (false, "127.0.0.1", 8787, "/host"));
+        assert_eq!(
+            (b.secure, b.host.as_str(), b.port, p.as_str()),
+            (false, "127.0.0.1", 8787, "/host")
+        );
         let (b, p) = ws_url("ws://localhost?x=1").unwrap();
         assert_eq!((b.port, p.as_str()), (80, "/?x=1"));
         assert_eq!(ws_url("wss://host").unwrap().1, "/");

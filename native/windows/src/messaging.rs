@@ -1042,7 +1042,10 @@ fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
                 who,
                 "wants to message you",
                 Control::Seg {
-                    options: vec![("allow".into(), "Allow".into()), ("block".into(), "Block".into())],
+                    options: vec![
+                        ("allow".into(), "Allow".into()),
+                        ("block".into(), "Block".into()),
+                    ],
                     value: String::new(),
                 },
             ));
@@ -1052,14 +1055,24 @@ fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
     if !allowed.is_empty() {
         out.push(Item::Heading("Allowed".into()));
         for who in &allowed {
-            out.push(row(&format!("forget:{who}"), who, "can message you", button("Remove")));
+            out.push(row(
+                &format!("forget:{who}"),
+                who,
+                "can message you",
+                button("Remove"),
+            ));
         }
     }
     let blocks = blocked();
     if !blocks.is_empty() {
         out.push(Item::Heading("Blocked".into()));
         for who in &blocks {
-            out.push(row(&format!("forget:{who}"), who, "messages are dropped unseen", button("Unblock")));
+            out.push(row(
+                &format!("forget:{who}"),
+                who,
+                "messages are dropped unseen",
+                button("Unblock"),
+            ));
         }
     }
     if name.is_empty() && allowed.is_empty() && blocks.is_empty() {

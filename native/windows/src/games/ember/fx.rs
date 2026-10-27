@@ -4,7 +4,8 @@
 use std::cell::Cell;
 
 use qcalc_core::games::ember::{
-    Camera, Cond, GameState, GLOW_EMBER, GLOW_FROST, GLOW_SMALL, PLAYER_H, PLAYER_W, POOL_SINK, Stage, T_LAVA, TILE,
+    Camera, Cond, GLOW_EMBER, GLOW_FROST, GLOW_SMALL, GameState, PLAYER_H, PLAYER_W, POOL_SINK,
+    Stage, T_LAVA, TILE,
 };
 
 use crate::games::canvas::{Canvas, Col, Composite, hex, js_round};
@@ -12,7 +13,11 @@ use crate::games::canvas::{Canvas, Col, Composite, hex, js_round};
 pub type Rgb = (f64, f64, f64);
 
 pub fn mix(a: Rgb, b: Rgb, t: f64) -> Rgb {
-    (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t, a.2 + (b.2 - a.2) * t)
+    (
+        a.0 + (b.0 - a.0) * t,
+        a.1 + (b.1 - a.1) * t,
+        a.2 + (b.2 - a.2) * t,
+    )
 }
 
 /// css(c, alpha): the colour rounded to whole channels, alpha to three places, as the TS's string said
@@ -56,7 +61,9 @@ pub fn hash01(n: f64) -> f64 {
     f64::from(h) / 4_294_967_296.0
 }
 
-pub const CHANNEL_HEX: [&str; 7] = ["#9b7bff", "#ff5fa2", "#1fb39a", "#e3b21c", "#5b7cff", "#d05ad6", "#8fa63a"];
+pub const CHANNEL_HEX: [&str; 7] = [
+    "#9b7bff", "#ff5fa2", "#1fb39a", "#e3b21c", "#5b7cff", "#d05ad6", "#8fa63a",
+];
 
 pub fn channel_colors() -> [Col; 7] {
     CHANNEL_HEX.map(hex)
@@ -71,7 +78,11 @@ pub fn channel_color(name: &str) -> Col {
 }
 
 pub fn cond_channels(c: Option<&Cond>) -> Vec<String> {
-    c.map_or(vec![], |c| c.0.iter().map(|n| n.strip_prefix('!').unwrap_or(n).to_string()).collect())
+    c.map_or(vec![], |c| {
+        c.0.iter()
+            .map(|n| n.strip_prefix('!').unwrap_or(n).to_string())
+            .collect()
+    })
 }
 
 /// whether a condition holds for the channels that are on; no condition means always
@@ -80,7 +91,11 @@ pub fn cond_holds(c: Option<&Cond>, on: &[String], lit: bool) -> bool {
     for n in &c.0 {
         let neg = n.starts_with('!');
         let name = n.strip_prefix('!').unwrap_or(n);
-        let is_on = if name == qcalc_core::games::ember::CH_LIT { lit } else { on.iter().any(|o| o == name) };
+        let is_on = if name == qcalc_core::games::ember::CH_LIT {
+            lit
+        } else {
+            on.iter().any(|o| o == name)
+        };
         if is_on == neg {
             return false;
         }
@@ -98,7 +113,11 @@ pub struct View {
 
 pub fn view_for(cam: &Camera, width: f64, shake_x: f64, shake_y: f64) -> View {
     let k = width / cam.w;
-    View { k, ox: js_round((shake_x - cam.x) * k), oy: js_round((shake_y - cam.y) * k) }
+    View {
+        k,
+        ox: js_round((shake_x - cam.x) * k),
+        oy: js_round((shake_y - cam.y) * k),
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,14 +133,28 @@ pub fn visible_tiles(cam: &Camera, cols: usize, rows: usize, pad: i64) -> TileRa
     let y0 = 0.max((cam.y / TILE).floor() as i64 - pad);
     let x1 = (cols as i64).min(((cam.x + cam.w) / TILE).ceil() as i64 + pad);
     let y1 = (rows as i64).min(((cam.y + cam.h) / TILE).ceil() as i64 + pad);
-    TileRange { x0, y0, x1: x0.max(x1), y1: y0.max(y1) }
+    TileRange {
+        x0,
+        y0,
+        x1: x0.max(x1),
+        y1: y0.max(y1),
+    }
 }
 
 pub fn in_view(cam: &Camera, x: f64, y: f64, w: f64, h: f64, pad: f64) -> bool {
-    x + w + pad >= cam.x && x - pad <= cam.x + cam.w && y + h + pad >= cam.y && y - pad <= cam.y + cam.h
+    x + w + pad >= cam.x
+        && x - pad <= cam.x + cam.w
+        && y + h + pad >= cam.y
+        && y - pad <= cam.y + cam.h
 }
 
-pub const MIPS: [f64; 5] = [1.0, std::f64::consts::FRAC_1_SQRT_2, 0.5, std::f64::consts::FRAC_1_SQRT_2 / 2.0, 0.25];
+pub const MIPS: [f64; 5] = [
+    1.0,
+    std::f64::consts::FRAC_1_SQRT_2,
+    0.5,
+    std::f64::consts::FRAC_1_SQRT_2 / 2.0,
+    0.25,
+];
 pub const CHUNK_PX: i64 = 512;
 
 pub fn mip_for(zoom: f64, held: i64) -> usize {
@@ -134,7 +167,11 @@ pub fn mip_for(zoom: f64, held: i64) -> usize {
             best = i;
         }
     }
-    if held >= 0 && (held as usize) < MIPS.len() && held as usize != best && (zoom / MIPS[held as usize]).ln().abs() < bd + 0.06 {
+    if held >= 0
+        && (held as usize) < MIPS.len()
+        && held as usize != best
+        && (zoom / MIPS[held as usize]).ln().abs() < bd + 0.06
+    {
         return held as usize;
     }
     best
@@ -165,11 +202,18 @@ pub const HOLE_CORE: f64 = 0.45;
 
 pub fn lava_tops(stage: &Stage) -> Vec<usize> {
     (0..stage.tiles.len())
-        .filter(|&i| stage.tiles[i] == T_LAVA && (i < stage.cols || stage.tiles[i - stage.cols] != T_LAVA))
+        .filter(|&i| {
+            stage.tiles[i] == T_LAVA && (i < stage.cols || stage.tiles[i - stage.cols] != T_LAVA)
+        })
         .collect()
 }
 
-pub fn light_holes(stage: &Stage, s: &GameState, lava: &[usize], at: &[(f64, f64); 2]) -> Vec<Hole> {
+pub fn light_holes(
+    stage: &Stage,
+    s: &GameState,
+    lava: &[usize],
+    at: &[(f64, f64); 2],
+) -> Vec<Hole> {
     let mut out = Vec::new();
     for (i, p) in s.players.iter().enumerate() {
         if !p.alive {
@@ -195,23 +239,53 @@ pub fn light_holes(stage: &Stage, s: &GameState, lava: &[usize], at: &[(f64, f64
         });
     }
     for l in &stage.lamps {
-        out.push(Hole { x: l.r.x + l.r.w / 2.0, y: l.r.y + l.r.h / 2.0, r: GLOW_SMALL, a: 0.85, p: None });
+        out.push(Hole {
+            x: l.r.x + l.r.w / 2.0,
+            y: l.r.y + l.r.h / 2.0,
+            r: GLOW_SMALL,
+            a: 0.85,
+            p: None,
+        });
     }
     for d in &stage.doors {
-        out.push(Hole { x: d.x + d.w / 2.0, y: d.y + d.h / 2.0, r: GLOW_SMALL, a: 0.75, p: None });
+        out.push(Hole {
+            x: d.x + d.w / 2.0,
+            y: d.y + d.h / 2.0,
+            r: GLOW_SMALL,
+            a: 0.75,
+            p: None,
+        });
     }
     for (i, g) in stage.gems.iter().enumerate() {
         if !s.taken.get(i).copied().unwrap_or(false) {
-            out.push(Hole { x: g.x, y: g.y, r: GLOW_SMALL * 0.7, a: 0.7, p: None });
+            out.push(Hole {
+                x: g.x,
+                y: g.y,
+                r: GLOW_SMALL * 0.7,
+                a: 0.7,
+                p: None,
+            });
         }
     }
     for p in &stage.portals {
-        out.push(Hole { x: p.r.x + p.r.w / 2.0, y: p.r.y + p.r.h / 2.0, r: GLOW_SMALL, a: 0.75, p: None });
+        out.push(Hole {
+            x: p.r.x + p.r.w / 2.0,
+            y: p.r.y + p.r.h / 2.0,
+            r: GLOW_SMALL,
+            a: 0.75,
+            p: None,
+        });
     }
     if s.cp >= 0
         && let Some(cp) = stage.checkpoints.get(s.cp as usize)
     {
-        out.push(Hole { x: cp.x, y: cp.y - TILE * 0.7, r: GLOW_SMALL, a: 0.75, p: None });
+        out.push(Hole {
+            x: cp.x,
+            y: cp.y - TILE * 0.7,
+            r: GLOW_SMALL,
+            a: 0.75,
+            p: None,
+        });
     }
     out
 }
@@ -320,7 +394,21 @@ impl Particles {
 
     // 6.283 is the TS's own number, not TAU
     #[allow(clippy::too_many_arguments, clippy::approx_constant)]
-    pub fn spawn(&mut self, kind: u8, col: usize, x: f64, y: f64, vx: f64, vy: f64, life: f64, size: f64, grav: f64, drag: f64, add: bool, spin: f64) {
+    pub fn spawn(
+        &mut self,
+        kind: u8,
+        col: usize,
+        x: f64,
+        y: f64,
+        vx: f64,
+        vy: f64,
+        life: f64,
+        size: f64,
+        grav: f64,
+        drag: f64,
+        add: bool,
+        spin: f64,
+    ) {
         let mut i = self.n;
         if i >= self.cap {
             self.over = (self.over + 1) % self.cap;
@@ -337,7 +425,11 @@ impl Particles {
         self.size[i] = size as f32;
         self.grav[i] = grav as f32;
         self.drag[i] = drag as f32;
-        self.rot[i] = if spin == 0.0 { 0.0 } else { ((x * 7.31 + y * 3.17) % 6.283) as f32 };
+        self.rot[i] = if spin == 0.0 {
+            0.0
+        } else {
+            ((x * 7.31 + y * 3.17) % 6.283) as f32
+        };
         self.spin[i] = spin as f32;
         self.kind[i] = kind;
         self.col[i] = col as u8;
@@ -391,7 +483,11 @@ impl Particles {
             if only >= 0 && only != i32::from(pass) {
                 continue;
             }
-            ctx.set_composite(if pass == 0 { Composite::SourceOver } else { add_op });
+            ctx.set_composite(if pass == 0 {
+                Composite::SourceOver
+            } else {
+                add_op
+            });
             for i in 0..self.n {
                 if self.add[i] == pass {
                     let c = usize::from(self.col[i]);
@@ -529,12 +625,17 @@ mod tests {
         assert_eq!(hash_str(""), 0x811c_9dc5);
         assert_eq!(channel_index("!a"), channel_index("a"));
         assert!((0.0..1.0).contains(&hash01(12345.0)));
-        assert_eq!(css((10.4, 20.5, 30.6), 0.12345), Col::rgba(10.0, 21.0, 31.0, 0.123));
+        assert_eq!(
+            css((10.4, 20.5, 30.6), 0.12345),
+            Col::rgba(10.0, 21.0, 31.0, 0.123)
+        );
         assert_eq!(mip_for(1.0, -1), 0);
         assert_eq!(mip_for(0.26, -1), 4);
         let mut p = Particles::new(3);
         for _ in 0..5 {
-            p.spawn(PK_DOT, 0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, false, 0.0);
+            p.spawn(
+                PK_DOT, 0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, false, 0.0,
+            );
         }
         assert_eq!(p.n, 3);
         p.update(2.0);

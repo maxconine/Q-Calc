@@ -260,11 +260,7 @@ static CONTROL: Control = Control {
 
 /// What settings shows.
 pub fn status() -> UpdateStatus {
-    CONTROL
-        .status
-        .lock()
-        .map(|s| s.clone())
-        .unwrap_or_default()
+    CONTROL.status.lock().map(|s| s.clone()).unwrap_or_default()
 }
 
 fn set_status(change: impl FnOnce(&mut UpdateStatus)) {
@@ -391,7 +387,10 @@ mod win {
         }
         // SAFETY: plain query
         let now = unsafe { GetTickCount() };
-        Some(Duration::from_millis(u64::from(idle_millis(now, info.dwTime))))
+        Some(Duration::from_millis(u64::from(idle_millis(
+            now,
+            info.dwTime,
+        ))))
     }
 
     fn bar_visible() -> bool {
@@ -462,7 +461,11 @@ mod win {
             {
                 set_status(|s| s.state = UpdateState::Installing);
                 let (path, show) = (r.path.clone(), now_asked);
-                qlog!("updates: installing {} ({})", r.version, if show { "asked" } else { "quiet moment" });
+                qlog!(
+                    "updates: installing {} ({})",
+                    r.version,
+                    if show { "asked" } else { "quiet moment" }
+                );
                 crate::bg::post(move |app| install(app, &path, show));
                 ready = None;
             }
@@ -490,14 +493,9 @@ mod win {
         let key = public_key(PUBKEY)?;
         let sig = signature(&offer.signature)?;
         if !signed_for(&sig, &offer.version) {
-            return Err(format!(
-                "the installer isn't signed for {}",
-                offer.version
-            ));
+            return Err(format!("the installer isn't signed for {}", offer.version));
         }
-        set_status(|s| {
-            (s.state, s.latest) = (UpdateState::Downloading, offer.version.clone())
-        });
+        set_status(|s| (s.state, s.latest) = (UpdateState::Downloading, offer.version.clone()));
         let dir = std::env::temp_dir().join("qcalc-update");
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
@@ -536,7 +534,10 @@ mod win {
     /// On the UI thread: start the installer (it waits for this process to go) and quit.
     fn install(app: &mut App, path: &std::path::Path, show: bool) {
         let relaunch = if show { "/R=show" } else { "/R=hidden" };
-        match std::process::Command::new(path).args(["/S", relaunch]).spawn() {
+        match std::process::Command::new(path)
+            .args(["/S", relaunch])
+            .spawn()
+        {
             Ok(_) => {
                 qlog!("updates: installer started, quitting");
                 app.save_store();
@@ -586,7 +587,13 @@ mod tests {
         assert!(offer(&format!("\u{feff}{m}"), "windows-x86_64").is_ok());
         assert!(offer(&m.replace("https://", "http://"), "windows-x86_64").is_err());
         assert!(offer(&m.replace("\"c2ln\"", "\"\""), "windows-x86_64").is_err());
-        assert!(offer(&m.replace("2.1.0\", \"pub", "two\", \"pub"), "windows-x86_64").is_err());
+        assert!(
+            offer(
+                &m.replace("2.1.0\", \"pub", "two\", \"pub"),
+                "windows-x86_64"
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -606,16 +613,24 @@ mod tests {
     }
 
     // minisign-verify's own test vector: the prehashed signature of b"test"
-    const TEST_KEY: &str = "untrusted comment: test\nRWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3\n";
+    const TEST_KEY: &str =
+        "untrusted comment: test\nRWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3\n";
     const TEST_SIG: &str = "untrusted comment: signature from minisign secret key\nRUQf6LRCGA9i559r3g7V1qNyJDApGip8MfqcadIgT9CuhV3EMhHoN1mGTkUidF/z7SrlQgXdy8ofjb7bNJJylDOocrCo8KLzZwo=\ntrusted comment: timestamp:1556193335\tfile:test\ny/rUw2y8/hOUYjZU71eHp/Wo1KZ40fGy2VJEDl34XMJM+TX48Ss/17u3IvIfbVR1FkZZSNCisQbuQY+bHwhEBg==\n";
 
     fn b64(s: &str) -> String {
         const A: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         let mut out = String::new();
         for chunk in s.as_bytes().chunks(3) {
-            let n = chunk.iter().enumerate().fold(0u32, |n, (i, b)| n | u32::from(*b) << (16 - 8 * i));
+            let n = chunk
+                .iter()
+                .enumerate()
+                .fold(0u32, |n, (i, b)| n | u32::from(*b) << (16 - 8 * i));
             for i in 0..4 {
-                out.push(if i <= chunk.len() { A[(n >> (18 - 6 * i) & 63) as usize] as char } else { '=' });
+                out.push(if i <= chunk.len() {
+                    A[(n >> (18 - 6 * i) & 63) as usize] as char
+                } else {
+                    '='
+                });
             }
         }
         out
@@ -641,9 +656,17 @@ mod tests {
     fn checks_on_launch_then_daily_and_a_backwards_clock_is_due() {
         let t0 = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
         assert!(check_due(None, CHECK_EVERY, t0));
-        assert!(!check_due(Some(t0), CHECK_EVERY, t0 + Duration::from_secs(60)));
+        assert!(!check_due(
+            Some(t0),
+            CHECK_EVERY,
+            t0 + Duration::from_secs(60)
+        ));
         assert!(check_due(Some(t0), CHECK_EVERY, t0 + CHECK_EVERY));
-        assert!(check_due(Some(t0), CHECK_EVERY, t0 - Duration::from_secs(3600)));
+        assert!(check_due(
+            Some(t0),
+            CHECK_EVERY,
+            t0 - Duration::from_secs(3600)
+        ));
     }
 
     #[test]

@@ -46,11 +46,7 @@ pub fn parse(d: &str) -> Vec<Seg> {
     let mut cmd = 'M';
     let (mut x, mut y) = (0.0f32, 0.0f32);
     let take = |i: &mut usize, n: usize| -> Option<Vec<f32>> {
-        let v: Vec<f32> = tokens[*i..]
-            .iter()
-            .take(n)
-            .map_while(|t| t.err())
-            .collect();
+        let v: Vec<f32> = tokens[*i..].iter().take(n).map_while(|t| t.err()).collect();
         (v.len() == n).then(|| {
             *i += n;
             v

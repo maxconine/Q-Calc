@@ -236,7 +236,11 @@ impl Bar {
         let visible = model.visible(now);
         // the games list stands where the tape would (commands.rs), as the cheat sheet does (cheats.rs)
         let games = crate::commands::games_height(model);
-        let help = if games > 0.0 { 0.0 } else { crate::cheats::height(model) };
+        let help = if games > 0.0 {
+            0.0
+        } else {
+            crate::cheats::height(model)
+        };
         let tape = if help > 0.0 || games > 0.0 {
             history::TapeLayout::default()
         } else {
@@ -293,7 +297,12 @@ impl Bar {
         });
         let th = crate::typst_row::height(model, width);
         let typst = (th > 0.0).then(|| {
-            let r = Rect::new(size::GUTTER, height, inner, th - crate::typst_row::PAD_BOTTOM);
+            let r = Rect::new(
+                size::GUTTER,
+                height,
+                inner,
+                th - crate::typst_row::PAD_BOTTOM,
+            );
             height += th;
             r
         });

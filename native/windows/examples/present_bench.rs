@@ -41,7 +41,11 @@ mod imp {
             ..Default::default()
         };
         unsafe {
-            let _ = K32GetProcessMemoryInfo(GetCurrentProcess(), (&mut c as *mut PROCESS_MEMORY_COUNTERS_EX).cast(), c.cb);
+            let _ = K32GetProcessMemoryInfo(
+                GetCurrentProcess(),
+                (&mut c as *mut PROCESS_MEMORY_COUNTERS_EX).cast(),
+                c.cb,
+            );
         }
         c.PrivateUsage as isize
     }
@@ -52,8 +56,15 @@ mod imp {
     }
 
     pub fn main() {
-        let a: Vec<u32> = std::env::args().skip(1).filter_map(|s| s.parse().ok()).collect();
-        let (w, h, frames) = (*a.first().unwrap_or(&1020), *a.get(1).unwrap_or(&108), *a.get(2).unwrap_or(&400));
+        let a: Vec<u32> = std::env::args()
+            .skip(1)
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        let (w, h, frames) = (
+            *a.first().unwrap_or(&1020),
+            *a.get(1).unwrap_or(&108),
+            *a.get(2).unwrap_or(&400),
+        );
         unsafe {
             let inst = GetModuleHandleW(None).unwrap();
             let class = WNDCLASSEXW {
@@ -79,7 +90,8 @@ mod imp {
                 None,
             )
             .unwrap();
-            let f: ID2D1Factory = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None).unwrap();
+            let f: ID2D1Factory =
+                D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, None).unwrap();
             let dw: IDWriteFactory = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED).unwrap();
             let fmt = dw
                 .CreateTextFormat(
@@ -111,18 +123,44 @@ mod imp {
                 }
             };
             let draw = |rt: &ID2D1RenderTarget, k: u32, x0: f32| {
-                let brush = rt.CreateSolidColorBrush(&D2D1_COLOR_F { r: 0.1, g: 0.1, b: 0.1, a: 1.0 }, None).unwrap();
-                rt.Clear(Some(&D2D1_COLOR_F { r: 1.0, g: 1.0, b: 1.0, a: 1.0 }));
+                let brush = rt
+                    .CreateSolidColorBrush(
+                        &D2D1_COLOR_F {
+                            r: 0.1,
+                            g: 0.1,
+                            b: 0.1,
+                            a: 1.0,
+                        },
+                        None,
+                    )
+                    .unwrap();
+                rt.Clear(Some(&D2D1_COLOR_F {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                }));
                 let text: Vec<u16> = format!("sin(90) + {k}").encode_utf16().collect();
                 let layout = dw.CreateTextLayout(&text, &fmt, 600.0, h as f32).unwrap();
-                rt.DrawTextLayout(Vector2 { X: 20.0 - x0, Y: 20.0 }, &layout, &brush, D2D1_DRAW_TEXT_OPTIONS_NONE);
+                rt.DrawTextLayout(
+                    Vector2 {
+                        X: 20.0 - x0,
+                        Y: 20.0,
+                    },
+                    &layout,
+                    &brush,
+                    D2D1_DRAW_TEXT_OPTIONS_NONE,
+                );
             };
             pump();
 
             // hwnd
             let hp = D2D1_HWND_RENDER_TARGET_PROPERTIES {
                 hwnd,
-                pixelSize: D2D_SIZE_U { width: w, height: h },
+                pixelSize: D2D_SIZE_U {
+                    width: w,
+                    height: h,
+                },
                 presentOptions: D2D1_PRESENT_OPTIONS_IMMEDIATELY,
             };
             let rt = f.CreateHwndRenderTarget(&props(96.0), &hp).unwrap();
@@ -148,9 +186,19 @@ mod imp {
                     pump();
                     let t = Instant::now();
                     let r = if part {
-                        RECT { left: (w * 2 / 3) as i32, top: 0, right: w as i32, bottom: h as i32 }
+                        RECT {
+                            left: (w * 2 / 3) as i32,
+                            top: 0,
+                            right: w as i32,
+                            bottom: h as i32,
+                        }
                     } else {
-                        RECT { left: 0, top: 0, right: w as i32, bottom: h as i32 }
+                        RECT {
+                            left: 0,
+                            top: 0,
+                            right: w as i32,
+                            bottom: h as i32,
+                        }
                     };
                     let hdc = GetDC(Some(hwnd));
                     dc.BindDC(hdc, &r).unwrap();
@@ -189,21 +237,28 @@ mod imp {
                 let dxgi_dev: IDXGIDevice = dev.cast().unwrap();
                 let f1: ID2D1Factory1 = f.cast().unwrap();
                 let d2d_dev = f1.CreateDevice(&dxgi_dev).unwrap();
-                let ctx = d2d_dev.CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE).unwrap();
+                let ctx = d2d_dev
+                    .CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE)
+                    .unwrap();
                 let adapter = dxgi_dev.GetAdapter().unwrap();
                 let factory: IDXGIFactory2 = adapter.GetParent().unwrap();
                 let desc = DXGI_SWAP_CHAIN_DESC1 {
                     Width: w,
                     Height: h,
                     Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                    SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 },
+                    SampleDesc: DXGI_SAMPLE_DESC {
+                        Count: 1,
+                        Quality: 0,
+                    },
                     BufferUsage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
                     BufferCount: 2,
                     SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
                     AlphaMode: DXGI_ALPHA_MODE_IGNORE,
                     ..Default::default()
                 };
-                let sc = factory.CreateSwapChainForHwnd(&dev, hwnd, &desc, None, None).unwrap();
+                let sc = factory
+                    .CreateSwapChainForHwnd(&dev, hwnd, &desc, None, None)
+                    .unwrap();
                 let surface: IDXGISurface = sc.GetBuffer(0).unwrap();
                 let bp = D2D1_BITMAP_PROPERTIES1 {
                     pixelFormat: D2D1_PIXEL_FORMAT {
@@ -224,13 +279,20 @@ mod imp {
                         let t = Instant::now();
                         // flip model: the back buffer changes each present
                         let surface: IDXGISurface = sc.GetBuffer(0).unwrap();
-                        let bmp = ctx.CreateBitmapFromDxgiSurface(&surface, Some(&bp)).unwrap();
+                        let bmp = ctx
+                            .CreateBitmapFromDxgiSurface(&surface, Some(&bp))
+                            .unwrap();
                         ctx.SetTarget(&bmp);
                         ctx.BeginDraw();
                         draw(&ctx, k, 0.0);
                         let _ = ctx.EndDraw(None, None);
                         ctx.SetTarget(None);
-                        let mut r = RECT { left: (w * 2 / 3) as i32, top: 0, right: w as i32, bottom: h as i32 };
+                        let mut r = RECT {
+                            left: (w * 2 / 3) as i32,
+                            top: 0,
+                            right: w as i32,
+                            bottom: h as i32,
+                        };
                         let params = DXGI_PRESENT_PARAMETERS {
                             DirtyRectsCount: if part && k > 1 { 1 } else { 0 },
                             pDirtyRects: &mut r,

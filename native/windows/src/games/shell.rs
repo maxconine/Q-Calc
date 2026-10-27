@@ -4,7 +4,9 @@
 //! `shell::paused_key`, `fullscreen::is_fullscreen_chord`); the window carries out what `route` returns.
 
 use qcalc_core::games::fullscreen::{Chord, is_fullscreen_chord};
-use qcalc_core::games::shell::{EscAction, EscState, KeyLike, PausedKey, ShellMode, esc_action, paused_key};
+use qcalc_core::games::shell::{
+    EscAction, EscState, KeyLike, PausedKey, ShellMode, esc_action, paused_key,
+};
 
 use super::keys::GameKey;
 

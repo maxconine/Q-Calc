@@ -24,9 +24,9 @@ mod answer;
 mod app;
 #[cfg(windows)]
 mod bench;
+mod bg;
 #[cfg(windows)]
 mod cheats;
-mod bg;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]

@@ -17,25 +17,30 @@ use std::f64::consts::PI;
 use std::rc::Rc;
 
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_BEZIER_SEGMENT, D2D1_COLOR_F,
-    D2D1_COMPOSITE_MODE_DESTINATION_OUT, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED,
-    D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING, D2D1_GRADIENT_STOP, D2D1_PIXEL_FORMAT,
+    D2D_RECT_F, D2D_SIZE_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_BEZIER_SEGMENT,
+    D2D1_COLOR_F, D2D1_COMPOSITE_MODE_DESTINATION_OUT, D2D1_FIGURE_BEGIN_FILLED,
+    D2D1_FIGURE_BEGIN_HOLLOW, D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN,
+    D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING, D2D1_GRADIENT_STOP, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
     D2D1_ANTIALIAS_MODE_PER_PRIMITIVE, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_BRUSH_PROPERTIES, D2D1_CAP_STYLE, D2D1_CAP_STYLE_FLAT,
-    D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_SQUARE, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DASH_STYLE_CUSTOM,
-    D2D1_DASH_STYLE_SOLID, D2D1_DRAW_TEXT_OPTIONS_NONE, D2D1_EXTEND_MODE_CLAMP, D2D1_GAMMA_2_2,
+    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_BRUSH_PROPERTIES, D2D1_CAP_STYLE,
+    D2D1_CAP_STYLE_FLAT, D2D1_CAP_STYLE_ROUND, D2D1_CAP_STYLE_SQUARE,
+    D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID,
+    D2D1_DRAW_TEXT_OPTIONS_NONE, D2D1_EXTEND_MODE_CLAMP, D2D1_GAMMA_2_2,
     D2D1_INTERPOLATION_MODE_LINEAR, D2D1_LAYER_OPTIONS_NONE, D2D1_LAYER_PARAMETERS, D2D1_LINE_JOIN,
-    D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES, D2D1_PRIMITIVE_BLEND_ADD,
-    D2D1_PRIMITIVE_BLEND_SOURCE_OVER, D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_STROKE_STYLE_PROPERTIES,
-    ID2D1Bitmap, ID2D1BitmapRenderTarget, ID2D1Brush, ID2D1CommandList, ID2D1DeviceContext, ID2D1Factory,
-    ID2D1Geometry, ID2D1Image, ID2D1PathGeometry, ID2D1RenderTarget, ID2D1SolidColorBrush, ID2D1StrokeStyle,
+    D2D1_LINE_JOIN_MITER, D2D1_LINE_JOIN_ROUND, D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES,
+    D2D1_PRIMITIVE_BLEND_ADD, D2D1_PRIMITIVE_BLEND_SOURCE_OVER,
+    D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES, D2D1_STROKE_STYLE_PROPERTIES, ID2D1Bitmap,
+    ID2D1BitmapRenderTarget, ID2D1Brush, ID2D1CommandList, ID2D1DeviceContext, ID2D1Factory,
+    ID2D1Geometry, ID2D1Image, ID2D1PathGeometry, ID2D1RenderTarget, ID2D1SolidColorBrush,
+    ID2D1StrokeStyle,
 };
 use windows::Win32::Graphics::DirectWrite::{
-    DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT, DWRITE_FONT_WEIGHT_REGULAR,
-    DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_LINE_METRICS, DWRITE_TEXT_METRICS, DWRITE_WORD_WRAPPING_NO_WRAP,
-    IDWriteFactory, IDWriteTextFormat, IDWriteTextLayout,
+    DWRITE_FONT_STRETCH_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_WEIGHT,
+    DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_LINE_METRICS,
+    DWRITE_TEXT_METRICS, DWRITE_WORD_WRAPPING_NO_WRAP, IDWriteFactory, IDWriteTextFormat,
+    IDWriteTextLayout,
 };
 use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
 use windows::core::{HSTRING, Interface};
@@ -82,9 +87,17 @@ impl Col {
 /// `#rrggbb` / `#rgb`, for the few colours written as text.
 pub fn hex(s: &str) -> Col {
     let t = s.trim().trim_start_matches('#');
-    let full: String = if t.len() == 3 { t.chars().flat_map(|c| [c, c]).collect() } else { t.to_string() };
+    let full: String = if t.len() == 3 {
+        t.chars().flat_map(|c| [c, c]).collect()
+    } else {
+        t.to_string()
+    };
     match u32::from_str_radix(&full, 16) {
-        Ok(n) if full.len() == 6 => Col::rgb(f64::from((n >> 16) & 255), f64::from((n >> 8) & 255), f64::from(n & 255)),
+        Ok(n) if full.len() == 6 => Col::rgb(
+            f64::from((n >> 16) & 255),
+            f64::from((n >> 8) & 255),
+            f64::from(n & 255),
+        ),
         _ => Col::WHITE,
     }
 }
@@ -102,7 +115,14 @@ pub struct Affine {
 }
 
 impl Affine {
-    pub const IDENTITY: Affine = Affine { a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 0.0, f: 0.0 };
+    pub const IDENTITY: Affine = Affine {
+        a: 1.0,
+        b: 0.0,
+        c: 0.0,
+        d: 1.0,
+        e: 0.0,
+        f: 0.0,
+    };
 
     pub const fn new(a: f64, b: f64, c: f64, d: f64, e: f64, f: f64) -> Affine {
         Affine { a, b, c, d, e, f }
@@ -129,7 +149,10 @@ impl Affine {
         }
     }
     pub fn apply(&self, x: f64, y: f64) -> (f64, f64) {
-        (self.a * x + self.c * y + self.e, self.b * x + self.d * y + self.f)
+        (
+            self.a * x + self.c * y + self.e,
+            self.b * x + self.d * y + self.f,
+        )
     }
     pub fn invert(&self) -> Option<Affine> {
         let det = self.a * self.d - self.b * self.c;
@@ -137,7 +160,14 @@ impl Affine {
             return None;
         }
         let (a, b, c, d) = (self.d / det, -self.b / det, -self.c / det, self.a / det);
-        Some(Affine { a, b, c, d, e: -(self.e * a + self.f * c), f: -(self.e * b + self.f * d) })
+        Some(Affine {
+            a,
+            b,
+            c,
+            d,
+            e: -(self.e * a + self.f * c),
+            f: -(self.e * b + self.f * d),
+        })
     }
     fn m(&self) -> Matrix3x2 {
         Matrix3x2 {
@@ -173,10 +203,16 @@ pub struct Gradient {
 
 impl Gradient {
     pub fn linear(x0: f64, y0: f64, x1: f64, y1: f64) -> Gradient {
-        Gradient { kind: GradKind::Linear(x0, y0, x1, y1), stops: Vec::new() }
+        Gradient {
+            kind: GradKind::Linear(x0, y0, x1, y1),
+            stops: Vec::new(),
+        }
     }
     pub fn radial(x0: f64, y0: f64, r0: f64, x1: f64, y1: f64, r1: f64) -> Gradient {
-        Gradient { kind: GradKind::Radial(x0, y0, r0, x1, y1, r1), stops: Vec::new() }
+        Gradient {
+            kind: GradKind::Radial(x0, y0, r0, x1, y1, r1),
+            stops: Vec::new(),
+        }
     }
     pub fn stop(&mut self, offset: f64, c: Col) -> &mut Gradient {
         self.stops.push((offset.clamp(0.0, 1.0), c));
@@ -185,8 +221,17 @@ impl Gradient {
     /// the stops in order (ties as added), and for a radial with an inner radius, remapped onto 0–r1 as D2D's
     /// single-circle gradient has them
     fn d2d_stops(&self, k: f64) -> Vec<D2D1_GRADIENT_STOP> {
-        let mut s: Vec<(usize, f64, Col)> = self.stops.iter().enumerate().map(|(i, (o, c))| (i, *o, *c)).collect();
-        s.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal).then(a.0.cmp(&b.0)));
+        let mut s: Vec<(usize, f64, Col)> = self
+            .stops
+            .iter()
+            .enumerate()
+            .map(|(i, (o, c))| (i, *o, *c))
+            .collect();
+        s.sort_by(|a, b| {
+            a.1.partial_cmp(&b.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.0.cmp(&b.0))
+        });
         let (inner, outer) = match self.kind {
             GradKind::Radial(_, _, r0, _, _, r1) if r1 > 0.0 => (r0.max(0.0) / r1, 1.0),
             _ => (0.0, 1.0),
@@ -195,14 +240,23 @@ impl Gradient {
         if inner > 0.0
             && let Some(first) = s.first()
         {
-            out.push(D2D1_GRADIENT_STOP { position: 0.0, color: first.2.d2d(k) });
+            out.push(D2D1_GRADIENT_STOP {
+                position: 0.0,
+                color: first.2.d2d(k),
+            });
         }
         for (_, o, c) in s {
-            out.push(D2D1_GRADIENT_STOP { position: (inner + o * (outer - inner)) as f32, color: c.d2d(k) });
+            out.push(D2D1_GRADIENT_STOP {
+                position: (inner + o * (outer - inner)) as f32,
+                color: c.d2d(k),
+            });
         }
         if out.len() == 1 {
             let c = out[0].color;
-            out.push(D2D1_GRADIENT_STOP { position: 1.0, color: c });
+            out.push(D2D1_GRADIENT_STOP {
+                position: 1.0,
+                color: c,
+            });
         }
         out
     }
@@ -301,7 +355,10 @@ impl Default for State {
             composite: Composite::SourceOver,
             dash: Vec::new(),
             dash_offset: 0.0,
-            font: CFont { size: 10.0, bold: false },
+            font: CFont {
+                size: 10.0,
+                bold: false,
+            },
             align: TextAlign::Left,
             baseline: Baseline::Alphabetic,
             smoothing: true,
@@ -357,7 +414,11 @@ impl Res {
         if let Some(x) = self.formats.borrow().get(&key) {
             return Some(x.clone());
         }
-        let weight: DWRITE_FONT_WEIGHT = if f.bold { DWRITE_FONT_WEIGHT_SEMI_BOLD } else { DWRITE_FONT_WEIGHT_REGULAR };
+        let weight: DWRITE_FONT_WEIGHT = if f.bold {
+            DWRITE_FONT_WEIGHT_SEMI_BOLD
+        } else {
+            DWRITE_FONT_WEIGHT_REGULAR
+        };
         // SAFETY: the strings outlive the call
         let fmt = unsafe {
             self.dw.CreateTextFormat(
@@ -396,7 +457,12 @@ impl Res {
         let _ = unsafe { l.GetLineMetrics(Some(&mut lines), &mut n) };
         let ascent = f64::from(lines[0].baseline);
         let descent = (f64::from(lines[0].height) - ascent).max(0.0);
-        let out = (l, f64::from(m.widthIncludingTrailingWhitespace), ascent, descent);
+        let out = (
+            l,
+            f64::from(m.widthIncludingTrailingWhitespace),
+            ascent,
+            descent,
+        );
         let mut all = self.layouts.borrow_mut();
         if all.len() > 400 {
             all.clear();
@@ -472,7 +538,14 @@ pub struct Canvas<'a> {
 }
 
 impl<'a> Canvas<'a> {
-    fn make(rt: ID2D1RenderTarget, dc: Option<ID2D1DeviceContext>, res: &'a Res, base: Affine, w: f64, h: f64) -> Canvas<'a> {
+    fn make(
+        rt: ID2D1RenderTarget,
+        dc: Option<ID2D1DeviceContext>,
+        res: &'a Res,
+        base: Affine,
+        w: f64,
+        h: f64,
+    ) -> Canvas<'a> {
         // SAFETY: a brush on a live target
         let brush = unsafe { rt.CreateSolidColorBrush(&Col::BLACK.d2d(1.0), None) }.ok();
         Canvas {
@@ -500,8 +573,16 @@ impl<'a> Canvas<'a> {
     pub fn on(ui: &Ui, res: &'a Res, r: Rect) -> Canvas<'a> {
         let (rt, dc, _, _) = ui.parts();
         let s = f64::from(ui.px_per_dip);
-        let base = Affine::scale(1.0 / s, 1.0 / s).then(Affine::translate(f64::from(r.x), f64::from(r.y)));
-        let mut c = Canvas::make(rt.clone(), dc.cloned(), res, base, (f64::from(r.w) * s).round(), (f64::from(r.h) * s).round());
+        let base =
+            Affine::scale(1.0 / s, 1.0 / s).then(Affine::translate(f64::from(r.x), f64::from(r.y)));
+        let mut c = Canvas::make(
+            rt.clone(),
+            dc.cloned(),
+            res,
+            base,
+            (f64::from(r.w) * s).round(),
+            (f64::from(r.h) * s).round(),
+        );
         c.generation = ui.generation;
         c
     }
@@ -514,11 +595,28 @@ impl<'a> Canvas<'a> {
     /// A new offscreen canvas of `w` × `h` pixels, compatible with this canvas's target.
     pub fn offscreen(&self, w: f64, h: f64) -> Option<Offscreen> {
         let (w, h) = (w.max(1.0).round(), h.max(1.0).round());
-        let size = D2D_SIZE_F { width: w as f32, height: h as f32 };
-        let px = D2D_SIZE_U { width: w as u32, height: h as u32 };
-        let fmt = D2D1_PIXEL_FORMAT { format: DXGI_FORMAT_B8G8R8A8_UNORM, alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED };
+        let size = D2D_SIZE_F {
+            width: w as f32,
+            height: h as f32,
+        };
+        let px = D2D_SIZE_U {
+            width: w as u32,
+            height: h as u32,
+        };
+        let fmt = D2D1_PIXEL_FORMAT {
+            format: DXGI_FORMAT_B8G8R8A8_UNORM,
+            alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+        };
         // SAFETY: the sizes outlive the call
-        let rt = unsafe { self.rt.CreateCompatibleRenderTarget(Some(&size), Some(&px), Some(&fmt), D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE) }.ok()?;
+        let rt = unsafe {
+            self.rt.CreateCompatibleRenderTarget(
+                Some(&size),
+                Some(&px),
+                Some(&fmt),
+                D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
+            )
+        }
+        .ok()?;
         // SAFETY: plain setter; one DIP is one pixel there
         unsafe { rt.SetDpi(96.0, 96.0) };
         // start transparent
@@ -528,7 +626,13 @@ impl<'a> Canvas<'a> {
             rt.Clear(Some(&Col::CLEAR.d2d(1.0)));
             let _ = rt.EndDraw(None, None);
         }
-        Some(Offscreen { rt, w, h, generation: self.generation, bitmap: None })
+        Some(Offscreen {
+            rt,
+            w,
+            h,
+            generation: self.generation,
+            bitmap: None,
+        })
     }
 
     /// Ends what's open: a destination-out run, clips, the blend.
@@ -577,7 +681,11 @@ impl<'a> Canvas<'a> {
     }
     pub fn set_line_dash(&mut self, d: &[f64]) {
         if d.iter().all(|x| *x >= 0.0 && x.is_finite()) {
-            self.st.dash = if d.len() % 2 == 1 { [d, d].concat() } else { d.to_vec() };
+            self.st.dash = if d.len() % 2 == 1 {
+                [d, d].concat()
+            } else {
+                d.to_vec()
+            };
         }
     }
     pub fn set_dash_offset(&mut self, o: f64) {
@@ -690,7 +798,10 @@ impl<'a> Canvas<'a> {
         let p0 = self.cur.unwrap_or((0.0, 0.0));
         let c = self.dev(cx, cy);
         let p = self.dev(x, y);
-        let c1 = (p0.0 + 2.0 / 3.0 * (c.0 - p0.0), p0.1 + 2.0 / 3.0 * (c.1 - p0.1));
+        let c1 = (
+            p0.0 + 2.0 / 3.0 * (c.0 - p0.0),
+            p0.1 + 2.0 / 3.0 * (c.1 - p0.1),
+        );
         let c2 = (p.0 + 2.0 / 3.0 * (c.0 - p.0), p.1 + 2.0 / 3.0 * (c.1 - p.1));
         self.path.push(Seg::Cubic(c1.0, c1.1, c2.0, c2.1, p.0, p.1));
         self.cur = Some(p);
@@ -749,7 +860,9 @@ impl<'a> Canvas<'a> {
         while sweep < -PI {
             sweep += 2.0 * PI;
         }
-        let m = Affine::scale(r, r).then(Affine::translate(cx, cy)).then(self.st.transform);
+        let m = Affine::scale(r, r)
+            .then(Affine::translate(cx, cy))
+            .then(self.st.transform);
         self.unit_arc(m, a0, sweep);
     }
 
@@ -766,7 +879,8 @@ impl<'a> Canvas<'a> {
             let p1 = m.apply(ca - k * sa, sa + k * ca);
             let p2 = m.apply(cb + k * sb, sb - k * cb);
             let p3 = m.apply(cb, sb);
-            self.path.push(Seg::Cubic(p1.0, p1.1, p2.0, p2.1, p3.0, p3.1));
+            self.path
+                .push(Seg::Cubic(p1.0, p1.1, p2.0, p2.1, p3.0, p3.1));
             self.cur = Some(p3);
             a = b;
         }
@@ -780,14 +894,34 @@ impl<'a> Canvas<'a> {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn ellipse(&mut self, x: f64, y: f64, rx: f64, ry: f64, rot: f64, a0: f64, a1: f64, ccw: bool) {
+    pub fn ellipse(
+        &mut self,
+        x: f64,
+        y: f64,
+        rx: f64,
+        ry: f64,
+        rot: f64,
+        a0: f64,
+        a1: f64,
+        ccw: bool,
+    ) {
         if rx >= 0.0 && ry >= 0.0 {
             self.ellipse_arc(x, y, rx, ry, rot, a0, a1, ccw);
         }
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn ellipse_arc(&mut self, x: f64, y: f64, rx: f64, ry: f64, rot: f64, a0: f64, a1: f64, ccw: bool) {
+    fn ellipse_arc(
+        &mut self,
+        x: f64,
+        y: f64,
+        rx: f64,
+        ry: f64,
+        rot: f64,
+        a0: f64,
+        a1: f64,
+        ccw: bool,
+    ) {
         // the spec's sweep: a full turn or more draws the whole ellipse; otherwise the short way round in the asked
         // direction
         let tau = 2.0 * PI;
@@ -805,10 +939,13 @@ impl<'a> Canvas<'a> {
             }
             s
         };
-        let m = Affine::scale(if rx == 0.0 { 1e-9 } else { rx }, if ry == 0.0 { 1e-9 } else { ry })
-            .then(Affine::rotate(rot))
-            .then(Affine::translate(x, y))
-            .then(self.st.transform);
+        let m = Affine::scale(
+            if rx == 0.0 { 1e-9 } else { rx },
+            if ry == 0.0 { 1e-9 } else { ry },
+        )
+        .then(Affine::rotate(rot))
+        .then(Affine::translate(x, y))
+        .then(self.st.transform);
         let start = m.apply(a0.cos(), a0.sin());
         if self.cur.is_none() {
             self.move_dev(start);
@@ -838,7 +975,9 @@ impl<'a> Canvas<'a> {
     /// roundRect with one radius for every corner, scaled down as the spec says when they don't fit.
     pub fn round_rect(&mut self, x: f64, y: f64, w: f64, h: f64, radius: f64) {
         let mut r = radius.max(0.0);
-        let k = 1f64.min(w.abs() / (2.0 * r.max(1e-12))).min(h.abs() / (2.0 * r.max(1e-12)));
+        let k = 1f64
+            .min(w.abs() / (2.0 * r.max(1e-12)))
+            .min(h.abs() / (2.0 * r.max(1e-12)));
         if r > 0.0 {
             r *= k;
         }
@@ -862,20 +1001,37 @@ impl<'a> Canvas<'a> {
     // ---- geometry
 
     /// The path as a geometry, each point through `back` (device space to the space it's drawn in).
-    fn geometry(&self, segs: &[Seg], back: Option<&Affine>, filled: bool, even_odd: bool) -> Option<ID2D1PathGeometry> {
+    fn geometry(
+        &self,
+        segs: &[Seg],
+        back: Option<&Affine>,
+        filled: bool,
+        even_odd: bool,
+    ) -> Option<ID2D1PathGeometry> {
         if segs.is_empty() {
             return None;
         }
         let tp = |x: f64, y: f64| {
             let (x, y) = back.map_or((x, y), |b| b.apply(x, y));
-            Vector2 { X: x as f32, Y: y as f32 }
+            Vector2 {
+                X: x as f32,
+                Y: y as f32,
+            }
         };
         // SAFETY: a fresh geometry, opened once and closed
         unsafe {
             let geo = self.res.d2d.CreatePathGeometry().ok()?;
             let sink = geo.Open().ok()?;
-            sink.SetFillMode(if even_odd { D2D1_FILL_MODE_ALTERNATE } else { D2D1_FILL_MODE_WINDING });
-            let begin = if filled { D2D1_FIGURE_BEGIN_FILLED } else { D2D1_FIGURE_BEGIN_HOLLOW };
+            sink.SetFillMode(if even_odd {
+                D2D1_FILL_MODE_ALTERNATE
+            } else {
+                D2D1_FILL_MODE_WINDING
+            });
+            let begin = if filled {
+                D2D1_FIGURE_BEGIN_FILLED
+            } else {
+                D2D1_FIGURE_BEGIN_HOLLOW
+            };
             let mut open = false;
             for s in segs {
                 match *s {
@@ -893,7 +1049,11 @@ impl<'a> Canvas<'a> {
                     }
                     Seg::Cubic(a, b, c, d, e, f) => {
                         if open {
-                            sink.AddBezier(&D2D1_BEZIER_SEGMENT { point1: tp(a, b), point2: tp(c, d), point3: tp(e, f) });
+                            sink.AddBezier(&D2D1_BEZIER_SEGMENT {
+                                point1: tp(a, b),
+                                point2: tp(c, d),
+                                point3: tp(e, f),
+                            });
                         }
                     }
                     Seg::Close => {
@@ -926,7 +1086,13 @@ impl<'a> Canvas<'a> {
         self.blend = c;
         if let Some(dc) = &self.dc {
             // SAFETY: a setter inside a draw
-            unsafe { dc.SetPrimitiveBlend(if c == Composite::Lighter { D2D1_PRIMITIVE_BLEND_ADD } else { D2D1_PRIMITIVE_BLEND_SOURCE_OVER }) };
+            unsafe {
+                dc.SetPrimitiveBlend(if c == Composite::Lighter {
+                    D2D1_PRIMITIVE_BLEND_ADD
+                } else {
+                    D2D1_PRIMITIVE_BLEND_SOURCE_OVER
+                })
+            };
         }
     }
 
@@ -964,7 +1130,9 @@ impl<'a> Canvas<'a> {
 
     /// A destination-out run ends: the recorded primitives cut out of what's there.
     fn flush(&mut self) {
-        let Some((list, old)) = self.rec.take() else { return };
+        let Some((list, old)) = self.rec.take() else {
+            return;
+        };
         let Some(dc) = &self.dc else { return };
         // SAFETY: back to the real target; the list is closed and drawn once, untransformed (it recorded the
         // transforms it was drawn with)
@@ -973,7 +1141,13 @@ impl<'a> Canvas<'a> {
             if list.Close().is_ok() {
                 dc.SetTransform(&Matrix3x2::identity());
                 let img: ID2D1Image = list.cast().unwrap_or_else(|_| old.clone());
-                dc.DrawImage(&img, None, None, D2D1_INTERPOLATION_MODE_LINEAR, D2D1_COMPOSITE_MODE_DESTINATION_OUT);
+                dc.DrawImage(
+                    &img,
+                    None,
+                    None,
+                    D2D1_INTERPOLATION_MODE_LINEAR,
+                    D2D1_COMPOSITE_MODE_DESTINATION_OUT,
+                );
             }
         }
     }
@@ -996,24 +1170,54 @@ impl<'a> Canvas<'a> {
                 let stops = g.d2d_stops(1.0);
                 // SAFETY: plain resource creation on a live target; the structs outlive the calls
                 unsafe {
-                    let coll = self.rt.CreateGradientStopCollection(&stops, D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP).ok()?;
-                    let bp = D2D1_BRUSH_PROPERTIES { opacity: self.st.alpha as f32, transform: grad_t.m() };
+                    let coll = self
+                        .rt
+                        .CreateGradientStopCollection(
+                            &stops,
+                            D2D1_GAMMA_2_2,
+                            D2D1_EXTEND_MODE_CLAMP,
+                        )
+                        .ok()?;
+                    let bp = D2D1_BRUSH_PROPERTIES {
+                        opacity: self.st.alpha as f32,
+                        transform: grad_t.m(),
+                    };
                     match g.kind {
                         GradKind::Linear(x0, y0, x1, y1) => {
                             let lp = D2D1_LINEAR_GRADIENT_BRUSH_PROPERTIES {
-                                startPoint: Vector2 { X: x0 as f32, Y: y0 as f32 },
-                                endPoint: Vector2 { X: x1 as f32, Y: y1 as f32 },
+                                startPoint: Vector2 {
+                                    X: x0 as f32,
+                                    Y: y0 as f32,
+                                },
+                                endPoint: Vector2 {
+                                    X: x1 as f32,
+                                    Y: y1 as f32,
+                                },
                             };
-                            self.rt.CreateLinearGradientBrush(&lp, Some(&bp), &coll).ok()?.cast().ok()
+                            self.rt
+                                .CreateLinearGradientBrush(&lp, Some(&bp), &coll)
+                                .ok()?
+                                .cast()
+                                .ok()
                         }
                         GradKind::Radial(x0, y0, _, x1, y1, r1) => {
                             let rp = D2D1_RADIAL_GRADIENT_BRUSH_PROPERTIES {
-                                center: Vector2 { X: x1 as f32, Y: y1 as f32 },
-                                gradientOriginOffset: Vector2 { X: (x0 - x1) as f32, Y: (y0 - y1) as f32 },
+                                center: Vector2 {
+                                    X: x1 as f32,
+                                    Y: y1 as f32,
+                                },
+                                gradientOriginOffset: Vector2 {
+                                    X: (x0 - x1) as f32,
+                                    Y: (y0 - y1) as f32,
+                                },
                                 radiusX: r1 as f32,
                                 radiusY: r1 as f32,
                             };
-                            self.rt.CreateRadialGradientBrush(&rp, Some(&bp), &coll).ok()?.cast().ok()
+                            self.rt
+                                .CreateRadialGradientBrush(&rp, Some(&bp), &coll)
+                                .ok()?
+                                .cast()
+                                .ok()
                         }
                     }
                 }
@@ -1034,18 +1238,36 @@ impl<'a> Canvas<'a> {
         let w = (self.st.line_width * scale).max(1e-6);
         let dashed = !self.st.dash.is_empty() && self.st.dash.iter().any(|d| *d > 0.0);
         // custom dashes and their offset are in stroke widths
-        let dashes: Vec<f32> = self.st.dash.iter().map(|d| (d / w).max(1e-4) as f32).collect();
+        let dashes: Vec<f32> = self
+            .st
+            .dash
+            .iter()
+            .map(|d| (d / w).max(1e-4) as f32)
+            .collect();
         let props = D2D1_STROKE_STYLE_PROPERTIES {
             startCap: cap,
             endCap: cap,
             dashCap: cap,
             lineJoin: join,
             miterLimit: 10.0,
-            dashStyle: if dashed { D2D1_DASH_STYLE_CUSTOM } else { D2D1_DASH_STYLE_SOLID },
-            dashOffset: if dashed { (self.st.dash_offset / w) as f32 } else { 0.0 },
+            dashStyle: if dashed {
+                D2D1_DASH_STYLE_CUSTOM
+            } else {
+                D2D1_DASH_STYLE_SOLID
+            },
+            dashOffset: if dashed {
+                (self.st.dash_offset / w) as f32
+            } else {
+                0.0
+            },
         };
         // SAFETY: the props and dashes outlive the call
-        unsafe { self.res.d2d.CreateStrokeStyle(&props, if dashed { Some(&dashes) } else { None }) }.ok()
+        unsafe {
+            self.res
+                .d2d
+                .CreateStrokeStyle(&props, if dashed { Some(&dashes) } else { None })
+        }
+        .ok()
     }
 
     // ---- painting
@@ -1054,9 +1276,13 @@ impl<'a> Canvas<'a> {
         if segs.is_empty() || !self.prep() {
             return;
         }
-        let Some(geo) = self.geometry(segs, None, true, even_odd) else { return };
+        let Some(geo) = self.geometry(segs, None, true, even_odd) else {
+            return;
+        };
         let paint = self.st.fill.clone();
-        let Some(b) = self.brush_for(&paint, self.st.transform) else { return };
+        let Some(b) = self.brush_for(&paint, self.st.transform) else {
+            return;
+        };
         if self.st.shadow_blur > 0.0 && self.st.shadow_color.a > 0.0 {
             self.halo(&geo, None);
         }
@@ -1069,7 +1295,9 @@ impl<'a> Canvas<'a> {
     fn halo(&mut self, geo: &ID2D1PathGeometry, stroke_w: Option<f64>) {
         let blur = self.st.shadow_blur;
         let c = self.st.shadow_color;
-        let Some(brush) = self.brush.clone() else { return };
+        let Some(brush) = self.brush.clone() else {
+            return;
+        };
         let Some(style) = ({
             let saved = (self.st.cap, self.st.join, std::mem::take(&mut self.st.dash));
             self.st.cap = Cap::Round;
@@ -1116,7 +1344,11 @@ impl<'a> Canvas<'a> {
         let segs = std::mem::take(&mut self.path);
         let user = self.geometry(&segs, Some(&inv), false, false);
         let shadow = self.st.shadow_blur > 0.0 && self.st.shadow_color.a > 0.0;
-        let dev_geo = if shadow { self.geometry(&segs, None, false, false) } else { None };
+        let dev_geo = if shadow {
+            self.geometry(&segs, None, false, false)
+        } else {
+            None
+        };
         self.path = segs;
         let Some(geo) = user else { return };
         if let Some(dg) = &dev_geo {
@@ -1125,15 +1357,23 @@ impl<'a> Canvas<'a> {
             self.halo(dg, Some(self.st.line_width * k));
         }
         let paint = self.st.stroke.clone();
-        let Some(b) = self.brush_for(&paint, Affine::IDENTITY) else { return };
+        let Some(b) = self.brush_for(&paint, Affine::IDENTITY) else {
+            return;
+        };
         let style = self.stroke_style_obj(1.0);
         self.set_rt_transform(t.then(self.base));
         // SAFETY: inside a draw
-        unsafe { self.rt.DrawGeometry(&geo, &b, self.st.line_width as f32, style.as_ref()) };
+        unsafe {
+            self.rt
+                .DrawGeometry(&geo, &b, self.st.line_width as f32, style.as_ref())
+        };
     }
 
     pub fn fill_rect(&mut self, x: f64, y: f64, w: f64, h: f64) {
-        if !(x.is_finite() && y.is_finite() && w.is_finite() && h.is_finite()) || w == 0.0 || h == 0.0 {
+        if !(x.is_finite() && y.is_finite() && w.is_finite() && h.is_finite())
+            || w == 0.0
+            || h == 0.0
+        {
             return;
         }
         let t = self.st.transform;
@@ -1143,9 +1383,16 @@ impl<'a> Canvas<'a> {
                 return;
             }
             let paint = self.st.fill.clone();
-            let Some(b) = self.brush_for(&paint, Affine::IDENTITY) else { return };
+            let Some(b) = self.brush_for(&paint, Affine::IDENTITY) else {
+                return;
+            };
             self.set_rt_transform(t.then(self.base));
-            let r = D2D_RECT_F { left: x as f32, top: y as f32, right: (x + w) as f32, bottom: (y + h) as f32 };
+            let r = D2D_RECT_F {
+                left: x as f32,
+                top: y as f32,
+                right: (x + w) as f32,
+                bottom: (y + h) as f32,
+            };
             // SAFETY: inside a draw
             unsafe { self.rt.FillRectangle(&r, &b) };
             return;
@@ -1170,11 +1417,17 @@ impl<'a> Canvas<'a> {
         let t = self.st.transform.then(self.base);
         let (x0, y0) = t.apply(x, y);
         let (x1, y1) = t.apply(x + w, y + h);
-        let r = D2D_RECT_F { left: x0.min(x1) as f32, top: y0.min(y1) as f32, right: x0.max(x1) as f32, bottom: y0.max(y1) as f32 };
+        let r = D2D_RECT_F {
+            left: x0.min(x1) as f32,
+            top: y0.min(y1) as f32,
+            right: x0.max(x1) as f32,
+            bottom: y0.max(y1) as f32,
+        };
         // SAFETY: a paired clip inside a draw
         unsafe {
             self.rt.SetTransform(&Matrix3x2::identity());
-            self.rt.PushAxisAlignedClip(&r, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+            self.rt
+                .PushAxisAlignedClip(&r, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
             self.rt.Clear(Some(&Col::CLEAR.d2d(1.0)));
             self.rt.PopAxisAlignedClip();
         }
@@ -1188,11 +1441,17 @@ impl<'a> Canvas<'a> {
         match rect {
             Some((x0, y0, x1, y1)) => {
                 let (a, b) = (self.base.apply(x0, y0), self.base.apply(x1, y1));
-                let r = D2D_RECT_F { left: a.0.min(b.0) as f32, top: a.1.min(b.1) as f32, right: a.0.max(b.0) as f32, bottom: a.1.max(b.1) as f32 };
+                let r = D2D_RECT_F {
+                    left: a.0.min(b.0) as f32,
+                    top: a.1.min(b.1) as f32,
+                    right: a.0.max(b.0) as f32,
+                    bottom: a.1.max(b.1) as f32,
+                };
                 // SAFETY: inside a draw; popped by restore or finish
                 unsafe {
                     self.rt.SetTransform(&Matrix3x2::identity());
-                    self.rt.PushAxisAlignedClip(&r, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+                    self.rt
+                        .PushAxisAlignedClip(&r, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
                 }
                 self.clips.push(Clip::Axis);
             }
@@ -1207,7 +1466,9 @@ impl<'a> Canvas<'a> {
                     // an empty path clips everything out
                     None => {
                         // SAFETY: a fresh empty rectangle geometry
-                        unsafe { self.res.d2d.CreateRectangleGeometry(&D2D_RECT_F::default()) }.ok().and_then(|g| g.cast().ok())
+                        unsafe { self.res.d2d.CreateRectangleGeometry(&D2D_RECT_F::default()) }
+                            .ok()
+                            .and_then(|g| g.cast().ok())
                     }
                 };
                 // SAFETY: a layer on a live target; popped by restore or finish
@@ -1215,7 +1476,12 @@ impl<'a> Canvas<'a> {
                     self.rt.CreateLayer(None).is_ok_and(|layer| {
                         self.set_rt_transform(Affine::IDENTITY);
                         let params = D2D1_LAYER_PARAMETERS {
-                            contentBounds: D2D_RECT_F { left: -1e7, top: -1e7, right: 1e7, bottom: 1e7 },
+                            contentBounds: D2D_RECT_F {
+                                left: -1e7,
+                                top: -1e7,
+                                right: 1e7,
+                                bottom: 1e7,
+                            },
                             geometricMask: std::mem::ManuallyDrop::new(mask),
                             maskAntialiasMode: D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
                             maskTransform: self.base.m(),
@@ -1253,10 +1519,22 @@ impl<'a> Canvas<'a> {
             return;
         }
         self.set_rt_transform(self.st.transform.then(self.base));
-        let r = D2D_RECT_F { left: dx as f32, top: dy as f32, right: (dx + dw) as f32, bottom: (dy + dh) as f32 };
-        let mode = if self.st.smoothing { D2D1_BITMAP_INTERPOLATION_MODE_LINEAR } else { D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR };
+        let r = D2D_RECT_F {
+            left: dx as f32,
+            top: dy as f32,
+            right: (dx + dw) as f32,
+            bottom: (dy + dh) as f32,
+        };
+        let mode = if self.st.smoothing {
+            D2D1_BITMAP_INTERPOLATION_MODE_LINEAR
+        } else {
+            D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR
+        };
         // SAFETY: inside a draw; the bitmap was made on a target compatible with this one
-        unsafe { self.rt.DrawBitmap(img, Some(&r), self.st.alpha as f32, mode, None) };
+        unsafe {
+            self.rt
+                .DrawBitmap(img, Some(&r), self.st.alpha as f32, mode, None)
+        };
     }
 
     // ---- text
@@ -1266,8 +1544,12 @@ impl<'a> Canvas<'a> {
     }
 
     pub fn fill_text(&mut self, text: &str, x: f64, y: f64) {
-        let Paint::Color(c) = self.st.fill else { return };
-        let Some((layout, w, ascent, descent)) = self.res.layout(text, self.st.font) else { return };
+        let Paint::Color(c) = self.st.fill else {
+            return;
+        };
+        let Some((layout, w, ascent, descent)) = self.res.layout(text, self.st.font) else {
+            return;
+        };
         if !self.prep() {
             return;
         }
@@ -1287,7 +1569,10 @@ impl<'a> Canvas<'a> {
         // SAFETY: inside a draw
         unsafe {
             self.rt.DrawTextLayout(
-                Vector2 { X: ox as f32, Y: (baseline - ascent) as f32 },
+                Vector2 {
+                    X: ox as f32,
+                    Y: (baseline - ascent) as f32,
+                },
                 &layout,
                 &b,
                 D2D1_DRAW_TEXT_OPTIONS_NONE,
@@ -1318,9 +1603,18 @@ fn rect_of(segs: &[Seg]) -> Option<(f64, f64, f64, f64)> {
     }
     let near = |a: f64, b: f64| (a - b).abs() < 1e-6;
     let [p0, p1, p2, p3] = [pts[0], pts[1], pts[2], pts[3]];
-    let horizontal_first = near(p0.1, p1.1) && near(p1.0, p2.0) && near(p2.1, p3.1) && near(p3.0, p0.0);
-    let vertical_first = near(p0.0, p1.0) && near(p1.1, p2.1) && near(p2.0, p3.0) && near(p3.1, p0.1);
-    (horizontal_first || vertical_first).then(|| (p0.0.min(p2.0), p0.1.min(p2.1), p0.0.max(p2.0), p0.1.max(p2.1)))
+    let horizontal_first =
+        near(p0.1, p1.1) && near(p1.0, p2.0) && near(p2.1, p3.1) && near(p3.0, p0.0);
+    let vertical_first =
+        near(p0.0, p1.0) && near(p1.1, p2.1) && near(p2.0, p3.0) && near(p3.1, p0.1);
+    (horizontal_first || vertical_first).then(|| {
+        (
+            p0.0.min(p2.0),
+            p0.1.min(p2.1),
+            p0.0.max(p2.0),
+            p0.1.max(p2.1),
+        )
+    })
 }
 
 /// Math.round: half up, toward +infinity.
@@ -1358,9 +1652,20 @@ mod tests {
 
     #[test]
     fn rectangles_are_found_for_axis_clips() {
-        let segs = [Seg::Move(0.0, 0.0), Seg::Line(10.0, 0.0), Seg::Line(10.0, 5.0), Seg::Line(0.0, 5.0), Seg::Close];
+        let segs = [
+            Seg::Move(0.0, 0.0),
+            Seg::Line(10.0, 0.0),
+            Seg::Line(10.0, 5.0),
+            Seg::Line(0.0, 5.0),
+            Seg::Close,
+        ];
         assert_eq!(rect_of(&segs), Some((0.0, 0.0, 10.0, 5.0)));
-        let tri = [Seg::Move(0.0, 0.0), Seg::Line(10.0, 0.0), Seg::Line(10.0, 5.0), Seg::Close];
+        let tri = [
+            Seg::Move(0.0, 0.0),
+            Seg::Line(10.0, 0.0),
+            Seg::Line(10.0, 5.0),
+            Seg::Close,
+        ];
         assert_eq!(rect_of(&tri), None);
         assert_eq!(hex("#9b7bff"), Col::rgb(155.0, 123.0, 255.0));
         assert_eq!(js_round(-0.5), 0.0);

@@ -130,12 +130,7 @@ pub fn puff(t: f64, delay: f64, drift: f64, rise: f64, sway: f64, reduce: bool) 
         dx: key(p, &times, &[0.0, sway, drift], &e),
         dy: key(p, &times, &[16.0, rise * 0.55, rise], &e),
         scale: key(p, &times, &[0.45, 1.1, 1.6], &e),
-        opacity: key(
-            p,
-            &[0.0, 0.14, 0.48, 1.0],
-            &[0.0, 0.85, 0.55, 0.0],
-            &e,
-        ),
+        opacity: key(p, &[0.0, 0.14, 0.48, 1.0], &[0.0, 0.85, 0.55, 0.0], &e),
     }
 }
 
@@ -196,12 +191,22 @@ pub fn digit(t: f64, spin: f64, reduce: bool) -> (f64, f64) {
     if reduce {
         return (
             0.0,
-            key(p, &[0.0, 0.2, 0.8, 1.0], &[0.0, 1.0, 1.0, 0.0], &[EASE_IN_OUT]),
+            key(
+                p,
+                &[0.0, 0.2, 0.8, 1.0],
+                &[0.0, 1.0, 1.0, 0.0],
+                &[EASE_IN_OUT],
+            ),
         );
     }
     (
         spin * 360.0 * EASE_IN_OUT.at(p),
-        key(p, &[0.0, 0.12, 0.88, 1.0], &[0.0, 1.0, 1.0, 0.0], &[EASE_IN_OUT]),
+        key(
+            p,
+            &[0.0, 0.12, 0.88, 1.0],
+            &[0.0, 1.0, 1.0, 0.0],
+            &[EASE_IN_OUT],
+        ),
     )
 }
 
@@ -222,7 +227,12 @@ pub fn hole(t: f64, reduce: bool) -> (f64, f64, f64) {
         let p = progress(t, 0.0, VOID_STILL_S);
         return (
             1.0,
-            key(p, &[0.0, 0.2, 0.8, 1.0], &[0.0, 1.0, 1.0, 0.0], &[EASE_IN_OUT]),
+            key(
+                p,
+                &[0.0, 0.2, 0.8, 1.0],
+                &[0.0, 1.0, 1.0, 0.0],
+                &[EASE_IN_OUT],
+            ),
             0.0,
         );
     }
@@ -475,7 +485,9 @@ mod tests {
         assert!(close(EASE.at(0.5), 0.8024));
         assert!(EASE_IN.at(0.25) < 0.25 && EASE_OUT.at(0.25) > 0.25);
         // the 67's weigh overshoots
-        let over = (1..100).map(|i| WEIGH.at(f64::from(i) / 100.0)).fold(0.0, f64::max);
+        let over = (1..100)
+            .map(|i| WEIGH.at(f64::from(i) / 100.0))
+            .fold(0.0, f64::max);
         assert!(over > 1.0, "{over}");
     }
 
@@ -488,7 +500,10 @@ mod tests {
         assert!(close(key(0.25, &times, &values, &[LINEAR]), 5.0));
         assert!(close(key(0.75, &times, &values, &[LINEAR]), 15.0));
         // keys that end early hold the last value (the hole's 0.86)
-        assert!(close(key(0.95, &[0.0, 0.86], &[1.0, 0.01], &[LINEAR]), 0.01));
+        assert!(close(
+            key(0.95, &[0.0, 0.86], &[1.0, 0.01], &[LINEAR]),
+            0.01
+        ));
     }
 
     #[test]

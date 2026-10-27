@@ -124,7 +124,11 @@ pub fn code_of(scan: u32, extended: bool, vk: u32) -> String {
 pub fn chord_key(vk: u32, shift: bool) -> Option<String> {
     let c = char::from_u32(vk)?;
     if c.is_ascii_uppercase() {
-        return Some(if shift { c.to_string() } else { c.to_ascii_lowercase().to_string() });
+        return Some(if shift {
+            c.to_string()
+        } else {
+            c.to_ascii_lowercase().to_string()
+        });
     }
     if c.is_ascii_digit() {
         return Some(c.to_string());
@@ -158,7 +162,14 @@ pub struct Mods {
 
 impl Tracker {
     /// WM_KEYDOWN / WM_SYSKEYDOWN. A key that types returns None and comes back as `char`.
-    pub fn down(&mut self, vk: u32, scan: u32, extended: bool, repeat: bool, mods: Mods) -> Option<GameKey> {
+    pub fn down(
+        &mut self,
+        vk: u32,
+        scan: u32,
+        extended: bool,
+        repeat: bool,
+        mods: Mods,
+    ) -> Option<GameKey> {
         let code = code_of(scan, extended, vk);
         let make = |key: String| GameKey {
             key,
@@ -240,7 +251,10 @@ mod tests {
         // W: vk 0x57, scan 0x11
         assert_eq!(t.down(0x57, 0x11, false, false, Mods::default()), None);
         let k = t.char(u16::from(b'w'), Mods::default()).unwrap();
-        assert_eq!((k.key.as_str(), k.code.as_str(), k.down), ("w", "KeyW", true));
+        assert_eq!(
+            (k.key.as_str(), k.code.as_str(), k.down),
+            ("w", "KeyW", true)
+        );
         let up = t.up(0x57, 0x11, false, Mods::default()).unwrap();
         assert_eq!((up.key.as_str(), up.down), ("w", false));
         assert!(t.up(0x57, 0x11, false, Mods::default()).is_none());
@@ -256,7 +270,10 @@ mod tests {
             ..Mods::default()
         };
         let f = t.down(0x46, 0x21, false, false, ctrl).unwrap();
-        assert_eq!((f.key.as_str(), f.code.as_str(), f.ctrl), ("f", "KeyF", true));
+        assert_eq!(
+            (f.key.as_str(), f.code.as_str(), f.ctrl),
+            ("f", "KeyF", true)
+        );
         // the U+0006 that follows is dropped
         assert!(t.char(6, ctrl).is_none());
         let space = t.down(0x20, 0x39, false, false, Mods::default());

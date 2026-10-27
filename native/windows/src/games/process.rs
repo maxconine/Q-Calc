@@ -11,10 +11,12 @@
 
 use windows::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError, HWND};
 use windows::Win32::System::Threading::CreateMutexW;
-use windows::Win32::UI::HiDpi::{DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext};
+use windows::Win32::UI::HiDpi::{
+    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
+};
 use windows::Win32::UI::WindowsAndMessaging::{
-    AllowSetForegroundWindow, DispatchMessageW, FindWindowW, GetMessageW, IsIconic, MSG, SW_RESTORE,
-    SetForegroundWindow, ShowWindow, TranslateMessage,
+    AllowSetForegroundWindow, DispatchMessageW, FindWindowW, GetMessageW, IsIconic, MSG,
+    SW_RESTORE, SetForegroundWindow, ShowWindow, TranslateMessage,
 };
 use windows::core::HSTRING;
 
@@ -31,7 +33,10 @@ pub fn class_name(kind: &str) -> String {
 }
 
 fn mutex_name(kind: &str) -> String {
-    format!("Local\\com.maxconine.qcalc.game.{kind}{}", crate::log::instance_suffix())
+    format!(
+        "Local\\com.maxconine.qcalc.game.{kind}{}",
+        crate::log::instance_suffix()
+    )
 }
 
 /// What `--game` asks: the kind, and the bar's â†µ as a performance-counter reading.
@@ -104,7 +109,14 @@ pub fn launch(kind: &str) {
         return;
     };
     match std::process::Command::new(exe)
-        .args([ARG, kind, T0, &t0.to_string(), PARENT, &std::process::id().to_string()])
+        .args([
+            ARG,
+            kind,
+            T0,
+            &t0.to_string(),
+            PARENT,
+            &std::process::id().to_string(),
+        ])
         .spawn()
     {
         Ok(child) => {
@@ -121,14 +133,18 @@ pub fn launch(kind: &str) {
 /// that only waits on the process handle: no polling, no cost while the bar runs.
 fn close_with(pid: u32, kind: String) {
     use windows::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
-    use windows::Win32::System::Threading::{INFINITE, OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject};
+    use windows::Win32::System::Threading::{
+        INFINITE, OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject,
+    };
     use windows::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_CLOSE};
     // SAFETY: a handle we close below; an id that's already gone fails to open, and then the bar is gone too
     let Ok(parent) = (unsafe { OpenProcess(PROCESS_SYNCHRONIZE, false, pid) }) else {
         qlog!("games: the bar (pid {pid}) is already gone; closing {kind}");
         if let Some(hwnd) = find(&kind) {
             // SAFETY: our own window
-            let _ = unsafe { PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default()) };
+            let _ = unsafe {
+                PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default())
+            };
         }
         return;
     };
@@ -143,7 +159,12 @@ fn close_with(pid: u32, kind: String) {
                 if WaitForSingleObject(parent, INFINITE) == WAIT_OBJECT_0 {
                     qlog!("games: the bar (pid {pid}) ended; closing {kind}");
                     if let Some(hwnd) = find(&kind) {
-                        let _ = PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default());
+                        let _ = PostMessageW(
+                            Some(hwnd),
+                            WM_CLOSE,
+                            Default::default(),
+                            Default::default(),
+                        );
                     }
                 }
                 let _ = CloseHandle(parent);
@@ -196,11 +217,29 @@ mod tests {
     #[test]
     fn the_game_arguments_parse() {
         let a = |s: &[&str]| GameArgs::parse(&s.iter().map(|x| x.to_string()).collect::<Vec<_>>());
-        assert_eq!(a(&["--game", "pong"]), Some(GameArgs { kind: "pong".into(), t0: None, parent: None }));
-        assert_eq!(a(&["--game", "ember", "--t0", "123"]), Some(GameArgs { kind: "ember".into(), t0: Some(123), parent: None }));
+        assert_eq!(
+            a(&["--game", "pong"]),
+            Some(GameArgs {
+                kind: "pong".into(),
+                t0: None,
+                parent: None
+            })
+        );
+        assert_eq!(
+            a(&["--game", "ember", "--t0", "123"]),
+            Some(GameArgs {
+                kind: "ember".into(),
+                t0: Some(123),
+                parent: None
+            })
+        );
         assert_eq!(
             a(&["--game", "pong", "--t0", "5", "--parent", "4242"]),
-            Some(GameArgs { kind: "pong".into(), t0: Some(5), parent: Some(4242) })
+            Some(GameArgs {
+                kind: "pong".into(),
+                t0: Some(5),
+                parent: Some(4242)
+            })
         );
         assert_eq!(a(&["--autostart"]), None);
         assert_eq!(a(&["--game"]), None);

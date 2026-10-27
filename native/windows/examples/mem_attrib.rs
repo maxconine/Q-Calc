@@ -26,7 +26,8 @@ fn note(p: *mut u8, n: usize) {
     }
     let bt = std::backtrace::Backtrace::force_capture();
     if let Ok(mut s) = SITES.lock() {
-        s.get_or_insert_with(HashMap::new).insert(p as usize, (n, bt));
+        s.get_or_insert_with(HashMap::new)
+            .insert(p as usize, (n, bt));
     }
     INSIDE.with(|i| i.set(false));
 }
@@ -84,9 +85,25 @@ fn main() {
     let warm = LIVE.load(Ordering::Relaxed);
     let rows = engine.load_history();
     let now = 1_793_000_000_000;
-    let view = HistoryView { show: HistoryShow::Recent, answer_form: AnswerForm::Exact, sig_figs: 10, now_ms: now };
+    let view = HistoryView {
+        show: HistoryShow::Recent,
+        answer_form: AnswerForm::Exact,
+        sig_figs: 10,
+        now_ms: now,
+    };
     let context = engine.context_from_history(rows, view);
-    for input in ["2+2", "sin(90)", "72 f to c", "1/3 + 1/6", "sqrt(2)*pi", "5 km in miles", "3x+2=11", "(1+2)*(3+4)/5^2", "20% of 80", "e^(i pi)+1"] {
+    for input in [
+        "2+2",
+        "sin(90)",
+        "72 f to c",
+        "1/3 + 1/6",
+        "sqrt(2)*pi",
+        "5 km in miles",
+        "3x+2=11",
+        "(1+2)*(3+4)/5^2",
+        "20% of 80",
+        "e^(i pi)+1",
+    ] {
         let chars: Vec<char> = input.chars().collect();
         for k in 1..=chars.len() {
             let text: String = chars[..k].iter().collect();
@@ -115,16 +132,23 @@ fn main() {
             .filter(|l| l.chars().next().is_some_and(|c| c.is_ascii_digit()))
             .filter_map(|l| l.split_once(": ").map(|(_, f)| f))
             .collect();
-        if frames.iter().any(|f| f.starts_with("regex") || f.starts_with("fancy_regex")) {
+        if frames
+            .iter()
+            .any(|f| f.starts_with("regex") || f.starts_with("fancy_regex"))
+        {
             regex_bytes += n;
             // which part of a regex: the deepest regex frame's module
             let part = frames
                 .iter()
                 .find(|f| {
-                    (f.starts_with("regex") || f.starts_with("aho_corasick") || f.starts_with("fancy_regex"))
+                    (f.starts_with("regex")
+                        || f.starts_with("aho_corasick")
+                        || f.starts_with("fancy_regex"))
                         && !f.contains("::pool::")
                 })
-                .map_or("?".to_string(), |f| f.split("::").take(3).collect::<Vec<_>>().join("::"));
+                .map_or("?".to_string(), |f| {
+                    f.split("::").take(3).collect::<Vec<_>>().join("::")
+                });
             let e = by.entry(format!("  [regex part] {part}")).or_default();
             e.0 += n;
             e.1 += 1;
@@ -133,12 +157,24 @@ fn main() {
         let site = frames
             .iter()
             .find(|f| {
-                let helper = ["::js", "::re", "::js_re", "::caps", "::compile", "::replace", "::regex"]
-                    .iter()
-                    .any(|h| f.ends_with(h));
+                let helper = [
+                    "::js",
+                    "::re",
+                    "::js_re",
+                    "::caps",
+                    "::compile",
+                    "::replace",
+                    "::regex",
+                ]
+                .iter()
+                .any(|h| f.ends_with(h));
                 f.starts_with("qcalc_core::")
                     && !f.starts_with("qcalc_core::jsre")
-                    && (if by_static { !helper } else { !f.contains("closure") })
+                    && (if by_static {
+                        !helper
+                    } else {
+                        !f.contains("closure")
+                    })
             })
             .or_else(|| frames.iter().find(|f| f.starts_with("qcalc_")))
             .map_or("?", |v| v);

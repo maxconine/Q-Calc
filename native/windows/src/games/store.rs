@@ -145,7 +145,10 @@ struct Lock(Option<windows::Win32::Foundation::HANDLE>);
 impl Lock {
     fn take() -> Lock {
         use windows::Win32::System::Threading::{CreateMutexW, WaitForSingleObject};
-        let name = format!("Local\\com.maxconine.qcalc.games-store{}", crate::log::instance_suffix());
+        let name = format!(
+            "Local\\com.maxconine.qcalc.games-store{}",
+            crate::log::instance_suffix()
+        );
         // SAFETY: a named mutex, waited for at most 2 s (a stuck holder never blocks a save for long)
         unsafe {
             match CreateMutexW(None, false, &windows::core::HSTRING::from(name)) {

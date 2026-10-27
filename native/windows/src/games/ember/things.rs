@@ -5,9 +5,9 @@ use std::f64::consts::PI;
 
 use qcalc_core::games::ember::engine::{gate_rect, tile_at};
 use qcalc_core::games::ember::{
-    ARROW_RESPAWN_TICKS, CANNON_FLY_TICKS, CANNON_FUSE_TICKS, CRUMBLE_GONE_TICKS, CRUMBLE_TICKS, Dir, Element,
-    GRAVITY, GameState, ONEWAY_H, PLAYER_H, PLAYER_W, POOL_SINK, Phase, Slant, Stage, T_CRUMBLE, T_GOO, T_LAVA,
-    T_LIGHT, T_ONEWAY, T_THIN, T_TRAMP, T_WALL, T_WATER, TILE, Who,
+    ARROW_RESPAWN_TICKS, CANNON_FLY_TICKS, CANNON_FUSE_TICKS, CRUMBLE_GONE_TICKS, CRUMBLE_TICKS,
+    Dir, Element, GRAVITY, GameState, ONEWAY_H, PLAYER_H, PLAYER_W, POOL_SINK, Phase, Slant, Stage,
+    T_CRUMBLE, T_GOO, T_LAVA, T_LIGHT, T_ONEWAY, T_THIN, T_TRAMP, T_WALL, T_WATER, TILE, Who,
 };
 
 use super::draw::*;
@@ -48,7 +48,15 @@ impl Renderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_pools(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, dt: f64, opts: DrawOpts) {
+    pub fn draw_pools(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        dt: f64,
+        opts: DrawOpts,
+    ) {
         let tiles = &level.tiles;
         let vt = visible_tiles(&self.vr, level.cols, level.rows, 1);
         let sink = POOL_SINK;
@@ -111,13 +119,19 @@ impl Renderer {
                         let seed = hash01((i * 7 + b) as f64);
                         let rate = if kind == T_LAVA { 0.55 } else { 0.35 };
                         let ph = (t * rate + seed) % 1.0;
-                        let bx = 3.0 + hash01((i * 13 + b) as f64 + (t * rate + seed).floor() * 31.0) * (T - 6.0);
+                        let bx = 3.0
+                            + hash01((i * 13 + b) as f64 + (t * rate + seed).floor() * 31.0)
+                                * (T - 6.0);
                         let by = T - 2.0 - ph * (T - sink - 2.0) * if open { 1.05 } else { 1.2 };
                         let r = 0.8 + ph * 1.6;
                         if by < if open { sink + 1.0 } else { 0.0 } {
                             continue;
                         }
-                        g.fill_style(if kind == T_LAVA { Col::rgba(255.0, 236.0, 160.0, 0.8) } else { Col::rgba(214.0, 255.0, 150.0, 0.75) });
+                        g.fill_style(if kind == T_LAVA {
+                            Col::rgba(255.0, 236.0, 160.0, 0.8)
+                        } else {
+                            Col::rgba(214.0, 255.0, 150.0, 0.75)
+                        });
                         g.begin_path();
                         g.arc(bx, by, r, 0.0, TAU, false);
                         g.fill();
@@ -131,7 +145,12 @@ impl Renderer {
                     for b in 0..2 {
                         let ph = (t * 0.3 + hash01((i * 5 + b) as f64)) % 1.0;
                         let gx = (ph * T * 1.4 + b as f64 * 9.0) % T;
-                        g.fill_style(Col::rgba(255.0, 255.0, 255.0, ((0.5 * (ph * PI).sin()) * 1000.0).round() / 1000.0));
+                        g.fill_style(Col::rgba(
+                            255.0,
+                            255.0,
+                            255.0,
+                            ((0.5 * (ph * PI).sin()) * 1000.0).round() / 1000.0,
+                        ));
                         g.fill_rect(gx, sink + 3.0 + b as f64 * 4.0, 3.0, 0.8);
                     }
                 }
@@ -168,10 +187,18 @@ impl Renderer {
                 continue;
             }
             let fl = 0.85 + 0.15 * (t * 3.0 + tx as f64).sin();
-            self.glow(g, tx as f64 * T + T / 2.0, ty as f64 * T + POOL_SINK + 2.0, if self.far { 36.0 } else { 24.0 }, css1(LAVA_MID), 0.33 * fl);
+            self.glow(
+                g,
+                tx as f64 * T + T / 2.0,
+                ty as f64 * T + POOL_SINK + 2.0,
+                if self.far { 36.0 } else { 24.0 },
+                css1(LAVA_MID),
+                0.33 * fl,
+            );
         }
         self.end_glow(g);
-        if seen > 0 && rnd() < seen.min(40) as f64 * dt * if opts.reduce_motion { 0.2 } else { 0.7 } {
+        if seen > 0 && rnd() < seen.min(40) as f64 * dt * if opts.reduce_motion { 0.2 } else { 0.7 }
+        {
             let i = tops[(rnd() * tops.len() as f64).floor() as usize % tops.len()];
             let tx = (i % level.cols) as i64;
             let ty = ((i - tx as usize) / level.cols) as i64;
@@ -195,17 +222,45 @@ impl Renderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_frozen(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, i: usize, x: f64, y: f64, t: f64) {
-        let left = self.thin_index.get(&i).and_then(|&j| cur.thin.get(j).copied()).unwrap_or(999);
-        let warn = if left < 40 { 0.55 + 0.45 * (t * 9.0).sin().abs() } else { 1.0 };
+    fn draw_frozen(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        i: usize,
+        x: f64,
+        y: f64,
+        t: f64,
+    ) {
+        let left = self
+            .thin_index
+            .get(&i)
+            .and_then(|&j| cur.thin.get(j).copied())
+            .unwrap_or(999);
+        let warn = if left < 40 {
+            0.55 + 0.45 * (t * 9.0).sin().abs()
+        } else {
+            1.0
+        };
         g.save();
         g.translate(x, y);
         g.set_alpha(warn);
         g.fill_style(self.pool_gradient(T_WALL));
         let (tx, ty) = ((x / T) as i64, (y / T) as i64);
-        let l_open = (i == 0 || level.tiles.get(i - 1) != Some(&T_THIN)) && !is_wall(level, tx - 1, ty);
+        let l_open =
+            (i == 0 || level.tiles.get(i - 1) != Some(&T_THIN)) && !is_wall(level, tx - 1, ty);
         let r_open = level.tiles.get(i + 1) != Some(&T_THIN) && !is_wall(level, tx + 1, ty);
-        round_rect_path(g, 0.0, 0.0, T, T, if l_open { 3.0 } else { 0.0 }, if r_open { 3.0 } else { 0.0 }, 0.0, 0.0);
+        round_rect_path(
+            g,
+            0.0,
+            0.0,
+            T,
+            T,
+            if l_open { 3.0 } else { 0.0 },
+            if r_open { 3.0 } else { 0.0 },
+            0.0,
+            0.0,
+        );
         g.fill();
         g.fill_style(Col::rgba(255.0, 255.0, 255.0, 0.85));
         g.fill_rect(0.0, 0.0, T, 1.6);
@@ -224,7 +279,20 @@ impl Renderer {
         g.restore();
         g.set_alpha(1.0);
         if rnd() < 0.012 {
-            self.parts.spawn(PK_STAR, C_WHITE, x + rand(3.0, 17.0), y + rand(2.0, 12.0), 0.0, 0.0, 0.6, 2.5, 0.0, 0.0, true, 0.0);
+            self.parts.spawn(
+                PK_STAR,
+                C_WHITE,
+                x + rand(3.0, 17.0),
+                y + rand(2.0, 12.0),
+                0.0,
+                0.0,
+                0.6,
+                2.5,
+                0.0,
+                0.0,
+                true,
+                0.0,
+            );
         }
     }
 
@@ -239,16 +307,28 @@ impl Renderer {
             let c2 = if fire { p.fire2 } else { p.frost2 };
             let in_door = cur.players[i].in_door;
             let open_now = in_door || cur.phase == Phase::Won || cur.phase == Phase::Clear;
-            self.door_open[i] = approach(self.door_open[i], if open_now { 1.0 } else { 0.0 }, 6.0, dt);
+            self.door_open[i] =
+                approach(self.door_open[i], if open_now { 1.0 } else { 0.0 }, 6.0, dt);
             if !self.vis(d.x, d.y, d.w, d.h, 44.0) {
                 continue;
             }
             let o = self.door_open[i];
             let cx = d.x + d.w / 2.0;
             self.begin_glow(g);
-            self.glow(g, cx, d.y + d.h * 0.55, 26.0 + o * 14.0, css1(c), 0.22 + o * 0.45 + 0.05 * (t * 2.0 + i as f64).sin());
+            self.glow(
+                g,
+                cx,
+                d.y + d.h * 0.55,
+                26.0 + o * 14.0,
+                css1(c),
+                0.22 + o * 0.45 + 0.05 * (t * 2.0 + i as f64).sin(),
+            );
             self.end_glow(g);
-            let frame = if p.dark { mix(p.wall, c, 0.25) } else { mix(p.wall, c, 0.2) };
+            let frame = if p.dark {
+                mix(p.wall, c, 0.25)
+            } else {
+                mix(p.wall, c, 0.2)
+            };
             arch_path(g, d.x - 2.5, d.y - 3.0, d.w + 5.0, d.h + 3.0);
             g.fill_style(css1(frame));
             g.fill();
@@ -260,7 +340,10 @@ impl Renderer {
                 let ax = cx + ang.cos() * (d.w / 2.0);
                 let ay = d.y + d.w / 2.0 + ang.sin() * (d.w / 2.0);
                 g.move_to(ax, ay);
-                g.line_to(cx + ang.cos() * (d.w / 2.0 + 2.5), d.y + d.w / 2.0 + ang.sin() * (d.w / 2.0 + 3.0));
+                g.line_to(
+                    cx + ang.cos() * (d.w / 2.0 + 2.5),
+                    d.y + d.w / 2.0 + ang.sin() * (d.w / 2.0 + 3.0),
+                );
             }
             let mut yy = d.y + d.w / 2.0 + 6.0;
             while yy < d.y + d.h - 2.0 {
@@ -273,7 +356,11 @@ impl Renderer {
             g.stroke();
             arch_path(g, d.x, d.y, d.w, d.h);
             let mut inner = Gradient::linear(0.0, d.y, 0.0, d.y + d.h);
-            let shut = if p.dark { mix(c, BLACK, 0.72) } else { mix(c, p.ink, 0.55) };
+            let shut = if p.dark {
+                mix(c, BLACK, 0.72)
+            } else {
+                mix(c, p.ink, 0.55)
+            };
             inner.stop(0.0, css1(mix(shut, c2, o * 0.9)));
             inner.stop(1.0, css1(mix(mix(shut, BLACK, 0.2), c, o * 0.8)));
             g.fill_style(inner);
@@ -363,7 +450,14 @@ impl Renderer {
             let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
             let (rx, ry) = (r.w / 2.0 - 1.0, r.h / 2.0 - 1.0);
             self.begin_glow(g);
-            self.glow(g, cx, cy, 30.0, css1(col), 0.45 + 0.1 * (t * 3.0 + i as f64).sin());
+            self.glow(
+                g,
+                cx,
+                cy,
+                30.0,
+                css1(col),
+                0.45 + 0.1 * (t * 3.0 + i as f64).sin(),
+            );
             self.end_glow(g);
             let mut gr = Gradient::radial(cx, cy, 0.0, cx, cy, ry);
             gr.stop(0.0, css1(mix(col, BLACK, 0.75)));
@@ -376,9 +470,14 @@ impl Renderer {
             g.set_line_width(1.2);
             for k in 0..3 {
                 let s = 1.0 - f64::from(k) * 0.27;
-                g.stroke_style(css(mix(col, WHITE, 0.25 + f64::from(k) * 0.25), 0.9 - f64::from(k) * 0.2));
+                g.stroke_style(css(
+                    mix(col, WHITE, 0.25 + f64::from(k) * 0.25),
+                    0.9 - f64::from(k) * 0.2,
+                ));
                 g.set_line_dash(&[5.0 * s, 4.0 * s]);
-                g.set_dash_offset((if k % 2 != 0 { -1.0 } else { 1.0 }) * t * (18.0 + f64::from(k) * 8.0));
+                g.set_dash_offset(
+                    (if k % 2 != 0 { -1.0 } else { 1.0 }) * t * (18.0 + f64::from(k) * 8.0),
+                );
                 g.begin_path();
                 g.ellipse(cx, cy, rx * s, ry * s, 0.0, 0.0, TAU, false);
                 g.stroke();
@@ -386,7 +485,20 @@ impl Renderer {
             g.set_line_dash(&[]);
             if rnd() < if opts.reduce_motion { 0.03 } else { 0.12 } {
                 let ang = rnd() * TAU;
-                self.parts.spawn(PK_DOT, C_PORTAL + pc, cx + ang.cos() * rx * 1.3, cy + ang.sin() * ry * 1.1, -ang.cos() * 14.0, -ang.sin() * 26.0, 0.6, 1.0, 0.0, 0.5, true, 0.0);
+                self.parts.spawn(
+                    PK_DOT,
+                    C_PORTAL + pc,
+                    cx + ang.cos() * rx * 1.3,
+                    cy + ang.sin() * ry * 1.1,
+                    -ang.cos() * 14.0,
+                    -ang.sin() * 26.0,
+                    0.6,
+                    1.0,
+                    0.0,
+                    0.5,
+                    true,
+                    0.0,
+                );
             }
         }
     }
@@ -399,7 +511,11 @@ impl Renderer {
             if !self.vis(r.x, r.y, r.w, r.h, 24.0) {
                 continue;
             }
-            let on = cur.plates.as_ref().and_then(|v| v.get(i).copied()).unwrap_or_else(|| cur.on.contains(&pl.ch));
+            let on = cur
+                .plates
+                .as_ref()
+                .and_then(|v| v.get(i).copied())
+                .unwrap_or_else(|| cur.on.contains(&pl.ch));
             let col = channel_color(&pl.ch);
             let floor = r.y + r.h;
             if pl.ceil {
@@ -408,21 +524,40 @@ impl Renderer {
                 g.scale(1.0, -1.0);
             }
             let h = if on { 1.0 } else { 3.0 };
-            let metal = if self.pal.dark { mix(METAL, BLACK, 0.3) } else { METAL };
+            let metal = if self.pal.dark {
+                mix(METAL, BLACK, 0.3)
+            } else {
+                METAL
+            };
             if on {
                 self.begin_glow(g);
-                self.glow(g, r.x + r.w / 2.0, floor - 2.0, r.w * 0.6 + 8.0, col, 0.55 + 0.08 * (t * 6.0).sin());
+                self.glow(
+                    g,
+                    r.x + r.w / 2.0,
+                    floor - 2.0,
+                    r.w * 0.6 + 8.0,
+                    col,
+                    0.55 + 0.08 * (t * 6.0).sin(),
+                );
                 self.end_glow(g);
             }
             g.fill_style(col);
             rr(g, r.x + 2.0, floor - 2.5 - h, r.w - 4.0, h + 1.0, 1.0);
             g.fill();
-            g.fill_style(if on { Col::rgba(255.0, 255.0, 255.0, 0.6) } else { Col::rgba(255.0, 255.0, 255.0, 0.3) });
+            g.fill_style(if on {
+                Col::rgba(255.0, 255.0, 255.0, 0.6)
+            } else {
+                Col::rgba(255.0, 255.0, 255.0, 0.3)
+            });
             g.fill_rect(r.x + 3.0, floor - 2.5 - h, r.w - 6.0, 0.8);
             g.fill_style(css1(metal));
             round_rect_path(g, r.x, floor - 2.5, r.w, 2.5, 1.2, 1.2, 0.0, 0.0);
             g.fill();
-            g.fill_style(if on { col } else { css1(mix(metal, BLACK, 0.3)) });
+            g.fill_style(if on {
+                col
+            } else {
+                css1(mix(metal, BLACK, 0.3))
+            });
             g.fill_rect(r.x + 1.5, floor - 1.4, r.w - 3.0, 0.7);
             if pl.ceil {
                 g.restore();
@@ -437,7 +572,11 @@ impl Renderer {
                 continue;
             }
             let left = cur.buttons.get(i).copied().unwrap_or(0) as f64;
-            let frac = if b.ticks > 0 { clamp(left / b.ticks as f64, 0.0, 1.0) } else { 0.0 };
+            let frac = if b.ticks > 0 {
+                clamp(left / b.ticks as f64, 0.0, 1.0)
+            } else {
+                0.0
+            };
             let on = left > 0.0;
             let col = channel_color(&b.ch);
             let cx = r.x + r.w / 2.0;
@@ -453,11 +592,29 @@ impl Renderer {
             let dome = if on { 2.0 } else { 4.2 };
             g.fill_style(col);
             g.begin_path();
-            g.ellipse(cx, floor - 2.5, (r.w / 2.0 - 3.0).min(7.0), dome, 0.0, PI, 0.0, false);
+            g.ellipse(
+                cx,
+                floor - 2.5,
+                (r.w / 2.0 - 3.0).min(7.0),
+                dome,
+                0.0,
+                PI,
+                0.0,
+                false,
+            );
             g.fill();
             g.fill_style(Col::rgba(255.0, 255.0, 255.0, 0.45));
             g.begin_path();
-            g.ellipse(cx - 2.0, floor - 2.5 - dome * 0.55, 2.0, dome * 0.25, 0.0, 0.0, TAU, false);
+            g.ellipse(
+                cx - 2.0,
+                floor - 2.5 - dome * 0.55,
+                2.0,
+                dome * 0.25,
+                0.0,
+                0.0,
+                TAU,
+                false,
+            );
             g.fill();
             if on {
                 let ay = floor - 13.0;
@@ -471,7 +628,11 @@ impl Renderer {
                 g.arc(cx, ay, 4.0, 0.0, TAU, false);
                 g.stroke();
                 g.stroke_style(col);
-                g.set_line_width(if frac < 0.25 && (t * 20.0).sin() > 0.0 { 2.4 } else { 1.8 });
+                g.set_line_width(if frac < 0.25 && (t * 20.0).sin() > 0.0 {
+                    2.4
+                } else {
+                    1.8
+                });
                 g.begin_path();
                 g.arc(cx, ay, 4.0, -PI / 2.0, -PI / 2.0 + TAU * frac, false);
                 g.stroke();
@@ -498,7 +659,11 @@ impl Renderer {
             let by = r.y + r.h - 1.0;
             let (hx, hy) = (cx + ang.sin() * 12.0, by - 3.0 - ang.cos() * 12.0);
             g.set_line_cap(Cap::Round);
-            g.stroke_style(css1(if self.pal.dark { mix(METAL, WHITE, 0.2) } else { mix(METAL, BLACK, 0.15) }));
+            g.stroke_style(css1(if self.pal.dark {
+                mix(METAL, WHITE, 0.2)
+            } else {
+                mix(METAL, BLACK, 0.15)
+            }));
             g.set_line_width(2.0);
             g.begin_path();
             g.move_to(cx, by - 3.0);
@@ -512,7 +677,11 @@ impl Renderer {
             g.begin_path();
             g.arc(hx - 0.8, hy - 0.8, 0.9, 0.0, TAU, false);
             g.fill();
-            g.fill_style(css1(if self.pal.dark { mix(METAL, BLACK, 0.3) } else { METAL }));
+            g.fill_style(css1(if self.pal.dark {
+                mix(METAL, BLACK, 0.3)
+            } else {
+                METAL
+            }));
             g.begin_path();
             g.ellipse(cx, by, 6.5, 5.0, 0.0, PI, 0.0, false);
             g.fill();
@@ -534,16 +703,28 @@ impl Renderer {
             if !self.vis(r.x, r.y, r.w, r.h, 24.0) {
                 continue;
             }
-            let lit = cur.sensors.as_ref().and_then(|v| v.get(i).copied()).unwrap_or_else(|| cur.on.contains(&s.ch));
+            let lit = cur
+                .sensors
+                .as_ref()
+                .and_then(|v| v.get(i).copied())
+                .unwrap_or_else(|| cur.on.contains(&s.ch));
             let col = channel_color(&s.ch);
             let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
-            g.fill_style(css1(if self.pal.dark { mix(METAL, BLACK, 0.35) } else { METAL }));
+            g.fill_style(css1(if self.pal.dark {
+                mix(METAL, BLACK, 0.35)
+            } else {
+                METAL
+            }));
             rr(g, r.x + 2.0, r.y + 2.0, r.w - 4.0, r.h - 4.0, 4.0);
             g.fill();
             g.stroke_style(col);
             g.set_line_width(1.2);
             g.stroke();
-            g.fill_style(if lit { css1(mix(rgb_of(col), WHITE, 0.5)) } else { css(BLACK, 0.55) });
+            g.fill_style(if lit {
+                css1(mix(rgb_of(col), WHITE, 0.5))
+            } else {
+                css(BLACK, 0.55)
+            });
             g.begin_path();
             g.arc(cx, cy, 4.0, 0.0, TAU, false);
             g.fill();
@@ -575,16 +756,28 @@ impl Renderer {
             g.save();
             g.translate(em.x, em.y);
             g.rotate(rot);
-            g.fill_style(css1(if self.pal.dark { mix(METAL, BLACK, 0.3) } else { METAL }));
+            g.fill_style(css1(if self.pal.dark {
+                mix(METAL, BLACK, 0.3)
+            } else {
+                METAL
+            }));
             rr(g, -8.0, -7.0, 13.0, 14.0, 3.0);
             g.fill();
             if let Some(ch) = &ch {
                 g.fill_style(channel_color(ch));
                 g.fill_rect(-8.0, -7.0, 2.5, 14.0);
             }
-            g.fill_style(css1(if self.pal.dark { mix(METAL, WHITE, 0.15) } else { mix(METAL, BLACK, 0.2) }));
+            g.fill_style(css1(if self.pal.dark {
+                mix(METAL, WHITE, 0.15)
+            } else {
+                mix(METAL, BLACK, 0.2)
+            }));
             g.fill_rect(5.0, -4.0, 3.5, 8.0);
-            g.fill_style(if on { self.colors[C_CORE] } else { css(BLACK, 0.5) });
+            g.fill_style(if on {
+                self.colors[C_CORE]
+            } else {
+                css(BLACK, 0.5)
+            });
             g.begin_path();
             g.arc(8.5, 0.0, 2.6, -PI / 2.0, PI / 2.0, false);
             g.fill();
@@ -601,7 +794,14 @@ impl Renderer {
                     _ => 0.0,
                 };
                 self.begin_glow(g);
-                self.glow(g, em.x + dx, em.y + dy, 12.0, css1(self.pal.star), 0.7 + 0.1 * (t * 14.0).sin());
+                self.glow(
+                    g,
+                    em.x + dx,
+                    em.y + dy,
+                    12.0,
+                    css1(self.pal.star),
+                    0.7 + 0.1 * (t * 14.0).sin(),
+                );
                 self.end_glow(g);
             }
         }
@@ -611,12 +811,25 @@ impl Renderer {
         for (i, m) in level.mirrors.iter().enumerate() {
             let slant = cur.mirrors.get(i).copied().unwrap_or(m.slant);
             if let Some(a) = self.mirror_ang.get_mut(i) {
-                *a = approach(*a, if slant == Slant::Slash { -PI / 4.0 } else { PI / 4.0 }, 16.0, dt);
+                *a = approach(
+                    *a,
+                    if slant == Slant::Slash {
+                        -PI / 4.0
+                    } else {
+                        PI / 4.0
+                    },
+                    16.0,
+                    dt,
+                );
             }
             if !self.vis(m.x - 12.0, m.y - 12.0, 24.0, 24.0, 24.0) {
                 continue;
             }
-            g.fill_style(css1(if self.pal.dark { mix(METAL, BLACK, 0.3) } else { METAL }));
+            g.fill_style(css1(if self.pal.dark {
+                mix(METAL, BLACK, 0.3)
+            } else {
+                METAL
+            }));
             g.fill_rect(m.x - 1.0, m.y, 2.0, T / 2.0);
             g.begin_path();
             g.arc(m.x, m.y, 2.4, 0.0, TAU, false);
@@ -624,7 +837,11 @@ impl Renderer {
             g.save();
             g.translate(m.x, m.y);
             g.rotate(self.mirror_ang.get(i).copied().unwrap_or(0.0));
-            g.fill_style(css1(if self.pal.dark { mix(METAL, BLACK, 0.45) } else { mix(METAL, BLACK, 0.25) }));
+            g.fill_style(css1(if self.pal.dark {
+                mix(METAL, BLACK, 0.45)
+            } else {
+                mix(METAL, BLACK, 0.25)
+            }));
             rr(g, -12.0, -2.2, 24.0, 4.4, 2.0);
             g.fill();
             let mut sheen = Gradient::linear(-12.0, 0.0, 12.0, 0.0);
@@ -653,7 +870,11 @@ impl Renderer {
             g.begin_path();
             g.rect(home.x, home.y, home.w, home.h);
             g.clip();
-            let bar = if p.dark { mix(METAL, BLACK, 0.15) } else { METAL };
+            let bar = if p.dark {
+                mix(METAL, BLACK, 0.15)
+            } else {
+                METAL
+            };
             g.fill_style(css1(mix(bar, BLACK, 0.35)));
             rr(g, r.x, r.y, r.w, r.h, 2.0);
             g.fill();
@@ -686,7 +907,11 @@ impl Renderer {
             }
             let n = chs.len().max(1);
             for c in 0..n {
-                g.fill_style(if c < chs.len() { channel_color(&chs[c]) } else { css1(p.muted) });
+                g.fill_style(if c < chs.len() {
+                    channel_color(&chs[c])
+                } else {
+                    css1(p.muted)
+                });
                 if vertical {
                     g.fill_rect(r.x, r.y + r.h - 7.0 - c as f64 * 4.0, r.w, 3.0);
                 } else {
@@ -705,7 +930,13 @@ impl Renderer {
         g.set_line_cap(Cap::Round);
         for m in &level.movers {
             let r = m.r;
-            if !self.vis(r.x.min(m.to.x), r.y.min(m.to.y), (m.to.x - r.x).abs() + r.w, (m.to.y - r.y).abs() + r.h, 4.0) {
+            if !self.vis(
+                r.x.min(m.to.x),
+                r.y.min(m.to.y),
+                (m.to.x - r.x).abs() + r.w,
+                (m.to.y - r.y).abs() + r.h,
+                4.0,
+            ) {
                 continue;
             }
             let ch = cond_channels(m.when.as_ref()).first().cloned();
@@ -728,13 +959,22 @@ impl Renderer {
         }
     }
 
-    pub fn draw_movers(&mut self, g: &mut Canvas, level: &Stage, prev: Option<&GameState>, cur: &GameState, a: f64) {
+    pub fn draw_movers(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        prev: Option<&GameState>,
+        cur: &GameState,
+        a: f64,
+    ) {
         let p = self.pal;
         for (i, m) in level.movers.iter().enumerate() {
             let Some(c) = cur.movers.get(i) else { continue };
             let q = prev.and_then(|s| s.movers.get(i));
             let (x, y) = match q {
-                Some(q) if (q.x - c.x).abs() <= 40.0 && (q.y - c.y).abs() <= 40.0 => (q.x + (c.x - q.x) * a, q.y + (c.y - q.y) * a),
+                Some(q) if (q.x - c.x).abs() <= 40.0 && (q.y - c.y).abs() <= 40.0 => {
+                    (q.x + (c.x - q.x) * a, q.y + (c.y - q.y) * a)
+                }
                 _ => (c.x, c.y),
             };
             let (mw, mh) = (m.r.w, m.r.h);
@@ -742,14 +982,22 @@ impl Renderer {
                 continue;
             }
             let ch = cond_channels(m.when.as_ref()).first().cloned();
-            let body = if p.dark { mix(p.wall, METAL, 0.5) } else { mix(p.wall, METAL, 0.45) };
+            let body = if p.dark {
+                mix(p.wall, METAL, 0.5)
+            } else {
+                mix(p.wall, METAL, 0.45)
+            };
             g.fill_style(css(BLACK, if p.dark { 0.3 } else { 0.1 }));
             rr(g, x + 1.0, y + 2.0, mw, mh, 3.0);
             g.fill();
             g.fill_style(css1(body));
             rr(g, x, y, mw, mh, 3.0);
             g.fill();
-            g.fill_style(css1(if p.dark { mix(body, WHITE, 0.2) } else { mix(body, WHITE, 0.5) }));
+            g.fill_style(css1(if p.dark {
+                mix(body, WHITE, 0.2)
+            } else {
+                mix(body, WHITE, 0.5)
+            }));
             g.fill_rect(x + 1.0, y, mw - 2.0, 2.0);
             g.fill_style(ch.as_deref().map_or(css1(p.muted), channel_color));
             g.fill_rect(x + 3.0, y + 3.0, mw - 6.0, 2.0);
@@ -764,13 +1012,21 @@ impl Renderer {
         }
     }
 
-    pub fn draw_boxes(&mut self, g: &mut Canvas, prev: Option<&GameState>, cur: &GameState, a: f64) {
+    pub fn draw_boxes(
+        &mut self,
+        g: &mut Canvas,
+        prev: Option<&GameState>,
+        cur: &GameState,
+        a: f64,
+    ) {
         let p = self.pal;
         let wood = if p.dark { mix(WOOD, BLACK, 0.1) } else { WOOD };
         for (i, c) in cur.boxes.iter().enumerate() {
             let q = prev.and_then(|s| s.boxes.get(i));
             let (x, y) = match q {
-                Some(q) if (q.x - c.x).abs() <= 40.0 && (q.y - c.y).abs() <= 40.0 => (q.x + (c.x - q.x) * a, q.y + (c.y - q.y) * a),
+                Some(q) if (q.x - c.x).abs() <= 40.0 && (q.y - c.y).abs() <= 40.0 => {
+                    (q.x + (c.x - q.x) * a, q.y + (c.y - q.y) * a)
+                }
                 _ => (c.x, c.y),
             };
             let s = T;
@@ -816,7 +1072,11 @@ impl Renderer {
             if p >= 1.0 || !self.vis(r.x, r.y, r.w, r.h, 4.0) {
                 continue;
             }
-            let jx = if melting { (t * 60.0 + i as f64).sin() * 0.6 } else { 0.0 };
+            let jx = if melting {
+                (t * 60.0 + i as f64).sin() * 0.6
+            } else {
+                0.0
+            };
             let x = r.x + jx;
             g.save();
             g.set_alpha(0.92 - p * 0.35);
@@ -863,7 +1123,10 @@ impl Renderer {
                     for s in 0..3 {
                         cx += (hash01((i * 47 + c * 5 + s) as f64) - 0.5) * 10.0;
                         cy += (hash01((i * 53 + c * 5 + s) as f64) - 0.5) * 10.0;
-                        g.line_to(clamp(cx, x + 1.0, x + r.w - 1.0), clamp(cy, r.y + 1.0, r.y + r.h - 1.0));
+                        g.line_to(
+                            clamp(cx, x + 1.0, x + r.w - 1.0),
+                            clamp(cy, r.y + 1.0, r.y + r.h - 1.0),
+                        );
                     }
                 }
                 g.stroke();
@@ -874,14 +1137,34 @@ impl Renderer {
             g.stroke();
             g.restore();
             if melting && rnd() < 0.3 {
-                self.parts.spawn(PK_DOT, C_WATER, x + rand(1.0, r.w - 1.0), r.y + r.h - 1.0, 0.0, rand(10.0, 30.0), 0.4, 1.0, 300.0, 0.0, false, 0.0);
+                self.parts.spawn(
+                    PK_DOT,
+                    C_WATER,
+                    x + rand(1.0, r.w - 1.0),
+                    r.y + r.h - 1.0,
+                    0.0,
+                    rand(10.0, 30.0),
+                    0.4,
+                    1.0,
+                    300.0,
+                    0.0,
+                    false,
+                    0.0,
+                );
             }
         }
     }
 
     // ---- version 2's tiles
 
-    pub fn draw_tiles(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, opts: DrawOpts) {
+    pub fn draw_tiles(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        opts: DrawOpts,
+    ) {
         let tiles = &level.tiles;
         let vt = visible_tiles(&self.vr, level.cols, level.rows, 1);
         let p = self.pal;
@@ -898,14 +1181,30 @@ impl Renderer {
                     self.draw_tramp(g, level, i, tx, ty, t);
                 } else if kind == T_ONEWAY {
                     let l = tx > 0 && tiles[i - 1] != 0 && tiles[i - 1] != T_CRUMBLE;
-                    let r = tx < level.cols as i64 - 1 && tiles[i + 1] != 0 && tiles[i + 1] != T_CRUMBLE;
+                    let r = tx < level.cols as i64 - 1
+                        && tiles[i + 1] != 0
+                        && tiles[i + 1] != T_CRUMBLE;
                     let h = ONEWAY_H;
-                    let wood = if p.dark { mix(WOOD, p.wall, 0.25) } else { mix(WOOD, p.wall_hi, 0.2) };
+                    let wood = if p.dark {
+                        mix(WOOD, p.wall, 0.25)
+                    } else {
+                        mix(WOOD, p.wall_hi, 0.2)
+                    };
                     g.fill_style(css(BLACK, if p.dark { 0.28 } else { 0.1 }));
                     g.fill_rect(x + 1.0, y + 2.0, T, h);
                     g.fill_style(css1(wood));
                     let k = |on: bool| if on { 0.0 } else { 2.5 };
-                    round_rect_path(g, x, y, T + if r { 0.4 } else { 0.0 }, h, k(l), k(r), k(r), k(l));
+                    round_rect_path(
+                        g,
+                        x,
+                        y,
+                        T + if r { 0.4 } else { 0.0 },
+                        h,
+                        k(l),
+                        k(r),
+                        k(r),
+                        k(l),
+                    );
                     g.fill();
                     let inset_l = if l { 0.0 } else { 1.5 };
                     let inset_r = if r { 0.0 } else { 1.5 };
@@ -940,7 +1239,13 @@ impl Renderer {
                         g.stroke();
                         g.set_line_dash(&[]);
                         if !self.far {
-                            light_glyph(g, sun, cx, cy, css(if p.dark { col } else { mix(col, BLACK, 0.3) }, 0.6));
+                            light_glyph(
+                                g,
+                                sun,
+                                cx,
+                                cy,
+                                css(if p.dark { col } else { mix(col, BLACK, 0.3) }, 0.6),
+                            );
                         }
                         g.set_alpha(1.0);
                     }
@@ -965,14 +1270,34 @@ impl Renderer {
                         g.fill();
                         g.fill_style(css(WHITE, if sun { 0.7 } else { 0.22 }));
                         g.fill_rect(-T / 2.0 + 2.0, -T / 2.0, T - 4.0, 2.2);
-                        g.fill_style(css(if sun { mix(SUN, LAVA_MID, 0.5) } else { BLACK }, if sun { 0.55 } else { 0.35 }));
+                        g.fill_style(css(
+                            if sun { mix(SUN, LAVA_MID, 0.5) } else { BLACK },
+                            if sun { 0.55 } else { 0.35 },
+                        ));
                         g.fill_rect(-T / 2.0 + 2.0, T / 2.0 - 2.2, T - 4.0, 2.2);
-                        g.stroke_style(css(if sun { mix(SUN, LAVA_MID, 0.55) } else { mix(MOON, WHITE, 0.3) }, 0.9));
+                        g.stroke_style(css(
+                            if sun {
+                                mix(SUN, LAVA_MID, 0.55)
+                            } else {
+                                mix(MOON, WHITE, 0.3)
+                            },
+                            0.9,
+                        ));
                         g.set_line_width(1.0);
                         rr(g, -T / 2.0 + 0.5, -T / 2.0 + 0.5, T - 1.0, T - 1.0, 3.0);
                         g.stroke();
                         if !self.far {
-                            light_glyph(g, sun, 0.0, 0.0, if sun { css1(mix(SUN, LAVA_BOT, 0.55)) } else { css1(mix(MOON, WHITE, 0.6)) });
+                            light_glyph(
+                                g,
+                                sun,
+                                0.0,
+                                0.0,
+                                if sun {
+                                    css1(mix(SUN, LAVA_BOT, 0.55))
+                                } else {
+                                    css1(mix(MOON, WHITE, 0.6))
+                                },
+                            );
                         }
                         g.restore();
                         g.set_alpha(1.0);
@@ -996,13 +1321,31 @@ impl Renderer {
         }
         let l = tx > 0 && level.tiles[i - 1] == T_TRAMP;
         let r = tx < level.cols as i64 - 1 && level.tiles[i + 1] == T_TRAMP;
-        let base = if p.dark { mix(METAL, BLACK, 0.45) } else { mix(METAL, BLACK, 0.2) };
+        let base = if p.dark {
+            mix(METAL, BLACK, 0.45)
+        } else {
+            mix(METAL, BLACK, 0.2)
+        };
         g.fill_style(css1(base));
-        round_rect_path(g, x, y + 5.0, T + if r { 0.4 } else { 0.0 }, T - 5.0, 0.0, 0.0, if r { 0.0 } else { 3.0 }, if l { 0.0 } else { 3.0 });
+        round_rect_path(
+            g,
+            x,
+            y + 5.0,
+            T + if r { 0.4 } else { 0.0 },
+            T - 5.0,
+            0.0,
+            0.0,
+            if r { 0.0 } else { 3.0 },
+            if l { 0.0 } else { 3.0 },
+        );
         g.fill();
         g.fill_style(css(BLACK, 0.4));
         g.fill_rect(x + 4.0, y + 7.0, T - 8.0, 9.0);
-        g.stroke_style(css1(if p.dark { mix(METAL, WHITE, 0.4) } else { mix(METAL, WHITE, 0.6) }));
+        g.stroke_style(css1(if p.dark {
+            mix(METAL, WHITE, 0.4)
+        } else {
+            mix(METAL, WHITE, 0.6)
+        }));
         g.set_line_width(1.2);
         g.begin_path();
         let top = y + 6.0 + d.max(-1.0);
@@ -1045,12 +1388,33 @@ impl Renderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_crumble(&mut self, g: &mut Canvas, cur: &GameState, i: usize, x: f64, y: f64, t: f64, opts: DrawOpts) {
+    fn draw_crumble(
+        &mut self,
+        g: &mut Canvas,
+        cur: &GameState,
+        i: usize,
+        x: f64,
+        y: f64,
+        t: f64,
+        opts: DrawOpts,
+    ) {
         let p = self.pal;
-        let c = self.crumble_index.get(&i).and_then(|&j| cur.crumble.get(j).copied()).unwrap_or(0) as f64;
-        let sand = if p.dark { mix(SAND, p.wall, 0.45) } else { mix(SAND, p.wall, 0.3) };
+        let c = self
+            .crumble_index
+            .get(&i)
+            .and_then(|&j| cur.crumble.get(j).copied())
+            .unwrap_or(0) as f64;
+        let sand = if p.dark {
+            mix(SAND, p.wall, 0.45)
+        } else {
+            mix(SAND, p.wall, 0.3)
+        };
         if c > CRUMBLE_TICKS as f64 {
-            let back = clamp((c - CRUMBLE_TICKS as f64) / CRUMBLE_GONE_TICKS as f64, 0.0, 1.0);
+            let back = clamp(
+                (c - CRUMBLE_TICKS as f64) / CRUMBLE_GONE_TICKS as f64,
+                0.0,
+                1.0,
+            );
             g.stroke_style(css(sand, 0.6));
             g.set_line_width(1.0);
             g.set_line_dash(&[1.5, 3.0]);
@@ -1063,9 +1427,21 @@ impl Renderer {
             g.fill();
             return;
         }
-        let shake = if c > 0.0 { c / CRUMBLE_TICKS as f64 } else { 0.0 };
-        let jx = if shake != 0.0 && !opts.reduce_motion { (t * 70.0 + i as f64).sin() * (0.4 + shake * 1.1) } else { 0.0 };
-        let jy = if shake != 0.0 && !opts.reduce_motion { (t * 57.0 + (i * 3) as f64).cos() * shake * 0.7 } else { 0.0 };
+        let shake = if c > 0.0 {
+            c / CRUMBLE_TICKS as f64
+        } else {
+            0.0
+        };
+        let jx = if shake != 0.0 && !opts.reduce_motion {
+            (t * 70.0 + i as f64).sin() * (0.4 + shake * 1.1)
+        } else {
+            0.0
+        };
+        let jy = if shake != 0.0 && !opts.reduce_motion {
+            (t * 57.0 + (i * 3) as f64).cos() * shake * 0.7
+        } else {
+            0.0
+        };
         let mut k = 1.0;
         if let Some(&at) = self.mend_at.get(&i) {
             let e = (t - at) / 0.22;
@@ -1116,13 +1492,33 @@ impl Renderer {
         g.restore();
         g.set_alpha(1.0);
         if shake > 0.0 && rnd() < if opts.reduce_motion { 0.06 } else { 0.3 } {
-            self.parts.spawn(PK_DOT, C_SAND, x + rand(2.0, T - 2.0), y + T - 1.0, rand(-8.0, 8.0), rand(10.0, 40.0), 0.4, rand(0.9, 1.5), 300.0, 0.5, false, 0.0);
+            self.parts.spawn(
+                PK_DOT,
+                C_SAND,
+                x + rand(2.0, T - 2.0),
+                y + T - 1.0,
+                rand(-8.0, 8.0),
+                rand(10.0, 40.0),
+                0.4,
+                rand(0.9, 1.5),
+                300.0,
+                0.5,
+                false,
+                0.0,
+            );
         }
     }
 
     // ---- version 2's things
 
-    pub fn draw_checkpoints(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, dt: f64) {
+    pub fn draw_checkpoints(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        dt: f64,
+    ) {
         let p = self.pal;
         for (i, c) in level.checkpoints.iter().enumerate() {
             let taken = i as i64 == cur.cp;
@@ -1135,13 +1531,28 @@ impl Renderer {
             let up = self.cp_up.get(i).copied().unwrap_or(0.0);
             let top = c.y - 27.0;
             let e = t - self.cp_at.get(i).copied().unwrap_or(-9.0);
-            let pop = if (0.0..0.7).contains(&e) { (-e * 6.0).exp() * (e * 20.0).sin() } else { 0.0 };
+            let pop = if (0.0..0.7).contains(&e) {
+                (-e * 6.0).exp() * (e * 20.0).sin()
+            } else {
+                0.0
+            };
             if up > 0.02 {
                 self.begin_glow(g);
-                self.glow(g, c.x + 5.0, top + 6.0, 20.0 + pop * 6.0, css1(p.star), (0.5 + 0.08 * (t * 3.0).sin()) * up);
+                self.glow(
+                    g,
+                    c.x + 5.0,
+                    top + 6.0,
+                    20.0 + pop * 6.0,
+                    css1(p.star),
+                    (0.5 + 0.08 * (t * 3.0).sin()) * up,
+                );
                 self.end_glow(g);
             }
-            g.fill_style(css1(if p.dark { mix(METAL, BLACK, 0.3) } else { METAL }));
+            g.fill_style(css1(if p.dark {
+                mix(METAL, BLACK, 0.3)
+            } else {
+                METAL
+            }));
             g.begin_path();
             g.ellipse(c.x, c.y, 5.0, 2.2, 0.0, PI, 0.0, false);
             g.fill();
@@ -1159,17 +1570,29 @@ impl Renderer {
                 let hf = f64::from(half);
                 let y0 = hy + hf * hgt / 2.0;
                 let y1 = y0 + hgt / 2.0;
-                g.fill_style(if up > 0.5 { css1(if half != 0 { p.frost } else { p.fire }) } else { css(p.muted, 0.75) });
+                g.fill_style(if up > 0.5 {
+                    css1(if half != 0 { p.frost } else { p.fire })
+                } else {
+                    css(p.muted, 0.75)
+                });
                 g.begin_path();
                 g.move_to(c.x + 0.9, y0);
                 let mut u = 0.25;
                 while u <= 1.001 {
-                    g.line_to(c.x + 0.9 + len * u, y0 + (hgt / 2.0 - hf * (hgt / 2.0)) * u * if half != 0 { 0.0 } else { 1.0 } + wave(u) + droop(u));
+                    g.line_to(
+                        c.x + 0.9 + len * u,
+                        y0 + (hgt / 2.0 - hf * (hgt / 2.0)) * u * if half != 0 { 0.0 } else { 1.0 }
+                            + wave(u)
+                            + droop(u),
+                    );
                     u += 0.25;
                 }
                 u = 1.0;
                 while u >= -0.001 {
-                    g.line_to(c.x + 0.9 + len * u, y1 - if half != 0 { (hgt / 2.0) * u } else { 0.0 } + wave(u) + droop(u));
+                    g.line_to(
+                        c.x + 0.9 + len * u,
+                        y1 - if half != 0 { (hgt / 2.0) * u } else { 0.0 } + wave(u) + droop(u),
+                    );
                     u -= 0.25;
                 }
                 g.close_path();
@@ -1179,10 +1602,25 @@ impl Renderer {
                 for k in 0..2 {
                     let pl = cur.players[k];
                     let z = c.zone;
-                    let inside = pl.alive && pl.x < z.x + z.w && pl.x + PLAYER_W > z.x && pl.y < z.y + z.h && pl.y + PLAYER_H > z.y;
-                    g.fill_style(if inside { css1(if k == 0 { p.fire } else { p.frost }) } else { css(p.ink, 0.22) });
+                    let inside = pl.alive
+                        && pl.x < z.x + z.w
+                        && pl.x + PLAYER_W > z.x
+                        && pl.y < z.y + z.h
+                        && pl.y + PLAYER_H > z.y;
+                    g.fill_style(if inside {
+                        css1(if k == 0 { p.fire } else { p.frost })
+                    } else {
+                        css(p.ink, 0.22)
+                    });
                     g.begin_path();
-                    g.arc(c.x + if k != 0 { 4.2 } else { -4.2 }, c.y - 4.5, if inside { 1.9 } else { 1.4 }, 0.0, TAU, false);
+                    g.arc(
+                        c.x + if k != 0 { 4.2 } else { -4.2 },
+                        c.y - 4.5,
+                        if inside { 1.9 } else { 1.4 },
+                        0.0,
+                        TAU,
+                        false,
+                    );
                     g.fill();
                 }
             }
@@ -1203,9 +1641,20 @@ impl Renderer {
             let cx = r.x + r.w / 2.0;
             let by = r.y + r.h;
             let hy = r.y + 6.5;
-            let metal = if p.dark { mix(METAL, BLACK, 0.3) } else { METAL };
+            let metal = if p.dark {
+                mix(METAL, BLACK, 0.3)
+            } else {
+                METAL
+            };
             self.begin_glow(g);
-            self.glow(g, cx, hy, 13.0 + on * 13.0, css1(SUN), 0.22 + on * 0.5 + 0.04 * (t * 5.0 + i as f64).sin());
+            self.glow(
+                g,
+                cx,
+                hy,
+                13.0 + on * 13.0,
+                css1(SUN),
+                0.22 + on * 0.5 + 0.04 * (t * 5.0 + i as f64).sin(),
+            );
             self.end_glow(g);
             g.fill_style(css1(metal));
             g.fill_rect(cx - 1.0, hy + 4.0, 2.0, by - hy - 4.0);
@@ -1240,7 +1689,11 @@ impl Renderer {
             g.arc(cx + 5.2, hy + 8.6 + on, 1.1, 0.0, TAU, false);
             g.fill();
             if l.ticks > 0 {
-                let frac = if cur.lit_t > 0 { clamp(cur.lit_t as f64 / l.ticks as f64, 0.0, 1.0) } else { 0.0 };
+                let frac = if cur.lit_t > 0 {
+                    clamp(cur.lit_t as f64 / l.ticks as f64, 0.0, 1.0)
+                } else {
+                    0.0
+                };
                 g.set_line_cap(Cap::Round);
                 g.stroke_style(css(p.ink, 0.18));
                 g.set_line_width(1.5);
@@ -1250,7 +1703,11 @@ impl Renderer {
                 g.stroke();
                 g.set_line_dash(&[]);
                 if frac > 0.0 {
-                    g.stroke_style(css1(if frac < 0.25 && (t * 20.0).sin() > 0.0 { WHITE } else { SUN }));
+                    g.stroke_style(css1(if frac < 0.25 && (t * 20.0).sin() > 0.0 {
+                        WHITE
+                    } else {
+                        SUN
+                    }));
                     g.set_line_width(1.9);
                     g.begin_path();
                     g.arc(cx, hy, 7.6, -PI / 2.0, -PI / 2.0 + TAU * frac, false);
@@ -1278,7 +1735,11 @@ impl Renderer {
             self.begin_glow(g);
             self.glow(g, cx, cy, 15.0 + spin * 8.0, css1(GRAV), 0.4 + spin * 0.4);
             self.end_glow(g);
-            g.fill_style(css1(if p.dark { mix(GRAV, BLACK, 0.74) } else { mix(GRAV, WHITE, 0.72) }));
+            g.fill_style(css1(if p.dark {
+                mix(GRAV, BLACK, 0.74)
+            } else {
+                mix(GRAV, WHITE, 0.72)
+            }));
             g.begin_path();
             g.arc(cx, cy, 7.2, 0.0, TAU, false);
             g.fill();
@@ -1330,13 +1791,23 @@ impl Renderer {
             let ly = r.y + r.h - 2.6;
             if who == Who::Fire || who == Who::Both {
                 g.fill_style(css1(p.fire));
-                flame_glyph(g, cx - if who == Who::Both { 3.4 } else { 0.0 }, ly - 0.4, 5.6);
+                flame_glyph(
+                    g,
+                    cx - if who == Who::Both { 3.4 } else { 0.0 },
+                    ly - 0.4,
+                    5.6,
+                );
                 g.fill();
             }
             if who == Who::Frost || who == Who::Both {
                 g.stroke_style(css1(p.frost));
                 g.set_line_width(0.8);
-                flake_glyph(g, cx + if who == Who::Both { 3.4 } else { 0.0 }, ly - 0.4, 2.5);
+                flake_glyph(
+                    g,
+                    cx + if who == Who::Both { 3.4 } else { 0.0 },
+                    ly - 0.4,
+                    2.5,
+                );
                 g.stroke();
             }
             if who == Who::Myself || who == Who::Other {
@@ -1344,7 +1815,14 @@ impl Renderer {
                 g.stroke_style(css(p.ink, 0.75));
                 g.set_line_width(0.8);
                 g.begin_path();
-                g.arc(cx - if who == Who::Other { 4.4 } else { 0.0 }, ly, 1.5, 0.0, TAU, false);
+                g.arc(
+                    cx - if who == Who::Other { 4.4 } else { 0.0 },
+                    ly,
+                    1.5,
+                    0.0,
+                    TAU,
+                    false,
+                );
                 g.fill();
                 if who == Who::Other {
                     g.begin_path();
@@ -1374,7 +1852,11 @@ impl Renderer {
                 continue;
             }
             let (cx, cy) = (r.x + r.w / 2.0, r.y + r.h / 2.0);
-            let body = if p.dark { mix(METAL, BLACK, 0.5) } else { mix(METAL, BLACK, 0.28) };
+            let body = if p.dark {
+                mix(METAL, BLACK, 0.5)
+            } else {
+                mix(METAL, BLACK, 0.28)
+            };
             g.save();
             g.translate(cx, cy);
             g.scale(1.0 + gone * 0.18, 1.0 + gone * 0.18);
@@ -1407,7 +1889,11 @@ impl Renderer {
             g.begin_path();
             g.arc(cx, cy, 5.6, 0.0, TAU, false);
             g.fill();
-            g.fill_style(css1(if ready { mix(GOLD_DARK, BLACK, 0.5) } else { mix(body, BLACK, 0.5) }));
+            g.fill_style(css1(if ready {
+                mix(GOLD_DARK, BLACK, 0.5)
+            } else {
+                mix(body, BLACK, 0.5)
+            }));
             g.begin_path();
             g.arc(cx, cy - 1.2, 1.9, 0.0, TAU, false);
             g.fill();
@@ -1441,19 +1927,48 @@ impl Renderer {
         g.restore();
     }
 
-    pub fn draw_keys(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, opts: DrawOpts) {
+    pub fn draw_keys(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        opts: DrawOpts,
+    ) {
         for (i, k) in level.keys.iter().enumerate() {
-            if cur.key_taken.get(i) == Some(&true) || !self.vis(k.x - 10.0, k.y - 10.0, 20.0, 20.0, 24.0) {
+            if cur.key_taken.get(i) == Some(&true)
+                || !self.vis(k.x - 10.0, k.y - 10.0, 20.0, 20.0, 24.0)
+            {
                 continue;
             }
             let fi = i as f64;
             let y = k.y + (t * 2.4 + fi * 2.1).sin() * 1.8;
             self.begin_glow(g);
-            self.glow(g, k.x, y, 17.0, css1(GOLD), 0.5 + 0.12 * (t * 4.0 + fi).sin());
+            self.glow(
+                g,
+                k.x,
+                y,
+                17.0,
+                css1(GOLD),
+                0.5 + 0.12 * (t * 4.0 + fi).sin(),
+            );
             self.end_glow(g);
             self.key_at(g, k.x - 1.0, y, 1.1, -0.5 + (t * 1.7 + fi).sin() * 0.12);
             if rnd() < if opts.reduce_motion { 0.01 } else { 0.035 } {
-                self.parts.spawn(PK_STAR, C_GOLD, k.x + rand(-7.0, 7.0), y + rand(-6.0, 6.0), 0.0, -4.0, 0.5, rand(2.0, 3.0), 0.0, 0.0, true, 0.0);
+                self.parts.spawn(
+                    PK_STAR,
+                    C_GOLD,
+                    k.x + rand(-7.0, 7.0),
+                    y + rand(-6.0, 6.0),
+                    0.0,
+                    -4.0,
+                    0.5,
+                    rand(2.0, 3.0),
+                    0.0,
+                    0.0,
+                    true,
+                    0.0,
+                );
             }
         }
     }
@@ -1464,7 +1979,13 @@ impl Renderer {
         if n == 0 {
             return;
         }
-        let h = if cur.players[self.key_holder].alive { self.key_holder } else if self.key_holder == 0 { 1 } else { 0 };
+        let h = if cur.players[self.key_holder].alive {
+            self.key_holder
+        } else if self.key_holder == 0 {
+            1
+        } else {
+            0
+        };
         let pl = cur.players[h];
         let gv = if pl.grav == -1 { -1.0 } else { 1.0 };
         let face = pl.face as f64;
@@ -1493,9 +2014,20 @@ impl Renderer {
         }
     }
 
-    pub fn draw_arrows(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, opts: DrawOpts) {
+    pub fn draw_arrows(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        opts: DrawOpts,
+    ) {
         let p = self.pal;
-        let col = if p.dark { ARROW } else { mix(ARROW, BLACK, 0.2) };
+        let col = if p.dark {
+            ARROW
+        } else {
+            mix(ARROW, BLACK, 0.2)
+        };
         for (i, a) in level.arrows.iter().enumerate() {
             if !self.vis(a.x - 10.0, a.y - 12.0, 20.0, 24.0, 24.0) {
                 continue;
@@ -1523,14 +2055,32 @@ impl Renderer {
                 g.set_alpha(1.0);
                 continue;
             }
-            let bob = if opts.reduce_motion { 0.0 } else { (t * 3.0 + i as f64 * 1.9).sin() * 2.2 };
+            let bob = if opts.reduce_motion {
+                0.0
+            } else {
+                (t * 3.0 + i as f64 * 1.9).sin() * 2.2
+            };
             let y = a.y + bob;
             self.begin_glow(g);
-            self.glow(g, a.x, y, 18.0, css1(ARROW), 0.5 + 0.12 * (t * 5.0 + i as f64).sin());
+            self.glow(
+                g,
+                a.x,
+                y,
+                18.0,
+                css1(ARROW),
+                0.5 + 0.12 * (t * 5.0 + i as f64).sin(),
+            );
             self.end_glow(g);
             g.save();
             g.translate(a.x, y);
-            g.fill_style(css(if p.dark { mix(ARROW, BLACK, 0.72) } else { mix(ARROW, WHITE, 0.78) }, 0.85));
+            g.fill_style(css(
+                if p.dark {
+                    mix(ARROW, BLACK, 0.72)
+                } else {
+                    mix(ARROW, WHITE, 0.78)
+                },
+                0.85,
+            ));
             g.begin_path();
             g.arc(0.0, 0.0, 8.0, 0.0, TAU, false);
             g.fill();
@@ -1541,18 +2091,43 @@ impl Renderer {
             g.stroke_style(css1(mix(ARROW, BLACK, 0.5)));
             g.set_line_width(3.2);
             g.stroke();
-            g.stroke_style(css1(if p.dark { mix(ARROW, WHITE, 0.45) } else { WHITE }));
+            g.stroke_style(css1(if p.dark {
+                mix(ARROW, WHITE, 0.45)
+            } else {
+                WHITE
+            }));
             g.set_line_width(1.7);
             g.stroke();
             g.restore();
             if rnd() < if opts.reduce_motion { 0.01 } else { 0.05 } {
-                self.parts.spawn(PK_CHEV, C_ARROW, a.x + rand(-6.0, 6.0), y + 8.0, 0.0, -rand(20.0, 40.0), 0.5, 1.8, 0.0, 0.0, true, 0.0);
+                self.parts.spawn(
+                    PK_CHEV,
+                    C_ARROW,
+                    a.x + rand(-6.0, 6.0),
+                    y + 8.0,
+                    0.0,
+                    -rand(20.0, 40.0),
+                    0.5,
+                    1.8,
+                    0.0,
+                    0.0,
+                    true,
+                    0.0,
+                );
             }
         }
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_cannons(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, dt: f64, opts: DrawOpts) {
+    pub fn draw_cannons(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        dt: f64,
+        opts: DrawOpts,
+    ) {
         let p = self.pal;
         for (i, c) in level.cannons.iter().enumerate() {
             if let Some(k) = self.cannon_kick.get_mut(i) {
@@ -1575,18 +2150,33 @@ impl Renderer {
             let chs = cond_channels(c.fire.as_ref());
             let ready = c.fire.is_some() && cond_holds(c.fire.as_ref(), &cur.on, cur.lit);
             let ch_col = chs.first().map_or(css1(p.muted), |s| channel_color(s));
-            let gv = if who >= 0 && cur.players[who as usize].grav == -1 { -1.0 } else { 1.0 };
+            let gv = if who >= 0 && cur.players[who as usize].grav == -1 {
+                -1.0
+            } else {
+                1.0
+            };
             g.fill_style(css(
                 match who {
                     0 => p.fire,
                     1 => p.frost,
                     _ => p.ink,
                 },
-                if loaded { 0.7 } else if p.dark { 0.26 } else { 0.22 },
+                if loaded {
+                    0.7
+                } else if p.dark {
+                    0.26
+                } else {
+                    0.22
+                },
             ));
             let fly_s = CANNON_FLY_TICKS as f64 / 60.0;
             for k in 1..=26 {
-                let tt = f64::from(k) * 0.055 + if opts.reduce_motion || !loaded { 0.0 } else { (t * 0.5) % 0.055 };
+                let tt = f64::from(k) * 0.055
+                    + if opts.reduce_motion || !loaded {
+                        0.0
+                    } else {
+                        (t * 0.5) % 0.055
+                    };
                 if tt > fly_s {
                     break;
                 }
@@ -1602,8 +2192,16 @@ impl Renderer {
                 g.arc(x, y, if loaded { 1.5 } else { 1.1 }, 0.0, TAU, false);
                 g.fill();
             }
-            let metal = if p.dark { mix(METAL, BLACK, 0.42) } else { mix(METAL, BLACK, 0.22) };
-            let swell = if loaded && !opts.reduce_motion { 1.0 + 0.05 * (t * 22.0).sin() } else { 1.0 };
+            let metal = if p.dark {
+                mix(METAL, BLACK, 0.42)
+            } else {
+                mix(METAL, BLACK, 0.22)
+            };
+            let swell = if loaded && !opts.reduce_motion {
+                1.0 + 0.05 * (t * 22.0).sin()
+            } else {
+                1.0
+            };
             g.save();
             g.translate(c.x, c.y);
             g.rotate(ang);
@@ -1631,7 +2229,11 @@ impl Renderer {
                 g.begin_path();
                 g.arc(12.2, 0.0, 4.6, -PI / 2.0, PI / 2.0, false);
                 g.fill();
-                g.fill_style(if who == 0 { Col::rgb(64.0, 22.0, 6.0) } else { Col::rgb(14.0, 48.0, 84.0) });
+                g.fill_style(if who == 0 {
+                    Col::rgb(64.0, 22.0, 6.0)
+                } else {
+                    Col::rgb(14.0, 48.0, 84.0)
+                });
                 g.fill_rect(14.4, -2.4, 1.3, 1.6);
                 g.fill_rect(14.4, 0.9, 1.3, 1.6);
             }
@@ -1640,13 +2242,26 @@ impl Renderer {
             g.begin_path();
             g.arc(c.x, c.y, 4.6, 0.0, TAU, false);
             g.fill();
-            g.fill_style(if loaded && (c.fire.is_none() || ready || (t * 10.0).sin() > 0.0) { ch_col } else { css1(mix(metal, WHITE, 0.3)) });
+            g.fill_style(
+                if loaded && (c.fire.is_none() || ready || (t * 10.0).sin() > 0.0) {
+                    ch_col
+                } else {
+                    css1(mix(metal, WHITE, 0.3))
+                },
+            );
             g.begin_path();
             g.arc(c.x, c.y, 1.9, 0.0, TAU, false);
             g.fill();
             if loaded {
                 self.begin_glow(g);
-                self.glow(g, c.x, c.y, 18.0, css1(if who == 0 { p.fire } else { p.frost }), 0.45);
+                self.glow(
+                    g,
+                    c.x,
+                    c.y,
+                    18.0,
+                    css1(if who == 0 { p.fire } else { p.frost }),
+                    0.45,
+                );
                 self.end_glow(g);
                 g.set_line_cap(Cap::Round);
                 if c.fire.is_none() {
@@ -1696,14 +2311,26 @@ impl Renderer {
 
     // ---- fans
 
-    pub fn draw_fan_columns(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, dt: f64, opts: DrawOpts) {
+    pub fn draw_fan_columns(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        dt: f64,
+        opts: DrawOpts,
+    ) {
         let p = self.pal;
         for (i, f) in level.fans.iter().enumerate() {
             let on = cond_holds(f.when.as_ref(), &cur.on, cur.lit);
             if i >= self.fan_spin.len() {
                 continue;
             }
-            self.fan_spin[i] = approach(self.fan_spin[i], if on { 1.0 } else { 0.0 }, if on { 3.0 } else { 1.5 }, dt);
+            self.fan_spin[i] = approach(
+                self.fan_spin[i],
+                if on { 1.0 } else { 0.0 },
+                if on { 3.0 } else { 1.5 },
+                dt,
+            );
             self.fan_ang[i] += self.fan_spin[i] * dt * 22.0;
             let spin = self.fan_spin[i];
             let r = f.r;
@@ -1720,10 +2347,27 @@ impl Renderer {
                 g.fill_rect(r.x + 2.0, r.y, r.w - 4.0, r.h - T);
                 let rate = (r.w / T) * if opts.reduce_motion { 3.0 } else { 10.0 } * spin;
                 if rnd() < rate * dt {
-                    self.parts.spawn(PK_STREAK, C_WHITE, r.x + rand(3.0, r.w - 3.0), fy, 0.0, -rand(160.0, 260.0), (r.h - T) / 220.0, rand(5.0, 10.0), 0.0, 0.0, true, 0.0);
+                    self.parts.spawn(
+                        PK_STREAK,
+                        C_WHITE,
+                        r.x + rand(3.0, r.w - 3.0),
+                        fy,
+                        0.0,
+                        -rand(160.0, 260.0),
+                        (r.h - T) / 220.0,
+                        rand(5.0, 10.0),
+                        0.0,
+                        0.0,
+                        true,
+                        0.0,
+                    );
                 }
             }
-            g.fill_style(css1(if p.dark { mix(METAL, BLACK, 0.45) } else { mix(METAL, BLACK, 0.1) }));
+            g.fill_style(css1(if p.dark {
+                mix(METAL, BLACK, 0.45)
+            } else {
+                mix(METAL, BLACK, 0.1)
+            }));
             rr(g, r.x, fy, r.w, T, 3.0);
             g.fill();
             let mut tx = r.x;
@@ -1733,11 +2377,24 @@ impl Renderer {
                 g.begin_path();
                 g.arc(cx, cy, 7.5, 0.0, TAU, false);
                 g.fill();
-                g.fill_style(css1(if p.dark { mix(METAL, WHITE, 0.25) } else { mix(METAL, WHITE, 0.35) }));
+                g.fill_style(css1(if p.dark {
+                    mix(METAL, WHITE, 0.25)
+                } else {
+                    mix(METAL, WHITE, 0.35)
+                }));
                 for b in 0..3 {
                     let ang = self.fan_ang[i] + f64::from(b) * TAU / 3.0;
                     g.begin_path();
-                    g.ellipse(cx + ang.cos() * 3.6, cy + ang.sin() * 3.6, 3.6, 1.6, ang, 0.0, TAU, false);
+                    g.ellipse(
+                        cx + ang.cos() * 3.6,
+                        cy + ang.sin() * 3.6,
+                        3.6,
+                        1.6,
+                        ang,
+                        0.0,
+                        TAU,
+                        false,
+                    );
                     g.fill();
                 }
                 g.fill_style(ch.as_deref().map_or(css1(p.muted), channel_color));
@@ -1746,7 +2403,11 @@ impl Renderer {
                 g.fill();
                 tx += T;
             }
-            g.fill_style(css1(if p.dark { mix(METAL, WHITE, 0.1) } else { METAL }));
+            g.fill_style(css1(if p.dark {
+                mix(METAL, WHITE, 0.1)
+            } else {
+                METAL
+            }));
             g.fill_rect(r.x + 1.0, fy, r.w - 2.0, 2.2);
             if let Some(ch) = &ch {
                 g.fill_style(channel_color(ch));
@@ -1757,14 +2418,27 @@ impl Renderer {
 
     // ---- gems, beams
 
-    pub fn draw_gems(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, opts: DrawOpts) {
+    pub fn draw_gems(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        opts: DrawOpts,
+    ) {
         let p = self.pal;
         for (i, gm) in level.gems.iter().enumerate() {
-            if cur.taken.get(i) == Some(&true) || !self.vis(gm.x - 8.0, gm.y - 8.0, 16.0, 16.0, 24.0) {
+            if cur.taken.get(i) == Some(&true)
+                || !self.vis(gm.x - 8.0, gm.y - 8.0, 16.0, 16.0, 24.0)
+            {
                 continue;
             }
             let fire = gm.el == Element::Fire;
-            let (c, c2) = if fire { (p.fire, p.fire2) } else { (p.frost, p.frost2) };
+            let (c, c2) = if fire {
+                (p.fire, p.fire2)
+            } else {
+                (p.frost, p.frost2)
+            };
             let fi = i as f64;
             let y = gm.y + (t * 2.6 + fi * 1.7).sin() * 1.6;
             self.begin_glow(g);
@@ -1805,7 +2479,20 @@ impl Renderer {
             g.stroke();
             g.restore();
             if rnd() < if opts.reduce_motion { 0.01 } else { 0.03 } {
-                self.parts.spawn(PK_STAR, if fire { C_FIRE2 } else { C_WHITE }, gm.x + rand(-6.0, 6.0), y + rand(-6.0, 5.0), 0.0, -4.0, 0.5, rand(2.0, 3.2), 0.0, 0.0, true, 0.0);
+                self.parts.spawn(
+                    PK_STAR,
+                    if fire { C_FIRE2 } else { C_WHITE },
+                    gm.x + rand(-6.0, 6.0),
+                    y + rand(-6.0, 5.0),
+                    0.0,
+                    -4.0,
+                    0.5,
+                    rand(2.0, 3.2),
+                    0.0,
+                    0.0,
+                    true,
+                    0.0,
+                );
             }
         }
     }
@@ -1848,7 +2535,20 @@ impl Renderer {
         self.end_glow(g);
         if rnd() < if opts.reduce_motion { 0.05 } else { 0.25 } {
             let b = beams[(rnd() * beams.len() as f64).floor() as usize % beams.len()];
-            self.parts.spawn(PK_STAR, C_STAR, b.2, b.3, rand(-20.0, 20.0), rand(-20.0, 20.0), 0.35, 2.4, 0.0, 2.0, true, 0.0);
+            self.parts.spawn(
+                PK_STAR,
+                C_STAR,
+                b.2,
+                b.3,
+                rand(-20.0, 20.0),
+                rand(-20.0, 20.0),
+                0.35,
+                2.4,
+                0.0,
+                2.0,
+                true,
+                0.0,
+            );
         }
     }
 }

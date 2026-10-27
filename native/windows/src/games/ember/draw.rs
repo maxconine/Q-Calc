@@ -9,8 +9,8 @@ use std::f64::consts::PI;
 use qcalc_core::games::ember::camera::{base_view, camera_at, ease_camera};
 use qcalc_core::games::ember::engine::trace_beams;
 use qcalc_core::games::ember::{
-    Camera, DeathCause, Element, EventKind, GLOW_SMALL, GameEvent, GameState, PLAYER_H, PLAYER_W, Phase, STAGE_TICKS,
-    Slant, Stage, T_CRUMBLE, T_DARK, T_LIGHT, T_ONEWAY, T_TRAMP, T_WALL, TILE,
+    Camera, DeathCause, Element, EventKind, GLOW_SMALL, GameEvent, GameState, PLAYER_H, PLAYER_W,
+    Phase, STAGE_TICKS, Slant, Stage, T_CRUMBLE, T_DARK, T_LIGHT, T_ONEWAY, T_TRAMP, T_WALL, TILE,
 };
 
 use super::fx::*;
@@ -47,22 +47,89 @@ pub const BLACK: Rgb = (0.0, 0.0, 0.0);
 
 /// readPalette: the theme's tokens (index.css, EmberPanel.css), light or dark
 pub fn read_palette(dark: bool) -> Palette {
-    let bg = if dark { (44.0, 44.0, 46.0) } else { (255.0, 255.0, 255.0) };
-    let tape = if dark { (37.0, 37.0, 39.0) } else { (245.0, 245.0, 247.0) };
-    let ink = if dark { (245.0, 245.0, 247.0) } else { (29.0, 29.0, 31.0) };
-    let muted = if dark { (152.0, 152.0, 157.0) } else { (134.0, 134.0, 139.0) };
-    let accent = if dark { (99.0, 211.0, 146.0) } else { (29.0, 122.0, 76.0) };
-    let fire = if dark { (255.0, 138.0, 71.0) } else { (232.0, 100.0, 28.0) };
-    let fire2 = if dark { (255.0, 193.0, 94.0) } else { (245.0, 165.0, 36.0) };
-    let frost = if dark { (95.0, 205.0, 242.0) } else { (31.0, 147.0, 198.0) };
-    let frost2 = if dark { (165.0, 232.0, 251.0) } else { (92.0, 200.0, 230.0) };
-    let star = if dark { (255.0, 196.0, 77.0) } else { (240.0, 168.0, 26.0) };
+    let bg = if dark {
+        (44.0, 44.0, 46.0)
+    } else {
+        (255.0, 255.0, 255.0)
+    };
+    let tape = if dark {
+        (37.0, 37.0, 39.0)
+    } else {
+        (245.0, 245.0, 247.0)
+    };
+    let ink = if dark {
+        (245.0, 245.0, 247.0)
+    } else {
+        (29.0, 29.0, 31.0)
+    };
+    let muted = if dark {
+        (152.0, 152.0, 157.0)
+    } else {
+        (134.0, 134.0, 139.0)
+    };
+    let accent = if dark {
+        (99.0, 211.0, 146.0)
+    } else {
+        (29.0, 122.0, 76.0)
+    };
+    let fire = if dark {
+        (255.0, 138.0, 71.0)
+    } else {
+        (232.0, 100.0, 28.0)
+    };
+    let fire2 = if dark {
+        (255.0, 193.0, 94.0)
+    } else {
+        (245.0, 165.0, 36.0)
+    };
+    let frost = if dark {
+        (95.0, 205.0, 242.0)
+    } else {
+        (31.0, 147.0, 198.0)
+    };
+    let frost2 = if dark {
+        (165.0, 232.0, 251.0)
+    } else {
+        (92.0, 200.0, 230.0)
+    };
+    let star = if dark {
+        (255.0, 196.0, 77.0)
+    } else {
+        (240.0, 168.0, 26.0)
+    };
     let is_dark = luma(bg) < 0.45;
-    let stone = if is_dark { (92.0, 88.0, 108.0) } else { (178.0, 172.0, 190.0) };
+    let stone = if is_dark {
+        (92.0, 88.0, 108.0)
+    } else {
+        (178.0, 172.0, 190.0)
+    };
     let wall = mix(mix(tape, ink, if is_dark { 0.2 } else { 0.3 }), stone, 0.4);
-    let wall_hi = if is_dark { mix(wall, ink, 0.24) } else { mix(wall, WHITE, 0.6) };
-    let wall_lo = if is_dark { mix(wall, BLACK, 0.38) } else { mix(wall, ink, 0.2) };
-    Palette { dark: is_dark, bg, tape, ink, muted, accent, fire, fire2, frost, frost2, star, wall, wall_hi, wall_lo }
+    let wall_hi = if is_dark {
+        mix(wall, ink, 0.24)
+    } else {
+        mix(wall, WHITE, 0.6)
+    };
+    let wall_lo = if is_dark {
+        mix(wall, BLACK, 0.38)
+    } else {
+        mix(wall, ink, 0.2)
+    };
+    Palette {
+        dark: is_dark,
+        bg,
+        tape,
+        ink,
+        muted,
+        accent,
+        fire,
+        fire2,
+        frost,
+        frost2,
+        star,
+        wall,
+        wall_hi,
+        wall_lo,
+    }
 }
 
 pub const LAVA_TOP: Rgb = (255.0, 196.0, 84.0);
@@ -88,7 +155,12 @@ pub const ARROW: Rgb = (72.0, 214.0, 150.0);
 pub const GOLD: Rgb = (246.0, 196.0, 62.0);
 pub const GOLD_DARK: Rgb = (150.0, 104.0, 22.0);
 pub const NIGHT: Col = Col::rgb(7.0, 6.0, 14.0);
-pub const PORTAL_COLORS: [Rgb; 4] = [(168.0, 112.0, 255.0), (255.0, 122.0, 214.0), (64.0, 222.0, 196.0), (255.0, 212.0, 92.0)];
+pub const PORTAL_COLORS: [Rgb; 4] = [
+    (168.0, 112.0, 255.0),
+    (255.0, 122.0, 214.0),
+    (64.0, 222.0, 196.0),
+    (255.0, 212.0, 92.0),
+];
 
 pub const C_FIRE: usize = 0;
 pub const C_FIRE2: usize = 1;
@@ -119,15 +191,35 @@ pub fn color_table(p: &Palette) -> Vec<Col> {
     t[C_FIRE2] = css1(p.fire2);
     t[C_FROST] = css1(p.frost);
     t[C_FROST2] = css1(p.frost2);
-    t[C_WHITE] = if p.dark { Col::rgb(255.0, 255.0, 255.0) } else { css1(mix(p.frost2, WHITE, 0.3)) };
-    t[C_STEAM] = if p.dark { Col::rgb(220.0, 228.0, 236.0) } else { Col::rgb(170.0, 180.0, 192.0) };
+    t[C_WHITE] = if p.dark {
+        Col::rgb(255.0, 255.0, 255.0)
+    } else {
+        css1(mix(p.frost2, WHITE, 0.3))
+    };
+    t[C_STEAM] = if p.dark {
+        Col::rgb(220.0, 228.0, 236.0)
+    } else {
+        Col::rgb(170.0, 180.0, 192.0)
+    };
     t[C_GOO] = css1(GOO_TOP);
     t[C_LAVA] = css1(LAVA_MID);
     t[C_WATER] = css1(WATER_TOP);
-    t[C_DUST] = css1(if p.dark { mix(p.wall, p.ink, 0.35) } else { mix(p.wall, p.ink, 0.15) });
+    t[C_DUST] = css1(if p.dark {
+        mix(p.wall, p.ink, 0.35)
+    } else {
+        mix(p.wall, p.ink, 0.15)
+    });
     t[C_STAR] = css1(p.star);
-    t[C_CORE] = if p.dark { Col::rgb(255.0, 246.0, 214.0) } else { css1(mix(p.star, LAVA_MID, 0.25)) };
-    t[C_ICE] = css1(if p.dark { ICE_TOP } else { mix(ICE_BOT, p.frost, 0.35) });
+    t[C_CORE] = if p.dark {
+        Col::rgb(255.0, 246.0, 214.0)
+    } else {
+        css1(mix(p.star, LAVA_MID, 0.25))
+    };
+    t[C_ICE] = css1(if p.dark {
+        ICE_TOP
+    } else {
+        mix(ICE_BOT, p.frost, 0.35)
+    });
     for (i, c) in PORTAL_COLORS.iter().enumerate() {
         t[C_PORTAL + i] = css1(*c);
     }
@@ -136,11 +228,23 @@ pub fn color_table(p: &Palette) -> Vec<Col> {
     }
     t[C_TRAMP] = css1(TRAMP);
     t[C_SAND] = css1(if p.dark { SAND } else { mix(SAND, BLACK, 0.2) });
-    t[C_SUN] = css1(if p.dark { SUN } else { mix(SUN, LAVA_MID, 0.35) });
+    t[C_SUN] = css1(if p.dark {
+        SUN
+    } else {
+        mix(SUN, LAVA_MID, 0.35)
+    });
     t[C_GRAV] = css1(if p.dark { GRAV } else { mix(GRAV, BLACK, 0.12) });
-    t[C_ARROW] = css1(if p.dark { ARROW } else { mix(ARROW, BLACK, 0.18) });
+    t[C_ARROW] = css1(if p.dark {
+        ARROW
+    } else {
+        mix(ARROW, BLACK, 0.18)
+    });
     t[C_GOLD] = css1(GOLD);
-    t[C_SMOKE] = if p.dark { Col::rgb(120.0, 120.0, 132.0) } else { Col::rgb(96.0, 96.0, 108.0) };
+    t[C_SMOKE] = if p.dark {
+        Col::rgb(120.0, 120.0, 132.0)
+    } else {
+        Col::rgb(96.0, 96.0, 108.0)
+    };
     t
 }
 
@@ -148,7 +252,17 @@ pub fn color_table(p: &Palette) -> Vec<Col> {
 
 /// a rect with its own radius per corner (tl, tr, br, bl)
 #[allow(clippy::too_many_arguments)]
-pub fn round_rect_path(g: &mut Canvas, x: f64, y: f64, w: f64, h: f64, tl: f64, tr: f64, br: f64, bl: f64) {
+pub fn round_rect_path(
+    g: &mut Canvas,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    tl: f64,
+    tr: f64,
+    br: f64,
+    bl: f64,
+) {
     g.begin_path();
     g.move_to(x + tl, y);
     g.line_to(x + w - tr, y);
@@ -188,10 +302,31 @@ pub fn flame_glyph(g: &mut Canvas, x: f64, y: f64, h: f64) {
     let b = y + h * 0.5;
     g.begin_path();
     g.move_to(x, b);
-    g.bezier_curve_to(x - w * 1.1, b, x - w * 1.15, y - h * 0.02, x - w * 0.6, y - h * 0.24);
+    g.bezier_curve_to(
+        x - w * 1.1,
+        b,
+        x - w * 1.15,
+        y - h * 0.02,
+        x - w * 0.6,
+        y - h * 0.24,
+    );
     g.quadratic_curve_to(x - w * 0.5, y - h * 0.02, x - w * 0.18, y - h * 0.06);
-    g.bezier_curve_to(x - w * 0.35, y - h * 0.3, x - w * 0.05, y - h * 0.42, x + w * 0.2, y - h * 0.5);
-    g.bezier_curve_to(x + w * 0.3, y - h * 0.25, x + w * 1.15, y - h * 0.12, x + w * 0.98, y + h * 0.2);
+    g.bezier_curve_to(
+        x - w * 0.35,
+        y - h * 0.3,
+        x - w * 0.05,
+        y - h * 0.42,
+        x + w * 0.2,
+        y - h * 0.5,
+    );
+    g.bezier_curve_to(
+        x + w * 0.3,
+        y - h * 0.25,
+        x + w * 1.15,
+        y - h * 0.12,
+        x + w * 0.98,
+        y + h * 0.2,
+    );
     g.bezier_curve_to(x + w * 0.88, b, x + w * 0.4, b, x, b);
     g.close_path();
 }
@@ -272,8 +407,18 @@ pub fn chevrons(g: &mut Canvas, s: f64) {
 pub fn paint_backdrop(g: &mut Canvas, level: &Stage, p: &Palette, range: Option<TileRange>) {
     let (w, h) = (level.w, level.h);
     let mut sky = Gradient::linear(0.0, 0.0, 0.0, h);
-    sky.stop(0.0, css1(mix(p.bg, p.tape, if p.dark { 0.1 } else { 0.15 })));
-    sky.stop(1.0, css1(if p.dark { mix(p.tape, BLACK, 0.12) } else { mix(p.tape, p.wall, 0.12) }));
+    sky.stop(
+        0.0,
+        css1(mix(p.bg, p.tape, if p.dark { 0.1 } else { 0.15 })),
+    );
+    sky.stop(
+        1.0,
+        css1(if p.dark {
+            mix(p.tape, BLACK, 0.12)
+        } else {
+            mix(p.tape, p.wall, 0.12)
+        }),
+    );
     g.fill_style(sky);
     g.fill_rect(0.0, 0.0, w, h);
     let mut warm = Gradient::radial(w * 0.12, h * 1.05, 0.0, w * 0.12, h * 1.05, h * 0.95);
@@ -289,14 +434,19 @@ pub fn paint_backdrop(g: &mut Canvas, level: &Stage, p: &Palette, range: Option<
     let (bw, bh) = (TILE * 2.0, TILE);
     let r0 = range.map_or(0, |r| r.y0.max(0));
     let r1 = range.map_or(level.rows as i64, |r| r.y1.min(level.rows as i64));
-    let bx0 = range.map_or(0.0, |r| (((r.x0 as f64 * TILE / bw).floor() as i64 - 1).max(0)) as f64 * bw);
+    let bx0 = range.map_or(0.0, |r| {
+        (((r.x0 as f64 * TILE / bw).floor() as i64 - 1).max(0)) as f64 * bw
+    });
     let bx1 = range.map_or(w, |r| w.min(r.x1 as f64 * TILE));
     for row in r0..r1.max(r0) {
         let off = if row % 2 != 0 { bw / 2.0 } else { 0.0 };
         let mut bx = bx0 - off;
         while bx < bx1 {
             let n = hash01((row * 97) as f64 + crate::games::canvas::js_round(bx) * 13.0 + 5.0);
-            g.fill_style(css(p.ink, (if p.dark { 0.018 } else { 0.012 }) + n * if p.dark { 0.02 } else { 0.016 }));
+            g.fill_style(css(
+                p.ink,
+                (if p.dark { 0.018 } else { 0.012 }) + n * if p.dark { 0.02 } else { 0.016 },
+            ));
             rr(g, bx + 1.0, row as f64 * bh + 1.0, bw - 2.0, bh - 2.0, 3.0);
             g.fill();
             bx += bw;
@@ -304,12 +454,25 @@ pub fn paint_backdrop(g: &mut Canvas, level: &Stage, p: &Palette, range: Option<
     }
     let mut vg = Gradient::radial(w / 2.0, h / 2.0, h * 0.35, w / 2.0, h / 2.0, w * 0.65);
     vg.stop(0.0, Col::rgba(0.0, 0.0, 0.0, 0.0));
-    vg.stop(1.0, if p.dark { Col::rgba(0.0, 0.0, 0.0, 0.28) } else { Col::rgba(40.0, 30.0, 60.0, 0.07) });
+    vg.stop(
+        1.0,
+        if p.dark {
+            Col::rgba(0.0, 0.0, 0.0, 0.28)
+        } else {
+            Col::rgba(40.0, 30.0, 60.0, 0.07)
+        },
+    );
     g.fill_style(vg);
     g.fill_rect(0.0, 0.0, w, h);
 }
 
-pub fn paint_walls(g: &mut Canvas, level: &Stage, p: &Palette, detail: bool, range: Option<TileRange>) {
+pub fn paint_walls(
+    g: &mut Canvas,
+    level: &Stage,
+    p: &Palette,
+    detail: bool,
+    range: Option<TileRange>,
+) {
     let r_ = 5.0;
     let tx0 = range.map_or(0, |r| r.x0);
     let ty0 = range.map_or(0, |r| r.y0);
@@ -318,16 +481,38 @@ pub fn paint_walls(g: &mut Canvas, level: &Stage, p: &Palette, detail: bool, ran
     if tx0 >= tx1 || ty0 >= ty1 {
         return;
     }
-    g.fill_style(if p.dark { Col::rgba(0.0, 0.0, 0.0, 0.32) } else { Col::rgba(40.0, 30.0, 70.0, 0.10) });
+    g.fill_style(if p.dark {
+        Col::rgba(0.0, 0.0, 0.0, 0.32)
+    } else {
+        Col::rgba(40.0, 30.0, 70.0, 0.10)
+    });
     for ty in ty0..ty1 {
         for tx in tx0..tx1 {
-            if !is_wall(level, tx, ty) || (closed_tile(level, tx, ty + 1) && closed_tile(level, tx + 1, ty)) {
+            if !is_wall(level, tx, ty)
+                || (closed_tile(level, tx, ty + 1) && closed_tile(level, tx + 1, ty))
+            {
                 continue;
             }
-            let (u, d) = (!closed_tile(level, tx, ty - 1), !closed_tile(level, tx, ty + 1));
-            let (l, r) = (!closed_tile(level, tx - 1, ty), !closed_tile(level, tx + 1, ty));
+            let (u, d) = (
+                !closed_tile(level, tx, ty - 1),
+                !closed_tile(level, tx, ty + 1),
+            );
+            let (l, r) = (
+                !closed_tile(level, tx - 1, ty),
+                !closed_tile(level, tx + 1, ty),
+            );
             let k = |on: bool| if on { r_ } else { 0.0 };
-            round_rect_path(g, tx as f64 * TILE + 1.0, ty as f64 * TILE + 2.5, TILE, TILE, k(u && l), k(u && r), k(d && r), k(d && l));
+            round_rect_path(
+                g,
+                tx as f64 * TILE + 1.0,
+                ty as f64 * TILE + 2.5,
+                TILE,
+                TILE,
+                k(u && l),
+                k(u && r),
+                k(d && r),
+                k(d && l),
+            );
             g.fill();
         }
     }
@@ -340,11 +525,27 @@ pub fn paint_walls(g: &mut Canvas, level: &Stage, p: &Palette, detail: bool, ran
                 continue;
             }
             let (x, y) = (tx as f64 * TILE, ty as f64 * TILE);
-            let (u, d) = (!closed_tile(level, tx, ty - 1), !closed_tile(level, tx, ty + 1));
-            let (l, r) = (!closed_tile(level, tx - 1, ty), !closed_tile(level, tx + 1, ty));
+            let (u, d) = (
+                !closed_tile(level, tx, ty - 1),
+                !closed_tile(level, tx, ty + 1),
+            );
+            let (l, r) = (
+                !closed_tile(level, tx - 1, ty),
+                !closed_tile(level, tx + 1, ty),
+            );
             let k = |on: bool| if on { r_ } else { 0.0 };
             g.save();
-            round_rect_path(g, x, y, TILE, TILE, k(u && l), k(u && r), k(d && r), k(d && l));
+            round_rect_path(
+                g,
+                x,
+                y,
+                TILE,
+                TILE,
+                k(u && l),
+                k(u && r),
+                k(d && r),
+                k(d && l),
+            );
             g.fill_style(base);
             g.fill();
             let rounded = (u && l) || (u && r) || (d && r) || (d && l);
@@ -356,12 +557,22 @@ pub fn paint_walls(g: &mut Canvas, level: &Stage, p: &Palette, detail: bool, ran
                 g.fill_rect(x, y + TILE / 2.0 - 0.5, TILE, 1.0);
                 let j = if ty & 1 != 0 { 0.0 } else { TILE / 2.0 };
                 g.fill_rect(x + j - 0.5, y, 1.0, TILE / 2.0);
-                g.fill_rect(x + (j + TILE / 2.0) % TILE - 0.5, y + TILE / 2.0, 1.0, TILE / 2.0);
+                g.fill_rect(
+                    x + (j + TILE / 2.0) % TILE - 0.5,
+                    y + TILE / 2.0,
+                    1.0,
+                    TILE / 2.0,
+                );
                 g.fill_style(speck);
                 for k in 0..3 {
                     let n = hash01((ty * level.cols as i64 * 7 + tx * 7 + k) as f64);
                     let m = hash01((ty * level.cols as i64 * 11 + tx * 5 + k + 999) as f64);
-                    g.fill_rect(x + 2.0 + n * (TILE - 4.0), y + 2.0 + m * (TILE - 4.0), 1.0, 1.0);
+                    g.fill_rect(
+                        x + 2.0 + n * (TILE - 4.0),
+                        y + 2.0 + m * (TILE - 4.0),
+                        1.0,
+                        1.0,
+                    );
                 }
             }
             if u {
@@ -508,8 +719,18 @@ impl Renderer {
             stat_key: String::new(),
             mip: -1,
             cam: None,
-            view: View { k: 1.0, ox: 0.0, oy: 0.0 },
-            vr: Camera { x: 0.0, y: 0.0, w: 640.0, h: 360.0, zoom: 1.0 },
+            view: View {
+                k: 1.0,
+                ox: 0.0,
+                oy: 0.0,
+            },
+            vr: Camera {
+                x: 0.0,
+                y: 0.0,
+                w: 640.0,
+                h: 360.0,
+                zoom: 1.0,
+            },
             far: false,
             pos: [(0.0, 0.0); 2],
             beams: Vec::new(),
@@ -589,8 +810,18 @@ impl Renderer {
         self.chunk_order.clear();
         self.cam = None;
         self.lava_tops_list = lava_tops(level);
-        self.thin_index = level.thin.iter().enumerate().map(|(j, &ti)| (ti, j)).collect();
-        self.crumble_index = level.crumble.iter().enumerate().map(|(j, &ti)| (ti, j)).collect();
+        self.thin_index = level
+            .thin
+            .iter()
+            .enumerate()
+            .map(|(j, &ti)| (ti, j))
+            .collect();
+        self.crumble_index = level
+            .crumble
+            .iter()
+            .enumerate()
+            .map(|(j, &ti)| (ti, j))
+            .collect();
         self.tramp_at.clear();
         self.mend_at.clear();
         self.cp_at = vec![-9.0; level.checkpoints.len()];
@@ -619,8 +850,22 @@ impl Renderer {
                 k % PORTAL_COLORS.len()
             })
             .collect();
-        self.lever_ang = level.levers.iter().map(|l| if l.on { 1.0 } else { -1.0 }).collect();
-        self.mirror_ang = level.mirrors.iter().map(|m| if m.slant == Slant::Slash { -PI / 4.0 } else { PI / 4.0 }).collect();
+        self.lever_ang = level
+            .levers
+            .iter()
+            .map(|l| if l.on { 1.0 } else { -1.0 })
+            .collect();
+        self.mirror_ang = level
+            .mirrors
+            .iter()
+            .map(|m| {
+                if m.slant == Slant::Slash {
+                    -PI / 4.0
+                } else {
+                    PI / 4.0
+                }
+            })
+            .collect();
         self.fan_ang = vec![0.0; level.fans.len()];
         self.fan_spin = vec![0.0; level.fans.len()];
         self.ice_last = vec![0.0; level.ice.len()];
@@ -631,7 +876,12 @@ impl Renderer {
 
     // ---- glow sprites
 
-    fn glow_sprite(&mut self, g: &Canvas, res: &Res, color: Col) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap> {
+    fn glow_sprite(
+        &mut self,
+        g: &Canvas,
+        res: &Res,
+        color: Col,
+    ) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap> {
         let id = (color.r as i64, color.g as i64, color.b as i64);
         if let std::collections::hash_map::Entry::Vacant(slot) = self.glow_cache.entry(id) {
             let mut s = g.offscreen(64.0, 64.0)?;
@@ -661,7 +911,11 @@ impl Renderer {
     }
 
     pub fn begin_glow(&self, g: &mut Canvas) {
-        g.set_composite(if self.pal.dark { Composite::Lighter } else { Composite::SourceOver });
+        g.set_composite(if self.pal.dark {
+            Composite::Lighter
+        } else {
+            Composite::SourceOver
+        });
     }
 
     pub fn end_glow(&self, g: &mut Canvas) {
@@ -675,7 +929,15 @@ impl Renderer {
 
     // ---- static layer
 
-    fn bake_chunk(&self, g: &Canvas, res: &Res, level: &Stage, kb: f64, ix: i64, iy: i64) -> Option<Offscreen> {
+    fn bake_chunk(
+        &self,
+        g: &Canvas,
+        res: &Res,
+        level: &Stage,
+        kb: f64,
+        ix: i64,
+        iy: i64,
+    ) -> Option<Offscreen> {
         let px = CHUNK_PX as f64;
         let mut c = g.offscreen(px, px)?;
         let p = self.pal;
@@ -690,7 +952,11 @@ impl Renderer {
                 x1: ((ix + 1) as f64 * w / TILE).ceil() as i64 + 1,
                 y1: ((iy + 1) as f64 * w / TILE).ceil() as i64 + 1,
             };
-            if range.x1 > 0 && range.y1 > 0 && range.x0 < level.cols as i64 && range.y0 < level.rows as i64 {
+            if range.x1 > 0
+                && range.y1 > 0
+                && range.x0 < level.cols as i64
+                && range.y0 < level.rows as i64
+            {
                 c.save();
                 c.begin_path();
                 c.rect(0.0, 0.0, level.w, level.h);
@@ -704,7 +970,11 @@ impl Renderer {
     }
 
     fn draw_static(&mut self, g: &mut Canvas, level: &Stage, w: f64, h: f64) {
-        let key = format!("{}|{w}x{h}|{}", if self.pal.dark { "dark" } else { "light" }, g.generation);
+        let key = format!(
+            "{}|{w}x{h}|{}",
+            if self.pal.dark { "dark" } else { "light" },
+            g.generation
+        );
         if key != self.stat_key {
             self.chunks.clear();
             self.chunk_order.clear();
@@ -747,23 +1017,67 @@ impl Renderer {
     // ---- particles helpers
 
     #[allow(clippy::too_many_arguments)]
-    pub fn burst(&mut self, kind: u8, col: usize, x: f64, y: f64, n: i64, speed: f64, life: f64, size: f64, grav: f64, drag: f64, add: bool, spin: f64, up: f64) {
+    pub fn burst(
+        &mut self,
+        kind: u8,
+        col: usize,
+        x: f64,
+        y: f64,
+        n: i64,
+        speed: f64,
+        life: f64,
+        size: f64,
+        grav: f64,
+        drag: f64,
+        add: bool,
+        spin: f64,
+        up: f64,
+    ) {
         for _ in 0..n.max(0) {
             let a = rnd() * TAU;
             let v = speed * (0.35 + rnd() * 0.65);
             let sp = if spin != 0.0 { rand(-spin, spin) } else { 0.0 };
-            self.parts.spawn(kind, col, x, y, a.cos() * v, a.sin() * v - up, life * (0.6 + rnd() * 0.6), size * (0.7 + rnd() * 0.6), grav, drag, add, sp);
+            self.parts.spawn(
+                kind,
+                col,
+                x,
+                y,
+                a.cos() * v,
+                a.sin() * v - up,
+                life * (0.6 + rnd() * 0.6),
+                size * (0.7 + rnd() * 0.6),
+                grav,
+                drag,
+                add,
+                sp,
+            );
         }
     }
 
     /// burst with the TS's defaults after `size`: no gravity, drag 2, plain
     #[allow(clippy::too_many_arguments)]
-    pub fn burst_add(&mut self, kind: u8, col: usize, x: f64, y: f64, n: i64, speed: f64, life: f64, size: f64, grav: f64, drag: f64) {
-        self.burst(kind, col, x, y, n, speed, life, size, grav, drag, true, 0.0, 0.0);
+    pub fn burst_add(
+        &mut self,
+        kind: u8,
+        col: usize,
+        x: f64,
+        y: f64,
+        n: i64,
+        speed: f64,
+        life: f64,
+        size: f64,
+        grav: f64,
+        drag: f64,
+    ) {
+        self.burst(
+            kind, col, x, y, n, speed, life, size, grav, drag, true, 0.0, 0.0,
+        );
     }
 
     pub fn ring(&mut self, col: usize, x: f64, y: f64, life: f64, size: f64) {
-        self.burst(PK_RING, col, x, y, 1, 0.0, life, size, 0.0, 0.0, true, 0.0, 0.0);
+        self.burst(
+            PK_RING, col, x, y, 1, 0.0, life, size, 0.0, 0.0, true, 0.0, 0.0,
+        );
     }
 
     pub fn ch_col(&self, name: Option<&str>) -> usize {
@@ -786,24 +1100,91 @@ impl Renderer {
         match e.k {
             EventKind::Jump => {
                 for _ in 0..n(5.0) {
-                    self.parts.spawn(PK_DOT, C_DUST, fx + rand(-5.0, 5.0), fy - gv, rand(-30.0, 30.0), gv * rand(-25.0, -5.0), rand(0.25, 0.4), rand(1.2, 2.0), gv * 40.0, 4.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_DOT,
+                        C_DUST,
+                        fx + rand(-5.0, 5.0),
+                        fy - gv,
+                        rand(-30.0, 30.0),
+                        gv * rand(-25.0, -5.0),
+                        rand(0.25, 0.4),
+                        rand(1.2, 2.0),
+                        gv * 40.0,
+                        4.0,
+                        false,
+                        0.0,
+                    );
                 }
                 if pi == 0 {
-                    self.burst(PK_SPARK, C_FIRE2, fx, fy - gv * 4.0, n(4.0), 50.0, 0.35, 0.9, -60.0, 3.0, true, 0.0, 0.0);
+                    self.burst(
+                        PK_SPARK,
+                        C_FIRE2,
+                        fx,
+                        fy - gv * 4.0,
+                        n(4.0),
+                        50.0,
+                        0.35,
+                        0.9,
+                        -60.0,
+                        3.0,
+                        true,
+                        0.0,
+                        0.0,
+                    );
                 } else {
-                    self.burst(PK_FLAKE, C_FROST2, fx, fy - gv * 4.0, n(3.0), 40.0, 0.5, 2.0, 20.0, 3.0, true, 4.0, 0.0);
+                    self.burst(
+                        PK_FLAKE,
+                        C_FROST2,
+                        fx,
+                        fy - gv * 4.0,
+                        n(3.0),
+                        40.0,
+                        0.5,
+                        2.0,
+                        20.0,
+                        3.0,
+                        true,
+                        4.0,
+                        0.0,
+                    );
                 }
             }
             EventKind::Land => {
                 for k in 0..n(7.0) {
                     let s = if k % 2 != 0 { 1.0 } else { -1.0 };
-                    self.parts.spawn(PK_DOT, C_DUST, fx + s * rand(2.0, 6.0), fy - gv, s * rand(25.0, 60.0), gv * rand(-18.0, -4.0), rand(0.25, 0.45), rand(1.2, 2.2), gv * 60.0, 5.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_DOT,
+                        C_DUST,
+                        fx + s * rand(2.0, 6.0),
+                        fy - gv,
+                        s * rand(25.0, 60.0),
+                        gv * rand(-18.0, -4.0),
+                        rand(0.25, 0.45),
+                        rand(1.2, 2.2),
+                        gv * 60.0,
+                        5.0,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Airjump => {
                 self.ring(C_ARROW, fx, fy, 0.4, 14.0);
                 for _ in 0..n(5.0) {
-                    self.parts.spawn(PK_CHEV, C_ARROW, fx + rand(-7.0, 7.0), fy + gv * rand(0.0, 4.0), rand(-12.0, 12.0), gv * rand(50.0, 110.0), rand(0.3, 0.5), rand(2.0, 3.0), 0.0, 2.5, true, 0.0);
+                    self.parts.spawn(
+                        PK_CHEV,
+                        C_ARROW,
+                        fx + rand(-7.0, 7.0),
+                        fy + gv * rand(0.0, 4.0),
+                        rand(-12.0, 12.0),
+                        gv * rand(50.0, 110.0),
+                        rand(0.3, 0.5),
+                        rand(2.0, 3.0),
+                        0.0,
+                        2.5,
+                        true,
+                        0.0,
+                    );
                 }
                 self.burst_add(PK_STAR, C_WHITE, fx, fy, n(4.0), 60.0, 0.4, 2.6, 0.0, 3.0);
             }
@@ -834,15 +1215,52 @@ impl Renderer {
                     );
                 }
                 for _ in 0..n(6.0) {
-                    self.parts.spawn(PK_DOT, C_TRAMP, cx + rand(-8.0, 8.0), by, rand(-70.0, 70.0), dir * rand(20.0, 90.0), rand(0.25, 0.45), rand(1.0, 1.8), -dir * 200.0, 2.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_DOT,
+                        C_TRAMP,
+                        cx + rand(-8.0, 8.0),
+                        by,
+                        rand(-70.0, 70.0),
+                        dir * rand(20.0, 90.0),
+                        rand(0.25, 0.45),
+                        rand(1.0, 1.8),
+                        -dir * 200.0,
+                        2.0,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Arrow => {
                 let a = level.arrows.get(i).map_or((ex, ey), |a| (a.x, a.y));
                 self.ring(C_ARROW, a.0, a.1, 0.45, 18.0);
-                self.burst_add(PK_STAR, C_ARROW, a.0, a.1, n(8.0), 100.0, 0.5, 3.2, 0.0, 3.0);
+                self.burst_add(
+                    PK_STAR,
+                    C_ARROW,
+                    a.0,
+                    a.1,
+                    n(8.0),
+                    100.0,
+                    0.5,
+                    3.2,
+                    0.0,
+                    3.0,
+                );
                 for k in 0..n(6.0) {
-                    self.parts.spawn(PK_CHEV, if k % 2 != 0 { C_WHITE } else { C_ARROW }, a.0 + rand(-8.0, 8.0), a.1 + rand(-4.0, 6.0), rand(-20.0, 20.0), -rand(60.0, 130.0), rand(0.35, 0.6), rand(2.0, 3.2), 0.0, 2.0, true, 0.0);
+                    self.parts.spawn(
+                        PK_CHEV,
+                        if k % 2 != 0 { C_WHITE } else { C_ARROW },
+                        a.0 + rand(-8.0, 8.0),
+                        a.1 + rand(-4.0, 6.0),
+                        rand(-20.0, 20.0),
+                        -rand(60.0, 130.0),
+                        rand(0.35, 0.6),
+                        rand(2.0, 3.2),
+                        0.0,
+                        2.0,
+                        true,
+                        0.0,
+                    );
                 }
             }
             EventKind::Arrowback => {
@@ -862,7 +1280,20 @@ impl Renderer {
                 let (hw, hh) = r.map_or((TILE / 2.0, TILE / 2.0), |r| (r.w / 2.0, r.h / 2.0));
                 let area = hw * hh * 4.0 / (TILE * TILE);
                 for k in 0..n((6.0 + area * 4.0).min(26.0)) {
-                    self.parts.spawn(PK_CHUNK, if k % 3 != 0 { C_SMOKE } else { C_GOLD }, cx + rand(-hw, hw), cy + rand(-hh, hh), rand(-90.0, 90.0), rand(-150.0, -20.0), rand(0.5, 0.9), rand(2.0, 3.6), 520.0, 1.0, false, 10.0);
+                    self.parts.spawn(
+                        PK_CHUNK,
+                        if k % 3 != 0 { C_SMOKE } else { C_GOLD },
+                        cx + rand(-hw, hw),
+                        cy + rand(-hh, hh),
+                        rand(-90.0, 90.0),
+                        rand(-150.0, -20.0),
+                        rand(0.5, 0.9),
+                        rand(2.0, 3.6),
+                        520.0,
+                        1.0,
+                        false,
+                        10.0,
+                    );
                 }
                 self.ring(C_GOLD, cx, cy, 0.5, 14.0 + hw.max(hh));
                 self.burst_add(PK_STAR, C_GOLD, cx, cy, n(8.0), 90.0, 0.6, 3.2, 0.0, 3.0);
@@ -870,7 +1301,21 @@ impl Renderer {
             EventKind::Load => {
                 let c = level.cannons.get(i).map_or((ex, ey), |c| (c.x, c.y));
                 self.ring(fire_c(pi), c.0, c.1, 0.3, 13.0);
-                self.burst(PK_DOT, C_SMOKE, c.0, c.1, n(5.0), 40.0, 0.35, 1.6, 0.0, 4.0, false, 0.0, 0.0);
+                self.burst(
+                    PK_DOT,
+                    C_SMOKE,
+                    c.0,
+                    c.1,
+                    n(5.0),
+                    40.0,
+                    0.35,
+                    1.6,
+                    0.0,
+                    4.0,
+                    false,
+                    0.0,
+                    0.0,
+                );
             }
             EventKind::Fire => {
                 let c = level.cannons.get(i);
@@ -906,7 +1351,20 @@ impl Renderer {
                     );
                 }
                 for _ in 0..n(9.0) {
-                    self.parts.spawn(PK_STEAM, C_SMOKE, mx + rand(-3.0, 3.0), my + rand(-3.0, 3.0), ux * rand(20.0, 80.0) + rand(-20.0, 20.0), uy * rand(20.0, 80.0) + rand(-20.0, 20.0), rand(0.5, 0.9), rand(3.0, 6.0), -14.0, 2.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_STEAM,
+                        C_SMOKE,
+                        mx + rand(-3.0, 3.0),
+                        my + rand(-3.0, 3.0),
+                        ux * rand(20.0, 80.0) + rand(-20.0, 20.0),
+                        uy * rand(20.0, 80.0) + rand(-20.0, 20.0),
+                        rand(0.5, 0.9),
+                        rand(3.0, 6.0),
+                        -14.0,
+                        2.0,
+                        false,
+                        0.0,
+                    );
                 }
                 self.ring(C_WHITE, mx, my, 0.3, 16.0);
             }
@@ -916,7 +1374,20 @@ impl Renderer {
                 self.ring(C_WHITE, cx, cy, 0.3, 12.0);
                 let g = e.grav.unwrap_or(1) as f64;
                 for k in 0..n(12.0) {
-                    self.parts.spawn(PK_CHEV, if k % 3 != 0 { C_GRAV } else { C_WHITE }, cx + rand(-11.0, 11.0), cy + rand(-12.0, 12.0), 0.0, g * rand(70.0, 170.0), rand(0.4, 0.7), rand(2.2, 3.4), 0.0, 1.5, true, 0.0);
+                    self.parts.spawn(
+                        PK_CHEV,
+                        if k % 3 != 0 { C_GRAV } else { C_WHITE },
+                        cx + rand(-11.0, 11.0),
+                        cy + rand(-12.0, 12.0),
+                        0.0,
+                        g * rand(70.0, 170.0),
+                        rand(0.4, 0.7),
+                        rand(2.2, 3.4),
+                        0.0,
+                        1.5,
+                        true,
+                        0.0,
+                    );
                 }
             }
             EventKind::Gswitch => {
@@ -936,7 +1407,20 @@ impl Renderer {
                 self.burst_add(PK_STAR, C_STAR, cx, cy, n(10.0), 110.0, 0.7, 3.4, 0.0, 2.5);
                 let cols = [C_FIRE, C_FIRE2, C_FROST, C_FROST2, C_STAR];
                 for k in 0..n(16.0) {
-                    self.parts.spawn(PK_CONFETTI, cols[k as usize % cols.len()], cx + rand(-4.0, 4.0), cy, rand(-80.0, 80.0), rand(-220.0, -110.0), rand(0.9, 1.4), rand(2.4, 3.6), 380.0, 1.6, false, 9.0);
+                    self.parts.spawn(
+                        PK_CONFETTI,
+                        cols[k as usize % cols.len()],
+                        cx + rand(-4.0, 4.0),
+                        cy,
+                        rand(-80.0, 80.0),
+                        rand(-220.0, -110.0),
+                        rand(0.9, 1.4),
+                        rand(2.4, 3.6),
+                        380.0,
+                        1.6,
+                        false,
+                        9.0,
+                    );
                 }
             }
             EventKind::Light => {
@@ -957,15 +1441,54 @@ impl Renderer {
             }
             EventKind::Shake => {
                 for _ in 0..n(4.0) {
-                    self.parts.spawn(PK_DOT, C_SAND, ex + rand(-9.0, 9.0), ey + rand(-2.0, 9.0), rand(-14.0, 14.0), rand(5.0, 30.0), rand(0.3, 0.5), rand(1.0, 1.7), 260.0, 1.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_DOT,
+                        C_SAND,
+                        ex + rand(-9.0, 9.0),
+                        ey + rand(-2.0, 9.0),
+                        rand(-14.0, 14.0),
+                        rand(5.0, 30.0),
+                        rand(0.3, 0.5),
+                        rand(1.0, 1.7),
+                        260.0,
+                        1.0,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Break => {
                 for _ in 0..n(7.0) {
-                    self.parts.spawn(PK_CHUNK, C_SAND, ex + rand(-8.0, 8.0), ey + rand(-8.0, 8.0), rand(-50.0, 50.0), rand(-60.0, 30.0), rand(0.55, 0.95), rand(2.6, 5.0), 620.0, 0.6, false, 9.0);
+                    self.parts.spawn(
+                        PK_CHUNK,
+                        C_SAND,
+                        ex + rand(-8.0, 8.0),
+                        ey + rand(-8.0, 8.0),
+                        rand(-50.0, 50.0),
+                        rand(-60.0, 30.0),
+                        rand(0.55, 0.95),
+                        rand(2.6, 5.0),
+                        620.0,
+                        0.6,
+                        false,
+                        9.0,
+                    );
                 }
                 for _ in 0..n(5.0) {
-                    self.parts.spawn(PK_STEAM, C_DUST, ex + rand(-8.0, 8.0), ey + rand(-4.0, 6.0), rand(-20.0, 20.0), rand(-16.0, 6.0), rand(0.4, 0.7), rand(2.5, 4.5), 0.0, 2.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_STEAM,
+                        C_DUST,
+                        ex + rand(-8.0, 8.0),
+                        ey + rand(-4.0, 6.0),
+                        rand(-20.0, 20.0),
+                        rand(-16.0, 6.0),
+                        rand(0.4, 0.7),
+                        rand(2.5, 4.5),
+                        0.0,
+                        2.0,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Mend => {
@@ -976,7 +1499,18 @@ impl Renderer {
             }
             EventKind::Clear => {
                 for d in level.doors {
-                    self.burst_add(PK_STAR, C_STAR, d.x + d.w / 2.0, d.y + d.h / 2.0, n(8.0), 110.0, 0.7, 3.2, 0.0, 2.0);
+                    self.burst_add(
+                        PK_STAR,
+                        C_STAR,
+                        d.x + d.w / 2.0,
+                        d.y + d.h / 2.0,
+                        n(8.0),
+                        110.0,
+                        0.7,
+                        3.2,
+                        0.0,
+                        2.0,
+                    );
                     self.ring(C_STAR, d.x + d.w / 2.0, d.y + d.h / 2.0, 0.6, 28.0);
                 }
             }
@@ -988,7 +1522,18 @@ impl Renderer {
                     let q = cur.players[k];
                     let (cx, cy) = (q.x + pw / 2.0, q.y + ph / 2.0);
                     self.ring(fire_c(k), cx, cy, 0.5, 20.0);
-                    self.burst_add(PK_STAR, fire2_c(k), cx, cy, n(6.0), 70.0, 0.5, 2.8, 0.0, 3.0);
+                    self.burst_add(
+                        PK_STAR,
+                        fire2_c(k),
+                        cx,
+                        cy,
+                        n(6.0),
+                        70.0,
+                        0.5,
+                        2.8,
+                        0.0,
+                        3.0,
+                    );
                 }
                 if let Some(cp) = e.cp
                     && cp >= 0
@@ -1005,18 +1550,96 @@ impl Renderer {
                 match e.cause {
                     Some(DeathCause::Water) => {
                         for _ in 0..n(16.0) {
-                            self.parts.spawn(PK_STEAM, C_STEAM, cx + rand(-6.0, 6.0), cy + rand(-4.0, 6.0), rand(-20.0, 20.0), rand(-60.0, -25.0), rand(0.6, 1.1), rand(3.0, 6.0), -10.0, 1.5, false, 0.0);
+                            self.parts.spawn(
+                                PK_STEAM,
+                                C_STEAM,
+                                cx + rand(-6.0, 6.0),
+                                cy + rand(-4.0, 6.0),
+                                rand(-20.0, 20.0),
+                                rand(-60.0, -25.0),
+                                rand(0.6, 1.1),
+                                rand(3.0, 6.0),
+                                -10.0,
+                                1.5,
+                                false,
+                                0.0,
+                            );
                         }
-                        self.burst_add(PK_SPARK, C_FIRE2, cx, cy, n(12.0), 90.0, 0.5, 1.0, 120.0, 2.0);
-                        self.burst(PK_RING, C_STEAM, cx, cy + 4.0, 1, 0.0, 0.5, 14.0, 0.0, 2.0, false, 0.0, 0.0);
+                        self.burst_add(
+                            PK_SPARK,
+                            C_FIRE2,
+                            cx,
+                            cy,
+                            n(12.0),
+                            90.0,
+                            0.5,
+                            1.0,
+                            120.0,
+                            2.0,
+                        );
+                        self.burst(
+                            PK_RING,
+                            C_STEAM,
+                            cx,
+                            cy + 4.0,
+                            1,
+                            0.0,
+                            0.5,
+                            14.0,
+                            0.0,
+                            2.0,
+                            false,
+                            0.0,
+                            0.0,
+                        );
                     }
                     Some(DeathCause::Lava) => {
                         for k in 0..n(18.0) {
-                            self.parts.spawn(PK_DOT, if k % 3 != 0 { C_FROST } else { C_FROST2 }, cx + rand(-6.0, 6.0), cy + rand(-8.0, 4.0), rand(-70.0, 70.0), rand(-140.0, -40.0), rand(0.5, 0.9), rand(1.2, 2.2), 520.0, 1.0, false, 0.0);
+                            self.parts.spawn(
+                                PK_DOT,
+                                if k % 3 != 0 { C_FROST } else { C_FROST2 },
+                                cx + rand(-6.0, 6.0),
+                                cy + rand(-8.0, 4.0),
+                                rand(-70.0, 70.0),
+                                rand(-140.0, -40.0),
+                                rand(0.5, 0.9),
+                                rand(1.2, 2.2),
+                                520.0,
+                                1.0,
+                                false,
+                                0.0,
+                            );
                         }
-                        self.burst(PK_SHARD, C_ICE, cx, cy, n(6.0), 90.0, 0.6, 3.0, 300.0, 1.0, false, 12.0, 50.0);
+                        self.burst(
+                            PK_SHARD,
+                            C_ICE,
+                            cx,
+                            cy,
+                            n(6.0),
+                            90.0,
+                            0.6,
+                            3.0,
+                            300.0,
+                            1.0,
+                            false,
+                            12.0,
+                            50.0,
+                        );
                         for _ in 0..n(8.0) {
-                            self.parts.spawn(PK_STEAM, C_STEAM, cx + rand(-5.0, 5.0), cy, rand(-15.0, 15.0), rand(-50.0, -20.0), rand(0.5, 0.9), rand(3.0, 5.0), -10.0, 1.5, false, 0.0);
+                            self.parts.spawn(
+                                PK_STEAM,
+                                C_STEAM,
+                                cx + rand(-5.0, 5.0),
+                                cy,
+                                rand(-15.0, 15.0),
+                                rand(-50.0, -20.0),
+                                rand(0.5, 0.9),
+                                rand(3.0, 5.0),
+                                -10.0,
+                                1.5,
+                                false,
+                                0.0,
+                            );
                         }
                     }
                     Some(DeathCause::Crush) => {
@@ -1039,45 +1662,128 @@ impl Renderer {
                             );
                         }
                         for _ in 0..n(8.0) {
-                            self.parts.spawn(PK_STEAM, C_DUST, cx + rand(-10.0, 10.0), cy + rand(-10.0, 10.0), rand(-30.0, 30.0), rand(-20.0, 10.0), rand(0.4, 0.7), rand(3.0, 5.0), 0.0, 2.0, false, 0.0);
+                            self.parts.spawn(
+                                PK_STEAM,
+                                C_DUST,
+                                cx + rand(-10.0, 10.0),
+                                cy + rand(-10.0, 10.0),
+                                rand(-30.0, 30.0),
+                                rand(-20.0, 10.0),
+                                rand(0.4, 0.7),
+                                rand(3.0, 5.0),
+                                0.0,
+                                2.0,
+                                false,
+                                0.0,
+                            );
                         }
                         self.ring(C_WHITE, cx, cy, 0.3, 18.0);
                         self.burst_add(PK_STAR, C_WHITE, cx, cy, n(4.0), 60.0, 0.35, 3.0, 0.0, 3.0);
                     }
                     _ => {
                         for k in 0..n(20.0) {
-                            self.parts.spawn(PK_DOT, if k % 4 != 0 { C_GOO } else { fire_c(pi) }, cx + rand(-5.0, 5.0), cy + 4.0, rand(-80.0, 80.0), rand(-170.0, -60.0), rand(0.5, 0.9), rand(1.3, 2.5), 560.0, 0.8, false, 0.0);
+                            self.parts.spawn(
+                                PK_DOT,
+                                if k % 4 != 0 { C_GOO } else { fire_c(pi) },
+                                cx + rand(-5.0, 5.0),
+                                cy + 4.0,
+                                rand(-80.0, 80.0),
+                                rand(-170.0, -60.0),
+                                rand(0.5, 0.9),
+                                rand(1.3, 2.5),
+                                560.0,
+                                0.8,
+                                false,
+                                0.0,
+                            );
                         }
-                        self.burst(PK_RING, C_GOO, cx, cy + 6.0, 1, 0.0, 0.45, 16.0, 0.0, 2.0, false, 0.0, 0.0);
+                        self.burst(
+                            PK_RING,
+                            C_GOO,
+                            cx,
+                            cy + 6.0,
+                            1,
+                            0.0,
+                            0.45,
+                            16.0,
+                            0.0,
+                            2.0,
+                            false,
+                            0.0,
+                            0.0,
+                        );
                     }
                 }
             }
             EventKind::Door => {
                 if let Some(d) = level.doors.get(pi).copied() {
                     self.ring(fire_c(pi), d.x + d.w / 2.0, d.y + d.h / 2.0, 0.6, 22.0);
-                    self.burst_add(PK_STAR, fire2_c(pi), d.x + d.w / 2.0, d.y + d.h / 2.0, n(6.0), 50.0, 0.6, 3.0, 0.0, 2.0);
+                    self.burst_add(
+                        PK_STAR,
+                        fire2_c(pi),
+                        d.x + d.w / 2.0,
+                        d.y + d.h / 2.0,
+                        n(6.0),
+                        50.0,
+                        0.6,
+                        3.0,
+                        0.0,
+                        2.0,
+                    );
                 }
             }
             EventKind::Portal => {
                 let col = self.portal_near(level, ex, ey);
                 self.ring(col, ex, ey, 0.45, 16.0);
                 self.ring(col, pl.x + pw / 2.0, pl.y + ph / 2.0, 0.5, 18.0);
-                self.burst_add(PK_STAR, col, pl.x + pw / 2.0, pl.y + ph / 2.0, n(8.0), 70.0, 0.5, 2.5, 0.0, 3.0);
+                self.burst_add(
+                    PK_STAR,
+                    col,
+                    pl.x + pw / 2.0,
+                    pl.y + ph / 2.0,
+                    n(8.0),
+                    70.0,
+                    0.5,
+                    2.5,
+                    0.0,
+                    3.0,
+                );
             }
             EventKind::Push => {
                 if rnd() < 0.5 {
-                    self.parts.spawn(PK_DOT, C_DUST, ex + rand(-4.0, 4.0), ey, rand(-10.0, 10.0), rand(-15.0, -5.0), 0.35, 1.4, 30.0, 4.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_DOT,
+                        C_DUST,
+                        ex + rand(-4.0, 4.0),
+                        ey,
+                        rand(-10.0, 10.0),
+                        rand(-15.0, -5.0),
+                        0.35,
+                        1.4,
+                        30.0,
+                        4.0,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Gem => {
                 let fire = e.el == Some(Element::Fire);
-                let (c, c2) = if fire { (C_FIRE, C_FIRE2) } else { (C_FROST, C_FROST2) };
+                let (c, c2) = if fire {
+                    (C_FIRE, C_FIRE2)
+                } else {
+                    (C_FROST, C_FROST2)
+                };
                 self.ring(c2, ex, ey, 0.45, 16.0);
                 self.burst_add(PK_STAR, c2, ex, ey, n(10.0), 110.0, 0.6, 3.5, 0.0, 3.0);
                 self.burst_add(PK_SPARK, c, ex, ey, n(14.0), 140.0, 0.5, 1.0, 160.0, 2.0);
             }
             EventKind::Lever | EventKind::Mirror => {
-                let col = if e.k == EventKind::Lever { self.ch_col(level.levers.get(i).map(|l| l.ch.as_str())) } else { C_WHITE };
+                let col = if e.k == EventKind::Lever {
+                    self.ch_col(level.levers.get(i).map(|l| l.ch.as_str()))
+                } else {
+                    C_WHITE
+                };
                 self.ring(col, ex, ey, 0.35, 10.0);
                 self.burst_add(PK_SPARK, col, ex, ey, n(5.0), 60.0, 0.3, 0.9, 100.0, 2.0);
             }
@@ -1097,25 +1803,101 @@ impl Renderer {
                 let (cx, cy) = r.map_or((ex, ey), |r| (r.x + r.w / 2.0, r.y + r.h / 2.0));
                 let (hw, hh) = r.map_or((TILE / 2.0, TILE / 2.0), |r| (r.w / 2.0, r.h / 2.0));
                 let area = hw * hh * 4.0 / (TILE * TILE);
-                self.burst(PK_SHARD, C_ICE, cx, cy, n((8.0 + area * 4.0).min(30.0)), 130.0, 0.8, 3.5, 380.0, 1.0, false, 14.0, 60.0);
+                self.burst(
+                    PK_SHARD,
+                    C_ICE,
+                    cx,
+                    cy,
+                    n((8.0 + area * 4.0).min(30.0)),
+                    130.0,
+                    0.8,
+                    3.5,
+                    380.0,
+                    1.0,
+                    false,
+                    14.0,
+                    60.0,
+                );
                 for _ in 0..n((6.0 + area * 2.0).min(16.0)) {
-                    self.parts.spawn(PK_STEAM, C_STEAM, cx + rand(-hw, hw), cy + rand(-hh, hh), rand(-10.0, 10.0), rand(-45.0, -20.0), rand(0.6, 1.0), rand(3.0, 6.0), -8.0, 1.5, false, 0.0);
+                    self.parts.spawn(
+                        PK_STEAM,
+                        C_STEAM,
+                        cx + rand(-hw, hw),
+                        cy + rand(-hh, hh),
+                        rand(-10.0, 10.0),
+                        rand(-45.0, -20.0),
+                        rand(0.6, 1.0),
+                        rand(3.0, 6.0),
+                        -8.0,
+                        1.5,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Freeze => {
-                self.burst(PK_FLAKE, C_FROST2, ex, ey, n(5.0), 40.0, 0.6, 2.2, 0.0, 3.0, true, 3.0, 0.0);
-                self.burst_add(PK_STAR, C_WHITE, ex, ey - 4.0, n(2.0), 20.0, 0.5, 2.5, 0.0, 3.0);
+                self.burst(
+                    PK_FLAKE,
+                    C_FROST2,
+                    ex,
+                    ey,
+                    n(5.0),
+                    40.0,
+                    0.6,
+                    2.2,
+                    0.0,
+                    3.0,
+                    true,
+                    3.0,
+                    0.0,
+                );
+                self.burst_add(
+                    PK_STAR,
+                    C_WHITE,
+                    ex,
+                    ey - 4.0,
+                    n(2.0),
+                    20.0,
+                    0.5,
+                    2.5,
+                    0.0,
+                    3.0,
+                );
             }
             EventKind::Thaw => {
                 for _ in 0..n(4.0) {
-                    self.parts.spawn(PK_DOT, C_WATER, ex + rand(-8.0, 8.0), ey - 4.0, rand(-10.0, 10.0), rand(-50.0, -20.0), 0.4, 1.2, 300.0, 1.0, false, 0.0);
+                    self.parts.spawn(
+                        PK_DOT,
+                        C_WATER,
+                        ex + rand(-8.0, 8.0),
+                        ey - 4.0,
+                        rand(-10.0, 10.0),
+                        rand(-50.0, -20.0),
+                        0.4,
+                        1.2,
+                        300.0,
+                        1.0,
+                        false,
+                        0.0,
+                    );
                 }
             }
             EventKind::Win => {
                 self.win_at = t;
                 self.confetti(n(80.0));
                 for d in level.doors {
-                    self.burst_add(PK_STAR, C_STAR, d.x + d.w / 2.0, d.y + d.h / 2.0, n(10.0), 120.0, 0.8, 3.5, 0.0, 2.0);
+                    self.burst_add(
+                        PK_STAR,
+                        C_STAR,
+                        d.x + d.w / 2.0,
+                        d.y + d.h / 2.0,
+                        n(10.0),
+                        120.0,
+                        0.8,
+                        3.5,
+                        0.0,
+                        2.0,
+                    );
                 }
             }
             _ => {}
@@ -1141,7 +1923,11 @@ impl Renderer {
         let u = v.w / 640.0;
         for i in 0..n.max(0) {
             let from_left = i % 2 == 0;
-            let x = if from_left { v.x + rand(-10.0, 60.0) * u } else { v.x + v.w - rand(-10.0, 60.0) * u };
+            let x = if from_left {
+                v.x + rand(-10.0, 60.0) * u
+            } else {
+                v.x + v.w - rand(-10.0, 60.0) * u
+            };
             self.parts.spawn(
                 PK_CONFETTI,
                 cols[i as usize % cols.len()],
@@ -1180,7 +1966,11 @@ impl Renderer {
         }
         let now_ms = input.now_ms;
         let opts = input.opts;
-        let dt = if self.last_ms != 0.0 { clamp((now_ms - self.last_ms) / 1000.0, 0.0, 0.05) } else { 1.0 / 60.0 };
+        let dt = if self.last_ms != 0.0 {
+            clamp((now_ms - self.last_ms) / 1000.0, 0.0, 0.05)
+        } else {
+            1.0 / 60.0
+        };
         self.last_ms = now_ms;
         let t = now_ms / 1000.0;
         let key = format!(
@@ -1229,7 +2019,13 @@ impl Renderer {
             self.pos[i] = (self.px[i], self.py[i]);
         }
 
-        let target = camera_at(level.w, level.h, (self.px[0], self.py[0]), (self.px[1], self.py[1]), w / h);
+        let target = camera_at(
+            level.w,
+            level.h,
+            (self.px[0], self.py[0]),
+            (self.px[1], self.py[1]),
+            w / h,
+        );
         let eased = ease_camera(self.cam.as_ref(), &target, dt * 60.0);
         self.cam = Some(eased);
 
@@ -1243,12 +2039,26 @@ impl Renderer {
 
         let v = view_for(&eased, w, sx, sy);
         self.view = v;
-        self.vr = Camera { x: -v.ox / v.k, y: -v.oy / v.k, w: w / v.k, h: h / v.k, zoom: eased.zoom };
+        self.vr = Camera {
+            x: -v.ox / v.k,
+            y: -v.oy / v.k,
+            w: w / v.k,
+            h: h / v.k,
+            zoom: eased.zoom,
+        };
         self.far = eased.zoom < 0.55;
-        self.beams = trace_beams(level, cur).iter().map(|b| (b.x1, b.y1, b.x2, b.y2)).collect();
+        self.beams = trace_beams(level, cur)
+            .iter()
+            .map(|b| (b.x1, b.y1, b.x2, b.y2))
+            .collect();
 
         let target_dark = if cur.lit { 0.0 } else { 1.0 };
-        self.dark_a = approach(self.dark_a, target_dark, if cur.lit { 16.0 } else { 9.0 }, dt);
+        self.dark_a = approach(
+            self.dark_a,
+            target_dark,
+            if cur.lit { 16.0 } else { 9.0 },
+            dt,
+        );
         if (self.dark_a - target_dark).abs() < 0.004 {
             self.dark_a = target_dark;
         }
@@ -1298,7 +2108,16 @@ impl Renderer {
         self.parts.draw(g, &self.colors, Composite::SourceOver, 0);
         self.draw_darkness(g, level, cur, t, w, h, opts);
         g.set_transform(v.k, 0.0, 0.0, v.k, v.ox, v.oy);
-        self.parts.draw(g, &self.colors, if self.pal.dark { Composite::Lighter } else { Composite::SourceOver }, 1);
+        self.parts.draw(
+            g,
+            &self.colors,
+            if self.pal.dark {
+                Composite::Lighter
+            } else {
+                Composite::SourceOver
+            },
+            1,
+        );
 
         if cur.phase == Phase::Won
             && self.win_at >= 0.0
@@ -1326,7 +2145,12 @@ impl Renderer {
             }
         }
         if self.flash > 0.01 {
-            g.fill_style(Col::rgba(255.0, 244.0, 214.0, (0.3 * self.flash * self.flash * 1000.0).round() / 1000.0));
+            g.fill_style(Col::rgba(
+                255.0,
+                244.0,
+                214.0,
+                (0.3 * self.flash * self.flash * 1000.0).round() / 1000.0,
+            ));
             g.fill_rect(0.0, 0.0, w, h);
         }
         self.draw_lamp_clock(g, cur, t, w, h);
@@ -1337,14 +2161,21 @@ impl Renderer {
 
     // ---- the dark
 
-    fn hole_sprite(&mut self, g: &Canvas, res: &Res) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap> {
+    fn hole_sprite(
+        &mut self,
+        g: &Canvas,
+        res: &Res,
+    ) -> Option<windows::Win32::Graphics::Direct2D::ID2D1Bitmap> {
         if self.hole.is_none() {
             let mut s = g.offscreen(128.0, 128.0)?;
             s.draw(res, |s| {
                 let mut gr = Gradient::radial(64.0, 64.0, 0.0, 64.0, 64.0, 64.0);
                 gr.stop(0.0, Col::rgba(0.0, 0.0, 0.0, 1.0));
                 gr.stop(HOLE_CORE, Col::rgba(0.0, 0.0, 0.0, 1.0));
-                gr.stop(HOLE_CORE + (1.0 - HOLE_CORE) * 0.5, Col::rgba(0.0, 0.0, 0.0, 0.42));
+                gr.stop(
+                    HOLE_CORE + (1.0 - HOLE_CORE) * 0.5,
+                    Col::rgba(0.0, 0.0, 0.0, 0.42),
+                );
                 gr.stop(1.0, Col::rgba(0.0, 0.0, 0.0, 0.0));
                 s.fill_style(gr);
                 s.fill_rect(0.0, 0.0, 128.0, 128.0);
@@ -1355,12 +2186,29 @@ impl Renderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_darkness(&mut self, g: &mut Canvas, level: &Stage, cur: &GameState, t: f64, w: f64, h: f64, opts: DrawOpts) {
+    fn draw_darkness(
+        &mut self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        t: f64,
+        w: f64,
+        h: f64,
+        opts: DrawOpts,
+    ) {
         let mut lvl = self.dark_a;
         if cur.lit_t > 0 && cur.lit_t < 90 && !opts.reduce_motion {
             let near = 1.0 - cur.lit_t as f64 / 90.0;
-            let blink = if (t * (14.0 + near * 22.0)).sin() > 0.35 { 0.1 + 0.3 * near } else { 0.0 };
-            lvl = if cur.lit { lvl.max(blink) } else { lvl.min(1.0 - blink) };
+            let blink = if (t * (14.0 + near * 22.0)).sin() > 0.35 {
+                0.1 + 0.3 * near
+            } else {
+                0.0
+            };
+            lvl = if cur.lit {
+                lvl.max(blink)
+            } else {
+                lvl.min(1.0 - blink)
+            };
         }
         if lvl < 0.004 {
             return;
@@ -1399,13 +2247,24 @@ impl Renderer {
             for hl in &holes {
                 let mut r = hl.r;
                 if let Some(hp) = hl.p {
-                    r *= boost * if hp == 0 && !opts.reduce_motion { 1.0 + 0.025 * (t * 9.0).sin() + 0.012 * (t * 23.7).sin() } else { 1.0 };
+                    r *= boost
+                        * if hp == 0 && !opts.reduce_motion {
+                            1.0 + 0.025 * (t * 9.0).sin() + 0.012 * (t * 23.7).sin()
+                        } else {
+                            1.0
+                        };
                 }
                 if !visible(hl.x - r, hl.y - r, 2.0 * r, 2.0 * r) {
                     continue;
                 }
                 m.set_alpha(hl.a);
-                m.draw_image(sprite.as_ref(), (hl.x - r) * k + ox, (hl.y - r) * k + oy, 2.0 * r * k, 2.0 * r * k);
+                m.draw_image(
+                    sprite.as_ref(),
+                    (hl.x - r) * k + ox,
+                    (hl.y - r) * k + oy,
+                    2.0 * r * k,
+                    2.0 * r * k,
+                );
             }
             if !beams.is_empty() {
                 m.set_transform(k, 0.0, 0.0, k, ox, oy);
@@ -1413,7 +2272,11 @@ impl Renderer {
                 m.set_line_cap(Cap::Round);
                 for pass in 0..2 {
                     m.set_alpha(if pass != 0 { 0.6 } else { 0.3 });
-                    m.set_line_width(if pass != 0 { GLOW_SMALL * 0.6 } else { GLOW_SMALL * 1.5 });
+                    m.set_line_width(if pass != 0 {
+                        GLOW_SMALL * 0.6
+                    } else {
+                        GLOW_SMALL * 1.5
+                    });
                     m.begin_path();
                     for b in &beams {
                         m.move_to(b.0, b.1);
@@ -1438,8 +2301,19 @@ impl Renderer {
             if !self.vis(hl.x - r, hl.y - r, 2.0 * r, 2.0 * r, 0.0) {
                 continue;
             }
-            let c = css1(if hp == 0 { self.pal.fire } else { self.pal.frost });
-            self.glow(g, hl.x, hl.y, r * 1.05, c, (if hp == 0 { 0.3 } else { 0.26 }) * lvl);
+            let c = css1(if hp == 0 {
+                self.pal.fire
+            } else {
+                self.pal.frost
+            });
+            self.glow(
+                g,
+                hl.x,
+                hl.y,
+                r * 1.05,
+                c,
+                (if hp == 0 { 0.3 } else { 0.26 }) * lvl,
+            );
         }
         self.end_glow(g);
     }
@@ -1461,7 +2335,14 @@ impl Renderer {
         rr(g, x, y - 1.5 * u, bw, 3.0 * u, 1.5 * u);
         g.fill();
         g.fill_style(css1(if low { WHITE } else { col }));
-        rr(g, x, y - 1.5 * u, (3.0 * u).max(bw * frac), 3.0 * u, 1.5 * u);
+        rr(
+            g,
+            x,
+            y - 1.5 * u,
+            (3.0 * u).max(bw * frac),
+            3.0 * u,
+            1.5 * u,
+        );
         g.fill();
         g.begin_path();
         g.arc(x - 4.5 * u, y, 2.4 * u, 0.0, TAU, false);
@@ -1475,10 +2356,24 @@ impl Renderer {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn draw_wipe(&self, g: &mut Canvas, level: &Stage, cur: &GameState, a: f64, t: f64, w: f64, h: f64, opts: DrawOpts) {
+    fn draw_wipe(
+        &self,
+        g: &mut Canvas,
+        level: &Stage,
+        cur: &GameState,
+        a: f64,
+        t: f64,
+        w: f64,
+        h: f64,
+        opts: DrawOpts,
+    ) {
         let (mut f, mut wx, mut wy) = (0.0, 0.0, 0.0);
         if cur.phase == Phase::Clear {
-            f = clamp((cur.phase_t as f64 + a - 26.0) / (STAGE_TICKS as f64 - 32.0), 0.0, 1.0);
+            f = clamp(
+                (cur.phase_t as f64 + a - 26.0) / (STAGE_TICKS as f64 - 32.0),
+                0.0,
+                1.0,
+            );
             wx = (level.doors[0].x + level.doors[1].x + TILE) / 2.0;
             wy = (level.doors[0].y + level.doors[1].y) / 2.0 + TILE;
         } else if t - self.iris_at < self.iris_dur && t >= self.iris_at {
@@ -1492,7 +2387,11 @@ impl Renderer {
         let v = self.view;
         let (cx, cy) = (wx * v.k + v.ox, wy * v.k + v.oy);
         let dark = self.pal.dark || self.dark_a > 0.5;
-        let col = if dark { (8.0, 7.0, 14.0) } else { mix(self.pal.tape, self.pal.wall, 0.35) };
+        let col = if dark {
+            (8.0, 7.0, 14.0)
+        } else {
+            mix(self.pal.tape, self.pal.wall, 0.35)
+        };
         g.reset_transform();
         if opts.reduce_motion {
             g.fill_style(css(col, f));
@@ -1529,7 +2428,12 @@ fn tramp_near(level: &Stage, x: f64, y: f64) -> i64 {
     let mut bd = f64::INFINITY;
     for ty in (cy - 2)..=(cy + 2) {
         for tx in (cx - 1)..=(cx + 1) {
-            if tx < 0 || ty < 0 || tx >= level.cols as i64 || ty >= level.rows as i64 || level.tiles[ty as usize * level.cols + tx as usize] != T_TRAMP {
+            if tx < 0
+                || ty < 0
+                || tx >= level.cols as i64
+                || ty >= level.rows as i64
+                || level.tiles[ty as usize * level.cols + tx as usize] != T_TRAMP
+            {
                 continue;
             }
             let d = ((tx as f64 + 0.5) * TILE - x).abs() + ((ty as f64 + 0.5) * TILE - y).abs();

@@ -155,7 +155,12 @@ pub unsafe fn take(lp: LPARAM) -> SockEvent {
 
 /// A socket's thread: connects, then reads on a second thread while this one sends what the UI queues, so a send
 /// goes out at once and a message comes in as it arrives. `tell` takes the socket's news (a `WM_SOCK` post).
-fn socket(id: u64, url: &str, rx: &Receiver<Out>, tell: impl Fn(SockEvent) + Clone + Send + 'static) {
+fn socket(
+    id: u64,
+    url: &str,
+    rx: &Receiver<Out>,
+    tell: impl Fn(SockEvent) + Clone + Send + 'static,
+) {
     let Some(ws) = crate::relay::Socket::open_url(url).map(Arc::new) else {
         crate::qlog!("games: relay socket {id} didn't open");
         tell(SockEvent::Closed);
@@ -229,7 +234,9 @@ mod tests {
         let mut peers = [OnlinePeer::new(&base()), OnlinePeer::new(&base())];
         let mut socks: [HashMap<u64, Sender<Out>>; 2] = [HashMap::new(), HashMap::new()];
         let mut heard: [Vec<PeerEvent>; 2] = [vec![], vec![]];
-        let mut pump = |peers: &mut [OnlinePeer; 2], heard: &mut [Vec<PeerEvent>; 2], until: &dyn Fn(&[Vec<PeerEvent>; 2]) -> bool| {
+        let mut pump = |peers: &mut [OnlinePeer; 2],
+                        heard: &mut [Vec<PeerEvent>; 2],
+                        until: &dyn Fn(&[Vec<PeerEvent>; 2]) -> bool| {
             let end = Instant::now() + Duration::from_secs(15);
             loop {
                 for (side, peer) in peers.iter_mut().enumerate() {
@@ -280,7 +287,9 @@ mod tests {
             }
         };
         peers[0].host("pong", "qcalc-test", true, now());
-        pump(&mut peers, &mut heard, &|h| h[0].iter().any(|e| matches!(e, PeerEvent::Hosting { .. })));
+        pump(&mut peers, &mut heard, &|h| {
+            h[0].iter().any(|e| matches!(e, PeerEvent::Hosting { .. }))
+        });
         let code = heard[0]
             .iter()
             .find_map(|e| match e {
@@ -295,12 +304,19 @@ mod tests {
         println!("paired after {:.0} ms", now());
         peers[0].send("hi there");
         pump(&mut peers, &mut heard, &|h| {
-            h[1].iter().any(|e| matches!(e, PeerEvent::Message { data } if data == "hi there"))
+            h[1].iter()
+                .any(|e| matches!(e, PeerEvent::Message { data } if data == "hi there"))
         });
         println!("message crossed after {:.0} ms", now());
         peers[0].close();
-        pump(&mut peers, &mut heard, &|h| h[1].iter().any(|e| matches!(e, PeerEvent::Closed { .. })));
-        println!("the other side heard the leave after {:.0} ms: {:?}", now(), heard[1].last());
+        pump(&mut peers, &mut heard, &|h| {
+            h[1].iter().any(|e| matches!(e, PeerEvent::Closed { .. }))
+        });
+        println!(
+            "the other side heard the leave after {:.0} ms: {:?}",
+            now(),
+            heard[1].last()
+        );
     }
 
     #[test]

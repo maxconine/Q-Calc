@@ -67,8 +67,14 @@ pub fn parse(d: &str) -> Poly {
                     for k in 1..=CURVE_STEPS {
                         let t = k as f32 / CURVE_STEPS as f32;
                         let u = 1.0 - t;
-                        let x = u * u * u * p0.0 + 3.0 * u * u * t * c1.0 + 3.0 * u * t * t * c2.0 + t * t * t * p3.0;
-                        let y = u * u * u * p0.1 + 3.0 * u * u * t * c1.1 + 3.0 * u * t * t * c2.1 + t * t * t * p3.1;
+                        let x = u * u * u * p0.0
+                            + 3.0 * u * u * t * c1.0
+                            + 3.0 * u * t * t * c2.0
+                            + t * t * t * p3.0;
+                        let y = u * u * u * p0.1
+                            + 3.0 * u * u * t * c1.1
+                            + 3.0 * u * t * t * c2.1
+                            + t * t * t * p3.1;
                         line_to(parts, (x, y));
                     }
                     cur = p3;
@@ -80,7 +86,13 @@ pub fn parse(d: &str) -> Poly {
                     for k in 1..=CURVE_STEPS {
                         let t = k as f32 / CURVE_STEPS as f32;
                         let u = 1.0 - t;
-                        line_to(parts, (u * u * p0.0 + 2.0 * u * t * c.0 + t * t * p2.0, u * u * p0.1 + 2.0 * u * t * c.1 + t * t * p2.1));
+                        line_to(
+                            parts,
+                            (
+                                u * u * p0.0 + 2.0 * u * t * c.0 + t * t * p2.0,
+                                u * u * p0.1 + 2.0 * u * t * c.1 + t * t * p2.1,
+                            ),
+                        );
                     }
                     cur = p2;
                 }
@@ -154,7 +166,10 @@ impl Poly {
                     left -= d;
                 } else {
                     let k = if d > 0.0 { left / d } else { 0.0 };
-                    kept.push((w[0].0 + (w[1].0 - w[0].0) * k, w[0].1 + (w[1].1 - w[0].1) * k));
+                    kept.push((
+                        w[0].0 + (w[1].0 - w[0].0) * k,
+                        w[0].1 + (w[1].1 - w[0].1) * k,
+                    ));
                     left = 0.0;
                     break;
                 }
@@ -173,7 +188,16 @@ mod tests {
     fn reads_the_commands_the_chalk_writes() {
         let p = parse("M0 0L10 0H20V10Z");
         assert_eq!(p.parts.len(), 1);
-        assert_eq!(p.parts[0], vec![(0.0, 0.0), (10.0, 0.0), (20.0, 0.0), (20.0, 10.0), (0.0, 0.0)]);
+        assert_eq!(
+            p.parts[0],
+            vec![
+                (0.0, 0.0),
+                (10.0, 0.0),
+                (20.0, 0.0),
+                (20.0, 10.0),
+                (0.0, 0.0)
+            ]
+        );
         let c = parse("M0,0 C0,10 10,10 10,0 M5-5Q6,7 8,9");
         assert_eq!(c.parts.len(), 2);
         assert_eq!(c.parts[0].len(), 1 + CURVE_STEPS);
