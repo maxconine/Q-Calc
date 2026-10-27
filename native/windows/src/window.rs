@@ -302,6 +302,8 @@ impl Bar {
         let layout = self.layout.clone();
         let window_focused = self.focused || !self.visible;
         let focused = window_focused && !crate::systems::focused(model);
+        let crt = crate::effects::crt_theme(model);
+        let (theme, scale) = (crt.as_ref().unwrap_or(theme), self.scale());
         let field_view = &mut self.field_view;
         self.surface.draw(gfx, theme, |c: &mut Canvas| {
             c.clear(theme.bg);
@@ -355,6 +357,7 @@ impl Bar {
             if let (Some(r), Some(g)) = (layout.graph, &model.graph) {
                 crate::graph::paint(c, g, r);
             }
+            crate::effects::paint_bar(c, model, &layout, scale);
         })
     }
 

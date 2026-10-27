@@ -612,4 +612,9 @@ impl Canvas<'_> {
         // SAFETY: after push_clip
         unsafe { self.rt.PopAxisAlignedClip() };
     }
+
+    /// The target and the brush, for a view that draws geometry itself (effects.rs's Pi Day slice).
+    pub fn raw(&self) -> (&ID2D1HwndRenderTarget, &ID2D1SolidColorBrush) {
+        (self.rt, self.brush)
+    }
 }

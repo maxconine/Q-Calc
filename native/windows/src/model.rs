@@ -86,6 +86,8 @@ pub struct BarModel {
     pub tape: crate::history::TapeState,
     /// the typeset row (typst_row.rs)
     pub typeset: crate::typst_row::TypesetState,
+    /// the easter eggs' gates, settle and CRT look (effects.rs)
+    pub eggs: crate::effects::Eggs,
 }
 
 impl BarModel {
@@ -110,6 +112,7 @@ impl BarModel {
             answer: Default::default(),
             tape: Default::default(),
             typeset: Default::default(),
+            eggs: crate::effects::Eggs::default(),
         }
     }
 
