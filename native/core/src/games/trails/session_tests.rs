@@ -5,7 +5,9 @@
 use std::sync::{Arc, Mutex};
 
 use super::net::{MAX_FRAMES, TRAILS_VERSION, TrailsMsg, decode_trails, encode_trails};
-use super::session::{Again, Role, STALL_SHOW_MS, TRAILS_SILENCE_MS, TrailsPhase, TrailsSession, TrailsView};
+use super::session::{
+    Again, Role, STALL_SHOW_MS, TRAILS_SILENCE_MS, TrailsPhase, TrailsSession, TrailsView,
+};
 use super::{Dir, TICK_MS, WIN_ROUNDS, seeded};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -43,14 +45,22 @@ struct Pair {
     script: Vec<(f64, To, Dir)>,
 }
 
-fn outbox() -> (Arc<Mutex<Vec<String>>>, Box<dyn FnMut(String) + Send>) {
+type Outbox = (Arc<Mutex<Vec<String>>>, Box<dyn FnMut(String) + Send>);
+
+fn outbox() -> Outbox {
     let out = Arc::new(Mutex::new(vec![]));
     let o = out.clone();
     (out, Box::new(move |t| o.lock().unwrap().push(t)))
 }
 
 impl Pair {
-    fn new(lag: f64, jitter: f64, seed: u32, fault: Option<Fault>, guest_version: Option<u32>) -> Self {
+    fn new(
+        lag: f64,
+        jitter: f64,
+        seed: u32,
+        fault: Option<Fault>,
+        guest_version: Option<u32>,
+    ) -> Self {
         let now = 1000.0;
         let (host_out, hs) = outbox();
         let (guest_out, gs) = outbox();
@@ -89,9 +99,15 @@ impl Pair {
     fn route(&mut self) {
         let from_host: Vec<String> = std::mem::take(&mut *self.host_out.lock().unwrap());
         let from_guest: Vec<String> = std::mem::take(&mut *self.guest_out.lock().unwrap());
-        for (to, text) in from_host.into_iter().map(|t| (To::Guest, t)).chain(from_guest.into_iter().map(|t| (To::Host, t))) {
+        for (to, text) in from_host
+            .into_iter()
+            .map(|t| (To::Guest, t))
+            .chain(from_guest.into_iter().map(|t| (To::Host, t)))
+        {
             let text = match (to, self.guest_version) {
-                (To::Host, Some(v)) => text.replace(&format!("\"v\":{TRAILS_VERSION}"), &format!("\"v\":{v}")),
+                (To::Host, Some(v)) => {
+                    text.replace(&format!("\"v\":{TRAILS_VERSION}"), &format!("\"v\":{v}"))
+                }
                 _ => text,
             };
             let m = decode_trails(&text).unwrap();
@@ -110,7 +126,9 @@ impl Pair {
     }
 
     fn deliver(&mut self, to: To) {
-        let mut due: Vec<usize> = (0..self.queue.len()).filter(|&i| self.queue[i].to == to && self.queue[i].at <= self.now).collect();
+        let mut due: Vec<usize> = (0..self.queue.len())
+            .filter(|&i| self.queue[i].to == to && self.queue[i].at <= self.now)
+            .collect();
         due.sort_by(|&a, &b| self.queue[a].at.total_cmp(&self.queue[b].at));
         let texts: Vec<String> = due.iter().map(|&i| self.queue[i].text.clone()).collect();
         let mut keep = vec![];
@@ -145,7 +163,11 @@ impl Pair {
                     To::Guest => self.guest.turn(dir),
                 }
             }
-            let side = if ((now - 1000.0) / (1000.0 / 120.0)).round() as i64 % 2 != 0 { To::Host } else { To::Guest };
+            let side = if ((now - 1000.0) / (1000.0 / 120.0)).round() as i64 % 2 != 0 {
+                To::Host
+            } else {
+                To::Guest
+            };
             self.deliver(side);
             match side {
                 To::Host => self.hv = self.host.tick(now),
@@ -165,7 +187,7 @@ impl Pair {
         self.run(ms, &mut |_| false);
     }
 
-    fn to_guest(&mut self, m: &TrailsMsg) {
+    fn send_guest(&mut self, m: &TrailsMsg) {
         let now = self.now;
         self.guest.receive(&encode_trails(m), now);
         self.route();
@@ -251,17 +273,31 @@ fn resends_hello_until_heard() {
 fn refuses_a_different_version() {
     let mut g = Pair::new(40.0, 0.0, 1, None, Some(TRAILS_VERSION + 1));
     g.run_for(500.0);
-    assert_eq!(g.hv.ended.as_deref(), Some("update both Q Calcs to play each other"));
-    assert!(g.sent.iter().any(|(to, t)| *to == To::Guest && t == "{\"t\":\"bye\"}"));
+    assert_eq!(
+        g.hv.ended.as_deref(),
+        Some("update both Q Calcs to play each other")
+    );
+    assert!(
+        g.sent
+            .iter()
+            .any(|(to, t)| *to == To::Guest && t == "{\"t\":\"bye\"}")
+    );
 }
 
 #[test]
 fn tells_when_the_other_side_opened_another_game() {
-    for (text, game) in [(r#"{"t":"hi","v":1}"#, "pong"), (r#"{"t":"c4","v":1}"#, "connect 4"), (r#"{"t":"hi","v":1,"u":3}"#, "ember")] {
+    for (text, game) in [
+        (r#"{"t":"hi","v":1}"#, "pong"),
+        (r#"{"t":"c4","v":1}"#, "connect 4"),
+        (r#"{"t":"hi","v":1,"u":3}"#, "ember"),
+    ] {
         let (out, send) = outbox();
         let mut s = TrailsSession::new(Role::Host, send, 0.0);
         s.receive(text, 10.0);
-        assert_eq!(s.tick(20.0).ended, Some(format!("your friend opened {game} · both type trails")));
+        assert_eq!(
+            s.tick(20.0).ended,
+            Some(format!("your friend opened {game} · both type trails"))
+        );
         assert_eq!(out.lock().unwrap().last().unwrap(), "{\"t\":\"bye\"}");
     }
 }
@@ -310,12 +346,24 @@ fn a_turn_lands_on_the_same_tick_on_both_sides() {
     g.guest.turn(2);
     g.run_for(1000.0);
     for p in 0..2 {
-        let a: Vec<i32> = g.hv.round.cycles[p].path.iter().take(200).copied().collect();
-        let b: Vec<i32> = g.gv.round.cycles[p].path.iter().take(200).copied().collect();
+        let a: Vec<i32> = g.hv.round.cycles[p]
+            .path
+            .iter()
+            .take(200)
+            .copied()
+            .collect();
+        let b: Vec<i32> = g.gv.round.cycles[p]
+            .path
+            .iter()
+            .take(200)
+            .copied()
+            .collect();
         assert_eq!(a, b);
     }
     let path = &g.hv.round.cycles[0].path;
-    let corner = (0..path.len()).position(|i| i > 0 && path.get(i + 1) == Some(&(path[i] - 64))).unwrap();
+    let corner = (0..path.len())
+        .position(|i| i > 0 && path.get(i + 1) == Some(&(path[i] - 64)))
+        .unwrap();
     assert_eq!(corner, pressed_at + g.host.state().delay as usize);
     assert_eq!(g.gv.round.cycles[0].path[corner + 1], path[corner + 1]);
 }
@@ -323,14 +371,21 @@ fn a_turn_lands_on_the_same_tick_on_both_sides() {
 #[test]
 fn turns_pressed_during_the_count_are_taken_as_the_round_starts() {
     let mut g = Pair::simple();
-    g.run(4000.0, &mut |p| p.gv.phase == TrailsPhase::Count && p.hv.phase == TrailsPhase::Count);
+    g.run(4000.0, &mut |p| {
+        p.gv.phase == TrailsPhase::Count && p.hv.phase == TrailsPhase::Count
+    });
     g.host.turn(2);
     g.host.turn(3);
     g.host.turn(0);
     g.guest.turn(0);
-    g.run(4000.0, &mut |p| p.host.state().tick >= 6 && p.guest.state().tick >= 6);
+    g.run(4000.0, &mut |p| {
+        p.host.state().tick >= 6 && p.guest.state().tick >= 6
+    });
     for v in [&g.hv, &g.gv] {
-        assert_eq!(v.round.cycles[0].path[..3], [12 * 64 + 8, 13 * 64 + 8, 13 * 64 + 7]);
+        assert_eq!(
+            v.round.cycles[0].path[..3],
+            [12 * 64 + 8, 13 * 64 + 8, 13 * 64 + 7]
+        );
         assert_eq!(v.round.cycles[1].path[..2], [13 * 64 + 55, 12 * 64 + 55]);
     }
 }
@@ -371,7 +426,13 @@ fn never_sticks_whatever_a_bad_link_loses() {
             }
             None
         });
-        let mut g = Pair::new(20.0 + f64::from(seed % 12) * 12.0, 60.0, seed, Some(fault), None);
+        let mut g = Pair::new(
+            20.0 + f64::from(seed % 12) * 12.0,
+            60.0,
+            seed,
+            Some(fault),
+            None,
+        );
         wander(&mut g, seed, 45_000.0);
         g.run_for(45_000.0);
         *bad.lock().unwrap() = false;
@@ -392,12 +453,18 @@ fn never_sticks_whatever_a_bad_link_loses() {
 fn a_stall_shows_and_ends_when_the_late_frame_arrives() {
     let mut from: Option<f64> = None;
     let fault: Fault = Box::new(move |to, m, now| {
-        let TrailsMsg::Frames { f, i, .. } = m else { return None };
+        let TrailsMsg::Frames { f, i, .. } = m else {
+            return None;
+        };
         if to != To::Host || (*f as usize + i.len()) < 20 {
             return None;
         }
         let start = *from.get_or_insert(now);
-        if now - start < 900.0 { Some(start + 900.0 - now) } else { None }
+        if now - start < 900.0 {
+            Some(start + 900.0 - now)
+        } else {
+            None
+        }
     });
     let mut g = Pair::new(30.0, 0.0, 1, Some(fault), None);
     g.run(4000.0, &mut running);
@@ -423,9 +490,30 @@ fn a_stale_or_far_future_frame_is_not_taken() {
     g.run_for(500.0);
     let s = g.guest.state();
     let (r, tick) = (s.r as u32, s.tick);
-    g.to_guest(&TrailsMsg::Frames { e: 1, r: r + 1, f: tick + 4, i: vec![Some(0)], a: -1, h: None });
-    g.to_guest(&TrailsMsg::Frames { e: 7, r, f: tick + 4, i: vec![Some(0)], a: -1, h: None });
-    g.to_guest(&TrailsMsg::Frames { e: 1, r, f: tick + MAX_FRAMES as u32 + 5, i: vec![Some(0)], a: -1, h: None });
+    g.send_guest(&TrailsMsg::Frames {
+        e: 1,
+        r: r + 1,
+        f: tick + 4,
+        i: vec![Some(0)],
+        a: -1,
+        h: None,
+    });
+    g.send_guest(&TrailsMsg::Frames {
+        e: 7,
+        r,
+        f: tick + 4,
+        i: vec![Some(0)],
+        a: -1,
+        h: None,
+    });
+    g.send_guest(&TrailsMsg::Frames {
+        e: 1,
+        r,
+        f: tick + MAX_FRAMES as u32 + 5,
+        i: vec![Some(0)],
+        a: -1,
+        h: None,
+    });
     g.run_for(1500.0);
     expect_same(&mut g);
     assert_eq!(g.host.state().epoch, 1);
@@ -437,7 +525,14 @@ fn puts_a_desync_right_from_the_host() {
     g.run(4000.0, &mut running);
     g.run_for(300.0);
     let s = g.guest.state();
-    g.to_guest(&TrailsMsg::Frames { e: 1, r: s.r as u32, f: s.tick + 6, i: vec![Some(0)], a: -1, h: None });
+    g.send_guest(&TrailsMsg::Frames {
+        e: 1,
+        r: s.r as u32,
+        f: s.tick + 6,
+        i: vec![Some(0)],
+        a: -1,
+        h: None,
+    });
     g.run_for(700.0);
     assert_ne!(g.gv.round.cycles[0].dir, g.hv.round.cycles[0].dir);
     g.run(3000.0, &mut |p| p.host.state().epoch > 1);
@@ -490,8 +585,20 @@ fn plays_a_whole_match_then_a_rematch() {
     g.guest.turn(0);
     g.route();
     g.run_for(500.0);
-    assert_eq!(g.hv.again, Again { mine: false, theirs: true });
-    assert_eq!(g.gv.again, Again { mine: true, theirs: false });
+    assert_eq!(
+        g.hv.again,
+        Again {
+            mine: false,
+            theirs: true
+        }
+    );
+    assert_eq!(
+        g.gv.again,
+        Again {
+            mine: true,
+            theirs: false
+        }
+    );
     assert_eq!(g.hv.phase, TrailsPhase::Over);
     let now = g.now;
     g.host.rematch(now);
@@ -526,7 +633,10 @@ fn keeps_the_link_warm_and_ends_after_silence() {
 fn times_out_and_says_bye() {
     let mut s = TrailsSession::new(Role::Guest, Box::new(|_| {}), 0.0);
     assert_eq!(s.tick(TRAILS_SILENCE_MS - 1.0).ended, None);
-    assert_eq!(s.tick(TRAILS_SILENCE_MS + 1.0).ended.as_deref(), Some("lost the connection"));
+    assert_eq!(
+        s.tick(TRAILS_SILENCE_MS + 1.0).ended.as_deref(),
+        Some("lost the connection")
+    );
     let mut g = Pair::simple();
     g.run(4000.0, &mut running);
     g.guest.leave();

@@ -1,4 +1,5 @@
 // trails.test.ts, case for case
+#![allow(clippy::needless_range_loop)]
 
 use super::*;
 
@@ -13,11 +14,24 @@ fn placed(a: At, b: At) -> Round {
     let mut grid = vec![0u8; (COLS * ROWS) as usize];
     let mut cyc = |c: At, p: usize| {
         grid[cell_index(c.x, c.y) as usize] = p as u8 + 1;
-        Cycle { x: c.x, y: c.y, dir: c.dir, queue: vec![], alive: true, path: vec![cell_index(c.x, c.y)], crash: None }
+        Cycle {
+            x: c.x,
+            y: c.y,
+            dir: c.dir,
+            queue: vec![],
+            alive: true,
+            path: vec![cell_index(c.x, c.y)],
+            crash: None,
+        }
     };
     let ca = cyc(a, 0);
     let cb = cyc(b, 1);
-    Round { grid, cycles: [ca, cb], tick: 0, result: None }
+    Round {
+        grid,
+        cycles: [ca, cb],
+        tick: 0,
+        result: None,
+    }
 }
 
 fn at(x: i32, y: i32, dir: Dir) -> At {
@@ -41,8 +55,14 @@ fn moves_one_cell_a_tick_and_leaves_a_trail() {
     let r0 = new_round();
     let (a0, b0) = (r0.cycles[0].clone(), r0.cycles[1].clone());
     let r = step(&step(&r0));
-    assert_eq!((r.cycles[0].x, r.cycles[0].y, r.cycles[0].alive), (a0.x + 2, a0.y, true));
-    assert_eq!((r.cycles[1].x, r.cycles[1].y, r.cycles[1].alive), (b0.x - 2, b0.y, true));
+    assert_eq!(
+        (r.cycles[0].x, r.cycles[0].y, r.cycles[0].alive),
+        (a0.x + 2, a0.y, true)
+    );
+    assert_eq!(
+        (r.cycles[1].x, r.cycles[1].y, r.cycles[1].alive),
+        (b0.x - 2, b0.y, true)
+    );
     assert_eq!(r.cycles[0].path.len(), 3);
     for &i in &r.cycles[0].path {
         assert_eq!(r.grid[i as usize], 1);
@@ -84,7 +104,15 @@ fn queues_two_quick_turns_and_drops_a_third() {
     r = step(&r);
     assert_eq!((r.cycles[0].x, r.cycles[0].y, r.cycles[0].dir), (10, 9, 0));
     r = step(&r);
-    assert_eq!((r.cycles[0].x, r.cycles[0].y, r.cycles[0].dir, r.cycles[0].alive), (9, 9, 3, true));
+    assert_eq!(
+        (
+            r.cycles[0].x,
+            r.cycles[0].y,
+            r.cycles[0].dir,
+            r.cycles[0].alive
+        ),
+        (9, 9, 3, true)
+    );
     assert!(r.cycles[0].queue.is_empty());
 }
 
@@ -123,8 +151,14 @@ fn draws() {
     let r = step(&placed(at(10, 10, 1), at(12, 10, 3)));
     assert_eq!(r.result, win(None));
     assert!(r.cycles.iter().all(|c| !c.alive));
-    assert_eq!(step(&placed(at(10, 10, 1), at(11, 10, 3))).result, win(None));
-    assert_eq!(step(&placed(at(0, 3, 3), at(COLS - 1, 20, 1))).result, win(None));
+    assert_eq!(
+        step(&placed(at(10, 10, 1), at(11, 10, 3))).result,
+        win(None)
+    );
+    assert_eq!(
+        step(&placed(at(0, 3, 3), at(COLS - 1, 20, 1))).result,
+        win(None)
+    );
 }
 
 #[test]
@@ -175,7 +209,12 @@ fn never_drives_the_computer_into_a_wall_when_a_way_out_exists() {
                 .filter(|&d| {
                     let x = me.x + DX[d as usize];
                     let y = me.y + DY[d as usize];
-                    d != (me.dir + 2) % 4 && x >= 0 && y >= 0 && x < COLS && y < ROWS && r.grid[cell_index(x, y) as usize] == 0
+                    d != (me.dir + 2) % 4
+                        && x >= 0
+                        && y >= 0
+                        && x < COLS
+                        && y < ROWS
+                        && r.grid[cell_index(x, y) as usize] == 0
                 })
                 .collect();
             let d = bot_turn(&r, 0, level, &mut rand);
@@ -240,7 +279,9 @@ fn opens_from_its_names() {
     for t in ["trails", "Trail", " cycles ", "TRAILS"] {
         assert!(is_trails_command(t), "{t}");
     }
-    for t in ["trails2", "trail s", "cycle", "2 trails", "trails+1", "sin(x)", "t"] {
+    for t in [
+        "trails2", "trail s", "cycle", "2 trails", "trails+1", "sin(x)", "t",
+    ] {
         assert!(!is_trails_command(t), "{t}");
     }
 }

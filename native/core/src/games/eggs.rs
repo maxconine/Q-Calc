@@ -97,7 +97,11 @@ pub struct SmokeRoom {
     pub bottom: f64,
 }
 
-pub const SMOKE_ROOM: SmokeRoom = SmokeRoom { top: 160.0, side: 100.0, bottom: 64.0 };
+pub const SMOKE_ROOM: SmokeRoom = SmokeRoom {
+    top: 160.0,
+    side: 100.0,
+    bottom: 64.0,
+};
 
 /// wideSmokeRoom: only a host that says it can grow the window sideways gets the wide room
 pub fn wide_smoke_room(native: bool, smoke_room: bool) -> bool {
@@ -128,8 +132,28 @@ pub struct Puff {
 }
 
 #[allow(clippy::too_many_arguments)]
-const fn puff(at: PuffAt, x: f64, y: f64, w: f64, h: f64, delay: f64, drift: f64, rise: f64, sway: f64) -> Puff {
-    Puff { at, x, y, w, h, delay, drift, rise, sway }
+const fn puff(
+    at: PuffAt,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    delay: f64,
+    drift: f64,
+    rise: f64,
+    sway: f64,
+) -> Puff {
+    Puff {
+        at,
+        x,
+        y,
+        w,
+        h,
+        delay,
+        drift,
+        rise,
+        sway,
+    }
 }
 
 use PuffAt::{Frac, Left, Right};
@@ -194,7 +218,11 @@ mod tests {
 
     #[test]
     fn gates_fire_once_and_rearm_after_a_change() {
-        for (t, near, far) in [(420.0, 42.0, 4200.0), (69.0, 6.9, 690.0), (67.0, 6.7, 670.0)] {
+        for (t, near, far) in [
+            (420.0, 42.0, 4200.0),
+            (69.0, 6.9, 690.0),
+            (67.0, 6.7, 670.0),
+        ] {
             assert_eq!(run(t, &[Some(near), Some(t)]), 1);
             assert_eq!(run(t, &[Some(t), Some(t), Some(t)]), 1);
             assert_eq!(run(t, &[Some(t), None, Some(t)]), 2);
@@ -221,7 +249,14 @@ mod tests {
         assert!(!wide_smoke_room(true, false));
         assert!(!wide_smoke_room(false, true));
         assert!(!wide_smoke_room(false, false));
-        assert_eq!(SMOKE_ROOM, SmokeRoom { top: 160.0, side: 100.0, bottom: 64.0 });
+        assert_eq!(
+            SMOKE_ROOM,
+            SmokeRoom {
+                top: 160.0,
+                side: 100.0,
+                bottom: 64.0
+            }
+        );
     }
 
     #[test]

@@ -40,7 +40,10 @@ impl LinkedGame {
 pub fn hello_game(o: &Map<String, Value>) -> Option<LinkedGame> {
     let t = o.get("t").and_then(Value::as_str);
     let hi_like = matches!(t, Some("hi" | "c4" | "ut" | "tr"));
-    if let Some(g) = o.get("g").and_then(Value::as_str).and_then(LinkedGame::from_tag)
+    if let Some(g) = o
+        .get("g")
+        .and_then(Value::as_str)
+        .and_then(LinkedGame::from_tag)
         && hi_like
     {
         return Some(g);
@@ -49,7 +52,11 @@ pub fn hello_game(o: &Map<String, Value>) -> Option<LinkedGame> {
         Some("c4") => Some(LinkedGame::Connect4),
         Some("tr") => Some(LinkedGame::Trails),
         Some("ut") => Some(LinkedGame::Ultimate),
-        Some("hi") => Some(if o.contains_key("u") || o.contains_key("w") { LinkedGame::Ember } else { LinkedGame::Pong }),
+        Some("hi") => Some(if o.contains_key("u") || o.contains_key("w") {
+            LinkedGame::Ember
+        } else {
+            LinkedGame::Pong
+        }),
         _ => None,
     }
 }
@@ -73,13 +80,34 @@ mod tests {
 
     #[test]
     fn hellos_name_their_game() {
-        assert_eq!(hello_game(&obj(r#"{"t":"tr","v":1,"g":"trails"}"#)), Some(LinkedGame::Trails));
-        assert_eq!(hello_game(&obj(r#"{"t":"hi","v":2,"w":1}"#)), Some(LinkedGame::Ember));
-        assert_eq!(hello_game(&obj(r#"{"t":"hi","v":2}"#)), Some(LinkedGame::Pong));
-        assert_eq!(hello_game(&obj(r#"{"t":"hi","v":2,"g":"connect4"}"#)), Some(LinkedGame::Connect4));
+        assert_eq!(
+            hello_game(&obj(r#"{"t":"tr","v":1,"g":"trails"}"#)),
+            Some(LinkedGame::Trails)
+        );
+        assert_eq!(
+            hello_game(&obj(r#"{"t":"hi","v":2,"w":1}"#)),
+            Some(LinkedGame::Ember)
+        );
+        assert_eq!(
+            hello_game(&obj(r#"{"t":"hi","v":2}"#)),
+            Some(LinkedGame::Pong)
+        );
+        assert_eq!(
+            hello_game(&obj(r#"{"t":"hi","v":2,"g":"connect4"}"#)),
+            Some(LinkedGame::Connect4)
+        );
         assert_eq!(hello_game(&obj(r#"{"t":"s"}"#)), None);
-        assert_eq!(other_hello(&obj(r#"{"t":"c4","v":1}"#), LinkedGame::Trails), Some("connect 4"));
-        assert_eq!(other_hello(&obj(r#"{"t":"tr","v":1}"#), LinkedGame::Trails), None);
-        assert_eq!(other_game_note("pong", LinkedGame::Ember), "your friend opened pong · both type ember");
+        assert_eq!(
+            other_hello(&obj(r#"{"t":"c4","v":1}"#), LinkedGame::Trails),
+            Some("connect 4")
+        );
+        assert_eq!(
+            other_hello(&obj(r#"{"t":"tr","v":1}"#), LinkedGame::Trails),
+            None
+        );
+        assert_eq!(
+            other_game_note("pong", LinkedGame::Ember),
+            "your friend opened pong · both type ember"
+        );
     }
 }

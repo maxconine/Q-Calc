@@ -87,7 +87,15 @@ const fn opposite(d: Dir) -> Dir {
 }
 
 fn start_cycle(x: i32, y: i32, dir: Dir) -> Cycle {
-    Cycle { x, y, dir, queue: vec![], alive: true, path: vec![cell_index(x, y)], crash: None }
+    Cycle {
+        x,
+        y,
+        dir,
+        queue: vec![],
+        alive: true,
+        path: vec![cell_index(x, y)],
+        crash: None,
+    }
 }
 
 /// point-symmetric starts, a row apart, so neither side has the better corner and straight on isn't a crash
@@ -97,7 +105,12 @@ pub fn new_round() -> Round {
     let mut grid = vec![0u8; (COLS * ROWS) as usize];
     grid[a.path[0] as usize] = 1;
     grid[b.path[0] as usize] = 2;
-    Round { grid, cycles: [a, b], tick: 0, result: None }
+    Round {
+        grid,
+        cycles: [a, b],
+        tick: 0,
+        result: None,
+    }
 }
 
 /// a turn pressed now; it's taken on a later tick. the same way or straight back (from the last turn already
@@ -123,7 +136,11 @@ pub fn steer(r: &Round, p: Player, dir: Dir) -> Round {
         return r.clone();
     }
     let mut out = r.clone();
-    out.cycles[p].queue = if dir == c.dir || dir == opposite(c.dir) { vec![] } else { vec![dir] };
+    out.cycles[p].queue = if dir == c.dir || dir == opposite(c.dir) {
+        vec![]
+    } else {
+        vec![dir]
+    };
     out
 }
 
@@ -149,7 +166,13 @@ pub fn step(r: &Round) -> Round {
             let x = c.x + DX[dir as usize];
             let y = c.y + DY[dir as usize];
             let hit = !inside(x, y) || r.grid[cell_index(x, y) as usize] != 0;
-            Moved { dir, queue, x, y, hit }
+            Moved {
+                dir,
+                queue,
+                x,
+                y,
+                hit,
+            }
         })
         .collect();
     if !moved[0].hit && !moved[1].hit && moved[0].x == moved[1].x && moved[0].y == moved[1].y {
@@ -160,13 +183,26 @@ pub fn step(r: &Round) -> Round {
         let m = &moved[p];
         let c = &r.cycles[p];
         if m.hit {
-            return Cycle { dir: m.dir, queue: vec![], alive: false, crash: Some((m.x, m.y)), ..c.clone() };
+            return Cycle {
+                dir: m.dir,
+                queue: vec![],
+                alive: false,
+                crash: Some((m.x, m.y)),
+                ..c.clone()
+            };
         }
         let at = cell_index(m.x, m.y);
         grid[at as usize] = p as u8 + 1;
         let mut path = c.path.clone();
         path.push(at);
-        Cycle { x: m.x, y: m.y, dir: m.dir, queue: m.queue.clone(), path, ..c.clone() }
+        Cycle {
+            x: m.x,
+            y: m.y,
+            dir: m.dir,
+            queue: m.queue.clone(),
+            path,
+            ..c.clone()
+        }
     });
     let (ah, bh) = (moved[0].hit, moved[1].hit);
     let result = match (ah, bh) {
@@ -175,7 +211,12 @@ pub fn step(r: &Round) -> Round {
         (false, true) => Some(RoundResult { winner: Some(0) }),
         _ => None,
     };
-    Round { grid, cycles, tick: r.tick + 1, result }
+    Round {
+        grid,
+        cycles,
+        tick: r.tick + 1,
+        result,
+    }
 }
 
 pub fn score_round(score: [u32; 2], result: RoundResult) -> [u32; 2] {
@@ -313,7 +354,9 @@ fn bot(level: Level) -> (f64, f64) {
 }
 
 fn safe_dirs(grid: &[u8], c: &Cycle) -> Vec<Dir> {
-    (0..4u8).filter(|&d| d != opposite(c.dir) && free(grid, c.x + DX[d as usize], c.y + DY[d as usize])).collect()
+    (0..4u8)
+        .filter(|&d| d != opposite(c.dir) && free(grid, c.x + DX[d as usize], c.y + DY[d as usize]))
+        .collect()
 }
 
 /// how a move to (x, y) looks from the cell's walls: hugging one wastes less room
@@ -332,7 +375,10 @@ const WIN: f64 = 1000.0;
 fn open_cells(grid: &[u8], c: Cell) -> Vec<Cell> {
     (0..4)
         .filter(|&d| free(grid, c.x + DX[d], c.y + DY[d]))
-        .map(|d| Cell { x: c.x + DX[d], y: c.y + DY[d] })
+        .map(|d| Cell {
+            x: c.x + DX[d],
+            y: c.y + DY[d],
+        })
         .collect()
 }
 
@@ -343,7 +389,11 @@ fn answer(grid: &[u8], me: Cell, them: Cell, me_v: u8, them_v: u8, depth: u32) -
     let mut worst = f64::INFINITY;
     for t in open_cells(grid, them) {
         let g = with_cell(grid, t.x, t.y, them_v);
-        let v = if depth == 0 { territory(&g, me, t).0 } else { best_move(&g, me, t, me_v, them_v, depth - 1) };
+        let v = if depth == 0 {
+            territory(&g, me, t).0
+        } else {
+            best_move(&g, me, t, me_v, them_v, depth - 1)
+        };
         worst = worst.min(v);
         if worst <= -WIN {
             break;
@@ -355,12 +405,23 @@ fn answer(grid: &[u8], me: Cell, them: Cell, me_v: u8, them_v: u8, depth: u32) -
 fn best_move(grid: &[u8], me: Cell, them: Cell, me_v: u8, them_v: u8, depth: u32) -> f64 {
     let mut best = f64::NEG_INFINITY;
     for m in open_cells(grid, me) {
-        best = best.max(answer(&with_cell(grid, m.x, m.y, me_v), m, them, me_v, them_v, depth));
+        best = best.max(answer(
+            &with_cell(grid, m.x, m.y, me_v),
+            m,
+            them,
+            me_v,
+            them_v,
+            depth,
+        ));
         if best >= WIN {
             break;
         }
     }
-    if best == f64::NEG_INFINITY { -WIN } else { best }
+    if best == f64::NEG_INFINITY {
+        -WIN
+    } else {
+        best
+    }
 }
 
 /// walled in alone: the most cells it can be sure of, trying every path FILL_DEPTH moves deep and counting the
@@ -400,7 +461,10 @@ pub fn bot_turn(r: &Round, p: Player, level: Level, rand: &mut dyn FnMut() -> f6
 
     let mut best = safe[0];
     let mut best_score = f64::NEG_INFINITY;
-    let them_cell = Cell { x: them.x, y: them.y };
+    let them_cell = Cell {
+        x: them.x,
+        y: them.y,
+    };
     for &d in &safe {
         let x = me.x + DX[d as usize];
         let y = me.y + DY[d as usize];
@@ -411,10 +475,16 @@ pub fn bot_turn(r: &Round, p: Player, level: Level, rand: &mut dyn FnMut() -> f6
         } else {
             let their_moves = safe_dirs(&r.grid, them);
             // could they take the same cell next tick? that's a draw at best
-            let contested = their_moves.iter().any(|&t| them.x + DX[t as usize] == x && them.y + DY[t as usize] == y);
+            let contested = their_moves
+                .iter()
+                .any(|&t| them.x + DX[t as usize] == x && them.y + DY[t as usize] == y);
             if level == Level::Normal {
                 let (t, separated) = territory(&grid, Cell { x, y }, them_cell);
-                score = if separated { t - open_sides(&grid, x, y) * 0.3 } else { t };
+                score = if separated {
+                    t - open_sides(&grid, x, y) * 0.3
+                } else {
+                    t
+                };
                 if contested {
                     score -= 500.0;
                 }
@@ -422,9 +492,17 @@ pub fn bot_turn(r: &Round, p: Player, level: Level, rand: &mut dyn FnMut() -> f6
                 let (t, separated) = territory(&grid, Cell { x, y }, them_cell);
                 // walled off: its room counted by how well it can fill it, less theirs
                 score = if separated {
-                    t - room(&grid, x, y, f64::INFINITY) + fill(&grid, x, y, FILL_DEPTH) - open_sides(&grid, x, y) * 0.3
+                    t - room(&grid, x, y, f64::INFINITY) + fill(&grid, x, y, FILL_DEPTH)
+                        - open_sides(&grid, x, y) * 0.3
                 } else {
-                    answer(&grid, Cell { x, y }, them_cell, p as u8 + 1, 2 - p as u8, HARD_DEPTH)
+                    answer(
+                        &grid,
+                        Cell { x, y },
+                        them_cell,
+                        p as u8 + 1,
+                        2 - p as u8,
+                        HARD_DEPTH,
+                    )
                 };
                 // the lookahead takes turns, so it can't see a head-on; only a sure loss is worse
                 if contested {
@@ -445,6 +523,6 @@ pub fn bot_turn(r: &Round, p: Player, level: Level, rand: &mut dyn FnMut() -> f6
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod session_tests;
+#[cfg(test)]
+mod tests;

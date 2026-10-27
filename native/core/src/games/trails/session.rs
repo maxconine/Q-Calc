@@ -11,10 +11,12 @@
 //! snapshot) and the guest carries on from that. The same snapshot starts a match and a rematch.
 
 use super::net::{
-    COUNT_MS, Frame, MAX_DELAY, MAX_FRAMES, NetPhase, POINT_MS, Snap, TRAILS_VERSION, TrailsMsg, decode_trails, encode_trails,
-    hash_start, hash_step,
+    COUNT_MS, Frame, MAX_DELAY, MAX_FRAMES, NetPhase, POINT_MS, Snap, TRAILS_VERSION, TrailsMsg,
+    decode_trails, encode_trails, hash_start, hash_step,
 };
-use super::{Dir, Player, QUEUE_MAX, Round, TICK_MS, match_winner, new_round, score_round, steer, step};
+use super::{
+    Dir, Player, QUEUE_MAX, Round, TICK_MS, match_winner, new_round, score_round, steer, step,
+};
 
 /// hello goes out this often until the other side's comes in
 const HI_MS: f64 = 400.0;
@@ -129,7 +131,9 @@ fn put<T: Clone + Default>(v: &mut Vec<T>, i: usize, x: T) {
 fn slice<T: Clone + Default>(v: &[T], from: i64, to: i64) -> Vec<T> {
     let from = from.max(0) as usize;
     let to = to.max(0) as usize;
-    (from..to).map(|i| v.get(i).cloned().unwrap_or_default()).collect()
+    (from..to)
+        .map(|i| v.get(i).cloned().unwrap_or_default())
+        .collect()
 }
 
 pub struct TrailsSession {
@@ -180,7 +184,10 @@ pub struct TrailsSession {
 
 impl std::fmt::Debug for TrailsSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("TrailsSession").field("role", &self.role).field("state", &self.state()).finish()
+        f.debug_struct("TrailsSession")
+            .field("role", &self.role)
+            .field("state", &self.state())
+            .finish()
     }
 }
 
@@ -238,7 +245,14 @@ impl TrailsSession {
 
     fn hi(&mut self) {
         let ok = self.greeted;
-        self.post(TrailsMsg::Hi { v: f64::from(TRAILS_VERSION), g: true, ok }, None);
+        self.post(
+            TrailsMsg::Hi {
+                v: f64::from(TRAILS_VERSION),
+                g: true,
+                ok,
+            },
+            None,
+        );
     }
 
     fn end(&mut self, note: &str) {
@@ -274,7 +288,11 @@ impl TrailsSession {
         self.queue = vec![];
         self.hashes = vec![];
         put(&mut self.hashes, tick as usize, Some(hash));
-        self.hash_due = if self.role == Role::Guest { Some((tick, hash)) } else { None };
+        self.hash_due = if self.role == Role::Guest {
+            Some((tick, hash))
+        } else {
+            None
+        };
         self.check = None;
         self.stall_at = None;
         self.acc = 0.0;
@@ -290,7 +308,11 @@ impl TrailsSession {
     /// fixes my frames up to tick `to`: each takes the oldest turn waiting, or none
     fn seal_to(&mut self, to: i64) {
         while self.sealed < to {
-            let turn = if self.queue.is_empty() { None } else { Some(self.queue.remove(0)) };
+            let turn = if self.queue.is_empty() {
+                None
+            } else {
+                Some(self.queue.remove(0))
+            };
             self.sealed += 1;
             put(&mut self.mine, self.sealed as usize, turn);
             if let Some(t) = turn {
@@ -303,7 +325,11 @@ impl TrailsSession {
     /// a frame as heard: Some(None) is straight on, None not heard (or, for mine, not sealed)
     fn frame(&self, p: Player, tick: u32) -> Option<Frame> {
         if p == self.me {
-            if i64::from(tick) > self.sealed { None } else { self.mine.get(tick as usize).copied() }
+            if i64::from(tick) > self.sealed {
+                None
+            } else {
+                self.mine.get(tick as usize).copied()
+            }
         } else {
             self.theirs.get(tick as usize).copied().flatten()
         }
@@ -325,7 +351,11 @@ impl TrailsSession {
         if let Some(res) = result {
             self.score = score_round(self.score, res);
             self.last = res.winner;
-            self.phase = if match_winner(self.score).is_some() { TrailsPhase::Over } else { TrailsPhase::Point };
+            self.phase = if match_winner(self.score).is_some() {
+                TrailsPhase::Over
+            } else {
+                TrailsPhase::Point
+            };
             self.phase_at = now;
             // the guest says how it ended, so a different ending is caught before the next round
             if self.role == Role::Guest {
@@ -334,7 +364,7 @@ impl TrailsSession {
             }
         } else {
             self.seal_to(i64::from(tick) + i64::from(self.delay) - 1);
-            if self.role == Role::Guest && tick % HASH_EVERY == 0 {
+            if self.role == Role::Guest && tick.is_multiple_of(HASH_EVERY) {
                 self.hash_due = Some((tick, hash));
             }
         }
@@ -361,7 +391,12 @@ impl TrailsSession {
 
     fn ping(&mut self, now: f64) {
         self.last_ping = now;
-        self.post(TrailsMsg::Ping { c: crate::jsnum::round(now).max(0.0) }, Some(now));
+        self.post(
+            TrailsMsg::Ping {
+                c: crate::jsnum::round(now).max(0.0),
+            },
+            Some(now),
+        );
     }
 
     /// a new match: the delay is set from the ping, and the guest starts from the snapshot
@@ -391,9 +426,20 @@ impl TrailsSession {
             wait = self.phase_at + POINT_MS - now - lag;
         }
         let t = i64::from(tick);
-        let mine: Vec<Frame> = if running { slice(&self.mine, t, self.sealed + 1).into_iter().take(MAX_FRAMES).collect() } else { vec![] };
+        let mine: Vec<Frame> = if running {
+            slice(&self.mine, t, self.sealed + 1)
+                .into_iter()
+                .take(MAX_FRAMES)
+                .collect()
+        } else {
+            vec![]
+        };
         let theirs: Vec<Frame> = if running {
-            slice(&self.theirs, t, self.their_next).into_iter().map(Option::flatten).take(MAX_FRAMES).collect()
+            slice(&self.theirs, t, self.their_next)
+                .into_iter()
+                .map(Option::flatten)
+                .take(MAX_FRAMES)
+                .collect()
         } else {
             vec![]
         };
@@ -442,7 +488,10 @@ impl TrailsSession {
 
     /// the guest is still in an old epoch: once the snapshot has had time to land, it didn't
     fn stale(&mut self, e: u32, now: f64) {
-        if self.phase != TrailsPhase::Wait && e < self.epoch && now - self.snap_at > RESYNC_MS + self.lag() * 3.0 {
+        if self.phase != TrailsPhase::Wait
+            && e < self.epoch
+            && now - self.snap_at > RESYNC_MS + self.lag() * 3.0
+        {
             self.snapshot(now);
         }
     }
@@ -490,7 +539,10 @@ impl TrailsSession {
 
     /// a turn pressed: it takes the next free tick. the same way or straight back does nothing, as offline
     pub fn turn(&mut self, dir: Dir) {
-        if self.ended.is_some() || !matches!(self.phase, TrailsPhase::Count | TrailsPhase::Run) || self.queue.len() >= QUEUE_MAX {
+        if self.ended.is_some()
+            || !matches!(self.phase, TrailsPhase::Count | TrailsPhase::Run)
+            || self.queue.len() >= QUEUE_MAX
+        {
             return;
         }
         if turns(self.queue.last().copied().unwrap_or(self.heading), dir) {
@@ -576,11 +628,20 @@ impl TrailsSession {
                     let limit = self.round.tick as usize + MAX_FRAMES;
                     for (j, fr) in i.iter().enumerate() {
                         let tick = f as usize + j;
-                        if tick >= self.round.tick as usize && tick < limit && self.theirs.get(tick).copied().flatten().is_none() {
+                        if tick >= self.round.tick as usize
+                            && tick < limit
+                            && self.theirs.get(tick).copied().flatten().is_none()
+                        {
                             put(&mut self.theirs, tick, Some(*fr));
                         }
                     }
-                    while self.theirs.get(self.their_next as usize).copied().flatten().is_some() {
+                    while self
+                        .theirs
+                        .get(self.their_next as usize)
+                        .copied()
+                        .flatten()
+                        .is_some()
+                    {
                         self.their_next += 1;
                     }
                     // my round is over and theirs is stuck short of it: the last frames go again
@@ -591,7 +652,17 @@ impl TrailsSession {
                     let from = (a + 1).max(p.sealed - MAX_FRAMES as i64 + 1).max(0);
                     let frames = slice(&p.mine, from, p.sealed + 1);
                     let e = self.epoch;
-                    self.post(TrailsMsg::Frames { e, r: r as u32, f: from as u32, i: frames, a: -1, h: None }, Some(now));
+                    self.post(
+                        TrailsMsg::Frames {
+                            e,
+                            r: r as u32,
+                            f: from as u32,
+                            i: frames,
+                            a: -1,
+                            h: None,
+                        },
+                        Some(now),
+                    );
                 }
                 if let Some(h) = h
                     && self.role == Role::Host
@@ -638,7 +709,9 @@ impl TrailsSession {
             return self.view(now);
         }
         if self.phase == TrailsPhase::Wait && self.role == Role::Host {
-            if self.rtts.len() >= PINGS || (!self.rtts.is_empty() && now - self.greeted_at >= PING_WAIT_MS) {
+            if self.rtts.len() >= PINGS
+                || (!self.rtts.is_empty() && now - self.greeted_at >= PING_WAIT_MS)
+            {
                 self.start(now);
             } else if now - self.last_ping >= PING_MS {
                 self.ping(now);
@@ -659,7 +732,13 @@ impl TrailsSession {
         } else if self.phase == TrailsPhase::Run {
             self.acc += dt;
             while self.acc >= TICK_MS && self.phase == TrailsPhase::Run {
-                if self.theirs.get(self.round.tick as usize).copied().flatten().is_none() {
+                if self
+                    .theirs
+                    .get(self.round.tick as usize)
+                    .copied()
+                    .flatten()
+                    .is_none()
+                {
                     // held at the brink, so it steps the moment the frame lands
                     self.acc = TICK_MS;
                     self.stall_at.get_or_insert(now);
@@ -699,10 +778,19 @@ impl TrailsSession {
         if self.phase == TrailsPhase::Wait {
             return;
         }
-        let from = (self.acked + 1).max(self.sealed - MAX_FRAMES as i64 + 1).max(0);
+        let from = (self.acked + 1)
+            .max(self.sealed - MAX_FRAMES as i64 + 1)
+            .max(0);
         let h = self.hash_due.take();
         let i = slice(&self.mine, from, self.sealed + 1);
-        let m = TrailsMsg::Frames { e: self.epoch, r: self.r.max(0) as u32, f: from as u32, i, a: self.their_next - 1, h };
+        let m = TrailsMsg::Frames {
+            e: self.epoch,
+            r: self.r.max(0) as u32,
+            f: from as u32,
+            i,
+            a: self.their_next - 1,
+            h,
+        };
         self.post(m, Some(now));
     }
 
@@ -720,11 +808,23 @@ impl TrailsSession {
             round,
             score: self.score,
             phase: self.phase,
-            count: if self.phase == TrailsPhase::Count { ((self.run_at - now) / COUNT_MS).ceil().clamp(1.0, 3.0) as u32 } else { 0 },
+            count: if self.phase == TrailsPhase::Count {
+                ((self.run_at - now) / COUNT_MS).ceil().clamp(1.0, 3.0) as u32
+            } else {
+                0
+            },
             last: self.last,
             winner: match_winner(self.score),
-            t: if self.phase == TrailsPhase::Run { (self.acc / TICK_MS).min(1.0) } else { 0.0 },
-            crash_ms: if over { Some(now - self.phase_at) } else { None },
+            t: if self.phase == TrailsPhase::Run {
+                (self.acc / TICK_MS).min(1.0)
+            } else {
+                0.0
+            },
+            crash_ms: if over {
+                Some(now - self.phase_at)
+            } else {
+                None
+            },
             stalled: self.stall_at.is_some_and(|at| now - at >= STALL_SHOW_MS),
             again: self.again,
             ended: self.ended.clone(),
