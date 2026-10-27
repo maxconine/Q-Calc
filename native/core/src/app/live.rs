@@ -493,7 +493,18 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         && !games
         && !looks_like_natural_language(q)
     {
-        blank_reason(q, &evaluates(&options, chained), &names_of(&options))
+        // the line itself was just evaluated, exactly as `evaluates` would (same text, same options), so its
+        // first question is already answered: that saves a second evaluation of every blank line
+        let base = evaluates(&options, chained);
+        let known = line
+            .as_ref()
+            .filter(|_| isolated.is_none())
+            .map(|l| !l.display.is_empty());
+        let ok = |t: &str| match known {
+            Some(answered) if t == q => answered,
+            _ => base(t),
+        };
+        blank_reason(q, &ok, &names_of(&options))
     } else {
         None
     };
