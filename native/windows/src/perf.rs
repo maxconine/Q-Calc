@@ -276,16 +276,18 @@ pub fn take() -> [Option<f64>; STAGES] {
     [None; STAGES]
 }
 
-/// Times a showing (Op::Show, from prepare_show to the uncloak) into `show_ms` (perf builds only).
+/// Times a showing (Op::Show, from prepare_show to the uncloak) for the pipe's `shows` (the last 32; perf.ps1 reads
+/// them for the show after a hide).
 pub struct ShowTimer(pub std::time::Instant);
 
 static SHOWS: std::sync::Mutex<Vec<f64>> = std::sync::Mutex::new(Vec::new());
 
 impl Drop for ShowTimer {
     fn drop(&mut self) {
-        if cfg!(feature = "perf")
-            && let Ok(mut s) = SHOWS.lock()
-        {
+        if let Ok(mut s) = SHOWS.lock() {
+            if s.len() >= 32 {
+                s.remove(0);
+            }
             s.push(self.0.elapsed().as_secs_f64() * 1000.0);
         }
     }

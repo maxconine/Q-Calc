@@ -92,7 +92,12 @@ fn main() {
         now_ms: now,
     };
     let context = engine.context_from_history(rows, view);
-    for input in [
+    let golden: Vec<String> = std::env::var("GOLDEN")
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    let standard = [
         "2+2",
         "sin(90)",
         "72 f to c",
@@ -103,7 +108,12 @@ fn main() {
         "(1+2)*(3+4)/5^2",
         "20% of 80",
         "e^(i pi)+1",
-    ] {
+    ];
+    for input in standard
+        .iter()
+        .map(|s| s.to_string())
+        .chain(golden)
+    {
         let chars: Vec<char> = input.chars().collect();
         for k in 1..=chars.len() {
             let text: String = chars[..k].iter().collect();

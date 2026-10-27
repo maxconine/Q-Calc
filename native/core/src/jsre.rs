@@ -13,8 +13,34 @@ pub use fancy_regex::Regex;
 /// The groups of one match in a `str`.
 pub type Caps<'t> = fancy_regex::Captures<'t, str>;
 
-/// A regex compiled once, on first use: `static RE: Lazy = jsre::lazy(r"...")`.
-pub type Lazy = std::sync::LazyLock<Regex>;
+/// A regex compiled on first use: `static RE: Lazy = Lazy::new(|| js(r"...", ""))`; `Lazy<Vec<..>>` for a table of
+/// them. Like `LazyLock`, except on the thread that called `own_compiled_here` (the Windows app's engine thread),
+/// which keeps copies of its own that `release_compiled` frees while the bar is hidden (qcalc-lazy).
+pub type Lazy<T = Regex> = qcalc_lazy::Lazy<T>;
+
+/// Makes this thread the one whose compiled regexes `release_compiled` can free (one thread per process, ever).
+/// For a host whose engine calls all run on one long-lived thread of its own (the Windows app's engine thread).
+pub fn own_compiled_here() -> bool {
+    qcalc_lazy::own_here()
+}
+
+/// Frees this thread's compiled regexes and tables if it called `own_compiled_here`; each is compiled again when
+/// it's next used. Returns how many statics were freed (qcalc-lazy's `release`).
+///
+/// # Safety
+/// No reference to a regex (or table) from a `Lazy` may be alive on this thread across the call: call it between
+/// jobs, from the top of the thread's loop. Other threads are unaffected.
+pub use qcalc_lazy::release as release_compiled;
+
+/// Empties this thread's cache of run-time patterns (`compile_cached`); a regex still in use stays alive.
+pub fn clear_cache() {
+    CACHE.with(|c| c.borrow_mut().clear());
+}
+
+thread_local! {
+    static CACHE: std::cell::RefCell<std::collections::HashMap<String, std::rc::Rc<Regex>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
 
 /// Compiles a pattern from the TS source. Panics on a bad pattern, which only a code change can cause.
 pub fn compile(pattern: &str) -> Regex {
@@ -27,12 +53,7 @@ pub fn compile(pattern: &str) -> Regex {
 /// `compile`, kept per thread for the next call with the same pattern (the last 64 patterns): for patterns built
 /// at run time from the line's variable and function names, which would otherwise compile on every keystroke.
 pub fn compile_cached(pattern: &str) -> std::rc::Rc<Regex> {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::rc::Rc;
-    thread_local! {
-        static CACHE: RefCell<HashMap<String, Rc<Regex>>> = RefCell::new(HashMap::new());
-    }
     CACHE.with(|cache| {
         if let Some(re) = cache.borrow().get(pattern) {
             return re.clone();

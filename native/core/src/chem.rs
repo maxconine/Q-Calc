@@ -756,8 +756,8 @@ pub fn gas_constant(text: &str) -> Option<GasConstant> {
             "i",
         )
     });
-    static TABLE: std::sync::LazyLock<Vec<(jsre::Regex, f64, &'static str)>> =
-        std::sync::LazyLock::new(|| {
+    static TABLE: crate::jsre::Lazy<Vec<(jsre::Regex, f64, &'static str)>> =
+        crate::jsre::Lazy::new(|| {
             vec![
                 (jsre::js(r"^(?:si|j|joules?)$", ""), R, "J·mol⁻¹·K⁻¹"),
                 (

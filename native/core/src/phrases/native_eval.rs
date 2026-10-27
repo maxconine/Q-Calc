@@ -73,7 +73,7 @@ pub fn native_eval_payload(req: &Json) -> Json {
 }
 
 // the only things soulvercore may answer: phrases the js engine can't read, never math it left blank on purpose
-static SOULVER_ONLY: std::sync::LazyLock<Vec<jsre::Regex>> = std::sync::LazyLock::new(|| {
+static SOULVER_ONLY: crate::jsre::Lazy<Vec<jsre::Regex>> = crate::jsre::Lazy::new(|| {
     [
         (r"[$€£¥₹]", ""),
         (r"\b(?:usd|eur|gbp|jpy|cad|aud|chf|cny|inr|mxn|dollars?|euros?|yen)\b", "i"),

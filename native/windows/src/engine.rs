@@ -177,6 +177,8 @@ impl EngineThread {
                 // this thread has the evaluation thread's 32 MB stack: the engine's calls run here, with no hop
                 // to qcalc-eval and back per call (~15 us each) and one set of regex caches (PERFORMANCE.md)
                 qcalc_ffi::run_engine_calls_here();
+                // and its compiled regexes are its own, so `release` can free them while the bar is hidden
+                qcalc_core::jsre::own_compiled_here();
                 let engine = Engine::new(config);
                 qlog!(
                     "engine created in {:.1} ms",
@@ -307,6 +309,24 @@ impl EngineThread {
             }
             qlog!(
                 "engine warmed in {:.1} ms",
+                t.elapsed().as_secs_f64() * 1000.0
+            );
+            None
+        });
+    }
+
+    /// The bar hid: the engine's compiled regexes (~6-9 MB with their caches, PERFORMANCE.md) are freed on the
+    /// engine thread between jobs, and the next showing's `warm_up` compiles the keystroke path's again.
+    pub fn release(&self) {
+        self.warmed.store(false, Ordering::Relaxed);
+        self.submit(Lane::Misc, |_| {
+            let t = Instant::now();
+            qcalc_core::jsre::clear_cache();
+            // SAFETY: a job of its own, run from the top of the engine thread's loop: no reference from a regex
+            // static is alive on this thread, and other threads keep their own copies (qcalc-lazy)
+            let n = unsafe { qcalc_core::jsre::release_compiled() };
+            qlog!(
+                "engine released {n} compiled statics in {:.1} ms",
                 t.elapsed().as_secs_f64() * 1000.0
             );
             None

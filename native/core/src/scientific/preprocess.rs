@@ -77,8 +77,9 @@ struct Callable {
 
 /// Cached per user-function list, as in the TS.
 fn callable_names(extra: &[String]) -> std::sync::Arc<Callable> {
-    static CACHE: LazyLock<Mutex<HashMap<String, std::sync::Arc<Callable>>>> =
-        LazyLock::new(|| Mutex::new(HashMap::new()));
+    // a jsre::Lazy, so the Windows engine thread's cache (and its compiled regexes) goes with the others at a hide
+    static CACHE: Lazy<Mutex<HashMap<String, std::sync::Arc<Callable>>>> =
+        Lazy::new(|| Mutex::new(HashMap::new()));
     let key = extra.join("|");
     if let Ok(cache) = CACHE.lock()
         && let Some(c) = cache.get(&key)
@@ -307,7 +308,7 @@ const INVERSE_POWER_FNS: &[(&str, &str)] = &[
 
 /// sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 isn't read as sin.
 fn rewrite_inverse_power(expr: &str) -> String {
-    static RES: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
+    static RES: crate::jsre::Lazy<Vec<(Regex, &'static str)>> = crate::jsre::Lazy::new(|| {
         INVERSE_POWER_FNS
             .iter()
             .map(|(f, inv)| {
@@ -595,7 +596,7 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static COUNT_CALL: Lazy = Lazy::new(|| js(r"\bcount\s*\(", ""));
     static RANGE: Lazy = Lazy::new(|| js(r"\[([^\][]*?)\s*\.\.\.\s*([^\][]*?)\]", ""));
     static LOG_BASE: Lazy = Lazy::new(|| js(r"\blog_(\d+(?:\.\d+)?)\s*\(([^)]+)\)", ""));
-    static WORDS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
+    static WORDS: crate::jsre::Lazy<Vec<(Regex, &'static str)>> = crate::jsre::Lazy::new(|| {
         [
             (r"\barcsin\b", "", "asin"),
             (r"\barccos\b", "", "acos"),
@@ -609,7 +610,7 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
         .map(|(p, f, to)| (js(p, f), *to))
         .collect()
     });
-    static HYPERBOLIC: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
+    static HYPERBOLIC: crate::jsre::Lazy<Vec<(Regex, &'static str)>> = crate::jsre::Lazy::new(|| {
         [
             (r"\barcsinh\b|\barsinh\b", "", "asinh"),
             (r"\barccosh\b|\barcosh\b", "", "acosh"),

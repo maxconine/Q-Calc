@@ -1084,6 +1084,8 @@ impl App {
         // the swap chain and the WARP device too (~2.5 MB, and D3D10Warp unloads): a showing makes them in ~4 ms
         self.bar.surface.release();
         self.gfx.drop_flip_device();
+        // and the engine's compiled regexes (engine.rs), compiled again with the next showing's warm-up
+        self.engine.release();
     }
 
     /// The bar has been hidden a while: give memory back (the working set; a hardware render target too).

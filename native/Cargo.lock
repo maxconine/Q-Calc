@@ -1787,6 +1787,7 @@ dependencies = [
  "num-integer",
  "num-rational",
  "num-traits",
+ "qcalc-lazy",
  "roxmltree",
  "serde",
  "serde_json",
@@ -1803,6 +1804,10 @@ dependencies = [
  "serde_json",
  "uniffi",
 ]
+
+[[package]]
+name = "qcalc-lazy"
+version = "0.1.0"
 
 [[package]]
 name = "qcalc-typst"
