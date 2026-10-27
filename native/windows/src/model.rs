@@ -74,6 +74,17 @@ pub struct BarModel {
     changed: bool,
     /// the clipboard text an action wants written (app.rs writes it)
     pub to_clipboard: Option<String>,
+    /// a word command being typed and what the answer slot says for it (commands.rs)
+    pub command: Option<crate::commands::Shown>,
+    /// the games list's picked and hovered rows (commands.rs)
+    pub games_pick: Option<usize>,
+    pub games_hover: Option<usize>,
+    /// message cards under the bar (messaging.rs)
+    pub cards: crate::messaging::Cards,
+    /// the walkthrough, examples and hints (tour.rs)
+    pub tour: crate::tour::Tour,
+    /// the edge tools' hover and tips (edge.rs)
+    pub edge: crate::edge::EdgeState,
 }
 
 impl BarModel {
@@ -93,6 +104,12 @@ impl BarModel {
             settings_dirty: false,
             changed: true,
             to_clipboard: None,
+            command: None,
+            games_pick: None,
+            games_hover: None,
+            cards: crate::messaging::Cards::default(),
+            tour: crate::tour::Tour::default(),
+            edge: crate::edge::EdgeState::default(),
         }
     }
 
@@ -158,9 +175,13 @@ impl BarModel {
         }
         self.changed = true;
         self.evaluate_live(engine);
+        crate::tour::text_changed(self, engine);
     }
 
     pub fn evaluate_live(&mut self, engine: &EngineThread) {
+        if crate::commands::live(self, engine) {
+            return;
+        }
         let typed = self.field.text().to_string();
         if typed.trim().is_empty() {
             engine.cancel(Lane::Live);
@@ -198,6 +219,7 @@ impl BarModel {
         self.live = Some(answer);
         self.live_for = typed.to_string();
         self.changed = true;
+        crate::tour::live_landed(self);
     }
 
     /// The answer as the slot shows it ("" for none).
@@ -261,10 +283,12 @@ impl BarModel {
                     return;
                 }
                 if saved {
+                    let committed = crate::tour::committed(m, &typed);
                     m.field.set_text(&result.input);
                     m.field.break_run();
                     m.hint = None;
                     app.text_changed();
+                    crate::tour::after_commit(app, &typed, committed);
                 } else {
                     m.hint = Some(result.hint.unwrap_or_else(|| {
                         "nothing to save yet · finish the line, or esc to close".into()

@@ -5,11 +5,14 @@
 
 // pure logic: compiles (and is tested) everywhere
 mod autostart;
+mod commands;
+mod edge;
 mod hotkey;
 mod keys;
 mod log;
 mod place;
 mod store;
+mod tour;
 
 #[cfg(windows)]
 mod answer;
@@ -32,11 +35,15 @@ mod history;
 #[cfg(windows)]
 mod input;
 #[cfg(windows)]
+mod later;
+#[cfg(windows)]
 mod messaging;
 #[cfg(windows)]
 mod model;
 #[cfg(windows)]
 mod rates;
+#[cfg(windows)]
+mod relay;
 #[cfg(windows)]
 mod render;
 #[cfg(windows)]

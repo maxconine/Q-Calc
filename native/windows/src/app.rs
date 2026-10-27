@@ -457,6 +457,16 @@ fn run_ops() {
     }
 }
 
+/// Runs `f` on the app from outside its two wndprocs (a sheet's window, a timer, the relay's window), then lays
+/// out, repaints and runs the ops as after a message. Never call it while the app is borrowed.
+pub fn poke(f: impl FnOnce(&mut App)) {
+    with_app(|a| {
+        f(a);
+        a.after();
+    });
+    run_ops();
+}
+
 fn run_op(op: Op) {
     match op {
         Op::Show => {
@@ -530,6 +540,11 @@ fn run_op(op: Op) {
 }
 
 impl App {
+    /// Queues a window op (run after the app's borrow ends), for modules outside app.rs.
+    pub fn op(&mut self, op: Op) {
+        self.ops.push(op);
+    }
+
     // ---- host messages ----
 
     fn on_host(&mut self, msg: u32, wp: WPARAM, lp: LPARAM) -> Option<LRESULT> {
@@ -550,6 +565,7 @@ impl App {
                 // PBT_APMRESUMESUSPEND 7, PBT_APMRESUMEAUTOMATIC 0x12
                 if wp.0 == 7 || wp.0 == 0x12 {
                     self.hotkey.kick("resume");
+                    crate::messaging::woke();
                 }
                 return Some(LRESULT(1));
             }
@@ -620,6 +636,7 @@ impl App {
                     self.theme = Theme::for_setting(&self.store.settings.theme);
                     self.bar.set_dark(self.theme.dark);
                     self.tray.refresh_icon();
+                    crate::sheets::retheme(self.theme);
                     self.model.touch();
                 }
             }
@@ -681,6 +698,9 @@ impl App {
             WM_CLOSE => self.ops.push(Op::Hide),
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
+                if crate::commands::key_down(self, vk, mods()) {
+                    return Some(LRESULT(0));
+                }
                 let host = self.bar.hwnd;
                 let outcome = self
                     .model
@@ -693,7 +713,11 @@ impl App {
                     Outcome::ClearHistory => self.set_history(Vec::new()),
                 }
             }
-            WM_CHAR => self.model.char16(wp.0 as u16, &self.engine),
+            WM_CHAR => {
+                if !crate::commands::char16(self, wp.0 as u16) {
+                    self.model.char16(wp.0 as u16, &self.engine);
+                }
+            }
             // Alt+letter isn't the bar's: no beep
             WM_SYSCHAR => {}
             WM_IME_STARTCOMPOSITION => {
@@ -715,6 +739,7 @@ impl App {
                 self.click(x, y, msg == WM_LBUTTONDBLCLK);
             }
             WM_MOUSEMOVE => {
+                crate::commands::pointer(self, Some(self.dips(lp)));
                 if self.bar.selecting {
                     let (x, y) = self.dips(lp);
                     let pos = self.bar.field_view.hit(x, y);
@@ -722,6 +747,8 @@ impl App {
                     self.model.touch();
                 }
             }
+            // WM_MOUSELEAVE: the pointer left the bar
+            0x02A3 => crate::commands::pointer(self, None),
             WM_LBUTTONUP => {
                 if self.bar.selecting {
                     self.bar.selecting = false;
@@ -764,6 +791,9 @@ impl App {
     }
 
     fn click(&mut self, x: f32, y: f32, double: bool) {
+        if crate::commands::click(self, x, y) {
+            return;
+        }
         let l = &self.bar.layout;
         if l.field.contains(x, y)
             || (y >= l.composer.y && y < l.composer.bottom() && x < l.answer.x)
@@ -933,6 +963,8 @@ impl App {
             }
             self.model.hint = self.notice.clone();
             self.model.field.select_all();
+            crate::tour::will_show(self);
+            crate::messaging::will_show(self);
         }
         self.bar.surface.set_dpi(monitor.dpi);
         let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
@@ -965,6 +997,7 @@ impl App {
         self.model.selected = None;
         self.model.tape_open = false;
         self.model.hint = None;
+        crate::commands::will_hide(&mut self.model);
         self.model.touch();
         self.hidden_at = Some(Instant::now());
         if self.store.moved_or_widened() {
@@ -1015,6 +1048,7 @@ impl App {
             let _ = self.gfx.layout(s, &self.gfx.fonts.row, 0.0, 36.0);
         }
         qlog!("bar warmed in {:.1} ms", t.elapsed().as_secs_f64() * 1000.0);
+        crate::messaging::start();
         if !self.ready_logged && !self.bar.visible {
             self.ready_logged = true;
             qlog!(

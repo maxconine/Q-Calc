@@ -52,6 +52,10 @@ pub struct BarLayout {
     pub answer: Rect,
     pub answer_text: String,
     pub hint: Option<Rect>,
+    /// the tutorial's line, in the hint's place (tour.rs)
+    pub tour: Option<Rect>,
+    /// the message cards' panel (messaging.rs)
+    pub cards: Option<Rect>,
 }
 
 /// A monitor: its store key (`\\.\DISPLAY1`, as Tauri named it), work area (physical px) and scale.
@@ -217,12 +221,23 @@ impl Bar {
     /// Lays the bar out for the model as it is.
     pub fn layout(gfx: &Gfx, model: &BarModel, width: f32, now: i64) -> BarLayout {
         let visible = model.visible(now);
-        let tape_rows = history::shown(model, visible);
-        let anchor = history::height(tape_rows.len());
+        // the games list stands where the tape would (commands.rs)
+        let games = crate::commands::games_height(model);
+        let tape_rows = if games > 0.0 {
+            visible.end..visible.end
+        } else {
+            history::shown(model, visible)
+        };
+        let anchor = if games > 0.0 {
+            games
+        } else {
+            history::height(tape_rows.len())
+        };
         let composer = Rect::new(0.0, anchor, width, size::COMPOSER);
         let inner = width - 2.0 * size::GUTTER;
         let answer_text = model.answer_text();
-        let aw = answer::wanted_width(gfx, &answer_text)
+        let aw = crate::commands::slot_width(gfx, model)
+            .unwrap_or_else(|| answer::wanted_width(gfx, &answer_text))
             .min(inner * 0.67 - 12.0)
             .max(0.0);
         let field_w = if aw > 0.0 { inner - aw - 12.0 } else { inner };
@@ -245,6 +260,17 @@ impl Bar {
             height += 18.0;
             r
         });
+        let tour = (hint.is_none() && crate::tour::line_shown(model)).then(|| {
+            let r = Rect::new(size::GUTTER, height - 12.0, inner, crate::tour::LINE_H);
+            height += crate::tour::LINE_H;
+            r
+        });
+        let cards = (!model.cards.list.is_empty()).then(|| {
+            let h = crate::messaging::height(gfx, model, width);
+            let r = Rect::new(0.0, height, width, h);
+            height += h;
+            r
+        });
         BarLayout {
             width,
             height,
@@ -255,18 +281,21 @@ impl Bar {
             answer,
             answer_text,
             hint,
+            tour,
+            cards,
         }
     }
 
     /// One frame of the bar as laid out.
     pub fn paint(&mut self, gfx: &Gfx, theme: &Theme, model: &BarModel) -> Result<()> {
         let layout = self.layout.clone();
-        let focused = self.focused || !self.visible;
+        let focused = (self.focused || !self.visible) && !crate::messaging::reply_has_keys(model);
         let field_view = &mut self.field_view;
         self.surface.draw(gfx, theme, |c: &mut Canvas| {
             c.clear(theme.bg);
             history::paint(c, model, layout.tape_rows.clone());
-            let placeholder = "Calculate";
+            crate::commands::paint_games(c, model);
+            let placeholder = crate::tour::placeholder(model).unwrap_or("Calculate");
             if model.chained && !model.field.text().is_empty() {
                 // .quick-chain: the faint `ans` a chained line continues from
                 if let Some(l) = c
@@ -294,7 +323,9 @@ impl Bar {
                 field_view.paint(c, &model.field, layout.field, focused, placeholder);
             }
             let stale = model.live_for != model.field.text();
-            answer::paint(c, &layout.answer_text, layout.answer, stale);
+            if !crate::commands::paint_slot(c, model, layout.answer) {
+                answer::paint(c, &layout.answer_text, layout.answer, stale);
+            }
             if let (Some(r), Some(hint)) = (layout.hint, model.hint.as_ref())
                 && let Some(l) = c.gfx.layout_in(
                     hint,
@@ -306,6 +337,13 @@ impl Bar {
             {
                 c.text(&l, r.x, r.y, theme.muted);
             }
+            if let Some(r) = layout.tour {
+                crate::tour::paint_line(c, model, r);
+            }
+            if let Some(r) = layout.cards {
+                crate::messaging::paint(c, model, r);
+            }
+            crate::edge::paint(c, model, layout.composer);
         })
     }
 

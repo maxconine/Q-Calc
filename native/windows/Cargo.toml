@@ -15,6 +15,8 @@ path = "src/main.rs"
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+# the bar's pure app logic (commands, messaging, the tour), linked already through qcalc-ffi on Windows
+qcalc-core = { path = "../core" }
 
 # everything Windows lives behind cfg(windows), so `cargo build` of the workspace on the Mac builds a stub main
 [target.'cfg(windows)'.dependencies]
@@ -26,6 +28,7 @@ windows = { version = "0.61", features = [
   "Win32_Graphics_Direct2D_Common",
   "Win32_Graphics_DirectWrite",
   "Win32_Graphics_Dxgi_Common",
+  "Win32_Networking_WinHttp",
   "Win32_Graphics_Dwm",
   "Win32_Graphics_Gdi",
   "Win32_Security",
