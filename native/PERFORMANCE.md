@@ -255,10 +255,13 @@ New in the bench:
 | pong's court as Core Animation layers, not a Canvas in a TimelineView | playing pong 167-173 → 32 MB | kept |
 | `opt-level = "z"` for the Typst dependencies the preview never runs (images, PDF, WASM, bibliographies) | binary 42.2 → 45.1 MB (bigger) | reverted |
 | `strip` instead of `strip -x` | executable 42.2 → 40.5 MB, on disk 44.4 → 42.9 MB | kept |
-| a CPU-bitmap stand-in for SwiftUI's Canvas (ImageRenderer) on crack's dial | crack's 125 MB spikes unchanged | reverted |
+| a stand-in for SwiftUI's Canvas that renders the same Canvas through ImageRenderer, on crack's dial | crack's 125 MB spikes unchanged (ImageRenderer rasterises on the GPU too) | reverted |
 | `.drawingGroup()` on connect 4's animating Canvas | peak 167 → 168 MB | reverted |
 | plot drawn again only when its state, the pointer or the scale changes | graph shown, 20 unrelated model changes: 20 → 0 redraws of ~10.6 ms each | kept |
 | menu bar icon bundled at 18 and 36 px (it was drawn from the 1254 px PNG, kept decoded) | idle 24/24 → 22/22, after typing 41/40 → 39/38, after the graph 57/57 → 55/55 MB; the icon is the same to the pixel | kept |
+| crack's dial drawn by Core Graphics into one bitmap (`CGCanvas`, the plot's approach) | each press: 34-36 → 157-160 MB for 1-4 s before, flat at 29 MB after; steady 35 → 29 MB; the ready dial within 2/255 | kept |
+| connect 4's board through `CGCanvas` | starting a game: peak 161 → 32 MB, steady 39 → 31 MB; the board within 2/255 | kept |
+| ultimate's slate through `CGCanvas` | starting a game: peak 163 → 33 MB, steady 40 → 31 MB; the board differs only where the chalk-in animation is caught at another moment (as two runs of the old build do) | kept |
 
 Before and after: the build this night started from (`native` at 405b057) against the last commit. Two
 invocations each with `--runs 2`, interleaved, so each cell is the median over four sessions (launches: 6 cold
@@ -279,6 +282,7 @@ and 10 warm).
 | CPU while typing at 40 ms a key | 8.2-8.9% | 7.7-8.9% |
 | idle CPU | 0% | 0% |
 | playing pong vs the computer | 167-173 MB | 32 MB |
+| crack, connect 4, ultimate: peak while playing | 157-163 MB | 29-33 MB |
 | app on disk | 44.4 MB | 42.8 MB |
 
 The before build has no `field` mode, so its "typed into the field" row in the raw JSON is the set-text path again.
@@ -304,11 +308,10 @@ Where the time goes now:
 - **Game frames** couldn't be timed tonight: with the display asleep the display links don't fire, so CPU per
   frame reads 0-4%.
 
-Open, not fixed:
-- **Crack and connect 4 spike to ~160 MB for 1-3 s.** Crack does it after each press, connect 4 when a game
-  starts. The memory is about 30 window-wide GPU surfaces of 4 MB ("owned unmapped (graphics)"), and it falls
-  back to 36-40 MB after.
-  - It isn't the dial's Canvas, which a CPU bitmap didn't change, nor the note under the dial.
-  - Where the surfaces come from is still unknown.
+Found on the way, not fixed:
+- **What made the game Canvases cost GPU surfaces.** After a change (a press, a game starting), each frame of a
+  SwiftUI Canvas inside the game window left a window-wide 4 MB surface behind for 1-3 s, about 30 of them.
+  It wasn't the TimelineView, the note under the dial or `.drawingGroup()`. Taking the Canvas out was the fix,
+  so `CGCanvas` is what a new per-frame game picture should use.
 - Ember's level picker shows "Optional(nil)" at the start of its note (`EmberPanel.swift`, the `note` line).
   This is a display bug, not performance, and it was left for the games work.
