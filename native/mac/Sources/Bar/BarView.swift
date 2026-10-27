@@ -81,9 +81,8 @@ struct BarView: View {
                 Text(line.text).lineLimit(1).truncationMode(.tail)
                 Text("\(line.at)/\(line.of)").monospacedDigit().opacity(0.7)
                 Spacer(minLength: 0)
-                Button("skip") { model.skipTutorial() }
+                Button { model.skipTutorial() } label: { Text("skip").underline() }
                     .buttonStyle(.plain)
-                    .underline()
                     .help("skip the tutorial (or type skip)")
             }
             .font(.system(size: Theme.small))
@@ -552,7 +551,7 @@ private struct EdgeTool<Label: View>: View {
         Button(action: action) {
             content
                 .font(.system(size: Theme.caption, weight: .medium))
-                .tracking(0.02 * Theme.caption)
+                .viewTracking(0.02 * Theme.caption)
                 .foregroundStyle(active || (hover && alignLeft) ? Color.qAnswer : hover ? Color.qMuted : Color.qMuted.opacity(0.72))
                 .padding(.vertical, 4)
                 .padding(.horizontal, alignLeft ? 6 : 9)

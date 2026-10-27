@@ -152,7 +152,7 @@ struct SystemPanel: View {
                           prompt: Text("equation \(i + 1)").foregroundColor(Color.qMuted.opacity(0.8)))
                     .textFieldStyle(.plain)
                     .font(.system(size: Theme.row))
-                    .tracking(Theme.displayTracking(Theme.row))
+                    .viewTracking(Theme.displayTracking(Theme.row))
                     .foregroundStyle(Color.qInk)
                     .padding(.horizontal, 12)
                     .frame(height: 40)

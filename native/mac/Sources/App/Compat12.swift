@@ -20,6 +20,16 @@ extension View {
         }
     }
 
+    /// `.tracking` on any view (13); Monterey has it on Text only, so there a view that isn't a Text keeps its
+    /// font's own spacing.
+    @ViewBuilder func viewTracking(_ tracking: CGFloat) -> some View {
+        if #available(macOS 13, *) {
+            self.tracking(tracking)
+        } else {
+            self
+        }
+    }
+
     /// `.gesture(SpatialTapGesture().onEnded { $0.location })`. On 12 a press that ends within a few points of
     /// where it began.
     @ViewBuilder func spatialTap(_ action: @escaping (CGPoint) -> Void) -> some View {

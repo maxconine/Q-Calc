@@ -369,7 +369,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func tab<Content: View>(_ title: String, symbol: String, size: NSSize, content: () -> Content) -> NSTabViewItem {
         let hosting = NSHostingController(rootView: content().frame(width: size.width, height: size.height))
-        hosting.sizingOptions = [.preferredContentSize]
+        if #available(macOS 13, *) {
+            hosting.sizingOptions = [.preferredContentSize]
+        } else {
+            // the content is a fixed frame, so its size is the one the option would have kept up to date
+            hosting.preferredContentSize = size
+        }
         hosting.title = title
         let item = NSTabViewItem(viewController: hosting)
         item.label = title
