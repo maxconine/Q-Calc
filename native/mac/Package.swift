@@ -25,7 +25,8 @@ let package = Package(
             name: "QCalcMac",
             dependencies: [.product(name: "QCalcCore", package: "QCalcCore")],
             path: "Sources",
-            swiftSettings: [.unsafeFlags(["-F", sparkle])],
+            // QCALC_NATIVE: code in the shared macos/ files that only this app compiles (the message threads)
+            swiftSettings: [.unsafeFlags(["-F", sparkle]), .define("QCALC_NATIVE")],
             linkerSettings: [
                 .unsafeFlags(["-F", sparkle, "-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks", "-Xlinker", "-dead_strip"]),
                 .linkedFramework("Sparkle"),

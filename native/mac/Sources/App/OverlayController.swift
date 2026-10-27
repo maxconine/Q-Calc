@@ -592,6 +592,8 @@ final class OverlayController: NSObject {
             if isCommandWCloseKey(event) {
                 if let sheet = PeriodicPanel.front() {
                     sheet.close()
+                } else if self.model.closeMessages() {
+                    // a message thread or the conversations list closes before the bar does
                 } else {
                     self.hide(because: "⌘W")
                 }

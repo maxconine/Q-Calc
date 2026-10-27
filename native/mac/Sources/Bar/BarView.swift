@@ -119,6 +119,9 @@ struct BarView: View {
         if let graph = model.graph {
             GraphPanel(model: model, state: graph)
         }
+        if model.messagesPanel != nil {
+            MessagesPanelView(model: model)
+        }
         if !model.cards.isEmpty {
             MessageCards(model: model)
         }
@@ -954,12 +957,18 @@ private struct CardView: View {
                 }
             }
             .frame(minHeight: 22)
+            // native only: a click on a message card's name or words opens the thread with them
+            // (Messages/MessageThreads.swift); the buttons and the reply line keep their own clicks
+            .contentShape(Rectangle())
+            .onTapGesture { if !card.ask { model.openThread(card.from) } }
             if !card.ask {
                 Text(card.text)
                     .foregroundStyle(Color.qAnswer)
                     .lineLimit(4)
-                    .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture { model.openThread(card.from) }
+                    .help("Open messages with \(card.from)")
                 HStack(spacing: 8) {
                     TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }),
                               prompt: Text("Reply to \(card.from)").foregroundColor(.qMuted))

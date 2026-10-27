@@ -109,6 +109,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
         case "identities": overlay.model.text = "identities"; overlay.model.enter()
         case "key": DevSnapshot.key(arg)
+        // text typed into whatever field has the keys (a reply line, the bar), and a click at x,y in the bar
+        // (points from its top-left)
+        case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView)?.insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
+        case "click": DevSnapshot.click(arg)
         case "bench": DevBench.run(spec: arg, model: overlay.model)
         // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i
         case "paste":

@@ -41,13 +41,13 @@ final class BarModel: ObservableObject {
     // the line
     @Published var text = "" { didSet { if text != oldValue { textChanged(from: oldValue) } } }
     /// what a command line says in the answer slot (`periodic table`, `↵ play pong`), as .live.message does
-    @Published private(set) var commandMessage: String?
+    @Published var commandMessage: String?
     @Published private(set) var live = LiveAnswer.blank
     /// a closed form the engine's PSLQ search found after the answer (π²/6), shown in place of `live.exact`
     @Published private(set) var upgradedExact: String? { didSet { if upgradedExact != oldValue { refreshTypeset() } } }
     /// the rest of the word being typed, drawn after the caret; Tab or → takes it
-    @Published private(set) var completion: String?
-    @Published private(set) var decorations = Decorations()
+    @Published var completion: String?
+    @Published var decorations = Decorations()
     // `sys N` (Systems.swift)
     @Published var sysLines: [String]?
     @Published var sysAnswer: SysAnswer?
@@ -92,6 +92,11 @@ final class BarModel: ObservableObject {
     /// keyboard focus is on an edge tool (Full Keyboard Access), which shows them as hover does
     @Published var edgeFocus = false
     @Published var replyFocused: String?
+    /// the message threads under the bar (native only, Messages/MessageThreads.swift): the conversations list or
+    /// one thread, its reply line's words and how its last send went
+    @Published var messagesPanel: MessagesPanel?
+    @Published var threadDraft = ""
+    @Published var threadReply = BannerCard.Reply.idle
     // settings mirrored for the views
     @Published private(set) var angleRad = false
     @Published private(set) var fractions = false
@@ -222,6 +227,8 @@ final class BarModel: ObservableObject {
         gamesShown = BarCommand.of(text, sheets: sheets) == .games
         if !gamesShown { gamePick = nil }
         helpShown = false
+        // the conversations list is picked from with the line empty; typing leaves it
+        if case .list = messagesPanel, !text.isEmpty { messagesPanel = nil }
         if text.isEmpty { hint = nil }
         if !text.isEmpty { dismissRotation() }
         evaluateLive()
@@ -241,6 +248,15 @@ final class BarModel: ObservableObject {
         if sysLines != nil { sysLines = nil; sysAnswer = nil }
         if case let .hint(h) = sys {
             commandMessage = h
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
+        if let threads = threadCommand(typed) {
+            nameCheckTimer?.invalidate()
+            graph = nil
+            helpShown = false
+            messagesLine(typed, threads)
             setLive(.blank, for: typed)
             engine.cancel(.live)
             return
@@ -541,6 +557,11 @@ final class BarModel: ObservableObject {
             enterOnRow(i, other: option)
             return
         }
+        if text.isEmpty, listEnter() { return }
+        if let threads = threadCommand(text) {
+            runThreadCommand(threads)
+            return
+        }
         if gamesShown {
             guard let g = gamePick else { commit(); return }
             let game = BarCommand.gameList[g]
@@ -615,7 +636,7 @@ final class BarModel: ObservableObject {
         onGame?(kind)
     }
 
-    private func clearLine(keepHint: Bool = false) {
+    func clearLine(keepHint: Bool = false) {
         let h = hint
         text = ""
         selected = nil
@@ -733,6 +754,7 @@ final class BarModel: ObservableObject {
     }
 
     func moveSelection(up: Bool) {
+        if listMove(up: up) { return }
         if gamesShown {
             // in the games list ↑ starts at the game nearest the bar and climbs; ↓ past the last leaves it
             let last = BarCommand.gameList.count - 1
@@ -1036,6 +1058,7 @@ final class BarModel: ObservableObject {
             focusField?()
             return true
         }
+        if closeMessages() { return true }
         if !cards.isEmpty {
             cards = []
             return true
@@ -1074,6 +1097,7 @@ final class BarModel: ObservableObject {
 
     func willHide() {
         replyFocused = nil
+        _ = closeMessages(refocus: false)
         let draftSeconds = settings.draftSeconds
         if text.trimmingCharacters(in: .whitespaces).isEmpty {
             UserDefaults.standard.removeObject(forKey: Self.draftKey)
@@ -1106,7 +1130,7 @@ final class BarModel: ObservableObject {
 
     /// the relay's answers about names, kept a while (core's name_check)
     private let nameCheck = NameCheck()
-    private var nameCheckTimer: Timer?
+    var nameCheckTimer: Timer?
 
     private static var nowMs: Double { Date().timeIntervalSince1970 * 1000 }
 
@@ -1162,6 +1186,8 @@ final class BarModel: ObservableObject {
             let ask = o["ask"] as? Bool ?? false
             let text = MessageInbox.cleanText(o["text"] as? String ?? "", max: Messages.textMax)
             let card = BannerCard(id: id, from: from, text: ask ? "" : text, ask: ask)
+            // the open thread with them shows it (MessageHistory has it already), so no card
+            if !ask, threadOpen(with: from) { continue }
             if cards.contains(where: { $0.id == id || (ask && $0.ask && $0.from == from) }) { continue }
             cards.insert(card, at: 0)
         }

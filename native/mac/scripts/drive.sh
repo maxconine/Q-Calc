@@ -4,6 +4,7 @@
 # Commands: show, hide, settings, theme:<system|light|dark>, type:<text>, enter, up, down, tab, esc,
 # key:<chord> (a real key event: key:enter, key:cmd+w), periodic, identities, card[:<from>], ask[:<from>],
 # paste[:<system field>], snap:<path prefix> (a PNG per visible window), sleep:<seconds>.
+# QCALC_DEV_ID=<bundle id> drives a copy of the dev build re-signed under another id instead.
 for cmd in "$@"; do
   if [[ "$cmd" == sleep:* ]]; then
     sleep "${cmd#sleep:}"
@@ -12,6 +13,6 @@ for cmd in "$@"; do
   osascript -l JavaScript -e "
     ObjC.import('Foundation');
     \$.NSDistributedNotificationCenter.defaultCenter.postNotificationNameObjectUserInfoDeliverImmediately(
-      'com.maxconine.qcalc.native-dev.command', $(printf '%s' "$cmd" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'), \$(), true)" >/dev/null
+      '${QCALC_DEV_ID:-com.maxconine.qcalc.native-dev}.command', $(printf '%s' "$cmd" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'), \$(), true)" >/dev/null
   sleep 0.35
 done

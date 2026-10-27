@@ -76,6 +76,20 @@ enum DevSnapshot {
         }
     }
 
+    /// A left click at `x,y` (points from the bar's top-left), sent through the window as a real click is.
+    static func click(_ spot: String) {
+        let parts = spot.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        guard parts.count == 2, let window = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }),
+              let content = window.contentView else { return }
+        let point = NSPoint(x: parts[0], y: content.bounds.height - parts[1])
+        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+            guard let event = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                 windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1,
+                                                 pressure: type == .leftMouseDown ? 1 : 0) else { continue }
+            window.sendEvent(event)
+        }
+    }
+
     /// A key press, as `enter`, `up`, `down`, `tab`, `escape`, `cmd+w`, `cmd+c`, `ctrl+d`…, to the key window.
     static func key(_ chord: String) {
         guard let parsed = Chord(chord), let code = KeyNames.byName[parsed.key],

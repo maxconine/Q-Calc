@@ -236,6 +236,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         accepted.removeAll { $0 == who }
         blocked.removeAll { $0 == who }
         saveLists()
+        #if QCALC_NATIVE
+        // the native app's thread with them goes too (MessageHistory.swift)
+        MessageHistory.shared.forget(who)
+        #endif
     }
 
     // the page's own changes to the lists
@@ -290,6 +294,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         guard !to.isEmpty, !text.isEmpty else { return done("bad") }
         post("/send", ["from": name, "key": key, "to": to, "text": text]) { status in
             let known: Set<String> = ["delivered", "offline", "unknown", "not-yours", "too-many", "bad"]
+            #if QCALC_NATIVE
+            // the native app keeps what the relay took, in the thread with them
+            if status == "delivered" { MessageHistory.shared.add(with: to, mine: true, text: text) }
+            #endif
             done(known.contains(status) ? status : "network")
         }
     }
@@ -435,6 +443,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // kept for the bar whatever happens to the notification, which is only the alert while the bar is away
     private func deliver(from: String, text: String) {
         guard let item = inbox.add(from: from, text: text, ask: false) else { return }
+        #if QCALC_NATIVE
+        // an accepted name's message, kept in the native app's thread with them before the bar is told
+        MessageHistory.shared.add(with: from, mine: false, text: text)
+        #endif
         inboxChanged()
         guard !barOpen else { return }
         let content = UNMutableNotificationContent()
@@ -585,6 +597,9 @@ struct MessagesSettingsView: View {
             }
             names("Accepted", messages.accepted, empty: "Nobody yet. Anyone new’s first message asks you.", action: "Remove")
             names("Blocked", messages.blocked, empty: "Nobody. A blocked name’s messages never show, and they aren’t told.", action: "Unblock")
+            #if QCALC_NATIVE
+            MessageHistorySection()
+            #endif
         }
         .groupedForm()
         .onAppear {
