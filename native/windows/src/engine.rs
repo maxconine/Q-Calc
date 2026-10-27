@@ -1,7 +1,8 @@
 //! The engine thread: the one place the UI reaches the maths from, so the UI thread never evaluates.
 //!
-//! One long-lived thread with a 32 MB stack owns the `qcalc_ffi::Engine` (which itself hops each call to its own
-//! 32 MB evaluation thread; ARCHITECTURE.md §5). Work comes in *lanes* (`Lane`), as in the Mac's
+//! One long-lived thread with a 32 MB stack owns the `qcalc_ffi::Engine`, whose sync calls run right on it
+//! (`run_engine_calls_here`; the Mac's engine hops each call to its own 32 MB evaluation thread, ARCHITECTURE.md
+//! §5, which this thread already is). Work comes in *lanes* (`Lane`), as in the Mac's
 //! `EngineThread.swift`: a lane holds at most one waiting job, a newer one replaces it, so a burst of keystrokes
 //! evaluates only the latest text. Every job carries its lane's generation; its result goes back to the UI thread
 //! as a boxed closure (`Done`) through `PostMessageW(WM_ENGINE)`, and app.rs drops it unless its generation is still
@@ -171,6 +172,9 @@ impl EngineThread {
             .stack_size(STACK_BYTES)
             .spawn(move || {
                 let t = Instant::now();
+                // this thread has the evaluation thread's 32 MB stack: the engine's calls run here, with no hop
+                // to qcalc-eval and back per call (~15 us each) and one set of regex caches (PERFORMANCE.md)
+                qcalc_ffi::run_engine_calls_here();
                 let engine = Engine::new(config);
                 qlog!(
                     "engine created in {:.1} ms",

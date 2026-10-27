@@ -32,6 +32,7 @@ mod worker;
 
 pub use cancel::CancelToken;
 pub use engine::Engine;
+pub use worker::run_engine_calls_here;
 pub use games::*;
 pub use games_ember::*;
 pub use name_check::NameCheck;
