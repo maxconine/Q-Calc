@@ -119,6 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "click": DevSnapshot.click(arg)
         // what settings' Remove / Unblock does for a name
         case "forget": Messages.shared.forget(arg)
+        case "closegame": overlay.closeGame()
         case "bench": DevBench.run(spec: arg, model: overlay.model)
         // sendfile:<name>:<path> offers a file as a drop on their thread would; savefile saves every file that can
         // be (Messages/MessageFiles.swift), as Save does
