@@ -272,14 +272,14 @@ warm); the last pair was run on the final commit and agrees with the first two.
 
 | | before | after |
 |---|---|---|
-| launch to ready, cold / warm (ms) | 558-576 / 132-153 | 548-569 / 133-134 |
-| footprint, idle (bar never shown) | 25-26 MB | 24 MB [22-25] |
+| launch to ready, cold / warm (ms) | 558-615 / 132-153 | 548-604 / 133-137 |
+| footprint, idle (bar never shown) | 25-26 MB | 23-24 MB [22-25] |
 | footprint, bar shown | 28 MB | 26 MB |
-| footprint, after the typing session | 40 MB | 38-40 MB |
+| footprint, after the typing session | 40-41 MB | 38-40 MB |
 | footprint, after the graph | 68 MB | 54 MB |
 | footprint, peak while graphing | 198 MB | 54 MB |
 | RSS, after the graph | 140 MB | 122-125 MB |
-| keystroke (set text): median / p90 / p99 | 1.30-1.36 / 2.83-2.97 / 4.96-5.48 ms | 1.19-1.26 / 2.51-2.83 / 4.89-5.27 ms |
+| keystroke (set text): median / p90 / p99 | 1.30-1.36 / 2.76-2.97 / 4.91-5.48 ms | 1.19-1.26 / 2.51-2.83 / 4.89-5.27 ms |
 | keystroke typed into the field: median | 1.92-2.10 ms (measured on the build just before the undo change) | 1.29-1.36 ms |
 | heavy lines | 1.6-2.0 ms | 1.5-2.0 ms |
 | CPU while typing at 40 ms a key | 8.2-8.9% | 7.7-8.9% |
