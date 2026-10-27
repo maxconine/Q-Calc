@@ -8,3 +8,4 @@ QCalcCore/.build/
 QCalcCore/.swiftpm/
 mac/.build/
 target-coord/
+windows/tests/e2e/e2e-out/
