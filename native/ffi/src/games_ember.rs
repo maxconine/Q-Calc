@@ -5,7 +5,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use qcalc_core::games::eggs::{self, Egg, EggGates, PuffAt};
+use qcalc_core::games::eggs::{self, Egg, EggGates, KonamiTracker, LineEgg, LineEggGates, PuffAt};
 use qcalc_core::games::ember::camera::{base_view, camera_at, ease_camera};
 use qcalc_core::games::ember::engine::{gate_rect, stage_of, tile_at, trace_beams};
 use qcalc_core::games::ember::json::{event_json, view_json};
@@ -110,6 +110,129 @@ impl EggGate {
     /// the answer as it settled (nil when it isn't a plain number): the effect to play, if any
     pub fn settle(&self, n: Option<f64>) -> Option<EggKind> {
         self.inner.lock().ok()?.settle(n).map(EggKind::from)
+    }
+}
+
+// ---- the native-only line eggs and the Konami code
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum LineEggKind {
+    /// `x/0`: a black hole swallows the answer
+    Void,
+    /// `e^(iπ)+1`: confetti and a note
+    Euler,
+    /// `pi` on March 14: more digits
+    PiDigits,
+    /// `do a barrel roll`
+    BarrelRoll,
+}
+
+impl From<LineEgg> for LineEggKind {
+    fn from(e: LineEgg) -> Self {
+        match e {
+            LineEgg::Void => LineEggKind::Void,
+            LineEgg::Euler => LineEggKind::Euler,
+            LineEgg::PiDigits => LineEggKind::PiDigits,
+            LineEgg::BarrelRoll => LineEggKind::BarrelRoll,
+        }
+    }
+}
+
+/// how long a line egg stays up, ms
+#[uniffi::export]
+pub fn line_egg_play_ms(kind: LineEggKind) -> f64 {
+    match kind {
+        LineEggKind::Void => LineEgg::Void.play_ms(),
+        LineEggKind::Euler => LineEgg::Euler.play_ms(),
+        LineEggKind::PiDigits => LineEgg::PiDigits.play_ms(),
+        LineEggKind::BarrelRoll => LineEgg::BarrelRoll.play_ms(),
+    }
+}
+
+/// the whole line is `do a barrel roll` (the bar keeps the squiggle off it)
+#[uniffi::export]
+pub fn is_barrel_roll(text: String) -> bool {
+    eggs::is_barrel_roll(&text)
+}
+
+/// March 14
+#[uniffi::export]
+pub fn is_pi_day(month: u32, day: u32) -> bool {
+    eggs::is_pi_day(month, day)
+}
+
+/// π to 50 places
+#[uniffi::export]
+pub fn pi_digits() -> String {
+    eggs::PI_DIGITS.to_string()
+}
+
+/// The line eggs' gates: each fires once per settled line that sets it off, and again only after one that didn't.
+#[derive(Debug, Default, uniffi::Object)]
+pub struct LineEggGate {
+    inner: Mutex<LineEggGates>,
+}
+
+#[uniffi::export]
+impl LineEggGate {
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    /// the line as it settled, the answer the bar shows and its number: the effect to play, if any
+    pub fn settle(
+        &self,
+        text: String,
+        display: String,
+        number: Option<f64>,
+        pi_day: bool,
+    ) -> Option<LineEggKind> {
+        self.inner
+            .lock()
+            .ok()?
+            .settle(&text, &display, number, pi_day)
+            .map(LineEggKind::from)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum KonamiKey {
+    Up,
+    Down,
+    Left,
+    Right,
+    B,
+    A,
+    Other,
+}
+
+/// Watches the bar's keys for ↑↑↓↓←→←→BA.
+#[derive(Debug, Default, uniffi::Object)]
+pub struct KonamiGate {
+    inner: Mutex<KonamiTracker>,
+}
+
+#[uniffi::export]
+impl KonamiGate {
+    #[uniffi::constructor]
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    /// one key down; true when it completes the code
+    pub fn push(&self, key: KonamiKey) -> bool {
+        use eggs::KonamiKey as K;
+        let key = match key {
+            KonamiKey::Up => K::Up,
+            KonamiKey::Down => K::Down,
+            KonamiKey::Left => K::Left,
+            KonamiKey::Right => K::Right,
+            KonamiKey::B => K::B,
+            KonamiKey::A => K::A,
+            KonamiKey::Other => K::Other,
+        };
+        self.inner.lock().is_ok_and(|mut k| k.push(key))
     }
 }
 
