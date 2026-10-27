@@ -54,6 +54,23 @@ pub fn building() -> bool {
     BUILDING.try_with(|b| b.get() != 0).unwrap_or(false)
 }
 
+/// Runs `f` as if building a freeable copy (`building` is true meanwhile) when this thread is the owner: for a
+/// value the owner keeps elsewhere and frees with its copies (a cache it clears at the same time).
+pub fn build_scope<R>(f: impl FnOnce() -> R) -> R {
+    if EPOCH.with(Cell::get) == 0 {
+        return f();
+    }
+    BUILDING.with(|b| b.set(b.get() + 1));
+    let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f));
+    BUILDING.with(|b| b.set(b.get() - 1));
+    out.unwrap_or_else(|e| std::panic::resume_unwind(e))
+}
+
+/// Whether some other thread owns the freeable copies (so this one reads the kept ones).
+pub fn owned_elsewhere() -> bool {
+    CLAIMED.load(Ordering::Relaxed) && EPOCH.with(Cell::get) == 0
+}
+
 /// Frees the owner thread's copies of every `Lazy` value; their next use on this thread builds them again. Returns
 /// how many were freed; does nothing (0) on any other thread.
 ///

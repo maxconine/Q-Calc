@@ -284,13 +284,6 @@ unsafe impl GlobalAlloc for Routed {
     }
 }
 
-/// The slabs' reservation in MB (0 when unused), for the log.
-pub fn reserved_mb() -> usize {
-    (END.load(Ordering::Relaxed)
-        .saturating_sub(START.load(Ordering::Relaxed)))
-        >> 20
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -47,8 +47,15 @@ thread_local! {
 }
 
 /// Compiles a pattern from the TS source. Panics on a bad pattern, which only a code change can cause.
+///
+/// With fancy-regex's seek (except on the threads of a host whose engine thread owns its own copies: there only
+/// the engine thread's regexes, freed at a hide, pay seek's ~60% more memory): a pattern that needs its backtracking VM (every JS `\b`, translated to look-arounds,
+/// does) first finds where a match could start with a regular over-approximation, instead of running the VM at
+/// every position. The engine's evaluation is ~2.5x quicker for it; all 1,078 patterns the core's tests compile
+/// gave the same matches with and without it over ~40,000 haystacks (native/windows/PERFORMANCE.md).
 pub fn compile(pattern: &str) -> Regex {
-    match Regex::new(pattern) {
+    let seek = !qcalc_lazy::owned_elsewhere();
+    match fancy_regex::RegexBuilder::new(pattern).seek(seek).build() {
         Ok(re) => {
             if building_compiled() {
                 // a freeable copy: its search caches are made now too, so they share its heap (qcalc-lazy)
@@ -68,7 +75,8 @@ pub fn compile_cached(pattern: &str) -> std::rc::Rc<Regex> {
         if let Some(re) = cache.borrow().get(pattern) {
             return re.clone();
         }
-        let re = Rc::new(compile(pattern));
+        // freed with the statics at a hide (`clear_cache`), so built where they are
+        let re = Rc::new(qcalc_lazy::build_scope(|| compile(pattern)));
         let mut cache = cache.borrow_mut();
         if cache.len() >= 64 {
             cache.clear();

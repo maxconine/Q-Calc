@@ -36,6 +36,9 @@ use crate::qlog;
 
 pub const STACK_BYTES: usize = 32 * 1024 * 1024;
 
+/// How long the bar stays hidden before the engine frees its compiled regexes (`release`).
+const RELEASE_AFTER: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// What the UI thread runs with a result.
 pub type Done = Box<dyn FnOnce(&mut App) + Send>;
 
@@ -71,6 +74,8 @@ pub enum Lane {
 pub struct Cx {
     pub engine: Arc<Engine>,
     context: Option<ContextKey>,
+    /// the warm-up read the rates file (once: a later warm-up only compiles again)
+    rates_loaded: bool,
 }
 
 struct ContextKey {
@@ -125,6 +130,9 @@ type TypstJob = Box<dyn FnOnce(&TypstRenderer) -> Option<Done> + Send>;
 
 type Work = Box<dyn FnOnce(&mut Cx) -> Option<Done> + Send>;
 
+/// A warm-up step.
+type Step = Box<dyn FnOnce(&mut Cx) + Send>;
+
 struct Job {
     lane: Lane,
     generation: u64,
@@ -135,6 +143,12 @@ struct Job {
 struct Queue {
     waiting: HashMap<Lane, Job>,
     misc: VecDeque<Job>,
+    /// the warm-up's steps, run only when nothing else waits
+    idle: VecDeque<Step>,
+    /// `warm_up` ran since the last release
+    warmed: bool,
+    /// when the regexes go (`release`), unless the bar shows first
+    release_at: Option<Instant>,
     order: VecDeque<Lane>,
     newest: HashMap<Lane, u64>,
     quit: bool,
@@ -153,8 +167,6 @@ pub struct EngineThread {
     typst: Mutex<Option<Sender<TypstJob>>>,
     /// tells the UI thread a result is ready (app.rs posts WM_ENGINE)
     notify: Arc<dyn Fn() + Send + Sync>,
-    /// `warm_up` ran
-    warmed: std::sync::atomic::AtomicBool,
 }
 
 impl EngineThread {
@@ -187,6 +199,7 @@ impl EngineThread {
                 let mut cx = Cx {
                     engine,
                     context: None,
+                    rates_loaded: false,
                 };
                 run(&s, &mut cx, &*n);
             })
@@ -194,7 +207,6 @@ impl EngineThread {
         EngineThread {
             shared,
             typst: Mutex::new(None),
-            warmed: std::sync::atomic::AtomicBool::new(false),
             notify,
         }
     }
@@ -278,23 +290,34 @@ impl EngineThread {
         generation
     }
 
-    /// The engine's first evaluation is the slow one (its lazy tables and ~150 regexes, ~20 ms and ~4.8 MB): run
-    /// once, off the UI thread, when the bar first shows (or at launch when it shows then), so an app started into
-    /// the tray at sign-in holds none of it until it is used. A keystroke comes well after the showing's ~10 ms.
+    /// The engine's first evaluation is the slow one (its lazy tables and ~240 regexes, ~40 ms and ~4.8 MB): run
+    /// off the UI thread when the bar shows (or at launch when it shows then), so an app started into the tray at
+    /// sign-in holds none of it until it is used, and again after `release` freed the regexes. It runs in steps of
+    /// a few ms, each only when no other job waits, so a key typed straight after the showing goes first.
     pub fn warm_up(&self) {
-        if self.warmed.swap(true, Ordering::Relaxed) {
+        let Ok(mut q) = self.shared.queue.lock() else {
+            return;
+        };
+        // a showing keeps what a hide was about to free
+        q.release_at = None;
+        if std::mem::replace(&mut q.warmed, true) {
             return;
         }
-        self.submit(Lane::Misc, |cx| {
-            let t = Instant::now();
-            let _ = cx.engine.reload_rates();
+        let t = Instant::now();
+        q.idle.push_back(Box::new(|cx: &mut Cx| {
+            if !std::mem::replace(&mut cx.rates_loaded, true) {
+                let _ = cx.engine.reload_rates();
+            }
             let _ = cx.engine.evaluate(
                 vec!["2+2".into(), "sin(90)".into(), "72 f to c".into()],
                 qcalc_ffi::default_eval_options(),
             );
-            // and a keystroke's own path (the live answer's checks, phrases, the field's decorations), whose
-            // first run cost the first two keys after a showing ~7 ms each
-            for text in ["2+", "2+2", "5 km in miles"] {
+        }));
+        // and a keystroke's own path (the live answer's checks, phrases, the field's decorations), whose first
+        // run cost the first keys after a showing ~2-7 ms each
+        const TEXTS: [&str; 7] = ["2", "2+", "2+2", "si", "sin(9", "3x+2=1", "5 km in miles"];
+        for (i, text) in TEXTS.into_iter().enumerate() {
+            q.idle.push_back(Box::new(move |cx: &mut Cx| {
                 let context = EvalContext::default();
                 let chained = cx.engine.chains(text.into(), context.clone());
                 let answer = cx.engine.live(qcalc_ffi::LiveRequest {
@@ -306,33 +329,26 @@ impl EngineThread {
                     phrases: true,
                 });
                 let _ = crate::line::decorate(text, &context, &answer);
-            }
-            qlog!(
-                "engine warmed in {:.1} ms",
-                t.elapsed().as_secs_f64() * 1000.0
-            );
-            None
-        });
+                if i + 1 == TEXTS.len() {
+                    qlog!(
+                        "engine warmed {:.1} ms after it was asked",
+                        t.elapsed().as_secs_f64() * 1000.0
+                    );
+                }
+            }));
+        }
+        drop(q);
+        self.shared.wake.notify_one();
     }
 
-    /// The bar hid: the engine's compiled regexes (~6-9 MB with their caches, PERFORMANCE.md) are freed on the
-    /// engine thread between jobs, and the next showing's `warm_up` compiles the keystroke path's again.
+    /// The bar hid: after RELEASE_AFTER with no showing, the engine's compiled regexes (~6-9 MB with their caches,
+    /// PERFORMANCE.md) are freed on the engine thread between jobs, and the next showing's `warm_up` compiles the
+    /// keystroke path's again. A showing within that time keeps them.
     pub fn release(&self) {
-        self.warmed.store(false, Ordering::Relaxed);
-        self.submit(Lane::Misc, |_| {
-            let t = Instant::now();
-            qcalc_core::jsre::clear_cache();
-            // SAFETY: a job of its own, run from the top of the engine thread's loop: no reference from a regex
-            // static is alive on this thread, and other threads keep their own copies (qcalc-lazy)
-            let n = unsafe { qcalc_core::jsre::release_compiled() };
-            qlog!(
-                "engine released {n} compiled statics in {:.1} ms (their heap: {} MB reserved, largest free {} KB)",
-                t.elapsed().as_secs_f64() * 1000.0,
-                crate::heap::reserved_mb(),
-                crate::heap::compact()
-            );
-            None
-        });
+        if let Ok(mut q) = self.shared.queue.lock() {
+            q.release_at = Some(Instant::now() + RELEASE_AFTER);
+        }
+        self.shared.wake.notify_one();
     }
 
     /// Makes a lane's waiting and running jobs stale (the line was cleared, a command took over).
@@ -397,6 +413,37 @@ fn run(shared: &Shared, cx: &mut Cx, notify: &(dyn Fn() + Send + Sync)) {
                 {
                     break job;
                 }
+                // then a warm-up step, then a due release
+                if let Some(step) = q.idle.pop_front() {
+                    break Job {
+                        lane: Lane::Misc,
+                        generation: 0,
+                        work: Box::new(move |cx| {
+                            step(cx);
+                            None
+                        }),
+                    };
+                }
+                if let Some(at) = q.release_at {
+                    let now = Instant::now();
+                    if now >= at {
+                        q.release_at = None;
+                        q.warmed = false;
+                        break Job {
+                            lane: Lane::Misc,
+                            generation: 0,
+                            work: Box::new(|_| {
+                                release_here();
+                                None
+                            }),
+                        };
+                    }
+                    q = match shared.wake.wait_timeout(q, at - now) {
+                        Ok((q, _)) => q,
+                        Err(_) => return,
+                    };
+                    continue;
+                }
                 q = match shared.wake.wait(q) {
                     Ok(q) => q,
                     Err(_) => return,
@@ -427,4 +474,19 @@ fn run(shared: &Shared, cx: &mut Cx, notify: &(dyn Fn() + Send + Sync)) {
             Err(_) => qlog!("engine job on {lane:?} panicked"),
         }
     }
+}
+
+/// Frees the engine's compiled regexes and their pages (`EngineThread::release`). On the engine thread, as a job of
+/// its own.
+fn release_here() {
+    let t = Instant::now();
+    qcalc_core::jsre::clear_cache();
+    // SAFETY: a job of its own, run from the top of the engine thread's loop: no reference from a regex static is
+    // alive on this thread, and other threads keep their own copies (qcalc-lazy)
+    let n = unsafe { qcalc_core::jsre::release_compiled() };
+    let kept = crate::heap::compact();
+    qlog!(
+        "engine released {n} compiled statics in {:.1} ms ({kept} KB of their pages kept)",
+        t.elapsed().as_secs_f64() * 1000.0
+    );
 }
