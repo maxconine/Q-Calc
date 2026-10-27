@@ -143,23 +143,28 @@ fn with_args(n: &Node, new_args: Vec<Node>) -> Node {
 
 /// `allChildren`: the arguments as if flattened; same-symbol operator children are merged.
 pub(crate) fn all_children(n: &Node, ctx: &Ctx) -> Vec<Node> {
+    child_refs(n, ctx).into_iter().cloned().collect()
+}
+
+/// [`all_children`] without copying them.
+fn child_refs<'a>(n: &'a Node, ctx: &Ctx) -> Vec<&'a Node> {
     let Some(a) = node_args(n) else {
         return Vec::new();
     };
     if !is_associative(n, ctx) {
-        return a.clone();
+        return a.iter().collect();
     }
     let Node::Operator { op, .. } = n else {
         // a FunctionNode has no `op`, so no child shares it
-        return a.clone();
+        return a.iter().collect();
     };
     let symbol = op.symbol();
     let mut out = Vec::new();
-    fn find(n: &Node, symbol: &str, out: &mut Vec<Node>) {
+    fn find<'a>(n: &'a Node, symbol: &str, out: &mut Vec<&'a Node>) {
         for child in node_args(n).into_iter().flatten() {
             match child {
                 Node::Operator { op, .. } if op.symbol() == symbol => find(child, symbol, out),
-                _ => out.push(child.clone()),
+                _ => out.push(child),
             }
         }
     }
@@ -171,8 +176,8 @@ pub(crate) fn all_children(n: &Node, ctx: &Ctx) -> Vec<Node> {
 pub(crate) fn flatten(n: &Node, ctx: &Ctx) -> Node {
     match node_args(n) {
         Some(a) if !a.is_empty() => {
-            let kids = all_children(n, ctx);
-            with_args(n, kids.iter().map(|k| flatten(k, ctx)).collect())
+            let kids = child_refs(n, ctx);
+            with_args(n, kids.into_iter().map(|k| flatten(k, ctx)).collect())
         }
         _ => n.clone(),
     }
@@ -680,16 +685,22 @@ fn combine(l1: &[Match], l2: &[Match]) -> Vec<Match> {
 }
 
 /// `mergeChildMatches`: the product of the children's matches, deduplicated.
-fn merge_child_matches(lists: Vec<Vec<Match>>) -> Vec<Match> {
+fn merge_child_matches(lists: Vec<Vec<Match>>) -> Result<Vec<Match>, SymError> {
     let mut it = lists.into_iter();
     let Some(first) = it.next() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let sets = it.fold(first, |acc, l| combine(&acc, &l));
     let mut seen = HashSet::new();
-    sets.into_iter()
-        .filter(|m| seen.insert(match_key(m)))
-        .collect()
+    let mut out = Vec::new();
+    for m in sets {
+        let key = match_key(&m);
+        spend(key.len() as u64)?;
+        if seen.insert(key) {
+            out.push(m);
+        }
+    }
+    Ok(out)
 }
 
 /// `getSplits`: the binary ways to read an n-ary node.
@@ -763,6 +774,7 @@ fn js_name(n: &Node) -> Option<&str> {
 
 /// `_ruleMatch(rule, node, context, isSplit)`.
 fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec<Match>, SymError> {
+    spend(1)?;
     let mut res: Vec<Match> = vec![Vec::new()];
     let pair = match (rule, node) {
         (
@@ -820,8 +832,10 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
                     }
                     child_matches = vec![left, right];
                 }
-                res = merge_child_matches(child_matches);
+                res = merge_child_matches(child_matches)?;
             } else if na.len() >= 2 && ra.len() == 2 {
+                // n ways to split n arguments, each copying the other n − 1
+                spend((na.len() * na.len()) as u64)?;
                 let mut out = Vec::new();
                 for split in get_splits(node, ctx) {
                     out.extend(rule_match(rule, &split, ctx, true)?);
@@ -971,6 +985,52 @@ fn resolve(n: &Node) -> Node {
 /// Passes over the rule list before giving up on an input that never settles (mathjs would loop forever).
 const MAX_PASSES: usize = 10_000;
 
+/// The work one simplify may do, in rule matches, the length of each match key it dedupes, the copies a split
+/// makes and the printed length of the tree each rule walks (`work.ts` counts, never the clock); about 30 ms per
+/// million in a release build. The golden fixtures spend at most 455k. Without a limit `d/dx x^x^…^x` cost
+/// seconds more per x past ten (ten x’s spend 10M) and gigabytes past fifteen, and an isolate over a product of
+/// 500 letters 11 s. Past it the simplify fails, as it does on an input that never settles. The TS engine has
+/// no such limit.
+const BUDGET: u64 = 12_000_000;
+
+thread_local! {
+    static LEFT: std::cell::Cell<u64> = const { std::cell::Cell::new(BUDGET) };
+    /// What the line being evaluated has left for all its simplifies, while one is (see `with_line_budget`).
+    static LINE_LEFT: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+/// All the simplifies one line may run together, in [`BUDGET`]'s units: isolate and calculus simplify several
+/// times over, and `isolate x 0.5 * 15 kg * (2 m/s m/s …)^2` (441 characters) spent 2.7 s on three that each
+/// used up a whole budget (0.9 s now). A golden line spends at most 472k.
+const LINE_BUDGET: u64 = BUDGET;
+
+/// Runs `f` (one line's evaluation) with [`LINE_BUDGET`] for its simplifies; a line evaluated inside it (a
+/// piece the squiggle tries) shares the outer one's.
+pub fn with_line_budget<R>(f: impl FnOnce() -> R) -> R {
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            LINE_LEFT.with(|l| l.set(None));
+        }
+    }
+    if LINE_LEFT.with(|l| l.get()).is_some() {
+        return f();
+    }
+    LINE_LEFT.with(|l| l.set(Some(LINE_BUDGET)));
+    let _reset = Reset;
+    f()
+}
+
+fn spend(units: u64) -> Result<(), SymError> {
+    LEFT.with(|l| match l.get().checked_sub(units) {
+        Some(rest) => {
+            l.set(rest);
+            Ok(())
+        }
+        None => err("simplify ran out of budget"),
+    })
+}
+
 /// `math.simplify(expr)` with mathjs's default rules.
 pub fn simplify(expr: &Node) -> Result<Node, SymError> {
     simplify_with(expr, default_rules(), &SimplifyOptions::default())
@@ -988,15 +1048,42 @@ pub fn simplify_with(
     options: &SimplifyOptions,
 ) -> Result<Node, SymError> {
     let ctx = Ctx::default();
+    // a budget of its own; a simplify nested in this one (or after it) gets a fresh one and hands this back
+    // and within what the line it serves has left (see `with_line_budget`), which it is charged for
+    struct Restore {
+        outer: u64,
+        start: u64,
+    }
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            let spent = self.start - LEFT.with(|l| l.get());
+            LINE_LEFT.with(|l| l.set(l.get().map(|left| left.saturating_sub(spent))));
+            LEFT.with(|l| l.set(self.outer));
+        }
+    }
+    let start = LINE_LEFT
+        .with(|l| l.get())
+        .map_or(BUDGET, |left| left.min(BUDGET));
+    let _restore = Restore {
+        outer: LEFT.with(|l| l.replace(start)),
+        start,
+    };
     let mut res = remove_parens(&resolve(expr));
     let mut visited = HashSet::new();
     let mut text = to_string(&res, &PrintOptions::all());
     let mut passes = 0;
-    while visited.insert(text) {
+    loop {
+        let len = text.len() as u64;
+        if !visited.insert(text) {
+            break;
+        }
         passes += 1;
         if passes > MAX_PASSES {
             return err("simplify did not settle");
         }
+        // every rule walks the whole tree (flatten, unflatten, simplifyCore) whether or not it matches
+        spend(len * rules.len() as u64)?;
+
         for rule in rules {
             res = match rule {
                 Rule::Core => simplify_core(&res),
@@ -1094,43 +1181,50 @@ pub fn simplify_core(node: &Node) -> Node {
             return simplify_core(kids[0]);
         }
     }
-    let mut node = node.clone();
-    if let Node::Function { args, .. } = &node {
-        let name = function_name(&node).to_string();
-        match operator_for(&name) {
-            Some(op) => {
-                let mut args = args.clone();
-                if args.len() > 2 && has_property(&node, Prop::Associative, &ctx) {
-                    while args.len() > 2 {
-                        let last = args.pop().expect("arg");
-                        let seclast = args.pop().expect("arg");
-                        args.push(super::op(op, vec![last, seclast]));
+    // the node as an operator when it's a function call that names one (`add(a, b)`); otherwise the node itself,
+    // borrowed: copying it at every level made a deep tree cost the square of its depth
+    let rebuilt;
+    let node: &Node = match node {
+        Node::Function { args, .. } => {
+            let name = function_name(node).to_string();
+            match operator_for(&name) {
+                Some(op) => {
+                    let mut args = args.clone();
+                    if args.len() > 2 && has_property(node, Prop::Associative, &ctx) {
+                        while args.len() > 2 {
+                            let last = args.pop().expect("arg");
+                            let seclast = args.pop().expect("arg");
+                            args.push(super::op(op, vec![last, seclast]));
+                        }
                     }
+                    rebuilt = super::op(op, args);
+                    &rebuilt
                 }
-                node = super::op(op, args);
-            }
-            None => {
-                let Node::Function { callee, args } = &node else {
-                    unreachable!()
-                };
-                return Node::Function {
-                    callee: Box::new(simplify_core(callee)),
-                    args: args.iter().map(simplify_core).collect(),
-                };
+                None => {
+                    let Node::Function { callee, args } = node else {
+                        unreachable!()
+                    };
+                    return Node::Function {
+                        callee: Box::new(simplify_core(callee)),
+                        args: args.iter().map(simplify_core).collect(),
+                    };
+                }
             }
         }
-    }
+        other => other,
+    };
     let Node::Operator {
         op, args, implicit, ..
-    } = &node
+    } = node
     else {
-        return match &node {
+        return match node {
             Node::Array(items) => Node::Array(items.iter().map(simplify_core).collect()),
-            Node::Accessor { .. } => super::map_children(&node, &mut simplify_core),
-            _ => node,
+            Node::Accessor { .. } => super::map_children(node, &mut simplify_core),
+            _ => node.clone(),
         };
     };
-    let (mut op, mut args, implicit) = (*op, args.clone(), *implicit);
+    let (mut op, mut args, implicit) =
+        (*op, std::borrow::Cow::Borrowed(args.as_slice()), *implicit);
     if args.len() == 1 {
         let a0 = simplify_core(&args[0]);
         if op == Op::BitNot
@@ -1164,7 +1258,7 @@ pub fn simplify_core(node: &Node) -> Node {
         {
             if inner.len() == 2 && *inner_op == Op::Subtract {
                 op = Op::Subtract;
-                args = vec![inner[1].clone(), inner[0].clone()];
+                args = std::borrow::Cow::Owned(vec![inner[1].clone(), inner[0].clone()]);
                 finish = false;
             }
             if inner.len() == 1 && inner_op.symbol() == "-" {

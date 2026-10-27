@@ -91,6 +91,16 @@ fn multiply_spaced_numbers(s: &str) -> String {
     static FRACTION_START: Lazy = Lazy::new(|| js(r"^\d+[/⁄]\d", ""));
     static POINT_END: Lazy = Lazy::new(|| js(r"\d\.$", ""));
     let cs: Vec<char> = s.chars().collect();
+    // the index of the last ASCII letter before each position
+    let mut last_letter = Vec::with_capacity(cs.len() + 1);
+    let mut seen = None;
+    for (j, c) in cs.iter().enumerate() {
+        last_letter.push(seen);
+        if c.is_ascii_alphabetic() {
+            seen = Some(j);
+        }
+    }
+    last_letter.push(seen);
     let mut depth = 0usize;
     let mut out = String::with_capacity(s.len());
     let mut i = 0;
@@ -107,12 +117,29 @@ fn multiply_spaced_numbers(s: &str) -> String {
             while cs.get(k) == Some(&' ') {
                 k += 1;
             }
-            let before: String = cs[..i].iter().collect();
-            let after: String = cs[k..].iter().collect();
+            // each pattern reads only the end of the text before or the start of the text after, so it gets just
+            // that much (the whole text each time made a long line quadratic): ARGUMENT's match is a function name
+            // then no ASCII letter, so it starts at most five characters before the last letter; WHOLE_END's is the
+            // run of digits and the character before it; FRACTION_START's the run of digits and two more
+            let tail = |from: usize| -> String { cs[from..i].iter().collect() };
+            let mut run = i;
+            while run > 0 && cs[run - 1].is_ascii_digit() {
+                run -= 1;
+            }
+            let mut ahead = k;
+            while cs.get(ahead).is_some_and(char::is_ascii_digit) {
+                ahead += 1;
+            }
+            let after: String = cs[k..(ahead + 2).min(cs.len())].iter().collect();
             // not after a function's own power or base (`sin^2 30`, `log_2 8`), and not a mixed number (`2 1/2`)
-            let argument = jsre::test(&ARGUMENT, &before);
-            let mixed = jsre::test(&WHOLE_END, &before) && jsre::test(&FRACTION_START, &after);
-            if !argument && !mixed && (is_digit(prev) || jsre::test(&POINT_END, &before)) {
+            let argument =
+                last_letter[i].is_some_and(|l| jsre::test(&ARGUMENT, &tail(l.saturating_sub(5))));
+            let mixed = jsre::test(&WHOLE_END, &tail(run.saturating_sub(1)))
+                && jsre::test(&FRACTION_START, &after);
+            if !argument
+                && !mixed
+                && (is_digit(prev) || jsre::test(&POINT_END, &tail(i.saturating_sub(2))))
+            {
                 let next_starts_number =
                     is_digit(cs.get(k)) || (cs.get(k) == Some(&'.') && is_digit(cs.get(k + 1)));
                 if next_starts_number {

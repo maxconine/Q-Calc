@@ -102,9 +102,16 @@ fn unsup(s: &str) -> String {
         .collect()
 }
 
+/// How deep a formula's brackets read. The TS reader (on node's stack) reads `H2O` 3,000 deep and overflows
+/// by 8,000.
+const MAX_BRACKETS: usize = 5_000;
+
 struct Scanner {
     s: Vec<char>,
     i: usize,
+    /// Brackets open around `i`: past [`MAX_BRACKETS`] a formula doesn't read, so `((((…` 100,000 deep can't
+    /// overflow the stack.
+    depth: usize,
 }
 
 impl Scanner {
@@ -112,6 +119,7 @@ impl Scanner {
         Scanner {
             s: s.chars().collect(),
             i: 0,
+            depth: 0,
         }
     }
     /// The character `k` ahead, or None past the end (the TS's `''`).
@@ -187,8 +195,14 @@ fn groups(sc: &mut Scanner) -> Option<Groups> {
         } else if let Some(close) =
             close_of(c).filter(|_| !STATES.iter().any(|st| sc.starts_with(st)))
         {
+            if sc.depth >= MAX_BRACKETS {
+                return None;
+            }
             sc.i += 1;
-            let inner = groups(sc)?;
+            sc.depth += 1;
+            let inner = groups(sc);
+            sc.depth -= 1;
+            let inner = inner?;
             if sc.peek(0) != Some(close) {
                 return None;
             }

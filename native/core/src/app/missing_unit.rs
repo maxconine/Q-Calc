@@ -17,9 +17,23 @@ const SI_UNITS: [&str; 14] = [
     "V", "A", "ohm", "W", "J", "N", "Pa", "C", "F", "H", "Hz", "m", "s", "kg",
 ];
 
+/// The characters [`missing_unit`] may evaluate in all (`work.ts` counts): each try is the whole line again, 14
+/// per bare numerator, so `791 / 791 / …` twenty long took 0.9 s. A typed line spends a few hundred. No such
+/// limit in the TS.
+const BUDGET: usize = 20_000;
+/// And the engine work its tries may do (`work::spend` units), for lines each try of which is slow: 42 tries of
+/// `solve for R in 1/Rft√bob = 1/R1 + 1/R2/R2/…` took 2.6 s.
+const WORK: u64 = 2_000_000;
+
 /// `10 mA + 5 / 1 kohm`: the number over a quantity that one SI unit would fix, and that unit. `ok` says whether
 /// a piece of text has a real answer. A guess to offer, never one to act on unasked.
 pub fn missing_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
+    // every try shares one line's simplify budget: 280 tries of `d/dx 2/dx 2/dx … 2 as`, 0.2 s each, ran for a
+    // minute
+    crate::symbolic::simplify::with_line_budget(|| tries(expr, ok))
+}
+
+fn tries(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
     static BARE_NUMERATOR: Lazy = Lazy::new(|| {
         jsre::js(
             r"(?<![A-Za-z_.\d^])\d+(?:\.\d+)?(?:e[+-]?\d+)?(?=\s*\/)",
@@ -28,6 +42,8 @@ pub fn missing_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
     });
     static QUOTED_UNIT: Lazy = Lazy::new(|| jsre::js(r#"\d\s*"[A-Za-zΩµμ°]"#, ""));
     let quoted = jsre::test(&QUOTED_UNIT, expr);
+    let mut budget = BUDGET;
+    let work = crate::work::WorkBudget::new(WORK);
     for m in BARE_NUMERATOR.find_iter(expr).filter_map(Result::ok) {
         let at = m.end();
         for unit in SI_UNITS {
@@ -37,6 +53,10 @@ pub fn missing_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
                 format!(" {unit}")
             };
             let filled = format!("{}{text}{}", &expr[..at], &expr[at..]);
+            budget = budget.checked_sub(filled.len())?;
+            if work.over() {
+                return None;
+            }
             if ok(&filled) {
                 let n = m.as_str();
                 return Some(UnitFix {

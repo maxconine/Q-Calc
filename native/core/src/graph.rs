@@ -49,7 +49,21 @@ pub struct GraphOptions {
     pub aspect: Option<f64>,
 }
 
+/// The tallest and widest plots a contour is sampled for (height over width), and the most samples a curve
+/// takes. The panel never asks for more, but a panel of no width would give an infinite aspect, which made the
+/// grid an allocation of terabytes (the TS engine has no limit either).
+const ASPECT_RANGE: (f64, f64) = (1.0 / 16.0, 16.0);
+const MAX_SAMPLES: f64 = 100_000.0;
+
 impl GraphOptions {
+    /// `aspect`, or the default for none (or none that makes sense), kept within [`ASPECT_RANGE`].
+    fn aspect(&self) -> f64 {
+        match self.aspect {
+            Some(a) if a.is_finite() && a > 0.0 => a.clamp(ASPECT_RANGE.0, ASPECT_RANGE.1),
+            _ => CONTOUR_ASPECT,
+        }
+    }
+
     fn sci(&self, mode: Option<AngleMode>) -> ScientificContext {
         ScientificContext {
             ans: self.ans,
@@ -818,6 +832,8 @@ fn sample_with(
 ) -> Vec<GraphPoint> {
     let (x_min, x_max) = domain;
     let n = jmax(2.0, count.unwrap_or(DEFAULT_GRAPH_SAMPLES).floor());
+    // (a NaN count stays NaN: no samples, as in the TS)
+    let n = if n > MAX_SAMPLES { MAX_SAMPLES } else { n };
     let mut points = Vec::new();
     let mut i = 0.0;
     while i < n {
@@ -1507,9 +1523,7 @@ pub fn graph_home(input: &str, options: &GraphOptions) -> (f64, f64) {
     if bx.is_some() || by.is_some() {
         let span = jmax(
             bx.map_or(0.0, |b| b.1 - b.0),
-            by.map_or(0.0, |b| {
-                (b.1 - b.0) / options.aspect.unwrap_or(CONTOUR_ASPECT)
-            }),
+            by.map_or(0.0, |b| (b.1 - b.0) / options.aspect()),
         );
         return nice_window(bx.map_or(0.0, |b| (b.0 + b.1) / 2.0), span * 1.2);
     }
@@ -1578,7 +1592,7 @@ fn build_contour(intent: GraphIntent, options: &GraphOptions, mode: AngleMode) -
     .then_some(mode);
     let domain = normalize_domain(options.domain, degree_or_default(angle_unit));
     let (x0, x1) = domain;
-    let aspect = options.aspect.unwrap_or(CONTOUR_ASPECT);
+    let aspect = options.aspect();
     let b = intent.bounds.clone();
     let by = hull(b.as_ref().map(|b| &b.y));
     let y_mid = by.map_or(0.0, |b| (b.0 + b.1) / 2.0);

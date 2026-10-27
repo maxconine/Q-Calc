@@ -51,6 +51,11 @@ fn known() -> &'static BTreeSet<String> {
 /// `ok` says whether a piece of text evaluates. None when there's no confident answer; a single operator at the end
 /// is unfinished, not wrong, so it's never flagged.
 pub fn blank_reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> {
+    // every piece tried shares one line's simplify budget, as in `missing_unit`
+    crate::symbolic::simplify::with_line_budget(|| reason(expr, ok, names))
+}
+
+fn reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> {
     if jstr::trim(expr).is_empty() || ok(expr) {
         return None;
     }
@@ -115,21 +120,36 @@ fn unreachable_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
     })
 }
 
+/// The characters [`stray_operator`] may evaluate in all, counted like `work.ts` budgets: a typed line spends a
+/// few thousand. The TS reader has no limit, and took 6 s on `e^/^/…` 1,000 characters long.
+const STRAY_BUDGET: usize = 40_000;
+
 fn stray_operator(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
     let units: Vec<u16> = expr.encode_utf16().collect();
     let unit_char = |i: usize| units.get(i).and_then(|&u| char::from_u32(u32::from(u)));
     let last = len16(jstr::trim_end(expr)) as isize - 1;
+    // the first unit that isn't a space
+    let first_text = units
+        .iter()
+        .position(|&u| !char::from_u32(u32::from(u)).is_some_and(jstr::is_js_space))
+        .unwrap_or(units.len());
     let mut i = 0usize;
+    let mut budget = STRAY_BUDGET;
     while (i as isize) <= last {
         let Some(ch) = unit_char(i).filter(|&c| is_operator(c)) else {
             i += 1;
             continue;
         };
-        let before = slice16(expr, 0, i);
-        let after_text = slice16(expr, i + 1, usize::MAX);
-        let after = jstr::trim_start(&after_text);
-        let leading = jstr::trim_end(&before).is_empty() && !can_lead(ch);
-        let first_after = after.chars().next().filter(|c| c.len_utf16() == 1);
+        // read off the units rather than slicing the text before and after each operator, which made a long run
+        // of operators quadratic (`-` 20,000 times took 0.8 s live): `before` trims to nothing when every unit
+        // before is a space, and `after`'s first character is the first unit past the spaces (a surrogate there
+        // is never an operator)
+        let space = |u: u16| char::from_u32(u32::from(u)).is_some_and(jstr::is_js_space);
+        let leading = i <= first_text && !can_lead(ch);
+        let first_after = units[i + 1..]
+            .iter()
+            .find(|&&u| !space(u))
+            .and_then(|&u| char::from_u32(u32::from(u)));
         let doubled = first_after.is_some_and(|c| is_operator(c) && !can_lead(c));
         let trailing = i as isize == last && (ch == '=' || ch == ',');
         if !leading && !doubled && !trailing {
@@ -151,6 +171,9 @@ fn stray_operator(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
             slice16(expr, 0, at),
             slice16(expr, at + 1, usize::MAX)
         );
+        // each try evaluates the whole line again, so a long run of operators (`e^/^/^/…`) cost the square of
+        // its length: past the budget there's no confident answer
+        budget = budget.checked_sub(without.len())?;
         if ok(&without) {
             return Some(Span {
                 start: at,

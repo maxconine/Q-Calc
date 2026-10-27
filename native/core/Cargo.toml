@@ -12,6 +12,9 @@ dashu-base.workspace = true
 dashu-float.workspace = true
 dashu-int.workspace = true
 fancy-regex.workspace = true
+# jsre's prefilter: the literals every match of a pattern starts or ends with (both already under fancy-regex)
+aho-corasick = "1"
+regex-syntax = "0.8"
 num-bigint.workspace = true
 num-integer.workspace = true
 num-rational.workspace = true
@@ -24,9 +27,17 @@ libm = "0.2" # WP-FUNCTIONS: fdlibm, the algorithms behind V8's Math.*
 jiff = { version = "0.2", default-features = false, features = ["std", "tzdb-bundle-always"] }
 roxmltree = "0.20"
 
+[features]
+# jsre asserts that its prefilter never rules out a text the pattern matches (for the fuzz harness)
+check-prefilter = []
+
 [lints]
 workspace = true
 
 [[example]]
 name = "engine_bench"
 path = "../bench/engine_bench.rs"
+
+[[example]]
+name = "fuzz"
+path = "../bench/fuzz.rs"

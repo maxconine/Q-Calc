@@ -140,15 +140,24 @@ pub fn calls_worked_out(
     let spelled = jsre::replace_all(&SQRT, expr, |_| "sqrt(".into());
     let spelled = jsre::replace_all(&CBRT, &spelled, |_| "cbrt(".into()).into_owned();
     let mut changed = false;
-    let result = work(&spelled, mode, evaluate, &mut changed);
-    changed.then_some(result)
+    let mut left = EVALUATE_BUDGET;
+    let result = work(&spelled, mode, evaluate, &mut changed, &mut left);
+    // past the budget nothing is worked out: the line stays as blank as it was
+    (changed && left > 0).then_some(result)
 }
+
+/// The characters [`work`] may hand to `evaluate` for one expression, counted like `work.ts` budgets. A call that
+/// doesn't evaluate is worked out from inside, so its inner calls are evaluated again: a deep nest of calls that
+/// never evaluates (`abs(abs(…abs(-1)…))` 1000 deep, past the parser's nesting limit) would cost the square of its
+/// length, seconds of work (the TS engine has the same cost). Typed lines spend a few thousand at most.
+const EVALUATE_BUDGET: usize = 40_000;
 
 fn work(
     text: &str,
     mode: AngleMode,
     evaluate: &dyn Fn(&str) -> Option<f64>,
     changed: &mut bool,
+    left: &mut usize,
 ) -> String {
     // a call to a built-in, however it's written: sqrt(, SIN(, \arcsin(, sin^-1(, sin^(-1)(, sin^{-1}(, sin⁻¹(
     // and with a power on the name: sin^2(, cos²(
@@ -187,6 +196,11 @@ fn work(
         } else {
             ""
         };
+        if call.len() >= *left {
+            *left = 0;
+            break;
+        }
+        *left -= call.len();
         let put = match evaluate(call).filter(|n| n.is_finite()) {
             Some(n) => {
                 if angle_exponent(call) == Some(1.0) {
@@ -197,7 +211,7 @@ fn work(
                 }
             }
             None => {
-                let inner = work(&text[open + 1..close], mode, evaluate, changed);
+                let inner = work(&text[open + 1..close], mode, evaluate, changed, left);
                 // a root of a quantity is a power of it: sqrt(16 m^2) is (16 m^2)^0.5
                 let root_power = match name.as_str() {
                     "sqrt" => Some("0.5"),
