@@ -14,12 +14,13 @@ pub use fancy_regex::Regex;
 pub type Caps<'t> = fancy_regex::Captures<'t, str>;
 
 /// A regex compiled on first use: `static RE: Lazy = Lazy::new(|| js(r"...", ""))`; `Lazy<Vec<..>>` for a table of
-/// them. Like `LazyLock`, except on the thread that called `own_compiled_here` (the Windows app's engine thread),
-/// which keeps copies of its own that `release_compiled` frees while the bar is hidden (qcalc-lazy).
+/// them. Like `LazyLock`, except on the threads that called `own_compiled_here` (the Windows app's engine, UI and
+/// Typst threads), which keep copies of their own that `release_compiled` frees while the bar is hidden
+/// (qcalc-lazy).
 pub type Lazy<T = Regex> = qcalc_lazy::Lazy<T>;
 
-/// Makes this thread the one whose compiled regexes `release_compiled` can free (one thread per process, ever).
-/// For a host whose engine calls all run on one long-lived thread of its own (the Windows app's engine thread).
+/// Makes this thread one whose compiled regexes `release_compiled` can free (up to qcalc-lazy's OWNERS threads at
+/// once). For a host that knows when a thread holds no regex (between its jobs, at a hide).
 pub fn own_compiled_here() -> bool {
     qcalc_lazy::own_here()
 }
@@ -31,6 +32,12 @@ pub fn own_compiled_here() -> bool {
 /// No reference to a regex (or table) from a `Lazy` may be alive on this thread across the call: call it between
 /// jobs, from the top of the thread's loop. Other threads are unaffected.
 pub use qcalc_lazy::release as release_compiled;
+
+/// `release_compiled`, and this thread owns no copies from here on (a thread about to end).
+///
+/// # Safety
+/// As for `release_compiled`.
+pub use qcalc_lazy::disown as disown_compiled;
 
 /// Whether this thread is compiling one of the regexes `release_compiled` frees (qcalc-lazy's `building`): the
 /// Windows app's allocator keeps those blocks in a heap of their own.
@@ -48,13 +55,13 @@ thread_local! {
 
 /// Compiles a pattern from the TS source. Panics on a bad pattern, which only a code change can cause.
 ///
-/// With fancy-regex's seek (except on the threads of a host whose engine thread owns its own copies: there only
-/// the engine thread's regexes, freed at a hide, pay seek's ~60% more memory): a pattern that needs its backtracking VM (every JS `\b`, translated to look-arounds,
-/// does) first finds where a match could start with a regular over-approximation, instead of running the VM at
+/// With fancy-regex's seek, except on the other threads of a host whose threads own copies (there only the copies
+/// freed at a hide pay seek's ~60% more memory): a pattern that needs its backtracking VM (every JS `\b`, translated
+/// to look-arounds, does) first finds where a match could start with a regular over-approximation, instead of running the VM at
 /// every position. The engine's evaluation is ~2.5x quicker for it; all 1,078 patterns the core's tests compile
 /// gave the same matches with and without it over ~40,000 haystacks (native/windows/PERFORMANCE.md).
 pub fn compile(pattern: &str) -> Regex {
-    let seek = !qcalc_lazy::owned_elsewhere();
+    let seek = qcalc_lazy::owns() || !qcalc_lazy::any_owner();
     match fancy_regex::RegexBuilder::new(pattern).seek(seek).build() {
         Ok(re) => {
             if building_compiled() {

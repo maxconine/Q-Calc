@@ -172,7 +172,11 @@ pub struct EngineThread {
 impl EngineThread {
     /// Starts the engine thread. `notify` is called on the engine's threads whenever a result is ready (app.rs
     /// posts WM_ENGINE). The Typst thread starts with the first typeset (`typst`).
+    ///
+    /// Called on the UI thread, which from here on also keeps its own compiled regexes (the few the bar's own
+    /// rules use), freed at a hide (`release`).
     pub fn start(config: EngineConfig, notify: impl Fn() + Send + Sync + 'static) -> EngineThread {
+        qcalc_core::jsre::own_compiled_here();
         let notify: Arc<dyn Fn() + Send + Sync> = Arc::new(notify);
         let shared = Arc::new(Shared {
             queue: Mutex::new(Queue::default()),
@@ -230,6 +234,8 @@ impl EngineThread {
                     .num_threads(1)
                     .thread_name(|_| "qcalc-typst-pool".into())
                     .build_global();
+                // its regexes (the typeset source's) are its own, and go with it
+                qcalc_core::jsre::own_compiled_here();
                 let typst = TypstRenderer::new();
                 let ms = typst.warm_up();
                 qlog!(
@@ -247,6 +253,9 @@ impl EngineThread {
                 }
                 // Typst's memos are process-wide: the renderer's drop alone would leave them
                 typst.clear_caches();
+                qcalc_core::jsre::clear_cache();
+                // SAFETY: after the thread's last job: no reference from a regex static is alive on it
+                unsafe { qcalc_core::jsre::disown_compiled() };
             })
             .ok()?;
         *slot = Some(tx.clone());
@@ -344,7 +353,13 @@ impl EngineThread {
     /// The bar hid: after RELEASE_AFTER with no showing, the engine's compiled regexes (~6-9 MB with their caches,
     /// PERFORMANCE.md) are freed on the engine thread between jobs, and the next showing's `warm_up` compiles the
     /// keystroke path's again. A showing within that time keeps them.
+    ///
+    /// On the UI thread, from the hide (app.rs `after_hide`), where no regex of the core's is in use: the UI
+    /// thread's own compiled regexes go at once.
     pub fn release(&self) {
+        qcalc_core::jsre::clear_cache();
+        // SAFETY: the UI thread at a hide, outside any call into the core: it holds no reference from a regex static
+        unsafe { qcalc_core::jsre::release_compiled() };
         if let Ok(mut q) = self.shared.queue.lock() {
             q.release_at = Some(Instant::now() + RELEASE_AFTER);
         }
