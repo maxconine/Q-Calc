@@ -1105,6 +1105,12 @@ pub fn drop_target(
         (share.to, share.name, String::new())
     } else if let Some(msg) = parse_message(line) {
         (msg.to, msg.name, msg.text)
+    } else if !line.trim().is_empty() {
+        // a calculation on the line stays; a drop there used to swap it for `send file to `
+        return DropTarget {
+            hint: "clear the line to send files · or drop them on a thread".into(),
+            ..DropTarget::default()
+        };
     } else {
         return DropTarget::default();
     };
@@ -1837,7 +1843,11 @@ mod share_tests {
             drop("message zed", Some(false), 1),
             to("", "", "username not found")
         );
-        assert_eq!(drop("2+2", None, 1), DropTarget::default());
+        assert_eq!(
+            drop("2+2", None, 1).hint,
+            "clear the line to send files · or drop them on a thread"
+        );
+        assert!(drop("2+2", None, 1).name.is_empty());
         assert_eq!(drop("", None, 1), DropTarget::default());
         let off = drop_target("message max2", &Messaging::default(), true, None, 1);
         assert_eq!(off.hint, "set your name in settings to send files");
