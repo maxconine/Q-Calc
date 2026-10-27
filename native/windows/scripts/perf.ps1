@@ -24,7 +24,9 @@ param(
   [string]$Work = (Join-Path $env:TEMP 'qcalc-perf')
 )
 $ErrorActionPreference = 'Stop'
-$Std = @('2+2', 'sin(90)', '72 f to c', '1/3 + 1/6', 'sqrt(2)*pi', '5 km in miles', '3x+2=11', '(1+2)*(3+4)/5^2',
+# `powershell -File` passes a,b as one string
+$Exes = @($Exes | ForEach-Object { $_ -split ',' } | Where-Object { $_ } | ForEach-Object { (Resolve-Path $_).Path })
+$Std =@('2+2', 'sin(90)', '72 f to c', '1/3 + 1/6', 'sqrt(2)*pi', '5 km in miles', '3x+2=11', '(1+2)*(3+4)/5^2',
   '20% of 80', 'e^(i pi)+1')
 $Golden = Get-Content -Raw "$PSScriptRoot\..\..\bench\inputs.json" | ConvertFrom-Json
 
