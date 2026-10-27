@@ -2133,6 +2133,48 @@ fn run_pending() {
     }
 }
 
+/// The window as the e2e suite sees it (the bench pipe's `settings-controls`): open or not, its page, and every
+/// control part on screen in physical pixels with its row id and choice, so a test can click one for real.
+pub fn debug() -> Value {
+    WIN.with(|w| {
+        let Ok(w) = w.try_borrow() else {
+            return json!({ "open": true, "busy": true });
+        };
+        let Some(win) = w.as_ref() else {
+            return json!({ "open": false });
+        };
+        let s = win.scale();
+        let mut origin = POINT::default();
+        // SAFETY: our window, a live out point
+        let _ = unsafe { ClientToScreen(win.hwnd, &mut origin) };
+        let (cw, ch) = win.client();
+        let mut controls = Vec::new();
+        if let Some(l) = &win.layout {
+            for (i, laid) in l.laid.iter().enumerate() {
+                let Some(Item::Row { id, control, .. }) = l.items.get(i) else {
+                    continue;
+                };
+                let (options, value) = match control {
+                    Control::Seg { options, value } | Control::Select { options, value } => {
+                        (options.iter().map(|(o, _)| o.clone()).collect(), value.clone())
+                    }
+                    Control::Toggle(on) => (Vec::new(), on.to_string()),
+                    _ => (Vec::new(), String::new()),
+                };
+                for (r, _, part) in &laid.parts {
+                    let y = r.y - win.scroll;
+                    let visible = y >= 0.0 && y + r.h <= ch && r.x + r.w <= cw;
+                    controls.push(json!({
+                        "id": id, "part": part, "option": options.get(*part), "value": value, "visible": visible,
+                        "rect": [origin.x + (r.x * s) as i32, origin.y + (y * s) as i32, (r.w * s) as i32, (r.h * s) as i32],
+                    }));
+                }
+            }
+        }
+        json!({ "open": true, "page": win.page.nav(), "dark": win.dark, "controls": controls })
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

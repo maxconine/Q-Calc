@@ -44,6 +44,9 @@ pub struct Spec {
     pub text: Option<String>,
     #[serde(default)]
     pub vk: Option<u32>,
+    /// also reply with what the bar showed for each input (`answers`): the e2e parity check
+    #[serde(default)]
+    pub answers: bool,
 }
 
 /// One step of a run.
@@ -133,6 +136,8 @@ pub struct Run {
     pub started: Instant,
     pub reply: Option<Sender<String>>,
     pub current_input: usize,
+    /// with `spec.answers`: (input, the slot's text, the engine's display) at each input's last keystroke
+    pub answers: Vec<(usize, String, String)>,
 }
 
 impl Run {
@@ -149,6 +154,7 @@ impl Run {
             started: Instant::now(),
             reply,
             current_input: 0,
+            answers: Vec::new(),
         }
     }
 
@@ -162,6 +168,17 @@ impl Run {
                 self.ms.push(self.t0.elapsed().as_secs_f64() * 1000.0);
                 self.idx.push(self.current_input);
                 self.wait = Wait::None;
+                if self.spec.answers {
+                    let display = model
+                        .live
+                        .as_ref()
+                        .map_or(String::new(), |a| a.display.clone());
+                    let shown = (self.current_input, model.answer_text(), display);
+                    match self.answers.last_mut() {
+                        Some(last) if last.0 == self.current_input => *last = shown,
+                        _ => self.answers.push(shown),
+                    }
+                }
                 true
             }
             Wait::Commit(text) if model.field.text() != text || model.hint.is_some() => {
@@ -174,11 +191,21 @@ impl Run {
 
     pub fn result(&self) -> serde_json::Value {
         let (median, p90, p99) = summary(&self.ms);
-        serde_json::json!({
+        let mut out = serde_json::json!({
             "ms": self.ms, "idx": self.idx, "timeouts": self.timeouts,
             "wallMs": self.started.elapsed().as_secs_f64() * 1000.0,
             "n": self.ms.len(), "median": median, "p90": p90, "p99": p99,
-        })
+        });
+        if self.spec.answers {
+            out["answers"] = self
+                .answers
+                .iter()
+                .map(|(i, shown, display)| {
+                    serde_json::json!({ "input": i, "shown": shown, "display": display })
+                })
+                .collect();
+        }
+        out
     }
 }
 
@@ -283,6 +310,41 @@ pub mod pipe {
                     }
                 }
             });
+    }
+}
+
+/// The pipe commands the e2e suite adds (native/windows/tests/e2e), for any `cmd` app.rs doesn't know itself:
+/// - `"e2e"`: which windows are up, the theme, the hotkey's state and memory, in one reply;
+/// - `"settings-controls"`: the settings window's controls in screen pixels (settings_window::debug), so the suite
+///   can click one for real.
+#[cfg(windows)]
+pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
+    match cmd {
+        "e2e" => {
+            let (ws, private) = memory();
+            let (f, s, l) = (app.bar.frame(), app.bar.scale(), &app.bar.layout);
+            let screen = |r: crate::render::Rect| {
+                [
+                    f.left + (r.x * s) as i32,
+                    f.top + (r.y * s) as i32,
+                    (r.w * s) as i32,
+                    (r.h * s) as i32,
+                ]
+            };
+            Some(serde_json::json!({
+                "frame": [f.left, f.top, f.right, f.bottom], "scale": s,
+                "composer": screen(l.composer), "field": screen(l.field), "answer": screen(l.answer),
+                "pid": std::process::id(),
+                "visible": app.bar.visible, "focused": app.bar.focused,
+                "settingsOpen": crate::settings_window::is_open(), "gameOpen": crate::games::is_open(),
+                "theme": app.store.settings.theme, "dark": app.theme.dark,
+                "hotkey": { "wanted": app.hotkey.wanted, "active": app.hotkey.active, "gaveUp": app.hotkey.gave_up },
+                "rows": app.model.rows.rows.len(), "text": app.model.field.text(),
+                "workingSet": ws, "private": private,
+            }))
+        }
+        "settings-controls" => Some(crate::settings_window::debug()),
+        _ => None,
     }
 }
 
