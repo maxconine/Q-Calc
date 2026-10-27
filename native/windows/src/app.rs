@@ -82,6 +82,11 @@ const COPYDATA_ARGS: usize = 0x5143_4c43;
 const HOST_CLASS: PCWSTR = w!("QCalcHost");
 const MUTEX: &str = "Local\\com.maxconine.qcalc.native";
 
+static PROF_PAINT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static PROF_N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static PROF_CHAR: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+static PROF_AFTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 thread_local! {
     static APP: RefCell<Option<App>> = const { RefCell::new(None) };
 }
@@ -704,7 +709,11 @@ impl App {
                     Outcome::ClearHistory => self.set_history(Vec::new()),
                 }
             }
-            WM_CHAR => self.model.char16(wp.0 as u16, &self.engine),
+            WM_CHAR => {
+                let t0 = Instant::now();
+                self.model.char16(wp.0 as u16, &self.engine);
+                PROF_CHAR.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+            }
             // Alt+letter isn't the bar's: no beep
             WM_SYSCHAR => {}
             // the composition is drawn inline (input.rs), not in the IME's own window
@@ -867,6 +876,12 @@ impl App {
 
     /// After every message: lay out and repaint if the model changed; save settings; write the clipboard.
     fn after(&mut self) {
+        let t0 = Instant::now();
+        self.after_inner();
+        PROF_AFTER.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn after_inner(&mut self) {
         if self.model.take_changed() {
             let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
             let resized = (layout.height - self.bar.layout.height).abs() > 0.1
@@ -892,7 +907,11 @@ impl App {
     }
 
     fn paint(&mut self) {
-        if let Err(e) = self.bar.paint(&self.gfx, &self.theme, &self.model) {
+        let t0 = Instant::now();
+        let r = self.bar.paint(&self.gfx, &self.theme, &self.model);
+        PROF_PAINT.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+        PROF_N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if let Err(e) = r {
             qlog!("paint failed: {e}");
         }
         if self.bar.visible && !self.ready_logged {
@@ -1138,6 +1157,13 @@ impl App {
 
     fn finish_bench(&mut self) {
         let Some(run) = self.run.take() else { return };
+        {
+            use std::sync::atomic::Ordering::Relaxed;
+            let n = PROF_N.swap(0, Relaxed).max(1);
+            qlog!("prof: paints {n} avg {:.3} ms; char total {:.3} ms; after total {:.3} ms",
+                PROF_PAINT.swap(0, Relaxed) as f64 / n as f64 / 1e6,
+                PROF_CHAR.swap(0, Relaxed) as f64 / 1e6, PROF_AFTER.swap(0, Relaxed) as f64 / 1e6);
+        }
         let result = run.result();
         qlog!(
             "bench: n {} median {:.3} ms p90 {:.3} ms p99 {:.3} ms timeouts {}",

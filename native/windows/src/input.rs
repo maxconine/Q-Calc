@@ -261,6 +261,8 @@ impl Field {
 
     /// prettyTokens and afterTyping, after a typed character.
     fn after_typing(&mut self) {
+        static OFF: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| std::env::var_os("QCALC_NOPRETTY").is_some());
+        if *OFF { return; }
         let (t, c) = crate::text_rules::pretty(&self.text, self.caret, self.keep_words);
         if t != self.text {
             self.text = t;
@@ -542,6 +544,9 @@ impl Field {
             if self.caret == self.text.len() {
                 return false;
             }
+            if !word && self.bound_key("Delete") {
+                return true;
+            }
             self.anchor = if word {
                 self.word_right(self.caret)
             } else {
@@ -656,7 +661,6 @@ mod view {
         pub completion: Option<&'a str>,
         /// the empty bar's rotating example (or "Calculate")
         pub placeholder: &'a str,
-        pub composition: Option<&'a Composition>,
         /// the caret's blink phase: false draws no caret this frame
         pub caret_on: bool,
     }
@@ -664,9 +668,12 @@ mod view {
     #[derive(PartialEq)]
     struct Key {
         text: String,
-        deco: Decorations,
+        offer: Option<(u32, String)>,
         bounds_on: bool,
     }
+
+    /// Small layouts drawn every frame (ghost parens, `ans`, the completion, the placeholder) kept a while.
+    const GHOSTS: usize = 12;
 
     /// How the field is drawn: its scroll and the layout of the current text (made again only when it changes).
     #[derive(Default)]
@@ -682,6 +689,7 @@ mod view {
         pub caret_at: f32,
         /// the IME's composition, drawn inline at the caret
         pub composition: Option<Composition>,
+        ghosts: Vec<(String, IDWriteTextLayout)>,
     }
 
     /// One limit to draw small beside its sign: its text, where it goes, and which.
@@ -702,6 +710,20 @@ mod view {
     const HIDDEN_SIZE: f32 = 0.01;
 
     impl FieldView {
+        /// A small one-line layout at the display size, from the cache when it was drawn lately.
+        fn ghost(&mut self, c: &Canvas, s: &str, h: f32) -> Option<IDWriteTextLayout> {
+            if let Some(i) = self.ghosts.iter().position(|(t, _)| t == s) {
+                let g = self.ghosts.remove(i);
+                let l = g.1.clone();
+                self.ghosts.insert(0, g);
+                return Some(l);
+            }
+            let l = c.gfx.layout(s, &c.gfx.fonts.display, 0.0, h)?;
+            self.ghosts.insert(0, (s.to_string(), l.clone()));
+            self.ghosts.truncate(GHOSTS);
+            Some(l)
+        }
+
         /// The text's layout: unit / known-word colours are drawn over it; a sign's limits shrink in it, their
         /// separators all but vanish, and an offered unit's gap opens after its number.
         fn layout(
@@ -713,7 +735,7 @@ mod view {
         ) -> Option<IDWriteTextLayout> {
             let key = Key {
                 text: field.text().to_string(),
-                deco: deco.cloned().unwrap_or_default(),
+                offer: deco.and_then(|d| d.offer.clone()),
                 bounds_on: !field.limits().is_empty(),
             };
             if let Some((k, l)) = &self.cached
@@ -783,13 +805,13 @@ mod view {
             if !field.text().is_empty() && (leading > 0 || x.chained) {
                 let parens = "(".repeat(leading);
                 if !parens.is_empty()
-                    && let Some(l) = c.gfx.layout(&parens, &c.gfx.fonts.display, 0.0, r.h)
+                    && let Some(l) = self.ghost(c, &parens, r.h)
                 {
                     c.text_plain(&l, r.x, r.y, t.muted);
                     lead_w += measure(&l).0;
                 }
                 if x.chained
-                    && let Some(l) = c.gfx.layout("ans", &c.gfx.fonts.display, 0.0, r.h)
+                    && let Some(l) = self.ghost(c, "ans", r.h)
                 {
                     c.text_plain(&l, r.x + lead_w, r.y, with_alpha(t.muted, 0.75));
                     lead_w += measure(&l).0 + 5.0;
@@ -799,7 +821,7 @@ mod view {
             if field.text().is_empty() && self.composition.is_none() {
                 self.scroll = 0.0;
                 if !x.placeholder.is_empty()
-                    && let Some(l) = c.gfx.layout(x.placeholder, &c.gfx.fonts.display, 0.0, r.h)
+                    && let Some(l) = self.ghost(c, x.placeholder, r.h)
                 {
                     c.text_plain(&l, r.x, r.y, with_alpha(t.muted, 0.8));
                     for (a, b) in radicand_ranges(x.placeholder) {
@@ -856,6 +878,8 @@ mod view {
                     clip_x(c, x0 + from.max(at) + comp_w, x0 + to + comp_w, r, || {
                         c.text(&layout, x0 + comp_w, r.y, color)
                     });
+                } else if from < -999.0 {
+                    c.text(&layout, x0, r.y, color);
                 } else {
                     clip_x(c, x0 + from, x0 + to, r, || c.text(&layout, x0, r.y, color));
                 }
@@ -890,7 +914,7 @@ mod view {
                 // the unit offered after its number, muted, in the gap opened for it
                 if let Some((at, text)) = &d.offer
                     && *at > 0
-                    && let Some(l) = c.gfx.layout(text, &c.gfx.fonts.display, 0.0, r.h)
+                    && let Some(l) = self.ghost(c, text, r.h)
                 {
                     let ow = measure(&l).0;
                     let end = caret_x(&layout, *at);
@@ -900,7 +924,7 @@ mod view {
             // after the end: the completion's rest (caret at the end), then the inferred `)`s
             let mut tail = x0 + w + comp_w;
             if let Some(g) = ghost
-                && let Some(l) = c.gfx.layout(g, &c.gfx.fonts.display, 0.0, r.h)
+                && let Some(l) = self.ghost(c, g, r.h)
             {
                 c.text_plain(&l, tail, r.y, with_alpha(t.muted, 0.8));
                 tail += measure(&l).0;
@@ -908,7 +932,7 @@ mod view {
             let trailing = deco.map_or(0, |d| d.trailing);
             if trailing > 0
                 && !field.text().is_empty()
-                && let Some(l) = c.gfx.layout(&")".repeat(trailing), &c.gfx.fonts.display, 0.0, r.h)
+                && let Some(l) = self.ghost(c, &")".repeat(trailing), r.h)
             {
                 c.text_plain(&l, tail, r.y, t.muted);
             }

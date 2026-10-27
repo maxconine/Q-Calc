@@ -78,6 +78,8 @@ pub fn decorate(
     context: &EvalContext,
     answer: &LiveAnswer,
 ) -> (Decorations, Option<String>) {
+    static OFF: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| std::env::var_os("QCALC_NODECO").is_some());
+    if *OFF { return (Decorations::default(), None); }
     let fill = qcalc_core::parens::infer_parens(typed);
     let variables: Vec<String> = context.variables.keys().cloned().collect();
     let functions: Vec<String> = context.functions.keys().cloned().collect();
@@ -225,7 +227,6 @@ pub fn before_enter(m: &mut BarModel, engine: &EngineThread) -> bool {
 
 const TAB: u32 = 0x09;
 const ENTER: u32 = 0x0D;
-const LEFT: u32 = 0x25;
 const UP: u32 = 0x26;
 const RIGHT: u32 = 0x27;
 const DOWN: u32 = 0x28;
@@ -273,7 +274,6 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
             return Some(Outcome::Handled);
         }
     }
-    let _ = LEFT;
     None
 }
 
@@ -689,7 +689,6 @@ mod paint {
             chained: m.chained && !m.field.text().is_empty(),
             completion: m.line.completion.as_deref(),
             placeholder: &placeholder,
-            composition: None,
             caret_on: m.line.caret_on || !focused,
         };
         view.paint(c, &m.field, field, focused, &x);
