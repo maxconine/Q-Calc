@@ -105,7 +105,11 @@ extension BarModel {
         guard case let .list(i) = messagesPanel else { return false }
         let count = MessageHistory.shared.conversations.count
         guard count > 0 else { return true }
-        messagesPanel = .list(selected: up ? max(0, i - 1) : min(count - 1, i + 1))
+        let next = up ? max(0, i - 1) : min(count - 1, i + 1)
+        messagesPanel = .list(selected: next)
+        // as the row reads; VoiceOver's cursor stays on the line
+        let c = MessageHistory.shared.conversations[next]
+        BarModel.announce("\(c.name): \(c.last.mine ? "you: " : "")\(c.last.text)")
         return true
     }
 

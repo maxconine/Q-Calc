@@ -833,6 +833,7 @@ final class BarModel: ObservableObject {
             // in the games list ↑ starts at the game nearest the bar and climbs; ↓ past the last leaves it
             let last = BarCommand.gameList.count - 1
             if up { gamePick = gamePick.map { max(0, $0 - 1) } ?? last } else if let g = gamePick { gamePick = g >= last ? nil : g + 1 }
+            if let g = gamePick { Self.announce("\(BarCommand.gameList[g].name), \(BarCommand.gameList[g].blurb)") }
             return
         }
         if helpShown { helpShown = false }
@@ -842,6 +843,7 @@ final class BarModel: ObservableObject {
             if fresh { sideIsExpr = false }
             tapeOpen = true
             land(on: fresh ? rows.count - 1 : max(0, selected! - 1))
+            announceSelected()
         } else {
             guard tapeOpen else { return }
             guard let i = selected, i < rows.count - 1 else {
@@ -850,7 +852,15 @@ final class BarModel: ObservableObject {
                 return
             }
             land(on: i + 1)
+            announceSelected()
         }
+    }
+
+    /// VoiceOver keeps its cursor on the line while ↑ ↓ walk the tape, so it hears the row each lands on (native
+    /// only; the page's rows are only aria-selected), as the row reads (`HistoryRowView`)
+    private func announceSelected() {
+        guard let i = selected, rows.indices.contains(i) else { return }
+        Self.announce("\(rows[i].expr) equals \(rows[i].display)")
     }
 
     /// ← → on a highlighted row (onSide)

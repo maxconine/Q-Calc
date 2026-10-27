@@ -811,8 +811,12 @@ private struct GamesSheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Play \(game.name), \(game.blurb)")
+                .accessibilityAddTraits(i == model.gamePick ? .isSelected : [])
             }
         }
+        // aria-label="Games", each row aria-selected as ↑ ↓ pick it
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Games")
     }
 }
 
