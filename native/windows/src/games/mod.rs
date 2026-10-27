@@ -592,7 +592,31 @@ fn run_ops() {
                     if let Some(w) = gone {
                         let kind = w.lobby.def.kind;
                         drop(w);
-                        qlog!("games: {kind} closed (window, render target and link released)");
+                        // the bar's own trim ran while the game was up; with the bar still away, trim now so
+                        // the working set goes back to where it was before the game
+                        let hidden = crate::app::with_app(|a| !a.bar.visible).unwrap_or(false);
+                        // what the game freed goes back to the system, not just to the heap
+                        // SAFETY: the process heap, compacted
+                        let _ = unsafe {
+                            windows::Win32::System::Memory::HeapCompact(
+                                windows::Win32::System::Memory::GetProcessHeap().unwrap_or_default(),
+                                windows::Win32::System::Memory::HEAP_FLAGS(0),
+                            )
+                        };
+                        if hidden {
+                            // SAFETY: our own process
+                            let _ = unsafe {
+                                windows::Win32::System::ProcessStatus::K32EmptyWorkingSet(
+                                    windows::Win32::System::Threading::GetCurrentProcess(),
+                                )
+                            };
+                        }
+                        let (ws, private) = crate::bench::memory();
+                        qlog!(
+                            "games: {kind} closed (window, render target and link released); working set {:.1} MB, private {:.1} MB",
+                            ws as f64 / 1e6,
+                            private as f64 / 1e6
+                        );
                     }
                 }
             }
