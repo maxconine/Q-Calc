@@ -16,7 +16,13 @@ pub enum Tool {
     Clear,
 }
 
-pub const TOOLS: [Tool; 5] = [Tool::Settings, Tool::Angle, Tool::Fraction, Tool::SigFigs, Tool::Clear];
+pub const TOOLS: [Tool; 5] = [
+    Tool::Settings,
+    Tool::Angle,
+    Tool::Fraction,
+    Tool::SigFigs,
+    Tool::Clear,
+];
 
 /// The pointer's part in them.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -102,8 +108,12 @@ pub use ui::*;
 mod ui {
     use std::cell::RefCell;
 
-    use windows::Win32::Graphics::DirectWrite::{DWRITE_FONT_WEIGHT_MEDIUM, IDWriteTextFormat};
-    use windows::Win32::UI::Input::KeyboardAndMouse::{TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent};
+    use windows::Win32::Graphics::DirectWrite::{
+        DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_WEIGHT_SEMI_BOLD, IDWriteTextFormat,
+    };
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
+    };
 
     use super::{EdgeState, Tool};
     use crate::app::App;
@@ -117,6 +127,24 @@ mod ui {
     thread_local! {
         /// the gear's icon font, made at the first hover
         static ICONS: RefCell<Option<Option<IDWriteTextFormat>>> = const { RefCell::new(None) };
+        /// .edge-frac-mark's 6.5 pt semibold
+        static MARK: RefCell<Option<Option<IDWriteTextFormat>>> = const { RefCell::new(None) };
+    }
+
+    fn mark(gfx: &Gfx) -> Option<IDWriteTextFormat> {
+        MARK.with(|m| {
+            m.borrow_mut()
+                .get_or_insert_with(|| {
+                    format(
+                        &gfx.dw,
+                        &gfx.fonts.text_family,
+                        6.5,
+                        DWRITE_FONT_WEIGHT_SEMI_BOLD,
+                    )
+                    .ok()
+                })
+                .clone()
+        })
     }
 
     fn icons(gfx: &Gfx) -> Option<IDWriteTextFormat> {
@@ -147,7 +175,12 @@ mod ui {
     pub fn rects(gfx: &Gfx, m: &BarModel, composer: Rect) -> Vec<(Tool, Rect)> {
         let mut out = vec![(
             Tool::Settings,
-            Rect::new(composer.x + 3.0, composer.y, width(gfx, m, Tool::Settings), H),
+            Rect::new(
+                composer.x + 3.0,
+                composer.y,
+                width(gfx, m, Tool::Settings),
+                H,
+            ),
         )];
         let mut right = composer.right() - 6.0;
         for tool in [Tool::SigFigs, Tool::Fraction, Tool::Angle] {
@@ -285,11 +318,12 @@ mod ui {
                     // a over b with a 7 pt bar
                     let mid = r.y + r.h / 2.0;
                     let cx = r.x + r.w / 2.0;
-                    for (glyph, y) in [("a", mid - 9.0), ("b", mid + 0.5)] {
-                        if let Some(l) = c.gfx.layout(glyph, &c.gfx.fonts.caption, 0.0, 9.0) {
-                            let (w, _) = measure(&l);
-                            // the 11 pt caption at a smaller look: its x-height sits the 6.5 pt mark's place
-                            c.text(&l, cx - w / 2.0, y, ink);
+                    if let Some(f) = mark(c.gfx) {
+                        for (glyph, y) in [("a", mid - 9.0), ("b", mid + 0.5)] {
+                            if let Some(l) = c.gfx.layout(glyph, &f, 0.0, 9.0) {
+                                let (w, _) = measure(&l);
+                                c.text(&l, cx - w / 2.0, y, ink);
+                            }
                         }
                     }
                     c.line(cx - 3.5, mid, cx + 3.5, mid, 1.0, ink);
@@ -303,15 +337,25 @@ mod ui {
         }
         // the tip: an ink pill with the background's colour for text, 4 off the button
         if let Some(tool) = e.tip
-            && let Some((_, r)) = rects(c.gfx, m, composer).into_iter().find(|(t, _)| *t == tool)
+            && let Some((_, r)) = rects(c.gfx, m, composer)
+                .into_iter()
+                .find(|(t, _)| *t == tool)
         {
             let tip = tool.tip(s, &m.keybinds);
             if let Some(l) = c.gfx.layout(&tip, &c.gfx.fonts.caption, 0.0, 15.0) {
                 let (w, _) = measure(&l);
                 let pw = w + 14.0;
                 let ph = 23.0;
-                let x = if tool == Tool::Settings { r.x } else { r.right() - pw };
-                let y = if tool.tip_above() { r.y - 4.0 - ph } else { r.bottom() + 4.0 };
+                let x = if tool == Tool::Settings {
+                    r.x
+                } else {
+                    r.right() - pw
+                };
+                let y = if tool.tip_above() {
+                    r.y - 4.0 - ph
+                } else {
+                    r.bottom() + 4.0
+                };
                 let pill = Rect::new(x.max(2.0).min(c.width - pw - 2.0), y, pw, ph);
                 c.fill_round(pill, size::RADIUS_S, t.ink);
                 c.text(&l, pill.x + 7.0, pill.y + 4.0, t.bg);
@@ -329,11 +373,23 @@ mod tests {
     fn tips_end_with_the_key() {
         let s = Settings::default();
         let k = Keybinds::new(&BTreeMap::new());
-        assert_eq!(Tool::Angle.tip(&s, &k), "Degrees · click for radians · Ctrl+D");
+        assert_eq!(
+            Tool::Angle.tip(&s, &k),
+            "Degrees · click for radians · Ctrl+D"
+        );
         assert_eq!(Tool::Settings.tip(&s, &k), "Open settings · Ctrl+,");
-        assert_eq!(Tool::Fraction.tip(&s, &k), "Answers as fractions: off · Ctrl+F");
-        assert_eq!(Tool::SigFigs.tip(&s, &k), "Sig figs from what you type: off · Ctrl+S");
-        assert_eq!(Tool::Clear.tip(&s, &k), "Clear history and variables · Ctrl+Shift+Backspace");
+        assert_eq!(
+            Tool::Fraction.tip(&s, &k),
+            "Answers as fractions: off · Ctrl+F"
+        );
+        assert_eq!(
+            Tool::SigFigs.tip(&s, &k),
+            "Sig figs from what you type: off · Ctrl+S"
+        );
+        assert_eq!(
+            Tool::Clear.tip(&s, &k),
+            "Clear history and variables · Ctrl+Shift+Backspace"
+        );
         let unbound = Keybinds::new(&BTreeMap::from([("clear".to_string(), String::new())]));
         assert_eq!(Tool::Clear.tip(&s, &unbound), "Clear history and variables");
         let rad = Settings {

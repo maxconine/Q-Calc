@@ -43,14 +43,14 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 };
 use windows::Win32::UI::WindowsAndMessaging::{
     CREATESTRUCTW, CS_DBLCLKS, CreateWindowExW, DefWindowProcW, DestroyWindow, GWLP_USERDATA,
-    GetClientRect, GetWindowRect, HWND_TOPMOST, IDC_ARROW, IDC_HAND, IsWindow,
-    LoadCursorW, MINMAXINFO, PostMessageW, RegisterClassExW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE,
-    SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER, SetCursor, SetWindowLongPtrW, SetWindowPos, ShowWindow,
-    WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_CREATE, WM_DESTROY, WM_DPICHANGED,
-    WM_ERASEBKGND, WM_GETMINMAXINFO, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
-    WM_MOUSEACTIVATE, WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT, WM_RBUTTONDOWN, WM_RBUTTONUP,
-    WM_SETCURSOR, WM_SIZE, WM_SIZING, WNDCLASSEXW, WS_CAPTION, WS_EX_NOACTIVATE,
-    WS_EX_TOOLWINDOW, WS_EX_TOPMOST, WS_OVERLAPPED, WS_SYSMENU, WS_THICKFRAME,
+    GetClientRect, GetWindowRect, HWND_TOPMOST, IDC_ARROW, IDC_HAND, IsWindow, LoadCursorW,
+    MINMAXINFO, PostMessageW, RegisterClassExW, SW_SHOWNOACTIVATE, SWP_NOACTIVATE, SWP_NOMOVE,
+    SWP_NOSIZE, SWP_NOZORDER, SetCursor, SetWindowLongPtrW, SetWindowPos, ShowWindow,
+    WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLOSE, WM_CREATE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND,
+    WM_GETMINMAXINFO, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEACTIVATE,
+    WM_MOUSEMOVE, WM_MOUSEWHEEL, WM_PAINT, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SETCURSOR, WM_SIZE,
+    WM_SIZING, WNDCLASSEXW, WS_CAPTION, WS_EX_NOACTIVATE, WS_EX_TOOLWINDOW, WS_EX_TOPMOST,
+    WS_OVERLAPPED, WS_SYSMENU, WS_THICKFRAME,
 };
 use windows::core::{BOOL, HSTRING, PCWSTR, w};
 
@@ -89,7 +89,12 @@ fn cell(row: i64, col: i64) -> Rect {
 fn union(a: Rect, b: Rect) -> Rect {
     let x = a.x.min(b.x);
     let y = a.y.min(b.y);
-    Rect::new(x, y, a.right().max(b.right()) - x, a.bottom().max(b.bottom()) - y)
+    Rect::new(
+        x,
+        y,
+        a.right().max(b.right()) - x,
+        a.bottom().max(b.bottom()) - y,
+    )
 }
 
 /// The table's size at scale 1.
@@ -180,8 +185,7 @@ pub fn identity_layout(sheet: &identities::IdentitySheet) -> IdLayout {
                 .push((x + 6.0, gy + 2.0, span - 6.0, group.title.clone()));
             gy += ID_GROUP_TITLE;
             for ii in 0..group.items.len() {
-                out.rows
-                    .push((Rect::new(x, gy, span, ID_ROW), si, gi, ii));
+                out.rows.push((Rect::new(x, gy, span, ID_ROW), si, gi, ii));
                 gy += ID_ROW;
             }
             columns[c] = gy;
@@ -230,7 +234,9 @@ struct Fonts {
 
 impl Fonts {
     fn new(gfx: &Gfx) -> windows::core::Result<Fonts> {
-        let f = |size: f32, weight: DWRITE_FONT_WEIGHT| format(&gfx.dw, &gfx.fonts.text_family, size, weight);
+        let f = |size: f32, weight: DWRITE_FONT_WEIGHT| {
+            format(&gfx.dw, &gfx.fonts.text_family, size, weight)
+        };
         Ok(Fonts {
             small: f(8.5, DWRITE_FONT_WEIGHT_REGULAR)?,
             badge: f(8.5, DWRITE_FONT_WEIGHT_SEMI_BOLD)?,
@@ -417,7 +423,8 @@ pub fn open_identities(app: &mut App, id: &str, section: usize) {
     later::free("sheet-open", 0, move || open_now(id, section, at));
 }
 
-const STYLE: WINDOW_STYLE = WINDOW_STYLE(WS_OVERLAPPED.0 | WS_CAPTION.0 | WS_SYSMENU.0 | WS_THICKFRAME.0);
+const STYLE: WINDOW_STYLE =
+    WINDOW_STYLE(WS_OVERLAPPED.0 | WS_CAPTION.0 | WS_SYSMENU.0 | WS_THICKFRAME.0);
 const EX_STYLE: WINDOW_EX_STYLE =
     WINDOW_EX_STYLE(WS_EX_TOOLWINDOW.0 | WS_EX_TOPMOST.0 | WS_EX_NOACTIVATE.0);
 
@@ -455,7 +462,15 @@ fn open_now(key: String, section: usize, at: Spot) {
         keep_clear(hwnd, &key, at);
         // SAFETY: our window; raised among the topmost ones without taking the keys
         unsafe {
-            let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            let _ = SetWindowPos(
+                hwnd,
+                Some(HWND_TOPMOST),
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+            );
             let _ = InvalidateRect(Some(hwnd), None, false);
         }
         return;
@@ -532,7 +547,14 @@ fn create(key: &str, section: usize, at: Spot) -> windows::core::Result<()> {
         (Some((bar, area, dpi)), None) => {
             let (fw, fh) = frame_for(w, h, dpi);
             let give = scaled_give(give, dpi);
-            let r = place::beside(area, bar, fw, fh, place::SHEET_MARGIN * f64::from(dpi) / 96.0, give);
+            let r = place::beside(
+                area,
+                bar,
+                fw,
+                fh,
+                place::SHEET_MARGIN * f64::from(dpi) / 96.0,
+                give,
+            );
             (r.x, r.y, r.width, r.height)
         }
         (None, None) => {
@@ -550,7 +572,10 @@ fn create(key: &str, section: usize, at: Spot) -> windows::core::Result<()> {
             (x, y, fw, fh)
         }
     };
-    qlog!("sheet {key}: frame {x:.0},{y:.0} {fw:.0}x{fh:.0} (bar {:?})", at.bar);
+    qlog!(
+        "sheet {key}: frame {x:.0},{y:.0} {fw:.0}x{fh:.0} (bar {:?})",
+        at.bar
+    );
     let key_box = Box::new(key.to_string());
     // SAFETY: our class; the key's box is handed to WM_CREATE through lpCreateParams and taken back there
     let hwnd = unsafe {
@@ -669,7 +694,12 @@ pub fn retheme(theme: Theme) {
 /// app is borrowed (the close is posted).
 pub fn close_front() -> bool {
     let front = with(|s| {
-        let key = s.order.iter().rev().find(|k| s.open.iter().any(|w| &w.key == *k))?.clone();
+        let key = s
+            .order
+            .iter()
+            .rev()
+            .find(|k| s.open.iter().any(|w| &w.key == *k))?
+            .clone();
         s.open.iter().find(|w| w.key == key).map(|w| w.hwnd)
     })
     .flatten();
@@ -898,7 +928,15 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
             let r = unsafe { *(lp.0 as *const RECT) };
             // SAFETY: our window
             let _ = unsafe {
-                SetWindowPos(hwnd, None, r.left, r.top, r.right - r.left, r.bottom - r.top, SWP_NOZORDER | SWP_NOACTIVATE)
+                SetWindowPos(
+                    hwnd,
+                    None,
+                    r.left,
+                    r.top,
+                    r.right - r.left,
+                    r.bottom - r.top,
+                    SWP_NOZORDER | SWP_NOACTIVATE,
+                )
             };
             return LRESULT(0);
         }
@@ -969,7 +1007,9 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
                     id.drag = None;
                 }
                 let now = hit_test(s, x, y);
-                (pressed.is_some() && pressed == now).then_some(now).flatten()
+                (pressed.is_some() && pressed == now)
+                    .then_some(now)
+                    .flatten()
             })
             .flatten();
             if let Some(hit) = act {
@@ -1068,7 +1108,13 @@ fn fit_scale(s: &mut Sheet, w_px: u32) {
 
 /// The least and most a sheet's frame may be, physical px.
 fn limits(hwnd: HWND) -> Option<(POINT, POINT)> {
-    let (key, dpi) = with(|s| s.open.iter().find(|w| w.hwnd == hwnd).map(|w| (w.key.clone(), w.dpi))).flatten()?;
+    let (key, dpi) = with(|s| {
+        s.open
+            .iter()
+            .find(|w| w.hwnd == hwnd)
+            .map(|w| (w.key.clone(), w.dpi))
+    })
+    .flatten()?;
     let ((w, h), _, _) = natural(&key)?;
     let (least, most) = if key == "periodic" {
         ((w * 0.6, h * 0.6), (w * 2.5, h * 2.5))
@@ -1077,7 +1123,10 @@ fn limits(hwnd: HWND) -> Option<(POINT, POINT)> {
         let full = identity_layout(sheet).height + ID_TOP;
         ((w, full.min(220.0)), (w, full))
     };
-    let (a, b) = (frame_for(least.0, least.1, dpi), frame_for(most.0, most.1, dpi));
+    let (a, b) = (
+        frame_for(least.0, least.1, dpi),
+        frame_for(most.0, most.1, dpi),
+    );
     Some((
         POINT {
             x: a.0 as i32,
@@ -1130,7 +1179,17 @@ fn raise(hwnd: HWND) {
         }
     });
     // SAFETY: our window, among the topmost ones, keys left where they are
-    let _ = unsafe { SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE) };
+    let _ = unsafe {
+        SetWindowPos(
+            hwnd,
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        )
+    };
 }
 
 /// Design coordinates (DIPs at scale 1) of a client point in px.
@@ -1237,10 +1296,14 @@ fn act_on(hwnd: HWND, hit: Hit, right: bool) {
     match hit {
         Hit::Tile(i) => {
             with(|s| {
-                let symbol = s.open.iter().find(|w| w.hwnd == hwnd).and_then(|w| match &w.body {
-                    Body::Periodic(p) => p.tiles.get(i).map(|t| t.symbol.clone()),
-                    Body::Identity(_) => None,
-                });
+                let symbol = s
+                    .open
+                    .iter()
+                    .find(|w| w.hwnd == hwnd)
+                    .and_then(|w| match &w.body {
+                        Body::Periodic(p) => p.tiles.get(i).map(|t| t.symbol.clone()),
+                        Body::Identity(_) => None,
+                    });
                 if let Some(symbol) = symbol {
                     if right {
                         s.picks.drop_one(&symbol);
@@ -1493,7 +1556,9 @@ fn prepare_periodic(p: &mut Periodic, gfx: &Gfx, fonts: &Fonts, picks: &Picks) {
     let clear = text(gfx, "Clear", &fonts.caption_medium);
     let clear_gap = 8.0;
     let width = parts.iter().map(|(_, t)| t.w.ceil() + 12.0).sum::<f32>()
-        + clear.as_ref().map_or(0.0, |t| clear_gap + t.w.ceil() + 12.0);
+        + clear
+            .as_ref()
+            .map_or(0.0, |t| clear_gap + t.w.ceil() + 12.0);
     let mut x = frame.x + frame.w / 2.0 - width / 2.0;
     let y = formula_rect.bottom() + 4.0;
     for (hit, t) in parts {
@@ -1549,13 +1614,28 @@ fn paint_periodic(
             badge.draw(c, r.right() - badge.w - 4.0, r.y + 3.0, t.ink);
         }
         symbol.draw(c, r.x + (r.w - symbol.w) / 2.0, r.y + 11.0, t.ink);
-        mass.draw(c, r.x + (r.w - mass.w) / 2.0, r.bottom() - mass.h - 4.0, t.muted);
+        mass.draw(
+            c,
+            r.x + (r.w - mass.w) / 2.0,
+            r.bottom() - mass.h - 4.0,
+            t.muted,
+        );
     }
     // the hovered element's name in the first row's gap
     let detail = union(cell(1, 3), cell(1, 12));
     if let Some((_, name, sub)) = &p.detail {
-        name.draw(c, detail.x + (detail.w - name.w) / 2.0, detail.y + 6.0, t.ink);
-        sub.draw(c, detail.x + (detail.w - sub.w) / 2.0, detail.y + 28.0, t.muted);
+        name.draw(
+            c,
+            detail.x + (detail.w - name.w) / 2.0,
+            detail.y + 6.0,
+            t.ink,
+        );
+        sub.draw(
+            c,
+            detail.x + (detail.w - sub.w) / 2.0,
+            detail.y + 28.0,
+            t.muted,
+        );
     }
     let frame = union(cell(2, 3), cell(3, 12));
     if let Some(hint) = &p.formula_hint {
@@ -1598,7 +1678,13 @@ fn thumb_rect(id: &Identity, client_h: f32) -> Option<Rect> {
     Some(Rect::new(identity_width() - 9.0, y + 2.0, 6.0, h - 4.0))
 }
 
-fn paint_identity(c: &Canvas, id: &mut Identity, client_h: f32, hover: Option<Hit>, pressed: Option<Hit>) {
+fn paint_identity(
+    c: &Canvas,
+    id: &mut Identity,
+    client_h: f32,
+    hover: Option<Hit>,
+    pressed: Option<Hit>,
+) {
     let t = c.theme;
     let width = identity_width();
     let view = client_h - ID_TOP;
@@ -1622,7 +1708,15 @@ fn paint_identity(c: &Canvas, id: &mut Identity, client_h: f32, hover: Option<Hi
     for (y, title) in &id.sections {
         if visible(*y, ID_SECTION_TITLE) {
             title.draw(c, ID_INSET, y + dy + 4.0, t.ink);
-            c.fill(Rect::new(ID_INSET, y + dy + ID_SECTION_TITLE - 3.0, width - ID_INSET * 2.0, 1.0), t.line);
+            c.fill(
+                Rect::new(
+                    ID_INSET,
+                    y + dy + ID_SECTION_TITLE - 3.0,
+                    width - ID_INSET * 2.0,
+                    1.0,
+                ),
+                t.line,
+            );
         }
     }
     for (x, y, title) in &id.groups {
@@ -1650,7 +1744,11 @@ fn paint_identity(c: &Canvas, id: &mut Identity, client_h: f32, hover: Option<Hi
         for (text, x, y) in &row.runs {
             text.draw(c, r.x + x, r.y + y, ink);
         }
-        let side = if copied { id.tick.as_ref() } else { row.note.as_ref() };
+        let side = if copied {
+            id.tick.as_ref()
+        } else {
+            row.note.as_ref()
+        };
         if let Some(n) = side {
             n.draw(c, r.right() - 6.0 - n.w, r.y + (r.h - n.h) / 2.0, t.muted);
         }
@@ -1703,17 +1801,29 @@ mod tests {
         for sheet in identities::sheets() {
             let l = identity_layout(sheet);
             assert_eq!(l.sections.len(), sheet.sections.len());
-            let items: usize = sheet.sections.iter().flat_map(|s| &s.groups).map(|g| g.items.len()).sum();
+            let items: usize = sheet
+                .sections
+                .iter()
+                .flat_map(|s| &s.groups)
+                .map(|g| g.items.len())
+                .sum();
             assert_eq!(l.rows.len(), items, "{}", sheet.id);
             assert!(l.height > 0.0);
             for (r, ..) in &l.rows {
-                assert!(r.right() <= identity_width() - ID_INSET + 0.01, "{} {r:?}", sheet.id);
+                assert!(
+                    r.right() <= identity_width() - ID_INSET + 0.01,
+                    "{} {r:?}",
+                    sheet.id
+                );
                 assert_eq!(r.h, ID_ROW);
             }
             // sections go down the page
             assert!(l.sections.windows(2).all(|w| w[1].0 > w[0].0));
         }
-        let c = identities::sheets().iter().find(|s| s.id == "constants").unwrap();
+        let c = identities::sheets()
+            .iter()
+            .find(|s| s.id == "constants")
+            .unwrap();
         assert!(row_label(&c.sections[0].groups[0].items[0]).len() > 1);
     }
 }

@@ -19,9 +19,9 @@
 
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use qcalc_core::app::message_banner::{self as banner, BannerCard};
@@ -45,8 +45,8 @@ use crate::app::App;
 use crate::input::Field;
 use crate::keys::Mods;
 use crate::model::BarModel;
-use crate::render::{Canvas, Gfx, Rect, caret_x, hit, measure, rgb, size};
 use crate::relay::{self, Frame, Socket};
+use crate::render::{Canvas, Gfx, Rect, caret_x, hit, measure, rgb, size};
 use crate::{later, qlog};
 
 const WM_RELAY: u32 = WM_APP + 0x51;
@@ -245,7 +245,14 @@ impl Poster {
     fn send(&self, e: Event) {
         if self.tx.send(e).is_ok() {
             // SAFETY: posting to our own message-only window from a worker thread
-            let _ = unsafe { PostMessageW(Some(HWND(self.hwnd as *mut _)), WM_RELAY, WPARAM(0), LPARAM(0)) };
+            let _ = unsafe {
+                PostMessageW(
+                    Some(HWND(self.hwnd as *mut _)),
+                    WM_RELAY,
+                    WPARAM(0),
+                    LPARAM(0),
+                )
+            };
         }
     }
 }
@@ -272,8 +279,12 @@ unsafe extern "system" fn relay_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
 }
 
 /// A POST on a worker thread; its status comes back as `done(status)` made into an event.
-fn post_later(path: &'static str, body: Value, done: impl FnOnce(String) -> Event + Send + 'static) {
-    let Some(post) = with(|s| poster(s)) else {
+fn post_later(
+    path: &'static str,
+    body: Value,
+    done: impl FnOnce(String) -> Event + Send + 'static,
+) {
+    let Some(post) = with(poster) else {
         return;
     };
     let spawned = std::thread::Builder::new()
@@ -457,7 +468,11 @@ fn arrived(app: &mut App, from: &str, text: &str) {
         Arrival::Show => deliver(app, from, text),
         Arrival::Ask => {
             // a name already asking isn't asked about again
-            let asked = with(|s| s.asking.insert(from.to_string(), text.to_string()).is_some());
+            let asked = with(|s| {
+                s.asking
+                    .insert(from.to_string(), text.to_string())
+                    .is_some()
+            });
             if asked {
                 return;
             }
@@ -675,7 +690,10 @@ fn recipient_found(s: &mut State, name: &str) -> Option<bool> {
 /// Asks the relay about `name` once typing has rested, unless it's known or already being asked.
 pub fn check_name(name: &str) {
     let ask = with(|s| {
-        !name.is_empty() && !s.m.name.is_empty() && s.link != Link::Offline && recipient_found(s, name).is_none()
+        !name.is_empty()
+            && !s.m.name.is_empty()
+            && s.link != Link::Offline
+            && recipient_found(s, name).is_none()
     });
     if !ask {
         later::cancel("name-check");
@@ -727,7 +745,9 @@ pub fn send_line(app: &mut App, name: String, text: String) {
     app.model.hint = Some(format!("sending to {name}…"));
     app.model.touch();
     let body = with(|s| send_body(s, &name, &text));
-    post_later("/send", body, move |status| Event::Sent(Sent::Line, name, status));
+    post_later("/send", body, move |status| {
+        Event::Sent(Sent::Line, name, status)
+    });
 }
 
 fn line_sent(app: &mut App, name: &str, status: &str) {
@@ -761,7 +781,9 @@ fn send_reply(app: &mut App, id: &str) {
     app.model.touch();
     let body = with(|s| send_body(s, &to, &said));
     let id = id.to_string();
-    post_later("/send", body, move |status| Event::Sent(Sent::Reply(id), to, status));
+    post_later("/send", body, move |status| {
+        Event::Sent(Sent::Reply(id), to, status)
+    });
 }
 
 fn reply_sent(app: &mut App, id: &str, to: &str, status: &str) {
@@ -826,7 +848,9 @@ pub fn status() -> String {
         }
         let n = &s.m.name;
         match s.link {
-            Link::Ready => format!("Receiving as {n}. Type message <name> <text> in the bar to send."),
+            Link::Ready => {
+                format!("Receiving as {n}. Type message <name> <text> in the bar to send.")
+            }
             Link::Taken => format!("Someone else has {n} now. Pick another name."),
             Link::Offline => format!("Receiving as {n} once the relay can be reached."),
             _ => format!("Connecting as {n}…"),
@@ -897,7 +921,10 @@ fn claimed(next: &str, status: &str) {
             "ok" => {
                 let old = std::mem::replace(&mut s.m.name, next.to_string());
                 save(&s.m);
-                Some((!old.is_empty() && old != next).then(|| json!({ "name": old, "key": s.m.key })))
+                Some(
+                    (!old.is_empty() && old != next)
+                        .then(|| json!({ "name": old, "key": s.m.key })),
+                )
             }
             "taken" => {
                 s.note = format!("{next} is taken. Try another.");
@@ -1004,7 +1031,11 @@ fn bold(gfx: &Gfx) -> Option<IDWriteTextFormat> {
 fn wrapped(gfx: &Gfx, text: &str, w: f32) -> Option<(IDWriteTextLayout, f32)> {
     let wide: Vec<u16> = text.encode_utf16().collect();
     // SAFETY: wide outlives the call; the format is live
-    let l = unsafe { gfx.dw.CreateTextLayout(&wide, &gfx.fonts.body, w.max(1.0), 10_000.0) }.ok()?;
+    let l = unsafe {
+        gfx.dw
+            .CreateTextLayout(&wide, &gfx.fonts.body, w.max(1.0), 10_000.0)
+    }
+    .ok()?;
     let (_, h) = measure(&l);
     let line = 17.5;
     Some((l, h.min(line * TEXT_LINES)))
@@ -1076,7 +1107,10 @@ fn place(gfx: &Gfx, cards: &Cards, width: f32) -> Vec<Placed> {
             {
                 let w = measure(&l).0.min(inner * 0.5);
                 fw = inner - w - 8.0;
-                status = Some((l, Rect::new(size::GUTTER + fw + 8.0, top + height, w, FIELD_H)));
+                status = Some((
+                    l,
+                    Rect::new(size::GUTTER + fw + 8.0, top + height, w, FIELD_H),
+                ));
             }
             field = Rect::new(size::GUTTER, top + height, fw, FIELD_H);
             height += FIELD_H + 12.0;
@@ -1139,7 +1173,12 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
             if hovered {
                 c.fill_round(ar, size::RADIUS_S, t.fill_selected);
             }
-            c.text(l, ar.x + 8.0, ar.y, if hovered { t.answer } else { t.muted });
+            c.text(
+                l,
+                ar.x + 8.0,
+                ar.y,
+                if hovered { t.answer } else { t.muted },
+            );
         }
         if let Some((l, tr)) = &p.text {
             c.push_clip(Rect::new(tr.x, tr.y + y0, tr.w, tr.h));
@@ -1161,7 +1200,11 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
         }
         paint_draft(c, card, f, focused);
         if let Some((l, sr)) = &p.status {
-            let ink = if card.reply == Reply::Sent { t.accent } else { t.muted };
+            let ink = if card.reply == Reply::Sent {
+                t.accent
+            } else {
+                t.muted
+            };
             c.text(l, sr.x, sr.y + y0, ink);
         }
     }
@@ -1172,10 +1215,15 @@ fn paint_draft(c: &Canvas, card: &Card, f: Rect, focused: bool) {
     let inner = f.inset(8.0, 0.0);
     c.push_clip(inner);
     let draft = card.draft.text();
-    if draft.is_empty() {
-        if let Some(l) = c.gfx.layout(&format!("Reply to {}", card.card.from), &c.gfx.fonts.small, 0.0, f.h) {
-            c.text(&l, inner.x, inner.y, t.muted);
-        }
+    if draft.is_empty()
+        && let Some(l) = c.gfx.layout(
+            &format!("Reply to {}", card.card.from),
+            &c.gfx.fonts.small,
+            0.0,
+            f.h,
+        )
+    {
+        c.text(&l, inner.x, inner.y, t.muted);
     }
     let Some(l) = c.gfx.layout(draft, &c.gfx.fonts.small, 0.0, f.h) else {
         c.pop_clip();
@@ -1190,13 +1238,23 @@ fn paint_draft(c: &Canvas, card: &Card, f: Rect, focused: bool) {
             caret_x(&l, card.draft.to_utf16(a)),
             caret_x(&l, card.draft.to_utf16(b)),
         );
-        c.fill(Rect::new(x0 + xa, f.y + 4.0, xb - xa, f.h - 8.0), t.selection);
+        c.fill(
+            Rect::new(x0 + xa, f.y + 4.0, xb - xa, f.h - 8.0),
+            t.selection,
+        );
     }
     if !draft.is_empty() {
         c.text(&l, x0, inner.y, t.ink);
     }
     if focused {
-        c.line(x0 + caret + 0.5, f.y + 5.0, x0 + caret + 0.5, f.bottom() - 5.0, 1.0, t.ink);
+        c.line(
+            x0 + caret + 0.5,
+            f.y + 5.0,
+            x0 + caret + 0.5,
+            f.bottom() - 5.0,
+            1.0,
+            t.ink,
+        );
     }
     c.pop_clip();
 }
@@ -1213,7 +1271,9 @@ fn under(gfx: &Gfx, m: &BarModel, r: Rect, x: f32, y: f32) -> Option<(String, Ac
                 return Some((card.card.id.clone(), *act));
             }
         }
-        if !card.card.ask && Rect::new(p.field.x, p.field.y + y0, p.field.w, p.field.h).contains(x, y) {
+        if !card.card.ask
+            && Rect::new(p.field.x, p.field.y + y0, p.field.w, p.field.h).contains(x, y)
+        {
             return Some((card.card.id.clone(), Act::Field));
         }
     }
@@ -1230,7 +1290,9 @@ pub fn hover(app: &mut App, at: Option<(f32, f32)>) {
         return;
     };
     let over = at.is_some_and(|(x, y)| r.contains(x, y));
-    let act = at.and_then(|(x, y)| under(&app.gfx, &app.model, r, x, y)).filter(|(_, a)| *a != Act::Field);
+    let act = at
+        .and_then(|(x, y)| under(&app.gfx, &app.model, r, x, y))
+        .filter(|(_, a)| *a != Act::Field);
     let cards = &mut app.model.cards;
     if cards.hovered != over || cards.hover_act != act {
         cards.hovered = over;
@@ -1270,7 +1332,9 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
                 .iter_mut()
                 .zip(placed)
                 .find(|(c, _)| c.card.id == id)
-                && let Some(l) = app.gfx.layout(card.draft.text(), &app.gfx.fonts.small, 0.0, FIELD_H)
+                && let Some(l) =
+                    app.gfx
+                        .layout(card.draft.text(), &app.gfx.fonts.small, 0.0, FIELD_H)
             {
                 let pos = hit(&l, x - p.field.x - 8.0, y - p.field.y - y0);
                 card.draft.set_caret_utf16(pos, false);
@@ -1379,4 +1443,3 @@ pub fn found(name: &str) -> Option<bool> {
 pub fn reply_has_keys(m: &BarModel) -> bool {
     m.cards.focus.is_some()
 }
-

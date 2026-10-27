@@ -62,8 +62,7 @@ pub fn winify(text: &str, keybinds: &Keybinds) -> String {
         .replace("⌃D", &chord(KeyAction::Angle, "Ctrl+D"))
         .replace("⌃F", &chord(KeyAction::Fraction, "Ctrl+F"))
         .replace("⌘,", &chord(KeyAction::Settings, "Ctrl+,"))
-        .replace('⌘', "Ctrl+")
-        .replace('⌃', "Ctrl+")
+        .replace(['⌘', '⌃'], "Ctrl+")
         .replace('⌥', "Alt+")
 }
 
@@ -101,12 +100,16 @@ mod ui {
     use super::*;
     use crate::app::App;
     use crate::engine::{EngineThread, Lane, done};
+    use crate::later;
     use crate::model::BarModel;
     use crate::render::{Canvas, Gfx, Rect, measure, size, with_alpha};
-    use crate::later;
 
     fn hotkey_title(app: &App) -> String {
-        let chord = app.hotkey.active.clone().unwrap_or_else(|| app.hotkey.wanted.clone());
+        let chord = app
+            .hotkey
+            .active
+            .clone()
+            .unwrap_or_else(|| app.hotkey.wanted.clone());
         crate::hotkey::title(&chord)
     }
 
@@ -117,7 +120,9 @@ mod ui {
     fn save(app: &mut App, o: &Onboarding) {
         let next = stored(o);
         if next != app.store.onboarding {
-            app.store.onboarding.merge(&serde_json::to_value(next).unwrap_or_default());
+            app.store
+                .onboarding
+                .merge(&serde_json::to_value(next).unwrap_or_default());
             app.save_store();
         }
         app.model.tour.o = state(app);
@@ -238,7 +243,11 @@ mod ui {
         let keybinds = m.keybinds.clone();
         let hint = m.hint.clone();
         let t = &mut m.tour;
-        let before = (t.line.clone(), t.ghost_example.clone(), t.ghost_plain.clone());
+        let before = (
+            t.line.clone(),
+            t.ghost_example.clone(),
+            t.ghost_plain.clone(),
+        );
         if let Some(step) = step_now(&t.o, t.replay, &t.hotkey) {
             let progress = core_tour::tour_progress(t.replay.unwrap_or(t.o.hints), &t.hotkey);
             let fits = core_tour::tour_line_fits(&step, &typed, answered);
@@ -263,7 +272,13 @@ mod ui {
                 None => (None, None),
             };
         }
-        if before != (t.line.clone(), t.ghost_example.clone(), t.ghost_plain.clone()) {
+        if before
+            != (
+                t.line.clone(),
+                t.ghost_example.clone(),
+                t.ghost_plain.clone(),
+            )
+        {
             m.touch();
         }
         refresh_example(m, engine);
@@ -288,7 +303,11 @@ mod ui {
             return;
         };
         let expr = winify(&expr, &m.keybinds);
-        if m.tour.example.as_ref().is_some_and(|e| e.id == id && e.expr == expr) {
+        if m.tour
+            .example
+            .as_ref()
+            .is_some_and(|e| e.id == id && e.expr == expr)
+        {
             return;
         }
         m.tour.example = Some(Example {
@@ -303,7 +322,11 @@ mod ui {
         // exampleAnswer: evaluated as the settings say, exact ≈ approx when there are two, `x =` for a solve
         let options = m.options();
         engine.submit(Lane::Misc, move |cx| {
-            let line = cx.engine.evaluate(vec![expr.clone()], options).into_iter().next()?;
+            let line = cx
+                .engine
+                .evaluate(vec![expr.clone()], options)
+                .into_iter()
+                .next()?;
             if line.display.is_empty() {
                 return None;
             }
@@ -458,7 +481,13 @@ mod ui {
             .map_or(0.0, |l| measure(&l).0);
         let tw = (right - r.x - cw - 8.0).max(0.0);
         let mut x = r.x;
-        if let Some(l) = c.gfx.layout_in(&line.text, &c.gfx.fonts.small, tw, r.h, DWRITE_TEXT_ALIGNMENT_LEADING) {
+        if let Some(l) = c.gfx.layout_in(
+            &line.text,
+            &c.gfx.fonts.small,
+            tw,
+            r.h,
+            DWRITE_TEXT_ALIGNMENT_LEADING,
+        ) {
             c.text(&l, x, r.y, t.muted);
             x += measure(&l).0.min(tw) + 8.0;
         }
@@ -505,12 +534,24 @@ mod tests {
     #[test]
     fn mac_keys_read_as_windows_chords() {
         let k = Keybinds::new(&BTreeMap::new());
-        assert_eq!(winify("⌘C copies the answer", &k), "Ctrl+C copies the answer");
-        assert_eq!(winify("degrees · ⌃D for radians", &k), "degrees · Ctrl+D for radians");
+        assert_eq!(
+            winify("⌘C copies the answer", &k),
+            "Ctrl+C copies the answer"
+        );
+        assert_eq!(
+            winify("degrees · ⌃D for radians", &k),
+            "degrees · Ctrl+D for radians"
+        );
         assert_eq!(winify("⌘, opens settings", &k), "Ctrl+, opens settings");
-        assert_eq!(winify("⌥↑ ⌥↓ step the unit prefix", &k), "Alt+↑ Alt+↓ step the unit prefix");
+        assert_eq!(
+            winify("⌥↑ ⌥↓ step the unit prefix", &k),
+            "Alt+↑ Alt+↓ step the unit prefix"
+        );
         assert_eq!(winify("12 * 7", &k), "12 * 7");
-        let mine = Keybinds::new(&BTreeMap::from([("copyAnswer".to_string(), "ctrl+alt+c".to_string())]));
+        let mine = Keybinds::new(&BTreeMap::from([(
+            "copyAnswer".to_string(),
+            "ctrl+alt+c".to_string(),
+        )]));
         assert_eq!(
             winify("⌘C copies the answer: type 2^10, then ⌘C", &mine),
             "Ctrl+Alt+C copies the answer: type 2^10, then Ctrl+Alt+C"
@@ -529,7 +570,10 @@ mod tests {
         };
         assert!(step_now(&done, None, "Alt+Space").is_none());
         // a replay starts over whatever was done
-        assert_eq!(step_now(&done, Some(0), "Alt+Space").map(|s| s.id), Some(TourId::Hotkey));
+        assert_eq!(
+            step_now(&done, Some(0), "Alt+Space").map(|s| s.id),
+            Some(TourId::Hotkey)
+        );
         let store = crate::store::Onboarding {
             opens: 2,
             commits: 1,

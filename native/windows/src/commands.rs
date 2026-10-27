@@ -316,7 +316,11 @@ mod ui {
                 // the walkthrough's copy step: the copy shortcut with an answer to copy
                 if app.model.keybinds.action(mods, vk) == Some(crate::keys::KeyAction::CopyAnswer)
                     && !app.model.field.has_selection()
-                    && app.model.live.as_ref().is_some_and(|a| !a.display.is_empty())
+                    && app
+                        .model
+                        .live
+                        .as_ref()
+                        .is_some_and(|a| !a.display.is_empty())
                 {
                     tour::copied(app);
                 }
@@ -501,13 +505,21 @@ mod tests {
             }
             other => panic!("{other:?}"),
         }
-        assert!(matches!(parse("trig"), Some(Command::Identities { id, .. }) if id == "identities"));
-        assert!(matches!(parse("constants"), Some(Command::Identities { id, .. }) if id == "constants"));
-        assert!(matches!(parse("conversion"), Some(Command::Identities { id, .. }) if id == "conversions"));
+        assert!(
+            matches!(parse("trig"), Some(Command::Identities { id, .. }) if id == "identities")
+        );
+        assert!(
+            matches!(parse("constants"), Some(Command::Identities { id, .. }) if id == "constants")
+        );
+        assert!(
+            matches!(parse("conversion"), Some(Command::Identities { id, .. }) if id == "conversions")
+        );
         assert!(
             matches!(parse("metric prefixes"), Some(Command::Identities { id, .. }) if id == "conversions")
         );
-        assert!(matches!(parse("derivatives"), Some(Command::Identities { id, .. }) if id == "calculus"));
+        assert!(
+            matches!(parse("derivatives"), Some(Command::Identities { id, .. }) if id == "calculus")
+        );
         assert_eq!(parse("games"), Some(Command::Games));
         assert_eq!(parse("Connect 4"), Some(Command::Game(GameKind::Connect4)));
         assert_eq!(
@@ -523,7 +535,15 @@ mod tests {
         assert_eq!(parse("hello!"), Some(Command::Greeting));
         // maths, and the other packages' commands, aren't ours
         for maths in [
-            "", "2+2", "hi", "sin(30)", "5 ft to cm", "help", "?", "graph x^2", "settings",
+            "",
+            "2+2",
+            "hi",
+            "sin(30)",
+            "5 ft to cm",
+            "help",
+            "?",
+            "graph x^2",
+            "settings",
         ] {
             assert_eq!(parse(maths), None, "{maths}");
         }

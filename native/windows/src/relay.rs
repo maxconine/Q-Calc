@@ -15,11 +15,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use windows::Win32::Networking::WinHttp::{
     WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_ADDREQ_FLAG_ADD, WINHTTP_FLAG_SECURE,
     WINHTTP_OPEN_REQUEST_FLAGS, WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, WINHTTP_QUERY_FLAG_NUMBER,
-    WINHTTP_QUERY_STATUS_CODE, WINHTTP_WEB_SOCKET_BUFFER_TYPE, WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE,
-    WINHTTP_WEB_SOCKET_UTF8_FRAGMENT_BUFFER_TYPE, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE,
-    WinHttpAddRequestHeaders, WinHttpCloseHandle, WinHttpConnect, WinHttpOpen, WinHttpOpenRequest,
-    WinHttpQueryDataAvailable, WinHttpQueryHeaders, WinHttpReadData, WinHttpReceiveResponse,
-    WinHttpSendRequest, WinHttpSetOption, WinHttpSetTimeouts, WinHttpWebSocketCompleteUpgrade, WinHttpWebSocketReceive, WinHttpWebSocketSend,
+    WINHTTP_QUERY_STATUS_CODE, WINHTTP_WEB_SOCKET_BUFFER_TYPE,
+    WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE, WINHTTP_WEB_SOCKET_UTF8_FRAGMENT_BUFFER_TYPE,
+    WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE, WinHttpAddRequestHeaders, WinHttpCloseHandle,
+    WinHttpConnect, WinHttpOpen, WinHttpOpenRequest, WinHttpQueryDataAvailable,
+    WinHttpQueryHeaders, WinHttpReadData, WinHttpReceiveResponse, WinHttpSendRequest,
+    WinHttpSetOption, WinHttpSetTimeouts, WinHttpWebSocketCompleteUpgrade, WinHttpWebSocketReceive,
+    WinHttpWebSocketSend,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -91,12 +93,7 @@ fn session(receive_ms: i32) -> Option<Handle> {
     Some(s)
 }
 
-fn request(
-    base: &Base,
-    connect: &Handle,
-    verb: PCWSTR,
-    path: &str,
-) -> Option<Handle> {
+fn request(base: &Base, connect: &Handle, verb: PCWSTR, path: &str) -> Option<Handle> {
     let flags = if base.secure {
         WINHTTP_FLAG_SECURE
     } else {
@@ -143,7 +140,9 @@ pub fn post(path: &str, body: &serde_json::Value) -> String {
 fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<String> {
     let s = session(10_000)?;
     // SAFETY: a live session; the host's HSTRING outlives the call
-    let c = Handle::new(unsafe { WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0) })?;
+    let c = Handle::new(unsafe {
+        WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0)
+    })?;
     let r = request(base, &c, w!("POST"), path)?;
     let text = body.to_string();
     let header: Vec<u16> = "Content-Type: text/plain;charset=UTF-8"
@@ -211,14 +210,21 @@ impl Socket {
         // no receive timeout: the inbox waits as long as nobody writes (the pings notice a dead link)
         let s = session(0)?;
         // SAFETY: a live session
-        let c = Handle::new(unsafe { WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0) })?;
+        let c = Handle::new(unsafe {
+            WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0)
+        })?;
         let r = request(&base, &c, w!("GET"), &format!("/inbox/{name}"))?;
         let header: Vec<u16> = format!("Sec-WebSocket-Protocol: qcalc-inbox, k{key}")
             .encode_utf16()
             .collect();
         // SAFETY: a live request; the header outlives the calls
         unsafe {
-            WinHttpSetOption(Some(r.0.cast_const()), WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET, None).ok()?;
+            WinHttpSetOption(
+                Some(r.0.cast_const()),
+                WINHTTP_OPTION_UPGRADE_TO_WEB_SOCKET,
+                None,
+            )
+            .ok()?;
             WinHttpAddRequestHeaders(r.0, &header, WINHTTP_ADDREQ_FLAG_ADD).ok()?;
             WinHttpSendRequest(r.0, None, None, 0, 0, 0).ok()?;
             WinHttpReceiveResponse(r.0, std::ptr::null_mut()).ok()?;
@@ -252,7 +258,13 @@ impl Socket {
             let mut kind = WINHTTP_WEB_SOCKET_BUFFER_TYPE(0);
             // SAFETY: a live socket (not closed: checked above, and close only cancels this call); the buffer is ours
             let err = unsafe {
-                WinHttpWebSocketReceive(self.ws, buf.as_mut_ptr().cast(), buf.len() as u32, &mut read, &mut kind)
+                WinHttpWebSocketReceive(
+                    self.ws,
+                    buf.as_mut_ptr().cast(),
+                    buf.len() as u32,
+                    &mut read,
+                    &mut kind,
+                )
             };
             if err != 0 || kind == WINHTTP_WEB_SOCKET_CLOSE_BUFFER_TYPE {
                 return Frame::Closed;
@@ -276,7 +288,13 @@ impl Socket {
             return false;
         }
         // SAFETY: a live socket; the text outlives the call
-        unsafe { WinHttpWebSocketSend(self.ws, WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE, Some(text.as_bytes())) == 0 }
+        unsafe {
+            WinHttpWebSocketSend(
+                self.ws,
+                WINHTTP_WEB_SOCKET_UTF8_MESSAGE_BUFFER_TYPE,
+                Some(text.as_bytes()),
+            ) == 0
+        }
     }
 
     /// Ends the socket (and a receive waiting on it), once.
