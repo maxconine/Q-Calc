@@ -17,8 +17,8 @@ CARGO="${CARGO:-$HOME/.cargo/bin/cargo}"
 TEST=1
 [[ "${1:-}" == "--no-test" ]] && TEST=0
 
-# the app's own floor (macos/build.sh MIN_MACOS)
-export MACOSX_DEPLOYMENT_TARGET=13.5
+# the native app's own floor (native/mac/build.sh MIN_MACOS)
+export MACOSX_DEPLOYMENT_TARGET=12.0
 typeset -A TRIPLE=(arm64 aarch64-apple-darwin x86_64 x86_64-apple-darwin)
 
 cd "$NATIVE"

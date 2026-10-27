@@ -287,7 +287,7 @@ fetching and passes the JSON to `Engine::set_rates`.
 - **New prerequisite:** the Rust toolchain from `native/rust-toolchain.toml` (rustup installs it on first
   `cargo` use) with both Apple targets. `build.sh` checks for `~/.cargo/bin/cargo` the way it checks for `swiftc`.
 - **Before `swiftc`:** run `native/scripts/build-mac.sh --no-test`, which builds `libqcalc_ffi.a` per architecture
-  (with `MACOSX_DEPLOYMENT_TARGET=13.5`, the app's floor) and generates `qcalc_ffi.swift` plus its C header and
+  (with `MACOSX_DEPLOYMENT_TARGET=12.0`, the native app's floor) and generates `qcalc_ffi.swift` plus its C header and
   module map.
 - **`swiftc`:** add `native/build/swift/qcalc_ffi.swift` to the sources and
   `-Xcc -fmodule-map-file=native/build/swift/qcalc_ffiFFI.modulemap -I native/build/swift`, and link

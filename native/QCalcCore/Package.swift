@@ -7,7 +7,7 @@ import PackageDescription
 
 let package = Package(
     name: "QCalcCore",
-    platforms: [.macOS("13.5")],
+    platforms: [.macOS("12.0")],
     products: [
         .library(name: "QCalcCore", targets: ["QCalcCore"]),
     ],

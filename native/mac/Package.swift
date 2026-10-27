@@ -16,7 +16,7 @@ let sparkle = ProcessInfo.processInfo.environment["QCALC_SPARKLE_DIR"]
 
 let package = Package(
     name: "QCalcMac",
-    platforms: [.macOS("13.5")],
+    platforms: [.macOS("12.0")],
     dependencies: [
         .package(path: "../QCalcCore"),
     ],

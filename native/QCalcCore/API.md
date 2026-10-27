@@ -21,7 +21,7 @@ Build the binary first with `native/scripts/build-mac.sh --no-test` (the full sc
 both architectures and `swift test` on this package). It builds the Rust library for arm64
 and x86_64, lipos them, regenerates `Sources/QCalcCore/qcalc_ffi.swift`, and writes
 `native/QCalcCore/qcalc_ffiFFI.xcframework` (gitignored), which `Package.swift` uses as a `binaryTarget`. The
-package's floor is macOS 13.5, the app's own.
+package's floor is macOS 12.0, the native app's own.
 
 ```swift
 import QCalcCore
