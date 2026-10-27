@@ -658,6 +658,7 @@ enum CRTLook {
         glow?.setValue(3, forKey: kCIInputRadiusKey)
         glow?.setValue(0.6, forKey: kCIInputIntensityKey)
         view.contentFilters = [tint, glow].compactMap { $0 }
+        OverlayLog.note("crt look: \(view.layer?.filters?.count ?? 0) filters on the bar")
         let lines = Scanlines(frame: view.bounds)
         lines.autoresizingMask = [.width, .height]
         lines.wantsLayer = true

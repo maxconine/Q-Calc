@@ -19,7 +19,8 @@ enum DevSnapshot {
                 // a grey ground, so the light and dark effects both show
                 ctx.setFillColor(CGColor(gray: 0.5, alpha: 1))
                 ctx.fill(CGRect(origin: .zero, size: size))
-                // the layers are top-down (flipped); the picture's rows are too
+                // the layers are top-down (flipped), so this puts everything where it is on screen; render(in:)
+                // ignores the flip for contents, so text and pictures come out mirrored top to bottom here only
                 ctx.translateBy(x: 0, y: size.height)
                 ctx.scaleBy(x: 1, y: -1)
                 (layer.presentation() ?? layer).render(in: ctx)
