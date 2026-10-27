@@ -52,7 +52,7 @@ pub struct GraphOptions {
 /// The tallest and widest plots a contour is sampled for (height over width), and the most samples a curve
 /// takes. The panel never asks for more, but a panel of no width would give an infinite aspect, which made the
 /// grid an allocation of terabytes (the TS engine has no limit either).
-const ASPECT_RANGE: (f64, f64) = (1.0 / 64.0, 64.0);
+const ASPECT_RANGE: (f64, f64) = (1.0 / 16.0, 16.0);
 const MAX_SAMPLES: f64 = 100_000.0;
 
 impl GraphOptions {
