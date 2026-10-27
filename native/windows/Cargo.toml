@@ -21,8 +21,6 @@ qcalc-core = { path = "../core" }
 # everything Windows lives behind cfg(windows), so `cargo build` of the workspace on the Mac builds a stub main
 [target.'cfg(windows)'.dependencies]
 qcalc-ffi = { path = "../ffi", features = ["typst"] }
-# games/relay.rs: the relay's websockets (wss through SChannel)
-tungstenite = { version = "0.26", default-features = false, features = ["handshake", "native-tls"] }
 # the update's signature: the Tauri updater's minisign key, verified as tauri-plugin-updater does
 minisign-verify = "0.2"
 windows-numerics = "0.2"

@@ -10,7 +10,7 @@ render target, fonts, saves and relay link, all made when a game opens and dropp
 | `mod.rs` | `GAMES` (the registry), `open(kind)`, `command` / `hint` / `list` for the bar, `Play` and `GameDef`, `Env` (what a game reaches), the window: creation, wndproc, keys, mouse, esc, full screen, timers, frames | GameWindow.swift, GameShell.swift, GameWindowController.swift |
 | `shell.rs` | which keys the shell takes (Ctrl+W, Ctrl+F, esc, the paused card's), over the core's `shell` / `fullscreen` | GameShellModel |
 | `lobby.rs` | the lobby's state, effects and screens (over the core's `lobby`), the room list, the code tiles | GameLobby.swift |
-| `relay.rs` | the relay link: the core's `OnlinePeer` over tungstenite + SChannel, a thread per socket, `WM_SOCK` back | PeerTransport.swift |
+| `relay.rs` | the relay link: the core's `OnlinePeer` over relay.rs's WinHTTP WebSocket (SChannel), two threads per socket, `WM_SOCK` back | PeerTransport.swift |
 | `store.rs` | `games.json` beside settings.json: `{ "gameSaves": {key: string}, "nickname": "…" }` | GameStore.swift |
 | `keys.rs` | `GameKey` (DOM `key` / `code`) from WM_KEYDOWN / WM_CHAR / WM_KEYUP | GameKeys.swift |
 | `gfx.rs` | `Gfx` (the window's D2D / DWrite state) and `Ui` (shapes, polylines, text, hit regions) | Canvas, SwiftUI |

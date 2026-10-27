@@ -1,5 +1,6 @@
-//! The relay's transport for messaging (relay/src/index.js): JSON POSTs (`/claim`, `/release`, `/send`, `/lookup`)
-//! and the inbox WebSocket (`/inbox/<name>`, the key riding as a protocol so it's never in a URL).
+//! The relay's transport (relay/src/index.js): messaging's JSON POSTs (`/claim`, `/release`, `/send`, `/lookup`)
+//! and inbox WebSocket (`/inbox/<name>`, the key riding as a protocol so it's never in a URL), and the games'
+//! sockets (games/relay.rs, `Socket::open_url`).
 //!
 //! WinHTTP, the system's HTTP stack: TLS is SChannel, proxies are the system's, and the binary grows by nothing
 //! (winhttp.dll loads only when messaging is first used). Everything here blocks, so it runs on messaging.rs's
@@ -21,7 +22,7 @@ use windows::Win32::Networking::WinHttp::{
     WinHttpConnect, WinHttpOpen, WinHttpOpenRequest, WinHttpQueryDataAvailable,
     WinHttpQueryHeaders, WinHttpReadData, WinHttpReceiveResponse, WinHttpSendRequest,
     WinHttpSetOption, WinHttpSetTimeouts, WinHttpWebSocketCompleteUpgrade, WinHttpWebSocketReceive,
-    WinHttpWebSocketSend,
+    WinHttpWebSocketSend, WinHttpWebSocketShutdown,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -58,6 +59,37 @@ pub fn local_base(url: &str) -> Option<Base> {
         secure: false,
         host: host.into(),
         port,
+    })
+}
+
+/// A `ws://` or `wss://` URL as (where, path with its query); None for anything else.
+pub fn ws_url(url: &str) -> Option<(Base, String)> {
+    let (secure, rest) = if let Some(r) = url.strip_prefix("wss://") {
+        (true, r)
+    } else {
+        (false, url.strip_prefix("ws://")?)
+    };
+    let (authority, path) = match rest.find(['/', '?']) {
+        Some(i) if rest[i..].starts_with('?') => (&rest[..i], format!("/{}", &rest[i..])),
+        Some(i) => (&rest[..i], rest[i..].to_string()),
+        None => (rest, "/".to_string()),
+    };
+    let default = if secure { 443 } else { 80 };
+    // `[::1]:8787` and `[::1]`: the port is after the last colon only outside the brackets
+    let (host, port) = match authority.rsplit_once(':') {
+        Some((h, p)) if !p.contains(']') => (h, p.parse().ok()?),
+        _ => (authority, default),
+    };
+    let host = host.trim_start_matches('[').trim_end_matches(']');
+    (!host.is_empty()).then(|| {
+        (
+            Base {
+                secure,
+                host: host.into(),
+                port,
+            },
+            path,
+        )
     })
 }
 
@@ -206,17 +238,24 @@ pub enum Frame {
 impl Socket {
     /// Opens `/inbox/<name>` with the key as a protocol beside `qcalc-inbox`.
     pub fn open(name: &str, key: &str) -> Option<Socket> {
-        let base = base();
-        // no receive timeout: the inbox waits as long as nobody writes (the pings notice a dead link)
+        let protocol = format!("qcalc-inbox, k{key}");
+        Socket::connect(&base(), &format!("/inbox/{name}"), Some(&protocol))
+    }
+
+    /// Opens a `ws://` / `wss://` URL as it is (the games' relay sockets; the URL's checks are the caller's).
+    pub fn open_url(url: &str) -> Option<Socket> {
+        let (base, path) = ws_url(url)?;
+        Socket::connect(&base, &path, None)
+    }
+
+    fn connect(base: &Base, path: &str, protocol: Option<&str>) -> Option<Socket> {
+        // no receive timeout: a socket waits as long as nobody writes (the pings notice a dead link)
         let s = session(0)?;
         // SAFETY: a live session
         let c = Handle::new(unsafe {
             WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0)
         })?;
-        let r = request(&base, &c, w!("GET"), &format!("/inbox/{name}"))?;
-        let header: Vec<u16> = format!("Sec-WebSocket-Protocol: qcalc-inbox, k{key}")
-            .encode_utf16()
-            .collect();
+        let r = request(base, &c, w!("GET"), path)?;
         // SAFETY: a live request; the header outlives the calls
         unsafe {
             WinHttpSetOption(
@@ -225,7 +264,10 @@ impl Socket {
                 None,
             )
             .ok()?;
-            WinHttpAddRequestHeaders(r.0, &header, WINHTTP_ADDREQ_FLAG_ADD).ok()?;
+            if let Some(p) = protocol {
+                let header: Vec<u16> = format!("Sec-WebSocket-Protocol: {p}").encode_utf16().collect();
+                WinHttpAddRequestHeaders(r.0, &header, WINHTTP_ADDREQ_FLAG_ADD).ok()?;
+            }
             WinHttpSendRequest(r.0, None, None, 0, 0, 0).ok()?;
             WinHttpReceiveResponse(r.0, std::ptr::null_mut()).ok()?;
         }
@@ -297,6 +339,16 @@ impl Socket {
         }
     }
 
+    /// Sends the close frame with `code` without waiting for the other side's (a receive waiting on the socket then
+    /// gets that, and ends). `close` still has to follow.
+    pub fn shutdown(&self, code: u16) {
+        if self.closed.load(Ordering::Acquire) {
+            return;
+        }
+        // SAFETY: a live socket; shutdown may run beside a pending receive
+        let _ = unsafe { WinHttpWebSocketShutdown(self.ws, code, None, 0) };
+    }
+
     /// Ends the socket (and a receive waiting on it), once.
     pub fn close(&self) {
         if self.closed.swap(true, Ordering::AcqRel) {
@@ -332,5 +384,23 @@ mod tests {
         assert_eq!(local_base("https://localhost:8787"), None);
         assert_eq!(local_base("http://evil.example:80"), None);
         assert_eq!(local_base("http://localhost:x"), None);
+    }
+
+    #[test]
+    fn websocket_urls_split_into_host_port_and_path() {
+        let (b, p) = ws_url("wss://qcalc-relay.maxconine.workers.dev/rooms/pong?name=a b").unwrap();
+        assert_eq!((b.secure, b.host.as_str(), b.port), (true, RELAY_HOST, 443));
+        assert_eq!(p, "/rooms/pong?name=a b");
+        let (b, p) = ws_url("ws://127.0.0.1:8787/host").unwrap();
+        assert_eq!((b.secure, b.host.as_str(), b.port, p.as_str()), (false, "127.0.0.1", 8787, "/host"));
+        let (b, p) = ws_url("ws://localhost?x=1").unwrap();
+        assert_eq!((b.port, p.as_str()), (80, "/?x=1"));
+        assert_eq!(ws_url("wss://host").unwrap().1, "/");
+        assert_eq!(ws_url("https://host/x"), None);
+        assert_eq!(ws_url("ws://:80/x"), None);
+        assert_eq!(ws_url("ws://host:nope/x"), None);
+        let (b, _) = ws_url("ws://[::1]:8787/x").unwrap();
+        assert_eq!((b.host.as_str(), b.port), ("::1", 8787));
+        assert_eq!(ws_url("ws://[::1]/x").unwrap().0.port, 80);
     }
 }

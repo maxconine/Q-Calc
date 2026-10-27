@@ -1,26 +1,22 @@
 //! The relay link for online play (`OnlinePeer` in `src/lib/peerOnline.ts`; the Mac's RelayTransport). The
 //! core's `OnlinePeer` decides everything; this runs its websockets and hands its events to the window.
 //!
-//! Each socket is a thread of its own (tungstenite over SChannel TLS): it connects, posts `WM_SOCK` to the game
-//! window for open / message / closed, and sends what the UI queues. After connecting the stream is non-blocking
-//! and the thread waits on its outgoing queue for 5 ms between reads, so a send goes out at once and a message
-//! comes in within 5 ms. Sockets exist only while a game's lobby or an online game uses the link; the window's
-//! close closes them (the friend hears `bye`).
+//! Each socket is two threads over relay.rs's WinHTTP WebSocket (SChannel TLS, the system's proxy, no crates): one
+//! connects and sends what the UI queues, the other waits in the socket's receive; both post `WM_SOCK` to the game
+//! window for open / message / closed. Sockets exist only while a game's lobby or an online game uses the link; the
+//! window's close closes them (the friend hears `bye`).
 
 use std::collections::HashMap;
-use std::io::ErrorKind;
-use std::net::TcpStream;
-use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Duration;
 
 use qcalc_core::games::peer::PeerEvent;
 use qcalc_core::games::peer_online::{OnlinePeer, RELAY_URL, SocketCmd};
-use tungstenite::protocol::CloseFrame;
-use tungstenite::protocol::frame::coding::CloseCode;
-use tungstenite::stream::MaybeTlsStream;
-use tungstenite::{Message, WebSocket};
 use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
 use windows::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_APP};
+
+use crate::relay::Frame;
 
 /// A socket's news for the UI thread: wParam is the socket's id, lParam a `Box<SockEvent>`.
 pub const WM_SOCK: u32 = WM_APP + 0x47;
@@ -80,7 +76,7 @@ impl Relay {
                     let spawned = std::thread::Builder::new()
                         .name(format!("qcalc-relay-{id}"))
                         .stack_size(256 * 1024)
-                        .spawn(move || socket(id, &url, &rx, hwnd));
+                        .spawn(move || socket(id, &url, &rx, move |e| post(hwnd, id, e)));
                     if spawned.is_err() {
                         self.socks.remove(&id);
                         post(hwnd, id, SockEvent::Closed);
@@ -157,97 +153,155 @@ pub unsafe fn take(lp: LPARAM) -> SockEvent {
     *unsafe { Box::from_raw(lp.0 as *mut SockEvent) }
 }
 
-fn set_nonblocking(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>) -> std::io::Result<()> {
-    match ws.get_mut() {
-        MaybeTlsStream::Plain(s) => s.set_nonblocking(true),
-        MaybeTlsStream::NativeTls(s) => s.get_mut().set_nonblocking(true),
-        _ => Ok(()),
-    }
-}
-
-fn would_block(e: &tungstenite::Error) -> bool {
-    matches!(e, tungstenite::Error::Io(io) if io.kind() == ErrorKind::WouldBlock)
-}
-
-fn socket(id: u64, url: &str, rx: &Receiver<Out>, hwnd: usize) {
-    let mut ws = match tungstenite::connect(url) {
-        Ok((ws, _)) => ws,
-        Err(e) => {
-            crate::qlog!("games: relay socket {id} didn't open: {e}");
-            post(hwnd, id, SockEvent::Closed);
-            return;
-        }
+/// A socket's thread: connects, then reads on a second thread while this one sends what the UI queues, so a send
+/// goes out at once and a message comes in as it arrives. `tell` takes the socket's news (a `WM_SOCK` post).
+fn socket(id: u64, url: &str, rx: &Receiver<Out>, tell: impl Fn(SockEvent) + Clone + Send + 'static) {
+    let Some(ws) = crate::relay::Socket::open_url(url).map(Arc::new) else {
+        crate::qlog!("games: relay socket {id} didn't open");
+        tell(SockEvent::Closed);
+        return;
     };
     // closed while connecting: leave quietly
     if let Ok(Out::Close(_)) | Err(mpsc::TryRecvError::Disconnected) = rx.try_recv() {
-        let _ = ws.close(None);
-        let _ = ws.flush();
+        ws.shutdown(1000);
+        ws.close();
         return;
     }
-    if set_nonblocking(&mut ws).is_err() {
-        post(hwnd, id, SockEvent::Closed);
+    tell(SockEvent::Opened);
+    let reader = {
+        let (ws, tell) = (ws.clone(), tell.clone());
+        std::thread::Builder::new()
+            .name(format!("qcalc-relay-{id}-in"))
+            .stack_size(256 * 1024)
+            .spawn(move || {
+                while let Frame::Text(text) = ws.receive() {
+                    tell(SockEvent::Message(text));
+                }
+                tell(SockEvent::Closed);
+            })
+    };
+    if reader.is_err() {
+        ws.close();
+        tell(SockEvent::Closed);
         return;
     }
-    post(hwnd, id, SockEvent::Opened);
-    loop {
-        // everything that's arrived
-        loop {
-            match ws.read() {
-                Ok(Message::Text(t)) => post(hwnd, id, SockEvent::Message(t.as_str().to_string())),
-                Ok(Message::Close(_)) => {
-                    post(hwnd, id, SockEvent::Closed);
-                    return;
-                }
-                Ok(_) => {}
-                Err(e) if would_block(&e) => break,
-                Err(_) => {
-                    post(hwnd, id, SockEvent::Closed);
-                    return;
-                }
-            }
-        }
-        // then what's to go, waiting a moment for it
-        match rx.recv_timeout(Duration::from_millis(5)) {
+    let code = loop {
+        match rx.recv() {
             Ok(Out::Text(text)) => {
-                if let Err(e) = ws.send(Message::text(text))
-                    && !would_block(&e)
-                {
-                    post(hwnd, id, SockEvent::Closed);
+                if !ws.send(&text) {
+                    // the reader hears the socket end and says so
+                    ws.close();
                     return;
                 }
             }
-            Ok(Out::Close(code)) => {
-                let _ = ws.close(Some(CloseFrame {
-                    code: CloseCode::from(code),
-                    reason: "".into(),
-                }));
-                for _ in 0..20 {
-                    match ws.flush() {
-                        Err(e) if would_block(&e) => std::thread::sleep(Duration::from_millis(5)),
-                        _ => break,
-                    }
-                }
-                return;
-            }
-            Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => {
-                let _ = ws.close(None);
-                let _ = ws.flush();
-                return;
-            }
+            Ok(Out::Close(code)) => break code,
+            Err(_) => break 1000,
         }
-        if let Err(e) = ws.flush()
-            && !would_block(&e)
-        {
-            post(hwnd, id, SockEvent::Closed);
-            return;
+    };
+    // the close frame with its code (4000 keeps the seat), a moment for the relay's answer, then the handle goes
+    ws.shutdown(code);
+    if let Ok(reader) = reader {
+        for _ in 0..50 {
+            if reader.is_finished() {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
         }
     }
+    ws.close();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `cargo test -p qcalc-win live_relay -- --ignored --nocapture`: two peers over the real relay (or
+    /// QCALC_RELAY_URL's) through these sockets: one hosts a locked room, the other joins by its code, a message
+    /// crosses, and leaving with 1000 tells the other side.
+    #[test]
+    #[ignore]
+    fn live_relay_pairs_two_peers() {
+        use qcalc_core::games::peer::PeerEvent;
+        use std::time::Instant;
+        let t0 = Instant::now();
+        let now = || t0.elapsed().as_secs_f64() * 1000.0;
+        let (tx, rx) = mpsc::channel::<(usize, u64, SockEvent)>();
+        let mut peers = [OnlinePeer::new(&base()), OnlinePeer::new(&base())];
+        let mut socks: [HashMap<u64, Sender<Out>>; 2] = [HashMap::new(), HashMap::new()];
+        let mut heard: [Vec<PeerEvent>; 2] = [vec![], vec![]];
+        let mut pump = |peers: &mut [OnlinePeer; 2], heard: &mut [Vec<PeerEvent>; 2], until: &dyn Fn(&[Vec<PeerEvent>; 2]) -> bool| {
+            let end = Instant::now() + Duration::from_secs(15);
+            loop {
+                for (side, peer) in peers.iter_mut().enumerate() {
+                    peer.tick(now());
+                    for cmd in peer.take_commands() {
+                        match cmd {
+                            SocketCmd::Open { id, url } => {
+                                let (stx, srx) = mpsc::channel();
+                                socks[side].insert(id, stx);
+                                let tx = tx.clone();
+                                std::thread::spawn(move || {
+                                    socket(id, &url, &srx, move |e| {
+                                        let _ = tx.send((side, id, e));
+                                    })
+                                });
+                            }
+                            SocketCmd::Send { id, text } => {
+                                if let Some(s) = socks[side].get(&id) {
+                                    let _ = s.send(Out::Text(text));
+                                }
+                            }
+                            SocketCmd::Close { id, code } => {
+                                if let Some(s) = socks[side].remove(&id) {
+                                    let _ = s.send(Out::Close(code));
+                                }
+                            }
+                        }
+                    }
+                    heard[side].extend(peer.take_events());
+                }
+                if until(heard) {
+                    return;
+                }
+                assert!(Instant::now() < end, "timed out: {heard:?}");
+                if let Ok((side, id, e)) = rx.recv_timeout(Duration::from_millis(20)) {
+                    if !socks[side].contains_key(&id) {
+                        continue;
+                    }
+                    match e {
+                        SockEvent::Opened => peers[side].opened(id, now()),
+                        SockEvent::Message(text) => peers[side].message(id, &text, now()),
+                        SockEvent::Closed => {
+                            socks[side].remove(&id);
+                            peers[side].closed(id, now());
+                        }
+                    }
+                }
+            }
+        };
+        peers[0].host("pong", "qcalc-test", true, now());
+        pump(&mut peers, &mut heard, &|h| h[0].iter().any(|e| matches!(e, PeerEvent::Hosting { .. })));
+        let code = heard[0]
+            .iter()
+            .find_map(|e| match e {
+                PeerEvent::Hosting { code, .. } => Some(code.clone()),
+                _ => None,
+            })
+            .unwrap();
+        println!("hosting {code} after {:.0} ms", now());
+        peers[1].join("", &code, "qcalc-test-b", now());
+        let open = |h: &Vec<PeerEvent>| h.iter().any(|e| matches!(e, PeerEvent::Open { .. }));
+        pump(&mut peers, &mut heard, &|h| open(&h[0]) && open(&h[1]));
+        println!("paired after {:.0} ms", now());
+        peers[0].send("hi there");
+        pump(&mut peers, &mut heard, &|h| {
+            h[1].iter().any(|e| matches!(e, PeerEvent::Message { data } if data == "hi there"))
+        });
+        println!("message crossed after {:.0} ms", now());
+        peers[0].close();
+        pump(&mut peers, &mut heard, &|h| h[1].iter().any(|e| matches!(e, PeerEvent::Closed { .. })));
+        println!("the other side heard the leave after {:.0} ms: {:?}", now(), heard[1].last());
+    }
 
     #[test]
     fn a_local_relay_is_only_taken_on_loopback() {
