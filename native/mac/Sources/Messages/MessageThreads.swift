@@ -75,6 +75,14 @@ extension BarModel {
 
     func threadOpen(with who: String) -> Bool { messagesPanel == .thread(who) }
 
+    /// what a drag over a thread says: `drop to send to max`, or why it can't go (no name set, no relay), as a
+    /// drop on the bar with `send file to max` on the line would
+    func threadDropHint(_ name: String) -> String {
+        let messaging = (try? JSONSerialization.jsonObject(with: Data(Messages.shared.webJSON.utf8))) ?? [:]
+        let o = logic.call("lib/messaging", "dropTarget", ["send file to \(name)", messaging, true, NSNull(), 1]) as? [String: Any]
+        return o?["hint"] as? String ?? ""
+    }
+
     /// an unsent reply waits for the thread to open again (esc, ⌘W, × or hiding the bar no longer loses it)
     private func keepThreadDraft() {
         if case let .thread(name) = messagesPanel { ThreadDrafts.shared.keep(threadDraft, for: name) }
@@ -306,6 +314,8 @@ private struct ThreadView: View {
     @FocusState private var focused: Bool
     @State private var contentHeight: CGFloat = 0
     @State private var showInfo = false
+    /// while files are dragged over the thread: where they'll go, or why they can't (the core's dropTarget)
+    @State private var dropHint: String?
     private static let maxHeight: CGFloat = 260
 
     private static let control = Color(nsColor: NSColor(name: nil) { a in
@@ -354,7 +364,10 @@ private struct ThreadView: View {
         .padding(.bottom, 12)
         .contentShape(Rectangle())
         // a file dropped on a thread goes to them (ShareCommands.swift)
-        .onDrop(of: [.fileURL], isTargeted: nil) { model.dropProviders($0, to: name) }
+        .onDrop(of: [.fileURL], isTargeted: Binding(get: { dropHint != nil }, set: { dropHint = $0 ? model.threadDropHint(name) : nil })) {
+            dropHint = nil
+            return model.dropProviders($0, to: name)
+        }
         .onAppear { focusReply() }
         .onChange(of: name) { _ in focusReply() }
     }
@@ -398,11 +411,15 @@ private struct ThreadView: View {
                     if case .failed = model.threadReply { model.threadReply = .idle }
                 }
                 .accessibilityLabel("Message \(name)")
-            switch model.threadReply {
-            case .sending: Text("sending…").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
-            case .sent: Text("sent").font(.system(size: Theme.small)).foregroundStyle(Color.qAccent)
-            case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1)
-            case .idle: EmptyView()
+            if let dropHint {
+                Text(dropHint).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1)
+            } else {
+                switch model.threadReply {
+                case .sending: Text("sending…").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                case .sent: Text("sent").font(.system(size: Theme.small)).foregroundStyle(Color.qAccent)
+                case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1).help(note)
+                case .idle: EmptyView()
+                }
             }
         }
     }
