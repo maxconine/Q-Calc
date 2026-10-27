@@ -172,3 +172,18 @@ fn powers_with_negligible_exponents_are_quick() {
     assert_eq!(show("asinh(1e-30)"), "1e-30");
     assert_eq!(show("asinh(0.001)"), "0.000999999833333");
 }
+
+#[test]
+fn unit_offers_share_one_simplify_budget() {
+    use qcalc_core::app::missing_unit::missing_unit;
+    on_engine_stack(|| {
+        // 20 bare numerators × 14 units, each try a derivative that simplifies for 0.2 s: a minute, before
+        let line = format!("d/dx {}2 as", "2/dx ".repeat(20));
+        let ok = |t: &str| !show(t).is_empty();
+        assert_eq!(missing_unit(&line, &ok), None);
+        assert_eq!(
+            missing_unit("10 mA + 5 / 1 kohm", &ok).map(|f| f.filled),
+            Some("10 mA + 5 V / 1 kohm".to_string())
+        );
+    });
+}

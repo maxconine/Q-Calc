@@ -28,6 +28,12 @@ const WORK: u64 = 2_000_000;
 /// `10 mA + 5 / 1 kohm`: the number over a quantity that one SI unit would fix, and that unit. `ok` says whether
 /// a piece of text has a real answer. A guess to offer, never one to act on unasked.
 pub fn missing_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
+    // every try shares one line's simplify budget: 280 tries of `d/dx 2/dx 2/dx … 2 as`, 0.2 s each, ran for a
+    // minute
+    crate::symbolic::simplify::with_line_budget(|| tries(expr, ok))
+}
+
+fn tries(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<UnitFix> {
     static BARE_NUMERATOR: Lazy = Lazy::new(|| {
         jsre::js(
             r"(?<![A-Za-z_.\d^])\d+(?:\.\d+)?(?:e[+-]?\d+)?(?=\s*\/)",

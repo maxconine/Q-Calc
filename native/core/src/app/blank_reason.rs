@@ -51,6 +51,11 @@ fn known() -> &'static BTreeSet<String> {
 /// `ok` says whether a piece of text evaluates. None when there's no confident answer; a single operator at the end
 /// is unfinished, not wrong, so it's never flagged.
 pub fn blank_reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> {
+    // every piece tried shares one line's simplify budget, as in `missing_unit`
+    crate::symbolic::simplify::with_line_budget(|| reason(expr, ok, names))
+}
+
+fn reason(expr: &str, ok: &dyn Fn(&str) -> bool, names: &Names) -> Option<Span> {
     if jstr::trim(expr).is_empty() || ok(expr) {
         return None;
     }
