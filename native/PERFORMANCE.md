@@ -231,38 +231,84 @@ Keystroke median 1.64 ms (p99 8.1), warm launch 180 ms (bar mounted 143 ms), foo
 
 ### Rounds 3 and 4 (overnight 2026-10-27, arm64, native only)
 
-Same M4 Pro, load 6 to 20 from other agents' builds. Every change was measured against the build before it, both
-saved and run back to back twice, interleaved (`app_bench.py --only native --runs 1`, with
-`QCALC_BENCH_NATIVE_APP` pointing at the saved copy). Snapshots (`snap` dev command) were compared pixel by pixel.
+Same M4 Pro, load 6 to 20 from other agents' builds, the display asleep. Each change was measured against the
+build before it: both saved and run back to back, twice, interleaved (`app_bench.py --only native --runs 1`, with
+`QCALC_BENCH_NATIVE_APP` pointing at the saved copy). Pictures from the `snap` dev command were compared pixel
+by pixel, in light and dark.
 
 New in the bench:
 - **Peak footprint while graphing**, sampled every 0.2 s from the graph line being typed to the 3 s sample.
 - **Typed into the field**: the same 269 inputs typed a character at a time through the text view (`field` in
-  DevBench: insertText, so auto-pairs, symbol swaps, undo and the field's updates all run), timed from before the
-  insert to the answer landing. Setting `model.text` (the older keystroke row) skips all of that.
+  DevBench). This is `insertText`, so auto-pairs, symbol swaps, undo and the field's updates all run. It is
+  timed from before the insert to the answer landing. Setting `model.text` (the older keystroke row) skips all
+  of that.
 
 | change | measured | kept? |
 |---|---|---|
 | graph plot drawn into a CPU bitmap handed to the layer, not a Canvas (round 3, carried over) | peak while graphing 195-197 → 62-65 MB; after the graph 68/157 → 62-64 MB | kept |
-| engine regexes without the fully compiled DFA (round 3, carried over) | keystroke 1.71/1.76 → 1.77/1.90 ms, after typing 41 → 40 MB, ready unchanged | reverted: no win beyond noise in the app |
+| engine regexes without the fully compiled DFA (round 3, carried over) | first try: keystroke 1.71/1.76 → 1.77/1.90 ms. Second try, footprint from `vmmap` over two sessions each: idle 24.1 → 23.8, after typing 41.2 → 40.0, after the graph 58.1 → 56.6 MB; keystroke 1.29/1.28 → 1.34/1.21 ms | kept on the second try |
 | undo in Swift (undo.ts line for line) instead of three `callJson` round trips a keystroke | typed into the field 1.92/2.07/2.10 → 1.59-1.80 ms | kept |
 | dev builds read `QCALC_PI_DAY` once (the composer read the whole environment on every redraw) | keystroke 1.66/1.79 → 1.57/1.31 ms; field 1.71/1.72 → 1.64/1.39 ms (dev builds only) | kept |
-| `malloc_zone_pressure_relief` 2 s after typing or a graph lands | no change in any footprint row | reverted |
+| `malloc_zone_pressure_relief` 2 s after typing or after a graph lands | no change in any footprint row | reverted |
 | `lto = "fat"` | binary within 2 KB of thin | reverted |
-| plot bitmap in the screen's pixel format and colour space (BGRA, the window's space) | after the graph 64/64 → 57/57 MB, peak 64 → 57-59 MB; sRGB BGRA alone saved nothing | kept |
+| plot bitmap in the screen's pixel format and colour space (BGRA, the window's space) | after the graph 64/64 → 57/57 MB, peak 64 → 57-59 MB; BGRA in sRGB alone saved nothing | kept |
 | pong's court as Core Animation layers, not a Canvas in a TimelineView | playing pong 167-173 → 32 MB | kept |
 | `opt-level = "z"` for the Typst dependencies the preview never runs (images, PDF, WASM, bibliographies) | binary 42.2 → 45.1 MB (bigger) | reverted |
 | `strip` instead of `strip -x` | executable 42.2 → 40.5 MB, on disk 44.4 → 42.9 MB | kept |
+| a CPU-bitmap stand-in for SwiftUI's Canvas (ImageRenderer) on crack's dial | crack's 125 MB spikes unchanged | reverted |
+| `.drawingGroup()` on connect 4's animating Canvas | peak 167 → 168 MB | reverted |
+| plot drawn again only when its state, the pointer or the scale changes | graph shown, 20 unrelated model changes: 20 → 0 redraws of ~10.6 ms each | kept |
+| menu bar icon bundled at 18 and 36 px (it was drawn from the 1254 px PNG, kept decoded) | idle 24/24 → 22/22, after typing 41/40 → 39/38, after the graph 57/57 → 55/55 MB; the icon is the same to the pixel | kept |
+
+Before and after: the build this night started from (`native` at 405b057) against the last commit. Two
+invocations each with `--runs 2`, interleaved, so each cell is the median over four sessions (launches: 6 cold
+and 10 warm).
+
+| | before | after |
+|---|---|---|
+| launch to ready, cold / warm (ms) | 558-576 / 132-153 | 548-569 / 133-134 |
+| footprint, idle (bar never shown) | 25-26 MB | 24 MB [22-25] |
+| footprint, bar shown | 28 MB | 26 MB |
+| footprint, after the typing session | 40 MB | 38-40 MB |
+| footprint, after the graph | 68 MB | 54 MB |
+| footprint, peak while graphing | 198 MB | 54 MB |
+| RSS, after the graph | 140 MB | 122-125 MB |
+| keystroke (set text): median / p90 / p99 | 1.30-1.36 / 2.83-2.97 / 4.96-5.48 ms | 1.19-1.26 / 2.51-2.83 / 4.89-5.27 ms |
+| keystroke typed into the field: median | 1.92-2.10 ms (measured on the build just before the undo change) | 1.29-1.36 ms |
+| heavy lines | 1.6-2.0 ms | 1.5-2.0 ms |
+| CPU while typing at 40 ms a key | 8.2-8.9% | 7.7-8.9% |
+| idle CPU | 0% | 0% |
+| playing pong vs the computer | 167-173 MB | 32 MB |
+| app on disk | 44.4 MB | 42.8 MB |
+
+The before build has no `field` mode, so its "typed into the field" row in the raw JSON is the set-text path again.
+Its value above comes from the round's own A/B runs instead.
 
 Where the time goes now:
-- **A keystroke typed into the field** (sample of the bench copy, unstripped binary): the main thread is about
-  half busy. SwiftUI's graph update is about half of that, as in round 2; the text view's own insert and
-  `textDidChange` about a fifth; Core Animation's commit about a tenth. The engine thread is busy about 18% of
-  the time, nearly all of it waiting for `Engine.live` on the evaluation thread.
+- **A keystroke typed into the field** (a `sample` of the bench copy, with the unstripped binary): the main thread
+  is about half busy.
+  - SwiftUI's graph update is about half of that, as in round 2.
+  - The text view's own insert and `textDidChange` are about a fifth.
+  - Core Animation's commit is about a tenth.
+  - The engine thread is busy about 18% of the time, nearly all of it waiting for `Engine.live` on the
+    evaluation thread.
 - **First launch after an install or update** (the "cold" row) is about 390 ms before `main`, against 7.5 ms
-  warm. A test binary shows that time grows with the binary's size, about 6 ms a MB (95 ms for a 50 KB binary,
-  340-400 ms for one padded to 42 MB), so it is the system reading the new binary, not our code.
+  warm. That time grows with the binary's size, about 6 ms a MB: a test binary took 95 ms when it was 50 KB and
+  340-400 ms when padded to 42 MB. So it is the system reading the new binary, not our code. Only a smaller
+  binary helps, and most of it is Typst's (its library, image and PDF decoders, WASM, bibliographies), which
+  has no features to turn off.
 - **Memory after typing** (+15 MB over the shown bar): about half is regexes compiled on first use (Thompson
-  NFAs, dense and one-pass DFAs, lazy-DFA caches); the rest is SwiftUI and AppKit.
+  NFAs, one-pass DFAs, lazy-DFA caches); the rest is SwiftUI and AppKit.
 - **File encryption** (FileCrypt, 256 MB of random bytes): about 1.5 GB/s each way, far beyond the relay's
   upload, so it was left alone.
+- **Game frames** couldn't be timed tonight: with the display asleep the display links don't fire, so CPU per
+  frame reads 0-4%.
+
+Open, not fixed:
+- **Crack and connect 4 spike to ~160 MB for 1-3 s.** Crack does it after each press, connect 4 when a game
+  starts. The memory is about 30 window-wide GPU surfaces of 4 MB ("owned unmapped (graphics)"), and it falls
+  back to 36-40 MB after.
+  - It isn't the dial's Canvas, which a CPU bitmap didn't change, nor the note under the dial.
+  - Where the surfaces come from is still unknown.
+- Ember's level picker shows "Optional(nil)" at the start of its note (`EmberPanel.swift`, the `note` line).
+  This is a display bug, not performance, and it was left for the games work.
