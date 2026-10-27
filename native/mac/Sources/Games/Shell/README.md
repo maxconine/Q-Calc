@@ -17,7 +17,9 @@ gameKeys,gameSaves,gameFullscreen,lobby,nickname,peer,peerOnline}.ts`. The rules
    page's `key`/`code` names (`ArrowUp`, `Enter`, `KeyW`), `down` (key-up events come too), `isRepeat`, `plain`.
    The shell takes ⌃F, esc and keys while paused first; the lobby next; then the game. ⌘ shortcuts never arrive.
 4. Time: `GameTime.now()` is `gameNow()` and `GameTime.date()` `gameDateNow()`; they stand still while paused.
-   Draw frames with `TimelineView(.animation)` and read `GameTime.now()` inside.
+   Draw frames with `TimelineView(.animation)` and read `GameTime.now()` inside. Paint a picture that changes
+   every frame with `CGCanvas` (Core Graphics into one bitmap), not SwiftUI's `Canvas`, which left ~120 MB of GPU
+   surfaces behind while it animated (native/PERFORMANCE.md, rounds 3 and 4).
 5. Saves: `GameSaves.load(key)` / `GameSaves.store(key, value)` with the page's local-storage keys
    (`qcalc-ember`…; the list is `game_save_keys()` in the core). The values are the strings the page wrote.
 6. Online: `GameProps` (`transport`, `role`, `peer`, `onEnd`) as the page had; `transport.subscribe { event in }`

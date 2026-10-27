@@ -652,6 +652,11 @@ final class OverlayController: NSObject {
         games.open(kind, on: screen)
     }
 
+    /// dev builds: closes an open game window (the bench's "closegame")
+    func closeGame() {
+        games.close()
+    }
+
     // messages go to the bar while it's up and no game has it, and to notifications otherwise
     private func tellMessagesBar() {
         let open = wantVisible && !gameOpen

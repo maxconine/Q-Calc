@@ -58,6 +58,8 @@ struct EmberPanel: View {
             ))
         }
         .onAppear { done = EmberPanel.finished() }
+        // the level pictures are made again next time: kept, they held ~10 MB after the game closed
+        .onDisappear { EmberThumbs.cache.removeAll() }
     }
 }
 

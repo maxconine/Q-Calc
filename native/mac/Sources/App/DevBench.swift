@@ -3,9 +3,11 @@ import Foundation
 /// Dev builds only: the typing runs native/bench/app_bench.py times (`drive.sh "bench:<spec.json>"`). The web-view
 /// app runs the same spec in its page (native/bench/page_bench.js), so the two are timed the same way.
 ///
-/// spec: `{"mode": "keys"|"session", "inputs": [...], "whole": false, "delayMs": 30, "enter": false, "clear": true, "out": path}`
+/// spec: `{"mode": "keys"|"session", "inputs": [...], "whole": false, "field": false, "delayMs": 30, "enter": false, "clear": true, "out": path}`
 /// - keys: each input typed a prefix at a time (or `whole`, all at once); each keystroke is timed from the text
 ///   changing to its live answer landing in the model (and the main queue turning once more), then the next.
+///   With `field`, each character goes into the text view as a typed one does (insertText: auto-pairs, symbols,
+///   undo, the field's own updates), timed from before the insert.
 /// - session: typed at a fixed pace without waiting, the answer awaited at the end of each line, ↵ if `enter`,
 ///   then the line cleared if `clear` (default: when not entered).
 /// Writes `{"ms": [...], "idx": [...], "timeouts": n, "wallMs": total}` to `out`.
@@ -14,6 +16,7 @@ enum DevBench {
         let mode: String
         let inputs: [String]
         let whole: Bool?
+        let field: Bool?
         let delayMs: Double?
         let enter: Bool?
         let clear: Bool?
@@ -43,6 +46,8 @@ enum DevBench {
         var waiting: String?
         var landed: (() -> Void)?
         var token = 0
+        /// the text of the last answer that landed, for one set before the insert returned
+        var lastLanded: String?
 
         init(spec: Spec, model: BarModel) {
             self.spec = spec
@@ -53,6 +58,7 @@ enum DevBench {
 
         func start() {
             model.onLive = { [weak self] typed in
+                self?.lastLanded = typed
                 guard let self, typed == self.waiting, let landed = self.landed else { return }
                 self.waiting = nil
                 self.landed = nil
@@ -92,6 +98,7 @@ enum DevBench {
         }
 
         func key(_ i: Int, _ steps: [String], _ k: Int) {
+            if spec.field == true { return fieldKey(i, Array(spec.inputs[i]), k) }
             guard k < steps.count else {
                 model.text = ""
                 DispatchQueue.main.async { self.input(i + 1) }
@@ -103,6 +110,36 @@ enum DevBench {
                     if ok { self.ms.append(Self.now() - t0); self.idx.append(i) } else { self.timeouts += 1 }
                     self.key(i, steps, k + 1)
                 }
+            }
+        }
+
+        /// the k-th character typed into the field
+        func fieldKey(_ i: Int, _ chars: [Character], _ k: Int) {
+            guard k < chars.count else {
+                model.setField?("")
+                DispatchQueue.main.async { self.input(i + 1) }
+                return
+            }
+            let before = model.text
+            lastLanded = nil
+            let t0 = Self.now()
+            model.insertIntoField?(String(chars[k]))
+            let now = model.text
+            let next = { DispatchQueue.main.async { self.fieldKey(i, chars, k + 1) } }
+            let done = { DispatchQueue.main.async { self.ms.append(Self.now() - t0); self.idx.append(i); next() } }
+            // a key that changed nothing (`]` over a paired one) has no answer to wait for
+            if now == before { return next() }
+            if lastLanded == now { return done() }
+            token += 1
+            let mine = token
+            waiting = now
+            landed = done
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                guard let self, self.token == mine, self.landed != nil else { return }
+                self.waiting = nil
+                self.landed = nil
+                self.timeouts += 1
+                next()
             }
         }
 

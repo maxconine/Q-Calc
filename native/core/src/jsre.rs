@@ -17,8 +17,12 @@ pub type Caps<'t> = fancy_regex::Captures<'t, str>;
 pub type Lazy = std::sync::LazyLock<Regex>;
 
 /// Compiles a pattern from the TS source. Panics on a bad pattern, which only a code change can cause.
+///
+/// No fully compiled DFAs: the lazy DFA answers the same, and a full DFA per small regex (the meta engine builds
+/// one whenever `regex-automata/dfa-build` is on, which typst's syntect turns on in the app) costs memory and
+/// compile time for the hundreds of engine regexes.
 pub fn compile(pattern: &str) -> Regex {
-    match Regex::new(pattern) {
+    match fancy_regex::RegexBuilder::new(pattern).delegate_dfa_size_limit(0).build() {
         Ok(re) => re,
         Err(e) => panic!("bad engine regex {pattern:?}: {e}"),
     }

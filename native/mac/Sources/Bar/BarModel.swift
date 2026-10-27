@@ -570,9 +570,12 @@ final class BarModel: ObservableObject {
         }
     }
 
+    /// read once: the composer asks on every redraw, and the environment is copied out whole each time it's read
+    private static let piDayForced = AppInfo.isDev && ProcessInfo.processInfo.environment["QCALC_PI_DAY"] == "1"
+
     /// March 14 by the local calendar (dev builds: QCALC_PI_DAY=1 makes any day Pi Day, to try it)
     static var piDay: Bool {
-        if AppInfo.isDev, ProcessInfo.processInfo.environment["QCALC_PI_DAY"] == "1" { return true }
+        if piDayForced { return true }
         let d = Calendar.current.dateComponents([.month, .day], from: Date())
         return isPiDay(month: UInt32(d.month ?? 0), day: UInt32(d.day ?? 0))
     }
@@ -993,43 +996,36 @@ final class BarModel: ObservableObject {
 
     /// the main thread's app logic (undo, onboarding, tour, analytics, typst copy)
     lazy var logic = AppLogic(engine: core)
-    private var undoState: Any = [String: Any]()
+    private var undoState = Undo.start("")
     private var undoReady = false
 
     func resetUndo() {
-        undoState = logic.call("lib/undo", "undoStart", [text]) ?? [String: Any]()
+        undoState = Undo.start(text)
         undoReady = true
     }
 
     func recordEdit(_ value: String, start: Int, end: Int, kind inputType: String?) {
         if !undoReady { resetUndo() }
-        let kind = logic.call("lib/undo", "editKind", [inputType ?? NSNull()]) ?? NSNull()
-        let state: [String: Any] = ["value": value, "start": start, "end": end]
-        if let next = logic.call("lib/undo", "recordEdit", [undoState, state, kind, Date().timeIntervalSince1970 * 1000]) {
-            undoState = next
-        }
+        undoState = Undo.record(undoState, Undo.Step(value: value, start: start, end: end), Undo.editKind(inputType),
+                                now: Date().timeIntervalSince1970 * 1000)
     }
 
     func breakUndoRun() {
-        // breakRun leaves a state with no run as it is, so that one isn't sent over (each caret move asks)
-        if let state = undoState as? [String: Any], state["run"] == nil || state["run"] is NSNull { return }
-        guard undoReady, let next = logic.call("lib/undo", "breakRun", [undoState]) else { return }
-        undoState = next
+        guard undoReady else { return }
+        undoState = Undo.breakRun(undoState)
     }
 
-    private func applyUndo(_ fn: String) -> Bool {
+    private func applyUndo(_ redo: Bool) -> Bool {
         if !undoReady { resetUndo() }
-        guard let next = logic.call("lib/undo", fn, [undoState]) as? [String: Any],
-              let current = next["current"] as? [String: Any], let value = current["value"] as? String else { return false }
+        guard let next = redo ? Undo.redo(undoState) : Undo.undo(undoState) else { return false }
         undoState = next
-        let start = (current["start"] as? NSNumber)?.intValue ?? (value as NSString).length
-        let end = (current["end"] as? NSNumber)?.intValue ?? start
-        restoreField?(value, NSRange(location: start, length: max(0, end - start)))
+        let c = next.current
+        restoreField?(c.value, NSRange(location: c.start, length: max(0, c.end - c.start)))
         return true
     }
 
-    func undoText() -> Bool { applyUndo("undo") }
-    func redoText() -> Bool { applyUndo("redo") }
+    func undoText() -> Bool { applyUndo(false) }
+    func redoText() -> Bool { applyUndo(true) }
 
     /// puts a value and selection back without recording it as an edit
     var restoreField: ((String, NSRange) -> Void)?

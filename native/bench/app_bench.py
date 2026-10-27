@@ -21,7 +21,8 @@ HOME = os.path.expanduser("~")
 APPS = {
     "html": dict(src=f"{ROOT}/macos/dist/Q Calc.app", name="Q Calc Bench", id="com.maxconine.qcalc.bench",
                  hotkey="ctrl+alt+shift+cmd+j", folder="Q Calc"),
-    "native": dict(src=f"{ROOT}/native/mac/dist/Q Calc Dev.app", name="Q Calc Native Bench",
+    # QCALC_BENCH_NATIVE_APP: another native build to measure (a saved copy, for A/B runs)
+    "native": dict(src=os.environ.get("QCALC_BENCH_NATIVE_APP", f"{ROOT}/native/mac/dist/Q Calc Dev.app"), name="Q Calc Native Bench",
                    id="com.maxconine.qcalc.native-bench", hotkey="ctrl+alt+shift+cmd+k", folder="Q Calc Native Bench"),
 }
 GRAPH = "graph sin(1/x) + sin(40x)"
@@ -319,11 +320,27 @@ def session(kind, app, inputs, idle_s):
     res["typing_wall_ms"] = s.get("wallMs")
     time.sleep(3)
     res["mem_typed"] = memory(r.pids())
+    # the peak too: drawing a graph can hold surfaces for a moment that are gone by the 3 s sample
+    peak, stop = [], threading.Event()
+
+    def sample():
+        while not stop.is_set():
+            peak.append(memory(r.pids())["footprint"])
+            stop.wait(0.2)
+
+    sampler = threading.Thread(target=sample, daemon=True)
+    sampler.start()
     r.bench(dict(mode="session", inputs=[GRAPH], delayMs=40, enter=False, clear=False))
     time.sleep(3)
+    stop.set()
+    sampler.join()
     res["mem_graph"] = memory(r.pids())
+    res["mem_graph_peak"] = max(peak) if peak else None
     keys = r.bench(dict(mode="keys", inputs=inputs))
     res["keys"] = keys
+    if kind == "native":
+        # the same inputs typed through the text view, a character at a time, as a person types them
+        res["keys_field"] = r.bench(dict(mode="keys", inputs=inputs, field=True))
     heavy = r.bench(dict(mode="keys", inputs=HEAVY_LINES * 5, whole=True))
     res["heavy"] = {line: [m for m, i in zip(heavy["ms"], heavy["idx"]) if HEAVY_LINES[i % len(HEAVY_LINES)] == line]
                     for line in HEAVY_LINES}

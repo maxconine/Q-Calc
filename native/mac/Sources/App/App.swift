@@ -136,6 +136,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "click": DevSnapshot.click(arg)
         // what settings' Remove / Unblock does for a name
         case "forget": Messages.shared.forget(arg)
+        case "closegame": overlay.closeGame()
         case "bench": DevBench.run(spec: arg, model: overlay.model)
         // sendfile:<name>:<path> offers a file as a drop on their thread would; savefile saves every file that can
         // be (Messages/MessageFiles.swift), as Save does
@@ -212,8 +213,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func statusBarImage() -> NSImage {
-        if let url = Bundle.main.url(forResource: "StatusIcon", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
+        // StatusIcon.png and StatusIcon@2x.png, made at 18 and 36 px by build.sh (from the full-size PNG the bar
+        // kept a 6 MB decoded copy for an 18 pt icon)
+        if let image = Bundle.main.image(forResource: "StatusIcon") {
             image.size = NSSize(width: 18, height: 18)
             image.isTemplate = true
             return image
