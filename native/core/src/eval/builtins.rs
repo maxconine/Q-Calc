@@ -230,10 +230,20 @@ const FOUNDATION: &[Builtin] = &[
 ];
 
 fn find(name: &str) -> Option<&'static Builtin> {
-    FOUNDATION
-        .iter()
-        .chain(crate::scientific::functions::TABLE.iter())
-        .find(|b| b.name == name)
+    // by name, the first of a name winning as the scan through both tables did; every call node looks its
+    // function up on every evaluation, and the linear scan was the top of a dense graph's profile
+    static BY_NAME: std::sync::LazyLock<std::collections::HashMap<&'static str, &'static Builtin>> =
+        std::sync::LazyLock::new(|| {
+            let mut map = std::collections::HashMap::new();
+            for b in FOUNDATION
+                .iter()
+                .chain(crate::scientific::functions::TABLE.iter())
+            {
+                map.entry(b.name).or_insert(b);
+            }
+            map
+        });
+    BY_NAME.get(name).copied()
 }
 
 /// Whether `name` is a function in the engine's scope.
