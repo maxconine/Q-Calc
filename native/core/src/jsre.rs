@@ -193,12 +193,29 @@ struct Prefilter {
     loose: Option<String>,
     compiled: Option<std::rc::Rc<Regex>>,
     misses: u32,
+    /// Uses so far, up to [`WARM`], when the rest is built.
+    uses: u32,
 }
 
 /// Texts the literals may let through to the backtracking VM for nothing before the loosened regex is compiled.
 const UPGRADE: u32 = 256;
 
+/// Uses of a pattern before its prefilter is built.
+const WARM: u32 = 3;
+
 impl Prefilter {
+    /// Nothing built yet: rules nothing out.
+    fn pending(pattern: &str) -> Prefilter {
+        Prefilter {
+            pattern: pattern.to_string(),
+            literals: Vec::new(),
+            loose: None,
+            compiled: None,
+            misses: 0,
+            uses: 1,
+        }
+    }
+
     fn of(pattern: &str) -> Prefilter {
         use regex_syntax::hir::literal::{ExtractKind, Extractor};
         let loose = loosened(pattern);
@@ -225,6 +242,7 @@ impl Prefilter {
             loose,
             compiled: None,
             misses: 0,
+            uses: WARM,
         };
         if p.literals.is_empty() {
             p.compile();
@@ -260,11 +278,23 @@ fn cannot_match(re: &Regex, s: &str) -> bool {
     let key = re as *const Regex as usize;
     PREFILTERS.with(|cache| {
         let mut cache = cache.borrow_mut();
-        if cache.get(&key).is_none_or(|p| p.pattern != pattern) {
-            if cache.len() >= 4096 {
-                cache.clear();
+        match cache.get_mut(&key) {
+            Some(p) if p.pattern == pattern => {
+                // a pattern earns its prefilter on its WARM-th use, so the first evaluation (the app's warm-up)
+                // doesn't pay to analyse every pattern it touches once
+                if p.uses < WARM {
+                    p.uses += 1;
+                    if p.uses == WARM {
+                        *p = Prefilter::of(pattern);
+                    }
+                }
             }
-            cache.insert(key, Prefilter::of(pattern));
+            _ => {
+                if cache.len() >= 4096 {
+                    cache.clear();
+                }
+                cache.insert(key, Prefilter::pending(pattern));
+            }
         }
         let out = cache.get(&key).is_some_and(|p| p.rules_out(s));
         // the fuzz harness builds with this to check, on every call, that a ruled-out text really can't match
