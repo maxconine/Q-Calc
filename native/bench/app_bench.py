@@ -338,6 +338,9 @@ def session(kind, app, inputs, idle_s):
     res["mem_graph_peak"] = max(peak) if peak else None
     keys = r.bench(dict(mode="keys", inputs=inputs))
     res["keys"] = keys
+    if kind == "native":
+        # the same inputs typed through the text view, a character at a time, as a person types them
+        res["keys_field"] = r.bench(dict(mode="keys", inputs=inputs, field=True))
     heavy = r.bench(dict(mode="keys", inputs=HEAVY_LINES * 5, whole=True))
     res["heavy"] = {line: [m for m, i in zip(heavy["ms"], heavy["idx"]) if HEAVY_LINES[i % len(HEAVY_LINES)] == line]
                     for line in HEAVY_LINES}

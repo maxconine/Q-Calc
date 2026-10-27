@@ -69,6 +69,14 @@ def app(d):
         lambda r: dist([m for s in r["sessions"] for m in s["keys"]["ms"]]))
     row("keystroke median per run (ms)", lambda r: spread([pct(s["keys"]["ms"], 50) for s in r["sessions"]], "{:.2f}"))
     row("keystroke timeouts (>10 s)", lambda r: str(sum(s["keys"].get("timeouts", 0) for s in r["sessions"])))
+    if all("keys_field" in s for r in runs.values() for s in r["sessions"]):
+        row("typed into the field, ms: median / p90 / p99 / max",
+            lambda r: dist([m for s in r["sessions"] for m in s["keys_field"]["ms"]]))
+        row("typed into the field, median per run (ms)",
+            lambda r: spread([pct(s["keys_field"]["ms"], 50) for s in r["sessions"]], "{:.2f}"))
+        row("typed into the field, keystrokes timed / timeouts",
+            lambda r: f"{sum(len(s['keys_field']['ms']) for s in r['sessions'])} / "
+                      f"{sum(s['keys_field'].get('timeouts', 0) for s in r['sessions'])}")
     for line in runs[names[0]]["sessions"][0]["heavy"]:
         row(f"`{line}` (ms)", lambda r, l=line: spread([m for s in r["sessions"] for m in s["heavy"][l]], "{:.1f}"))
     row("app on disk (MB)", lambda r: f"{r['size_mb']:.1f}")
