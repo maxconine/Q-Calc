@@ -28,9 +28,18 @@ re!(THETA, r"(?i)(?<![\\A-Za-z])theta(?![A-Za-z0-9])");
 re!(INFTY, r"(?i)(?<![\\A-Za-z])infty(?![A-Za-z0-9])");
 re!(INF, r"(?i)(?<![\\A-Za-z])inf(?![A-Za-z0-9])");
 re!(CBRT, r"(?i)(?<![\\A-Za-z])cbrt(?![A-Za-z])");
-re!(LIM, r"((?<![A-Za-z0-9_])lim(?:it)?\s*_?[({]?\s*[A-Za-z]\s*)->");
-re!(PLUS_MINUS, r"(?i)(?<![\\A-Za-z])plus[\s.-]?minus(?![A-Za-z])");
-re!(MINUS_PLUS, r"(?i)(?<![\\A-Za-z])minus[\s.-]?plus(?![A-Za-z])");
+re!(
+    LIM,
+    r"((?<![A-Za-z0-9_])lim(?:it)?\s*_?[({]?\s*[A-Za-z]\s*)->"
+);
+re!(
+    PLUS_MINUS,
+    r"(?i)(?<![\\A-Za-z])plus[\s.-]?minus(?![A-Za-z])"
+);
+re!(
+    MINUS_PLUS,
+    r"(?i)(?<![\\A-Za-z])minus[\s.-]?plus(?![A-Za-z])"
+);
 re!(DOT, r"(?i)(?<![\\A-Za-z])dot(?![A-Za-z])");
 re!(SUM, r"(?<![\\A-Za-z_])sum(?![A-Za-z0-9])");
 re!(PROD, r"(?<![\\A-Za-z_])prod(?![A-Za-z0-9])");
@@ -144,7 +153,10 @@ fn replace_tokens(text: &str, keep_trailing: bool, keep_words: bool) -> String {
             if keep_trailing
                 && !AT_ONCE.contains(&r.put)
                 && at_end
-                && matched.chars().last().is_some_and(|c| c.is_ascii_alphabetic())
+                && matched
+                    .chars()
+                    .last()
+                    .is_some_and(|c| c.is_ascii_alphabetic())
             {
                 matched.to_string()
             } else if r.keep_lead {

@@ -44,12 +44,12 @@ use windows::Win32::UI::WindowsAndMessaging::{
     RegisterClassExW, RegisterWindowMessageW, SMTO_ABORTIFHUNG, SW_HIDE, SWP_NOACTIVATE,
     SWP_NOZORDER, SWP_SHOWWINDOW, SendMessageTimeoutW, SetCursor, SetForegroundWindow, SetTimer,
     SetWindowPos, ShowWindow, TranslateMessage, WA_INACTIVE, WM_ACTIVATE, WM_APP, WM_CHAR,
-    WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_DPICHANGED, WM_ENDSESSION, WM_ERASEBKGND, WM_HOTKEY,
-    WM_EXITSIZEMOVE, WM_IME_COMPOSITION, WM_IME_ENDCOMPOSITION, WM_IME_SETCONTEXT,
-    WM_IME_STARTCOMPOSITION, WM_MOVE, WM_NCHITTEST, WM_SIZING, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
-    WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_POWERBROADCAST, WM_SETCURSOR, WM_SETTINGCHANGE,
-    WM_SIZE, WM_SYSCHAR, WM_SYSKEYDOWN, WM_TIMER, WM_WTSSESSION_CHANGE, WNDCLASSEXW,
-    WS_EX_TOOLWINDOW, WS_POPUP,
+    WM_CLOSE, WM_COPYDATA, WM_DESTROY, WM_DPICHANGED, WM_ENDSESSION, WM_ERASEBKGND,
+    WM_EXITSIZEMOVE, WM_HOTKEY, WM_IME_COMPOSITION, WM_IME_ENDCOMPOSITION, WM_IME_SETCONTEXT,
+    WM_IME_STARTCOMPOSITION, WM_KEYDOWN, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP,
+    WM_MOUSEMOVE, WM_MOVE, WM_NCHITTEST, WM_PAINT, WM_POWERBROADCAST, WM_SETCURSOR,
+    WM_SETTINGCHANGE, WM_SIZE, WM_SIZING, WM_SYSCHAR, WM_SYSKEYDOWN, WM_TIMER,
+    WM_WTSSESSION_CHANGE, WNDCLASSEXW, WS_EX_TOOLWINDOW, WS_POPUP,
 };
 use windows::core::{HSTRING, PCWSTR, w};
 
@@ -81,11 +81,6 @@ const COPYDATA_ARGS: usize = 0x5143_4c43;
 
 const HOST_CLASS: PCWSTR = w!("QCalcHost");
 const MUTEX: &str = "Local\\com.maxconine.qcalc.native";
-
-static PROF_PAINT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-static PROF_N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-static PROF_CHAR: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-static PROF_AFTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 thread_local! {
     static APP: RefCell<Option<App>> = const { RefCell::new(None) };
@@ -709,11 +704,7 @@ impl App {
                     Outcome::ClearHistory => self.set_history(Vec::new()),
                 }
             }
-            WM_CHAR => {
-                let t0 = Instant::now();
-                self.model.char16(wp.0 as u16, &self.engine);
-                PROF_CHAR.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
-            }
+            WM_CHAR => self.model.char16(wp.0 as u16, &self.engine),
             // Alt+letter isn't the bar's: no beep
             WM_SYSCHAR => {}
             // the composition is drawn inline (input.rs), not in the IME's own window
@@ -741,8 +732,8 @@ impl App {
                 }
                 if lp.0 as u32 & GCS_COMPSTR.0 != 0 {
                     let (text, cursor) = ime::composition(hwnd);
-                    self.bar.field_view.composition = (!text.is_empty())
-                        .then_some(crate::input::Composition { text, cursor });
+                    self.bar.field_view.composition =
+                        (!text.is_empty()).then_some(crate::input::Composition { text, cursor });
                     self.model.touch();
                 }
                 self.place_ime();
@@ -876,12 +867,6 @@ impl App {
 
     /// After every message: lay out and repaint if the model changed; save settings; write the clipboard.
     fn after(&mut self) {
-        let t0 = Instant::now();
-        self.after_inner();
-        PROF_AFTER.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
-    }
-
-    fn after_inner(&mut self) {
         if self.model.take_changed() {
             let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
             let resized = (layout.height - self.bar.layout.height).abs() > 0.1
@@ -907,11 +892,7 @@ impl App {
     }
 
     fn paint(&mut self) {
-        let t0 = Instant::now();
-        let r = self.bar.paint(&self.gfx, &self.theme, &self.model);
-        PROF_PAINT.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
-        PROF_N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        if let Err(e) = r {
+        if let Err(e) = self.bar.paint(&self.gfx, &self.theme, &self.model) {
             qlog!("paint failed: {e}");
         }
         if self.bar.visible && !self.ready_logged {
@@ -1157,13 +1138,6 @@ impl App {
 
     fn finish_bench(&mut self) {
         let Some(run) = self.run.take() else { return };
-        {
-            use std::sync::atomic::Ordering::Relaxed;
-            let n = PROF_N.swap(0, Relaxed).max(1);
-            qlog!("prof: paints {n} avg {:.3} ms; char total {:.3} ms; after total {:.3} ms",
-                PROF_PAINT.swap(0, Relaxed) as f64 / n as f64 / 1e6,
-                PROF_CHAR.swap(0, Relaxed) as f64 / 1e6, PROF_AFTER.swap(0, Relaxed) as f64 / 1e6);
-        }
         let result = run.result();
         qlog!(
             "bench: n {} median {:.3} ms p90 {:.3} ms p99 {:.3} ms timeouts {}",

@@ -261,8 +261,6 @@ impl Field {
 
     /// prettyTokens and afterTyping, after a typed character.
     fn after_typing(&mut self) {
-        static OFF: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| std::env::var_os("QCALC_NOPRETTY").is_some());
-        if *OFF { return; }
         let (t, c) = crate::text_rules::pretty(&self.text, self.caret, self.keep_words);
         if t != self.text {
             self.text = t;
@@ -771,7 +769,11 @@ mod view {
                             _ => {
                                 // an empty slot's box keeps its room after the sign
                                 let at = end.saturating_sub(1).max(sign);
-                                let room = if lw > 0.0 { (empty - 0.0).max(2.0) } else { empty * 2.0 + 4.0 };
+                                let room = if lw > 0.0 {
+                                    (empty - 0.0).max(2.0)
+                                } else {
+                                    empty * 2.0 + 4.0
+                                };
                                 let _ = l1.SetCharacterSpacing(0.0, room, 0.0, range(at, at + 1));
                             }
                         }
@@ -874,7 +876,9 @@ mod view {
             let split = self.composition.is_some().then_some(caret);
             let draw = |color: Color, from: f32, to: f32| {
                 if let Some(at) = split {
-                    clip_x(c, x0 + from, x0 + to.min(at), r, || c.text(&layout, x0, r.y, color));
+                    clip_x(c, x0 + from, x0 + to.min(at), r, || {
+                        c.text(&layout, x0, r.y, color)
+                    });
                     clip_x(c, x0 + from.max(at) + comp_w, x0 + to + comp_w, r, || {
                         c.text(&layout, x0 + comp_w, r.y, color)
                     });
@@ -885,21 +889,37 @@ mod view {
                 }
             };
             if !field.text().is_empty() {
-                draw(t.ink, -1000.0, w + 1000.0);
-                if let Some(d) = deco {
-                    // .quick-word in accent mixed 85% with ink, .quick-unit in the accent
-                    let word = mix(t.accent, t.ink, 0.15);
-                    for &(a, b) in &d.words {
-                        let (xa, xb) = (caret_x(&layout, a), caret_x(&layout, b));
-                        draw(word, xa, xb);
-                    }
-                    for &(a, b) in &d.units {
-                        let (xa, xb) = (caret_x(&layout, a), caret_x(&layout, b));
-                        draw(t.accent, xa, xb);
+                // .quick-word in accent mixed 85% with ink, .quick-unit in the accent: drawing effects on the
+                // layout, so the line is still one draw
+                // SAFETY: setters on a live layout, ranges inside the text
+                unsafe {
+                    let _ = layout.SetDrawingEffect(None, range(0, len16));
+                    if let Some(d) = deco.filter(|d| !d.words.is_empty() || !d.units.is_empty()) {
+                        if !d.words.is_empty()
+                            && let Some(b) = c.brush(mix(t.accent, t.ink, 0.15))
+                        {
+                            for &(a, z) in &d.words {
+                                let _ = layout.SetDrawingEffect(&b, range(a, z));
+                            }
+                        }
+                        if !d.units.is_empty()
+                            && let Some(b) = c.brush(t.accent)
+                        {
+                            for &(a, z) in &d.units {
+                                let _ = layout.SetDrawingEffect(&b, range(a, z));
+                            }
+                        }
                     }
                 }
+                draw(t.ink, -1000.0, w + 1000.0);
             }
-            let shift = |p: u32| if split.is_some() && p >= caret16 { comp_w } else { 0.0 };
+            let shift = |p: u32| {
+                if split.is_some() && p >= caret16 {
+                    comp_w
+                } else {
+                    0.0
+                }
+            };
             // a radical's bar over what it takes
             for (a, b) in radicand_ranges(field.text()) {
                 radical_bar(c, &layout, x0 + shift(a), r.y, a, b, t.ink);
@@ -909,7 +929,13 @@ mod view {
                 // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
                 if let Some((a, b)) = d.squiggle {
                     let (xa, xb) = (caret_x(&layout, a), caret_x(&layout, b));
-                    squiggle(c, x0 + xa, x0 + xb, r.y + r.h * 0.5 + 13.0, with_alpha(t.muted, 0.7));
+                    squiggle(
+                        c,
+                        x0 + xa,
+                        x0 + xb,
+                        r.y + r.h * 0.5 + 13.0,
+                        with_alpha(t.muted, 0.7),
+                    );
                 }
                 // the unit offered after its number, muted, in the gap opened for it
                 if let Some((at, text)) = &d.offer
@@ -985,9 +1011,9 @@ mod view {
                     },
                     sign_end,
                 ));
-                let (us, ue) = b
-                    .upper
-                    .map_or((b.end as u32, b.end as u32), |u| (u.start as u32, u.end as u32));
+                let (us, ue) = b.upper.map_or((b.end as u32, b.end as u32), |u| {
+                    (u.start as u32, u.end as u32)
+                });
                 slots.push((
                     Limit {
                         start: us,
@@ -1016,7 +1042,11 @@ mod view {
                         .collect();
                     let text = String::from_utf16_lossy(&u);
                     let xa = x0 + caret_x(layout, s.start);
-                    let y = if s.upper { mid - small * 1.15 } else { mid - small * 0.15 };
+                    let y = if s.upper {
+                        mid - small * 1.15
+                    } else {
+                        mid - small * 0.15
+                    };
                     if let Some(l) = c.gfx.layout(&text, &c.gfx.fonts.display, 0.0, small * 1.3) {
                         // SAFETY: a setter on a live layout
                         unsafe {
@@ -1026,7 +1056,11 @@ mod view {
                     }
                 } else {
                     let bx = x0 + sign_end + if s.upper { small * 0.3 } else { small * 0.05 };
-                    let by = if s.upper { mid - small * 0.95 } else { mid + small * 0.05 };
+                    let by = if s.upper {
+                        mid - small * 0.95
+                    } else {
+                        mid + small * 0.05
+                    };
                     c.fill_round(
                         Rect::new(bx, by, box_w, box_h),
                         small * 0.14,
@@ -1049,7 +1083,11 @@ mod view {
         if b <= a {
             return 0.0;
         }
-        let u: Vec<u16> = text.encode_utf16().skip(a as usize).take((b - a) as usize).collect();
+        let u: Vec<u16> = text
+            .encode_utf16()
+            .skip(a as usize)
+            .take((b - a) as usize)
+            .collect();
         let s = String::from_utf16_lossy(&u);
         let Some(l) = c.gfx.layout(&s, &c.gfx.fonts.display, 0.0, 40.0) else {
             return 0.0;
@@ -1080,7 +1118,15 @@ mod view {
     }
 
     /// The bar over a radicand (UTF-16 range a..b), as Radical.tsx draws it.
-    fn radical_bar(c: &Canvas, l: &IDWriteTextLayout, x0: f32, y: f32, a: u32, b: u32, color: Color) {
+    fn radical_bar(
+        c: &Canvas,
+        l: &IDWriteTextLayout,
+        x0: f32,
+        y: f32,
+        a: u32,
+        b: u32,
+        color: Color,
+    ) {
         let (xa, xb) = (caret_x(l, a), caret_x(l, b));
         let top = y + 36.0 * 0.5 - size::DISPLAY * 0.5;
         c.fill(Rect::new(x0 + xa, top, xb - xa, 1.3), color);
@@ -1147,8 +1193,12 @@ pub mod ime {
             let bytes = ImmGetCompositionStringW(imc, which, None, 0);
             let out = if bytes > 0 {
                 let mut buf = vec![0u16; bytes as usize / 2];
-                let got =
-                    ImmGetCompositionStringW(imc, which, Some(buf.as_mut_ptr().cast()), bytes as u32);
+                let got = ImmGetCompositionStringW(
+                    imc,
+                    which,
+                    Some(buf.as_mut_ptr().cast()),
+                    bytes as u32,
+                );
                 (got > 0).then(|| String::from_utf16_lossy(&buf[..got as usize / 2]))
             } else {
                 None
@@ -1350,7 +1400,10 @@ mod tests {
         // the caret never stops on a hidden `^`
         f.left(false, false);
         f.left(false, false);
-        assert!(!bounds::is_hidden(f.limits(), i64::from(f.to_utf16(f.caret()))));
+        assert!(!bounds::is_hidden(
+            f.limits(),
+            i64::from(f.to_utf16(f.caret()))
+        ));
     }
 
     #[test]

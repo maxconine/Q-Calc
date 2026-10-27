@@ -78,8 +78,6 @@ pub fn decorate(
     context: &EvalContext,
     answer: &LiveAnswer,
 ) -> (Decorations, Option<String>) {
-    static OFF: std::sync::LazyLock<bool> = std::sync::LazyLock::new(|| std::env::var_os("QCALC_NODECO").is_some());
-    if *OFF { return (Decorations::default(), None); }
     let fill = qcalc_core::parens::infer_parens(typed);
     let variables: Vec<String> = context.variables.keys().cloned().collect();
     let functions: Vec<String> = context.functions.keys().cloned().collect();
@@ -92,10 +90,14 @@ pub fn decorate(
                 .into_iter()
                 .map(|s| (s.start as u32, s.end as u32))
                 .collect(),
-            qcalc_core::app::known_words::known_word_spans(typed, &functions, context.ans.is_some())
-                .into_iter()
-                .map(|s| (s.start as u32, s.end as u32))
-                .collect(),
+            qcalc_core::app::known_words::known_word_spans(
+                typed,
+                &functions,
+                context.ans.is_some(),
+            )
+            .into_iter()
+            .map(|s| (s.start as u32, s.end as u32))
+            .collect(),
         )
     };
     let deco = Decorations {
@@ -213,7 +215,14 @@ pub fn before_enter(m: &mut BarModel, engine: &EngineThread) -> bool {
         m.text_changed(engine);
         return true;
     }
-    if !m.field.keep_words && !m.field.text().trim_start().to_lowercase().starts_with("message") {
+    if !m.field.keep_words
+        && !m
+            .field
+            .text()
+            .trim_start()
+            .to_lowercase()
+            .starts_with("message")
+    {
         let (t, _) = crate::text_rules::pretty(m.field.text(), 0, false);
         if t != m.field.text() {
             m.field.set_text(&t);
@@ -423,7 +432,11 @@ pub fn will_hide(m: &mut BarModel, engine: &EngineThread) {
 
 /// willShow: the draft comes back if the bar was away less than `draftSeconds` (shouldRestoreDraft); the open is
 /// counted and the examples start (examplesActive: the first three opens, until five saves).
-pub fn will_show(m: &mut BarModel, onboarding: &mut crate::store::Onboarding, engine: &EngineThread) {
+pub fn will_show(
+    m: &mut BarModel,
+    onboarding: &mut crate::store::Onboarding,
+    engine: &EngineThread,
+) {
     m.field.keep_words = m.settings.keep_words;
     let seconds = m.settings.draft_seconds;
     match draft(m) {
@@ -487,7 +500,11 @@ fn refresh_example(m: &mut BarModel, engine: &EngineThread) {
     let typed = crate::text_rules::pretty(&item.expr, item.expr.len(), m.settings.keep_words).0;
     let options = m.options();
     engine.submit(Lane::Input, move |cx| {
-        let line = cx.engine.evaluate(vec![typed], options).into_iter().next()?;
+        let line = cx
+            .engine
+            .evaluate(vec![typed], options)
+            .into_iter()
+            .next()?;
         if line.display.is_empty() {
             return None;
         }
@@ -751,7 +768,12 @@ mod paint {
                 },
             );
             let fg = if varying { t.accent } else { t.muted };
-            c.text_plain(&lay, rect.x + (w - measure(&lay).0) / 2.0, rect.y, with_alpha(fg, a));
+            c.text_plain(
+                &lay,
+                rect.x + (w - measure(&lay).0) / 2.0,
+                rect.y,
+                with_alpha(fg, a),
+            );
             chips.push((rect, letter.to_string(), varying, locked));
             *x += w + 4.0;
         };
