@@ -266,6 +266,8 @@ private struct EqualGame: View {
                 .font(.game(GameMetrics.fsSmall)).foregroundColor(colors.muted.color)
                 .frame(minHeight: 16)
                 .padding(.bottom, GameMetrics.sp2)
+                // .equal-note aria-live="polite"
+                .liveRegion(m.note.isEmpty ? "\(left) \(left == 1 ? "guess" : "guesses") left" : m.note)
             VStack(spacing: 5) {
                 ForEach(0..<keyRows.count, id: \.self) { r in
                     HStack(spacing: 5) {

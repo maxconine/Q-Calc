@@ -166,6 +166,8 @@ struct UltimateGameView: View {
                 .lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity)
                 .modifier(PongWait(on: !v.started))
+                // .ut-status aria-live="polite"
+                .liveRegion(status(v, myTurn: myTurn))
             UltimateBoard(view: v, role: role, live: myTurn, zone: zone, cursor: myTurn && aiming ? cursor : nil,
                           canPlay: { model.game.canPlay(cell: UInt32($0), who: role) },
                           onHover: { c in cursor = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })

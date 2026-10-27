@@ -134,6 +134,20 @@ struct PongNote: View {
     }
 }
 
+/// `aria-live="polite"` / `role="status"`: VoiceOver hears the text when it shows and each time it changes.
+struct LiveRegion: ViewModifier {
+    let text: String
+    func body(content: Content) -> some View {
+        content
+            .onAppear { if !text.isEmpty { BarModel.announce(text) } }
+            .onChange(of: text) { if !$0.isEmpty { BarModel.announce($0) } }
+    }
+}
+
+extension View {
+    func liveRegion(_ text: String) -> some View { modifier(LiveRegion(text: text)) }
+}
+
 /// The games' `@media (prefers-reduced-motion: reduce)` rules: Reduce Motion stops the pulse, the caret's blink,
 /// equal's shake and flip, and crack's shake, click and pop, as the page does.
 enum GameMotion {

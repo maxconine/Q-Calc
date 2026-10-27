@@ -336,6 +336,8 @@ struct GameToast: View {
             .background(Capsule().fill(colors.bg.color))
             .boxShadow(colors.cardShadow, radius: 999)
             .allowsHitTesting(false)
+            // .game-toast role="status"
+            .liveRegion(text)
     }
 }
 

@@ -131,6 +131,8 @@ struct Connect4GameView: View {
                 .lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity)
                 .modifier(PongWait(on: !v.started))
+                // .c4-status aria-live="polite"
+                .liveRegion(status(v, myTurn: myTurn))
             Connect4Board(view: v, role: role, cursor: myTurn ? col : nil, ghost: ghostOn && aiming,
                           onHover: { c in col = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
             PongNote("← → or 1–7 to pick · ↵ drop · G \(ghostOn ? "hides" : "shows") the preview · \(skillName.map { "\($0) · " } ?? "")esc leaves")

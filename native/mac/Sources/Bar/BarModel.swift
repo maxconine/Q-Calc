@@ -57,7 +57,10 @@ final class BarModel: ObservableObject {
     @Published var sysFocus: Int?
     // onboarding and the walkthrough (Tour.swift)
     @Published var example: ExampleShown?
-    @Published var tourLine: TourLineShown?
+    /// .tour-line role="status": VoiceOver hears each step as it comes
+    @Published var tourLine: TourLineShown? {
+        didSet { if let tourLine, tourLine.text != oldValue?.text { Self.announce(tourLine.text) } }
+    }
     var replay: Int?
     var rotation: (on: Bool, tick: Int) = (false, 0)
     var rotationTimer: Timer?
