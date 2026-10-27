@@ -194,3 +194,33 @@ What's left:
   - Engine, model and overlay preload: 7 ms.
   - Engine warm-up: 30 ms more, which is the Rust first call.
 - **Not touched:** the Rust first call and the binary size.
+
+### Round 2
+
+Same method. The machine was busier (load 7 to 12), so latency figures are noisier than in round 1.
+
+**The graphics footprint was the typeset row, not the panel's resizes.** With the typeset preview turned off, a
+session stays at 37–41 MB. The row drew its Typst paths in a SwiftUI `Canvas`, which renders into GPU surfaces
+that SwiftUI keeps, one per size. The row now draws the same paths in an AppKit view through Core Graphics
+(`MathPreview.PathsNSView`). A snapshot of the row in dark mode looks the same.
+
+| | before | after |
+|---|---|---|
+| footprint after the 20-line typing session (several sessions) | 48–143 MB | 41 MB |
+| footprint after the graph | 70–155 MB | 64 MB |
+| footprint after the keystroke bench | 168–187 MB | 46–65 MB |
+| keystroke median (same load, back to back) | 1.79 ms | 1.81 ms |
+
+Tried and dropped, with no measured win:
+- **Making `LiveAnswerView` and `InputField` `.equatable()` over snapshots of what they read** (a light split of
+  `BarModel`): 1.29–1.41 against 1.30–1.33 ms.
+  - Their data changes on every keystroke, so they have to redraw anyway.
+  - What's left is the two graph updates per keystroke: one when the text changes, one when the answer lands.
+    Merging them means holding back the text's updates until the answer comes, which changes when things appear on
+    screen. I didn't do it.
+- **Starting the engine warm-up before the status item:** ready went from 147 to 155 ms (median of 5).
+  - The ~35 ms between the bar being mounted and "engine warm" is the main thread's first render after
+    `applicationDidFinishLaunching`, not the engine. The engine's reply is delivered on the main queue.
+- **The status item:** finer probes put the 23–26 ms launch step all in
+  `NSStatusBar.system.statusItem(withLength:)`, a window-server call. Deferring it would only move it later. I left
+  it.
