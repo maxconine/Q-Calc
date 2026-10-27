@@ -194,34 +194,107 @@ struct PongGameView: View {
 }
 
 /// The court as the page's canvas drew it: the centre line, the paddles, the ball, on whole device pixels.
-private struct PongCourt: View {
+/// Plain Core Animation layers moved each frame, not a SwiftUI Canvas: a Canvas redrawn every display frame kept
+/// about 120 MB of GPU surfaces while a game ran.
+private struct PongCourt: NSViewRepresentable {
     let view: PongView
     let mine: GameSide
     let colors: GameColors
-    @Environment(\.displayScale) private var scale
 
-    var body: some View {
-        Canvas { ctx, size in
-            let k = size.width / geo.courtW * scale
-            func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> Path {
+    func makeNSView(context: Context) -> CourtView { CourtView() }
+
+    func updateNSView(_ court: CourtView, context: Context) {
+        court.show(view, mine: mine, colors: colors)
+    }
+
+    final class CourtView: NSView {
+        /// y down from the court's top, as the canvas measured
+        private let stage = CALayer()
+        private let host = CALayer(), guest = CALayer(), ball = CALayer()
+        private var dashes: [CALayer] = []
+        private var last: (view: PongView, mine: GameSide, colors: GameColors)?
+
+        override init(frame: NSRect) {
+            super.init(frame: frame)
+            wantsLayer = true
+            stage.isGeometryFlipped = true
+            for l in [host, guest, ball] { stage.addSublayer(l) }
+            layer?.addSublayer(stage)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override var wantsUpdateLayer: Bool { true }
+        override func updateLayer() {}
+
+        // cacheDisplay (DevSnapshot) draws through here, which leaves sublayers out: the same rects, painted
+        override func draw(_ dirtyRect: NSRect) {
+            guard let cg = NSGraphicsContext.current?.cgContext else { return }
+            cg.saveGState()
+            cg.translateBy(x: 0, y: bounds.height)
+            cg.scaleBy(x: 1, y: -1)
+            for l in [host, guest, ball] + dashes where !l.isHidden {
+                guard let color = l.backgroundColor else { continue }
+                cg.setFillColor(color)
+                cg.fill(l.frame)
+            }
+            cg.restoreGState()
+        }
+
+        override func layout() {
+            super.layout()
+            redraw()
+        }
+
+        override func viewDidChangeBackingProperties() {
+            super.viewDidChangeBackingProperties()
+            redraw()
+        }
+
+        func show(_ view: PongView, mine: GameSide, colors: GameColors) {
+            last = (view, mine, colors)
+            redraw()
+        }
+
+        private func redraw() {
+            guard let (view, mine, colors) = last else { return }
+            let scale = window?.backingScaleFactor ?? 2
+            let k = bounds.width / geo.courtW * scale
+            func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double) -> CGRect {
                 let x0 = (x * k).rounded(), y0 = (y * k).rounded()
                 let x1 = ((x + w) * k).rounded(), y1 = ((y + h) * k).rounded()
-                return Path(CGRect(x: x0 / scale, y: y0 / scale, width: (x1 - x0) / scale, height: (y1 - y0) / scale))
+                return CGRect(x: x0 / scale, y: y0 / scale, width: (x1 - x0) / scale, height: (y1 - y0) / scale)
             }
-            var dashes = Path()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            stage.frame = bounds
+            var lines: [CGRect] = []
             var y = 4.0
             while y < geo.courtH {
-                dashes.addPath(rect(geo.courtW / 2 - 1, y, 2, 8))
+                lines.append(rect(geo.courtW / 2 - 1, y, 2, 8))
                 y += 16
             }
-            ctx.fill(dashes, with: .color(colors.muted.opacity(0.35).color))
-            for (side, py) in [(GameSide.host, view.paddleHost), (.guest, view.paddleGuest)] {
+            while dashes.count < lines.count {
+                let l = CALayer()
+                stage.insertSublayer(l, at: 0)
+                dashes.append(l)
+            }
+            let dash = colors.muted.opacity(0.35).cg
+            for (i, l) in dashes.enumerated() {
+                l.isHidden = i >= lines.count
+                if i < lines.count { l.frame = lines[i] }
+                l.backgroundColor = dash
+            }
+            for (side, py, l) in [(GameSide.host, view.paddleHost, host), (.guest, view.paddleGuest, guest)] {
                 let x = side == .host ? geo.paddleInset : geo.courtW - geo.paddleInset - geo.paddleW
-                ctx.fill(rect(x, py - geo.paddleH / 2, geo.paddleW, geo.paddleH), with: .color((side == mine ? colors.accent : colors.ink).color))
+                l.frame = rect(x, py - geo.paddleH / 2, geo.paddleW, geo.paddleH)
+                l.backgroundColor = (side == mine ? colors.accent : colors.ink).cg
             }
-            if view.phase == .play {
-                ctx.fill(rect(view.ballX - geo.ballSize / 2, view.ballY - geo.ballSize / 2, geo.ballSize, geo.ballSize), with: .color(colors.ink.color))
-            }
+            ball.isHidden = view.phase != .play
+            ball.frame = rect(view.ballX - geo.ballSize / 2, view.ballY - geo.ballSize / 2, geo.ballSize, geo.ballSize)
+            ball.backgroundColor = colors.ink.cg
+            CATransaction.commit()
         }
     }
 }
