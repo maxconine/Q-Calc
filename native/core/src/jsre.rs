@@ -32,6 +32,10 @@ pub fn own_compiled_here() -> bool {
 /// jobs, from the top of the thread's loop. Other threads are unaffected.
 pub use qcalc_lazy::release as release_compiled;
 
+/// Whether this thread is compiling one of the regexes `release_compiled` frees (qcalc-lazy's `building`): the
+/// Windows app's allocator keeps those blocks in a heap of their own.
+pub use qcalc_lazy::building as building_compiled;
+
 /// Empties this thread's cache of run-time patterns (`compile_cached`); a regex still in use stays alive.
 pub fn clear_cache() {
     CACHE.with(|c| c.borrow_mut().clear());
@@ -45,7 +49,13 @@ thread_local! {
 /// Compiles a pattern from the TS source. Panics on a bad pattern, which only a code change can cause.
 pub fn compile(pattern: &str) -> Regex {
     match Regex::new(pattern) {
-        Ok(re) => re,
+        Ok(re) => {
+            if building_compiled() {
+                // a freeable copy: its search caches are made now too, so they share its heap (qcalc-lazy)
+                let _ = re.is_match("");
+            }
+            re
+        }
         Err(e) => panic!("bad engine regex {pattern:?}: {e}"),
     }
 }

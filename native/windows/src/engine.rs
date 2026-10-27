@@ -326,8 +326,10 @@ impl EngineThread {
             // static is alive on this thread, and other threads keep their own copies (qcalc-lazy)
             let n = unsafe { qcalc_core::jsre::release_compiled() };
             qlog!(
-                "engine released {n} compiled statics in {:.1} ms",
-                t.elapsed().as_secs_f64() * 1000.0
+                "engine released {n} compiled statics in {:.1} ms (their heap: {} MB reserved, largest free {} KB)",
+                t.elapsed().as_secs_f64() * 1000.0,
+                crate::heap::reserved_mb(),
+                crate::heap::compact()
             );
             None
         });

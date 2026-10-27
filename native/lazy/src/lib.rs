@@ -26,6 +26,8 @@ type Built = (usize, unsafe fn(usize));
 thread_local! {
     /// 0 on every thread but the owner; on the owner, the current release epoch (from 1).
     static EPOCH: Cell<u64> = const { Cell::new(0) };
+    /// How deep the owner is in building its copies (`building`).
+    static BUILDING: Cell<u32> = const { Cell::new(0) };
     /// The owner's copies built this epoch: each box's pointer and the function that drops it.
     static BUILT: RefCell<Vec<Built>> = const { RefCell::new(Vec::new()) };
 }
@@ -43,6 +45,13 @@ pub fn own_here() -> bool {
         return true;
     }
     false
+}
+
+/// Whether this thread is building one of its own freeable copies right now: a host's allocator can put what is
+/// made meanwhile in a heap of its own, so freeing the copies leaves no holes among longer-lived blocks.
+#[inline]
+pub fn building() -> bool {
+    BUILDING.try_with(|b| b.get() != 0).unwrap_or(false)
 }
 
 /// Frees the owner thread's copies of every `Lazy` value; their next use on this thread builds them again. Returns
@@ -93,7 +102,11 @@ impl<T> Lazy<T> {
     #[cold]
     #[inline(never)]
     fn build_owned(&self, epoch: u64) -> &T {
-        let p = Box::into_raw(Box::new((self.init)()));
+        BUILDING.with(|b| b.set(b.get() + 1));
+        let built =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Box::new((self.init)())));
+        BUILDING.with(|b| b.set(b.get() - 1));
+        let p = Box::into_raw(built.unwrap_or_else(|e| std::panic::resume_unwind(e)));
         BUILT.with(|b| b.borrow_mut().push((p as usize, drop_box::<T>)));
         // a build that used this same Lazy would have listed its own box too (never in the engine): both are
         // freed at the next release, and this one is handed out

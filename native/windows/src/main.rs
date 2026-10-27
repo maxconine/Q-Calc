@@ -40,6 +40,8 @@ mod games;
 #[cfg(windows)]
 mod graph;
 #[cfg(windows)]
+mod heap;
+#[cfg(windows)]
 mod history;
 #[cfg(windows)]
 mod input;
@@ -79,6 +81,10 @@ mod window;
 #[cfg(feature = "perf")]
 #[global_allocator]
 static ALLOC: perf::Counting = perf::Counting;
+// the engine's freeable regexes in a heap of their own (heap.rs)
+#[cfg(all(windows, not(feature = "perf")))]
+#[global_allocator]
+static ALLOC: heap::Routed = heap::Routed;
 
 #[cfg(windows)]
 fn main() {
