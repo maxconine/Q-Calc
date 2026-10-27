@@ -4,6 +4,17 @@ compatibility_date = "2026-03-01"
 workers_dev = true
 preview_urls = false
 
+# no request logs, traces or sampling: a request's url, headers and address would otherwise be kept by
+# cloudflare's workers logs, and the file and messaging routes are meant to leave nothing behind
+# (native/PRIVACY.md). the code itself logs nothing either
+[observability]
+enabled = false
+head_sampling_rate = 0
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+
 # one room per host, and per code: earlier releases' code-only rooms, and the claims on locked rooms' codes
 [[durable_objects.bindings]]
 name = "ROOMS"

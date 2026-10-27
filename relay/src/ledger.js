@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers'
-import { CAPS, dayOf, GRANT_TTL_MS, hourOf, OFFER_TTL_MS, PART_TRIES, partCount, partLength, randomHex, STALE_UPLOAD_MS, STORED_TTL_MS, UPLOAD_MAX_MS } from './files.js'
+import { CAPS, dayOf, FILE_ID, GRANT_TTL_MS, hourOf, OFFER_TTL_MS, PART_TRIES, partCount, partLength, randomHex, STALE_UPLOAD_MS, STORED_TTL_MS, UPLOAD_MAX_MS } from './files.js'
 
 // the one ledger of every file offered, accepted, being uploaded or waiting to be downloaded, and of the bytes
 // they hold against the hard caps in files.js. it keeps no file's contents, name or key: only who sent it to
@@ -12,7 +12,18 @@ import { CAPS, dayOf, GRANT_TTL_MS, hourOf, OFFER_TTL_MS, PART_TRIES, partCount,
 //   uploading  parts are arriving (`uploadId`, `parts`)                         aborted when stale
 //   stored     waiting for its recipient                                        deleted after STORED_TTL_MS
 //
-// a removal hands back the record, so the worker can abort its upload or delete its object
+// a removal hands back the record, so the worker can abort its upload or delete its object.
+//
+// an address is never kept: an upload's start counts against a tag, sha-256 over a random salt drawn for that
+// hour and the address, and both the salt and the tags go once the hour's over, so a tag can't be traced back
+// to an address afterwards, even by trying every one. each method runs start to finish without another request
+// in between (a durable object's input gate holds them while it only awaits its own storage), so an accept and
+// a take-back can't interleave inside the ledger; the worker's steps around it are checked for it below
+
+async function sha256Hex(text) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, '0')).join('')
+}
 
 // the states that hold room against the caps
 function holds(rec) {
@@ -65,6 +76,8 @@ export class Ledger extends DurableObject {
 
   // a sender offers a file; it holds no room until it's accepted
   async offer({ id, from, to, bytes }) {
+    // the sender's app drew the id; one that's already out is turned away, never shared or replaced
+    if (!FILE_ID.test(id ?? '') || (await this.file(id))) return { status: 'bad' }
     if (bytes > Math.min(CAPS.recipientPending, CAPS.senderPending, CAPS.senderDaily, CAPS.totalPending)) return { status: 'too-big' }
     if (((await this.store.get(`offers:${from}`)) ?? 0) >= CAPS.senderOffers) return { status: 'too-many' }
     const now = Date.now()
@@ -97,10 +110,10 @@ export class Ledger extends DurableObject {
   }
 
   // a grant its sender never heard of, or never used: the room and the day's bytes come back, and the offer
-  // can be accepted again
-  async revert(id) {
+  // can be accepted again. with `grant`, only that grant is taken back, so a late revert never undoes a newer one
+  async revert(id, grant = null) {
     const rec = await this.file(id)
-    if (rec?.state !== 'granted') return
+    if (rec?.state !== 'granted' || (grant != null && rec.grant !== grant)) return
     await this.reserve(rec, -1)
     await this.add(rec.day, -rec.bytes)
     delete rec.grant
@@ -111,8 +124,8 @@ export class Ledger extends DurableObject {
   }
 
   // its sender starts uploading with the grant, which can't be used again; or comes back to an upload they'd
-  // started, and hears which parts are in. ip is a hash of the address, kept for the hour
-  async start(id, from, grant, ip) {
+  // started, and hears which parts are in. `address` is counted under the hour's salted tag and never kept
+  async start(id, from, grant, address) {
     const rec = await this.file(id)
     const now = Date.now()
     if (!rec || rec.from !== from) return { status: 'gone' }
@@ -127,7 +140,8 @@ export class Ledger extends DurableObject {
       await this.revert(id)
       return { status: 'expired' }
     }
-    const hour = `ip:${ip}:${hourOf(now)}`
+    await this.prune(now)
+    const hour = `ip:${await this.tag(address, now)}:${hourOf(now)}`
     if (((await this.store.get(hour)) ?? 0) >= CAPS.addressHourly) return { status: 'too-many' }
     // its start and its finish
     if (!(await this.budget('writes', 2))) return { status: 'relay-full' }
@@ -137,6 +151,25 @@ export class Ledger extends DurableObject {
     Object.assign(rec, { state: 'uploading', started: now, touched: now, parts: {}, tries: 0, uploadId: null })
     await this.save(rec)
     return { status: 'ok', uploadId: null, parts: [], bytes: rec.bytes }
+  }
+
+  // the hour's salt, drawn the first time it's needed
+  async tag(address, now) {
+    const key = `salt:${hourOf(now)}`
+    let salt = await this.store.get(key)
+    if (!salt) {
+      salt = randomHex(32)
+      await this.store.put(key, salt)
+    }
+    return sha256Hex(`${salt}:${address}`)
+  }
+
+  // address tags and salts from hours that are over go at once, not only at the hourly sweep
+  async prune(now) {
+    const hour = hourOf(now)
+    for (const prefix of ['ip:', 'salt:']) {
+      for (const [k] of await this.store.list({ prefix })) if (Number(k.split(':').pop()) < hour) await this.store.delete(k)
+    }
   }
 
   async started(id, uploadId) {
@@ -219,9 +252,8 @@ export class Ledger extends DurableObject {
       const stale = rec.state === 'uploading' && (rec.touched + STALE_UPLOAD_MS <= now || rec.started + UPLOAD_MAX_MS <= now)
       if (stale || ((rec.state === 'offered' || rec.state === 'stored') && rec.expires <= now)) removed.push(await this.remove(rec.id))
     }
-    const hour = hourOf(now)
     const day = dayOf(now)
-    for (const [k] of await this.store.list({ prefix: 'ip:' })) if (Number(k.split(':').pop()) < hour) await this.store.delete(k)
+    await this.prune(now)
     for (const prefix of ['day:', 'writes:', 'reads:']) {
       for (const [k] of await this.store.list({ prefix })) if (Number(k.split(':').pop()) < day) await this.store.delete(k)
     }

@@ -53,6 +53,18 @@ export function holdName(claim, hash, now) {
   if (!lapsed(claim, now) && claim.hash !== hash) return { ok: false }
   // since: when this holder first claimed it, so a brand-new name can be told apart (0 for a claim older than
   // since was kept)
+  // a new holder starts without a public key; the same holder keeps theirs
   if (lapsed(claim, now)) return { ok: true, write: { hash, seen: now, since: now } }
-  return { ok: true, write: now - claim.seen > SEEN_EVERY_MS ? { hash, seen: now, since: claim.since ?? 0 } : null }
+  const keep = claim.pub ? { pub: claim.pub } : {}
+  return { ok: true, write: now - claim.seen > SEEN_EVERY_MS ? { hash, seen: now, since: claim.since ?? 0, ...keep } : null }
+}
+
+// the x25519 public key a name's app publishes for end-to-end files and clips (native/PRIVACY.md): 32 bytes as
+// base64url. anyone with a name can read it through /lookup, as a public key is meant to be read
+export const PUBLIC_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/
+
+// what publishing a key does to the holder's claim: the claim with it, or null when this key doesn't hold it
+export function withPub(claim, hash, pub, now) {
+  if (lapsed(claim, now) || claim.hash !== hash || !PUBLIC_KEY.test(pub ?? '')) return null
+  return { ...claim, pub }
 }
