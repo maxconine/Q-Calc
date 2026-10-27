@@ -1355,7 +1355,9 @@ final class BarModel: ObservableObject {
     private func expireCards() {
         let now = Date()
         for i in cards.indices where held(cards[i]) { cards[i].shownAt = now }
-        cards.removeAll { now.timeIntervalSince($0.shownAt) >= 10 }
+        // 10 s, as the page; with VoiceOver on, 30 (native only), since reading a card and its buttons takes longer
+        let shown: TimeInterval = NSWorkspace.shared.isVoiceOverEnabled ? 30 : 10
+        cards.removeAll { now.timeIntervalSince($0.shownAt) >= shown }
         if cards.isEmpty { cardTimer?.invalidate() }
     }
 
