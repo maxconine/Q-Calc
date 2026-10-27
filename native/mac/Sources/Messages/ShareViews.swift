@@ -25,15 +25,31 @@ private struct ShareButton: View {
     }
 }
 
+/// the lock beside a file or a clip: it was end-to-end encrypted, and only the two of you can open it
+struct ShareLock: View {
+    let who: String
+    var body: some View {
+        let tip = MessageFiles.shared.logic?.string("lib/messaging", "lockTooltip", [who])
+            ?? "end-to-end encrypted · only you and \(who) can open it"
+        Image(systemName: "lock.fill")
+            .font(.system(size: Theme.small - 3))
+            .foregroundStyle(Color.qMuted)
+            .help(tip)
+            .accessibilityLabel(tip)
+    }
+}
+
 /// shared clipboard text, as it was copied
 struct ClipBlock: View {
     let clip: String
+    var who = ""
     var lines = 8
     @State private var copied = false
     @FocusState private var focused: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
+            ShareLock(who: who).padding(.top, 8)
             Text(clip)
                 .font(.system(size: Theme.small, design: .monospaced))
                 .foregroundStyle(Color.qAnswer)
@@ -86,6 +102,7 @@ struct FileBlock: View {
                 Image(systemName: "doc")
                     .font(.system(size: Theme.small))
                     .foregroundStyle(Color.qMuted)
+                ShareLock(who: who)
                 Text(file.name)
                     .foregroundStyle(Color.qAnswer)
                     .lineLimit(1)
@@ -160,6 +177,95 @@ struct MessageFilesSection: View {
                 Text("Save files without asking")
                 Text("Only from accepted names. Files go to Downloads and are never opened. Others wait for Save.")
             }
+        }
+    }
+}
+
+/// Messages settings' privacy rows (native only): what's end-to-end encrypted, what the relay sees and keeps, and
+/// what the safety code is for, in the core's words
+struct MessagePrivacySection: View {
+    var body: some View {
+        let lines = MessageFiles.shared.logic?.call("lib/messaging", "privacySettingsText", []) as? [String] ?? []
+        Section("Privacy") {
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// a contact's safety code and key, under their thread's header when ⓘ is on, and always while their key has
+/// changed (native only)
+struct ThreadKeyInfo: View {
+    let name: String
+    let showCode: Bool
+    @ObservedObject private var keys = ShareKeys.shared
+
+    private func words(_ fn: String, _ args: [Any]) -> String {
+        MessageFiles.shared.logic?.string("lib/messaging", fn, args) ?? ""
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if keys.changed[name] != nil {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color.qInk)
+                    Text(words("keyChangedText", [name])).fontWeight(.semibold).foregroundStyle(Color.qInk).lineLimit(1)
+                    Spacer(minLength: 0)
+                    Button("Trust New Key") { keys.trust(name) }
+                        .controlSize(.small)
+                        .help("Pin \(name)’s new key and open what they sent")
+                }
+                Text(words("keyChangedDetail", [name]))
+                    .font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if showCode || keys.changed[name] != nil {
+                let code = keys.safetyCode(with: name)
+                Text(words("safetyCodeText", [name, code]))
+                    .font(.system(size: Theme.small, design: code.isEmpty ? .default : .monospaced))
+                    .foregroundStyle(code.isEmpty ? Color.qMuted : Color.qAnswer)
+                    .textSelection(.enabled)
+                    .accessibilityLabel(words("safetyCodeText", [name, code]))
+                if !code.isEmpty {
+                    Text(words("safetyCodeDetail", [name]))
+                        .font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .onAppear { if showCode { keys.learn(name) } }
+        .onChange(of: showCode) { if $0 { keys.learn(name) } }
+    }
+}
+
+/// the bar's one-time line on what's encrypted, with × to dismiss it for good
+struct PrivacyNoticeLine: View {
+    @ObservedObject private var notice = PrivacyNotice.shared
+    @State private var hover = false
+
+    var body: some View {
+        if notice.showing {
+            let text = MessageFiles.shared.logic?.string("lib/messaging", "privacyNotice", []) ?? ""
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: "lock.fill").font(.system(size: Theme.small - 3))
+                Text(text).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Button { notice.dismiss() } label: {
+                    Text("×").foregroundStyle(hover ? Color.qAnswer : Color.qMuted)
+                }
+                .buttonStyle(.plain)
+                .onHover { hover = $0 }
+                .help("Got it")
+                .accessibilityLabel("Dismiss")
+            }
+            .font(.system(size: Theme.small))
+            .foregroundStyle(Color.qMuted)
+            .padding(.horizontal, Theme.gutter)
+            .padding(.bottom, 10)
+            .accessibilityElement(children: .combine)
         }
     }
 }

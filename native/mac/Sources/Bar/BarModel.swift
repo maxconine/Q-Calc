@@ -76,6 +76,8 @@ final class BarModel: ObservableObject {
     @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
     @Published var hint: String?
+    /// the hint from before files were dragged over the bar, put back when they leave (Messages/ShareCommands.swift)
+    var dragHint: String?
     // the tape
     @Published var rows: [HistoryRow] = []
     @Published var selected: Int?
@@ -1156,7 +1158,7 @@ final class BarModel: ObservableObject {
 
     /// whether the name after `message` is anyone's: nil until the relay has said, and whenever it can't (no name
     /// of your own, the relay out of reach), so the bar never calls a name missing that the relay didn't
-    private func recipientFound(_ name: String) -> Bool? {
+    func recipientFound(_ name: String) -> Bool? {
         let m = Messages.shared
         guard !name.isEmpty, !m.name.isEmpty, m.link != .offline else { return nil }
         return nameCheck.cached(name: name, nowMs: Self.nowMs)

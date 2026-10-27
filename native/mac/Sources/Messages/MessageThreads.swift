@@ -156,13 +156,29 @@ private struct PanelHeader<Title: View>: View {
     @ViewBuilder var title: Title
     let note: String
     let close: () -> Void
+    /// a thread's ⓘ: its safety code (native/PRIVACY.md)
+    var info: Binding<Bool>?
     @State private var hover = false
+    @State private var infoHover = false
 
     var body: some View {
         HStack(spacing: 8) {
             title
             Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1)
             Spacer(minLength: 0)
+            if let info {
+                Button { info.wrappedValue.toggle() } label: {
+                    Image(systemName: info.wrappedValue ? "info.circle.fill" : "info.circle")
+                        .font(.system(size: Theme.small))
+                        .foregroundStyle(infoHover || info.wrappedValue ? Color.qAnswer : Color.qMuted)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .onHover { infoHover = $0 }
+                .help("Safety code")
+                .accessibilityLabel("Safety code")
+            }
             Button(action: close) {
                 Text("×")
                     .font(.system(size: Theme.small))
@@ -270,6 +286,7 @@ private struct ThreadView: View {
     let lines: [ThreadMessage]
     @FocusState private var focused: Bool
     @State private var contentHeight: CGFloat = 0
+    @State private var showInfo = false
     private static let maxHeight: CGFloat = 260
 
     private static let control = Color(nsColor: NSColor(name: nil) { a in
@@ -280,7 +297,8 @@ private struct ThreadView: View {
         VStack(alignment: .leading, spacing: 4) {
             PanelHeader(title: { Text(name).fontWeight(.semibold).foregroundStyle(Color.qInk).lineLimit(1) },
                         note: lines.isEmpty ? "" : "\(lines.count) message\(lines.count == 1 ? "" : "s")",
-                        close: { model.closeMessages() })
+                        close: { model.closeMessages() }, info: $showInfo)
+            ThreadKeyInfo(name: name, showCode: showInfo)
             if lines.isEmpty {
                 Text(MessageThreadText.empty(name, model.logic))
                     .foregroundStyle(Color.qMuted)
@@ -375,7 +393,7 @@ private struct ThreadLine: View {
                 .padding(.top, 6)
             }
             if let clip = line.clip {
-                ClipBlock(clip: clip)
+                ClipBlock(clip: clip, who: name)
             } else if let file = line.file {
                 FileBlock(file: file, mine: line.mine, who: name)
             } else {

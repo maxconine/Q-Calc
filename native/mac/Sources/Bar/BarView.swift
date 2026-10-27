@@ -51,7 +51,9 @@ struct BarView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
         // a file dropped on the bar goes to whoever the line names (Messages/ShareCommands.swift); a thread
         // under it takes its own drops
-        .onDrop(of: [.fileURL], isTargeted: nil) { model.dropProviders($0, to: nil) }
+        .onDrop(of: [.fileURL], isTargeted: Binding(get: { model.dragHint != nil }, set: { model.dragHover($0) })) {
+            model.dropProviders($0, to: nil)
+        }
         .fixedSize(horizontal: false, vertical: true)
         .reportHeight(HeightKey.self)
         .onPreferenceChange(HeightKey.self) { h in
@@ -112,6 +114,8 @@ struct BarView: View {
                 .padding(.top, -12)
                 .accessibilityLabel(hint)
         }
+        // the one-time line on what's end-to-end encrypted (Messages/ShareViews.swift)
+        PrivacyNoticeLine()
         if let typeset = model.typeset {
             MathPreview(typeset: typeset)
                 .frame(maxWidth: .infinity)
@@ -977,7 +981,7 @@ private struct CardView: View {
             }
             if !card.ask {
                 if let clip = card.clip {
-                    ClipBlock(clip: clip, lines: 4)
+                    ClipBlock(clip: clip, who: card.from, lines: 4)
                 } else if let file = card.file {
                     FileBlock(file: file, mine: false, who: card.from)
                 } else {
