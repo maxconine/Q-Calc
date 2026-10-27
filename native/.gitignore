@@ -7,3 +7,4 @@ QCalcCore/qcalc_ffiFFI.xcframework/
 QCalcCore/.build/
 QCalcCore/.swiftpm/
 mac/.build/
+target-coord/

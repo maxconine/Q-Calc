@@ -101,6 +101,21 @@ namespace QCalcE2E
             return found.ToArray();
         }
 
+        // windows whose class starts with `prefix` (a game's class is QCalcGame.<kind><instance>)
+        public static IntPtr[] WindowsOfClassPrefix(int[] pids, string prefix)
+        {
+            HashSet<uint> wanted = new HashSet<uint>();
+            if (pids == null) return new IntPtr[0];
+            foreach (int p in pids) wanted.Add((uint)p);
+            List<IntPtr> found = new List<IntPtr>();
+            EnumWindows(delegate (IntPtr h, IntPtr l)
+            {
+                if (wanted.Contains(ProcessOf(h)) && ClassName(h).StartsWith(prefix)) found.Add(h);
+                return true;
+            }, IntPtr.Zero);
+            return found.ToArray();
+        }
+
         // a region's colours: how many distinct ones (quantised to 4 bits a channel), mean luminance 0-255, and the
         // share of pixels far from the region's commonest colour ("ink"): enough to tell a painted bar from a blank one
         public static double[] Stats(int x, int y, int width, int height)

@@ -1,0 +1,7 @@
+﻿{
+    "file":  "eval.matrix",
+    "input":  "dot([1; 2; 3], [4 5 6])",
+    "fixture":  "32",
+    "app":  "rows differ in length",
+    "shown":  "rows differ in length"
+}

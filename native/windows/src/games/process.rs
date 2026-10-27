@@ -23,6 +23,7 @@ use crate::qlog;
 /// The argument that makes the exe a game.
 pub const ARG: &str = "--game";
 const T0: &str = "--t0";
+const PARENT: &str = "--parent";
 
 /// The window class of a game of `kind` (per instance, so a test copy finds only its own games).
 pub fn class_name(kind: &str) -> String {
@@ -38,6 +39,8 @@ fn mutex_name(kind: &str) -> String {
 pub struct GameArgs {
     pub kind: String,
     pub t0: Option<i64>,
+    /// the bar's process: the game closes when it ends (quit from the tray, an update's restart, a crash)
+    pub parent: Option<u32>,
 }
 
 impl GameArgs {
@@ -49,7 +52,12 @@ impl GameArgs {
             .position(|a| a == T0)
             .and_then(|i| args.get(i + 1))
             .and_then(|v| v.parse().ok());
-        Some(GameArgs { kind, t0 })
+        let parent = args
+            .iter()
+            .position(|a| a == PARENT)
+            .and_then(|i| args.get(i + 1))
+            .and_then(|v| v.parse().ok());
+        Some(GameArgs { kind, t0, parent })
     }
 }
 
@@ -96,7 +104,7 @@ pub fn launch(kind: &str) {
         return;
     };
     match std::process::Command::new(exe)
-        .args([ARG, kind, T0, &t0.to_string()])
+        .args([ARG, kind, T0, &t0.to_string(), PARENT, &std::process::id().to_string()])
         .spawn()
     {
         Ok(child) => {
@@ -107,6 +115,40 @@ pub fn launch(kind: &str) {
         }
         Err(e) => qlog!("games: couldn't start {kind}: {e}"),
     }
+}
+
+/// Closes the game (as its own close button would, so it saves) once the bar's process `pid` has ended. A thread
+/// that only waits on the process handle: no polling, no cost while the bar runs.
+fn close_with(pid: u32, kind: String) {
+    use windows::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0};
+    use windows::Win32::System::Threading::{INFINITE, OpenProcess, PROCESS_SYNCHRONIZE, WaitForSingleObject};
+    use windows::Win32::UI::WindowsAndMessaging::{PostMessageW, WM_CLOSE};
+    // SAFETY: a handle we close below; an id that's already gone fails to open, and then the bar is gone too
+    let Ok(parent) = (unsafe { OpenProcess(PROCESS_SYNCHRONIZE, false, pid) }) else {
+        qlog!("games: the bar (pid {pid}) is already gone; closing {kind}");
+        if let Some(hwnd) = find(&kind) {
+            // SAFETY: our own window
+            let _ = unsafe { PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default()) };
+        }
+        return;
+    };
+    let handle = parent.0 as usize;
+    let _ = std::thread::Builder::new()
+        .name("qcalc-game-parent".into())
+        .stack_size(64 * 1024)
+        .spawn(move || {
+            let parent = windows::Win32::Foundation::HANDLE(handle as *mut _);
+            // SAFETY: our open handle, closed once the wait ends
+            unsafe {
+                if WaitForSingleObject(parent, INFINITE) == WAIT_OBJECT_0 {
+                    qlog!("games: the bar (pid {pid}) ended; closing {kind}");
+                    if let Some(hwnd) = find(&kind) {
+                        let _ = PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default());
+                    }
+                }
+                let _ = CloseHandle(parent);
+            }
+        });
 }
 
 /// `qcalc.exe --game <kind>`: runs the game and returns the exit code; None when the command line isn't a game's.
@@ -132,6 +174,9 @@ pub fn child_main() -> Option<i32> {
         return Some(1);
     }
     crate::log::started();
+    if let Some(parent) = args.parent {
+        close_with(parent, kind.to_string());
+    }
     let mut msg = MSG::default();
     // SAFETY: the standard loop on this thread; it ends with the window (WM_QUIT)
     unsafe {
@@ -151,8 +196,12 @@ mod tests {
     #[test]
     fn the_game_arguments_parse() {
         let a = |s: &[&str]| GameArgs::parse(&s.iter().map(|x| x.to_string()).collect::<Vec<_>>());
-        assert_eq!(a(&["--game", "pong"]), Some(GameArgs { kind: "pong".into(), t0: None }));
-        assert_eq!(a(&["--game", "ember", "--t0", "123"]), Some(GameArgs { kind: "ember".into(), t0: Some(123) }));
+        assert_eq!(a(&["--game", "pong"]), Some(GameArgs { kind: "pong".into(), t0: None, parent: None }));
+        assert_eq!(a(&["--game", "ember", "--t0", "123"]), Some(GameArgs { kind: "ember".into(), t0: Some(123), parent: None }));
+        assert_eq!(
+            a(&["--game", "pong", "--t0", "5", "--parent", "4242"]),
+            Some(GameArgs { kind: "pong".into(), t0: Some(5), parent: Some(4242) })
+        );
         assert_eq!(a(&["--autostart"]), None);
         assert_eq!(a(&["--game"]), None);
         assert!(class_name("pong").starts_with("QCalcGame.pong"));

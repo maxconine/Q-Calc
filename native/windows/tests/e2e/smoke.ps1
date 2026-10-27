@@ -756,6 +756,9 @@ Invoke-Check 'V2' 'smoke room grows the window' 'informational' {
 
 # ---- a game ----
 
+# a game runs in a process of its own (qcalc.exe --game <kind>), started by the bar's
+function Game-Pids { [int[]](@($script:proc.Id) + @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$($script:proc.Id)" | ForEach-Object { [int]$_.ProcessId })) }
+
 Invoke-Check 'M1' 'a game opens from the bar and closes' 'required' {
     Show-QCalc | Out-Null
     Clear-Input
@@ -763,7 +766,7 @@ Invoke-Check 'M1' 'a game opens from the bar and closes' 'required' {
     Wait-Until { $s = State; $s.hint } 2000 | Out-Null
     $N::Chord($N::VK_RETURN)
     $script:game = [IntPtr]::Zero
-    $open = Wait-Until { $g = @($N::WindowsOfClass([int[]]@($script:proc.Id), 'QCalcGame') | Where-Object { $N::IsWindowVisible($_) }); if ($g) { $script:game = $g[0] }; [bool]$g } 5000
+    $open = Wait-Until { $g = @($N::WindowsOfClassPrefix((Game-Pids), 'QCalcGame') | Where-Object { $N::IsWindowVisible($_) }); if ($g) { $script:game = $g[0] }; [bool]$g } 5000
     $title = if ($open) { $N::Title($script:game) } else { '' }
     $painted = 0
     if ($open) {
@@ -780,7 +783,8 @@ Invoke-Check 'M1' 'a game opens from the bar and closes' 'required' {
         if ($N::GetForegroundWindow() -eq $script:game) { $N::Chord($N::VK_MENU, $N::VK_F4) }
         else { $how = "WM_CLOSE (front was $(Describe-Foreground))"; $N::Close($script:game) | Out-Null }
     }
-    $closed = Wait-Until { -not (E2E).gameOpen -and @($N::WindowsOfClass([int[]]@($script:proc.Id), 'QCalcGame')).Count -eq 0 } 4000
+    $gamePid = if ($open) { [int]$N::ProcessOf($script:game) } else { 0 }
+    $closed = Wait-Until { -not (E2E).gameOpen -and @($N::WindowsOfClassPrefix((Game-Pids), 'QCalcGame')).Count -eq 0 -and -not ($gamePid -and (Get-Process -Id $gamePid -ErrorAction SilentlyContinue)) } 4000
     @{ Pass = ($open -and $closed -and $painted -gt 0.005 -and -not $script:proc.HasExited)
        Detail = "game window '$title' opened: $open, painted $([Math]::Round($painted * 100, 1))% ink; closed by $($how): $closed; app alive: $(-not $script:proc.HasExited)" }
 }

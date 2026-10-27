@@ -138,6 +138,9 @@ pub struct Run {
     pub current_input: usize,
     /// with `spec.answers`: (input, the slot's text, the engine's display) at each input's last keystroke
     pub answers: Vec<(usize, String, String)>,
+    /// the step's WM_CHARs not handled yet: a whole line is posted at once, and a prefix that answers on the spot
+    /// (`integral` opens a sheet) must not count as the line's answer
+    pub pending_chars: usize,
 }
 
 impl Run {
@@ -148,6 +151,7 @@ impl Run {
             k: 0,
             t0: Instant::now(),
             wait: Wait::None,
+            pending_chars: 0,
             ms: Vec::new(),
             idx: Vec::new(),
             timeouts: 0,
@@ -162,7 +166,8 @@ impl Run {
     pub fn painted(&mut self, model: &BarModel) -> bool {
         match &self.wait {
             Wait::Answer(text, before)
-                if model.live_for == model.field.text()
+                if self.pending_chars == 0
+                    && model.live_for == model.field.text()
                     && (model.field.text() == text || model.field.text() != before) =>
             {
                 self.ms.push(self.t0.elapsed().as_secs_f64() * 1000.0);

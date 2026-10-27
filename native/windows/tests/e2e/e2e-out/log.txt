@@ -1,0 +1,190 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261027032142
+Username: FALCON-MINI\maxco
+RunAs User: FALCON-MINI\maxco
+Configuration Name: 
+Machine: FALCON-MINI (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\WINDOWS\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File smoke.ps1 -Exe C:\Users\maxco\Documents\GitHub\QCALC\Q-Calc\.claude\worktrees\windows-native\native\target-coord\release\qcalc.exe -Instance e2e2
+Process ID: 13700
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+[03:21:42.738] exe: C:\Users\maxco\Documents\GitHub\QCALC\Q-Calc\.claude\worktrees\windows-native\native\target-coord\release\qcalc.exe
+[03:21:42.738] instance: e2e2
+[03:21:42.743] data: C:\Users\maxco\AppData\Local\Temp\qcalc-e2e-e2e2-2bf3d0a2\data
+[03:21:42.743] os: Microsoft Windows NT 10.0.26200.0
+[03:21:42.743] session: 1 (console session 1)
+[03:21:42.743] input desktop: Default
+[03:21:42.743] screen: 3840x2160
+[03:21:42.743] apps use light theme: 1
+[03:21:42.743] foreground lock timeout: 2147483647 ms
+[03:21:42.743] foreground at start: 'pong' class QCalcGame.pong-e2e (qcalc)
+[03:21:43.086] started pid 22792 --autostart
+[03:21:43.093] --- L1 first launch shows the bar
+[03:21:43.445] PASS L1: shown on the first launch (even with --autostart): True
+[03:21:43.445] --- L2 opening it with nothing running shows the bar
+[03:21:43.503] started pid 25356
+[03:21:43.801] PASS L2: shown: True; in front: True ('Q Calc' class QCalcBar (qcalc))
+[03:21:43.803] --- L3 the launch at sign in (--autostart) starts hidden
+[03:21:43.834] started pid 6660 --autostart
+[03:21:45.136] PASS L3: alive: True; bar created: True; visible windows: 0; pipe visible: False
+[03:21:45.136] --- L4 tray icon
+[03:21:45.610] PASS L4: found 'Q Calc'
+[03:21:45.610] --- H1 hotkey shows and focuses
+[03:21:45.977] PASS H1: registered: ctrl+alt+shift+f9 (wanted ctrl+alt+shift+f9); shown in 66 ms: True; in front: True ('Q Calc' class QCalcBar (qcalc))
+[03:21:45.977] --- H2 hotkey again hides (toggle)
+[03:21:46.461] PASS H2: hidden by the second press: True
+[03:21:46.461] --- H3 hotkey refocuses over another app
+[03:21:47.693] PASS H3: other app in front first: True; shown: True; in front: True ('Q Calc' class QCalcBar (qcalc))
+[03:21:47.710] --- E1 esc hides
+[03:21:48.241] PASS E1: hidden after Esc
+[03:21:48.243] --- E2 click elsewhere hides
+[03:21:48.827] PASS E2: front after the click: 'qcalc-e2e-other' class WindowsForms10.Window.8.app.0.18444a1_r13_ad1 (powershell); hidden: True
+[03:21:48.827] --- E3 focus loss hides
+[03:21:49.407] PASS E3: front after Alt+Tab: 'qcalc-e2e-other' class WindowsForms10.Window.8.app.0.18444a1_r13_ad1 (powershell); hidden: True
+[03:21:49.410] --- S1 a second launch hands off to the first
+[03:21:49.430] started pid 8708
+[03:21:49.756] PASS S1: second launch exited: True (code 0); first copy showed the bar: True; my processes alive: 1
+[03:21:49.757] --- S2 a second launch with --autostart stays quiet
+[03:21:49.773] started pid 9028 --autostart
+[03:21:50.593] PASS S2: second launch exited: True; bar stayed hidden: True
+[03:21:50.593] --- T1 arithmetic answer
+[03:21:51.531] PASS T1: '2+3*4' shows '14'; answer slot painted: 3.02% ink, 14 colours
+[03:21:51.531] --- T2 unit conversion
+[03:21:52.677] PASS T2: '12 kg to lb' shows '26.4555 lbs'; answer slot painted: 14.13% ink, 15 colours
+[03:21:52.687] --- T3 percent phrase
+[03:21:53.735] PASS T3: '20% off 80' shows '64'; answer slot painted: 3.7% ink, 15 colours
+[03:21:53.735] --- T4 solve
+[03:21:54.693] PASS T4: '3x+2=11' shows 'x = 3'; answer slot painted: 3.13% ink, 19 colours
+[03:21:54.693] --- T5 enter commits to the tape
+[03:21:55.435] PASS T5: rows 0 -> 1; last '19*3' = '57'; line now ''
+[03:21:55.436] --- C1 ctrl+c copies the answer
+PS>TerminatingError(Get-Clipboard): "Requested Clipboard operation did not succeed."
+[03:21:57.143] PASS C1: clipboard after Ctrl+C: '42'
+[03:21:57.143] --- T6 history and the draft survive a restart
+[03:21:58.109] started pid 7856 --autostart
+[03:21:58.777] PASS T6: rows before 2, after the restart 2, 41+1 kept: True; draft back: True (line '100/8')
+[03:21:58.777] --- P1 graph panel opens and the bar grows
+[03:22:00.013] PASS P1: height 236 -> 793 px; graph 'sin(x)' with 401 points
+[03:22:00.013] --- P2 sys panel opens
+[03:22:01.499] PASS P2: height 236 -> 401 px; panel open: True; x+y=3, x-y=1 solved: 'x = 2 y = 1'
+[03:22:01.501] --- W1 the bar drags and the spot is kept
+[03:22:03.410] PASS W1: dragged 200, 120 px: moved 200, 120 px; still shown: True; same spot after hide and show: True
+[03:22:03.410] --- W2 the left edge widens the bar
+[03:22:05.903] PASS W2: 1020 px wide, then 1170 px; painted to the new edge: True ('ffffff' vs 'ffffff'); back to the standard width: True
+[03:22:05.903] --- W3 double click on the background recentres
+[03:22:06.636] PASS W3: bar middle at x 1920 on a 3840 px wide screen
+[03:22:10.551] started pid 17660 --autostart
+[03:22:10.589] --- G1 ctrl+comma opens settings
+[03:22:11.443] PASS G1: settings window open: True, in front: True; painted: 15.4% ink, 1013 colours
+[03:22:11.443] --- G2 a change applies live (appearance: dark)
+[03:22:13.227] PASS G2: theme now 'dark', saved 'dark'; settings window luminance 242 -> 45; bar luminance 45
+[03:22:13.227] --- G3 esc closes settings (and light comes back)
+[03:22:14.343] PASS G3: back to light: True; closed by Esc: True; bar luminance 254
+[03:22:14.349] --- V1 look over light and dark (rounded corners, shadow)
+[03:22:18.843] PASS V1: look-light.png 1020x236 px, answer shown; corner eaeaea vs edge a5a9ae; below aaafb6 vs 40 px down c1c6cf; rounded True, shadow True / look-dark.png 1020x236 px, answer shown; corner 1b1b1b vs edge 474c55; below 232a36 vs 40 px down 28303d; rounded True, shadow True
+[03:22:18.843] --- V2 smoke room grows the window
+[03:22:23.193] PASS V2: height 236 px, then 236 px (top moved 0 px), or an effect window: True
+[03:22:23.193] --- M1 a game opens from the bar and closes
+[03:22:26.794] PASS M1: game window 'pong' opened: True, painted 1.9% ink; closed by Alt+F4: True; app alive: True
+[03:22:26.794] --- K1 hotkey works after another process held it at launch
+[03:22:26.833] started pid 8052 --autostart
+[03:22:29.161] PASS K1: held by the test at launch: True; registered while held: False; taken after release: True; shown by the chord: True; log: [native +25.1ms] hotkey ctrl+alt+shift+f9 registered (launch, attempt 1) / [native +28.2ms] hotkey ctrl+alt+shift+f9 not registered (launch, attempt 1): Hot key is already registered. / [native +1036.3ms] hotkey ctrl+alt+shift+f9 not registered (retry, attempt 2): Hot key is already registered. / [native +2045.0ms] hotkey ctrl+alt+shift+f9 registered (retry, attempt 3)
+[03:22:29.161] --- Z1 idle memory after use, hidden and trimmed
+[03:22:33.662] FAIL Z1: private working set, hidden after use 20.703 MB (target < 12.5 MB) (after the trim 0.4 MB; private bytes 24.5 MB)
+::warning title=check Z1 idle memory after use, hidden and trimmed::private working set, hidden after use 20.703 MB (target < 12.5 MB) (after the trim 0.4 MB; private bytes 24.5 MB)
+[03:22:33.662] --- Z2 keystroke to painted answer
+[03:22:34.083] FAIL Z2: keystroke -> answer painted, median 0.941 ms (target < 0.8 ms) (n 92, p90 1.821, p99 3.094, timeouts 0)
+::warning title=check Z2 keystroke to painted answer::keystroke -> answer painted, median 0.941 ms (target < 0.8 ms) (n 92, p90 1.821, p99 3.094, timeouts 0)
+[03:22:34.085] --- Z3 warm launch to ready
+[03:22:34.110] started pid 14232 --autostart
+[03:22:34.199] started pid 584 --autostart
+[03:22:34.294] started pid 13124 --autostart
+[03:22:34.388] started pid 7060 --autostart
+[03:22:34.485] started pid 7280 --autostart
+[03:22:34.568] started pid 25336 --autostart
+[03:22:34.894] PASS Z3: warm launch -> ready (in the tray) 41.9 ms (target < 75 ms) (runs: 41.9, 40.7, 42.1, 41.9, 43)
+[03:22:34.943] --- I1 install (per user, own app id, temp folder)
+[03:23:08.926] started pid 22100 --autostart
+[03:23:09.293] PASS I1: exit 0; exe: True; uninstall entry 0.0.1; Run value: '"C:\Users\maxco\AppData\Local\Temp\qcalc-e2e-e2e2-2bf3d0a2\install\qcalc.exe" --autostart'; Start menu shortcut: True; installed copy answers its pipe: True
+[03:23:09.293] --- I2 upgrade in place (closes the running copy, keeps the sign-in choice, relaunches)
+[03:23:12.043] PASS I2: exit 0; old copy closed: True; version 0.0.2; Run value stayed off: True; relaunched: True, in the tray: True
+[03:23:12.043] --- I3 uninstall (closes it, removes files, entry, shortcut, its own Run value)
+[03:23:13.118] PASS I3: files and entry gone: True; running copy closed: True; Run value removed: True; shortcut removed: True; data kept: True
+## Q Calc native Windows smoke test
+
+**All required checks passed.**
+
+| # | check | kind | result | detail | screenshot |
+|---|---|---|---|---|---|
+| L1 | first launch shows the bar | required | pass | shown on the first launch (even with --autostart): True | L1-first-launch-shows-the-bar.png |
+| L2 | opening it with nothing running shows the bar | required | pass | shown: True; in front: True ('Q Calc' class QCalcBar (qcalc)) | L2-opening-it-with-nothing-running-shows-the-bar.png |
+| L3 | the launch at sign in (--autostart) starts hidden | required | pass | alive: True; bar created: True; visible windows: 0; pipe visible: False | L3-the-launch-at-sign-in-autostart-starts-hidden.png |
+| L4 | tray icon | informational | pass | found 'Q Calc' | L4-tray-icon.png |
+| H1 | hotkey shows and focuses | required | pass | registered: ctrl+alt+shift+f9 (wanted ctrl+alt+shift+f9); shown in 66 ms: True; in front: True ('Q Calc' class QCalcBar (qcalc)) | H1-hotkey-shows-and-focuses.png |
+| H2 | hotkey again hides (toggle) | required | pass | hidden by the second press: True | H2-hotkey-again-hides-toggle.png |
+| H3 | hotkey refocuses over another app | required | pass | other app in front first: True; shown: True; in front: True ('Q Calc' class QCalcBar (qcalc)) | H3-hotkey-refocuses-over-another-app.png |
+| E1 | esc hides | required | pass | hidden after Esc | E1-esc-hides.png |
+| E2 | click elsewhere hides | required | pass | front after the click: 'qcalc-e2e-other' class WindowsForms10.Window.8.app.0.18444a1_r13_ad1 (powershell); hidden: True | E2-click-elsewhere-hides.png |
+| E3 | focus loss hides | required | pass | front after Alt+Tab: 'qcalc-e2e-other' class WindowsForms10.Window.8.app.0.18444a1_r13_ad1 (powershell); hidden: True | E3-focus-loss-hides.png |
+| S1 | a second launch hands off to the first | required | pass | second launch exited: True (code 0); first copy showed the bar: True; my processes alive: 1 | S1-a-second-launch-hands-off-to-the-first.png |
+| S2 | a second launch with --autostart stays quiet | required | pass | second launch exited: True; bar stayed hidden: True | S2-a-second-launch-with-autostart-stays-quiet.png |
+| T1 | arithmetic answer | required | pass | '2+3*4' shows '14'; answer slot painted: 3.02% ink, 14 colours | T1-arithmetic-answer.png |
+| T2 | unit conversion | required | pass | '12 kg to lb' shows '26.4555 lbs'; answer slot painted: 14.13% ink, 15 colours | T2-unit-conversion.png |
+| T3 | percent phrase | informational | pass | '20% off 80' shows '64'; answer slot painted: 3.7% ink, 15 colours | T3-percent-phrase.png |
+| T4 | solve | informational | pass | '3x+2=11' shows 'x = 3'; answer slot painted: 3.13% ink, 19 colours | T4-solve.png |
+| T5 | enter commits to the tape | required | pass | rows 0 -> 1; last '19*3' = '57'; line now '' | T5-enter-commits-to-the-tape.png |
+| C1 | ctrl+c copies the answer | required | pass | clipboard after Ctrl+C: '42' | C1-ctrl-c-copies-the-answer.png |
+| T6 | history and the draft survive a restart | required | pass | rows before 2, after the restart 2, 41+1 kept: True; draft back: True (line '100/8') | T6-history-and-the-draft-survive-a-restart.png |
+| P1 | graph panel opens and the bar grows | required | pass | height 236 -> 793 px; graph 'sin(x)' with 401 points | P1-graph-panel-opens-and-the-bar-grows.png |
+| P2 | sys panel opens | required | pass | height 236 -> 401 px; panel open: True; x+y=3, x-y=1 solved: 'x = 2 y = 1' | P2-sys-panel-opens.png |
+| W1 | the bar drags and the spot is kept | required | pass | dragged 200, 120 px: moved 200, 120 px; still shown: True; same spot after hide and show: True | W1-the-bar-drags-and-the-spot-is-kept.png |
+| W2 | the left edge widens the bar | required | pass | 1020 px wide, then 1170 px; painted to the new edge: True ('ffffff' vs 'ffffff'); back to the standard width: True | W2-the-left-edge-widens-the-bar.png |
+| W3 | double click on the background recentres | informational | pass | bar middle at x 1920 on a 3840 px wide screen | W3-double-click-on-the-background-recentres.png |
+| G1 | ctrl+comma opens settings | required | pass | settings window open: True, in front: True; painted: 15.4% ink, 1013 colours | G1-ctrl-comma-opens-settings.png |
+| G2 | a change applies live (appearance: dark) | required | pass | theme now 'dark', saved 'dark'; settings window luminance 242 -> 45; bar luminance 45 | G2-a-change-applies-live-appearance-dark.png |
+| G3 | esc closes settings (and light comes back) | required | pass | back to light: True; closed by Esc: True; bar luminance 254 | G3-esc-closes-settings-and-light-comes-back.png |
+| V1 | look over light and dark (rounded corners, shadow) | informational | pass | look-light.png 1020x236 px, answer shown; corner eaeaea vs edge a5a9ae; below aaafb6 vs 40 px down c1c6cf; rounded True, shadow True / look-dark.png 1020x236 px, answer shown; corner 1b1b1b vs edge 474c55; below 232a36 vs 40 px down 28303d; rounded True, shadow True | V1-look-over-light-and-dark-rounded-corners-shadow.png |
+| V2 | smoke room grows the window | informational | pass | height 236 px, then 236 px (top moved 0 px), or an effect window: True | V2-smoke-room-grows-the-window.png |
+| M1 | a game opens from the bar and closes | required | pass | game window 'pong' opened: True, painted 1.9% ink; closed by Alt+F4: True; app alive: True | M1-a-game-opens-from-the-bar-and-closes.png |
+| K1 | hotkey works after another process held it at launch | required | pass | held by the test at launch: True; registered while held: False; taken after release: True; shown by the chord: True; log: [native +25.1ms] hotkey ctrl+alt+shift+f9 registered (launch, attempt 1) / [native +28.2ms] hotkey ctrl+alt+shift+f9 not registered (launch, attempt 1): Hot key is already registered. / [native +1036.3ms] hotkey ctrl+alt+shift+f9 not registered (retry, attempt 2): Hot key is already registered. / [native +2045.0ms] hotkey ctrl+alt+shift+f9 registered (retry, attempt 3) | K1-hotkey-works-after-another-process-held-it-at-launch.png |
+| Z1 | idle memory after use, hidden and trimmed | target | warn | private working set, hidden after use 20.703 MB (target < 12.5 MB) (after the trim 0.4 MB; private bytes 24.5 MB) | Z1-idle-memory-after-use-hidden-and-trimmed.png |
+| Z2 | keystroke to painted answer | target | warn | keystroke -> answer painted, median 0.941 ms (target < 0.8 ms) (n 92, p90 1.821, p99 3.094, timeouts 0) | Z2-keystroke-to-painted-answer.png |
+| Z3 | warm launch to ready | target | pass | warm launch -> ready (in the tray) 41.9 ms (target < 75 ms) (runs: 41.9, 40.7, 42.1, 41.9, 43) | Z3-warm-launch-to-ready.png |
+| I1 | install (per user, own app id, temp folder) | required | pass | exit 0; exe: True; uninstall entry 0.0.1; Run value: '"C:\Users\maxco\AppData\Local\Temp\qcalc-e2e-e2e2-2bf3d0a2\install\qcalc.exe" --autostart'; Start menu shortcut: True; installed copy answers its pipe: True | I1-install-per-user-own-app-id-temp-folder.png |
+| I2 | upgrade in place (closes the running copy, keeps the sign-in choice, relaunches) | required | pass | exit 0; old copy closed: True; version 0.0.2; Run value stayed off: True; relaunched: True, in the tray: True | I2-upgrade-in-place-closes-the-running-copy-keeps-the-sign-in-choice-relaunches.png |
+| I3 | uninstall (closes it, removes files, entry, shortcut, its own Run value) | required | pass | files and entry gone: True; running copy closed: True; Run value removed: True; shortcut removed: True; data kept: True | I3-uninstall-closes-it-removes-files-entry-shortcut-its-own-run-value.png |
+
+### Targets (AGENTS.md; soft)
+
+| what | measured | target | met |
+|---|---|---|---|
+| private working set, hidden after use | 20.703 MB | < 12.5 MB | no |
+| keystroke -> answer painted, median | 0.941 ms | < 0.8 ms | no |
+| warm launch -> ready (in the tray) | 41.9 ms | < 75 ms | yes |
+
+<details><summary>runner</summary>
+
+- exe: C:\Users\maxco\Documents\GitHub\QCALC\Q-Calc\.claude\worktrees\windows-native\native\target-coord\release\qcalc.exe
+- instance: e2e2
+- data: C:\Users\maxco\AppData\Local\Temp\qcalc-e2e-e2e2-2bf3d0a2\data
+- os: Microsoft Windows NT 10.0.26200.0
+- session: 1 (console session 1)
+- input desktop: Default
+- screen: 3840x2160
+- apps use light theme: 1
+- foreground lock timeout: 2147483647 ms
+- foreground at start: 'pong' class QCalcGame.pong-e2e (qcalc)
+
+</details>
+**********************
+Windows PowerShell transcript end
+End time: 20261027032313
+**********************

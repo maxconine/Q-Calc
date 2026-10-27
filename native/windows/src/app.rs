@@ -742,6 +742,9 @@ impl App {
                 }
             }
             WM_CHAR => {
+                if let Some(run) = &mut self.run {
+                    run.pending_chars = run.pending_chars.saturating_sub(1);
+                }
                 if !crate::commands::char16(self, wp.0 as u16) {
                     self.model.char16(wp.0 as u16, &self.engine);
                 }
@@ -1160,6 +1163,7 @@ impl App {
                 run.current_input = input;
                 run.wait = Wait::Answer(expect, self.model.field.text().to_string());
                 run.t0 = Instant::now();
+                run.pending_chars = units.len();
                 for u in units {
                     // SAFETY: posting typed characters to our bar, as the keyboard would
                     let _ = unsafe {
