@@ -99,7 +99,8 @@ for arch in "${ARCHS[@]}"; do
   THIN+=("$(swift build "${SPM_ARGS[@]}" --show-bin-path)/QCalcMac")
 done
 lipo -create "${THIN[@]}" -output "$BIN"
-strip -x "$BIN"
+# every symbol: nothing looks the executable's own up by name (the SwiftPM build's dSYM keeps them for crash logs)
+strip "$BIN"
 chmod +x "$BIN"
 
 # 4. the bundle
