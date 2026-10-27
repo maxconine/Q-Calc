@@ -322,6 +322,8 @@ private struct ThreadView: View {
     @State private var showInfo = false
     /// while files are dragged over the thread: where they'll go, or why they can't (the core's dropTarget)
     @State private var dropHint: String?
+    /// the thread whose new lines are read out; switching threads changes `lines.last` without anything new arriving
+    @State private var heardFor = ""
     private static let maxHeight: CGFloat = 260
 
     private static let control = Color(nsColor: NSColor(name: nil) { a in
@@ -359,7 +361,7 @@ private struct ThreadView: View {
                     .onChange(of: lines.last?.id) { id in
                         if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .bottom) } }
                         // their new line lands here, not as a card, so VoiceOver hears it as it would a card
-                        if let last = lines.last, last.id == id, !last.mine {
+                        if heardFor == name, let last = lines.last, last.id == id, !last.mine {
                             let kind = last.clip != nil ? "clip" : last.file != nil ? "file" : "text"
                             if let said = model.logic.string("lib/messaging", "cardAnnouncement",
                                                              [name, kind, last.file?.name ?? last.text]) {
@@ -382,8 +384,12 @@ private struct ThreadView: View {
             dropHint = nil
             return model.dropProviders($0, to: name)
         }
-        .onAppear { focusReply() }
-        .onChange(of: name) { _ in focusReply() }
+        .onAppear { focusReply(); heardFor = name }
+        .onChange(of: name) { now in
+            focusReply()
+            // after this update, so the new thread's last line isn't read out as if it had just come
+            DispatchQueue.main.async { heardFor = now }
+        }
     }
 
     /// the reply line takes the keys with the caret after a kept draft (focusing selects it all, and the next key
