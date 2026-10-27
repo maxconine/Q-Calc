@@ -517,16 +517,24 @@ fn graph_options(r: &mut Rng) -> graph::GraphOptions {
 /// The entry points a case may hit; returns the name of the one it ran.
 fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
     let o = options(r);
-    // FUZZ_ENTRY=line|sheet|live|graph|sample|messaging runs only that entry point
+    // FUZZ_ENTRY=line|sheet|live|graph|sample|messaging|text runs only that entry point
     static ENTRY: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
     let only = *ENTRY.get_or_init(|| {
         let e = std::env::var("FUZZ_ENTRY").ok()?;
-        ["line", "sheet", "live", "graph", "sample", "messaging"]
-            .iter()
-            .position(|n| *n == e)
-            .map(|i| [0, 5, 6, 9, 10, 11][i])
+        [
+            "line",
+            "sheet",
+            "live",
+            "graph",
+            "sample",
+            "messaging",
+            "text",
+        ]
+        .iter()
+        .position(|n| *n == e)
+        .map(|i| [0, 5, 6, 9, 10, 12, 11][i])
     });
-    let pick = r.below(12);
+    let pick = r.below(13);
     match only.unwrap_or(pick) {
         0..=4 => {
             std::hint::black_box(evaluate_sheet(&[input.to_string()], &o));
@@ -592,7 +600,7 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
             std::hint::black_box(graph::sample_graph(input, &graph_options(r)));
             "sample"
         }
-        _ => {
+        12.. => {
             std::hint::black_box(messaging::parse_message(input));
             std::hint::black_box(messaging::parse_messages_command(input));
             std::hint::black_box(messaging::parse_share_command(input));
@@ -610,7 +618,122 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
             }
             "messaging"
         }
+        11 => {
+            // the bar's text helpers, and files and payloads read from disk or the network
+            let names = qcalc_core::app::completion::CompletionNames {
+                variables: vec!["x".into(), "price".into()],
+                functions: vec!["f".into()],
+                ans: r.chance(50),
+                contacts: vec!["bob".into()],
+            };
+            std::hint::black_box(qcalc_core::app::completion::completion_for(input, &names));
+            std::hint::black_box(qcalc_core::app::unit_spans::unit_spans(
+                input,
+                &["x".into()],
+                &["f".into()],
+            ));
+            std::hint::black_box(qcalc_core::app::paste::clean_pasted_text(input));
+            std::hint::black_box(qcalc_core::app::chain::chained_expr(input));
+            std::hint::black_box(qcalc_core::app::chain::ans_written_out(input, "3.5"));
+            let ok = |t: &str| {
+                !evaluate_sheet(&[t.to_string()], &EvaluateOptions::default())[0]
+                    .display
+                    .is_empty()
+            };
+            std::hint::black_box(qcalc_core::app::missing_unit::missing_unit(input, &ok));
+            let doc = random_json(r, input, 0);
+            let text = doc.to_string();
+            let mut n = 0;
+            let rows = qcalc_core::app::history::load_rows(&text, &mut || {
+                n += 1;
+                format!("id{n}")
+            });
+            std::hint::black_box(qcalc_core::app::history::history_variables(&rows));
+            std::hint::black_box(qcalc_core::app::history::history_functions(&rows));
+            std::hint::black_box(qcalc_core::app::history::history_measures(&rows));
+            std::hint::black_box(qcalc_core::app::history::persistable_history(&rows));
+            std::hint::black_box(qcalc_core::app::history::file_text(&rows));
+            std::hint::black_box(qcalc_core::app::settings::merge_settings(
+                &doc,
+                &qcalc_core::app::settings::default_settings(),
+            ));
+            let _ = std::hint::black_box(qcalc_core::phrases::rates::parse_json(&text));
+            let _ = std::hint::black_box(qcalc_core::phrases::rates::parse_json(input));
+            std::hint::black_box(qcalc_core::phrases::rates::parse_xml(input));
+            "text"
+        }
     }
+}
+
+/// A JSON value shaped like the app's files (history rows, settings, rates), with `seed` text in its strings.
+fn random_json(r: &mut Rng, seed: &str, depth: u32) -> Value {
+    let leaf = |r: &mut Rng| -> Value {
+        match r.below(8) {
+            0 => json!(seed),
+            1 => json!(r.next() as f64 / 1e15),
+            2 => json!(*r.pick(&[0.0, -1.0, 1e308, 5e-324, 3.5, 1e21])),
+            3 => json!(r.chance(50)),
+            4 => Value::Null,
+            5 => json!(*r.pick(&[
+                "number", "text", "matrix", "list", "x", "f(x)", "rad", "deg", "m", "USD"
+            ])),
+            6 => json!(r.below(100)),
+            _ => json!(""),
+        }
+    };
+    if depth > 3 || r.chance(30) {
+        return leaf(r);
+    }
+    const KEYS: &[&str] = &[
+        "version",
+        "rows",
+        "id",
+        "expr",
+        "result",
+        "display",
+        "value",
+        "kind",
+        "n",
+        "unit",
+        "unitId",
+        "text",
+        "variable",
+        "fn",
+        "params",
+        "body",
+        "meas",
+        "v",
+        "unc",
+        "sig",
+        "quantity",
+        "exact",
+        "angleMode",
+        "sigFigs",
+        "theme",
+        "defaultUnits",
+        "date",
+        "rates",
+        "base",
+        "USD",
+        "EUR",
+        "time",
+        "items",
+        "contacts",
+        "allowed",
+        "blocked",
+        "__proto__",
+        "constructor",
+    ];
+    if r.chance(25) {
+        let n = r.below(5);
+        return Value::Array((0..n).map(|_| random_json(r, seed, depth + 1)).collect());
+    }
+    let mut m = serde_json::Map::new();
+    for _ in 0..r.below(8) {
+        let k = *r.pick(KEYS);
+        m.insert(k.to_string(), random_json(r, seed, depth + 1));
+    }
+    Value::Object(m)
 }
 
 fn rss_kb() -> u64 {
