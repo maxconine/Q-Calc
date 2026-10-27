@@ -713,6 +713,60 @@ static NAME_RE: Lazy = Lazy::new(|| js(&format!(r"\b({NAMES})\b"), "i"));
 /// The text mathjs evaluates, or None when the line isn't maths this layer should answer (a clock `2:30`, an
 /// assignment, `3!!`, `17 % 5`, leftover words).
 pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String> {
+    // one keystroke preprocesses the same text in the same context several times over (the answer, its precise
+    // twin, the angle check, calculus), so the last few are kept; what it reads of the context is `ans`, the
+    // variables and the functions
+    struct Seen {
+        text: String,
+        ans: Option<u64>,
+        variables: Vec<(String, u64)>,
+        functions: std::collections::BTreeMap<String, crate::types::UserFunction>,
+        out: Option<String>,
+    }
+    thread_local! {
+        static SEEN: std::cell::RefCell<Vec<Seen>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+    let ans = ctx.ans.map(f64::to_bits);
+    let same = |s: &Seen| {
+        s.text == text
+            && s.ans == ans
+            && s.variables.len() == ctx.variables.len()
+            && s.variables
+                .iter()
+                .zip(&ctx.variables)
+                .all(|((k, v), (k2, v2))| k == k2 && *v == v2.to_bits())
+            && s.functions == ctx.functions
+    };
+    if let Some(out) = SEEN.with(|seen| {
+        seen.borrow()
+            .iter()
+            .find(|s| same(s))
+            .map(|s| s.out.clone())
+    }) {
+        return out;
+    }
+    let out = preprocess_checked_uncached(text, ctx);
+    SEEN.with(|seen| {
+        let mut seen = seen.borrow_mut();
+        if seen.len() >= 8 {
+            seen.remove(0);
+        }
+        seen.push(Seen {
+            text: text.to_string(),
+            ans,
+            variables: ctx
+                .variables
+                .iter()
+                .map(|(k, v)| (k.clone(), v.to_bits()))
+                .collect(),
+            functions: ctx.functions.clone(),
+            out: out.clone(),
+        });
+    });
+    out
+}
+
+fn preprocess_checked_uncached(text: &str, ctx: &ScientificContext) -> Option<String> {
     static PHI_CHARS: Lazy = Lazy::new(|| js(r"[φϕ]", ""));
     static ANS: Lazy = Lazy::new(|| js(r"\bans\b", "i"));
     static PHI: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])phi(?![A-Za-z0-9_])", ""));
