@@ -12,7 +12,7 @@ pub mod connect4;
 pub mod connect4_bot;
 pub mod connect4_session;
 pub mod crack;
-// pub mod equal;
+pub mod equal;
 pub mod fullscreen;
 pub mod hello;
 pub mod lobby;
