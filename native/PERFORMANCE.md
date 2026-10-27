@@ -224,3 +224,7 @@ Tried and dropped, with no measured win:
 - **The status item:** finer probes put the 23–26 ms launch step all in
   `NSStatusBar.system.statusItem(withLength:)`, a window-server call. Deferring it would only move it later. I left
   it.
+
+### After the native games merge (2026-10-26, arm64, native only)
+
+Keystroke median 1.64 ms (p99 8.1), warm launch 180 ms (bar mounted 143 ms), footprint idle 28 MB / after typing 42 MB / after graph 65 MB, one process, 0% idle CPU, 43.7 MB on disk. The web build is unchanged from the baseline above (91 MB idle, 396 MB after a graph, 12 ms keystrokes).

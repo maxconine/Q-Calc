@@ -25,6 +25,8 @@ final class NativeGameWindowController: NSObject, NSWindowDelegate {
             defer: false
         )
         window.title = BarCommand.gameList.first { $0.kind == kind }?.name ?? "Q Calc"
+        // the name stays for the Window menu; the page draws its own heading, as the web panel did
+        window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         window.delegate = self
