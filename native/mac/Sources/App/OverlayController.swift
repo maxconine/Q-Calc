@@ -81,7 +81,7 @@ final class OverlayController: NSObject {
     }()
     private var identitySheets: [String: IdentityWindowController] = [:]
     private lazy var games = GameWindowController()
-    private lazy var effects = EffectOverlay()
+    private lazy var effects = EggOverlay()
 
     init(model: BarModel) {
         self.model = model

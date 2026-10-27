@@ -131,7 +131,8 @@ final class BarModel: ObservableObject {
     private var recentTimer: Timer?
     private var copiedTimer: Timer?
     private var cardTimer: Timer?
-    private var effectArmed = true
+    private let effectGate = EggGate()
+    private var effectSettle: Timer?
     private var bag: Set<AnyCancellable> = []
     private static let draftKey = "qcalc.draft"
 
@@ -427,20 +428,15 @@ final class BarModel: ObservableObject {
     /// The engine's own pretty text for the live display; Pretty.answer (a port of prettyAnswer) for anything else.
     func pretty(_ s: String) -> String { s == live.display && !live.pretty.isEmpty ? live.pretty : Pretty.answer(s) }
 
-    // the 420 / 67 / 69 effects fire once as the answer arrives, and again only after it changes away
+    // the 420 / 67 / 69 effects: the answer rests on the number for a moment (so 4200 typed passes through 420
+    // without firing), then the core's gate fires it once, and again only after the answer was something else
     private func checkEffects(_ answer: LiveAnswer) {
-        guard let n = answer.number, answer.unit == nil else {
-            effectArmed = true
-            return
+        let n = answer.unit == nil ? answer.number : nil
+        effectSettle?.invalidate()
+        effectSettle = Timer.scheduledTimer(withTimeInterval: eggSettleMs() / 1000, repeats: false) { [weak self] _ in
+            guard let self, let egg = self.effectGate.settle(n: n) else { return }
+            self.onEffect?(egg == .smoke ? "smoke" : egg == .arms ? "arms" : "fold")
         }
-        let kind: String? = n == 420 ? "smoke" : n == 67 ? "arms" : n == 69 ? "fold" : nil
-        guard let kind else {
-            effectArmed = true
-            return
-        }
-        guard effectArmed else { return }
-        effectArmed = false
-        onEffect?(kind)
     }
 
     // MARK: - answer forms (Tab)
