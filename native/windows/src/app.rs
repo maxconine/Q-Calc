@@ -54,7 +54,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
 use windows::core::{HSTRING, PCWSTR, w};
 
 use crate::bench::{self, Run, Step, Wait};
-use crate::engine::{EngineThread, Lane, Rows};
+use crate::engine::{EngineThread, Rows};
 use crate::hotkey::{self, Hotkey};
 use crate::input::ime;
 use crate::keys::Mods;
@@ -235,20 +235,10 @@ pub fn run() -> i32 {
             };
         },
     );
-    // the first evaluation is the slow one (≈17 ms): done now, off the UI thread
-    engine.submit(Lane::Misc, |cx| {
-        let t = Instant::now();
-        let _ = cx.engine.reload_rates();
-        let _ = cx.engine.evaluate(
-            vec!["2+2".into(), "sin(90)".into(), "72 f to c".into()],
-            qcalc_ffi::default_eval_options(),
-        );
-        qlog!(
-            "engine warmed in {:.1} ms",
-            t.elapsed().as_secs_f64() * 1000.0
-        );
-        None
-    });
+    // the first evaluation is the slow one: now if the bar shows now, else with its first showing (engine.rs)
+    if !args.autostart || first_run {
+        engine.warm_up();
+    }
     crate::migrate::history(&engine);
     history::load(&engine);
 
@@ -480,6 +470,7 @@ pub fn poke(f: impl FnOnce(&mut App)) {
 fn run_op(op: Op) {
     match op {
         Op::Show => {
+            let _show_ms = crate::perf::ShowTimer(Instant::now());
             let Some(Some((hwnd, x, y, w, h))) = with_app(|a| a.prepare_show()) else {
                 return;
             };
@@ -620,9 +611,11 @@ impl App {
                 return None;
             }
             WM_ENGINE => {
+                crate::perf::mark(crate::perf::Stage::Engine);
                 for done in self.engine.take_results() {
                     done(self);
                 }
+                crate::perf::mark(crate::perf::Stage::Applied);
                 crate::answer::poll(self);
             }
             WM_PIPE => {
@@ -702,6 +695,7 @@ impl App {
                 } else {
                     self.bar.focused = true;
                 }
+                ime::forget();
                 self.model.touch();
             }
             WM_CLOSE => self.ops.push(Op::Hide),
@@ -742,12 +736,15 @@ impl App {
                 }
             }
             WM_CHAR => {
+                crate::perf::mark(crate::perf::Stage::Char);
                 if let Some(run) = &mut self.run {
                     run.pending_chars = run.pending_chars.saturating_sub(1);
+                    run.keyed = true;
                 }
                 if !crate::commands::char16(self, wp.0 as u16) {
                     self.model.char16(wp.0 as u16, &self.engine);
                 }
+                crate::perf::mark(crate::perf::Stage::Submitted);
             }
             // Alt+letter isn't the bar's: no beep
             WM_SYSCHAR => {}
@@ -759,6 +756,7 @@ impl App {
                 });
             }
             WM_IME_STARTCOMPOSITION => {
+                ime::forget();
                 self.place_ime();
                 return Some(LRESULT(0));
             }
@@ -893,7 +891,7 @@ impl App {
     fn place_ime(&self) {
         let s = self.bar.scale();
         let r = self.bar.layout.field;
-        ime::place(
+        ime::place_if_moved(
             self.bar.hwnd,
             (self.bar.field_view.caret_at * s) as i32,
             ((r.y + r.h - 6.0) * s) as i32,
@@ -931,6 +929,7 @@ impl App {
             let resized = (layout.height - self.bar.layout.height).abs() > 0.1
                 || (layout.anchor - self.bar.layout.anchor).abs() > 0.1;
             self.bar.layout = layout;
+            crate::perf::mark(crate::perf::Stage::Laidout);
             if self.bar.visible {
                 if resized {
                     self.ops.push(Op::Reframe);
@@ -952,9 +951,11 @@ impl App {
     }
 
     fn paint(&mut self) {
+        crate::perf::paint_start();
         if let Err(e) = self.bar.paint(&self.gfx, &self.theme, &self.model) {
             qlog!("paint failed: {e}");
         }
+        crate::perf::painted();
         if self.bar.visible && !self.ready_logged {
             self.ready_logged = true;
             qlog!(
@@ -1014,6 +1015,7 @@ impl App {
             crate::place::MIN_WIDTH as f32
         };
         if !self.bar.visible {
+            self.engine.warm_up();
             // the line outlives a hide only for draftSeconds (draft.json); the open counts for the examples
             crate::line::will_show(&mut self.model, &mut self.store.onboarding, &self.engine);
             self.model.hint = self.notice.clone();
@@ -1065,6 +1067,11 @@ impl App {
         }
         // SAFETY: our host's timer (one-shot: trim() kills it)
         unsafe { SetTimer(Some(self.host), TIMER_TRIM, TRIM_AFTER_MS, None) };
+        // what only a showing needs goes now (the layouts, the Typst thread): ~3.5 MB back, remade as needed
+        crate::answer::trim_hidden(self);
+        // the swap chain and the WARP device too (~2.5 MB, and D3D10Warp unloads): a showing makes them in ~4 ms
+        self.bar.surface.release();
+        self.gfx.drop_flip_device();
     }
 
     /// The bar has been hidden a while: give memory back (the working set; a hardware render target too).
@@ -1162,6 +1169,8 @@ impl App {
             } => {
                 run.current_input = input;
                 run.wait = Wait::Answer(expect, self.model.field.text().to_string());
+                run.keyed = false;
+                crate::perf::reset();
                 run.t0 = Instant::now();
                 run.pending_chars = units.len();
                 for u in units {

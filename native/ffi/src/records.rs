@@ -415,7 +415,8 @@ pub struct LiveAnswer {
     pub number: Option<f64>,
     pub unit: Option<String>,
     pub kind: AnswerKind,
-    /// Where a blank answer stops reading (the squiggle).
+    /// Where a blank answer stops reading (the squiggle). Always None from `Engine::live`, so a keystroke doesn't
+    /// pay for it: the bars ask `Engine::blank_span` once typing pauses.
     pub blank: Option<Span>,
     /// The rest of the word being typed.
     pub completion: Option<String>,

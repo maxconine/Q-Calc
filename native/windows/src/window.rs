@@ -188,7 +188,7 @@ impl Bar {
         let dpi = unsafe { windows::Win32::UI::HiDpi::GetDpiForWindow(hwnd) }.max(96);
         Ok(Bar {
             hwnd,
-            surface: Surface::new(hwnd, dpi),
+            surface: Surface::new_flip(hwnd, dpi),
             field_view: FieldView::default(),
             layout: BarLayout::default(),
             width: place::MIN_WIDTH as f32,

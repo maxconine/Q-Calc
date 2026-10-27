@@ -1158,8 +1158,27 @@ pub mod ime {
         ImmReleaseContext, ImmSetCandidateWindow, ImmSetCompositionWindow,
     };
 
+    thread_local! {
+        /// where the IME's windows were last put (window, x, y)
+        static PLACED: std::cell::Cell<Option<(usize, i32, i32)>> = const { std::cell::Cell::new(None) };
+    }
+
+    /// `place`, skipped when the spot is the one already set: every frame asks, and the IME calls cost ~0.1 ms
+    /// (PERFORMANCE.md).
+    pub fn place_if_moved(hwnd: HWND, x: i32, y: i32) {
+        if PLACED.with(|p| p.get()) != Some((hwnd.0 as usize, x, y)) {
+            place(hwnd, x, y);
+        }
+    }
+
+    /// The next `place_if_moved` places again (a composition starts, the window was activated).
+    pub fn forget() {
+        PLACED.with(|p| p.set(None));
+    }
+
     /// Puts the IME's composition and candidate windows at the caret (window pixels; `y` the line's bottom).
     pub fn place(hwnd: HWND, x: i32, y: i32) {
+        PLACED.with(|p| p.set(Some((hwnd.0 as usize, x, y))));
         // SAFETY: the context is released below; the forms are live locals
         unsafe {
             let imc = ImmGetContext(hwnd);

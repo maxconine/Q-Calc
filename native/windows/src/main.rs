@@ -10,6 +10,7 @@ mod edge;
 mod hotkey;
 mod keys;
 mod log;
+mod perf;
 mod place;
 mod store;
 mod text_rules;
@@ -74,6 +75,10 @@ mod typst_row;
 mod update;
 #[cfg(windows)]
 mod window;
+
+#[cfg(feature = "perf")]
+#[global_allocator]
+static ALLOC: perf::Counting = perf::Counting;
 
 #[cfg(windows)]
 fn main() {

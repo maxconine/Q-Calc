@@ -31,6 +31,10 @@ before): keystroke median 0.85 ms for a returning user (0.80 before); during the
 (0.82 before), all of it the first keystroke of a line, when the tour's line under the bar goes and the window
 shrinks; hidden after use 17.4-18.5 MB private working set (16.8 before), 0.4-2 MB after the trim.
 
+After the performance pass (PERFORMANCE.md, `scripts/perf.ps1`): keystroke median 0.51 ms (p90 1.18, p99 1.55;
+golden inputs 0.53 / 1.20 / 1.70), never shown 4.2 MB private working set / 6.3 MB private bytes, hidden after use
+13.7 / 15.5 MB (the engine's compiled regexes are most of it), warm launch 46 ms.
+
 Rules that keep them: never evaluate on the UI thread; never block the UI thread on the engine; repaint only
 when the model changed; no timer while idle (one-shot timers only, an animation's timer stops with it); make
 COM objects and text layouts once and cache them (render.rs `Fonts`, input.rs `FieldView`'s layout cache).
@@ -91,12 +95,14 @@ Each module's doc comment names its Mac / Tauri spec.
 - **UI thread** (main): the Win32 message loop; owns `App` in a thread-local (`app::with_app`). Two windows:
   the hidden *host* (hotkey, tray, power / session / TaskbarCreated broadcasts, WM_COPYDATA, engine results,
   bench) and the *bar*.
-- **Engine thread** `qcalc-engine` (32 MB stack): owns `Engine` (which hops each call to its own 32 MB
-  evaluation thread). UI code submits closures: `app.engine.submit(Lane::X, move |cx| { ...; done(move |app| ...) })`.
+- **Engine thread** `qcalc-engine` (32 MB stack): owns `Engine`, whose sync calls run right on it
+  (`qcalc_ffi::run_engine_calls_here`: no hop to the FFI's evaluation thread). Its warm-up (`warm_up`) runs at
+  launch when the bar shows, else with the first showing. UI code submits closures: `app.engine.submit(Lane::X, move |cx| { ...; done(move |app| ...) })`.
   A lane keeps only its newest waiting job; every job has the lane's generation, and its `Done` runs on the UI
   thread (posted as `WM_ENGINE`) only if it is still the lane's newest. Use `Lane::Misc` for work that must
   never be dropped (load / save). `cx.context(&rows, view)` is the cached `context_from_history`.
-- **Typst thread** `qcalc-typst`: owns the `TypstRenderer`, warmed at launch; `app.engine.typst(|r| ...)`.
+- **Typst thread** `qcalc-typst`: owns the `TypstRenderer`; started by the first typeset,
+  ended (with its caches) when the bar hides; `app.engine.typst(|r| ...)`. Typst's rayon pool has one thread.
 - **Bench pipe thread**: only with `--bench-pipe` / `QCALC_BENCH=1`.
 
 Never hold anything across threads but owned data (`Rows` is an `Arc`); `HWND` crosses as `usize`.
@@ -106,9 +112,10 @@ Never hold anything across threads but owned data (`Rows` is an `Arc`); `HWND` c
 - State lives in `BarModel`. **Every mutation sets `changed`** (`model.touch()`).
 - After each message, `App::after` checks `take_changed()`: it re-lays out the bar (`Bar::layout`, pure DIP
   maths from the model), queues `Op::Reframe` if the height or the composer's offset moved, and marks a paint.
-- The render target is **software** Direct2D by default (render.rs `hardware()`): for a window this size it draws
-  as fast, is made in ~15 ms instead of 150-300 ms (no D3D device or GPU driver load on the first showing) and
-  keeps ~50 MB of device memory out of the process. `QCALC_D2D=hardware` switches for experiments.
+- The render target is **software** by default (render.rs `hardware()`): for a window this size it draws as fast,
+  is made in ms instead of 150-300 ms (no GPU driver load on the first showing) and keeps ~50 MB of device memory
+  out of the process. The bar draws through a flip-model swap chain on a shared WARP device (`Surface::new_flip`,
+  one rasterising thread); settings and sheets use window targets. `QCALC_D2D=hwnd` / `hardware` switch.
 - `run_ops` (after the borrow ends) runs the ops, then `InvalidateRect` + `UpdateWindow`: the frame goes out
   synchronously, `D2D1_PRESENT_OPTIONS_IMMEDIATELY`, no vsync wait.
 - `Bar::paint` draws the whole bar each frame (it's small): background, tape, composer, hint, panels. All
@@ -116,8 +123,8 @@ Never hold anything across threads but owned data (`Rows` is an `Arc`); `HWND` c
 - Win32 calls that send messages back (SetWindowPos, ShowWindow, SetForegroundWindow, TrackPopupMenu,
   UpdateWindow, DestroyWindow) are **never** made inside `with_app`: push an `Op` (add a variant if needed).
 - Showing: `prepare_show` (monitor under the pointer, the remembered spot, layout), then cloak, SetWindowPos,
-  SetForegroundWindow, paint, uncloak. Hiding: SW_HIDE, `after_hide`; 30 s later `trim` drops the render target
-  and empties the working set.
+  SetForegroundWindow, paint, uncloak. Hiding: SW_HIDE, `after_hide`, which lets go of what only a showing needs
+  (layouts, the Typst thread, the swap chain and the WARP device); 30 s later `trim` empties the working set.
 
 ## Adding a panel (graph, sys, typst row, message cards)
 

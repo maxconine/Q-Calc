@@ -141,6 +141,11 @@ pub struct Run {
     /// the step's WM_CHARs not handled yet: a whole line is posted at once, and a prefix that answers on the spot
     /// (`integral` opens a sheet) must not count as the line's answer
     pub pending_chars: usize,
+    /// the step's WM_CHAR was handled (a key that leaves the text as it was, like typing over a closing bracket,
+    /// is done at its first paint)
+    pub keyed: bool,
+    /// with the `perf` feature: each keystroke's timeline (perf.rs), µs since WM_CHAR
+    pub stages: Vec<[Option<f64>; crate::perf::STAGES]>,
 }
 
 impl Run {
@@ -159,6 +164,8 @@ impl Run {
             reply,
             current_input: 0,
             answers: Vec::new(),
+            keyed: false,
+            stages: Vec::new(),
         }
     }
 
@@ -168,10 +175,15 @@ impl Run {
             Wait::Answer(text, before)
                 if self.pending_chars == 0
                     && model.live_for == model.field.text()
-                    && (model.field.text() == text || model.field.text() != before) =>
+                    && (model.field.text() == text
+                        || model.field.text() != before
+                        || self.keyed) =>
             {
                 self.ms.push(self.t0.elapsed().as_secs_f64() * 1000.0);
                 self.idx.push(self.current_input);
+                if cfg!(feature = "perf") {
+                    self.stages.push(crate::perf::take());
+                }
                 self.wait = Wait::None;
                 if self.spec.answers {
                     let display = model
@@ -201,6 +213,21 @@ impl Run {
             "wallMs": self.started.elapsed().as_secs_f64() * 1000.0,
             "n": self.ms.len(), "median": median, "p90": p90, "p99": p99,
         });
+        if !self.stages.is_empty() {
+            // each stage's median µs since WM_CHAR, over the keystrokes that reached it
+            let names = [
+                "char", "submitted", "textPainted", "jobStart", "context", "chains", "live", "decorated",
+                "posted", "engine", "applied", "laidout", "paintStart", "endDraw", "post", "seen",
+            ];
+            let mut st = serde_json::Map::new();
+            for (i, name) in names.iter().enumerate() {
+                let v: Vec<f64> = self.stages.iter().filter_map(|s| s[i]).collect();
+                let (m, p90, _) = summary(&v);
+                st.insert(name.to_string(), serde_json::json!([v.len(), m, p90]));
+            }
+            out["stages"] = serde_json::Value::Object(st);
+            out["stageRows"] = serde_json::json!(self.stages);
+        }
         if self.spec.answers {
             out["answers"] = self
                 .answers
@@ -349,7 +376,7 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             }))
         }
         "settings-controls" => Some(crate::settings_window::debug()),
-        _ => None,
+        _ => crate::perf::cmd(cmd),
     }
 }
 

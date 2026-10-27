@@ -8,6 +8,10 @@ repository.workspace = true
 rust-version.workspace = true
 build = "build.rs"
 
+[features]
+# diagnostics for native/windows/PERFORMANCE.md (perf.rs): keystroke timelines, a counting allocator, the bench's `vm`; never in a shipping build
+perf = []
+
 [[bin]]
 name = "qcalc"
 path = "src/main.rs"
@@ -23,6 +27,8 @@ qcalc-core = { path = "../core" }
 qcalc-ffi = { path = "../ffi", features = ["typst"] }
 # the update's signature: the Tauri updater's minisign key, verified as tauri-plugin-updater does
 minisign-verify = "0.2"
+# Typst's worker pool (it parallelises with rayon): one thread, not one per core (engine.rs, PERFORMANCE.md)
+rayon = "1.12"
 windows-numerics = "0.2"
 windows = { version = "0.61", features = [
   "Win32_Foundation",
