@@ -256,6 +256,51 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             json!(msg::messages_completion(&s(0), &contacts))
         }
         ("lib/messaging", "threadEmptyText") => json!(msg::thread_empty_text(&s(0))),
+        // native only: clips and files
+        ("lib/messaging", "parseShareCommand") => opt(msg::parse_share_command(&s(0))),
+        ("lib/messaging", "shareHint") => match msg::parse_share_command(&s(0)) {
+            Some(cmd) => json!(msg::share_hint(
+                &cmd,
+                &messaging(&a(1)),
+                b(2),
+                a(3).as_bool(),
+                &s(4)
+            )),
+            None => Json::Null,
+        },
+        ("lib/messaging", "shareCompletion") => {
+            let contacts: Vec<String> = of(&a(1)).unwrap_or_default();
+            json!(msg::share_completion(&s(0), &contacts))
+        }
+        ("lib/messaging", "shareStatusText") => {
+            json!(msg::share_status_text(&s(0), &s(1), &s(2), &s(3)))
+        }
+        ("lib/messaging", "fileStateText") => json!(msg::file_state_text(
+            &s(0),
+            &s(1),
+            n(2).map(|p| p.max(0.0) as u32)
+        )),
+        ("lib/messaging", "fileErrorText") => json!(msg::file_error_text(&s(0), &s(1))),
+        ("lib/messaging", "fileSizeText") => {
+            json!(msg::file_size_text(n(0).unwrap_or(0.0).max(0.0) as u64))
+        }
+        ("lib/messaging", "encryptedLength") => {
+            json!(msg::encrypted_len(n(0).unwrap_or(0.0).max(0.0) as u64))
+        }
+        ("lib/messaging", "cleanFilename") => json!(msg::clean_filename(&s(0))),
+        ("lib/messaging", "numberedName") => json!(msg::numbered_name(
+            &s(0),
+            n(1).unwrap_or(1.0).max(1.0) as u32
+        )),
+        ("lib/messaging", "cleanClip") => opt(msg::clean_clip(&a(0))),
+        ("lib/messaging", "clipPreview") => json!(msg::clip_preview(&s(0))),
+        ("lib/messaging", "cleanOffer") => opt(msg::clean_offer(&a(0))),
+        ("lib/messaging", "autoAccept") => json!(msg::auto_accept(
+            &messaging(&a(0)),
+            &s(1),
+            n(2).unwrap_or(0.0).max(0.0) as u64,
+            n(3).unwrap_or(0.0).max(0.0) as u64
+        )),
         // ---- lib/history ----
         ("lib/history", "ellipsize") => json!(h::ellipsize(&s(0), n(1).unwrap_or(0.0) as i64)),
         ("lib/history", "isMatrixQuantity") => json!(h::is_matrix_quantity(a(0).as_str())),
