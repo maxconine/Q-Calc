@@ -462,8 +462,10 @@ final class BarModel: ObservableObject {
         let lead = (fill["leading"] as? NSNumber)?.intValue ?? 0, trail = (fill["trailing"] as? NSNumber)?.intValue ?? 0
         guard lead + trail > 0 else { return false }
         let filled = String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
-        // the grey ones become typed ones where they stand, and the caret stays by the same character
-        let caret = (fieldCaret?() ?? (text as NSString).length) + lead
+        // the grey ones become typed ones where they stand, and the caret stays by the same character (at the end
+        // of the line it stays at the end, past the new `)`)
+        let length = (text as NSString).length, at = fieldCaret?() ?? length
+        let caret = at >= length ? (filled as NSString).length : at + lead
         decorations.leadingParens = 0
         decorations.trailingParens = 0
         if let fillParensInField { fillParensInField(filled, caret) } else { text = filled }

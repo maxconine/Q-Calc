@@ -284,7 +284,8 @@ final class BarTextView: NSTextView {
     private let leadView = GhostLeadView()
 
     private func updateInset() {
-        let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: [.font: font!]).width + 2
+        // as wide as typed `(` with the line's tracking, so filling one in moves nothing
+        let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: Self.attributes).width
         // the line sits in the middle of its 36 pt box, as the web input's does
         let line = layoutManager?.defaultLineHeight(for: font!) ?? Self.fontSize * 1.2
         textContainerInset = NSSize(width: lead, height: max(0, (bounds.height - line) / 2))
