@@ -84,10 +84,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // a dev send's result, where a script's snapshot and the log can both see it
+    private static func devSaid(_ status: String, _ overlay: OverlayController?) {
+        NSLog("Q Calc dev: %@", status)
+        OverlayLog.note("dev share: \(status)")
+        overlay?.model.hint = status
+    }
+
     // "show", "hide", "settings", "theme:dark", "type:<text>", "enter", "up", "periodic", "identities"
     private func devCommand(_ command: String) {
         guard let overlay else { return }
         let (verb, arg) = command.firstIndex(of: ":").map { (String(command[..<$0]), String(command[command.index(after: $0)...])) } ?? (command, "")
+        if verb.hasPrefix("send") { OverlayLog.note("dev: \(verb)") }
         switch verb {
         case "show": overlay.show(from: "dev")
         case "hide": overlay.hide(because: "dev")
@@ -124,11 +132,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // be (Messages/MessageFiles.swift), as Save does
         case "sendfile":
             let parts = arg.split(separator: ":", maxSplits: 1).map(String.init)
-            if parts.count == 2 { MessageFiles.shared.sendFile(URL(fileURLWithPath: parts[1]), to: parts[0]) { NSLog("Q Calc dev: %@", $0) } }
+            if parts.count == 2 { MessageFiles.shared.sendFile(URL(fileURLWithPath: parts[1]), to: parts[0]) { [weak overlay] in Self.devSaid($0, overlay) } }
         // sendclip:<name>:<text> shares text as `paste to` shares the clipboard, without touching it
         case "sendclip":
             let parts = arg.split(separator: ":", maxSplits: 1).map(String.init)
-            if parts.count == 2 { MessageFiles.shared.sendClip(parts[1].replacingOccurrences(of: "\\n", with: "\n"), to: parts[0]) { NSLog("Q Calc dev: %@", $0) } }
+            if parts.count == 2 { MessageFiles.shared.sendClip(parts[1].replacingOccurrences(of: "\\n", with: "\n"), to: parts[0]) { [weak overlay] in Self.devSaid($0, overlay) } }
         case "savefile":
             for (id, t) in MessageFiles.shared.transfers where !t.mine { MessageFiles.shared.save(id) }
         // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i

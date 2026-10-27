@@ -12,7 +12,9 @@ import Security
 final class ShareKeys: ObservableObject {
     static let shared = ShareKeys()
     private static let pinsKey = "qcalc.messaging.pins"
-    private static let service = "com.maxconine.qcalc.share-key"
+    // one key per app: a dev build, a test copy and the release each keep their own, never reading another's (the
+    // Keychain asks, or refuses, when an app with another signature reads an item)
+    private static let service = "\(Bundle.main.bundleIdentifier ?? "com.maxconine.qcalc").share-key"
     private static let account = "x25519"
 
     /// contact → their pinned public key (base64url)
