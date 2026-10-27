@@ -169,6 +169,8 @@ struct PongGameView: View {
         TimelineView(.animation) { _ in
             let _ = model.frame()
             PongCourt(view: model.view, mine: model.role, colors: colors)
+                .accessibilityElement()
+                .accessibilityLabel("court")
         }
         .aspectRatio(geo.courtW / geo.courtH, contentMode: .fit)
         .background(RoundedRectangle(cornerRadius: GameMetrics.radiusS).fill(colors.court.color))

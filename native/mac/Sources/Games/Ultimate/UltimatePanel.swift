@@ -166,9 +166,13 @@ struct UltimateGameView: View {
                 .lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity)
                 .modifier(PongWait(on: !v.started))
+                // .ut-status aria-live="polite"
+                .liveRegion(status(v, myTurn: myTurn))
             UltimateBoard(view: v, role: role, live: myTurn, zone: zone, cursor: myTurn && aiming ? cursor : nil,
                           canPlay: { model.game.canPlay(cell: UInt32($0), who: role) },
                           onHover: { c in cursor = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("board")
             PongNote("\(myTurn && zone == nil ? "1–9 pick a board" : "1–9 or arrows pick a cell") · ↵ play · \(solo.map { s in "\(skills.first { $0.1 == s }!.0) · " } ?? "")esc leaves")
         }
         .onAppear {

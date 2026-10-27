@@ -148,10 +148,11 @@ struct SystemPanel: View {
     var body: some View {
         VStack(spacing: 2) {
             ForEach(Array((model.sysLines ?? []).enumerated()), id: \.offset) { i, line in
-                TextField("", text: Binding(get: { line }, set: { model.setSysLine(i, $0) }),
-                          prompt: Text("equation \(i + 1)").foregroundColor(Color.qMuted.opacity(0.8)))
+                TextField("", text: Binding(get: { line }, set: { model.setSysLine(i, $0) }))
                     .textFieldStyle(.plain)
                     .font(.system(size: Theme.row))
+                    .mutedPrompt("equation \(i + 1)", shown: line.isEmpty, size: Theme.row, color: Color.qMuted.opacity(0.8),
+                                 kerning: Theme.displayTracking(Theme.row))
                     .viewTracking(Theme.displayTracking(Theme.row))
                     .foregroundStyle(Color.qInk)
                     .padding(.horizontal, 12)

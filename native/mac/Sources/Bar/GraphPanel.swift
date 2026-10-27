@@ -91,18 +91,27 @@ struct GraphPanel: View {
 
     // .graph-detail: "Critical points", then a chip per point (kind in caption muted, the point in ink)
     @ViewBuilder private var details: some View {
-        if !state.critical.isEmpty {
+        if state.critical.isEmpty {
+            // .graph-detail-empty: the page says there are none rather than leaving the label out
             VStack(alignment: .leading, spacing: 6) {
                 Text("Critical points").font(.system(size: Theme.caption, weight: .semibold)).foregroundStyle(Color.qMuted)
                     .padding(.top, 12)
-                HStack(spacing: 4) {
+                Text("None in this domain").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+            }
+            .padding(.top, 8)
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Critical points").font(.system(size: Theme.caption, weight: .semibold)).foregroundStyle(Color.qMuted)
+                    .padding(.top, 12)
+                // .graph-detail-list: flex-wrap, so a narrow bar puts the chips on more rows (an HStack squeezed
+                // each into a column a character wide)
+                WrapRow(spacing: 4, leading: true) {
                     ForEach(Array(state.critical.enumerated()), id: \.offset) { _, c in
-                        HStack(spacing: 6) {
-                            Text(kindName(c.kind)).font(.system(size: Theme.caption, weight: .medium)).foregroundStyle(Color.qMuted)
-                            Text("(\(fmt(c.x)), \(fmt(c.y)))").font(.system(size: Theme.small).monospacedDigit()).foregroundStyle(Color.qInk)
+                        // .graph-detail-item: a button, "Copy x" (selectX → copyValue), the point at 8 figures
+                        // (formatCoord), as the page has it; they were static and grouped to 6
+                        CriticalChip(kind: kindName(c.kind), coords: "(\(coord(c.x)), \(coord(c.y)))") {
+                            model.copyAnswer(model.logic.string("engine/format", "formatNumber", [c.x, 8]) ?? fmt(c.x))
                         }
-                        .padding(.vertical, 3).padding(.horizontal, 8)
-                        .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk.opacity(0.06)))
                     }
                 }
             }
@@ -148,6 +157,17 @@ struct GraphPanel: View {
         return "Graph of \(label) from x \(fmt(state.xMin)) to \(fmt(state.xMax)), y from \(fmt(lo)) to \(fmt(hi))"
     }
 
+    /// a tick as the page draws it (`{t.label}`: formatNumber, no grouping, a real minus); Pretty.answer had
+    /// grouped `50000` but not `−50000`, so one axis read `50,000` beside `−50000`
+    private static func tickText(_ label: String) -> String {
+        label.hasPrefix("-") ? Pretty.minus + label.dropFirst() : label
+    }
+
+    /// formatCoord: formatNumber at 8 figures with a real minus (the page's `withMinus`)
+    private func coord(_ v: Double) -> String {
+        Self.tickText(model.logic.string("engine/format", "formatNumber", [abs(v) < 1e-12 ? 0 : v, 8]) ?? fmt(v))
+    }
+
     private func fmt4(_ v: Double) -> String {
         Pretty.answer(String(format: "%.4g", abs(v) < 1e-9 ? 0 : v))
     }
@@ -169,13 +189,13 @@ struct GraphPanel: View {
         for t in g.xTicks where t.value >= g.xMin && t.value <= g.xMax {
             var l = Path(); l.move(to: CGPoint(x: px(t.value), y: p.top)); l.addLine(to: CGPoint(x: px(t.value), y: bottom))
             ctx.stroke(l, with: .color(grid), lineWidth: 1)
-            ctx.draw(Text(Pretty.answer(t.label)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted),
+            ctx.draw(Text(Self.tickText(t.label)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted),
                      at: CGPoint(x: px(t.value), y: Self.svgH - 12), anchor: .center)
         }
         for t in g.yTicks where t.value >= g.yMin && t.value <= g.yMax {
             var l = Path(); l.move(to: CGPoint(x: p.left, y: py(t.value))); l.addLine(to: CGPoint(x: right, y: py(t.value)))
             ctx.stroke(l, with: .color(grid), lineWidth: 1)
-            ctx.draw(Text(Pretty.answer(t.label)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted),
+            ctx.draw(Text(Self.tickText(t.label)).font(.system(size: 10).monospacedDigit()).foregroundColor(.qMuted),
                      at: CGPoint(x: p.left - 6, y: py(t.value)), anchor: .trailing)
         }
         if py(0) >= p.top, py(0) <= bottom {
@@ -240,5 +260,31 @@ struct GraphPanel: View {
             v += step
         }
         return out
+    }
+}
+
+/// .graph-detail-item: fill-track, accent tint on hover; the kind in caption muted, the point in ink
+private struct CriticalChip: View {
+    let kind: String
+    let coords: String
+    let action: () -> Void
+    @State private var hover = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Text(kind).font(.system(size: Theme.caption, weight: .medium)).foregroundStyle(hover ? Color.qAccent : Color.qMuted)
+                Text(coords).font(.system(size: Theme.small).monospacedDigit()).foregroundStyle(hover ? Color.qAccent : Color.qInk)
+            }
+            .padding(.vertical, 3).padding(.horizontal, 8)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusS)
+                .fill(hover ? Color.qAccent.opacity(0.12) : Color.qInk.opacity(0.06)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hover = $0 }
+        .help("Copy x")
+        .accessibilityLabel("\(kind) \(coords)")
+        .accessibilityHint("Copies x")
     }
 }

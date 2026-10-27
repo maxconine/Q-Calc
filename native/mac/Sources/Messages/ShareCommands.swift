@@ -25,7 +25,8 @@ extension BarModel {
     func shareLine(_ typed: String) {
         decorations = Decorations()
         let messaging = (try? JSONSerialization.jsonObject(with: Data(Messages.shared.webJSON.utf8))) ?? [:]
-        let dropped = MessageFiles.shared.pendingDrop.map { MessageFiles.safeName($0.lastPathComponent) } ?? ""
+        let pending = MessageFiles.shared.pendingDrop
+        let dropped = pending.first.flatMap { logic.string("lib/messaging", "droppedLabel", [$0.lastPathComponent, pending.count]) } ?? ""
         commandMessage = logic.string("lib/messaging", "shareHint", [typed, messaging, true, NSNull(), dropped])
         let contacts = logic.call("lib/messaging", "messageContacts", [messaging]) as? [String] ?? []
         let rest = logic.string("lib/messaging", "shareCompletion", [typed, contacts])
@@ -35,7 +36,7 @@ extension BarModel {
     func runShare(_ cmd: ShareCmd) {
         let m = Messages.shared
         if m.name.isEmpty {
-            onSettings?()
+            (onMessagesSettings ?? onSettings)?()
             return
         }
         guard !cmd.name.isEmpty else { return }
@@ -47,16 +48,25 @@ extension BarModel {
             MessageFiles.shared.sendClipboard(to: name, done: say)
             return
         }
-        if let url = MessageFiles.shared.pendingDrop {
-            MessageFiles.shared.pendingDrop = nil
+        let dropped = MessageFiles.shared.pendingDrop
+        if !dropped.isEmpty {
+            MessageFiles.shared.pendingDrop = []
             clearLine()
-            MessageFiles.shared.sendFile(url, to: name, done: say)
+            dropped.forEach { MessageFiles.shared.sendFile($0, to: name, done: say) }
             return
         }
         clearLine()
-        pickFile { url in
+        // the picker takes the focus, so the bar hides; it comes back after, on the thread with them, where the
+        // file's line says how it's going (before, its statuses went to a hidden bar)
+        pickFile { [weak self] url in
+            guard let self else { return }
+            self.onShow?("file picker")
             guard let url else { return }
-            MessageFiles.shared.sendFile(url, to: name, done: say)
+            self.openThread(name)
+            MessageFiles.shared.sendFile(url, to: name) { [weak self] note in
+                guard let self else { return }
+                if self.messagesPanel == .thread(name) { self.threadReply = .failed(note) } else { self.hint = note }
+            }
         }
     }
 
@@ -102,11 +112,23 @@ extension BarModel {
     /// files dropped on the bar (to nil: whoever the line names) or on a thread (to them); true when taken
     @discardableResult
     func dropFiles(_ urls: [URL], to who: String?) -> Bool {
-        let files = urls.filter(\.isFileURL)
-        guard let url = files.first else { return false }
         let say: (String) -> Void = { [weak self] note in
             guard let self else { return }
             if let who, self.messagesPanel == .thread(who) { self.threadReply = .failed(note) } else { self.hint = note }
+        }
+        // folders don't go (sendFile would only say it couldn't read one): say so when nothing else was dropped
+        let isFolder = { (u: URL) in (try? u.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+        let all = urls.filter(\.isFileURL)
+        let files = all.filter { !isFolder($0) }
+        guard !files.isEmpty else {
+            if !all.isEmpty { dragHint = nil; say(MessageFiles.shared.errorText("folder", who: who ?? "")) }
+            return !all.isEmpty
+        }
+        // a drop past what the relay takes in an hour goes not at all, rather than mostly failing one by one
+        if let tooMany = logic.string("lib/messaging", "dropCountText", [files.count]), !tooMany.isEmpty {
+            dragHint = nil
+            say(tooMany)
+            return true
         }
         if let who {
             files.forEach { MessageFiles.shared.sendFile($0, to: who, done: say) }
@@ -133,7 +155,9 @@ extension BarModel {
             return true
         }
         // no name yet: the line asks for one, and ↵ sends it
-        MessageFiles.shared.pendingDrop = url
+        MessageFiles.shared.pendingDrop = files
+        // an earlier drop's word (a folder, a bad name) is stale now that the line asks for a name
+        hint = nil
         text = "send file to "
         focusField?()
         return true

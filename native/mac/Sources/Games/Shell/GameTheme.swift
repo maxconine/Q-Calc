@@ -44,8 +44,10 @@ struct GameColors: Equatable {
         bg = dark ? RGBA(0x2c2c2e) : RGBA(0xffffff)
         bgTape = dark ? RGBA(0x252527) : RGBA(0xf5f5f7)
         ink = dark ? RGBA(0xf5f5f7) : RGBA(0x1d1d1f)
-        muted = dark ? RGBA(0x98989d) : RGBA(0x86868b)
-        line = dark ? RGBA(0xffffff, 0.09) : RGBA(0x000000, 0.08)
+        // Increase Contrast (native only) takes muted and the hairlines to the bar's stronger values (Theme.swift)
+        let high = Theme.increaseContrast
+        muted = high ? (dark ? RGBA(0xaeaeb2) : RGBA(0x636366)) : dark ? RGBA(0x98989d) : RGBA(0x86868b)
+        line = high ? (dark ? RGBA(0xffffff, 0.3) : RGBA(0x000000, 0.3)) : dark ? RGBA(0xffffff, 0.09) : RGBA(0x000000, 0.08)
         accent = dark ? RGBA(0x63d392) : RGBA(0x1d7a4c)
         control = dark ? RGBA(0x58585c) : RGBA(0xffffff)
         page = dark ? RGBA(0x1c1c1e) : RGBA(0xd8d8d4)

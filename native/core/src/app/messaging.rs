@@ -381,11 +381,32 @@ pub fn messages_completion(text: &str, contacts: &[String]) -> String {
 }
 
 /// What an empty thread says: nobody's name, or none of their messages yet.
+/// The thread's empty reply line (native only): who it goes to, or, with no name set, what ↵ does instead.
+pub fn thread_reply_prompt(name: &str, named: bool) -> String {
+    if named {
+        format!("Message {name}")
+    } else {
+        "set your name to reply · ↵ opens settings".into()
+    }
+}
+
 pub fn thread_empty_text(name: &str) -> String {
     if name.is_empty() {
         "no messages yet · message <name> <text> starts one".into()
     } else {
         format!("no messages with {name} yet")
+    }
+}
+
+/// What VoiceOver says when a card arrives (native only): the cards come and go on their own, and nothing moves
+/// the VoiceOver cursor to them. `kind` is `ask`, `clip`, `file` (with its name in `text`) or the message's words.
+pub fn card_announcement(from: &str, kind: &str, text: &str) -> String {
+    match kind {
+        "ask" => format!("{from} wants to message you"),
+        "clip" => format!("{from} shared their clipboard"),
+        "file" if text.is_empty() => format!("{from} sent a file"),
+        "file" => format!("{from} sent {text}"),
+        _ => format!("message from {from}: {text}"),
     }
 }
 
@@ -443,10 +464,15 @@ pub fn share_hint(
     if !relay {
         return "messages need the online relay".into();
     }
-    if m.name.is_empty() || m.key.is_empty() {
-        return "set your name in settings to send messages · ↵ opens settings".into();
-    }
     let clip = cmd.what == "clip";
+    if m.name.is_empty() || m.key.is_empty() {
+        // what this line does, not `message`'s words
+        return if clip {
+            "set your name in settings to share your clipboard · ↵ opens settings".into()
+        } else {
+            "set your name in settings to send files · ↵ opens settings".into()
+        };
+    }
     if cmd.to.is_empty() {
         return if clip {
             "paste to <name> · shares what you’ve copied".into()
@@ -495,6 +521,10 @@ pub fn share_completion(text: &str, contacts: &[String]) -> String {
 pub fn share_status_text(status: &str, to: &str, what: &str, name: &str) -> String {
     let clip = what == "clip";
     match status {
+        "no-name" if clip => "set your name in settings to share your clipboard".into(),
+        "no-name" => "set your name in settings to send files".into(),
+        "empty-clipboard" => "there’s nothing copied to share".into(),
+        "folder" => "a folder can’t be sent · zip it first".into(),
         "delivered" if clip => format!("clipboard sent to {to}"),
         "delivered" => format!("offered {name} to {to} · waiting for them to accept"),
         "offline" if clip => format!("{to} isn’t on q calc right now · not sent"),
@@ -561,7 +591,31 @@ pub fn file_error_text(status: &str, who: &str) -> String {
         "no-key" => format!("{who} needs a newer q calc to get files"),
         "disk" => "couldn’t write it to downloads".into(),
         "unreadable" => "couldn’t read that file".into(),
+        "folder" => "a folder can’t be sent · zip it first".into(),
         _ => "couldn’t reach the relay · try again".into(),
+    }
+}
+
+/// The most files one drop sends: the relay starts 20 uploads an hour per address (relay/src/files.js `CAPS`), so a
+/// bigger drop would mostly fail one by one with `that’s a lot of sending`.
+pub const DROP_MAX: u32 = 20;
+
+/// Why a drop of `count` files doesn't go (empty when it can): past `DROP_MAX`, nothing is sent.
+pub fn drop_count_text(count: u32) -> String {
+    if count > DROP_MAX {
+        format!("that’s {count} files · up to {DROP_MAX} at a time, or zip them into one")
+    } else {
+        String::new()
+    }
+}
+
+/// What the bar calls files dropped on it while the line asks for a name (`send a.pdf to <name>`): the one
+/// file's clean name, or how many there are.
+pub fn dropped_label(first: &str, count: u32) -> String {
+    if count > 1 {
+        format!("{count} files")
+    } else {
+        clean_filename(first)
     }
 }
 
@@ -1073,6 +1127,12 @@ pub fn drop_target(
         (share.to, share.name, String::new())
     } else if let Some(msg) = parse_message(line) {
         (msg.to, msg.name, msg.text)
+    } else if !line.trim().is_empty() {
+        // a calculation on the line stays; a drop there used to swap it for `send file to `
+        return DropTarget {
+            hint: "clear the line to send files · or drop them on a thread".into(),
+            ..DropTarget::default()
+        };
     } else {
         return DropTarget::default();
     };
@@ -1094,6 +1154,9 @@ pub fn drop_target(
     }
     if found == Some(false) {
         return why("username not found".into());
+    }
+    if count > DROP_MAX {
+        return why(drop_count_text(count));
     }
     let what = if count > 1 {
         format!("{count} files ")
@@ -1117,6 +1180,102 @@ pub fn auto_accept(m: &Messaging, from: &str, size: u64, limit: u64) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn a_share_line_with_no_name_says_what_it_needs_one_for() {
+        let none = Messaging::default();
+        let file = parse_share_command("send file to max").unwrap();
+        let clip = parse_share_command("paste to max").unwrap();
+        assert_eq!(
+            share_hint(&file, &none, true, None, ""),
+            "set your name in settings to send files · ↵ opens settings"
+        );
+        assert_eq!(
+            share_hint(&clip, &none, true, None, ""),
+            "set your name in settings to share your clipboard · ↵ opens settings"
+        );
+    }
+
+    #[test]
+    fn says_when_theres_no_name_rather_than_a_taken_one() {
+        assert_eq!(
+            share_status_text("no-name", "max", "file", "a.pdf"),
+            "set your name in settings to send files"
+        );
+        assert_eq!(
+            share_status_text("no-name", "max", "clip", ""),
+            "set your name in settings to share your clipboard"
+        );
+        assert_ne!(
+            share_status_text("no-name", "max", "file", ""),
+            share_status_text("not-yours", "max", "file", "")
+        );
+        assert_eq!(
+            share_status_text("empty-clipboard", "max", "clip", ""),
+            "there’s nothing copied to share"
+        );
+        assert_eq!(
+            share_status_text("folder", "max", "file", ""),
+            file_error_text("folder", "max")
+        );
+    }
+
+    #[test]
+    fn the_reply_line_says_when_a_name_is_needed() {
+        assert_eq!(thread_reply_prompt("max", true), "Message max");
+        assert_eq!(
+            thread_reply_prompt("max", false),
+            "set your name to reply · ↵ opens settings"
+        );
+    }
+
+    #[test]
+    fn a_huge_drop_is_refused_whole() {
+        assert_eq!(drop_count_text(1), "");
+        assert_eq!(drop_count_text(DROP_MAX), "");
+        assert_eq!(
+            drop_count_text(21),
+            "that’s 21 files · up to 20 at a time, or zip them into one"
+        );
+    }
+
+    #[test]
+    fn names_what_was_dropped() {
+        assert_eq!(dropped_label("a.pdf", 1), "a.pdf");
+        assert_eq!(dropped_label("a.pdf", 3), "3 files");
+        assert_eq!(
+            file_error_text("folder", "max"),
+            "a folder can’t be sent · zip it first"
+        );
+        let m = Messaging {
+            name: "me".into(),
+            key: "k".into(),
+            ..Messaging::default()
+        };
+        let p = parse_share_command("send file to max").unwrap();
+        assert_eq!(
+            share_hint(&p, &m, true, None, &dropped_label("x", 2)),
+            "↵ offers 2 files to max"
+        );
+    }
+
+    #[test]
+    fn says_what_a_card_is() {
+        assert_eq!(
+            card_announcement("max", "ask", ""),
+            "max wants to message you"
+        );
+        assert_eq!(
+            card_announcement("max", "clip", ""),
+            "max shared their clipboard"
+        );
+        assert_eq!(card_announcement("max", "file", "a.pdf"), "max sent a.pdf");
+        assert_eq!(card_announcement("max", "file", ""), "max sent a file");
+        assert_eq!(
+            card_announcement("max", "text", "hi"),
+            "message from max: hi"
+        );
+    }
 
     #[test]
     fn reads_the_conversation_commands() {
@@ -1728,7 +1887,11 @@ mod share_tests {
             drop("message zed", Some(false), 1),
             to("", "", "username not found")
         );
-        assert_eq!(drop("2+2", None, 1), DropTarget::default());
+        assert_eq!(
+            drop("2+2", None, 1).hint,
+            "clear the line to send files · or drop them on a thread"
+        );
+        assert!(drop("2+2", None, 1).name.is_empty());
         assert_eq!(drop("", None, 1), DropTarget::default());
         let off = drop_target("message max2", &Messaging::default(), true, None, 1);
         assert_eq!(off.hint, "set your name in settings to send files");

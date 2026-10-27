@@ -361,6 +361,16 @@ pub fn is_konami_line(text: &str) -> bool {
     t == "↑↑↓↓←→←→ba" || t == "konami"
 }
 
+/// What the answer slot says while the line is the Konami code (native only), like a command's `↵ …`: nothing
+/// showed before, so `konami` from the `?` list looked like it did nothing. `on` is the CRT look now.
+pub fn konami_hint(on: bool) -> &'static str {
+    if on {
+        "↵ back to the usual look"
+    } else {
+        "↵ an old look"
+    }
+}
+
 /// March 14, by the local calendar
 pub fn is_pi_day(month: u32, day: u32) -> bool {
     month == 3 && day == 14
@@ -468,6 +478,12 @@ impl KonamiTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn konami_says_what_enter_does() {
+        assert_eq!(konami_hint(false), "↵ an old look");
+        assert_eq!(konami_hint(true), "↵ back to the usual look");
+    }
 
     #[test]
     fn divide_by_zero_needs_a_literal_zero_and_a_blown_answer() {

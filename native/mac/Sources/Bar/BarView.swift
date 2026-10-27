@@ -47,7 +47,7 @@ struct BarView: View {
             below
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        .background(Color.qBg.opacity(0.9))
+        .background(Color.qBg.opacity(Theme.panelOpacity))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
         // a file dropped on the bar goes to whoever the line names (Messages/ShareCommands.swift); a thread
         // under it takes its own drops
@@ -69,7 +69,7 @@ struct BarView: View {
     // what sits above the line (.tape): the cheat sheet, the games list, or the history
     @ViewBuilder private var above: some View {
         if model.helpShown {
-            TapeBox { HelpSheet() }
+            TapeBox { HelpSheet(logic: model.logic) }
         } else if model.gamesShown {
             TapeBox { GamesSheet(model: model) }
         } else if !model.visibleRange.isEmpty {
@@ -84,7 +84,8 @@ struct BarView: View {
         if model.hint == nil, let line = model.tourLine {
             // .tour-line: the step, `n/m` at 70%, and an underlined skip, clear of the clear button's corner
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(line.text).lineLimit(1).truncationMode(.tail)
+                // native only: a narrow bar wraps the step to a second line rather than cutting off what to type
+                Text(line.text).lineLimit(2).truncationMode(.tail).fixedSize(horizontal: false, vertical: true)
                 if line.fillable { Text("· tab fills it").lineLimit(1).opacity(0.7) }
                 Text("\(line.at)/\(line.of)").monospacedDigit().opacity(0.7)
                 Spacer(minLength: 0)
@@ -106,12 +107,15 @@ struct BarView: View {
                 .font(.system(size: Theme.small))
                 .lineSpacing(2)
                 .foregroundStyle(Color.qMuted)
-                .lineLimit(1)
+                // native only: two lines on a narrow bar (the page cuts it at one), so a why or a how isn't lost
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 12)
                 .padding(.top, -12)
+                .help(hint)
                 .accessibilityLabel(hint)
         }
         // the one-time line on what's end-to-end encrypted (Messages/ShareViews.swift)
@@ -145,7 +149,7 @@ private struct TapeBox<Content: View>: View {
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.qBgTape.opacity(0.9))
+            .background(Color.qBgTape.opacity(Theme.panelOpacity))
             .overlay(alignment: .bottom) { Rectangle().fill(Color.qLine).frame(height: 1) }
     }
 }
@@ -265,7 +269,13 @@ struct LiveAnswerView: View {
     }
 
     @ViewBuilder private var content: some View {
-        if model.text.isEmpty, let example = model.example, !example.answer.isEmpty, !model.copied {
+        if let part = model.selectionAnswer, !model.text.isEmpty {
+            // .live.live-selection: the selected part's answer, muted, not a button
+            AnswerText(text: model.pretty(part), size: Theme.display)
+                .foregroundStyle(Color.qMuted)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                .accessibilityLabel("Selection: \(part)")
+        } else if model.text.isEmpty, let example = model.example, !example.answer.isEmpty, !model.copied {
             // .live-example: the example's answer, muted at 70%, fading with it
             ExampleFade(id: example.id) {
                 AnswerText(text: Pretty.answer(example.answer), size: Theme.display)
@@ -287,8 +297,10 @@ struct LiveAnswerView: View {
             Text(message)
                 .font(.system(size: Theme.body))
                 .foregroundStyle(Color.qMuted)
-                .truncationMode(.head)
+                .truncationMode(.tail)  // .live: text-overflow: ellipsis, so the start (what is wrong) stays
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                // a narrow bar cuts its end off; the pointer shows it whole (native only)
+                .help(message)
         } else if model.live.isBlank, let steady = model.steady {
             // .live-steady: never the answer's colour, gone after a pause
             AnswerText(text: model.pretty(steady), size: Theme.display)
@@ -694,7 +706,8 @@ private struct HistoryRowView: View, Equatable {
                 }
                 .buttonStyle(.plain)
                 .onHover { exprHover = $0 }
-                .help("Insert the expression")
+                // HistoryTape.tsx's titles; the pointer also reads an expression cut off at the row's end in full
+                .help(exprTip)
                 .accessibilityLabel("Expression \(row.expr)")
 
                 answers
@@ -720,21 +733,32 @@ private struct HistoryRowView: View, Equatable {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
+    private var exprTip: String {
+        let what = row.kind == .system ? "Edit equations" : row.kind == .definition ? "Insert word at the cursor"
+            : "Insert expression at the cursor"
+        return row.expr.count > 40 ? "\(what) · \(row.expr)" : what
+    }
+
     @ViewBuilder private var answers: some View {
         if row.hasDual, let exact = row.exact {
+            // the page's titles: exact value, then approximation
             // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
             HStack(spacing: 6) {
-                answer(Pretty.answer(exact), insert: true, picked: picked == 1)
+                answer(Pretty.answer(exact), insert: true, picked: picked == 1, tip: "Insert exact value at the cursor")
                 Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                answer(Pretty.answer(row.display), insert: true, picked: picked == 2)
+                answer(Pretty.answer(row.display), insert: true, picked: picked == 2, tip: "Insert approximation at the cursor")
             }
         } else {
-            answer(Pretty.answer(row.display), insert: true, picked: picked == 1, fill: true)
+            answer(Pretty.answer(row.display), insert: true, picked: picked == 1, fill: true,
+                   tip: row.kind == .definition ? "Insert word at the cursor"
+                       : AppSettings.shared.answerForm == "exact" && row.exact != nil ? "Insert exact value at the cursor"
+                       : "Insert approximation at the cursor")
         }
     }
 
-    private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false) -> some View {
-        AnswerCell(text: text, picked: picked, fill: fill) { model.insertFromRow(index, answer: true) }
+    private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false,
+                        tip: String = "Insert the answer at the cursor") -> some View {
+        AnswerCell(text: text, picked: picked, fill: fill, tip: tip) { model.insertFromRow(index, answer: true) }
             .onDrag { NSItemProvider(object: row.display as NSString) }
     }
 }
@@ -745,6 +769,7 @@ private struct AnswerCell: View {
     let picked: Bool
     /// a lone answer is the whole column (display: block), so its pick ring is too
     var fill = false
+    var tip = "Insert the answer at the cursor"
     let action: () -> Void
     @State private var hover = false
     var body: some View {
@@ -761,7 +786,7 @@ private struct AnswerCell: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help("Insert the answer")
+        .help(tip)
         .accessibilityLabel("Answer \(text)")
     }
 }
@@ -802,13 +827,18 @@ private struct GamesSheet: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Play \(game.name), \(game.blurb)")
+                .accessibilityAddTraits(i == model.gamePick ? .isSelected : [])
             }
         }
+        // aria-label="Games", each row aria-selected as ↑ ↓ pick it
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Games")
     }
 }
 
 /// `?` / `help`: the cheat sheet (cheatSheet + hostCheats), its keys following the user's keybinds
 private struct HelpSheet: View {
+    let logic: AppLogic
     @ObservedObject private var settings = AppSettings.shared
 
     private func key(_ action: String) -> String { KeyActions.title(KeyActions.chord(action, in: settings.keybinds)) }
@@ -824,21 +854,45 @@ private struct HelpSheet: View {
         ]
     }
 
-    private let right: [(String, String)] = [
-        ("ft to cm", "units"), ("80 + 15%", "percent"), ("+/- -/+", "± ∓ uncertainty"), ("x = 5", "variables"),
-        ("x^2 = 2", "solve"), ("sys 2", "systems"), ("graph x^2", "plot"), ("GCF LCM", "factors"),
-        ("sum n, n=1..9", "Σ sums"), ("tutorial", "the walkthrough"), ("?", "this list"),
-    ]
+    /// the web's things to type with the Mac app's own (messages, sharing, konami) before `?` (core `nativeCheats`)
+    private var right: [(String, String)] {
+        if let rows = logic.call("lib/onboarding", "nativeCheats", []) as? [[String]], !rows.isEmpty {
+            // the page collapses the core's double spaces (`GCF  LCM`), so this does too
+            return rows.compactMap { $0.count == 2 ? ($0[0].replacingOccurrences(of: "  ", with: " "), $0[1]) : nil }
+        }
+        return [
+            ("ft to cm", "units"), ("80 + 15%", "percent"), ("+/- -/+", "± ∓ uncertainty"), ("x = 5", "variables"),
+            ("x^2 = 2", "solve"), ("sys 2", "systems"), ("graph x^2", "plot"), ("GCF LCM", "factors"),
+            ("sum n, n=1..9", "Σ sums"), ("tutorial", "the walkthrough"), ("?", "this list"),
+        ]
+    }
 
     var body: some View {
+        Group {
+            if #available(macOS 13, *) {
+                // native only: a bar too narrow for both columns' labels (they'd end in "…" at 340 pt) lists them
+                // in one column, the keys first, scrolling past 12 rows
+                ViewThatFits(in: .horizontal) {
+                    twoColumns
+                    ScrollView(.vertical) { column(left + right, keyWidth: 96).padding(.vertical, 8) }
+                        // past 12 rows, half of the 12th shows, so it reads as more below
+                        .frame(height: left.count + right.count > 12 ? 11.5 * 28 + 8 : CGFloat(left.count + right.count) * 28 + 16)
+                }
+            } else {
+                twoColumns
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Shortcuts")
+    }
+
+    private var twoColumns: some View {
         // .cheats: two columns 24 pt apart; key columns at least 64 and 96 pt plus 8, 12 pt to the label
         HStack(alignment: .top, spacing: 24) {
             column(left, keyWidth: 64)
             column(right, keyWidth: 96)
         }
         .padding(.vertical, 8)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Shortcuts")
     }
 
     // a subgrid in the web: the key column is as wide as its widest key, and every label lines up after it
@@ -994,10 +1048,10 @@ private struct CardView: View {
                         .help("Open messages with \(card.from)")
                 }
                 HStack(spacing: 8) {
-                    TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }),
-                              prompt: Text("Reply to \(card.from)").foregroundColor(.qMuted))
+                    TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }))
                         .textFieldStyle(.plain)
                         .font(.system(size: Theme.small))
+                        .mutedPrompt("Reply to \(card.from)", shown: card.draft.isEmpty, size: Theme.small)
                         .foregroundStyle(Color.qInk)
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)
@@ -1027,7 +1081,15 @@ private struct CardView: View {
         .onChange(of: focused) { on in
             if on { model.replyFocused = card.id } else if model.replyFocused == card.id { model.replyFocused = nil }
         }
+        // Tab on an empty line (BarModel.tabToCard)
+        .onChange(of: model.cardFocusRequest) { id in
+            guard id == card.id else { return }
+            focused = true
+            model.cardFocusRequest = nil
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(card.ask ? "\(card.from) wants to message you" : "Message from \(card.from): \(card.text)")
+        // the click on the name or words that opens the thread, for VoiceOver and Full Keyboard Access
+        .accessibilityAction(named: "Open messages with \(card.from)") { if !card.ask { model.openThread(card.from) } }
     }
 }

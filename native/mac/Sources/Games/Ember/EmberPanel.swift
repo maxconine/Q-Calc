@@ -536,14 +536,22 @@ struct EmberPlayColumn: View {
         return HStack(spacing: GameMetrics.sp3) {
             (Text("\(f.level + 1)").fontWeight(.semibold).foregroundColor(colors.muted.color) + Text(" \(h.levelName)"))
                 .lineLimit(1).truncationMode(.tail)
-            if h.stages > 1 { chip("stage \(h.stage + 1)/\(h.stages)", on: false) }
-            if h.cps > 0 { chip("⚑ \(max(0, h.cp + 1))/\(h.cps)", on: h.cp >= 0).id("cp\(h.stage).\(h.cp)") }
+            // EmberPanel.tsx's hud aria-labels
+            if h.stages > 1 {
+                chip("stage \(h.stage + 1)/\(h.stages)", on: false).accessibilityLabel("stage \(h.stage + 1) of \(h.stages)")
+            }
+            if h.cps > 0 {
+                chip("⚑ \(max(0, h.cp + 1))/\(h.cps)", on: h.cp >= 0).id("cp\(h.stage).\(h.cp)")
+                    .accessibilityLabel(h.cp >= 0 ? "checkpoint \(h.cp + 1) of \(h.cps)" : "no checkpoint yet, \(h.cps) in this stage")
+            }
             if h.total.reduce(0, +) > 0 { gems(h.gems, h.total) }
             if h.keys > 0 {
                 HStack(spacing: 3) {
                     KeyGlyph().frame(width: 15, height: 9)
                     if h.keys > 1 { Text("×\(h.keys)") }
                 }.foregroundColor(EmberTheme.star(dark))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(h.keys) \(h.keys == 1 ? "key" : "keys") carried")
             }
             if h.deaths > 0 { Text(h.deaths == 1 ? "1 death" : "\(h.deaths) deaths").foregroundColor(colors.muted.color) }
             if let me = f.me {
@@ -553,6 +561,8 @@ struct EmberPlayColumn: View {
             (Text(h.clock).fontWeight(.semibold).foregroundColor(h.over ? colors.muted.color : colors.ink.color)
                 + Text(card != nil ? " / \(h.parText)" : "").foregroundColor(colors.muted.color))
                 .font(.gameDigits(GameMetrics.fsSmall))
+                .accessibilityLabel("time, and the target time")
+                .accessibilityValue(card != nil ? "\(h.clock) / \(h.parText)" : h.clock)
         }
         .font(.game(GameMetrics.fsSmall))
         .foregroundColor(colors.ink.color)

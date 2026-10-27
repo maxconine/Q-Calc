@@ -564,7 +564,10 @@ struct InputField: NSViewRepresentable {
 
         // a click or an arrow key ends the typing run (breakRun)
         func textViewDidChangeSelection(_ notification: Notification) {
-            guard let text, text.editKind == nil else { return }
+            guard let text else { return }
+            // a part of the line selected is answered on its own in the answer slot (selDisplay)
+            model.inputSelected(text.string, text.selectedRange())
+            guard text.editKind == nil else { return }
             model.breakUndoRun()
         }
 

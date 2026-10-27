@@ -43,7 +43,7 @@ final class MessageFiles: NSObject, ObservableObject {
 
     @Published private(set) var transfers: [String: Transfer] = [:]
     /// a file dropped on the bar with no name on the line yet (ShareCommands.swift)
-    var pendingDrop: URL?
+    var pendingDrop: [URL] = []
 
     /// what a sender's app holds for an upload: the sealed file and its length
     private struct Outgoing {
@@ -110,7 +110,7 @@ final class MessageFiles: NSObject, ObservableObject {
         return core("fileStateText", [t.state, t.who, t.percent as Any? ?? NSNull()]) ?? t.state
     }
 
-    private func errorText(_ status: String, who: String) -> String {
+    func errorText(_ status: String, who: String) -> String {
         core("fileErrorText", [status, who]) ?? "couldn’t send that file"
     }
 
@@ -213,13 +213,13 @@ final class MessageFiles: NSObject, ObservableObject {
             guard (try? png.write(to: url)) != nil else { return done(errorText("disk", who: to)) }
             return sendFile(url, to: to, done: done)
         }
-        done("there’s nothing copied to share")
+        done(shareStatus("empty-clipboard", to: to, what: "clip"))
     }
 
     func sendClip(_ clip: String, to raw: String, done: @escaping (String) -> Void) {
         let to = Messages.clean(raw)
         let m = Messages.shared
-        guard !m.name.isEmpty else { return done(shareStatus("not-yours", to: to, what: "clip")) }
+        guard !m.name.isEmpty else { return done(shareStatus("no-name", to: to, what: "clip")) }
         PrivacyNotice.shared.firstShare()
         recipientKey(to, what: "clip", done: done) { [weak self] theirs, theirText in
             guard let self else { return }
@@ -277,11 +277,16 @@ final class MessageFiles: NSObject, ObservableObject {
     // MARK: - sending a file
 
     /// encrypts the file, then offers it; `done` hears what the bar says. The upload waits for the recipient
-    func sendFile(_ url: URL, to raw: String, done: @escaping (String) -> Void) {
+    func sendFile(_ given: URL, to raw: String, done: @escaping (String) -> Void) {
+        // a Finder alias or a symlink sends what it points to (it had sent the tiny alias file itself, or said it
+        // couldn't read a link)
+        let url = (try? URL(resolvingAliasFileAt: given)) ?? given
         let to = Messages.clean(raw)
         let m = Messages.shared
-        guard !m.name.isEmpty else { return done(shareStatus("not-yours", to: to, what: "file")) }
-        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .typeIdentifierKey])
+        guard !m.name.isEmpty else { return done(shareStatus("no-name", to: to, what: "file")) }
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isDirectoryKey, .typeIdentifierKey])
+        // a folder (a copied one through `paste to`, or one dropped on a thread) says so, not that it's unreadable
+        if values?.isDirectory == true { return done(shareStatus("folder", to: to, what: "file")) }
         guard values?.isRegularFile == true, let size = values?.fileSize.map(UInt64.init) else { return done(errorText("unreadable", who: to)) }
         guard size <= Self.fileMax else { return done(shareStatus("too-big", to: to, what: "file")) }
         let name = cleanName(url.lastPathComponent)

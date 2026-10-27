@@ -256,6 +256,8 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             json!(msg::messages_completion(&s(0), &contacts))
         }
         ("lib/messaging", "threadEmptyText") => json!(msg::thread_empty_text(&s(0))),
+        ("lib/messaging", "threadReplyPrompt") => json!(msg::thread_reply_prompt(&s(0), b(1))),
+        ("lib/messaging", "cardAnnouncement") => json!(msg::card_announcement(&s(0), &s(1), &s(2))),
         // native only: clips and files
         ("lib/messaging", "parseShareCommand") => opt(msg::parse_share_command(&s(0))),
         ("lib/messaging", "shareHint") => match msg::parse_share_command(&s(0)) {
@@ -288,6 +290,12 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             json!(msg::encrypted_len(n(0).unwrap_or(0.0).max(0.0) as u64))
         }
         ("lib/messaging", "cleanFilename") => json!(msg::clean_filename(&s(0))),
+        ("lib/messaging", "dropCountText") => {
+            json!(msg::drop_count_text(a(0).as_u64().unwrap_or(0) as u32))
+        }
+        ("lib/messaging", "droppedLabel") => {
+            json!(msg::dropped_label(&s(0), a(1).as_u64().unwrap_or(1) as u32))
+        }
         ("lib/messaging", "numberedName") => json!(msg::numbered_name(
             &s(0),
             n(1).unwrap_or(1.0).max(1.0) as u32
@@ -445,6 +453,9 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             let [keys, typed] = ob::cheat_sheet(a(0).as_str(), b(1), labels.as_ref());
             json!([keys, typed])
         }
+        ("lib/onboarding", "nativeCheats") => json!(ob::native_type_cheats()),
+        ("lib/onboarding", "konamiHint") => json!(crate::games::eggs::konami_hint(b(0))),
+        ("lib/onboarding", "modeAnnouncement") => json!(ob::mode_announcement(&s(0), b(1))),
         ("lib/onboarding", "emptyOnboarding") => to(&ob::empty_onboarding()),
         ("lib/onboarding", "exampleAnswer") => {
             let line: Option<LineResult> = of(&a(0));

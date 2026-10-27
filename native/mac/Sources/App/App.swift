@@ -52,6 +52,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         feedRates(ECBRates.shared.pageJSON)
         overlay = OverlayController(model: model)
         overlay?.onSettings = { [weak self] in self?.showSettings() }
+        // `message`, `paste to` and `send file to` with no name set: straight to where it's set
+        overlay?.onMessagesSettings = { [weak self] in
+            self?.showSettings()
+            if let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first,
+               let i = tabs.tabViewItems.firstIndex(where: { $0.label == "Messages" }) { tabs.selectedTabViewItemIndex = i }
+        }
         overlay?.preload()
         Analytics.shared.start(logic: model.logic)
         // the engine's first call pays for its lazy tables; do it now, off the main thread
@@ -118,6 +124,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "snap": DevSnapshot.writeAll(to: arg)
         case "clear": overlay.model.clearHistory(); overlay.model.text = ""; overlay.model.hint = nil
         case "hover": overlay.model.edgeFocus = arg != "off"
+        case "contrast": overlay.devContrast = arg != "off"
+        // drop:<path>|<path>… is files dropped on the bar (Messages/ShareCommands.swift)
+        case "drop": overlay.model.dropFiles(arg.split(separator: "|").map { URL(fileURLWithPath: String($0)) }, to: nil)
         case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
         case "identities": overlay.model.text = "identities"; overlay.model.enter()
         case "key": DevSnapshot.key(arg)

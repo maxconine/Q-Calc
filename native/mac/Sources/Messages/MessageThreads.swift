@@ -63,7 +63,8 @@ extension BarModel {
         let name = Messages.clean(who)
         guard !name.isEmpty else { return }
         if messagesPanel != .thread(name) {
-            threadDraft = ""
+            keepThreadDraft()
+            threadDraft = ThreadDrafts.shared.take(name)
             threadReply = .idle
         }
         messagesPanel = .thread(name)
@@ -74,10 +75,24 @@ extension BarModel {
 
     func threadOpen(with who: String) -> Bool { messagesPanel == .thread(who) }
 
+    /// what a drag over a thread says: `drop to send to max`, or why it can't go (no name set, no relay), as a
+    /// drop on the bar with `send file to max` on the line would
+    func threadDropHint(_ name: String) -> String {
+        let messaging = (try? JSONSerialization.jsonObject(with: Data(Messages.shared.webJSON.utf8))) ?? [:]
+        let o = logic.call("lib/messaging", "dropTarget", ["send file to \(name)", messaging, true, NSNull(), 1]) as? [String: Any]
+        return o?["hint"] as? String ?? ""
+    }
+
+    /// an unsent reply waits for the thread to open again (esc, ⌘W, × or hiding the bar no longer loses it)
+    private func keepThreadDraft() {
+        if case let .thread(name) = messagesPanel { ThreadDrafts.shared.keep(threadDraft, for: name) }
+    }
+
     /// closes the list or the thread; false when neither was open
     @discardableResult
     func closeMessages(refocus: Bool = true) -> Bool {
         guard messagesPanel != nil else { return false }
+        keepThreadDraft()
         messagesPanel = nil
         threadDraft = ""
         threadReply = .idle
@@ -90,7 +105,11 @@ extension BarModel {
         guard case let .list(i) = messagesPanel else { return false }
         let count = MessageHistory.shared.conversations.count
         guard count > 0 else { return true }
-        messagesPanel = .list(selected: up ? max(0, i - 1) : min(count - 1, i + 1))
+        let next = up ? max(0, i - 1) : min(count - 1, i + 1)
+        messagesPanel = .list(selected: next)
+        // as the row reads; VoiceOver's cursor stays on the line
+        let c = MessageHistory.shared.conversations[next]
+        BarModel.announce("\(c.name): \(c.last.mine ? "you: " : "")\(c.last.text)")
         return true
     }
 
@@ -106,12 +125,14 @@ extension BarModel {
     func sendThreadReply() {
         guard case let .thread(name) = messagesPanel else { return }
         let said = String(threadDraft.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Messages.textMax))
-        guard !said.isEmpty, threadReply != .sending else { return }
         let m = Messages.shared
         if m.name.isEmpty {
-            threadReply = .failed("set your name in settings to send messages")
+            // as `message` does with no name: straight to where it's set (the reply stays for when they're back)
+            keepThreadDraft()
+            (onMessagesSettings ?? onSettings)?()
             return
         }
+        guard !said.isEmpty, threadReply != .sending else { return }
         threadReply = .sending
         m.send(to: name, text: said) { [weak self] status in
             guard let self, self.messagesPanel == .thread(name) else { return }
@@ -127,6 +148,18 @@ extension BarModel {
             }
         }
     }
+}
+
+/// Unsent thread replies by name, for this run of the app only (never written to disk).
+final class ThreadDrafts {
+    static let shared = ThreadDrafts()
+    private var drafts: [String: String] = [:]
+
+    func keep(_ draft: String, for name: String) {
+        drafts[name] = draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : draft
+    }
+
+    func take(_ name: String) -> String { drafts.removeValue(forKey: name) ?? "" }
 }
 
 // MARK: - the views
@@ -276,6 +309,7 @@ private struct ConversationRow: View {
         .onHover { hover = $0 }
         .help("Open messages with \(name)")
         .accessibilityLabel("\(name): \(last.mine ? "you: " : "")\(last.text), \(ThreadTime.label(last.at))")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -287,6 +321,10 @@ private struct ThreadView: View {
     @FocusState private var focused: Bool
     @State private var contentHeight: CGFloat = 0
     @State private var showInfo = false
+    /// while files are dragged over the thread: where they'll go, or why they can't (the core's dropTarget)
+    @State private var dropHint: String?
+    /// the thread whose new lines are read out; switching threads changes `lines.last` without anything new arriving
+    @State private var heardFor = ""
     private static let maxHeight: CGFloat = 260
 
     private static let control = Color(nsColor: NSColor(name: nil) { a in
@@ -323,6 +361,14 @@ private struct ThreadView: View {
                     .onAppear { if let last = lines.last { proxy.scrollTo(last.id, anchor: .bottom) } }
                     .onChange(of: lines.last?.id) { id in
                         if let id { withAnimation(.easeOut(duration: 0.15)) { proxy.scrollTo(id, anchor: .bottom) } }
+                        // their new line lands here, not as a card, so VoiceOver hears it as it would a card
+                        if heardFor == name, let last = lines.last, last.id == id, !last.mine {
+                            let kind = last.clip != nil ? "clip" : last.file != nil ? "file" : "text"
+                            if let said = model.logic.string("lib/messaging", "cardAnnouncement",
+                                                             [name, kind, last.file?.name ?? last.text]) {
+                                BarModel.announce(said)
+                            }
+                        }
                     }
                 }
                 .accessibilityElement(children: .contain)
@@ -335,9 +381,29 @@ private struct ThreadView: View {
         .padding(.bottom, 12)
         .contentShape(Rectangle())
         // a file dropped on a thread goes to them (ShareCommands.swift)
-        .onDrop(of: [.fileURL], isTargeted: nil) { model.dropProviders($0, to: name) }
-        .onAppear { DispatchQueue.main.async { focused = true } }
-        .onChange(of: name) { _ in DispatchQueue.main.async { focused = true } }
+        .onDrop(of: [.fileURL], isTargeted: Binding(get: { dropHint != nil }, set: { dropHint = $0 ? model.threadDropHint(name) : nil })) {
+            dropHint = nil
+            return model.dropProviders($0, to: name)
+        }
+        .onAppear { focusReply(); heardFor = name }
+        .onChange(of: name) { now in
+            focusReply()
+            // after this update, so the new thread's last line isn't read out as if it had just come
+            DispatchQueue.main.async { heardFor = now }
+        }
+    }
+
+    /// the reply line takes the keys with the caret after a kept draft (focusing selects it all, and the next key
+    /// would replace it)
+    private func focusReply() {
+        DispatchQueue.main.async {
+            focused = true
+            DispatchQueue.main.async {
+                guard let editor = NSApp.windows.first(where: { $0 is OverlayPanel })?.firstResponder as? NSTextView,
+                      editor.isFieldEditor else { return }
+                editor.moveToEndOfDocument(nil)
+            }
+        }
     }
 
     /// a line says who and when when the sender changes, or 5 minutes have passed
@@ -348,9 +414,11 @@ private struct ThreadView: View {
 
     private var replyLine: some View {
         HStack(spacing: 8) {
-            TextField("", text: $model.threadDraft, prompt: Text("Message \(name)").foregroundColor(.qMuted))
+            TextField("", text: $model.threadDraft)
                 .textFieldStyle(.plain)
                 .font(.system(size: Theme.small))
+                .mutedPrompt(model.logic.string("lib/messaging", "threadReplyPrompt", [name, !Messages.shared.name.isEmpty])
+                                 ?? "Message \(name)", shown: model.threadDraft.isEmpty, size: Theme.small)
                 .foregroundStyle(Color.qInk)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)
@@ -366,11 +434,15 @@ private struct ThreadView: View {
                     if case .failed = model.threadReply { model.threadReply = .idle }
                 }
                 .accessibilityLabel("Message \(name)")
-            switch model.threadReply {
-            case .sending: Text("sending…").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
-            case .sent: Text("sent").font(.system(size: Theme.small)).foregroundStyle(Color.qAccent)
-            case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1)
-            case .idle: EmptyView()
+            if let dropHint {
+                Text(dropHint).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1)
+            } else {
+                switch model.threadReply {
+                case .sending: Text("sending…").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                case .sent: Text("sent").font(.system(size: Theme.small)).foregroundStyle(Color.qAccent)
+                case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1).help(note)
+                case .idle: EmptyView()
+                }
             }
         }
     }
@@ -405,8 +477,22 @@ private struct ThreadLine: View {
             }
         }
         .padding(.bottom, 2)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(line.mine ? "you" : name), \(ThreadTime.full(line.at)): \(line.text)")
+        .modifier(ThreadLineAccessibility(label: "\(line.mine ? "you" : name), \(ThreadTime.full(line.at)): \(line.text)",
+                                          plain: line.clip == nil && line.file == nil))
+    }
+}
+
+/// A words-only line reads as one element. A clip or a file keeps its own label (state, size) and its buttons
+/// (Copy, Save, Take Back) as separate elements, which a combined line would fold into its label and hide.
+private struct ThreadLineAccessibility: ViewModifier {
+    let label: String
+    let plain: Bool
+    func body(content: Content) -> some View {
+        if plain {
+            content.accessibilityElement(children: .combine).accessibilityLabel(label)
+        } else {
+            content.accessibilityElement(children: .contain)
+        }
     }
 }
 

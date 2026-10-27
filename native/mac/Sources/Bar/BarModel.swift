@@ -57,7 +57,10 @@ final class BarModel: ObservableObject {
     @Published var sysFocus: Int?
     // onboarding and the walkthrough (Tour.swift)
     @Published var example: ExampleShown?
-    @Published var tourLine: TourLineShown?
+    /// .tour-line role="status": VoiceOver hears each step as it comes
+    @Published var tourLine: TourLineShown? {
+        didSet { if let tourLine, tourLine.text != oldValue?.text { Self.announce(tourLine.text) } }
+    }
     var replay: Int?
     var rotation: (on: Bool, tick: Int) = (false, 0)
     var rotationTimer: Timer?
@@ -75,7 +78,10 @@ final class BarModel: ObservableObject {
     @Published private(set) var forms: [String] = [] { didSet { if forms != oldValue { refreshTypeset() } } }
     @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
-    @Published var hint: String?
+    /// the status line under the bar; VoiceOver hears each new one, since nothing moves its focus there
+    @Published var hint: String? {
+        didSet { if let hint, !hint.isEmpty, hint != oldValue { Self.announce(hint) } }
+    }
     /// the hint from before files were dragged over the bar, put back when they leave (Messages/ShareCommands.swift)
     var dragHint: String?
     // the tape
@@ -100,8 +106,21 @@ final class BarModel: ObservableObject {
     /// the message threads under the bar (native only, Messages/MessageThreads.swift): the conversations list or
     /// one thread, its reply line's words and how its last send went
     @Published var messagesPanel: MessagesPanel?
+    /// the card whose reply line Tab asks to focus (tabToCard)
+    @Published var cardFocusRequest: String?
+    /// the selected part of the line's own answer (inputSelected)
+    @Published var selectionAnswer: String?
     @Published var threadDraft = ""
-    @Published var threadReply = BannerCard.Reply.idle
+    @Published var threadReply = BannerCard.Reply.idle {
+        didSet {
+            guard threadReply != oldValue else { return }
+            switch threadReply {
+            case .sent: Self.announce("sent")
+            case let .failed(note): Self.announce(note)
+            default: break
+            }
+        }
+    }
     // settings mirrored for the views
     @Published private(set) var angleRad = false
     @Published private(set) var fractions = false
@@ -120,7 +139,11 @@ final class BarModel: ObservableObject {
 
     // what the bar asks of its window
     var onHide: ((String) -> Void)?
+    /// the bar back up (after the file picker took the focus and hid it)
+    var onShow: ((String) -> Void)?
     var onSettings: (() -> Void)?
+    /// settings at the Messages tab, where the name is set (native only; the web-view app opens General)
+    var onMessagesSettings: (() -> Void)?
     var onPeriodic: (() -> Void)?
     var onIdentities: ((String, Int) -> Void)?
     var onGame: ((String) -> Void)?
@@ -278,7 +301,19 @@ final class BarModel: ObservableObject {
             return
         }
         // a file dropped on the bar waits only while the line asks for its name
-        MessageFiles.shared.pendingDrop = nil
+        MessageFiles.shared.pendingDrop = []
+        // the Konami code typed out says what ↵ does, as a command does
+        if isKonamiLine(text: typed) {
+            nameCheckTimer?.invalidate()
+            graph = nil
+            helpShown = false
+            decorations = Decorations()
+            completion = nil
+            commandMessage = logic.string("lib/onboarding", "konamiHint", [crt])
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
             var found: Bool?
@@ -403,6 +438,30 @@ final class BarModel: ObservableObject {
         guard let completion, !completion.isEmpty else { return false }
         insert(completion)
         return true
+    }
+
+    /// selDisplay (QuickCalc.tsx): part of the line selected is evaluated alone, with no history, and shown muted
+    /// in the answer slot (`.live.live-selection`, aria-live), unless it's the whole line, a graph's, or reads the
+    /// same as its value. Nil otherwise.
+    func inputSelected(_ line: String, _ range: NSRange) {
+        let ns = line as NSString
+        let part = range.length > 0 && NSMaxRange(range) <= ns.length
+            ? ns.substring(with: range).trimmingCharacters(in: .whitespaces) : ""
+        guard !part.isEmpty, part != line.trimmingCharacters(in: .whitespaces), graph == nil else {
+            if selectionAnswer != nil { selectionAnswer = nil }
+            engine.cancel(.selection)
+            return
+        }
+        let view = HistoryView.from(settings), options = self.options
+        engine.submit(.selection, { engine -> String? in
+            let answer = engine.live(request: Self.request(engine, text: part, rows: [], view: view, options: options))
+            let shown = answer.display
+            return shown.isEmpty || shown == part || answer.improper ? nil : shown
+        }) { [weak self] shown in
+            guard let self, self.text == line else { return }
+            self.selectionAnswer = shown
+            if let shown { Self.announce(shown) }
+        }
     }
 
     private func setLive(_ answer: LiveAnswer, for typed: String) {
@@ -632,7 +691,7 @@ final class BarModel: ObservableObject {
         case let .message(_, name, said):
             let m = Messages.shared
             if m.name.isEmpty {
-                onSettings?()
+                (onMessagesSettings ?? onSettings)?()
                 return
             }
             guard !name.isEmpty, !said.isEmpty else { return }
@@ -792,6 +851,7 @@ final class BarModel: ObservableObject {
             // in the games list ↑ starts at the game nearest the bar and climbs; ↓ past the last leaves it
             let last = BarCommand.gameList.count - 1
             if up { gamePick = gamePick.map { max(0, $0 - 1) } ?? last } else if let g = gamePick { gamePick = g >= last ? nil : g + 1 }
+            if let g = gamePick { Self.announce("\(BarCommand.gameList[g].name), \(BarCommand.gameList[g].blurb)") }
             return
         }
         if helpShown { helpShown = false }
@@ -801,6 +861,7 @@ final class BarModel: ObservableObject {
             if fresh { sideIsExpr = false }
             tapeOpen = true
             land(on: fresh ? rows.count - 1 : max(0, selected! - 1))
+            announceSelected()
         } else {
             guard tapeOpen else { return }
             guard let i = selected, i < rows.count - 1 else {
@@ -809,7 +870,15 @@ final class BarModel: ObservableObject {
                 return
             }
             land(on: i + 1)
+            announceSelected()
         }
+    }
+
+    /// VoiceOver keeps its cursor on the line while ↑ ↓ walk the tape, so it hears the row each lands on (native
+    /// only; the page's rows are only aria-selected), as the row reads (`HistoryRowView`)
+    private func announceSelected() {
+        guard let i = selected, rows.indices.contains(i) else { return }
+        Self.announce("\(rows[i].expr) equals \(rows[i].display)")
     }
 
     /// ← → on a highlighted row (onSide)
@@ -990,6 +1059,13 @@ final class BarModel: ObservableObject {
         flashCopied()
     }
 
+    /// a status VoiceOver reads out without moving its cursor
+    static func announce(_ text: String, high: Bool = false) {
+        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested,
+                             userInfo: [.announcement: text,
+                                        .priority: (high ? NSAccessibilityPriorityLevel.high : .medium).rawValue])
+    }
+
     private func flashCopied() {
         copied = true
         copiedTimer?.invalidate()
@@ -1000,9 +1076,26 @@ final class BarModel: ObservableObject {
 
     // MARK: - toggles
 
-    func toggleAngle() { settings.setAngleMode(angleRad ? "deg" : "rad", notifyWeb: true) }
-    func toggleFractions() { settings.setFractionMode(!fractions, notifyWeb: true) }
-    func toggleSigFigMode() { settings.setSigFigMode(!sigFigMode, notifyWeb: true) }
+    func toggleAngle() {
+        let rad = !angleRad
+        settings.setAngleMode(rad ? "rad" : "deg", notifyWeb: true)
+        announceMode("angle", rad)
+    }
+    func toggleFractions() {
+        let on = !fractions
+        settings.setFractionMode(on, notifyWeb: true)
+        announceMode("fraction", on)
+    }
+    func toggleSigFigMode() {
+        let on = !sigFigMode
+        settings.setSigFigMode(on, notifyWeb: true)
+        announceMode("sigFigs", on)
+    }
+
+    /// VoiceOver hears where a toggle left the mode (native only; the edge tools showing it are hidden off hover)
+    private func announceMode(_ action: String, _ on: Bool) {
+        if let line = logic.string("lib/onboarding", "modeAnnouncement", [action, on]), !line.isEmpty { Self.announce(line) }
+    }
 
     // MARK: - keys
 
@@ -1039,7 +1132,7 @@ final class BarModel: ObservableObject {
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
-            if !flags.contains(.shift), fillTourStep() || acceptCompletion() { return true }
+            if !flags.contains(.shift), fillTourStep() || acceptCompletion() || tabToCard() { return true }
             cycleForms(back: flags.contains(.shift))
             return true
         case kVK_Delete:
@@ -1213,6 +1306,7 @@ final class BarModel: ObservableObject {
               let rows = try? JSONSerialization.jsonObject(with: Data(Messages.shared.inboxJSON.utf8)) as? [[String: Any]]
         else { return }
         var ids: [String] = []
+        let before = Set(cards.map(\.id))
         for o in rows {
             guard let id = o["id"] as? String, let from = o["from"] as? String else { continue }
             ids.append(id)
@@ -1229,6 +1323,12 @@ final class BarModel: ObservableObject {
             cards.insert(card, at: 0)
         }
         if cards.count > 3 { cards = Array(cards.prefix(3)) }
+        // VoiceOver hears each new card (they hide on their own after 10 s)
+        for card in cards.reversed() where !before.contains(card.id) {
+            let kind = card.ask ? "ask" : card.clip != nil ? "clip" : card.file != nil ? "file" : "text"
+            let said = card.file?.name ?? card.text
+            if let line = logic.string("lib/messaging", "cardAnnouncement", [card.from, kind, said]) { Self.announce(line) }
+        }
         if !ids.isEmpty { Messages.shared.seen(ids) }
         scheduleCardExpiry()
     }
@@ -1255,7 +1355,9 @@ final class BarModel: ObservableObject {
     private func expireCards() {
         let now = Date()
         for i in cards.indices where held(cards[i]) { cards[i].shownAt = now }
-        cards.removeAll { now.timeIntervalSince($0.shownAt) >= 10 }
+        // 10 s, as the page; with VoiceOver on, 30 (native only), since reading a card and its buttons takes longer
+        let shown: TimeInterval = NSWorkspace.shared.isVoiceOverEnabled ? 30 : 10
+        cards.removeAll { now.timeIntervalSince($0.shownAt) >= shown }
         if cards.isEmpty { cardTimer?.invalidate() }
     }
 
@@ -1273,6 +1375,7 @@ final class BarModel: ObservableObject {
         Messages.shared.send(to: card.from, text: said) { [weak self] status in
             guard let self, let j = self.cards.firstIndex(where: { $0.id == id }) else { return }
             if status == "delivered" {
+                Self.announce("sent")
                 self.cards[j].reply = .sent
                 self.cards[j].draft = ""
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
@@ -1283,7 +1386,9 @@ final class BarModel: ObservableObject {
                     }
                 }
             } else {
-                self.cards[j].reply = .failed(Messages.sendStatusText(status, to: card.from))
+                let note = Messages.sendStatusText(status, to: card.from)
+                Self.announce(note)
+                self.cards[j].reply = .failed(note)
             }
         }
     }
@@ -1292,6 +1397,16 @@ final class BarModel: ObservableObject {
         guard let card = cards.first(where: { $0.id == id }) else { return }
         if allow { Messages.shared.allow(card.from) } else { Messages.shared.block(card.from) }
         cards.removeAll { $0.id == id }
+        // Allow / Block had the keyboard (Full Keyboard Access, VoiceOver) and is gone: the line takes it back
+        focusField?()
+    }
+
+    /// Tab on an empty line with a message card up moves to the newest card's reply line (native only: the line
+    /// keeps Tab for completion and answer forms, so the keyboard had no way into a card before it went)
+    func tabToCard() -> Bool {
+        guard text.isEmpty, let card = cards.first(where: { !$0.ask && $0.reply != .sent }) else { return false }
+        cardFocusRequest = card.id
+        return true
     }
 
     func dismissCard(_ id: String) {
