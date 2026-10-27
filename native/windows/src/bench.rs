@@ -221,6 +221,7 @@ impl Run {
                 st.insert(name.to_string(), serde_json::json!([v.len(), m, p90]));
             }
             out["stages"] = serde_json::Value::Object(st);
+            out["stageRows"] = serde_json::json!(self.stages);
         }
         if self.spec.answers {
             out["answers"] = self

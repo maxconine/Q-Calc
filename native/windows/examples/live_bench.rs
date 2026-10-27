@@ -80,6 +80,15 @@ fn main() {
             }
         }
     }
+    if std::env::var_os("LIVE_BENCH_EACH").is_some() {
+        // each prefix's median over the timed passes
+        let per = live.len() / 3;
+        for i in 0..per.min(120) {
+            let mut v = vec![live[i], live[i + per], live[i + 2 * per]];
+            print!("{:.0} ", pct(&mut v, 50.0));
+        }
+        println!();
+    }
     for (name, v) in [("context clone", &mut ctx), ("chains", &mut chains), ("live", &mut live), ("evaluate_sheet", &mut sheet)] {
         let n = v.len();
         println!(
