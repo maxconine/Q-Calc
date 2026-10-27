@@ -474,10 +474,60 @@ fn options(r: &mut Rng) -> EvaluateOptions {
     o
 }
 
+/// FUZZ_TRACE set: each step of a case goes to stderr before it runs, to find which one crashed.
+fn trace(step: &str) {
+    if std::env::var_os("FUZZ_TRACE").is_some() {
+        eprintln!("trace {step}");
+    }
+}
+
+/// x ranges the graph panel can reach by panning and zooming, and some it shouldn't.
+const DOMAINS: &[(f64, f64)] = &[
+    (-10.0, 10.0),
+    (-1e-12, 1e-12),
+    (1e15, 1e15 + 1.0),
+    (-1e300, 1e300),
+    (5.0, 5.0),
+    (10.0, -10.0),
+    (0.0, 5e-324),
+    (-1e-300, 1e-300),
+    (1e300, f64::MAX),
+    (f64::NAN, 1.0),
+    (f64::NEG_INFINITY, f64::INFINITY),
+    (-720.0, 720.0),
+];
+
+fn graph_options(r: &mut Rng) -> graph::GraphOptions {
+    let mut go = graph::GraphOptions::default();
+    if r.chance(60) {
+        go.domain = Some(*r.pick(DOMAINS));
+    }
+    if r.chance(30) {
+        go.sample_count = Some(*r.pick(&[0.0, 1.0, 2.0, 3.0, 50.0, 500.0, 2000.0, -5.0, f64::NAN]));
+    }
+    if r.chance(30) {
+        go.aspect = Some(*r.pick(&[0.0, 0.5, 1.0, 1e-9, 1e9, -1.0, f64::NAN]));
+    }
+    if r.chance(20) {
+        go.angle_mode = Some(qcalc_core::types::AngleMode::Deg);
+    }
+    go
+}
+
 /// The entry points a case may hit; returns the name of the one it ran.
 fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
     let o = options(r);
-    match r.below(12) {
+    // FUZZ_ENTRY=line|sheet|live|graph|sample|messaging runs only that entry point
+    static ENTRY: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
+    let only = *ENTRY.get_or_init(|| {
+        let e = std::env::var("FUZZ_ENTRY").ok()?;
+        ["line", "sheet", "live", "graph", "sample", "messaging"]
+            .iter()
+            .position(|n| *n == e)
+            .map(|i| [0, 5, 6, 9, 10, 11][i])
+    });
+    let pick = r.below(12);
+    match only.unwrap_or(pick) {
         0..=4 => {
             std::hint::black_box(evaluate_sheet(&[input.to_string()], &o));
             "line"
@@ -517,11 +567,29 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
             } else {
                 format!("graph {input}")
             };
-            std::hint::black_box(graph::build_graph(&text, &graph::GraphOptions::default()));
+            let go = graph_options(r);
+            trace(&format!("build_graph {text:?} {go:?}"));
+            std::hint::black_box(graph::build_graph(&text, &go));
+            if r.chance(50) {
+                let (lo, hi) = graph::graph_home(&text, &go);
+                let target = *r.pick(&[7.0, 1.0, 0.0, -3.0, 1e9, f64::NAN]);
+                let unit = *r.pick(&[
+                    None,
+                    Some(qcalc_core::types::AngleMode::Deg),
+                    Some(qcalc_core::types::AngleMode::Rad),
+                ]);
+                trace(&format!("graph_ticks {lo} {hi} {unit:?} {target}"));
+                std::hint::black_box(graph::graph_ticks(lo, hi, unit, target));
+                let (a, b) = *r.pick(DOMAINS);
+                trace(&format!("ticks/readouts {a} {b}"));
+                std::hint::black_box(graph::graph_ticks(a, b, unit, target));
+                std::hint::black_box(graph::readout_y(&text, &go, a));
+                std::hint::black_box(graph::readout_z(&text, &go, a, b));
+            }
             "graph"
         }
         10 => {
-            std::hint::black_box(graph::sample_graph(input, &graph::GraphOptions::default()));
+            std::hint::black_box(graph::sample_graph(input, &graph_options(r)));
             "sample"
         }
         _ => {
@@ -648,8 +716,9 @@ fn main() {
                     }
                 };
                 let shown = serde_json::to_string(&input).unwrap();
-                std::fs::write(&current, &shown).ok();
                 let case_seed = r.next();
+                // the case seed first, then the input: what `replay` takes
+                std::fs::write(&current, format!("{case_seed} {shown}")).ok();
                 *now_input.lock().unwrap() = format!("{case_seed} {shown}");
                 started.store(epoch.elapsed().as_millis() as u64, Ordering::SeqCst);
                 busy.store(true, Ordering::SeqCst);

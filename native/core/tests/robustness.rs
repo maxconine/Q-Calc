@@ -93,3 +93,26 @@ fn long_blank_lines_stay_quick_live() {
         assert_eq!(live_display("2++3"), "5");
     });
 }
+
+#[test]
+fn graph_options_from_an_odd_panel_stay_bounded() {
+    use qcalc_core::graph::{GraphOptions, build_graph, sample_graph};
+    on_engine_stack(|| {
+        // a contour's grid has a row per column times the aspect: 1e9 (or a panel of no width) asked for 116 TB
+        for aspect in [1e9, f64::INFINITY, 0.0, -1.0, f64::NAN] {
+            let o = GraphOptions {
+                aspect: Some(aspect),
+                ..Default::default()
+            };
+            assert!(build_graph("graph x^2 + y^2 = 1", &o).is_some(), "{aspect}");
+        }
+        // an endless sample count was an endless loop; a NaN one still samples nothing, as in the TS
+        let count = |n: f64| GraphOptions {
+            sample_count: Some(n),
+            ..Default::default()
+        };
+        assert_eq!(sample_graph("x", &count(f64::INFINITY)).len(), 100_000);
+        assert_eq!(sample_graph("x", &count(f64::NAN)).len(), 0);
+        assert_eq!(sample_graph("x", &count(161.0)).len(), 161);
+    });
+}
