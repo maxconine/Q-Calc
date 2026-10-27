@@ -70,18 +70,53 @@ extension BarModel {
         }
     }
 
+    /// while someone's being messaged (their thread is open, or the line names who: `message max2`,
+    /// `send file to max2`, files waiting for a name), clicking another app doesn't hide the bar, so files can be
+    /// dragged in from Finder (native only); esc, ⌘W and the shortcut still do
+    var holdsOpen: Bool {
+        if case .thread = messagesPanel { return true }
+        if !MessageFiles.shared.pendingDrop.isEmpty { return true }
+        return dropTarget(count: 1) != nil
+    }
+
+    /// the thread's 📎: the picker, then every file picked goes to `name`, the bar back on their thread
+    func attachFiles(to name: String) {
+        pickFile(multiple: true) { [weak self] urls in
+            guard let self else { return }
+            self.onShow?("file picker")
+            guard !urls.isEmpty else { return }
+            self.openThread(name)
+            self.dropFiles(urls, to: name)
+        }
+    }
+
+    /// files dropped on the menu bar icon: the bar opens and asks who they're for (or sends them to whoever's
+    /// thread is open)
+    func droppedOnIcon(_ urls: [URL]) {
+        if case let .thread(name) = messagesPanel {
+            dropFiles(urls, to: name)
+        } else {
+            text = ""
+            dropFiles(urls, to: nil)
+        }
+    }
+
     /// the open panel, over the bar
     func pickFile(_ done: @escaping (URL?) -> Void) {
+        pickFile(multiple: false) { done($0.first) }
+    }
+
+    func pickFile(multiple: Bool, _ done: @escaping ([URL]) -> Void) {
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
+        panel.allowsMultipleSelection = multiple
         panel.resolvesAliases = true
         panel.prompt = "Send"
         panel.message = "Pick a file to send (up to 1 GB). It’s encrypted before it leaves this Mac."
         NSApp.activate(ignoringOtherApps: true)
         panel.begin { response in
-            done(response == .OK ? panel.url : nil)
+            done(response == .OK ? panel.urls : [])
         }
     }
 
@@ -172,6 +207,16 @@ extension BarModel {
         if case let .thread(who) = messagesPanel { return dropFiles(urls, to: who) }
         guard dropTarget(count: urls.count) != nil else { return false }
         return dropFiles(urls, to: nil)
+    }
+
+    /// ⌘V of text in a thread: it waits on the reply line as the clipboard (a chip), and ↵ sends it as a clip
+    /// rather than pasting it into the reply (native only)
+    func pasteClip() -> Bool {
+        guard case .thread = messagesPanel, let text = NSPasteboard.general.string(forType: .string),
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+        threadClip = text
+        if case .failed = threadReply { threadReply = .idle }
+        return true
     }
 
     /// file urls from a SwiftUI drop, all of them, in the order they were dragged

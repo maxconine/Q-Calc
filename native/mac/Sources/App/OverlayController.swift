@@ -370,7 +370,7 @@ final class OverlayController: NSObject {
     }
 
     private func lostFocus() {
-        guard wantVisible, panel?.isVisible == true, !gameOpen else { return }
+        guard wantVisible, panel?.isVisible == true, !gameOpen, !model.holdsOpen else { return }
         let since = uptime() - shownAt
         if OverlayHealth.focusLossHides(sinceShow: since) {
             hide(because: "lost focus")
@@ -576,12 +576,12 @@ final class OverlayController: NSObject {
     private func installClickAwayMonitors() {
         guard clickAwayMonitor == nil else { return }
         clickAwayMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard self?.panel?.isVisible == true, self?.gameOpen == false else { return }
+            guard self?.panel?.isVisible == true, self?.gameOpen == false, self?.model.holdsOpen == false else { return }
             self?.hide(because: "click in another app")
         }
         clickAwayLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window !== panel,
-                  !(event.window is PeriodicPanel), !self.gameOpen else { return event }
+                  !(event.window is PeriodicPanel), !self.gameOpen, !self.model.holdsOpen else { return event }
             self.hide(because: "click in another window")
             return event
         }
@@ -605,9 +605,10 @@ final class OverlayController: NSObject {
                 self.periodic.putFormulaIn()
                 return nil
             }
-            // ⌘V with files copied sends them, in a thread or on a line that names someone; otherwise it pastes
+            // ⌘V with files copied sends them, in a thread or on a line that names someone; text in a thread waits as the
+            // clipboard chip; otherwise it pastes
             if event.modifierFlags.intersection([.command, .option, .control, .shift]) == [.command],
-               event.keyCode == UInt16(kVK_ANSI_V), !composing, self.model.pasteFiles() {
+               event.keyCode == UInt16(kVK_ANSI_V), !composing, self.model.pasteFiles() || self.model.pasteClip() {
                 return nil
             }
             // ⌘W closes the front reference sheet first (sheets never take the keys while the bar is up), else

@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandlerInstalled = false
     private var statusItem: NSStatusItem?
+    private var statusDrop: StatusDrop?
     private var settingsWindow: SettingsWindowController?
     private var settingsObserver: NSObjectProtocol?
 
@@ -269,6 +270,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.image = statusBarImage()
             button.imageScaling = .scaleProportionallyDown
             button.toolTip = "Q Calc"
+            // files dropped on the Q open the bar, which asks who they're for
+            statusDrop = StatusDrop(button) { [weak self] urls in
+                guard let self else { return }
+                self.overlay?.show(from: "files on the icon")
+                DispatchQueue.main.async { self.overlay?.model.droppedOnIcon(urls) }
+            }
         }
         let menu = NSMenu()
         menu.delegate = self

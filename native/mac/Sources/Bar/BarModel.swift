@@ -111,6 +111,8 @@ final class BarModel: ObservableObject {
     /// the selected part of the line's own answer (inputSelected)
     @Published var selectionAnswer: String?
     @Published var threadDraft = ""
+    /// ⌘V in a thread: the clipboard, sent as a clip with ↵ (shown as a chip on the reply line, not pasted in)
+    @Published var threadClip: String?
     @Published var threadReply = BannerCard.Reply.idle {
         didSet {
             guard threadReply != oldValue else { return }
@@ -1195,6 +1197,10 @@ final class BarModel: ObservableObject {
         if replyFocused != nil {
             replyFocused = nil
             focusField?()
+            return true
+        }
+        if threadClip != nil {
+            threadClip = nil
             return true
         }
         if closeMessages() { return true }

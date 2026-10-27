@@ -459,12 +459,17 @@ final class MessageFiles: NSObject, ObservableObject {
             if let offer = event["file"] as? [String: Any], let id = offer["id"] as? String, !from.isEmpty { call("/file/\(id)", method: "DELETE") { _, _ in } }
             return
         }
-        // only sealed shares are taken (a plain clip or offer from an older copy is ignored), each id once
+        // only sealed shares are opened (a plain clip or offer from an older copy says it couldn't be), each id once
         let kind = event["kind"] as? String ?? ""
         let fn = kind == "clip" ? "cleanSealedClip" : kind == "file" ? "cleanSealedOffer" : ""
-        guard !fn.isEmpty, let share = logic?.call("lib/messaging", fn, [event[kind] ?? NSNull()]) as? [String: Any],
-              let id = share["id"] as? String, let epk = share["epk"] as? String, let sealed = share["sealed"] as? String,
-              !seenIds.contains(id) else { return }
+        guard !fn.isEmpty else { return }
+        guard let share = logic?.call("lib/messaging", fn, [event[kind] ?? NSNull()]) as? [String: Any],
+              let id = share["id"] as? String, let epk = share["epk"] as? String, let sealed = share["sealed"] as? String else {
+            OverlayLog.note("share in: \(kind) from \(from), not sealed")
+            return unopened(kind, from: from)
+        }
+        guard !seenIds.contains(id) else { return }
+        OverlayLog.note("share in: \(kind) from \(from)")
         openShare(kind: kind, from: from, id: id, epk: epk, sealed: sealed, event: event) { [weak self] plain in
             guard let self, self.seenIds.insert(id).inserted else { return }
             if kind == "clip" {
@@ -481,7 +486,12 @@ final class MessageFiles: NSObject, ObservableObject {
     private func openShare(kind: String, from: String, id: String, epk: String, sealed: String, event: [String: Any],
                            then: @escaping (Data) -> Void) {
         let keys = ShareKeys.shared
-        let turnDown = { [weak self] in if kind == "file" { self?.call("/file/\(id)", method: "DELETE") { _, _ in } } }
+        // never dropped unseen: their thread says it came and couldn't be opened, so they can be asked again
+        let turnDown = { [weak self] (why: String) in
+            OverlayLog.note("share in: \(kind) from \(from) not opened (\(why))")
+            if kind == "file" { self?.call("/file/\(id)", method: "DELETE") { _, _ in } }
+            self?.unopened(kind, from: from)
+        }
         let holdForKey = { [weak self] in
             guard let self else { return }
             if !self.heldForKey.contains(where: { ($0.event[kind] as? [String: Any])?["id"] as? String == id }) {
@@ -498,20 +508,36 @@ final class MessageFiles: NSObject, ObservableObject {
                    let plain = try? ShareCrypt.open(sealed, epk: epk, me: me, from: theirs, context: ctx) {
                     return then(plain)
                 }
-                keys.recheck(from) { changed in if changed { holdForKey() } else { turnDown() } }
+                // most likely sealed for a key this Mac had before: the relay gets this one again for next time
+                keys.republish()
+                keys.recheck(from) { changed in if changed { holdForKey() } else { turnDown("didn't open") } }
             case .changed:
                 holdForKey()
-            case .none, .unknown:
-                turnDown()
+            case .none:
+                turnDown("no key")
+            case .unknown:
+                turnDown("unknown name")
             case .offline:
                 // their key couldn't be fetched the first time: tried again a little later, a few times
                 let tries = (event["retries"] as? Int) ?? 0
-                guard tries < 3 else { return }
+                guard tries < 3 else { return turnDown("relay unreachable") }
                 var again = event
                 again["retries"] = tries + 1
                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(10 << tries)) { [weak self] in self?.heard(again) }
             }
         }
+    }
+
+    /// a clip or file from `from` that came but couldn't be opened: a line in their thread (and a card), so it's
+    /// never lost without a word; someone not allowed yet hears nothing, as their share would have waited anyway
+    private func unopened(_ kind: String, from: String) {
+        guard Messages.shared.accepted.contains(from) else { return }
+        let note = kind == "file"
+            ? "sent a file that couldn’t be opened on this Mac · ask them to send it again"
+            : "shared their clipboard, but it couldn’t be opened on this Mac · ask them to send it again"
+        MessageHistory.shared.add(with: from, mine: false, text: note)
+        queued.append(BannerCard(id: "f\(UUID().uuidString)", from: from, text: note, ask: false))
+        NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
     }
 
     /// shares held while `who`'s key had changed, opened now it's trusted

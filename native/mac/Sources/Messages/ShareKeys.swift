@@ -102,6 +102,13 @@ final class ShareKeys: ObservableObject {
         }
     }
 
+    /// publishes again even if this launch already did: something sealed for this Mac didn't open, so the relay
+    /// may hold a key it no longer has
+    func republish() {
+        published = ""
+        publish()
+    }
+
     /// What's known of a contact's key.
     enum Found {
         case key(ShareCrypt.PublicKey, String)

@@ -400,6 +400,11 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         case "inbox":
             link = .ready
             retryWait = 3
+            #if QCALC_NATIVE
+            // each time the inbox connects (after a launch that was offline, a wake, a new network), so the relay
+            // never keeps a key this Mac no longer has: shares sealed for that one could never be opened
+            ShareKeys.shared.publish()
+            #endif
         case "closed":
             // another key holds the name now; trying again won't change that
             if event["reason"] as? String == "taken" || event["reason"] as? String == "released" {

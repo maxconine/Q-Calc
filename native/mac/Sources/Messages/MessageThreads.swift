@@ -65,6 +65,7 @@ extension BarModel {
         if messagesPanel != .thread(name) {
             keepThreadDraft()
             threadDraft = ThreadDrafts.shared.take(name)
+            threadClip = nil
             threadReply = .idle
         }
         messagesPanel = .thread(name)
@@ -95,6 +96,7 @@ extension BarModel {
         keepThreadDraft()
         messagesPanel = nil
         threadDraft = ""
+        threadClip = nil
         threadReply = .idle
         if refocus { focusField?() }
         return true
@@ -132,20 +134,40 @@ extension BarModel {
             (onMessagesSettings ?? onSettings)?()
             return
         }
-        guard !said.isEmpty, threadReply != .sending else { return }
+        guard !said.isEmpty || threadClip != nil, threadReply != .sending else { return }
         threadReply = .sending
+        if let clip = threadClip {
+            // the clipboard goes as a clip, then any words typed with it as a message
+            let files = MessageFiles.shared
+            files.sendClip(clip, to: name) { [weak self] note in
+                guard let self, self.messagesPanel == .thread(name) else { return }
+                guard note == files.shareStatus("delivered", to: name, what: "clip") else {
+                    self.threadReply = .failed(note)
+                    return
+                }
+                self.threadClip = nil
+                if said.isEmpty { return self.replySent() }
+                self.threadReply = .idle
+                self.sendThreadReply()
+            }
+            return
+        }
         m.send(to: name, text: said) { [weak self] status in
             guard let self, self.messagesPanel == .thread(name) else { return }
             if status == "delivered" {
                 m.noteSent(name)
                 self.threadDraft = ""
-                self.threadReply = .sent
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-                    if self?.threadReply == .sent { self?.threadReply = .idle }
-                }
+                self.replySent()
             } else {
                 self.threadReply = .failed(Messages.sendStatusText(status, to: name))
             }
+        }
+    }
+
+    private func replySent() {
+        threadReply = .sent
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            if self?.threadReply == .sent { self?.threadReply = .idle }
         }
     }
 }
@@ -414,10 +436,19 @@ private struct ThreadView: View {
 
     private var replyLine: some View {
         HStack(spacing: 8) {
+            Button { model.attachFiles(to: name) } label: {
+                Image(systemName: "paperclip").font(.system(size: Theme.small + 1, weight: .medium))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.qMuted)
+            .help("Send a file to \(name) (or drop one here, or ⌘V a copied one)")
+            .accessibilityLabel("Send a file to \(name)")
+            if let clip = model.threadClip { ClipChip(clip: clip) { model.threadClip = nil } }
             TextField("", text: $model.threadDraft)
                 .textFieldStyle(.plain)
                 .font(.system(size: Theme.small))
-                .mutedPrompt(model.logic.string("lib/messaging", "threadReplyPrompt", [name, !Messages.shared.name.isEmpty])
+                .mutedPrompt(model.threadClip != nil ? "↵ sends your clipboard to \(name)"
+                                 : model.logic.string("lib/messaging", "threadReplyPrompt", [name, !Messages.shared.name.isEmpty])
                                  ?? "Message \(name)", shown: model.threadDraft.isEmpty, size: Theme.small)
                 .foregroundStyle(Color.qInk)
                 .padding(.vertical, 4)
@@ -445,6 +476,39 @@ private struct ThreadView: View {
                 }
             }
         }
+    }
+}
+
+/// The clipboard waiting on the reply line after ⌘V: its first words, × (or esc) takes it off (native only)
+private struct ClipChip: View {
+    let clip: String
+    let remove: () -> Void
+
+    private var preview: String {
+        let flat = clip.split(whereSeparator: \.isNewline).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        return flat.count > 24 ? String(flat.prefix(24)) + "…" : flat
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "doc.on.clipboard").font(.system(size: Theme.caption))
+            Text("clipboard").fontWeight(.medium)
+            Text(preview).foregroundStyle(Color.qMuted).lineLimit(1)
+            Button(action: remove) { Image(systemName: "xmark").font(.system(size: Theme.caption - 1, weight: .semibold)) }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.qMuted)
+                .help("Take the clipboard off (esc)")
+                .accessibilityLabel("Remove clipboard")
+        }
+        .font(.system(size: Theme.small))
+        .foregroundStyle(Color.qInk)
+        .padding(.vertical, 3)
+        .padding(.horizontal, 8)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qAccent.opacity(0.12)))
+        .fixedSize()
+        .help(clip.count > 400 ? String(clip.prefix(400)) + "…" : clip)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Clipboard to send: \(preview)")
     }
 }
 
