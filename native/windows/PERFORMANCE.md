@@ -4,7 +4,111 @@ The native Windows app against the three targets (AGENTS.md, tightened by 50%): 
 under 0.8 ms median, idle memory under 12.5 MB (private working set and private bytes), warm launch to ready under
 75 ms. Modelled on native/PERFORMANCE.md (the Mac's).
 
-## Headline
+## Second pass (win-perf2)
+
+`windows-native` at e77c180 (before) against `win-perf2` (after), with stretch goals of hidden after use under 8 MB
+private working set and 10 MB private bytes, keystroke p90 under 0.8 ms and p99 under 1.5 ms, a showing after a
+hide under 5 ms, and warm launch under 30 ms. Release builds, `scripts/perf.ps1` interleaved, the median of the
+runs (3 with the golden inputs, 2 without), on the same shared 24-core machine.
+
+| | before | after |
+|---|---|---|
+| keystroke to answer painted, standard inputs: median / p90 / p99 | 0.51 / 1.16 / 1.54-1.61 ms | **0.47 / 0.62 / 1.28-1.38 ms** |
+| same, the 269 golden inputs | 0.54 / 1.23 / 1.69 ms | **0.47 / 0.56 / 1.73 ms** |
+| the engine alone (`live_bench`, `Engine::live`): median / p90 / p99 | 195 / 462 / 695 µs | **113 / 204 / 448 µs** |
+| idle, never shown: private working set / private bytes | 4.1 / 6.3 MB | 4.2 / 6.4 MB |
+| idle, hidden 10 s after a standard session | 13.8 / 15.5 MB | **6.4 / 8.1 MB** |
+| same session after the 269 golden inputs too | 19.2 / 21.0 MB | **7.5 / 9.2 MB** |
+| the e2e suite's memory check (smoke.ps1 Z1, 0.8 s after a hide) | 11.6 MB | **4.7 MB** |
+| a showing after a hide (Op::Show to the uncloak; perf.ps1's new `showMed`) | 10.3-10.5 ms | 9.0-9.4 ms |
+| warm launch to the first frame | 43-46 ms | **34 ms** (smoke.ps1 Z3, to ready in the tray: 31 ms) |
+
+Met: memory after use (both counters, both sessions), keystroke p90 and the standard inputs' p99. Not met: the
+golden inputs' p99 (1.73 ms: the first-time paths of a few heavy inputs), a showing under 5 ms, launch under 30 ms.
+
+### What changed
+
+1. **The compiled regexes go at a hide** (19.2 -> 10.9 MB after the golden session). A new crate, `native/lazy`
+   (`qcalc-lazy`), replaces the core's `LazyLock<Regex>` statics (`jsre::Lazy`, ~480 statics, and the regex tables):
+   every thread reads a value built once and kept, as with `LazyLock`, except up to four threads that call
+   `jsre::own_compiled_here` (the engine, UI and Typst threads). Each of those builds copies of its own, listed on
+   that thread, which it alone frees with `release_compiled` when it holds none: the engine thread as a job of its
+   own when the bar hides, the UI thread in `after_hide`, the Typst thread as it ends. A copy remembers the
+   owner's epoch it was built in, so `release` never touches a static, and a static may move or drop. No other
+   thread ever sees an owner's copies, so freeing them can't pull a regex out from under one. The core keeps
+   `unsafe_code = "forbid"`: the one `unsafe` primitive is in the new crate. The Mac and the tests never claim, so
+   they get `LazyLock`'s behaviour. The next showing's warm-up compiles the keystroke path's again (~35-50 ms on the
+   engine thread, in steps that each run only when no keystroke waits).
+2. **The freed regexes' blocks come from slabs of their own** (heap.rs; 10.9 -> 9.4 MB): while an owner builds a
+   copy (`jsre::building_compiled`), blocks up to 32 KB come from a 64 MB reservation cut into 64 KB slabs of one
+   size class each, committed a page at a time; a regex's search caches are made at compile time and grow there.
+   Freed, the slabs empty out whole and are decommitted, instead of leaving holes in the process heap's pages.
+3. **The UI and Typst threads' regexes go too** (8.5 -> 6.4 MB standard session): 48 and 28 regexes the bar's own
+   rules and the typeset source compile on those threads, kept for good before.
+4. **fancy-regex's seek** (`RegexBuilder::seek`) on the owners' regexes (and everywhere for the Mac and tests): a
+   pattern that needs the backtracking VM (each JS `\b` becomes look-arounds, so most do) first finds where a match
+   can start with a regular over-approximation, instead of running the VM at every position. A sampling profiler
+   (below) put 46% of `evaluate_sheet` in `preprocess_ascii`'s rewrite chains and a third of all samples in
+   fancy-regex's VM. With seek the engine is ~2.5x quicker (keystroke p90 1.17 -> 0.57 ms). Checked: every one of
+   the 1,078 patterns the core's tests compile gave the same captures with and without seek over ~39,500 haystacks
+   (the golden inputs and their prefixes, variants, 40,000 random token strings); the golden fixtures pass. Seek's
+   copies are ~60% bigger and ~80% slower to compile, which only the owners' (freed) copies pay.
+5. **The bar's WARP device is made on a thread of its own** (warp.rs) at launch and as a hidden bar starts to
+   show, while the UI thread makes its windows and lays out; the first paint takes it. Launch 46 -> 34 ms (the
+   first device in a process is ~11 ms), a showing ~1 ms. WARP's DLL also stays loaded across hides (pinned), which
+   was another ~1 ms of a showing for no measurable memory.
+
+Where a showing's ~9 ms goes now (instrumented, not kept): `prepare_show` ~0.9 ms, SetWindowPos ~8 ms of which the
+paint inside it is ~4-5 (device ~0-3 ms if the prefetch hasn't finished, swap chain 0.6, D2D device context, draw)
+and the rest the window manager's, the second paint 0.6 ms. Under 5 ms needs work in the paint path (one paint, the
+D2D context kept) and a look at what SetWindowPos waits for.
+
+### Iteration log (second pass)
+
+Interleaved A/B against the build before, 1-3 runs each.
+
+| change | keystroke median / p90 / p99 | hidden after use (pws / priv) | other |
+|---|---|---|---|
+| owned regex copies freed at a hide | = | golden session 19.3 / 21.1 -> 10.9 / 12.6 | |
+| their blocks in a private heap (HeapCreate, fixed size) | = | 11.1 / 12.8 -> 9.35 / 11.1 | re-warm 36 -> 48 ms (no LFH) |
+| slabs of our own instead | = / p99 2.5 -> 2.1 | = | re-warm 48 -> 31 ms; release 0.8 ms |
+| ... committed a page at a time | = | = | never shown back to 6.4 MB private (whole slabs: 7.5) |
+| warm-up in steps behind keystrokes, more of a keystroke's paths | p99 2.1 -> 1.56 | = | |
+| seek on every regex | 0.50 / 1.17 / 1.55 -> 0.47 / 0.57 / 1.31 | 9.7 / 11.4 -> 10.5 / 12.3 | |
+| ... on the owners' only | = | 10.4 / 12.1 -> 9.8 / 11.5 | |
+| WARP DLL pinned | = | +0.05 | show 10.2 -> 9.3 ms |
+| UI and Typst threads own and free theirs | = | standard session 8.5 / 10.2 -> 6.4 / 8.1 | show +0.4 ms |
+| device made ahead on a thread | = | = | launch 46 -> 35 ms, show 9.7 -> 8.6 ms |
+| regexes freed at once at a hide, not 5 s after | first key after a showing see below | Z1 15.4 -> 4.7 | |
+
+Tried and dropped:
+- **A 5 s delay before the engine frees its regexes**, so a quick reopen keeps them: smoke.ps1's Z1 reads 0.8 s
+  after a hide, and with seek's bigger copies it read 15.4 MB. They go at once now. The cost: a key typed within
+  ~50 ms of a showing after a hide (before the warm-up's steps ran) compiles what it needs, up to ~30 ms (Z2's p99
+  shows it, since the bench types the instant the bar shows); perf.ps1 types 0.5 s after a showing and its p99 is
+  unaffected. A person's first key comes 150+ ms after the hotkey.
+- **Every engine-thread block in the private heap**, not just the regexes': 0.35 / 0.7 MB less, but the keystroke
+  median 0.54 -> 0.73 ms (the fixed-size heap has no low-fragmentation front end).
+- **HeapCreate'd private heap** for the regexes: worked, but compiling in it was ~30% slower; the slabs replaced it.
+- **Freeing the units table at a hide** (0.85 MB): units are compared by `Arc` identity, and values the engine
+  keeps across a hide hold the old table's units, so answers could change. Kept.
+- **`(?-u:\b)` for JS `\b`** (a native ASCII word boundary, no VM): fancy-regex rejects changing Unicode mode, and
+  under the `i` flag the current translation also counts ſ and K (Kelvin) as word characters, so it wouldn't be
+  byte-identical. Seek got the speed instead.
+- **Pre-made device kept at a hide** (show 6.5 ms): ~2.3 MB, which is what the hide gives back.
+
+### Tools added
+
+- `examples/live_bench.rs` with `LIVE_BENCH_EACH=1` lists the 30 slowest prefixes (engine and `evaluate_sheet`).
+- `examples/mem_attrib.rs` runs on an owner thread, takes `GOLDEN=<inputs.json>` and `RELEASE=1` (what stays after
+  the hide's release).
+- `scripts/perf.ps1` times a showing after a hide (`-Shows`, `showMed`); the pipe's `shows` now records in every
+  build (the last 32).
+- The sampling profiler (not in the repo): a thread that suspends the evaluating thread every 200 µs, walks its
+  stack with `RtlLookupFunctionEntry` / `RtlVirtualUnwind` into a preallocated buffer (allocating while the other
+  thread is suspended can deadlock on the heap lock) and symbolises with dbghelp; inclusive and self percentages.
+
+## Headline (first pass)
 
 `windows-native` at 8e73660 (before) against `win-perf` (after). Release builds, 4K at 150%, on a 24-core machine
 shared with ~7 agents building at the same time. Three interleaved runs each (before, after, before, after, ...) of
@@ -148,6 +252,21 @@ Tried and dropped:
   first showing went 17 -> 37 ms; the warm paint stays.
 
 ## What's left
+
+After the second pass (the first pass's notes on memory and the keystroke p90 are done above):
+
+- **A showing after a hide, ~9 ms** (stretch 5): the paint inside SetWindowPos (swap chain, D2D device context, a
+  full draw) and the window manager's share of SetWindowPos; then a second paint from UpdateWindow.
+- **Warm launch, 34 ms** (stretch 30): ~10 ms pass before `main` (loading a 47 MB image and its imports), then
+  the factories, the windows and the first frame.
+- **The golden inputs' p99, 1.7 ms**: a few inputs' first-time paths (regexes or tables not in the warm-up).
+- **What stays while hidden, ~6.4 MB**: the units table (~0.85 MB, kept: see above), Typst's process-wide leftovers
+  (~0.85 MB after its thread ends), the process heap's other blocks and holes, stacks, DLL data.
+- **One frame is ~140 µs** on WARP, single-threaded now (+25 µs for 1.2 MB of threads).
+- typst's `web_parity` test fails in a Windows checkout with CRLF line endings (macros.typ), before and after.
+
+## What was left after the first pass
+
 
 - **Memory after use, 13.7 / 15.5 MB** (target 12.5). The engine's thread holds ~6.8 MB of Rust heap (5.4-5.8 MB of
   it the core's ~300 compiled `fancy_regex` statics, ~19 KB each: forward and reverse NFAs, fancy-regex programs,
