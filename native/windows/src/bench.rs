@@ -192,7 +192,6 @@ pub mod pipe {
         PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE, PIPE_WAIT,
     };
     use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
-    use windows::core::w;
 
     use crate::qlog;
 
@@ -208,10 +207,15 @@ pub mod pipe {
             .name("qcalc-bench-pipe".into())
             .spawn(move || {
                 loop {
+                    // QCALC_INSTANCE (dev) gives a second copy its own pipe, `qcalc-bench-<tag>`
+                    let name = match std::env::var("QCALC_INSTANCE") {
+                        Ok(tag) if !tag.is_empty() => format!(r"\\.\pipe\qcalc-bench-{tag}"),
+                        _ => r"\\.\pipe\qcalc-bench".to_string(),
+                    };
                     // SAFETY: a fresh pipe instance each loop, closed below
                     let pipe = unsafe {
                         CreateNamedPipeW(
-                            w!(r"\\.\pipe\qcalc-bench"),
+                            &windows::core::HSTRING::from(name),
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE
                                 | PIPE_READMODE_BYTE

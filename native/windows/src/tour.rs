@@ -1,8 +1,11 @@
 //! Onboarding and the walkthrough, as Tour.swift runs them over the core's `onboarding` and `tour` rules: the
-//! open's hint and the examples that rotate in the empty bar (each with its answer), a hint after an answer has sat
-//! still 1.5 s, a hint after a save, the tutorial's line under the bar (`n/m`, skip), `tutorial` / `skip`, and the
-//! "you can also" extras on later opens. The state is settings.json's `onboarding` (store.rs), shared with the
-//! Tauri app's page, so progress carries over.
+//! first-run flow (the tour enrolled on the first opens, its step's example faint in the empty bar with its answer
+//! beside it), the open's hint, a hint after an answer has sat still 1.5 s, a hint after a save, the tutorial's line
+//! under the bar (`n/m`, skip), `tutorial` / `skip`, and the "you can also" extras on later opens. The state is
+//! settings.json's `onboarding` (store.rs), shared with the Tauri app's page, so progress carries over.
+//!
+//! The rotating examples of the first opens, and counting the opens, are the input line's (line.rs on the
+//! `win-input` branch): `will_show` runs after it has counted this one.
 //!
 //! The rules' words name the Mac's keys (⌘C, ⌃D, ⌘,); `winify` puts the Windows chords in, following the user's
 //! keybinds.
@@ -33,7 +36,6 @@ pub struct Example {
 pub struct Tour {
     /// `tutorial` replays the steps from scratch: the bits done in this replay
     pub replay: Option<u32>,
-    pub rotation: Option<u32>,
     pub line: Option<Line>,
     pub example: Option<Example>,
     ghost_example: Option<String>,
@@ -166,8 +168,6 @@ mod ui {
     /// `tutorial`.
     pub fn start(app: &mut App) {
         app.model.tour.replay = Some(0);
-        app.model.tour.rotation = None;
-        later::cancel("examples");
         app.model.hint = None;
         refresh(&mut app.model, &app.engine);
     }
@@ -183,16 +183,13 @@ mod ui {
         refresh(&mut app.model, &app.engine);
     }
 
-    /// Each showing (`beginShowing`): an open counted, the tour enrolled, the open's hint or an extra.
+    /// Each showing (`beginShowing`), after the open was counted: the tour enrolled, the open's hint or an extra.
     pub fn will_show(app: &mut App) {
         app.model.tour.hotkey = hotkey_title(app);
         app.model.tour.o = state(app);
-        let mut o = ob::record_open(&state(app));
-        o = core_tour::enrol_tour(&o, true);
+        let o = core_tour::enrol_tour(&state(app), true);
         save(app, &o);
         let o = state(app);
-        let rotate = !touring(app) && ob::examples_active(&o);
-        app.model.tour.rotation = rotate.then_some(0);
         // the hotkey's notice (app.notice) already has the line when the shortcut couldn't be had
         if app.notice.is_none() {
             let facts = HintFacts {
@@ -220,38 +217,16 @@ mod ui {
             app.model.tour.hint_ghost = Some((text, extra.expr, extra.plain));
         }
         refresh(&mut app.model, &app.engine);
-        rotate_later(app);
     }
 
     pub fn will_hide(m: &mut BarModel) {
-        m.tour.rotation = None;
-        later::cancel("examples");
+        m.tour.example = None;
         later::cancel("pause-hint");
     }
 
-    fn rotate_later(app: &App) {
-        if app.model.tour.rotation.is_none() {
-            return;
-        }
-        later::after("examples", ob::EXAMPLE_MS as u32, |app| {
-            let Some(tick) = app.model.tour.rotation else {
-                return;
-            };
-            if !app.bar.visible {
-                return;
-            }
-            app.model.tour.rotation = Some(tick + 1);
-            refresh_example(&mut app.model, &app.engine);
-            rotate_later(app);
-        });
-    }
-
-    /// The line changed (model.rs `text_changed`): the rotation stops at the first keystroke; the tour's line
-    /// and example follow the text. Cheap: no store, and the engine only when an example needs its answer.
+    /// The line changed (model.rs `text_changed`): the tour's line and example follow the text. Cheap: no store,
+    /// and the engine only when a step's example needs its answer.
     pub fn text_changed(m: &mut BarModel, engine: &EngineThread) {
-        if !m.field.text().is_empty() && m.tour.rotation.take().is_some() {
-            later::cancel("examples");
-        }
         later::cancel("pause-hint");
         refresh(m, engine);
     }
@@ -306,13 +281,6 @@ mod ui {
             (-1 - at, g.clone(), false)
         } else if let Some(p) = &m.tour.ghost_plain {
             (-1 - at, p.clone(), true)
-        } else if let Some(tick) = m.tour.rotation {
-            let list = ob::example_list(None);
-            let Some(item) = ob::rotation_item(ob::Rotation { on: true, tick }, &list) else {
-                m.tour.example = None;
-                return;
-            };
-            (i64::from(tick), item.expr, item.plain)
         } else {
             if m.tour.example.take().is_some() {
                 m.touch();

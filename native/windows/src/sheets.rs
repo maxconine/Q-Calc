@@ -550,6 +550,7 @@ fn create(key: &str, section: usize, at: Spot) -> windows::core::Result<()> {
             (x, y, fw, fh)
         }
     };
+    qlog!("sheet {key}: frame {x:.0},{y:.0} {fw:.0}x{fh:.0} (bar {:?})", at.bar);
     let key_box = Box::new(key.to_string());
     // SAFETY: our class; the key's box is handed to WM_CREATE through lpCreateParams and taken back there
     let hwnd = unsafe {
