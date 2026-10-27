@@ -79,7 +79,10 @@ extension Color {
     static var qLine: Color { Theme.increaseContrast ? qLineContrast : qLineBase }
     /// --fill-hover / --fill-selected: ink at 5% and 8%
     static let qFillHover = Color(nsColor: Theme.ink).opacity(0.05)
-    static let qFillSelected = Color(nsColor: Theme.ink).opacity(0.08)
+    // Increase Contrast: the picked row and the pressed fills read at 16% rather than 8%
+    private static let qFillSelectedBase = Color(nsColor: Theme.ink).opacity(0.08)
+    private static let qFillSelectedContrast = Color(nsColor: Theme.ink).opacity(0.16)
+    static var qFillSelected: Color { Theme.increaseContrast ? qFillSelectedContrast : qFillSelectedBase }
 }
 
 extension View {

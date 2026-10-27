@@ -26,7 +26,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Click away / focus loss hides; Esc closes layers first | ✅ | Esc order: reply field, cards, sheets, selection, then hide |
 | Health checks and recovery | ✅ | OverlayHealth verdicts; seen recovering while the display slept |
 | Solid card, 90% opacity, 12 pt corners, system shadow | ✅ | all pairs |
-| **Native-only addition:** Increase Contrast, Reduce Transparency | ✅ | the page has neither. With Increase Contrast `--muted` (3.3:1 on the light tape, under WCAG AA) becomes `#636366` / `#aeaeb2` (5.5:1 / 6.3:1) and the hairlines go from 8% to 30%; with either setting the card and tape are opaque instead of 90%. Switching it redraws the bar. The native games take the same muted and hairlines (`GameColors`). Pictured light and dark through `drive.sh contrast:on` (a dev-only stand-in, since the system setting isn't changed here) |
+| **Native-only addition:** Increase Contrast, Reduce Transparency | ✅ | the page has neither. With Increase Contrast `--muted` (3.3:1 on the light tape, under WCAG AA) becomes `#636366` / `#aeaeb2` (5.5:1 / 6.3:1) and the hairlines go from 8% to 30% and the picked row's fill from 8% to 16%; with either setting the card and tape are opaque instead of 90%. Switching it redraws the bar. The native games take the same muted and hairlines (`GameColors`). Pictured light and dark through `drive.sh contrast:on` (a dev-only stand-in, since the system setting isn't changed here) |
 
 ## 2. The input line
 
