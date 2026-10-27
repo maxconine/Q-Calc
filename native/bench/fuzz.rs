@@ -476,8 +476,10 @@ fn options(r: &mut Rng) -> EvaluateOptions {
 
 /// FUZZ_TRACE set: each step of a case goes to stderr before it runs, to find which one crashed.
 fn trace(step: &str) {
+    static T0: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
     if std::env::var_os("FUZZ_TRACE").is_some() {
-        eprintln!("trace {step}");
+        let ms = T0.get_or_init(Instant::now).elapsed().as_millis();
+        eprintln!("trace {ms} ms: {step}");
     }
 }
 
@@ -626,7 +628,9 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
                 ans: r.chance(50),
                 contacts: vec!["bob".into()],
             };
+            trace("completion");
             std::hint::black_box(qcalc_core::app::completion::completion_for(input, &names));
+            trace("unit spans");
             std::hint::black_box(qcalc_core::app::unit_spans::unit_spans(
                 input,
                 &["x".into()],
@@ -640,7 +644,9 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
                     .display
                     .is_empty()
             };
+            trace("missing unit");
             std::hint::black_box(qcalc_core::app::missing_unit::missing_unit(input, &ok));
+            trace("files");
             let doc = random_json(r, input, 0);
             let text = doc.to_string();
             let mut n = 0;
@@ -660,6 +666,7 @@ fn run_case(r: &mut Rng, input: &str, corpus: &[String]) -> &'static str {
             let _ = std::hint::black_box(qcalc_core::phrases::rates::parse_json(&text));
             let _ = std::hint::black_box(qcalc_core::phrases::rates::parse_json(input));
             std::hint::black_box(qcalc_core::phrases::rates::parse_xml(input));
+            trace("done");
             "text"
         }
     }
