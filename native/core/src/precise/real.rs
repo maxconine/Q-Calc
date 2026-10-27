@@ -945,6 +945,14 @@ impl Ctx {
                 return if neg { one.neg() } else { one };
             }
         }
+        // x^y is exp(y ln x); when |y ln x| is far below the last digit kept, that rounds to 1 (to the nearest),
+        // and working it out took time and memory in proportion to y's exponent: `2^1023e-123456789` ran for
+        // seconds and hundreds of MB
+        if matches!(self.rounding, Rounding::HalfUp | Rounding::HalfEven)
+            && negligible_exponent(x, y, self.precision)
+        {
+            return Real::one();
+        }
         let base = x.abs().repr().cloned().unwrap_or_else(Rep::zero);
         let b = y.repr().cloned().unwrap_or_else(Rep::zero);
         let r = self.run(|w, c| w.powf(&base, &b, Some(c)));
@@ -1216,6 +1224,19 @@ impl Ctx {
     pub fn e(&self) -> Real {
         self.exp(&Real::one())
     }
+}
+
+/// Whether |y ln x| is below 10^-(precision + 2) for finite, nonzero x and y, from their decimal magnitudes.
+fn negligible_exponent(x: &Real, y: &Real, precision: usize) -> bool {
+    let digits = |s: &IBig| s.unsigned_abs().to_string().len() as i64;
+    let (Some((sx, ex)), Some((sy, ey))) = (x.parts(), y.parts()) else {
+        return false;
+    };
+    // |y| < 10^(digits + exponent); |log10 x| ≤ |ex| + digits, so |ln x| < 2.31 (|ex| + digits) + 1
+    let y_mag = digits(&sy) + ey as i64;
+    let ln_x = 2.31 * ((ex as i64).unsigned_abs() as f64 + digits(&sx) as f64) + 1.0;
+    let ln_mag = ln_x.log10().ceil() as i64;
+    y_mag + ln_mag < -(precision as i64) - 2
 }
 
 #[cfg(test)]

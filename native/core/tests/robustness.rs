@@ -158,3 +158,11 @@ fn deep_trees_simplify_without_copies() {
         assert_eq!(show(&line), "");
     });
 }
+
+#[test]
+fn powers_with_negligible_exponents_are_quick() {
+    // the precise twin worked out exp(y ln x) in time and memory proportional to y's exponent
+    assert_eq!(show("-2^1023e-123456789"), "-1");
+    assert_eq!(show("2^1e-30"), "1");
+    assert_eq!(show("2^0.5"), "1.41421356237");
+}
