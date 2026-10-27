@@ -140,7 +140,8 @@ final class MessageFiles: NSObject, ObservableObject {
     private static func status(_ data: Data?, _ response: URLResponse?, _ error: Error?) -> (String, [String: Any]) {
         if let error = error as? URLError {
             let off: Set<URLError.Code> = [.notConnectedToInternet, .networkConnectionLost, .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed, .timedOut]
-            return (off.contains(error.code) ? "offline" : "network", [:])
+            // not the relay's `offline`, which is about the recipient
+            return (off.contains(error.code) ? "no-network" : "network", [:])
         }
         let o = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
         if let s = o["status"] as? String { return (s, o) }
@@ -313,7 +314,7 @@ final class MessageFiles: NSObject, ObservableObject {
                             return self.part(id, n: n + 1, of: parts, skip: skip, partBytes: partBytes, total: total, tries: 0)
                         }
                         // a part cut short goes again, a few times, a little later each time
-                        if (status == "failed" || status == "offline" || status == "network"), tries + 1 < Self.partTries {
+                        if Self.retryable.contains(status), tries + 1 < Self.partTries {
                             DispatchQueue.main.asyncAfter(deadline: .now() + Double(2 << tries)) {
                                 self.part(id, n: n, of: parts, skip: skip, partBytes: partBytes, total: total, tries: tries + 1)
                             }
@@ -355,10 +356,25 @@ final class MessageFiles: NSObject, ObservableObject {
         observers.removeValue(forKey: id)?.forEach { $0.invalidate() }
     }
 
+    /// what can go again: a part or a request cut short, or the network gone a while
+    private static let retryable: Set<String> = ["failed", "no-network", "network"]
+
     private func failed(_ id: String, _ status: String) {
         guard let t = transfers[id] else { return }
         update(id) { $0.state = "failed"; $0.percent = nil; $0.error = self.errorText(status, who: t.who) }
-        if t.mine { dropOutgoing(id) }
+        // an upload that can pick up where it stopped keeps its sealed file for Retry
+        if t.mine, !Self.retryable.contains(status) { dropOutgoing(id) }
+    }
+
+    /// whether Retry can pick a failed upload of yours up again
+    func canRetry(_ id: String) -> Bool {
+        transfers[id]?.mine == true && transfers[id]?.state == "failed" && outgoing[id] != nil
+    }
+
+    /// Retry: the relay says which parts it has (no grant needed once started), and the rest go
+    func retry(_ id: String) {
+        guard canRetry(id) else { return }
+        upload(id, grant: "", partBytes: 50 * 1024 * 1024)
     }
 
     // MARK: - what arrives
@@ -453,8 +469,9 @@ final class MessageFiles: NSObject, ObservableObject {
 
     /// Save: ask the relay for it (the sender uploads it), then download it once it's ready
     func save(_ id: String) {
-        guard let t = transfers[id], !t.mine, Messages.shared.accepted.contains(t.who) else { return }
-        guard let inc = incoming[id] else { return update(id) { $0.state = "lost" } }
+        // only an accepted name's, and only one that isn't on its way or saved already
+        guard let t = transfers[id], !t.mine, Messages.shared.accepted.contains(t.who), t.state == "received" || t.state == "failed" else { return }
+        guard let inc = incoming[id] else { return update(id) { $0.state = "lost"; $0.error = nil } }
         if inc.expires > 0, inc.expires < Date().timeIntervalSince1970 * 1000 {
             return update(id) { $0.state = "failed"; $0.error = self.errorText("expired", who: t.who) }
         }

@@ -521,7 +521,7 @@ pub fn file_state_text(state: &str, who: &str, percent: Option<u32>) -> String {
         "preparing" => "encrypting…".into(),
         "offered" => format!("waiting for {who} to accept"),
         "uploading" => format!("sending{pct}"),
-        "sent" => format!("sent · {who} can save it for a day"),
+        "sent" => format!("sent to {who}"),
         "received" => "".into(),
         "request" => format!("allow {who} to save it"),
         "accepting" => "asking for it…".into(),
@@ -544,7 +544,7 @@ pub fn file_error_text(status: &str, who: &str) -> String {
         "too-big" | "over" => "that file’s over 1 GB".into(),
         "expired" => "that file expired · ask for it again".into(),
         "gone" => "that file’s gone".into(),
-        "offline" => "you’re offline · try again when you’re back".into(),
+        "no-network" | "offline" => "you’re offline · try again when you’re back".into(),
         "sender-offline" => format!("{who} isn’t online to send it · try again later"),
         "recipient-full" => format!("{who} has too many files waiting · try later"),
         "sender-full" => "too many of your files are waiting · try later".into(),
@@ -1040,6 +1040,11 @@ mod share_tests {
             file_error_text("offline", "ana"),
             "you’re offline · try again when you’re back"
         );
+        assert_eq!(
+            file_error_text("no-network", "ana"),
+            "you’re offline · try again when you’re back"
+        );
+        assert_eq!(file_state_text("sent", "max", None), "sent to max");
         assert_eq!(file_error_text("over", "ana"), "that file’s over 1 GB");
         assert_eq!(
             file_error_text("sender-offline", "ana"),

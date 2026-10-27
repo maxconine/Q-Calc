@@ -121,7 +121,10 @@ struct FileBlock: View {
 
     @ViewBuilder private func actions(_ t: MessageFiles.Transfer) -> some View {
         if mine {
-            if t.state == "offered" || t.state == "uploading" {
+            if files.canRetry(file.id) {
+                ShareButton(title: "Retry") { files.retry(file.id) }.help("Send the rest")
+            }
+            if t.state == "offered" || t.state == "uploading" || files.canRetry(file.id) {
                 ShareButton(title: "Take Back") { files.cancel(file.id) }.help("Stop sending it")
             }
         } else {
