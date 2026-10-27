@@ -310,6 +310,17 @@ impl Gfx {
         if let Some(d) = self.flip.borrow().as_ref() {
             return Ok(d.clone());
         }
+        // made ahead on a thread of its own, at launch or as the bar started to show (warp.rs)
+        if let Some((d3d, factory)) = crate::warp::take() {
+            // SAFETY: live objects the prefetch thread made and let go of; the cast and the call are on them
+            let dev = unsafe {
+                let dxgi: IDXGIDevice = d3d.cast()?;
+                let d2d = self.d2d.cast::<ID2D1Factory1>()?.CreateDevice(&dxgi)?;
+                FlipDevice { d3d, factory, d2d }
+            };
+            *self.flip.borrow_mut() = Some(dev.clone());
+            return Ok(dev);
+        }
         let mut d3d = None;
         // SAFETY: plain device creation into a live out pointer; the casts and lookups are on live objects
         let dev = unsafe {
@@ -335,13 +346,14 @@ impl Gfx {
         };
         *self.flip.borrow_mut() = Some(dev.clone());
         // WARP's DLL stays loaded across hides (warp.rs)
-        crate::warp::pin();
+        crate::warp::held();
         Ok(dev)
     }
 
     /// The device was lost: the next flip surface makes a new one.
     pub fn drop_flip_device(&self) {
         *self.flip.borrow_mut() = None;
+        crate::warp::dropped();
     }
 
     /// A layout of one line of `text` (no wrapping), vertically centred in `h`. `max_w` 0 means unbounded.

@@ -179,6 +179,8 @@ pub fn run() -> i32 {
         forward(&argv);
         return 0;
     }
+    // the bar's device, made meanwhile on a thread of its own (warp.rs)
+    crate::warp::prefetch();
     // the manifest already says per-monitor v2; this covers a build without it
     // SAFETY: plain call
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
@@ -477,6 +479,8 @@ fn run_op(op: Op) {
     match op {
         Op::Show => {
             let _show_ms = crate::perf::ShowTimer(Instant::now());
+            // a hidden bar's device, made while the showing lays out (warp.rs)
+            crate::warp::prefetch();
             let Some(Some((hwnd, x, y, w, h))) = with_app(|a| a.prepare_show()) else {
                 return;
             };
