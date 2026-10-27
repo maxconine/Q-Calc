@@ -65,6 +65,10 @@ pub struct BarLayout {
     pub typst: Option<Rect>,
     /// the d/dt chips under a time derivative (line.rs)
     pub letters: Option<Rect>,
+    /// the tutorial's line, in the hint's place (tour.rs)
+    pub tour: Option<Rect>,
+    /// the message cards' panel (messaging.rs)
+    pub cards: Option<Rect>,
 }
 
 /// A monitor: its store key (`\\.\DISPLAY1`, as Tauri named it), work area (physical px) and scale.
@@ -230,19 +234,31 @@ impl Bar {
     /// Lays the bar out for the model as it is.
     pub fn layout(gfx: &Gfx, model: &BarModel, width: f32, now: i64) -> BarLayout {
         let visible = model.visible(now);
-        let help = crate::cheats::height(model);
-        let tape = if help > 0.0 {
+        // the games list stands where the tape would (commands.rs), as the cheat sheet does (cheats.rs)
+        let games = crate::commands::games_height(model);
+        let help = if games > 0.0 { 0.0 } else { crate::cheats::height(model) };
+        let tape = if help > 0.0 || games > 0.0 {
             history::TapeLayout::default()
         } else {
             history::layout(model, visible)
         };
         let tape_rows = tape.drawn.clone();
-        let anchor = if help > 0.0 { help } else { tape.height };
+        let anchor = if games > 0.0 {
+            games
+        } else if help > 0.0 {
+            help
+        } else {
+            tape.height
+        };
         let composer = Rect::new(0.0, anchor, width, size::COMPOSER);
         let inner = width - 2.0 * size::GUTTER;
         let answer_text = model.answer_text();
-        let mut live = answer::measure(gfx, model, inner * 0.67 - 12.0);
-        let aw = live.width.max(0.0);
+        let max_w = inner * 0.67 - 12.0;
+        let mut live = answer::measure(gfx, model, max_w);
+        // a command's words (or the tour's example answer) take the slot instead of the answer
+        let aw = crate::commands::slot_width(gfx, model)
+            .map_or(live.width, |w| w.min(max_w))
+            .max(0.0);
         let field_w = if aw > 0.0 { inner - aw - 12.0 } else { inner };
         let field = Rect::new(
             size::GUTTER,
@@ -270,6 +286,11 @@ impl Bar {
             height += 18.0;
             r
         });
+        let tour = (hint.is_none() && crate::tour::line_shown(model)).then(|| {
+            let r = Rect::new(size::GUTTER, height - 12.0, inner, crate::tour::LINE_H);
+            height += crate::tour::LINE_H;
+            r
+        });
         let th = crate::typst_row::height(model, width);
         let typst = (th > 0.0).then(|| {
             let r = Rect::new(size::GUTTER, height, inner, th - crate::typst_row::PAD_BOTTOM);
@@ -284,6 +305,12 @@ impl Bar {
         let graph = model.graph.as_ref().map(|g| {
             let r = Rect::new(0.0, height, width, crate::graph::height(gfx, g, width));
             height += r.h;
+            r
+        });
+        let cards = (!model.cards.list.is_empty()).then(|| {
+            let h = crate::messaging::height(gfx, model, width);
+            let r = Rect::new(0.0, height, width, h);
+            height += h;
             r
         });
         BarLayout {
@@ -303,6 +330,8 @@ impl Bar {
             help,
             typst,
             letters,
+            tour,
+            cards,
         }
     }
 
@@ -310,7 +339,9 @@ impl Bar {
     pub fn paint(&mut self, gfx: &Gfx, theme: &Theme, model: &BarModel) -> Result<()> {
         let layout = self.layout.clone();
         let window_focused = self.focused || !self.visible;
-        let focused = window_focused && !crate::systems::focused(model);
+        let focused = window_focused
+            && !crate::systems::focused(model)
+            && !crate::messaging::reply_has_keys(model);
         let crt = crate::effects::crt_theme(model);
         let (theme, scale) = (crt.as_ref().unwrap_or(theme), self.scale());
         let field_view = &mut self.field_view;
@@ -318,11 +349,14 @@ impl Bar {
             c.clear(theme.bg);
             history::paint(c, model, &layout.tape);
             crate::cheats::paint(c, model, layout.help);
+            crate::commands::paint_games(c, model);
             crate::line::paint_field(c, field_view, model, layout.field, layout.composer, focused);
             if let Some(r) = layout.letters {
                 crate::line::paint_letters(c, model, r);
             }
-            answer::paint(c, &layout.live, layout.answer);
+            if !crate::commands::paint_slot(c, model, layout.answer) {
+                answer::paint(c, &layout.live, layout.answer);
+            }
             if let (Some(r), Some(hint)) = (layout.hint, model.hint.as_ref())
                 && let Some(l) = c.gfx.layout_in(
                     hint,
@@ -334,6 +368,12 @@ impl Bar {
             {
                 c.text(&l, r.x, r.y, theme.muted);
             }
+            if let Some(r) = layout.tour {
+                crate::tour::paint_line(c, model, r);
+            }
+            if let Some(r) = layout.cards {
+                crate::messaging::paint(c, model, r);
+            }
             if let Some(r) = layout.typst {
                 crate::typst_row::paint(c, model, r);
             }
@@ -343,6 +383,7 @@ impl Bar {
             if let (Some(r), Some(g)) = (layout.graph, &model.graph) {
                 crate::graph::paint(c, g, r);
             }
+            crate::edge::paint(c, model, layout.composer);
             crate::effects::paint_bar(c, model, &layout, scale);
         })
     }

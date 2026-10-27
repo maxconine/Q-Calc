@@ -90,6 +90,17 @@ pub struct BarModel {
     pub eggs: crate::effects::Eggs,
     /// the input line's decorations, completion, draft, examples, chips (line.rs)
     pub line: crate::line::LineState,
+    /// a word command being typed and what the answer slot says for it (commands.rs)
+    pub command: Option<crate::commands::Shown>,
+    /// the games list's picked and hovered rows (commands.rs)
+    pub games_pick: Option<usize>,
+    pub games_hover: Option<usize>,
+    /// message cards under the bar (messaging.rs)
+    pub cards: crate::messaging::Cards,
+    /// the walkthrough, examples and hints (tour.rs)
+    pub tour: crate::tour::Tour,
+    /// the edge tools' hover and tips (edge.rs)
+    pub edge: crate::edge::EdgeState,
 }
 
 impl BarModel {
@@ -116,6 +127,12 @@ impl BarModel {
             typeset: Default::default(),
             eggs: crate::effects::Eggs::default(),
             line: crate::line::LineState::default(),
+            command: None,
+            games_pick: None,
+            games_hover: None,
+            cards: crate::messaging::Cards::default(),
+            tour: crate::tour::Tour::default(),
+            edge: crate::edge::EdgeState::default(),
         }
     }
 
@@ -188,11 +205,15 @@ impl BarModel {
         self.changed = true;
         crate::line::text_changed(self);
         self.evaluate_live(engine);
+        crate::tour::text_changed(self, engine);
     }
 
     pub fn evaluate_live(&mut self, engine: &EngineThread) {
         crate::systems::follow(self, engine);
         crate::graph::follow(self, engine);
+        if crate::commands::live(self, engine) {
+            return;
+        }
         let typed = self.field.text().to_string();
         if typed.trim().is_empty() {
             engine.cancel(Lane::Live);
@@ -237,6 +258,7 @@ impl BarModel {
         self.live = Some(answer);
         self.live_for = typed.to_string();
         self.changed = true;
+        crate::tour::live_landed(self);
     }
 
     /// The answer as the slot shows it ("" for none).
@@ -316,10 +338,12 @@ impl BarModel {
                     return;
                 }
                 if saved {
+                    let committed = crate::tour::committed(m, &typed);
                     m.field.set_text(&result.input);
                     m.field.break_run();
                     m.hint = None;
                     app.text_changed();
+                    crate::tour::after_commit(app, &typed, committed);
                 } else {
                     m.hint = Some(result.hint.unwrap_or_else(|| {
                         "nothing to save yet · finish the line, or esc to close".into()
