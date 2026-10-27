@@ -1278,6 +1278,10 @@ impl App {
                     "hint": self.model.hint, "rows": rows, "visible": self.bar.visible, "focused": self.bar.focused,
                     "frame": [r.left, r.top, r.right, r.bottom], "hotkey": self.hotkey.active,
                     "graph": crate::graph::debug(&self.model), "systems": crate::systems::debug(&self.model),
+                    "slot": self.model.command.as_ref().map(|c| c.message.clone()), "sheets": crate::sheets::open_keys(),
+                    "game": crate::games::is_open(), "settingsOpen": settings_window::is_open(),
+                    "cheats": crate::cheats::height(&self.model) > 0.0, "gamesList": crate::commands::games_shown(&self.model),
+                    "tour": self.model.tour.line.as_ref().map(|l| l.text.clone()),
                 }));
             }
             "mem" => {

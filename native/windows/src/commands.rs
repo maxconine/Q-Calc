@@ -278,11 +278,13 @@ mod ui {
         true
     }
 
-    /// Opens a game in the games window (games/mod.rs); one the native app doesn't have yet says so.
+    /// Opens a game in the games window (games/mod.rs) and puts the bar away, as a game's name and ↵ does there;
+    /// one the native app doesn't have yet says so.
     fn play(app: &mut App, id: &'static str) {
         clear_line(app, false);
         if games::list().iter().any(|(kind, _)| *kind == id) {
             games::open(id);
+            app.ops.push(crate::app::Op::Hide);
         } else {
             crate::qlog!("games: {id} isn't in the native app yet");
             app.model.hint = Some(format!("{id} isn't in the native app yet"));

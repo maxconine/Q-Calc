@@ -1019,7 +1019,7 @@ fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
         &status(),
         Control::Text {
             value: name.clone(),
-            placeholder: "2–20 letters, digits, - or _".into(),
+            placeholder: "your name".into(),
         },
     )];
     if !name.is_empty() {
