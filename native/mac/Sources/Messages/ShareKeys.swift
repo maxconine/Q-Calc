@@ -65,12 +65,12 @@ final class ShareKeys: ObservableObject {
 
     private static func read() -> Data? {
         if let file = keyFile {
-            if let data = try? Data(contentsOf: file), data.count == 32 { return data }
-            // an earlier dev build's Keychain key, moved over only if it opens without asking (else a new key)
-            guard let old = readKeychain(prompt: false), writeFile(old, to: file) else { return nil }
-            return old
+            // an earlier dev build's Keychain key is left where it is: reading it is the very prompt this avoids
+            // (the login keychain asks even when told not to), so a dev build without the file makes a new key
+            guard let data = try? Data(contentsOf: file), data.count == 32 else { return nil }
+            return data
         }
-        return readKeychain(prompt: true)
+        return readKeychain()
     }
 
     private static func writeFile(_ raw: Data, to file: URL) -> Bool {
@@ -80,9 +80,8 @@ final class ShareKeys: ObservableObject {
         return (try? Data(contentsOf: file)) == raw
     }
 
-    private static func readKeychain(prompt: Bool) -> Data? {
+    private static func readKeychain() -> Data? {
         var q = query()
-        if !prompt { q[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?
@@ -97,7 +96,7 @@ final class ShareKeys: ObservableObject {
         q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         q[kSecAttrLabel as String] = "Q Calc sharing key"
         let status = SecItemAdd(q as CFDictionary, nil)
-        return status == errSecSuccess || (status == errSecDuplicateItem && readKeychain(prompt: true) == raw)
+        return status == errSecSuccess || (status == errSecDuplicateItem && readKeychain() == raw)
     }
 
     // MARK: - the relay
