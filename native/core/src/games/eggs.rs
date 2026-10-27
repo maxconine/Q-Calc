@@ -236,7 +236,7 @@ impl LineEgg {
     pub fn matches(self, text: &str, display: &str, number: Option<f64>, pi_day: bool) -> bool {
         match self {
             LineEgg::Void => divides_by_zero(text, display),
-            LineEgg::Euler => is_euler(text, number),
+            LineEgg::Euler => is_euler(text, display, number),
             LineEgg::PiDigits => pi_day && is_just_pi(text) && number == Some(std::f64::consts::PI),
             LineEgg::BarrelRoll => is_barrel_roll(text),
         }
@@ -310,15 +310,18 @@ pub fn divides_by_zero(text: &str, display: &str) -> bool {
 }
 
 /// Euler's identity: `e^(iπ)+1`, `1+e^(iπ)`, `e^(iπ)+1=0`, `e^(iπ)=-1` and `e^(iπ)` itself, with `πi` for `iπ`.
-/// The bare forms count only when the answer is what the identity says (so a misread line never fires); the
-/// equation forms need no answer.
-pub fn is_euler(text: &str, number: Option<f64>) -> bool {
+/// The bare forms count when the answer is what the identity says, or when there is none (the engine leaves
+/// `e^(i π)` blank today), never on another number or an error; the equation forms need no answer.
+pub fn is_euler(text: &str, display: &str, number: Option<f64>) -> bool {
     let s = squeeze(text);
     let s = s
         .strip_prefix("exp")
         .map_or(s.clone(), |r| format!("e^{r}"));
     const POWERS: [&str; 4] = ["e^(ipi)", "e^(pii)", "e^(i(pi))", "e^((pi)i)"];
-    let close = |want: f64| number.is_some_and(|n| (n - want).abs() < 1e-9);
+    let close = |want: f64| match number {
+        Some(n) => (n - want).abs() < 1e-9,
+        None => display.trim().is_empty(),
+    };
     POWERS.iter().any(|p| {
         let sum = [format!("{p}+1"), format!("1+{p}")];
         if sum.contains(&s) {
@@ -480,23 +483,24 @@ mod tests {
             "e^{i pi}+1",
             "exp(i pi)+1",
         ] {
-            assert!(is_euler(t, Some(0.0)), "{t}");
+            assert!(is_euler(t, "0", Some(0.0)), "{t}");
         }
-        assert!(is_euler("e^(iπ)", Some(-1.0)));
-        assert!(is_euler("e^(i pi)", Some(-1.0 + 1e-16)));
+        assert!(is_euler("e^(iπ)", "-1", Some(-1.0)));
+        assert!(is_euler("e^(i π)+1", "", None));
+        assert!(is_euler("e^(i pi)", "-1", Some(-1.0 + 1e-16)));
         for t in [
             "e^(iπ)+1=0",
             "e^(i pi) = -1",
             "-1 = e^(πi)",
             "0 = 1 + e^(i*pi)",
         ] {
-            assert!(is_euler(t, None), "{t}");
+            assert!(is_euler(t, "", None), "{t}");
         }
         // a bare form whose answer isn't the identity's (a misread line) never fires
-        assert!(!is_euler("e^(iπ)+1", None));
-        assert!(!is_euler("e^(iπ)", Some(0.0)));
+        assert!(!is_euler("exp(iπ)+1", "undefined", None));
+        assert!(!is_euler("e^(iπ)", "0", Some(0.0)));
         for t in ["e^(i pi)+2", "e^(pi)+1", "e^(2 i pi)+1", "e^(iπ)+1=1"] {
-            assert!(!is_euler(t, Some(0.0)), "{t}");
+            assert!(!is_euler(t, "0", Some(0.0)), "{t}");
         }
     }
 

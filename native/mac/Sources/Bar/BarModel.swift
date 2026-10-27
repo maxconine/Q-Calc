@@ -135,7 +135,19 @@ final class BarModel: ObservableObject {
     private var copiedTimer: Timer?
     private var cardTimer: Timer?
     private let effectGate = EggGate()
+    private let lineEggGate = LineEggGate()
+    private let konamiGate = KonamiGate()
     private var effectSettle: Timer?
+    /// the line a black hole, the π digits or the barrel roll is playing for; typing on ends it
+    private var effectLine: String?
+    /// the black hole has the answer: the slot hides it until it comes back (the answer itself never changes)
+    @Published var answerVeiled = false
+    /// the Konami code's green-phosphor CRT look, for this run only (never saved)
+    @Published private(set) var crt = false
+    /// where the answer slot sits, in the window's content (top-left origin), for the effects that use it
+    var answerFrame: CGRect = .zero
+    /// an answer-bound effect (black hole, π digits, barrel roll) should end now: the line changed under it
+    var onEffectInterrupt: (() -> Void)?
     private var bag: Set<AnyCancellable> = []
     private static let draftKey = "qcalc.draft"
 
@@ -322,7 +334,8 @@ final class BarModel: ObservableObject {
     // the squiggle shows once typing has paused 700 ms on a blank line (SQUIGGLE_IDLE_MS), never for commands
     private func squiggleLater(_ typed: String) {
         squiggleTimer?.invalidate()
-        guard live.isBlank, !typed.trimmingCharacters(in: .whitespaces).isEmpty, BarCommand.of(typed, sheets: sheets) == nil else { return }
+        guard live.isBlank, !typed.trimmingCharacters(in: .whitespaces).isEmpty, BarCommand.of(typed, sheets: sheets) == nil,
+              !isBarrelRoll(text: typed) else { return }
         squiggleTimer = Timer.scheduledTimer(withTimeInterval: 0.7, repeats: false) { [weak self] _ in
             guard let self, self.text == typed, self.live.isBlank else { return }
             let rows = self.rows, view = HistoryView.from(self.settings), options = self.options, thread = self.engine
@@ -433,12 +446,62 @@ final class BarModel: ObservableObject {
 
     // the 420 / 67 / 69 effects: the answer rests on the number for a moment (so 4200 typed passes through 420
     // without firing), then the core's gate fires it once, and again only after the answer was something else
+    // The native-only line eggs (divide by zero, Euler's identity, Pi Day, the barrel roll) settle the same way,
+    // read from the line and the answer shown; one of them wins over a number egg.
     private func checkEffects(_ answer: LiveAnswer) {
         let n = answer.unit == nil ? answer.number : nil
+        let typed = text, display = answer.display, number = answer.number
+        if let line = effectLine, line != typed {
+            effectLine = nil
+            onEffectInterrupt?()
+        }
         effectSettle?.invalidate()
         effectSettle = Timer.scheduledTimer(withTimeInterval: eggSettleMs() / 1000, repeats: false) { [weak self] _ in
-            guard let self, let egg = self.effectGate.settle(n: n) else { return }
-            self.onEffect?(egg == .smoke ? "smoke" : egg == .arms ? "arms" : "fold")
+            guard let self else { return }
+            let egg = self.effectGate.settle(n: n)
+            if let line = self.lineEggGate.settle(text: typed, display: display, number: number, piDay: Self.piDay) {
+                self.effectLine = line == .euler ? nil : typed
+                self.onEffect?(Self.effectName(line))
+            } else if let egg {
+                self.onEffect?(egg == .smoke ? "smoke" : egg == .arms ? "arms" : "fold")
+            }
+        }
+    }
+
+    static func effectName(_ line: LineEggKind) -> String {
+        switch line {
+        case .void: return "void"
+        case .euler: return "euler"
+        case .piDigits: return "pidigits"
+        case .barrelRoll: return "roll"
+        }
+    }
+
+    /// March 14 by the local calendar (dev builds: QCALC_PI_DAY=1 makes any day Pi Day, to try it)
+    static var piDay: Bool {
+        if AppInfo.isDev, ProcessInfo.processInfo.environment["QCALC_PI_DAY"] == "1" { return true }
+        let d = Calendar.current.dateComponents([.month, .day], from: Date())
+        return isPiDay(month: UInt32(d.month ?? 0), day: UInt32(d.day ?? 0))
+    }
+
+    /// One key down in the bar (the window sees it before the field, which still gets it): ↑↑↓↓←→←→BA turns the
+    /// CRT look on, and again off.
+    func konamiKey(_ event: NSEvent) {
+        guard !event.isARepeat else { return }
+        let key: KonamiKey
+        let mods = event.modifierFlags.intersection([.command, .control, .option])
+        switch event.keyCode {
+        case 126: key = .up
+        case 125: key = .down
+        case 123: key = .left
+        case 124: key = .right
+        default:
+            let c = event.charactersIgnoringModifiers?.lowercased()
+            key = !mods.isEmpty ? .other : c == "b" ? .b : c == "a" ? .a : .other
+        }
+        if konamiGate.push(key: key) {
+            crt.toggle()
+            OverlayLog.note("konami: crt \(crt ? "on" : "off")")
         }
     }
 
@@ -485,6 +548,13 @@ final class BarModel: ObservableObject {
             return
         }
         if case let .count(n) = SysCommand.of(text), enterSystem(n) { return }
+        // `do a barrel roll` saves nothing and says nothing: ↵ rolls now if the line hasn't settled yet, and clears it
+        if isBarrelRoll(text: text) {
+            effectSettle?.fire()
+            effectLine = nil
+            clearLine()
+            return
+        }
         if let command = BarCommand.of(text, sheets: sheets) {
             run(command)
             return

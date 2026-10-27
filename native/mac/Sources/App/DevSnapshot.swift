@@ -9,6 +9,25 @@ enum DevSnapshot {
     /// so each picture sits on the window's own background colour.
     static func writeAll(to prefix: String) {
         for window in NSApp.windows where window.isVisible && window.className != "NSStatusBarWindow" {
+            // an effect over the bar (EggOverlay) is Core Animation alone: its layers as they are on screen now
+            if window.title == EggOverlay.title, let layer = window.contentView?.layer {
+                let scale = window.backingScaleFactor, size = layer.bounds.size
+                guard let ctx = CGContext(data: nil, width: Int(size.width * scale), height: Int(size.height * scale), bitsPerComponent: 8,
+                                          bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { continue }
+                ctx.scaleBy(x: scale, y: scale)
+                // a grey ground, so the light and dark effects both show
+                ctx.setFillColor(CGColor(gray: 0.5, alpha: 1))
+                ctx.fill(CGRect(origin: .zero, size: size))
+                // the layers are top-down (flipped); the picture's rows are too
+                ctx.translateBy(x: 0, y: size.height)
+                ctx.scaleBy(x: 1, y: -1)
+                (layer.presentation() ?? layer).render(in: ctx)
+                if let image = ctx.makeImage(), let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: "\(prefix)-effect.png"))
+                }
+                continue
+            }
             // a titled panel's frame view draws over its content in a cache, so those take the content view
             let frameView = window is NSPanel && !(window is OverlayPanel) && window.styleMask.contains(.titled) && !window.title.contains("Periodic")
                 ? window.contentView : (window.contentView?.superview ?? window.contentView)

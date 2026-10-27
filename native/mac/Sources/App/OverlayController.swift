@@ -18,8 +18,15 @@ final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onResignKey: (() -> Void)?
     var ignoreResignKey = false
+    /// every key down, before the field takes it (the Konami code watches these; it never eats one)
+    var onKeyDown: ((NSEvent) -> Void)?
 
     override var canBecomeKey: Bool { true }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown { onKeyDown?(event) }
+        super.sendEvent(event)
+    }
     override var canBecomeMain: Bool { false }
 
     override func cancelOperation(_ sender: Any?) { onEscape?() }
@@ -102,8 +109,14 @@ final class OverlayController: NSObject {
         model.onGame = { [weak self] kind in self?.play(kind) }
         model.onEffect = { [weak self] kind in
             guard let self, let panel = self.panel, panel.isVisible else { return }
-            self.effects.play(kind, over: panel)
+            let m = self.model
+            self.effects.play(kind, over: panel, answer: (m.answerFrame, m.pretty(m.shownAnswer)))
         }
+        model.onEffectInterrupt = { [weak self] in self?.effects.interrupt() }
+        effects.onVeil = { [weak self] veiled in self?.model.answerVeiled = veiled }
+        model.$crt.dropFirst().removeDuplicates().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.applyAppearance() }
+        }.store(in: &bag)
         model.onTutorial = { [weak self] in self?.showTutorial() }
         games.onClose = { [weak self] in
             self?.gameOpen = false
@@ -145,6 +158,7 @@ final class OverlayController: NSObject {
         panel.title = "Q Calc"
         panel.onEscape = { [weak self] in self?.escape() }
         panel.onResignKey = { [weak self] in self?.lostFocus() }
+        panel.onKeyDown = { [weak self] event in self?.model.konamiKey(event) }
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -209,7 +223,9 @@ final class OverlayController: NSObject {
     }
 
     private func applyAppearance() {
-        panel?.appearance = AppSettings.shared.nsAppearance
+        // the Konami CRT reads as phosphor on black: it always draws on the dark bar
+        panel?.appearance = model.crt ? NSAppearance(named: .darkAqua) : AppSettings.shared.nsAppearance
+        if let background = panel?.contentView { CRTLook.apply(model.crt, to: background) }
     }
 
     // MARK: - showing and hiding

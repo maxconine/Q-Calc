@@ -2530,6 +2530,285 @@ public func FfiConverterTypeGameClock_lower(_ value: GameClock) -> UInt64 {
 
 
 /**
+ * Watches the bar's keys for ↑↑↓↓←→←→BA.
+ */
+public protocol KonamiGateProtocol: AnyObject, Sendable {
+    
+    /**
+     * one key down; true when it completes the code
+     */
+    func push(key: KonamiKey)  -> Bool
+    
+}
+/**
+ * Watches the bar's keys for ↑↑↓↓←→←→BA.
+ */
+open class KonamiGate: KonamiGateProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_konamigate(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_konamigate_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_konamigate(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * one key down; true when it completes the code
+     */
+open func push(key: KonamiKey) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_konamigate_push(
+            self.uniffiCloneHandle(),
+        FfiConverterTypeKonamiKey_lower(key),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKonamiGate: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = KonamiGate
+
+    public static func lift(_ handle: UInt64) throws -> KonamiGate {
+        return KonamiGate(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: KonamiGate) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KonamiGate {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: KonamiGate, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKonamiGate_lift(_ handle: UInt64) throws -> KonamiGate {
+    return try FfiConverterTypeKonamiGate.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKonamiGate_lower(_ value: KonamiGate) -> UInt64 {
+    return FfiConverterTypeKonamiGate.lower(value)
+}
+
+
+
+
+
+
+/**
+ * The line eggs' gates: each fires once per settled line that sets it off, and again only after one that didn't.
+ */
+public protocol LineEggGateProtocol: AnyObject, Sendable {
+    
+    /**
+     * the line as it settled, the answer the bar shows and its number: the effect to play, if any
+     */
+    func settle(text: String, display: String, number: Double?, piDay: Bool)  -> LineEggKind?
+    
+}
+/**
+ * The line eggs' gates: each fires once per settled line that sets it off, and again only after one that didn't.
+ */
+open class LineEggGate: LineEggGateProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_lineegggate(self.handle, $0) }
+    }
+public convenience init() {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_lineegggate_new(uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_lineegggate(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * the line as it settled, the answer the bar shows and its number: the effect to play, if any
+     */
+open func settle(text: String, display: String, number: Double?, piDay: Bool) -> LineEggKind?  {
+    return try!  FfiConverterOptionTypeLineEggKind.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_lineegggate_settle(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(text),
+        FfiConverterString.lower(display),
+        FfiConverterOptionDouble.lower(number),
+        FfiConverterBool.lower(piDay),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLineEggGate: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = LineEggGate
+
+    public static func lift(_ handle: UInt64) throws -> LineEggGate {
+        return LineEggGate(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: LineEggGate) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LineEggGate {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: LineEggGate, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineEggGate_lift(_ handle: UInt64) throws -> LineEggGate {
+    return try FfiConverterTypeLineEggGate.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineEggGate_lower(_ value: LineEggGate) -> UInt64 {
+    return FfiConverterTypeLineEggGate.lower(value)
+}
+
+
+
+
+
+
+/**
  * The relay's answers about names, kept a while. Times are ms since the epoch.
  */
 public protocol NameCheckProtocol: AnyObject, Sendable {
@@ -11321,6 +11600,199 @@ public func FfiConverterTypeHistoryShow_lower(_ value: HistoryShow) -> RustBuffe
 
 
 
+public enum KonamiKey: Equatable, Hashable {
+    
+    case up
+    case down
+    case left
+    case right
+    case b
+    case a
+    case other
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension KonamiKey: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeKonamiKey: FfiConverterRustBuffer {
+    typealias SwiftType = KonamiKey
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KonamiKey {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .up
+        
+        case 2: return .down
+        
+        case 3: return .left
+        
+        case 4: return .right
+        
+        case 5: return .b
+        
+        case 6: return .a
+        
+        case 7: return .other
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: KonamiKey, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .up:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .down:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .left:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .right:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .b:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .a:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .other:
+            writeInt(&buf, Int32(7))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKonamiKey_lift(_ buf: RustBuffer) throws -> KonamiKey {
+    return try FfiConverterTypeKonamiKey.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeKonamiKey_lower(_ value: KonamiKey) -> RustBuffer {
+    return FfiConverterTypeKonamiKey.lower(value)
+}
+
+
+
+
+public enum LineEggKind: Equatable, Hashable {
+    
+    /**
+     * `x/0`: a black hole swallows the answer
+     */
+    case void
+    /**
+     * `e^(iπ)+1`: confetti and a note
+     */
+    case euler
+    /**
+     * `pi` on March 14: more digits
+     */
+    case piDigits
+    /**
+     * `do a barrel roll`
+     */
+    case barrelRoll
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension LineEggKind: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLineEggKind: FfiConverterRustBuffer {
+    typealias SwiftType = LineEggKind
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> LineEggKind {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .void
+        
+        case 2: return .euler
+        
+        case 3: return .piDigits
+        
+        case 4: return .barrelRoll
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: LineEggKind, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .void:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .euler:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .piDigits:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .barrelRoll:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineEggKind_lift(_ buf: RustBuffer) throws -> LineEggKind {
+    return try FfiConverterTypeLineEggKind.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLineEggKind_lower(_ value: LineEggKind) -> RustBuffer {
+    return FfiConverterTypeLineEggKind.lower(value)
+}
+
+
+
+
 public enum LobbyEffect: Equatable, Hashable {
     
     case host(locked: Bool
@@ -13635,6 +14107,30 @@ fileprivate struct FfiConverterOptionTypeHistoryKind: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeLineEggKind: FfiConverterRustBuffer {
+    typealias SwiftType = LineEggKind?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeLineEggKind.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeLineEggKind.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeLobbyEffect: FfiConverterRustBuffer {
     typealias SwiftType = LobbyEffect?
 
@@ -15235,6 +15731,50 @@ public func emberSaveKey() -> String  {
     )
 })
 }
+/**
+ * the whole line is `do a barrel roll` (the bar keeps the squiggle off it)
+ */
+public func isBarrelRoll(text: String) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_is_barrel_roll(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * March 14
+ */
+public func isPiDay(month: UInt32, day: UInt32) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_is_pi_day(
+        FfiConverterUInt32.lower(month),
+        FfiConverterUInt32.lower(day),uniffiCallStatus
+    )
+})
+}
+/**
+ * how long a line egg stays up, ms
+ */
+public func lineEggPlayMs(kind: LineEggKind) -> Double  {
+    return try!  FfiConverterDouble.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_line_egg_play_ms(
+        FfiConverterTypeLineEggKind_lower(kind),uniffiCallStatus
+    )
+})
+}
+/**
+ * π to 50 places
+ */
+public func piDigits() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_pi_digits(uniffiCallStatus
+    )
+})
+}
 public func smokePuffs() -> [SmokePuff]  {
     return try!  FfiConverterSequenceTypeSmokePuff.lift(try! rustCall() {
         uniffiCallStatus in
@@ -15727,6 +16267,18 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_func_ember_save_key() != 8851) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_func_is_barrel_roll() != 56324) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_is_pi_day() != 33327) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_line_egg_play_ms() != 14987) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_pi_digits() != 7969) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_func_smoke_puffs() != 23175) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16069,6 +16621,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_embermatch_toggle_mute() != 31229) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_konamigate_push() != 25437) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_lineegggate_settle() != 9820) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_trailsmatch_key() != 28235) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16193,6 +16751,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_embermatch_online() != 14436) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_konamigate_new() != 10829) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_lineegggate_new() != 23698) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_trailsmatch_local() != 3400) {
