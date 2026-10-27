@@ -484,7 +484,9 @@ impl Surface {
 
     /// A surface that presents through a flip-model swap chain on the shared WARP device (render.rs `FlipDevice`)
     /// rather than an `ID2D1HwndRenderTarget`: the same software rasteriser, but a frame is handed to DWM in about
-    /// half the time (no GDI blit; PERFORMANCE.md). For windows without child windows (the bar).
+    /// half the time (no GDI blit; PERFORMANCE.md). For windows without child windows (the bar, settings, the
+    /// sheets). The window target can also go blank for good: once it reports the window occluded it skips every
+    /// present while EndDraw still succeeds, which left the settings window white.
     /// `QCALC_D2D=hwnd` (or `hardware`) keeps the window target.
     pub fn new_flip(hwnd: HWND, dpi: u32) -> Surface {
         let flip = std::env::var("QCALC_D2D").map_or(true, |v| v.is_empty());

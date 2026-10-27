@@ -787,7 +787,7 @@ fn build(key: &str, hwnd: HWND, dpi: u32) -> Option<Sheet> {
     Some(Sheet {
         hwnd,
         key: key.to_string(),
-        surface: Surface::new(hwnd, dpi),
+        surface: Surface::new_flip(hwnd, dpi),
         dpi,
         body,
         hover: None,

@@ -1969,7 +1969,7 @@ fn show_now() {
         set_dark(hwnd, dark);
         let mut win = Box::new(Win {
             hwnd,
-            surface: Surface::new(hwnd, dpi),
+            surface: Surface::new_flip(hwnd, dpi),
             fonts,
             page: Page::General,
             scroll: 0.0,
