@@ -175,7 +175,7 @@ impl BarModel {
 
     /// The line changed (typed, pasted, undone, replaced): drop what belonged to the old text and evaluate.
     pub fn text_changed(&mut self, engine: &EngineThread) {
-        self.hint = None;
+        self.hint = crate::games::hint(self.field.text());
         crate::history::text_changed(self);
         self.answer.text_changed(self.field.text());
         if self.field.text().trim().is_empty() {
@@ -486,6 +486,15 @@ impl BarModel {
                 return Outcome::Handled;
             }
             ENTER => {
+                // a game's command (`pong`, `connect 4`…) opens its window and puts the bar away
+                if self.selected.is_none()
+                    && let Some(kind) = crate::games::command(self.field.text())
+                {
+                    crate::games::open(kind);
+                    self.field.reset("");
+                    self.text_changed(engine);
+                    return Outcome::Hide;
+                }
                 self.enter(engine);
                 return Outcome::Handled;
             }
