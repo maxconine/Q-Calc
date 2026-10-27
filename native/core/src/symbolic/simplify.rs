@@ -834,6 +834,8 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
                 }
                 res = merge_child_matches(child_matches)?;
             } else if na.len() >= 2 && ra.len() == 2 {
+                // n ways to split n arguments, each copying the other n − 1
+                spend((na.len() * na.len()) as u64)?;
                 let mut out = Vec::new();
                 for split in get_splits(node, ctx) {
                     out.extend(rule_match(rule, &split, ctx, true)?);
@@ -983,11 +985,12 @@ fn resolve(n: &Node) -> Node {
 /// Passes over the rule list before giving up on an input that never settles (mathjs would loop forever).
 const MAX_PASSES: usize = 10_000;
 
-/// The work one simplify may do, in rule matches, the length of each match key it dedupes and the printed
-/// length of the tree each rule walks (`work.ts` counts, never the clock). The golden fixtures spend at most
-/// 455k; `d/dx x^x^…^x` with ten x's spends about 10M (0.35 s). Past this a tower like it costs seconds more
-/// per level and gigabytes (`d/dx` thirty times over), so the simplify fails, as it does on an input that never
-/// settles. The TS engine has no such limit.
+/// The work one simplify may do, in rule matches, the length of each match key it dedupes, the copies a split
+/// makes and the printed length of the tree each rule walks (`work.ts` counts, never the clock); about 30 ms per
+/// million in a release build. The golden fixtures spend at most 455k. Without a limit `d/dx x^x^…^x` cost
+/// seconds more per x past ten (ten x’s spend 10M) and gigabytes past fifteen, and an isolate over a product of
+/// 500 letters 11 s. Past it the simplify fails, as it does on an input that never settles. The TS engine has
+/// no such limit.
 const BUDGET: u64 = 12_000_000;
 
 thread_local! {

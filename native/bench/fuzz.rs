@@ -557,6 +557,21 @@ fn main() {
                     println!("{:?} {:?}", r.kind, r.display);
                     return "line";
                 }
+                if case_seed == 1 {
+                    // seed 1: the bar's live answer for the line, as the app asks for it
+                    let req = LiveRequest {
+                        text: input,
+                        phrases: true,
+                        now_ms: 1.7e12,
+                        ..Default::default()
+                    };
+                    let a = live(&req);
+                    println!(
+                        "{:?}",
+                        format!("{a:?}").chars().take(160).collect::<String>()
+                    );
+                    return "live";
+                }
                 run_case(&mut Rng(case_seed | 1), &input, &corpus)
             })
             .unwrap()

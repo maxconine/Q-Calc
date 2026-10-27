@@ -65,3 +65,31 @@ fn derivatives_that_explode_give_up() {
         assert!(show(&tower(4)).starts_with("x^(x^(x^x) + x^x - 1)"));
     });
 }
+
+fn live_display(text: &str) -> String {
+    use qcalc_core::app::live::{LiveRequest, live};
+    let req = LiveRequest {
+        text: text.to_string(),
+        phrases: true,
+        ..Default::default()
+    };
+    live(&req).display
+}
+
+#[test]
+fn long_blank_lines_stay_quick_live() {
+    on_engine_stack(|| {
+        // the squiggle under a stray operator tried the line once per operator: 6 s for `e^/^/…` 1,000 long
+        assert_eq!(live_display(&format!("e{}", "^/".repeat(500))), "");
+        assert_eq!(
+            live_display(&format!("solve for x: y {}", "= ".repeat(500))),
+            ""
+        );
+        // isolate simplified a product of 500 letters for 11 s
+        assert_eq!(
+            live_display(&format!("isolate x in x^5 + x = {}", "y ".repeat(500))),
+            ""
+        );
+        assert_eq!(live_display("2++3"), "5");
+    });
+}

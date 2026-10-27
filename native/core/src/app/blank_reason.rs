@@ -115,11 +115,16 @@ fn unreachable_unit(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
     })
 }
 
+/// The characters [`stray_operator`] may evaluate in all, counted like `work.ts` budgets: a typed line spends a
+/// few thousand. The TS reader has no limit, and took 6 s on `e^/^/…` 1,000 characters long.
+const STRAY_BUDGET: usize = 40_000;
+
 fn stray_operator(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
     let units: Vec<u16> = expr.encode_utf16().collect();
     let unit_char = |i: usize| units.get(i).and_then(|&u| char::from_u32(u32::from(u)));
     let last = len16(jstr::trim_end(expr)) as isize - 1;
     let mut i = 0usize;
+    let mut budget = STRAY_BUDGET;
     while (i as isize) <= last {
         let Some(ch) = unit_char(i).filter(|&c| is_operator(c)) else {
             i += 1;
@@ -151,6 +156,9 @@ fn stray_operator(expr: &str, ok: &dyn Fn(&str) -> bool) -> Option<Span> {
             slice16(expr, 0, at),
             slice16(expr, at + 1, usize::MAX)
         );
+        // each try evaluates the whole line again, so a long run of operators (`e^/^/^/…`) cost the square of
+        // its length: past the budget there's no confident answer
+        budget = budget.checked_sub(without.len())?;
         if ok(&without) {
             return Some(Span {
                 start: at,
