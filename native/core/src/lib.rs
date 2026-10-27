@@ -64,3 +64,6 @@ pub use types::{EvaluateOptions, LineResult, Value};
 
 /// The engine's version, for bug reports and the FFI handshake.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+// ---- the games (ember, trails) and the 420/67/69 effects ----
+pub mod games;
