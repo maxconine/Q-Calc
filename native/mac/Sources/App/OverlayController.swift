@@ -18,15 +18,8 @@ final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onResignKey: (() -> Void)?
     var ignoreResignKey = false
-    /// every key down, before the field takes it (the Konami code watches these; it never eats one)
-    var onKeyDown: ((NSEvent) -> Void)?
-
     override var canBecomeKey: Bool { true }
 
-    override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown { onKeyDown?(event) }
-        super.sendEvent(event)
-    }
     override var canBecomeMain: Bool { false }
 
     override func cancelOperation(_ sender: Any?) { onEscape?() }
@@ -158,7 +151,6 @@ final class OverlayController: NSObject {
         panel.title = "Q Calc"
         panel.onEscape = { [weak self] in self?.escape() }
         panel.onResignKey = { [weak self] in self?.lostFocus() }
-        panel.onKeyDown = { [weak self] event in self?.model.konamiKey(event) }
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -576,6 +568,9 @@ final class OverlayController: NSObject {
         guard escapeMonitor == nil else { return }
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window === panel else { return event }
+            // the Konami code watches every key here, once each, before anything takes it: the arrows never reach
+            // the window, since AppKit offers them to the field as key equivalents first and the bar uses them up
+            self.model.konamiKey(event)
             let composing = (panel.firstResponder as? NSTextInputClient)?.hasMarkedText() == true
             if event.keyCode == UInt16(kVK_Escape), !composing {
                 self.escape()

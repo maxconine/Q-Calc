@@ -516,7 +516,7 @@ final class BarModel: ObservableObject {
         return isPiDay(month: UInt32(d.month ?? 0), day: UInt32(d.day ?? 0))
     }
 
-    /// One key down in the bar (the window sees it before the field, which still gets it): ↑↑↓↓←→←→BA turns the
+    /// One key down in the bar (the app's key monitor sees it before anything takes it): ↑↑↓↓←→←→BA turns the
     /// CRT look on, and again off.
     func konamiKey(_ event: NSEvent) {
         guard !event.isARepeat else { return }
