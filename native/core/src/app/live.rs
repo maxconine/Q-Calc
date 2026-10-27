@@ -106,6 +106,9 @@ pub struct LiveRequest {
     /// The IANA zone the user's clock reads in, for time phrases (`timeZone`); None reads it as the TS
     /// recordings did, in America/Los_Angeles.
     pub time_zone: Option<String>,
+    /// Leave out the squiggle (`squiggle` stays None): for a piece the squiggle search itself reads, which only
+    /// asks whether it answers. Nothing else in the answer changes.
+    pub no_squiggle: bool,
 }
 
 /// A line that answers with a message or opens something, rather than calculating.
@@ -487,6 +490,7 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         opens: None,
     };
     let squiggle = if display.is_empty()
+        && !req.no_squiggle
         && !jstr::trim(q).is_empty()
         && !a_command
         && !help
