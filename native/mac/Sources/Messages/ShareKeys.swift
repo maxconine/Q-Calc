@@ -56,8 +56,33 @@ final class ShareKeys: ObservableObject {
          kSecAttrSynchronizable as String: kCFBooleanFalse as Any]
     }
 
+    /// Dev and tester builds keep the key in a file only this user can read, in the build's own support folder:
+    /// they're signed ad hoc, so each build is a new app to the Keychain, which asked for the login password every
+    /// time a new one read the key. A release, signed for real, keeps it in the Keychain.
+    private static var keyFile: URL? {
+        AppInfo.isDev ? AppInfo.supportDirectory.appendingPathComponent("share-key", isDirectory: false) : nil
+    }
+
     private static func read() -> Data? {
+        if let file = keyFile {
+            if let data = try? Data(contentsOf: file), data.count == 32 { return data }
+            // an earlier dev build's Keychain key, moved over only if it opens without asking (else a new key)
+            guard let old = readKeychain(prompt: false), writeFile(old, to: file) else { return nil }
+            return old
+        }
+        return readKeychain(prompt: true)
+    }
+
+    private static func writeFile(_ raw: Data, to file: URL) -> Bool {
+        let fm = FileManager.default
+        try? fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        guard fm.createFile(atPath: file.path, contents: raw, attributes: [.posixPermissions: 0o600]) else { return false }
+        return (try? Data(contentsOf: file)) == raw
+    }
+
+    private static func readKeychain(prompt: Bool) -> Data? {
         var q = query()
+        if !prompt { q[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var out: CFTypeRef?
@@ -66,12 +91,13 @@ final class ShareKeys: ObservableObject {
     }
 
     private static func write(_ raw: Data) -> Bool {
+        if let file = keyFile { return writeFile(raw, to: file) }
         var q = query()
         q[kSecValueData as String] = raw
         q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         q[kSecAttrLabel as String] = "Q Calc sharing key"
         let status = SecItemAdd(q as CFDictionary, nil)
-        return status == errSecSuccess || (status == errSecDuplicateItem && read() == raw)
+        return status == errSecSuccess || (status == errSecDuplicateItem && readKeychain(prompt: true) == raw)
     }
 
     // MARK: - the relay
