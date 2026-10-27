@@ -4,6 +4,8 @@
 #![allow(dead_code)]
 
 // pure logic: compiles (and is tested) everywhere
+#[cfg(windows)]
+mod a11y;
 mod autostart;
 mod commands;
 mod edge;

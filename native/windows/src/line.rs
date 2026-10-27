@@ -59,6 +59,8 @@ pub struct LineState {
     /// the field's state at the last `after`, to restart the blink on a change: (selection, text hash)
     seen: (usize, usize, u64),
     blinking: bool,
+    /// since when the caret has blinked unchanged: after Windows' caret timeout it stays on and the timer stops
+    blink_from: Option<std::time::Instant>,
     example_armed: bool,
     squiggle_armed: Option<String>,
     /// a blank line waiting for its squiggle
@@ -606,6 +608,7 @@ pub fn on_timer(m: &mut BarModel, id: usize, engine: &EngineThread, shown: bool)
 /// unfocused, none run. The blink restarts solid whenever the line or the caret changed.
 pub fn after(app: &mut crate::app::App) {
     use windows::Win32::UI::WindowsAndMessaging::{GetCaretBlinkTime, KillTimer, SetTimer};
+    crate::a11y::after(app);
     let hwnd = Some(app.bar.hwnd);
     let shown = app.bar.visible;
     let focused = app.bar.focused;
@@ -628,7 +631,15 @@ pub fn after(app: &mut crate::app::App) {
                 m.touch();
             }
             let l = &mut m.line;
-            if changed || !l.blinking {
+            if changed || l.blink_from.is_none() {
+                l.blink_from = Some(std::time::Instant::now());
+            }
+            // as Windows' own edit boxes: the blink stops, caret shown, after the caret timeout (5 s by default)
+            let tired = l.caret_on
+                && l.blink_from.is_some_and(|t| {
+                    caret_tired(t.elapsed().as_millis() as u64, caret_timeout_ms())
+                });
+            if changed || (!l.blinking && !tired) {
                 l.blinking = true;
                 // GetCaretBlinkTime is INFINITE (u32::MAX) when blinking is off in Settings
                 let ms = GetCaretBlinkTime();
@@ -636,7 +647,8 @@ pub fn after(app: &mut crate::app::App) {
                     SetTimer(hwnd, TIMER_BLINK, ms, None);
                 }
             }
-        } else if l.blinking || !l.caret_on {
+        } else if l.blinking || !l.caret_on || l.blink_from.is_some() {
+            l.blink_from = None;
             l.blinking = false;
             l.caret_on = true;
             let _ = KillTimer(hwnd, TIMER_BLINK);
@@ -661,6 +673,30 @@ pub fn after(app: &mut crate::app::App) {
             l.squiggle_armed = squiggle;
         }
     }
+}
+
+/// Whether a caret that has blinked `ms` unchanged should rest (shown, no timer), for a timeout of `timeout` ms
+/// (0: never rests).
+pub fn caret_tired(ms: u64, timeout: u32) -> bool {
+    timeout > 0 && ms >= u64::from(timeout)
+}
+
+/// Windows' caret timeout (SPI_GETCARETTIMEOUT; 5000 ms unless changed), 0 when it can't be read.
+fn caret_timeout_ms() -> u32 {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        SYSTEM_PARAMETERS_INFO_ACTION, SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS, SystemParametersInfoW,
+    };
+    let mut ms = 0u32;
+    // SAFETY: a live out u32 (SPI_GETCARETTIMEOUT, 0x2022)
+    let ok = unsafe {
+        SystemParametersInfoW(
+            SYSTEM_PARAMETERS_INFO_ACTION(0x2022),
+            0,
+            Some((&mut ms as *mut u32).cast()),
+            SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS(0),
+        )
+    };
+    if ok.is_ok() { ms } else { 5000 }
 }
 
 /// WM_TIMER on the bar: each of the input's timers is one-shot (`after` arms the next if still wanted).
@@ -803,6 +839,13 @@ mod paint {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_caret_rests_after_the_timeout() {
+        assert!(!caret_tired(4999, 5000));
+        assert!(caret_tired(5000, 5000));
+        assert!(!caret_tired(60_000, 0));
+    }
 
     #[test]
     fn decorations_come_from_the_core() {
