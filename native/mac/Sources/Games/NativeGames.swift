@@ -9,6 +9,8 @@ enum NativeGames {
         case "crack": return AnyView(CrackPanel())
         case "connect4": return AnyView(Connect4Panel())
         case "ultimate": return AnyView(UltimatePanel())
+        case "equal": return AnyView(EqualPanel())
+        case "numbers": return AnyView(NumbersPanel())
         default: return nil
         }
     }

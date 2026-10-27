@@ -4025,6 +4025,184 @@ public func FfiConverterTypeEngineConfig_lower(_ value: EngineConfig) -> RustBuf
 }
 
 
+public struct EqualDaily: Equatable, Hashable {
+    public var date: String
+    public var guesses: [String]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(date: String, guesses: [String]) {
+        self.date = date
+        self.guesses = guesses
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EqualDaily: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEqualDaily: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EqualDaily {
+        return
+            try EqualDaily(
+                date: FfiConverterString.read(from: &buf), 
+                guesses: FfiConverterSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EqualDaily, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.date, into: &buf)
+        FfiConverterSequenceString.write(value.guesses, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualDaily_lift(_ buf: RustBuffer) throws -> EqualDaily {
+    return try FfiConverterTypeEqualDaily.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualDaily_lower(_ value: EqualDaily) -> RustBuffer {
+    return FfiConverterTypeEqualDaily.lower(value)
+}
+
+
+public struct EqualSave: Equatable, Hashable {
+    public var daily: EqualDaily?
+    public var stats: EqualStats
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(daily: EqualDaily?, stats: EqualStats) {
+        self.daily = daily
+        self.stats = stats
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EqualSave: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEqualSave: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EqualSave {
+        return
+            try EqualSave(
+                daily: FfiConverterOptionTypeEqualDaily.read(from: &buf), 
+                stats: FfiConverterTypeEqualStats.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EqualSave, into buf: inout [UInt8]) {
+        FfiConverterOptionTypeEqualDaily.write(value.daily, into: &buf)
+        FfiConverterTypeEqualStats.write(value.stats, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualSave_lift(_ buf: RustBuffer) throws -> EqualSave {
+    return try FfiConverterTypeEqualSave.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualSave_lower(_ value: EqualSave) -> RustBuffer {
+    return FfiConverterTypeEqualSave.lower(value)
+}
+
+
+public struct EqualStats: Equatable, Hashable {
+    public var played: UInt32
+    public var wins: UInt32
+    public var streak: UInt32
+    public var best: UInt32
+    public var lastWin: String?
+    public var dist: [UInt32]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(played: UInt32, wins: UInt32, streak: UInt32, best: UInt32, lastWin: String?, dist: [UInt32]) {
+        self.played = played
+        self.wins = wins
+        self.streak = streak
+        self.best = best
+        self.lastWin = lastWin
+        self.dist = dist
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension EqualStats: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEqualStats: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EqualStats {
+        return
+            try EqualStats(
+                played: FfiConverterUInt32.read(from: &buf), 
+                wins: FfiConverterUInt32.read(from: &buf), 
+                streak: FfiConverterUInt32.read(from: &buf), 
+                best: FfiConverterUInt32.read(from: &buf), 
+                lastWin: FfiConverterOptionString.read(from: &buf), 
+                dist: FfiConverterSequenceUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: EqualStats, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.played, into: &buf)
+        FfiConverterUInt32.write(value.wins, into: &buf)
+        FfiConverterUInt32.write(value.streak, into: &buf)
+        FfiConverterUInt32.write(value.best, into: &buf)
+        FfiConverterOptionString.write(value.lastWin, into: &buf)
+        FfiConverterSequenceUInt32.write(value.dist, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualStats_lift(_ buf: RustBuffer) throws -> EqualStats {
+    return try FfiConverterTypeEqualStats.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualStats_lower(_ value: EqualStats) -> RustBuffer {
+    return FfiConverterTypeEqualStats.lower(value)
+}
+
+
 /**
  * What the history defines for the next line (`contextFromHistory`).
  */
@@ -6103,6 +6281,226 @@ public func FfiConverterTypeMeasInfo_lift(_ buf: RustBuffer) throws -> MeasInfo 
 #endif
 public func FfiConverterTypeMeasInfo_lower(_ value: MeasInfo) -> RustBuffer {
     return FfiConverterTypeMeasInfo.lower(value)
+}
+
+
+/**
+ * `checkExpr`: the value so far (n/d), what's wrong, and whether it's a finished legal answer.
+ */
+public struct NumbersCheck: Equatable, Hashable {
+    public var hasValue: Bool
+    public var n: Double
+    public var d: Double
+    public var valueText: String
+    public var problem: String?
+    public var valid: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(hasValue: Bool, n: Double, d: Double, valueText: String, problem: String?, valid: Bool) {
+        self.hasValue = hasValue
+        self.n = n
+        self.d = d
+        self.valueText = valueText
+        self.problem = problem
+        self.valid = valid
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NumbersCheck: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNumbersCheck: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NumbersCheck {
+        return
+            try NumbersCheck(
+                hasValue: FfiConverterBool.read(from: &buf), 
+                n: FfiConverterDouble.read(from: &buf), 
+                d: FfiConverterDouble.read(from: &buf), 
+                valueText: FfiConverterString.read(from: &buf), 
+                problem: FfiConverterOptionString.read(from: &buf), 
+                valid: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NumbersCheck, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.hasValue, into: &buf)
+        FfiConverterDouble.write(value.n, into: &buf)
+        FfiConverterDouble.write(value.d, into: &buf)
+        FfiConverterString.write(value.valueText, into: &buf)
+        FfiConverterOptionString.write(value.problem, into: &buf)
+        FfiConverterBool.write(value.valid, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersCheck_lift(_ buf: RustBuffer) throws -> NumbersCheck {
+    return try FfiConverterTypeNumbersCheck.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersCheck_lower(_ value: NumbersCheck) -> RustBuffer {
+    return FfiConverterTypeNumbersCheck.lower(value)
+}
+
+
+/**
+ * A round as dealt: the numbers, the target, one solution, and the closest anyone can get.
+ */
+public struct NumbersDeal: Equatable, Hashable {
+    public var nums: [Double]
+    public var target: Double
+    public var solution: String
+    public var bestValue: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(nums: [Double], target: Double, solution: String, bestValue: Double) {
+        self.nums = nums
+        self.target = target
+        self.solution = solution
+        self.bestValue = bestValue
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NumbersDeal: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNumbersDeal: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NumbersDeal {
+        return
+            try NumbersDeal(
+                nums: FfiConverterSequenceDouble.read(from: &buf), 
+                target: FfiConverterDouble.read(from: &buf), 
+                solution: FfiConverterString.read(from: &buf), 
+                bestValue: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NumbersDeal, into buf: inout [UInt8]) {
+        FfiConverterSequenceDouble.write(value.nums, into: &buf)
+        FfiConverterDouble.write(value.target, into: &buf)
+        FfiConverterString.write(value.solution, into: &buf)
+        FfiConverterDouble.write(value.bestValue, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersDeal_lift(_ buf: RustBuffer) throws -> NumbersDeal {
+    return try FfiConverterTypeNumbersDeal.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersDeal_lower(_ value: NumbersDeal) -> RustBuffer {
+    return FfiConverterTypeNumbersDeal.lower(value)
+}
+
+
+public struct NumbersStats: Equatable, Hashable {
+    public var countdown: Bool
+    public var large: Double
+    public var streak24: Double
+    public var best24: Double
+    public var solved24: Double
+    public var rounds: Double
+    public var points: Double
+    public var exactStreak: Double
+    public var bestExact: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(countdown: Bool, large: Double, streak24: Double, best24: Double, solved24: Double, rounds: Double, points: Double, exactStreak: Double, bestExact: Double) {
+        self.countdown = countdown
+        self.large = large
+        self.streak24 = streak24
+        self.best24 = best24
+        self.solved24 = solved24
+        self.rounds = rounds
+        self.points = points
+        self.exactStreak = exactStreak
+        self.bestExact = bestExact
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension NumbersStats: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNumbersStats: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NumbersStats {
+        return
+            try NumbersStats(
+                countdown: FfiConverterBool.read(from: &buf), 
+                large: FfiConverterDouble.read(from: &buf), 
+                streak24: FfiConverterDouble.read(from: &buf), 
+                best24: FfiConverterDouble.read(from: &buf), 
+                solved24: FfiConverterDouble.read(from: &buf), 
+                rounds: FfiConverterDouble.read(from: &buf), 
+                points: FfiConverterDouble.read(from: &buf), 
+                exactStreak: FfiConverterDouble.read(from: &buf), 
+                bestExact: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: NumbersStats, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.countdown, into: &buf)
+        FfiConverterDouble.write(value.large, into: &buf)
+        FfiConverterDouble.write(value.streak24, into: &buf)
+        FfiConverterDouble.write(value.best24, into: &buf)
+        FfiConverterDouble.write(value.solved24, into: &buf)
+        FfiConverterDouble.write(value.rounds, into: &buf)
+        FfiConverterDouble.write(value.points, into: &buf)
+        FfiConverterDouble.write(value.exactStreak, into: &buf)
+        FfiConverterDouble.write(value.bestExact, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersStats_lift(_ buf: RustBuffer) throws -> NumbersStats {
+    return try FfiConverterTypeNumbersStats.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersStats_lower(_ value: NumbersStats) -> RustBuffer {
+    return FfiConverterTypeNumbersStats.lower(value)
 }
 
 
@@ -8386,6 +8784,79 @@ public func FfiConverterTypeElementCategory_lower(_ value: ElementCategory) -> R
 
 
 
+public enum EqualMark: Equatable, Hashable {
+    
+    case miss
+    case near
+    case hit
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension EqualMark: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeEqualMark: FfiConverterRustBuffer {
+    typealias SwiftType = EqualMark
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EqualMark {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .miss
+        
+        case 2: return .near
+        
+        case 3: return .hit
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: EqualMark, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .miss:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .near:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .hit:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualMark_lift(_ buf: RustBuffer) throws -> EqualMark {
+    return try FfiConverterTypeEqualMark.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeEqualMark_lower(_ value: EqualMark) -> RustBuffer {
+    return FfiConverterTypeEqualMark.lower(value)
+}
+
+
+
+
 public enum GameEscAction: Equatable, Hashable {
     
     case unfullscreen
@@ -9366,6 +9837,72 @@ public func FfiConverterTypeLobbyState_lift(_ buf: RustBuffer) throws -> LobbySt
 #endif
 public func FfiConverterTypeLobbyState_lower(_ value: LobbyState) -> RustBuffer {
     return FfiConverterTypeLobbyState.lower(value)
+}
+
+
+
+
+public enum NumbersMode: Equatable, Hashable {
+    
+    case twentyFour
+    case countdown
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension NumbersMode: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeNumbersMode: FfiConverterRustBuffer {
+    typealias SwiftType = NumbersMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> NumbersMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .twentyFour
+        
+        case 2: return .countdown
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: NumbersMode, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .twentyFour:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .countdown:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersMode_lift(_ buf: RustBuffer) throws -> NumbersMode {
+    return try FfiConverterTypeNumbersMode.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeNumbersMode_lower(_ value: NumbersMode) -> RustBuffer {
+    return FfiConverterTypeNumbersMode.lower(value)
 }
 
 
@@ -10663,6 +11200,30 @@ fileprivate struct FfiConverterOptionTypeChainAnswer: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeEqualDaily: FfiConverterRustBuffer {
+    typealias SwiftType = EqualDaily?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeEqualDaily.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeEqualDaily.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeFunctionDef: FfiConverterRustBuffer {
     typealias SwiftType = FunctionDef?
 
@@ -11791,6 +12352,31 @@ fileprivate struct FfiConverterSequenceTypeUnitSettingItemInfo: FfiConverterRust
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeEqualMark: FfiConverterRustBuffer {
+    typealias SwiftType = [EqualMark]
+
+    public static func write(_ value: [EqualMark], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeEqualMark.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [EqualMark] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [EqualMark]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeEqualMark.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeGamePeerEvent: FfiConverterRustBuffer {
     typealias SwiftType = [GamePeerEvent]
 
@@ -12012,6 +12598,32 @@ fileprivate struct FfiConverterDictionaryStringTypeUserFn: FfiConverterRustBuffe
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterTypeUserFn.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterDictionaryStringTypeEqualMark: FfiConverterRustBuffer {
+    public static func write(_ value: [String: EqualMark], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeEqualMark.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: EqualMark] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: EqualMark]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeEqualMark.read(from: &buf)
             dict[key] = value
         }
         return dict
@@ -12426,6 +13038,229 @@ public func crackTick(state: CrackState, now: Double) -> CrackStep  {
     )
 })
 }
+public func equalCurrentStreak(stats: EqualStats, today: String) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_current_streak(
+        FfiConverterTypeEqualStats_lower(stats),
+        FfiConverterString.lower(today),uniffiCallStatus
+    )
+})
+}
+/**
+ * Today's (`dailyAnswer(dateKey)`), its number, and the day before.
+ */
+public func equalDailyAnswer(date: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_daily_answer(
+        FfiConverterString.lower(date),uniffiCallStatus
+    )
+})
+}
+public func equalDailyNumber(date: String) -> Int64  {
+    return try!  FfiConverterInt64.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_daily_number(
+        FfiConverterString.lower(date),uniffiCallStatus
+    )
+})
+}
+/**
+ * Why a guess can't be played (`guessProblem`), or nil.
+ */
+public func equalGuessProblem(guess: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_guess_problem(
+        FfiConverterString.lower(guess),uniffiCallStatus
+    )
+})
+}
+/**
+ * `keyMarks`: each key's best mark so far, keyed by the character.
+ */
+public func equalKeyMarks(guesses: [String], answer: String) -> [String: EqualMark]  {
+    return try!  FfiConverterDictionaryStringTypeEqualMark.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_key_marks(
+        FfiConverterSequenceString.lower(guesses),
+        FfiConverterString.lower(answer),uniffiCallStatus
+    )
+})
+}
+/**
+ * `loadSave()` from `qcalc-equal`'s text, and the text `storeSave` writes.
+ */
+public func equalLoadSave(raw: String?) -> EqualSave  {
+    return try!  FfiConverterTypeEqualSave_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_load_save(
+        FfiConverterOptionString.lower(raw),uniffiCallStatus
+    )
+})
+}
+/**
+ * A practice puzzle (`generate(Math.random)`).
+ */
+public func equalPractice() -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_practice(uniffiCallStatus
+    )
+})
+}
+public func equalRecordDaily(stats: EqualStats, date: String, guesses: [String], answer: String) -> EqualStats  {
+    return try!  FfiConverterTypeEqualStats_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_record_daily(
+        FfiConverterTypeEqualStats_lower(stats),
+        FfiConverterString.lower(date),
+        FfiConverterSequenceString.lower(guesses),
+        FfiConverterString.lower(answer),uniffiCallStatus
+    )
+})
+}
+public func equalSaveJson(save: EqualSave) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_save_json(
+        FfiConverterTypeEqualSave_lower(save),uniffiCallStatus
+    )
+})
+}
+public func equalScore(guess: String, answer: String) -> [EqualMark]  {
+    return try!  FfiConverterSequenceTypeEqualMark.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_score(
+        FfiConverterString.lower(guess),
+        FfiConverterString.lower(answer),uniffiCallStatus
+    )
+})
+}
+public func equalShareText(guesses: [String], answer: String, title: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_equal_share_text(
+        FfiConverterSequenceString.lower(guesses),
+        FfiConverterString.lower(answer),
+        FfiConverterString.lower(title),uniffiCallStatus
+    )
+})
+}
+public func numbersAutofillParens(text: String, caret: UInt32, selectionEnd: UInt32) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_autofill_parens(
+        FfiConverterString.lower(text),
+        FfiConverterUInt32.lower(caret),
+        FfiConverterUInt32.lower(selectionEnd),uniffiCallStatus
+    )
+})
+}
+public func numbersCheck(text: String, nums: [Double], mode: NumbersMode) -> NumbersCheck  {
+    return try!  FfiConverterTypeNumbersCheck_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_check(
+        FfiConverterString.lower(text),
+        FfiConverterSequenceDouble.lower(nums),
+        FfiConverterTypeNumbersMode_lower(mode),uniffiCallStatus
+    )
+})
+}
+public func numbersDeal(mode: NumbersMode, large: Double) -> NumbersDeal  {
+    return try!  FfiConverterTypeNumbersDeal_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_deal(
+        FfiConverterTypeNumbersMode_lower(mode),
+        FfiConverterDouble.lower(large),uniffiCallStatus
+    )
+})
+}
+public func numbersFillParens(text: String) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_fill_parens(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * `loadStats()` from `qcalc-numbers`'s text, and the text `saveStats` writes.
+ */
+public func numbersLoadStats(raw: String?) -> NumbersStats  {
+    return try!  FfiConverterTypeNumbersStats_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_load_stats(
+        FfiConverterOptionString.lower(raw),uniffiCallStatus
+    )
+})
+}
+public func numbersPoints(target: Double, value: Double?) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_points(
+        FfiConverterDouble.lower(target),
+        FfiConverterOptionDouble.lower(value),uniffiCallStatus
+    )
+})
+}
+public func numbersRecord24(stats: NumbersStats, solved: Bool) -> NumbersStats  {
+    return try!  FfiConverterTypeNumbersStats_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_record24(
+        FfiConverterTypeNumbersStats_lower(stats),
+        FfiConverterBool.lower(solved),uniffiCallStatus
+    )
+})
+}
+public func numbersRecordCountdown(stats: NumbersStats, points: UInt32) -> NumbersStats  {
+    return try!  FfiConverterTypeNumbersStats_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_record_countdown(
+        FfiConverterTypeNumbersStats_lower(stats),
+        FfiConverterUInt32.lower(points),uniffiCallStatus
+    )
+})
+}
+public func numbersSolves24(text: String, nums: [Double]) -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_solves24(
+        FfiConverterString.lower(text),
+        FfiConverterSequenceDouble.lower(nums),uniffiCallStatus
+    )
+})
+}
+public func numbersStatsJson(stats: NumbersStats) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_stats_json(
+        FfiConverterTypeNumbersStats_lower(stats),uniffiCallStatus
+    )
+})
+}
+/**
+ * The faint `)`s the bar would add (`inferParens(text).trailing`), the text with them (`fillParens`), and tab's
+ * write-in (`autofillParens`).
+ */
+public func numbersTrailingParens(text: String) -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_trailing_parens(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+public func numbersUsedTiles(text: String, nums: [Double]) -> [Bool]  {
+    return try!  FfiConverterSequenceBool.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_numbers_used_tiles(
+        FfiConverterString.lower(text),
+        FfiConverterSequenceDouble.lower(nums),uniffiCallStatus
+    )
+})
+}
 public func pongGeometry() -> PongGeometry  {
     return try!  FfiConverterTypePongGeometry_lift(try! rustCall() {
         uniffiCallStatus in
@@ -12624,6 +13459,75 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_crack_tick() != 25218) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_current_streak() != 54753) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_daily_answer() != 17155) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_daily_number() != 13932) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_guess_problem() != 36361) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_key_marks() != 60454) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_load_save() != 55883) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_practice() != 13541) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_record_daily() != 6326) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_save_json() != 23930) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_score() != 43624) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_equal_share_text() != 42085) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_autofill_parens() != 4324) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_check() != 48030) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_deal() != 8530) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_fill_parens() != 24405) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_load_stats() != 2122) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_points() != 48245) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_record24() != 15228) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_record_countdown() != 43785) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_solves24() != 36756) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_stats_json() != 41384) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_trailing_parens() != 63057) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_numbers_used_tiles() != 50584) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_pong_geometry() != 9290) {
