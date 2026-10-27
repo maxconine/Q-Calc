@@ -42,6 +42,8 @@ mod graph;
 #[cfg(windows)]
 mod history;
 #[cfg(windows)]
+mod hover;
+#[cfg(windows)]
 mod input;
 #[cfg(windows)]
 mod later;

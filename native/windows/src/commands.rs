@@ -367,6 +367,7 @@ mod ui {
         const ESC: u32 = 0x1B;
         const UP: u32 = 0x26;
         const DOWN: u32 = 0x28;
+        crate::hover::key_down();
         if messaging::key(app, vk, mods) {
             return true;
         }
@@ -414,6 +415,7 @@ mod ui {
 
     /// A click in the bar: the edge tools, the tour's skip, the cards, the games list. True when taken.
     pub fn click(app: &mut App, x: f32, y: f32) -> bool {
+        crate::hover::key_down();
         crate::edge::click(app, x, y)
             || tour::click(app, x, y)
             || messaging::click(app, x, y)
@@ -423,6 +425,7 @@ mod ui {
     /// The pointer over the bar (None when it left): the edge tools, the cards' hold, the games list's hover.
     pub fn pointer(app: &mut App, at: Option<(f32, f32)>) {
         crate::edge::pointer(app, at);
+        crate::hover::pointer(app, at);
         messaging::hover(app, at);
         let row = at.and_then(|(x, y)| game_at(&app.model, app.bar.layout.width, x, y));
         if row != app.model.games_hover {
@@ -434,6 +437,7 @@ mod ui {
     /// The bar hid: this package's hover and focus let go.
     pub fn will_hide(m: &mut BarModel) {
         crate::edge::will_hide(m);
+        crate::hover::will_hide();
         messaging::will_hide(m);
         tour::will_hide(m);
         m.games_hover = None;

@@ -245,6 +245,15 @@ fn spec(
     }
 }
 
+/// The line is turning into `graph …` / `plot …` (a space after the word): the slot stays empty for its panel.
+pub fn graphing(text: &str) -> bool {
+    let t = text.trim_start();
+    ["graph", "plot"].iter().any(|w| {
+        t.get(..w.len()).is_some_and(|h| h.eq_ignore_ascii_case(w))
+            && t[w.len()..].starts_with(char::is_whitespace)
+    })
+}
+
 /// What the slot shows for the model as it is, left to right.
 pub fn specs(m: &BarModel) -> Vec<Spec> {
     // an open `sys N` panel answers in the slot: its solution, or why there's none (muted)
@@ -278,8 +287,11 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
     let blank = live.is_none_or(is_blank);
     if blank {
         // .live-steady: never the answer's colour, gone after a pause
+        // not under a graph: `graph sin(x)` answers in its panel, so a prefix's answer ("1 gr") mustn't linger
         if let Some(s) = &m.answer.steady
             && !m.field.text().trim().is_empty()
+            && m.graph.is_none()
+            && !graphing(m.field.text())
         {
             return vec![spec(
                 pretty(m, s),
@@ -615,6 +627,51 @@ pub fn hit(l: &AnswerLayout, x: f32, y: f32) -> Option<String> {
         .and_then(|i| i.copy.clone())
 }
 
+/// The piece of the answer a copy-click at (x, y) would take: its index.
+pub fn item_at(l: &AnswerLayout, x: f32, y: f32) -> Option<usize> {
+    l.items
+        .iter()
+        .position(|i| i.copy.is_some() && i.rect.contains(x, y))
+}
+
+/// A piece's tooltip, from what the pieces are (copies, muted, text), as LiveAnswer.tsx / BarView.swift title them.
+pub fn piece_tip(pieces: &[(bool, bool, &str)], i: usize) -> Option<&'static str> {
+    let (copies, muted, _) = *pieces.get(i)?;
+    if !copies {
+        return None;
+    }
+    // a solve's letter copies every root
+    if muted {
+        return Some("Copy all the solutions");
+    }
+    if let Some(q) = pieces.iter().position(|p| p.2 == "≈") {
+        return Some(if i < q {
+            "Copy exact value"
+        } else {
+            "Copy approximation"
+        });
+    }
+    if pieces.iter().filter(|p| p.0 && !p.1).count() > 1 {
+        return Some("Copy this solution");
+    }
+    Some("Copy to clipboard · Ctrl+C also copies")
+}
+
+/// The tooltip for piece `i` of the answer as laid out.
+pub fn tip(l: &AnswerLayout, i: usize) -> Option<&'static str> {
+    // among several pieces, the one muted piece that copies nothing is the dual's ≈ (specs)
+    let pieces: Vec<(bool, bool, &str)> = l
+        .items
+        .iter()
+        .map(|it| {
+            let muted = it.ink == Ink::Muted;
+            let sign = muted && it.copy.is_none() && l.items.len() > 1;
+            (it.copy.is_some(), muted, if sign { "≈" } else { "" })
+        })
+        .collect();
+    piece_tip(&pieces, i)
+}
+
 fn ink(c: &Canvas, ink: Ink, copied: bool) -> Color {
     let t = c.theme;
     match ink {
@@ -629,11 +686,25 @@ pub fn paint(c: &Canvas, l: &AnswerLayout, r: Rect) {
     if l.items.is_empty() || r.w <= 0.0 {
         return;
     }
-    c.push_clip(Rect::new(r.x, r.y - 4.0, r.w, r.h + 8.0));
+    c.push_clip(Rect::new(r.x, r.y - 4.0, r.w + PAD_X, r.h + 8.0));
     let copied = l.flash.is_some();
-    for item in &l.items {
+    // .live:hover: the answer's colour lightens, with a 9% wash behind it (hover.rs knows the piece)
+    let hot = crate::hover::answer_item();
+    for (k, item) in l.items.iter().enumerate() {
         let x = item.rect.x + item.pad.0;
-        c.text(&item.layout, x, r.y, ink(c, item.ink, copied));
+        let over = hot == Some(k) && item.copy.is_some();
+        if over {
+            // .live's 8 px padding on both sides, its trailing margin -8 (into the gutter)
+            let tail = if item.pad.1 < 1.0 { PAD_X } else { 0.0 };
+            let wash = Rect::new(item.rect.x, item.rect.y, item.rect.w + tail, item.rect.h);
+            c.fill_round(wash, size::RADIUS_S, with_alpha(c.theme.answer, 0.09));
+        }
+        let color = if over && item.ink == Ink::Answer {
+            c.theme.answer_hover
+        } else {
+            ink(c, item.ink, copied)
+        };
+        c.text(&item.layout, x, r.y, color);
     }
     if let Some(f) = &l.flash {
         // .live-check: caption, accent-hover, on the bar's own colour so it reads over anything under it

@@ -537,10 +537,12 @@ fn build(gfx: &Gfx, m: &BarModel, row: &HistoryRow, w: f32) -> Option<RowView> {
     let gaps: Vec<f32> = (0..answers.len())
         .map(|k| {
             let tight = |i: usize| answers[i].0.text.starts_with(',');
-            if k == 0 {
+            if k == 0 || tight(k) {
+                // nothing before a comma: it sits on its root as written ("−2, 2")
                 0.0
-            } else if tight(k) || tight(k - 1) {
-                3.0
+            } else if tight(k - 1) {
+                // the comma's own space is the gap after it
+                1.0
             } else {
                 gap
             }
@@ -620,15 +622,15 @@ fn view(gfx: &Gfx, m: &BarModel, row: &HistoryRow, w: f32) -> Option<RowView> {
     Some(v)
 }
 
-/// The cell under a point: its row and what it does.
-pub fn hit(
+/// The cell under a point: its row, the cell's index in the row (None: the row's background) and what it does.
+pub fn cell_at(
     gfx: &Gfx,
     m: &BarModel,
     width: f32,
     t: &TapeLayout,
     x: f32,
     y: f32,
-) -> Option<(usize, Act)> {
+) -> Option<(usize, Option<usize>, Act)> {
     if !window(t).contains(x, y) {
         return None;
     }
@@ -644,15 +646,81 @@ pub fn hit(
         let exprs = &v.cells[0];
         let first_answer = v.cells.get(1).map_or(r.w, |c| c.2);
         if local < first_answer - 6.0 {
-            return Some((i, exprs.0.act.clone()));
+            return Some((i, Some(0), exprs.0.act.clone()));
         }
         v.cells
             .iter()
+            .enumerate()
             .skip(1)
-            .find(|c| local >= c.2 - 4.0 && local < c.2 + c.3 + 4.0)
-            .map(|c| (i, c.0.act.clone()))
-            .or(Some((i, Act::None)))
+            .find(|(_, c)| local >= c.2 - 4.0 && local < c.2 + c.3 + 4.0)
+            .map(|(k, c)| (i, Some(k), c.0.act.clone()))
+            .or(Some((i, None, Act::None)))
     })
+}
+
+/// The cell under a point: its row and what it does.
+pub fn hit(
+    gfx: &Gfx,
+    m: &BarModel,
+    width: f32,
+    t: &TapeLayout,
+    x: f32,
+    y: f32,
+) -> Option<(usize, Act)> {
+    cell_at(gfx, m, width, t, x, y).map(|(i, _, act)| (i, act))
+}
+
+/// A tape cell's tooltip (the web's HistoryTape titles), None for a cell that does nothing.
+pub fn tip(row: &HistoryRow, cells: &[Cell], k: usize, form: AnswerForm) -> Option<&'static str> {
+    let c = cells.get(k)?;
+    if k == 0 {
+        return Some(match row.kind {
+            Some(HistoryKind::System) => "Edit equations",
+            Some(HistoryKind::Definition) => "Insert word at the cursor",
+            _ => "Insert expression at the cursor",
+        });
+    }
+    match &c.act {
+        Act::None => None,
+        Act::Copy(_) => Some("Copy all the solutions"),
+        Act::OpenSystem => Some("Edit equations"),
+        Act::Insert(_) => {
+            let roots = cells.iter().filter(|c| c.text.starts_with(',')).count() > 0
+                || cells.iter().any(|c| matches!(c.act, Act::Copy(_)));
+            let dual = cells.iter().any(|c| c.text == "≈");
+            Some(if dual {
+                // the ≈ splits the exact side (before it) from the approximation (after)
+                let approx = cells.iter().position(|c| c.text == "≈").is_some_and(|q| k > q);
+                if approx && roots {
+                    "Insert this solution at the cursor"
+                } else if approx {
+                    "Insert approximation at the cursor"
+                } else {
+                    "Insert exact value at the cursor"
+                }
+            } else if roots {
+                "Insert this solution at the cursor"
+            } else if row.kind == Some(HistoryKind::Definition) {
+                "Insert word at the cursor"
+            } else if form == AnswerForm::Exact && row.exact.is_some() {
+                "Insert exact value at the cursor"
+            } else {
+                "Insert approximation at the cursor"
+            })
+        }
+    }
+}
+
+/// The tooltip and the cell's box (window DIPs) for the cell under a point.
+pub fn tip_at(app: &App, row: usize, k: usize) -> Option<(&'static str, Rect)> {
+    let t = &app.bar.layout.tape;
+    let r = row_rect(app.bar.layout.width, t, row);
+    let hr = app.model.rows.rows.get(row)?;
+    let v = view(&app.gfx, &app.model, hr, r.w)?;
+    let cells: Vec<Cell> = v.cells.iter().map(|c| c.0.clone()).collect();
+    let text = tip(hr, &cells, k, form(&app.model))?;
+    let (_, _, x, w) = &v.cells[k];
+    Some((text, Rect::new(r.x + x, r.y, *w, r.h)))
 }
 
 /// A click on the tape: the cell's piece goes in at the caret (or is copied, or a system reopens).
@@ -729,26 +797,41 @@ pub fn paint(c: &Canvas, model: &BarModel, t: &TapeLayout) {
     c.fill(Rect::new(0.0, t.height - 1.0, c.width, 1.0), th.line);
     let win = window(t);
     c.push_clip(Rect::new(0.0, win.y, c.width, win.h));
+    // the pointer's row and cell (hover.rs): .tape-row:hover, .tape-q:hover, .tape-a:hover, .tape-root:hover
+    let hovered = crate::hover::tape_cell();
     for i in t.drawn.clone() {
         let Some(row) = model.rows.rows.get(i) else {
             continue;
         };
         let r = row_rect(c.width, t, i);
         let selected = model.selected == Some(i);
+        let over = hovered.filter(|h| h.0 == i);
         if selected {
             c.fill_round(r, size::RADIUS_S, th.fill_selected);
+        } else if over.is_some() {
+            c.fill_round(r, size::RADIUS_S, th.fill_hover);
         }
         let Some(v) = view(c.gfx, model, row, r.w) else {
             continue;
         };
-        for (cell, layout, x, w) in &v.cells {
+        let roots = v.cells.iter().any(|c| c.0.text.starts_with(','));
+        for (k, (cell, layout, x, w)) in v.cells.iter().enumerate() {
             let picked = selected && cell.pick == Some(model.tape.pick);
+            let hot = over.is_some_and(|h| h.1 == Some(k)) && cell.act != Act::None;
             if picked {
                 picked_mark(c, Rect::new(r.x + x - 3.0, r.y + 4.0, w + 6.0, r.h - 8.0));
+            } else if hot && k > 0 && (roots || matches!(cell.act, Act::Copy(_))) {
+                c.fill_round(
+                    Rect::new(r.x + x - 3.0, r.y + 4.0, w + 6.0, r.h - 8.0),
+                    4.0,
+                    with_alpha(th.answer, 0.12),
+                );
             }
             let ink = match cell.look {
-                Look::Expr if picked => th.ink,
+                Look::Expr if picked || hot => th.ink,
+                Look::Quiet if hot => th.answer_hover,
                 Look::Expr | Look::Quiet => th.muted,
+                Look::Answer if hot => th.answer_hover,
                 Look::Answer => th.answer,
             };
             c.text(layout, r.x + x, r.y, ink);
@@ -925,6 +1008,35 @@ mod tests {
         key(&mut m, 0x1B, none);
         assert!(!m.tape.help);
         engine.shutdown();
+    }
+
+    #[test]
+    fn tips_say_what_a_click_does() {
+        let f = AnswerForm::Exact;
+        let one = row("2+2", "4", None);
+        let c = cells(&one, f, 6.0, HistoryInsert::Expr);
+        assert_eq!(tip(&one, &c, 0, f), Some("Insert expression at the cursor"));
+        assert_eq!(tip(&one, &c, 1, f), Some("Insert approximation at the cursor"));
+        let dual = row("sqrt(2)", "1.41421", Some("√2"));
+        let c = cells(&dual, f, 6.0, HistoryInsert::Expr);
+        assert_eq!(tip(&dual, &c, 1, f), Some("Insert exact value at the cursor"));
+        assert_eq!(tip(&dual, &c, 2, f), None);
+        assert_eq!(tip(&dual, &c, 3, f), Some("Insert approximation at the cursor"));
+        let mut solve = row("x^2=4", "-2, 2", None);
+        solve.solve = Some(SolveInfo {
+            variable: "x".into(),
+            roots: vec![-2.0, 2.0],
+            outcome: SolveOutcome::Roots,
+            more: false,
+        });
+        let c = cells(&solve, f, 6.0, HistoryInsert::Expr);
+        assert_eq!(tip(&solve, &c, 1, f), Some("Copy all the solutions"));
+        assert_eq!(tip(&solve, &c, 2, f), Some("Insert this solution at the cursor"));
+        assert_eq!(tip(&solve, &c, 3, f), None);
+        let mut sys = row("x+y=3; x-y=1", "x = 2, y = 1", None);
+        sys.kind = Some(HistoryKind::System);
+        let c = cells(&sys, f, 6.0, HistoryInsert::Expr);
+        assert_eq!(tip(&sys, &c, 0, f), Some("Edit equations"));
     }
 
     #[test]
