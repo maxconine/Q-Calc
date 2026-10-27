@@ -484,12 +484,22 @@ pub enum Embedded {
 }
 
 /// `embedIntegrals`: replaces integrals inside a larger line (`4*∫0..1 x^2`) with their values.
+/// The most places an integral could start that one line is read for.
+const MAX_INTEGRAL_STARTS: usize = 64;
+
 pub fn embed_integrals(expr: &str, ctx: &CalcContext) -> Embedded {
     static START: Lazy = Lazy::new(|| re(r"(?:the\s+)?(?:integrate|integral)|int|∫", "i"));
     let c = chars(expr);
     let mut found: Vec<(usize, usize)> = Vec::new();
-    for m in START.find_iter(expr).flatten() {
-        let at = expr[..m.start()].chars().count();
+    let (mut at, mut counted) = (0, 0);
+    for (n, m) in START.find_iter(expr).flatten().enumerate() {
+        // each start reads the rest of the line, so a line of a thousand nested `integral of` took seconds
+        // (the TS too); past this many, no line a person types, it's blank
+        if n >= MAX_INTEGRAL_STARTS {
+            return Embedded::Failed;
+        }
+        at += expr[counted..m.start()].chars().count();
+        counted = m.start();
         if at > 0 && word_char(c[at - 1]) {
             continue;
         }
