@@ -334,6 +334,8 @@ impl Gfx {
             FlipDevice { d3d, factory, d2d }
         };
         *self.flip.borrow_mut() = Some(dev.clone());
+        // WARP's DLL stays loaded across hides (warp.rs)
+        crate::warp::pin();
         Ok(dev)
     }
 

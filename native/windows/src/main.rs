@@ -76,6 +76,8 @@ mod typst_row;
 #[cfg(windows)]
 mod update;
 #[cfg(windows)]
+mod warp;
+#[cfg(windows)]
 mod window;
 
 #[cfg(feature = "perf")]
