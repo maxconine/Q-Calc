@@ -138,3 +138,23 @@ fn gcd_of_an_infinity_ends() {
     assert_eq!(show("gcd(1e308*10, 4)"), "undefined");
     assert_eq!(show("lcm(4, 6)"), "12");
 }
+
+#[test]
+fn ranges_past_exact_integers_end() {
+    // 2^53 + 1 is 2^53 again: the loop never passed the end and pushed until memory ran out (TS too)
+    assert_eq!(
+        show("inclusiveRange(9007199254740993, 9007199254740992)"),
+        "[9.00719925474e+15]"
+    );
+    assert_eq!(show("inclusiveRange(1, 4)"), "[1, 2, 3, 4]");
+}
+
+#[test]
+fn deep_trees_simplify_without_copies() {
+    on_engine_stack(|| {
+        // simplifyCore copied each subtree at every level: `d/dx` ten times over a 6,500-letter product took
+        // 8.7 s and 5.5 GB
+        let line = format!("{}4 floz to q{}", "d/dx ".repeat(10), "t".repeat(2000));
+        assert_eq!(show(&line), "");
+    });
+}

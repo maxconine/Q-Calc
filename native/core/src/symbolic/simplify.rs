@@ -1145,43 +1145,50 @@ pub fn simplify_core(node: &Node) -> Node {
             return simplify_core(kids[0]);
         }
     }
-    let mut node = node.clone();
-    if let Node::Function { args, .. } = &node {
-        let name = function_name(&node).to_string();
-        match operator_for(&name) {
-            Some(op) => {
-                let mut args = args.clone();
-                if args.len() > 2 && has_property(&node, Prop::Associative, &ctx) {
-                    while args.len() > 2 {
-                        let last = args.pop().expect("arg");
-                        let seclast = args.pop().expect("arg");
-                        args.push(super::op(op, vec![last, seclast]));
+    // the node as an operator when it's a function call that names one (`add(a, b)`); otherwise the node itself,
+    // borrowed: copying it at every level made a deep tree cost the square of its depth
+    let rebuilt;
+    let node: &Node = match node {
+        Node::Function { args, .. } => {
+            let name = function_name(node).to_string();
+            match operator_for(&name) {
+                Some(op) => {
+                    let mut args = args.clone();
+                    if args.len() > 2 && has_property(node, Prop::Associative, &ctx) {
+                        while args.len() > 2 {
+                            let last = args.pop().expect("arg");
+                            let seclast = args.pop().expect("arg");
+                            args.push(super::op(op, vec![last, seclast]));
+                        }
                     }
+                    rebuilt = super::op(op, args);
+                    &rebuilt
                 }
-                node = super::op(op, args);
-            }
-            None => {
-                let Node::Function { callee, args } = &node else {
-                    unreachable!()
-                };
-                return Node::Function {
-                    callee: Box::new(simplify_core(callee)),
-                    args: args.iter().map(simplify_core).collect(),
-                };
+                None => {
+                    let Node::Function { callee, args } = node else {
+                        unreachable!()
+                    };
+                    return Node::Function {
+                        callee: Box::new(simplify_core(callee)),
+                        args: args.iter().map(simplify_core).collect(),
+                    };
+                }
             }
         }
-    }
+        other => other,
+    };
     let Node::Operator {
         op, args, implicit, ..
-    } = &node
+    } = node
     else {
-        return match &node {
+        return match node {
             Node::Array(items) => Node::Array(items.iter().map(simplify_core).collect()),
-            Node::Accessor { .. } => super::map_children(&node, &mut simplify_core),
-            _ => node,
+            Node::Accessor { .. } => super::map_children(node, &mut simplify_core),
+            _ => node.clone(),
         };
     };
-    let (mut op, mut args, implicit) = (*op, args.clone(), *implicit);
+    let (mut op, mut args, implicit) =
+        (*op, std::borrow::Cow::Borrowed(args.as_slice()), *implicit);
     if args.len() == 1 {
         let a0 = simplify_core(&args[0]);
         if op == Op::BitNot
@@ -1215,7 +1222,7 @@ pub fn simplify_core(node: &Node) -> Node {
         {
             if inner.len() == 2 && *inner_op == Op::Subtract {
                 op = Op::Subtract;
-                args = vec![inner[1].clone(), inner[0].clone()];
+                args = std::borrow::Cow::Owned(vec![inner[1].clone(), inner[0].clone()]);
                 finish = false;
             }
             if inner.len() == 1 && inner_op.symbol() == "-" {

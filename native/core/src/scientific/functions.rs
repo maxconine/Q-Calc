@@ -781,7 +781,9 @@ fn inclusive_range(a: &[Val], _: &Scope) -> EvalResult {
     alloc_check(count)?;
     let mut out = Vec::new();
     let mut i = start;
-    while if step > 0.0 { i <= end } else { i >= end } {
+    // never more than `count`: past 2^53 adding 1 can leave i where it was, and the TS loop (and this one,
+    // before) pushed until memory ran out on `inclusiveRange(2^53, 2^53)`
+    while out.len() < count as usize && if step > 0.0 { i <= end } else { i >= end } {
         out.push(i);
         i += step;
     }
