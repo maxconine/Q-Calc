@@ -633,6 +633,10 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     let s = replace(&ROOT_LETTER, &lower_calls(expr, extra), |c| {
         format!("{}({})", g(c, 1), g(c, 2))
     });
+    // native only: `iπ` and `e π` would read as calls `i(pi)` and `e (pi)` once π is `(pi)`; i and e are never
+    // functions, so they multiply
+    static CONST_PI: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])([ie])(\s*)(?=[πτ])", ""));
+    let s = replace(&CONST_PI, &s, |c| format!("{}*{}", g(c, 1), g(c, 2)));
     let s = rewrite_typeset_mul(&s)
         .replace('°', " deg")
         .replace('÷', "/")

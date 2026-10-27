@@ -1140,7 +1140,11 @@ pub const TABLE: &[Builtin] = &[
     entry!("log2", 1, |a, _| positive_log(n(a, 0), jsmath::log2)),
     entry!("log10", 1, |a, _| positive_log(n(a, 0), jsmath::log10)),
     entry!("log", 2, log),
-    entry!("exp", 1, |a, _| num(jsmath::exp(n(a, 0)))),
+    // native only: a complex power of e, as `e^(i*pi)` already gives (the TS scope's exp is real only)
+    entry!("exp", 1, |a, _| match a.first() {
+        Some(Val::Complex { re, im }) => Ok(C::new(*re, *im).exp().val()),
+        _ => num(jsmath::exp(n(a, 0))),
+    }),
     entry!("nthroot", 2, nth_root),
     entry!("nthRoot", 2, nth_root),
     entry!("sign", 1, |a, _| num(js_sign(n(a, 0)))),
