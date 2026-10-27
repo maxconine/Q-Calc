@@ -854,8 +854,8 @@ mod tests {
         assert_eq!(s.phase, Phase::Play);
         assert!(close(s.ball.vx, -SERVE_SPEED, 2) && close(s.ball.vy, 0.0, 2));
         let s = step(new_game(1.0), SERVE_PAUSE_S + 0.01, &mut || 0.999);
-        assert!(close(s.ball.vx.hypot(s.ball.vy), SERVE_SPEED, 2));
-        assert!(s.ball.vy > 0.0 && s.ball.vy.atan2(s.ball.vx).abs() < 0.45);
+        assert!(close(js_hypot(s.ball.vx, s.ball.vy), SERVE_SPEED, 2));
+        assert!(s.ball.vy > 0.0 && crate::scientific::functions::jsmath::atan2(s.ball.vy, s.ball.vx).abs() < 0.45);
     }
 
     #[test]
@@ -939,7 +939,7 @@ mod tests {
         );
         assert!(close(long.ball.x, 320.0 + 100.0 * 0.25, 0));
         let b = bounce_off(ball(0.0, 200.0, -MAX_SPEED, 0.0), 100.0, 1.0);
-        assert!(close(b.vy.atan2(b.vx), MAX_BOUNCE, 2) && close(b.vx.hypot(b.vy), MAX_SPEED, 2));
+        assert!(close(crate::scientific::functions::jsmath::atan2(b.vy, b.vx), MAX_BOUNCE, 2) && close(js_hypot(b.vx, b.vy), MAX_SPEED, 2));
     }
 
     #[test]

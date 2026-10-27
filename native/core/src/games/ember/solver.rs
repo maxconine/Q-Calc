@@ -509,7 +509,7 @@ pub fn reachability(def: &StageDef, opts: ReachOpts) -> Reach {
                 }
                 let x = i as i64 % c.w;
                 let y = (i as i64 - x) / c.w;
-                if ((x - tx) as f64).hypot((y - ty) as f64) <= 2.2 {
+                if crate::games::js_hypot((x - tx) as f64, (y - ty) as f64) <= 2.2 {
                     c.frozen[t] = true;
                     changed = true;
                 }

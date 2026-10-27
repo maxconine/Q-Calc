@@ -344,10 +344,10 @@ fn acos(a: &[Val], s: &Scope) -> EvalResult {
     })
 }
 fn atan(a: &[Val], s: &Scope) -> EvalResult {
-    num(from_rad(n(a, 0).atan(), s))
+    num(from_rad(jsmath::atan(n(a, 0)), s))
 }
 fn atan2(a: &[Val], s: &Scope) -> EvalResult {
-    num(from_rad(n(a, 0).atan2(n(a, 1)), s))
+    num(from_rad(jsmath::atan2(n(a, 0), n(a, 1)), s))
 }
 fn acsc(a: &[Val], s: &Scope) -> EvalResult {
     let x = n(a, 0);
@@ -1007,12 +1007,21 @@ fn hypot(a: &[Val], _: &Scope) -> EvalResult {
         _ if a.iter().any(|v| matches!(v, Val::List(_))) => return Err(type_error("hypot")),
         _ => a.to_vec(),
     };
-    let (mut result, mut largest) = (0.0, 0.0);
+    let mut nums = Vec::with_capacity(values.len());
     for v in &values {
-        let value = match v {
-            Val::Num(_) | Val::Bool(_) => v.to_number().abs(),
+        match v {
+            Val::Num(_) | Val::Bool(_) => nums.push(v.to_number()),
             _ => return Err(type_error("hypot")),
-        };
+        }
+    }
+    num(hypot_numbers(&nums))
+}
+
+/// mathjs `hypot` of plain numbers (also what `simplify` folds `hypot(a, b)` with).
+pub fn hypot_numbers(values: &[f64]) -> f64 {
+    let (mut result, mut largest) = (0.0, 0.0);
+    for v in values {
+        let value = v.abs();
         if largest < value && !nearly_equal(largest, value) {
             result *= (largest / value) * (largest / value);
             result += 1.0;
@@ -1025,7 +1034,7 @@ fn hypot(a: &[Val], _: &Scope) -> EvalResult {
             };
         }
     }
-    num(largest * result.sqrt())
+    largest * result.sqrt()
 }
 
 /// mathjs `re`, `im`, `conj` and `arg`: elementwise over lists, a number's own parts otherwise.

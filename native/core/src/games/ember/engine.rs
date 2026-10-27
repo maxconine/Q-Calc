@@ -2137,7 +2137,7 @@ pub fn step(level: &Level, s0: &GameState, input: Inputs) -> GameState {
     }
     for (i, m) in stage.movers.iter().enumerate() {
         let st = s.movers[i];
-        let len = (m.to.x - m.r.x).hypot(m.to.y - m.r.y);
+        let len = crate::games::js_hypot(m.to.x - m.r.x, m.to.y - m.r.y);
         if len == 0.0 {
             continue;
         }
@@ -2199,7 +2199,7 @@ pub fn step(level: &Level, s0: &GameState, input: Inputs) -> GameState {
         let ty = ti / stage.cols;
         let cx = tx as f64 * TILE + TILE / 2.0;
         let cy = ty as f64 * TILE + TILE / 2.0;
-        let near = frost.alive && (fc.0 - cx).hypot(fc.1 - cy) <= FREEZE_RADIUS;
+        let near = frost.alive && crate::games::js_hypot(fc.0 - cx, fc.1 - cy) <= FREEZE_RADIUS;
         let was = s.thin[i] > 0;
         if near {
             s.thin[i] = FREEZE_TICKS;
