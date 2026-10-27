@@ -775,9 +775,11 @@ pub mod timer {
     pub const COPIED: usize = 1;
     /// the recent view's next row to expire (the tape shrinks while the bar is up)
     pub const RECENT: usize = 2;
+    /// the line resting before it is typeset (typst_row.rs)
+    pub const TYPESET: usize = 3;
 
     thread_local! {
-        static IDS: [Cell<usize>; 3] = const { [Cell::new(0), Cell::new(0), Cell::new(0)] };
+        static IDS: [Cell<usize>; 4] = const { [Cell::new(0), Cell::new(0), Cell::new(0), Cell::new(0)] };
         /// when the RECENT timer is due, ms since 1970
         static RECENT_AT: Cell<i64> = const { Cell::new(0) };
     }
@@ -832,12 +834,17 @@ pub mod timer {
             match which {
                 STEADY => app.model.answer.steady = None,
                 COPIED => app.model.answer.copied = false,
+                // nothing to draw yet: the picture comes back from the Typst thread
+                TYPESET => {
+                    crate::typst_row::compile(&mut app.model, &app.engine);
+                    return None;
+                }
                 _ => RECENT_AT.with(|c| c.set(0)),
             }
             app.model.touch();
-            app.host
+            Some(app.host)
         });
-        if let Some(host) = host {
+        if let Some(Some(host)) = host {
             // SAFETY: our own window; its handler lays out and paints
             let _ = unsafe { PostMessageW(Some(host), WM_ENGINE, WPARAM(0), LPARAM(0)) };
         }

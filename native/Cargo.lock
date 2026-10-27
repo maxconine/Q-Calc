@@ -1814,6 +1814,7 @@ dependencies = [
 name = "qcalc-win"
 version = "0.1.0"
 dependencies = [
+ "qcalc-core",
  "qcalc-ffi",
  "serde",
  "serde_json",

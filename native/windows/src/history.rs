@@ -531,7 +531,13 @@ fn build(gfx: &Gfx, m: &BarModel, row: &HistoryRow, w: f32) -> Option<RowView> {
     let gaps: Vec<f32> = (0..answers.len())
         .map(|k| {
             let tight = |i: usize| answers[i].0.text.starts_with(',');
-            if k == 0 || tight(k) || tight(k - 1) { 0.0 } else { gap }
+            if k == 0 {
+                0.0
+            } else if tight(k) || tight(k - 1) {
+                3.0
+            } else {
+                gap
+            }
         })
         .collect();
     let natural: f32 = answers.iter().map(|a| a.2).sum::<f32>() + gaps.iter().sum::<f32>();
@@ -722,7 +728,7 @@ pub fn paint(c: &Canvas, model: &BarModel, t: &TapeLayout) {
         for (cell, layout, x, w) in &v.cells {
             let picked = selected && cell.pick == Some(model.tape.pick);
             if picked {
-                picked_mark(c, Rect::new(r.x + x - 4.0, r.y + 4.0, w + 8.0, r.h - 8.0));
+                picked_mark(c, Rect::new(r.x + x - 3.0, r.y + 4.0, w + 6.0, r.h - 8.0));
             }
             let ink = match cell.look {
                 Look::Expr if picked => th.ink,
@@ -822,6 +828,88 @@ mod tests {
         let c = cells(&none, AnswerForm::Exact, 6.0, HistoryInsert::Expr);
         assert_eq!(c[1].look, Look::Quiet);
         assert_eq!(c[1].act, Act::Insert(String::new()));
+    }
+
+    /// The tape's keys through the model as the bar routes them (no window; the engine thread runs but its
+    /// answers never come back, so only the synchronous parts are checked).
+    #[test]
+    fn tape_keys() {
+        use crate::keys::Mods;
+        use crate::model::Outcome;
+        const UP: u32 = 0x26;
+        const LEFT: u32 = 0x25;
+        const ENTER: u32 = 0x0D;
+        const BACK: u32 = 0x08;
+        let engine = EngineThread::start(
+            qcalc_ffi::EngineConfig {
+                is_windows: true,
+                locale: "en_US".into(),
+                data_dir: None,
+                time_zone: None,
+            },
+            || {},
+        );
+        let mut m = BarModel::new(crate::store::Settings::default());
+        m.rows = Rows::new(vec![
+            row("2+2", "4", None),
+            row("sqrt(8)", "2.82843", Some("2sqrt(2)")),
+            row("255 in hex", "0xFF", None),
+        ]);
+        let none = Mods::default();
+        let alt = Mods {
+            alt: true,
+            ..none
+        };
+        let ctrl = Mods {
+            ctrl: true,
+            ..none
+        };
+        let key = |m: &mut BarModel, vk: u32, mods: Mods| m.key_down(vk, mods, &engine, || None);
+        // ↑ lands on the newest row's answer; ↵ inserts it
+        key(&mut m, UP, none);
+        assert_eq!((m.selected, m.tape.pick), (Some(2), 1));
+        key(&mut m, ENTER, none);
+        assert_eq!(m.field.text(), "0xFF");
+        assert_eq!(m.selected, None);
+        // Alt+↵ inserts the other half than the setting (expression by default, so the answer)
+        m.field.reset("");
+        key(&mut m, UP, none);
+        key(&mut m, UP, none);
+        assert_eq!(m.selected, Some(1));
+        // a dual row lands on the exact side when the setting is exact
+        assert_eq!(m.tape.pick, 1);
+        key(&mut m, ENTER, alt);
+        assert_eq!(m.field.text(), "2sqrt(2)");
+        // ← picks the expression, and ↑ keeps to that side
+        m.field.reset("");
+        key(&mut m, UP, none);
+        key(&mut m, LEFT, none);
+        assert_eq!(m.tape.pick, 0);
+        key(&mut m, UP, none);
+        assert_eq!((m.selected, m.tape.pick), (Some(1), 0));
+        key(&mut m, ENTER, none);
+        assert_eq!(m.field.text(), "sqrt(8)");
+        // Ctrl+Backspace deletes the highlighted row, Ctrl+Z puts it back
+        m.field.reset("");
+        key(&mut m, UP, none);
+        key(&mut m, UP, none);
+        assert_eq!(m.selected, Some(1));
+        key(&mut m, BACK, ctrl);
+        assert_eq!(m.rows.rows.len(), 2);
+        assert_eq!(m.rows.rows[1].expr, "255 in hex");
+        key(&mut m, 0x5A, ctrl);
+        assert_eq!(m.rows.rows.len(), 3);
+        assert_eq!(m.rows.rows[1].expr, "sqrt(8)");
+        assert_eq!(m.selected, Some(1));
+        // Ctrl+W asks the app to close a sheet or hide
+        assert_eq!(key(&mut m, 0x57, ctrl), Outcome::CloseSheet);
+        // `?` shows the cheat sheet; Esc closes it
+        m.field.reset("");
+        m.char16(u16::from(b'?'), &engine);
+        assert!(m.tape.help);
+        key(&mut m, 0x1B, none);
+        assert!(!m.tape.help);
+        engine.shutdown();
     }
 
     #[test]

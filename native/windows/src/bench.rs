@@ -192,7 +192,6 @@ pub mod pipe {
         PIPE_REJECT_REMOTE_CLIENTS, PIPE_TYPE_BYTE, PIPE_WAIT,
     };
     use windows::Win32::UI::WindowsAndMessaging::PostMessageW;
-    use windows::core::w;
 
     use crate::qlog;
 
@@ -202,8 +201,14 @@ pub mod pipe {
         pub reply: Sender<String>,
     }
 
+    /// `qcalc-bench`, or `QCALC_PIPE` (so parallel dev builds each have their own)
+    pub fn name() -> String {
+        std::env::var("QCALC_PIPE").unwrap_or_else(|_| "qcalc-bench".into())
+    }
+
     pub fn serve(host: HWND, msg: u32) {
         let host = host.0 as usize;
+        let path = windows::core::HSTRING::from(format!(r"\\.\pipe\{}", name()));
         let _ = std::thread::Builder::new()
             .name("qcalc-bench-pipe".into())
             .spawn(move || {
@@ -211,7 +216,7 @@ pub mod pipe {
                     // SAFETY: a fresh pipe instance each loop, closed below
                     let pipe = unsafe {
                         CreateNamedPipeW(
-                            w!(r"\\.\pipe\qcalc-bench"),
+                            &path,
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE
                                 | PIPE_READMODE_BYTE

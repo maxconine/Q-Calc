@@ -20,7 +20,7 @@ use qcalc_ffi::{
     SolveOutcome, TypstLineCap, TypstLineJoin, TypstPaint, TypstPaths, TypstRenderer, TypstStyle,
 };
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D1_BEZIER_SEGMENT, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
+    D2D_RECT_F, D2D_SIZE_F, D2D1_BEZIER_SEGMENT, D2D1_FIGURE_BEGIN_FILLED, D2D1_FIGURE_BEGIN_HOLLOW,
     D2D1_FIGURE_END_CLOSED, D2D1_FIGURE_END_OPEN, D2D1_FILL_MODE_ALTERNATE, D2D1_FILL_MODE_WINDING,
 };
 use windows::Win32::Graphics::Direct2D::{
@@ -28,8 +28,10 @@ use windows::Win32::Graphics::Direct2D::{
     D2D1_CAP_STYLE_SQUARE, D2D1_DASH_STYLE_CUSTOM, D2D1_DASH_STYLE_SOLID, D2D1_LAYER_OPTIONS_NONE,
     D2D1_LAYER_PARAMETERS, D2D1_LINE_JOIN_BEVEL, D2D1_LINE_JOIN_MITER_OR_BEVEL,
     D2D1_LINE_JOIN_ROUND, D2D1_QUADRATIC_BEZIER_SEGMENT, D2D1_STROKE_STYLE_PROPERTIES,
-    ID2D1Geometry, ID2D1PathGeometry, ID2D1StrokeStyle,
+    D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE, ID2D1Bitmap,
+    ID2D1Geometry, ID2D1PathGeometry, ID2D1RenderTarget, ID2D1SolidColorBrush, ID2D1StrokeStyle,
 };
+use windows::core::Interface;
 use windows_numerics::{Matrix3x2, Vector2};
 
 use crate::engine::{EngineThread, done};
@@ -135,8 +137,12 @@ fn typeset(r: &TypstRenderer, req: &Request) -> Outcome {
 }
 
 /// What the bar shows changed (an answer landed, Tab, a closed form): typeset it again if the request differs.
+/// The compile waits a moment (`SETTLE_MS`) first: a burst of keystrokes asks once, after it, so typing never
+/// shares the machine with compiles it is already past.
 pub fn refresh(m: &mut BarModel, engine: &EngineThread) {
+    let _ = engine;
     let Some(req) = request(m) else {
+        crate::answer::timer::stop(crate::answer::timer::TYPESET);
         let asked = m.typeset.asked.take().is_some();
         if m.typeset.shown.take().is_some() || asked {
             m.touch();
@@ -146,7 +152,19 @@ pub fn refresh(m: &mut BarModel, engine: &EngineThread) {
     if m.typeset.asked.as_ref() == Some(&req) {
         return;
     }
-    m.typeset.asked = Some(req.clone());
+    m.typeset.asked = Some(req);
+    crate::answer::timer::start(crate::answer::timer::TYPESET, SETTLE_MS);
+}
+
+/// How long the line rests before it is typeset (about a frame).
+pub const SETTLE_MS: u32 = 20;
+
+/// The line rested (answer.rs' timer): the Typst thread typesets what was asked; the picture is drawn when it
+/// comes back, if it is still the one asked for.
+pub fn compile(m: &mut BarModel, engine: &EngineThread) {
+    let Some(req) = m.typeset.asked.clone() else {
+        return;
+    };
     let latest = m.typeset.latest.clone();
     let generation = latest.fetch_add(1, Ordering::Relaxed) + 1;
     engine.typst(move |r| {
@@ -169,6 +187,7 @@ pub fn refresh(m: &mut BarModel, engine: &EngineThread) {
                         stale: false,
                     });
                 }
+                // mid-edit input Typst rejects keeps the last picture, dimmed
                 Outcome::Failed(doc) => {
                     if let Some(s) = &mut st.shown
                         && s.doc != doc
@@ -181,7 +200,6 @@ pub fn refresh(m: &mut BarModel, engine: &EngineThread) {
         })
     });
 }
-
 /// The row's height in a bar `width` wide (0 when hidden).
 pub fn height(m: &BarModel, width: f32) -> f32 {
     m.typeset
@@ -215,19 +233,13 @@ struct Drawn {
 }
 
 struct Built {
-    doc: String,
     items: Vec<Drawn>,
     clips: Vec<ID2D1PathGeometry>,
 }
 
-thread_local! {
-    /// the geometries of the document on screen, made on its first paint
-    static BUILT: RefCell<Option<Built>> = const { RefCell::new(None) };
-}
-
-/// The hidden trim: the geometries go, and Typst's own caches on its thread.
+/// The hidden trim: the picture goes, and Typst's own caches on its thread.
 pub fn trim(engine: &EngineThread) {
-    BUILT.with(|b| b.borrow_mut().take());
+    PICTURE.with(|p| p.borrow_mut().take());
     engine.typst(|r| {
         r.clear_caches();
         None
@@ -398,7 +410,6 @@ fn build(gfx: &Gfx, t: &Typeset) -> Built {
         })
         .collect();
     Built {
-        doc: t.doc.clone(),
         items,
         clips,
     }
@@ -417,6 +428,91 @@ fn color(paint: TypstPaint, ink: Color, alpha: f32) -> Color {
     }
 }
 
+/// The picture on screen, drawn once into a bitmap of the bar's render target: each frame after that only copies
+/// it. Made again when the document, the ink, the scale or the render target change.
+struct Picture {
+    key: (String, [u32; 4], usize, u32),
+    bitmap: ID2D1Bitmap,
+    size: (f32, f32),
+}
+
+thread_local! {
+    static PICTURE: RefCell<Option<Picture>> = const { RefCell::new(None) };
+}
+
+fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Built, ink: Color) {
+    // SAFETY: inside the target's BeginDraw/EndDraw; layers are pushed and popped here
+    unsafe {
+        for item in &built.items {
+            let mut pushed = 0;
+            for &k in &item.clips {
+                let Some(g) = built.clips.get(k) else { continue };
+                let mask: ID2D1Geometry = g.clone().into();
+                let params = D2D1_LAYER_PARAMETERS {
+                    contentBounds: D2D_RECT_F {
+                        left: f32::MIN,
+                        top: f32::MIN,
+                        right: f32::MAX,
+                        bottom: f32::MAX,
+                    },
+                    geometricMask: std::mem::ManuallyDrop::new(Some(mask)),
+                    maskAntialiasMode: D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
+                    maskTransform: Matrix3x2::identity(),
+                    opacity: 1.0,
+                    opacityBrush: std::mem::ManuallyDrop::new(None),
+                    layerOptions: D2D1_LAYER_OPTIONS_NONE,
+                };
+                rt.PushLayer(&params, None);
+                let _ = std::mem::ManuallyDrop::into_inner(params.geometricMask);
+                pushed += 1;
+            }
+            brush.SetColor(&color(item.paint, ink, 1.0));
+            match &item.style {
+                Style::Fill => rt.FillGeometry(&item.geometry, brush, None),
+                Style::Stroke(w, style) => rt.DrawGeometry(&item.geometry, brush, *w, style.as_ref()),
+            }
+            for _ in 0..pushed {
+                rt.PopLayer();
+            }
+        }
+    }
+}
+
+/// The page drawn at `s` into a bitmap the bar's target can copy.
+fn picture(c: &Canvas, t: &Typeset, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))> {
+    let built = build(c.gfx, t);
+    let size = D2D_SIZE_F {
+        width: (t.paths.width_pt * s).ceil().max(1.0),
+        height: (t.paths.height_pt * s).ceil().max(1.0),
+    };
+    // SAFETY: a target made from the bar's (which is mid-frame), drawn and closed here
+    unsafe {
+        let brt = c
+            .rt()
+            .CreateCompatibleRenderTarget(
+                Some(&size),
+                None,
+                None,
+                D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
+            )
+            .ok()?;
+        let brush = brt.CreateSolidColorBrush(&c.theme.ink, None).ok()?;
+        brt.BeginDraw();
+        brt.Clear(Some(&rgb(0, 0.0)));
+        brt.SetTransform(&Matrix3x2 {
+            M11: s,
+            M12: 0.0,
+            M21: 0.0,
+            M22: s,
+            M31: 0.0,
+            M32: 0.0,
+        });
+        draw_items(&brt, &brush, &built, c.theme.ink);
+        brt.EndDraw(None, None).ok()?;
+        Some((brt.GetBitmap().ok()?, (size.width, size.height)))
+    }
+}
+
 /// The row in `r`: the page centred at the top, shrunk to fit, in `--ink` (40% while stale).
 pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
     let Some(t) = &m.typeset.shown else { return };
@@ -424,59 +520,35 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
         return;
     }
     let (s, _) = fit(&t.paths, c.width);
-    let x = r.x + (r.w - t.paths.width_pt * s) / 2.0;
-    let alpha = if t.stale { 0.4 } else { 1.0 };
-    let rt = c.rt();
-    BUILT.with(|b| {
-        let mut b = b.borrow_mut();
-        if b.as_ref().is_none_or(|b| b.doc != t.doc) {
-            *b = Some(build(c.gfx, t));
+    let ink = c.theme.ink;
+    let key = (
+        t.doc.clone(),
+        [ink.r.to_bits(), ink.g.to_bits(), ink.b.to_bits(), ink.a.to_bits()],
+        c.rt().as_raw() as usize,
+        s.to_bits(),
+    );
+    PICTURE.with(|p| {
+        let mut p = p.borrow_mut();
+        if p.as_ref().is_none_or(|p| p.key != key) {
+            *p = picture(c, t, s).map(|(bitmap, size)| Picture { key, bitmap, size });
         }
-        let Some(built) = b.as_ref() else { return };
-        // SAFETY: inside the frame's BeginDraw/EndDraw; transforms and layers are paired here
+        let Some(pic) = p.as_ref() else { return };
+        let x = (r.x + (r.w - pic.size.0) / 2.0).round();
+        let dest = D2D_RECT_F {
+            left: x,
+            top: r.y,
+            right: x + pic.size.0,
+            bottom: r.y + pic.size.1,
+        };
+        // SAFETY: inside the frame's BeginDraw/EndDraw
         unsafe {
-            let mut before = Matrix3x2::default();
-            rt.GetTransform(&mut before);
-            rt.SetTransform(&Matrix3x2 {
-                M11: s,
-                M12: 0.0,
-                M21: 0.0,
-                M22: s,
-                M31: x,
-                M32: r.y,
-            });
-            for item in &built.items {
-                for &k in &item.clips {
-                    if let Some(g) = built.clips.get(k) {
-                        let mask: ID2D1Geometry = g.clone().into();
-                        let params = D2D1_LAYER_PARAMETERS {
-                            contentBounds: D2D_RECT_F {
-                                left: f32::MIN,
-                                top: f32::MIN,
-                                right: f32::MAX,
-                                bottom: f32::MAX,
-                            },
-                            geometricMask: std::mem::ManuallyDrop::new(Some(mask)),
-                            maskAntialiasMode: D2D1_ANTIALIAS_MODE_PER_PRIMITIVE,
-                            maskTransform: Matrix3x2::identity(),
-                            opacity: 1.0,
-                            opacityBrush: std::mem::ManuallyDrop::new(None),
-                            layerOptions: D2D1_LAYER_OPTIONS_NONE,
-                        };
-                        rt.PushLayer(&params, None);
-                        let _ = std::mem::ManuallyDrop::into_inner(params.geometricMask);
-                    }
-                }
-                let brush = c.brush(color(item.paint, c.theme.ink, alpha));
-                match &item.style {
-                    Style::Fill => rt.FillGeometry(&item.geometry, brush, None),
-                    Style::Stroke(w, style) => rt.DrawGeometry(&item.geometry, brush, *w, style.as_ref()),
-                }
-                for _ in item.clips.iter().filter(|&&k| k < built.clips.len()) {
-                    rt.PopLayer();
-                }
-            }
-            rt.SetTransform(&before);
+            c.rt().DrawBitmap(
+                &pic.bitmap,
+                Some(&dest),
+                if t.stale { 0.4 } else { 1.0 },
+                D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+                None,
+            );
         }
     });
 }

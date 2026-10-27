@@ -163,8 +163,13 @@ pub fn run() -> i32 {
     qlog!("launch native {} {:?}", env!("CARGO_PKG_VERSION"), argv);
 
     // one Q Calc: a second launch hands its arguments to the first (which shows the bar) and leaves
+    // a dev build with its own QCALC_PIPE is its own instance too
+    let mutex_name = match std::env::var("QCALC_PIPE") {
+        Ok(p) => format!("{MUTEX}.{p}"),
+        Err(_) => MUTEX.to_string(),
+    };
     // SAFETY: the handle stays open for the process's life (that is the point)
-    let mutex = unsafe { CreateMutexW(None, true, &HSTRING::from(MUTEX)) };
+    let mutex = unsafe { CreateMutexW(None, true, &HSTRING::from(mutex_name)) };
     // SAFETY: plain query right after the call
     if mutex.is_ok() && unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
         forward(&argv);
