@@ -43,7 +43,7 @@ final class MessageFiles: NSObject, ObservableObject {
 
     @Published private(set) var transfers: [String: Transfer] = [:]
     /// a file dropped on the bar with no name on the line yet (ShareCommands.swift)
-    var pendingDrop: URL?
+    var pendingDrop: [URL] = []
 
     /// what a sender's app holds for an upload: the sealed file and its length
     private struct Outgoing {
@@ -110,7 +110,7 @@ final class MessageFiles: NSObject, ObservableObject {
         return core("fileStateText", [t.state, t.who, t.percent as Any? ?? NSNull()]) ?? t.state
     }
 
-    private func errorText(_ status: String, who: String) -> String {
+    func errorText(_ status: String, who: String) -> String {
         core("fileErrorText", [status, who]) ?? "couldn’t send that file"
     }
 

@@ -111,6 +111,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "clear": overlay.model.clearHistory(); overlay.model.text = ""; overlay.model.hint = nil
         case "hover": overlay.model.edgeFocus = arg != "off"
         case "contrast": overlay.devContrast = arg != "off"
+        // drop:<path>|<path>… is files dropped on the bar (Messages/ShareCommands.swift)
+        case "drop": overlay.model.dropFiles(arg.split(separator: "|").map { URL(fileURLWithPath: String($0)) }, to: nil)
         case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
         case "identities": overlay.model.text = "identities"; overlay.model.enter()
         case "key": DevSnapshot.key(arg)

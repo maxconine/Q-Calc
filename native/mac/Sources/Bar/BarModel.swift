@@ -278,7 +278,7 @@ final class BarModel: ObservableObject {
             return
         }
         // a file dropped on the bar waits only while the line asks for its name
-        MessageFiles.shared.pendingDrop = nil
+        MessageFiles.shared.pendingDrop = []
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
             var found: Bool?

@@ -561,7 +561,18 @@ pub fn file_error_text(status: &str, who: &str) -> String {
         "no-key" => format!("{who} needs a newer q calc to get files"),
         "disk" => "couldn’t write it to downloads".into(),
         "unreadable" => "couldn’t read that file".into(),
+        "folder" => "a folder can’t be sent · zip it first".into(),
         _ => "couldn’t reach the relay · try again".into(),
+    }
+}
+
+/// What the bar calls files dropped on it while the line asks for a name (`send a.pdf to <name>`): the one
+/// file's clean name, or how many there are.
+pub fn dropped_label(first: &str, count: u32) -> String {
+    if count > 1 {
+        format!("{count} files")
+    } else {
+        clean_filename(first)
     }
 }
 
