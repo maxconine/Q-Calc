@@ -102,7 +102,7 @@ final class GameWindowController: NSObject, NSWindowDelegate, WKScriptMessageHan
         window.appearance = AppSettings.shared.nsAppearance
         window.minSize = NSSize(width: 480, height: 360)
         if let visible = (screen ?? NSScreen.main)?.visibleFrame {
-            window.setFrame(GameWindow.frame(visible: visible, natural: CGSize(width: 900, height: 620), titlebar: 28), display: false)
+            window.setFrame(GameWindow.frame(visible: visible, natural: CGSize(width: 900, height: 620), titlebar: GameWindow.titlebarHeight), display: false)
         } else {
             window.center()
         }

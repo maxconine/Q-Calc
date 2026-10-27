@@ -255,7 +255,10 @@ struct GameShellView<Content: View>: View {
                 }
             }
         }
-        // the page ran under the title bar too; the traffic lights sit over the card's corner as they did
+        // the page ran under the clear title bar but kept its strip clear (--game-fs-inset), so the traffic lights
+        // never sit on a heading
+        .padding(.top, GameWindow.titlebarHeight)
+        .background(shell.fullscreen ? colors.bg.color : Color.clear)
         .ignoresSafeArea()
         .environment(\.gameColors, colors)
         .environmentObject(shell)

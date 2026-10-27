@@ -35,7 +35,7 @@ final class NativeGameWindowController: NSObject, NSWindowDelegate {
         window.appearance = AppSettings.shared.nsAppearance
         window.minSize = NSSize(width: 480, height: 360)
         if let visible = (screen ?? NSScreen.main)?.visibleFrame {
-            window.setFrame(GameWindow.frame(visible: visible, natural: CGSize(width: 900, height: 620), titlebar: 28), display: false)
+            window.setFrame(GameWindow.frame(visible: visible, natural: CGSize(width: 900, height: 620), titlebar: GameWindow.titlebarHeight), display: false)
         } else {
             window.center()
         }
@@ -98,4 +98,12 @@ final class GameNSWindow: NSWindow {
         if event.type == .keyDown || event.type == .keyUp, keys?(event) == true { return }
         super.sendEvent(event)
     }
+}
+
+extension GameWindow {
+    // a titled window's title bar strip, which the page keeps clear
+    static let titlebarHeight: CGFloat = {
+        let content = NSRect(x: 0, y: 0, width: 400, height: 400)
+        return NSWindow.frameRect(forContentRect: content, styleMask: [.titled]).height - content.height
+    }()
 }
