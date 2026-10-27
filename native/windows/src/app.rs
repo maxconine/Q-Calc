@@ -601,6 +601,7 @@ impl App {
                 for done in self.engine.take_results() {
                     done(self);
                 }
+                crate::answer::poll(self);
             }
             WM_PIPE => {
                 // SAFETY: the pipe thread boxed it and gave it up by posting (bench::pipe)
@@ -691,6 +692,11 @@ impl App {
                     Outcome::Hide => self.ops.push(Op::Hide),
                     Outcome::OpenSettings => settings_window::open(self),
                     Outcome::ClearHistory => self.set_history(Vec::new()),
+                    Outcome::CloseSheet => {
+                        if !crate::keys::close_front_sheet(self) {
+                            self.ops.push(Op::Hide);
+                        }
+                    }
                 }
             }
             WM_CHAR => self.model.char16(wp.0 as u16, &self.engine),
@@ -739,7 +745,10 @@ impl App {
             }
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
-                    return None;
+                    if msg != WM_MOUSEWHEEL {
+                        return None;
+                    }
+                    history::wheel(self, wp, lp);
                 }
             }
             windows::Win32::UI::Controls::WM_MOUSELEAVE => {
@@ -800,21 +809,12 @@ impl App {
             return;
         }
         if l.answer.contains(x, y) {
-            if let Some(a) = &self.model.live
-                && !a.display.is_empty()
-            {
-                self.model.to_clipboard = Some(a.display.clone());
-                self.model.hint = Some("copied".into());
-                self.model.touch();
+            if let Some(copy) = crate::answer::hit(&l.live, x, y) {
+                crate::answer::copy(&mut self.model, &copy);
             }
             return;
         }
-        if let Some((i, answer)) =
-            history::hit(self.bar.layout.width, &self.bar.layout.tape_rows, x, y)
-        {
-            self.model.insert_row(i, answer);
-            self.text_changed();
-        }
+        history::click(self, x, y);
     }
 
     fn place_ime(&self) {
@@ -949,6 +949,7 @@ impl App {
                 self.model.text_changed(&self.engine);
             }
             self.model.hint = self.notice.clone();
+            self.model.tape.hotkey = self.store.hotkey.clone();
             self.model.field.select_all();
         }
         self.bar.surface.set_dpi(monitor.dpi);
@@ -1003,6 +1004,7 @@ impl App {
         if crate::render::hardware() {
             self.bar.surface.release();
         }
+        crate::answer::trim_hidden(self);
         let (ws, private) = bench::memory();
         // SAFETY: our own process
         let _ = unsafe {

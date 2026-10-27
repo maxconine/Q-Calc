@@ -56,6 +56,13 @@ pub struct BarLayout {
     pub systems: Option<Rect>,
     /// the graph panel (graph.rs)
     pub graph: Option<Rect>,
+    /// the answer's pieces, placed in `answer` (answer.rs)
+    pub live: answer::AnswerLayout,
+    /// the tape's rows and scroll (history.rs); the cheat sheet's height when it shows instead
+    pub tape: history::TapeLayout,
+    pub help: f32,
+    /// the typeset row (typst_row.rs)
+    pub typst: Option<Rect>,
 }
 
 /// A monitor: its store key (`\\.\DISPLAY1`, as Tauri named it), work area (physical px) and scale.
@@ -221,14 +228,19 @@ impl Bar {
     /// Lays the bar out for the model as it is.
     pub fn layout(gfx: &Gfx, model: &BarModel, width: f32, now: i64) -> BarLayout {
         let visible = model.visible(now);
-        let tape_rows = history::shown(model, visible);
-        let anchor = history::height(tape_rows.len());
+        let help = crate::cheats::height(model);
+        let tape = if help > 0.0 {
+            history::TapeLayout::default()
+        } else {
+            history::layout(model, visible)
+        };
+        let tape_rows = tape.drawn.clone();
+        let anchor = if help > 0.0 { help } else { tape.height };
         let composer = Rect::new(0.0, anchor, width, size::COMPOSER);
         let inner = width - 2.0 * size::GUTTER;
         let answer_text = model.answer_text();
-        let aw = answer::wanted_width(gfx, &answer_text)
-            .min(inner * 0.67 - 12.0)
-            .max(0.0);
+        let mut live = answer::measure(gfx, model, inner * 0.67 - 12.0);
+        let aw = live.width.max(0.0);
         let field_w = if aw > 0.0 { inner - aw - 12.0 } else { inner };
         let field = Rect::new(
             size::GUTTER,
@@ -242,11 +254,18 @@ impl Bar {
             aw,
             36.0,
         );
+        answer::place(&mut live, answer);
         let mut height = anchor + size::COMPOSER;
         let hint = model.hint.as_ref().filter(|h| !h.is_empty()).map(|_| {
             // .composer-hint: 12 muted, tucked 12 up into the composer's bottom padding
             let r = Rect::new(size::GUTTER, height - 12.0, inner, 18.0);
             height += 18.0;
+            r
+        });
+        let th = crate::typst_row::height(model, width);
+        let typst = (th > 0.0).then(|| {
+            let r = Rect::new(size::GUTTER, height, inner, th - crate::typst_row::PAD_BOTTOM);
+            height += th;
             r
         });
         let systems = model.systems.as_ref().map(|s| {
@@ -271,6 +290,10 @@ impl Bar {
             hint,
             systems,
             graph,
+            live,
+            tape,
+            help,
+            typst,
         }
     }
 
@@ -282,7 +305,8 @@ impl Bar {
         let field_view = &mut self.field_view;
         self.surface.draw(gfx, theme, |c: &mut Canvas| {
             c.clear(theme.bg);
-            history::paint(c, model, layout.tape_rows.clone());
+            history::paint(c, model, &layout.tape);
+            crate::cheats::paint(c, model, layout.help);
             let placeholder = "Calculate";
             if model.chained && !model.field.text().is_empty() {
                 // .quick-chain: the faint `ans` a chained line continues from
@@ -310,8 +334,7 @@ impl Bar {
             } else {
                 field_view.paint(c, &model.field, layout.field, focused, placeholder);
             }
-            let stale = model.live_for != model.field.text() || crate::systems::slot_is_message(model);
-            answer::paint(c, &layout.answer_text, layout.answer, stale);
+            answer::paint(c, &layout.live, layout.answer);
             if let (Some(r), Some(hint)) = (layout.hint, model.hint.as_ref())
                 && let Some(l) = c.gfx.layout_in(
                     hint,
@@ -322,6 +345,9 @@ impl Bar {
                 )
             {
                 c.text(&l, r.x, r.y, theme.muted);
+            }
+            if let Some(r) = layout.typst {
+                crate::typst_row::paint(c, model, r);
             }
             if let (Some(r), Some(s)) = (layout.systems, &model.systems) {
                 crate::systems::paint(c, s, r, window_focused);

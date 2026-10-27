@@ -50,6 +50,8 @@ pub enum Outcome {
     OpenSettings,
     /// the clear-history shortcut: app.rs empties the tape and saves it
     ClearHistory,
+    /// Ctrl+W: the front sheet closes (keys.rs `close_front_sheet`), else the bar hides
+    CloseSheet,
 }
 
 /// The bar's state.
@@ -78,6 +80,12 @@ pub struct BarModel {
     pub graph: Option<crate::graph::GraphState>,
     /// the `sys N` rows (systems.rs), once ↵ opened them
     pub systems: Option<crate::systems::SysState>,
+    /// the live answer's own state: steady, Tab's forms, the closed form, the copied flash (answer.rs)
+    pub answer: crate::answer::AnswerState,
+    /// the tape's picks, scroll, deleted row, cheat sheet (history.rs)
+    pub tape: crate::history::TapeState,
+    /// the typeset row (typst_row.rs)
+    pub typeset: crate::typst_row::TypesetState,
 }
 
 impl BarModel {
@@ -99,6 +107,9 @@ impl BarModel {
             to_clipboard: None,
             graph: None,
             systems: None,
+            answer: Default::default(),
+            tape: Default::default(),
+            typeset: Default::default(),
         }
     }
 
@@ -158,6 +169,11 @@ impl BarModel {
     /// The line changed (typed, pasted, undone, replaced): drop what belonged to the old text and evaluate.
     pub fn text_changed(&mut self, engine: &EngineThread) {
         self.hint = None;
+        crate::history::text_changed(self);
+        self.answer.text_changed(self.field.text());
+        if self.field.text().trim().is_empty() {
+            crate::typst_row::refresh(self, engine);
+        }
         if self.selected.is_some() && !self.field.text().is_empty() {
             self.selected = None;
             self.tape_open = false;
@@ -193,7 +209,8 @@ impl BarModel {
                 now_ms: now,
                 phrases: true,
             });
-            done(move |app| app.model.set_live(&typed, answer, chained))
+            let closed = crate::answer::closed_form(&cx.engine, &answer);
+            done(move |app| crate::answer::landed(app, typed, answer, chained, closed))
         });
     }
 
@@ -329,15 +346,16 @@ impl BarModel {
             } else {
                 self.selected.unwrap_or(n).saturating_sub(1)
             });
-            if fresh {
-                self.pick_answer = true;
-            }
+            crate::history::land(self, fresh);
         } else {
             if !self.tape_open {
                 return;
             }
             match self.selected {
-                Some(i) if i + 1 < n => self.selected = Some(i + 1),
+                Some(i) if i + 1 < n => {
+                    self.selected = Some(i + 1);
+                    crate::history::land(self, false);
+                }
                 _ => {
                     self.selected = None;
                     self.tape_open = false;
@@ -404,7 +422,7 @@ impl BarModel {
         let ctrl = mods.ctrl && !mods.alt;
         // copying a selection beats the copy-answer shortcut on the same chord
         if ctrl && !mods.shift && vk == 0x43 && self.field.has_selection() {
-            self.to_clipboard = Some(self.field.selected_text().to_string());
+            crate::answer::copy_selection(self);
             return Outcome::Handled;
         }
         if let Some(action) = self.keybinds.action(mods, vk) {
@@ -413,6 +431,10 @@ impl BarModel {
         let shift = mods.shift;
         match vk {
             ESC => {
+                if std::mem::take(&mut self.tape.help) {
+                    self.changed = true;
+                    return Outcome::Handled;
+                }
                 if self.tape_open || self.selected.is_some() {
                     self.tape_open = false;
                     self.selected = None;
@@ -424,31 +446,40 @@ impl BarModel {
                 }
                 return Outcome::Hide;
             }
+            ENTER if self.selected.is_some() => {
+                crate::history::enter_row(self, engine, mods.alt);
+                return Outcome::Handled;
+            }
+            ENTER if self.tape.help => {
+                self.field.reset("");
+                self.text_changed(engine);
+                return Outcome::Handled;
+            }
             ENTER => {
                 self.enter(engine);
                 return Outcome::Handled;
             }
             UP => self.move_selection(true),
             DOWN => self.move_selection(false),
-            LEFT if self.selected.is_some() => {
-                self.pick_answer = false;
-                self.changed = true;
-            }
-            RIGHT if self.selected.is_some() => {
-                self.pick_answer = true;
-                self.changed = true;
-            }
+            LEFT if self.selected.is_some() => crate::history::pick_side(self, -1),
+            RIGHT if self.selected.is_some() => crate::history::pick_side(self, 1),
             LEFT => self.field.left(ctrl, shift),
             RIGHT => self.field.right(ctrl, shift),
             HOME => self.field.home(shift),
             END => self.field.end(shift),
+            BACK if ctrl && self.selected.is_some() => {
+                crate::history::delete_selected(self, engine);
+            }
             BACK => {
                 self.field.backspace(ctrl);
             }
             DELETE => {
                 self.field.delete(ctrl);
             }
+            // Tab cycles the answer's forms (the input's completion, when it has one, takes Tab first)
+            TAB if !ctrl && !mods.alt => crate::answer::cycle_forms(self, engine, shift),
             TAB => {}
+            0x57 if ctrl => return Outcome::CloseSheet,
             // Ctrl+A / X / V / Z / Y
             0x41 if ctrl => self.field.select_all(),
             0x58 if ctrl => {
@@ -465,7 +496,9 @@ impl BarModel {
                 self.field.redo();
             }
             0x5A if ctrl => {
-                self.field.undo();
+                if !crate::history::undo_delete(self, engine) {
+                    self.field.undo();
+                }
             }
             0x59 if ctrl => {
                 self.field.redo();
@@ -503,23 +536,8 @@ impl BarModel {
         self.changed = true;
         match action {
             KeyAction::Settings => return Outcome::OpenSettings,
-            KeyAction::CopyAnswer => {
-                if let Some(a) = &self.live
-                    && !a.display.is_empty()
-                {
-                    self.to_clipboard = Some(a.display.clone());
-                }
-            }
-            KeyAction::CopyLine => {
-                let answer = self
-                    .live
-                    .as_ref()
-                    .map(|a| a.display.clone())
-                    .unwrap_or_default();
-                if !answer.is_empty() {
-                    self.to_clipboard = Some(format!("{} = {answer}", self.field.text().trim()));
-                }
-            }
+            KeyAction::CopyAnswer => crate::answer::copy_shown(self),
+            KeyAction::CopyLine => crate::answer::copy_line(self),
             KeyAction::Angle => {
                 self.settings.angle_mode = if self.settings.angle_mode == "rad" {
                     "deg".into()
@@ -542,6 +560,7 @@ impl BarModel {
             KeyAction::Clear => {
                 self.selected = None;
                 self.tape_open = false;
+                self.hint = Some("history cleared".into());
                 return Outcome::ClearHistory;
             }
         }
