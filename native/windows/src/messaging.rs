@@ -299,6 +299,10 @@ fn post_later(
 
 /// After launch (off the first frame): with a name set, the inbox opens. Without one, nothing at all.
 pub fn start() {
+    crate::settings_window::set_messages_hook(crate::settings_window::MessagesHook {
+        items: settings_items,
+        changed: settings_changed,
+    });
     let named = with(|s| !s.m.name.is_empty() && !s.m.key.is_empty());
     if named {
         connect();
@@ -387,6 +391,12 @@ fn connect() {
 }
 
 fn on_event(app: &mut App, ev: Event) {
+    on_event_now(app, ev);
+    // the Messages page's status and lists follow the relay
+    crate::settings_window::refresh(app);
+}
+
+fn on_event_now(app: &mut App, ev: Event) {
     match ev {
         Event::Opened(g, sock) => {
             let current = with(|s| {
@@ -992,6 +1002,94 @@ pub fn forget(who: &str) {
         s.m = core::forget_sender(&s.m, who);
         save(&s.m);
     });
+}
+
+/// The settings window's Messages page (settings_window.rs `MessagesHook`): the name and its status, turning off,
+/// the requests waiting, and the allowed and blocked names.
+fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
+    use crate::settings_window::{Control, Item, row};
+    let button = |label: &str| Control::Button {
+        label: label.into(),
+        enabled: true,
+    };
+    let name = name();
+    let mut out = vec![row(
+        "name",
+        "Your name",
+        &status(),
+        Control::Text {
+            value: name.clone(),
+            placeholder: "2–20 letters, digits, - or _".into(),
+        },
+    )];
+    if !name.is_empty() {
+        out.push(row(
+            "off",
+            "Turn off messages",
+            "Lets go of your name on the relay and stops receiving.",
+            Control::Button {
+                label: "Turn Off".into(),
+                enabled: !busy(),
+            },
+        ));
+    }
+    let asks = requests();
+    if !asks.is_empty() {
+        out.push(Item::Heading("Requests".into()));
+        for who in &asks {
+            out.push(row(
+                &format!("ask:{who}"),
+                who,
+                "wants to message you",
+                Control::Seg {
+                    options: vec![("allow".into(), "Allow".into()), ("block".into(), "Block".into())],
+                    value: String::new(),
+                },
+            ));
+        }
+    }
+    let allowed = accepted();
+    if !allowed.is_empty() {
+        out.push(Item::Heading("Allowed".into()));
+        for who in &allowed {
+            out.push(row(&format!("forget:{who}"), who, "can message you", button("Remove")));
+        }
+    }
+    let blocks = blocked();
+    if !blocks.is_empty() {
+        out.push(Item::Heading("Blocked".into()));
+        for who in &blocks {
+            out.push(row(&format!("forget:{who}"), who, "messages are dropped unseen", button("Unblock")));
+        }
+    }
+    if name.is_empty() && allowed.is_empty() && blocks.is_empty() {
+        out.push(Item::Note(
+            "With a name set, type message <name> <text> in the bar to send. Someone new's first message asks you first."
+                .into(),
+            false,
+        ));
+    }
+    out
+}
+
+/// A change on the Messages page: the row's id and its new value.
+fn settings_changed(app: &mut App, id: &str, value: &Value) {
+    match id {
+        "name" => set_name(value.as_str().unwrap_or_default()),
+        "off" => turn_off(),
+        _ => {
+            if let Some(who) = id.strip_prefix("ask:") {
+                match value.as_str() {
+                    Some("allow") => allow(who),
+                    Some("block") => block(who),
+                    _ => {}
+                }
+            } else if let Some(who) = id.strip_prefix("forget:") {
+                forget(who);
+            }
+        }
+    }
+    crate::settings_window::refresh(app);
 }
 
 // ---- the cards' view (MessageCards in BarView.swift) ----

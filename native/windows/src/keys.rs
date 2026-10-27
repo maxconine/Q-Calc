@@ -229,11 +229,11 @@ pub fn host_keys(text: &str) -> String {
 }
 
 /// Ctrl+W: closes the sheet in front of the bar (periodic table, identities) and says true; false when none is
-/// open, and then the bar hides. **Hook for the sheets package** (sheets.rs fills it in).
+/// open, and then the bar hides (sheets.rs `close_front`).
 #[cfg(windows)]
 pub fn close_front_sheet(app: &mut crate::app::App) -> bool {
     let _ = app;
-    false
+    crate::sheets::close_front()
 }
 
 #[cfg(test)]

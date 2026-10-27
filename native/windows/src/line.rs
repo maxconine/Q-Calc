@@ -533,6 +533,10 @@ fn refresh_example(m: &mut BarModel, engine: &EngineThread) {
 
 /// The placeholder: the rotating example, or "Calculate".
 pub fn placeholder(m: &BarModel) -> String {
+    // the walkthrough's step example (tour.rs) stands in for the rotation while it shows
+    if let Some(p) = crate::tour::placeholder(m) {
+        return p.to_string();
+    }
     match &m.line.example {
         Some((_, expr, _)) => crate::text_rules::pretty(expr, expr.len(), false).0,
         None => "Calculate".into(),
@@ -711,6 +715,7 @@ mod paint {
         view.paint(c, &m.field, field, focused, &x);
         // .live-example: the example's answer, muted at 70%
         if m.field.text().is_empty()
+            && crate::tour::placeholder(m).is_none()
             && let Some((_, _, answer)) = &m.line.example
             && !answer.is_empty()
         {
