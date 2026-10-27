@@ -41,14 +41,14 @@ describe('messaging names', () => {
 
   it('holds a free name, keeps it for its own key, and turns other keys away until it lapses', () => {
     const first = holdName(undefined, 'h1', 1000)
-    expect(first).toEqual({ ok: true, write: { hash: 'h1', seen: 1000 } })
+    expect(first).toEqual({ ok: true, write: { hash: 'h1', seen: 1000, since: 1000 } })
     const claim = first.write
     expect(holdName(claim, 'h2', 2000)).toEqual({ ok: false })
     // seen again soon after: nothing to write
     expect(holdName(claim, 'h1', 2000)).toEqual({ ok: true, write: null })
-    expect(holdName(claim, 'h1', 1000 + SEEN_EVERY_MS + 1)).toEqual({ ok: true, write: { hash: 'h1', seen: 1000 + SEEN_EVERY_MS + 1 } })
+    expect(holdName(claim, 'h1', 1000 + SEEN_EVERY_MS + 1)).toEqual({ ok: true, write: { hash: 'h1', seen: 1000 + SEEN_EVERY_MS + 1, since: 1000 } })
     expect(lapsed(claim, 1000 + LAPSE_MS)).toBe(false)
     expect(lapsed(claim, 1000 + LAPSE_MS + 1)).toBe(true)
-    expect(holdName(claim, 'h2', 1000 + LAPSE_MS + 1)).toEqual({ ok: true, write: { hash: 'h2', seen: 1000 + LAPSE_MS + 1 } })
+    expect(holdName(claim, 'h2', 1000 + LAPSE_MS + 1)).toEqual({ ok: true, write: { hash: 'h2', seen: 1000 + LAPSE_MS + 1, since: 1000 + LAPSE_MS + 1 } })
   })
 })

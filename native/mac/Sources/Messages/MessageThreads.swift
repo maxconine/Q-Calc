@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 // The message threads under the bar (native only; the web app has no thread view). `messages` lists the
 // conversations in MessageHistory, latest first, picked with ↑↓ and ↵; `messages <name>`, `messages with <name>`
@@ -314,6 +315,9 @@ private struct ThreadView: View {
         .padding(.top, 8)
         .padding(.horizontal, Theme.gutter)
         .padding(.bottom, 12)
+        .contentShape(Rectangle())
+        // a file dropped on a thread goes to them (ShareCommands.swift)
+        .onDrop(of: [.fileURL], isTargeted: nil) { model.dropProviders($0, to: name) }
         .onAppear { DispatchQueue.main.async { focused = true } }
         .onChange(of: name) { _ in DispatchQueue.main.async { focused = true } }
     }
@@ -370,11 +374,17 @@ private struct ThreadLine: View {
                 }
                 .padding(.top, 6)
             }
-            Text(line.text)
-                .foregroundStyle(Color.qAnswer)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if let clip = line.clip {
+                ClipBlock(clip: clip)
+            } else if let file = line.file {
+                FileBlock(file: file, mine: line.mine, who: name)
+            } else {
+                Text(line.text)
+                    .foregroundStyle(Color.qAnswer)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.bottom, 2)
         .accessibilityElement(children: .combine)

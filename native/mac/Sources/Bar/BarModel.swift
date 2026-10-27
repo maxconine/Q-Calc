@@ -11,6 +11,9 @@ struct BannerCard: Identifiable, Equatable {
     let from: String
     let text: String
     let ask: Bool
+    /// native only (MessageFiles.swift): shared clipboard text, or a file, instead of words
+    var clip: String? = nil
+    var file: ThreadFile? = nil
     var draft = ""
     var reply = Reply.idle
     var shownAt = Date()
@@ -175,6 +178,8 @@ final class BarModel: ObservableObject {
             .sink { [weak self] _ in self?.dropAnsweredCards() }
             .store(in: &bag)
         refreshRecent()
+        // clips and files say things in the core's words (Messages/MessageFiles.swift)
+        MessageFiles.shared.logic = logic
     }
 
     // MARK: - settings
@@ -261,6 +266,17 @@ final class BarModel: ObservableObject {
             engine.cancel(.live)
             return
         }
+        if shareCommand(typed) != nil {
+            nameCheckTimer?.invalidate()
+            graph = nil
+            helpShown = false
+            shareLine(typed)
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
+        // a file dropped on the bar waits only while the line asks for its name
+        MessageFiles.shared.pendingDrop = nil
         let command = BarCommand.of(typed, sheets: sheets)
         if let command {
             var found: Bool?
@@ -560,6 +576,10 @@ final class BarModel: ObservableObject {
         if text.isEmpty, listEnter() { return }
         if let threads = threadCommand(text) {
             runThreadCommand(threads)
+            return
+        }
+        if let share = shareCommand(text) {
+            runShare(share)
             return
         }
         if gamesShown {
@@ -1191,6 +1211,10 @@ final class BarModel: ObservableObject {
             if cards.contains(where: { $0.id == id || (ask && $0.ask && $0.from == from) }) { continue }
             cards.insert(card, at: 0)
         }
+        // clips and files (MessageFiles.swift); the open thread with them shows them already
+        for card in MessageFiles.shared.takeCards() where !threadOpen(with: card.from) {
+            cards.insert(card, at: 0)
+        }
         if cards.count > 3 { cards = Array(cards.prefix(3)) }
         if !ids.isEmpty { Messages.shared.seen(ids) }
         scheduleCardExpiry()
@@ -1201,9 +1225,12 @@ final class BarModel: ObservableObject {
         cards.removeAll { m.blocked.contains($0.from) || ($0.ask && m.accepted.contains($0.from)) }
     }
 
-    /// cardHeld: a card waits while the pointer is on the cards, or while its reply is typed or sent
+    /// cardHeld: a card waits while the pointer is on the cards, or while its reply is typed or sent; a file's
+    /// waits while it's on its way
     private func held(_ card: BannerCard) -> Bool {
-        cardsHovered || replyFocused == card.id || !card.draft.isEmpty || card.reply == .sending
+        if let file = card.file, let t = MessageFiles.shared.transfers[file.id],
+           ["accepting", "waiting", "downloading", "decrypting"].contains(t.state) { return true }
+        return cardsHovered || replyFocused == card.id || !card.draft.isEmpty || card.reply == .sending
     }
 
     func scheduleCardExpiry() {

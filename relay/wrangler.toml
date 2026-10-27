@@ -63,6 +63,38 @@ name = "SENDERS"
 namespace_id = "7306"
 simple = { limit = 10, period = 60 }
 
+# files sent between names (files.js, ledger.js). the ledger is one object holding every file's state and the
+# bytes they hold against the hard caps; the bucket holds the encrypted files, each until its recipient
+# downloads it, it's taken back or turned down, or it expires. wrangler dev keeps a local bucket of its own
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "Ledger"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Ledger"]
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "qcalc-files"
+
+# every hour: lapsed offers, unused grants, stale uploads and expired files go
+[triggers]
+crons = ["0 * * * *"]
+
+# offers and upload starts, per ip and per sender name under one namespace (the ledger also caps uploads per
+# address per hour, and bytes per sender, per recipient and for the whole bucket)
+[[ratelimits]]
+name = "UPLOADS"
+namespace_id = "7308"
+simple = { limit = 10, period = 60 }
+
+# accepting, downloading and taking back files, per ip
+[[ratelimits]]
+name = "FILE_GETS"
+namespace_id = "7309"
+simple = { limit = 30, period = 60 }
+
 # the bar's name check as you type `message <name>`: per ip and per sender name, under one namespace
 [[ratelimits]]
 name = "LOOKUPS"

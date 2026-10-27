@@ -120,6 +120,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // what settings' Remove / Unblock does for a name
         case "forget": Messages.shared.forget(arg)
         case "bench": DevBench.run(spec: arg, model: overlay.model)
+        // sendfile:<name>:<path> offers a file as a drop on their thread would; savefile saves every file that can
+        // be (Messages/MessageFiles.swift), as Save does
+        case "sendfile":
+            let parts = arg.split(separator: ":", maxSplits: 1).map(String.init)
+            if parts.count == 2 { MessageFiles.shared.sendFile(URL(fileURLWithPath: parts[1]), to: parts[0]) { NSLog("Q Calc dev: %@", $0) } }
+        // sendclip:<name>:<text> shares text as `paste to` shares the clipboard, without touching it
+        case "sendclip":
+            let parts = arg.split(separator: ":", maxSplits: 1).map(String.init)
+            if parts.count == 2 { MessageFiles.shared.sendClip(parts[1].replacingOccurrences(of: "\\n", with: "\n"), to: parts[0]) { NSLog("Q Calc dev: %@", $0) } }
+        case "savefile":
+            for (id, t) in MessageFiles.shared.transfers where !t.mine { MessageFiles.shared.save(id) }
         // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i
         case "paste":
             if let i = Int(arg), let raw = NSPasteboard.general.string(forType: .string) {
