@@ -210,10 +210,11 @@ private struct Connect4Board: View {
         let moving = fall.moving(now) || held.moving(now)
         Group {
             // the disc falling and the held one sliding draw every frame; a still board draws once
+            // drawn on the CPU (CGCanvas): a Canvas briefly kept ~125 MB of GPU surfaces when a game started
             if moving {
-                TimelineView(.animation) { _ in Canvas { ctx, sz in draw(ctx, sz) } }
+                TimelineView(.animation) { _ in CGCanvas { cg, sz in draw(cg, sz) } }
             } else {
-                Canvas { ctx, sz in draw(ctx, sz) }
+                CGCanvas { cg, sz in draw(cg, sz) }
             }
         }
         .onAppear { settle() }
@@ -236,27 +237,37 @@ private struct Connect4Board: View {
         return max(300, min(stage.width - 2 * GameMetrics.gutter, stage.gameH - 200))
     }
 
-    private func circle(_ x: Double, _ y: Double, _ r: Double) -> Path {
-        Path(ellipseIn: CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r))
+    private func circle(_ x: Double, _ y: Double, _ r: Double) -> CGRect {
+        CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r)
     }
 
-    private func draw(_ ctx: GraphicsContext, _ sz: CGSize) {
-        var ctx = ctx
+    private func draw(_ cg: CGContext, _ sz: CGSize) {
         let k = sz.width / Self.w
-        ctx.scaleBy(x: k, y: k)
+        cg.scaleBy(x: k, y: k)
         let now = CACurrentMediaTime()
-        let frame = Path(roundedRect: CGRect(x: 0, y: Self.lane, width: Self.w, height: 6 * Self.cell), cornerRadius: 10)
-        ctx.fill(frame, with: .color(colors.court.color))
-        ctx.stroke(frame, with: .color(colors.line.color), lineWidth: 1)
+        func fill(_ path: CGPath, _ color: RGBA) {
+            cg.addPath(path)
+            cg.setFillColor(color.cg)
+            cg.fillPath()
+        }
+        func stroke(_ path: CGPath, _ color: RGBA, _ width: CGFloat) {
+            cg.addPath(path)
+            cg.setStrokeColor(color.cg)
+            cg.setLineWidth(width)
+            cg.strokePath()
+        }
+        let frame = Path(roundedRect: CGRect(x: 0, y: Self.lane, width: Self.w, height: 6 * Self.cell), cornerRadius: 10).cgPath
+        fill(frame, colors.court)
+        stroke(frame, colors.line, 1)
         for row in 0..<6 {
             for c in 0..<7 {
-                let hole = circle(Self.cx(c), Self.cy(row), Self.r)
-                ctx.fill(hole, with: .color(colors.bg.color))
-                ctx.stroke(hole, with: .color(colors.line.mix(0.6, .clear).color), lineWidth: 1)
+                let hole = CGPath(ellipseIn: circle(Self.cx(c), Self.cy(row), Self.r), transform: nil)
+                fill(hole, colors.bg)
+                stroke(hole, colors.line.mix(0.6, .clear), 1)
             }
         }
         if ghost, let cursor, view.landing[cursor] >= 0 {
-            ctx.fill(circle(Self.cx(cursor), Self.cy(Int(view.landing[cursor])), Self.r), with: .color(colors.accent.mix(0.22, .clear).color))
+            fill(CGPath(ellipseIn: circle(Self.cx(cursor), Self.cy(Int(view.landing[cursor])), Self.r), transform: nil), colors.accent.mix(0.22, .clear))
         }
         let line = Set(view.line.map(Int.init))
         let last = view.last.map(Int.init) ?? -1
@@ -269,15 +280,14 @@ private struct Connect4Board: View {
                 let t = min(1, (now - fall.at) / 0.26)
                 y -= (Self.cy(row) - Self.lane / 2) * (1 - cssEase(t, 0.5, 0, 0.75, 0.3))
             }
-            let disc = circle(Self.cx(c), y, Self.r)
+            let disc = CGPath(ellipseIn: circle(Self.cx(c), y, Self.r), transform: nil)
             let dim = view.over && !view.line.isEmpty && !line.contains(i)
-            let fill = (who == role ? colors.accent : colors.ink).opacity(dim ? 0.3 : 1)
-            ctx.fill(disc, with: .color(fill.color))
-            if line.contains(i) { ctx.stroke(disc, with: .color(colors.bg.color), lineWidth: 3) }
+            fill(disc, (who == role ? colors.accent : colors.ink).opacity(dim ? 0.3 : 1))
+            if line.contains(i) { stroke(disc, colors.bg, 3) }
         }
         if let cursor {
             let full = view.landing[cursor] < 0
-            ctx.fill(circle(held.x(now, Self.cx), Self.lane / 2, Self.r), with: .color(colors.accent.opacity(full ? 0.25 : 0.9).color))
+            fill(CGPath(ellipseIn: circle(held.x(now, Self.cx), Self.lane / 2, Self.r), transform: nil), colors.accent.opacity(full ? 0.25 : 0.9))
         }
     }
 }
