@@ -228,8 +228,12 @@ impl BarModel {
         let view = self.view(now);
         let options = self.options();
         engine.submit(Lane::Live, move |cx| {
+            use crate::perf::{Stage, mark};
+            mark(Stage::JobStart);
             let context = cx.context(&rows, view);
+            mark(Stage::Context);
             let chained = cx.engine.chains(typed.clone(), context.clone());
+            mark(Stage::Chains);
             let answer = cx.engine.live(LiveRequest {
                 text: typed.clone(),
                 options,
@@ -238,8 +242,10 @@ impl BarModel {
                 now_ms: now,
                 phrases: true,
             });
+            mark(Stage::Live);
             let closed = crate::answer::closed_form(&cx.engine, &answer);
             let (deco, completion) = crate::line::decorate(&typed, &context, &answer);
+            mark(Stage::Decorated);
             done(move |app| {
                 crate::answer::landed(app, typed.clone(), answer, chained, closed);
                 if app.model.field.text() == typed {

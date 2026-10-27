@@ -8,6 +8,10 @@ repository.workspace = true
 rust-version.workspace = true
 build = "build.rs"
 
+[features]
+# diagnostics for native/windows/PERFORMANCE.md (perf.rs): keystroke timelines, a counting allocator, the bench's `vm`; never in a shipping build
+perf = []
+
 [[bin]]
 name = "qcalc"
 path = "src/main.rs"
@@ -28,7 +32,10 @@ windows = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct2D",
   "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
   "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Dxgi",
   "Win32_Graphics_Dxgi_Common",
   "Win32_Graphics_Dwm",
   "Win32_Graphics_Gdi",

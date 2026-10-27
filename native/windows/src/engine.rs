@@ -316,6 +316,9 @@ fn run(shared: &Shared, cx: &mut Cx, notify: &(dyn Fn() + Send + Sync)) {
                 if let Ok(mut r) = shared.results.lock() {
                     r.push((lane, generation, done));
                 }
+                if lane == Lane::Live {
+                    crate::perf::mark(crate::perf::Stage::Posted);
+                }
                 notify();
             }
             Ok(None) => {}

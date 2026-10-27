@@ -620,9 +620,11 @@ impl App {
                 return None;
             }
             WM_ENGINE => {
+                crate::perf::mark(crate::perf::Stage::Engine);
                 for done in self.engine.take_results() {
                     done(self);
                 }
+                crate::perf::mark(crate::perf::Stage::Applied);
                 crate::answer::poll(self);
             }
             WM_PIPE => {
@@ -742,9 +744,14 @@ impl App {
                 }
             }
             WM_CHAR => {
+                crate::perf::mark(crate::perf::Stage::Char);
+                if let Some(run) = &mut self.run {
+                    run.keyed = true;
+                }
                 if !crate::commands::char16(self, wp.0 as u16) {
                     self.model.char16(wp.0 as u16, &self.engine);
                 }
+                crate::perf::mark(crate::perf::Stage::Submitted);
             }
             // Alt+letter isn't the bar's: no beep
             WM_SYSCHAR => {}
@@ -928,6 +935,7 @@ impl App {
             let resized = (layout.height - self.bar.layout.height).abs() > 0.1
                 || (layout.anchor - self.bar.layout.anchor).abs() > 0.1;
             self.bar.layout = layout;
+            crate::perf::mark(crate::perf::Stage::Laidout);
             if self.bar.visible {
                 if resized {
                     self.ops.push(Op::Reframe);
@@ -949,9 +957,11 @@ impl App {
     }
 
     fn paint(&mut self) {
+        crate::perf::paint_start();
         if let Err(e) = self.bar.paint(&self.gfx, &self.theme, &self.model) {
             qlog!("paint failed: {e}");
         }
+        crate::perf::painted();
         if self.bar.visible && !self.ready_logged {
             self.ready_logged = true;
             qlog!(
@@ -1159,6 +1169,8 @@ impl App {
             } => {
                 run.current_input = input;
                 run.wait = Wait::Answer(expect, self.model.field.text().to_string());
+                run.keyed = false;
+                crate::perf::reset();
                 run.t0 = Instant::now();
                 for u in units {
                     // SAFETY: posting typed characters to our bar, as the keyboard would
