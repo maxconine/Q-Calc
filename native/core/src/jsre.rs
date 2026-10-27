@@ -122,7 +122,7 @@ fn translate(pattern: &str, flags: &str) -> String {
 /// `pattern` with its look-arounds taken out (and atomic groups made plain): a pattern that matches wherever
 /// `pattern` does, and more, which the `regex` crate's automata run without backtracking. None when it can't be
 /// made (a backreference, or something left that doesn't compile).
-fn loosened(pattern: &str) -> Option<Regex> {
+fn loosened(pattern: &str) -> Option<String> {
     let b = pattern.as_bytes();
     let mut out = String::with_capacity(pattern.len());
     let mut i = 0;
@@ -179,37 +179,112 @@ fn loosened(pattern: &str) -> Option<Regex> {
         out.push(c);
         i += c.len_utf8();
     }
-    Regex::new(&out).ok()
+    Some(out)
 }
 
-/// A regex's pattern and its [`loosened`] form, by the regex's address.
-type Loose = (String, Option<std::rc::Rc<Regex>>);
+/// How [`cannot_match`] rules a text out for one pattern, kept per thread by the regex's address.
+struct Prefilter {
+    pattern: String,
+    /// Every match starts with one of the first set and ends with one of the second (either may be missing): a
+    /// text holding none of a set can't match. Next to no memory, so it's tried first.
+    literals: Vec<aho_corasick::AhoCorasick>,
+    /// The loosened pattern, and once compiled (about 15 KB) the regex: at once for a pattern without literals,
+    /// otherwise after the literals let [`UPGRADE`] texts through that the pattern didn't match.
+    loose: Option<String>,
+    compiled: Option<std::rc::Rc<Regex>>,
+    misses: u32,
+}
 
-/// A quick test that `re` can't match `s`: its [`loosened`] pattern doesn't. Kept per thread by the pattern.
-fn cannot_match(re: &Regex, s: &str) -> bool {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
-    thread_local! {
-        static LOOSE: RefCell<HashMap<usize, Loose>> =
-            RefCell::new(HashMap::new());
+/// Texts the literals may let through to the backtracking VM for nothing before the loosened regex is compiled.
+const UPGRADE: u32 = 256;
+
+impl Prefilter {
+    fn of(pattern: &str) -> Prefilter {
+        use regex_syntax::hir::literal::{ExtractKind, Extractor};
+        let loose = loosened(pattern);
+        let literals: Vec<aho_corasick::AhoCorasick> = loose
+            .as_deref()
+            .and_then(|l| regex_syntax::Parser::new().parse(l).ok())
+            .map(|hir| {
+                [ExtractKind::Prefix, ExtractKind::Suffix]
+                    .into_iter()
+                    .filter_map(|kind| {
+                        let seq = Extractor::new().kind(kind).extract(&hir);
+                        let lits = seq.literals()?;
+                        if lits.is_empty() || lits.iter().any(|l| l.as_bytes().is_empty()) {
+                            return None;
+                        }
+                        aho_corasick::AhoCorasick::new(lits.iter().map(|l| l.as_bytes())).ok()
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut p = Prefilter {
+            pattern: pattern.to_string(),
+            literals,
+            loose,
+            compiled: None,
+            misses: 0,
+        };
+        if p.literals.is_empty() {
+            p.compile();
+        }
+        p
     }
+
+    fn compile(&mut self) {
+        self.compiled = self
+            .loose
+            .take()
+            .and_then(|l| Regex::new(&l).ok())
+            .map(std::rc::Rc::new);
+    }
+
+    fn rules_out(&self, s: &str) -> bool {
+        self.literals.iter().any(|lits| !lits.is_match(s))
+            || self
+                .compiled
+                .as_ref()
+                .is_some_and(|re| matches!(re.is_match(s), Ok(false)))
+    }
+}
+
+thread_local! {
+    static PREFILTERS: std::cell::RefCell<std::collections::HashMap<usize, Prefilter>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// A quick test that `re` can't match `s`, without its look-arounds' backtracking (see [`Prefilter`]).
+fn cannot_match(re: &Regex, s: &str) -> bool {
     let pattern = re.as_str();
     let key = re as *const Regex as usize;
-    let loose = LOOSE.with(|cache| {
-        if let Some((p, l)) = cache.borrow().get(&key)
-            && p == pattern
-        {
-            return l.clone();
-        }
-        let l = loosened(pattern).map(std::rc::Rc::new);
+    PREFILTERS.with(|cache| {
         let mut cache = cache.borrow_mut();
-        if cache.len() >= 4096 {
-            cache.clear();
+        if cache.get(&key).is_none_or(|p| p.pattern != pattern) {
+            if cache.len() >= 4096 {
+                cache.clear();
+            }
+            cache.insert(key, Prefilter::of(pattern));
         }
-        cache.insert(key, (pattern.to_string(), l.clone()));
-        l
+        cache.get(&key).is_some_and(|p| p.rules_out(s))
+    })
+}
+
+/// `re` ran on a text its prefilter let through and didn't match: past [`UPGRADE`] of those, compile the loose
+/// regex.
+fn missed(re: &Regex) {
+    let key = re as *const Regex as usize;
+    PREFILTERS.with(|cache| {
+        if let Some(p) = cache.borrow_mut().get_mut(&key)
+            && p.compiled.is_none()
+            && p.loose.is_some()
+        {
+            p.misses += 1;
+            if p.misses >= UPGRADE {
+                p.compile();
+            }
+        }
     });
-    loose.is_some_and(|l| matches!(l.is_match(s), Ok(false)))
 }
 
 /// `s.replace(re, f)` with the `g` flag. A regex that runs out of backtracking budget leaves the text as it was.
@@ -232,6 +307,7 @@ pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> Strin
         changed = true;
     }
     if !changed {
+        missed(re);
         return Cow::Borrowed(s);
     }
     out.push_str(&s[last..]);
@@ -240,7 +316,14 @@ pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> Strin
 
 /// `re.test(s)`; a regex that runs out of budget counts as no match.
 pub fn test(re: &Regex, s: &str) -> bool {
-    !cannot_match(re, s) && re.is_match(s).unwrap_or(false)
+    if cannot_match(re, s) {
+        return false;
+    }
+    let hit = re.is_match(s).unwrap_or(false);
+    if !hit {
+        missed(re);
+    }
+    hit
 }
 
 /// The text of group `i`, or "" when it didn't take part (JS gives `undefined`, which the TS mostly treats as "").
@@ -264,7 +347,7 @@ mod tests {
 
     #[test]
     fn loosened_patterns_drop_look_arounds_only() {
-        let l = |p: &str| loosened(p).map(|r| r.as_str().to_string());
+        let l = |p: &str| loosened(p);
         assert_eq!(l(r"(?<![A-Za-z])pi(?![A-Za-z(])").as_deref(), Some("pi"));
         assert_eq!(l(r"a(?=b(c))d|(?<=x)e").as_deref(), Some("ad|e"));
         assert_eq!(l(r"[(?=]x\(?=y").as_deref(), Some(r"[(?=]x\(?=y"));

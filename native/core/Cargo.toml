@@ -12,6 +12,9 @@ dashu-base.workspace = true
 dashu-float.workspace = true
 dashu-int.workspace = true
 fancy-regex.workspace = true
+# jsre's prefilter: the literals every match of a pattern starts or ends with (both already under fancy-regex)
+aho-corasick = "1"
+regex-syntax = "0.8"
 num-bigint.workspace = true
 num-integer.workspace = true
 num-rational.workspace = true
