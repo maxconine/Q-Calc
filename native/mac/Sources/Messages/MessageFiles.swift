@@ -277,7 +277,10 @@ final class MessageFiles: NSObject, ObservableObject {
     // MARK: - sending a file
 
     /// encrypts the file, then offers it; `done` hears what the bar says. The upload waits for the recipient
-    func sendFile(_ url: URL, to raw: String, done: @escaping (String) -> Void) {
+    func sendFile(_ given: URL, to raw: String, done: @escaping (String) -> Void) {
+        // a Finder alias or a symlink sends what it points to (it had sent the tiny alias file itself, or said it
+        // couldn't read a link)
+        let url = (try? URL(resolvingAliasFileAt: given)) ?? given
         let to = Messages.clean(raw)
         let m = Messages.shared
         guard !m.name.isEmpty else { return done(shareStatus("no-name", to: to, what: "file")) }
