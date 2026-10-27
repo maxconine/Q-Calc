@@ -12,7 +12,13 @@ import Security
 final class ShareKeys: ObservableObject {
     static let shared = ShareKeys()
     private static let pinsKey = "qcalc.messaging.pins"
-    private static let service = "com.maxconine.qcalc.share-key"
+    /// Q Calc's own item, `com.maxconine.qcalc.share-key`, as before; any other build (Q Calc Dev, a copy under
+    /// another id) keeps its own beside it. One shared item meant a dev build beside Q Calc read the other app's
+    /// key, which macOS answers with a Keychain password prompt while the bar waits, and both used one identity.
+    private static let service: String = {
+        let id = Bundle.main.bundleIdentifier ?? "com.maxconine.qcalc"
+        return id == "com.maxconine.qcalc" ? "com.maxconine.qcalc.share-key" : "\(id).share-key"
+    }()
     private static let account = "x25519"
 
     /// contact → their pinned public key (base64url)
@@ -87,8 +93,10 @@ final class ShareKeys: ObservableObject {
     /// publishes this Mac's public key with the name (after a claim, and once a launch)
     func publish() {
         let m = Messages.shared
+        // no name, no key: the Keychain isn't touched (or the key made) for someone who doesn't use messages
+        guard !m.name.isEmpty, !m.relayKey.isEmpty else { return }
         let pub = publicText
-        guard !m.name.isEmpty, !m.relayKey.isEmpty, !pub.isEmpty, published != "\(m.name):\(pub)" else { return }
+        guard !pub.isEmpty, published != "\(m.name):\(pub)" else { return }
         post("/pubkey", ["name": m.name, "key": m.relayKey, "pub": pub]) { [weak self] status, _ in
             if status == "ok" { self?.published = "\(m.name):\(pub)" }
         }
