@@ -1,11 +1,12 @@
 //! A seeded random-input harness for the engine's public entry points (built as qcalc-core's `fuzz` example).
 //!   fuzz <corpus.json> <seed> <cases> [<current-file>]
-//!   fuzz <corpus.json> replay <case seed> <json input>
+//!   fuzz <corpus.json> replay <case seed> <json input or @file>   (case seed 0: the line alone; 1: live)
 //! The corpus is a JSON array of strings (inputs to mutate; the golden fixtures' string arguments make a good one).
 //! Each case runs on a 32 MB thread like the app's engine thread. A panic is caught and printed as `PANIC`; a case
 //! slower than 500 ms prints `SLOW`; a watchdog prints `HANG` and exits 3 after 5 s, or `HUGE` and exits 4 when
 //! the resident size passes 3 GB. The input being run is written to <current-file> first, so a stack overflow
-//! (which aborts the process) leaves its input behind. Every line printed is `KIND <ms> <entry> <json input>`.
+//! (which aborts the process) leaves its input behind. With FUZZ_SHORT set every input stays under 300
+//! characters, the lengths people type. Every line printed is `KIND <ms> <entry> <json input>`.
 use qcalc_core::app::live::{LiveRequest, live};
 use qcalc_core::app::messaging;
 use qcalc_core::{EvaluateOptions, evaluate_sheet, graph};
@@ -13,6 +14,12 @@ use serde_json::{Value, json};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+/// FUZZ_SHORT set: inputs stay under 300 characters, the lengths people type.
+fn short() -> bool {
+    static SHORT: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *SHORT.get_or_init(|| std::env::var_os("FUZZ_SHORT").is_some())
+}
 
 struct Rng(u64);
 impl Rng {
@@ -308,7 +315,11 @@ fn mutate(r: &mut Rng, base: &str, corpus: &[String]) -> String {
                 // repeat a slice many times: long and nested input
                 let a = r.below(len);
                 let b = (a + 1 + r.below(6)).min(len);
-                let times = *r.pick(&[2usize, 5, 20, 100, 500, 2000]);
+                let times = *r.pick(if short() {
+                    &[2usize, 3, 5, 10, 20]
+                } else {
+                    &[2usize, 5, 20, 100, 500, 2000]
+                });
                 let piece: Vec<char> = chars[a..b].to_vec();
                 let rep: Vec<char> = piece
                     .iter()
@@ -320,7 +331,11 @@ fn mutate(r: &mut Rng, base: &str, corpus: &[String]) -> String {
             }
             4 => {
                 let (open, close) = *r.pick(WRAPS);
-                let times = *r.pick(&[1usize, 3, 10, 50, 300, 1500]);
+                let times = *r.pick(if short() {
+                    &[1usize, 2, 3, 5, 8]
+                } else {
+                    &[1usize, 3, 10, 50, 300, 1500]
+                });
                 let mut s = open.repeat(times);
                 s.extend(chars.iter());
                 s.push_str(&close.repeat(times));
@@ -398,11 +413,18 @@ fn mutate(r: &mut Rng, base: &str, corpus: &[String]) -> String {
             }
         }
     }
-    chars.into_iter().take(20_000).collect()
+    chars
+        .into_iter()
+        .take(if short() { 300 } else { 20_000 })
+        .collect()
 }
 
 fn pathological(r: &mut Rng) -> String {
-    let n = *r.pick(&[10usize, 100, 1000, 5000, 20000]);
+    let n = *r.pick(if short() {
+        &[3usize, 10, 30, 100, 300]
+    } else {
+        &[10usize, 100, 1000, 5000, 20000]
+    });
     match r.below(20) {
         0 => format!("{}1{}", "(".repeat(n), ")".repeat(n)),
         1 => "(".repeat(n),
