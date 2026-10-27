@@ -2,6 +2,9 @@ import { DurableObject } from 'cloudflare:workers'
 import { cleanName, GAMES, ipKey, newRoomId, ROOM_ID, RoomList } from './directory.js'
 import { enqueue, GRACE_MS, LEFT, newSeats, otherSide, overdue, seatOf, SIDES } from './seats.js'
 import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFromProtocols, lapsed, LAPSE_MS, MAX_INBOX_SOCKETS } from './names.js'
+import { CLIP_MAX, cleanClip, cleanOffer, declaredLength, disposition, FALLBACK, fileKey, NEW_NAME_MS, PART_BYTES, partCount, randomHex, rangeStart } from './files.js'
+
+export { Ledger } from './ledger.js'
 
 // the online link for q calc's two-player games. each game has a list of open rooms that the lobby watches;
 // a host opens a room, open or locked with a 6-digit code, and a guest picks it from the list (typing the code
@@ -28,6 +31,21 @@ import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFrom
 //   POST /release  {name, key}              lets a name go
 //   POST /send     {from, key, to, text}    hands a message to the name's open inbox, if there is one: nothing
 //                                           is queued, so a name that's offline hears nothing
+//                  {…, kind: 'clip', clip}  clipboard text, up to 64 KB, passed on as it is
+//                  {…, kind: 'file', file}  offers a file {name, size, bytes, type, sha256, key}: nothing is
+//                                           stored until its recipient accepts. answers {status, id}
+//   an inbox hears {type: 'message', from, text} and, for a clip or an offer, kind and clip or file {id, name,
+//   size, bytes, type, sha256, key, expires}; text is then a line an app that only knows text messages shows
+//   instead. a file's progress comes as {type: 'file', event: 'accepted' | 'ready' | 'cancelled' | 'declined',
+//   id, …}
+//
+// and files (files.js, ledger.js), where who's asking rides in headers (x-qcalc-name, x-qcalc-key), never the url:
+//   POST   /file/<id>/accept     the recipient accepts; the sender, if online, hears `accepted` with a grant
+//   POST   /file/<id>/start      the sender, with x-qcalc-grant, starts the upload (or comes back to it)
+//   PUT    /file/<id>/part/<n>   one part, exactly PART_BYTES but the last
+//   POST   /file/<id>/finish     puts the parts together; the recipient hears `ready`
+//   GET    /file/<id>            the recipient downloads it ([Range: bytes=N-]); it goes once it's all been read
+//   DELETE /file/<id>            its sender takes it back, or its recipient turns it down
 //
 // a page that can take a seat back asks with resume=1; only when both sides did is a seat held. then `open`
 // carries the room and the side's token. a close other than 1000 (a lost link, a quit app)
@@ -76,10 +94,13 @@ function reply(body) {
   return new Response(JSON.stringify(body), { status: 200, headers: { ...CORS, 'Content-Type': 'application/json' } })
 }
 
-async function body(req) {
+// a clip is up to 64 KB, which json can make up to six times longer
+const MAX_SEND_BODY = CLIP_MAX * 6 + MAX_BODY
+
+async function body(req, max = MAX_BODY) {
   try {
     const text = await req.text()
-    if (text.length > MAX_BODY) return null
+    if (text.length > max) return null
     const o = JSON.parse(text)
     return o && typeof o === 'object' ? o : null
   } catch {
@@ -115,17 +136,9 @@ const upgrade = { headers: { Upgrade: 'websocket' } }
 
 // messaging's plain requests. the sender proves its name with its key, so nobody writes as someone else
 async function messaging(req, env, path) {
-  const o = await body(req)
+  const o = await body(req, path === '/send' ? MAX_SEND_BODY : MAX_BODY)
   if (!o) return reply({ status: 'bad' })
-  if (path === '/send') {
-    const from = cleanHandle(o.from)
-    const to = cleanHandle(o.to)
-    const text = cleanText(o.text)
-    if (!from || !to || !text || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
-    if (!(await allowed(env.MESSAGES, req)) || !(await allowedKey(env.SENDERS, from))) return reply({ status: 'too-many' })
-    if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
-    return reply({ status: await inbox(env, to).deliver(from, text) })
-  }
+  if (path === '/send') return send(req, env, o)
   const name = cleanHandle(o.name)
   if (!name || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
   if (!(await allowed(env.NAMES, req))) return reply({ status: 'too-many' })
@@ -135,13 +148,261 @@ async function messaging(req, env, path) {
   return reply({ status: 'ok' })
 }
 
+// a message, a clip, or a file's offer: what it says, and what else the inbox hears with it
+function said(o) {
+  const kind = o.kind ?? 'text'
+  if (kind === 'text') {
+    const text = cleanText(o.text)
+    return text ? { kind, text, extra: {} } : null
+  }
+  if (kind === 'clip') {
+    const clip = cleanClip(o.clip)
+    return clip ? { kind, text: FALLBACK.clip, extra: { kind, clip } } : null
+  }
+  if (kind === 'file') {
+    const offer = cleanOffer(o.file)
+    if (offer === 'too-big') return 'too-big'
+    return offer ? { kind, text: FALLBACK.file, extra: { kind }, offer } : null
+  }
+  return null
+}
+
+function ledger(env) {
+  return env.LEDGER.get(env.LEDGER.idFromName('files'))
+}
+
+// a name newer than NEW_NAME_MS can't send files. only local testing shortens it (wrangler dev --var
+// NEW_NAME_MS:0); the deployed relay sets no such var
+async function seasoned(env, from) {
+  const wait = /^[0-9]+$/.test(env.NEW_NAME_MS ?? '') ? Number(env.NEW_NAME_MS) : NEW_NAME_MS
+  return Date.now() - (await inbox(env, from).since()) >= wait
+}
+
+async function send(req, env, o) {
+  const from = cleanHandle(o.from)
+  const to = cleanHandle(o.to)
+  const what = said(o)
+  if (what === 'too-big') return reply({ status: 'too-big' })
+  if (!from || !to || !what || !KEY.test(o.key ?? '')) return reply({ status: 'bad' })
+  if (!(await allowed(env.MESSAGES, req)) || !(await allowedKey(env.SENDERS, from))) return reply({ status: 'too-many' })
+  if (what.kind === 'file' && !(await allowed(env.UPLOADS, req))) return reply({ status: 'too-many' })
+  if (!(await inbox(env, from).hold(await hashKey(o.key)))) return reply({ status: 'not-yours' })
+  if (what.kind !== 'file') return reply({ status: await inbox(env, to).deliver(from, what.text, what.extra) })
+  if (!(await seasoned(env, from))) return reply({ status: 'new-name' })
+  // the offer goes on its way with its key; the ledger keeps only who, to whom and how long
+  const id = randomHex()
+  const offered = await ledger(env).offer({ id, from, to, bytes: what.offer.bytes })
+  if (offered.status !== 'ok') return reply({ status: offered.status })
+  what.extra.file = { id, ...what.offer, expires: offered.expires }
+  const status = await inbox(env, to).deliver(from, what.text, what.extra)
+  if (status !== 'delivered') await ledger(env).remove(id)
+  return reply(status === 'delivered' ? { status, id, expires: offered.expires } : { status })
+}
+
+const FILE_CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, PUT, GET, DELETE',
+  'Access-Control-Allow-Headers': 'Content-Type, Range, X-QCalc-Name, X-QCalc-Key, X-QCalc-Grant',
+  'Access-Control-Expose-Headers': 'Content-Range, X-QCalc-From',
+}
+const FILE_HTTP = {
+  ok: 200,
+  done: 200,
+  bad: 400,
+  'not-yours': 403,
+  'new-name': 403,
+  gone: 404,
+  busy: 409,
+  'not-accepted': 409,
+  'not-ready': 409,
+  incomplete: 409,
+  'sender-offline': 409,
+  expired: 410,
+  over: 413,
+  'too-big': 413,
+  'too-many': 429,
+  'daily-limit': 429,
+  'recipient-full': 507,
+  'sender-full': 507,
+  'relay-full': 507,
+  failed: 502,
+}
+
+function answer(status, more = {}) {
+  return new Response(JSON.stringify({ status, ...more }), {
+    status: FILE_HTTP[status] ?? 400,
+    headers: { ...FILE_CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  })
+}
+
+// whatever r2 holds for a file the ledger let go: its unfinished upload or its object
+async function clear(env, rec) {
+  if (!rec) return
+  try {
+    if (rec.state === 'uploading' && rec.uploadId) await env.FILES.resumeMultipartUpload(fileKey(rec.id), rec.uploadId).abort()
+    if (rec.state === 'stored') await env.FILES.delete(fileKey(rec.id))
+  } catch {
+    // the bucket's lifecycle rule takes what's left
+  }
+}
+
+// a file event for one side: accepted, ready, cancelled or declined
+const notify = (env, name, e) => inbox(env, name).notify(event({ type: 'file', ...e }))
+
+// the recipient accepts an offer: the sender, who must be online to hear it, gets a grant for one upload
+async function accept(env, id, name) {
+  const granted = await ledger(env).grant(id, name)
+  if (granted.status !== 'ok') return answer(granted.status)
+  const heard = await notify(env, granted.from, { event: 'accepted', id, to: name, grant: granted.grant, bytes: granted.bytes, partBytes: PART_BYTES })
+  if (heard === 'delivered') return answer('ok')
+  await ledger(env).revert(id)
+  return answer('sender-offline')
+}
+
+async function start(req, env, id, name) {
+  const ip = await hashKey(ipKey(req.headers.get('cf-connecting-ip')))
+  if (!(await allowed(env.UPLOADS, req)) || !(await allowedKey(env.UPLOADS, `name:${name}`))) return answer('too-many')
+  if (!(await seasoned(env, name))) return answer('new-name')
+  const s = await ledger(env).start(id, name, req.headers.get('X-QCalc-Grant') ?? '', ip)
+  if (s.status !== 'ok') return answer(s.status)
+  const more = { partBytes: PART_BYTES, parts: partCount(s.bytes), done: s.parts }
+  if (s.uploadId) return answer('ok', more)
+  let upload
+  try {
+    upload = await env.FILES.createMultipartUpload(fileKey(id), { httpMetadata: { contentType: 'application/octet-stream' } })
+  } catch {
+    await clear(env, await ledger(env).remove(id))
+    return answer('failed')
+  }
+  if (!(await ledger(env).started(id, upload.uploadId))) {
+    await upload.abort().catch(() => {})
+    return answer('gone')
+  }
+  return answer('ok', more)
+}
+
+// one part, streamed straight to r2 and held to exactly the length its place in the file has
+async function part(req, env, id, name, n) {
+  const length = declaredLength(req.headers.get('Content-Length'))
+  if (length == null) return answer('bad')
+  const p = await ledger(env).part(id, name, n, length)
+  if (p.removed) {
+    await clear(env, p.removed)
+    await notify(env, p.removed.to, { event: 'cancelled', id, from: name })
+  }
+  if (p.status !== 'ok') return answer(p.status)
+  const body = length === 0 || !req.body ? new Uint8Array(0) : typeof FixedLengthStream === 'function' ? req.body.pipeThrough(new FixedLengthStream(length)) : req.body
+  try {
+    const done = await env.FILES.resumeMultipartUpload(fileKey(id), p.uploadId).uploadPart(n, body)
+    await ledger(env).partDone(id, n, done.etag)
+  } catch {
+    // a part cut short is tried again
+    return answer('failed')
+  }
+  return answer('ok')
+}
+
+async function finish(env, id, name) {
+  const f = await ledger(env).finish(id, name)
+  if (f.status !== 'ok') return answer(f.status, f.missing ? { missing: f.missing } : {})
+  try {
+    await env.FILES.resumeMultipartUpload(fileKey(id), f.uploadId).complete(f.parts)
+  } catch {
+    return answer('failed')
+  }
+  const s = await ledger(env).stored(id)
+  if (!s) return answer('gone')
+  await notify(env, s.to, { event: 'ready', id, from: name, expires: s.expires })
+  return answer('ok', { expires: s.expires })
+}
+
+// its recipient downloads it, from a byte on with `Range: bytes=N-` to pick up where a cut-short one stopped.
+// it goes once its last byte has been passed on
+async function download(req, env, ctx, id, name) {
+  const r = await ledger(env).readable(id, name)
+  if (r.removed) await clear(env, r.removed)
+  if (r.status !== 'ok') return answer(r.status)
+  const from = rangeStart(req.headers.get('Range'), r.bytes)
+  if (from == null) return answer('bad')
+  const k = fileKey(id)
+  const obj = await env.FILES.get(k, from ? { range: { offset: from } } : undefined)
+  if (!obj) {
+    await ledger(env).remove(id)
+    return answer('gone')
+  }
+  const { readable, writable } = new TransformStream()
+  const done = obj.body
+    .pipeTo(writable)
+    .then(async () => {
+      await ledger(env).remove(id)
+      await env.FILES.delete(k)
+    })
+    .catch(() => {
+      // kept for another try until it's taken back or expires
+    })
+  if (ctx?.waitUntil) ctx.waitUntil(done)
+  const headers = {
+    ...FILE_CORS,
+    // never anything a browser would render or run, whatever the bytes are; they're encrypted anyway
+    'Content-Type': 'application/octet-stream',
+    'Content-Disposition': disposition(id),
+    'X-Content-Type-Options': 'nosniff',
+    'Cache-Control': 'no-store',
+    'Content-Length': String(r.bytes - from),
+    'X-QCalc-From': r.from,
+  }
+  if (from) headers['Content-Range'] = `bytes ${from}-${r.bytes - 1}/${r.bytes}`
+  return new Response(readable, { status: from ? 206 : 200, headers })
+}
+
+// its sender takes it back or its recipient turns it down, at any point; the other side hears
+async function cancel(env, id, name) {
+  const rec = await ledger(env).remove(id, name)
+  if (!rec) return answer('gone')
+  await clear(env, rec)
+  if (name === rec.from) await notify(env, rec.to, { event: 'cancelled', id, from: name })
+  else await notify(env, rec.from, { event: 'declined', id, to: name })
+  return answer('ok')
+}
+
+const FILE_ROUTE = /^\/file\/([0-9a-f]{32})(?:\/(accept|start|finish|part\/([0-9]{1,5})))?$/
+
+async function files(req, env, ctx, path) {
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: FILE_CORS })
+  const m = FILE_ROUTE.exec(path)
+  if (!m) return answer('gone')
+  const [, id, action, n] = m
+  const want = !action ? ['GET', 'DELETE'] : action.startsWith('part/') ? ['PUT'] : ['POST']
+  if (!want.includes(req.method)) return new Response(`expected ${want.join(' or ')}\n`, { status: 405 })
+  // who's asking, on every route, by their name and its key; never in the url
+  const name = cleanHandle(req.headers.get('X-QCalc-Name') ?? '')
+  const key = req.headers.get('X-QCalc-Key') ?? ''
+  if (!name || !KEY.test(key)) return answer('bad')
+  if (!n && !(await allowed(env.FILE_GETS, req))) return answer('too-many')
+  if (!(await inbox(env, name).hold(await hashKey(key)))) return answer('not-yours')
+  if (!action) return req.method === 'GET' ? download(req, env, ctx, id, name) : cancel(env, id, name)
+  if (action === 'accept') return accept(env, id, name)
+  if (action === 'start') return start(req, env, id, name)
+  if (action === 'finish') return finish(env, id, name)
+  return part(req, env, id, name, Number(n))
+}
+
+// the hourly cron: lapsed offers, unused grants, stale uploads and expired files go, and r2 with them
+async function sweep(env) {
+  for (const rec of await ledger(env).sweep()) {
+    await clear(env, rec)
+    if (rec.state === 'uploading' || rec.state === 'stored') await notify(env, rec.to, { event: 'cancelled', id: rec.id, from: rec.from }).catch(() => {})
+  }
+}
+
 const MESSAGING = new Set(['/claim', '/release', '/send'])
 const INBOX_ROUTE = /^\/inbox\/([a-z0-9_-]+)$/
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url)
     if (url.pathname === '/') return new Response('q calc relay\n')
+    if (url.pathname.startsWith('/file/')) return files(req, env, ctx, url.pathname)
     if (MESSAGING.has(url.pathname)) {
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
       if (req.method === 'POST') return messaging(req, env, url.pathname)
@@ -220,6 +481,10 @@ export default {
     }
 
     return new Response('not found\n', { status: 404 })
+  },
+
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(sweep(env))
   },
 }
 
@@ -723,13 +988,15 @@ export class Inbox extends DurableObject {
     }
   }
 
-  // over rpc: 'delivered' when an open inbox took it, 'offline' when none is open, 'unknown' when nobody holds the name
-  async deliver(from, text) {
-    if (lapsed(await this.ctx.storage.get('claim'), Date.now())) return 'unknown'
-    const socks = this.open()
-    const frame = event({ type: 'message', from, text })
+  // over rpc: when the name's holder first claimed it (0 for a claim older than this was kept)
+  async since() {
+    return (await this.ctx.storage.get('claim'))?.since ?? 0
+  }
+
+  // over rpc: a frame for the open sockets, 'delivered' or 'offline'
+  async notify(frame) {
     let sent = 0
-    for (const ws of socks) {
+    for (const ws of this.open()) {
       try {
         ws.send(frame)
         sent++
@@ -738,6 +1005,13 @@ export class Inbox extends DurableObject {
       }
     }
     return sent ? 'delivered' : 'offline'
+  }
+
+  // over rpc: 'delivered' when an open inbox took it, 'offline' when none is open, 'unknown' when nobody holds
+  // the name. a clip or a file's facts ride along in extra
+  async deliver(from, text, extra = {}) {
+    if (lapsed(await this.ctx.storage.get('claim'), Date.now())) return 'unknown'
+    return this.notify(event({ type: 'message', from, text, ...extra }))
   }
 
   async fetch(req) {
