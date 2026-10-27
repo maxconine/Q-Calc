@@ -9,3 +9,7 @@ Items packages handed back that no single package owns yet. Strike them through 
 - **TS bugs kept for parity, worth fixing in both** (from WP-PHRASES): `constructor`/`__proto__` hit `Object.prototype` in phrase and currency lookups; money amounts ≥ 1e21 are read back wrong from `toFixed`.
 
 - Native only (2026-10-26): `iπ`, `i π`, `eπ` multiply instead of reading as calls `i(pi)`/`e (pi)`, and `exp` takes a complex argument, so `e^(iπ)+1` and `exp(i pi)+1` give 0. The TS app still answers blank / "undefined". Tests: `core/tests/native_fixes.rs`.
+- Native only (2026-10-27, found by `bench/fuzz.rs`; tests in `core/tests/robustness.rs`). The TS engine has each of these too:
+  - Brackets past a depth no longer recurse without end: the unit reader stops at 1,000 and the formula reader at 5,000. `((((…` 20,000 deep overflowed the stack and killed the app; in TS it throws a RangeError.
+  - `angles::calls_worked_out` evaluates at most 40,000 characters per line: a deep nest of calls that never evaluates (`abs(abs(…(-1)…))` 1,000 deep) was quadratic, 13 s natively and 3 s in TS.
+  - `symbolic::simplify` has a work budget (10M rule matches plus match-key characters, 24× the most a golden fixture spends): `d/dx x^x^…^x` past ten x's, or `d/dx` typed thirty times, took seconds per level and gigabytes. Such lines are now blank; TS still answers `d/dx` typed 8 times over `x^x`, in about a second.

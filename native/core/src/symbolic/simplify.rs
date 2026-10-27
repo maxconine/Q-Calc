@@ -680,16 +680,22 @@ fn combine(l1: &[Match], l2: &[Match]) -> Vec<Match> {
 }
 
 /// `mergeChildMatches`: the product of the children's matches, deduplicated.
-fn merge_child_matches(lists: Vec<Vec<Match>>) -> Vec<Match> {
+fn merge_child_matches(lists: Vec<Vec<Match>>) -> Result<Vec<Match>, SymError> {
     let mut it = lists.into_iter();
     let Some(first) = it.next() else {
-        return Vec::new();
+        return Ok(Vec::new());
     };
     let sets = it.fold(first, |acc, l| combine(&acc, &l));
     let mut seen = HashSet::new();
-    sets.into_iter()
-        .filter(|m| seen.insert(match_key(m)))
-        .collect()
+    let mut out = Vec::new();
+    for m in sets {
+        let key = match_key(&m);
+        spend(key.len() as u64)?;
+        if seen.insert(key) {
+            out.push(m);
+        }
+    }
+    Ok(out)
 }
 
 /// `getSplits`: the binary ways to read an n-ary node.
@@ -763,6 +769,7 @@ fn js_name(n: &Node) -> Option<&str> {
 
 /// `_ruleMatch(rule, node, context, isSplit)`.
 fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec<Match>, SymError> {
+    spend(1)?;
     let mut res: Vec<Match> = vec![Vec::new()];
     let pair = match (rule, node) {
         (
@@ -820,7 +827,7 @@ fn rule_match(rule: &Node, node: &Node, ctx: &Ctx, is_split: bool) -> Result<Vec
                     }
                     child_matches = vec![left, right];
                 }
-                res = merge_child_matches(child_matches);
+                res = merge_child_matches(child_matches)?;
             } else if na.len() >= 2 && ra.len() == 2 {
                 let mut out = Vec::new();
                 for split in get_splits(node, ctx) {
@@ -971,6 +978,26 @@ fn resolve(n: &Node) -> Node {
 /// Passes over the rule list before giving up on an input that never settles (mathjs would loop forever).
 const MAX_PASSES: usize = 10_000;
 
+/// The work one simplify may do, in rule matches plus the length of each match key it dedupes (`work.ts`
+/// counts, never the clock). The golden fixtures spend at most 420k; `d/dx x^x^…^x` with ten x's spends 9.3M
+/// (0.4 s). Past this a tower like it costs seconds more per level and gigabytes (`d/dx` thirty times over), so
+/// the simplify fails, as it does on an input that never settles. The TS engine has no such limit.
+const BUDGET: u64 = 10_000_000;
+
+thread_local! {
+    static LEFT: std::cell::Cell<u64> = const { std::cell::Cell::new(BUDGET) };
+}
+
+fn spend(units: u64) -> Result<(), SymError> {
+    LEFT.with(|l| match l.get().checked_sub(units) {
+        Some(rest) => {
+            l.set(rest);
+            Ok(())
+        }
+        None => err("simplify ran out of budget"),
+    })
+}
+
 /// `math.simplify(expr)` with mathjs's default rules.
 pub fn simplify(expr: &Node) -> Result<Node, SymError> {
     simplify_with(expr, default_rules(), &SimplifyOptions::default())
@@ -988,15 +1015,27 @@ pub fn simplify_with(
     options: &SimplifyOptions,
 ) -> Result<Node, SymError> {
     let ctx = Ctx::default();
+    // a budget of its own; a simplify nested in this one (or after it) gets a fresh one and hands this back
+    struct Restore(u64);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            LEFT.with(|l| l.set(self.0));
+        }
+    }
+    let _restore = Restore(LEFT.with(|l| l.replace(BUDGET)));
     let mut res = remove_parens(&resolve(expr));
     let mut visited = HashSet::new();
     let mut text = to_string(&res, &PrintOptions::all());
     let mut passes = 0;
-    while visited.insert(text) {
+    loop {
+        if !visited.insert(text) {
+            break;
+        }
         passes += 1;
         if passes > MAX_PASSES {
             return err("simplify did not settle");
         }
+
         for rule in rules {
             res = match rule {
                 Rule::Core => simplify_core(&res),

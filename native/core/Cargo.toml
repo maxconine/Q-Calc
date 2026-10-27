@@ -30,3 +30,7 @@ workspace = true
 [[example]]
 name = "engine_bench"
 path = "../bench/engine_bench.rs"
+
+[[example]]
+name = "fuzz"
+path = "../bench/fuzz.rs"
