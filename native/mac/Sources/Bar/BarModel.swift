@@ -157,6 +157,10 @@ final class BarModel: ObservableObject {
     var caretAtEnd: (() -> Bool)?
     /// replaces the whole line as typing would (symbols, undo), for scripted input
     var setField: ((String) -> Void)?
+    /// the inferred parens made real where they're drawn: the new text and the caret's place in it, the grey ones
+    /// cleared in the same step so nothing on the line moves (native only)
+    var fillParensInField: ((String, Int) -> Void)?
+    var fieldCaret: (() -> Int)?
     /// dev builds only: told each time the live answer lands for a typed line (DevBench's keystroke timing)
     var onLive: ((String) -> Void)?
     /// sanitizeOnboarding and tourRunning for the stored onboarding state they were worked out from (Tour.swift):
@@ -458,11 +462,11 @@ final class BarModel: ObservableObject {
         let lead = (fill["leading"] as? NSNumber)?.intValue ?? 0, trail = (fill["trailing"] as? NSNumber)?.intValue ?? 0
         guard lead + trail > 0 else { return false }
         let filled = String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
-        // the grey ones go now, not when the engine next answers: drawn over the typed ones meanwhile, the line
-        // looked shifted with its paren missing
+        // the grey ones become typed ones where they stand, and the caret stays by the same character
+        let caret = (fieldCaret?() ?? (text as NSString).length) + lead
         decorations.leadingParens = 0
         decorations.trailingParens = 0
-        if let setField { setField(filled) } else { text = filled }
+        if let fillParensInField { fillParensInField(filled, caret) } else { text = filled }
         return true
     }
 

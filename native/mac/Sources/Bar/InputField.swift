@@ -296,6 +296,8 @@ final class BarTextView: NSTextView {
         leadView.isHidden = ghostLead.isEmpty
         leadView.needsDisplay = true
         needsDisplay = true
+        // the caret moves with the text when the room for grey ( opens or closes (it had stayed a character off)
+        if window != nil { updateInsertionPointStateAndRestartTimer(true) }
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -512,6 +514,14 @@ struct InputField: NSViewRepresentable {
         }
         model.setField = { [weak text] value in
             text?.replace(with: value, selection: NSRange(location: (value as NSString).length, length: 0))
+        }
+        model.fieldCaret = { [weak text] in text?.selectedRange().location ?? 0 }
+        model.fillParensInField = { [weak text] value, caret in
+            guard let text else { return }
+            // the grey ones go first, in this same step: the leading ones' room closes as the typed ( takes it
+            text.ghostLead = ""
+            text.trailingParens = 0
+            text.replace(with: value, selection: NSRange(location: caret, length: 0))
         }
         model.caretAtEnd = { [weak text] in
             guard let text else { return false }
