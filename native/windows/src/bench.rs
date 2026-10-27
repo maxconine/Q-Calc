@@ -207,11 +207,6 @@ pub mod pipe {
 
     pub fn serve(host: HWND, msg: u32) {
         let host = host.0 as usize;
-        // QCALC_PIPE names another pipe, so agents' instances running side by side don't answer each other
-        let name = windows::core::HSTRING::from(format!(
-            r"\\.\pipe\{}",
-            std::env::var("QCALC_PIPE").unwrap_or_else(|_| "qcalc-bench".into())
-        ));
         let _ = std::thread::Builder::new()
             .name("qcalc-bench-pipe".into())
             .spawn(move || {
@@ -219,14 +214,10 @@ pub mod pipe {
                     // SAFETY: a fresh pipe instance each loop, closed below
                     let pipe = unsafe {
                         CreateNamedPipeW(
-<<<<<<< HEAD
-                            &name,
-=======
                             &windows::core::HSTRING::from(format!(
                                 r"\\.\pipe\qcalc-bench{}",
                                 crate::log::instance_suffix()
                             )),
->>>>>>> b2f8702 (native windows: QCALC_INSTANCE gives a dev copy its own single-instance mutex and bench pipe, so test copies run side by side)
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE
                                 | PIPE_READMODE_BYTE
