@@ -1092,13 +1092,14 @@ impl Engine {
         function: String,
         args_json: String,
     ) -> Result<String, CoreError> {
-        self.on_result(move |_| {
+        // pure functions of their arguments: on the logic thread, never queued behind a keystroke's evaluation
+        self.workers.run_logic(move || {
             let args: Json = serde_json::from_str(&args_json).map_err(CoreError::bad)?;
             let Json::Array(args) = args else {
                 return Err(CoreError::bad("args_json must be a JSON array"));
             };
             bridge::call_checked(&module, &function, &args).map(|v| v.to_string())
-        })
+        })?
     }
 }
 

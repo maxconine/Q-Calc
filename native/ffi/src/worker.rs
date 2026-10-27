@@ -1,5 +1,6 @@
-//! The engine's threads (ARCHITECTURE.md §5): one evaluation thread for the per-keystroke calls and a small
-//! pool for long work. Each thread has a 32 MB stack, because a dispatch thread's 512 KB can't hold parsing and
+//! The engine's threads (ARCHITECTURE.md §5): one evaluation thread for the per-keystroke calls, one for the app
+//! logic (`call_json`, so the main thread's small calls never queue behind an evaluation) and a small pool for
+//! long work. Each thread has a 32 MB stack, because a dispatch thread's 512 KB can't hold parsing and
 //! evaluating near the parser's nesting limit. A sync call sends its closure over and blocks for the answer. An
 //! async call returns a future that the pool's thread completes and wakes, so it needs no async runtime: UniFFI
 //! polls it from Swift's executor.
@@ -76,6 +77,7 @@ fn spawn_worker(name: String, rx: Arc<Mutex<Receiver<Job>>>) {
 #[derive(Debug)]
 pub struct Workers {
     live: Pool,
+    logic: Pool,
     long: Pool,
 }
 
@@ -90,6 +92,7 @@ impl Workers {
         quiet_cancel_panics();
         Workers {
             live: Pool::new("qcalc-eval", 1),
+            logic: Pool::new("qcalc-logic", 1),
             long: Pool::new("qcalc-long", LONG_THREADS),
         }
     }
@@ -99,11 +102,26 @@ impl Workers {
         &self,
         f: impl FnOnce() -> R + Send + 'static,
     ) -> Result<R, CoreError> {
+        Self::run_on(&self.live, f)
+    }
+
+    /// `run` on the app-logic thread.
+    pub fn run_logic<R: Send + 'static>(
+        &self,
+        f: impl FnOnce() -> R + Send + 'static,
+    ) -> Result<R, CoreError> {
+        Self::run_on(&self.logic, f)
+    }
+
+    fn run_on<R: Send + 'static>(
+        pool: &Pool,
+        f: impl FnOnce() -> R + Send + 'static,
+    ) -> Result<R, CoreError> {
         let (tx, rx) = sync_channel(1);
         let job: Job = Box::new(move || {
             let _ = tx.send(catch_unwind(AssertUnwindSafe(f)));
         });
-        if !self.live.send(job) {
+        if !pool.send(job) {
             return Err(internal("the evaluation thread is gone"));
         }
         match rx.recv() {

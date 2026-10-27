@@ -124,6 +124,9 @@ final class BarModel: ObservableObject {
     var setField: ((String) -> Void)?
     /// dev builds only: told each time the live answer lands for a typed line (DevBench's keystroke timing)
     var onLive: ((String) -> Void)?
+    /// sanitizeOnboarding and tourRunning for the stored onboarding state they were worked out from (Tour.swift):
+    /// both pure, and asked on every keystroke
+    var onboardingMemo: (raw: [String: Int], state: [String: Any], running: Bool?)?
 
     private var deleted: (row: HistoryRow, index: Int)?
     private var lastLiveText = ""
