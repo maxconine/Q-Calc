@@ -219,7 +219,14 @@ pub mod pipe {
                     // SAFETY: a fresh pipe instance each loop, closed below
                     let pipe = unsafe {
                         CreateNamedPipeW(
+<<<<<<< HEAD
                             &name,
+=======
+                            &windows::core::HSTRING::from(format!(
+                                r"\\.\pipe\qcalc-bench{}",
+                                crate::log::instance_suffix()
+                            )),
+>>>>>>> b2f8702 (native windows: QCALC_INSTANCE gives a dev copy its own single-instance mutex and bench pipe, so test copies run side by side)
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE
                                 | PIPE_READMODE_BYTE

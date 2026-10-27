@@ -39,7 +39,9 @@ These rules keep the branches mergeable.
 - `cargo clippy -p qcalc-win --all-targets` clean, and `cargo test -p qcalc-win` passing, with unit tests for your
   pure logic.
 - Run the app and check your feature for real. Use `QCALC_DATA=<temp dir>` and `QCALC_LOG=<temp file>` so you
-  don't touch the user's data. Drive it with `--bench-pipe` / `scripts/bench.ps1`, SendInput, or `--bench
+  don't touch the user's data, and `QCALC_INSTANCE=<your pkg>` so your copy takes its own single-instance mutex
+  and bench pipe (`\.\pipe\qcalc-bench-<pkg>`; bench.ps1 follows the variable). Without it, your launch hands off
+  to another agent's running copy. Keep scripts in a subfolder of the scratchpad named after your package. Drive it with `--bench-pipe` / `scripts/bench.ps1`, SendInput, or `--bench
   spec.json`. Screenshot with PowerShell (System.Drawing CopyFromScreen) and look at the result in light and dark
   mode. Kill only the qcalc.exe processes you started (by PID). Never kill or touch the installed Q Calc at
   `%LOCALAPPDATA%\Q Calc`.
