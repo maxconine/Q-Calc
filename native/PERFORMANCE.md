@@ -317,5 +317,7 @@ Found on the way, not fixed:
   SwiftUI Canvas inside the game window left a window-wide 4 MB surface behind for 1-3 s, about 30 of them.
   It wasn't the TimelineView, the note under the dial or `.drawingGroup()`. Taking the Canvas out was the fix,
   so `CGCanvas` is what a new per-frame game picture should use.
+- **The settings window** goes to ~174 MB for about 1.5 s as it opens and holds 52 MB while open (idle 24). It is
+  `Sources/Shared/SettingsWindow.swift`, shared with the web-view app, so it was left alone.
 - Ember's level picker shows "Optional(nil)" at the start of its note (`EmberPanel.swift`, the `note` line).
   This is a display bug, not performance, and it was left for the games work.
