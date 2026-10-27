@@ -161,6 +161,44 @@ namespace QCalcE2E
             return i;
         }
 
+        // SendInput goes to whatever window is in front. When the bar loses focus mid-test, typing must not land in the
+        // person's own app (a chat, an editor): with a guard set, keys go only to windows of the app under test (its
+        // exe, games included), the suite's own windows (titles starting "qcalc-e2e") or the tray overflow; otherwise the
+        // step throws.
+        public static string GuardExe = null;
+
+        static bool OursInFront()
+        {
+            IntPtr h = GetForegroundWindow();
+            if (h == IntPtr.Zero) return false;
+            StringBuilder title = new StringBuilder(256);
+            GetWindowTextW(h, title, 256);
+            // the suite's own windows, and the taskbar's tray overflow that L4 opens and closes
+            if (title.ToString().StartsWith("qcalc-e2e") || title.ToString() == "System tray overflow window.") return true;
+            uint pid;
+            GetWindowThreadProcessId(h, out pid);
+            try
+            {
+                string path = System.Diagnostics.Process.GetProcessById((int)pid).MainModule.FileName;
+                return string.Equals(System.IO.Path.GetFullPath(path), System.IO.Path.GetFullPath(GuardExe), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception) { return false; }
+        }
+
+        static void Guard(bool global)
+        {
+            if (GuardExe == null || global) return;
+            // focus can take a moment to arrive after a show
+            for (int i = 0; i < 40; i++)
+            {
+                if (OursInFront()) return;
+                Thread.Sleep(25);
+            }
+            StringBuilder title = new StringBuilder(256);
+            GetWindowTextW(GetForegroundWindow(), title, 256);
+            throw new InvalidOperationException("not typing: '" + title + "' is in front, not the app under test");
+        }
+
         static void Send(List<INPUT> inputs)
         {
             INPUT[] arr = inputs.ToArray();
@@ -171,6 +209,10 @@ namespace QCalcE2E
         // modifiers go down in order and come up in reverse, like a person pressing a chord
         public static void Chord(params ushort[] vks)
         {
+            // the test hotkey (Ctrl+Alt+Shift+F9) and Alt+Tab act on the desktop, not the window in front
+            List<ushort> set = new List<ushort>(vks);
+            Guard((set.Contains(VK_F9) && set.Contains(VK_CONTROL) && set.Contains(VK_MENU) && set.Contains(VK_SHIFT))
+                || (set.Contains(VK_TAB) && set.Contains(VK_MENU)));
             List<INPUT> inputs = new List<INPUT>();
             foreach (ushort vk in vks) inputs.Add(Key(vk, false));
             for (int k = vks.Length - 1; k >= 0; k--) inputs.Add(Key(vks[k], true));
@@ -182,6 +224,7 @@ namespace QCalcE2E
         {
             foreach (char ch in text)
             {
+                Guard(false);
                 List<INPUT> inputs = new List<INPUT>();
                 short scan = VkKeyScanW(ch);
                 if (scan == -1)

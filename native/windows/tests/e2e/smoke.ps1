@@ -31,6 +31,8 @@ Start-Transcript -Path (Join-Path $OutDir 'log.txt') -Force | Out-Null
 Add-Type -TypeDefinition (Get-Content -Raw (Join-Path $PSScriptRoot 'Native.cs')) -ReferencedAssemblies System.Drawing, System.Core
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 $N = [QCalcE2E.Native]
+# keys only ever go to the app under test or the suite's own windows, never the person's app in front
+$N::GuardExe = $Exe
 $N::SetProcessDPIAware() | Out-Null
 
 $Root = Join-Path ([IO.Path]::GetTempPath()) ("qcalc-e2e-{0}-{1}" -f $Instance, [Guid]::NewGuid().ToString('N').Substring(0, 8))
