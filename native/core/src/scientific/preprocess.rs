@@ -739,7 +739,7 @@ pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String>
         .cloned()
         .collect();
     if !var_names.is_empty() {
-        let re = js(
+        let re = jsre::js_cached(
             &format!(r"(?<![A-Za-z0-9_])({})\s*\(", names_pattern(&var_names)),
             "",
         );
@@ -760,7 +760,7 @@ pub fn preprocess_checked(text: &str, ctx: &ScientificContext) -> Option<String>
         .chain(fn_names.iter().cloned())
         .collect();
     let allow_re = (!allow.is_empty()).then(|| {
-        js(
+        jsre::js_cached(
             &format!(
                 r"(?<![A-Za-z_])(?:{})(?![A-Za-z0-9_])",
                 names_pattern(&allow)

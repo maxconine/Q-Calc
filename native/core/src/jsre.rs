@@ -24,6 +24,34 @@ pub fn compile(pattern: &str) -> Regex {
     }
 }
 
+/// `compile`, kept per thread for the next call with the same pattern (the last 64 patterns): for patterns built
+/// at run time from the line's variable and function names, which would otherwise compile on every keystroke.
+pub fn compile_cached(pattern: &str) -> std::rc::Rc<Regex> {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    thread_local! {
+        static CACHE: RefCell<HashMap<String, Rc<Regex>>> = RefCell::new(HashMap::new());
+    }
+    CACHE.with(|cache| {
+        if let Some(re) = cache.borrow().get(pattern) {
+            return re.clone();
+        }
+        let re = Rc::new(compile(pattern));
+        let mut cache = cache.borrow_mut();
+        if cache.len() >= 64 {
+            cache.clear();
+        }
+        cache.insert(pattern.to_string(), re.clone());
+        re
+    })
+}
+
+/// `js`, kept per thread like `compile_cached`.
+pub fn js_cached(pattern: &str, flags: &str) -> std::rc::Rc<Regex> {
+    compile_cached(&translate(pattern, flags))
+}
+
 /// Compiles a JS regex source as written in the TS (pass `"i"` for the `i` flag). ASCII-only JS classes are
 /// kept ASCII: `\d`, `\w`, `\D`, `\W` and `\b` are rewritten to their ASCII forms, and `\/` to `/`, so a pattern can
 /// be pasted from the TS unchanged.
