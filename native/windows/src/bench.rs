@@ -207,15 +207,13 @@ pub mod pipe {
             .name("qcalc-bench-pipe".into())
             .spawn(move || {
                 loop {
-                    // QCALC_INSTANCE (dev) gives a second copy its own pipe, `qcalc-bench-<tag>`
-                    let name = match std::env::var("QCALC_INSTANCE") {
-                        Ok(tag) if !tag.is_empty() => format!(r"\\.\pipe\qcalc-bench-{tag}"),
-                        _ => r"\\.\pipe\qcalc-bench".to_string(),
-                    };
                     // SAFETY: a fresh pipe instance each loop, closed below
                     let pipe = unsafe {
                         CreateNamedPipeW(
-                            &windows::core::HSTRING::from(name),
+                            &windows::core::HSTRING::from(format!(
+                                r"\\.\pipe\qcalc-bench{}",
+                                crate::log::instance_suffix()
+                            )),
                             PIPE_ACCESS_DUPLEX,
                             PIPE_TYPE_BYTE
                                 | PIPE_READMODE_BYTE
