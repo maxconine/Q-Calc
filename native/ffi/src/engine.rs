@@ -239,6 +239,8 @@ impl State {
             now_ms: req.now_ms as f64,
             rates: self.rates_table(req.now_ms),
             time_zone: self.config.time_zone.clone(),
+            // the apps ask `blank_span` once typing pauses; a keystroke's answer doesn't wait for it
+            no_squiggle: true,
             ..live::LiveRequest::default()
         }
     }

@@ -15,7 +15,7 @@
 //! - `display`/`exact`/`shown` are the answer, its exact form, and the side `answer_form` reads; `steady` the label
 //!   the dimmed slot keeps mid-edit; `sides`/`roots`/`roots_of` what clicking each part inserts;
 //! - `squiggle` is where a blank answer stops reading. The TS waits 700 ms of idle typing before showing it; the UI
-//!   keeps that delay, the core just computes it (None whenever the slot isn't blank);
+//!   keeps that delay, the core just computes it (None whenever the slot isn't blank, or `no_squiggle` asks);
 //! - `completion` is the faint rest of the word being typed;
 //! - `command` names a line that is a command (graph, sys, periodic, identities, a game, `games`, `tutorial`, `?`,
 //!   `hello`, `message …`), and `tape_expr` is what ↵ saves (the chain written out, an isolate's rewrite);
@@ -106,6 +106,9 @@ pub struct LiveRequest {
     /// The IANA zone the user's clock reads in, for time phrases (`timeZone`); None reads it as the TS
     /// recordings did, in America/Los_Angeles.
     pub time_zone: Option<String>,
+    /// Leave `squiggle` None: the native bars ask for it (`blank_reason`) only once typing has paused, so a
+    /// keystroke needn't pay for it (on a blank line it re-reads every piece, often more than the answer took).
+    pub no_squiggle: bool,
 }
 
 /// A line that answers with a message or opens something, rather than calculating.
@@ -486,7 +489,8 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         native: None,
         opens: None,
     };
-    let squiggle = if display.is_empty()
+    let squiggle = if !req.no_squiggle
+        && display.is_empty()
         && !jstr::trim(q).is_empty()
         && !a_command
         && !help
