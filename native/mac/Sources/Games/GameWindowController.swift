@@ -60,10 +60,20 @@ private final class WeakHandler: NSObject, WKScriptMessageHandler {
 final class GameWindowController: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavigationDelegate {
     private var window: NSWindow?
     private var web: WKWebView?
+    // a game ported to Swift opens in a window of its own with no web view (Games/NativeGames.swift)
+    private lazy var native: NativeGameWindowController = {
+        let c = NativeGameWindowController()
+        c.onClose = { [weak self] in self?.onClose?() }
+        return c
+    }()
     var onClose: (() -> Void)?
 
     func open(_ kind: String, on screen: NSScreen?) {
         close()
+        if let view = NativeGames.view(kind) {
+            native.open(kind, on: screen) { _ in view }
+            return
+        }
         guard let url = GameBundle.url else {
             let alert = NSAlert()
             alert.messageText = "This build has no games"
@@ -106,6 +116,7 @@ final class GameWindowController: NSObject, NSWindowDelegate, WKScriptMessageHan
     }
 
     func close() {
+        if native.isOpen { native.close() }
         guard let window else { return }
         window.delegate = nil
         window.close()

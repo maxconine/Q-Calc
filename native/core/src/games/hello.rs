@@ -1,8 +1,8 @@
-//! Every linked game opens with a hello tagged with its game, so a friend who opened another game is told which
-//! (`src/lib/hello.ts`). Older builds sent pong's and ember's hellos as plain `hi` (ember's with u, or w from
-//! ember 2), connect 4's as `c4`, ultimate's as `ut` and trails' as `tr`, so those still read as theirs.
+//! `src/lib/hello.ts`: every linked game opens with a hello tagged with its game, so a friend who opened another
+//! game is told which. older builds sent pong's and ember's hellos as plain `hi` (ember's with u, or w from ember
+//! 2), connect 4's as `c4` and ultimate's as `ut` and trails' as `tr`, so those still read as theirs.
 
-use serde_json::{Map, Value};
+use serde_json::{Map, Value as Json};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LinkedGame {
@@ -24,8 +24,8 @@ impl LinkedGame {
         }
     }
 
-    fn from_tag(g: &str) -> Option<Self> {
-        Some(match g {
+    fn from_id(id: &str) -> Option<LinkedGame> {
+        Some(match id {
             "pong" => LinkedGame::Pong,
             "connect4" => LinkedGame::Connect4,
             "ultimate" => LinkedGame::Ultimate,
@@ -36,15 +36,14 @@ impl LinkedGame {
     }
 }
 
-/// helloGame: the game a decoded message's hello belongs to, or None when it isn't a hello
-pub fn hello_game(o: &Map<String, Value>) -> Option<LinkedGame> {
-    let t = o.get("t").and_then(Value::as_str);
-    let hi_like = matches!(t, Some("hi" | "c4" | "ut" | "tr"));
+/// The game a decoded message's hello belongs to, or None when it isn't a hello.
+pub fn hello_game(o: &Map<String, Json>) -> Option<LinkedGame> {
+    let t = o.get("t").and_then(Json::as_str);
     if let Some(g) = o
         .get("g")
-        .and_then(Value::as_str)
-        .and_then(LinkedGame::from_tag)
-        && hi_like
+        .and_then(Json::as_str)
+        .and_then(LinkedGame::from_id)
+        && matches!(t, Some("hi" | "c4" | "ut" | "tr"))
     {
         return Some(g);
     }
@@ -61,8 +60,8 @@ pub fn hello_game(o: &Map<String, Value>) -> Option<LinkedGame> {
     }
 }
 
-/// otherHello: another game's hello, as the name to show; None for this game's own or for anything else
-pub fn other_hello(o: &Map<String, Value>, mine: LinkedGame) -> Option<&'static str> {
+/// Another game's hello, as the name to show; None for this game's own or for anything else.
+pub fn other_hello(o: &Map<String, Json>, mine: LinkedGame) -> Option<&'static str> {
     hello_game(o).filter(|g| *g != mine).map(LinkedGame::name)
 }
 
@@ -73,41 +72,46 @@ pub fn other_game_note(other: &str, mine: LinkedGame) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
-    fn obj(text: &str) -> Map<String, Value> {
-        serde_json::from_str(text).unwrap()
+    fn o(v: Json) -> Map<String, Json> {
+        v.as_object().cloned().unwrap_or_default()
     }
 
     #[test]
-    fn hellos_name_their_game() {
+    fn reads_hellos_old_and_new() {
         assert_eq!(
-            hello_game(&obj(r#"{"t":"tr","v":1,"g":"trails"}"#)),
-            Some(LinkedGame::Trails)
-        );
-        assert_eq!(
-            hello_game(&obj(r#"{"t":"hi","v":2,"w":1}"#)),
-            Some(LinkedGame::Ember)
-        );
-        assert_eq!(
-            hello_game(&obj(r#"{"t":"hi","v":2}"#)),
+            hello_game(&o(json!({"t": "hi", "v": 2, "g": "pong"}))),
             Some(LinkedGame::Pong)
         );
         assert_eq!(
-            hello_game(&obj(r#"{"t":"hi","v":2,"g":"connect4"}"#)),
+            hello_game(&o(json!({"t": "hi", "v": 1}))),
+            Some(LinkedGame::Pong)
+        );
+        assert_eq!(
+            hello_game(&o(json!({"t": "hi", "u": 1}))),
+            Some(LinkedGame::Ember)
+        );
+        assert_eq!(
+            hello_game(&o(json!({"t": "c4", "v": 1}))),
             Some(LinkedGame::Connect4)
         );
-        assert_eq!(hello_game(&obj(r#"{"t":"s"}"#)), None);
         assert_eq!(
-            other_hello(&obj(r#"{"t":"c4","v":1}"#), LinkedGame::Trails),
+            hello_game(&o(json!({"t": "hi", "g": "ultimate"}))),
+            Some(LinkedGame::Ultimate)
+        );
+        assert_eq!(hello_game(&o(json!({"t": "p"}))), None);
+        assert_eq!(
+            other_hello(&o(json!({"t": "c4", "v": 1})), LinkedGame::Pong),
             Some("connect 4")
         );
         assert_eq!(
-            other_hello(&obj(r#"{"t":"tr","v":1}"#), LinkedGame::Trails),
+            other_hello(&o(json!({"t": "c4", "v": 1})), LinkedGame::Connect4),
             None
         );
         assert_eq!(
-            other_game_note("pong", LinkedGame::Ember),
-            "your friend opened pong · both type ember"
+            other_game_note("pong", LinkedGame::Connect4),
+            "your friend opened pong · both type connect 4"
         );
     }
 }
