@@ -71,7 +71,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Feature | Status | Notes |
 |---|---|---|
 | Rows, newest at the bottom, recent / always / only on ↑ | ✅ | `history` pair; recent window 5 min, 5 rows |
-| Selection, picks, ↵ inserts the pick, ⌥↵ the other half | ✅ | |
+| Selection, picks, ↵ inserts the pick, ⌥↵ the other half | ✅ | the tooltips are the page's titles (`Edit equations`, `Insert word at the cursor`, `Insert expression at the cursor`, `Insert exact value / approximation at the cursor` by the answer form); they said `Insert the expression` / `Insert the answer` for every row. **Native only:** an expression past 40 characters, cut at the row's end, is in its tooltip whole. Built; tooltips not pictured |
 | ⌘⌫ deletes the row, ⌘Z restores it | ✅ | |
 | Clear history (⌃C, edge tool) | ✅ | |
 | Matrix / complex / solve rows; a system row reopens its panel | ✅ | engine displays; a `sys` row reopens its equations |

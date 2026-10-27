@@ -703,7 +703,8 @@ private struct HistoryRowView: View, Equatable {
                 }
                 .buttonStyle(.plain)
                 .onHover { exprHover = $0 }
-                .help("Insert the expression")
+                // HistoryTape.tsx's titles; the pointer also reads an expression cut off at the row's end in full
+                .help(exprTip)
                 .accessibilityLabel("Expression \(row.expr)")
 
                 answers
@@ -729,21 +730,32 @@ private struct HistoryRowView: View, Equatable {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
+    private var exprTip: String {
+        let what = row.kind == .system ? "Edit equations" : row.kind == .definition ? "Insert word at the cursor"
+            : "Insert expression at the cursor"
+        return row.expr.count > 40 ? "\(what) · \(row.expr)" : what
+    }
+
     @ViewBuilder private var answers: some View {
         if row.hasDual, let exact = row.exact {
+            // the page's titles: exact value, then approximation
             // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
             HStack(spacing: 6) {
-                answer(Pretty.answer(exact), insert: true, picked: picked == 1)
+                answer(Pretty.answer(exact), insert: true, picked: picked == 1, tip: "Insert exact value at the cursor")
                 Text("≈").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                answer(Pretty.answer(row.display), insert: true, picked: picked == 2)
+                answer(Pretty.answer(row.display), insert: true, picked: picked == 2, tip: "Insert approximation at the cursor")
             }
         } else {
-            answer(Pretty.answer(row.display), insert: true, picked: picked == 1, fill: true)
+            answer(Pretty.answer(row.display), insert: true, picked: picked == 1, fill: true,
+                   tip: row.kind == .definition ? "Insert word at the cursor"
+                       : AppSettings.shared.answerForm == "exact" && row.exact != nil ? "Insert exact value at the cursor"
+                       : "Insert approximation at the cursor")
         }
     }
 
-    private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false) -> some View {
-        AnswerCell(text: text, picked: picked, fill: fill) { model.insertFromRow(index, answer: true) }
+    private func answer(_ text: String, insert: Bool, picked: Bool, fill: Bool = false,
+                        tip: String = "Insert the answer at the cursor") -> some View {
+        AnswerCell(text: text, picked: picked, fill: fill, tip: tip) { model.insertFromRow(index, answer: true) }
             .onDrag { NSItemProvider(object: row.display as NSString) }
     }
 }
@@ -754,6 +766,7 @@ private struct AnswerCell: View {
     let picked: Bool
     /// a lone answer is the whole column (display: block), so its pick ring is too
     var fill = false
+    var tip = "Insert the answer at the cursor"
     let action: () -> Void
     @State private var hover = false
     var body: some View {
@@ -770,7 +783,7 @@ private struct AnswerCell: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help("Insert the answer")
+        .help(tip)
         .accessibilityLabel("Answer \(text)")
     }
 }
