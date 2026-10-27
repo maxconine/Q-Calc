@@ -26,6 +26,26 @@ Met: keystroke median (37% under), never-shown memory (both counters, half the t
 after use, at 13.7 / 15.5 MB for a standard session. What is left there is mostly the engine's compiled regexes (see
 the end).
 
+## Against the Tauri app
+
+The installed Tauri app (2.0.15, WebView2) and the native build (93a2db2), on the same desktop with one external
+harness, since the Tauri app has no bench pipe. The harness launches the exe and polls until a visible window of
+the process has painted. It types `1` to `9` four times with SendInput and times each key until the pixels of the
+answer side of the line change. It then measures the private working set of the whole process tree 10 s after Esc.
+The screen is read through DWM, so a keystroke can never measure under one 60 Hz frame (16.7 ms). What counts is
+whether the answer lands on the next frame or a later one. The Tauri app was launched once (it is the user's own
+install); the native build five times.
+
+| | Tauri (WebView2) | native |
+|---|---|---|
+| launch to a painted window (includes PowerShell's process start) | 794 ms | **79 ms** (median of 5; 72-82 warm) |
+| keystroke to answer on screen: median / p90 | 16.9 / 33.2 ms (1 / 2 frames) | **16.6 / 16.9 ms** (every key the next frame) |
+| keys whose answer never visibly changed within 250 ms | 4 of 36 | **0 of 36** |
+| idle, hidden 10 s after use: private working set | 121.5 MB in 7 processes | **12.0 MB** in 1 process |
+
+By its own clock the native app needs 0.6 ms from keystroke to painted answer (smoke.ps1 Z2), so the frame it
+lands on is set by DWM, not by the app. About a third of the Tauri app's keystrokes miss the next frame.
+
 ## Method
 
 - **Keystrokes**: the bench (`bench.rs`), in-process: from posting WM_CHAR to the EndDraw (now the Present) of the
