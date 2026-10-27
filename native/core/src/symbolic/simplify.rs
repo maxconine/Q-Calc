@@ -143,23 +143,28 @@ fn with_args(n: &Node, new_args: Vec<Node>) -> Node {
 
 /// `allChildren`: the arguments as if flattened; same-symbol operator children are merged.
 pub(crate) fn all_children(n: &Node, ctx: &Ctx) -> Vec<Node> {
+    child_refs(n, ctx).into_iter().cloned().collect()
+}
+
+/// [`all_children`] without copying them.
+fn child_refs<'a>(n: &'a Node, ctx: &Ctx) -> Vec<&'a Node> {
     let Some(a) = node_args(n) else {
         return Vec::new();
     };
     if !is_associative(n, ctx) {
-        return a.clone();
+        return a.iter().collect();
     }
     let Node::Operator { op, .. } = n else {
         // a FunctionNode has no `op`, so no child shares it
-        return a.clone();
+        return a.iter().collect();
     };
     let symbol = op.symbol();
     let mut out = Vec::new();
-    fn find(n: &Node, symbol: &str, out: &mut Vec<Node>) {
+    fn find<'a>(n: &'a Node, symbol: &str, out: &mut Vec<&'a Node>) {
         for child in node_args(n).into_iter().flatten() {
             match child {
                 Node::Operator { op, .. } if op.symbol() == symbol => find(child, symbol, out),
-                _ => out.push(child.clone()),
+                _ => out.push(child),
             }
         }
     }
@@ -171,8 +176,8 @@ pub(crate) fn all_children(n: &Node, ctx: &Ctx) -> Vec<Node> {
 pub(crate) fn flatten(n: &Node, ctx: &Ctx) -> Node {
     match node_args(n) {
         Some(a) if !a.is_empty() => {
-            let kids = all_children(n, ctx);
-            with_args(n, kids.iter().map(|k| flatten(k, ctx)).collect())
+            let kids = child_refs(n, ctx);
+            with_args(n, kids.into_iter().map(|k| flatten(k, ctx)).collect())
         }
         _ => n.clone(),
     }
@@ -978,11 +983,12 @@ fn resolve(n: &Node) -> Node {
 /// Passes over the rule list before giving up on an input that never settles (mathjs would loop forever).
 const MAX_PASSES: usize = 10_000;
 
-/// The work one simplify may do, in rule matches plus the length of each match key it dedupes (`work.ts`
-/// counts, never the clock). The golden fixtures spend at most 420k; `d/dx x^x^…^x` with ten x's spends 9.3M
-/// (0.4 s). Past this a tower like it costs seconds more per level and gigabytes (`d/dx` thirty times over), so
-/// the simplify fails, as it does on an input that never settles. The TS engine has no such limit.
-const BUDGET: u64 = 10_000_000;
+/// The work one simplify may do, in rule matches, the length of each match key it dedupes and the printed
+/// length of the tree each rule walks (`work.ts` counts, never the clock). The golden fixtures spend at most
+/// 455k; `d/dx x^x^…^x` with ten x's spends about 10M (0.35 s). Past this a tower like it costs seconds more
+/// per level and gigabytes (`d/dx` thirty times over), so the simplify fails, as it does on an input that never
+/// settles. The TS engine has no such limit.
+const BUDGET: u64 = 12_000_000;
 
 thread_local! {
     static LEFT: std::cell::Cell<u64> = const { std::cell::Cell::new(BUDGET) };
@@ -1028,6 +1034,7 @@ pub fn simplify_with(
     let mut text = to_string(&res, &PrintOptions::all());
     let mut passes = 0;
     loop {
+        let len = text.len() as u64;
         if !visited.insert(text) {
             break;
         }
@@ -1035,6 +1042,8 @@ pub fn simplify_with(
         if passes > MAX_PASSES {
             return err("simplify did not settle");
         }
+        // every rule walks the whole tree (flatten, unflatten, simplifyCore) whether or not it matches
+        spend(len * rules.len() as u64)?;
 
         for rule in rules {
             res = match rule {
