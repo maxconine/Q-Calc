@@ -179,7 +179,7 @@ extension EmberRenderer {
         }
     }
 
-    func eyes(_ g: Canvas2D, _ an: PAnim, _ t: Double, _ y: Double, _ ink: RGBA, _ happy: Bool) {
+    func eyes(_ g: Canvas2D, _ an: PAnim, _ t: Double, _ y: Double, _ ink: Col, _ happy: Bool) {
         let lx = an.look * 1.7
         let ly = vyRel < -60 ? -0.7 : vyRel > 200 ? 0.6 : 0
         let blink = t < an.blinkUntil
@@ -200,7 +200,7 @@ extension EmberRenderer {
             g.ellipse(ex, ey, 1.25, blink ? 0.3 : 2, 0, 0, TAU)
             g.fill()
             if !blink {
-                g.fill(RGBA(255, 255, 255, 0.95))
+                g.fill(Col(255, 255, 255, 0.95))
                 g.fillRect(ex - 0.2 + an.look * 0.3, ey - 1.3, 0.75, 0.75)
             }
         }
@@ -236,16 +236,16 @@ extension EmberRenderer {
         g.fill(css(p.fire2))
         g.fill()
         flame(g, 3.4, -4.8, tipX * 0.5, -12.5 - sin(t * 23) * 0.8)
-        g.fill(RGBA(255, 246, 214, 0.95))
+        g.fill(Col(255, 246, 214, 0.95))
         g.fill()
-        eyes(g, an, t, -10.5, RGBA(64, 22, 6), happy)
-        g.fill(RGBA(255, 90, 60, 0.45))
+        eyes(g, an, t, -10.5, Col(64, 22, 6), happy)
+        g.fill(Col(255, 90, 60, 0.45))
         g.beginPath()
         g.ellipse(-5 + an.look * 1.2, -7.6, 1.5, 0.9, 0, 0, TAU)
         g.ellipse(5 + an.look * 1.2, -7.6, 1.5, 0.9, 0, 0, TAU)
         g.fill()
         if happy || !pl.ground {
-            g.stroke(RGBA(64, 22, 6))
+            g.stroke(Col(64, 22, 6))
             g.lineWidth = 0.9
             g.beginPath()
             if happy { g.arc(an.look * 1.7, -7.8, 1.6, 0.15 * .pi, 0.85 * .pi) } else { g.ellipse(an.look * 1.7, -6.8, 0.8, 1.1, 0, 0, TAU) }
@@ -313,7 +313,7 @@ extension EmberRenderer {
         g.stroke(edge)
         g.lineWidth = 1.1
         g.stroke()
-        g.fill(RGBA(255, 255, 255, 0.6))
+        g.fill(Col(255, 255, 255, 0.6))
         g.beginPath()
         g.moveTo(-4, -18)
         g.lineTo(0.5, -18)
@@ -330,14 +330,14 @@ extension EmberRenderer {
         g.moveTo(2.5, -13.5)
         g.lineTo(4, -18)
         g.stroke()
-        eyes(g, an, t, -9, RGBA(14, 48, 84), happy)
-        g.fill(RGBA(120, 170, 255, 0.45))
+        eyes(g, an, t, -9, Col(14, 48, 84), happy)
+        g.fill(Col(120, 170, 255, 0.45))
         g.beginPath()
         g.ellipse(-5 + an.look * 1.2, -6.2, 1.4, 0.8, 0, 0, TAU)
         g.ellipse(5 + an.look * 1.2, -6.2, 1.4, 0.8, 0, 0, TAU)
         g.fill()
         if happy || !pl.ground {
-            g.stroke(RGBA(14, 48, 84))
+            g.stroke(Col(14, 48, 84))
             g.lineWidth = 0.9
             g.beginPath()
             if happy { g.arc(an.look * 1.7, -6.2, 1.6, 0.15 * .pi, 0.85 * .pi) } else { g.ellipse(an.look * 1.7, -5.2, 0.8, 1.1, 0, 0, TAU) }
@@ -471,7 +471,7 @@ func drawEmberThumb(_ g: Canvas2D, _ level: EStage, stages: Int, dark: Bool) {
         g.beginPath()
         if !level.darks.isEmpty { for r in level.darks { g.rect(r.x, r.y, r.w, r.h) } } else { g.rect(-ox / k, -oy / k, cw / k, ch / k) }
         g.clip()
-        g.fill(RGBA(7, 6, 14, 0.8))
+        g.fill(Col(7, 6, 14, 0.8))
         g.fillRect(-ox / k, -oy / k, cw / k, ch / k)
         for i in 0..<2 {
             let h = hero(i)
@@ -492,7 +492,7 @@ func drawEmberThumb(_ g: Canvas2D, _ level: EStage, stages: Int, dark: Bool) {
         let gap = r * 3.2
         let bw = gap * Double(n - 1) + r * 4
         let by = ch - r * 2.6
-        g.fill(p.dark ? RGBA(0, 0, 0, 0.6) : RGBA(255, 255, 255, 0.78))
+        g.fill(p.dark ? Col(0, 0, 0, 0.6) : Col(255, 255, 255, 0.78))
         rr(g, cw / 2 - bw / 2, by - r * 1.8, bw, r * 3.6, r * 1.8)
         g.fill()
         for i in 0..<n {

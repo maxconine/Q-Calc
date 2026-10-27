@@ -73,7 +73,7 @@ let GRAV: RGB = (190, 132, 255)
 let ARROW: RGB = (72, 214, 150)
 let GOLD: RGB = (246, 196, 62)
 let GOLD_DARK: RGB = (150, 104, 22)
-let NIGHT = RGBA(7, 6, 14)
+let NIGHT = Col(7, 6, 14)
 let PORTAL_COLORS: [RGB] = [(168, 112, 255), (255, 122, 214), (64, 222, 196), (255, 212, 92)]
 
 let C_FIRE = 0, C_FIRE2 = 1, C_FROST = 2, C_FROST2 = 3, C_WHITE = 4, C_STEAM = 5, C_GOO = 6, C_LAVA = 7, C_WATER = 8
@@ -82,20 +82,20 @@ let C_CH = C_PORTAL + PORTAL_COLORS.count
 let C_TRAMP = C_CH + CHANNEL_COLORS.count
 let C_SAND = C_TRAMP + 1, C_SUN = C_TRAMP + 2, C_GRAV = C_TRAMP + 3, C_ARROW = C_TRAMP + 4, C_GOLD = C_TRAMP + 5, C_SMOKE = C_TRAMP + 6
 
-func colorTable(_ p: Palette) -> [RGBA] {
-    var t = [RGBA](repeating: .white, count: C_SMOKE + 1)
+func colorTable(_ p: Palette) -> [Col] {
+    var t = [Col](repeating: .white, count: C_SMOKE + 1)
     t[C_FIRE] = css(p.fire)
     t[C_FIRE2] = css(p.fire2)
     t[C_FROST] = css(p.frost)
     t[C_FROST2] = css(p.frost2)
-    t[C_WHITE] = p.dark ? RGBA(255, 255, 255) : css(mixRgb(p.frost2, WHITE, 0.3))
-    t[C_STEAM] = p.dark ? RGBA(220, 228, 236) : RGBA(170, 180, 192)
+    t[C_WHITE] = p.dark ? Col(255, 255, 255) : css(mixRgb(p.frost2, WHITE, 0.3))
+    t[C_STEAM] = p.dark ? Col(220, 228, 236) : Col(170, 180, 192)
     t[C_GOO] = css(GOO_TOP)
     t[C_LAVA] = css(LAVA_MID)
     t[C_WATER] = css(WATER_TOP)
     t[C_DUST] = css(p.dark ? mixRgb(p.wall, p.ink, 0.35) : mixRgb(p.wall, p.ink, 0.15))
     t[C_STAR] = css(p.star)
-    t[C_CORE] = p.dark ? RGBA(255, 246, 214) : css(mixRgb(p.star, LAVA_MID, 0.25))
+    t[C_CORE] = p.dark ? Col(255, 246, 214) : css(mixRgb(p.star, LAVA_MID, 0.25))
     t[C_ICE] = css(p.dark ? ICE_TOP : mixRgb(ICE_BOT, p.frost, 0.35))
     for (i, c) in PORTAL_COLORS.enumerated() { t[C_PORTAL + i] = css(c) }
     for (i, c) in CHANNEL_COLORS.enumerated() { t[C_CH + i] = c }
@@ -105,7 +105,7 @@ func colorTable(_ p: Palette) -> [RGBA] {
     t[C_GRAV] = css(p.dark ? GRAV : mixRgb(GRAV, BLACK, 0.12))
     t[C_ARROW] = css(p.dark ? ARROW : mixRgb(ARROW, BLACK, 0.18))
     t[C_GOLD] = css(GOLD)
-    t[C_SMOKE] = p.dark ? RGBA(120, 120, 132) : RGBA(96, 96, 108)
+    t[C_SMOKE] = p.dark ? Col(120, 120, 132) : Col(96, 96, 108)
     return t
 }
 
@@ -249,8 +249,8 @@ func paintBackdrop(_ g: Canvas2D, _ level: EStage, _ p: Palette, _ range: TileRa
         }
     }
     let vg = CanvasGradient(.radial(CGPoint(x: W / 2, y: H / 2), H * 0.35, CGPoint(x: W / 2, y: H / 2), W * 0.65))
-    vg.addColorStop(0, RGBA(0, 0, 0, 0))
-    vg.addColorStop(1, p.dark ? RGBA(0, 0, 0, 0.28) : RGBA(40, 30, 60, 0.07))
+    vg.addColorStop(0, Col(0, 0, 0, 0))
+    vg.addColorStop(1, p.dark ? Col(0, 0, 0, 0.28) : Col(40, 30, 60, 0.07))
     g.fill(vg)
     g.fillRect(0, 0, W, H)
 }
@@ -260,7 +260,7 @@ func paintWalls(_ g: Canvas2D, _ level: EStage, _ p: Palette, _ detail: Bool, _ 
     let tx0 = range?.x0 ?? 0, ty0 = range?.y0 ?? 0
     let tx1 = range?.x1 ?? level.cols, ty1 = range?.y1 ?? level.rows
     guard tx0 < tx1, ty0 < ty1 else { return }
-    g.fill(p.dark ? RGBA(0, 0, 0, 0.32) : RGBA(40, 30, 70, 0.10))
+    g.fill(p.dark ? Col(0, 0, 0, 0.32) : Col(40, 30, 70, 0.10))
     for ty in ty0..<ty1 {
         for tx in tx0..<tx1 {
             if !isWall(level, tx, ty) { continue }
@@ -343,14 +343,14 @@ struct EmberDrawInput {
 
 final class EmberRenderer {
     var pal: Palette
-    var colors: [RGBA]
+    var colors: [Col]
     let parts = Particles(MAX_PARTICLES)
     var chunks: [String: Canvas2D] = [:]
     var chunkOrder: [String] = []
     var statKey = ""
     var mip = -1
     var cam: Cam?
-    var view = View(k: 1, ox: 0, oy: 0)
+    var view = EView(k: 1, ox: 0, oy: 0)
     var vr = Cam(x: 0, y: 0, w: 640, h: 360, zoom: 1)
     var far = false
     var pos: [EPoint] = [EPoint(x: 0, y: 0), EPoint(x: 0, y: 0)]
@@ -480,7 +480,7 @@ final class EmberRenderer {
 
     // ---- glow sprites
 
-    private func glowSprite(_ color: RGBA) -> CGImage? {
+    private func glowSprite(_ color: Col) -> CGImage? {
         let id = "\(color.r),\(color.g),\(color.b)"
         if let s = glowCache[id] { return s }
         guard let s = Canvas2D(width: 64, height: 64) else { return nil }
@@ -497,7 +497,7 @@ final class EmberRenderer {
         return img
     }
 
-    func glow(_ g: Canvas2D, _ x: Double, _ y: Double, _ r: Double, _ color: RGBA, _ a: Double) {
+    func glow(_ g: Canvas2D, _ x: Double, _ y: Double, _ r: Double, _ color: Col, _ a: Double) {
         if a <= 0.003 { return }
         g.globalAlpha = min(1, a * (pal.dark ? 1 : 0.5))
         g.drawImage(glowSprite(color), x - r, y - r, r * 2, r * 2)
@@ -955,12 +955,12 @@ final class EmberRenderer {
         if cur.phase == "dead" {
             let d = clamp((cur.phaseT - 18) / 30, 0, 1)
             if d > 0 {
-                g.fill(pal.dark ? RGBA(0, 0, 0, (0.3 * d * 1000).rounded() / 1000) : RGBA(30, 24, 48, (0.16 * d * 1000).rounded() / 1000))
+                g.fill(pal.dark ? Col(0, 0, 0, (0.3 * d * 1000).rounded() / 1000) : Col(30, 24, 48, (0.16 * d * 1000).rounded() / 1000))
                 g.fillRect(0, 0, W, H)
             }
         }
         if flash > 0.01 {
-            g.fill(RGBA(255, 244, 214, (0.3 * flash * flash * 1000).rounded() / 1000))
+            g.fill(Col(255, 244, 214, (0.3 * flash * flash * 1000).rounded() / 1000))
             g.fillRect(0, 0, W, H)
         }
         drawLampClock(g, cur, t, W, H)
@@ -975,10 +975,10 @@ final class EmberRenderer {
         if let hole { return hole }
         guard let s = Canvas2D(width: 128, height: 128) else { return nil }
         let gr = CanvasGradient(.radial(CGPoint(x: 64, y: 64), 0, CGPoint(x: 64, y: 64), 64))
-        gr.addColorStop(0, RGBA(0, 0, 0, 1))
-        gr.addColorStop(HOLE_CORE, RGBA(0, 0, 0, 1))
-        gr.addColorStop(HOLE_CORE + (1 - HOLE_CORE) * 0.5, RGBA(0, 0, 0, 0.42))
-        gr.addColorStop(1, RGBA(0, 0, 0, 0))
+        gr.addColorStop(0, Col(0, 0, 0, 1))
+        gr.addColorStop(HOLE_CORE, Col(0, 0, 0, 1))
+        gr.addColorStop(HOLE_CORE + (1 - HOLE_CORE) * 0.5, Col(0, 0, 0, 0.42))
+        gr.addColorStop(1, Col(0, 0, 0, 0))
         s.fill(gr)
         s.fillRect(0, 0, 128, 128)
         hole = s.image()
@@ -1060,7 +1060,7 @@ final class EmberRenderer {
         let col = cur.lit ? SUN : MOON
         let low = frac < 0.25 && sin(t * 20) > 0
         g.resetTransform()
-        g.fill(RGBA(0, 0, 0, 0.45))
+        g.fill(Col(0, 0, 0, 0.45))
         rr(g, x - 9 * u, y - 4 * u, w + 13 * u, 8 * u, 4 * u)
         g.fill()
         g.fill(css(col, 0.28))
@@ -1073,7 +1073,7 @@ final class EmberRenderer {
         g.arc(x - 4.5 * u, y, 2.4 * u, 0, TAU)
         g.fill()
         if !cur.lit {
-            g.fill(RGBA(0, 0, 0, 0.75))
+            g.fill(Col(0, 0, 0, 0.75))
             g.beginPath()
             g.arc(x - 3.5 * u, y - 0.8 * u, 2 * u, 0, TAU)
             g.fill()

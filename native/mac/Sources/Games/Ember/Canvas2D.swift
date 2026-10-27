@@ -11,7 +11,7 @@ import CoreText
 // Coordinates are canvas pixels, y down, from the top-left. A Canvas2D draws into any CGContext: its own bitmap
 // (an offscreen canvas, drawImage-able), or the layer context Core Animation hands GameCanvasLayer each frame.
 
-struct RGBA: Equatable, Hashable {
+struct Col: Equatable, Hashable {
     /// 0–255 like css, alpha 0–1
     var r: Double, g: Double, b: Double, a: Double
 
@@ -22,11 +22,11 @@ struct RGBA: Equatable, Hashable {
         self.a = a
     }
 
-    static let clear = RGBA(0, 0, 0, 0)
-    static let black = RGBA(0, 0, 0)
-    static let white = RGBA(255, 255, 255)
+    static let clear = Col(0, 0, 0, 0)
+    static let black = Col(0, 0, 0)
+    static let white = Col(255, 255, 255)
 
-    func alpha(_ a: Double) -> RGBA { RGBA(r, g, b, a) }
+    func alpha(_ a: Double) -> Col { Col(r, g, b, a) }
 
     var cg: CGColor {
         CGColor(colorSpace: Canvas2D.space, components: [CGFloat(r / 255), CGFloat(g / 255), CGFloat(b / 255), CGFloat(min(1, max(0, a)))])
@@ -41,12 +41,12 @@ final class CanvasGradient {
     }
 
     let kind: Kind
-    private(set) var stops: [(CGFloat, RGBA)] = []
+    private(set) var stops: [(CGFloat, Col)] = []
     private var made: CGGradient?
 
     init(_ kind: Kind) { self.kind = kind }
 
-    func addColorStop(_ offset: Double, _ color: RGBA) {
+    func addColorStop(_ offset: Double, _ color: Col) {
         stops.append((CGFloat(min(1, max(0, offset))), color))
         made = nil
     }
@@ -68,7 +68,7 @@ final class CanvasGradient {
 }
 
 enum Paint {
-    case color(RGBA)
+    case color(Col)
     case gradient(CanvasGradient)
 }
 
@@ -107,7 +107,7 @@ final class Canvas2D {
         var baseline: TextBaseline = .alphabetic
         var smoothing = true
         var shadowBlur: CGFloat = 0
-        var shadowColor: RGBA = .clear
+        var shadowColor: Col = .clear
         var transform: CGAffineTransform = .identity
     }
 
@@ -152,9 +152,9 @@ final class Canvas2D {
         get { st.stroke }
         set { st.stroke = newValue }
     }
-    func fill(_ c: RGBA) { st.fill = .color(c) }
+    func fill(_ c: Col) { st.fill = .color(c) }
     func fill(_ g: CanvasGradient) { st.fill = .gradient(g) }
-    func stroke(_ c: RGBA) { st.stroke = .color(c) }
+    func stroke(_ c: Col) { st.stroke = .color(c) }
     func stroke(_ g: CanvasGradient) { st.stroke = .gradient(g) }
 
     var lineWidth: Double {
@@ -197,7 +197,7 @@ final class Canvas2D {
         get { Double(st.shadowBlur) }
         set { st.shadowBlur = CGFloat(max(0, newValue)) }
     }
-    var shadowColor: RGBA {
+    var shadowColor: Col {
         get { st.shadowColor }
         set { st.shadowColor = newValue }
     }
@@ -367,7 +367,7 @@ final class Canvas2D {
         case let .gradient(g):
             if st.shadowBlur > 0, st.shadowColor.a > 0 {
                 // the shadow of the shape, then the gradient inside it
-                cg.setFillColor(RGBA.black.cg)
+                cg.setFillColor(Col.black.cg)
                 cg.addPath(p)
                 cg.fillPath(using: rule)
                 cg.setShadow(offset: .zero, blur: 0, color: nil)
@@ -498,19 +498,19 @@ final class Canvas2D {
 }
 
 /// css's rgb()/rgba()/#hex, for the few colours read from settings or written as text
-func parseCSSColor(_ s: String, _ fallback: RGBA) -> RGBA {
+func parseCSSColor(_ s: String, _ fallback: Col) -> Col {
     let t = s.trimmingCharacters(in: .whitespaces).lowercased()
     if t.hasPrefix("#") {
         var hex = String(t.dropFirst())
         if hex.count == 3 { hex = hex.map { "\($0)\($0)" }.joined() }
         guard hex.count == 6, let n = Int(hex, radix: 16) else { return fallback }
-        return RGBA(Double((n >> 16) & 255), Double((n >> 8) & 255), Double(n & 255))
+        return Col(Double((n >> 16) & 255), Double((n >> 8) & 255), Double(n & 255))
     }
     if t.hasPrefix("rgb") {
         let inner = t.drop { $0 != "(" }.dropFirst().prefix { $0 != ")" }
         let parts = inner.split { $0 == "," || $0 == " " || $0 == "/" }.compactMap { Double($0) }
         guard parts.count >= 3 else { return fallback }
-        return RGBA(parts[0], parts[1], parts[2], parts.count > 3 ? parts[3] : 1)
+        return Col(parts[0], parts[1], parts[2], parts.count > 3 ? parts[3] : 1)
     }
     return fallback
 }

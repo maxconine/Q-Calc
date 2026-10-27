@@ -11,13 +11,13 @@ func mixRgb(_ a: RGB, _ b: RGB, _ t: Double) -> RGB {
 }
 
 /// css(c, alpha): the colour rounded to whole channels, alpha to three places, as the TS's string said
-func css(_ c: RGB, _ alpha: Double = 1) -> RGBA {
+func css(_ c: RGB, _ alpha: Double = 1) -> Col {
     let r = jsRound(c.0), g = jsRound(c.1), b = jsRound(c.2)
-    if alpha >= 1 { return RGBA(r, g, b) }
-    return RGBA(r, g, b, (max(0, alpha) * 1000).rounded() / 1000)
+    if alpha >= 1 { return Col(r, g, b) }
+    return Col(r, g, b, (max(0, alpha) * 1000).rounded() / 1000)
 }
 
-func rgbOf(_ c: RGBA) -> RGB { (c.r, c.g, c.b) }
+func rgbOf(_ c: Col) -> RGB { (c.r, c.g, c.b) }
 
 /// Math.round: half up, toward +infinity
 @inline(__always) func jsRound(_ x: Double) -> Double { (x + 0.5).rounded(.down) }
@@ -44,13 +44,13 @@ func hash01(_ n: Double) -> Double {
     return Double(h) / 4294967296
 }
 
-let CHANNEL_COLORS: [RGBA] = ["#9b7bff", "#ff5fa2", "#1fb39a", "#e3b21c", "#5b7cff", "#d05ad6", "#8fa63a"].map { parseCSSColor($0, .white) }
+let CHANNEL_COLORS: [Col] = ["#9b7bff", "#ff5fa2", "#1fb39a", "#e3b21c", "#5b7cff", "#d05ad6", "#8fa63a"].map { parseCSSColor($0, .white) }
 
 func channelIndex(_ name: String) -> Int {
     Int(hashStr(name.hasPrefix("!") ? String(name.dropFirst()) : name) % UInt32(CHANNEL_COLORS.count))
 }
 
-func channelColor(_ name: String) -> RGBA { CHANNEL_COLORS[channelIndex(name)] }
+func channelColor(_ name: String) -> Col { CHANNEL_COLORS[channelIndex(name)] }
 
 func condChannels(_ c: [String]?) -> [String] {
     (c ?? []).map { $0.hasPrefix("!") ? String($0.dropFirst()) : $0 }
@@ -91,15 +91,15 @@ struct Cam {
 }
 
 /// world px to canvas px: cx = wx * k + ox, the offsets whole pixels
-struct View {
+struct EView {
     var k: Double
     var ox: Double
     var oy: Double
 }
 
-func viewFor(_ cam: Cam, _ width: Double, _ shakeX: Double = 0, _ shakeY: Double = 0) -> View {
+func viewFor(_ cam: Cam, _ width: Double, _ shakeX: Double = 0, _ shakeY: Double = 0) -> EView {
     let k = width / cam.w
-    return View(k: k, ox: jsRound((shakeX - cam.x) * k), oy: jsRound((shakeY - cam.y) * k))
+    return EView(k: k, ox: jsRound((shakeX - cam.x) * k), oy: jsRound((shakeY - cam.y) * k))
 }
 
 struct TileRange {
@@ -278,7 +278,7 @@ final class Particles {
     }
 
     /// two passes, plain then additive; `only` draws one of them
-    func draw(_ ctx: Canvas2D, _ colors: [RGBA], _ addOp: Composite, _ only: Int = -1) {
+    func draw(_ ctx: Canvas2D, _ colors: [Col], _ addOp: Composite, _ only: Int = -1) {
         for pass in 0..<2 {
             if only >= 0 && only != pass { continue }
             ctx.globalCompositeOperation = pass == 0 ? .sourceOver : addOp
@@ -291,7 +291,7 @@ final class Particles {
         ctx.globalAlpha = 1
     }
 
-    private func drawOne(_ ctx: Canvas2D, _ i: Int, _ color: RGBA) {
+    private func drawOne(_ ctx: Canvas2D, _ i: Int, _ color: Col) {
         let t = Double(life[i] / max[i])
         let x = Double(self.x[i])
         let y = Double(self.y[i])

@@ -80,12 +80,12 @@ extension EmberRenderer {
                             let by = T - 2 - ph * (T - SINK - 2) * (open ? 1.05 : 1.2)
                             let r = 0.8 + ph * 1.6
                             if by < (open ? SINK + 1 : 0) { continue }
-                            g.fill(kind == Ember.T_LAVA ? RGBA(255, 236, 160, 0.8) : RGBA(214, 255, 150, 0.75))
+                            g.fill(kind == Ember.T_LAVA ? Col(255, 236, 160, 0.8) : Col(214, 255, 150, 0.75))
                             g.beginPath()
                             g.arc(bx, by, r, 0, TAU)
                             g.fill()
                             if kind == Ember.T_GOO {
-                                g.stroke(RGBA(40, 110, 20, 0.5))
+                                g.stroke(Col(40, 110, 20, 0.5))
                                 g.lineWidth = 0.6
                                 g.stroke()
                             }
@@ -94,7 +94,7 @@ extension EmberRenderer {
                         for b in 0..<2 {
                             let ph = (t * 0.3 + hash01(Double(i * 5 + b))).truncatingRemainder(dividingBy: 1)
                             let gx = (ph * T * 1.4 + Double(b) * 9).truncatingRemainder(dividingBy: T)
-                            g.fill(RGBA(255, 255, 255, ((0.5 * sin(ph * .pi)) * 1000).rounded() / 1000))
+                            g.fill(Col(255, 255, 255, ((0.5 * sin(ph * .pi)) * 1000).rounded() / 1000))
                             g.fillRect(gx, SINK + 3 + Double(b) * 4, 3, 0.8)
                         }
                     }
@@ -106,7 +106,7 @@ extension EmberRenderer {
                             g.lineTo(lx, SINK + wave(kind, x + lx, t))
                             lx += 2
                         }
-                        g.stroke(kind == Ember.T_LAVA ? RGBA(255, 244, 190, 0.95) : kind == Ember.T_GOO ? RGBA(220, 255, 160, 0.9) : RGBA(235, 248, 255, 0.9))
+                        g.stroke(kind == Ember.T_LAVA ? Col(255, 244, 190, 0.95) : kind == Ember.T_GOO ? Col(220, 255, 160, 0.9) : Col(235, 248, 255, 0.9))
                         g.lineWidth = 1.2
                         g.stroke()
                     }
@@ -148,9 +148,9 @@ extension EmberRenderer {
         let rOpen = at(level.tiles, i + 1) != Ember.T_THIN && !isWall(level, tx + 1, ty)
         roundRectPath(g, 0, 0, T, T, lOpen ? 3 : 0, rOpen ? 3 : 0, 0, 0)
         g.fill()
-        g.fill(RGBA(255, 255, 255, 0.85))
+        g.fill(Col(255, 255, 255, 0.85))
         g.fillRect(0, 0, T, 1.6)
-        g.stroke(RGBA(255, 255, 255, 0.7))
+        g.stroke(Col(255, 255, 255, 0.7))
         g.lineWidth = 0.8
         g.beginPath()
         let h = hash01(Double(i))
@@ -340,7 +340,7 @@ extension EmberRenderer {
             g.fill(col)
             rr(g, pl.x + 2, floor - 2.5 - h, pl.w - 4, h + 1, 1)
             g.fill()
-            g.fill(on ? RGBA(255, 255, 255, 0.6) : RGBA(255, 255, 255, 0.3))
+            g.fill(on ? Col(255, 255, 255, 0.6) : Col(255, 255, 255, 0.3))
             g.fillRect(pl.x + 3, floor - 2.5 - h, pl.w - 6, 0.8)
             g.fill(css(metal))
             roundRectPath(g, pl.x, floor - 2.5, pl.w, 2.5, 1.2, 1.2, 0, 0)
@@ -373,7 +373,7 @@ extension EmberRenderer {
             g.beginPath()
             g.ellipse(cx, floor - 2.5, min(b.w / 2 - 3, 7), dome, 0, .pi, 0)
             g.fill()
-            g.fill(RGBA(255, 255, 255, 0.45))
+            g.fill(Col(255, 255, 255, 0.45))
             g.beginPath()
             g.ellipse(cx - 2, floor - 2.5 - dome * 0.55, 2, dome * 0.25, 0, 0, TAU)
             g.fill()
@@ -420,7 +420,7 @@ extension EmberRenderer {
             g.beginPath()
             g.arc(hx, hy, 2.6, 0, TAU)
             g.fill()
-            g.fill(RGBA(255, 255, 255, 0.55))
+            g.fill(Col(255, 255, 255, 0.55))
             g.beginPath()
             g.arc(hx - 0.8, hy - 0.8, 0.9, 0, TAU)
             g.fill()
@@ -518,9 +518,9 @@ extension EmberRenderer {
             rr(g, -12, -2.2, 24, 4.4, 2)
             g.fill()
             let sheen = CanvasGradient(.linear(CGPoint(x: -12, y: 0), CGPoint(x: 12, y: 0)))
-            sheen.addColorStop(0, RGBA(210, 230, 255, 0.95))
-            sheen.addColorStop(0.5, RGBA(255, 255, 255, 1))
-            sheen.addColorStop(1, RGBA(180, 205, 240, 0.95))
+            sheen.addColorStop(0, Col(210, 230, 255, 0.95))
+            sheen.addColorStop(0.5, Col(255, 255, 255, 1))
+            sheen.addColorStop(1, Col(180, 205, 240, 0.95))
             g.fill(sheen)
             rr(g, -11, -2.2, 22, 2.2, 1.1)
             g.fill()
@@ -549,13 +549,13 @@ extension EmberRenderer {
             if vertical {
                 var bx = r.x + 2
                 while bx < r.x + r.w - 1 { g.fillRect(bx, r.y + 1, 2.5, r.h - 2); bx += 5 }
-                g.fill(RGBA(255, 255, 255, 0.28))
+                g.fill(Col(255, 255, 255, 0.28))
                 bx = r.x + 2
                 while bx < r.x + r.w - 1 { g.fillRect(bx, r.y + 1, 0.8, r.h - 2); bx += 5 }
             } else {
                 var by = r.y + 2
                 while by < r.y + r.h - 1 { g.fillRect(r.x + 1, by, r.w - 2, 2.5); by += 5 }
-                g.fill(RGBA(255, 255, 255, 0.28))
+                g.fill(Col(255, 255, 255, 0.28))
                 by = r.y + 2
                 while by < r.y + r.h - 1 { g.fillRect(r.x + 1, by, r.w - 2, 0.8); by += 5 }
             }
@@ -662,7 +662,7 @@ extension EmberRenderer {
             g.lineWidth = 1.4
             rr(g, x + 0.7, y + 0.7, s - 1.4, s - 1.4, 2)
             g.stroke()
-            g.fill(RGBA(255, 255, 255, 0.25))
+            g.fill(Col(255, 255, 255, 0.25))
             g.fillRect(x + 1.5, y + 1.2, s - 3, 1)
         }
     }
@@ -683,7 +683,7 @@ extension EmberRenderer {
             g.fill(gr)
             rr(g, x, r.y, r.w, r.h, 2.5)
             g.fill()
-            g.stroke(RGBA(255, 255, 255, 0.55))
+            g.stroke(Col(255, 255, 255, 0.55))
             g.lineWidth = 0.7
             g.beginPath()
             var ty = r.y + T
@@ -699,7 +699,7 @@ extension EmberRenderer {
                 tx += T
             }
             g.stroke()
-            g.stroke(RGBA(255, 255, 255, 0.85))
+            g.stroke(Col(255, 255, 255, 0.85))
             g.lineWidth = 1.2
             g.lineCap = .round
             g.beginPath()
@@ -823,7 +823,7 @@ extension EmberRenderer {
         }
     }
 
-    func lightGlyph(_ g: Canvas2D, _ sun: Bool, _ cx: Double, _ cy: Double, _ color: RGBA) {
+    func lightGlyph(_ g: Canvas2D, _ sun: Bool, _ cx: Double, _ cy: Double, _ color: Col) {
         g.fill(color)
         g.stroke(color)
         if sun {
@@ -1411,7 +1411,7 @@ extension EmberRenderer {
                 g.beginPath()
                 g.arc(12.2, 0, 4.6, -.pi / 2, .pi / 2)
                 g.fill()
-                g.fill(who == 0 ? RGBA(64, 22, 6) : RGBA(14, 48, 84))
+                g.fill(who == 0 ? Col(64, 22, 6) : Col(14, 48, 84))
                 g.fillRect(14.4, -2.4, 1.3, 1.6)
                 g.fillRect(14.4, 0.9, 1.3, 1.6)
             }
@@ -1549,7 +1549,7 @@ extension EmberRenderer {
             g.lineTo(0, 5.5)
             g.closePath()
             g.fill()
-            g.fill(RGBA(255, 255, 255, 0.85))
+            g.fill(Col(255, 255, 255, 0.85))
             g.beginPath()
             g.moveTo(-2.6, -3.9)
             g.lineTo(-0.6, -3.9)
