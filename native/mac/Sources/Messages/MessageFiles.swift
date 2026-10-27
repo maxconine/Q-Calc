@@ -213,13 +213,13 @@ final class MessageFiles: NSObject, ObservableObject {
             guard (try? png.write(to: url)) != nil else { return done(errorText("disk", who: to)) }
             return sendFile(url, to: to, done: done)
         }
-        done("there’s nothing copied to share")
+        done(shareStatus("empty-clipboard", to: to, what: "clip"))
     }
 
     func sendClip(_ clip: String, to raw: String, done: @escaping (String) -> Void) {
         let to = Messages.clean(raw)
         let m = Messages.shared
-        guard !m.name.isEmpty else { return done(shareStatus("not-yours", to: to, what: "clip")) }
+        guard !m.name.isEmpty else { return done(shareStatus("no-name", to: to, what: "clip")) }
         PrivacyNotice.shared.firstShare()
         recipientKey(to, what: "clip", done: done) { [weak self] theirs, theirText in
             guard let self else { return }
@@ -280,8 +280,10 @@ final class MessageFiles: NSObject, ObservableObject {
     func sendFile(_ url: URL, to raw: String, done: @escaping (String) -> Void) {
         let to = Messages.clean(raw)
         let m = Messages.shared
-        guard !m.name.isEmpty else { return done(shareStatus("not-yours", to: to, what: "file")) }
-        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .typeIdentifierKey])
+        guard !m.name.isEmpty else { return done(shareStatus("no-name", to: to, what: "file")) }
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isDirectoryKey, .typeIdentifierKey])
+        // a folder (a copied one through `paste to`, or one dropped on a thread) says so, not that it's unreadable
+        if values?.isDirectory == true { return done(shareStatus("folder", to: to, what: "file")) }
         guard values?.isRegularFile == true, let size = values?.fileSize.map(UInt64.init) else { return done(errorText("unreadable", who: to)) }
         guard size <= Self.fileMax else { return done(shareStatus("too-big", to: to, what: "file")) }
         let name = cleanName(url.lastPathComponent)

@@ -507,6 +507,10 @@ pub fn share_completion(text: &str, contacts: &[String]) -> String {
 pub fn share_status_text(status: &str, to: &str, what: &str, name: &str) -> String {
     let clip = what == "clip";
     match status {
+        "no-name" if clip => "set your name in settings to share your clipboard".into(),
+        "no-name" => "set your name in settings to send files".into(),
+        "empty-clipboard" => "there’s nothing copied to share".into(),
+        "folder" => "a folder can’t be sent · zip it first".into(),
         "delivered" if clip => format!("clipboard sent to {to}"),
         "delivered" => format!("offered {name} to {to} · waiting for them to accept"),
         "offline" if clip => format!("{to} isn’t on q calc right now · not sent"),
@@ -1142,26 +1146,65 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn says_when_theres_no_name_rather_than_a_taken_one() {
+        assert_eq!(
+            share_status_text("no-name", "max", "file", "a.pdf"),
+            "set your name in settings to send files"
+        );
+        assert_eq!(
+            share_status_text("no-name", "max", "clip", ""),
+            "set your name in settings to share your clipboard"
+        );
+        assert_ne!(
+            share_status_text("no-name", "max", "file", ""),
+            share_status_text("not-yours", "max", "file", "")
+        );
+        assert_eq!(
+            share_status_text("empty-clipboard", "max", "clip", ""),
+            "there’s nothing copied to share"
+        );
+        assert_eq!(
+            share_status_text("folder", "max", "file", ""),
+            file_error_text("folder", "max")
+        );
+    }
+
+    #[test]
     fn names_what_was_dropped() {
         assert_eq!(dropped_label("a.pdf", 1), "a.pdf");
         assert_eq!(dropped_label("a.pdf", 3), "3 files");
-        assert_eq!(file_error_text("folder", "max"), "a folder can’t be sent · zip it first");
+        assert_eq!(
+            file_error_text("folder", "max"),
+            "a folder can’t be sent · zip it first"
+        );
         let m = Messaging {
             name: "me".into(),
             key: "k".into(),
             ..Messaging::default()
         };
         let p = parse_share_command("send file to max").unwrap();
-        assert_eq!(share_hint(&p, &m, true, None, &dropped_label("x", 2)), "↵ offers 2 files to max");
+        assert_eq!(
+            share_hint(&p, &m, true, None, &dropped_label("x", 2)),
+            "↵ offers 2 files to max"
+        );
     }
 
     #[test]
     fn says_what_a_card_is() {
-        assert_eq!(card_announcement("max", "ask", ""), "max wants to message you");
-        assert_eq!(card_announcement("max", "clip", ""), "max shared their clipboard");
+        assert_eq!(
+            card_announcement("max", "ask", ""),
+            "max wants to message you"
+        );
+        assert_eq!(
+            card_announcement("max", "clip", ""),
+            "max shared their clipboard"
+        );
         assert_eq!(card_announcement("max", "file", "a.pdf"), "max sent a.pdf");
         assert_eq!(card_announcement("max", "file", ""), "max sent a file");
-        assert_eq!(card_announcement("max", "text", "hi"), "message from max: hi");
+        assert_eq!(
+            card_announcement("max", "text", "hi"),
+            "message from max: hi"
+        );
     }
 
     #[test]
