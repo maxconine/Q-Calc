@@ -1212,6 +1212,10 @@ impl App {
                 let (ws, private) = bench::memory();
                 reply(serde_json::json!({ "workingSet": ws, "private": private }));
             }
+            "settings" => {
+                settings_window::open_named(self, spec.text.as_deref().unwrap_or(""));
+                reply(serde_json::json!({ "ok": true }));
+            }
             "quit" => {
                 reply(serde_json::json!({ "ok": true }));
                 self.ops.push(Op::Quit);

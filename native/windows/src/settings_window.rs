@@ -28,7 +28,7 @@
 use std::cell::{Cell, RefCell};
 
 use qcalc_core::app::host_settings::{
-    HostInfo, HotkeyVerdict, UpdateState, conflict_text, draft_choices, hotkey_note, spot_choices,
+    HostInfo, HotkeyVerdict, UpdateState, draft_choices, hotkey_note, spot_choices,
     update_line,
 };
 use qcalc_core::app::keybinds::{
@@ -761,7 +761,8 @@ fn pick_show(app: &mut App, win: &mut Win, chord: &str) {
     let v = probe_now(app, win.hwnd, chord);
     if !v.free {
         qlog!("settings: {chord} is taken ({})", v.owner);
-        win.note = conflict_text(&v);
+        // the row says why (hotkey_note with this verdict) and the next row offers the free chord
+        win.note.clear();
         win.refused = v.chord.clone();
         win.verdict = Some(v);
         app.hotkey.kick("settings");
@@ -1031,12 +1032,13 @@ impl Win {
                     + 4.0,
                 30.0,
             ),
+            // one width for every list, so a page's controls line up
             Control::Select { options, .. } => {
                 let widest = options
                     .iter()
                     .map(|(_, l)| text_w(gfx, l, &f.hint))
                     .fold(0.0, f32::max);
-                ((widest + 44.0).clamp(120.0, 260.0), 30.0)
+                ((widest + 44.0).clamp(220.0, 300.0), 30.0)
             }
             Control::Button { label, .. } => ((text_w(gfx, label, &f.hint) + 32.0).max(88.0), 30.0),
             Control::Key { label, .. } => ((text_w(gfx, label, &f.hint) + 28.0).max(150.0) + 34.0, 30.0),
@@ -1178,10 +1180,17 @@ impl Win {
     fn stop_recording(&mut self, app: &mut App) {
         if let Some(r) = self.recording.take() {
             if r.action == KeyAction::Show {
+                // the paused chord comes back
                 app.hotkey.kick("settings recorder done");
             }
             self.dirty = true;
         }
+    }
+
+    /// Recording ends with a chord picked: no resume of the old chord first, the pick registers what stays.
+    fn end_recording(&mut self) {
+        self.recording = None;
+        self.dirty = true;
     }
 
     /// A key while recording. True when it was taken.
@@ -1249,7 +1258,7 @@ impl Win {
             self.dirty = true;
             return true;
         }
-        self.stop_recording(app);
+        self.end_recording();
         self.note.clear();
         if action == KeyAction::Show {
             pick_show(app, self, &chord);
@@ -1718,6 +1727,14 @@ pub fn open_page(app: &mut App, page: Page) {
     app.ops.push(Op::Run(crate::bg::Later(show_now)));
 }
 
+/// Opens the page whose sidebar name is `name` ("updates"), else the one it was on (the bench pipe's `settings`).
+pub fn open_named(app: &mut App, name: &str) {
+    match Page::ALL.iter().find(|p| p.nav().eq_ignore_ascii_case(name)) {
+        Some(p) => open_page(app, *p),
+        None => open(app),
+    }
+}
+
 /// The settings changed elsewhere (the bar's shortcuts, the theme, the update loop): shown again if open.
 pub fn refresh(_app: &mut App) {
     WIN.with(|w| {
@@ -2093,6 +2110,7 @@ fn run_pending() {
                     let _ = DestroyMenu(menu);
                     cmd.0 as usize
                 };
+                qlog!("settings: list for item {item} picked {picked}");
                 if picked > 0
                     && let Some((id, _)) = options.get(picked - 1)
                 {
@@ -2118,6 +2136,7 @@ fn run_pending() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use qcalc_core::app::host_settings::conflict_text;
 
     #[test]
     fn a_probe_names_the_owner_and_a_free_chord() {
