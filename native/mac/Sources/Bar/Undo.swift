@@ -38,7 +38,8 @@ enum Undo {
     }
 
     static func record(_ u: State, _ next: Step, _ kind: Kind?, now: Double) -> State {
-        if next.value == u.current.value { return u }
+        // JS `===`: the same UTF-16 units (Swift's `==` would also call é and e + ◌́ equal)
+        if next.value.utf16.elementsEqual(u.current.value.utf16) { return u }
         let joins = kind != nil && u.run == kind && now - u.at < runMs
         if joins {
             var j = u
