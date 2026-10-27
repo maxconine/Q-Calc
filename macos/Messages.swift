@@ -218,8 +218,12 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         blocked.removeAll { $0 == who }
         inbox.answered(who, blocked: false)
         answered(who)
-        if let said = asking.removeValue(forKey: who) { deliver(from: who, text: said) }
+        // a request that only shared a clip or a file said nothing to show (askShare)
+        if let said = asking.removeValue(forKey: who), !said.isEmpty { deliver(from: who, text: said) }
         requests = asking.keys.sorted()
+        #if QCALC_NATIVE
+        MessageFiles.shared.answered(who, allowed: true)
+        #endif
     }
 
     func block(_ who: String) {
@@ -229,6 +233,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         requests = asking.keys.sorted()
         inbox.answered(who, blocked: true)
         answered(who)
+        #if QCALC_NATIVE
+        MessageFiles.shared.answered(who, allowed: false)
+        #endif
     }
 
     // off both lists: their next message asks again
@@ -393,7 +400,18 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
                 link = .taken
             }
         case "message":
+            #if QCALC_NATIVE
+            // a clip or a file's offer (MessageFiles.swift); its text is only for apps that don't know them
+            if let kind = event["kind"] as? String, kind != "text" {
+                MessageFiles.shared.heard(event)
+                return
+            }
+            #endif
             if let from = event["from"] as? String, let said = event["text"] as? String { arrived(from: from, text: said) }
+        #if QCALC_NATIVE
+        case "file":
+            MessageFiles.shared.event(event)
+        #endif
         default:
             break
         }
@@ -424,9 +442,15 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
             deliver(from: from, text: text)
             return
         }
+        ask(from, said: text)
+    }
+
+    // someone new asks: once a name, whatever they send meanwhile. `said` is what to show once they're allowed,
+    // "" for a clip or a file, which MessageFiles keeps
+    private func ask(_ from: String, said text: String) {
         // a name already asking isn't asked about again
         let asked = asking[from] != nil
-        asking[from] = text
+        if !asked || !text.isEmpty { asking[from] = text }
         requests = asking.keys.sorted()
         guard !asked else { return }
         inbox.add(from: from, text: "", ask: true)
@@ -456,6 +480,18 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: item.id, content: content, trigger: nil))
     }
+
+    #if QCALC_NATIVE
+    // the key, for MessageFiles' requests, which carry it in a header as the page's posts carry it in a body
+    var relayKey: String { key }
+
+    // a clip or a file from someone new: they ask as a message would
+    func askShare(from raw: String) {
+        let from = Self.clean(raw)
+        guard !from.isEmpty, !blocked.contains(from), !accepted.contains(from) else { return }
+        ask(from, said: "")
+    }
+    #endif
 
     private func inboxChanged() {
         NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
@@ -598,6 +634,7 @@ struct MessagesSettingsView: View {
             names("Accepted", messages.accepted, empty: "Nobody yet. Anyone new’s first message asks you.", action: "Remove")
             names("Blocked", messages.blocked, empty: "Nobody. A blocked name’s messages never show, and they aren’t told.", action: "Unblock")
             #if QCALC_NATIVE
+            MessageFilesSection()
             MessageHistorySection()
             #endif
         }

@@ -1,6 +1,7 @@
 import AppKit
 import QCalcCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 // The bar, laid out as the web app's .spotlight is (src/index.css): the tape above, the 72 pt composer, then the
 // hint, the graph and the message cards, on one solid --bg card with 12 pt corners. Every size, colour and
@@ -48,6 +49,9 @@ struct BarView: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .background(Color.qBg.opacity(0.9))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radius, style: .continuous))
+        // a file dropped on the bar goes to whoever the line names (Messages/ShareCommands.swift); a thread
+        // under it takes its own drops
+        .onDrop(of: [.fileURL], isTargeted: nil) { model.dropProviders($0, to: nil) }
         .fixedSize(horizontal: false, vertical: true)
         .reportHeight(HeightKey.self)
         .onPreferenceChange(HeightKey.self) { h in
@@ -961,14 +965,29 @@ private struct CardView: View {
             // (Messages/MessageThreads.swift); the buttons and the reply line keep their own clicks
             .contentShape(Rectangle())
             .onTapGesture { if !card.ask { model.openThread(card.from) } }
+            if card.ask {
+                // a request's files show, without Save until they're allowed (MessageFiles.swift)
+                ForEach(MessageFiles.shared.heldFiles(from: card.from), id: \.id) { file in
+                    FileBlock(file: file, mine: false, who: card.from)
+                }
+                if MessageFiles.shared.heldClips(from: card.from) > 0 {
+                    Text("shared their clipboard").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                }
+            }
             if !card.ask {
-                Text(card.text)
-                    .foregroundStyle(Color.qAnswer)
-                    .lineLimit(4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .onTapGesture { model.openThread(card.from) }
-                    .help("Open messages with \(card.from)")
+                if let clip = card.clip {
+                    ClipBlock(clip: clip, lines: 4)
+                } else if let file = card.file {
+                    FileBlock(file: file, mine: false, who: card.from)
+                } else {
+                    Text(card.text)
+                        .foregroundStyle(Color.qAnswer)
+                        .lineLimit(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { model.openThread(card.from) }
+                        .help("Open messages with \(card.from)")
+                }
                 HStack(spacing: 8) {
                     TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }),
                               prompt: Text("Reply to \(card.from)").foregroundColor(.qMuted))

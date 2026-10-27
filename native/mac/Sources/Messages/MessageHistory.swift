@@ -1,12 +1,23 @@
 import Foundation
 
-/// One line of a conversation: who said it (you or them), what, and when (ms since 1970).
+/// A file in a conversation: the relay's id for it, its name and its plain size. Its key and its progress live
+/// only in memory (MessageFiles), so after a relaunch it reads as no longer available unless it was saved.
+struct ThreadFile: Codable, Equatable {
+    let id: String
+    let name: String
+    let size: UInt64
+}
+
+/// One line of a conversation: who said it (you or them), what, and when (ms since 1970). A clip or a file
+/// (native only, MessageFiles.swift) keeps a one-line summary in `text`, for the conversations list.
 struct ThreadMessage: Codable, Equatable, Identifiable {
     let id: String
     let at: Double
     /// "sent" (you said it) or "received"
     let dir: String
     let text: String
+    var clip: String? = nil
+    var file: ThreadFile? = nil
 
     var mine: Bool { dir == "sent" }
 }
@@ -59,7 +70,11 @@ final class MessageHistory: ObservableObject {
             let name = Messages.clean(who)
             guard !name.isEmpty else { continue }
             let kept = list.filter { ($0.dir == "sent" || $0.dir == "received") && !$0.text.isEmpty }
-                .map { ThreadMessage(id: $0.id, at: $0.at, dir: $0.dir, text: MessageInbox.cleanText($0.text, max: Messages.textMax)) }
+                .map { m in
+                    ThreadMessage(id: m.id, at: m.at, dir: m.dir, text: MessageInbox.cleanText(m.text, max: Messages.textMax),
+                                  clip: m.clip.flatMap { $0.utf8.count <= MessageFiles.clipMax && !$0.isEmpty ? $0 : nil },
+                                  file: m.file.map { ThreadFile(id: $0.id, name: MessageFiles.safeName($0.name), size: $0.size) })
+                }
                 .sorted { $0.at < $1.at }
             if !kept.isEmpty { out[name, default: []] += kept.suffix(cap) }
         }
@@ -85,6 +100,21 @@ final class MessageHistory: ObservableObject {
         guard !name.isEmpty, !text.isEmpty else { return }
         let message = ThreadMessage(id: UUID().uuidString, at: (date.timeIntervalSince1970 * 1000).rounded(),
                                     dir: mine ? "sent" : "received", text: text)
+        change { threads in
+            var list = threads[name] ?? []
+            list.append(message)
+            if list.count > Self.cap { list.removeFirst(list.count - Self.cap) }
+            threads[name] = list
+        }
+    }
+
+    /// a clip or a file to or from `who`; `summary` is the line the conversations list shows
+    func addShare(with who: String, mine: Bool, summary: String, clip: String? = nil, file: ThreadFile? = nil, at date: Date = Date()) {
+        let name = Messages.clean(who)
+        let text = MessageInbox.cleanText(summary, max: Messages.textMax)
+        guard !name.isEmpty, !text.isEmpty, clip != nil || file != nil else { return }
+        let message = ThreadMessage(id: UUID().uuidString, at: (date.timeIntervalSince1970 * 1000).rounded(),
+                                    dir: mine ? "sent" : "received", text: text, clip: clip, file: file)
         change { threads in
             var list = threads[name] ?? []
             list.append(message)
