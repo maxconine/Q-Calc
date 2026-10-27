@@ -105,6 +105,8 @@ pub enum Op {
     /// the tray menu (modal)
     TrayMenu,
     Quit,
+    /// a feature's own window work (settings_window.rs), run outside the borrow
+    Run(crate::bg::Later),
 }
 
 /// What the command line asks.
@@ -150,7 +152,7 @@ pub struct App {
     pub run: Option<Run>,
     /// a notice for the next showing (the hotkey couldn't be had)
     pub notice: Option<String>,
-    ops: Vec<Op>,
+    pub ops: Vec<Op>,
     needs_paint: bool,
     ready_logged: bool,
     taskbar_created: u32,
@@ -247,6 +249,7 @@ pub fn run() -> i32 {
         );
         None
     });
+    crate::migrate::history(&engine);
     history::load(&engine);
 
     // SAFETY: plain registration on our host window
@@ -431,7 +434,7 @@ unsafe extern "system" fn bar_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM)
 }
 
 /// Runs the queued window ops, outside any borrow.
-fn run_ops() {
+pub(crate) fn run_ops() {
     loop {
         let Some((ops, paint, bar)) = with_app(|a| {
             (
@@ -501,17 +504,13 @@ fn run_op(op: Op) {
             let _ = unsafe { SetWindowPos(hwnd, None, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE) };
         }
         Op::TrayMenu => {
-            let Some(host) = with_app(|a| a.host) else {
+            let Some((host, state)) = with_app(|a| (a.host, tray::MenuState::of(a))) else {
                 return;
             };
-            let cmd = Tray::menu(host);
-            with_app(|a| match cmd {
-                Some(tray::CMD_SHOW) => a.ops.push(Op::Show),
-                Some(tray::CMD_SETTINGS) => settings_window::open(a),
-                Some(tray::CMD_QUIT) => a.ops.push(Op::Quit),
-                _ => {}
-            });
+            let cmd = Tray::menu(host, &state);
+            with_app(|a| tray::picked(a, cmd));
         }
+        Op::Run(f) => (f.0)(),
         Op::Quit => {
             let Some((host, bar)) = with_app(|a| {
                 a.save_store();
@@ -623,6 +622,7 @@ impl App {
                     self.bar.set_dark(self.theme.dark);
                     self.tray.refresh_icon();
                     self.model.touch();
+                    settings_window::refresh(self);
                 }
             }
             WM_ENDSESSION => self.save_store(),
@@ -630,6 +630,7 @@ impl App {
                 // SAFETY: ends the loop
                 unsafe { PostQuitMessage(0) };
             }
+            m if crate::bg::is_ours(m) => crate::bg::run(self),
             m if m == self.taskbar_created && m != 0 => {
                 qlog!("Explorer restarted: tray icon and hotkey again");
                 self.tray.add();
@@ -886,7 +887,7 @@ impl App {
     }
 
     /// After every message: lay out and repaint if the model changed; save settings; write the clipboard.
-    fn after(&mut self) {
+    pub(crate) fn after(&mut self) {
         if self.model.take_changed() {
             crate::effects::after(self);
             let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
@@ -903,6 +904,7 @@ impl App {
         if std::mem::take(&mut self.model.settings_dirty) {
             self.store.settings = self.model.settings.clone();
             self.save_store();
+            settings_window::refresh(self);
         }
         crate::line::after(self);
         if let Some(text) = self.model.to_clipboard.take()
@@ -980,6 +982,7 @@ impl App {
             self.model.hint = self.notice.clone();
             self.model.tape.hotkey = self.store.hotkey.clone();
             self.model.field.select_all();
+            crate::analytics::track(self, "open");
         }
         self.bar.surface.set_dpi(monitor.dpi);
         let layout = Bar::layout(&self.gfx, &self.model, self.bar.width, now_ms());
@@ -1064,6 +1067,7 @@ impl App {
             let _ = self.gfx.layout(s, &self.gfx.fonts.row, 0.0, 36.0);
         }
         qlog!("bar warmed in {:.1} ms", t.elapsed().as_secs_f64() * 1000.0);
+        crate::bg::start(self);
         if !self.ready_logged && !self.bar.visible {
             self.ready_logged = true;
             qlog!(
@@ -1257,6 +1261,10 @@ impl App {
                 self.trim();
                 let (ws, private) = bench::memory();
                 reply(serde_json::json!({ "workingSet": ws, "private": private }));
+            }
+            "settings" => {
+                settings_window::open_named(self, spec.text.as_deref().unwrap_or(""));
+                reply(serde_json::json!({ "ok": true }));
             }
             "quit" => {
                 reply(serde_json::json!({ "ok": true }));

@@ -13,6 +13,8 @@ mod store;
 mod text_rules;
 
 #[cfg(windows)]
+mod analytics;
+#[cfg(windows)]
 mod answer;
 #[cfg(windows)]
 mod app;
@@ -20,6 +22,7 @@ mod app;
 mod bench;
 #[cfg(windows)]
 mod cheats;
+mod bg;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
@@ -41,7 +44,11 @@ mod line;
 #[cfg(windows)]
 mod messaging;
 #[cfg(windows)]
+mod migrate;
+#[cfg(windows)]
 mod model;
+#[cfg(windows)]
+mod net;
 #[cfg(windows)]
 mod rates;
 #[cfg(windows)]

@@ -54,12 +54,18 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `clip.rs` | clipboard text |
 | `bench.rs` | the dev bench: spec, steps, stats, the named pipe, memory counters |
 | `log.rs` | the log file, ms since process creation, the panic hook |
-| `settings_window.rs` | stub: the settings window |
+| `settings_window.rs` | the settings window (drawn with render.rs; made on first open, dropped on close); `set_messages_hook` for the Messages page |
 | `graph.rs`, `systems.rs`, `typst_row.rs`, `messaging.rs` | stubs: panels under the composer |
 | `sheets.rs` | stub: periodic table and identity sheets (their own windows) |
 | `effects.rs` | stub: the easter-egg effects |
 | `games/` | the native games in a window of their own (games/README.md): `open(kind)`, `command`/`hint` for the bar |
-| `update.rs`, `rates.rs` | stubs: self-update, the ECB rates fetch |
+| `update.rs` | self-update: `latest-native.json` on the GitHub release, minisign-verified with the Tauri updater's key, installed while away |
+| `rates.rs` | the ECB daily rates (the core's rules) on a background thread, into `rates.json` and the engine |
+| `analytics.rs` | the usage counts (the core's rules), `track(app, event)` |
+| `bg.rs` | background threads' way back to the UI thread (`post`), and `start` for the background jobs after the first frame |
+| `net.rs` | HTTPS over WinHTTP for the background jobs |
+| `migrate.rs` | the Tauri app's history out of its WebView2 LevelDB, once |
+| `installer/` | the NSIS installer (`qcalc.nsi`) and `build.ps1` (installer, signature, feed) |
 
 Each stub's doc comment names its Mac / Tauri spec and the hooks it should use.
 
