@@ -511,9 +511,12 @@ final class BarModel: ObservableObject {
         }
     }
 
+    /// read once: the composer asks on every redraw, and the environment is copied out whole each time it's read
+    private static let piDayForced = AppInfo.isDev && ProcessInfo.processInfo.environment["QCALC_PI_DAY"] == "1"
+
     /// March 14 by the local calendar (dev builds: QCALC_PI_DAY=1 makes any day Pi Day, to try it)
     static var piDay: Bool {
-        if AppInfo.isDev, ProcessInfo.processInfo.environment["QCALC_PI_DAY"] == "1" { return true }
+        if piDayForced { return true }
         let d = Calendar.current.dateComponents([.month, .day], from: Date())
         return isPiDay(month: UInt32(d.month ?? 0), day: UInt32(d.day ?? 0))
     }
