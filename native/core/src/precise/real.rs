@@ -970,6 +970,13 @@ impl Ctx {
                 }
             }
             _ if x.is_zero() => Real::one(),
+            // e^x for |x| far below the last digit kept rounds to 1 (to the nearest); working it out took time in
+            // proportion to x's exponent (`exp(1e-123456789)`: 11.6 s)
+            _ if matches!(self.rounding, Rounding::HalfUp | Rounding::HalfEven)
+                && magnitude(x).is_some_and(|m| m < -(self.precision as i64) - 2) =>
+            {
+                Real::one()
+            }
             Some(r) => self.run(|w, c| w.exp(r, Some(c))),
         }
     }
@@ -1188,6 +1195,7 @@ impl Ctx {
             None => Real::NAN,
             Some(r) if r.is_infinite() => x.clone(),
             _ if x.is_zero() => x.clone(),
+            _ if self.is_its_own_odd_series(x) => self.round(x),
             Some(a) => self.run(|w, c| w.asinh(a, Some(c))),
         }
     }
@@ -1208,8 +1216,20 @@ impl Ctx {
             _ if x.is_zero() => x.clone(),
             _ if x.abs().gt(&Real::one()) => Real::NAN,
             _ if x.abs().eq_value(&Real::one()) => Real::infinity(x.is_neg()),
+            _ if self.is_its_own_odd_series(x) => self.round(x),
             Some(a) => self.run(|w, c| w.atanh(a, Some(c))),
         }
+    }
+
+    /// asinh x = x − x³/6 + … and atanh x = x + x³/3 + …: when x² is far below the last digit kept and x has
+    /// fewer digits than that, the series rounds (to the nearest) to x itself. Working it out took time in
+    /// proportion to x's exponent (`asinh(1e-123456789)`: 6 s).
+    fn is_its_own_odd_series(&self, x: &Real) -> bool {
+        let p = self.precision as i64;
+        matches!(self.rounding, Rounding::HalfUp | Rounding::HalfEven)
+            && magnitude(x).is_some_and(|m| m < -(p / 2) - 3)
+            && x.parts()
+                .is_some_and(|(s, _)| (s.unsigned_abs().to_string().len() as i64) < p)
     }
 
     /// π (decimal.js `acos(-1)`).
@@ -1226,14 +1246,19 @@ impl Ctx {
     }
 }
 
+/// m with |x| < 10^m, from x's significand digits and decimal exponent; None for NaN or ±∞.
+fn magnitude(x: &Real) -> Option<i64> {
+    let (s, e) = x.parts()?;
+    Some(s.unsigned_abs().to_string().len() as i64 + e as i64)
+}
+
 /// Whether |y ln x| is below 10^-(precision + 2) for finite, nonzero x and y, from their decimal magnitudes.
 fn negligible_exponent(x: &Real, y: &Real, precision: usize) -> bool {
     let digits = |s: &IBig| s.unsigned_abs().to_string().len() as i64;
-    let (Some((sx, ex)), Some((sy, ey))) = (x.parts(), y.parts()) else {
+    let (Some((sx, ex)), Some(y_mag)) = (x.parts(), magnitude(y)) else {
         return false;
     };
-    // |y| < 10^(digits + exponent); |log10 x| ≤ |ex| + digits, so |ln x| < 2.31 (|ex| + digits) + 1
-    let y_mag = digits(&sy) + ey as i64;
+    // |log10 x| ≤ |ex| + digits, so |ln x| < 2.31 (|ex| + digits) + 1
     let ln_x = 2.31 * ((ex as i64).unsigned_abs() as f64 + digits(&sx) as f64) + 1.0;
     let ln_mag = ln_x.log10().ceil() as i64;
     y_mag + ln_mag < -(precision as i64) - 2

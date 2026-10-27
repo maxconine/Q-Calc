@@ -165,4 +165,10 @@ fn powers_with_negligible_exponents_are_quick() {
     assert_eq!(show("-2^1023e-123456789"), "-1");
     assert_eq!(show("2^1e-30"), "1");
     assert_eq!(show("2^0.5"), "1.41421356237");
+    // and so did exp (11.6 s), asinh and atanh (6 s each; the TS one runs out of memory on asinh)
+    assert_eq!(show("exp(1e-123456789)"), "1");
+    assert_eq!(show("asinh(1e-123456789)"), "0");
+    assert_eq!(show("atanh(-1e-123456789)"), "0");
+    assert_eq!(show("asinh(1e-30)"), "1e-30");
+    assert_eq!(show("asinh(0.001)"), "0.000999999833333");
 }
