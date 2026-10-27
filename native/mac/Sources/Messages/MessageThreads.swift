@@ -309,6 +309,7 @@ private struct ConversationRow: View {
         .onHover { hover = $0 }
         .help("Open messages with \(name)")
         .accessibilityLabel("\(name): \(last.mine ? "you: " : "")\(last.text), \(ThreadTime.label(last.at))")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
