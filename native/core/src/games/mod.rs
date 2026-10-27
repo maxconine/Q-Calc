@@ -167,6 +167,31 @@ pub fn count(v: Option<&Json>, max: f64) -> Option<f64> {
     finite(v).filter(|n| n.fract() == 0.0 && *n >= 0.0 && *n <= max)
 }
 
+/// V8's `Math.hypot` for two arguments: scaled by the larger, with Kahan compensation (as `graph.rs` has it).
+pub fn js_hypot(a: f64, b: f64) -> f64 {
+    let (a, b) = (a.abs(), b.abs());
+    if a.is_infinite() || b.is_infinite() {
+        return f64::INFINITY;
+    }
+    let max = if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) };
+    if max.is_nan() {
+        return f64::NAN;
+    }
+    if max == 0.0 {
+        return 0.0;
+    }
+    let mut sum = 0.0;
+    let mut compensation = 0.0;
+    for v in [a, b] {
+        let n = v / max;
+        let summand = n * n - compensation;
+        let preliminary = sum + summand;
+        compensation = (preliminary - sum) - summand;
+        sum = preliminary;
+    }
+    sum.sqrt() * max
+}
+
 /// `Math.round` the JS way (halves go up).
 pub fn js_round(x: f64) -> f64 {
     crate::jsnum::round(x)
