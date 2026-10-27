@@ -125,12 +125,14 @@ extension BarModel {
     func sendThreadReply() {
         guard case let .thread(name) = messagesPanel else { return }
         let said = String(threadDraft.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Messages.textMax))
-        guard !said.isEmpty, threadReply != .sending else { return }
         let m = Messages.shared
         if m.name.isEmpty {
-            threadReply = .failed("set your name in settings to send messages")
+            // as `message` does with no name: straight to where it's set (the reply stays for when they're back)
+            keepThreadDraft()
+            (onMessagesSettings ?? onSettings)?()
             return
         }
+        guard !said.isEmpty, threadReply != .sending else { return }
         threadReply = .sending
         m.send(to: name, text: said) { [weak self] status in
             guard let self, self.messagesPanel == .thread(name) else { return }
@@ -400,7 +402,8 @@ private struct ThreadView: View {
             TextField("", text: $model.threadDraft)
                 .textFieldStyle(.plain)
                 .font(.system(size: Theme.small))
-                .mutedPrompt("Message \(name)", shown: model.threadDraft.isEmpty, size: Theme.small)
+                .mutedPrompt(model.logic.string("lib/messaging", "threadReplyPrompt", [name, !Messages.shared.name.isEmpty])
+                                 ?? "Message \(name)", shown: model.threadDraft.isEmpty, size: Theme.small)
                 .foregroundStyle(Color.qInk)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)

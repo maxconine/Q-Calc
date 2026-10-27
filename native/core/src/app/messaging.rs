@@ -381,6 +381,15 @@ pub fn messages_completion(text: &str, contacts: &[String]) -> String {
 }
 
 /// What an empty thread says: nobody's name, or none of their messages yet.
+/// The thread's empty reply line (native only): who it goes to, or, with no name set, what ↵ does instead.
+pub fn thread_reply_prompt(name: &str, named: bool) -> String {
+    if named {
+        format!("Message {name}")
+    } else {
+        "set your name in settings to reply · ↵ opens settings".into()
+    }
+}
+
 pub fn thread_empty_text(name: &str) -> String {
     if name.is_empty() {
         "no messages yet · message <name> <text> starts one".into()
@@ -1192,6 +1201,15 @@ mod tests {
         assert_eq!(
             share_status_text("folder", "max", "file", ""),
             file_error_text("folder", "max")
+        );
+    }
+
+    #[test]
+    fn the_reply_line_says_when_a_name_is_needed() {
+        assert_eq!(thread_reply_prompt("max", true), "Message max");
+        assert_eq!(
+            thread_reply_prompt("max", false),
+            "set your name in settings to reply · ↵ opens settings"
         );
     }
 

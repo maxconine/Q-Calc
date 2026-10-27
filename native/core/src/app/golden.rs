@@ -256,6 +256,7 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             json!(msg::messages_completion(&s(0), &contacts))
         }
         ("lib/messaging", "threadEmptyText") => json!(msg::thread_empty_text(&s(0))),
+        ("lib/messaging", "threadReplyPrompt") => json!(msg::thread_reply_prompt(&s(0), b(1))),
         ("lib/messaging", "cardAnnouncement") => json!(msg::card_announcement(&s(0), &s(1), &s(2))),
         // native only: clips and files
         ("lib/messaging", "parseShareCommand") => opt(msg::parse_share_command(&s(0))),
