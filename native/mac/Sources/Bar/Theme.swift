@@ -83,14 +83,16 @@ extension Color {
 }
 
 extension View {
-    /// A plain TextField's prompt in muted, drawn here: AppKit draws an unfocused field's prompt in the field's text
-    /// colour whatever the prompt's own, so an empty reply line read as words already typed (the page's
-    /// `::placeholder` is muted). Put it right after `.font`, before any padding, and leave the prompt empty.
-    func mutedPrompt(_ text: String, shown: Bool, size: CGFloat, color: Color = .qMuted, kerning: CGFloat = 0) -> some View {
+    /// A plain TextField's prompt in the page's `::placeholder` colour (muted), drawn here: SwiftUI hands AppKit the
+    /// prompt without its colour, so AppKit used its own placeholder grey (black at 25%, about 1.8:1 on white) and
+    /// `drive.sh snap` pictures drew it in the text colour. Put it right after `.font`, before any padding, and
+    /// leave the prompt empty. `font` overrides the system font at `size`.
+    func mutedPrompt(_ text: String, shown: Bool, size: CGFloat, font: Font? = nil, color: Color = .qMuted,
+                     kerning: CGFloat = 0) -> some View {
         overlay(alignment: .leading) {
             if shown {
                 Text(text)
-                    .font(.system(size: size))
+                    .font(font ?? .system(size: size))
                     .kerning(kerning)
                     .foregroundStyle(color)
                     .lineLimit(1)

@@ -36,7 +36,7 @@ extension BarModel {
     func runShare(_ cmd: ShareCmd) {
         let m = Messages.shared
         if m.name.isEmpty {
-            onSettings?()
+            (onMessagesSettings ?? onSettings)?()
             return
         }
         guard !cmd.name.isEmpty else { return }

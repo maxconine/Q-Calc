@@ -71,6 +71,7 @@ final class OverlayController: NSObject {
     private var recentShows: [TimeInterval] = []
     private var firstLayout: ((Int) -> Void)?
     var onSettings: (() -> Void)?
+    var onMessagesSettings: (() -> Void)?
     var gameOpen = false
     var isShown: Bool { panel?.isVisible == true }
 
@@ -90,6 +91,10 @@ final class OverlayController: NSObject {
         model.onSettings = { [weak self] in
             track("settings.open")
             self?.onSettings?()
+        }
+        model.onMessagesSettings = { [weak self] in
+            track("settings.open")
+            self?.onMessagesSettings?()
         }
         model.onPeriodic = { [weak self] in
             guard let self else { return }

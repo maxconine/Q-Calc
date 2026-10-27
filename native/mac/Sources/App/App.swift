@@ -52,6 +52,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         feedRates(ECBRates.shared.pageJSON)
         overlay = OverlayController(model: model)
         overlay?.onSettings = { [weak self] in self?.showSettings() }
+        // `message`, `paste to` and `send file to` with no name set: straight to where it's set
+        overlay?.onMessagesSettings = { [weak self] in
+            self?.showSettings()
+            if let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first,
+               let i = tabs.tabViewItems.firstIndex(where: { $0.label == "Messages" }) { tabs.selectedTabViewItemIndex = i }
+        }
         overlay?.preload()
         Analytics.shared.start(logic: model.logic)
         // the engine's first call pays for its lazy tables; do it now, off the main thread

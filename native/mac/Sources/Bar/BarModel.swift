@@ -140,6 +140,8 @@ final class BarModel: ObservableObject {
     // what the bar asks of its window
     var onHide: ((String) -> Void)?
     var onSettings: (() -> Void)?
+    /// settings at the Messages tab, where the name is set (native only; the web-view app opens General)
+    var onMessagesSettings: (() -> Void)?
     var onPeriodic: (() -> Void)?
     var onIdentities: ((String, Int) -> Void)?
     var onGame: ((String) -> Void)?
@@ -687,7 +689,7 @@ final class BarModel: ObservableObject {
         case let .message(_, name, said):
             let m = Messages.shared
             if m.name.isEmpty {
-                onSettings?()
+                (onMessagesSettings ?? onSettings)?()
                 return
             }
             guard !name.isEmpty, !said.isEmpty else { return }

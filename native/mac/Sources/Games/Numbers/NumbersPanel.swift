@@ -295,10 +295,12 @@ private struct NumbersGame: View {
     private func entry(_ r: NumbersRound, left: Double) -> some View {
         let ghost = r.over == nil ? String(repeating: ")", count: Int(numbersTrailingParens(text: m.text))) : ""
         return ZStack(alignment: .leading) {
-            TextField("", text: Binding(get: { m.text }, set: { m.text = $0.replacingOccurrences(of: "?", with: ""); m.note = "" }),
-                      prompt: Text(r.countdown ? "e.g. 100 × 7 − 25" : "e.g. (8 − 2) × 4").foregroundColor(colors.muted.opacity(0.6).color))
+            TextField("", text: Binding(get: { m.text }, set: { m.text = $0.replacingOccurrences(of: "?", with: ""); m.note = "" }))
                 .textFieldStyle(.plain)
                 .font(.gameDigits(16))
+                // .nums-input::placeholder, which the prompt's own colour never reached
+                .mutedPrompt(r.countdown ? "e.g. 100 × 7 − 25" : "e.g. (8 − 2) × 4", shown: m.text.isEmpty, size: 16,
+                             font: .gameDigits(16), color: colors.muted.opacity(0.6).color)
                 .foregroundColor(colors.ink.color)
                 .focused($focused)
                 .disabled(r.over != nil)
