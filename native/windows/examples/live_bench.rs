@@ -82,7 +82,10 @@ fn main() {
                 }));
                 let l = t.elapsed().as_secs_f64() * 1e6;
                 let t = Instant::now();
-                std::hint::black_box(qcalc_core::evaluate_sheet(&[text.clone()], &core_options));
+                std::hint::black_box(qcalc_core::evaluate_sheet(
+                    std::slice::from_ref(&text),
+                    &core_options,
+                ));
                 let s = t.elapsed().as_secs_f64() * 1e6;
                 if pass == 1 {
                     texts.push(text.clone());
