@@ -5,7 +5,9 @@
 import { evaluateSheet } from '../../src/engine/evaluate'
 import { buildGraph } from '../../src/engine/graph'
 
-type Heavy = { name: string; kind: 'sheet' | 'graph'; lines?: string[]; input?: string }
+import { identifyJob, type ClosedFormJob } from '../../src/engine/closedForm'
+
+type Heavy = { name: string; kind: 'sheet' | 'graph' | 'closedForm'; lines?: string[]; input?: string; job?: ClosedFormJob }
 declare const BENCH: { inputs: string[]; heavy: Heavy[]; passes: number }
 declare const print: ((s: string) => void) | undefined
 declare const preciseTime: (() => number) | undefined
@@ -38,9 +40,12 @@ for (let pass = 0; pass <= BENCH.passes; pass++) {
   }
 }
 
-const run = (h: Heavy) => (h.kind === 'graph' ? buildGraph(h.input!, {}) : evaluateSheet(h.lines!, {}))
+// closedForm: the PSLQ search the bar runs after a definite integral's numeric answer
+const run = (h: Heavy) =>
+  h.kind === 'closedForm' ? identifyJob(h.job!) : h.kind === 'graph' ? buildGraph(h.input!, {}) : evaluateSheet(h.lines!, {})
 // what each case answered (the last line's display, or the graph's point count), so a fast case is a real answer
 const answer = (h: Heavy) => {
+  if (h.kind === 'closedForm') return identifyJob(h.job!) ?? 'none'
   if (h.kind === 'graph') return `${buildGraph(h.input!, {})?.points.length ?? 0} points`
   const lines = evaluateSheet(h.lines!, {})
   return lines[lines.length - 1].display

@@ -1,13 +1,58 @@
 [
  {
-  "name": "closed-form integral",
-  "kind": "sheet",
-  "lines": [
-   "integral of x^2 sin(x) from 0 to pi"
-  ]
+  "name": "closed-form integral (∫₀¹ ln x ln(1−x) dx → 2 − π²/6)",
+  "kind": "closedForm",
+  "job": {
+   "kind": "integral",
+   "f": {
+    "t": "op",
+    "op": "*",
+    "a": [
+     {
+      "t": "fn",
+      "name": "log",
+      "a": [
+       {
+        "t": "var"
+       }
+      ]
+     },
+     {
+      "t": "fn",
+      "name": "log",
+      "a": [
+       {
+        "t": "op",
+        "op": "-",
+        "a": [
+         {
+          "t": "num",
+          "v": "1"
+         },
+         {
+          "t": "var"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "a": {
+    "t": "num",
+    "v": "0"
+   },
+   "b": {
+    "t": "num",
+    "v": "1"
+   },
+   "approx": 0.3550659331518,
+   "err": 2.8207771454955166e-14,
+   "rad": true
+  }
  },
  {
-  "name": "improper integral",
+  "name": "numeric integral (e^(−x²) over ℝ)",
   "kind": "sheet",
   "lines": [
    "integral of e^(-x^2) from -inf to inf"

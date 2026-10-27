@@ -43,8 +43,16 @@ fn main() {
         }
     }
 
+    // the closed-form search (PSLQ) the bar runs after a definite integral's numeric answer, through the same
+    // entry point the golden tests call
+    let closed_form = |h: &Value| match qcalc_core::golden::dispatch("engine/closedForm", "identifyJob", &[h["job"].clone()]) {
+        qcalc_core::golden::Outcome::Answer(v) => v.as_str().unwrap_or("none").to_string(),
+        _ => "none".to_string(),
+    };
     let run = |h: &Value| {
-        if h["kind"] == "graph" {
+        if h["kind"] == "closedForm" {
+            std::hint::black_box(closed_form(h));
+        } else if h["kind"] == "graph" {
             std::hint::black_box(graph::build_graph(h["input"].as_str().unwrap(), &graph::GraphOptions::default()));
         } else {
             let lines: Vec<String> = serde_json::from_value(h["lines"].clone()).unwrap();
@@ -53,7 +61,9 @@ fn main() {
     };
     // what each case answered (the last line's display, or the graph's point count)
     let answer = |h: &Value| -> String {
-        if h["kind"] == "graph" {
+        if h["kind"] == "closedForm" {
+            closed_form(h)
+        } else if h["kind"] == "graph" {
             let g = graph::build_graph(h["input"].as_str().unwrap(), &graph::GraphOptions::default());
             format!("{} points", g.map_or(0, |g| g.points.len()))
         } else {
