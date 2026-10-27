@@ -324,7 +324,8 @@ pub fn run() -> i32 {
 fn forward(argv: &[String]) {
     // SAFETY: plain lookups and a synchronous WM_COPYDATA with a live buffer
     unsafe {
-        let Ok(host) = FindWindowW(HOST_CLASS, None) else {
+        // by title too, which carries QCALC_INSTANCE: a test copy hands off to its own first copy, not another's
+        let Ok(host) = FindWindowW(HOST_CLASS, &host_title()) else {
             qlog!("second launch: no running host window found");
             return;
         };
@@ -351,6 +352,11 @@ fn forward(argv: &[String]) {
     qlog!("second launch: handed {argv:?} to the running app");
 }
 
+/// "Q Calc host", plus `-<QCALC_INSTANCE>` for a test copy.
+fn host_title() -> HSTRING {
+    HSTRING::from(format!("Q Calc host{}", crate::log::instance_suffix()))
+}
+
 fn create_host() -> windows::core::Result<HWND> {
     // SAFETY: a class with our wndproc and a hidden window
     unsafe {
@@ -366,7 +372,7 @@ fn create_host() -> windows::core::Result<HWND> {
         CreateWindowExW(
             WS_EX_TOOLWINDOW,
             HOST_CLASS,
-            w!("Q Calc host"),
+            &host_title(),
             WS_POPUP,
             0,
             0,
@@ -692,6 +698,10 @@ impl App {
             }
             WM_MOVE => crate::drag::moved(self),
             WM_EXITSIZEMOVE => crate::drag::remember(self),
+            // HTCAPTION: a double click on the background puts the bar back (drag.rs)
+            windows::Win32::UI::WindowsAndMessaging::WM_NCLBUTTONDBLCLK if wp.0 == 2 => {
+                crate::drag::put_back(self)
+            }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
                 if crate::effects::key_down(self, vk, lp.0) {
@@ -1270,7 +1280,11 @@ impl App {
                 reply(serde_json::json!({ "ok": true }));
                 self.ops.push(Op::Quit);
             }
-            other => reply(serde_json::json!({ "error": format!("unknown cmd {other}") })),
+            other => {
+                reply(bench::extra(self, other).unwrap_or_else(
+                    || serde_json::json!({ "error": format!("unknown cmd {other}") }),
+                ))
+            }
         }
     }
 }

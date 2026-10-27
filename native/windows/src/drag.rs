@@ -115,6 +115,16 @@ pub fn remember(app: &mut App) {
     app.model.touch();
 }
 
+/// WM_NCLBUTTONDBLCLK on the background: the bar goes back to where it opens by default on this monitor (the
+/// Mac's double-click to put back); the spot for the monitor is forgotten, the width kept.
+pub fn put_back(app: &mut App) {
+    if let Some(m) = &app.bar.monitor {
+        app.store.positions.remove(&m.key);
+    }
+    app.save_store();
+    app.ops.push(crate::app::Op::Show);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
