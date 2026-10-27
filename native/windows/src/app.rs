@@ -165,13 +165,7 @@ pub fn run() -> i32 {
 
     // one Q Calc: a second launch hands its arguments to the first (which shows the bar) and leaves
     // SAFETY: the handle stays open for the process's life (that is the point)
-    let mutex = unsafe {
-        CreateMutexW(
-            None,
-            true,
-            &HSTRING::from(format!("{MUTEX}{}", crate::log::instance_suffix())),
-        )
-    };
+    let mutex = unsafe { CreateMutexW(None, true, &HSTRING::from(format!("{MUTEX}{}", crate::log::instance_suffix()))) };
     // SAFETY: plain query right after the call
     if mutex.is_ok() && unsafe { GetLastError() } == ERROR_ALREADY_EXISTS {
         forward(&argv);
