@@ -106,6 +106,8 @@ final class BarModel: ObservableObject {
     /// the message threads under the bar (native only, Messages/MessageThreads.swift): the conversations list or
     /// one thread, its reply line's words and how its last send went
     @Published var messagesPanel: MessagesPanel?
+    /// the card whose reply line Tab asks to focus (tabToCard)
+    @Published var cardFocusRequest: String?
     /// the selected part of the line's own answer (inputSelected)
     @Published var selectionAnswer: String?
     @Published var threadDraft = ""
@@ -1114,7 +1116,7 @@ final class BarModel: ObservableObject {
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
-            if !flags.contains(.shift), fillTourStep() || acceptCompletion() { return true }
+            if !flags.contains(.shift), fillTourStep() || acceptCompletion() || tabToCard() { return true }
             cycleForms(back: flags.contains(.shift))
             return true
         case kVK_Delete:
@@ -1379,6 +1381,14 @@ final class BarModel: ObservableObject {
         cards.removeAll { $0.id == id }
         // Allow / Block had the keyboard (Full Keyboard Access, VoiceOver) and is gone: the line takes it back
         focusField?()
+    }
+
+    /// Tab on an empty line with a message card up moves to the newest card's reply line (native only: the line
+    /// keeps Tab for completion and answer forms, so the keyboard had no way into a card before it went)
+    func tabToCard() -> Bool {
+        guard text.isEmpty, let card = cards.first(where: { !$0.ask && $0.reply != .sent }) else { return false }
+        cardFocusRequest = card.id
+        return true
     }
 
     func dismissCard(_ id: String) {

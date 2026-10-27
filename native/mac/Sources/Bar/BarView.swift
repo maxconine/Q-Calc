@@ -1065,6 +1065,12 @@ private struct CardView: View {
         .onChange(of: focused) { on in
             if on { model.replyFocused = card.id } else if model.replyFocused == card.id { model.replyFocused = nil }
         }
+        // Tab on an empty line (BarModel.tabToCard)
+        .onChange(of: model.cardFocusRequest) { id in
+            guard id == card.id else { return }
+            focused = true
+            model.cardFocusRequest = nil
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(card.ask ? "\(card.from) wants to message you" : "Message from \(card.from): \(card.text)")
         // the click on the name or words that opens the thread, for VoiceOver and Full Keyboard Access
