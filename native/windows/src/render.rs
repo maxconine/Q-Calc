@@ -43,7 +43,8 @@ use windows::Win32::Graphics::Direct2D::{
 use windows::Win32::Graphics::Direct2D::Common::D2D1_ALPHA_MODE_IGNORE;
 use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_WARP;
 use windows::Win32::Graphics::Direct3D11::{
-    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_SINGLETHREADED, D3D11_SDK_VERSION,
+    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS,
+    D3D11_CREATE_DEVICE_SINGLETHREADED, D3D11_SDK_VERSION,
     D3D11CreateDevice, ID3D11Device,
 };
 use windows::Win32::Graphics::Dxgi::Common::{
@@ -318,7 +319,9 @@ impl Gfx {
                 D3D_DRIVER_TYPE_WARP,
                 HMODULE::default(),
                 // Direct2D needs BGRA; only the UI thread draws
-                D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_SINGLETHREADED,
+                D3D11_CREATE_DEVICE_BGRA_SUPPORT
+                    | D3D11_CREATE_DEVICE_SINGLETHREADED
+                    | D3D11_CREATE_DEVICE_PREVENT_INTERNAL_THREADING_OPTIMIZATIONS,
                 None,
                 D3D11_SDK_VERSION,
                 Some(&mut d3d),
