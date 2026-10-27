@@ -179,6 +179,8 @@ pub fn run() -> i32 {
         forward(&argv);
         return 0;
     }
+    // the bar's device, made meanwhile on a thread of its own (warp.rs)
+    crate::warp::prefetch();
     // the manifest already says per-monitor v2; this covers a build without it
     // SAFETY: plain call
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
@@ -477,6 +479,8 @@ fn run_op(op: Op) {
     match op {
         Op::Show => {
             let _show_ms = crate::perf::ShowTimer(Instant::now());
+            // a hidden bar's device, made while the showing lays out (warp.rs)
+            crate::warp::prefetch();
             let Some(Some((hwnd, x, y, w, h))) = with_app(|a| a.prepare_show()) else {
                 return;
             };
@@ -1086,6 +1090,8 @@ impl App {
         // the swap chain and the WARP device too (~2.5 MB, and D3D10Warp unloads): a showing makes them in ~4 ms
         self.bar.surface.release();
         self.gfx.drop_flip_device();
+        // and the engine's compiled regexes (engine.rs), compiled again with the next showing's warm-up
+        self.engine.release();
     }
 
     /// The bar has been hidden a while: give memory back (the working set; a hardware render target too).

@@ -7,7 +7,8 @@
        (native/bench/inputs.json), each a key at a time: keystroke -> answer painted, median / p90 / p99;
     3. uses the bar as a person does (each standard input typed, a 0.9 s pause, Enter), hides it, and reads memory
        1 s and 10 s later (before the 30 s trim);
-    4. quits and launches -Launches times: warm launch to the first frame (the log's ready line).
+    4. shows and hides the bar -Shows times: a showing after a hide (the pipe's `shows`, median);
+    5. quits and launches -Launches times: warm launch to the first frame (the log's ready line).
   Memory is the private working set (Task Manager's "Memory") and private bytes (commit), from
   GetProcessMemoryInfo. Every copy runs as its own QCALC_INSTANCE with its own QCALC_DATA and log.
 
@@ -20,6 +21,7 @@ param(
   [int]$Runs = 1,
   [int]$Rounds = 3,
   [int]$Launches = 3,
+  [int]$Shows = 5,
   [switch]$NoGolden,
   [string]$Work = (Join-Path $env:TEMP 'qcalc-perf')
 )
@@ -125,6 +127,13 @@ for ($run = 0; $run -lt $Runs; $run++) {
     Send-Q $q.inst @{ cmd = 'hide' } | Out-Null
     Start-Sleep -Seconds 1; $m = Mem $q; $o.hidden1sPws = $m[0]; $o.hidden1sPriv = $m[1]
     Start-Sleep -Seconds 9; $m = Mem $q; $o.hidden10sPws = $m[0]; $o.hidden10sPriv = $m[1]
+    # a showing after a hide (the hotkey on a bar hidden a while): its own time, from prepare_show to the uncloak
+    for ($i = 0; $i -lt $Shows; $i++) {
+      Send-Q $q.inst @{ cmd = 'show' } | Out-Null; Start-Sleep -Milliseconds 400
+      Send-Q $q.inst @{ cmd = 'hide' } | Out-Null; Start-Sleep -Milliseconds 1500
+    }
+    $sh = @((Send-Q $q.inst @{ cmd = 'shows' }) | Select-Object -Last $Shows)
+    if ($sh.Count) { $o.showMed = Pct $sh 50 }
     Stop-Q $q
     $l = @(); for ($i = 0; $i -lt $Launches; $i++) { $q = Start-Q $exe "$inst-l" $data @(); $l += $q.ready; Start-Sleep -Milliseconds 300; Stop-Q $q }
     $o.launchMed = Pct $l 50
@@ -138,7 +147,7 @@ foreach ($exe in $Exes) {
   $name = [IO.Path]::GetFileNameWithoutExtension($exe)
   $r = $rows | Where-Object { $_.exe -eq $name }
   $line = "${name}:"
-  foreach ($k in 'stdMed', 'stdP90', 'stdP99', 'goldMed', 'goldP90', 'goldP99', 'neverShownPws', 'neverShownPriv', 'hidden10sPws', 'hidden10sPriv', 'launchMed') {
+  foreach ($k in 'stdMed', 'stdP90', 'stdP99', 'goldMed', 'goldP90', 'goldP99', 'neverShownPws', 'neverShownPriv', 'hidden10sPws', 'hidden10sPriv', 'showMed', 'launchMed') {
     $v = @($r | ForEach-Object { $_.$k } | Where-Object { $null -ne $_ })
     if ($v.Count) { $line += " $k=$([math]::Round((Pct $v 50), 3))" }
   }

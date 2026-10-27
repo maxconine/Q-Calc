@@ -51,7 +51,7 @@ pub const STAGES: usize = 16;
 #[cfg(feature = "perf")]
 mod on {
     use super::{STAGES, Stage};
-    use std::alloc::{GlobalAlloc, Layout, System};
+    use std::alloc::{GlobalAlloc, Layout};
     use std::sync::OnceLock;
     use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
     use std::time::Instant;
@@ -216,19 +216,19 @@ mod on {
         INSIDE.with(|i| i.set(false));
     }
 
-    // SAFETY: forwards to System, only counting
+    // SAFETY: forwards to heap.rs, only counting
     unsafe impl GlobalAlloc for Counting {
         unsafe fn alloc(&self, l: Layout) -> *mut u8 {
             add(l.size());
             // SAFETY: as the caller promised
-            let p = unsafe { System.alloc(l) };
+            let p = unsafe { crate::heap::Routed.alloc(l) };
             track_big(p, l.size());
             p
         }
         unsafe fn alloc_zeroed(&self, l: Layout) -> *mut u8 {
             add(l.size());
             // SAFETY: as the caller promised
-            let p = unsafe { System.alloc_zeroed(l) };
+            let p = unsafe { crate::heap::Routed.alloc_zeroed(l) };
             track_big(p, l.size());
             p
         }
@@ -237,7 +237,7 @@ mod on {
             by_thread(-(l.size() as isize));
             untrack_big(p, l.size());
             // SAFETY: as the caller promised
-            unsafe { System.dealloc(p, l) }
+            unsafe { crate::heap::Routed.dealloc(p, l) }
         }
         unsafe fn realloc(&self, p: *mut u8, l: Layout, n: usize) -> *mut u8 {
             LIVE.fetch_sub(l.size(), Ordering::Relaxed);
@@ -245,7 +245,7 @@ mod on {
             untrack_big(p, l.size());
             add(n);
             // SAFETY: as the caller promised
-            let q = unsafe { System.realloc(p, l, n) };
+            let q = unsafe { crate::heap::Routed.realloc(p, l, n) };
             track_big(q, n);
             q
         }
@@ -276,16 +276,18 @@ pub fn take() -> [Option<f64>; STAGES] {
     [None; STAGES]
 }
 
-/// Times a showing (Op::Show, from prepare_show to the uncloak) into `show_ms` (perf builds only).
+/// Times a showing (Op::Show, from prepare_show to the uncloak) for the pipe's `shows` (the last 32; perf.ps1 reads
+/// them for the show after a hide).
 pub struct ShowTimer(pub std::time::Instant);
 
 static SHOWS: std::sync::Mutex<Vec<f64>> = std::sync::Mutex::new(Vec::new());
 
 impl Drop for ShowTimer {
     fn drop(&mut self) {
-        if cfg!(feature = "perf")
-            && let Ok(mut s) = SHOWS.lock()
-        {
+        if let Ok(mut s) = SHOWS.lock() {
+            if s.len() >= 32 {
+                s.remove(0);
+            }
             s.push(self.0.elapsed().as_secs_f64() * 1000.0);
         }
     }

@@ -77,8 +77,9 @@ struct Callable {
 
 /// Cached per user-function list, as in the TS.
 fn callable_names(extra: &[String]) -> std::sync::Arc<Callable> {
-    static CACHE: LazyLock<Mutex<HashMap<String, std::sync::Arc<Callable>>>> =
-        LazyLock::new(|| Mutex::new(HashMap::new()));
+    // a jsre::Lazy, so the Windows engine thread's cache (and its compiled regexes) goes with the others at a hide
+    static CACHE: Lazy<Mutex<HashMap<String, std::sync::Arc<Callable>>>> =
+        Lazy::new(|| Mutex::new(HashMap::new()));
     let key = extra.join("|");
     if let Ok(cache) = CACHE.lock()
         && let Some(c) = cache.get(&key)
@@ -92,10 +93,13 @@ fn callable_names(extra: &[String]) -> std::sync::Arc<Callable> {
         .filter(|n| !WRAP_SKIP.contains(&n.to_lowercase().as_str()))
         .collect();
     names.sort_by_key(|n| std::cmp::Reverse(n.chars().count()));
-    let implicit = js(
-        &format!(r"(\d)(\s*)({})(?![A-Za-z_])", names.join("|")),
-        "i",
-    );
+    // kept in CACHE, a jsre::Lazy freed with the regexes at a hide: built where they are
+    let implicit = qcalc_lazy::build_scope(|| {
+        js(
+            &format!(r"(\d)(\s*)({})(?![A-Za-z_])", names.join("|")),
+            "i",
+        )
+    });
     let c = std::sync::Arc::new(Callable { names, implicit });
     if let Ok(mut cache) = CACHE.lock() {
         if cache.len() > 64 {
@@ -307,7 +311,7 @@ const INVERSE_POWER_FNS: &[(&str, &str)] = &[
 
 /// sin^-1(x), cos^(-1)(x), tan⁻¹(x). Longer names first so sinh^-1 isn't read as sin.
 fn rewrite_inverse_power(expr: &str) -> String {
-    static RES: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
+    static RES: crate::jsre::Lazy<Vec<(Regex, &'static str)>> = crate::jsre::Lazy::new(|| {
         INVERSE_POWER_FNS
             .iter()
             .map(|(f, inv)| {
@@ -595,7 +599,7 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     static COUNT_CALL: Lazy = Lazy::new(|| js(r"\bcount\s*\(", ""));
     static RANGE: Lazy = Lazy::new(|| js(r"\[([^\][]*?)\s*\.\.\.\s*([^\][]*?)\]", ""));
     static LOG_BASE: Lazy = Lazy::new(|| js(r"\blog_(\d+(?:\.\d+)?)\s*\(([^)]+)\)", ""));
-    static WORDS: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
+    static WORDS: crate::jsre::Lazy<Vec<(Regex, &'static str)>> = crate::jsre::Lazy::new(|| {
         [
             (r"\barcsin\b", "", "asin"),
             (r"\barccos\b", "", "acos"),
@@ -609,23 +613,24 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
         .map(|(p, f, to)| (js(p, f), *to))
         .collect()
     });
-    static HYPERBOLIC: LazyLock<Vec<(Regex, &'static str)>> = LazyLock::new(|| {
-        [
-            (r"\barcsinh\b|\barsinh\b", "", "asinh"),
-            (r"\barccosh\b|\barcosh\b", "", "acosh"),
-            (r"\barctanh\b|\bartanh\b", "", "atanh"),
-            (r"\barccsch\b|\barcsch\b", "", "acsch"),
-            (r"\barcsech\b", "", "asech"),
-            (r"\barccoth\b", "", "acoth"),
-            (r"\bnthroot\b", "", "nthRoot"),
-            (r"\bgcf\b", "i", "gcf"),
-            (r"\blcm\b", "i", "lcm"),
-            (r"\blcf\b", "i", "lcf"),
-        ]
-        .iter()
-        .map(|(p, f, to)| (js(p, f), *to))
-        .collect()
-    });
+    static HYPERBOLIC: crate::jsre::Lazy<Vec<(Regex, &'static str)>> =
+        crate::jsre::Lazy::new(|| {
+            [
+                (r"\barcsinh\b|\barsinh\b", "", "asinh"),
+                (r"\barccosh\b|\barcosh\b", "", "acosh"),
+                (r"\barctanh\b|\bartanh\b", "", "atanh"),
+                (r"\barccsch\b|\barcsch\b", "", "acsch"),
+                (r"\barcsech\b", "", "asech"),
+                (r"\barccoth\b", "", "acoth"),
+                (r"\bnthroot\b", "", "nthRoot"),
+                (r"\bgcf\b", "i", "gcf"),
+                (r"\blcm\b", "i", "lcm"),
+                (r"\blcf\b", "i", "lcf"),
+            ]
+            .iter()
+            .map(|(p, f, to)| (js(p, f), *to))
+            .collect()
+        });
     static REAL: Lazy = Lazy::new(|| js(r"\breal\b", ""));
     static IMAG: Lazy = Lazy::new(|| js(r"\bimag\b", ""));
 

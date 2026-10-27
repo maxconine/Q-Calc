@@ -59,6 +59,7 @@ fn main() {
     let options = qcalc_ffi::default_eval_options();
     let core_options = qcalc_core::EvaluateOptions::default();
     let (mut chains, mut live, mut sheet, mut ctx) = (vec![], vec![], vec![], vec![]);
+    let mut texts: Vec<String> = vec![];
     for pass in 0..4 {
         for input in &inputs {
             let chars: Vec<char> = input.chars().collect();
@@ -81,8 +82,14 @@ fn main() {
                 }));
                 let l = t.elapsed().as_secs_f64() * 1e6;
                 let t = Instant::now();
-                std::hint::black_box(qcalc_core::evaluate_sheet(&[text], &core_options));
+                std::hint::black_box(qcalc_core::evaluate_sheet(
+                    std::slice::from_ref(&text),
+                    &core_options,
+                ));
                 let s = t.elapsed().as_secs_f64() * 1e6;
+                if pass == 1 {
+                    texts.push(text.clone());
+                }
                 if pass > 0 {
                     ctx.push(a);
                     chains.push(b);
@@ -93,13 +100,19 @@ fn main() {
         }
     }
     if std::env::var_os("LIVE_BENCH_EACH").is_some() {
-        // each prefix's median over the timed passes
-        let per = live.len() / 3;
-        for i in 0..per.min(120) {
-            let mut v = vec![live[i], live[i + per], live[i + 2 * per]];
-            print!("{:.0} ", pct(&mut v, 50.0));
+        // the slowest prefixes: each one's median over the timed passes, live and evaluate_sheet
+        let per = texts.len();
+        let mut each: Vec<(f64, f64, &str)> = (0..per)
+            .map(|i| {
+                let mut l = vec![live[i], live[i + per], live[i + 2 * per]];
+                let mut s = vec![sheet[i], sheet[i + per], sheet[i + 2 * per]];
+                (pct(&mut l, 50.0), pct(&mut s, 50.0), texts[i].as_str())
+            })
+            .collect();
+        each.sort_by(|a, b| b.0.total_cmp(&a.0));
+        for (l, s, t) in each.iter().take(30) {
+            println!("{l:>8.0} {s:>8.0}  {t}");
         }
-        println!();
     }
     for (name, v) in [
         ("context clone", &mut ctx),

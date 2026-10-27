@@ -33,7 +33,9 @@ shrinks; hidden after use 17.4-18.5 MB private working set (16.8 before), 0.4-2 
 
 After the performance pass (PERFORMANCE.md, `scripts/perf.ps1`): keystroke median 0.51 ms (p90 1.18, p99 1.55;
 golden inputs 0.53 / 1.20 / 1.70), never shown 4.2 MB private working set / 6.3 MB private bytes, hidden after use
-13.7 / 15.5 MB (the engine's compiled regexes are most of it), warm launch 46 ms.
+13.7 / 15.5 MB (the engine's compiled regexes are most of it), warm launch 46 ms. After the second pass:
+keystroke median 0.47 ms (p90 0.62, p99 1.28; golden 0.47 / 0.56 / 1.73), hidden after use 6.4 / 8.1 MB (7.5 /
+9.2 MB after the golden inputs too), warm launch 34 ms, a showing after a hide 9 ms.
 
 Rules that keep them: never evaluate on the UI thread; never block the UI thread on the engine; repaint only
 when the model changed; no timer while idle (one-shot timers only, an animation's timer stops with it); make
@@ -50,7 +52,9 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `window.rs` | the bar window (`Bar`): creation, DWM corners / shadow / cloak, `BarLayout` (`Bar::layout`), `Bar::paint`, placement (`placement`, `reframe`), monitors |
 | `place.rs` | placement maths, ported unchanged from src-tauri (tested) |
 | `render.rs` | D2D / DWrite factories (`Gfx`), `Fonts`, `Theme` (light / dark colours), `Surface` (the HWND render target, DPI), `Canvas` (fill, rounded rect, line, text, clip), text hit-testing helpers |
-| `engine.rs` | the engine thread (32 MB stack) and the Typst thread, lanes, generations, `Done` closures, the history-context cache |
+| `engine.rs` | the engine thread (32 MB stack) and the Typst thread, lanes, generations, `Done` closures, the history-context cache, the warm-up after a showing (in steps behind keystrokes) and freeing the compiled regexes at a hide (`release`) |
+| `heap.rs` | the global allocator: the process heap, but slabs of our own for the regexes the engine, UI and Typst threads free at a hide (native/lazy, PERFORMANCE.md) |
+| `warp.rs` | the bar's WARP device made ahead on a thread of its own at launch and as a hidden bar shows; WARP's DLL kept loaded |
 | `model.rs` | `BarModel` (BarModel.swift port): the line, live answer, chaining, commit, tape selection, in-bar actions |
 | `input.rs` | `Field` (text, caret, selection, word moves, undo, paste, WM_CHAR surrogates), `FieldView` (drawing, scroll, hit test), `ime` |
 | `answer.rs` | the live answer view: fit font, Tab's forms, closed forms, the steady answer, the copied flash |

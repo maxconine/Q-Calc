@@ -12,6 +12,8 @@ dashu-base.workspace = true
 dashu-float.workspace = true
 dashu-int.workspace = true
 fancy-regex.workspace = true
+# the regex statics: like LazyLock, but the Windows engine thread can free its copies while the bar is hidden
+qcalc-lazy = { path = "../lazy" }
 num-bigint.workspace = true
 num-integer.workspace = true
 num-rational.workspace = true

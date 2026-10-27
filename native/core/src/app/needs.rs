@@ -164,7 +164,7 @@ pub fn parse_graph_intent(
 
 /// `looksLikeNaturalLanguage`, written out in full: money, clock times, dates and phrase words, never calculus.
 pub fn looks_like_natural_language(expr: &str) -> bool {
-    static ONLY: std::sync::LazyLock<Vec<jsre::Regex>> = std::sync::LazyLock::new(|| {
+    static ONLY: crate::jsre::Lazy<Vec<jsre::Regex>> = crate::jsre::Lazy::new(|| {
         [
             (r"[$€£¥₹]", ""),
             (

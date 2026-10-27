@@ -2667,7 +2667,7 @@ const UNIT_POW: &str = r"(?:\s*(?:\^\s*-?\d+|[²³]))?";
 const DIMS: usize = 7;
 
 fn quantity_re() -> &'static jsre::Regex {
-    static RE: std::sync::LazyLock<jsre::Regex> = std::sync::LazyLock::new(|| {
+    static RE: crate::jsre::Lazy<jsre::Regex> = crate::jsre::Lazy::new(|| {
         js(
             &format!(
                 r"(?<![\w.])((?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)(\s*)({UNIT_WORD}{UNIT_POW}(?:\s*[*/·]\s*{UNIT_WORD}{UNIT_POW})*)"
@@ -2776,8 +2776,8 @@ pub fn prep_units(lines: &[String], unknowns: &[String]) -> Option<UnitPrep> {
 }
 
 fn kept_unit(text: &str, bare: &[String]) -> Option<String> {
-    static RE: std::sync::LazyLock<jsre::Regex> =
-        std::sync::LazyLock::new(|| js(&format!(r"(^|\s*[*/·]\s*)({UNIT_WORD})({UNIT_POW})"), ""));
+    static RE: crate::jsre::Lazy<jsre::Regex> =
+        crate::jsre::Lazy::new(|| js(&format!(r"(^|\s*[*/·]\s*)({UNIT_WORD})({UNIT_POW})"), ""));
     let mut parts: Vec<(String, bool)> = Vec::new();
     let mut pos = 0;
     while pos <= text.len() {

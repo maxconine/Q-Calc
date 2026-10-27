@@ -68,6 +68,18 @@ unsafe impl GlobalAlloc for Tracking {
 static A: Tracking = Tracking;
 
 fn main() {
+    // on a thread like the app's engine thread: the engine's calls and its freeable regexes are its own
+    std::thread::Builder::new()
+        .stack_size(32 << 20)
+        .spawn(session)
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+fn session() {
+    qcalc_ffi::run_engine_calls_here();
+    qcalc_core::jsre::own_compiled_here();
     let data = std::env::args().nth(1);
     ON.store(true, Ordering::Relaxed);
     let engine = Engine::new(EngineConfig {
@@ -92,7 +104,12 @@ fn main() {
         now_ms: now,
     };
     let context = engine.context_from_history(rows, view);
-    for input in [
+    let golden: Vec<String> = std::env::var("GOLDEN")
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default();
+    let standard = [
         "2+2",
         "sin(90)",
         "72 f to c",
@@ -103,7 +120,8 @@ fn main() {
         "(1+2)*(3+4)/5^2",
         "20% of 80",
         "e^(i pi)+1",
-    ] {
+    ];
+    for input in standard.iter().map(|s| s.to_string()).chain(golden) {
         let chars: Vec<char> = input.chars().collect();
         for k in 1..=chars.len() {
             let text: String = chars[..k].iter().collect();
@@ -117,6 +135,12 @@ fn main() {
                 phrases: true,
             });
         }
+    }
+    if std::env::var_os("RELEASE").is_some() {
+        // the bar hid (engine.rs `release`): what stays is what the app holds while hidden
+        qcalc_core::jsre::clear_cache();
+        // SAFETY: no reference from a regex static is held here
+        unsafe { qcalc_core::jsre::release_compiled() };
     }
     ON.store(false, Ordering::Relaxed);
     let typed = LIVE.load(Ordering::Relaxed);

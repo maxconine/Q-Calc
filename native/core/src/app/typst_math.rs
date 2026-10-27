@@ -5,8 +5,6 @@
 //! character is either printed whole (a letter or symbol) or dropped whole in both, so the output is the same.
 //! The limits of `∫_a^b` come from `bounds`, which counts UTF-16 units, so that step converts.
 
-use std::sync::LazyLock;
-
 use crate::app::bounds::{U16, bounds_in_units};
 use crate::jsre::{self, Lazy};
 use crate::jsstr;
@@ -333,9 +331,9 @@ const PLAIN_NUMBER: &str = r"-?\s*(?:\d+(?:\.\d*)?|\.\d+|ans)";
 
 /// `3.5/2` or `sin(30)`: one division of two numbers, or one function of a number, reads fine in the bar as typed.
 fn simple_math(math: &str) -> bool {
-    static DIVISION: LazyLock<jsre::Regex> =
-        LazyLock::new(|| re(&format!(r"^{PLAIN_NUMBER}\s*/\s*{PLAIN_NUMBER}$"), ""));
-    static CALL: LazyLock<jsre::Regex> = LazyLock::new(|| {
+    static DIVISION: crate::jsre::Lazy<jsre::Regex> =
+        crate::jsre::Lazy::new(|| re(&format!(r"^{PLAIN_NUMBER}\s*/\s*{PLAIN_NUMBER}$"), ""));
+    static CALL: crate::jsre::Lazy<jsre::Regex> = crate::jsre::Lazy::new(|| {
         re(
             &format!(r"^([A-Za-z][A-Za-z0-9]*)\s*\(\s*{PLAIN_NUMBER}\s*\)$"),
             "",
