@@ -864,6 +864,122 @@ mod tests {
         assert_eq!(l, ["0.5", "1/2", "5e-1"]);
     }
 
+    fn live(display: &str, exact: Option<&str>) -> LiveAnswer {
+        LiveAnswer {
+            display: display.into(),
+            pretty: String::new(),
+            exact: exact.map(String::from),
+            dual_label: String::new(),
+            number: None,
+            unit: None,
+            kind: qcalc_ffi::AnswerKind::Expression,
+            blank: None,
+            completion: None,
+            solve: None,
+            closed_form_job: None,
+            time_letters: None,
+            quantity: None,
+            variable: None,
+            meas: None,
+            value_json: None,
+            expr: String::new(),
+            phrase: false,
+            improper: false,
+            json: "{}".into(),
+        }
+    }
+
+    fn model(text: &str, a: LiveAnswer) -> BarModel {
+        let mut m = BarModel::new(crate::store::Settings::default());
+        m.field.reset(text);
+        m.live = Some(a);
+        m.live_for = text.into();
+        m
+    }
+
+    fn texts(m: &BarModel) -> Vec<(String, Option<String>)> {
+        specs(m).into_iter().map(|s| (s.text, s.copy)).collect()
+    }
+
+    #[test]
+    fn what_the_slot_shows() {
+        // exact ≈ decimal, each half its own copy
+        let mut m = model("sqrt(8)", live("2.82843", Some("2sqrt(2)")));
+        assert_eq!(
+            texts(&m),
+            [
+                ("2√2".into(), Some("2sqrt(2)".into())),
+                ("≈".into(), None),
+                ("2.82843".into(), Some("2.82843".into())),
+            ]
+        );
+        assert_eq!(shown_answer(&m), "2sqrt(2)");
+        m.settings.answer_form = "approx".into();
+        assert_eq!(shown_answer(&m), "2.82843");
+        // Tab's form replaces the dual
+        m.answer.forms = vec!["2.82843".into(), "2sqrt(2)".into(), "2.82843e0".into()];
+        m.answer.form_index = 2;
+        assert_eq!(texts(&m), [("2.82843e0".into(), Some("2.82843e0".into()))]);
+        // a closed form found later replaces live.exact
+        let mut m = model("x", live("1.64493", None));
+        assert!(!has_dual(&m));
+        m.answer.upgraded_exact = Some("π^2/6".into());
+        assert!(has_dual(&m));
+        // blank mid-edit: the steady answer, not a button
+        let mut m = model("2+", live("", None));
+        m.answer.steady = Some("4".into());
+        let s = specs(&m);
+        assert_eq!((s[0].text.as_str(), s[0].ink, s[0].copy.is_none()), ("4", Ink::Steady, true));
+        m.field.reset("");
+        assert!(specs(&m).is_empty());
+    }
+
+    #[test]
+    fn solves() {
+        let mut a = live("1, 2, 3", None);
+        a.solve = Some(qcalc_ffi::SolveInfo {
+            variable: "x".into(),
+            roots: vec![1.0, 2.0, 3.0],
+            outcome: SolveOutcome::Roots,
+            more: false,
+        });
+        let m = model("x^3-6x^2+11x-6=0", a);
+        let t = texts(&m);
+        assert_eq!(t[0], ("x =".into(), Some("1, 2, 3".into())));
+        assert_eq!(t[1], ("1".into(), Some("1".into())));
+        assert_eq!(t[2].1, None);
+        assert_eq!(t[3], ("2".into(), Some("2".into())));
+        assert_eq!(t.len(), 6);
+        let mut a = live("no real solution", None);
+        a.solve = Some(qcalc_ffi::SolveInfo {
+            variable: "x".into(),
+            roots: vec![],
+            outcome: SolveOutcome::None,
+            more: false,
+        });
+        let s = specs(&model("x^2=-4", a));
+        assert_eq!((s.len(), s[0].font, s[0].copy.is_none()), (1, Font::Body, true));
+    }
+
+    #[test]
+    fn fit_and_flash() {
+        let gfx = Gfx::new().expect("DirectWrite");
+        let mut m = model("2^100", live("1.26765e30", None));
+        let plain = measure(&gfx, &m, 400.0);
+        assert!(plain.flash.is_none());
+        m.answer.copied = true;
+        let flashed = measure(&gfx, &m, 400.0);
+        // the flash is counted in, so it shows whole
+        assert!(flashed.flash.is_some() && flashed.width > plain.width);
+        // a long answer shrinks before it is cut
+        let long = "123456789012345678901234567890123456789";
+        let m = model("x", live(long, None));
+        let full = measure(&gfx, &m, 2000.0);
+        let fitted = measure(&gfx, &m, 300.0);
+        assert!(fitted.width <= 300.0 + 0.5);
+        assert!(fitted.items[0].w < full.items[0].w);
+    }
+
     #[test]
     fn pretty_like_the_mac() {
         assert_eq!(pretty_text("2sqrt(2)"), "2√2");

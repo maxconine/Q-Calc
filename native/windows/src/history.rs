@@ -9,7 +9,7 @@
 //! muted) left and its answers (17) right in up to 46% of the width, as cells (`cells`): a solve's letter (copies
 //! every root) and each root (inserts itself), `exact ≈ approx` (each inserts its side), or the one answer
 //! (matrices, complex numbers and lists are the engine's text). A system row's expression reopens its panel
-//! (`open_system_row`, the systems package's hook).
+//! (through `BarModel::insert_row`, where systems.rs hooks in).
 //!
 //! Keys (from model.rs): ↑ ↓ walk the rows and keep to the side ← → last chose (`land`), ← → step through the
 //! row's picks (`historyPicks`: the expression, then each answer), ↵ inserts the pick, Alt+↵ the other half
@@ -171,8 +171,10 @@ pub fn enter_row(m: &mut BarModel, engine: &EngineThread, alt: bool) {
     let Some(row) = m.rows.rows.get(i).cloned() else {
         return;
     };
+    // a system row goes through the model's insert_row, whose systems hook reopens its panel
     if row.kind == Some(HistoryKind::System) {
-        open_system_row(m, engine, i);
+        m.insert_row(i, false);
+        m.text_changed(engine);
         return;
     }
     let piece = if alt {
@@ -193,16 +195,6 @@ pub fn enter_row(m: &mut BarModel, engine: &EngineThread, alt: bool) {
     };
     insert_piece(m, &piece);
     m.text_changed(engine);
-}
-
-/// A system row (`sys 2`'s equations, kind `system`) asks to be reopened in its panel.
-/// **Hook for the systems package** (systems.rs): open the `sys` panel with `row.equations`. Until then the tape
-/// just closes.
-pub fn open_system_row(m: &mut BarModel, engine: &EngineThread, i: usize) {
-    let _ = (engine, i);
-    m.selected = None;
-    m.tape_open = false;
-    m.touch();
 }
 
 /// Ctrl+Backspace on a highlighted row: it goes (saved), and Ctrl+Z can put it back.
@@ -657,7 +649,10 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
             }
         }
         Act::Copy(text) => crate::answer::copy(&mut app.model, &text),
-        Act::OpenSystem => open_system_row(&mut app.model, &app.engine, i),
+        Act::OpenSystem => {
+            app.model.insert_row(i, false);
+            app.text_changed();
+        }
     }
     true
 }
