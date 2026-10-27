@@ -2244,6 +2244,202 @@ public func FfiConverterTypeNameCheck_lower(_ value: NameCheck) -> UInt64 {
 
 
 /**
+ * `PongSession`: one side of a game, or one against the computer (`solo`).
+ */
+public protocol PongGameProtocol: AnyObject, Sendable {
+    
+    /**
+     * The up or down key went down (`held`) or up.
+     */
+    func key(up: Bool, held: Bool) 
+    
+    func receive(text: String, now: Double) 
+    
+    func release() 
+    
+    func rematch() 
+    
+    func takeSent()  -> [String]
+    
+    func tick(now: Double)  -> PongView
+    
+}
+/**
+ * `PongSession`: one side of a game, or one against the computer (`solo`).
+ */
+open class PongGame: PongGameProtocol, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_qcalc_ffi_fn_clone_ponggame(self.handle, $0) }
+    }
+public convenience init(role: GameSide, now: Double, solo: PongSkill?) {
+    let handle =
+        try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_constructor_ponggame_new(
+        FfiConverterTypeGameSide_lower(role),
+        FfiConverterDouble.lower(now),
+        FfiConverterOptionTypePongSkill.lower(solo),uniffiCallStatus
+    )
+}
+    self.init(unsafeFromHandle: handle)
+}
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_qcalc_ffi_fn_free_ponggame(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * The up or down key went down (`held`) or up.
+     */
+open func key(up: Bool, held: Bool)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_ponggame_key(
+            self.uniffiCloneHandle(),
+        FfiConverterBool.lower(up),
+        FfiConverterBool.lower(held),uniffiCallStatus
+    )
+}
+}
+    
+open func receive(text: String, now: Double)  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_ponggame_receive(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(text),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+}
+}
+    
+open func release()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_ponggame_release(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func rematch()  {try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_ponggame_rematch(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+}
+}
+    
+open func takeSent() -> [String]  {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_ponggame_take_sent(
+            self.uniffiCloneHandle(),uniffiCallStatus
+    )
+})
+}
+    
+open func tick(now: Double) -> PongView  {
+    return try!  FfiConverterTypePongView_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_ponggame_tick(
+            self.uniffiCloneHandle(),
+        FfiConverterDouble.lower(now),uniffiCallStatus
+    )
+})
+}
+    
+
+    
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePongGame: FfiConverter {
+    typealias FfiType = UInt64
+    typealias SwiftType = PongGame
+
+    public static func lift(_ handle: UInt64) throws -> PongGame {
+        return PongGame(unsafeFromHandle: handle)
+    }
+
+    public static func lower(_ value: PongGame) -> UInt64 {
+        return value.uniffiCloneHandle()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PongGame {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: PongGame, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongGame_lift(_ handle: UInt64) throws -> PongGame {
+    return try FfiConverterTypePongGame.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongGame_lower(_ value: PongGame) -> UInt64 {
+    return FfiConverterTypePongGame.lower(value)
+}
+
+
+
+
+
+
+/**
  * `OnlinePeer` in `src/lib/peerOnline.ts`, without its sockets and timers: after every call the shell runs
  * `take_commands`, hands `take_events` to whoever subscribed, and calls `tick` by `next_deadline`. `now` is
  * `Date.now()`.
@@ -5911,6 +6107,184 @@ public func FfiConverterTypeMeasInfo_lower(_ value: MeasInfo) -> RustBuffer {
 
 
 /**
+ * The court's sizes (`COURT_W`, …), for drawing.
+ */
+public struct PongGeometry: Equatable, Hashable {
+    public var courtW: Double
+    public var courtH: Double
+    public var paddleW: Double
+    public var paddleH: Double
+    public var paddleInset: Double
+    public var ballSize: Double
+    public var winScore: UInt32
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(courtW: Double, courtH: Double, paddleW: Double, paddleH: Double, paddleInset: Double, ballSize: Double, winScore: UInt32) {
+        self.courtW = courtW
+        self.courtH = courtH
+        self.paddleW = paddleW
+        self.paddleH = paddleH
+        self.paddleInset = paddleInset
+        self.ballSize = ballSize
+        self.winScore = winScore
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PongGeometry: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePongGeometry: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PongGeometry {
+        return
+            try PongGeometry(
+                courtW: FfiConverterDouble.read(from: &buf), 
+                courtH: FfiConverterDouble.read(from: &buf), 
+                paddleW: FfiConverterDouble.read(from: &buf), 
+                paddleH: FfiConverterDouble.read(from: &buf), 
+                paddleInset: FfiConverterDouble.read(from: &buf), 
+                ballSize: FfiConverterDouble.read(from: &buf), 
+                winScore: FfiConverterUInt32.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PongGeometry, into buf: inout [UInt8]) {
+        FfiConverterDouble.write(value.courtW, into: &buf)
+        FfiConverterDouble.write(value.courtH, into: &buf)
+        FfiConverterDouble.write(value.paddleW, into: &buf)
+        FfiConverterDouble.write(value.paddleH, into: &buf)
+        FfiConverterDouble.write(value.paddleInset, into: &buf)
+        FfiConverterDouble.write(value.ballSize, into: &buf)
+        FfiConverterUInt32.write(value.winScore, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongGeometry_lift(_ buf: RustBuffer) throws -> PongGeometry {
+    return try FfiConverterTypePongGeometry.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongGeometry_lower(_ value: PongGeometry) -> RustBuffer {
+    return FfiConverterTypePongGeometry.lower(value)
+}
+
+
+/**
+ * What the court draws (`SessionView` with its `Snapshot` flattened; `has_snap` false before there's one).
+ */
+public struct PongView: Equatable, Hashable {
+    public var hasSnap: Bool
+    public var ballX: Double
+    public var ballY: Double
+    public var paddleHost: Double
+    public var paddleGuest: Double
+    public var scoreHost: UInt32
+    public var scoreGuest: UInt32
+    public var phase: PongPhase
+    public var winner: GameSide?
+    public var started: Bool
+    public var againMine: Bool
+    public var againTheirs: Bool
+    public var ended: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(hasSnap: Bool, ballX: Double, ballY: Double, paddleHost: Double, paddleGuest: Double, scoreHost: UInt32, scoreGuest: UInt32, phase: PongPhase, winner: GameSide?, started: Bool, againMine: Bool, againTheirs: Bool, ended: String?) {
+        self.hasSnap = hasSnap
+        self.ballX = ballX
+        self.ballY = ballY
+        self.paddleHost = paddleHost
+        self.paddleGuest = paddleGuest
+        self.scoreHost = scoreHost
+        self.scoreGuest = scoreGuest
+        self.phase = phase
+        self.winner = winner
+        self.started = started
+        self.againMine = againMine
+        self.againTheirs = againTheirs
+        self.ended = ended
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension PongView: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePongView: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PongView {
+        return
+            try PongView(
+                hasSnap: FfiConverterBool.read(from: &buf), 
+                ballX: FfiConverterDouble.read(from: &buf), 
+                ballY: FfiConverterDouble.read(from: &buf), 
+                paddleHost: FfiConverterDouble.read(from: &buf), 
+                paddleGuest: FfiConverterDouble.read(from: &buf), 
+                scoreHost: FfiConverterUInt32.read(from: &buf), 
+                scoreGuest: FfiConverterUInt32.read(from: &buf), 
+                phase: FfiConverterTypePongPhase.read(from: &buf), 
+                winner: FfiConverterOptionTypeGameSide.read(from: &buf), 
+                started: FfiConverterBool.read(from: &buf), 
+                againMine: FfiConverterBool.read(from: &buf), 
+                againTheirs: FfiConverterBool.read(from: &buf), 
+                ended: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: PongView, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.hasSnap, into: &buf)
+        FfiConverterDouble.write(value.ballX, into: &buf)
+        FfiConverterDouble.write(value.ballY, into: &buf)
+        FfiConverterDouble.write(value.paddleHost, into: &buf)
+        FfiConverterDouble.write(value.paddleGuest, into: &buf)
+        FfiConverterUInt32.write(value.scoreHost, into: &buf)
+        FfiConverterUInt32.write(value.scoreGuest, into: &buf)
+        FfiConverterTypePongPhase.write(value.phase, into: &buf)
+        FfiConverterOptionTypeGameSide.write(value.winner, into: &buf)
+        FfiConverterBool.write(value.started, into: &buf)
+        FfiConverterBool.write(value.againMine, into: &buf)
+        FfiConverterBool.write(value.againTheirs, into: &buf)
+        FfiConverterOptionString.write(value.ended, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongView_lift(_ buf: RustBuffer) throws -> PongView {
+    return try FfiConverterTypePongView.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongView_lower(_ value: PongView) -> RustBuffer {
+    return FfiConverterTypePongView.lower(value)
+}
+
+
+/**
  * Whether the currency rates are usable.
  */
 public struct RatesStatus: Equatable, Hashable {
@@ -9177,6 +9551,152 @@ public func FfiConverterTypePeerWho_lower(_ value: PeerWho) -> RustBuffer {
 
 
 
+
+public enum PongPhase: Equatable, Hashable {
+    
+    case serve
+    case play
+    case over
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PongPhase: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePongPhase: FfiConverterRustBuffer {
+    typealias SwiftType = PongPhase
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PongPhase {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .serve
+        
+        case 2: return .play
+        
+        case 3: return .over
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PongPhase, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .serve:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .play:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .over:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongPhase_lift(_ buf: RustBuffer) throws -> PongPhase {
+    return try FfiConverterTypePongPhase.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongPhase_lower(_ value: PongPhase) -> RustBuffer {
+    return FfiConverterTypePongPhase.lower(value)
+}
+
+
+
+
+public enum PongSkill: Equatable, Hashable {
+    
+    case easy
+    case normal
+    case hard
+
+
+
+
+
+}
+
+#if compiler(>=6)
+extension PongSkill: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypePongSkill: FfiConverterRustBuffer {
+    typealias SwiftType = PongSkill
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PongSkill {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .easy
+        
+        case 2: return .normal
+        
+        case 3: return .hard
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PongSkill, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .easy:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .normal:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .hard:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongSkill_lift(_ buf: RustBuffer) throws -> PongSkill {
+    return try FfiConverterTypePongSkill.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypePongSkill_lower(_ value: PongSkill) -> RustBuffer {
+    return FfiConverterTypePongSkill.lower(value)
+}
+
+
+
 /**
  * What the shell does with its websockets.
  */
@@ -10551,6 +11071,30 @@ fileprivate struct FfiConverterOptionTypeLobbyEffect: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypePongSkill: FfiConverterRustBuffer {
+    typealias SwiftType = PongSkill?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypePongSkill.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypePongSkill.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeTypstPaint: FfiConverterRustBuffer {
     typealias SwiftType = TypstPaint?
 
@@ -11882,6 +12426,13 @@ public func crackTick(state: CrackState, now: Double) -> CrackStep  {
     )
 })
 }
+public func pongGeometry() -> PongGeometry  {
+    return try!  FfiConverterTypePongGeometry_lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_pong_geometry(uniffiCallStatus
+    )
+})
+}
 /**
  * `chalkBox(x, y, w, h, seed)`.
  */
@@ -12073,6 +12624,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_crack_tick() != 25218) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_pong_geometry() != 9290) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_func_ut_chalk_box() != 7408) {
@@ -12294,6 +12848,24 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_method_connect4game_view() != 22422) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_method_ponggame_key() != 36754) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_ponggame_receive() != 24514) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_ponggame_release() != 32665) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_ponggame_rematch() != 5848) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_ponggame_take_sent() != 11400) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_ponggame_tick() != 61963) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_method_ultimategame_can_play() != 21582) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -12358,6 +12930,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_connect4game_new() != 33470) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_constructor_ponggame_new() != 11944) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_constructor_ultimategame_new() != 6329) {

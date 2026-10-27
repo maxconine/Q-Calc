@@ -3,7 +3,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use qcalc_core::games::{connect4, connect4_bot, connect4_session, crack, ultimate, ultimate_bot, ultimate_chalk, ultimate_session};
+use qcalc_core::games::{connect4, connect4_bot, connect4_session, crack, pong, pong_session, ultimate, ultimate_bot, ultimate_chalk, ultimate_session};
 
 use crate::games::{GameSide, lock, math_random};
 
@@ -105,6 +105,129 @@ impl Connect4Game {
     }
     pub fn view(&self) -> C4View {
         lock(&self.inner).view().into()
+    }
+    pub fn take_sent(&self) -> Vec<String> {
+        lock(&self.inner).take_sent()
+    }
+}
+
+// ---- pong
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum PongSkill {
+    Easy,
+    Normal,
+    Hard,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum PongPhase {
+    Serve,
+    Play,
+    Over,
+}
+
+/// What the court draws (`SessionView` with its `Snapshot` flattened; `has_snap` false before there's one).
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct PongView {
+    pub has_snap: bool,
+    pub ball_x: f64,
+    pub ball_y: f64,
+    pub paddle_host: f64,
+    pub paddle_guest: f64,
+    pub score_host: u32,
+    pub score_guest: u32,
+    pub phase: PongPhase,
+    pub winner: Option<GameSide>,
+    pub started: bool,
+    pub again_mine: bool,
+    pub again_theirs: bool,
+    pub ended: Option<String>,
+}
+
+/// The court's sizes (`COURT_W`, …), for drawing.
+#[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
+pub struct PongGeometry {
+    pub court_w: f64,
+    pub court_h: f64,
+    pub paddle_w: f64,
+    pub paddle_h: f64,
+    pub paddle_inset: f64,
+    pub ball_size: f64,
+    pub win_score: u32,
+}
+
+#[uniffi::export]
+pub fn pong_geometry() -> PongGeometry {
+    PongGeometry {
+        court_w: pong::COURT_W,
+        court_h: pong::COURT_H,
+        paddle_w: pong::PADDLE_W,
+        paddle_h: pong::PADDLE_H,
+        paddle_inset: pong::PADDLE_INSET,
+        ball_size: pong::BALL_SIZE,
+        win_score: pong::WIN_SCORE,
+    }
+}
+
+impl From<pong_session::SessionView> for PongView {
+    fn from(v: pong_session::SessionView) -> Self {
+        let s = v.snap;
+        PongView {
+            has_snap: s.is_some(),
+            ball_x: s.map_or(0.0, |s| s.ball.x),
+            ball_y: s.map_or(0.0, |s| s.ball.y),
+            paddle_host: s.map_or(pong::COURT_H / 2.0, |s| s.paddles[0]),
+            paddle_guest: s.map_or(pong::COURT_H / 2.0, |s| s.paddles[1]),
+            score_host: s.map_or(0, |s| s.score[0]),
+            score_guest: s.map_or(0, |s| s.score[1]),
+            phase: match s.map_or(pong::Phase::Serve, |s| s.phase) {
+                pong::Phase::Serve => PongPhase::Serve,
+                pong::Phase::Play => PongPhase::Play,
+                pong::Phase::Over => PongPhase::Over,
+            },
+            winner: s.and_then(|s| s.winner).map(Into::into),
+            started: v.started,
+            again_mine: v.again.mine,
+            again_theirs: v.again.theirs,
+            ended: v.ended,
+        }
+    }
+}
+
+/// `PongSession`: one side of a game, or one against the computer (`solo`).
+#[derive(Debug, uniffi::Object)]
+pub struct PongGame {
+    inner: Mutex<pong_session::PongSession>,
+}
+
+#[uniffi::export]
+impl PongGame {
+    #[uniffi::constructor]
+    pub fn new(role: GameSide, now: f64, solo: Option<PongSkill>) -> Arc<Self> {
+        let solo = solo.map(|s| match s {
+            PongSkill::Easy => pong::Skill::Easy,
+            PongSkill::Normal => pong::Skill::Normal,
+            PongSkill::Hard => pong::Skill::Hard,
+        });
+        Arc::new(PongGame { inner: Mutex::new(pong_session::PongSession::with_defaults(role.into(), now, solo)) })
+    }
+
+    /// The up or down key went down (`held`) or up.
+    pub fn key(&self, up: bool, held: bool) {
+        lock(&self.inner).key(up, held)
+    }
+    pub fn release(&self) {
+        lock(&self.inner).release()
+    }
+    pub fn rematch(&self) {
+        lock(&self.inner).rematch()
+    }
+    pub fn receive(&self, text: String, now: f64) {
+        lock(&self.inner).receive(&text, now)
+    }
+    pub fn tick(&self, now: f64) -> PongView {
+        lock(&self.inner).tick(now).into()
     }
     pub fn take_sent(&self) -> Vec<String> {
         lock(&self.inner).take_sent()
