@@ -328,12 +328,15 @@ enum Clip {
 
 // ---- what canvases share: factories, fonts
 
+/// a laid-out line: the layout, its width, ascent and descent
+type Laid = (IDWriteTextLayout, f64, f64, f64);
+
 /// The factories and the fonts every canvas of a game shares (made from the frame's `Ui`).
 pub struct Res {
     d2d: ID2D1Factory,
     dw: IDWriteFactory,
     formats: RefCell<HashMap<(u32, bool), IDWriteTextFormat>>,
-    layouts: RefCell<HashMap<(String, u32, bool), (IDWriteTextLayout, f64, f64, f64)>>,
+    layouts: RefCell<HashMap<(String, u32, bool), Laid>>,
     family: String,
 }
 
@@ -501,6 +504,11 @@ impl<'a> Canvas<'a> {
         let mut c = Canvas::make(rt.clone(), dc.cloned(), res, base, (f64::from(r.w) * s).round(), (f64::from(r.h) * s).round());
         c.generation = ui.generation;
         c
+    }
+
+    /// The shared factories and fonts.
+    pub fn res(&self) -> &'a Res {
+        self.res
     }
 
     /// A new offscreen canvas of `w` × `h` pixels, compatible with this canvas's target.

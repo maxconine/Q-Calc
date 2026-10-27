@@ -46,7 +46,7 @@ pub static DEF: GameDef = GameDef {
 };
 
 enum Game {
-    Local(LocalArena),
+    Local(Box<LocalArena>),
     Online {
         session: Box<TrailsSession>,
         out: Arc<Mutex<Vec<String>>>,
@@ -70,14 +70,14 @@ impl Trails {
     fn local(option: usize, env: &mut Env) -> Trails {
         let vs = VS[option.min(VS.len() - 1)];
         let seed = (env.rand() * 9e15) as u64 | 1;
-        Trails::make(Game::Local(LocalArena::new(vs, env.now(), seed)), Some(option))
+        Trails::make(Game::Local(Box::new(LocalArena::new(vs, env.now(), seed))), Some(option))
     }
 
     fn online(role: Side, peer: String, _env: &mut Env) -> Trails {
         let out = Arc::new(Mutex::new(Vec::new()));
         let o = out.clone();
         let host = role == Side::Host;
-        let mut t = Trails::make(Game::Local(LocalArena::new(VS[0], 0.0, 1)), None);
+        let mut t = Trails::make(Game::Local(Box::new(LocalArena::new(VS[0], 0.0, 1))), None);
         let session = TrailsSession::new(
             if host { Role::Host } else { Role::Guest },
             Box::new(move |s| {

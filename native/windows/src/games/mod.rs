@@ -13,6 +13,7 @@
 mod canvas;
 mod connect4;
 mod crack;
+mod ember;
 mod equal;
 mod gfx;
 mod keys;
@@ -148,13 +149,14 @@ pub struct GameDef {
 }
 
 /// The games, in the order the games list shows them. Ember & frost and trails slot in here (README.md).
-pub static GAMES: [&GameDef; 7] = [
+pub static GAMES: [&GameDef; 8] = [
     &pong::DEF,
     &connect4::DEF,
     &ultimate::DEF,
     &crack::DEF,
     &equal::DEF,
     &numbers::DEF,
+    &ember::DEF,
     &trails::DEF,
 ];
 
@@ -1185,6 +1187,6 @@ mod tests {
         assert_eq!(hint("crack").as_deref(), Some("↵ crack the safe"));
         assert_eq!(hint("countdown").as_deref(), Some("↵ play 24 or countdown"));
         assert_eq!(hint("connect 4").as_deref(), Some("↵ play connect 4"));
-        assert_eq!(list().len(), 7);
+        assert_eq!(list().len(), 8);
     }
 }
