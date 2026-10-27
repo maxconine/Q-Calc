@@ -18,6 +18,7 @@ mod keys;
 mod lobby;
 mod numbers;
 mod pong;
+mod process;
 mod relay;
 mod shell;
 mod store;
@@ -318,6 +319,8 @@ struct Win {
     /// the window's top-left while not full screen
     normal_at: Option<(i32, i32)>,
     closed: bool,
+    /// the bar's ↵ (process.rs `qpc`), until the first frame is on screen
+    launched_at: Option<i64>,
 }
 
 /// Window work that sends messages back, run once the borrow ends.
@@ -331,47 +334,24 @@ enum Op {
 thread_local! {
     static WIN: RefCell<Option<Win>> = const { RefCell::new(None) };
     static OPS: RefCell<Vec<Op>> = const { RefCell::new(Vec::new()) };
-    static PENDING: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 fn push(op: Op) {
     OPS.with(|o| o.borrow_mut().push(op));
 }
 
-/// Opens a game window for `kind` (closing one that's open), on the next turn of the message loop, so it can be
-/// called from anywhere on the UI thread, inside an app handler or not.
+/// Opens the game of `kind` in a process of its own (process.rs), or brings it forward when it's already up.
+/// Safe to call from anywhere on the bar's UI thread: it sends no message back.
 pub fn open(kind: &str) {
     if !GAMES.iter().any(|g| g.kind == kind) {
         qlog!("games: no game called {kind}");
         return;
     }
-    PENDING.with(|p| *p.borrow_mut() = Some(kind.to_string()));
-    // a thread timer with a callback: DispatchMessage runs it, whatever window the loop is serving
-    // SAFETY: plain timer on this thread
-    unsafe { SetTimer(None, 0, 0, Some(open_now)) };
+    process::launch(kind);
 }
 
-/// Whether a game window is open.
-pub fn is_open() -> bool {
-    WIN.with(|w| w.try_borrow().map(|w| w.is_some()).unwrap_or(true))
-}
-
-unsafe extern "system" fn open_now(_: HWND, _: u32, id: usize, _: u32) {
-    // SAFETY: our own one-shot thread timer
-    let _ = unsafe { KillTimer(None, id) };
-    let Some(kind) = PENDING.with(|p| p.borrow_mut().take()) else {
-        return;
-    };
-    let old = WIN.with(|w| w.try_borrow().ok().and_then(|w| w.as_ref().map(|w| w.hwnd)));
-    if let Some(old) = old {
-        // SAFETY: our window; its WM_DESTROY drops it
-        let _ = unsafe { DestroyWindow(old) };
-        run_ops();
-    }
-    if let Err(e) = create(&kind) {
-        qlog!("games: couldn't open {kind}: {e}");
-    }
-}
+/// `qcalc.exe --game <kind>`: the game's process (main.rs runs it before anything of the bar).
+pub use process::child_main;
 
 fn theme_setting() -> String {
     crate::app::with_app(|a| a.store.settings.theme.clone()).unwrap_or_else(|| {
@@ -381,13 +361,15 @@ fn theme_setting() -> String {
     })
 }
 
-fn create(kind: &str) -> windows::core::Result<()> {
+fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
     let Some(def) = GAMES.iter().copied().find(|g| g.kind == kind) else {
-        return Ok(());
+        return Err(windows::core::Error::new(windows::core::HRESULT(0x8007_0057u32 as i32), "no such game"));
     };
     let t = Instant::now();
     let monitor = crate::window::cursor_monitor();
-    // SAFETY: registering our class (again is harmless) and making a hidden window with our wndproc
+    // a class per kind, so the bar (and a second launch) can find this game's window
+    let class_name = HSTRING::from(process::class_name(kind));
+    // SAFETY: registering our class and making a hidden window with our wndproc
     let hwnd = unsafe {
         let instance = windows::Win32::System::LibraryLoader::GetModuleHandleW(None)?;
         let class = WNDCLASSEXW {
@@ -396,13 +378,13 @@ fn create(kind: &str) -> windows::core::Result<()> {
             lpfnWndProc: Some(proc_),
             hInstance: instance.into(),
             hCursor: LoadCursorW(None, IDC_ARROW).unwrap_or_default(),
-            lpszClassName: CLASS,
+            lpszClassName: PCWSTR(class_name.as_ptr()),
             ..Default::default()
         };
         RegisterClassExW(&class);
         CreateWindowExW(
             WS_EX_APPWINDOW,
-            CLASS,
+            &class_name,
             &HSTRING::from(def.title),
             NORMAL_STYLE,
             monitor.area.x as i32,
@@ -461,6 +443,7 @@ fn create(kind: &str) -> windows::core::Result<()> {
         animating: false,
         normal_at: None,
         closed: false,
+        launched_at: t0,
     };
     win.lobby.attach(&mut win.env);
     // one frame while hidden, so the window opens at the card's height
@@ -591,32 +574,16 @@ fn run_ops() {
                     let gone = WIN.with(|c| c.try_borrow_mut().ok().and_then(|mut w| w.take()));
                     if let Some(w) = gone {
                         let kind = w.lobby.def.kind;
-                        drop(w);
-                        // the bar's own trim ran while the game was up; with the bar still away, trim now so
-                        // the working set goes back to where it was before the game
-                        let hidden = crate::app::with_app(|a| !a.bar.visible).unwrap_or(false);
-                        // what the game freed goes back to the system, not just to the heap
-                        // SAFETY: the process heap, compacted
-                        let _ = unsafe {
-                            windows::Win32::System::Memory::HeapCompact(
-                                windows::Win32::System::Memory::GetProcessHeap().unwrap_or_default(),
-                                windows::Win32::System::Memory::HEAP_FLAGS(0),
-                            )
-                        };
-                        if hidden {
-                            // SAFETY: our own process
-                            let _ = unsafe {
-                                windows::Win32::System::ProcessStatus::K32EmptyWorkingSet(
-                                    windows::Win32::System::Threading::GetCurrentProcess(),
-                                )
-                            };
-                        }
                         let (ws, private) = crate::bench::memory();
+                        drop(w);
                         qlog!(
-                            "games: {kind} closed (window, render target and link released); working set {:.1} MB, private {:.1} MB",
+                            "games: {kind} closed; its process ends (it had working set {:.1} MB, private {:.1} MB)",
                             ws as f64 / 1e6,
                             private as f64 / 1e6
                         );
+                        // the game's process ends with its window, and everything it held goes with it
+                        // SAFETY: plain call on this thread
+                        unsafe { windows::Win32::UI::WindowsAndMessaging::PostQuitMessage(0) };
                     }
                 }
             }
@@ -631,6 +598,15 @@ impl Win {
                 self.paint();
                 // SAFETY: our window
                 let _ = unsafe { ValidateRect(Some(self.hwnd), None) };
+                if let Some(t0) = self.launched_at.take() {
+                    qlog!(
+                        "games: {} first frame {:.1} ms after the bar's ↵ ({:.1} ms since this process started, {} target)",
+                        self.lobby.def.kind,
+                        process::ms_since(t0),
+                        crate::log::since_start_ms(),
+                        if self.gfx.hardware { "hardware" } else { "software" }
+                    );
+                }
                 self.next_frame();
             }
             WM_ERASEBKGND => return Some(LRESULT(1)),

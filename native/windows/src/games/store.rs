@@ -62,12 +62,28 @@ impl GameStore {
             .unwrap_or_default()
     }
 
-    fn write(&self) {
-        if let Some(p) = &self.path
-            && let Err(e) = crate::store::write_atomic(p, &self.to_json())
-        {
+    /// The store kept at `path` (tests).
+    pub fn at(path: PathBuf) -> GameStore {
+        let mut s = GameStore::from_json(&std::fs::read_to_string(&path).unwrap_or_default());
+        s.path = Some(path);
+        s
+    }
+
+    /// A change, made to the file as it is now: under the games' lock, read fresh (another game's process may have
+    /// written since this one loaded it), changed, written, and kept. Two games saving at once both keep theirs.
+    fn update(&mut self, change: impl FnOnce(&mut GameStore)) {
+        let Some(p) = self.path.clone() else {
+            change(self);
+            return;
+        };
+        let _lock = Lock::take();
+        let mut fresh = GameStore::from_json(&std::fs::read_to_string(&p).unwrap_or_default());
+        change(&mut fresh);
+        if let Err(e) = crate::store::write_atomic(&p, &fresh.to_json()) {
             crate::qlog!("games: couldn't save {}: {e}", p.display());
         }
+        self.saves = fresh.saves;
+        self.nickname = fresh.nickname;
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
@@ -80,27 +96,34 @@ impl GameStore {
             return;
         }
         match value {
-            Some(v) if v.encode_utf16().count() > saves::GAME_SAVE_MAX => return,
+            Some(v) if v.encode_utf16().count() > saves::GAME_SAVE_MAX => {}
             Some(v) => {
-                if self.get(key) == Some(v) {
-                    return;
+                if self.get(key) != Some(v) {
+                    self.update(|s| {
+                        s.saves.insert(key.into(), v.into());
+                    });
                 }
-                self.saves.insert(key.into(), v.into());
             }
             None => {
-                if self.saves.remove(key).is_none() {
-                    return;
+                if self.saves.contains_key(key) {
+                    self.update(|s| {
+                        s.saves.remove(key);
+                    });
                 }
             }
         }
-        self.write();
     }
 
     /// The name the room lists show: the kept one, or a fresh random one kept from now on.
     pub fn nickname(&mut self, rand: &mut dyn FnMut() -> f64) -> String {
         if self.nickname.is_empty() {
-            self.nickname = nickname::random_nickname(rand);
-            self.write();
+            let made = nickname::random_nickname(rand);
+            // another game may have made one meanwhile: that one stays
+            self.update(|s| {
+                if s.nickname.is_empty() {
+                    s.nickname = made;
+                }
+            });
         }
         self.nickname.clone()
     }
@@ -111,9 +134,40 @@ impl GameStore {
         if cleaned.is_empty() {
             return self.nickname(rand);
         }
-        self.nickname = cleaned;
-        self.write();
+        self.update(|s| s.nickname = cleaned);
         self.nickname.clone()
+    }
+}
+
+/// The games' file lock: a named mutex every Q Calc process (the bar, each game) takes around a write.
+struct Lock(Option<windows::Win32::Foundation::HANDLE>);
+
+impl Lock {
+    fn take() -> Lock {
+        use windows::Win32::System::Threading::{CreateMutexW, WaitForSingleObject};
+        let name = format!("Local\\com.maxconine.qcalc.games-store{}", crate::log::instance_suffix());
+        // SAFETY: a named mutex, waited for at most 2 s (a stuck holder never blocks a save for long)
+        unsafe {
+            match CreateMutexW(None, false, &windows::core::HSTRING::from(name)) {
+                Ok(h) => {
+                    let _ = WaitForSingleObject(h, 2000);
+                    Lock(Some(h))
+                }
+                Err(_) => Lock(None),
+            }
+        }
+    }
+}
+
+impl Drop for Lock {
+    fn drop(&mut self) {
+        if let Some(h) = self.0.take() {
+            // SAFETY: our handle, released and closed once
+            unsafe {
+                let _ = windows::Win32::System::Threading::ReleaseMutex(h);
+                let _ = windows::Win32::Foundation::CloseHandle(h);
+            }
+        }
     }
 }
 
@@ -139,6 +193,29 @@ mod tests {
         assert_eq!(back.get("whatever"), None);
         assert_eq!(back.get("qcalc-numbers"), None);
         assert_eq!(back.nickname, "teal otter");
+    }
+
+    #[test]
+    fn two_games_saving_at_once_both_keep_theirs() {
+        let dir = std::env::temp_dir().join(format!("qcalc-games-store-{}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let path = dir.join("games.json");
+        let _ = std::fs::remove_file(&path);
+        // both loaded before either wrote, as two game processes would be
+        let mut a = GameStore::at(path.clone());
+        let mut b = GameStore::at(path.clone());
+        a.set("qcalc-crack", Some("3"));
+        b.set("qcalc-ember", Some("{}"));
+        let mut r = qcalc_core::games::Random::new(3);
+        let name = a.nickname(&mut || r.next_f64());
+        // b had no name; the one a made stays
+        assert_eq!(b.nickname(&mut || r.next_f64()), name);
+        let back = GameStore::at(path.clone());
+        assert_eq!(back.get("qcalc-crack"), Some("3"));
+        assert_eq!(back.get("qcalc-ember"), Some("{}"));
+        assert_eq!(back.nickname, name);
+        assert_eq!(b.get("qcalc-crack"), Some("3"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

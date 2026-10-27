@@ -63,6 +63,10 @@ mod window;
 
 #[cfg(windows)]
 fn main() {
+    // `--game <kind>`: a game in a process of its own (games/process.rs), nothing of the bar
+    if let Some(code) = games::child_main() {
+        std::process::exit(code);
+    }
     std::process::exit(app::run());
 }
 
