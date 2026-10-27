@@ -328,7 +328,10 @@ impl<'o> Sheet<'o> {
     }
 
     fn run(mut self, lines: &[String]) -> Vec<LineResult> {
-        lines.iter().map(|raw| self.line(raw)).collect()
+        lines
+            .iter()
+            .map(|raw| crate::symbolic::simplify::with_line_budget(|| self.line(raw)))
+            .collect()
     }
 
     fn sci(&self) -> ScientificContext {

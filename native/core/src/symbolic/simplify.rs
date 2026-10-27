@@ -995,6 +995,30 @@ const BUDGET: u64 = 12_000_000;
 
 thread_local! {
     static LEFT: std::cell::Cell<u64> = const { std::cell::Cell::new(BUDGET) };
+    /// What the line being evaluated has left for all its simplifies, while one is (see `with_line_budget`).
+    static LINE_LEFT: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+}
+
+/// All the simplifies one line may run together, in [`BUDGET`]'s units: isolate and calculus simplify several
+/// times over, and `isolate x 0.5 * 15 kg * (2 m/s m/s …)^2` (441 characters) spent 2.7 s on three that each
+/// used up a whole budget (0.9 s now). A golden line spends at most 472k.
+const LINE_BUDGET: u64 = BUDGET;
+
+/// Runs `f` (one line's evaluation) with [`LINE_BUDGET`] for its simplifies; a line evaluated inside it (a
+/// piece the squiggle tries) shares the outer one's.
+pub fn with_line_budget<R>(f: impl FnOnce() -> R) -> R {
+    struct Reset;
+    impl Drop for Reset {
+        fn drop(&mut self) {
+            LINE_LEFT.with(|l| l.set(None));
+        }
+    }
+    if LINE_LEFT.with(|l| l.get()).is_some() {
+        return f();
+    }
+    LINE_LEFT.with(|l| l.set(Some(LINE_BUDGET)));
+    let _reset = Reset;
+    f()
 }
 
 fn spend(units: u64) -> Result<(), SymError> {
@@ -1025,13 +1049,25 @@ pub fn simplify_with(
 ) -> Result<Node, SymError> {
     let ctx = Ctx::default();
     // a budget of its own; a simplify nested in this one (or after it) gets a fresh one and hands this back
-    struct Restore(u64);
+    // and within what the line it serves has left (see `with_line_budget`), which it is charged for
+    struct Restore {
+        outer: u64,
+        start: u64,
+    }
     impl Drop for Restore {
         fn drop(&mut self) {
-            LEFT.with(|l| l.set(self.0));
+            let spent = self.start - LEFT.with(|l| l.get());
+            LINE_LEFT.with(|l| l.set(l.get().map(|left| left.saturating_sub(spent))));
+            LEFT.with(|l| l.set(self.outer));
         }
     }
-    let _restore = Restore(LEFT.with(|l| l.replace(BUDGET)));
+    let start = LINE_LEFT
+        .with(|l| l.get())
+        .map_or(BUDGET, |left| left.min(BUDGET));
+    let _restore = Restore {
+        outer: LEFT.with(|l| l.replace(start)),
+        start,
+    };
     let mut res = remove_parens(&resolve(expr));
     let mut visited = HashSet::new();
     let mut text = to_string(&res, &PrintOptions::all());
