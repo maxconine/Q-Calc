@@ -87,7 +87,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Cheat sheet (`?`, `help`) | ✅ | `help` pair, keys follow the keybinds. **Native only:** the things-to-type column also lists `messages`, `paste to max`, `send file to max` and `konami` before `?` (core `native_type_cheats`); a bar too narrow for both columns' labels (they ended in "…" at 340 pt) shows one column that scrolls past 12 rows (macOS 13+; 12 keeps two). Pictured light and dark at 680 and 340 pt |
 | Games list | ✅ | `games` pair (↑ from the bottom, ↓ off the end) |
 | Edge tools with key tooltips | ✅ | hover-only, ink pills after 450 ms |
-| Message cards with reply, ask cards, 10 s auto-hide, held on hover/focus/draft | ✅ | `banner` pair; expiry verified at 11 s |
+| Message cards with reply, ask cards, 10 s auto-hide, held on hover/focus/draft | ✅ | `banner` pair; expiry verified at 11 s. The empty reply line's "Reply to max" is muted like the page's placeholder (it was drawn in ink while the field lacked focus, so it read as typed words; the native pair showed it); the same for the thread's reply line and the `sys` fields (`mutedPrompt`), pictured light and dark |
 | Tour line and onboarding hints | ✅ | open, pause (1.5 s) and commit hints (`pickHint`), the walkthrough’s line with `n/m` and skip, `tutorial` / `skip`, extras on later opens; skip sets `TOUR_OFF` (it asked for `tourBit("off")`, which is 0, so skipping did nothing) |
 | Greeting reply | ✅ | `hello` (not `hi`) answers `hi 👋` in the answer slot; ↵ clears |
 | `message <name> …` send | ✅ | `Messages.send` (added to the shared Messages.swift) |

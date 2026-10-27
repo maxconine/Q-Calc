@@ -393,9 +393,10 @@ private struct ThreadView: View {
 
     private var replyLine: some View {
         HStack(spacing: 8) {
-            TextField("", text: $model.threadDraft, prompt: Text("Message \(name)").foregroundColor(.qMuted))
+            TextField("", text: $model.threadDraft)
                 .textFieldStyle(.plain)
                 .font(.system(size: Theme.small))
+                .mutedPrompt("Message \(name)", shown: model.threadDraft.isEmpty, size: Theme.small)
                 .foregroundStyle(Color.qInk)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)

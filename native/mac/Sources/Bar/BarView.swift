@@ -1022,10 +1022,10 @@ private struct CardView: View {
                         .help("Open messages with \(card.from)")
                 }
                 HStack(spacing: 8) {
-                    TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }),
-                              prompt: Text("Reply to \(card.from)").foregroundColor(.qMuted))
+                    TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }))
                         .textFieldStyle(.plain)
                         .font(.system(size: Theme.small))
+                        .mutedPrompt("Reply to \(card.from)", shown: card.draft.isEmpty, size: Theme.small)
                         .foregroundStyle(Color.qInk)
                         .padding(.vertical, 4)
                         .padding(.horizontal, 8)

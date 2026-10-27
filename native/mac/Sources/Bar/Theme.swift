@@ -81,3 +81,22 @@ extension Color {
     static let qFillHover = Color(nsColor: Theme.ink).opacity(0.05)
     static let qFillSelected = Color(nsColor: Theme.ink).opacity(0.08)
 }
+
+extension View {
+    /// A plain TextField's prompt in muted, drawn here: AppKit draws an unfocused field's prompt in the field's text
+    /// colour whatever the prompt's own, so an empty reply line read as words already typed (the page's
+    /// `::placeholder` is muted). Put it right after `.font`, before any padding, and leave the prompt empty.
+    func mutedPrompt(_ text: String, shown: Bool, size: CGFloat, color: Color = .qMuted, kerning: CGFloat = 0) -> some View {
+        overlay(alignment: .leading) {
+            if shown {
+                Text(text)
+                    .font(.system(size: size))
+                    .kerning(kerning)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
