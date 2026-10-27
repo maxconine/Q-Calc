@@ -37,7 +37,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Completion ghost, Tab / → accepts | ✅ | `LiveAnswer.completion`, else engine `completionFor` (`foo` → `foot`) |
 | `[` pairing, `]` step-over, backspace in `[]`, wrap a selection, `+-` → ± | ✅ | `Symbols.bracketKey/wrap`, `BarTextView` |
 | Unit / known-word colouring, blank-reason squiggle, missing-unit offer | ✅ | `unitSpans`, `knownWordSpans` as temporary colours; `blankReason` after 700 ms idle and on a failed ↵ (`enterHint`); `missingUnit` drawn muted after the number, ↵ again takes it (`10 mA + 5 / 1 kohm`) |
-| Radicals drawn over their argument | ✅ | bar over the radicand in the field, tape and answer (`RadicalText`) |
+| Radicals drawn over their argument | ✅ | bar over the radicand in the field, tape and answer (`RadicalText`); a solve's `±2sqrt(2)` too (the ± had kept it as plain text in the answer and the tape). Pictured |
 | Σ/∫ bounds slots | ✅ | `boundsIn`: limits drawn small beside the sign (upper over lower, hidden `_ ^ ..`, holes for empty ones); caret snaps (`snapOffset`); `afterTyping`, `boundKey` (→ Tab space ^ ↑ ↓ ↵ ⌫) and `wordToSign` |
 | Faint `ans` while chaining | ✅ | `history` pair |
 | Example rotation in the empty field | ✅ | `exampleList`, every 2.5 s with the fade, answers evaluated live, until the first keystroke (`Tour.swift`) |
