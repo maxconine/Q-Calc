@@ -43,7 +43,7 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     VK_MENU, VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::{
-    CS_DBLCLKS, CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_STYLE, GetWindowRect,
+    CS_DBLCLKS, CreateWindowExW, DefWindowProcW, DestroyWindow, GWL_STYLE, GetClientRect, GetWindowLongPtrW, GetWindowRect,
     ICON_BIG, ICON_SMALL, IDC_ARROW, IsIconic, IsWindowVisible, KillTimer, LoadCursorW, MINMAXINFO,
     RegisterClassExW, SW_SHOW, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOZORDER, SendMessageW,
     SetForegroundWindow, SetTimer, SetWindowLongPtrW, SetWindowPos, SetWindowTextW, ShowWindow,
@@ -51,7 +51,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_ERASEBKGND, WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDBLCLK, WM_LBUTTONDOWN,
     WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_SETICON, WM_SETTINGCHANGE, WM_SIZE,
     WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER, WNDCLASSEXW, WS_CAPTION, WS_EX_APPWINDOW,
-    WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_SYSMENU,
+    WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_SYSMENU, WS_VISIBLE,
 };
 use windows::core::{BOOL, HSTRING, PCWSTR, w};
 
@@ -420,7 +420,7 @@ fn create(kind: &str) -> windows::core::Result<()> {
     let setting = theme_setting();
     let dark = crate::render::Theme::for_setting(&setting).dark;
     set_dark(hwnd, dark);
-    set_icons(hwnd, dpi);
+    set_icons(hwnd, dpi, dark);
     let mut gfx = Gfx::new(hwnd, dpi)?;
     let scale = dpi as f32 / 96.0;
     gfx.resize((m::PANEL_W * scale) as u32, (300.0 * scale) as u32);
@@ -471,7 +471,7 @@ fn create(kind: &str) -> windows::core::Result<()> {
     let x = (monitor.area.x + (monitor.area.width - f64::from(w)) / 2.0) as i32;
     let y = (monitor.area.y + (monitor.area.height * 0.18).min(160.0 * s)) as i32;
     win.normal_at = Some((x, y));
-    win.settle();
+    win.settle(true);
     WIN.with(|c| *c.borrow_mut() = Some(win));
     // SAFETY: our window, shown and given the keyboard
     unsafe {
@@ -497,9 +497,9 @@ fn set_dark(hwnd: HWND, dark: bool) {
     };
 }
 
-fn set_icons(hwnd: HWND, dpi: u32) {
+fn set_icons(hwnd: HWND, dpi: u32, dark: bool) {
     for (which, px) in [(ICON_SMALL, 16 * dpi / 96), (ICON_BIG, 32 * dpi / 96)] {
-        if let Some(icon) = crate::tray::icon(px, false) {
+        if let Some(icon) = crate::tray::icon(px, dark) {
             // SAFETY: our window; the icon stays for its life (a few KB, freed with the process)
             unsafe { SendMessageW(hwnd, WM_SETICON, Some(WPARAM(which as usize)), Some(LPARAM(icon.0 as isize))) };
         }
@@ -545,7 +545,8 @@ unsafe extern "system" fn proc_(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) ->
         let win = slot.as_mut().filter(|w| w.hwnd == hwnd)?;
         let r = win.on(msg, wp, lp);
         if !win.closed {
-            win.settle();
+            // a frame repaints only when something moves (next_frame), never because it was painted
+            win.settle(msg != WM_PAINT);
         }
         Some(r)
     });
@@ -576,8 +577,11 @@ fn run_ops() {
                     let _ = unsafe { SetWindowPos(hwnd, None, x, y, w, h, flags) };
                 }
                 Op::Style(hwnd, style) => {
-                    // SAFETY: our window
-                    unsafe { SetWindowLongPtrW(hwnd, GWL_STYLE, style.0 as isize) };
+                    // SAFETY: our window; it stays visible (WS_VISIBLE is part of the style word)
+                    unsafe {
+                        let visible = GetWindowLongPtrW(hwnd, GWL_STYLE) & WS_VISIBLE.0 as isize;
+                        SetWindowLongPtrW(hwnd, GWL_STYLE, style.0 as isize | visible)
+                    };
                 }
                 Op::Destroy(hwnd) => {
                     // SAFETY: our window; WM_DESTROY comes back and marks it for dropping
@@ -757,6 +761,7 @@ impl Win {
                     let dark = crate::render::Theme::for_setting(&self.theme).dark;
                     self.colors = Colors::new(dark);
                     set_dark(self.hwnd, dark);
+                    set_icons(self.hwnd, self.dpi(), dark);
                 }
                 return None;
             }
@@ -916,7 +921,7 @@ impl Win {
     }
 
     /// After every message: the game's requests, the link's news, the timers, the clipboard, and a repaint.
-    fn settle(&mut self) {
+    fn settle(&mut self, repaint: bool) {
         for _ in 0..32 {
             let sent = std::mem::take(&mut self.env.sent);
             if !sent.is_empty()
@@ -974,12 +979,23 @@ impl Win {
         if let Some(text) = self.env.clipboard.take() {
             crate::clip::set(hwnd, &text);
         }
-        // SAFETY: our window; WM_PAINT comes when the queue is empty
-        let _ = unsafe { InvalidateRect(Some(hwnd), None, false) };
+        if repaint {
+            // SAFETY: our window; WM_PAINT comes when the queue is empty
+            let _ = unsafe { InvalidateRect(Some(hwnd), None, false) };
+        }
     }
 
     /// One frame: the card (or full screen's stage), the lobby or the game, and the shell's layers.
     fn paint(&mut self) {
+        // the target follows the client area (a WM_SIZE sent while the window was being restyled can go by)
+        let mut cr = RECT::default();
+        // SAFETY: a live out rect for our window
+        if unsafe { GetClientRect(self.hwnd, &mut cr) }.is_ok() {
+            let (w, h) = (cr.right.max(1) as u32, cr.bottom.max(1) as u32);
+            if (w, h) != self.gfx.px && unsafe { IsWindowVisible(self.hwnd).as_bool() } {
+                self.gfx.resize(w, h);
+            }
+        }
         let t = self.t0.elapsed().as_secs_f64();
         let fs = self.env.shell.fullscreen;
         let content_h = self.content_h;

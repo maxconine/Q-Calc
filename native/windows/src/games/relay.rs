@@ -107,7 +107,10 @@ impl Relay {
             return;
         }
         match e {
-            SockEvent::Opened => self.peer.opened(id, now),
+            SockEvent::Opened => {
+                crate::qlog!("games: relay socket {id} open");
+                self.peer.opened(id, now);
+            }
             SockEvent::Message(text) => self.peer.message(id, &text, now),
             SockEvent::Closed => {
                 self.socks.remove(&id);
