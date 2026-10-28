@@ -288,13 +288,68 @@ pub fn tauri_history(dir: &Path) -> Option<String> {
         .filter(|t| t.trim_start().starts_with('['))
 }
 
-/// Queued on the engine thread before the tape loads: the Tauri app's history, once.
+/// Written once the move has been made (or found nothing), so later launches cost one file check.
+pub const MARKER: &str = "tauri-migrated.json";
+
+/// What the Tauri page left in its localStorage that the native app keeps in files of its own.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Moves {
+    /// the page's `qcalc-history` (or `instant-solver-history`) JSON, for the engine's `history.json`
+    pub history: Option<String>,
+    /// `qcalc-messaging` (`{name, key, accepted, blocked, recent}`), for `messaging.json`, in the same shape
+    pub messaging: Option<String>,
+    /// the game saves and the room nickname, as `games.json` (`{gameSaves, nickname}`, games/store.rs)
+    pub games: Option<String>,
+}
+
+/// The moves a Tauri LevelDB holds.
+pub fn plan(db: &Newest) -> Moves {
+    let history = ["qcalc-history", "instant-solver-history"]
+        .iter()
+        .find_map(|k| local_storage(db, k))
+        .filter(|t| t.trim_start().starts_with('['));
+    // a name without its key can't be had back from the relay, so the pair moves together, and lists alone too
+    let messaging = local_storage(db, "qcalc-messaging").filter(|t| {
+        serde_json::from_str::<serde_json::Value>(t).is_ok_and(|v| {
+            v.is_object()
+                && (v["name"].as_str().is_some_and(|n| !n.is_empty())
+                    || ["accepted", "blocked", "recent"]
+                        .iter()
+                        .any(|k| v[*k].as_array().is_some_and(|a| !a.is_empty())))
+        })
+    });
+    let mut saves = serde_json::Map::new();
+    for key in qcalc_core::games::saves::GAME_SAVE_KEYS {
+        if let Some(v) = local_storage(db, key)
+            && v.encode_utf16().count() <= qcalc_core::games::saves::GAME_SAVE_MAX
+        {
+            saves.insert(key.to_string(), serde_json::Value::String(v));
+        }
+    }
+    let nickname = local_storage(db, "qcalc-nickname")
+        .map(|n| qcalc_core::games::nickname::clean_nickname(&n))
+        .unwrap_or_default();
+    let games = (!saves.is_empty() || !nickname.is_empty()).then(|| {
+        serde_json::to_string_pretty(
+            &serde_json::json!({ "gameSaves": saves, "nickname": nickname }),
+        )
+        .unwrap_or_default()
+    });
+    Moves {
+        history,
+        messaging,
+        games,
+    }
+}
+
+/// Queued on the engine thread before the tape loads (Misc runs first): the Tauri app's history, messaging name
+/// and lists, and game saves, each into its file only if that file isn't there yet, then the marker.
 pub fn history(engine: &crate::engine::EngineThread) {
     // QCALC_DATA points tests and the bench at a folder of their own; they never take a real user's history
     if std::env::var_os("QCALC_DATA").is_some() && std::env::var_os("QCALC_MIGRATE").is_none() {
         return;
     }
-    let Some(target) = crate::store::config_dir().map(|d| d.join("history.json")) else {
+    let Some(data) = crate::store::config_dir() else {
         return;
     };
     let Some(dir) = std::env::var_os("QCALC_MIGRATE")
@@ -303,24 +358,48 @@ pub fn history(engine: &crate::engine::EngineThread) {
     else {
         return;
     };
-    if target.exists() || !dir.is_dir() {
+    if data.join(MARKER).exists() || !dir.is_dir() {
         return;
     }
     engine.submit(crate::engine::Lane::Misc, move |cx| {
         let t = std::time::Instant::now();
-        let Some(json) = tauri_history(&dir) else {
-            qlog!("migrate: no history in the Tauri app's storage");
-            return None;
-        };
-        let rows = cx.engine.history_from_json(json);
-        let n = rows.len();
-        match cx.engine.save_history(rows) {
-            Ok(_) => qlog!(
-                "migrate: {n} history rows from the Tauri app in {:.1} ms",
-                t.elapsed().as_secs_f64() * 1000.0
-            ),
-            Err(e) => qlog!("migrate: couldn't save the history: {e}"),
+        let moves = plan(&read_db(&dir));
+        let mut rows_moved = 0usize;
+        if let Some(json) = moves.history
+            && !data.join("history.json").exists()
+        {
+            let rows = cx.engine.history_from_json(json);
+            rows_moved = rows.len();
+            if let Err(e) = cx.engine.save_history(rows) {
+                qlog!("migrate: couldn't save the history: {e}");
+                // tried again next launch
+                return None;
+            }
         }
+        let put = |file: &str, text: Option<String>| -> bool {
+            let path = data.join(file);
+            match text {
+                Some(text) if !path.exists() => match crate::store::write_atomic(&path, &text) {
+                    Ok(()) => true,
+                    Err(e) => {
+                        qlog!("migrate: couldn't write {file}: {e}");
+                        false
+                    }
+                },
+                _ => false,
+            }
+        };
+        let messaging = put("messaging.json", moves.messaging);
+        let games = put("games.json", moves.games);
+        let note = serde_json::json!({
+            "at": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs()),
+            "historyRows": rows_moved, "messaging": messaging, "games": games,
+        });
+        let _ = crate::store::write_atomic(&data.join(MARKER), &note.to_string());
+        qlog!(
+            "migrate: from the Tauri app: {rows_moved} history rows, messaging {messaging}, games {games} in {:.1} ms",
+            t.elapsed().as_secs_f64() * 1000.0
+        );
         None
     });
 }
@@ -469,6 +548,99 @@ mod tests {
             &mut db,
         );
         assert_eq!(local_storage(&db, "qcalc-history").as_deref(), Some("[2]"));
+    }
+
+    fn fixture(rest: &str) -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join(r"tests\fixtures\tauri")
+            .join(rest)
+    }
+
+    /// The Tauri app's real on-disk shapes (tests/fixtures/tauri/make.ps1: Chromium's own LevelDB, a table and a
+    /// newer log over it; the Tauri store's settings.json).
+    #[test]
+    fn the_tauri_fixture_moves_whole() {
+        let db = read_db(&fixture("leveldb"));
+        let moves = plan(&db);
+        let history: serde_json::Value =
+            serde_json::from_str(moves.history.as_deref().unwrap()).unwrap();
+        let exprs: Vec<&str> = history
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["expr"].as_str().unwrap())
+            .collect();
+        // the log's newer tape, not the table's older one; oldest first, as the page keeps it
+        assert_eq!(exprs, ["12 kg to lb", "r = 5 m", "f(x) = x^2 + 1", "2×π"]);
+        assert_eq!(history[2]["fnBody"], "x^2 + 1");
+        let m: serde_json::Value =
+            serde_json::from_str(moves.messaging.as_deref().unwrap()).unwrap();
+        assert_eq!(
+            (m["name"].as_str(), m["key"].as_str().map(str::len)),
+            (Some("ada_l"), Some(64))
+        );
+        // what the native app makes of it, through the core's own rules
+        let native = qcalc_core::app::messaging::sanitize_messaging(&m);
+        assert_eq!(native.name, "ada_l");
+        assert_eq!(native.accepted, ["grace_h"]);
+        assert_eq!(native.blocked, ["spam_bot"]);
+        // games.json's shape (games/store.rs `GameStore::from_json`)
+        let games: serde_json::Value =
+            serde_json::from_str(moves.games.as_deref().unwrap()).unwrap();
+        assert_eq!(games["nickname"], "teal otter");
+        assert_eq!(games["gameSaves"]["qcalc-crack"], "7");
+        assert!(games["gameSaves"]["qcalc-equal"].is_string());
+        // deleted in the second run: gone, though the table still holds it
+        assert_eq!(local_storage(&db, "qcalc-filler"), None);
+        // the page's draft and settings mirror aren't moved (settings.json is shared and counts)
+        assert!(local_storage(&db, "qcalc-draft").is_some());
+        assert_eq!(tauri_history(&fixture("leveldb")), moves.history);
+    }
+
+    #[test]
+    fn the_tauri_settings_file_reads_as_saved() {
+        let text = std::fs::read_to_string(fixture("settings.json")).unwrap();
+        let s = crate::store::Store::from_json(&text);
+        assert_eq!(s.settings.angle_mode, "rad");
+        assert!(s.settings.fraction_mode && s.settings.space_thousands && !s.settings.share_usage);
+        assert_eq!((s.settings.sig_figs, s.settings.draft_seconds), (9, 120));
+        assert_eq!(s.settings.theme, "dark");
+        assert_eq!(s.settings.history_show, "always");
+        assert_eq!(
+            s.settings.default_units.get("length").map(String::as_str),
+            Some("ft")
+        );
+        assert_eq!(
+            s.settings.keybinds.get("angle").map(String::as_str),
+            Some("ctrl+alt+r")
+        );
+        assert_eq!(s.hotkey, "ctrl+alt+shift+f10");
+        assert_eq!(s.positions.get(r"\\.\DISPLAY1"), Some(&[412.0, 180.0]));
+        assert_eq!((s.spot_seconds, s.width, s.auto_update), (0, 900.0, false));
+        assert!(s.first_run_done && s.onboarding.done);
+        assert_eq!(s.onboarding.commits, 117);
+        // kept for the Tauri app, written back as it was
+        assert_eq!(s.sign_in, Some(true));
+        assert!(
+            serde_json::to_string(&s)
+                .unwrap()
+                .contains("\"signIn\":true")
+        );
+    }
+
+    #[test]
+    fn nothing_to_move_is_no_moves() {
+        assert_eq!(plan(&Newest::new()), Moves::default());
+        let mut db = Newest::new();
+        // a messaging entry with neither a name nor lists isn't worth a file
+        note(
+            &mut db,
+            &key("qcalc-messaging"),
+            1,
+            Some(b"\x01{\"name\":\"\",\"accepted\":[]}"),
+        );
+        note(&mut db, &key("qcalc-history"), 2, Some(b"\x01{}"));
+        assert_eq!(plan(&db), Moves::default());
     }
 
     #[test]

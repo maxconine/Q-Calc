@@ -63,7 +63,7 @@ pub fn spawn(name: &str, f: impl FnOnce() + Send + 'static) {
         .spawn(f);
 }
 
-/// Once, after the first frame: the rates, the usage counts and the update loop.
+/// Once, after the first frame: the rates, the usage counts, the update loop and a crash report to offer.
 pub fn start(app: &mut App) {
     if HOST.load(Ordering::Relaxed) != 0 {
         return;
@@ -77,6 +77,7 @@ pub fn start(app: &mut App) {
     crate::analytics::start(app);
     crate::rates::start();
     crate::update::start(app);
+    crate::crash::start();
 }
 
 /// A function for `Op::Run`: window work a feature does once the app's borrow has ended. Never equal to another

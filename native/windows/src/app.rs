@@ -161,6 +161,7 @@ pub struct App {
 
 pub fn run() -> i32 {
     log::install();
+    crate::crash::install();
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let args = Args::parse(&argv);
     qlog!("launch native {} {:?}", env!("CARGO_PKG_VERSION"), argv);
