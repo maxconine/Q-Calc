@@ -70,6 +70,7 @@ fn function_name(word: &str) -> Option<&'static str> {
         "gcf" => "greatest common factor",
         "hcf" => "highest common factor",
         "lcm" | "lcf" => "least common multiple",
+        "lcd" => "least common denominator",
         "mod" => "modulo",
         "hypot" => "hypotenuse",
         "factorial" => "factorial",

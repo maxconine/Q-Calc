@@ -621,6 +621,7 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
             (r"\bgcf\b", "i", "gcf"),
             (r"\blcm\b", "i", "lcm"),
             (r"\blcf\b", "i", "lcf"),
+            (r"\blcd\b", "i", "lcd"),
         ]
         .iter()
         .map(|(p, f, to)| (js(p, f), *to))

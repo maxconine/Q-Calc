@@ -1204,6 +1204,8 @@ pub const TABLE: &[Builtin] = &[
     entry!("hcf", 0, |a, _| num(ratio_fold(a, true))),
     entry!("lcm", 0, |a, _| num(ratio_fold(a, false))),
     entry!("lcf", 0, |a, _| num(ratio_fold(a, false))),
+    // native only: the least common denominator of whole denominators is their lcm
+    entry!("lcd", 0, |a, _| num(ratio_fold(a, false))),
     entry!("powmod", 3, powmod),
     entry!("combinations", 2, combinations),
     entry!("permutations", 2, permutations),

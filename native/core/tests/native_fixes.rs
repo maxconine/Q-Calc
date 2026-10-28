@@ -124,3 +124,14 @@ fn exponent_form_of_an_answer() {
         assert_eq!(exponent_form(shown, 6), None, "{shown}");
     }
 }
+
+#[test]
+fn lcd_is_the_least_common_denominator() {
+    assert_eq!(show("lcd(4,6)"), "12");
+    assert_eq!(show("LCD(3, 4, 6)"), "12");
+    assert_eq!(show("lcd(4,6)"), show("lcm(4,6)"));
+    let names = qcalc_core::app::word_names::word_names("lcd(4,6) + gcf(12,18)", &[], &[], false);
+    let said: Vec<&str> = names.iter().map(|w| w.name.as_str()).collect();
+    assert!(said.contains(&"least common denominator"), "{said:?}");
+    assert!(said.contains(&"greatest common factor"), "{said:?}");
+}
