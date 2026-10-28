@@ -1,6 +1,8 @@
 // q calc's usage counts: POST /e from the apps, a daily github download snapshot, and a dashboard at /
 // secrets: DASHBOARD_PASSWORD (wrangler secret put DASHBOARD_PASSWORD), optional GITHUB_TOKEN for rate limits
 
+import { FEATURES, label, needsWork, perUser, rankLiked } from './stats.js'
+
 const ID_RE = /^[0-9a-f]{32}$/
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
 const EVENT_RE = /^[a-z]+(?:\.[a-z]+)?$/
@@ -154,15 +156,35 @@ async function dashboard(env, url) {
   const since = addDays(today, -(range - 1))
   const q = (sql, ...args) => env.DB.prepare(sql).bind(...args).all().then((r) => r.results)
 
-  const [active, fresh, events, featureReach, dl, dlBefore, versions, totals, reached, firstSnap] = await Promise.all([
+  const [active, fresh, calcs, perEvent, perInstall, windows, cohort, dl, dlBefore, versions, totals, firstSnap] = await Promise.all([
     q(
       `SELECT u.day, i.platform, COUNT(DISTINCT u.id) AS n FROM usage u JOIN installs i ON i.id = u.id
        WHERE u.day >= ?1 GROUP BY u.day, i.platform`,
       since,
     ),
     q(`SELECT first_day AS day, platform, COUNT(*) AS n FROM installs WHERE first_day >= ?1 GROUP BY first_day, platform`, since),
-    q(`SELECT day, event, SUM(n) AS n FROM usage WHERE day >= ?1 GROUP BY day, event`, since),
-    q(`SELECT event, COUNT(DISTINCT id) AS installs FROM usage WHERE day >= ?1 GROUP BY event`, since),
+    q(`SELECT day, SUM(n) AS n FROM usage WHERE day >= ?1 AND event LIKE 'calc.%' GROUP BY day`, since),
+    // one row per install and event: enough for every per-user median, the liked list and the drop-offs
+    q(
+      `SELECT id, event, SUM(n) AS n, COUNT(*) AS days, max(day) AS last FROM usage WHERE day >= ?1 GROUP BY id, event`,
+      since,
+    ),
+    q(`SELECT id, COUNT(DISTINCT day) AS days, max(day) AS last FROM usage WHERE day >= ?1 GROUP BY id`, since),
+    // active yesterday (the last whole day), in the last 7 and in the last 30 days, whatever the range
+    q(
+      `SELECT COUNT(DISTINCT CASE WHEN day = ?1 THEN id END) AS d1, COUNT(DISTINCT CASE WHEN day >= ?2 THEN id END) AS d7,
+         COUNT(DISTINCT id) AS d30 FROM usage WHERE day >= ?3`,
+      addDays(today, -1),
+      addDays(today, -6),
+      addDays(today, -29),
+    ),
+    // installs first seen 8 to 37 days ago, old enough for a week to have passed: did they come back?
+    q(
+      `SELECT COUNT(*) AS cohort, coalesce(SUM(last_day > first_day), 0) AS back,
+         coalesce(SUM(last_day >= date(first_day, '+7 days')), 0) AS week FROM installs WHERE first_day BETWEEN ?1 AND ?2`,
+      addDays(today, -37),
+      addDays(today, -8),
+    ),
     q(`SELECT day, asset, platform, total FROM downloads WHERE day >= ?1 ORDER BY day`, since),
     // the last snapshot before the range, so the first day in it has a delta
     q(
@@ -180,7 +202,6 @@ async function dashboard(env, url) {
        JOIN (SELECT asset, max(day) AS day FROM downloads GROUP BY asset) l ON l.asset = d.asset AND l.day = d.day
        GROUP BY d.platform`,
     ),
-    q(`SELECT COUNT(DISTINCT id) AS n FROM usage WHERE day >= ?1`, since),
     q(`SELECT min(day) AS day FROM downloads`),
   ])
 
@@ -198,9 +219,23 @@ async function dashboard(env, url) {
     prev.set(r.asset, r.total)
   }
 
-  const data = { range, days, installs: reached[0].n, active, fresh, events, featureReach, downloads, versions, totals }
+  // install ids stay in the worker; the page only gets counts
+  const users = perUser(perEvent, perInstall)
+  const retention = cohort[0]
+  const liked = rankLiked(users.features).slice(0, 10)
+  const work = needsWork({ ...users, retention }).slice(0, 8)
+  const allFeatures = FEATURES.map(
+    (e) => users.features.find((f) => f.event === e) ?? { event: e, label: label(e), users: 0, share: 0, repeat: 0, repeatRate: 0, dropped: 0, dropRate: 0, medianUses: null, total: 0 },
+  )
+  allFeatures.push(...users.features.filter((f) => !FEATURES.includes(f.event)))
+  allFeatures.sort((a, b) => b.users - a.users || b.total - a.total)
+
+  const data = {
+    range, days, windows: windows[0], retention, activeUsers: users.activeUsers, spreads: users.spreads, liked, work,
+    features: allFeatures, active, fresh, calcs, downloads, versions, downloadTotals: totals,
+  }
   const json = JSON.stringify(data).replace(/</g, '\\u003c')
-  return new Response(PAGE.replace('__DATA__', json), {
+  return new Response(PAGE.replace('__DATA__', () => json), {
     headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
   })
 }
@@ -266,6 +301,20 @@ td.n, th.n { text-align: right; }
 #tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
 .foot { color: var(--text-muted); font-size: 12px; margin-top: 16px; }
 .foot a { color: inherit; }
+h3 { font-size: 15px; margin: 28px 0 10px; color: var(--text-secondary); font-weight: 600; }
+.tile .note { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+ol.rank { margin: 0; padding: 0; list-style: none; counter-reset: r; }
+ol.rank li { counter-increment: r; display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 8px; padding: 7px 0; border-bottom: 1px solid var(--grid); }
+ol.rank li:last-child { border-bottom: 0; }
+ol.rank li::before { content: counter(r); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+ol.rank .what { font-weight: 600; }
+ol.rank .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+ol.rank .why { grid-column: 2 / 4; color: var(--text-secondary); font-size: 12px; }
+.meter { grid-column: 2 / 4; height: 6px; border-radius: 3px; background: var(--grid); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--series-1); border-radius: 3px; }
+.muted { color: var(--text-muted); }
+.wide { grid-column: 1 / -1; }
+.scroll { overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -276,11 +325,17 @@ td.n, th.n { text-align: right; }
   </header>
   <div class="tiles" id="tiles"></div>
   <div class="grid">
+    <section class="card"><h2>What people like</h2><p class="sub" id="liked-sub"></p><div id="liked"></div></section>
+    <section class="card"><h2>What needs work</h2><p class="sub">Ranked by how many users each one touches</p><div id="work"></div></section>
+  </div>
+  <h3>Detail</h3>
+  <div class="grid">
+    <section class="card wide"><h2>Per user</h2><p class="sub">Medians across active installs in range, so one heavy user doesn't skew them. The middle half of users fall between the 25th and 75th percentiles.</p><div id="peruser" class="scroll"></div></section>
+    <section class="card wide"><h2>All features</h2><p class="sub">Installs that used each feature in range, the share who came back to it on another day, and how often each used it</p><div id="features" class="scroll"></div></section>
     <section class="card"><h2>Daily active installs</h2><p class="sub">Installs that opened Q Calc that day</p><div id="dau"></div></section>
-    <section class="card"><h2>Downloads per day</h2><p class="sub">Installers and Mac update zips from GitHub Releases</p><div id="dl"></div></section>
     <section class="card"><h2>Calculations per day</h2><p class="sub">Answers committed with Enter, all installs</p><div id="calcs"></div></section>
     <section class="card"><h2>New installs per day</h2><p class="sub">First day an install reported</p><div id="fresh"></div></section>
-    <section class="card"><h2>Feature usage</h2><p class="sub">Total uses in range · installs that used it</p><div id="features"></div></section>
+    <section class="card"><h2>Downloads per day</h2><p class="sub" id="dl-sub">Installers and Mac update zips from GitHub Releases</p><div id="dl"></div></section>
     <section class="card"><h2>Versions in use</h2><p class="sub">Installs active in range, by current version</p><div id="versions"></div></section>
   </div>
   <p class="foot">Apps report every few hours on their own calendar day, so today fills in late. Downloads update daily; <a href="/snapshot">snapshot now</a>.</p>
@@ -289,16 +344,9 @@ td.n, th.n { text-align: right; }
 <script>
 const D = __DATA__
 const PLATFORMS = [['mac', 'Mac', 'var(--series-1)'], ['windows', 'Windows', 'var(--series-2)']]
-const LABELS = {
-  launch: 'App launched', open: 'Overlay opened', update: 'Updated to a new version',
-  'calc.arith': 'Arithmetic', 'calc.units': 'Units', 'calc.solve': 'Solve', 'calc.system': 'Systems of equations',
-  'calc.graph': 'Graph', 'calc.function': 'Function definition', 'calc.assign': 'Variable assignment',
-  'calc.calculus': 'Calculus', 'calc.matrix': 'Matrices', 'calc.words': 'Natural language', 'calc.chain': 'Chained from answer',
-  'copy.answer': 'Copy answer', 'copy.line': 'Copy line', 'history.insert': 'Insert from history', 'history.undo': 'Undo history',
-  'form.tab': 'Tab through answer forms', 'prefix.step': 'Step SI prefix', periodic: 'Periodic table', help: 'Help sheet',
-  'settings.open': 'Settings shortcut', 'error.blank': 'Enter with no answer', 'error.unit': 'Impossible unit conversion',
-}
-const fmt = (n) => n.toLocaleString('en-US')
+const fmt = (n) => (n == null ? '–' : (+n).toLocaleString('en-US', { maximumFractionDigits: 1 }))
+const ppl = (n) => fmt(n) + (n === 1 ? ' user' : ' users')
+const pct = (x) => (x == null ? '–' : Math.round(x * 100) + '%')
 const short = (day) => new Date(day + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const sum = (rows) => rows.reduce((a, r) => a + r.n, 0)
@@ -375,52 +423,69 @@ function columns(el, series, stacked) {
   })
 }
 
-// ---- tiles
-const activeDay = byDay(D.active)
-const calcRows = D.events.filter((r) => r.event.startsWith('calc.'))
+// ---- headline numbers
+const W = D.windows, R = D.retention, C = D.spreads.calculations
+const rangeName = D.range === 365 ? 'the last year' : 'the last ' + D.range + ' days'
 const tiles = [
-  ['Active installs', fmt(D.installs)],
-  ['New installs', fmt(sum(D.fresh))],
-  ['Downloads', fmt(sum(D.downloads))],
-  ['All-time downloads', fmt(sum(D.totals))],
-  ['Calculations', fmt(sum(calcRows))],
+  ['Active yesterday', fmt(W.d1), 'installs that used Q Calc'],
+  ['Active, last 7 days', fmt(W.d7), 'installs'],
+  ['Active, last 30 days', fmt(W.d30), 'installs'],
+  ['Median calculations per user', fmt(C.median), C.users ? 'middle half ' + fmt(C.p25) + '–' + fmt(C.p75) + ' · ' + fmt(C.users) + ' users, ' + rangeName : 'no users yet'],
+  ['Still using a week later', R.cohort ? pct(R.week / R.cohort) : '–', R.cohort ? fmt(R.week) + ' of ' + fmt(R.cohort) + ' installs first seen 8–37 days ago' : 'no installs old enough yet'],
+  ['Came back another day', R.cohort ? pct(R.back / R.cohort) : '–', R.cohort ? 'of the same ' + fmt(R.cohort) + ' installs' : ''],
 ]
 document.getElementById('tiles').innerHTML = tiles
-  .map(([k, v]) => '<div class="tile"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>').join('')
+  .map(([k, v, note]) => '<div class="tile"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="note">' + esc(note) + '</div></div>').join('')
 
-columns(document.getElementById('dau'), PLATFORMS, activeDay)
+// ---- what people like
+document.getElementById('liked-sub').textContent = 'Features ranked by how many of the ' + fmt(D.activeUsers) +
+  ' active installs used them in ' + rangeName + ', then by how many came back to them on another day'
+;(() => {
+  const el = document.getElementById('liked')
+  if (!D.liked.length) return (el.innerHTML = '<div class="empty">Nothing yet</div>')
+  el.innerHTML = '<ol class="rank">' + D.liked.map((f) =>
+    '<li><span class="what">' + esc(f.label) + '</span><span class="num">' + ppl(f.users) + ' <span class="muted">· ' + pct(f.share) + '</span></span>' +
+    '<span class="meter"><i style="width:' + Math.max(2, f.share * 100) + '%"></i></span>' +
+    '<span class="why">' + pct(f.repeatRate) + ' came back to it on another day · median ' + fmt(f.medianUses) + ' uses each</span></li>').join('') + '</ol>'
+})()
+
+// ---- what needs work
+;(() => {
+  const el = document.getElementById('work')
+  if (!D.work.length) return (el.innerHTML = '<div class="empty">Nothing stands out yet</div>')
+  el.innerHTML = '<ol class="rank">' + D.work.map((w) =>
+    '<li><span class="what">' + esc(w.label) + '</span><span class="num">' + (w.users ? ppl(w.users) : '') + '</span>' +
+    '<span class="why">' + esc(w.detail) + '</span></li>').join('') + '</ol>'
+})()
+
+// ---- per user
+;(() => {
+  const rows = [
+    ['Calculations', D.spreads.calculations],
+    ['Times the overlay was opened', D.spreads.opens],
+    ['Days active', D.spreads.activeDays],
+    ['Different features used', D.spreads.features],
+  ]
+  document.getElementById('peruser').innerHTML = '<table><thead><tr><th>Per user, ' + rangeName + '</th><th class="n">Median</th><th class="n">25th pct</th><th class="n">75th pct</th><th class="n">Users</th></tr></thead><tbody>' +
+    rows.map(([k, s]) => '<tr><td>' + k + '</td><td class="n"><b>' + fmt(s.median) + '</b></td><td class="n">' + fmt(s.p25) + '</td><td class="n">' + fmt(s.p75) +
+      '</td><td class="n">' + fmt(s.users) + '</td></tr>').join('') + '</tbody></table>'
+})()
+
+// ---- all features
+document.getElementById('features').innerHTML = '<table><thead><tr><th>Feature</th><th class="n">Users</th><th class="n">Came back</th><th class="n">Tried once, dropped</th><th class="n">Median uses per user</th><th class="n">All uses</th></tr></thead><tbody>' +
+  D.features.map((f) => '<tr><td>' + esc(f.label) + '</td><td class="n">' + fmt(f.users) + '</td><td class="n">' + (f.users ? pct(f.repeatRate) : '–') +
+    '</td><td class="n">' + (f.users ? fmt(f.dropped) : '–') + '</td><td class="n">' + fmt(f.medianUses) + '</td><td class="n">' + fmt(f.total) + '</td></tr>').join('') +
+  '</tbody></table>'
+
+// ---- charts
+columns(document.getElementById('dau'), PLATFORMS, byDay(D.active))
 columns(document.getElementById('dl'), PLATFORMS, byDay(D.downloads))
 columns(document.getElementById('fresh'), PLATFORMS, byDay(D.fresh))
 const calcDay = new Map(D.days.map((d) => [d, { all: 0 }]))
-for (const r of calcRows) if (calcDay.has(r.day)) calcDay.get(r.day).all += r.n
+for (const r of D.calcs) if (calcDay.has(r.day)) calcDay.get(r.day).all += r.n
 columns(document.getElementById('calcs'), [['all', 'Calculations', 'var(--series-1)']], calcDay)
-
-// ---- features: horizontal bars, one hue, sorted by use
-;(() => {
-  const totals = new Map()
-  for (const r of D.events) totals.set(r.event, (totals.get(r.event) || 0) + r.n)
-  const reach = new Map(D.featureReach.map((r) => [r.event, r.installs]))
-  const rows = [...totals].filter(([e]) => e !== 'launch').sort((a, b) => b[1] - a[1])
-  const el = document.getElementById('features')
-  if (!rows.length) return (el.innerHTML = '<div class="empty">Nothing yet</div>')
-  const W = 480, rh = 22, LW = 170, VW = 80, max = rows[0][1]
-  let s = '<svg class="bars" viewBox="0 0 ' + W + ' ' + rows.length * rh + '" role="img">'
-  rows.forEach(([event, n], i) => {
-    const w = Math.max(2, ((W - LW - VW) * n) / max), y = i * rh
-    s += '<text class="lbl" x="0" y="' + (y + 15) + '">' + esc(LABELS[event] || event) + '</text>'
-    s += '<rect x="' + LW + '" y="' + (y + 5) + '" width="' + w + '" height="12" rx="3" fill="var(--series-1)"/>'
-    s += '<text class="val" x="' + (LW + w + 6) + '" y="' + (y + 15) + '">' + fmt(n) + '</text>'
-    s += '<text x="' + W + '" y="' + (y + 15) + '" text-anchor="end">' + fmt(reach.get(event) || 0) + '</text>'
-    s += '<rect class="hit" data-e="' + esc(event) + '" x="0" y="' + y + '" width="' + W + '" height="' + rh + '" fill="transparent"/>'
-  })
-  el.innerHTML = s + '</svg>'
-  el.querySelectorAll('.hit').forEach((r) => {
-    const e = r.dataset.e
-    r.addEventListener('mousemove', (ev) => showTip(ev, '<b>' + esc(LABELS[e] || e) + '</b>' + fmt(totals.get(e)) + ' uses<br>' +
-      fmt(reach.get(e) || 0) + ' installs<br><span style="color:var(--text-muted)">' + esc(e) + '</span>'))
-    r.addEventListener('mouseleave', hideTip)
-  })
-})()
+document.getElementById('dl-sub').textContent = fmt(sum(D.downloads)) + ' in range, ' + fmt(sum(D.downloadTotals)) +
+  ' all time. Installers and Mac update zips from GitHub Releases'
 
 // ---- versions
 ;(() => {
