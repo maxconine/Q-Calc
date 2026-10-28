@@ -61,7 +61,7 @@ namespace QCalcE2E
         const uint MOUSEEVENTF_LEFTDOWN = 0x2, MOUSEEVENTF_LEFTUP = 0x4;
         public const ushort VK_BACK = 0x08, VK_TAB = 0x09, VK_RETURN = 0x0D, VK_SHIFT = 0x10, VK_CONTROL = 0x11, VK_MENU = 0x12,
             VK_ESCAPE = 0x1B, VK_SPACE = 0x20, VK_A = 0x41, VK_C = 0x43, VK_Q = 0x51, VK_F4 = 0x73, VK_F9 = 0x78,
-            VK_OEM_COMMA = 0xBC;
+            VK_OEM_COMMA = 0xBC, VK_UP = 0x26;
 
         [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
         [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(POINT p);

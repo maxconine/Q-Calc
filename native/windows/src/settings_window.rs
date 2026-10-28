@@ -480,7 +480,10 @@ fn items(app: &App, win: &Win) -> Vec<Item> {
                 } else {
                     keybind_for(&core_binds, action, true)
                 };
-                let recording = win.recording.as_ref().filter(|r| r.action == action);
+                let recording = win
+                    .recording
+                    .as_ref()
+                    .filter(|r| r.native.is_none() && r.action == action);
                 let text = match recording {
                     Some(r) if !r.held.is_empty() => kb::held_label(&r.held, true),
                     Some(_) => "Press keys…".into(),
@@ -522,6 +525,27 @@ fn items(app: &App, win: &Win) -> Vec<Item> {
                         },
                     ));
                 }
+            }
+            // the native app's own: Ctrl+E's exponent form, Ctrl+Shift+E's other forms (exponent.rs)
+            for (id, label, default) in crate::exponent::NATIVE_ACTIONS {
+                let chord = crate::exponent::native_chord(&s.keybinds, id);
+                let recording = win.recording.as_ref().filter(|r| r.native == Some(id));
+                let text = match recording {
+                    Some(r) if !r.held.is_empty() => kb::held_label(&r.held, true),
+                    Some(_) => "Press keys…".into(),
+                    None if chord.is_empty() => "None".into(),
+                    None => chord_label(&chord, true),
+                };
+                out.push(row(
+                    &format!("key:{id}"),
+                    label,
+                    "",
+                    Control::Key {
+                        label: text,
+                        recording: recording.is_some(),
+                        changed: chord != default,
+                    },
+                ));
             }
             let changed = !s.keybinds.is_empty() || app.hotkey.wanted != hotkey::STANDARD;
             out.push(row(
@@ -670,6 +694,8 @@ fn changed(app: &mut App, win: &mut Win, id: &str, value: Value) {
         _ if id.starts_with("key:") => {
             if let Some(action) = KeyAction::from_id(&id["key:".len()..]) {
                 win.toggle_recording(app, action);
+            } else if let Some(native) = crate::exponent::native_action(&id["key:".len()..]) {
+                win.toggle_native(app, native);
             }
         }
         _ => patch(app, json!({ id: value })),
@@ -680,7 +706,15 @@ fn changed(app: &mut App, win: &mut Win, id: &str, value: Value) {
 /// A chord for one of the bar's actions: the core's rule that a default is stored as no override.
 fn pick_key(app: &mut App, action: KeyAction, chord: &str) {
     let next = kb::set_keybind(&binds(&app.store.settings), action, chord, true);
-    patch(app, json!({ "keybinds": kb::keybinds_json(&next) }));
+    // the native app's own keys (exponent.rs) ride along, since the core's JSON only knows its own
+    let next = crate::exponent::with_native(kb::keybinds_json(&next), &app.store.settings.keybinds);
+    patch(app, json!({ "keybinds": next }));
+}
+
+/// A chord for one of the native app's own actions (exponent.rs), the core's overrides kept.
+fn pick_native(app: &mut App, id: &str, chord: &str) {
+    let next = crate::exponent::set_native(&app.store.settings.keybinds, id, chord);
+    patch(app, json!({ "keybinds": next }));
 }
 
 /// The verdict on a chord for show / hide: free (or already Q Calc's), or taken with its likely owner and a free
@@ -788,6 +822,8 @@ fn pick_show(app: &mut App, win: &mut Win, chord: &str) {
 #[derive(Clone, Debug, PartialEq)]
 struct Recording {
     action: KeyAction,
+    /// a native action's id (exponent.rs) being recorded; `action` is then unused
+    native: Option<&'static str>,
     /// the modifiers held now ("ctrl+alt"), and the most held since the last key
     held: String,
     peak: String,
@@ -888,6 +924,9 @@ enum Pending {
 
 fn color_of(theme: &Theme, dark: bool) -> (D2D1_COLOR_F, D2D1_COLOR_F) {
     // page, card
+    if crate::contrast::on() {
+        return (theme.bg, theme.bg);
+    }
     if dark {
         (render::rgb(0x202022, 1.0), theme.bg)
     } else {
@@ -1225,7 +1264,10 @@ impl Win {
     }
 
     fn toggle_recording(&mut self, app: &mut App, action: KeyAction) {
-        let again = self.recording.as_ref().is_some_and(|r| r.action == action);
+        let again = self
+            .recording
+            .as_ref()
+            .is_some_and(|r| r.native.is_none() && r.action == action);
         self.stop_recording(app);
         self.note.clear();
         if again {
@@ -1237,6 +1279,27 @@ impl Win {
         }
         self.recording = Some(Recording {
             action,
+            native: None,
+            held: String::new(),
+            peak: String::new(),
+        });
+        self.dirty = true;
+    }
+
+    /// Recording for a native action (exponent.rs): as `toggle_recording`, with no hotkey to pause.
+    fn toggle_native(&mut self, app: &mut App, id: &'static str) {
+        let again = self
+            .recording
+            .as_ref()
+            .is_some_and(|r| r.native == Some(id));
+        self.stop_recording(app);
+        self.note.clear();
+        if again {
+            return;
+        }
+        self.recording = Some(Recording {
+            action: KeyAction::Settings,
+            native: Some(id),
             held: String::new(),
             peak: String::new(),
         });
@@ -1245,7 +1308,7 @@ impl Win {
 
     fn stop_recording(&mut self, app: &mut App) {
         if let Some(r) = self.recording.take() {
-            if r.action == KeyAction::Show {
+            if r.native.is_none() && r.action == KeyAction::Show {
                 // the paused chord comes back
                 app.hotkey.kick("settings recorder done");
             }
@@ -1284,6 +1347,7 @@ impl Win {
             return true;
         }
         let action = rec.action;
+        let native = rec.native;
         rec.peak.clear();
         rec.held.clear();
         let plain = held.is_empty();
@@ -1293,7 +1357,11 @@ impl Win {
             return true;
         }
         if plain && (vk == 0x08 || vk == 0x2E) {
-            if action == KeyAction::Show {
+            if let Some(id) = native {
+                self.stop_recording(app);
+                self.note.clear();
+                pick_native(app, id, "");
+            } else if action == KeyAction::Show {
                 self.note = "Show / hide needs a key".into();
             } else {
                 self.stop_recording(app);
@@ -1319,7 +1387,23 @@ impl Win {
         let chord = hotkey::normalize(&chord).unwrap_or(chord);
         let mut all = binds(&app.store.settings);
         all.insert(KeyAction::Show, app.hotkey.wanted.clone());
-        if let Some(why) = chord_problem(&chord, action, &all, true) {
+        if let Some(id) = native {
+            // a native action (exponent.rs): the core's rules, and no clash with any other key
+            let keys = &app.store.settings.keybinds;
+            if let Some(why) = crate::exponent::native_problem(&chord, id, keys, &all) {
+                self.note = why;
+                self.dirty = true;
+                return true;
+            }
+            self.end_recording();
+            self.note.clear();
+            pick_native(app, id, &chord);
+            self.dirty = true;
+            return true;
+        }
+        let problem = chord_problem(&chord, action, &all, true)
+            .or_else(|| crate::exponent::native_clash(&chord, None, &app.store.settings.keybinds));
+        if let Some(why) = problem {
             self.note = why;
             self.dirty = true;
             return true;
@@ -1372,8 +1456,16 @@ impl Win {
                     }
                     Control::Button { enabled: true, .. } => changed(app, self, &id, Value::Null),
                     Control::Key { .. } => {
-                        if let Some(action) = KeyAction::from_id(&id["key:".len().min(id.len())..])
-                        {
+                        let key_id = &id["key:".len().min(id.len())..];
+                        if let Some(native) = crate::exponent::native_action(key_id) {
+                            if part == 1 {
+                                self.stop_recording(app);
+                                self.note.clear();
+                                pick_native(app, native, crate::exponent::native_default(native));
+                            } else {
+                                self.toggle_native(app, native);
+                            }
+                        } else if let Some(action) = KeyAction::from_id(key_id) {
                             if part == 1 {
                                 self.stop_recording(app);
                                 self.note.clear();
@@ -1567,11 +1659,14 @@ impl Win {
         let result = self.surface.draw(&app.gfx, &theme, |c: &mut Canvas| {
             c.clear(page_bg);
             // the sidebar
-            let side = if dark {
-                render::rgb(0x1b1b1d, 1.0)
-            } else {
-                render::rgb(0xebebef, 1.0)
-            };
+            let side = crate::contrast::or(
+                if dark {
+                    render::rgb(0x1b1b1d, 1.0)
+                } else {
+                    render::rgb(0xebebef, 1.0)
+                },
+                theme.bg,
+            );
             c.fill(Rect::new(0.0, 0.0, NAV_W, c.height), side);
             if let Some(t) = c.gfx.layout("Settings", &fonts.heading, 0.0, 24.0) {
                 c.text(&t, 26.0, PAD + 6.0, theme.muted);
@@ -1707,16 +1802,22 @@ fn draw_control(
 ) {
     let at = |r: &Rect| Rect::new(r.x, r.y + dy, r.w, r.h);
     let hovered = |part: usize| hover == Some(Target::Control { item, part });
-    let field_bg = if theme.dark {
-        render::rgb(0x3a3a3c, 1.0)
-    } else {
-        render::rgb(0xffffff, 1.0)
-    };
-    let border = if theme.dark {
-        render::rgb(0xffffff, 0.14)
-    } else {
-        render::rgb(0x000000, 0.16)
-    };
+    let field_bg = crate::contrast::or(
+        if theme.dark {
+            render::rgb(0x3a3a3c, 1.0)
+        } else {
+            render::rgb(0xffffff, 1.0)
+        },
+        theme.bg,
+    );
+    let border = crate::contrast::or(
+        if theme.dark {
+            render::rgb(0xffffff, 0.14)
+        } else {
+            render::rgb(0x000000, 0.16)
+        },
+        theme.line,
+    );
     match control {
         Control::None => {}
         Control::Toggle(on) => {
@@ -1735,11 +1836,14 @@ fn draw_control(
                 c.fill_round(
                     k,
                     k.h / 2.0,
-                    if theme.dark {
-                        render::rgb(0x1d1d1f, 1.0)
-                    } else {
-                        render::rgb(0xffffff, 1.0)
-                    },
+                    crate::contrast::or(
+                        if theme.dark {
+                            render::rgb(0x1d1d1f, 1.0)
+                        } else {
+                            render::rgb(0xffffff, 1.0)
+                        },
+                        theme.bg,
+                    ),
                 );
             } else {
                 boxed(
@@ -2201,7 +2305,13 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> 
                 drop(win);
                 qlog!("settings: closed, its resources released");
             }
+            crate::uia::forget(hwnd);
             return LRESULT(0);
+        }
+        windows::Win32::UI::WindowsAndMessaging::WM_GETOBJECT => {
+            if let Some(r) = crate::uia::get_object(hwnd, wp, lp, uia_tree) {
+                return r;
+            }
         }
         _ => {}
     }
@@ -2213,6 +2323,10 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> 
     });
     crate::app::run_ops();
     run_pending();
+    // a reader hears the focus move and the page change (uia.rs), from what was just painted
+    if msg == WM_PAINT && (crate::a11y::reader_on() || crate::uia::heard(hwnd)) {
+        crate::uia::changed(hwnd, None);
+    }
     match out {
         Some(Some(Some(r))) => r,
         _ if msg == WM_PAINT => {
@@ -2468,6 +2582,155 @@ fn run_pending() {
 
 /// The window as the e2e suite sees it (the bench pipe's `settings-controls`): open or not, its page, and every
 /// control part on screen in physical pixels with its row id and choice, so a test can click one for real.
+/// The window for UI Automation (uia.rs's source): the pages as tabs, the page's headings and notes as text, each
+/// control as what it is (a toggle a check box, choices radio buttons, a list a combo box, a shortcut a button), in
+/// screen pixels, with the keyboard's focus. None while the window is busy.
+fn uia_tree(hwnd: HWND) -> Option<crate::uia::Tree> {
+    use crate::uia::{Node, Role, Tree};
+    WIN.with(|w| {
+        let w = w.try_borrow().ok()?;
+        let win = w.as_ref()?;
+        let s = f64::from(win.scale());
+        let mut origin = POINT::default();
+        // SAFETY: our window, a live out point
+        let _ = unsafe { ClientToScreen(hwnd, &mut origin) };
+        // SAFETY: a plain query
+        let active = unsafe { windows::Win32::UI::Input::KeyboardAndMouse::GetFocus() } == hwnd;
+        let at = |r: Rect, scrolled: bool| {
+            let y = if scrolled { r.y - win.scroll } else { r.y };
+            [
+                f64::from(origin.x) + f64::from(r.x) * s,
+                f64::from(origin.y) + f64::from(y) * s,
+                f64::from(r.w) * s,
+                f64::from(r.h) * s,
+            ]
+        };
+        let focused = win.focus.and_then(|i| win.focusables().get(i).map(|f| f.0));
+        let mut nodes = Vec::new();
+        let Some(l) = &win.layout else {
+            return Some(Tree {
+                name: "Q Calc Settings".into(),
+                nodes,
+            });
+        };
+        for (k, (page, r, _)) in l.nav.iter().enumerate() {
+            nodes.push(Node {
+                id: 1 + k as i32,
+                role: Role::Tab,
+                name: page.nav().into(),
+                rect: at(*r, false),
+                selected: Some(*page == win.page),
+                ..Node::default()
+            });
+        }
+        for (i, item) in l.items.iter().enumerate() {
+            let Some(laid) = l.laid.get(i) else {
+                continue;
+            };
+            let base = 1000 + 100 * i as i32;
+            match item {
+                Item::Heading(t) | Item::Note(t, _) => nodes.push(Node {
+                    id: base,
+                    role: if matches!(item, Item::Heading(_)) {
+                        Role::Heading
+                    } else {
+                        Role::Text
+                    },
+                    name: t.clone(),
+                    rect: at(laid.card, true),
+                    ..Node::default()
+                }),
+                Item::Row {
+                    title,
+                    hint,
+                    control,
+                    ..
+                } => {
+                    for (r, _, part) in &laid.parts {
+                        let here = Target::Control {
+                            item: i,
+                            part: *part,
+                        };
+                        let mut n = Node {
+                            id: base + *part as i32,
+                            name: title.clone(),
+                            help: hint.clone(),
+                            rect: at(*r, true),
+                            focusable: true,
+                            focused: active && focused == Some(here),
+                            ..Node::default()
+                        };
+                        match control {
+                            Control::None => {
+                                n.role = Role::Text;
+                                n.focusable = false;
+                            }
+                            Control::Toggle(on) => {
+                                n.role = Role::CheckBox;
+                                n.toggled = Some(*on);
+                            }
+                            Control::Seg { options, value } => {
+                                n.role = Role::RadioButton;
+                                if let Some((id, label)) = options.get(*part) {
+                                    n.name = format!("{label}, {title}");
+                                    n.selected = Some(id == value);
+                                }
+                            }
+                            Control::Select { options, value } => {
+                                n.role = Role::ComboBox;
+                                n.value = Some(
+                                    options
+                                        .iter()
+                                        .find(|(id, _)| id == value)
+                                        .map_or_else(|| value.clone(), |(_, l)| l.clone()),
+                                );
+                            }
+                            Control::Button { label, enabled } => {
+                                n.role = Role::Button;
+                                n.name = label.clone();
+                                if hint.is_empty() {
+                                    n.help = title.clone();
+                                }
+                                n.focusable = *enabled;
+                            }
+                            Control::Key {
+                                label, recording, ..
+                            } => {
+                                n.role = Role::Button;
+                                n.name = if *part == 1 {
+                                    format!("Reset {title}")
+                                } else if *recording {
+                                    format!("{title}: press the new shortcut")
+                                } else {
+                                    format!("{title}: {label}")
+                                };
+                            }
+                            Control::Text { value, .. } => {
+                                n.role = Role::Edit;
+                                n.value = Some(value.clone());
+                            }
+                        }
+                        nodes.push(n);
+                    }
+                    if laid.parts.is_empty() {
+                        nodes.push(Node {
+                            id: base,
+                            name: title.clone(),
+                            help: hint.clone(),
+                            rect: at(laid.card, true),
+                            ..Node::default()
+                        });
+                    }
+                }
+            }
+        }
+        Some(Tree {
+            name: format!("Q Calc Settings, {}", win.page.title()),
+            nodes,
+        })
+    })
+}
+
 pub fn debug() -> Value {
     WIN.with(|w| {
         let Ok(w) = w.try_borrow() else {

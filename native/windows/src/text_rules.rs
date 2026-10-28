@@ -242,8 +242,14 @@ pub fn wrap(text: &str, start: usize, end: usize, key: char) -> Option<(String, 
 
 /// A `+-` that meets at the caret after a backspace becomes ± (joinPlusMinusAt): the new text, or None.
 pub fn join_plus_minus(text: &str, caret: usize) -> Option<String> {
-    (caret > 0 && text[caret - 1..].starts_with("+-"))
-        .then(|| format!("{}±{}", &text[..caret - 1], &text[caret + 1..]))
+    // bytes, not a str slice: the caret can sit just after a two-byte letter (π), and caret - 1 is inside it. "+-"
+    // is ASCII, so where it matches both slices below fall on character boundaries
+    (caret > 0
+        && text
+            .as_bytes()
+            .get(caret - 1..)
+            .is_some_and(|b| b.starts_with(b"+-")))
+    .then(|| format!("{}±{}", &text[..caret - 1], &text[caret + 1..]))
 }
 
 /// flattenPastedText: look-alike characters cleaned (cleanPastedText), line breaks as spaces.
@@ -326,6 +332,9 @@ mod tests {
     fn pastes_flatten_and_equations_open_a_system() {
         assert_eq!(flatten_paste("1\r\n+2\t*3"), "1 +2 *3");
         assert_eq!(join_plus_minus("2+-1", 2).as_deref(), Some("2±1"));
+        // a backspace that leaves the caret after π (two bytes): no join, and no panic mid-letter
+        assert_eq!(join_plus_minus("sin(π", "sin(π".len()), None);
+        assert_eq!(join_plus_minus("π+-1", "π+".len()).as_deref(), Some("π±1"));
         let sys = pasted_system("x + y = 3\nx - y = 1").expect("a system");
         assert_eq!(sys.len(), 2);
         assert_eq!(pasted_system("2+2"), None);

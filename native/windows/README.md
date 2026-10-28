@@ -78,12 +78,19 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `commands.rs` | the word commands that aren't maths (`periodic`, `idt …`, `constants`, `games` and a game's name, `message`, `tutorial`, `skip`, `hello`): their words in the answer slot, ↵ runs them, the games list above the bar |
 | `sheets.rs` | the periodic table and identity sheets, each a no-activate window beside the bar; `close_front` for Ctrl+W |
 | `messaging.rs` | messages through the relay: the `message` line, the cards under the bar, the name; registers settings' Messages page (`set_messages_hook`) |
+| `threads.rs` | message threads under the cards (`messages`, `messages <name>`): the history (`messages.json`), the list, a thread's lines with Copy / Save / Retry, its reply line and 📎, Trust New Key and the safety code; the one-time privacy notice |
+| `share_drop.rs` | the bar as an OLE drop target once messaging is in use: the hint while files are dragged over the bar or a thread |
+| `clip_image.rs` | a copied image as `clipboard.png` (the clipboard's PNG, else its bitmap encoded here) |
+| `share_debug.rs` | the bench pipe's `share {…}` commands for `tests/e2e/share-e2e.ps1` (two copies through a local relay) |
 | `relay.rs` | the relay over WinHTTP: messaging's POSTs and inbox socket, and the games' sockets (`Socket::open_url`) |
 | `tour.rs` | onboarding and the walkthrough: the tour's line, its step example in the empty bar (in place of line.rs's), hints; `will_show` runs after line.rs counted the open |
 | `hover.rs` | the pointer over the tape and the answer: the row and cell lit, the hand cursor, the system tooltip after a 450 ms rest; triple-click selects the line |
 | `contrast.rs` | contrast themes: the theme from the system colours while one is on (`QCALC_CONTRAST=1` to look without one) |
-| `a11y.rs` | with a screen reader on, the bar's name is the line and its answer, with a name-change event (`QCALC_READER=1` for the test) |
-| `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf, clear) and their tips |
+| `a11y.rs` | the bar for screen readers: its UI Automation tree (line, answer, hint, tape rows) and, with a reader on, the events and notifications; the name-change fallback (`QCALC_READER=1` for the test) |
+| `uia.rs` | UI Automation providers for the windows Q Calc draws (bar, settings): a flat tree of named parts, focus / value / live-region events, notifications (`examples/uia_watch.rs` listens) |
+| `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf · ×10ⁿ, clear) and their tips |
+| `exponent.rs` | Ctrl+E's lasting exponent form (`settings.exponentMode`, 3,000 → 3 × 10³) and Ctrl+Shift+E's other forms: the native app's own keybinds (`exponent`, `forms`) beside the core's, listed in Settings › Keybinds |
+| `word_tip.rs` | the pointer over the line names its units, functions and constants over the word (the core's `word_names`), and `ans` (typed or faint) the last answer; asked of the engine only while the pointer is on the line |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
 | `games/` | the native games, each in a window and a process of its own (`qcalc.exe --game <kind>`, games/README.md): `open(kind)`, `is_open`, `command`/`hint` for the bar; online play over relay.rs |
@@ -169,5 +176,5 @@ retries run out does the tray say which launcher likely holds the chord.
 ## Known gaps (next agents)
 
 The games ember & frost and trails (win-games2; the games list says they aren't in yet); Mica / acrylic backdrop;
-a full UI Automation tree (a11y.rs only names the bar: the tape's rows, the caret and selection aren't exposed);
+UI Automation for the sheets and the games' insides (their windows are named only) and the line's caret and selection as a text pattern;
 a fade on showing (the Mac's 0.1 s: a flip swap chain can't be a layered window, so it needs DirectComposition).

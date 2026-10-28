@@ -104,6 +104,26 @@ fn temp() -> PathBuf {
     d
 }
 
+/// A folder of its own under `temp()`, for a file whose name is what the recipient sees (`clipboard.png`), so two
+/// copies (or two quick pastes) never write over each other.
+fn temp_own() -> PathBuf {
+    let d = temp().join(crypt::new_id());
+    let _ = std::fs::create_dir_all(&d);
+    d
+}
+
+/// Where Save puts files: Downloads, or `QCALC_DOWNLOADS` (the e2e suite's folder).
+fn downloads() -> Option<PathBuf> {
+    match std::env::var_os("QCALC_DOWNLOADS") {
+        Some(d) if !d.is_empty() => {
+            let d = PathBuf::from(d);
+            let _ = std::fs::create_dir_all(&d);
+            Some(d)
+        }
+        _ => crypt::downloads(),
+    }
+}
+
 fn auth() -> Option<[(String, String); 2]> {
     let (name, key) = crate::messaging::credentials();
     (!name.is_empty() && !key.is_empty()).then(|| {
@@ -164,6 +184,7 @@ pub fn hint(what: &str, to: &str, name: &str) -> String {
     if !name.is_empty() {
         crate::messaging::check_name(name);
     }
+    crate::share_drop::ensure_soon();
     core::share_hint(&cmd, &m, true, crate::messaging::found_name(name), &dropped)
 }
 
@@ -188,8 +209,18 @@ pub fn enter(app: &mut App, what: &str, name: &str) {
         send_files(app, dropped, &name);
         return;
     }
+    pick_and_send(app, &name);
+}
+
+/// The open dialog (a thread's 📎, `send file to <name>` ↵): the picked file goes to `name`.
+pub fn pick_and_send(app: &mut App, name: &str) {
+    if !crate::messaging::has_name() {
+        crate::settings_window::open(app);
+        return;
+    }
     // the picker takes the keys (our own window, so the bar stays); it runs outside the app's borrow
     let owner = app.bar.hwnd.0 as usize;
+    let name = name.to_string();
     crate::later::free("share-pick", 0, move || {
         let picked = pick_file(owner);
         bg::post(move |app| {
@@ -203,7 +234,7 @@ pub fn enter(app: &mut App, what: &str, name: &str) {
 /// Whether the bar stays up when another window is clicked (a file can be dragged in from Explorer): only for a
 /// messaging line (`message …`, `send file to …`, `paste to …`) or files waiting for a name.
 pub fn holds_open(m: &BarModel) -> bool {
-    if with(|s| !s.pending.is_empty()) {
+    if with(|s| !s.pending.is_empty()) || crate::threads::panel().is_some() {
         return true;
     }
     let t = m.field.text();
@@ -217,6 +248,16 @@ fn say(app: &mut App, note: String) {
     app.model.touch();
 }
 
+/// `say`, on the open thread's reply line when it's `to`'s, else under the bar.
+fn say_to(app: &mut App, to: &str, note: String) {
+    if crate::threads::say(to, &note) {
+        crate::a11y::announce(&note);
+        app.model.touch();
+    } else {
+        say(app, note);
+    }
+}
+
 // ---- sending a clip ----
 
 /// The clipboard to `to`: copied files as files, text as a clip (a text file past 64 KB).
@@ -228,32 +269,63 @@ pub fn send_clipboard(app: &mut App, to: &str) {
     }
     let text = crate::clip::get(app.bar.hwnd).unwrap_or_default();
     if text.is_empty() {
-        say(
+        // a copied image goes as clipboard.png
+        if let Some(image) = crate::clip_image::read(app.bar.hwnd) {
+            let to = to.to_string();
+            say_to(app, &to, "encrypting clipboard.png…".into());
+            bg::spawn("qcalc-share-png", move || {
+                let path = temp_own().join("clipboard.png");
+                let written = crate::clip_image::png(image)
+                    .is_some_and(|png| std::fs::write(&path, png).is_ok());
+                bg::post(move |app| {
+                    if written {
+                        send_files(app, vec![path], &to);
+                    } else {
+                        say_to(app, &to, core::file_error_text("disk", &to));
+                    }
+                });
+            });
+            return;
+        }
+        say_to(
             app,
+            to,
             core::share_status_text("empty-clipboard", to, "clip", ""),
         );
         return;
     }
     if text.len() > core::CLIP_MAX {
-        let path = temp().join("clipboard.txt");
-        if std::fs::write(&path, text.as_bytes()).is_err() {
-            say(app, core::file_error_text("disk", to));
-            return;
-        }
-        send_files(app, vec![path], to);
+        let to = to.to_string();
+        bg::spawn("qcalc-share-txt", move || {
+            let path = temp_own().join("clipboard.txt");
+            let written = std::fs::write(&path, text.as_bytes()).is_ok();
+            bg::post(move |app| {
+                if written {
+                    send_files(app, vec![path], &to);
+                } else {
+                    say_to(app, &to, core::file_error_text("disk", &to));
+                }
+            });
+        });
         return;
     }
     send_clip(app, text, to);
 }
 
-fn send_clip(app: &mut App, clip: String, to: &str) {
+pub fn send_clip(app: &mut App, clip: String, to: &str) {
     let to = to.to_string();
     let (me, relay_key) = crate::messaging::credentials();
     if me.is_empty() {
-        say(app, core::share_status_text("no-name", &to, "clip", ""));
+        say_to(
+            app,
+            &to,
+            core::share_status_text("no-name", &to, "clip", ""),
+        );
         return;
     }
-    say(app, format!("sharing with {to}…"));
+    crate::threads::first_share(app);
+    say_to(app, &to, format!("sharing with {to}…"));
+    let sent = clip.clone();
     bg::spawn("qcalc-share", move || {
         let status = (|| {
             let (theirs, their_text) = match keys::for_sending(&me, &relay_key, &to) {
@@ -279,8 +351,9 @@ fn send_clip(app: &mut App, clip: String, to: &str) {
         bg::post(move |app| {
             if status == "delivered" {
                 crate::messaging::note_sent(&to);
+                crate::threads::record_clip(&to, true, &sent);
             }
-            say(app, core::share_status_text(&status, &to, "clip", ""));
+            say_to(app, &to, core::share_status_text(&status, &to, "clip", ""));
         });
     });
 }
@@ -299,45 +372,114 @@ fn found_status(f: &Found) -> String {
 
 // ---- sending files ----
 
-/// Files to `to`: folders say to zip them, more than 20 send none, each other one is offered.
+/// Files to `to`: folders say to zip them, more than 20 send none, each other one is offered. Shortcuts and links
+/// are followed first (off the UI thread), so a `.lnk` to a folder says so too.
 pub fn send_files(app: &mut App, paths: Vec<PathBuf>, to: &str) {
-    let files: Vec<PathBuf> = paths.iter().filter(|p| !p.is_dir()).cloned().collect();
-    if files.is_empty() {
-        if !paths.is_empty() {
-            say(app, core::file_error_text("folder", to));
-        }
+    if paths.is_empty() {
         return;
     }
-    let too_many = core::drop_count_text(files.len() as u32);
+    let too_many = core::drop_count_text(paths.len() as u32);
     if !too_many.is_empty() {
-        say(app, too_many);
+        say_to(app, to, too_many);
         return;
     }
-    for f in files {
-        send_file(app, f, to);
+    if crate::messaging::credentials().0.is_empty() {
+        say_to(app, to, core::share_status_text("no-name", to, "file", ""));
+        return;
+    }
+    crate::threads::first_share(app);
+    let to = to.to_string();
+    bg::spawn("qcalc-share-paths", move || {
+        let resolved: Vec<PathBuf> = paths.iter().map(|p| target_of(p)).collect();
+        let files: Vec<PathBuf> = resolved.into_iter().filter(|p| !p.is_dir()).collect();
+        bg::post(move |app| {
+            if files.is_empty() {
+                say_to(app, &to, core::file_error_text("folder", &to));
+                return;
+            }
+            for f in files {
+                send_file(app, f, &to);
+            }
+        });
+    });
+}
+
+/// What a path is once shortcuts (`.lnk`) and symbolic links are followed (a worker: it reads the disk).
+pub fn target_of(given: &Path) -> PathBuf {
+    let lnk = given
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("lnk"));
+    let followed = if lnk {
+        shortcut_target(given).unwrap_or_else(|| given.to_path_buf())
+    } else {
+        given.to_path_buf()
+    };
+    // a symlink (or a junction) sends what it points to; `\\?\` comes off for a plain name
+    match std::fs::canonicalize(&followed) {
+        Ok(p) => {
+            let s = p.to_string_lossy();
+            match s.strip_prefix(r"\\?\") {
+                Some(rest) if !rest.starts_with("UNC\\") => PathBuf::from(rest),
+                _ => p,
+            }
+        }
+        Err(_) => followed,
     }
 }
 
-fn send_file(app: &mut App, given: PathBuf, to: &str) {
+/// A shell shortcut's target (IShellLinkW), None when it isn't one or points at nothing on disk.
+fn shortcut_target(lnk: &Path) -> Option<PathBuf> {
+    use windows::Win32::System::Com::{
+        CLSCTX_INPROC_SERVER, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx,
+        CoUninitialize, IPersistFile, STGM_READ,
+    };
+    use windows::Win32::UI::Shell::{IShellLinkW, ShellLink};
+    use windows::core::{HSTRING, Interface};
+    // SAFETY: COM on this worker thread for the call's length; the buffers outlive the calls
+    unsafe {
+        let inited = CoInitializeEx(None, COINIT_MULTITHREADED).is_ok();
+        let out = (|| {
+            let link: IShellLinkW =
+                CoCreateInstance(&ShellLink, None, CLSCTX_INPROC_SERVER).ok()?;
+            let file: IPersistFile = link.cast().ok()?;
+            file.Load(&HSTRING::from(lnk.as_os_str()), STGM_READ).ok()?;
+            let mut buf = [0u16; 32_768];
+            // no flags: the target as a full path, environment variables expanded
+            link.GetPath(&mut buf, std::ptr::null_mut(), 0).ok()?;
+            let len = buf.iter().position(|c| *c == 0).unwrap_or(0);
+            let p = PathBuf::from(String::from_utf16_lossy(&buf[..len]));
+            (len > 0 && p.exists()).then_some(p)
+        })();
+        if inited {
+            CoUninitialize();
+        }
+        out
+    }
+}
+
+fn send_file(app: &mut App, path: PathBuf, to: &str) {
     let to = to.to_string();
     let (me, relay_key) = crate::messaging::credentials();
     if me.is_empty() {
-        say(app, core::share_status_text("no-name", &to, "file", ""));
+        say_to(
+            app,
+            &to,
+            core::share_status_text("no-name", &to, "file", ""),
+        );
         return;
     }
-    // a symlink sends what it points to
-    let path = std::fs::canonicalize(&given).unwrap_or(given);
     let raw_name = path
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     let name = core::clean_filename(&raw_name);
-    say(app, format!("encrypting {name}…"));
+    say_to(app, &to, format!("encrypting {name}…"));
     bg::spawn("qcalc-share", move || {
         let result = offer(&path, &name, &to, &me, &relay_key);
         bg::post(move |app| match result {
             Ok((id, sealed, bytes, size)) => {
                 crate::messaging::note_sent(&to);
+                crate::threads::record_file(&to, true, &id, &name, size);
                 with(|s| {
                     s.outgoing.insert(
                         id.clone(),
@@ -360,12 +502,13 @@ fn send_file(app: &mut App, given: PathBuf, to: &str) {
                         },
                     );
                 });
-                say(
+                say_to(
                     app,
+                    &to,
                     core::share_status_text("delivered", &to, "file", &name),
                 );
             }
-            Err(note) => say(app, note),
+            Err(note) => say_to(app, &to, note),
         });
     });
 }
@@ -486,6 +629,13 @@ fn upload(id: &str, grant: &str, part_bytes: u64) {
                 }
                 let mut tries = 0;
                 loop {
+                    // the e2e suite's window to take the relay down mid-upload
+                    if let Some(ms) = std::env::var("QCALC_E2E_SLOW_UPLOAD_MS")
+                        .ok()
+                        .and_then(|v| v.parse::<u64>().ok())
+                    {
+                        std::thread::sleep(std::time::Duration::from_millis(ms));
+                    }
                     let (status, _) = call(
                         "PUT",
                         &format!("/file/{id}/part/{n}"),
@@ -518,6 +668,18 @@ fn upload(id: &str, grant: &str, part_bytes: u64) {
                 drop_outgoing(&id);
             } else if status != "cancelled" {
                 failed(&id, &status, &who);
+                // the bar says so too: the file's line (with Retry) is in their thread
+                if !crate::threads::is_open(&who) {
+                    let note = core::file_error_text(&status, &who);
+                    say(
+                        app,
+                        if RETRYABLE.contains(&status.as_str()) {
+                            format!("{note} · messages {who} to retry")
+                        } else {
+                            note
+                        },
+                    );
+                }
             }
             refresh_cards(app);
         });
@@ -581,6 +743,18 @@ pub fn frame(app: &mut App, text: &str) -> bool {
 pub fn inbox_ready() {
     let (name, key) = crate::messaging::credentials();
     bg::spawn("qcalc-share-key", move || keys::publish(&name, &key));
+    // a `ready` sent while the inbox was down is never sent again: a file still waiting is asked for now (the relay
+    // says `not-ready` if it isn't, and it stays waiting)
+    let waiting: Vec<String> = with(|s| {
+        s.transfers
+            .iter()
+            .filter(|(_, t)| !t.mine && t.state == "waiting")
+            .map(|(id, _)| id.clone())
+            .collect()
+    });
+    for id in waiting {
+        download(&id);
+    }
 }
 
 fn heard(app: &mut App, event: Value) {
@@ -660,7 +834,11 @@ fn heard(app: &mut App, event: Value) {
                     s.held_for_key.push((from.clone(), event));
                     first
                 });
-                if first {
+                // an open thread shows it (and Trust New Key) itself
+                if crate::threads::is_open(&from) {
+                    crate::a11y::announce(&core::key_changed_text(&from));
+                    app.model.touch();
+                } else if first {
                     crate::messaging::share_card(
                         app,
                         &from,
@@ -694,6 +872,13 @@ fn unopened(app: &mut App, kind: &str, from: &str) {
     } else {
         "shared their clipboard, but it couldn’t be opened on this pc · ask them to send it again"
     };
+    // a line is left in their thread, so it's never lost without a word
+    crate::threads::record_text(from, false, note);
+    if crate::threads::is_open(from) {
+        crate::threads::heard(from, "message", note);
+        app.model.touch();
+        return;
+    }
     crate::messaging::share_card(app, from, note, None);
 }
 
@@ -774,12 +959,23 @@ fn show(app: &mut App, from: &str, clip: Option<String>, file: Option<String>) {
     };
     let said = match &kind {
         Kind::File(id) => {
-            let name = with(|s| s.transfers.get(id).map(|t| t.name.clone()));
-            core::card_announcement(from, "file", &name.unwrap_or_default())
+            let t = with(|s| s.transfers.get(id).map(|t| (t.name.clone(), t.size)));
+            let (name, size) = t.unwrap_or_default();
+            crate::threads::record_file(from, false, id, &name, size);
+            core::card_announcement(from, "file", &name)
         }
-        _ => core::card_announcement(from, "clip", ""),
+        Kind::Clip(c) => {
+            crate::threads::record_clip(from, false, c);
+            core::card_announcement(from, "clip", "")
+        }
+        Kind::KeyChanged(_) => String::new(),
     };
     crate::a11y::announce(&said);
+    // with their thread open it lands there, not as a card
+    if crate::threads::is_open(from) {
+        app.model.touch();
+        return;
+    }
     crate::messaging::share_card(app, from, &text, Some(kind));
 }
 
@@ -879,6 +1075,7 @@ fn save(app: &mut App, id: &str) {
     if t.mine || !matches!(t.state.as_str(), "received" | "failed") {
         return;
     }
+    crate::threads::first_share(app);
     let Some(inc) = with(|s| s.incoming.get(id).cloned()) else {
         set_state(id, "lost", None, None);
         return;
@@ -965,7 +1162,7 @@ fn download(id: &str) {
             }
             drop(file);
             let key = crypt::file_key(&inc.key).ok_or("corrupt")?;
-            let dir = crypt::downloads().ok_or("disk")?;
+            let dir = downloads().ok_or("disk")?;
             crypt::safe_save(&sealed, &key, &inc.sha256, inc.size, &t.name, &dir)
                 .map_err(|e| e.status().to_string())
         })();
@@ -1051,19 +1248,119 @@ pub fn acts(card: &str) -> Vec<(Act, String)> {
     match kind {
         Kind::Clip(_) => vec![(Act::Copy, "Copy".into())],
         Kind::KeyChanged(_) => vec![(Act::Trust, "Trust New Key".into())],
-        Kind::File(id) => {
-            if can_retry(&id) {
-                return vec![(Act::Retry, "Retry".into())];
-            }
-            let state = with(|s| s.transfers.get(&id).map(|t| (t.mine, t.state.clone())));
-            match state {
-                Some((false, st)) if st == "received" || st == "failed" => {
-                    vec![(Act::Save, "Save".into())]
-                }
-                _ => Vec::new(),
-            }
-        }
+        Kind::File(id) => file_acts(&id),
     }
+}
+
+/// A file's buttons, in a card or a thread line: Retry for a failed upload, Save for an accepted name's file.
+pub fn file_acts(id: &str) -> Vec<(Act, String)> {
+    if can_retry(id) {
+        return vec![(Act::Retry, "Retry".into())];
+    }
+    let state = with(|s| {
+        s.transfers
+            .get(id)
+            .map(|t| (t.mine, t.state.clone(), t.who.clone()))
+    });
+    match state {
+        Some((false, st, who))
+            if (st == "received" || st == "failed")
+                && crate::messaging::arrival_of(&who) == Arrival::Show =>
+        {
+            vec![(Act::Save, "Save".into())]
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// A file line's words and progress in a thread: where it's got to; "no longer available" for one this run never
+/// heard of (a key and progress live only in memory).
+pub fn line_state(id: &str, mine: bool, who: &str) -> (String, Option<u32>) {
+    let _ = mine;
+    with(|s| match s.transfers.get(id) {
+        Some(t) => {
+            let words = t
+                .error
+                .clone()
+                .unwrap_or_else(|| core::file_state_text(&t.state, &t.who, t.percent));
+            let pct = matches!(t.state.as_str(), "uploading" | "downloading")
+                .then_some(t.percent)
+                .flatten();
+            (words, pct)
+        }
+        None => (core::file_state_text("lost", who, None), None),
+    })
+}
+
+/// Save or Retry on a file (a card's, a thread line's).
+pub fn file_act(app: &mut App, id: &str, retry: bool) {
+    if retry {
+        if can_retry(id) {
+            upload(id, "", PART_BYTES);
+        }
+    } else {
+        save(app, id);
+    }
+    refresh_cards(app);
+}
+
+/// Trust New Key (a card's, the thread's): their new key is pinned, the safety code said, and what they sent while
+/// it was held opens now.
+pub fn trust(app: &mut App, who: &str) {
+    if !keys::trust(who) {
+        return;
+    }
+    let who = who.to_string();
+    let cards: Vec<String> = with(|s| {
+        s.cards
+            .iter()
+            .filter(|(_, k)| **k == Kind::KeyChanged(who.clone()))
+            .map(|(c, _)| c.clone())
+            .collect()
+    });
+    app.model.cards.list.retain(|c| !cards.contains(&c.card.id));
+    let code = keys::safety_code(&who);
+    say_to(app, &who, core::safety_code_text(&who, &code));
+    let held: Vec<Value> = with(|s| {
+        let (theirs, rest) = std::mem::take(&mut s.held_for_key)
+            .into_iter()
+            .partition(|(w, _)| *w == who);
+        s.held_for_key = rest;
+        theirs.into_iter().map(|(_, e)| e).collect()
+    });
+    for e in held {
+        heard(app, e);
+    }
+    refresh_cards(app);
+}
+
+/// Ctrl+V in `name`'s thread with files copied: they go to them. False leaves Ctrl+V to paste text.
+pub fn paste_files_to(app: &mut App, name: &str) -> bool {
+    let files = clipboard_files(app.bar.hwnd);
+    if files.is_empty() {
+        return false;
+    }
+    send_files(app, files, name);
+    true
+}
+
+/// The e2e suite's view of the transfers and the cards.
+pub fn debug_state() -> Value {
+    with(|s| {
+        let transfers: Vec<Value> = s
+            .transfers
+            .iter()
+            .map(|(id, t)| {
+                json!({ "id": id, "mine": t.mine, "who": t.who, "name": t.name, "size": t.size,
+                    "state": t.state, "percent": t.percent, "error": t.error,
+                    "retry": s.outgoing.contains_key(id) && t.mine && t.state == "failed" })
+            })
+            .collect();
+        let cards: BTreeMap<&String, String> =
+            s.cards.iter().map(|(c, k)| (c, format!("{k:?}"))).collect();
+        json!({ "transfers": transfers, "cards": cards, "held": s.held.len(),
+            "heldForKey": s.held_for_key.len(), "pending": s.pending.len() })
+    })
 }
 
 /// A card stays while its file is on its way, or until its Save is answered.
@@ -1093,21 +1390,7 @@ pub fn act(app: &mut App, card: &str, act: Act) {
         }
         (Act::Save, Kind::File(id)) => save(app, &id),
         (Act::Retry, Kind::File(id)) => upload(&id, "", PART_BYTES),
-        (Act::Trust, Kind::KeyChanged(who)) if keys::trust(&who) => {
-            app.model.cards.list.retain(|c| c.card.id != card);
-            let code = keys::safety_code(&who);
-            say(app, core::safety_code_text(&who, &code));
-            let held: Vec<Value> = with(|s| {
-                let (theirs, rest) = std::mem::take(&mut s.held_for_key)
-                    .into_iter()
-                    .partition(|(w, _)| *w == who);
-                s.held_for_key = rest;
-                theirs.into_iter().map(|(_, e)| e).collect()
-            });
-            for e in held {
-                heard(app, e);
-            }
-        }
+        (Act::Trust, Kind::KeyChanged(who)) => trust(app, &who),
         _ => {}
     }
     refresh_cards(app);
@@ -1272,7 +1555,24 @@ mod tests {
         remember_card("c1", Kind::File("a".repeat(32)));
         assert!(holds("c1"));
         set_state(&"a".repeat(32), "received", None, None);
-        assert_eq!(acts("c1"), vec![(Act::Save, "Save".to_string())]);
+        // max isn't an accepted name here: no Save until they're allowed (a request's file waits)
+        assert!(acts("c1").is_empty());
+        set_state(&"a".repeat(32), "failed", None, None);
+        assert!(acts("c1").is_empty());
+        set_state(
+            &"a".repeat(32),
+            "failed",
+            None,
+            Some("that file expired · ask for it again".into()),
+        );
+        assert_eq!(
+            line_state(&"a".repeat(32), false, "max").0,
+            "that file expired · ask for it again"
+        );
+        assert_eq!(
+            line_state(&"b".repeat(32), false, "max").0,
+            "no longer available"
+        );
         set_state(&"a".repeat(32), "saved", None, None);
         assert!(!holds("c1"));
         assert!(acts("c1").is_empty());

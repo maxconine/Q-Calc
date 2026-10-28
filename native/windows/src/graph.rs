@@ -618,6 +618,8 @@ mod view {
         kind_w: f32,
         coords: IDWriteTextLayout,
         x: f64,
+        /// a critical point's y: hovering its chip rings the point on the plot (roots' chips have none)
+        y: Option<f64>,
     }
 
     /// Where everything goes for a width and a sample, panel-relative.
@@ -710,7 +712,7 @@ mod view {
             if let Some(s) = sample.filter(|s| !s.contour) {
                 y += 8.0;
                 let section = |title: &str,
-                               items: Vec<(&'static str, String, f64)>,
+                               items: Vec<(&'static str, String, f64, Option<f64>)>,
                                y: &mut f32,
                                geo: &mut Geo,
                                empty: bool| {
@@ -730,17 +732,17 @@ mod view {
                     }
                     let built: Vec<_> = items
                         .into_iter()
-                        .filter_map(|(kind, coords, x)| {
+                        .filter_map(|(kind, coords, x, cy)| {
                             let (kl, kw) = lay(gfx, kind, &res.kind, CHIP_H)?;
                             let (cl, cw) = lay(gfx, &coords, &f.small, CHIP_H)?;
-                            Some((kl, kw, cl, cw, x))
+                            Some((kl, kw, cl, cw, (x, cy)))
                         })
                         .collect();
                     let widths: Vec<f32> =
                         built.iter().map(|b| 8.0 + b.1 + 6.0 + b.3 + 8.0).collect();
                     let places = wrap(&widths, inner, CHIP_GAP);
                     let lines = places.last().map_or(0, |p| p.1 + 1);
-                    for ((kl, kw, cl, _, x), ((cx, line), w)) in
+                    for ((kl, kw, cl, _, (x, cy)), ((cx, line), w)) in
                         built.into_iter().zip(places.into_iter().zip(widths))
                     {
                         geo.chips.push(Chip {
@@ -754,6 +756,7 @@ mod view {
                             kind_w: kw,
                             coords: cl,
                             x,
+                            y: cy,
                         });
                     }
                     *y += lines as f32 * (CHIP_H + CHIP_GAP) - CHIP_GAP;
@@ -767,6 +770,7 @@ mod view {
                             kind_name(c.kind),
                             format!("({}{deg}, {})", fmt_g(c.x, 8), fmt_g(c.y, 8)),
                             c.x,
+                            Some(c.y),
                         )
                     })
                     .collect();
@@ -775,7 +779,7 @@ mod view {
                     let roots = s
                         .roots
                         .iter()
-                        .map(|&x| ("root", format!("x = {}{deg}", fmt_g(x, 8)), x))
+                        .map(|&x| ("root", format!("x = {}{deg}", fmt_g(x, 8)), x, None))
                         .collect();
                     section("Roots", roots, &mut y, &mut geo, false);
                 }
@@ -987,12 +991,27 @@ mod view {
             c.text(m, r.x + size::GUTTER, r.y + BODY_Y + 12.0, t.muted);
         }
         if let Some(svg) = geo.svg {
+            // the critical point whose chip is under the pointer, ringed on the plot
+            let spot = geo
+                .chips
+                .iter()
+                .find(|chip| hover.is_some_and(|(hx, hy)| chip.rect.contains(hx, hy)))
+                .and_then(|chip| Some((chip.x, chip.y?)));
             plot(
                 c,
                 g,
                 &res,
                 Rect::new(r.x + svg.x, r.y + svg.y, svg.w, svg.h),
             );
+            if let Some((x, y)) = spot {
+                ring(
+                    c,
+                    g,
+                    Rect::new(r.x + svg.x, r.y + svg.y, svg.w, svg.h),
+                    x,
+                    y,
+                );
+            }
         }
         for (y, l) in &geo.titles {
             c.text(l, r.x + size::GUTTER, r.y + y, t.muted);
@@ -1028,6 +1047,52 @@ mod view {
                 if over { t.accent } else { t.ink },
             );
         }
+    }
+
+    /// A critical point picked out by its chip (GraphPanel.swift's `spot`): faint dashed accent guides to the left
+    /// and bottom edges (where the ticks read), the mark filled in the accent with a halo ring around it.
+    fn ring(c: &Canvas, g: &GraphState, svg: Rect, x: f64, y: f64) {
+        let t = c.theme;
+        let s = svg.w / SVG_W;
+        let (left, top) = (svg.x + PAD_LEFT * s, svg.y + PAD_TOP * s);
+        let (right, bottom) = (left + PLOT_W * s, top + PLOT_H * s);
+        let (cx, cy) = (svg.x + g.vx(x) * s, svg.y + g.vy(y) * s);
+        if !(left..=right).contains(&cx) || !(top..=bottom).contains(&cy) {
+            return;
+        }
+        let guide = with_alpha(t.accent, 0.45);
+        // 3 on, 3 off
+        let dashes = |x0: f32, y0: f32, x1: f32, y1: f32| {
+            let len = ((x1 - x0).powi(2) + (y1 - y0).powi(2)).sqrt();
+            if len <= 0.0 {
+                return;
+            }
+            let (ux, uy) = ((x1 - x0) / len, (y1 - y0) / len);
+            let mut d = 0.0;
+            while d < len {
+                let e = (d + 3.0).min(len);
+                c.line(
+                    x0 + ux * d,
+                    y0 + uy * d,
+                    x0 + ux * e,
+                    y0 + uy * e,
+                    1.0,
+                    guide,
+                );
+                d += 6.0;
+            }
+        };
+        dashes(cx, cy + 6.0, cx, bottom);
+        dashes(cx - 6.0, cy, left, cy);
+        ellipse(
+            c,
+            cx,
+            cy,
+            6.5,
+            with_alpha(t.accent, 0.14),
+            Some((t.accent, 1.5)),
+        );
+        ellipse(c, cx, cy, 3.5, t.accent, Some((plot_bg(c), 1.5)));
     }
 
     /// The plot: background, grid, ticks, axes, curve or level curves, marks and the readout, in `svg` (the

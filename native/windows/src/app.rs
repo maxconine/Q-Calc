@@ -161,6 +161,7 @@ pub struct App {
 
 pub fn run() -> i32 {
     log::install();
+    crate::crash::install();
     let argv: Vec<String> = std::env::args().skip(1).collect();
     let args = Args::parse(&argv);
     qlog!("launch native {} {:?}", env!("CARGO_PKG_VERSION"), argv);
@@ -418,6 +419,12 @@ unsafe extern "system" fn host_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
 }
 
 unsafe extern "system" fn bar_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    // UI Automation's provider (uia.rs), before the app's borrow: a client may ask mid-message
+    if msg == windows::Win32::UI::WindowsAndMessaging::WM_GETOBJECT
+        && let Some(r) = crate::uia::get_object(hwnd, wp, lp, crate::a11y::bar_source)
+    {
+        return r;
+    }
     let out = with_app(|app| {
         let r = app.on_bar(msg, wp, lp);
         app.after();
@@ -564,7 +571,7 @@ impl App {
                         self.notice = Some(notice);
                     }
                 }
-                TIMER_TRIM => self.trim(),
+                TIMER_TRIM => self.trim_soon(),
                 TIMER_BENCH => self.bench_timeout(),
                 _ => return None,
             },
@@ -831,6 +838,8 @@ impl App {
                     let _ = unsafe { ReleaseCapture() };
                 }
             }
+            // a message thread under the bar scrolls (threads.rs)
+            WM_MOUSEWHEEL if crate::threads::wheel(self, wp, lp) => {}
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
                     if msg != WM_MOUSEWHEEL {
@@ -1017,6 +1026,10 @@ impl App {
     fn toggle(&mut self) {
         // SAFETY: plain query
         let front = unsafe { GetForegroundWindow() };
+        // a game in the bar's place is the bar while it's up: the hotkey closes or fronts it (games/process.rs)
+        if !self.bar.visible && crate::games::hotkey() {
+            return;
+        }
         if self.bar.visible && front == self.bar.hwnd {
             self.ops.push(Op::Hide);
         } else {
@@ -1092,14 +1105,21 @@ impl App {
             self.store.used_at = (now_ms() / 1000) as u64;
             self.save_store();
         }
-        // SAFETY: our host's timer (one-shot: trim() kills it)
+        // SAFETY: our host's timer (one-shot: trim() kills it). What only a showing needs goes with it, 30 s on, so
+        // a quick hide and show keeps the regexes, the device and the layouts (`release_hidden`)
         unsafe { SetTimer(Some(self.host), TIMER_TRIM, TRIM_AFTER_MS, None) };
-        // what only a showing needs goes now (the layouts, the Typst thread): ~3.5 MB back, remade as needed
+    }
+
+    /// The bar has stayed hidden TRIM_AFTER_MS (or the pipe's `release`): what only a showing needs goes. The
+    /// layouts and the Typst thread (~3.5 MB), the swap chain and WARP device (~2.5 MB; a showing makes them in
+    /// ~4 ms), and the engine's compiled regexes (engine.rs; the next showing's warm-up compiles them again).
+    fn release_hidden(&mut self) {
+        if self.bar.visible {
+            return;
+        }
         crate::answer::trim_hidden(self);
-        // the swap chain and the WARP device too (~2.5 MB, and D3D10Warp unloads): a showing makes them in ~4 ms
         self.bar.surface.release();
         self.gfx.drop_flip_device();
-        // and the engine's compiled regexes (engine.rs), compiled again with the next showing's warm-up
         self.engine.release();
     }
 
@@ -1110,11 +1130,27 @@ impl App {
         if self.bar.visible {
             return;
         }
-        // a GPU target holds the device's memory; the software one is a few hundred KB and quicker kept
-        if crate::render::hardware() {
-            self.bar.surface.release();
+        self.release_hidden();
+        self.trim_working_set();
+    }
+
+    /// TIMER_TRIM: the bar has stayed hidden 30 s. What only a showing needs goes now, and the working set is trimmed
+    /// a moment later, once the engine thread has freed its regexes (a trim before that left them paged in).
+    fn trim_soon(&mut self) {
+        // SAFETY: our host's timer
+        let _ = unsafe { KillTimer(Some(self.host), TIMER_TRIM) };
+        if self.bar.visible {
+            return;
         }
-        crate::answer::trim_hidden(self);
+        self.release_hidden();
+        crate::later::free("trim-working-set", 2000, || {
+            if with_app(|a| a.bar.visible) == Some(false) {
+                with_app(|a| a.trim_working_set());
+            }
+        });
+    }
+
+    fn trim_working_set(&mut self) {
         let (ws, private) = bench::memory();
         // SAFETY: our own process
         let _ = unsafe {
@@ -1344,6 +1380,10 @@ impl App {
                 reply(
                     serde_json::json!({ "workingSet": ws, "private": private, "visible": self.bar.visible }),
                 );
+            }
+            "release" => {
+                self.release_hidden();
+                reply(serde_json::json!({ "ok": !self.bar.visible }));
             }
             "trim" => {
                 self.trim();

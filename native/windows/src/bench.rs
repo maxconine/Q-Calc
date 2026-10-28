@@ -15,7 +15,7 @@
 //!   `{"ms": [...], "idx": [...], "timeouts": n, "wallMs": t, "n": n, "median": m, "p90": a, "p99": b}`.
 //! - commands: `{"cmd": "show"}`, `"hide"`, `"state"` (the line, the answer, the rows, visibility),
 //!   `{"cmd": "type", "text": "..."}` (posts WM_CHARs), `{"cmd": "key", "vk": 13}`, `"mem"` (working set and
-//!   private bytes), `"trim"` (what a long hide does), `"quit"`.
+//!   private bytes), `"release"` (what 30 s hidden gives back, now), `"trim"` (that and the working-set trim), `"quit"`.
 //!
 //! The app also logs `ready` with ms since process creation (log.rs), for warm-launch timing.
 
@@ -390,6 +390,19 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             }))
         }
         "settings-controls" => Some(crate::settings_window::debug()),
+        // the tray's Report a Problem… (crash.rs), for the e2e suite
+        "report" => {
+            crate::crash::report_problem();
+            Some(serde_json::json!({ "ok": true }))
+        }
+        "wordTip" => Some(crate::word_tip::debug(app)),
+        "exponent" => Some(serde_json::json!({
+            "on": app.store.settings.exponent_mode || app.model.settings.exponent_mode,
+            "model": app.model.settings.exponent_mode, "saved": app.store.settings.exponent_mode,
+            "hint": app.model.hint, "shown": crate::answer::shown_answer(&app.model),
+        })),
+        // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
+        c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
 }

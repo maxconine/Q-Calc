@@ -1,0 +1,14 @@
+{
+  "version": "2.1.0",
+  "pub_date": "2026-10-27T12:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZjZMUkNHQTlpNTU5cjNnN1YxcU55SkRBcEdpcDhNZnFjYWRJZ1Q5Q3VoVjNFTWhIb04xbUdUa1VpZEYvejdTcmxRZ1hkeThvZmpiN2JOSkp5bERPb2NyQ284S0x6WndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDAwMDAwCWZpbGU6US1DYWxjLTIuMS4wLXg2NC1uYXRpdmUtc2V0dXAuZXhlCXZlcnNpb246Mi4xLjAKeS9yVXcyeTgvaE9VWWpaVTcxZUhwL1dvMUtaNDBmR3kyVkpFRGwzNFhNSk0rVFg0OFNzLzE3dTNJdklmYlZSMUZrWlpTTkNpc1FidVFZK2JId2hFQmc9PQo=",
+      "url": "https://github.com/maxconine/Q-Calc/releases/download/v2.1.0/Q-Calc-2.1.0-x64-native-setup.exe"
+    },
+    "windows-aarch64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZjZMUkNHQTlpNTU5cjNnN1YxcU55SkRBcEdpcDhNZnFjYWRJZ1Q5Q3VoVjNFTWhIb04xbUdUa1VpZEYvejdTcmxRZ1hkeThvZmpiN2JOSkp5bERPb2NyQ284S0x6WndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDAwMDAwCWZpbGU6US1DYWxjLTIuMS4wLWFybTY0LW5hdGl2ZS1zZXR1cC5leGUJdmVyc2lvbjoyLjEuMAp5L3JVdzJ5OC9oT1VZalpVNzFlSHAvV28xS1o0MGZHeTJWSkVEbDM0WE1KTStUWDQ4U3MvMTd1M0l2SWZiVlIxRmtaWlNOQ2lzUWJ1UVkrYkh3aEVCZz09Cg==",
+      "url": "https://github.com/maxconine/Q-Calc/releases/download/v2.1.0/Q-Calc-2.1.0-arm64-native-setup.exe"
+    }
+  }
+}

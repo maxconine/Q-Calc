@@ -113,7 +113,9 @@ pub fn request(m: &BarModel) -> Option<Request> {
         display: if tabbed {
             st.forms[st.form_index].clone()
         } else {
-            live.map(|a| a.display.clone()).unwrap_or_default()
+            // Ctrl+E's mode: in exponent form, as the slot (exponent.rs)
+            live.map(|a| crate::exponent::shown(m, &a.display))
+                .unwrap_or_default()
         },
         message: solve.is_some() && solved_for.is_empty(),
         solved_for,

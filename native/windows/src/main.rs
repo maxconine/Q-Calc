@@ -9,6 +9,7 @@ mod a11y;
 mod autostart;
 mod commands;
 mod edge;
+mod exponent;
 mod hotkey;
 mod keys;
 mod log;
@@ -32,7 +33,11 @@ mod cheats;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
+mod clip_image;
+#[cfg(windows)]
 mod contrast;
+#[cfg(windows)]
+mod crash;
 #[cfg(windows)]
 mod drag;
 #[cfg(windows)]
@@ -78,21 +83,31 @@ mod share;
 #[cfg(windows)]
 mod share_crypt;
 #[cfg(windows)]
+mod share_debug;
+#[cfg(windows)]
+mod share_drop;
+#[cfg(windows)]
 mod share_keys;
 #[cfg(windows)]
 mod sheets;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]
+mod threads;
+#[cfg(windows)]
 mod tray;
 #[cfg(windows)]
 mod typst_row;
+#[cfg(windows)]
+mod uia;
 #[cfg(windows)]
 mod update;
 #[cfg(windows)]
 mod warp;
 #[cfg(windows)]
 mod window;
+#[cfg(windows)]
+mod word_tip;
 #[cfg(windows)]
 mod wrap;
 

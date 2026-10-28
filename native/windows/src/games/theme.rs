@@ -86,6 +86,33 @@ impl Colors {
         }
     }
 
+    /// Q Calc's colours, or a contrast theme's system colours while one is on (contrast.rs), as the bar and
+    /// settings draw: the window, text, grey text, highlight. A game's own pieces (players, tiles) keep theirs.
+    #[cfg(windows)]
+    pub fn for_window(dark: bool) -> Colors {
+        if !crate::contrast::active() {
+            return Colors::new(dark);
+        }
+        let t = crate::contrast::apply(crate::render::Theme::new(dark));
+        let c = |k: crate::render::Color| Rgba {
+            r: k.r,
+            g: k.g,
+            b: k.b,
+            a: k.a,
+        };
+        Colors {
+            dark: t.dark,
+            bg: c(t.bg),
+            bg_tape: c(t.bg_tape),
+            ink: c(t.ink),
+            muted: c(t.muted),
+            line: c(t.line),
+            accent: c(t.accent),
+            control: c(t.bg),
+            page: c(t.bg),
+        }
+    }
+
     /// --fill-hover, --fill-selected, --fill-track: ink at 5, 8 and 6%.
     pub fn fill_hover(&self) -> Rgba {
         self.ink.mix(0.05, Rgba::CLEAR)

@@ -25,9 +25,19 @@ fn exp_stays_real_for_reals() {
 #[test]
 fn and_is_bitwise_and() {
     // `and` reads as `&`
-    for (t, want) in [("12 and 10", "8"), ("12 and 3", "0"), ("1 and 1", "1"), ("1 and 0", "0"), ("6 AND 3", "2")] {
+    for (t, want) in [
+        ("12 and 10", "8"),
+        ("12 and 3", "0"),
+        ("1 and 1", "1"),
+        ("1 and 0", "0"),
+        ("6 AND 3", "2"),
+    ] {
         assert_eq!(show(t), want, "{t}");
-        assert_eq!(show(t), show(&t.to_lowercase().replace(" and ", " & ")), "{t}");
+        assert_eq!(
+            show(t),
+            show(&t.to_lowercase().replace(" and ", " & ")),
+            "{t}"
+        );
     }
     assert_eq!(show("(2>1) and (3>4)"), "0");
     assert_eq!(show("(2>1) and (4>3)"), "1");
@@ -129,7 +139,12 @@ fn spaced_and_starred_factors_differentiate_as_powers() {
     // x written out six times, spaced or starred, is x^6: same answer, same form
     let want = show("d/dx 4x^3 + 12(x^6)");
     assert_eq!(want, "12x² + 72x⁵");
-    for t in ["d/dx 4x^3 + 12(x*x x x x x)", "d/dx 4x^3 + 12(x x x x x x)", "d/dx 4x^3 + 12 x x x x x x", "d/dx 4x^3 + 12x*x*x*x*x*x"] {
+    for t in [
+        "d/dx 4x^3 + 12(x*x x x x x)",
+        "d/dx 4x^3 + 12(x x x x x x)",
+        "d/dx 4x^3 + 12 x x x x x x",
+        "d/dx 4x^3 + 12x*x*x*x*x*x",
+    ] {
         assert_eq!(show(t), want, "{t}");
     }
     assert_eq!(show("d/dx 4 x^3 + 12 x x"), show("d/dx 4x^3 + 12x^2"));
@@ -186,7 +201,10 @@ fn exponent_form_of_an_answer() {
         assert_eq!(exponent_form(shown, 6).as_deref(), Some(want), "{shown}");
     }
     assert_eq!(show("1 gigabyte"), "1 GB");
-    assert_eq!(exponent_form(&show("1 gigabyte"), 6).as_deref(), Some("1 × 10⁹ B"));
+    assert_eq!(
+        exponent_form(&show("1 gigabyte"), 6).as_deref(),
+        Some("1 × 10⁹ B")
+    );
     for shown in ["1/3", "7:55 pm", "", "abc", "2x"] {
         assert_eq!(exponent_form(shown, 6), None, "{shown}");
     }

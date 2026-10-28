@@ -22,7 +22,11 @@ param(
   [string]$Version,
   [ValidateSet('x64', 'arm64')][string]$Arch = 'x64',
   [string]$BaseUrl,
-  [switch]$SkipBuild
+  [switch]$SkipBuild,
+  # Authenticode: a command that signs the file named by its last argument (e.g. `signtool sign /fd sha256 /tr
+  # http://timestamp.digicert.com /td sha256 /a`). makensis runs it on uninstall.exe as it's written and on the
+  # installer at the end (qcalc.nsi SIGN). scripts\sign-check.ps1 runs this path with a throwaway certificate
+  [string]$SignCommand
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
@@ -49,7 +53,12 @@ if (-not (Test-Path $makensis)) { throw "makensis not found: install NSIS 3 or r
 $out = "$here\out"
 New-Item -ItemType Directory -Force $out | Out-Null
 $setup = "$out\Q-Calc-$Version-$Arch-native-setup.exe"
-& $makensis /V2 "/DVERSION=$Version" "/DEXE=$exe" "/DOUT=$setup" "$here\qcalc.nsi"
+# the numeric part for the version resource (a pre-release "2.1.0-beta.1" is 2.1.0)
+$versionNum = ($Version -split '[-+]')[0]
+if ($versionNum -notmatch '^\d+\.\d+\.\d+$') { throw "not a version: $Version" }
+$nsisArgs = @('/V2', "/DVERSION=$Version", "/DVERSION_NUM=$versionNum", "/DEXE=$exe", "/DOUT=$setup", "/DOUTNAME=$(Split-Path $setup -Leaf)")
+if ($SignCommand) { $nsisArgs += "/DSIGN=$SignCommand" }
+& $makensis @nsisArgs "$here\qcalc.nsi"
 if ($LASTEXITCODE) { throw "makensis failed" }
 "installer: $setup ($([math]::Round((Get-Item $setup).Length / 1MB, 2)) MB)"
 
@@ -72,5 +81,6 @@ if (-not $manifest -or $manifest.version -ne $Version) {
 }
 $entry = [pscustomobject]@{ signature = $sig; url = "$($BaseUrl.TrimEnd('/'))/$([uri]::EscapeDataString((Split-Path $setup -Leaf)))" }
 $manifest.platforms | Add-Member -NotePropertyName $platform -NotePropertyValue $entry -Force
-$manifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 $feed
+# UTF-8 without a byte-order mark (PowerShell 5's Set-Content -Encoding utf8 writes one)
+[IO.File]::WriteAllText($feed, ($manifest | ConvertTo-Json -Depth 5))
 "feed: $feed ($platform)"

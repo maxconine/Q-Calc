@@ -69,6 +69,8 @@ pub struct BarLayout {
     pub tour: Option<Rect>,
     /// the message cards' panel (messaging.rs)
     pub cards: Option<Rect>,
+    /// the message thread or list, and the privacy notice (threads.rs)
+    pub threads: Option<Rect>,
 }
 
 /// A monitor: its store key (`\\.\DISPLAY1`, as Tauri named it), work area (physical px) and scale.
@@ -326,6 +328,12 @@ impl Bar {
             height += h;
             r
         });
+        let tth = crate::threads::height(gfx, width);
+        let threads = (tth > 0.0).then(|| {
+            let r = Rect::new(0.0, height, width, tth);
+            height += tth;
+            r
+        });
         BarLayout {
             width,
             height,
@@ -345,6 +353,7 @@ impl Bar {
             letters,
             tour,
             cards,
+            threads,
         }
     }
 
@@ -382,6 +391,9 @@ impl Bar {
             }
             if let Some(r) = layout.cards {
                 crate::messaging::paint(c, model, r);
+            }
+            if let Some(r) = layout.threads {
+                crate::threads::paint(c, model, r);
             }
             if let Some(r) = layout.typst {
                 crate::typst_row::paint(c, model, r);
