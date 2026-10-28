@@ -23,7 +23,7 @@ $now = 1793000000000 # ms, 2026-10-26
 # src/lib/history.ts HistoryRow[], oldest first, as persistableHistory keeps it
 $history = @(
     @{ id = 'mg8k1a-x1'; expr = '12 kg to lb'; display = '26.4555 lb'; n = 26.455471462185; quantity = '26.455471462185 lb'; at = $now - 900000 }
-    @{ id = 'mg8k2b-x2'; expr = 'r = 5 m'; display = '5 m'; n = 5; quantity = '5 m'; kind = 'definition'; at = $now - 600000 }
+    @{ id = 'mg8k2b-x2'; expr = 'r = 5 m'; display = '5 m'; n = 5; quantity = '5 m'; at = $now - 600000 }
     @{ id = 'mg8k3c-x3'; expr = 'f(x) = x^2 + 1'; display = 'f(x) = x^2 + 1'; kind = 'function'; fnName = 'f'; fnParams = @('x'); fnBody = 'x^2 + 1'; at = $now - 300000 }
     @{ id = 'mg8k4d-x4'; expr = "2$([char]0xD7)$([char]0x3C0)"; display = '6.28319'; exact = "2$([char]0x3C0)"; n = 6.283185307179586; at = $now - 60000 }
 )
@@ -60,6 +60,8 @@ function Page($set, [string[]]$remove = @()) {
 function Run-Edge([string]$userData, [string]$html) {
     # one port for both runs: the origin (http://tauri.localhost:<port>) must stay the same, as the app's did
     $listener = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Loopback, $script:port)
+    # the first run's connections may still be in TIME_WAIT on that port
+    $listener.Server.SetSocketOption([Net.Sockets.SocketOptionLevel]::Socket, [Net.Sockets.SocketOptionName]::ReuseAddress, $true)
     $listener.Start()
     $port = $listener.LocalEndpoint.Port
     $script:port = $port

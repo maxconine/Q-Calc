@@ -66,18 +66,17 @@ function Stop-Copy($p, [string]$name = $Instance) {
     if (-not $p.WaitForExit(5000)) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }
 }
 function Answer([string]$text, [string]$name = $Instance) {
-    Send-Pipe @{ cmd = 'type'; text = "" } 2000 $name | Out-Null
-    Send-Pipe @{ cmd = 'key'; vk = 27 } 2000 $name | Out-Null
-    Send-Pipe @{ cmd = 'show' } 2000 $name | Out-Null
+    # typed while hidden too (a showing would start a fresh line)
+    Send-Pipe @{ cmd = 'hide' } 2000 $name | Out-Null
     $st = Send-Pipe @{ cmd = 'state' } 2000 $name
-    # clear the line, type, and wait for this text's answer
-    foreach ($i in 1..40) { if (-not $st -or -not $st.text) { break }; Send-Pipe @{ cmd = 'key'; vk = 8 } 1000 $name | Out-Null; $st = Send-Pipe @{ cmd = 'state' } 1000 $name }
+    # clear the line (backspaces), type, and wait for the answer to the line as it now reads (the field may
+    # spell `pi` as π)
+    foreach ($i in 1..60) { if (-not $st -or -not $st.text) { break }; Send-Pipe @{ cmd = 'key'; vk = 8 } 1000 $name | Out-Null; $st = Send-Pipe @{ cmd = 'state' } 1000 $name }
     Send-Pipe @{ cmd = 'type'; text = $text } 2000 $name | Out-Null
     $script:ans = $null
-    Wait-Until { $s = Send-Pipe @{ cmd = 'state' } 1000 $name; if ($s -and $s.liveFor -eq $text -and $s.answer) { $script:ans = $s.answer; $true } else { $false } } 8000 | Out-Null
+    Wait-Until { $s = Send-Pipe @{ cmd = 'state' } 1000 $name; if ($s -and $s.text -and $s.liveFor -eq $s.text -and $s.answer) { $script:ans = $s.answer; $true } else { $false } } 8000 | Out-Null
     $script:ans
-}
-function LogText {
+}function LogText {
     # the app appends while this reads: share it both ways, and try again on a sharing clash
     foreach ($i in 1..10) {
         if (-not (Test-Path $Log)) { return '' }
@@ -103,6 +102,8 @@ try {
     $rows = @($st.rows | ForEach-Object { $_.expr })
     Check 'MG1' 'the Tauri history is on the tape' ($up -and (($rows -join '|') -eq ($expected -join '|')) -and (Test-Path (Join-Path $Data 'history.json'))) "rows: $($rows -join ' | ')"
 
+    Send-Pipe @{ cmd = 'show' } | Out-Null
+    Wait-Until { (Send-Pipe @{ cmd = 'state' } 1000).visible } 5000 | Out-Null
     $e = Send-Pipe @{ cmd = 'e2e' }
     Check 'MG2' "the Tauri settings apply (dark, the shortcut, the bar's width)" ($e.theme -eq 'dark' -and $e.dark -and $e.hotkey.wanted -eq 'ctrl+alt+shift+f10' -and ($e.frame[2] - $e.frame[0]) -ge [int](880 * $e.scale)) `
         "theme $($e.theme) dark $($e.dark); hotkey $($e.hotkey.wanted) active $($e.hotkey.active); bar width $($e.frame[2] - $e.frame[0]) px at scale $($e.scale)"
@@ -110,7 +111,8 @@ try {
     $a1 = Answer 'r*2'
     $a2 = Answer 'sin(pi/2)'
     $a3 = Answer 'f(3)'
-    Check 'MG3' 'a migrated definition and function still answer, in radians' ($a1 -match '^10\s*m$' -and $a2 -eq '1' -and $a3 -eq '10') "r*2 = $a1; sin(pi/2) = $a2; f(3) = $a3"
+    $st3 = Send-Pipe @{ cmd = 'state' }
+    Check 'MG3' 'a migrated variable and function still answer, in radians, feet and fractions' ($a1 -match '^12500/381\s*ft$' -and $a2 -eq '1' -and $a3 -eq '10') "r*2 = $a1 (10 m in the default feet, as a fraction); sin(pi/2) = $a2; f(3) = $a3 (line now: '$($st3.text)' answer '$($st3.answer)' for '$($st3.liveFor)')"
     Send-Pipe @{ cmd = 'hide' } | Out-Null
 
     $m = Get-Content (Join-Path $Data 'messaging.json') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
