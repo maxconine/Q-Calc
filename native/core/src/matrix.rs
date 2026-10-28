@@ -1035,6 +1035,9 @@ mod tests {
         assert_eq!(line("[1 2 3] · [4; 5; 6]"), "32");
         assert_eq!(line("[1; 2; 3] · [4 5 6]"), "[4 5 6; 8 10 12; 12 15 18]");
         assert_eq!(line("2 · (3)"), "6");
-        assert_eq!(line("dot([1 2], [1 2 3])"), "dot needs vectors of the same length (2 and 3)");
+        assert_eq!(
+            line("dot([1 2], [1 2 3])"),
+            "dot needs vectors of the same length (2 and 3)"
+        );
     }
 }
