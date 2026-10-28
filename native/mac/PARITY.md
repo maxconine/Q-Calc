@@ -220,3 +220,5 @@ the 13+ paths were spot-checked after the change: the live answer and typeset ro
 settings (General) and Connect 4's lobby and board.
 
 **Connect 4 board (native only):** Core Animation layers (`C4Layers`): the frame and holes are one shape each, each disc a layer, the fall (260 ms) and the held disc's slide (90 ms) are Core Animation's. A full-screen game with 40 held-disc moves and 3 drops took 0.08–0.09 s of app CPU against 1.47–1.52 s for the CPU-drawn bitmap; memory is the same (≈33 MB). Its big window is 460 wide in the card's units (`GameShellModel.bigWidth`), not the bar's 680, and the board shrinks to fit a short big window instead of being cut off.
+
+**Showing the bar (native only):** no fade. It's laid out once, then shown at full opacity at once (the 0.1 s fade-in is gone; hiding was already instant).
