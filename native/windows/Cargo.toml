@@ -30,6 +30,8 @@ minisign-verify = "0.2"
 # Typst's worker pool (it parallelises with rayon): one thread, not one per core (engine.rs, PERFORMANCE.md)
 rayon = "1.12"
 windows-numerics = "0.2"
+# the implement macro (uia.rs's UI Automation provider) names this crate
+windows-core = "0.61"
 # end-to-end sealing for clips and files, byte for byte as the Mac's CryptoKit (share_crypt.rs, native/PRIVACY.md)
 x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 hkdf = "0.12.4"
@@ -67,6 +69,7 @@ windows = { version = "0.61", features = [
   "Win32_System_Threading",
   "Win32_System_Variant",
   "Win32_System_IO",
+  "Win32_UI_Accessibility",
   "Win32_UI_Controls",
   "Win32_UI_Controls_Dialogs",
   "Win32_UI_HiDpi",

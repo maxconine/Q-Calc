@@ -128,14 +128,27 @@ pub fn dpi_changed(app: &mut App, lp: LPARAM) {
         x: (r.left + r.right) / 2,
         y: (r.top + r.bottom) / 2,
     });
-    let scale = monitor.scale();
-    app.bar.width =
-        place::fitted_width(f64::from(app.bar.width), monitor.area.width / scale) as f32;
-    app.bar.composer_at = (
-        r.left,
-        r.top + (f64::from(app.bar.layout.anchor) * scale).round() as i32,
+    let (width, at) = reframed(
+        r,
+        monitor.area.width,
+        monitor.scale(),
+        app.bar.width,
+        app.bar.layout.anchor,
     );
+    app.bar.width = width;
+    app.bar.composer_at = at;
     app.bar.monitor = Some(monitor);
+}
+
+/// WM_DPICHANGED's arithmetic: for Windows' suggested frame `r` (px) on a monitor of `scale` whose work area is
+/// `area_px` wide, the bar's width (DIPs, kept unless the monitor is too narrow for it) and where the composer
+/// stands (px: the frame's left, its top plus the anchor at the new scale).
+pub fn reframed(r: RECT, area_px: f64, scale: f64, width: f32, anchor: f32) -> (f32, (i32, i32)) {
+    let width = place::fitted_width(f64::from(width), area_px / scale) as f32;
+    (
+        width,
+        (r.left, r.top + (f64::from(anchor) * scale).round() as i32),
+    )
 }
 
 /// WM_NCLBUTTONDBLCLK on the background: the bar goes back to where it opens by default on this monitor (the
@@ -176,5 +189,58 @@ mod tests {
         assert_eq!(hit(&l, 450.0, 30.0), HTCAPTION);
         // below the composer (panels) is never the background
         assert_eq!(hit(&l, 100.0, 80.0), HTCLIENT);
+    }
+
+    fn rect(left: i32, top: i32, w: i32, h: i32) -> RECT {
+        RECT {
+            left,
+            top,
+            right: left + w,
+            bottom: top + h,
+        }
+    }
+
+    /// WM_DPICHANGED with synthetic frames: the bar keeps its width in DIPs across 100, 150 and 200%, the composer
+    /// stands at the suggested frame's left and its top plus the anchor at the new scale, and a monitor too narrow
+    /// at its scale narrows it (never under the standard width).
+    #[test]
+    fn dpi_changes_keep_the_width_and_place_the_composer() {
+        let (w, anchor) = (900.0, 40.0);
+        // a 1920 px wide work area at each scale, and a 3840 px one
+        for (scale, left, top) in [(1.0, 100, 200), (1.5, -1800, 300), (2.0, 4000, 50)] {
+            let suggested = rect(left, top, (900.0 * scale) as i32, (120.0 * scale) as i32);
+            let (width, at) = reframed(suggested, 3840.0, scale, w, anchor);
+            assert_eq!(width, 900.0, "{scale}");
+            assert_eq!(at, (left, top + (40.0 * scale) as i32), "{scale}");
+        }
+        // 100% -> 200% on 1920 px: 960 DIPs across, so 920 at most: 900 stays
+        assert_eq!(
+            reframed(rect(0, 0, 1800, 240), 1920.0, 2.0, 900.0, anchor).0,
+            900.0
+        );
+        // a wide bar (1500 DIPs) dragged from a 4K 100% monitor onto a 1920 px one at 150%: 1280 - 40
+        assert_eq!(
+            reframed(rect(10, 10, 2250, 180), 1920.0, 1.5, 1500.0, anchor).0,
+            1240.0
+        );
+        // and at 200% on 1920 px: 920
+        assert_eq!(
+            reframed(rect(10, 10, 3000, 240), 1920.0, 2.0, 1500.0, anchor).0,
+            920.0
+        );
+        // a tiny monitor at 200% never takes the bar under its standard width
+        assert_eq!(
+            reframed(rect(0, 0, 1360, 144), 1280.0, 2.0, 700.0, anchor).0,
+            place::MIN_WIDTH as f32
+        );
+        // 200% -> 100%: back to the width it was given, the anchor at 1x
+        let (width, at) = reframed(rect(5, 7, 1240, 120), 1920.0, 1.0, 1240.0, 36.5);
+        assert_eq!(width, 1240.0);
+        assert_eq!(at, (5, 7 + 37));
+        // a fractional scale (125%) rounds the anchor to whole pixels
+        assert_eq!(
+            reframed(rect(0, 0, 900, 90), 1920.0, 1.25, 700.0, 36.5).1,
+            (0, 46)
+        );
     }
 }

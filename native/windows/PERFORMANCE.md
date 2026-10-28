@@ -4,6 +4,29 @@ The native Windows app against the three targets (AGENTS.md, tightened by 50%): 
 under 0.8 ms median, idle memory under 12.5 MB (private working set and private bytes), warm launch to ready under
 75 ms. Modelled on native/PERFORMANCE.md (the Mac's).
 
+## First key after reopening (win-polish)
+
+The bar used to free the core's compiled regexes, the WARP device and swap chain, and the text layouts at every
+hide, so a key typed within ~50 ms of the next showing waited for the warm-up's first step (~35 ms; smoke.ps1 Z2's
+p99, since its bench types the instant the bar shows). Now they go only once the bar has stayed hidden 30 s
+(app.rs `release_hidden`, from the trim timer a showing cancels); the working set is trimmed 2 s after that, once the
+engine thread has freed them. The pipe's `release` does it at once, so smoke.ps1 Z1 still reads the released state
+0.8 s after a hide without waiting 30 s.
+
+| | before (a27cf55) | after |
+|---|---|---|
+| smoke Z2 p99, keystroke to answer painted | 42.2 ms (bar shown and typed into at once) | **1.64 ms** after a quick hide; 37.0 ms after a release (as after 30 s hidden) |
+| smoke Z2 median | 0.69 ms | 0.67 ms |
+| a showing after a quick hide (perf.ps1 `showMed`) | 9.36-9.39 ms | **6.31-6.32 ms** (the device and swap chain kept) |
+| hidden 35-45 s after a standard session (launch settled first): private working set / private bytes | 0.61 / 7.70-7.75 MB | 0.25 / 7.79-7.84 MB |
+| hidden 1-10 s after use (before the release) | 6.1-6.3 / 7.8-8.5 MB | 20.5-20.7 / 22.9-23.1 MB (what a quick reopen keeps) |
+| smoke Z1 (released, 0.8 s after) / Z3 | 5.06 MB / 44.1 ms | 5.86 MB / 31.7 ms |
+
+A currency-rates fetch landing inside the 30 s (a fresh data folder's first, then once a day) leaves the released
+state ~0.5 MB higher in private bytes: blocks the fetch and reload make among what is freed later keep their pages.
+HeapCompact on the process heap didn't give them back. What is left of a showing's ~6.3 ms is SetWindowPos and the
+two paints (below).
+
 ## Second pass (win-perf2)
 
 `windows-native` at e77c180 (before) against `win-perf2` (after), with stretch goals of hidden after use under 8 MB

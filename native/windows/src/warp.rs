@@ -1,7 +1,7 @@
 //! The bar's WARP device, made ahead on a thread of its own, and WARP's DLL kept loaded across hides.
 //!
-//! The bar draws through a flip swap chain on a WARP device (render.rs), which goes when the bar hides (app.rs
-//! `after_hide`; ~2.5 MB). Making one costs ~11 ms the first time in a process and ~3 ms after, on the UI thread at
+//! The bar draws through a flip swap chain on a WARP device (render.rs), which goes 30 s into a hide (app.rs
+//! `release_hidden`; ~2.5 MB). Making one costs ~11 ms the first time in a process and ~3 ms after, on the UI thread at
 //! the first paint, which is most of a launch's time to its first frame and a third of a showing. So a launch and a
 //! showing start making it at once on another thread (`prefetch`), while the UI thread makes its windows and
 //! lays the bar out, and the first paint takes it (`take`). D3D11CreateDevice and the DXGI lookups may run on any
