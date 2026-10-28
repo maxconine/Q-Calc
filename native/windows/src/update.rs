@@ -678,7 +678,8 @@ mod tests {
     #[test]
     #[ignore = "run by installer/feed-check.ps1"]
     fn feed_from_a_local_installer() {
-        let dir = std::path::PathBuf::from(std::env::var("QCALC_FEED_CHECK").expect("QCALC_FEED_CHECK"));
+        let dir =
+            std::path::PathBuf::from(std::env::var("QCALC_FEED_CHECK").expect("QCALC_FEED_CHECK"));
         let pubkey = std::env::var("QCALC_FEED_PUBKEY").expect("QCALC_FEED_PUBKEY");
         let feed = std::fs::read_to_string(dir.join("latest-native.json")).unwrap();
         let o = offer(&feed, platform()).unwrap();

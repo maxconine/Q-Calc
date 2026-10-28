@@ -330,8 +330,10 @@ pub fn plan(db: &Newest) -> Moves {
         .map(|n| qcalc_core::games::nickname::clean_nickname(&n))
         .unwrap_or_default();
     let games = (!saves.is_empty() || !nickname.is_empty()).then(|| {
-        serde_json::to_string_pretty(&serde_json::json!({ "gameSaves": saves, "nickname": nickname }))
-            .unwrap_or_default()
+        serde_json::to_string_pretty(
+            &serde_json::json!({ "gameSaves": saves, "nickname": nickname }),
+        )
+        .unwrap_or_default()
     });
     Moves {
         history,
@@ -549,7 +551,9 @@ mod tests {
     }
 
     fn fixture(rest: &str) -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(r"tests\fixtures\tauri").join(rest)
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join(r"tests\fixtures\tauri")
+            .join(rest)
     }
 
     /// The Tauri app's real on-disk shapes (tests/fixtures/tauri/make.ps1: Chromium's own LevelDB, a table and a
@@ -569,15 +573,20 @@ mod tests {
         // the log's newer tape, not the table's older one; oldest first, as the page keeps it
         assert_eq!(exprs, ["12 kg to lb", "r = 5 m", "f(x) = x^2 + 1", "2×π"]);
         assert_eq!(history[2]["fnBody"], "x^2 + 1");
-        let m: serde_json::Value = serde_json::from_str(moves.messaging.as_deref().unwrap()).unwrap();
-        assert_eq!((m["name"].as_str(), m["key"].as_str().map(str::len)), (Some("ada_l"), Some(64)));
+        let m: serde_json::Value =
+            serde_json::from_str(moves.messaging.as_deref().unwrap()).unwrap();
+        assert_eq!(
+            (m["name"].as_str(), m["key"].as_str().map(str::len)),
+            (Some("ada_l"), Some(64))
+        );
         // what the native app makes of it, through the core's own rules
         let native = qcalc_core::app::messaging::sanitize_messaging(&m);
         assert_eq!(native.name, "ada_l");
         assert_eq!(native.accepted, ["grace_h"]);
         assert_eq!(native.blocked, ["spam_bot"]);
         // games.json's shape (games/store.rs `GameStore::from_json`)
-        let games: serde_json::Value = serde_json::from_str(moves.games.as_deref().unwrap()).unwrap();
+        let games: serde_json::Value =
+            serde_json::from_str(moves.games.as_deref().unwrap()).unwrap();
         assert_eq!(games["nickname"], "teal otter");
         assert_eq!(games["gameSaves"]["qcalc-crack"], "7");
         assert!(games["gameSaves"]["qcalc-equal"].is_string());
@@ -597,8 +606,14 @@ mod tests {
         assert_eq!((s.settings.sig_figs, s.settings.draft_seconds), (9, 120));
         assert_eq!(s.settings.theme, "dark");
         assert_eq!(s.settings.history_show, "always");
-        assert_eq!(s.settings.default_units.get("length").map(String::as_str), Some("ft"));
-        assert_eq!(s.settings.keybinds.get("angle").map(String::as_str), Some("ctrl+alt+r"));
+        assert_eq!(
+            s.settings.default_units.get("length").map(String::as_str),
+            Some("ft")
+        );
+        assert_eq!(
+            s.settings.keybinds.get("angle").map(String::as_str),
+            Some("ctrl+alt+r")
+        );
         assert_eq!(s.hotkey, "ctrl+alt+shift+f10");
         assert_eq!(s.positions.get(r"\\.\DISPLAY1"), Some(&[412.0, 180.0]));
         assert_eq!((s.spot_seconds, s.width, s.auto_update), (0, 900.0, false));
@@ -606,7 +621,11 @@ mod tests {
         assert_eq!(s.onboarding.commits, 117);
         // kept for the Tauri app, written back as it was
         assert_eq!(s.sign_in, Some(true));
-        assert!(serde_json::to_string(&s).unwrap().contains("\"signIn\":true"));
+        assert!(
+            serde_json::to_string(&s)
+                .unwrap()
+                .contains("\"signIn\":true")
+        );
     }
 
     #[test]
@@ -614,7 +633,12 @@ mod tests {
         assert_eq!(plan(&Newest::new()), Moves::default());
         let mut db = Newest::new();
         // a messaging entry with neither a name nor lists isn't worth a file
-        note(&mut db, &key("qcalc-messaging"), 1, Some(b"\x01{\"name\":\"\",\"accepted\":[]}"));
+        note(
+            &mut db,
+            &key("qcalc-messaging"),
+            1,
+            Some(b"\x01{\"name\":\"\",\"accepted\":[]}"),
+        );
         note(&mut db, &key("qcalc-history"), 2, Some(b"\x01{}"));
         assert_eq!(plan(&db), Moves::default());
     }

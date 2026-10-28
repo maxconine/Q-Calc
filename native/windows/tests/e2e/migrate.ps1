@@ -77,7 +77,17 @@ function Answer([string]$text, [string]$name = $Instance) {
     Wait-Until { $s = Send-Pipe @{ cmd = 'state' } 1000 $name; if ($s -and $s.liveFor -eq $text -and $s.answer) { $script:ans = $s.answer; $true } else { $false } } 8000 | Out-Null
     $script:ans
 }
-function LogText { if (Test-Path $Log) { [IO.File]::ReadAllText($Log) } else { '' } }
+function LogText {
+    # the app appends while this reads: share it both ways, and try again on a sharing clash
+    foreach ($i in 1..10) {
+        if (-not (Test-Path $Log)) { return '' }
+        try {
+            $fs = New-Object System.IO.FileStream($Log, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]'ReadWrite, Delete')
+            try { return (New-Object System.IO.StreamReader($fs)).ReadToEnd() } finally { $fs.Dispose() }
+        } catch { Start-Sleep -Milliseconds 50 }
+    }
+    ''
+}
 $expected = @('12 kg to lb', 'r = 5 m', 'f(x) = x^2 + 1', "2$([char]0xD7)$([char]0x3C0)")
 
 $AppId = "Q Calc Migrate E2E $Instance"
