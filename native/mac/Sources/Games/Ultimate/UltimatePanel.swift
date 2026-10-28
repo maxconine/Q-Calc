@@ -166,9 +166,13 @@ struct UltimateGameView: View {
                 .lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity)
                 .modifier(PongWait(on: !v.started))
+                // .ut-status aria-live="polite"
+                .liveRegion(status(v, myTurn: myTurn))
             UltimateBoard(view: v, role: role, live: myTurn, zone: zone, cursor: myTurn && aiming ? cursor : nil,
                           canPlay: { model.game.canPlay(cell: UInt32($0), who: role) },
                           onHover: { c in cursor = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("board")
             PongNote("\(myTurn && zone == nil ? "1–9 pick a board" : "1–9 or arrows pick a cell") · ↵ play · \(solo.map { s in "\(skills.first { $0.1 == s }!.0) · " } ?? "")esc leaves")
         }
         .onAppear {
@@ -260,10 +264,11 @@ private struct UltimateBoard: View {
         let size: CGFloat = 340
         let aimOk = cursor.map(canPlay) ?? false
         Group {
+            // drawn on the CPU (CGCanvas): a Canvas briefly kept ~120 MB of GPU surfaces when a game started
             if clock.moving(now) {
-                TimelineView(.animation) { _ in Canvas { ctx, sz in draw(ctx, sz, aimOk) } }
+                TimelineView(.animation) { _ in CGCanvas { cg, sz in draw(cg, sz, aimOk) } }
             } else {
-                Canvas { ctx, sz in draw(ctx, sz, aimOk) }
+                CGCanvas { cg, sz in draw(cg, sz, aimOk) }
             }
         }
         .frame(width: size, height: size)
@@ -333,24 +338,30 @@ private struct UltimateBoard: View {
         return out
     }()
 
-    private func draw(_ ctx: GraphicsContext, _ sz: CGSize, _ aimOk: Bool) {
-        var ctx = ctx
+    private func draw(_ cg: CGContext, _ sz: CGSize, _ aimOk: Bool) {
         let k = sz.width / Self.span
-        ctx.scaleBy(x: k, y: k)
-        ctx.translateBy(x: G.pad, y: G.pad)
+        cg.scaleBy(x: k, y: k)
+        cg.translateBy(x: G.pad, y: G.pad)
         let now = CACurrentMediaTime()
-        let round = StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round)
-        func stroke(_ c: GraphicsContext, _ p: Path, _ color: RGBA, _ width: Double) {
-            var s = round
-            s.lineWidth = width
-            c.stroke(p, with: .color(color.color), style: s)
+        func stroke(_ p: Path, _ color: RGBA, _ width: Double) {
+            cg.addPath(p.cgPath)
+            cg.setStrokeColor(color.cg)
+            cg.setLineWidth(width)
+            cg.setLineCap(.round)
+            cg.setLineJoin(.round)
+            cg.strokePath()
+        }
+        func fill(_ p: Path, _ color: RGBA) {
+            cg.addPath(p.cgPath)
+            cg.setFillColor(color.cg)
+            cg.fillPath()
         }
         // the dust and the grid
         for d in Self.dust {
-            ctx.fill(Path(ellipseIn: CGRect(x: d.x - d.r, y: d.y - d.r, width: 2 * d.r, height: 2 * d.r)), with: .color(Chalk.chalk.opacity(0.07).color))
+            fill(Path(ellipseIn: CGRect(x: d.x - d.r, y: d.y - d.r, width: 2 * d.r, height: 2 * d.r)), Chalk.chalk.opacity(0.07))
         }
         for l in Self.lines {
-            stroke(ctx, SVGPath.path(l.d), Chalk.chalk.opacity(l.big ? 0.85 : 0.3), l.big ? 3.2 : 1.4)
+            stroke(SVGPath.path(l.d), Chalk.chalk.opacity(l.big ? 0.85 : 0.3), l.big ? 3.2 : 1.4)
         }
         // the boards you may play in, chalked round as your turn comes
         if live {
@@ -358,7 +369,7 @@ private struct UltimateBoard: View {
             for b in 0..<9 where view.open[b] {
                 let p = SVGPath.path(utChalkBox(x: G.bx(b) - 4, y: G.by(b) - 4, w: G.board + 8, h: G.board + 8, seed: Double(300 + b)))
                 let zoneOn = zone == b
-                stroke(ctx, p.trimmedPath(from: 0, to: t), Chalk.mine.opacity(zoneOn ? 1 : 0.45), zoneOn ? 2.4 : 1.5)
+                stroke(p.trimmedPath(from: 0, to: t), Chalk.mine.opacity(zoneOn ? 1 : 0.45), zoneOn ? 2.4 : 1.5)
             }
         }
         let last = view.last.map(Int.init) ?? -1
@@ -371,11 +382,14 @@ private struct UltimateBoard: View {
             p.move(to: CGPoint(x: x1, y: y1))
             p.addQuadCurve(to: CGPoint(x: x2, y: y2), control: CGPoint(x: (x1 + x2) / 2 - (y2 - y1) * bend, y: (y1 + y2) / 2 + (x2 - x1) * bend))
             let o = 0.6 * cssEase(max(0, min(1, (now - clock.lastAt - 0.15) / 0.3)), 0, 0, 0.58, 1)
-            ctx.stroke(p, with: .color(Chalk.mine.opacity(o).color), style: StrokeStyle(lineWidth: 1.6, lineCap: .round, dash: [0.5, 6]))
+            cg.saveGState()
+            cg.setLineDash(phase: 0, lengths: [0.5, 6])
+            stroke(p, Chalk.mine.opacity(o), 1.6)
+            cg.restoreGState()
         }
         if let cursor {
             let r = Path(roundedRect: CGRect(x: G.cx(cursor) + 3, y: G.cy(cursor) + 3, width: G.cell - 6, height: G.cell - 6), cornerRadius: 7)
-            ctx.fill(r, with: .color(aimOk ? Chalk.mine.opacity(0.2).color : Chalk.chalk.opacity(0.06).color))
+            fill(r, aimOk ? Chalk.mine.opacity(0.2) : Chalk.chalk.opacity(0.06))
         }
         // the pieces
         let tone = { (who: GameSide) in who == role ? Chalk.mine : Chalk.theirs }
@@ -385,15 +399,17 @@ private struct UltimateBoard: View {
             if let fresh { t = cssEase(max(0, min(1, (since - fresh.delay) / fresh.dur)), 0, 0, 0.58, 1) }
             guard t > 0 else { return }
             let p = SVGPath.path(d).trimmedPath(from: 0, to: t)
-            var c = ctx
-            if dim { c.opacity = 0.22 }
-            stroke(c, p, color.opacity(glowOp), glow)
-            stroke(c, p, color, core)
+            // GraphicsContext.opacity: each stroke on its own at that alpha
+            cg.saveGState()
+            if dim { cg.setAlpha(0.22) }
+            stroke(p, color.opacity(glowOp), glow)
+            stroke(p, color, core)
+            cg.restoreGState()
         }
         for b in 0..<9 {
             if let m = view.boards[b], m != .draw {
-                ctx.fill(Path(ellipseIn: CGRect(x: G.bx(b), y: G.by(b) + G.board / 2 - G.board / 2.3, width: G.board, height: 2 * G.board / 2.3)),
-                         with: .color(Chalk.chalk.opacity(0.045).color))
+                fill(Path(ellipseIn: CGRect(x: G.bx(b), y: G.by(b) + G.board / 2 - G.board / 2.3, width: G.board, height: 2 * G.board / 2.3)),
+                     Chalk.chalk.opacity(0.045))
             }
         }
         for i in 0..<81 {

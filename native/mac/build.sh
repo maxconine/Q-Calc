@@ -99,7 +99,8 @@ for arch in "${ARCHS[@]}"; do
   THIN+=("$(swift build "${SPM_ARGS[@]}" --show-bin-path)/QCalcMac")
 done
 lipo -create "${THIN[@]}" -output "$BIN"
-strip -x "$BIN"
+# every symbol: nothing looks the executable's own up by name (the SwiftPM build's dSYM keeps them for crash logs)
+strip "$BIN"
 chmod +x "$BIN"
 
 # 4. the bundle
@@ -125,7 +126,9 @@ rm -rf "$APP/Contents/Frameworks/Sparkle.framework/XPCServices" "$APP/Contents/F
 
 icon_src="$ROOT/public/Qcalc_favi.png"
 if [[ -f "$icon_src" ]]; then
-  cp "$icon_src" "$APP/Contents/Resources/StatusIcon.png"
+  # the menu bar icon at the 18 pt it's shown, 1x and 2x (drawn from the full PNG, it kept a 6 MB decoded copy)
+  sips -s format png -z 18 18 "$icon_src" --out "$APP/Contents/Resources/StatusIcon.png" >/dev/null
+  sips -s format png -z 36 36 "$icon_src" --out "$APP/Contents/Resources/StatusIcon@2x.png" >/dev/null
   iconset="$STAGE/AppIcon.iconset"
   mkdir -p "$iconset"
   sips -s format png -z 1024 1024 "$icon_src" --out "$STAGE/icon.png" >/dev/null

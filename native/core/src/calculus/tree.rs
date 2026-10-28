@@ -138,9 +138,35 @@ fn is_one_const(n: &T) -> bool {
     crate::symbolic::simplify::is_one_node(&to_node(n))
 }
 
+/// The most nodes a derivative may have written out (a subtree shared by several parents counts each time).
+/// Every derivative in the golden fixtures has under 100; the product rule over `t t t …` a thousand long made
+/// a million, which simplify then copied into gigabytes. Past this the derivative fails, as an unsupported one
+/// does.
+const MAX_DERIVATIVE_NODES: usize = 50_000;
+
+/// The nodes of `t` written out, counting no further than `limit`.
+pub fn size_up_to(t: &T, limit: usize) -> usize {
+    fn walk(t: &T, left: &mut usize) {
+        if *left == 0 {
+            return;
+        }
+        *left -= 1;
+        for a in t.args() {
+            walk(a, left);
+        }
+    }
+    let mut left = limit;
+    walk(t, &mut left);
+    limit - left
+}
+
 /// `math.derivative(tree, variable, {simplify: false})`.
 pub fn derivative(tree: &T, var: &str) -> DR {
-    Deriv { var }.derive(tree)
+    let d = Deriv { var }.derive(tree)?;
+    if size_up_to(&d, MAX_DERIVATIVE_NODES) >= MAX_DERIVATIVE_NODES {
+        return Err(DerivError);
+    }
+    Ok(d)
 }
 
 impl Deriv<'_> {

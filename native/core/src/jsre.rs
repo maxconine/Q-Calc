@@ -43,9 +43,11 @@ pub use qcalc_lazy::disown as disown_compiled;
 /// Windows app's allocator keeps those blocks in a heap of their own.
 pub use qcalc_lazy::building as building_compiled;
 
-/// Empties this thread's cache of run-time patterns (`compile_cached`); a regex still in use stays alive.
+/// Empties this thread's cache of run-time patterns (`compile_cached`) and its prefilters; a regex still in use
+/// stays alive, and a pattern used again earns its prefilter again.
 pub fn clear_cache() {
     CACHE.with(|c| c.borrow_mut().clear());
+    PREFILTERS.with(|c| c.borrow_mut().clear());
 }
 
 thread_local! {
@@ -60,9 +62,17 @@ thread_local! {
 /// to look-arounds, does) first finds where a match could start with a regular over-approximation, instead of running the VM at
 /// every position. The engine's evaluation is ~2.5x quicker for it; all 1,078 patterns the core's tests compile
 /// gave the same matches with and without it over ~40,000 haystacks (native/windows/PERFORMANCE.md).
+///
+/// No fully compiled DFAs: the lazy DFA answers the same, and a full DFA per small regex (the meta engine builds
+/// one whenever `regex-automata/dfa-build` is on, which typst's syntect turns on in the app) costs memory and
+/// compile time for the hundreds of engine regexes.
 pub fn compile(pattern: &str) -> Regex {
     let seek = qcalc_lazy::owns() || !qcalc_lazy::any_owner();
-    match fancy_regex::RegexBuilder::new(pattern).seek(seek).build() {
+    match fancy_regex::RegexBuilder::new(pattern)
+        .seek(seek)
+        .delegate_dfa_size_limit(0)
+        .build()
+    {
         Ok(re) => {
             if building_compiled() {
                 // a freeable copy: its search caches are made now too, so they share its heap (qcalc-lazy)
@@ -165,8 +175,216 @@ fn translate(pattern: &str, flags: &str) -> String {
     out
 }
 
+/// `pattern` with its look-arounds taken out (and atomic groups made plain): a pattern that matches wherever
+/// `pattern` does, and more, which the `regex` crate's automata run without backtracking. None when it can't be
+/// made (a backreference, or something left that doesn't compile).
+fn loosened(pattern: &str) -> Option<String> {
+    let b = pattern.as_bytes();
+    let mut out = String::with_capacity(pattern.len());
+    let mut i = 0;
+    let mut in_class = false;
+    // the index just past the group opening at `start` (its `(`), skipping escapes and classes
+    let group_end = |start: usize| -> Option<usize> {
+        let (mut depth, mut k, mut class) = (0usize, start, false);
+        while k < b.len() {
+            match b[k] {
+                b'\\' => k += 1,
+                b'[' if !class => class = true,
+                b']' if class => class = false,
+                b'(' if !class => depth += 1,
+                b')' if !class => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(k + 1);
+                    }
+                }
+                _ => {}
+            }
+            k += 1;
+        }
+        None
+    };
+    while i < b.len() {
+        let rest = &pattern[i..];
+        if b[i] == b'\\' {
+            let next = *b.get(i + 1)?;
+            if next.is_ascii_digit() && next != b'0' || next == b'k' {
+                return None;
+            }
+            let len = 1 + rest[1..].chars().next()?.len_utf8();
+            out.push_str(&rest[..len]);
+            i += len;
+            continue;
+        }
+        if in_class {
+            in_class = b[i] != b']';
+        } else if b[i] == b'[' {
+            in_class = true;
+        } else if ["(?=", "(?!", "(?<=", "(?<!"]
+            .iter()
+            .any(|p| rest.starts_with(p))
+        {
+            i = group_end(i)?;
+            continue;
+        } else if rest.starts_with("(?>") {
+            out.push_str("(?:");
+            i += 3;
+            continue;
+        }
+        let c = rest.chars().next()?;
+        out.push(c);
+        i += c.len_utf8();
+    }
+    Some(out)
+}
+
+/// How [`cannot_match`] rules a text out for one pattern, kept per thread by the regex's address.
+struct Prefilter {
+    pattern: String,
+    /// Every match starts with one of the first set and ends with one of the second (either may be missing): a
+    /// text holding none of a set can't match. Next to no memory, so it's tried first.
+    literals: Vec<aho_corasick::AhoCorasick>,
+    /// The loosened pattern, and once compiled (about 15 KB) the regex: at once for a pattern without literals,
+    /// otherwise after the literals let [`UPGRADE`] texts through that the pattern didn't match.
+    loose: Option<String>,
+    compiled: Option<std::rc::Rc<Regex>>,
+    misses: u32,
+    /// Uses so far, up to [`WARM`], when the rest is built.
+    uses: u32,
+}
+
+/// Texts the literals may let through to the backtracking VM for nothing before the loosened regex is compiled.
+const UPGRADE: u32 = 256;
+
+/// Uses of a pattern before its prefilter is built.
+const WARM: u32 = 3;
+
+impl Prefilter {
+    /// Nothing built yet: rules nothing out.
+    fn pending(pattern: &str) -> Prefilter {
+        Prefilter {
+            pattern: pattern.to_string(),
+            literals: Vec::new(),
+            loose: None,
+            compiled: None,
+            misses: 0,
+            uses: 1,
+        }
+    }
+
+    fn of(pattern: &str) -> Prefilter {
+        use regex_syntax::hir::literal::{ExtractKind, Extractor};
+        let loose = loosened(pattern);
+        let literals: Vec<aho_corasick::AhoCorasick> = loose
+            .as_deref()
+            .and_then(|l| regex_syntax::Parser::new().parse(l).ok())
+            .map(|hir| {
+                [ExtractKind::Prefix, ExtractKind::Suffix]
+                    .into_iter()
+                    .filter_map(|kind| {
+                        let seq = Extractor::new().kind(kind).extract(&hir);
+                        let lits = seq.literals()?;
+                        if lits.is_empty() || lits.iter().any(|l| l.as_bytes().is_empty()) {
+                            return None;
+                        }
+                        aho_corasick::AhoCorasick::new(lits.iter().map(|l| l.as_bytes())).ok()
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut p = Prefilter {
+            pattern: pattern.to_string(),
+            literals,
+            loose,
+            compiled: None,
+            misses: 0,
+            uses: WARM,
+        };
+        if p.literals.is_empty() {
+            p.compile();
+        }
+        p
+    }
+
+    fn compile(&mut self) {
+        self.compiled = self
+            .loose
+            .take()
+            .and_then(|l| Regex::new(&l).ok())
+            .map(std::rc::Rc::new);
+    }
+
+    fn rules_out(&self, s: &str) -> bool {
+        self.literals.iter().any(|lits| !lits.is_match(s))
+            || self
+                .compiled
+                .as_ref()
+                .is_some_and(|re| matches!(re.is_match(s), Ok(false)))
+    }
+}
+
+thread_local! {
+    static PREFILTERS: std::cell::RefCell<std::collections::HashMap<usize, Prefilter>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+/// A quick test that `re` can't match `s`, without its look-arounds' backtracking (see [`Prefilter`]).
+fn cannot_match(re: &Regex, s: &str) -> bool {
+    let pattern = re.as_str();
+    let key = re as *const Regex as usize;
+    PREFILTERS.with(|cache| {
+        let mut cache = cache.borrow_mut();
+        match cache.get_mut(&key) {
+            Some(p) if p.pattern == pattern => {
+                // a pattern earns its prefilter on its WARM-th use, so the first evaluation (the app's warm-up)
+                // doesn't pay to analyse every pattern it touches once
+                if p.uses < WARM {
+                    p.uses += 1;
+                    if p.uses == WARM {
+                        *p = Prefilter::of(pattern);
+                    }
+                }
+            }
+            _ => {
+                if cache.len() >= 4096 {
+                    cache.clear();
+                }
+                cache.insert(key, Prefilter::pending(pattern));
+            }
+        }
+        let out = cache.get(&key).is_some_and(|p| p.rules_out(s));
+        // the fuzz harness builds with this to check, on every call, that a ruled-out text really can't match
+        #[cfg(feature = "check-prefilter")]
+        assert!(
+            !(out && re.is_match(s).unwrap_or(false)),
+            "prefilter ruled out a match: {pattern:?} on {s:?}"
+        );
+        out
+    })
+}
+
+/// `re` ran on a text its prefilter let through and didn't match: past [`UPGRADE`] of those, compile the loose
+/// regex.
+fn missed(re: &Regex) {
+    let key = re as *const Regex as usize;
+    PREFILTERS.with(|cache| {
+        if let Some(p) = cache.borrow_mut().get_mut(&key)
+            && p.compiled.is_none()
+            && p.loose.is_some()
+        {
+            p.misses += 1;
+            if p.misses >= UPGRADE {
+                p.compile();
+            }
+        }
+    });
+}
+
 /// `s.replace(re, f)` with the `g` flag. A regex that runs out of backtracking budget leaves the text as it was.
 pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> String) -> Cow<'t, str> {
+    if cannot_match(re, s) {
+        return Cow::Borrowed(s);
+    }
     let mut f = f;
     let mut out = String::new();
     let mut last = 0;
@@ -182,6 +400,7 @@ pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> Strin
         changed = true;
     }
     if !changed {
+        missed(re);
         return Cow::Borrowed(s);
     }
     out.push_str(&s[last..]);
@@ -190,7 +409,14 @@ pub fn replace_all<'t>(re: &Regex, s: &'t str, f: impl FnMut(&Caps<'_>) -> Strin
 
 /// `re.test(s)`; a regex that runs out of budget counts as no match.
 pub fn test(re: &Regex, s: &str) -> bool {
-    re.is_match(s).unwrap_or(false)
+    if cannot_match(re, s) {
+        return false;
+    }
+    let hit = re.is_match(s).unwrap_or(false);
+    if !hit {
+        missed(re);
+    }
+    hit
 }
 
 /// The text of group `i`, or "" when it didn't take part (JS gives `undefined`, which the TS mostly treats as "").
@@ -210,6 +436,21 @@ mod tests {
             "2(pi) + spin"
         );
         assert!(test(&RE, "pi"));
+    }
+
+    #[test]
+    fn loosened_patterns_drop_look_arounds_only() {
+        let l = |p: &str| loosened(p);
+        assert_eq!(l(r"(?<![A-Za-z])pi(?![A-Za-z(])").as_deref(), Some("pi"));
+        assert_eq!(l(r"a(?=b(c))d|(?<=x)e").as_deref(), Some("ad|e"));
+        assert_eq!(l(r"[(?=]x\(?=y").as_deref(), Some(r"[(?=]x\(?=y"));
+        assert_eq!(l(r"(?>ab)+(?<n>c)").as_deref(), Some("(?:ab)+(?<n>c)"));
+        assert_eq!(l(r"(a)\1"), None);
+        // the quick test never turns a match into none
+        let re = js(r"\bsin\b(?=\s*\()", "i");
+        assert!(test(&re, "2 SIN (x)"));
+        assert!(!test(&re, "sinx(1)"));
+        assert_eq!(replace_all(&re, "cos(1)", |_| "s".into()), "cos(1)");
     }
 
     #[test]

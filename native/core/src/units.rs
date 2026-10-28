@@ -1518,9 +1518,16 @@ struct Parser<'v> {
     // a unit symbol that is also a stored variable (`n = 5`, then `2 n`) is ambiguous, so the whole reading goes
     shadowed: bool,
     vars: &'v BTreeMap<String, f64>,
+    /// Open brackets around the current position: past [`MAX_BRACKETS`] the reading fails, so `((((…` 20,000
+    /// deep can't overflow the stack (the TS one throws a RangeError there).
+    depth: usize,
 }
 
 static NO_VARS: BTreeMap<String, f64> = BTreeMap::new();
+
+/// How deep [`Parser`] reads brackets. The TS reader (on node's stack) still reads `2 m` 600 deep and gives up
+/// before 3,000; each level here costs about 3 KB of a release build's stack, more in a debug one.
+const MAX_BRACKETS: usize = 1_000;
 
 impl<'v> Parser<'v> {
     fn new(s: &str, vars: &'v BTreeMap<String, f64>) -> Self {
@@ -1531,6 +1538,7 @@ impl<'v> Parser<'v> {
             incompatible: false,
             shadowed: false,
             vars,
+            depth: 0,
         }
     }
 
@@ -1670,7 +1678,13 @@ impl<'v> Parser<'v> {
     fn parse_primary(&mut self) -> Option<Qty> {
         self.skip();
         if self.eat('(') {
-            let inner = self.parse_add()?;
+            if self.depth >= MAX_BRACKETS {
+                return None;
+            }
+            self.depth += 1;
+            let inner = self.parse_add();
+            self.depth -= 1;
+            let inner = inner?;
             if !self.eat(')') {
                 return None;
             }
@@ -1782,7 +1796,12 @@ impl<'v> Parser<'v> {
     fn parse_number(&mut self) -> Option<Qty> {
         static RE: Lazy = Lazy::new(|| js(r"^([+-]?)((?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)", "i"));
         self.skip();
-        let rest = st(&self.s[self.i..]);
+        // the pattern reads only these characters, so the run of them is all it needs to see (the whole rest
+        // made a long line quadratic)
+        let rest: String = self.s[self.i..]
+            .iter()
+            .take_while(|c| c.is_ascii_digit() || matches!(c, '+' | '-' | '.' | 'e' | 'E'))
+            .collect();
         let c = RE.captures(rest.as_str()).ok()??;
         let whole = jsre::group(&c, 0);
         let si = jsnum::parse(whole)?;

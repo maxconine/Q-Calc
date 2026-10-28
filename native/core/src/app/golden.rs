@@ -241,6 +241,107 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
                 a(3).as_bool()
             ))
         }
+        // native only (no TS counterpart): the conversation commands and the message threads
+        ("lib/messaging", "parseMessagesCommand") => opt(msg::parse_messages_command(&s(0))),
+        ("lib/messaging", "messagesHint") => match msg::parse_messages_command(&s(0)) {
+            Some(cmd) => json!(msg::messages_hint(&cmd)),
+            None => Json::Null,
+        },
+        ("lib/messaging", "threadContacts") => {
+            let history: Vec<String> = of(&a(0)).unwrap_or_default();
+            json!(msg::thread_contacts(&history, &messaging(&a(1))))
+        }
+        ("lib/messaging", "messagesCompletion") => {
+            let contacts: Vec<String> = of(&a(1)).unwrap_or_default();
+            json!(msg::messages_completion(&s(0), &contacts))
+        }
+        ("lib/messaging", "threadEmptyText") => json!(msg::thread_empty_text(&s(0))),
+        ("lib/messaging", "threadReplyPrompt") => json!(msg::thread_reply_prompt(&s(0), b(1))),
+        ("lib/messaging", "cardAnnouncement") => json!(msg::card_announcement(&s(0), &s(1), &s(2))),
+        // native only: clips and files
+        ("lib/messaging", "parseShareCommand") => opt(msg::parse_share_command(&s(0))),
+        ("lib/messaging", "shareHint") => match msg::parse_share_command(&s(0)) {
+            Some(cmd) => json!(msg::share_hint(
+                &cmd,
+                &messaging(&a(1)),
+                b(2),
+                a(3).as_bool(),
+                &s(4)
+            )),
+            None => Json::Null,
+        },
+        ("lib/messaging", "shareCompletion") => {
+            let contacts: Vec<String> = of(&a(1)).unwrap_or_default();
+            json!(msg::share_completion(&s(0), &contacts))
+        }
+        ("lib/messaging", "shareStatusText") => {
+            json!(msg::share_status_text(&s(0), &s(1), &s(2), &s(3)))
+        }
+        ("lib/messaging", "fileStateText") => json!(msg::file_state_text(
+            &s(0),
+            &s(1),
+            n(2).map(|p| p.max(0.0) as u32)
+        )),
+        ("lib/messaging", "fileErrorText") => json!(msg::file_error_text(&s(0), &s(1))),
+        ("lib/messaging", "fileSizeText") => {
+            json!(msg::file_size_text(n(0).unwrap_or(0.0).max(0.0) as u64))
+        }
+        ("lib/messaging", "encryptedLength") => {
+            json!(msg::encrypted_len(n(0).unwrap_or(0.0).max(0.0) as u64))
+        }
+        ("lib/messaging", "cleanFilename") => json!(msg::clean_filename(&s(0))),
+        ("lib/messaging", "dropCountText") => {
+            json!(msg::drop_count_text(a(0).as_u64().unwrap_or(0) as u32))
+        }
+        ("lib/messaging", "droppedLabel") => {
+            json!(msg::dropped_label(&s(0), a(1).as_u64().unwrap_or(1) as u32))
+        }
+        ("lib/messaging", "numberedName") => json!(msg::numbered_name(
+            &s(0),
+            n(1).unwrap_or(1.0).max(1.0) as u32
+        )),
+        ("lib/messaging", "cleanClip") => opt(msg::clean_clip(&a(0))),
+        ("lib/messaging", "clipPreview") => json!(msg::clip_preview(&s(0))),
+        // native only: end-to-end keys for clips and files
+        ("lib/messaging", "cleanSealedOffer") => opt(msg::clean_sealed_offer(&a(0))),
+        ("lib/messaging", "cleanSealedClip") => opt(msg::clean_sealed_clip(&a(0))),
+        ("lib/messaging", "cleanPublicKey") => opt(msg::clean_public_key(&a(0))),
+        ("lib/messaging", "safetyCode") => opt(msg::safety_code(&s(0), &s(1))),
+        ("lib/messaging", "shareContext") => {
+            opt(msg::share_context(&s(0), &s(1), &s(2), &s(3), &s(4), &s(5)))
+        }
+        ("lib/messaging", "sealFileFacts") => opt(msg::seal_file_facts(
+            &s(0),
+            &s(1),
+            n(2).unwrap_or(-1.0).max(0.0) as u64,
+            &s(3),
+            &s(4),
+        )),
+        ("lib/messaging", "openFileFacts") => opt(msg::open_file_facts(
+            &s(0),
+            n(1).unwrap_or(0.0).max(0.0) as u64,
+        )),
+        ("lib/messaging", "pinState") => json!(msg::pin_state(&a(0), &s(1), &s(2))),
+        ("lib/messaging", "privacyNotice") => json!(msg::privacy_notice()),
+        ("lib/messaging", "privacySettingsText") => json!(msg::privacy_settings_text()),
+        ("lib/messaging", "lockTooltip") => json!(msg::lock_tooltip(&s(0))),
+        ("lib/messaging", "keyChangedText") => json!(msg::key_changed_text(&s(0))),
+        ("lib/messaging", "keyChangedDetail") => json!(msg::key_changed_detail(&s(0))),
+        ("lib/messaging", "safetyCodeText") => json!(msg::safety_code_text(&s(0), &s(1))),
+        ("lib/messaging", "safetyCodeDetail") => json!(msg::safety_code_detail(&s(0))),
+        ("lib/messaging", "dropTarget") => json!(msg::drop_target(
+            &s(0),
+            &messaging(&a(1)),
+            b(2),
+            a(3).as_bool(),
+            n(4).unwrap_or(1.0).max(0.0) as u32
+        )),
+        ("lib/messaging", "autoAccept") => json!(msg::auto_accept(
+            &messaging(&a(0)),
+            &s(1),
+            n(2).unwrap_or(0.0).max(0.0) as u64,
+            n(3).unwrap_or(0.0).max(0.0) as u64
+        )),
         // ---- lib/history ----
         ("lib/history", "ellipsize") => json!(h::ellipsize(&s(0), n(1).unwrap_or(0.0) as i64)),
         ("lib/history", "isMatrixQuantity") => json!(h::is_matrix_quantity(a(0).as_str())),
@@ -352,6 +453,9 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             let [keys, typed] = ob::cheat_sheet(a(0).as_str(), b(1), labels.as_ref());
             json!([keys, typed])
         }
+        ("lib/onboarding", "nativeCheats") => json!(ob::native_type_cheats()),
+        ("lib/onboarding", "konamiHint") => json!(crate::games::eggs::konami_hint(b(0))),
+        ("lib/onboarding", "modeAnnouncement") => json!(ob::mode_announcement(&s(0), b(1))),
         ("lib/onboarding", "emptyOnboarding") => to(&ob::empty_onboarding()),
         ("lib/onboarding", "exampleAnswer") => {
             let line: Option<LineResult> = of(&a(0));

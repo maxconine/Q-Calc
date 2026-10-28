@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var hotKeyRef: EventHotKeyRef?
     private var hotKeyHandlerInstalled = false
     private var statusItem: NSStatusItem?
+    private var statusDrop: StatusDrop?
     private var settingsWindow: SettingsWindowController?
     private var settingsObserver: NSObjectProtocol?
 
@@ -52,6 +53,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         feedRates(ECBRates.shared.pageJSON)
         overlay = OverlayController(model: model)
         overlay?.onSettings = { [weak self] in self?.showSettings() }
+        // `message`, `paste to` and `send file to` with no name set: straight to where it's set
+        overlay?.onMessagesSettings = { [weak self] in
+            self?.showSettings()
+            if let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first,
+               let i = tabs.tabViewItems.firstIndex(where: { $0.label == "Messages" }) { tabs.selectedTabViewItemIndex = i }
+        }
         overlay?.preload()
         Analytics.shared.start(logic: model.logic)
         // the engine's first call pays for its lazy tables; do it now, off the main thread
@@ -84,14 +91,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    // a dev send's result, where a script's snapshot and the log can both see it
+    private static func devSaid(_ status: String, _ overlay: OverlayController?) {
+        NSLog("Q Calc dev: %@", status)
+        OverlayLog.note("dev share: \(status)")
+        overlay?.model.hint = status
+    }
+
     // "show", "hide", "settings", "theme:dark", "type:<text>", "enter", "up", "periodic", "identities"
     private func devCommand(_ command: String) {
         guard let overlay else { return }
         let (verb, arg) = command.firstIndex(of: ":").map { (String(command[..<$0]), String(command[command.index(after: $0)...])) } ?? (command, "")
+        if verb.hasPrefix("send") { OverlayLog.note("dev: \(verb)") }
         switch verb {
         case "show": overlay.show(from: "dev")
         case "hide": overlay.hide(because: "dev")
-        case "settings": showSettings()
+        case "settings":
+            showSettings()
+            // settings:<tab index> opens that tab (2 is Messages)
+            if let i = Int(arg), let tabs = NSApp.windows.lazy.compactMap({ $0.contentViewController as? NSTabViewController }).first,
+               tabs.tabViewItems.indices.contains(i) { tabs.selectedTabViewItemIndex = i }
         case "theme": AppSettings.shared.setTheme(arg, notifyWeb: true)
         case "type": overlay.model.setField?(arg)
         case "enter": overlay.model.enter()
@@ -106,10 +125,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "snap": DevSnapshot.writeAll(to: arg)
         case "clear": overlay.model.clearHistory(); overlay.model.text = ""; overlay.model.hint = nil
         case "hover": overlay.model.edgeFocus = arg != "off"
+        case "contrast": overlay.devContrast = arg != "off"
+        // drop:<path>|<path>… is files dropped on the bar (Messages/ShareCommands.swift)
+        case "drop": overlay.model.dropFiles(arg.split(separator: "|").map { URL(fileURLWithPath: String($0)) }, to: nil)
         case "periodic": overlay.model.text = "periodic"; overlay.model.enter()
         case "identities": overlay.model.text = "identities"; overlay.model.enter()
         case "key": DevSnapshot.key(arg)
+        // text typed into whatever field has the keys (a reply line, the bar), and a click at x,y in the bar
+        // (points from its top-left)
+        case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView)?.insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
+        case "click": DevSnapshot.click(arg)
+        // what settings' Remove / Unblock does for a name
+        case "forget": Messages.shared.forget(arg)
+        case "closegame": overlay.closeGame()
         case "bench": DevBench.run(spec: arg, model: overlay.model)
+        // sendfile:<name>:<path> offers a file as a drop on their thread would; savefile saves every file that can
+        // be (Messages/MessageFiles.swift), as Save does
+        case "sendfile":
+            let parts = arg.split(separator: ":", maxSplits: 1).map(String.init)
+            if parts.count == 2 { MessageFiles.shared.sendFile(URL(fileURLWithPath: parts[1]), to: parts[0]) { [weak overlay] in Self.devSaid($0, overlay) } }
+        // sendclip:<name>:<text> shares text as `paste to` shares the clipboard, without touching it
+        case "sendclip":
+            let parts = arg.split(separator: ":", maxSplits: 1).map(String.init)
+            if parts.count == 2 { MessageFiles.shared.sendClip(parts[1].replacingOccurrences(of: "\\n", with: "\n"), to: parts[0]) { [weak overlay] in Self.devSaid($0, overlay) } }
+        case "savefile":
+            for (id, t) in MessageFiles.shared.transfers where !t.mine { MessageFiles.shared.save(id) }
         // the pasteboard into the field with the keys (the bar's paste path), or, with an index, into system field i
         case "paste":
             if let i = Int(arg), let raw = NSPasteboard.general.string(forType: .string) {
@@ -174,8 +214,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func statusBarImage() -> NSImage {
-        if let url = Bundle.main.url(forResource: "StatusIcon", withExtension: "png"),
-           let image = NSImage(contentsOf: url) {
+        // StatusIcon.png and StatusIcon@2x.png, made at 18 and 36 px by build.sh (from the full-size PNG the bar
+        // kept a 6 MB decoded copy for an 18 pt icon)
+        if let image = Bundle.main.image(forResource: "StatusIcon") {
             image.size = NSSize(width: 18, height: 18)
             image.isTemplate = true
             return image
@@ -229,6 +270,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             button.image = statusBarImage()
             button.imageScaling = .scaleProportionallyDown
             button.toolTip = "Q Calc"
+            // files dropped on the Q open the bar, which asks who they're for
+            statusDrop = StatusDrop(button) { [weak self] urls in
+                guard let self else { return }
+                self.overlay?.show(from: "files on the icon")
+                DispatchQueue.main.async { self.overlay?.model.droppedOnIcon(urls) }
+            }
         }
         let menu = NSMenu()
         menu.delegate = self

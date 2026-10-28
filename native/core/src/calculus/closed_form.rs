@@ -1235,10 +1235,10 @@ fn pslq(xs: &[Real], c: &Ctx, digits: usize, bound: f64, clock: &mut Clock) -> R
 
 fn gcd(a: f64, b: f64) -> f64 {
     let (mut a, mut b) = (a.abs(), b.abs());
-    while b != 0.0 {
+    while b != 0.0 && !b.is_nan() {
         (a, b) = (b, a % b);
     }
-    if a == 0.0 { 1.0 } else { a }
+    if a == 0.0 || a.is_nan() { 1.0 } else { a }
 }
 
 struct Term<'a> {

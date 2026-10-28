@@ -354,6 +354,27 @@ pub fn is_barrel_roll(text: &str) -> bool {
     t.split_whitespace().collect::<Vec<_>>() == ["do", "a", "barrel", "roll"]
 }
 
+/// The whole line is the Konami code typed out (`↑↑↓↓←→←→ba`, spaces and case aside) or `konami`: ↵ toggles the
+/// CRT look as the keys do
+pub fn is_konami_line(text: &str) -> bool {
+    let t: String = text
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>()
+        .to_lowercase();
+    t == "↑↑↓↓←→←→ba" || t == "konami"
+}
+
+/// What the answer slot says while the line is the Konami code (native only), like a command's `↵ …`: nothing
+/// showed before, so `konami` from the `?` list looked like it did nothing. `on` is the CRT look now.
+pub fn konami_hint(on: bool) -> &'static str {
+    if on {
+        "↵ back to the usual look"
+    } else {
+        "↵ an old look"
+    }
+}
+
 /// March 14, by the local calendar
 pub fn is_pi_day(month: u32, day: u32) -> bool {
     month == 3 && day == 14
@@ -422,6 +443,11 @@ pub struct KonamiTracker {
 }
 
 impl KonamiTracker {
+    /// how many keys of the code the last keys spell
+    pub fn progress(&self) -> usize {
+        self.at
+    }
+
     /// one key down; true when it completes the code
     pub fn push(&mut self, key: KonamiKey) -> bool {
         // the longest prefix of the code that the keys so far end with (↑↑↑ still holds ↑↑)
@@ -456,6 +482,12 @@ impl KonamiTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn konami_says_what_enter_does() {
+        assert_eq!(konami_hint(false), "↵ an old look");
+        assert_eq!(konami_hint(true), "↵ back to the usual look");
+    }
 
     #[test]
     fn divide_by_zero_needs_a_literal_zero_and_a_blown_answer() {
@@ -662,5 +694,23 @@ mod tests {
         assert_eq!(PUFFS[12].left(600.0, 100.0), 116.0);
         assert_eq!(PUFFS[13].left(600.0, 100.0), 484.0);
         assert!((PUFFS[0].left(600.0, 100.0) - 132.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn konami_line() {
+        assert!(is_konami_line("↑↑↓↓←→←→BA"));
+        assert!(is_konami_line(" ↑ ↑ ↓ ↓ ← → ← → b a "));
+        assert!(is_konami_line("Konami"));
+        assert!(!is_konami_line("↑↑↓↓←→←→ab"));
+        assert!(!is_konami_line("konami code"));
+    }
+
+    #[test]
+    fn konami_progress() {
+        let mut t = KonamiTracker::default();
+        for k in [KonamiKey::Up, KonamiKey::Up, KonamiKey::Down] {
+            t.push(k);
+        }
+        assert_eq!(t.progress(), 3);
     }
 }

@@ -180,6 +180,8 @@ struct TrailsArenaView: View {
             ZStack {
                 GameCanvas(frame: { model.tick() }, draw: { g, _ in model.paint(g, colors: colors) })
                     .aspectRatio(640 / 260, contentMode: .fit)
+                    .accessibilityElement()
+                    .accessibilityLabel("arena")
                 if let f, !f.banner.isEmpty {
                     Text(f.banner)
                         .font(f.big ? .gameDigits(GameMetrics.fsDisplay, .semibold) : .game(GameMetrics.fsBody))

@@ -112,6 +112,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         )
         // the inbox doesn't wait on the permission prompt, which may never be answered
         connect()
+        #if QCALC_NATIVE
+        if !name.isEmpty { ShareKeys.shared.publish() }
+        #endif
         if name.isEmpty {
             refreshAlerts()
         } else {
@@ -194,6 +197,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
                 self.name = next
                 self.saveName()
                 self.connect()
+                #if QCALC_NATIVE
+                // the native app's end-to-end key goes with the name (ShareKeys.swift)
+                ShareKeys.shared.publish()
+                #endif
             case "taken": self.note = "\(next) is taken. Try another."
             case "too-many": self.note = "Too many tries. Wait a minute."
             default: self.note = "Couldn’t reach the relay. Try again."
@@ -218,8 +225,12 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         blocked.removeAll { $0 == who }
         inbox.answered(who, blocked: false)
         answered(who)
-        if let said = asking.removeValue(forKey: who) { deliver(from: who, text: said) }
+        // a request that only shared a clip or a file said nothing to show (askShare)
+        if let said = asking.removeValue(forKey: who), !said.isEmpty { deliver(from: who, text: said) }
         requests = asking.keys.sorted()
+        #if QCALC_NATIVE
+        MessageFiles.shared.answered(who, allowed: true)
+        #endif
     }
 
     func block(_ who: String) {
@@ -229,6 +240,9 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         requests = asking.keys.sorted()
         inbox.answered(who, blocked: true)
         answered(who)
+        #if QCALC_NATIVE
+        MessageFiles.shared.answered(who, allowed: false)
+        #endif
     }
 
     // off both lists: their next message asks again
@@ -236,6 +250,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         accepted.removeAll { $0 == who }
         blocked.removeAll { $0 == who }
         saveLists()
+        #if QCALC_NATIVE
+        // the native app's thread with them goes too (MessageHistory.swift)
+        MessageHistory.shared.forget(who)
+        #endif
     }
 
     // the page's own changes to the lists
@@ -290,6 +308,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         guard !to.isEmpty, !text.isEmpty else { return done("bad") }
         post("/send", ["from": name, "key": key, "to": to, "text": text]) { status in
             let known: Set<String> = ["delivered", "offline", "unknown", "not-yours", "too-many", "bad"]
+            #if QCALC_NATIVE
+            // the native app keeps what the relay took, in the thread with them
+            if status == "delivered" { MessageHistory.shared.add(with: to, mine: true, text: text) }
+            #endif
             done(known.contains(status) ? status : "network")
         }
     }
@@ -378,6 +400,11 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         case "inbox":
             link = .ready
             retryWait = 3
+            #if QCALC_NATIVE
+            // each time the inbox connects (after a launch that was offline, a wake, a new network), so the relay
+            // never keeps a key this Mac no longer has: shares sealed for that one could never be opened
+            ShareKeys.shared.publish()
+            #endif
         case "closed":
             // another key holds the name now; trying again won't change that
             if event["reason"] as? String == "taken" || event["reason"] as? String == "released" {
@@ -385,7 +412,18 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
                 link = .taken
             }
         case "message":
+            #if QCALC_NATIVE
+            // a clip or a file's offer (MessageFiles.swift); its text is only for apps that don't know them
+            if let kind = event["kind"] as? String, kind != "text" {
+                MessageFiles.shared.heard(event)
+                return
+            }
+            #endif
             if let from = event["from"] as? String, let said = event["text"] as? String { arrived(from: from, text: said) }
+        #if QCALC_NATIVE
+        case "file":
+            MessageFiles.shared.event(event)
+        #endif
         default:
             break
         }
@@ -416,9 +454,15 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
             deliver(from: from, text: text)
             return
         }
+        ask(from, said: text)
+    }
+
+    // someone new asks: once a name, whatever they send meanwhile. `said` is what to show once they're allowed,
+    // "" for a clip or a file, which MessageFiles keeps
+    private func ask(_ from: String, said text: String) {
         // a name already asking isn't asked about again
         let asked = asking[from] != nil
-        asking[from] = text
+        if !asked || !text.isEmpty { asking[from] = text }
         requests = asking.keys.sorted()
         guard !asked else { return }
         inbox.add(from: from, text: "", ask: true)
@@ -435,6 +479,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // kept for the bar whatever happens to the notification, which is only the alert while the bar is away
     private func deliver(from: String, text: String) {
         guard let item = inbox.add(from: from, text: text, ask: false) else { return }
+        #if QCALC_NATIVE
+        // an accepted name's message, kept in the native app's thread with them before the bar is told
+        MessageHistory.shared.add(with: from, mine: false, text: text)
+        #endif
         inboxChanged()
         guard !barOpen else { return }
         let content = UNMutableNotificationContent()
@@ -444,6 +492,18 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: item.id, content: content, trigger: nil))
     }
+
+    #if QCALC_NATIVE
+    // the key, for MessageFiles' requests, which carry it in a header as the page's posts carry it in a body
+    var relayKey: String { key }
+
+    // a clip or a file from someone new: they ask as a message would
+    func askShare(from raw: String) {
+        let from = Self.clean(raw)
+        guard !from.isEmpty, !blocked.contains(from), !accepted.contains(from) else { return }
+        ask(from, said: "")
+    }
+    #endif
 
     private func inboxChanged() {
         NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
@@ -585,6 +645,11 @@ struct MessagesSettingsView: View {
             }
             names("Accepted", messages.accepted, empty: "Nobody yet. Anyone new’s first message asks you.", action: "Remove")
             names("Blocked", messages.blocked, empty: "Nobody. A blocked name’s messages never show, and they aren’t told.", action: "Unblock")
+            #if QCALC_NATIVE
+            MessageFilesSection()
+            MessagePrivacySection()
+            MessageHistorySection()
+            #endif
         }
         .groupedForm()
         .onAppear {

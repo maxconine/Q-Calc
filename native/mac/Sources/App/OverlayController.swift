@@ -18,15 +18,8 @@ final class OverlayPanel: NSPanel {
     var onEscape: (() -> Void)?
     var onResignKey: (() -> Void)?
     var ignoreResignKey = false
-    /// every key down, before the field takes it (the Konami code watches these; it never eats one)
-    var onKeyDown: ((NSEvent) -> Void)?
-
     override var canBecomeKey: Bool { true }
 
-    override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown { onKeyDown?(event) }
-        super.sendEvent(event)
-    }
     override var canBecomeMain: Bool { false }
 
     override func cancelOperation(_ sender: Any?) { onEscape?() }
@@ -78,6 +71,7 @@ final class OverlayController: NSObject {
     private var recentShows: [TimeInterval] = []
     private var firstLayout: ((Int) -> Void)?
     var onSettings: (() -> Void)?
+    var onMessagesSettings: (() -> Void)?
     var gameOpen = false
     var isShown: Bool { panel?.isVisible == true }
 
@@ -94,9 +88,14 @@ final class OverlayController: NSObject {
         self.model = model
         super.init()
         model.onHide = { [weak self] why in self?.hide(because: why) }
+        model.onShow = { [weak self] why in self?.show(from: why) }
         model.onSettings = { [weak self] in
             track("settings.open")
             self?.onSettings?()
+        }
+        model.onMessagesSettings = { [weak self] in
+            track("settings.open")
+            self?.onMessagesSettings?()
         }
         model.onPeriodic = { [weak self] in
             guard let self else { return }
@@ -158,7 +157,6 @@ final class OverlayController: NSObject {
         panel.title = "Q Calc"
         panel.onEscape = { [weak self] in self?.escape() }
         panel.onResignKey = { [weak self] in self?.lostFocus() }
-        panel.onKeyDown = { [weak self] event in self?.model.konamiKey(event) }
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
@@ -209,6 +207,10 @@ final class OverlayController: NSObject {
         workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
             self?.environmentChanged("wake")
         }
+        // Increase Contrast / Reduce Transparency switched: the bar redraws with Theme's other colours
+        workspace.addObserver(forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.model.objectWillChange.send()
+        }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             self?.environmentChanged("display change")
         }
@@ -222,9 +224,22 @@ final class OverlayController: NSObject {
         }
     }
 
+    /// dev builds (`drive.sh contrast:on`): the bar drawn as with Increase Contrast on, to picture it
+    var devContrast = false {
+        didSet {
+            Theme.devContrast = devContrast
+            applyAppearance()
+            model.objectWillChange.send()
+        }
+    }
+
     private func applyAppearance() {
         // the Konami CRT reads as phosphor on black: it always draws on the dark bar
         panel?.appearance = model.crt ? NSAppearance(named: .darkAqua) : AppSettings.shared.nsAppearance
+        if devContrast, let panel {
+            let dark = panel.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            panel.appearance = NSAppearance(named: dark ? .accessibilityHighContrastDarkAqua : .accessibilityHighContrastAqua)
+        }
         if let background = panel?.contentView { CRTLook.apply(model.crt, to: background) }
     }
 
@@ -355,7 +370,7 @@ final class OverlayController: NSObject {
     }
 
     private func lostFocus() {
-        guard wantVisible, panel?.isVisible == true, !gameOpen else { return }
+        guard wantVisible, panel?.isVisible == true, !gameOpen, !model.holdsOpen else { return }
         let since = uptime() - shownAt
         if OverlayHealth.focusLossHides(sinceShow: since) {
             hide(because: "lost focus")
@@ -561,12 +576,12 @@ final class OverlayController: NSObject {
     private func installClickAwayMonitors() {
         guard clickAwayMonitor == nil else { return }
         clickAwayMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard self?.panel?.isVisible == true, self?.gameOpen == false else { return }
+            guard self?.panel?.isVisible == true, self?.gameOpen == false, self?.model.holdsOpen == false else { return }
             self?.hide(because: "click in another app")
         }
         clickAwayLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window !== panel,
-                  !(event.window is PeriodicPanel), !self.gameOpen else { return event }
+                  !(event.window is PeriodicPanel), !self.gameOpen, !self.model.holdsOpen else { return event }
             self.hide(because: "click in another window")
             return event
         }
@@ -576,6 +591,9 @@ final class OverlayController: NSObject {
         guard escapeMonitor == nil else { return }
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, let panel = self.panel, panel.isVisible, event.window === panel else { return event }
+            // the Konami code watches every key here, once each, before anything takes it: the arrows never reach
+            // the window, since AppKit offers them to the field as key equivalents first and the bar uses them up
+            self.model.konamiKey(event)
             let composing = (panel.firstResponder as? NSTextInputClient)?.hasMarkedText() == true
             if event.keyCode == UInt16(kVK_Escape), !composing {
                 self.escape()
@@ -587,11 +605,19 @@ final class OverlayController: NSObject {
                 self.periodic.putFormulaIn()
                 return nil
             }
+            // ⌘V with files copied sends them, in a thread or on a line that names someone; text in a thread waits as the
+            // clipboard chip; otherwise it pastes
+            if event.modifierFlags.intersection([.command, .option, .control, .shift]) == [.command],
+               event.keyCode == UInt16(kVK_ANSI_V), !composing, self.model.pasteFiles() || self.model.pasteClip() {
+                return nil
+            }
             // ⌘W closes the front reference sheet first (sheets never take the keys while the bar is up), else
             // hides the bar
             if isCommandWCloseKey(event) {
                 if let sheet = PeriodicPanel.front() {
                     sheet.close()
+                } else if self.model.closeMessages() {
+                    // a message thread or the conversations list closes before the bar does
                 } else {
                     self.hide(because: "⌘W")
                 }
@@ -630,6 +656,11 @@ final class OverlayController: NSObject {
         gameOpen = true
         tellMessagesBar()
         games.open(kind, on: screen)
+    }
+
+    /// dev builds: closes an open game window (the bench's "closegame")
+    func closeGame() {
+        games.close()
     }
 
     // messages go to the bar while it's up and no game has it, and to notifications otherwise

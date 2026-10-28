@@ -57,34 +57,71 @@ impl PrintOptions {
 
 /// `node.toString(options)`.
 pub fn to_string(n: &Node, o: &PrintOptions) -> String {
+    let mut out = String::new();
+    write(n, o, &mut out);
+    out
+}
+
+/// `n` in brackets, or as it is.
+fn write_wrapped(n: &Node, o: &PrintOptions, wrap: bool, out: &mut String) {
+    if wrap {
+        out.push('(');
+    }
+    write(n, o, out);
+    if wrap {
+        out.push(')');
+    }
+}
+
+/// `items` printed one after another with `sep` between them.
+fn write_joined<'a>(
+    items: impl IntoIterator<Item = &'a Node>,
+    sep: &str,
+    out: &mut String,
+    mut each: impl FnMut(usize, &'a Node, &mut String),
+) {
+    for (i, x) in items.into_iter().enumerate() {
+        if i > 0 {
+            out.push_str(sep);
+        }
+        each(i, x, out);
+    }
+}
+
+/// [`to_string`] onto the end of `out`: a deep tree is written once, never copied into each parent.
+fn write(n: &Node, o: &PrintOptions, out: &mut String) {
     match n {
-        Node::Constant(c) => constant_text(c),
-        Node::Symbol(s) => s.clone(),
+        Node::Constant(c) => out.push_str(&constant_text(c)),
+        Node::Symbol(s) => out.push_str(s),
         Node::Parenthesis(c) => {
-            if matches!(o.parenthesis, None | Some(Parenthesis::Keep)) {
-                format!("({})", to_string(c, o))
-            } else {
-                to_string(c, o)
-            }
+            write_wrapped(
+                c,
+                o,
+                matches!(o.parenthesis, None | Some(Parenthesis::Keep)),
+                out,
+            );
         }
         Node::Function { callee, args } => {
-            let fname = match callee.as_ref() {
-                f @ Node::FunctionAssignment { .. } => format!("({})", to_string(f, o)),
-                f => to_string(f, o),
-            };
-            let a: Vec<String> = args.iter().map(|x| to_string(x, o)).collect();
-            format!("{fname}({})", a.join(", "))
+            let f = callee.as_ref();
+            write_wrapped(f, o, matches!(f, Node::FunctionAssignment { .. }), out);
+            out.push('(');
+            write_joined(args, ", ", out, |_, x, out| write(x, o, out));
+            out.push(')');
         }
-        Node::Operator { .. } => operator_text(n, o),
+        Node::Operator { .. } => operator_text(n, o, out),
         Node::Array(items) => {
-            let a: Vec<String> = items.iter().map(|x| to_string(x, o)).collect();
-            format!("[{}]", a.join(", "))
+            out.push('[');
+            write_joined(items, ", ", out, |_, x, out| write(x, o, out));
+            out.push(']');
         }
-        Node::Block(items) => items
-            .iter()
-            .map(|(n, visible)| format!("{}{}", to_string(n, o), if *visible { "" } else { ";" }))
-            .collect::<Vec<_>>()
-            .join("\n"),
+        Node::Block(items) => {
+            write_joined(items.iter().map(|(n, _)| n), "\n", out, |i, x, out| {
+                write(x, o, out);
+                if !items[i].1 {
+                    out.push(';');
+                }
+            });
+        }
         Node::Range { start, end, step } => {
             let p = o.parenthesis.unwrap_or_default();
             let prec = precedence(n, p, o.implicit, None);
@@ -92,18 +129,13 @@ pub fn to_string(n: &Node, o: &PrintOptions) -> String {
                 p == Parenthesis::All
                     || precedence(x, p, o.implicit, None).is_some_and(|q| q <= prec.unwrap_or(0))
             };
-            let part = |x: &Node| {
-                let s = to_string(x, o);
-                if needs(x) { format!("({s})") } else { s }
-            };
-            let mut s = part(start);
+            write_wrapped(start, o, needs(start), out);
             if let Some(st) = step {
-                s.push(':');
-                s.push_str(&part(st));
+                out.push(':');
+                write_wrapped(st, o, needs(st), out);
             }
-            s.push(':');
-            s.push_str(&part(end));
-            s
+            out.push(':');
+            write_wrapped(end, o, needs(end), out);
         }
         Node::Conditional {
             condition,
@@ -112,64 +144,58 @@ pub fn to_string(n: &Node, o: &PrintOptions) -> String {
         } => {
             let p = o.parenthesis.unwrap_or_default();
             let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
-            let part = |x: &Node| {
-                let s = to_string(x, o);
+            let needs = |x: &Node| {
                 let q = precedence(x, p, o.implicit, None);
-                if p == Parenthesis::All
+                p == Parenthesis::All
                     || matches!(x, Node::Operator { .. })
                     || q.is_some_and(|q| q <= prec)
-                {
-                    format!("({s})")
-                } else {
-                    s
-                }
             };
-            format!("{} ? {} : {}", part(condition), part(then), part(otherwise))
+            write_wrapped(condition, o, needs(condition), out);
+            out.push_str(" ? ");
+            write_wrapped(then, o, needs(then), out);
+            out.push_str(" : ");
+            write_wrapped(otherwise, o, needs(otherwise), out);
         }
         Node::Relational { ops, params } => {
             let p = o.parenthesis.unwrap_or_default();
             let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
-            let parts: Vec<String> = params
-                .iter()
-                .map(|x| {
-                    let q = precedence(x, p, o.implicit, None);
-                    if p == Parenthesis::All || q.is_some_and(|q| q <= prec) {
-                        format!("({})", to_string(x, o))
-                    } else {
-                        to_string(x, o)
-                    }
-                })
-                .collect();
-            let mut s = parts[0].clone();
-            for (i, op) in ops.iter().enumerate() {
-                s.push_str(&format!(" {} {}", op.symbol(), parts[i + 1]));
+            for (i, x) in params.iter().enumerate() {
+                if i > 0 {
+                    out.push(' ');
+                    out.push_str(ops[i - 1].symbol());
+                    out.push(' ');
+                }
+                let q = precedence(x, p, o.implicit, None);
+                write_wrapped(
+                    x,
+                    o,
+                    p == Parenthesis::All || q.is_some_and(|q| q <= prec),
+                    out,
+                );
             }
-            s
         }
         Node::Assignment { target, value, .. } => {
             let p = o.parenthesis.unwrap_or_default();
             let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
-            let mut v = to_string(value, o);
-            if p == Parenthesis::All
-                || precedence(value, p, o.implicit, None).is_some_and(|q| q <= prec)
-            {
-                v = format!("({v})");
-            }
-            format!("{} = {v}", to_string(target, o))
+            write(target, o, out);
+            out.push_str(" = ");
+            let wrap = p == Parenthesis::All
+                || precedence(value, p, o.implicit, None).is_some_and(|q| q <= prec);
+            write_wrapped(value, o, wrap, out);
         }
         Node::FunctionAssignment { name, params, body } => {
             let p = o.parenthesis.unwrap_or_default();
             let prec = precedence(n, p, o.implicit, None).unwrap_or(0);
-            let mut v = to_string(body, o);
-            if p == Parenthesis::All
-                || precedence(body, p, o.implicit, None).is_some_and(|q| q <= prec)
-            {
-                v = format!("({v})");
-            }
-            format!("{name}({}) = {v}", params.join(", "))
+            out.push_str(name);
+            out.push('(');
+            out.push_str(&params.join(", "));
+            out.push_str(") = ");
+            let wrap = p == Parenthesis::All
+                || precedence(body, p, o.implicit, None).is_some_and(|q| q <= prec);
+            write_wrapped(body, o, wrap, out);
         }
         // accessors print through the debug rendering (the symbolic layer never meets one)
-        other => other.to_string(),
+        other => out.push_str(&other.to_string()),
     }
 }
 
@@ -642,7 +668,7 @@ fn calculate_parens(root: &Node, p: Parenthesis, implicit: Implicit, a: &[Node])
     result
 }
 
-fn operator_text(n: &Node, o: &PrintOptions) -> String {
+fn operator_text(n: &Node, o: &PrintOptions, out: &mut String) {
     let Node::Operator {
         op,
         args: a,
@@ -658,49 +684,46 @@ fn operator_text(n: &Node, o: &PrintOptions) -> String {
     let add_or_mul = id == "OperatorNode:add" || id == "OperatorNode:multiply";
     if a.is_empty() || (a.len() > 2 && !add_or_mul) {
         // fallback to a function call, arguments in the default format
-        let parts: Vec<String> = a
-            .iter()
-            .map(|x| to_string(x, &PrintOptions::default()))
-            .collect();
-        return format!("{}({})", op.name(), parts.join(", "));
+        out.push_str(op.name());
+        out.push('(');
+        write_joined(a, ", ", out, |_, x, out| {
+            write(x, &PrintOptions::default(), out)
+        });
+        out.push(')');
+        return;
     }
     let parens = calculate_parens(n, p, implicit, a);
-    let wrap = |s: String, on: bool| if on { format!("({s})") } else { s };
     let symbol = op.symbol();
-    match a.len() {
-        1 => {
-            let assoc = associativity(n, p);
-            let operand = wrap(to_string(&a[0], o), parens[0]);
-            let named = symbol.chars().any(|c| c.is_ascii_alphabetic());
-            let space = if named { " " } else { "" };
-            match assoc {
-                Some(Assoc::Right) => format!("{symbol}{space}{operand}"),
-                Some(Assoc::Left) => format!("{operand}{space}{symbol}"),
-                None => format!("{operand}{symbol}"),
+    let hidden = *imp && *op == Op::Multiply && implicit == Implicit::Hide;
+    if a.len() == 1 {
+        let named = symbol.chars().any(|c| c.is_ascii_alphabetic());
+        let space = if named { " " } else { "" };
+        match associativity(n, p) {
+            Some(Assoc::Right) => {
+                out.push_str(symbol);
+                out.push_str(space);
+                write_wrapped(&a[0], o, parens[0], out);
+            }
+            Some(Assoc::Left) => {
+                write_wrapped(&a[0], o, parens[0], out);
+                out.push_str(space);
+                out.push_str(symbol);
+            }
+            None => {
+                write_wrapped(&a[0], o, parens[0], out);
+                out.push_str(symbol);
             }
         }
-        2 => {
-            let lhs = wrap(to_string(&a[0], o), parens[0]);
-            let rhs = wrap(to_string(&a[1], o), parens[1]);
-            if *imp && *op == Op::Multiply && implicit == Implicit::Hide {
-                format!("{lhs} {rhs}")
-            } else {
-                format!("{lhs} {symbol} {rhs}")
-            }
-        }
-        _ => {
-            let parts: Vec<String> = a
-                .iter()
-                .enumerate()
-                .map(|(i, x)| wrap(to_string(x, o), parens[i]))
-                .collect();
-            if *imp && *op == Op::Multiply && implicit == Implicit::Hide {
-                parts.join(" ")
-            } else {
-                parts.join(&format!(" {symbol} "))
-            }
-        }
+        return;
     }
+    let sep = if hidden {
+        " ".to_string()
+    } else {
+        format!(" {symbol} ")
+    };
+    write_joined(a, &sep, out, |i, x, out| {
+        write_wrapped(x, o, parens[i], out)
+    });
 }
 
 #[cfg(test)]

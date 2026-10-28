@@ -13,17 +13,34 @@ enum Theme {
         }
     }
 
+    /// dev builds (`drive.sh contrast:on`) draw as if Increase Contrast were on
+    static var devContrast = false
+    static var increaseContrast: Bool { devContrast || NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast }
+
+    /// the bar's 90% (`--bg` at .9), solid while Reduce Transparency or Increase Contrast is on (native only)
+    static var panelOpacity: Double {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency || increaseContrast ? 1 : 0.9
+    }
+
     // --bg, --bg-tape, --ink, --muted, --answer, --answer-hover, --accent, --accent-hover
     static let bg = dynamic(0xffffff, 0x2c2c2e)
     static let bgTape = dynamic(0xf5f5f7, 0x252527)
     static let ink = dynamic(0x1d1d1f, 0xf5f5f7)
-    static let muted = dynamic(0x86868b, 0x98989d)
+    // Increase Contrast (native only; the page has no such setting) swaps the two that fall short: muted is 3.3:1
+    // on the light tape (5.5:1 with it, 6.3:1 in dark), and the hairlines at 8% barely show
+    private static let mutedBase = dynamic(0x86868b, 0x98989d)
+    private static let mutedContrast = dynamic(0x636366, 0xaeaeb2)
+    static var muted: NSColor { increaseContrast ? mutedContrast : mutedBase }
+    static func muted(contrast: Bool) -> NSColor { contrast ? mutedContrast : mutedBase }
     static let answer = dynamic(0x1d1d1f, 0xf5f5f7)
     static let answerHover = dynamic(0x48484a, 0xd1d1d6)
     static let accent = dynamic(0x1d7a4c, 0x63d392)
     static let accentHover = dynamic(0x159a5a, 0x7ee2a8)
     // --line: rgba(0,0,0,.08) / rgba(255,255,255,.09)
-    static let line = dynamic(0x000000, 0xffffff, alpha: 0.08, darkAlpha: 0.09)
+    private static let lineBase = dynamic(0x000000, 0xffffff, alpha: 0.08, darkAlpha: 0.09)
+    private static let lineContrast = dynamic(0x000000, 0xffffff, alpha: 0.3)
+    static var line: NSColor { increaseContrast ? lineContrast : lineBase }
+    static func line(contrast: Bool) -> NSColor { contrast ? lineContrast : lineBase }
 
     // type: --fs-display 24, --fs-answer-part 20, --fs-row 17, --fs-body 13, --fs-small 12, --fs-caption 11
     static let display: CGFloat = 24
@@ -49,13 +66,42 @@ extension Color {
     static let qBg = Color(nsColor: Theme.bg)
     static let qBgTape = Color(nsColor: Theme.bgTape)
     static let qInk = Color(nsColor: Theme.ink)
-    static let qMuted = Color(nsColor: Theme.muted)
+    // two colours each, picked when a view draws (Increase Contrast), so SwiftUI sees a new colour when it flips
+    private static let qMutedBase = Color(nsColor: Theme.muted(contrast: false))
+    private static let qMutedContrast = Color(nsColor: Theme.muted(contrast: true))
+    static var qMuted: Color { Theme.increaseContrast ? qMutedContrast : qMutedBase }
     static let qAnswer = Color(nsColor: Theme.answer)
     static let qAnswerHover = Color(nsColor: Theme.answerHover)
     static let qAccent = Color(nsColor: Theme.accent)
     static let qAccentHover = Color(nsColor: Theme.accentHover)
-    static let qLine = Color(nsColor: Theme.line)
+    private static let qLineBase = Color(nsColor: Theme.line(contrast: false))
+    private static let qLineContrast = Color(nsColor: Theme.line(contrast: true))
+    static var qLine: Color { Theme.increaseContrast ? qLineContrast : qLineBase }
     /// --fill-hover / --fill-selected: ink at 5% and 8%
     static let qFillHover = Color(nsColor: Theme.ink).opacity(0.05)
-    static let qFillSelected = Color(nsColor: Theme.ink).opacity(0.08)
+    // Increase Contrast: the picked row and the pressed fills read at 16% rather than 8%
+    private static let qFillSelectedBase = Color(nsColor: Theme.ink).opacity(0.08)
+    private static let qFillSelectedContrast = Color(nsColor: Theme.ink).opacity(0.16)
+    static var qFillSelected: Color { Theme.increaseContrast ? qFillSelectedContrast : qFillSelectedBase }
+}
+
+extension View {
+    /// A plain TextField's prompt in the page's `::placeholder` colour (muted), drawn here: SwiftUI hands AppKit the
+    /// prompt without its colour, so AppKit used its own placeholder grey (black at 25%, about 1.8:1 on white) and
+    /// `drive.sh snap` pictures drew it in the text colour. Put it right after `.font`, before any padding, and
+    /// leave the prompt empty. `font` overrides the system font at `size`.
+    func mutedPrompt(_ text: String, shown: Bool, size: CGFloat, font: Font? = nil, color: Color = .qMuted,
+                     kerning: CGFloat = 0) -> some View {
+        overlay(alignment: .leading) {
+            if shown {
+                Text(text)
+                    .font(font ?? .system(size: size))
+                    .kerning(kerning)
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
 }

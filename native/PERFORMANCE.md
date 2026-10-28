@@ -228,3 +228,96 @@ Tried and dropped, with no measured win:
 ### After the native games merge (2026-10-26, arm64, native only)
 
 Keystroke median 1.64 ms (p99 8.1), warm launch 180 ms (bar mounted 143 ms), footprint idle 28 MB / after typing 42 MB / after graph 65 MB, one process, 0% idle CPU, 43.7 MB on disk. The web build is unchanged from the baseline above (91 MB idle, 396 MB after a graph, 12 ms keystrokes).
+
+### Rounds 3 and 4 (overnight 2026-10-27, arm64, native only)
+
+Same M4 Pro, load 6 to 20 from other agents' builds, the display asleep. Each change was measured against the
+build before it: both saved and run back to back, twice, interleaved (`app_bench.py --only native --runs 1`, with
+`QCALC_BENCH_NATIVE_APP` pointing at the saved copy). Pictures from the `snap` dev command were compared pixel
+by pixel, in light and dark.
+
+New in the bench:
+- **Peak footprint while graphing**, sampled every 0.2 s from the graph line being typed to the 3 s sample.
+- **Typed into the field**: the same 269 inputs typed a character at a time through the text view (`field` in
+  DevBench). This is `insertText`, so auto-pairs, symbol swaps, undo and the field's updates all run. It is
+  timed from before the insert to the answer landing. Setting `model.text` (the older keystroke row) skips all
+  of that.
+
+| change | measured | kept? |
+|---|---|---|
+| graph plot drawn into a CPU bitmap handed to the layer, not a Canvas (round 3, carried over) | peak while graphing 195-197 → 62-65 MB; after the graph 68/157 → 62-64 MB | kept |
+| engine regexes without the fully compiled DFA (round 3, carried over) | first try: keystroke 1.71/1.76 → 1.77/1.90 ms. Second try, footprint from `vmmap` over two sessions each: idle 24.1 → 23.8, after typing 41.2 → 40.0, after the graph 58.1 → 56.6 MB; keystroke 1.29/1.28 → 1.34/1.21 ms | kept on the second try |
+| undo in Swift (undo.ts line for line) instead of three `callJson` round trips a keystroke | typed into the field 1.92/2.07/2.10 → 1.59-1.80 ms | kept |
+| dev builds read `QCALC_PI_DAY` once (the composer read the whole environment on every redraw) | keystroke 1.66/1.79 → 1.57/1.31 ms; field 1.71/1.72 → 1.64/1.39 ms (dev builds only) | kept |
+| `malloc_zone_pressure_relief` 2 s after typing or after a graph lands | no change in any footprint row | reverted |
+| `lto = "fat"` | binary within 2 KB of thin | reverted |
+| plot bitmap in the screen's pixel format and colour space (BGRA, the window's space) | after the graph 64/64 → 57/57 MB, peak 64 → 57-59 MB; BGRA in sRGB alone saved nothing | kept |
+| pong's court as Core Animation layers, not a Canvas in a TimelineView | playing pong 167-173 → 32 MB | kept |
+| `opt-level = "z"` for the Typst dependencies the preview never runs (images, PDF, WASM, bibliographies) | binary 42.2 → 45.1 MB (bigger) | reverted |
+| `strip` instead of `strip -x` | executable 42.2 → 40.5 MB, on disk 44.4 → 42.9 MB | kept |
+| a stand-in for SwiftUI's Canvas that renders the same Canvas through ImageRenderer, on crack's dial | crack's 125 MB spikes unchanged (ImageRenderer rasterises on the GPU too) | reverted |
+| `.drawingGroup()` on connect 4's animating Canvas | peak 167 → 168 MB | reverted |
+| plot drawn again only when its state, the pointer or the scale changes | graph shown, 20 unrelated model changes: 20 → 0 redraws of ~10.6 ms each | kept |
+| menu bar icon bundled at 18 and 36 px (it was drawn from the 1254 px PNG, kept decoded) | idle 24/24 → 22/22, after typing 41/40 → 39/38, after the graph 57/57 → 55/55 MB; the icon is the same to the pixel | kept |
+| crack's dial drawn by Core Graphics into one bitmap (`CGCanvas`, the plot's approach) | each press: 34-36 → 157-160 MB for 1-4 s before, flat at 29 MB after; steady 35 → 29 MB; the ready dial within 2/255 | kept |
+| connect 4's board through `CGCanvas` | starting a game: peak 161 → 32 MB, steady 39 → 31 MB; the board within 2/255 | kept |
+| ultimate's slate through `CGCanvas` | starting a game: peak 163 → 33 MB, steady 40 → 31 MB; the board differs only where the chalk-in animation is caught at another moment (as two runs of the old build do) | kept |
+| the 420 smoke's puff images dropped when the effect ends (they were cached for good) | after one 420: 63 → 30 MB (idle before it 24); while it plays, unchanged | kept |
+| one Core Image context for all of the smoke's puffs | the smoke's peak 160 → 259 MB | reverted |
+| ember's level pictures dropped when the game closes (a static cache) | open the level picker, close the game: 47.5 → 37.2 MB | kept |
+
+Before and after: the build this night started from (`native` at 405b057) against the last commit. Three
+invocations each with `--runs 2`, interleaved, so each cell spans six sessions (launches: 9 cold and 15
+warm); the last pair was run on the final commit and agrees with the first two.
+
+| | before | after |
+|---|---|---|
+| launch to ready, cold / warm (ms) | 558-615 / 132-153 | 548-604 / 133-137 |
+| footprint, idle (bar never shown) | 25-26 MB | 23-24 MB [22-25] |
+| footprint, bar shown | 28 MB | 26 MB |
+| footprint, after the typing session | 40-41 MB | 38-40 MB |
+| footprint, after the graph | 68 MB | 54 MB |
+| footprint, peak while graphing | 198 MB | 54 MB |
+| RSS, after the graph | 140 MB | 122-125 MB |
+| keystroke (set text): median / p90 / p99 | 1.30-1.36 / 2.76-2.97 / 4.91-5.48 ms | 1.19-1.26 / 2.51-2.83 / 4.89-5.27 ms |
+| keystroke typed into the field: median | 1.92-2.10 ms (measured on the build just before the undo change) | 1.29-1.36 ms |
+| heavy lines | 1.6-2.0 ms | 1.5-2.0 ms |
+| CPU while typing at 40 ms a key | 8.2-8.9% | 7.7-8.9% |
+| idle CPU | 0% | 0% |
+| playing pong vs the computer | 167-173 MB | 32 MB |
+| crack, connect 4, ultimate: peak while playing | 157-163 MB | 29-33 MB |
+| after one 420 smoke / after visiting ember's levels | 63 / 47.5 MB | 30 / 37.2 MB |
+| app on disk | 44.4 MB | 42.8 MB |
+
+The before build has no `field` mode, so its "typed into the field" row in the raw JSON is the set-text path again.
+Its value above comes from the round's own A/B runs instead.
+
+Where the time goes now:
+- **A keystroke typed into the field** (a `sample` of the bench copy, with the unstripped binary): the main thread
+  is about half busy.
+  - SwiftUI's graph update is about half of that, as in round 2.
+  - The text view's own insert and `textDidChange` are about a fifth.
+  - Core Animation's commit is about a tenth.
+  - The engine thread is busy about 18% of the time, nearly all of it waiting for `Engine.live` on the
+    evaluation thread.
+- **First launch after an install or update** (the "cold" row) is about 390 ms before `main`, against 7.5 ms
+  warm. That time grows with the binary's size, about 6 ms a MB: a test binary took 95 ms when it was 50 KB and
+  340-400 ms when padded to 42 MB. So it is the system reading the new binary, not our code. Only a smaller
+  binary helps, and most of it is Typst's (its library, image and PDF decoders, WASM, bibliographies), which
+  has no features to turn off.
+- **Memory after typing** (+15 MB over the shown bar): about half is regexes compiled on first use (Thompson
+  NFAs, one-pass DFAs, lazy-DFA caches); the rest is SwiftUI and AppKit.
+- **File encryption** (FileCrypt, 256 MB of random bytes): about 1.5 GB/s each way, far beyond the relay's
+  upload, so it was left alone.
+- **Game frames** couldn't be timed tonight: with the display asleep the display links don't fire, so CPU per
+  frame reads 0-4%.
+
+Found on the way, not fixed:
+- **What made the game Canvases cost GPU surfaces.** After a change (a press, a game starting), each frame of a
+  SwiftUI Canvas inside the game window left a window-wide 4 MB surface behind for 1-3 s, about 30 of them.
+  It wasn't the TimelineView, the note under the dial or `.drawingGroup()`. Taking the Canvas out was the fix,
+  so `CGCanvas` is what a new per-frame game picture should use.
+- **The settings window** goes to ~174 MB for about 1.5 s as it opens and holds 52 MB while open (idle 24). It is
+  `Sources/Shared/SettingsWindow.swift`, shared with the web-view app, so it was left alone.
+- ~~Ember's level picker shows "Optional(nil)" at the start of its note~~ (fixed: the note is read straight off the frame, not through `?? nil`, which made `$0` an optional).
+  This is a display bug, not performance, and it was left for the games work.

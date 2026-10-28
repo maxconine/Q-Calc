@@ -148,6 +148,8 @@ private struct EqualGame: View {
             VStack(spacing: 0) {
                 head
                 grid(guesses, over: over)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("guesses")
                     .padding(.top, GameMetrics.sp3)
                     .padding(.bottom, GameMetrics.sp2)
                 if over { summary(guesses) } else { keypad(guesses) }
@@ -233,7 +235,7 @@ private struct EqualGame: View {
     private func shake(_ t: Double) -> CGFloat {
         let frames: [(Double, Double)] = [(0, 0), (0.2, -6), (0.4, 6), (0.6, -4), (0.8, 3), (1, 0)]
         let u = t / 0.36
-        guard u >= 0, u < 1 else { return 0 }
+        guard u >= 0, u < 1, !GameMotion.reduced else { return 0 }
         for i in 1..<frames.count where u <= frames[i].0 {
             let k = (u - frames[i - 1].0) / (frames[i].0 - frames[i - 1].0)
             return frames[i - 1].1 + (frames[i].1 - frames[i - 1].1) * cssEase(k, 0.25, 0.1, 0.25, 1)
@@ -244,7 +246,7 @@ private struct EqualGame: View {
     private func tile(_ c: Character?, mark mk: EqualMark?, flip: Double) -> some View {
         let shape = RoundedRectangle(cornerRadius: GameMetrics.radiusS)
         // equal-flip: rotateX 90° → 0, ease, 0.42 s, held at 90° until its delay
-        let angle = 90 * (1 - cssEase(flip, 0.25, 0.1, 0.25, 1))
+        let angle = GameMotion.reduced ? 0 : 90 * (1 - cssEase(flip, 0.25, 0.1, 0.25, 1))
         return Text(c.map(glyph) ?? "")
             .font(.gameDigits(GameMetrics.fsRow, .semibold))
             .foregroundColor(mk != nil ? .white : colors.ink.color)
@@ -266,6 +268,8 @@ private struct EqualGame: View {
                 .font(.game(GameMetrics.fsSmall)).foregroundColor(colors.muted.color)
                 .frame(minHeight: 16)
                 .padding(.bottom, GameMetrics.sp2)
+                // .equal-note aria-live="polite"
+                .liveRegion(m.note.isEmpty ? "\(left) \(left == 1 ? "guess" : "guesses") left" : m.note)
             VStack(spacing: 5) {
                 ForEach(0..<keyRows.count, id: \.self) { r in
                     HStack(spacing: 5) {
@@ -273,8 +277,8 @@ private struct EqualGame: View {
                             EqualKey(label: glyph(k), mark: keys[String(k)], fill: keys[String(k)].map(fill)) { m.press(String(k)) }
                         }
                         if r == 1 {
-                            EqualKey(label: "⌫", wide: true) { m.press("Backspace") }
-                            EqualKey(label: "↵", wide: true) { m.press("Enter") }
+                            EqualKey(label: "⌫", wide: true) { m.press("Backspace") }.accessibilityLabel("delete")
+                            EqualKey(label: "↵", wide: true) { m.press("Enter") }.accessibilityLabel("enter")
                         }
                     }
                 }

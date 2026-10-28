@@ -285,6 +285,17 @@ impl State {
         r
     }
 
+    /// The core's `live` for a piece of the line, as `blank_span` and `missing_unit` read it: without its own
+    /// squiggle, which nothing reads (each piece that was blank searched its own pieces again).
+    /// Gives what [`Engine::live`] would show (a graph's answer slot is empty) and whether it's improper.
+    fn piece_live(&self, req: &LiveRequest, piece: &str) -> (String, bool) {
+        let mut r = self.core_request(&Self::piece(req, piece));
+        r.no_squiggle = true;
+        let a = live::live(&r);
+        let graph = matches!(a.command, Some(live::LiveCommand::Graph));
+        (if graph { String::new() } else { a.display }, a.improper)
+    }
+
     /// `blankReason` for the bar's line, each piece read by `live` with the line's own context.
     pub(crate) fn blank_span(&self, req: &LiveRequest) -> Option<Span> {
         if jsstr::trim(&req.text).is_empty() {
@@ -294,15 +305,15 @@ impl State {
             variables: req.context.variables.keys().cloned().collect(),
             functions: req.context.functions.keys().cloned().collect(),
         };
-        let ok = |p: &str| !jsstr::trim(&self.live(&Self::piece(req, p)).display).is_empty();
+        let ok = |p: &str| !jsstr::trim(&self.piece_live(req, p).0).is_empty();
         blank::blank_reason(&req.text, &ok, &names).map(span)
     }
 
     /// `missingUnit` for the bar's line: a piece is fine when it reads and isn't an improper conversion.
     pub(crate) fn missing_unit(&self, req: &LiveRequest) -> Option<UnitOffer> {
         let ok = |p: &str| {
-            let a = self.live(&Self::piece(req, p));
-            !jsstr::trim(&a.display).is_empty() && !a.improper
+            let (display, improper) = self.piece_live(req, p);
+            !jsstr::trim(&display).is_empty() && !improper
         };
         qcalc_core::app::missing_unit::missing_unit(&req.text, &ok).map(|f| UnitOffer {
             at: f.at as u32,
@@ -1127,6 +1138,26 @@ mod tests {
             now_ms: 1_790_287_960_000,
             phrases: true,
         }
+    }
+
+    #[test]
+    fn squiggles_and_unit_offers() {
+        let e = engine();
+        let span = |t: &str| e.blank_span(request(t)).map(|s| (s.start, s.end));
+        assert_eq!(span("2x+3==11"), Some((5, 6)));
+        assert_eq!(span("5 foo + 2"), Some((2, 5)));
+        assert_eq!(span("2+3"), None);
+        let fix = e.missing_unit(request("10 mA + 5 / 1 kohm"));
+        assert_eq!(
+            fix.map(|f| f.filled).as_deref(),
+            Some("10 mA + 5 V / 1 kohm")
+        );
+        // each piece is read without a squiggle of its own (a blank piece used to search its own pieces again),
+        // and that changes no answer
+        assert_eq!(span(&format!("e{}", "^/".repeat(60))), None);
+        assert_eq!(span("2 ++ 3 = = 4"), None);
+        assert_eq!(span("sin(30) + foo(2) + 1"), Some((10, 13)));
+        assert_eq!(span("3 kg to m + 2"), None);
     }
 
     #[test]

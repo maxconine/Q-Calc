@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 // The pieces every game panel is built from, as src/index.css draws them (.pong, .pong-head, .pong-button,
@@ -133,13 +134,34 @@ struct PongNote: View {
     }
 }
 
+/// `aria-live="polite"` / `role="status"`: VoiceOver hears the text when it shows and each time it changes.
+struct LiveRegion: ViewModifier {
+    let text: String
+    func body(content: Content) -> some View {
+        content
+            .onAppear { if !text.isEmpty { BarModel.announce(text) } }
+            .onChange(of: text) { if !$0.isEmpty { BarModel.announce($0) } }
+    }
+}
+
+extension View {
+    func liveRegion(_ text: String) -> some View { modifier(LiveRegion(text: text)) }
+}
+
+/// The games' `@media (prefers-reduced-motion: reduce)` rules: Reduce Motion stops the pulse, the caret's blink,
+/// equal's shake and flip, and crack's shake, click and pop, as the page does.
+enum GameMotion {
+    static var reduced: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
+}
+
 /// `.pong-wait`: opacity down to 0.45 and back every 1.6 s.
 struct PongWait: ViewModifier {
     let on: Bool
     @State private var dim = false
 
     func body(content: Content) -> some View {
-        if on {
+        // `@media (prefers-reduced-motion: reduce) { .pong-wait { animation: none } }`
+        if on, !GameMotion.reduced {
             TimelineView(.animation(minimumInterval: 1 / 30)) { ctx in
                 let t = ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.6) / 1.6
                 // ease-in-out between 1 and 0.45, lowest half way
@@ -189,6 +211,10 @@ struct PongCode: View {
                     .insetRing(entry ? (caret == i ? colors.accent.mix(0.55, .clear) : colors.line) : .clear, width: 1, radius: GameMetrics.radiusS)
             }
         }
+        // .pong-code aria-label="room code", read as its digits rather than one tile at a time
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("room code")
+        .accessibilityValue(digits.filter { !$0.isEmpty }.joined(separator: " "))
     }
 }
 

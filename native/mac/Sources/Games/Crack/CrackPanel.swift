@@ -93,6 +93,9 @@ private struct CrackGame: View {
                     VStack(spacing: 0) {
                         CrackDial(s: model.s, pop: model.pop, phaseAt: model.phaseAt, colors: colors)
                             .frame(width: dialSize, height: dialSize)
+                            // CrackPanel.tsx's dial aria-label
+                            .accessibilityElement()
+                            .accessibilityLabel("level \(model.s.level), \(model.s.left) to go")
                             .contentShape(Rectangle())
                             .gesture(DragGesture(minimumDistance: 0)
                                 .onChanged { _ in
@@ -150,74 +153,87 @@ private struct CrackDial: View {
     var dotColor: RGBA { colors.dark ? RGBA(0xffd23f) : RGBA(0xe9a800) }
     var missColor: RGBA { colors.dark ? RGBA(0xff6b5c) : RGBA(0xd93a2b) }
 
+    // drawn on the CPU (CGCanvas): a Canvas redrawn every frame briefly kept ~125 MB of GPU surfaces after each press
     var body: some View {
-        Canvas { ctx, size in
-            let now = CACurrentMediaTime()
-            let since = now - phaseAt
-            let k = size.width / 200
-            ctx.scaleBy(x: k, y: k)
-            // a miss shakes the whole dial
-            if s.phase == .fail { ctx.translateBy(x: Self.shake(since), y: 0) }
-            let p = { (a: Double, r: Double) in CGPoint(x: Self.c + r * sin(a), y: Self.c - r * cos(a)) }
-            let circle = { (r: Double) in Path(ellipseIn: CGRect(x: Self.c - r, y: Self.c - r, width: 2 * r, height: 2 * r)) }
+        CGCanvas { cg, size in draw(cg, size) }
+    }
 
-            let bezel = circle(Self.trackR + 18)
-            ctx.fill(bezel, with: .color(colors.court.color))
-            ctx.stroke(bezel, with: .color(colors.line.color), lineWidth: 1)
-
-            // the track's colour fades over 0.2 s into the phase's
-            let base = colors.ink.mix(0.11, .clear)
-            let lit: RGBA = s.phase == .fail ? missColor.mix(0.45, .clear) : s.phase == .clear ? colors.accent.mix(0.55, .clear) : base
-            let fade = min(1, since / 0.2)
-            ctx.stroke(circle(Self.trackR), with: .color(lit.mix(fade, base).color), lineWidth: 26)
-
-            // the tick ring; a clear turns it a click, like a tumbler giving
-            var ticks = ctx
-            if s.phase == .clear {
-                let turn = 27 * Self.clickEase(min(1, since / 0.5))
-                ticks.translateBy(x: Self.c, y: Self.c)
-                ticks.rotate(by: .degrees(turn))
-                ticks.translateBy(x: -Self.c, y: -Self.c)
-            }
-            for i in 0..<40 {
-                let a = Double(i) / 40 * 2 * .pi
-                let major = i % 5 == 0
-                var line = Path()
-                line.move(to: p(a, Self.tickR))
-                line.addLine(to: p(a, Self.tickR - (major ? 7 : 3.5)))
-                ticks.stroke(line, with: .color(colors.muted.opacity(major ? 0.9 : 0.55).color),
-                             style: StrokeStyle(lineWidth: major ? 1.6 : 1, lineCap: .round))
-            }
-
-            if s.phase != .clear {
-                let d = p(s.dot, Self.trackR)
-                ctx.fill(Path(ellipseIn: CGRect(x: d.x - Self.dotR, y: d.y - Self.dotR, width: 2 * Self.dotR, height: 2 * Self.dotR)),
-                         with: .color(dotColor.color))
-            }
-            if let pop {
-                let t = (now - pop.at) / 0.35
-                if t < 1 {
-                    let eased = Self.easeOut(t)
-                    let r = Self.dotR * (1 + 1.2 * eased)
-                    let d = p(pop.angle, Self.trackR)
-                    ctx.stroke(Path(ellipseIn: CGRect(x: d.x - r, y: d.y - r, width: 2 * r, height: 2 * r)),
-                               with: .color(dotColor.opacity(1 - eased).color), lineWidth: 3 * (1 + 1.2 * eased))
-                }
-            }
-
-            let needleColor: RGBA = s.phase == .fail ? missColor : s.phase == .clear ? colors.accent : colors.ink
-            var needle = Path()
-            needle.move(to: p(s.angle, Self.trackR - 13))
-            needle.addLine(to: p(s.angle, Self.trackR + 13))
-            ctx.stroke(needle, with: .color(needleColor.color), style: StrokeStyle(lineWidth: 5, lineCap: .round))
-
-            let big = s.phase == .clear ? "open" : "\(s.level)"
-            let small = s.phase == .clear ? "level \(s.level) cracked" : s.phase == .fail ? "missed" : "\(s.left) to go"
-            ctx.draw(Text(big).font(.gameDigits(30, .semibold)).foregroundColor((s.phase == .clear ? colors.accent : colors.ink).color),
-                     at: CGPoint(x: Self.c, y: Self.c + 4), anchor: UnitPoint(x: 0.5, y: Self.baseline(30, .semibold)))
-            ctx.draw(Text(small).font(.game(11)).foregroundColor((s.phase == .fail ? missColor : colors.muted).color),
-                     at: CGPoint(x: Self.c, y: Self.c + 24), anchor: UnitPoint(x: 0.5, y: Self.baseline(11, .regular)))
+    private func draw(_ cg: CGContext, _ size: CGSize) {
+        let now = CACurrentMediaTime()
+        let since = now - phaseAt
+        let k = size.width / 200
+        cg.scaleBy(x: k, y: k)
+        // a miss shakes the whole dial
+        if s.phase == .fail, !GameMotion.reduced { cg.translateBy(x: Self.shake(since), y: 0) }
+        let p = { (a: Double, r: Double) in CGPoint(x: Self.c + r * sin(a), y: Self.c - r * cos(a)) }
+        let circle = { (r: Double) in CGRect(x: Self.c - r, y: Self.c - r, width: 2 * r, height: 2 * r) }
+        func stroke(_ path: CGPath, _ color: RGBA, _ width: CGFloat, cap: CGLineCap = .butt) {
+            cg.addPath(path)
+            cg.setStrokeColor(color.cg)
+            cg.setLineWidth(width)
+            cg.setLineCap(cap)
+            cg.strokePath()
         }
+
+        let bezel = CGPath(ellipseIn: circle(Self.trackR + 18), transform: nil)
+        cg.addPath(bezel)
+        cg.setFillColor(colors.court.cg)
+        cg.fillPath()
+        stroke(bezel, colors.line, 1)
+
+        // the track's colour fades over 0.2 s into the phase's
+        let base = colors.ink.mix(0.11, .clear)
+        let lit: RGBA = s.phase == .fail ? missColor.mix(0.45, .clear) : s.phase == .clear ? colors.accent.mix(0.55, .clear) : base
+        let fade = min(1, since / 0.2)
+        stroke(CGPath(ellipseIn: circle(Self.trackR), transform: nil), lit.mix(fade, base), 26)
+
+        // the tick ring; a clear turns it a click, like a tumbler giving
+        cg.saveGState()
+        if s.phase == .clear, !GameMotion.reduced {
+            let turn = 27 * Self.clickEase(min(1, since / 0.5))
+            cg.translateBy(x: Self.c, y: Self.c)
+            cg.rotate(by: turn * .pi / 180)
+            cg.translateBy(x: -Self.c, y: -Self.c)
+        }
+        for i in 0..<40 {
+            let a = Double(i) / 40 * 2 * .pi
+            let major = i % 5 == 0
+            let line = CGMutablePath()
+            line.move(to: p(a, Self.tickR))
+            line.addLine(to: p(a, Self.tickR - (major ? 7 : 3.5)))
+            stroke(line, colors.muted.opacity(major ? 0.9 : 0.55), major ? 1.6 : 1, cap: .round)
+        }
+        cg.restoreGState()
+
+        if s.phase != .clear {
+            let d = p(s.dot, Self.trackR)
+            cg.setFillColor(dotColor.cg)
+            cg.fillEllipse(in: CGRect(x: d.x - Self.dotR, y: d.y - Self.dotR, width: 2 * Self.dotR, height: 2 * Self.dotR))
+        }
+        if let pop, !GameMotion.reduced {
+            let t = (now - pop.at) / 0.35
+            if t < 1 {
+                let eased = Self.easeOut(t)
+                let r = Self.dotR * (1 + 1.2 * eased)
+                let d = p(pop.angle, Self.trackR)
+                stroke(CGPath(ellipseIn: CGRect(x: d.x - r, y: d.y - r, width: 2 * r, height: 2 * r), transform: nil),
+                       dotColor.opacity(1 - eased), 3 * (1 + 1.2 * eased))
+            }
+        }
+
+        let needleColor: RGBA = s.phase == .fail ? missColor : s.phase == .clear ? colors.accent : colors.ink
+        let needle = CGMutablePath()
+        needle.move(to: p(s.angle, Self.trackR - 13))
+        needle.addLine(to: p(s.angle, Self.trackR + 13))
+        stroke(needle, needleColor, 5, cap: .round)
+
+        let big = s.phase == .clear ? "open" : "\(s.level)"
+        let small = s.phase == .clear ? "level \(s.level) cracked" : s.phase == .fail ? "missed" : "\(s.left) to go"
+        cg.drawText(big, font: NSFont.monospacedDigitSystemFont(ofSize: 30, weight: .semibold),
+                    color: (s.phase == .clear ? colors.accent : colors.ink).cg,
+                    at: CGPoint(x: Self.c, y: Self.c + 4), anchor: UnitPoint(x: 0.5, y: Self.baseline(30, .semibold)))
+        cg.drawText(small, font: NSFont.systemFont(ofSize: 11), color: (s.phase == .fail ? missColor : colors.muted).cg,
+                    at: CGPoint(x: Self.c, y: Self.c + 24), anchor: UnitPoint(x: 0.5, y: Self.baseline(11, .regular)))
     }
 
     // svg text sits on its baseline at y: the share of the line box above the baseline

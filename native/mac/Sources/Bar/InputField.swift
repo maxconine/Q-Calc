@@ -9,6 +9,9 @@ final class BarTextView: NSTextView {
     var onEscape: (() -> Void)?
     /// a paste with line breaks or `;`: true when it was taken (equations opened as a system)
     var onPasteLines: ((String) -> Bool)?
+    /// files dropped on the line (native only, ShareCommands.swift): true when they were taken, else the path is
+    /// typed as text would be
+    var onDropFiles: (([URL]) -> Bool)?
     var placeholder = "" { didSet { needsDisplay = true } }
     /// a faint `ans` ahead of the text while the line chains from the last answer
     var ghostLead = "" { didSet { if ghostLead != oldValue { updateInset() } } }
@@ -31,6 +34,35 @@ final class BarTextView: NSTextView {
         }
     }
     private var coloured: (units: [NSRange], words: [NSRange]) = ([], [])
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
+        if !urls.isEmpty, onDropFiles?(urls) == true { return true }
+        return super.performDragOperation(sender)
+    }
+
+    /// files over the line: the hint says where they'll go (native only, ShareCommands.swift)
+    var onDragFiles: ((Bool, Int) -> Void)?
+
+    private func fileCount(_ sender: NSDraggingInfo) -> Int {
+        (sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []).count
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let n = fileCount(sender)
+        if n > 0 { onDragFiles?(true, n) }
+        return super.draggingEntered(sender)
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        onDragFiles?(false, 0)
+        super.draggingExited(sender)
+    }
+
+    override func concludeDragOperation(_ sender: NSDraggingInfo?) {
+        onDragFiles?(false, 0)
+        super.concludeDragOperation(sender)
+    }
 
     /// .quick-unit in the accent, .quick-word in accent mixed 85% with ink: temporary attributes, so typing and
     /// undo never see them
@@ -247,12 +279,26 @@ final class BarTextView: NSTextView {
         setAccessibilityRole(.textField)
     }
 
+    /// the grey leading parens, a view of their own: drawn by the text view itself they sat in the inset, which
+    /// the text view doesn't repaint, so a new one never showed and an old one stayed after the line was cleared
+    private let leadView = GhostLeadView()
+
     private func updateInset() {
-        let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: [.font: font!]).width + 2
+        // as wide as typed `(` with the line's tracking, so filling one in moves nothing
+        let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: Self.attributes).width
         // the line sits in the middle of its 36 pt box, as the web input's does
         let line = layoutManager?.defaultLineHeight(for: font!) ?? Self.fontSize * 1.2
         textContainerInset = NSSize(width: lead, height: max(0, (bounds.height - line) / 2))
+        if leadView.superview == nil { addSubview(leadView) }
+        leadView.text = ghostLead
+        leadView.attributes = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
+        leadView.y = textContainerInset.height
+        leadView.frame = NSRect(x: 0, y: 0, width: lead, height: bounds.height)
+        leadView.isHidden = ghostLead.isEmpty
+        leadView.needsDisplay = true
         needsDisplay = true
+        // the caret moves with the text when the room for grey ( opens or closes (it had stayed a character off)
+        if window != nil { updateInsertionPointStateAndRestartTimer(true) }
     }
 
     override func setFrameSize(_ newSize: NSSize) {
@@ -351,9 +397,6 @@ final class BarTextView: NSTextView {
         let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
         let inferred: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
-        if !ghostLead.isEmpty {
-            (ghostLead as NSString).draw(at: NSPoint(x: 0, y: textContainerInset.height), withAttributes: inferred)
-        }
         // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
         if let squiggle, let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
             let glyphs = lm.glyphRange(forCharacterRange: squiggle, actualCharacterRange: nil)
@@ -429,6 +472,8 @@ struct InputField: NSViewRepresentable {
         text.delegate = context.coordinator
         text.onKey = { [weak model] event in model?.key(event) ?? false }
         text.onPasteLines = { [weak model] raw in model?.pasteSystem(raw) ?? false }
+        text.onDropFiles = { [weak model] urls in model?.dropFiles(urls, to: nil) ?? false }
+        text.onDragFiles = { [weak model] over, n in model?.dragHover(over, count: n) }
         text.onEscape = { [weak model] in
             guard let model else { return }
             if !model.escape() { model.onHide?("esc") }
@@ -471,6 +516,14 @@ struct InputField: NSViewRepresentable {
         model.setField = { [weak text] value in
             text?.replace(with: value, selection: NSRange(location: (value as NSString).length, length: 0))
         }
+        model.fieldCaret = { [weak text] in text?.selectedRange().location ?? 0 }
+        model.fillParensInField = { [weak text] value, caret in
+            guard let text else { return }
+            // the grey ones go first, in this same step: the leading ones' room closes as the typed ( takes it
+            text.ghostLead = ""
+            text.trailingParens = 0
+            text.replace(with: value, selection: NSRange(location: caret, length: 0))
+        }
         model.caretAtEnd = { [weak text] in
             guard let text else { return false }
             let r = text.selectedRange()
@@ -505,6 +558,15 @@ struct InputField: NSViewRepresentable {
         // keep the caret in view as the line grows
         text.sizeToFit()
         text.frame.size.width = max(scroll.contentSize.width, text.frame.width)
+        // sizeToFit makes the height the line plus both insets, and the inset centres the line in that height, so it
+        // grew to 72 pt in the 36 pt clip: with text the caret is scrolled into view, empty it sat half below the clip
+        text.frame.size.height = scroll.contentSize.height
+        // a line that fits starts at the left edge again (a grey ( going, or the line getting shorter, could leave
+        // it scrolled with its first characters cut off)
+        if text.frame.width <= scroll.contentSize.width, scroll.contentView.bounds.origin.x != 0 {
+            scroll.contentView.scroll(to: .zero)
+            scroll.reflectScrolledClipView(scroll.contentView)
+        }
         text.scrollRangeToVisible(text.selectedRange())
     }
 
@@ -527,7 +589,10 @@ struct InputField: NSViewRepresentable {
 
         // a click or an arrow key ends the typing run (breakRun)
         func textViewDidChangeSelection(_ notification: Notification) {
-            guard let text, text.editKind == nil else { return }
+            guard let text else { return }
+            // a part of the line selected is answered on its own in the answer slot (selDisplay)
+            model.inputSelected(text.string, text.selectedRange())
+            guard text.editKind == nil else { return }
             model.breakUndoRun()
         }
 
@@ -561,5 +626,19 @@ struct InputField: NSViewRepresentable {
             text.sizeToFit()
             text.scrollRangeToVisible(text.selectedRange())
         }
+    }
+}
+
+/// The grey `(`s the engine would add in front of the line, at the text view's left edge (BarTextView.leadView)
+final class GhostLeadView: NSView {
+    var text = ""
+    var attributes: [NSAttributedString.Key: Any] = [:]
+    var y: CGFloat = 0
+
+    override var isFlipped: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draw(_ dirtyRect: NSRect) {
+        (text as NSString).draw(at: NSPoint(x: 0, y: y), withAttributes: attributes)
     }
 }

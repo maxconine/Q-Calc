@@ -27,6 +27,11 @@ enum Pretty {
     /// prettyAnswer (src/engine/format.ts): a real minus sign and grouped digits. Display only; copy and insert
     /// keep the plain answer, which re-parses.
     static func answer(_ s: String) -> String {
+        // a solve's `±2sqrt(2)`: the page's Radical draws the root whatever leads it; here the sign kept the rest
+        // from being read as maths, so it showed `±2sqrt(2)` in the answer and the tape
+        if let first = s.first, first == "±" || first == "∓", s.count > 1 {
+            return String(first) + answer(String(s.dropFirst()))
+        }
         if let g = leadNumber.groups(s), let whole = g[0] {
             let sign = g[1] ?? "", cur = g[2] ?? "", int = (g[3] ?? "").replacingOccurrences(of: ",", with: "")
             let frac = g[4] ?? "", exp = (g[5] ?? "").replacingOccurrences(of: "-", with: minus)

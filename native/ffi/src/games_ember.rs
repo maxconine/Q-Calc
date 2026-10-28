@@ -155,6 +155,12 @@ pub fn is_barrel_roll(text: String) -> bool {
     eggs::is_barrel_roll(&text)
 }
 
+/// the whole line is the Konami code typed out, or `konami`
+#[uniffi::export]
+pub fn is_konami_line(text: String) -> bool {
+    eggs::is_konami_line(&text)
+}
+
 /// March 14
 #[uniffi::export]
 pub fn is_pi_day(month: u32, day: u32) -> bool {
@@ -218,6 +224,11 @@ impl KonamiGate {
     #[uniffi::constructor]
     pub fn new() -> Arc<Self> {
         Arc::new(Self::default())
+    }
+
+    /// how many keys of the code the last keys spell
+    pub fn progress(&self) -> u32 {
+        self.inner.lock().map(|t| t.progress() as u32).unwrap_or(0)
     }
 
     /// one key down; true when it completes the code

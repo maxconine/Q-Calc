@@ -10,7 +10,7 @@ import QCalcCore
 // overwrite a newer one. Long work (closed forms, graphs) goes through QCalcCore's async calls with a CancelToken
 // instead, cancelled when the line changes.
 final class EngineThread {
-    enum Lane: Hashable { case live, forms, graph, commit, misc }
+    enum Lane: Hashable { case live, forms, graph, commit, misc, selection }
 
     private struct Job {
         let generation: Int

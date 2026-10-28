@@ -106,8 +106,9 @@ pub struct LiveRequest {
     /// The IANA zone the user's clock reads in, for time phrases (`timeZone`); None reads it as the TS
     /// recordings did, in America/Los_Angeles.
     pub time_zone: Option<String>,
-    /// Leave `squiggle` None: the native bars ask for it (`blank_reason`) only once typing has paused, so a
-    /// keystroke needn't pay for it (on a blank line it re-reads every piece, often more than the answer took).
+    /// Leave out the squiggle (`squiggle` stays None): for a piece the squiggle search itself reads, which only
+    /// asks whether it answers, and for the native bars, which ask for it (`blank_reason`) only once typing has
+    /// paused, so a keystroke needn't pay for it. Nothing else in the answer changes.
     pub no_squiggle: bool,
 }
 
@@ -497,7 +498,18 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
         && !games
         && !looks_like_natural_language(q)
     {
-        blank_reason(q, &evaluates(&options, chained), &names_of(&options))
+        // the line itself was just evaluated, exactly as `evaluates` would (same text, same options), so its
+        // first question is already answered: that saves a second evaluation of every blank line
+        let base = evaluates(&options, chained);
+        let known = line
+            .as_ref()
+            .filter(|_| isolated.is_none())
+            .map(|l| !l.display.is_empty());
+        let ok = |t: &str| match known {
+            Some(answered) if t == q => answered,
+            _ => base(t),
+        };
+        blank_reason(q, &ok, &names_of(&options))
     } else {
         None
     };
