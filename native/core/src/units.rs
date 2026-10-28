@@ -412,7 +412,7 @@ pub fn split_si_prefix(word: &str) -> Option<(i32, String)> {
     let w = cs(word);
     let unit = match_unit_at_start(&w).filter(|h| h.rest.is_empty())?.unit;
     for p in table::PREFIXES {
-        let power = p.factor.log10();
+        let power = crate::scientific::functions::jsmath::log10(p.factor);
         if p.factor == 1.0 || (power - power.round()).abs() > 1e-9 {
             continue;
         }
