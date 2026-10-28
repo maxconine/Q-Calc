@@ -153,10 +153,21 @@ fn pretty(m: &BarModel, s: &str) -> String {
 /// `Pretty.answer` (TextRules.swift): `prettyAnswer` (a real minus, grouped digits), and in plain maths the web's
 /// radicals as text: `2sqrt(2)` reads `2√2`, a long argument keeps its brackets, `pi` is π.
 pub fn pretty_text(s: &str) -> String {
+    // a solve's `±2sqrt(2)`: the sign kept the rest from reading as maths, so the root stayed plain text
+    if let Some(sign) = s.chars().next().filter(|c| matches!(c, '±' | '∓'))
+        && s.len() > sign.len_utf8()
+    {
+        return format!("{sign}{}", pretty_text(&s[sign.len_utf8()..]));
+    }
     radicals_if_math(&pretty_answer(s))
 }
 
 pub fn radicals_if_math(s: &str) -> String {
+    if let Some(sign) = s.chars().next().filter(|c| matches!(c, '±' | '∓'))
+        && s.len() > sign.len_utf8()
+    {
+        return format!("{sign}{}", radicals_if_math(&s[sign.len_utf8()..]));
+    }
     const MATH: &str = "0123456789 \t+-−*/^().,πe√i·×sqrt";
     if s.is_empty()
         || !s.chars().all(|c| MATH.contains(c))
@@ -1003,6 +1014,13 @@ pub mod timer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_solves_plus_minus_root_is_drawn() {
+        assert_eq!(pretty_text("±2sqrt(2)"), "±2√2");
+        assert_eq!(radicals_if_math("∓sqrt(3)"), "∓√3");
+        assert_eq!(pretty_text("±"), "±");
+    }
 
     #[test]
     fn forms_list_dedupes() {

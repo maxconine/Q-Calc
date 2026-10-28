@@ -18,6 +18,8 @@ pub enum Spot {
     Row(usize, Option<usize>),
     /// a piece of the live answer that copies
     Answer(usize),
+    /// a command's words in the answer slot, cut at the end: the whole text on hover
+    Slot,
 }
 
 thread_local! {
@@ -46,6 +48,7 @@ pub fn answer_item() -> Option<usize> {
 fn clickable(app: &App, spot: Spot) -> bool {
     match spot {
         Spot::Answer(_) => true,
+        Spot::Slot => false,
         Spot::Row(r, Some(k)) => tip_of(app, Spot::Row(r, Some(k))).is_some(),
         Spot::Row(_, None) => false,
     }
@@ -55,6 +58,11 @@ fn spot_at(app: &App, x: f32, y: f32) -> Option<Spot> {
         return None;
     }
     let l = &app.bar.layout;
+    if l.answer.contains(x, y)
+        && crate::commands::slot_cut(&app.gfx, &app.model, l.answer).is_some()
+    {
+        return Some(Spot::Slot);
+    }
     if l.answer.contains(x, y) || l.composer.contains(x, y) {
         return crate::answer::item_at(&l.live, x, y).map(Spot::Answer);
     }
@@ -63,14 +71,18 @@ fn spot_at(app: &App, x: f32, y: f32) -> Option<Spot> {
 }
 
 /// The tooltip and the box it belongs to (window DIPs).
-fn tip_of(app: &App, spot: Spot) -> Option<(&'static str, crate::render::Rect)> {
+fn tip_of(app: &App, spot: Spot) -> Option<(String, crate::render::Rect)> {
     match spot {
         Spot::Answer(i) => {
             let item = app.bar.layout.live.items.get(i)?;
-            crate::answer::tip(&app.bar.layout.live, i).map(|t| (t, item.rect))
+            crate::answer::tip(&app.bar.layout.live, i).map(|t| (t.to_string(), item.rect))
         }
         Spot::Row(r, Some(k)) => crate::history::tip_at(app, r, k),
         Spot::Row(_, None) => None,
+        Spot::Slot => {
+            let r = app.bar.layout.answer;
+            crate::commands::slot_cut(&app.gfx, &app.model, r).map(|t| (t, r))
+        }
     }
 }
 
@@ -104,7 +116,7 @@ pub fn pointer(app: &mut App, at: Option<(f32, f32)>) {
                 let dark = app.theme.dark;
                 let owner = app.bar.hwnd.0 as usize;
                 crate::later::free("hover-tip-show", 0, move || {
-                    tip::show(owner, text, x, y, dark)
+                    tip::show(owner, &text, x, y, dark)
                 });
             }
         });
@@ -248,7 +260,7 @@ mod tip {
     }
 
     /// Shows `text` with its top-left at screen (x, y). Runs outside the app's borrow (later::free).
-    pub fn show(owner: usize, text: &'static str, x: i32, y: i32, dark: bool) {
+    pub fn show(owner: usize, text: &str, x: i32, y: i32, dark: bool) {
         let owner = HWND(owner as *mut _);
         let mut tip = HWND(TIP.with(Cell::get) as *mut _);
         if tip.is_invalid() || OWNER.with(Cell::get) != owner.0 as usize {

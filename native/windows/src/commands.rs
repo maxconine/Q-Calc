@@ -465,6 +465,20 @@ mod ui {
         Some(measure(&l).0 + 2.0 * crate::answer::PAD_X + 1.0)
     }
 
+    /// A command's words when the slot `r` cuts them at the end (the page's `.live.message` ellipsis): the whole
+    /// text, for the tooltip (hover.rs). None when they fit or there's no command.
+    pub fn slot_cut(gfx: &Gfx, m: &BarModel, r: Rect) -> Option<String> {
+        if crate::selection::slot_width(gfx, m).is_some() {
+            return None;
+        }
+        let words = &m.command.as_ref()?.message;
+        if words.is_empty() {
+            return None;
+        }
+        let l = gfx.layout(words, &gfx.fonts.body, 0.0, 36.0)?;
+        (measure(&l).0 > r.w - 2.0 * crate::answer::PAD_X + 0.5).then(|| words.clone())
+    }
+
     /// Paints a command's words in the answer slot; false when there's no command (the answer paints instead).
     pub fn paint_slot(c: &Canvas, m: &BarModel, r: Rect) -> bool {
         if crate::selection::paint_slot(c, m, r) {
