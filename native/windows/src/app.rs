@@ -570,7 +570,7 @@ impl App {
                         self.notice = Some(notice);
                     }
                 }
-                TIMER_TRIM => self.trim(),
+                TIMER_TRIM => self.trim_soon(),
                 TIMER_BENCH => self.bench_timeout(),
                 _ => return None,
             },
@@ -1124,6 +1124,26 @@ impl App {
             return;
         }
         self.release_hidden();
+        self.trim_working_set();
+    }
+
+    /// TIMER_TRIM: the bar has stayed hidden 30 s. What only a showing needs goes now, and the working set is trimmed
+    /// a moment later, once the engine thread has freed its regexes (a trim before that left them paged in).
+    fn trim_soon(&mut self) {
+        // SAFETY: our host's timer
+        let _ = unsafe { KillTimer(Some(self.host), TIMER_TRIM) };
+        if self.bar.visible {
+            return;
+        }
+        self.release_hidden();
+        crate::later::free("trim-working-set", 2000, || {
+            if with_app(|a| a.bar.visible) == Some(false) {
+                with_app(|a| a.trim_working_set());
+            }
+        });
+    }
+
+    fn trim_working_set(&mut self) {
         let (ws, private) = bench::memory();
         // SAFETY: our own process
         let _ = unsafe {
