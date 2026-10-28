@@ -8,6 +8,12 @@ const TRIG: [&str; 6] = ["sin", "cos", "tan", "sec", "csc", "cot"];
 /// the line for one still open, or after a bare number (`sin 30`). An argument with `°`, `deg`, `rad`, `grad`, `gon`,
 /// `′` or `″` in it gets none, nor does an empty one.
 pub fn angle_marks(text: &str) -> Vec<usize> {
+    angle_spans(text).into_iter().map(|(_, at)| at).collect()
+}
+
+/// Each marked argument as (where it starts, where its mark goes), in UTF-16 offsets: the bar hides a mark while
+/// the caret is anywhere from the start to the mark, so it never sits in the gap the mark opens.
+pub fn angle_spans(text: &str) -> Vec<(usize, usize)> {
     let chars: Vec<char> = text.chars().collect();
     let u16_at: Vec<usize> = {
         let mut out = Vec::with_capacity(chars.len() + 1);
@@ -80,18 +86,18 @@ pub fn angle_marks(text: &str) -> Vec<usize> {
         let arg: String = lower[start..stop].iter().collect();
         let says_unit = ["°", "deg", "rad", "grad", "gon", "′", "″", "'"].iter().any(|u| arg.contains(u));
         if !arg.trim().is_empty() && !says_unit {
-            marks.push(u16_at[at]);
+            marks.push((u16_at[start], u16_at[at]));
         }
         i = end;
     }
-    marks.sort_unstable();
-    marks.dedup();
+    marks.sort_unstable_by_key(|m| (m.1, m.0));
+    marks.dedup_by_key(|m| m.1);
     marks
 }
 
 #[cfg(test)]
 mod tests {
-    use super::angle_marks;
+    use super::{angle_marks, angle_spans};
 
     #[test]
     fn marks_each_trig_argument() {
@@ -109,6 +115,13 @@ mod tests {
         for t in ["sin(30°)", "sin(30 deg)", "sin(pi rad)", "asin(0.5)", "arcsin(0.5)", "sinh(2)", "sin()", "sin x", "since 3", "2+2", "cosec(3)"] {
             assert!(angle_marks(t).is_empty(), "{t}: {:?}", angle_marks(t));
         }
+    }
+
+    #[test]
+    fn spans_start_at_the_argument() {
+        assert_eq!(angle_spans("12sin(123+12)"), vec![(6, 12)]);
+        assert_eq!(angle_spans("sin 30 + 1"), vec![(4, 6)]);
+        assert_eq!(angle_spans("sin(30"), vec![(4, 6)]);
     }
 
     #[test]

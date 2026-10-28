@@ -34,13 +34,26 @@ final class BarTextView: NSTextView {
     /// the text (as the grey `)` is), so the caret never moves for it.
     private(set) var angleMarks: [Int] = []
     private(set) var angleMarkText = "°"
+    private var angleSpans: [AngleSpan] = []
     private var gapsFor = ""
 
-    func setAngleMarks(_ marks: [Int], text mark: String) {
+    /// the marks to draw: each argument's, unless the caret is in it (being typed, its mark would sit where the
+    /// caret does; it shows once the caret leaves)
+    func setAngleMarks(_ spans: [AngleSpan], text mark: String) {
+        angleSpans = spans
+        let caret = selectedRange().location
+        let marks = spans.filter { caret < $0.start || caret > $0.at }.map(\.at)
         guard marks != angleMarks || mark != angleMarkText || gapsFor != string else { return }
         angleMarks = marks
         angleMarkText = mark
         applyGaps()
+    }
+
+    /// the caret moved: a mark hides or shows as it enters or leaves its argument
+    func refreshAngleMarks() {
+        // a line just typed waits for its own spans (the next update), never the older line's
+        guard gapsFor == string else { return }
+        setAngleMarks(angleSpans, text: angleMarkText)
     }
 
     /// the offer's and the angle marks' gaps, on a freshly styled line
@@ -722,6 +735,7 @@ struct InputField: NSViewRepresentable {
             guard let text else { return }
             // what's typed next takes the line's own style, never a gap opened after the character before it
             text.typingAttributes = BarTextView.attributes
+            text.refreshAngleMarks()
             // a part of the line selected is answered on its own in the answer slot (selDisplay)
             model.inputSelected(text.string, text.selectedRange())
             guard text.editKind == nil else { return }

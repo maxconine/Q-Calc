@@ -19,6 +19,12 @@ struct BannerCard: Identifiable, Equatable {
     var shownAt = Date()
 }
 
+/// A trig argument's span and where its angle mark goes (UTF-16)
+struct AngleSpan: Equatable {
+    let start: Int
+    let at: Int
+}
+
 /// A word in the line and its full name: `kPa` kilopascal, `gcf` greatest common factor, `π` pi.
 struct WordName: Equatable {
     var range: NSRange
@@ -490,15 +496,16 @@ final class BarModel: ObservableObject {
         return true
     }
 
-    private var angleMarksMemo: (String, [Int])?
+    private var angleMarksMemo: (String, [AngleSpan])?
 
-    /// where the faint `°` / ` rad` goes after each trig argument (core `angleMarks`), worked out for the text as it
-    /// is now so a mark is never drawn where an older line had one
-    func angleMarks(for text: String) -> [Int] {
+    /// each trig argument that gets a faint `°` / ` rad` (core `angleSpans`): where it starts and where its mark
+    /// goes, worked out for the text as it is now so a mark is never drawn where an older line had one
+    func angleMarks(for text: String) -> [AngleSpan] {
         if let memo = angleMarksMemo, memo.0 == text { return memo.1 }
-        let marks = text.isEmpty ? [] : (logic.call("lib/angleMarks", "angleMarks", [text]) as? [NSNumber] ?? []).map(\.intValue)
-        angleMarksMemo = (text, marks)
-        return marks
+        let raw = text.isEmpty ? [] : logic.call("lib/angleMarks", "angleSpans", [text]) as? [[NSNumber]] ?? []
+        let spans = raw.compactMap { p in p.count == 2 ? AngleSpan(start: p[0].intValue, at: p[1].intValue) : nil }
+        angleMarksMemo = (text, spans)
+        return spans
     }
 
     /// Type in the grey parens the engine would add (inferParens), both ends: Tab, or → at the end of the line
