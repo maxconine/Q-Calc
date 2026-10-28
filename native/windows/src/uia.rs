@@ -703,4 +703,3 @@ mod tests {
         assert_eq!(changes(&d, &b), vec![Change::Focus(1), Change::Live(2)]);
     }
 }
-
