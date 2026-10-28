@@ -120,7 +120,7 @@ fn call(
     path: &str,
     extra: &[(&str, &str)],
     body: &[u8],
-    sink: Option<&mut dyn FnMut(&[u8]) -> bool>,
+    sink: crate::relay::Sink,
 ) -> (String, Value) {
     let Some(a) = auth() else {
         return ("not-yours".into(), Value::Null);
@@ -1093,21 +1093,19 @@ pub fn act(app: &mut App, card: &str, act: Act) {
         }
         (Act::Save, Kind::File(id)) => save(app, &id),
         (Act::Retry, Kind::File(id)) => upload(&id, "", PART_BYTES),
-        (Act::Trust, Kind::KeyChanged(who)) => {
-            if keys::trust(&who) {
-                app.model.cards.list.retain(|c| c.card.id != card);
-                let code = keys::safety_code(&who);
-                say(app, core::safety_code_text(&who, &code));
-                let held: Vec<Value> = with(|s| {
-                    let (theirs, rest) = std::mem::take(&mut s.held_for_key)
-                        .into_iter()
-                        .partition(|(w, _)| *w == who);
-                    s.held_for_key = rest;
-                    theirs.into_iter().map(|(_, e)| e).collect()
-                });
-                for e in held {
-                    heard(app, e);
-                }
+        (Act::Trust, Kind::KeyChanged(who)) if keys::trust(&who) => {
+            app.model.cards.list.retain(|c| c.card.id != card);
+            let code = keys::safety_code(&who);
+            say(app, core::safety_code_text(&who, &code));
+            let held: Vec<Value> = with(|s| {
+                let (theirs, rest) = std::mem::take(&mut s.held_for_key)
+                    .into_iter()
+                    .partition(|(w, _)| *w == who);
+                s.held_for_key = rest;
+                theirs.into_iter().map(|(_, e)| e).collect()
+            });
+            for e in held {
+                heard(app, e);
             }
         }
         _ => {}

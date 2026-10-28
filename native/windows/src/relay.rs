@@ -223,6 +223,9 @@ fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<serde_js
     serde_json::from_slice(&out).ok()
 }
 
+/// Where a 200's body goes, piece by piece (false stops it).
+pub type Sink<'a> = Option<&'a mut dyn FnMut(&[u8]) -> bool>;
+
 /// The relay's word for an answer (MessageFiles.swift `status`): its JSON `status`, else by the HTTP code.
 pub fn status_of(code: u32, body: &serde_json::Value) -> String {
     if let Some(s) = body["status"].as_str() {
@@ -246,7 +249,7 @@ pub fn call(
     headers: &[(&str, &str)],
     body: &[u8],
     receive_ms: i32,
-    mut sink: Option<&mut dyn FnMut(&[u8]) -> bool>,
+    mut sink: Sink,
 ) -> (String, serde_json::Value) {
     let base = base();
     let mut run = || -> Option<(u32, Vec<u8>)> {
