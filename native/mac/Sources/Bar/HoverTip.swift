@@ -6,6 +6,15 @@ import SwiftUI
 /// and goes the moment the pointer leaves. The text is also the accessibility hint, as `.help`'s was.
 struct HoverTip: ViewModifier {
     static let delay: TimeInterval = 0.6
+    /// once a label has shown, the next shows at once for this long after the last was on screen
+    static let warm: TimeInterval = 5
+    private static var lastOnScreen: TimeInterval = -.infinity
+
+    /// how long a label waits before it shows: none while one showed in the last 5 s
+    static var wait: TimeInterval { ProcessInfo.processInfo.systemUptime - lastOnScreen < warm ? 0 : delay }
+    /// a label (any kind: these, the edge tools', the word names) is on screen, or just went
+    static func onScreen() { lastOnScreen = ProcessInfo.processInfo.systemUptime }
+
     let text: String
     @State private var anchor = HoverTipAnchor()
 
@@ -32,10 +41,16 @@ final class HoverTipAnchor {
         timer?.invalidate()
         timer = nil
         guard on, !text.isEmpty else {
-            if Self.owner === self { Self.window.hide(); Self.owner = nil }
+            if Self.owner === self {
+                Self.window.hide()
+                Self.owner = nil
+                HoverTip.onScreen()
+            }
             return
         }
-        timer = Timer.scheduledTimer(withTimeInterval: HoverTip.delay, repeats: false) { [weak self] _ in self?.show(text) }
+        let wait = HoverTip.wait
+        if wait == 0 { return show(text) }
+        timer = Timer.scheduledTimer(withTimeInterval: wait, repeats: false) { [weak self] _ in self?.show(text) }
     }
 
     private func show(_ text: String) {
@@ -47,6 +62,7 @@ final class HoverTipAnchor {
         var y = rect.minY - 4 - height
         if y < visible.minY { y = rect.maxY + 4 }
         Self.owner = self
+        HoverTip.onScreen()
         Self.window.show(text, at: NSPoint(x: max(visible.minX, rect.minX), y: y), over: window)
         // kept on screen at the right edge too
         let frame = Self.window.frame

@@ -146,11 +146,12 @@ final class BarTextView: NSTextView {
             let onWindow = self.convert(NSRect(x: rect.minX, y: 0, width: rect.width, height: self.bounds.height), to: nil)
             let onScreen = window.convertToScreen(onWindow)
             self.tip.show(hit.name, at: NSPoint(x: onScreen.minX, y: onScreen.maxY - 2), over: window)
+            HoverTip.onScreen()
         }
-        if now || tipShown != nil || tipEngaged {
+        if now || tipShown != nil || tipEngaged || HoverTip.wait == 0 {
             show()
         } else {
-            tipTimer = Timer.scheduledTimer(withTimeInterval: HoverTip.delay, repeats: false) { _ in show() }
+            tipTimer = Timer.scheduledTimer(withTimeInterval: HoverTip.wait, repeats: false) { _ in show() }
         }
     }
 
@@ -160,6 +161,7 @@ final class BarTextView: NSTextView {
         guard tipShown != nil else { return }
         tipShown = nil
         tip.hide()
+        HoverTip.onScreen()
     }
 
     static let fontSize: CGFloat = 24

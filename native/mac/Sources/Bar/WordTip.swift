@@ -11,7 +11,9 @@ final class WordTipWindow: NSPanel {
                    backing: .buffered, defer: true)
         isOpaque = false
         backgroundColor = .clear
-        hasShadow = false
+        // a shadow sets the solid pill off the bar under it
+        hasShadow = true
+        alphaValue = 1
         ignoresMouseEvents = true
         isReleasedWhenClosed = false
         hidesOnDeactivate = false
@@ -53,7 +55,8 @@ final class WordTipView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        Theme.ink.setFill()
+        // fully opaque, whatever the appearance
+        (Theme.ink.usingColorSpace(.sRGB)?.withAlphaComponent(1) ?? Theme.ink).setFill()
         NSBezierPath(roundedRect: bounds, xRadius: Theme.radiusS, yRadius: Theme.radiusS).fill()
         let s = (text as NSString).size(withAttributes: attributes)
         (text as NSString).draw(at: NSPoint(x: 7, y: (bounds.height - s.height) / 2), withAttributes: attributes)

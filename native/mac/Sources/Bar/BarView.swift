@@ -602,8 +602,18 @@ private struct EdgeTool<Label: View>: View {
         .buttonStyle(.plain)
         .onHover { on in
             hover = on
+            if tipShown { HoverTip.onScreen() }
             tipShown = false
-            if on { DispatchQueue.main.asyncAfter(deadline: .now() + HoverTip.delay) { if hover { tipShown = true } } }
+            guard on else { return }
+            let wait = HoverTip.wait
+            if wait == 0 {
+                tipShown = true
+                HoverTip.onScreen()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                    if hover { tipShown = true; HoverTip.onScreen() }
+                }
+            }
         }
         .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {
             if tipShown {
@@ -613,7 +623,9 @@ private struct EdgeTool<Label: View>: View {
                     .foregroundStyle(Color.qBg)
                     .fixedSize()
                     .padding(.vertical, 4).padding(.horizontal, 7)
-                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk))
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk)
+                        .shadow(color: .black.opacity(0.25), radius: 3, y: 1))
+                    .compositingGroup()
                     .alignmentGuide(tipAbove ? .top : .bottom) { d in tipAbove ? d[.bottom] + 4 : d[.top] - 4 }
                     .allowsHitTesting(false)
                     .zIndex(10)
