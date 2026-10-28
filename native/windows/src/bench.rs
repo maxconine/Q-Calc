@@ -390,6 +390,12 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             }))
         }
         "settings-controls" => Some(crate::settings_window::debug()),
+        "wordTip" => Some(crate::word_tip::debug(app)),
+        "exponent" => Some(serde_json::json!({
+            "on": app.store.settings.exponent_mode || app.model.settings.exponent_mode,
+            "model": app.model.settings.exponent_mode, "saved": app.store.settings.exponent_mode,
+            "hint": app.model.hint, "shown": crate::answer::shown_answer(&app.model),
+        })),
         _ => crate::perf::cmd(cmd),
     }
 }
