@@ -772,15 +772,14 @@ fn show(app: &mut App, from: &str, clip: Option<String>, file: Option<String>) {
         (None, Some(id)) => (file_text(&id), Kind::File(id)),
         (None, None) => return,
     };
-    crate::a11y::announce(&core::card_announcement(
-        from,
-        if matches!(kind, Kind::Clip(_)) {
-            "clip"
-        } else {
-            "file"
-        },
-        &text,
-    ));
+    let said = match &kind {
+        Kind::File(id) => {
+            let name = with(|s| s.transfers.get(id).map(|t| t.name.clone()));
+            core::card_announcement(from, "file", &name.unwrap_or_default())
+        }
+        _ => core::card_announcement(from, "clip", ""),
+    };
+    crate::a11y::announce(&said);
     crate::messaging::share_card(app, from, &text, Some(kind));
 }
 

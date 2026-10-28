@@ -494,6 +494,7 @@ fn arrived(app: &mut App, from: &str, text: &str) {
             }
             let card = new_card(from, "", true);
             if app.bar.visible {
+                crate::a11y::announce(&core::card_announcement(from, "ask", ""));
                 show_cards(app, vec![card]);
             } else {
                 with(|s| keep(s, card));
@@ -532,6 +533,8 @@ fn keep(s: &mut State, card: BannerCard) {
 fn deliver(app: &mut App, from: &str, text: &str) {
     let card = new_card(from, text, false);
     if app.bar.visible {
+        // a reader hears it, since a card never takes the keys and goes in 10 s (30 with a reader)
+        crate::a11y::announce(&core::card_announcement(from, "message", text));
         show_cards(app, vec![card]);
     } else {
         with(|s| keep(s, card));

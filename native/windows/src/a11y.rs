@@ -18,6 +18,31 @@ thread_local! {
     static NEWS: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
+/// After Ctrl+D, Ctrl+F or Ctrl+S: where the mode is now (`radians`, `fractions on`…), since the edge tools that
+/// show it are hidden off hover (core `mode_announcement`).
+pub fn announce_mode(action: &str, on: bool) {
+    announce(&qcalc_core::app::onboarding::mode_announcement(action, on));
+}
+
+thread_local! {
+    /// the hint and tutorial step last read out, so each is heard once as it changes (the page's role="status")
+    static STATUS: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// The line under the bar as a reader should hear it: the hint, else the tutorial's step; "" for none.
+fn status_of(app: &App) -> String {
+    match &app.model.hint {
+        Some(h) if !h.is_empty() => h.clone(),
+        _ => app
+            .model
+            .tour
+            .line
+            .as_ref()
+            .map(|l| l.text.clone())
+            .unwrap_or_default(),
+    }
+}
+
 /// Has a reader hear `text` with the bar's next name (the Mac's `announce`, the page's aria-live regions). Costs a
 /// string while no reader runs; `after` drops it then.
 pub fn announce(text: &str) {
@@ -78,6 +103,23 @@ pub fn after(app: &App) {
         return;
     }
     let mut now = name(app.model.field.text(), &app.model.answer_text());
+    let status = status_of(app);
+    let fresh = STATUS.with(|s| {
+        let fresh = *s.borrow() != status;
+        if fresh {
+            s.replace(status.clone());
+        }
+        fresh
+    });
+    let news = if fresh && !status.is_empty() && !news.contains(&status) {
+        if news.is_empty() {
+            status
+        } else {
+            format!("{news} · {status}")
+        }
+    } else {
+        news
+    };
     if !news.is_empty() {
         now = format!("{now}. {news}");
     }
