@@ -39,6 +39,8 @@ pub enum Command {
     Tutorial,
     Skip,
     Greeting,
+    /// `messages`, `messages <name>`, `open messages with <name>` (threads.rs)
+    Thread(core_msg::ThreadCommand),
 }
 
 /// What the bar shows for a command line: the command and the words in the answer slot.
@@ -91,6 +93,9 @@ pub fn parse(raw: &str) -> Option<Command> {
         if let Some(kind) = core_games::game_command(&t) {
             return Some(Command::Game(kind));
         }
+    }
+    if let Some(t) = core_msg::parse_messages_command(raw) {
+        return Some(Command::Thread(t));
     }
     if core_msg::is_message_command(raw)
         && let Some(line) = core_msg::parse_message(raw)
@@ -170,8 +175,8 @@ const STEMS: [&str; 41] = [
     "cycles",
 ];
 
-const MORE_STEMS: [&str; 9] = [
-    "message", "tutorial", "tour", "skip", "hello", "hiya", "send", "paste", "share",
+const MORE_STEMS: [&str; 10] = [
+    "message", "tutorial", "tour", "skip", "hello", "hiya", "send", "paste", "share", "open",
 ];
 
 fn could_be(trimmed: &str) -> bool {
@@ -202,6 +207,7 @@ pub fn hint(command: &Command, message: impl FnOnce(&str, &str, &str) -> String)
         Command::Tutorial => core_tour::TUTORIAL_HINT.into(),
         Command::Skip => String::new(),
         Command::Greeting => greeting::GREETING_REPLY.into(),
+        Command::Thread(t) => core_msg::messages_hint(t),
     }
 }
 
@@ -272,6 +278,13 @@ mod ui {
         {
             m.hint = None;
         }
+        // Tab finishes a name on a messaging line (messaging.rs)
+        if matches!(
+            command,
+            Command::Message { .. } | Command::Share { .. } | Command::Thread(_)
+        ) {
+            m.line.completion = messaging::completion(&typed);
+        }
         m.command = Some(Shown { command, message });
         engine.cancel(Lane::Live);
         m.chained = false;
@@ -338,6 +351,16 @@ mod ui {
                 tour::skip(app);
             }
             Command::Greeting => clear_line(app, false),
+            Command::Thread(qcalc_core::app::messaging::ThreadCommand::List) => {
+                clear_line(app, false);
+                crate::threads::open_list(app);
+            }
+            Command::Thread(qcalc_core::app::messaging::ThreadCommand::Open { name, .. }) => {
+                if !name.is_empty() {
+                    clear_line(app, false);
+                    crate::threads::open(app, &name);
+                }
+            }
         }
         true
     }
@@ -775,6 +798,33 @@ mod timing {
         println!(
             "parse: {per:.2} µs a keystroke over {} lines",
             prefixes.len()
+        );
+    }
+
+    #[test]
+    fn the_conversation_commands_open_the_list_or_a_thread() {
+        use crate::commands::{Command, hint, parse};
+        use qcalc_core::app::messaging::ThreadCommand;
+        assert_eq!(
+            parse("messages"),
+            Some(Command::Thread(ThreadCommand::List))
+        );
+        assert_eq!(
+            parse("open messages with Max"),
+            Some(Command::Thread(ThreadCommand::Open {
+                to: "Max".into(),
+                name: "max".into()
+            }))
+        );
+        // `message max hi` is still a message, and `messages max hi` nothing
+        assert!(matches!(
+            parse("message max hi"),
+            Some(Command::Message { .. })
+        ));
+        assert_eq!(parse("messages max hi"), None);
+        assert_eq!(
+            hint(&parse("messages max").unwrap(), |_, _, _| String::new()),
+            "↵ opens messages with max"
         );
     }
 }

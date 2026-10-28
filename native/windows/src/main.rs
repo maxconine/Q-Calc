@@ -32,6 +32,8 @@ mod cheats;
 #[cfg(windows)]
 mod clip;
 #[cfg(windows)]
+mod clip_image;
+#[cfg(windows)]
 mod contrast;
 #[cfg(windows)]
 mod drag;
@@ -78,11 +80,17 @@ mod share;
 #[cfg(windows)]
 mod share_crypt;
 #[cfg(windows)]
+mod share_debug;
+#[cfg(windows)]
+mod share_drop;
+#[cfg(windows)]
 mod share_keys;
 #[cfg(windows)]
 mod sheets;
 #[cfg(windows)]
 mod systems;
+#[cfg(windows)]
+mod threads;
 #[cfg(windows)]
 mod tray;
 #[cfg(windows)]

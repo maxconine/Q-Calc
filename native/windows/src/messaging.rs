@@ -79,10 +79,12 @@ enum Event {
 
 #[derive(Clone, Debug)]
 enum Sent {
-    /// from the bar's `message` line
-    Line,
-    /// a card's reply
-    Reply(String),
+    /// from the bar's `message` line (what was said)
+    Line(String),
+    /// a card's reply (the card, what was said)
+    Reply(String, String),
+    /// a thread's reply (what was said)
+    Thread(String),
 }
 
 struct State {
@@ -329,6 +331,19 @@ fn close(s: &mut State) {
     s.generation += 1;
 }
 
+/// The e2e suite: the inbox closes and stays closed (as if this pc were offline) until `inbox_pause(false)`.
+pub fn inbox_pause(pause: bool) {
+    if pause {
+        with(|s| {
+            close(s);
+            s.link = Link::Offline;
+        });
+    } else {
+        with(|s| s.retry_ms = 3000);
+        connect();
+    }
+}
+
 /// One socket while a name is set, none otherwise.
 fn connect() {
     let job = with(|s| {
@@ -457,8 +472,37 @@ fn on_event_now(app: &mut App, ev: Event) {
             }
         }
         Event::Claimed(next, status) => claimed(&next, &status),
-        Event::Sent(Sent::Line, name, status) => line_sent(app, &name, &status),
-        Event::Sent(Sent::Reply(id), name, status) => reply_sent(app, &id, &name, &status),
+        Event::Sent(Sent::Line(text), name, status) => {
+            if status == "delivered" {
+                crate::threads::record_text(&name, true, &text);
+            }
+            line_sent(app, &name, &status)
+        }
+        Event::Sent(Sent::Reply(id, text), name, status) => {
+            if status == "delivered" {
+                crate::threads::record_text(&name, true, &text);
+            }
+            reply_sent(app, &id, &name, &status)
+        }
+        Event::Sent(Sent::Thread(text), name, status) => {
+            let st = status_of(&status);
+            with(|s| {
+                s.names.note_send(&name, st, now_ms());
+                if st == SendStatus::Delivered {
+                    s.m = core::with_recent(&s.m, &name);
+                    save(&s.m);
+                }
+            });
+            if st == SendStatus::Delivered {
+                crate::threads::record_text(&name, true, &text);
+            }
+            crate::threads::reply_sent(
+                app,
+                &name,
+                st == SendStatus::Delivered,
+                core::send_status_text(st, &name),
+            );
+        }
         Event::Looked(name, found) => {
             with(|s| s.names.finish(&name, found, now_ms()));
             // still typing to them: the hint follows what the relay said
@@ -531,6 +575,13 @@ fn keep(s: &mut State, card: BannerCard) {
 
 /// Kept for the bar whatever happens to the balloon, which is only the alert while the bar is away.
 fn deliver(app: &mut App, from: &str, text: &str) {
+    crate::threads::record_text(from, false, text);
+    // with their thread open it lands there, and a reader hears it as a card's would be
+    if app.bar.visible && crate::threads::is_open(from) {
+        crate::threads::heard(from, "message", text);
+        app.model.touch();
+        return;
+    }
     let card = new_card(from, text, false);
     if app.bar.visible {
         // a reader hears it, since a card never takes the keys and goes in 10 s (30 with a reader)
@@ -545,6 +596,14 @@ fn deliver(app: &mut App, from: &str, text: &str) {
 
 /// The bar is showing: what came while it was away becomes cards (the newest on top).
 pub fn will_show(app: &mut App) {
+    // with a name, the bar takes drags with a hint (share_drop.rs), once the showing is out
+    let named = STATE.with(|s| {
+        s.try_borrow()
+            .is_ok_and(|s| s.loaded && !s.m.name.is_empty())
+    });
+    if named {
+        crate::share_drop::ensure_soon();
+    }
     let waiting = STATE.with(|s| {
         s.try_borrow_mut()
             .ok()
@@ -586,7 +645,12 @@ impl Card {
     fn new(card: BannerCard) -> Card {
         Card {
             card,
-            draft: Field::default(),
+            // a reply is words: `pi` stays `pi`
+            draft: {
+                let mut f = Field::default();
+                f.keep_words = true;
+                f
+            },
             reply: Reply::Idle,
             shown_at: Instant::now(),
         }
@@ -667,6 +731,10 @@ fn expire_later() {
 
 /// Esc: a reply line gives the keys back; else the cards go. True when it did either.
 pub fn escape(m: &mut BarModel) -> bool {
+    // the list or a thread closes first (its reply kept)
+    if crate::threads::close(m) {
+        return true;
+    }
     if m.cards.focus.take().is_some() {
         m.touch();
         return true;
@@ -682,6 +750,9 @@ pub fn escape(m: &mut BarModel) -> bool {
 /// Tab on an empty line with a message card up moves to the newest card's reply line (tabToCard), since the
 /// keyboard had no other way into a card before it went. True when it did.
 pub fn tab_to_card(m: &mut BarModel) -> bool {
+    if crate::threads::tab_in(m) {
+        return true;
+    }
     let Some(id) = m
         .cards
         .list
@@ -710,6 +781,7 @@ fn card_ms() -> u64 {
 pub fn will_hide(m: &mut BarModel) {
     m.cards.focus = None;
     m.cards.hovered = false;
+    crate::threads::will_hide();
 }
 
 // ---- sending ----
@@ -725,6 +797,7 @@ pub fn line_hint(to: &str, name: &str, text: &str) -> String {
         name: name.into(),
         text: text.into(),
     };
+    crate::share_drop::ensure_soon();
     with(|s| {
         let found = recipient_found(s, name);
         core::message_hint(&line, &s.m, true, found)
@@ -799,8 +872,43 @@ pub fn send_line(app: &mut App, name: String, text: String) {
     app.model.touch();
     let body = with(|s| send_body(s, &name, &text));
     post_later("/send", body, move |status| {
-        Event::Sent(Sent::Line, name, status)
+        Event::Sent(Sent::Line(text), name, status)
     });
+}
+
+/// A thread's reply (threads.rs): the same send, its answer back to the thread.
+pub fn send_thread(name: String, text: String) {
+    let text = core::clean_message_text(&Value::String(text))
+        .trim()
+        .to_string();
+    if text.is_empty() {
+        return;
+    }
+    let body = with(|s| send_body(s, &name, &text));
+    post_later("/send", body, move |status| {
+        Event::Sent(Sent::Thread(text), name, status)
+    });
+}
+
+/// Tab's rest of a name on `message …`, `paste to …`, `send file to …` and `messages …` lines: from the threads'
+/// names (latest first), then who you've sent to, then the accepted (the core's `thread_contacts`).
+pub fn completion(typed: &str) -> Option<String> {
+    crate::threads::load();
+    let contacts = with(|s| core::thread_contacts(&crate::threads::names(), &s.m));
+    let rest = if core::parse_share_command(typed).is_some() {
+        core::share_completion(typed, &contacts)
+    } else if core::parse_messages_command(typed).is_some() {
+        core::messages_completion(typed, &contacts)
+    } else if core::is_message_command(typed) {
+        let names = qcalc_core::app::completion::CompletionNames {
+            contacts,
+            ..Default::default()
+        };
+        qcalc_core::app::completion::completion_for(typed, &names)
+    } else {
+        String::new()
+    };
+    (!rest.is_empty()).then_some(rest)
 }
 
 /// (name, the name's relay key), "" for both with no name (share.rs).
@@ -889,7 +997,7 @@ fn send_reply(app: &mut App, id: &str) {
     let body = with(|s| send_body(s, &to, &said));
     let id = id.to_string();
     post_later("/send", body, move |status| {
-        Event::Sent(Sent::Reply(id), to, status)
+        Event::Sent(Sent::Reply(id, said), to, status)
     });
 }
 
@@ -926,6 +1034,17 @@ fn answer_ask(app: &mut App, id: &str, allow: bool) {
         return;
     };
     let who = app.model.cards.list.remove(i).card.from;
+    answer(app, &who, allow);
+}
+
+/// Allow or Block on someone asking, from their card or settings' Requests: the lists change, what they said while
+/// asking shows (or is dropped), and what they shared shows (or their files are turned down).
+pub fn answer(app: &mut App, who: &str, allow: bool) {
+    let who = who.to_string();
+    app.model
+        .cards
+        .list
+        .retain(|c| !(c.card.ask && c.card.from == who));
     app.model.touch();
     let said = with(|s| {
         s.m = if allow {
@@ -1104,8 +1223,9 @@ pub fn forget(who: &str) {
         s.m = core::forget_sender(&s.m, who);
         save(&s.m);
     });
-    // their pinned key goes too, so a new contact by that name starts afresh
+    // their pinned key and their thread go too, so a new contact by that name starts afresh
     crate::share_keys::forget(who);
+    crate::threads::forget(who);
 }
 
 /// The settings window's Messages page (settings_window.rs `MessagesHook`): the name and its status, turning off,
@@ -1196,9 +1316,10 @@ fn settings_changed(app: &mut App, id: &str, value: &Value) {
         "off" => turn_off(),
         _ => {
             if let Some(who) = id.strip_prefix("ask:") {
+                // as the card's buttons: their first words and what they shared show, or go
                 match value.as_str() {
-                    Some("allow") => allow(who),
-                    Some("block") => block(who),
+                    Some("allow") => answer(app, who, true),
+                    Some("block") => answer(app, who, false),
                     _ => {}
                 }
             } else if let Some(who) = id.strip_prefix("forget:") {
@@ -1499,6 +1620,7 @@ fn under(gfx: &Gfx, m: &BarModel, r: Rect, x: f32, y: f32) -> Option<(String, Ac
 
 /// The pointer moved over the bar (None: it left).
 pub fn hover(app: &mut App, at: Option<(f32, f32)>) {
+    crate::threads::hover(app, at);
     let Some(r) = app.bar.layout.cards else {
         if app.model.cards.hovered {
             app.model.cards.hovered = false;
@@ -1520,6 +1642,13 @@ pub fn hover(app: &mut App, at: Option<(f32, f32)>) {
 
 /// A click in the bar: true when it was the cards'.
 pub fn click(app: &mut App, x: f32, y: f32) -> bool {
+    // the thread's panel, under the cards
+    if crate::threads::click(app, x, y) {
+        if app.model.cards.focus.take().is_some() {
+            app.model.touch();
+        }
+        return true;
+    }
     let Some(r) = app.bar.layout.cards else {
         return false;
     };
@@ -1569,12 +1698,13 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
 
 /// A key while a reply line has the keys: true when it was the reply's.
 pub fn key(app: &mut App, vk: u32, mods: Mods) -> bool {
+    if crate::threads::key(app, vk, mods) {
+        return true;
+    }
     let Some(id) = app.model.cards.focus.clone() else {
         return false;
     };
     let host = app.bar.hwnd;
-    let ctrl = mods.ctrl && !mods.alt;
-    let shift = mods.shift;
     if vk == 0x0D {
         send_reply(app, &id);
         return true;
@@ -1591,7 +1721,32 @@ pub fn key(app: &mut App, vk: u32, mods: Mods) -> bool {
     if card.reply == Reply::Sent {
         return true;
     }
-    let f = &mut card.draft;
+    let mut to_clip = None;
+    let took = edit_field(&mut card.draft, vk, mods, host, &mut to_clip);
+    if !took {
+        return false;
+    }
+    if card.reply != Reply::Sending {
+        card.reply = Reply::Idle;
+    }
+    if to_clip.is_some() {
+        app.model.to_clipboard = to_clip;
+    }
+    app.model.touch();
+    true
+}
+
+/// A reply line's editing keys (a card's, a thread's): true when `vk` was one. Copy and Cut hand their text out
+/// through `to_clip`.
+pub fn edit_field(
+    f: &mut Field,
+    vk: u32,
+    mods: Mods,
+    host: HWND,
+    to_clip: &mut Option<String>,
+) -> bool {
+    let ctrl = mods.ctrl && !mods.alt;
+    let shift = mods.shift;
     match vk {
         0x25 => f.left(ctrl, shift),
         0x27 => f.right(ctrl, shift),
@@ -1606,12 +1761,12 @@ pub fn key(app: &mut App, vk: u32, mods: Mods) -> bool {
         0x41 if ctrl => f.select_all(),
         0x43 if ctrl => {
             if f.has_selection() {
-                app.model.to_clipboard = Some(f.selected_text().to_string());
+                *to_clip = Some(f.selected_text().to_string());
             }
         }
         0x58 if ctrl => {
             if let Some(cut) = f.cut() {
-                app.model.to_clipboard = Some(cut);
+                *to_clip = Some(cut);
             }
         }
         0x56 if ctrl => {
@@ -1632,15 +1787,14 @@ pub fn key(app: &mut App, vk: u32, mods: Mods) -> bool {
         0x26 | 0x28 | 0x09 => {}
         _ => return false,
     }
-    if card.reply != Reply::Sending {
-        card.reply = Reply::Idle;
-    }
-    app.model.touch();
     true
 }
 
 /// WM_CHAR while a reply line has the keys: true when it took it.
 pub fn char16(app: &mut App, unit: u16) -> bool {
+    if crate::threads::char16(app, unit) {
+        return true;
+    }
     let Some(id) = app.model.cards.focus.clone() else {
         return false;
     };
@@ -1661,5 +1815,31 @@ pub fn found(name: &str) -> Option<bool> {
 
 /// The accent the composer's caret takes while a reply has the keys: none.
 pub fn reply_has_keys(m: &BarModel) -> bool {
-    m.cards.focus.is_some()
+    m.cards.focus.is_some() || crate::threads::has_keys()
+}
+
+/// The e2e suite's view: the name, the link, the lists, the cards up.
+pub fn debug_state_with(m: &BarModel) -> Value {
+    let cards: Vec<Value> = m
+        .cards
+        .list
+        .iter()
+        .map(|c| {
+            json!({ "id": c.card.id, "from": c.card.from, "text": c.card.text, "ask": c.card.ask,
+                "acts": crate::share::acts(&c.card.id).into_iter().map(|(_, l)| l).collect::<Vec<_>>() })
+        })
+        .collect();
+    let mut v = debug_state();
+    v["cards"] = Value::Array(cards);
+    v
+}
+
+pub fn debug_state() -> Value {
+    with(|s| {
+        json!({
+            "name": s.m.name, "link": format!("{:?}", s.link), "note": s.note,
+            "accepted": s.m.accepted, "blocked": s.m.blocked, "recent": s.m.recent,
+            "asking": s.asking.keys().collect::<Vec<_>>(), "inbox": s.inbox.len(),
+        })
+    })
 }
