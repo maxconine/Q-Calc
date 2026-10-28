@@ -480,7 +480,10 @@ fn items(app: &App, win: &Win) -> Vec<Item> {
                 } else {
                     keybind_for(&core_binds, action, true)
                 };
-                let recording = win.recording.as_ref().filter(|r| r.action == action);
+                let recording = win
+                    .recording
+                    .as_ref()
+                    .filter(|r| r.native.is_none() && r.action == action);
                 let text = match recording {
                     Some(r) if !r.held.is_empty() => kb::held_label(&r.held, true),
                     Some(_) => "Press keys…".into(),
@@ -522,6 +525,27 @@ fn items(app: &App, win: &Win) -> Vec<Item> {
                         },
                     ));
                 }
+            }
+            // the native app's own: Ctrl+E's exponent form, Ctrl+Shift+E's other forms (exponent.rs)
+            for (id, label, default) in crate::exponent::NATIVE_ACTIONS {
+                let chord = crate::exponent::native_chord(&s.keybinds, id);
+                let recording = win.recording.as_ref().filter(|r| r.native == Some(id));
+                let text = match recording {
+                    Some(r) if !r.held.is_empty() => kb::held_label(&r.held, true),
+                    Some(_) => "Press keys…".into(),
+                    None if chord.is_empty() => "None".into(),
+                    None => chord_label(&chord, true),
+                };
+                out.push(row(
+                    &format!("key:{id}"),
+                    label,
+                    "",
+                    Control::Key {
+                        label: text,
+                        recording: recording.is_some(),
+                        changed: chord != default,
+                    },
+                ));
             }
             let changed = !s.keybinds.is_empty() || app.hotkey.wanted != hotkey::STANDARD;
             out.push(row(
@@ -670,6 +694,8 @@ fn changed(app: &mut App, win: &mut Win, id: &str, value: Value) {
         _ if id.starts_with("key:") => {
             if let Some(action) = KeyAction::from_id(&id["key:".len()..]) {
                 win.toggle_recording(app, action);
+            } else if let Some(native) = crate::exponent::native_action(&id["key:".len()..]) {
+                win.toggle_native(app, native);
             }
         }
         _ => patch(app, json!({ id: value })),
@@ -680,7 +706,15 @@ fn changed(app: &mut App, win: &mut Win, id: &str, value: Value) {
 /// A chord for one of the bar's actions: the core's rule that a default is stored as no override.
 fn pick_key(app: &mut App, action: KeyAction, chord: &str) {
     let next = kb::set_keybind(&binds(&app.store.settings), action, chord, true);
-    patch(app, json!({ "keybinds": kb::keybinds_json(&next) }));
+    // the native app's own keys (exponent.rs) ride along, since the core's JSON only knows its own
+    let next = crate::exponent::with_native(kb::keybinds_json(&next), &app.store.settings.keybinds);
+    patch(app, json!({ "keybinds": next }));
+}
+
+/// A chord for one of the native app's own actions (exponent.rs), the core's overrides kept.
+fn pick_native(app: &mut App, id: &str, chord: &str) {
+    let next = crate::exponent::set_native(&app.store.settings.keybinds, id, chord);
+    patch(app, json!({ "keybinds": next }));
 }
 
 /// The verdict on a chord for show / hide: free (or already Q Calc's), or taken with its likely owner and a free
@@ -788,6 +822,8 @@ fn pick_show(app: &mut App, win: &mut Win, chord: &str) {
 #[derive(Clone, Debug, PartialEq)]
 struct Recording {
     action: KeyAction,
+    /// a native action's id (exponent.rs) being recorded; `action` is then unused
+    native: Option<&'static str>,
     /// the modifiers held now ("ctrl+alt"), and the most held since the last key
     held: String,
     peak: String,
@@ -1225,7 +1261,10 @@ impl Win {
     }
 
     fn toggle_recording(&mut self, app: &mut App, action: KeyAction) {
-        let again = self.recording.as_ref().is_some_and(|r| r.action == action);
+        let again = self
+            .recording
+            .as_ref()
+            .is_some_and(|r| r.native.is_none() && r.action == action);
         self.stop_recording(app);
         self.note.clear();
         if again {
@@ -1237,6 +1276,27 @@ impl Win {
         }
         self.recording = Some(Recording {
             action,
+            native: None,
+            held: String::new(),
+            peak: String::new(),
+        });
+        self.dirty = true;
+    }
+
+    /// Recording for a native action (exponent.rs): as `toggle_recording`, with no hotkey to pause.
+    fn toggle_native(&mut self, app: &mut App, id: &'static str) {
+        let again = self
+            .recording
+            .as_ref()
+            .is_some_and(|r| r.native == Some(id));
+        self.stop_recording(app);
+        self.note.clear();
+        if again {
+            return;
+        }
+        self.recording = Some(Recording {
+            action: KeyAction::Settings,
+            native: Some(id),
             held: String::new(),
             peak: String::new(),
         });
@@ -1245,7 +1305,7 @@ impl Win {
 
     fn stop_recording(&mut self, app: &mut App) {
         if let Some(r) = self.recording.take() {
-            if r.action == KeyAction::Show {
+            if r.native.is_none() && r.action == KeyAction::Show {
                 // the paused chord comes back
                 app.hotkey.kick("settings recorder done");
             }
@@ -1284,6 +1344,7 @@ impl Win {
             return true;
         }
         let action = rec.action;
+        let native = rec.native;
         rec.peak.clear();
         rec.held.clear();
         let plain = held.is_empty();
@@ -1293,7 +1354,11 @@ impl Win {
             return true;
         }
         if plain && (vk == 0x08 || vk == 0x2E) {
-            if action == KeyAction::Show {
+            if let Some(id) = native {
+                self.stop_recording(app);
+                self.note.clear();
+                pick_native(app, id, "");
+            } else if action == KeyAction::Show {
                 self.note = "Show / hide needs a key".into();
             } else {
                 self.stop_recording(app);
@@ -1319,7 +1384,23 @@ impl Win {
         let chord = hotkey::normalize(&chord).unwrap_or(chord);
         let mut all = binds(&app.store.settings);
         all.insert(KeyAction::Show, app.hotkey.wanted.clone());
-        if let Some(why) = chord_problem(&chord, action, &all, true) {
+        if let Some(id) = native {
+            // a native action (exponent.rs): the core's rules, and no clash with any other key
+            let keys = &app.store.settings.keybinds;
+            if let Some(why) = crate::exponent::native_problem(&chord, id, keys, &all) {
+                self.note = why;
+                self.dirty = true;
+                return true;
+            }
+            self.end_recording();
+            self.note.clear();
+            pick_native(app, id, &chord);
+            self.dirty = true;
+            return true;
+        }
+        let problem = chord_problem(&chord, action, &all, true)
+            .or_else(|| crate::exponent::native_clash(&chord, None, &app.store.settings.keybinds));
+        if let Some(why) = problem {
             self.note = why;
             self.dirty = true;
             return true;
@@ -1372,8 +1453,16 @@ impl Win {
                     }
                     Control::Button { enabled: true, .. } => changed(app, self, &id, Value::Null),
                     Control::Key { .. } => {
-                        if let Some(action) = KeyAction::from_id(&id["key:".len().min(id.len())..])
-                        {
+                        let key_id = &id["key:".len().min(id.len())..];
+                        if let Some(native) = crate::exponent::native_action(key_id) {
+                            if part == 1 {
+                                self.stop_recording(app);
+                                self.note.clear();
+                                pick_native(app, native, crate::exponent::native_default(native));
+                            } else {
+                                self.toggle_native(app, native);
+                            }
+                        } else if let Some(action) = KeyAction::from_id(key_id) {
                             if part == 1 {
                                 self.stop_recording(app);
                                 self.note.clear();
