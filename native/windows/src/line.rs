@@ -69,6 +69,9 @@ pub struct LineState {
     draft: Option<Option<Draft>>,
     /// the d/dt chips' rects at the last paint: (rect, letter, varying, locked)
     pub chips: RefCell<Vec<(Rect, String, bool, bool)>>,
+    /// a selected part of the line's own answer, and the (line, selection) it was asked for (selection.rs)
+    pub selection_answer: Option<String>,
+    pub sel_seen: (String, usize, usize),
 }
 
 // ---- on the engine thread, with the live answer ----
@@ -272,24 +275,39 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
         }
         return Some(Outcome::Handled);
     }
-    if (vk == RIGHT || vk == TAB) && m.field.caret_at_end() && m.selected.is_none() {
-        if let Some(rest) = m.line.completion.clone() {
+    // Tab during the walkthrough types the step's line (fillTourStep), before anything else
+    if vk == TAB && !mods.shift && m.selected.is_none() && crate::tour::fill_step(m) {
+        m.field.break_run();
+        m.text_changed(engine);
+        return Some(Outcome::Handled);
+    }
+    let at_end = m.field.caret_at_end();
+    if ((vk == RIGHT && at_end) || (vk == TAB && !mods.shift)) && m.selected.is_none() {
+        if at_end && let Some(rest) = m.line.completion.clone() {
             m.field.insert(&rest);
             m.field.break_run();
             m.text_changed(engine);
             return Some(Outcome::Handled);
         }
-        if let Some(filled) = fill(m) {
+        if at_end && let Some(filled) = chain_fill(m) {
             m.field.set_text(&filled);
             m.text_changed(engine);
             return Some(Outcome::Handled);
         }
+        if fill_parens(m) {
+            m.text_changed(engine);
+            return Some(Outcome::Handled);
+        }
+    }
+    // Tab on an empty line moves to the newest card's reply (tabToCard)
+    if vk == TAB && !mods.shift && m.field.text().is_empty() && crate::messaging::tab_to_card(m) {
+        return Some(Outcome::Handled);
     }
     None
 }
 
-/// chainFill, then autofillParens: the line with its faint parts written in, when the caret is at its end.
-fn fill(m: &BarModel) -> Option<String> {
+/// chainFill: the line with its faint `ans` written in, when the caret is at its end.
+fn chain_fill(m: &BarModel) -> Option<String> {
     let text = m.field.text();
     if text.trim_start().to_lowercase().starts_with("message") || !m.field.caret_at_end() {
         return None;
@@ -303,8 +321,46 @@ fn fill(m: &BarModel) -> Option<String> {
             qcalc_core::app::chain::chained_expr(text)
         });
     }
-    let len = text.encode_utf16().count();
-    qcalc_core::parens::autofill_parens(text, len, len)
+    None
+}
+
+/// The line with its grey parens typed in where they're drawn (acceptParens), and the caret kept by the same
+/// character: past the new `(`s, or at the very end when it was at the end. None when there's nothing to add.
+pub fn parens_filled(text: &str, caret: usize) -> Option<(String, usize)> {
+    if text.trim().is_empty() || text.trim_start().to_lowercase().starts_with("message") {
+        return None;
+    }
+    let fill = qcalc_core::parens::infer_parens(text);
+    if fill.leading + fill.trailing == 0 {
+        return None;
+    }
+    let filled = format!(
+        "{}{text}{}",
+        "(".repeat(fill.leading),
+        ")".repeat(fill.trailing)
+    );
+    let at = if caret >= text.len() {
+        filled.len()
+    } else {
+        caret + fill.leading
+    };
+    Some((filled, at))
+}
+
+/// Tab (or → at the end): the grey parens become typed ones, the grey ones going in the same step so nothing on
+/// the line moves.
+fn fill_parens(m: &mut BarModel) -> bool {
+    let caret = m.field.selection().0;
+    let Some((filled, at)) = parens_filled(m.field.text(), caret) else {
+        return false;
+    };
+    if let Some(d) = &mut m.line.deco {
+        d.leading = 0;
+        d.trailing = 0;
+    }
+    m.field.set_text_at(&filled, at);
+    m.field.break_run();
+    true
 }
 
 /// Ctrl+V: equations on several lines (or with `;`) open as a system; anything else is pasted as one line.
@@ -608,6 +664,7 @@ pub fn on_timer(m: &mut BarModel, id: usize, engine: &EngineThread, shown: bool)
 /// unfocused, none run. The blink restarts solid whenever the line or the caret changed.
 pub fn after(app: &mut crate::app::App) {
     use windows::Win32::UI::WindowsAndMessaging::{GetCaretBlinkTime, KillTimer, SetTimer};
+    crate::selection::after(app);
     crate::a11y::after(app);
     let hwnd = Some(app.bar.hwnd);
     let shown = app.bar.visible;
@@ -861,6 +918,18 @@ mod tests {
         assert_eq!(d.leading, 1);
         let (d, _) = decorate("message bob (", &EvalContext::default(), &a);
         assert_eq!(d.trailing, 0);
+    }
+
+    #[test]
+    fn tab_types_the_grey_parens_where_they_stand() {
+        // `5+3)*2` reads as `(5+3)*2`: the caret after `3` stays after `3`
+        assert_eq!(parens_filled("5+3)*2", 3), Some(("(5+3)*2".into(), 4)));
+        // at the end it stays at the end, past the new `)`
+        assert_eq!(parens_filled("(2+3", 4), Some(("(2+3)".into(), 5)));
+        assert_eq!(parens_filled("sqrt(2", 1), Some(("sqrt(2)".into(), 1)));
+        assert_eq!(parens_filled("2+3", 3), None);
+        assert_eq!(parens_filled("", 0), None);
+        assert_eq!(parens_filled("message bob (", 13), None);
     }
 
     fn blank() -> LiveAnswer {

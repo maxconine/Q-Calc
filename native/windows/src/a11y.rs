@@ -14,9 +14,26 @@ thread_local! {
     /// (reader on, when it was read)
     static READER: Cell<Option<(bool, Instant)>> = const { Cell::new(None) };
     static SPOKEN: RefCell<String> = const { RefCell::new(String::new()) };
+    /// something said once, after the line's name (a new card, a hint, a mode toggled, a selection's answer)
+    static NEWS: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
-fn reader_on() -> bool {
+/// Has a reader hear `text` with the bar's next name (the Mac's `announce`, the page's aria-live regions). Costs a
+/// string while no reader runs; `after` drops it then.
+pub fn announce(text: &str) {
+    if text.trim().is_empty() {
+        return;
+    }
+    NEWS.with(|n| {
+        let mut n = n.borrow_mut();
+        if !n.is_empty() {
+            n.push_str(" · ");
+        }
+        n.push_str(text.trim());
+    });
+}
+
+pub fn reader_on() -> bool {
     // the e2e test's switch: behave as with a reader on, without starting one on the desktop
     if std::env::var_os("QCALC_READER").is_some() {
         return true;
@@ -56,10 +73,14 @@ pub fn name(text: &str, answer: &str) -> String {
 
 /// After every message (line.rs's `after`): the bar's name follows the line and the answer.
 pub fn after(app: &App) {
+    let news = NEWS.with(|n| std::mem::take(&mut *n.borrow_mut()));
     if !app.bar.visible || !reader_on() {
         return;
     }
-    let now = name(app.model.field.text(), &app.model.answer_text());
+    let mut now = name(app.model.field.text(), &app.model.answer_text());
+    if !news.is_empty() {
+        now = format!("{now}. {news}");
+    }
     if SPOKEN.with(|s| *s.borrow() == now) {
         return;
     }

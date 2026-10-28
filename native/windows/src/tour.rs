@@ -21,6 +21,8 @@ pub struct Line {
     pub text: String,
     pub at: usize,
     pub of: usize,
+    /// Tab would type the step's line (`fill_step`): "· tab fills it" follows the step
+    pub fillable: bool,
 }
 
 /// What the empty bar shows: an example and (once the engine has said) its answer.
@@ -95,7 +97,7 @@ pub use ui::*;
 
 #[cfg(windows)]
 mod ui {
-    use windows::Win32::Graphics::DirectWrite::{DWRITE_TEXT_ALIGNMENT_LEADING, DWRITE_TEXT_RANGE};
+    use windows::Win32::Graphics::DirectWrite::DWRITE_TEXT_RANGE;
 
     use super::*;
     use crate::app::App;
@@ -271,6 +273,7 @@ mod ui {
                 text: winify(&step.text, keybinds),
                 at: progress.at,
                 of: progress.of,
+                fillable: step.id != TourId::Hotkey && !step.expr.is_empty() && typed != step.expr,
             });
             (t.ghost_example, t.ghost_plain) = if step.plain {
                 (None, Some(step.expr))
@@ -479,9 +482,52 @@ mod ui {
     }
 
     fn skip_rect(gfx: &Gfx, r: Rect) -> Option<Rect> {
-        let l = gfx.layout("skip", &gfx.fonts.small, 0.0, r.h)?;
+        let h = crate::wrap::ONE_LINE;
+        let l = gfx.layout("skip", &gfx.fonts.small, 0.0, h)?;
         let w = measure(&l).0;
-        Some(Rect::new(r.right() - 44.0 - w, r.y, w, r.h))
+        Some(Rect::new(r.right() - 44.0 - w, r.y, w, h))
+    }
+
+    /// The step as drawn: its words, and "· tab fills it" while Tab would type its line.
+    fn shown_text(line: &Line) -> String {
+        if line.fillable {
+            format!("{} · tab fills it", line.text)
+        } else {
+            line.text.clone()
+        }
+    }
+
+    /// The line's height in the bar: one line, or two when the step wraps on a narrow bar.
+    pub fn line_height(gfx: &Gfx, m: &BarModel, inner: f32) -> f32 {
+        let Some(line) = &m.tour.line else {
+            return LINE_H;
+        };
+        let skip = skip_rect(gfx, Rect::new(0.0, 0.0, inner, LINE_H)).map_or(0.0, |s| s.w + 8.0);
+        let count = format!("{}/{}", line.at, line.of);
+        let cw = gfx
+            .layout(&count, &gfx.fonts.small, 0.0, LINE_H)
+            .map_or(0.0, |l| measure(&l).0);
+        let tw = (inner - 44.0 - skip - cw - 8.0).max(1.0);
+        crate::wrap::height(gfx, &shown_text(line), &gfx.fonts.small, tw)
+    }
+
+    /// Tab during the walkthrough types the step's line (fillTourStep): the rest of it while what's typed is its
+    /// start, else the whole line. False when the step has nothing to type.
+    pub fn fill_step(m: &mut BarModel) -> bool {
+        if !m.tour.line.as_ref().is_some_and(|l| l.fillable) {
+            return false;
+        }
+        let Some(step) = step_now(&m.tour.o, m.tour.replay, &m.tour.hotkey) else {
+            return false;
+        };
+        let typed = m.field.text().to_string();
+        if let Some(rest) = step.expr.strip_prefix(typed.as_str()) {
+            m.field.end(false);
+            m.field.insert(rest);
+        } else {
+            m.field.set_text(&step.expr);
+        }
+        true
     }
 
     /// `.tour-line`: the step, `n/m` at 70%, and an underlined skip clear of the clear button's corner.
@@ -497,20 +543,23 @@ mod ui {
             .map_or(0.0, |l| measure(&l).0);
         let tw = (right - r.x - cw - 8.0).max(0.0);
         let mut x = r.x;
-        if let Some(l) = c.gfx.layout_in(
-            &line.text,
-            &c.gfx.fonts.small,
-            tw,
-            r.h,
-            DWRITE_TEXT_ALIGNMENT_LEADING,
-        ) {
+        // a narrow bar wraps the step to a second line rather than cutting off what to type (native only)
+        let text = shown_text(line);
+        let row = Rect::new(r.x, r.y, r.w, crate::wrap::ONE_LINE);
+        c.push_clip(r);
+        if let Some(l) = crate::wrap::layout(c.gfx, &text, &c.gfx.fonts.small, tw, r.h) {
             c.text(&l, x, r.y, t.muted);
-            x += measure(&l).0.min(tw) + 8.0;
+            if r.h <= crate::wrap::ONE_LINE {
+                x += measure(&l).0.min(tw) + 8.0;
+            } else {
+                x = r.x + tw + 8.0;
+            }
         }
-        if let Some(l) = c.gfx.layout(&count, &c.gfx.fonts.small, 0.0, r.h) {
-            c.text(&l, x, r.y, with_alpha(t.muted, 0.7));
+        c.pop_clip();
+        if let Some(l) = c.gfx.layout(&count, &c.gfx.fonts.small, 0.0, row.h) {
+            c.text(&l, x, row.y, with_alpha(t.muted, 0.7));
         }
-        if let (Some(s), Some(l)) = (skip, c.gfx.layout("skip", &c.gfx.fonts.small, 0.0, r.h)) {
+        if let (Some(s), Some(l)) = (skip, c.gfx.layout("skip", &c.gfx.fonts.small, 0.0, row.h)) {
             // SAFETY: a setter on the live layout
             let _ = unsafe {
                 l.SetUnderline(

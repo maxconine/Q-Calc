@@ -68,6 +68,8 @@ pub enum Lane {
     Typeset,
     /// the input's own asks (line.rs): the squiggle after a pause, the SI prefix step, the examples' answers
     Input,
+    /// a selected part of the line answered on its own (selection.rs)
+    Selection,
     /// history load / save, warm-up and anything that must not be dropped: never replaced, never stale
     Misc,
 }

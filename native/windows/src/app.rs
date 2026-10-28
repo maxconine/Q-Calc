@@ -1325,6 +1325,8 @@ impl App {
                     "game": crate::games::is_open(), "settingsOpen": settings_window::is_open(),
                     "cheats": crate::cheats::height(&self.model) > 0.0, "gamesList": crate::commands::games_shown(&self.model),
                     "tour": self.model.tour.line.as_ref().map(|l| l.text.clone()),
+                    "caret": self.model.field.to_utf16(self.model.field.caret()),
+                    "selectionAnswer": self.model.line.selection_answer,
                 }));
             }
             "mem" => {

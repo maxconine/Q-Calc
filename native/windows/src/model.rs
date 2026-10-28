@@ -546,9 +546,9 @@ impl BarModel {
             DELETE => {
                 self.field.delete(ctrl);
             }
-            // Tab cycles the answer's forms (the input's completion, when it has one, takes Tab first)
-            TAB if !ctrl && !mods.alt => crate::answer::cycle_forms(self, engine, shift),
+            // Tab takes the completion and fills parens (line.rs); Ctrl+E / Ctrl+Shift+E cycle the answer's forms
             TAB => {}
+            0x45 if ctrl => crate::answer::cycle_forms(self, engine, shift),
             0x57 if ctrl => return Outcome::CloseSheet,
             // Ctrl+A / X / V / Z / Y
             0x41 if ctrl => self.field.select_all(),

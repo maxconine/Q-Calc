@@ -9,8 +9,9 @@
 //!   Layouts are cached by text and size, so a keystroke that doesn't change the answer makes none.
 //! - **Copy**: a click on a piece (`hit`) or Ctrl+C copies, unitless when "copy unitless" is on; the "✓ copied"
 //!   flash hangs left of the answer for 1.2 s, and the answer's width counts it, so it shows whole.
-//! - **Tab** (`cycle_forms`): the engine's `answer_forms` for the answer as shown, on `Lane::Forms`, then cycled
-//!   locally; Shift+Tab goes back.
+//! - **Ctrl+E** (`cycle_forms`): the engine's `answer_forms` for the answer as shown, on `Lane::Forms`, then
+//!   cycled locally; Ctrl+Shift+E goes back. (The page cycles on Tab; native moved it, as the Mac's ⌃E, so Tab fills
+//!   the grey parens.)
 //! - **Closed forms**: the live job hands back `Engine::closed_form`'s future with its `CancelToken`
 //!   (`closed_form`); the UI thread polls it whenever WM_ENGINE comes (`poll`), its waker posts WM_ENGINE, and a new
 //!   keystroke cancels it. A found form replaces `live.exact` (π²/6 for 1.6449…).
@@ -802,9 +803,9 @@ pub fn poll(app: &mut App) {
     }
 }
 
-// ---- Tab ----
+// ---- Ctrl+E ----
 
-/// Tab: the engine's answerForms for the answer as shown, cycled (useAnswerForms); Shift+Tab goes back.
+/// Ctrl+E: the engine's answerForms for the answer as shown, cycled (useAnswerForms); Ctrl+Shift+E goes back.
 pub fn cycle_forms(m: &mut BarModel, engine: &EngineThread, back: bool) {
     let Some(a) = live_of(m).cloned() else { return };
     let Some(value_json) = a.value_json.clone() else {

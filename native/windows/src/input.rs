@@ -209,6 +209,19 @@ impl Field {
         self.recorded(None);
     }
 
+    /// Replaces the whole line with the caret at `caret` (bytes): the grey parens typed in (line.rs
+    /// `fill_parens`); its own undo step.
+    pub fn set_text_at(&mut self, text: &str, caret: usize) {
+        if text == self.text {
+            return;
+        }
+        let mut at = caret.min(text.len());
+        while !text.is_char_boundary(at) {
+            at -= 1;
+        }
+        self.replace_all(text.to_string(), at, None);
+    }
+
     /// The whole line and the caret (bytes) after a rule's edit, recorded as `kind`.
     fn replace_all(&mut self, text: String, caret: usize, kind: Option<EditKind>) {
         self.text = text;

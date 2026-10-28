@@ -70,6 +70,8 @@ mod relay;
 #[cfg(windows)]
 mod render;
 #[cfg(windows)]
+mod selection;
+#[cfg(windows)]
 mod settings_window;
 #[cfg(windows)]
 mod sheets;
@@ -85,6 +87,8 @@ mod update;
 mod warp;
 #[cfg(windows)]
 mod window;
+#[cfg(windows)]
+mod wrap;
 
 #[cfg(feature = "perf")]
 #[global_allocator]

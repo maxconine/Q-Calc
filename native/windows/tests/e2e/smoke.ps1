@@ -557,13 +557,16 @@ Invoke-Check 'P2' 'sys panel opens' 'required' {
     Clear-Input
     Start-Sleep -Milliseconds 200
     $before = Height $h
-    # sys2 and Enter open two rows with the first focused; Enter moves to the next
+    # sys2 opens two rows as soon as the 2 is typed, the first focused (native only); Enter moves to the next,
+    # Tab and Shift+Tab go round them
     Type-Text 'sys2'
-    Wait-Until { (State).text -eq 'sys2' } 1500 | Out-Null
-    $N::Chord($N::VK_RETURN)
-    $ok = Wait-Until { $s = State; $null -ne $s.systems } 4000
+    $ok = Wait-Until { $s = State; $null -ne $s.systems -and $s.systems.focus -eq 0 } 4000
     $grew = Wait-Until { (Height $h) -gt $before + 20 } 3000
     $open = Height $h
+    $N::Chord($N::VK_TAB)
+    $tab = Wait-Until { (State).systems.focus -eq 1 } 1500
+    $N::Chord($N::VK_TAB)
+    $round = Wait-Until { (State).systems.focus -eq 0 } 1500
     Type-Text 'x+y=3'
     $N::Chord($N::VK_RETURN)
     Start-Sleep -Milliseconds 150
@@ -571,7 +574,43 @@ Invoke-Check 'P2' 'sys panel opens' 'required' {
     $a = Read-Answer '^x\s*=\s*2.*y\s*=\s*1$' 4000
     $N::Chord($N::VK_ESCAPE)
     Wait-Until { $null -eq (State).systems } 1500 | Out-Null
-    @{ Pass = ($ok -and $grew -and $a.Found); Detail = "height $before -> $open px; panel open: $ok; x+y=3, x-y=1 solved: '$($a.Text)'" }
+    @{ Pass = ($ok -and $grew -and $tab -and $round -and $a.Found); Detail = "height $before -> $open px; open on typing the count, first row focused: $ok; Tab to the second: $tab, round to the first: $round; x+y=3, x-y=1 solved: '$($a.Text)'" }
+}
+
+# Tab turns the grey parens into typed ones where they stand, the caret kept by the same character (native only)
+Invoke-Check 'E1' 'tab types in the grey parens' 'required' {
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '5+3)*2'
+    Read-Answer '^16$' | Out-Null
+    # the caret after the 3: three to the left of the end
+    foreach ($i in 1..3) { $N::Chord([uint16]0x25) }
+    Wait-Until { (State).caret -eq 3 } 1500 | Out-Null
+    $N::Chord($N::VK_TAB)
+    $mid = Wait-Until { $s = State; $s.text -eq '(5+3)*2' -and $s.caret -eq 4 } 2000
+    $s1 = State
+    Clear-Input
+    Type-Text '(2+3'
+    Read-Answer '^5$' | Out-Null
+    $N::Chord($N::VK_TAB)
+    $end = Wait-Until { $s = State; $s.text -eq '(2+3)' -and $s.caret -eq 5 } 2000
+    $s2 = State
+    @{ Pass = ($mid -and $end); Detail = "mid-line: '$($s1.text)' caret $($s1.caret) (want '(5+3)*2' at 4); at the end: '$($s2.text)' caret $($s2.caret) (want '(2+3)' at 5)" }
+}
+
+# Ctrl+E cycles the answer's forms (Tab on the page); Tab no longer does
+Invoke-Check 'E2' 'ctrl+e cycles answer forms' 'required' {
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '0.75'
+    $a = Read-Answer '^0\.75$'
+    $N::Chord($N::VK_TAB)
+    Start-Sleep -Milliseconds 300
+    $tabbed = Normalize (State).answer
+    $N::Chord($N::VK_CONTROL, [uint16]0x45)
+    $changed = Wait-Until { $x = Normalize (State).answer; $x -ne '' -and $x -ne '0.75' } 2500
+    $form = Normalize (State).answer
+    @{ Pass = ($a.Found -and $tabbed -eq '0.75' -and $changed); Detail = "0.75 answers '$($a.Text)'; after Tab '$tabbed' (unchanged); after Ctrl+E '$form'" }
 }
 
 function Near([int]$a, [int]$b, [int]$within = 6) { [Math]::Abs($a - $b) -le $within }

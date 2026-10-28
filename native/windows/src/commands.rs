@@ -448,6 +448,9 @@ mod ui {
 
     /// How wide the answer slot wants to be for a command's words (None when there are none to show).
     pub fn slot_width(gfx: &Gfx, m: &BarModel) -> Option<f32> {
+        if let Some(w) = crate::selection::slot_width(gfx, m) {
+            return Some(w);
+        }
         if m.command.is_none()
             && let Some(answer) = tour::example_answer(m)
         {
@@ -464,6 +467,9 @@ mod ui {
 
     /// Paints a command's words in the answer slot; false when there's no command (the answer paints instead).
     pub fn paint_slot(c: &Canvas, m: &BarModel, r: Rect) -> bool {
+        if crate::selection::paint_slot(c, m, r) {
+            return true;
+        }
         let Some(shown) = &m.command else {
             // the empty bar's example answer, muted at 70%
             if let Some(answer) = tour::example_answer(m) {

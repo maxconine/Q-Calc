@@ -632,9 +632,10 @@ fn expire_later() {
             }
         }
         let before = cards.list.len();
+        let ms = card_ms();
         cards
             .list
-            .retain(|c| now.duration_since(c.shown_at) < Duration::from_millis(banner::BANNER_MS));
+            .retain(|c| now.duration_since(c.shown_at) < Duration::from_millis(ms));
         if cards.list.len() != before {
             if let Some(f) = &cards.focus
                 && !cards.list.iter().any(|c| &c.card.id == f)
@@ -661,6 +662,33 @@ pub fn escape(m: &mut BarModel) -> bool {
         return true;
     }
     false
+}
+
+/// Tab on an empty line with a message card up moves to the newest card's reply line (tabToCard), since the
+/// keyboard had no other way into a card before it went. True when it did.
+pub fn tab_to_card(m: &mut BarModel) -> bool {
+    let Some(id) = m
+        .cards
+        .list
+        .iter()
+        .find(|c| !c.card.ask && c.reply != Reply::Sent)
+        .map(|c| c.card.id.clone())
+    else {
+        return false;
+    };
+    m.cards.focus = Some(id);
+    m.touch();
+    true
+}
+
+/// How long a card stays: 10 s, or 30 s while a screen reader runs, since 10 s is too short to hear a card and
+/// reach its reply.
+fn card_ms() -> u64 {
+    if crate::a11y::reader_on() {
+        30_000
+    } else {
+        banner::BANNER_MS
+    }
 }
 
 /// The bar went away: replies give the keys back.
