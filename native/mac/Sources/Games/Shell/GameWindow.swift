@@ -138,7 +138,9 @@ final class NativeGameWindowController: NSObject, NSWindowDelegate {
         if on {
             let visible = window.screen?.visibleFrame ?? spot?.visible ?? NSScreen.main?.visibleFrame ?? .zero
             // the card's size is the shape the big window keeps (the page's natural size)
-            let natural = window.frame.size
+            // (or the game's own narrower width, at the card's height)
+            let natural = NSSize(width: shell?.bigWidth.map { min($0, window.frame.width) } ?? window.frame.width,
+                                 height: window.frame.height)
             let frame = GameWindow.frame(visible: visible, natural: natural, titlebar: GameWindow.titlebarHeight)
             OverlayLog.note("game window on \(NSStringFromRect(frame))")
             dress(big: true)

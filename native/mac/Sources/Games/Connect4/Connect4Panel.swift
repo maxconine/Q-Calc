@@ -163,7 +163,12 @@ struct Connect4GameView: View {
             }
             return true
         }
-        .onDisappear { model.stop() }
+        // the big window around the square board, not the bar's 680-wide card
+        .onAppear { shell.bigWidth = 460 }
+        .onDisappear {
+            model.stop()
+            shell.bigWidth = nil
+        }
     }
 
     private func status(_ v: C4View, myTurn: Bool) -> String {
@@ -191,46 +196,20 @@ private struct Connect4Board: View {
     let onPick: (Int) -> Void
     @Environment(\.gameColors) private var colors
     @Environment(\.gameStage) private var stage
-    @State private var fall = FallClock()
-    @State private var held = HeldClock()
-    @State private var settled = 0
-
-    // one more draw once the animations are over, so the board stops on its last frame
-    private func settle() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) { settled += 1 }
-    }
-
-    private static let cell = 40.0, r = 15.0, lane = 40.0
-    private static let w = 7 * cell, h = lane + 6 * cell
-    private static func cx(_ col: Int) -> Double { Double(col) * cell + cell / 2 }
-    private static func cy(_ row: Int) -> Double { lane + Double(5 - row) * cell + cell / 2 }
 
     var body: some View {
         let size = boardSize
-        let now = CACurrentMediaTime()
-        let _ = fall.note(view.last, now)
-        let _ = held.note(cursor, now)
-        let _ = settled
-        let moving = fall.moving(now) || held.moving(now)
-        Group {
-            // the disc falling and the held one sliding draw every frame; a still board draws once
-            // drawn on the CPU (CGCanvas): a Canvas briefly kept ~125 MB of GPU surfaces when a game started
-            if moving {
-                TimelineView(.animation) { _ in CGCanvas { cg, sz in draw(cg, sz) } }
-            } else {
-                CGCanvas { cg, sz in draw(cg, sz) }
+        // Core Animation layers (C4Layers): the board is built once, each disc is a layer, and the fall and the held
+        // disc's slide are Core Animation's, so nothing is redrawn on the CPU per frame (a bitmap redrawn at 60 fps
+        // was slow full screen) and no GPU surfaces pile up (a SwiftUI Canvas had kept ~125 MB)
+        C4Layers(state: C4Layers.State(view: view, role: role, cursor: cursor, ghost: ghost, colors: colors))
+            .frame(width: size, height: size)
+            .contentShape(Rectangle())
+            .pointerHover { p in
+                if let p { onHover(column(p.x, size)) } else { onLeave() }
             }
-        }
-        .onAppear { settle() }
-        .onChange(of: view.rev) { _ in settle() }
-        .onChange(of: cursor) { _ in settle() }
-        .frame(width: size, height: size)
-        .contentShape(Rectangle())
-        .pointerHover { p in
-            if let p { onHover(column(p.x, size)) } else { onLeave() }
-        }
-        .spatialTap { p in onPick(column(p.x, size)) }
-        .frame(maxWidth: .infinity)
+            .spatialTap { p in onPick(column(p.x, size)) }
+            .frame(maxWidth: .infinity)
     }
 
     private func column(_ x: CGFloat, _ size: CGFloat) -> Int { max(0, min(6, Int(x / size * 7))) }
@@ -238,90 +217,160 @@ private struct Connect4Board: View {
     // .c4-board: 300 wide (aspect 1); full screen grows it to min(100%, --game-h − 200)
     private var boardSize: CGFloat {
         guard let stage else { return 300 }
-        return max(300, min(stage.width - 2 * GameMetrics.gutter, stage.gameH - 200))
-    }
-
-    private func circle(_ x: Double, _ y: Double, _ r: Double) -> CGRect {
-        CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r)
-    }
-
-    private func draw(_ cg: CGContext, _ sz: CGSize) {
-        let k = sz.width / Self.w
-        cg.scaleBy(x: k, y: k)
-        let now = CACurrentMediaTime()
-        func fill(_ path: CGPath, _ color: RGBA) {
-            cg.addPath(path)
-            cg.setFillColor(color.cg)
-            cg.fillPath()
-        }
-        func stroke(_ path: CGPath, _ color: RGBA, _ width: CGFloat) {
-            cg.addPath(path)
-            cg.setStrokeColor(color.cg)
-            cg.setLineWidth(width)
-            cg.strokePath()
-        }
-        let frame = Path(roundedRect: CGRect(x: 0, y: Self.lane, width: Self.w, height: 6 * Self.cell), cornerRadius: 10).cgPath
-        fill(frame, colors.court)
-        stroke(frame, colors.line, 1)
-        for row in 0..<6 {
-            for c in 0..<7 {
-                let hole = CGPath(ellipseIn: circle(Self.cx(c), Self.cy(row), Self.r), transform: nil)
-                fill(hole, colors.bg)
-                stroke(hole, colors.line.mix(0.6, .clear), 1)
-            }
-        }
-        if ghost, let cursor, view.landing[cursor] >= 0 {
-            fill(CGPath(ellipseIn: circle(Self.cx(cursor), Self.cy(Int(view.landing[cursor])), Self.r), transform: nil), colors.accent.mix(0.22, .clear))
-        }
-        let line = Set(view.line.map(Int.init))
-        let last = view.last.map(Int.init) ?? -1
-        for i in 0..<42 {
-            guard let who = view.board[i] else { continue }
-            let c = i % 7, row = i / 7
-            var y = Self.cy(row)
-            if i == last {
-                // c4-fall: from the lane down to its hole, 260 ms, cubic-bezier(0.5, 0, 0.75, 0.3)
-                let t = min(1, (now - fall.at) / 0.26)
-                y -= (Self.cy(row) - Self.lane / 2) * (1 - cssEase(t, 0.5, 0, 0.75, 0.3))
-            }
-            let disc = CGPath(ellipseIn: circle(Self.cx(c), y, Self.r), transform: nil)
-            let dim = view.over && !view.line.isEmpty && !line.contains(i)
-            fill(disc, (who == role ? colors.accent : colors.ink).opacity(dim ? 0.3 : 1))
-            if line.contains(i) { stroke(disc, colors.bg, 3) }
-        }
-        if let cursor {
-            let full = view.landing[cursor] < 0
-            fill(CGPath(ellipseIn: circle(held.x(now, Self.cx), Self.lane / 2, Self.r), transform: nil), colors.accent.opacity(full ? 0.25 : 0.9))
-        }
+        // a big window made from the lobby's shorter shape has less room than 300: the board fits it, never cut off
+        return max(160, min(stage.width - 2 * GameMetrics.gutter, stage.gameH - 200))
     }
 }
 
-/// When the newest disc dropped, for its fall.
-private final class FallClock {
-    var last: UInt32?
-    var at = 0.0
-    func note(_ l: UInt32?, _ now: Double) {
-        if l != last {
-            if l != nil { at = now }
-            last = l
-        }
+/// The board as layers, in the svg's units scaled to the view: the frame and the 42 holes one shape each (rebuilt
+/// only for new colours), the ghost, a layer per disc and the held disc. A new last disc falls from the lane to its
+/// hole (260 ms, cubic-bezier(0.5, 0, 0.75, 0.3)); the held disc slides between columns (90 ms ease-out).
+private struct C4Layers: NSViewRepresentable {
+    struct State: Equatable {
+        let view: C4View
+        let role: GameSide
+        let cursor: Int?
+        let ghost: Bool
+        let colors: GameColors
     }
-    func moving(_ now: Double) -> Bool { now - at < 0.3 }
-}
+    let state: State
 
-/// The held disc slides between columns (`transition: cx 90ms ease-out`).
-private final class HeldClock {
-    var to: Int?
-    var from = 3
-    var at = 0.0
-    func note(_ c: Int?, _ now: Double) {
-        guard c != to else { return }
-        if let c, let t = to { from = t; at = now; to = c } else { to = c; if let c { from = c } }
-    }
-    func moving(_ now: Double) -> Bool { now - at < 0.12 }
-    func x(_ now: Double, _ cx: (Int) -> Double) -> Double {
-        guard let to else { return cx(from) }
-        let t = min(1, (now - at) / 0.09)
-        return cx(from) + (cx(to) - cx(from)) * cssEase(t, 0, 0, 0.58, 1)
+    static let cell = 40.0, r = 15.0, lane = 40.0
+    static let w = 7 * cell, h = lane + 6 * cell
+    static func cx(_ col: Int) -> Double { Double(col) * cell + cell / 2 }
+    static func cy(_ row: Int) -> Double { lane + Double(5 - row) * cell + cell / 2 }
+
+    func makeNSView(context: Context) -> BoardView { BoardView() }
+    func updateNSView(_ v: BoardView, context: Context) { v.apply(state) }
+
+    final class BoardView: NSView {
+        private let content = CALayer()
+        private let frameLayer = CAShapeLayer()
+        private let holes = CAShapeLayer()
+        private let ghostLayer = CAShapeLayer()
+        private var discs: [CAShapeLayer] = []
+        private let held = CAShapeLayer()
+        private var last: State?
+
+        override init(frame: NSRect) {
+            super.init(frame: frame)
+            wantsLayer = true
+            layer?.addSublayer(content)
+            content.anchorPoint = .zero
+            content.bounds = CGRect(x: 0, y: 0, width: C4Layers.w, height: C4Layers.w)
+            frameLayer.path = CGPath(roundedRect: CGRect(x: 0, y: C4Layers.lane, width: C4Layers.w, height: 6 * C4Layers.cell),
+                                     cornerWidth: 10, cornerHeight: 10, transform: nil)
+            frameLayer.lineWidth = 1
+            let holePaths = CGMutablePath()
+            for row in 0..<6 { for c in 0..<7 { holePaths.addEllipse(in: Self.circle(C4Layers.cx(c), C4Layers.cy(row))) } }
+            holes.path = holePaths
+            holes.lineWidth = 1
+            ghostLayer.path = Self.disc
+            held.path = Self.disc
+            for layer in [frameLayer, holes, ghostLayer] { content.addSublayer(layer) }
+            for _ in 0..<42 {
+                let d = CAShapeLayer()
+                d.path = Self.disc
+                d.isHidden = true
+                content.addSublayer(d)
+                discs.append(d)
+            }
+            content.addSublayer(held)
+        }
+
+        required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+        override var isFlipped: Bool { true }
+        // the gestures on the SwiftUI side get every event
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        /// a disc's circle centred on the layer's position
+        private static let disc = CGPath(ellipseIn: CGRect(x: -C4Layers.r, y: -C4Layers.r, width: 2 * C4Layers.r, height: 2 * C4Layers.r), transform: nil)
+        private static func circle(_ x: Double, _ y: Double) -> CGRect {
+            CGRect(x: x - C4Layers.r, y: y - C4Layers.r, width: 2 * C4Layers.r, height: 2 * C4Layers.r)
+        }
+
+        override func layout() {
+            super.layout()
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let k = bounds.width / C4Layers.w
+            content.setAffineTransform(CGAffineTransform(scaleX: k, y: k))
+            content.position = .zero
+            CATransaction.commit()
+        }
+
+        override func viewDidChangeBackingProperties() {
+            super.viewDidChangeBackingProperties()
+            let scale = window?.backingScaleFactor ?? 2
+            for l in [frameLayer, holes, ghostLayer, held] + discs { l.contentsScale = scale }
+        }
+
+        func apply(_ s: State) {
+            guard s != last else { return }
+            let before = last
+            last = s
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            let c = s.colors
+            if before?.colors != c {
+                frameLayer.fillColor = c.court.cg
+                frameLayer.strokeColor = c.line.cg
+                holes.fillColor = c.bg.cg
+                holes.strokeColor = c.line.mix(0.6, .clear).cg
+            }
+            // the ghost: where the held disc would land
+            if s.ghost, let cur = s.cursor, s.view.landing[cur] >= 0 {
+                ghostLayer.isHidden = false
+                ghostLayer.position = CGPoint(x: C4Layers.cx(cur), y: C4Layers.cy(Int(s.view.landing[cur])))
+                ghostLayer.fillColor = c.accent.mix(0.22, .clear).cg
+            } else {
+                ghostLayer.isHidden = true
+            }
+            let line = Set(s.view.line.map(Int.init))
+            let lastDisc = s.view.last.map(Int.init)
+            for i in 0..<42 {
+                let d = discs[i]
+                guard let who = s.view.board[i] else { d.isHidden = true; continue }
+                let col = i % 7, row = i / 7
+                let target = CGPoint(x: C4Layers.cx(col), y: C4Layers.cy(row))
+                let dim = s.view.over && !s.view.line.isEmpty && !line.contains(i)
+                d.fillColor = (who == s.role ? c.accent : c.ink).opacity(dim ? 0.3 : 1).cg
+                d.strokeColor = c.bg.cg
+                d.lineWidth = line.contains(i) ? 3 : 0
+                let isNew = d.isHidden
+                d.isHidden = false
+                d.position = target
+                // c4-fall: the newest disc drops from the lane to its hole
+                if isNew, i == lastDisc, before != nil, !GameMotion.reduced {
+                    let fall = CABasicAnimation(keyPath: "position.y")
+                    fall.fromValue = C4Layers.lane / 2
+                    fall.toValue = target.y
+                    fall.duration = 0.26
+                    fall.timingFunction = CAMediaTimingFunction(controlPoints: 0.5, 0, 0.75, 0.3)
+                    d.add(fall, forKey: "fall")
+                }
+            }
+            // the disc you're holding, sliding between columns
+            if let cur = s.cursor {
+                let full = s.view.landing[cur] < 0
+                held.fillColor = c.accent.opacity(full ? 0.25 : 0.9).cg
+                let to = CGPoint(x: C4Layers.cx(cur), y: C4Layers.lane / 2)
+                let from = held.isHidden ? to : (held.presentation()?.position ?? held.position)
+                held.isHidden = false
+                held.position = to
+                if from != to, !GameMotion.reduced {
+                    let slide = CABasicAnimation(keyPath: "position.x")
+                    slide.fromValue = from.x
+                    slide.toValue = to.x
+                    slide.duration = 0.09
+                    slide.timingFunction = CAMediaTimingFunction(controlPoints: 0, 0, 0.58, 1)
+                    held.add(slide, forKey: "slide")
+                }
+            } else {
+                held.isHidden = true
+            }
+            CATransaction.commit()
+        }
     }
 }
