@@ -266,7 +266,6 @@ struct LiveAnswerView: View {
         .lineLimit(1)
         // the black hole has it for a moment (EggOverlay `void`); the answer underneath never changes
         .opacity(model.answerVeiled ? 0 : 1)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.answerVeiled)
     }
 
     @ViewBuilder private var content: some View {
@@ -333,7 +332,6 @@ struct LiveAnswerView: View {
             AnswerButton(model: model, shown: model.pretty(model.shownAnswer), copy: model.shownAnswer, size: Theme.display,
                          help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
                 .id(model.formIndex)
-                .transition(.opacity)
         }
     }
 }
@@ -432,37 +430,17 @@ struct TimeLetterChips: View {
     }
 }
 
-/// qcalc-example: 0 → 1 over the first tenth, held, → 0 over the last tenth of EXAMPLE_MS (2.5 s); still with
-/// reduced motion. A new `id` starts it again.
+/// qcalc-example: the rotating example, shown at once (native only: no fade in or out, it just changes)
 private struct ExampleFade<Content: View>: View {
     let id: Int
     @ViewBuilder var content: Content
-    @State private var opacity: Double = reduceMotion ? 1 : 0
-    @State private var shownID: Int?
 
-    var body: some View {
-        content
-            .opacity(opacity)
-            .onAppear { run() }
-            .onChange(of: id) { _ in run() }
-    }
-
-    private func run() {
-        guard !reduceMotion else { return }
-        shownID = id
-        opacity = 0
-        withAnimation(.easeInOut(duration: 0.25)) { opacity = 1 }
-        let mine = id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.25) {
-            guard shownID == mine, mine >= 0 else { return }
-            withAnimation(.easeInOut(duration: 0.25)) { opacity = 0 }
-        }
-    }
+    var body: some View { content }
 }
 
-/// .live-check: "✓ copied", hanging left of the answer, in for 120 ms, held, gone by 1.2 s
+/// .live-check: "✓ copied", hanging left of the answer, there at once and gone at once by 1.2 s (native only: no fade)
 private struct CopiedCheck: View {
-    @State private var opacity: Double = reduceMotion ? 1 : 0
+    @State private var opacity: Double = 1
     var body: some View {
         Text("✓ copied")
             .font(.system(size: Theme.caption, weight: .medium))
@@ -473,9 +451,7 @@ private struct CopiedCheck: View {
             .padding(.trailing, 6)
             .opacity(opacity)
             .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeOut(duration: 0.12)) { opacity = 1 }
-                withAnimation(.easeOut(duration: 0.48).delay(0.72)) { opacity = 0 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { opacity = 0 }
             }
             .accessibilityLabel("Copied")
     }
@@ -518,7 +494,6 @@ private struct AnswerButton: View {
         .buttonStyle(.plain)
         .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
         .onHover { hover = $0 }
-        .animation(.easeOut(duration: 0.12), value: hover)
         .help(help)
         .accessibilityLabel("Answer \(shown)")
         .accessibilityHint("Copies it")
@@ -591,7 +566,6 @@ private struct EdgeTools: View, Equatable {
             .padding(.trailing, 6)
         }
         .opacity(shown ? 1 : 0)
-        .animation(.easeInOut(duration: 0.15), value: shown)
     }
 
     private func tip(_ text: String, _ action: String) -> String {
@@ -631,7 +605,6 @@ private struct EdgeTool<Label: View>: View {
             tipShown = false
             if on { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { if hover { tipShown = true } } }
         }
-        .animation(.easeOut(duration: 0.12), value: hover)
         .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {
             if tipShown {
                 // ::after: ink pill with --bg text, 4 pt off the button
@@ -643,7 +616,6 @@ private struct EdgeTool<Label: View>: View {
                     .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk))
                     .alignmentGuide(tipAbove ? .top : .bottom) { d in tipAbove ? d[.bottom] + 4 : d[.top] - 4 }
                     .allowsHitTesting(false)
-                    .transition(.opacity)
                     .zIndex(10)
             }
         }

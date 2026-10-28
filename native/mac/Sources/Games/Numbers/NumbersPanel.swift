@@ -254,7 +254,6 @@ private struct NumbersGame: View {
                             .background(RoundedRectangle(cornerRadius: GameMetrics.radiusS).fill(colors.control.color))
                             .boxShadow(colors.controlShadow, radius: GameMetrics.radiusS)
                             .opacity(i < taken.count && taken[i] ? 0.3 : 1)
-                            .animation(.easeInOut(duration: 0.12), value: taken)
                     }
                     .buttonStyle(.plain)
                     .disabled(over != nil)
