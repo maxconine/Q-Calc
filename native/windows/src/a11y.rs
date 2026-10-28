@@ -103,10 +103,11 @@ pub fn name(text: &str, answer: &str) -> String {
 /// events and the news as a notification; else the bar's name follows the line and the answer.
 pub fn after(app: &App) {
     let news = NEWS.with(|n| std::mem::take(&mut *n.borrow_mut()));
-    if !app.bar.visible || !reader_on() {
+    let hwnd = app.bar.hwnd;
+    // Narrator listens to UI Automation without setting SPI_SETSCREENREADER
+    if !app.bar.visible || !(reader_on() || crate::uia::heard(hwnd)) {
         return;
     }
-    let hwnd = app.bar.hwnd;
     if crate::uia::provided(hwnd) {
         let tree = bar_tree(app);
         // a row picked from the tape is heard as the focus moves to it, not again as news

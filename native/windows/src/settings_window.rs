@@ -2235,7 +2235,7 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> 
     crate::app::run_ops();
     run_pending();
     // a reader hears the focus move and the page change (uia.rs), from what was just painted
-    if msg == WM_PAINT && crate::a11y::reader_on() {
+    if msg == WM_PAINT && (crate::a11y::reader_on() || crate::uia::heard(hwnd)) {
         crate::uia::changed(hwnd, None);
     }
     match out {

@@ -225,7 +225,8 @@ pub fn forget(hwnd: HWND) {
     }
 }
 
-fn listening() -> bool {
+/// Whether any UIA client listens for events (Narrator does, without setting SPI_SETSCREENREADER).
+pub fn listening() -> bool {
     // SAFETY: a plain query
     unsafe { UiaClientsAreListening().as_bool() }
 }
@@ -645,6 +646,12 @@ impl ISelectionItemProvider_Impl for Child_Impl {
     }
 }
 
+/// Whether a reader may be listening to this window: a client has asked for its provider and one listens for
+/// events (a cheap check, after the first).
+pub fn heard(hwnd: HWND) -> bool {
+    provided(hwnd) && listening()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -696,3 +703,4 @@ mod tests {
         assert_eq!(changes(&d, &b), vec![Change::Focus(1), Change::Live(2)]);
     }
 }
+
