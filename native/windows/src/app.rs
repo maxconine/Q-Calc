@@ -1092,14 +1092,21 @@ impl App {
             self.store.used_at = (now_ms() / 1000) as u64;
             self.save_store();
         }
-        // SAFETY: our host's timer (one-shot: trim() kills it)
+        // SAFETY: our host's timer (one-shot: trim() kills it). What only a showing needs goes with it, 30 s on, so
+        // a quick hide and show keeps the regexes, the device and the layouts (`release_hidden`)
         unsafe { SetTimer(Some(self.host), TIMER_TRIM, TRIM_AFTER_MS, None) };
-        // what only a showing needs goes now (the layouts, the Typst thread): ~3.5 MB back, remade as needed
+    }
+
+    /// The bar has stayed hidden TRIM_AFTER_MS (or the pipe's `release`): what only a showing needs goes. The
+    /// layouts and the Typst thread (~3.5 MB), the swap chain and WARP device (~2.5 MB; a showing makes them in
+    /// ~4 ms), and the engine's compiled regexes (engine.rs; the next showing's warm-up compiles them again).
+    fn release_hidden(&mut self) {
+        if self.bar.visible {
+            return;
+        }
         crate::answer::trim_hidden(self);
-        // the swap chain and the WARP device too (~2.5 MB, and D3D10Warp unloads): a showing makes them in ~4 ms
         self.bar.surface.release();
         self.gfx.drop_flip_device();
-        // and the engine's compiled regexes (engine.rs), compiled again with the next showing's warm-up
         self.engine.release();
     }
 
@@ -1110,11 +1117,7 @@ impl App {
         if self.bar.visible {
             return;
         }
-        // a GPU target holds the device's memory; the software one is a few hundred KB and quicker kept
-        if crate::render::hardware() {
-            self.bar.surface.release();
-        }
-        crate::answer::trim_hidden(self);
+        self.release_hidden();
         let (ws, private) = bench::memory();
         // SAFETY: our own process
         let _ = unsafe {
@@ -1344,6 +1347,10 @@ impl App {
                 reply(
                     serde_json::json!({ "workingSet": ws, "private": private, "visible": self.bar.visible }),
                 );
+            }
+            "release" => {
+                self.release_hidden();
+                reply(serde_json::json!({ "ok": !self.bar.visible }));
             }
             "trim" => {
                 self.trim();

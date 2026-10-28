@@ -36,9 +36,9 @@ use crate::qlog;
 
 pub const STACK_BYTES: usize = 32 * 1024 * 1024;
 
-/// How long the bar stays hidden before the engine frees its compiled regexes (`release`): at once (once the jobs
-/// waiting are done). A delay of 5 s, so a quick reopen kept them, left the e2e suite's reading 0.8 s after a hide
-/// 3.8 MB higher (PERFORMANCE.md); the warm-up after a showing goes behind keystrokes, so a reopen costs little.
+/// How long after `release` the engine thread frees its compiled regexes: at once (once the jobs waiting are done).
+/// The wait is app.rs's: `release` is called only once the bar has stayed hidden 30 s (TRIM_AFTER_MS, a timer a
+/// showing cancels), so a quick hide and show keeps them and its first key compiles nothing (PERFORMANCE.md).
 const RELEASE_AFTER: std::time::Duration = std::time::Duration::ZERO;
 
 /// What the UI thread runs with a result.
@@ -358,11 +358,11 @@ impl EngineThread {
     /// PERFORMANCE.md) are freed on the engine thread between jobs, and the next showing's `warm_up` compiles the
     /// keystroke path's again. A showing before the engine thread gets to it keeps them.
     ///
-    /// On the UI thread, from the hide (app.rs `after_hide`), where no regex of the core's is in use: the UI
-    /// thread's own compiled regexes go at once.
+    /// On the UI thread, once the bar has stayed hidden 30 s (app.rs `release_hidden`), where no regex of the
+    /// core's is in use: the UI thread's own compiled regexes go at once.
     pub fn release(&self) {
         qcalc_core::jsre::clear_cache();
-        // SAFETY: the UI thread at a hide, outside any call into the core: it holds no reference from a regex static
+        // SAFETY: the UI thread while hidden, outside any call into the core: it holds no reference from a regex static
         unsafe { qcalc_core::jsre::release_compiled() };
         if let Ok(mut q) = self.shared.queue.lock() {
             q.release_at = Some(Instant::now() + RELEASE_AFTER);
