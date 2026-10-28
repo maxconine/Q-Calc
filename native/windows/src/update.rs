@@ -652,6 +652,52 @@ mod tests {
         assert!(verify_bytes(&public_key(PUBKEY).unwrap(), &sig, b"test").is_err());
     }
 
+    /// The feed exactly as the release writes it (native/windows/installer/latest-native.mjs), with both platforms.
+    #[test]
+    fn the_release_feed_parses_for_both_platforms() {
+        let feed = include_str!("../tests/fixtures/latest-native.json");
+        for (platform, file) in [
+            ("windows-x86_64", "Q-Calc-2.1.0-x64-native-setup.exe"),
+            ("windows-aarch64", "Q-Calc-2.1.0-arm64-native-setup.exe"),
+        ] {
+            let o = offer(feed, platform).unwrap();
+            assert_eq!(o.version, "2.1.0");
+            assert_eq!(
+                o.url,
+                format!("https://github.com/maxconine/Q-Calc/releases/download/v2.1.0/{file}")
+            );
+            assert!(signed_for(&signature(&o.signature).unwrap(), "2.1.0"));
+        }
+        assert!(newer(&offer(feed, platform()).unwrap().version, "2.0.15"));
+    }
+
+    /// A feed built from a real local installer by native/windows/installer/feed-check.ps1: a throwaway minisign
+    /// key signs the installer (`tauri signer sign --app-version`), latest-native.mjs writes the feed, and this
+    /// reads it as the app would and verifies the installer against that key, whole and streamed.
+    /// `QCALC_FEED_CHECK=<dir with latest-native.json and the installer>`, `QCALC_FEED_PUBKEY=<base64 key>`.
+    #[test]
+    #[ignore = "run by installer/feed-check.ps1"]
+    fn feed_from_a_local_installer() {
+        let dir = std::path::PathBuf::from(std::env::var("QCALC_FEED_CHECK").expect("QCALC_FEED_CHECK"));
+        let pubkey = std::env::var("QCALC_FEED_PUBKEY").expect("QCALC_FEED_PUBKEY");
+        let feed = std::fs::read_to_string(dir.join("latest-native.json")).unwrap();
+        let o = offer(&feed, platform()).unwrap();
+        let file = o.url.rsplit('/').next().unwrap().replace("%20", " ");
+        let bytes = std::fs::read(dir.join(&file)).unwrap();
+        let key = public_key(pubkey.trim()).unwrap();
+        let sig = signature(&o.signature).unwrap();
+        assert!(signed_for(&sig, &o.version), "not signed for {}", o.version);
+        verify_bytes(&key, &sig, &bytes).unwrap();
+        let mut s = key.verify_stream(&sig).unwrap();
+        for piece in bytes.chunks(64 * 1024) {
+            s.update(piece);
+        }
+        s.finalize().unwrap();
+        // and the real key didn't make it: the shipped app would refuse this one
+        assert!(verify_bytes(&public_key(PUBKEY).unwrap(), &sig, &bytes).is_err());
+        eprintln!("feed ok: {} {} ({} bytes)", o.version, o.url, bytes.len());
+    }
+
     #[test]
     fn checks_on_launch_then_daily_and_a_backwards_clock_is_due() {
         let t0 = SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000);
