@@ -1336,6 +1336,7 @@ impl App {
                     "tour": self.model.tour.line.as_ref().map(|l| l.text.clone()),
                     "caret": self.model.field.to_utf16(self.model.field.caret()),
                     "selectionAnswer": self.model.line.selection_answer,
+                    "shown": crate::answer::shown_answer(&self.model),
                 }));
             }
             "mem" => {

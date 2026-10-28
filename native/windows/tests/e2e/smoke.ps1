@@ -578,7 +578,7 @@ Invoke-Check 'P2' 'sys panel opens' 'required' {
 }
 
 # Tab turns the grey parens into typed ones where they stand, the caret kept by the same character (native only)
-Invoke-Check 'E1' 'tab types in the grey parens' 'required' {
+Invoke-Check 'B1' 'tab types in the grey parens' 'required' {
     Show-QCalc | Out-Null
     Clear-Input
     Type-Text '5+3)*2'
@@ -599,17 +599,17 @@ Invoke-Check 'E1' 'tab types in the grey parens' 'required' {
 }
 
 # Ctrl+E cycles the answer's forms (Tab on the page); Tab no longer does
-Invoke-Check 'E2' 'ctrl+e cycles answer forms' 'required' {
+Invoke-Check 'B2' 'ctrl+e cycles answer forms' 'required' {
     Show-QCalc | Out-Null
     Clear-Input
     Type-Text '0.75'
     $a = Read-Answer '^0\.75$'
     $N::Chord($N::VK_TAB)
     Start-Sleep -Milliseconds 300
-    $tabbed = Normalize (State).answer
+    $tabbed = Normalize (State).shown
     $N::Chord($N::VK_CONTROL, [uint16]0x45)
-    $changed = Wait-Until { $x = Normalize (State).answer; $x -ne '' -and $x -ne '0.75' } 2500
-    $form = Normalize (State).answer
+    $changed = Wait-Until { $x = Normalize (State).shown; $x -ne '' -and $x -ne '0.75' } 2500
+    $form = Normalize (State).shown
     @{ Pass = ($a.Found -and $tabbed -eq '0.75' -and $changed); Detail = "0.75 answers '$($a.Text)'; after Tab '$tabbed' (unchanged); after Ctrl+E '$form'" }
 }
 
