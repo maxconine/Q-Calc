@@ -313,7 +313,8 @@ struct LiveAnswerView: View {
                 .font(.system(size: Theme.body))
                 .foregroundStyle(Color.qMuted)
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
-        } else if let solve = model.live.solve, solve.roots.count > 1, !model.hasDual {
+        } else if let solve = model.live.solve, solve.roots.count > 1 || (solve.roots.count == 1 && !solve.variable.isEmpty), !model.hasDual {
+            // native only: one root too reads `D = 26` (its number alone is what's copied and what ans takes)
             SolveRoots(model: model, solve: solve)
         } else if model.live.improper {
             Text(model.live.display)
@@ -322,6 +323,11 @@ struct LiveAnswerView: View {
         } else if model.hasDual, let exact = model.exact {
             // .live-dual: two 20 pt halves around a 17 pt ≈, each its own copy
             HStack(spacing: 0) {
+                // native only: a solved letter's name in front, `x = √2 ≈ 1.41421`
+                if let v = model.live.solve?.variable, !v.isEmpty, model.live.solve?.outcome == .roots {
+                    Text("\(v) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
+                        .padding(.trailing, 0.2 * Theme.answerPart)
+                }
                 AnswerButton(model: model, shown: Pretty.answer(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
                 Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
                 AnswerButton(model: model, shown: model.pretty(model.exponentShown(model.live.display)), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
@@ -356,12 +362,21 @@ private struct SolveRoots: View {
             .hoverTip("Copy all the solutions")
             ForEach(Array(solve.roots.enumerated()), id: \.offset) { k, root in
                 if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
-                RootButton(model: model, shown: Pretty.answer(labels[k]), copy: String(format: "%.17g", root))
+                RootButton(model: model, shown: Pretty.answer(labels[k]), copy: Self.plain(root))
             }
             if solve.more { Text(", …").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Solutions")
+    }
+}
+
+extension SolveRoots {
+    /// a root as it copies: the shortest text that reads back as the same number (`26`, `0.1`, not `0.1000…01`)
+    static func plain(_ root: Double) -> String {
+        guard root.isFinite else { return String(root) }
+        if root == root.rounded(), abs(root) < 1e15 { return String(Int64(root)) }
+        return "\(root)"
     }
 }
 
@@ -732,6 +747,18 @@ private struct HistoryRowView: View, Equatable {
     }
 
     @ViewBuilder private var answers: some View {
+        // native only: a solved row names its letter, `D = 26`; a click still inserts the number alone
+        if let v = row.solve?.variable, !v.isEmpty, row.solve?.outcome == .roots {
+            HStack(spacing: 4) {
+                Text("\(v) =").font(.system(size: Theme.body)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
+                answerCells
+            }
+        } else {
+            answerCells
+        }
+    }
+
+    @ViewBuilder private var answerCells: some View {
         if row.hasDual, let exact = row.exact {
             // the page's titles: exact value, then approximation
             // .tape-a-dual: exact ≈ approx, 6 pt apart, the ≈ in 13 pt muted
