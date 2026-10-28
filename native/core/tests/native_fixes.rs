@@ -78,6 +78,53 @@ fn and_or_are_wedge_and_vee_in_the_typst_preview() {
 }
 
 #[test]
+fn every_typed_character_previews_and_every_preview_compiles() {
+    use qcalc_core::app::typst_math::{preview_math, typst_preview_useful};
+    // as in typstMath.test.ts; the renderer compiles them in qcalc-typst's preview_fuzz
+    for (line, want) in [
+        ("⌊x⌋", "floor(x)"),
+        ("⌈2.5⌉", "ceil(2.5)"),
+        ("‖v‖", "norm(v)"),
+        ("⟨x, y⟩", "lr(chevron.l x , y chevron.r)"),
+        ("⌊x", "floor.l x"),
+        ("f″(x)", "f '' (x)"),
+        ("€5 + £3", "€ 5 + £ 3"),
+        ("¥ ¢ ‰ § ¶ —", "¥ ¢ ‰ § ¶ —"),
+        ("@ ` \\ ‹ « “ ‘", "\\@ \\` backslash ‹ « “ ‘"),
+        ("x^2 \"", "x ^ 2 \\\""),
+        ("0b1010", "\"0b1010\""),
+        ("0xff + 1/2", "\"0xff\" + 1 / 2"),
+        ("0o17", "\"0o17\""),
+        ("sin(2;3)", "sin(2 \\; 3)"),
+        ("∛", "\\∛"),
+        ("√", "\\√"),
+        ("∜(16)", "root(4, 16)"),
+        ("√()", "sqrt(zws)"),
+        ("2^", "2 \\^"),
+        ("/3", "\\/ 3"),
+        ("⁻¹", "zws^(-1)"),
+        ("_3", "zws_(3)"),
+        ("abs()", "abs(zws)"),
+        ("frac(1)", "op(\"frac\")(1)"),
+        ("floor(1, 2)", "op(\"floor\")(1, 2)"),
+        ("ip(x)", "op(\"ip\")(x)"),
+        ("amat(1, 2; 3, 4)", "amat(1, 2; 3, 4)"),
+        ("cbrt(sqrt", "root(3, op(\"sqrt\"))"),
+        ("dx_1", "#dx _(1)"),
+        ("√(1, 2)", "sqrt(lr(1 , 2))"),
+        ("log(8, 2)", "log(8, 2)"),
+    ] {
+        assert_eq!(preview_math(line), want, "{line}");
+    }
+    for line in ["0b1010", "0xff", "0o17", "€5 + £3", "2^"] {
+        assert!(!typst_preview_useful(line), "{line}");
+    }
+    for line in ["⌊x⌋", "‖v‖", "sin(2;3)", "0xff + 1/2", "x^2 \""] {
+        assert!(typst_preview_useful(line), "{line}");
+    }
+}
+
+#[test]
 fn spaced_and_starred_factors_differentiate_as_powers() {
     // x written out six times, spaced or starred, is x^6: same answer, same form
     let want = show("d/dx 4x^3 + 12(x^6)");
