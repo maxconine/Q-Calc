@@ -101,3 +101,26 @@ fn spaced_numbers_multiply_in_calculus() {
     assert_eq!(show("d/dx 3.5 2 x"), "7");
     assert_eq!(show("int 0..1 2 3 x dx"), show("int 0..1 6x dx"));
 }
+
+#[test]
+fn exponent_form_of_an_answer() {
+    use qcalc_core::format::exponent_form;
+    for (shown, want) in [
+        ("3,000", "3 × 10³"),
+        ("3000", "3 × 10³"),
+        ("15,372", "1.5372 × 10⁴"),
+        ("0.00052", "5.2 × 10⁻⁴"),
+        ("-42", "−4.2 × 10¹"),
+        ("−42", "−4.2 × 10¹"),
+        ("7", "7 × 10⁰"),
+        ("3,000 m", "3 × 10³ m"),
+        ("1.5e12", "1.5 × 10¹²"),
+        ("2.5 × 10⁻³", "2.5 × 10⁻³"),
+        ("3 000", "3 × 10³"),
+    ] {
+        assert_eq!(exponent_form(shown, 6).as_deref(), Some(want), "{shown}");
+    }
+    for shown in ["1/3", "7:55 pm", "", "abc", "2x"] {
+        assert_eq!(exponent_form(shown, 6), None, "{shown}");
+    }
+}

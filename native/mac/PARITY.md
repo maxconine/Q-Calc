@@ -55,7 +55,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Feature | Status | Notes |
 |---|---|---|
 | Pretty answer, dual exact ≈ decimal, answer form setting | ✅ | `live`, `dual` pairs |
-| ⌃E cycles forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile. **Native only:** ⌃E / ⌃⇧E, not Tab (Tab fills parens); the page keeps Tab |
+| Answer forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile. **Native only:** ⌃E shows the answer in exponent form (`3 × 10³`, core `exponent_form`, units kept) and back; ⌃⇧E cycles the other forms (Tab fills parens instead); both are rows in Settings › Keybinds (`exponent`, `forms`). The page cycles forms on Tab |
 | Steady answer while briefly invalid | ✅ | |
 | Selected part answered on its own (`selDisplay`, `.live.live-selection`) | ✅ | was missing: selecting `3*4` in `2 + 3*4` shows a muted `12` in the answer slot until the selection goes (evaluated alone, no history; not for the whole line, a graph, or a part that reads as its value), read out as the page's `aria-live` is; its own engine lane. Pictured |
 | Fit font | ✅ | shrinks to half before truncating |
@@ -121,7 +121,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Esc layers then hide | ✅ |
 | ↑ / ↓ history, games list | ✅ |
 | ← / → picks; → accepts completion at the end | ✅ |
-| Tab completion and parens; ⌃E / ⌃⇧E answer forms (native only; the page cycles forms on Tab / ⇧Tab) | ✅ |
+| Tab completion and parens; ⌃E exponent form, ⌃⇧E other answer forms, both rebindable (native only; the page cycles forms on Tab / ⇧Tab) | ✅ |
 | ⌥↑ / ⌥↓ prefix | ✅ |
 | ⌘⌫ delete row | ✅ |
 | ⌘Z / ⇧⌘Z | ✅ (typing runs, and a deleted row) |

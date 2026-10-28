@@ -1011,10 +1011,28 @@ final class BarModel: ObservableObject {
 
     // MARK: - SI prefix (⌥↑ ⌥↓)
 
+    /// what ⌃E put in the answer slot, so the next press puts the answer back
+    private var exponentShown: String?
     @Published private(set) var prefixShown: String? { didSet { if prefixShown != oldValue { refreshTypeset() } } }
     private var prefixValue: Any?
 
     /// onPrefixStep: the answer one SI prefix up or down (stepPrefix), shown until the line changes
+    /// ⌃E (Settings › Keybinds, native only): the answer as `3 × 10³`, and back on the next press
+    func toggleExponent() {
+        guard !live.isBlank else { return }
+        if let shown = prefixShown, shown == exponentShown {
+            prefixShown = nil
+            exponentShown = nil
+            return
+        }
+        let current = prefixShown ?? live.display
+        guard let form = logic.string("engine/format", "exponentForm", [current, settings.significantFigures]),
+              !form.isEmpty else { return }
+        exponentShown = form
+        prefixShown = form
+        track("form.exponent")
+    }
+
     func stepPrefix(_ dir: Int) {
         let base: Any? = prefixValue ?? live.valueJson.flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) }
         guard let base, let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
@@ -1162,11 +1180,6 @@ final class BarModel: ObservableObject {
             guard flags.isSubset(of: [.shift]) else { return false }
             if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
             return true
-        case kVK_ANSI_E:
-            // the answer's other forms (base, exponent, fraction…), which Tab cycles on the page
-            guard flags == [.control] || flags == [.control, .shift] else { return false }
-            cycleForms(back: flags.contains(.shift))
-            return true
         case kVK_Delete:
             if flags == [.command], selected != nil { return deleteSelected() }
             return false
@@ -1200,6 +1213,8 @@ final class BarModel: ObservableObject {
         case "fraction": toggleFractions()
         case "sigFigs": toggleSigFigMode()
         case "clear": clearHistory()
+        case "exponent": toggleExponent()
+        case "forms": cycleForms()
         default: break
         }
     }

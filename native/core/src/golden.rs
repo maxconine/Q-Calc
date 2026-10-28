@@ -152,6 +152,10 @@ pub fn dispatch(module: &str, name: &str, args: &[Json]) -> Outcome {
         ("engine/format", "clampSigFigs") => {
             json!(crate::format::clamp_sig_figs(n(0).unwrap_or(f64::NAN)))
         }
+        // native only (⌃E)
+        ("engine/format", "exponentForm") => {
+            opt_str(crate::format::exponent_form(&s(0), n(1).unwrap_or(6.0) as u32))
+        }
         ("engine/format", "prettyAnswer") => json!(crate::format::pretty_answer(&s(0))),
         ("engine/format", "formatValue") => {
             let Some(v) = args
