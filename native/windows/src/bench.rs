@@ -396,6 +396,8 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             "model": app.model.settings.exponent_mode, "saved": app.store.settings.exponent_mode,
             "hint": app.model.hint, "shown": crate::answer::shown_answer(&app.model),
         })),
+        // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
+        c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
 }

@@ -182,7 +182,10 @@ fn pin(who: &str, key: &str) {
         serde_json::to_vec_pretty(pins).ok()
     });
     if let (Some(p), Some(b)) = (path(PINS_FILE), saved) {
-        let _ = std::fs::write(p, b);
+        // Trust New Key pins on the UI thread: the write goes to a worker
+        crate::bg::spawn("qcalc-share-pins", move || {
+            let _ = std::fs::write(p, b);
+        });
     }
 }
 
@@ -314,6 +317,47 @@ pub fn safety_code(who: &str) -> String {
         return String::new();
     };
     core::safety_code(&public_text(), &theirs).unwrap_or_default()
+}
+
+/// `safety_code` from what's already in memory, for painting (never reads the disk or asks the relay): "" until
+/// this app's key and theirs are known.
+pub fn known_safety_code(who: &str) -> String {
+    let (mine, theirs) = with(|k| {
+        let theirs = k
+            .changed
+            .get(who)
+            .cloned()
+            .or_else(|| k.pins.as_ref().and_then(|p| p.get(who).cloned()));
+        (k.secret.as_ref().map(crypt::public_text), theirs)
+    });
+    match (mine, theirs) {
+        (Some(m), Some(t)) => core::safety_code(&m, &t).unwrap_or_default(),
+        _ => String::new(),
+    }
+}
+
+/// A thread's ⓘ: their key fetched and pinned (off the UI thread) when nothing is pinned yet, so the code shows.
+pub fn learn(who: &str) {
+    let who = who.to_string();
+    let (name, key) = crate::messaging::credentials();
+    crate::bg::spawn("qcalc-share-learn", move || {
+        let _ = secret();
+        if !changed(&who) && pinned(&who).is_none() && !name.is_empty() {
+            let _ = for_sending(&name, &key, &who);
+        }
+        crate::bg::post(|app| app.model.touch());
+    });
+}
+
+/// The e2e suite's view: this app's public key, the pins and the changed keys.
+pub fn debug_state() -> Value {
+    with(|k| {
+        json!({
+            "pub": k.secret.as_ref().map(crypt::public_text),
+            "pins": k.pins.clone(),
+            "changed": k.changed.clone(),
+        })
+    })
 }
 
 /// Forgets a contact's pin (Remove / Unblock in settings).

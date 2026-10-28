@@ -831,6 +831,8 @@ impl App {
                     let _ = unsafe { ReleaseCapture() };
                 }
             }
+            // a message thread under the bar scrolls (threads.rs)
+            WM_MOUSEWHEEL if crate::threads::wheel(self, wp, lp) => {}
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
                     if msg != WM_MOUSEWHEEL {
