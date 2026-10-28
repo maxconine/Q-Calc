@@ -819,8 +819,14 @@ fn word_forms(expr: &str) -> String {
 fn prep(expr: &str) -> String {
     static SCALE: Lazy = Lazy::new(|| js(r"(?<=[\w.)\]])\s*\[", ""));
     static PRIME: Lazy = Lazy::new(|| js(r"([\])])\s*'", ""));
+    // the input's word rule (prettyTokens, QuickInput's and the native bars') turns a typed `dot(` into `·(`: a `·`
+    // with nothing to multiply before it is still the dot product's call, as `dot([1; 2; 3], [4 5 6])` is 32
+    static DOT_CALL: Lazy = Lazy::new(|| js(r"(^|[^\w.)\]\s])(\s*)·(?=\s*\()", ""));
+    let expr = jsre::replace_all(&DOT_CALL, expr, |c| {
+        format!("{}{}dot", jsre::group(c, 1), jsre::group(c, 2))
+    });
     // `3[[1, 2]]` and `k [1 2]` scale; mathjs would read a bracket after a value as an index
-    let s = word_forms(&spaced(expr));
+    let s = word_forms(&spaced(&expr));
     let s = jsre::replace_all(&SCALE, &s, |_| "*[".into()).into_owned();
     let s = jsre::replace_all(&PRIME, &s, |c| format!("{}^T", jsre::group(c, 1))).into_owned();
     s.replace('ᵀ', "^T")
@@ -1003,9 +1009,32 @@ mod tests {
         assert_eq!(shown("[1 2; 3 4]^-1"), "[-2 1; 1.5 -0.5]");
         assert_eq!(shown("det of [1 2; 3 4]"), "-2");
         assert_eq!(shown("[1 2 3] * [1; 2; 3]"), "14");
+        // a column and a row of one length dot (eval.matrix, matrix.edge.test.ts)
+        assert_eq!(shown("dot([1; 2; 3], [4 5 6])"), "32");
+        assert_eq!(shown("dot([1 2 3], [4; 5; 6])"), "32");
         assert_eq!(shown("[1 2 3; 4 5 6]'"), "[1 4; 2 5; 3 6]");
         assert_eq!(shown("inv([1 2; 2 4])"), "no inverse (determinant is 0)");
         assert!(!looks_like_matrix("[1, 2, 3]", &[]));
         assert!(!looks_like_matrix("mean([1, 2, 3])", &[]));
+    }
+
+    /// The bar's word rule writes a typed `dot(` as `·(` (prettyTokens): still the dot product, column or row.
+    #[test]
+    fn dot_typed_through_the_bar() {
+        let line = |t: &str| crate::evaluate::evaluate_line(t, &Default::default()).display;
+        for t in [
+            "dot([1; 2; 3], [4 5 6])",
+            "·([1; 2; 3], [4 5 6])",
+            "·([1 2 3], [4 5 6])",
+            "· ([1 2 3], [4; 5; 6])",
+            "x = ·([1; 2; 3], [4; 5; 6])",
+        ] {
+            assert_eq!(line(t), "32", "{t}");
+        }
+        // a `·` after a value multiplies, as before
+        assert_eq!(line("[1 2 3] · [4; 5; 6]"), "32");
+        assert_eq!(line("[1; 2; 3] · [4 5 6]"), "[4 5 6; 8 10 12; 12 15 18]");
+        assert_eq!(line("2 · (3)"), "6");
+        assert_eq!(line("dot([1 2], [1 2 3])"), "dot needs vectors of the same length (2 and 3)");
     }
 }
