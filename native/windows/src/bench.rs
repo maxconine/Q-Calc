@@ -390,6 +390,8 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             }))
         }
         "settings-controls" => Some(crate::settings_window::debug()),
+        // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
+        c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
 }
