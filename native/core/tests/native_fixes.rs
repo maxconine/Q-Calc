@@ -76,3 +76,28 @@ fn and_or_are_wedge_and_vee_in_the_typst_preview() {
         assert_eq!(to_typst_math(line), want, "{line}");
     }
 }
+
+#[test]
+fn spaced_and_starred_factors_differentiate_as_powers() {
+    // x written out six times, spaced or starred, is x^6: same answer, same form
+    let want = show("d/dx 4x^3 + 12(x^6)");
+    assert_eq!(want, "12x² + 72x⁵");
+    for t in ["d/dx 4x^3 + 12(x*x x x x x)", "d/dx 4x^3 + 12(x x x x x x)", "d/dx 4x^3 + 12 x x x x x x", "d/dx 4x^3 + 12x*x*x*x*x*x"] {
+        assert_eq!(show(t), want, "{t}");
+    }
+    assert_eq!(show("d/dx 4 x^3 + 12 x x"), show("d/dx 4x^3 + 12x^2"));
+    assert_eq!(show("d/dx x x^2"), "3x²");
+    assert_eq!(show("d/dx x*y x"), "2xy");
+    assert_eq!(show("int 0..1 x*x x dx"), show("int 0..1 x^3 dx"));
+}
+
+#[test]
+fn spaced_numbers_multiply_in_calculus() {
+    // `2 3 x` is 6x in a derivative as on a plain line (it had come back blank)
+    assert_eq!(show("2 3"), "6");
+    for t in ["d/dx 2 3 x", "d/dx 2 3*x", "d/dx 2*3 x", "d/dx 6x"] {
+        assert_eq!(show(t), "6", "{t}");
+    }
+    assert_eq!(show("d/dx 3.5 2 x"), "7");
+    assert_eq!(show("int 0..1 2 3 x dx"), show("int 0..1 6x dx"));
+}
