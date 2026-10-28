@@ -26,18 +26,24 @@ saves and relay link, and closing it ends the process, so the bar's process neve
 
 ## The window
 
-- `open(kind)` (the bar's `pong` + ↵, model.rs, which then puts the bar away) brings that kind's window forward if
-  it's up (its class is `QCalcGame.<kind>` plus the QCALC_INSTANCE suffix; `is_open` looks for any), else starts
-  `qcalc.exe --game <kind>` (QCALC_INSTANCE, QCALC_DATA and QCALC_LOG go with it). The game's process takes its own
-  mutex per kind (a second launch brings the first forward and leaves) and opens the window centred near the top of
-  the monitor under the pointer, the card's 680 DIPs wide and as tall as what it draws (the window follows the
-  card's height). Its log says how long from the bar's ↵ to the first frame (about 60 ms warm).
+- `open_at(kind, spot)` (the bar's `pong` + ↵, commands.rs, which then puts the bar away) brings that kind's window
+  forward if it's up (its class is `QCalcGame.<kind>` plus the QCALC_INSTANCE suffix; `is_open` looks for any), else
+  starts `qcalc.exe --game <kind> --at <x>,<width>,<top>` (QCALC_INSTANCE, QCALC_DATA and QCALC_LOG go with it). The
+  game's process takes its own mutex per kind (a second launch brings the first forward and leaves) and opens **in
+  the bar's place** (GameWindow.swift's bar card): a borderless, rounded window with the bar's shadow, at the bar's
+  left and width, hanging from the composer's top and as tall as what it draws (the window follows the card's
+  height; moved up only when it wouldn't fit, `process::card_frame`). With no bar up it opens where a bar would.
+  Its log says how long from the bar's ↵ to the first frame (about 60 ms warm).
+- Esc from the lobby's first screen closes the game back to the bar (`process::bar_back`, a second launch's
+  hand-off with no arguments, so the bar shows where it was). The bar's hotkey while a game is up closes the game in
+  front, or brings one behind forward (`games::hotkey`, from app.rs `toggle`).
 - Saves: games.json is read when a game opens and written under a named mutex, read fresh first, so two games (or
   a game and the bar) saving at once both keep theirs.
 - Full screen (Ctrl+F, f on the lobby and the paused card, the buttons): a decorated, resizable window at 80% of the
-  monitor (place.rs `game_window`), the game area centred and boards growing with it (`Env::stage`); esc or Ctrl+F
-  back. Esc layers: full screen → a lobby step (closing from the first screen) → pause (a local game) or "esc again
-  to leave" (online) → leave. Ctrl+W and Alt+F4 close. A local game pauses when the window loses focus.
+  monitor (place.rs `game_window`), the game area centred and boards growing with it (`Env::stage`); esc, Ctrl+F or
+  Ctrl+W back to the bar's card. Only full screen makes it bigger. Esc layers: full screen → a lobby step (closing
+  from the first screen) → pause (a local game) or "esc again to leave" (online) → leave. Ctrl+W (from the card) and
+  Alt+F4 close. A local game pauses when the window loses focus.
 - Drawing is immediate mode: each frame lays out and paints, and clicks are tested against the regions it drew
   (`Hit`). A press on a board is the game's (the window has a real caption, so nothing drags).
 - Frames: the first ones go to a software HWND target (~15 ms to make) while `gfx::warm_gpu` makes the D3D11

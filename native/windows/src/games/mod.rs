@@ -40,9 +40,11 @@ use qcalc_core::games::shell::{EscAction, ShellMode};
 use qcalc_core::games::{Random, Side};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Dwm::{
-    DWMWA_USE_IMMERSIVE_DARK_MODE, DwmFlush, DwmSetWindowAttribute,
+    DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
+    DwmExtendFrameIntoClientArea, DwmFlush, DwmSetWindowAttribute,
 };
 use windows::Win32::Graphics::Gdi::{InvalidateRect, ValidateRect};
+use windows::Win32::UI::Controls::MARGINS;
 use windows::Win32::UI::HiDpi::{AdjustWindowRectExForDpi, GetDpiForWindow};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
@@ -57,8 +59,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
     WM_CLOSE, WM_DESTROY, WM_DPICHANGED, WM_ERASEBKGND, WM_GETMINMAXINFO, WM_KEYDOWN, WM_KEYUP,
     WM_LBUTTONDBLCLK, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE, WM_PAINT, WM_SETICON,
     WM_SETTINGCHANGE, WM_SIZE, WM_SYSCHAR, WM_SYSKEYDOWN, WM_SYSKEYUP, WM_TIMER, WNDCLASSEXW,
-    WS_CAPTION, WS_EX_APPWINDOW, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_SYSMENU,
-    WS_VISIBLE,
+    WS_CAPTION, WS_EX_APPWINDOW, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_OVERLAPPEDWINDOW, WS_POPUP,
+    WS_SYSMENU, WS_VISIBLE,
 };
 use windows::core::{BOOL, HSTRING, PCWSTR, w};
 
@@ -309,6 +311,8 @@ const TIMER_RELAY: usize = 3;
 const TIMER_FRAME: usize = 4;
 const NORMAL_STYLE: WINDOW_STYLE =
     WINDOW_STYLE(WS_OVERLAPPED.0 | WS_CAPTION.0 | WS_SYSMENU.0 | WS_MINIMIZEBOX.0);
+/// The game in the bar's place (GameWindow.swift's bar card): borderless, rounded, with the bar's shadow.
+const CARD_STYLE: WINDOW_STYLE = WS_POPUP;
 
 struct Win {
     hwnd: HWND,
@@ -333,6 +337,10 @@ struct Win {
     animating: bool,
     /// the window's top-left while not full screen
     normal_at: Option<(i32, i32)>,
+    /// the bar's place the card hangs in: its left, width and the composer's top (physical pixels)
+    card: process::BarSpot,
+    /// esc from the lobby's first screen: the bar comes back as the window goes
+    back_to_bar: bool,
     closed: bool,
     /// the bar's ↵ (process.rs `qpc`), until the first frame is on screen
     launched_at: Option<i64>,
@@ -343,6 +351,8 @@ enum Op {
     Pos(HWND, i32, i32, i32, i32, bool),
     Style(HWND, WINDOW_STYLE),
     Destroy(HWND),
+    /// the window's look as the bar's card (true) or the big window
+    Dress(HWND, bool),
     Drop,
 }
 
@@ -358,11 +368,25 @@ fn push(op: Op) {
 /// Opens the game of `kind` in a process of its own (process.rs), or brings it forward when it's already up.
 /// Safe to call from anywhere on the bar's UI thread: it sends no message back.
 pub fn open(kind: &str) {
+    open_at(kind, None);
+}
+
+/// As `open`, the game taking the bar's place (`spot`: its left, width and the composer's top, physical pixels),
+/// as the Mac's does; None opens it where a bar would open.
+pub fn open_at(kind: &str, spot: Option<process::BarSpot>) {
     if !GAMES.iter().any(|g| g.kind == kind) {
         qlog!("games: no game called {kind}");
         return;
     }
-    process::launch(kind);
+    process::launch(kind, spot);
+}
+
+pub use process::BarSpot;
+
+/// The bar's hotkey while a game is up (its process found by window class): the game in front closes, as the bar
+/// it stands in for would hide; one behind comes forward. False with no game up (the bar shows as ever).
+pub fn hotkey() -> bool {
+    process::hotkey(GAMES.iter().map(|g| g.kind))
 }
 
 /// Whether a game window is up (each game is a process of its own, found by its window class).
@@ -381,7 +405,7 @@ fn theme_setting() -> String {
     })
 }
 
-fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
+fn create(kind: &str, t0: Option<i64>, spot: Option<BarSpot>) -> windows::core::Result<()> {
     let Some(def) = GAMES.iter().copied().find(|g| g.kind == kind) else {
         return Err(windows::core::Error::new(
             windows::core::HRESULT(0x8007_0057u32 as i32),
@@ -389,7 +413,22 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
         ));
     };
     let t = Instant::now();
-    let monitor = crate::window::cursor_monitor();
+    let monitor = match spot {
+        Some(s) => crate::window::monitor_at(POINT {
+            x: s.x + s.width / 2,
+            y: s.top,
+        }),
+        None => crate::window::cursor_monitor(),
+    };
+    // where a bar would open, when the bar wasn't up to give its place
+    let card = spot.unwrap_or_else(|| {
+        let width = (crate::place::MIN_WIDTH * monitor.scale()).min(monitor.area.width) as i32;
+        BarSpot {
+            x: (monitor.area.x + (monitor.area.width - f64::from(width)) / 2.0) as i32,
+            width,
+            top: (monitor.area.y + monitor.area.height * 0.28) as i32,
+        }
+    });
     // a class per kind, so the bar (and a second launch) can find this game's window
     let class_name = HSTRING::from(process::class_name(kind));
     // SAFETY: registering our class and making a hidden window with our wndproc
@@ -409,10 +448,10 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
             WS_EX_APPWINDOW,
             &class_name,
             &HSTRING::from(def.title),
-            NORMAL_STYLE,
-            monitor.area.x as i32,
-            monitor.area.y as i32,
-            400,
+            CARD_STYLE,
+            card.x,
+            card.top,
+            card.width.max(1),
             300,
             None,
             None,
@@ -426,9 +465,10 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
     let dark = crate::render::Theme::for_setting(&setting).dark;
     set_dark(hwnd, dark);
     set_icons(hwnd, dpi, dark);
+    dress(hwnd, true);
     let mut gfx = Gfx::new(hwnd, dpi)?;
     let scale = dpi as f32 / 96.0;
-    gfx.resize((m::PANEL_W * scale) as u32, (300.0 * scale) as u32);
+    gfx.resize(card.width.max(1) as u32, (300.0 * scale) as u32);
     let mut r = Random::from_entropy();
     let env = Env {
         shell: Shell::default(),
@@ -465,17 +505,16 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
         ticking: false,
         animating: false,
         normal_at: None,
+        card,
+        back_to_bar: false,
         closed: false,
         launched_at: t0,
     };
     win.lobby.attach(&mut win.env);
     // one frame while hidden, so the window opens at the card's height
     win.paint();
-    let (cw, ch) = (m::PANEL_W, win.content_h);
-    let (w, h) = outer(hwnd, NORMAL_STYLE, cw, ch, dpi);
-    let s = monitor.scale();
-    let x = (monitor.area.x + (monitor.area.width - f64::from(w)) / 2.0) as i32;
-    let y = (monitor.area.y + (monitor.area.height * 0.18).min(160.0 * s)) as i32;
+    // in the bar's place: its width, hanging from the composer's top, as tall as the game
+    let (x, y, w, h) = win.card_frame(win.content_h);
     win.normal_at = Some((x, y));
     win.settle(true);
     WIN.with(|c| *c.borrow_mut() = Some(win));
@@ -487,8 +526,13 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
     }
     run_ops();
     qlog!(
-        "games: {kind} opened in {:.1} ms",
-        t.elapsed().as_secs_f64() * 1000.0
+        "games: {kind} opened in {:.1} ms, in the bar's place at {x},{y} w {w} h {h}{}",
+        t.elapsed().as_secs_f64() * 1000.0,
+        if spot.is_some() {
+            ""
+        } else {
+            " (no bar up: where it would open)"
+        }
     );
     Ok(())
 }
@@ -522,6 +566,28 @@ fn set_icons(hwnd: HWND, dpi: u32, dark: bool) {
                 )
             };
         }
+    }
+}
+
+/// The window as the bar's card (rounded, with a 1 px frame inset so DWM gives the borderless window its shadow, as
+/// the bar has) or as the big window (the frame's own).
+fn dress(hwnd: HWND, card: bool) {
+    let round = DWMWCP_ROUND;
+    let margins = MARGINS {
+        cxLeftWidth: 0,
+        cxRightWidth: 0,
+        cyTopHeight: 0,
+        cyBottomHeight: i32::from(card),
+    };
+    // SAFETY: attributes on our own window, with pointers to live locals
+    unsafe {
+        let _ = DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            (&round as *const windows::Win32::Graphics::Dwm::DWM_WINDOW_CORNER_PREFERENCE).cast(),
+            std::mem::size_of_val(&round) as u32,
+        );
+        let _ = DwmExtendFrameIntoClientArea(hwnd, &margins);
     }
 }
 
@@ -608,6 +674,7 @@ fn run_ops() {
                         SetWindowLongPtrW(hwnd, GWL_STYLE, style.0 as isize | visible)
                     };
                 }
+                Op::Dress(hwnd, card) => dress(hwnd, card),
                 Op::Destroy(hwnd) => {
                     // SAFETY: our window; WM_DESTROY comes back and marks it for dropping
                     let _ = unsafe { DestroyWindow(hwnd) };
@@ -616,6 +683,11 @@ fn run_ops() {
                     let gone = WIN.with(|c| c.try_borrow_mut().ok().and_then(|mut w| w.take()));
                     if let Some(w) = gone {
                         let kind = w.lobby.def.kind;
+                        // esc from the lobby: the bar comes back where it was (the window's gone first, so the
+                        // bar's hotkey check doesn't find it)
+                        if w.back_to_bar {
+                            process::bar_back();
+                        }
                         let (ws, private) = crate::bench::memory();
                         drop(w);
                         qlog!(
@@ -905,6 +977,8 @@ impl Win {
                 ShellAct::ExitFullscreen => self.set_fullscreen(false),
                 ShellAct::Resume => self.env.resume(),
                 ShellAct::Escape => self.escape(),
+                // Ctrl+W: out of the big window back to the bar's card, as its close did on the Mac; else closed
+                ShellAct::Close if self.env.shell.fullscreen => self.set_fullscreen(false),
                 ShellAct::Close => push(Op::Destroy(self.hwnd)),
             }
             return true;
@@ -920,6 +994,8 @@ impl Win {
             EscAction::Unfullscreen => self.set_fullscreen(false),
             EscAction::Lobby => {
                 if !self.lobby.back(&mut self.env) {
+                    // from the lobby's first screen: the game closes back to the bar
+                    self.back_to_bar = true;
                     push(Op::Destroy(self.hwnd));
                 }
             }
@@ -956,6 +1032,25 @@ impl Win {
 
     fn dpi(&self) -> u32 {
         self.gfx.dpi as u32
+    }
+
+    /// The card in the bar's place for a game `h` DIPs tall (GameWindow.swift `barFrame`): the bar's left and
+    /// width, its top at the composer's, kept on the work area.
+    fn card_frame(&self, h: f32) -> (i32, i32, i32, i32) {
+        let c = self.card;
+        let mon = crate::window::monitor_at(POINT {
+            x: c.x + c.width / 2,
+            y: c.top,
+        });
+        let a = &mon.area;
+        let s = self.dpi() as f32 / 96.0;
+        let area = process::Area {
+            x: a.x as i32,
+            y: a.y as i32,
+            w: a.width as i32,
+            h: a.height as i32,
+        };
+        process::card_frame(c, ((h.max(64.0)) * s).round() as i32, area)
     }
 
     fn fullscreen_min(&self) -> (i32, i32) {
@@ -997,12 +1092,14 @@ impl Win {
             let (w, h) = outer(self.hwnd, WS_OVERLAPPEDWINDOW, cw as f32, ch as f32, dpi);
             let x = (mon.area.x + (mon.area.width - f64::from(w)) / 2.0) as i32;
             let y = (mon.area.y + (mon.area.height - f64::from(h)) / 2.0) as i32;
+            push(Op::Dress(self.hwnd, false));
             push(Op::Style(self.hwnd, WS_OVERLAPPEDWINDOW));
             push(Op::Pos(self.hwnd, x, y, w, h, true));
         } else {
-            let (x, y) = self.normal_at.unwrap_or((100, 100));
-            let (w, h) = outer(self.hwnd, NORMAL_STYLE, m::PANEL_W, self.content_h, dpi);
-            push(Op::Style(self.hwnd, NORMAL_STYLE));
+            // back in the bar's place
+            let (x, y, w, h) = self.card_frame(self.content_h);
+            push(Op::Style(self.hwnd, CARD_STYLE));
+            push(Op::Dress(self.hwnd, true));
             push(Op::Pos(self.hwnd, x, y, w, h, true));
         }
         // SAFETY: our window's title stays the game's
@@ -1167,20 +1264,9 @@ impl Win {
         if (new_h - self.content_h).abs() > 0.5 {
             self.content_h = new_h;
             if !fs && self.normal_at.is_some() {
-                // the card's height moved: the window follows, top-left still
-                let mut r = RECT::default();
-                // SAFETY: a live out rect
-                let _ = unsafe { GetWindowRect(self.hwnd, &mut r) };
-                let mon = self.monitor();
-                let max_h = (mon.area.height / mon.scale()) as f32 - 40.0;
-                let (w, h) = outer(
-                    self.hwnd,
-                    NORMAL_STYLE,
-                    m::PANEL_W,
-                    new_h.min(max_h),
-                    self.dpi(),
-                );
-                push(Op::Pos(self.hwnd, r.left, r.top, w, h, false));
+                // the card's height moved: the window follows, hanging from the composer's top
+                let (x, y, w, h) = self.card_frame(new_h);
+                push(Op::Pos(self.hwnd, x, y, w, h, false));
             } else {
                 self.animating = true;
             }
