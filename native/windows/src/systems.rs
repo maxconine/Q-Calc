@@ -9,6 +9,8 @@
 //! - Solving: `engine/system` `solveLive` through `Engine::call_json` on `Lane::System`, so only the newest rows
 //!   are solved; the answer shows in the bar's answer slot (`slot`), partial as soon as the equations typed so
 //!   far settle a value, units carried through (the settings' default units).
+//! - Native only: the rows open as soon as `sys N` is typed, the caret in the first; Tab / Shift+Tab go round
+//!   them and → at the end of one types in its grey parens.
 //! - Keys: ↵ goes to the next row and saves from the last; ↑ ↓ (and Tab) move between rows, ↑ from the first back
 //!   to the line, ↓ from the line to the first row; Esc closes the panel and clears the line; Ctrl+Backspace (or
 //!   Ctrl+Delete) on the line resets to calculating. Ctrl+V of several equations into a row fills the system from
@@ -194,6 +196,23 @@ pub fn slot_is_message(m: &BarModel) -> bool {
 
 /// The line changed: the panel stays only while the line says `sys N` for its N; rows that changed are solved.
 pub fn follow(m: &mut BarModel, engine: &EngineThread) {
+    // the fields open the moment the count is typed (the page waits for ↵), the caret in the first; a new count
+    // keeps what's typed in the fields it still has (native only)
+    if let Some(Ok(n)) = count(m.field.text())
+        && m.systems.as_ref().is_none_or(|s| s.rows.len() != n)
+    {
+        let kept: Vec<String> = m
+            .systems
+            .as_ref()
+            .map(|s| s.lines().into_iter().take(n).collect())
+            .unwrap_or_default();
+        let mut lines = kept;
+        lines.resize(n, String::new());
+        engine.cancel(Lane::System);
+        m.systems = Some(SysState::new(&lines));
+        m.hint = None;
+        m.touch();
+    }
     let Some(s) = &m.systems else { return };
     if count(m.field.text()) != Some(Ok(s.rows.len())) {
         close(m, engine);
@@ -487,14 +506,23 @@ pub fn key_down<F: FnOnce() -> Option<String>>(
             return Ok(Outcome::Handled);
         }
         TAB if !ctrl => {
-            if mods.shift {
-                if i > 0 {
-                    focus(m, i - 1);
-                }
-            } else if i + 1 < n {
-                focus(m, i + 1);
-            }
+            // Tab / Shift+Tab go round the equations (native only)
+            focus(m, (i + if mods.shift { n - 1 } else { 1 }) % n.max(1));
             return Ok(Outcome::Handled);
+        }
+        // → at the end of an equation types in the parens it would be read with, as on the line
+        RIGHT if !ctrl && !mods.shift => {
+            if let Some(s) = &mut m.systems
+                && let Some(f) = s.rows.get_mut(i)
+                && f.caret_at_end()
+                && let Some((filled, at)) = crate::line::parens_filled(f.text(), f.caret())
+            {
+                let before = f.text().to_string();
+                f.set_text_at(&filled, at);
+                f.break_run();
+                edited(m, engine, i, &before);
+                return Ok(Outcome::Handled);
+            }
         }
         _ => {}
     }

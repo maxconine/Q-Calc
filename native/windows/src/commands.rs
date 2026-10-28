@@ -30,6 +30,12 @@ pub enum Command {
         name: String,
         text: String,
     },
+    /// `paste to <name>`, `send clipboard to <name>`, `send file to <name>` (share.rs): `what` is `clip` or `file`
+    Share {
+        what: String,
+        to: String,
+        name: String,
+    },
     Tutorial,
     Skip,
     Greeting,
@@ -95,6 +101,13 @@ pub fn parse(raw: &str) -> Option<Command> {
             text: line.text,
         });
     }
+    if let Some(share) = core_msg::parse_share_command(raw) {
+        return Some(Command::Share {
+            what: share.what,
+            to: share.to,
+            name: share.name,
+        });
+    }
     if !short {
         return None;
     }
@@ -157,7 +170,9 @@ const STEMS: [&str; 41] = [
     "cycles",
 ];
 
-const MORE_STEMS: [&str; 6] = ["message", "tutorial", "tour", "skip", "hello", "hiya"];
+const MORE_STEMS: [&str; 9] = [
+    "message", "tutorial", "tour", "skip", "hello", "hiya", "send", "paste", "share",
+];
 
 fn could_be(trimmed: &str) -> bool {
     let first: String = trimmed
@@ -182,6 +197,8 @@ pub fn hint(command: &Command, message: impl FnOnce(&str, &str, &str) -> String)
         Command::Games => core_games::GAMES_HINT.into(),
         Command::Game(kind) => core_games::game_hint(*kind).into(),
         Command::Message { to, name, text } => message(to, name, text),
+        // share.rs's words, worked out in `live`, where the app is
+        Command::Share { .. } => String::new(),
         Command::Tutorial => core_tour::TUTORIAL_HINT.into(),
         Command::Skip => String::new(),
         Command::Greeting => greeting::GREETING_REPLY.into(),
@@ -238,9 +255,12 @@ mod ui {
             }
             return false;
         };
-        let message = hint(&command, |to, name, text| {
-            messaging::line_hint(to, name, text)
-        });
+        let message = match &command {
+            Command::Share { what, to, name } => crate::share::hint(what, to, name),
+            _ => hint(&command, |to, name, text| {
+                messaging::line_hint(to, name, text)
+            }),
+        };
         if !matches!(command, Command::Games) {
             m.games_pick = None;
         }
@@ -308,6 +328,7 @@ mod ui {
                 }
                 messaging::send_line(app, name, text);
             }
+            Command::Share { what, name, .. } => crate::share::enter(app, &what, &name),
             Command::Tutorial => {
                 clear_line(app, false);
                 tour::start(app);
@@ -369,6 +390,16 @@ mod ui {
         const DOWN: u32 = 0x28;
         crate::hover::key_down();
         if messaging::key(app, vk, mods) {
+            return true;
+        }
+        // Ctrl+V with files copied, on a line that names someone: they're sent as a drop would be (share.rs)
+        if vk == 0x56
+            && mods.ctrl
+            && !mods.alt
+            && !mods.shift
+            && app.model.systems.as_ref().is_none_or(|s| s.focus.is_none())
+            && crate::share::paste_files(app)
+        {
             return true;
         }
         let plain = !mods.ctrl && !mods.alt && !mods.win;
@@ -448,6 +479,9 @@ mod ui {
 
     /// How wide the answer slot wants to be for a command's words (None when there are none to show).
     pub fn slot_width(gfx: &Gfx, m: &BarModel) -> Option<f32> {
+        if let Some(w) = crate::selection::slot_width(gfx, m) {
+            return Some(w);
+        }
         if m.command.is_none()
             && let Some(answer) = tour::example_answer(m)
         {
@@ -462,8 +496,25 @@ mod ui {
         Some(measure(&l).0 + 2.0 * crate::answer::PAD_X + 1.0)
     }
 
+    /// A command's words when the slot `r` cuts them at the end (the page's `.live.message` ellipsis): the whole
+    /// text, for the tooltip (hover.rs). None when they fit or there's no command.
+    pub fn slot_cut(gfx: &Gfx, m: &BarModel, r: Rect) -> Option<String> {
+        if crate::selection::slot_width(gfx, m).is_some() {
+            return None;
+        }
+        let words = &m.command.as_ref()?.message;
+        if words.is_empty() {
+            return None;
+        }
+        let l = gfx.layout(words, &gfx.fonts.body, 0.0, 36.0)?;
+        (measure(&l).0 > r.w - 2.0 * crate::answer::PAD_X + 0.5).then(|| words.clone())
+    }
+
     /// Paints a command's words in the answer slot; false when there's no command (the answer paints instead).
     pub fn paint_slot(c: &Canvas, m: &BarModel, r: Rect) -> bool {
+        if crate::selection::paint_slot(c, m, r) {
+            return true;
+        }
         let Some(shown) = &m.command else {
             // the empty bar's example answer, muted at 70%
             if let Some(answer) = tour::example_answer(m) {

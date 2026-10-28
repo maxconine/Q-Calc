@@ -30,6 +30,12 @@ minisign-verify = "0.2"
 # Typst's worker pool (it parallelises with rayon): one thread, not one per core (engine.rs, PERFORMANCE.md)
 rayon = "1.12"
 windows-numerics = "0.2"
+# end-to-end sealing for clips and files, byte for byte as the Mac's CryptoKit (share_crypt.rs, native/PRIVACY.md)
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
+hkdf = "0.12.4"
+sha2 = "0.10.8"
+aes-gcm = "0.10.3"
+getrandom = "0.2.15"
 windows = { version = "0.61", features = [
   "Win32_Foundation",
   "Win32_Graphics_Direct2D",
@@ -44,6 +50,7 @@ windows = { version = "0.61", features = [
   "Win32_Networking_WinHttp",
   "Win32_Media_Audio",
   "Win32_Security",
+  "Win32_Security_Cryptography",
   "Win32_Storage_FileSystem",
   "Win32_System_Com",
   "Win32_System_Com_StructuredStorage",
@@ -61,6 +68,7 @@ windows = { version = "0.61", features = [
   "Win32_System_Variant",
   "Win32_System_IO",
   "Win32_UI_Controls",
+  "Win32_UI_Controls_Dialogs",
   "Win32_UI_HiDpi",
   "Win32_UI_Input_Ime",
   "Win32_UI_Input_KeyboardAndMouse",

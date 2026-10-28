@@ -391,6 +391,14 @@ impl BarModel {
     }
 
     pub fn move_selection(&mut self, up: bool) {
+        self.move_selection_now(up);
+        // a reader hears the row ↑ ↓ land on, while the keys stay on the line
+        if let Some(r) = self.selected.and_then(|i| self.rows.rows.get(i)) {
+            crate::a11y::announce(&format!("{} = {}", r.expr, r.display));
+        }
+    }
+
+    fn move_selection_now(&mut self, up: bool) {
         let n = self.rows.rows.len();
         if n == 0 {
             return;
@@ -546,9 +554,9 @@ impl BarModel {
             DELETE => {
                 self.field.delete(ctrl);
             }
-            // Tab cycles the answer's forms (the input's completion, when it has one, takes Tab first)
-            TAB if !ctrl && !mods.alt => crate::answer::cycle_forms(self, engine, shift),
+            // Tab takes the completion and fills parens (line.rs); Ctrl+E / Ctrl+Shift+E cycle the answer's forms
             TAB => {}
+            0x45 if ctrl => crate::answer::cycle_forms(self, engine, shift),
             0x57 if ctrl => return Outcome::CloseSheet,
             // Ctrl+A / X / V / Z / Y
             0x41 if ctrl => self.field.select_all(),
@@ -619,16 +627,19 @@ impl BarModel {
                 };
                 self.settings_dirty = true;
                 self.evaluate_live(engine);
+                crate::a11y::announce_mode("angle", self.settings.angle_mode == "rad");
             }
             KeyAction::Fraction => {
                 self.settings.fraction_mode = !self.settings.fraction_mode;
                 self.settings_dirty = true;
                 self.evaluate_live(engine);
+                crate::a11y::announce_mode("fraction", self.settings.fraction_mode);
             }
             KeyAction::SigFigs => {
                 self.settings.sig_fig_mode = !self.settings.sig_fig_mode;
                 self.settings_dirty = true;
                 self.evaluate_live(engine);
+                crate::a11y::announce_mode("sigFigs", self.settings.sig_fig_mode);
             }
             KeyAction::Clear => {
                 self.selected = None;

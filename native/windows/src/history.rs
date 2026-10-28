@@ -717,14 +717,25 @@ pub fn tip(row: &HistoryRow, cells: &[Cell], k: usize, form: AnswerForm) -> Opti
     }
 }
 
+/// `tip`, and on the expression a long line in full after it, since one cut off at the row's end can't be read
+/// otherwise (the Mac's `exprTip`: past 40 characters).
+pub fn tip_text(row: &HistoryRow, cells: &[Cell], k: usize, form: AnswerForm) -> Option<String> {
+    let what = tip(row, cells, k, form)?;
+    Some(if k == 0 && row.expr.chars().count() > 40 {
+        format!("{what} · {}", row.expr)
+    } else {
+        what.to_string()
+    })
+}
+
 /// The tooltip and the cell's box (window DIPs) for the cell under a point.
-pub fn tip_at(app: &App, row: usize, k: usize) -> Option<(&'static str, Rect)> {
+pub fn tip_at(app: &App, row: usize, k: usize) -> Option<(String, Rect)> {
     let t = &app.bar.layout.tape;
     let r = row_rect(app.bar.layout.width, t, row);
     let hr = app.model.rows.rows.get(row)?;
     let v = view(&app.gfx, &app.model, hr, r.w)?;
     let cells: Vec<Cell> = v.cells.iter().map(|c| c.0.clone()).collect();
-    let text = tip(hr, &cells, k, form(&app.model))?;
+    let text = tip_text(hr, &cells, k, form(&app.model))?;
     let (_, _, x, w) = &v.cells[k];
     Some((text, Rect::new(r.x + x, r.y, *w, r.h)))
 }
@@ -1079,6 +1090,28 @@ mod tests {
         let half = glide_at(0.0, 36.0, 0.5);
         assert!(half > 30.0 && half < 36.0, "{half}");
         assert!(glide_at(36.0, 0.0, 0.5) < 6.0);
+    }
+
+    #[test]
+    fn a_long_expression_shows_whole_in_its_tip() {
+        let f = AnswerForm::Exact;
+        let long = "1+2+3+4+5+6+7+8+9+10+11+12+13+14+15+16+17";
+        let r = row(long, "153", None);
+        let c = cells(&r, f, 6.0, HistoryInsert::Expr);
+        assert_eq!(
+            tip_text(&r, &c, 0, f).as_deref(),
+            Some(format!("Insert expression at the cursor · {long}").as_str())
+        );
+        assert_eq!(
+            tip_text(&r, &c, 1, f).as_deref(),
+            Some("Insert approximation at the cursor")
+        );
+        let short = row("2+2", "4", None);
+        let c = cells(&short, f, 6.0, HistoryInsert::Expr);
+        assert_eq!(
+            tip_text(&short, &c, 0, f).as_deref(),
+            Some("Insert expression at the cursor")
+        );
     }
 
     #[test]

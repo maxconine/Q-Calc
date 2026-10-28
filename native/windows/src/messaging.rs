@@ -414,9 +414,15 @@ fn on_event_now(app: &mut App, ev: Event) {
             if with(|s| s.generation) != g {
                 return;
             }
+            // a sealed clip, a file's offer or a file's event (share.rs)
+            if crate::share::frame(app, &text) {
+                return;
+            }
             match core::parse_inbox_frame(&text) {
                 Some(InboxEvent::State { state }) if state == "ready" => {
                     qlog!("messaging: inbox open");
+                    // each time the inbox connects, so the relay never keeps a key this app no longer has
+                    crate::share::inbox_ready();
                     with(|s| {
                         s.link = Link::Ready;
                         s.retry_ms = 3000;
@@ -488,6 +494,7 @@ fn arrived(app: &mut App, from: &str, text: &str) {
             }
             let card = new_card(from, "", true);
             if app.bar.visible {
+                crate::a11y::announce(&core::card_announcement(from, "ask", ""));
                 show_cards(app, vec![card]);
             } else {
                 with(|s| keep(s, card));
@@ -526,6 +533,8 @@ fn keep(s: &mut State, card: BannerCard) {
 fn deliver(app: &mut App, from: &str, text: &str) {
     let card = new_card(from, text, false);
     if app.bar.visible {
+        // a reader hears it, since a card never takes the keys and goes in 10 s (30 with a reader)
+        crate::a11y::announce(&core::card_announcement(from, "message", text));
         show_cards(app, vec![card]);
     } else {
         with(|s| keep(s, card));
@@ -598,6 +607,11 @@ pub enum Act {
     Block,
     Dismiss,
     Field,
+    /// a clip's Copy, a file's Save, a failed upload's Retry, a changed key's Trust New Key (share.rs)
+    Copy,
+    Save,
+    Retry,
+    Trust,
 }
 
 /// The cards under the bar (BarModel's `cards`, `cardsHovered`, `replyFocused`).
@@ -612,12 +626,13 @@ pub struct Cards {
 
 impl Cards {
     fn held(&self, c: &Card) -> bool {
-        banner::card_held(
-            self.hovered,
-            self.focus.as_deref() == Some(c.card.id.as_str()),
-            c.draft.text(),
-            c.reply == Reply::Sending,
-        )
+        crate::share::holds(&c.card.id)
+            || banner::card_held(
+                self.hovered,
+                self.focus.as_deref() == Some(c.card.id.as_str()),
+                c.draft.text(),
+                c.reply == Reply::Sending,
+            )
     }
 }
 
@@ -632,9 +647,10 @@ fn expire_later() {
             }
         }
         let before = cards.list.len();
+        let ms = card_ms();
         cards
             .list
-            .retain(|c| now.duration_since(c.shown_at) < Duration::from_millis(banner::BANNER_MS));
+            .retain(|c| now.duration_since(c.shown_at) < Duration::from_millis(ms));
         if cards.list.len() != before {
             if let Some(f) = &cards.focus
                 && !cards.list.iter().any(|c| &c.card.id == f)
@@ -661,6 +677,33 @@ pub fn escape(m: &mut BarModel) -> bool {
         return true;
     }
     false
+}
+
+/// Tab on an empty line with a message card up moves to the newest card's reply line (tabToCard), since the
+/// keyboard had no other way into a card before it went. True when it did.
+pub fn tab_to_card(m: &mut BarModel) -> bool {
+    let Some(id) = m
+        .cards
+        .list
+        .iter()
+        .find(|c| !c.card.ask && c.reply != Reply::Sent)
+        .map(|c| c.card.id.clone())
+    else {
+        return false;
+    };
+    m.cards.focus = Some(id);
+    m.touch();
+    true
+}
+
+/// How long a card stays: 10 s, or 30 s while a screen reader runs, since 10 s is too short to hear a card and
+/// reach its reply.
+fn card_ms() -> u64 {
+    if crate::a11y::reader_on() {
+        30_000
+    } else {
+        banner::BANNER_MS
+    }
 }
 
 /// The bar went away: replies give the keys back.
@@ -760,6 +803,60 @@ pub fn send_line(app: &mut App, name: String, text: String) {
     });
 }
 
+/// (name, the name's relay key), "" for both with no name (share.rs).
+pub fn credentials() -> (String, String) {
+    with(|s| (s.m.name.clone(), s.m.key.clone()))
+}
+
+/// What arrives from `from` does: shown, asked about, or dropped (share.rs).
+pub fn arrival_of(from: &str) -> Arrival {
+    with(|s| core::arrival(&s.m, from))
+}
+
+/// A clip or file reached `to` (share.rs): they're a recent recipient now.
+pub fn note_sent(to: &str) {
+    with(|s| {
+        s.m = core::with_recent(&s.m, to);
+        save(&s.m);
+    });
+}
+
+/// The relay's answer to whether `name` exists, once it has said (share.rs's hint).
+pub fn found_name(name: &str) -> Option<bool> {
+    with(|s| recipient_found(s, name))
+}
+
+/// A card for a clip, a file or a note about one (share.rs): shown now, or kept for the bar's next showing with a
+/// tray balloon. `ask` makes it a request card (someone new).
+pub fn share_card(app: &mut App, from: &str, text: &str, share: Option<crate::share::Kind>) {
+    let card = new_card(from, text, false);
+    if let Some(k) = share {
+        crate::share::remember_card(&card.id, k);
+    }
+    if app.bar.visible {
+        show_cards(app, vec![card]);
+    } else {
+        with(|s| keep(s, card));
+        app.tray.notify(from, text);
+    }
+}
+
+/// Someone new shared something: their request card, as a message's (their share waits until they're allowed).
+pub fn ask_share(app: &mut App, from: &str) {
+    let asked = with(|s| s.asking.insert(from.to_string(), String::new()).is_some());
+    if asked {
+        return;
+    }
+    let card = new_card(from, "", true);
+    if app.bar.visible {
+        show_cards(app, vec![card]);
+    } else {
+        with(|s| keep(s, card));
+        app.tray
+            .notify("Q Calc", &format!("{from} wants to share with you. Allow?"));
+    }
+}
+
 fn line_sent(app: &mut App, name: &str, status: &str) {
     let status = status_of(status);
     with(|s| {
@@ -840,9 +937,14 @@ fn answer_ask(app: &mut App, id: &str, allow: bool) {
         s.inbox.retain(|c| !(c.from == who && (c.ask || !allow)));
         s.asking.remove(&who)
     });
-    if allow && let Some(said) = said {
+    if allow
+        && let Some(said) = said
+        && !said.is_empty()
+    {
         deliver(app, &who, &said);
     }
+    // what they shared while asking shows now, or a blocked name's files are turned down
+    crate::share::answered(app, &who, allow);
 }
 
 // ---- the settings window's side (Messages.swift's name, lists and status) ----
@@ -1002,6 +1104,8 @@ pub fn forget(who: &str) {
         s.m = core::forget_sender(&s.m, who);
         save(&s.m);
     });
+    // their pinned key goes too, so a new contact by that name starts afresh
+    crate::share_keys::forget(who);
 }
 
 /// The settings window's Messages page (settings_window.rs `MessagesHook`): the name and its status, turning off,
@@ -1169,12 +1273,14 @@ fn place(gfx: &Gfx, cards: &Cards, width: f32) -> Vec<Placed> {
             .and_then(|f| gfx.layout(&c.card.from, f, 0.0, HEAD));
         let mut acts = Vec::new();
         let mut right = width - size::GUTTER;
-        let names: &[(Act, &str)] = if c.card.ask {
-            &[(Act::Block, "Block"), (Act::Allow, "Allow")]
+        let names: Vec<(Act, String)> = if c.card.ask {
+            vec![(Act::Block, "Block".into()), (Act::Allow, "Allow".into())]
         } else {
-            &[(Act::Dismiss, "×")]
+            let mut v = vec![(Act::Dismiss, "×".to_string())];
+            v.extend(crate::share::acts(&c.card.id));
+            v
         };
-        for (act, label) in names {
+        for (act, label) in &names {
             if let Some(l) = gfx.layout(label, &gfx.fonts.small, 0.0, ACT_H) {
                 let w = measure(&l).0 + 16.0;
                 right -= w;
@@ -1424,6 +1530,9 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
         return false;
     }
     match under(&app.gfx, &app.model, r, x, y) {
+        Some((id, act @ (Act::Copy | Act::Save | Act::Retry | Act::Trust))) => {
+            crate::share::act(app, &id, act);
+        }
         Some((id, Act::Allow)) => answer_ask(app, &id, true),
         Some((id, Act::Block)) => answer_ask(app, &id, false),
         Some((id, Act::Dismiss)) => {

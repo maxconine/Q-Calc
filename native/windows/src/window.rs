@@ -167,6 +167,8 @@ impl Bar {
         };
         // SAFETY: attributes on our own window, with pointers to live locals
         unsafe {
+            // files dropped from Explorer arrive as WM_DROPFILES (share.rs)
+            windows::Win32::UI::Shell::DragAcceptFiles(hwnd, true);
             let round = DWMWCP_ROUND;
             let _ = DwmSetWindowAttribute(
                 hwnd,
@@ -284,15 +286,17 @@ impl Bar {
             height += lh;
             r
         });
-        let hint = model.hint.as_ref().filter(|h| !h.is_empty()).map(|_| {
-            // .composer-hint: 12 muted, tucked 12 up into the composer's bottom padding
-            let r = Rect::new(size::GUTTER, height - 12.0, inner, 18.0);
-            height += 18.0;
+        let hint = model.hint.as_ref().filter(|h| !h.is_empty()).map(|h| {
+            // .composer-hint: 12 muted, tucked 12 up into the composer's bottom padding (two lines when narrow)
+            let hh = crate::wrap::height(gfx, h, &gfx.fonts.small, inner);
+            let r = Rect::new(size::GUTTER, height - 12.0, inner, hh);
+            height += hh;
             r
         });
         let tour = (hint.is_none() && crate::tour::line_shown(model)).then(|| {
-            let r = Rect::new(size::GUTTER, height - 12.0, inner, crate::tour::LINE_H);
-            height += crate::tour::LINE_H;
+            let lh = crate::tour::line_height(gfx, model, inner);
+            let r = Rect::new(size::GUTTER, height - 12.0, inner, lh);
+            height += lh;
             r
         });
         let th = crate::typst_row::height(model, width);
@@ -367,15 +371,11 @@ impl Bar {
                 answer::paint(c, &layout.live, layout.answer);
             }
             if let (Some(r), Some(hint)) = (layout.hint, model.hint.as_ref())
-                && let Some(l) = c.gfx.layout_in(
-                    hint,
-                    &c.gfx.fonts.small,
-                    r.w,
-                    r.h,
-                    windows::Win32::Graphics::DirectWrite::DWRITE_TEXT_ALIGNMENT_LEADING,
-                )
+                && let Some(l) = crate::wrap::layout(c.gfx, hint, &c.gfx.fonts.small, r.w, r.h)
             {
+                c.push_clip(r);
                 c.text(&l, r.x, r.y, theme.muted);
+                c.pop_clip();
             }
             if let Some(r) = layout.tour {
                 crate::tour::paint_line(c, model, r);
