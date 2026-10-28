@@ -671,11 +671,14 @@ pub fn paint(c: &Canvas, s: &SysState, r: Rect, window_focused: bool) {
             radiusX: size::RADIUS_CARD,
             radiusY: size::RADIUS_CARD,
         };
-        let edge = if t.dark {
-            crate::render::rgb(0xffffff, 0.08)
-        } else {
-            crate::render::rgb(0, 0.1)
-        };
+        let edge = crate::contrast::or(
+            if t.dark {
+                crate::render::rgb(0xffffff, 0.08)
+            } else {
+                crate::render::rgb(0, 0.1)
+            },
+            t.line,
+        );
         c.target()
             .DrawRoundedRectangle(&rr, c.brush(edge), 0.5, None);
     }

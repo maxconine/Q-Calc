@@ -3,6 +3,8 @@
 //! as a WebView did for the Tauri app with `forced-colors`. `apply` runs where render.rs makes the theme (launch,
 //! the light / dark setting, Windows' colour changes).
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use windows::Win32::Graphics::Gdi::{
     COLOR_GRAYTEXT, COLOR_HIGHLIGHT, COLOR_HOTLIGHT, COLOR_WINDOW, COLOR_WINDOWTEXT, GetSysColor,
 };
@@ -92,9 +94,25 @@ pub fn theme_from(window: u32, text: u32, gray: u32, highlight: u32, hot: u32) -
     }
 }
 
+/// A contrast theme was on when the theme was last made (`apply`): read while painting, where `active`'s system
+/// query would be one per frame.
+static ON: AtomicBool = AtomicBool::new(false);
+
+pub fn on() -> bool {
+    ON.load(Ordering::Relaxed)
+}
+
+/// A colour Q Calc fixes for its own look (a control's fill, a sidebar), or the theme's system colour in its place
+/// while a contrast theme is on.
+pub fn or(fixed: Color, system: Color) -> Color {
+    if on() { system } else { fixed }
+}
+
 /// Q Calc's theme, or the contrast theme's colours while one is on.
 pub fn apply(theme: Theme) -> Theme {
-    if !active() {
+    let on = active();
+    ON.store(on, Ordering::Relaxed);
+    if !on {
         return theme;
     }
     // SAFETY: plain queries

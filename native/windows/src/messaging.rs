@@ -1366,11 +1366,14 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
     c.fill(r, t.bg_tape);
     c.fill(Rect::new(r.x, r.y, r.w, 1.0), t.line);
     let y0 = r.y + 1.0;
-    let control = if t.dark {
-        rgb(0x58585c, 1.0)
-    } else {
-        rgb(0xffffff, 1.0)
-    };
+    let control = crate::contrast::or(
+        if t.dark {
+            rgb(0x58585c, 1.0)
+        } else {
+            rgb(0xffffff, 1.0)
+        },
+        t.bg,
+    );
     for (card, p) in m.cards.list.iter().zip(place(c.gfx, &m.cards, r.w)) {
         if p.top > 0.0 {
             c.fill(Rect::new(r.x, y0 + p.top - 1.0, r.w, 1.0), t.line);
@@ -1412,7 +1415,7 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
             c.fill_round(f, size::RADIUS_S, t.accent);
             c.fill_round(f.inset(2.0, 2.0), size::RADIUS_S - 2.0, control);
         } else {
-            c.fill_round(f, size::RADIUS_S, rgb(0x000000, 0.12));
+            c.fill_round(f, size::RADIUS_S, crate::contrast::or(rgb(0, 0.12), t.line));
             c.fill_round(f.inset(0.5, 0.5), size::RADIUS_S - 0.5, control);
         }
         paint_draft(c, card, f, focused);

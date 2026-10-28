@@ -449,7 +449,7 @@ fn create(kind: &str, t0: Option<i64>) -> windows::core::Result<()> {
     let mut win = Win {
         hwnd,
         gfx,
-        colors: Colors::new(dark),
+        colors: Colors::for_window(dark),
         theme: setting,
         lobby: Lobby::new(def),
         env,
@@ -823,7 +823,7 @@ impl Win {
                 };
                 if what == "ImmersiveColorSet" {
                     let dark = crate::render::Theme::for_setting(&self.theme).dark;
-                    self.colors = Colors::new(dark);
+                    self.colors = Colors::for_window(dark);
                     set_dark(self.hwnd, dark);
                     set_icons(self.hwnd, self.dpi(), dark);
                 }
