@@ -89,7 +89,8 @@ function Start-Relay {
     $env:WRANGLER_SEND_METRICS = 'false'
     $env:CI = '1'
     # node directly (not npx), so the whole tree can be stopped by its pid; state persists across a restart
-    $script:relayProc = Start-Process node -PassThru -WindowStyle Hidden `
+    # in the run's own folder: wrangler keeps its build (.wrangler) where it starts
+    $script:relayProc = Start-Process node -PassThru -WindowStyle Hidden -WorkingDirectory $Root `
         -RedirectStandardOutput (Join-Path $OutDir 'relay.log') -RedirectStandardError (Join-Path $OutDir 'relay.err') `
         -ArgumentList @("`"$js`"", 'dev', '--config', "`"$cfg`"", '--ip', '127.0.0.1', '--port', "$Port", '--persist-to', "`"$RelayState`"")
     if (-not (Wait-Until { Test-Relay } 90000)) { throw "the local relay didn't start (see relay.log)" }
