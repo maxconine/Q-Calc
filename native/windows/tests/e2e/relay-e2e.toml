@@ -1,0 +1,44 @@
+# The relay (relay/src, unchanged) as share-e2e.ps1 runs it: `wrangler dev` on loopback, offline, with Miniflare's
+# local durable objects and bucket. Its bindings are relay/wrangler.toml's, less the rate limits (Miniflare's local
+# rate limiter fails every call on Windows, and the relay skips a limiter that isn't bound) and the hourly cron (not
+# run locally). Never deployed: it has no account, and `wrangler deploy` is never run with it.
+name = "qcalc-relay-e2e"
+main = "../../../../relay/src/index.js"
+compatibility_date = "2026-03-01"
+workers_dev = false
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "DIRECTORY"
+class_name = "Directory"
+
+[[durable_objects.bindings]]
+name = "INBOX"
+class_name = "Inbox"
+
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "Ledger"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Directory"]
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Inbox"]
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Ledger"]
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "qcalc-files-e2e"

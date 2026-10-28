@@ -506,8 +506,8 @@ fn word_math(s: &str, raw: &str, sig_figs: f64) -> Option<PhraseAnswer> {
             "i",
         )
     });
-    static WHOLE_WORDS: std::sync::LazyLock<Vec<(Regex, &'static str)>> =
-        std::sync::LazyLock::new(|| {
+    static WHOLE_WORDS: crate::jsre::Lazy<Vec<(Regex, &'static str)>> =
+        crate::jsre::Lazy::new(|| {
             [
                 (r"^(\S+) choose (\S+)$", "nCr($1, $2)"),
                 (r"^(?:the )?square of (.+)$", "($1)^2"),
@@ -522,8 +522,8 @@ fn word_math(s: &str, raw: &str, sig_figs: f64) -> Option<PhraseAnswer> {
             .map(|(p, to)| (js_re(p, ""), to))
             .collect()
         });
-    static OPERATOR_WORDS: std::sync::LazyLock<Vec<(Regex, &'static str)>> =
-        std::sync::LazyLock::new(|| {
+    static OPERATOR_WORDS: crate::jsre::Lazy<Vec<(Regex, &'static str)>> =
+        crate::jsre::Lazy::new(|| {
             [
                 (r"\b(?:the )?square root of\b", "sqrt "),
                 (r"\b(?:the )?cube root of\b", "cbrt "),

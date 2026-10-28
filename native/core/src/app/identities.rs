@@ -194,8 +194,8 @@ pub fn identity_target_for(text: &str) -> Option<IdentityTarget> {
             "i",
         )
     });
-    static PART_RES: LazyLock<Vec<jsre::Regex>> =
-        LazyLock::new(|| PARTS.iter().map(|p| js(p.names, "")).collect());
+    static PART_RES: crate::jsre::Lazy<Vec<jsre::Regex>> =
+        crate::jsre::Lazy::new(|| PARTS.iter().map(|p| js(p.names, "")).collect());
     let t = jsre::replace_all(&SPACES, jstr::trim(text), |_| " ".into()).into_owned();
     let part = PART_COMMAND
         .captures(t.as_str())

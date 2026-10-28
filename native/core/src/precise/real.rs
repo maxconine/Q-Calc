@@ -1260,7 +1260,7 @@ fn negligible_exponent(x: &Real, y: &Real, precision: usize) -> bool {
     };
     // |log10 x| ≤ |ex| + digits, so |ln x| < 2.31 (|ex| + digits) + 1
     let ln_x = 2.31 * ((ex as i64).unsigned_abs() as f64 + digits(&sx) as f64) + 1.0;
-    let ln_mag = ln_x.log10().ceil() as i64;
+    let ln_mag = crate::scientific::functions::jsmath::log10(ln_x).ceil() as i64;
     y_mag + ln_mag < -(precision as i64) - 2
 }
 

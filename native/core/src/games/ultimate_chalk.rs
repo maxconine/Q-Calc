@@ -19,7 +19,7 @@ fn wobble(a: Pt, b: Pt, amp: f64, r: &mut dyn FnMut() -> f64) -> String {
     let dx = b.0 - a.0;
     let dy = b.1 - a.1;
     let len = {
-        let h = dx.hypot(dy);
+        let h = super::js_hypot(dx, dy);
         if h == 0.0 { 1.0 } else { h }
     };
     let (ux, uy) = (dx / len, dy / len);
@@ -60,7 +60,10 @@ fn chalk_loop(cx: f64, cy: f64, radius: f64, r: &mut dyn FnMut() -> f64) -> Stri
     for i in 0..=n {
         let t = start + sweep * i as f64 / n as f64;
         let rad = radius * (0.94 + r() * 0.1) * (1.0 - i as f64 / n as f64 * 0.05);
-        pts.push((cx + t.cos() * rad, cy + t.sin() * rad * squash));
+        pts.push((
+            cx + crate::scientific::functions::jsmath::cos(t) * rad,
+            cy + crate::scientific::functions::jsmath::sin(t) * rad * squash,
+        ));
     }
     // catmull-rom through the points, as cubic beziers
     let mut d = format!("M{} {}", f(pts[0].0), f(pts[0].1));

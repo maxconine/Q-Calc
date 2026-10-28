@@ -60,7 +60,7 @@ pub fn ease_camera(from: Option<&Camera>, to: &Camera, ticks: f64) -> Camera {
     if from.w / from.h != to.w / to.h {
         return *to;
     }
-    let t = 1.0 - (1.0 - CAM_EASE).powf(ticks.max(0.0));
+    let t = 1.0 - crate::scientific::functions::jsmath::pow(1.0 - CAM_EASE, ticks.max(0.0));
     let mix = |p: f64, q: f64| {
         if (q - p).abs() < 0.01 {
             q

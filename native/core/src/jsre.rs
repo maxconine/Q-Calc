@@ -13,17 +13,73 @@ pub use fancy_regex::Regex;
 /// The groups of one match in a `str`.
 pub type Caps<'t> = fancy_regex::Captures<'t, str>;
 
-/// A regex compiled once, on first use: `static RE: Lazy = jsre::lazy(r"...")`.
-pub type Lazy = std::sync::LazyLock<Regex>;
+/// A regex compiled on first use: `static RE: Lazy = Lazy::new(|| js(r"...", ""))`; `Lazy<Vec<..>>` for a table of
+/// them. Like `LazyLock`, except on the threads that called `own_compiled_here` (the Windows app's engine, UI and
+/// Typst threads), which keep copies of their own that `release_compiled` frees while the bar is hidden
+/// (qcalc-lazy).
+pub type Lazy<T = Regex> = qcalc_lazy::Lazy<T>;
+
+/// Makes this thread one whose compiled regexes `release_compiled` can free (up to qcalc-lazy's OWNERS threads at
+/// once). For a host that knows when a thread holds no regex (between its jobs, at a hide).
+pub fn own_compiled_here() -> bool {
+    qcalc_lazy::own_here()
+}
+
+/// Frees this thread's compiled regexes and tables if it called `own_compiled_here`; each is compiled again when
+/// it's next used. Returns how many statics were freed (qcalc-lazy's `release`).
+///
+/// # Safety
+/// No reference to a regex (or table) from a `Lazy` may be alive on this thread across the call: call it between
+/// jobs, from the top of the thread's loop. Other threads are unaffected.
+pub use qcalc_lazy::release as release_compiled;
+
+/// `release_compiled`, and this thread owns no copies from here on (a thread about to end).
+///
+/// # Safety
+/// As for `release_compiled`.
+pub use qcalc_lazy::disown as disown_compiled;
+
+/// Whether this thread is compiling one of the regexes `release_compiled` frees (qcalc-lazy's `building`): the
+/// Windows app's allocator keeps those blocks in a heap of their own.
+pub use qcalc_lazy::building as building_compiled;
+
+/// Empties this thread's cache of run-time patterns (`compile_cached`) and its prefilters; a regex still in use
+/// stays alive, and a pattern used again earns its prefilter again.
+pub fn clear_cache() {
+    CACHE.with(|c| c.borrow_mut().clear());
+    PREFILTERS.with(|c| c.borrow_mut().clear());
+}
+
+thread_local! {
+    static CACHE: std::cell::RefCell<std::collections::HashMap<String, std::rc::Rc<Regex>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
+}
 
 /// Compiles a pattern from the TS source. Panics on a bad pattern, which only a code change can cause.
+///
+/// With fancy-regex's seek, except on the other threads of a host whose threads own copies (there only the copies
+/// freed at a hide pay seek's ~60% more memory): a pattern that needs its backtracking VM (every JS `\b`, translated
+/// to look-arounds, does) first finds where a match could start with a regular over-approximation, instead of running the VM at
+/// every position. The engine's evaluation is ~2.5x quicker for it; all 1,078 patterns the core's tests compile
+/// gave the same matches with and without it over ~40,000 haystacks (native/windows/PERFORMANCE.md).
 ///
 /// No fully compiled DFAs: the lazy DFA answers the same, and a full DFA per small regex (the meta engine builds
 /// one whenever `regex-automata/dfa-build` is on, which typst's syntect turns on in the app) costs memory and
 /// compile time for the hundreds of engine regexes.
 pub fn compile(pattern: &str) -> Regex {
-    match fancy_regex::RegexBuilder::new(pattern).delegate_dfa_size_limit(0).build() {
-        Ok(re) => re,
+    let seek = qcalc_lazy::owns() || !qcalc_lazy::any_owner();
+    match fancy_regex::RegexBuilder::new(pattern)
+        .seek(seek)
+        .delegate_dfa_size_limit(0)
+        .build()
+    {
+        Ok(re) => {
+            if building_compiled() {
+                // a freeable copy: its search caches are made now too, so they share its heap (qcalc-lazy)
+                let _ = re.is_match("");
+            }
+            re
+        }
         Err(e) => panic!("bad engine regex {pattern:?}: {e}"),
     }
 }
@@ -31,17 +87,13 @@ pub fn compile(pattern: &str) -> Regex {
 /// `compile`, kept per thread for the next call with the same pattern (the last 64 patterns): for patterns built
 /// at run time from the line's variable and function names, which would otherwise compile on every keystroke.
 pub fn compile_cached(pattern: &str) -> std::rc::Rc<Regex> {
-    use std::cell::RefCell;
-    use std::collections::HashMap;
     use std::rc::Rc;
-    thread_local! {
-        static CACHE: RefCell<HashMap<String, Rc<Regex>>> = RefCell::new(HashMap::new());
-    }
     CACHE.with(|cache| {
         if let Some(re) = cache.borrow().get(pattern) {
             return re.clone();
         }
-        let re = Rc::new(compile(pattern));
+        // freed with the statics at a hide (`clear_cache`), so built where they are
+        let re = Rc::new(qcalc_lazy::build_scope(|| compile(pattern)));
         let mut cache = cache.borrow_mut();
         if cache.len() >= 64 {
             cache.clear();

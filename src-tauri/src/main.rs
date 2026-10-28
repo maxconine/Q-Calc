@@ -9,11 +9,12 @@ mod place;
 mod sheet;
 mod rates;
 mod recorder;
+mod startup;
 mod store;
 mod update;
 
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{mpsc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -77,6 +78,8 @@ struct State {
     game_frame: Option<(PhysicalPosition<i32>, PhysicalSize<u32>)>,
     // the reference sheets' windows that are open, the front one last
     sheets: Vec<String>,
+    // the settings page is recording a new show / hide key, and every chord is let go meanwhile
+    hotkey_paused: bool,
 }
 
 struct Host(Mutex<State>);
@@ -95,8 +98,7 @@ fn save(state: &mut State) {
     state.unsaved = false;
 }
 
-// what windows passes when it starts q calc at sign in; that launch stays in the tray
-const AUTOSTART_ARG: &str = "--autostart";
+use startup::AUTOSTART_ARG;
 
 fn main() {
     crash::install();
@@ -132,15 +134,12 @@ fn main() {
                 let _ = store.save(path);
             }
             // a tray app that isn't running after a restart just looks like a dead hotkey, so windows opens it at
-            // sign in from the start; settings turns that off. the mac leaves this to login items
+            // sign in from the start; settings turns that off. each launch puts the entry right: at the installed
+            // copy (never a build under target\), quoted, quiet, and back after an uninstall deleted it. the mac
+            // leaves this to login items
             #[cfg(windows)]
-            if first_run && !cfg!(debug_assertions) {
-                let _ = app.autolaunch().enable();
-            }
-            // an entry written before launches at sign in carried AUTOSTART_ARG is written again, so it starts quietly
-            #[cfg(windows)]
-            if !first_run && !cfg!(debug_assertions) && app.autolaunch().is_enabled().unwrap_or(false) {
-                let _ = app.autolaunch().enable();
+            if !cfg!(debug_assertions) {
+                startup::sync(store.sign_in);
             }
             let autostarted = updated || std::env::args().any(|arg| arg == AUTOSTART_ARG);
             update::set_auto(store.auto_update);
@@ -163,11 +162,17 @@ fn main() {
                 game_open: false,
                 game_frame: None,
                 sheets: Vec::new(),
+                hotkey_paused: false,
             })));
             // before the web view boots, so its injected settings already carry the shortcut
             let shortcuts = app.global_shortcut();
-            let hotkey = hotkey::launch(&preferred, |c| register(&shortcuts, c));
+            let hotkey = hotkey::launch(&preferred, |c| register(shortcuts, c));
+            let missed = hotkey.active.as_deref() != Some(preferred.as_str());
+            if missed {
+                crash::log(&format!("shortcut {preferred} taken at launch, bound {:?}; trying again", hotkey.active));
+            }
             with(app.handle(), |s| s.hotkey = hotkey);
+            keep_hotkey(app.handle(), missed);
 
             let theme = with(app.handle(), |s| window_theme(&s.store.settings.theme));
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("quick.html".into()))
@@ -205,6 +210,7 @@ fn main() {
                 frame::webview_background(&window, |line| e2e::note(&line));
             }
             quiet_browser_keys(&window);
+            watch_wake(&window);
             let handle = window.clone();
             window.on_window_event(move |event| match event {
                 WindowEvent::Focused(false) => blurred(&handle),
@@ -267,7 +273,8 @@ fn main() {
     app.run(|app, event| {
         if let RunEvent::Ready = event {
             let args: Vec<String> = std::env::args().skip(1).collect();
-            crash::started(&format!("started {} on {} {args:?}", app.package_info().version, os_name()));
+            let exe = std::env::current_exe().map_or(String::new(), |p| p.display().to_string());
+            crash::started(&format!("started {} on {} {args:?} from {exe}", app.package_info().version, os_name()));
         }
         if let RunEvent::Exit = event {
             with(app, |s| {
@@ -397,8 +404,21 @@ fn host(window: WebviewWindow, message: Value) {
         Some("hotkeyProbe") => recorder::probe(app, message["chord"].as_str().unwrap_or_default()),
         Some("tutorial") => show_tutorial(app),
         Some("autostart") => {
+            let on = message["on"].as_bool() == Some(true);
             let launcher = app.autolaunch();
-            let _ = if message["on"].as_bool() == Some(true) { launcher.enable() } else { launcher.disable() };
+            if !on {
+                let _ = launcher.disable();
+            } else if cfg!(windows) {
+                // the installed copy, quoted; a dev build with no installed copy writes nothing
+                #[cfg(windows)]
+                startup::enable();
+            } else {
+                let _ = launcher.enable();
+            }
+            with(app, |s| {
+                s.store.sign_in = on;
+                save(s);
+            });
             push_settings(app, None, None);
         }
         _ => {}
@@ -548,13 +568,132 @@ fn register(shortcuts: &tauri_plugin_global_shortcut::GlobalShortcut<tauri::Wry>
 fn pause_hotkey(app: &AppHandle, paused: bool) {
     let shortcuts = app.global_shortcut();
     let _ = shortcuts.unregister_all();
+    with(app, |s| s.hotkey_paused = paused);
     recorder::listen(app, paused);
     if !paused {
         if let Some(active) = with(app, |s| s.hotkey.active.clone()) {
-            register(&shortcuts, &active);
+            register(shortcuts, &active);
         }
     }
 }
+
+// set when the pc wakes or the session unlocks, so a chord another app held is tried again
+static WOKE: (Mutex<bool>, Condvar) = (Mutex::new(false), Condvar::new());
+
+fn wake_hotkey() {
+    *WOKE.0.lock().unwrap_or_else(|e| e.into_inner()) = true;
+    WOKE.1.notify_all();
+}
+
+// true when woken, false once `wait` is up; with no wait, only a wake ends it
+fn wait_for_wake(wait: Option<Duration>) -> bool {
+    let mut woke = WOKE.0.lock().unwrap_or_else(|e| e.into_inner());
+    let until = wait.map(|w| Instant::now() + w);
+    while !*woke {
+        match until {
+            Some(until) => {
+                let left = until.saturating_duration_since(Instant::now());
+                if left.is_zero() {
+                    return false;
+                }
+                woke = WOKE.1.wait_timeout(woke, left).unwrap_or_else(|e| e.into_inner()).0;
+            }
+            None => woke = WOKE.1.wait(woke).unwrap_or_else(|e| e.into_inner()),
+        }
+    }
+    *woke = false;
+    true
+}
+
+// a show / hide chord that didn't bind at launch is tried again on hotkey::retry_delay's schedule, and again whenever
+// the pc wakes or the session unlocks; the settings page hears as soon as it binds
+fn keep_hotkey(app: &AppHandle, missed: bool) {
+    let app = app.clone();
+    thread::spawn(move || {
+        let mut attempt = missed.then_some(0u32);
+        loop {
+            let woke = wait_for_wake(attempt.and_then(hotkey::retry_delay));
+            if !woke && attempt.is_none() {
+                continue;
+            }
+            // on the main thread, as the commands that change the chord are, so the two can't cross
+            let (tx, rx) = mpsc::channel();
+            let main = app.clone();
+            if app.run_on_main_thread(move || {
+                let _ = tx.send(retry_hotkey(&main));
+            })
+            .is_err() {
+                return;
+            }
+            let Ok(done) = rx.recv() else { return };
+            attempt = match attempt {
+                _ if done => None,
+                Some(n) if !woke => Some(n + 1),
+                _ => Some(0),
+            };
+            if attempt.is_some_and(|n| hotkey::retry_delay(n).is_none()) {
+                crash::log("shortcut still taken after 5 minutes; trying again when the pc wakes or unlocks");
+                attempt = None;
+            }
+        }
+    });
+}
+
+// true once the picked chord is bound
+fn retry_hotkey(app: &AppHandle) -> bool {
+    let (preferred, now, paused) = with(app, |s| (hotkey::named(&s.store.hotkey), s.hotkey.clone(), s.hotkey_paused));
+    if paused {
+        return false;
+    }
+    let shortcuts = app.global_shortcut();
+    let unbind = |c: &str| {
+        if let Some(s) = hotkey::shortcut(c) {
+            let _ = shortcuts.unregister(s);
+        }
+    };
+    let Some(next) = hotkey::retry(&preferred, &now, |c| register(shortcuts, c), unbind) else { return true };
+    let done = next.active.as_deref() == Some(preferred.as_str());
+    if next != now {
+        crash::log(&format!("shortcut now {:?} (wanted {preferred})", next.active));
+        with(app, |s| s.hotkey = next);
+        // clears the settings page's "taken" line
+        push_settings(app, None, None);
+    }
+    done
+}
+
+// the main window hears windows' power and session news; a wake or an unlock retries a chord that isn't bound
+#[cfg(windows)]
+fn watch_wake(window: &WebviewWindow) {
+    use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+    use windows_sys::Win32::System::RemoteDesktop::{WTSRegisterSessionNotification, NOTIFY_FOR_THIS_SESSION};
+    use windows_sys::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
+    const WM_POWERBROADCAST: u32 = 0x0218;
+    const PBT_APMRESUMESUSPEND: usize = 0x7;
+    const PBT_APMRESUMEAUTOMATIC: usize = 0x12;
+    const WM_WTSSESSION_CHANGE: u32 = 0x02B1;
+    // console connect, remote connect, logon, unlock
+    const SESSION_BACK: [usize; 4] = [0x1, 0x3, 0x5, 0x8];
+
+    unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM, _: usize, _: usize) -> LRESULT {
+        let resumed = msg == WM_POWERBROADCAST && (wparam == PBT_APMRESUMESUSPEND || wparam == PBT_APMRESUMEAUTOMATIC);
+        if resumed || (msg == WM_WTSSESSION_CHANGE && SESSION_BACK.contains(&wparam)) {
+            wake_hotkey();
+        }
+        DefSubclassProc(hwnd, msg, wparam, lparam)
+    }
+
+    let Ok(hwnd) = window.hwnd() else { return };
+    let hwnd = hwnd.0 as HWND;
+    // setup runs on the window's own thread, as subclassing has to
+    unsafe {
+        SetWindowSubclass(hwnd, Some(proc), 2, 0);
+        WTSRegisterSessionNotification(hwnd, NOTIFY_FOR_THIS_SESSION);
+    }
+}
+
+#[cfg(not(windows))]
+fn watch_wake(_: &WebviewWindow) {}
 
 fn choose_hotkey(app: &AppHandle, raw: &str) {
     // a pause from the recorder ends with the pick
@@ -565,7 +704,7 @@ fn choose_hotkey(app: &AppHandle, raw: &str) {
     let (after, taken) = hotkey::select(
         &next,
         &now,
-        |c| register(&shortcuts, c),
+        |c| register(shortcuts, c),
         || {
             let _ = shortcuts.unregister_all();
         },

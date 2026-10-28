@@ -5,8 +5,9 @@
 //! kernels and CORE-MATH's cbrt) round about one input in twenty differently by an ulp, which shows when a
 //! later step snaps or cancels. So these are ports of V8's functions, statement for statement.
 //!
-//! `pow` is not here: Rust's `powf` agrees with V8's `Math.pow` on every input tried. Arguments past 2^19·π/2
-//! (which need the multi-word reduction, `__kernel_rem_pio2`) fall back to the `libm` crate's reduction.
+//! `pow` is V8's own cases around a correctly rounded core (`crpow.rs`): V8 leaves the rest to the platform's
+//! C library, which rounds differently on each. Arguments past 2^19·π/2 (which need the multi-word reduction,
+//! `__kernel_rem_pio2`) fall back to the `libm` crate's reduction.
 
 // fdlibm's constants are its own digits (not std's), and `x - x` is how it makes a NaN
 #![allow(
@@ -17,14 +18,24 @@
     clippy::unreadable_literal
 )]
 
+mod crpow;
+
 /// `a*b + c` as clang contracts it on arm64 (`-ffp-contract=on`): one rounding, as `llvm.fmuladd` lowers there.
+/// `libm::fma` rather than `f64::mul_add`, which on a target without an fma instruction (x86-64 Windows) calls
+/// the C runtime's `fma`.
 fn ma(a: f64, b: f64, c: f64) -> f64 {
-    a.mul_add(b, c)
+    libm::fma(a, b, c)
 }
 
 /// `Math.pow` and `**`: V8's `math::pow` with `--use-std-math-pow` (on by default), which is the C library's
-/// `pow` (Apple's, on a Mac, which Rust's `powf` also calls) plus the cases its optimizing compilers inline:
-/// `x ** 2` is `x * x` and `x ** 0.5` is `sqrt(x + 0)`. ±1 to an infinite power and anything to NaN are NaN.
+/// `pow` plus the cases its optimizing compilers inline: `x ** 2` is `x * x` and `x ** 0.5` is `sqrt(x + 0)`.
+/// ±1 to an infinite power and anything to NaN are NaN. The C library's pow differs by platform in the odd last
+/// place, so the rest is C99's special cases around a correctly rounded core (`crpow`), which is what Apple's
+/// and the UCRT's pow answer nearly always.
+///
+/// On Apple platforms it is Apple's pow itself, as V8 there: the golden answers were recorded with it, and it
+/// does round a few hard cases the other way (`15 ** -0.5` is ...611, not the correctly rounded ...6115), which
+/// `zeta(-0.5)` and two integrals' error estimates show. It is also quicker than the double-double core.
 pub fn pow(x: f64, y: f64) -> f64 {
     if y.is_nan() || (y.is_infinite() && (x == 1.0 || x == -1.0)) {
         return f64::NAN;
@@ -39,7 +50,53 @@ pub fn pow(x: f64, y: f64) -> f64 {
             (x + 0.0).sqrt()
         };
     }
-    x.powf(y)
+    #[cfg(target_vendor = "apple")]
+    {
+        #[allow(clippy::disallowed_methods)]
+        return x.powf(y);
+    }
+    #[cfg(not(target_vendor = "apple"))]
+    c_pow(x, y)
+}
+
+/// C99 `pow` for a non-NaN `y`, rounded correctly.
+#[cfg_attr(target_vendor = "apple", allow(dead_code))]
+fn c_pow(x: f64, y: f64) -> f64 {
+    if y == 0.0 {
+        return 1.0;
+    }
+    if x.is_nan() {
+        return f64::NAN;
+    }
+    if y.is_infinite() {
+        let ax = x.abs();
+        return if ax == 1.0 {
+            1.0
+        } else if (ax > 1.0) == (y > 0.0) {
+            f64::INFINITY
+        } else {
+            0.0
+        };
+    }
+    let y_int = y == y.trunc();
+    // every double past 2^53 is even
+    let y_odd = y_int && y.abs() < 9_007_199_254_740_992.0 && (y % 2.0).abs() == 1.0;
+    if x == 0.0 {
+        let r = if y < 0.0 { f64::INFINITY } else { 0.0 };
+        return if y_odd { r.copysign(x) } else { r };
+    }
+    if x.is_infinite() {
+        let r = if y < 0.0 { 0.0 } else { f64::INFINITY };
+        return if y_odd && x < 0.0 { -r } else { r };
+    }
+    if x < 0.0 {
+        if !y_int {
+            return f64::NAN;
+        }
+        let r = crpow::pow_pos(-x, y);
+        return if y_odd { -r } else { r };
+    }
+    crpow::pow_pos(x, y)
 }
 
 fn hi(x: f64) -> i32 {

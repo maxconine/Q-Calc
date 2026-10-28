@@ -211,7 +211,7 @@ pub fn bot_cell(
         let mut pos = root.clone();
         let mut at = 0;
         while tree[at].untried.is_empty() && !tree[at].kids.is_empty() {
-            let log_n = tree[at].visits.ln();
+            let log_n = crate::scientific::functions::jsmath::ln(tree[at].visits);
             let mut best = tree[at].kids[0];
             let mut best_score = f64::NEG_INFINITY;
             for &k in &tree[at].kids {

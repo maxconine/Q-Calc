@@ -1,7 +1,7 @@
 //! The in-memory Typst world: the preview document at `/main.typ`, the macros at `/macros.typ`, the three New
 //! Computer Modern fonts the web preview loads, and nothing else (no files, packages, clock or system fonts).
 
-use std::sync::OnceLock;
+use std::sync::{Arc, Mutex, Weak};
 
 use typst::diag::{FileError, FileResult};
 use typst::foundations::{Bytes, Datetime};
@@ -26,26 +26,32 @@ const FONT_FILES: [&[u8]; 3] = [
 /// The licence the fonts ship under (SIL OFL 1.1), for the app's acknowledgements.
 pub const FONT_NOTICE: &str = include_str!("../../../public/typst/NOTICE.txt");
 
-/// Fonts, font book and standard library, built once per process and shared by every world.
+/// Fonts, font book and standard library, built once and shared by every world while any world lives: an app
+/// that keeps a renderer (the Mac's) builds them once; one that drops its renderer while idle (Windows, hidden)
+/// gets their memory back and builds them again with the next renderer.
 struct Shared {
     library: LazyHash<Library>,
     book: LazyHash<FontBook>,
     fonts: Vec<Font>,
 }
 
-fn shared() -> &'static Shared {
-    static SHARED: OnceLock<Shared> = OnceLock::new();
-    SHARED.get_or_init(|| {
-        let fonts: Vec<Font> = FONT_FILES
-            .iter()
-            .flat_map(|data| Font::iter(Bytes::new(*data)))
-            .collect();
-        Shared {
-            library: LazyHash::new(Library::default()),
-            book: LazyHash::new(FontBook::from_fonts(&fonts)),
-            fonts,
-        }
-    })
+fn shared() -> Arc<Shared> {
+    static SHARED: Mutex<Weak<Shared>> = Mutex::new(Weak::new());
+    let mut slot = SHARED.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(s) = slot.upgrade() {
+        return s;
+    }
+    let fonts: Vec<Font> = FONT_FILES
+        .iter()
+        .flat_map(|data| Font::iter(Bytes::new(*data)))
+        .collect();
+    let s = Arc::new(Shared {
+        library: LazyHash::new(Library::default()),
+        book: LazyHash::new(FontBook::from_fonts(&fonts)),
+        fonts,
+    });
+    *slot = Arc::downgrade(&s);
+    s
 }
 
 /// How many font faces the world has (three: math, regular, bold).
@@ -56,17 +62,18 @@ pub fn font_count() -> usize {
 pub(crate) struct PreviewWorld {
     main: Source,
     macros: Source,
+    shared: Arc<Shared>,
 }
 
 impl PreviewWorld {
     pub(crate) fn new(macros: &str) -> Self {
         let main_id = FileId::new(None, VirtualPath::new("/main.typ"));
         let macros_id = FileId::new(None, VirtualPath::new("/macros.typ"));
-        // touch the shared state now, so constructing a world is where the one-time cost lands
-        let _ = shared();
+        // the shared state now, so constructing a world is where the one-time cost lands
         Self {
             main: Source::new(main_id, String::new()),
             macros: Source::new(macros_id, macros.to_string()),
+            shared: shared(),
         }
     }
 
@@ -91,11 +98,11 @@ impl PreviewWorld {
 
 impl World for PreviewWorld {
     fn library(&self) -> &LazyHash<Library> {
-        &shared().library
+        &self.shared.library
     }
 
     fn book(&self) -> &LazyHash<FontBook> {
-        &shared().book
+        &self.shared.book
     }
 
     fn main(&self) -> FileId {
@@ -112,7 +119,7 @@ impl World for PreviewWorld {
     }
 
     fn font(&self, index: usize) -> Option<Font> {
-        shared().fonts.get(index).cloned()
+        self.shared.fonts.get(index).cloned()
     }
 
     // the preview never shows a date; `datetime.today()` failing keeps every render deterministic

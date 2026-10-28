@@ -6,6 +6,7 @@
 //! polls it from Swift's executor.
 
 use std::any::Any;
+use std::cell::Cell;
 use std::future::Future;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::pin::Pin;
@@ -73,6 +74,19 @@ fn spawn_worker(name: String, rx: Arc<Mutex<Receiver<Job>>>) {
     drop(spawned);
 }
 
+thread_local! {
+    /// This thread makes the engine's sync calls itself (`run_engine_calls_here`).
+    static INLINE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// From now on, the engine's sync calls made on this thread run on it, not on the evaluation (or logic) thread.
+/// For a host that already calls the engine from a thread of its own with a stack of at least `STACK_BYTES` (the
+/// Windows app's engine thread): no hop to another thread and back per call, and one thread's regex caches
+/// instead of two. The async calls still go to the long-work threads.
+pub fn run_engine_calls_here() {
+    INLINE.with(|i| i.set(true));
+}
+
 /// The engine's threads.
 #[derive(Debug)]
 pub struct Workers {
@@ -117,6 +131,9 @@ impl Workers {
         pool: &Pool,
         f: impl FnOnce() -> R + Send + 'static,
     ) -> Result<R, CoreError> {
+        if INLINE.with(Cell::get) {
+            return catch_unwind(AssertUnwindSafe(f)).map_err(from_panic);
+        }
         let (tx, rx) = sync_channel(1);
         let job: Job = Box::new(move || {
             let _ = tx.send(catch_unwind(AssertUnwindSafe(f)));
@@ -307,6 +324,25 @@ mod tests {
         );
         // the thread survives a panic
         assert_eq!(w.run(|| 2 + 2).unwrap(), 4);
+    }
+
+    #[test]
+    fn calls_can_run_on_the_callers_thread() {
+        let w = Workers::new();
+        let elsewhere = w.run(|| thread::current().id()).unwrap();
+        assert_ne!(elsewhere, thread::current().id());
+        let here = thread::spawn(move || {
+            run_engine_calls_here();
+            let me = thread::current().id();
+            let ran_on = w.run(|| thread::current().id()).unwrap();
+            // a panic is still an error, not a crash
+            let boom = w.run(|| -> u32 { panic!("boom") });
+            (me, ran_on, boom.is_err())
+        })
+        .join()
+        .unwrap();
+        assert_eq!(here.0, here.1);
+        assert!(here.2);
     }
 
     fn deep_value(n: u64) -> u64 {

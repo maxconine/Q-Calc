@@ -196,6 +196,9 @@ pub struct Store {
     pub defaults: u64,
     // updates check, download and install by themselves; off, only when settings asks
     pub auto_update: bool,
+    // windows starts q calc at sign in. kept here as well as in the registry, since an uninstall before an upgrade
+    // deletes the registry's entry, and the next launch puts it back while this says so
+    pub sign_in: bool,
 }
 
 impl Default for Store {
@@ -212,6 +215,7 @@ impl Default for Store {
             analytics: Value::Null,
             defaults: DEFAULTS,
             auto_update: true,
+            sign_in: true,
         }
     }
 }
@@ -235,6 +239,7 @@ impl Store {
         store.used_at = v["usedAt"].as_u64().unwrap_or(0);
         store.width = v["width"].as_f64().filter(|w| w.is_finite() && *w > 0.0).unwrap_or(0.0);
         store.auto_update = v["autoUpdate"].as_bool().unwrap_or(true);
+        store.sign_in = v["signIn"].as_bool().unwrap_or(true);
         if v["settings"].is_object() && v["defaults"].as_u64().unwrap_or(1) < 2 {
             if store.settings.sig_figs == 12 {
                 store.settings.sig_figs = DEFAULT_SIG_FIGS;
@@ -288,6 +293,9 @@ mod tests {
         // once brought up to date, a 12 or an off preview is a choice
         let chosen = Store::from_json(r#"{ "defaults": 2, "settings": { "sigFigs": 12, "typstPreview": false } }"#);
         assert_eq!((chosen.settings.sig_figs, chosen.settings.typst_preview), (12, false));
+        // starting at sign in is on unless settings turned it off
+        assert!(old.sign_in);
+        assert!(!Store::from_json(r#"{ "signIn": false }"#).sign_in);
     }
 
     #[test]
