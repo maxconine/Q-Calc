@@ -672,7 +672,13 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
     // the |…| absolute values, so `a or b or c` isn't read as `a |b| c`. Phrases (`between 1 and 2`, `4 hours and
     // 10 minutes`) are answered before this layer
     static AND_OR: Lazy = Lazy::new(|| js(r"(?<=[\w)\]!.]\s*)\b(and|or)\b(?=\s*[\w(.√∛-])", "i"));
-    let s = replace(&AND_OR, &s, |c| if g(c, 1).eq_ignore_ascii_case("and") { "&".into() } else { "|".into() });
+    let s = replace(&AND_OR, &s, |c| {
+        if g(c, 1).eq_ignore_ascii_case("and") {
+            "&".into()
+        } else {
+            "|".into()
+        }
+    });
     let s = lit(&STARSTAR, &s, "^");
     let s = replace(&POW_MOD, &s, |c| {
         format!("powmod({},{},{})", g(c, 1), g(c, 2), g(c, 3))

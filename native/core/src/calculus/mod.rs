@@ -881,7 +881,11 @@ fn merge_powers(product: T) -> T {
         return product;
     }
     for (name, k, at) in seen {
-        kept[at] = Some(if k == 1.0 { symbol(&name) } else { op(Op::Pow, vec![symbol(&name), constant(k)]) });
+        kept[at] = Some(if k == 1.0 {
+            symbol(&name)
+        } else {
+            op(Op::Pow, vec![symbol(&name), constant(k)])
+        });
     }
     let mut parts = kept.into_iter().flatten();
     let first = parts.next().unwrap_or_else(|| constant(1.0));
@@ -1916,14 +1920,28 @@ pub fn evaluate_calculus(text: &str, ctx: &CalcContext) -> Option<CalculusResult
             vars,
             at,
             partial,
-        } => run_derivative(&join_spaced_numbers(body), vars, at.as_deref(), *partial, ctx),
+        } => run_derivative(
+            &join_spaced_numbers(body),
+            vars,
+            at.as_deref(),
+            *partial,
+            ctx,
+        ),
         Intent::Integral {
             body,
             v,
             lower,
             upper,
-        } => run_integral(&join_spaced_numbers(body), v.as_deref(), lower, upper, &ctx.sci),
-        Intent::Limit { body, v, to, side } => run_limit(&join_spaced_numbers(body), v, to, *side, &ctx.sci),
+        } => run_integral(
+            &join_spaced_numbers(body),
+            v.as_deref(),
+            lower,
+            upper,
+            &ctx.sci,
+        ),
+        Intent::Limit { body, v, to, side } => {
+            run_limit(&join_spaced_numbers(body), v, to, *side, &ctx.sci)
+        }
     };
     Some(out.unwrap_or_default())
 }
