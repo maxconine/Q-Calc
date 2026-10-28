@@ -88,6 +88,8 @@ mod tray;
 #[cfg(windows)]
 mod typst_row;
 #[cfg(windows)]
+mod uia;
+#[cfg(windows)]
 mod update;
 #[cfg(windows)]
 mod warp;

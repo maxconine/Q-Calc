@@ -888,6 +888,9 @@ enum Pending {
 
 fn color_of(theme: &Theme, dark: bool) -> (D2D1_COLOR_F, D2D1_COLOR_F) {
     // page, card
+    if crate::contrast::on() {
+        return (theme.bg, theme.bg);
+    }
     if dark {
         (render::rgb(0x202022, 1.0), theme.bg)
     } else {
@@ -1567,11 +1570,14 @@ impl Win {
         let result = self.surface.draw(&app.gfx, &theme, |c: &mut Canvas| {
             c.clear(page_bg);
             // the sidebar
-            let side = if dark {
-                render::rgb(0x1b1b1d, 1.0)
-            } else {
-                render::rgb(0xebebef, 1.0)
-            };
+            let side = crate::contrast::or(
+                if dark {
+                    render::rgb(0x1b1b1d, 1.0)
+                } else {
+                    render::rgb(0xebebef, 1.0)
+                },
+                theme.bg,
+            );
             c.fill(Rect::new(0.0, 0.0, NAV_W, c.height), side);
             if let Some(t) = c.gfx.layout("Settings", &fonts.heading, 0.0, 24.0) {
                 c.text(&t, 26.0, PAD + 6.0, theme.muted);
@@ -1707,16 +1713,22 @@ fn draw_control(
 ) {
     let at = |r: &Rect| Rect::new(r.x, r.y + dy, r.w, r.h);
     let hovered = |part: usize| hover == Some(Target::Control { item, part });
-    let field_bg = if theme.dark {
-        render::rgb(0x3a3a3c, 1.0)
-    } else {
-        render::rgb(0xffffff, 1.0)
-    };
-    let border = if theme.dark {
-        render::rgb(0xffffff, 0.14)
-    } else {
-        render::rgb(0x000000, 0.16)
-    };
+    let field_bg = crate::contrast::or(
+        if theme.dark {
+            render::rgb(0x3a3a3c, 1.0)
+        } else {
+            render::rgb(0xffffff, 1.0)
+        },
+        theme.bg,
+    );
+    let border = crate::contrast::or(
+        if theme.dark {
+            render::rgb(0xffffff, 0.14)
+        } else {
+            render::rgb(0x000000, 0.16)
+        },
+        theme.line,
+    );
     match control {
         Control::None => {}
         Control::Toggle(on) => {
@@ -1735,11 +1747,14 @@ fn draw_control(
                 c.fill_round(
                     k,
                     k.h / 2.0,
-                    if theme.dark {
-                        render::rgb(0x1d1d1f, 1.0)
-                    } else {
-                        render::rgb(0xffffff, 1.0)
-                    },
+                    crate::contrast::or(
+                        if theme.dark {
+                            render::rgb(0x1d1d1f, 1.0)
+                        } else {
+                            render::rgb(0xffffff, 1.0)
+                        },
+                        theme.bg,
+                    ),
                 );
             } else {
                 boxed(
@@ -2201,7 +2216,13 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> 
                 drop(win);
                 qlog!("settings: closed, its resources released");
             }
+            crate::uia::forget(hwnd);
             return LRESULT(0);
+        }
+        windows::Win32::UI::WindowsAndMessaging::WM_GETOBJECT => {
+            if let Some(r) = crate::uia::get_object(hwnd, wp, lp, uia_tree) {
+                return r;
+            }
         }
         _ => {}
     }
@@ -2213,6 +2234,10 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> 
     });
     crate::app::run_ops();
     run_pending();
+    // a reader hears the focus move and the page change (uia.rs), from what was just painted
+    if msg == WM_PAINT && crate::a11y::reader_on() {
+        crate::uia::changed(hwnd, None);
+    }
     match out {
         Some(Some(Some(r))) => r,
         _ if msg == WM_PAINT => {
@@ -2468,6 +2493,155 @@ fn run_pending() {
 
 /// The window as the e2e suite sees it (the bench pipe's `settings-controls`): open or not, its page, and every
 /// control part on screen in physical pixels with its row id and choice, so a test can click one for real.
+/// The window for UI Automation (uia.rs's source): the pages as tabs, the page's headings and notes as text, each
+/// control as what it is (a toggle a check box, choices radio buttons, a list a combo box, a shortcut a button), in
+/// screen pixels, with the keyboard's focus. None while the window is busy.
+fn uia_tree(hwnd: HWND) -> Option<crate::uia::Tree> {
+    use crate::uia::{Node, Role, Tree};
+    WIN.with(|w| {
+        let w = w.try_borrow().ok()?;
+        let win = w.as_ref()?;
+        let s = f64::from(win.scale());
+        let mut origin = POINT::default();
+        // SAFETY: our window, a live out point
+        let _ = unsafe { ClientToScreen(hwnd, &mut origin) };
+        // SAFETY: a plain query
+        let active = unsafe { windows::Win32::UI::Input::KeyboardAndMouse::GetFocus() } == hwnd;
+        let at = |r: Rect, scrolled: bool| {
+            let y = if scrolled { r.y - win.scroll } else { r.y };
+            [
+                f64::from(origin.x) + f64::from(r.x) * s,
+                f64::from(origin.y) + f64::from(y) * s,
+                f64::from(r.w) * s,
+                f64::from(r.h) * s,
+            ]
+        };
+        let focused = win.focus.and_then(|i| win.focusables().get(i).map(|f| f.0));
+        let mut nodes = Vec::new();
+        let Some(l) = &win.layout else {
+            return Some(Tree {
+                name: "Q Calc Settings".into(),
+                nodes,
+            });
+        };
+        for (k, (page, r, _)) in l.nav.iter().enumerate() {
+            nodes.push(Node {
+                id: 1 + k as i32,
+                role: Role::Tab,
+                name: page.nav().into(),
+                rect: at(*r, false),
+                selected: Some(*page == win.page),
+                ..Node::default()
+            });
+        }
+        for (i, item) in l.items.iter().enumerate() {
+            let Some(laid) = l.laid.get(i) else {
+                continue;
+            };
+            let base = 1000 + 100 * i as i32;
+            match item {
+                Item::Heading(t) | Item::Note(t, _) => nodes.push(Node {
+                    id: base,
+                    role: if matches!(item, Item::Heading(_)) {
+                        Role::Heading
+                    } else {
+                        Role::Text
+                    },
+                    name: t.clone(),
+                    rect: at(laid.card, true),
+                    ..Node::default()
+                }),
+                Item::Row {
+                    title,
+                    hint,
+                    control,
+                    ..
+                } => {
+                    for (r, _, part) in &laid.parts {
+                        let here = Target::Control {
+                            item: i,
+                            part: *part,
+                        };
+                        let mut n = Node {
+                            id: base + *part as i32,
+                            name: title.clone(),
+                            help: hint.clone(),
+                            rect: at(*r, true),
+                            focusable: true,
+                            focused: active && focused == Some(here),
+                            ..Node::default()
+                        };
+                        match control {
+                            Control::None => {
+                                n.role = Role::Text;
+                                n.focusable = false;
+                            }
+                            Control::Toggle(on) => {
+                                n.role = Role::CheckBox;
+                                n.toggled = Some(*on);
+                            }
+                            Control::Seg { options, value } => {
+                                n.role = Role::RadioButton;
+                                if let Some((id, label)) = options.get(*part) {
+                                    n.name = format!("{label}, {title}");
+                                    n.selected = Some(id == value);
+                                }
+                            }
+                            Control::Select { options, value } => {
+                                n.role = Role::ComboBox;
+                                n.value = Some(
+                                    options
+                                        .iter()
+                                        .find(|(id, _)| id == value)
+                                        .map_or_else(|| value.clone(), |(_, l)| l.clone()),
+                                );
+                            }
+                            Control::Button { label, enabled } => {
+                                n.role = Role::Button;
+                                n.name = label.clone();
+                                if hint.is_empty() {
+                                    n.help = title.clone();
+                                }
+                                n.focusable = *enabled;
+                            }
+                            Control::Key {
+                                label, recording, ..
+                            } => {
+                                n.role = Role::Button;
+                                n.name = if *part == 1 {
+                                    format!("Reset {title}")
+                                } else if *recording {
+                                    format!("{title}: press the new shortcut")
+                                } else {
+                                    format!("{title}: {label}")
+                                };
+                            }
+                            Control::Text { value, .. } => {
+                                n.role = Role::Edit;
+                                n.value = Some(value.clone());
+                            }
+                        }
+                        nodes.push(n);
+                    }
+                    if laid.parts.is_empty() {
+                        nodes.push(Node {
+                            id: base,
+                            name: title.clone(),
+                            help: hint.clone(),
+                            rect: at(laid.card, true),
+                            ..Node::default()
+                        });
+                    }
+                }
+            }
+        }
+        Some(Tree {
+            name: format!("Q Calc Settings, {}", win.page.title()),
+            nodes,
+        })
+    })
+}
+
 pub fn debug() -> Value {
     WIN.with(|w| {
         let Ok(w) = w.try_borrow() else {

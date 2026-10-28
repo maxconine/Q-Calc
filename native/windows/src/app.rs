@@ -418,6 +418,12 @@ unsafe extern "system" fn host_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM
 }
 
 unsafe extern "system" fn bar_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARAM) -> LRESULT {
+    // UI Automation's provider (uia.rs), before the app's borrow: a client may ask mid-message
+    if msg == windows::Win32::UI::WindowsAndMessaging::WM_GETOBJECT
+        && let Some(r) = crate::uia::get_object(hwnd, wp, lp, crate::a11y::bar_source)
+    {
+        return r;
+    }
     let out = with_app(|app| {
         let r = app.on_bar(msg, wp, lp);
         app.after();

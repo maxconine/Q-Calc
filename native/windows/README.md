@@ -82,7 +82,8 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `tour.rs` | onboarding and the walkthrough: the tour's line, its step example in the empty bar (in place of line.rs's), hints; `will_show` runs after line.rs counted the open |
 | `hover.rs` | the pointer over the tape and the answer: the row and cell lit, the hand cursor, the system tooltip after a 450 ms rest; triple-click selects the line |
 | `contrast.rs` | contrast themes: the theme from the system colours while one is on (`QCALC_CONTRAST=1` to look without one) |
-| `a11y.rs` | with a screen reader on, the bar's name is the line and its answer, with a name-change event (`QCALC_READER=1` for the test) |
+| `a11y.rs` | the bar for screen readers: its UI Automation tree (line, answer, hint, tape rows) and, with a reader on, the events and notifications; the name-change fallback (`QCALC_READER=1` for the test) |
+| `uia.rs` | UI Automation providers for the windows Q Calc draws (bar, settings): a flat tree of named parts, focus / value / live-region events, notifications (`examples/uia_watch.rs` listens) |
 | `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf, clear) and their tips |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
@@ -169,5 +170,5 @@ retries run out does the tray say which launcher likely holds the chord.
 ## Known gaps (next agents)
 
 The games ember & frost and trails (win-games2; the games list says they aren't in yet); Mica / acrylic backdrop;
-a full UI Automation tree (a11y.rs only names the bar: the tape's rows, the caret and selection aren't exposed);
+UI Automation for the sheets and the games' insides (their windows are named only) and the line's caret and selection as a text pattern;
 a fade on showing (the Mac's 0.1 s: a flip swap chain can't be a layered window, so it needs DirectComposition).

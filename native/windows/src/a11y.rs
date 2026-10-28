@@ -1,9 +1,12 @@
-//! Screen readers (Narrator, NVDA, JAWS): while one runs, the bar's accessible name is what it shows, "2+2 = 4",
-//! kept up to date as the answer lands, with a name-change event so the reader speaks it. The bar draws itself
-//! (Direct2D), so without this a reader heard only "Q Calc". Nothing runs unless Windows says a reader is on
-//! (SPI_GETSCREENREADER, read at most every 2 s), so a keystroke costs nothing extra otherwise.
+//! Screen readers (Narrator, NVDA, JAWS). The bar draws itself (Direct2D), so it describes itself to UI Automation
+//! (uia.rs, `bar_tree`): the line as an edit with its value, the answer and the hint as live text, the tape's rows
+//! in sight as list items. While a reader runs, each message's changes are raised as events (focus, value, live
+//! region) and the news (`announce`: a mode toggled, a card) as a notification. Before any UIA client has asked
+//! for the bar's provider, the older way stands: the bar's name is what it shows, "2+2 = 4", with a name-change
+//! event. Nothing runs unless Windows says a reader is on (SPI_GETSCREENREADER, read at most every 2 s), so a
+//! keystroke costs nothing extra otherwise.
 //!
-//! Not a full UI Automation tree (the tape's rows, the caret and selection as text patterns): see README's gaps.
+//! Not exposed: the caret and selection as a text pattern (a reader echoes typed keys itself).
 
 use std::cell::{Cell, RefCell};
 use std::time::Instant;
@@ -96,10 +99,41 @@ pub fn name(text: &str, answer: &str) -> String {
     }
 }
 
-/// After every message (line.rs's `after`): the bar's name follows the line and the answer.
+/// After every message (line.rs's `after`): with UI Automation's provider handed out (uia.rs), the bar's parts'
+/// events and the news as a notification; else the bar's name follows the line and the answer.
 pub fn after(app: &App) {
     let news = NEWS.with(|n| std::mem::take(&mut *n.borrow_mut()));
     if !app.bar.visible || !reader_on() {
+        return;
+    }
+    let hwnd = app.bar.hwnd;
+    if crate::uia::provided(hwnd) {
+        let tree = bar_tree(app);
+        // a row picked from the tape is heard as the focus moves to it, not again as news
+        let focused = tree
+            .nodes
+            .iter()
+            .find(|n| n.focused)
+            .map(|n| n.name.as_str());
+        let news: Vec<&str> = news.split(" · ").filter(|s| Some(*s) != focused).collect();
+        let news = news.join(" · ");
+        UIA_NEWS.with(|n| {
+            let mut n = n.borrow_mut();
+            if !news.is_empty() {
+                if !n.is_empty() {
+                    n.push_str(" · ");
+                }
+                n.push_str(&news);
+            }
+        });
+        let h = hwnd.0 as usize;
+        // events can call back into the provider: outside the app's borrow
+        crate::later::free("a11y-uia", 0, move || {
+            let hwnd = windows::Win32::Foundation::HWND(h as *mut _);
+            crate::uia::changed(hwnd, Some(tree));
+            let news = UIA_NEWS.with(|n| std::mem::take(&mut *n.borrow_mut()));
+            crate::uia::notify(hwnd, &news);
+        });
         return;
     }
     let mut now = name(app.model.field.text(), &app.model.answer_text());
@@ -139,6 +173,89 @@ pub fn after(app: &App) {
             NotifyWinEvent(0x800C, hwnd, 0, 0);
         }
     });
+}
+
+thread_local! {
+    /// news waiting for the next notification (uia.rs)
+    static UIA_NEWS: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// The bar for UI Automation (uia.rs's source): the line as an edit with its value, the answer and the hint as live
+/// text, the tape's rows in sight as list items, in screen pixels. None while the app is busy.
+pub fn bar_source(_hwnd: windows::Win32::Foundation::HWND) -> Option<crate::uia::Tree> {
+    crate::app::with_app(|app| bar_tree(app))
+}
+
+pub fn bar_tree(app: &App) -> crate::uia::Tree {
+    use crate::uia::{Node, Role, Tree};
+    let mut nodes = Vec::new();
+    if app.bar.visible {
+        let f = app.bar.frame();
+        let s = f64::from(app.bar.scale());
+        let l = &app.bar.layout;
+        let at = |r: crate::render::Rect| {
+            [
+                f64::from(f.left) + f64::from(r.x) * s,
+                f64::from(f.top) + f64::from(r.y) * s,
+                f64::from(r.w) * s,
+                f64::from(r.h) * s,
+            ]
+        };
+        let m = &app.model;
+        let row_focused = app.bar.focused && m.selected.is_some();
+        nodes.push(Node {
+            id: 1,
+            role: Role::Edit,
+            name: "Calculation".into(),
+            value: Some(m.field.text().to_string()),
+            help: "Type a calculation; Enter keeps it in the history, Up goes through it".into(),
+            rect: at(l.field),
+            focusable: true,
+            focused: app.bar.focused && !row_focused,
+            ..Node::default()
+        });
+        let answer = m.answer_text();
+        if !answer.trim().is_empty() {
+            nodes.push(Node {
+                id: 2,
+                name: answer.trim().to_string(),
+                help: "The answer; Ctrl+C copies it".into(),
+                rect: at(l.answer),
+                live: true,
+                ..Node::default()
+            });
+        }
+        let status = status_of(app);
+        if !status.trim().is_empty() {
+            nodes.push(Node {
+                id: 3,
+                name: status,
+                rect: at(l.tour.or(l.hint).unwrap_or_default()),
+                live: true,
+                ..Node::default()
+            });
+        }
+        for i in l.tape.drawn.clone() {
+            let Some(r) = m.rows.rows.get(i) else {
+                continue;
+            };
+            let selected = m.selected == Some(i);
+            nodes.push(Node {
+                id: 100 + i as i32,
+                role: Role::ListItem,
+                name: name(&r.expr, &r.display),
+                rect: at(crate::history::row_rect(l.width, &l.tape, i)),
+                focusable: true,
+                focused: selected && app.bar.focused,
+                selected: Some(selected),
+                ..Node::default()
+            });
+        }
+    }
+    Tree {
+        name: "Q Calc".into(),
+        nodes,
+    }
 }
 
 // user32's NotifyWinEvent (in the windows crate only behind Win32_UI_Accessibility)
