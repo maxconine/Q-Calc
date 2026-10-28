@@ -68,10 +68,13 @@ function Find-Wrangler {
         New-Item -ItemType Directory -Force $dir | Out-Null
         Log "installing wrangler@4.151.0 into $dir (once)"
         Push-Location $dir
+        # npm's warnings go to stderr, which -ErrorAction Stop would treat as a failure: judge by the file instead
+        $eap = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
         try {
-            & npm init -y | Out-Null
-            & npm install --no-audit --no-fund wrangler@4.151.0 | Out-Null
-        } finally { Pop-Location }
+            & npm init -y 2>&1 | Out-Null
+            & npm install --no-audit --no-fund wrangler@4.151.0 2>&1 | Out-Null
+        } finally { $ErrorActionPreference = $eap; Pop-Location }
+        if (-not (Test-Path $js)) { throw "wrangler didn't install into $dir" }
     }
     $js
 }
