@@ -244,8 +244,12 @@ pub fn wrap(text: &str, start: usize, end: usize, key: char) -> Option<(String, 
 pub fn join_plus_minus(text: &str, caret: usize) -> Option<String> {
     // bytes, not a str slice: the caret can sit just after a two-byte letter (π), and caret - 1 is inside it. "+-"
     // is ASCII, so where it matches both slices below fall on character boundaries
-    (caret > 0 && text.as_bytes().get(caret - 1..).is_some_and(|b| b.starts_with(b"+-")))
-        .then(|| format!("{}±{}", &text[..caret - 1], &text[caret + 1..]))
+    (caret > 0
+        && text
+            .as_bytes()
+            .get(caret - 1..)
+            .is_some_and(|b| b.starts_with(b"+-")))
+    .then(|| format!("{}±{}", &text[..caret - 1], &text[caret + 1..]))
 }
 
 /// flattenPastedText: look-alike characters cleaned (cleanPastedText), line breaks as spaces.
