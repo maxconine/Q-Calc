@@ -137,7 +137,7 @@ pub fn answer_forms(src: &FormSource) -> Vec<AnswerView> {
     let mag = if n == 0.0 {
         0.0
     } else {
-        n.abs().log10().floor()
+        crate::scientific::functions::jsmath::log10(n.abs()).floor()
     };
     if mag.abs() >= 3.0 {
         add(

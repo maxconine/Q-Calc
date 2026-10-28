@@ -1,7 +1,9 @@
 [workspace]
 resolver = "3"
 members = ["core", "ffi",
+  "lazy", # statics the Windows engine thread can give back (compiled regexes)
   "typst", # WP-TYPST-RENDER
+  "windows", # the native Windows app (qcalc-win)
 ]
 
 [workspace.package]

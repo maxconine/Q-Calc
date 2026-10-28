@@ -585,7 +585,7 @@ fn data_units() -> Vec<Unit> {
             format!("{id}b"),
             Dim::Digital,
             format!("{p}B"),
-            1024f64.powf((i + 1) as f64),
+            crate::scientific::functions::jsmath::pow(1024.0, (i + 1) as f64),
             vec![
                 format!("{id}b"),
                 format!("{word}byte"),

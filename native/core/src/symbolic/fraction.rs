@@ -71,7 +71,7 @@ impl Fraction {
             let big_n = 10_000_000.0f64;
             let (mut n, mut d) = (0.0f64, 1.0f64);
             if p1 >= 1.0 {
-                let k = (1.0 + p1.log10()).floor() as i32;
+                let k = (1.0 + crate::scientific::functions::jsmath::log10(p1)).floor() as i32;
                 z = format!("1e{k}").parse::<f64>().unwrap_or(f64::INFINITY);
                 p1 /= z;
             }

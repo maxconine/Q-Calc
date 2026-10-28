@@ -357,7 +357,11 @@ pub fn is_barrel_roll(text: &str) -> bool {
 /// The whole line is the Konami code typed out (`↑↑↓↓←→←→ba`, spaces and case aside) or `konami`: ↵ toggles the
 /// CRT look as the keys do
 pub fn is_konami_line(text: &str) -> bool {
-    let t: String = text.chars().filter(|c| !c.is_whitespace()).collect::<String>().to_lowercase();
+    let t: String = text
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>()
+        .to_lowercase();
     t == "↑↑↓↓←→←→ba" || t == "konami"
 }
 

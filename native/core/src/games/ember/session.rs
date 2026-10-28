@@ -1157,7 +1157,7 @@ impl GuestGame {
                         || (a.fly > 0) != (b.fly > 0)
                         || (a.portal_cd > 0) != (b.portal_cd > 0)
                         || a.alive != b.alive
-                        || x.hypot(y) > SNAP_PX
+                        || crate::games::js_hypot(x, y) > SNAP_PX
                 });
             self.offsets[p] = if far {
                 Offset::default()

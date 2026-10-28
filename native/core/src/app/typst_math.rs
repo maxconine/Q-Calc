@@ -5,8 +5,6 @@
 //! character is either printed whole (a letter or symbol) or dropped whole in both, so the output is the same.
 //! The limits of `∫_a^b` come from `bounds`, which counts UTF-16 units, so that step converts.
 
-use std::sync::LazyLock;
-
 use crate::app::bounds::{U16, bounds_in_units};
 use crate::jsre::{self, Lazy};
 use crate::jsstr;
@@ -344,10 +342,10 @@ const PLAIN_ARG: &str = r"[-+]?\s*(?:\d+(?:\.\d*)?|\.\d+)";
 /// by `+ − × ÷`, reads fine in the bar as typed. A call that draws differently (a root, |x| bars, ⌊x⌋, a
 /// binomial) isn't plain.
 fn simple_math(math: &str) -> bool {
-    static DIVISION: LazyLock<jsre::Regex> =
-        LazyLock::new(|| re(&format!(r"^{PLAIN_NUMBER}\s*/\s*{PLAIN_NUMBER}$"), ""));
+    static DIVISION: crate::jsre::Lazy<jsre::Regex> =
+        crate::jsre::Lazy::new(|| re(&format!(r"^{PLAIN_NUMBER}\s*/\s*{PLAIN_NUMBER}$"), ""));
     // a call of plain numbers, `gcd(12, 18)` or `op(1, 2, 3)` (a quoted name's op, once bare)
-    static CALL: LazyLock<jsre::Regex> = LazyLock::new(|| {
+    static CALL: crate::jsre::Lazy<jsre::Regex> = crate::jsre::Lazy::new(|| {
         re(
             &format!(
                 r"(?<![A-Za-z0-9.#_])([A-Za-z][A-Za-z0-9]*)\(\s*{PLAIN_ARG}(?:\s*,\s*{PLAIN_ARG})*\s*\)"

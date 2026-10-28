@@ -10,17 +10,15 @@
 //! `(-8)^(1/3)` through Fraction.js) is a Complex, which can't become a node, so simplify throws. A function
 //! mathjs doesn't have (`ln`) stays a call.
 //!
-//! Known divergence: a folded transcendental call (`asin(0.5)`, `log(3)`, `cbrt(2.5)`) uses the platform libm,
-//! while V8's `Math` is fdlibm, so about one random constant call in a hundred prints a different last digit
-//! (only `tan` is ported, in `jsmath.rs`). The engine hides constant calls from `simplify` (calculus's `k0__`,
-//! isolate's `__held0`), so this reaches only isolate's `rationalize` candidate, which loses to an exact form
-//! whenever it shows a decimal. A shared fdlibm port would close it.
+//! A folded transcendental call (`asin(0.5)`, `log(3)`, `cbrt(2.5)`) goes through `jsmath`, V8's fdlibm bit for
+//! bit, never the platform libm, so a fold prints the same last digit as the TS engine on every platform.
 
 use super::fraction::{Fraction, big_to_f64};
 use super::simplify::{Ctx, SimplifyOptions, all_children, is_associative, make_node};
 use super::{Constant, Node, Op, SymError, err, function_name, num, op};
 use crate::eval::builtins::modulo;
 use crate::eval::ops::real_pow;
+use crate::scientific::functions::jsmath;
 
 /// What `foldFraction` returns: a node, or a value not yet turned back into one.
 #[derive(Clone, Debug)]
@@ -299,9 +297,9 @@ fn mathjs_pow(x: f64, y: f64) -> Val {
         return Val::Num(0.0);
     }
     // (x + 0i)^y
-    let r = (-x).powf(y);
+    let r = jsmath::pow(-x, y);
     let t = std::f64::consts::PI * y;
-    Val::Complex(r * t.cos(), r * t.sin())
+    Val::Complex(r * jsmath::cos(t), r * jsmath::sin(t))
 }
 
 fn frac_binary(fname: &str, a: &Fraction, b: &Fraction) -> Result<Val, SymError> {
@@ -341,13 +339,13 @@ fn num_binary(fname: &str, a: f64, b: f64) -> Result<Val, SymError> {
             if b == 0.0 {
                 return err("Root must be non-zero");
             }
-            let r = a.abs().powf(1.0 / b);
+            let r = jsmath::pow(a.abs(), 1.0 / b);
             if a < 0.0 { -r } else { r }
         }
-        "atan2" => a.atan2(b),
-        "hypot" => a.hypot(b),
+        "atan2" => jsmath::atan2(a, b),
+        "hypot" => crate::scientific::functions::hypot_numbers(&[a, b]),
         "round" => {
-            let f = 10f64.powf(b);
+            let f = jsmath::pow(10.0, b);
             crate::jsnum::round(a * f) / f
         }
         "max" => a.max(b),
@@ -359,9 +357,9 @@ fn num_binary(fname: &str, a: f64, b: f64) -> Result<Val, SymError> {
 fn log_of(x: f64, base: Option<f64>) -> Val {
     let ln = |v: f64| -> Val {
         if v < 0.0 {
-            Val::Complex((-v).ln(), std::f64::consts::PI)
+            Val::Complex(jsmath::ln(-v), std::f64::consts::PI)
         } else {
-            Val::Num(v.ln())
+            Val::Num(jsmath::ln(v))
         }
     };
     match base {
@@ -385,91 +383,91 @@ fn num_unary(fname: &str, x: f64) -> Result<Val, SymError> {
             }
             x.sqrt()
         }
-        "cbrt" => x.cbrt(),
-        "exp" => x.exp(),
-        "expm1" => x.exp_m1(),
+        "cbrt" => jsmath::cbrt(x),
+        "exp" => jsmath::exp(x),
+        "expm1" => jsmath::expm1(x),
         "log" => return Ok(log_of(x, None)),
         "log10" => {
             if x < 0.0 {
                 return Ok(complex);
             }
-            x.log10()
+            jsmath::log10(x)
         }
         "log2" => {
             if x < 0.0 {
                 return Ok(complex);
             }
-            x.log2()
+            jsmath::log2(x)
         }
         "log1p" => {
             if x < -1.0 {
                 return Ok(complex);
             }
-            x.ln_1p()
+            jsmath::log1p(x)
         }
-        "sin" => x.sin(),
-        "cos" => x.cos(),
-        "tan" => crate::scientific::functions::jsmath::tan(x),
-        "sec" => 1.0 / x.cos(),
-        "csc" => 1.0 / x.sin(),
-        "cot" => 1.0 / crate::scientific::functions::jsmath::tan(x),
-        "sinh" => x.sinh(),
-        "cosh" => x.cosh(),
-        "tanh" => x.tanh(),
-        "sech" => 1.0 / x.cosh(),
-        "csch" => 1.0 / x.sinh(),
-        "coth" => 1.0 / x.tanh(),
+        "sin" => jsmath::sin(x),
+        "cos" => jsmath::cos(x),
+        "tan" => jsmath::tan(x),
+        "sec" => 1.0 / jsmath::cos(x),
+        "csc" => 1.0 / jsmath::sin(x),
+        "cot" => 1.0 / jsmath::tan(x),
+        "sinh" => jsmath::sinh(x),
+        "cosh" => jsmath::cosh(x),
+        "tanh" => jsmath::tanh(x),
+        "sech" => 1.0 / jsmath::cosh(x),
+        "csch" => 1.0 / jsmath::sinh(x),
+        "coth" => 1.0 / jsmath::tanh(x),
         "asin" => {
             if x.abs() > 1.0 {
                 return Ok(complex);
             }
-            x.asin()
+            jsmath::asin(x)
         }
         "acos" => {
             if x.abs() > 1.0 {
                 return Ok(complex);
             }
-            x.acos()
+            jsmath::acos(x)
         }
-        "atan" => x.atan(),
-        "acot" => (1.0 / x).atan(),
+        "atan" => jsmath::atan(x),
+        "acot" => jsmath::atan(1.0 / x),
         "asec" => {
             if x.abs() < 1.0 {
                 return Ok(complex);
             }
-            (1.0 / x).acos()
+            jsmath::acos(1.0 / x)
         }
         "acsc" => {
             if x.abs() < 1.0 {
                 return Ok(complex);
             }
-            (1.0 / x).asin()
+            jsmath::asin(1.0 / x)
         }
-        "asinh" => x.asinh(),
+        "asinh" => jsmath::asinh(x),
         "acosh" => {
             if x < 1.0 {
                 return Ok(complex);
             }
-            x.acosh()
+            jsmath::acosh(x)
         }
         "atanh" => {
             if x.abs() > 1.0 {
                 return Ok(complex);
             }
-            x.atanh()
+            jsmath::atanh(x)
         }
-        "acsch" => (1.0 / x).asinh(),
+        "acsch" => jsmath::asinh(1.0 / x),
         "asech" => {
             if !(0.0..=1.0).contains(&x) {
                 return Ok(complex);
             }
-            (1.0 / x).acosh()
+            jsmath::acosh(1.0 / x)
         }
         "acoth" => {
             if x.abs() < 1.0 {
                 return Ok(complex);
             }
-            (1.0 / x).atanh()
+            jsmath::atanh(1.0 / x)
         }
         "abs" => x.abs(),
         "sign" => {

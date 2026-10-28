@@ -36,6 +36,10 @@ pub use games::*;
 pub use games_ember::*;
 pub use name_check::NameCheck;
 pub use records::*;
+pub use worker::run_engine_calls_here;
+// the Windows app (native/windows) calls the renderer from Rust, not through the bindings
+#[cfg(feature = "typst")]
+pub use typst_preview::*;
 
 use qcalc_core::types::EvaluateOptions;
 

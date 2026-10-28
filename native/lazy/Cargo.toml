@@ -1,0 +1,17 @@
+[package]
+name = "qcalc-lazy"
+description = "Lazily built statics that one thread can give back: the engine's compiled regexes, freed while the Windows bar is hidden"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+# not the workspace's lints: this crate is the one place the engine's statics use `unsafe` (a pointer the owning
+# thread frees), so qcalc-core keeps `unsafe_code = "forbid"`
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
