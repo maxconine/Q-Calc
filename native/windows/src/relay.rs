@@ -223,6 +223,100 @@ fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<serde_js
     serde_json::from_slice(&out).ok()
 }
 
+/// The relay's word for an answer (MessageFiles.swift `status`): its JSON `status`, else by the HTTP code.
+pub fn status_of(code: u32, body: &serde_json::Value) -> String {
+    if let Some(s) = body["status"].as_str() {
+        return s.to_string();
+    }
+    match code {
+        413 => "too-big",
+        410 => "expired",
+        404 => "gone",
+        0 => "no-network",
+        _ => "network",
+    }
+    .into()
+}
+
+/// A request to the relay for files (`/file/<id>/…`): `method`, extra `headers`, a `body`; a 200's body goes to
+/// `sink` piece by piece when given (false from it stops), else it's read as JSON. (status, the JSON). Blocking.
+pub fn call(
+    method: &str,
+    path: &str,
+    headers: &[(&str, &str)],
+    body: &[u8],
+    receive_ms: i32,
+    mut sink: Option<&mut dyn FnMut(&[u8]) -> bool>,
+) -> (String, serde_json::Value) {
+    let base = base();
+    let mut run = || -> Option<(u32, Vec<u8>)> {
+        let s = session(receive_ms)?;
+        // SAFETY: a live session; the host's HSTRING outlives the call
+        let c = Handle::new(unsafe {
+            WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0)
+        })?;
+        let verb = HSTRING::from(method);
+        let r = request(&base, &c, PCWSTR(verb.as_ptr()), path)?;
+        let mut head = String::new();
+        for (k, v) in headers {
+            head.push_str(&format!("{k}: {v}\r\n"));
+        }
+        let head: Vec<u16> = head.encode_utf16().collect();
+        // SAFETY: a live request; the headers and body outlive the calls
+        unsafe {
+            WinHttpSendRequest(
+                r.0,
+                (!head.is_empty()).then_some(head.as_slice()),
+                (!body.is_empty()).then_some(body.as_ptr().cast()),
+                body.len() as u32,
+                body.len() as u32,
+                0,
+            )
+            .ok()?;
+            WinHttpReceiveResponse(r.0, std::ptr::null_mut()).ok()?;
+        }
+        let code = status_code(&r);
+        let mut out = Vec::new();
+        let mut buf = vec![0u8; 64 * 1024];
+        loop {
+            let mut read = 0u32;
+            // SAFETY: a live request; a buffer of the size given
+            unsafe { WinHttpReadData(r.0, buf.as_mut_ptr().cast(), buf.len() as u32, &mut read) }
+                .ok()?;
+            if read == 0 {
+                break;
+            }
+            let piece = &buf[..read as usize];
+            match (&mut sink, code == 200) {
+                (Some(f), true) => {
+                    if !f(piece) {
+                        return None;
+                    }
+                }
+                _ => {
+                    out.extend_from_slice(piece);
+                    if out.len() > 64 * 1024 {
+                        break;
+                    }
+                }
+            }
+        }
+        Some((code, out))
+    };
+    match run() {
+        Some((code, out)) => {
+            let v = serde_json::from_slice(&out).unwrap_or(serde_json::Value::Null);
+            let status = if code == 200 && v["status"].is_null() {
+                "ok".to_string()
+            } else {
+                status_of(code, &v)
+            };
+            (status, v)
+        }
+        None => ("no-network".into(), serde_json::Value::Null),
+    }
+}
+
 /// An open inbox: one receiver thread blocks in `receive`, another may `send` (pings) or `close` at any time.
 pub struct Socket {
     ws: *mut c_void,

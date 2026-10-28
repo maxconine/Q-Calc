@@ -700,7 +700,12 @@ impl App {
                         pid == std::process::id()
                     };
                     // a click away (another window took the foreground) puts the bar away
-                    if self.bar.visible && !ours && self.run.is_none() {
+                    // except on a messaging line, so files can be dragged in from Explorer (share.rs)
+                    if self.bar.visible
+                        && !ours
+                        && self.run.is_none()
+                        && !crate::share::holds_open(&self.model)
+                    {
                         self.ops.push(Op::Hide);
                     }
                 } else {
@@ -710,6 +715,10 @@ impl App {
                 self.model.touch();
             }
             WM_CLOSE => self.ops.push(Op::Hide),
+            // files dropped on the bar go to whoever the line names (share.rs)
+            windows::Win32::UI::WindowsAndMessaging::WM_DROPFILES => {
+                crate::share::dropped(self, windows::Win32::UI::Shell::HDROP(wp.0 as *mut _));
+            }
             // the input's one-shot timers: the caret's blink, the examples, the squiggle (line.rs)
             WM_TIMER if crate::line::timer(self, wp.0) => {}
             // dragged by the background, widened from the edges, remembered per monitor (drag.rs)

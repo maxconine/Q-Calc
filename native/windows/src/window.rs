@@ -167,6 +167,8 @@ impl Bar {
         };
         // SAFETY: attributes on our own window, with pointers to live locals
         unsafe {
+            // files dropped from Explorer arrive as WM_DROPFILES (share.rs)
+            windows::Win32::UI::Shell::DragAcceptFiles(hwnd, true);
             let round = DWMWCP_ROUND;
             let _ = DwmSetWindowAttribute(
                 hwnd,

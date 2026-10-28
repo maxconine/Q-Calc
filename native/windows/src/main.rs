@@ -74,6 +74,8 @@ mod selection;
 #[cfg(windows)]
 mod settings_window;
 #[cfg(windows)]
+mod share;
+#[cfg(windows)]
 mod share_crypt;
 #[cfg(windows)]
 mod share_keys;

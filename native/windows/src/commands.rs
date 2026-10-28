@@ -30,6 +30,12 @@ pub enum Command {
         name: String,
         text: String,
     },
+    /// `paste to <name>`, `send clipboard to <name>`, `send file to <name>` (share.rs): `what` is `clip` or `file`
+    Share {
+        what: String,
+        to: String,
+        name: String,
+    },
     Tutorial,
     Skip,
     Greeting,
@@ -95,6 +101,13 @@ pub fn parse(raw: &str) -> Option<Command> {
             text: line.text,
         });
     }
+    if let Some(share) = core_msg::parse_share_command(raw) {
+        return Some(Command::Share {
+            what: share.what,
+            to: share.to,
+            name: share.name,
+        });
+    }
     if !short {
         return None;
     }
@@ -157,7 +170,9 @@ const STEMS: [&str; 41] = [
     "cycles",
 ];
 
-const MORE_STEMS: [&str; 6] = ["message", "tutorial", "tour", "skip", "hello", "hiya"];
+const MORE_STEMS: [&str; 9] = [
+    "message", "tutorial", "tour", "skip", "hello", "hiya", "send", "paste", "share",
+];
 
 fn could_be(trimmed: &str) -> bool {
     let first: String = trimmed
@@ -182,6 +197,8 @@ pub fn hint(command: &Command, message: impl FnOnce(&str, &str, &str) -> String)
         Command::Games => core_games::GAMES_HINT.into(),
         Command::Game(kind) => core_games::game_hint(*kind).into(),
         Command::Message { to, name, text } => message(to, name, text),
+        // share.rs's words, worked out in `live`, where the app is
+        Command::Share { .. } => String::new(),
         Command::Tutorial => core_tour::TUTORIAL_HINT.into(),
         Command::Skip => String::new(),
         Command::Greeting => greeting::GREETING_REPLY.into(),
@@ -238,9 +255,12 @@ mod ui {
             }
             return false;
         };
-        let message = hint(&command, |to, name, text| {
-            messaging::line_hint(to, name, text)
-        });
+        let message = match &command {
+            Command::Share { what, to, name } => crate::share::hint(what, to, name),
+            _ => hint(&command, |to, name, text| {
+                messaging::line_hint(to, name, text)
+            }),
+        };
         if !matches!(command, Command::Games) {
             m.games_pick = None;
         }
@@ -308,6 +328,7 @@ mod ui {
                 }
                 messaging::send_line(app, name, text);
             }
+            Command::Share { what, name, .. } => crate::share::enter(app, &what, &name),
             Command::Tutorial => {
                 clear_line(app, false);
                 tour::start(app);
@@ -369,6 +390,16 @@ mod ui {
         const DOWN: u32 = 0x28;
         crate::hover::key_down();
         if messaging::key(app, vk, mods) {
+            return true;
+        }
+        // Ctrl+V with files copied, on a line that names someone: they're sent as a drop would be (share.rs)
+        if vk == 0x56
+            && mods.ctrl
+            && !mods.alt
+            && !mods.shift
+            && app.model.systems.as_ref().is_none_or(|s| s.focus.is_none())
+            && crate::share::paste_files(app)
+        {
             return true;
         }
         let plain = !mods.ctrl && !mods.alt && !mods.win;
