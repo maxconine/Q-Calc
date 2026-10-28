@@ -228,3 +228,13 @@ describe('a solve still being typed', () => {
     expect(previewMath(expr).replace(/\s+/g, ' ')).toBe(math)
   })
 })
+
+describe('ampersand', () => {
+  it('escapes & so Typst draws it rather than taking it as an alignment point', () => {
+    for (const line of ['sin(22&3)', '(22&3*21)22/23']) {
+      const typst = toTypstMath(line)
+      expect(typst).toContain('\\&')
+      expect(typst.replaceAll('\\&', '')).not.toContain('&')
+    }
+  })
+})

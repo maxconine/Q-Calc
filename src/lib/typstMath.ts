@@ -558,7 +558,8 @@ function readSymbol(s: string, i: number, to: number): Piece {
     '°': 'degree',
     '…': 'dots.h',
     '|': '|',
-    '&': '&',
+    // bare & is Typst's alignment point, which draws nothing
+    '&': '\\&',
     "'": "'",
     '′': "'",
     ':': ':',

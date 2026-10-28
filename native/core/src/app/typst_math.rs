@@ -973,7 +973,8 @@ fn one(ch: char) -> Option<&'static str> {
         '°' => "degree",
         '…' => "dots.h",
         '|' => "|",
-        '&' => "&",
+        // bare & is Typst's alignment point, which draws nothing
+        '&' => "\\&",
         '\'' | '′' => "'",
         ':' => ":",
         ';' => ";",

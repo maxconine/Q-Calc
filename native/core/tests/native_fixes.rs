@@ -21,3 +21,13 @@ fn euler_with_a_typed_pi() {
 fn exp_stays_real_for_reals() {
     assert_eq!(show("exp(2)"), "7.38905609893");
 }
+
+#[test]
+fn ampersand_is_drawn_in_the_typst_preview() {
+    // a bare & is Typst's alignment point and draws nothing; escaped, it shows
+    for line in ["sin(22&3)", "(22&3*21)22/23"] {
+        let typst = qcalc_core::app::typst_math::to_typst_math(line);
+        assert!(typst.contains("\\&"), "{line} → {typst}");
+        assert!(!typst.replace("\\&", "").contains('&'), "{line} → {typst}");
+    }
+}
