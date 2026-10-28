@@ -76,7 +76,10 @@ extension BarModel {
     var holdsOpen: Bool {
         if case .thread = messagesPanel { return true }
         if !MessageFiles.shared.pendingDrop.isEmpty { return true }
-        return dropTarget(count: 1) != nil
+        // only a `message …`, `send file to …` or `paste to …` line (dropTarget had stood in for this, but it also
+        // answers a calculation, `clear the line to send files`, which kept the bar up for nearly any line)
+        if case .message = BarCommand.of(text, sheets: sheets) { return true }
+        return shareCommand(text) != nil
     }
 
     /// the thread's 📎: the picker, then every file picked goes to `name`, the bar back on their thread
