@@ -60,26 +60,34 @@ private final class WeakHandler: NSObject, WKScriptMessageHandler {
 final class GameWindowController: NSObject, NSWindowDelegate, WKScriptMessageHandler, WKNavigationDelegate {
     private var window: NSWindow?
     private var web: WKWebView?
-    // a game ported to Swift opens in a window of its own with no web view (Games/NativeGames.swift)
+    // a game ported to Swift opens in the bar's place with no web view (Games/NativeGames.swift, Shell/GameWindow.swift)
     private lazy var native: NativeGameWindowController = {
         let c = NativeGameWindowController()
-        c.onClose = { [weak self] in self?.onClose?() }
+        c.onClose = { [weak self] back in self?.onClose?(back) }
         return c
     }()
-    var onClose: (() -> Void)?
+    /// The game closed: true when it goes back to the bar (esc from a native game's lobby).
+    var onClose: ((Bool) -> Void)?
+    /// A native game is up, or held hidden with the bar.
+    var nativeOpen: Bool { native.isOpen }
+    /// The hotkey while a native game is up (NativeGameWindowController.hotkey).
+    func nativeHotkey() { native.hotkey() }
+    /// A show while a native game is up brings the game forward instead.
+    func nativeReshow() { native.reshow() }
 
-    func open(_ kind: String, on screen: NSScreen?) {
+    func open(_ kind: String, at spot: GameBarSpot) {
         close()
         if let view = NativeGames.view(kind) {
-            native.open(kind, on: screen) { _ in view }
+            native.open(kind, at: spot) { _ in view }
             return
         }
+        let screen = NSScreen.screens.first { $0.visibleFrame == spot.visible }
         guard let url = GameBundle.url else {
             let alert = NSAlert()
             alert.messageText = "This build has no games"
             alert.informativeText = "Run npm run build, then native/mac/build.sh, to bundle games.html."
             alert.runModal()
-            onClose?()
+            onClose?(false)
             return
         }
         let config = GameBundle.configuration(kind: kind, handler: WeakHandler(self))
@@ -135,7 +143,7 @@ final class GameWindowController: NSObject, NSWindowDelegate, WKScriptMessageHan
         window?.contentView = nil
         window = nil
         OverlayLog.note("game closed (web view released)")
-        onClose?()
+        onClose?(false)
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
