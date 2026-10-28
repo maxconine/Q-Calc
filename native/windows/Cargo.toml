@@ -79,6 +79,11 @@ windows = { version = "0.61", features = [
   "Win32_UI_WindowsAndMessaging",
 ] }
 
+# the engine benches (examples/live_bench.rs, mem_attrib.rs) call the engine as the bar does, on any platform,
+# so `cargo clippy --workspace --all-targets` passes on the Mac too
+[dev-dependencies]
+qcalc-ffi = { path = "../ffi" }
+
 [lints.rust]
 # Win32, Direct2D and DirectWrite are unsafe FFI. Unsafe stays in the thin wrappers that call them (render.rs,
 # window.rs, app.rs, tray.rs, hotkey.rs, autostart.rs, bench.rs' pipe, clip.rs); the model, the field's editing

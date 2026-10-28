@@ -10,7 +10,9 @@
 //! The rules' words name the Mac's keys (⌘C, ⌃D, ⌘,); `winify` puts the Windows chords in, following the user's
 //! keybinds.
 
+#[cfg_attr(not(windows), allow(unused_imports))]
 use qcalc_core::app::onboarding::{self as ob, HintFacts, HintOn, Onboarding};
+#[cfg_attr(not(windows), allow(unused_imports))]
 use qcalc_core::app::tour::{self as core_tour, TourFacts, TourId};
 
 use crate::keys::{KeyAction, Keybinds};

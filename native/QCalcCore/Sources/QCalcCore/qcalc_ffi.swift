@@ -7536,7 +7536,8 @@ public struct LiveAnswer: Equatable, Hashable {
     public var unit: String?
     public var kind: AnswerKind
     /**
-     * Where a blank answer stops reading (the squiggle).
+     * Where a blank answer stops reading (the squiggle). Always None from `Engine::live`, so a keystroke doesn't
+     * pay for it: the bars ask `Engine::blank_span` once typing pauses.
      */
     public var blank: Span?
     /**
@@ -7586,7 +7587,8 @@ public struct LiveAnswer: Equatable, Hashable {
          * `π/4 ≈ 0.785398`, or the display.
          */dualLabel: String, number: Double?, unit: String?, kind: AnswerKind, 
         /**
-         * Where a blank answer stops reading (the squiggle).
+         * Where a blank answer stops reading (the squiggle). Always None from `Engine::live`, so a keystroke doesn't
+         * pay for it: the bars ask `Engine::blank_span` once typing pauses.
          */blank: Span?, 
         /**
          * The rest of the word being typed.

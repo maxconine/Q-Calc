@@ -27,6 +27,7 @@ mod answer;
 mod app;
 #[cfg(windows)]
 mod bench;
+#[cfg(windows)]
 mod bg;
 #[cfg(windows)]
 mod cheats;
