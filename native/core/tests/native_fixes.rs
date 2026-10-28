@@ -117,9 +117,29 @@ fn exponent_form_of_an_answer() {
         ("1.5e12", "1.5 × 10¹²"),
         ("2.5 × 10⁻³", "2.5 × 10⁻³"),
         ("3 000", "3 × 10³"),
+        // a prefixed unit gives its prefix to the power
+        ("1 GB", "1 × 10⁹ B"),
+        ("1.5 GB", "1.5 × 10⁹ B"),
+        ("5 km", "5 × 10³ m"),
+        ("2,000 km", "2 × 10⁶ m"),
+        ("3 ms", "3 × 10⁻³ s"),
+        ("4 MHz", "4 × 10⁶ Hz"),
+        ("7 kg", "7 × 10³ g"),
+        // units that only look prefixed, or have none, stay
+        ("5 Pa", "5 × 10⁰ Pa"),
+        ("3 min", "3 × 10⁰ min"),
+        ("60 mph", "6 × 10¹ mph"),
+        ("2 m", "2 × 10⁰ m"),
+        ("1 GiB", "1 × 10⁰ GiB"),
+        ("1 nmi", "1 × 10⁰ nmi"),
+        ("1 cd", "1 × 10⁰ cd"),
+        ("1 ft", "1 × 10⁰ ft"),
+        ("1 kN", "1 × 10³ N"),
     ] {
         assert_eq!(exponent_form(shown, 6).as_deref(), Some(want), "{shown}");
     }
+    assert_eq!(show("1 gigabyte"), "1 GB");
+    assert_eq!(exponent_form(&show("1 gigabyte"), 6).as_deref(), Some("1 × 10⁹ B"));
     for shown in ["1/3", "7:55 pm", "", "abc", "2x"] {
         assert_eq!(exponent_form(shown, 6), None, "{shown}");
     }

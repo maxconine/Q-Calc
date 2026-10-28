@@ -567,7 +567,7 @@ final class BarModel: ObservableObject {
         let request = TypesetRequest(
             expr: chained ? Chain.expr(text) : text,
             exact: prefixShown != nil || tabbed ? nil : exact,
-            display: prefixShown ?? (tabbed ? forms[formIndex] : live.display),
+            display: exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display)),
             solvedFor: rootsOf,
             message: solve != nil && rootsOf.isEmpty)
         guard request != typesetAsked else { return }
@@ -590,10 +590,10 @@ final class BarModel: ObservableObject {
 
     /// The answer the slot shows and ⌘C copies: the cycled form, else exact or approximate per the setting.
     var shownAnswer: String {
-        if let prefixShown { return prefixShown }
+        if let prefixShown { return exponentShown(prefixShown) }
         if formIndex > 0, forms.indices.contains(formIndex) { return forms[formIndex] }
         if settings.answerForm == "exact", let exact, !exact.isEmpty { return exact }
-        return live.display
+        return exponentShown(live.display)
     }
 
     /// the closed form beside the decimal, upgraded by the PSLQ search when it found one
@@ -1049,26 +1049,36 @@ final class BarModel: ObservableObject {
 
     // MARK: - SI prefix (⌥↑ ⌥↓)
 
-    /// what ⌃E put in the answer slot, so the next press puts the answer back
-    private var exponentShown: String?
+    /// ⌃E's mode: answers in exponent form (native only)
+    @Published private(set) var exponentMode = UserDefaults.standard.bool(forKey: BarModel.exponentModeKey)
+    static let exponentModeKey = "qcalc.exponentMode"
+    private var exponentMemo: (String, String)?
     @Published private(set) var prefixShown: String? { didSet { if prefixShown != oldValue { refreshTypeset() } } }
     private var prefixValue: Any?
 
     /// onPrefixStep: the answer one SI prefix up or down (stepPrefix), shown until the line changes
-    /// ⌃E (Settings › Keybinds, native only): the answer as `3 × 10³`, and back on the next press
+    /// ⌃E (Settings › Keybinds, native only): every answer in exponent form (`3 × 10³`) until it's pressed again,
+    /// remembered across launches; turning it on, the hint says how to turn it off
     func toggleExponent() {
-        guard !live.isBlank else { return }
-        if let shown = prefixShown, shown == exponentShown {
-            prefixShown = nil
-            exponentShown = nil
-            return
-        }
-        let current = prefixShown ?? live.display
-        guard let form = logic.string("engine/format", "exponentForm", [current, settings.significantFigures]),
-              !form.isEmpty else { return }
-        exponentShown = form
-        prefixShown = form
+        exponentMode.toggle()
+        UserDefaults.standard.set(exponentMode, forKey: Self.exponentModeKey)
+        // the pause's tip would land over this hint a moment later
+        pauseTimer?.invalidate()
+        let key = KeyActions.title(KeyActions.chord("exponent", in: settings.keybinds))
+        // only turning it on says how to turn it off; turning it off says nothing
+        hint = exponentMode ? "exponent form on · \(key.isEmpty ? "the same key" : key) turns it off" : nil
+        refreshTypeset()
         track("form.exponent")
+    }
+
+    /// `display` in exponent form while the mode is on (answers that don't start with a number stay as they are)
+    func exponentShown(_ display: String) -> String {
+        guard exponentMode, !display.isEmpty else { return display }
+        if let memo = exponentMemo, memo.0 == display { return memo.1 }
+        let form = logic.string("engine/format", "exponentForm", [display, settings.significantFigures]) ?? ""
+        let out = form.isEmpty ? display : form
+        exponentMemo = (display, out)
+        return out
     }
 
     func stepPrefix(_ dir: Int) {

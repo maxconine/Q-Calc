@@ -49,6 +49,15 @@ pub fn exponent_form(display: &str, sig_figs: u32) -> Option<String> {
         let v: i32 = sup.chars().filter_map(|c| SUPER.iter().position(|&d| d == c)).fold(0, |a, d| a * 10 + d as i32);
         exp = if neg { -v } else { v };
     }
+    // a prefixed unit after it gives its prefix to the power: `1 GB` is 1 × 10⁹ B, `5 km` 5 × 10³ m
+    let mut rest = display[whole..].to_string();
+    let word = rest.trim();
+    if !word.is_empty() && !word.contains(char::is_whitespace)
+        && let Some((power, base)) = crate::units::split_si_prefix(word)
+    {
+        exp += power;
+        rest = format!(" {base}");
+    }
     let n: f64 = format!("{digits}{}e{exp}", jsre::group(&m, 3)).parse().ok()?;
     if !n.is_finite() {
         return None;
@@ -58,7 +67,7 @@ pub fn exponent_form(display: &str, sig_figs: u32) -> Option<String> {
     let power: i32 = power.parse().ok()?;
     let sup: String = power.to_string().chars().map(|c| if c == '-' { '⁻' } else { SUPER[c.to_digit(10).unwrap_or(0) as usize] }).collect();
     let sign = if jsre::group(&m, 1).is_empty() { "" } else { MINUS };
-    Some(format!("{sign}{mant} × 10{sup}{}", &display[whole..]))
+    Some(format!("{sign}{mant} × 10{sup}{rest}"))
 }
 
 /// An answer's number as shown: rounded to `sig_figs`, scientific outside 1e-6..1e12.
