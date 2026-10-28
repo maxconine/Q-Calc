@@ -402,6 +402,8 @@ function readWord(s: string, i: number, to: number): Piece {
     const text = arg?.text ? matrixFn(key, [arg.text]) : null
     if (arg && text) return { text, end: arg.end }
   }
+  // `or (3 > 4)` is the operator before a group, not a call of `or`
+  if (key === 'and' || key === 'or') return { text: bareName(word), end: j }
   if (s[k] === '(' && CALLS.has(word)) {
     const close = matchClose(s, k, to)
     if (close > 0) return { text: callMacro(word, s.slice(k + 1, close)), end: close + 1 }
@@ -454,6 +456,9 @@ function bareName(word: string): string {
   if (CONTENT.has(key) && key === word) return `#${word}`
   if (key === 'dot') return 'dot.op'
   if (key === 'ans') return '"ans"'
+  // the logical words as their symbols: ∧ and ∨
+  if (key === 'and') return 'and'
+  if (key === 'or') return 'or'
   if (key === 'pi' || word === 'π') return 'pi'
   if (key === 'theta' || word === 'θ') return 'theta'
   if (key === 'tau') return 'tau'
@@ -558,8 +563,8 @@ function readSymbol(s: string, i: number, to: number): Piece {
     '°': 'degree',
     '…': 'dots.h',
     '|': '|',
-    // bare & is Typst's alignment point, which draws nothing
-    '&': '\\&',
+    // bitwise and, drawn as the wedge (a bare & is Typst's alignment point, which draws nothing)
+    '&': 'and',
     "'": "'",
     '′': "'",
     ':': ':',

@@ -23,11 +23,56 @@ fn exp_stays_real_for_reals() {
 }
 
 #[test]
-fn ampersand_is_drawn_in_the_typst_preview() {
-    // a bare & is Typst's alignment point and draws nothing; escaped, it shows
-    for line in ["sin(22&3)", "(22&3*21)22/23"] {
-        let typst = qcalc_core::app::typst_math::to_typst_math(line);
-        assert!(typst.contains("\\&"), "{line} → {typst}");
-        assert!(!typst.replace("\\&", "").contains('&'), "{line} → {typst}");
+fn and_is_bitwise_and() {
+    // `and` reads as `&`
+    for (t, want) in [("12 and 10", "8"), ("12 and 3", "0"), ("1 and 1", "1"), ("1 and 0", "0"), ("6 AND 3", "2")] {
+        assert_eq!(show(t), want, "{t}");
+        assert_eq!(show(t), show(&t.to_lowercase().replace(" and ", " & ")), "{t}");
+    }
+    assert_eq!(show("(2>1) and (3>4)"), "0");
+    assert_eq!(show("(2>1) and (4>3)"), "1");
+}
+
+#[test]
+fn logic_or() {
+    // `or` reads as `|`: on 0 and 1 (or true/false comparisons) it's logical or, on whole numbers bitwise
+    for (t, want) in [
+        ("1 or 0", "1"),
+        ("0 or 1", "1"),
+        ("1 or 1", "1"),
+        ("0 or 0", "0"),
+        ("12 or 3", "15"),
+        ("8 OR 1", "9"),
+        ("1 or 0 or 0", "1"),
+        ("0 or 0 or 0", "0"),
+        ("(2>1) or (3>4)", "1"),
+        ("(1>2) or (3>4)", "0"),
+        ("2>1 or 3>4", "1"),
+        ("1>2 or 3>4", "0"),
+        ("(1 or 0) and 1", "1"),
+    ] {
+        assert_eq!(show(t), want, "{t}");
+    }
+    assert_eq!(show("12 or 3"), show("12 | 3"));
+}
+
+#[test]
+fn and_or_in_phrases_stay_words() {
+    // the words in a phrase aren't operators: `between 1 and 2` stays blank (as on the page), not `1 & 2`
+    assert_eq!(show("between 1 and 2"), "");
+}
+
+#[test]
+fn and_or_are_wedge_and_vee_in_the_typst_preview() {
+    use qcalc_core::app::typst_math::to_typst_math;
+    // ∧ for & and `and`, ∨ for `or` (a bare & was Typst's alignment point and drew nothing)
+    for (line, want) in [
+        ("sin(22&3)", "sin(22 and 3)"),
+        ("(22&3*21)22/23", "(22 and 3 dot 21) 22 / 23"),
+        ("12 and 3", "12 and 3"),
+        ("1 or 0", "1 or 0"),
+        ("(2>1) or (3>4)", "(2 > 1) or (3 > 4)"),
+    ] {
+        assert_eq!(to_typst_math(line), want, "{line}");
     }
 }

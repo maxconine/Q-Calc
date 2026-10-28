@@ -747,6 +747,10 @@ fn read_word(s: &[char], i: usize, to: usize) -> Piece {
             return (text, end);
         }
     }
+    // `or (3 > 4)` is the operator before a group, not a call of `or`
+    if matches!(key.as_str(), "and" | "or") {
+        return (bare_name(&word), j);
+    }
     if at(s, k) == Some('(')
         && CALLS.contains(&word.as_str())
         && let Some(close) = match_close(s, k, to).filter(|&c| c > 0)
@@ -842,6 +846,9 @@ fn bare_name(word: &str) -> String {
     match key.as_str() {
         "dot" => return "dot.op".into(),
         "ans" => return "\"ans\"".into(),
+        // the logical words as their symbols: ∧ and ∨
+        "and" => return "and".into(),
+        "or" => return "or".into(),
         "pi" => return "pi".into(),
         "theta" => return "theta".into(),
         "tau" => return "tau".into(),
@@ -973,8 +980,8 @@ fn one(ch: char) -> Option<&'static str> {
         '°' => "degree",
         '…' => "dots.h",
         '|' => "|",
-        // bare & is Typst's alignment point, which draws nothing
-        '&' => "\\&",
+        // bitwise and, drawn as the wedge (a bare & is Typst's alignment point, which draws nothing)
+        '&' => "and",
         '\'' | '′' => "'",
         ':' => ":",
         ';' => ";",

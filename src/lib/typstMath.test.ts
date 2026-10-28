@@ -229,12 +229,12 @@ describe('a solve still being typed', () => {
   })
 })
 
-describe('ampersand', () => {
-  it('escapes & so Typst draws it rather than taking it as an alignment point', () => {
-    for (const line of ['sin(22&3)', '(22&3*21)22/23']) {
-      const typst = toTypstMath(line)
-      expect(typst).toContain('\\&')
-      expect(typst.replaceAll('\\&', '')).not.toContain('&')
-    }
+describe('and / or', () => {
+  it('draws & and `and` as the wedge and `or` as the vee', () => {
+    expect(toTypstMath('sin(22&3)')).toBe('sin(22 and 3)')
+    expect(toTypstMath('(22&3*21)22/23')).toBe('(22 and 3 dot 21) 22 / 23')
+    expect(toTypstMath('12 and 3')).toBe('12 and 3')
+    expect(toTypstMath('1 or 0')).toBe('1 or 0')
+    expect(toTypstMath('(2>1) or (3>4)')).toBe('(2 > 1) or (3 > 4)')
   })
 })
