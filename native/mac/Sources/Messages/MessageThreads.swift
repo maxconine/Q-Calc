@@ -231,7 +231,7 @@ private struct PanelHeader<Title: View>: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { infoHover = $0 }
-                .help("Safety code")
+                .hoverTip("Safety code")
                 .accessibilityLabel("Safety code")
             }
             Button(action: close) {
@@ -245,7 +245,7 @@ private struct PanelHeader<Title: View>: View {
             }
             .buttonStyle(.plain)
             .onHover { hover = $0 }
-            .help("Close (esc)")
+            .hoverTip("Close (esc)")
             .accessibilityLabel("Close")
         }
         .frame(minHeight: 22)
@@ -329,7 +329,7 @@ private struct ConversationRow: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help("Open messages with \(name)")
+        .hoverTip("Open messages with \(name)")
         .accessibilityLabel("\(name): \(last.mine ? "you: " : "")\(last.text), \(ThreadTime.label(last.at))")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -441,7 +441,7 @@ private struct ThreadView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(Color.qMuted)
-            .help("Send a file to \(name) (or drop one here, or ⌘V a copied one)")
+            .hoverTip("Send a file to \(name) (or drop one here, or ⌘V a copied one)")
             .accessibilityLabel("Send a file to \(name)")
             if let clip = model.threadClip { ClipChip(clip: clip) { model.threadClip = nil } }
             TextField("", text: $model.threadDraft)
@@ -471,7 +471,7 @@ private struct ThreadView: View {
                 switch model.threadReply {
                 case .sending: Text("sending…").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
                 case .sent: Text("sent").font(.system(size: Theme.small)).foregroundStyle(Color.qAccent)
-                case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1).help(note)
+                case let .failed(note): Text(note).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).lineLimit(1).hoverTip(note)
                 case .idle: EmptyView()
                 }
             }
@@ -497,7 +497,7 @@ private struct ClipChip: View {
             Button(action: remove) { Image(systemName: "xmark").font(.system(size: Theme.caption - 1, weight: .semibold)) }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.qMuted)
-                .help("Take the clipboard off (esc)")
+                .hoverTip("Take the clipboard off (esc)")
                 .accessibilityLabel("Remove clipboard")
         }
         .font(.system(size: Theme.small))
@@ -506,7 +506,7 @@ private struct ClipChip: View {
         .padding(.horizontal, 8)
         .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qAccent.opacity(0.12)))
         .fixedSize()
-        .help(clip.count > 400 ? String(clip.prefix(400)) + "…" : clip)
+        .hoverTip(clip.count > 400 ? String(clip.prefix(400)) + "…" : clip)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Clipboard to send: \(preview)")
     }

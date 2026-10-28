@@ -150,7 +150,7 @@ final class BarTextView: NSTextView {
         if now || tipShown != nil || tipEngaged {
             show()
         } else {
-            tipTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { _ in show() }
+            tipTimer = Timer.scheduledTimer(withTimeInterval: HoverTip.delay, repeats: false) { _ in show() }
         }
     }
 

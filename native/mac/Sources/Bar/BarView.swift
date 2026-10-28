@@ -91,7 +91,7 @@ struct BarView: View {
                 Spacer(minLength: 0)
                 Button { model.skipTutorial() } label: { Text("skip").underline() }
                     .buttonStyle(.plain)
-                    .help("skip the tutorial (or type skip)")
+                    .hoverTip("skip the tutorial (or type skip)")
             }
             .font(.system(size: Theme.small))
             .foregroundStyle(Color.qMuted)
@@ -115,7 +115,7 @@ struct BarView: View {
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 12)
                 .padding(.top, -12)
-                .help(hint)
+                .hoverTip(hint)
                 .accessibilityLabel(hint)
         }
         // the one-time line on what's end-to-end encrypted (Messages/ShareViews.swift)
@@ -205,7 +205,7 @@ private struct Composer: View {
                     .foregroundStyle(Color.qMuted)
                     .opacity(0.75)
                     // native only: no gap after it, so Tab / → typing it in (`ans*2`) moves nothing
-                    .help(model.ansHover)
+                    .hoverTip(model.ansHover)
                     .accessibilityLabel("continues from the last answer")
             }
             ZStack(alignment: .leading) {
@@ -300,7 +300,7 @@ struct LiveAnswerView: View {
                 .truncationMode(.tail)  // .live: text-overflow: ellipsis, so the start (what is wrong) stays
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
                 // a narrow bar cuts its end off; the pointer shows it whole (native only)
-                .help(message)
+                .hoverTip(message)
         } else if model.live.isBlank, let steady = model.steady {
             // .live-steady: never the answer's colour, gone after a pause
             AnswerText(text: model.pretty(steady), size: Theme.display)
@@ -353,7 +353,7 @@ private struct SolveRoots: View {
                     .padding(.horizontal, 2).padding(.trailing, 0.2 * Theme.answerPart)
             }
             .buttonStyle(.plain)
-            .help("Copy all the solutions")
+            .hoverTip("Copy all the solutions")
             ForEach(Array(solve.roots.enumerated()), id: \.offset) { k, root in
                 if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
                 RootButton(model: model, shown: Pretty.answer(labels[k]), copy: String(format: "%.17g", root))
@@ -379,7 +379,7 @@ private struct RootButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help("Copy this solution")
+        .hoverTip("Copy this solution")
         .accessibilityLabel("Solution \(shown)")
     }
 }
@@ -424,7 +424,7 @@ struct TimeLetterChips: View {
         }
         .buttonStyle(.plain)
         .disabled(locked)
-        .help(locked ? "\(letter) is written with a dot, so it changes with time"
+        .hoverTip(locked ? "\(letter) is written with a dot, so it changes with time"
               : varying ? "Treat \(letter) as a constant" : "Treat \(letter) as changing with time")
         .accessibilityLabel("\(letter): \(varying ? "changing with time" : "constant")\(locked ? "" : ". Click to switch")")
     }
@@ -494,7 +494,7 @@ private struct AnswerButton: View {
         .buttonStyle(.plain)
         .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
         .onHover { hover = $0 }
-        .help(help)
+        .hoverTip(help)
         .accessibilityLabel("Answer \(shown)")
         .accessibilityHint("Copies it")
         .onDrag { NSItemProvider(object: copy as NSString) }
@@ -603,7 +603,7 @@ private struct EdgeTool<Label: View>: View {
         .onHover { on in
             hover = on
             tipShown = false
-            if on { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { if hover { tipShown = true } } }
+            if on { DispatchQueue.main.asyncAfter(deadline: .now() + HoverTip.delay) { if hover { tipShown = true } } }
         }
         .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {
             if tipShown {
@@ -687,7 +687,7 @@ private struct HistoryRowView: View, Equatable {
                 .buttonStyle(.plain)
                 .onHover { exprHover = $0 }
                 // HistoryTape.tsx's titles; the pointer also reads an expression cut off at the row's end in full
-                .help(exprTip)
+                .hoverTip(exprTip)
                 .accessibilityLabel("Expression \(row.expr)")
 
                 answers
@@ -766,7 +766,7 @@ private struct AnswerCell: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help(tip)
+        .hoverTip(tip)
         .accessibilityLabel("Answer \(text)")
     }
 }
@@ -1025,7 +1025,7 @@ private struct CardView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                         .onTapGesture { model.openThread(card.from) }
-                        .help("Open messages with \(card.from)")
+                        .hoverTip("Open messages with \(card.from)")
                 }
                 HStack(spacing: 8) {
                     TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }))

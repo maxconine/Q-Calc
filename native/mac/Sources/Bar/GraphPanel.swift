@@ -53,7 +53,7 @@ struct GraphPanel: View {
                 .opacity(atHome ? 0.4 : 1)
                 .padding(.vertical, -3).padding(.trailing, -8)
                 .onHover { resetHover = $0 }
-                .help("Reset view")
+                .hoverTip("Reset view")
             }
             if let error = state.error {
                 // .graph-error
@@ -353,7 +353,7 @@ private struct CriticalChip: View {
         .onHover { hover = $0 }
         .onChange(of: lit) { highlight($0) }
         .onDisappear { if lit { highlight(false) } }
-        .help("Copy x")
+        .hoverTip("Copy x")
         .accessibilityLabel("\(kind) \(coords)")
         .accessibilityHint("Copies x")
     }

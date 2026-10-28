@@ -34,7 +34,7 @@ struct ShareLock: View {
         Image(systemName: "lock.fill")
             .font(.system(size: Theme.small - 3))
             .foregroundStyle(Color.qMuted)
-            .help(tip)
+            .hoverTip(tip)
             .accessibilityLabel(tip)
     }
 }
@@ -62,7 +62,7 @@ struct ClipBlock: View {
                 .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qFillHover))
                 .overlay(RoundedRectangle(cornerRadius: Theme.radiusS).strokeBorder(focused ? Color.qAccent : .clear, lineWidth: 2))
             ShareButton(title: copied ? "Copied" : "Copy") { copy() }
-                .help("Copy to your clipboard (⌘C)")
+                .hoverTip("Copy to your clipboard (⌘C)")
                 .accessibilityLabel("Copy")
         }
         .focusable()
@@ -139,18 +139,18 @@ struct FileBlock: View {
     @ViewBuilder private func actions(_ t: MessageFiles.Transfer) -> some View {
         if mine {
             if files.canRetry(file.id) {
-                ShareButton(title: "Retry") { files.retry(file.id) }.help("Send the rest")
+                ShareButton(title: "Retry") { files.retry(file.id) }.hoverTip("Send the rest")
             }
             if t.state == "offered" || t.state == "uploading" || files.canRetry(file.id) {
-                ShareButton(title: "Take Back") { files.cancel(file.id) }.help("Stop sending it")
+                ShareButton(title: "Take Back") { files.cancel(file.id) }.hoverTip("Stop sending it")
             }
         } else {
             switch t.state {
             // a request's file waits for Allow
             case "received" where messages.accepted.contains(who), "failed" where messages.accepted.contains(who) && t.saved == nil:
-                ShareButton(title: "Save") { files.save(file.id) }.help("Save to Downloads")
+                ShareButton(title: "Save") { files.save(file.id) }.hoverTip("Save to Downloads")
             case "accepting", "waiting", "downloading":
-                ShareButton(title: "Cancel") { files.decline(file.id) }.help("Don’t save it")
+                ShareButton(title: "Cancel") { files.decline(file.id) }.hoverTip("Don’t save it")
             case "saved":
                 ShareButton(title: "Show in Finder") { files.reveal(file.id) }
             default:
@@ -217,7 +217,7 @@ struct ThreadKeyInfo: View {
                     Spacer(minLength: 0)
                     Button("Trust New Key") { keys.trust(name) }
                         .controlSize(.small)
-                        .help("Pin \(name)’s new key and open what they sent")
+                        .hoverTip("Pin \(name)’s new key and open what they sent")
                 }
                 Text(words("keyChangedDetail", [name]))
                     .font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
@@ -259,7 +259,7 @@ struct PrivacyNoticeLine: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { hover = $0 }
-                .help("Got it")
+                .hoverTip("Got it")
                 .accessibilityLabel("Dismiss")
             }
             .font(.system(size: Theme.small))
