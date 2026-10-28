@@ -76,6 +76,92 @@ final class BarTextView: NSTextView {
         for r in units where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: Theme.accent, forCharacterRange: r) }
     }
 
+    // ---- .quick-unit-tip: the full name of the unit, function or constant under the pointer, in a small ink label
+    //      over the word. The first waits for a short rest (350 ms); once one has shown, the next word's shows at
+    //      once, and an edit under the pointer renames it straight away. It goes when the pointer leaves the line.
+
+    /// each named word in the line (wordNames, from the core)
+    var wordNames: [WordName] = [] {
+        didSet {
+            guard wordNames != oldValue else { return }
+            if pointer != nil, tipEngaged { hoverName(now: true) } else if pointer == nil { hideTip() }
+        }
+    }
+    private var pointer: NSPoint?
+    private var tipEngaged = false
+    private var tipTimer: Timer?
+    private var tipShown: (name: String, range: NSRange)?
+    private lazy var tip = WordTipWindow()
+    private var nameTracking: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let nameTracking { removeTrackingArea(nameTracking) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(area)
+        nameTracking = area
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        pointer = convert(event.locationInWindow, from: nil)
+        if !wordNames.isEmpty || tipShown != nil { hoverName(now: false) }
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        pointer = nil
+        tipEngaged = false
+        hideTip()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { pointer = nil; tipEngaged = false; hideTip() }
+    }
+
+    /// where a word's glyphs are, in the view
+    private func wordRect(_ range: NSRange) -> NSRect? {
+        guard let lm = layoutManager, let tc = textContainer, NSMaxRange(range) <= (string as NSString).length else { return nil }
+        let glyphs = lm.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
+        return lm.boundingRect(forGlyphRange: glyphs, in: tc).offsetBy(dx: textContainerInset.width, dy: textContainerInset.height)
+    }
+
+    private func hoverName(now: Bool) {
+        tipTimer?.invalidate()
+        tipTimer = nil
+        guard let pointer, let hit = wordNames.first(where: { w in
+            guard let r = wordRect(w.range) else { return false }
+            return pointer.x >= r.minX && pointer.x <= r.maxX
+        }), let rect = wordRect(hit.range) else {
+            hideTip()
+            return
+        }
+        if tipShown?.name == hit.name, tipShown?.range == hit.range { return }
+        let show = { [weak self] in
+            guard let self, let window = self.window, window.isVisible else { return }
+            self.tipEngaged = true
+            self.tipShown = (hit.name, hit.range)
+            // the label's bottom 2 pt into the top of the line's box, its left at the word's (bottom: calc(100% - 2px))
+            let onWindow = self.convert(NSRect(x: rect.minX, y: 0, width: rect.width, height: self.bounds.height), to: nil)
+            let onScreen = window.convertToScreen(onWindow)
+            self.tip.show(hit.name, at: NSPoint(x: onScreen.minX, y: onScreen.maxY - 2), over: window)
+        }
+        if now || tipShown != nil || tipEngaged {
+            show()
+        } else {
+            tipTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { _ in show() }
+        }
+    }
+
+    private func hideTip() {
+        tipTimer?.invalidate()
+        tipTimer = nil
+        guard tipShown != nil else { return }
+        tipShown = nil
+        tip.hide()
+    }
+
     static let fontSize: CGFloat = 24
     static let attributes: [NSAttributedString.Key: Any] = [
         .font: NSFont.systemFont(ofSize: fontSize, weight: .regular),
@@ -553,6 +639,7 @@ struct InputField: NSViewRepresentable {
         text.squiggle = deco.squiggle
         text.offer = deco.offer
         text.colour(units: deco.units, words: deco.words)
+        text.wordNames = deco.names
         text.ghostTail = model.completion ?? ""
         text.insertionPointColor = Theme.ink
         // keep the caret in view as the line grows

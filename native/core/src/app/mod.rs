@@ -4,6 +4,7 @@
 pub mod draft;
 pub mod missing_unit;
 pub mod unit_spans;
+pub mod word_names;
 
 // ---- WP-APP-LOGIC ----
 pub mod analytics;
