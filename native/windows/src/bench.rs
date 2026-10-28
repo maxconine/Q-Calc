@@ -15,7 +15,7 @@
 //!   `{"ms": [...], "idx": [...], "timeouts": n, "wallMs": t, "n": n, "median": m, "p90": a, "p99": b}`.
 //! - commands: `{"cmd": "show"}`, `"hide"`, `"state"` (the line, the answer, the rows, visibility),
 //!   `{"cmd": "type", "text": "..."}` (posts WM_CHARs), `{"cmd": "key", "vk": 13}`, `"mem"` (working set and
-//!   private bytes), `"trim"` (what a long hide does), `"quit"`.
+//!   private bytes), `"release"` (what 30 s hidden gives back, now), `"trim"` (that and the working-set trim), `"quit"`.
 //!
 //! The app also logs `ready` with ms since process creation (log.rs), for warm-launch timing.
 

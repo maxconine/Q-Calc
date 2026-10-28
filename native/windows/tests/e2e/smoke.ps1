@@ -871,6 +871,59 @@ Invoke-Check 'K1' 'hotkey works after another process held it at launch' 'requir
        Detail = "held by the test at launch: $held; registered while held: $([bool]$during.active); taken after release: $took; shown by the chord: $shown; log: $($attempts -join ' / ')" }
 }
 
+# ---- what a screen reader sees ----
+
+# UI Automation's tree (uia.rs, a11y.rs bar_tree, settings_window.rs uia_tree), read as Narrator reads it
+function Uia-Children($e) {
+    @($e.FindAll([System.Windows.Automation.TreeScope]::Children, [System.Windows.Automation.Condition]::TrueCondition))
+}
+function Uia-Describe($e) {
+    $c = $e.Current
+    $v = ''
+    try { $v = '=' + $e.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } catch {}
+    "$($c.ControlType.ProgrammaticName -replace 'ControlType\.', '') '$($c.Name)'$v$(if ($c.HasKeyboardFocus) { ' (focus)' })"
+}
+
+Invoke-Check 'A1' 'ui automation: the bar, the answer, the tape and settings are named parts' 'required' {
+    $AE = [System.Windows.Automation.AutomationElement]
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '6*7'
+    Read-Answer '^42$' | Out-Null
+    $N::Chord($N::VK_RETURN)
+    Wait-Until { $s = State; $s -and $s.text -eq '' } 2000 | Out-Null
+    Type-Text '2+2'
+    Read-Answer '^4$' | Out-Null
+    # the line has the focus; Up picks the last row in the tape, which takes it
+    $bar = $AE::FromHandle((Get-Bar))
+    $kids = Uia-Children $bar
+    $edit = $kids | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::Edit } | Select-Object -First 1
+    $value = if ($edit) { $edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } else { '' }
+    $answer = $kids | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::Text -and $_.Current.Name -eq '4' }
+    $focused = $edit -and $edit.Current.HasKeyboardFocus
+    $N::Chord($N::VK_UP)
+    Start-Sleep -Milliseconds 300
+    $rows = @(Uia-Children $bar | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::ListItem })
+    $row = $rows | Where-Object { $_.Current.Name -like '6*7 = 42' -or $_.Current.Name -like '6×7 = 42' } | Select-Object -First 1
+    $rowFocus = $row -and $row.Current.HasKeyboardFocus
+    $seen = (Uia-Children $bar | ForEach-Object { Uia-Describe $_ }) -join '; '
+    $N::Chord($N::VK_ESCAPE)
+    Hide-QCalc
+    Send-Pipe @{ cmd = 'settings' } | Out-Null
+    Wait-Until { (Get-SettingsWindow) -ne [IntPtr]::Zero } 4000 | Out-Null
+    Start-Sleep -Milliseconds 300
+    $sw = Get-SettingsWindow
+    $parts = if ($sw -ne [IntPtr]::Zero) { Uia-Children ($AE::FromHandle($sw)) } else { @() }
+    $tabs = @($parts | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::TabItem }).Count
+    $checks = @($parts | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::CheckBox }).Count
+    $radios = @($parts | Where-Object { $_.Current.ControlType -eq [System.Windows.Automation.ControlType]::RadioButton }).Count
+    $settingsName = if ($sw -ne [IntPtr]::Zero) { ($AE::FromHandle($sw)).Current.Name } else { '' }
+    if ($sw -ne [IntPtr]::Zero) { $N::Close($sw) | Out-Null }
+    Wait-Until { (Get-SettingsWindow) -eq [IntPtr]::Zero } 2000 | Out-Null
+    @{ Pass = ($edit -and $value -eq '2+2' -and $answer -and $focused -and $row -and $rowFocus -and $tabs -ge 5 -and $checks -ge 1 -and $radios -ge 2)
+       Detail = "bar: $seen; line focused before Up: $focused, row focused after: $rowFocus; settings '$settingsName': $tabs tabs, $checks check boxes, $radios radio buttons" }
+}
+
 # ---- targets (soft) ----
 
 Invoke-Check 'Z1' 'idle memory after use, hidden and trimmed' 'target' {
@@ -1017,7 +1070,8 @@ if (-not $script:makensis) {
         $p = Start-Process -FilePath (Join-Path $InstallDir 'uninstall.exe') -ArgumentList '/S' -PassThru
         $p.WaitForExit(60000) | Out-Null
         # the uninstaller runs a copy of itself from %TEMP%; wait for its work
-        $gone = Wait-Until { -not (Test-Path $exe) -and -not (Test-Path $UninstallKey) } 30000
+        # mid-delete the exe can answer Access denied, which Stop turns into a throw: that is "not gone yet"
+        $gone = Wait-Until { try { -not (Test-Path $exe) -and -not (Test-Path $UninstallKey) } catch { $false } } 30000
         $closed = @($running | Where-Object { -not $_.HasExited }).Count -eq 0
         $run = (Get-ItemProperty $RunKey -ErrorAction SilentlyContinue).$AppId
         $data = Test-Path (Join-Path $Root 'data-installed\settings.json')
