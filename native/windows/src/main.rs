@@ -95,6 +95,8 @@ mod warp;
 #[cfg(windows)]
 mod window;
 #[cfg(windows)]
+mod word_tip;
+#[cfg(windows)]
 mod wrap;
 
 #[cfg(feature = "perf")]
