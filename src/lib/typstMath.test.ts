@@ -145,7 +145,7 @@ describe('matrices', () => {
 describe('typstPreviewUseful', () => {
   it.each([
     '1/3 + 2/5', 'x^2 - 5x + 6 = 0', 'integral(x^2, 0, 1)', 'sum n, n=1..9', '[1 2; 3 4]', 'det([1 2; 3 4])',
-    'inv([1 2; 3 4])', 'sqrt(2)', 'nthRoot(27, 3)', 'sin^-1(0.5)', 'gcd(12, 18)', 'sin(x)', '2 sin(30)', 'cos(pi/3)',
+    'inv([1 2; 3 4])', 'sqrt(2)', 'nthRoot(27, 3)', 'sin^-1(0.5)', 'abs(-3)', 'sin(x)', 'cos(pi/3)',
     '5!', '2^8', 'x_1 + x_2', 'f(x) = x^3', '10 choose 3', '1/2 + 1/3', 'x/(x+1)',
   ])('shows for %s, which typesets differently', (expr) => {
     expect(typstPreviewUseful(expr)).toBe(true)
@@ -159,7 +159,7 @@ describe('typstPreviewUseful', () => {
     expect(typstPreviewUseful(expr)).toBe(false)
   })
 
-  it.each(['3.5/2', '10/4', '-10/4', '1/3', 'sin(90)', 'ln(2)', 'log(100)', 'abs(-3)', 'arccsc(2)', 'cos(-0.5)'])(
+  it.each(['3.5/2', '10/4', '-10/4', '1/3', 'sin(90)', 'ln(2)', 'log(100)', 'arccsc(2)', 'cos(-0.5)'])(
     'hides for %s, one division of two numbers or one function of a number',
     (expr) => {
       expect(typstPreviewUseful(expr)).toBe(false)
@@ -199,6 +199,48 @@ describe('typstPreviewUseful', () => {
 
   it.each(['2 hr 30 min', '10 km to mi', '3:45pm + 4 hr 10 min', '5 m * 3 m'])('hides for %s', (expr) => {
     expect(typstPreviewUseful(expr)).toBe(false)
+  })
+
+  it.each([
+    'gcd(12,18)', 'max(1,2)', 'mean(1,2,3)', 'lcd(4,6)', 'gcf(12,18)', 'sin(30)+1', '2≠3', '2 sin(30)',
+    'max(-1.5, 2) * 3', 'gcd(12, 18) ÷ 2', 'min(max(1, 2), 3)',
+  ])('hides for %s: calls of plain numbers read the same typeset', (expr) => {
+    expect(typstPreviewUseful(expr)).toBe(false)
+  })
+
+  it.each(['sqrt(2) + 1', 'abs(-3)', 'floor(2.5)', 'nCr(5, 2)', 'log2(8)', 'atan(1)', 'sin(30)/2', '5! + 1', 'x_1 + 2'])(
+    'shows for %s, which draws differently',
+    (expr) => {
+      expect(typstPreviewUseful(expr)).toBe(true)
+    },
+  )
+
+  it.each(['50 mph in km/h', '5 km to mi', '3 ft + 2 in to cm', '10 kg into lb'])('hides for the conversion %s', (expr) => {
+    expect(typstPreviewUseful(expr)).toBe(false)
+  })
+
+  it.each([
+    ['9.8 m/s^2', '9.8 "m" / "s" ^ 2'],
+    ['3 kg * 9.8 m/s^2', '3 "kg" dot 9.8 "m" / "s" ^ 2'],
+    ['F = 2 kg * 3 m/s^2', 'F = 2 "kg" dot 3 "m" / "s" ^ 2'],
+  ])('sets the units of %s upright', (expr, math) => {
+    expect(typstPreviewUseful(expr)).toBe(true)
+    expect(previewMath(expr)).toBe(math)
+  })
+
+  it('keeps a variable italic', () => {
+    expect(previewMath('m^2 + x')).toBe('m ^ 2 + x')
+    expect(previewMath('x^2 - 5x')).toBe('x ^ 2 - 5 x')
+    expect(previewMath('integrate t^2 from 0 to 1')).toBe('integral_(0)^(1) t ^ 2 dif t')
+    expect(previewMath('2H2 + O2')).toBe('2 H_(2) + O_(2)')
+  })
+
+  it.each([
+    ['1e6', '1 times 10^(6)'],
+    ['2.5e-3', '2.5 times 10^(-3)'],
+  ])('shows scientific notation %s as a power of ten', (expr, math) => {
+    expect(typstPreviewUseful(expr)).toBe(true)
+    expect(previewMath(expr)).toBe(math)
   })
 
   it('sets an answer unit upright, like the units typed', () => {

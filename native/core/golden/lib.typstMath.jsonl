@@ -4,18 +4,42 @@
 {"fn":"copiedEquation","args":["√(2)+1",false],"out":"√(2)+1","src":"src/lib/typstMath.test.ts"}
 {"fn":"copiedEquation","args":["√(2)+1",true],"out":"sqrt(2) + 1","src":"src/lib/typstMath.test.ts"}
 {"fn":"copiedEquation","args":["∫_0^1 x^2 dx",true],"out":"integral_(0)^(1) x ^ 2 dif x","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["/3"],"out":"\\/ 3","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["0b1010"],"out":"\"0b1010\"","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["0o17"],"out":"\"0o17\"","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["0xff + 1/2"],"out":"\"0xff\" + 1 / 2","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["1e6"],"out":"1 times 10^(6)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["2.5e-3"],"out":"2.5 times 10^(-3)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["2H2 + O2"],"out":"2 H_(2) + O_(2)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["2^"],"out":"2 \\^","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["3 kg * 9.8 m/s^2"],"out":"3 \"kg\" dot 9.8 \"m\" / \"s\" ^ 2","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["9.8 m/s^2"],"out":"9.8 \"m\" / \"s\" ^ 2","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["@ ` \\ ‹ « “ ‘"],"out":"\\@ \\` backslash ‹ « “ ‘","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["F = 2 kg * 3 m/s^2"],"out":"F = 2 \"kg\" dot 3 \"m\" / \"s\" ^ 2","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["_3"],"out":"zws_(3)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["abs()"],"out":"abs(zws)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["amat(1, 2; 3, 4)"],"out":"amat(1, 2; 3, 4)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["cbrt(sqrt"],"out":"root(3, op(\"sqrt\"))","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["d/dx x^2 + 1"],"out":"frac(dif, dif x) (x ^ 2 + 1)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["d/dx x^3 at 2"],"out":"lr(frac(dif, dif x) x ^ 3 |)_(x = 2)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["d/dx x^3"],"out":"frac(dif, dif x) x ^ 3","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["dx_1"],"out":"#dx _(1)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["d²/dx² sin(x)"],"out":"frac(dif^2, dif x^2) sin(x)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["floor(1, 2)"],"out":"op(\"floor\")(1, 2)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["frac(1)"],"out":"op(\"frac\")(1)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["f″(x)"],"out":"f '' (x)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["int 0..1 x^2 dx"],"out":"integral_(0)^(1) x ^ 2 dif x","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["integral of x^2 from 0 to 1"],"out":"integral_(0)^(1) x ^ 2 dif x","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["integrate t^2 from 0 to 1"],"out":"integral_(0)^(1) t ^ 2 dif t","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["ip(x)"],"out":"op(\"ip\")(x)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["isolate T in P*V = n*R*T"],"out":"P dot V = n dot R dot T","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["lim x->0 sin(x)/x"],"out":"lim_(x arrow.r 0) sin(x) / x","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["limit of sin(x)/x as x -> 0"],"out":"lim_(x arrow.r 0) sin(x) / x","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["log(8, 2)"],"out":"log(8, 2)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["m^2 + x"],"out":"m ^ 2 + x","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["prod k from 1 to 5"],"out":"product_(k = 1)^(5) k","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["second derivative of t^4"],"out":"frac(dif^2, dif t^2) t ^ 4","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["sin(2;3)"],"out":"sin(2 \\; 3)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["solve ( 6 (3 / (3 + R)"],"out":"(6 (3 / (3 + R)))","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["solve ( 6 (3 / (3 + R)) = 2"],"out":"(6 (3 / (3 + R)) = 2)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["solve 2x = 6"],"out":"2 x = 6","src":"src/lib/typstMath.test.ts"}
@@ -24,18 +48,37 @@
 {"fn":"previewMath","args":["solve for x: x^2 = 4"],"out":"x ^ 2 = 4","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["solve x^2 = 4"],"out":"x ^ 2 = 4","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["sum n^2 from 1 to 10"],"out":"sum_(n = 1)^(10) n ^ 2","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["x^2 - 5x"],"out":"x ^ 2 - 5 x","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["x^2 = 4 for x"],"out":"x ^ 2 = 4","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["x^2 \""],"out":"x ^ 2 \\\"","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["¥ ¢ ‰ § ¶ —"],"out":"¥ ¢ ‰ § ¶ —","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["‖v‖"],"out":"norm(v)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["⁻¹"],"out":"zws^(-1)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["€5 + £3"],"out":"€ 5 + £ 3","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["√"],"out":"\\√","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["√()"],"out":"sqrt(zws)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["√(1, 2)"],"out":"sqrt(lr(1 , 2))","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["∛"],"out":"\\∛","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["∜(16)"],"out":"root(4, 16)","src":"src/lib/typstMath.test.ts"}
 {"fn":"previewMath","args":["∫0..pi sin(x) dx"],"out":"integral_(0)^(pi) sin(x) dif x","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["⌈2.5⌉"],"out":"ceil(2.5)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["⌊x"],"out":"floor.l x","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["⌊x⌋"],"out":"floor(x)","src":"src/lib/typstMath.test.ts"}
+{"fn":"previewMath","args":["⟨x, y⟩"],"out":"lr(chevron.l x , y chevron.r)","src":"src/lib/typstMath.test.ts"}
+{"fn":"toTypstMath","args":["(22&3*21)22/23"],"out":"(22 and 3 dot 21) 22 / 23","src":"src/lib/typstMath.test.ts"}
+{"fn":"toTypstMath","args":["(2>1) or (3>4)"],"out":"(2 > 1) or (3 > 4)","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["."],"out":".","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":[".5"],"out":".5","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["0.1+0.2"],"out":"0.1 + 0.2","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["0.125"],"out":"0.125","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toTypstMath","args":["1 or 0"],"out":"1 or 0","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["1.26765060023e+30"],"out":"1.26765060023 times 10^(30)","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["1.5"],"out":"1.5","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["1/2"],"out":"1 / 2","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["1/3"],"out":"1 / 3","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["1/sqrt(2)"],"out":"1 / sqrt(2)","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["100 °C"],"out":"100 degree C","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"toTypstMath","args":["12 and 3"],"out":"12 and 3","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["1234567"],"out":"1234567","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["1e-20"],"out":"1 times 10^(-20)","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["1e-5"],"out":"1 times 10^(-5)","src":"native/golden-capture/corpus/science.golden.ts"}
@@ -94,6 +137,7 @@
 {"fn":"toTypstMath","args":["nCr(5, 2)"],"out":"binom(5, 2)","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["pi/4"],"out":"pi / 4","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["prod_n=1^5 n"],"out":"product_(n = 1)^(5) n","src":"src/lib/typstMath.test.ts"}
+{"fn":"toTypstMath","args":["sin(22&3)"],"out":"sin(22 and 3)","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["sin(60)"],"out":"sin(60)","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["sin(90)"],"out":"sin(90)","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["sin(ans)"],"out":"sin(\"ans\")","src":"src/lib/typstMath.test.ts"}
@@ -134,16 +178,16 @@
 {"fn":"typstDocument","args":["1.2*10^3 Nm / (28*10^9 Pa)","4.28571428571e-8 m³"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 1.2 dot 10 ^ 3 \"Nm\" / (28 dot 10 ^ 9 \"Pa\") = 4.28571428571 times 10^(-8) \"m³\" $\n","src":"src/lib/typstMath.test.ts"}
 {"fn":"typstDocument","args":["1/3","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 1 / 3 = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["1/sqrt(2)","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 1 / sqrt(2) = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"typstDocument","args":["100 °C","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 100 degree C = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"typstDocument","args":["100 °C","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 100 \"°C\" = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["1234567","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 1234567 = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["1e-5","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 1 times 10^(-5) = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["2/3","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 2 / 3 = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["22/7","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 22 / 7 = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["26.5 lb","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 26.5 \"lb\" = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["2^0.5","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 2 ^ 0.5 = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"typstDocument","args":["3 m * 4 m","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 3 m dot 4 m = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
+{"fn":"typstDocument","args":["3 m * 4 m","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 3 \"m\" dot 4 \"m\" = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["5 kg","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 5 \"kg\" = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
-{"fn":"typstDocument","args":["5 m * 3 m","15 m²"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 5 m dot 3 m = 15 \"m²\" $\n","src":"src/lib/typstMath.test.ts"}
+{"fn":"typstDocument","args":["5 m * 3 m","15 m²"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ 5 \"m\" dot 3 \"m\" = 15 \"m²\" $\n","src":"src/lib/typstMath.test.ts"}
 {"fn":"typstDocument","args":["[[1,2],[3,4]]","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ mat(delim: \"[\", 1, 2; 3, 4) = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["cos(45)","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ cos(45) = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"typstDocument","args":["d/dx sin(x)","1"],"out":"#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ frac(dif, dif x) sin(x) = 1 $\n","src":"native/golden-capture/corpus/science.golden.ts"}
@@ -166,6 +210,10 @@
 {"fn":"typstPreviewUseful","args":["(9.81 +/- 0.02) * (2.50 +/- 0.01)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["-10/4"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["0.5 * 3"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["0b1010"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["0o17"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["0xff + 1/2"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["0xff"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["1",0,["1","1/","1/x"]],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["1.2*10^3 Nm / (28*10^9 Pa * pi/2 * (25*10^-3)^4)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["1/",1,["1","1/","1/x"]],"out":false,"src":"src/lib/typstMath.test.ts"}
@@ -174,30 +222,43 @@
 {"fn":"typstPreviewUseful","args":["1/3"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["1/x",2,["1","1/","1/x"]],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["10 choose 3"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["10 kg into lb"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["10 km to mi"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["10/4"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["100 usd to eur"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["12 kg to lb"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["12*4"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["1e6"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["2 hr 30 min"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["2 pi"],"out":false,"src":"src/lib/typstMath.test.ts"}
-{"fn":"typstPreviewUseful","args":["2 sin(30)"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["2 sin(30)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["2+3"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["2.5e-3"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["20% off 80"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["2^"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["2^8"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["2x + 3 = 7"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["2≠3"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["3 ft + 2 in to cm"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["3 kg * 9.8 m/s^2"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["3.5/2"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["3:45pm + 4 hr 10 min"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["42"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["5 km to mi"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["5 m * 3 m"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["5! + 1"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["5!"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["50 kN / 20 mm^2"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["50 mph in km/h"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["72 f"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["9.8 m/s^2"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["9.81 m/s^2 * (2 s)^2 / 2"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["?"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["F = 2 kg * 3 m/s^2"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["[1 2; 3 4]"],"out":true,"src":"src/lib/typstMath.test.ts"}
-{"fn":"typstPreviewUseful","args":["abs(-3)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["abs(-3)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["arccsc(2)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["atan(1)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["cos(-0.5)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["cos(pi/3)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["d/dx x^2 + 1"],"out":true,"src":"src/lib/typstMath.test.ts"}
@@ -206,7 +267,10 @@
 {"fn":"typstPreviewUseful","args":["det([1 2; 3 4])"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["d²/dx² sin(x)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["f(x) = x^3"],"out":true,"src":"src/lib/typstMath.test.ts"}
-{"fn":"typstPreviewUseful","args":["gcd(12, 18)"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["floor(2.5)"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["gcd(12, 18) ÷ 2"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["gcd(12,18)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["gcf(12,18)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["graph x^2"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["int 0..1 x^2 dx"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["integral of x^2 from 0 to 1"],"out":true,"src":"src/lib/typstMath.test.ts"}
@@ -215,14 +279,24 @@
 {"fn":"typstPreviewUseful","args":["inv([1 2; 3 4])"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["isolate T in P*V = n*R*T"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["isolate T in PV = nRT"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["lcd(4,6)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["lim x->0 sin(x)/x"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["limit of sin(x)/x as x -> 0"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["ln(2)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["log(100)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["log2(8)"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["max(-1.5, 2) * 3"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["max(1,2)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["mean(1,2,3)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["min(max(1, 2), 3)"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["nCr(5, 2)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["nthRoot(27, 3)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["periodic table"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["prod k from 1 to 5"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["second derivative of t^4"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["sin(2;3)"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["sin(30)+1"],"out":false,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["sin(30)/2"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["sin(90)"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["sin(x)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["sin^-1(0.5)"],"out":true,"src":"src/lib/typstMath.test.ts"}
@@ -233,6 +307,7 @@
 {"fn":"typstPreviewUseful","args":["solve 6 (3 / (3 + R)) ="],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["solve for x: x^2 = 4"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["solve x^2 = 4"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["sqrt(2) + 1"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["sqrt(2)"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["sum n, n=1..9"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["sum n^2 from 1 to 10"],"out":true,"src":"src/lib/typstMath.test.ts"}
@@ -246,6 +321,11 @@
 {"fn":"typstPreviewUseful","args":["x^2 - 5x + 6 = 0"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["x^2 -",3,["x","x^","x^2","x^2 -","x^2 - 1"]],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["x^2 = 4 for x"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["x^2 \""],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["x^2",2,["x","x^","x^2","x^2 -","x^2 - 1"]],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["x_1 + 2"],"out":true,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["x_1 + x_2"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["‖v‖"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["€5 + £3"],"out":false,"src":"src/lib/typstMath.test.ts"}
 {"fn":"typstPreviewUseful","args":["∫0..pi sin(x) dx"],"out":true,"src":"src/lib/typstMath.test.ts"}
+{"fn":"typstPreviewUseful","args":["⌊x⌋"],"out":true,"src":"src/lib/typstMath.test.ts"}

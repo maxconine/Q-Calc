@@ -2,6 +2,7 @@ import { fillParens } from '../engine/parens'
 import { latexToAscii } from '../engine/plainMath'
 import { readsAsUnit } from '../engine/units'
 import { boundsIn } from './bounds'
+import { unitSpans } from './unitSpans'
 
 /** Macros available to the typeset preview. */
 export const TYPST_PREAMBLE = `#let choose = "choose"
@@ -177,6 +178,8 @@ export function typstPreviewUseful(expr: string): boolean {
   const typed = expr.replace(/\+\/-|-\/\+/g, '±')
   const math = previewMath(typed)
   if (!math) return false
+  // `50 mph in km/h`, `3 ft + 2 in to cm`: a conversion reads fine as typed
+  if (isConversion(typed)) return false
   // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
   // a quoted unit (`"Nm"`, `"Pa"`) is still math; any other quoted word (`"to"`, a date, money) hides it
   // a typed quote mark (\") isn't quoted text, a stray \) is a bracket, and 0xff is a number
@@ -193,8 +196,8 @@ export function typstPreviewUseful(expr: string): boolean {
   // an integral, sum, limit, derivative or solve line always shows: its answer is what the bar can't typeset
   if (isKeywordMath(typed.trim())) return true
   if (simpleMath(bare)) return false
-  // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet
-  if (/!|[/^_](?=\s*[^\s)])/.test(bare)) return true
+  // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet; `!=` is ≠, not a factorial
+  if (/!(?!=)|[/^_](?=\s*[^\s)])/.test(bare)) return true
   // a word right after a number is its unit (`10 min`), not a call (`min(3, 4)`)
   const names = bare.replace(/(\d\s+)[A-Za-z]+\b(?!\s*\()/g, '$1unit')
   return (names.match(/[A-Za-z][A-Za-z0-9.]*/g) ?? []).some((name) => TYPESET_NAMES.has(name.split('.')[0]!))
@@ -203,16 +206,44 @@ export function typstPreviewUseful(expr: string): boolean {
 // a number, or `ans` standing in for one
 const PLAIN_NUMBER = String.raw`-?\s*(?:\d+(?:\.\d*)?|\.\d+|ans)`
 const PLAIN_DIVISION = new RegExp(String.raw`^${PLAIN_NUMBER}\s*/\s*${PLAIN_NUMBER}$`)
-const PLAIN_CALL = new RegExp(String.raw`^([A-Za-z][A-Za-z0-9]*)\s*\(\s*${PLAIN_NUMBER}\s*\)$`)
-// a root still looks different typeset, so it isn't simple
-const ROOTS = new Set(['sqrt', 'root'])
+// a call of plain numbers, `gcd(12, 18)` or `op(1, 2, 3)` (a quoted name's op, once bare): it reads as typed
+const PLAIN_ARG = String.raw`[-+]?\s*(?:\d+(?:\.\d*)?|\.\d+)`
+const PLAIN_CALL = new RegExp(String.raw`(?<![A-Za-z0-9.#_])([A-Za-z][A-Za-z0-9]*)\(\s*${PLAIN_ARG}(?:\s*,\s*${PLAIN_ARG})*\s*\)`, 'g')
+// what's left once those calls are numbers: numbers, + − × ÷, comparisons and brackets
+const PLAIN_ARITHMETIC = /^(?:\s|\d+(?:\.\d*)?|\.\d+|[-+()=<>]|!=|\b(?:dot(?:\.op)?|times|div)\b)*$/
 
-/** `3.5/2` or `sin(30)`: one division of two numbers, or one function of a number, reads fine in the bar as typed. */
+/**
+ * `3.5/2`, `gcd(12, 18)` or `sin(30) + 1`: one division of two numbers, or calls of plain numbers joined by
+ * + − × ÷, reads fine in the bar as typed. A call that draws differently (a root, |x| bars, ⌊x⌋, a binomial)
+ * isn't plain.
+ */
 function simpleMath(math: string): boolean {
   const s = math.trim()
   if (PLAIN_DIVISION.test(s)) return true
-  const call = PLAIN_CALL.exec(s)
-  return Boolean(call && !ROOTS.has(call[1]!))
+  let rest = s
+  for (let prev = ''; prev !== rest; ) {
+    prev = rest
+    rest = rest.replace(PLAIN_CALL, (call, name: string) => (plainName(name) ? '1' : call))
+  }
+  return rest !== s && PLAIN_ARITHMETIC.test(rest)
+}
+
+// a name set upright with f-of-x spacing, as it's typed: sin, gcd, max, a quoted name's op
+function plainName(name: string): boolean {
+  return name === 'op' || (TYPST_NAMES.has(name) && TYPESET_NAMES.has(name))
+}
+
+// `50 mph in km/h`: a conversion word with a unit before it and a unit right after it
+const CONVERSION = /(?<![A-Za-z])(?:into|in|to|as)\s+/gi
+
+function isConversion(text: string): boolean {
+  const spans = unitSpans(text)
+  if (spans.length < 2) return false
+  for (const m of text.matchAll(CONVERSION)) {
+    const after = m.index! + m[0].length
+    if (spans.some((u) => u.start === after) && spans.some((u) => u.end <= m.index!)) return true
+  }
+  return false
 }
 
 /**
@@ -225,7 +256,34 @@ export function previewMath(expr: string): string {
   const s = fillParens(expr.trim())
   const derivative = derivativeMath(s)
   if (derivative != null) return derivative
-  return toTypstMath(keywordMath(s))
+  return toTypstMath(markUnits(keywordMath(s)))
+}
+
+// a unit word, as the engine reads one, is marked so it's set upright: `9.8 m/s^2` is 9.8 m/s², not italic m and s
+const UNIT_OPEN = '\uE000'
+const UNIT_CLOSE = '\uE001'
+
+function markUnits(text: string): string {
+  const s = text.replace(/[\uE000\uE001]/g, '')
+  // an integral's `dt` is its differential, not decitonnes
+  const integral = /∫|\bint/i.test(s)
+  let out = ''
+  let at = 0
+  for (const u of unitSpans(s)) {
+    if (integral && /^d[A-Za-z]$/.test(s.slice(u.start, u.end))) continue
+    // a word run into its digits is a name (`H2`, `C6H12O6`), not a unit
+    if (/\d/.test(s[u.end] ?? '')) continue
+    out += `${s.slice(at, u.start)}${UNIT_OPEN}${s.slice(u.start, u.end)}${UNIT_CLOSE}`
+    at = u.end
+  }
+  return out + s.slice(at)
+}
+
+// a marked unit as upright text
+function readUnit(s: string, i: number, to: number): Piece {
+  const close = s.indexOf(UNIT_CLOSE, i + 1)
+  if (close < 0 || close >= to) return { text: '', end: i + 1 }
+  return { text: `"${s.slice(i + 1, close).replace(/["\\]/g, '')}"`, end: close + 1 }
 }
 
 const BOUND = String.raw`(\S+?)`
@@ -386,6 +444,7 @@ type Piece = { text: string; end: number }
 
 function readPiece(s: string, i: number, to: number): Piece | null {
   const ch = s[i]!
+  if (ch === UNIT_OPEN) return readUnit(s, i, to)
   if (ch === '(' || ch === '[' || ch === '{') {
     const grid = ch === '[' ? readMatrix(s, i, to) : null
     if (grid) return grid
