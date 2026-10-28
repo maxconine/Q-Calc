@@ -137,7 +137,7 @@ struct Connect4GameView: View {
                           onHover: { c in col = c; aiming = true }, onLeave: { aiming = false }, onPick: { model.play($0) })
                 .accessibilityElement(children: .contain)
                 .accessibilityLabel("board")
-            PongNote("← → or 1–7 to pick · ↵ drop · G \(ghostOn ? "hides" : "shows") the preview · \(skillName.map { "\($0) · " } ?? "")esc leaves")
+            PongNote("← → or 1–7 to pick · ↵ or ↓ drop · G \(ghostOn ? "hides" : "shows") the preview · \(skillName.map { "\($0) · " } ?? "")esc leaves")
         }
         .gameKeys(shell) { key in
             guard key.down, key.plain, key.key != "Escape" else { return false }
@@ -154,7 +154,7 @@ struct Connect4GameView: View {
                     ghostOn.toggle()
                     GameSaves.store(ghostKey, ghostOn ? "on" : "off")
                 }
-            } else if key.key == "Enter" || key.key == " " {
+            } else if key.key == "Enter" || key.key == " " || key.key == "ArrowDown" {
                 if !key.isRepeat {
                     if model.game.view().over { model.rematch() } else { model.play(col) }
                 }

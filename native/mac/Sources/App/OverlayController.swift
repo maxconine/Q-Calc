@@ -297,7 +297,8 @@ final class OverlayController: NSObject {
         panel.orderFrontRegardless()
         panel.makeKeyAndOrderFront(nil)
         model.focusField?()
-        // one layout pass so the tape is in place, then fade in (the page waited for its size message)
+        // one layout pass so the tape is in place, then shown at once (native only: no fade, the bar is there the
+        // moment it's laid out)
         let token = showCount
         DispatchQueue.main.async { [weak self] in
             self?.model.focusField?()
@@ -309,15 +310,7 @@ final class OverlayController: NSObject {
 
     private func reveal(_ token: Int) {
         guard token == showCount, let panel, panel.isVisible else { return }
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            panel.alphaValue = 1
-            return
-        }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.1
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().alphaValue = 1
-        }
+        panel.alphaValue = 1
     }
 
     func hide(because why: String = "asked") {

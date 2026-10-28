@@ -91,7 +91,7 @@ struct BarView: View {
                 Spacer(minLength: 0)
                 Button { model.skipTutorial() } label: { Text("skip").underline() }
                     .buttonStyle(.plain)
-                    .help("skip the tutorial (or type skip)")
+                    .hoverTip("skip the tutorial (or type skip)")
             }
             .font(.system(size: Theme.small))
             .foregroundStyle(Color.qMuted)
@@ -115,7 +115,7 @@ struct BarView: View {
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 12)
                 .padding(.top, -12)
-                .help(hint)
+                .hoverTip(hint)
                 .accessibilityLabel(hint)
         }
         // the one-time line on what's end-to-end encrypted (Messages/ShareViews.swift)
@@ -205,7 +205,7 @@ private struct Composer: View {
                     .foregroundStyle(Color.qMuted)
                     .opacity(0.75)
                     // native only: no gap after it, so Tab / → typing it in (`ans*2`) moves nothing
-                    .help(model.ansHover)
+                    .hoverTip(model.ansHover)
                     .accessibilityLabel("continues from the last answer")
             }
             ZStack(alignment: .leading) {
@@ -266,7 +266,6 @@ struct LiveAnswerView: View {
         .lineLimit(1)
         // the black hole has it for a moment (EggOverlay `void`); the answer underneath never changes
         .opacity(model.answerVeiled ? 0 : 1)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: model.answerVeiled)
     }
 
     @ViewBuilder private var content: some View {
@@ -301,7 +300,7 @@ struct LiveAnswerView: View {
                 .truncationMode(.tail)  // .live: text-overflow: ellipsis, so the start (what is wrong) stays
                 .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
                 // a narrow bar cuts its end off; the pointer shows it whole (native only)
-                .help(message)
+                .hoverTip(message)
         } else if model.live.isBlank, let steady = model.steady {
             // .live-steady: never the answer's colour, gone after a pause
             AnswerText(text: model.pretty(steady), size: Theme.display)
@@ -333,7 +332,6 @@ struct LiveAnswerView: View {
             AnswerButton(model: model, shown: model.pretty(model.shownAnswer), copy: model.shownAnswer, size: Theme.display,
                          help: "Copy to clipboard · ⌘C also copies", trailingPad: -8)
                 .id(model.formIndex)
-                .transition(.opacity)
         }
     }
 }
@@ -355,7 +353,7 @@ private struct SolveRoots: View {
                     .padding(.horizontal, 2).padding(.trailing, 0.2 * Theme.answerPart)
             }
             .buttonStyle(.plain)
-            .help("Copy all the solutions")
+            .hoverTip("Copy all the solutions")
             ForEach(Array(solve.roots.enumerated()), id: \.offset) { k, root in
                 if k > 0 { Text(", ").font(.system(size: Theme.display)).foregroundStyle(Color.qAnswer) }
                 RootButton(model: model, shown: Pretty.answer(labels[k]), copy: String(format: "%.17g", root))
@@ -381,7 +379,7 @@ private struct RootButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help("Copy this solution")
+        .hoverTip("Copy this solution")
         .accessibilityLabel("Solution \(shown)")
     }
 }
@@ -426,43 +424,23 @@ struct TimeLetterChips: View {
         }
         .buttonStyle(.plain)
         .disabled(locked)
-        .help(locked ? "\(letter) is written with a dot, so it changes with time"
+        .hoverTip(locked ? "\(letter) is written with a dot, so it changes with time"
               : varying ? "Treat \(letter) as a constant" : "Treat \(letter) as changing with time")
         .accessibilityLabel("\(letter): \(varying ? "changing with time" : "constant")\(locked ? "" : ". Click to switch")")
     }
 }
 
-/// qcalc-example: 0 → 1 over the first tenth, held, → 0 over the last tenth of EXAMPLE_MS (2.5 s); still with
-/// reduced motion. A new `id` starts it again.
+/// qcalc-example: the rotating example, shown at once (native only: no fade in or out, it just changes)
 private struct ExampleFade<Content: View>: View {
     let id: Int
     @ViewBuilder var content: Content
-    @State private var opacity: Double = reduceMotion ? 1 : 0
-    @State private var shownID: Int?
 
-    var body: some View {
-        content
-            .opacity(opacity)
-            .onAppear { run() }
-            .onChange(of: id) { _ in run() }
-    }
-
-    private func run() {
-        guard !reduceMotion else { return }
-        shownID = id
-        opacity = 0
-        withAnimation(.easeInOut(duration: 0.25)) { opacity = 1 }
-        let mine = id
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.25) {
-            guard shownID == mine, mine >= 0 else { return }
-            withAnimation(.easeInOut(duration: 0.25)) { opacity = 0 }
-        }
-    }
+    var body: some View { content }
 }
 
-/// .live-check: "✓ copied", hanging left of the answer, in for 120 ms, held, gone by 1.2 s
+/// .live-check: "✓ copied", hanging left of the answer, there at once and gone at once by 1.2 s (native only: no fade)
 private struct CopiedCheck: View {
-    @State private var opacity: Double = reduceMotion ? 1 : 0
+    @State private var opacity: Double = 1
     var body: some View {
         Text("✓ copied")
             .font(.system(size: Theme.caption, weight: .medium))
@@ -473,9 +451,7 @@ private struct CopiedCheck: View {
             .padding(.trailing, 6)
             .opacity(opacity)
             .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeOut(duration: 0.12)) { opacity = 1 }
-                withAnimation(.easeOut(duration: 0.48).delay(0.72)) { opacity = 0 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { opacity = 0 }
             }
             .accessibilityLabel("Copied")
     }
@@ -518,8 +494,7 @@ private struct AnswerButton: View {
         .buttonStyle(.plain)
         .padding(.trailing, trailingPad < 0 ? trailingPad : 0)
         .onHover { hover = $0 }
-        .animation(.easeOut(duration: 0.12), value: hover)
-        .help(help)
+        .hoverTip(help)
         .accessibilityLabel("Answer \(shown)")
         .accessibilityHint("Copies it")
         .onDrag { NSItemProvider(object: copy as NSString) }
@@ -591,7 +566,6 @@ private struct EdgeTools: View, Equatable {
             .padding(.trailing, 6)
         }
         .opacity(shown ? 1 : 0)
-        .animation(.easeInOut(duration: 0.15), value: shown)
     }
 
     private func tip(_ text: String, _ action: String) -> String {
@@ -628,10 +602,19 @@ private struct EdgeTool<Label: View>: View {
         .buttonStyle(.plain)
         .onHover { on in
             hover = on
+            if tipShown { HoverTip.onScreen() }
             tipShown = false
-            if on { DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { if hover { tipShown = true } } }
+            guard on else { return }
+            let wait = HoverTip.wait
+            if wait == 0 {
+                tipShown = true
+                HoverTip.onScreen()
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+                    if hover { tipShown = true; HoverTip.onScreen() }
+                }
+            }
         }
-        .animation(.easeOut(duration: 0.12), value: hover)
         .overlay(alignment: tipAbove ? .topTrailing : (alignLeft ? .bottomLeading : .bottomTrailing)) {
             if tipShown {
                 // ::after: ink pill with --bg text, 4 pt off the button
@@ -640,10 +623,11 @@ private struct EdgeTool<Label: View>: View {
                     .foregroundStyle(Color.qBg)
                     .fixedSize()
                     .padding(.vertical, 4).padding(.horizontal, 7)
-                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk))
+                    .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qInk)
+                        .shadow(color: .black.opacity(0.25), radius: 3, y: 1))
+                    .compositingGroup()
                     .alignmentGuide(tipAbove ? .top : .bottom) { d in tipAbove ? d[.bottom] + 4 : d[.top] - 4 }
                     .allowsHitTesting(false)
-                    .transition(.opacity)
                     .zIndex(10)
             }
         }
@@ -715,7 +699,7 @@ private struct HistoryRowView: View, Equatable {
                 .buttonStyle(.plain)
                 .onHover { exprHover = $0 }
                 // HistoryTape.tsx's titles; the pointer also reads an expression cut off at the row's end in full
-                .help(exprTip)
+                .hoverTip(exprTip)
                 .accessibilityLabel("Expression \(row.expr)")
 
                 answers
@@ -794,7 +778,7 @@ private struct AnswerCell: View {
         }
         .buttonStyle(.plain)
         .onHover { hover = $0 }
-        .help(tip)
+        .hoverTip(tip)
         .accessibilityLabel("Answer \(text)")
     }
 }
@@ -1053,7 +1037,7 @@ private struct CardView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                         .onTapGesture { model.openThread(card.from) }
-                        .help("Open messages with \(card.from)")
+                        .hoverTip("Open messages with \(card.from)")
                 }
                 HStack(spacing: 8) {
                     TextField("", text: Binding(get: { card.draft }, set: { model.setDraft(card.id, $0) }))

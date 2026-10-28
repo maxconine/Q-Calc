@@ -374,7 +374,7 @@ struct FullscreenButton: View {
         .buttonStyle(.plain)
         .opacity(corner && !hover ? 0.5 : 1)
         .onHover { hover = $0 }
-        .help(on ? "\(label) (F, ⌃F or esc)" : "\(label) (F or ⌃F)")
+        .hoverTip(on ? "\(label) (F, ⌃F or esc)" : "\(label) (F or ⌃F)")
         .accessibilityLabel(label)
     }
 }
