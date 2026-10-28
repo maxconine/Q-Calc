@@ -56,6 +56,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Feature | Status | Notes |
 |---|---|---|
 | Pretty answer, dual exact ≈ decimal, answer form setting | ✅ | `live`, `dual` pairs |
+| Chained `ans` (`*2`) | ✅ | the faint `ans` in front. **Native only:** Tab (or → at the end) types it in with any grey parens, nothing moving (no gap after the faint one); a typed `ans` is green as a known word, and hovering either shows `last answer = 3,000` |
 | Answer forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile. **Native only:** ⌃E shows the answer in exponent form (`3 × 10³`, core `exponent_form`, units kept) and back; ⌃⇧E cycles the other forms (Tab fills parens instead); both are rows in Settings › Keybinds (`exponent`, `forms`). The page cycles forms on Tab |
 | Steady answer while briefly invalid | ✅ | |
 | Selected part answered on its own (`selDisplay`, `.live.live-selection`) | ✅ | was missing: selecting `3*4` in `2 + 3*4` shows a muted `12` in the answer slot until the selection goes (evaluated alone, no history; not for the whole line, a graph, or a part that reads as its value), read out as the page's `aria-live` is; its own engine lane. Pictured |

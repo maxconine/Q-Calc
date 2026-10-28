@@ -204,7 +204,8 @@ private struct Composer: View {
                     .tracking(Theme.displayTracking(Theme.display))
                     .foregroundStyle(Color.qMuted)
                     .opacity(0.75)
-                    .padding(.trailing, 0.22 * Theme.display)
+                    // native only: no gap after it, so Tab / → typing it in (`ans*2`) moves nothing
+                    .help(model.ansHover)
                     .accessibilityLabel("continues from the last answer")
             }
             ZStack(alignment: .leading) {

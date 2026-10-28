@@ -33,6 +33,8 @@ struct Decorations: Equatable {
     var words: [NSRange] = []
     /// each unit, function and constant with its full name, for the hover label (wordNames; .quick-unit-tip)
     var names: [WordName] = []
+    /// the last answer `ans` stands for, as it inserts (native only: its hover label)
+    var ans: String?
     var squiggle: NSRange?
     /// a unit offered where a number was owed one (missingUnit): drawn muted after the number
     var offer: (at: Int, text: String)?
@@ -83,6 +85,8 @@ final class BarModel: ObservableObject {
     /// the last real answer, dimmed, while the line is briefly unreadable (useSteadyAnswer)
     @Published private(set) var steady: String?
     @Published private(set) var chained = false
+    /// the grey `ans`'s hover label: the number it stands for (native only)
+    @Published private(set) var ansHover = "last answer"
     @Published private(set) var forms: [String] = [] { didSet { if forms != oldValue { refreshTypeset() } } }
     @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
@@ -384,6 +388,7 @@ final class BarModel: ObservableObject {
         }) { [weak self] answer, chain, deco, completion in
             guard let self, self.text == typed else { return }
             self.chained = chain
+            self.ansHover = deco.ans.map { "last answer = \($0)" } ?? "last answer"
             if !answer.isBlank { self.hint = nil }
             self.completion = completion.flatMap { $0.isEmpty ? nil : $0 }
             self.decorations = deco
@@ -413,7 +418,23 @@ final class BarModel: ObservableObject {
                   let name = s["name"] as? String, !name.isEmpty else { return nil }
             return WordName(range: NSRange(location: a, length: b - a), name: name)
         }
+        // native only: a typed `ans` names the number it stands for
+        d.ans = ansValue(logic, request.context, sigFigs: request.options.sigFigs)
+        if let value = d.ans {
+            let ns = text as NSString
+            d.names = d.names.map { w in
+                guard NSMaxRange(w.range) <= ns.length, ns.substring(with: w.range).lowercased() == "ans" else { return w }
+                return WordName(range: w.range, name: "last answer = \(value)")
+            }
+        }
         return d
+    }
+
+    /// the last answer as it inserts (`3,000 m`), for `ans`'s hover label
+    private static func ansValue(_ logic: AppLogic, _ context: EvalContext, sigFigs: UInt32) -> String? {
+        if let plain = context.chainAnswer?.plain, !plain.isEmpty { return plain }
+        guard let n = context.ans else { return nil }
+        return logic.string("engine/format", "formatNumber", [n, Int(sigFigs)])
     }
 
     /// blankReason, each piece read by the engine as the line is (its context, chained as it is); runs on the
@@ -474,12 +495,15 @@ final class BarModel: ObservableObject {
     func acceptParens() -> Bool {
         guard let fill = logic.call("engine/parens", "inferParens", [text]) as? [String: Any] else { return false }
         let lead = (fill["leading"] as? NSNumber)?.intValue ?? 0, trail = (fill["trailing"] as? NSNumber)?.intValue ?? 0
-        guard lead + trail > 0 else { return false }
-        let filled = String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
+        // the grey `ans` a chained line continues from (`*2`) is typed in the same way, in front (native only)
+        let ans = chained ? "ans" : ""
+        guard lead + trail > 0 || !ans.isEmpty else { return false }
+        let filled = ans + String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
         // the grey ones become typed ones where they stand, and the caret stays by the same character (at the end
         // of the line it stays at the end, past the new `)`)
         let length = (text as NSString).length, at = fieldCaret?() ?? length
-        let caret = at >= length ? (filled as NSString).length : at + lead
+        let caret = at >= length ? (filled as NSString).length : at + lead + (ans as NSString).length
+        if !ans.isEmpty { chained = false }
         decorations.leadingParens = 0
         decorations.trailingParens = 0
         if let fillParensInField { fillParensInField(filled, caret) } else { text = filled }
