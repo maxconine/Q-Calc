@@ -433,6 +433,17 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
                 b(2),
             ))
         }
+        // native only: the hover label's name for each unit, function and constant in the line
+        ("lib/knownWords", "wordNames") => {
+            let vars: Vec<String> = of(&a(1)).unwrap_or_default();
+            let fns: Vec<String> = of(&a(2)).unwrap_or_default();
+            to(&crate::app::word_names::word_names(
+                &s(0),
+                &vars,
+                &fns,
+                b(3),
+            ))
+        }
         // ---- lib/onboarding ----
         ("lib/onboarding", "advanceRotation") => {
             to(&ob::advance_rotation(of(&a(0)).unwrap_or_default()))

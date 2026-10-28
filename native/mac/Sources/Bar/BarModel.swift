@@ -19,19 +19,27 @@ struct BannerCard: Identifiable, Equatable {
     var shownAt = Date()
 }
 
+/// A word in the line and its full name: `kPa` kilopascal, `gcf` greatest common factor, `π` pi.
+struct WordName: Equatable {
+    var range: NSRange
+    var name: String
+}
+
 /// What the input draws over its text.
 struct Decorations: Equatable {
     var leadingParens = 0
     var trailingParens = 0
     var units: [NSRange] = []
     var words: [NSRange] = []
+    /// each unit, function and constant with its full name, for the hover label (wordNames; .quick-unit-tip)
+    var names: [WordName] = []
     var squiggle: NSRange?
     /// a unit offered where a number was owed one (missingUnit): drawn muted after the number
     var offer: (at: Int, text: String)?
 
     static func == (a: Decorations, b: Decorations) -> Bool {
         a.leadingParens == b.leadingParens && a.trailingParens == b.trailingParens && a.units == b.units
-            && a.words == b.words && a.squiggle == b.squiggle && a.offer?.at == b.offer?.at && a.offer?.text == b.offer?.text
+            && a.words == b.words && a.names == b.names && a.squiggle == b.squiggle && a.offer?.at == b.offer?.at && a.offer?.text == b.offer?.text
     }
 }
 
@@ -399,6 +407,12 @@ final class BarModel: ObservableObject {
         let variables = Array(request.context.variables.keys), functions = Array(request.context.functions.keys)
         d.units = logic.spans("lib/unitSpans", "unitSpans", [text, variables, functions])
         d.words = logic.spans("lib/knownWords", "knownWordSpans", [text, functions, request.context.ans != nil])
+        let named = logic.call("lib/knownWords", "wordNames", [text, variables, functions, request.context.ans != nil]) as? [[String: Any]] ?? []
+        d.names = named.compactMap { s in
+            guard let a = (s["start"] as? NSNumber)?.intValue, let b = (s["end"] as? NSNumber)?.intValue, b > a,
+                  let name = s["name"] as? String, !name.isEmpty else { return nil }
+            return WordName(range: NSRange(location: a, length: b - a), name: name)
+        }
         return d
     }
 
