@@ -692,17 +692,19 @@ Invoke-Check 'B5' 'hovering a word in the line names it' 'required' {
     Clear-Input
     Type-Text '*3'
     Read-Answer '^18$' | Out-Null
-    $N::MoveTo([int]($f[0] + $f[2] - 4), [int]($f[1] + $f[3] / 2))
+    # a few px from where the last step left the pointer: a move to the same spot sends no WM_MOUSEMOVE
+    $N::MoveTo([int]($f[0] + $f[2] - 10), [int]($f[1] + $f[3] / 2))
     $faint = $false
     $at = $null
     if (Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $script:fa = $d.ans; $null -ne $d.ans } 2000) {
         $N::MoveTo([int](($script:fa[0] + $script:fa[1]) / 2), [int]$script:fa[2])
-        $faint = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $d.shown -eq 'last answer = 6' -and $d.tipUp } 3000
+        $faint = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $script:fd = $d; $d.shown -eq 'last answer = 6' -and $d.tipUp } 3000
     }
+    $faintWhy = if ($faint) { '' } else { " (faint ans at $($script:fa -join ','); state $(($script:fd | ConvertTo-Json -Compress -Depth 4)))" }
     $r = $N::Rect((Get-Bar))
     $N::MoveTo($r.Left + 20, [Math]::Max(0, $r.Top - 120))
     $gone = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; -not $d.shown -and -not (Tip-Visible) } 2000
-    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans; faint ans named: $faint; gone when the pointer left: $gone" }
+    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans; faint ans named: $faint$faintWhy; gone when the pointer left: $gone" }
 }
 
 function Near([int]$a, [int]$b, [int]$within = 6) { [Math]::Abs($a - $b) -le $within }
