@@ -189,7 +189,7 @@ private struct Composer: View {
         }
         .overlay {
             EdgeTools(model: model, angleRad: model.angleRad, fractions: model.fractions, sigFigMode: model.sigFigMode,
-                      shown: hover || model.edgeFocus)
+                      exponentMode: model.exponentMode, shown: hover || model.edgeFocus)
                 .equatable()
         }
         .onHover { hover = $0 }
@@ -204,7 +204,8 @@ private struct Composer: View {
                     .tracking(Theme.displayTracking(Theme.display))
                     .foregroundStyle(Color.qMuted)
                     .opacity(0.75)
-                    .padding(.trailing, 0.22 * Theme.display)
+                    // native only: no gap after it, so Tab / → typing it in (`ans*2`) moves nothing
+                    .help(model.ansHover)
                     .accessibilityLabel("continues from the last answer")
             }
             ZStack(alignment: .leading) {
@@ -324,7 +325,7 @@ struct LiveAnswerView: View {
             HStack(spacing: 0) {
                 AnswerButton(model: model, shown: Pretty.answer(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
                 Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                AnswerButton(model: model, shown: model.pretty(model.live.display), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
+                AnswerButton(model: model, shown: model.pretty(model.exponentShown(model.live.display)), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Answer")
@@ -533,11 +534,12 @@ private struct EdgeTools: View, Equatable {
     let angleRad: Bool
     let fractions: Bool
     let sigFigMode: Bool
+    let exponentMode: Bool
     @ObservedObject private var settings = AppSettings.shared
     let shown: Bool
 
     static func == (a: Self, b: Self) -> Bool {
-        a.angleRad == b.angleRad && a.fractions == b.fractions && a.sigFigMode == b.sigFigMode && a.shown == b.shown
+        a.angleRad == b.angleRad && a.fractions == b.fractions && a.sigFigMode == b.sigFigMode && a.exponentMode == b.exponentMode && a.shown == b.shown
     }
 
     var body: some View {
@@ -571,6 +573,12 @@ private struct EdgeTools: View, Equatable {
                          tip: tip("Sig figs from what you type: \(sigFigMode ? "on" : "off")", "sigFigs"),
                          tipAbove: false, active: sigFigMode, action: { model.toggleSigFigMode() }) {
                     Text("sf")
+                }
+                // native only: ⌃E's exponent form
+                EdgeTool(label: "Exponent form \(exponentMode ? "on" : "off")",
+                         tip: tip("Answers in exponent form: \(exponentMode ? "on" : "off")", "exponent"),
+                         tipAbove: false, active: exponentMode, action: { model.toggleExponent() }) {
+                    Text("×10ⁿ")
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)

@@ -44,7 +44,7 @@
 {"fn":"toTypstMath","args":["2 · 3"],"out":"2 dot.op 3","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["2*(Σ_n=1^10 n^2)+1"],"out":"2 dot (sum_(n = 1)^(10) n ^ 2) + 1","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["2+."],"out":"2 + .","src":"src/lib/typstMath.test.ts"}
-{"fn":"toTypstMath","args":["2+3)*4"],"out":"2 + 3 ) dot 4","src":"src/lib/typstMath.test.ts"}
+{"fn":"toTypstMath","args":["2+3)*4"],"out":"2 + 3 \\) dot 4","src":"src/lib/typstMath.test.ts"}
 {"fn":"toTypstMath","args":["2/3"],"out":"2 / 3","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["22/7"],"out":"22 / 7","src":"native/golden-capture/corpus/science.golden.ts"}
 {"fn":"toTypstMath","args":["26.5 lb"],"out":"26.5 \"lb\"","src":"native/golden-capture/corpus/science.golden.ts"}

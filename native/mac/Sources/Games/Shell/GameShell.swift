@@ -44,8 +44,10 @@ final class GameShellModel: ObservableObject {
 
     /// The window closes (esc from the lobby's first screen, or a page's own esc button there).
     var onClose: () -> Void = {}
-    /// Full screen went on or off: the window zooms.
+    /// Full screen went on (the big window) or off (back to the bar's card).
     var onFullscreen: (Bool) -> Void = { _ in }
+    /// The card's height at the bar's width, so the window is as tall as the game (the page's `size` message).
+    var onCardHeight: (CGFloat) -> Void = { _ in }
 
     private var hooks: ShellHooks?
     private var hooksId = 0
@@ -228,36 +230,37 @@ struct GameShellView<Content: View>: View {
     var body: some View {
         let colors = GameColors(dark: scheme == .dark)
         GeometryReader { geo in
-            Group {
-                if shell.fullscreen {
-                    let l = gameFullscreenLayout(viewW: geo.size.width, viewH: geo.size.height, baseW: shell.layout.baseW,
-                                                 baseH: shell.layout.baseH, chrome: shell.layout.chrome, pad: shell.layout.pad,
-                                                 maxUi: shell.layout.maxUi, integer: shell.layout.integer)
-                    let pad = CGFloat(shell.layout.pad * l.ui)
-                    let gameH = max(0, geo.size.height - 2 * pad)
-                    let w = min(geo.size.width - 2 * pad, gameH * 1.8)
-                    layers(colors) {
-                        content
-                            .frame(width: w)
-                            .frame(maxHeight: gameH)
-                            .environment(\.gameStage, GameStage(gameH: gameH, width: w))
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .background(colors.bg.color)
-                } else {
-                    layers(colors) { content }
-                        .frame(width: min(GameMetrics.panelWidth, max(0, geo.size.width - 24)))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .background(colors.bg.color)
-                        .clipShape(RoundedRectangle(cornerRadius: GameMetrics.radius))
-                        .boxShadow(colors.shadow, radius: GameMetrics.radius)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                }
+            // one view tree for both, so the game (its lobby screen, a match under way) lives through ⌃F: a branch
+            // per mode rebuilt the game from its first screen on every switch.
+            // the bar's card: the window's width, as tall as the game (the window follows the height; its own rounded
+            // corners and shadow are the card's, as the bar's are). full screen: the whole window, the game area centred
+            let full = shell.fullscreen
+            let l = gameFullscreenLayout(viewW: geo.size.width, viewH: geo.size.height, baseW: shell.layout.baseW,
+                                         baseH: shell.layout.baseH, chrome: shell.layout.chrome, pad: shell.layout.pad,
+                                         maxUi: shell.layout.maxUi, integer: shell.layout.integer)
+            let pad = full ? CGFloat(shell.layout.pad * l.ui) : 0
+            let gameH = max(0, geo.size.height - 2 * pad)
+            let w = full ? max(0, min(geo.size.width - 2 * pad, gameH * 1.8)) : geo.size.width
+            layers(colors) {
+                content
+                    .frame(width: w)
+                    .frame(maxHeight: full ? gameH : nil)
+                    .environment(\.gameStage, full ? GameStage(gameH: gameH, width: w) : nil)
             }
+            .frame(width: geo.size.width, height: full ? geo.size.height : nil)
+            .fixedSize(horizontal: false, vertical: !full)
+            .background(colors.bg.color)
+            .background(GeometryReader { card in
+                Color.clear.preference(key: CardHeightKey.self, value: full ? 0 : card.size.height)
+            })
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .onPreferenceChange(CardHeightKey.self) { h in
+            if !shell.fullscreen, h > 0 { shell.onCardHeight(h) }
         }
         // the page ran under the clear title bar but kept its strip clear (--game-fs-inset), so the traffic lights
-        // never sit on a heading
-        .padding(.top, GameWindow.titlebarHeight)
+        // never sit on a heading; the bar's card has no title bar
+        .padding(.top, shell.fullscreen ? GameWindow.titlebarHeight : 0)
         .background(shell.fullscreen ? colors.bg.color : Color.clear)
         .ignoresSafeArea()
         .environment(\.gameColors, colors)
@@ -282,6 +285,11 @@ struct GameShellView<Content: View>: View {
             }
         }
     }
+}
+
+private struct CardHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 /// The paused overlay: any key carries on, esc leaves to the lobby.

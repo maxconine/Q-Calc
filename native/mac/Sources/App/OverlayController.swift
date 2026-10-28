@@ -117,9 +117,11 @@ final class OverlayController: NSObject {
             DispatchQueue.main.async { self?.applyAppearance() }
         }.store(in: &bag)
         model.onTutorial = { [weak self] in self?.showTutorial() }
-        games.onClose = { [weak self] in
+        // esc from a game's lobby closes it back to the bar, in the same place; the hotkey and ⌘W take both away
+        games.onClose = { [weak self] backToBar in
             self?.gameOpen = false
             self?.tellMessagesBar()
+            if backToBar { self?.show(from: "game closed") }
         }
     }
 
@@ -246,6 +248,11 @@ final class OverlayController: NSObject {
     // MARK: - showing and hiding
 
     func toggle(from source: String = "hotkey") {
+        // a game is the bar while it's up: the hotkey hides it (or brings its big window forward)
+        if gameOpen, games.nativeOpen, panel?.isVisible != true {
+            games.nativeHotkey()
+            return
+        }
         if let panel, panel.isVisible, panel.isOnActiveSpace, panel.alphaValue > 0 {
             hide(because: source)
             return
@@ -261,6 +268,11 @@ final class OverlayController: NSObject {
     }
 
     func show(from source: String = "menu") {
+        // the game has the bar's place; showing the bar brings the game forward instead
+        if gameOpen, games.nativeOpen {
+            games.nativeReshow()
+            return
+        }
         if panel == nil { build() }
         if NSApp.isHidden { NSApp.unhideWithoutActivation() }
         wantVisible = true
@@ -650,12 +662,22 @@ final class OverlayController: NSObject {
         model.insert(text)
     }
 
+    // the game takes the bar's place: its width, hanging from the composer's top, as the page's game took the panel
+    // with the composer hidden. full screen (⌃F) makes it a big window of its own (Shell/GameWindow.swift)
     private func play(_ kind: String) {
         let screen = panel?.screen ?? Self.screenWithPointer()
+        let visible = screen?.visibleFrame ?? .zero
+        let spot: GameBarSpot
+        if let panel, panel.isVisible {
+            spot = GameBarSpot(x: panel.frame.minX, width: panel.frame.width, top: panel.frame.maxY - sizeAnchorTop, visible: visible)
+        } else {
+            let width = fittedWidth(overlayWidth, on: screen)
+            spot = GameBarSpot(x: visible.midX - width / 2, width: width, top: visible.minY + visible.height * 0.72, visible: visible)
+        }
         hide(because: "game")
         gameOpen = true
         tellMessagesBar()
-        games.open(kind, on: screen)
+        games.open(kind, at: spot)
     }
 
     /// dev builds: closes an open game window (the bench's "closegame")

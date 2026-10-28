@@ -19,19 +19,29 @@ struct BannerCard: Identifiable, Equatable {
     var shownAt = Date()
 }
 
+/// A word in the line and its full name: `kPa` kilopascal, `gcf` greatest common factor, `π` pi.
+struct WordName: Equatable {
+    var range: NSRange
+    var name: String
+}
+
 /// What the input draws over its text.
 struct Decorations: Equatable {
     var leadingParens = 0
     var trailingParens = 0
     var units: [NSRange] = []
     var words: [NSRange] = []
+    /// each unit, function and constant with its full name, for the hover label (wordNames; .quick-unit-tip)
+    var names: [WordName] = []
+    /// the last answer `ans` stands for, as it inserts (native only: its hover label)
+    var ans: String?
     var squiggle: NSRange?
     /// a unit offered where a number was owed one (missingUnit): drawn muted after the number
     var offer: (at: Int, text: String)?
 
     static func == (a: Decorations, b: Decorations) -> Bool {
         a.leadingParens == b.leadingParens && a.trailingParens == b.trailingParens && a.units == b.units
-            && a.words == b.words && a.squiggle == b.squiggle && a.offer?.at == b.offer?.at && a.offer?.text == b.offer?.text
+            && a.words == b.words && a.names == b.names && a.squiggle == b.squiggle && a.offer?.at == b.offer?.at && a.offer?.text == b.offer?.text
     }
 }
 
@@ -75,6 +85,8 @@ final class BarModel: ObservableObject {
     /// the last real answer, dimmed, while the line is briefly unreadable (useSteadyAnswer)
     @Published private(set) var steady: String?
     @Published private(set) var chained = false
+    /// the grey `ans`'s hover label: the number it stands for (native only)
+    @Published private(set) var ansHover = "last answer"
     @Published private(set) var forms: [String] = [] { didSet { if forms != oldValue { refreshTypeset() } } }
     @Published private(set) var formIndex = 0 { didSet { if formIndex != oldValue { refreshTypeset() } } }
     @Published private(set) var copied = false
@@ -376,6 +388,7 @@ final class BarModel: ObservableObject {
         }) { [weak self] answer, chain, deco, completion in
             guard let self, self.text == typed else { return }
             self.chained = chain
+            self.ansHover = deco.ans.map { "last answer = \($0)" } ?? "last answer"
             if !answer.isBlank { self.hint = nil }
             self.completion = completion.flatMap { $0.isEmpty ? nil : $0 }
             self.decorations = deco
@@ -399,7 +412,29 @@ final class BarModel: ObservableObject {
         let variables = Array(request.context.variables.keys), functions = Array(request.context.functions.keys)
         d.units = logic.spans("lib/unitSpans", "unitSpans", [text, variables, functions])
         d.words = logic.spans("lib/knownWords", "knownWordSpans", [text, functions, request.context.ans != nil])
+        let named = logic.call("lib/knownWords", "wordNames", [text, variables, functions, request.context.ans != nil]) as? [[String: Any]] ?? []
+        d.names = named.compactMap { s in
+            guard let a = (s["start"] as? NSNumber)?.intValue, let b = (s["end"] as? NSNumber)?.intValue, b > a,
+                  let name = s["name"] as? String, !name.isEmpty else { return nil }
+            return WordName(range: NSRange(location: a, length: b - a), name: name)
+        }
+        // native only: a typed `ans` names the number it stands for
+        d.ans = ansValue(logic, request.context, sigFigs: request.options.sigFigs)
+        if let value = d.ans {
+            let ns = text as NSString
+            d.names = d.names.map { w in
+                guard NSMaxRange(w.range) <= ns.length, ns.substring(with: w.range).lowercased() == "ans" else { return w }
+                return WordName(range: w.range, name: "last answer = \(value)")
+            }
+        }
         return d
+    }
+
+    /// the last answer as it inserts (`3,000 m`), for `ans`'s hover label
+    private static func ansValue(_ logic: AppLogic, _ context: EvalContext, sigFigs: UInt32) -> String? {
+        if let plain = context.chainAnswer?.plain, !plain.isEmpty { return plain }
+        guard let n = context.ans else { return nil }
+        return logic.string("engine/format", "formatNumber", [n, Int(sigFigs)])
     }
 
     /// blankReason, each piece read by the engine as the line is (its context, chained as it is); runs on the
@@ -460,12 +495,15 @@ final class BarModel: ObservableObject {
     func acceptParens() -> Bool {
         guard let fill = logic.call("engine/parens", "inferParens", [text]) as? [String: Any] else { return false }
         let lead = (fill["leading"] as? NSNumber)?.intValue ?? 0, trail = (fill["trailing"] as? NSNumber)?.intValue ?? 0
-        guard lead + trail > 0 else { return false }
-        let filled = String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
+        // the grey `ans` a chained line continues from (`*2`) is typed in the same way, in front (native only)
+        let ans = chained ? "ans" : ""
+        guard lead + trail > 0 || !ans.isEmpty else { return false }
+        let filled = ans + String(repeating: "(", count: lead) + text + String(repeating: ")", count: trail)
         // the grey ones become typed ones where they stand, and the caret stays by the same character (at the end
         // of the line it stays at the end, past the new `)`)
         let length = (text as NSString).length, at = fieldCaret?() ?? length
-        let caret = at >= length ? (filled as NSString).length : at + lead
+        let caret = at >= length ? (filled as NSString).length : at + lead + (ans as NSString).length
+        if !ans.isEmpty { chained = false }
         decorations.leadingParens = 0
         decorations.trailingParens = 0
         if let fillParensInField { fillParensInField(filled, caret) } else { text = filled }
@@ -529,7 +567,7 @@ final class BarModel: ObservableObject {
         let request = TypesetRequest(
             expr: chained ? Chain.expr(text) : text,
             exact: prefixShown != nil || tabbed ? nil : exact,
-            display: prefixShown ?? (tabbed ? forms[formIndex] : live.display),
+            display: exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display)),
             solvedFor: rootsOf,
             message: solve != nil && rootsOf.isEmpty)
         guard request != typesetAsked else { return }
@@ -552,10 +590,10 @@ final class BarModel: ObservableObject {
 
     /// The answer the slot shows and ⌘C copies: the cycled form, else exact or approximate per the setting.
     var shownAnswer: String {
-        if let prefixShown { return prefixShown }
+        if let prefixShown { return exponentShown(prefixShown) }
         if formIndex > 0, forms.indices.contains(formIndex) { return forms[formIndex] }
         if settings.answerForm == "exact", let exact, !exact.isEmpty { return exact }
-        return live.display
+        return exponentShown(live.display)
     }
 
     /// the closed form beside the decimal, upgraded by the PSLQ search when it found one
@@ -1011,10 +1049,38 @@ final class BarModel: ObservableObject {
 
     // MARK: - SI prefix (⌥↑ ⌥↓)
 
+    /// ⌃E's mode: answers in exponent form (native only)
+    @Published private(set) var exponentMode = UserDefaults.standard.bool(forKey: BarModel.exponentModeKey)
+    static let exponentModeKey = "qcalc.exponentMode"
+    private var exponentMemo: (String, String)?
     @Published private(set) var prefixShown: String? { didSet { if prefixShown != oldValue { refreshTypeset() } } }
     private var prefixValue: Any?
 
     /// onPrefixStep: the answer one SI prefix up or down (stepPrefix), shown until the line changes
+    /// ⌃E (Settings › Keybinds, native only): every answer in exponent form (`3 × 10³`) until it's pressed again,
+    /// remembered across launches; turning it on, the hint says how to turn it off
+    func toggleExponent() {
+        exponentMode.toggle()
+        UserDefaults.standard.set(exponentMode, forKey: Self.exponentModeKey)
+        // the pause's tip would land over this hint a moment later
+        pauseTimer?.invalidate()
+        let key = KeyActions.title(KeyActions.chord("exponent", in: settings.keybinds))
+        // only turning it on says how to turn it off; turning it off says nothing
+        hint = exponentMode ? "exponent form on · \(key.isEmpty ? "the same key" : key) turns it off" : nil
+        refreshTypeset()
+        track("form.exponent")
+    }
+
+    /// `display` in exponent form while the mode is on (answers that don't start with a number stay as they are)
+    func exponentShown(_ display: String) -> String {
+        guard exponentMode, !display.isEmpty else { return display }
+        if let memo = exponentMemo, memo.0 == display { return memo.1 }
+        let form = logic.string("engine/format", "exponentForm", [display, settings.significantFigures]) ?? ""
+        let out = form.isEmpty ? display : form
+        exponentMemo = (display, out)
+        return out
+    }
+
     func stepPrefix(_ dir: Int) {
         let base: Any? = prefixValue ?? live.valueJson.flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) }
         guard let base, let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
@@ -1162,11 +1228,6 @@ final class BarModel: ObservableObject {
             guard flags.isSubset(of: [.shift]) else { return false }
             if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
             return true
-        case kVK_ANSI_E:
-            // the answer's other forms (base, exponent, fraction…), which Tab cycles on the page
-            guard flags == [.control] || flags == [.control, .shift] else { return false }
-            cycleForms(back: flags.contains(.shift))
-            return true
         case kVK_Delete:
             if flags == [.command], selected != nil { return deleteSelected() }
             return false
@@ -1200,6 +1261,8 @@ final class BarModel: ObservableObject {
         case "fraction": toggleFractions()
         case "sigFigs": toggleSigFigMode()
         case "clear": clearHistory()
+        case "exponent": toggleExponent()
+        case "forms": cycleForms()
         default: break
         }
     }

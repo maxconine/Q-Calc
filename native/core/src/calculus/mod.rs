@@ -831,6 +831,63 @@ fn to_tree(text: &str, ctx: &TreeCtx) -> Option<T> {
     convert(&root, ctx)
 }
 
+/// native only: `2 3 x` is 2·3·x in a calculus body, as it is on a plain line (the parser takes no number right
+/// after a number, so the body had come back blank)
+fn join_spaced_numbers(body: &str) -> String {
+    static SPACED_NUMBERS: Lazy = Lazy::new(|| re(r"(\d)\s+(?=\.?\d)", ""));
+    jsre::replace_all(&SPACED_NUMBERS, body, |c| format!("{}*", jsre::group(c, 1))).into_owned()
+}
+
+/// native only: a product whose factors repeat a letter (`x*x x x`, `12 x x`) as powers (`x^4`, `12 x^2`), so it
+/// differentiates and simplifies as the power would (it had come back factored, `12(6x⁵ + x²)` for `12 x^6`'s
+/// `12x² + 72x⁵`). Products with no repeat are left exactly as they were.
+fn merge_powers(product: T) -> T {
+    fn factors(t: &T, out: &mut Vec<T>) {
+        match &**t {
+            N::Op(Op::Multiply, args) => args.iter().for_each(|a| factors(a, out)),
+            _ => out.push(t.clone()),
+        }
+    }
+    fn power_of(t: &T) -> Option<(String, f64)> {
+        match &**t {
+            N::Sym(name) => Some((name.clone(), 1.0)),
+            N::Op(Op::Pow, args) if args.len() == 2 => match (&*args[0], &*args[1]) {
+                (N::Sym(name), N::Const(k)) => Some((name.clone(), *k)),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+    let mut all = Vec::new();
+    factors(&product, &mut all);
+    let mut seen: Vec<(String, f64, usize)> = Vec::new();
+    let mut kept: Vec<Option<T>> = Vec::new();
+    let mut repeats = false;
+    for f in all {
+        match power_of(&f) {
+            Some((name, k)) => {
+                if let Some(entry) = seen.iter_mut().find(|e| e.0 == name) {
+                    entry.1 += k;
+                    repeats = true;
+                } else {
+                    seen.push((name, k, kept.len()));
+                    kept.push(None);
+                }
+            }
+            None => kept.push(Some(f)),
+        }
+    }
+    if !repeats {
+        return product;
+    }
+    for (name, k, at) in seen {
+        kept[at] = Some(if k == 1.0 { symbol(&name) } else { op(Op::Pow, vec![symbol(&name), constant(k)]) });
+    }
+    let mut parts = kept.into_iter().flatten();
+    let first = parts.next().unwrap_or_else(|| constant(1.0));
+    parts.fold(first, |acc, f| op(Op::Multiply, vec![acc, f]))
+}
+
 fn convert(n: &crate::syntax::Node, ctx: &TreeCtx) -> Option<T> {
     use crate::syntax::{Constant, Node};
     match n {
@@ -873,6 +930,8 @@ fn convert(n: &crate::syntax::Node, ctx: &TreeCtx) -> Option<T> {
                 .collect::<Option<Vec<_>>>()?;
             Some(if *o == Op::UnaryPlus {
                 a.into_iter().next()?
+            } else if *o == Op::Multiply {
+                merge_powers(op(*o, a))
             } else {
                 op(*o, a)
             })
@@ -1857,14 +1916,14 @@ pub fn evaluate_calculus(text: &str, ctx: &CalcContext) -> Option<CalculusResult
             vars,
             at,
             partial,
-        } => run_derivative(body, vars, at.as_deref(), *partial, ctx),
+        } => run_derivative(&join_spaced_numbers(body), vars, at.as_deref(), *partial, ctx),
         Intent::Integral {
             body,
             v,
             lower,
             upper,
-        } => run_integral(body, v.as_deref(), lower, upper, &ctx.sci),
-        Intent::Limit { body, v, to, side } => run_limit(body, v, to, *side, &ctx.sci),
+        } => run_integral(&join_spaced_numbers(body), v.as_deref(), lower, upper, &ctx.sci),
+        Intent::Limit { body, v, to, side } => run_limit(&join_spaced_numbers(body), v, to, *side, &ctx.sci),
     };
     Some(out.unwrap_or_default())
 }

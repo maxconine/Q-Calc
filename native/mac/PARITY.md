@@ -37,6 +37,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Completion ghost, Tab / → accepts | ✅ | `LiveAnswer.completion`, else engine `completionFor` (`foo` → `foot`). **Native only:** with no completion, Tab (or → at the end) turns the grey inferred parens into typed ones where they are drawn, the caret kept by the same character and nothing on the line moving (`acceptParens`), and the grey parens go when the line is emptied (the page's do too; native left the last line's drawn) |
 | `[` pairing, `]` step-over, backspace in `[]`, wrap a selection, `+-` → ± | ✅ | `Symbols.bracketKey/wrap`, `BarTextView` |
 | Unit / known-word colouring, blank-reason squiggle, missing-unit offer | ✅ | `unitSpans`, `knownWordSpans` as temporary colours; `blankReason` after 700 ms idle and on a failed ↵ (`enterHint`); `missingUnit` drawn muted after the number, ↵ again takes it (`10 mA + 5 / 1 kohm`) |
+| Hover label naming the word under the pointer (`.quick-unit-tip`) | ✅ | core `wordNames` (`lib/knownWords`, native only): units by their `unitSpans` name as the web does, and functions (`gcf` greatest common factor) and constants (`π` pi, `e`, `i`, `φ`, `∞`) too; a child window over the word, 350 ms on the first rest, at once after that and after an edit under the pointer, gone when the pointer leaves the line (`drive.sh point:x,y` / `point:off`) |
 | Radicals drawn over their argument | ✅ | bar over the radicand in the field, tape and answer (`RadicalText`); a solve's `±2sqrt(2)` too (the ± had kept it as plain text in the answer and the tape). Pictured |
 | Σ/∫ bounds slots | ✅ | `boundsIn`: limits drawn small beside the sign (upper over lower, hidden `_ ^ ..`, holes for empty ones); caret snaps (`snapOffset`); `afterTyping`, `boundKey` (→ Tab space ^ ↑ ↓ ↵ ⌫) and `wordToSign` |
 | Faint `ans` while chaining | ✅ | `history` pair |
@@ -55,7 +56,8 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Feature | Status | Notes |
 |---|---|---|
 | Pretty answer, dual exact ≈ decimal, answer form setting | ✅ | `live`, `dual` pairs |
-| ⌃E cycles forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile. **Native only:** ⌃E / ⌃⇧E, not Tab (Tab fills parens); the page keeps Tab |
+| Chained `ans` (`*2`) | ✅ | the faint `ans` in front. **Native only:** Tab (or → at the end) types it in with any grey parens, nothing moving (no gap after the faint one); a typed `ans` is green as a known word, and hovering either shows `last answer = 3,000` |
+| Answer forms | ✅ | `Engine.answerForms` (bridged) with the same cycle built locally meanwhile. **Native only:** ⌃E turns on exponent form for every answer (`3 × 10³`, core `exponent_form`, units kept) until it's pressed again, remembered across launches, with a hint saying how to turn it off and a lit `×10ⁿ` beside deg / a/b / sf; ⌃⇧E cycles the other forms (Tab fills parens instead); both are rows in Settings › Keybinds (`exponent`, `forms`). The page cycles forms on Tab |
 | Steady answer while briefly invalid | ✅ | |
 | Selected part answered on its own (`selDisplay`, `.live.live-selection`) | ✅ | was missing: selecting `3*4` in `2 + 3*4` shows a muted `12` in the answer slot until the selection goes (evaluated alone, no history; not for the whole line, a graph, or a part that reads as its value), read out as the page's `aria-live` is; its own engine lane. Pictured |
 | Fit font | ✅ | shrinks to half before truncating |
@@ -84,6 +86,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 |---|---|---|
 | Graph: head, plot, grid, ticks, curve, pan, zoom, reset | ✅ | `graph` pair: same layout, colours and sizes |
 | Graph: home view, roots and critical points, hover readout | ✅ | `graphHome`, `graphTicks`, `graphReadoutY`, `GraphResult` roots and critical points; graph pair matches. Fixed against GraphPanel.tsx: the critical-point chips wrap onto more rows (`flex-wrap`; an HStack had squeezed six of them into columns a character wide on a narrow bar), are buttons that copy x (`Copy x`), and show 8 figures ungrouped (`formatCoord`); no points says `None in this domain`; the ticks are the engine's labels as given (they had read `50,000` beside `−50000`). Pictured at 340 pt |
+| Graph: a critical-point chip picks out its point | ✅ | native only (GraphPanel.tsx's chips only tint on hover): hovering or keyboard-focusing a chip (`CriticalChip`) draws the point filled in the accent with a halo ring and faint dashed accent guides to the left and bottom edges, gone when the pointer or focus leaves; the point is in `PlotKey`, so the plot redraws only then. Pictured light and dark; focus not exercised here (the field keeps Tab, and Full Keyboard Access was off) |
 | Systems panel (`sys`) | ✅ | `sys N` opens N fields (`sysCommand`), solved live by `engine/system` `solveLive`, ↵ / ↑ ↓ between fields (arrows need macOS 14; Tab on 13), saved as a `system` row. **Native only:** the fields open as soon as N is typed (the page waits for ↵) with the caret in the first, a new N keeps the fields it still has, Tab / ⇧Tab go round them and → at the end of one types in its inferred parens (macOS 14+) |
 | Cheat sheet (`?`, `help`) | ✅ | `help` pair, keys follow the keybinds. **Native only:** the things-to-type column also lists `messages`, `paste to max`, `send file to max` and `konami` before `?` (core `native_type_cheats`); a bar too narrow for both columns' labels (they ended in "…" at 340 pt) shows one column that scrolls past 12 rows (macOS 13+; 12 keeps two). Pictured light and dark at 680 and 340 pt |
 | Games list | ✅ | `games` pair (↑ from the bottom, ↓ off the end) |
@@ -121,7 +124,7 @@ edge tools 11 pt medium shown on hover, accent green `#1d7a4c` / `#63d392`, ink 
 | Esc layers then hide | ✅ |
 | ↑ / ↓ history, games list | ✅ |
 | ← / → picks; → accepts completion at the end | ✅ |
-| Tab completion and parens; ⌃E / ⌃⇧E answer forms (native only; the page cycles forms on Tab / ⇧Tab) | ✅ |
+| Tab completion and parens; ⌃E exponent form, ⌃⇧E other answer forms, both rebindable (native only; the page cycles forms on Tab / ⇧Tab) | ✅ |
 | ⌥↑ / ⌥↓ prefix | ✅ |
 | ⌘⌫ delete row | ✅ |
 | ⌘Z / ⇧⌘Z | ✅ (typing runs, and a deleted row) |
@@ -156,8 +159,8 @@ relay.
 
 | Feature | Status | Notes |
 |---|---|---|
-| Shell: the 680 card at the window's top left, esc (full screen → lobby step → pause / "esc again to leave" → close), paused card, corner full-screen button, pause on focus loss | ✅ | `GameShellModel`, `escAction`/`pausedKey` from the core; esc, arm and leave checked in an online connect 4 |
-| Full screen as the big window (⌃F, f, the buttons), boards growing with `--game-h` | 🟡 | window zoom as before; pong court, connect 4 board and the crack dial take the larger size; not pictured |
+| Shell: the game in the bar's place, esc (full screen → lobby step → pause / "esc again to leave" → close), paused card, corner full-screen button, pause on focus loss | ✅ | as the page's game took the panel (composer hidden, the panel growing down from the composer's top): a borderless card at the bar's spot and width, at its level, as tall as the game (`GameShellView` measures it; the window follows), rounded with the bar's shadow. Esc from the lobby's first screen puts the bar back where it was; ⌘W and the hotkey take both away (a game that holds its link is hidden and comes back on the next show). It used to open a separate 900×620 titled window with the card in its top-left. `GameShellModel`, `escAction`/`pausedKey` from the core; esc, arm and leave checked in an online connect 4 |
+| Full screen as the big window (⌃F, f, the buttons), boards growing with `--game-h` | ✅ | the card's window becomes a titled, centred, resizable one sized by `GameWindow.frame` from the card's shape (`setGameWindow` in Overlay.swift); esc, ⌃F, ⌘W or the red button go back to the bar's card. One view tree for both, so the game survives the switch (a branch per mode had rebuilt it from the lobby). Pong lobby and a match in and out of full screen, connect 4's lobby, light and dark, pictured in a re-signed dev copy |
 | Lobby: start / vs computer / vs a friend screens, host open or locked, join by list or code, rename, ⌫ back, codes, notes | ✅ | the core's `lobby_*` (lobby.ts and its tests); room list, open host and join seen against the web page |
 | Relay link: rooms socket, host/join, pings, seat kept through a dropped link, step away / come back, retries on wake | ✅ | the core's `RelayPeer` (peerOnline.ts and its tests) run over URLSessionWebSocketTask; native ↔ web connect 4 played both ways |
 | Saves (`qcalc-equal`, `qcalc-numbers`, `qcalc-crack`, `qcalc-c4-ghost`, `qcalc-host-locked`) and the nickname | ✅ | the same AppSettings store and strings the web page mirrored, so saves carry over |

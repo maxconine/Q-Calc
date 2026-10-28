@@ -405,6 +405,34 @@ pub fn is_unit_name(word: &str) -> bool {
     tbl().alias_names.contains(&word.to_lowercase())
 }
 
+/// native only (⌃E): a whole word read as a unit with a decimal SI prefix on a unit that takes one, as the prefix's
+/// power of ten and the unit's symbol without it (`GB` → (9, `B`), `km` → (3, `m`), `µs` → (−6, `s`)). None for a
+/// unit that only looks prefixed (`Pa`, `min`, `mph`), a binary prefix (`GiB`) or no prefix at all.
+pub fn split_si_prefix(word: &str) -> Option<(i32, String)> {
+    let w = cs(word);
+    let unit = match_unit_at_start(&w).filter(|h| h.rest.is_empty())?.unit;
+    for p in table::PREFIXES {
+        let power = p.factor.log10();
+        if p.factor == 1.0 || (power - power.round()).abs() > 1e-9 {
+            continue;
+        }
+        let Some(rest) = unit.symbol.strip_prefix(p.symbol).filter(|r| !r.is_empty()) else {
+            continue;
+        };
+        let base = tbl().by_symbol.get(rest).and_then(|list| {
+            list.iter().find(|b| {
+                // same kind of quantity at exactly the prefix's scale (bytes are listed one by one, not prefixable,
+                // so it isn't asked for): `nmi` isn't nano-miles, `Pa` isn't peta-ares
+                b.dim == unit.dim && ((b.to_base * p.factor) / unit.to_base - 1.0).abs() < 1e-9
+            })
+        });
+        if let Some(base) = base {
+            return Some((power.round() as i32, base.symbol.clone()));
+        }
+    }
+    None
+}
+
 /// A unit name, or a prefixed symbol written exactly as its unit shows (`ms`, `kV`, not `ka`).
 pub fn reads_as_unit(word: &str) -> bool {
     if is_unit_name(word) {

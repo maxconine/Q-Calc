@@ -626,6 +626,7 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
                 (r"\bgcf\b", "i", "gcf"),
                 (r"\blcm\b", "i", "lcm"),
                 (r"\blcf\b", "i", "lcf"),
+                (r"\blcd\b", "i", "lcd"),
             ]
             .iter()
             .map(|(p, f, to)| (js(p, f), *to))
@@ -667,6 +668,11 @@ pub fn preprocess_ascii(expr: &str, extra: &[String]) -> String {
         format!("^({digits})")
     });
     let s = replace(&ABS, &s, |c| format!("abs({})", g(c, 1)));
+    // native only: `and` is `&` and `or` is `|` between two operands (`12 and 10` = 8, `12 or 3` = 15); after
+    // the |…| absolute values, so `a or b or c` isn't read as `a |b| c`. Phrases (`between 1 and 2`, `4 hours and
+    // 10 minutes`) are answered before this layer
+    static AND_OR: Lazy = Lazy::new(|| js(r"(?<=[\w)\]!.]\s*)\b(and|or)\b(?=\s*[\w(.√∛-])", "i"));
+    let s = replace(&AND_OR, &s, |c| if g(c, 1).eq_ignore_ascii_case("and") { "&".into() } else { "|".into() });
     let s = lit(&STARSTAR, &s, "^");
     let s = replace(&POW_MOD, &s, |c| {
         format!("powmod({},{},{})", g(c, 1), g(c, 2), g(c, 3))

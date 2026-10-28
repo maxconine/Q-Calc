@@ -89,6 +89,32 @@ enum DevSnapshot {
         }
     }
 
+    /// The pointer resting at x,y in the bar (points from its top-left), or leaving the line with `off`: what the
+    /// line's tracking area would say, straight to the line (a synthesized mouse-moved never reaches it)
+    static func point(_ spot: String) {
+        guard let window = NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible }),
+              let line = find(BarTextView.self, in: window.contentView) else { return }
+        if spot == "off" {
+            if let event = NSEvent.enterExitEvent(with: .mouseExited, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                  windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil) {
+                line.mouseExited(with: event)
+            }
+            return
+        }
+        let xy = spot.split(separator: ",").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
+        guard xy.count == 2, let event = NSEvent.mouseEvent(with: .mouseMoved, location: NSPoint(x: xy[0], y: window.frame.height - xy[1]), modifierFlags: [],
+                                                            timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                                            context: nil, eventNumber: 0, clickCount: 0, pressure: 0) else { return }
+        line.mouseMoved(with: event)
+    }
+
+    private static func find<T: NSView>(_ type: T.Type, in view: NSView?) -> T? {
+        guard let view else { return nil }
+        if let hit = view as? T { return hit }
+        for sub in view.subviews { if let hit = find(type, in: sub) { return hit } }
+        return nil
+    }
+
     /// A key press, as `enter`, `up`, `down`, `tab`, `escape`, `cmd+w`, `cmd+c`, `ctrl+d`…, to the key window.
     static func key(_ chord: String) {
         guard let parsed = Chord(chord), let code = KeyNames.byName[parsed.key],

@@ -79,7 +79,7 @@ describe('toTypstMath', () => {
 
   it('keeps unicode letters, stray brackets and what follows them', () => {
     expect(toTypstMath('2α + ∂')).toBe('2 α + ∂')
-    expect(toTypstMath('2+3)*4')).toBe('2 + 3 ) dot 4')
+    expect(toTypstMath('2+3)*4')).toBe('2 + 3 \\) dot 4')
     expect(toTypstMath('[1, 2')).toBe('\\[ 1 , 2')
     expect(toTypstMath("f'(x)")).toBe("f ' (x)")
   })
@@ -226,5 +226,62 @@ describe('a solve still being typed', () => {
   ])('%s previews its equation so far', (expr, math) => {
     expect(typstPreviewUseful(expr)).toBe(true)
     expect(previewMath(expr).replace(/\s+/g, ' ')).toBe(math)
+  })
+})
+
+describe('and / or', () => {
+  it('draws & and `and` as the wedge and `or` as the vee', () => {
+    expect(toTypstMath('sin(22&3)')).toBe('sin(22 and 3)')
+    expect(toTypstMath('(22&3*21)22/23')).toBe('(22 and 3 dot 21) 22 / 23')
+    expect(toTypstMath('12 and 3')).toBe('12 and 3')
+    expect(toTypstMath('1 or 0')).toBe('1 or 0')
+    expect(toTypstMath('(2>1) or (3>4)')).toBe('(2 > 1) or (3 > 4)')
+  })
+})
+
+describe('every typed character previews, and every preview compiles', () => {
+  it.each([
+    // floor, ceiling, norm and angle brackets, and a double prime
+    ['⌊x⌋', 'floor(x)'],
+    ['⌈2.5⌉', 'ceil(2.5)'],
+    ['‖v‖', 'norm(v)'],
+    ['⟨x, y⟩', 'lr(chevron.l x , y chevron.r)'],
+    ['⌊x', 'floor.l x'],
+    ['f″(x)', "f '' (x)"],
+    // drawn as typed
+    ['€5 + £3', '€ 5 + £ 3'],
+    ['¥ ¢ ‰ § ¶ —', '¥ ¢ ‰ § ¶ —'],
+    ['@ ` \\ ‹ « “ ‘', '\\@ \\` backslash ‹ « “ ‘'],
+    ['x^2 "', 'x ^ 2 \\"'],
+    // number literals as typed
+    ['0b1010', '"0b1010"'],
+    ['0xff + 1/2', '"0xff" + 1 / 2'],
+    ['0o17', '"0o17"'],
+    // what Typst couldn't compile
+    ['sin(2;3)', 'sin(2 \\; 3)'],
+    ['∛', '\\∛'],
+    ['√', '\\√'],
+    ['∜(16)', 'root(4, 16)'],
+    ['√()', 'sqrt(zws)'],
+    ['2^', '2 \\^'],
+    ['/3', '\\/ 3'],
+    ['⁻¹', 'zws^(-1)'],
+    ['_3', 'zws_(3)'],
+    ['abs()', 'abs(zws)'],
+    ['frac(1)', 'op("frac")(1)'],
+    ['floor(1, 2)', 'op("floor")(1, 2)'],
+    ['ip(x)', 'op("ip")(x)'],
+    ['amat(1, 2; 3, 4)', 'amat(1, 2; 3, 4)'],
+    ['cbrt(sqrt', 'root(3, op("sqrt"))'],
+    ['dx_1', '#dx _(1)'],
+    ['√(1, 2)', 'sqrt(lr(1 , 2))'],
+    ['log(8, 2)', 'log(8, 2)'],
+  ])('%s previews as %s', (expr, math) => {
+    expect(previewMath(expr)).toBe(math)
+  })
+
+  it('shows for what it typesets, and not for a number literal alone', () => {
+    for (const expr of ['0b1010', '0xff', '0o17', '€5 + £3', '2^']) expect(typstPreviewUseful(expr)).toBe(false)
+    for (const expr of ['⌊x⌋', '‖v‖', 'sin(2;3)', '0xff + 1/2', 'x^2 "']) expect(typstPreviewUseful(expr)).toBe(true)
   })
 })

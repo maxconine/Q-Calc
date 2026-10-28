@@ -288,7 +288,11 @@ pub fn typst_preview_useful(expr: &str) -> bool {
     }
     // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
     // a quoted unit (`"Nm"`, `"Pa"`) is still math; any other quoted word (`"to"`, a date, money) hides it
-    let bare = jsre::replace_all(lazy!(r#"op\("[^"]*"\)"#), &math, |_| "op".into()).into_owned();
+    // a typed quote mark (\") isn't quoted text, a stray \) is a bracket, and 0xff is a number
+    let bare = math.replace("\\\"", "").replace("\\)", ")");
+    let bare =
+        jsre::replace_all(lazy!(r#""0[bxo][0-9a-f]+""#, "i"), &bare, |_| "0".into()).into_owned();
+    let bare = jsre::replace_all(lazy!(r#"op\("[^"]*"\)"#), &bare, |_| "op".into()).into_owned();
     let bare = jsre::replace_all(lazy!(r#"delim: "[^"]*""#), &bare, |_| String::new()).into_owned();
     let bare = jsre::replace_all(lazy!(r#""([^"]*)""#), &bare, |c| {
         if crate::units::reads_as_unit(jsre::group(c, 1)) {
@@ -622,11 +626,53 @@ fn emit(s: &[char], from: usize, to: usize) -> String {
             continue;
         }
         match parts.last_mut() {
-            Some(last) if text.starts_with("_(") => *last += &text,
+            // a sign isn't a base: `/_2` is a subscript the fraction's other side
+            Some(last) if text.starts_with("_(") && last != "/" && last != "^" => {
+                // `#dx_(1)` would read `dx_` as the name
+                if last.starts_with('#') && last.ends_with(|c: char| c.is_ascii_alphanumeric()) {
+                    *last += " ";
+                }
+                *last += &text;
+            }
             _ => parts.push(text),
         }
     }
-    parts.join(" ")
+    tidy(parts)
+}
+
+/// The pieces of a group, joined so Typst can compile them. A / or ^ with nothing to divide or raise on one
+/// side (`2^`, `/3`, `2 / ^(-1)`) is the sign as typed, and a subscript or power with nothing before it hangs
+/// off an empty base: Typst can't compile a fraction or an attachment with a side missing.
+fn tidy(mut parts: Vec<String>) -> String {
+    let sign = |p: &String| p == "/" || p == "^";
+    for (k, p) in parts.iter_mut().enumerate() {
+        if p.starts_with("_(") || (k == 0 && p.starts_with('^') && p != "^") {
+            *p = format!("zws{p}");
+        }
+    }
+    (0..parts.len())
+        .map(|k| {
+            let p = &parts[k];
+            let open = sign(p)
+                && (k == 0
+                    || sign(&parts[k - 1])
+                    || parts
+                        .get(k + 1)
+                        .is_none_or(|n| n == "/" || n.starts_with('^')));
+            if open { format!("\\{p}") } else { p.clone() }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Whether a piece can stand alone as a radicand, a subscript or an exponent: not a sign still waiting for
+/// its other side, a closer or a comma.
+fn operand(t: &str) -> bool {
+    let t = jsstr::trim(t);
+    !t.is_empty()
+        && !matches!(t, "/" | "^" | "," | "\\)" | "\\]" | "\\}" | "\\;")
+        && !t.starts_with('^')
+        && !t.starts_with("_(")
 }
 
 fn is_big_sign(c: char) -> bool {
@@ -642,13 +688,8 @@ fn read_piece(s: &[char], i: usize, to: usize) -> Option<Piece> {
             return Some(grid);
         }
         let Some(close) = match_close(s, i, to) else {
-            // still being typed: an open bracket shows on its own
-            let text = if ch == '(' {
-                "(".to_string()
-            } else {
-                format!("\\{ch}")
-            };
-            return Some((text, i + 1));
+            // still being typed: an open bracket shows on its own (escaped, so it doesn't swallow a closer after it)
+            return Some((format!("\\{ch}"), i + 1));
         };
         let inner = emit(s, i + 1, close);
         let wrap = match ch {
@@ -660,11 +701,12 @@ fn read_piece(s: &[char], i: usize, to: usize) -> Option<Piece> {
     }
     // a stray closer is printed, and what follows it still is
     match ch {
-        ')' => return Some((")".into(), i + 1)),
-        ']' | '}' => return Some((format!("\\{ch}"), i + 1)),
+        // escaped, so a group around it still closes where it should
+        ')' | ']' | '}' => return Some((format!("\\{ch}"), i + 1)),
         ',' => return Some((",".into(), i + 1)),
         '_' => return Some(read_subscript(s, i, to)),
-        '√' | '∛' => return Some(read_radical(s, i, to)),
+        '√' | '∛' | '∜' => return Some(read_radical(s, i, to)),
+        '⌊' | '⌈' | '‖' | '⟨' | '⌋' | '⌉' | '⟩' => return Some(read_fence(s, i, to)),
         _ => {}
     }
     if is_ident_start(Some(ch)) || is_big_sign(ch) {
@@ -745,6 +787,10 @@ fn read_word(s: &[char], i: usize, to: usize) -> Piece {
             return (text, end);
         }
     }
+    // `or (3 > 4)` is the operator before a group, not a call of `or`
+    if matches!(key.as_str(), "and" | "or") {
+        return (bare_name(&word), j);
+    }
     if at(s, k) == Some('(')
         && CALLS.contains(&word.as_str())
         && let Some(close) = match_close(s, k, to).filter(|&c| c > 0)
@@ -760,20 +806,32 @@ fn read_word(s: &[char], i: usize, to: usize) -> Piece {
 }
 
 fn call_macro(name: &str, inner: &str) -> String {
+    let parts = split_top(inner, ',');
+    // with the wrong number of arguments a macro can't compile; it's then a name like any other
+    let fits = match name {
+        "multibinom" => parts.len() >= 2,
+        "ip" => parts.len() == 2,
+        "ibar" | "imod" => parts.len() == 1,
+        _ => true,
+    };
+    if !fits {
+        return call_fn(name, inner);
+    }
     if matches!(name, "amat" | "emat" | "dmat" | "multibinom") {
+        // a math call: `#amat(1, 2; 3, 4)` in code would read the rows as code
         let rows: Vec<String> = split_top(inner, ';')
             .iter()
             .map(|row| {
                 split_top(row, ',')
                     .iter()
-                    .map(|cell| or_space(emit_str(cell)))
+                    .map(|cell| or_zws(emit_str(cell)))
                     .collect::<Vec<_>>()
                     .join(", ")
             })
             .collect();
-        return format!("#{name}({})", rows.join("; "));
+        return format!("{name}({})", rows.join("; "));
     }
-    let args: Vec<String> = split_top(inner, ',')
+    let args: Vec<String> = parts
         .iter()
         .map(|a| {
             let math = emit_str(a);
@@ -791,25 +849,43 @@ fn or_space(s: String) -> String {
     if s.is_empty() { " ".into() } else { s }
 }
 
+/// How many arguments a Typst function takes: (fewest, most).
+fn arity(name: &str) -> (usize, usize) {
+    match name {
+        "root" | "frac" => (2, 2),
+        "binom" => (2, usize::MAX),
+        "vec" | "mat" => (0, usize::MAX),
+        _ => (1, 1),
+    }
+}
+
 fn call_fn(word: &str, inner: &str) -> String {
     let key = word.to_lowercase();
     let args: Vec<String> = split_top(inner, ',').iter().map(|a| emit_str(a)).collect();
-    let arg = |k: usize| args.get(k).map_or("", String::as_str);
+    // what's typed between the brackets, where Typst needs something: sqrt() is an empty radical
+    let slot = |k: usize| one_arg(or_zws(args.get(k).cloned().unwrap_or_default()));
+    let all = args.join(", ");
+    let unary = args.len() == 1;
     if MATRIX_FNS.contains(&key.as_str())
+        && (unary || matches!(key.as_str(), "dot" | "cross"))
         && let Some(m) = matrix_fn(&key, &args)
     {
         return m;
     }
     match key.as_str() {
-        "sqrt" => return format!("sqrt({})", arg(0)),
-        "cbrt" => return format!("root(3, {})", arg(0)),
-        "nthroot" if args.len() >= 2 => return format!("root({}, {})", arg(1), arg(0)),
-        "ncr" | "combinations" => return format!("binom({}, {})", arg(0), arg(1)),
-        "npr" | "permutations" => return format!("attach(P, bl: {}, br: {})", arg(0), arg(1)),
-        "log2" => return format!("log_2({})", arg(0)),
-        "log10" | "log" => return format!("log({})", arg(0)),
-        "ln" => return format!("ln({})", arg(0)),
-        "abs" => return format!("abs({})", arg(0)),
+        "sqrt" if unary => return format!("sqrt({})", slot(0)),
+        "cbrt" if unary => return format!("root(3, {})", slot(0)),
+        "nthroot" if args.len() == 2 => return format!("root({}, {})", slot(1), slot(0)),
+        "ncr" | "combinations" if args.len() <= 2 => {
+            return format!("binom({}, {})", slot(0), slot(1));
+        }
+        "npr" | "permutations" if args.len() <= 2 => {
+            return format!("attach(P, bl: {}, br: {})", slot(0), slot(1));
+        }
+        "log2" => return format!("log_2({all})"),
+        "log10" | "log" => return format!("log({all})"),
+        "ln" => return format!("ln({all})"),
+        "abs" if unary => return format!("abs({})", slot(0)),
         _ => {}
     }
     match inverse(&key) {
@@ -817,18 +893,26 @@ fn call_fn(word: &str, inner: &str) -> String {
         Some(inv) => return format!("{inv}({})", args.join(", ")),
         None => {}
     }
-    let name = if TYPST_FUNCTIONS.contains(&word) {
-        word.to_string()
-    } else {
-        math_name(word)
-    };
+    if TYPST_FUNCTIONS.contains(&word) {
+        let (fewest, most) = arity(word);
+        // a call Typst can't make (`frac(1)`, `floor(1, 2)`) is the name and its brackets as typed
+        if fewest == 0 {
+            return format!("{word}({all})");
+        }
+        if (fewest..=most).contains(&args.len()) {
+            let filled: Vec<String> = (0..args.len()).map(slot).collect();
+            return format!("{word}({})", filled.join(", "));
+        }
+        return format!("op(\"{word}\")({all})");
+    }
+    let name = math_name(word);
     // a quoted name would be text, which reads as a product; op keeps f-of-x spacing
     let head = if name.starts_with('"') {
         format!("op({name})")
     } else {
         name
     };
-    format!("{head}({})", args.join(", "))
+    format!("{head}({all})")
 }
 
 fn bare_name(word: &str) -> String {
@@ -840,6 +924,9 @@ fn bare_name(word: &str) -> String {
     match key.as_str() {
         "dot" => return "dot.op".into(),
         "ans" => return "\"ans\"".into(),
+        // the logical words as their symbols: ∧ and ∨
+        "and" => return "and".into(),
+        "or" => return "or".into(),
         "pi" => return "pi".into(),
         "theta" => return "theta".into(),
         "tau" => return "tau".into(),
@@ -857,8 +944,9 @@ fn bare_name(word: &str) -> String {
         Some(inv) => return inv.into(),
         None => {}
     }
+    // the function itself would be a function where Typst wants math (`root(3, sqrt)`)
     if key == "sqrt" {
-        return "sqrt".into();
+        return "op(\"sqrt\")".into();
     }
     math_name(word)
 }
@@ -883,8 +971,92 @@ fn math_name(word: &str) -> String {
     format!("\"{}\"", word.replace(['"', '\\'], ""))
 }
 
+/// ⌊x⌋, ⌈x⌉, ‖x‖ and ⟨x⟩ as the floor, ceiling, norm and angle brackets they are. One still open (or a stray
+/// closer) is its own sign.
+fn read_fence(s: &[char], i: usize, to: usize) -> Piece {
+    let (open, close, sign) = match s[i] {
+        '⌊' => ('⌊', '⌋', "floor.l"),
+        '⌈' => ('⌈', '⌉', "ceil.l"),
+        '‖' => ('‖', '‖', "bar.v.double"),
+        '⟨' => ('⟨', '⟩', "chevron.l"),
+        '⌋' => return ("floor.r".into(), i + 1),
+        '⌉' => return ("ceil.r".into(), i + 1),
+        _ => return ("chevron.r".into(), i + 1),
+    };
+    let mut depth = 0;
+    let mut end = None;
+    for (k, &c) in s.iter().enumerate().take(to).skip(i + 1) {
+        if c == close && depth == 0 {
+            end = Some(k);
+            break;
+        }
+        if open != close && c == open {
+            depth += 1;
+        } else if c == close {
+            depth -= 1;
+        }
+    }
+    let Some(end) = end else {
+        return (sign.into(), i + 1);
+    };
+    let inner = or_zws(emit(s, i + 1, end));
+    // lr takes the commas in ⟨x, y⟩ as they are; a call of one argument needs them kept together
+    let one = one_arg(inner.clone());
+    let text = match open {
+        '⌊' => format!("floor({one})"),
+        '⌈' => format!("ceil({one})"),
+        '‖' => format!("norm({one})"),
+        _ => format!("lr(chevron.l {inner} chevron.r)"),
+    };
+    (text, end + 1)
+}
+
+/// An empty argument as an empty box: Typst can't call `sqrt()` or `abs()` with nothing.
+fn or_zws(s: String) -> String {
+    if jsstr::trim(&s).is_empty() {
+        "zws".into()
+    } else {
+        s
+    }
+}
+
+/// Math as one argument of a call: a comma in it (`√(1, 2)`) would start a second one, so it's kept in `lr`.
+fn one_arg(s: String) -> String {
+    if top_comma(&s) { format!("lr({s})") } else { s }
+}
+
+/// Whether math has a comma outside its brackets and quotes, where a call would read it as another argument.
+fn top_comma(t: &str) -> bool {
+    let mut depth = 0;
+    let mut quoted = false;
+    let mut escaped = false;
+    for ch in t.chars() {
+        if escaped {
+            escaped = false;
+        } else if ch == '\\' {
+            escaped = true;
+        } else if ch == '"' {
+            quoted = !quoted;
+        } else if quoted {
+            continue;
+        } else if "([{".contains(ch) {
+            depth += 1;
+        } else if ")]}".contains(ch) {
+            depth -= 1;
+        } else if (ch == ',' || ch == ';') && depth == 0 {
+            return true;
+        }
+    }
+    false
+}
+
 fn read_radical(s: &[char], i: usize, to: usize) -> Piece {
-    let cube = s[i] == '∛';
+    let sign = s[i];
+    let radical = |under: &str| match sign {
+        '∛' => format!("root(3, {under})"),
+        '∜' => format!("root(4, {under})"),
+        _ => format!("sqrt({under})"),
+    };
     let mut k = i + 1;
     while k < to && jsstr::is_space(s[k]) {
         k += 1;
@@ -892,29 +1064,35 @@ fn read_radical(s: &[char], i: usize, to: usize) -> Piece {
     if at(s, k) == Some('(')
         && let Some(close) = match_close(s, k, to).filter(|&c| c > 0)
     {
-        let inner = emit(s, k + 1, close);
-        let text = if cube {
-            format!("root(3, {inner})")
-        } else {
-            format!("sqrt({inner})")
-        };
-        return (text, close + 1);
+        let inner = one_arg(or_zws(emit(s, k + 1, close)));
+        return (radical(&inner), close + 1);
     }
     let atom = if k < to { read_piece(s, k, to) } else { None };
-    match atom {
-        None => (if cube { "root(3, )" } else { "sqrt" }.into(), i + 1),
-        Some((t, end)) => (
-            if cube {
-                format!("root(3, {t})")
-            } else {
-                format!("sqrt({t})")
-            },
-            end,
-        ),
+    match atom.filter(|(t, _)| operand(t)) {
+        Some((t, end)) => (radical(&one_arg(t)), end),
+        // a radical with nothing after it yet is the sign as typed (escaped: bare, Typst wants its radicand)
+        None => (format!("\\{sign}"), i + 1),
     }
 }
 
 fn read_number(s: &[char], i: usize, to: usize) -> Piece {
+    // 0b1010, 0xff and 0o17 are upright as typed, not 0 times a variable
+    if s[i] == '0'
+        && let Some(base) = at(s, i + 1).filter(|c| "bBxXoO".contains(*c))
+    {
+        let digit = |c: char| match base.to_ascii_lowercase() {
+            'b' => c == '0' || c == '1',
+            'o' => ('0'..='7').contains(&c),
+            _ => c.is_ascii_hexdigit(),
+        };
+        let mut j = i + 2;
+        while j < to && digit(s[j]) {
+            j += 1;
+        }
+        if j > i + 2 && !is_ident_part(at(s, j)) {
+            return (format!("\"{}\"", sl(s, i, j)), j);
+        }
+    }
     let mut j = i;
     while j < to && (s[j].is_ascii_digit() || s[j] == '.') {
         j += 1;
@@ -971,10 +1149,20 @@ fn one(ch: char) -> Option<&'static str> {
         '°' => "degree",
         '…' => "dots.h",
         '|' => "|",
-        '&' => "&",
+        '″' => "''",
+        '‴' => "'''",
+        // `;` would split a call's arguments into rows (`sin(2;3)`); `"` would open a string; the rest are
+        // markup a bare one would start
+        ';' => "\\;",
+        '"' => "\\\"",
+        '@' => "\\@",
+        '`' => "\\`",
+        // `\\` is a line break
+        '\\' => "backslash",
+        // bitwise and, drawn as the wedge (a bare & is Typst's alignment point, which draws nothing)
+        '&' => "and",
         '\'' | '′' => "'",
         ':' => ":",
-        ';' => ";",
         '?' => "?",
         '~' => "tilde.op",
         _ => return None,
@@ -1012,8 +1200,9 @@ fn read_symbol(s: &[char], i: usize, to: usize) -> Piece {
         let rest = sl(s, i, to);
         if let Some(m) = caps(lazy!(r"^\^\s*[-−]\s*"), &rest) {
             let len = jsre::group(&m, 0).chars().count();
-            if let Some((p, end)) = read_piece(s, i + len, to)
-                && !p.is_empty()
+            if i + len < to
+                && let Some((p, end)) = read_piece(s, i + len, to)
+                && operand(&p)
             {
                 return (format!("^(-{p})"), end);
             }
@@ -1044,8 +1233,8 @@ fn read_symbol(s: &[char], i: usize, to: usize) -> Piece {
     if ch == '$' || ch == '#' {
         return (format!("\\{ch}"), i + 1);
     }
-    // α, Ω, ∂, ∇ and other letters and symbols typeset as themselves
-    static GLYPH: Lazy = Lazy::new(|| jsre::compile(r"^[\p{L}\p{No}\p{Sm}\p{So}]$"));
+    // α, Ω, ∂, ∇ and other letters, symbols and marks typeset as themselves (€, ‰, §, —, «, “)
+    static GLYPH: Lazy = Lazy::new(|| jsre::compile(r"^[\p{L}\p{N}\p{S}\p{P}]$"));
     if (ch as u32) > 0x7f && jsre::test(&GLYPH, &ch.to_string()) {
         return (ch.to_string(), i + 1);
     }
@@ -1398,8 +1587,9 @@ fn read_subscript(s: &[char], i: usize, to: usize) -> Piece {
         };
     }
     match read_piece(s, j, to) {
-        Some((t, end)) if !t.is_empty() => (format!("_({t})"), end),
-        _ => (String::new(), j),
+        Some((t, end)) if operand(&t) => (format!("_({t})"), end),
+        // `_` before a sign or a closer is the underscore as typed
+        _ => ("\\_".into(), j),
     }
 }
 

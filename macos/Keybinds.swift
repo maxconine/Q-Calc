@@ -174,7 +174,14 @@ enum KeyActions {
         ("fraction", "Fractions"),
         ("sigFigs", "Sig figs from input"),
         ("clear", "Clear history"),
-    ]
+    ] + native
+
+    // native only: ⌃E's exponent form, and the answer's other forms (Tab cycles those on the page)
+    #if QCALC_NATIVE
+    private static let native: [(id: String, label: String)] = [("exponent", "Exponent form (3 × 10³)"), ("forms", "Other answer forms")]
+    #else
+    private static let native: [(id: String, label: String)] = []
+    #endif
 
     static let defaults: [String: String] = [
         "show": GlobalHotKey.standard.id,
@@ -185,6 +192,8 @@ enum KeyActions {
         "fraction": "ctrl+f",
         "sigFigs": "ctrl+s",
         "clear": "ctrl+c",
+        "exponent": "ctrl+e",
+        "forms": "ctrl+shift+e",
     ]
 
     static func label(_ id: String) -> String {

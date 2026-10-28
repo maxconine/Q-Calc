@@ -35,6 +35,7 @@ pub const COMPLETION_FUNCTIONS: &[&str] = &[
     "gcd",
     "gcf",
     "lcf",
+    "lcd",
     "lcm",
     "mean",
     "median",

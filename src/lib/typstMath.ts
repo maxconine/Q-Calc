@@ -179,7 +179,11 @@ export function typstPreviewUseful(expr: string): boolean {
   if (!math) return false
   // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
   // a quoted unit (`"Nm"`, `"Pa"`) is still math; any other quoted word (`"to"`, a date, money) hides it
+  // a typed quote mark (\") isn't quoted text, a stray \) is a bracket, and 0xff is a number
   const bare = math
+    .replaceAll('\\"', '')
+    .replaceAll('\\)', ')')
+    .replace(/"0[bxo][0-9a-f]+"/gi, '0')
     .replace(/op\("[^"]*"\)/g, 'op')
     .replace(/delim: "[^"]*"/g, '')
     .replace(/"([^"]*)"/g, (word, inner: string) => (readsAsUnit(inner) ? 'unit' : word))
@@ -346,10 +350,36 @@ function emit(s: string, from: number, to: number): string {
     if (!atom || atom.end <= i) break
     i = atom.end
     if (!atom.text) continue
-    if (atom.text.startsWith('_(') && parts.length) parts[parts.length - 1] += atom.text
-    else parts.push(atom.text)
+    const last = parts[parts.length - 1]
+    // a sign isn't a base: `/_2` is a subscript the fraction's other side
+    if (atom.text.startsWith('_(') && last != null && last !== '/' && last !== '^') {
+      // `#dx_(1)` would read `dx_` as the name
+      parts[parts.length - 1] = (/^#.*[A-Za-z0-9]$/.test(last) ? `${last} ` : last) + atom.text
+    } else parts.push(atom.text)
   }
-  return parts.join(' ')
+  return tidy(parts)
+}
+
+// The pieces of a group, joined so Typst can compile them. A / or ^ with nothing to divide or raise on one
+// side (`2^`, `/3`, `2 / ^(-1)`) is the sign as typed, and a subscript or power with nothing before it hangs
+// off an empty base: Typst can't compile a fraction or an attachment with a side missing.
+function tidy(parts: string[]): string {
+  const sign = (p: string) => p === '/' || p === '^'
+  const based = parts.map((p, k) => (p.startsWith('_(') || (k === 0 && p.startsWith('^') && p !== '^') ? `zws${p}` : p))
+  return based
+    .map((p, k) => {
+      const next = based[k + 1]
+      const open = sign(p) && (k === 0 || sign(based[k - 1]!) || next == null || next === '/' || next.startsWith('^'))
+      return open ? `\\${p}` : p
+    })
+    .join(' ')
+}
+
+// Whether a piece can stand alone as a radicand, a subscript or an exponent: not a sign still waiting for its
+// other side, a closer or a comma.
+function operand(text: string): boolean {
+  const t = text.trim()
+  return !!t && !['/', '^', ',', '\\)', '\\]', '\\}', '\\;'].includes(t) && !t.startsWith('^') && !t.startsWith('_(')
 }
 
 type Piece = { text: string; end: number }
@@ -360,18 +390,19 @@ function readPiece(s: string, i: number, to: number): Piece | null {
     const grid = ch === '[' ? readMatrix(s, i, to) : null
     if (grid) return grid
     const close = matchClose(s, i, to)
-    // still being typed: an open bracket shows on its own
-    if (close < 0) return { text: ch === '(' ? '(' : `\\${ch}`, end: i + 1 }
+    // still being typed: an open bracket shows on its own (escaped, so it doesn't swallow a closer after it)
+    if (close < 0) return { text: `\\${ch}`, end: i + 1 }
     const inner = emit(s, i + 1, close)
     const wrap = ch === '(' ? `(${inner})` : ch === '[' ? `lr(\\[${inner}\\])` : `lr(\\{${inner}\\})`
     return { text: wrap, end: close + 1 }
   }
-  // a stray closer is printed, and what follows it still is
-  if (ch === ')') return { text: ')', end: i + 1 }
-  if (ch === ']' || ch === '}') return { text: `\\${ch}`, end: i + 1 }
+  // a stray closer is printed, and what follows it still is (escaped, so a group around it still closes where
+  // it should)
+  if (ch === ')' || ch === ']' || ch === '}') return { text: `\\${ch}`, end: i + 1 }
   if (ch === ',') return { text: ',', end: i + 1 }
   if (ch === '_') return readSubscript(s, i, to)
-  if (ch === '√' || ch === '∛') return readRadical(s, i, to)
+  if (ch === '√' || ch === '∛' || ch === '∜') return readRadical(s, i, to)
+  if ('⌊⌈‖⟨⌋⌉⟩'.includes(ch)) return readFence(s, i, to)
   if (isIdentStart(ch) || 'Σ∑Π∏∫'.includes(ch)) return readWord(s, i, to)
   if (isDigit(ch) || (ch === '.' && isDigit(s[i + 1] ?? ''))) return readNumber(s, i, to)
   return readSymbol(s, i, to)
@@ -402,6 +433,8 @@ function readWord(s: string, i: number, to: number): Piece {
     const text = arg?.text ? matrixFn(key, [arg.text]) : null
     if (arg && text) return { text, end: arg.end }
   }
+  // `or (3 > 4)` is the operator before a group, not a call of `or`
+  if (key === 'and' || key === 'or') return { text: bareName(word), end: j }
   if (s[k] === '(' && CALLS.has(word)) {
     const close = matchClose(s, k, to)
     if (close > 0) return { text: callMacro(word, s.slice(k + 1, close)), end: close + 1 }
@@ -414,38 +447,63 @@ function readWord(s: string, i: number, to: number): Piece {
 }
 
 function callMacro(name: string, inner: string): string {
+  const parts = splitTop(inner, ',')
+  // with the wrong number of arguments a macro can't compile; it's then a name like any other
+  const fits =
+    name === 'multibinom' ? parts.length >= 2 : name === 'ip' ? parts.length === 2 : name === 'ibar' || name === 'imod' ? parts.length === 1 : true
+  if (!fits) return callFn(name, inner)
   if (name === 'amat' || name === 'emat' || name === 'dmat' || name === 'multibinom') {
-    const rows = splitTop(inner, ';').map((row) => splitTop(row, ',').map((cell) => emit(cell, 0, cell.length) || ' ').join(', '))
-    return `#${name}(${rows.join('; ')})`
+    // a math call: `#amat(1, 2; 3, 4)` in code would read the rows as code
+    const rows = splitTop(inner, ';').map((row) => splitTop(row, ',').map((cell) => orZws(emit(cell, 0, cell.length))).join(', '))
+    return `${name}(${rows.join('; ')})`
   }
-  const args = splitTop(inner, ',').map((arg) => {
+  const args = parts.map((arg) => {
     const math = emit(arg, 0, arg.length)
     return math ? `$${math}$` : '$ $'
   })
   return `#${name}(${args.join(', ')})`
 }
 
+// how many arguments a Typst function takes: [fewest, most]
+function arity(name: string): [number, number] {
+  if (name === 'root' || name === 'frac') return [2, 2]
+  if (name === 'binom') return [2, Infinity]
+  if (name === 'vec' || name === 'mat') return [0, Infinity]
+  return [1, 1]
+}
+
 function callFn(word: string, inner: string): string {
   const key = word.toLowerCase()
   const args = splitTop(inner, ',').map((arg) => emit(arg, 0, arg.length))
-  const matrix = MATRIX_FNS.has(key) ? matrixFn(key, args) : null
+  // what's typed between the brackets, where Typst needs something: sqrt() is an empty radical
+  const slot = (k: number) => oneArg(orZws(args[k] ?? ''))
+  const all = args.join(', ')
+  const unary = args.length === 1
+  const matrix = MATRIX_FNS.has(key) && (unary || key === 'dot' || key === 'cross') ? matrixFn(key, args) : null
   if (matrix) return matrix
-  if (key === 'sqrt') return `sqrt(${args[0] ?? ''})`
-  if (key === 'cbrt') return `root(3, ${args[0] ?? ''})`
-  if (key === 'nthroot' && args.length >= 2) return `root(${args[1]}, ${args[0]})`
-  if (key === 'ncr' || key === 'combinations') return `binom(${args[0] ?? ''}, ${args[1] ?? ''})`
-  if (key === 'npr' || key === 'permutations') return `attach(P, bl: ${args[0] ?? ''}, br: ${args[1] ?? ''})`
-  if (key === 'log2') return `log_2(${args[0] ?? ''})`
-  if (key === 'log10' || key === 'log') return `log(${args[0] ?? ''})`
-  if (key === 'ln') return `ln(${args[0] ?? ''})`
-  if (key === 'abs') return `abs(${args[0] ?? ''})`
+  if (key === 'sqrt' && unary) return `sqrt(${slot(0)})`
+  if (key === 'cbrt' && unary) return `root(3, ${slot(0)})`
+  if (key === 'nthroot' && args.length === 2) return `root(${slot(1)}, ${slot(0)})`
+  if ((key === 'ncr' || key === 'combinations') && args.length <= 2) return `binom(${slot(0)}, ${slot(1)})`
+  if ((key === 'npr' || key === 'permutations') && args.length <= 2) return `attach(P, bl: ${slot(0)}, br: ${slot(1)})`
+  if (key === 'log2') return `log_2(${all})`
+  if (key === 'log10' || key === 'log') return `log(${all})`
+  if (key === 'ln') return `ln(${all})`
+  if (key === 'abs' && unary) return `abs(${slot(0)})`
   const inv = INVERSE[key]
-  if (inv === 'tan1') return `(#tan1)(${args.join(', ')})`
-  if (inv) return `${inv}(${args.join(', ')})`
-  const name = TYPST_FUNCTIONS.has(word) ? word : mathName(word)
+  if (inv === 'tan1') return `(#tan1)(${all})`
+  if (inv) return `${inv}(${all})`
+  if (TYPST_FUNCTIONS.has(word)) {
+    const [fewest, most] = arity(word)
+    if (fewest === 0) return `${word}(${all})`
+    // a call Typst can't make (`frac(1)`, `floor(1, 2)`) is the name and its brackets as typed
+    if (args.length >= fewest && args.length <= most) return `${word}(${args.map((_, k) => slot(k)).join(', ')})`
+    return `op("${word}")(${all})`
+  }
+  const name = mathName(word)
   // a quoted name would be text, which reads as a product; op keeps f-of-x spacing
   const head = name.startsWith('"') ? `op(${name})` : name
-  return `${head}(${args.join(', ')})`
+  return `${head}(${all})`
 }
 
 function bareName(word: string): string {
@@ -454,13 +512,17 @@ function bareName(word: string): string {
   if (CONTENT.has(key) && key === word) return `#${word}`
   if (key === 'dot') return 'dot.op'
   if (key === 'ans') return '"ans"'
+  // the logical words as their symbols: ∧ and ∨
+  if (key === 'and') return 'and'
+  if (key === 'or') return 'or'
   if (key === 'pi' || word === 'π') return 'pi'
   if (key === 'theta' || word === 'θ') return 'theta'
   if (key === 'tau') return 'tau'
   if (key === 'infinity' || key === 'infty' || key === 'inf' || word === '∞') return 'infinity'
   if (INVERSE[key] === 'tan1') return '(#tan1)'
   if (INVERSE[key]) return INVERSE[key]
-  if (key === 'sqrt') return 'sqrt'
+  // the function itself would be a function where Typst wants math (`root(3, sqrt)`)
+  if (key === 'sqrt') return 'op("sqrt")'
   return mathName(word)
 }
 
@@ -476,23 +538,85 @@ function mathName(word: string): string {
   return `"${word.replace(/["\\]/g, '')}"`
 }
 
+// ⌊x⌋, ⌈x⌉, ‖x‖ and ⟨x⟩ as the floor, ceiling, norm and angle brackets they are. One still open (or a stray
+// closer) is its own sign.
+function readFence(s: string, i: number, to: number): Piece {
+  const ch = s[i]!
+  if (ch === '⌋') return { text: 'floor.r', end: i + 1 }
+  if (ch === '⌉') return { text: 'ceil.r', end: i + 1 }
+  if (ch === '⟩') return { text: 'chevron.r', end: i + 1 }
+  const close = ch === '⌊' ? '⌋' : ch === '⌈' ? '⌉' : ch === '‖' ? '‖' : '⟩'
+  const sign = ch === '⌊' ? 'floor.l' : ch === '⌈' ? 'ceil.l' : ch === '‖' ? 'bar.v.double' : 'chevron.l'
+  let depth = 0
+  let end = -1
+  for (let k = i + 1; k < to; k++) {
+    if (s[k] === close && depth === 0) {
+      end = k
+      break
+    }
+    if (ch !== close && s[k] === ch) depth++
+    else if (s[k] === close) depth--
+  }
+  if (end < 0) return { text: sign, end: i + 1 }
+  const inner = orZws(emit(s, i + 1, end))
+  // lr takes the commas in ⟨x, y⟩ as they are; a call of one argument needs them kept together
+  const one = oneArg(inner)
+  const text =
+    ch === '⌊' ? `floor(${one})` : ch === '⌈' ? `ceil(${one})` : ch === '‖' ? `norm(${one})` : `lr(chevron.l ${inner} chevron.r)`
+  return { text, end: end + 1 }
+}
+
+// an empty argument as an empty box: Typst can't call `sqrt()` or `abs()` with nothing
+function orZws(s: string): string {
+  return s.trim() ? s : 'zws'
+}
+
+// math as one argument of a call: a comma in it (`√(1, 2)`) would start a second one, so it's kept in `lr`
+function oneArg(s: string): string {
+  return topComma(s) ? `lr(${s})` : s
+}
+
+// whether math has a comma outside its brackets and quotes, where a call would read it as another argument
+function topComma(t: string): boolean {
+  let depth = 0
+  let quoted = false
+  let escaped = false
+  for (const ch of t) {
+    if (escaped) escaped = false
+    else if (ch === '\\') escaped = true
+    else if (ch === '"') quoted = !quoted
+    else if (quoted) continue
+    else if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) depth--
+    else if ((ch === ',' || ch === ';') && depth === 0) return true
+  }
+  return false
+}
+
 function readRadical(s: string, i: number, to: number): Piece {
-  const cube = s[i] === '∛'
+  const sign = s[i]!
+  const radical = (under: string) => (sign === '∛' ? `root(3, ${under})` : sign === '∜' ? `root(4, ${under})` : `sqrt(${under})`)
   let k = i + 1
   while (k < to && /\s/.test(s[k]!)) k++
   if (s[k] === '(') {
     const close = matchClose(s, k, to)
-    if (close > 0) {
-      const inner = emit(s, k + 1, close)
-      return { text: cube ? `root(3, ${inner})` : `sqrt(${inner})`, end: close + 1 }
-    }
+    if (close > 0) return { text: radical(oneArg(orZws(emit(s, k + 1, close)))), end: close + 1 }
   }
   const atom = k < to ? readPiece(s, k, to) : null
-  if (!atom) return { text: cube ? 'root(3, )' : 'sqrt', end: i + 1 }
-  return { text: cube ? `root(3, ${atom.text})` : `sqrt(${atom.text})`, end: atom.end }
+  if (atom && operand(atom.text)) return { text: radical(oneArg(atom.text)), end: atom.end }
+  // a radical with nothing after it yet is the sign as typed (escaped: bare, Typst wants its radicand)
+  return { text: `\\${sign}`, end: i + 1 }
 }
 
 function readNumber(s: string, i: number, to: number): Piece {
+  // 0b1010, 0xff and 0o17 are upright as typed, not 0 times a variable
+  const base = s[i] === '0' ? (s[i + 1] ?? '').toLowerCase() : ''
+  if (base === 'b' || base === 'o' || base === 'x') {
+    const digit = base === 'b' ? /[01]/ : base === 'o' ? /[0-7]/ : /[0-9a-fA-F]/
+    let j = i + 2
+    while (j < to && digit.test(s[j]!)) j++
+    if (j > i + 2 && !(j < to && isIdentPart(s[j]!))) return { text: `"${s.slice(i, j)}"`, end: j }
+  }
   let j = i
   while (j < to && /[\d.]/.test(s[j]!)) j++
   const mantissa = s.slice(i, j)
@@ -522,8 +646,8 @@ function readSymbol(s: string, i: number, to: number): Piece {
   // `^-1` keeps its minus in the exponent; `ᵀ` and `⁻¹` are exponents too
   if (ch === '^') {
     const minus = /^\^\s*[-−]\s*/.exec(s.slice(i, to))
-    const power = minus ? readPiece(s, i + minus[0].length, to) : null
-    if (minus && power?.text) return { text: `^(-${power.text})`, end: power.end }
+    const power = minus && i + minus[0].length < to ? readPiece(s, i + minus[0].length, to) : null
+    if (minus && power && operand(power.text)) return { text: `^(-${power.text})`, end: power.end }
   }
   if (ch === 'ᵀ') return { text: '^T', end: i + 1 }
   const raised = /^[⁻⁺]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+/.exec(s.slice(i, to))
@@ -558,20 +682,30 @@ function readSymbol(s: string, i: number, to: number): Piece {
     '°': 'degree',
     '…': 'dots.h',
     '|': '|',
-    '&': '&',
+    '″': "''",
+    '‴': "'''",
+    // `;` would split a call's arguments into rows (`sin(2;3)`); `"` would open a string; the rest are
+    // markup a bare one would start
+    ';': '\\;',
+    '"': '\\"',
+    '@': '\\@',
+    '`': '\\`',
+    // `\\` is a line break
+    '\\': 'backslash',
+    // bitwise and, drawn as the wedge (a bare & is Typst's alignment point, which draws nothing)
+    '&': 'and',
     "'": "'",
     '′': "'",
     ':': ':',
-    ';': ';',
     '?': '?',
     '~': 'tilde.op',
   }
   if (one[ch]) return { text: one[ch], end: i + 1 }
   if (ch === '$' || ch === '#') return { text: `\\${ch}`, end: i + 1 }
-  // α, Ω, ∂, ∇ and other letters and symbols typeset as themselves
+  // α, Ω, ∂, ∇ and other letters, symbols and marks typeset as themselves (€, ‰, §, —, «, “)
   const cp = s.codePointAt(i)!
   const glyph = String.fromCodePoint(cp)
-  if (cp > 0x7f && /[\p{L}\p{No}\p{Sm}\p{So}]/u.test(glyph)) return { text: glyph, end: i + glyph.length }
+  if (cp > 0x7f && /[\p{L}\p{N}\p{S}\p{P}]/u.test(glyph)) return { text: glyph, end: i + glyph.length }
   return { text: '', end: i + 1 }
 }
 
@@ -754,7 +888,8 @@ function readSubscript(s: string, i: number, to: number): Piece {
     return { text: `_(${emit(s, j + 1, close)})`, end: close + 1 }
   }
   const atom = readPiece(s, j, to)
-  if (!atom?.text) return { text: '', end: j }
+  // `_` before a sign or a closer is the underscore as typed
+  if (!atom || !operand(atom.text)) return { text: '\\_', end: j }
   return { text: `_(${atom.text})`, end: atom.end }
 }
 

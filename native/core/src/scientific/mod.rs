@@ -15,7 +15,7 @@ use crate::types::{AngleMode, Complex, UserFunction, Value, ValueKind};
 pub use preprocess::{names_pattern, preprocess_ascii, preprocess_checked, split_glued_functions};
 
 /// Every built-in name, as `SCIENTIFIC_NAMES` lists them.
-pub const NAMES: &str = "sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|acsc|asec|acot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans";
+pub const NAMES: &str = "sqrt|cbrt|nthroot|nthRoot|sin|cos|tan|csc|sec|cot|asin|acos|atan|atan2|arcsin|arccos|arctan|arctan2|arccsc|arcsec|arccot|acsc|asec|acot|sinh|cosh|tanh|csch|sech|coth|asinh|acosh|atanh|arsinh|arcosh|artanh|arcsinh|arccosh|arctanh|arccsch|arcsech|arccoth|acsch|asech|acoth|ln|log|log2|log10|exp|abs|sign|floor|ceil|round|clamp|min|max|mean|median|mad|std|stdev|stdevp|var|varp|sum|total|length|count|quartile|quantile|corr|gcd|gcf|hcf|lcm|lcf|lcd|mod|hypot|factorial|nCr|nPr|combinations|permutations|randint|rand|random|re|im|real|imag|conj|arg|range|inclusiveRange|zeta|catalan|pi|tau|inf|infinity|ans";
 
 /// Cap on list sizes from `[a...b]`, `random(N)` and `randint(lo, hi, count)`.
 pub const MAX_LIST_ALLOC: usize = 10_000;
