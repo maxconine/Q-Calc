@@ -166,10 +166,20 @@ fn status_code(req: &Handle) -> u32 {
 /// POSTs `body` (JSON, sent as text/plain like the page's) and returns the relay's `status`, or "network" when it
 /// can't be reached or says nothing readable.
 pub fn post(path: &str, body: &serde_json::Value) -> String {
-    post_at(&base(), path, body).unwrap_or_else(|| "network".into())
+    post_at(&base(), path, body)
+        .and_then(|v| v["status"].as_str().map(String::from))
+        .unwrap_or_else(|| "network".into())
 }
 
-fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<String> {
+/// `post`, with the whole answer (`/lookup`'s `pub`): (status, the JSON).
+pub fn post_value(path: &str, body: &serde_json::Value) -> (String, serde_json::Value) {
+    match post_at(&base(), path, body) {
+        Some(v) => (v["status"].as_str().unwrap_or("network").to_string(), v),
+        None => ("network".into(), serde_json::Value::Null),
+    }
+}
+
+fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<serde_json::Value> {
     let s = session(10_000)?;
     // SAFETY: a live session; the host's HSTRING outlives the call
     let c = Handle::new(unsafe {
@@ -210,8 +220,7 @@ fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<String> 
             break;
         }
     }
-    let v: serde_json::Value = serde_json::from_slice(&out).ok()?;
-    v["status"].as_str().map(String::from)
+    serde_json::from_slice(&out).ok()
 }
 
 /// An open inbox: one receiver thread blocks in `receive`, another may `send` (pings) or `close` at any time.
