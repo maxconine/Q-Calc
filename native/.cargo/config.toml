@@ -1,0 +1,9 @@
+# Windows (MSVC): link the C runtime statically, so qcalc.exe needs no Visual C++ redistributable. Linked
+# dynamically it imports VCRUNTIME140.dll, which the installer doesn't ship and a clean Windows doesn't have: Q Calc
+# wouldn't start there. native/windows/scripts/sign-check.ps1 fails a build that imports a DLL Windows lacks.
+# (A RUSTFLAGS environment variable replaces these flags: set +crt-static there too.)
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.aarch64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

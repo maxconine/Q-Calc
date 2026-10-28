@@ -33,6 +33,21 @@ SetCompressor /SOLID lzma
 !ifndef APP_ID
   !define APP_ID "Q Calc"
 !endif
+; the numeric x.y.z of VERSION (a pre-release's "2.1.0-beta.1" is 2.1.0): VIProductVersion takes only numbers
+!ifndef VERSION_NUM
+  !define VERSION_NUM "${VERSION}"
+!endif
+!ifndef OUTNAME
+  !define OUTNAME "Q-Calc-${VERSION}-native-setup.exe"
+!endif
+; Authenticode: SIGN is a command that signs the file named by its last argument (build.ps1 -SignCommand, or
+; scripts\sign-check.ps1's throwaway certificate). The uninstaller is signed as it's written, so a signed installer
+; never carries an unsigned uninstall.exe; the installer itself last. Without SIGN nothing is signed here (a
+; service like SignPath signs the finished installer instead, and uninstall.exe stays unsigned)
+!ifdef SIGN
+  !uninstfinalize '${SIGN} "%1"' = 0
+  !finalize '${SIGN} "%1"' = 0
+!endif
 !define APP_NAME "Q Calc"
 !define PUBLISHER "maxconine"
 !define URL "https://github.com/maxconine/Q-Calc"
@@ -50,13 +65,16 @@ Name "${APP_NAME}"
 OutFile "${OUT}"
 InstallDir "$LOCALAPPDATA\${APP_ID}"
 BrandingText "${APP_NAME} ${VERSION}"
-VIProductVersion "${VERSION}.0"
+VIProductVersion "${VERSION_NUM}.0"
+VIFileVersion "${VERSION_NUM}.0"
 VIAddVersionKey "ProductName" "${APP_NAME}"
 VIAddVersionKey "ProductVersion" "${VERSION}"
 VIAddVersionKey "FileVersion" "${VERSION}"
 VIAddVersionKey "CompanyName" "${PUBLISHER}"
 VIAddVersionKey "FileDescription" "${APP_NAME} installer"
-VIAddVersionKey "LegalCopyright" "MIT"
+VIAddVersionKey "LegalCopyright" "MIT License"
+VIAddVersionKey "OriginalFilename" "${OUTNAME}"
+VIAddVersionKey "InternalName" "qcalc-setup"
 
 !define MUI_ICON "${ICON}"
 !define MUI_UNICON "${ICON}"

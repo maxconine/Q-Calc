@@ -45,8 +45,14 @@ fn icon(dir: &Path) {
         .to_string()
         .replace('\\', "\\\\");
     let ico_path = ico_path.trim_start_matches("\\\\\\\\?\\\\").to_string();
-    // id 1 is the app icon (Explorer takes the first); window.rs/tray.rs load the same bytes from the binary
-    if std::fs::write(&script, format!("1 ICON \"{ico_path}\"\n")).is_err() {
+    // id 1 is the app icon (Explorer takes the first); window.rs/tray.rs load the same bytes from the binary. The
+    // version resource beside it is what Explorer's Details, Task Manager's name and code signing's checks read
+    let version = std::env::var("QCALC_VERSION")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| std::env::var("CARGO_PKG_VERSION").unwrap_or_default());
+    let script_text = format!("1 ICON \"{ico_path}\"\n{}", version_info(&version));
+    if std::fs::write(&script, script_text).is_err() {
         return;
     }
     let res = out.join("qcalc.res");
@@ -62,6 +68,58 @@ fn icon(dir: &Path) {
     } else {
         println!("cargo:warning=rc.exe failed: qcalc.exe builds without its icon resource");
     }
+}
+
+/// `2.1.0-beta.1` → [2, 1, 0]: the numeric part a VERSIONINFO's FILEVERSION takes (a pre-release keeps its text in
+/// the string values).
+fn version_numbers(version: &str) -> [u16; 3] {
+    let core = version.trim().trim_start_matches('v');
+    let core = core.split(['-', '+']).next().unwrap_or("");
+    let mut out = [0u16; 3];
+    for (slot, part) in out.iter_mut().zip(core.split('.')) {
+        *slot = part.parse().unwrap_or(0);
+    }
+    out
+}
+
+/// The VERSIONINFO resource: company, product, file version (the version update.rs reports), original file name.
+fn version_info(version: &str) -> String {
+    let [a, b, c] = version_numbers(version);
+    let text: String = version
+        .chars()
+        .filter(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '+'))
+        .collect();
+    format!(
+        r#"1 VERSIONINFO
+FILEVERSION {a},{b},{c},0
+PRODUCTVERSION {a},{b},{c},0
+FILEFLAGSMASK 0x3f
+FILEFLAGS 0x0
+FILEOS 0x40004
+FILETYPE 0x1
+FILESUBTYPE 0x0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName", "maxconine"
+      VALUE "FileDescription", "Q Calc"
+      VALUE "FileVersion", "{text}"
+      VALUE "InternalName", "qcalc"
+      VALUE "LegalCopyright", "MIT License"
+      VALUE "OriginalFilename", "qcalc.exe"
+      VALUE "ProductName", "Q Calc"
+      VALUE "ProductVersion", "{text}"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END
+"#
+    )
 }
 
 fn find_rc() -> Option<PathBuf> {

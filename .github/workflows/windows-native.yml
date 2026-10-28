@@ -75,6 +75,16 @@ jobs:
           $exe = "native/target/x86_64-pc-windows-msvc/release/qcalc.exe"
           powershell.exe -NoProfile -ExecutionPolicy Bypass -File native\windows\tests\e2e\parity.ps1 -Exe $exe -OutDir "$env:RUNNER_TEMP\e2e-out"
           exit $LASTEXITCODE
+      # a mock code-signing pass over the built exe and installer (a throwaway certificate, made and deleted in the
+      # runner's CurrentUser\My): version info, manifest, coverage, signature structure. advisory until real
+      # signing is set up, so it never fails the job
+      - name: Mock signing check
+        if: always()
+        continue-on-error: true
+        run: |
+          $exe = "native/target/x86_64-pc-windows-msvc/release/qcalc.exe"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File native\windows\scripts\sign-check.ps1 -Exe $exe -OutDir "$env:RUNNER_TEMP\e2e-out\sign-check" -Makensis "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
