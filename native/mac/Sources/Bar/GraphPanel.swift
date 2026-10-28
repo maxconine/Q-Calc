@@ -14,6 +14,9 @@ struct GraphPanel: View {
     @State private var resetHover = false
     /// the pointer over the plot, in plot (viewBox) units
     @State private var hoverX: Double?
+    /// the critical point whose chip is hovered or focused, ringed on the plot (native only: the page's chips
+    /// only tint)
+    @State private var spot: PlotSpot?
 
     /// y on the curve at x, as the readout shows it (the engine's graphReadoutY)
     private func curveY(at x: Double) -> Double? { model.graphReadout(x) }
@@ -107,11 +110,14 @@ struct GraphPanel: View {
                 // each into a column a character wide)
                 WrapRow(spacing: 4, leading: true) {
                     ForEach(Array(state.critical.enumerated()), id: \.offset) { _, c in
+                        let here = PlotSpot(x: c.x, y: c.y)
                         // .graph-detail-item: a button, "Copy x" (selectX → copyValue), the point at 8 figures
                         // (formatCoord), as the page has it; they were static and grouped to 6
-                        CriticalChip(kind: kindName(c.kind), coords: "(\(coord(c.x)), \(coord(c.y)))") {
+                        CriticalChip(kind: kindName(c.kind), coords: "(\(coord(c.x)), \(coord(c.y)))", action: {
                             model.copyAnswer(model.logic.string("engine/format", "formatNumber", [c.x, 8]) ?? fmt(c.x))
-                        }
+                        }, highlight: { on in
+                            if on { spot = here } else if spot == here { spot = nil }
+                        })
                     }
                 }
             }
@@ -125,7 +131,7 @@ struct GraphPanel: View {
             // an AppKit view drawing through Core Graphics, not a Canvas: a Canvas renders each redraw into a new
             // GPU surface that SwiftUI keeps for a while, 130 MB of them while a graph line is typed
             Color.clear
-                .background(PlotCanvas(key: PlotKey(state: state, hoverX: hoverX, scale: scale)) { cg in
+                .background(PlotCanvas(key: PlotKey(state: state, hoverX: hoverX, spot: spot, scale: scale)) { cg in
                     cg.scaleBy(x: scale, y: scale)
                     draw(cg)
                 })
@@ -267,6 +273,31 @@ struct GraphPanel: View {
             cg.strokeEllipse(in: ring)
         }
         cg.restoreGState()
+        // the chip under the pointer or keyboard: faint dashed guides to the left and bottom edges (where the
+        // ticks read), the mark filled in the accent with a halo ring around it
+        if let s = spot, g.critical.contains(where: { $0.x == s.x && $0.y == s.y }) {
+            let c = CGPoint(x: px(s.x), y: py(s.y))
+            if c.x >= p.left, c.x <= right, c.y >= p.top, c.y <= bottom {
+                cg.saveGState()
+                cg.setLineDash(phase: 0, lengths: [3, 3])
+                let guide = accent.copy(alpha: 0.45) ?? accent
+                line(CGPoint(x: c.x, y: c.y + 6), CGPoint(x: c.x, y: bottom), guide, 1)
+                line(CGPoint(x: c.x - 6, y: c.y), CGPoint(x: p.left, y: c.y), guide, 1)
+                cg.restoreGState()
+                let halo = CGRect(x: c.x - 6.5, y: c.y - 6.5, width: 13, height: 13)
+                cg.setFillColor(accent.copy(alpha: 0.14) ?? accent)
+                cg.fillEllipse(in: halo)
+                cg.setStrokeColor(accent)
+                cg.setLineWidth(1.5)
+                cg.strokeEllipse(in: halo)
+                let dot = CGRect(x: c.x - 3.5, y: c.y - 3.5, width: 7, height: 7)
+                cg.setFillColor(accent)
+                cg.fillEllipse(in: dot)
+                cg.setStrokeColor(plotBg)
+                cg.setLineWidth(1.5)
+                cg.strokeEllipse(in: dot)
+            }
+        }
     }
 
     /// GraphicsContext.draw(Text, at:, anchor:): the line's box placed so `anchor` of it sits on `point`
@@ -299,30 +330,45 @@ private struct CriticalChip: View {
     let kind: String
     let coords: String
     let action: () -> Void
+    /// hovered or keyboard-focused: the panel rings this point on the plot
+    let highlight: (Bool) -> Void
     @State private var hover = false
+    @FocusState private var focused: Bool
+
+    private var lit: Bool { hover || focused }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Text(kind).font(.system(size: Theme.caption, weight: .medium)).foregroundStyle(hover ? Color.qAccent : Color.qMuted)
-                Text(coords).font(.system(size: Theme.small).monospacedDigit()).foregroundStyle(hover ? Color.qAccent : Color.qInk)
+                Text(kind).font(.system(size: Theme.caption, weight: .medium)).foregroundStyle(lit ? Color.qAccent : Color.qMuted)
+                Text(coords).font(.system(size: Theme.small).monospacedDigit()).foregroundStyle(lit ? Color.qAccent : Color.qInk)
             }
             .padding(.vertical, 3).padding(.horizontal, 8)
             .background(RoundedRectangle(cornerRadius: Theme.radiusS)
-                .fill(hover ? Color.qAccent.opacity(0.12) : Color.qInk.opacity(0.06)))
+                .fill(lit ? Color.qAccent.opacity(0.12) : Color.qInk.opacity(0.06)))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focused($focused)
         .onHover { hover = $0 }
+        .onChange(of: lit) { highlight($0) }
+        .onDisappear { if lit { highlight(false) } }
         .help("Copy x")
         .accessibilityLabel("\(kind) \(coords)")
         .accessibilityHint("Copies x")
     }
 }
 
+/// a critical point, in graph units, picked out on the plot
+private struct PlotSpot: Equatable {
+    let x: Double
+    let y: Double
+}
+
 private struct PlotKey: Equatable {
     let state: GraphState
     let hoverX: Double?
+    let spot: PlotSpot?
     let scale: CGFloat
 }
 
