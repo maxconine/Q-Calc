@@ -8,6 +8,7 @@ pub mod word_names;
 
 // ---- WP-APP-LOGIC ----
 pub mod analytics;
+pub mod angle_marks;
 pub mod answer;
 pub mod answer_forms;
 pub mod blank_reason;

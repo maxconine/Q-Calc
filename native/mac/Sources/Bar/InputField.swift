@@ -25,13 +25,37 @@ final class BarTextView: NSTextView {
     var offer: (at: Int, text: String)? {
         didSet {
             guard offer?.at != oldValue?.at || offer?.text != oldValue?.text else { return }
-            restyle()
-            if let offer, offer.at > 0, offer.at <= (string as NSString).length, let storage = textStorage {
-                let width = (offer.text as NSString).size(withAttributes: Self.attributes).width
-                storage.addAttribute(.kern, value: Theme.displayTracking(Self.fontSize) + width, range: NSRange(location: offer.at - 1, length: 1))
-            }
-            needsDisplay = true
+            applyGaps()
         }
+    }
+
+    /// native only: a faint `°` or ` rad` after each trig argument (core `angleMarks`), saying which angle mode it's
+    /// read in. One inside the line opens a gap after the argument as the offer does; one at the end is drawn after
+    /// the text (as the grey `)` is), so the caret never moves for it.
+    private(set) var angleMarks: [Int] = []
+    private(set) var angleMarkText = "°"
+    private var gapsFor = ""
+
+    func setAngleMarks(_ marks: [Int], text mark: String) {
+        guard marks != angleMarks || mark != angleMarkText || gapsFor != string else { return }
+        angleMarks = marks
+        angleMarkText = mark
+        applyGaps()
+    }
+
+    /// the offer's and the angle marks' gaps, on a freshly styled line
+    private func applyGaps() {
+        restyle()
+        gapsFor = string
+        guard let storage = textStorage else { return needsDisplay = true }
+        let length = (string as NSString).length
+        var gaps: [(Int, String)] = angleMarks.filter { $0 > 0 && $0 < length }.map { ($0, angleMarkText) }
+        if let offer, offer.at > 0, offer.at <= length { gaps.append((offer.at, offer.text)) }
+        for (at, text) in gaps {
+            let width = (text as NSString).size(withAttributes: Self.attributes).width
+            storage.addAttribute(.kern, value: Theme.displayTracking(Self.fontSize) + width, range: NSRange(location: at - 1, length: 1))
+        }
+        needsDisplay = true
     }
     private var coloured: (units: [NSRange], words: [NSRange]) = ([], [])
 
@@ -515,6 +539,17 @@ final class BarTextView: NSTextView {
             }
         }
         // the completion's rest, faint, right after the text while the caret is at the end
+        // the angle marks inside the line, in the gaps opened after their arguments
+        if let lm = layoutManager, let tc = textContainer {
+            let length = (string as NSString).length
+            for at in angleMarks where at > 0 && at < length {
+                let glyph = lm.glyphIndexForCharacter(at: at - 1)
+                let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
+                let width = (angleMarkText as NSString).size(withAttributes: Self.attributes).width
+                (angleMarkText as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height),
+                                                 withAttributes: [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)])
+            }
+        }
         if let offer, offer.at > 0, offer.at <= (string as NSString).length, let lm = layoutManager, let tc = textContainer {
             let glyph = lm.glyphIndexForCharacter(at: offer.at - 1)
             let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
@@ -528,6 +563,11 @@ final class BarTextView: NSTextView {
             if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length {
                 (ghostTail as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: attrs)
                 x += (ghostTail as NSString).size(withAttributes: attrs).width
+            }
+            // an angle mark for an argument still open at the end of the line
+            if angleMarks.contains((string as NSString).length) {
+                (angleMarkText as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
+                x += (angleMarkText as NSString).size(withAttributes: inferred).width
             }
             if trailingParens > 0 {
                 (String(repeating: ")", count: trailingParens) as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
@@ -640,6 +680,7 @@ struct InputField: NSViewRepresentable {
         text.trailingParens = deco.trailingParens
         text.squiggle = deco.squiggle
         text.offer = deco.offer
+        text.setAngleMarks(model.angleMarks(for: text.string), text: model.angleRad ? " rad" : "°")
         text.colour(units: deco.units, words: deco.words)
         text.wordNames = deco.names
         text.ghostTail = model.completion ?? ""
@@ -679,6 +720,8 @@ struct InputField: NSViewRepresentable {
         // a click or an arrow key ends the typing run (breakRun)
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let text else { return }
+            // what's typed next takes the line's own style, never a gap opened after the character before it
+            text.typingAttributes = BarTextView.attributes
             // a part of the line selected is answered on its own in the answer slot (selDisplay)
             model.inputSelected(text.string, text.selectedRange())
             guard text.editKind == nil else { return }

@@ -434,6 +434,8 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             ))
         }
         // native only: the hover label's name for each unit, function and constant in the line
+        // native only: where the bar's faint ° / rad goes
+        ("lib/angleMarks", "angleMarks") => to(&crate::app::angle_marks::angle_marks(&s(0))),
         ("lib/knownWords", "wordNames") => {
             let vars: Vec<String> = of(&a(1)).unwrap_or_default();
             let fns: Vec<String> = of(&a(2)).unwrap_or_default();

@@ -490,6 +490,17 @@ final class BarModel: ObservableObject {
         return true
     }
 
+    private var angleMarksMemo: (String, [Int])?
+
+    /// where the faint `°` / ` rad` goes after each trig argument (core `angleMarks`), worked out for the text as it
+    /// is now so a mark is never drawn where an older line had one
+    func angleMarks(for text: String) -> [Int] {
+        if let memo = angleMarksMemo, memo.0 == text { return memo.1 }
+        let marks = text.isEmpty ? [] : (logic.call("lib/angleMarks", "angleMarks", [text]) as? [NSNumber] ?? []).map(\.intValue)
+        angleMarksMemo = (text, marks)
+        return marks
+    }
+
     /// Type in the grey parens the engine would add (inferParens), both ends: Tab, or → at the end of the line
     /// (native only)
     func acceptParens() -> Bool {
