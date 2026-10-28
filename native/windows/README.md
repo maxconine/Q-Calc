@@ -83,7 +83,9 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `hover.rs` | the pointer over the tape and the answer: the row and cell lit, the hand cursor, the system tooltip after a 450 ms rest; triple-click selects the line |
 | `contrast.rs` | contrast themes: the theme from the system colours while one is on (`QCALC_CONTRAST=1` to look without one) |
 | `a11y.rs` | with a screen reader on, the bar's name is the line and its answer, with a name-change event (`QCALC_READER=1` for the test) |
-| `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf, clear) and their tips |
+| `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf · ×10ⁿ, clear) and their tips |
+| `exponent.rs` | Ctrl+E's lasting exponent form (`settings.exponentMode`, 3,000 → 3 × 10³) and Ctrl+Shift+E's other forms: the native app's own keybinds (`exponent`, `forms`) beside the core's, listed in Settings › Keybinds |
+| `word_tip.rs` | the pointer over the line names its units, functions and constants over the word (the core's `word_names`), and `ans` (typed or faint) the last answer; asked of the engine only while the pointer is on the line |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
 | `games/` | the native games, each in a window and a process of its own (`qcalc.exe --game <kind>`, games/README.md): `open(kind)`, `is_open`, `command`/`hint` for the bar; online play over relay.rs |

@@ -347,7 +347,16 @@ mod ui {
     fn play(app: &mut App, id: &'static str) {
         clear_line(app, false);
         if games::list().iter().any(|(kind, _)| *kind == id) {
-            games::open(id);
+            // the game takes the bar's place: its width, hanging from the composer's top (the Mac's GameBarSpot)
+            let spot = app.bar.visible.then(|| {
+                let f = app.bar.frame();
+                games::BarSpot {
+                    x: f.left,
+                    width: f.right - f.left,
+                    top: f.top + (app.bar.layout.composer.y * app.bar.scale()).round() as i32,
+                }
+            });
+            games::open_at(id, spot);
             app.ops.push(crate::app::Op::Hide);
         } else {
             crate::qlog!("games: {id} isn't in the native app yet");

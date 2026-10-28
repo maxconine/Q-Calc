@@ -9,6 +9,7 @@ mod a11y;
 mod autostart;
 mod commands;
 mod edge;
+mod exponent;
 mod hotkey;
 mod keys;
 mod log;
@@ -93,6 +94,8 @@ mod update;
 mod warp;
 #[cfg(windows)]
 mod window;
+#[cfg(windows)]
+mod word_tip;
 #[cfg(windows)]
 mod wrap;
 

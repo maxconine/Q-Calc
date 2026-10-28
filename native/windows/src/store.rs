@@ -60,9 +60,12 @@ pub struct Settings {
     pub share_usage: bool,
     // the page's own shortcuts, overrides only; "" is an action left without a key. the page checks the chords
     pub keybinds: BTreeMap<String, String>,
+    // native only: Ctrl+E's exponent form, on until pressed again (exponent.rs)
+    pub exponent_mode: bool,
 }
 
-const KEY_ACTIONS: [&str; 7] = [
+// the core's actions, then the native app's own (exponent.rs NATIVE_ACTIONS)
+const KEY_ACTIONS: [&str; 9] = [
     "settings",
     "copyAnswer",
     "copyLine",
@@ -70,6 +73,8 @@ const KEY_ACTIONS: [&str; 7] = [
     "fraction",
     "sigFigs",
     "clear",
+    "exponent",
+    "forms",
 ];
 
 impl Default for Settings {
@@ -93,6 +98,7 @@ impl Default for Settings {
             copy_unitless: true,
             share_usage: true,
             keybinds: BTreeMap::new(),
+            exponent_mode: false,
         }
     }
 }
@@ -120,6 +126,7 @@ impl Settings {
         flag("spaceThousands", &mut self.space_thousands);
         flag("copyUnitless", &mut self.copy_unitless);
         flag("shareUsage", &mut self.share_usage);
+        flag("exponentMode", &mut self.exponent_mode);
         if let Some(s) = v["angleMode"].as_str()
             && (s == "deg" || s == "rad")
         {
@@ -414,7 +421,8 @@ mod tests {
                 "angleMode": "deg", "fractionMode": false, "sigFigMode": false, "rationalize": true,
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 6, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
-                "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {}
+                "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {},
+                "exponentMode": false
             })
         );
     }

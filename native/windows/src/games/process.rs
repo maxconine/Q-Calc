@@ -3,7 +3,8 @@
 //! used goes back to the system (in the bar's process ~28 MB of driver and heap stayed committed after a game).
 //!
 //! - The bar (`open`): a game of that kind already up is brought forward (its window class is per kind), else the
-//!   exe starts with `--game <kind> --t0 <QueryPerformanceCounter at â†µ>`. QCALC_INSTANCE, QCALC_DATA and QCALC_LOG
+//!   exe starts with `--game <kind> --t0 <QueryPerformanceCounter at â†µ>`, and `--at <x>,<width>,<top>`: the bar's
+//!   place, which the game takes (GameWindow.swift's `GameBarSpot`). QCALC_INSTANCE, QCALC_DATA and QCALC_LOG
 //!   go with it (the environment is inherited).
 //! - The game (`child_main`): its own single-instance mutex per kind (never the bar's, so it isn't handed to the
 //!   bar's instance), the game window with its hardware target, a message loop, and out when the window closes.
@@ -26,6 +27,47 @@ use crate::qlog;
 pub const ARG: &str = "--game";
 const T0: &str = "--t0";
 const PARENT: &str = "--parent";
+const AT: &str = "--at";
+
+/// Where the bar was as a game opened, in physical pixels: its left edge, width and the composer's top. The game
+/// takes the bar's place there (the Mac's `GameBarSpot`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct BarSpot {
+    pub x: i32,
+    pub width: i32,
+    pub top: i32,
+}
+
+impl BarSpot {
+    fn arg(self) -> String {
+        format!("{},{},{}", self.x, self.width, self.top)
+    }
+
+    fn parse(s: &str) -> Option<BarSpot> {
+        let mut it = s.split(',').map(|p| p.trim().parse::<i32>().ok());
+        let (x, width, top) = (it.next()??, it.next()??, it.next()??);
+        (width > 0 && it.next().is_none()).then_some(BarSpot { x, width, top })
+    }
+}
+
+/// A monitor's work area, physical pixels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Area {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+}
+
+/// The card's frame (x, y, w, h) for a game `h` px tall at `spot`: hanging from the composer's top, moved up only
+/// as far as the work area needs, never wider or taller than it (GameWindow.swift `barFrame`).
+pub fn card_frame(spot: BarSpot, h: i32, area: Area) -> (i32, i32, i32, i32) {
+    let w = spot.width.min(area.w).max(1);
+    let h = h.min(area.h).max(1);
+    let y = spot.top.min(area.y + area.h - h).max(area.y);
+    let x = spot.x.min(area.x + area.w - w).max(area.x);
+    (x, y, w, h)
+}
 
 /// The window class of a game of `kind` (per instance, so a test copy finds only its own games).
 pub fn class_name(kind: &str) -> String {
@@ -46,6 +88,8 @@ pub struct GameArgs {
     pub t0: Option<i64>,
     /// the bar's process: the game closes when it ends (quit from the tray, an update's restart, a crash)
     pub parent: Option<u32>,
+    /// the bar's place, which the game takes
+    pub at: Option<BarSpot>,
 }
 
 impl GameArgs {
@@ -62,7 +106,17 @@ impl GameArgs {
             .position(|a| a == PARENT)
             .and_then(|i| args.get(i + 1))
             .and_then(|v| v.parse().ok());
-        Some(GameArgs { kind, t0, parent })
+        let at = args
+            .iter()
+            .position(|a| a == AT)
+            .and_then(|i| args.get(i + 1))
+            .and_then(|v| BarSpot::parse(v));
+        Some(GameArgs {
+            kind,
+            t0,
+            parent,
+            at,
+        })
     }
 }
 
@@ -96,8 +150,67 @@ fn bring_forward(hwnd: HWND) {
     }
 }
 
-/// The bar's side: the game of `kind` already up comes forward, else its process starts.
-pub fn launch(kind: &str) {
+/// The bar's hotkey while a game is up: the one in front closes (as the bar would hide), one behind comes forward.
+/// False when none of `kinds` is up.
+pub fn hotkey<'a>(kinds: impl Iterator<Item = &'a str>) -> bool {
+    use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, PostMessageW, WM_CLOSE};
+    let Some(hwnd) = kinds.filter_map(find).next() else {
+        return false;
+    };
+    // SAFETY: plain query, and a close posted to the game's window
+    unsafe {
+        if GetForegroundWindow() == hwnd && !IsIconic(hwnd).as_bool() {
+            qlog!("games: the hotkey closes the game in front");
+            let _ = PostMessageW(Some(hwnd), WM_CLOSE, Default::default(), Default::default());
+        } else {
+            qlog!("games: the hotkey brings the game forward");
+            bring_forward(hwnd);
+        }
+    }
+    true
+}
+
+/// The game's side, closing by esc from its lobby: the bar shows again where it was (a second launch's hand-off
+/// with no arguments, app.rs `forward`, which shows the bar).
+pub fn bar_back() {
+    use windows::Win32::Foundation::{LPARAM, WPARAM};
+    use windows::Win32::System::DataExchange::COPYDATASTRUCT;
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetWindowThreadProcessId, SMTO_ABORTIFHUNG, SendMessageTimeoutW, WM_COPYDATA,
+    };
+    let title = HSTRING::from(format!("Q Calc host{}", crate::log::instance_suffix()));
+    // SAFETY: plain lookups and a synchronous WM_COPYDATA with a live (empty) buffer
+    unsafe {
+        let Ok(host) = FindWindowW(windows::core::w!("QCalcHost"), &title) else {
+            qlog!("games: no bar to go back to");
+            return;
+        };
+        let mut pid = 0u32;
+        GetWindowThreadProcessId(host, Some(&mut pid));
+        let _ = AllowSetForegroundWindow(pid);
+        let empty = [0u16; 1];
+        let data = COPYDATASTRUCT {
+            // app.rs COPYDATA_ARGS
+            dwData: 0x5143_4c43,
+            cbData: 0,
+            lpData: empty.as_ptr() as *mut _,
+        };
+        let mut result = 0usize;
+        SendMessageTimeoutW(
+            host,
+            WM_COPYDATA,
+            WPARAM(0),
+            LPARAM(&data as *const _ as isize),
+            SMTO_ABORTIFHUNG,
+            2000,
+            Some(&mut result),
+        );
+    }
+    qlog!("games: closed back to the bar");
+}
+
+/// The bar's side: the game of `kind` already up comes forward, else its process starts in the bar's place.
+pub fn launch(kind: &str, spot: Option<BarSpot>) {
     if let Some(hwnd) = find(kind) {
         bring_forward(hwnd);
         qlog!("games: {kind} is already open; brought forward");
@@ -108,17 +221,19 @@ pub fn launch(kind: &str) {
         qlog!("games: couldn't find our own exe to start {kind}");
         return;
     };
-    match std::process::Command::new(exe)
-        .args([
-            ARG,
-            kind,
-            T0,
-            &t0.to_string(),
-            PARENT,
-            &std::process::id().to_string(),
-        ])
-        .spawn()
-    {
+    let mut cmd = std::process::Command::new(exe);
+    cmd.args([
+        ARG,
+        kind,
+        T0,
+        &t0.to_string(),
+        PARENT,
+        &std::process::id().to_string(),
+    ]);
+    if let Some(spot) = spot {
+        cmd.args([AT, &spot.arg()]);
+    }
+    match cmd.spawn() {
         Ok(child) => {
             // the bar has the foreground (its â†µ); the game may take it
             // SAFETY: plain call with the child's id
@@ -190,7 +305,7 @@ pub fn child_main() -> Option<i32> {
     }
     // SAFETY: plain call
     let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
-    if let Err(e) = super::create(kind, args.t0) {
+    if let Err(e) = super::create(kind, args.t0, args.at) {
         qlog!("games: couldn't open {kind}: {e}");
         return Some(1);
     }
@@ -222,7 +337,8 @@ mod tests {
             Some(GameArgs {
                 kind: "pong".into(),
                 t0: None,
-                parent: None
+                parent: None,
+                at: None,
             })
         );
         assert_eq!(
@@ -230,7 +346,8 @@ mod tests {
             Some(GameArgs {
                 kind: "ember".into(),
                 t0: Some(123),
-                parent: None
+                parent: None,
+                at: None,
             })
         );
         assert_eq!(
@@ -238,11 +355,60 @@ mod tests {
             Some(GameArgs {
                 kind: "pong".into(),
                 t0: Some(5),
-                parent: Some(4242)
+                parent: Some(4242),
+                at: None,
             })
+        );
+        assert_eq!(
+            a(&["--game", "pong", "--at", "-1900,1020,300"]).and_then(|g| g.at),
+            Some(BarSpot {
+                x: -1900,
+                width: 1020,
+                top: 300
+            })
+        );
+        assert_eq!(
+            a(&["--game", "pong", "--at", "1,0,3"]).and_then(|g| g.at),
+            None
+        );
+        assert_eq!(
+            a(&["--game", "pong", "--at", "1,2"]).and_then(|g| g.at),
+            None
         );
         assert_eq!(a(&["--autostart"]), None);
         assert_eq!(a(&["--game"]), None);
         assert!(class_name("pong").starts_with("QCalcGame.pong"));
+    }
+
+    #[test]
+    fn the_card_hangs_from_the_composer_and_stays_on_screen() {
+        let area = Area {
+            x: 0,
+            y: 0,
+            w: 1920,
+            h: 1040,
+        };
+        let spot = BarSpot {
+            x: 450,
+            width: 1020,
+            top: 300,
+        };
+        // the bar's left and width, its top at the composer's
+        assert_eq!(card_frame(spot, 500, area), (450, 300, 1020, 500));
+        // too tall to hang there: moved up just enough
+        assert_eq!(card_frame(spot, 900, area), (450, 140, 1020, 900));
+        // never taller or wider than the screen, never off its left
+        assert_eq!(
+            card_frame(
+                BarSpot {
+                    x: -50,
+                    width: 3000,
+                    top: 10
+                },
+                2000,
+                area
+            ),
+            (0, 0, 1920, 1040)
+        );
     }
 }

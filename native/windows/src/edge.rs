@@ -1,4 +1,5 @@
-//! The edge tools (EdgeTools in BarView.swift, EdgeTools.tsx): settings top left, deg · a/b · sf top right, clear
+//! The edge tools (EdgeTools in BarView.swift, EdgeTools.tsx): settings top left, deg · a/b · sf · ×10ⁿ (native
+//! only: Ctrl+E's exponent form, exponent.rs) top right, clear
 //! bottom right, over the composer's corners, shown while the pointer is on the composer. Each is 11 pt medium,
 //! muted at 72% (an active toggle in the answer's colour), with a hover and press fill, and its tip, an ink pill,
 //! after a 450 ms rest; the tip ends with the action's key, from the user's keybinds ("Degrees · click for
@@ -13,14 +14,16 @@ pub enum Tool {
     Angle,
     Fraction,
     SigFigs,
+    Exponent,
     Clear,
 }
 
-pub const TOOLS: [Tool; 5] = [
+pub const TOOLS: [Tool; 6] = [
     Tool::Settings,
     Tool::Angle,
     Tool::Fraction,
     Tool::SigFigs,
+    Tool::Exponent,
     Tool::Clear,
 ];
 
@@ -38,14 +41,16 @@ pub struct EdgeState {
 }
 
 impl Tool {
-    pub fn action(self) -> KeyAction {
-        match self {
+    /// The bar's shortcut it does (the exponent form's is the native app's own, exponent.rs).
+    pub fn action(self) -> Option<KeyAction> {
+        Some(match self {
             Tool::Settings => KeyAction::Settings,
             Tool::Angle => KeyAction::Angle,
             Tool::Fraction => KeyAction::Fraction,
             Tool::SigFigs => KeyAction::SigFigs,
             Tool::Clear => KeyAction::Clear,
-        }
+            Tool::Exponent => return None,
+        })
     }
 
     /// What it says ("" for the ones drawn as marks: the gear and a/b).
@@ -60,6 +65,7 @@ impl Tool {
                 }
             }
             Tool::SigFigs => "sf",
+            Tool::Exponent => "×10ⁿ",
             Tool::Clear => "clear",
         }
     }
@@ -70,12 +76,16 @@ impl Tool {
             Tool::Angle => true,
             Tool::Fraction => s.fraction_mode,
             Tool::SigFigs => s.sig_fig_mode,
+            Tool::Exponent => s.exponent_mode,
             Tool::Settings | Tool::Clear => false,
         }
     }
 
     /// The tip, with its key when it has one.
     pub fn tip(self, s: &Settings, keybinds: &Keybinds) -> String {
+        if self == Tool::Exponent {
+            return crate::exponent::tip(s.exponent_mode, &s.keybinds);
+        }
         let on = |b: bool| if b { "on" } else { "off" };
         let text = match self {
             Tool::Settings => "Open settings".to_string(),
@@ -88,8 +98,9 @@ impl Tool {
             Tool::Fraction => format!("Answers as fractions: {}", on(s.fraction_mode)),
             Tool::SigFigs => format!("Sig figs from what you type: {}", on(s.sig_fig_mode)),
             Tool::Clear => "Clear history and variables".to_string(),
+            Tool::Exponent => String::new(),
         };
-        match keybinds.chord_for(self.action()) {
+        match self.action().and_then(|a| keybinds.chord_for(a)) {
             Some(chord) if !chord.is_empty() => {
                 format!("{text} · {}", crate::hotkey::title(&chord))
             }
@@ -119,6 +130,7 @@ mod ui {
 
     use super::{EdgeState, Tool};
     use crate::app::App;
+    use crate::keys::KeyAction;
     use crate::later;
     use crate::model::{BarModel, Outcome};
     use crate::render::{Canvas, Gfx, Rect, format, measure, size, with_alpha};
@@ -185,7 +197,7 @@ mod ui {
             ),
         )];
         let mut right = composer.right() - 6.0;
-        for tool in [Tool::SigFigs, Tool::Fraction, Tool::Angle] {
+        for tool in [Tool::Exponent, Tool::SigFigs, Tool::Fraction, Tool::Angle] {
             let w = width(gfx, m, tool);
             right -= w;
             out.push((tool, Rect::new(right, composer.y, w, H)));
@@ -266,13 +278,16 @@ mod ui {
         match tool {
             Tool::Settings => crate::settings_window::open(app),
             Tool::Clear => {
-                if app.model.perform(tool.action(), &app.engine) == Outcome::ClearHistory {
+                if app.model.perform(KeyAction::Clear, &app.engine) == Outcome::ClearHistory {
                     app.set_history(Vec::new());
                     app.model.hint = Some("history cleared".into());
                 }
             }
+            Tool::Exponent => crate::exponent::toggle(&mut app.model, &app.engine),
             _ => {
-                app.model.perform(tool.action(), &app.engine);
+                if let Some(action) = tool.action() {
+                    app.model.perform(action, &app.engine);
+                }
             }
         }
         app.model.touch();
@@ -403,5 +418,11 @@ mod tests {
         assert!(Tool::Fraction.active(&rad));
         assert!(!Tool::SigFigs.active(&rad));
         assert!(Tool::Clear.tip_above() && !Tool::Angle.tip_above());
+        assert_eq!(
+            Tool::Exponent.tip(&s, &k),
+            "Answers in exponent form: off · Ctrl+E"
+        );
+        assert_eq!(Tool::Exponent.label(&s), "×10ⁿ");
+        assert!(!Tool::Exponent.active(&s));
     }
 }

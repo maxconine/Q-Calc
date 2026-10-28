@@ -289,11 +289,7 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
             m.text_changed(engine);
             return Some(Outcome::Handled);
         }
-        if at_end && let Some(filled) = chain_fill(m) {
-            m.field.set_text(&filled);
-            m.text_changed(engine);
-            return Some(Outcome::Handled);
-        }
+        // the faint `ans` and the grey parens become typed ones where they're drawn, together
         if fill_parens(m) {
             m.text_changed(engine);
             return Some(Outcome::Handled);
@@ -306,54 +302,67 @@ pub fn key_down(m: &mut BarModel, vk: u32, mods: Mods, engine: &EngineThread) ->
     None
 }
 
-/// chainFill: the line with its faint `ans` written in, when the caret is at its end.
-fn chain_fill(m: &BarModel) -> Option<String> {
+/// The faint `ans` a chained line continues from, as drawn before the text and as Tab types it: what the engine
+/// reads the line as (`chainedExpr`) less the line itself, so `*2` shows `ans` and `to mm` shows `ans `.
+pub fn ans_ghost(text: &str) -> String {
+    let full = qcalc_core::app::chain::chained_expr(text);
+    match full.strip_suffix(text) {
+        Some(lead) if !lead.is_empty() => lead.to_string(),
+        _ => "ans".to_string(),
+    }
+}
+
+/// The faint `ans` the line shows now: only on a chained line whose answer is in ("" for none).
+fn chain_ghost(m: &BarModel) -> String {
     let text = m.field.text();
-    if text.trim_start().to_lowercase().starts_with("message") || !m.field.caret_at_end() {
-        return None;
+    if m.chained && m.live_for == text && !text.trim_start().to_lowercase().starts_with("message") {
+        ans_ghost(text)
+    } else {
+        String::new()
     }
-    if m.chained && m.live_for == text {
-        static SPACED: qcalc_core::jsre::Lazy =
-            qcalc_core::jsre::Lazy::new(|| qcalc_core::jsre::js(r"^\s*\S\s", ""));
-        return Some(if qcalc_core::jsre::test(&SPACED, text) {
-            format!("ans {}", text.trim_start())
-        } else {
-            qcalc_core::app::chain::chained_expr(text)
-        });
-    }
-    None
 }
 
 /// The line with its grey parens typed in where they're drawn (acceptParens), and the caret kept by the same
 /// character: past the new `(`s, or at the very end when it was at the end. None when there's nothing to add.
 pub fn parens_filled(text: &str, caret: usize) -> Option<(String, usize)> {
+    lead_filled(text, caret, "")
+}
+
+/// As `parens_filled`, with a chained line's faint `ans` (`ghost`) typed in too, after the `(`s as it's drawn:
+/// `*2` → `ans*2`, nothing moving (the Mac's acceptParens).
+pub fn lead_filled(text: &str, caret: usize, ghost: &str) -> Option<(String, usize)> {
     if text.trim().is_empty() || text.trim_start().to_lowercase().starts_with("message") {
         return None;
     }
     let fill = qcalc_core::parens::infer_parens(text);
-    if fill.leading + fill.trailing == 0 {
+    if fill.leading + fill.trailing == 0 && ghost.is_empty() {
         return None;
     }
     let filled = format!(
-        "{}{text}{}",
+        "{}{ghost}{text}{}",
         "(".repeat(fill.leading),
         ")".repeat(fill.trailing)
     );
     let at = if caret >= text.len() {
         filled.len()
     } else {
-        caret + fill.leading
+        caret + fill.leading + ghost.len()
     };
     Some((filled, at))
 }
 
-/// Tab (or → at the end): the grey parens become typed ones, the grey ones going in the same step so nothing on
-/// the line moves.
+/// Tab (or → at the end): the faint `ans` and the grey parens become typed ones, the grey ones going in the same
+/// step so nothing on the line moves.
 fn fill_parens(m: &mut BarModel) -> bool {
     let caret = m.field.selection().0;
-    let Some((filled, at)) = parens_filled(m.field.text(), caret) else {
+    let ghost = chain_ghost(m);
+    let Some((filled, at)) = lead_filled(m.field.text(), caret, &ghost) else {
         return false;
     };
+    if !ghost.is_empty() {
+        // typed in now: the faint one goes in the same frame
+        m.chained = false;
+    }
     if let Some(d) = &mut m.line.deco {
         d.leading = 0;
         d.trailing = 0;
@@ -930,6 +939,23 @@ mod tests {
         assert_eq!(parens_filled("2+3", 3), None);
         assert_eq!(parens_filled("", 0), None);
         assert_eq!(parens_filled("message bob (", 13), None);
+    }
+
+    #[test]
+    fn tab_types_the_faint_ans_where_it_stands() {
+        // `*2` continues from the last answer: `ans` goes in front, the caret kept by its character
+        assert_eq!(ans_ghost("*2"), "ans");
+        assert_eq!(lead_filled("*2", 2, "ans"), Some(("ans*2".into(), 5)));
+        assert_eq!(lead_filled("*2", 1, "ans"), Some(("ans*2".into(), 4)));
+        // with grey parens too: `(` first, as they're drawn
+        assert_eq!(
+            lead_filled("*2)+1", 5, "ans"),
+            Some(("(ans*2)+1".into(), 9))
+        );
+        // a conversion reads `ans to mm`
+        assert_eq!(ans_ghost("to mm"), "ans ");
+        assert_eq!(ans_ghost(" to mm"), "ans");
+        assert_eq!(lead_filled("2+3", 3, ""), None);
     }
 
     fn blank() -> LiveAnswer {

@@ -9,9 +9,9 @@
 //!   Layouts are cached by text and size, so a keystroke that doesn't change the answer makes none.
 //! - **Copy**: a click on a piece (`hit`) or Ctrl+C copies, unitless when "copy unitless" is on; the "✓ copied"
 //!   flash hangs left of the answer for 1.2 s, and the answer's width counts it, so it shows whole.
-//! - **Ctrl+E** (`cycle_forms`): the engine's `answer_forms` for the answer as shown, on `Lane::Forms`, then
-//!   cycled locally; Ctrl+Shift+E goes back. (The page cycles on Tab; native moved it, as the Mac's ⌃E, so Tab fills
-//!   the grey parens.)
+//! - **Ctrl+Shift+E** (`cycle_forms`, the `forms` key in exponent.rs): the engine's `answer_forms` for the answer
+//!   as shown, on `Lane::Forms`, then cycled locally. (The page cycles on Tab; native moved it, as the Mac's ⌃⇧E, so
+//!   Tab fills the grey parens. Ctrl+E is the lasting exponent form, exponent.rs.)
 //! - **Closed forms**: the live job hands back `Engine::closed_form`'s future with its `CancelToken`
 //!   (`closed_form`); the UI thread polls it whenever WM_ENGINE comes (`poll`), its waker posts WM_ENGINE, and a new
 //!   keystroke cancels it. A found form replaces `live.exact` (π²/6 for 1.6449…).
@@ -139,7 +139,8 @@ pub fn shown_answer(m: &BarModel) -> String {
     {
         return e.to_string();
     }
-    a.display.clone()
+    // Ctrl+E's mode: in exponent form (exponent.rs)
+    crate::exponent::shown(m, &a.display)
 }
 
 /// The engine's own pretty text for the live display; `pretty_text` for anything else.
@@ -287,11 +288,12 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
     }
     // Alt+↑/↓ stepped the answer's SI prefix (line.rs): that reading, copyable, until the line changes
     if let Some(p) = &m.line.prefix_shown {
+        let p = crate::exponent::shown(m, p);
         return vec![spec(
             p.clone(),
             Font::Display,
             Ink::Answer,
-            Some(p.clone()),
+            Some(p),
             (PAD_X, 0.0),
         )];
     }
@@ -390,7 +392,7 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
         ));
         out.push(spec("≈", Font::Row, Ink::Muted, None, (0.0, 0.0)));
         out.push(spec(
-            pretty(m, &a.display),
+            pretty(m, &crate::exponent::shown(m, &a.display)),
             Font::Part,
             Ink::Answer,
             Some(a.display.clone()),
@@ -814,9 +816,9 @@ pub fn poll(app: &mut App) {
     }
 }
 
-// ---- Ctrl+E ----
+// ---- Ctrl+Shift+E ----
 
-/// Ctrl+E: the engine's answerForms for the answer as shown, cycled (useAnswerForms); Ctrl+Shift+E goes back.
+/// Ctrl+Shift+E: the engine's answerForms for the answer as shown, cycled (useAnswerForms); `back` goes back.
 pub fn cycle_forms(m: &mut BarModel, engine: &EngineThread, back: bool) {
     let Some(a) = live_of(m).cloned() else { return };
     let Some(value_json) = a.value_json.clone() else {

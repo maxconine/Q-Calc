@@ -1017,6 +1017,10 @@ impl App {
     fn toggle(&mut self) {
         // SAFETY: plain query
         let front = unsafe { GetForegroundWindow() };
+        // a game in the bar's place is the bar while it's up: the hotkey closes or fronts it (games/process.rs)
+        if !self.bar.visible && crate::games::hotkey() {
+            return;
+        }
         if self.bar.visible && front == self.bar.hwnd {
             self.ops.push(Op::Hide);
         } else {

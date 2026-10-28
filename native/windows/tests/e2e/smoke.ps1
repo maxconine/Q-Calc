@@ -598,8 +598,8 @@ Invoke-Check 'B1' 'tab types in the grey parens' 'required' {
     @{ Pass = ($mid -and $end); Detail = "mid-line: '$($s1.text)' caret $($s1.caret) (want '(5+3)*2' at 4); at the end: '$($s2.text)' caret $($s2.caret) (want '(2+3)' at 5)" }
 }
 
-# Ctrl+E cycles the answer's forms (Tab on the page); Tab no longer does
-Invoke-Check 'B2' 'ctrl+e cycles answer forms' 'required' {
+# Ctrl+Shift+E cycles the answer's forms (Tab on the page); Tab no longer does, and Ctrl+E is the exponent form (B3)
+Invoke-Check 'B2' 'ctrl+shift+e cycles answer forms' 'required' {
     Show-QCalc | Out-Null
     Clear-Input
     Type-Text '0.75'
@@ -607,10 +607,102 @@ Invoke-Check 'B2' 'ctrl+e cycles answer forms' 'required' {
     $N::Chord($N::VK_TAB)
     Start-Sleep -Milliseconds 300
     $tabbed = Normalize (State).shown
-    $N::Chord($N::VK_CONTROL, [uint16]0x45)
+    $N::Chord($N::VK_CONTROL, $N::VK_SHIFT, [uint16]0x45)
     $changed = Wait-Until { $x = Normalize (State).shown; $x -ne '' -and $x -ne '0.75' } 2500
     $form = Normalize (State).shown
-    @{ Pass = ($a.Found -and $tabbed -eq '0.75' -and $changed); Detail = "0.75 answers '$($a.Text)'; after Tab '$tabbed' (unchanged); after Ctrl+E '$form'" }
+    $mode = (Send-Pipe @{ cmd = 'exponent' }).model
+    @{ Pass = ($a.Found -and $tabbed -eq '0.75' -and $changed -and -not $mode); Detail = "0.75 answers '$($a.Text)'; after Tab '$tabbed' (unchanged); after Ctrl+Shift+E '$form'; exponent form left off: $(-not $mode)" }
+}
+
+# Ctrl+E: a lasting exponent-form mode (3,000 -> 3 x 10^3), saying how to turn it off, remembered across a restart
+# (exponent.rs); Ctrl+E again turns it off
+$script:expo = '^3\s*' + [char]0x00D7 + '\s*10' + [char]0x00B3 + '$'
+Invoke-Check 'B3' 'ctrl+e turns on exponent form, remembered' 'required' {
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '3000'
+    $a = Read-Answer '^3000$'
+    $N::Chord($N::VK_CONTROL, [uint16]0x45)
+    $on = Wait-Until { $x = Send-Pipe @{ cmd = 'exponent' }; $x.model -and (Normalize $x.shown) -match $script:expo } 2500
+    $e = Send-Pipe @{ cmd = 'exponent' }
+    $hint = [string]$e.hint
+    $saidOff = $hint -match 'exponent form on .* Ctrl\+E turns it off'
+    Hide-QCalc
+    Start-Sleep -Milliseconds 300
+    Restart-QCalc @('--autostart')
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '3000'
+    $kept = Wait-Until { $x = Send-Pipe @{ cmd = 'exponent' }; $x.model -and (Normalize $x.shown) -match $script:expo } 4000
+    $after = Normalize (Send-Pipe @{ cmd = 'exponent' }).shown
+    $N::Chord($N::VK_CONTROL, [uint16]0x45)
+    $off = Wait-Until { $x = Send-Pipe @{ cmd = 'exponent' }; -not $x.model -and (Normalize $x.shown) -eq '3000' -and -not $x.hint } 2500
+    @{ Pass = ($a.Found -and $on -and $saidOff -and $kept -and $off); Detail = "3000 answers '$($a.Text)'; Ctrl+E: exponent form '$(Normalize $e.shown)': $on, hint '$hint'; after a restart still on: $kept ('$after'); Ctrl+E again off: $off" }
+}
+
+# a chained line's faint `ans` (`*2` continues from the last answer): Tab types it in where it's drawn (line.rs)
+Invoke-Check 'B4' 'tab types in the faint ans' 'required' {
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '6'
+    Read-Answer '^6$' | Out-Null
+    $N::Chord($N::VK_RETURN)
+    Wait-Until { (State).text -ne '6' } 2000 | Out-Null
+    Clear-Input
+    Type-Text '*2'
+    $a = Read-Answer '^12$'
+    $faint = Wait-Until { $null -ne (Send-Pipe @{ cmd = 'wordTip' }).ans } 1500
+    $N::Chord($N::VK_TAB)
+    $typed = Wait-Until { $s = State; $s.text -eq 'ans*2' -and $s.caret -eq 5 } 2000
+    $b = Read-Answer '^12$'
+    $gone = $null -eq (Send-Pipe @{ cmd = 'wordTip' }).ans
+    $s = State
+    @{ Pass = ($a.Found -and $faint -and $typed -and $b.Found -and $gone); Detail = "*2 after 6 answers '$($a.Text)', faint ans drawn: $faint; Tab: '$($s.text)' caret $($s.caret) (want 'ans*2' at 5), answer '$($b.Text)', faint ans gone: $gone" }
+}
+
+# the pointer over a word of the line names it over the word (word_tip.rs): a unit, `ans` with its value, the faint ans
+function Hover-Word([string]$name, [int]$ms = 3000) {
+    $script:hw = $null
+    $found = Wait-Until {
+        $d = Send-Pipe @{ cmd = 'wordTip' }
+        $w = @($d.words | Where-Object { $_.name -eq $name })
+        if ($w.Count -gt 0) { $script:hw = $w[0].at }
+        $null -ne $script:hw
+    } $ms
+    if (-not $found) { return $false }
+    $N::MoveTo([int](($script:hw[0] + $script:hw[1]) / 2), [int]$script:hw[2])
+    Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $d.shown -eq $name -and $d.tipUp } $ms
+}
+function Tip-Visible { @($N::WindowsOfClass([int[]]@($script:proc.Id), 'tooltips_class32') | Where-Object { $N::IsWindowVisible($_) }).Count -gt 0 }
+Invoke-Check 'B5' 'hovering a word in the line names it' 'required' {
+    Show-QCalc | Out-Null
+    Clear-Input
+    Type-Text '5 kPa'
+    Read-Answer 'kPa' | Out-Null
+    $f = (E2E).field
+    # onto the line, so its names are asked for
+    $N::MoveTo([int]($f[0] + 4), [int]($f[1] + $f[3] / 2))
+    $unit = Hover-Word 'kilopascal'
+    $unitTip = Tip-Visible
+    Clear-Input
+    Type-Text 'ans+1'
+    Read-Answer '^7$' | Out-Null
+    $N::MoveTo([int]($f[0] + $f[2] - 4), [int]($f[1] + $f[3] / 2))
+    $ans = Hover-Word 'last answer = 6'
+    Clear-Input
+    Type-Text '*3'
+    Read-Answer '^18$' | Out-Null
+    $N::MoveTo([int]($f[0] + $f[2] - 4), [int]($f[1] + $f[3] / 2))
+    $faint = $false
+    $at = $null
+    if (Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $script:fa = $d.ans; $null -ne $d.ans } 2000) {
+        $N::MoveTo([int](($script:fa[0] + $script:fa[1]) / 2), [int]$script:fa[2])
+        $faint = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $d.shown -eq 'last answer = 6' -and $d.tipUp } 3000
+    }
+    $r = $N::Rect((Get-Bar))
+    $N::MoveTo($r.Left + 20, [Math]::Max(0, $r.Top - 120))
+    $gone = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; -not $d.shown -and -not (Tip-Visible) } 2000
+    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans; faint ans named: $faint; gone when the pointer left: $gone" }
 }
 
 function Near([int]$a, [int]$b, [int]$within = 6) { [Math]::Abs($a - $b) -le $within }
@@ -818,34 +910,47 @@ Invoke-Check 'V2' 'smoke room grows the window' 'informational' {
 # a game runs in a process of its own (qcalc.exe --game <kind>), started by the bar's
 function Game-Pids { [int[]](@($script:proc.Id) + @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$($script:proc.Id)" | ForEach-Object { [int]$_.ProcessId })) }
 
-Invoke-Check 'M1' 'a game opens from the bar and closes' 'required' {
+# the game takes the bar's place (games/mod.rs): the bar's left and width, hanging from the composer's top, as tall as
+# the game, with no title bar; esc from its lobby closes it back to the bar
+Invoke-Check 'M1' 'a game opens in the bar''s place and closes back to the bar' 'required' {
     Show-QCalc | Out-Null
     Clear-Input
     Type-Text 'pong'
     Wait-Until { $s = State; $s.hint } 2000 | Out-Null
+    $e = E2E
+    $bar = $e.frame
+    $composerTop = $e.composer[1]
     $N::Chord($N::VK_RETURN)
     $script:game = [IntPtr]::Zero
     $open = Wait-Until { $g = @($N::WindowsOfClassPrefix((Game-Pids), 'QCalcGame') | Where-Object { $N::IsWindowVisible($_) }); if ($g) { $script:game = $g[0] }; [bool]$g } 5000
     $title = if ($open) { $N::Title($script:game) } else { '' }
     $painted = 0
+    $placed = $false
+    $where = ''
     if ($open) {
         Start-Sleep -Milliseconds 600
         $r = $N::Rect($script:game)
-        $painted = $N::Stats($r.Left + 10, $r.Top + 40, $r.Right - $r.Left - 20, $r.Bottom - $r.Top - 50)[2]
+        $where = "game $($r.Left),$($r.Top) $($r.Right - $r.Left)x$($r.Bottom - $r.Top); bar left $($bar[0]) width $($bar[2] - $bar[0]), composer top $composerTop"
+        # the bar's left and width, its top at the composer's (moved up only when it wouldn't fit below)
+        $placed = (Near $r.Left $bar[0] 3) -and (Near ($r.Right - $r.Left) ($bar[2] - $bar[0]) 3) -and ($r.Top -le $composerTop + 3) -and (($r.Bottom - $r.Top) -lt 0.9 * $N::Screen().Height)
+        $painted = $N::Stats($r.Left + 10, $r.Top + 10, $r.Right - $r.Left - 20, $r.Bottom - $r.Top - 20)[2]
         $N::Screenshot((Join-Path $OutDir 'game.png'), $r.Left, $r.Top, $r.Right - $r.Left, $r.Bottom - $r.Top)
-        $how = 'Alt+F4'
+        $how = 'esc (the lobby''s first screen)'
         if (-not (Wait-Until { $N::GetForegroundWindow() -eq $script:game } 1500)) {
             $N::Click([int](($r.Left + $r.Right) / 2), $r.Top + 12)
             Wait-Until { $N::GetForegroundWindow() -eq $script:game } 1500 | Out-Null
         }
-        # Alt+F4 only to the game: it would close whatever else is in front
-        if ($N::GetForegroundWindow() -eq $script:game) { $N::Chord($N::VK_MENU, $N::VK_F4) }
-        else { $how = "WM_CLOSE (front was $(Describe-Foreground))"; $N::Close($script:game) | Out-Null }
+        # keys only to the game
+        if ($N::GetForegroundWindow() -eq $script:game) { $N::Chord($N::VK_ESCAPE) }
+        if (-not (Wait-Until { @($N::WindowsOfClassPrefix((Game-Pids), 'QCalcGame')).Count -eq 0 } 2500)) {
+            $how = "WM_CLOSE (esc didn't close it; front was $(Describe-Foreground))"; $N::Close($script:game) | Out-Null
+        }
     }
     $gamePid = if ($open) { [int]$N::ProcessOf($script:game) } else { 0 }
     $closed = Wait-Until { -not (E2E).gameOpen -and @($N::WindowsOfClassPrefix((Game-Pids), 'QCalcGame')).Count -eq 0 -and -not ($gamePid -and (Get-Process -Id $gamePid -ErrorAction SilentlyContinue)) } 4000
-    @{ Pass = ($open -and $closed -and $painted -gt 0.005 -and -not $script:proc.HasExited)
-       Detail = "game window '$title' opened: $open, painted $([Math]::Round($painted * 100, 1))% ink; closed by $($how): $closed; app alive: $(-not $script:proc.HasExited)" }
+    $back = Wait-Until { Test-Shown } 2500
+    @{ Pass = ($open -and $placed -and $closed -and $back -and $painted -gt 0.005 -and -not $script:proc.HasExited)
+       Detail = "game window '$title' opened: $open, in the bar's place: $placed ($where), painted $([Math]::Round($painted * 100, 1))% ink; closed by $($how): $closed; the bar back: $back; app alive: $(-not $script:proc.HasExited)" }
 }
 
 # ---- the held-hotkey retry ----

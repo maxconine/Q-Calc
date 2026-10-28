@@ -494,6 +494,10 @@ impl BarModel {
         if let Some(action) = self.keybinds.action(mods, vk) {
             return self.perform(action, engine);
         }
+        // Ctrl+E's exponent form and Ctrl+Shift+E's other forms, rebindable (exponent.rs)
+        if crate::exponent::key_down(self, vk, mods, engine) {
+            return Outcome::Handled;
+        }
         if let Some(outcome) = crate::line::key_down(self, vk, mods, engine) {
             return outcome;
         }
@@ -554,9 +558,8 @@ impl BarModel {
             DELETE => {
                 self.field.delete(ctrl);
             }
-            // Tab takes the completion and fills parens (line.rs); Ctrl+E / Ctrl+Shift+E cycle the answer's forms
+            // Tab takes the completion and fills parens (line.rs)
             TAB => {}
-            0x45 if ctrl => crate::answer::cycle_forms(self, engine, shift),
             0x57 if ctrl => return Outcome::CloseSheet,
             // Ctrl+A / X / V / Z / Y
             0x41 if ctrl => self.field.select_all(),

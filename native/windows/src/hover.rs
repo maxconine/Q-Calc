@@ -6,6 +6,8 @@
 //! The tooltip is the system's (comctl32 v6, a tracking tooltip), so it can stand outside the bar when the bar is
 //! one composer tall, follows the light / dark theme (`DarkMode_Explorer`), and is made at the first tip. Nothing
 //! here runs on a keystroke but `key_down`, which only clears; no timer runs unless the pointer rests on a cell.
+//!
+//! The pointer over the line itself names its words (word_tip.rs) in the same tooltip, over the word.
 
 use std::cell::Cell;
 
@@ -88,6 +90,12 @@ fn tip_of(app: &App, spot: Spot) -> Option<(String, crate::render::Rect)> {
 
 /// The pointer moved over the bar (None: it left). Called from commands.rs's `pointer`.
 pub fn pointer(app: &mut App, at: Option<(f32, f32)>) {
+    spot_moved(app, at);
+    // the line's words, named over them (word_tip.rs)
+    crate::word_tip::moved(app, at);
+}
+
+fn spot_moved(app: &mut App, at: Option<(f32, f32)>) {
     let spot = at.and_then(|(x, y)| spot_at(app, x, y));
     if spot == SPOT.with(Cell::get) {
         return;
@@ -187,17 +195,18 @@ pub fn triple_click(app: &mut App, x: f32, y: f32) -> bool {
 pub fn will_hide() {
     SPOT.with(|s| s.set(None));
     crate::later::cancel("hover-tip");
+    crate::word_tip::will_hide();
     tip::hide();
 }
-mod tip {
+pub(crate) mod tip {
     //! The one tracking tooltip, made at the first tip and kept (a few KB).
     use std::cell::Cell;
 
     use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows::Win32::UI::Controls::{
-        SetWindowTheme, TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW, TTM_SETMAXTIPWIDTH,
-        TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTM_UPDATETIPTEXTW, TTS_ALWAYSTIP, TTS_NOPREFIX,
-        TTTOOLINFOW,
+        SetWindowTheme, TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW, TTM_GETBUBBLESIZE,
+        TTM_SETMAXTIPWIDTH, TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTM_UPDATETIPTEXTW,
+        TTS_ALWAYSTIP, TTS_NOPREFIX, TTTOOLINFOW,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         CreateWindowExW, SendMessageW, WINDOW_STYLE, WS_EX_TOPMOST, WS_POPUP,
@@ -261,6 +270,15 @@ mod tip {
 
     /// Shows `text` with its top-left at screen (x, y). Runs outside the app's borrow (later::free).
     pub fn show(owner: usize, text: &str, x: i32, y: i32, dark: bool) {
+        show_at(owner, text, x, y, dark, false);
+    }
+
+    /// Shows `text` with its bottom-left at screen (x, y): over a word of the line (word_tip.rs).
+    pub fn show_above(owner: usize, text: &str, x: i32, y: i32, dark: bool) {
+        show_at(owner, text, x, y, dark, true);
+    }
+
+    fn show_at(owner: usize, text: &str, x: i32, y: i32, dark: bool, above: bool) {
         let owner = HWND(owner as *mut _);
         let mut tip = HWND(TIP.with(Cell::get) as *mut _);
         if tip.is_invalid() || OWNER.with(Cell::get) != owner.0 as usize {
@@ -271,7 +289,6 @@ mod tip {
         }
         let text = HSTRING::from(text);
         let ti = info(owner, Some(&text));
-        let pos = ((y as u32 & 0xffff) << 16) | (x as u32 & 0xffff);
         // SAFETY: messages to our tooltip with live structs
         unsafe {
             let _ = SetWindowTheme(
@@ -289,6 +306,19 @@ mod tip {
                 Some(WPARAM(0)),
                 Some(LPARAM(&ti as *const _ as isize)),
             );
+            // over the point: the bubble's height (HIWORD) above it
+            let y = if above {
+                let size = SendMessageW(
+                    tip,
+                    TTM_GETBUBBLESIZE,
+                    Some(WPARAM(0)),
+                    Some(LPARAM(&ti as *const _ as isize)),
+                );
+                y - ((size.0 >> 16) & 0xffff) as i32
+            } else {
+                y
+            };
+            let pos = ((y as u32 & 0xffff) << 16) | (x as u32 & 0xffff);
             SendMessageW(
                 tip,
                 TTM_TRACKPOSITION,

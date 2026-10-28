@@ -701,6 +701,8 @@ mod view {
         /// the IME's composition, drawn inline at the caret
         pub composition: Option<Composition>,
         ghosts: Vec<(String, IDWriteTextLayout)>,
+        /// the faint `ans`'s box at the last paint, window DIPs (its hover label, word_tip.rs)
+        pub ans_rect: Option<Rect>,
     }
 
     /// One limit to draw small beside its sign: its text, where it goes, and which.
@@ -721,6 +723,12 @@ mod view {
     const HIDDEN_SIZE: f32 = 0.01;
 
     impl FieldView {
+        /// Where UTF-16 `a..b` of the text was drawn at the last paint: (left, right), window DIPs (word_tip.rs).
+        pub fn span_x(&self, a: u32, b: u32) -> Option<(f32, f32)> {
+            let (_, l) = self.cached.as_ref()?;
+            Some((self.text_x + caret_x(l, a), self.text_x + caret_x(l, b)))
+        }
+
         /// A small one-line layout at the display size, from the cache when it was drawn lately.
         fn ghost(&mut self, c: &Canvas, s: &str, h: f32) -> Option<IDWriteTextLayout> {
             if let Some(i) = self.ghosts.iter().position(|(t, _)| t == s) {
@@ -825,12 +833,23 @@ mod view {
                     c.text_plain(&l, r.x, r.y, t.muted);
                     lead_w += measure(&l).0;
                 }
-                if x.chained
-                    && let Some(l) = self.ghost(c, "ans", r.h)
+                // drawn as Tab types it (line.rs `ans_ghost`), with no gap after it, so typing it in moves nothing
+                let ghost = if x.chained {
+                    crate::line::ans_ghost(field.text())
+                } else {
+                    String::new()
+                };
+                if !ghost.is_empty()
+                    && let Some(l) = self.ghost(c, &ghost, r.h)
                 {
                     c.text_plain(&l, r.x + lead_w, r.y, with_alpha(t.muted, 0.75));
-                    lead_w += measure(&l).0 + 5.0;
+                    let w = measure(&l).0;
+                    self.ans_rect = Some(Rect::new(r.x + lead_w, r.y, w, r.h));
+                    lead_w += w;
                 }
+            }
+            if !x.chained {
+                self.ans_rect = None;
             }
             let r = Rect::new(r.x + lead_w, r.y, (r.w - lead_w).max(1.0), r.h);
             if field.text().is_empty() && self.composition.is_none() {
