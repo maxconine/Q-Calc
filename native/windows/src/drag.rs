@@ -47,11 +47,12 @@ pub fn nc_hit_test(app: &App, lp: LPARAM) -> u32 {
     );
     let f = app.bar.frame();
     let s = app.bar.scale();
-    hit(
-        &app.bar.layout,
-        (sx - f.left) as f32 / s,
-        (sy - f.top) as f32 / s,
-    )
+    let (x, y) = ((sx - f.left) as f32 / s, (sy - f.top) as f32 / s);
+    // the edge tools take clicks and keep their hover instead of dragging the bar
+    if crate::edge::tool_at(app, x, y).is_some() {
+        return HTCLIENT;
+    }
+    hit(&app.bar.layout, x, y)
 }
 
 /// WM_SIZING: the edge being dragged (`wp`) and the proposed frame (`lp`, a RECT to adjust): the height stays,
