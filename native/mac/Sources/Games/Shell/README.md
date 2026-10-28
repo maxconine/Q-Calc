@@ -37,9 +37,10 @@ gameKeys,gameSaves,gameFullscreen,lobby,nickname,peer,peerOnline}.ts`. The rules
 | `GameKeys.swift` | `GameKey`, `GameKeyRouter`, `.gameKeys` | `gameKeys.ts` |
 | `GameStore.swift` | `GameTime`, `GameSaves`, `GameNickname` | `gameClock.ts`, `gameSaves.ts`, `nickname.ts` |
 | `PeerTransport.swift` | `PeerTransport`, `RelayTransport` (the core's `RelayPeer` over URLSessionWebSocketTask) | `peer.ts`, `peerOnline.ts` |
-| `GameWindow.swift` | `NativeGameWindowController`: the window, the key monitor, zoom for full screen, pause on blur | `GameWindowController` |
+| `GameWindow.swift` | `NativeGameWindowController`: the window (the bar's card, or the big window for full screen), the key monitor, pause on blur | `GameWindowController` |
 
-Full screen is the window zoomed ("big window"), as in the web-view build. While it's on, the game area is
+A game opens in the bar's place: a borderless card at the bar's width hanging from the composer's top, as tall as
+the game. Full screen turns that window into a big titled one ("big window"), as in the web-view build, and back. While it's on, the game area is
 centred and `@Environment(\.gameStage)` gives its height (`--game-h`) so boards can grow; a game with a picture of
 its own shape calls `shell.fullscreenLayout(GameFullscreenOptions(...))` and lays itself out with
 `gameFullscreenLayout(...)` from the core.
