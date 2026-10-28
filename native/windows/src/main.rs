@@ -34,6 +34,8 @@ mod clip;
 #[cfg(windows)]
 mod contrast;
 #[cfg(windows)]
+mod crash;
+#[cfg(windows)]
 mod drag;
 #[cfg(windows)]
 mod effects;

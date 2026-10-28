@@ -1,4 +1,5 @@
-//! The notification-area icon: its menu (Show Q Calc, Settings…, Tips…, Tutorial, Check for Updates…, Quit Q Calc,
+//! The notification-area icon: its menu (Show Q Calc, Settings…, Tips…, Tutorial, Check for Updates…, Report a
+//! Problem… (crash.rs), Quit Q Calc,
 //! and the shortcut's warning when it couldn't be had, as the Tauri app's and the Mac's menus), a click shows the
 //! bar, and the balloon notices (the hotkey held after retries ran out).
 //!
@@ -35,6 +36,8 @@ pub const CMD_TUTORIAL: usize = 5;
 pub const CMD_UPDATES: usize = 6;
 /// the shortcut warning: picking it opens the keybinds in settings
 pub const CMD_HOTKEY: usize = 7;
+/// the issue form and a folder with the log (crash.rs)
+pub const CMD_REPORT: usize = 8;
 
 /// What the menu shows besides its fixed items.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -77,6 +80,7 @@ pub fn items(state: &MenuState) -> Vec<(usize, String)> {
         (CMD_TIPS, "Tips…"),
         (CMD_TUTORIAL, "Tutorial"),
         (CMD_UPDATES, "Check for Updates…"),
+        (CMD_REPORT, "Report a Problem…"),
         (0, ""),
         (CMD_QUIT, "Quit Q Calc"),
     ] {
@@ -103,6 +107,7 @@ pub fn picked(app: &mut crate::app::App, cmd: Option<usize>) {
             settings_window::open_page(app, Page::Updates);
         }
         Some(CMD_HOTKEY) => settings_window::open_page(app, Page::Keybinds),
+        Some(CMD_REPORT) => crate::crash::report_problem(),
         Some(CMD_QUIT) => app.ops.push(Op::Quit),
         _ => {}
     }
@@ -397,6 +402,7 @@ mod tests {
                 "Tips…",
                 "Tutorial",
                 "Check for Updates…",
+                "Report a Problem…",
                 "",
                 "Quit Q Calc"
             ]
@@ -413,7 +419,7 @@ mod tests {
                 "⚠ Alt+Space is taken · pick another…".to_string()
             )
         );
-        assert_eq!((all[1].0, all.len()), (0, 9));
+        assert_eq!((all[1].0, all.len()), (0, 10));
         // the shortcut sits right-aligned beside Show, as a menu's accelerator
         let keyed = MenuState {
             shortcut: Some("Alt+Space".into()),
