@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import worker, { Inbox, Ledger } from './index.js'
-import { BYTES_MAX, CAPS, cleanSealedClip, cleanSealedOffer, FALLBACK, fileKey, NEW_NAME_MS, OFFER_TTL_MS, PART_BYTES, partCount, partLength, rangeStart, SEALED_CLIP_MAX, SEALED_FILE_MAX, STALE_UPLOAD_MS, STORED_TTL_MS } from './files.js'
+import { BYTES_MAX, CAPS, cleanSealedClip, cleanSealedOffer, FALLBACK, fileKey, NEW_NAME_MS, OFFER_TTL_MS, PART_BYTES, partCount, partKey, partLength, rangeStart, SEALED_CHUNK, SEALED_CLIP_MAX, SEALED_FILE_MAX, STALE_UPLOAD_MS, STORED_TTL_MS, STREAM_PARTS_MAX, streamPartBytes } from './files.js'
 
 // files and clips through the worker, its inboxes and its ledger, against the same kind of stand-in for the
 // workers runtime as inbox.test.js, plus a bucket that keeps what's put in it
@@ -94,7 +94,12 @@ class Bucket {
     return { body: new ReadableStream({ start: (c) => (c.enqueue(bytes), c.close()) }) }
   }
   async delete(k) {
-    this.objects.delete(k)
+    for (const key of Array.isArray(k) ? k : [k]) this.objects.delete(key)
+  }
+  async put(k, body) {
+    const bytes = await readAll(body)
+    this.objects.set(k, bytes)
+    return { key: k, size: bytes.length }
   }
   async createMultipartUpload(k) {
     const id = `u${this.next++}`
@@ -841,6 +846,167 @@ describe('authorization, guessing, replays, sizes and races', () => {
     expect(tags()).toHaveLength(1)
     expect(tags()[0].split(':')[1]).not.toBe(first.split(':')[1])
     expect([...r.ledger().ctx.data.keys()].filter((k) => k.startsWith('salt:'))).toHaveLength(1)
+  })
+})
+
+describe('streaming', () => {
+  const P = streamPartBytes(21)
+  const BYTES = 2 * P + 10
+  const blob = (n, fill) => new Uint8Array(n).fill(fill)
+  const put = (r, id, n, len, h = {}) => r.file('PUT', `/file/${id}/part/${n}`, 'ana', KEY_B, { 'Content-Length': String(len), ...h }, blob(len, n))
+  const getPart = (r, id, n, name = 'max', key = KEY_A) => r.file('GET', `/file/${id}/part/${n}`, name, key)
+  // offered, accepted, and the grant the sender heard
+  async function streaming(r, ana, bytes = BYTES) {
+    const id = await offered(r, offer({ bytes }))
+    const res = await r.file('POST', `/file/${id}/accept`, 'max', KEY_A)
+    return { id, accepted: await res.json(), grant: last(ana).grant, heard: last(ana) }
+  }
+
+  it('cuts a file into whole sealed chunks, never more than 64 parts', () => {
+    expect(P).toBe(4 * SEALED_CHUNK)
+    expect(streamPartBytes(BYTES_MAX)).toBe(16 * SEALED_CHUNK)
+    expect(partCount(BYTES_MAX, streamPartBytes(BYTES_MAX))).toBe(STREAM_PARTS_MAX)
+    expect(partCount(BYTES_MAX - 1, streamPartBytes(BYTES_MAX - 1))).toBeLessThanOrEqual(STREAM_PARTS_MAX)
+    expect(partCount(21, P)).toBe(1)
+    expect(partLength(BYTES, 3, P)).toBe(10)
+    expect(partKey('ab'.repeat(16), 3)).toBe('f/' + 'ab'.repeat(16) + '/3')
+    for (const bad of [0, STREAM_PARTS_MAX + 1, 1.5]) expect(() => partKey('ab'.repeat(16), bad)).toThrow()
+  })
+
+  it('lets the recipient read each part as it lands, and lets the file go once all are read and it’s finished', async () => {
+    const { r, max, ana } = await pair()
+    const { id, accepted, grant, heard: ev } = await streaming(r, ana)
+    // both sides hear the part length a streamed upload uses; an older sender's partBytes is still there
+    expect(accepted).toEqual({ status: 'ok', stream: P })
+    expect(ev).toMatchObject({ event: 'accepted', partBytes: PART_BYTES, stream: P })
+    expect(await status(await getPart(r, id, 1))).toBe('not-ready')
+    // the first part, with the grant, starts it: no start of its own
+    expect(await status(await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' }))).toBe('ok')
+    expect(last(max)).toEqual({ type: 'file', event: 'part', id, n: 1 })
+    expect(r.env.FILES.uploads.size).toBe(0)
+    const one = await getPart(r, id, 1)
+    expect(one.status).toBe(200)
+    expect(one.headers.get('Content-Length')).toBe(String(P))
+    const got = await readAll(one.body)
+    expect([got.length, got[0], got[P - 1]]).toEqual([P, 1, 1])
+    await r.settle()
+    // only the recipient, only a part that's in
+    expect(await status(await getPart(r, id, 2))).toBe('not-ready')
+    expect(await status(await getPart(r, id, 1, 'ana', KEY_B))).toBe('gone')
+    expect(await status(await getPart(r, id, 4))).toBe('bad')
+    expect(await status(await put(r, id, 2, P))).toBe('ok')
+    expect(await status(await put(r, id, 3, 10))).toBe('ok')
+    for (const n of [2, 3]) await readAll((await getPart(r, id, n)).body)
+    await r.settle()
+    // everything's been read: finishing lets it go, with nothing more to tell the recipient
+    expect(r.env.FILES.objects.size).toBe(3)
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('ok')
+    expect(heard(max).some((e) => e.event === 'ready')).toBe(false)
+    expect(r.env.FILES.objects.size).toBe(0)
+    expect(await r.ledger().totals()).toEqual({ total: 0 })
+    expect(await status(await getPart(r, id, 1))).toBe('gone')
+  })
+
+  it('lets the file go when its last part is read after it’s finished', async () => {
+    const { r, max, ana } = await pair()
+    const { id, grant } = await streaming(r, ana, 21)
+    expect(await status(await put(r, id, 1, 21, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' }))).toBe('ok')
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('ok')
+    expect(last(max)).toMatchObject({ event: 'ready', id })
+    expect(Array.from(await readAll((await getPart(r, id, 1)).body))).toEqual(Array.from(blob(21, 1)))
+    await r.settle()
+    expect(r.env.FILES.objects.size).toBe(0)
+    expect(await r.ledger().file(id)).toBeNull()
+  })
+
+  it('serves a streamed file whole, from a range, to an app that doesn’t stream', async () => {
+    const { r, max, ana } = await pair()
+    const { id, grant } = await streaming(r, ana)
+    await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' })
+    await put(r, id, 3, 10)
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('incomplete')
+    await put(r, id, 2, P)
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('ok')
+    expect(last(max)).toMatchObject({ type: 'file', event: 'ready', id })
+    const res = await r.file('GET', `/file/${id}`, 'max', KEY_A, { Range: `bytes=${P - 2}-` })
+    expect(res.status).toBe(206)
+    expect(res.headers.get('Content-Range')).toBe(`bytes ${P - 2}-${BYTES - 1}/${BYTES}`)
+    const got = await readAll(res.body)
+    expect(got.length).toBe(BYTES - P + 2)
+    expect([got[0], got[1], got[2], got[P + 1], got[P + 2], got.at(-1)]).toEqual([1, 1, 2, 2, 3, 3])
+    await r.settle()
+    expect(r.env.FILES.objects.size).toBe(0)
+    expect(await r.ledger().totals()).toEqual({ total: 0 })
+  })
+
+  it('says whole for a file an older sender uploads in one, which works as before', async () => {
+    const { r, max, ana } = await pair()
+    const { id, grant } = await streaming(r, ana, 21)
+    await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant })
+    expect(await status(await getPart(r, id, 1))).toBe('whole')
+    await put(r, id, 1, 21)
+    expect(await status(await r.file('POST', `/file/${id}/finish`, 'ana', KEY_B))).toBe('ok')
+    expect(heard(max).some((e) => e.event === 'part')).toBe(false)
+    expect(Array.from(await readAll((await r.file('GET', `/file/${id}`, 'max', KEY_A)).body))).toEqual(Array.from(blob(21, 1)))
+  })
+
+  it('starts only with the sender’s grant, once, and comes back to it without one', async () => {
+    const { r, ana } = await pair()
+    await r.connect('eve', KEY_E)
+    const { id, grant } = await streaming(r, ana)
+    // a part before the stream's started, a wrong grant, someone else's, a grant without the stream header
+    expect(await status(await put(r, id, 2, P))).toBe('gone')
+    expect(await status(await put(r, id, 1, P, { 'X-QCalc-Grant': 'f'.repeat(32), 'X-QCalc-Stream': '1' }))).toBe('gone')
+    expect(await status(await r.file('PUT', `/file/${id}/part/1`, 'eve', KEY_E, { 'Content-Length': String(P), 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' }, blob(P, 1)))).toBe('gone')
+    expect(await status(await put(r, id, 1, P, { 'X-QCalc-Grant': grant }))).toBe('gone')
+    expect(await status(await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' }))).toBe('ok')
+    // the grant's used: an older start with it is turned away, coming back without it says what's in
+    expect(await status(await r.file('POST', `/file/${id}/start`, 'ana', KEY_B, { 'X-QCalc-Grant': grant }))).toBe('ok')
+    expect(await (await r.file('POST', `/file/${id}/start`, 'ana', KEY_B)).json()).toEqual({ status: 'ok', partBytes: P, parts: 3, done: [1], stream: P })
+    // a part longer than its place ends it, and its parts go
+    expect(await status(await put(r, id, 3, 11))).toBe('over')
+    expect(r.env.FILES.objects.size).toBe(0)
+    // a write each part, and none to start or finish
+    expect(JSON.stringify([...r.ledger().ctx.data.keys()])).not.toContain('1.2.3.4')
+  })
+
+  it('takes a streamed file back mid-upload, or turns it down, deleting its parts', async () => {
+    const { r, max, ana } = await pair()
+    let { id, grant } = await streaming(r, ana)
+    await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' })
+    expect(await status(await r.file('DELETE', `/file/${id}`, 'ana', KEY_B))).toBe('ok')
+    expect(last(max)).toEqual({ type: 'file', event: 'cancelled', id, from: 'ana' })
+    expect(r.env.FILES.objects.size).toBe(0)
+    ;({ id, grant } = await streaming(r, ana))
+    await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' })
+    expect(await status(await r.file('DELETE', `/file/${id}`, 'max', KEY_A))).toBe('ok')
+    expect(last(ana)).toEqual({ type: 'file', event: 'declined', id, to: 'max' })
+    expect(r.env.FILES.objects.size).toBe(0)
+    // a part that lands after it was turned down isn't kept
+    expect(await status(await put(r, id, 2, P))).toBe('gone')
+    expect(r.env.FILES.objects.size).toBe(0)
+    expect(await r.ledger().totals()).toEqual({ total: 0 })
+  })
+
+  it('lets a stale streamed upload go at the hourly sweep, with its parts', async () => {
+    const { r, max, ana } = await pair()
+    const { id, grant } = await streaming(r, ana)
+    await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' })
+    vi.setSystemTime(NEW_NAME_MS + STALE_UPLOAD_MS)
+    await worker.scheduled({}, r.env, { waitUntil: (p) => p })
+    await vi.waitFor(() => expect(r.env.FILES.objects.size).toBe(0))
+    expect(heard(max).filter((e) => e.event === 'cancelled').map((e) => e.id)).toEqual([id])
+    expect(await r.ledger().totals()).toEqual({ total: 0 })
+  })
+
+  it('caps a day’s reads and writes part by part', async () => {
+    const { r, ana } = await pair()
+    const { id, grant } = await streaming(r, ana)
+    CAPS.dailyWrites = 1
+    expect(await status(await put(r, id, 1, P, { 'X-QCalc-Grant': grant, 'X-QCalc-Stream': '1' }))).toBe('ok')
+    expect(await status(await put(r, id, 2, P))).toBe('relay-full')
+    CAPS.dailyReads = 0
+    expect(await status(await getPart(r, id, 1))).toBe('relay-full')
   })
 })
 

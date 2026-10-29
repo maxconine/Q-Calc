@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers'
-import { CAPS, dayOf, FILE_ID, GRANT_TTL_MS, hourOf, OFFER_TTL_MS, PART_TRIES, partCount, partLength, randomHex, STALE_UPLOAD_MS, STORED_TTL_MS, UPLOAD_MAX_MS } from './files.js'
+import { CAPS, dayOf, FILE_ID, GRANT_TTL_MS, hourOf, OFFER_TTL_MS, PART_TRIES, partCount, partLength, randomHex, STALE_UPLOAD_MS, STORED_TTL_MS, streamPartBytes, UPLOAD_MAX_MS } from './files.js'
 
 // the one ledger of every file offered, accepted, being uploaded or waiting to be downloaded, and of the bytes
 // they hold against the hard caps in files.js. it keeps no file's contents, name or key: only who sent it to
@@ -12,7 +12,11 @@ import { CAPS, dayOf, FILE_ID, GRANT_TTL_MS, hourOf, OFFER_TTL_MS, PART_TRIES, p
 //   uploading  parts are arriving (`uploadId`, `parts`)                         aborted when stale
 //   stored     waiting for its recipient                                        deleted after STORED_TTL_MS
 //
-// a removal hands back the record, so the worker can abort its upload or delete its object.
+// a streamed upload (`stream`, its part length) has no multipart upload: each part is an object of its own, and
+// its recipient may read each one (`partReadable`, `partRead`) while the rest are still coming. it goes once every
+// part has been read and the upload's finished, or, read as one file by an app that doesn't stream, as any other.
+//
+// a removal hands back the record, so the worker can abort its upload or delete its object (or parts).
 //
 // an address is never kept: an upload's start counts against a tag, sha-256 over a random salt drawn for that
 // hour and the address, and both the salt and the tags go once the hour's over, so a tag can't be traced back
@@ -130,6 +134,7 @@ export class Ledger extends DurableObject {
     const now = Date.now()
     if (!rec || rec.from !== from) return { status: 'gone' }
     if (rec.state === 'uploading') {
+      if (rec.stream) return { status: 'ok', stream: rec.stream, parts: Object.keys(rec.parts).map(Number), bytes: rec.bytes }
       if (!rec.uploadId) return { status: 'busy' }
       return { status: 'ok', uploadId: rec.uploadId, parts: Object.keys(rec.parts).map(Number), bytes: rec.bytes }
     }
@@ -151,6 +156,34 @@ export class Ledger extends DurableObject {
     Object.assign(rec, { state: 'uploading', started: now, touched: now, parts: {}, tries: 0, uploadId: null })
     await this.save(rec)
     return { status: 'ok', uploadId: null, parts: [], bytes: rec.bytes }
+  }
+
+  // its sender starts a streamed upload with the grant (the first part carries it): each part is an object of its
+  // own that its recipient can read as soon as it's in, each streamPartBytes long but the last. coming back to a
+  // streamed upload, without the grant, is `start`'s
+  async startStream(id, from, grant, address) {
+    const rec = await this.file(id)
+    const now = Date.now()
+    if (!rec || rec.from !== from) return { status: 'gone' }
+    if (rec.state === 'uploading' && rec.stream) return { status: 'ok', started: false }
+    if (rec.state === 'uploading') return { status: 'busy' }
+    if (rec.state === 'stored') return { status: 'done' }
+    if (rec.state !== 'granted') return { status: 'not-accepted' }
+    if (rec.grant !== grant) return { status: 'gone' }
+    if (rec.grantExpires <= now) {
+      await this.revert(id)
+      return { status: 'expired' }
+    }
+    await this.prune(now)
+    const hour = `ip:${await this.tag(address, now)}:${hourOf(now)}`
+    if (((await this.store.get(hour)) ?? 0) >= CAPS.addressHourly) return { status: 'too-many' }
+    await this.add(hour, 1)
+    delete rec.grant
+    delete rec.grantExpires
+    // no multipart upload to make or put together: each part is one write, counted as it comes
+    Object.assign(rec, { state: 'uploading', started: now, touched: now, parts: {}, tries: 0, stream: streamPartBytes(rec.bytes), read: {} })
+    await this.save(rec)
+    return { status: 'ok', started: true }
   }
 
   // the hour's salt, drawn the first time it's needed
@@ -184,15 +217,16 @@ export class Ledger extends DurableObject {
   // granted. one that isn't, or too many tries, ends the upload (the record comes back as `removed`)
   async part(id, from, n, length) {
     const rec = await this.file(id)
-    if (!rec || rec.from !== from || rec.state !== 'uploading' || !rec.uploadId) return { status: 'gone' }
-    const want = partLength(rec.bytes, n)
+    if (!rec || rec.from !== from || rec.state !== 'uploading' || !(rec.uploadId || rec.stream)) return { status: 'gone' }
+    const size = rec.stream || undefined
+    const want = partLength(rec.bytes, n, size)
     rec.tries++
     if (want == null || length !== want) return { status: 'over', removed: await this.remove(id) }
-    if (rec.tries > partCount(rec.bytes) * PART_TRIES) return { status: 'failed', removed: await this.remove(id) }
+    if (rec.tries > partCount(rec.bytes, size) * PART_TRIES) return { status: 'failed', removed: await this.remove(id) }
     if (!(await this.budget('writes', 1))) return { status: 'relay-full' }
     rec.touched = Date.now()
     await this.save(rec)
-    return { status: 'ok', uploadId: rec.uploadId }
+    return { status: 'ok', uploadId: rec.uploadId, stream: rec.stream ?? 0, to: rec.to }
   }
 
   async partDone(id, n, etag) {
@@ -204,42 +238,80 @@ export class Ledger extends DurableObject {
     return true
   }
 
-  // every part is in: what r2 needs to put them together
+  // every part is in: what r2 needs to put them together (a streamed file's parts stay as they are)
   async finish(id, from) {
     const rec = await this.file(id)
     if (!rec || rec.from !== from) return { status: 'gone' }
     if (rec.state === 'stored') return { status: 'done' }
-    if (rec.state !== 'uploading' || !rec.uploadId) return { status: 'gone' }
+    if (rec.state !== 'uploading' || !(rec.uploadId || rec.stream)) return { status: 'gone' }
     const parts = []
     const missing = []
-    for (let n = 1; n <= partCount(rec.bytes); n++) {
+    for (let n = 1; n <= partCount(rec.bytes, rec.stream || undefined); n++) {
       if (rec.parts[n]) parts.push({ partNumber: n, etag: rec.parts[n] })
       else missing.push(n)
     }
     if (missing.length) return { status: 'incomplete', missing }
-    return { status: 'ok', uploadId: rec.uploadId, parts }
+    return { status: 'ok', uploadId: rec.uploadId, parts, stream: rec.stream ?? 0 }
   }
 
+  // uploaded. a streamed file whose recipient has already read every part goes at once (`gone` comes back true)
   async stored(id) {
     const rec = await this.file(id)
     if (rec?.state !== 'uploading') return null
     const expires = Date.now() + STORED_TTL_MS
     Object.assign(rec, { state: 'stored', expires })
     delete rec.uploadId
-    delete rec.parts
     delete rec.tries
+    if (rec.stream && this.allRead(rec)) {
+      await this.remove(id)
+      return { to: rec.to, from: rec.from, expires, bytes: rec.bytes, stream: rec.stream, gone: true }
+    }
+    if (!rec.stream) delete rec.parts
     await this.save(rec)
-    return { to: rec.to, from: rec.from, expires, bytes: rec.bytes }
+    return { to: rec.to, from: rec.from, expires, bytes: rec.bytes, stream: rec.stream ?? 0 }
   }
 
-  // whether its recipient can download it now
+  allRead(rec) {
+    const n = partCount(rec.bytes, rec.stream)
+    return Object.keys(rec.read ?? {}).length >= n
+  }
+
+  // whether its recipient can download it now, as one file (a streamed one is read part by part from r2, a read
+  // each)
   async readable(id, name) {
     const rec = await this.file(id)
     if (!rec || rec.to !== name) return { status: 'gone' }
     if (rec.state !== 'stored') return { status: 'not-ready' }
     if (rec.expires <= Date.now()) return { status: 'expired', removed: await this.remove(id) }
+    if (!(await this.budget('reads', rec.stream ? partCount(rec.bytes, rec.stream) : 1))) return { status: 'relay-full' }
+    return { status: 'ok', bytes: rec.bytes, from: rec.from, stream: rec.stream ?? 0 }
+  }
+
+  // whether its recipient can read part n of a streamed file now: `not-ready` until it's in, `whole` for a file
+  // that isn't streamed (its sender's app uploads it in one, to be read once it's `ready`)
+  async partReadable(id, name, n) {
+    const rec = await this.file(id)
+    if (!rec || rec.to !== name) return { status: 'gone' }
+    if (rec.state === 'offered') return { status: 'not-accepted' }
+    if (rec.state === 'granted') return { status: 'not-ready' }
+    if (!rec.stream) return { status: 'whole' }
+    const length = partLength(rec.bytes, n, rec.stream)
+    if (length == null) return { status: 'bad' }
+    if (!rec.parts[n]) return { status: 'not-ready' }
+    if (rec.state === 'stored' && rec.expires <= Date.now()) return { status: 'expired', removed: await this.remove(id) }
     if (!(await this.budget('reads', 1))) return { status: 'relay-full' }
-    return { status: 'ok', bytes: rec.bytes, from: rec.from }
+    return { status: 'ok', length, from: rec.from }
+  }
+
+  // part n has been read to its end. once every part has been and the upload's finished, the file goes (the
+  // record comes back as `removed`, for the worker to delete its parts)
+  async partRead(id, n) {
+    const rec = await this.file(id)
+    if (!rec?.stream) return {}
+    rec.read[n] = 1
+    if (rec.state === 'stored' && this.allRead(rec)) return { removed: await this.remove(id) }
+    await this.save(rec)
+    return {}
   }
 
   // the hourly sweep: lapsed offers, unused grants, stale uploads and expired files, and old counters. hands
