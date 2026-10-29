@@ -27,4 +27,11 @@ describe('latest-native.json', () => {
     expect(() => nativeManifest('2.1.0', base, [{ ...x64, file: 'Q-Calc-2.1.0-x64-setup.exe' }])).toThrow(/native/)
     expect(() => nativeManifest('2.1.0', base, [{ ...x64, sig: sig('version:2.0.9') }])).toThrow(/2.0.9/)
   })
+
+  // the release builds with QCALC_VERSION = package.json's; a plain cargo build reports the crate's, so they agree
+  it("the native app's crate version is package.json's", () => {
+    const pkg = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'))
+    const cargo = readFileSync(new URL('../Cargo.toml', import.meta.url), 'utf8')
+    expect(/^version = "([^"]+)"/m.exec(cargo)?.[1]).toBe(pkg.version)
+  })
 })

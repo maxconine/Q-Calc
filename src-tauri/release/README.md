@@ -2,11 +2,14 @@
 
 Pushing a `v*` tag runs two separate workflows. `release.yml` builds the Mac zip and creates the GitHub Release. `windows.yml` builds the Windows installers, waits for that release to exist, and then attaches:
 
-- `Q-Calc-<version>-x64-setup.exe`
-- `Q-Calc-<version>-arm64-setup.exe` (skipped for that release if the arm64 build fails)
-- `latest.json`, the manifest the in-app updater reads
+- `Q-Calc-<version>-x64-native-setup.exe`, the native app ([native/windows](../../native/windows/README.md))
+- `Q-Calc-<version>-arm64-native-setup.exe` (cross-built on the x64 runner; skipped for that release if the arm64 build fails)
+- `latest-native.json`, the feed the native app's updater reads
+- `latest.json`, the manifest the Tauri app's updater reads. From 3.0 its Windows entries point at the native installers, so every Tauri install updates itself to the native app. The native installer upgrades a Tauri install in place, in the same folder and **Installed apps** entry, and keeps settings and history.
 
 If the Windows workflow fails, the Mac release is unaffected.
+
+The switch is `NATIVE_WINDOWS` in `windows.yml`. A tag push always takes the native app. Running **Windows** by hand with *native_windows* unticked builds and publishes the Tauri app as before 3.0 (`Q-Calc-<version>-x64-setup.exe`, `latest.json` on it). The native installers and `latest-native.json` still go beside it. Before anything is uploaded, `verify-feed.mjs` checks both feeds the way the apps read them: the entry tauri-plugin-updater picks on each arch, and each installer's signature against the key both apps trust. The step-by-step for a release, and how to roll one back, is in [native/windows/RELEASE.md](../../native/windows/RELEASE.md).
 
 Running **Windows** by hand with *publish* off builds unsigned installers and saves them as workflow artefacts. This replaces the old manual build. With *publish* on, it does the full release for the `package.json` version.
 
