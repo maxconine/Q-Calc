@@ -17,7 +17,7 @@ use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HWND};
 use windows::Win32::Foundation::{E_FAIL, HMODULE};
 use windows::Win32::Graphics::Direct2D::Common::D2D1_ALPHA_MODE_IGNORE;
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT,
+    D2D_RECT_F, D2D_SIZE_U, D2D1_COLOR_F, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
     D2D1_ANTIALIAS_MODE_ALIASED, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
@@ -559,9 +559,11 @@ impl Surface {
             } else {
                 D2D1_RENDER_TARGET_TYPE_SOFTWARE
             },
+            // opaque, as the swap chain is: the windows extend DWM's frame into them, so a premultiplied target
+            // let the desktop show through wherever a frame hadn't painted
             pixelFormat: D2D1_PIXEL_FORMAT {
                 format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                alphaMode: D2D1_ALPHA_MODE_IGNORE,
             },
             dpiX: self.dpi,
             dpiY: self.dpi,
