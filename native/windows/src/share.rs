@@ -993,6 +993,10 @@ impl Upload<'_> {
         if let Some(s) = failure.into_inner().ok().flatten() {
             return s;
         }
+        // sealing ended badly (the file changed under it): never finish what the offer doesn't describe
+        if self.sealing.get().1 {
+            return "unreadable".into();
+        }
         let (status, _) = ask("POST", &format!("/file/{}/finish", self.id), &[]);
         match status.as_str() {
             "ok" | "done" => "ok".into(),
@@ -1500,6 +1504,10 @@ static UNFINISHED: Mutex<(Option<Vec<String>>, Option<String>)> = Mutex::new((No
 /// so that after a restart, when nothing of them is left in memory (keys, sealed files, progress), the relay lets
 /// them go and the other side hears they were taken back or turned down instead of waiting on them.
 fn persist_unfinished() {
+    // the unit tests change transfers too, and never write beside a real settings.json
+    if cfg!(test) {
+        return;
+    }
     let ids: Vec<String> = with(|s| {
         s.transfers
             .iter()
