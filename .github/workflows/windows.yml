@@ -242,6 +242,15 @@ jobs:
 
       - run: npm ci
 
+      # NSIS 3 under Program Files (x86): newer windows images no longer have it, so it's installed when missing
+      - name: NSIS
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) {
+            choco install nsis -y --no-progress
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" /VERSION
+
       # build.ps1: the release exe with QCALC_VERSION, NSIS, and with the updater key the installer's .sig
       # (`tauri signer sign`, the key update.rs and the Tauri app verify). authenticode, when there is a
       # certificate, goes in through build.ps1 -SignCommand before that, so the .sig covers the signed bytes
