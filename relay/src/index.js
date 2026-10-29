@@ -283,6 +283,10 @@ async function clear(env, rec) {
   }
 }
 
+// a stream that passes bytes on as they are and says when the last has gone: the runtime's own (no JavaScript per
+// chunk, which is what a download's speed hangs on), or the standard one where there's none (the tests)
+const passThrough = () => (typeof IdentityTransformStream === 'function' ? new IdentityTransformStream() : new TransformStream())
+
 // a file event for one side: accepted, ready, cancelled or declined
 const notify = (env, name, e) => inbox(env, name).notify(event({ type: 'file', ...e }))
 
@@ -401,7 +405,7 @@ async function readPart(env, ctx, id, name, n) {
   if (r.status !== 'ok') return answer(r.status)
   const obj = await env.FILES.get(partKey(id, n))
   if (!obj) return answer('not-ready')
-  const { readable, writable } = new TransformStream()
+  const { readable, writable } = passThrough()
   const done = obj.body
     .pipeTo(writable)
     .then(async () => {
@@ -468,7 +472,7 @@ async function download(req, env, ctx, id, name) {
     }
     body = obj.body
   }
-  const { readable, writable } = new TransformStream()
+  const { readable, writable } = passThrough()
   const done = body
     .pipeTo(writable)
     .then(async () => {
