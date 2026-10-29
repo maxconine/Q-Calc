@@ -67,7 +67,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `hotkey.rs` | the global shortcut: chord parsing, RegisterHotKey with retries, re-registration triggers, the "held by X" guess |
 | `autostart.rs` | the Run entry: only an installed build writes it, always pointing at itself with `--autostart` |
 | `store.rs` | settings.json (`Store`, the Tauri shape), `config_dir`, `Draft` |
-| `tray.rs` | the notification-area icon, its menu, balloons |
+| `tray.rs` | the notification-area icon, its menu, the shortcut-taken balloon |
 | `clip.rs` | clipboard text |
 | `bench.rs` | the dev bench: spec, steps, stats, the named pipe, memory counters |
 | `log.rs` | the log file, ms since process creation, the panic hook |
@@ -81,6 +81,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `threads.rs` | message threads under the cards (`messages`, `messages <name>`): the history (`messages.json`), the list, a thread's lines with Copy / Save / Retry, its reply line and 📎, Trust New Key and the safety code; the one-time privacy notice |
 | `share_drop.rs` | the bar as an OLE drop target once messaging is in use: the hint while files are dragged over the bar or a thread |
 | `clip_image.rs` | a copied image as `clipboard.png` (the clipboard's PNG, else its bitmap encoded here) |
+| `notice.rs` | the note in the corner for a message, request or file while the bar is away (non-activating, made and freed per showing), quiet in Do Not Disturb / full screen, Settings › Messages › Notifications |
 | `share_debug.rs` | the bench pipe's `share {…}` commands for `tests/e2e/share-e2e.ps1` (two copies through a local relay) |
 | `relay.rs` | the relay over WinHTTP: messaging's POSTs and inbox socket, and the games' sockets (`Socket::open_url`) |
 | `tour.rs` | onboarding and the walkthrough: the tour's line, its step example in the empty bar (in place of line.rs's), hints; `will_show` runs after line.rs counted the open |
