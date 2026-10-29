@@ -528,7 +528,7 @@ fn on_event_now(app: &mut App, ev: Event) {
             with(|s| {
                 s.names.note_send(&name, st, now_ms());
                 if st == SendStatus::Delivered {
-                    s.m = core::with_recent(&s.m, &name);
+                    s.m = core::sent_to(&s.m, &name);
                     save(&s.m);
                 }
             });
@@ -978,7 +978,7 @@ pub fn auto_accept(from: &str, size: u64, limit: u64) -> bool {
 /// A clip or file reached `to` (share.rs): they're a recent recipient now.
 pub fn note_sent(to: &str) {
     with(|s| {
-        s.m = core::with_recent(&s.m, to);
+        s.m = core::sent_to(&s.m, to);
         save(&s.m);
     });
 }
@@ -1023,7 +1023,7 @@ fn line_sent(app: &mut App, name: &str, status: &str) {
     with(|s| {
         s.names.note_send(name, status, now_ms());
         if status == SendStatus::Delivered {
-            s.m = core::with_recent(&s.m, name);
+            s.m = core::sent_to(&s.m, name);
             save(&s.m);
         }
     });
@@ -1064,7 +1064,7 @@ fn reply_sent(app: &mut App, id: &str, to: &str, status: &str) {
         card.reply = Reply::Sent;
         card.draft.reset("");
         with(|s| {
-            s.m = core::with_recent(&s.m, to);
+            s.m = core::sent_to(&s.m, to);
             save(&s.m);
         });
         let id = id.to_string();

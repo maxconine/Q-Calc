@@ -844,7 +844,7 @@ fn place(gfx: &Gfx, width: f32) -> Placed {
     let mut y = 0.0;
     if notice_shown() {
         y += 8.0;
-        let text = format!("🔒 {}", core::privacy_notice());
+        let text = core::privacy_notice().to_string();
         if let Some((l, h)) = wrapped(gfx, &text, &gfx.fonts.small, inner - 30.0, 3.0) {
             p.items.push(Item::Text(l, g, y, Ink::Muted));
             let r = Rect::new(width - g - 22.0, y - 3.0, 22.0, BTN_H);
@@ -1242,8 +1242,7 @@ fn line_block(
             false,
         );
         let bw = right - g;
-        if let Some((l, h)) = wrapped(gfx, &format!("🔒 {clip}"), &gfx.fonts.small, bw - 16.0, 8.0)
-        {
+        if let Some((l, h)) = wrapped(gfx, clip, &gfx.fonts.small, bw - 16.0, 8.0) {
             let r = Rect::new(g, c, bw, h + 12.0);
             items.push(Item::Fill(r, size::RADIUS_S, false));
             items.push(Item::Text(l, g + 8.0, c + 6.0, Ink::Answer));
@@ -1266,7 +1265,7 @@ fn line_block(
         }
         let top = c;
         c += 6.0;
-        let head = format!("📄 🔒 {}  {}", file.name, core::file_size_text(file.size));
+        let head = format!("📄 {}  {}", file.name, core::file_size_text(file.size));
         if let Some(l) = gfx.layout_in(
             &head,
             &gfx.fonts.body,

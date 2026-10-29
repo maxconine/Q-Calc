@@ -26,8 +26,8 @@ const DEFAULT_DRAFT_SECONDS: i64 = 60;
 // how long a moved or widened bar keeps its spot and width after it was last used; 0 keeps them for good. the
 // mac's 5 minutes
 pub const DEFAULT_SPOT_SECONDS: i64 = 300;
-// an accepted name's files up to 100 MB save on their own unless settings says otherwise; 1 GiB is any file
-pub const DEFAULT_AUTO_ACCEPT: u64 = 100_000_000;
+// an accepted name's files ask for Save unless settings says to save them on their own (up to a size); 1 GiB is any file
+pub const DEFAULT_AUTO_ACCEPT: u64 = 0;
 pub const AUTO_ACCEPT_MAX: u64 = 1024 * 1024 * 1024;
 const MAX_SPOT_SECONDS: f64 = 86_400.0;
 
@@ -70,6 +70,8 @@ pub struct Settings {
     pub auto_accept_bytes: u64,
     // native only: a received file goes on the clipboard once it's saved, for Ctrl+V in Explorer (share.rs)
     pub received_to_clipboard: bool,
+    // native only: where saved files go ("" Downloads; Settings › Messages)
+    pub save_folder: String,
     // native only: the note in the corner when a message or file comes while the bar is away (notice.rs), its
     // words, and whether Windows' Do Not Disturb still lets it show (Settings › Messages › Notifications)
     pub notifications: bool,
@@ -114,6 +116,7 @@ impl Default for Settings {
             exponent_mode: false,
             auto_accept_bytes: DEFAULT_AUTO_ACCEPT,
             received_to_clipboard: false,
+            save_folder: String::new(),
             notifications: true,
             notification_text: true,
             notifications_in_dnd: false,
@@ -149,6 +152,9 @@ impl Settings {
         flag("notifications", &mut self.notifications);
         flag("notificationText", &mut self.notification_text);
         flag("notificationsInDnd", &mut self.notifications_in_dnd);
+        if let Some(f) = v["saveFolder"].as_str() {
+            self.save_folder = f.trim().to_string();
+        }
         if let Some(n) = v["autoAcceptBytes"].as_f64()
             && n.is_finite()
         {
@@ -455,7 +461,7 @@ mod tests {
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 6, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
                 "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {},
-                "exponentMode": false, "autoAcceptBytes": 100_000_000, "receivedToClipboard": false,
+                "exponentMode": false, "autoAcceptBytes": 0, "receivedToClipboard": false, "saveFolder": "",
                 "notifications": true, "notificationText": true, "notificationsInDnd": false
             })
         );

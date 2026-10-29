@@ -187,6 +187,7 @@ pub fn run() -> i32 {
     let store_path = store::settings_path();
     let mut st = store_path.as_deref().map(Store::load).unwrap_or_default();
     st.hotkey = hotkey::named(&st.hotkey);
+    crate::share::use_save_folder(&st.settings.save_folder);
     let first_run = st.claim_first_run();
     if first_run && let Some(p) = &store_path {
         let _ = st.save(p);

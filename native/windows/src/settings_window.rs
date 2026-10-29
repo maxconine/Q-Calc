@@ -2080,6 +2080,11 @@ pub fn refresh(_app: &mut App) {
     });
 }
 
+/// The window, while it's open (a dialog's owner).
+pub fn hwnd() -> Option<usize> {
+    WIN.with(|w| w.try_borrow().ok()?.as_ref().map(|w| w.hwnd.0 as usize))
+}
+
 /// Whether the window is open (tests, the bench).
 pub fn is_open() -> bool {
     WIN.with(|w| w.try_borrow().is_ok_and(|w| w.is_some()))
