@@ -9,7 +9,10 @@
 # pinning, a changed key held until Trust New Key; an upload that survives the relay going away mid-upload (a part
 # tried again on its own, and Retry after the tries run out); the Mac's construction both ways (share-vectors.mjs);
 # the thread (lines, a kept reply with the caret after it, sending from it), drag hints, name completion, a copied
-# image as clipboard.png, a shortcut sending its target, and the privacy notice. Then: messages sent back to back
+# image as clipboard.png, a shortcut sending its target, and the privacy notice. The note in the corner for a
+# hidden bar (notice.rs): the window in front keeps the focus, it sits in the work area's corner and goes on its
+# own, none in Do Not Disturb (faked) unless allowed, none with notifications off, only who with the text hidden,
+# and a click opens the thread. Then: messages sent back to back
 # arrive in order; a file streams (the recipient reads parts while the sender, slowed, is still uploading) and saves
 # without asking (Settings › Messages), one file in Downloads and nothing partial; it lands on the clipboard as a
 # file to paste (CF_HDROP, copy); several files at once; a file over the size set waits for Save; Cancel and Take
@@ -36,6 +39,8 @@ Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 $N = [QCalcE2E.Native]
 # keys only ever go to the app under test (this suite drives the pipe, but the guard stays as smoke.ps1 keeps it)
 $N::GuardExe = $Exe
+# physical pixels, as the app reports the note's rect (notice.rs) and as the clicks on it go
+$N::SetProcessDPIAware() | Out-Null
 
 $Root = Join-Path ([IO.Path]::GetTempPath()) ("qcalc-share-e2e-{0}" -f [Guid]::NewGuid().ToString('N').Substring(0, 8))
 New-Item -ItemType Directory -Force $Root | Out-Null
@@ -223,6 +228,81 @@ try {
     Check 'T1' 'a message goes alice → bob and lands in his history' (Wait-Until { (Thread-Of $B $A.User | Where-Object { $_.dir -eq 'received' -and $_.text -eq 'hello bob · 1' }) } 10000)
     Share $B @{ op = 'text'; to = $A.User; text = 'hi alice · 2' } | Out-Null
     Check 'T2' 'a message goes bob → alice, and the sent one is in his thread' (Wait-Until { (Thread-Of $A $B.User | Where-Object { $_.text -eq 'hi alice · 2' }) -and (Thread-Of $B $A.User | Where-Object { $_.dir -eq 'sent' -and $_.text -eq 'hi alice · 2' }) } 10000)
+
+    # ---- the note in the corner while the bar is away (notice.rs) ----
+    # Windows' own state is faked quiet-free (`dnd` false), so a real Do Not Disturb or full screen can't fail these
+    Share $B @{ op = 'notice'; dnd = $false } | Out-Null
+    $script:other = Start-Process powershell -PassThru -ArgumentList @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+        '-File', (Join-Path $PSScriptRoot 'other-window.ps1'), '-X', '40', '-Y', '200')
+    $script:mine.Add($script:other.Id)
+    Wait-Until { @($N::Windows([int[]]@($script:other.Id), 'qcalc-e2e-other')).Count -gt 0 } 15000 | Out-Null
+    $otherHwnd = @($N::Windows([int[]]@($script:other.Id), 'qcalc-e2e-other'))[0]
+    $or = $N::Rect($otherHwnd)
+    for ($i = 0; $i -lt 4 -and $N::GetForegroundWindow() -ne $otherHwnd; $i++) {
+        $N::Click([int](($or.Left + $or.Right) / 2), [int](($or.Top + $or.Bottom) / 2) + 10 * $i)
+        Wait-Until { $N::GetForegroundWindow() -eq $otherHwnd } 800 | Out-Null
+    }
+    $front = $N::GetForegroundWindow()
+    function Notice($c) { Share $c @{ op = 'notice' } }
+    function Notice-Says($c, [string]$text) { $n = Notice $c; $n.shown -and @($n.notes | Where-Object { $_.body -eq $text }).Count -gt 0 }
+    Share $A @{ op = 'text'; to = $B.User; text = 'a note in the corner' } | Out-Null
+    $noted = Wait-Until { Notice-Says $B 'a note in the corner' } 10000
+    $nb = Notice $B
+    Check 'NT1' "a message to a hidden bar shows the note in the corner, sender apart from the words" ($noted -and $nb.notes[0].from -eq $A.User -and -not (St $B).visible) "$($nb | ConvertTo-Json -Compress -Depth 4)"
+    Start-Sleep -Milliseconds 300
+    Check 'NT2' 'the note never takes the focus: the window in front stays in front' ($front -eq $otherHwnd -and $N::GetForegroundWindow() -eq $front) "front $front now $($N::GetForegroundWindow()) other $otherHwnd"
+    $wa = [Windows.Forms.Screen]::FromPoint((New-Object Drawing.Point(($nb.rect[0] + 1), ($nb.rect[1] + 1)))).WorkingArea
+    $inCorner = $nb.rect -and $nb.rect[2] -le $wa.Right -and $nb.rect[3] -le $wa.Bottom -and ($wa.Right - $nb.rect[2]) -lt 60 -and ($wa.Bottom - $nb.rect[3]) -lt 60
+    Check 'NT3' "it sits in the work area's bottom-right corner, clear of the taskbar" $inCorner "rect $($nb.rect -join ',') work area $wa"
+    Check 'NT4' 'it goes on its own after about 6 s' (Wait-Until { -not (Notice $B).shown } 9000)
+
+    Share $B @{ op = 'notice'; dnd = $true } | Out-Null
+    $q0 = (Notice $B).quieted
+    Share $A @{ op = 'text'; to = $B.User; text = 'while in do not disturb' } | Out-Null
+    $landed = Wait-Until { Thread-Of $B $A.User | Where-Object { $_.text -eq 'while in do not disturb' } } 10000
+    Start-Sleep -Milliseconds 500
+    $nd = Notice $B
+    Check 'NT5' 'in Do Not Disturb (faked) no note shows, and the message still waits for the bar' ($landed -and -not $nd.shown -and $nd.quieted -gt $q0 -and $nd.lastQuiet -eq 'do not disturb') "$($nd | ConvertTo-Json -Compress -Depth 4)"
+    Share $B @{ op = 'notifyPrefs'; notificationsInDnd = $true } | Out-Null
+    Start-Sleep -Milliseconds 200
+    Share $A @{ op = 'text'; to = $B.User; text = 'even in do not disturb' } | Out-Null
+    Check 'NT6' '"Even in Do Not Disturb" lets it show' (Wait-Until { Notice-Says $B 'even in do not disturb' } 10000)
+    Share $B @{ op = 'notifyPrefs'; notificationsInDnd = $false } | Out-Null
+    Share $B @{ op = 'notice'; dnd = $false } | Out-Null
+
+    Share $B @{ op = 'notifyPrefs'; notifications = $false } | Out-Null
+    Start-Sleep -Milliseconds 300
+    Share $A @{ op = 'text'; to = $B.User; text = 'with notifications off' } | Out-Null
+    $landed = Wait-Until { Thread-Of $B $A.User | Where-Object { $_.text -eq 'with notifications off' } } 10000
+    Start-Sleep -Milliseconds 500
+    $saved = Get-Content -Raw (Join-Path $B.Data 'settings.json') | ConvertFrom-Json
+    Check 'NT7' 'Show notifications off: none shows (the message still lands), and the setting is saved' ($landed -and -not (Notice $B).shown -and $saved.settings.notifications -eq $false) "$((Notice $B) | ConvertTo-Json -Compress -Depth 4)"
+    Share $B @{ op = 'notifyPrefs'; notifications = $true; notificationText = $false } | Out-Null
+    Start-Sleep -Milliseconds 200
+    Share $A @{ op = 'text'; to = $B.User; text = 'private words' } | Out-Null
+    $hidden = Wait-Until { $n = Notice $B; $n.shown -and @($n.notes | Where-Object { $_.from -eq $A.User -and $_.body -eq '' -and $_.beside -eq 'sent you a message' }).Count -gt 0 } 10000
+    Check 'NT8' 'Show message text off: the note says only who sent something' ($hidden -and -not ((Notice $B | ConvertTo-Json -Depth 4) -like '*private words*'))
+    Share $B @{ op = 'notifyPrefs'; notificationText = $true } | Out-Null
+    Start-Sleep -Milliseconds 200
+
+    # a click opens the bar on their thread (a Windows toast from elsewhere can sit over the corner: wait it out)
+    $clicked = $false
+    for ($i = 0; $i -lt 12 -and -not $clicked; $i++) {
+        Share $A @{ op = 'text'; to = $B.User; text = "open my thread $i" } | Out-Null
+        if (-not (Wait-Until { Notice-Says $B "open my thread $i" } 10000)) { continue }
+        $r = (Notice $B).rect
+        $cx = [int]($r[0] + ($r[2] - $r[0]) / 4); $cy = [int](($r[1] + $r[3]) / 2)
+        if (-not (Wait-Until { $N::OwnerAt($cx, $cy) -eq $B.Proc.Id } 5000)) { Log "a window of pid $($N::OwnerAt($cx, $cy)) is over the note; again"; continue }
+        $N::Click($cx, $cy)
+        $clicked = $true
+    }
+    $opened = $clicked -and (Wait-Until { $s = St $B; $s.visible -and $s.threads.panel.thread -eq $A.User } 5000)
+    Check 'NT9' "a click on the note opens the bar on their thread, and the note goes" ($opened -and -not (Notice $B).shown) "clicked $clicked; $((St $B).threads.panel | ConvertTo-Json -Compress)"
+    Share $B @{ op = 'close' } | Out-Null
+    Pipe $B @{ cmd = 'hide' } | Out-Null
+    Wait-Until { -not (St $B).visible } 3000 | Out-Null
+    Stop-Process -Id $script:other.Id -Force -ErrorAction SilentlyContinue
 
     foreach ($c in 'paste to ali', 'send file to ali', 'messages ali') {
         Share $B @{ op = 'line'; text = $c } | Out-Null
@@ -502,6 +582,28 @@ try {
     $let = Wait-Until { (Transfer-Named $B 'quit mid-way.bin' $false).state -eq 'cancelled' } 40000
     Start-Sleep -Milliseconds 500
     Check 'X6' "after a restart mid-upload the recipient hears it was taken back, nothing partial is left" ($let -and (No-Partials $B)) "B: $((Transfer-Named $B 'quit mid-way.bin' $false).state)"
+
+    # ---- writing first is the handshake; an offer in an open thread says nothing that goes stale ----
+    Wait-Until { (St $A).messaging.link -eq 'Ready' } 20000 | Out-Null
+    Share $A @{ op = 'forget'; who = $B.User } | Out-Null
+    Share $B @{ op = 'forget'; who = $A.User } | Out-Null
+    Start-Sleep -Milliseconds 300
+    Share $A @{ op = 'text'; to = $B.User; text = 'hello again' } | Out-Null
+    $asked = Wait-Until { @((St $B).messaging.asking) -contains $A.User } 10000
+    Check 'HS1' 'once forgotten, a first message is a request again' $asked "$((St $B).messaging | ConvertTo-Json -Compress)"
+    Share $B @{ op = 'allow'; who = $A.User } | Out-Null
+    Share $B @{ op = 'text'; to = $A.User; text = 'hi back' } | Out-Null
+    $shown = Wait-Until { Thread-Of $A $B.User | Where-Object { $_.dir -eq 'received' -and $_.text -eq 'hi back' } } 10000
+    $sa = (St $A).messaging
+    Check 'HS2' 'writing first is the handshake: their reply shows with no request back' ($shown -and @($sa.asking) -notcontains $B.User -and @($sa.accepted) -contains $B.User) "$($sa | ConvertTo-Json -Compress)"
+    Share $A @{ op = 'open'; who = $B.User } | Out-Null
+    Wait-Until { (St $A).threads.panel.thread -eq $B.User } 3000 | Out-Null
+    $fo = New-Blob (Join-Path $Root 'in the thread.bin') 2048
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fo) } | Out-Null
+    $went = Wait-Until { (Transfer-Named $A 'in the thread.bin' $true).state -eq 'sent' } 20000
+    $reply = (St $A).threads.reply
+    Check 'HS3' "a file offered from an open thread leaves no 'waiting for them to accept' behind" ($went -and $reply -notmatch 'waiting|encrypting') "reply: $reply"
+    Share $A @{ op = 'close' } | Out-Null
 } catch {
     Check 'X' 'the suite ran to the end' $false $_.Exception.Message
     Log $_.ScriptStackTrace

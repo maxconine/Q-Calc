@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # writes the winget manifests for one release, ready for a pull request to microsoft/winget-pkgs.
-# usage: winget.sh <version> <download base url> <dir with installers> <out dir>
+# usage: [INSTALLER_SUFFIX=-native] winget.sh <version> <download base url> <dir with installers> <out dir>
+# INSTALLER_SUFFIX=-native (windows.yml with NATIVE_WINDOWS, from 3.0): the native app's installers,
+# Q-Calc-<v>-<arch>-native-setup.exe, which run on Windows 10 1507 and later; empty: the Tauri app's.
+# both are the same per-user NSIS install (folder, "Installed apps" entry "Q Calc"), so either upgrades the other.
 set -euo pipefail
 
+SUFFIX="${INSTALLER_SUFFIX:-}"
 VERSION="$1"
 BASE="${2%/}"
 DIR="$3"
@@ -67,10 +71,13 @@ InstallModes:
 UpgradeBehavior: install
 ProductCode: Q Calc
 ReleaseDate: $(date -u +%Y-%m-%d)
-Installers:
 YAML
-  installer x64 "Q-Calc-${VERSION}-x64-setup.exe"
-  installer arm64 "Q-Calc-${VERSION}-arm64-setup.exe"
+  if [[ "$SUFFIX" == "-native" ]]; then
+    echo "MinimumOSVersion: 10.0.10240.0"
+  fi
+  echo "Installers:"
+  installer x64 "Q-Calc-${VERSION}-x64${SUFFIX}-setup.exe"
+  installer arm64 "Q-Calc-${VERSION}-arm64${SUFFIX}-setup.exe"
   cat <<YAML
 ManifestType: installer
 ManifestVersion: ${SCHEMA}

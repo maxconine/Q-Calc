@@ -110,6 +110,8 @@ struct Outgoing {
     grant: String,
     stream: u64,
     started: Arc<AtomicBool>,
+    /// times the relay said `too-many` and the upload waited to try again on its own
+    waits: u32,
 }
 
 /// A count worker threads wait on (the sealed bytes written so far, the parts landed), and whether it ended
@@ -195,7 +197,11 @@ fn with<R>(f: impl FnOnce(&mut Share) -> R) -> R {
     STATE.with(|s| f(&mut s.borrow_mut()))
 }
 
-const RETRYABLE: [&str; 3] = ["failed", "no-network", "network"];
+const RETRYABLE: [&str; 4] = ["failed", "no-network", "network", "too-many"];
+/// the relay takes 10 offers and upload starts a minute: a file refused for that waits and tries again on its own,
+/// these many times, `WAIT_MS` longer each, inside the 2 minutes its recipient waits for a part
+const WAITS: u32 = 3;
+const WAIT_MS: u64 = 20_000;
 const PART_TRIES: u32 = 3;
 /// parts sent side by side, each on a warm connection of its own (relay.rs `shared`)
 const UPLOADS: usize = 4;
@@ -242,7 +248,17 @@ fn temp_own() -> PathBuf {
     d
 }
 
-/// Where Save puts files: Downloads, or `QCALC_DOWNLOADS` (the e2e suite's folder).
+/// The folder picked in Settings › Messages ("" Downloads), for the download workers.
+static SAVE_FOLDER: Mutex<String> = Mutex::new(String::new());
+
+pub fn use_save_folder(folder: &str) {
+    if let Ok(mut f) = SAVE_FOLDER.lock() {
+        *f = folder.to_string();
+    }
+}
+
+/// Where Save puts files: the folder picked in settings while it's there, else Downloads, or `QCALC_DOWNLOADS`
+/// (the e2e suite's folder).
 fn downloads() -> Option<PathBuf> {
     match std::env::var_os("QCALC_DOWNLOADS") {
         Some(d) if !d.is_empty() => {
@@ -250,8 +266,15 @@ fn downloads() -> Option<PathBuf> {
             let _ = std::fs::create_dir_all(&d);
             Some(d)
         }
-        _ => crypt::downloads(),
+        _ => picked_folder().or_else(crypt::downloads),
     }
+}
+
+/// The picked folder, if it's still a folder (a drive that went away saves to Downloads instead).
+fn picked_folder() -> Option<PathBuf> {
+    let f = SAVE_FOLDER.lock().ok()?.clone();
+    let p = PathBuf::from(f);
+    (!p.as_os_str().is_empty() && p.is_dir()).then_some(p)
 }
 
 fn auth() -> Option<[(String, String); 2]> {
@@ -314,12 +337,12 @@ pub fn settings_items(app: &App) -> Vec<crate::settings_window::Item> {
         .rev()
         .find(|(v, _)| v.parse::<u64>().is_ok_and(|v| v <= limit))
         .map_or("0", |(v, _)| v);
-    vec![
+    let mut items = vec![
         Item::Heading("Files".into()),
         row(
             "autoAccept",
             "Save files without asking",
-            "Only from allowed names. Files go to Downloads and are never opened. Others wait for Save.",
+            "Only from allowed names. Saved files are never opened. Others wait for Save.",
             Control::Select {
                 options: options
                     .iter()
@@ -329,12 +352,53 @@ pub fn settings_items(app: &App) -> Vec<crate::settings_window::Item> {
             },
         ),
         row(
-            "receivedToClipboard",
-            "Copy received files",
-            "A saved file goes on the clipboard, so Ctrl+V pastes it in Explorer or another app.",
-            Control::Toggle(app.store.settings.received_to_clipboard),
+            "saveFolder",
+            "Save files to",
+            &folder_label(&app.store.settings.save_folder),
+            Control::Button {
+                label: "Choose…".into(),
+                enabled: true,
+            },
         ),
-    ]
+    ];
+    if !app.store.settings.save_folder.is_empty() {
+        items.push(row(
+            "saveFolderReset",
+            "Back to Downloads",
+            "Saved files go to your Downloads folder again.",
+            Control::Button {
+                label: "Use Downloads".into(),
+                enabled: true,
+            },
+        ));
+    }
+    items.push(row(
+        "receivedToClipboard",
+        "Copy received files",
+        "A saved file goes on the clipboard, so Ctrl+V pastes it in Explorer or another app.",
+        Control::Toggle(app.store.settings.received_to_clipboard),
+    ));
+    items
+}
+
+/// Where saved files go, as the settings row says it.
+fn folder_label(folder: &str) -> String {
+    if folder.is_empty() {
+        return "Downloads".into();
+    }
+    if Path::new(folder).is_dir() {
+        folder.to_string()
+    } else {
+        format!("{folder} isn’t there now · saving to Downloads")
+    }
+}
+
+/// The folder picked in settings (or "" for Downloads): saved, and used from the next file on.
+pub fn set_save_folder(app: &mut App, folder: &str) {
+    app.store.settings.save_folder = folder.to_string();
+    use_save_folder(folder);
+    app.save_store();
+    crate::settings_window::refresh(app);
 }
 
 /// A file row changed on the Messages page: true when it was one of these.
@@ -349,6 +413,16 @@ pub fn settings_changed(app: &mut App, id: &str, value: &Value) -> bool {
             set_prefs(app, Some(n), None);
         }
         "receivedToClipboard" => set_prefs(app, None, value.as_bool()),
+        "saveFolder" => {
+            // the picker is modal: it runs outside the app's borrow, over the settings window
+            let owner = crate::settings_window::hwnd().unwrap_or(app.bar.hwnd.0 as usize);
+            crate::later::free("save-folder-pick", 0, move || {
+                if let Some(p) = pick_folder(owner) {
+                    bg::post(move |app| set_save_folder(app, &p.display().to_string()));
+                }
+            });
+        }
+        "saveFolderReset" => set_save_folder(app, ""),
         _ => return false,
     }
     true
@@ -442,7 +516,8 @@ pub fn pick_and_send(app: &mut App, name: &str) {
 /// Whether the bar stays up when another window is clicked (a file can be dragged in from Explorer): only for a
 /// messaging line (`message …`, `send file to …`, `paste to …`) or files waiting for a name.
 pub fn holds_open(m: &BarModel) -> bool {
-    if with(|s| !s.pending.is_empty()) || crate::threads::panel().is_some() {
+    // an open thread doesn't: a click away puts it away with the bar, as everything else under it
+    if with(|s| !s.pending.is_empty()) {
         return true;
     }
     let t = m.field.text();
@@ -682,11 +757,14 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
         .unwrap_or_default();
     let name = core::clean_filename(&raw_name);
     let started = crate::model::now_ms() as f64;
-    say_to(app, &to, format!("encrypting {name}…"));
+    let encrypting = format!("encrypting {name}…");
+    say_to(app, &to, encrypting.clone());
     bg::spawn("qcalc-share", move || {
         let result = offer(&path, &name, &to, &me, &relay_key);
         bg::post(move |app| match result {
             Ok(o) => {
+                // the file's own line in the thread takes over from here
+                crate::threads::unsay(&to, &encrypting);
                 crate::messaging::note_sent(&to);
                 crate::threads::record_file(&to, true, &o.id, &name, o.size);
                 with(|s| {
@@ -701,6 +779,7 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
                             grant: String::new(),
                             stream: 0,
                             started: Arc::new(AtomicBool::new(false)),
+                            waits: 0,
                         },
                     );
                     let mut t = Transfer::new(true, &to, &name, o.size, "offered");
@@ -712,13 +791,17 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
                 if let Some((grant, stream, _)) = early {
                     upload(&o.id, &grant, stream);
                 }
-                say_to(
-                    app,
-                    &to,
-                    core::share_status_text("delivered", &to, "file", &name),
-                );
-                // the bar's line follows it from here: sending, then sent (or why not)
+                // their open thread shows the file's own line, which follows it; a note on its reply line would
+                // stay saying "waiting for them to accept" long after it was. Under the bar: where it has got to
+                // (an accept that came first has it sending already), then the line follows it
                 if !crate::threads::is_open(&to) {
+                    let now = with(|s| s.transfers.get(&o.id).and_then(hint_text));
+                    say(
+                        app,
+                        now.unwrap_or_else(|| {
+                            core::share_status_text("delivered", &to, "file", &name)
+                        }),
+                    );
                     hint_about(app, &o.id);
                 }
                 persist_unfinished();
@@ -819,7 +902,25 @@ fn offer(path: &Path, name: &str, to: &str, me: &str, relay_key: &str) -> Result
         crypt::seal(facts.as_bytes(), &secret, &theirs, &ctx).map_err(|_| fail("bad"))?;
     let body = json!({ "from": me, "key": relay_key, "to": to, "kind": "file",
         "file": { "id": id, "epk": epk, "sealed": boxed, "bytes": bytes } });
-    let (status, o) = crate::relay::post_value("/send", &body);
+    // the relay's minute of offers is used up: wait it out and offer again (it kept nothing of the refused one)
+    let mut waits = 0;
+    let (status, o) = loop {
+        let (status, o) = crate::relay::post_value("/send", &body);
+        if status != "too-many" || waits >= WAITS || cancelled.load(Ordering::Relaxed) {
+            break (status, o);
+        }
+        waits += 1;
+        let secs = WAIT_MS * u64::from(waits) / 1000;
+        let (who, what) = (to.to_string(), name.to_string());
+        bg::post(move |app| {
+            say_to(
+                app,
+                &who,
+                format!("lots sent at once · {what} goes in {secs} s"),
+            )
+        });
+        std::thread::sleep(std::time::Duration::from_millis(WAIT_MS * u64::from(waits)));
+    };
     if status != "delivered" || o["id"].as_str() != Some(id.as_str()) {
         return Err(fail(&status));
     }
@@ -887,6 +988,9 @@ fn upload(id: &str, grant: &str, stream: u64) {
         let status = job.run(&grant, stream);
         running.store(false, Ordering::Release);
         bg::post(move |app| {
+            if status == "too-many" && wait_again(&id) {
+                return;
+            }
             if status == "ok" {
                 set_state(&id, "sent", None, None);
                 with(|s| {
@@ -1118,6 +1222,37 @@ fn failed(id: &str, status: &str, who: &str) {
     if mine && !RETRYABLE.contains(&status) {
         drop_outgoing(id);
     }
+}
+
+/// A refused upload waits out the relay's minute and starts again with its grant (the file still says uploading,
+/// so its recipient, waiting on the first part, sees nothing go wrong). False once the waits run out.
+fn wait_again(id: &str) -> bool {
+    let Some(n) = with(|s| {
+        let o = s.outgoing.get_mut(id).filter(|o| o.waits < WAITS)?;
+        o.waits += 1;
+        Some(o.waits)
+    }) else {
+        return false;
+    };
+    crate::qlog!(
+        "share out: too many at once, trying again in {} s",
+        WAIT_MS * u64::from(n) / 1000
+    );
+    let id = id.to_string();
+    bg::spawn("qcalc-share-wait", move || {
+        std::thread::sleep(std::time::Duration::from_millis(WAIT_MS * u64::from(n)));
+        bg::post(move |_| {
+            let still = with(|s| {
+                s.transfers
+                    .get(&id)
+                    .is_some_and(|t| t.mine && t.state == "uploading")
+            });
+            if still {
+                upload(&id, "", 0);
+            }
+        });
+    });
+    true
 }
 
 fn can_retry(id: &str) -> bool {
@@ -2514,6 +2649,46 @@ fn pick_file(owner: usize) -> Option<PathBuf> {
     }
     let len = buf.iter().position(|c| *c == 0).unwrap_or(0);
     (len > 0).then(|| PathBuf::from(String::from_utf16_lossy(&buf[..len])))
+}
+
+/// The folder dialog (Settings › Messages › Save files to), starting in the folder saved to now.
+fn pick_folder(owner: usize) -> Option<PathBuf> {
+    use windows::Win32::System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance, CoTaskMemFree};
+    use windows::Win32::UI::Shell::{
+        FOS_FORCEFILESYSTEM, FOS_PICKFOLDERS, FileOpenDialog, IFileOpenDialog, IShellItem,
+        SHCreateItemFromParsingName, SIGDN_FILESYSPATH,
+    };
+    use windows::core::HSTRING;
+    // SAFETY: COM is up on the UI thread (OleInitialize); the dialog and items are live for these calls, and the
+    // path string the shell allocates is freed once copied
+    unsafe {
+        let dialog: IFileOpenDialog =
+            CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER).ok()?;
+        let opts = dialog.GetOptions().ok()?;
+        dialog
+            .SetOptions(opts | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM)
+            .ok()?;
+        let _ = dialog.SetTitle(&HSTRING::from("Save received files to"));
+        if let Some(now) = downloads()
+            && let Ok(item) = SHCreateItemFromParsingName::<_, _, IShellItem>(
+                &HSTRING::from(now.as_os_str()),
+                None,
+            )
+        {
+            let _ = dialog.SetFolder(&item);
+        }
+        dialog
+            .Show(Some(windows::Win32::Foundation::HWND(owner as *mut _)))
+            .ok()?;
+        let path = dialog
+            .GetResult()
+            .ok()?
+            .GetDisplayName(SIGDN_FILESYSPATH)
+            .ok()?;
+        let out = path.to_string().ok();
+        CoTaskMemFree(Some(path.0 as *const _));
+        out.filter(|p| !p.is_empty()).map(PathBuf::from)
+    }
 }
 
 #[cfg(test)]

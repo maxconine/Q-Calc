@@ -101,6 +101,17 @@ pub fn with_recent(m: &Messaging, to: &str) -> Messaging {
     }
 }
 
+/// A message or file has reached `to`: they're recent, and accepted. Writing to someone first is the handshake, so
+/// once they allow you their replies show here without a request of their own (a block of them lifts too: you
+/// wrote to them).
+pub fn sent_to(m: &Messaging, to: &str) -> Messaging {
+    let name = clean_name(&Json::String(to.to_string()));
+    if name.is_empty() {
+        return m.clone();
+    }
+    allow_sender(&with_recent(m, &name), &name)
+}
+
 /// The names `message` finishes: who you've sent to, the latest first, then the rest of the accepted ones.
 pub fn message_contacts(m: &Messaging) -> Vec<String> {
     let mut out = m.recent.clone();
@@ -117,11 +128,13 @@ pub enum Arrival {
     Drop,
 }
 
-/// An accepted name's message shows; a blocked name's goes unseen; anyone else's is a request.
+/// An accepted name's message shows, and so does a reply from someone you wrote to; a blocked name's goes unseen;
+/// anyone else's is a request.
 pub fn arrival(m: &Messaging, from: &str) -> Arrival {
     if m.blocked.iter().any(|n| n == from) {
         Arrival::Drop
-    } else if m.accepted.iter().any(|n| n == from) {
+    } else if m.accepted.iter().any(|n| n == from) || m.recent.iter().any(|n| n == from) {
+        // someone you've written to is answering you (`sent_to`; and those written to before it accepted them)
         Arrival::Show
     } else {
         Arrival::Ask
@@ -152,8 +165,12 @@ pub fn block_sender(m: &Messaging, who: &str) -> Messaging {
     with_lists(m, who, false, true)
 }
 
+/// Off both lists, and off the recent ones: a name written to shows (`arrival`), so forgetting it has to undo that.
 pub fn forget_sender(m: &Messaging, who: &str) -> Messaging {
-    with_lists(m, who, false, false)
+    Messaging {
+        recent: m.recent.iter().filter(|n| *n != who).cloned().collect(),
+        ..with_lists(m, who, false, false)
+    }
 }
 
 /// The bar's `message <name> <text>`.
@@ -1402,6 +1419,27 @@ mod tests {
         assert_eq!(message_name_span("message Max hi"), Some((8, 11)));
         assert_eq!(message_name_span("  message  max"), Some((11, 14)));
         assert_eq!(message_name_span("message "), None);
+    }
+
+    #[test]
+    fn writing_first_is_the_handshake() {
+        // ana writes to zoe: zoe's reply shows, her files can save on their own, and nothing asks
+        let m = sent_to(&me(), "Zoe");
+        assert_eq!(arrival(&m, "zoe"), Arrival::Show);
+        assert!(m.accepted.contains(&"zoe".to_string()));
+        assert!(auto_accept(&m, "zoe", 10, 100));
+        // a name written to before this kept only as recent still shows
+        let before = Messaging {
+            recent: vec!["bea".into()],
+            ..me()
+        };
+        assert_eq!(arrival(&before, "bea"), Arrival::Show);
+        // writing to someone blocked lifts the block; a stranger still asks; nothing for a name that can't be one
+        assert_eq!(arrival(&sent_to(&me(), "spam"), "spam"), Arrival::Show);
+        assert_eq!(arrival(&m, "eve"), Arrival::Ask);
+        assert_eq!(sent_to(&me(), "!!"), me());
+        // forgetting someone written to makes their next message a request again
+        assert_eq!(arrival(&forget_sender(&m, "zoe"), "zoe"), Arrival::Ask);
     }
 
     #[test]

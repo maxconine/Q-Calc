@@ -17,7 +17,7 @@ use windows::Win32::Foundation::{D2DERR_RECREATE_TARGET, HWND};
 use windows::Win32::Foundation::{E_FAIL, HMODULE};
 use windows::Win32::Graphics::Direct2D::Common::D2D1_ALPHA_MODE_IGNORE;
 use windows::Win32::Graphics::Direct2D::Common::{
-    D2D_RECT_F, D2D_SIZE_U, D2D1_ALPHA_MODE_PREMULTIPLIED, D2D1_COLOR_F, D2D1_PIXEL_FORMAT,
+    D2D_RECT_F, D2D_SIZE_U, D2D1_COLOR_F, D2D1_PIXEL_FORMAT,
 };
 use windows::Win32::Graphics::Direct2D::{
     D2D1_ANTIALIAS_MODE_ALIASED, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
@@ -470,10 +470,29 @@ enum Target {
 }
 
 struct Flip {
-    chain: IDXGISwapChain1,
+    chain: std::mem::ManuallyDrop<IDXGISwapChain1>,
     ctx: ID2D1DeviceContext,
     /// the back buffer as the context's target, for buffers of `size`; made again after a resize
     bitmap: Option<(ID2D1Bitmap1, (u32, u32))>,
+    d3d: ID3D11Device,
+}
+
+impl Drop for Flip {
+    /// The swap chain goes now, not whenever the device next flushes: D3D11 defers destroying it, and while another
+    /// window (settings) kept the shared device alive, the bar's old chain still held its window, so the next one
+    /// for it was refused (E_ACCESSDENIED) and the bar fell back to a window target that stopped showing frames.
+    fn drop(&mut self) {
+        // SAFETY: live objects; the chain is dropped once, here, after nothing refers to its buffers
+        unsafe {
+            self.ctx.SetTarget(None);
+            self.bitmap = None;
+            std::mem::ManuallyDrop::drop(&mut self.chain);
+            if let Ok(imm) = self.d3d.GetImmediateContext() {
+                imm.ClearState();
+                imm.Flush();
+            }
+        }
+    }
 }
 
 /// A window's render target, made when first needed and kept across hides.
@@ -540,9 +559,11 @@ impl Surface {
             } else {
                 D2D1_RENDER_TARGET_TYPE_SOFTWARE
             },
+            // opaque, as the swap chain is: the windows extend DWM's frame into them, so a premultiplied target
+            // let the desktop show through wherever a frame hadn't painted
             pixelFormat: D2D1_PIXEL_FORMAT {
                 format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                alphaMode: D2D1_ALPHA_MODE_PREMULTIPLIED,
+                alphaMode: D2D1_ALPHA_MODE_IGNORE,
             },
             dpiX: self.dpi,
             dpiY: self.dpi,
@@ -605,9 +626,10 @@ impl Surface {
             let brush = ctx.CreateSolidColorBrush(&rgb(0, 1.0), None)?;
             Ok((
                 Target::Flip(Flip {
-                    chain,
+                    chain: std::mem::ManuallyDrop::new(chain),
                     ctx,
                     bitmap: None,
+                    d3d: dev.d3d.clone(),
                 }),
                 brush,
             ))

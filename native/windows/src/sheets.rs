@@ -27,6 +27,7 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
+use crate::compat::dpi_for_window as GetDpiForWindow;
 use qcalc_core::app::elements::{self, ElementCategory, PeriodicTile};
 use qcalc_core::app::identities::{self, Shift};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
@@ -35,9 +36,8 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_LINE_METRICS, DWRITE_TEXT_RANGE,
     DWRITE_WORD_WRAPPING_NO_WRAP, IDWriteTextFormat, IDWriteTextLayout,
 };
-use windows::Win32::Graphics::Dwm::{DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowAttribute};
+use windows::Win32::Graphics::Dwm::DwmSetWindowAttribute;
 use windows::Win32::Graphics::Gdi::{InvalidateRect, ValidateRect};
-use windows::Win32::UI::HiDpi::{AdjustWindowRectExForDpi, GetDpiForWindow};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
 };
@@ -438,7 +438,7 @@ fn frame_for(w: f32, h: f32, dpi: u32) -> (f64, f64) {
         bottom: (h * s).round() as i32,
     };
     // SAFETY: a live rect
-    let _ = unsafe { AdjustWindowRectExForDpi(&mut r, STYLE, false, EX_STYLE, dpi) };
+    let _ = crate::compat::adjust_window_rect_for_dpi(&mut r, STYLE, false, EX_STYLE, dpi);
     (f64::from(r.right - r.left), f64::from(r.bottom - r.top))
 }
 
@@ -669,7 +669,7 @@ fn set_dark(hwnd: HWND, dark: bool) {
     let _ = unsafe {
         DwmSetWindowAttribute(
             hwnd,
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            crate::compat::dark_attr(),
             (&v as *const BOOL).cast(),
             std::mem::size_of::<BOOL>() as u32,
         )
@@ -891,8 +891,7 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
                 let cs = &*(lp.0 as *const CREATESTRUCTW);
                 *Box::from_raw(cs.lpCreateParams as *mut String)
             };
-            // SAFETY: plain query on our window
-            let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
+            let dpi = GetDpiForWindow(hwnd).max(96);
             if let Some(sheet) = build(&key, hwnd, dpi) {
                 with(|s| s.open.push(sheet));
             }

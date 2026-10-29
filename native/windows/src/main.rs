@@ -36,6 +36,8 @@ mod clip;
 #[cfg(windows)]
 mod clip_image;
 #[cfg(windows)]
+mod compat;
+#[cfg(windows)]
 mod contrast;
 #[cfg(windows)]
 mod crash;
@@ -69,6 +71,8 @@ mod migrate;
 mod model;
 #[cfg(windows)]
 mod net;
+#[cfg(windows)]
+mod notice;
 #[cfg(windows)]
 mod rates;
 #[cfg(windows)]

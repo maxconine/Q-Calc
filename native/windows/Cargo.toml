@@ -1,7 +1,9 @@
 [package]
 name = "qcalc-win"
 description = "Q Calc for Windows, native: Win32 + Direct2D + DirectWrite around the Rust engine (no web view)"
-version.workspace = true
+# the release version, package.json's (windows.yml refuses a tag where they differ); a release build's QCALC_VERSION
+# names the same version for update.rs, the crash reports, analytics and the exe's version resource
+version = "3.0.0"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -11,6 +13,9 @@ build = "build.rs"
 [features]
 # diagnostics for native/windows/PERFORMANCE.md (perf.rs): keystroke timelines, a counting allocator, the bench's `vm`; never in a shipping build
 perf = []
+# tests/e2e/update-e2e.ps1's build: the update loop may take a loopback http feed, a test key and short waits from
+# QCALC_UPDATE_FEED / _PUBKEY / _QUIET_SECS (update.rs `overrides`); never in a shipping build, which ignores them
+update-e2e = []
 
 [[bin]]
 name = "qcalc"

@@ -27,6 +27,7 @@
 
 use std::cell::{Cell, RefCell};
 
+use crate::compat::dpi_for_window as GetDpiForWindow;
 use qcalc_core::app::host_settings::{
     HostInfo, HotkeyVerdict, UpdateState, draft_choices, hotkey_note, spot_choices, update_line,
 };
@@ -41,9 +42,8 @@ use windows::Win32::Graphics::DirectWrite::{
     DWRITE_FONT_WEIGHT_REGULAR, DWRITE_FONT_WEIGHT_SEMI_BOLD, DWRITE_TEXT_ALIGNMENT_CENTER,
     DWRITE_TEXT_ALIGNMENT_LEADING, IDWriteTextFormat, IDWriteTextLayout,
 };
-use windows::Win32::Graphics::Dwm::{DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowAttribute};
+use windows::Win32::Graphics::Dwm::DwmSetWindowAttribute;
 use windows::Win32::Graphics::Gdi::{ClientToScreen, InvalidateRect, ValidateRect};
-use windows::Win32::UI::HiDpi::GetDpiForWindow;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, HOT_KEY_MODIFIERS, MOD_NOREPEAT, RegisterHotKey, UnregisterHotKey, VK_CONTROL,
     VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
@@ -570,19 +570,11 @@ fn items(app: &App, win: &Win) -> Vec<Item> {
             let st = update::status();
             let auto = app.store.auto_update;
             out.push(Item::Heading(format!("Q Calc {}", update::VERSION)));
-            let busy = matches!(
-                st.state,
-                UpdateState::Checking | UpdateState::Downloading | UpdateState::Installing
-            );
-            let control = match st.state {
-                UpdateState::Off => Control::None,
-                UpdateState::Ready => Control::Button {
-                    label: "Install now".into(),
-                    enabled: true,
-                },
-                _ => Control::Button {
-                    label: "Check now".into(),
-                    enabled: !busy,
+            let control = match update::button(st.state) {
+                None => Control::None,
+                Some((label, enabled)) => Control::Button {
+                    label: label.into(),
+                    enabled,
                 },
             };
             out.push(row("update", "Status", &update_line(&st, auto, now_s()), control));
@@ -2027,6 +2019,10 @@ fn mods_text(m: (bool, bool, bool, bool)) -> String {
 pub fn dark_menus(dark: bool) {
     use windows::Win32::System::LibraryLoader::{GetProcAddress, LoadLibraryW};
     use windows::core::PCSTR;
+    // before 1809 the ordinals are other functions (compat.rs)
+    if crate::compat::build() < crate::compat::B1809 {
+        return;
+    }
     // SAFETY: uxtheme is a system DLL that stays loaded; the ordinals have these signatures since 1809
     unsafe {
         let Ok(ux) = LoadLibraryW(w!("uxtheme.dll")) else {
@@ -2084,6 +2080,11 @@ pub fn refresh(_app: &mut App) {
     });
 }
 
+/// The window, while it's open (a dialog's owner).
+pub fn hwnd() -> Option<usize> {
+    WIN.with(|w| w.try_borrow().ok()?.as_ref().map(|w| w.hwnd.0 as usize))
+}
+
 /// Whether the window is open (tests, the bench).
 pub fn is_open() -> bool {
     WIN.with(|w| w.try_borrow().is_ok_and(|w| w.is_some()))
@@ -2116,8 +2117,7 @@ fn show_now() {
     let Some(hwnd) = create() else { return };
     let made = with_app(|app| {
         let fonts = Formats::new(&app.gfx).ok()?;
-        // SAFETY: plain query on our window
-        let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
+        let dpi = GetDpiForWindow(hwnd).max(96);
         let dark = app.theme.dark;
         set_dark(hwnd, dark);
         let mut win = Box::new(Win {
@@ -2234,7 +2234,7 @@ fn set_dark(hwnd: HWND, dark: bool) {
     let _ = unsafe {
         DwmSetWindowAttribute(
             hwnd,
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            crate::compat::dark_attr(),
             (&v as *const BOOL).cast(),
             std::mem::size_of::<BOOL>() as u32,
         )

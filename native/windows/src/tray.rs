@@ -280,10 +280,9 @@ impl Tray {
 
     fn make_icon(&mut self) -> HICON {
         // SAFETY: plain query
-        let dpi = unsafe { windows::Win32::UI::HiDpi::GetDpiForWindow(self.hwnd) }.max(96);
+        let dpi = crate::compat::dpi_for_window(self.hwnd).max(96);
         // SAFETY: plain query
-        let px = unsafe { windows::Win32::UI::HiDpi::GetSystemMetricsForDpi(SM_CXSMICON, dpi) }
-            .max(16) as u32;
+        let px = crate::compat::system_metrics_for_dpi(SM_CXSMICON, dpi).max(16) as u32;
         if let Some(old) = self.icon.take() {
             // SAFETY: an icon we made
             let _ = unsafe { DestroyIcon(old) };

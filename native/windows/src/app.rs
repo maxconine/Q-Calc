@@ -29,9 +29,6 @@ use windows::Win32::Graphics::Gdi::{InvalidateRect, ScreenToClient, UpdateWindow
 use windows::Win32::System::DataExchange::COPYDATASTRUCT;
 use windows::Win32::System::RemoteDesktop::WTSRegisterSessionNotification;
 use windows::Win32::System::Threading::{CreateMutexW, GetCurrentProcess};
-use windows::Win32::UI::HiDpi::{
-    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
-};
 use windows::Win32::UI::Input::Ime::{GCS_COMPSTR, GCS_RESULTSTR};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, SetFocus, VK_CONTROL, VK_LWIN, VK_MENU, VK_RETURN,
@@ -182,13 +179,15 @@ pub fn run() -> i32 {
     }
     // the bar's device, made meanwhile on a thread of its own (warp.rs)
     crate::warp::prefetch();
-    // the manifest already says per-monitor v2; this covers a build without it
-    // SAFETY: plain call
-    let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    // per-monitor v2 DPI comes from the manifest (SetProcessDpiAwarenessContext is 1703+; compat.rs)
+    if crate::compat::simulated() || crate::compat::build() < crate::compat::B1709 {
+        crate::qlog!("compat: {}", crate::compat::describe());
+    }
 
     let store_path = store::settings_path();
     let mut st = store_path.as_deref().map(Store::load).unwrap_or_default();
     st.hotkey = hotkey::named(&st.hotkey);
+    crate::share::use_save_folder(&st.settings.save_folder);
     let first_run = st.claim_first_run();
     if first_run && let Some(p) = &store_path {
         let _ = st.save(p);
@@ -849,6 +848,9 @@ impl App {
                 }
             }
             windows::Win32::UI::Controls::WM_MOUSELEAVE => {
+                if crate::edge::spurious_leave(self) {
+                    return Some(LRESULT(0));
+                }
                 crate::commands::pointer(self, None);
                 crate::graph::leave(self);
             }

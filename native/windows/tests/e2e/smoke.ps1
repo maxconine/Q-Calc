@@ -1,4 +1,4 @@
-# End-to-end smoke test for the native Windows app (qcalc-win). Real input through SendInput (Native.cs), state over
+﻿# End-to-end smoke test for the native Windows app (qcalc-win). Real input through SendInput (Native.cs), state over
 # the bench pipe (bench.rs: state, e2e, settings-controls, mem), paint checks from screenshots. The Tauri app's
 # src-tauri/tests/e2e/smoke.ps1 ported, plus what the native app does that it didn't (single-instance hand-off,
 # the held-hotkey retry, history and the draft across a restart, copy, graph / sys panels, a game, the installer,
@@ -20,7 +20,12 @@ param(
     # Ctrl+Alt+Shift+F9: free on any desktop, so neither the installed app nor a launcher is in the way
     [string]$Chord = 'ctrl+alt+shift+f9',
     [switch]$SkipInstaller,
-    [string]$Makensis
+    [string]$Makensis,
+    # an older Windows 10 build for compat.rs (QCALC_COMPAT_SIMULATE: 1507, 1607, 1709, ... or a build number): the
+    # functions it lacks are reported missing, so the fallbacks run here. Every copy the suite starts inherits it
+    [string]$Simulate,
+    # only these checks (ids, e.g. B4,B5), for chasing one; the others are skipped and the suite doesn't judge
+    [string]$Only
 )
 $ErrorActionPreference = 'Stop'
 $Exe = (Resolve-Path $Exe).Path
@@ -44,6 +49,7 @@ $env:QCALC_DATA = $Data
 $env:QCALC_LOG = $Log
 $env:QCALC_BENCH = '1'
 Remove-Item Env:QCALC_E2E -ErrorAction SilentlyContinue
+if ($Simulate) { $env:QCALC_COMPAT_SIMULATE = $Simulate } else { Remove-Item Env:QCALC_COMPAT_SIMULATE -ErrorAction SilentlyContinue }
 
 $script:results = New-Object System.Collections.Generic.List[object]
 $script:targets = New-Object System.Collections.Generic.List[object]
@@ -272,6 +278,7 @@ function Describe-App {
 
 # kind: required, informational, or target (a soft check against AGENTS.md's targets)
 function Invoke-Check([string]$id, [string]$name, [string]$kind, [scriptblock]$body) {
+    if ($Only -and ($Only -split '[,\s]+') -notcontains $id) { return }
     Log "--- $id $name"
     $pass = $false; $detail = ''
     # a required check gets a second go: the desktop is shared (CI's isn't, a dev machine's is), and a window or
@@ -320,6 +327,7 @@ $env_ = [ordered]@{
     'apps use light theme' = $(try { (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -ErrorAction Stop).AppsUseLightTheme } catch { 'unset' })
     'foreground lock timeout' = "$($N::ForegroundLockTimeout()) ms"
     'foreground at start' = Describe-Foreground
+    'simulated Windows build' = $(if ($Simulate) { $Simulate } else { 'none' })
 }
 $env_.GetEnumerator() | ForEach-Object { Log "$($_.Key): $($_.Value)" }
 $script:clipBefore = Get-Clip
@@ -335,6 +343,15 @@ Invoke-Check 'L1' 'first launch shows the bar' 'required' {
     $shown = Wait-Until { Test-Shown } 15000
     @{ Pass = $shown; Detail = "shown on the first launch (even with --autostart): $shown" }
 }
+
+if ($Simulate) {
+    Invoke-Check 'O1' "runs as Windows 10 $Simulate would (compat.rs fallbacks)" 'required' {
+        $script:compatLine = $null
+        Wait-Until { $script:compatLine = Select-String -Path $Log -Pattern 'compat: build \d+ \(simulated\).*' -ErrorAction SilentlyContinue | Select-Object -First 1; [bool]$script:compatLine } 5000 | Out-Null
+        @{ Pass = [bool]$script:compatLine; Detail = $(if ($script:compatLine) { $script:compatLine.Matches[0].Value } else { 'no compat line in the log' }) }
+    }
+}
+
 
 Invoke-Check 'L2' 'opening it with nothing running shows the bar' 'required' {
     Restart-QCalc
@@ -689,6 +706,7 @@ Invoke-Check 'B5' 'hovering a word in the line names it' 'required' {
     Read-Answer '^7$' | Out-Null
     $N::MoveTo([int]($f[0] + $f[2] - 4), [int]($f[1] + $f[3] / 2))
     $ans = Hover-Word 'last answer = 6'
+    $ansWhy = if ($ans) { '' } else { " (state $((Send-Pipe @{ cmd = 'wordTip' }) | ConvertTo-Json -Compress -Depth 4); line '$((State).text)'; log $((Get-Content $Log -Tail 10) -join ' | '))" }
     Clear-Input
     Type-Text '*3'
     Read-Answer '^18$' | Out-Null
@@ -700,11 +718,11 @@ Invoke-Check 'B5' 'hovering a word in the line names it' 'required' {
         $N::MoveTo([int](($script:fa[0] + $script:fa[1]) / 2), [int]$script:fa[2])
         $faint = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $script:fd = $d; $d.shown -eq 'last answer = 6' -and $d.tipUp } 3000
     }
-    $faintWhy = if ($faint) { '' } else { " (faint ans at $($script:fa -join ','); state $(($script:fd | ConvertTo-Json -Compress -Depth 4)))" }
+    $faintWhy = if ($faint) { '' } else { " (faint ans at $($script:fa -join ','); state $(($script:fd | ConvertTo-Json -Compress -Depth 4)); log $((Get-Content $Log -Tail 10) -join ' | '))" }
     $r = $N::Rect((Get-Bar))
     $N::MoveTo($r.Left + 20, [Math]::Max(0, $r.Top - 120))
     $gone = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; -not $d.shown -and -not (Tip-Visible) } 2000
-    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans; faint ans named: $faint$faintWhy; gone when the pointer left: $gone" }
+    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans$ansWhy; faint ans named: $faint$faintWhy; gone when the pointer left: $gone" }
 }
 
 function Near([int]$a, [int]$b, [int]$within = 6) { [Math]::Abs($a - $b) -le $within }
@@ -1195,6 +1213,7 @@ if (-not $script:makensis) {
     if ($script:makensis) {
         if (Test-Path (Join-Path $InstallDir 'uninstall.exe')) { Start-Process (Join-Path $InstallDir 'uninstall.exe') -ArgumentList '/S' -Wait -ErrorAction SilentlyContinue }
         Remove-Item $UninstallKey -Recurse -ErrorAction SilentlyContinue
+        Remove-Item "HKCU:\Software\maxconine\$AppId" -Recurse -ErrorAction SilentlyContinue
         Remove-ItemProperty -Path $RunKey -Name $AppId -ErrorAction SilentlyContinue
         Remove-Item $Shortcut -ErrorAction SilentlyContinue
     }

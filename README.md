@@ -61,9 +61,9 @@ Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as y
 
 ### Windows
 
-You need **Windows 10 or 11**, on an x64 or Arm PC.
+You need **Windows 10** (any version from 1507, build 10240) **or Windows 11**, on an x64 or Arm PC. From 3.0, Q Calc for Windows is a native app ([native/windows](native/windows/README.md)): no web view, and nothing else to install.
 
-Download `Q-Calc-<version>-x64-setup.exe` (or `-arm64-setup.exe` for Snapdragon PCs) from the [latest release](https://github.com/maxconine/Q-Calc/releases/latest) and run it. It installs for your account only, so there's no admin prompt, and adds Q Calc to the Start menu and **Installed apps**.
+Download `Q-Calc-<version>-x64-native-setup.exe` (or `-arm64-native-setup.exe` for Snapdragon PCs) from the [latest release](https://github.com/maxconine/Q-Calc/releases/latest) and run it. It installs for your account only, so there's no admin prompt, and adds Q Calc to the Start menu and **Installed apps**. An older Q Calc (2.x) updates itself to 3.0 in place and keeps its settings and history.
 
 > [!NOTE]
 > The installer isn't code-signed yet, so Windows may say it protected your PC. Click **More info → Run anyway**. Updates after that install silently, and never show this.
@@ -74,7 +74,7 @@ Q Calc opens when you sign in. Turn that off with **Open at login** in settings 
 
 If **Alt + Space** opens something else (PowerToys Run and Command Palette use it too), open settings, click **Choose keybinds…** under **Keybinds**, then click the **Show / hide Q Calc** key and press a new one. Any shortcut in that list can be changed the same way. If another app already holds the shortcut when Q Calc starts, the calculator says so.
 
-Q Calc checks for updates once a day and installs them while you're away from the PC. See [src-tauri/release/README.md](src-tauri/release/README.md) for the details.
+Q Calc checks for updates once a day and installs them while you're away from the PC. See [src-tauri/release/README.md](src-tauri/release/README.md) for the details, and [native/windows/RELEASE.md](native/windows/RELEASE.md) for how a Windows release is shipped.
 
 ### Mac
 
