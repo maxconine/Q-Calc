@@ -155,6 +155,35 @@ pub fn cmd(app: &App, args: &str) -> Value {
             "coldUs": threads::debug_place_us(&app.gfx, app.bar.layout.threads.map_or(640.0, |r| r.w), 21, true),
             "lines": threads::open_name().map_or(0, |n| threads::debug_state()["threads"][n.as_str()].as_array().map_or(0, Vec::len)),
         }),
+        // the note in the corner (notice.rs): its state, and Do Not Disturb faked (`dnd` true / false, null real)
+        "notice" => {
+            if !a["dnd"].is_null() || a["real"].as_bool() == Some(true) {
+                crate::notice::fake_quiet(a["dnd"].as_bool());
+            }
+            crate::notice::debug_state()
+        }
+        // a notice as a message from `from` would raise (screenshots; the suite sends real ones)
+        "noticePost" => {
+            let (from, text, kind) = (s(&a, "from"), s(&a, "text"), s(&a, "kind"));
+            later(Box::new(move |app| {
+                let what = match kind.as_str() {
+                    "ask" => crate::notice::What::Ask,
+                    "file" => crate::notice::What::Share(text),
+                    _ => crate::notice::What::Message(text),
+                };
+                crate::notice::post(app, &from, what);
+            }))
+        }
+        "notifyPrefs" => {
+            let a = a.clone();
+            later(Box::new(move |app| {
+                for key in ["notifications", "notificationText", "notificationsInDnd"] {
+                    if !a[key].is_null() {
+                        crate::notice::settings_changed(app, key, &a[key]);
+                    }
+                }
+            }))
+        }
         "vector-open" => vector_open(&a),
         "vector-seal" => vector_seal(&a),
         _ => json!({ "error": format!("share: unknown op {op}") }),
