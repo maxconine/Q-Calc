@@ -20,7 +20,10 @@ param(
     # Ctrl+Alt+Shift+F9: free on any desktop, so neither the installed app nor a launcher is in the way
     [string]$Chord = 'ctrl+alt+shift+f9',
     [switch]$SkipInstaller,
-    [string]$Makensis
+    [string]$Makensis,
+    # an older Windows 10 build for compat.rs (QCALC_COMPAT_SIMULATE: 1507, 1607, 1709, ... or a build number): the
+    # functions it lacks are reported missing, so the fallbacks run here. Every copy the suite starts inherits it
+    [string]$Simulate
 )
 $ErrorActionPreference = 'Stop'
 $Exe = (Resolve-Path $Exe).Path
@@ -44,6 +47,7 @@ $env:QCALC_DATA = $Data
 $env:QCALC_LOG = $Log
 $env:QCALC_BENCH = '1'
 Remove-Item Env:QCALC_E2E -ErrorAction SilentlyContinue
+if ($Simulate) { $env:QCALC_COMPAT_SIMULATE = $Simulate } else { Remove-Item Env:QCALC_COMPAT_SIMULATE -ErrorAction SilentlyContinue }
 
 $script:results = New-Object System.Collections.Generic.List[object]
 $script:targets = New-Object System.Collections.Generic.List[object]
@@ -320,6 +324,7 @@ $env_ = [ordered]@{
     'apps use light theme' = $(try { (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' -ErrorAction Stop).AppsUseLightTheme } catch { 'unset' })
     'foreground lock timeout' = "$($N::ForegroundLockTimeout()) ms"
     'foreground at start' = Describe-Foreground
+    'simulated Windows build' = $(if ($Simulate) { $Simulate } else { 'none' })
 }
 $env_.GetEnumerator() | ForEach-Object { Log "$($_.Key): $($_.Value)" }
 $script:clipBefore = Get-Clip
@@ -335,6 +340,15 @@ Invoke-Check 'L1' 'first launch shows the bar' 'required' {
     $shown = Wait-Until { Test-Shown } 15000
     @{ Pass = $shown; Detail = "shown on the first launch (even with --autostart): $shown" }
 }
+
+if ($Simulate) {
+    Invoke-Check 'O1' "runs as Windows 10 $Simulate would (compat.rs fallbacks)" 'required' {
+        $script:compatLine = $null
+        Wait-Until { $script:compatLine = Select-String -Path $Log -Pattern 'compat: build \d+ \(simulated\).*' -ErrorAction SilentlyContinue | Select-Object -First 1; [bool]$script:compatLine } 5000 | Out-Null
+        @{ Pass = [bool]$script:compatLine; Detail = $(if ($script:compatLine) { $script:compatLine.Matches[0].Value } else { 'no compat line in the log' }) }
+    }
+}
+
 
 Invoke-Check 'L2' 'opening it with nothing running shows the bar' 'required' {
     Restart-QCalc
@@ -1195,6 +1209,7 @@ if (-not $script:makensis) {
     if ($script:makensis) {
         if (Test-Path (Join-Path $InstallDir 'uninstall.exe')) { Start-Process (Join-Path $InstallDir 'uninstall.exe') -ArgumentList '/S' -Wait -ErrorAction SilentlyContinue }
         Remove-Item $UninstallKey -Recurse -ErrorAction SilentlyContinue
+        Remove-Item "HKCU:\Software\maxconine\$AppId" -Recurse -ErrorAction SilentlyContinue
         Remove-ItemProperty -Path $RunKey -Name $AppId -ErrorAction SilentlyContinue
         Remove-Item $Shortcut -ErrorAction SilentlyContinue
     }

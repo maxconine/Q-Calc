@@ -33,6 +33,7 @@ mod widgets;
 use std::cell::RefCell;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
+use crate::compat::dpi_for_window as GetDpiForWindow;
 use qcalc_core::games::clock::GameClock;
 use qcalc_core::games::fullscreen::{FullscreenLayoutOptions, Size, fullscreen_layout};
 use qcalc_core::games::peer::PeerEvent;
@@ -40,12 +41,11 @@ use qcalc_core::games::shell::{EscAction, ShellMode};
 use qcalc_core::games::{Random, Side};
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, POINT, RECT, WPARAM};
 use windows::Win32::Graphics::Dwm::{
-    DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-    DwmExtendFrameIntoClientArea, DwmFlush, DwmSetWindowAttribute,
+    DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DwmExtendFrameIntoClientArea, DwmFlush,
+    DwmSetWindowAttribute,
 };
 use windows::Win32::Graphics::Gdi::{InvalidateRect, ValidateRect};
 use windows::Win32::UI::Controls::MARGINS;
-use windows::Win32::UI::HiDpi::{AdjustWindowRectExForDpi, GetDpiForWindow};
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
     VK_CONTROL, VK_MENU, VK_SHIFT,
@@ -459,8 +459,7 @@ fn create(kind: &str, t0: Option<i64>, spot: Option<BarSpot>) -> windows::core::
             None,
         )?
     };
-    // SAFETY: a plain query on our window
-    let dpi = unsafe { GetDpiForWindow(hwnd) }.max(96);
+    let dpi = GetDpiForWindow(hwnd).max(96);
     let setting = theme_setting();
     let dark = crate::render::Theme::for_setting(&setting).dark;
     set_dark(hwnd, dark);
@@ -546,7 +545,7 @@ fn set_dark(hwnd: HWND, dark: bool) {
     let _ = unsafe {
         DwmSetWindowAttribute(
             hwnd,
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            crate::compat::dark_attr(),
             (&v as *const BOOL).cast(),
             std::mem::size_of::<BOOL>() as u32,
         )
@@ -601,7 +600,7 @@ fn outer(hwnd: HWND, style: WINDOW_STYLE, w: f32, h: f32, dpi: u32) -> (i32, i32
         bottom: (h * s).round() as i32,
     };
     // SAFETY: a live out rect
-    let _ = unsafe { AdjustWindowRectExForDpi(&mut r, style, false, WS_EX_APPWINDOW, dpi) };
+    let _ = crate::compat::adjust_window_rect_for_dpi(&mut r, style, false, WS_EX_APPWINDOW, dpi);
     let _ = hwnd;
     (r.right - r.left, r.bottom - r.top)
 }

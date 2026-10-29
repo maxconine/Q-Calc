@@ -19,8 +19,8 @@ use std::ops::Range;
 
 use windows::Win32::Foundation::{HWND, POINT, RECT};
 use windows::Win32::Graphics::Dwm::{
-    DWMWA_CLOAK, DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND,
-    DwmExtendFrameIntoClientArea, DwmSetWindowAttribute,
+    DWMWA_CLOAK, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND, DwmExtendFrameIntoClientArea,
+    DwmSetWindowAttribute,
 };
 use windows::Win32::Graphics::Gdi::{
     GetMonitorInfoW, HMONITOR, MONITOR_DEFAULTTONEAREST, MONITORINFOEXW, MonitorFromPoint,
@@ -189,7 +189,7 @@ impl Bar {
             let _ = DwmExtendFrameIntoClientArea(hwnd, &margins);
         }
         // SAFETY: a plain query on our window
-        let dpi = unsafe { windows::Win32::UI::HiDpi::GetDpiForWindow(hwnd) }.max(96);
+        let dpi = crate::compat::dpi_for_window(hwnd).max(96);
         Ok(Bar {
             hwnd,
             surface: Surface::new_flip(hwnd, dpi),
@@ -211,7 +211,7 @@ impl Bar {
         let _ = unsafe {
             DwmSetWindowAttribute(
                 self.hwnd,
-                DWMWA_USE_IMMERSIVE_DARK_MODE,
+                crate::compat::dark_attr(),
                 (&v as *const BOOL).cast(),
                 std::mem::size_of::<BOOL>() as u32,
             )
