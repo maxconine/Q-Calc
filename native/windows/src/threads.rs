@@ -1429,7 +1429,7 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
             }
         }
         Some(Hit::Copy(id)) => copy_line(app, &id),
-        Some(Hit::File(id, act)) => crate::share::file_act(app, &id, act == Act::Retry),
+        Some(Hit::File(id, act)) => crate::share::file_act(app, &id, act),
         Some(Hit::Row(i)) => {
             if let Some((name, _)) = with(|s| conversations(&s.threads)).get(i) {
                 open(app, &name.clone());

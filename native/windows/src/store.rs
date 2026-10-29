@@ -26,6 +26,9 @@ const DEFAULT_DRAFT_SECONDS: i64 = 60;
 // how long a moved or widened bar keeps its spot and width after it was last used; 0 keeps them for good. the
 // mac's 5 minutes
 pub const DEFAULT_SPOT_SECONDS: i64 = 300;
+// an accepted name's files up to 100 MB save on their own unless settings says otherwise; 1 GiB is any file
+pub const DEFAULT_AUTO_ACCEPT: u64 = 100_000_000;
+pub const AUTO_ACCEPT_MAX: u64 = 1024 * 1024 * 1024;
 const MAX_SPOT_SECONDS: f64 = 86_400.0;
 
 // what the settings window sends for "move the bar back after"; anything odd is the default
@@ -62,6 +65,11 @@ pub struct Settings {
     pub keybinds: BTreeMap<String, String>,
     // native only: Ctrl+E's exponent form, on until pressed again (exponent.rs)
     pub exponent_mode: bool,
+    // native only: an accepted name's files up to this many bytes save on their own (0 never; Settings › Messages,
+    // the Mac's qcalc.messaging.autoAcceptBytes)
+    pub auto_accept_bytes: u64,
+    // native only: a received file goes on the clipboard once it's saved, for Ctrl+V in Explorer (share.rs)
+    pub received_to_clipboard: bool,
 }
 
 // the core's actions, then the native app's own (exponent.rs NATIVE_ACTIONS)
@@ -99,6 +107,8 @@ impl Default for Settings {
             share_usage: true,
             keybinds: BTreeMap::new(),
             exponent_mode: false,
+            auto_accept_bytes: DEFAULT_AUTO_ACCEPT,
+            received_to_clipboard: false,
         }
     }
 }
@@ -127,6 +137,12 @@ impl Settings {
         flag("copyUnitless", &mut self.copy_unitless);
         flag("shareUsage", &mut self.share_usage);
         flag("exponentMode", &mut self.exponent_mode);
+        flag("receivedToClipboard", &mut self.received_to_clipboard);
+        if let Some(n) = v["autoAcceptBytes"].as_f64()
+            && n.is_finite()
+        {
+            self.auto_accept_bytes = n.clamp(0.0, AUTO_ACCEPT_MAX as f64) as u64;
+        }
         if let Some(s) = v["angleMode"].as_str()
             && (s == "deg" || s == "rad")
         {
@@ -428,9 +444,17 @@ mod tests {
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 6, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
                 "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {},
-                "exponentMode": false
+                "exponentMode": false, "autoAcceptBytes": 100_000_000, "receivedToClipboard": false
             })
         );
+        // the file rows: a size is kept to 0..1 GiB, a flag as it is
+        let mut s = Settings::default();
+        assert!(s.merge(&json!({ "autoAcceptBytes": 0, "receivedToClipboard": true })));
+        assert_eq!((s.auto_accept_bytes, s.received_to_clipboard), (0, true));
+        s.merge(&json!({ "autoAcceptBytes": 1e12 }));
+        assert_eq!(s.auto_accept_bytes, AUTO_ACCEPT_MAX);
+        s.merge(&json!({ "autoAcceptBytes": -5 }));
+        assert_eq!(s.auto_accept_bytes, 0);
     }
 
     #[test]

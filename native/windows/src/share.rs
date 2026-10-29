@@ -21,8 +21,8 @@
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
 
 use qcalc_core::app::messaging::{self as core, Arrival};
 use serde_json::{Value, json};
@@ -53,6 +53,28 @@ struct Transfer {
     state: String,
     percent: Option<u32>,
     error: Option<String>,
+    /// where a received file was saved (Show in Folder)
+    saved: Option<PathBuf>,
+    /// when it was sent or offered, and when it was saved or sent (ms since 1970; the e2e suite's timings)
+    started_ms: f64,
+    done_ms: f64,
+}
+
+impl Transfer {
+    fn new(mine: bool, who: &str, name: &str, size: u64, state: &str) -> Transfer {
+        Transfer {
+            mine,
+            who: who.into(),
+            name: name.into(),
+            size,
+            state: state.into(),
+            percent: None,
+            error: None,
+            saved: None,
+            started_ms: crate::model::now_ms() as f64,
+            done_ms: 0.0,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -62,12 +84,81 @@ struct Incoming {
     size: u64,
     bytes: u64,
     expires: f64,
+    /// the part length the relay streams it in (from the accept's answer; 0 until then, or when it doesn't)
+    stream: u64,
+    /// the parts landed (a `part` event wakes the download), and Cancel or a take-back stopping it
+    landed: Arc<Signal>,
 }
 
 struct Outgoing {
     sealed: PathBuf,
     bytes: u64,
     cancelled: Arc<AtomicBool>,
+    /// how much of `sealed` is written: it's sealed while it's offered and uploaded
+    sealing: Arc<Signal>,
+    /// an upload is running (Retry, or a second `accepted`, never starts another beside it)
+    running: Arc<AtomicBool>,
+    /// the accept's grant and stream length, and whether the relay has started the upload: Retry before it has
+    /// starts it with the grant again
+    grant: String,
+    stream: u64,
+    started: Arc<AtomicBool>,
+}
+
+/// A count worker threads wait on (the sealed bytes written so far, the parts landed), and whether it ended
+/// (sealing failed, or the download was stopped).
+#[derive(Default, Debug)]
+struct Signal {
+    m: Mutex<(u64, bool)>,
+    cv: Condvar,
+}
+
+impl Signal {
+    fn set(&self, v: u64) {
+        if let Ok(mut g) = self.m.lock() {
+            g.0 = v;
+        }
+        self.cv.notify_all();
+    }
+
+    fn bump(&self) {
+        if let Ok(mut g) = self.m.lock() {
+            g.0 += 1;
+        }
+        self.cv.notify_all();
+    }
+
+    fn end(&self) {
+        if let Ok(mut g) = self.m.lock() {
+            g.1 = true;
+        }
+        self.cv.notify_all();
+    }
+
+    fn get(&self) -> (u64, bool) {
+        self.m.lock().map(|g| *g).unwrap_or((0, true))
+    }
+
+    /// Waits up to `ms` for the count to reach `at`: Some(true) when it did, Some(false) when it ended first, None
+    /// when time ran out.
+    fn wait_for(&self, at: u64, ms: u64) -> Option<bool> {
+        let Ok(g) = self.m.lock() else {
+            return Some(false);
+        };
+        let (g, _) = self
+            .cv
+            .wait_timeout_while(g, std::time::Duration::from_millis(ms), |(v, ended)| {
+                *v < at && !*ended
+            })
+            .ok()?;
+        if g.0 >= at {
+            Some(true)
+        } else if g.1 {
+            Some(false)
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Default)]
@@ -84,6 +175,9 @@ struct Share {
     seen: HashSet<String>,
     /// files dropped on the bar, waiting for the line to name someone
     pending: Vec<PathBuf>,
+    /// an `accepted` (its grant and stream length) that came before the offer's own answer: a recipient who saves
+    /// on their own can accept that fast
+    early: BTreeMap<String, (String, u64, std::time::Instant)>,
 }
 
 thread_local! {
@@ -96,11 +190,40 @@ fn with<R>(f: impl FnOnce(&mut Share) -> R) -> R {
 
 const RETRYABLE: [&str; 3] = ["failed", "no-network", "network"];
 const PART_TRIES: u32 = 3;
-const PART_BYTES: u64 = 50 * 1024 * 1024;
+/// parts sent side by side, each on a warm connection of its own (relay.rs `shared`)
+const UPLOADS: usize = 4;
+/// parts read side by side while a streamed file comes in, and how far ahead of the one being opened
+const FETCHES: usize = 3;
+/// a streamed part is a whole number of sealed chunks (relay/src/files.js `streamPartBytes`)
+const SEALED_CHUNK: u64 = (crypt::CHUNK + crypt::TAG) as u64;
+/// partial downloads older than this, left by a run that quit mid-way, are swept from Downloads
+const STALE_PARTIAL: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
+/// a streamed part that doesn't land in this long stops the download (the sender quit or went offline)
+const STALLED: std::time::Duration = std::time::Duration::from_secs(120);
 
 fn temp() -> PathBuf {
+    static SWEPT: std::sync::Once = std::sync::Once::new();
     let d = std::env::temp_dir().join("QCalcShare");
     let _ = std::fs::create_dir_all(&d);
+    // what a run that quit mid-send left (sealed files, pasted images) goes once it's a day old
+    SWEPT.call_once(|| {
+        for e in std::fs::read_dir(&d).into_iter().flatten().flatten() {
+            let old = e
+                .metadata()
+                .and_then(|m| m.modified())
+                .ok()
+                .and_then(|t| t.elapsed().ok())
+                .is_some_and(|age| age >= STALE_PARTIAL);
+            if old {
+                let p = e.path();
+                let _ = if p.is_dir() {
+                    std::fs::remove_dir_all(&p)
+                } else {
+                    std::fs::remove_file(&p)
+                };
+            }
+        }
+    });
     d
 }
 
@@ -139,7 +262,7 @@ fn call(
     method: &str,
     path: &str,
     extra: &[(&str, &str)],
-    body: &[u8],
+    body: crate::relay::Body,
     sink: crate::relay::Sink,
 ) -> (String, Value) {
     let Some(a) = auth() else {
@@ -150,11 +273,89 @@ fn call(
     crate::relay::call(method, path, &headers, body, 120_000, sink)
 }
 
+/// A request with no body.
+fn ask(method: &str, path: &str, extra: &[(&str, &str)]) -> (String, Value) {
+    call(method, path, extra, crate::relay::Body::Bytes(&[]), None)
+}
+
 fn forget_offer(id: &str) {
     let path = format!("/file/{id}");
     bg::spawn("qcalc-share", move || {
-        let _ = call("DELETE", &path, &[], &[], None);
+        let _ = ask("DELETE", &path, &[]);
     });
+}
+
+// ---- settings › messages: files ----
+
+/// An accepted name's files up to this many bytes save on their own (0: never); strangers' always ask.
+fn auto_limit(app: &App) -> u64 {
+    app.store.settings.auto_accept_bytes
+}
+
+/// Settings › Messages' file rows (messaging.rs adds them to the page).
+pub fn settings_items(app: &App) -> Vec<crate::settings_window::Item> {
+    use crate::settings_window::{Control, Item, row};
+    let limit = auto_limit(app);
+    let options = [
+        ("0", "Off"),
+        ("10000000", "Up to 10 MB"),
+        ("100000000", "Up to 100 MB"),
+        ("1073741824", "Any size"),
+    ];
+    let value = options
+        .iter()
+        .rev()
+        .find(|(v, _)| v.parse::<u64>().is_ok_and(|v| v <= limit))
+        .map_or("0", |(v, _)| v);
+    vec![
+        Item::Heading("Files".into()),
+        row(
+            "autoAccept",
+            "Save files without asking",
+            "Only from allowed names. Files go to Downloads and are never opened. Others wait for Save.",
+            Control::Select {
+                options: options
+                    .iter()
+                    .map(|(v, l)| ((*v).to_string(), (*l).to_string()))
+                    .collect(),
+                value: value.into(),
+            },
+        ),
+        row(
+            "receivedToClipboard",
+            "Copy received files",
+            "A saved file goes on the clipboard, so Ctrl+V pastes it in Explorer or another app.",
+            Control::Toggle(app.store.settings.received_to_clipboard),
+        ),
+    ]
+}
+
+/// A file row changed on the Messages page: true when it was one of these.
+pub fn settings_changed(app: &mut App, id: &str, value: &Value) -> bool {
+    match id {
+        "autoAccept" => {
+            let n = value
+                .as_str()
+                .and_then(|s| s.parse::<u64>().ok())
+                .or_else(|| value.as_u64())
+                .unwrap_or(0);
+            set_prefs(app, Some(n), None);
+        }
+        "receivedToClipboard" => set_prefs(app, None, value.as_bool()),
+        _ => return false,
+    }
+    true
+}
+
+/// The file settings changed (Settings › Messages, the e2e suite), saved with the rest.
+pub fn set_prefs(app: &mut App, auto: Option<u64>, clipboard: Option<bool>) {
+    if let Some(n) = auto {
+        app.store.settings.auto_accept_bytes = n.min(crate::store::AUTO_ACCEPT_MAX);
+    }
+    if let Some(on) = clipboard {
+        app.store.settings.received_to_clipboard = on;
+    }
+    app.save_store();
 }
 
 // ---- the line: hints and ↵ ----
@@ -473,54 +674,67 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     let name = core::clean_filename(&raw_name);
+    let started = crate::model::now_ms() as f64;
     say_to(app, &to, format!("encrypting {name}…"));
     bg::spawn("qcalc-share", move || {
         let result = offer(&path, &name, &to, &me, &relay_key);
         bg::post(move |app| match result {
-            Ok((id, sealed, bytes, size)) => {
+            Ok(o) => {
                 crate::messaging::note_sent(&to);
-                crate::threads::record_file(&to, true, &id, &name, size);
+                crate::threads::record_file(&to, true, &o.id, &name, o.size);
                 with(|s| {
                     s.outgoing.insert(
-                        id.clone(),
+                        o.id.clone(),
                         Outgoing {
-                            sealed,
-                            bytes,
-                            cancelled: Arc::new(AtomicBool::new(false)),
+                            sealed: o.sealed,
+                            bytes: o.bytes,
+                            cancelled: o.cancelled,
+                            sealing: o.sealing,
+                            running: Arc::new(AtomicBool::new(false)),
+                            grant: String::new(),
+                            stream: 0,
+                            started: Arc::new(AtomicBool::new(false)),
                         },
                     );
-                    s.transfers.insert(
-                        id,
-                        Transfer {
-                            mine: true,
-                            who: to.clone(),
-                            name: name.clone(),
-                            size,
-                            state: "offered".into(),
-                            percent: None,
-                            error: None,
-                        },
-                    );
+                    let mut t = Transfer::new(true, &to, &name, o.size, "offered");
+                    t.started_ms = started;
+                    s.transfers.insert(o.id.clone(), t);
                 });
+                // the accept may have come while the offer was on its way back: its upload starts now
+                let early = with(|s| s.early.remove(&o.id));
+                if let Some((grant, stream, _)) = early {
+                    upload(&o.id, &grant, stream);
+                }
                 say_to(
                     app,
                     &to,
                     core::share_status_text("delivered", &to, "file", &name),
                 );
+                // the bar's line follows it from here: sending, then sent (or why not)
+                if !crate::threads::is_open(&to) {
+                    hint_about(app, &o.id);
+                }
+                persist_unfinished();
+                refresh_cards(app);
             }
             Err(note) => say_to(app, &to, note),
         });
     });
 }
 
-/// On a worker: encrypt, seal the facts, offer. (id, the sealed file, its length, the plain size) or the words.
-fn offer(
-    path: &Path,
-    name: &str,
-    to: &str,
-    me: &str,
-    relay_key: &str,
-) -> Result<(String, PathBuf, u64, u64), String> {
+/// An offer that went: its id, the sealed file (still being written: `sealing`), its length and the plain size.
+struct Offered {
+    id: String,
+    sealed: PathBuf,
+    bytes: u64,
+    size: u64,
+    sealing: Arc<Signal>,
+    cancelled: Arc<AtomicBool>,
+}
+
+/// On a worker: hash, seal the facts, offer; the file is sealed into a temporary file alongside (another thread),
+/// so the offer and the recipient's accept don't wait for it, and the upload reads it as it's written.
+fn offer(path: &Path, name: &str, to: &str, me: &str, relay_key: &str) -> Result<Offered, String> {
     let meta = std::fs::metadata(path).map_err(|_| core::file_error_text("unreadable", to))?;
     if meta.is_dir() {
         return Err(core::file_error_text("folder", to));
@@ -542,16 +756,47 @@ fn offer(
     };
     let key = crypt::new_file_key();
     let sealed = temp().join(crypt::new_id());
-    let sha = crypt::encrypt_file(path, &sealed, &key, |_| {}).map_err(|e| {
-        let _ = std::fs::remove_file(&sealed);
-        core::file_error_text(e.status(), to)
-    })?;
-    let bytes = crypt::encrypted_length(size);
-    let id = crypt::new_id();
+    let sealing = Arc::new(Signal::default());
+    let cancelled = Arc::new(AtomicBool::new(false));
+    // the hash the facts carry is read first, here; the sealing pass checks it again, so a file that changed under
+    // it is never sent as something else
+    let (seal_to, seal_from, progress) = (sealed.clone(), path.to_path_buf(), sealing.clone());
+    let sealer = std::thread::Builder::new()
+        .name("qcalc-share-seal".into())
+        .spawn(move || {
+            let p = progress.clone();
+            let sha = crypt::encrypt_file(&seal_from, &seal_to, &key, move |n| p.set(n));
+            if sha.is_err() {
+                progress.end();
+            }
+            sha
+        })
+        .map_err(|_| core::file_error_text("disk", to))?;
     let fail = |status: &str| {
+        cancelled.store(true, Ordering::Relaxed);
         let _ = std::fs::remove_file(&sealed);
         core::share_status_text(status, to, "file", name)
     };
+    let sha = match crypt::hash_file(path) {
+        Ok(sha) => sha,
+        Err(e) => {
+            let _ = sealer.join();
+            let _ = std::fs::remove_file(&sealed);
+            return Err(core::file_error_text(e.status(), to));
+        }
+    };
+    // a sealing pass whose hash isn't this one (the file changed meanwhile) ends the upload: `sealing` ends
+    let check = sealing.clone();
+    let want = sha.clone();
+    let _ = std::thread::Builder::new()
+        .name("qcalc-share-seal-check".into())
+        .spawn(move || {
+            if !matches!(sealer.join(), Ok(Ok(got)) if got == want) {
+                check.end();
+            }
+        });
+    let bytes = crypt::encrypted_length(size);
+    let id = crypt::new_id();
     let facts = core::seal_file_facts(
         name,
         "application/octet-stream",
@@ -571,100 +816,77 @@ fn offer(
     if status != "delivered" || o["id"].as_str() != Some(id.as_str()) {
         return Err(fail(&status));
     }
-    Ok((id, sealed, bytes, size))
+    Ok(Offered {
+        id,
+        sealed,
+        bytes,
+        size,
+        sealing,
+        cancelled,
+    })
 }
 
-/// The recipient said yes: upload with the grant, part by part (Retry passes no grant: the relay says which
-/// parts it has).
-fn upload(id: &str, grant: &str, part_bytes: u64) {
-    let Some((sealed, bytes, cancelled, who)) = with(|s| {
-        let o = s.outgoing.get(id)?;
-        let t = s.transfers.get(id).filter(|t| t.mine)?;
-        Some((
-            o.sealed.clone(),
-            o.bytes,
-            o.cancelled.clone(),
-            t.who.clone(),
-        ))
-    }) else {
+/// The recipient said yes: upload with the grant. `stream` (the relay's part length for a streamed upload, 0 from
+/// an older relay) sends parts the recipient reads as they land, the first one starting it with the grant; else
+/// `start` first, as before. Retry passes no grant: the relay says which parts it has and how they're cut.
+fn upload(id: &str, grant: &str, stream: u64) {
+    let Some((sealed, bytes, cancelled, sealing, running, started, who, grant, stream)) =
+        with(|s| {
+            let o = s.outgoing.get_mut(id)?;
+            if !grant.is_empty() {
+                o.grant = grant.to_string();
+                o.stream = stream;
+            }
+            // Retry: with the grant again if the relay never started it (it was cut before the first part landed)
+            let (grant, stream) = if o.started.load(Ordering::Acquire) {
+                (String::new(), 0)
+            } else {
+                (o.grant.clone(), o.stream)
+            };
+            let t = s.transfers.get(id).filter(|t| t.mine)?;
+            Some((
+                o.sealed.clone(),
+                o.bytes,
+                o.cancelled.clone(),
+                o.sealing.clone(),
+                o.running.clone(),
+                o.started.clone(),
+                t.who.clone(),
+                grant,
+                stream,
+            ))
+        })
+    else {
         // a file this app doesn't have any more: the relay lets it go
         forget_offer(id);
         return;
     };
+    if running.swap(true, Ordering::AcqRel) {
+        return;
+    }
     set_state(id, "uploading", Some(0), None);
-    let (id, grant) = (id.to_string(), grant.to_string());
+    let id = id.to_string();
     bg::spawn("qcalc-share-up", move || {
-        let status = (|| {
-            let headers: Vec<(&str, &str)> = if grant.is_empty() {
-                vec![]
-            } else {
-                vec![("X-QCalc-Grant", grant.as_str())]
-            };
-            let (status, o) = call("POST", &format!("/file/{id}/start"), &headers, &[], None);
-            if status != "ok" {
-                return status;
-            }
-            let parts = o["parts"].as_u64().unwrap_or(1);
-            let done: HashSet<u64> = o["done"]
-                .as_array()
-                .map(|a| a.iter().filter_map(Value::as_u64).collect())
-                .unwrap_or_default();
-            let part_bytes = o["partBytes"].as_u64().unwrap_or(part_bytes).max(1);
-            let Ok(mut f) = std::fs::File::open(&sealed) else {
-                return "unreadable".into();
-            };
-            for n in 1..=parts {
-                if cancelled.load(Ordering::Relaxed) {
-                    return "cancelled".into();
-                }
-                if done.contains(&n) {
-                    continue;
-                }
-                let offset = (n - 1) * part_bytes;
-                let length = part_bytes.min(bytes.saturating_sub(offset)) as usize;
-                let mut data = vec![0u8; length];
-                use std::io::{Read, Seek, SeekFrom};
-                if f.seek(SeekFrom::Start(offset)).is_err() || f.read_exact(&mut data).is_err() {
-                    return "unreadable".into();
-                }
-                let mut tries = 0;
-                loop {
-                    // the e2e suite's window to take the relay down mid-upload
-                    if let Some(ms) = std::env::var("QCALC_E2E_SLOW_UPLOAD_MS")
-                        .ok()
-                        .and_then(|v| v.parse::<u64>().ok())
-                    {
-                        std::thread::sleep(std::time::Duration::from_millis(ms));
-                    }
-                    let (status, _) = call(
-                        "PUT",
-                        &format!("/file/{id}/part/{n}"),
-                        &[("Content-Type", "application/octet-stream")],
-                        &data,
-                        None,
-                    );
-                    if status == "ok" {
-                        break;
-                    }
-                    // a part cut short goes again, a few times, a little later each time
-                    tries += 1;
-                    if !RETRYABLE.contains(&status.as_str()) || tries >= PART_TRIES {
-                        return status;
-                    }
-                    std::thread::sleep(std::time::Duration::from_secs(2 << tries));
-                }
-                let pct = ((offset + length as u64) * 100 / bytes.max(1)) as u32;
-                let id2 = id.clone();
-                bg::post(move |app| {
-                    progress(&id2, pct);
-                    app.model.touch();
-                });
-            }
-            call("POST", &format!("/file/{id}/finish"), &[], &[], None).0
-        })();
+        let job = Upload {
+            id: &id,
+            sealed: &sealed,
+            bytes,
+            cancelled: &cancelled,
+            sealing: &sealing,
+            started: &started,
+            sent: AtomicI64::new(0),
+            shown: AtomicU32::new(0),
+        };
+        let status = job.run(&grant, stream);
+        running.store(false, Ordering::Release);
         bg::post(move |app| {
             if status == "ok" {
                 set_state(&id, "sent", None, None);
+                with(|s| {
+                    if let Some(t) = s.transfers.get_mut(&id) {
+                        t.done_ms = crate::model::now_ms() as f64;
+                    }
+                });
                 drop_outgoing(&id);
             } else if status != "cancelled" {
                 failed(&id, &status, &who);
@@ -684,6 +906,191 @@ fn upload(id: &str, grant: &str, part_bytes: u64) {
             refresh_cards(app);
         });
     });
+}
+
+/// One upload's parts, on a worker.
+struct Upload<'a> {
+    id: &'a str,
+    sealed: &'a Path,
+    bytes: u64,
+    cancelled: &'a AtomicBool,
+    sealing: &'a Signal,
+    /// the relay has started it (Retry then needs no grant)
+    started: &'a AtomicBool,
+    /// bytes sent so far (a part cut short takes its back), and the percent last shown
+    sent: AtomicI64,
+    shown: AtomicU32,
+}
+
+impl Upload<'_> {
+    fn run(&self, grant: &str, stream: u64) -> String {
+        // a streamed upload with the grant starts with its first part; anything else asks `start`
+        let fresh = streamable(stream) && !grant.is_empty();
+        let (size, parts, done) = if fresh {
+            (stream, self.bytes.div_ceil(stream).max(1), HashSet::new())
+        } else {
+            let headers: Vec<(&str, &str)> = if grant.is_empty() {
+                vec![]
+            } else {
+                vec![("X-QCalc-Grant", grant)]
+            };
+            let (status, o) = ask("POST", &format!("/file/{}/start", self.id), &headers);
+            // already all in and put together
+            if status == "done" {
+                return "ok".into();
+            }
+            if status != "ok" {
+                return status;
+            }
+            self.started.store(true, Ordering::Release);
+            let size = o["partBytes"].as_u64().unwrap_or(0).max(1);
+            let done: HashSet<u64> = o["done"]
+                .as_array()
+                .map(|a| a.iter().filter_map(Value::as_u64).collect())
+                .unwrap_or_default();
+            (size, o["parts"].as_u64().unwrap_or(1).max(1), done)
+        };
+        for n in &done {
+            self.count(self.length(*n, size) as i64);
+        }
+        let mut todo: Vec<u64> = (1..=parts).filter(|n| !done.contains(n)).collect();
+        if fresh && todo.first() == Some(&1) {
+            let s = self.part(
+                1,
+                size,
+                &[("X-QCalc-Grant", grant), ("X-QCalc-Stream", "1")],
+            );
+            if s != "ok" {
+                return s;
+            }
+            self.started.store(true, Ordering::Release);
+            todo.remove(0);
+        }
+        // the rest side by side, each on a connection of its own
+        let queue = Mutex::new(todo.into_iter());
+        let failure: Mutex<Option<String>> = Mutex::new(None);
+        std::thread::scope(|scope| {
+            for _ in 0..UPLOADS {
+                scope.spawn(|| {
+                    loop {
+                        if failure.lock().map_or(true, |f| f.is_some()) {
+                            return;
+                        }
+                        let Some(n) = queue.lock().ok().and_then(|mut q| q.next()) else {
+                            return;
+                        };
+                        let s = self.part(n, size, &[]);
+                        if s != "ok" {
+                            if let Ok(mut f) = failure.lock() {
+                                f.get_or_insert(s);
+                            }
+                            return;
+                        }
+                    }
+                });
+            }
+        });
+        if let Some(s) = failure.into_inner().ok().flatten() {
+            return s;
+        }
+        let (status, _) = ask("POST", &format!("/file/{}/finish", self.id), &[]);
+        match status.as_str() {
+            "ok" | "done" => "ok".into(),
+            // a part the relay didn't keep: Retry sends what's missing
+            "incomplete" => "failed".into(),
+            _ => status,
+        }
+    }
+
+    fn length(&self, n: u64, size: u64) -> u64 {
+        size.min(self.bytes.saturating_sub((n - 1) * size))
+    }
+
+    /// Bytes sent (or taken back), and the percent shown when it moved.
+    fn count(&self, delta: i64) {
+        let sent = self.sent.fetch_add(delta, Ordering::Relaxed) + delta;
+        let pct = (sent.max(0) as u64 * 100 / self.bytes.max(1)).min(100) as u32;
+        let was = self.shown.load(Ordering::Relaxed);
+        if pct != was
+            && self
+                .shown
+                .compare_exchange(was, pct, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+        {
+            let id = self.id.to_string();
+            bg::post(move |app| {
+                progress(&id, pct);
+                refresh_cards(app);
+            });
+        }
+    }
+
+    /// Part `n`, read from the sealed file once that much of it is written, a piece at a time; a part cut short goes
+    /// again, a few times, a little later each time.
+    fn part(&self, n: u64, size: u64, extra: &[(&str, &str)]) -> String {
+        let offset = (n - 1) * size;
+        let len = self.length(n, size);
+        loop {
+            if self.cancelled.load(Ordering::Relaxed) {
+                return "cancelled".into();
+            }
+            match self.sealing.wait_for(offset + len, 250) {
+                Some(true) => break,
+                Some(false) => return "unreadable".into(),
+                None => {}
+            }
+        }
+        let path = format!("/file/{}/part/{n}", self.id);
+        let mut headers = vec![("Content-Type", "application/octet-stream")];
+        headers.extend_from_slice(extra);
+        let mut tries = 0;
+        loop {
+            // the e2e suite's window to take the relay down mid-upload
+            if let Some(ms) = std::env::var("QCALC_E2E_SLOW_UPLOAD_MS")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .filter(|ms| *ms > 0)
+            {
+                std::thread::sleep(std::time::Duration::from_millis(ms));
+            }
+            let part_sent = AtomicI64::new(0);
+            let sent = |k: u64| {
+                part_sent.fetch_add(k as i64, Ordering::Relaxed);
+                self.count(k as i64);
+            };
+            let (status, _) = call(
+                "PUT",
+                &path,
+                &headers,
+                crate::relay::Body::File {
+                    path: self.sealed,
+                    offset,
+                    len,
+                    stop: self.cancelled,
+                    sent: &sent,
+                },
+                None,
+            );
+            if status == "ok" {
+                return status;
+            }
+            self.count(-part_sent.load(Ordering::Relaxed));
+            if self.cancelled.load(Ordering::Relaxed) {
+                return "cancelled".into();
+            }
+            tries += 1;
+            if !RETRYABLE.contains(&status.as_str()) || tries >= PART_TRIES {
+                return status;
+            }
+            // a little later each time, Take Back heard meanwhile
+            for _ in 0..(20u64 << tries) {
+                if self.cancelled.load(Ordering::Relaxed) {
+                    return "cancelled".into();
+                }
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
+        }
+    }
 }
 
 fn drop_outgoing(id: &str) {
@@ -709,6 +1116,22 @@ fn can_retry(id: &str) -> bool {
             .is_some_and(|t| t.mine && t.state == "failed")
             && s.outgoing.contains_key(id)
     })
+}
+
+/// The sender takes it back: the upload stops (mid-part), the relay lets it go and the recipient hears.
+fn take_back(id: &str) {
+    let mine = with(|s| {
+        s.transfers.get(id).is_some_and(|t| {
+            t.mine && matches!(t.state.as_str(), "offered" | "uploading" | "failed")
+        })
+    });
+    if !mine {
+        return;
+    }
+    drop_outgoing(id);
+    with(|s| s.early.remove(id));
+    set_state(id, "withdrawn", None, None);
+    forget_offer(id);
 }
 
 // ---- what arrives ----
@@ -743,6 +1166,7 @@ pub fn frame(app: &mut App, text: &str) -> bool {
 pub fn inbox_ready() {
     let (name, key) = crate::messaging::credentials();
     bg::spawn("qcalc-share-key", move || keys::publish(&name, &key));
+    forget_last_run();
     // a `ready` sent while the inbox was down is never sent again: a file still waiting is asked for now (the relay
     // says `not-ready` if it isn't, and it stays waiting)
     let waiting: Vec<String> = with(|s| {
@@ -754,6 +1178,15 @@ pub fn inbox_ready() {
     });
     for id in waiting {
         download(&id);
+    }
+    // a streamed download waiting out a dropped link looks again now
+    for inc in with(|s| {
+        s.incoming
+            .values()
+            .map(|i| i.landed.clone())
+            .collect::<Vec<_>>()
+    }) {
+        inc.bump();
     }
 }
 
@@ -911,22 +1344,32 @@ fn received_facts(app: &mut App, plain: &[u8], share: &core::SealedShare, from: 
                 size: f.size,
                 bytes: share.bytes,
                 expires: share.expires,
+                stream: 0,
+                landed: Arc::new(Signal::default()),
             },
         );
         s.transfers.insert(
             share.id.clone(),
-            Transfer {
-                mine: false,
-                who: from.to_string(),
-                name: f.name.clone(),
-                size: f.size,
-                state: if accepted { "received" } else { "request" }.into(),
-                percent: None,
-                error: None,
-            },
+            Transfer::new(
+                false,
+                from,
+                &f.name,
+                f.size,
+                if accepted { "received" } else { "request" },
+            ),
         );
     });
+    persist_unfinished();
+    // an allowed name's file under the size settings says saves on its own, at once (the Mac's autoAccept)
+    let auto = accepted && {
+        let limit = auto_limit(app);
+        crate::messaging::auto_accept(from, f.size, limit)
+    };
     show_or_ask(app, from, None, Some(share.id.clone()));
+    if auto {
+        save(app, &share.id);
+        refresh_cards(app);
+    }
 }
 
 fn show_or_ask(app: &mut App, from: &str, clip: Option<String>, file: Option<String>) {
@@ -1031,6 +1474,134 @@ fn set_state(id: &str, state: &str, percent: Option<u32>, error: Option<String>)
             t.error = error;
         }
     });
+    persist_unfinished();
+    hint_follows(id);
+}
+
+// ---- files on their way when the app quits ----
+
+const UNFINISHED_FILE: &str = "share-unfinished.json";
+
+/// A file still on its way: what an app that quits leaves the other side waiting on.
+fn unfinished(t: &Transfer) -> bool {
+    if t.mine {
+        matches!(t.state.as_str(), "offered" | "uploading" | "failed")
+    } else {
+        matches!(
+            t.state.as_str(),
+            "received" | "request" | "accepting" | "waiting" | "downloading"
+        )
+    }
+}
+
+static UNFINISHED: Mutex<(Option<Vec<String>>, Option<String>)> = Mutex::new((None, None));
+
+/// The ids of the files on their way, kept beside settings.json (written off the UI thread, only when they change),
+/// so that after a restart, when nothing of them is left in memory (keys, sealed files, progress), the relay lets
+/// them go and the other side hears they were taken back or turned down instead of waiting on them.
+fn persist_unfinished() {
+    let ids: Vec<String> = with(|s| {
+        s.transfers
+            .iter()
+            .filter(|(_, t)| unfinished(t))
+            .map(|(id, _)| id.clone())
+            .collect()
+    });
+    let first = {
+        let Ok(mut g) = UNFINISHED.lock() else { return };
+        if g.0.as_ref() == Some(&ids) {
+            return;
+        }
+        g.0 = Some(ids.clone());
+        g.1.replace(serde_json::to_string(&ids).unwrap_or_default())
+            .is_none()
+    };
+    if first {
+        bg::spawn("qcalc-share-unfinished", || {
+            while let Some(text) = UNFINISHED.lock().ok().and_then(|mut g| g.1.take()) {
+                if let Some(d) = crate::store::config_dir() {
+                    let _ = std::fs::create_dir_all(&d);
+                    let _ = crate::store::write_atomic(&d.join(UNFINISHED_FILE), &text);
+                }
+            }
+        });
+    }
+}
+
+/// Once the inbox first opens: files left on their way by the last run go (the relay tells the other side).
+fn forget_last_run() {
+    static ONCE: std::sync::Once = std::sync::Once::new();
+    ONCE.call_once(|| {
+        bg::spawn("qcalc-share-unfinished", || {
+            let ids: Vec<String> = crate::store::config_dir()
+                .and_then(|d| std::fs::read(d.join(UNFINISHED_FILE)).ok())
+                .and_then(|b| serde_json::from_slice(&b).ok())
+                .unwrap_or_default();
+            bg::post(move |_| {
+                for id in ids {
+                    let known = with(|s| s.transfers.contains_key(&id));
+                    if !known && id.len() == 32 && id.bytes().all(|b| b.is_ascii_hexdigit()) {
+                        qlog!("share: letting go of a file the last run left on its way");
+                        forget_offer(&id);
+                    }
+                }
+                if let Ok(mut g) = UNFINISHED.lock() {
+                    g.0 = None;
+                }
+                persist_unfinished();
+            });
+        });
+    });
+}
+
+// ---- the bar's line follows a file it spoke about ----
+
+/// The file the hint under the bar last spoke about, and what it said.
+static HINT: Mutex<Option<(String, String)>> = Mutex::new(None);
+
+/// The hint under the bar spoke about this file: it follows it as it goes.
+fn hint_about(app: &mut App, id: &str) {
+    if let Some(h) = &app.model.hint
+        && let Ok(mut g) = HINT.lock()
+    {
+        *g = Some((id.to_string(), h.clone()));
+    }
+}
+
+/// What the hint says for a file of mine as it goes: its words while it's on its way, and how it ended.
+fn hint_text(t: &Transfer) -> Option<String> {
+    let state = t
+        .error
+        .clone()
+        .unwrap_or_else(|| core::file_state_text(&t.state, &t.who, t.percent));
+    match t.state.as_str() {
+        "uploading" => Some(format!("{} to {} · {state}", t.name, t.who)),
+        "sent" | "declined" | "withdrawn" | "failed" => Some(format!("{} · {state}", t.name)),
+        _ => None,
+    }
+}
+
+/// The hint, if it still says what it last said about `id`, says where that file has got to.
+fn hint_follows(id: &str) {
+    let Some(text) = with(|s| s.transfers.get(id).filter(|t| t.mine).and_then(hint_text)) else {
+        return;
+    };
+    let ours = HINT
+        .lock()
+        .ok()
+        .and_then(|g| g.clone())
+        .filter(|(i, _)| i == id);
+    let Some((_, said)) = ours else { return };
+    let id = id.to_string();
+    bg::post(move |app| {
+        if app.model.hint.as_deref() == Some(said.as_str()) {
+            app.model.hint = Some(text.clone());
+            app.model.touch();
+            if let Ok(mut g) = HINT.lock() {
+                *g = Some((id, text));
+            }
+        }
+    });
 }
 
 fn progress(id: &str, pct: u32) {
@@ -1041,6 +1612,7 @@ fn progress(id: &str, pct: u32) {
             t.percent = Some(pct);
         }
     });
+    hint_follows(id);
 }
 
 /// The cards' words follow their files.
@@ -1067,7 +1639,8 @@ fn refresh_cards(app: &mut App) {
 
 // ---- saving ----
 
-/// Save: ask the relay for it (the sender uploads it), then download it once it's ready.
+/// Save: accept it (the sender uploads it), then download it. From a relay that streams (`stream` in the answer),
+/// the download starts at once and reads each part as it lands; from an older one, once it's `ready`.
 fn save(app: &mut App, id: &str) {
     let Some(t) = with(|s| s.transfers.get(id).cloned()) else {
         return;
@@ -1093,17 +1666,27 @@ fn save(app: &mut App, id: &str) {
     refresh_cards(app);
     let id = id.to_string();
     bg::spawn("qcalc-share", move || {
-        let (status, _) = call("POST", &format!("/file/{id}/accept"), &[], &[], None);
+        let (status, o) = ask("POST", &format!("/file/{id}/accept"), &[]);
+        let stream = o["stream"].as_u64().unwrap_or(0);
         bg::post(move |app| {
             match status.as_str() {
-                "ok" => with(|s| {
-                    if let Some(t) = s.transfers.get_mut(&id)
-                        && t.state == "accepting"
-                    {
-                        t.state = "waiting".into();
+                "ok" => {
+                    let streams = streamable(stream);
+                    with(|s| {
+                        if let Some(inc) = s.incoming.get_mut(&id) {
+                            inc.stream = if streams { stream } else { 0 };
+                        }
+                        if let Some(t) = s.transfers.get_mut(&id)
+                            && t.state == "accepting"
+                        {
+                            t.state = "waiting".into();
+                        }
+                    });
+                    if streams && is_state(&id, "waiting") {
+                        download(&id);
                     }
-                }),
-                // already accepted: it may be ready
+                }
+                // already accepted: it may be ready, or streaming
                 "busy" => download(&id),
                 _ => set_state(
                     &id,
@@ -1117,65 +1700,54 @@ fn save(app: &mut App, id: &str) {
     });
 }
 
+/// A part length this app can open part by part: whole sealed chunks.
+fn streamable(stream: u64) -> bool {
+    stream > 0 && stream.is_multiple_of(SEALED_CHUNK)
+}
+
+fn is_state(id: &str, state: &str) -> bool {
+    with(|s| s.transfers.get(id).is_some_and(|t| t.state == state))
+}
+
+/// Downloads it into a hidden partial file beside where it lands, opening each sealed chunk as it comes (so
+/// there's no second pass): part by part as they land when it streams, else in one once it's `ready`. Checked
+/// (length, size, SHA-256), marked with the Mark of the Web, then moved in whole under a free name. Nothing partial is
+/// left behind.
 fn download(id: &str) {
     let Some((t, inc)) =
         with(|s| Some((s.transfers.get(id)?.clone(), s.incoming.get(id)?.clone())))
     else {
         return;
     };
+    if t.state == "downloading" {
+        return;
+    }
     set_state(id, "downloading", Some(0), None);
     let id = id.to_string();
     bg::spawn("qcalc-share-down", move || {
-        let sealed = temp().join(crypt::new_id());
-        let result = (|| {
-            let mut file = std::fs::File::create(&sealed).map_err(|_| "disk".to_string())?;
-            let mut got: u64 = 0;
-            let mut shown = 0u32;
-            let mut over = false;
-            let status = {
-                let mut sink = |piece: &[u8]| {
-                    use std::io::Write;
-                    got += piece.len() as u64;
-                    // never more than the length that was offered, whatever the relay sends
-                    if got > inc.bytes || file.write_all(piece).is_err() {
-                        over = true;
-                        return false;
-                    }
-                    let pct = (got * 100 / inc.bytes.max(1)) as u32;
-                    if pct >= shown + 5 {
-                        shown = pct;
-                        let id = id.clone();
-                        bg::post(move |app| {
-                            progress(&id, pct);
-                            refresh_cards(app);
-                        });
-                    }
-                    true
-                };
-                call("GET", &format!("/file/{id}"), &[], &[], Some(&mut sink)).0
-            };
-            if over {
-                return Err("corrupt".to_string());
-            }
-            if status != "ok" {
-                return Err(status);
-            }
-            drop(file);
-            let key = crypt::file_key(&inc.key).ok_or("corrupt")?;
-            let dir = downloads().ok_or("disk")?;
-            crypt::safe_save(&sealed, &key, &inc.sha256, inc.size, &t.name, &dir)
-                .map_err(|e| e.status().to_string())
-        })();
-        let _ = std::fs::remove_file(&sealed);
+        let result = Download {
+            id: &id,
+            inc: &inc,
+            shown: AtomicU32::new(0),
+        }
+        .run(&t.name);
         bg::post(move |app| {
             match result {
-                Ok(path) => {
-                    qlog!("share in: saved {}", path.display());
-                    set_state(&id, "saved", None, None);
-                    with(|s| s.incoming.remove(&id));
+                Ok(path) => saved(app, &id, path),
+                // a sender that doesn't stream: it comes whole once it's `ready`
+                Err(s) if s == "whole" => {
+                    with(|s| {
+                        if let Some(inc) = s.incoming.get_mut(&id) {
+                            inc.stream = 0;
+                        }
+                    });
+                    set_state(&id, "waiting", None, None);
+                    download(&id);
                 }
                 // not uploaded yet: `ready` will come
                 Err(s) if s == "not-ready" => set_state(&id, "waiting", None, None),
+                // Cancel, or the sender took it back: its state is already said
+                Err(s) if s == "cancelled" => {}
                 Err(s) => set_state(&id, "failed", None, Some(core::file_error_text(&s, &t.who))),
             }
             refresh_cards(app);
@@ -1183,14 +1755,300 @@ fn download(id: &str) {
     });
 }
 
-/// The recipient turns it down.
+/// It's in Downloads: Show in Folder, and on the clipboard when settings says so.
+fn saved(app: &mut App, id: &str, path: PathBuf) {
+    qlog!("share in: saved {}", path.display());
+    set_state(id, "saved", None, None);
+    with(|s| {
+        s.incoming.remove(id);
+        if let Some(t) = s.transfers.get_mut(id) {
+            t.saved = Some(path.clone());
+            t.done_ms = crate::model::now_ms() as f64;
+        }
+    });
+    if app.store.settings.received_to_clipboard
+        && crate::clip::set_files(app.bar.hwnd, std::slice::from_ref(&path))
+    {
+        crate::a11y::announce("copied");
+    }
+}
+
+/// One download, on a worker.
+struct Download<'a> {
+    id: &'a str,
+    inc: &'a Incoming,
+    shown: AtomicU32,
+}
+
+/// Sealed bytes fed in any pieces, opened a whole chunk at a time.
+struct Opener<W: std::io::Write> {
+    open: crypt::StreamOpen,
+    held: Vec<u8>,
+    out: W,
+    got: u64,
+}
+
+impl<W: std::io::Write> Opener<W> {
+    fn feed(&mut self, mut piece: &[u8]) -> Result<(), crypt::Failure> {
+        let whole = SEALED_CHUNK as usize;
+        self.got += piece.len() as u64;
+        if !self.held.is_empty() {
+            let take = (whole - self.held.len()).min(piece.len());
+            self.held.extend_from_slice(&piece[..take]);
+            piece = &piece[take..];
+            if self.held.len() == whole {
+                self.open.part(&self.held, &mut self.out)?;
+                self.held.clear();
+            }
+        }
+        let full = piece.len() / whole * whole;
+        if full > 0 {
+            self.open.part(&piece[..full], &mut self.out)?;
+        }
+        self.held.extend_from_slice(&piece[full..]);
+        Ok(())
+    }
+
+    fn finish(mut self, sha256: &str) -> Result<W, crypt::Failure> {
+        if !self.held.is_empty() {
+            let held = std::mem::take(&mut self.held);
+            self.open.part(&held, &mut self.out)?;
+        }
+        self.out.flush().map_err(|_| crypt::Failure::Disk)?;
+        self.open.finish(sha256)?;
+        Ok(self.out)
+    }
+}
+
+impl Download<'_> {
+    fn run(&self, name: &str) -> Result<PathBuf, String> {
+        let key = crypt::file_key(&self.inc.key).ok_or("corrupt")?;
+        let dir = downloads().ok_or("disk")?;
+        crypt::sweep_partials(&dir, STALE_PARTIAL);
+        let partial = crypt::partial_in(&dir);
+        let result = (|| {
+            let file = crypt::create_partial(&partial).map_err(|e| e.status().to_string())?;
+            let mut opener = Opener {
+                open: crypt::StreamOpen::new(&key, self.inc.size)
+                    .map_err(|e| e.status().to_string())?,
+                held: Vec::new(),
+                out: std::io::BufWriter::with_capacity(1 << 20, file),
+                got: 0,
+            };
+            if self.inc.stream > 0 {
+                self.parts(&mut opener)?;
+            } else {
+                self.whole(&mut opener)?;
+            }
+            if opener.got != self.inc.bytes {
+                return Err("corrupt".into());
+            }
+            let file = opener
+                .finish(&self.inc.sha256)
+                .map_err(|e| e.status().to_string())?;
+            drop(file);
+            crypt::place(&partial, name, &dir).map_err(|e| e.status().to_string())
+        })();
+        if result.is_err() {
+            let _ = std::fs::remove_file(&partial);
+        }
+        result
+    }
+
+    fn stopped(&self) -> bool {
+        self.inc.landed.get().1
+    }
+
+    fn shown(&self, got: u64) {
+        let pct = (got * 100 / self.inc.bytes.max(1)).min(100) as u32;
+        if pct != self.shown.swap(pct, Ordering::Relaxed) {
+            let id = self.id.to_string();
+            bg::post(move |app| {
+                progress(&id, pct);
+                refresh_cards(app);
+            });
+        }
+    }
+
+    /// In one, once it's all uploaded (never more than the length that was offered, whatever the relay sends).
+    fn whole<W: std::io::Write>(&self, opener: &mut Opener<W>) -> Result<(), String> {
+        let mut bad: Option<String> = None;
+        let status = {
+            let mut sink = |piece: &[u8]| {
+                if self.stopped() {
+                    bad = Some("cancelled".into());
+                    return false;
+                }
+                if opener.got + piece.len() as u64 > self.inc.bytes {
+                    bad = Some("corrupt".into());
+                    return false;
+                }
+                if let Err(e) = opener.feed(piece) {
+                    bad = Some(e.status().into());
+                    return false;
+                }
+                self.shown(opener.got);
+                true
+            };
+            ask_into(&format!("/file/{}", self.id), &mut sink)
+        };
+        if let Some(b) = bad {
+            return Err(b);
+        }
+        if status != "ok" {
+            return Err(status);
+        }
+        Ok(())
+    }
+
+    /// Part by part as they land, a few read side by side and opened in order.
+    fn parts<W: std::io::Write>(&self, opener: &mut Opener<W>) -> Result<(), String> {
+        let size = self.inc.stream;
+        let count = self.inc.bytes.div_ceil(size).max(1);
+        struct Shelf {
+            next: u64,
+            opened: u64,
+            got: BTreeMap<u64, Result<Vec<u8>, String>>,
+            stop: bool,
+        }
+        let shelf = Mutex::new(Shelf {
+            next: 1,
+            opened: 0,
+            got: BTreeMap::new(),
+            stop: false,
+        });
+        let cv = Condvar::new();
+        let length = |n: u64| size.min(self.inc.bytes - (n - 1) * size);
+        let fetch = |n: u64| -> Result<Vec<u8>, String> {
+            let len = length(n) as usize;
+            let mut tries = 0;
+            let asked = std::time::Instant::now();
+            loop {
+                // nothing from the sender for this long: they quit or went offline mid-way (Save asks again)
+                if asked.elapsed() > STALLED {
+                    return Err("sender-offline".into());
+                }
+                if self.stopped() || shelf.lock().map_or(true, |s| s.stop) {
+                    return Err("cancelled".into());
+                }
+                let seen = self.inc.landed.get().0;
+                let mut buf = Vec::with_capacity(len);
+                let mut over = false;
+                let status = {
+                    let mut sink = |piece: &[u8]| {
+                        if buf.len() + piece.len() > len {
+                            over = true;
+                            return false;
+                        }
+                        buf.extend_from_slice(piece);
+                        true
+                    };
+                    ask_into(&format!("/file/{}/part/{n}", self.id), &mut sink)
+                };
+                match status.as_str() {
+                    "ok" if !over && buf.len() == len => return Ok(buf),
+                    "ok" => return Err("corrupt".into()),
+                    // not in yet: its `part` event (or a second and a half) says to look again
+                    "not-ready" => {
+                        let _ = self.inc.landed.wait_for(seen + 1, 1500);
+                    }
+                    // the relay out of reach for a moment: looked for again, as long as it hasn't stalled (the
+                    // inbox opening again wakes it at once)
+                    s if RETRYABLE.contains(&s) => {
+                        tries = (tries + 1).min(4);
+                        let _ = self.inc.landed.wait_for(seen + 1, 500 << tries);
+                    }
+                    _ => return Err(status),
+                }
+            }
+        };
+        let mut failure = None;
+        std::thread::scope(|scope| {
+            for _ in 0..FETCHES {
+                scope.spawn(|| {
+                    loop {
+                        let n = {
+                            let Ok(mut s) = shelf.lock() else { return };
+                            // never more than FETCHES parts ahead of the one being opened
+                            while !s.stop && s.next <= count && s.next > s.opened + FETCHES as u64 {
+                                s = match cv.wait(s) {
+                                    Ok(s) => s,
+                                    Err(_) => return,
+                                };
+                            }
+                            if s.stop || s.next > count {
+                                return;
+                            }
+                            s.next += 1;
+                            s.next - 1
+                        };
+                        let r = fetch(n);
+                        let failed = r.is_err();
+                        if let Ok(mut s) = shelf.lock() {
+                            s.got.insert(n, r);
+                        }
+                        cv.notify_all();
+                        if failed {
+                            return;
+                        }
+                    }
+                });
+            }
+            for n in 1..=count {
+                let part = {
+                    let Ok(mut s) = shelf.lock() else {
+                        failure = Some("disk".to_string());
+                        break;
+                    };
+                    loop {
+                        if let Some(p) = s.got.remove(&n) {
+                            break p;
+                        }
+                        s = match cv.wait(s) {
+                            Ok(s) => s,
+                            Err(_) => return,
+                        };
+                    }
+                };
+                let opened =
+                    part.and_then(|data| opener.feed(&data).map_err(|e| e.status().to_string()));
+                if let Err(e) = opened {
+                    failure = Some(e);
+                    break;
+                }
+                self.shown(opener.got);
+                if let Ok(mut s) = shelf.lock() {
+                    s.opened = n;
+                }
+                cv.notify_all();
+            }
+            if let Ok(mut s) = shelf.lock() {
+                s.stop = true;
+            }
+            cv.notify_all();
+        });
+        match failure {
+            Some(e) => Err(e),
+            None => Ok(()),
+        }
+    }
+}
+
+/// A GET whose 200 goes to `sink`.
+fn ask_into(path: &str, sink: &mut dyn FnMut(&[u8]) -> bool) -> String {
+    call("GET", path, &[], crate::relay::Body::Bytes(&[]), Some(sink)).0
+}
+
+/// The recipient turns it down, or stops it on its way (Cancel): the download stops and the sender hears.
 fn decline(id: &str) {
-    with(|s| s.incoming.remove(id));
+    if let Some(inc) = with(|s| s.incoming.remove(id)) {
+        inc.landed.end();
+    }
     set_state(id, "refused", None, None);
     forget_offer(id);
 }
 
-/// A file's event from the inbox: accepted (the sender's), ready, cancelled (the recipient's), declined.
+/// A file's event from the inbox: accepted (the sender's), part and ready, cancelled (the recipient's), declined.
 fn file_event(app: &mut App, e: &Value) {
     let Some(id) = e["id"]
         .as_str()
@@ -1201,10 +2059,31 @@ fn file_event(app: &mut App, e: &Value) {
     match e["event"].as_str() {
         Some("accepted") => {
             if let Some(grant) = e["grant"].as_str() {
-                upload(id, grant, e["partBytes"].as_u64().unwrap_or(PART_BYTES));
+                let stream = e["stream"].as_u64().unwrap_or(0);
+                if with(|s| s.outgoing.contains_key(id)) {
+                    upload(id, grant, stream);
+                } else {
+                    // accepted before the offer's own answer came back (the recipient saves on their own): kept for
+                    // it a little while; a file this app doesn't know at all is let go then
+                    with(|s| {
+                        s.early.insert(
+                            id.to_string(),
+                            (grant.to_string(), stream, std::time::Instant::now()),
+                        )
+                    });
+                    forget_early_later();
+                }
+            }
+        }
+        Some("part") => {
+            if let Some(inc) = with(|s| s.incoming.get(id).cloned()) {
+                inc.landed.bump();
             }
         }
         Some("ready") => {
+            if let Some(inc) = with(|s| s.incoming.get(id).cloned()) {
+                inc.landed.bump();
+            }
             if with(|s| {
                 s.transfers
                     .get(id)
@@ -1214,10 +2093,12 @@ fn file_event(app: &mut App, e: &Value) {
             }
         }
         Some("cancelled") => {
-            with(|s| {
-                s.incoming.remove(id);
+            if let Some(inc) = with(|s| {
                 s.held.retain(|h| h.2.as_deref() != Some(id));
-            });
+                s.incoming.remove(id)
+            }) {
+                inc.landed.end();
+            }
             if with(|s| s.transfers.get(id).is_some_and(|t| t.state != "saved")) {
                 set_state(id, "cancelled", None, None);
             }
@@ -1229,6 +2110,30 @@ fn file_event(app: &mut App, e: &Value) {
         _ => {}
     }
     refresh_cards(app);
+}
+
+/// Early accepts nobody claimed in 20 s are for files this app doesn't know (it restarted): the relay lets them go.
+fn forget_early_later() {
+    crate::later::free("share-early", 20_000, || {
+        let old: Vec<String> = with(|s| {
+            let old: Vec<String> = s
+                .early
+                .iter()
+                .filter(|(_, (_, _, at))| at.elapsed() >= std::time::Duration::from_secs(19))
+                .map(|(id, _)| id.clone())
+                .collect();
+            for id in &old {
+                s.early.remove(id);
+            }
+            old
+        });
+        for id in old {
+            forget_offer(&id);
+        }
+        if with(|s| !s.early.is_empty()) {
+            forget_early_later();
+        }
+    });
 }
 
 // ---- cards ----
@@ -1252,23 +2157,34 @@ pub fn acts(card: &str) -> Vec<(Act, String)> {
     }
 }
 
-/// A file's buttons, in a card or a thread line: Retry for a failed upload, Save for an accepted name's file.
+/// A file's buttons, in a card or a thread line, rightmost first (the Mac's FileRow): the sender's Retry and Take
+/// Back; the recipient's Save (an accepted name's), Cancel while it's on its way, and Show in Folder once it's in.
 pub fn file_acts(id: &str) -> Vec<(Act, String)> {
-    if can_retry(id) {
-        return vec![(Act::Retry, "Retry".into())];
+    with(|s| file_acts_in(s, id))
+}
+
+fn file_acts_in(s: &Share, id: &str) -> Vec<(Act, String)> {
+    let Some(t) = s.transfers.get(id) else {
+        return Vec::new();
+    };
+    let (mine, st, who, saved) = (t.mine, t.state.as_str(), t.who.as_str(), t.saved.is_some());
+    if mine {
+        let mut out = Vec::new();
+        let retry = st == "failed" && s.outgoing.contains_key(id);
+        if retry || st == "offered" || st == "uploading" {
+            out.push((Act::TakeBack, "Take Back".into()));
+        }
+        if retry {
+            out.push((Act::Retry, "Retry".into()));
+        }
+        return out;
     }
-    let state = with(|s| {
-        s.transfers
-            .get(id)
-            .map(|t| (t.mine, t.state.clone(), t.who.clone()))
-    });
-    match state {
-        Some((false, st, who))
-            if (st == "received" || st == "failed")
-                && crate::messaging::arrival_of(&who) == Arrival::Show =>
-        {
+    match st {
+        "received" | "failed" if crate::messaging::arrival_of(who) == Arrival::Show => {
             vec![(Act::Save, "Save".into())]
         }
+        "accepting" | "waiting" | "downloading" => vec![(Act::Cancel, "Cancel".into())],
+        "saved" if saved => vec![(Act::Reveal, "Show in Folder".into())],
         _ => Vec::new(),
     }
 }
@@ -1284,24 +2200,59 @@ pub fn line_state(id: &str, mine: bool, who: &str) -> (String, Option<u32>) {
                 .clone()
                 .unwrap_or_else(|| core::file_state_text(&t.state, &t.who, t.percent));
             let pct = matches!(t.state.as_str(), "uploading" | "downloading")
-                .then_some(t.percent)
-                .flatten();
+                .then_some(t.percent.unwrap_or(0));
             (words, pct)
         }
         None => (core::file_state_text("lost", who, None), None),
     })
 }
 
-/// Save or Retry on a file (a card's, a thread line's).
-pub fn file_act(app: &mut App, id: &str, retry: bool) {
-    if retry {
-        if can_retry(id) {
-            upload(id, "", PART_BYTES);
+/// A file's button was pressed (a card's, a thread line's).
+pub fn file_act(app: &mut App, id: &str, act: Act) {
+    match act {
+        Act::Retry => {
+            if can_retry(id) {
+                upload(id, "", 0);
+            }
         }
-    } else {
-        save(app, id);
+        Act::Save => save(app, id),
+        Act::TakeBack => take_back(id),
+        Act::Cancel => {
+            if with(|s| {
+                s.transfers.get(id).is_some_and(|t| {
+                    !t.mine && matches!(t.state.as_str(), "accepting" | "waiting" | "downloading")
+                })
+            }) {
+                decline(id);
+            }
+        }
+        Act::Reveal => {
+            if let Some(p) = with(|s| s.transfers.get(id).and_then(|t| t.saved.clone())) {
+                reveal(&p);
+            }
+        }
+        _ => {}
     }
     refresh_cards(app);
+}
+
+/// Explorer opens on the saved file's folder with it selected (nothing is opened or run).
+fn reveal(path: &Path) {
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+    use windows::core::HSTRING;
+    let args = HSTRING::from(format!("/select,\"{}\"", path.display()));
+    // SAFETY: live wide strings for the call's length
+    unsafe {
+        ShellExecuteW(
+            None,
+            &HSTRING::from("open"),
+            &HSTRING::from("explorer.exe"),
+            &args,
+            windows::core::PCWSTR::null(),
+            SW_SHOWNORMAL,
+        );
+    }
 }
 
 /// Trust New Key (a card's, the thread's): their new key is pinned, the safety code said, and what they sent while
@@ -1353,7 +2304,11 @@ pub fn debug_state() -> Value {
             .map(|(id, t)| {
                 json!({ "id": id, "mine": t.mine, "who": t.who, "name": t.name, "size": t.size,
                     "state": t.state, "percent": t.percent, "error": t.error,
-                    "retry": s.outgoing.contains_key(id) && t.mine && t.state == "failed" })
+                    "retry": s.outgoing.contains_key(id) && t.mine && t.state == "failed",
+                    "saved": t.saved.as_ref().map(|p| p.display().to_string()),
+                    "stream": s.incoming.get(id).map_or(0, |i| i.stream),
+                    "acts": file_acts_in(s, id).into_iter().map(|(_, l)| l).collect::<Vec<_>>(),
+                    "startedMs": t.started_ms, "doneMs": t.done_ms })
             })
             .collect();
         let cards: BTreeMap<&String, String> =
@@ -1372,7 +2327,7 @@ pub fn holds(card: &str) -> bool {
         s.transfers.get(&id).is_some_and(|t| {
             !matches!(
                 t.state.as_str(),
-                "saved" | "sent" | "declined" | "cancelled" | "refused" | "lost"
+                "saved" | "sent" | "declined" | "cancelled" | "refused" | "lost" | "withdrawn"
             )
         })
     })
@@ -1388,8 +2343,10 @@ pub fn act(app: &mut App, card: &str, act: Act) {
             app.model.to_clipboard = Some(c);
             say(app, "copied".into());
         }
-        (Act::Save, Kind::File(id)) => save(app, &id),
-        (Act::Retry, Kind::File(id)) => upload(&id, "", PART_BYTES),
+        (
+            act @ (Act::Save | Act::Retry | Act::TakeBack | Act::Cancel | Act::Reveal),
+            Kind::File(id),
+        ) => file_act(app, &id, act),
         (Act::Trust, Kind::KeyChanged(who)) => trust(app, &who),
         _ => {}
     }
@@ -1538,13 +2495,8 @@ mod tests {
             s.transfers.insert(
                 "a".repeat(32),
                 Transfer {
-                    mine: false,
-                    who: "max".into(),
-                    name: "notes.pdf".into(),
-                    size: 1_200_000,
-                    state: "downloading".into(),
                     percent: Some(40),
-                    error: None,
+                    ..Transfer::new(false, "max", "notes.pdf", 1_200_000, "downloading")
                 },
             );
         });
@@ -1554,6 +2506,8 @@ mod tests {
         );
         remember_card("c1", Kind::File("a".repeat(32)));
         assert!(holds("c1"));
+        // on its way, it can be stopped
+        assert_eq!(acts("c1"), vec![(Act::Cancel, "Cancel".to_string())]);
         set_state(&"a".repeat(32), "received", None, None);
         // max isn't an accepted name here: no Save until they're allowed (a request's file waits)
         assert!(acts("c1").is_empty());
@@ -1576,5 +2530,67 @@ mod tests {
         set_state(&"a".repeat(32), "saved", None, None);
         assert!(!holds("c1"));
         assert!(acts("c1").is_empty());
+        with(|s| s.transfers.get_mut(&"a".repeat(32)).unwrap().saved = Some("x".into()));
+        assert_eq!(
+            acts("c1"),
+            vec![(Act::Reveal, "Show in Folder".to_string())]
+        );
+        // the sender's: Take Back while it's offered or going, nothing once it's sent
+        with(|s| {
+            s.transfers.insert(
+                "c".repeat(32),
+                Transfer::new(true, "max", "a.bin", 5, "offered"),
+            )
+        });
+        assert_eq!(
+            file_acts(&"c".repeat(32)),
+            vec![(Act::TakeBack, "Take Back".to_string())]
+        );
+        set_state(&"c".repeat(32), "sent", None, None);
+        assert!(file_acts(&"c".repeat(32)).is_empty());
+    }
+
+    #[test]
+    fn a_download_opens_whatever_pieces_it_comes_in() {
+        let dir = std::env::temp_dir().join(format!("qcalc-share-open-{}", crypt::new_id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let key = crypt::new_file_key();
+        let plain: Vec<u8> = (0..crypt::CHUNK * 2 + 99)
+            .map(|i| (i % 241) as u8)
+            .collect();
+        let (src, sealed) = (dir.join("p"), dir.join("s"));
+        std::fs::write(&src, &plain).unwrap();
+        let sha = crypt::encrypt_file(&src, &sealed, &key, |_| {}).unwrap();
+        let bytes = std::fs::read(&sealed).unwrap();
+        for cut in [1usize, 7, 65_536, crypt::CHUNK + crypt::TAG, 3_000_000] {
+            let mut o = Opener {
+                open: crypt::StreamOpen::new(&key, plain.len() as u64).unwrap(),
+                held: Vec::new(),
+                out: Vec::new(),
+                got: 0,
+            };
+            for piece in bytes.chunks(cut) {
+                o.feed(piece).unwrap();
+            }
+            assert_eq!(o.got, bytes.len() as u64);
+            assert_eq!(o.finish(&sha).unwrap(), plain);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_signal_wakes_its_waiters() {
+        let s = Arc::new(Signal::default());
+        assert_eq!(s.wait_for(1, 10), None);
+        let t = {
+            let s = s.clone();
+            std::thread::spawn(move || s.wait_for(3, 5_000))
+        };
+        s.set(3);
+        assert_eq!(t.join().unwrap(), Some(true));
+        s.bump();
+        assert_eq!(s.get(), (4, false));
+        s.end();
+        assert_eq!(s.wait_for(10, 5_000), Some(false));
     }
 }

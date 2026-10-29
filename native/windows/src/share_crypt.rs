@@ -231,12 +231,28 @@ fn read_full(r: &mut impl Read, buf: &mut [u8]) -> std::io::Result<usize> {
     Ok(got)
 }
 
-/// `source` sealed into `dest`; the plain bytes' SHA-256 as hex. `progress` hears the fraction done.
+/// The plain bytes' SHA-256 as hex, read once (what an offer's facts carry, before the file is sealed).
+pub fn hash_file(source: &Path) -> Result<String, Failure> {
+    let mut input = File::open(source).map_err(|_| Failure::Unreadable)?;
+    let mut hash = Sha256::new();
+    let mut buf = vec![0u8; CHUNK];
+    loop {
+        let got = read_full(&mut input, &mut buf).map_err(|_| Failure::Unreadable)?;
+        if got == 0 {
+            break;
+        }
+        hash.update(&buf[..got]);
+    }
+    Ok(hex(&hash.finalize()))
+}
+
+/// `source` sealed into `dest`; the plain bytes' SHA-256 as hex. `progress` hears how many sealed bytes are in
+/// `dest` so far, after each chunk (an upload reads up to there while the rest is sealed).
 pub fn encrypt_file(
     source: &Path,
     dest: &Path,
     key: &[u8; 32],
-    mut progress: impl FnMut(f64),
+    mut progress: impl FnMut(u64),
 ) -> Result<String, Failure> {
     let mut input = File::open(source).map_err(|_| Failure::Unreadable)?;
     let total = input.metadata().map_err(|_| Failure::Unreadable)?.len();
@@ -246,6 +262,7 @@ pub fn encrypt_file(
     let mut hash = Sha256::new();
     let mut buf = vec![0u8; CHUNK];
     let mut read: u64 = 0;
+    let mut sealed: u64 = 0;
     for i in 0..chunks {
         let want = (CHUNK as u64).min(total - read) as usize;
         let got = read_full(&mut input, &mut buf[..want]).map_err(|_| Failure::Unreadable)?;
@@ -265,7 +282,8 @@ pub fn encrypt_file(
             )
             .map_err(|_| Failure::Disk)?;
         output.write_all(&ct).map_err(|_| Failure::Disk)?;
-        progress((i + 1) as f64 / chunks as f64);
+        sealed += ct.len() as u64;
+        progress(sealed);
     }
     output.flush().map_err(|_| Failure::Disk)?;
     Ok(hex(&hash.finalize()))
@@ -319,6 +337,74 @@ pub fn decrypt_file(
         return Err(Failure::Corrupt);
     }
     Ok(())
+}
+
+/// A download opened as its parts land (a streamed file, relay/src/files.js `streamPartBytes`): each part is whole
+/// sealed chunks, opened in order into `out` with the hash kept running; `finish` checks the size and SHA-256 the
+/// sender sealed. Anything that doesn't open is `Corrupt`.
+pub struct StreamOpen {
+    cipher: Aes256Gcm,
+    hash: Sha256,
+    chunks: u64,
+    next: u64,
+    written: u64,
+    size: u64,
+}
+
+impl StreamOpen {
+    pub fn new(key: &[u8; 32], size: u64) -> Result<StreamOpen, Failure> {
+        Ok(StreamOpen {
+            cipher: Aes256Gcm::new_from_slice(key).map_err(|_| Failure::Corrupt)?,
+            hash: Sha256::new(),
+            chunks: size.div_ceil(CHUNK as u64).max(1),
+            next: 0,
+            written: 0,
+            size,
+        })
+    }
+
+    /// The next part's sealed bytes, opened and written to `out`.
+    pub fn part(&mut self, sealed: &[u8], out: &mut impl Write) -> Result<(), Failure> {
+        for piece in sealed.chunks(CHUNK + TAG) {
+            if piece.len() < TAG || self.next >= self.chunks {
+                return Err(Failure::Corrupt);
+            }
+            let last = self.next == self.chunks - 1;
+            // only the last chunk may be short
+            if !last && piece.len() != CHUNK + TAG {
+                return Err(Failure::Corrupt);
+            }
+            let plain = self
+                .cipher
+                .decrypt(
+                    Nonce::from_slice(&chunk_nonce(self.next)),
+                    Payload {
+                        msg: piece,
+                        aad: &chunk_aad(self.next, last),
+                    },
+                )
+                .map_err(|_| Failure::Corrupt)?;
+            self.written += plain.len() as u64;
+            if self.written > self.size {
+                return Err(Failure::Corrupt);
+            }
+            self.hash.update(&plain);
+            out.write_all(&plain).map_err(|_| Failure::Disk)?;
+            self.next += 1;
+        }
+        Ok(())
+    }
+
+    /// Every chunk came, the size is the sender's and so is the hash.
+    pub fn finish(self, sha256: &str) -> Result<(), Failure> {
+        if self.next != self.chunks
+            || self.written != self.size
+            || hex(&self.hash.finalize()) != sha256
+        {
+            return Err(Failure::Corrupt);
+        }
+        Ok(())
+    }
 }
 
 // ---- saving ----
@@ -381,9 +467,8 @@ pub fn safe_save(
     {
         return Err(Failure::Size);
     }
-    let name = core::clean_filename(name);
     // hidden, beside where it lands (same volume, so the move is a rename and the mark goes with it)
-    let partial = dir.join(format!(".qcalc-{}.partial", new_id()));
+    let partial = partial_in(dir);
     let done = (|| {
         decrypt_file(sealed, &partial, key, sha256, size).map_err(|e| {
             if e == Failure::Disk {
@@ -392,28 +477,88 @@ pub fn safe_save(
                 Failure::Corrupt
             }
         })?;
-        if !mark_of_the_web(&partial) {
-            return Err(Failure::Disk);
-        }
-        for n in 1..=999u32 {
-            let candidate = core::numbered_name(&name, n);
-            if candidate.contains(['/', '\\', ':']) || candidate.starts_with('.') {
-                continue;
-            }
-            let dest = dir.join(&candidate);
-            if dest.parent() != Some(dir) || dest.exists() {
-                continue;
-            }
-            if move_new(&partial, &dest) {
-                return Ok(dest);
-            }
-        }
-        Err(Failure::Disk)
+        place(&partial, name, dir)
     })();
     if done.is_err() {
         let _ = std::fs::remove_file(&partial);
     }
     done
+}
+
+const PARTIAL_PREFIX: &str = ".qcalc-";
+const PARTIAL_EXT: &str = ".partial";
+
+/// Where a download is opened before it's checked: hidden, in the folder it lands in, never a name a saved file
+/// could have.
+pub fn partial_in(dir: &Path) -> PathBuf {
+    dir.join(format!("{PARTIAL_PREFIX}{}{PARTIAL_EXT}", new_id()))
+}
+
+/// A partial file made hidden (it never shows in Explorer while it's being written).
+pub fn create_partial(path: &Path) -> Result<File, Failure> {
+    use std::os::windows::fs::OpenOptionsExt;
+    const FILE_ATTRIBUTE_HIDDEN: u32 = 2;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .attributes(FILE_ATTRIBUTE_HIDDEN)
+        .open(path)
+        .map_err(|_| Failure::Disk)
+}
+
+/// Partial files left in `dir` by a download that never finished (the app quit or crashed mid-way), older than
+/// `age`, go.
+pub fn sweep_partials(dir: &Path, age: std::time::Duration) {
+    let Ok(list) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for e in list.flatten() {
+        let name = e.file_name().to_string_lossy().into_owned();
+        if !(name.starts_with(PARTIAL_PREFIX) && name.ends_with(PARTIAL_EXT)) {
+            continue;
+        }
+        let old = e
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|t| t.elapsed().ok())
+            .is_some_and(|d| d >= age);
+        if old {
+            let _ = std::fs::remove_file(e.path());
+        }
+    }
+}
+
+/// A checked partial file marked with the Mark of the Web, made visible and moved into `dir` as `name` (cleaned
+/// again here), or the next free numbered name: it appears there whole, at once. The partial stays on failure (the
+/// caller removes it).
+pub fn place(partial: &Path, name: &str, dir: &Path) -> Result<PathBuf, Failure> {
+    use windows::Win32::Storage::FileSystem::{FILE_ATTRIBUTE_NORMAL, SetFileAttributesW};
+    let name = core::clean_filename(name);
+    if !mark_of_the_web(partial) {
+        return Err(Failure::Disk);
+    }
+    // SAFETY: a live wide string
+    let _ = unsafe {
+        SetFileAttributesW(
+            &windows::core::HSTRING::from(partial.as_os_str()),
+            FILE_ATTRIBUTE_NORMAL,
+        )
+    };
+    for n in 1..=999u32 {
+        let candidate = core::numbered_name(&name, n);
+        if candidate.contains(['/', '\\', ':']) || candidate.starts_with('.') {
+            continue;
+        }
+        let dest = dir.join(&candidate);
+        if dest.parent() != Some(dir) || dest.exists() {
+            continue;
+        }
+        if move_new(partial, &dest) {
+            return Ok(dest);
+        }
+    }
+    Err(Failure::Disk)
 }
 
 #[cfg(test)]
@@ -589,6 +734,62 @@ mod tests {
             Err(Failure::Size)
         );
         assert_eq!(std::fs::read_dir(&d).unwrap().count(), before);
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn a_streamed_download_opens_part_by_part_and_only_whole() {
+        let d = scratch("stream");
+        let key = new_file_key();
+        let plain: Vec<u8> = (0..CHUNK * 3 + 7).map(|i| (i % 253) as u8).collect();
+        let (src, sealed) = (d.join("in.bin"), d.join("sealed.bin"));
+        std::fs::write(&src, &plain).unwrap();
+        let mut seen = Vec::new();
+        let sha = encrypt_file(&src, &sealed, &key, |n| seen.push(n)).unwrap();
+        assert_eq!(sha, hash_file(&src).unwrap());
+        // each chunk's end, the last the whole length
+        assert_eq!(seen.len(), 4);
+        assert_eq!(*seen.last().unwrap(), encrypted_length(plain.len() as u64));
+        let bytes = std::fs::read(&sealed).unwrap();
+        let size = plain.len() as u64;
+        // parts of two sealed chunks, as the relay cuts them
+        let parts: Vec<&[u8]> = bytes.chunks(2 * (CHUNK + TAG)).collect();
+        let mut out = Vec::new();
+        let mut open = StreamOpen::new(&key, size).unwrap();
+        for p in &parts {
+            open.part(p, &mut out).unwrap();
+        }
+        open.finish(&sha).unwrap();
+        assert_eq!(out, plain);
+        // a part missing, out of order, cut, or a wrong hash never finishes
+        let mut open = StreamOpen::new(&key, size).unwrap();
+        open.part(parts[0], &mut Vec::new()).unwrap();
+        assert_eq!(open.finish(&sha), Err(Failure::Corrupt));
+        let mut open = StreamOpen::new(&key, size).unwrap();
+        assert_eq!(open.part(parts[1], &mut Vec::new()), Err(Failure::Corrupt));
+        let mut open = StreamOpen::new(&key, size).unwrap();
+        assert_eq!(
+            open.part(&parts[0][..CHUNK], &mut Vec::new()),
+            Err(Failure::Corrupt)
+        );
+        let mut open = StreamOpen::new(&key, size).unwrap();
+        for p in &parts {
+            open.part(p, &mut Vec::new()).unwrap();
+        }
+        assert_eq!(open.finish(&"0".repeat(64)), Err(Failure::Corrupt));
+        // a partial is hidden until it's placed, and placing it marks it and shows it
+        let partial = partial_in(&d);
+        create_partial(&partial).unwrap().write_all(b"x").unwrap();
+        let placed = place(&partial, "done.txt", &d).unwrap();
+        assert_eq!(placed.file_name().unwrap(), "done.txt");
+        assert!(has_mark_of_the_web(&placed));
+        assert!(!partial.exists());
+        let stale = partial_in(&d);
+        drop(create_partial(&stale).unwrap());
+        sweep_partials(&d, std::time::Duration::from_secs(3600));
+        assert!(stale.exists());
+        sweep_partials(&d, std::time::Duration::ZERO);
+        assert!(!stale.exists());
         let _ = std::fs::remove_dir_all(&d);
     }
 }

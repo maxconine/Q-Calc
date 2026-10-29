@@ -125,6 +125,30 @@ fn session(receive_ms: i32) -> Option<Handle> {
     Some(s)
 }
 
+/// The one session the relay's requests share, made at the first one: WinHTTP keeps its connections open between
+/// requests (keep-alive), so after the first a request skips the TCP and TLS handshakes, and parts go side by side
+/// on connections of their own. Its handle lives as long as the process.
+struct Shared(Handle);
+
+// SAFETY: a WinHTTP session handle may be used from any thread, by several requests at once
+unsafe impl Send for Shared {}
+// SAFETY: as above
+unsafe impl Sync for Shared {}
+
+fn shared() -> Option<&'static Handle> {
+    static SESSION: std::sync::OnceLock<Option<Shared>> = std::sync::OnceLock::new();
+    SESSION
+        .get_or_init(|| session(10_000).map(Shared))
+        .as_ref()
+        .map(|s| &s.0)
+}
+
+/// A request's own receive timeout (the session's others stay).
+fn timeouts(req: &Handle, receive_ms: i32) {
+    // SAFETY: a live request handle
+    let _ = unsafe { WinHttpSetTimeouts(req.0, 10_000, 10_000, 30_000, receive_ms) };
+}
+
 fn request(base: &Base, connect: &Handle, verb: PCWSTR, path: &str) -> Option<Handle> {
     let flags = if base.secure {
         WINHTTP_FLAG_SECURE
@@ -180,12 +204,13 @@ pub fn post_value(path: &str, body: &serde_json::Value) -> (String, serde_json::
 }
 
 fn post_at(base: &Base, path: &str, body: &serde_json::Value) -> Option<serde_json::Value> {
-    let s = session(10_000)?;
+    let s = shared()?;
     // SAFETY: a live session; the host's HSTRING outlives the call
     let c = Handle::new(unsafe {
         WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0)
     })?;
     let r = request(base, &c, w!("POST"), path)?;
+    timeouts(&r, 10_000);
     let text = body.to_string();
     let header: Vec<u16> = "Content-Type: text/plain;charset=UTF-8"
         .encode_utf16()
@@ -241,43 +266,142 @@ pub fn status_of(code: u32, body: &serde_json::Value) -> String {
     .into()
 }
 
+/// What a file request sends.
+pub enum Body<'a> {
+    Bytes(&'a [u8]),
+    /// `len` bytes of a file from `offset`, read and sent a piece at a time (never all in memory). `stop` ends it
+    /// between pieces; `sent` hears each piece's length.
+    File {
+        path: &'a std::path::Path,
+        offset: u64,
+        len: u64,
+        stop: &'a AtomicBool,
+        sent: &'a (dyn Fn(u64) + Sync),
+    },
+}
+
+/// The piece a file body is read and written in.
+const PIECE: usize = 256 * 1024;
+
+/// Sends a file body's bytes on a request whose headers are out (WinHttpWriteData); false when it stopped or failed.
+fn write_file_body(
+    r: &Handle,
+    path: &std::path::Path,
+    offset: u64,
+    len: u64,
+    stop: &AtomicBool,
+    sent: &(dyn Fn(u64) + Sync),
+) -> bool {
+    use std::io::{Read, Seek, SeekFrom};
+    use windows::Win32::Networking::WinHttp::WinHttpWriteData;
+    let Ok(mut f) = std::fs::File::open(path) else {
+        return false;
+    };
+    if f.seek(SeekFrom::Start(offset)).is_err() {
+        return false;
+    }
+    let mut buf = vec![0u8; PIECE.min(len as usize).max(1)];
+    let mut left = len;
+    while left > 0 {
+        if stop.load(Ordering::Relaxed) {
+            return false;
+        }
+        let n = (left as usize).min(buf.len());
+        if f.read_exact(&mut buf[..n]).is_err() {
+            return false;
+        }
+        let mut done = 0usize;
+        while done < n {
+            let mut wrote = 0u32;
+            // SAFETY: a live request whose headers were sent with this body's length; the buffer outlives the call
+            if unsafe {
+                WinHttpWriteData(
+                    r.0,
+                    Some(buf[done..n].as_ptr().cast()),
+                    (n - done) as u32,
+                    &mut wrote,
+                )
+            }
+            .is_err()
+                || wrote == 0
+            {
+                return false;
+            }
+            done += wrote as usize;
+        }
+        left -= n as u64;
+        sent(n as u64);
+    }
+    true
+}
+
 /// A request to the relay for files (`/file/<id>/…`): `method`, extra `headers`, a `body`; a 200's body goes to
 /// `sink` piece by piece when given (false from it stops), else it's read as JSON. (status, the JSON). Blocking.
+/// Requests share one session (`shared`), so their connections are kept warm between them.
 pub fn call(
     method: &str,
     path: &str,
     headers: &[(&str, &str)],
-    body: &[u8],
+    body: Body,
     receive_ms: i32,
     mut sink: Sink,
 ) -> (String, serde_json::Value) {
     let base = base();
     let mut run = || -> Option<(u32, Vec<u8>)> {
-        let s = session(receive_ms)?;
+        let s = shared()?;
         // SAFETY: a live session; the host's HSTRING outlives the call
         let c = Handle::new(unsafe {
             WinHttpConnect(s.0, &HSTRING::from(base.host.as_str()), base.port, 0)
         })?;
         let verb = HSTRING::from(method);
         let r = request(&base, &c, PCWSTR(verb.as_ptr()), path)?;
+        timeouts(&r, receive_ms);
         let mut head = String::new();
         for (k, v) in headers {
             head.push_str(&format!("{k}: {v}\r\n"));
         }
         let head: Vec<u16> = head.encode_utf16().collect();
-        // SAFETY: a live request; the headers and body outlive the calls
-        unsafe {
-            WinHttpSendRequest(
-                r.0,
-                (!head.is_empty()).then_some(head.as_slice()),
-                (!body.is_empty()).then_some(body.as_ptr().cast()),
-                body.len() as u32,
-                body.len() as u32,
-                0,
-            )
-            .ok()?;
-            WinHttpReceiveResponse(r.0, std::ptr::null_mut()).ok()?;
+        match &body {
+            Body::Bytes(bytes) => {
+                // SAFETY: a live request; the headers and body outlive the calls
+                unsafe {
+                    WinHttpSendRequest(
+                        r.0,
+                        (!head.is_empty()).then_some(head.as_slice()),
+                        (!bytes.is_empty()).then_some(bytes.as_ptr().cast()),
+                        bytes.len() as u32,
+                        bytes.len() as u32,
+                        0,
+                    )
+                    .ok()?;
+                }
+            }
+            Body::File {
+                path,
+                offset,
+                len,
+                stop,
+                sent,
+            } => {
+                // SAFETY: a live request; the headers outlive the call; the body follows with WinHttpWriteData
+                unsafe {
+                    WinHttpSendRequest(
+                        r.0,
+                        (!head.is_empty()).then_some(head.as_slice()),
+                        None,
+                        0,
+                        *len as u32,
+                        0,
+                    )
+                    .ok()?;
+                }
+                if !write_file_body(&r, path, *offset, *len, stop, *sent) {
+                    return None;
+                }
+            }
         }
+        // SAFETY: a live request whose body is all sent
+        unsafe { WinHttpReceiveResponse(r.0, std::ptr::null_mut()) }.ok()?;
         let code = status_code(&r);
         let mut out = Vec::new();
         let mut buf = vec![0u8; 64 * 1024];

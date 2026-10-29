@@ -280,7 +280,14 @@ unsafe extern "system" fn relay_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
     unsafe { DefWindowProcW(hwnd, msg, wp, lp) }
 }
 
-/// A POST on a worker thread; its status comes back as `done(status)` made into an event.
+type SendJob = (Value, Box<dyn FnOnce(String) -> Event + Send>, Poster);
+
+/// Messages waiting to go, in the order they were sent, and whether a worker is sending them.
+static SENDS: std::sync::Mutex<(std::collections::VecDeque<SendJob>, bool)> =
+    std::sync::Mutex::new((std::collections::VecDeque::new(), false));
+
+/// A POST on a worker thread; its status comes back as `done(status)` made into an event. `/send`s go one after
+/// another on one worker, so messages typed quickly arrive in the order they were sent.
 fn post_later(
     path: &'static str,
     body: Value,
@@ -289,6 +296,38 @@ fn post_later(
     let Some(post) = with(poster) else {
         return;
     };
+    if path == "/send" {
+        let start = SENDS.lock().is_ok_and(|mut q| {
+            q.0.push_back((body, Box::new(done), post));
+            !std::mem::replace(&mut q.1, true)
+        });
+        if start {
+            let spawned = std::thread::Builder::new()
+                .name("qcalc-relay-send".into())
+                .spawn(|| {
+                    loop {
+                        let job = SENDS.lock().ok().and_then(|mut q| {
+                            let job = q.0.pop_front();
+                            if job.is_none() {
+                                q.1 = false;
+                            }
+                            job
+                        });
+                        let Some((body, done, post)) = job else {
+                            return;
+                        };
+                        post.send(done(relay::post("/send", &body)));
+                    }
+                });
+            if let Err(e) = spawned {
+                qlog!("messaging: no thread for /send: {e}");
+                if let Ok(mut q) = SENDS.lock() {
+                    q.1 = false;
+                }
+            }
+        }
+        return;
+    }
     let spawned = std::thread::Builder::new()
         .name("qcalc-relay-post".into())
         .spawn(move || post.send(done(relay::post(path, &body))));
@@ -676,6 +715,10 @@ pub enum Act {
     Save,
     Retry,
     Trust,
+    /// a file's Take Back (the sender's), Cancel (the recipient's, while it's on its way) and Show in Folder
+    TakeBack,
+    Cancel,
+    Reveal,
 }
 
 /// The cards under the bar (BarModel's `cards`, `cardsHovered`, `replyFocused`).
@@ -919,6 +962,12 @@ pub fn credentials() -> (String, String) {
 /// What arrives from `from` does: shown, asked about, or dropped (share.rs).
 pub fn arrival_of(from: &str) -> Arrival {
     with(|s| core::arrival(&s.m, from))
+}
+
+/// Whether `from`'s file of `size` bytes saves without asking under settings' `limit` (the core's autoAccept: an
+/// allowed name's, never a stranger's).
+pub fn auto_accept(from: &str, size: u64, limit: u64) -> bool {
+    with(|s| core::auto_accept(&s.m, from, size, limit))
 }
 
 /// A clip or file reached `to` (share.rs): they're a recent recipient now.
@@ -1230,7 +1279,7 @@ pub fn forget(who: &str) {
 
 /// The settings window's Messages page (settings_window.rs `MessagesHook`): the name and its status, turning off,
 /// the requests waiting, and the allowed and blocked names.
-fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
+fn settings_items(app: &App) -> Vec<crate::settings_window::Item> {
     use crate::settings_window::{Control, Item, row};
     let button = |label: &str| Control::Button {
         label: label.into(),
@@ -1256,6 +1305,8 @@ fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
                 enabled: !busy(),
             },
         ));
+        // saving files without asking, and copying them once saved (share.rs)
+        out.extend(crate::share::settings_items(app));
     }
     let asks = requests();
     if !asks.is_empty() {
@@ -1311,6 +1362,10 @@ fn settings_items(_app: &App) -> Vec<crate::settings_window::Item> {
 
 /// A change on the Messages page: the row's id and its new value.
 fn settings_changed(app: &mut App, id: &str, value: &Value) {
+    if crate::share::settings_changed(app, id, value) {
+        crate::settings_window::refresh(app);
+        return;
+    }
     match id {
         "name" => set_name(value.as_str().unwrap_or_default()),
         "off" => turn_off(),
@@ -1662,7 +1717,16 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
         return false;
     }
     match under(&app.gfx, &app.model, r, x, y) {
-        Some((id, act @ (Act::Copy | Act::Save | Act::Retry | Act::Trust))) => {
+        Some((
+            id,
+            act @ (Act::Copy
+            | Act::Save
+            | Act::Retry
+            | Act::Trust
+            | Act::TakeBack
+            | Act::Cancel
+            | Act::Reveal),
+        )) => {
             crate::share::act(app, &id, act);
         }
         Some((id, Act::Allow)) => answer_ask(app, &id, true),

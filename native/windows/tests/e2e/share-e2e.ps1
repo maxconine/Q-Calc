@@ -118,7 +118,8 @@ function New-Copy([string]$Name, [string]$Chord, [int]$SlowMs = 0) {
         Downloads = (Join-Path $dir 'downloads'); Chord = $Chord; Slow = $SlowMs; Proc = $null
     }
     New-Item -ItemType Directory -Force $c.Data, $c.Downloads | Out-Null
-    $store = @{ hotkey = $Chord; firstRunDone = $true; autoUpdate = $false; settings = @{ theme = 'light'; shareUsage = $false } }
+    # files ask for Save until the auto-accept checks turn it on (`prefs`)
+    $store = @{ hotkey = $Chord; firstRunDone = $true; autoUpdate = $false; settings = @{ theme = 'light'; shareUsage = $false; autoAcceptBytes = 0 } }
     [IO.File]::WriteAllText((Join-Path $c.Data 'settings.json'), ($store | ConvertTo-Json -Depth 6))
     $c
 }
@@ -395,6 +396,106 @@ try {
     $savedD = Wait-Until { (Transfer-Named $B 'retry by hand.bin' $false).state -eq 'saved' } 60000
     $sameD = $savedD -and ((Sha (Join-Path $B.Downloads 'retry by hand.bin')) -eq (Sha $fd))
     Check 'U3' 'Retry sends the rest once the relay is back, and the file arrives intact' $sameD "A: $((Transfer-Named $A 'retry by hand.bin' $true).state) B: $((Transfer-Named $B 'retry by hand.bin' $false).state)"
+
+    # ---- messages typed quickly arrive in order ----
+    Wait-Until { (St $A).messaging.link -eq 'Ready' -and (St $B).messaging.link -eq 'Ready' } 30000 | Out-Null
+    $burst = 1..10 | ForEach-Object { "quick $_" }
+    foreach ($m in $burst) { Share $A @{ op = 'text'; to = $B.User; text = $m } | Out-Null }
+    $inOrder = Wait-Until { $got = @(Thread-Of $B $A.User | Where-Object { $_.text -like 'quick *' } | ForEach-Object { $_.text }); ($got -join '|') -eq ($burst -join '|') } 15000
+    Check 'Q1' 'ten messages sent back to back arrive, in the order they were sent' $inOrder "$(@(Thread-Of $B $A.User | Where-Object { $_.text -like 'quick *' } | ForEach-Object { $_.text }) -join ', ')"
+
+    # ---- streaming, saving without asking, the clipboard ----
+    function No-Partials($c) { @(Get-ChildItem -Force -LiteralPath $c.Downloads -Filter '.qcalc-*' -ErrorAction SilentlyContinue).Count -eq 0 }
+    Share $B @{ op = 'prefs'; autoAccept = 100000000; clipboard = $true } | Out-Null
+    Share $A @{ op = 'prefs'; autoAccept = 100000000; clipboard = $false } | Out-Null
+    Start-Sleep -Milliseconds 300
+    $settingsB = Get-Content -Raw (Join-Path $B.Data 'settings.json') | ConvertFrom-Json
+    Check 'S0' 'Settings › Messages: saving without asking and copying received files are saved' ($settingsB.settings.autoAcceptBytes -eq 100000000 -and $settingsB.settings.receivedToClipboard -eq $true)
+
+    # alice uploads a part every 1.5 s (QCALC_E2E_SLOW_UPLOAD_MS): bob reads each one while the rest are still coming
+    $fs = New-Blob (Join-Path $Root 'streamed.bin') (9 * 1024 * 1024 + 321)
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fs) } | Out-Null
+    $overlap = Wait-Until { $tb = Transfer-Named $B 'streamed.bin' $false; $ta = Transfer-Named $A 'streamed.bin' $true; $tb.state -eq 'downloading' -and $tb.percent -gt 0 -and $ta.state -eq 'uploading' } 30000 50
+    $streamedSaved = Wait-Until { (Transfer-Named $B 'streamed.bin' $false).state -eq 'saved' } 60000
+    $tsb = Transfer-Named $B 'streamed.bin' $false
+    $pathS = Join-Path $B.Downloads 'streamed.bin'
+    Check 'S1' "an allowed name's file saves on its own, streamed, byte for byte" ($streamedSaved -and (Sha $pathS) -eq (Sha $fs) -and $tsb.saved -eq $pathS) "$($tsb | ConvertTo-Json -Compress)"
+    Check 'S2' 'the recipient reads parts while the sender is still uploading' $overlap
+    Check 'S3' 'one file per send in Downloads, nothing partial left' ((No-Partials $B) -and @(Get-ChildItem -LiteralPath $B.Downloads -Filter 'streamed*').Count -eq 1)
+    $drop = $null; $effect = $null
+    try {
+        $drop = [Windows.Forms.Clipboard]::GetFileDropList()
+        $ms = [Windows.Forms.Clipboard]::GetData('Preferred DropEffect')
+        if ($ms) { $buf = New-Object byte[] 4; $ms.Read($buf, 0, 4) | Out-Null; $effect = [BitConverter]::ToInt32($buf, 0) }
+    } catch {}
+    Check 'S4' 'the saved file is on the clipboard as a file to paste (copy)' ($drop -and $drop.Contains($pathS) -and $effect -eq 1) "drop: $($drop -join ';') effect: $effect"
+    Check 'S5' 'a saved file has Show in Folder' (@($tsb.acts) -contains 'Show in Folder') "$($tsb.acts -join ',')"
+    Check 'S6' 'the sender says sent, and the line under the bar follows it' ((Wait-Until { (Transfer-Named $A 'streamed.bin' $true).state -eq 'sent' } 20000) -and ((St $A).hint -like 'streamed.bin*sent to*')) "$((St $A).hint)"
+
+    # several at once
+    $many = @((New-Blob (Join-Path $Root 'many-1.bin') 1024), (New-Blob (Join-Path $Root 'many-2.bin') (1024 * 1024)), (New-Blob (Join-Path $Root 'many-3.bin') (2 * 1024 * 1024 + 9)))
+    Share $A @{ op = 'files'; to = $B.User; paths = $many } | Out-Null
+    $allIn = Wait-Until { @(1..3 | Where-Object { (Transfer-Named $B "many-$_.bin" $false).state -eq 'saved' }).Count -eq 3 } 60000
+    $allSame = $allIn -and @(1..3 | Where-Object { (Sha (Join-Path $B.Downloads "many-$_.bin")) -eq (Sha $many[$_ - 1]) }).Count -eq 3
+    Check 'S7' 'three files sent at once all save on their own, intact' $allSame
+
+    # over the size it asks
+    Share $B @{ op = 'prefs'; autoAccept = 10000000 } | Out-Null
+    Start-Sleep -Milliseconds 200
+    $fbig = New-Blob (Join-Path $Root 'over ten.bin') (11 * 1000 * 1000)
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fbig) } | Out-Null
+    $asks = Wait-Until { (Transfer-Named $B 'over ten.bin' $false).state -eq 'received' } 20000
+    Start-Sleep -Milliseconds 800
+    $tbig = Transfer-Named $B 'over ten.bin' $false
+    Check 'S8' 'a file over the size set waits for Save' ($asks -and $tbig.state -eq 'received' -and @($tbig.acts) -contains 'Save') "$($tbig | ConvertTo-Json -Compress)"
+    Share $B @{ op = 'save'; id = $tbig.id } | Out-Null
+    Check 'S9' 'Save streams it in' ((Wait-Until { (Transfer-Named $B 'over ten.bin' $false).state -eq 'saved' } 60000) -and (Sha (Join-Path $B.Downloads 'over ten.bin')) -eq (Sha $fbig))
+
+    # the recipient cancels mid-way, the sender takes one back mid-way: nothing is left either side
+    Share $B @{ op = 'prefs'; autoAccept = 100000000 } | Out-Null
+    $fc1 = New-Blob (Join-Path $Root 'cancel me.bin') (12 * 1024 * 1024)
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fc1) } | Out-Null
+    Wait-Until { (Transfer-Named $B 'cancel me.bin' $false).state -eq 'downloading' } 20000 50 | Out-Null
+    Share $B @{ op = 'cancel'; id = (Transfer-Named $B 'cancel me.bin' $false).id } | Out-Null
+    $declined = Wait-Until { (Transfer-Named $A 'cancel me.bin' $true).state -eq 'declined' } 20000
+    Start-Sleep -Milliseconds 500
+    Check 'X1' "Cancel stops the download, the sender hears it was turned down, nothing's left" ($declined -and (Transfer-Named $B 'cancel me.bin' $false).state -eq 'refused' -and (No-Partials $B) -and -not (Test-Path (Join-Path $B.Downloads 'cancel me.bin'))) "A: $((Transfer-Named $A 'cancel me.bin' $true).state) B: $((Transfer-Named $B 'cancel me.bin' $false).state)"
+    $fc2 = New-Blob (Join-Path $Root 'take me back.bin') (12 * 1024 * 1024)
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fc2) } | Out-Null
+    Wait-Until { (Transfer-Named $A 'take me back.bin' $true).state -eq 'uploading' } 20000 50 | Out-Null
+    Check 'X2a' 'Take Back shows while it uploads' (@((Transfer-Named $A 'take me back.bin' $true).acts) -contains 'Take Back')
+    Share $A @{ op = 'takeback'; id = (Transfer-Named $A 'take me back.bin' $true).id } | Out-Null
+    $tookBack = Wait-Until { (Transfer-Named $B 'take me back.bin' $false).state -eq 'cancelled' } 20000
+    Start-Sleep -Milliseconds 500
+    Check 'X2' "Take Back stops the upload, the recipient hears it, nothing's left" ($tookBack -and (Transfer-Named $A 'take me back.bin' $true).state -eq 'withdrawn' -and (No-Partials $B) -and -not (Test-Path (Join-Path $B.Downloads 'take me back.bin'))) "A: $((Transfer-Named $A 'take me back.bin' $true).state) B: $((Transfer-Named $B 'take me back.bin' $false).state)"
+
+    # a stranger's file always asks, whatever the size setting
+    Share $B @{ op = 'forget'; who = $A.User } | Out-Null
+    Start-Sleep -Milliseconds 300
+    $fst = New-Blob (Join-Path $Root 'from a stranger.bin') 2048
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fst) } | Out-Null
+    $req = Wait-Until { (Transfer-Named $B 'from a stranger.bin' $false).state -eq 'request' } 20000
+    Start-Sleep -Milliseconds 800
+    Check 'X3' "a stranger's file waits behind their request, never saved on its own" ($req -and (Transfer-Named $B 'from a stranger.bin' $false).state -eq 'request' -and -not (Test-Path (Join-Path $B.Downloads 'from a stranger.bin')))
+    Share $B @{ op = 'allow'; who = $A.User } | Out-Null
+    $tst = $null; Wait-Until { $tst = Transfer-Named $B 'from a stranger.bin' $false; $tst.state -eq 'received' } 10000 | Out-Null
+    Share $B @{ op = 'save'; id = (Transfer-Named $B 'from a stranger.bin' $false).id } | Out-Null
+    Check 'X4' 'once allowed, Save brings it in' (Wait-Until { (Transfer-Named $B 'from a stranger.bin' $false).state -eq 'saved' } 20000)
+
+    # a name with no key yet
+    $nk = Invoke-RestMethod -Method Post "$Relay/claim" -Body ('{"name":"nokey-e2e","key":"' + ('c3' * 32) + '"}')
+    Share $A @{ op = 'files'; to = 'nokey-e2e'; paths = @($fst) } | Out-Null
+    Check 'X5' 'a name with no key yet: it says they need a newer q calc, and nothing is offered' ($nk.status -eq 'ok' -and (Wait-Until { (St $A).hint -like '*needs a newer q calc*' } 15000)) "$((St $A).hint)"
+
+    # the sender quits mid-upload: on its next start the relay lets the file go and the recipient hears
+    $fq = New-Blob (Join-Path $Root 'quit mid-way.bin') (12 * 1024 * 1024)
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fq) } | Out-Null
+    Wait-Until { (Transfer-Named $A 'quit mid-way.bin' $true).state -eq 'uploading' } 20000 50 | Out-Null
+    Stop-Process -Id $A.Proc.Id -Force
+    Start-Copy $A
+    $let = Wait-Until { (Transfer-Named $B 'quit mid-way.bin' $false).state -eq 'cancelled' } 40000
+    Start-Sleep -Milliseconds 500
+    Check 'X6' "after a restart mid-upload the recipient hears it was taken back, nothing partial is left" ($let -and (No-Partials $B)) "B: $((Transfer-Named $B 'quit mid-way.bin' $false).state)"
 } catch {
     Check 'X' 'the suite ran to the end' $false $_.Exception.Message
     Log $_.ScriptStackTrace
