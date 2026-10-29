@@ -18,8 +18,14 @@
 //! at once with `/R=show`. A failed check retries an hour later. Off (`store.auto_update` false), nothing happens
 //! until settings asks.
 //!
+//! A feed that isn't there (HTTP 404: no release carries one yet) is no news: "up to date", again in an hour.
+//!
 //! Only an installed copy updates (autostart.rs `is_installed`); a dev build's status is "off".
-//! `QCALC_UPDATE_FEED=<https URL>` points a build at another manifest and lets it check (testing).
+//!
+//! **Testing** (`tests/e2e/update-e2e.ps1`): only a build with the cargo feature `update-e2e` reads
+//! `QCALC_UPDATE_FEED` (an https URL, or loopback http), `QCALC_UPDATE_PUBKEY` (the key it trusts instead of
+//! `PUBKEY`) and `QCALC_UPDATE_QUIET_SECS` (the first check, the quiet wait and the retry, in seconds). A release
+//! build ignores all three, so it only ever trusts GitHub's feed and the real key (unit-tested below).
 //!
 //! The pure parts (manifest, versions, the quiet rule, base64, the signature) are unit-tested.
 
@@ -53,6 +59,114 @@ const QUIET_POLL: Duration = Duration::from_secs(60);
 pub const IDLE: Duration = Duration::from_secs(5 * 60);
 const MAX_MANIFEST: usize = 64 * 1024;
 const MAX_INSTALLER: u64 = 200 * 1024 * 1024;
+
+// ---- the test build's overrides ----
+
+/// The loop's waits.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Timing {
+    pub first: Duration,
+    pub idle: Duration,
+    pub poll: Duration,
+    pub retry: Duration,
+}
+
+pub const TIMING: Timing = Timing {
+    first: FIRST_CHECK,
+    idle: IDLE,
+    poll: QUIET_POLL,
+    retry: RETRY_AFTER,
+};
+
+/// What the environment may change, read through these so a release build provably can't be pointed elsewhere.
+pub mod overrides {
+    use super::*;
+
+    /// The feed `QCALC_UPDATE_FEED` names, in an `update-e2e` build only.
+    pub fn feed(var: Option<&str>) -> Option<String> {
+        if !cfg!(feature = "update-e2e") {
+            return None;
+        }
+        var.map(str::trim)
+            .filter(|f| super::crate_split_url(f))
+            .map(String::from)
+    }
+
+    /// The key the installer must be signed with: `PUBKEY`, or `QCALC_UPDATE_PUBKEY` in an `update-e2e` build.
+    pub fn key(var: Option<&str>) -> String {
+        match var.map(str::trim).filter(|k| !k.is_empty()) {
+            Some(k) if cfg!(feature = "update-e2e") => k.to_string(),
+            _ => PUBKEY.to_string(),
+        }
+    }
+
+    /// `QCALC_UPDATE_QUIET_SECS` (1-3600) for every wait, in an `update-e2e` build only.
+    pub fn timing(var: Option<&str>) -> Timing {
+        match var.and_then(|v| v.trim().parse::<u64>().ok()) {
+            Some(s) if cfg!(feature = "update-e2e") && (1..=3600).contains(&s) => {
+                let d = Duration::from_secs(s);
+                Timing {
+                    first: d,
+                    idle: d,
+                    poll: Duration::from_secs(1),
+                    retry: d,
+                }
+            }
+            _ => TIMING,
+        }
+    }
+
+    fn var(name: &str) -> Option<String> {
+        std::env::var(name).ok()
+    }
+
+    pub fn env_feed() -> Option<String> {
+        feed(var("QCALC_UPDATE_FEED").as_deref())
+    }
+
+    pub fn env_key() -> String {
+        key(var("QCALC_UPDATE_PUBKEY").as_deref())
+    }
+
+    pub fn env_timing() -> Timing {
+        timing(var("QCALC_UPDATE_QUIET_SECS").as_deref())
+    }
+}
+
+/// An error as settings shows it after "Couldn't update: ".
+pub fn friendly(e: &str) -> String {
+    let net = [
+        "open:",
+        "connect:",
+        "request:",
+        "send:",
+        "response:",
+        "status:",
+        "read:",
+    ];
+    if net.iter().any(|p| e.starts_with(p)) {
+        return "no connection to the update server".into();
+    }
+    if let Some(code) = e.strip_prefix("HTTP ") {
+        return format!("the update server answered {code}");
+    }
+    if e.starts_with("the installer's signature doesn't match") {
+        return "the download didn't match its signature, so it was thrown away".into();
+    }
+    e.to_string()
+}
+
+/// The Updates page's button: its label and whether it can be pressed; none when this copy can't update.
+pub fn button(state: UpdateState) -> Option<(&'static str, bool)> {
+    match state {
+        UpdateState::Off => None,
+        UpdateState::Ready => Some(("Install now", true)),
+        UpdateState::Checking | UpdateState::Downloading | UpdateState::Installing => {
+            Some(("Check now", false))
+        }
+        UpdateState::Idle | UpdateState::Current | UpdateState::Failed => Some(("Check now", true)),
+    }
+}
 
 // ---- pure parts ----
 
@@ -129,7 +243,7 @@ pub fn offer(manifest: &str, platform: &str) -> Result<Offer, String> {
 fn crate_split_url(u: &str) -> bool {
     #[cfg(windows)]
     {
-        crate::net::split_url(u).is_some()
+        crate::net::parse_url(u).is_some()
     }
     #[cfg(not(windows))]
     {
@@ -209,12 +323,26 @@ pub fn idle_millis(tick_now: u32, last_input: u32) -> u32 {
 }
 
 /// Put away for IDLE and no keyboard or mouse for IDLE: the moment an automatic install may run.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Quiet {
     hidden_since: Option<Instant>,
+    idle: Duration,
+}
+
+impl Default for Quiet {
+    fn default() -> Quiet {
+        Quiet::new(IDLE)
+    }
 }
 
 impl Quiet {
+    pub fn new(idle: Duration) -> Quiet {
+        Quiet {
+            hidden_since: None,
+            idle,
+        }
+    }
+
     pub fn observe(&mut self, visible: bool, now: Instant) {
         if visible {
             self.hidden_since = None;
@@ -227,7 +355,8 @@ impl Quiet {
         let Some(since) = self.hidden_since else {
             return false;
         };
-        now.saturating_duration_since(since) >= IDLE && input_idle.is_none_or(|i| i >= IDLE)
+        now.saturating_duration_since(since) >= self.idle
+            && input_idle.is_none_or(|i| i >= self.idle)
     }
 }
 
@@ -346,10 +475,7 @@ mod win {
     use windows::Win32::UI::WindowsAndMessaging::IsWindowVisible;
 
     fn feed() -> Option<String> {
-        if let Some(f) = std::env::var("QCALC_UPDATE_FEED")
-            .ok()
-            .filter(|f| crate::net::split_url(f).is_some())
-        {
+        if let Some(f) = overrides::env_feed() {
             return Some(f);
         }
         let exe = std::env::current_exe()
@@ -373,7 +499,21 @@ mod win {
             return;
         }
         set_status(|s| s.state = UpdateState::Idle);
+        qlog!("updates: on, feed {feed}");
         crate::bg::spawn("qcalc-update", move || run(&feed));
+    }
+
+    /// The bench's `update` (update-e2e.ps1): the state and what the Updates page shows for it.
+    pub fn debug(app: &App) -> Value {
+        let st = status();
+        let auto = app.store.auto_update;
+        let line = qcalc_core::app::host_settings::update_line(&st, auto, unix_now());
+        let (label, enabled) = button(st.state).unwrap_or(("", false));
+        serde_json::json!({
+            "version": VERSION, "state": st.state, "latest": st.latest, "error": st.error,
+            "checkedAt": st.checked_at, "auto": auto, "line": line,
+            "button": label, "enabled": enabled,
+        })
     }
 
     fn input_idle() -> Option<Duration> {
@@ -404,12 +544,23 @@ mod win {
         path: std::path::PathBuf,
     }
 
+    /// What a check found.
+    enum Found {
+        Newer(Ready),
+        /// nothing newer (or the one already downloaded)
+        Current,
+        /// no feed at all (HTTP 404: no release carries one yet)
+        NoFeed,
+    }
+
     fn run(feed: &str) {
-        wait(FIRST_CHECK);
+        let t = overrides::env_timing();
+        let key = overrides::env_key();
+        wait(t.first);
         let mut last: Option<SystemTime> = None;
         let mut every = CHECK_EVERY;
         let mut ready: Option<Ready> = None;
-        let mut quiet = Quiet::default();
+        let mut quiet = Quiet::new(t.idle);
         loop {
             let asked = CONTROL.check.swap(false, Ordering::SeqCst);
             if asked || (auto() && check_due(last, every, SystemTime::now())) {
@@ -420,10 +571,18 @@ mod win {
                     s.error.clear();
                 });
                 let have = ready.as_ref().map(|r| r.version.clone());
-                let found = check(feed, have.as_deref());
+                let found = check(feed, &key, have.as_deref());
                 let at = unix_now();
+                let current = |s: &mut UpdateStatus| {
+                    s.state = if ready.is_some() {
+                        UpdateState::Ready
+                    } else {
+                        UpdateState::Current
+                    };
+                    s.checked_at = at;
+                };
                 match found {
-                    Ok(Some(r)) => {
+                    Ok(Found::Newer(r)) => {
                         let v = r.version.clone();
                         qlog!("updates: {v} downloaded and verified");
                         ready = Some(r);
@@ -431,24 +590,22 @@ mod win {
                             (s.state, s.latest, s.checked_at) = (UpdateState::Ready, v, at)
                         });
                     }
-                    Ok(None) => set_status(|s| {
-                        s.state = if ready.is_some() {
-                            UpdateState::Ready
-                        } else {
-                            UpdateState::Current
-                        };
-                        s.checked_at = at;
-                    }),
+                    Ok(Found::Current) => set_status(current),
+                    Ok(Found::NoFeed) => {
+                        qlog!("updates: no feed yet (HTTP 404), again in {:?}", t.retry);
+                        every = t.retry;
+                        set_status(current);
+                    }
                     Err(e) => {
                         qlog!("updates: check failed: {e}");
-                        every = RETRY_AFTER;
+                        every = t.retry;
                         set_status(|s| {
                             s.state = if ready.is_some() {
                                 UpdateState::Ready
                             } else {
                                 UpdateState::Failed
                             };
-                            s.error = e;
+                            s.error = friendly(&e);
                             s.checked_at = at;
                         });
                     }
@@ -470,12 +627,12 @@ mod win {
                 ready = None;
             }
             let next = if ready.is_some() && auto() {
-                QUIET_POLL
+                t.poll
             } else if auto() {
                 last.and_then(|at| at.checked_add(every))
                     .and_then(|due| due.duration_since(SystemTime::now()).ok())
                     .unwrap_or(Duration::from_secs(60))
-                    .max(Duration::from_secs(60))
+                    .max(t.poll.min(Duration::from_secs(60)))
             } else {
                 CHECK_EVERY
             };
@@ -483,14 +640,26 @@ mod win {
         }
     }
 
-    /// A newer installer than `have`, downloaded and verified; None when there's nothing newer.
-    fn check(feed: &str, have: Option<&str>) -> Result<Option<Ready>, String> {
-        let manifest = crate::net::get(feed, MAX_MANIFEST)?;
+    /// A newer installer than the running version and `have`, downloaded and verified against `key`.
+    fn check(feed: &str, key: &str, have: Option<&str>) -> Result<Found, String> {
+        let manifest = match crate::net::get(feed, MAX_MANIFEST) {
+            Err(e) if e == "HTTP 404" => return Ok(Found::NoFeed),
+            r => r?,
+        };
         let offer = offer(&String::from_utf8_lossy(&manifest), platform())?;
-        if !newer(&offer.version, VERSION) || have == Some(offer.version.as_str()) {
-            return Ok(None);
+        if !newer(&offer.version, VERSION) {
+            if offer.version != VERSION {
+                qlog!(
+                    "updates: the feed offers {}, older than {VERSION}: left alone",
+                    offer.version
+                );
+            }
+            return Ok(Found::Current);
         }
-        let key = public_key(PUBKEY)?;
+        if have == Some(offer.version.as_str()) {
+            return Ok(Found::Current);
+        }
+        let key = public_key(key)?;
         let sig = signature(&offer.signature)?;
         if !signed_for(&sig, &offer.version) {
             return Err(format!("the installer isn't signed for {}", offer.version));
@@ -502,12 +671,16 @@ mod win {
         let path = dir.join(format!("Q-Calc-{}-setup.exe", offer.version));
         let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
         let mut stream = key.verify_stream(&sig).ok();
-        crate::net::download(&offer.url, &mut file, MAX_INSTALLER, |piece| {
+        let got = crate::net::download(&offer.url, &mut file, MAX_INSTALLER, |piece| {
             if let Some(s) = &mut stream {
                 s.update(piece);
             }
-        })?;
+        });
         drop(file);
+        if let Err(e) = got {
+            let _ = std::fs::remove_dir_all(&dir);
+            return Err(e);
+        }
         let verified = match &mut stream {
             Some(s) => s
                 .finalize()
@@ -525,7 +698,7 @@ mod win {
             let _ = std::fs::remove_dir_all(&dir);
             return Err(e);
         }
-        Ok(Some(Ready {
+        Ok(Found::Newer(Ready {
             version: offer.version,
             path,
         }))
@@ -594,6 +767,59 @@ mod tests {
             )
             .is_err()
         );
+    }
+
+    /// A shipping build (no `update-e2e` feature) can't be pointed at another feed or key, or made to install
+    /// sooner, whatever the environment says; the test build takes them, and plain http only to this machine.
+    #[test]
+    fn a_release_build_trusts_only_githubs_feed_and_the_real_key() {
+        let elsewhere = Some("https://example.com/latest-native.json");
+        let lo = Some("http://127.0.0.1:8123/latest-native.json");
+        let test_build = cfg!(feature = "update-e2e");
+        assert_eq!(
+            overrides::feed(elsewhere).is_some(),
+            test_build,
+            "QCALC_UPDATE_FEED"
+        );
+        assert_eq!(overrides::feed(lo).is_some(), test_build && cfg!(windows));
+        assert_eq!(overrides::key(Some("other")) == PUBKEY, !test_build);
+        assert_eq!(overrides::timing(Some("3")) == TIMING, !test_build);
+        // in either build: never plain http to another machine, nothing set is nothing changed
+        assert_eq!(overrides::feed(Some("http://example.com:80/x")), None);
+        assert_eq!(overrides::feed(None), None);
+        assert_eq!(overrides::key(None), PUBKEY);
+        assert_eq!(overrides::key(Some("  ")), PUBKEY);
+        assert_eq!(overrides::timing(Some("0")), TIMING);
+        assert_eq!(overrides::timing(Some("soon")), TIMING);
+        // the feed's installer link too
+        let m = r#"{ "version": "9.0.0", "platforms": { "windows-x86_64": { "url": "http://127.0.0.1:8123/Q-Calc-9.0.0-x64-native-setup.exe", "signature": "c2ln" } } }"#;
+        assert_eq!(
+            offer(m, "windows-x86_64").is_ok(),
+            test_build && cfg!(windows)
+        );
+    }
+
+    #[test]
+    fn errors_read_as_sentences_and_the_button_follows_the_state() {
+        assert_eq!(
+            friendly("send: The server name or address could not be resolved"),
+            "no connection to the update server"
+        );
+        assert_eq!(friendly("HTTP 500"), "the update server answered 500");
+        assert_eq!(
+            friendly("the installer's signature doesn't match: Signature verification failed"),
+            "the download didn't match its signature, so it was thrown away"
+        );
+        assert_eq!(
+            friendly("the installer isn't signed for 2.1.0"),
+            "the installer isn't signed for 2.1.0"
+        );
+        assert_eq!(button(UpdateState::Off), None);
+        assert_eq!(button(UpdateState::Ready), Some(("Install now", true)));
+        assert_eq!(button(UpdateState::Checking), Some(("Check now", false)));
+        assert_eq!(button(UpdateState::Downloading), Some(("Check now", false)));
+        assert_eq!(button(UpdateState::Failed), Some(("Check now", true)));
+        assert_eq!(button(UpdateState::Current), Some(("Check now", true)));
     }
 
     #[test]

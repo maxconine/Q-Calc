@@ -26,7 +26,11 @@ param(
   # Authenticode: a command that signs the file named by its last argument (e.g. `signtool sign /fd sha256 /tr
   # http://timestamp.digicert.com /td sha256 /a`). makensis runs it on uninstall.exe as it's written and on the
   # installer at the end (qcalc.nsi SIGN). scripts\sign-check.ps1 runs this path with a throwaway certificate
-  [string]$SignCommand
+  [string]$SignCommand,
+  # tests only (tests/e2e/update-e2e.ps1): cargo features for the exe (`update-e2e`), and the installer's app id
+  # (qcalc.nsi APP_ID: its own registry names, shortcut and default folder, never the real install's)
+  [string]$Features,
+  [string]$AppId
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
@@ -40,7 +44,9 @@ $platform = if ($Arch -eq 'arm64') { 'windows-aarch64' } else { 'windows-x86_64'
 if (-not $SkipBuild) {
   $env:QCALC_VERSION = $Version
   Push-Location $native
-  try { cargo build --release -p qcalc-win --target $target; if ($LASTEXITCODE) { throw "cargo build failed" } }
+  $cargoArgs = @('build', '--release', '-p', 'qcalc-win', '--target', $target)
+  if ($Features) { $cargoArgs += @('--features', $Features) }
+  try { cargo @cargoArgs; if ($LASTEXITCODE) { throw "cargo build failed" } }
   finally { Pop-Location; Remove-Item Env:QCALC_VERSION -ErrorAction SilentlyContinue }
 }
 $exe = "$native\target\$target\release\qcalc.exe"
@@ -58,6 +64,7 @@ $versionNum = ($Version -split '[-+]')[0]
 if ($versionNum -notmatch '^\d+\.\d+\.\d+$') { throw "not a version: $Version" }
 $nsisArgs = @('/V2', "/DVERSION=$Version", "/DVERSION_NUM=$versionNum", "/DEXE=$exe", "/DOUT=$setup", "/DOUTNAME=$(Split-Path $setup -Leaf)")
 if ($SignCommand) { $nsisArgs += "/DSIGN=$SignCommand" }
+if ($AppId) { $nsisArgs += "/DAPP_ID=$AppId" }
 & $makensis @nsisArgs "$here\qcalc.nsi"
 if ($LASTEXITCODE) { throw "makensis failed" }
 "installer: $setup ($([math]::Round((Get-Item $setup).Length / 1MB, 2)) MB)"
