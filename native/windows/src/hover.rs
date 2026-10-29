@@ -204,7 +204,7 @@ pub(crate) mod tip {
 
     use windows::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows::Win32::UI::Controls::{
-        SetWindowTheme, TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTM_ADDTOOLW, TTM_GETBUBBLESIZE,
+        SetWindowTheme, TOOLTIPS_CLASSW, TTF_ABSOLUTE, TTF_TRACK, TTF_TRANSPARENT, TTM_ADDTOOLW, TTM_GETBUBBLESIZE,
         TTM_SETMAXTIPWIDTH, TTM_TRACKACTIVATE, TTM_TRACKPOSITION, TTM_UPDATETIPTEXTW,
         TTS_ALWAYSTIP, TTS_NOPREFIX, TTTOOLINFOW,
     };
@@ -226,7 +226,9 @@ pub(crate) mod tip {
     fn info(tip_owner: HWND, text: Option<&HSTRING>) -> TTTOOLINFOW {
         TTTOOLINFOW {
             cbSize: std::mem::size_of::<TTTOOLINFOW>() as u32,
-            uFlags: TTF_TRACK | TTF_ABSOLUTE,
+            // transparent to the mouse: a tip that pops up under the pointer (a word's, over the line) would
+            // otherwise take it, and the bar's WM_MOUSELEAVE hid the tip, which came back on the next move: a blink
+            uFlags: TTF_TRACK | TTF_ABSOLUTE | TTF_TRANSPARENT,
             hwnd: tip_owner,
             uId: 1,
             lpszText: text.map_or(PWSTR::null(), |t| PWSTR(t.as_ptr() as *mut u16)),
