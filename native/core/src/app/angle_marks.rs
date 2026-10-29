@@ -74,7 +74,10 @@ pub fn angle_spans(text: &str) -> Vec<(usize, usize)> {
                 j += 1;
             }
             let digits = j;
-            while chars.get(j).is_some_and(|c| c.is_ascii_digit() || *c == '.') {
+            while chars
+                .get(j)
+                .is_some_and(|c| c.is_ascii_digit() || *c == '.')
+            {
                 j += 1;
             }
             if j == digits {
@@ -84,7 +87,9 @@ pub fn angle_spans(text: &str) -> Vec<(usize, usize)> {
             (k, j, j)
         };
         let arg: String = lower[start..stop].iter().collect();
-        let says_unit = ["°", "deg", "rad", "grad", "gon", "′", "″", "'"].iter().any(|u| arg.contains(u));
+        let says_unit = ["°", "deg", "rad", "grad", "gon", "′", "″", "'"]
+            .iter()
+            .any(|u| arg.contains(u));
         if !arg.trim().is_empty() && !says_unit {
             marks.push((u16_at[start], u16_at[at]));
         }
@@ -112,7 +117,19 @@ mod tests {
 
     #[test]
     fn leaves_what_says_its_unit_or_isnt_trig() {
-        for t in ["sin(30°)", "sin(30 deg)", "sin(pi rad)", "asin(0.5)", "arcsin(0.5)", "sinh(2)", "sin()", "sin x", "since 3", "2+2", "cosec(3)"] {
+        for t in [
+            "sin(30°)",
+            "sin(30 deg)",
+            "sin(pi rad)",
+            "asin(0.5)",
+            "arcsin(0.5)",
+            "sinh(2)",
+            "sin()",
+            "sin x",
+            "since 3",
+            "2+2",
+            "cosec(3)",
+        ] {
             assert!(angle_marks(t).is_empty(), "{t}: {:?}", angle_marks(t));
         }
     }

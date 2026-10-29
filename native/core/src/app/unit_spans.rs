@@ -51,7 +51,8 @@ pub fn unit_spans(text: &str, variables: &[String], functions: &[String]) -> Vec
         }
         // `in` before another unit is the conversion (`5 in mm`, the second of `12122 in in mm`); before a
         // conversion word, an operator or nothing it's inches (`5 in to mm`, `5 in + 2`)
-        static IN_CONVERTS: Lazy = Lazy::new(|| jsre::js(r"^\s+(?!(?:to|into|in|as)\b)[A-Za-zµμΩÅ°]", "i"));
+        static IN_CONVERTS: Lazy =
+            Lazy::new(|| jsre::js(r"^\s+(?!(?:to|into|in|as)\b)[A-Za-zµμΩÅ°]", "i"));
         if word.eq_ignore_ascii_case("in") && jsre::test(&IN_CONVERTS, &text[end..]) {
             continue;
         }
