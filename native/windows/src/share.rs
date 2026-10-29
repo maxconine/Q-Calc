@@ -110,6 +110,8 @@ struct Outgoing {
     grant: String,
     stream: u64,
     started: Arc<AtomicBool>,
+    /// times the relay said `too-many` and the upload waited to try again on its own
+    waits: u32,
 }
 
 /// A count worker threads wait on (the sealed bytes written so far, the parts landed), and whether it ended
@@ -195,7 +197,11 @@ fn with<R>(f: impl FnOnce(&mut Share) -> R) -> R {
     STATE.with(|s| f(&mut s.borrow_mut()))
 }
 
-const RETRYABLE: [&str; 3] = ["failed", "no-network", "network"];
+const RETRYABLE: [&str; 4] = ["failed", "no-network", "network", "too-many"];
+/// the relay takes 10 offers and upload starts a minute: a file refused for that waits and tries again on its own,
+/// these many times, `WAIT_MS` longer each, inside the 2 minutes its recipient waits for a part
+const WAITS: u32 = 3;
+const WAIT_MS: u64 = 20_000;
 const PART_TRIES: u32 = 3;
 /// parts sent side by side, each on a warm connection of its own (relay.rs `shared`)
 const UPLOADS: usize = 4;
@@ -701,6 +707,7 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
                             grant: String::new(),
                             stream: 0,
                             started: Arc::new(AtomicBool::new(false)),
+                            waits: 0,
                         },
                     );
                     let mut t = Transfer::new(true, &to, &name, o.size, "offered");
@@ -819,7 +826,25 @@ fn offer(path: &Path, name: &str, to: &str, me: &str, relay_key: &str) -> Result
         crypt::seal(facts.as_bytes(), &secret, &theirs, &ctx).map_err(|_| fail("bad"))?;
     let body = json!({ "from": me, "key": relay_key, "to": to, "kind": "file",
         "file": { "id": id, "epk": epk, "sealed": boxed, "bytes": bytes } });
-    let (status, o) = crate::relay::post_value("/send", &body);
+    // the relay's minute of offers is used up: wait it out and offer again (it kept nothing of the refused one)
+    let mut waits = 0;
+    let (status, o) = loop {
+        let (status, o) = crate::relay::post_value("/send", &body);
+        if status != "too-many" || waits >= WAITS || cancelled.load(Ordering::Relaxed) {
+            break (status, o);
+        }
+        waits += 1;
+        let secs = WAIT_MS * u64::from(waits) / 1000;
+        let (who, what) = (to.to_string(), name.to_string());
+        bg::post(move |app| {
+            say_to(
+                app,
+                &who,
+                format!("lots sent at once · {what} goes in {secs} s"),
+            )
+        });
+        std::thread::sleep(std::time::Duration::from_millis(WAIT_MS * u64::from(waits)));
+    };
     if status != "delivered" || o["id"].as_str() != Some(id.as_str()) {
         return Err(fail(&status));
     }
@@ -887,6 +912,9 @@ fn upload(id: &str, grant: &str, stream: u64) {
         let status = job.run(&grant, stream);
         running.store(false, Ordering::Release);
         bg::post(move |app| {
+            if status == "too-many" && wait_again(&id) {
+                return;
+            }
             if status == "ok" {
                 set_state(&id, "sent", None, None);
                 with(|s| {
@@ -1118,6 +1146,37 @@ fn failed(id: &str, status: &str, who: &str) {
     if mine && !RETRYABLE.contains(&status) {
         drop_outgoing(id);
     }
+}
+
+/// A refused upload waits out the relay's minute and starts again with its grant (the file still says uploading,
+/// so its recipient, waiting on the first part, sees nothing go wrong). False once the waits run out.
+fn wait_again(id: &str) -> bool {
+    let Some(n) = with(|s| {
+        let o = s.outgoing.get_mut(id).filter(|o| o.waits < WAITS)?;
+        o.waits += 1;
+        Some(o.waits)
+    }) else {
+        return false;
+    };
+    crate::qlog!(
+        "share out: too many at once, trying again in {} s",
+        WAIT_MS * u64::from(n) / 1000
+    );
+    let id = id.to_string();
+    bg::spawn("qcalc-share-wait", move || {
+        std::thread::sleep(std::time::Duration::from_millis(WAIT_MS * u64::from(n)));
+        bg::post(move |_| {
+            let still = with(|s| {
+                s.transfers
+                    .get(&id)
+                    .is_some_and(|t| t.mine && t.state == "uploading")
+            });
+            if still {
+                upload(&id, "", 0);
+            }
+        });
+    });
+    true
 }
 
 fn can_retry(id: &str) -> bool {
