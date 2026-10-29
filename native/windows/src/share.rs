@@ -6,14 +6,21 @@
 //!   longer text as `clipboard.txt`, copied files as files. `send file to <name>` and ↵ picks a file. Files dropped
 //!   on the bar (or pasted with Ctrl+V after Explorer's Copy) go to whoever the line names (`message max…`,
 //!   `send file to max`), or wait there for a name; more than 20 at once send none and say why, and a folder says
-//!   to zip it. A file is encrypted to a temporary file, its facts (name, type, size, SHA-256, its own key) sealed
-//!   for the recipient alone and offered; the upload waits for their accept, part by part with the relay's grant,
-//!   a part cut short tried again a few times, and a failed upload keeps its sealed file for Retry.
+//!   to zip it. A file is hashed and its facts (name, type, size, SHA-256, its own key) sealed for the recipient
+//!   alone and offered while it's encrypted into a temporary file alongside. The upload waits for their accept: on
+//!   a relay that streams, its first part starts it with the grant and the rest go four at a time, read from the
+//!   sealed file as it's written; on an older one, `start`, the parts, `finish`. A part cut short goes again a few
+//!   times, a failed upload keeps its sealed file for Retry, and Take Back stops it mid-part.
 //! - **Receiving.** A sealed clip or offer from a pinned (or first-seen) key opens off the UI thread: an accepted
 //!   name's becomes a card (Copy; Save), someone new's waits behind their request card. One that doesn't open is
 //!   checked against the relay: a changed key holds it for Trust New Key (on a card, with the safety code); else a
-//!   card says it couldn't be opened. Save accepts, downloads (never more than the offered length) and saves
-//!   through `share_crypt::safe_save`: checked, marked with the Mark of the Web, never opened on its own.
+//!   card says it couldn't be opened. An accepted name's file under the size Settings › Messages sets saves on its
+//!   own; otherwise Save. Saving accepts and downloads (never more than the offered length) into one hidden file
+//!   beside Downloads, opening each sealed chunk as it comes: part by part as they land when the relay streams,
+//!   else in one once it's `ready`. It's checked, marked with the Mark of the Web and moved in whole, never opened
+//!   on its own; Cancel stops it, Show in Folder shows it, and it goes on the clipboard if settings says so.
+//! - **Restarts.** The ids of files on their way are kept (`share-unfinished.json`); the next run lets them go on
+//!   the relay, so the other side hears instead of waiting.
 //!
 //! Nothing here runs before messaging has a name; every relay call and every file read or write runs on a worker
 //! thread (`bg::spawn`), and results come back through `bg::post`.

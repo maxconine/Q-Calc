@@ -9,7 +9,11 @@
 # pinning, a changed key held until Trust New Key; an upload that survives the relay going away mid-upload (a part
 # tried again on its own, and Retry after the tries run out); the Mac's construction both ways (share-vectors.mjs);
 # the thread (lines, a kept reply with the caret after it, sending from it), drag hints, name completion, a copied
-# image as clipboard.png, a shortcut sending its target, and the privacy notice.
+# image as clipboard.png, a shortcut sending its target, and the privacy notice. Then: messages sent back to back
+# arrive in order; a file streams (the recipient reads parts while the sender, slowed, is still uploading) and saves
+# without asking (Settings › Messages), one file in Downloads and nothing partial; it lands on the clipboard as a
+# file to paste (CF_HDROP, copy); several files at once; a file over the size set waits for Save; Cancel and Take
+# Back mid-way; a stranger's file always asks; a name with no key yet; and a restart mid-upload.
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File native\windows\tests\e2e\share-e2e.ps1 -Exe native\target\debug\qcalc.exe
 #
