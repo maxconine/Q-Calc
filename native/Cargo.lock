@@ -2027,7 +2027,7 @@ dependencies = [
 
 [[package]]
 name = "qcalc-win"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "aes-gcm",
  "getrandom 0.2.17",

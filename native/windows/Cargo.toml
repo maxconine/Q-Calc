@@ -3,7 +3,7 @@ name = "qcalc-win"
 description = "Q Calc for Windows, native: Win32 + Direct2D + DirectWrite around the Rust engine (no web view)"
 # the release version, package.json's (windows.yml refuses a tag where they differ); a release build's QCALC_VERSION
 # names the same version for update.rs, the crash reports, analytics and the exe's version resource
-version = "3.0.0"
+version = "3.0.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
