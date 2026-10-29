@@ -242,6 +242,14 @@ jobs:
 
       - run: npm ci
 
+      # windows-2025 runners (windows-latest) no longer come with NSIS, so put it in before the long build
+      - name: NSIS
+        run: |
+          $nsis = "${env:ProgramFiles(x86)}\NSIS"
+          if (-not (Test-Path "$nsis\makensis.exe")) { choco install nsis --no-progress -y }
+          if (-not (Test-Path "$nsis\makensis.exe")) { Write-Output "::error::NSIS didn't install, so the installer can't be built"; exit 1 }
+          & "$nsis\makensis.exe" /VERSION
+
       # build.ps1: the release exe with QCALC_VERSION, NSIS, and with the updater key the installer's .sig
       # (`tauri signer sign`, the key update.rs and the Tauri app verify). authenticode, when there is a
       # certificate, goes in through build.ps1 -SignCommand before that, so the .sig covers the signed bytes
@@ -251,7 +259,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ env.PUBLISH == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
         run: |
           $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$env:PATH"
-          ./native/windows/installer/build.ps1 -Version '${{ steps.version.outputs.version }}' -Arch ${{ matrix.arch }}
+          # a throw in build.ps1 becomes an annotation, so the run's summary says why it failed
+          try { ./native/windows/installer/build.ps1 -Version '${{ steps.version.outputs.version }}' -Arch ${{ matrix.arch }} }
+          catch { Write-Output "::error::build.ps1: $_"; exit 1 }
 
       # the cross build really is for this arch (the PE header's machine: 0x8664 x64, 0xAA64 arm64)
       - name: Check the exe's architecture
