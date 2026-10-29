@@ -1,6 +1,14 @@
 // writes the updater manifest (latest.json) for the windows installers of one release.
-// usage: node latest-json.mjs <version> <download base url> <dir> platform=installer.exe ...
+// usage: node latest-json.mjs [--keep <old latest.json>] <version> <download base url> <dir> platform=installer.exe ...
 // each installer needs its .sig next to it, signed for exactly this version.
+//
+// the installers can be the Tauri app's (Q-Calc-<v>-x64-setup.exe) or, from 3.0 on, the native app's
+// (Q-Calc-<v>-x64-native-setup.exe): the native installer upgrades a Tauri install in place, so pointing these
+// entries at it moves every Tauri install over to the native app (windows.yml NATIVE_WINDOWS).
+//
+// only the plain windows-x86_64 / windows-aarch64 keys are written. tauri-plugin-updater looks for
+// windows-<arch>-nsis before windows-<arch>, so an -nsis key left in would win over them: --keep carries over
+// the other platforms of an older manifest (a darwin-* entry, say) but never a windows-* one.
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -33,11 +41,27 @@ export function manifest(version, baseUrl, installers, now = new Date()) {
   return { version, pub_date: now.toISOString().replace(/\.\d{3}Z$/, 'Z'), platforms }
 }
 
+// manifest() plus the non-windows platforms of `previous` (an older latest.json), as they were
+export function compose(version, baseUrl, installers, previous = null, now = new Date()) {
+  const next = manifest(version, baseUrl, installers, now)
+  const kept = Object.entries(previous?.platforms ?? {}).filter(([key]) => !key.startsWith('windows-'))
+  next.platforms = { ...next.platforms, ...Object.fromEntries(kept) }
+  return next
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const [version, baseUrl, dir, ...pairs] = process.argv.slice(2)
+  const args = process.argv.slice(2)
+  let previous = null
+  if (args[0] === '--keep') {
+    previous = JSON.parse(readFileSync(args[1], 'utf8').replace(/^﻿/, ''))
+    args.splice(0, 2)
+  }
+  const [version, baseUrl, dir, ...pairs] = args
   const installers = pairs.map((pair) => {
     const [platform, file] = pair.split('=')
     return { platform, file, sig: readFileSync(join(dir, `${file}.sig`), 'utf8') }
   })
-  writeFileSync(join(dir, 'latest.json'), `${JSON.stringify(manifest(version, baseUrl, installers), null, 2)}\n`)
+  const out = compose(version, baseUrl, installers, previous)
+  writeFileSync(join(dir, 'latest.json'), `${JSON.stringify(out, null, 2)}\n`)
+  console.log(`${join(dir, 'latest.json')}: ${Object.keys(out.platforms).join(', ')}`)
 }

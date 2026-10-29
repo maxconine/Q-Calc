@@ -34,7 +34,11 @@ param(
     [switch]$SkipBuild,
     [string]$Work,
     [switch]$KeepTemp,
-    [string]$TauriCli
+    [string]$TauriCli,
+    # the installed version and the one the feed offers (a release's dry run: -New 3.0.0); Old must be above 2.0.97,
+    # the "older version" the feed offers in a failure case
+    [string]$Old = '2.0.98',
+    [string]$New = '2.0.99'
 )
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
@@ -45,7 +49,6 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
 Start-Transcript -Path (Join-Path $OutDir 'log.txt') -Force | Out-Null
 
-$Old = '2.0.98'; $New = '2.0.99'
 $AppId = 'Q Calc Update E2E'
 $Instance = 'update-e2e'
 $Chord = 'ctrl+alt+shift+f8'
