@@ -12,9 +12,6 @@
 
 use windows::Win32::Foundation::{ERROR_ALREADY_EXISTS, GetLastError, HWND};
 use windows::Win32::System::Threading::CreateMutexW;
-use windows::Win32::UI::HiDpi::{
-    DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, SetProcessDpiAwarenessContext,
-};
 use windows::Win32::UI::WindowsAndMessaging::{
     AllowSetForegroundWindow, DispatchMessageW, FindWindowW, GetMessageW, IsIconic, MSG,
     SW_RESTORE, SetForegroundWindow, ShowWindow, TranslateMessage,
@@ -303,8 +300,7 @@ pub fn child_main() -> Option<i32> {
         }
         return Some(0);
     }
-    // SAFETY: plain call
-    let _ = unsafe { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) };
+    // per-monitor v2 DPI comes from the manifest (the call is 1703+; compat.rs)
     if let Err(e) = super::create(kind, args.t0, args.at) {
         qlog!("games: couldn't open {kind}: {e}");
         return Some(1);

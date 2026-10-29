@@ -14,6 +14,16 @@ cargo clippy -p qcalc-win
 On a non-Windows host the crate builds a stub `main` and the pure modules' tests, so the Mac's workspace build
 is unaffected.
 
+## Which Windows
+
+Every Windows 10 from 1507 (build 10240) and Windows 11, x64 and arm64. Windows 7 and 8.1 can't run it: Rust's
+tier-1 MSVC targets need Windows 10 (the standard library imports Windows 8+ functions such as `WaitOnAddress` and
+`ProcessPrng`). Nothing newer than 1507 is imported: `compat.rs` looks up the 1607+ DPI functions and 1709's
+`UiaRaiseNotificationEvent` at run time and falls back without them; DWM's rounded corners (11), the dark border
+(1809+) and the dark menus (1809+) are asked for and simply absent before. `QCALC_COMPAT_SIMULATE=1507` (or 1607,
+1709, ..., a build number) makes this machine report an older build and those functions as missing, so the
+fallbacks can be tried here: `tests\e2e\smoke.ps1 -Simulate 1507`.
+
 ## Targets (design for them in everything you add)
 
 | what | target | how it's measured |
@@ -100,6 +110,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `analytics.rs` | the usage counts (the core's rules), `track(app, event)` |
 | `bg.rs` | background threads' way back to the UI thread (`post`), and `start` for the background jobs after the first frame |
 | `net.rs` | HTTPS GETs over WinHTTP for the background jobs |
+| `compat.rs` | Windows 10 1507 onward: the functions newer than 1507, looked up once at run time with their fallbacks; the OS build; `QCALC_COMPAT_SIMULATE` |
 | `migrate.rs` | the Tauri app's history out of its WebView2 LevelDB, once |
 | `installer/` | the NSIS installer (`qcalc.nsi`) and `build.ps1` (installer, signature, feed) |
 

@@ -396,6 +396,17 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             Some(serde_json::json!({ "ok": true }))
         }
         "wordTip" => Some(crate::word_tip::debug(app)),
+        // update-e2e.ps1: the update loop's state and the Updates page's line; "update check" / "update install"
+        // press its button
+        "update" => Some(crate::update::debug(app)),
+        "update check" | "update install" => {
+            if cmd.ends_with("install") {
+                crate::update::ask_install();
+            } else {
+                crate::update::ask_check();
+            }
+            Some(crate::update::debug(app))
+        }
         "exponent" => Some(serde_json::json!({
             "on": app.store.settings.exponent_mode || app.model.settings.exponent_mode,
             "model": app.model.settings.exponent_mode, "saved": app.store.settings.exponent_mode,

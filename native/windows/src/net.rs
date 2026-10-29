@@ -5,13 +5,56 @@
 use std::io::Write;
 
 use windows::Win32::Networking::WinHttp::{
-    INTERNET_DEFAULT_HTTPS_PORT, WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_FLAG_SECURE,
+    WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY, WINHTTP_FLAG_SECURE, WINHTTP_OPEN_REQUEST_FLAGS,
     WINHTTP_OPTION_DECOMPRESSION, WINHTTP_QUERY_FLAG_NUMBER, WINHTTP_QUERY_STATUS_CODE,
     WinHttpCloseHandle, WinHttpConnect, WinHttpOpen, WinHttpOpenRequest, WinHttpQueryHeaders,
     WinHttpReadData, WinHttpReceiveResponse, WinHttpSendRequest, WinHttpSetOption,
     WinHttpSetTimeouts,
 };
 use windows::core::{HSTRING, PCWSTR};
+
+/// Where a request goes: https on 443, or (only in a build with the `update-e2e` feature, update-e2e.ps1's
+/// loopback feed) plain http to 127.0.0.1 / localhost on its port.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Url<'a> {
+    pub host: &'a str,
+    pub port: u16,
+    pub path: &'a str,
+    pub secure: bool,
+}
+
+/// An https URL (or, in an `update-e2e` build, a loopback http one), parsed; anything else is refused.
+pub fn parse_url(url: &str) -> Option<Url<'_>> {
+    if let Some((host, path)) = split_url(url) {
+        return Some(Url {
+            host,
+            port: 443,
+            path,
+            secure: true,
+        });
+    }
+    if cfg!(feature = "update-e2e") {
+        return loopback_http(url);
+    }
+    None
+}
+
+/// `http://127.0.0.1:<port>/path` or `http://localhost:<port>/path`.
+pub fn loopback_http(url: &str) -> Option<Url<'_>> {
+    let rest = url.strip_prefix("http://")?;
+    let (authority, path) = match rest.find('/') {
+        Some(i) => (&rest[..i], &rest[i..]),
+        None => (rest, "/"),
+    };
+    let (host, port) = authority.rsplit_once(':')?;
+    let port: u16 = port.parse().ok().filter(|p| *p != 0)?;
+    matches!(host, "127.0.0.1" | "localhost").then_some(Url {
+        host,
+        port,
+        path,
+        secure: false,
+    })
+}
 
 /// An https URL's host and path ("/a/b?c"); anything else is refused.
 pub fn split_url(url: &str) -> Option<(&str, &str)> {
@@ -74,16 +117,16 @@ fn request(
     body: Option<(&str, &[u8])>,
     mut sink: impl FnMut(&[u8]) -> bool,
 ) -> Result<u32, String> {
-    let (host, path) = split_url(url).ok_or_else(|| format!("not an https URL: {url}"))?;
+    let Url {
+        host,
+        port,
+        path,
+        secure,
+    } = parse_url(url).ok_or_else(|| format!("not an https URL: {url}"))?;
     let session = open(url)?;
     // SAFETY: live handles; strings outlive each call; buffers are sized locals
     unsafe {
-        let connect = Handle(WinHttpConnect(
-            session.0,
-            &HSTRING::from(host),
-            INTERNET_DEFAULT_HTTPS_PORT,
-            0,
-        ));
+        let connect = Handle(WinHttpConnect(session.0, &HSTRING::from(host), port, 0));
         if connect.0.is_null() {
             return Err(last_error("connect"));
         }
@@ -94,7 +137,11 @@ fn request(
             PCWSTR::null(),
             PCWSTR::null(),
             std::ptr::null(),
-            WINHTTP_FLAG_SECURE,
+            if secure {
+                WINHTTP_FLAG_SECURE
+            } else {
+                WINHTTP_OPEN_REQUEST_FLAGS(0)
+            },
         ));
         if req.0.is_null() {
             return Err(last_error("request"));
@@ -218,5 +265,31 @@ mod tests {
         assert_eq!(split_url("https://ex ample.com/x"), None);
         assert_eq!(split_url("https://user@host/x"), None);
         assert_eq!(split_url("https:///x"), None);
+        assert_eq!(
+            parse_url("https://example.com/x").map(|u| u.port),
+            Some(443)
+        );
+    }
+
+    /// A release build talks https only; plain http, even to this machine, is the `update-e2e` test build's.
+    #[test]
+    fn plain_http_only_to_loopback_and_only_in_the_test_build() {
+        let lo = "http://127.0.0.1:8123/latest-native.json";
+        assert_eq!(
+            loopback_http(lo),
+            Some(Url {
+                host: "127.0.0.1",
+                port: 8123,
+                path: "/latest-native.json",
+                secure: false
+            })
+        );
+        assert!(loopback_http("http://localhost:9/x").is_some());
+        assert_eq!(loopback_http("http://example.com:80/x"), None);
+        assert_eq!(loopback_http("http://127.0.0.1/x"), None);
+        assert_eq!(loopback_http("http://127.0.0.1.example.com:80/x"), None);
+        assert_eq!(loopback_http("http://127.0.0.1:0/x"), None);
+        assert_eq!(parse_url(lo).is_some(), cfg!(feature = "update-e2e"));
+        assert_eq!(parse_url("http://example.com/x"), None);
     }
 }

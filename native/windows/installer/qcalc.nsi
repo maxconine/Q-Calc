@@ -53,6 +53,9 @@ SetCompressor /SOLID lzma
 !define URL "https://github.com/maxconine/Q-Calc"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 !define RUN_KEY "Software\Microsoft\Windows\CurrentVersion\Run"
+; where it is installed, the key the Tauri app's installer keeps too (its default value is the folder): an upgrade
+; goes there, so a Tauri or native install in another folder is replaced in place. /D= still wins
+!define DIR_KEY "Software\${PUBLISHER}\${APP_ID}"
 !ifndef ICON
   !define ICON "..\..\..\src-tauri\icons\icon.ico"
 !endif
@@ -64,6 +67,7 @@ SetCompressor /SOLID lzma
 Name "${APP_NAME}"
 OutFile "${OUT}"
 InstallDir "$LOCALAPPDATA\${APP_ID}"
+InstallDirRegKey HKCU "${DIR_KEY}" ""
 BrandingText "${APP_NAME} ${VERSION}"
 VIProductVersion "${VERSION_NUM}.0"
 VIFileVersion "${VERSION_NUM}.0"
@@ -136,6 +140,7 @@ Section "Install"
 
   CreateShortcut "$SMPROGRAMS\${APP_ID}.lnk" "$INSTDIR\qcalc.exe" "" "$INSTDIR\qcalc.exe" 0
 
+  WriteRegStr HKCU "${DIR_KEY}" "" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${APP_ID}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
   WriteRegStr HKCU "${UNINSTALL_KEY}" "Publisher" "${PUBLISHER}"
@@ -182,6 +187,8 @@ Section "Uninstall"
   RMDir "$INSTDIR"
   Delete "$SMPROGRAMS\${APP_ID}.lnk"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
+  DeleteRegKey HKCU "${DIR_KEY}"
+  DeleteRegKey /ifempty HKCU "Software\${PUBLISHER}"
   ; the sign-in entry only when it is ours
   ReadRegStr $0 HKCU "${RUN_KEY}" "${APP_ID}"
   ${If} $0 == '"$INSTDIR\qcalc.exe" --autostart'

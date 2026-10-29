@@ -336,15 +336,20 @@ pub fn notify(hwnd: HWND, text: &str) {
     if text.trim().is_empty() || !listening() {
         return;
     }
+    // Windows 10 1709+; before it a reader hears only the focused element's own changes (compat.rs)
+    let Some(raise) = crate::compat::uia_notification() else {
+        return;
+    };
     let root: IRawElementProviderSimple = Root { hwnd: key, source }.into();
-    // SAFETY: a plain notification about our own provider
+    let (text, activity) = (BSTR::from(text.trim()), BSTR::from("qcalc"));
+    // SAFETY: a plain notification about our own provider; the BSTRs and the provider outlive the call
     let _ = unsafe {
-        UiaRaiseNotificationEvent(
-            &root,
-            NotificationKind_Other,
-            NotificationProcessing_ImportantAll,
-            &BSTR::from(text.trim()),
-            &BSTR::from("qcalc"),
+        raise(
+            root.as_raw(),
+            NotificationKind_Other.0,
+            NotificationProcessing_ImportantAll.0,
+            text.as_ptr(),
+            activity.as_ptr(),
         )
     };
 }
