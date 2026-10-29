@@ -327,6 +327,8 @@ try {
 
     # ---- the Mac's construction, both ways ----
     $vec = Join-Path $Root 'vectors'
+    # node writes UTF-8; read it as such even where the console's code page is the OEM one (a ✓ came back as mojibake)
+    [Console]::OutputEncoding = [Text.Encoding]::UTF8
     $made = & node (Join-Path $PSScriptRoot 'share-vectors.mjs') make $vec | ConvertFrom-Json
     $mac = Get-Content -Raw -Encoding UTF8 (Join-Path $vec 'mac.json') | ConvertFrom-Json
     $op = @{ op = 'vector-open' }
