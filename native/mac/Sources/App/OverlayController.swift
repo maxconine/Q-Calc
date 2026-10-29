@@ -89,6 +89,12 @@ final class OverlayController: NSObject {
         super.init()
         model.onHide = { [weak self] why in self?.hide(because: why) }
         model.onShow = { [weak self] why in self?.show(from: why) }
+        // a click on a note in the corner: the bar, on their thread (a request is the bar's own card)
+        CornerNotes.shared.onOpen = { [weak self] from, ask in
+            guard let self else { return }
+            if !ask { self.model.openThread(from) }
+            self.show(from: "note")
+        }
         model.onSettings = { [weak self] in
             track("settings.open")
             self?.onSettings?()
@@ -165,6 +171,8 @@ final class OverlayController: NSObject {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
+        // no fade or zoom from AppKit as it's ordered in or out: the bar is there, or gone, at once
+        panel.animationBehavior = .none
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = true
         panel.becomesKeyOnlyIfNeeded = false
@@ -282,6 +290,12 @@ final class OverlayController: NSObject {
         resetPlaceIfIdle()
         model.willShow()
         showOnce()
+        // what's highlighted in the app in front comes into the line, once it's read (the bar doesn't wait for it)
+        let token = showCount
+        FrontSelection.read { [weak self] text in
+            guard let self, let text, token == self.showCount, self.panel?.isVisible == true else { return }
+            self.model.insert(text)
+        }
         OverlayLog.note("show \(showCount) (\(source))")
         verify(showCount, attempt: 0)
     }
@@ -683,6 +697,7 @@ final class OverlayController: NSObject {
         let open = wantVisible && !gameOpen
         let opened = open && !Messages.shared.barOpen
         Messages.shared.barOpen = open
+        if open { CornerNotes.shared.clear() }
         if opened, panel?.isVisible == true { model.pullInbox() }
     }
 }

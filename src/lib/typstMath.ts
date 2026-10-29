@@ -423,7 +423,15 @@ function emit(s: string, from: number, to: number): string {
 // off an empty base: Typst can't compile a fraction or an attachment with a side missing.
 function tidy(parts: string[]): string {
   const sign = (p: string) => p === '/' || p === '^'
-  const based = parts.map((p, k) => (p.startsWith('_(') || (k === 0 && p.startsWith('^') && p !== '^') ? `zws${p}` : p))
+  // a number in e notation beside a / or under a ^ is one number, as the engine reads it: 2.03e-12/22 is
+  // 2.03 × 10⁻¹² over 22, not 2.03 × (10⁻¹² / 22) (Typst drops the parens a fraction's side is in)
+  const held = parts.map((p, k) => {
+    const next = parts[k + 1]
+    return POWER_OF_TEN.test(p) && (parts[k - 1] === '/' || next === '/' || !!next?.startsWith('^'))
+  })
+  const based = parts
+    .map((p, k) => (held[k] ? `(${p})` : p))
+    .map((p, k) => (p.startsWith('_(') || (k === 0 && p.startsWith('^') && p !== '^') ? `zws${p}` : p))
   return based
     .map((p, k) => {
       const next = based[k + 1]
@@ -432,6 +440,9 @@ function tidy(parts: string[]): string {
     })
     .join(' ')
 }
+
+// a number in e notation as readNumber typesets it (`2.03 times 10^(-12)`)
+const POWER_OF_TEN = /^[\d.]+ times 10\^\(/
 
 // Whether a piece can stand alone as a radicand, a subscript or an exponent: not a sign still waiting for its
 // other side, a closer or a comma.

@@ -122,6 +122,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             overlay.model.cards.insert(BannerCard(id: "dev\(Int.random(in: 0...9999))", from: arg.isEmpty ? "max" : arg,
                                                   text: "lunch at noon? bring the 4.2 m tape", ask: false), at: 0)
         case "ask": overlay.model.cards.insert(BannerCard(id: "dev\(Int.random(in: 0...9999))", from: arg.isEmpty ? "sam" : arg, text: "", ask: true), at: 0)
+        case "note": CornerNotes.shared.post(from: arg.isEmpty ? "max" : arg, body: "lunch at noon? bring the 4.2 m tape")
+        case "noteask": CornerNotes.shared.post(from: arg.isEmpty ? "sam" : arg, ask: true)
         case "snap": DevSnapshot.writeAll(to: arg)
         case "clear": overlay.model.clearHistory(); overlay.model.text = ""; overlay.model.hint = nil
         case "hover": overlay.model.edgeFocus = arg != "off"

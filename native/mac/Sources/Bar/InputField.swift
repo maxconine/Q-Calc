@@ -9,6 +9,8 @@ final class BarTextView: NSTextView {
     var onEscape: (() -> Void)?
     /// a paste with line breaks or `;`: true when it was taken (equations opened as a system)
     var onPasteLines: ((String) -> Bool)?
+    /// a pasted sentence or paragraph, flattened to one plain line (PlainText)
+    var onPastedProse: ((String) -> Void)?
     /// files dropped on the line (native only, ShareCommands.swift): true when they were taken, else the path is
     /// typed as text would be
     var onDropFiles: (([URL]) -> Bool)?
@@ -70,7 +72,7 @@ final class BarTextView: NSTextView {
         }
         needsDisplay = true
     }
-    private var coloured: (units: [NSRange], words: [NSRange]) = ([], [])
+    private var coloured: (units: [NSRange], words: [NSRange], style: String) = ([], [], "")
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
@@ -103,14 +105,14 @@ final class BarTextView: NSTextView {
 
     /// .quick-unit in the accent, .quick-word in accent mixed 85% with ink: temporary attributes, so typing and
     /// undo never see them
-    func colour(units: [NSRange], words: [NSRange]) {
-        guard units != coloured.units || words != coloured.words, let lm = layoutManager else { return }
-        coloured = (units, words)
+    func colour(units: [NSRange], words: [NSRange], style: String) {
+        guard units != coloured.units || words != coloured.words || style != coloured.style, let lm = layoutManager else { return }
+        coloured = (units, words, style)
         let all = NSRange(location: 0, length: (string as NSString).length)
         lm.removeTemporaryAttribute(.foregroundColor, forCharacterRange: all)
-        let word = Theme.accent.blended(withFraction: 0.15, of: Theme.ink) ?? Theme.accent
+        let word = Theme.wordColour(style), unit = Theme.unitColour(style)
         for r in words where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: word, forCharacterRange: r) }
-        for r in units where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: Theme.accent, forCharacterRange: r) }
+        for r in units where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: unit, forCharacterRange: r) }
     }
 
     // ---- .quick-unit-tip: the full name of the unit, function or constant under the pointer, in a small ink label
@@ -511,9 +513,11 @@ final class BarTextView: NSTextView {
         editKind = "insertFromPaste"
         guard let raw = NSPasteboard.general.string(forType: .string) else { return }
         if onPasteLines?(raw) == true { return }
-        let clean = raw.replacingOccurrences(of: #"\s*[\r\n]+\s*"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespaces)
+        // one plain line, as Spotlight takes a paste: no breaks, tabs or indents
+        let clean = PlainText.flatten(raw)
         insertText(clean, replacementRange: selectedRange())
+        // a pasted sentence or paragraph goes back on the clipboard that way too
+        if PlainText.isProse(clean) { onPastedProse?(clean) }
     }
 
 
@@ -613,6 +617,7 @@ struct InputField: NSViewRepresentable {
         text.delegate = context.coordinator
         text.onKey = { [weak model] event in model?.key(event) ?? false }
         text.onPasteLines = { [weak model] raw in model?.pasteSystem(raw) ?? false }
+        text.onPastedProse = { [weak model] plain in model?.copyPlain(plain) }
         text.onDropFiles = { [weak model] urls in model?.dropFiles(urls, to: nil) ?? false }
         text.onDragFiles = { [weak model] over, n in model?.dragHover(over, count: n) }
         text.onEscape = { [weak model] in
@@ -694,7 +699,7 @@ struct InputField: NSViewRepresentable {
         text.squiggle = deco.squiggle
         text.offer = deco.offer
         text.setAngleMarks(model.angleMarks(for: text.string), text: model.angleRad ? " rad" : "°")
-        text.colour(units: deco.units, words: deco.words)
+        text.colour(units: deco.units, words: deco.words, style: AppSettings.shared.wordColor)
         text.wordNames = deco.names
         text.ghostTail = model.completion ?? ""
         text.insertionPointColor = Theme.ink

@@ -70,6 +70,12 @@ describe('a plain ans given a unit', () => {
     expect(shown(['255', 'ans in hex'])).toBe('0xFF')
     expect(shown(['ans mm'])).toBe('')
   })
+
+  it('has no unit to convert a plain ans to', () => {
+    expect(shown(['5', 'ans in mm'])).toBe('')
+    expect(shown(['5', 'ans to mm'])).toBe('')
+    expect(shown(['5', 'ans into mm'])).toBe('')
+  })
 })
 
 describe('an ans with a unit given another of its kind', () => {

@@ -9,6 +9,9 @@
 #   zsh native/mac/build.sh --arch=arm64 # one architecture only (faster while iterating)
 #   zsh native/mac/build.sh --skip-rust  # reuse native/build's libraries and bindings
 #   zsh native/mac/build.sh --release    # Q Calc's own bundle id, name, hotkey and Sparkle key (not for side-by-side use)
+#   zsh native/mac/build.sh --package    # a release, then the zips the release workflow publishes, one per architecture:
+#                                        # native/mac/dist/Q-Calc-<version>-apple-silicon.zip (appcast.xml) and -intel.zip
+#                                        # (appcast-intel.xml), each thinned to its own code, as macos/build.sh --package's
 #
 # Inputs it finds by itself, or from the environment:
 #   QCALC_SPARKLE_DIR  a Sparkle-2.10.0 release folder (default macos/vendor/Sparkle-2.10.0, fetched like macos/build.sh)
@@ -32,6 +35,7 @@ RUN=0
 ZIP=0
 SKIP_RUST=0
 RELEASE=0
+PACKAGE=0
 ARCHS=(arm64 x86_64)
 
 for arg in "$@"; do
@@ -40,12 +44,17 @@ for arg in "$@"; do
     --zip) ZIP=1 ;;
     --skip-rust) SKIP_RUST=1 ;;
     --release) RELEASE=1 ;;
+    --package) PACKAGE=1; RELEASE=1 ;;
     --arch=*) ARCHS=("${arg#--arch=}") ;;
     -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     *) echo "Unknown option: $arg" >&2; exit 1 ;;
   esac
 done
 
+if (( PACKAGE )) && (( ${#ARCHS} != 2 )); then
+  echo "--package builds both architectures; leave out --arch" >&2
+  exit 1
+fi
 if (( RELEASE )); then
   APP_NAME="Q Calc"
 else
@@ -147,15 +156,18 @@ else
   echo "warning: no $GAMES_WEB/games.html (needs node_modules); games and the 420/67/69 effects are off in this build" >&2
 fi
 
-# 5. sign, inside out, ad hoc (the release workflow signs for real)
-xattr -cr "$APP"
-sparkle="$APP/Contents/Frameworks/Sparkle.framework"
-codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Autoupdate"
-codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Updater.app"
-codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B"
-codesign --force --sign - --timestamp=none -o runtime "$sparkle"
-codesign --force --sign - --timestamp=none --identifier "$BUNDLE_ID" "$APP"
-codesign --verify --deep --strict "$APP"
+# 5. sign, inside out, ad hoc, as macos/build.sh signs the app it replaces
+sign_app() {
+  local app="$1" sparkle="$1/Contents/Frameworks/Sparkle.framework"
+  xattr -cr "$app"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Autoupdate"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B/Updater.app"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle/Versions/B"
+  codesign --force --sign - --timestamp=none -o runtime "$sparkle"
+  codesign --force --sign - --timestamp=none --identifier "$BUNDLE_ID" "$app"
+  codesign --verify --deep --strict "$app"
+}
+sign_app "$APP"
 
 if (( RUN )); then
   # only this build's own process; the installed Q Calc has another bundle id and is never touched
@@ -171,6 +183,23 @@ if (( ZIP )); then
   rm -f "$ZIP_PATH"
   ditto -c -k --norsrc --keepParent "$APP" "$ZIP_PATH"
   echo "Packaged $ZIP_PATH ($(du -h "$ZIP_PATH" | cut -f1))"
+fi
+if (( PACKAGE )); then
+  # one zip per architecture, each with only its own code and its own feed (an intel copy reads appcast-intel.xml,
+  # so it's never offered an apple silicon build); zipped from the stage, without Finder metadata
+  for arch in arm64 x86_64; do
+    if [[ "$arch" == arm64 ]]; then label=apple-silicon feed=appcast.xml; else label=intel feed=appcast-intel.xml; fi
+    thin="$STAGE/$label/$APP_NAME.app"
+    mkdir -p "$STAGE/$label"
+    ditto --arch "$arch" "$APP" "$thin"
+    /usr/libexec/PlistBuddy -c "Set :SUFeedURL https://maxconine.github.io/Q-Calc/$feed" "$thin/Contents/Info.plist"
+    sign_app "$thin"
+    [[ "$(lipo -archs "$thin/Contents/MacOS/QCalc")" == "$arch" ]] || { echo "$label zip isn't $arch only" >&2; exit 1; }
+    zip_path="$MAC/dist/Q-Calc-$APP_VERSION-$label.zip"
+    rm -f "$zip_path"
+    ditto -c -k --norsrc --keepParent "$thin" "$zip_path"
+    echo "Packaged $zip_path ($(du -h "$zip_path" | cut -f1), $feed)"
+  done
 fi
 if (( RUN )); then
   open "$DIST_APP" --args --show

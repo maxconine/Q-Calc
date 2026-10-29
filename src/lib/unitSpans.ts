@@ -6,6 +6,7 @@ export type UnitSpan = Span & { name: string }
 // words that are never a unit here, whatever the table says: constants and the conversion words themselves
 const NOT_UNITS = new Set(['e', 'i', 'pi', 'tau', 'ans', 'to', 'into', 'as', 'per', 'of', 'and', 'or'])
 const CONVERSION_WORDS = new Set(['to', 'in', 'into', 'as'])
+const IN_CONVERTS = /^\s+(?!(?:to|into|in|as)\b)[A-Za-zµμΩÅ°]/i
 // a word may sit right against its number (`5m`), but not inside another word
 const WORD = /(?<![A-Za-z_µμΩÅ°])°?[A-Za-zµμΩÅ][A-Za-zµμΩÅ]*/g
 const TEMPERATURES = new Set(['celsius', 'fahrenheit', 'kelvin', 'rankine'])
@@ -26,6 +27,9 @@ export function unitSpans(text: string, variables: string[] = [], functions: str
     // a call, not a unit
     if (/^\s*\(/.test(text.slice(end))) continue
     if (!unitPlace(text, start, spans)) continue
+    // `in` before another unit is the conversion (`5 in mm`, the second of `12122 in in mm`); before a conversion
+    // word, an operator or nothing it's inches (`5 in to mm`, `5 in + 2`)
+    if (word.toLowerCase() === 'in' && IN_CONVERTS.test(text.slice(end))) continue
     const info = unitInfo(word)
     if (info) spans.push({ start, end, name: info.name })
   }
@@ -54,7 +58,7 @@ function unitPlace(text: string, start: number, found: UnitSpan[]): boolean {
     if (/[\d²³⁰-⁹)]$/.test(operand)) return true
     return found.some((u) => u.end === operand.length || text.slice(u.end, operand.length).match(/^\^-?\d+$/) != null)
   }
-  // `10 km to mi`
-  const prior = /([A-Za-z]+)$/.exec(before)?.[1]
-  return prior != null && CONVERSION_WORDS.has(prior.toLowerCase())
+  // `10 km to mi`, and `ans in to mm`: ans is a number
+  const prior = /([A-Za-z]+)$/.exec(before)?.[1]?.toLowerCase()
+  return prior != null && (CONVERSION_WORDS.has(prior) || prior === 'ans')
 }

@@ -36,6 +36,19 @@ enum Theme {
     static let answerHover = dynamic(0x48484a, 0xd1d1d6)
     static let accent = dynamic(0x1d7a4c, 0x63d392)
     static let accentHover = dynamic(0x159a5a, 0x7ee2a8)
+    /// units, functions and constants in the line, as Settings › Units and functions picks: dark is a step past ink
+    static let wordDark = dynamic(0x000000, 0xffffff)
+    static func unitColour(_ style: String) -> NSColor {
+        switch style {
+        case "dark": return wordDark
+        case "grey": return muted
+        default: return accent
+        }
+    }
+    /// a known word: the unit colour mixed 85% with ink (green only; dark and grey are the same for both)
+    static func wordColour(_ style: String) -> NSColor {
+        style == "green" ? (accent.blended(withFraction: 0.15, of: ink) ?? accent) : unitColour(style)
+    }
     // --line: rgba(0,0,0,.08) / rgba(255,255,255,.09)
     private static let lineBase = dynamic(0x000000, 0xffffff, alpha: 0.08, darkAlpha: 0.09)
     private static let lineContrast = dynamic(0x000000, 0xffffff, alpha: 0.3)

@@ -128,8 +128,13 @@ fn ans_in_unit(expr: &str, ans_qty: Option<&str>, opts: &EvaluateOptions) -> Str
             "i",
         )
     });
+    // a plain number has no unit to convert: `ans in mm` is `ans to mm` (no answer), not ans inches times mm
+    static PLAIN: Lazy = Lazy::new(|| js(r"^ans\s+(?:to|into|in)\s+(?!(?:to|into|in)\b)(\S.*)$", "i"));
     let Some(q) = ans_qty else {
-        return expr.to_string();
+        return match PLAIN.captures(expr) {
+            Ok(Some(c)) => format!("ans to {}", jsre::group(&c, 1)),
+            _ => expr.to_string(),
+        };
     };
     let Ok(Some(c)) = RE.captures(expr) else {
         return expr.to_string();

@@ -73,6 +73,9 @@ function withQuantities(expr: string, quantities: Record<string, string>): strin
  * a temperature converts only unbracketed (`212 °F to K`), since an offset scale can't be multiplied out
  */
 function ansInUnit(expr: string, ansQty: string | undefined): string {
+  // a plain number has no unit to convert: `ans in mm` is `ans to mm` (no answer), not ans inches times mm
+  const plain = ansQty ? null : expr.match(/^ans\s+(?:to|into|in)\s+(?!(?:to|into|in)\b)(\S.*)$/i)
+  if (plain) return `ans to ${plain[1]}`
   const m = ansQty ? expr.match(/^ans\s+(?:(?:to|into|in)\s+(.+)|([A-Za-zµμ°Ω].*?)(?:\s+(?:to|into|in)\s+(.+))?)$/i) : null
   if (!m) return expr
   const kind = m[1] ?? m[2]!

@@ -89,6 +89,13 @@ describe('toTypstMath', () => {
     expect(toTypstMath('1e-20')).toBe('1 times 10^(-20)')
   })
 
+  it('keeps an e-notation number whole beside a fraction or under a power', () => {
+    expect(toTypstMath('2.03e-12/22')).toBe('(2.03 times 10^(-12)) / 22')
+    expect(toTypstMath('22/2.03e-12')).toBe('22 / (2.03 times 10^(-12))')
+    expect(toTypstMath('2e3^2')).toBe('(2 times 10^(3)) ^ 2')
+    expect(toTypstMath('3*2e-2')).toBe('3 dot 2 times 10^(-2)')
+  })
+
   it('wraps a document that imports the preamble and includes the answer', () => {
     const doc = typstDocument('x^2', '4')
     expect(doc).toContain('#import "/macros.typ": *')

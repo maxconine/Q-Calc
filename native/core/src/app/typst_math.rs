@@ -743,10 +743,24 @@ fn emit(s: &[char], from: usize, to: usize) -> String {
 
 /// The pieces of a group, joined so Typst can compile them. A / or ^ with nothing to divide or raise on one
 /// side (`2^`, `/3`, `2 / ^(-1)`) is the sign as typed, and a subscript or power with nothing before it hangs
-/// off an empty base: Typst can't compile a fraction or an attachment with a side missing.
+/// off an empty base: Typst can't compile a fraction or an attachment with a side missing. A number in e
+/// notation beside a / or under a ^ is one number, as the engine reads it: 2.03e-12/22 is 2.03 × 10⁻¹² over 22,
+/// not 2.03 × (10⁻¹² / 22) (Typst drops the parens a fraction's side is in)
 fn tidy(mut parts: Vec<String>) -> String {
     let sign = |p: &String| p == "/" || p == "^";
+    let held: Vec<bool> = (0..parts.len())
+        .map(|k| {
+            power_of_ten(&parts[k])
+                && ((k > 0 && parts[k - 1] == "/")
+                    || parts
+                        .get(k + 1)
+                        .is_some_and(|n| n == "/" || n.starts_with('^')))
+        })
+        .collect();
     for (k, p) in parts.iter_mut().enumerate() {
+        if held[k] {
+            *p = format!("({p})");
+        }
         if p.starts_with("_(") || (k == 0 && p.starts_with('^') && p != "^") {
             *p = format!("zws{p}");
         }
@@ -764,6 +778,12 @@ fn tidy(mut parts: Vec<String>) -> String {
         })
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+/// Whether a piece is a number in e notation as `read_number` typesets it (`2.03 times 10^(-12)`).
+fn power_of_ten(p: &str) -> bool {
+    p.split_once(" times 10^(")
+        .is_some_and(|(m, _)| !m.is_empty() && m.chars().all(|c| c.is_ascii_digit() || c == '.'))
 }
 
 /// Whether a piece can stand alone as a radicand, a subscript or an exponent: not a sign still waiting for
@@ -1975,6 +1995,18 @@ mod tests {
         for (expr, math) in [("1e6", "1 times 10^(6)"), ("2.5e-3", "2.5 times 10^(-3)")] {
             assert!(typst_preview_useful(expr), "{expr}");
             assert_eq!(preview_math(expr), math);
+        }
+    }
+
+    #[test]
+    fn scientific_notation_is_one_number_beside_a_fraction_or_power() {
+        for (expr, math) in [
+            ("2.03e-12/22", "(2.03 times 10^(-12)) / 22"),
+            ("22/2.03e-12", "22 / (2.03 times 10^(-12))"),
+            ("2e3^2", "(2 times 10^(3)) ^ 2"),
+            ("3*2e-2", "3 dot 2 times 10^(-2)"),
+        ] {
+            assert_eq!(to_typst_math(expr), math, "{expr}");
         }
     }
 }

@@ -226,6 +226,10 @@ final class BarModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.dropAnsweredCards() }
             .store(in: &bag)
+        MessageFiles.shared.$transfers
+            .receive(on: RunLoop.main)
+            .sink { [weak self] in self?.followOffer($0) }
+            .store(in: &bag)
         refreshRecent()
         // clips and files say things in the core's words (Messages/MessageFiles.swift)
         MessageFiles.shared.logic = logic
@@ -416,7 +420,11 @@ final class BarModel: ObservableObject {
             d.trailingParens = (fill["trailing"] as? NSNumber)?.intValue ?? 0
         }
         let variables = Array(request.context.variables.keys), functions = Array(request.context.functions.keys)
-        d.units = logic.spans("lib/unitSpans", "unitSpans", [text, variables, functions])
+        // a chained line is read after its faint `ans`, so `in` in `in to mm` is the unit it follows
+        let lead = request.chained ? "ans " : ""
+        d.units = logic.spans("lib/unitSpans", "unitSpans", [lead + text, variables, functions]).compactMap { r in
+            r.location < lead.utf16.count ? nil : NSRange(location: r.location - lead.utf16.count, length: r.length)
+        }
         d.words = logic.spans("lib/knownWords", "knownWordSpans", [text, functions, request.context.ans != nil])
         let named = logic.call("lib/knownWords", "wordNames", [text, variables, functions, request.context.ans != nil]) as? [[String: Any]] ?? []
         d.names = named.compactMap { s in
@@ -1030,6 +1038,31 @@ final class BarModel: ObservableObject {
         if let insertIntoField { insertIntoField(piece) } else { text += piece }
     }
 
+    /// the line under the bar follows a file it just offered: waiting, sending, then sent (or declined, cancelled…)
+    /// rather than saying "waiting for them to accept" after it's gone. Anything else said there lets it go.
+    private var followed: (id: String, line: String)?
+    private func followOffer(_ transfers: [String: MessageFiles.Transfer]) {
+        if followed == nil, let offer = MessageFiles.shared.lastOffer, hint == offer.line { followed = offer }
+        guard let f = followed, hint == f.line, let t = transfers[f.id] else { followed = nil; return }
+        guard t.state != "offered" else { return }
+        let line = "\(t.name) · \(MessageFiles.shared.stateText(t))"
+        hint = line
+        let done = ["sent", "declined", "cancelled", "withdrawn", "refused", "lost", "failed"].contains(t.state) || t.error != nil
+        followed = done ? nil : (f.id, line)
+    }
+
+    /// pasted prose back on the clipboard as one plain line (Settings › Copy pasted text as plain text); the bar
+    /// opens empty next time, since the paste was only there to be flattened
+    func copyPlain(_ plain: String) {
+        guard settings.plainPasteCopy else { return }
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(plain, forType: .string)
+        hint = "Copied as plain text"
+        freshNextOpen = true
+    }
+    private var freshNextOpen = false
+
     func deleteSelected() -> Bool {
         guard let i = selected, let row = history.remove(at: i) else { return false }
         deleted = (row, i)
@@ -1340,7 +1373,17 @@ final class BarModel: ObservableObject {
 
     func willHide() {
         replyFocused = nil
+        // a confirmation (sent, copied…) was for that visit: the bar opens without it
+        hint = nil
+        followed = nil
         _ = closeMessages(refocus: false)
+        if freshNextOpen {
+            // a paragraph pasted to be copied as plain text: nothing kept, so the next open starts fresh
+            freshNextOpen = false
+            text = ""
+            UserDefaults.standard.removeObject(forKey: Self.draftKey)
+            return
+        }
         let draftSeconds = settings.draftSeconds
         if text.trimmingCharacters(in: .whitespaces).isEmpty {
             UserDefaults.standard.removeObject(forKey: Self.draftKey)

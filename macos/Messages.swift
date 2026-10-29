@@ -459,7 +459,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // someone new asks: once a name, whatever they send meanwhile. `said` is what to show once they're allowed,
     // "" for a clip or a file, which MessageFiles keeps
-    private func ask(_ from: String, said text: String) {
+    private func ask(_ from: String, said text: String, sharing: Bool = false) {
         // a name already asking isn't asked about again
         let asked = asking[from] != nil
         if !asked || !text.isEmpty { asking[from] = text }
@@ -469,11 +469,16 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         inboxChanged()
         // the bar asks itself while it's up
         guard !barOpen else { return }
+        #if QCALC_NATIVE
+        CornerNotes.shared.post(from: from, ask: true, sharing: sharing)
+        #else
         let content = UNMutableNotificationContent()
-        content.body = "\(from) wants to message you. Allow?"
+        // a clip or a file asks as "share", as the Windows app's balloon says it
+        content.body = sharing ? "\(from) wants to share with you. Allow?" : "\(from) wants to message you. Allow?"
         content.categoryIdentifier = Self.requestCategory
         content.userInfo = ["from": from]
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "request-\(from)", content: content, trigger: nil))
+        #endif
     }
 
     // kept for the bar whatever happens to the notification, which is only the alert while the bar is away
@@ -485,12 +490,17 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
         #endif
         inboxChanged()
         guard !barOpen else { return }
+        #if QCALC_NATIVE
+        _ = item
+        CornerNotes.shared.post(from: from, body: text)
+        #else
         let content = UNMutableNotificationContent()
         // the sender in the title, apart from their words, so no text can pass for another name
         content.title = from
         content.body = text
         content.sound = .default
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: item.id, content: content, trigger: nil))
+        #endif
     }
 
     #if QCALC_NATIVE
@@ -501,13 +511,19 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     func askShare(from raw: String) {
         let from = Self.clean(raw)
         guard !from.isEmpty, !blocked.contains(from), !accepted.contains(from) else { return }
-        ask(from, said: "")
+        ask(from, said: "", sharing: true)
     }
     #endif
 
     private func inboxChanged() {
         NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
     }
+
+    #if QCALC_NATIVE
+    private static let systemAlerts = false
+    #else
+    private static let systemAlerts = true
+    #endif
 
     private static func alerts(_ status: UNAuthorizationStatus) -> Alerts {
         switch status {
@@ -519,6 +535,8 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 
     // asks the first time; after that it's the answer given, or what system settings says now
     private func needAlerts(_ done: @escaping (Bool) -> Void) {
+        // the native app's notes in the corner are its own, so it never asks for macOS notifications
+        guard Self.systemAlerts else { return done(false) }
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { settings in
             guard settings.authorizationStatus == .notDetermined else {
@@ -541,6 +559,7 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
     // turned off in system settings, receiving pauses; turned back on, it picks up again
     // with a name set, permission that was reset is asked for again
     @objc func refreshAlerts() {
+        guard Self.systemAlerts else { return }
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             let now = Self.alerts(settings.authorizationStatus)
             DispatchQueue.main.async { [weak self] in
@@ -593,6 +612,10 @@ final class Messages: NSObject, ObservableObject, URLSessionWebSocketDelegate, U
 struct MessagesSettingsView: View {
     @ObservedObject var messages: Messages
     @State private var draft = ""
+    #if QCALC_NATIVE
+    @AppStorage(CornerNotes.onKey) private var notesOn = true
+    @AppStorage(CornerNotes.textKey) private var notesText = true
+    #endif
 
     var body: some View {
         Form {
@@ -611,6 +634,18 @@ struct MessagesSettingsView: View {
                     Text("Your name")
                     Text(messages.status)
                 }
+                #if QCALC_NATIVE
+                Toggle(isOn: $notesOn) {
+                    Text("Show notifications")
+                    Text("A note in the corner when a message or file comes while the bar is closed. It never takes the keys.")
+                }
+                if notesOn {
+                    Toggle(isOn: $notesText) {
+                        Text("Show message text")
+                        Text("Off, a note only says who sent something.")
+                    }
+                }
+                #else
                 if messages.alerts == .denied {
                     QLabeled {
                         Button("Open Settings") { messages.openNotificationSettings() }
@@ -619,6 +654,7 @@ struct MessagesSettingsView: View {
                         Text("Off. Messages wait under the bar for the next time you open it.")
                     }
                 }
+                #endif
                 if !messages.name.isEmpty {
                     QLabeled {
                         Button("Turn Off") {
