@@ -1015,7 +1015,8 @@ mod view {
                     self.caret_at + 0.5,
                     mid + half,
                     1.5,
-                    t.accent,
+                    // grey, never the accent: a green caret read as a selection or a mode
+                    t.muted,
                 );
             }
             c.pop_clip();

@@ -2,7 +2,7 @@ import { DurableObject } from 'cloudflare:workers'
 import { cleanName, GAMES, ipKey, newRoomId, ROOM_ID, RoomList } from './directory.js'
 import { enqueue, GRACE_MS, LEFT, newSeats, otherSide, overdue, seatOf, SIDES } from './seats.js'
 import { cleanHandle, cleanText, hashKey, holdName, INBOX_PROTOCOL, KEY, keyFromProtocols, lapsed, LAPSE_MS, MAX_INBOX_SOCKETS, withPub } from './names.js'
-import { cleanSealedClip, cleanSealedOffer, declaredLength, disposition, FALLBACK, fileKey, NEW_NAME_MS, PART_BYTES, partCount, rangeStart, SEALED_CLIP_MAX } from './files.js'
+import { cleanSealedClip, cleanSealedOffer, declaredLength, disposition, FALLBACK, fileKey, NEW_NAME_MS, PART_BYTES, partCount, partKey, partKeys, rangeStart, SEALED_CLIP_MAX, streamPartBytes } from './files.js'
 
 export { Ledger } from './ledger.js'
 
@@ -47,11 +47,18 @@ export { Ledger } from './ledger.js'
 //   by the apps and can't be read here (native/PRIVACY.md). nothing on these routes is logged
 //
 // and files (files.js, ledger.js), where who's asking rides in headers (x-qcalc-name, x-qcalc-key), never the url:
-//   POST   /file/<id>/accept     the recipient accepts; the sender, if online, hears `accepted` with a grant
+//   POST   /file/<id>/accept     the recipient accepts; the sender, if online, hears `accepted` with a grant (and
+//                                `stream`, the part length a streamed upload uses); the recipient's answer says
+//                                `stream` too
 //   POST   /file/<id>/start      the sender, with x-qcalc-grant, starts the upload (or comes back to it)
-//   PUT    /file/<id>/part/<n>   one part, exactly PART_BYTES but the last
+//   PUT    /file/<id>/part/<n>   one part, exactly PART_BYTES but the last. streamed: exactly `stream` but the last,
+//                                the first with x-qcalc-grant and x-qcalc-stream: 1 in place of start, and the
+//                                recipient hears `part` {n} as each one is in
+//   GET    /file/<id>/part/<n>   the recipient reads a streamed part as soon as it's in (`not-ready` before; `whole`
+//                                for a file that isn't streamed, to be read once it's `ready`)
 //   POST   /file/<id>/finish     puts the parts together; the recipient hears `ready`
-//   GET    /file/<id>            the recipient downloads it ([Range: bytes=N-]); it goes once it's all been read
+//   GET    /file/<id>            the recipient downloads it ([Range: bytes=N-]), a streamed one as its parts one after
+//                                another; it goes once it's all been read
 //   DELETE /file/<id>            its sender takes it back, or its recipient turns it down
 //
 // a page that can take a seat back asks with resume=1; only when both sides did is a seat held. then `open`
@@ -227,7 +234,7 @@ async function send(req, env, o) {
 const FILE_CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, PUT, GET, DELETE',
-  'Access-Control-Allow-Headers': 'Content-Type, Range, X-QCalc-Name, X-QCalc-Key, X-QCalc-Grant',
+  'Access-Control-Allow-Headers': 'Content-Type, Range, X-QCalc-Name, X-QCalc-Key, X-QCalc-Grant, X-QCalc-Stream',
   'Access-Control-Expose-Headers': 'Content-Range, X-QCalc-From',
 }
 const FILE_HTTP = {
@@ -240,6 +247,7 @@ const FILE_HTTP = {
   busy: 409,
   'not-accepted': 409,
   'not-ready': 409,
+  whole: 409,
   incomplete: 409,
   'sender-offline': 409,
   expired: 410,
@@ -264,12 +272,20 @@ function answer(status, more = {}) {
 async function clear(env, rec) {
   if (!rec) return
   try {
+    if (rec.stream) {
+      if (rec.state === 'uploading' || rec.state === 'stored') await env.FILES.delete(partKeys(rec.id, rec.bytes, rec.stream))
+      return
+    }
     if (rec.state === 'uploading' && rec.uploadId) await env.FILES.resumeMultipartUpload(fileKey(rec.id), rec.uploadId).abort()
     if (rec.state === 'stored') await env.FILES.delete(fileKey(rec.id))
   } catch {
     // the bucket's lifecycle rule takes what's left
   }
 }
+
+// a stream that passes bytes on as they are and says when the last has gone: the runtime's own (no JavaScript per
+// chunk, which is what a download's speed hangs on), or the standard one where there's none (the tests)
+const passThrough = () => (typeof IdentityTransformStream === 'function' ? new IdentityTransformStream() : new TransformStream())
 
 // a file event for one side: accepted, ready, cancelled or declined
 const notify = (env, name, e) => inbox(env, name).notify(event({ type: 'file', ...e }))
@@ -278,8 +294,10 @@ const notify = (env, name, e) => inbox(env, name).notify(event({ type: 'file', .
 async function accept(env, id, name) {
   const granted = await ledger(env).grant(id, name)
   if (granted.status !== 'ok') return answer(granted.status)
-  const heard = await notify(env, granted.from, { event: 'accepted', id, to: name, grant: granted.grant, bytes: granted.bytes, partBytes: PART_BYTES })
-  if (heard === 'delivered') return answer('ok')
+  // an app that streams uploads in `stream`-long parts its recipient reads as they land; an older one, PART_BYTES
+  const stream = streamPartBytes(granted.bytes)
+  const heard = await notify(env, granted.from, { event: 'accepted', id, to: name, grant: granted.grant, bytes: granted.bytes, partBytes: PART_BYTES, stream })
+  if (heard === 'delivered') return answer('ok', { stream })
   // only this grant: if the offer was taken back meanwhile, or accepted again, nothing newer is undone
   await ledger(env).revert(id, granted.grant)
   return answer('sender-offline')
@@ -291,6 +309,8 @@ async function start(req, env, id, name) {
   // the ledger counts the address under a salted tag for the hour and keeps nothing of it
   const s = await ledger(env).start(id, name, req.headers.get('X-QCalc-Grant') ?? '', ipKey(req.headers.get('cf-connecting-ip')))
   if (s.status !== 'ok') return answer(s.status)
+  // coming back to a streamed upload: its own part length
+  if (s.stream) return answer('ok', { partBytes: s.stream, parts: partCount(s.bytes, s.stream), done: s.parts, stream: s.stream })
   const more = { partBytes: PART_BYTES, parts: partCount(s.bytes), done: s.parts }
   if (s.uploadId) return answer('ok', more)
   let upload
@@ -307,10 +327,19 @@ async function start(req, env, id, name) {
   return answer('ok', more)
 }
 
-// one part, streamed straight to r2 and held to exactly the length its place in the file has
+// one part, streamed straight to r2 and held to exactly the length its place in the file has. a streamed upload's
+// first part carries the grant and starts it (no round trip of its own), and each part is an object its recipient
+// can read at once
 async function part(req, env, id, name, n) {
   const length = declaredLength(req.headers.get('Content-Length'))
   if (length == null) return answer('bad')
+  const grant = req.headers.get('X-QCalc-Grant')
+  if (grant && req.headers.get('X-QCalc-Stream') === '1') {
+    if (!(await allowed(env.UPLOADS, req)) || !(await allowedKey(env.UPLOADS, `name:${name}`))) return answer('too-many')
+    if (!(await seasoned(env, name))) return answer('new-name')
+    const s = await ledger(env).startStream(id, name, grant, ipKey(req.headers.get('cf-connecting-ip')))
+    if (s.status !== 'ok') return answer(s.status)
+  }
   const p = await ledger(env).part(id, name, n, length)
   if (p.removed) {
     await clear(env, p.removed)
@@ -320,6 +349,19 @@ async function part(req, env, id, name, n) {
   const body = length === 0 || !req.body ? new Uint8Array(0) : typeof FixedLengthStream === 'function' ? req.body.pipeThrough(new FixedLengthStream(length)) : req.body
   let kept
   try {
+    if (p.stream) {
+      const put = await env.FILES.put(partKey(id, n), body, { httpMetadata: { contentType: 'application/octet-stream' } })
+      if (!put) return answer('failed')
+      kept = await ledger(env).partDone(id, n, 1)
+      if (!kept) {
+        // taken back or turned down while it was on its way: what was just put goes too
+        await env.FILES.delete(partKey(id, n)).catch(() => {})
+        return answer('gone')
+      }
+      // its recipient reads it now, if they're streaming; nothing's lost if they don't hear it
+      await notify(env, p.to, { event: 'part', id, n }).catch(() => {})
+      return answer('ok')
+    }
     const done = await env.FILES.resumeMultipartUpload(fileKey(id), p.uploadId).uploadPart(n, body)
     kept = await ledger(env).partDone(id, n, done.etag)
   } catch {
@@ -333,19 +375,81 @@ async function part(req, env, id, name, n) {
 async function finish(env, id, name) {
   const f = await ledger(env).finish(id, name)
   if (f.status !== 'ok') return answer(f.status, f.missing ? { missing: f.missing } : {})
-  try {
-    await env.FILES.resumeMultipartUpload(fileKey(id), f.uploadId).complete(f.parts)
-  } catch {
-    return answer('failed')
+  if (!f.stream) {
+    try {
+      await env.FILES.resumeMultipartUpload(fileKey(id), f.uploadId).complete(f.parts)
+    } catch {
+      return answer('failed')
+    }
   }
   const s = await ledger(env).stored(id)
   if (!s) {
     // taken back or turned down while its parts were being put together: what was just made goes too
-    await env.FILES.delete(fileKey(id)).catch(() => {})
+    if (!f.stream) await env.FILES.delete(fileKey(id)).catch(() => {})
     return answer('gone')
+  }
+  if (s.gone) {
+    // streamed, and its recipient has read every part already: nothing's left to tell them
+    await env.FILES.delete(partKeys(id, s.bytes, s.stream)).catch(() => {})
+    return answer('ok', { expires: s.expires })
   }
   await notify(env, s.to, { event: 'ready', id, from: name, expires: s.expires })
   return answer('ok', { expires: s.expires })
+}
+
+// a streamed part, read by its recipient as soon as it's in. once every part has been read to its end and the
+// upload's finished, the file goes
+async function readPart(env, ctx, id, name, n) {
+  const r = await ledger(env).partReadable(id, name, n)
+  if (r.removed) await clear(env, r.removed)
+  if (r.status !== 'ok') return answer(r.status)
+  const obj = await env.FILES.get(partKey(id, n))
+  if (!obj) return answer('not-ready')
+  const { readable, writable } = passThrough()
+  const done = obj.body
+    .pipeTo(writable)
+    .then(async () => {
+      const { removed } = await ledger(env).partRead(id, n)
+      if (removed) await clear(env, removed)
+    })
+    .catch(() => {
+      // read again
+    })
+  if (ctx?.waitUntil) ctx.waitUntil(done)
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      ...FILE_CORS,
+      'Content-Type': 'application/octet-stream',
+      'Content-Disposition': disposition(id),
+      'X-Content-Type-Options': 'nosniff',
+      'Cache-Control': 'no-store',
+      'Content-Length': String(r.length),
+      'X-QCalc-From': r.from,
+    },
+  })
+}
+
+// a streamed file read as one, from byte `from` on: its parts one after another
+function streamed(env, id, bytes, size, from) {
+  let n = Math.floor(from / size) + 1
+  let skip = from - (n - 1) * size
+  const last = partCount(bytes, size)
+  return new ReadableStream({
+    async pull(c) {
+      if (n > last) return c.close()
+      const obj = await env.FILES.get(partKey(id, n), skip ? { range: { offset: skip } } : undefined)
+      if (!obj) return c.error(new Error('part gone'))
+      const reader = obj.body.getReader()
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        c.enqueue(value)
+      }
+      n++
+      skip = 0
+    },
+  })
 }
 
 // its recipient downloads it, from a byte on with `Range: bytes=N-` to pick up where a cut-short one stopped.
@@ -357,17 +461,24 @@ async function download(req, env, ctx, id, name) {
   const from = rangeStart(req.headers.get('Range'), r.bytes)
   if (from == null) return answer('bad')
   const k = fileKey(id)
-  const obj = await env.FILES.get(k, from ? { range: { offset: from } } : undefined)
-  if (!obj) {
-    await ledger(env).remove(id)
-    return answer('gone')
+  let body
+  if (r.stream) {
+    body = streamed(env, id, r.bytes, r.stream, from)
+  } else {
+    const obj = await env.FILES.get(k, from ? { range: { offset: from } } : undefined)
+    if (!obj) {
+      await ledger(env).remove(id)
+      return answer('gone')
+    }
+    body = obj.body
   }
-  const { readable, writable } = new TransformStream()
-  const done = obj.body
+  const { readable, writable } = passThrough()
+  const done = body
     .pipeTo(writable)
     .then(async () => {
-      await ledger(env).remove(id)
-      await env.FILES.delete(k)
+      const rec = await ledger(env).remove(id)
+      if (r.stream) await clear(env, rec ?? { id, state: 'stored', bytes: r.bytes, stream: r.stream })
+      else await env.FILES.delete(k)
     })
     .catch(() => {
       // kept for another try until it's taken back or expires
@@ -404,7 +515,7 @@ async function files(req, env, ctx, path) {
   const m = FILE_ROUTE.exec(path)
   if (!m) return answer('gone')
   const [, id, action, n] = m
-  const want = !action ? ['GET', 'DELETE'] : action.startsWith('part/') ? ['PUT'] : ['POST']
+  const want = !action ? ['GET', 'DELETE'] : action.startsWith('part/') ? ['PUT', 'GET'] : ['POST']
   if (!want.includes(req.method)) return new Response(`expected ${want.join(' or ')}\n`, { status: 405 })
   // who's asking, on every route, by their name and its key; never in the url
   const name = cleanHandle(req.headers.get('X-QCalc-Name') ?? '')
@@ -416,6 +527,7 @@ async function files(req, env, ctx, path) {
   if (action === 'accept') return accept(env, id, name)
   if (action === 'start') return start(req, env, id, name)
   if (action === 'finish') return finish(env, id, name)
+  if (req.method === 'GET') return readPart(env, ctx, id, name, Number(n))
   return part(req, env, id, name, Number(n))
 }
 

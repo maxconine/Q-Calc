@@ -1,4 +1,6 @@
-//! The clipboard, as Unicode text.
+//! The clipboard, as Unicode text (and a received file, as files: `set_files`).
+
+use std::os::windows::ffi::OsStrExt;
 
 use windows::Win32::Foundation::{HANDLE, HGLOBAL, HWND};
 use windows::Win32::System::DataExchange::{
@@ -45,6 +47,63 @@ pub fn get(owner: HWND) -> Option<String> {
     // SAFETY: opened above
     let _ = unsafe { CloseClipboard() };
     out
+}
+
+/// Files on the clipboard as Explorer's Copy puts them (CF_HDROP, and the shell's "Preferred DropEffect" saying
+/// copy), so Ctrl+V pastes them in Explorer or any app that takes files.
+pub fn set_files(owner: HWND, paths: &[std::path::PathBuf]) -> bool {
+    use windows::Win32::System::DataExchange::RegisterClipboardFormatW;
+    use windows::Win32::UI::Shell::DROPFILES;
+    const CF_HDROP: u32 = 15;
+    if paths.is_empty() || !open(owner) {
+        return false;
+    }
+    // the paths, each ending in a nul, then one more
+    let mut wide: Vec<u16> = Vec::new();
+    for p in paths {
+        wide.extend(p.as_os_str().encode_wide());
+        wide.push(0);
+    }
+    wide.push(0);
+    let head = std::mem::size_of::<DROPFILES>();
+    // SAFETY: the clipboard is open; each global is filled while locked and handed to the clipboard, which owns it
+    let ok = unsafe {
+        let _ = EmptyClipboard();
+        let drop = GlobalAlloc(GMEM_MOVEABLE, head + wide.len() * 2)
+            .ok()
+            .and_then(|g| {
+                let p = GlobalLock(g) as *mut u8;
+                if p.is_null() {
+                    return None;
+                }
+                let files = DROPFILES {
+                    pFiles: head as u32,
+                    fWide: true.into(),
+                    ..Default::default()
+                };
+                std::ptr::copy_nonoverlapping((&files as *const DROPFILES).cast::<u8>(), p, head);
+                std::ptr::copy_nonoverlapping(wide.as_ptr(), p.add(head).cast::<u16>(), wide.len());
+                let _ = GlobalUnlock(g);
+                SetClipboardData(CF_HDROP, Some(HANDLE(g.0))).ok()
+            });
+        // DROPEFFECT_COPY: a paste copies, never moves the saved file away
+        let effect = RegisterClipboardFormatW(windows::core::w!("Preferred DropEffect"));
+        if drop.is_some()
+            && effect != 0
+            && let Ok(g) = GlobalAlloc(GMEM_MOVEABLE, 4)
+        {
+            let p = GlobalLock(g) as *mut u32;
+            if !p.is_null() {
+                *p = 1;
+                let _ = GlobalUnlock(g);
+                let _ = SetClipboardData(effect, Some(HANDLE(g.0)));
+            }
+        }
+        drop.is_some()
+    };
+    // SAFETY: opened above
+    let _ = unsafe { CloseClipboard() };
+    ok
 }
 
 pub fn set(owner: HWND, text: &str) -> bool {

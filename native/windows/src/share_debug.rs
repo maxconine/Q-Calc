@@ -87,10 +87,20 @@ pub fn cmd(app: &App, args: &str) -> Value {
                 share::drop_files(app, paths);
             }))
         }
-        "save" | "retry" => {
+        "save" | "retry" | "takeback" | "cancel" => {
             let id = s(&a, "id");
-            let retry = op == "retry";
-            later(Box::new(move |app| share::file_act(app, &id, retry)))
+            let act = match op.as_str() {
+                "retry" => messaging::Act::Retry,
+                "takeback" => messaging::Act::TakeBack,
+                "cancel" => messaging::Act::Cancel,
+                _ => messaging::Act::Save,
+            };
+            later(Box::new(move |app| share::file_act(app, &id, act)))
+        }
+        // Settings › Messages' file rows, as if picked there
+        "prefs" => {
+            let (auto, clip) = (a["autoAccept"].as_u64(), a["clipboard"].as_bool());
+            later(Box::new(move |app| share::set_prefs(app, auto, clip)))
         }
         "trust" => {
             let who = s(&a, "who");
@@ -139,6 +149,12 @@ pub fn cmd(app: &App, args: &str) -> Value {
                 }
             }))
         }
+        // the open thread's layout time, as a frame pays it
+        "threadCost" => json!({
+            "us": threads::debug_place_us(&app.gfx, app.bar.layout.threads.map_or(640.0, |r| r.w), 21, false),
+            "coldUs": threads::debug_place_us(&app.gfx, app.bar.layout.threads.map_or(640.0, |r| r.w), 21, true),
+            "lines": threads::open_name().map_or(0, |n| threads::debug_state()["threads"][n.as_str()].as_array().map_or(0, Vec::len)),
+        }),
         "vector-open" => vector_open(&a),
         "vector-seal" => vector_seal(&a),
         _ => json!({ "error": format!("share: unknown op {op}") }),

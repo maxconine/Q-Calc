@@ -259,6 +259,8 @@ struct State {
     copied: Option<String>,
     notice: Option<bool>,
     bold: Option<IDWriteTextFormat>,
+    /// the open thread's lines, laid out (line_block), by what they show
+    blocks: HashMap<String, Block>,
 }
 
 impl Default for State {
@@ -281,6 +283,7 @@ impl Default for State {
             copied: None,
             notice: None,
             bold: None,
+            blocks: HashMap::new(),
         }
     }
 }
@@ -519,6 +522,7 @@ pub fn open(app: &mut App, who: &str) {
             s.reply = Reply::Idle;
             s.info = false;
             s.scroll = 0.0;
+            s.blocks.clear();
         }
         s.panel = Some(Panel::Thread(name.clone()));
         s.focus = true;
@@ -546,6 +550,7 @@ pub fn close(m: &mut BarModel) -> bool {
         }
         keep_draft(s);
         s.panel = None;
+        s.blocks.clear();
         s.draft = reply_field("");
         s.reply = Reply::Idle;
         s.focus = false;
@@ -569,6 +574,8 @@ pub fn will_hide() {
     with(|s| {
         s.hover = None;
         s.drop_hint = None;
+        // the layouts go with the showing (made again, once, at the next)
+        s.blocks.clear();
     });
 }
 
@@ -742,11 +749,20 @@ enum Ink {
     Accent,
 }
 
+#[derive(Clone)]
 enum Item {
     Text(IDWriteTextLayout, f32, f32, Ink),
     Fill(Rect, f32, bool),
     Button(Rect, IDWriteTextLayout, Hit),
     Bar(Rect, u32),
+}
+
+/// A thread line laid out from its own top, kept while it doesn't change.
+#[derive(Clone)]
+struct Block {
+    h: f32,
+    items: Vec<Item>,
+    hits: Vec<(Rect, Hit)>,
 }
 
 struct Placed {
@@ -1052,7 +1068,6 @@ fn place_thread(gfx: &Gfx, p: &mut Placed, width: f32, mut y: f32, name: &str) -
     // the lines, in content coordinates, then fitted to the view from the bottom
     let mut c = 0.0;
     let mut items = Vec::new();
-    let mut hits: Vec<(Rect, Hit)> = Vec::new();
     let now = local(now_ms());
     if lines.is_empty() {
         if let Some(l) = gfx.layout(&core::thread_empty_text(name), &gfx.fonts.body, 0.0, BTN_H) {
@@ -1060,110 +1075,45 @@ fn place_thread(gfx: &Gfx, p: &mut Placed, width: f32, mut y: f32, name: &str) -
         }
         c += BTN_H;
     }
+    // each line's block, laid out once and kept while it doesn't change (a file's line follows its transfer, so
+    // it's laid out each time); a frame, a hover or a click then costs a lookup per line, not its text layouts
+    let mut blocks: Vec<(f32, Block)> = Vec::with_capacity(lines.len());
     for (i, line) in lines.iter().enumerate() {
-        if headed(&lines, i) {
-            c += 6.0;
-            let mut x = g;
-            if let Some(b) = bold(gfx)
-                && let Some(l) = gfx.layout(if line.mine() { "you" } else { name }, &b, 0.0, 18.0)
-            {
-                x += measure(&l).0 + 6.0;
-                items.push(Item::Text(
-                    l,
-                    g,
-                    c,
-                    if line.mine() { Ink::Muted } else { Ink::Text },
-                ));
+        let head = headed(&lines, i);
+        let key = line.file.is_none().then(|| {
+            format!(
+                "{}|{head}|{}|{}|{}",
+                line.id,
+                width.to_bits(),
+                copied.as_deref() == Some(line.id.as_str()),
+                if head {
+                    time_full(local(line.at), now)
+                } else {
+                    String::new()
+                }
+            )
+        });
+        let kept = key
+            .as_ref()
+            .and_then(|k| with(|s| s.blocks.get(k).cloned()));
+        let block = match kept {
+            Some(b) => b,
+            None => {
+                let b = line_block(gfx, line, head, name, width, copied.as_deref(), now);
+                if let Some(k) = key {
+                    with(|s| {
+                        if s.blocks.len() > 4 * CAP {
+                            s.blocks.clear();
+                        }
+                        s.blocks.insert(k, b.clone());
+                    });
+                }
+                b
             }
-            if let Some(l) =
-                gfx.layout(&time_full(local(line.at), now), &gfx.fonts.small, 0.0, 18.0)
-            {
-                items.push(Item::Text(l, x, c, Ink::Muted));
-            }
-            c += 18.0;
-        }
-        if let Some(clip) = &line.clip {
-            let label = if copied.as_deref() == Some(line.id.as_str()) {
-                "Copied"
-            } else {
-                "Copy"
-            };
-            let right = button(
-                gfx,
-                label,
-                width - g,
-                c + 2.0,
-                Hit::Copy(line.id.clone()),
-                &mut items,
-                &mut hits,
-                false,
-            );
-            let bw = right - g;
-            if let Some((l, h)) =
-                wrapped(gfx, &format!("🔒 {clip}"), &gfx.fonts.small, bw - 16.0, 8.0)
-            {
-                let r = Rect::new(g, c, bw, h + 12.0);
-                items.push(Item::Fill(r, size::RADIUS_S, false));
-                items.push(Item::Text(l, g + 8.0, c + 6.0, Ink::Answer));
-                c += r.h + 4.0;
-            }
-        } else if let Some(file) = &line.file {
-            let (state, pct) = crate::share::line_state(&file.id, line.mine(), name);
-            let mut right = width - g - 8.0;
-            for (act, label) in crate::share::file_acts(&file.id).into_iter() {
-                right = button(
-                    gfx,
-                    &label,
-                    right,
-                    c + 6.0,
-                    Hit::File(file.id.clone(), act),
-                    &mut items,
-                    &mut hits,
-                    false,
-                );
-            }
-            let top = c;
-            c += 6.0;
-            let head = format!("📄 🔒 {}  {}", file.name, core::file_size_text(file.size));
-            if let Some(l) = gfx.layout_in(
-                &head,
-                &gfx.fonts.body,
-                (right - g - 8.0).max(1.0),
-                BTN_H,
-                DWRITE_TEXT_ALIGNMENT_LEADING,
-            ) {
-                items.push(Item::Text(l, g + 8.0, c, Ink::Answer));
-            }
-            c += BTN_H;
-            if !state.is_empty()
-                && let Some(l) = gfx.layout_in(
-                    &state,
-                    &gfx.fonts.small,
-                    inner - 16.0,
-                    18.0,
-                    DWRITE_TEXT_ALIGNMENT_LEADING,
-                )
-            {
-                items.push(Item::Text(l, g + 8.0, c, Ink::Muted));
-                c += 18.0;
-            }
-            if let Some(pct) = pct {
-                items.push(Item::Bar(
-                    Rect::new(g + 8.0, c + 2.0, inner - 16.0, 3.0),
-                    pct,
-                ));
-                c += 8.0;
-            }
-            c += 6.0;
-            items.insert(
-                0,
-                Item::Fill(Rect::new(g, top, inner, c - top), size::RADIUS_S, false),
-            );
-            c += 4.0;
-        } else if let Some((l, h)) = wrapped(gfx, &line.text, &gfx.fonts.body, inner, 40.0) {
-            items.push(Item::Text(l, g, c, Ink::Answer));
-            c += h + 2.0;
-        }
+        };
+        let h = block.h;
+        blocks.push((c, block));
+        c += h;
     }
     let view_h = c.min(MAX_VIEW);
     let scroll = with(|s| {
@@ -1172,18 +1122,29 @@ fn place_thread(gfx: &Gfx, p: &mut Placed, width: f32, mut y: f32, name: &str) -
     });
     let shift = y - (c - view_h - scroll);
     p.view = Rect::new(0.0, y, width, view_h);
+    let moved = |it: Item, dy: f32| match it {
+        Item::Text(l, x, ty, ink) => Item::Text(l, x, ty + dy, ink),
+        Item::Fill(r, rad, sel) => Item::Fill(Rect::new(r.x, r.y + dy, r.w, r.h), rad, sel),
+        Item::Button(r, l, h) => Item::Button(Rect::new(r.x, r.y + dy, r.w, r.h), l, h),
+        Item::Bar(r, pct) => Item::Bar(Rect::new(r.x, r.y + dy, r.w, r.h), pct),
+    };
     for it in items {
-        p.view_items.push(match it {
-            Item::Text(l, x, ty, ink) => Item::Text(l, x, ty + shift, ink),
-            Item::Fill(r, rad, sel) => Item::Fill(Rect::new(r.x, r.y + shift, r.w, r.h), rad, sel),
-            Item::Button(r, l, h) => Item::Button(Rect::new(r.x, r.y + shift, r.w, r.h), l, h),
-            Item::Bar(r, pct) => Item::Bar(Rect::new(r.x, r.y + shift, r.w, r.h), pct),
-        });
+        p.view_items.push(moved(it, shift));
     }
-    for (r, h) in hits {
-        let r = Rect::new(r.x, r.y + shift, r.w, r.h);
-        if r.bottom() > y && r.y < y + view_h {
-            p.hits.push((r, h));
+    // only the lines in view are drawn and can be clicked
+    for (top, b) in blocks {
+        let at = top + shift;
+        if at + b.h <= y || at >= y + view_h {
+            continue;
+        }
+        for it in b.items {
+            p.view_items.push(moved(it, at));
+        }
+        for (r, h) in b.hits {
+            let r = Rect::new(r.x, r.y + at, r.w, r.h);
+            if r.bottom() > y && r.y < y + view_h {
+                p.hits.push((r, h));
+            }
         }
     }
     p.content = c;
@@ -1228,6 +1189,124 @@ fn place_thread(gfx: &Gfx, p: &mut Placed, width: f32, mut y: f32, name: &str) -
     p.hits.push((p.field, Hit::Field));
     let _ = draft_empty;
     y + FIELD_H + 12.0
+}
+
+/// One line of a thread, laid out from its own top: who and when (if it's `headed`), then its words, clip or file.
+fn line_block(
+    gfx: &Gfx,
+    line: &Line,
+    head: bool,
+    name: &str,
+    width: f32,
+    copied: Option<&str>,
+    now: i64,
+) -> Block {
+    let g = size::GUTTER;
+    let inner = width - 2.0 * g;
+    let mut c = 0.0;
+    let mut items = Vec::new();
+    let mut hits: Vec<(Rect, Hit)> = Vec::new();
+    if head {
+        c += 6.0;
+        let mut x = g;
+        if let Some(b) = bold(gfx)
+            && let Some(l) = gfx.layout(if line.mine() { "you" } else { name }, &b, 0.0, 18.0)
+        {
+            x += measure(&l).0 + 6.0;
+            items.push(Item::Text(
+                l,
+                g,
+                c,
+                if line.mine() { Ink::Muted } else { Ink::Text },
+            ));
+        }
+        if let Some(l) = gfx.layout(&time_full(local(line.at), now), &gfx.fonts.small, 0.0, 18.0) {
+            items.push(Item::Text(l, x, c, Ink::Muted));
+        }
+        c += 18.0;
+    }
+    if let Some(clip) = &line.clip {
+        let label = if copied == Some(line.id.as_str()) {
+            "Copied"
+        } else {
+            "Copy"
+        };
+        let right = button(
+            gfx,
+            label,
+            width - g,
+            c + 2.0,
+            Hit::Copy(line.id.clone()),
+            &mut items,
+            &mut hits,
+            false,
+        );
+        let bw = right - g;
+        if let Some((l, h)) = wrapped(gfx, &format!("🔒 {clip}"), &gfx.fonts.small, bw - 16.0, 8.0)
+        {
+            let r = Rect::new(g, c, bw, h + 12.0);
+            items.push(Item::Fill(r, size::RADIUS_S, false));
+            items.push(Item::Text(l, g + 8.0, c + 6.0, Ink::Answer));
+            c += r.h + 4.0;
+        }
+    } else if let Some(file) = &line.file {
+        let (state, pct) = crate::share::line_state(&file.id, line.mine(), name);
+        let mut right = width - g - 8.0;
+        for (act, label) in crate::share::file_acts(&file.id).into_iter() {
+            right = button(
+                gfx,
+                &label,
+                right,
+                c + 6.0,
+                Hit::File(file.id.clone(), act),
+                &mut items,
+                &mut hits,
+                false,
+            );
+        }
+        let top = c;
+        c += 6.0;
+        let head = format!("📄 🔒 {}  {}", file.name, core::file_size_text(file.size));
+        if let Some(l) = gfx.layout_in(
+            &head,
+            &gfx.fonts.body,
+            (right - g - 8.0).max(1.0),
+            BTN_H,
+            DWRITE_TEXT_ALIGNMENT_LEADING,
+        ) {
+            items.push(Item::Text(l, g + 8.0, c, Ink::Answer));
+        }
+        c += BTN_H;
+        if !state.is_empty()
+            && let Some(l) = gfx.layout_in(
+                &state,
+                &gfx.fonts.small,
+                inner - 16.0,
+                18.0,
+                DWRITE_TEXT_ALIGNMENT_LEADING,
+            )
+        {
+            items.push(Item::Text(l, g + 8.0, c, Ink::Muted));
+            c += 18.0;
+        }
+        if let Some(pct) = pct {
+            items.push(Item::Bar(
+                Rect::new(g + 8.0, c + 2.0, inner - 16.0, 3.0),
+                pct,
+            ));
+            c += 8.0;
+        }
+        c += 6.0;
+        items.insert(
+            0,
+            Item::Fill(Rect::new(g, top, inner, c - top), size::RADIUS_S, false),
+        );
+        c += 4.0;
+    } else if let Some((l, h)) = wrapped(gfx, &line.text, &gfx.fonts.body, inner, 40.0) {
+        items.push(Item::Text(l, g, c, Ink::Answer));
+        c += h + 2.0;
+    }
+    Block { h: c, items, hits }
 }
 
 /// The panel's height under the cards (0 when there's nothing to show).
@@ -1429,7 +1508,7 @@ pub fn click(app: &mut App, x: f32, y: f32) -> bool {
             }
         }
         Some(Hit::Copy(id)) => copy_line(app, &id),
-        Some(Hit::File(id, act)) => crate::share::file_act(app, &id, act == Act::Retry),
+        Some(Hit::File(id, act)) => crate::share::file_act(app, &id, act),
         Some(Hit::Row(i)) => {
             if let Some((name, _)) = with(|s| conversations(&s.threads)).get(i) {
                 open(app, &name.clone());
@@ -1615,6 +1694,24 @@ pub fn over_thread(app: &App, x: f32, y: f32) -> bool {
 }
 
 // ---- the e2e suite's view ----
+
+/// How long the panel takes to lay out (µs, the median of `n`): what a frame, a hover and a click each pay.
+/// `cold` lays every line out again each time, as before the lines were kept.
+pub fn debug_place_us(gfx: &Gfx, width: f32, n: usize, cold: bool) -> f64 {
+    let mut times: Vec<f64> = (0..n.max(1))
+        .map(|_| {
+            if cold {
+                with(|s| s.blocks.clear());
+            }
+            let t = std::time::Instant::now();
+            let p = place(gfx, width);
+            std::hint::black_box(p.height);
+            t.elapsed().as_secs_f64() * 1e6
+        })
+        .collect();
+    times.sort_by(f64::total_cmp);
+    times[times.len() / 2]
+}
 
 pub fn debug_state() -> Value {
     with(|s| {

@@ -120,11 +120,36 @@ export function cleanSealedClip(raw) {
   return cleanSealed(raw, SEALED_CLIP_MAX)
 }
 
-// how many parts an upload of this many bytes takes, and how long part n (from 1) must be
-export const partCount = (bytes) => Math.max(1, Math.ceil(bytes / PART_BYTES))
-export function partLength(bytes, n) {
-  if (!Number.isSafeInteger(n) || n < 1 || n > partCount(bytes)) return null
-  return Math.min(PART_BYTES, bytes - (n - 1) * PART_BYTES)
+// how many parts an upload of this many bytes takes, and how long part n (from 1) must be; `size` is the part
+// length, PART_BYTES for a multipart upload, streamPartBytes(bytes) for a streamed one
+export const partCount = (bytes, size = PART_BYTES) => Math.max(1, Math.ceil(bytes / size))
+export function partLength(bytes, n, size = PART_BYTES) {
+  if (!Number.isSafeInteger(n) || n < 1 || n > partCount(bytes, size)) return null
+  return Math.min(size, bytes - (n - 1) * size)
+}
+
+// a streamed file (native apps from 2026-10 on): each part is an object of its own that its recipient can read as
+// soon as it's in, so the download runs alongside the upload instead of after it. a part is a whole number of the
+// apps' sealed chunks (1 MiB of plain bytes and its 16-byte tag), so each one can be opened as it lands: at least
+// STREAM_CHUNKS of them, more for a big file so that no file takes more than STREAM_PARTS_MAX parts (each part is
+// one r2 write and one read: 64 for a 1 GiB file, against a multipart upload's 23)
+export const SEALED_CHUNK = 1024 * 1024 + 16
+export const STREAM_CHUNKS = 4
+export const STREAM_PARTS_MAX = 64
+export function streamPartBytes(bytes) {
+  const chunks = Math.max(1, Math.ceil(bytes / SEALED_CHUNK))
+  return SEALED_CHUNK * Math.max(STREAM_CHUNKS, Math.ceil(chunks / STREAM_PARTS_MAX))
+}
+
+// a streamed part's own r2 key, under its file's
+export function partKey(id, n) {
+  if (!Number.isSafeInteger(n) || n < 1 || n > STREAM_PARTS_MAX) throw new Error('not a part')
+  return `${fileKey(id)}/${n}`
+}
+
+// every r2 key a streamed file of this many bytes can have
+export function partKeys(id, bytes, size) {
+  return Array.from({ length: partCount(bytes, size) }, (_, i) => partKey(id, i + 1))
 }
 
 // a declared length, or null when it isn't one

@@ -1,7 +1,8 @@
 //! The edge tools (EdgeTools in BarView.swift, EdgeTools.tsx): settings top left, deg · a/b · sf · ×10ⁿ (native
 //! only: Ctrl+E's exponent form, exponent.rs) top right, clear
-//! bottom right, over the composer's corners, shown while the pointer is on the composer. Each is 11 pt medium,
-//! muted at 72% (an active toggle in the answer's colour), with a hover and press fill, and its tip, an ink pill,
+//! bottom right, over the composer's corners, shown while the pointer is on the composer (its line or the background
+//! that drags, which Windows reports as non-client). Each is 11 pt medium, muted and opaque (an active toggle in the
+//! answer's colour), with a hover and press fill, and takes clicks rather than starting a drag; its tip, an ink pill,
 //! after a 450 ms rest; the tip ends with the action's key, from the user's keybinds ("Degrees · click for
 //! radians · Ctrl+D").
 
@@ -38,6 +39,8 @@ pub struct EdgeState {
     pub tip: Option<Tool>,
     /// a WM_MOUSELEAVE is asked for
     pub tracking: bool,
+    /// a WM_NCMOUSELEAVE is asked for (the pointer is on the background that drags)
+    pub nc_tracking: bool,
 }
 
 impl Tool {
@@ -125,7 +128,7 @@ mod ui {
         DWRITE_FONT_WEIGHT_MEDIUM, DWRITE_FONT_WEIGHT_SEMI_BOLD, IDWriteTextFormat,
     };
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent,
+        TME_LEAVE, TME_NONCLIENT, TRACKMOUSEEVENT, TrackMouseEvent,
     };
 
     use super::{EdgeState, Tool};
@@ -133,9 +136,11 @@ mod ui {
     use crate::keys::KeyAction;
     use crate::later;
     use crate::model::{BarModel, Outcome};
-    use crate::render::{Canvas, Gfx, Rect, format, measure, size, with_alpha};
+    use crate::render::{Canvas, Gfx, Rect, format, measure, size};
 
     const H: f32 = 23.0;
+    /// not in the windows crate's Controls module
+    pub const WM_NCMOUSELEAVE: u32 = 0x02A2;
     const TIP_MS: u32 = 450;
 
     thread_local! {
@@ -143,6 +148,8 @@ mod ui {
         static ICONS: RefCell<Option<Option<IDWriteTextFormat>>> = const { RefCell::new(None) };
         /// .edge-frac-mark's 6.5 pt semibold
         static MARK: RefCell<Option<Option<IDWriteTextFormat>>> = const { RefCell::new(None) };
+        /// inside `nc_pointer`
+        static IN_NC: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     }
 
     fn mark(gfx: &Gfx) -> Option<IDWriteTextFormat> {
@@ -210,16 +217,72 @@ mod ui {
         out
     }
 
-    fn tool_at(app: &App, x: f32, y: f32) -> Option<Tool> {
+    pub fn tool_at(app: &App, x: f32, y: f32) -> Option<Tool> {
+        if !app.bar.layout.composer.contains(x, y) {
+            return None;
+        }
         rects(&app.gfx, &app.model, app.bar.layout.composer)
             .into_iter()
             .find(|(_, r)| r.contains(x, y))
             .map(|(t, _)| t)
     }
 
+    /// The pointer over the composer's background, which drags the bar (HTCAPTION, so Windows sends it as
+    /// WM_NCMOUSEMOVE, not WM_MOUSEMOVE): the tools show there too. `lp` is the screen point.
+    pub fn nc_pointer(app: &mut App, lp: windows::Win32::Foundation::LPARAM) {
+        if !app.model.edge.nc_tracking {
+            let mut t = TRACKMOUSEEVENT {
+                cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
+                dwFlags: TME_LEAVE | TME_NONCLIENT,
+                hwndTrack: app.bar.hwnd,
+                dwHoverTime: 0,
+            };
+            // SAFETY: a live struct for our bar
+            let _ = unsafe { TrackMouseEvent(&mut t) };
+            // one leave is tracked at a time: this replaces the client area's
+            app.model.edge.nc_tracking = true;
+            app.model.edge.tracking = false;
+        }
+        let (sx, sy) = (
+            i32::from((lp.0 & 0xffff) as u16 as i16),
+            i32::from(((lp.0 >> 16) & 0xffff) as u16 as i16),
+        );
+        let at = window_point(app, sx, sy);
+        // the tools only: the rest of the bar keeps the client area's pointer, as before. No client tracking from
+        // here: asked for off the client area, Windows posts WM_MOUSELEAVE at once
+        IN_NC.with(|n| n.set(true));
+        pointer(app, Some(at));
+        IN_NC.with(|n| n.set(false));
+    }
+
+    /// WM_NCMOUSELEAVE: the pointer left the background that drags.
+    pub fn nc_left(app: &mut App) {
+        // stale when a client request (ours or graph.rs's) has replaced the background's since
+        if !app.model.edge.nc_tracking {
+            return;
+        }
+        app.model.edge.nc_tracking = false;
+        pointer(app, None);
+    }
+
+    /// Whether the pointer is still over the bar itself (not a tooltip or another window over it): moving between
+    /// the line and the background that drags leaves one area for the other, not the bar.
+    fn still_over(app: &App) -> bool {
+        use windows::Win32::UI::WindowsAndMessaging::{GetCursorPos, WindowFromPoint};
+        let mut pt = windows::Win32::Foundation::POINT::default();
+        // SAFETY: a live out point
+        unsafe { GetCursorPos(&mut pt) }.is_ok() && unsafe { WindowFromPoint(pt) } == app.bar.hwnd
+    }
+
+    fn window_point(app: &App, sx: i32, sy: i32) -> (f32, f32) {
+        let f = app.bar.frame();
+        let s = app.bar.scale();
+        ((sx - f.left) as f32 / s, (sy - f.top) as f32 / s)
+    }
+
     /// The pointer moved over the bar (None: it left the window).
     pub fn pointer(app: &mut App, at: Option<(f32, f32)>) {
-        if at.is_some() && !app.model.edge.tracking {
+        if at.is_some() && !app.model.edge.tracking && !IN_NC.with(|n| n.get()) {
             let mut t = TRACKMOUSEEVENT {
                 cbSize: std::mem::size_of::<TRACKMOUSEEVENT>() as u32,
                 dwFlags: TME_LEAVE,
@@ -230,8 +293,18 @@ mod ui {
             let _ = unsafe { TrackMouseEvent(&mut t) };
             app.model.edge.tracking = true;
         }
+        if at.is_some() && !IN_NC.with(|n| n.get()) {
+            // on the line: any background request was replaced (by ours or graph.rs's)
+            app.model.edge.nc_tracking = false;
+        }
         if at.is_none() {
-            app.model.edge.tracking = false;
+            if !IN_NC.with(|n| n.get()) {
+                app.model.edge.tracking = false;
+            }
+            // a leave between the line and the background keeps the tools; the next move updates them
+            if still_over(app) {
+                return;
+            }
         }
         let shown = at.is_some_and(|(x, y)| app.bar.layout.composer.contains(x, y));
         let hover = if shown {
@@ -250,6 +323,7 @@ mod ui {
             pressed: e.pressed.filter(|p| Some(*p) == hover),
             tip: if moved { None } else { e.tip },
             tracking: e.tracking,
+            nc_tracking: e.nc_tracking,
         };
         app.model.touch();
         if moved {
@@ -316,10 +390,9 @@ mod ui {
             }
             let ink = if tool.active(s) || (hovered && tool == Tool::Settings) {
                 t.answer
-            } else if hovered {
-                t.muted
             } else {
-                with_alpha(t.muted, 0.72)
+                // opaque: at 72% they read as disabled
+                t.muted
             };
             match tool {
                 Tool::Settings => {

@@ -852,6 +852,15 @@ impl App {
                 crate::commands::pointer(self, None);
                 crate::graph::leave(self);
             }
+            // the background that drags is non-client: the edge tools show over it too (edge.rs)
+            windows::Win32::UI::WindowsAndMessaging::WM_NCMOUSEMOVE => {
+                crate::edge::nc_pointer(self, lp);
+                return None;
+            }
+            crate::edge::WM_NCMOUSELEAVE => {
+                crate::edge::nc_left(self);
+                return None;
+            }
             WM_SETCURSOR => {
                 if (lp.0 & 0xffff) as u32 != 1 {
                     return None; // not HTCLIENT
