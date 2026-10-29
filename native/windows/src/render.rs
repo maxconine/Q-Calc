@@ -470,10 +470,29 @@ enum Target {
 }
 
 struct Flip {
-    chain: IDXGISwapChain1,
+    chain: std::mem::ManuallyDrop<IDXGISwapChain1>,
     ctx: ID2D1DeviceContext,
     /// the back buffer as the context's target, for buffers of `size`; made again after a resize
     bitmap: Option<(ID2D1Bitmap1, (u32, u32))>,
+    d3d: ID3D11Device,
+}
+
+impl Drop for Flip {
+    /// The swap chain goes now, not whenever the device next flushes: D3D11 defers destroying it, and while another
+    /// window (settings) kept the shared device alive, the bar's old chain still held its window, so the next one
+    /// for it was refused (E_ACCESSDENIED) and the bar fell back to a window target that stopped showing frames.
+    fn drop(&mut self) {
+        // SAFETY: live objects; the chain is dropped once, here, after nothing refers to its buffers
+        unsafe {
+            self.ctx.SetTarget(None);
+            self.bitmap = None;
+            std::mem::ManuallyDrop::drop(&mut self.chain);
+            if let Ok(imm) = self.d3d.GetImmediateContext() {
+                imm.ClearState();
+                imm.Flush();
+            }
+        }
+    }
 }
 
 /// A window's render target, made when first needed and kept across hides.
@@ -605,9 +624,10 @@ impl Surface {
             let brush = ctx.CreateSolidColorBrush(&rgb(0, 1.0), None)?;
             Ok((
                 Target::Flip(Flip {
-                    chain,
+                    chain: std::mem::ManuallyDrop::new(chain),
                     ctx,
                     bitmap: None,
+                    d3d: dev.d3d.clone(),
                 }),
                 brush,
             ))
