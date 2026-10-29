@@ -149,6 +149,12 @@ pub fn cmd(app: &App, args: &str) -> Value {
                 }
             }))
         }
+        // the open thread's layout time, as a frame pays it
+        "threadCost" => json!({
+            "us": threads::debug_place_us(&app.gfx, app.bar.layout.threads.map_or(640.0, |r| r.w), 21, false),
+            "coldUs": threads::debug_place_us(&app.gfx, app.bar.layout.threads.map_or(640.0, |r| r.w), 21, true),
+            "lines": threads::open_name().map_or(0, |n| threads::debug_state()["threads"][n.as_str()].as_array().map_or(0, Vec::len)),
+        }),
         "vector-open" => vector_open(&a),
         "vector-seal" => vector_seal(&a),
         _ => json!({ "error": format!("share: unknown op {op}") }),
