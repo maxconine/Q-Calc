@@ -8,8 +8,8 @@
 //!   bar ("sent to max", "max isn't on q calc right now · not sent"...), and a delivered line clears.
 //! - **The cards.** An accepted name's message is a card under the bar with a reply line; someone new's first
 //!   message is a request card with Allow and Block, and a blocked name's messages are dropped unseen. While the
-//!   bar is away a message waits (and a tray balloon says so, the sender as its title, as the Mac's notification
-//!   does); the bar shows it on its next open. Cards go after 10 s unless the pointer is on them or a reply is being
+//!   bar is away a message waits (and a note in the corner says so, notice.rs, the sender apart from their words,
+//!   as the Mac's notification has them); the bar shows it on its next open. Cards go after 10 s unless the pointer is on them or a reply is being
 //!   typed or sent. Text is sanitised (controls and direction overrides become spaces) by the core.
 //! - **The name** is held on the relay by a 64-hex key made here, kept with the lists in `messaging.json` beside
 //!   settings.json. The settings window sets and lets go of it (`set_name`, `turn_off`, `status`, the lists).
@@ -581,8 +581,7 @@ fn arrived(app: &mut App, from: &str, text: &str) {
                 show_cards(app, vec![card]);
             } else {
                 with(|s| keep(s, card));
-                app.tray
-                    .notify("Q Calc", &format!("{from} wants to message you. Allow?"));
+                crate::notice::post(app, from, crate::notice::What::Ask);
             }
         }
     }
@@ -612,7 +611,7 @@ fn keep(s: &mut State, card: BannerCard) {
     }
 }
 
-/// Kept for the bar whatever happens to the balloon, which is only the alert while the bar is away.
+/// Kept for the bar whatever happens to the notice (notice.rs), which is only the alert while the bar is away.
 fn deliver(app: &mut App, from: &str, text: &str) {
     crate::threads::record_text(from, false, text);
     // with their thread open it lands there, and a reader hears it as a card's would be
@@ -628,13 +627,15 @@ fn deliver(app: &mut App, from: &str, text: &str) {
         show_cards(app, vec![card]);
     } else {
         with(|s| keep(s, card));
-        // the sender as the title, apart from their words, so no text can pass for another name
-        app.tray.notify(from, text);
+        // the sender apart from their words (their own line, in bold), so no text can pass for another name
+        crate::notice::post(app, from, crate::notice::What::Message(text.to_string()));
     }
 }
 
 /// The bar is showing: what came while it was away becomes cards (the newest on top).
 pub fn will_show(app: &mut App) {
+    // what the notices said is in the bar now
+    crate::notice::clear();
     // with a name, the bar takes drags with a hint (share_drop.rs), once the showing is out
     let named = STATE.with(|s| {
         s.try_borrow()
@@ -988,7 +989,7 @@ pub fn found_name(name: &str) -> Option<bool> {
 }
 
 /// A card for a clip, a file or a note about one (share.rs): shown now, or kept for the bar's next showing with a
-/// tray balloon. `ask` makes it a request card (someone new).
+/// notice in the corner (notice.rs).
 pub fn share_card(app: &mut App, from: &str, text: &str, share: Option<crate::share::Kind>) {
     let card = new_card(from, text, false);
     if let Some(k) = share {
@@ -998,7 +999,7 @@ pub fn share_card(app: &mut App, from: &str, text: &str, share: Option<crate::sh
         show_cards(app, vec![card]);
     } else {
         with(|s| keep(s, card));
-        app.tray.notify(from, text);
+        crate::notice::post(app, from, crate::notice::What::Share(text.to_string()));
     }
 }
 
@@ -1013,8 +1014,7 @@ pub fn ask_share(app: &mut App, from: &str) {
         show_cards(app, vec![card]);
     } else {
         with(|s| keep(s, card));
-        app.tray
-            .notify("Q Calc", &format!("{from} wants to share with you. Allow?"));
+        crate::notice::post(app, from, crate::notice::What::AskShare);
     }
 }
 
@@ -1311,6 +1311,8 @@ fn settings_items(app: &App) -> Vec<crate::settings_window::Item> {
         ));
         // saving files without asking, and copying them once saved (share.rs)
         out.extend(crate::share::settings_items(app));
+        // the note in the corner while the bar is away (notice.rs)
+        out.extend(crate::notice::settings_items(app));
     }
     let asks = requests();
     if !asks.is_empty() {
@@ -1366,7 +1368,9 @@ fn settings_items(app: &App) -> Vec<crate::settings_window::Item> {
 
 /// A change on the Messages page: the row's id and its new value.
 fn settings_changed(app: &mut App, id: &str, value: &Value) {
-    if crate::share::settings_changed(app, id, value) {
+    if crate::share::settings_changed(app, id, value)
+        || crate::notice::settings_changed(app, id, value)
+    {
         crate::settings_window::refresh(app);
         return;
     }

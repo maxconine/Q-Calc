@@ -70,6 +70,11 @@ pub struct Settings {
     pub auto_accept_bytes: u64,
     // native only: a received file goes on the clipboard once it's saved, for Ctrl+V in Explorer (share.rs)
     pub received_to_clipboard: bool,
+    // native only: the note in the corner when a message or file comes while the bar is away (notice.rs), its
+    // words, and whether Windows' Do Not Disturb still lets it show (Settings › Messages › Notifications)
+    pub notifications: bool,
+    pub notification_text: bool,
+    pub notifications_in_dnd: bool,
 }
 
 // the core's actions, then the native app's own (exponent.rs NATIVE_ACTIONS)
@@ -109,6 +114,9 @@ impl Default for Settings {
             exponent_mode: false,
             auto_accept_bytes: DEFAULT_AUTO_ACCEPT,
             received_to_clipboard: false,
+            notifications: true,
+            notification_text: true,
+            notifications_in_dnd: false,
         }
     }
 }
@@ -138,6 +146,9 @@ impl Settings {
         flag("shareUsage", &mut self.share_usage);
         flag("exponentMode", &mut self.exponent_mode);
         flag("receivedToClipboard", &mut self.received_to_clipboard);
+        flag("notifications", &mut self.notifications);
+        flag("notificationText", &mut self.notification_text);
+        flag("notificationsInDnd", &mut self.notifications_in_dnd);
         if let Some(n) = v["autoAcceptBytes"].as_f64()
             && n.is_finite()
         {
@@ -444,7 +455,8 @@ mod tests {
                 "keepWords": false, "answerForm": "exact", "historyInsert": "expr", "historyShow": "recent",
                 "sigFigs": 6, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
                 "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {},
-                "exponentMode": false, "autoAcceptBytes": 100_000_000, "receivedToClipboard": false
+                "exponentMode": false, "autoAcceptBytes": 100_000_000, "receivedToClipboard": false,
+                "notifications": true, "notificationText": true, "notificationsInDnd": false
             })
         );
         // the file rows: a size is kept to 0..1 GiB, a flag as it is
@@ -455,6 +467,13 @@ mod tests {
         assert_eq!(s.auto_accept_bytes, AUTO_ACCEPT_MAX);
         s.merge(&json!({ "autoAcceptBytes": -5 }));
         assert_eq!(s.auto_accept_bytes, 0);
+        // the notification rows: flags, a missing one kept
+        assert!(s.merge(&json!({ "notifications": false, "notificationsInDnd": true })));
+        assert_eq!(
+            (s.notifications, s.notification_text, s.notifications_in_dnd),
+            (false, true, true)
+        );
+        assert!(!s.merge(&json!({ "notificationText": "yes" })));
     }
 
     #[test]

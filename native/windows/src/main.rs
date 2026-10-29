@@ -69,6 +69,8 @@ mod model;
 #[cfg(windows)]
 mod net;
 #[cfg(windows)]
+mod notice;
+#[cfg(windows)]
 mod rates;
 #[cfg(windows)]
 mod relay;
