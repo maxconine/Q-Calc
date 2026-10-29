@@ -6,6 +6,14 @@
     <description>Q Calc updates for Intel Macs</description>
     <language>en</language>
     <item>
+      <title>Version 3.0.0</title>
+      <pubDate>Thu, 29 Oct 2026 20:53:51 +0000</pubDate>
+      <sparkle:version>3.0.0</sparkle:version>
+      <sparkle:shortVersionString>3.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.5</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v3.0.0/Q-Calc-3.0.0-intel.zip" sparkle:edSignature="3YCFO2yGfUnBEpAN6k5D5Inl0mgQZZNpQuwsE7gPtJGKzKVi59C8ozfkxz5T0ktsQGRms428Ok2jBCo4KKzxAA==" length="14680263" type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.0.15</title>
       <pubDate>Wed, 21 Oct 2026 18:57:48 +0000</pubDate>
       <sparkle:version>2.0.15</sparkle:version>
