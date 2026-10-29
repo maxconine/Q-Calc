@@ -757,11 +757,14 @@ fn send_file(app: &mut App, path: PathBuf, to: &str) {
         .unwrap_or_default();
     let name = core::clean_filename(&raw_name);
     let started = crate::model::now_ms() as f64;
-    say_to(app, &to, format!("encrypting {name}…"));
+    let encrypting = format!("encrypting {name}…");
+    say_to(app, &to, encrypting.clone());
     bg::spawn("qcalc-share", move || {
         let result = offer(&path, &name, &to, &me, &relay_key);
         bg::post(move |app| match result {
             Ok(o) => {
+                // the file's own line in the thread takes over from here
+                crate::threads::unsay(&to, &encrypting);
                 crate::messaging::note_sent(&to);
                 crate::threads::record_file(&to, true, &o.id, &name, o.size);
                 with(|s| {

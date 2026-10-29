@@ -186,12 +186,16 @@ Section "Uninstall"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
   Delete "$SMPROGRAMS\${APP_ID}.lnk"
+  ; the Tauri installer's desktop shortcut, if this install upgraded one (it would point at nothing now)
+  Delete "$DESKTOP\${APP_ID}.lnk"
   DeleteRegKey HKCU "${UNINSTALL_KEY}"
   DeleteRegKey HKCU "${DIR_KEY}"
   DeleteRegKey /ifempty HKCU "Software\${PUBLISHER}"
   ; the sign-in entry only when it is ours
   ReadRegStr $0 HKCU "${RUN_KEY}" "${APP_ID}"
+  ; (or the Tauri app's unquoted one, when this install upgraded it and Q Calc hasn't run since)
   ${If} $0 == '"$INSTDIR\qcalc.exe" --autostart'
+  ${OrIf} $0 == '$INSTDIR\qcalc.exe --autostart'
     DeleteRegValue HKCU "${RUN_KEY}" "${APP_ID}"
   ${EndIf}
   ; settings, history and rates (%APPDATA%\com.maxconine.qcalc) stay, as the Tauri app's uninstaller left them

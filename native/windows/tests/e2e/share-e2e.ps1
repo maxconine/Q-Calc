@@ -582,6 +582,28 @@ try {
     $let = Wait-Until { (Transfer-Named $B 'quit mid-way.bin' $false).state -eq 'cancelled' } 40000
     Start-Sleep -Milliseconds 500
     Check 'X6' "after a restart mid-upload the recipient hears it was taken back, nothing partial is left" ($let -and (No-Partials $B)) "B: $((Transfer-Named $B 'quit mid-way.bin' $false).state)"
+
+    # ---- writing first is the handshake; an offer in an open thread says nothing that goes stale ----
+    Wait-Until { (St $A).messaging.link -eq 'Ready' } 20000 | Out-Null
+    Share $A @{ op = 'forget'; who = $B.User } | Out-Null
+    Share $B @{ op = 'forget'; who = $A.User } | Out-Null
+    Start-Sleep -Milliseconds 300
+    Share $A @{ op = 'text'; to = $B.User; text = 'hello again' } | Out-Null
+    $asked = Wait-Until { @((St $B).messaging.asking) -contains $A.User } 10000
+    Check 'HS1' 'once forgotten, a first message is a request again' $asked "$((St $B).messaging | ConvertTo-Json -Compress)"
+    Share $B @{ op = 'allow'; who = $A.User } | Out-Null
+    Share $B @{ op = 'text'; to = $A.User; text = 'hi back' } | Out-Null
+    $shown = Wait-Until { Thread-Of $A $B.User | Where-Object { $_.dir -eq 'received' -and $_.text -eq 'hi back' } } 10000
+    $sa = (St $A).messaging
+    Check 'HS2' 'writing first is the handshake: their reply shows with no request back' ($shown -and @($sa.asking) -notcontains $B.User -and @($sa.accepted) -contains $B.User) "$($sa | ConvertTo-Json -Compress)"
+    Share $A @{ op = 'open'; who = $B.User } | Out-Null
+    Wait-Until { (St $A).threads.panel.thread -eq $B.User } 3000 | Out-Null
+    $fo = New-Blob (Join-Path $Root 'in the thread.bin') 2048
+    Share $A @{ op = 'files'; to = $B.User; paths = @($fo) } | Out-Null
+    $went = Wait-Until { (Transfer-Named $A 'in the thread.bin' $true).state -eq 'sent' } 20000
+    $reply = (St $A).threads.reply
+    Check 'HS3' "a file offered from an open thread leaves no 'waiting for them to accept' behind" ($went -and $reply -notmatch 'waiting|encrypting') "reply: $reply"
+    Share $A @{ op = 'close' } | Out-Null
 } catch {
     Check 'X' 'the suite ran to the end' $false $_.Exception.Message
     Log $_.ScriptStackTrace

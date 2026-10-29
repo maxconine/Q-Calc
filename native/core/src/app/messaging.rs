@@ -165,8 +165,12 @@ pub fn block_sender(m: &Messaging, who: &str) -> Messaging {
     with_lists(m, who, false, true)
 }
 
+/// Off both lists, and off the recent ones: a name written to shows (`arrival`), so forgetting it has to undo that.
 pub fn forget_sender(m: &Messaging, who: &str) -> Messaging {
-    with_lists(m, who, false, false)
+    Messaging {
+        recent: m.recent.iter().filter(|n| *n != who).cloned().collect(),
+        ..with_lists(m, who, false, false)
+    }
 }
 
 /// The bar's `message <name> <text>`.
@@ -1434,6 +1438,8 @@ mod tests {
         assert_eq!(arrival(&sent_to(&me(), "spam"), "spam"), Arrival::Show);
         assert_eq!(arrival(&m, "eve"), Arrival::Ask);
         assert_eq!(sent_to(&me(), "!!"), me());
+        // forgetting someone written to makes their next message a request again
+        assert_eq!(arrival(&forget_sender(&m, "zoe"), "zoe"), Arrival::Ask);
     }
 
     #[test]

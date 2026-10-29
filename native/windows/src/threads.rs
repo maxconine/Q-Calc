@@ -731,6 +731,17 @@ pub fn reply_sent(app: &mut App, to: &str, delivered: bool, note: String) {
 }
 
 /// A share's word for the open thread's reply status (share.rs `say` with a thread open).
+/// The reply line's note goes, if it still says `note` in `to`'s open thread (a step that's over, as encrypting).
+pub fn unsay(to: &str, note: &str) {
+    if is_open(to) {
+        with(|s| {
+            if matches!(&s.reply, Reply::Failed(n) if n == note) {
+                s.reply = Reply::Idle;
+            }
+        });
+    }
+}
+
 pub fn say(to: &str, note: &str) -> bool {
     if !is_open(to) {
         return false;
