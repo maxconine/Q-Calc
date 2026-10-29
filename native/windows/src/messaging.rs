@@ -643,14 +643,18 @@ pub fn will_show(app: &mut App) {
     if named {
         crate::share_drop::ensure_soon();
     }
-    let waiting = STATE.with(|s| {
+    let mut waiting = STATE.with(|s| {
         s.try_borrow_mut()
             .ok()
             .map(|mut s| std::mem::take(&mut s.inbox))
             .unwrap_or_default()
     });
+    // what came from someone whose thread is open is in their thread already, not a card as well
+    waiting.retain(|c| c.ask || !crate::threads::is_open(&c.from));
     if !waiting.is_empty() {
         show_cards(app, waiting);
+        // a file's card says where it's got to since it came (it may be saved by now)
+        crate::share::refresh(app);
     }
 }
 
@@ -1400,6 +1404,8 @@ struct Placed {
     asks: Option<IDWriteTextLayout>,
     acts: Vec<(Act, Rect, IDWriteTextLayout)>,
     text: Option<(IDWriteTextLayout, Rect)>,
+    /// a file on its way: how far (share.rs `card_progress`)
+    bar: Option<(Rect, u32)>,
     field: Rect,
     status: Option<(IDWriteTextLayout, Rect)>,
 }
@@ -1471,6 +1477,7 @@ fn place(gfx: &Gfx, cards: &Cards, width: f32) -> Vec<Placed> {
             .flatten();
         let mut height = PAD_TOP + HEAD;
         let mut text = None;
+        let mut bar = None;
         let mut field = Rect::default();
         let mut status = None;
         if c.card.ask {
@@ -1480,6 +1487,10 @@ fn place(gfx: &Gfx, cards: &Cards, width: f32) -> Vec<Placed> {
             if let Some((l, h)) = wrapped(gfx, &c.card.text, inner) {
                 text = Some((l, Rect::new(size::GUTTER, top + height, inner, h)));
                 height += h;
+            }
+            if let Some(pct) = crate::share::card_progress(&c.card.id) {
+                bar = Some((Rect::new(size::GUTTER, top + height + 4.0, inner, 3.0), pct));
+                height += 8.0;
             }
             height += 4.0 + 4.0;
             let words = match &c.reply {
@@ -1515,6 +1526,7 @@ fn place(gfx: &Gfx, cards: &Cards, width: f32) -> Vec<Placed> {
             asks,
             acts,
             text,
+            bar,
             field,
             status,
         });
@@ -1580,6 +1592,15 @@ pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
             c.push_clip(Rect::new(tr.x, tr.y + y0, tr.w, tr.h));
             c.text(l, tr.x, tr.y + y0, t.answer);
             c.pop_clip();
+        }
+        if let Some((br, pct)) = &p.bar {
+            let br = Rect::new(br.x, br.y + y0, br.w, br.h);
+            c.fill_round(br, 1.5, t.line);
+            c.fill_round(
+                Rect::new(br.x, br.y, br.w * (*pct).min(100) as f32 / 100.0, br.h),
+                1.5,
+                t.accent,
+            );
         }
         if card.card.ask {
             continue;

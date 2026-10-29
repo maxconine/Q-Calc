@@ -1615,6 +1615,11 @@ fn progress(id: &str, pct: u32) {
     hint_follows(id);
 }
 
+/// The cards' words follow their files (messaging.rs, as kept cards show).
+pub fn refresh(app: &mut App) {
+    refresh_cards(app);
+}
+
 /// The cards' words follow their files.
 fn refresh_cards(app: &mut App) {
     let files: Vec<(String, String)> = with(|s| {
@@ -2155,6 +2160,17 @@ pub fn acts(card: &str) -> Vec<(Act, String)> {
         Kind::KeyChanged(_) => vec![(Act::Trust, "Trust New Key".into())],
         Kind::File(id) => file_acts(&id),
     }
+}
+
+/// How far a card's file has got while it's on its way (its progress bar).
+pub fn card_progress(card: &str) -> Option<u32> {
+    with(|s| {
+        let Some(Kind::File(id)) = s.cards.get(card) else {
+            return None;
+        };
+        let t = s.transfers.get(id)?;
+        matches!(t.state.as_str(), "uploading" | "downloading").then(|| t.percent.unwrap_or(0))
+    })
 }
 
 /// A file's buttons, in a card or a thread line, rightmost first (the Mac's FileRow): the sender's Retry and Take
