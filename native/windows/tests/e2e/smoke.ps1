@@ -1,4 +1,4 @@
-# End-to-end smoke test for the native Windows app (qcalc-win). Real input through SendInput (Native.cs), state over
+﻿# End-to-end smoke test for the native Windows app (qcalc-win). Real input through SendInput (Native.cs), state over
 # the bench pipe (bench.rs: state, e2e, settings-controls, mem), paint checks from screenshots. The Tauri app's
 # src-tauri/tests/e2e/smoke.ps1 ported, plus what the native app does that it didn't (single-instance hand-off,
 # the held-hotkey retry, history and the draft across a restart, copy, graph / sys panels, a game, the installer,
@@ -23,7 +23,9 @@ param(
     [string]$Makensis,
     # an older Windows 10 build for compat.rs (QCALC_COMPAT_SIMULATE: 1507, 1607, 1709, ... or a build number): the
     # functions it lacks are reported missing, so the fallbacks run here. Every copy the suite starts inherits it
-    [string]$Simulate
+    [string]$Simulate,
+    # only these checks (ids, e.g. B4,B5), for chasing one; the others are skipped and the suite doesn't judge
+    [string]$Only
 )
 $ErrorActionPreference = 'Stop'
 $Exe = (Resolve-Path $Exe).Path
@@ -276,6 +278,7 @@ function Describe-App {
 
 # kind: required, informational, or target (a soft check against AGENTS.md's targets)
 function Invoke-Check([string]$id, [string]$name, [string]$kind, [scriptblock]$body) {
+    if ($Only -and ($Only -split '[,\s]+') -notcontains $id) { return }
     Log "--- $id $name"
     $pass = $false; $detail = ''
     # a required check gets a second go: the desktop is shared (CI's isn't, a dev machine's is), and a window or
@@ -703,6 +706,7 @@ Invoke-Check 'B5' 'hovering a word in the line names it' 'required' {
     Read-Answer '^7$' | Out-Null
     $N::MoveTo([int]($f[0] + $f[2] - 4), [int]($f[1] + $f[3] / 2))
     $ans = Hover-Word 'last answer = 6'
+    $ansWhy = if ($ans) { '' } else { " (state $((Send-Pipe @{ cmd = 'wordTip' }) | ConvertTo-Json -Compress -Depth 4); line '$((State).text)'; log $((Get-Content $Log -Tail 10) -join ' | '))" }
     Clear-Input
     Type-Text '*3'
     Read-Answer '^18$' | Out-Null
@@ -714,11 +718,11 @@ Invoke-Check 'B5' 'hovering a word in the line names it' 'required' {
         $N::MoveTo([int](($script:fa[0] + $script:fa[1]) / 2), [int]$script:fa[2])
         $faint = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; $script:fd = $d; $d.shown -eq 'last answer = 6' -and $d.tipUp } 3000
     }
-    $faintWhy = if ($faint) { '' } else { " (faint ans at $($script:fa -join ','); state $(($script:fd | ConvertTo-Json -Compress -Depth 4)))" }
+    $faintWhy = if ($faint) { '' } else { " (faint ans at $($script:fa -join ','); state $(($script:fd | ConvertTo-Json -Compress -Depth 4)); log $((Get-Content $Log -Tail 10) -join ' | '))" }
     $r = $N::Rect((Get-Bar))
     $N::MoveTo($r.Left + 20, [Math]::Max(0, $r.Top - 120))
     $gone = Wait-Until { $d = Send-Pipe @{ cmd = 'wordTip' }; -not $d.shown -and -not (Tip-Visible) } 2000
-    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans; faint ans named: $faint$faintWhy; gone when the pointer left: $gone" }
+    @{ Pass = ($unit -and $unitTip -and $ans -and $faint -and $gone); Detail = "kPa named kilopascal: $unit (tooltip up: $unitTip); typed ans named 'last answer = 6': $ans$ansWhy; faint ans named: $faint$faintWhy; gone when the pointer left: $gone" }
 }
 
 function Near([int]$a, [int]$b, [int]$within = 6) { [Math]::Abs($a - $b) -le $within }

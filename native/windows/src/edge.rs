@@ -265,6 +265,58 @@ mod ui {
         pointer(app, None);
     }
 
+    /// WM_MOUSELEAVE while the pointer is still inside the bar, over it or over the tooltip a word's name just put
+    /// up there: tracking asked for in the moment the tip appeared (its first WM_MOUSEMOVE) ends at once, and the
+    /// leave hid the tip, which came back 350 ms on: a blink. False for a real leave; true asks again on the next
+    /// move.
+    pub fn spurious_leave(app: &mut App) -> bool {
+        if !pointer_inside(app) {
+            return false;
+        }
+        app.model.edge.tracking = false;
+        recheck_leave();
+        true
+    }
+
+    /// After a leave that wasn't: until a move asks for tracking again, look every 150 ms, so a pointer that jumps
+    /// straight off the bar (no move over it on the way) still takes the tips and the highlight with it.
+    fn recheck_leave() {
+        crate::later::after("leave-recheck", 150, |app| {
+            if app.model.edge.tracking {
+                return;
+            }
+            if pointer_inside(app) {
+                recheck_leave();
+            } else {
+                crate::commands::pointer(app, None);
+                crate::graph::leave(app);
+            }
+        });
+    }
+
+    /// The pointer is inside the showing bar, over it or over the tooltip on it.
+    fn pointer_inside(app: &App) -> bool {
+        use windows::Win32::UI::WindowsAndMessaging::{
+            GetCursorPos, GetWindowRect, WindowFromPoint,
+        };
+        let mut pt = windows::Win32::Foundation::POINT::default();
+        let mut r = windows::Win32::Foundation::RECT::default();
+        // SAFETY: live out structs; our own window
+        let inside =
+            unsafe { GetCursorPos(&mut pt).is_ok() && GetWindowRect(app.bar.hwnd, &mut r).is_ok() }
+                && pt.x >= r.left
+                && pt.x < r.right
+                && pt.y >= r.top
+                && pt.y < r.bottom;
+        if !inside || !app.bar.visible {
+            return false;
+        }
+        // SAFETY: a plain query
+        let under = unsafe { WindowFromPoint(pt) };
+        let tip = crate::hover::tip::hwnd();
+        under == app.bar.hwnd || (tip != 0 && under.0 as usize == tip)
+    }
+
     /// Whether the pointer is still over the bar itself (not a tooltip or another window over it): moving between
     /// the line and the background that drags leaves one area for the other, not the bar.
     fn still_over(app: &App) -> bool {

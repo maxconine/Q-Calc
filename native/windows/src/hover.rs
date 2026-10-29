@@ -223,6 +223,11 @@ pub(crate) mod tip {
         UP.with(Cell::get)
     }
 
+    /// The tooltip window, 0 before the first.
+    pub fn hwnd() -> usize {
+        TIP.with(Cell::get)
+    }
+
     fn info(tip_owner: HWND, text: Option<&HSTRING>) -> TTTOOLINFOW {
         TTTOOLINFOW {
             cbSize: std::mem::size_of::<TTTOOLINFOW>() as u32,

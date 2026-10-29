@@ -848,6 +848,9 @@ impl App {
                 }
             }
             windows::Win32::UI::Controls::WM_MOUSELEAVE => {
+                if crate::edge::spurious_leave(self) {
+                    return Some(LRESULT(0));
+                }
                 crate::commands::pointer(self, None);
                 crate::graph::leave(self);
             }
