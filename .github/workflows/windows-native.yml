@@ -1,0 +1,99 @@
+# the native Windows app (native/windows, qcalc-win): format, lints, the engine's tests (golden included), the
+# app's tests, a release build, the installer, and the end-to-end suite (native/windows/tests/e2e) on a real desktop.
+# the rust toolchain comes from native/rust-toolchain.toml (rustup installs it on first use)
+
+name: Windows native
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "windows*"
+      - "win-*"
+    paths:
+      - "native/**"
+      - ".github/workflows/windows-native.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - ".github/workflows/windows-native.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      - name: Format
+        run: cargo fmt --check -p qcalc-core -p qcalc-win
+      - name: Clippy
+        run: cargo clippy -p qcalc-core -p qcalc-win --all-targets -- -D warnings
+      - name: Engine tests (golden included)
+        run: cargo test --release -p qcalc-core
+      - name: App tests
+        run: cargo test -p qcalc-win
+
+  e2e:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+      # the installer build compiles the release exe (QCALC_VERSION from package.json) and wraps it with NSIS 3,
+      # which the windows image has under Program Files (x86)
+      - name: Release build and installer
+        run: |
+          $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$env:PATH"
+          ./native/windows/installer/build.ps1
+      - name: Smoke test
+        run: |
+          $exe = "native/target/x86_64-pc-windows-msvc/release/qcalc.exe"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File native\windows\tests\e2e\smoke.ps1 -Exe $exe -OutDir "$env:RUNNER_TEMP\e2e-out" -Makensis "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          exit $LASTEXITCODE
+      - name: Engine parity through the app
+        if: always()
+        run: |
+          $exe = "native/target/x86_64-pc-windows-msvc/release/qcalc.exe"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File native\windows\tests\e2e\parity.ps1 -Exe $exe -OutDir "$env:RUNNER_TEMP\e2e-out"
+          exit $LASTEXITCODE
+      # a mock code-signing pass over the built exe and installer (a throwaway certificate, made and deleted in the
+      # runner's CurrentUser\My): version info, manifest, coverage, signature structure. advisory until real
+      # signing is set up, so it never fails the job
+      - name: Mock signing check
+        if: always()
+        continue-on-error: true
+        run: |
+          $exe = "native/target/x86_64-pc-windows-msvc/release/qcalc.exe"
+          powershell.exe -NoProfile -ExecutionPolicy Bypass -File native\windows\scripts\sign-check.ps1 -Exe $exe -OutDir "$env:RUNNER_TEMP\e2e-out\sign-check" -Makensis "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
+          exit $LASTEXITCODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-installer
+          path: native/windows/installer/out/*.exe
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-native-e2e
+          path: ${{ runner.temp }}/e2e-out
+          if-no-files-found: warn

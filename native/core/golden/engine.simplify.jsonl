@@ -1,0 +1,149 @@
+{"fn":"dualLabel","args":["10sqrt(2)","14.1421356237"],"out":"10sqrt(2) ≈ 14.1421356237","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["10sqrt(3)","17.3205080757"],"out":"10sqrt(3) ≈ 17.3205080757","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["10sqrt(5)","22.360679775"],"out":"10sqrt(5) ≈ 22.360679775","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["11sqrt(2)","15.5563491861"],"out":"11sqrt(2) ≈ 15.5563491861","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["11sqrt(3)","19.0525588833"],"out":"11sqrt(3) ≈ 19.0525588833","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["11sqrt(5)","24.5967477525"],"out":"11sqrt(5) ≈ 24.5967477525","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["12sqrt(2)","16.9705627485"],"out":"12sqrt(2) ≈ 16.9705627485","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["12sqrt(3)","20.7846096908"],"out":"12sqrt(3) ≈ 20.7846096908","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["12sqrt(5)","26.83281573"],"out":"12sqrt(5) ≈ 26.83281573","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["13sqrt(2)","18.3847763109"],"out":"13sqrt(2) ≈ 18.3847763109","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["13sqrt(3)","22.5166604984"],"out":"13sqrt(3) ≈ 22.5166604984","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["13sqrt(5)","29.0688837075"],"out":"13sqrt(5) ≈ 29.0688837075","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["14sqrt(2)","19.7989898732"],"out":"14sqrt(2) ≈ 19.7989898732","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["14sqrt(3)","24.248711306"],"out":"14sqrt(3) ≈ 24.248711306","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["14sqrt(5)","31.304951685"],"out":"14sqrt(5) ≈ 31.304951685","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["15sqrt(2)","21.2132034356"],"out":"15sqrt(2) ≈ 21.2132034356","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["15sqrt(3)","25.9807621135"],"out":"15sqrt(3) ≈ 25.9807621135","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["15sqrt(5)","33.5410196625"],"out":"15sqrt(5) ≈ 33.5410196625","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["16sqrt(2)","22.627416998"],"out":"16sqrt(2) ≈ 22.627416998","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["16sqrt(3)","27.7128129211"],"out":"16sqrt(3) ≈ 27.7128129211","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["16sqrt(5)","35.77708764"],"out":"16sqrt(5) ≈ 35.77708764","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["17sqrt(2)","24.0416305603"],"out":"17sqrt(2) ≈ 24.0416305603","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["17sqrt(3)","29.4448637287"],"out":"17sqrt(3) ≈ 29.4448637287","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["17sqrt(5)","38.0131556175"],"out":"17sqrt(5) ≈ 38.0131556175","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["18sqrt(2)","25.4558441227"],"out":"18sqrt(2) ≈ 25.4558441227","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["18sqrt(3)","31.1769145362"],"out":"18sqrt(3) ≈ 31.1769145362","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["18sqrt(5)","40.249223595"],"out":"18sqrt(5) ≈ 40.249223595","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["19sqrt(2)","26.8700576851"],"out":"19sqrt(2) ≈ 26.8700576851","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["19sqrt(3)","32.9089653438"],"out":"19sqrt(3) ≈ 32.9089653438","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["19sqrt(5)","42.4852915725"],"out":"19sqrt(5) ≈ 42.4852915725","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["20sqrt(2)","28.2842712475"],"out":"20sqrt(2) ≈ 28.2842712475","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["20sqrt(3)","34.6410161514"],"out":"20sqrt(3) ≈ 34.6410161514","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["20sqrt(5)","44.72135955"],"out":"20sqrt(5) ≈ 44.72135955","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["21sqrt(2)","29.6984848098"],"out":"21sqrt(2) ≈ 29.6984848098","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["21sqrt(3)","36.3730669589"],"out":"21sqrt(3) ≈ 36.3730669589","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["22sqrt(2)","31.1126983722"],"out":"22sqrt(2) ≈ 31.1126983722","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["22sqrt(3)","38.1051177665"],"out":"22sqrt(3) ≈ 38.1051177665","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["23sqrt(2)","32.5269119346"],"out":"23sqrt(2) ≈ 32.5269119346","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["23sqrt(3)","39.8371685741"],"out":"23sqrt(3) ≈ 39.8371685741","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["24sqrt(2)","33.941125497"],"out":"24sqrt(2) ≈ 33.941125497","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["24sqrt(3)","41.5692193817"],"out":"24sqrt(3) ≈ 41.5692193817","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["25sqrt(2)","35.3553390593"],"out":"25sqrt(2) ≈ 35.3553390593","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["25sqrt(3)","43.3012701892"],"out":"25sqrt(3) ≈ 43.3012701892","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["26sqrt(2)","36.7695526217"],"out":"26sqrt(2) ≈ 36.7695526217","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["26sqrt(3)","45.0333209968"],"out":"26sqrt(3) ≈ 45.0333209968","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["27sqrt(2)","38.1837661841"],"out":"27sqrt(2) ≈ 38.1837661841","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["27sqrt(3)","46.7653718044"],"out":"27sqrt(3) ≈ 46.7653718044","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["28sqrt(2)","39.5979797464"],"out":"28sqrt(2) ≈ 39.5979797464","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["28sqrt(3)","48.4974226119"],"out":"28sqrt(3) ≈ 48.4974226119","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["29sqrt(2)","41.0121933088"],"out":"29sqrt(2) ≈ 41.0121933088","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["29sqrt(3)","50.2294734195"],"out":"29sqrt(3) ≈ 50.2294734195","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["2sqrt(11)","6.63324958071"],"out":"2sqrt(11) ≈ 6.63324958071","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["2sqrt(13)","7.21110255093"],"out":"2sqrt(13) ≈ 7.21110255093","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["2sqrt(2)","2.82842712475"],"out":"2sqrt(2) ≈ 2.82842712475","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["2sqrt(3)","3.46410161514"],"out":"2sqrt(3) ≈ 3.46410161514","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["2sqrt(5)","4.472135955"],"out":"2sqrt(5) ≈ 4.472135955","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["2sqrt(7)","5.29150262213"],"out":"2sqrt(7) ≈ 5.29150262213","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["30sqrt(2)","42.4264068712"],"out":"30sqrt(2) ≈ 42.4264068712","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["30sqrt(3)","51.9615242271"],"out":"30sqrt(3) ≈ 51.9615242271","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["31sqrt(2)","43.8406204336"],"out":"31sqrt(2) ≈ 43.8406204336","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["32sqrt(2)","45.2548339959"],"out":"32sqrt(2) ≈ 45.2548339959","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["33sqrt(2)","46.6690475583"],"out":"33sqrt(2) ≈ 46.6690475583","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["34sqrt(2)","48.0832611207"],"out":"34sqrt(2) ≈ 48.0832611207","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["35sqrt(2)","49.4974746831"],"out":"35sqrt(2) ≈ 49.4974746831","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["36sqrt(2)","50.9116882454"],"out":"36sqrt(2) ≈ 50.9116882454","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["37sqrt(2)","52.3259018078"],"out":"37sqrt(2) ≈ 52.3259018078","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["38sqrt(2)","53.7401153702"],"out":"38sqrt(2) ≈ 53.7401153702","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["39sqrt(2)","55.1543289326"],"out":"39sqrt(2) ≈ 55.1543289326","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["3sqrt(10)","9.48683298051"],"out":"3sqrt(10) ≈ 9.48683298051","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["3sqrt(2)","4.24264068712"],"out":"3sqrt(2) ≈ 4.24264068712","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["3sqrt(3)","5.19615242271"],"out":"3sqrt(3) ≈ 5.19615242271","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["3sqrt(5)","6.7082039325"],"out":"3sqrt(5) ≈ 6.7082039325","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["3sqrt(7)","7.93725393319"],"out":"3sqrt(7) ≈ 7.93725393319","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["40sqrt(2)","56.5685424949"],"out":"40sqrt(2) ≈ 56.5685424949","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["4sqrt(2)","5.65685424949"],"out":"4sqrt(2) ≈ 5.65685424949","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["4sqrt(3)","6.92820323028"],"out":"4sqrt(3) ≈ 6.92820323028","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["4sqrt(5)","8.94427191"],"out":"4sqrt(5) ≈ 8.94427191","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["5sqrt(2)","7.07106781187"],"out":"5sqrt(2) ≈ 7.07106781187","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["5sqrt(3)","8.66025403784"],"out":"5sqrt(3) ≈ 8.66025403784","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["5sqrt(5)","11.1803398875"],"out":"5sqrt(5) ≈ 11.1803398875","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["6sqrt(2)","8.48528137424"],"out":"6sqrt(2) ≈ 8.48528137424","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["6sqrt(3)","10.3923048454"],"out":"6sqrt(3) ≈ 10.3923048454","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["6sqrt(5)","13.416407865"],"out":"6sqrt(5) ≈ 13.416407865","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["7sqrt(2)","9.89949493661"],"out":"7sqrt(2) ≈ 9.89949493661","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["7sqrt(3)","12.124355653"],"out":"7sqrt(3) ≈ 12.124355653","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["7sqrt(5)","15.6524758425"],"out":"7sqrt(5) ≈ 15.6524758425","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["8sqrt(2)","11.313708499"],"out":"8sqrt(2) ≈ 11.313708499","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["8sqrt(3)","13.8564064606"],"out":"8sqrt(3) ≈ 13.8564064606","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["8sqrt(5)","17.88854382"],"out":"8sqrt(5) ≈ 17.88854382","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["9sqrt(2)","12.7279220614"],"out":"9sqrt(2) ≈ 12.7279220614","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["9sqrt(3)","15.5884572681"],"out":"9sqrt(3) ≈ 15.5884572681","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["9sqrt(5)","20.1246117975"],"out":"9sqrt(5) ≈ 20.1246117975","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["sqrt(2)/2","0.707106781187"],"out":"sqrt(2)/2 ≈ 0.707106781187","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["sqrt(3)","1.73205080757"],"out":"sqrt(3) ≈ 1.73205080757","src":"src/engine/scientific.test.ts"}
+{"fn":"dualLabel","args":["sqrt(3)/2","0.866025403784"],"out":"sqrt(3)/2 ≈ 0.866025403784","src":"src/engine/scientific.test.ts"}
+{"fn":"exactForm","args":[-0.7808688094430304,{"rationalize":false}],"out":"-5/sqrt(41)","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.2588190451025207],"out":"(sqrt(6)-sqrt(2))/4","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.5000000001511499],"out":null,"src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.5235987755982988],"out":"pi/6","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.7071067811865475,{"rationalize":false}],"out":"1/sqrt(2)","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.7071067811865475],"out":"sqrt(2)/2","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.7808688094430304,{"rationalize":false}],"out":"5/sqrt(41)","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[0.7808688094430304],"out":"5sqrt(41)/41","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1.1547005383792517,{"rationalize":false}],"out":"2/sqrt(3)","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1.1547005383792517],"out":"2sqrt(3)/3","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1.2246467991473532e-16],"out":"0","src":"src/engine/r4b.exact.test.ts"}
+{"fn":"exactForm","args":[1.23456789],"out":null,"src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1.4142135623730951],"out":"sqrt(2)","src":"src/engine/r4b.exact.test.ts"}
+{"fn":"exactForm","args":[1.4142135623780951],"out":null,"src":"src/engine/r4b.exact.test.ts"}
+{"fn":"exactForm","args":[1.4142135627266486],"out":null,"src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1.7677669529663687,{"rationalize":false}],"out":"5/(2sqrt(2))","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1414.213562373095],"out":"1000sqrt(2)","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[1e-12],"out":null,"src":"src/engine/r4b.exact.test.ts"}
+{"fn":"exactForm","args":[3.141592653589793],"out":"pi","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[3.4641016151377544,{"rationalize":false}],"out":"2sqrt(3)","src":"src/engine/simplify.test.ts"}
+{"fn":"exactForm","args":[572957787.3425436],"out":null,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["1/2"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["2*pi"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["2+2"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["2/3"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["2032mm to ft"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["2^8"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["2sqrt(3)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["5!"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["90 deg"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["\\sin(90)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["\\sqrt{8}"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["arccos(0.5)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["arcsin(0.5)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["arctan(1)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["asin(1)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["cos(pi/6)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["cot(30)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["csc(90)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["ln(e)"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["log(10)"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["log(100)"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["pi"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["pi/2"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sec(60)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sin(30)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sin90"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sin^-1(0.5)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sinh(0)"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sqrt(12)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["sqrt12"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["tan(45)"],"out":true,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["x = 5"],"out":false,"src":"src/engine/simplify.test.ts"}
+{"fn":"wantsExactForm","args":["√2"],"out":true,"src":"src/engine/simplify.test.ts"}

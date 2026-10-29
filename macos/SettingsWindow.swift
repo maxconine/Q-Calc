@@ -19,7 +19,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent {
+                QLabeled {
                     Button("Choose Keybinds…") { choosingKeys = true }
                 } label: {
                     Text("Keybinds")
@@ -67,7 +67,7 @@ struct GeneralSettingsView: View {
                     Text("Once Q Calc has gone this long unopened, a bar you moved or widened opens in its usual spot and width")
                 }
                 toggle("Share anonymous usage", "Counts of which features get used, never what you type", \.shareUsage, AppSettings.setShareUsage(_:notifyWeb:))
-                LabeledContent {
+                QLabeled {
                     Button("Replay") { QCalc.delegate.showTutorial() }
                 } label: {
                     Text("Tutorial")
@@ -113,7 +113,7 @@ struct GeneralSettingsView: View {
                 toggle("Propagate from input", withKey("Match the precision you typed", "sigFigs"), \.sigFigMode, AppSettings.setSigFigMode(_:notifyWeb:))
             }
         }
-        .formStyle(.grouped)
+        .groupedForm()
     }
 
     private var placeResetChoices: [Int] {
@@ -184,7 +184,7 @@ struct KeybindsSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             Form {
                 ForEach(KeyActions.all, id: \.id) { action in
-                    LabeledContent(action.label) {
+                    QLabeled(action.label) {
                         HStack(spacing: 6) {
                             if chord(action.id) != KeyActions.defaults[action.id] {
                                 Button {
@@ -206,7 +206,7 @@ struct KeybindsSheet: View {
                     }
                 }
             }
-            .formStyle(.grouped)
+            .groupedForm()
             HStack {
                 Button("Reset All", action: resetAll).disabled(!changed)
                 Spacer()
@@ -369,7 +369,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
 
     private func tab<Content: View>(_ title: String, symbol: String, size: NSSize, content: () -> Content) -> NSTabViewItem {
         let hosting = NSHostingController(rootView: content().frame(width: size.width, height: size.height))
-        hosting.sizingOptions = [.preferredContentSize]
+        if #available(macOS 13, *) {
+            hosting.sizingOptions = [.preferredContentSize]
+        } else {
+            // the content is a fixed frame, so its size is the one the option would have kept up to date
+            hosting.preferredContentSize = size
+        }
         hosting.title = title
         let item = NSTabViewItem(viewController: hosting)
         item.label = title

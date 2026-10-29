@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { math } from './math'
-import { solveLive, solveSystem } from './system'
+import { pastedEquations, solveLive, solveSystem } from './system'
 
 function num(s: string, scope: Record<string, number> = {}): number {
   return Number(math.evaluate(s, scope))
@@ -447,5 +447,27 @@ describe('systems of equations', () => {
     expect(principal('C')).toBeCloseTo(Math.PI, 8)
     expect(principal('D')).toBeCloseTo(Math.PI / 3, 8)
     expect(principal('E')).toBeCloseTo(Math.PI / 3, 8)
+  })
+})
+
+describe('worksheet equations', () => {
+  it('a name before parentheses multiplies unless mathjs knows it as a function', () => {
+    expect(solveLive(['20(7.5)-B_y(5)+40(2) = 0', 'B_y+D_y = 60'])?.display).toBe('B_y = 46, D_y = 14')
+    expect(solveLive(['x(2) = 6', 'y = x + 1'])?.display).toBe('x = 3, y = 4')
+    expect(solveLive(['sqrt(x) = 3', 'y = x'])?.display).toBe('x = 9, y = 9')
+    expect(solveLive(['ln(x) = 0', 'y = x + 1'])?.display).toBe('x = 1, y = 2')
+  })
+
+  it('a pasted system: one equation per line, and an expression is = 0', () => {
+    expect(pastedEquations('20(7.5)-B_y(5)+40(2)\nB_y+D_y = 60')).toEqual(['20(7.5)-B_y(5)+40(2) = 0', 'B_y+D_y = 60'])
+    expect(pastedEquations('x + y = 3\r\n\r\nx - y = 1\n')).toEqual(['x + y = 3', 'x - y = 1'])
+    expect(pastedEquations('x + y = 3; x - y = 1')).toEqual(['x + y = 3', 'x - y = 1'])
+  })
+
+  it('anything else is plain text', () => {
+    expect(pastedEquations('x + y = 3')).toBeNull()
+    expect(pastedEquations('2 + 3\n4 + 5')).toBeNull()
+    expect(pastedEquations('a = 1\nb = 2\nc = 3\nd = 4\ne = 5\nf = 6')).toBeNull()
+    expect(pastedEquations('hello there\nx = 2')).toBeNull()
   })
 })

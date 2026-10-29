@@ -1,0 +1,69 @@
+// vitest setup for the golden capture: every engine-like module is replaced by a copy whose exported functions
+// record their top-level calls (see recorder.ts). Only native/golden-capture/vitest.config.ts loads this file.
+import { afterAll, vi } from 'vitest'
+import { flush } from './recorder'
+
+afterAll(() => flush())
+
+// one vi.mock per module: vitest hoists these, so each path has to be written out literally
+vi.mock('../../src/engine/angles', async (orig) => (await import('./recorder')).wrapModule('engine/angles', await orig()))
+vi.mock('../../src/engine/calcNumeric', async (orig) => (await import('./recorder')).wrapModule('engine/calcNumeric', await orig()))
+vi.mock('../../src/engine/calculus', async (orig) => (await import('./recorder')).wrapModule('engine/calculus', await orig()))
+vi.mock('../../src/engine/chem', async (orig) => (await import('./recorder')).wrapModule('engine/chem', await orig()))
+vi.mock('../../src/engine/closedForm', async (orig) => (await import('./recorder')).wrapModule('engine/closedForm', await orig()))
+vi.mock('../../src/engine/currency', async (orig) => (await import('./recorder')).wrapModule('engine/currency', await orig()))
+vi.mock('../../src/engine/dots', async (orig) => (await import('./recorder')).wrapModule('engine/dots', await orig()))
+vi.mock('../../src/engine/evaluate', async (orig) => (await import('./recorder')).wrapModule('engine/evaluate', await orig()))
+vi.mock('../../src/engine/format', async (orig) => (await import('./recorder')).wrapModule('engine/format', await orig()))
+vi.mock('../../src/engine/graph', async (orig) => (await import('./recorder')).wrapModule('engine/graph', await orig()))
+vi.mock('../../src/engine/isolate', async (orig) => (await import('./recorder')).wrapModule('engine/isolate', await orig()))
+vi.mock('../../src/engine/letters', async (orig) => (await import('./recorder')).wrapModule('engine/letters', await orig()))
+vi.mock('../../src/engine/matrix', async (orig) => (await import('./recorder')).wrapModule('engine/matrix', await orig()))
+vi.mock('../../src/engine/measure', async (orig) => (await import('./recorder')).wrapModule('engine/measure', await orig()))
+vi.mock('../../src/engine/parens', async (orig) => (await import('./recorder')).wrapModule('engine/parens', await orig()))
+vi.mock('../../src/engine/phraseMoney', async (orig) => (await import('./recorder')).wrapModule('engine/phraseMoney', await orig()))
+vi.mock('../../src/engine/phraseTime', async (orig) => (await import('./recorder')).wrapModule('engine/phraseTime', await orig()))
+vi.mock('../../src/engine/phrases', async (orig) => (await import('./recorder')).wrapModule('engine/phrases', await orig()))
+vi.mock('../../src/engine/plainMath', async (orig) => (await import('./recorder')).wrapModule('engine/plainMath', await orig()))
+vi.mock('../../src/engine/precise', async (orig) => (await import('./recorder')).wrapModule('engine/precise', await orig()))
+vi.mock('../../src/engine/scientific', async (orig) => (await import('./recorder')).wrapModule('engine/scientific', await orig()))
+vi.mock('../../src/engine/simplify', async (orig) => (await import('./recorder')).wrapModule('engine/simplify', await orig()))
+vi.mock('../../src/engine/solve', async (orig) => (await import('./recorder')).wrapModule('engine/solve', await orig()))
+vi.mock('../../src/engine/sums', async (orig) => (await import('./recorder')).wrapModule('engine/sums', await orig()))
+vi.mock('../../src/engine/system', async (orig) => (await import('./recorder')).wrapModule('engine/system', await orig()))
+vi.mock('../../src/engine/systemNumeric', async (orig) => (await import('./recorder')).wrapModule('engine/systemNumeric', await orig()))
+vi.mock('../../src/engine/typstInput', async (orig) => (await import('./recorder')).wrapModule('engine/typstInput', await orig()))
+vi.mock('../../src/engine/unitSolve', async (orig) => (await import('./recorder')).wrapModule('engine/unitSolve', await orig()))
+vi.mock('../../src/engine/units', async (orig) => (await import('./recorder')).wrapModule('engine/units', await orig()))
+
+// WP-SYMBOLIC: mathjs's simplify/derivative/rationalize/toString/parse as the engine calls them
+vi.mock('../../src/engine/math', async (orig) => {
+  const mod = (await orig()) as { math: Record<string, unknown> }
+  ;(await import('./symbolic')).instrumentMath(mod.math)
+  return mod
+})
+
+vi.mock('../../src/lib/answer', async (orig) => (await import('./recorder')).wrapModule('lib/answer', await orig()))
+vi.mock('../../src/lib/answerForms', async (orig) => (await import('./recorder')).wrapModule('lib/answerForms', await orig()))
+vi.mock('../../src/lib/blankReason', async (orig) => (await import('./recorder')).wrapModule('lib/blankReason', await orig()))
+vi.mock('../../src/lib/bounds', async (orig) => (await import('./recorder')).wrapModule('lib/bounds', await orig()))
+vi.mock('../../src/lib/chain', async (orig) => (await import('./recorder')).wrapModule('lib/chain', await orig()))
+vi.mock('../../src/lib/completion', async (orig) => (await import('./recorder')).wrapModule('lib/completion', await orig()))
+vi.mock('../../src/lib/draft', async (orig) => (await import('./recorder')).wrapModule('lib/draft', await orig()))
+vi.mock('../../src/lib/elements', async (orig) => (await import('./recorder')).wrapModule('lib/elements', await orig()))
+vi.mock('../../src/lib/history', async (orig) => (await import('./recorder')).wrapModule('lib/history', await orig()))
+vi.mock('../../src/lib/historyShow', async (orig) => (await import('./recorder')).wrapModule('lib/historyShow', await orig()))
+vi.mock('../../src/lib/identities', async (orig) => (await import('./recorder')).wrapModule('lib/identities', await orig()))
+vi.mock('../../src/lib/keybinds', async (orig) => (await import('./recorder')).wrapModule('lib/keybinds', await orig()))
+vi.mock('../../src/lib/knownWords', async (orig) => (await import('./recorder')).wrapModule('lib/knownWords', await orig()))
+vi.mock('../../src/lib/missingUnit', async (orig) => (await import('./recorder')).wrapModule('lib/missingUnit', await orig()))
+vi.mock('../../src/lib/nativeEval', async (orig) => (await import('./recorder')).wrapModule('lib/nativeEval', await orig()))
+vi.mock('../../src/lib/onboarding', async (orig) => (await import('./recorder')).wrapModule('lib/onboarding', await orig()))
+vi.mock('../../src/lib/paste', async (orig) => (await import('./recorder')).wrapModule('lib/paste', await orig()))
+vi.mock('../../src/lib/radical', async (orig) => (await import('./recorder')).wrapModule('lib/radical', await orig()))
+vi.mock('../../src/lib/settings', async (orig) => (await import('./recorder')).wrapModule('lib/settings', await orig()))
+vi.mock('../../src/lib/steady', async (orig) => (await import('./recorder')).wrapModule('lib/steady', await orig()))
+vi.mock('../../src/lib/touches', async (orig) => (await import('./recorder')).wrapModule('lib/touches', await orig()))
+vi.mock('../../src/lib/typstMath', async (orig) => (await import('./recorder')).wrapModule('lib/typstMath', await orig()))
+vi.mock('../../src/lib/undo', async (orig) => (await import('./recorder')).wrapModule('lib/undo', await orig()))
+vi.mock('../../src/lib/unitSpans', async (orig) => (await import('./recorder')).wrapModule('lib/unitSpans', await orig()))

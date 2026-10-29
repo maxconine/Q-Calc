@@ -1,6 +1,13 @@
-# builds the windows installers and, for a v* tag, attaches them and the updater manifest
-# (latest.json) to the release that release.yml creates. separate from release.yml on purpose:
-# nothing here can block or break the mac release. setup: src-tauri/release/README.md
+# builds the windows installers and, for a v* tag, attaches them and the updater manifests to the release that
+# release.yml creates: latest-native.json (the native app's feed, native/windows/src/update.rs) and latest.json
+# (the Tauri app's, tauri-plugin-updater). separate from release.yml on purpose: nothing here can block or break
+# the mac release. setup: src-tauri/release/README.md; the release checklist: native/windows/RELEASE.md
+#
+# NATIVE_WINDOWS (on from 3.0): windows is the native app. the native installers (x64, and arm64 cross-built on
+# the x64 runner) are the windows downloads, and latest.json's windows entries point at them, so every Tauri
+# install updates itself to the native app (its installer upgrades a Tauri install in place, keeping settings and
+# history); the Tauri installers aren't built. off (a hand run with native_windows unticked): the Tauri app as
+# before 3.0, latest.json on the Tauri installers, the native installers and latest-native.json beside them.
 
 name: Windows
 
@@ -14,6 +21,10 @@ on:
         description: Attach to the release for package.json's version (off = just build installers)
         type: boolean
         default: false
+      native_windows:
+        description: Windows is the native app (latest.json moves Tauri installs to it). Off = the Tauri app, as before 3.0
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -24,10 +35,14 @@ concurrency:
 
 env:
   PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+  # the switch: a tag push always takes the native app; a hand run takes its native_windows box
+  NATIVE_WINDOWS: ${{ github.event_name == 'push' || inputs.native_windows }}
 
 jobs:
+  # the Tauri app's installers: only with the switch off (job-level `if` can't read env, so it's spelled out)
   build:
     name: build ${{ matrix.arch }}
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.native_windows }}
     runs-on: windows-latest
     # arm64 is a bonus: if it fails, x64 still ships
     continue-on-error: ${{ matrix.arch == 'arm64' }}
@@ -156,42 +171,218 @@ jobs:
           path: out/
           if-no-files-found: error
 
+  # the native app (native/windows): its installer, signed with the updater key for latest-native.json (which
+  # native/windows/src/update.rs reads) and, with NATIVE_WINDOWS, for latest.json. with the switch on it is the
+  # windows release, so x64 must build (arm64 stays a bonus: x64 still ships without it); off, it's a beta beside
+  # the Tauri app and the Tauri release ships whatever happens here
+  native:
+    name: native ${{ matrix.arch }}
+    runs-on: windows-latest
+    continue-on-error: ${{ matrix.arch == 'arm64' || (github.event_name == 'workflow_dispatch' && !inputs.native_windows) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            target: x86_64-pc-windows-msvc
+          - arch: arm64
+            target: aarch64-pc-windows-msvc
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        run: |
+          $pkg = node -p "require('./package.json').version"
+          if ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF_NAME.TrimStart('v') -ne $pkg) {
+            Write-Output "::error::package.json version $pkg does not match tag $env:GITHUB_REF_NAME"
+            exit 1
+          }
+          # a plain cargo build reports the crate's version: it must be the release's too
+          $crate = (Select-String -Path native/windows/Cargo.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          if ($crate -ne $pkg) {
+            Write-Output "::error::native/windows/Cargo.toml version $crate does not match package.json $pkg"
+            exit 1
+          }
+          "version=$pkg" >> $env:GITHUB_OUTPUT
+
+      - name: Check updater key
+        if: env.PUBLISH == 'true'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          $conf = (Get-Content src-tauri/tauri.windows.conf.json -Raw | ConvertFrom-Json).plugins.updater.pubkey
+          $rs = (Select-String -Path native/windows/src/update.rs -Pattern 'pub const PUBKEY: &str = "([^"]+)"').Matches[0].Groups[1].Value
+          if (-not $conf -or $conf -like '*QCALC_UPDATER_PUBKEY_PLACEHOLDER*' -or $rs -ne $conf) {
+            Write-Output "::error::The updater public key in native/windows/src/update.rs must be src-tauri/tauri.windows.conf.json's (and not the placeholder): both apps verify updates with it."
+            exit 1
+          }
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY) {
+            Write-Output "::error::The TAURI_SIGNING_PRIVATE_KEY secret is missing, so updates can't be signed. See src-tauri/release/README.md."
+            exit 1
+          }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # the toolchain comes from native/rust-toolchain.toml; the arm64 target is a cross build
+      - name: Rust target
+        working-directory: native
+        run: rustup target add ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: native
+          key: native-${{ matrix.target }}
+
+      - run: npm ci
+
+      # build.ps1: the release exe with QCALC_VERSION, NSIS, and with the updater key the installer's .sig
+      # (`tauri signer sign`, the key update.rs and the Tauri app verify). authenticode, when there is a
+      # certificate, goes in through build.ps1 -SignCommand before that, so the .sig covers the signed bytes
+      - name: Build native installer
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.PUBLISH == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ env.PUBLISH == 'true' && secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+        run: |
+          $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$env:PATH"
+          ./native/windows/installer/build.ps1 -Version '${{ steps.version.outputs.version }}' -Arch ${{ matrix.arch }}
+
+      # the cross build really is for this arch (the PE header's machine: 0x8664 x64, 0xAA64 arm64)
+      - name: Check the exe's architecture
+        run: |
+          $exe = "native/target/${{ matrix.target }}/release/qcalc.exe"
+          $bytes = [IO.File]::ReadAllBytes((Resolve-Path $exe))
+          $pe = [BitConverter]::ToInt32($bytes, 0x3C)
+          $machine = '{0:X4}' -f [BitConverter]::ToUInt16($bytes, $pe + 4)
+          $want = if ('${{ matrix.arch }}' -eq 'arm64') { 'AA64' } else { '8664' }
+          if ($machine -ne $want) { Write-Output "::error::$exe is machine $machine, not $want"; exit 1 }
+          "$exe is machine $machine (${{ matrix.arch }})"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: q-calc-windows-native-${{ matrix.arch }}
+          path: |
+            native/windows/installer/out/*-native-setup.exe
+            native/windows/installer/out/*-native-setup.exe.sig
+          if-no-files-found: error
+
   publish:
-    needs: build
+    needs: [build, native]
     if: ${{ !cancelled() && (github.event_name == 'push' || inputs.publish) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v4
+      # verify-feed.mjs needs node's ed25519 and blake2b512, in any current node
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Download the Tauri installers
+        if: env.NATIVE_WINDOWS != 'true'
+        uses: actions/download-artifact@v4
         with:
           pattern: q-calc-windows-*
           merge-multiple: true
           path: win
 
+      - name: Download the native installers
+        uses: actions/download-artifact@v4
+        continue-on-error: ${{ env.NATIVE_WINDOWS != 'true' }}
+        with:
+          pattern: q-calc-windows-native-*
+          merge-multiple: true
+          path: win-native
+
+      # the windows downloads and latest.json's entries: the native installers with NATIVE_WINDOWS, else the Tauri ones
       - name: Collect installers
         id: files
         run: |
           VERSION="$(node -p "require('./package.json').version")"
-          X64="Q-Calc-${VERSION}-x64-setup.exe"
-          ARM="Q-Calc-${VERSION}-arm64-setup.exe"
-          if [[ ! -f "win/${X64}.sig" ]]; then
-            echo "::error::The signed x64 installer is missing, so nothing is published."
+          if [[ "$NATIVE_WINDOWS" == "true" ]]; then
+            DIR=win-native SUFFIX=-native KIND=native
+          else
+            DIR=win SUFFIX= KIND=Tauri
+          fi
+          X64="Q-Calc-${VERSION}-x64${SUFFIX}-setup.exe"
+          ARM="Q-Calc-${VERSION}-arm64${SUFFIX}-setup.exe"
+          if [[ ! -f "${DIR}/${X64}.sig" ]]; then
+            echo "::error::The signed ${KIND} x64 installer is missing, so nothing is published."
             exit 1
           fi
           PAIRS="windows-x86_64=${X64}"
-          FILES="win/${X64}"
-          if [[ -f "win/${ARM}.sig" ]]; then
+          FILES="${DIR}/${X64}"
+          if [[ -f "${DIR}/${ARM}.sig" ]]; then
             PAIRS="${PAIRS} windows-aarch64=${ARM}"
-            FILES="${FILES} win/${ARM}"
+            FILES="${FILES} ${DIR}/${ARM}"
           else
-            echo "::warning::No arm64 installer this time; arm64 installs pick this version up with the next release."
+            echo "::warning::No ${KIND} arm64 installer this time; arm64 installs pick this version up with the next release."
           fi
+          echo "windows is the ${KIND} app: ${PAIRS}"
           {
             echo "version=${VERSION}"
+            echo "dir=${DIR}"
+            echo "suffix=${SUFFIX}"
             echo "pairs=${PAIRS}"
             echo "files=${FILES}"
           } >> "$GITHUB_OUTPUT"
+
+      # the Tauri app's feed. only plain windows-<arch> keys: an -nsis key would win over them in tauri-plugin-updater
+      - name: Write latest.json
+        env:
+          VERSION: ${{ steps.files.outputs.version }}
+          DIR: ${{ steps.files.outputs.dir }}
+          PAIRS: ${{ steps.files.outputs.pairs }}
+        run: |
+          # shellcheck disable=SC2086
+          node src-tauri/release/latest-json.mjs "$VERSION" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" "$DIR" $PAIRS
+          cat "${DIR}/latest.json"
+
+      # the native app's feed: latest-native.json in update.rs's shape, from each signed native installer
+      - name: Write latest-native.json
+        id: native
+        env:
+          VERSION: ${{ steps.files.outputs.version }}
+        run: |
+          X64="Q-Calc-${VERSION}-x64-native-setup.exe"
+          ARM="Q-Calc-${VERSION}-arm64-native-setup.exe"
+          if [[ ! -f "win-native/${X64}.sig" ]]; then
+            echo "::warning::No signed native x64 installer, so no latest-native.json this time; native installs stay on their version."
+            exit 0
+          fi
+          PAIRS="windows-x86_64=${X64}"
+          FILES="win-native/${X64}"
+          if [[ -f "win-native/${ARM}.sig" ]]; then
+            PAIRS="${PAIRS} windows-aarch64=${ARM}"
+            FILES="${FILES} win-native/${ARM}"
+          fi
+          # shellcheck disable=SC2086
+          node native/windows/installer/latest-native.mjs "$VERSION" \
+            "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" win-native $PAIRS
+          cat win-native/latest-native.json
+          echo "files=${FILES}" >> "$GITHUB_OUTPUT"
+
+      # both feeds as the apps will read them, before anything is uploaded: the entry tauri-plugin-updater picks on
+      # each arch, a newer version, and each installer's signature against the key both apps trust
+      - name: Check the feeds
+        env:
+          DIR: ${{ steps.files.outputs.dir }}
+        run: |
+          NATIVE=()
+          if [[ "$NATIVE_WINDOWS" == "true" ]]; then NATIVE=(--native); fi
+          node src-tauri/release/verify-feed.mjs "${DIR}/latest.json" --dir "$DIR" \
+            --pubkey-from src-tauri/tauri.windows.conf.json "${NATIVE[@]}"
+          if [[ -f win-native/latest-native.json ]]; then
+            node src-tauri/release/verify-feed.mjs win-native/latest-native.json --dir win-native \
+              --pubkey-from src-tauri/tauri.windows.conf.json --native
+          fi
 
       # release.yml is the only thing that creates the release; creating it here could make its
       # own create step fail, so wait instead
@@ -207,31 +398,44 @@ jobs:
           echo "::error::Release ${TAG} didn't appear within an hour. Once the mac Release workflow has made it, re-run this job."
           exit 1
 
-      - name: Write latest.json
+      # the release's notes, when the repo has them for this version (release.yml generates them otherwise)
+      - name: Release notes
         env:
+          GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.files.outputs.version }}
-          PAIRS: ${{ steps.files.outputs.pairs }}
         run: |
-          # shellcheck disable=SC2086
-          node src-tauri/release/latest-json.mjs "$VERSION" \
-            "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" win $PAIRS
-          cat win/latest.json
+          NOTES="RELEASE_NOTES_v${VERSION}.md"
+          if [[ -f "$NOTES" ]]; then
+            gh release edit "v${VERSION}" --notes-file "$NOTES"
+          else
+            echo "no ${NOTES}: the release keeps its generated notes"
+          fi
 
-      # installers first, manifest last, so latest.json never points at a file that isn't there yet
+      # installers first, then the native feed, latest.json last: a Tauri install that moves to the native app
+      # finds the native feed there, and no feed ever points at a file that isn't there yet
       - name: Upload to the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v${{ steps.files.outputs.version }}
+          DIR: ${{ steps.files.outputs.dir }}
           FILES: ${{ steps.files.outputs.files }}
+          NATIVE_FILES: ${{ steps.native.outputs.files }}
         run: |
           # shellcheck disable=SC2086
-          gh release upload "$TAG" $FILES --clobber
-          gh release upload "$TAG" win/latest.json --clobber
+          UPLOAD="$(printf '%s\n' $FILES $NATIVE_FILES | sort -u | tr '\n' ' ')"
+          # shellcheck disable=SC2086
+          gh release upload "$TAG" $UPLOAD --clobber
+          if [[ -f win-native/latest-native.json ]]; then
+            gh release upload "$TAG" win-native/latest-native.json --clobber
+          fi
+          gh release upload "$TAG" "${DIR}/latest.json" --clobber
 
       - name: Write winget manifests
         env:
           VERSION: ${{ steps.files.outputs.version }}
-        run: bash src-tauri/release/winget.sh "$VERSION" "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" win winget
+          DIR: ${{ steps.files.outputs.dir }}
+          INSTALLER_SUFFIX: ${{ steps.files.outputs.suffix }}
+        run: bash src-tauri/release/winget.sh "$VERSION" "https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}" "$DIR" winget
 
       - uses: actions/upload-artifact@v4
         with:

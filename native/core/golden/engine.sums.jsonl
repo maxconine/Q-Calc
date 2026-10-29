@@ -1,0 +1,6 @@
+{"fn":"hurwitz","args":[0.5,1],"out":-1.4603545088095868,"src":"src/engine/sums.test.ts"}
+{"fn":"hurwitz","args":[1,1],"out":null,"src":"src/engine/sums.test.ts"}
+{"fn":"hurwitz","args":[2,0.5],"out":4.934802200544681,"src":"src/engine/sums.test.ts"}
+{"fn":"hurwitz","args":[2,1],"out":1.6449340668482262,"src":"src/engine/sums.test.ts"}
+{"fn":"hurwitz","args":[3,1],"out":1.2020569031595938,"src":"src/engine/sums.test.ts"}
+{"fn":"hurwitz","args":[40,1],"out":1.0000000000009095,"src":"src/engine/sums.test.ts"}

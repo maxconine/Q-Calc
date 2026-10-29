@@ -1,0 +1,254 @@
+{
+  "rawCalls": 64842,
+  "unique": 57004,
+  "areas": {
+    "engine.angles": {
+      "records": 7,
+      "nondet": 0
+    },
+    "engine.calcNumeric": {
+      "records": 20,
+      "nondet": 4
+    },
+    "engine.calculus": {
+      "records": 89,
+      "nondet": 0
+    },
+    "engine.chem": {
+      "records": 67,
+      "nondet": 1
+    },
+    "engine.closedForm": {
+      "records": 41,
+      "nondet": 0
+    },
+    "engine.currency": {
+      "records": 14,
+      "nondet": 0
+    },
+    "engine.dots": {
+      "records": 16,
+      "nondet": 0
+    },
+    "engine.evaluate": {
+      "records": 12,
+      "nondet": 0
+    },
+    "engine.format": {
+      "records": 9986,
+      "nondet": 0
+    },
+    "engine.graph": {
+      "records": 2309,
+      "nondet": 0
+    },
+    "engine.isolate": {
+      "records": 50,
+      "nondet": 0
+    },
+    "engine.matrix": {
+      "records": 2,
+      "nondet": 0
+    },
+    "engine.measure": {
+      "records": 23,
+      "nondet": 0
+    },
+    "engine.parens": {
+      "records": 746,
+      "nondet": 0
+    },
+    "engine.phrases": {
+      "records": 365,
+      "nondet": 0
+    },
+    "engine.phraseTime": {
+      "records": 13,
+      "nondet": 0
+    },
+    "engine.plainMath": {
+      "records": 10,
+      "nondet": 0
+    },
+    "engine.precise": {
+      "records": 1356,
+      "nondet": 0
+    },
+    "engine.scientific": {
+      "records": 4428,
+      "nondet": 1
+    },
+    "engine.simplify": {
+      "records": 149,
+      "nondet": 0
+    },
+    "engine.solve": {
+      "records": 45,
+      "nondet": 0
+    },
+    "engine.sums": {
+      "records": 6,
+      "nondet": 0
+    },
+    "engine.system": {
+      "records": 86,
+      "nondet": 0
+    },
+    "engine.typstInput": {
+      "records": 9,
+      "nondet": 0
+    },
+    "engine.units": {
+      "records": 1165,
+      "nondet": 0
+    },
+    "eval.arithmetic": {
+      "records": 6911,
+      "nondet": 0
+    },
+    "eval.blank": {
+      "records": 1317,
+      "nondet": 0
+    },
+    "eval.calculus": {
+      "records": 425,
+      "nondet": 2
+    },
+    "eval.chem": {
+      "records": 257,
+      "nondet": 0
+    },
+    "eval.functions": {
+      "records": 4179,
+      "nondet": 8
+    },
+    "eval.latex": {
+      "records": 222,
+      "nondet": 0
+    },
+    "eval.matrix": {
+      "records": 422,
+      "nondet": 0
+    },
+    "eval.measure": {
+      "records": 2100,
+      "nondet": 0
+    },
+    "eval.sheet": {
+      "records": 4490,
+      "nondet": 0
+    },
+    "eval.solve": {
+      "records": 468,
+      "nondet": 0
+    },
+    "eval.sums": {
+      "records": 307,
+      "nondet": 0
+    },
+    "eval.system": {
+      "records": 9,
+      "nondet": 0
+    },
+    "eval.units": {
+      "records": 8991,
+      "nondet": 0
+    },
+    "lib.answer": {
+      "records": 708,
+      "nondet": 0
+    },
+    "lib.answerForms": {
+      "records": 72,
+      "nondet": 0
+    },
+    "lib.blankReason": {
+      "records": 80,
+      "nondet": 0
+    },
+    "lib.bounds": {
+      "records": 309,
+      "nondet": 0
+    },
+    "lib.chain": {
+      "records": 62,
+      "nondet": 0
+    },
+    "lib.completion": {
+      "records": 292,
+      "nondet": 0
+    },
+    "lib.draft": {
+      "records": 391,
+      "nondet": 0
+    },
+    "lib.elements": {
+      "records": 482,
+      "nondet": 0
+    },
+    "lib.history": {
+      "records": 81,
+      "nondet": 0
+    },
+    "lib.historyShow": {
+      "records": 24,
+      "nondet": 0
+    },
+    "lib.identities": {
+      "records": 241,
+      "nondet": 0
+    },
+    "lib.keybinds": {
+      "records": 89,
+      "nondet": 0
+    },
+    "lib.knownWords": {
+      "records": 14,
+      "nondet": 0
+    },
+    "lib.missingUnit": {
+      "records": 10,
+      "nondet": 0
+    },
+    "lib.nativeEval": {
+      "records": 657,
+      "nondet": 0
+    },
+    "lib.onboarding": {
+      "records": 94,
+      "nondet": 0
+    },
+    "lib.paste": {
+      "records": 35,
+      "nondet": 0
+    },
+    "lib.radical": {
+      "records": 1881,
+      "nondet": 0
+    },
+    "lib.settings": {
+      "records": 21,
+      "nondet": 0
+    },
+    "lib.steady": {
+      "records": 18,
+      "nondet": 0
+    },
+    "lib.touches": {
+      "records": 12,
+      "nondet": 0
+    },
+    "lib.typstMath": {
+      "records": 251,
+      "nondet": 0
+    },
+    "lib.undo": {
+      "records": 45,
+      "nondet": 0
+    },
+    "lib.unitSpans": {
+      "records": 23,
+      "nondet": 0
+    }
+  }
+}

@@ -73,6 +73,10 @@
 .periodic-formula-name { font-size: 20px; font-weight: 500; }
 .periodic-formula-mass { font-size: var(--fs-row); }
 .periodic-formula-parts { display: flex; flex-wrap: wrap; justify-content: center; color: var(--muted); font-size: var(--fs-caption); }
+/* labelled and filled at rest, so it reads as a button among the parts */
+.periodic-formula .periodic-formula-clear { margin-left: var(--sp-2); padding: 1px 8px; background: var(--fill-track); color: var(--ink); font-weight: 500; }
+.periodic-formula .periodic-formula-clear:hover { background: var(--fill-selected); }
+.periodic-formula .periodic-formula-clear:active { background: color-mix(in srgb, var(--ink) 12%, transparent); }
 .periodic-formula-hint { color: var(--muted); font-size: var(--fs-caption); }
 .periodic-tile.picked { background: color-mix(in srgb, var(--tint) 32%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tint) 70%, transparent); }
 .periodic-count {

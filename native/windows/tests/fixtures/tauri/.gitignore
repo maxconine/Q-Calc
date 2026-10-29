@@ -1,0 +1,2 @@
+# Chromium's leveldb log is part of the fixture (the newer tape over the table); the repo ignores *.log
+!leveldb/*.log

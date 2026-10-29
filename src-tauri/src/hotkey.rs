@@ -86,6 +86,46 @@ pub fn launch(preferred: &str, mut bind: impl FnMut(&str) -> bool) -> HotKey {
     HotKey { active: None, failed: true }
 }
 
+// at sign in another app (powertoys run, or the q calc an update is replacing, still on its way out) can hold the
+// chord for a moment. so a chord that didn't bind is tried again: each second for half a minute, then each 10 seconds
+// to five minutes, and after that only when the pc wakes or the session unlocks. `attempt` counts from 0
+pub const RETRY_FAST: (u32, u64) = (30, 1);
+pub const RETRY_SLOW: (u32, u64) = (27, 10);
+
+pub fn retry_delay(attempt: u32) -> Option<std::time::Duration> {
+    let secs = if attempt < RETRY_FAST.0 {
+        RETRY_FAST.1
+    } else if attempt < RETRY_FAST.0 + RETRY_SLOW.0 {
+        RETRY_SLOW.1
+    } else {
+        return None;
+    };
+    Some(std::time::Duration::from_secs(secs))
+}
+
+// one more try for the picked chord; none when it's already bound. a fallback to the standard chord is let go once
+// the picked one binds, and with nothing bound the standard is tried as at launch
+pub fn retry(
+    preferred: &str,
+    now: &HotKey,
+    mut bind: impl FnMut(&str) -> bool,
+    unbind: impl FnOnce(&str),
+) -> Option<HotKey> {
+    if now.active.as_deref() == Some(preferred) {
+        return None;
+    }
+    if bind(preferred) {
+        if let Some(fallback) = &now.active {
+            unbind(fallback);
+        }
+        return Some(HotKey { active: Some(preferred.to_string()), failed: false });
+    }
+    if now.active.is_none() && preferred != STANDARD && bind(STANDARD) {
+        return Some(HotKey { active: Some(STANDARD.to_string()), failed: true });
+    }
+    Some(now.clone())
+}
+
 // false when another app owns `next`; the previous one stays bound
 pub fn select(next: &str, now: &HotKey, mut bind: impl FnMut(&str) -> bool, unbind: impl FnOnce()) -> (HotKey, bool) {
     if now.active.as_deref() == Some(next) {
@@ -322,6 +362,44 @@ mod tests {
             false
         });
         assert_eq!(tried, [STANDARD]);
+    }
+
+    #[test]
+    fn retries_come_each_second_then_each_ten_for_five_minutes() {
+        use std::time::Duration;
+        assert_eq!(retry_delay(0), Some(Duration::from_secs(1)));
+        assert_eq!(retry_delay(29), Some(Duration::from_secs(1)));
+        assert_eq!(retry_delay(30), Some(Duration::from_secs(10)));
+        assert_eq!(retry_delay(56), Some(Duration::from_secs(10)));
+        assert_eq!(retry_delay(57), None);
+        let fast: Duration = (0..30).filter_map(retry_delay).sum();
+        let all: Duration = (0..).map_while(retry_delay).sum();
+        assert_eq!((fast, all), (Duration::from_secs(30), Duration::from_secs(300)));
+    }
+
+    #[test]
+    fn a_retry_binds_the_picked_chord_and_lets_the_fallback_go() {
+        let on = |c: &str| HotKey { active: Some(c.to_string()), failed: false };
+        // already bound: nothing to do
+        assert_eq!(retry("ctrl+k", &on("ctrl+k"), |_| panic!("no bind"), |_| panic!("no unbind")), None);
+        // nothing bound at launch, the chord is free now
+        let none = HotKey { active: None, failed: true };
+        assert_eq!(retry(STANDARD, &none, |_| true, |_| panic!("no unbind")), Some(on(STANDARD)));
+        // fell back to the standard: the picked one binds, then the standard goes
+        let fell_back = HotKey { active: Some(STANDARD.into()), failed: true };
+        let mut unbound = None;
+        assert_eq!(retry("ctrl+k", &fell_back, |c| c == "ctrl+k", |c| unbound = Some(c.to_string())), Some(on("ctrl+k")));
+        assert_eq!(unbound.as_deref(), Some(STANDARD));
+        // still held: the fallback stays, and isn't tried again
+        let mut tried = vec![];
+        let out = retry("ctrl+k", &fell_back, |c| {
+            tried.push(c.to_string());
+            false
+        }, |_| panic!("no unbind"));
+        assert_eq!((out, tried), (Some(fell_back.clone()), vec!["ctrl+k".to_string()]));
+        // nothing bound and the picked one still held: the standard is the fallback, as at launch
+        assert_eq!(retry("ctrl+k", &none, |c| c == STANDARD, |_| ()), Some(fell_back));
+        assert_eq!(retry(STANDARD, &none, |_| false, |_| ()), Some(none));
     }
 
     #[test]

@@ -117,6 +117,8 @@ export type HintFacts = {
   answer?: string
   variable?: string
   unit?: boolean
+  // ⌥↑/⌥↓ would move the answer along a prefix ladder (not degrees, miles or °C)
+  prefix?: boolean
   // the input carries on from the last answer
   chained?: boolean
   angleMode?: 'deg' | 'rad'
@@ -151,7 +153,7 @@ export const HINTS: readonly HintRule[] = [
     when: (f) => TRIG.test(f.expr),
     text: (f) => (f.angleMode === 'rad' ? 'radians · ⌃D for degrees' : 'degrees · ⌃D for radians'),
   },
-  { bit: 64, on: 'pause', when: (f) => Boolean(f.unit), text: '⌥↑ ⌥↓ step the unit prefix' },
+  { bit: 64, on: 'pause', when: (f) => Boolean(f.prefix), text: '⌥↑ ⌥↓ step the unit prefix' },
   {
     bit: 128,
     on: 'pause',

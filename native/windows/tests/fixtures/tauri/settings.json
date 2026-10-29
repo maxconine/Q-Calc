@@ -1,0 +1,47 @@
+{
+  "settings": {
+    "angleMode": "rad",
+    "fractionMode": true,
+    "sigFigMode": false,
+    "rationalize": true,
+    "keepWords": false,
+    "answerForm": "exact",
+    "historyInsert": "answer",
+    "historyShow": "always",
+    "sigFigs": 9,
+    "draftSeconds": 120,
+    "defaultUnits": {
+      "length": "ft"
+    },
+    "theme": "dark",
+    "typstPreview": true,
+    "typstCopy": false,
+    "spaceThousands": true,
+    "copyUnitless": true,
+    "shareUsage": false,
+    "keybinds": {
+      "angle": "ctrl+alt+r"
+    }
+  },
+  "hotkey": "ctrl+alt+shift+f10",
+  "onboarding": {
+    "opens": 41,
+    "commits": 117,
+    "hints": 2047,
+    "done": true
+  },
+  "firstRunDone": true,
+  "positions": {
+    "\\\\.\\DISPLAY1": [
+      412.0,
+      180.0
+    ]
+  },
+  "spotSeconds": 0,
+  "usedAt": 1792999000,
+  "width": 900.0,
+  "analytics": null,
+  "defaults": 2,
+  "autoUpdate": false,
+  "signIn": true
+}

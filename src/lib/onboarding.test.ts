@@ -144,9 +144,15 @@ describe('hints', () => {
     expect(pickHint(COPY, { expr: 'asin(1)' }, 'pause')?.bit).toBe(trig)
   })
 
-  it('unit answers teach prefix stepping while they are on screen', () => {
-    expect(pickHint(COPY, { expr: '100 W * 2 hr', unit: true }, 'pause')?.bit).toBe(UNIT)
-    expect(pickHint(BACK, { expr: '100 W * 2 hr', unit: true })).toBeNull()
+  it('answers on a prefix ladder teach prefix stepping while they are on screen', () => {
+    expect(pickHint(COPY, { expr: '100 W * 2 hr', unit: true, prefix: true }, 'pause')?.bit).toBe(UNIT)
+    expect(pickHint(BACK, { expr: '100 W * 2 hr', unit: true, prefix: true })).toBeNull()
+  })
+
+  it('a unit with no prefixes, like an inverse trig answer in degrees, does not', () => {
+    const seenTrig = COPY | trig
+    expect(pickHint(seenTrig, { expr: 'asin(0.5)', unit: true, prefix: false }, 'pause')?.bit).not.toBe(UNIT)
+    expect(pickHint(COPY, { expr: '3 mi to mi', unit: true }, 'pause')?.bit).not.toBe(UNIT)
   })
 
   it('a decimal from a division suggests fractions unless they are on', () => {

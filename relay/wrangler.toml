@@ -4,6 +4,17 @@ compatibility_date = "2026-03-01"
 workers_dev = true
 preview_urls = false
 
+# no request logs, traces or sampling: a request's url, headers and address would otherwise be kept by
+# cloudflare's workers logs, and the file and messaging routes are meant to leave nothing behind
+# (native/PRIVACY.md). the code itself logs nothing either
+[observability]
+enabled = false
+head_sampling_rate = 0
+
+[observability.logs]
+enabled = false
+invocation_logs = false
+
 # one room per host, and per code: earlier releases' code-only rooms, and the claims on locked rooms' codes
 [[durable_objects.bindings]]
 name = "ROOMS"
@@ -62,3 +73,41 @@ simple = { limit = 30, period = 60 }
 name = "SENDERS"
 namespace_id = "7306"
 simple = { limit = 10, period = 60 }
+
+# files sent between names (files.js, ledger.js). the ledger is one object holding every file's state and the
+# bytes they hold against the hard caps; the bucket holds the encrypted files, each until its recipient
+# downloads it, it's taken back or turned down, or it expires. wrangler dev keeps a local bucket of its own
+[[durable_objects.bindings]]
+name = "LEDGER"
+class_name = "Ledger"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Ledger"]
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "qcalc-files"
+
+# every hour: lapsed offers, unused grants, stale uploads and expired files go
+[triggers]
+crons = ["0 * * * *"]
+
+# offers and upload starts, per ip and per sender name under one namespace (the ledger also caps uploads per
+# address per hour, and bytes per sender, per recipient and for the whole bucket)
+[[ratelimits]]
+name = "UPLOADS"
+namespace_id = "7308"
+simple = { limit = 10, period = 60 }
+
+# accepting, downloading and taking back files, per ip
+[[ratelimits]]
+name = "FILE_GETS"
+namespace_id = "7309"
+simple = { limit = 30, period = 60 }
+
+# the bar's name check as you type `message <name>`: per ip and per sender name, under one namespace
+[[ratelimits]]
+name = "LOOKUPS"
+namespace_id = "7307"
+simple = { limit = 60, period = 60 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ELEMENTS, formulaOf, formulaOfPicks, gridCell, hasStandardWeight, insertableMass } from './elements'
-import { isPeriodicCommand } from './periodic'
+import { isPeriodicCommand, takesFormulaEnter } from './periodic'
 
 const PERIOD_STARTS = [1, 3, 11, 19, 37, 55, 87, 119]
 
@@ -159,6 +159,29 @@ describe('periodic command', () => {
   it('leaves other input alone', () => {
     for (const t of ['periodi', 'periodic t', 'periodic tables', 'the periodic table', 'periodic 2', '']) {
       expect(isPeriodicCommand(t), t).toBe(false)
+    }
+  })
+})
+
+describe('enter in the periodic table', () => {
+  const key = { key: 'Enter', metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, isComposing: false, repeat: false }
+
+  it('takes a plain enter', () => {
+    expect(takesFormulaEnter(key)).toBe(true)
+  })
+
+  it('leaves modified, held, composing and other keys to the bar', () => {
+    for (const k of [
+      { ...key, metaKey: true },
+      { ...key, ctrlKey: true },
+      { ...key, altKey: true },
+      { ...key, shiftKey: true },
+      { ...key, isComposing: true },
+      { ...key, repeat: true },
+      { ...key, key: 'Escape' },
+      { ...key, key: 'Tab' },
+    ]) {
+      expect(takesFormulaEnter(k), JSON.stringify(k)).toBe(false)
     }
   })
 })

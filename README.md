@@ -61,9 +61,9 @@ Type `sin(90)`, `72 f`, or `$10 for lunch + 15% tip` — the answer updates as y
 
 ### Windows
 
-You need **Windows 10 or 11**, on an x64 or Arm PC.
+You need **Windows 10** (any version from 1507, build 10240) **or Windows 11**, on an x64 or Arm PC. From 3.0, Q Calc for Windows is a native app ([native/windows](native/windows/README.md)): no web view, and nothing else to install.
 
-Download `Q-Calc-<version>-x64-setup.exe` (or `-arm64-setup.exe` for Snapdragon PCs) from the [latest release](https://github.com/maxconine/Q-Calc/releases/latest) and run it. It installs for your account only, so there's no admin prompt, and adds Q Calc to the Start menu and **Installed apps**.
+Download `Q-Calc-<version>-x64-native-setup.exe` (or `-arm64-native-setup.exe` for Snapdragon PCs) from the [latest release](https://github.com/maxconine/Q-Calc/releases/latest) and run it. It installs for your account only, so there's no admin prompt, and adds Q Calc to the Start menu and **Installed apps**. An older Q Calc (2.x) updates itself to 3.0 in place and keeps its settings and history.
 
 > [!NOTE]
 > The installer isn't code-signed yet, so Windows may say it protected your PC. Click **More info → Run anyway**. Updates after that install silently, and never show this.
@@ -74,7 +74,7 @@ Q Calc opens when you sign in. Turn that off with **Open at login** in settings 
 
 If **Alt + Space** opens something else (PowerToys Run and Command Palette use it too), open settings, click **Choose keybinds…** under **Keybinds**, then click the **Show / hide Q Calc** key and press a new one. Any shortcut in that list can be changed the same way. If another app already holds the shortcut when Q Calc starts, the calculator says so.
 
-Q Calc checks for updates once a day and installs them while you're away from the PC. See [src-tauri/release/README.md](src-tauri/release/README.md) for the details.
+Q Calc checks for updates once a day and installs them while you're away from the PC. See [src-tauri/release/README.md](src-tauri/release/README.md) for the details, and [native/windows/RELEASE.md](native/windows/RELEASE.md) for how a Windows release is shipped.
 
 ### Mac
 
@@ -135,7 +135,7 @@ On Windows, read **⌘** and **⌃** below as **Ctrl**, **Option** as **Alt**, a
 - Solve a system with `sys2` through `sys5` (`sys 3` works too). The fields open as soon as you type the count, and the answer updates as you type (`x + y = 5`, `x - y = 1`). You don't have to fill every field: once the equations you've typed settle a value, it shows. Units carry through: `x + y = 10 m`, `x - y = 2 m` gives `x = 6 m, y = 4 m`, and `F = m*a`, `m = 2 kg`, `a = 3 m/s^2` gives `F = 6 N`. Nonlinear systems solve too: linear and quadratic ones exactly, anything else numerically (`x^2 + y^2 = 4`, `x^2 - y = 2` gives all three solutions; `e^x = y`, `x + y = 2` gives `x = 0.44285, y = 1.55715`).
 - Time derivatives: `d/dt (x sin(theta))` is `ẋ sin(θ) + xθ̇ cos(θ)`, and `d²/dt²` works too. Positions and angles (x, y, z, r, s, θ, φ, ψ) change with time and other letters (L, h, k, m…) are constants; a row of chips under the bar shows which is which, and clicking one switches it until Q Calc quits. Dotted variables can be typed `thetadot`, `dot(theta)`, `\dot\theta` or `θ̇`, and LaTeX can be pasted straight in: `d/dt $e^{k\theta}\,\dot\theta$`.
 - Or in one line: `solve({x^2 + y^2 = 4, x^2 - y = 2})` for every solution, or `solve({x^2 + y^2 = 4, x^2 - y = 2}, x = 1, y = 1)` for the one those guesses lead to.
-- Natural-language math works in the Mac app via SoulverCore: `$10 for lunch + 15% tip`, `40 is what % of 90`, `3:45pm + 4 hr 10 min`. The Windows app has its own phrases for the common cases, like `$10 for lunch + 15% tip`, `3:45pm + 4 hr 10 min`, `days until december 25` and `100 usd to eur`.
+- Natural-language math works too: `$10 for lunch + 15% tip`, `$45.50 + $12.25`, `$30/hr * 40 hr`, `40 is what % of 90`, `30 is 20% of what`, `3:45pm + 4 hr 10 min`, `5pm - 9am`, `days until christmas`, `time in tokyo` and `100 usd to eur` (live rates from the European Central Bank, refreshed daily).
 <!-- Apple Dictionary — uncomment to restore:
 - Type a word such as `ingenious` to see its Apple Dictionary definition. Phrases work too: `define New York`, `definition of apple`, `what does pi mean`. Click the definition or press **⌘C** to copy it. **Enter** saves the word to history.
 -->
@@ -170,7 +170,7 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 sudo xcodebuild -license accept
 ```
 
-Xcode 26 is required because the Mac app links [SoulverCore](https://github.com/soulverteam/SoulverCore), which ships a Swift 6.2 binary. Node.js 20 or later is also required (`brew install node`).
+Xcode 26 or later is required, and Node.js 20 or later (`brew install node`).
 
 ```bash
 npm install
@@ -240,4 +240,3 @@ Q Calc sends anonymous usage counts, such as how many calculations used units or
 
 Q Calc is [MIT](LICENSE).
 
-The Mac app embeds [SoulverCore](https://github.com/soulverteam/SoulverCore), a closed-source natural language math engine. SoulverCore may be used in personal and private projects. [Contact the authors](mailto:contact@soulver.app) before using it in a public or commercial project (they offer options, including a free license with attribution). `npm run mac` downloads the official xcframework at build time.

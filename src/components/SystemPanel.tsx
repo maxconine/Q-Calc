@@ -7,6 +7,8 @@ type SystemPanelProps = {
   onEnter: (index: number) => void
   /** Up from the first equation returns to the main search field. */
   onFocusMain: () => void
+  /** Several equations pasted into field `index`; true when they filled the system. */
+  onPasteLines?: (index: number, text: string) => boolean
 }
 
 function focusEq(el: HTMLInputElement) {
@@ -15,7 +17,7 @@ function focusEq(el: HTMLInputElement) {
   el.setSelectionRange(end, end)
 }
 
-export function SystemPanel({ lines, onChange, onEnter, onFocusMain }: SystemPanelProps) {
+export function SystemPanel({ lines, onChange, onEnter, onFocusMain, onPasteLines }: SystemPanelProps) {
   const first = useRef<HTMLInputElement>(null)
   const caret = useRef<{ index: number; at: number } | null>(null)
   const caretRef = (index: number, at: number) => {
@@ -44,6 +46,7 @@ export function SystemPanel({ lines, onChange, onEnter, onFocusMain }: SystemPan
             className="sys-eq"
             value={line}
             spellCheck={false}
+            {...{ writingsuggestions: 'false' }}
             autoCapitalize="off"
             autoCorrect="off"
             placeholder={`equation ${i + 1}`}
@@ -54,6 +57,10 @@ export function SystemPanel({ lines, onChange, onEnter, onFocusMain }: SystemPan
               const next = prettyTokens(el.value, caret)
               caretRef(i, caret + (next.length - el.value.length))
               onChange(i, next)
+            }}
+            onPaste={(e) => {
+              const text = e.clipboardData?.getData('text/plain') ?? ''
+              if (/[\r\n;]/.test(text) && onPasteLines?.(i, text)) e.preventDefault()
             }}
             onKeyDown={(e) => {
               const plain = !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey

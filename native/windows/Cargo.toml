@@ -1,0 +1,96 @@
+[package]
+name = "qcalc-win"
+description = "Q Calc for Windows, native: Win32 + Direct2D + DirectWrite around the Rust engine (no web view)"
+# the release version, package.json's (windows.yml refuses a tag where they differ); a release build's QCALC_VERSION
+# names the same version for update.rs, the crash reports, analytics and the exe's version resource
+version = "3.0.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[features]
+# diagnostics for native/windows/PERFORMANCE.md (perf.rs): keystroke timelines, a counting allocator, the bench's `vm`; never in a shipping build
+perf = []
+# tests/e2e/update-e2e.ps1's build: the update loop may take a loopback http feed, a test key and short waits from
+# QCALC_UPDATE_FEED / _PUBKEY / _QUIET_SECS (update.rs `overrides`); never in a shipping build, which ignores them
+update-e2e = []
+
+[[bin]]
+name = "qcalc"
+path = "src/main.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+# the bar's pure logic (keybinds, cheat sheet, steady, unitless copy, typst preview text, commands, messaging, the tour), called in place
+qcalc-core = { path = "../core" }
+
+# everything Windows lives behind cfg(windows), so `cargo build` of the workspace on the Mac builds a stub main
+[target.'cfg(windows)'.dependencies]
+qcalc-ffi = { path = "../ffi", features = ["typst"] }
+# the update's signature: the Tauri updater's minisign key, verified as tauri-plugin-updater does
+minisign-verify = "0.2"
+# Typst's worker pool (it parallelises with rayon): one thread, not one per core (engine.rs, PERFORMANCE.md)
+rayon = "1.12"
+windows-numerics = "0.2"
+# the implement macro (uia.rs's UI Automation provider) names this crate
+windows-core = "0.61"
+# end-to-end sealing for clips and files, byte for byte as the Mac's CryptoKit (share_crypt.rs, native/PRIVACY.md)
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
+hkdf = "0.12.4"
+sha2 = "0.10.8"
+aes-gcm = "0.10.3"
+getrandom = "0.2.15"
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Direct2D",
+  "Win32_Graphics_Direct2D_Common",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_DirectWrite",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  "Win32_Graphics_Dwm",
+  "Win32_Graphics_Gdi",
+  "Win32_Networking_WinHttp",
+  "Win32_Media_Audio",
+  "Win32_Security",
+  "Win32_Security_Cryptography",
+  "Win32_Storage_FileSystem",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_DataExchange",
+  "Win32_System_Diagnostics_ToolHelp",
+  "Win32_System_LibraryLoader",
+  "Win32_System_Memory",
+  "Win32_System_Ole",
+  "Win32_System_Pipes",
+  "Win32_System_ProcessStatus",
+  "Win32_System_Registry",
+  "Win32_System_RemoteDesktop",
+  "Win32_System_SystemInformation",
+  "Win32_System_Threading",
+  "Win32_System_Variant",
+  "Win32_System_IO",
+  "Win32_UI_Accessibility",
+  "Win32_UI_Controls",
+  "Win32_UI_Controls_Dialogs",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input_Ime",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }
+
+[lints.rust]
+# Win32, Direct2D and DirectWrite are unsafe FFI. Unsafe stays in the thin wrappers that call them (render.rs,
+# window.rs, app.rs, tray.rs, hotkey.rs, autostart.rs, bench.rs' pipe, clip.rs); the model, the field's editing
+# and the store are safe Rust.
+unsafe_code = "allow"
+unsafe_op_in_unsafe_fn = "deny"
+missing_debug_implementations = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

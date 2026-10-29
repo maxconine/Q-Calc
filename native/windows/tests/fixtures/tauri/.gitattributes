@@ -1,0 +1,3 @@
+# the Tauri app's files byte for byte: never line-ending converted
+leveldb/** -text
+settings.json -text

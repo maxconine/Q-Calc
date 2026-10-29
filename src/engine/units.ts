@@ -1767,6 +1767,11 @@ export function stepPrefix(value: Value, dir: 1 | -1): Value | null {
   return moveOnLadder(value, place, exp)
 }
 
+/** Whether ⌥↑ or ⌥↓ would move the value along a prefix ladder (degrees, miles and °C have none). */
+export function canStepPrefix(value: Value | undefined): boolean {
+  return Boolean(value?.unit) && (stepPrefix(value!, 1) != null || stepPrefix(value!, -1) != null)
+}
+
 /** Re-express a value in a unit from the same prefix ladder (keeps a ⌥↑ choice while typing). */
 export function inLadderUnit(value: Value, unitId: string): Value | null {
   if (value.kind !== 'number' || !Number.isFinite(value.n)) return null

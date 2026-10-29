@@ -1,0 +1,41 @@
+[workspace]
+resolver = "3"
+members = ["core", "ffi",
+  "lazy", # statics the Windows engine thread can give back (compiled regexes)
+  "typst", # WP-TYPST-RENDER
+  "windows", # the native Windows app (qcalc-win)
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/maxconine/Q-Calc"
+rust-version = "1.99"
+
+[workspace.dependencies]
+# WP-PRECISE: decimal big floats (base 10, half-up rounding like decimal.js) for the precise twin
+dashu-base = { version = "0.6.1", default-features = false, features = ["std"] }
+dashu-float = { version = "0.6.2", default-features = false, features = ["std"] }
+dashu-int = { version = "0.6.2", default-features = false, features = ["std"] }
+fancy-regex = { version = "0.19", features = ["variable-lookbehinds"] }
+num-bigint = "0.4"
+num-integer = "0.1"
+num-rational = "0.4"
+num-traits = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+uniffi = "0.32"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "unwind"
+strip = "debuginfo"

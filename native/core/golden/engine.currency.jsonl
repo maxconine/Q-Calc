@@ -1,0 +1,14 @@
+{"fn":"convertCurrency","args":[1,"USD","GBP",null],"out":null,"src":"src/engine/phrases.test.ts"}
+{"fn":"convertCurrency","args":[1,"USD","GBP",{"base":"EUR","rates":{"USD":0,"GBP":0.8}}],"out":null,"src":"src/engine/phrases.test.ts"}
+{"fn":"convertCurrency","args":[1,"USD","XYZ",{"base":"EUR","rates":{"USD":1.25,"GBP":0.8,"JPY":160,"CAD":1.5}}],"out":null,"src":"src/engine/phrases.test.ts"}
+{"fn":"convertCurrency","args":[1,"usd","jpy",{"base":"EUR","rates":{"USD":1.25,"GBP":0.8,"JPY":160,"CAD":1.5}}],"out":128,"src":"src/engine/phrases.test.ts"}
+{"fn":"convertCurrency","args":[100,"EUR","EUR",{"base":"EUR","rates":{"USD":1.25,"GBP":0.8,"JPY":160,"CAD":1.5}}],"out":100,"src":"src/engine/phrases.test.ts"}
+{"fn":"convertCurrency","args":[100,"USD","GBP",{"base":"EUR","rates":{"USD":1.25,"GBP":0.8,"JPY":160,"CAD":1.5}}],"out":64,"src":"src/engine/phrases.test.ts"}
+{"fn":"formatMoney","args":[-0.001,"USD"],"out":"$0.00","src":"src/engine/phrases.test.ts"}
+{"fn":"formatMoney","args":[-5,"USD"],"out":"-$5.00","src":"src/engine/phrases.test.ts"}
+{"fn":"formatMoney","args":[1234.5,"JPY"],"out":"¥1235","src":"src/engine/phrases.test.ts"}
+{"fn":"formatMoney","args":[3,"CHF"],"out":"3.00 CHF","src":"src/engine/phrases.test.ts"}
+{"fn":"isRatesTable","args":[{"$undef":true}],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isRatesTable","args":[{"USD":1}],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isRatesTable","args":[{"base":"EUR","rates":{"USD":1.25,"GBP":0.8}}],"out":true,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"parseMoney","args":["5 pounds"],"out":null,"src":"src/engine/phrases.test.ts"}

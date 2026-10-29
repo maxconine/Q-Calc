@@ -4,13 +4,13 @@ import { chemCopyText, isReactionInput } from '../engine/chem'
 import { evaluateSheet, parseFunctionDef } from '../engine/evaluate'
 import { formatValue } from '../engine/format'
 import { isGraphCommand, parseGraphIntent } from '../engine/graph'
-import { isSysCommand, parseSystemCall, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
+import { isSysCommand, parseSystemCall, pastedEquations, solveLive, sysCommand, type SystemAnswer } from '../engine/system'
 import { isIsolateCommand, isolatePrevious } from '../engine/isolate'
 import { isEquation } from '../engine/solve'
 import { hasPlusMinus } from '../engine/measure'
 import { inferParens } from '../engine/parens'
 import { dualLabel } from '../engine/simplify'
-import { inLadderUnit, isImproperUnitConversion, stepPrefix } from '../engine/units'
+import { canStepPrefix, inLadderUnit, isImproperUnitConversion, stepPrefix } from '../engine/units'
 import type { SolveInfo, UserFunction, Value } from '../engine/types'
 import { useClosedForm } from '../lib/closedForm'
 import { applyTheme } from '../lib/theme'
@@ -82,6 +82,7 @@ import {
   type NativeLive,
 } from '../lib/nativeEval'
 import { QuickInput, flattenPastedText, prettyTokens, type QuickInputHandle } from './QuickInput'
+import { cleanPastedText } from '../lib/paste'
 import {
   advanceRotation,
   afterHelpInput,
@@ -120,9 +121,10 @@ import { nextRecentExpiry, recentStart, scopeStart } from '../lib/historyShow'
 import { isPeriodicCommand, openNativePeriodicTable, PERIODIC_HINT } from '../lib/periodic'
 import { identityTargetFor, isIdentityCommand, openNativeIdentitySheet, type IdentityTarget } from '../lib/identities'
 import { GREETING_REPLY, isGreeting } from '../lib/greeting'
-import { isMessageCommand, loadMessaging, messageHint, onMessagingChange, parseMessage, sendMessage, sendStatusText } from '../lib/messaging'
+import { isMessageCommand, loadMessaging, lookupName, messageContacts, messageHint, onMessagingChange, parseMessage, rememberRecipient, sendMessage, sendStatusText } from '../lib/messaging'
+import { CHECK_DELAY_MS, NameCheck } from '../lib/nameCheck'
 import { relayUrl } from '../lib/peerOnline'
-import { MessageNotices } from './MessageNotices'
+import { MessageNotices, type MessageNoticesHandle } from './MessageNotices'
 import { calcKind, setUsageSharing, track } from '../lib/analytics'
 import { actionForEvent, keyRecorder, type KeyAction } from '../lib/keybinds'
 import { KeybindSettings } from './KeybindSettings'
@@ -343,6 +345,13 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const messagingRef = useRef(messaging)
   messagingRef.current = messaging
   useEffect(() => onMessagingChange(setMessaging), [])
+  // whether the name after `message` is anyone's, asked of the relay once typing rests
+  const nameCheck = useMemo(() => new NameCheck((name) => lookupName(messagingRef.current, name)), [])
+  const [nameChecked, setNameChecked] = useState<{ name: string; found: boolean } | null>(null)
+  // message cards under the bar; esc closes them before it closes the bar
+  const bannerRef = useRef<MessageNoticesHandle>(null)
+  const [bannerOpen, setBannerOpen] = useState(false)
+  const focusBar = useCallback(() => mathRef.current?.focus(), [])
   const draftAtRef = useRef(storedDraft?.savedAt ?? 0)
   const draftTimer = useRef(0)
   const evalIdRef = useRef(0)
@@ -489,8 +498,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const nativeMeas = useMemo(() => historyMeasures(scoped), [scoped])
   const nativeQty = useMemo(() => historyQuantities(scoped), [scoped])
   const completionNames = useMemo(
-    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null, contacts: messaging.accepted }),
-    [nativeVars, nativeFns, lastAns, messaging.accepted],
+    () => ({ variables: Object.keys(nativeVars), functions: Object.keys(nativeFns), ans: lastAns != null, contacts: messageContacts(messaging) }),
+    [nativeVars, nativeFns, lastAns, messaging],
   )
 
   const helpShown = helpOpen || isHelpCommand(q)
@@ -507,9 +516,30 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const sysCmd = isSysCommand(q)
   const greeting = isGreeting(q)
   const messageCmd = isMessageCommand(q)
+  const messageLine = messageCmd ? parseMessage(q) : null
+  const messageTo = messageLine?.name ?? ''
+  const canLookUp = Boolean(messageTo && relayUrl() && messaging.name && messaging.key)
+  // null until the relay has said, and whenever it can't (offline): never a "not found" it didn't give
+  const recipientFound = !canLookUp
+    ? null
+    : (nameCheck.cached(messageTo) ?? (nameChecked?.name === messageTo ? nameChecked.found : null))
   // `periodic`, `hello` and `message` answer with a message, not a calculation
   const periodicCmd = isPeriodicCommand(q) || greeting || messageCmd
   const identityCmd = useMemo(() => identityTargetFor(q), [q])
+  useEffect(() => {
+    if (!canLookUp || nameCheck.cached(messageTo) != null) return
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+    let live = true
+    const t = window.setTimeout(() => {
+      void nameCheck.check(messageTo).then((found) => {
+        if (live && found != null) setNameChecked({ name: messageTo, found })
+      })
+    }, CHECK_DELAY_MS)
+    return () => {
+      live = false
+      window.clearTimeout(t)
+    }
+  }, [canLookUp, messageTo, nameCheck, messaging.name])
   // pong or connect 4
   const pongCmd = gameCommand(q)
   const tutorialCmd = isTutorialCommand(q)
@@ -634,6 +664,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       answer: display,
       variable: fromJs && live?.kind === 'assignment' ? live.variable : undefined,
       unit: Boolean(steppableRef.current?.unit),
+      prefix: canStepPrefix(steppableRef.current),
       chained,
       angleMode: settings.angleMode,
       fractionMode: settings.fractionMode,
@@ -871,10 +902,8 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setTapeOpen(tapeRestRef.current)
   }, [])
 
-  const openHistorySystem = useCallback((index: number) => {
-    const row = history[index]
-    const lines = row?.kind === 'system' ? row.equations?.slice(0, 5) : undefined
-    if (!lines?.length) return
+  // the system fields, opened with these equations (a history row, or lines pasted from a worksheet)
+  const openSystem = useCallback((lines: string[]) => {
     const text = `sys ${lines.length}`
     sysLinesRef.current = lines
     qRef.current = text
@@ -884,7 +913,27 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     setTapeOpen(false)
     setCopied(false)
     mathRef.current?.setValue(text)
-  }, [history])
+  }, [])
+
+  const openHistorySystem = useCallback(
+    (index: number) => {
+      const row = history[index]
+      const lines = row?.kind === 'system' ? row.equations?.slice(0, 5) : undefined
+      if (lines?.length) openSystem(lines)
+    },
+    [history, openSystem],
+  )
+
+  // a paste of two to five equations opens them as a system; anything else is plain text
+  const pasteSystem = useCallback(
+    (text: string, before: string[] = []): boolean => {
+      const lines = pastedEquations(cleanPastedText(text))
+      if (!lines) return false
+      openSystem([...before, ...lines].slice(0, 5))
+      return true
+    },
+    [openSystem],
+  )
 
   const insertHistoryExpr = useCallback(
     (index: number) => {
@@ -1047,6 +1096,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
     tapeRestRef.current = false
     setRotation(ROTATION_OFF)
     setHint(null)
+    bannerRef.current?.setShown(false)
     // a game kept open hears about it: it leaves full screen and pauses
     if (pongOpenRef.current && gameHoldRef.current?.()) window.dispatchEvent(new Event(GAME_HIDE_EVENT))
     else setPongOpen(null)
@@ -1238,16 +1288,20 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       return
     }
     if (!relayUrl() || !m.name || !m.key || !line.name || !line.text) {
-      setHint(messageHint(line, m))
+      setHint(messageHint(line, m, undefined, line.name ? nameCheck.cached(line.name) : null))
       return
     }
     const typed = qRef.current
     setHint(`sending to ${line.name}…`)
     void sendMessage(m, line.name, line.text).then((status) => {
+      // a send says whether the name is anyone's too
+      if (status === 'delivered' || status === 'offline') nameCheck.note(line.name, true)
+      if (status === 'unknown') nameCheck.note(line.name, false)
+      if (status === 'delivered') rememberRecipient(line.name)
       if (status === 'delivered' && qRef.current === typed) resetToCalculate()
       setHint(sendStatusText(status, line.name))
     })
-  }, [resetToCalculate])
+  }, [resetToCalculate, nameCheck])
 
   const onEnter = useCallback((alt = false) => {
     const opening = sysCommand(qRef.current)
@@ -1310,7 +1364,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // lobby's list it closes the game back to the bar. false tells the mac app to hide; the page does not clear
   // the tape or the input first.
   const escapeLayer = useCallback((): boolean => {
-    if (!pongOpenRef.current) return false
+    if (!pongOpenRef.current) return Boolean(bannerRef.current?.close())
     if (!gameEscRef.current?.()) closeGame()
     return true
   }, [closeGame])
@@ -1318,11 +1372,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   // so the mac app hands esc to the page while a game is up, and keeps the window up when it loses focus;
   // the windows shell reads the flag, since its esc listener runs before the page's
   useEffect(() => {
-    nativeHandler()?.postMessage({ type: 'escapeLayer', on: Boolean(pongOpen) })
     nativeHandler()?.postMessage({ type: 'game', open: Boolean(pongOpen) })
     calcWindow().__QCALC_GAME_OPEN = Boolean(pongOpen)
     if (!pongOpen) mathRef.current?.focus()
   }, [pongOpen])
+
+  useEffect(() => {
+    nativeHandler()?.postMessage({ type: 'escapeLayer', on: Boolean(pongOpen) || bannerOpen })
+  }, [pongOpen, bannerOpen])
 
   useEffect(() => {
     calcWindow().__qcalcEscape = escapeLayer
@@ -1470,10 +1527,16 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       if (typeof text !== 'string' || !text) return
       // a field of the page's own (a game's input, a settings box) takes the paste, not the hidden bar
       const active = document.activeElement
+      // equations pasted into the bar or a system field fill the system, from that field on
+      if (active instanceof HTMLInputElement && active.classList.contains('sys-eq')) {
+        const at = [...document.querySelectorAll('.sys-eq')].indexOf(active)
+        if (pasteSystem(text, (sysLinesRef.current ?? []).slice(0, Math.max(at, 0)))) return
+      }
       if ((active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) && !active.classList.contains('quick-plain')) {
         if (!document.execCommand('insertText', false, text)) active.setRangeText(text, active.selectionStart ?? active.value.length, active.selectionEnd ?? active.value.length, 'end')
         return
       }
+      if (pasteSystem(text)) return
       mathRef.current?.insert(flattenPastedText(text))
       mathRef.current?.focus()
     }
@@ -1490,6 +1553,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
         onPrepare()
         beginShowing()
         beginTour()
+        bannerRef.current?.setShown(true)
       })
       size()
       requestAnimationFrame(size)
@@ -1546,7 +1610,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
       for (const t of focusTimers) window.clearTimeout(t)
       ro?.disconnect()
     }
-  }, [beginShowing, beginTour, insertPlain, markTour, touringNow, onPrepare, onWillHide, startTutorial])
+  }, [beginShowing, beginTour, insertPlain, markTour, touringNow, onPrepare, onWillHide, pasteSystem, startTutorial])
 
   useTapeWheel(rootRef, tapeRef, {
     longInput: () => {
@@ -1709,8 +1773,10 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
               squiggle={squiggle?.q === q && !display ? squiggle.span : null}
               suggest={unitFix?.q === q ? unitFix : null}
               completionNames={completionNames}
+              recipient={recipientFound ? messageTo : undefined}
               onSelection={onInputSel}
               onTab={onTab}
+              onPasteLines={pasteSystem}
             />
             {selDisplay ? (
               <span className="live live-selection" aria-live="polite">
@@ -1720,7 +1786,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
             <LiveAnswer
               copied={copied && copiedFor.current === shownLive}
               example={example ? { tick: exampleId, answer: exampleShown } : null}
-              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : messageCmd ? messageHint(parseMessage(q)!, messaging) : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
+              display={sysCmd ? sysShown : greeting ? GREETING_REPLY : messageCmd ? messageHint(messageLine!, messaging, undefined, recipientFound) : periodicCmd ? PERIODIC_HINT : identityCmd ? identityCmd.hint : tutorialCmd ? TUTORIAL_HINT : gamesShown ? GAMES_HINT : pongCmd ? gameHint(pongCmd) : graphCmd ? '' : display}
               exact={liveExact}
               shown={shownLive}
               steady={steady}
@@ -1766,7 +1832,14 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
           ) : step && !pongOpen && !helpShown && tourLineFits(step, q, Boolean(shownLive)) ? (
             <TourLine text={hostKeys(step.text)} progress={tourProgress(tourDone, nativeInfo.hotkey)} onSkip={skipTutorial} />
           ) : null}
-          <MessageNotices key={messaging.name} messaging={messaging} hidden={Boolean(pongOpen)} />
+          <MessageNotices
+            key={messaging.name}
+            messaging={messaging}
+            hidden={Boolean(pongOpen)}
+            handle={bannerRef}
+            onOpen={setBannerOpen}
+            onFocusBar={focusBar}
+          />
           {sysLines && sysParsed && 'count' in sysParsed && sysParsed.count === sysLines.length ? (
             <SystemPanel
               lines={sysLines}
@@ -1780,6 +1853,7 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
                 else commit()
               }}
               onFocusMain={() => mathRef.current?.focus()}
+              onPasteLines={(index, text) => pasteSystem(text, (sysLinesRef.current ?? []).slice(0, index))}
             />
           ) : null}
           {graphCmd ? (

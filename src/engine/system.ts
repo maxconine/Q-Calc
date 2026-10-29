@@ -632,6 +632,9 @@ function wrap(s: string): string {
 
 type Parsed = { lhs: MathNode; rhs: MathNode; diff: MathNode }
 
+// systemNumeric's scope adds these to mathjs's functions
+const OWN_FNS = new Set(['ln', 'arcsin', 'arccos', 'arctan'])
+
 function prepEq(text: string): Parsed | null {
   let s = text.trim()
   if (!s) return null
@@ -641,6 +644,11 @@ function prepEq(text: string): Parsed | null {
   // `2x`, `2sin(x)`, `sqrt(2)x` — mathjs does not read juxtaposition
   s = s.replace(/(\d)(?![eE][+-]?\d)(?=[A-Za-z(])/g, '$1*')
   s = s.replace(/\)(?=[A-Za-z(])/g, ')*')
+  // `B_y(5)` from a statics sheet is B_y times 5: only a function name (mathjs's, or the solver's own ln and
+  // arcsin…) is a call
+  s = s.replace(/(?<![\w.])([A-Za-z][A-Za-z0-9_]*)\s*\(/g, (m, name: string) =>
+    OWN_FNS.has(name) || typeof (math as unknown as Record<string, unknown>)[name] === 'function' ? m : `${name}*(`,
+  )
   const parts = s.split('=')
   if (parts.length !== 2) return null
   const lhs = parts[0]!.trim()
@@ -1550,6 +1558,23 @@ export function solveLive(lines: string[], defaults?: DefaultUnits, angleMode?: 
   if (result.status === 'inconsistent' || result.status === 'mismatch') return { display: result.display, message: true }
   if (result.status === 'infinite' && pending) return result.pinned ? { display: result.pinned } : null
   return { display: result.display }
+}
+
+/**
+ * Lines pasted from a worksheet as a system: 2 to 5 lines, each an equation or, like a moment sum, an expression
+ * that's taken as `= 0`. Null when the paste isn't a system, so it goes in the field as plain text.
+ */
+export function pastedEquations(text: string): string[] | null {
+  const lines = text
+    .split(/\r\n|[\r\n;]/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  if (lines.length < 2 || lines.length > 5) return null
+  if (!lines.some((line) => line.includes('='))) return null
+  // a line with no = has to look like a sum, not words (mathjs would read `hello there` as hello*there)
+  if (lines.some((line) => !line.includes('=') && !(/\d/.test(line) && /[-+*/^]/.test(line)))) return null
+  const equations = lines.map((line) => (line.includes('=') ? line : `${line} = 0`))
+  return equations.every((eq) => prepEq(eq) && /[A-Za-z]/.test(eq)) ? equations : null
 }
 
 /** Solve up to five equations. Null when the system isn't one this solver reads. */

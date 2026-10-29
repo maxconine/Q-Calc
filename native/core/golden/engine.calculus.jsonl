@@ -1,0 +1,89 @@
+{"fn":"evaluateCalculus","args":["2 + 3"],"out":null,"src":"src/engine/calculus.test.ts"}
+{"fn":"evaluateCalculus","args":["d/2"],"out":null,"src":"src/engine/calculus.test.ts"}
+{"fn":"evaluateCalculus","args":["d/dxy x"],"out":null,"src":"src/engine/calculus.test.ts"}
+{"fn":"evaluateCalculus","args":["dist/dt"],"out":null,"src":"src/engine/calculus.test.ts"}
+{"fn":"evaluateCalculus","args":["g'(2)",{}],"out":null,"src":"src/engine/calculus.test.ts"}
+{"fn":"evaluateCalculus","args":["lim*2"],"out":null,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["$20 in euros and change"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["$20 in euros"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["$45.50 + $12.25"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["$50 dinner + 20% tip split 3 ways"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["$60 + 18% tip"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["% change from 80 to 100"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["0.5 + 0.25"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["1 hr to min"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["1 kW * 2 hr"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["1.5k + 500"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["10 am"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["10 mod 3"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["100 kg to lb"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["15% of 80"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["1e3"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["2 + 3 * 4"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["2 + 3"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["2+2"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["20 m * 2 in"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["20% off 80"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["20%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["2^10"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["3 days"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["3 ft to m"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["3 weeks in days"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["3:45pm + 4 hr"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["5 d"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["5 km to mi"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["5 min + 3 s"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["5 people"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["5! / 3"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["50 - 10% of 20"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["50 W * 1 day"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["5pm - 9am"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["60 / 3 people"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["60 split 3 ways"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["72 f in c"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["80 * 20%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["80 + 15%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["80 - 20% - 10%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["80 - 20%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["9am to 5pm"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["a third of 90"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["between 1 and 2"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["d/2"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["d/dx x^2"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["d/dx"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["days until christmas"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["days until"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["derivative of x^2"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["f'(2)"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["from 2 to 3"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["increase 50 by 10%"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["int*2"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["integral of x^2 from 0 to 1"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["integral of x^2 from"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["integral"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["lim + 1"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["lim x->"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["lim x->0 sin(x)/x"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["lim*2"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["limit of sin(x)/x as x->0"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["lunch"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["next friday"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["next week"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["partial derivative of x y"],"out":true,"src":"src/engine/partial.test.ts"}
+{"fn":"isCalculusInput","args":["sin(90)"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["sqrt(16)"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["tip 18%"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["tip of 15% on 80"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["twice 25"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["until"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["what % of 90 is 40"],"out":false,"src":"src/engine/phrases.soulver.test.ts"}
+{"fn":"isCalculusInput","args":["what is 40% of 90"],"out":false,"src":"src/lib/phraseLive.test.ts"}
+{"fn":"isCalculusInput","args":["what is 5% of 20"],"out":false,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["∂/∂x"],"out":true,"src":"src/engine/partial.test.ts"}
+{"fn":"isCalculusInput","args":["∂²/∂x∂y x y"],"out":true,"src":"src/engine/partial.test.ts"}
+{"fn":"isCalculusInput","args":["∫0.."],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"isCalculusInput","args":["∫0..1 x^2"],"out":true,"src":"src/engine/calculus.test.ts"}
+{"fn":"jobKey","args":[{"kind":"integral","f":{"t":"op","op":"-","a":[{"t":"op","op":"^","a":[{"t":"var"},{"t":"num","v":"2"}]},{"t":"op","op":"/","a":[{"t":"var"},{"t":"num","v":"7"}]}]},"a":{"t":"num","v":"0"},"b":{"t":"num","v":"3"},"approx":8.357142857143,"err":2.2724094224604316e-13,"rad":true}],"out":"{\"kind\":\"integral\",\"f\":{\"t\":\"op\",\"op\":\"-\",\"a\":[{\"t\":\"op\",\"op\":\"^\",\"a\":[{\"t\":\"var\"},{\"t\":\"num\",\"v\":\"2\"}]},{\"t\":\"op\",\"op\":\"/\",\"a\":[{\"t\":\"var\"},{\"t\":\"num\",\"v\":\"7\"}]}]},\"a\":{\"t\":\"num\",\"v\":\"0\"},\"b\":{\"t\":\"num\",\"v\":\"3\"},\"rad\":true}","src":"src/engine/calculus.test.ts"}
+{"fn":"knownClosedForm","args":["{\"kind\":\"integral\",\"f\":{\"t\":\"op\",\"op\":\"-\",\"a\":[{\"t\":\"op\",\"op\":\"^\",\"a\":[{\"t\":\"var\"},{\"t\":\"num\",\"v\":\"2\"}]},{\"t\":\"op\",\"op\":\"/\",\"a\":[{\"t\":\"var\"},{\"t\":\"num\",\"v\":\"7\"}]}]},\"a\":{\"t\":\"num\",\"v\":\"0\"},\"b\":{\"t\":\"num\",\"v\":\"3\"},\"rad\":true}"],"out":{"$undef":true},"src":"src/engine/calculus.test.ts"}
+{"fn":"rememberClosedForm","args":[{"kind":"integral","f":{"t":"op","op":"+","a":[{"t":"op","op":"^","a":[{"t":"var"},{"t":"num","v":"5"}]},{"t":"op","op":"/","a":[{"t":"var"},{"t":"num","v":"9"}]}]},"a":{"t":"num","v":"0"},"b":{"t":"num","v":"1"},"approx":0.2222222222222,"err":2.5751681818458687e-14,"rad":true},null],"out":{"$undef":true},"src":"src/engine/calculus.test.ts"}
+{"fn":"rememberClosedForm","args":[{"kind":"integral","f":{"t":"op","op":"-","a":[{"t":"op","op":"^","a":[{"t":"var"},{"t":"num","v":"2"}]},{"t":"op","op":"/","a":[{"t":"var"},{"t":"num","v":"7"}]}]},"a":{"t":"num","v":"0"},"b":{"t":"num","v":"3"},"approx":8.357142857143,"err":2.2724094224604316e-13,"rad":true},"60/7"],"out":{"$undef":true},"src":"src/engine/calculus.test.ts"}

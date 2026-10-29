@@ -1,0 +1,202 @@
+; Q Calc for Windows, native: the per-user installer (NSIS 3, Unicode). Built by build.ps1 beside it:
+;   makensis /DVERSION=2.1.0 /DEXE=<path to qcalc.exe> /DOUT=<setup.exe> qcalc.nsi
+;
+; What it does, as the Tauri app's installer did (so it upgrades a Tauri install in place):
+; - installs for the current user only, no admin prompt, into %LOCALAPPDATA%\Q Calc (the Tauri app's folder and exe
+;   name, qcalc.exe), with a Start menu entry and an "Installed apps" entry (HKCU ...\Uninstall\Q Calc);
+; - turns on start at sign-in (the HKCU Run value "Q Calc", "<exe>" --autostart) only on a fresh install, so an
+;   upgrade keeps someone's choice; the app keeps the entry right itself afterwards (autostart.rs);
+; - closes a running copy started from this folder (exactly that path, never another Q Calc) before replacing it;
+; - keeps the user's data: settings, history and rates live in %APPDATA%\com.maxconine.qcalc, which both apps share;
+;   the native app moves the Tauri app's history out of its web view's storage at its first launch (migrate.rs).
+;
+; Silent (/S, the self-update and the Tauri updater) it relaunches the app afterwards: in the tray (--autostart)
+; unless /R=show asks for the bar; /NORELAUNCH leaves it closed. Interactive, the finish page offers to run it.
+;
+; For a test that must not touch a real install: /DAPP_ID="Q Calc Test" changes the registry names, the shortcut
+; and the default folder.
+
+Unicode true
+ManifestDPIAware true
+RequestExecutionLevel user
+SetCompressor /SOLID lzma
+
+!ifndef VERSION
+  !error "VERSION is required: makensis /DVERSION=x.y.z"
+!endif
+!ifndef EXE
+  !error "EXE is required: the release qcalc.exe"
+!endif
+!ifndef OUT
+  !define OUT "Q-Calc-${VERSION}-native-setup.exe"
+!endif
+!ifndef APP_ID
+  !define APP_ID "Q Calc"
+!endif
+; the numeric x.y.z of VERSION (a pre-release's "2.1.0-beta.1" is 2.1.0): VIProductVersion takes only numbers
+!ifndef VERSION_NUM
+  !define VERSION_NUM "${VERSION}"
+!endif
+!ifndef OUTNAME
+  !define OUTNAME "Q-Calc-${VERSION}-native-setup.exe"
+!endif
+; Authenticode: SIGN is a command that signs the file named by its last argument (build.ps1 -SignCommand, or
+; scripts\sign-check.ps1's throwaway certificate). The uninstaller is signed as it's written, so a signed installer
+; never carries an unsigned uninstall.exe; the installer itself last. Without SIGN nothing is signed here (a
+; service like SignPath signs the finished installer instead, and uninstall.exe stays unsigned)
+!ifdef SIGN
+  !uninstfinalize '${SIGN} "%1"' = 0
+  !finalize '${SIGN} "%1"' = 0
+!endif
+!define APP_NAME "Q Calc"
+!define PUBLISHER "maxconine"
+!define URL "https://github.com/maxconine/Q-Calc"
+!define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
+!define RUN_KEY "Software\Microsoft\Windows\CurrentVersion\Run"
+; where it is installed, the key the Tauri app's installer keeps too (its default value is the folder): an upgrade
+; goes there, so a Tauri or native install in another folder is replaced in place. /D= still wins
+!define DIR_KEY "Software\${PUBLISHER}\${APP_ID}"
+!ifndef ICON
+  !define ICON "..\..\..\src-tauri\icons\icon.ico"
+!endif
+
+!include "MUI2.nsh"
+!include "LogicLib.nsh"
+!include "FileFunc.nsh"
+
+Name "${APP_NAME}"
+OutFile "${OUT}"
+InstallDir "$LOCALAPPDATA\${APP_ID}"
+InstallDirRegKey HKCU "${DIR_KEY}" ""
+BrandingText "${APP_NAME} ${VERSION}"
+VIProductVersion "${VERSION_NUM}.0"
+VIFileVersion "${VERSION_NUM}.0"
+VIAddVersionKey "ProductName" "${APP_NAME}"
+VIAddVersionKey "ProductVersion" "${VERSION}"
+VIAddVersionKey "FileVersion" "${VERSION}"
+VIAddVersionKey "CompanyName" "${PUBLISHER}"
+VIAddVersionKey "FileDescription" "${APP_NAME} installer"
+VIAddVersionKey "LegalCopyright" "MIT License"
+VIAddVersionKey "OriginalFilename" "${OUTNAME}"
+VIAddVersionKey "InternalName" "qcalc-setup"
+
+!define MUI_ICON "${ICON}"
+!define MUI_UNICON "${ICON}"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\qcalc.exe"
+!define MUI_FINISHPAGE_RUN_TEXT "Open ${APP_NAME} (Alt+Space shows it)"
+!insertmacro MUI_PAGE_INSTFILES
+!insertmacro MUI_PAGE_FINISH
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_LANGUAGE "English"
+
+Var Fresh
+
+; Closes the qcalc.exe started from $INSTDIR, if one runs, and waits until its file can be replaced.
+!macro CloseRunning un
+Function ${un}CloseRunning
+  ; a running exe can be renamed, and on current Windows even deleted, while it keeps running, so the files can't
+  ; tell: ask for the process by its exact path (the self-update has already quit; a hand install may find it open)
+  ${If} ${FileExists} "$INSTDIR\qcalc.exe"
+    ; the 64-bit PowerShell: a 32-bit one (this installer's own kind) can't read a 64-bit process's path
+    StrCpy $4 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+    ${IfNot} ${FileExists} $4
+      StrCpy $4 "powershell"
+    ${EndIf}
+    nsExec::ExecToStack `"$4" -NoProfile -NonInteractive -Command "$$p = Get-Process qcalc -ErrorAction SilentlyContinue | Where-Object { $$_.Path -eq '$INSTDIR\qcalc.exe' }; $$p | Stop-Process -Force; $$p | Wait-Process -Timeout 5 -ErrorAction SilentlyContinue"`
+    Pop $0
+    Pop $2
+  ${EndIf}
+  StrCpy $1 0
+  ${Do}
+    Delete "$INSTDIR\qcalc.exe"
+    ${IfNot} ${FileExists} "$INSTDIR\qcalc.exe"
+      ${Break}
+    ${EndIf}
+    IntOp $1 $1 + 1
+    ${If} $1 > 50
+      ${Break}
+    ${EndIf}
+    Sleep 100
+  ${Loop}
+FunctionEnd
+!macroend
+!insertmacro CloseRunning ""
+!insertmacro CloseRunning "un."
+
+Section "Install"
+  SetShellVarContext current
+  ReadRegStr $0 HKCU "${UNINSTALL_KEY}" "DisplayVersion"
+  ${If} $0 == ""
+    StrCpy $Fresh 1
+  ${Else}
+    StrCpy $Fresh 0
+  ${EndIf}
+
+  SetOutPath "$INSTDIR"
+  Call CloseRunning
+  SetOverwrite on
+  File "/oname=qcalc.exe" "${EXE}"
+  WriteUninstaller "$INSTDIR\uninstall.exe"
+
+  CreateShortcut "$SMPROGRAMS\${APP_ID}.lnk" "$INSTDIR\qcalc.exe" "" "$INSTDIR\qcalc.exe" 0
+
+  WriteRegStr HKCU "${DIR_KEY}" "" "$INSTDIR"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayName" "${APP_ID}"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayVersion" "${VERSION}"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "Publisher" "${PUBLISHER}"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "DisplayIcon" '"$INSTDIR\qcalc.exe"'
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "InstallLocation" '"$INSTDIR"'
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "MainBinaryName" "qcalc.exe"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "URLInfoAbout" "${URL}"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "URLUpdateInfo" "${URL}"
+  WriteRegStr HKCU "${UNINSTALL_KEY}" "HelpLink" "${URL}"
+  WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoModify" 1
+  WriteRegDWORD HKCU "${UNINSTALL_KEY}" "NoRepair" 1
+  ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+  WriteRegDWORD HKCU "${UNINSTALL_KEY}" "EstimatedSize" $0
+
+  ; start at sign-in: on for a fresh install; an upgrade keeps what the user chose
+  ${If} $Fresh == 1
+    WriteRegStr HKCU "${RUN_KEY}" "${APP_ID}" '"$INSTDIR\qcalc.exe" --autostart'
+  ${EndIf}
+
+  ; silent: start it again, in the tray unless asked for the bar
+  ${If} ${Silent}
+    ${GetParameters} $0
+    ClearErrors
+    ${GetOptions} $0 "/NORELAUNCH" $1
+    ${If} ${Errors}
+      ClearErrors
+      ${GetOptions} $0 "/R=" $1
+      ${If} $1 == "show"
+        Exec '"$INSTDIR\qcalc.exe"'
+      ${Else}
+        Exec '"$INSTDIR\qcalc.exe" --autostart'
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
+SectionEnd
+
+Section "Uninstall"
+  SetShellVarContext current
+  Call un.CloseRunning
+  Delete "$INSTDIR\qcalc.exe"
+  Delete "$INSTDIR\uninstall.exe"
+  RMDir "$INSTDIR"
+  Delete "$SMPROGRAMS\${APP_ID}.lnk"
+  ; the Tauri installer's desktop shortcut, if this install upgraded one (it would point at nothing now)
+  Delete "$DESKTOP\${APP_ID}.lnk"
+  DeleteRegKey HKCU "${UNINSTALL_KEY}"
+  DeleteRegKey HKCU "${DIR_KEY}"
+  DeleteRegKey /ifempty HKCU "Software\${PUBLISHER}"
+  ; the sign-in entry only when it is ours
+  ReadRegStr $0 HKCU "${RUN_KEY}" "${APP_ID}"
+  ; (or the Tauri app's unquoted one, when this install upgraded it and Q Calc hasn't run since)
+  ${If} $0 == '"$INSTDIR\qcalc.exe" --autostart'
+  ${OrIf} $0 == '$INSTDIR\qcalc.exe --autostart'
+    DeleteRegValue HKCU "${RUN_KEY}" "${APP_ID}"
+  ${EndIf}
+  ; settings, history and rates (%APPDATA%\com.maxconine.qcalc) stay, as the Tauri app's uninstaller left them
+SectionEnd

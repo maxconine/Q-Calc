@@ -132,6 +132,11 @@ describe('derivatives: at a point', () => {
     expect(g[2]!.display).toBe('π cos(x)/180')
   })
 
+  it('a parameter used more than once differentiates like the expanded body', () => {
+    const rs = evaluateSheet(['f(t) = t*t', 'd/dx f(x)', "f'(3)", "f''(x)", 'h(t) = t*t*t', "h'(x)"], rad)
+    expect([rs[1], rs[2], rs[3], rs[5]].map((r) => r!.display)).toEqual(['2x', '6', '2', '3x²'])
+  })
+
   it('known variables are constants, the variable of differentiation is not', () => {
     const rs = evaluateSheet(['a = 2', 'x = 3', 'd/dx a x^2', 'd/dx x^2', 'd/dx x^2 at 5', 'x^2'], rad)
     expect(rs.map((r) => r.display).slice(2)).toEqual(['4x', '2x', '10', '9'])

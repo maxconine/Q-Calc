@@ -1,0 +1,45 @@
+[package]
+name = "qcalc-core"
+description = "Q Calc's calculator engine: parsing, evaluation and answer formatting, with no UI and no platform code"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+dashu-base.workspace = true
+dashu-float.workspace = true
+dashu-int.workspace = true
+fancy-regex.workspace = true
+# the regex statics: like LazyLock, but the Windows engine thread can free its copies while the bar is hidden
+qcalc-lazy = { path = "../lazy" }
+# jsre's prefilter: the literals every match of a pattern starts or ends with (both already under fancy-regex)
+aho-corasick = "1"
+regex-syntax = "0.8"
+num-bigint.workspace = true
+num-integer.workspace = true
+num-rational.workspace = true
+num-traits.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+unicode-normalization = "0.1" # WP-FUNCTIONS: NFD/NFC in dots.rs
+libm = "0.2" # WP-FUNCTIONS: fdlibm, the algorithms behind V8's Math.*
+# WP-PHRASES: time zones from an embedded tz database (no platform files), and the ECB rates XML
+jiff = { version = "0.2", default-features = false, features = ["std", "tzdb-bundle-always"] }
+roxmltree = "0.20"
+
+[features]
+# jsre asserts that its prefilter never rules out a text the pattern matches (for the fuzz harness)
+check-prefilter = []
+
+[lints]
+workspace = true
+
+[[example]]
+name = "engine_bench"
+path = "../bench/engine_bench.rs"
+
+[[example]]
+name = "fuzz"
+path = "../bench/fuzz.rs"
