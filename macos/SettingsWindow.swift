@@ -41,6 +41,16 @@ struct GeneralSettingsView: View {
                     Text("Light").tag("light")
                     Text("Dark").tag("dark")
                 }
+                #if QCALC_NATIVE
+                Picker(selection: bind(\.wordColor, AppSettings.setWordColor(_:notifyWeb:))) {
+                    Text("Green").tag("green")
+                    Text("Dark").tag("dark")
+                    Text("Grey").tag("grey")
+                } label: {
+                    Text("Units and functions")
+                    Text("The colour of units, functions and constants in the line")
+                }
+                #endif
                 Picker(selection: bind(\.historyShow, AppSettings.setHistoryShow(_:notifyWeb:))) {
                     Text("Recent calculations").tag("recent")
                     Text("Always").tag("always")
@@ -102,6 +112,10 @@ struct GeneralSettingsView: View {
                 toggle("Typst preview", "Show math like fractions, powers and integrals typeset under the bar", \.typstPreview, AppSettings.setTypstPreview(_:notifyWeb:))
                 toggle("Copy Typst compatible", "Equations copied from the bar paste as Typst math", \.typstCopy, AppSettings.setTypstCopy(_:notifyWeb:))
                 toggle("Copy answers without units", "A copied answer is just the number: 15 m² copies as 15", \.copyUnitless, AppSettings.setCopyUnitless(_:notifyWeb:))
+                #if QCALC_NATIVE
+                toggle("Bring in highlighted text", "Text highlighted in another app goes into the bar when it opens. Turning this on asks for Accessibility", \.bringSelection, AppSettings.setBringSelection(_:notifyWeb:))
+                toggle("Copy pasted text as plain text", "Pasting a sentence or paragraph puts it back on the clipboard as one plain line, no breaks or indents", \.plainPasteCopy, AppSettings.setPlainPasteCopy(_:notifyWeb:))
+                #endif
             }
 
             Section("Significant figures") {

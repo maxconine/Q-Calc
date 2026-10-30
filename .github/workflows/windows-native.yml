@@ -58,8 +58,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: native
-      # the installer build compiles the release exe (QCALC_VERSION from package.json) and wraps it with NSIS 3,
-      # which the windows image has under Program Files (x86)
+      # NSIS 3 under Program Files (x86): newer windows images no longer have it, so it's installed when missing
+      - name: NSIS
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) {
+            choco install nsis -y --no-progress
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          & "${env:ProgramFiles(x86)}\NSIS\makensis.exe" /VERSION
+      # the installer build compiles the release exe (QCALC_VERSION from package.json) and wraps it with NSIS 3
       - name: Release build and installer
         run: |
           $env:PATH = "${env:ProgramFiles(x86)}\NSIS;$env:PATH"

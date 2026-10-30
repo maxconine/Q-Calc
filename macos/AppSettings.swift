@@ -68,11 +68,15 @@ final class AppSettings: ObservableObject {
     static let rationalizeKey = "qcalc.rationalize"
     static let sigFigModeKey = "qcalc.sigFigMode"
     static let keepWordsKey = "qcalc.keepWords"
+    static let bringSelectionKey = "qcalc.bringSelection"
+    static let plainPasteCopyKey = "qcalc.plainPasteCopy"
     static let themeKey = "qcalc.theme"
     static let angleModeKey = "qcalc.angleMode"
     static let fractionModeKey = "qcalc.fractionMode"
     static let typstPreviewKey = "qcalc.typstPreview"
     static let typstCopyKey = "qcalc.typstCopy"
+    static let wordColorKey = "qcalc.wordColor"
+    static let wordColors = ["green", "dark", "grey"]
     static let shareUsageKey = "qcalc.shareUsage"
     static let copyUnitlessKey = "qcalc.copyUnitless"
     static let spaceThousandsKey = "qcalc.spaceThousands"
@@ -111,11 +115,17 @@ final class AppSettings: ObservableObject {
     @Published private(set) var rationalize: Bool
     @Published private(set) var sigFigMode: Bool
     @Published private(set) var keepWords: Bool
+    /// native only: the text highlighted in the app in front comes into the line as the bar opens (Accessibility)
+    @Published private(set) var bringSelection: Bool
+    /// native only: pasted prose goes back on the clipboard as one plain line, as Spotlight does
+    @Published private(set) var plainPasteCopy: Bool
     @Published private(set) var theme: String
     @Published private(set) var angleMode: String
     @Published private(set) var fractionMode: Bool
     @Published private(set) var typstPreview: Bool
     @Published private(set) var typstCopy: Bool
+    /// native only: how units, functions and constants in the line are coloured: green (the accent), dark or grey
+    @Published private(set) var wordColor: String
     @Published private(set) var shareUsage: Bool
     // copied answers leave their unit behind; on unless turned off
     @Published private(set) var copyUnitless: Bool
@@ -149,11 +159,14 @@ final class AppSettings: ObservableObject {
         rationalize = Self.loadRationalize()
         sigFigMode = UserDefaults.standard.bool(forKey: Self.sigFigModeKey)
         keepWords = UserDefaults.standard.bool(forKey: Self.keepWordsKey)
+        bringSelection = UserDefaults.standard.bool(forKey: Self.bringSelectionKey)
+        plainPasteCopy = UserDefaults.standard.object(forKey: Self.plainPasteCopyKey) as? Bool ?? true
         theme = Self.loadTheme()
         angleMode = UserDefaults.standard.string(forKey: Self.angleModeKey) == "rad" ? "rad" : "deg"
         fractionMode = UserDefaults.standard.bool(forKey: Self.fractionModeKey)
         typstPreview = UserDefaults.standard.object(forKey: Self.typstPreviewKey) as? Bool ?? true
         typstCopy = UserDefaults.standard.bool(forKey: Self.typstCopyKey)
+        wordColor = Self.wordColors.contains(UserDefaults.standard.string(forKey: Self.wordColorKey) ?? "") ? UserDefaults.standard.string(forKey: Self.wordColorKey)! : "green"
         shareUsage = UserDefaults.standard.object(forKey: Self.shareUsageKey) as? Bool ?? true
         copyUnitless = UserDefaults.standard.object(forKey: Self.copyUnitlessKey) as? Bool ?? true
         spaceThousands = UserDefaults.standard.bool(forKey: Self.spaceThousandsKey)
@@ -412,6 +425,22 @@ final class AppSettings: ObservableObject {
         if notifyWeb { notifySettingsChanged() }
     }
 
+    func setBringSelection(_ value: Bool, notifyWeb: Bool) {
+        guard value != bringSelection else { return }
+        bringSelection = value
+        UserDefaults.standard.set(value, forKey: Self.bringSelectionKey)
+        // turned on: ask for Accessibility now, while it's clear why
+        #if QCALC_NATIVE
+        if value { FrontSelection.ask() }
+        #endif
+    }
+
+    func setPlainPasteCopy(_ value: Bool, notifyWeb: Bool) {
+        guard value != plainPasteCopy else { return }
+        plainPasteCopy = value
+        UserDefaults.standard.set(value, forKey: Self.plainPasteCopyKey)
+    }
+
     func setTheme(_ raw: String, notifyWeb: Bool) {
         let value = Self.normalizeTheme(raw)
         guard value != theme else { return }
@@ -440,6 +469,12 @@ final class AppSettings: ObservableObject {
         typstPreview = value
         UserDefaults.standard.set(value, forKey: Self.typstPreviewKey)
         if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setWordColor(_ value: String, notifyWeb: Bool) {
+        guard value != wordColor, Self.wordColors.contains(value) else { return }
+        wordColor = value
+        UserDefaults.standard.set(value, forKey: Self.wordColorKey)
     }
 
     func setTypstCopy(_ value: Bool, notifyWeb: Bool) {

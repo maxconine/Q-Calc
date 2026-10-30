@@ -52,8 +52,14 @@ jobs:
       - run: npm ci
       - run: npm test
 
+      # the native app (native/mac) from 3.0 on: the Rust engine (rust-toolchain.toml brings both targets), the
+      # SwiftUI app, and the games bundle built from node_modules
+      - name: Test the engine
+        working-directory: native
+        run: cargo test -p qcalc-core
+
       - name: Build zip
-        run: npm run mac:package
+        run: zsh native/mac/build.sh --package
 
       # one zip per architecture: each carries only its own code, and each has its own update feed
       - name: Checksum
@@ -61,7 +67,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           for arch in apple-silicon intel; do
-            ZIP="macos/dist/Q-Calc-${VERSION}-${arch}.zip"
+            ZIP="native/mac/dist/Q-Calc-${VERSION}-${arch}.zip"
             SHA="$(shasum -a 256 "$ZIP" | awk '{print $1}')"
             KEY="${arch//-/_}"
             echo "${KEY}_sha256=${SHA}" >> "$GITHUB_OUTPUT"

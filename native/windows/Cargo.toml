@@ -3,7 +3,7 @@ name = "qcalc-win"
 description = "Q Calc for Windows, native: Win32 + Direct2D + DirectWrite around the Rust engine (no web view)"
 # the release version, package.json's (windows.yml refuses a tag where they differ); a release build's QCALC_VERSION
 # names the same version for update.rs, the crash reports, analytics and the exe's version resource
-version = "3.0.0"
+version = "3.0.1"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -83,6 +83,11 @@ windows = { version = "0.61", features = [
   "Win32_UI_Shell",
   "Win32_UI_WindowsAndMessaging",
 ] }
+
+# the engine benches (examples/live_bench.rs, mem_attrib.rs) call the engine as the bar does, on any platform,
+# so `cargo clippy --workspace --all-targets` passes on the Mac too
+[dev-dependencies]
+qcalc-ffi = { path = "../ffi" }
 
 [lints.rust]
 # Win32, Direct2D and DirectWrite are unsafe FFI. Unsafe stays in the thin wrappers that call them (render.rs,

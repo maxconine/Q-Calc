@@ -89,6 +89,12 @@ final class OverlayController: NSObject {
         super.init()
         model.onHide = { [weak self] why in self?.hide(because: why) }
         model.onShow = { [weak self] why in self?.show(from: why) }
+        // a click on a note in the corner: the bar, on their thread (a request is the bar's own card)
+        CornerNotes.shared.onOpen = { [weak self] from, ask in
+            guard let self else { return }
+            if !ask { self.model.openThread(from) }
+            self.show(from: "note")
+        }
         model.onSettings = { [weak self] in
             track("settings.open")
             self?.onSettings?()
@@ -165,6 +171,8 @@ final class OverlayController: NSObject {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = true
+        // no fade or zoom from AppKit as it's ordered in or out: the bar is there, or gone, at once
+        panel.animationBehavior = .none
         panel.hidesOnDeactivate = false
         panel.isMovableByWindowBackground = true
         panel.becomesKeyOnlyIfNeeded = false
@@ -282,6 +290,12 @@ final class OverlayController: NSObject {
         resetPlaceIfIdle()
         model.willShow()
         showOnce()
+        // what's highlighted in the app in front comes into the line, once it's read (the bar doesn't wait for it)
+        let token = showCount
+        FrontSelection.read { [weak self] text in
+            guard let self, let text, token == self.showCount, self.panel?.isVisible == true else { return }
+            self.model.insert(text)
+        }
         OverlayLog.note("show \(showCount) (\(source))")
         verify(showCount, attempt: 0)
     }
@@ -297,7 +311,8 @@ final class OverlayController: NSObject {
         panel.orderFrontRegardless()
         panel.makeKeyAndOrderFront(nil)
         model.focusField?()
-        // one layout pass so the tape is in place, then fade in (the page waited for its size message)
+        // one layout pass so the tape is in place, then shown at once (native only: no fade, the bar is there the
+        // moment it's laid out)
         let token = showCount
         DispatchQueue.main.async { [weak self] in
             self?.model.focusField?()
@@ -309,15 +324,7 @@ final class OverlayController: NSObject {
 
     private func reveal(_ token: Int) {
         guard token == showCount, let panel, panel.isVisible else { return }
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
-            panel.alphaValue = 1
-            return
-        }
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.1
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            panel.animator().alphaValue = 1
-        }
+        panel.alphaValue = 1
     }
 
     func hide(because why: String = "asked") {
@@ -690,6 +697,7 @@ final class OverlayController: NSObject {
         let open = wantVisible && !gameOpen
         let opened = open && !Messages.shared.barOpen
         Messages.shared.barOpen = open
+        if open { CornerNotes.shared.clear() }
         if opened, panel?.isVisible == true { model.pullInbox() }
     }
 }

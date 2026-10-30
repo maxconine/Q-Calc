@@ -49,6 +49,13 @@ pub fn unit_spans(text: &str, variables: &[String], functions: &[String]) -> Vec
         if !unit_place(text, start, &spans) {
             continue;
         }
+        // `in` before another unit is the conversion (`5 in mm`, the second of `12122 in in mm`); before a
+        // conversion word, an operator or nothing it's inches (`5 in to mm`, `5 in + 2`)
+        static IN_CONVERTS: Lazy =
+            Lazy::new(|| jsre::js(r"^\s+(?!(?:to|into|in|as)\b)[A-Za-zµμΩÅ°]", "i"));
+        if word.eq_ignore_ascii_case("in") && jsre::test(&IN_CONVERTS, &text[end..]) {
+            continue;
+        }
         if let Some(info) = unit_info(word) {
             spans.push(Found {
                 start,
@@ -125,10 +132,9 @@ fn unit_place(text: &str, start: usize, found: &[Found]) -> bool {
             .iter()
             .any(|u| u.end == len || (u.end < len && jsre::test(&POWER, &text[u.end..len])));
     }
-    // `10 km to mi`
-    PRIOR
-        .captures(before)
-        .ok()
-        .flatten()
-        .is_some_and(|c| CONVERSION_WORDS.contains(&jsre::group(&c, 1).to_lowercase().as_str()))
+    // `10 km to mi`, and `ans in to mm`: ans is a number
+    PRIOR.captures(before).ok().flatten().is_some_and(|c| {
+        let prior = jsre::group(&c, 1).to_lowercase();
+        CONVERSION_WORDS.contains(&prior.as_str()) || prior == "ans"
+    })
 }

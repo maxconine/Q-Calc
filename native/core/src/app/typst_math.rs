@@ -286,6 +286,10 @@ pub fn typst_preview_useful(expr: &str) -> bool {
     if math.is_empty() {
         return false;
     }
+    // `50 mph in km/h`, `3 ft + 2 in to cm`: a conversion reads fine as typed
+    if is_conversion(&typed) {
+        return false;
+    }
     // op("arccsc") and a matrix's delim: "[" are the quoted text that isn't a word
     // a quoted unit (`"Nm"`, `"Pa"`) is still math; any other quoted word (`"to"`, a date, money) hides it
     // a typed quote mark (\") isn't quoted text, a stray \) is a bracket, and 0xff is a number
@@ -316,8 +320,8 @@ pub fn typst_preview_useful(expr: &str) -> bool {
     if simple_math(&bare) {
         return false;
     }
-    // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet
-    if jsre::test(lazy!(r"!|[/^_](?=\s*[^\s)])"), &bare) {
+    // a / ^ or _ still waiting for what follows it isn't a fraction or a power yet; `!=` is ≠, not a factorial
+    if jsre::test(lazy!(r"!(?!=)|[/^_](?=\s*[^\s)])"), &bare) {
         return true;
     }
     // a word right after a number is its unit (`10 min`), not a call (`min(3, 4)`)
@@ -332,23 +336,120 @@ pub fn typst_preview_useful(expr: &str) -> bool {
 
 // a number, or `ans` standing in for one
 const PLAIN_NUMBER: &str = r"-?\s*(?:\d+(?:\.\d*)?|\.\d+|ans)";
+const PLAIN_ARG: &str = r"[-+]?\s*(?:\d+(?:\.\d*)?|\.\d+)";
 
-/// `3.5/2` or `sin(30)`: one division of two numbers, or one function of a number, reads fine in the bar as typed.
+/// `3.5/2`, `gcd(12, 18)` or `sin(30) + 1`: one division of two numbers, or calls of plain numbers joined
+/// by `+ − × ÷`, reads fine in the bar as typed. A call that draws differently (a root, |x| bars, ⌊x⌋, a
+/// binomial) isn't plain.
 fn simple_math(math: &str) -> bool {
     static DIVISION: crate::jsre::Lazy<jsre::Regex> =
         crate::jsre::Lazy::new(|| re(&format!(r"^{PLAIN_NUMBER}\s*/\s*{PLAIN_NUMBER}$"), ""));
+    // a call of plain numbers, `gcd(12, 18)` or `op(1, 2, 3)` (a quoted name's op, once bare)
     static CALL: crate::jsre::Lazy<jsre::Regex> = crate::jsre::Lazy::new(|| {
         re(
-            &format!(r"^([A-Za-z][A-Za-z0-9]*)\s*\(\s*{PLAIN_NUMBER}\s*\)$"),
+            &format!(
+                r"(?<![A-Za-z0-9.#_])([A-Za-z][A-Za-z0-9]*)\(\s*{PLAIN_ARG}(?:\s*,\s*{PLAIN_ARG})*\s*\)"
+            ),
             "",
         )
     });
+    // what's left once those calls are numbers: numbers, + − × ÷, comparisons and brackets
+    let arithmetic =
+        lazy!(r"^(?:\s|\d+(?:\.\d*)?|\.\d+|[-+()=<>]|!=|\b(?:dot(?:\.op)?|times|div)\b)*$");
     let s = jsstr::trim(math);
     if jsre::test(&DIVISION, s) {
         return true;
     }
-    // a root still looks different typeset, so it isn't simple
-    caps(&CALL, s).is_some_and(|c| !matches!(jsre::group(&c, 1), "sqrt" | "root"))
+    let mut rest = s.to_string();
+    loop {
+        let next = jsre::replace_all(&CALL, &rest, |c| {
+            if plain_name(jsre::group(c, 1)) {
+                "1".into()
+            } else {
+                jsre::group(c, 0).into()
+            }
+        })
+        .into_owned();
+        if next == rest {
+            break;
+        }
+        rest = next;
+    }
+    rest != s && jsre::test(arithmetic, &rest)
+}
+
+// a name set upright with f-of-x spacing, as it's typed: sin, gcd, max, a quoted name's op
+fn plain_name(name: &str) -> bool {
+    name == "op" || (is_typst_name(name) && is_typeset_name(name))
+}
+
+/// `50 mph in km/h`: a conversion word with a unit before it and a unit right after it.
+fn is_conversion(text: &str) -> bool {
+    let spans = crate::app::unit_spans::unit_spans(text, &[], &[]);
+    if spans.len() < 2 {
+        return false;
+    }
+    let u16 = |b: usize| text[..b].encode_utf16().count();
+    lazy!(r"(?<![A-Za-z])(?:into|in|to|as)\s+", "i")
+        .find_iter(text)
+        .flatten()
+        .any(|m| {
+            let (at, after) = (u16(m.start()), u16(m.end()));
+            spans.iter().any(|u| u.start == after) && spans.iter().any(|u| u.end <= at)
+        })
+}
+
+// a unit word, as the engine reads one, is marked so it's set upright: `9.8 m/s^2` is 9.8 m/s², not italic
+// m and s
+const UNIT_OPEN: char = '\u{E000}';
+const UNIT_CLOSE: char = '\u{E001}';
+
+fn mark_units(text: &str) -> String {
+    let s: String = text
+        .chars()
+        .filter(|&c| c != UNIT_OPEN && c != UNIT_CLOSE)
+        .collect();
+    // an integral's `dt` is its differential, not decitonnes
+    let integral = jsre::test(lazy!(r"∫|\bint", "i"), &s);
+    let units: Vec<u16> = s.encode_utf16().collect();
+    let spans: Vec<_> = crate::app::unit_spans::unit_spans(&s, &[], &[])
+        .into_iter()
+        .filter(|u| {
+            let word = String::from_utf16_lossy(&units[u.start..u.end]);
+            // a word run into its digits is a name (`H2`, `C6H12O6`), not a unit
+            let named = units
+                .get(u.end)
+                .is_some_and(|&c| (0x30..=0x39).contains(&c));
+            !(integral && jsre::test(lazy!(r"^d[A-Za-z]$"), &word)) && !named
+        })
+        .collect();
+    let mut out = String::new();
+    let mut at = 0;
+    for ch in s.chars() {
+        if spans.iter().any(|u| u.end == at) {
+            out.push(UNIT_CLOSE);
+        }
+        if spans.iter().any(|u| u.start == at) {
+            out.push(UNIT_OPEN);
+        }
+        out.push(ch);
+        at += ch.len_utf16();
+    }
+    if spans.iter().any(|u| u.end == at) {
+        out.push(UNIT_CLOSE);
+    }
+    out
+}
+
+// a marked unit as upright text
+fn read_unit(s: &[char], i: usize, to: usize) -> Piece {
+    match (i + 1..to).find(|&k| s[k] == UNIT_CLOSE) {
+        Some(close) => (
+            format!("\"{}\"", sl(s, i + 1, close).replace(['"', '\\'], "")),
+            close + 1,
+        ),
+        None => (String::new(), i + 1),
+    }
 }
 
 /// The preview's math: the typed line as Typst, with the calculator's keyword forms written as the math they
@@ -360,7 +461,7 @@ pub fn preview_math(expr: &str) -> String {
     if let Some(d) = derivative_math(&s) {
         return d;
     }
-    to_typst_math(&keyword_math(&s))
+    to_typst_math(&mark_units(&keyword_math(&s)))
 }
 
 /// The keyword forms the calculator reads, respelled with the limits and signs `to_typst_math` typesets.
@@ -642,10 +743,24 @@ fn emit(s: &[char], from: usize, to: usize) -> String {
 
 /// The pieces of a group, joined so Typst can compile them. A / or ^ with nothing to divide or raise on one
 /// side (`2^`, `/3`, `2 / ^(-1)`) is the sign as typed, and a subscript or power with nothing before it hangs
-/// off an empty base: Typst can't compile a fraction or an attachment with a side missing.
+/// off an empty base: Typst can't compile a fraction or an attachment with a side missing. A number in e
+/// notation beside a / or under a ^ is one number, as the engine reads it: 2.03e-12/22 is 2.03 × 10⁻¹² over 22,
+/// not 2.03 × (10⁻¹² / 22) (Typst drops the parens a fraction's side is in)
 fn tidy(mut parts: Vec<String>) -> String {
     let sign = |p: &String| p == "/" || p == "^";
+    let held: Vec<bool> = (0..parts.len())
+        .map(|k| {
+            power_of_ten(&parts[k])
+                && ((k > 0 && parts[k - 1] == "/")
+                    || parts
+                        .get(k + 1)
+                        .is_some_and(|n| n == "/" || n.starts_with('^')))
+        })
+        .collect();
     for (k, p) in parts.iter_mut().enumerate() {
+        if held[k] {
+            *p = format!("({p})");
+        }
         if p.starts_with("_(") || (k == 0 && p.starts_with('^') && p != "^") {
             *p = format!("zws{p}");
         }
@@ -665,6 +780,12 @@ fn tidy(mut parts: Vec<String>) -> String {
         .join(" ")
 }
 
+/// Whether a piece is a number in e notation as `read_number` typesets it (`2.03 times 10^(-12)`).
+fn power_of_ten(p: &str) -> bool {
+    p.split_once(" times 10^(")
+        .is_some_and(|(m, _)| !m.is_empty() && m.chars().all(|c| c.is_ascii_digit() || c == '.'))
+}
+
 /// Whether a piece can stand alone as a radicand, a subscript or an exponent: not a sign still waiting for
 /// its other side, a closer or a comma.
 fn operand(t: &str) -> bool {
@@ -681,6 +802,9 @@ fn is_big_sign(c: char) -> bool {
 
 fn read_piece(s: &[char], i: usize, to: usize) -> Option<Piece> {
     let ch = s[i];
+    if ch == UNIT_OPEN {
+        return Some(read_unit(s, i, to));
+    }
     if matches!(ch, '(' | '[' | '{') {
         if ch == '['
             && let Some(grid) = read_matrix(s, i, to)
@@ -1790,5 +1914,99 @@ mod tests {
             copied_equation("solve x^2 = 4", true),
             "\"solve\" x ^ 2 = 4"
         );
+    }
+
+    #[test]
+    fn hides_calls_of_plain_numbers() {
+        for expr in [
+            "gcd(12,18)",
+            "max(1,2)",
+            "mean(1,2,3)",
+            "lcd(4,6)",
+            "gcf(12,18)",
+            "sin(30)+1",
+            "2≠3",
+            "2 sin(30)",
+            "max(-1.5, 2) * 3",
+            "gcd(12, 18) ÷ 2",
+            "min(max(1, 2), 3)",
+            "sin(90)",
+            "arccsc(2)",
+        ] {
+            assert!(!typst_preview_useful(expr), "{expr}");
+        }
+    }
+
+    #[test]
+    fn shows_what_draws_differently() {
+        for expr in [
+            "sqrt(2) + 1",
+            "abs(-3)",
+            "floor(2.5)",
+            "nCr(5, 2)",
+            "log2(8)",
+            "atan(1)",
+            "sin(30)/2",
+            "5! + 1",
+            "x_1 + 2",
+            "1/2 + 1/3",
+            "[1 2; 3 4]",
+            "int 0..1 x^2 dx",
+            "solve x^2 = 4",
+        ] {
+            assert!(typst_preview_useful(expr), "{expr}");
+        }
+    }
+
+    #[test]
+    fn hides_unit_conversions() {
+        for expr in [
+            "50 mph in km/h",
+            "5 km to mi",
+            "3 ft + 2 in to cm",
+            "10 kg into lb",
+        ] {
+            assert!(!typst_preview_useful(expr), "{expr}");
+        }
+    }
+
+    #[test]
+    fn sets_units_upright() {
+        for (expr, math) in [
+            ("9.8 m/s^2", r#"9.8 "m" / "s" ^ 2"#),
+            ("3 kg * 9.8 m/s^2", r#"3 "kg" dot 9.8 "m" / "s" ^ 2"#),
+            ("F = 2 kg * 3 m/s^2", r#"F = 2 "kg" dot 3 "m" / "s" ^ 2"#),
+        ] {
+            assert!(typst_preview_useful(expr), "{expr}");
+            assert_eq!(preview_math(expr), math);
+        }
+        // a variable stays italic, and an integral's dt stays its differential
+        assert_eq!(preview_math("m^2 + x"), "m ^ 2 + x");
+        assert_eq!(preview_math("x^2 - 5x"), "x ^ 2 - 5 x");
+        assert_eq!(
+            preview_math("integrate t^2 from 0 to 1"),
+            "integral_(0)^(1) t ^ 2 dif t"
+        );
+        assert_eq!(preview_math("2H2 + O2"), "2 H_(2) + O_(2)");
+    }
+
+    #[test]
+    fn shows_scientific_notation() {
+        for (expr, math) in [("1e6", "1 times 10^(6)"), ("2.5e-3", "2.5 times 10^(-3)")] {
+            assert!(typst_preview_useful(expr), "{expr}");
+            assert_eq!(preview_math(expr), math);
+        }
+    }
+
+    #[test]
+    fn scientific_notation_is_one_number_beside_a_fraction_or_power() {
+        for (expr, math) in [
+            ("2.03e-12/22", "(2.03 times 10^(-12)) / 22"),
+            ("22/2.03e-12", "22 / (2.03 times 10^(-12))"),
+            ("2e3^2", "(2 times 10^(3)) ^ 2"),
+            ("3*2e-2", "3 dot 2 times 10^(-2)"),
+        ] {
+            assert_eq!(to_typst_math(expr), math, "{expr}");
+        }
     }
 }

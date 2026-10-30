@@ -10,6 +10,7 @@ set -euo pipefail
 # quit (default): the old app downloads the update, then we quit it and check it was replaced.
 # idle: leave the Mac untouched; the update should install itself and relaunch after 20s idle.
 # Build first with: zsh macos/build.sh
+# The native app: QCALC_UPDATE_APP="native/mac/dist/Q Calc.app" after zsh native/mac/build.sh --release
 
 if [[ $# -lt 2 || $# -gt 3 ]]; then
   echo "Usage: macos/test-update.sh <private-key-file> <public-key-file> [quit|idle]" >&2
@@ -20,7 +21,7 @@ PRIVATE_KEY="$1"
 PUBLIC_KEY="$(tr -d '[:space:]' < "$2")"
 MODE="${3:-quit}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUILT="$ROOT/macos/dist/Q Calc.app"
+BUILT="${QCALC_UPDATE_APP:-$ROOT/macos/dist/Q Calc.app}"
 DOMAIN="com.maxconine.qcalc"
 PORT=8765
 WORK="$(mktemp -d /tmp/qcalc-update-test.XXXXXX)"
@@ -57,6 +58,8 @@ prepare() {
   /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey $PUBLIC_KEY" "$plist"
   /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $2" "$plist"
   /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $2" "$plist"
+  # a copied bundle can carry Finder info and other attributes codesign refuses
+  xattr -cr "$1"
   codesign --force --sign - --timestamp=none --identifier "$DOMAIN" "$1"
   codesign --verify --deep --strict "$1"
 }

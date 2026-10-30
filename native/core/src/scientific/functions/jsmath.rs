@@ -32,6 +32,10 @@ fn ma(a: f64, b: f64, c: f64) -> f64 {
 /// ±1 to an infinite power and anything to NaN are NaN. The C library's pow differs by platform in the odd last
 /// place, so the rest is C99's special cases around a correctly rounded core (`crpow`), which is what Apple's
 /// and the UCRT's pow answer nearly always.
+///
+/// On Apple platforms it is Apple's pow itself, as V8 there: the golden answers were recorded with it, and it
+/// does round a few hard cases the other way (`15 ** -0.5` is ...611, not the correctly rounded ...6115), which
+/// `zeta(-0.5)` and two integrals' error estimates show. It is also quicker than the double-double core.
 pub fn pow(x: f64, y: f64) -> f64 {
     if y.is_nan() || (y.is_infinite() && (x == 1.0 || x == -1.0)) {
         return f64::NAN;
@@ -46,10 +50,17 @@ pub fn pow(x: f64, y: f64) -> f64 {
             (x + 0.0).sqrt()
         };
     }
+    #[cfg(target_vendor = "apple")]
+    {
+        #[allow(clippy::disallowed_methods)]
+        return x.powf(y);
+    }
+    #[cfg(not(target_vendor = "apple"))]
     c_pow(x, y)
 }
 
 /// C99 `pow` for a non-NaN `y`, rounded correctly.
+#[cfg_attr(target_vendor = "apple", allow(dead_code))]
 fn c_pow(x: f64, y: f64) -> f64 {
     if y == 0.0 {
         return 1.0;

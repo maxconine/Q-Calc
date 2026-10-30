@@ -9,6 +9,8 @@ final class BarTextView: NSTextView {
     var onEscape: (() -> Void)?
     /// a paste with line breaks or `;`: true when it was taken (equations opened as a system)
     var onPasteLines: ((String) -> Bool)?
+    /// a pasted sentence or paragraph, flattened to one plain line (PlainText)
+    var onPastedProse: ((String) -> Void)?
     /// files dropped on the line (native only, ShareCommands.swift): true when they were taken, else the path is
     /// typed as text would be
     var onDropFiles: (([URL]) -> Bool)?
@@ -25,15 +27,52 @@ final class BarTextView: NSTextView {
     var offer: (at: Int, text: String)? {
         didSet {
             guard offer?.at != oldValue?.at || offer?.text != oldValue?.text else { return }
-            restyle()
-            if let offer, offer.at > 0, offer.at <= (string as NSString).length, let storage = textStorage {
-                let width = (offer.text as NSString).size(withAttributes: Self.attributes).width
-                storage.addAttribute(.kern, value: Theme.displayTracking(Self.fontSize) + width, range: NSRange(location: offer.at - 1, length: 1))
-            }
-            needsDisplay = true
+            applyGaps()
         }
     }
-    private var coloured: (units: [NSRange], words: [NSRange]) = ([], [])
+
+    /// native only: a faint `°` or ` rad` after each trig argument (core `angleMarks`), saying which angle mode it's
+    /// read in. One inside the line opens a gap after the argument as the offer does; one at the end is drawn after
+    /// the text (as the grey `)` is), so the caret never moves for it.
+    private(set) var angleMarks: [Int] = []
+    private(set) var angleMarkText = "°"
+    private var angleSpans: [AngleSpan] = []
+    private var gapsFor = ""
+
+    /// the marks to draw: each argument's, unless the caret is in it (being typed, its mark would sit where the
+    /// caret does; it shows once the caret leaves)
+    func setAngleMarks(_ spans: [AngleSpan], text mark: String) {
+        angleSpans = spans
+        let caret = selectedRange().location
+        let marks = spans.filter { caret < $0.start || caret > $0.at }.map(\.at)
+        guard marks != angleMarks || mark != angleMarkText || gapsFor != string else { return }
+        angleMarks = marks
+        angleMarkText = mark
+        applyGaps()
+    }
+
+    /// the caret moved: a mark hides or shows as it enters or leaves its argument
+    func refreshAngleMarks() {
+        // a line just typed waits for its own spans (the next update), never the older line's
+        guard gapsFor == string else { return }
+        setAngleMarks(angleSpans, text: angleMarkText)
+    }
+
+    /// the offer's and the angle marks' gaps, on a freshly styled line
+    private func applyGaps() {
+        restyle()
+        gapsFor = string
+        guard let storage = textStorage else { return needsDisplay = true }
+        let length = (string as NSString).length
+        var gaps: [(Int, String)] = angleMarks.filter { $0 > 0 && $0 < length }.map { ($0, angleMarkText) }
+        if let offer, offer.at > 0, offer.at <= length { gaps.append((offer.at, offer.text)) }
+        for (at, text) in gaps {
+            let width = (text as NSString).size(withAttributes: Self.attributes).width
+            storage.addAttribute(.kern, value: Theme.displayTracking(Self.fontSize) + width, range: NSRange(location: at - 1, length: 1))
+        }
+        needsDisplay = true
+    }
+    private var coloured: (units: [NSRange], words: [NSRange], style: String) = ([], [], "")
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
@@ -66,14 +105,14 @@ final class BarTextView: NSTextView {
 
     /// .quick-unit in the accent, .quick-word in accent mixed 85% with ink: temporary attributes, so typing and
     /// undo never see them
-    func colour(units: [NSRange], words: [NSRange]) {
-        guard units != coloured.units || words != coloured.words, let lm = layoutManager else { return }
-        coloured = (units, words)
+    func colour(units: [NSRange], words: [NSRange], style: String) {
+        guard units != coloured.units || words != coloured.words || style != coloured.style, let lm = layoutManager else { return }
+        coloured = (units, words, style)
         let all = NSRange(location: 0, length: (string as NSString).length)
         lm.removeTemporaryAttribute(.foregroundColor, forCharacterRange: all)
-        let word = Theme.accent.blended(withFraction: 0.15, of: Theme.ink) ?? Theme.accent
+        let word = Theme.wordColour(style), unit = Theme.unitColour(style)
         for r in words where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: word, forCharacterRange: r) }
-        for r in units where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: Theme.accent, forCharacterRange: r) }
+        for r in units where NSMaxRange(r) <= all.length { lm.addTemporaryAttribute(.foregroundColor, value: unit, forCharacterRange: r) }
     }
 
     // ---- .quick-unit-tip: the full name of the unit, function or constant under the pointer, in a small ink label
@@ -146,11 +185,12 @@ final class BarTextView: NSTextView {
             let onWindow = self.convert(NSRect(x: rect.minX, y: 0, width: rect.width, height: self.bounds.height), to: nil)
             let onScreen = window.convertToScreen(onWindow)
             self.tip.show(hit.name, at: NSPoint(x: onScreen.minX, y: onScreen.maxY - 2), over: window)
+            HoverTip.onScreen()
         }
-        if now || tipShown != nil || tipEngaged {
+        if now || tipShown != nil || tipEngaged || HoverTip.wait == 0 {
             show()
         } else {
-            tipTimer = Timer.scheduledTimer(withTimeInterval: 0.35, repeats: false) { _ in show() }
+            tipTimer = Timer.scheduledTimer(withTimeInterval: HoverTip.wait, repeats: false) { _ in show() }
         }
     }
 
@@ -160,6 +200,7 @@ final class BarTextView: NSTextView {
         guard tipShown != nil else { return }
         tipShown = nil
         tip.hide()
+        HoverTip.onScreen()
     }
 
     static let fontSize: CGFloat = 24
@@ -472,9 +513,11 @@ final class BarTextView: NSTextView {
         editKind = "insertFromPaste"
         guard let raw = NSPasteboard.general.string(forType: .string) else { return }
         if onPasteLines?(raw) == true { return }
-        let clean = raw.replacingOccurrences(of: #"\s*[\r\n]+\s*"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespaces)
+        // one plain line, as Spotlight takes a paste: no breaks, tabs or indents
+        let clean = PlainText.flatten(raw)
         insertText(clean, replacementRange: selectedRange())
+        // a pasted sentence or paragraph goes back on the clipboard that way too
+        if PlainText.isProse(clean) { onPastedProse?(clean) }
     }
 
 
@@ -513,6 +556,17 @@ final class BarTextView: NSTextView {
             }
         }
         // the completion's rest, faint, right after the text while the caret is at the end
+        // the angle marks inside the line, in the gaps opened after their arguments
+        if let lm = layoutManager, let tc = textContainer {
+            let length = (string as NSString).length
+            for at in angleMarks where at > 0 && at < length {
+                let glyph = lm.glyphIndexForCharacter(at: at - 1)
+                let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
+                let width = (angleMarkText as NSString).size(withAttributes: Self.attributes).width
+                (angleMarkText as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height),
+                                                 withAttributes: [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)])
+            }
+        }
         if let offer, offer.at > 0, offer.at <= (string as NSString).length, let lm = layoutManager, let tc = textContainer {
             let glyph = lm.glyphIndexForCharacter(at: offer.at - 1)
             let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
@@ -526,6 +580,11 @@ final class BarTextView: NSTextView {
             if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length {
                 (ghostTail as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: attrs)
                 x += (ghostTail as NSString).size(withAttributes: attrs).width
+            }
+            // an angle mark for an argument still open at the end of the line
+            if angleMarks.contains((string as NSString).length) {
+                (angleMarkText as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
+                x += (angleMarkText as NSString).size(withAttributes: inferred).width
             }
             if trailingParens > 0 {
                 (String(repeating: ")", count: trailingParens) as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: inferred)
@@ -558,6 +617,7 @@ struct InputField: NSViewRepresentable {
         text.delegate = context.coordinator
         text.onKey = { [weak model] event in model?.key(event) ?? false }
         text.onPasteLines = { [weak model] raw in model?.pasteSystem(raw) ?? false }
+        text.onPastedProse = { [weak model] plain in model?.copyPlain(plain) }
         text.onDropFiles = { [weak model] urls in model?.dropFiles(urls, to: nil) ?? false }
         text.onDragFiles = { [weak model] over, n in model?.dragHover(over, count: n) }
         text.onEscape = { [weak model] in
@@ -638,7 +698,8 @@ struct InputField: NSViewRepresentable {
         text.trailingParens = deco.trailingParens
         text.squiggle = deco.squiggle
         text.offer = deco.offer
-        text.colour(units: deco.units, words: deco.words)
+        text.setAngleMarks(model.angleMarks(for: text.string), text: model.angleRad ? " rad" : "°")
+        text.colour(units: deco.units, words: deco.words, style: AppSettings.shared.wordColor)
         text.wordNames = deco.names
         text.ghostTail = model.completion ?? ""
         text.insertionPointColor = Theme.ink
@@ -677,6 +738,9 @@ struct InputField: NSViewRepresentable {
         // a click or an arrow key ends the typing run (breakRun)
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let text else { return }
+            // what's typed next takes the line's own style, never a gap opened after the character before it
+            text.typingAttributes = BarTextView.attributes
+            text.refreshAngleMarks()
             // a part of the line selected is answered on its own in the answer slot (selDisplay)
             model.inputSelected(text.string, text.selectedRange())
             guard text.editKind == nil else { return }

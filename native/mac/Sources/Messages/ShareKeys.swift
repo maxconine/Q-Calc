@@ -56,12 +56,25 @@ final class ShareKeys: ObservableObject {
          kSecAttrSynchronizable as String: kCFBooleanFalse as Any]
     }
 
-    /// Dev and tester builds keep the key in a file only this user can read, in the build's own support folder:
-    /// they're signed ad hoc, so each build is a new app to the Keychain, which asked for the login password every
-    /// time a new one read the key. A release, signed for real, keeps it in the Keychain.
+    /// A build signed ad hoc (dev builds, and releases until there's a developer certificate) keeps the key in a
+    /// file only this user can read, in its own support folder: to the Keychain each such build is a new app, so
+    /// every update would ask for the login password when it read the key. A build signed with a team (Developer
+    /// ID) keeps it in the Keychain.
     private static var keyFile: URL? {
-        AppInfo.isDev ? AppInfo.supportDirectory.appendingPathComponent("share-key", isDirectory: false) : nil
+        AppInfo.isDev || !teamSigned ? AppInfo.supportDirectory.appendingPathComponent("share-key", isDirectory: false) : nil
     }
+
+    /// whether this app's signature names a team (a developer certificate), not ad hoc
+    private static let teamSigned: Bool = {
+        var code: SecCode?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return false }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else { return false }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
+              let dict = info as? [String: Any] else { return false }
+        return (dict[kSecCodeInfoTeamIdentifier as String] as? String)?.isEmpty == false
+    }()
 
     private static func read() -> Data? {
         if let file = keyFile {

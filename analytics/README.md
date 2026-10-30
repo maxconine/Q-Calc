@@ -33,14 +33,23 @@ Optional: `npx wrangler secret put GITHUB_TOKEN` (a read-only token) avoids GitH
 
 ## Dashboard
 
-Open the worker URL and sign in with any username and your `DASHBOARD_PASSWORD`. The dashboard shows:
+Open the worker URL and sign in with any username and your `DASHBOARD_PASSWORD`. The dashboard shows, from the top:
 
-- daily active installs
-- downloads per day (Mac and Windows)
-- calculations per day
-- new installs
-- feature usage
-- versions in use
+- **Headline numbers:** installs active yesterday, in the last 7 and in the last 30 days; the median calculations per user with the middle half (25th to 75th percentile) and how many users that covers; and of installs first seen 8 to 37 days ago, the share still using Q Calc a week later and the share that came back on another day.
+- **What people like:** features ranked by how many distinct installs used them, then by the share who came back to them on another day. Raw event counts don't decide the order.
+- **What needs work:** a short ranked list in plain words, ordered by how many users each item touches:
+  - features tried on one day and then dropped while the person kept using Q Calc
+  - Enter that gave no answer
+  - impossible unit conversions
+  - new installs that never came back
+  - features nobody used
+- **Detail:**
+  - medians and spreads per user (calculations, overlay opens, days active, features used)
+  - every feature's reach, repeat use and drop-off
+  - daily active installs, calculations, new installs and downloads per day
+  - versions in use
+
+Per-user figures are medians, not means, so one heavy user can't skew them. The maths lives in `src/stats.js`, tested by `src/stats.test.js` (`npx vitest run analytics` from the repo root). Install ids stay in the worker; the page only gets counts.
 
 It covers 7, 30 or 90 days, or a year.
 

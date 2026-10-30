@@ -42,6 +42,8 @@ final class MessageFiles: NSObject, ObservableObject {
     var logic: AppLogic?
 
     @Published private(set) var transfers: [String: Transfer] = [:]
+    /// the file just offered and the line the bar said about it, so the bar can follow it to sent (BarModel)
+    private(set) var lastOffer: (id: String, line: String)?
     /// a file dropped on the bar with no name on the line yet (ShareCommands.swift)
     var pendingDrop: [URL] = []
 
@@ -331,9 +333,11 @@ final class MessageFiles: NSObject, ObservableObject {
                     }
                     m.noteSent(to)
                     self.outgoing[id] = Outgoing(sealed: sealed, bytes: bytes)
+                    let line = self.shareStatus(status, to: to, what: "file", name: name)
+                    self.lastOffer = (id, line)
                     self.transfers[id] = Transfer(id: id, mine: true, who: to, name: name, size: size, state: "offered")
                     MessageHistory.shared.addShare(with: to, mine: true, summary: name, file: ThreadFile(id: id, name: name, size: size))
-                    done(self.shareStatus(status, to: to, what: "file", name: name))
+                    done(line)
                 }
             }
         }
@@ -494,8 +498,16 @@ final class MessageFiles: NSObject, ObservableObject {
         }
         let holdForKey = { [weak self] in
             guard let self else { return }
+            let first = !self.heldForKey.contains { $0.from == from }
             if !self.heldForKey.contains(where: { ($0.event[kind] as? [String: Any])?["id"] as? String == id }) {
                 self.heldForKey.append((from, event))
+            }
+            // the first one held says why on a card (their open thread shows Trust New Key itself), and while the
+            // bar is away as a notification, as the Windows app does
+            if first, let text = self.core("keyChangedText", [from]), let detail = self.core("keyChangedDetail", [from]) {
+                let note = "\(text) · \(detail)"
+                self.queued.append(BannerCard(id: "f\(UUID().uuidString)", from: from, text: note, ask: false))
+                self.notify(from: from, body: note)
             }
             NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
         }
@@ -538,6 +550,7 @@ final class MessageFiles: NSObject, ObservableObject {
         MessageHistory.shared.add(with: from, mine: false, text: note)
         queued.append(BannerCard(id: "f\(UUID().uuidString)", from: from, text: note, ask: false))
         NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
+        notify(from: from, body: note)
     }
 
     /// shares held while `who`'s key had changed, opened now it's trusted
@@ -588,12 +601,22 @@ final class MessageFiles: NSObject, ObservableObject {
         MessageHistory.shared.addShare(with: from, mine: false, summary: summary, clip: clip, file: file)
         queued.append(BannerCard(id: "f\(UUID().uuidString)", from: from, text: summary, ask: false, clip: clip, file: file))
         NotificationCenter.default.post(name: .qcalcInboxChanged, object: nil)
-        guard !Messages.shared.barOpen else { return }
-        let content = UNMutableNotificationContent()
-        content.title = from
-        content.body = file.map { "sent you \($0.name) (\(sizeText($0.size)))" } ?? "shared their clipboard"
-        content.sound = .default
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "share-\(UUID().uuidString)", content: content, trigger: nil))
+        notify(from: from, body: clip != nil ? "shared their clipboard · \(summary)" : file.map(fileNotice) ?? summary)
+    }
+
+    /// while the bar is away, what came as a note in the corner: the sender apart from their words, so no text can
+    /// pass for another name (as a message's, and as the Windows app's)
+    private func notify(from: String, body: String) {
+        guard !body.isEmpty else { return }
+        CornerNotes.shared.post(from: from, body: body)
+    }
+
+    /// a file that came: its name and size, then where it's got to (allow them to save it, saved…), as its card says
+    private func fileNotice(_ file: ThreadFile) -> String {
+        let head = "sent you \(file.name) (\(sizeText(file.size)))"
+        guard let t = transfers[file.id] else { return head }
+        let state = stateText(t)
+        return state.isEmpty ? head : "\(head) · \(state)"
     }
 
     /// someone new: their request asks as a message's would, and their share waits until they're allowed

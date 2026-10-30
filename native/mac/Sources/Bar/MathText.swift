@@ -99,7 +99,6 @@ struct MathPreview: View {
             }
         }
         .opacity(typeset.stale ? 0.4 : 1)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: typeset.stale)
         .accessibilityHidden(true)
     }
 

@@ -33,6 +33,9 @@ final class GameShellModel: ObservableObject {
     @Published private(set) var paused = false
     @Published private(set) var armedAt: Double?
     @Published private(set) var fullscreen = false
+    /// A game narrower than the bar (connect 4's square board) says how wide its picture is, so the big window takes
+    /// that shape rather than the bar card's 680-wide one (native only)
+    var bigWidth: CGFloat?
     @Published private(set) var layout = GameFullscreenOptions()
 
     /// Who gets keys after the shell: the lobby, then the open game (`.gameKeys(shell) { … }`).
@@ -371,7 +374,7 @@ struct FullscreenButton: View {
         .buttonStyle(.plain)
         .opacity(corner && !hover ? 0.5 : 1)
         .onHover { hover = $0 }
-        .help(on ? "\(label) (F, ⌃F or esc)" : "\(label) (F or ⌃F)")
+        .hoverTip(on ? "\(label) (F, ⌃F or esc)" : "\(label) (F or ⌃F)")
         .accessibilityLabel(label)
     }
 }
