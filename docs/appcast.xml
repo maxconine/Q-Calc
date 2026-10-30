@@ -7,11 +7,11 @@
     <language>en</language>
     <item>
       <title>Version 3.0.1</title>
-      <pubDate>Fri, 30 Oct 2026 03:15:17 +0000</pubDate>
+      <pubDate>Fri, 30 Oct 2026 08:38:25 +0000</pubDate>
       <sparkle:version>3.0.1</sparkle:version>
       <sparkle:shortVersionString>3.0.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v3.0.1/Q-Calc-3.0.1-apple-silicon.zip" sparkle:edSignature="NCTJMbazDgsXarV5PiaE527D1q8UEG20VIBtyhZKidTSnvpziQMtcXsvGIdSH5jCDqqbTC6rV+7lXHYSKZMQDg==" length="19507791" type="application/octet-stream"/>
+      <enclosure url="https://github.com/maxconine/Q-Calc/releases/download/v3.0.1/Q-Calc-3.0.1-apple-silicon.zip" sparkle:edSignature="Vacldrm3WGt54O+dnqYGUpMJ39Km/9+apKVFS+PQwDtdPkhZAe0jrlmKTtgKx53eAgeYdSZIE3VrevB/988QAQ==" length="19507800" type="application/octet-stream"/>
     </item>
     <item>
       <title>Version 3.0.0</title>
