@@ -13,7 +13,8 @@ set -euo pipefail
 NATIVE="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$NATIVE/build"
 PKG="$NATIVE/QCalcCore"
-CARGO="${CARGO:-$HOME/.cargo/bin/cargo}"
+# cargo on the PATH (the CI runners have it elsewhere), else rustup's usual place
+CARGO="${CARGO:-$(command -v cargo || echo "$HOME/.cargo/bin/cargo")}"
 TEST=1
 [[ "${1:-}" == "--no-test" ]] && TEST=0
 
