@@ -273,6 +273,13 @@ namespace QCalcE2E
             return GetCursorInfo(ref ci) && ci.hCursor == LoadCursorW(IntPtr.Zero, (IntPtr)32649);
         }
 
+        // a cursor is on screen at all (CURSOR_SHOWING): a CI runner with no mouse has none
+        public static bool CursorShowing()
+        {
+            CURSORINFO ci = new CURSORINFO(); ci.cbSize = Marshal.SizeOf(typeof(CURSORINFO));
+            return GetCursorInfo(ref ci) && (ci.flags & 1) != 0 && ci.hCursor != IntPtr.Zero;
+        }
+
         public static void RightClick(int x, int y)
         {
             Press(x, y, 0x0008, 0x0010);
