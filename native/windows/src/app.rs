@@ -81,6 +81,13 @@ const MUTEX: &str = "Local\\com.maxconine.qcalc.native";
 
 thread_local! {
     static APP: RefCell<Option<App>> = const { RefCell::new(None) };
+    /// the cursor WM_SETCURSOR last set over the bar, for the e2e suite: a runner with no mouse shows none
+    static CURSOR: std::cell::Cell<&'static str> = const { std::cell::Cell::new("") };
+}
+
+/// The cursor the bar last set ("hand", "ibeam", "arrow"; "" before any).
+pub fn last_cursor() -> &'static str {
+    CURSOR.with(|c| c.get())
 }
 
 /// Runs `f` on the app unless it is missing or already borrowed (a re-entrant message).
@@ -879,12 +886,17 @@ impl App {
                     .or_else(|| crate::systems::cursor(self, x, y))
                     .or_else(|| crate::hover::cursor(self, x, y));
                 let over = self.bar.layout.field.contains(x, y);
+                let id = panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW });
+                let name = match id {
+                    _ if id == IDC_IBEAM => "ibeam",
+                    _ if id == IDC_ARROW => "arrow",
+                    _ if id == windows::Win32::UI::WindowsAndMessaging::IDC_HAND => "hand",
+                    _ => "other",
+                };
+                CURSOR.with(|c| c.set(name));
                 // SAFETY: system cursors
                 unsafe {
-                    if let Ok(c) = LoadCursorW(
-                        None,
-                        panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW }),
-                    ) {
+                    if let Ok(c) = LoadCursorW(None, id) {
                         SetCursor(Some(c));
                     }
                 }

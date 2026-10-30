@@ -386,6 +386,7 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
                 "theme": app.store.settings.theme, "dark": app.theme.dark,
                 "hotkey": { "wanted": app.hotkey.wanted, "active": app.hotkey.active, "gaveUp": app.hotkey.gave_up },
                 "rows": app.model.rows.rows.len(), "text": app.model.field.text(),
+                "cursor": crate::app::last_cursor(),
                 "workingSet": ws, "private": private,
             }))
         }

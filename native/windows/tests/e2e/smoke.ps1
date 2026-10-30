@@ -525,11 +525,15 @@ Invoke-Check 'U1' 'the answer shows the hand and a tooltip under the pointer' 'r
     $s = $N::GetDpiForWindow($h) / 96.0
     # the answer sits at the composer's right (16 in), the composer the bar's bottom 72 DIPs
     $N::MoveTo([int]($r.Right - 30 * $s), [int]($r.Bottom - 36 * $s))
-    $hand = Wait-Until { $N::CursorIsHand() } 1500
+    # with no cursor on screen (a CI runner has no mouse) the system can't show the hand: the bar's own choice
+    # in WM_SETCURSOR is what's checked then
+    $showing = $N::CursorShowing()
+    $hand = if ($showing) { Wait-Until { $N::CursorIsHand() } 1500 } else { Wait-Until { (E2E).cursor -eq 'hand' } 1500 }
+    $how = if ($showing) { 'on screen' } else { "no cursor on screen, the bar set '$((E2E).cursor)'" }
     $tip = Wait-Until { @($N::WindowsOfClass([int[]]@($script:proc.Id), 'tooltips_class32') | Where-Object { $N::IsWindowVisible($_) }).Count -gt 0 } 2500
     $N::MoveTo([int]($r.Left + 40 * $s), [int]($r.Bottom - 36 * $s))
     $gone = Wait-Until { @($N::WindowsOfClass([int[]]@($script:proc.Id), 'tooltips_class32') | Where-Object { $N::IsWindowVisible($_) }).Count -eq 0 } 1500
-    @{ Pass = ($hand -and $tip -and $gone); Detail = "hand over the answer: $hand; tooltip after a rest: $tip; gone when the pointer left: $gone" }
+    @{ Pass = ($hand -and $tip -and $gone); Detail = "hand over the answer: $hand ($how); tooltip after a rest: $tip; gone when the pointer left: $gone" }
 }
 
 # the draft: an unfinished line outlives a hide and a restart (draftSeconds 60)
@@ -753,8 +757,19 @@ Invoke-Check 'W2' 'the left edge widens the bar' 'required' {
     $h = Show-QCalc
     $c = (E2E).composer
     $r = $N::Rect($h)
+    # W1 can leave the bar at the screen's left (a 1024 px runner): move it right to make room to widen into
+    if ($r.Left -lt 160) {
+        $s = $N::Screen()
+        $dx = [Math]::Min(170 - $r.Left, $s.Width - $r.Right)
+        $x = [int]($c[0] + $c[2] / 2); $cy = [int]$c[1] + 4
+        $N::Drag($x, $cy, $x + $dx, $cy)
+        Wait-Until { Near ($N::Rect($h).Left) ($r.Left + $dx) } 2000 | Out-Null
+        $c = (E2E).composer
+        $r = $N::Rect($h)
+    }
+    $grow = [Math]::Min(150, $r.Left - 10)
     $y = [int]($c[1] + $c[3] / 2)
-    $N::Drag($r.Left + 2, $y, $r.Left - 148, $y)
+    $N::Drag($r.Left + 2, $y, $r.Left + 2 - $grow, $y)
     $wider = Wait-Until { $m = $N::Rect($h); (($m.Right - $m.Left) - ($r.Right - $r.Left)) -gt 100 -and (Near $m.Right $r.Right 3) } 2000
     $m = $N::Rect($h)
     Start-Sleep -Milliseconds 300
