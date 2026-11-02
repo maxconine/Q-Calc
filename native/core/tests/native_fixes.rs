@@ -220,3 +220,24 @@ fn lcd_is_the_least_common_denominator() {
     assert!(said.contains(&"least common denominator"), "{said:?}");
     assert!(said.contains(&"greatest common factor"), "{said:?}");
 }
+
+#[test]
+fn the_preview_shows_the_number_ans_stands_for() {
+    use qcalc_core::app::chain::ans_written_out;
+    use qcalc_core::app::typst_math::{preview_math, typst_preview_useful};
+    // a quoted `"ans"` read as a word and hid the row
+    assert!(!typst_preview_useful("ans * (10^5)/30"));
+    for (line, plain, want) in [
+        ("ans * (10^5)/30", "3333.33", "3333.33 dot (10 ^ 5) / 30"),
+        ("ans * (10^5)/30", "-3", "(- 3) dot (10 ^ 5) / 30"),
+        ("ans^2", "3 km", "(3 \"km\") ^ 2"),
+        ("sqrt(ans)", "2", "sqrt(2)"),
+    ] {
+        let written = ans_written_out(line, plain);
+        assert!(typst_preview_useful(&written), "{line}");
+        assert_eq!(preview_math(&written), want, "{line}");
+    }
+    // plain arithmetic still reads as typed
+    assert!(!typst_preview_useful(&ans_written_out("ans*2", "5")));
+    assert!(!qcalc_core::format::format_number(3000.0, 10.0).contains(','));
+}

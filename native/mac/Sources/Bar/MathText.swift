@@ -18,6 +18,8 @@ struct Typeset {
 struct TypesetRequest: Equatable {
     /// the line, chained through `ans` as it evaluates (`chainedExpr`)
     let expr: String
+    /// the number `ans` stands for, written out in place of the word
+    let ans: String?
     /// the exact form beside the shown answer, when the answer slot shows the plain one
     let exact: String?
     let display: String
@@ -62,11 +64,12 @@ final class MathTypesetter {
         queue.async { [weak self] in
             guard let self, let renderer = self.renderer, self.lock.withLock({ self.latest == r }) else { return }
             let outcome: Outcome
-            if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [r.expr]) {
+            let expr = r.ans.flatMap { self.logic.string("lib/chain", "ansWrittenOut", [r.expr, $0]) } ?? r.expr
+            if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [expr]) {
                 outcome = .hidden
             } else {
                 let answer = r.message ? "" : self.logic.string("lib/typstMath", "typstAnswer", [r.exact ?? NSNull(), r.display]) ?? ""
-                if let doc = self.engine.typstSource(expr: r.expr, answer: answer, solvedFor: r.solvedFor) {
+                if let doc = self.engine.typstSource(expr: expr, answer: answer, solvedFor: r.solvedFor) {
                     do {
                         outcome = .drawn(try renderer.paths(source: doc), doc: doc)
                     } catch {

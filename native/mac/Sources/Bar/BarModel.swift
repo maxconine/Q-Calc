@@ -592,6 +592,7 @@ final class BarModel: ObservableObject {
         let tabbed = formIndex > 0 && forms.indices.contains(formIndex)
         let request = TypesetRequest(
             expr: chained ? Chain.expr(text) : text,
+            ans: decorations.ans,
             exact: prefixShown != nil || tabbed ? nil : exact,
             display: exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display)),
             solvedFor: rootsOf,
