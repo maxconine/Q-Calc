@@ -723,13 +723,13 @@ impl<'o> Sheet<'o> {
             // a matrix is stored as its literal, the way a unit answer is
             self.measures.remove(v);
             set_or_delete(&mut self.variables, v, m.n);
-            set_or_delete(&mut self.quantities, v, m.literal.clone());
+            set_or_delete(&mut self.quantities, v, m.to_store().cloned());
         }
         if let Some(n) = m.n {
             self.last_ans = Some(n);
             self.measures.remove("ans");
             self.quantities.remove("ans");
-        } else if let Some(lit) = &m.literal {
+        } else if let Some(lit) = m.to_store() {
             self.measures.remove("ans");
             self.quantities.insert("ans".into(), lit.clone());
         }

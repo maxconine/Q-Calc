@@ -13,7 +13,13 @@ typed as text or filled in a grid. Native mac + windows only (no TS port). Every
 - Steps view: "show steps" lists each row operation.
 - Entry: text (`[1 2; 3 4]`, `[[1,2],[3,4]]`, words) **and** a grid editor.
 
-## Phase 1 — exact core (native/core)
+## Phase 1 — exact core (native/core) — done
+
+Landed as `core/src/exact.rs` (moved from `system.rs`) and `core/src/matrix/exact_eval.rs`, tested in
+`core/tests/linear_algebra.rs`. Float answers still lead; the exact form rides in `exact` and `MatrixAnswer.stored`
+(what a stored matrix keeps), and replaces the answer only where the floats give up or a symbol is unknown. A bare
+literal with symbols stays blank, as in the TS, but is stored. Divergence from the TS: `inv([1 1; 1 1.0000000001])`
+is answered exactly (golden `eval.matrix` floor 421).
 1. Move `Rat`, `Rad`/`RadField`, `Mono`/`Rf`/`RfField`, `trait Field` and `eliminate<F>` out of `system.rs` into a
    shared `exact/` module (`pub(crate)`); `system.rs` imports them back. No behaviour change, golden must stay green.
 2. Matrix entries become a cell enum: exact rational → surd → rational function in parameters → f64 fallback.

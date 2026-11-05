@@ -18,6 +18,8 @@ use crate::jsre::{self, Lazy, js};
 use crate::symbolic::print::{PrintOptions, to_string};
 use crate::syntax::{Constant, Node, Op};
 
+mod exact_eval;
+
 /// A matrix answer: a matrix as `[1 2; 3 4]`, a number, or a message such as `not square`.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct MatrixAnswer {
@@ -28,6 +30,16 @@ pub struct MatrixAnswer {
     /// Fraction form, when some entry isn't whole and every entry is a simple fraction.
     pub exact: Option<String>,
     pub message: bool,
+    /// What a stored matrix or `ans` keeps when it says more than `literal`: exact entries (`1/1009`, `sqrt(2)`,
+    /// `k`) where `literal` has the TS's floats. Native only.
+    pub stored: Option<String>,
+}
+
+impl MatrixAnswer {
+    /// The literal a stored matrix or `ans` is read back from.
+    pub fn to_store(&self) -> Option<&String> {
+        self.stored.as_ref().or(self.literal.as_ref())
+    }
 }
 
 /// The calculator's reading of an entry's text as a plain number.
@@ -893,18 +905,82 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
             ..MatrixAnswer::default()
         });
     };
-    let value = match eval_node(&node, opts) {
-        Ok(v) => v,
-        Err(Fail::Matrix(msg)) => {
-            return Some(MatrixAnswer {
-                display: msg,
-                message: true,
-                ..MatrixAnswer::default()
-            });
-        }
-        Err(Fail::Blank) => return Some(MatrixAnswer::default()),
-        Err(Fail::Other) => return None,
+    let exact = exact_eval::exact_answer(&node, opts);
+    // a matrix typed on its own answers with itself; its exact form would only repeat the line
+    let bare = matches!(&node, Node::Array(_));
+    let from_exact = |exact: Option<exact_eval::Exact>| match &exact {
+        Some(exact_eval::Exact::Value {
+            approx: Some(approx),
+            ..
+        }) => Some(with_exact(numeric_answer(approx.clone(), opts), exact, bare, opts)),
+        _ => None,
     };
+    match eval_node(&node, opts) {
+        Ok(value) => Some(with_exact(numeric_answer(value, opts), exact, bare, opts)),
+        // the floats gave up (`nearly singular`) where exact arithmetic didn't
+        Err(Fail::Matrix(msg)) => Some(from_exact(exact).unwrap_or_else(|| message(msg))),
+        // a name the floats don't know is a symbol inside a matrix: `[k 2; 3 k]`
+        Err(Fail::Blank) => match exact {
+            Some(exact_eval::Exact::Value {
+                approx: None,
+                text,
+                literal,
+                ..
+            }) => Some(MatrixAnswer {
+                // blank as in the TS, but kept, so `A = [k 2; 3 k]` stores A
+                display: if bare { String::new() } else { text },
+                stored: literal,
+                ..MatrixAnswer::default()
+            }),
+            Some(exact_eval::Exact::Message(msg)) => Some(message(msg)),
+            other => Some(from_exact(other).unwrap_or_default()),
+        },
+        Err(Fail::Other) => None,
+    }
+}
+
+fn message(msg: String) -> MatrixAnswer {
+    MatrixAnswer {
+        display: msg,
+        message: true,
+        ..MatrixAnswer::default()
+    }
+}
+
+/// The float answer with the exact one beside it, where the exact one says more: a fraction past what the floats
+/// read back (`1/1234`), or a square root (`2*sqrt(3)`).
+fn with_exact(
+    mut ans: MatrixAnswer,
+    exact: Option<exact_eval::Exact>,
+    bare: bool,
+    opts: &MatrixOptions<'_>,
+) -> MatrixAnswer {
+    let Some(exact_eval::Exact::Value {
+        text,
+        literal,
+        rich: true,
+        ..
+    }) = exact
+    else {
+        return ans;
+    };
+    if ans.message || ans.exact.is_some() || text == ans.display {
+        return ans;
+    }
+    ans.stored = literal;
+    if bare {
+        return ans;
+    }
+    if opts.fraction_mode && !text.contains("sqrt") {
+        ans.display = text;
+    } else {
+        ans.exact = Some(text);
+    }
+    ans
+}
+
+/// The float reader's answer: a number, or a grid shown to a few digits with its fraction form beside it.
+fn numeric_answer(value: M, opts: &MatrixOptions<'_>) -> MatrixAnswer {
     // a row times a column is a number (`[1 2 3] * [1; 2; 3]` is 14)
     let value = match value {
         M::Grid(g) if g.len() == 1 && g[0].len() == 1 => M::Num(g[0][0]),
@@ -913,11 +989,7 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
     match value {
         M::Num(v) => {
             if !v.is_finite() {
-                return Some(MatrixAnswer {
-                    display: "undefined".into(),
-                    message: true,
-                    ..MatrixAnswer::default()
-                });
+                return message("undefined".into());
             }
             let n = tidy(v, 1.0);
             let exact = if jsnum::is_integer(n) {
@@ -929,12 +1001,12 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
                 Some(e) if opts.fraction_mode => e.clone(),
                 _ => format_number(n, opts.sig_figs),
             };
-            Some(MatrixAnswer {
+            MatrixAnswer {
                 exact: exact.filter(|e| *e != display),
                 display,
                 n: Some(n),
                 ..MatrixAnswer::default()
-            })
+            }
         }
         M::Grid(g) => {
             let s = scale_of(&g);
@@ -956,12 +1028,12 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
                 Some(e) if opts.fraction_mode => e.clone(),
                 _ => format_grid(&clean, |v| format_number(v, figs)),
             };
-            Some(MatrixAnswer {
+            MatrixAnswer {
                 exact: exact.filter(|e| *e != display),
                 display,
                 literal: Some(literal_of(&clean)),
                 ..MatrixAnswer::default()
-            })
+            }
         }
     }
 }
