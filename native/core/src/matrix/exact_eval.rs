@@ -1,48 +1,56 @@
-//! Exact matrix arithmetic: the same lines the float reader takes, worked out over the most exact field that holds
-//! every entry, tried in turn: rationals (`[1/3 2; 0.5 1]`), sums of square roots (`[sqrt(2) 1; 1 sqrt(2)]`), then
-//! rational functions in the unknown names inside a matrix (`[k 2; 3 k]`).
+//! The generic matrix evaluator: a line worked out over the most exact field that holds every entry, tried in turn —
+//! rationals (`[1/3 2; 0.5 1]`), sums of square roots (`[sqrt(2) 1; 1 sqrt(2)]`), rational functions in the unknown
+//! names inside a matrix (`[k 2; 3 k]`) — and, for the functions only this evaluator knows (`eig`, `null`, `svd`…),
+//! plain floats as the last resort.
 //!
-//! A line this can't do exactly (an entry like `sin(30)` or `pi`, a function it doesn't know) is `NotExact`, and the
-//! float reader's answer stands alone. Over the rational functions, a pivot that is a nonzero expression counts as
-//! nonzero, so `rref([k 1; 2 1])` is the identity, as it is for every k but 2.
+//! A line a field can't hold (an entry like `sin(30)` in an exact field, a name it doesn't know) is `NotExact`, and the
+//! next field takes it. Over the rational functions a pivot that is a nonzero expression counts as nonzero, so
+//! `rref([k 1; 2 1])` is the identity, as it is for every k but 2.
+
+use std::cell::Cell as StdCell;
 
 use num_bigint::BigInt;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
-use super::{MatrixOptions, callee_name, is_call, is_t};
+use super::show::{Answer, Fmt, shows_whole};
+use super::{MatrixOptions, callee_name, has_matrix_part, is_t};
 use crate::exact::{
-    Field, Mono, Rad, RadField, Rat, RatField, Rf, RfField, guarded, has_sign_after_first,
-    join_signed, key_exps, mono_key, pconst, rat, rf_cancel, sqrt_rat,
+    Field, Mono, RadField, Rat, RatField, Rf, RfField, bgcd, guarded, has_sign_after_first,
+    join_signed, key_exps, mono_key, pconst, rat, rf_cancel,
 };
 use crate::jsnum;
+use crate::symbolic::print::{PrintOptions, to_string};
 use crate::syntax::{Constant, Node, Op};
 
-/// Past this many entries the exact pass is skipped; the float answer is shown alone.
-const MAX_CELLS: usize = 144;
-/// A division-free determinant (rational functions) expands over column subsets: 2^n states.
-const MAX_SYMBOLIC_DET: usize = 10;
-const MAX_POWER: i64 = 256;
-const MAX_IDENTITY: i64 = 20;
+/// Past this many entries the exact fields are skipped.
+const MAX_CELLS: usize = 400;
 
-/// A value: a scalar, a grid, or a square root that only a final answer may be (`norm([1 2 3])` is √14).
+pub(super) type G<C> = Vec<Vec<C>>;
+
+/// A value: a scalar, a grid, or a finished answer that is neither (eigenvalues, a span, P and D), which only a
+/// whole line may be.
 #[derive(Clone, Debug)]
 pub(super) enum X<C> {
     Num(C),
-    Grid(Vec<Vec<C>>),
-    Surd(String, f64),
+    Grid(G<C>),
+    Done(Answer),
 }
 
 pub(super) enum XFail {
-    /// Not something this field can hold; the next field, or the float reader, takes it.
+    /// Not something this field can hold; the next field takes it.
     NotExact,
-    /// A real error, worded as the float reader words it.
+    /// A real error, shown as the answer.
     Matrix(String),
 }
 
-type XR<T> = Result<T, XFail>;
+pub(super) type XR<T> = Result<T, XFail>;
 
-fn fail<T>(msg: impl Into<String>) -> XR<T> {
+pub(super) fn fail<T>(msg: impl Into<String>) -> XR<T> {
     Err(XFail::Matrix(msg.into()))
+}
+
+pub(super) fn size<C>(g: &[Vec<C>]) -> String {
+    format!("{}×{}", g.len(), g.first().map_or(0, Vec::len))
 }
 
 /// A field matrix cells live in, plus how a cell is read from a leaf and read back as a number.
@@ -51,6 +59,7 @@ pub(super) trait Cells: Field {
     fn param(&self, _name: &str) -> Option<Self::C> {
         None
     }
+    /// √r for a rational r ≥ 0, where the field holds it.
     fn root(&self, _r: &Rat) -> Option<Self::C> {
         None
     }
@@ -64,6 +73,107 @@ pub(super) trait Cells: Field {
     /// The cell as an answer writes it.
     fn show(&self, c: &Self::C) -> String {
         self.str(c)
+    }
+    /// Floats only: a leaf the exact fields can't read (`pi`, `sin(30)`).
+    fn float_leaf(&self, _v: f64) -> Option<Self::C> {
+        None
+    }
+    fn is_float(&self) -> bool {
+        false
+    }
+    /// √c, where the field holds it.
+    fn sqrt(&self, c: &Self::C) -> Option<Self::C> {
+        let r = self.as_rat(c)?;
+        if r.n.is_negative() {
+            return None;
+        }
+        self.root(&r)
+    }
+    /// -1, 0 or 1, when the field knows.
+    fn sign(&self, c: &Self::C) -> Option<i32> {
+        if self.is_zero(c) {
+            return Some(0);
+        }
+        let v = self.approx(c)?;
+        Some(if v < 0.0 { -1 } else { 1 })
+    }
+    /// How good a pivot a cell is; exact fields take the first nonzero one.
+    fn weight(&self, _c: &Self::C) -> f64 {
+        0.0
+    }
+    /// A basis vector as a textbook writes it: whole numbers where it can be.
+    fn tidy_vec(&self, v: Vec<Self::C>) -> Vec<Self::C> {
+        v
+    }
+}
+
+pub(super) fn rat_f64(r: &Rat) -> f64 {
+    match (r.n.to_f64(), r.d.to_f64()) {
+        (Some(n), Some(d)) if n.is_finite() && d.is_finite() => n / d,
+        _ => {
+            // a huge numerator or denominator: scale both down by the same power of ten
+            let shift = r.n.to_string().len().max(r.d.to_string().len()).saturating_sub(300) as u32;
+            let p = BigInt::from(10).pow(shift);
+            (&r.n / &p).to_f64().unwrap_or(f64::NAN) / (&r.d / &p).to_f64().unwrap_or(f64::NAN)
+        }
+    }
+}
+
+pub(super) fn ri(n: i64) -> Rat {
+    rat(BigInt::from(n), BigInt::one())
+}
+
+impl Cells for RatField {
+    fn lift(&self, r: &Rat) -> Rat {
+        r.clone()
+    }
+    fn as_rat(&self, c: &Rat) -> Option<Rat> {
+        Some(c.clone())
+    }
+    fn approx(&self, c: &Rat) -> Option<f64> {
+        Some(rat_f64(c))
+    }
+    fn tidy_vec(&self, v: Vec<Rat>) -> Vec<Rat> {
+        // times the denominators' lcm, over the numerators' gcd
+        let mut l = BigInt::one();
+        let mut g = BigInt::zero();
+        for x in &v {
+            l = &l / bgcd(&l, &x.d) * &x.d;
+            g = bgcd(&g, &x.n);
+        }
+        if g.is_zero() {
+            return v;
+        }
+        v.iter()
+            .map(|x| rat(&x.n * &l / &x.d / &g, BigInt::one()))
+            .collect()
+    }
+}
+
+impl Cells for RadField {
+    fn lift(&self, r: &Rat) -> Vec<Rat> {
+        self.rat_of(r)
+    }
+    fn root(&self, r: &Rat) -> Option<Vec<Rat>> {
+        self.sqrt_of(r)
+    }
+    fn as_rat(&self, c: &Vec<Rat>) -> Option<Rat> {
+        let c = self.fit(c);
+        c[1..].iter().all(|x| x.n.is_zero()).then(|| c[0].clone())
+    }
+    fn approx(&self, c: &Vec<Rat>) -> Option<f64> {
+        let primes = self.primes.borrow();
+        let mut sum = 0.0;
+        for (mask, k) in self.fit(c).iter().enumerate() {
+            let mut rad = 1.0;
+            for (bit, p) in primes.iter().enumerate() {
+                if (mask >> bit) & 1 == 1 {
+                    rad *= p.to_f64()?;
+                }
+            }
+            sum += rat_f64(k) * rad.sqrt();
+        }
+        Some(sum)
     }
 }
 
@@ -112,57 +222,6 @@ fn poly_desc(p: &Mono, params: &[String]) -> String {
     join_signed(&parts)
 }
 
-pub(super) fn rat_f64(r: &Rat) -> f64 {
-    match (r.n.to_f64(), r.d.to_f64()) {
-        (Some(n), Some(d)) if n.is_finite() && d.is_finite() => n / d,
-        _ => {
-            // a huge numerator or denominator: scale both down by the same power of ten
-            let shift = r.n.to_string().len().max(r.d.to_string().len()).saturating_sub(300) as u32;
-            let p = BigInt::from(10).pow(shift);
-            (&r.n / &p).to_f64().unwrap_or(f64::NAN) / (&r.d / &p).to_f64().unwrap_or(f64::NAN)
-        }
-    }
-}
-
-impl Cells for RatField {
-    fn lift(&self, r: &Rat) -> Rat {
-        r.clone()
-    }
-    fn as_rat(&self, c: &Rat) -> Option<Rat> {
-        Some(c.clone())
-    }
-    fn approx(&self, c: &Rat) -> Option<f64> {
-        Some(rat_f64(c))
-    }
-}
-
-impl Cells for RadField {
-    fn lift(&self, r: &Rat) -> Vec<Rat> {
-        self.rat_of(r)
-    }
-    fn root(&self, r: &Rat) -> Option<Vec<Rat>> {
-        self.sqrt_of(r)
-    }
-    fn as_rat(&self, c: &Vec<Rat>) -> Option<Rat> {
-        let c = self.fit(c);
-        c[1..].iter().all(|x| x.n.is_zero()).then(|| c[0].clone())
-    }
-    fn approx(&self, c: &Vec<Rat>) -> Option<f64> {
-        let primes = self.primes.borrow();
-        let mut sum = 0.0;
-        for (mask, k) in self.fit(c).iter().enumerate() {
-            let mut rad = 1.0;
-            for (bit, p) in primes.iter().enumerate() {
-                if (mask >> bit) & 1 == 1 {
-                    rad *= p.to_f64()?;
-                }
-            }
-            sum += rat_f64(k) * rad.sqrt();
-        }
-        Some(sum)
-    }
-}
-
 impl Cells for RfField {
     fn lift(&self, r: &Rat) -> Rf {
         Rf {
@@ -182,7 +241,7 @@ impl Cells for RfField {
         })
     }
     fn as_rat(&self, c: &Rf) -> Option<Rat> {
-        let only_const = |m: &crate::exact::Mono| m.keys().all(String::is_empty);
+        let only_const = |m: &Mono| m.keys().all(String::is_empty);
         if !only_const(&c.n) || !only_const(&c.d) {
             return None;
         }
@@ -213,13 +272,95 @@ impl Cells for RfField {
     }
 }
 
+/// Plain floats, with zero meaning "small next to the entries typed".
+pub(super) struct F64Field {
+    scale: StdCell<f64>,
+}
+
+impl F64Field {
+    pub(super) fn new() -> Self {
+        F64Field {
+            scale: StdCell::new(0.0),
+        }
+    }
+    fn eps(&self) -> f64 {
+        let s = self.scale.get();
+        1e-10 * if s > 0.0 { s } else { 1.0 }
+    }
+}
+
+impl Field for F64Field {
+    type C = f64;
+    fn zero(&self) -> f64 {
+        0.0
+    }
+    fn one(&self) -> f64 {
+        1.0
+    }
+    fn add(&self, a: &f64, b: &f64) -> f64 {
+        a + b
+    }
+    fn sub(&self, a: &f64, b: &f64) -> f64 {
+        a - b
+    }
+    fn mul(&self, a: &f64, b: &f64) -> f64 {
+        a * b
+    }
+    fn div(&self, a: &f64, b: &f64) -> f64 {
+        a / b
+    }
+    fn neg(&self, a: &f64) -> f64 {
+        -a
+    }
+    fn is_zero(&self, a: &f64) -> bool {
+        a.abs() <= self.eps()
+    }
+    fn str(&self, a: &f64) -> String {
+        jsnum::to_string(*a)
+    }
+}
+
+impl Cells for F64Field {
+    fn lift(&self, r: &Rat) -> f64 {
+        rat_f64(r)
+    }
+    fn as_rat(&self, c: &f64) -> Option<Rat> {
+        jsnum::is_safe_integer(*c).then(|| ri(*c as i64))
+    }
+    fn approx(&self, c: &f64) -> Option<f64> {
+        Some(*c)
+    }
+    fn float_leaf(&self, v: f64) -> Option<f64> {
+        if !v.is_finite() {
+            return None;
+        }
+        self.scale.set(self.scale.get().max(v.abs()));
+        Some(v)
+    }
+    fn is_float(&self) -> bool {
+        true
+    }
+    fn root(&self, r: &Rat) -> Option<f64> {
+        Some(rat_f64(r).sqrt())
+    }
+    fn sqrt(&self, c: &f64) -> Option<f64> {
+        if *c < -self.eps() {
+            return None;
+        }
+        Some(c.max(0.0).sqrt())
+    }
+    fn weight(&self, c: &f64) -> f64 {
+        c.abs()
+    }
+}
+
 /// A float as the rational it was typed as: `0.1` is 1/10, a stored 1/3 is 1/3. None past what reads cleanly.
 pub(super) fn rat_of_f64(v: f64) -> Option<Rat> {
     if !v.is_finite() {
         return None;
     }
     if jsnum::is_safe_integer(v) {
-        return Some(rat(BigInt::from(v as i64), BigInt::one()));
+        return Some(ri(v as i64));
     }
     for q in 2..=1000_i64 {
         let p = (v * q as f64).round();
@@ -252,64 +393,56 @@ pub(super) fn rat_of_f64(v: f64) -> Option<Rat> {
     })
 }
 
-fn size<C>(g: &[Vec<C>]) -> String {
-    format!("{}×{}", g.len(), g.first().map_or(0, Vec::len))
+fn constant(name: &str) -> Option<f64> {
+    Some(match name {
+        "pi" => std::f64::consts::PI,
+        "e" => std::f64::consts::E,
+        "tau" => std::f64::consts::TAU,
+        _ => return None,
+    })
 }
 
-fn as_grid<C>(a: X<C>) -> XR<Vec<Vec<C>>> {
-    match a {
-        X::Num(c) => Ok(vec![vec![c]]),
-        X::Grid(g) => Ok(g),
-        X::Surd(..) => Err(XFail::NotExact),
-    }
-}
-
-fn square<C>(a: X<C>, what: &str) -> XR<Vec<Vec<C>>> {
-    let g = as_grid(a)?;
-    if g.len() != g[0].len() {
-        return fail(format!(
-            "{what} needs a square matrix (this is {})",
-            size(&g)
-        ));
-    }
-    Ok(g)
-}
-
-struct Ev<'a, 'o, F: Cells> {
-    f: &'a F,
-    opts: &'a MatrixOptions<'o>,
+pub(super) struct Ev<'a, 'o, F: Cells> {
+    pub f: &'a F,
+    pub opts: &'a MatrixOptions<'o>,
+    pub fmt: Fmt,
 }
 
 impl<F: Cells> Ev<'_, '_, F> {
-    fn scalar(&self, a: X<F::C>) -> XR<F::C> {
-        match a {
-            X::Num(c) => Ok(c),
-            _ => Err(XFail::NotExact),
+    /// A number leaf: exact fields read it as typed, floats as it is.
+    fn number(&self, v: f64) -> XR<F::C> {
+        if self.f.is_float() {
+            return self.f.float_leaf(v).ok_or(XFail::NotExact);
         }
+        let r = rat_of_f64(v).ok_or(XFail::NotExact)?;
+        Ok(self.f.lift(&r))
     }
 
-    fn int_of(&self, c: &F::C) -> Option<i64> {
-        let r = self.f.as_rat(c)?;
-        r.d.is_one().then(|| r.n.to_i64()).flatten()
-    }
-
-    fn eval(&self, node: &Node, in_array: bool) -> XR<X<F::C>> {
+    pub(super) fn eval(&self, node: &Node, in_array: bool) -> XR<X<F::C>> {
         let f = self.f;
+        // floats read an entry like `sin(30)` or `2^0.5` as the calculator does
+        if f.is_float()
+            && !matches!(node, Node::Constant(_) | Node::Symbol(_) | Node::Parenthesis(_))
+            && let Some(scalar) = self.opts.scalar
+            && !has_matrix_part(node).map_err(|_| XFail::NotExact)?
+        {
+            let v = scalar(&to_string(node, &PrintOptions::default())).ok_or(XFail::NotExact)?;
+            return self.number(v).map(X::Num);
+        }
         match node {
             Node::Parenthesis(c) => self.eval(c, in_array),
-            Node::Constant(Constant::Number { value, .. }) => {
-                let r = rat_of_f64(*value).ok_or(XFail::NotExact)?;
-                Ok(X::Num(f.lift(&r)))
-            }
+            Node::Constant(Constant::Number { value, .. }) => self.number(*value).map(X::Num),
             Node::Symbol(name) => {
                 if let Some(v) = self.opts.variables.get(name) {
-                    let r = rat_of_f64(*v).ok_or(XFail::NotExact)?;
-                    return Ok(X::Num(f.lift(&r)));
+                    return self.number(*v).map(X::Num);
                 }
                 if in_array && let Some(c) = f.param(name) {
                     return Ok(X::Num(c));
                 }
-                Err(XFail::NotExact)
+                match constant(name) {
+                    Some(v) if f.is_float() => self.number(v).map(X::Num),
+                    _ => Err(XFail::NotExact),
+                }
             }
             Node::Array(items) => self.array(items),
             Node::Function { callee, args } => {
@@ -317,32 +450,22 @@ impl<F: Cells> Ev<'_, '_, F> {
                 if let Some(k) = self.opts.variables.get(name)
                     && args.len() == 1
                 {
-                    let k = f.lift(&rat_of_f64(*k).ok_or(XFail::NotExact)?);
+                    let k = self.number(*k)?;
                     return self.mul(X::Num(k), self.eval(&args[0], in_array)?);
                 }
                 let key = name.to_lowercase();
                 if key == "sqrt" && args.len() == 1 {
                     let c = self.scalar(self.eval(&args[0], in_array)?)?;
-                    let r = f.as_rat(&c).ok_or(XFail::NotExact)?;
-                    if r.n.is_negative() {
-                        return Err(XFail::NotExact);
-                    }
-                    return f.root(&r).map(X::Num).ok_or(XFail::NotExact);
+                    return f.sqrt(&c).map(X::Num).ok_or(XFail::NotExact);
                 }
-                if !is_call(&key) {
+                if !super::is_call(&key) {
                     return Err(XFail::NotExact);
                 }
-                let want = if key == "dot" || key == "cross" { 2 } else { 1 };
-                if args.len() != want {
-                    return Err(XFail::NotExact);
-                }
-                let mut values = args
+                let values = args
                     .iter()
                     .map(|a| self.eval(a, in_array))
                     .collect::<XR<Vec<_>>>()?;
-                let first = values.remove(0);
-                let second = values.pop();
-                self.call(&key, first, second)
+                super::functions::call(self, &key, values)
             }
             Node::Operator { op, args, .. } => {
                 let (l, r) = (args.first(), args.get(1));
@@ -360,7 +483,9 @@ impl<F: Cells> Ev<'_, '_, F> {
                     return Err(XFail::NotExact);
                 };
                 if *op == Op::Pow && is_t(r) {
-                    return Ok(self.transpose(self.eval(l, in_array)?));
+                    return Ok(X::Grid(super::algebra::transpose(&self.grid(
+                        self.eval(l, in_array)?,
+                    )?)));
                 }
                 let a = self.eval(l, in_array)?;
                 let b = self.eval(r, in_array)?;
@@ -372,7 +497,7 @@ impl<F: Cells> Ev<'_, '_, F> {
                         X::Grid(_) => {
                             fail("can't divide by a matrix; multiply by its inverse instead")
                         }
-                        X::Surd(..) => Err(XFail::NotExact),
+                        X::Done(_) => Err(XFail::NotExact),
                         X::Num(k) if f.is_zero(&k) => fail("can't divide by 0"),
                         X::Num(k) => self.mul(a, X::Num(f.div(&f.one(), &k))),
                     },
@@ -382,6 +507,39 @@ impl<F: Cells> Ev<'_, '_, F> {
             }
             _ => Err(XFail::NotExact),
         }
+    }
+
+    pub(super) fn scalar(&self, a: X<F::C>) -> XR<F::C> {
+        match a {
+            X::Num(c) => Ok(c),
+            X::Grid(mut g) if g.len() == 1 && g[0].len() == 1 => Ok(g.remove(0).remove(0)),
+            _ => Err(XFail::NotExact),
+        }
+    }
+
+    /// A number is a 1×1 matrix wherever an operation needs one.
+    pub(super) fn grid(&self, a: X<F::C>) -> XR<G<F::C>> {
+        match a {
+            X::Num(c) => Ok(vec![vec![c]]),
+            X::Grid(g) => Ok(g),
+            X::Done(_) => Err(XFail::NotExact),
+        }
+    }
+
+    pub(super) fn square(&self, a: X<F::C>, what: &str) -> XR<G<F::C>> {
+        let g = self.grid(a)?;
+        if g.len() != g[0].len() {
+            return fail(format!(
+                "{what} needs a square matrix (this is {})",
+                size(&g)
+            ));
+        }
+        Ok(g)
+    }
+
+    pub(super) fn int_of(&self, c: &F::C) -> Option<i64> {
+        let r = self.f.as_rat(c)?;
+        r.d.is_one().then(|| r.n.to_i64()).flatten()
     }
 
     fn array(&self, items: &[Node]) -> XR<X<F::C>> {
@@ -395,19 +553,19 @@ impl<F: Cells> Ev<'_, '_, F> {
         if items.iter().all(|v| matches!(v, X::Num(_))) {
             let row = items
                 .into_iter()
-                .map(|v| match v {
-                    X::Num(c) => c,
-                    _ => unreachable!(),
+                .filter_map(|v| match v {
+                    X::Num(c) => Some(c),
+                    _ => None,
                 })
                 .collect();
             return Ok(X::Grid(vec![row]));
         }
         if items.iter().all(|v| matches!(v, X::Grid(g) if g.len() == 1)) {
-            let rows: Vec<Vec<F::C>> = items
+            let rows: G<F::C> = items
                 .into_iter()
-                .map(|v| match v {
-                    X::Grid(mut g) => g.remove(0),
-                    _ => unreachable!(),
+                .filter_map(|v| match v {
+                    X::Grid(mut g) => Some(g.remove(0)),
+                    _ => None,
                 })
                 .collect();
             let width = rows[0].len();
@@ -440,222 +598,21 @@ impl<F: Cells> Ev<'_, '_, F> {
                         .collect(),
                 ))
             }
-            (X::Surd(..), _) | (_, X::Surd(..)) => Err(XFail::NotExact),
+            (X::Done(_), _) | (_, X::Done(_)) => Err(XFail::NotExact),
             _ => fail(format!("can't {verb} a number and a matrix")),
         }
     }
 
-    fn scale(&self, g: &[Vec<F::C>], k: &F::C) -> Vec<Vec<F::C>> {
-        g.iter()
-            .map(|r| r.iter().map(|v| self.f.mul(v, k)).collect())
-            .collect()
-    }
-
-    fn mul_grids(&self, a: &[Vec<F::C>], b: &[Vec<F::C>]) -> XR<Vec<Vec<F::C>>> {
+    pub(super) fn mul(&self, a: X<F::C>, b: X<F::C>) -> XR<X<F::C>> {
         let f = self.f;
-        let inner = a[0].len();
-        if inner != b.len() {
-            let hint = if a.len() == b.len() && inner == b[0].len() {
-                "; for entry by entry, use dot for vectors"
-            } else {
-                ""
-            };
-            return fail(format!(
-                "can't multiply {} by {}: columns of the first must equal rows of the second{hint}",
-                size(a),
-                size(b)
-            ));
-        }
-        Ok(a.iter()
-            .map(|r| {
-                (0..b[0].len())
-                    .map(|j| {
-                        r.iter()
-                            .enumerate()
-                            .fold(f.zero(), |s, (k, v)| f.add(&s, &f.mul(v, &b[k][j])))
-                    })
-                    .collect()
-            })
-            .collect())
-    }
-
-    fn mul(&self, a: X<F::C>, b: X<F::C>) -> XR<X<F::C>> {
         Ok(match (a, b) {
-            (X::Num(x), X::Num(y)) => X::Num(self.f.mul(&x, &y)),
-            (X::Num(x), X::Grid(g)) | (X::Grid(g), X::Num(x)) => X::Grid(self.scale(&g, &x)),
-            (X::Grid(a), X::Grid(b)) => X::Grid(self.mul_grids(&a, &b)?),
+            (X::Num(x), X::Num(y)) => X::Num(f.mul(&x, &y)),
+            (X::Num(x), X::Grid(g)) | (X::Grid(g), X::Num(x)) => {
+                X::Grid(super::algebra::scale(f, &g, &x))
+            }
+            (X::Grid(a), X::Grid(b)) => X::Grid(super::algebra::mul(f, &a, &b)?),
             _ => return Err(XFail::NotExact),
         })
-    }
-
-    fn transpose(&self, a: X<F::C>) -> X<F::C> {
-        match a {
-            X::Grid(g) => X::Grid(
-                (0..g[0].len())
-                    .map(|j| g.iter().map(|r| r[j].clone()).collect())
-                    .collect(),
-            ),
-            other => other,
-        }
-    }
-
-    fn identity(&self, n: usize) -> Vec<Vec<F::C>> {
-        (0..n)
-            .map(|i| {
-                (0..n)
-                    .map(|j| if i == j { self.f.one() } else { self.f.zero() })
-                    .collect()
-            })
-            .collect()
-    }
-
-    fn det_of(&self, g: &[Vec<F::C>]) -> XR<F::C> {
-        if self.f.division_free() {
-            return det_expand(self.f, g).ok_or(XFail::NotExact);
-        }
-        Ok(reduce(self.f, g, false).det)
-    }
-
-    fn inverse(&self, g: &[Vec<F::C>]) -> XR<Vec<Vec<F::C>>> {
-        let f = self.f;
-        let n = g.len();
-        if f.division_free() {
-            // adjugate over the determinant: no division until the very end
-            let d = self.det_of(g)?;
-            if f.is_zero(&d) {
-                return fail("no inverse (determinant is 0)");
-            }
-            let mut out = vec![vec![f.zero(); n]; n];
-            for (i, row) in out.iter_mut().enumerate() {
-                for (j, cell) in row.iter_mut().enumerate() {
-                    let c = cofactor(f, g, j, i).ok_or(XFail::NotExact)?;
-                    *cell = f.div(&c, &d);
-                }
-            }
-            return Ok(out);
-        }
-        let aug: Vec<Vec<F::C>> = g
-            .iter()
-            .zip(self.identity(n))
-            .map(|(r, e)| r.iter().cloned().chain(e).collect())
-            .collect();
-        let red = reduce(f, &aug, true);
-        if red.pivots.len() < n || red.pivots[n - 1] != n - 1 {
-            return fail("no inverse (determinant is 0)");
-        }
-        Ok(red.m.into_iter().map(|r| r[n..].to_vec()).collect())
-    }
-
-    fn vector(a: &X<F::C>) -> Option<Vec<F::C>> {
-        let X::Grid(g) = a else { return None };
-        if g.len() == 1 {
-            return Some(g[0].clone());
-        }
-        if g[0].len() == 1 {
-            return Some(g.iter().map(|r| r[0].clone()).collect());
-        }
-        None
-    }
-
-    fn call(&self, key: &str, a: X<F::C>, b: Option<X<F::C>>) -> XR<X<F::C>> {
-        let f = self.f;
-        match key {
-            "inv" | "inverse" => match a {
-                X::Num(c) if f.is_zero(&c) => fail("no inverse (it is 0)"),
-                X::Num(c) => Ok(X::Num(f.div(&f.one(), &c))),
-                a => Ok(X::Grid(self.inverse(&square(a, "inverse")?)?)),
-            },
-            "det" | "determinant" => Ok(X::Num(self.det_of(&square(a, "determinant")?)?)),
-            "transpose" => Ok(self.transpose(a)),
-            "trace" | "tr" => {
-                let g = square(a, "trace")?;
-                Ok(X::Num(
-                    g.iter()
-                        .enumerate()
-                        .fold(f.zero(), |s, (i, r)| f.add(&s, &r[i])),
-                ))
-            }
-            "rank" => {
-                let g = as_grid(a)?;
-                let r = reduce(f, &g, false).pivots.len();
-                Ok(X::Num(f.lift(&rat(BigInt::from(r), BigInt::one()))))
-            }
-            "rref" => Ok(X::Grid(reduce(f, &as_grid(a)?, true).m)),
-            "identity" | "eye" => {
-                let n = self.int_of(&self.scalar(a)?);
-                match n {
-                    Some(n) if (1..=MAX_IDENTITY).contains(&n) => {
-                        Ok(X::Grid(self.identity(n as usize)))
-                    }
-                    _ => fail(format!(
-                        "identity needs a whole size from 1 to {MAX_IDENTITY}"
-                    )),
-                }
-            }
-            "dot" => {
-                let b = b.ok_or(XFail::NotExact)?;
-                let (Some(u), Some(v)) = (Self::vector(&a), Self::vector(&b)) else {
-                    return fail("dot needs two vectors");
-                };
-                if u.len() != v.len() {
-                    return fail(format!(
-                        "dot needs vectors of the same length ({} and {})",
-                        u.len(),
-                        v.len()
-                    ));
-                }
-                Ok(X::Num(
-                    u.iter()
-                        .zip(&v)
-                        .fold(f.zero(), |s, (x, y)| f.add(&s, &f.mul(x, y))),
-                ))
-            }
-            "cross" => {
-                let b = b.ok_or(XFail::NotExact)?;
-                let (Some(u), Some(v)) = (Self::vector(&a), Self::vector(&b)) else {
-                    return fail("cross needs two vectors of length 3");
-                };
-                if u.len() != 3 || v.len() != 3 {
-                    return fail("cross needs two vectors of length 3");
-                }
-                let m = |x: &F::C, y: &F::C| f.mul(x, y);
-                let w = [
-                    f.sub(&m(&u[1], &v[2]), &m(&u[2], &v[1])),
-                    f.sub(&m(&u[2], &v[0]), &m(&u[0], &v[2])),
-                    f.sub(&m(&u[0], &v[1]), &m(&u[1], &v[0])),
-                ];
-                let row = matches!(&a, X::Grid(g) if g.len() == 1);
-                Ok(X::Grid(if row {
-                    vec![w.to_vec()]
-                } else {
-                    w.into_iter().map(|x| vec![x]).collect()
-                }))
-            }
-            "norm" => {
-                let g = as_grid(a)?;
-                let sum = g
-                    .iter()
-                    .flatten()
-                    .fold(f.zero(), |s, v| f.add(&s, &f.mul(v, v)));
-                let r = f.as_rat(&sum).ok_or(XFail::NotExact)?;
-                let Rad { c, rad } = sqrt_rat(&r).ok_or(XFail::NotExact)?;
-                if rad.is_one() {
-                    return Ok(X::Num(f.lift(&c)));
-                }
-                let unit = format!("sqrt({rad})");
-                let text = if c.n.is_one() && c.d.is_one() {
-                    unit
-                } else if c.d.is_one() {
-                    format!("{}*{unit}", c.n)
-                } else if c.n.is_one() {
-                    format!("{unit}/{}", c.d)
-                } else {
-                    format!("{}*{unit}/{}", c.n, c.d)
-                };
-                Ok(X::Surd(text, rat_f64(&c) * rad.to_f64().unwrap_or(f64::NAN).sqrt()))
-            }
-            _ => Err(XFail::NotExact),
-        }
     }
 
     fn power(&self, a: X<F::C>, e: X<F::C>) -> XR<X<F::C>> {
@@ -663,15 +620,23 @@ impl<F: Cells> Ev<'_, '_, F> {
         let e = match e {
             X::Num(e) => e,
             X::Grid(_) => return fail("can't raise to a matrix power"),
-            X::Surd(..) => return Err(XFail::NotExact),
+            X::Done(_) => return Err(XFail::NotExact),
         };
         let Some(k) = self.int_of(&e) else {
             return match a {
-                X::Grid(_) if f.as_rat(&e).is_some() => fail("a matrix power must be a whole number"),
+                X::Grid(_) if f.as_rat(&e).is_some() => {
+                    fail("a matrix power must be a whole number")
+                }
+                X::Num(x) if f.is_float() => {
+                    let (Some(x), Some(e)) = (f.approx(&x), f.approx(&e)) else {
+                        return Err(XFail::NotExact);
+                    };
+                    self.number(crate::eval::ops::js_pow(x, e)).map(X::Num)
+                }
                 _ => Err(XFail::NotExact),
             };
         };
-        if k.abs() > MAX_POWER {
+        if k.abs() > 256 {
             return Err(XFail::NotExact);
         }
         if let X::Num(x) = &a {
@@ -685,130 +650,9 @@ impl<F: Cells> Ev<'_, '_, F> {
             }
             return Ok(X::Num(out));
         }
-        let sq = square(a, "a power")?;
-        let mut base = if k < 0 { self.inverse(&sq)? } else { sq.clone() };
-        let mut out = self.identity(sq.len());
-        let mut k = k.abs();
-        while k > 0 {
-            if k % 2 == 1 {
-                out = self.mul_grids(&out, &base)?;
-            }
-            k /= 2;
-            if k > 0 {
-                base = self.mul_grids(&base, &base)?;
-            }
-        }
-        Ok(X::Grid(out))
+        let sq = self.square(a, "a power")?;
+        Ok(X::Grid(super::algebra::power(f, &sq, k)?))
     }
-}
-
-pub(super) struct Reduced<C> {
-    pub m: Vec<Vec<C>>,
-    pub pivots: Vec<usize>,
-    pub det: C,
-}
-
-/// Row echelon (or, with `full`, reduced row echelon) by exact elimination, and the determinant it finds on the way.
-pub(super) fn reduce<F: Field>(f: &F, src: &[Vec<F::C>], full: bool) -> Reduced<F::C> {
-    let mut m: Vec<Vec<F::C>> = src.to_vec();
-    let rows = m.len();
-    let cols = m.first().map_or(0, Vec::len);
-    let mut pivots = Vec::new();
-    let mut det = f.one();
-    let (mut r, mut c) = (0, 0);
-    while c < cols && r < rows {
-        let Some(p) = (r..rows).find(|&i| !f.is_zero(&m[i][c])) else {
-            det = f.zero();
-            c += 1;
-            continue;
-        };
-        if p != r {
-            m.swap(p, r);
-            det = f.neg(&det);
-        }
-        let piv = m[r][c].clone();
-        det = f.mul(&det, &piv);
-        if full {
-            m[r] = m[r].iter().map(|v| f.div(v, &piv)).collect();
-        }
-        let start = if full { 0 } else { r + 1 };
-        for i in start..rows {
-            if i == r || f.is_zero(&m[i][c]) {
-                continue;
-            }
-            let fac = f.div(&m[i][c], &m[r][c]);
-            let pivot_row = m[r].clone();
-            m[i] = m[i]
-                .iter()
-                .zip(&pivot_row)
-                .enumerate()
-                .map(|(k, (v, p))| if k == c { f.zero() } else { f.sub(v, &f.mul(&fac, p)) })
-                .collect();
-        }
-        pivots.push(c);
-        r += 1;
-        c += 1;
-    }
-    if r < rows {
-        det = f.zero();
-    }
-    Reduced { m, pivots, det }
-}
-
-/// The determinant by expansion over column subsets: no division, so a polynomial stays a polynomial.
-pub(super) fn det_expand<F: Field>(f: &F, g: &[Vec<F::C>]) -> Option<F::C> {
-    let n = g.len();
-    if n == 0 {
-        return Some(f.one());
-    }
-    if n > MAX_SYMBOLIC_DET {
-        return None;
-    }
-    let mut dp: Vec<Option<F::C>> = vec![None; 1 << n];
-    dp[0] = Some(f.one());
-    for mask in 0..(1usize << n) {
-        let Some(cur) = dp[mask].clone() else { continue };
-        if f.is_zero(&cur) {
-            continue;
-        }
-        let row = mask.count_ones() as usize;
-        if row == n {
-            continue;
-        }
-        for j in 0..n {
-            if mask & (1 << j) != 0 || f.is_zero(&g[row][j]) {
-                continue;
-            }
-            // each column already used to the right of j is one inversion
-            let inversions = (mask >> (j + 1)).count_ones();
-            let term = f.mul(&cur, &g[row][j]);
-            let term = if inversions % 2 == 1 { f.neg(&term) } else { term };
-            let slot = &mut dp[mask | (1 << j)];
-            *slot = Some(match slot.take() {
-                Some(s) => f.add(&s, &term),
-                None => term,
-            });
-        }
-    }
-    Some(dp[(1 << n) - 1].clone().unwrap_or_else(|| f.zero()))
-}
-
-/// `(-1)^(i+j)` times the minor that drops row i and column j.
-pub(super) fn cofactor<F: Field>(f: &F, g: &[Vec<F::C>], i: usize, j: usize) -> Option<F::C> {
-    let minor: Vec<Vec<F::C>> = g
-        .iter()
-        .enumerate()
-        .filter(|(r, _)| *r != i)
-        .map(|(_, row)| {
-            row.iter()
-                .enumerate()
-                .filter(|(c, _)| *c != j)
-                .map(|(_, v)| v.clone())
-                .collect()
-        })
-        .collect();
-    let d = det_expand(f, &minor)?;
-    Some(if (i + j) % 2 == 1 { f.neg(&d) } else { d })
 }
 
 /// The unknown names inside matrix literals, in the order they first appear; None when a name outside any matrix
@@ -821,7 +665,10 @@ fn params_of(node: &Node, opts: &MatrixOptions<'_>) -> Option<Vec<String>> {
                     return true;
                 }
                 if !in_array
-                    || matches!(name.as_str(), "pi" | "e" | "tau" | "i" | "ans" | "Infinity" | "NaN")
+                    || matches!(
+                        name.as_str(),
+                        "pi" | "e" | "tau" | "i" | "ans" | "Infinity" | "NaN"
+                    )
                     || opts.functions.iter().any(|f| f == name)
                 {
                     return false;
@@ -852,50 +699,34 @@ fn cells_of(node: &Node) -> usize {
     }
 }
 
-/// An exact answer: its text (`[1/2 sqrt(3); 0 k]`), a literal to store, and its value as floats when it has one.
+/// An answer from the generic evaluator.
 #[derive(Debug)]
 pub(super) enum Exact {
     Message(String),
+    /// One number or matrix: its exact text (`[1/2 sqrt(3); 0 k]`), a literal to store, and its value as floats when it
+    /// has one. `rich` when some entry is a fraction the floats round, an irrational, or a symbol.
     Value {
         text: String,
         literal: Option<String>,
         approx: Option<super::M>,
-        /// Some entry is a fraction or an irrational, so the text says more than whole numbers would.
         rich: bool,
     },
-}
-
-/// The float answer already shows this rational whole: a whole number, or a decimal that ends within the digits a
-/// matrix entry gets (`0.00001`, `1.5`), where a fraction beside it would add nothing.
-fn shows_whole(r: &Rat) -> bool {
-    if r.d.is_one() {
-        return true;
-    }
-    let mut d = r.d.clone();
-    for p in [2, 5] {
-        let p = BigInt::from(p);
-        while (&d % &p).is_zero() {
-            d /= &p;
-        }
-    }
-    if !d.is_one() {
-        return false;
-    }
-    let s = jsnum::to_string(rat_f64(r));
-    let mant = s.split('e').next().unwrap_or("");
-    let digits = mant.chars().filter(char::is_ascii_digit).skip_while(|c| *c == '0');
-    digits.count() <= 6
+    /// Anything else: eigenvalues, a span, P and D.
+    Worded(Answer),
 }
 
 /// A cell written to read back in a spaced row: `k^2-6`, `2*sqrt(3)`, `1/2`.
-fn compact(s: &str) -> String {
+pub(super) fn compact(s: &str) -> String {
     s.split_whitespace().collect()
 }
 
 fn finish<F: Cells>(f: &F, v: X<F::C>) -> Exact {
-    let rich_cell = |c: &F::C| match f.as_rat(c) {
-        Some(r) => !shows_whole(&r),
-        None => true,
+    let rich_cell = |c: &F::C| {
+        !f.is_float()
+            && match f.as_rat(c) {
+                Some(r) => !shows_whole(&r),
+                None => true,
+            }
     };
     // a row times a column is a number
     let v = match v {
@@ -903,12 +734,7 @@ fn finish<F: Cells>(f: &F, v: X<F::C>) -> Exact {
         v => v,
     };
     match v {
-        X::Surd(text, approx) => Exact::Value {
-            text,
-            literal: None,
-            approx: Some(super::M::Num(approx)),
-            rich: true,
-        },
+        X::Done(a) => Exact::Worded(a),
         X::Num(c) => Exact::Value {
             text: f.show(&c),
             literal: None,
@@ -933,22 +759,26 @@ fn finish<F: Cells>(f: &F, v: X<F::C>) -> Exact {
                     .collect::<Vec<_>>()
                     .join(", ")
             );
-            let approx: Option<Vec<Vec<f64>>> = g
+            let approx: Option<G<f64>> = g
                 .iter()
                 .map(|r| r.iter().map(|c| f.approx(c)).collect())
                 .collect();
             Exact::Value {
                 text,
-                literal: Some(literal),
+                literal: (!f.is_float()).then_some(literal),
                 approx: approx.map(super::M::Grid),
                 rich: g.iter().flatten().any(rich_cell),
-                }
+            }
         }
     }
 }
 
 fn attempt<F: Cells>(f: &F, node: &Node, opts: &MatrixOptions<'_>) -> Option<Option<Exact>> {
-    let ev = Ev { f, opts };
+    let ev = Ev {
+        f,
+        opts,
+        fmt: Fmt::new(opts.sig_figs),
+    };
     let out = guarded(|| Some(ev.eval(node, false)));
     match out {
         None => Some(None), // a division by zero inside the field: no exact answer
@@ -958,20 +788,25 @@ fn attempt<F: Cells>(f: &F, node: &Node, opts: &MatrixOptions<'_>) -> Option<Opt
     }
 }
 
-/// The exact answer to a matrix line, or None when it has none.
-pub(super) fn exact_answer(node: &Node, opts: &MatrixOptions<'_>) -> Option<Exact> {
-    if cells_of(node) > MAX_CELLS {
-        return None;
+/// The answer to a matrix line from the generic evaluator, or None when no field holds it. `floats` lets plain floats
+/// take a line no exact field holds (for the functions only this evaluator knows).
+pub(super) fn exact_answer(node: &Node, opts: &MatrixOptions<'_>, floats: bool) -> Option<Exact> {
+    if cells_of(node) <= MAX_CELLS {
+        if let Some(out) = attempt(&RatField, node, opts) {
+            return out;
+        }
+        if let Some(out) = attempt(&RadField::new(), node, opts) {
+            return out;
+        }
+        if let Some(params) = params_of(node, opts)
+            && !params.is_empty()
+            && let Some(out) = attempt(&RfField { params }, node, opts)
+        {
+            return out;
+        }
     }
-    if let Some(out) = attempt(&RatField, node, opts) {
-        return out;
+    if floats {
+        return attempt(&F64Field::new(), node, opts).flatten();
     }
-    if let Some(out) = attempt(&RadField::new(), node, opts) {
-        return out;
-    }
-    let params = params_of(node, opts)?;
-    if params.is_empty() {
-        return None;
-    }
-    attempt(&RfField { params }, node, opts).flatten()
+    None
 }

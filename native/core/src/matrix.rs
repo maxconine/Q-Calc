@@ -18,7 +18,12 @@ use crate::jsre::{self, Lazy, js};
 use crate::symbolic::print::{PrintOptions, to_string};
 use crate::syntax::{Constant, Node, Op};
 
+mod algebra;
+mod eigen;
 mod exact_eval;
+mod functions;
+mod numeric;
+mod show;
 
 /// A matrix answer: a matrix as `[1 2; 3 4]`, a number, or a message such as `not square`.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -106,6 +111,157 @@ const FNS: &[&str] = &[
     "cross",
 ];
 
+/// Functions only the generic evaluator knows (native only). They count on a line with a matrix in it (or a stored
+/// one), so `row`, `col` or `solve` elsewhere keep their meaning; `zeros`, `ones` and `rot` make a matrix from sizes.
+const NEW_FNS: &[&str] = &[
+    "eig",
+    "eigenvalues",
+    "eigvals",
+    "eigenvectors",
+    "eigvecs",
+    "eigvec",
+    "charpoly",
+    "diagonalize",
+    "jordan",
+    "solve",
+    "lsq",
+    "leastsquares",
+    "coords",
+    "null",
+    "nullspace",
+    "kernel",
+    "leftnull",
+    "nullity",
+    "col",
+    "colspace",
+    "row",
+    "rowspace",
+    "basis",
+    "orth",
+    "gramschmidt",
+    "proj",
+    "angle",
+    "unit",
+    "normalize",
+    "adj",
+    "adjugate",
+    "cofactor",
+    "minor",
+    "entry",
+    "kron",
+    "hadamard",
+    "augment",
+    "stack",
+    "zeros",
+    "ones",
+    "diag",
+    "issymmetric",
+    "isorthogonal",
+    "isinvertible",
+    "isdiagonalizable",
+    "isposdef",
+    "posdef",
+    "islinind",
+    "independent",
+    "lu",
+    "qr",
+    "svd",
+    "cond",
+    "cholesky",
+    "chol",
+    "pinv",
+    "expm",
+    "sqrtm",
+];
+/// New names that make a matrix with no matrix typed.
+const MAKERS: &str = "zeros|ones|rot";
+/// New names that read as words: `eigenvalues of A`, `null A`.
+const NEW_WORDS: &str = "eigenvalues|eigenvectors|eig|charpoly|diagonalize|jordan|null|nullspace|kernel|leftnull|\
+nullity|colspace|rowspace|adj|adjugate|pinv|svd|lu|qr|cholesky|cond|expm|orth|gramschmidt|isinvertible|\
+isdiagonalizable|issymmetric|isorthogonal|isposdef";
+
+static NEW_CALL: Lazy = Lazy::new(|| new_call_re(&[]));
+static MAKER_CALL: Lazy = Lazy::new(|| js(&format!(r"(?<![A-Za-z_])(?:{MAKERS})\s*\("), "i"));
+static NEW_WORD_FORM: Lazy = Lazy::new(|| {
+    js(
+        &format!(r"(?<![A-Za-z_])(?:the\s+)?(?:{NEW_WORDS})\s+(?:of\s+)?[\[(A-Za-z0-9]"),
+        "i",
+    )
+});
+
+fn new_call_re(names: &[String]) -> jsre::Regex {
+    let own: Vec<String> = names.iter().map(|n| n.to_lowercase()).collect();
+    let list: Vec<&str> = NEW_FNS
+        .iter()
+        .copied()
+        .filter(|n| !own.iter().any(|o| o == n))
+        .collect();
+    js(&format!(r"(?<![A-Za-z_])(?:{})\s*\(", list.join("|")), "i")
+}
+
+/// Textbook phrases as the names they mean: `the null space of A` is `null of A`.
+fn phrases(expr: &str) -> String {
+    static PHRASES: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z_])(characteristic\s+polynomial|left\s+null\s*space|null\s*space|column\s+space|row\s+space|jordan\s+(?:normal\s+)?form|pseudo-?\s*inverse|eigen\s+values|eigen\s+vectors|singular\s+value\s+decomposition|condition\s+number|least\s+squares|lu\s+decomposition|qr\s+decomposition|cholesky\s+decomposition)(?![A-Za-z_])",
+            "i",
+        )
+    });
+    jsre::replace_all(&PHRASES, expr, |c| {
+        let p = jsre::group(c, 1).to_lowercase();
+        let p: String = p.split_whitespace().collect::<Vec<_>>().join(" ");
+        match p.as_str() {
+            "characteristic polynomial" => "charpoly",
+            s if s.starts_with("left null") => "leftnull",
+            s if s.starts_with("null") => "null",
+            "column space" => "colspace",
+            "row space" => "rowspace",
+            s if s.starts_with("jordan") => "jordan",
+            s if s.starts_with("pseudo") => "pinv",
+            "eigen values" => "eigenvalues",
+            "eigen vectors" => "eigenvectors",
+            "singular value decomposition" => "svd",
+            "condition number" => "cond",
+            "least squares" => "lsq",
+            "lu decomposition" => "lu",
+            "qr decomposition" => "qr",
+            _ => "cholesky",
+        }
+        .to_string()
+    })
+    .into_owned()
+}
+
+/// A line the generic evaluator takes: one of its own functions with a matrix about.
+fn looks_new(expr: &str, functions: &[String]) -> bool {
+    if jsre::test(&MAKER_CALL, expr) && !functions.iter().any(|f| MAKERS.split('|').any(|m| m == f)) {
+        return true;
+    }
+    if !expr.contains('[') {
+        return false;
+    }
+    let expr = phrases(expr);
+    let called = if functions.is_empty() {
+        jsre::test(&NEW_CALL, &expr)
+    } else {
+        jsre::test(&new_call_re(functions), &expr)
+    };
+    called || jsre::test(&NEW_WORD_FORM, &expr)
+}
+
+/// Some call in the line is one only the generic evaluator knows.
+fn uses_new(node: &Node, functions: &[String]) -> bool {
+    if let Node::Function { callee, .. } = node
+        && let Node::Symbol(name) = callee.as_ref()
+    {
+        let key = name.to_lowercase();
+        if NEW_FNS.contains(&key.as_str()) && !functions.iter().any(|f| f.to_lowercase() == key) {
+            return true;
+        }
+    }
+    children(node).into_iter().any(|c| uses_new(c, functions))
+}
+
 static TWO_D: Lazy = Lazy::new(|| js(r"\[\s*\[|\[[^\][]*;[^\][]*\]", ""));
 /// `[1 2 3]`, a row the way answers write it; a list takes commas.
 static SPACED_ROW: Lazy = Lazy::new(|| {
@@ -145,7 +301,7 @@ pub fn looks_like_matrix(expr: &str, functions: &[String]) -> bool {
     } else {
         jsre::test(&fn_call_re(functions), expr)
     };
-    if called {
+    if called || looks_new(expr, functions) {
         return true;
     }
     if !expr.contains('[') {
@@ -531,7 +687,7 @@ fn power(a: M, e: M) -> R<M> {
 }
 
 fn is_call(key: &str) -> bool {
-    FNS.contains(&key)
+    FNS.contains(&key) || NEW_FNS.contains(&key)
 }
 
 fn call(key: &str, mut args: Vec<M>) -> R<M> {
@@ -800,7 +956,7 @@ fn operand_end(s: &str, i: usize) -> Option<usize> {
 fn word_forms(expr: &str) -> String {
     static WORD: Lazy = Lazy::new(|| {
         js(
-            &format!(r"(?<![A-Za-z_])(?:the\s+)?({WORDS})\s+(?:of\s+)?(?=[\[(A-Za-z0-9])"),
+            &format!(r"(?<![A-Za-z_])(?:the\s+)?({WORDS}|{NEW_WORDS})\s+(?:of\s+)?(?=[\[(A-Za-z0-9])"),
             "i",
         )
     });
@@ -837,8 +993,12 @@ fn prep(expr: &str) -> String {
     let expr = jsre::replace_all(&DOT_CALL, expr, |c| {
         format!("{}{}dot", jsre::group(c, 1), jsre::group(c, 2))
     });
+    let expr = rotations(&augmented(&phrases(&expr)));
     // `3[[1, 2]]` and `k [1 2]` scale; mathjs would read a bracket after a value as an index
-    let s = word_forms(&spaced(&expr));
+    let s = word_forms(&backslash(&spaced(&expr)));
+    // `null` is the parser's constant, so the call goes by its long name
+    static NULL_CALL: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])null(?=\s*\()", "i"));
+    let s = jsre::replace_all(&NULL_CALL, &s, |_| "nullspace".into()).into_owned();
     let s = jsre::replace_all(&SCALE, &s, |_| "*[".into()).into_owned();
     let s = jsre::replace_all(&PRIME, &s, |c| format!("{}^T", jsre::group(c, 1))).into_owned();
     s.replace('ᵀ', "^T")
@@ -847,6 +1007,94 @@ fn prep(expr: &str) -> String {
         .replace(['×', '·'], "*")
         .replace('÷', "/")
         .replace('π', "pi")
+}
+
+/// `[1 2 | 3; 4 5 | 6]`, an augmented matrix, is the matrix with b as its last column. A row with one bar is
+/// augmented; abs bars come in pairs.
+fn augmented(expr: &str) -> String {
+    static BRACKET: Lazy = Lazy::new(|| js(r"\[([^\][]*)\]", ""));
+    if !expr.contains('|') {
+        return expr.to_string();
+    }
+    jsre::replace_all(&BRACKET, expr, |c| {
+        let body = jsre::group(c, 1);
+        if !body.contains('|') || !body.split(';').all(|row| row.matches('|').count() == 1) {
+            return jsre::group(c, 0).to_string();
+        }
+        let sep = if body.contains(',') { "," } else { " " };
+        format!("[{}]", body.replace('|', sep))
+    })
+    .into_owned()
+}
+
+/// `rot(θ)` is the rotation matrix, its entries read by the calculator in the angle mode.
+fn rotations(expr: &str) -> String {
+    static ROT: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])rot\s*(?=\()", "i"));
+    let mut out = expr.to_string();
+    for _ in 0..4 {
+        let Ok(Some(m)) = ROT.find(out.as_str()) else {
+            break;
+        };
+        let open = m.end();
+        let Some(end) = operand_end(&out, open) else {
+            break;
+        };
+        let t = out[open + 1..end - 1].to_string();
+        out = format!(
+            "{}[[cos({t}), -sin({t})], [sin({t}), cos({t})]]{}",
+            &out[..m.start()],
+            &out[end..]
+        );
+    }
+    out
+}
+
+/// `A \ b`, MATLAB's solve, is `solve(A, b)`.
+fn backslash(expr: &str) -> String {
+    static NAME: Lazy = Lazy::new(|| js(r"[A-Za-z0-9_.]+$", ""));
+    let mut out = expr.to_string();
+    for _ in 0..4 {
+        let Some(i) = out.find('\\') else { break };
+        let left = out[..i].trim_end();
+        let start = match left.as_bytes().last() {
+            Some(b')') | Some(b']') => {
+                let (close, open) = if left.ends_with(')') { (b')', b'(') } else { (b']', b'[') };
+                let mut depth = 0;
+                let mut at = None;
+                for (k, ch) in left.bytes().enumerate().rev() {
+                    if ch == close {
+                        depth += 1;
+                    } else if ch == open {
+                        depth -= 1;
+                        if depth == 0 {
+                            at = Some(k);
+                            break;
+                        }
+                    }
+                }
+                match at {
+                    Some(k) => k,
+                    None => break,
+                }
+            }
+            _ => match NAME.find(left).ok().flatten() {
+                Some(m) => m.start(),
+                None => break,
+            },
+        };
+        let rest = &out[i + 1..];
+        let skip = rest.len() - rest.trim_start().len();
+        let r0 = i + 1 + skip;
+        let Some(end) = operand_end(&out, r0) else { break };
+        out = format!(
+            "{}solve({}, {}){}",
+            &out[..start],
+            &left[start..],
+            &out[r0..end],
+            &out[end..]
+        );
+    }
+    out
 }
 
 fn tidy(n: f64, scale: f64) -> f64 {
@@ -905,9 +1153,12 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
             ..MatrixAnswer::default()
         });
     };
-    let exact = exact_eval::exact_answer(&node, opts);
     // a matrix typed on its own answers with itself; its exact form would only repeat the line
     let bare = matches!(&node, Node::Array(_));
+    if uses_new(&node, opts.functions) {
+        return Some(generic_answer(exact_eval::exact_answer(&node, opts, true), bare, opts));
+    }
+    let exact = exact_eval::exact_answer(&node, opts, false);
     let from_exact = |exact: Option<exact_eval::Exact>| match &exact {
         Some(exact_eval::Exact::Value {
             approx: Some(approx),
@@ -936,6 +1187,50 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
             other => Some(from_exact(other).unwrap_or_default()),
         },
         Err(Fail::Other) => None,
+    }
+}
+
+/// A line only the generic evaluator knows: its answer alone, with no float reader to lead.
+fn generic_answer(
+    exact: Option<exact_eval::Exact>,
+    bare: bool,
+    opts: &MatrixOptions<'_>,
+) -> MatrixAnswer {
+    if let Some(exact_eval::Exact::Value {
+        approx: Some(approx),
+        ..
+    }) = &exact
+    {
+        let approx = approx.clone();
+        return with_exact(numeric_answer(approx, opts), exact, bare, opts);
+    }
+    match exact {
+        None => MatrixAnswer::default(),
+        Some(exact_eval::Exact::Message(msg)) => message(msg),
+        Some(exact_eval::Exact::Worded(a)) => {
+            let display = a.display();
+            let exact = a.exact().filter(|e| *e != display);
+            let (display, exact) = match exact {
+                Some(e) if opts.fraction_mode && !e.contains("sqrt") && !e.contains('i') => (e, None),
+                other => (display, other),
+            };
+            MatrixAnswer {
+                display,
+                exact,
+                // one matrix is kept when stored; several parts wait for `L, U = lu(A)`
+                stored: match a.parts.as_slice() {
+                    [p] => p.literal.clone(),
+                    _ => None,
+                },
+                ..MatrixAnswer::default()
+            }
+        }
+        // a symbolic answer
+        Some(exact_eval::Exact::Value { text, literal, .. }) => MatrixAnswer {
+            display: text,
+            stored: literal,
+            ..MatrixAnswer::default()
+        },
     }
 }
 

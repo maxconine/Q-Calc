@@ -28,7 +28,15 @@ is answered exactly (golden `eval.matrix` floor 421).
 3. Existing functions (det, inv, rref, rank, trace, powers, products) run exactly through the new cells. Existing
    decimal answers stay identical (golden + `native_fixes.rs`).
 
-## Phase 2 — new operations
+## Phase 2 — new operations — done
+
+Landed in `core/src/matrix/`: `exact_eval.rs` (the fields, now with a float field, and the evaluator), `algebra.rs`
+(generic algorithms), `eigen.rs`, `functions.rs` (every name), `show.rs` (answer text in labeled parts),
+`numeric.rs` (float kernels: polynomial roots, symmetric eigen, SVD, expm, sqrtm, complex null space). Tested in
+`core/tests/linear_algebra_more.rs`. New names count only on a line with a matrix (`zeros`, `ones`, `rot` always), and
+lines using them skip the float reader. Multi-part answers are joined text for now (`P = […],  D = […]`); Phase 3
+exposes the parts. Not done: `sqrtm` beyond Denman–Beavers, exact singular values, Jordan for repeated irrational
+eigenvalues, `A[i, j]` indexing (use `entry(A, i, j)`), and `ans`/storing of multi-part answers.
 | Area | Functions (plus word forms like "eigenvalues of A") |
 |---|---|
 | Eigen | `eig`/`eigenvalues`, `eigenvectors`/`eigvec`, `charpoly`, `diagonalize` (P, D), algebraic/geometric multiplicity, `jordan` (small sizes) |

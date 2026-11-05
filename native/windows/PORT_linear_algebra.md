@@ -28,3 +28,26 @@ No Windows code should be needed. Long answers such as `[k^2 2*k; 0 k^2]` must f
 | `inv([7 0; 0 1001])` | decimals, exact form `[1/7 0; 0 1/1001]` |
 | `inv` of the 5×5 Hilbert matrix | whole numbers starting `[25 -300 1050 -1400 630; …` |
 | `det(A)` with no A stored | blank, as before |
+
+### Phase 2: the new functions (`core/src/matrix/{functions,algebra,eigen,numeric,show}.rs`)
+
+All core; no Windows code. Answers with several parts are one line for now (`P = […],  D = […]`), so check they
+fit or scroll. New names count only on a line with a matrix in it (`zeros`, `ones`, `rot` always).
+
+| Type | Expect |
+| --- | --- |
+| `eig([1 2; 3 4])` | `λ = 5.37228, -0.372281`, exact form `λ = (5 ± sqrt(33))/2` |
+| `eig([1 -2; 2 1])` | `λ = 1 ± 2i` |
+| `eigenvectors([4 1; 2 3])` | `λ = 5: [1; 1],  λ = 2: [-1; 2]` |
+| `charpoly([1 2; 3 4])` | `λ^2 - 5*λ - 2` |
+| `diagonalize([4 1; 2 3])` | `P = [1 -1; 1 2],  D = [5 0; 0 2]` |
+| `jordan([2 1; 0 2])` | `[2 1; 0 2]` |
+| `[2 1; 1 3] \ [3; 5]` | `[0.8; 1.4]` |
+| `solve([1 2 3; 2 4 6], [6; 12])` | `x = [6; 0; 0] + t*[-2; 1; 0] + s*[-3; 0; 1] (any t, s)` |
+| `rref([1 2 \| 5; 3 4 \| 6])` | `[1 0 -4; 0 1 4.5]` |
+| `null([1 2 3; 2 4 6])` | `span{[-2; 1; 0], [-3; 0; 1]}` |
+| `lu([0 1; 1 0])` | `P = …,  L = …,  U = …` |
+| `svd([3 0; 0 4])` | `U = [0 1; 1 0],  Σ = [4 0; 0 3],  V = [0 1; 1 0]` |
+| `isposdef([2 -1; -1 2])` | `yes` |
+| `angle([1 0], [0 1])` in degrees | `90` |
+| `row = 3`, then `row + 1` | `4` (an ordinary name, untouched) |
