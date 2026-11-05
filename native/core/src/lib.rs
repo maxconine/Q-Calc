@@ -45,6 +45,7 @@ pub mod measure;
 pub mod isolate;
 pub mod solve;
 pub mod system;
+pub(crate) mod exact;
 pub mod system_numeric;
 pub mod unit_solve;
 // ---- WP-CALCULUS ----
