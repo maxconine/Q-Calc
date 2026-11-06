@@ -742,6 +742,7 @@ impl App {
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
                 if crate::effects::key_down(self, vk, lp.0)
+                    || crate::sheets::bar_key(vk, mods())
                     || crate::commands::key_down(self, vk, mods())
                 {
                     return Some(LRESULT(0));
