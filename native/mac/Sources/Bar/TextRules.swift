@@ -42,6 +42,8 @@ enum Pretty {
             let replaced = looseMinus.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "$1" + minus)
             return radicals(replaced)
         }
+        // native only: a matrix answer (the tape's too) as the live one is written
+        if s.hasPrefix("[") || s.hasPrefix("λ") || s.hasPrefix("span{") { return matrix(s) }
         return s
     }
 
@@ -58,6 +60,37 @@ enum Pretty {
     // the web view draws sqrt(…) as a radical over its argument (Radical.tsx); in plain text a short argument
     // reads as √2, a long one keeps its brackets. The Typst/native math view replaces this (MathText.swift)
     private static let shortRoot = regex(#"sqrt\(([0-9.]+|[A-Za-zπ])\)"#)
+    private static let matrixMinus = regex(#"(^|[\s(\[;,{])-(?=[\dA-Za-zλμ(π√])"#)
+    private static let binaryMinus = regex(#"(?<=\S) - (?=\S)"#)
+    private static let matrixPower = regex(#"(?<=[A-Za-zλμ)\]])\^(\d+)"#)
+    private static let superscript: [Character: Character] = [
+        "0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹",
+    ]
+    private static let impliedTimes = regex(#"(?<=[\dA-Za-zλμ)])\*(?=[A-Za-zλμ(√\[])"#)
+
+    /// A matrix answer (native only), written as the typeset row writes it: real minus signs, drawn roots, powers
+    /// raised and a product by a letter run together (`[1 −1; 1 √2]`, `λ² − 5λ + 5`, `ad − bc`); any other `*` is
+    /// `·`. Display only: copy keeps the plain text. `answer` leaves anything with brackets or words as typed.
+    static func matrix(_ s: String) -> String {
+        func sub(_ re: NSRegularExpression, _ t: String, _ with: String) -> String {
+            re.stringByReplacingMatches(in: t, range: NSRange(t.startIndex..., in: t), withTemplate: with)
+        }
+        var t = radicals(s)
+        t = sub(matrixMinus, t, "$1" + minus)
+        t = sub(binaryMinus, t, " " + minus + " ")
+        t = sub(impliedTimes, t, "")
+        t = t.replacingOccurrences(of: "*", with: "·")
+        // ^2 → ², from the end so earlier ranges stay put
+        let ns = t as NSString
+        var out = t
+        for m in matrixPower.matches(in: t, range: NSRange(location: 0, length: ns.length)).reversed() {
+            let digits = ns.substring(with: m.range(at: 1))
+            let raised = String(digits.compactMap { superscript[$0] })
+            out = (out as NSString).replacingCharacters(in: m.range, with: raised)
+        }
+        return out
+    }
+
     static func radicals(_ s: String) -> String {
         var t = shortRoot.stringByReplacingMatches(in: s, range: NSRange(s.startIndex..., in: s), withTemplate: "√$1")
         t = t.replacingOccurrences(of: "sqrt(", with: "√(")

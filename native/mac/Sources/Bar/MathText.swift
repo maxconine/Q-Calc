@@ -121,6 +121,8 @@ extension MathTypesetter {
 /// `--ink`, at 40% while stale.
 struct MathPreview: View {
     let typeset: Typeset
+    /// set against the left edge rather than centred (a step's matrix, beside its operation)
+    var leading = false
 
     var body: some View {
         let paths = typeset.paths
@@ -129,9 +131,9 @@ struct MathPreview: View {
             // an AppKit view, not a Canvas: a Canvas renders into GPU surfaces that SwiftUI keeps per size, about
             // 100 MB of them after a session of typing
             if #available(macOS 13, *) {
-                FitLayout(width: w, height: h) { PathsView(paths: paths, width: w) }
+                FitLayout(width: w, height: h, leading: leading) { PathsView(paths: paths, width: w) }
             } else {
-                FitFrame(width: w, height: h) { PathsView(paths: paths, width: w) }
+                FitFrame(width: w, height: h, leading: leading) { PathsView(paths: paths, width: w) }
             }
         }
         .opacity(typeset.stale ? 0.4 : 1)
@@ -145,6 +147,7 @@ struct MathPreview: View {
     private struct FitLayout: Layout {
         let width: CGFloat
         let height: CGFloat
+        var leading = false
 
         private func scale(_ available: CGFloat?) -> CGFloat {
             min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
@@ -157,7 +160,8 @@ struct MathPreview: View {
 
         func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
             let s = scale(bounds.width)
-            subviews.first?.place(at: CGPoint(x: bounds.midX, y: bounds.minY), anchor: .top,
+            subviews.first?.place(at: CGPoint(x: leading ? bounds.minX : bounds.midX, y: bounds.minY),
+                                  anchor: leading ? .topLeading : .top,
                                   proposal: ProposedViewSize(width: width * s, height: height * s))
         }
     }
@@ -167,6 +171,7 @@ struct MathPreview: View {
     private struct FitFrame<Content: View>: View {
         let width: CGFloat
         let height: CGFloat
+        var leading = false
         @ViewBuilder let content: () -> Content
         @State private var available: CGFloat?
 
@@ -174,7 +179,7 @@ struct MathPreview: View {
             let s = min(1, (available ?? width) / max(width, 1), 72 / max(height, 1))
             content()
                 .frame(width: width * s, height: height * s)
-                .frame(maxWidth: .infinity, alignment: .top)
+                .frame(maxWidth: .infinity, alignment: leading ? .topLeading : .top)
                 .background(GeometryReader { g in
                     Color.clear.preference(key: AvailableWidth.self, value: g.size.width)
                 })

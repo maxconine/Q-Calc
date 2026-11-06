@@ -5,9 +5,11 @@ To be folded into `native/windows/MAC_CHANGES_TO_PORT.md` when branch `linear-al
 
 ## Checks to run first
 
-The `eval.matrix` golden floor is now 421, because `inv([1 1; 1 1.0000000001])` now gives the exact inverse of the
-matrix as typed instead of "nearly singular". If Windows passes a different count, tell the Mac side rather than
-raising it.
+The `eval.matrix` golden floor is now 420, on purpose: `inv([1 1; 1 1.0000000001])` gives the exact inverse of the
+matrix as typed instead of "nearly singular", and `[1 2; 3 4] * y` gives `[y 2*y; 3*y 4*y]` (a lone letter beside a
+written matrix is an unknown) where the TS is blank. If Windows passes a different count, tell the Mac side rather
+than raising it. `eval.arithmetic` may show one failure, a 2001-term `1+1+…` the TS blanks by running out of stack:
+it fails the same on the Phase 3 commit run today, so it isn't from this branch.
 
 ## 1. Comes from the core: just test it
 
@@ -66,6 +68,25 @@ unchanged, so these only need checking:
 | `L, U = lu([0 1; 1 0])`, then `U` | `[1 0; 0 1]` (names matched by label) |
 | `Q, R = eig([1 2; 3 4])` | `this answer has 1 part (λ); give 1 name` |
 | `M = 2 * [k 1; 1 k]` committed, then `det(M)` on the next line | `4*k^2 - 4` (history reads M back) |
+
+### After Phase 4: textbook forms (core)
+
+| Type | Expect |
+| --- | --- |
+| `A = [2 1; 1 3]`, `b = [3; 5]`, then `Ax = b` (or `A x = b`, `A*x = b`, `solve Ax = b`, `Ax = b for x`) | `x = [0.8; 1.4]`, exact `x = [4/5; 7/5]` |
+| …then `solve(A, b)` | `[0.8; 1.4]` (it was blank: the systems solver took it) |
+| `[2 1; 1 3] x = [3; 5]` | `x = [0.8; 1.4]` |
+| `characteristic equation of [1 2; 3 4]` | `λ^2 - 5*λ - 2 = 0,  λ = 5.37228, -0.372281` |
+| `det(A - λI)`, `A - 2I` | `λ^2 - 5*λ + 5`, `[0 1; 1 1]` |
+| `A = [1 2 3; 4 5 6]`, then `A[2, 1]`, `A[1, :]`, `A[:, 3]` | `4`, `[1 2 3]`, `[3; 6]` |
+| `unit([1 1])` exact form | `[sqrt(2)/2 sqrt(2)/2]` (was `1/2*sqrt(2)`) |
+| `det(A)` with no A stored | still blank |
+
+`MatrixView.message` is set when the answer says why there is none (`determinant needs a square matrix`): the Mac
+shows it as a 13 pt muted message, not typeset in the preview. The cheat sheet gains `matrix 3x3` and `Ax = b`
+(core `NATIVE_CHEATS`), and a keys row for ⌃G ⌃R. A matrix answer's slot text gets real minus signs and drawn roots
+(`Pretty.matrix`: `−` leading each entry, `sqrt(` as `√(`), and when both halves of the dual start `λ = ` the
+approximation drops it. A step's matrix is set against the left of its row.
 
 ## 2. Mac UI to port (Phase 4)
 

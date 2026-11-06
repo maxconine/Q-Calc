@@ -227,11 +227,24 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                 .collect();
             Ok(done(parts))
         }
-        "charpoly" => {
+        "charpoly" | "chareq" => {
             let a = ev.square(one(&mut args)?, "the characteristic polynomial")?;
             let cp = algebra::charpoly(f, &a)?;
             let cells: Vec<Cell> = cp.iter().map(|c| fmt.cell(f, c)).collect();
-            Ok(done(vec![poly_part(None, &cells, "λ")]))
+            let mut p = poly_part(None, &cells, "λ");
+            // the characteristic equation: det(A − λI) = 0
+            if key != "chareq" {
+                return Ok(done(vec![p]));
+            }
+            p.display.push_str(" = 0");
+            p.exact = p.exact.map(|e| format!("{e} = 0"));
+            // and its roots, the eigenvalues, as the next line of the working would have them
+            let roots = match eigen::eigenvalues(f, &a) {
+                Ok(Spectrum::Values(v)) => Some(eigen::values_part(f, fmt, &v)),
+                Ok(Spectrum::Symbolic(s)) => Some(text_part(Some("λ = ".into()), s)),
+                Err(_) => None,
+            };
+            Ok(done(std::iter::once(p).chain(roots).collect()))
         }
         "diagonalize" => {
             let a = ev.square(one(&mut args)?, "diagonalize")?;
@@ -466,6 +479,12 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             } else {
                 algebra::cofactor(f, &a, i, j)?
             }))
+        }
+        "entry" if args.len() == 2 => {
+            // one index into a vector
+            let v = vector(&args[0]).ok_or_else(|| XFail::Matrix("one index is for a vector; a matrix takes a row and a column, like A[1, 2]".into()))?;
+            let i = ev.index(args.remove(1), v.len(), "the index")?;
+            Ok(X::Num(v[i].clone()))
         }
         "entry" => {
             takes(key, &args, 3, "a matrix and a row and column, like entry(A, 1, 2)")?;

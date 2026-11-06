@@ -181,6 +181,8 @@ pub struct MatrixParts {
     pub steps: Vec<MatrixStep>,
     /// What the line keeps when assigned or as `ans` (a bare `[k 2; 3 k]` keeps itself though it shows blank).
     pub stored: Option<String>,
+    /// The answer is why there is none (`determinant needs a square matrix`), words, not maths.
+    pub message: bool,
 }
 
 impl MatrixParts {

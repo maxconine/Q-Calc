@@ -71,8 +71,16 @@ text rules in `core/src/app/matrix_grid.rs` (exported by `ffi/src/matrix_grid.rs
 `Engine::typst_source_math`. The one-line answer slot stays text (parity); matrix answers are typeset in the
 preview row under it, exact where they can be. Steps: a `show steps · N` chip and ⌃R open a card of operations with
 typeset matrices. Grid: `matrix 3x3` + ↵ (anywhere in a line), ⌃G on a typed matrix; Tab / ↵ / arrows, `− +`
-resize, written live into the line. PARITY.md rows added. Not done: the cheat sheet doesn't list `matrix 3x3`, ⌃G
-or ⌃R; a step's matrix is centred in its row rather than set against the operation.
+resize, written live into the line. PARITY.md rows added.
+
+## After Phase 4 — textbook forms
+
+`Ax = b` typed as an equation (`A x = b`, `[2 1; 1 3] x = [3; 5]`, `solve Ax = b`, `… for x`) solves the system and
+names the answer by its unknown; `solve(A, b)` of stored names no longer goes to the systems solver. `characteristic
+equation of A` (`chareq`) gives `… = 0` and its roots; `det(A - λI)` works (`I` is the identity, as tall as the line's
+first matrix; a lone letter beside a written matrix is an unknown, so `[1 2; 3 4] * y` answers where the TS is
+blank, golden floor 420). `A[i, j]`, `A[i, :]`, `A[:, j]`, `v[i]` index. Surds are written as the calculator writes
+them (`sqrt(2)/2`). Tested in `core/tests/linear_algebra_typed.rs`.
 
 ## Phase 5 — windows UI
 Same three pieces through the README "Adding a panel" pattern (steps panel, grid editor from `SysState`), within the

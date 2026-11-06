@@ -51,7 +51,8 @@ fn labeled_parts() {
     let one = parts("[1 2; 3 4] * 2");
     assert_eq!(one.parts.len(), 1);
     assert_eq!(one.parts[0].label, "");
-    assert!(line("inv([1 2; 2 4])").matrix.is_none());
+    let none = line("inv([1 2; 2 4])").matrix.unwrap_or_default();
+    assert!(none.message && none.parts.is_empty());
 }
 
 #[test]

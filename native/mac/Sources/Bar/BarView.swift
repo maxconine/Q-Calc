@@ -322,6 +322,14 @@ struct LiveAnswerView: View {
         } else if let solve = model.live.solve, solve.roots.count > 1 || (solve.roots.count == 1 && !solve.variable.isEmpty), !model.hasDual {
             // native only: one root too reads `D = 26` (its number alone is what's copied and what ans takes)
             SolveRoots(model: model, solve: solve)
+        } else if model.live.matrix?.message == true {
+            // native only: why a matrix has no answer (`determinant needs a square matrix`), as a message
+            Text(model.live.display)
+                .font(.system(size: Theme.body))
+                .foregroundStyle(Color.qMuted)
+                .truncationMode(.tail)
+                .padding(.vertical, 2).padding(.horizontal, 8).padding(.trailing, -8)
+                .hoverTip(model.live.display)
         } else if model.live.improper {
             Text(model.live.display)
                 .font(.system(size: Theme.body))
@@ -334,9 +342,9 @@ struct LiveAnswerView: View {
                     Text("\(v) =").font(.system(size: Theme.answerPart)).foregroundStyle(Color.qMuted)
                         .padding(.trailing, 0.2 * Theme.answerPart)
                 }
-                AnswerButton(model: model, shown: Pretty.answer(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
+                AnswerButton(model: model, shown: model.live.matrix == nil ? Pretty.answer(exact) : model.pretty(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
                 Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                AnswerButton(model: model, shown: model.pretty(model.exponentShown(model.live.display)), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
+                AnswerButton(model: model, shown: String(model.pretty(model.exponentShown(model.live.display)).dropFirst(model.dualLabel.count)), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Answer")
@@ -875,7 +883,10 @@ private struct HelpSheet: View {
             ([key("copyAnswer"), key("copyLine")].filter { !$0.isEmpty }.joined(separator: " "), "copy answer / line"),
             ("⌥↑ ⌥↓", "unit prefix"),
             (key("angle"), "degrees / radians"), (key("fraction"), "fractions"), (key("sigFigs"), "sig figs from input"),
-            (key("clear"), "clear history"), (key("settings"), "settings"), ("esc", "hide"),
+            (key("clear"), "clear history"), (key("settings"), "settings"),
+            // native only: the matrix grid and a matrix answer's row operations
+            ([key("matrixGrid"), key("matrixSteps")].filter { !$0.isEmpty }.joined(separator: " "), "matrix grid / steps"),
+            ("esc", "hide"),
         ]
     }
 

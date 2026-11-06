@@ -60,10 +60,11 @@ fn square_roots_stay_exact() {
         both("det([sqrt(2) 1; 1 sqrt(2)])"),
         ("1".into(), None)
     );
-    assert_eq!(exact("det([sqrt(3) 1; 0 2])").as_deref(), Some("2*sqrt(3)"));
+    // written as the calculator writes a surd (`2sqrt(2)`, `sqrt(2)/2`)
+    assert_eq!(exact("det([sqrt(3) 1; 0 2])").as_deref(), Some("2sqrt(3)"));
     assert_eq!(
         exact("inv([sqrt(2) 0; 0 1])").as_deref(),
-        Some("[1/2*sqrt(2) 0; 0 1]")
+        Some("[sqrt(2)/2 0; 0 1]")
     );
     assert_eq!(exact("norm([1 2 3])").as_deref(), Some("sqrt(14)"));
     assert_eq!(show("norm([3 4])"), "5");

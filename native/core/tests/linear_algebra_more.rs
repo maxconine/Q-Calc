@@ -70,7 +70,7 @@ fn subspaces() {
     assert_eq!(show("nullity([1 2 3; 2 4 6])"), "2");
     assert_eq!(show("proj([1; 2], [1; 0])"), "[1; 0]");
     assert_eq!(show("proj([1 1 1], [[1, 0], [0, 1], [0, 0]])"), "[1 1 0]");
-    assert_eq!(exact("unit([1 1])").as_deref(), Some("[1/2*sqrt(2) 1/2*sqrt(2)]"));
+    assert_eq!(exact("unit([1 1])").as_deref(), Some("[sqrt(2)/2 sqrt(2)/2]"));
     assert_eq!(show("orth([1 1; 0 1])"), "[1 0; 0 1]");
     assert_eq!(show("angle([1 0], [0 1])"), "90");
     assert_eq!(show("basis([1 2 3; 2 4 7])"), "span{[1; 2], [3; 7]}");

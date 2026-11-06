@@ -612,13 +612,18 @@ final class BarModel: ObservableObject {
             guard m.typeset, prefixShown == nil, !tabbed, solve == nil else { return nil }
             return MatrixAsk(typst: m.exactTypst ?? m.typst, arrow: m.labeled)
         }
+        let shownExact = prefixShown != nil || tabbed ? nil : exact
+        var display = exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display))
+        // `λ = (5 ± √33)/2 ≈ 5.37228, −0.372281`, the label once (native only)
+        if shownExact != nil, !dualLabel.isEmpty, display.hasPrefix(dualLabel) { display = String(display.dropFirst(dualLabel.count)) }
         let request = TypesetRequest(
             expr: chained ? Chain.expr(text) : text,
             ans: decorations.ans,
-            exact: prefixShown != nil || tabbed ? nil : exact,
-            display: exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display)),
+            exact: shownExact,
+            display: display,
             solvedFor: rootsOf,
-            message: solve != nil && rootsOf.isEmpty,
+            // a matrix answer that says why there is none is words, as a solve's is (native only)
+            message: (solve != nil && rootsOf.isEmpty) || live.matrix?.message == true,
             matrix: matrix)
         guard request != typesetAsked else { return }
         typesetAsked = request
@@ -655,7 +660,31 @@ final class BarModel: ObservableObject {
     }
 
     /// The engine's own pretty text for the live display; Pretty.answer (a port of prettyAnswer) for anything else.
-    func pretty(_ s: String) -> String { s == live.display && !live.pretty.isEmpty ? live.pretty : Pretty.answer(s) }
+    func pretty(_ s: String) -> String {
+        // native only: a matrix answer's own minus signs and roots
+        if let m = live.matrix, !m.message, s == live.display || s == exact { return Pretty.matrix(s) }
+        return s == live.display && !live.pretty.isEmpty ? live.pretty : Pretty.answer(s)
+    }
+
+    /// What both halves of a matrix answer's dual start with, written once, before the exact half (native only):
+    /// the parts that read the same both ways, then a shared `name = ` (`λ^2 − 5λ + 5 = 0,  λ = (5 ± √5)/2 ≈
+    /// 3.61803, 1.38197`); "" otherwise.
+    var dualLabel: String {
+        guard let m = live.matrix, !m.message, let exact else { return "" }
+        let sep = ",  "
+        let e = exact.components(separatedBy: sep), d = live.display.components(separatedBy: sep)
+        var same = 0
+        while same < min(e.count, d.count) - 1, e[same] == d[same] { same += 1 }
+        var prefix = e.prefix(same).map { $0 + sep }.joined()
+        if same < e.count, let r = e[same].range(of: " = ") {
+            let name = String(e[same][..<r.lowerBound])
+            let label = name + " = "
+            if !name.isEmpty, name.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "_" }), d[same].hasPrefix(label) {
+                prefix += label
+            }
+        }
+        return live.display.hasPrefix(prefix) ? prefix : ""
+    }
 
     // the 420 / 67 / 69 effects: the answer rests on the number for a moment (so 4200 typed passes through 420
     // without firing), then the core's gate fires it once, and again only after the answer was something else

@@ -126,6 +126,7 @@ const NEW_FNS: &[&str] = &[
     "eigvecs",
     "eigvec",
     "charpoly",
+    "chareq",
     "diagonalize",
     "jordan",
     "solve",
@@ -181,7 +182,7 @@ const NEW_FNS: &[&str] = &[
 /// New names that make a matrix with no matrix typed.
 const MAKERS: &str = "zeros|ones|rot";
 /// New names that read as words: `eigenvalues of A`, `null A`.
-const NEW_WORDS: &str = "eigenvalues|eigenvectors|eig|charpoly|diagonalize|jordan|null|nullspace|kernel|leftnull|\
+const NEW_WORDS: &str = "eigenvalues|eigenvectors|eig|charpoly|chareq|diagonalize|jordan|null|nullspace|kernel|leftnull|\
 nullity|colspace|rowspace|adj|adjugate|pinv|svd|lu|qr|cholesky|cond|expm|orth|gramschmidt|isinvertible|\
 isdiagonalizable|issymmetric|isorthogonal|isposdef";
 
@@ -208,7 +209,7 @@ fn new_call_re(names: &[String]) -> jsre::Regex {
 fn phrases(expr: &str) -> String {
     static PHRASES: Lazy = Lazy::new(|| {
         js(
-            r"(?<![A-Za-z_])(characteristic\s+polynomial|left\s+null\s*space|null\s*space|column\s+space|row\s+space|jordan\s+(?:normal\s+)?form|pseudo-?\s*inverse|eigen\s+values|eigen\s+vectors|singular\s+value\s+decomposition|condition\s+number|least\s+squares|lu\s+decomposition|qr\s+decomposition|cholesky\s+decomposition)(?![A-Za-z_])",
+            r"(?<![A-Za-z_])(characteristic\s+(?:polynomial|equation|poly)|char\.?\s*poly(?:nomial)?|char\.?\s*eq(?:uation)?|left\s+null\s*space|null\s*space|column\s+space|row\s+space|jordan\s+(?:normal\s+)?form|pseudo-?\s*inverse|eigen\s+values|eigen\s+vectors|singular\s+value\s+decomposition|condition\s+number|least\s+squares|lu\s+decomposition|qr\s+decomposition|cholesky\s+decomposition)(?![A-Za-z_])",
             "i",
         )
     });
@@ -216,7 +217,8 @@ fn phrases(expr: &str) -> String {
         let p = jsre::group(c, 1).to_lowercase();
         let p: String = p.split_whitespace().collect::<Vec<_>>().join(" ");
         match p.as_str() {
-            "characteristic polynomial" => "charpoly",
+            s if s.starts_with("char") && s.contains("eq") => "chareq",
+            s if s.starts_with("char") => "charpoly",
             s if s.starts_with("left null") => "leftnull",
             s if s.starts_with("null") => "null",
             "column space" => "colspace",
@@ -957,6 +959,100 @@ fn operand_end(s: &str, i: usize) -> Option<usize> {
     Some(i + m.end())
 }
 
+/// `I` is the identity, as big as the line's first matrix is tall (`det(A - λI)`, `A + 2I`); `λI` is `λ*I`.
+/// Native only.
+fn identity_symbol(expr: &str) -> String {
+    static GLUED: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_])([A-Za-zλμ])I(?![A-Za-z0-9_(])", ""));
+    static LONE: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_.])I(?![A-Za-z0-9_(])", ""));
+    if !expr.contains('I') || !expr.contains('[') {
+        return expr.to_string();
+    }
+    static NUMBER: Lazy = Lazy::new(|| js(r"(\d)I(?![A-Za-z0-9_(])", ""));
+    let s = jsre::replace_all(&GLUED, expr, |c| format!("{}*I", jsre::group(c, 1))).into_owned();
+    let s = jsre::replace_all(&NUMBER, &s, |c| format!("{}*I", jsre::group(c, 1))).into_owned();
+    if !jsre::test(&LONE, &s) {
+        return s;
+    }
+    // the rows of the first bracketed matrix: `[[1, 2], [3, 4]]` or `[1 2; 3 4]`
+    let Some(open) = s.find('[') else { return s };
+    let Some(end) = operand_end(&s, open) else { return s };
+    let inner = &s[open + 1..end - 1];
+    let rows = if inner.trim_start().starts_with('[') {
+        let mut depth = 0;
+        inner.chars().filter(|&c| {
+            match c {
+                '[' | '(' => depth += 1,
+                ']' | ')' => depth -= 1,
+                _ => {}
+            }
+            depth == 0 && c == ','
+        }).count() + 1
+    } else {
+        inner.matches(';').count() + 1
+    };
+    jsre::replace_all(&LONE, &s, |_| format!("eye({rows})")).into_owned()
+}
+
+/// `A[2, 1]` is an entry, `A[2, :]` a row, `A[:, 1]` a column, `v[3]` one entry of a vector (native only): a
+/// bracket of one or two indices right after a matrix or a call, with nothing between. A stored `A` is its literal
+/// by now (`[[1, 2], [3, 4]][2, 1]`); a bracket with a `;`, another bracket or a space before it is a matrix.
+fn indexing(expr: &str) -> String {
+    let mut out = expr.to_string();
+    for _ in 0..4 {
+        let bytes = out.as_bytes();
+        let mut found = None;
+        for i in 1..bytes.len() {
+            if bytes[i] != b'[' || !matches!(bytes[i - 1], b']' | b')') {
+                continue;
+            }
+            let Some(end) = operand_end(&out, i) else { continue };
+            let inner = &out[i + 1..end - 1];
+            if inner.contains(['[', ';', '|']) {
+                continue;
+            }
+            let items: Vec<&str> = inner.split(',').map(str::trim).collect();
+            if items.is_empty() || items.len() > 2 || items.iter().any(|t| t.is_empty()) {
+                continue;
+            }
+            // where the indexed thing starts: its bracket, or its call's name
+            let (close, open) = if bytes[i - 1] == b']' { (b']', b'[') } else { (b')', b'(') };
+            let mut depth = 0;
+            let mut start = None;
+            for k in (0..i).rev() {
+                if bytes[k] == close {
+                    depth += 1;
+                } else if bytes[k] == open {
+                    depth -= 1;
+                    if depth == 0 {
+                        start = Some(k);
+                        break;
+                    }
+                }
+            }
+            let Some(mut start) = start else { continue };
+            if open == b'(' {
+                while start > 0 && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_') {
+                    start -= 1;
+                }
+            }
+            found = Some((start, i, end, items.iter().map(|t| t.to_string()).collect::<Vec<_>>()));
+            break;
+        }
+        let Some((start, i, end, items)) = found else { break };
+        let m = &out[start..i];
+        let call = match items.as_slice() {
+            [a] => format!("entry({m}, {a})"),
+            [a, b] if a == ":" && b == ":" => m.to_string(),
+            [a, b] if b == ":" => format!("row({m}, {a})"),
+            [a, b] if a == ":" => format!("col({m}, {b})"),
+            [a, b] => format!("entry({m}, {a}, {b})"),
+            _ => break,
+        };
+        out = format!("{}{call}{}", &out[..start], &out[end..]);
+    }
+    out
+}
+
 /// `det A`, `the inverse of A`, `transpose [1 2; 3 4]` are calls; `A transpose` and `A inverse` are marks.
 fn word_forms(expr: &str) -> String {
     static WORD: Lazy = Lazy::new(|| {
@@ -998,7 +1094,7 @@ fn prep(expr: &str) -> String {
     let expr = jsre::replace_all(&DOT_CALL, expr, |c| {
         format!("{}{}dot", jsre::group(c, 1), jsre::group(c, 2))
     });
-    let expr = rotations(&augmented(&phrases(&expr)));
+    let expr = identity_symbol(&indexing(&rotations(&augmented(&phrases(&expr)))));
     // `3[[1, 2]]` and `k [1 2]` scale; mathjs would read a bracket after a value as an index
     let s = word_forms(&backslash(&spaced(&expr)));
     // `null` is the parser's constant, so the call goes by its long name

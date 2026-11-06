@@ -161,6 +161,32 @@ impl Cells for RadField {
         let c = self.fit(c);
         c[1..].iter().all(|x| x.n.is_zero()).then(|| c[0].clone())
     }
+    /// As the calculator writes a surd: `2sqrt(2)`, `sqrt(2)/2`, `3sqrt(5)/2`, `1 + sqrt(3)`.
+    fn show(&self, c: &Vec<Rat>) -> String {
+        let primes = self.primes.borrow();
+        let mut parts = Vec::new();
+        for (mask, k) in self.fit(c).iter().enumerate() {
+            if k.n.is_zero() {
+                continue;
+            }
+            let mut radicand = BigInt::one();
+            for (bit, p) in primes.iter().enumerate() {
+                if (mask >> bit) & 1 == 1 {
+                    radicand *= p;
+                }
+            }
+            let (num, den) = (k.n.abs(), k.d.clone());
+            let body = if radicand.is_one() {
+                crate::exact::rstr(&rat(num, den))
+            } else {
+                let coeff = if num.is_one() { String::new() } else { num.to_string() };
+                let over = if den.is_one() { String::new() } else { format!("/{den}") };
+                format!("{coeff}sqrt({radicand}){over}")
+            };
+            parts.push((k.n.is_negative(), body));
+        }
+        if parts.is_empty() { "0".into() } else { join_signed(&parts) }
+    }
     fn approx(&self, c: &Vec<Rat>) -> Option<f64> {
         let primes = self.primes.borrow();
         let mut sum = 0.0;
@@ -436,7 +462,7 @@ impl<F: Cells> Ev<'_, '_, F> {
                 if let Some(v) = self.opts.variables.get(name) {
                     return self.number(*v).map(X::Num);
                 }
-                if in_array && let Some(c) = f.param(name) {
+                if (in_array || loose_unknown(name)) && let Some(c) = f.param(name) {
                     return Ok(X::Num(c));
                 }
                 match constant(name) {
@@ -657,14 +683,39 @@ impl<F: Cells> Ev<'_, '_, F> {
 
 /// The unknown names inside matrix literals, in the order they first appear; None when a name outside any matrix
 /// isn't known (`det(A)` with no A is still being typed, not a symbol).
+/// An unknown that counts outside a matrix's brackets too, as in `det(A - λI)` or `x*[1 2]`: one letter (not `e` or
+/// `i`) or `lambda`. Longer unknown names there are still a line the matrix reader can't answer.
+pub(super) fn loose_unknown(name: &str) -> bool {
+    let mut chars = name.chars();
+    let one = matches!((chars.next(), chars.next()), (Some(c), None) if c.is_alphabetic() && c != 'e' && c != 'i');
+    one || name == "lambda"
+}
+
 fn params_of(node: &Node, opts: &MatrixOptions<'_>) -> Option<Vec<String>> {
-    fn walk(node: &Node, in_array: bool, opts: &MatrixOptions<'_>, out: &mut Vec<String>) -> bool {
+    fn has_array(node: &Node) -> bool {
+        match node {
+            Node::Array(_) => true,
+            Node::Function { args, .. } | Node::Operator { args, .. } => args.iter().any(has_array),
+            Node::Parenthesis(c) => has_array(c),
+            _ => false,
+        }
+    }
+    // `det(A)` before A is stored is still being typed: a lone letter is an unknown only beside a written matrix
+    let loose = has_array(node);
+    let walk_loose = move |name: &str| loose && loose_unknown(name);
+    fn walk(
+        node: &Node,
+        in_array: bool,
+        opts: &MatrixOptions<'_>,
+        loose: &dyn Fn(&str) -> bool,
+        out: &mut Vec<String>,
+    ) -> bool {
         match node {
             Node::Symbol(name) => {
                 if opts.variables.contains_key(name) || is_t(node) {
                     return true;
                 }
-                if !in_array
+                if !(in_array || loose(name))
                     || matches!(
                         name.as_str(),
                         "pi" | "e" | "tau" | "i" | "ans" | "Infinity" | "NaN"
@@ -678,16 +729,16 @@ fn params_of(node: &Node, opts: &MatrixOptions<'_>) -> Option<Vec<String>> {
                 }
                 true
             }
-            Node::Array(items) => items.iter().all(|i| walk(i, true, opts, out)),
-            Node::Function { args, .. } => args.iter().all(|a| walk(a, in_array, opts, out)),
-            Node::Operator { args, .. } => args.iter().all(|a| walk(a, in_array, opts, out)),
-            Node::Parenthesis(c) => walk(c, in_array, opts, out),
+            Node::Array(items) => items.iter().all(|i| walk(i, true, opts, loose, out)),
+            Node::Function { args, .. } => args.iter().all(|a| walk(a, in_array, opts, loose, out)),
+            Node::Operator { args, .. } => args.iter().all(|a| walk(a, in_array, opts, loose, out)),
+            Node::Parenthesis(c) => walk(c, in_array, opts, loose, out),
             Node::Constant(_) => true,
             _ => false,
         }
     }
     let mut out = Vec::new();
-    walk(node, false, opts, &mut out).then_some(out)
+    walk(node, false, opts, &walk_loose, &mut out).then_some(out)
 }
 
 fn cells_of(node: &Node) -> usize {

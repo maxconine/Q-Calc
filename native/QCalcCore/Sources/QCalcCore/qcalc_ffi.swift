@@ -8286,6 +8286,10 @@ public struct MatrixView: Equatable, Hashable {
      * Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
      */
     public var typeset: Bool
+    /**
+     * The answer is why there is none (`determinant needs a square matrix`): words, shown as a message.
+     */
+    public var message: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -8304,7 +8308,10 @@ public struct MatrixView: Equatable, Hashable {
          */labeled: Bool = false, 
         /**
          * Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
-         */typeset: Bool = false) {
+         */typeset: Bool = false, 
+        /**
+         * The answer is why there is none (`determinant needs a square matrix`): words, shown as a message.
+         */message: Bool = false) {
         self.parts = parts
         self.steps = steps
         self.document = document
@@ -8313,6 +8320,7 @@ public struct MatrixView: Equatable, Hashable {
         self.exactTypst = exactTypst
         self.labeled = labeled
         self.typeset = typeset
+        self.message = message
     }
 
     
@@ -8338,7 +8346,8 @@ public struct FfiConverterTypeMatrixView: FfiConverterRustBuffer {
                 typst: FfiConverterString.read(from: &buf), 
                 exactTypst: FfiConverterOptionString.read(from: &buf), 
                 labeled: FfiConverterBool.read(from: &buf), 
-                typeset: FfiConverterBool.read(from: &buf)
+                typeset: FfiConverterBool.read(from: &buf), 
+                message: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -8351,6 +8360,7 @@ public struct FfiConverterTypeMatrixView: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.exactTypst, into: &buf)
         FfiConverterBool.write(value.labeled, into: &buf)
         FfiConverterBool.write(value.typeset, into: &buf)
+        FfiConverterBool.write(value.message, into: &buf)
     }
 }
 

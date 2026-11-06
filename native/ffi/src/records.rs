@@ -505,12 +505,15 @@ pub struct MatrixView {
     /// Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
     #[uniffi(default)]
     pub typeset: bool,
+    /// The answer is why there is none (`determinant needs a square matrix`): words, shown as a message.
+    #[uniffi(default)]
+    pub message: bool,
 }
 
 impl MatrixView {
     /// None when there is nothing to typeset (a bare `[k 2; 3 k]` shows blank).
     pub(crate) fn shown(m: &MatrixParts) -> Option<Self> {
-        (!m.parts.is_empty() || !m.steps.is_empty()).then(|| m.into())
+        (!m.parts.is_empty() || !m.steps.is_empty() || m.message).then(|| m.into())
     }
 }
 
@@ -565,6 +568,7 @@ impl From<&MatrixParts> for MatrixView {
                 .then(|| m.typst(true)),
             labeled: m.parts.iter().any(|p| !p.label.is_empty()),
             typeset: m.parts.len() > 1 || m.parts.iter().any(|p| p.typst.contains("mat(")),
+            message: m.message,
         }
     }
 }

@@ -385,21 +385,21 @@ struct StepsPanel: View {
             VStack(alignment: .leading, spacing: Self.spacing) {
                 ForEach(rows) { row in
                     if row.remark {
-                        Text(row.op)
+                        Text(Pretty.matrix(row.op))
                             .font(.system(size: Theme.body))
                             .foregroundStyle(Color.qInk)
                             .frame(maxWidth: .infinity, minHeight: row.height, alignment: .leading)
                             .textSelection(.enabled)
                     } else {
                         HStack(alignment: .center, spacing: 10) {
-                            Text(row.op)
+                            Text(Pretty.matrix(row.op))
                                 .font(.system(size: Theme.body))
                                 .foregroundStyle(Color.qMuted)
                                 .frame(width: Self.opWidth, alignment: .leading)
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                             if let paths = row.paths {
-                                MathPreview(typeset: Typeset(paths: paths, doc: ""))
+                                MathPreview(typeset: Typeset(paths: paths, doc: ""), leading: true)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .frame(height: row.height)
                             } else {

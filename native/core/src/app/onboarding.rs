@@ -334,7 +334,9 @@ const CHEAT_TYPE: [(&str, &str); 11] = [
 
 /// The Mac app's own things to type (native only; the web app has no messages, sharing or CRT look), listed in
 /// `?` before its last row.
-pub const NATIVE_CHEATS: [(&str, &str); 4] = [
+pub const NATIVE_CHEATS: [(&str, &str); 6] = [
+    ("matrix 3x3", "fill in a matrix"),
+    ("Ax = b", "solve with matrices"),
     ("messages", "your conversations"),
     ("paste to max", "share what’s copied"),
     ("send file to max", "share a file"),
