@@ -819,6 +819,7 @@ impl App {
             WM_MOUSEMOVE => {
                 let (x, y) = self.dips(lp);
                 crate::commands::pointer(self, Some((x, y)));
+                crate::working::mouse_move(self, x, y);
                 if crate::systems::mouse_move(self, x, y) || crate::graph::mouse_move(self, x, y) {
                     return Some(LRESULT(0));
                 }
@@ -853,6 +854,7 @@ impl App {
             }
             // a message thread under the bar scrolls (threads.rs)
             WM_MOUSEWHEEL if crate::threads::wheel(self, wp, lp) => {}
+            WM_MOUSEWHEEL if crate::working::wheel(self, wp, lp) => {}
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
                     if msg != WM_MOUSEWHEEL {
@@ -867,6 +869,7 @@ impl App {
                 }
                 crate::commands::pointer(self, None);
                 crate::graph::leave(self);
+                crate::working::leave(self);
             }
             // the background that drags is non-client: the edge tools show over it too (edge.rs)
             windows::Win32::UI::WindowsAndMessaging::WM_NCMOUSEMOVE => {
@@ -891,6 +894,7 @@ impl App {
                 let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
                 let panel = crate::graph::cursor(self, x, y)
                     .or_else(|| crate::systems::cursor(self, x, y))
+                    .or_else(|| crate::working::cursor(self, x, y))
                     .or_else(|| crate::hover::cursor(self, x, y));
                 let over = self.bar.layout.field.contains(x, y);
                 // SAFETY: system cursors
@@ -919,6 +923,7 @@ impl App {
             || crate::commands::click(self, x, y)
             || crate::systems::click(self, x, y, double, mods().shift)
             || crate::graph::click(self, x, y, double)
+            || crate::working::click(self, x, y)
         {
             return;
         }
@@ -1124,6 +1129,7 @@ impl App {
         self.model.tape_open = false;
         self.model.hint = None;
         crate::commands::will_hide(&mut self.model);
+        crate::working::will_hide(&mut self.model);
         self.model.touch();
         self.hidden_at = Some(Instant::now());
         if self.store.moved_or_widened() {

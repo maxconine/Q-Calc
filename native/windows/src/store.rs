@@ -80,7 +80,7 @@ pub struct Settings {
 }
 
 // the core's actions, then the native app's own (exponent.rs NATIVE_ACTIONS)
-const KEY_ACTIONS: [&str; 9] = [
+const KEY_ACTIONS: [&str; 10] = [
     "settings",
     "copyAnswer",
     "copyLine",
@@ -90,6 +90,7 @@ const KEY_ACTIONS: [&str; 9] = [
     "clear",
     "exponent",
     "forms",
+    "working",
 ];
 
 impl Default for Settings {

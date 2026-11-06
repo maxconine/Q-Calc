@@ -413,6 +413,19 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             "model": app.model.settings.exponent_mode, "saved": app.store.settings.exponent_mode,
             "hint": app.model.hint, "shown": crate::answer::shown_answer(&app.model),
         })),
+        // the working (working.rs): its state; `working press` is Ctrl+W, `working copy <n>` clicks step n
+        "working" => Some(crate::working::debug(app)),
+        "working press" => {
+            crate::bg::post(crate::working::press);
+            Some(serde_json::json!({ "ok": true }))
+        }
+        c if c.starts_with("working copy ") => {
+            let i = c[13..].trim().parse::<usize>().unwrap_or(0);
+            crate::bg::post(move |app| {
+                crate::working::copy_step(&mut app.model, i);
+            });
+            Some(serde_json::json!({ "ok": true }))
+        }
         // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
         c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
         // the formula sheets' windows (sheets.rs `debug`): sheetpages, sheetfilter:, sheetback, sheetclick:...
