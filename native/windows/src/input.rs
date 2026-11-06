@@ -31,6 +31,9 @@ pub struct Decorations {
     pub squiggle: Option<(u32, u32)>,
     /// a unit offered where a number was owed one (missingUnit): drawn muted in a gap at `at`
     pub offer: Option<(u32, String)>,
+    /// each trig argument that gets a faint `°` / ` rad` (core `angle_spans`): (where it starts, where its mark
+    /// goes)
+    pub angles: Vec<(u32, u32)>,
 }
 
 impl Decorations {
@@ -42,6 +45,17 @@ impl Decorations {
             .chain(self.squiggle.iter())
             .all(|&(_, b)| b <= len16)
             && self.offer.as_ref().is_none_or(|(a, _)| *a <= len16)
+            && self.angles.iter().all(|&(_, at)| at <= len16)
+    }
+
+    /// The angle marks to draw with the caret at `caret`: each argument's, unless the caret is in it (being typed,
+    /// its mark would sit where the caret does; it shows once the caret leaves).
+    pub fn angle_marks(&self, caret: u32) -> Vec<u32> {
+        self.angles
+            .iter()
+            .filter(|&&(start, at)| caret < start || caret > at)
+            .map(|&(_, at)| at)
+            .collect()
     }
 }
 
@@ -674,6 +688,8 @@ mod view {
         pub placeholder: &'a str,
         /// the caret's blink phase: false draws no caret this frame
         pub caret_on: bool,
+        /// what an angle mark says: `°` in degrees, ` rad` in radians
+        pub angle_mark: &'a str,
     }
 
     #[derive(PartialEq)]
@@ -681,6 +697,8 @@ mod view {
         text: String,
         offer: Option<(u32, String)>,
         bounds_on: bool,
+        /// the angle marks inside the line (each opens a gap after its argument), and their text
+        marks: (Vec<u32>, String),
     }
 
     /// Small layouts drawn every frame (ghost parens, `ans`, the completion, the placeholder) kept a while.
@@ -750,12 +768,14 @@ mod view {
             c: &Canvas,
             field: &Field,
             deco: Option<&Decorations>,
+            marks: (Vec<u32>, String),
             h: f32,
         ) -> Option<IDWriteTextLayout> {
             let key = Key {
                 text: field.text().to_string(),
                 offer: deco.and_then(|d| d.offer.clone()),
                 bounds_on: !field.limits().is_empty(),
+                marks,
             };
             if let Some((k, l)) = &self.cached
                 && *k == key
@@ -800,15 +820,30 @@ mod view {
                         }
                     }
                 }
-                if let Some(d) = deco
-                    && let (Some((at, text)), Some(l1)) = (&d.offer, &l1)
-                    && *at > 0
-                {
+                // the offered unit's and the angle marks' gaps, after the character before each
+                let mut gaps: Vec<(u32, f32)> = Vec::new();
+                let mut gap = |at: u32, text: &str| {
                     let w = c
                         .gfx
                         .layout(text, &c.gfx.fonts.display, 0.0, h)
                         .map_or(0.0, |o| measure(&o).0);
-                    let _ = l1.SetCharacterSpacing(0.0, w, 0.0, range(at - 1, *at));
+                    match gaps.iter_mut().find(|g| g.0 == at) {
+                        Some(g) => g.1 += w,
+                        None => gaps.push((at, w)),
+                    }
+                };
+                for &at in &key.marks.0 {
+                    gap(at, &key.marks.1);
+                }
+                if let Some((at, text)) = deco.and_then(|d| d.offer.as_ref())
+                    && *at > 0
+                {
+                    gap(*at, text);
+                }
+                if let Some(l1) = &l1 {
+                    for (at, w) in gaps {
+                        let _ = l1.SetCharacterSpacing(0.0, w, 0.0, range(at - 1, at));
+                    }
                 }
             }
             self.cached = Some((key, l.clone()));
@@ -863,11 +898,20 @@ mod view {
                     }
                 }
             }
-            let Some(layout) = self.layout(c, field, deco, r.h) else {
+            let caret16 = field.to_utf16(field.caret());
+            let marks = deco.map_or_else(Vec::new, |d| d.angle_marks(caret16));
+            let inside: Vec<u32> = marks
+                .iter()
+                .copied()
+                .filter(|&at| at > 0 && at < len16)
+                .collect();
+            let mark_text = if marks.is_empty() { "" } else { x.angle_mark };
+            let Some(layout) =
+                self.layout(c, field, deco, (inside.clone(), mark_text.to_string()), r.h)
+            else {
                 c.pop_clip();
                 return;
             };
-            let caret16 = field.to_utf16(field.caret());
             let comp_w = self.composition.as_ref().map_or(0.0, |comp| {
                 c.gfx
                     .layout(&comp.text, &c.gfx.fonts.display, 0.0, r.h)
@@ -970,6 +1014,7 @@ mod view {
                     );
                 }
                 // the unit offered after its number, muted, in the gap opened for it
+                let mut offer_at = None;
                 if let Some((at, text)) = &d.offer
                     && *at > 0
                     && let Some(l) = self.ghost(c, text, r.h)
@@ -977,6 +1022,18 @@ mod view {
                     let ow = measure(&l).0;
                     let end = caret_x(&layout, *at);
                     c.text_plain(&l, x0 + end - ow, r.y, t.muted);
+                    offer_at = Some((*at, ow));
+                }
+                // the angle marks inside the line, in the gaps opened after their arguments (before an offer's)
+                if !inside.is_empty()
+                    && let Some(l) = self.ghost(c, mark_text, r.h)
+                {
+                    let mw = measure(&l).0;
+                    for &at in &inside {
+                        let ow = offer_at.filter(|o| o.0 == at).map_or(0.0, |o| o.1);
+                        let end = caret_x(&layout, at) + shift(at);
+                        c.text_plain(&l, x0 + end - ow - mw, r.y, t.muted);
+                    }
                 }
             }
             // after the end: the completion's rest (caret at the end), then the inferred `)`s
@@ -985,6 +1042,14 @@ mod view {
                 && let Some(l) = self.ghost(c, g, r.h)
             {
                 c.text_plain(&l, tail, r.y, with_alpha(t.muted, 0.8));
+                tail += measure(&l).0;
+            }
+            // an angle mark for an argument still open at the end of the line
+            if marks.contains(&len16)
+                && len16 > 0
+                && let Some(l) = self.ghost(c, mark_text, r.h)
+            {
+                c.text_plain(&l, tail, r.y, t.muted);
                 tail += measure(&l).0;
             }
             let trailing = deco.map_or(0, |d| d.trailing);
@@ -1485,5 +1550,19 @@ mod tests {
         };
         assert!(d.fits(4));
         assert!(!d.fits(3));
+    }
+
+    #[test]
+    fn an_angle_mark_hides_while_the_caret_is_in_its_argument() {
+        // `50sin(26.87) + cos(x)`: the arguments are 6..11 and 18..19
+        let d = Decorations {
+            angles: vec![(6, 11), (18, 19)],
+            ..Decorations::default()
+        };
+        assert_eq!(d.angle_marks(0), vec![11, 19]);
+        assert_eq!(d.angle_marks(8), vec![19]);
+        assert_eq!(d.angle_marks(11), vec![19]);
+        assert_eq!(d.angle_marks(12), vec![11, 19]);
+        assert!(!d.fits(18));
     }
 }

@@ -433,7 +433,7 @@ fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
                     aspect: Some(PLOT_ASPECT),
                     y_center: None,
                     surface: false,
-                x_log: false,
+                    x_log: false,
                 },
                 settings.clone(),
             );
@@ -1498,7 +1498,7 @@ mod view {
             aspect: Some(PLOT_ASPECT),
             y_center: None,
             surface: false,
-                x_log: false,
+            x_log: false,
         }
     }
 

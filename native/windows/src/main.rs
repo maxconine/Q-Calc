@@ -74,6 +74,8 @@ mod net;
 #[cfg(windows)]
 mod notice;
 #[cfg(windows)]
+mod rate_tip;
+#[cfg(windows)]
 mod rates;
 #[cfg(windows)]
 mod relay;

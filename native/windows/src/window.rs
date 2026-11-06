@@ -243,7 +243,7 @@ impl Bar {
         let help = if games > 0.0 {
             0.0
         } else {
-            crate::cheats::height(model)
+            crate::cheats::height(gfx, model, width)
         };
         let tape = if help > 0.0 || games > 0.0 {
             history::TapeLayout::default()

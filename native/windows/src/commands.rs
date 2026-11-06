@@ -175,8 +175,10 @@ const STEMS: [&str; 41] = [
     "cycles",
 ];
 
-const MORE_STEMS: [&str; 10] = [
+const MORE_STEMS: [&str; 11] = [
     "message", "tutorial", "tour", "skip", "hello", "hiya", "send", "paste", "share", "open",
+    // `chat` is the same word as `messages` (MessageThreads.swift's guard)
+    "chat",
 ];
 
 /// The first words of the core's `NATIVE_COMMANDS` sheets.
@@ -376,6 +378,17 @@ mod ui {
             Command::Message { .. } | Command::Share { .. } | Command::Thread(_)
         ) {
             m.line.completion = messaging::completion(&typed);
+        }
+        // native only: a sheet's short word still finishes to its full name (`formula` to `formulas`)
+        if matches!(command, Command::Identities { .. }) {
+            let names = qcalc_core::app::completion::CompletionNames {
+                variables: Vec::new(),
+                functions: Vec::new(),
+                ans: false,
+                contacts: Vec::new(),
+            };
+            let rest = qcalc_core::app::completion::completion_for(&typed, &names);
+            m.line.completion = (!rest.is_empty()).then_some(rest);
         }
         m.command = Some(Shown { command, message });
         engine.cancel(Lane::Live);
@@ -758,8 +771,9 @@ mod tests {
         assert_eq!(parse("  Periodic   Table "), Some(Command::Periodic));
         match parse("idt summation") {
             Some(Command::Identities { id, section, hint }) => {
-                assert_eq!(id, "identities");
-                assert!(section > 0);
+                // a part opens alone (native_target_for)
+                assert_eq!(id, "identities: Summation");
+                assert_eq!(section, 0);
                 assert!(hint.contains("summation"), "{hint}");
             }
             other => panic!("{other:?}"),
@@ -917,6 +931,7 @@ mod timing {
                 name: "max".into()
             }))
         );
+        assert_eq!(parse("chat max"), parse("messages max"));
         // `message max hi` is still a message, and `messages max hi` nothing
         assert!(matches!(
             parse("message max hi"),
