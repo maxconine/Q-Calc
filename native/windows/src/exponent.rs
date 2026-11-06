@@ -16,9 +16,11 @@ use std::collections::BTreeMap;
 use qcalc_core::app::keybinds as kb;
 
 /// The native app's own actions: id, settings label, Windows default (macos/Keybinds.swift `native`).
-pub const NATIVE_ACTIONS: [(&str, &str, &str); 2] = [
+pub const NATIVE_ACTIONS: [(&str, &str, &str); 3] = [
     ("exponent", "Exponent form (3 × 10³)", "ctrl+e"),
     ("forms", "Other answer forms", "ctrl+shift+e"),
+    // the working panel (working.rs); Ctrl+W still closes the front sheet on a line without working
+    ("working", "Show working", "ctrl+w"),
 ];
 
 /// Which native action an id is.
@@ -238,6 +240,7 @@ mod bar {
         };
         match super::native_for(&m.settings.keybinds, &chord) {
             Some("exponent") => toggle(m, engine),
+            Some("working") => return crate::working::key(m, engine, &chord),
             Some(_) => crate::answer::cycle_forms(m, engine, false),
             None => return false,
         }

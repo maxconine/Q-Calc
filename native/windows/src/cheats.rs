@@ -36,11 +36,15 @@ pub fn rows(m: &BarModel) -> [Vec<Row>; 2] {
         let chord = crate::exponent::native_chord(&m.settings.keybinds, id);
         qcalc_core::app::keybinds::chord_label(&chord, true)
     };
-    let mut own: Vec<Row> = [("exponent", "exponent form"), ("forms", "answer forms")]
-        .iter()
-        .map(|(id, label)| (native(id), label.to_string()))
-        .filter(|(k, _)| !k.is_empty())
-        .collect();
+    let mut own: Vec<Row> = [
+        ("exponent", "exponent form"),
+        ("forms", "answer forms"),
+        ("working", "show working"),
+    ]
+    .iter()
+    .map(|(id, label)| (native(id), label.to_string()))
+    .filter(|(k, _)| !k.is_empty())
+    .collect();
     own.push(("Tab".into(), "complete".into()));
     let at = keys
         .iter()

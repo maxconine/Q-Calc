@@ -238,14 +238,6 @@ Windows opens all the sheets, but draws them in its old text style. To match the
   - Home, then ⌦ twice. You should get an empty box over `12`, and typing `7` gives 7/12. Backspace twice after `42` should do the same.
   - With the caret in `23*12`, ⌘⌫ should take only what's before the caret in that denominator. ⌥⌫ on the last `12` should leave no stray `·`.
 
-### The working, ⌃W (`Bar/Working.swift`, `Bar/BarView.swift`, `Bar/MathText.swift` `paths`)
-- **Core:** `Engine::call_json("lib/steps", "steps", [text, options])` gives the steps for a line, or null. `options` is `EvaluateOptions` as JSON (`angleMode`, `sigFigs`, `fractionMode`, `spaceThousands`, `ans`, `variables`, `functions`). Each step is `{math, why, plain}`: Typst math, a short phrase, and plain text for copying. `lib/steps` `stepDocument` `[math]` gives the document a step compiles to (the preview's macros, 15 pt). The core already checks the last step against its own answer; the app also drops working whose last step's `plain` doesn't end in the shown `display`.
-- **What has working:** `d/dx …` (first derivatives, also `at`), `∫ … dx` from the integral table, one equation in one unknown (linear or quadratic), unit conversions (`5 ft to m`), and differential equations. Nothing else, and never a chained line.
-- **When:** ask after each live answer lands, on a worker thread of its own (never the keystroke path), keep only the newest line's answer. Typeset the steps only while the panel is up.
-- **Hint:** with working, `show working · Ctrl+W` (11 pt muted, a button) sits at the composer's bottom right, left of the clear tool's corner (gutter + 44). `hide working` while the panel is up. Hidden while the hint line or a tutorial step shows.
-- **Panel:** under the bar where the graph and systems panels go, same look: `--bg-tape`, a hairline on top, 12 / 16 / 16 padding. Head: `Working` 13 pt semibold, `click a step to copy it` and `⌃W hides` 12 pt muted. Rows: the number (12 pt muted), the typeset step, why at the right in 12 pt muted (up to 3 lines, 260 pt wide). Hover tints the row; a click copies `plain` with the copied flash. Scrolls past 320 pt.
-- **Keys:** `working` action, default `ctrl+w` on both, rebindable, listed in Settings → Keybinds and the `?` keys column. Esc closes the panel before the cheat sheet. Hiding the bar closes it. With the panel up on a line without working nothing shows; it comes back on the next line that has working.
-
 ### The caret in ∫ Σ Π limits (`Bar/InputField.swift` `limitCaretRect`, `drawHoles`; `Bar/StackedLayout.swift` `stackCaretRect`)
 
 - Native only, the way Wolfram does it. It works whether or not the stacked setting is on.

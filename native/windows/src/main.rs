@@ -116,6 +116,8 @@ mod window;
 #[cfg(windows)]
 mod word_tip;
 #[cfg(windows)]
+mod working;
+#[cfg(windows)]
 mod wrap;
 
 #[cfg(feature = "perf")]

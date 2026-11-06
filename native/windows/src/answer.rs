@@ -1007,7 +1007,7 @@ pub fn copy_selection(m: &mut BarModel) {
     ));
 }
 
-fn flash(m: &mut BarModel) {
+pub fn flash(m: &mut BarModel) {
     m.answer.copied = true;
     m.touch();
     timer::start(timer::COPIED, COPIED_MS);

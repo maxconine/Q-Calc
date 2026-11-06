@@ -103,6 +103,8 @@ pub struct BarModel {
     pub tour: crate::tour::Tour,
     /// the edge tools' hover and tips (edge.rs)
     pub edge: crate::edge::EdgeState,
+    /// the working for the line and its panel, Ctrl+W (working.rs)
+    pub working: crate::working::WorkingState,
 }
 
 impl BarModel {
@@ -136,6 +138,7 @@ impl BarModel {
             cards: crate::messaging::Cards::default(),
             tour: crate::tour::Tour::default(),
             edge: crate::edge::EdgeState::default(),
+            working: Default::default(),
         }
     }
 
@@ -257,6 +260,7 @@ impl BarModel {
                 if app.model.field.text() == typed {
                     crate::line::landed(&mut app.model, &typed, deco, completion);
                 }
+                crate::working::landed(app, &typed, context);
             })
         });
     }
@@ -510,6 +514,9 @@ impl BarModel {
         let shift = mods.shift;
         match vk {
             ESC => {
+                if crate::working::escape(self) {
+                    return Outcome::Handled;
+                }
                 if std::mem::take(&mut self.tape.help) {
                     self.changed = true;
                     return Outcome::Handled;

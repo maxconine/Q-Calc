@@ -102,6 +102,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf · ×10ⁿ, clear) and their tips |
 | `exponent.rs` | Ctrl+E's lasting exponent form (`settings.exponentMode`, 3,000 → 3 × 10³) and Ctrl+Shift+E's other forms: the native app's own keybinds (`exponent`, `forms`) beside the core's, listed in Settings › Keybinds |
 | `word_tip.rs` | the pointer over the line names its units, functions and constants over the word (the core's `word_names`), and `ans` (typed or faint) the last answer; asked of the engine only while the pointer is on the line |
+| `working.rs` | the working, Ctrl+W (`working`, a native action; on a line without working Ctrl+W still closes the front sheet): the core's steps asked on `Lane::Working` once the line rests, the hint under the answer, the panel of typeset steps (a click copies one) |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
 | `games/` | the native games, each in a window and a process of its own (`qcalc.exe --game <kind>`, games/README.md): `open(kind)`, `is_open`, `command`/`hint` for the bar; online play over relay.rs |

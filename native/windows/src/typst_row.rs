@@ -525,6 +525,16 @@ fn picture(c: &Canvas, t: &Typeset, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))>
     }
 }
 
+/// Any page of paths drawn at `s` into a bitmap the bar's target can copy (working.rs's steps).
+pub fn bitmap(c: &Canvas, paths: &Arc<TypstPaths>, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))> {
+    let t = Typeset {
+        paths: paths.clone(),
+        doc: String::new(),
+        stale: false,
+    };
+    picture(c, &t, s)
+}
+
 /// The row in `r`: the page centred at the top, shrunk to fit, in `--ink` (40% while stale).
 pub fn paint(c: &Canvas, m: &BarModel, r: Rect) {
     let Some(t) = &m.typeset.shown else { return };
