@@ -15,6 +15,7 @@ mod keys;
 mod log;
 mod perf;
 mod place;
+mod stacked;
 mod store;
 mod text_rules;
 mod tour;
@@ -106,6 +107,8 @@ mod sheet_page;
 mod sheets;
 #[cfg(windows)]
 mod sheets_typst;
+#[cfg(windows)]
+mod stacked_layout;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]

@@ -511,6 +511,10 @@ impl BarModel {
         if crate::exponent::key_down(self, vk, mods, engine) {
             return Outcome::Handled;
         }
+        // ↑ ↓ between a stacked fraction's top and bottom, before the limits' and the history's
+        if crate::stacked_layout::key_down(self, vk, mods) {
+            return Outcome::Handled;
+        }
         if let Some(outcome) = crate::line::key_down(self, vk, mods, engine) {
             return outcome;
         }
