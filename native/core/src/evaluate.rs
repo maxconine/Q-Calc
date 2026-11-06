@@ -536,6 +536,20 @@ impl<'o> Sheet<'o> {
                 ..LineResult::blank(raw)
             };
         }
+        // `2x + y = 5, x - y = 1` on one line, `solve …` or not; only when it solves (native only)
+        if !of_matrices
+            && let Some(equations) = stubs::parse_equation_list(&line)
+            && let Some(answer) =
+                stubs::solve_system_call(&equations, &[], self.angle_mode, &self.options.default_units)
+                    .filter(|a| !a.is_empty())
+        {
+            return LineResult {
+                raw: raw.into(),
+                value: Some(Value::text(answer.clone())),
+                display: answer,
+                ..LineResult::blank(raw)
+            };
+        }
         // `isolate x in …` rearranges symbolically; stored values stay letters
         if jsre::test(&ISOLATE, &line) {
             return match stubs::isolate_variable(&line, None) {

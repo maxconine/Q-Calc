@@ -54,6 +54,20 @@ fit or scroll. New names count only on a line with a matrix in it (`zeros`, `one
 | `angle([1 0], [0 1])` in degrees | `90` |
 | `row = 3`, then `row + 1` | `4` (an ordinary name, untouched) |
 
+### Written the textbook way (core only, nothing to port)
+
+| Type | Expect |
+| --- | --- |
+| `2x + y = 5, x - y = 1` (or `;`, or `solve …`) | `x = 2, y = 1`; `solve(…, …)` stays the current app's call |
+| `[1 2 3]·[4 5 6]`, `[1 2 3] . [4 5 6]`, `u · v` | `32` (a column times a row is still the outer product) |
+| `[1 2 3] × [4 5 6]` | `[-3 6 -3]`; `2 × A` still scales |
+| `A .* B`, `A ./ B` | entry by entry |
+| `\|[1 2; 3 4]\|`, `\|[3 4]\|` | `-2`, `5` |
+| `x = [1; 2; 3]`, then `x^T x` | `14` |
+| `projection of [1 2] onto [3 4]`, `angle between u and v`, `the dot product of u and v`, `magnitude of v`, `unit vector v` | the call's answer |
+| `basis for the null space of A`, `dim null A`, `least squares A b` | the call's answer |
+| `is A invertible?`, `is A positive definite`, `are u, v and w linearly independent` | `yes (det = -2)`, `no (rank 1 of 2)`… |
+
 ### Phase 3: parts, steps, storing parts (core + ffi)
 
 No Windows UI yet (that is Phase 5). The FFI records gained `LiveAnswer.matrix` and `LineAnswer.matrix:

@@ -528,6 +528,34 @@ impl<F: Cells> Ev<'_, '_, F> {
                         X::Num(k) => self.mul(a, X::Num(f.div(&f.one(), &k))),
                     },
                     Op::Pow => self.power(a, b),
+                    // `A .* B` and `A ./ B` go entry by entry; a number scales
+                    Op::DotMultiply | Op::DotDivide => match (a, b) {
+                        (X::Grid(x), X::Grid(y)) => {
+                            if x.len() != y.len() || x[0].len() != y[0].len() {
+                                return fail(format!(
+                                    "{} needs matrices of the same size",
+                                    op.symbol()
+                                ));
+                            }
+                            let mut out = x;
+                            for (row, other) in out.iter_mut().zip(&y) {
+                                for (c, d) in row.iter_mut().zip(other) {
+                                    if *op == Op::DotMultiply {
+                                        *c = f.mul(c, d);
+                                    } else if f.is_zero(d) {
+                                        return fail("can't divide by 0");
+                                    } else {
+                                        *c = f.div(c, d);
+                                    }
+                                }
+                            }
+                            Ok(X::Grid(out))
+                        }
+                        (_, X::Num(k)) if *op == Op::DotDivide && f.is_zero(&k) => fail("can't divide by 0"),
+                        (a, X::Num(k)) if *op == Op::DotDivide => self.mul(a, X::Num(f.div(&f.one(), &k))),
+                        (a, b) if *op == Op::DotMultiply => self.mul(a, b),
+                        _ => Err(XFail::NotExact),
+                    },
                     _ => Err(XFail::NotExact),
                 }
             }

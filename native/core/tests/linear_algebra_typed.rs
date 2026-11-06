@@ -108,3 +108,52 @@ fn messages_are_marked() {
     assert!(r.matrix.is_some_and(|m| m.message));
     assert!(evaluate_line("det([1 2; 3 4])", &EvaluateOptions::default()).matrix.is_some_and(|m| !m.message));
 }
+
+#[test]
+fn systems_on_one_line() {
+    assert_eq!(show("2x + y = 5, x - y = 1"), "x = 2, y = 1");
+    assert_eq!(show("2x + y = 5; x - y = 1"), "x = 2, y = 1");
+    assert_eq!(show("solve 2x + y = 5, x - y = 1"), "x = 2, y = 1");
+    // the current app's `solve(…)` call is left as it was
+    assert_eq!(show("solve(2x + y = 5, x - y = 1)"), "");
+    assert_eq!(show("solve x + 2y + z = 4, 2x - y + z = 1, x + y - z = 0"), "x = 1/3, y = 10/9, z = 13/9");
+    assert_eq!(show("x + y = 2, x + y = 3"), "no solution");
+    // assignments and a function of two variables stay what they were
+    assert_eq!(show("a = 1, b = 2"), "");
+    assert_eq!(show("f(x, y) = x + y"), "f(x, y) = x + y");
+}
+
+#[test]
+fn products_as_written() {
+    assert_eq!(show("[1 2 3]·[4 5 6]"), "32");
+    assert_eq!(show("[1 2 3] . [4 5 6]"), "32");
+    assert_eq!(show("[1 2 3] × [4 5 6]"), "[-3 6 -3]");
+    assert_eq!(show("2 × [1 2; 3 4]"), "[2 4; 6 8]");
+    assert_eq!(show("[1 2; 3 4] · [5 6; 7 8]"), "[19 22; 43 50]");
+    assert_eq!(show("[1 2; 3 4] .* [1 1; 2 2]"), "[1 2; 6 8]");
+    assert_eq!(show("[1 2; 3 4] ./ [1 2; 3 4]"), "[1 1; 1 1]");
+    assert_eq!(show("|[1 2; 3 4]|"), "-2");
+    assert_eq!(show("|[3 4]|"), "5");
+    let v = ["u = [1 2 3]", "v = [4 5 6]", "A = [1 2; 3 4]", "x = [1; 2; 3]"];
+    assert_eq!(after(&v, &["u · v", "u × v", "|A|", "x^T x", "A^T A"]), ["32", "[-3 6 -3]", "-2", "14", "[10 14; 14 20]"]);
+}
+
+#[test]
+fn questions_as_a_textbook_asks() {
+    assert_eq!(show("projection of [1 2] onto [3 4]"), "[1.32 1.76]");
+    assert_eq!(show("angle between [1 0] and [1 1]"), "45");
+    assert_eq!(show("the dot product of [1 2 3] and [4 5 6]"), "32");
+    assert_eq!(show("cross product of [1 0 0] and [0 1 0]"), "[0 0 1]");
+    assert_eq!(show("magnitude of [1 2 2]"), "3");
+    assert_eq!(show("unit vector [3 4]"), "[0.6 0.8]");
+    assert_eq!(show("basis for the null space of [1 2 3; 2 4 6]"), "span{[-2; 1; 0], [-3; 0; 1]}");
+    assert_eq!(show("dim null [1 2 3; 2 4 6]"), "2");
+    assert_eq!(show("dimension of the column space of [1 2 3; 2 4 6]"), "1");
+    assert_eq!(show("least squares [1 1; 1 2; 1 3] [1; 2; 2]"), "[0.666667; 0.5]");
+    assert_eq!(show("is [1 2; 2 4] invertible?"), "no (det = 0)");
+    assert_eq!(show("is [2 1; 1 2] positive definite"), "yes");
+    assert_eq!(show("are [1 0 0], [0 1 0] and [0 0 1] linearly independent"), "yes (rank 3 of 3)");
+    assert_eq!(after(&["A = [1 2; 2 4]"], &["is A invertible"]), ["no (det = 0)"]);
+    // a sentence without a matrix is not one
+    assert_eq!(show("the length of the trip"), "");
+}

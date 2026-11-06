@@ -2274,6 +2274,34 @@ pub fn parse_system_call(text: &str) -> Option<SystemCall> {
     })
 }
 
+/// A system typed on one line, the way a textbook writes it: `2x + y = 5, x - y = 1`, `…; …`, `solve 2x + y = 5,
+/// x - y = 1`. Two to five equations, each with one `=`; a list of plain
+/// assignments (`a = 1, b = 2`) is not a system (native only).
+pub fn parse_equation_list(text: &str) -> Option<Vec<String>> {
+    static HEAD: Lazy = Lazy::new(|| js(r"^solve\b\s*", "i"));
+    static NAME: Lazy = Lazy::new(|| js(r"^\s*[A-Za-z_][A-Za-z0-9_]*\s*$", ""));
+    let mut s = text.trim();
+    if let Some(m) = HEAD.find(s).ok().flatten() {
+        s = s[m.end()..].trim();
+    }
+    // `solve(…, …)` is the current app's call (blank, or an equation and a guess), and not changed here
+    if s.starts_with('(') || s.contains('[') || s.contains('{') {
+        return None;
+    }
+    let parts: Vec<String> = split_top_level(s, &[',', ';'])
+        .into_iter()
+        .map(|e| e.trim().to_string())
+        .collect();
+    let one_eq = |e: &str| {
+        e.matches('=').count() == 1 && !e.contains("==") && !e.contains("<=") && !e.contains(">=") && !e.contains("!=")
+    };
+    if !(2..=5).contains(&parts.len()) || parts.iter().any(|e| e.is_empty() || !one_eq(e)) {
+        return None;
+    }
+    let all_assignments = parts.iter().all(|e| e.split_once('=').is_some_and(|(l, _)| jsre::test(&NAME, l)));
+    (!all_assignments).then_some(parts)
+}
+
 fn matching_brace(s: &str, open: usize) -> Option<usize> {
     let mut depth = 0;
     for (i, ch) in s.bytes().enumerate().skip(open) {

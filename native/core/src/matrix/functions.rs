@@ -134,6 +134,32 @@ impl<F: Cells> Ev<'_, '_, F> {
 }
 
 pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> XR<X<F::C>> {
+    // `u · v`, `u × v` and `|A|` as typed (prep's hidden calls): the dot product of two vectors of one length, the
+    // cross product of two 3-vectors, a square matrix's determinant or a vector's length; otherwise a product
+    let key = match key {
+        "qc_dot" | "qc_cross" if args.len() == 2 => {
+            let (u, v) = (vector(&args[0]), vector(&args[1]));
+            let n = if key == "qc_dot" { u.as_ref().map(Vec::len) } else { Some(3) };
+            match (u, v) {
+                // two rows or two columns; a column times a row is still their product
+                (Some(u), Some(v))
+                    if Some(u.len()) == n && v.len() == u.len() && is_row(&args[0]) == is_row(&args[1]) =>
+                {
+                    &key[3..]
+                }
+                _ => {
+                    let b = args.remove(1);
+                    return ev.mul(args.remove(0), b);
+                }
+            }
+        }
+        "qc_bars" if args.len() == 1 => match &args[0] {
+            X::Grid(g) if g.len() == g[0].len() && g.len() > 1 => "det",
+            X::Grid(_) => "norm",
+            _ => return Err(XFail::NotExact),
+        },
+        k => k,
+    };
     let f = ev.f;
     let fmt = &ev.fmt;
     let one = |args: &mut Vec<X<F::C>>| -> XR<X<F::C>> {

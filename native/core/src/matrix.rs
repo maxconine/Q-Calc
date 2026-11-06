@@ -173,6 +173,10 @@ const NEW_FNS: &[&str] = &[
     "qr",
     "svd",
     "cond",
+    // prep's own: `u · v`, `u × v`, `|A|`
+    "qc_dot",
+    "qc_cross",
+    "qc_bars",
     "cholesky",
     "chol",
     "pinv",
@@ -206,7 +210,117 @@ fn new_call_re(names: &[String]) -> jsre::Regex {
 }
 
 /// Textbook phrases as the names they mean: `the null space of A` is `null of A`.
+/// Whole-line questions as a textbook asks them, made calls: `projection of u onto v`, `angle between u and v`,
+/// `the dot product of u and v`, `magnitude of v`, `unit vector v`, `orthonormal basis of A`, `gram schmidt A`,
+/// `basis for the null space of A`, `dim null A`, `least squares A b`, `is A invertible?`, `are … linearly
+/// independent?` (native only).
+fn sentences(expr: &str) -> String {
+    const ARG: &str = r"(.+?)";
+    static RULES: std::sync::LazyLock<Vec<(jsre::Regex, &'static str)>> = std::sync::LazyLock::new(|| {
+        let r = |p: String, to: &'static str| (js(&format!(r"^\s*(?:find\s+|compute\s+|what\s+is\s+|what's\s+)?(?:the\s+|an?\s+)?{p}\s*\??\s*$"), "i"), to);
+        vec![
+            r(format!(r"(?:vector\s+)?proj(?:ection)?\s+of\s+{ARG}\s+(?:onto|on)\s+{ARG}"), "proj"),
+            r(format!(r"angle\s+between\s+{ARG}\s+and\s+{ARG}"), "angle"),
+            r(format!(r"(?:dot|inner|scalar)\s+product\s+of\s+{ARG}\s+and\s+{ARG}"), "dot"),
+            r(format!(r"(?:cross|vector)\s+product\s+of\s+{ARG}\s+and\s+{ARG}"), "cross"),
+            r(format!(r"(?:magnitude|length)\s+of\s+{ARG}"), "norm"),
+            r(format!(r"unit\s+vector\s+(?:of\s+|for\s+|along\s+|in\s+the\s+direction\s+of\s+)?{ARG}"), "unit"),
+            r(format!(r"orthonormal\s+basis\s+(?:of|for)\s+{ARG}"), "gramschmidt"),
+            r(format!(r"(?:gram[-\s]*schmidt|orthonormali[sz]e)\s+(?:of\s+|on\s+)?{ARG}"), "gramschmidt"),
+            r(format!(r"basis\s+(?:of|for)\s+(?:the\s+)?(?:null\s*space|kernel)\s+of\s+{ARG}"), "nullspace"),
+            r(format!(r"basis\s+(?:of|for)\s+(?:the\s+)?column\s+space\s+of\s+{ARG}"), "colspace"),
+            r(format!(r"basis\s+(?:of|for)\s+(?:the\s+)?row\s+space\s+of\s+{ARG}"), "rowspace"),
+            r(format!(r"(?:dim(?:ension)?\s+(?:of\s+)?(?:the\s+)?(?:null\s*space|null|kernel)|nullity)\s+(?:of\s+)?{ARG}"), "nullity"),
+            r(format!(r"dim(?:ension)?\s+(?:of\s+)?(?:the\s+)?(?:column\s+space|col|row\s+space|row)\s+(?:of\s+)?{ARG}"), "rank"),
+            r(format!(r"(?:least\s+squares|lsq)\s+(?:solution\s+|fit\s+)?(?:of\s+|for\s+|to\s+)?{ARG}"), "lsq"),
+            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+invertible"), "isinvertible"),
+            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+symmetric"), "issymmetric"),
+            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+orthogonal"), "isorthogonal"),
+            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+diagonali[sz]able"), "isdiagonalizable"),
+            r(format!(r"(?:is|check\s+if)\s+{ARG}\s+positive\s+definite"), "isposdef"),
+            r(format!(r"(?:are|is|check\s+if)\s+{ARG}\s+linearly\s+independent"), "islinind"),
+        ]
+    });
+    for (re, to) in RULES.iter() {
+        let Ok(Some(c)) = re.captures(expr) else { continue };
+        let args: Vec<String> = (1..c.len()).filter_map(|i| c.get(i)).map(|m| m.as_str().trim().to_string()).collect();
+        // `least squares A b` names two operands with a space between
+        let args = match *to {
+            "lsq" if args.len() == 1 => two_operands(&args[0]).unwrap_or(args),
+            // `are u, v and w linearly independent`
+            "islinind" => args[0].split(" and ").flat_map(|p| p.split(',')).map(|p| p.trim().to_string()).filter(|p| !p.is_empty()).collect(),
+            _ => args,
+        };
+        return format!("{to}({})", args.join(", "));
+    }
+    expr.to_string()
+}
+
+/// `[1 1; 1 2] [1; 2]` or `A, b`: two operands side by side.
+fn two_operands(s: &str) -> Option<Vec<String>> {
+    let mut depth = 0i32;
+    for (i, ch) in s.char_indices() {
+        match ch {
+            '[' | '(' => depth += 1,
+            ']' | ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    let rest = s[i + 1..].trim_start();
+                    let rest = rest.strip_prefix(',').unwrap_or(rest).trim();
+                    let rest = rest.strip_prefix("and ").unwrap_or(rest).trim();
+                    return (!rest.is_empty()).then(|| vec![s[..=i].trim().to_string(), rest.to_string()]);
+                }
+            }
+            ',' if depth == 0 => return Some(vec![s[..i].trim().to_string(), s[i + 1..].trim().to_string()]),
+            _ => {}
+        }
+    }
+    None
+}
+
+/// `u · v` and `u × v` with one product on the line are the dot and cross products when both sides are vectors
+/// (`qc_dot`, `qc_cross` decide); `u . v`, spaced, is a dot too; `|A|` is a determinant, or a vector's length.
+fn products(expr: &str) -> String {
+    static SPACED_DOT: Lazy = Lazy::new(|| js(r"(?<=[\])A-Za-z])\s+\.\s+(?=[\[(A-Za-z])", ""));
+    static BARS: Lazy = Lazy::new(|| js(r"^\s*\|([^|]+)\|\s*$", ""));
+    let s = jsre::replace_all(&SPACED_DOT, expr, |_| " · ".into()).into_owned();
+    if let Ok(Some(c)) = BARS.captures(s.as_str()) {
+        return format!("qc_bars({})", jsre::group(&c, 1).trim());
+    }
+    // the right side of an assignment
+    let (head, body) = match top_level(&s, &['=']).as_slice() {
+        [i] => (&s[..=*i], &s[*i + 1..]),
+        _ => ("", s.as_str()),
+    };
+    let at = top_level(body, &['·', '×']);
+    let [i] = at.as_slice() else { return s };
+    let ch = body[*i..].chars().next().expect("found");
+    let (l, r) = (body[..*i].trim(), body[*i + ch.len_utf8()..].trim());
+    let sum = |t: &str| !top_level(t.trim_start_matches(['-', '+']), &['+', '-']).is_empty();
+    if l.is_empty() || r.is_empty() || sum(l) || sum(r) {
+        return s;
+    }
+    let name = if ch == '·' { "qc_dot" } else { "qc_cross" };
+    format!("{head} {name}({l}, {r})").trim_start().to_string()
+}
+
+/// Byte offsets of `chars` outside brackets and parentheses.
+fn top_level(s: &str, chars: &[char]) -> Vec<usize> {
+    let mut depth = 0i32;
+    let mut out = Vec::new();
+    for (i, ch) in s.char_indices() {
+        match ch {
+            '[' | '(' | '{' => depth += 1,
+            ']' | ')' | '}' => depth -= 1,
+            c if depth == 0 && chars.contains(&c) => out.push(i),
+            _ => {}
+        }
+    }
+    out
+}
+
 fn phrases(expr: &str) -> String {
+    let expr = &sentences(expr);
     static PHRASES: Lazy = Lazy::new(|| {
         js(
             r"(?<![A-Za-z_])(characteristic\s+(?:polynomial|equation|poly)|char\.?\s*poly(?:nomial)?|char\.?\s*eq(?:uation)?|left\s+null\s*space|null\s*space|column\s+space|row\s+space|jordan\s+(?:normal\s+)?form|pseudo-?\s*inverse|eigen\s+values|eigen\s+vectors|singular\s+value\s+decomposition|condition\s+number|least\s+squares|lu\s+decomposition|qr\s+decomposition|cholesky\s+decomposition)(?![A-Za-z_])",
@@ -1088,13 +1202,17 @@ fn word_forms(expr: &str) -> String {
 fn prep(expr: &str) -> String {
     static SCALE: Lazy = Lazy::new(|| js(r"(?<=[\w.)\]])\s*\[", ""));
     static PRIME: Lazy = Lazy::new(|| js(r"([\])])\s*'", ""));
+    // `x^T x`: a product after the transpose mark, not `T x`
+    static T_THEN: Lazy = Lazy::new(|| js(r"(\^\s*T|ᵀ)\s+(?=[\[(A-Za-z0-9])", ""));
+    let expr = jsre::replace_all(&T_THEN, expr, |c| format!("{} * ", jsre::group(c, 1))).into_owned();
+    let expr = expr.as_str();
     // the input's word rule (prettyTokens, QuickInput's and the native bars') turns a typed `dot(` into `·(`: a `·`
     // with nothing to multiply before it is still the dot product's call, as `dot([1; 2; 3], [4 5 6])` is 32
     static DOT_CALL: Lazy = Lazy::new(|| js(r"(^|[^\w.)\]\s])(\s*)·(?=\s*\()", ""));
     let expr = jsre::replace_all(&DOT_CALL, expr, |c| {
         format!("{}{}dot", jsre::group(c, 1), jsre::group(c, 2))
     });
-    let expr = identity_symbol(&indexing(&rotations(&augmented(&phrases(&expr)))));
+    let expr = identity_symbol(&indexing(&rotations(&augmented(&products(&phrases(&expr))))));
     // `3[[1, 2]]` and `k [1 2]` scale; mathjs would read a bracket after a value as an index
     let s = word_forms(&backslash(&spaced(&expr)));
     // `null` is the parser's constant, so the call goes by its long name
