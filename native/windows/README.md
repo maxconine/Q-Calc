@@ -82,7 +82,10 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `bench.rs` | the dev bench: spec, steps, stats, the named pipe, memory counters |
 | `log.rs` | the log file, ms since process creation, the panic hook |
 | `settings_window.rs` | the settings window (drawn with render.rs; made on first open, dropped on close); `set_messages_hook` for the Messages page |
-| `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`) |
+| `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`, `graph a; b`): state, sampling, pan / zoom / orbit, the panel's fields |
+| `graph_view.rs` | the graph panel drawn (the plot's base pass cached as a bitmap, the pointer's pass over it) and the pointer over it |
+| `graph3d.rs` | the graph's 3D view as maths: the cube's projection, clipping, the depth-sorted scene, the patch under the pointer |
+| `graph_settings.rs` | the graph's settings (the head's wrench): `graphPrefs` in settings.json and the per-graph controls |
 | `systems.rs` | `sys2`…`sys5`: equation rows under the composer, solved live, saved as one row |
 | `typst_row.rs` | the typeset maths row under the composer |
 | `commands.rs` | the word commands that aren't maths (`periodic`, `idt …`, `constants`, `games` and a game's name, `message`, `tutorial`, `skip`, `hello`): their words in the answer slot, ↵ runs them, the games list above the bar |

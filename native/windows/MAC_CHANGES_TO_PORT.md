@@ -45,9 +45,6 @@ No Windows code should be needed. Type each line and check the result.
 | `formula` | autofill ghost `s`, and Tab takes it |
 | `control ` | ghost `systems` |
 | `ohms` | ghost ` law` |
-| `graph y=-5x+7.5` | chips `x-intercept (1.5, 0)` and `y-intercept (0, 7.5)` |
-| `graph y=3` | y-intercept only |
-| `graph x^2-4` | no intercept chips |
 | `6'2"`, `6′2″`, `6'2` | `6 ft 2 in` |
 | `10''` | the same as `10"` |
 | `6'2" + 1'11"`, `5 ft + 3 in` | `8 ft 1 in`, `5 ft 3 in` |
@@ -73,66 +70,14 @@ No Windows code should be needed. Type each line and check the result.
 
 Also check the `?` sheet. `NATIVE_CHEATS` grew to 17 rows, and the Mac needed three columns to fit them. Make sure nothing is cut off in `cheats.rs`.
 
-### Graphing (core `graph_native.rs`, FFI `graph` / `graph_home`)
-
-`engine.graph` and `engine.graph_home` now return more. Check these numbers, even before the drawing is ported:
-
-| Type | Expect from the engine |
-| --- | --- |
-| `graph y^{2}=10000x` | label `y^2 = 10000x`; home about `[−100000, 280000]`; one `vertical tangent (0, 0)` |
-| `graph x^2+y^2=25` | `max (0, 5)`, `min (0, −5)`, `vertical tangent (±5, 0)` |
-| `graph (x-3)^2+(y-50)^2=4` | `graph_home` gives `y_center` 50; pass it back as `GraphOptions::y_center` |
-| `graph y - 3 = 2(x - 1)` | a curve, not a contour; label `y - 3 = 2(x - 1) → y = 2x + 1`; intercepts `(−0.5, 0)` and `(0, 1)` |
-| `graph line through (1, 2) and (3, 5)`, `graph (1,2) slope 3`, `graph interpolate (0,0), (1,3), (2,1), (4,5)` | `point` critical points first; y readout interpolates |
-| `graph z = x^2 - y^2` with `surface: true`, `aspect: 1` | `saddle (0, 0)` with `z: Some(0)`; `surface` is a 49 × 49 grid, z −100…100 |
-| `graph x + y + z = 1` | a surface; `graph x^2+y^2+z^2=25` gives an error asking for `z = …` |
-
-New FFI fields: `GraphOptions.y_center`, `GraphOptions.surface`, `GraphWindow.y_center`, `CriticalPoint.z`, `GraphResult.surface` (`SurfaceGrid`), and `CriticalKind::{Saddle, VerticalTangent, Point}`.
-
 ## 2. Edited on Windows but never run: test it
 
 - **`ans` in the typeset row:** `ans * (10^5)/30` shows the number, not the word. `model.rs` (`ans_value`), `typst_row.rs`, `word_tip.rs`.
 - **Typeset look:** `tan⁻¹(x)` has no brackets round `tan⁻¹`, and a root's bar sits clear of what's under it. `typst_row.rs` uses `native_typst_document`.
-- **Graph chips:** a y-intercept's chip copies y, not x. `graph.rs`. The separate Roots list still repeats the x-intercept, so decide whether to hide it for a line. The Mac has no Roots list.
 - **Sheet commands:** `commands.rs` uses `native_target_for`, with extra first-word stems and `part_could_start`. Check `beams`, `Ohm's law`, `newton's 2nd` and `F = ma` open a sheet, and that `ohm`, `newton`, `5 ohm` and `dt = 5` still calculate.
 - **Sheet rows (`sheets.rs`):** a section's own lead widths, heading rows that aren't clickable, a click on a table cell copying that cell, rows on `formulas` opening their sheet, and the copied state lasting 0.25 s.
-- **Graph FFI fields (`graph.rs`):** `kind_name` has arms for `saddle`, `vertical tangent` and `point`, and the three `GraphOptions` literals pass `y_center: None, surface: false, x_log: false`. This is only enough to compile. See section 3 for the behaviour.
 
 ## 3. Not on Windows yet: implement it
-
-### Graph panel: implicit curves, 3D surfaces, key points (`Bar/GraphModel.swift`, `Bar/GraphPanel.swift`)
-- **Draw `contours`:** the Mac panel never drew them before. An implicit curve (`contour && !contour_levels`) is one 2 pt accent line. A surface's level curves use opacity 0.35→1 from the lowest level up, with their labels on a plot-coloured box.
-- **y centre:** keep `y_center` for anything but a curve. Take it from `graph_home` on open, send it with every sample, and let a vertical drag move it by `dy × (y_max − y_min)`. Reset restores it.
-- **Readout for x-and-y plots:** crosshairs and `(x, y)`, plus `z = …` from `graph_readout_z` for a surface.
-- **3D view, the default for a surface:** a `3D | contour` switch in the head. 3D samples with `aspect: 1` and `surface: true`, in a 652 × 300 plot. It draws the grid's quads back to front, viridis by height, lit by the normal, with a floor, the x/y/z values at the edges and the critical points ringed. Controls follow Onshape. A two-finger press-and-drag (a right-drag) orbits, and so does a plain drag. Orbit turns against the pointer side to side and against it up/down too: dragging down lowers the tilt, `pitch -= dy * 1.6` with dy the fraction of the plot height dragged down, clamped to 0.05…1.45 (flipped from the first port, where dragging down raised it). Two fingers moving up/down zoom, up zooming in whatever the natural-scrolling setting (`isDirectionInvertedFromDevice`). Shift + two-finger drag pans along the floor, following the fingers, and so do a shift/option drag and a middle-drag. Momentum is ignored. A mouse wheel or a pinch zooms. The right-click menu is suppressed over the plot. The 3D plot takes these events in its own native view (`PlotInput` in `GraphPanel.swift`), which never lets a press start a drag of the bar's window. Through SwiftUI gestures, a drag moved the whole bar instead of orbiting. See `Surface3D` in `GraphPanel.swift` for the projection. **Ticks and pointer readout (3D):** the floor has a faint grid at the x and y ticks, about 8 across using the 1/2/5 rule (`ticks`); x = 0 and y = 0 are a little stronger. Short tick marks stick out from the front x edge and the side y edge, and every other tick is labelled (all of them when there are 5 or fewer; `labelled`). The z edge has ticks about 6 across, each with a faint level line along the two back walls. Hovering the surface finds the nearest drawn quad under the pointer (`surfacePoint`, barycentric on its two triangles), takes x and y there and gets z exactly from `graphReadoutZ`. It draws a dot, a dashed drop to the floor and dashed guides across the floor to the x and y edges, plus an "(x, y, z)" pill at 4 significant figures. The controls hint shows only when the pointer is off the surface.
-- **Key points easy to find:** marks are 6.5 pt. With the pointer within 9 pt of a mark, the plot shows a halo, dashed guides and a `kind (x, y)` pill, and the matching chip lights. Chips show `(x, y, z)` for a surface and copy z. The heading reads `Key points` for an implicit curve, `Points` when there are `point`s, and otherwise `Critical points`.
-- **3D now looks like Desmos 3D (replaces the floor / viridis drawing above):**
-  - The view is a cube, 360 tall. x and y are the window. z is `fixed_z`, or by default as wide as x and centred on 0 (`zWindow`), so the axes share one scale.
-  - Each surface patch is clipped against the cube's top and bottom (`Surface3D.clip`, Sutherland–Hodgman), so a surface is cut off at the walls instead of squashed. Patches are shaded in their equation's colour, lambert-lit and stroked in their own colour to hide seams.
-  - The 9 cube edges away from the nearest corner are drawn first. The z = 0 plane's grid (major/minor at the x and y ticks) and the axes through the origin (clamped to the walls, 1.75 pt) are cut into short lengths and depth-sorted with the patches. Front edges, arrowheads, axis names (`x`/`y` or the axis labels, `z`) and numbers go on top.
-  - Hovering a patch reads `(x, y, z)` (`patchHit`: barycentric on the patch's fan, z from `graph_readout_z`), with dashed guides to the plane and the axes.
-- **Several equations:**
-  - `graph a; b; c` splits at top-level `;` (`splitGraphs`). The first is the graph. The rest are `GraphLayer`s marked `fromBar`.
-  - The head's `+` adds a layer typed in the panel (`GraphEquations`: a colour dot, a text field and a remove button).
-  - Every layer is sampled with the first one's options. In 2D a curve layer widens the fitted y range, and an implicit layer is sampled again over the final y window (aspect = y span / x span, y centre = its middle). In 3D, layer surfaces are drawn in the same cube.
-  - Colours: the first is the accent, then red, blue, purple, orange, teal, grey (`layerRGB`). A layer's roots and critical points are rings in its colour. The readout dots every curve and reads the one nearest the pointer.
-  - The critical-point chips list every equation's points, the bar's first (`allCritical` in `GraphPanel.swift`; on the 3D view only surface layers). With more than one equation each chip starts with a small square in its equation's colour. Hovering a chip or its mark highlights it as before.
-- **Graph settings (head wrench → popover, `GraphSettings.swift`):**
-  - Persisted in `GraphPrefs` (UserDefaults `graphPrefs`): text size (ticks 10 → 12.5 pt), reverse contrast (the plot drawn in the other appearance), grid on/off, cartesian or polar grid (circles a step apart, spokes every 15°), arrows (both ends of each axis), axis numbers, minor gridlines (a fifth of a step, a quarter of a 2), x/y axis shown, lock viewport (no pan or zoom; orbit still works), radians/degrees (overrides `angle_radians` for the graph).
-  - Per graph, in `GraphState`: axis labels; `lo ≤ x ≤ hi` (sets the window); `lo ≤ y ≤ hi` (sets `fixed_y`, which pans and zooms with the view, and which Reset clears); in 3D, the second row sets `fixed_z`; steps; Zoom Square (y as many units per point as x); linear/log for x and y.
-  - A log x axis sends `x_log: true` (new `GraphOptions` field), so the core samples evenly in log x. A log y axis is only a drawing transform; its auto y range comes from the positive y values of all curves. Ticks on a log axis are decades, with 2–9 as minor lines.
-  - Braille mode and complex mode are not done.
-- **Technical look (replaces the rounded/pill styling above for the graph panel):**
-  - Monospaced type everywhere on the plot (ticks 9.5 pt, readouts 10.5 pt), the head's label, `x ∈ [lo, hi]`, the chips and the equation list.
-  - The 2D plot sits in a square frame with a 0.75 pt edge, with tick marks out from the frame (4 pt major, 2 pt minor). Grids are 0.5 pt hairlines, and minor gridlines are on by default. Axes are solid at ink 62%. Curves are 1.6 pt.
-  - Marks are 6 pt hollow squares. A picked mark is a filled square inside a 14 pt square.
-  - Readouts are dashed crosshairs plus a square box with a hairline edge, reading `x  …` / `y  …` (/ `z  …`) on separate lines.
-  - Chips are plain cells with a hairline edge, with no fill until lit. Equation rows are a 3 pt colour bar, the equation and a hairline under each. The section heading is uppercase mono.
-  - 3D draws the surface with its mesh: each patch is filled and stroked in one call, the stroke being the fill × 0.62. The cube edges are hairlines, axis names are mono, and the hint is short mono text.
-- **Graph performance:**
-  - The plot is drawn in two passes. The base pass (graph, view, settings, scale) is cached as a bitmap. The pointer pass (crosshair, reading, picked mark) is a separate transparent layer over it, so moving the pointer never redraws the plot: 3D hover went from ~16 ms a move to under 1 ms.
-  - The 3D base pass keeps its patches (`SceneCache`) for the pointer pass to hit-test.
-  - Patch colours are made once per shade level (65 levels a surface), not twice a patch. A patch wholly above or below the cube is skipped before clipping, and the grid's corners are put in cube units once.
 
 ### Systems panel (`Bar/Systems.swift`)
 

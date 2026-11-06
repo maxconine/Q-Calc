@@ -826,6 +826,17 @@ impl App {
                     self.model.touch();
                 }
             }
+            // the graph's plot: a right-drag orbits (and opens no menu), a middle-drag pans (graph.rs)
+            windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONDOWN
+            | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN => {
+                let (x, y) = self.dips(lp);
+                crate::graph::press(self, x, y, msg == windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN);
+            }
+            windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONUP
+            | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONUP => {
+                let (x, y) = self.dips(lp);
+                crate::graph::mouse_up(self, x, y);
+            }
             WM_LBUTTONUP => {
                 let (x, y) = self.dips(lp);
                 if crate::systems::mouse_up(self) || crate::graph::mouse_up(self, x, y) {
@@ -1129,6 +1140,7 @@ impl App {
             return;
         }
         crate::answer::trim_hidden(self);
+        crate::graph::release(self);
         self.bar.surface.release();
         self.gfx.drop_flip_device();
         self.engine.release();

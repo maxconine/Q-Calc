@@ -414,6 +414,7 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
         })),
         // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
         c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
+        c if c.starts_with("graph ") => Some(crate::graph::bench(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
 }

@@ -363,6 +363,7 @@ impl Bar {
         let window_focused = self.focused || !self.visible;
         let focused = window_focused
             && !crate::systems::focused(model)
+            && !crate::graph::focused(model)
             && !crate::messaging::reply_has_keys(model);
         let crt = crate::effects::crt_theme(model);
         let (theme, scale) = (crt.as_ref().unwrap_or(theme), self.scale());
