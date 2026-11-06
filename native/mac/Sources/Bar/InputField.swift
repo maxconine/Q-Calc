@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 
 /// The bar's one-line input: an NSTextView, because a TextField can't take every key first, and later needs
@@ -73,6 +74,53 @@ final class BarTextView: NSTextView {
         needsDisplay = true
     }
     private var coloured: (units: [NSRange], words: [NSRange], style: String) = ([], [], "")
+
+    // ---- stacked fractions and powers (StackedMath.swift, StackedLayout.swift)
+    var stacked = StackedMath.Parsed()
+    var stackBars: [StackBar] = []
+    var stackHoles: [StackHole] = []
+    var slotLooks: [SlotLook] = []
+    var stackCaret: NSRect?
+    var stackCaretShown = true
+    var stackBlink: Timer?
+    var caretInk: NSColor = Theme.ink
+    private var stackWatch: AnyCancellable?
+
+    override var insertionPointColor: NSColor? {
+        get { super.insertionPointColor }
+        set { caretInk = newValue ?? Theme.ink; super.insertionPointColor = stackCaret == nil ? newValue : .clear }
+    }
+
+    override func setSelectedRanges(_ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting: Bool) {
+        super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelecting)
+        if stackCaret != nil || !stacked.stacks.isEmpty { refreshStackCaret() }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard Self.stackedOn, !stacked.stacks.isEmpty, event.clickCount == 1,
+              event.modifierFlags.intersection([.shift, .command, .option, .control]).isEmpty,
+              let at = stackStop(near: convert(event.locationInWindow, from: nil)) else { return super.mouseDown(with: event) }
+        window?.makeFirstResponder(self)
+        setSelectedRange(NSRange(location: at, length: 0))
+    }
+
+    // ← → one place along the text (TextKit goes by the glyphs, which overlap in a stacked fraction), never onto a
+    // hidden one
+    override func moveLeft(_ sender: Any?) { if !stackStep(-1) { super.moveLeft(sender) } }
+    override func moveRight(_ sender: Any?) { if !stackStep(1) { super.moveRight(sender) } }
+    override func moveBackward(_ sender: Any?) { if !stackStep(-1) { super.moveBackward(sender) } }
+    override func moveForward(_ sender: Any?) { if !stackStep(1) { super.moveForward(sender) } }
+
+    private func stackStep(_ by: Int) -> Bool {
+        guard Self.stackedOn, !stacked.stacks.isEmpty else { return false }
+        let sel = selectedRange(), n = (string as NSString).length
+        let to = sel.length > 0 ? (by < 0 ? sel.location : NSMaxRange(sel)) : min(n, max(0, sel.location + by))
+        setSelectedRange(NSRange(location: StackedMath.snap(stacked, to, from: sel.location, length: n), length: 0))
+        return true
+    }
+
+    /// the line again in its look, after the setting changes
+    func restyleWithGaps() { applyGaps() }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL] ?? []
@@ -204,6 +252,8 @@ final class BarTextView: NSTextView {
     }
 
     static let fontSize: CGFloat = 24
+    /// the line's own font (`font` is the first character's, which may be a stacked fraction's hidden bracket)
+    static let lineFont = NSFont.systemFont(ofSize: fontSize, weight: .regular)
     static let attributes: [NSAttributedString.Key: Any] = [
         .font: NSFont.systemFont(ofSize: fontSize, weight: .regular),
         .foregroundColor: Theme.ink,
@@ -237,9 +287,10 @@ final class BarTextView: NSTextView {
 
     /// The whole line in the field's look, after any programmatic change.
     func restyle() {
-        guard let storage = textStorage, storage.length > 0 else { return }
+        guard let storage = textStorage, storage.length > 0 else { stacked = StackedMath.Parsed(); stackBars = []; stackHoles = []; return refreshStackCaret() }
         storage.setAttributes(Self.attributes, range: NSRange(location: 0, length: storage.length))
         styleBounds()
+        styleStacks()
     }
 
     // ---- ∫ Σ Π limits (Bounds.tsx, lib/bounds.ts): drawn small beside the sign, upper over lower; the `_ ^ ..`
@@ -321,6 +372,7 @@ final class BarTextView: NSTextView {
     override func insertText(_ insert: Any, replacementRange: NSRange) {
         let typed = (insert as? String) ?? (insert as? NSAttributedString)?.string ?? ""
         let sel = selectedRange()
+        if Self.stackedOn, !hasMarkedText(), replacementRange.location == NSNotFound, stackedTyping(typed, sel) { return }
         if !hasMarkedText(), replacementRange.location == NSNotFound, ["[", "]", "(", "{"].contains(typed) {
             if let w = Symbols.wrap(string, start: sel.location, end: sel.location + sel.length, key: typed) {
                 replace(with: w.text, selection: NSRange(location: w.start, length: w.end - w.start))
@@ -335,6 +387,26 @@ final class BarTextView: NSTextView {
         super.insertText(insert, replacementRange: replacementRange)
     }
 
+    /// `/`, `^`, `)` and a term after a stack, when the line stacks them: true when the key was taken
+    private func stackedTyping(_ typed: String, _ sel: NSRange) -> Bool {
+        var edit: StackedMath.Edit?
+        switch typed {
+        case "/", "÷": edit = StackedMath.slashKey(string, start: sel.location, end: NSMaxRange(sel))
+        case "^" where sel.length == 0: edit = StackedMath.powerKey(string, caret: sel.location)
+        case ")" where sel.length == 0:
+            if let to = StackedMath.closeKey(string, caret: sel.location) {
+                setSelectedRange(NSRange(location: StackedMath.snap(stacked, to, from: sel.location, length: (string as NSString).length), length: 0))
+                return true
+            }
+        default:
+            if sel.length == 0, (typed as NSString).length == 1 { edit = StackedMath.termAfterStack(string, caret: sel.location, typed: typed) }
+        }
+        guard let edit else { return false }
+        editKind = "insertText"
+        replace(with: edit.text, selection: NSRange(location: edit.caret, length: 0))
+        return true
+    }
+
     // backspace in `[]` takes both; a +- that meets at the caret becomes ± (joinPlusMinusAt)
     override func deleteForward(_ sender: Any?) {
         editKind = "deleteContentForward"
@@ -344,6 +416,10 @@ final class BarTextView: NSTextView {
     override func deleteBackward(_ sender: Any?) {
         editKind = "deleteContentBackward"
         let sel = selectedRange()
+        if Self.stackedOn, sel.length == 0, let e = StackedMath.backspace(string, caret: sel.location) {
+            if e.text == string { editKind = nil; setSelectedRange(NSRange(location: e.caret, length: 0)) } else { replace(with: e.text, selection: NSRange(location: e.caret, length: 0)) }
+            return
+        }
         if let b = Symbols.bracketKey(string, start: sel.location, end: sel.location + sel.length, key: "backspace") {
             replace(with: b.text, selection: NSRange(location: b.caret, length: 0))
             return
@@ -364,6 +440,7 @@ final class BarTextView: NSTextView {
     convenience init() {
         let storage = NSTextStorage()
         let layout = NSLayoutManager()
+        layout.typesetter = StackTypesetter()
         storage.addLayoutManager(layout)
         let container = NSTextContainer(size: NSSize(width: CGFloat.greatestFiniteMagnitude, height: 40))
         container.widthTracksTextView = false
@@ -404,6 +481,7 @@ final class BarTextView: NSTextView {
         setAccessibilityLabel("Calculation")
         setAccessibilityHelp("Type maths; the answer appears as you type. Return saves it to the history.")
         setAccessibilityRole(.textField)
+        stackWatch = AppSettings.shared.$stackedMath.dropFirst().receive(on: RunLoop.main).sink { [weak self] _ in self?.restyleWithGaps() }
     }
 
     /// the grey leading parens, a view of their own: drawn by the text view itself they sat in the inset, which
@@ -414,11 +492,11 @@ final class BarTextView: NSTextView {
         // as wide as typed `(` with the line's tracking, so filling one in moves nothing
         let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: Self.attributes).width
         // the line sits in the middle of its 36 pt box, as the web input's does
-        let line = layoutManager?.defaultLineHeight(for: font!) ?? Self.fontSize * 1.2
+        let line = layoutManager?.defaultLineHeight(for: Self.lineFont) ?? Self.fontSize * 1.2
         textContainerInset = NSSize(width: lead, height: max(0, (bounds.height - line) / 2))
         if leadView.superview == nil { addSubview(leadView) }
         leadView.text = ghostLead
-        leadView.attributes = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
+        leadView.attributes = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
         leadView.y = textContainerInset.height
         leadView.frame = NSRect(x: 0, y: 0, width: lead, height: bounds.height)
         leadView.isHidden = ghostLead.isEmpty
@@ -444,6 +522,11 @@ final class BarTextView: NSTextView {
         if hasMarkedText() { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         let sel = selectedRange()
+        if Self.stackedOn, sel.length == 0, flags.isEmpty, event.keyCode == 126 || event.keyCode == 125,
+           let to = stackVertical(up: event.keyCode == 126) {
+            setSelectedRange(NSRange(location: to, length: 0))
+            return
+        }
         if sel.length == 0, flags.isSubset(of: [.shift]), let boundKey {
             let chars = event.charactersIgnoringModifiers ?? ""
             let name: String? = {
@@ -523,9 +606,9 @@ final class BarTextView: NSTextView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        let attrs: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
+        let attrs: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted.withAlphaComponent(0.8), .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-inferred: the grey parens the engine would add, ahead of the text and after it
-        let inferred: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
+        let inferred: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
         // .quick-squiggle: a wavy line, muted at 70%, under where a blank answer stops reading
         if let squiggle, let lm = layoutManager, let tc = textContainer, NSMaxRange(squiggle) <= (string as NSString).length {
             let glyphs = lm.glyphRange(forCharacterRange: squiggle, actualCharacterRange: nil)
@@ -545,6 +628,7 @@ final class BarTextView: NSTextView {
             path.stroke()
         }
         drawHoles()
+        drawStacks()
         // a radical's bar over what it takes, as Radical.tsx draws it in the web input
         if let lm = layoutManager, let tc = textContainer {
             Theme.ink.setFill()
@@ -564,19 +648,20 @@ final class BarTextView: NSTextView {
                 let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
                 let width = (angleMarkText as NSString).size(withAttributes: Self.attributes).width
                 (angleMarkText as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height),
-                                                 withAttributes: [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)])
+                                                 withAttributes: [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)])
             }
         }
         if let offer, offer.at > 0, offer.at <= (string as NSString).length, let lm = layoutManager, let tc = textContainer {
             let glyph = lm.glyphIndexForCharacter(at: offer.at - 1)
             let rect = lm.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: tc)
             let width = (offer.text as NSString).size(withAttributes: Self.attributes).width
-            let muted: [NSAttributedString.Key: Any] = [.font: font!, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
+            let muted: [NSAttributedString.Key: Any] = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
             (offer.text as NSString).draw(at: NSPoint(x: textContainerInset.width + rect.maxX - width, y: textContainerInset.height), withAttributes: muted)
         }
         if let lm = layoutManager, let tc = textContainer {
             let used = lm.usedRect(for: tc)
-            var x = textContainerInset.width + used.maxX
+            // a stacked fraction's pull leaves the used rect wider than the line
+            var x = stacked.stacks.isEmpty ? textContainerInset.width + used.maxX : stackCaretX((string as NSString).length) ?? textContainerInset.width + used.maxX
             if !ghostTail.isEmpty, selectedRange().location == (string as NSString).length {
                 (ghostTail as NSString).draw(at: NSPoint(x: x, y: textContainerInset.height), withAttributes: attrs)
                 x += (ghostTail as NSString).size(withAttributes: attrs).width
@@ -727,6 +812,14 @@ struct InputField: NSViewRepresentable {
         // the caret never stops among a limit's hidden `_ ^ ..` (snapOffset)
         func textView(_ textView: NSTextView, willChangeSelectionFromCharacterRange old: NSRange,
                       toCharacterRange new: NSRange) -> NSRange {
+            // nor on a stacked fraction's or power's hidden `/ ^ ( )` (StackedMath.dead)
+            // (the line as it is now: while a character goes in, the selection moves before the line is restyled)
+            if let text, new.length == 0, BarTextView.stackedOn, text.string.contains("/") || text.string.contains("^") {
+                let now = StackedMath.parse(text.string)
+                if now.dead.contains(new.location) {
+                    return NSRange(location: StackedMath.snap(now, new.location, from: old.location, length: (text.string as NSString).length), length: 0)
+                }
+            }
             guard let text, new.length == 0, !text.limits.isEmpty,
                   model.logic.bool("lib/bounds", "isHidden", [text.limits, new.location]),
                   let o = (model.logic.call("lib/bounds", "snapOffset",
@@ -749,6 +842,7 @@ struct InputField: NSViewRepresentable {
 
         func textDidChange(_ notification: Notification) {
             guard let text else { return }
+            defer { if BarTextView.stackedOn { text.restyle() } }
             // typed words become symbols as they're finished (prettyTokens), unless "keep words" is on
             if !text.hasMarkedText() {
                 let caret = text.selectedRange().location

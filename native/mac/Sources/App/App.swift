@@ -135,7 +135,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         case "key": DevSnapshot.key(arg)
         // text typed into whatever field has the keys (a reply line, the bar), and a click at x,y in the bar
         // (points from its top-left)
-        case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView)?.insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
+        case "keys": (NSApp.keyWindow?.firstResponder as? NSTextView
+                      ?? NSApp.windows.first(where: { $0 is OverlayPanel && $0.isVisible })?.firstResponder as? NSTextView)?
+                .insertText(arg, replacementRange: NSRange(location: NSNotFound, length: 0))
         case "click": DevSnapshot.click(arg)
         // point:<x>,<y> rests the pointer there in the bar (the hover label), point:off leaves the line
         case "point": DevSnapshot.point(arg)
