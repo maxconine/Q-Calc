@@ -834,7 +834,12 @@ impl App {
             windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONDOWN
             | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN => {
                 let (x, y) = self.dips(lp);
-                crate::graph::press(self, x, y, msg == windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN);
+                crate::graph::press(
+                    self,
+                    x,
+                    y,
+                    msg == windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN,
+                );
             }
             windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONUP
             | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONUP => {

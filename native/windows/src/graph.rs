@@ -29,8 +29,8 @@ use qcalc_ffi::{
 };
 
 use crate::engine::{EngineThread, Lane, done};
-use crate::graph3d::{HOME_PITCH, HOME_YAW, PITCH_MAX, PITCH_MIN};
 use crate::graph_settings::{self as gs, FieldId};
+use crate::graph3d::{HOME_PITCH, HOME_YAW, PITCH_MAX, PITCH_MIN};
 use crate::input::Field;
 use crate::keys::Mods;
 use crate::model::{BarModel, Outcome, now_ms};
@@ -356,7 +356,11 @@ pub fn axis_grid(lo: f64, hi: f64, log: bool, step: Option<f64>, engine: &[Graph
     if let Some(step) = step.filter(|s| *s > 0.0 && (hi - lo) / s <= 200.0) {
         let mut k = (lo / step).ceil();
         while k * step <= hi + step * 1e-9 {
-            let v = if (k * step).abs() < step * 1e-9 { 0.0 } else { k * step };
+            let v = if (k * step).abs() < step * 1e-9 {
+                0.0
+            } else {
+                k * step
+            };
             out.major.push((v, fmt_g(v, 6)));
             k += 1.0;
         }
@@ -506,7 +510,12 @@ pub enum Reading {
     /// a plot of x and y: the point under the pointer, and a surface's height there
     Point { x: f64, y: f64, z: Option<f64> },
     /// the 3D view: the point of a surface under the pointer
-    Surface { x: f64, y: f64, z: f64, layer: usize },
+    Surface {
+        x: f64,
+        y: f64,
+        z: f64,
+        layer: usize,
+    },
 }
 
 /// A press being dragged over the plot.
@@ -651,7 +660,8 @@ impl GraphState {
     }
 
     pub fn at_home(&self) -> bool {
-        self.home.is_none_or(|(lo, hi)| self.x_min == lo && self.x_max == hi)
+        self.home
+            .is_none_or(|(lo, hi)| self.x_min == lo && self.x_max == hi)
             && self.y_center == self.home_y_center
             && self.fixed_y.is_none()
             && self.fixed_z.is_none()
@@ -671,7 +681,10 @@ impl GraphState {
     pub fn cube(&self, size: (f32, f32)) -> Option<crate::graph3d::Cube> {
         let grid = self.main().and_then(|p| p.surface.as_ref());
         let x = grid.map_or((self.x_min, self.x_max), |s| (s.x_lo, s.x_hi));
-        let (yc, half) = (self.y_center.unwrap_or(0.0), (self.x_max - self.x_min) / 2.0);
+        let (yc, half) = (
+            self.y_center.unwrap_or(0.0),
+            (self.x_max - self.x_min) / 2.0,
+        );
         let y = grid.map_or((yc - half, yc + half), |s| (s.y_lo, s.y_hi));
         crate::graph3d::Cube::new(x, y, self.z_window(), self.yaw, self.pitch, size)
     }
@@ -957,7 +970,11 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
         }
         yc = w.y_center;
         if job.x_log && lo <= 0.0 {
-            (lo, hi) = if hi > 0.0 { (hi / 1000.0, hi) } else { (0.1, 100.0) };
+            (lo, hi) = if hi > 0.0 {
+                (hi / 1000.0, hi)
+            } else {
+                (0.1, 100.0)
+            };
         }
     }
     let in3d = job.in3d;
@@ -991,7 +1008,9 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
         .map(|(id, input)| (*id, e.graph(input.clone(), first.clone(), settings.clone())))
         .collect();
     // y: as set; or fitted to every curve when the first is one (a plot of x and y keeps its own)
-    let (mut y0, mut y1) = result.as_ref().map_or((-10.0, 10.0), |r| (r.y_min, r.y_max));
+    let (mut y0, mut y1) = result
+        .as_ref()
+        .map_or((-10.0, 10.0), |r| (r.y_min, r.y_max));
     if let (Some(fy), false) = (job.fixed_y, in3d) {
         (y0, y1) = fy;
     } else if let Some(r) = result.as_ref().filter(|r| !r.contour && !in3d) {
@@ -1007,9 +1026,15 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
             let ys = curves()
                 .flat_map(|c| c.points.iter().filter_map(|p| p.y))
                 .filter(|y| *y > 0.0 && y.is_finite());
-            let (a, b) = ys.fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), y| (a.min(y), b.max(y)));
+            let (a, b) = ys.fold((f64::INFINITY, f64::NEG_INFINITY), |(a, b), y| {
+                (a.min(y), b.max(y))
+            });
             (y0, y1) = if a.is_finite() {
-                if a < b { (a / 1.5, b * 1.5) } else { (a / 10.0, a * 10.0) }
+                if a < b {
+                    (a / 1.5, b * 1.5)
+                } else {
+                    (a / 10.0, a * 10.0)
+                }
             } else {
                 (0.1, 100.0)
             };
@@ -1031,7 +1056,10 @@ fn run(e: &Engine, job: Job, settings: EvalOptions) -> Landed {
     }
     let unit = result.as_ref().and_then(|r| r.angle_unit);
     let (x_ticks, y_ticks) = if result.is_some() {
-        (e.graph_ticks(lo, hi, unit, 6), e.graph_ticks(y0, y1, None, 5))
+        (
+            e.graph_ticks(lo, hi, unit, 6),
+            e.graph_ticks(y0, y1, None, 5),
+        )
     } else {
         (Vec::new(), Vec::new())
     };
@@ -1116,7 +1144,8 @@ pub fn pan(m: &mut BarModel, engine: &EngineThread, dx: f64, dy: f64, move3d: bo
         let w = g.x_max - g.x_min;
         g.x_min += du * w / 2.0;
         g.x_max += du * w / 2.0;
-        g.y_center = Some(g.y_center.unwrap_or((g.y_min + g.y_max) / 2.0) + dv * (g.y_max - g.y_min) / 2.0);
+        g.y_center =
+            Some(g.y_center.unwrap_or((g.y_min + g.y_max) / 2.0) + dv * (g.y_max - g.y_min) / 2.0);
     } else {
         (g.x_min, g.x_max) = shifted(g.x_min, g.x_max, -dx, g.log_x());
         if let Some((lo, hi)) = g.fixed_y {
@@ -1144,7 +1173,11 @@ pub fn zoom(m: &mut BarModel, engine: &EngineThread, factor: f64, at: f64) {
     }
     let Some(g) = &mut m.graph else { return };
     let (lo, hi) = scaled(g.x_min, g.x_max, factor, at.clamp(0.0, 1.0), g.log_x());
-    if hi - lo < MIN_SPAN || (hi - lo > MAX_SPAN && !g.log_x()) || !lo.is_finite() || !hi.is_finite() {
+    if hi - lo < MIN_SPAN
+        || (hi - lo > MAX_SPAN && !g.log_x())
+        || !lo.is_finite()
+        || !hi.is_finite()
+    {
         return;
     }
     (g.x_min, g.x_max) = (lo, hi);
@@ -1175,7 +1208,11 @@ pub fn home(m: &mut BarModel, engine: &EngineThread) {
     g.yaw = HOME_YAW;
     g.pitch = HOME_PITCH;
     if g.x_log && lo <= 0.0 {
-        (g.x_min, g.x_max) = if hi > 0.0 { (hi / 1000.0, hi) } else { (0.1, 100.0) };
+        (g.x_min, g.x_max) = if hi > 0.0 {
+            (hi / 1000.0, hi)
+        } else {
+            (0.1, 100.0)
+        };
     }
     g.reading = None;
     g.bump();
@@ -1264,7 +1301,10 @@ pub fn zoom_square(m: &mut BarModel, engine: &EngineThread) {
         m.touch();
         return;
     }
-    let (mid, half) = ((g.y_min + g.y_max) / 2.0, (g.x_max - g.x_min) * PLOT_ASPECT / 2.0);
+    let (mid, half) = (
+        (g.y_min + g.y_max) / 2.0,
+        (g.x_max - g.x_min) * PLOT_ASPECT / 2.0,
+    );
     set_y(m, engine, mid - half, mid + half);
 }
 
@@ -1274,7 +1314,11 @@ pub fn set_log(m: &mut BarModel, engine: &EngineThread, x: Option<bool>, y: Opti
     if let Some(x) = x {
         g.x_log = x;
         if x && g.x_min <= 0.0 {
-            (g.x_min, g.x_max) = if g.x_max > 0.0 { (g.x_max / 1000.0, g.x_max) } else { (0.1, 100.0) };
+            (g.x_min, g.x_max) = if g.x_max > 0.0 {
+                (g.x_max / 1000.0, g.x_max)
+            } else {
+                (0.1, 100.0)
+            };
         }
     }
     if let Some(y) = y {
@@ -1282,7 +1326,11 @@ pub fn set_log(m: &mut BarModel, engine: &EngineThread, x: Option<bool>, y: Opti
         if y {
             let top = g.fixed_y.map_or(g.y_max, |f| f.1).max(0.0);
             if g.fixed_y.map_or(g.y_min, |f| f.0) <= 0.0 {
-                g.fixed_y = Some(if top > 0.0 { (top / 1000.0, top) } else { (0.1, 100.0) });
+                g.fixed_y = Some(if top > 0.0 {
+                    (top / 1000.0, top)
+                } else {
+                    (0.1, 100.0)
+                });
             }
         }
     }
@@ -1619,7 +1667,12 @@ mod tests {
         // far samples are pinned
         assert_eq!(dots[1].1, -V_LIMIT);
         // on a log y axis, y at or below 0 is a gap and the rest sit in decades
-        let log = [p(1.0, Some(1.0)), p(2.0, Some(10.0)), p(3.0, Some(0.0)), p(4.0, Some(100.0))];
+        let log = [
+            p(1.0, Some(1.0)),
+            p(2.0, Some(10.0)),
+            p(3.0, Some(0.0)),
+            p(4.0, Some(100.0)),
+        ];
         let (lines, dots) = runs(&log, [1.0, 4.0, 1.0, 100.0], (false, true));
         assert_eq!(lines, vec![vec![(0.0, 1.0), (1.0 / 3.0, 0.5)]]);
         assert_eq!(dots, vec![(1.0, 0.0)]);
@@ -1637,8 +1690,14 @@ mod tests {
     #[test]
     fn ticks_step_by_one_two_or_five() {
         assert_eq!(nice_ticks(-10.0, 10.0, 4), [-10.0, -5.0, 0.0, 5.0, 10.0]);
-        assert_eq!(nice_ticks(0.0, 1.0, 5), [0.0, 0.2, 0.4, 0.6000000000000001, 0.8, 1.0]);
-        assert_eq!(nice_ticks(-3.0, 3.0, 6), [-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]);
+        assert_eq!(
+            nice_ticks(0.0, 1.0, 5),
+            [0.0, 0.2, 0.4, 0.6000000000000001, 0.8, 1.0]
+        );
+        assert_eq!(
+            nice_ticks(-3.0, 3.0, 6),
+            [-3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0]
+        );
         assert!(nice_ticks(1.0, 1.0, 4).is_empty());
         assert!(nice_ticks(f64::NAN, 1.0, 4).is_empty());
     }
@@ -1647,7 +1706,10 @@ mod tests {
     fn grids_take_a_set_step_or_decades_or_the_engines_ticks() {
         // a step of 2: minor lines a quarter of it
         let g = axis_grid(-4.0, 4.0, false, Some(2.0), &[]);
-        assert_eq!(g.major.iter().map(|m| m.0).collect::<Vec<_>>(), [-4.0, -2.0, 0.0, 2.0, 4.0]);
+        assert_eq!(
+            g.major.iter().map(|m| m.0).collect::<Vec<_>>(),
+            [-4.0, -2.0, 0.0, 2.0, 4.0]
+        );
         assert_eq!(g.major[0].1, "−4");
         assert_eq!(g.minor.len(), 12);
         assert!(g.minor.contains(&-3.5) && !g.minor.contains(&-2.0));
@@ -1656,19 +1718,39 @@ mod tests {
         assert_eq!(g.minor, [1.0, 2.0, 3.0, 4.0, 6.0, 7.0, 8.0, 9.0]);
         // log: decades, with 2…9 between
         let g = axis_grid(1.0, 1000.0, true, None, &[]);
-        assert_eq!(g.major.iter().map(|m| m.0).collect::<Vec<_>>(), [1.0, 10.0, 100.0, 1000.0]);
+        assert_eq!(
+            g.major.iter().map(|m| m.0).collect::<Vec<_>>(),
+            [1.0, 10.0, 100.0, 1000.0]
+        );
         assert_eq!(g.minor.len(), 24);
         // otherwise the engine's ticks, as labelled
-        let t = |v: f64, l: &str| GraphTick { value: v, label: l.into() };
-        let g = axis_grid(-1.0, 11.0, false, None, &[t(-5.0, "-5"), t(0.0, "0"), t(5.0, "5"), t(10.0, "10")]);
-        assert_eq!(g.major, vec![(0.0, "0".into()), (5.0, "5".into()), (10.0, "10".into())]);
+        let t = |v: f64, l: &str| GraphTick {
+            value: v,
+            label: l.into(),
+        };
+        let g = axis_grid(
+            -1.0,
+            11.0,
+            false,
+            None,
+            &[t(-5.0, "-5"), t(0.0, "0"), t(5.0, "5"), t(10.0, "10")],
+        );
+        assert_eq!(
+            g.major,
+            vec![(0.0, "0".into()), (5.0, "5".into()), (10.0, "10".into())]
+        );
         assert_eq!(g.step(), Some(5.0));
         assert!(g.minor.contains(&-1.0) && g.minor.contains(&11.0));
     }
 
     #[test]
     fn the_pointer_picks_the_nearest_mark_within_reach() {
-        let marks = [Some((10.0, 10.0)), None, Some((14.0, 10.0)), Some((100.0, 100.0))];
+        let marks = [
+            Some((10.0, 10.0)),
+            None,
+            Some((14.0, 10.0)),
+            Some((100.0, 100.0)),
+        ];
         assert_eq!(nearest(&marks, (13.0, 10.0), SNAP), Some(2));
         assert_eq!(nearest(&marks, (5.0, 10.0), SNAP), Some(0));
         assert_eq!(nearest(&marks, (50.0, 50.0), SNAP), None);
@@ -1713,18 +1795,34 @@ mod tests {
     }
 
     fn cp(kind: CriticalKind, x: f64, y: f64) -> CriticalPoint {
-        CriticalPoint { x, y, kind, z: None }
+        CriticalPoint {
+            x,
+            y,
+            kind,
+            z: None,
+        }
     }
 
     #[test]
     fn a_lines_root_shows_once_and_every_equations_points_are_listed() {
         let line = plot(
             Kind::Curve,
-            vec![cp(CriticalKind::XIntercept, 1.5, 0.0), cp(CriticalKind::YIntercept, 0.0, 7.5)],
+            vec![
+                cp(CriticalKind::XIntercept, 1.5, 0.0),
+                cp(CriticalKind::YIntercept, 0.0, 7.5),
+            ],
             vec![1.5],
         );
-        let layer = Layer { id: 1, expression: "x^2-4".into(), from_bar: true };
-        let parabola = plot(Kind::Curve, vec![cp(CriticalKind::Min, 0.0, -4.0)], vec![-2.0, 2.0]);
+        let layer = Layer {
+            id: 1,
+            expression: "x^2-4".into(),
+            from_bar: true,
+        };
+        let parabola = plot(
+            Kind::Curve,
+            vec![cp(CriticalKind::Min, 0.0, -4.0)],
+            vec![-2.0, 2.0],
+        );
         let g = state_with(line, vec![(layer, parabola)]);
         assert!(g.roots().is_empty());
         let all = g.all_critical();
@@ -1732,7 +1830,11 @@ mod tests {
         assert_eq!(g.detail_title(), "Critical points");
         let pts = plot(Kind::Curve, vec![cp(CriticalKind::Point, 1.0, 2.0)], vec![]);
         assert_eq!(state_with(pts, vec![]).detail_title(), "Points");
-        let circle = plot(Kind::Implicit, vec![cp(CriticalKind::Max, 0.0, 5.0)], vec![]);
+        let circle = plot(
+            Kind::Implicit,
+            vec![cp(CriticalKind::Max, 0.0, 5.0)],
+            vec![],
+        );
         let g = state_with(circle, vec![]);
         assert_eq!(g.detail_title(), "Key points");
         assert!(g.roots().is_empty());
@@ -1744,12 +1846,22 @@ mod tests {
     fn bar_layers_keep_their_ids_and_the_panels_follow() {
         let mut g = GraphState::new("x".into(), None);
         g.layers = vec![
-            Layer { id: 1, expression: "a".into(), from_bar: true },
-            Layer { id: 2, expression: "typed".into(), from_bar: false },
+            Layer {
+                id: 1,
+                expression: "a".into(),
+                from_bar: true,
+            },
+            Layer {
+                id: 2,
+                expression: "typed".into(),
+                from_bar: false,
+            },
         ];
         let next = bar_layers(&g, &["a2".into(), "b".into()]);
         assert_eq!(
-            next.iter().map(|l| (l.id, l.expression.as_str(), l.from_bar)).collect::<Vec<_>>(),
+            next.iter()
+                .map(|l| (l.id, l.expression.as_str(), l.from_bar))
+                .collect::<Vec<_>>(),
             [(1, "a2", true), (3, "b", true), (2, "typed", false)]
         );
     }

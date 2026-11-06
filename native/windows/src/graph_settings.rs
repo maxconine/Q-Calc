@@ -153,19 +153,42 @@ pub struct View {
 /// The controls for `p` and `v` (GraphSettingsView's rows, flattened).
 pub fn controls(p: &GraphPrefs, v: &View) -> Vec<Ctl> {
     let mut out = vec![
-        Ctl::Seg(Seg::TextSize, vec!["A", "A+"], usize::from(p.large_text), true),
-        Ctl::Check(Check::ReverseContrast, "reverse contrast", p.reverse_contrast),
-        Ctl::Seg(Seg::Angles, vec!["rad", "deg"], usize::from(p.degrees.unwrap_or(!v.radians)), true),
+        Ctl::Seg(
+            Seg::TextSize,
+            vec!["A", "A+"],
+            usize::from(p.large_text),
+            true,
+        ),
+        Ctl::Check(
+            Check::ReverseContrast,
+            "reverse contrast",
+            p.reverse_contrast,
+        ),
+        Ctl::Seg(
+            Seg::Angles,
+            vec!["rad", "deg"],
+            usize::from(p.degrees.unwrap_or(!v.radians)),
+            true,
+        ),
         Ctl::Break,
         Ctl::Check(Check::Grid, "grid", p.grid),
-        Ctl::Seg(Seg::GridKind, vec!["cartesian", "polar"], usize::from(p.polar), p.grid),
+        Ctl::Seg(
+            Seg::GridKind,
+            vec!["cartesian", "polar"],
+            usize::from(p.polar),
+            p.grid,
+        ),
         Ctl::Check(Check::Arrows, "arrows", p.arrows),
         Ctl::Check(Check::AxisNumbers, "axis numbers", p.axis_numbers),
         Ctl::Check(Check::MinorGrid, "minor gridlines", p.minor_grid),
         Ctl::ZoomSquare(!v.log.0 && !v.log.1),
         Ctl::Break,
     ];
-    let (y_name, y_lo, y_hi) = if v.three_d { ("z", FieldId::YLo, FieldId::YHi) } else { ("y", FieldId::YLo, FieldId::YHi) };
+    let (y_name, y_lo, y_hi) = if v.three_d {
+        ("z", FieldId::YLo, FieldId::YHi)
+    } else {
+        ("y", FieldId::YLo, FieldId::YHi)
+    };
     out.extend([
         Ctl::Check(Check::XAxis, "x-axis", p.show_x_axis),
         Ctl::Field(FieldId::XLabel, v.x_label.clone(), "label", 64.0),
@@ -187,12 +210,26 @@ pub fn controls(p: &GraphPrefs, v: &View) -> Vec<Ctl> {
     if !v.three_d {
         out.extend([
             Ctl::Text("x".into()),
-            Ctl::Seg(Seg::XScale, vec!["linear", "log"], usize::from(v.log.0), true),
+            Ctl::Seg(
+                Seg::XScale,
+                vec!["linear", "log"],
+                usize::from(v.log.0),
+                true,
+            ),
             Ctl::Text("y".into()),
-            Ctl::Seg(Seg::YScale, vec!["linear", "log"], usize::from(v.log.1), true),
+            Ctl::Seg(
+                Seg::YScale,
+                vec!["linear", "log"],
+                usize::from(v.log.1),
+                true,
+            ),
         ]);
     }
-    out.push(Ctl::Check(Check::LockViewport, "lock viewport", p.lock_viewport));
+    out.push(Ctl::Check(
+        Check::LockViewport,
+        "lock viewport",
+        p.lock_viewport,
+    ));
     out
 }
 
@@ -243,7 +280,11 @@ pub fn parse(raw: &str) -> Option<f64> {
             return match rest {
                 "" => Some(k),
                 "-" => Some(-k),
-                m => m.parse::<f64>().ok().filter(|m| m.is_finite()).map(|m| m * k),
+                m => m
+                    .parse::<f64>()
+                    .ok()
+                    .filter(|m| m.is_finite())
+                    .map(|m| m * k),
             };
         }
     }
@@ -273,9 +314,14 @@ mod tests {
 
     #[test]
     fn prefs_default_and_read_partly() {
-        let p = GraphPrefs::from_value(&serde_json::json!({ "polar": true, "minorGrid": false, "bogus": 1 }));
+        let p = GraphPrefs::from_value(
+            &serde_json::json!({ "polar": true, "minorGrid": false, "bogus": 1 }),
+        );
         assert!(p.polar && !p.minor_grid && p.grid && p.axis_numbers);
-        assert_eq!(GraphPrefs::from_value(&serde_json::Value::Null), GraphPrefs::default());
+        assert_eq!(
+            GraphPrefs::from_value(&serde_json::Value::Null),
+            GraphPrefs::default()
+        );
         let back = serde_json::to_value(p).unwrap();
         assert_eq!(back["minorGrid"], false);
         let mut q = GraphPrefs::default();

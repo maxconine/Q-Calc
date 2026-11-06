@@ -143,7 +143,11 @@ impl Cube {
 
 /// The 3D cube's z: `fixed`, or as wide as x about 0. A surface under a tenth that tall would be a flat sheet in
 /// that, so its own heights are fitted instead (zWindow).
-pub fn z_window(fixed: Option<(f64, f64)>, x: (f64, f64), surface: Option<(f64, f64)>) -> (f64, f64) {
+pub fn z_window(
+    fixed: Option<(f64, f64)>,
+    x: (f64, f64),
+    surface: Option<(f64, f64)>,
+) -> (f64, f64) {
     if let Some(z) = fixed {
         return z;
     }
@@ -288,7 +292,13 @@ pub fn scene(c: &Cube, f: &Frame, plane: &Plane, surfaces: &[(&SurfaceGrid, usiz
     let add_line = |pieces: &mut Vec<(f64, Piece)>, a: P3, b: P3, kind: Line, parts: usize| {
         for k in 0..parts {
             let (t0, t1) = (k as f64 / parts as f64, (k + 1) as f64 / parts as f64);
-            let at = |t: f64| [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+            let at = |t: f64| {
+                [
+                    a[0] + (b[0] - a[0]) * t,
+                    a[1] + (b[1] - a[1]) * t,
+                    a[2] + (b[2] - a[2]) * t,
+                ]
+            };
             let (q0, d0) = c.at(at(t0));
             let (q1, d1) = c.at(at(t1));
             // a hair in front of a surface at the same place
@@ -299,26 +309,68 @@ pub fn scene(c: &Cube, f: &Frame, plane: &Plane, surfaces: &[(&SurfaceGrid, usiz
     if plane.grid {
         if plane.minor {
             for &t in &plane.x_minor {
-                add_line(&mut pieces, [c.u(t), -1.0, w0], [c.u(t), 1.0, w0], Line::Minor, 6);
+                add_line(
+                    &mut pieces,
+                    [c.u(t), -1.0, w0],
+                    [c.u(t), 1.0, w0],
+                    Line::Minor,
+                    6,
+                );
             }
             for &t in &plane.y_minor {
-                add_line(&mut pieces, [-1.0, c.v(t), w0], [1.0, c.v(t), w0], Line::Minor, 6);
+                add_line(
+                    &mut pieces,
+                    [-1.0, c.v(t), w0],
+                    [1.0, c.v(t), w0],
+                    Line::Minor,
+                    6,
+                );
             }
         }
         for &t in &plane.x_major {
-            add_line(&mut pieces, [c.u(t), -1.0, w0], [c.u(t), 1.0, w0], Line::Major, 8);
+            add_line(
+                &mut pieces,
+                [c.u(t), -1.0, w0],
+                [c.u(t), 1.0, w0],
+                Line::Major,
+                8,
+            );
         }
         for &t in &plane.y_major {
-            add_line(&mut pieces, [-1.0, c.v(t), w0], [1.0, c.v(t), w0], Line::Major, 8);
+            add_line(
+                &mut pieces,
+                [-1.0, c.v(t), w0],
+                [1.0, c.v(t), w0],
+                Line::Major,
+                8,
+            );
         }
     }
     if plane.x_axis {
-        add_line(&mut pieces, [-1.0, f.clamp_v, w0], [1.0, f.clamp_v, w0], Line::Axis, 16);
+        add_line(
+            &mut pieces,
+            [-1.0, f.clamp_v, w0],
+            [1.0, f.clamp_v, w0],
+            Line::Axis,
+            16,
+        );
     }
     if plane.y_axis {
-        add_line(&mut pieces, [f.clamp_u, -1.0, w0], [f.clamp_u, 1.0, w0], Line::Axis, 16);
+        add_line(
+            &mut pieces,
+            [f.clamp_u, -1.0, w0],
+            [f.clamp_u, 1.0, w0],
+            Line::Axis,
+            16,
+        );
     }
-    add_line(&mut pieces, [f.clamp_u, f.clamp_v, -1.0], [f.clamp_u, f.clamp_v, 1.0], Line::Axis, 16);
+    add_line(
+        &mut pieces,
+        [f.clamp_u, f.clamp_v, -1.0],
+        [f.clamp_u, f.clamp_v, 1.0],
+        Line::Axis,
+        16,
+    );
     let light = normalize(LIGHT);
     for &(grid, layer) in surfaces {
         let (nx, ny) = (grid.nx as usize, grid.ny as usize);
@@ -346,7 +398,9 @@ pub fn scene(c: &Cube, f: &Frame, plane: &Plane, surfaces: &[(&SurfaceGrid, usiz
                     continue;
                 };
                 // wholly above or below the cube: nothing to draw
-                if [a, b, cc, d].iter().all(|p| p[2] > 1.0) || [a, b, cc, d].iter().all(|p| p[2] < -1.0) {
+                if [a, b, cc, d].iter().all(|p| p[2] > 1.0)
+                    || [a, b, cc, d].iter().all(|p| p[2] < -1.0)
+                {
                     continue;
                 }
                 let poly = clip(&[a, b, cc, d]);
@@ -419,7 +473,8 @@ pub fn patch_hit(p: P2, patches: &[Patch]) -> Option<(P3, usize)> {
             continue;
         }
         for k in 1..patch.screen.len() - 1 {
-            let Some((l1, l2, l3)) = bary(patch.screen[0], patch.screen[k], patch.screen[k + 1]) else {
+            let Some((l1, l2, l3)) = bary(patch.screen[0], patch.screen[k], patch.screen[k + 1])
+            else {
                 continue;
             };
             let (a, b, c) = (patch.cube[0], patch.cube[k], patch.cube[k + 1]);
@@ -436,7 +491,15 @@ mod tests {
     use super::*;
 
     fn cube() -> Cube {
-        Cube::new((-10.0, 10.0), (-10.0, 10.0), (-10.0, 10.0), HOME_YAW, HOME_PITCH, (652.0, 360.0)).unwrap()
+        Cube::new(
+            (-10.0, 10.0),
+            (-10.0, 10.0),
+            (-10.0, 10.0),
+            HOME_YAW,
+            HOME_PITCH,
+            (652.0, 360.0),
+        )
+        .unwrap()
     }
 
     #[test]
@@ -448,7 +511,10 @@ mod tests {
             for b in [-1.0, 1.0] {
                 for w in [-1.0, 1.0] {
                     let (q, _) = c.unit(a, b, w);
-                    assert!(q.0 > 0.0 && q.0 < 652.0 && q.1 > 0.0 && q.1 < 360.0, "{q:?}");
+                    assert!(
+                        q.0 > 0.0 && q.0 < 652.0 && q.1 > 0.0 && q.1 < 360.0,
+                        "{q:?}"
+                    );
                 }
             }
         }
@@ -472,13 +538,23 @@ mod tests {
         let inside = [[0.0, 0.0, 0.5], [1.0, 0.0, 0.5], [1.0, 1.0, 0.5]];
         assert_eq!(clip(&inside), inside.to_vec());
         // half above the top: cut at w = 1
-        let tall = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 0.0, 2.0], [0.0, 0.0, 2.0]];
+        let tall = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 2.0],
+            [0.0, 0.0, 2.0],
+        ];
         let cut = clip(&tall);
         assert_eq!(cut.len(), 4);
         assert!(cut.iter().all(|p| p[2] <= 1.0 + 1e-12));
         assert!(cut.iter().any(|p| (p[2] - 1.0).abs() < 1e-12));
         // through both: cut twice
-        let through = [[0.0, 0.0, -3.0], [1.0, 0.0, -3.0], [1.0, 0.0, 3.0], [0.0, 0.0, 3.0]];
+        let through = [
+            [0.0, 0.0, -3.0],
+            [1.0, 0.0, -3.0],
+            [1.0, 0.0, 3.0],
+            [0.0, 0.0, 3.0],
+        ];
         assert!(clip(&through).iter().all(|p| p[2].abs() <= 1.0 + 1e-12));
         // wholly above: nothing
         assert!(clip(&[[0.0, 0.0, 2.0], [1.0, 0.0, 2.0], [1.0, 1.0, 3.0]]).is_empty());
@@ -486,7 +562,10 @@ mod tests {
 
     #[test]
     fn z_is_a_cube_unless_the_surface_is_flat() {
-        assert_eq!(z_window(None, (-10.0, 10.0), Some((-100.0, 100.0))), (-10.0, 10.0));
+        assert_eq!(
+            z_window(None, (-10.0, 10.0), Some((-100.0, 100.0))),
+            (-10.0, 10.0)
+        );
         assert_eq!(z_window(Some((0.0, 4.0)), (-10.0, 10.0), None), (0.0, 4.0));
         let (lo, hi) = z_window(None, (-360.0, 360.0), Some((-1.0, 1.0)));
         assert!((lo + 1.3).abs() < 1e-9 && (hi - 1.3).abs() < 1e-9);
@@ -502,7 +581,17 @@ mod tests {
                 z.push((x * x - y * y) / 10.0);
             }
         }
-        SurfaceGrid { nx: n, ny: n, x_lo: -10.0, x_hi: 10.0, y_lo: -10.0, y_hi: 10.0, z, z_lo: -10.0, z_hi: 10.0 }
+        SurfaceGrid {
+            nx: n,
+            ny: n,
+            x_lo: -10.0,
+            x_hi: 10.0,
+            y_lo: -10.0,
+            y_hi: 10.0,
+            z,
+            z_lo: -10.0,
+            z_hi: 10.0,
+        }
     }
 
     #[test]
@@ -511,16 +600,30 @@ mod tests {
         let f = Frame::new(&c);
         assert!((f.w0).abs() < 1e-12);
         let grid = saddle();
-        let plane = Plane { grid: true, x_major: vec![-5.0, 0.0, 5.0], y_major: vec![0.0], x_axis: true, y_axis: true, ..Plane::default() };
+        let plane = Plane {
+            grid: true,
+            x_major: vec![-5.0, 0.0, 5.0],
+            y_major: vec![0.0],
+            x_axis: true,
+            y_axis: true,
+            ..Plane::default()
+        };
         let s = scene(&c, &f, &plane, &[(&grid, 0)]);
         assert_eq!(s.patches.len(), 64);
-        assert!(s.pieces.iter().any(|p| matches!(p, Piece::Segment(_, _, Line::Axis))));
+        assert!(
+            s.pieces
+                .iter()
+                .any(|p| matches!(p, Piece::Segment(_, _, Line::Axis)))
+        );
         // the origin's patch: the hit lands at (0, 0, 0) in the cube
         let (o, _) = c.unit(0.0, 0.0, 0.0);
         let (hit, layer) = patch_hit(o, &s.patches).unwrap();
         assert_eq!(layer, 0);
         let d = c.data(hit);
-        assert!(d[0].abs() < 0.5 && d[1].abs() < 0.5 && d[2].abs() < 0.5, "{d:?}");
+        assert!(
+            d[0].abs() < 0.5 && d[1].abs() < 0.5 && d[2].abs() < 0.5,
+            "{d:?}"
+        );
         assert!(patch_hit((-50.0, -50.0), &s.patches).is_none());
         assert!(shade(SHADES as u8, false) == 1.0 && shade(0, true) < shade(0, false));
     }

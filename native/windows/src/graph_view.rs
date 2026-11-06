@@ -42,15 +42,17 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyState, ReleaseCapture, SetCapture, TME_LEAVE, TRACKMOUSEEVENT, TrackMouseEvent, VK_MENU,
     VK_SHIFT,
 };
-use windows::Win32::UI::WindowsAndMessaging::{IDC_ARROW, IDC_HAND, IDC_IBEAM, IDC_SIZEALL, IDC_SIZEWE};
+use windows::Win32::UI::WindowsAndMessaging::{
+    IDC_ARROW, IDC_HAND, IDC_IBEAM, IDC_SIZEALL, IDC_SIZEWE,
+};
 use windows::core::{HSTRING, PCWSTR};
 use windows_numerics::{Matrix3x2, Vector2};
 
 use crate::app::App;
 use crate::engine::{Lane, done};
 use crate::graph::*;
-use crate::graph3d::{self, Cube, Frame, Line, P2, P3, Piece, Plane, Scene};
 use crate::graph_settings::{self as gs, Check, Ctl, FieldId, GraphPrefs, Seg};
+use crate::graph3d::{self, Cube, Frame, Line, P2, P3, Piece, Plane, Scene};
 use crate::model::{BarModel, now_ms};
 use crate::render::{Canvas, Color, Gfx, Rect, Theme, caret_x, measure, size, with_alpha};
 
@@ -217,7 +219,12 @@ impl<'a> Pen<'a> {
         let mut d = 0.0;
         while d < len {
             let e = (d + on).min(len);
-            self.line((a.0 + ux * d, a.1 + uy * d), (a.0 + ux * e, a.1 + uy * e), w, c);
+            self.line(
+                (a.0 + ux * d, a.1 + uy * d),
+                (a.0 + ux * e, a.1 + uy * e),
+                w,
+                c,
+            );
             d += on + off;
         }
     }
@@ -271,7 +278,14 @@ impl<'a> Pen<'a> {
     }
 
     /// Text with `anchor` (0…1 across, 0…1 down) of its box on `at`; its size.
-    fn text(&self, s: &str, f: &IDWriteTextFormat, c: Color, at: P2, anchor: (f32, f32)) -> (f32, f32) {
+    fn text(
+        &self,
+        s: &str,
+        f: &IDWriteTextFormat,
+        c: Color,
+        at: P2,
+        anchor: (f32, f32),
+    ) -> (f32, f32) {
         let Some((l, w, h)) = lay(self.gfx, s, f) else {
             return (0.0, 0.0);
         };
@@ -299,7 +313,10 @@ impl<'a> Pen<'a> {
             bottom: r.y + r.h,
         };
         // SAFETY: paired with unclip
-        unsafe { self.rt.PushAxisAlignedClip(&d, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE) };
+        unsafe {
+            self.rt
+                .PushAxisAlignedClip(&d, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE)
+        };
     }
 
     fn unclip(&self) {
@@ -315,7 +332,13 @@ fn polygon(gfx: &Gfx, pts: &[P2]) -> Option<ID2D1PathGeometry> {
     unsafe {
         let geo = gfx.d2d.CreatePathGeometry().ok()?;
         let sink = geo.Open().ok()?;
-        sink.BeginFigure(Vector2 { X: first.0, Y: first.1 }, D2D1_FIGURE_BEGIN_FILLED);
+        sink.BeginFigure(
+            Vector2 {
+                X: first.0,
+                Y: first.1,
+            },
+            D2D1_FIGURE_BEGIN_FILLED,
+        );
         let v: Vec<Vector2> = rest.iter().map(|p| Vector2 { X: p.0, Y: p.1 }).collect();
         sink.AddLines(&v);
         sink.EndFigure(D2D1_FIGURE_END_CLOSED);
@@ -325,7 +348,10 @@ fn polygon(gfx: &Gfx, pts: &[P2]) -> Option<ID2D1PathGeometry> {
 }
 
 /// One path geometry of open polylines.
-fn polylines<'a>(gfx: &Gfx, lines: impl Iterator<Item = &'a [(f32, f32)]>) -> Option<ID2D1PathGeometry> {
+fn polylines<'a>(
+    gfx: &Gfx,
+    lines: impl Iterator<Item = &'a [(f32, f32)]>,
+) -> Option<ID2D1PathGeometry> {
     // SAFETY: a fresh geometry, opened, filled and closed here; the points are locals
     unsafe {
         let geo = gfx.d2d.CreatePathGeometry().ok()?;
@@ -673,11 +699,24 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     push(Btn::Wrench, "\u{E90F}", &icon, 11.0, g.settings_open, true)?;
     push(Btn::Add, "\u{E710}", &icon, 11.0, false, true)?;
     if g.kind() == Kind::Surface && g.main().is_some_and(|p| p.ok()) {
-        push(Btn::Contour, "contour", &ui_small, 16.0, !g.shows_3d(), true)?;
+        push(
+            Btn::Contour,
+            "contour",
+            &ui_small,
+            16.0,
+            !g.shows_3d(),
+            true,
+        )?;
         push(Btn::View3D, "3D", &ui_small, 16.0, g.shows_3d(), true)?;
     }
     let room = right - 8.0 - x0;
-    let label = gfx.layout_in(&g.label(), &label_f, (room * 0.6).max(40.0), HEAD_H, DWRITE_TEXT_ALIGNMENT_LEADING);
+    let label = gfx.layout_in(
+        &g.label(),
+        &label_f,
+        (room * 0.6).max(40.0),
+        HEAD_H,
+        DWRITE_TEXT_ALIGNMENT_LEADING,
+    );
     let label_w = label.as_ref().map_or(0.0, |l| measure(l).0.min(room * 0.6));
     let res_x = (g.x_max - g.x_min) / f64::from(PLOT_W);
     let unit = match g.main().and_then(|p| p.unit) {
@@ -691,14 +730,30 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
         fmt_g(round_to_pixel(g.x_max, res_x), 6)
     );
     let domain_x = x0 + label_w + 12.0;
-    let domain = gfx.layout_in(&domain, &t_mono, (right - 8.0 - domain_x).max(1.0), HEAD_H, DWRITE_TEXT_ALIGNMENT_LEADING);
+    let domain = gfx.layout_in(
+        &domain,
+        &t_mono,
+        (right - 8.0 - domain_x).max(1.0),
+        HEAD_H,
+        DWRITE_TEXT_ALIGNMENT_LEADING,
+    );
     let mut y = TOP + HEAD_H + 8.0;
     // the equations, when there are several
     let mut eqs = Vec::new();
     if !g.layers.is_empty() {
-        let mut row = |index: usize, id: Option<u32>, text: Option<String>, placeholder: bool, note: Option<String>, added: bool, y: f32| {
+        let mut row = |index: usize,
+                       id: Option<u32>,
+                       text: Option<String>,
+                       placeholder: bool,
+                       note: Option<String>,
+                       added: bool,
+                       y: f32| {
             let shown = text.as_deref().unwrap_or("");
-            let text = if shown.is_empty() { None } else { lay(gfx, shown, &t_mono).map(|l| (l.0, l.1)) };
+            let text = if shown.is_empty() {
+                None
+            } else {
+                lay(gfx, shown, &t_mono).map(|l| (l.0, l.1))
+            };
             let note = note.and_then(|n| lay(gfx, &n, &caption).map(|l| (l.0, l.1)));
             let r = Rect::new(x0, y, inner, EQ_ROW);
             eqs.push(EqRow {
@@ -708,7 +763,8 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
                 text,
                 placeholder,
                 note,
-                field: added.then(|| Rect::new(x0 + 15.0, y + 2.0, inner - 15.0 - 26.0, EQ_ROW - 4.0)),
+                field: added
+                    .then(|| Rect::new(x0 + 15.0, y + 2.0, inner - 15.0 - 26.0, EQ_ROW - 4.0)),
                 remove: added.then(|| Rect::new(x0 + inner - 20.0, y + 2.0, 18.0, 18.0)),
             });
         };
@@ -716,18 +772,39 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
         y += EQ_ROW;
         for (i, l) in g.layers.iter().enumerate() {
             let focused = g.focus == Some(FieldId::Layer(l.id));
-            let text = if focused { g.edit.text().to_string() } else { l.expression.replace("sqrt(", "√(") };
+            let text = if focused {
+                g.edit.text().to_string()
+            } else {
+                l.expression.replace("sqrt(", "√(")
+            };
             let placeholder = text.is_empty() && !focused;
-            let shown = if placeholder { "y = …  or  x^2 + y^2 = 9  or  z = …".to_string() } else { text };
-            let plot = g.sample.as_ref().and_then(|s| s.layers.iter().find(|p| p.0 == l.id));
+            let shown = if placeholder {
+                "y = …  or  x^2 + y^2 = 9  or  z = …".to_string()
+            } else {
+                text
+            };
+            let plot = g
+                .sample
+                .as_ref()
+                .and_then(|s| s.layers.iter().find(|p| p.0 == l.id));
             let note = match plot {
                 _ if l.blank() => None,
                 Some((_, None)) => Some("can’t graph this".to_string()),
                 Some((_, Some(p))) if p.error.is_some() => p.error.clone(),
-                Some((_, Some(p))) if g.shows_3d() && p.surface.is_none() => Some("not a surface: shown in 2D".into()),
+                Some((_, Some(p))) if g.shows_3d() && p.surface.is_none() => {
+                    Some("not a surface: shown in 2D".into())
+                }
                 _ => None,
             };
-            row(i + 1, Some(l.id), Some(shown), placeholder, note, !l.from_bar, y);
+            row(
+                i + 1,
+                Some(l.id),
+                Some(shown),
+                placeholder,
+                note,
+                !l.from_bar,
+                y,
+            );
             y += EQ_ROW;
         }
         y += 8.0;
@@ -755,17 +832,34 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
                     cy += SET_ROW + 4.0;
                 }
                 Ctl::Text(s) => {
-                    let Some((l, w, _)) = lay(gfx, &s, &t_mono) else { continue };
+                    let Some((l, w, _)) = lay(gfx, &s, &t_mono) else {
+                        continue;
+                    };
                     let r = place(w, &mut cx, &mut cy);
-                    items.push(SetItem { rect: r, act: Act::None, look: Look::Text, text: Some((l, w)) });
+                    items.push(SetItem {
+                        rect: r,
+                        act: Act::None,
+                        look: Look::Text,
+                        text: Some((l, w)),
+                    });
                 }
                 Ctl::Check(k, s, on) => {
-                    let Some((l, w, _)) = lay(gfx, s, &t_mono) else { continue };
+                    let Some((l, w, _)) = lay(gfx, s, &t_mono) else {
+                        continue;
+                    };
                     let r = place(16.0 + w, &mut cx, &mut cy);
-                    items.push(SetItem { rect: r, act: Act::Check(k), look: Look::Check(on), text: Some((l, w)) });
+                    items.push(SetItem {
+                        rect: r,
+                        act: Act::Check(k),
+                        look: Look::Check(on),
+                        text: Some((l, w)),
+                    });
                 }
                 Ctl::Seg(k, options, chosen, enabled) => {
-                    let cells: Vec<_> = options.iter().filter_map(|s| lay(gfx, s, &t_mono)).collect();
+                    let cells: Vec<_> = options
+                        .iter()
+                        .filter_map(|s| lay(gfx, s, &t_mono))
+                        .collect();
                     let total: f32 = cells.iter().map(|c| c.1 + 14.0).sum();
                     let r = place(total, &mut cx, &mut cy);
                     let mut x = r.x;
@@ -782,15 +876,30 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
                 }
                 Ctl::Field(id, value, placeholder, w) => {
                     let focused = g.focus == Some(id);
-                    let shown = if focused { g.edit.text().to_string() } else { value };
+                    let shown = if focused {
+                        g.edit.text().to_string()
+                    } else {
+                        value
+                    };
                     let ph = shown.is_empty() && !focused;
                     let text = if ph { placeholder.to_string() } else { shown };
-                    let text = if text.is_empty() { None } else { lay(gfx, &text, &t_mono).map(|l| (l.0, l.1)) };
+                    let text = if text.is_empty() {
+                        None
+                    } else {
+                        lay(gfx, &text, &t_mono).map(|l| (l.0, l.1))
+                    };
                     let r = place(w, &mut cx, &mut cy);
-                    items.push(SetItem { rect: r, act: Act::Field(id), look: Look::Field(ph), text });
+                    items.push(SetItem {
+                        rect: r,
+                        act: Act::Field(id),
+                        look: Look::Field(ph),
+                        text,
+                    });
                 }
                 Ctl::ZoomSquare(enabled) => {
-                    let Some((l, w, _)) = lay(gfx, "Zoom Square", &t_mono) else { continue };
+                    let Some((l, w, _)) = lay(gfx, "Zoom Square", &t_mono) else {
+                        continue;
+                    };
                     let r = place(w + 16.0, &mut cx, &mut cy);
                     items.push(SetItem {
                         rect: r,
@@ -829,7 +938,13 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
     };
     if let Some(m) = message {
         geo.message = gfx
-            .layout_in(&m, &gfx.fonts.body, inner, 18.0, DWRITE_TEXT_ALIGNMENT_LEADING)
+            .layout_in(
+                &m,
+                &gfx.fonts.body,
+                inner,
+                18.0,
+                DWRITE_TEXT_ALIGNMENT_LEADING,
+            )
             .map(|l| (y + 12.0, l));
         y += 12.0 + 18.0 + 12.0;
     } else {
@@ -860,14 +975,17 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
                     .filter_map(|(index, kind, coords, copy, color)| {
                         let (kl, kw, _) = lay(gfx, kind, &caption)?;
                         let (cl, cw, _) = lay(gfx, &coords, &t_mono)?;
-                        let w = 7.0 + if color.is_some() { 12.0 } else { 0.0 } + kw + 6.0 + cw + 7.0;
+                        let w =
+                            7.0 + if color.is_some() { 12.0 } else { 0.0 } + kw + 6.0 + cw + 7.0;
                         Some((index, kl, kw, cl, w, copy, color))
                     })
                     .collect();
                 let widths: Vec<f32> = built.iter().map(|b| b.4).collect();
                 let places = wrap(&widths, inner, CHIP_GAP);
                 let lines = places.last().map_or(0, |p| p.1 + 1);
-                for ((index, kl, kw, cl, w, copy, color), (cx, line)) in built.into_iter().zip(places) {
+                for ((index, kl, kw, cl, w, copy, color), (cx, line)) in
+                    built.into_iter().zip(places)
+                {
                     geo.chips.push(Chip {
                         rect: Rect::new(x0 + cx, *y + line as f32 * (CHIP_H + CHIP_GAP), w, CHIP_H),
                         index,
@@ -886,11 +1004,18 @@ fn geo(gfx: &Gfx, g: &GraphState, width: f32) -> Option<Rc<Geo>> {
                 .enumerate()
                 .map(|(i, (layer, c))| {
                     let coords = match c.z {
-                        Some(z) => format!("({}{deg}, {}{deg}, {})", coord(c.x), coord(c.y), coord(z)),
+                        Some(z) => {
+                            format!("({}{deg}, {}{deg}, {})", coord(c.x), coord(c.y), coord(z))
+                        }
                         None => format!("({}{deg}, {})", coord(c.x), coord(c.y)),
                     };
                     // a surface's chip copies its height; a y-intercept's x is always 0, so its chip copies y
-                    let copy = c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept { c.y } else { c.x });
+                    let copy =
+                        c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept {
+                            c.y
+                        } else {
+                            c.x
+                        });
                     let color = several.then(|| layer_rgb(layer).map_or(t.accent, |c| rgb(c, 1.0)));
                     (Some(i), kind_name(c.kind), coords, copy, color)
                 })
@@ -966,7 +1091,10 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
     let focus = g.focus;
     for e in &geo.eqs {
         let er = at(&e.rect);
-        c.fill(Rect::new(er.x + 4.0, er.y + 4.0, 3.0, 14.0), layer_color(t, e.index));
+        c.fill(
+            Rect::new(er.x + 4.0, er.y + 4.0, 3.0, 14.0),
+            layer_color(t, e.index),
+        );
         let tx = er.x + 15.0;
         let editing = e.id.is_some_and(|id| focus == Some(FieldId::Layer(id)));
         if let Some((l, w)) = &e.text {
@@ -991,10 +1119,27 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
             if over(rm) {
                 c.fill_round(rr, 4.0, t.fill_hover);
             }
-            c.line(rr.x + 5.5, rr.y + 5.5, rr.x + 12.5, rr.y + 12.5, 1.25, t.muted);
-            c.line(rr.x + 12.5, rr.y + 5.5, rr.x + 5.5, rr.y + 12.5, 1.25, t.muted);
+            c.line(
+                rr.x + 5.5,
+                rr.y + 5.5,
+                rr.x + 12.5,
+                rr.y + 12.5,
+                1.25,
+                t.muted,
+            );
+            c.line(
+                rr.x + 12.5,
+                rr.y + 5.5,
+                rr.x + 5.5,
+                rr.y + 12.5,
+                1.25,
+                t.muted,
+            );
         }
-        c.fill(Rect::new(er.x, er.bottom() - 0.5, er.w, 0.5), with_alpha(t.ink, 0.1));
+        c.fill(
+            Rect::new(er.x, er.bottom() - 0.5, er.w, 0.5),
+            with_alpha(t.ink, 0.1),
+        );
     }
     if let Some((box_r, items)) = &geo.settings {
         let br = at(box_r);
@@ -1028,7 +1173,16 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
         if lit {
             c.fill(cr, with_alpha(t.accent, 0.1));
         }
-        stroke(c, cr, 0.75, if lit { with_alpha(t.accent, 0.6) } else { with_alpha(t.ink, 0.16) });
+        stroke(
+            c,
+            cr,
+            0.75,
+            if lit {
+                with_alpha(t.accent, 0.6)
+            } else {
+                with_alpha(t.ink, 0.16)
+            },
+        );
         let mut x = cr.x + 7.0;
         if let Some(col) = chip.color {
             c.fill(Rect::new(x, cr.y + (cr.h - 6.0) / 2.0, 6.0, 6.0), col);
@@ -1036,9 +1190,19 @@ pub fn paint(c: &Canvas, g: &GraphState, r: Rect) {
         }
         let (kl, kw) = &chip.kind;
         let kh = measure(kl).1;
-        c.text(kl, x, cr.y + (cr.h - kh) / 2.0, if lit { t.accent } else { t.muted });
+        c.text(
+            kl,
+            x,
+            cr.y + (cr.h - kh) / 2.0,
+            if lit { t.accent } else { t.muted },
+        );
         let ch = measure(&chip.coords).1;
-        c.text(&chip.coords, x + kw + 6.0, cr.y + (cr.h - ch) / 2.0, if lit { t.accent } else { t.ink });
+        c.text(
+            &chip.coords,
+            x + kw + 6.0,
+            cr.y + (cr.h - ch) / 2.0,
+            if lit { t.accent } else { t.ink },
+        );
     }
 }
 
@@ -1053,16 +1217,34 @@ fn stroke(c: &Canvas, r: Rect, w: f32, col: Color) {
     unsafe { c.target().DrawRectangle(&d, c.brush(col), w, None) };
 }
 
-fn paint_selection(c: &Canvas, f: &crate::input::Field, l: &IDWriteTextLayout, x: f32, y: f32, h: f32) {
+fn paint_selection(
+    c: &Canvas,
+    f: &crate::input::Field,
+    l: &IDWriteTextLayout,
+    x: f32,
+    y: f32,
+    h: f32,
+) {
     let (a, b) = f.selection();
     if a == b {
         return;
     }
     let (xa, xb) = (caret_x(l, f.to_utf16(a)), caret_x(l, f.to_utf16(b)));
-    c.fill(Rect::new(x + xa.min(xb), y, (xb - xa).abs(), h), c.theme.selection);
+    c.fill(
+        Rect::new(x + xa.min(xb), y, (xb - xa).abs(), h),
+        c.theme.selection,
+    );
 }
 
-fn caret(c: &Canvas, f: &crate::input::Field, l: Option<&IDWriteTextLayout>, x: f32, y: f32, h: f32, t: &Theme) {
+fn caret(
+    c: &Canvas,
+    f: &crate::input::Field,
+    l: Option<&IDWriteTextLayout>,
+    x: f32,
+    y: f32,
+    h: f32,
+    t: &Theme,
+) {
     let cx = l.map_or(0.0, |l| caret_x(l, f.to_utf16(f.caret())));
     c.fill(Rect::new((x + cx).round(), y, 1.0, h), t.accent);
 }
@@ -1107,14 +1289,33 @@ fn paint_item(c: &Canvas, g: &GraphState, it: &SetItem, r: Rect, hot: bool) {
         Look::Field(placeholder) => {
             let editing = matches!(it.act, Act::Field(id) if g.focus == Some(id));
             c.fill(r, t.bg_tape);
-            stroke(c, r, 0.75, if editing { t.accent } else { with_alpha(t.ink, if hot { 0.35 } else { 0.2 }) });
+            stroke(
+                c,
+                r,
+                0.75,
+                if editing {
+                    t.accent
+                } else {
+                    with_alpha(t.ink, if hot { 0.35 } else { 0.2 })
+                },
+            );
             c.push_clip(r.inset(2.0, 0.0));
-            let (tx, lh) = (r.x + 5.0, it.text.as_ref().map_or(14.0, |l| measure(&l.0).1));
+            let (tx, lh) = (
+                r.x + 5.0,
+                it.text.as_ref().map_or(14.0, |l| measure(&l.0).1),
+            );
             let ty = r.y + (r.h - lh) / 2.0;
             if editing && let Some((l, _)) = &it.text {
                 paint_selection(c, &g.edit, l, tx, ty, lh);
             }
-            text_at(tx, if placeholder { with_alpha(t.muted, 0.7) } else { t.ink });
+            text_at(
+                tx,
+                if placeholder {
+                    with_alpha(t.muted, 0.7)
+                } else {
+                    t.ink
+                },
+            );
             if editing {
                 caret(c, &g.edit, it.text.as_ref().map(|l| &l.0), tx, ty, lh, t);
             }
@@ -1125,7 +1326,14 @@ fn paint_item(c: &Canvas, g: &GraphState, it: &SetItem, r: Rect, hot: bool) {
                 c.fill(r, t.fill_hover);
             }
             stroke(c, r, 0.75, with_alpha(t.ink, 0.2));
-            text_at(r.x + 8.0, if enabled { t.ink } else { with_alpha(t.muted, 0.5) });
+            text_at(
+                r.x + 8.0,
+                if enabled {
+                    t.ink
+                } else {
+                    with_alpha(t.muted, 0.5)
+                },
+            );
         }
     }
 }
@@ -1145,7 +1353,13 @@ fn plot(c: &Canvas, g: &GraphState, svg: Rect, spot: Option<usize>) {
         };
         // SAFETY: inside the frame; the bitmap was made from this target (its key holds the target's address)
         unsafe {
-            rt.DrawBitmap(&bitmap, Some(&d), 1.0, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, None)
+            rt.DrawBitmap(
+                &bitmap,
+                Some(&d),
+                1.0,
+                D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR,
+                None,
+            )
         };
     }
     let started = Instant::now();
@@ -1189,7 +1403,9 @@ fn base(c: &Canvas, g: &GraphState, svg: Rect, s: f32, prefs: &GraphPrefs) -> Op
         h: svg.h.to_bits(),
         dpi: dpi.to_bits(),
         ink: c.theme.ink.r.to_bits() ^ c.theme.ink.g.to_bits().rotate_left(7),
-        bg: c.theme.bg.r.to_bits() ^ c.theme.bg.b.to_bits().rotate_left(7) ^ u32::from(prefs.reverse_contrast),
+        bg: c.theme.bg.r.to_bits()
+            ^ c.theme.bg.b.to_bits().rotate_left(7)
+            ^ u32::from(prefs.reverse_contrast),
     };
     if let Some((k, b)) = &g.cache.borrow().base
         && *k == key
@@ -1204,7 +1420,12 @@ fn base(c: &Canvas, g: &GraphState, svg: Rect, s: f32, prefs: &GraphPrefs) -> Op
     // SAFETY: a compatible target of ours, drawn between its own Begin/EndDraw
     let bitmap = unsafe {
         let brt = rt
-            .CreateCompatibleRenderTarget(Some(&size), None, None, D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE)
+            .CreateCompatibleRenderTarget(
+                Some(&size),
+                None,
+                None,
+                D2D1_COMPATIBLE_RENDER_TARGET_OPTIONS_NONE,
+            )
             .ok()?;
         brt.SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
         brt.BeginDraw();
@@ -1254,7 +1475,10 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
         return;
     };
     let empty = Vec::new();
-    let (xt, yt) = g.sample.as_ref().map_or((&empty, &empty), |s| (&s.x_ticks, &s.y_ticks));
+    let (xt, yt) = g
+        .sample
+        .as_ref()
+        .map_or((&empty, &empty), |s| (&s.x_ticks, &s.y_ticks));
     let gx = axis_grid(g.x_min, g.x_max, m.log.0, g.x_step, xt);
     let gy = axis_grid(g.y_min, g.y_max, m.log.1, g.y_step, yt);
     p.clip(rect);
@@ -1262,10 +1486,15 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
         if prefs.polar && !m.log.0 && !m.log.1 {
             // circles about the origin a step apart (minor ones a fifth), and spokes every 15°
             let step = gx.step().unwrap_or((g.x_max - g.x_min) / 6.0);
-            let r_max = [(g.x_min, g.y_min), (g.x_min, g.y_max), (g.x_max, g.y_min), (g.x_max, g.y_max)]
-                .iter()
-                .map(|(x, y)| x.hypot(*y))
-                .fold(0.0, f64::max);
+            let r_max = [
+                (g.x_min, g.y_min),
+                (g.x_min, g.y_max),
+                (g.x_max, g.y_min),
+                (g.x_max, g.y_max),
+            ]
+            .iter()
+            .map(|(x, y)| x.hypot(*y))
+            .fold(0.0, f64::max);
             let circles = |every: f64, skip: i64, color: Color| {
                 if every <= 0.0 || r_max / every > 1000.0 {
                     return;
@@ -1287,7 +1516,12 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
             for d in (0..360).step_by(15) {
                 let a = f64::from(d).to_radians();
                 let col = if d % 45 == 0 { grid_c } else { minor_c };
-                p.line((m.px(0.0), m.py(0.0)), (m.px(r_max * a.cos()), m.py(r_max * a.sin())), 0.5, col);
+                p.line(
+                    (m.px(0.0), m.py(0.0)),
+                    (m.px(r_max * a.cos()), m.py(r_max * a.sin())),
+                    0.5,
+                    col,
+                );
             }
         } else {
             if prefs.minor_grid {
@@ -1321,7 +1555,12 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
     }
     if prefs.show_y_axis {
         for (v, _) in &gy.major {
-            p.line((PAD_LEFT - 4.0, m.py(*v)), (PAD_LEFT, m.py(*v)), 0.75, frame_c);
+            p.line(
+                (PAD_LEFT - 4.0, m.py(*v)),
+                (PAD_LEFT, m.py(*v)),
+                0.75,
+                frame_c,
+            );
         }
         if prefs.minor_grid {
             for &v in &gy.minor {
@@ -1332,18 +1571,34 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
     if prefs.axis_numbers {
         if prefs.show_x_axis {
             for (v, label) in &gx.major {
-                p.text(label, &tick_f, t.muted, (m.px(*v), SVG_H - 11.0), (0.5, 0.5));
+                p.text(
+                    label,
+                    &tick_f,
+                    t.muted,
+                    (m.px(*v), SVG_H - 11.0),
+                    (0.5, 0.5),
+                );
             }
         }
         if prefs.show_y_axis {
             for (v, label) in &gy.major {
-                p.text(label, &tick_f, t.muted, (PAD_LEFT - 7.0, m.py(*v)), (1.0, 0.5));
+                p.text(
+                    label,
+                    &tick_f,
+                    t.muted,
+                    (PAD_LEFT - 7.0, m.py(*v)),
+                    (1.0, 0.5),
+                );
             }
         }
     }
     // the axes (x = 0 and y = 0, none on a log axis), with arrowheads at their ends when asked
-    let x_axis_y = (!m.log.1).then(|| m.py(0.0)).filter(|y| (PAD_TOP..=bottom).contains(y));
-    let y_axis_x = (!m.log.0).then(|| m.px(0.0)).filter(|x| (PAD_LEFT..=right).contains(x));
+    let x_axis_y = (!m.log.1)
+        .then(|| m.py(0.0))
+        .filter(|y| (PAD_TOP..=bottom).contains(y));
+    let y_axis_x = (!m.log.0)
+        .then(|| m.px(0.0))
+        .filter(|x| (PAD_LEFT..=right).contains(x));
     let arrow = |tip: P2, dx: f32, dy: f32| {
         let (sz, half) = (6.0, 3.0);
         p.poly(
@@ -1374,13 +1629,24 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
             arrow((x, bottom), 0.0, 1.0);
         }
     }
-    if let Some(name_f) = font(p.gfx, true, if big { 13.0 } else { 11.0 }, DWRITE_FONT_WEIGHT_MEDIUM) {
+    if let Some(name_f) = font(
+        p.gfx,
+        true,
+        if big { 13.0 } else { 11.0 },
+        DWRITE_FONT_WEIGHT_MEDIUM,
+    ) {
         if prefs.show_x_axis && !g.x_label.is_empty() {
-            let at = (right - if prefs.arrows { 10.0 } else { 4.0 }, x_axis_y.unwrap_or(bottom) - 4.0);
+            let at = (
+                right - if prefs.arrows { 10.0 } else { 4.0 },
+                x_axis_y.unwrap_or(bottom) - 4.0,
+            );
             p.text(&g.x_label, &name_f, ink, at, (1.0, 1.0));
         }
         if prefs.show_y_axis && !g.y_label.is_empty() {
-            let at = (y_axis_x.unwrap_or(PAD_LEFT) + 6.0, PAD_TOP + if prefs.arrows { 8.0 } else { 3.0 });
+            let at = (
+                y_axis_x.unwrap_or(PAD_LEFT) + 6.0,
+                PAD_TOP + if prefs.arrows { 8.0 } else { 3.0 },
+            );
             p.text(&g.y_label, &name_f, ink, at, (0.0, 0.0));
         }
     }
@@ -1428,7 +1694,11 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
             }
             let implicit = plot.kind == Kind::Implicit;
             for (geo, opacity) in &ps.levels {
-                draw(geo, with_alpha(color, *opacity), if implicit { 1.6 } else { 1.0 });
+                draw(
+                    geo,
+                    with_alpha(color, *opacity),
+                    if implicit { 1.6 } else { 1.0 },
+                );
             }
             for &(u, v) in &ps.dots {
                 let (x, y) = (u * xf.M11 + xf.M31, v * xf.M22 + xf.M32);
@@ -1440,10 +1710,15 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
             && let Some(label_f) = font(p.gfx, true, if big { 10.5 } else { 8.5 }, REGULAR)
         {
             for lv in &main.contours {
-                let (Some(ax), Some(ay)) = (lv.at_x, lv.at_y) else { continue };
+                let (Some(ax), Some(ay)) = (lv.at_x, lv.at_y) else {
+                    continue;
+                };
                 let at = (m.px(ax), m.py(ay));
                 if let Some((l, w, h)) = lay(p.gfx, &tick_text(&lv.label), &label_f) {
-                    p.fill(Rect::new(at.0 - w / 2.0 - 2.0, at.1 - h / 2.0, w + 4.0, h), bg);
+                    p.fill(
+                        Rect::new(at.0 - w / 2.0 - 2.0, at.1 - h / 2.0, w + 4.0, h),
+                        bg,
+                    );
                     p.layout(&l, (at.0 - w / 2.0, at.1 - h / 2.0), t.muted);
                 }
             }
@@ -1451,13 +1726,22 @@ fn base_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
     }
     p.unclip();
     // roots and critical points: small hollow squares in their equation's colour
-    p.clip(Rect::new(PAD_LEFT - 4.0, PAD_TOP - 4.0, PLOT_W + 8.0, PLOT_H + 8.0));
+    p.clip(Rect::new(
+        PAD_LEFT - 4.0,
+        PAD_TOP - 4.0,
+        PLOT_W + 8.0,
+        PLOT_H + 8.0,
+    ));
     if !m.log.1 {
         let mut roots: Vec<(f64, usize)> = g
             .layers
             .iter()
             .enumerate()
-            .filter_map(|(i, l)| g.layer_plot(l).filter(|p| p.kind == Kind::Curve).map(|p| (i + 1, p)))
+            .filter_map(|(i, l)| {
+                g.layer_plot(l)
+                    .filter(|p| p.kind == Kind::Curve)
+                    .map(|p| (i + 1, p))
+            })
             .flat_map(|(i, p)| p.roots.iter().map(move |&r| (r, i)))
             .collect();
         if let Some(main) = g.main().filter(|p| p.ok()) {
@@ -1559,8 +1843,22 @@ fn overlay_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Opti
                 {
                     let y = m.data_y(near.0);
                     p.dashed((PAD_LEFT, near.0), (right, near.0), 0.5, hair, 2.0, 2.0);
-                    let lines = [format!("x  {}{}", fmt4(*x), g.deg()), format!("y  {}", fmt4(y))];
-                    readout_box(p, &lines, (h.0, near.0), rect, BoxLook { bg, edge: near.1, ink }, prefs.large_text);
+                    let lines = [
+                        format!("x  {}{}", fmt4(*x), g.deg()),
+                        format!("y  {}", fmt4(y)),
+                    ];
+                    readout_box(
+                        p,
+                        &lines,
+                        (h.0, near.0),
+                        rect,
+                        BoxLook {
+                            bg,
+                            edge: near.1,
+                            ink,
+                        },
+                        prefs.large_text,
+                    );
                 }
                 for (py, color) in shown {
                     dot(p, (h.0, py), color, bg);
@@ -1572,7 +1870,18 @@ fn overlay_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Opti
                 if g.kind() == Kind::Surface {
                     lines.push(format!("z  {}", z.map_or("—".into(), fmt4)));
                 }
-                readout_box(p, &lines, h, rect, BoxLook { bg, edge: with_alpha(ink, 0.3), ink }, prefs.large_text);
+                readout_box(
+                    p,
+                    &lines,
+                    h,
+                    rect,
+                    BoxLook {
+                        bg,
+                        edge: with_alpha(ink, 0.3),
+                        ink,
+                    },
+                    prefs.large_text,
+                );
             }
             _ => {}
         }
@@ -1589,7 +1898,18 @@ fn overlay_2d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Opti
             halo(p, q, accent);
             if snapped.is_some() {
                 let s = format!("{} {}", kind_name(c0.kind), point_text(c0, g.deg()));
-                readout_box(p, &[s], q, rect, BoxLook { bg, edge: with_alpha(ink, 0.3), ink }, false);
+                readout_box(
+                    p,
+                    &[s],
+                    q,
+                    rect,
+                    BoxLook {
+                        bg,
+                        edge: with_alpha(ink, 0.3),
+                        ink,
+                    },
+                    false,
+                );
             }
         }
     }
@@ -1668,11 +1988,20 @@ fn base_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
     let shades = |layer: usize| -> Vec<(Color, Color)> {
         let base = layer_rgb(layer).unwrap_or((t.accent.r, t.accent.g, t.accent.b));
         (0..=graph3d::SHADES as u8)
-            .map(|k| (rgb(base, graph3d::shade(k, false)), rgb(base, graph3d::shade(k, true))))
+            .map(|k| {
+                (
+                    rgb(base, graph3d::shade(k, false)),
+                    rgb(base, graph3d::shade(k, true)),
+                )
+            })
             .collect()
     };
     let mut colours: HashMap<usize, Vec<(Color, Color)>> = HashMap::new();
-    let (major, minor, axis) = (with_alpha(ink, 0.16), with_alpha(ink, 0.06), with_alpha(ink, 0.7));
+    let (major, minor, axis) = (
+        with_alpha(ink, 0.16),
+        with_alpha(ink, 0.06),
+        with_alpha(ink, 0.7),
+    );
     for piece in &scene.pieces {
         match piece {
             Piece::Patch(pts, level, layer) => {
@@ -1696,13 +2025,22 @@ fn base_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
     let big = prefs.large_text;
     let (Some(num_f), Some(name_f)) = (
         font(p.gfx, true, if big { 11.5 } else { 9.5 }, REGULAR),
-        font(p.gfx, true, if big { 13.0 } else { 11.0 }, DWRITE_FONT_WEIGHT_MEDIUM),
+        font(
+            p.gfx,
+            true,
+            if big { 13.0 } else { 11.0 },
+            DWRITE_FONT_WEIGHT_MEDIUM,
+        ),
     ) else {
         return;
     };
     let label = |s: &str, at: P3, dx: f32, dy: f32, name: bool| {
         let q = c.at(at).0;
-        let (fnt, col) = if name { (&name_f, ink) } else { (&num_f, t.muted) };
+        let (fnt, col) = if name {
+            (&name_f, ink)
+        } else {
+            (&num_f, t.muted)
+        };
         p.text(s, fnt, col, (q.0 + dx, q.1 + dy), (0.5, 0.5));
     };
     let arrowhead = |from: P3, to: P3| {
@@ -1722,11 +2060,31 @@ fn base_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
     let (w0, cu, cv) = (f.w0, f.clamp_u, f.clamp_v);
     if prefs.show_x_axis {
         arrowhead([0.9, cv, w0], [1.05, cv, w0]);
-        label(if g.x_label.is_empty() { "x" } else { &g.x_label }, [1.14, cv, w0], 0.0, 0.0, true);
+        label(
+            if g.x_label.is_empty() {
+                "x"
+            } else {
+                &g.x_label
+            },
+            [1.14, cv, w0],
+            0.0,
+            0.0,
+            true,
+        );
     }
     if prefs.show_y_axis {
         arrowhead([cu, 0.9, w0], [cu, 1.05, w0]);
-        label(if g.y_label.is_empty() { "y" } else { &g.y_label }, [cu, 1.14, w0], 0.0, 0.0, true);
+        label(
+            if g.y_label.is_empty() {
+                "y"
+            } else {
+                &g.y_label
+            },
+            [cu, 1.14, w0],
+            0.0,
+            0.0,
+            true,
+        );
     }
     arrowhead([cu, cv, 0.9], [cu, cv, 1.05]);
     label("z", [cu, cv, 1.13], 0.0, 0.0, true);
@@ -1738,7 +2096,11 @@ fn base_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
             }
             let step = major[1].0 - major[0].0;
             let every = (major.len() as f64 / 4.0).ceil() as i64;
-            major.iter().filter(|m| ((m.0 / step).round() as i64).rem_euclid(every) == 0).cloned().collect()
+            major
+                .iter()
+                .filter(|m| ((m.0 / step).round() as i64).rem_euclid(every) == 0)
+                .cloned()
+                .collect()
         };
         let (gx, gy) = grids_3d(g, c);
         if prefs.show_x_axis {
@@ -1770,7 +2132,14 @@ fn base_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs) {
 
 /// The 3D view's pointer pass: the picked-out critical point with a drop to the plane and its label, or the point
 /// of the surface under the pointer with guides to the plane and the axes and its (x, y, z).
-fn overlay_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Option<usize>, sh: f32) {
+fn overlay_3d(
+    p: &Pen,
+    g: &GraphState,
+    t: &Theme,
+    prefs: &GraphPrefs,
+    spot: Option<usize>,
+    sh: f32,
+) {
     let (ink, accent, bg) = (t.ink, t.accent, plot_bg(t));
     let Some(sc) = g.cache.borrow().scene.as_ref().map(|s| s.1.clone()) else {
         return;
@@ -1788,7 +2157,18 @@ fn overlay_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Opti
         halo(p, *q, accent);
         if snapped.is_some() {
             let s = format!("{} {}", kind_name(c0.kind), point_text(c0, ""));
-            readout_box(p, &[s], *q, frame, BoxLook { bg, edge: with_alpha(ink, 0.3), ink }, false);
+            readout_box(
+                p,
+                &[s],
+                *q,
+                frame,
+                BoxLook {
+                    bg,
+                    edge: with_alpha(ink, 0.3),
+                    ink,
+                },
+                false,
+            );
         }
     }
     let mut on_surface = false;
@@ -1802,17 +2182,63 @@ fn overlay_3d(p: &Pen, g: &GraphState, t: &Theme, prefs: &GraphPrefs, spot: Opti
         // down (or up) to the plane, then across it to the axes, where the numbers are
         let foot = c.unit(c.u(*x), c.v(*y), f.w0).0;
         p.dashed(q, foot, 0.75, guide, 2.0, 2.0);
-        p.dashed(c.unit(c.u(*x), f.clamp_v, f.w0).0, foot, 0.75, guide, 2.0, 2.0);
-        p.dashed(foot, c.unit(f.clamp_u, c.v(*y), f.w0).0, 0.75, guide, 2.0, 2.0);
-        dot(p, q, if *layer == 0 { ink } else { layer_color(t, *layer) }, bg);
-        let lines = [format!("x  {}", fmt4(*x)), format!("y  {}", fmt4(*y)), format!("z  {}", fmt4(*z))];
-        readout_box(p, &lines, q, frame, BoxLook { bg, edge: layer_color(t, *layer), ink }, prefs.large_text);
+        p.dashed(
+            c.unit(c.u(*x), f.clamp_v, f.w0).0,
+            foot,
+            0.75,
+            guide,
+            2.0,
+            2.0,
+        );
+        p.dashed(
+            foot,
+            c.unit(f.clamp_u, c.v(*y), f.w0).0,
+            0.75,
+            guide,
+            2.0,
+            2.0,
+        );
+        dot(
+            p,
+            q,
+            if *layer == 0 {
+                ink
+            } else {
+                layer_color(t, *layer)
+            },
+            bg,
+        );
+        let lines = [
+            format!("x  {}", fmt4(*x)),
+            format!("y  {}", fmt4(*y)),
+            format!("z  {}", fmt4(*z)),
+        ];
+        readout_box(
+            p,
+            &lines,
+            q,
+            frame,
+            BoxLook {
+                bg,
+                edge: layer_color(t, *layer),
+                ink,
+            },
+            prefs.large_text,
+        );
     }
-    if g.pointer.is_some() && snapped.is_none() && !on_surface
+    if g.pointer.is_some()
+        && snapped.is_none()
+        && !on_surface
         && let Some(hint_f) = font(p.gfx, true, 9.0, REGULAR)
     {
         let s = "drag/right-drag: orbit · wheel: zoom · ⇧/middle-drag: pan · dbl-click: reset";
-        p.text(s, &hint_f, t.muted, (frame.right() - 8.0, frame.y + 12.0), (1.0, 0.5));
+        p.text(
+            s,
+            &hint_f,
+            t.muted,
+            (frame.right() - 8.0, frame.y + 12.0),
+            (1.0, 0.5),
+        );
     }
 }
 
@@ -1855,10 +2281,18 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
     let p = (x - r.x, y - r.y);
     let hit = |rect: &Rect| inside && rect.contains(p.0, p.1);
     // a click anywhere but the field with the keys gives them back
-    let on_focused = app.model.graph.as_ref().and_then(|g| g.focus).is_some_and(|f| {
-        geo.settings.as_ref().is_some_and(|(_, items)| items.iter().any(|i| i.act == Act::Field(f) && hit(&i.rect)))
-            || geo.eqs.iter().any(|e| e.id.is_some_and(|id| FieldId::Layer(id) == f) && e.field.is_some_and(|fr| hit(&fr)))
-    });
+    let on_focused = app
+        .model
+        .graph
+        .as_ref()
+        .and_then(|g| g.focus)
+        .is_some_and(|f| {
+            geo.settings.as_ref().is_some_and(|(_, items)| {
+                items.iter().any(|i| i.act == Act::Field(f) && hit(&i.rect))
+            }) || geo.eqs.iter().any(|e| {
+                e.id.is_some_and(|id| FieldId::Layer(id) == f) && e.field.is_some_and(|fr| hit(&fr))
+            })
+        });
     if !on_focused {
         commit(&mut app.model, &app.engine);
     }
@@ -1892,7 +2326,13 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
         if let (Some(fr), Some(id)) = (e.field, e.id)
             && hit(&fr)
         {
-            place_caret(app, FieldId::Layer(id), e.text.as_ref().map(|t| &t.0), p.0 - (e.rect.x + 15.0), double);
+            place_caret(
+                app,
+                FieldId::Layer(id),
+                e.text.as_ref().map(|t| &t.0),
+                p.0 - (e.rect.x + 15.0),
+                double,
+            );
             return true;
         }
     }
@@ -1902,7 +2342,13 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
         match it.act {
             Act::Check(k) => set_pref(app, |p| gs::toggle(p, k)),
             Act::Seg(k, i) => seg(app, k, i),
-            Act::Field(id) => place_caret(app, id, it.text.as_ref().map(|t| &t.0), p.0 - (it.rect.x + 5.0), double),
+            Act::Field(id) => place_caret(
+                app,
+                id,
+                it.text.as_ref().map(|t| &t.0),
+                p.0 - (it.rect.x + 5.0),
+                double,
+            ),
             Act::ZoomSquare => zoom_square(&mut app.model, &app.engine),
             Act::None => {}
         }
@@ -1923,12 +2369,24 @@ pub fn click(app: &mut App, x: f32, y: f32, double: bool) -> bool {
 }
 
 /// A field takes the keys with the caret where it was clicked (a double-click selects it all).
-fn place_caret(app: &mut App, id: FieldId, layout: Option<&IDWriteTextLayout>, dx: f32, double: bool) {
-    let already = app.model.graph.as_ref().is_some_and(|g| g.focus == Some(id));
+fn place_caret(
+    app: &mut App,
+    id: FieldId,
+    layout: Option<&IDWriteTextLayout>,
+    dx: f32,
+    double: bool,
+) {
+    let already = app
+        .model
+        .graph
+        .as_ref()
+        .is_some_and(|g| g.focus == Some(id));
     if !already {
         focus(&mut app.model, &app.engine, id);
     }
-    let Some(g) = &mut app.model.graph else { return };
+    let Some(g) = &mut app.model.graph else {
+        return;
+    };
     if double {
         g.edit.select_all();
     } else if let Some(l) = layout.filter(|_| already) {
@@ -1980,7 +2438,9 @@ fn copy(m: &mut BarModel, v: f64) {
 fn start_drag(app: &mut App, x: f32, y: f32, left: bool, pan: bool) {
     let Some(geo) = cached_geo(app) else { return };
     let Some(svg) = geo.svg else { return };
-    let Some(g) = &mut app.model.graph else { return };
+    let Some(g) = &mut app.model.graph else {
+        return;
+    };
     let s = svg.w / SVG_W;
     let sh = svg_h(g);
     g.drag = Some(Drag {
@@ -2001,7 +2461,13 @@ pub fn press(app: &mut App, x: f32, y: f32, middle: bool) -> bool {
         return false;
     }
     commit(&mut app.model, &app.engine);
-    start_drag(app, x, y, false, middle || key_down(VK_SHIFT) || key_down(VK_MENU));
+    start_drag(
+        app,
+        x,
+        y,
+        false,
+        middle || key_down(VK_SHIFT) || key_down(VK_MENU),
+    );
     true
 }
 
@@ -2017,7 +2483,11 @@ pub fn mouse_move(app: &mut App, x: f32, y: f32) -> bool {
         }
         let three = g.shows_3d();
         if let Some(g) = &mut app.model.graph {
-            g.drag = Some(Drag { last: (x, y), moved: true, ..drag });
+            g.drag = Some(Drag {
+                last: (x, y),
+                moved: true,
+                ..drag
+            });
             g.pointer = to_svg_from(g, app.bar.layout.graph, x, y);
         }
         let (fx, fy) = (f64::from(dx / drag.plot.0), f64::from(dy / drag.plot.1));
@@ -2058,7 +2528,8 @@ fn to_svg_from(g: &GraphState, panel: Option<Rect>, x: f32, y: f32) -> Option<P2
     let svg = g.cache.borrow().geo.as_ref()?.1.svg?;
     let (px, py) = (x - r.x, y - r.y);
     let s = svg.w / SVG_W;
-    svg.contains(px, py).then(|| ((px - svg.x) / s, (py - svg.y) / s))
+    svg.contains(px, py)
+        .then(|| ((px - svg.x) / s, (py - svg.y) / s))
 }
 
 fn track_leave(app: &App) {
@@ -2074,7 +2545,9 @@ fn track_leave(app: &App) {
 
 /// The reading for the pointer at `p` (viewBox): what can be read at once is set now, the rest asked of the engine.
 fn readout(app: &mut App, p: P2) {
-    let Some(g) = &mut app.model.graph else { return };
+    let Some(g) = &mut app.model.graph else {
+        return;
+    };
     if g.main().is_none_or(|m| !m.ok()) || hovered_mark(g).is_some() {
         g.reading = None;
         app.engine.cancel(Lane::GraphReadout);
@@ -2083,7 +2556,9 @@ fn readout(app: &mut App, p: P2) {
     let inputs = |g: &GraphState| -> Vec<(usize, String)> {
         std::iter::once((0, g.input()))
             .chain(g.layers.iter().enumerate().filter_map(|(i, l)| {
-                g.layer_plot(l).filter(|p| p.kind == Kind::Curve).map(|_| (i + 1, l.input()))
+                g.layer_plot(l)
+                    .filter(|p| p.kind == Kind::Curve)
+                    .map(|_| (i + 1, l.input()))
             }))
             .collect()
     };
@@ -2102,11 +2577,17 @@ fn readout(app: &mut App, p: P2) {
         let input = if layer == 0 {
             g.input()
         } else {
-            g.layers.get(layer - 1).map_or_else(|| g.input(), |l| l.input())
+            g.layers
+                .get(layer - 1)
+                .map_or_else(|| g.input(), |l| l.input())
         };
         ask(app, move |cx, settings| {
-            let exact = cx.engine.graph_readout_z(input, x, y, options(window), settings);
-            exact.filter(|z| z.is_finite()).map(|z| Reading::Surface { x, y, z, layer })
+            let exact = cx
+                .engine
+                .graph_readout_z(input, x, y, options(window), settings);
+            exact
+                .filter(|z| z.is_finite())
+                .map(|z| Reading::Surface { x, y, z, layer })
         });
         return;
     }
@@ -2116,7 +2597,11 @@ fn readout(app: &mut App, p: P2) {
         return;
     }
     let res = (g.x_max - g.x_min) / f64::from(PLOT_W);
-    let x = if m.log.0 { m.data_x(p.0) } else { round_to_pixel(m.data_x(p.0), res) };
+    let x = if m.log.0 {
+        m.data_x(p.0)
+    } else {
+        round_to_pixel(m.data_x(p.0), res)
+    };
     match g.kind() {
         Kind::Curve => {
             let ins = inputs(g);
@@ -2124,7 +2609,12 @@ fn readout(app: &mut App, p: P2) {
                 let ys = ins
                     .into_iter()
                     .filter_map(|(i, input)| {
-                        let y = cx.engine.graph_readout_y(input, x, options(window), settings.clone())?;
+                        let y = cx.engine.graph_readout_y(
+                            input,
+                            x,
+                            options(window),
+                            settings.clone(),
+                        )?;
                         y.is_finite().then_some((i, y))
                     })
                     .collect();
@@ -2133,12 +2623,18 @@ fn readout(app: &mut App, p: P2) {
         }
         kind => {
             let y = m.data_y(p.1);
-            let y = if m.log.1 { y } else { round_to_pixel(y, (g.y_max - g.y_min) / f64::from(PLOT_H)) };
+            let y = if m.log.1 {
+                y
+            } else {
+                round_to_pixel(y, (g.y_max - g.y_min) / f64::from(PLOT_H))
+            };
             g.reading = Some(Reading::Point { x, y, z: None });
             if kind == Kind::Surface {
                 let input = g.input();
                 ask(app, move |cx, settings| {
-                    let z = cx.engine.graph_readout_z(input, x, y, options(window), settings);
+                    let z = cx
+                        .engine
+                        .graph_readout_z(input, x, y, options(window), settings);
                     Some(Reading::Point { x, y, z })
                 });
             } else {
@@ -2176,7 +2672,10 @@ fn ask(
     let degrees = gs::prefs().degrees;
     app.engine.submit(Lane::GraphReadout, move |cx| {
         let context = cx.context(&rows, view);
-        let r = f(cx, graph_settings(merged_options(options, context), degrees));
+        let r = f(
+            cx,
+            graph_settings(merged_options(options, context), degrees),
+        );
         done(move |app| {
             if let Some(g) = &mut app.model.graph
                 && g.expression == expr
@@ -2204,7 +2703,12 @@ pub fn mouse_up(app: &mut App, x: f32, y: f32) -> bool {
         && let Some(i) = hovered_mark(g)
         && let Some((_, c)) = g.all_critical().get(i)
     {
-        let v = c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept { c.y } else { c.x });
+        let v =
+            c.z.unwrap_or(if c.kind == qcalc_ffi::CriticalKind::YIntercept {
+                c.y
+            } else {
+                c.x
+            });
         copy(&mut app.model, v);
     }
     app.model.touch();
@@ -2249,17 +2753,30 @@ pub fn wheel(app: &mut App, horizontal: bool, wp: WPARAM, lp: LPARAM) -> bool {
     };
     let notches = f64::from(((wp.0 >> 16) & 0xffff) as u16 as i16) / 120.0;
     let ctrl = wp.0 & 0x0008 != 0;
-    let Some(g) = &app.model.graph else { return false };
+    let Some(g) = &app.model.graph else {
+        return false;
+    };
     if g.shows_3d() {
         if !horizontal {
-            zoom(&mut app.model, &app.engine, (-notches * 0.2).clamp(-0.5, 0.5).exp(), 0.5);
+            zoom(
+                &mut app.model,
+                &app.engine,
+                (-notches * 0.2).clamp(-0.5, 0.5).exp(),
+                0.5,
+            );
         }
         return true;
     }
     // a notch (120) as a browser's 100 px of deltaY
     let px = -notches * 100.0;
     if horizontal {
-        pan(&mut app.model, &app.engine, -px / f64::from(PLOT_W), 0.0, false);
+        pan(
+            &mut app.model,
+            &app.engine,
+            -px / f64::from(PLOT_W),
+            0.0,
+            false,
+        );
         return true;
     }
     let k = if ctrl { 0.01 } else { 0.002 };
@@ -2342,12 +2859,20 @@ pub fn bench(app: &App, args: &str) -> serde_json::Value {
         });
     }
     let arg = |i: usize| nums.get(i).copied().unwrap_or(0.5);
-    let button = words.get(1).map(|w| w.to_ascii_lowercase()).unwrap_or_default();
+    let button = words
+        .get(1)
+        .map(|w| w.to_ascii_lowercase())
+        .unwrap_or_default();
     let head = geo
         .head
         .iter()
         .find(|h| format!("{:?}", h.btn).to_ascii_lowercase() == button)
-        .map(|h| (r.x + h.rect.x + h.rect.w / 2.0, r.y + h.rect.y + h.rect.h / 2.0));
+        .map(|h| {
+            (
+                r.x + h.rect.x + h.rect.w / 2.0,
+                r.y + h.rect.y + h.rect.h / 2.0,
+            )
+        });
     let cmd = cmd.to_string();
     let rest: Vec<String> = words[1..].iter().map(|s| s.to_string()).collect();
     let (a0, a1, a2, a3) = (arg(0), arg(1), arg(2), arg(3));
@@ -2375,7 +2900,10 @@ pub fn bench(app: &App, args: &str) -> serde_json::Value {
         "wheel" => {
             let (x, y) = at(a0, a1);
             let s = app.bar.scale();
-            let mut pt = POINT { x: (x * s) as i32, y: (y * s) as i32 };
+            let mut pt = POINT {
+                x: (x * s) as i32,
+                y: (y * s) as i32,
+            };
             // SAFETY: a live point; our bar
             let _ = unsafe { windows::Win32::Graphics::Gdi::ClientToScreen(app.bar.hwnd, &mut pt) };
             let delta = (a2 * 120.0) as i16 as u16 as usize;
@@ -2386,7 +2914,9 @@ pub fn bench(app: &App, args: &str) -> serde_json::Value {
             let (x0, y0) = at(a0, a1);
             let (x1, y1) = at(a2, a3);
             let shift = rest.iter().any(|w| w == "shift");
-            let which = rest.iter().find(|w| ["left", "right", "middle"].contains(&w.as_str()));
+            let which = rest
+                .iter()
+                .find(|w| ["left", "right", "middle"].contains(&w.as_str()));
             match which.map(String::as_str) {
                 Some("right") => {
                     press(app, x0, y0, false);
