@@ -252,6 +252,23 @@ pub fn typst_document(expr: &str, answer: &str, solved_for: &str) -> Option<Stri
     Some(math_document(&body))
 }
 
+/// The preview with its answer already written as Typst math (a matrix answer's parts, native only): after `=`,
+/// or after ⇒ when the answer names its own parts (`P = …  D = …`).
+pub fn typst_document_math(expr: &str, answer: &str, arrow: bool) -> Option<String> {
+    let math = preview_math(expr);
+    if math.is_empty() {
+        return None;
+    }
+    let body = if answer.is_empty() {
+        math
+    } else if arrow {
+        format!("{math} quad arrow.r.double quad {answer}")
+    } else {
+        format!("{math} = {answer}")
+    };
+    Some(math_document(&body))
+}
+
 /// A preview document holding one line of Typst math, as `typst_document` writes them.
 pub fn math_document(body: &str) -> String {
     format!(

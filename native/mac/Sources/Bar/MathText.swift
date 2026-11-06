@@ -27,13 +27,21 @@ struct TypesetRequest: Equatable {
     let solvedFor: String
     /// the slot says something that isn't an answer (no real solution, a command), so nothing follows `=`
     let message: Bool
+    /// a matrix answer already written as Typst math (native only)
+    var matrix: MatrixAsk? = nil
+}
+
+/// A matrix answer's Typst math, and whether it follows ⇒ (it names its parts) or `=`.
+struct MatrixAsk: Equatable {
+    let typst: String
+    let arrow: Bool
 }
 
 /// Compiles on its own serial queue, so neither the main thread nor the engine thread waits on Typst.
 final class MathTypesetter {
-    private let queue = DispatchQueue(label: "qcalc.typst", qos: .userInitiated)
+    fileprivate let queue = DispatchQueue(label: "qcalc.typst", qos: .userInitiated)
     private let engine: Engine
-    private var renderer: TypstRenderer?
+    fileprivate var renderer: TypstRenderer?
     /// only touched on `queue`
     private lazy var logic = AppLogic(engine: engine)
 
@@ -65,7 +73,18 @@ final class MathTypesetter {
             guard let self, let renderer = self.renderer, self.lock.withLock({ self.latest == r }) else { return }
             let outcome: Outcome
             let expr = r.ans.flatMap { self.logic.string("lib/chain", "ansWrittenOut", [r.expr, $0]) } ?? r.expr
-            if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [expr]) {
+            if let m = r.matrix {
+                // a matrix answer always earns the row: it says what one line of text can't
+                if let doc = self.engine.typstSourceMath(expr: expr, answerTypst: m.typst, arrow: m.arrow) {
+                    do {
+                        outcome = .drawn(try renderer.paths(source: doc), doc: doc)
+                    } catch {
+                        outcome = .failed(doc: doc)
+                    }
+                } else {
+                    outcome = .hidden
+                }
+            } else if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [expr]) {
                 outcome = .hidden
             } else {
                 let answer = r.message ? "" : self.logic.string("lib/typstMath", "typstAnswer", [r.exact ?? NSNull(), r.display]) ?? ""
@@ -80,6 +99,20 @@ final class MathTypesetter {
                 }
             }
             DispatchQueue.main.async { done(outcome) }
+        }
+    }
+}
+
+extension MathTypesetter {
+    /// Several documents at once, in order (the steps' matrices); nil for one that doesn't compile or is empty.
+    func render(_ docs: [String], done: @escaping ([TypstPaths?]) -> Void) {
+        queue.async { [weak self] in
+            let renderer = self?.renderer
+            let out = docs.map { doc -> TypstPaths? in
+                guard !doc.isEmpty, let renderer else { return nil }
+                return try? renderer.paths(source: doc)
+            }
+            DispatchQueue.main.async { done(out) }
         }
     }
 }

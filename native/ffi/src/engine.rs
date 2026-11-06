@@ -949,6 +949,14 @@ impl Engine {
         })
     }
 
+    /// The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
+    /// `arrow`, else after `=`. Native only.
+    pub fn typst_source_math(&self, expr: String, answer_typst: String, arrow: bool) -> Option<String> {
+        self.on(None, move |_| {
+            qcalc_core::app::typst_math::typst_document_math(&expr, &answer_typst, arrow)
+        })
+    }
+
     /// The closed-form search for `LiveAnswer::closed_form_job` (`identifyJob`); None when none is found.
     pub async fn closed_form(
         &self,

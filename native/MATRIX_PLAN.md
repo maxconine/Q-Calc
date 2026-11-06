@@ -64,12 +64,15 @@ history reads such rows, and matrices with unknowns, back through `evaluate::mat
 `core/tests/linear_algebra_parts.rs` and `ffi/tests/matrix_view.rs` (every document compiles with Typst).
 Eigenvalue lists stay one part (`λ = 5, 2`), not one per value.
 
-## Phase 4 — mac UI
-- Answer slot: matrices and multi-part answers show typeset (reuse `MathTypesetter`), Tab cycles exact/decimal.
-- Steps panel under the composer (`BarView.below`, like `SystemPanel`), opened by a "steps" chip on the answer.
-- Grid editor: `matrix 3x3` (and a ⌘-shortcut) opens a rows×cols field grid like `SystemPanel`; Tab/arrow move,
-  `+`/`−` buttons resize, writes `[a b; c d]` back into the line. Editing an existing `[…]` reopens it in the grid.
-- PARITY.md rows marked "Native only".
+## Phase 4 — mac UI — done
+
+Landed in `mac/Sources/Bar/Matrices.swift` with hooks in `BarModel`, `BarView`, `MathText` and `Keybinds`; the grid's
+text rules in `core/src/app/matrix_grid.rs` (exported by `ffi/src/matrix_grid.rs`), the preview document by
+`Engine::typst_source_math`. The one-line answer slot stays text (parity); matrix answers are typeset in the
+preview row under it, exact where they can be. Steps: a `show steps · N` chip and ⌃R open a card of operations with
+typeset matrices. Grid: `matrix 3x3` + ↵ (anywhere in a line), ⌃G on a typed matrix; Tab / ↵ / arrows, `− +`
+resize, written live into the line. PARITY.md rows added. Not done: the cheat sheet doesn't list `matrix 3x3`, ⌃G
+or ⌃R; a step's matrix is centred in its row rather than set against the operation.
 
 ## Phase 5 — windows UI
 Same three pieces through the README "Adding a panel" pattern (steps panel, grid editor from `SysState`), within the

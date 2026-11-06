@@ -66,3 +66,37 @@ unchanged, so these only need checking:
 | `L, U = lu([0 1; 1 0])`, then `U` | `[1 0; 0 1]` (names matched by label) |
 | `Q, R = eig([1 2; 3 4])` | `this answer has 1 part (λ); give 1 name` |
 | `M = 2 * [k 1; 1 k]` committed, then `det(M)` on the next line | `4*k^2 - 4` (history reads M back) |
+
+## 2. Mac UI to port (Phase 4)
+
+Mac code: `mac/Sources/Bar/Matrices.swift` (new), with hooks in `BarModel.swift` (`evaluateLive`, `setLive`,
+`refreshTypeset`, `enter`, `escape`, `perform`), `BarView.swift` (`below`), `MathText.swift` (`MatrixAsk`,
+`MathTypesetter.render`) and `Keybinds.swift`. The text rules are in the core, so Windows calls the same functions:
+`matrix_grid_command`, `matrix_grid_hint`, `matrix_grid_at`, `matrix_grid_literal`, `matrix_grid_max`
+(`ffi/src/matrix_grid.rs`), and `Engine::typst_source_math` for the preview. All native only.
+
+1. **Typeset matrix answers.** When `LiveAnswer.matrix` has `typeset` set (a matrix in it, or several parts), the
+   preview row typesets `Engine::typst_source_math(expr, view.exact_typst ?? view.typst, view.labeled)` instead of
+   `typst_source`, skipping the `typstPreviewUseful` check; not while a cycled answer form or a prefix shows. The
+   answer slot is unchanged.
+2. **Steps.** When `matrix.steps` isn't empty, a muted chip under the preview reads `show steps · N` (`hide steps`
+   when open); it, or ⌃R (keybind `matrixSteps`), opens a card (the `sys` card's look) of rows: the operation (13 pt
+   muted, 168 pt column) and the step's `matrix_document` typeset beside it, at most 72 pt high; a remark (empty
+   `matrix_document`) is one line of ink text. The card scrolls past 320 pt. Esc shuts it; an emptied line starts
+   with it shut. With the preview setting off, rows show `display` as text.
+3. **Grid.** While the line holds `matrix 3x3` the answer slot shows `matrix_grid_hint` (`↵ opens a 3×3 grid`); ↵
+   opens a rows × columns grid of 64 × 34 pt cells in the `sys` card, between drawn square brackets, `0` as each
+   empty cell's placeholder. Each keystroke writes `matrix_grid_literal(cells)` into the line in the grid's place
+   (UTF-16 offsets from the spot), caret after it, so the answer stays live (`det(matrix 2x2)`). Any other edit of
+   the line closes the grid. Keys: Tab / ⇧Tab along the rows, ↵ down the column (from the last row the grid closes
+   to the line), arrows between cells (← → only from the ends of the cell's text; ↑ from the top row to the line),
+   esc closes. `− +` buttons for rows and columns (1 to 8). ⌃G (keybind `matrixGrid`) opens `matrix_grid_at` (the
+   matrix under the caret, else the last), else a 2×2 at the caret; again, it closes.
+
+| Do | Expect |
+| --- | --- |
+| type `diagonalize([4 1; 2 3])` | preview: the line ⇒ `P = [1 −1; 1 2]  D = [5 0; 0 2]` typeset |
+| type `eig([1 2; 3 4])` | preview: `λ = (5 ± √33)/2` |
+| type `rref([1 2 \| 5; 3 4 \| 6])`, click `show steps · 4` | Start, R₂ → R₂ − 3R₁, R₂ → −(1/2)R₂, R₁ → R₁ − 2R₂, augmented bars drawn |
+| type `det(matrix 2x2)`, ↵, type 1 Tab 2 Tab 3 Tab 4 | line reads `det([1 2; 3 4])`, answer `-2` |
+| line `det([1 2; 3 4])`, ⌃G | grid opens on 1 2 / 3 4; `+` columns makes it 2×3, line `det([1 2 0; 3 4 0])` |

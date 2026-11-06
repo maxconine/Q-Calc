@@ -1698,6 +1698,12 @@ public protocol EngineProtocol: AnyObject, Sendable {
      */
     func typstSource(expr: String, answer: String, solvedFor: String)  -> String?
     
+    /**
+     * The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
+     * `arrow`, else after `=`. Native only.
+     */
+    func typstSourceMath(expr: String, answerTypst: String, arrow: Bool)  -> String?
+    
 }
 /**
  * The engine: settings-independent state (rates, its threads), shared by every call.
@@ -2297,6 +2303,22 @@ open func typstSource(expr: String, answer: String, solvedFor: String) -> String
         FfiConverterString.lower(expr),
         FfiConverterString.lower(answer),
         FfiConverterString.lower(solvedFor),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * The preview document for a line whose answer is already Typst math (`MatrixView::typst`): after ⇒ when
+     * `arrow`, else after `=`. Native only.
+     */
+open func typstSourceMath(expr: String, answerTypst: String, arrow: Bool) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_typst_source_math(
+            self.uniffiCloneHandle(),
+        FfiConverterString.lower(expr),
+        FfiConverterString.lower(answerTypst),
+        FfiConverterBool.lower(arrow),uniffiCallStatus
     )
 })
 }
@@ -6832,6 +6854,67 @@ public func FfiConverterTypeGraphWindow_lower(_ value: GraphWindow) -> RustBuffe
 }
 
 
+/**
+ * Where the grid writes in the line (UTF-16 offsets), and the cells it opens with.
+ */
+public struct GridSpot: Equatable, Hashable {
+    public var start: UInt32
+    public var end: UInt32
+    public var cells: [[String]]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(start: UInt32, end: UInt32, cells: [[String]]) {
+        self.start = start
+        self.end = end
+        self.cells = cells
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension GridSpot: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeGridSpot: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> GridSpot {
+        return
+            try GridSpot(
+                start: FfiConverterUInt32.read(from: &buf), 
+                end: FfiConverterUInt32.read(from: &buf), 
+                cells: FfiConverterSequenceSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: GridSpot, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.start, into: &buf)
+        FfiConverterUInt32.write(value.end, into: &buf)
+        FfiConverterSequenceSequenceString.write(value.cells, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGridSpot_lift(_ buf: RustBuffer) throws -> GridSpot {
+    return try FfiConverterTypeGridSpot.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeGridSpot_lower(_ value: GridSpot) -> RustBuffer {
+    return FfiConverterTypeGridSpot.lower(value)
+}
+
+
 public struct Hint: Equatable, Hashable {
     public var bit: UInt32
     public var text: String
@@ -8091,6 +8174,10 @@ public struct MatrixStep: Equatable, Hashable {
      * A whole preview document: the operation, then the matrix.
      */
     public var document: String
+    /**
+     * The matrix alone as a preview document, for a view that writes the operation itself; empty for a remark.
+     */
+    public var matrixDocument: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -8109,12 +8196,16 @@ public struct MatrixStep: Equatable, Hashable {
          */typst: String, 
         /**
          * A whole preview document: the operation, then the matrix.
-         */document: String) {
+         */document: String, 
+        /**
+         * The matrix alone as a preview document, for a view that writes the operation itself; empty for a remark.
+         */matrixDocument: String = "") {
         self.op = op
         self.opTypst = opTypst
         self.display = display
         self.typst = typst
         self.document = document
+        self.matrixDocument = matrixDocument
     }
 
     
@@ -8137,7 +8228,8 @@ public struct FfiConverterTypeMatrixStep: FfiConverterRustBuffer {
                 opTypst: FfiConverterString.read(from: &buf), 
                 display: FfiConverterString.read(from: &buf), 
                 typst: FfiConverterString.read(from: &buf), 
-                document: FfiConverterString.read(from: &buf)
+                document: FfiConverterString.read(from: &buf), 
+                matrixDocument: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -8147,6 +8239,7 @@ public struct FfiConverterTypeMatrixStep: FfiConverterRustBuffer {
         FfiConverterString.write(value.display, into: &buf)
         FfiConverterString.write(value.typst, into: &buf)
         FfiConverterString.write(value.document, into: &buf)
+        FfiConverterString.write(value.matrixDocument, into: &buf)
     }
 }
 
@@ -8180,6 +8273,19 @@ public struct MatrixView: Equatable, Hashable {
      * The same with each part's exact form; None when no part has one.
      */
     public var exactDocument: String?
+    /**
+     * The answer alone as Typst math (no document around it), for `Engine::typst_source_math`.
+     */
+    public var typst: String
+    public var exactTypst: String?
+    /**
+     * Some part has a label (`P = …`), so the preview sets the answer after ⇒ rather than `=`.
+     */
+    public var labeled: Bool
+    /**
+     * Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
+     */
+    public var typeset: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -8189,11 +8295,24 @@ public struct MatrixView: Equatable, Hashable {
          */document: String, 
         /**
          * The same with each part's exact form; None when no part has one.
-         */exactDocument: String?) {
+         */exactDocument: String?, 
+        /**
+         * The answer alone as Typst math (no document around it), for `Engine::typst_source_math`.
+         */typst: String = "", exactTypst: String? = nil, 
+        /**
+         * Some part has a label (`P = …`), so the preview sets the answer after ⇒ rather than `=`.
+         */labeled: Bool = false, 
+        /**
+         * Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
+         */typeset: Bool = false) {
         self.parts = parts
         self.steps = steps
         self.document = document
         self.exactDocument = exactDocument
+        self.typst = typst
+        self.exactTypst = exactTypst
+        self.labeled = labeled
+        self.typeset = typeset
     }
 
     
@@ -8215,7 +8334,11 @@ public struct FfiConverterTypeMatrixView: FfiConverterRustBuffer {
                 parts: FfiConverterSequenceTypeMatrixPart.read(from: &buf), 
                 steps: FfiConverterSequenceTypeMatrixStep.read(from: &buf), 
                 document: FfiConverterString.read(from: &buf), 
-                exactDocument: FfiConverterOptionString.read(from: &buf)
+                exactDocument: FfiConverterOptionString.read(from: &buf), 
+                typst: FfiConverterString.read(from: &buf), 
+                exactTypst: FfiConverterOptionString.read(from: &buf), 
+                labeled: FfiConverterBool.read(from: &buf), 
+                typeset: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -8224,6 +8347,10 @@ public struct FfiConverterTypeMatrixView: FfiConverterRustBuffer {
         FfiConverterSequenceTypeMatrixStep.write(value.steps, into: &buf)
         FfiConverterString.write(value.document, into: &buf)
         FfiConverterOptionString.write(value.exactDocument, into: &buf)
+        FfiConverterString.write(value.typst, into: &buf)
+        FfiConverterOptionString.write(value.exactTypst, into: &buf)
+        FfiConverterBool.write(value.labeled, into: &buf)
+        FfiConverterBool.write(value.typeset, into: &buf)
     }
 }
 
@@ -14051,6 +14178,30 @@ fileprivate struct FfiConverterOptionTypeGraphResult: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeGridSpot: FfiConverterRustBuffer {
+    typealias SwiftType = GridSpot?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeGridSpot.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeGridSpot.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeHint: FfiConverterRustBuffer {
     typealias SwiftType = Hint?
 
@@ -15527,6 +15678,31 @@ fileprivate struct FfiConverterSequenceOptionTypeUtMark: FfiConverterRustBuffer 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [[String]]
+
+    public static func write(_ value: [[String]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterSequenceString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [[String]] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [[String]]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterSequenceString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDictionaryStringDouble: FfiConverterRustBuffer {
     public static func write(_ value: [String: Double], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -16525,6 +16701,61 @@ public func utChalkMark(kind: String, x: Double, y: Double, size: Double, seed: 
 })
 }
 /**
+ * The typed matrix the caret is in (else the last one), read into cells to edit.
+ */
+public func matrixGridAt(text: String, caret: UInt32) -> GridSpot?  {
+    return try!  FfiConverterOptionTypeGridSpot.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_at(
+        FfiConverterString.lower(text),
+        FfiConverterUInt32.lower(caret),uniffiCallStatus
+    )
+})
+}
+/**
+ * `matrix 3x3` anywhere in the line: the empty grid ↵ opens, in its place.
+ */
+public func matrixGridCommand(text: String) -> GridSpot?  {
+    return try!  FfiConverterOptionTypeGridSpot.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_command(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * What the answer slot says while the line holds `matrix 3x3` (`↵ opens a 3×3 grid`).
+ */
+public func matrixGridHint(text: String) -> String?  {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_hint(
+        FfiConverterString.lower(text),uniffiCallStatus
+    )
+})
+}
+/**
+ * The cells written back as a matrix: `[1 2; 3 4]`, an empty cell as 0.
+ */
+public func matrixGridLiteral(cells: [[String]]) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_literal(
+        FfiConverterSequenceSequenceString.lower(cells),uniffiCallStatus
+    )
+})
+}
+/**
+ * The most rows or columns the grid has.
+ */
+public func matrixGridMax() -> UInt32  {
+    return try!  FfiConverterUInt32.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_func_matrix_grid_max(uniffiCallStatus
+    )
+})
+}
+/**
  * How long typing rests before a name is asked about, in ms.
  */
 public func nameCheckDelayMs() -> UInt32  {
@@ -16794,6 +17025,21 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qcalc_ffi_checksum_func_ut_chalk_mark() != 17612) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_at() != 52379) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_command() != 24906) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_hint() != 49430) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_literal() != 17521) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_func_matrix_grid_max() != 32769) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qcalc_ffi_checksum_func_name_check_delay_ms() != 2694) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -16918,6 +17164,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_typst_source() != 62253) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_typst_source_math() != 33438) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_gameclock_date() != 117) {

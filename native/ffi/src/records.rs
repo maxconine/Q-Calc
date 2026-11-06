@@ -480,6 +480,9 @@ pub struct MatrixStep {
     pub typst: String,
     /// A whole preview document: the operation, then the matrix.
     pub document: String,
+    /// The matrix alone as a preview document, for a view that writes the operation itself; empty for a remark.
+    #[uniffi(default)]
+    pub matrix_document: String,
 }
 
 /// A matrix answer laid out for typesetting.
@@ -491,6 +494,17 @@ pub struct MatrixView {
     pub document: String,
     /// The same with each part's exact form; None when no part has one.
     pub exact_document: Option<String>,
+    /// The answer alone as Typst math (no document around it), for `Engine::typst_source_math`.
+    #[uniffi(default)]
+    pub typst: String,
+    #[uniffi(default)]
+    pub exact_typst: Option<String>,
+    /// Some part has a label (`P = …`), so the preview sets the answer after ⇒ rather than `=`.
+    #[uniffi(default)]
+    pub labeled: bool,
+    /// Worth a typeset row of its own: a matrix in it, or several parts (a lone number reads fine as text).
+    #[uniffi(default)]
+    pub typeset: bool,
 }
 
 impl MatrixView {
@@ -530,6 +544,11 @@ impl From<&MatrixParts> for MatrixView {
                     } else {
                         format!("{} quad {}", s.op_typst, s.typst)
                     }),
+                    matrix_document: if s.typst.is_empty() {
+                        String::new()
+                    } else {
+                        math_document(&s.typst)
+                    },
                 })
                 .collect(),
             document: math_document(&m.typst(false)),
@@ -538,6 +557,14 @@ impl From<&MatrixParts> for MatrixView {
                 .iter()
                 .any(|p| p.exact_typst.is_some())
                 .then(|| math_document(&m.typst(true))),
+            typst: m.typst(false),
+            exact_typst: m
+                .parts
+                .iter()
+                .any(|p| p.exact_typst.is_some())
+                .then(|| m.typst(true)),
+            labeled: m.parts.iter().any(|p| !p.label.is_empty()),
+            typeset: m.parts.len() > 1 || m.parts.iter().any(|p| p.typst.contains("mat(")),
         }
     }
 }

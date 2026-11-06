@@ -71,6 +71,14 @@ final class BarModel: ObservableObject {
     @Published var sysLines: [String]?
     @Published var sysAnswer: SysAnswer?
     @Published var sysFocus: Int?
+    // the matrix grid and the row-operation steps (Matrices.swift, native only)
+    @Published var grid: GridState?
+    @Published var gridFocus: GridCell?
+    /// the grid is writing the line, so the change is its own
+    var writingGrid = false
+    @Published var stepsShown = false
+    @Published var stepRows: [StepRow] = []
+    var stepsAsked: [String]?
     // onboarding and the walkthrough (Tour.swift)
     @Published var example: ExampleShown?
     /// .tour-line role="status": VoiceOver hears each step as it comes
@@ -154,7 +162,7 @@ final class BarModel: ObservableObject {
     let sheets: SheetData = SheetData.shared
     /// the typeset preview row (MathText.swift); nil hides it
     @Published private(set) var typeset: Typeset?
-    private lazy var typesetter = MathTypesetter(engine: core)
+    lazy var typesetter = MathTypesetter(engine: core)
     private var typesetAsked: TypesetRequest?
 
     // what the bar asks of its window
@@ -295,6 +303,14 @@ final class BarModel: ObservableObject {
 
     func evaluateLive() {
         let typed = text
+        // the grid stays open only while the line is the one it wrote
+        if let g = grid, !writingGrid, typed != g.written { grid = nil; gridFocus = nil }
+        if grid == nil, let h = matrixGridHint(text: typed) {
+            commandMessage = h
+            setLive(.blank, for: typed)
+            engine.cancel(.live)
+            return
+        }
         // `sys`: a hint until there's a count; the panel's own answer once its fields are open
         let sys = SysCommand.of(typed)
         // native only: the fields open the moment the count is typed (the page waits for ↵), the caret in the
@@ -573,6 +589,7 @@ final class BarModel: ObservableObject {
         if !answer.isBlank { lastLiveText = typed }
         checkEffects(answer)
         refreshTypeset()
+        refreshSteps()
         onLive?(typed)
     }
 
@@ -590,13 +607,19 @@ final class BarModel: ObservableObject {
         let solve = live.solve
         let rootsOf = solve?.outcome == .roots ? solve?.variable ?? "" : ""
         let tabbed = formIndex > 0 && forms.indices.contains(formIndex)
+        // native only: a matrix answer is typeset from its parts (`P = [..]  D = [..]`), exact where it has it
+        let matrix = live.matrix.flatMap { m -> MatrixAsk? in
+            guard m.typeset, prefixShown == nil, !tabbed, solve == nil else { return nil }
+            return MatrixAsk(typst: m.exactTypst ?? m.typst, arrow: m.labeled)
+        }
         let request = TypesetRequest(
             expr: chained ? Chain.expr(text) : text,
             ans: decorations.ans,
             exact: prefixShown != nil || tabbed ? nil : exact,
             display: exponentShown(prefixShown ?? (tabbed ? forms[formIndex] : live.display)),
             solvedFor: rootsOf,
-            message: solve != nil && rootsOf.isEmpty)
+            message: solve != nil && rootsOf.isEmpty,
+            matrix: matrix)
         guard request != typesetAsked else { return }
         typesetAsked = request
         typesetter.typeset(request) { [weak self] outcome in
@@ -754,6 +777,11 @@ final class BarModel: ObservableObject {
             return
         }
         if case let .count(n) = SysCommand.of(text), enterSystem(n) { return }
+        // `matrix 3x3` (native only): the grid, in its place
+        if grid == nil, let spot = matrixGridCommand(text: text) {
+            openGrid(spot)
+            return
+        }
         // `do a barrel roll` saves nothing and says nothing: ↵ rolls now if the line hasn't settled yet, and clears it
         if isBarrelRoll(text: text) {
             effectSettle?.fire()
@@ -1315,12 +1343,22 @@ final class BarModel: ObservableObject {
         case "clear": clearHistory()
         case "exponent": toggleExponent()
         case "forms": cycleForms()
+        case "matrixGrid": toggleGrid()
+        case "matrixSteps": toggleSteps()
         default: break
         }
     }
 
     /// Esc closes the innermost layer; false means nothing was open, so the bar hides.
     func escape() -> Bool {
+        if grid != nil {
+            closeGrid()
+            return true
+        }
+        if stepsShown {
+            stepsShown = false
+            return true
+        }
         if sysLines != nil {
             closeSystem()
             text = ""

@@ -126,6 +126,12 @@ struct BarView: View {
                 .padding(.horizontal, Theme.gutter)
                 .padding(.bottom, 8)
         }
+        if model.grid != nil {
+            MatrixGridPanel(model: model)
+        } else if let steps = model.live.matrix?.steps, !steps.isEmpty {
+            StepsChip(model: model, count: steps.count)
+            if model.stepsShown { StepsPanel(model: model) }
+        }
         if model.sysLines != nil {
             SystemPanel(model: model)
         }
