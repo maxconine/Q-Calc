@@ -270,4 +270,51 @@ enum StackedMath {
         while p.dead.contains(c), c + step >= 0, c + step <= length { c += step }
         return c
     }
+
+    // ---- selections and deletions that would cut a stack
+
+    /// a selection grown so it never takes part of a stack: one inside a single slot stays, one that reaches
+    /// past a slot takes the whole stack (and the hidden `·` after one it takes whole)
+    static func expand(_ p: Parsed, _ r: NSRange, length: Int) -> NSRange {
+        guard r.length > 0 else { return r }
+        var lo = r.location, hi = NSMaxRange(r), changed = true
+        while changed {
+            changed = false
+            for s in p.stacks where lo < s.end && hi > s.start {
+                if lo <= s.start && hi >= s.end { continue }
+                if s.slots.contains(where: { lo >= $0.lo && hi <= $0.hi }) { continue }
+                lo = min(lo, s.start)
+                hi = max(hi, s.end)
+                changed = true
+            }
+        }
+        if hi < length, p.dots.contains(hi), p.stacks.contains(where: { $0.end == hi && $0.start >= lo }) { hi += 1 }
+        return NSRange(location: lo, length: hi - lo)
+    }
+
+    /// what ⌥⌫ / ⌘⌫ (and ⌥⌦ / ⌘⌦ going on) take: from the caret to `to`, kept inside the slot the caret is in, and
+    /// grown to whole stacks outside one. nil when the caret is at its slot's edge (backspace there takes the
+    /// stack apart instead)
+    static func deletion(_ p: Parsed, caret: Int, to: Int, length: Int, next: ((Int) -> Bool)? = nil) -> NSRange? {
+        var lo = min(caret, to), hi = max(caret, to)
+        if let slot = p.slot(at: caret) {
+            lo = max(lo, slot.lo)
+            hi = min(hi, slot.hi)
+        }
+        guard hi > lo else { return nil }
+        var r = expand(p, NSRange(location: lo, length: hi - lo), length: length)
+        // the hidden `·` before what's taken goes too when no term is left after it to keep apart from the stack
+        if r.location > 0, p.dots.contains(r.location - 1), !(next?(NSMaxRange(r)) ?? false) {
+            r = NSRange(location: r.location - 1, length: r.length + 1)
+        }
+        return r
+    }
+
+    /// a deletion that would take all of a slot with no hidden brackets (`42/(12)`'s 42, `x^2`'s 2): the `/` or
+    /// `^` would be left with nothing on that side and the stack would come apart, so the slot is left as an empty
+    /// `()` instead. The slot's first place, or nil when `r` doesn't empty one.
+    static func emptying(_ p: Parsed, _ r: NSRange) -> Int? {
+        guard r.length > 0 else { return nil }
+        return p.stacks.flatMap(\.slots).first { $0.open == nil && $0.content == r }?.lo
+    }
 }

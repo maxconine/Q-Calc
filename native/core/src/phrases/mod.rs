@@ -16,6 +16,7 @@ pub mod golden;
 pub mod jsdate;
 pub mod live;
 pub mod money;
+pub mod native_money;
 pub mod native_eval;
 pub mod rates;
 pub mod time;
@@ -462,7 +463,16 @@ fn conversion_phrase(s: &str, rates: Option<&CurrencyRates>) -> Answered {
 
 /// `answerPhrase`, or None where the TS throws (see [`try_answer_phrase`]).
 pub fn answer_phrase(expr: &str, options: &PhraseOptions<'_>) -> Option<PhraseAnswer> {
-    try_answer_phrase(expr, options).ok().flatten()
+    match try_answer_phrase(expr, options) {
+        Ok(Some(a)) => Some(a),
+        // native only: currency lines the web leaves blank
+        Ok(None) => native_money::answer(
+            expr,
+            options.rates,
+            options.sig_figs.unwrap_or(DEFAULT_SIG_FIGS as f64),
+        ),
+        Err(_) => None,
+    }
 }
 
 /// `answerPhrase`, with the TS's throws kept apart.

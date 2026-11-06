@@ -80,7 +80,9 @@ final class OverlayController: NSObject {
         controller.onPick = { [weak self] in self?.insertText($0) }
         return controller
     }()
-    private var identitySheets: [String: IdentityWindowController] = [:]
+    // the formula sheets' one window, a page at a time, made on the first open; Open in New Window adds the others
+    private var sheetWindow: IdentityWindowController?
+    private var extraSheetWindows: [IdentityWindowController] = []
     private lazy var games = GameWindowController()
     private lazy var effects = EggOverlay()
 
@@ -108,8 +110,10 @@ final class OverlayController: NSObject {
             self.periodic.show(SheetData.shared.elements, bar: self.barSpot())
         }
         model.onIdentities = { [weak self] id, section in
-            guard let self, let sheet = SheetData.shared.identitySheet(id) else { return }
-            self.identityWindow(id).show(sheet, section: section, bar: self.barSpot())
+            SheetData.shared.identitySheet(id) { [weak self] sheet in
+                guard let self, let sheet else { return }
+                self.mainSheetWindow().show(sheet, section: section, bar: self.barSpot())
+            }
         }
         model.onGame = { [weak self] kind in self?.play(kind) }
         model.onEffect = { [weak self] kind in
@@ -632,6 +636,10 @@ final class OverlayController: NSObject {
             }
             // ⌘W closes the front reference sheet first (sheets never take the keys while the bar is up), else
             // hides the bar
+            // ⌘[ and ⌘] step back and forward through the front sheet window's pages
+            if let step = IdentityWindowController.navigationStep(event), let sheets = IdentityWindowController.front(), sheets.go(step) {
+                return nil
+            }
             if isCommandWCloseKey(event) {
                 if let sheet = PeriodicPanel.front() {
                     sheet.close()
@@ -657,11 +665,43 @@ final class OverlayController: NSObject {
         return (panel.frame, screen.visibleFrame)
     }
 
-    private func identityWindow(_ id: String) -> IdentityWindowController {
-        if let controller = identitySheets[id] { return controller }
-        let controller = IdentityWindowController(id: id, cascade: identitySheets.count)
-        identitySheets[id] = controller
+    private func mainSheetWindow() -> IdentityWindowController {
+        if let sheetWindow { return sheetWindow }
+        let controller = sheetController(id: "sheets", cascade: 0)
+        sheetWindow = controller
         return controller
+    }
+
+    // the formulas page: a click opens the sheet it names in the same window, replacing the page; its menu's Open in
+    // New Window gives that sheet a window of its own
+    private func sheetController(id: String, cascade: Int) -> IdentityWindowController {
+        let controller = IdentityWindowController(id: id, cascade: cascade)
+        controller.onOpen = { [weak self, weak controller] line in
+            guard let self else { return }
+            if let target = SheetData.shared.target(line) {
+                SheetData.shared.identitySheet(target.id) { sheet in
+                    guard let sheet, let controller else { return }
+                    controller.show(sheet, section: target.section)
+                }
+            } else if line == "periodic" {
+                self.model.onPeriodic?()
+            }
+        }
+        controller.onOpenNew = { [weak self] line in self?.openSheetInNewWindow(line) }
+        return controller
+    }
+
+    private func openSheetInNewWindow(_ line: String) {
+        if line == "periodic" { return model.onPeriodic?() ?? () }
+        guard let target = SheetData.shared.target(line) else { return }
+        SheetData.shared.identitySheet(target.id) { [weak self] sheet in
+            guard let self, let sheet else { return }
+            // a closed one is gone for good
+            self.extraSheetWindows.removeAll { !$0.isOpen }
+            let controller = self.sheetController(id: "sheets-\(self.extraSheetWindows.count + 1)", cascade: self.extraSheetWindows.count + 1)
+            self.extraSheetWindows.append(controller)
+            controller.show(sheet, section: target.section)
+        }
     }
 
     private func insertText(_ text: String) {

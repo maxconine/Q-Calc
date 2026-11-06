@@ -52,10 +52,6 @@ pub(crate) struct State {
 
 // ---- small conversions ----
 
-fn opt_string(v: Option<Json>) -> Option<String> {
-    v.and_then(|v| v.as_str().map(str::to_string))
-}
-
 fn u32_of(v: &Json, key: &str) -> Option<u32> {
     v.get(key)?.as_f64().filter(|x| *x >= 0.0).map(|x| x as u32)
 }
@@ -79,6 +75,15 @@ fn graph_options_json(o: &GraphOptions, settings: &EvalOptions) -> Json {
     }
     if let Some(a) = o.aspect {
         out["aspect"] = json!(a);
+    }
+    if let Some(y) = o.y_center {
+        out["yCenter"] = json!(y);
+    }
+    if o.x_log {
+        out["xLog"] = json!(true);
+    }
+    if o.surface {
+        out["surface"] = json!(true);
     }
     out
 }
@@ -128,8 +133,14 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                         kind: match p.get("kind")?.as_str()? {
                             "min" => CriticalKind::Min,
                             "max" => CriticalKind::Max,
+                            "x-intercept" => CriticalKind::XIntercept,
+                            "y-intercept" => CriticalKind::YIntercept,
+                            "saddle" => CriticalKind::Saddle,
+                            "vertical tangent" => CriticalKind::VerticalTangent,
+                            "point" => CriticalKind::Point,
                             _ => CriticalKind::Critical,
                         },
+                        z: num(p.get("z")),
                     })
                 })
                 .collect()
@@ -158,11 +169,30 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                 .collect()
         })
         .unwrap_or_default();
-    // the readout functions (`y`, `z`) don't cross; graph_y and graph_z stand for them
+    let surface = v.get("surface").filter(|g| g.is_object()).and_then(|g| {
+        Some(SurfaceGrid {
+            nx: u32_of(g, "nx")?,
+            ny: u32_of(g, "ny")?,
+            x_lo: num(g.get("xLo"))?,
+            x_hi: num(g.get("xHi"))?,
+            y_lo: num(g.get("yLo"))?,
+            y_hi: num(g.get("yHi"))?,
+            z: g
+                .get("z")?
+                .as_array()?
+                .iter()
+                .map(|v| v.as_f64().unwrap_or(f64::NAN))
+                .collect(),
+            z_lo: num(g.get("zLo"))?,
+            z_hi: num(g.get("zHi"))?,
+        })
+    });
+    // the readout functions (`y`, `z`) don't cross; graph_y and graph_z stand for them, and the grid is its own
     let mut json = v.clone();
     if let Some(o) = json.as_object_mut() {
         o.remove("y");
         o.remove("z");
+        o.remove("surface");
     }
     Some(GraphResult {
         label: intent
@@ -198,6 +228,7 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
         contours,
         error: v.get("error").and_then(Json::as_str).map(str::to_string),
         json: json.to_string(),
+        surface,
     })
 }
 
@@ -591,7 +622,7 @@ impl State {
     ) -> Option<GraphResult> {
         call(
             "engine/graph",
-            "buildGraph",
+            "buildNativeGraph",
             &[json!(input), graph_options_json(options, settings)],
         )
         .as_ref()
@@ -835,17 +866,20 @@ impl Engine {
         let fallback = GraphWindow {
             lo: -10.0,
             hi: 10.0,
+            y_center: None,
         };
         self.on(fallback, move |_| {
+            // native: an implicit curve framed whole, lines through points, equations solved for y
             call(
                 "engine/graph",
-                "graphHome",
+                "graphNativeHome",
                 &[json!(input), graph_options_json(&options, &settings)],
             )
             .and_then(|v| {
                 Some(GraphWindow {
-                    lo: v.get(0)?.as_f64()?,
-                    hi: v.get(1)?.as_f64()?,
+                    lo: v.get("lo")?.as_f64()?,
+                    hi: v.get("hi")?.as_f64()?,
+                    y_center: v.get("yCenter").and_then(Json::as_f64),
                 })
             })
             .unwrap_or(fallback)
@@ -938,11 +972,7 @@ impl Engine {
     /// The Typst document for the preview (`typstDocument`).
     pub fn typst_source(&self, expr: String, answer: String, solved_for: String) -> Option<String> {
         self.on(None, move |_| {
-            opt_string(call(
-                "lib/typstMath",
-                "typstDocument",
-                &[json!(expr), json!(answer), json!(solved_for)],
-            ))
+            qcalc_core::app::typst_math::native_typst_document(&expr, &answer, &solved_for)
         })
     }
 

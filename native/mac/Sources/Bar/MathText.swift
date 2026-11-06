@@ -47,6 +47,13 @@ final class MathTypesetter {
         }
     }
 
+    /// native only: a line through `ans` with a unit in its answer (`ans sec`) shows what the number and unit are,
+    /// unless that's all it says (`ans` alone)
+    private func showsAnsUnit(_ r: TypesetRequest, written: String) -> Bool {
+        guard written != r.expr, !r.message, written.replacingOccurrences(of: ",", with: "") != r.display.replacingOccurrences(of: ",", with: "") else { return false }
+        return logic.string("lib/answer", "unitlessAnswer", [r.display]) != r.display
+    }
+
     enum Outcome {
         /// nothing worth typesetting: the row hides
         case hidden
@@ -65,7 +72,7 @@ final class MathTypesetter {
             guard let self, let renderer = self.renderer, self.lock.withLock({ self.latest == r }) else { return }
             let outcome: Outcome
             let expr = r.ans.flatMap { self.logic.string("lib/chain", "ansWrittenOut", [r.expr, $0]) } ?? r.expr
-            if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [expr]) {
+            if !self.logic.bool("lib/typstMath", "typstPreviewUseful", [expr]), !self.showsAnsUnit(r, written: expr) {
                 outcome = .hidden
             } else {
                 let answer = r.message ? "" : self.logic.string("lib/typstMath", "typstAnswer", [r.exact ?? NSNull(), r.display]) ?? ""
@@ -80,6 +87,16 @@ final class MathTypesetter {
                 }
             }
             DispatchQueue.main.async { done(outcome) }
+        }
+    }
+
+    /// native only: the working panel's steps (Working.swift), each its own document, on the same queue and
+    /// renderer as the preview; nil for a step Typst can't compile
+    func paths(_ docs: [String], done: @escaping ([TypstPaths?]) -> Void) {
+        queue.async { [weak self] in
+            guard let renderer = self?.renderer else { return }
+            let out = docs.map { try? renderer.paths(source: $0) }
+            DispatchQueue.main.async { done(out) }
         }
     }
 }

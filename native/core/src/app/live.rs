@@ -338,7 +338,13 @@ pub fn live(req: &LiveRequest) -> LiveAnswer {
     let sys_parsed = if sys_cmd { sys_command(q) } else { None };
     let sys_answer = match (&req.sys_lines, &sys_parsed) {
         (Some(lines), Some(SysCommand::Count(n))) if *n == lines.len() => {
-            solve_live(lines, &o.default_units, o.angle())
+            solve_live(lines, &o.default_units, o.angle()).map(|mut a| {
+                // native only: fractions only with fraction form on
+                if o.fraction_mode != Some(true) && !a.message {
+                    a.display = crate::app::answer::system_decimals(&a.display, sig_figs);
+                }
+                a
+            })
         }
         _ => None,
     };

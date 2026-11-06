@@ -47,6 +47,12 @@ pub struct GraphOptions {
     pub find_roots: Option<bool>,
     /// The plot's height over its width, so a contour plot's x and y share a scale.
     pub aspect: Option<f64>,
+    /// Native only: the y a plot of x and y centres on (0 when none); a pan moves it.
+    pub y_center: Option<f64>,
+    /// Native only: a surface's grid of z for the 3D view ([`GraphResult::surface`]).
+    pub surface: bool,
+    /// Native only: a curve sampled evenly in log x, for a logarithmic x axis (a domain above 0).
+    pub x_log: bool,
 }
 
 /// The tallest and widest plots a contour is sampled for (height over width), and the most samples a curve
@@ -57,7 +63,7 @@ const MAX_SAMPLES: f64 = 100_000.0;
 
 impl GraphOptions {
     /// `aspect`, or the default for none (or none that makes sense), kept within [`ASPECT_RANGE`].
-    fn aspect(&self) -> f64 {
+    pub(crate) fn aspect(&self) -> f64 {
         match self.aspect {
             Some(a) if a.is_finite() && a > 0.0 => a.clamp(ASPECT_RANGE.0, ASPECT_RANGE.1),
             _ => CONTOUR_ASPECT,
@@ -115,7 +121,7 @@ pub struct GraphIntent {
 }
 
 impl GraphIntent {
-    fn new(expression: impl Into<String>, label: impl Into<String>) -> Self {
+    pub(crate) fn new(expression: impl Into<String>, label: impl Into<String>) -> Self {
         GraphIntent {
             expression: expression.into(),
             label: label.into(),
@@ -139,6 +145,16 @@ pub enum CriticalKind {
     Min,
     Max,
     Critical,
+    /// Native only (`line_intercepts`): where a straight line crosses the x axis.
+    XIntercept,
+    /// Native only (`line_intercepts`): where a straight line crosses the y axis.
+    YIntercept,
+    /// Native only: a surface's saddle point.
+    Saddle,
+    /// Native only: where an implicit curve turns vertical (`y^2 = 4x` at the origin).
+    VerticalTangent,
+    /// Native only: a point the line was drawn through (`graph line through (1, 2) and (3, 5)`).
+    Point,
 }
 
 impl CriticalKind {
@@ -147,6 +163,11 @@ impl CriticalKind {
             CriticalKind::Min => "min",
             CriticalKind::Max => "max",
             CriticalKind::Critical => "critical",
+            CriticalKind::XIntercept => "x-intercept",
+            CriticalKind::YIntercept => "y-intercept",
+            CriticalKind::Saddle => "saddle",
+            CriticalKind::VerticalTangent => "vertical tangent",
+            CriticalKind::Point => "point",
         }
     }
 }
@@ -156,6 +177,8 @@ pub struct CriticalPoint {
     pub x: f64,
     pub y: f64,
     pub kind: CriticalKind,
+    /// Native only: a surface's height there.
+    pub z: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -212,6 +235,23 @@ pub struct GraphResult {
     pub contours: Option<Vec<ContourLevel>>,
     pub error: Option<String>,
     pub readout: GraphReadout,
+    /// Native only: z over the window, for the 3D view (asked for by [`GraphOptions::surface`]).
+    pub surface: Option<SurfaceGrid>,
+}
+
+/// A surface sampled on a grid: `z[j * (nx + 1) + i]` at x = x_lo + i·(x_hi − x_lo)/nx, y likewise; NaN where
+/// it's undefined or out of bounds. `z_lo`/`z_hi` are the heights the view frames (outliers clipped).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SurfaceGrid {
+    pub nx: usize,
+    pub ny: usize,
+    pub x_lo: f64,
+    pub x_hi: f64,
+    pub y_lo: f64,
+    pub y_hi: f64,
+    pub z: Vec<f64>,
+    pub z_lo: f64,
+    pub z_hi: f64,
 }
 
 impl GraphResult {
@@ -350,7 +390,7 @@ fn map_set(map: &mut Vec<(String, String)>, k: &str, v: &str) {
 }
 
 /// All at once, so f(y, x) swaps rather than merging.
-fn rewrite_params(body: &str, pairs: &[(&str, &str)]) -> String {
+pub(crate) fn rewrite_params(body: &str, pairs: &[(&str, &str)]) -> String {
     let mut map = Vec::new();
     for (k, v) in pairs {
         map_set(&mut map, k, v);
@@ -724,7 +764,7 @@ fn hull(rs: Option<&Vec<GraphRange>>) -> Option<(f64, f64)> {
     (lo.is_finite() && hi.is_finite() && hi > lo).then_some((lo, hi))
 }
 
-fn inside(b: Option<&GraphBounds>, x: f64, y: f64) -> bool {
+pub(crate) fn inside(b: Option<&GraphBounds>, x: f64, y: f64) -> bool {
     b.is_none_or(|b| in_ranges(x, &b.x) && in_ranges(y, &b.y))
 }
 
@@ -840,6 +880,24 @@ fn sample_with(
         let x = x_min + (x_max - x_min) * (i / (n - 1.0));
         points.push(GraphPoint { x, y: f(x) });
         i += 1.0;
+    }
+    points
+}
+
+/// Native only: [`sample_with`] evenly in log x (a domain above 0), for a logarithmic x axis, which uneven
+/// samples would leave bare at its low end.
+fn sample_log(f: &dyn Fn(f64) -> Option<f64>, domain: (f64, f64), count: Option<f64>) -> Vec<GraphPoint> {
+    let (l0, l1) = (jsmath::ln(domain.0), jsmath::ln(domain.1));
+    let mut points: Vec<GraphPoint> = sample_with(&|t| f(jsmath::exp(t)), (l0, l1), count)
+        .into_iter()
+        .map(|p| GraphPoint { x: jsmath::exp(p.x), y: p.y })
+        .collect();
+    // the ends exactly, not exp(ln(x))
+    if let Some(p) = points.first_mut() {
+        *p = GraphPoint { x: domain.0, y: f(domain.0) };
+    }
+    if let Some(p) = points.last_mut() {
+        *p = GraphPoint { x: domain.1, y: f(domain.1) };
     }
     points
 }
@@ -982,7 +1040,7 @@ fn refine_samples(
     r.out
 }
 
-fn quantile(sorted: &[f64], q: f64) -> f64 {
+pub(crate) fn quantile(sorted: &[f64], q: f64) -> f64 {
     if sorted.is_empty() {
         return f64::NAN;
     }
@@ -998,7 +1056,7 @@ fn quantile(sorted: &[f64], q: f64) -> f64 {
     a + rest * (b - a)
 }
 
-fn sort_numbers(v: &mut [f64]) {
+pub(crate) fn sort_numbers(v: &mut [f64]) {
     v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
 }
 
@@ -1148,6 +1206,7 @@ pub fn find_critical_points(
                 x: cur.x,
                 y: cy,
                 kind,
+                z: None,
             });
             continue;
         };
@@ -1173,7 +1232,12 @@ pub fn find_critical_points(
         } else {
             f(x).unwrap_or(f64::NAN)
         };
-        out.push(CriticalPoint { x, y, kind });
+        out.push(CriticalPoint {
+            x,
+            y,
+            kind,
+            z: None,
+        });
     }
     dedupe_by_x(out, |p| p.x)
 }
@@ -1314,7 +1378,12 @@ fn degree_or_default(unit: Option<AngleMode>) -> (f64, f64) {
 /// `buildGraph`: None when the input is not a graph command.
 pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
     let intent = parse_graph_intent(input, &options.functions, &options.variables)?;
+    Some(build_intent(intent, options, false))
+}
 
+/// `build_graph` from a parsed intent; `native` adds what only the native panels show (finer implicit curves,
+/// their turning points and intercepts, a surface's critical points and 3D grid, a pannable y).
+pub(crate) fn build_intent(intent: GraphIntent, options: &GraphOptions, native: bool) -> GraphResult {
     if intent.expression.is_empty() || intent.bounds_error.is_some() {
         let msg = intent.bounds_error.clone().unwrap_or_else(|| {
             if intent
@@ -1327,7 +1396,7 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
                 "Unknown function — define it first (e.g. f(x) = …)".into()
             }
         });
-        return Some(GraphResult {
+        return GraphResult {
             intent,
             points: Vec::new(),
             domain: normalize_domain(options.domain, DEFAULT_GRAPH_DOMAIN),
@@ -1341,7 +1410,8 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
             contours: None,
             error: Some(msg),
             readout: GraphReadout::None,
-        });
+            surface: None,
+        };
     }
 
     // an inline def is usable before history registers it
@@ -1357,7 +1427,7 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
     }
     let mode = options.angle_mode.unwrap_or(AngleMode::Rad);
     if intent.contour.is_some() {
-        return Some(build_contour(intent, &base, mode));
+        return build_contour(intent, &base, mode, native);
     }
     let curve = compile_graph_y(&intent.expression, &base, Some(mode));
     let other = compile_graph_y(&intent.expression, &base, Some(other_mode(mode)));
@@ -1365,11 +1435,12 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
     let bounds = intent.bounds.clone();
     let f = |x: f64| restrict(&curve, bounds.as_ref(), x);
     let domain = normalize_domain(options.domain, degree_or_default(angle_unit));
-    let uniform = with_ends(
-        sample_with(&f, domain, base.sample_count),
-        &f,
-        bounds.as_ref(),
-    );
+    let even = if native && options.x_log && domain.0 > 0.0 && domain.1 > domain.0 {
+        sample_log(&f, domain, base.sample_count)
+    } else {
+        sample_with(&f, domain, base.sample_count)
+    };
+    let uniform = with_ends(even, &f, bounds.as_ref());
     let y_scale = auto_y_scale(&uniform);
     let readout = GraphReadout::Curve {
         expression: intent.expression.clone(),
@@ -1382,7 +1453,7 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
             && sample_with(&|x| curve.at(x), domain, base.sample_count)
                 .iter()
                 .any(|p| p.y.is_some());
-        return Some(GraphResult {
+        return GraphResult {
             intent,
             points: uniform,
             domain,
@@ -1400,7 +1471,8 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
                 .into(),
             ),
             readout,
-        });
+            surface: None,
+        };
     }
 
     let points = refine_samples(&uniform, &f, y_scale);
@@ -1410,7 +1482,7 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
     } else {
         Vec::new()
     };
-    Some(GraphResult {
+    GraphResult {
         intent,
         points,
         domain,
@@ -1421,13 +1493,104 @@ pub fn build_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
         contours: None,
         error: None,
         readout,
-    })
+        surface: None,
+    }
+}
+
+/// Native only: a straight line has no turns to list, so the panel lists where it crosses the axes, those inside
+/// the window and the bounds. Empty for anything but a line. A flat line has no x-intercept, even `y = 0`.
+pub fn line_intercepts(r: &GraphResult) -> Vec<CriticalPoint> {
+    if r.error.is_some() || r.contours.is_some() {
+        return Vec::new();
+    }
+    let defined: Vec<(f64, f64)> = r
+        .points
+        .iter()
+        .filter_map(|p| Some((p.x, p.y?)))
+        .filter(|(x, y)| x.is_finite() && y.is_finite())
+        .collect();
+    let (Some(&(x0, y0)), Some(&(x1, y1))) = (defined.first(), defined.last()) else {
+        return Vec::new();
+    };
+    if defined.len() < 3 || x1 <= x0 {
+        return Vec::new();
+    }
+    let slope = (y1 - y0) / (x1 - x0);
+    let tallest = defined.iter().fold(0.0_f64, |m, (_, y)| m.max(y.abs()));
+    let tolerance = tallest * 1e-9;
+    if defined
+        .iter()
+        .any(|(x, y)| (y0 + slope * (x - x0) - y).abs() > tolerance)
+    {
+        return Vec::new();
+    }
+    let in_window = |x: f64| x >= r.domain.0 && x <= r.domain.1;
+    let mut out = Vec::new();
+    if (y1 - y0).abs() > tolerance {
+        let exact = x0 - y0 / slope;
+        // the shortest decimal the line can't tell apart (−1/3 is −0.333…339 from the samples)
+        let tol = 1e-12 * (r.domain.1 - r.domain.0);
+        let x = tidy(exact, &|c| (c - exact).abs() <= tol);
+        if in_window(x) && r.y_at(x).is_some() {
+            out.push(CriticalPoint {
+                x,
+                y: 0.0,
+                kind: CriticalKind::XIntercept,
+                z: None,
+            });
+        }
+    }
+    if in_window(0.0)
+        && let Some(y) = r.y_at(0.0).filter(|y| y.is_finite())
+    {
+        out.push(CriticalPoint {
+            x: 0.0,
+            y,
+            kind: CriticalKind::YIntercept,
+            z: None,
+        });
+    }
+    out
+}
+
+/// `build_graph` for the native panels: the web's result (the golden suite holds `build_graph` to it), with a
+/// straight line's intercepts added to its critical points.
+/// Native also reads LaTeX (`y^{2}=10000x`), lines through points, an equation solvable for y (point-slope
+/// `y − 3 = 2(x − 1)`, drawn as a curve) or z (`x + y + z = 1`, a surface), and adds the features the native
+/// panel lists for implicit curves and surfaces ([`build_intent`]).
+pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphResult> {
+    let native = crate::graph_native::native_intent(input, options)?;
+    let mut r = build_intent(native.intent, options, true);
+    let intercepts = line_intercepts(&r);
+    r.critical_points.extend(intercepts);
+    // the points a line was drawn through, first
+    if r.error.is_none() && !native.points.is_empty() {
+        let mut marks: Vec<CriticalPoint> = native
+            .points
+            .iter()
+            .filter(|(x, y)| x.is_finite() && y.is_finite())
+            .map(|&(x, y)| CriticalPoint {
+                x,
+                y,
+                kind: CriticalKind::Point,
+                z: None,
+            })
+            .collect();
+        let close = |a: &CriticalPoint, b: &CriticalPoint| a.x == b.x && a.y == b.y;
+        r.critical_points.retain(|c| !marks.iter().any(|m| close(m, c)));
+        marks.append(&mut r.critical_points);
+        r.critical_points = marks;
+    }
+    if let Some(e) = native.error {
+        r.error = Some(e);
+    }
+    Some(r)
 }
 
 /// What `buildGraph(input, options).y` / `.z` evaluate, without sampling: for a readout under the pointer, so
 /// the UI needn't rebuild the graph per hover. Native only (the TS keeps the closures).
 pub fn graph_readout(input: &str, options: &GraphOptions) -> GraphReadout {
-    let Some(intent) = parse_graph_intent(input, &options.functions, &options.variables) else {
+    let Some(intent) = crate::graph_native::native_intent(input, options).map(|n| n.intent) else {
         return GraphReadout::None;
     };
     if intent.expression.is_empty() || intent.bounds_error.is_some() {
@@ -1487,6 +1650,7 @@ fn readout_result(readout: GraphReadout) -> GraphResult {
         contours: None,
         error: None,
         readout,
+        surface: None,
     }
 }
 
@@ -1503,7 +1667,7 @@ fn nice_step(raw: f64, ceil: bool) -> f64 {
 }
 
 // at least `span` wide about `mid`, with ends on a round step
-fn nice_window(mid: f64, span: f64) -> (f64, f64) {
+pub(crate) fn nice_window(mid: f64, span: f64) -> (f64, f64) {
     let step = nice_step(span / 10.0, false);
     let lo = ((mid - span / 2.0) / step + 1e-9).floor() * step;
     let hi = ((mid + span / 2.0) / step - 1e-9).ceil() * step;
@@ -1513,8 +1677,17 @@ fn nice_window(mid: f64, span: f64) -> (f64, f64) {
 /// `graphHome`: the window a graph opens on, ±10 (±360 for trig in degrees), narrowed around the roots and
 /// extrema when they all sit in a small middle part of it.
 pub fn graph_home(input: &str, options: &GraphOptions) -> (f64, f64) {
-    // finite bounds frame the view, with a little room either side
     let intent = parse_graph_intent(input, &options.functions, &options.variables);
+    home_of(intent, options, &|o| build_graph(input, o))
+}
+
+/// `graph_home` for an intent, built by `build`.
+pub(crate) fn home_of(
+    intent: Option<GraphIntent>,
+    options: &GraphOptions,
+    build: &dyn Fn(&GraphOptions) -> Option<GraphResult>,
+) -> (f64, f64) {
+    // finite bounds frame the view, with a little room either side
     let ok = intent.as_ref().filter(|i| i.bounds_error.is_none());
     let bx = ok.and_then(|i| hull(i.bounds.as_ref().map(|b| &b.x)));
     let by = ok
@@ -1527,13 +1700,10 @@ pub fn graph_home(input: &str, options: &GraphOptions) -> (f64, f64) {
         );
         return nice_window(bx.map_or(0.0, |b| (b.0 + b.1) / 2.0), span * 1.2);
     }
-    let g = build_graph(
-        input,
-        &GraphOptions {
-            domain: None,
-            ..options.clone()
-        },
-    );
+    let g = build(&GraphOptions {
+        domain: None,
+        ..options.clone()
+    });
     let Some(g) = g else {
         return DEFAULT_GRAPH_DOMAIN;
     };
@@ -1583,7 +1753,12 @@ const FULL: GraphRange = GraphRange {
 };
 
 /// Level curves of f(x, y) by marching squares, clipped to the bounds.
-fn build_contour(intent: GraphIntent, options: &GraphOptions, mode: AngleMode) -> GraphResult {
+fn build_contour(
+    intent: GraphIntent,
+    options: &GraphOptions,
+    mode: AngleMode,
+    native: bool,
+) -> GraphResult {
     let raw = compile_graph_z(&intent.expression, options, Some(mode));
     let other = compile_graph_z(&intent.expression, options, Some(other_mode(mode)));
     let angle_unit = depends_on_angle(&|x| raw.at(x, 0.61 - x / 3.0), &|x| {
@@ -1595,14 +1770,23 @@ fn build_contour(intent: GraphIntent, options: &GraphOptions, mode: AngleMode) -
     let aspect = options.aspect();
     let b = intent.bounds.clone();
     let by = hull(b.as_ref().map(|b| &b.y));
-    let y_mid = by.map_or(0.0, |b| (b.0 + b.1) / 2.0);
+    let y_mid = match options.y_center {
+        Some(c) if native && c.is_finite() => c,
+        _ => by.map_or(0.0, |b| (b.0 + b.1) / 2.0),
+    };
     let y_half = ((x1 - x0) * aspect) / 2.0;
     let y_scale = YScale {
         min: y_mid - y_half,
         max: y_mid + y_half,
     };
 
-    let nx = CONTOUR_COLUMNS;
+    // an implicit curve is one thin line, so the native panel samples it finer
+    let zero = intent.contour == Some(ContourKind::Zero);
+    let nx = if native && zero {
+        2 * CONTOUR_COLUMNS
+    } else {
+        CONTOUR_COLUMNS
+    };
     let ny = jmax(4.0, jsnum::round(nx as f64 * aspect)) as usize;
     let dx = (x1 - x0) / nx as f64;
     let dy = (y_scale.max - y_scale.min) / ny as f64;
@@ -1636,6 +1820,7 @@ fn build_contour(intent: GraphIntent, options: &GraphOptions, mode: AngleMode) -
         contours: None,
         error: None,
         readout,
+        surface: None,
     };
     if seen.is_empty() {
         let somewhere = b.is_some() && grid.iter().any(|v| !v.is_nan());
@@ -1707,6 +1892,27 @@ fn build_contour(intent: GraphIntent, options: &GraphOptions, mode: AngleMode) -
     // a lone f = 0 curve needs no label
     if result.intent.contour == Some(ContourKind::Levels) {
         place_labels(&mut contours, domain, y_scale);
+    }
+    if native {
+        let f = |x: f64, y: f64| {
+            if inside(b.as_ref(), x, y) {
+                raw.at(x, y)
+            } else {
+                None
+            }
+        };
+        let window = crate::graph_native::Window {
+            x: domain,
+            y: (y_scale.min, y_scale.max),
+        };
+        result.critical_points = if zero {
+            crate::graph_native::implicit_features(&f, &contours, window)
+        } else {
+            crate::graph_native::surface_features(&f, window)
+        };
+        if !zero && options.surface {
+            result.surface = Some(crate::graph_native::surface_grid(&f, window));
+        }
     }
     result.contours = Some(contours);
     result
@@ -2059,7 +2265,13 @@ pub fn points_json(points: &[GraphPoint]) -> Json {
 fn critical_json(cs: &[CriticalPoint]) -> Json {
     Json::Array(
         cs.iter()
-            .map(|c| json!({"x": num_json(c.x), "y": num_json(c.y), "kind": c.kind.name()}))
+            .map(|c| {
+                let mut o = json!({"x": num_json(c.x), "y": num_json(c.y), "kind": c.kind.name()});
+                if let Some(z) = c.z {
+                    o["z"] = num_json(z);
+                }
+                o
+            })
             .collect(),
     )
 }
@@ -2113,6 +2325,17 @@ pub fn result_json(r: &GraphResult) -> Json {
     if let Some(e) = &r.error {
         o.insert("error".into(), json!(e));
     }
+    if let Some(g) = &r.surface {
+        o.insert(
+            "surface".into(),
+            json!({
+                "nx": g.nx, "ny": g.ny,
+                "xLo": g.x_lo, "xHi": g.x_hi, "yLo": g.y_lo, "yHi": g.y_hi,
+                "zLo": num_json(g.z_lo), "zHi": num_json(g.z_hi),
+                "z": g.z.iter().map(|v| opt_num(Some(*v).filter(|v| v.is_finite()))).collect::<Vec<_>>(),
+            }),
+        );
+    }
     Json::Object(o)
 }
 
@@ -2147,6 +2370,9 @@ pub fn options_from_json(v: &Json) -> GraphOptions {
         ans: num("ans"),
         find_roots: v.get("findRoots").and_then(Json::as_bool),
         aspect: num("aspect"),
+        y_center: num("yCenter"),
+        surface: v.get("surface").and_then(Json::as_bool).unwrap_or(false),
+        x_log: v.get("xLog").and_then(Json::as_bool).unwrap_or(false),
     }
 }
 
@@ -2179,6 +2405,9 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
                 .map_or(Json::Null, |i| intent_json(&i))
         }
         "buildGraph" => build_graph(&s(0), &opts(1)).map_or(Json::Null, |r| result_json(&r)),
+        "buildNativeGraph" => {
+            build_native_graph(&s(0), &opts(1)).map_or(Json::Null, |r| result_json(&r))
+        }
         "evaluateGraphY" => opt_num(evaluate_graph_y(&s(0), n(1)?, &opts(2))),
         "evaluateGraphZ" => opt_num(evaluate_graph_z(&s(0), n(1)?, n(2)?, &opts(3))),
         "compileGraphY" | "compileGraphZ" => json!({"$fn": "anon"}),
@@ -2192,6 +2421,10 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
         "graphHome" => {
             let (lo, hi) = graph_home(&s(0), &opts(1));
             json!([lo, hi])
+        }
+        "graphNativeHome" => {
+            let (lo, hi, y) = crate::graph_native::native_home(&s(0), &opts(1));
+            json!({"lo": lo, "hi": hi, "yCenter": y})
         }
         "autoYScale" => {
             if args

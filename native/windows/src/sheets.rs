@@ -18,7 +18,7 @@
 //! starts over. Laid out at one size and scaled to the window, which keeps its shape.
 //!
 //! **Identity sheets.** Sections down the page, each one's groups in two columns (a wide section's at full width),
-//! rows with raised and lowered runs; a row click copies it ("✓ copied" for 1.2 s). Scrolls with the wheel or the
+//! rows with raised and lowered runs; a row click copies it ("✓ copied" for 0.25 s). Scrolls with the wheel or the
 //! thumb; only the height can change.
 //!
 //! **Cost.** Nothing until a sheet opens: the window class, its own D2D/DWrite factories and fonts, and the text
@@ -313,6 +313,10 @@ struct Periodic {
 struct IdRow {
     rect: Rect,
     copy: String,
+    /// the bar line a click runs instead (the formulas page)
+    open: Option<String>,
+    /// each lead cell's right edge and what a click on it copies, for the cells that copy themselves
+    cells: Vec<(f32, String)>,
     /// lead cells then the runs: (text, dx, dy) from the row's left and top
     runs: Vec<(Text, f32, f32)>,
     note: Option<Text>,
@@ -800,12 +804,18 @@ fn build_identity(sheet: &identities::IdentitySheet) -> Option<Identity> {
     with(|s| {
         let (gfx, fonts) = s.gfx.as_ref()?;
         let l = identity_layout(sheet);
-        let lead_widths = identities::LEAD_WIDTHS.map(|w| w as f32);
         let rows = l
             .rows
             .iter()
             .map(|&(rect, si, gi, ii)| {
                 let item = &sheet.sections[si].groups[gi].items[ii];
+                let lead_widths: Vec<f32> = sheet.sections[si]
+                    .lead_widths
+                    .as_deref()
+                    .unwrap_or(&identities::LEAD_WIDTHS)
+                    .iter()
+                    .map(|&w| w as f32)
+                    .collect();
                 let main = text(gfx, "Ag", &fonts.math);
                 let (main_h, main_base) = main.map_or((17.0, 13.0), |t| (t.h, t.baseline));
                 let base_y = (ID_ROW - main_h) / 2.0 + main_base;
@@ -827,10 +837,16 @@ fn build_identity(sheet: &identities::IdentitySheet) -> Option<Identity> {
                         }
                     }
                 };
+                let mut cells = Vec::new();
                 for (i, cell) in item.lead.as_deref().unwrap_or(&[]).iter().enumerate() {
                     let mut cx = x;
                     put(cell, &mut cx);
                     x += lead_widths[i.min(lead_widths.len() - 1)];
+                    if let Some(copy) = item.lead_copy.as_ref().and_then(|c| c.get(i))
+                        && !copy.is_empty()
+                    {
+                        cells.push((x, copy.clone()));
+                    }
                 }
                 put(&item.show, &mut x);
                 let note = item
@@ -841,6 +857,8 @@ fn build_identity(sheet: &identities::IdentitySheet) -> Option<Identity> {
                 IdRow {
                     rect,
                     copy: item.copy.clone(),
+                    open: item.open.clone(),
+                    cells,
                     runs,
                     note,
                 }
@@ -1012,7 +1030,8 @@ unsafe extern "system" fn sheet_proc(hwnd: HWND, msg: u32, wp: WPARAM, lp: LPARA
             })
             .flatten();
             if let Some(hit) = act {
-                act_on(hwnd, hit, right);
+                let click_x = on_sheet(hwnd, |s, _| design(s, x, y).0).unwrap_or(0.0);
+                act_on(hwnd, hit, right, click_x);
             }
             // SAFETY: our window
             let _ = unsafe { InvalidateRect(Some(hwnd), None, false) };
@@ -1291,7 +1310,7 @@ fn mouse_move(hwnd: HWND, x: i32, y: i32) {
 }
 
 /// A click (or right click) that went down and up on the same thing.
-fn act_on(hwnd: HWND, hit: Hit, right: bool) {
+fn act_on(hwnd: HWND, hit: Hit, right: bool, x: f32) {
     match hit {
         Hit::Tile(i) => {
             with(|s| {
@@ -1340,7 +1359,7 @@ fn act_on(hwnd: HWND, hit: Hit, right: bool) {
                 crate::app::poke(|app| app.model.insert_text(&mass, &app.engine));
             }
         }
-        Hit::Row(i) if !right => copy_row(hwnd, i),
+        Hit::Row(i) if !right => copy_row(hwnd, i, x),
         _ => {}
     }
 }
@@ -1366,21 +1385,46 @@ fn formula_changed(s: &mut Sheets, hwnd: HWND) {
     }
 }
 
-fn copy_row(hwnd: HWND, i: usize) {
+/// A row's click, `x` in the sheet's own units: opens what the row names, else copies the cell under it.
+fn copy_row(hwnd: HWND, i: usize, x: f32) {
+    let open = on_sheet(hwnd, |s, _| match &s.body {
+        Body::Identity(id) => id.rows.get(i).and_then(|r| r.open.clone()),
+        Body::Periodic(_) => None,
+    })
+    .flatten();
+    if let Some(line) = open {
+        crate::app::poke(move |app| {
+            if let Some(target) = identities::native_target_for(&line) {
+                open_identities(app, &target.sheet.id, target.section);
+            } else {
+                open_periodic(app);
+            }
+        });
+        return;
+    }
     let copy = on_sheet(hwnd, |s, _| match &mut s.body {
         Body::Identity(id) => {
             id.copied = Some(i);
-            id.rows.get(i).map(|r| r.copy.clone())
+            id.rows.get(i).map(|r| {
+                let at = x - r.rect.x;
+                r.cells
+                    .iter()
+                    .find(|(right, _)| at < *right)
+                    .map_or_else(|| r.copy.clone(), |(_, copy)| copy.clone())
+            })
         }
         Body::Periodic(_) => None,
     })
     .flatten();
-    let Some(copy) = copy else { return };
+    // a table's heading row
+    let Some(copy) = copy.filter(|c| !c.is_empty()) else {
+        return;
+    };
     if !crate::clip::set(hwnd, &copy) {
         qlog!("sheet: couldn't copy a row");
     }
     let target = hwnd.0 as usize;
-    later::free("sheet-copied", 1200, move || {
+    later::free("sheet-copied", 250, move || {
         let hwnd = HWND(target as *mut _);
         // SAFETY: a plain check that the window is still ours to touch
         if !unsafe { IsWindow(Some(hwnd)) }.as_bool() {

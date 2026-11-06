@@ -48,3 +48,4 @@ These rules keep the branches mergeable.
 - Before you finish, run the keystroke bench (release build) and confirm you didn't regress it.
 - Your final report (under 400 words): what works and how you checked it, the hub edits you made (file, function,
   one line each, so the coordinator can resolve merge conflicts), measurements, and gaps.
+- Mac changes waiting to be ported or tested here are listed in `MAC_CHANGES_TO_PORT.md`, in this folder. Delete a line once it's done and tested. Work through it with `PORT_RUNBOOK.md`.

@@ -3,6 +3,7 @@
 //!
 //! Readers other packages port are called through `crate::stubs`, which answer "not mine" until then.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 
 use crate::format::{DEFAULT_SIG_FIGS, format_as_fraction, format_value};
@@ -171,6 +172,9 @@ fn ans_in_unit(expr: &str, ans_qty: Option<&str>, opts: &EvaluateOptions) -> Str
 }
 
 fn show(value: &Value, fraction_mode: bool, sig_figs: f64) -> String {
+    if value.complex.is_some() {
+        return format_value(value, sig_figs);
+    }
     if value.kind == ValueKind::Text
         && let Some(t) = &value.text
         && !t.is_empty()
@@ -286,8 +290,17 @@ fn in_base(n: f64, base: Base) -> Option<String> {
 
 /// Every line of a sheet, each seeing what the lines above it defined.
 pub fn evaluate_sheet(lines: &[String], options: &EvaluateOptions) -> Vec<LineResult> {
+    // native only: `x^2; x=5`
+    if let [only] = lines
+        && let Some(result) = line_with_definitions(only, options)
+    {
+        return vec![result];
+    }
     with_space_thousands(options.space_thousands.unwrap_or(false), || {
-        Sheet::new(options).run(lines)
+        // native only: in sig-fig mode a unit sum keeps its last place
+        crate::units::with_sum_places(options.sig_fig_mode.unwrap_or(false), || {
+            Sheet::new(options).run(lines)
+        })
     })
 }
 
@@ -296,6 +309,75 @@ pub fn evaluate_line(text: &str, options: &EvaluateOptions) -> LineResult {
     evaluate_sheet(&[text.to_string()], options)
         .pop()
         .unwrap_or_else(|| LineResult::empty(text))
+}
+
+/// `x^2 + y; x=5; y=2`: the expression and the definitions after it. None unless everything after the first
+/// semicolon defines a letter.
+pub fn split_line_definitions(text: &str) -> Option<(&str, Vec<(String, String)>)> {
+    if !text.contains(';') {
+        return None;
+    }
+    let mut parts = Vec::new();
+    let (mut depth, mut start) = (0_i32, 0);
+    for (i, c) in text.char_indices() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ';' if depth == 0 => {
+                parts.push(&text[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&text[start..]);
+    let (head, rest) = parts.split_first()?;
+    if rest.is_empty() || head.trim().is_empty() {
+        return None;
+    }
+    let definitions = rest
+        .iter()
+        .map(|d| parse_assignment(d.trim()))
+        .collect::<Option<Vec<_>>>()?;
+    Some((head.trim(), definitions))
+}
+
+/// Native only: definitions after a semicolon apply to this line alone. None when the line isn't that, so it goes on
+/// as it always has.
+fn line_with_definitions(text: &str, options: &EvaluateOptions) -> Option<LineResult> {
+    let (head, definitions) = split_line_definitions(text)?;
+    let mut scoped = options.clone();
+    for (name, value) in definitions {
+        let line = evaluate_sheet(&[value], &scoped).pop()?;
+        match (&line.quantity, &line.value) {
+            (Some(quantity), _) => {
+                scoped.quantities.insert(name, quantity.clone());
+            }
+            (None, Some(v)) if v.kind == ValueKind::Number => {
+                scoped.quantities.remove(&name);
+                scoped.variables.insert(name, v.n);
+            }
+            _ => return None,
+        }
+    }
+    let mut result = evaluate_sheet(&[head.to_string()], &scoped).pop()?;
+    // a derivative answers in letters: `d/dx x^2; x=3` is that at 3
+    if result
+        .value
+        .as_ref()
+        .is_some_and(|v| v.kind == ValueKind::Text)
+    {
+        let at = evaluate_sheet(&[result.display.clone()], &scoped).pop()?;
+        if at
+            .value
+            .as_ref()
+            .is_some_and(|v| v.kind == ValueKind::Number)
+        {
+            result = at;
+        }
+    }
+    result.raw = text.to_string();
+    Some(result)
 }
 
 struct Sheet<'o> {
@@ -397,7 +479,26 @@ impl<'o> Sheet<'o> {
         }
     }
 
+    // native only: `6′2″`, `10''` and `6'2` read as feet and inches, and a line that mixed them answers in both
     fn line(&mut self, raw: &str) -> LineResult {
+        // native only: `y' = 2x`, `y'' + y = 0; y(0)=1; y'(0)=0`, before a mark after a letter could read as feet
+        if let Some(answer) = crate::calculus::ode::ode_answer(raw, &self.sci(), self.sig_figs) {
+            return LineResult {
+                value: (!answer.is_empty()).then(|| Value::text(answer.clone())),
+                display: answer,
+                ..LineResult::blank(raw)
+            };
+        }
+        let marked = crate::feet_inches::foot_marks(raw);
+        let mut result = self.line_as_typed(&marked);
+        if let Cow::Owned(_) = marked {
+            result.raw = raw.to_string();
+        }
+        crate::feet_inches::answer_in_feet_and_inches(&marked, &mut result, self.sig_figs);
+        result
+    }
+
+    fn line_as_typed(&mut self, raw: &str) -> LineResult {
         static DOLLAR_LATEX: Lazy = Lazy::new(|| js(r"\$([^$]*\\[A-Za-z][^$]*)\$", ""));
         static ISOLATE: Lazy = Lazy::new(|| js(r"\bisolate\b", "i"));
         // `\dot\theta`, `dot(theta)` and `θ̇` all read as `thetadot` before anything else rewrites them;
@@ -821,6 +922,18 @@ impl<'o> Sheet<'o> {
                     }
                 }
             }
+            // native only: an integral with no bounds, from a table
+            if !calc.as_ref().is_some_and(|c| c.value.is_some())
+                && let Some(answer) =
+                    crate::calculus::indefinite_integral(&expr, &calc_ctx.sci, self.sig_figs)
+            {
+                calc = Some(stubs::CalculusResult {
+                    value: Some(answer),
+                    exact: None,
+                    job: None,
+                    time: None,
+                });
+            }
         }
         if calc.is_none() {
             // WP-SUMS: the TS passes `{ ...ctx, defaultUnits, rationalize }`
@@ -932,14 +1045,7 @@ impl<'o> Sheet<'o> {
         let quantity = if finite && value.unit.is_some() {
             Some(quantity_text(&value, self.angle_mode).unwrap_or_default())
         } else {
-            value.complex.map(|z| {
-                format!(
-                    "{} {} {}i",
-                    jsnum::to_string(z.re),
-                    if z.im < 0.0 { '-' } else { '+' },
-                    jsnum::to_string(z.im.abs())
-                )
-            })
+            crate::complex_line::chain_text(&value)
         };
         if value.complex.is_some()
             && let Some(q) = &quantity

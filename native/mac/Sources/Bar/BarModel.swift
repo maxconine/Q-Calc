@@ -116,6 +116,13 @@ final class BarModel: ObservableObject {
     @Published private(set) var helpShown = false
     // panels below
     @Published var graph: GraphState?
+    /// Native only: the graph settings panel's display choices, kept between graphs and launches
+    @Published var graphPrefs = GraphPrefs.load() {
+        didSet {
+            graphPrefs.save()
+            if oldValue.degrees != graphPrefs.degrees { sampleGraph() }
+        }
+    }
     @Published var cards: [BannerCard] = []
     @Published var cardsHovered = false
     /// keyboard focus is on an edge tool (Full Keyboard Access), which shows them as hover does
@@ -154,7 +161,12 @@ final class BarModel: ObservableObject {
     let sheets: SheetData = SheetData.shared
     /// the typeset preview row (MathText.swift); nil hides it
     @Published private(set) var typeset: Typeset?
-    private lazy var typesetter = MathTypesetter(engine: core)
+    lazy var typesetter = MathTypesetter(engine: core)
+    /// native only: the working for the line (Working.swift); nil when it has none
+    @Published var working: [WorkingStep]?
+    /// native only: the working panel is up (⌃W)
+    @Published var workingShown = false
+    lazy var workingMaker = WorkingMaker(engine: core)
     private var typesetAsked: TypesetRequest?
 
     // what the bar asks of its window
@@ -295,6 +307,9 @@ final class BarModel: ObservableObject {
 
     func evaluateLive() {
         let typed = text
+        // a line answered anywhere but the live lane has no working
+        var lane = false
+        defer { if !lane { working = nil } }
         // `sys`: a hint until there's a count; the panel's own answer once its fields are open
         let sys = SysCommand.of(typed)
         // native only: the fields open the moment the count is typed (the page waits for ↵), the caret in the
@@ -360,6 +375,11 @@ final class BarModel: ObservableObject {
                 nameCheckTimer?.invalidate()
             }
             commandMessage = command.hint(messaging: Messages.shared, found: found)
+            // native only: a sheet's short word still finishes to its full name (`formula` to `formulas`)
+            if case .identities = command {
+                let rest = logic.string("lib/completion", "completionFor", [typed, ["contacts": [String]()]])
+                completion = rest.flatMap { $0.isEmpty ? nil : $0 }
+            }
             if command == .help, !helpShown { track("help") }
             helpShown = command == .help
             if case let .graph(body) = command { showGraph(body) } else { graph = nil }
@@ -382,7 +402,8 @@ final class BarModel: ObservableObject {
         let thread = engine
         let keepWords = settings.keepWords
         let timeVarying = self.timeVarying
-        engine.submit(.live, { engine -> (LiveAnswer, Bool, Decorations, String?) in
+        lane = true
+        engine.submit(.live, { engine -> (LiveAnswer, Bool, Decorations, String?, EvalContext) in
             var request = Self.request(engine, text: typed, rows: rows, view: view, options: options)
             request.options.timeVarying = timeVarying
             let answer = engine.live(request: request)
@@ -394,8 +415,8 @@ final class BarModel: ObservableObject {
                                             "ans": request.context.ans != nil]
                 completion = thread.logic.string("lib/completion", "completionFor", [typed, names])
             }
-            return (answer, request.chained, deco, completion)
-        }) { [weak self] answer, chain, deco, completion in
+            return (answer, request.chained, deco, completion, request.context)
+        }) { [weak self] answer, chain, deco, completion, context in
             guard let self, self.text == typed else { return }
             self.chained = chain
             self.ansHover = deco.ans.map { "last answer = \($0)" } ?? "last answer"
@@ -407,6 +428,7 @@ final class BarModel: ObservableObject {
             self.pauseHintLater()
             self.refreshTour()
             self.upgradeClosedForm(answer, for: typed)
+            self.findWorking(typed, answer: answer, chained: chain, context: context)
         }
     }
 
@@ -1124,6 +1146,56 @@ final class BarModel: ObservableObject {
     }
 
     /// `display` in exponent form while the mode is on (answers that don't start with a number stay as they are)
+    /// `14.9 ms` as its number and its unit, for the copy block around the number alone (native only); nil when the
+    /// answer isn't one number and a unit
+    func numberAndUnit(_ shown: String) -> (number: String, unit: String)? {
+        if let known = unitSplits[shown] { return known.split }
+        let number = logic.string("lib/answer", "unitlessAnswer", [shown]) ?? shown
+        var split: (number: String, unit: String)?
+        if number != shown, shown.hasPrefix(number) {
+            split = (number, shown.dropFirst(number.count).trimmingCharacters(in: .whitespaces))
+        }
+        if unitSplits.count > 500 { unitSplits.removeAll() }
+        unitSplits[shown] = UnitSplit(split: split, name: split.flatMap { unitName($0.unit) })
+        return split
+    }
+
+    /// native only: the rate behind a currency conversion (`100 usd to eur`), for the answer's hover tip
+    var rateNote: String? {
+        let typed = text
+        if let memo = rateMemo, memo.0 == typed { return memo.1 }
+        let note = live.isBlank ? nil : logic.string("lib/currency", "rateNote",
+                                                     [typed, ECBRates.shared.pageJSON, Date().timeIntervalSince1970 * 1000])
+        rateMemo = (typed, note.flatMap { $0.isEmpty ? nil : $0 })
+        return rateMemo?.1
+    }
+    private var rateMemo: (String, String?)?
+
+    /// what an answer's unit is called, for its hover label (native only): `ms` is millisecond, `m/s^2` meter/second^2
+    func unitName(forAnswer shown: String) -> String? {
+        _ = numberAndUnit(shown)
+        return unitSplits[shown]?.name
+    }
+
+    private func unitName(_ unit: String) -> String? {
+        let lead = "1 "
+        let spans = logic.call("lib/knownWords", "wordNames", [lead + unit, [String](), [String](), false]) as? [[String: Any]] ?? []
+        guard !spans.isEmpty else { return nil }
+        let name = NSMutableString(string: lead + unit)
+        for s in spans.reversed() {
+            guard let a = (s["start"] as? NSNumber)?.intValue, let b = (s["end"] as? NSNumber)?.intValue, b > a, b <= name.length,
+                  let word = s["name"] as? String else { continue }
+            name.replaceCharacters(in: NSRange(location: a, length: b - a), with: word)
+        }
+        return String((name as String).dropFirst(lead.count))
+    }
+
+    private struct UnitSplit {
+        let split: (number: String, unit: String)?
+        let name: String?
+    }
+    private var unitSplits: [String: UnitSplit] = [:]
+
     func exponentShown(_ display: String) -> String {
         guard exponentMode, !display.isEmpty else { return display }
         if let memo = exponentMemo, memo.0 == display { return memo.1 }
@@ -1135,7 +1207,17 @@ final class BarModel: ObservableObject {
 
     func stepPrefix(_ dir: Int) {
         let base: Any? = prefixValue ?? live.valueJson.flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) }
-        guard let base, let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
+        guard let base else { return }
+        // native only: a length in feet or inches steps inches ↔ feet and inches ↔ feet
+        let shown = prefixShown ?? live.display
+        if let step = logic.call("engine/units", "stepFeetInches", [base, shown, dir, settings.significantFigures]) as? [String: Any],
+           let value = step["value"] as? [String: Any], let display = step["display"] as? String {
+            prefixValue = value
+            prefixShown = display
+            track("prefix.step")
+            return
+        }
+        guard let next = logic.call("engine/units", "stepPrefix", [base, dir]) as? [String: Any],
               next["unitId"] != nil else { return }
         prefixValue = next
         prefixShown = logic.string("engine/format", "formatValue", [next, settings.significantFigures])
@@ -1212,7 +1294,7 @@ final class BarModel: ObservableObject {
                                         .priority: (high ? NSAccessibilityPriorityLevel.high : .medium).rawValue])
     }
 
-    private func flashCopied() {
+    func flashCopied() {
         copied = true
         copiedTimer?.invalidate()
         copiedTimer = Timer.scheduledTimer(withTimeInterval: 1.2, repeats: false) { [weak self] _ in self?.copied = false }
@@ -1230,6 +1312,7 @@ final class BarModel: ObservableObject {
     func toggleFractions() {
         let on = !fractions
         settings.setFractionMode(on, notifyWeb: true)
+        if sysLines != nil { solveSystemLive() }
         announceMode("fraction", on)
     }
     func toggleSigFigMode() {
@@ -1278,6 +1361,11 @@ final class BarModel: ObservableObject {
             return false
         case kVK_Tab:
             guard flags.isSubset(of: [.shift]) else { return false }
+            // native only: from the line, Tab goes down to the first equation of an open system
+            if !flags.contains(.shift), sysLines != nil {
+                sysFocus = 0
+                return true
+            }
             if !flags.contains(.shift) { _ = fillTourStep() || acceptCompletion() || acceptParens() || tabToCard() }
             return true
         case kVK_Delete:
@@ -1315,6 +1403,7 @@ final class BarModel: ObservableObject {
         case "clear": clearHistory()
         case "exponent": toggleExponent()
         case "forms": cycleForms()
+        case "working": toggleWorking()
         default: break
         }
     }
@@ -1338,6 +1427,10 @@ final class BarModel: ObservableObject {
         if closeMessages() { return true }
         if !cards.isEmpty {
             cards = []
+            return true
+        }
+        if workingShown, working != nil {
+            workingShown = false
             return true
         }
         if helpShown || gamesShown {
@@ -1374,6 +1467,7 @@ final class BarModel: ObservableObject {
 
     func willHide() {
         replyFocused = nil
+        workingShown = false
         // a confirmation (sent, copied…) was for that visit: the bar opens without it
         hint = nil
         followed = nil

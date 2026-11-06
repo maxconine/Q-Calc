@@ -44,6 +44,20 @@ thread_local! {
     static ST: RefCell<State> = RefCell::new(State::default());
 }
 
+/// The last answer as it inserts (`3,000 m`), or the number when no row chains.
+pub fn ans_value(context: &qcalc_ffi::EvalContext, figs: f64) -> Option<String> {
+    context
+        .chain_answer
+        .as_ref()
+        .map(|c| c.plain.clone())
+        .filter(|p| !p.is_empty())
+        .or_else(|| {
+            context
+                .ans
+                .map(|n| qcalc_core::format::format_number(n, figs))
+        })
+}
+
 /// `ans`'s label: the number it stands for when there is one.
 pub fn ans_label(value: Option<&str>) -> String {
     match value {
@@ -224,16 +238,7 @@ fn ask(app: &mut App, text: String) {
         let context = cx.context(&rows, view);
         let variables: Vec<String> = context.variables.keys().cloned().collect();
         let functions: Vec<String> = context.functions.keys().cloned().collect();
-        let ans = context
-            .chain_answer
-            .as_ref()
-            .map(|c| c.plain.clone())
-            .filter(|p| !p.is_empty())
-            .or_else(|| {
-                context
-                    .ans
-                    .map(|n| qcalc_core::format::format_number(n, figs))
-            });
+        let ans = ans_value(&context, figs);
         let words = named(
             &text,
             &variables,

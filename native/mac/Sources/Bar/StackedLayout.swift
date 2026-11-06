@@ -32,22 +32,39 @@ final class StackTypesetter: NSATSTypesetter {
         var before: CGFloat = first < s.length ? (s.attribute(Self.lead, at: first, effectiveRange: nil) as? CGFloat) ?? 0 : 0
         if glyphRange.location > start { for g in start..<glyphRange.location { before += pull(g) } }
         let at = NSPoint(x: location.x + before, y: location.y)
-        let pulls = (0..<glyphRange.length).map { pull(glyphRange.location + $0) }
-        if let advancements {
-            let adv = (0..<glyphRange.length).map { advancements[$0] + pulls[$0] }
-            return adv.withUnsafeBufferPointer { super.setLocation(at, withAdvancements: $0.baseAddress, forStartOfGlyphRange: glyphRange) }
+        guard let lm = layoutManager else { return super.setLocation(at, withAdvancements: advancements, forStartOfGlyphRange: glyphRange) }
+        // each glyph gets a location of its own: TextKit answers where a glyph inside a run is (the caret, a click)
+        // from the run's start and the font's advances, which leave the pulls out
+        var x = at.x
+        for i in 0..<glyphRange.length {
+            let g = glyphRange.location + i
+            super.setLocation(NSPoint(x: x, y: at.y), withAdvancements: nil, forStartOfGlyphRange: NSRange(location: g, length: 1))
+            let advance: CGFloat
+            if let advancements {
+                advance = advancements[i]
+            } else {
+                let c = lm.characterIndexForGlyph(at: g)
+                let font = s.attribute(.font, at: c, effectiveRange: nil) as? NSFont ?? .systemFont(ofSize: 24)
+                let kern = (s.attribute(.kern, at: c, effectiveRange: nil) as? NSNumber).map { CGFloat($0.doubleValue) } ?? 0
+                advance = font.advancement(forCGGlyph: lm.cgGlyph(at: g)).width + kern
+            }
+            x += advance + pull(g)
         }
-        guard pulls.dropLast().contains(where: { $0 != 0 }), let lm = layoutManager else {
-            return super.setLocation(at, withAdvancements: nil, forStartOfGlyphRange: glyphRange)
+    }
+
+    // the line's used width with the pulls and the lead taken in, so what TextKit draws by it (the selection's
+    // highlight, the line's end, the scroll to the caret) ends where the text does
+    override func setLineFragmentRect(_ fragmentRect: NSRect, forGlyphRange glyphRange: NSRange, usedRect: NSRect, baselineOffset: CGFloat) {
+        guard let s = attributedString, s.length > 0, glyphRange.length > 0, let lm = layoutManager,
+              s.attribute(Self.pull, existsIn: NSRange(location: 0, length: s.length)) else {
+            return super.setLineFragmentRect(fragmentRect, forGlyphRange: glyphRange, usedRect: usedRect, baselineOffset: baselineOffset)
         }
-        // nominal advances, with the pulls inside the run
-        let adv: [CGFloat] = (0..<glyphRange.length).map { i in
-            let g = glyphRange.location + i, c = lm.characterIndexForGlyph(at: g)
-            let font = s.attribute(.font, at: c, effectiveRange: nil) as? NSFont ?? .systemFont(ofSize: 24)
-            let kern = (s.attribute(.kern, at: c, effectiveRange: nil) as? NSNumber).map { CGFloat($0.doubleValue) } ?? 0
-            return font.advancement(forCGGlyph: lm.cgGlyph(at: g)).width + kern + pulls[i]
-        }
-        adv.withUnsafeBufferPointer { super.setLocation(at, withAdvancements: $0.baseAddress, forStartOfGlyphRange: glyphRange) }
+        let first = lm.characterIndexForGlyph(at: glyphRange.location)
+        var shift = first < s.length ? (s.attribute(Self.lead, at: first, effectiveRange: nil) as? CGFloat) ?? 0 : 0
+        for g in glyphRange.location..<NSMaxRange(glyphRange) { shift += pull(g) }
+        var used = usedRect
+        used.size.width = max(0, used.width + shift)
+        super.setLineFragmentRect(fragmentRect, forGlyphRange: glyphRange, usedRect: used, baselineOffset: baselineOffset)
     }
 }
 
@@ -180,7 +197,8 @@ extension BarTextView {
         guard let lm = layoutManager, let tc = textContainer, (string as NSString).length > 0 else { return textContainerInset.height + Self.fontSize }
         lm.ensureLayout(for: tc)
         // a hidden `/` or `^` sits on the line's own baseline
-        let at = stacked.stacks.first?.op ?? 0
+        // (the parse can be the line's before an edit, until restyle: never past its end)
+        let at = min(stacked.stacks.first?.op ?? 0, (string as NSString).length - 1)
         let g = lm.glyphIndexForCharacter(at: at)
         let frag = lm.lineFragmentRect(forGlyphAt: g, effectiveRange: nil)
         return textContainerInset.height + frag.minY + lm.location(forGlyphAt: g).y
@@ -192,10 +210,14 @@ extension BarTextView {
         return slotLooks.first { $0.content == slot.content }
     }
 
-    /// the caret drawn by the line itself, the height of the slot it's in (nil outside every slot)
+    /// the caret drawn by the line itself while it has stacks, the height of the slot it's in (full height outside
+    /// them: TextKit's own caret goes by the line's used width, which the pulls leave wider than the text)
     func stackCaretRect() -> NSRect? {
         let sel = selectedRange()
-        guard sel.length == 0, let look = stackLook(at: sel.location), var x = stackCaretX(sel.location) else { return nil }
+        guard sel.length == 0 else { return nil }
+        if let limit = limitCaretRect(sel.location) { return limit }
+        guard !stacked.stacks.isEmpty, var x = stackCaretX(sel.location) else { return nil }
+        let look = stackLook(at: sel.location) ?? SlotLook(content: NSRange(location: 0, length: 0), size: Self.fontSize, offset: 0)
         // in an empty slot, the middle of its box
         if let slot = stacked.slot(at: sel.location), slot.isEmpty, let o = slot.open,
            let hole = stackHoles.first(where: { $0.anchor == o }), let ox = stackCaretX(o) {

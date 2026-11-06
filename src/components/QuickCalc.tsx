@@ -569,7 +569,9 @@ export function QuickCalc({ onClose, embedded = false }: { onClose: () => void; 
   const tapeExpr = chained && ansPlain ? chainedHistoryExpr(q, ansPlain) : q
   chainedRef.current = isolated ?? (chainAnswer ? ansWrittenOut(tapeExpr, chainAnswer.plain) : chained ? tapeExpr : '')
   // typeset only when it shows something the bar doesn't, and never for a command's own panel
-  const typstExpr = chained ? chainedExpr(q) : q
+  // with the number `ans` stands for in place of the word
+  const typstLine = chained ? chainedExpr(q) : q
+  const typstExpr = ansPlain ? ansWrittenOut(typstLine, ansPlain) : typstLine
   const typstShown = useMemo(
     () => settings.typstPreview && !graphCmd && !sysCmd && !periodicCmd && !identityCmd && !pongCmd && !tutorialCmd && !helpShown && !gamesShown && typstPreviewUseful(typstExpr),
     [settings.typstPreview, graphCmd, sysCmd, periodicCmd, identityCmd, pongCmd, tutorialCmd, helpShown, gamesShown, typstExpr],

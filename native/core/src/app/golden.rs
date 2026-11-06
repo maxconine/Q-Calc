@@ -182,6 +182,19 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
         ("lib/answer", "solveRoots") => opt(ans::solve_roots(&a(0), sig(1))),
         ("lib/answer", "solveInsert") => opt(ans::solve_insert(&a(0), sig(1))),
         ("lib/answer", "unitlessAnswer") => json!(ans::unitless_answer(&s(0))),
+        // native only: the rate behind a converted amount, for its hover note (`[text, rates JSON, now ms]`)
+        ("lib/currency", "rateNote") => {
+            let rates = crate::phrases::rates::parse_json(&s(1))
+                .ok()
+                .flatten()
+                .and_then(|r| r.currency_rates(n(2).unwrap_or(0.0) as i64));
+            rates
+                .and_then(|r| crate::phrases::native_money::rate_note(&s(0), &r))
+                .map_or(Json::Null, |t| json!(t))
+        }
+        ("lib/answer", "systemDecimals") => {
+            json!(ans::system_decimals(&s(0), n(1).unwrap_or(12.0)))
+        }
         ("lib/answer", "visibleAnswer") => {
             let row = a(0);
             json!(ans::visible_answer(
@@ -381,6 +394,14 @@ pub fn dispatch(module: &str, name: &str, raw: &[Json]) -> Option<Outcome> {
             let lead: Vec<String> = of(&a(1)).unwrap_or_default();
             json!(idt::identity_label(&s(0), &lead))
         }
+        // ---- lib/steps (native only): the working for a line, and the document a step compiles to
+        ("lib/steps", "steps") => opt(crate::steps::steps(&s(0), &of(&a(1)).unwrap_or_default())),
+        ("lib/steps", "stepDocument") => json!(crate::steps::step_document(&s(0))),
+        // native only: the document a typeset sheet's cell compiles
+        ("lib/identities", "sheetMathDocument") => json!(idt::sheet_math_document(&s(0))),
+        // native only: the part or sheet a line opens, and a sheet by its id
+        ("lib/identities", "nativeTargetFor") => opt(idt::native_target_for(&s(0))),
+        ("lib/identities", "identitySheetById") => opt(idt::native_identity_sheet_by_id(&s(0))),
         ("lib/identities", "identityRuns") => to(&idt::identity_runs(&s(0))),
         ("lib/identities", "identitySheetFor") => opt(idt::identity_sheet_for(&s(0))),
         ("lib/identities", "identityTargetFor") => opt(idt::identity_target_for(&s(0))),
