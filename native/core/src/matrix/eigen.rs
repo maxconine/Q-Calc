@@ -504,7 +504,7 @@ pub(super) fn values_part<F: Cells>(f: &F, fmt: &Fmt, eigs: &[Eig<F::C>]) -> Par
         label: Some("λ = ".into()),
         exact: (rich && exact != display).then_some(exact),
         display,
-        literal: None,
+        ..Part::default()
     }
 }
 

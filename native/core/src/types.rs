@@ -169,6 +169,60 @@ pub struct LineResult {
     pub closed_form: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub time: Option<TimeLetters>,
+    /// A matrix answer in labeled parts, with the row operations behind it. Native only, so not in the JSON.
+    #[serde(skip)]
+    pub matrix: Option<MatrixParts>,
+}
+
+/// A matrix answer as labeled parts (`P = […]`, `D = […]`) and the row operations that reach it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct MatrixParts {
+    pub parts: Vec<MatrixPart>,
+    pub steps: Vec<MatrixStep>,
+    /// What the line keeps when assigned or as `ans` (a bare `[k 2; 3 k]` keeps itself though it shows blank).
+    pub stored: Option<String>,
+}
+
+impl MatrixParts {
+    /// The whole answer as one row of Typst math, parts a quad apart; `exact` picks each part's exact form.
+    pub fn typst(&self, exact: bool) -> String {
+        self.parts
+            .iter()
+            .map(|p| match &p.exact_typst {
+                Some(e) if exact => e.clone(),
+                _ => p.typst.clone(),
+            })
+            .collect::<Vec<_>>()
+            .join(" quad ")
+    }
+}
+
+/// One labeled part of a matrix answer.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct MatrixPart {
+    /// `P`, `λ = 5`, `x`, or empty.
+    pub label: String,
+    /// The value to a few digits, without its label.
+    pub display: String,
+    /// The exact value (`(5 ± sqrt(33))/2`), when it says more.
+    pub exact: Option<String>,
+    /// What storing this part keeps (`P, D = diagonalize(A)`), when it is one matrix or number.
+    pub literal: Option<String>,
+    /// Words after the value: `(any t, s)`.
+    pub note: Option<String>,
+    /// Typst math for the part, label included.
+    pub typst: String,
+    pub exact_typst: Option<String>,
+}
+
+/// One row operation (`R₂ → R₂ − 3R₁`) and the matrix after it; a closing remark has no matrix.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct MatrixStep {
+    pub op: String,
+    pub op_typst: String,
+    /// The matrix after the operation, exact where it can be (`[1 0 -4; 0 1 9/2]`); empty for a remark.
+    pub display: String,
+    pub typst: String,
 }
 
 impl LineResult {

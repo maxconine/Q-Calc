@@ -6,7 +6,7 @@ use super::exact_eval::{Cells, Ev, G, X, XFail, XR, fail, ri};
 use super::numeric;
 use super::show::{
     Answer, Cell, Part, column as cell_column, grid_part, number_part, poly_part, text_part,
-    vectors_part, verdict,
+    vectors_part, verdict, words_part,
 };
 
 /// Free parameters of a general solution, in the order a textbook uses them.
@@ -95,7 +95,7 @@ impl<F: Cells> Ev<'_, '_, F> {
     /// `span{[1; 0], [0; 1]}`, or the zero space.
     fn span(&self, vs: &[Vec<F::C>], rows: bool) -> X<F::C> {
         if vs.is_empty() {
-            return done(vec![text_part(None, "{0} (only the zero vector)")]);
+            return done(vec![words_part("{0} (only the zero vector)")]);
         }
         let cells = self.vec_cells(vs);
         let mut p = if rows {
@@ -110,7 +110,7 @@ impl<F: Cells> Ev<'_, '_, F> {
                         .collect::<Vec<_>>()
                         .join(", ")
                 }),
-                literal: None,
+                ..Part::default()
             }
         } else {
             vectors_part(None, &cells)
@@ -314,9 +314,10 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                     let names = FREE[..ds.len().min(FREE.len())].join(", ");
                     Ok(done(vec![Part {
                         label: Some("x = ".into()),
-                        display: format!("{display} (any {names})"),
-                        exact: exact.map(|e| format!("{e} (any {names})")),
-                        literal: None,
+                        display,
+                        exact,
+                        note: Some(format!("(any {names})")),
+                        ..Part::default()
                     }]))
                 }
             }
@@ -624,7 +625,7 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             let (_, s, _) = numeric::svd(&g);
             let (max, min) = (s.first().copied().unwrap_or(0.0), s.last().copied().unwrap_or(0.0));
             if min <= 1e-14 * max {
-                return Ok(done(vec![text_part(None, "∞ (singular)")]));
+                return Ok(done(vec![words_part("∞ (singular)")]));
             }
             Ok(done(vec![number_part(None, &fmt.ccell((max / min, 0.0)))]))
         }

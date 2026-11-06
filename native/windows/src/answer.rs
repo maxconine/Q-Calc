@@ -1056,6 +1056,7 @@ mod tests {
             expr: String::new(),
             phrase: false,
             improper: false,
+            matrix: None,
             json: "{}".into(),
         }
     }

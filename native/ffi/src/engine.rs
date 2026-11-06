@@ -376,6 +376,9 @@ impl State {
             expr: a.expr.clone(),
             phrase: a.phrase,
             improper: a.improper,
+            matrix: from_line(from_js)
+                .and_then(|l| l.matrix.as_ref())
+                .and_then(MatrixView::shown),
             json: line.map_or_else(
                 || serde_json::to_string(&LineResult::blank(&a.expr)).unwrap_or_default(),
                 |l| serde_json::to_string(l).unwrap_or_default(),

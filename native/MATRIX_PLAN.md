@@ -51,12 +51,18 @@ Exact eigenvalues: char poly exactly (Faddeev–LeVerrier / Bareiss over the fie
 quadratic `closed_form` from `solve.rs` (lifted to `exact/`, extended to `a ± b·i·√r`); anything left is numeric
 (QR / complex `C`). Eigenvectors come from the exact null space of `A − λI` when λ is exact.
 
-## Phase 3 — answer shape (core + ffi)
-- `LineResult.matrix: Option<MatrixParts>`: `parts: Vec<{label, literal, typst, display}>`, `values: Vec<…>` for
-  eigenvalue lists (with multiplicity), and `steps: Vec<Step>` (`op` text like `R₂ → R₂ − 3R₁`, matrix after).
-- `LiveAnswer` gets `matrix_parts`/`steps` with `#[uniffi(default)]`; Swift bindings regenerated.
-- `typst_math.rs` writes multi-part rows as `$ L = mat(…) quad U = mat(…) $` and steps with `amat`.
-- Storing: `L, U = lu(A)` and `P, D = diagonalize(A)` assign each part; `ans` keeps the first part.
+## Phase 3 — answer shape (core + ffi) — done
+
+Landed as `LineResult.matrix: Option<MatrixParts>` (`#[serde(skip)]`, so the TS JSON and golden are unchanged):
+`parts` (label, display, exact, literal, note, typst, exact_typst; a plain answer is one unlabeled part), `steps`
+(`core/src/matrix/steps.rs`: `Start`, then each swap, scaling and column clear as `R₂ → R₂ − 3R₁` with the matrix
+after it, for `rref`, `inv`, `solve`/`A \ b`, `det` and `rank`, exact where the entries allow; a closing remark for
+`det`, `rank`, `inv`), and `stored`. FFI: `LiveAnswer.matrix` and `LineAnswer.matrix: Option<MatrixView>` with ready
+preview documents (`document`, `exact_document`, one per step; `typst_math::math_document`), Swift bindings
+regenerated. `L, U = lu(A)` stores each part (in order, or by label when fewer names are given), `ans` the first;
+history reads such rows, and matrices with unknowns, back through `evaluate::matrix_stores`. Tested in
+`core/tests/linear_algebra_parts.rs` and `ffi/tests/matrix_view.rs` (every document compiles with Typst).
+Eigenvalue lists stay one part (`λ = 5, 2`), not one per value.
 
 ## Phase 4 — mac UI
 - Answer slot: matrices and multi-part answers show typeset (reuse `MathTypesetter`), Tab cycles exact/decimal.

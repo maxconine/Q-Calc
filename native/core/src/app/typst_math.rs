@@ -249,9 +249,14 @@ pub fn typst_document(expr: &str, answer: &str, solved_for: &str) -> Option<Stri
     } else {
         math
     };
-    Some(format!(
+    Some(math_document(&body))
+}
+
+/// A preview document holding one line of Typst math, as `typst_document` writes them.
+pub fn math_document(body: &str) -> String {
+    format!(
         "#import \"/macros.typ\": *\n#set page(width: auto, height: auto, margin: 2pt, fill: none)\n#set text(size: 18pt, fill: black)\n$ {body} $\n"
-    ))
+    )
 }
 
 // names that typeset differently from how they're typed: a function set upright with its own spacing, a big

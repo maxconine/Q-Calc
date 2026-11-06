@@ -810,3 +810,58 @@ pub(super) fn exact_answer(node: &Node, opts: &MatrixOptions<'_>, floats: bool) 
     }
     None
 }
+
+fn steps_in<F: Cells>(
+    f: &F,
+    key: &str,
+    args: &[Node],
+    opts: &MatrixOptions<'_>,
+    bar: Option<usize>,
+) -> Option<Vec<crate::types::MatrixStep>> {
+    let ev = Ev {
+        f,
+        opts,
+        fmt: Fmt::new(opts.sig_figs),
+    };
+    let run = || {
+        let grids = args
+            .iter()
+            .map(|a| ev.eval(a, false).and_then(|x| ev.grid(x)))
+            .collect::<XR<Vec<_>>>()?;
+        super::steps::run(&ev, key, grids, bar)
+    };
+    match guarded(|| Some(run())) {
+        None => Some(Vec::new()),
+        Some(Ok(s)) => Some(s),
+        Some(Err(XFail::Matrix(_))) => Some(Vec::new()),
+        Some(Err(XFail::NotExact)) => None,
+    }
+}
+
+/// The row operations behind a line like `rref(A)` or `A \ b`, in the most exact field that holds its entries.
+/// `bar` is where a typed `[A | b]` divides its columns.
+pub(super) fn steps(node: &Node, opts: &MatrixOptions<'_>, bar: Option<usize>) -> Vec<crate::types::MatrixStep> {
+    let Node::Function { callee, args } = node else {
+        return Vec::new();
+    };
+    let Ok(name) = callee_name(callee) else {
+        return Vec::new();
+    };
+    let key = name.to_lowercase();
+    if !super::steps::has_steps(&key) || cells_of(node) > MAX_CELLS {
+        return Vec::new();
+    }
+    if let Some(out) = steps_in(&RatField, &key, args, opts, bar) {
+        return out;
+    }
+    if let Some(out) = steps_in(&RadField::new(), &key, args, opts, bar) {
+        return out;
+    }
+    if let Some(params) = params_of(node, opts)
+        && !params.is_empty()
+        && let Some(out) = steps_in(&RfField { params }, &key, args, opts, bar)
+    {
+        return out;
+    }
+    steps_in(&F64Field::new(), &key, args, opts, bar).unwrap_or_default()
+}

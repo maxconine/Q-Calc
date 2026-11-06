@@ -7422,6 +7422,10 @@ public struct LineAnswer: Equatable, Hashable {
      */
     public var quantity: String?
     /**
+     * A matrix answer in labeled parts, with its row-operation steps. Native only.
+     */
+    public var matrix: MatrixView?
+    /**
      * The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
      */
     public var json: String
@@ -7445,6 +7449,9 @@ public struct LineAnswer: Equatable, Hashable {
          * A unit answer as text the reader reads back, for chaining `ans`.
          */quantity: String?, 
         /**
+         * A matrix answer in labeled parts, with its row-operation steps. Native only.
+         */matrix: MatrixView? = nil, 
+        /**
          * The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
          */json: String) {
         self.raw = raw
@@ -7455,6 +7462,7 @@ public struct LineAnswer: Equatable, Hashable {
         self.unit = unit
         self.variable = variable
         self.quantity = quantity
+        self.matrix = matrix
         self.json = json
     }
 
@@ -7482,6 +7490,7 @@ public struct FfiConverterTypeLineAnswer: FfiConverterRustBuffer {
                 unit: FfiConverterOptionString.read(from: &buf), 
                 variable: FfiConverterOptionString.read(from: &buf), 
                 quantity: FfiConverterOptionString.read(from: &buf), 
+                matrix: FfiConverterOptionTypeMatrixView.read(from: &buf), 
                 json: FfiConverterString.read(from: &buf)
         )
     }
@@ -7495,6 +7504,7 @@ public struct FfiConverterTypeLineAnswer: FfiConverterRustBuffer {
         FfiConverterOptionString.write(value.unit, into: &buf)
         FfiConverterOptionString.write(value.variable, into: &buf)
         FfiConverterOptionString.write(value.quantity, into: &buf)
+        FfiConverterOptionTypeMatrixView.write(value.matrix, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
     }
 }
@@ -7570,6 +7580,10 @@ public struct LiveAnswer: Equatable, Hashable {
      */
     public var improper: Bool
     /**
+     * A matrix answer in labeled parts, with its row-operation steps. Native only.
+     */
+    public var matrix: MatrixView?
+    /**
      * The whole TS `LineResult` as JSON.
      */
     public var json: String
@@ -7609,6 +7623,9 @@ public struct LiveAnswer: Equatable, Hashable {
          * `improper unit conversion`.
          */improper: Bool = false, 
         /**
+         * A matrix answer in labeled parts, with its row-operation steps. Native only.
+         */matrix: MatrixView? = nil, 
+        /**
          * The whole TS `LineResult` as JSON.
          */json: String) {
         self.display = display
@@ -7630,6 +7647,7 @@ public struct LiveAnswer: Equatable, Hashable {
         self.expr = expr
         self.phrase = phrase
         self.improper = improper
+        self.matrix = matrix
         self.json = json
     }
 
@@ -7668,6 +7686,7 @@ public struct FfiConverterTypeLiveAnswer: FfiConverterRustBuffer {
                 expr: FfiConverterString.read(from: &buf), 
                 phrase: FfiConverterBool.read(from: &buf), 
                 improper: FfiConverterBool.read(from: &buf), 
+                matrix: FfiConverterOptionTypeMatrixView.read(from: &buf), 
                 json: FfiConverterString.read(from: &buf)
         )
     }
@@ -7692,6 +7711,7 @@ public struct FfiConverterTypeLiveAnswer: FfiConverterRustBuffer {
         FfiConverterString.write(value.expr, into: &buf)
         FfiConverterBool.write(value.phrase, into: &buf)
         FfiConverterBool.write(value.improper, into: &buf)
+        FfiConverterOptionTypeMatrixView.write(value.matrix, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
     }
 }
@@ -7931,6 +7951,295 @@ public func FfiConverterTypeLobbyStep_lift(_ buf: RustBuffer) throws -> LobbySte
 #endif
 public func FfiConverterTypeLobbyStep_lower(_ value: LobbyStep) -> RustBuffer {
     return FfiConverterTypeLobbyStep.lower(value)
+}
+
+
+/**
+ * One labeled part of a matrix answer: `P = [1 -1; 1 2]`.
+ */
+public struct MatrixPart: Equatable, Hashable {
+    /**
+     * `P`, `λ = 5`, `x`, or empty.
+     */
+    public var label: String
+    /**
+     * The value to a few digits, without its label.
+     */
+    public var display: String
+    /**
+     * The exact value, when it says more (`(5 ± sqrt(33))/2`).
+     */
+    public var exact: String?
+    /**
+     * What storing the part keeps; None when it can't be stored.
+     */
+    public var literal: String?
+    /**
+     * Words after the value: `(any t, s)`.
+     */
+    public var note: String?
+    /**
+     * Typst math for the part, label included.
+     */
+    public var typst: String
+    public var exactTypst: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `P`, `λ = 5`, `x`, or empty.
+         */label: String, 
+        /**
+         * The value to a few digits, without its label.
+         */display: String, 
+        /**
+         * The exact value, when it says more (`(5 ± sqrt(33))/2`).
+         */exact: String?, 
+        /**
+         * What storing the part keeps; None when it can't be stored.
+         */literal: String?, 
+        /**
+         * Words after the value: `(any t, s)`.
+         */note: String?, 
+        /**
+         * Typst math for the part, label included.
+         */typst: String, exactTypst: String?) {
+        self.label = label
+        self.display = display
+        self.exact = exact
+        self.literal = literal
+        self.note = note
+        self.typst = typst
+        self.exactTypst = exactTypst
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixPart: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixPart: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixPart {
+        return
+            try MatrixPart(
+                label: FfiConverterString.read(from: &buf), 
+                display: FfiConverterString.read(from: &buf), 
+                exact: FfiConverterOptionString.read(from: &buf), 
+                literal: FfiConverterOptionString.read(from: &buf), 
+                note: FfiConverterOptionString.read(from: &buf), 
+                typst: FfiConverterString.read(from: &buf), 
+                exactTypst: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixPart, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.label, into: &buf)
+        FfiConverterString.write(value.display, into: &buf)
+        FfiConverterOptionString.write(value.exact, into: &buf)
+        FfiConverterOptionString.write(value.literal, into: &buf)
+        FfiConverterOptionString.write(value.note, into: &buf)
+        FfiConverterString.write(value.typst, into: &buf)
+        FfiConverterOptionString.write(value.exactTypst, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixPart_lift(_ buf: RustBuffer) throws -> MatrixPart {
+    return try FfiConverterTypeMatrixPart.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixPart_lower(_ value: MatrixPart) -> RustBuffer {
+    return FfiConverterTypeMatrixPart.lower(value)
+}
+
+
+/**
+ * One row operation and the matrix after it; a closing remark (`det = …`) has an empty `display`.
+ */
+public struct MatrixStep: Equatable, Hashable {
+    /**
+     * `R₂ → R₂ − 3R₁`, `Start`, or a remark.
+     */
+    public var op: String
+    /**
+     * The operation as Typst math.
+     */
+    public var opTypst: String
+    /**
+     * The matrix after it, exact where it can be, `|` before an augmented column: `[1 2 | 5; 0 -2 | -9]`.
+     */
+    public var display: String
+    /**
+     * The matrix as Typst math (`mat(delim: "[", augment: #2, …)`); empty for a remark.
+     */
+    public var typst: String
+    /**
+     * A whole preview document: the operation, then the matrix.
+     */
+    public var document: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * `R₂ → R₂ − 3R₁`, `Start`, or a remark.
+         */op: String, 
+        /**
+         * The operation as Typst math.
+         */opTypst: String, 
+        /**
+         * The matrix after it, exact where it can be, `|` before an augmented column: `[1 2 | 5; 0 -2 | -9]`.
+         */display: String, 
+        /**
+         * The matrix as Typst math (`mat(delim: "[", augment: #2, …)`); empty for a remark.
+         */typst: String, 
+        /**
+         * A whole preview document: the operation, then the matrix.
+         */document: String) {
+        self.op = op
+        self.opTypst = opTypst
+        self.display = display
+        self.typst = typst
+        self.document = document
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixStep: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixStep: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixStep {
+        return
+            try MatrixStep(
+                op: FfiConverterString.read(from: &buf), 
+                opTypst: FfiConverterString.read(from: &buf), 
+                display: FfiConverterString.read(from: &buf), 
+                typst: FfiConverterString.read(from: &buf), 
+                document: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixStep, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.op, into: &buf)
+        FfiConverterString.write(value.opTypst, into: &buf)
+        FfiConverterString.write(value.display, into: &buf)
+        FfiConverterString.write(value.typst, into: &buf)
+        FfiConverterString.write(value.document, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixStep_lift(_ buf: RustBuffer) throws -> MatrixStep {
+    return try FfiConverterTypeMatrixStep.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixStep_lower(_ value: MatrixStep) -> RustBuffer {
+    return FfiConverterTypeMatrixStep.lower(value)
+}
+
+
+/**
+ * A matrix answer laid out for typesetting.
+ */
+public struct MatrixView: Equatable, Hashable {
+    public var parts: [MatrixPart]
+    public var steps: [MatrixStep]
+    /**
+     * The whole answer, parts a quad apart, as a preview document (`TypstRenderer.render(source:)`).
+     */
+    public var document: String
+    /**
+     * The same with each part's exact form; None when no part has one.
+     */
+    public var exactDocument: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(parts: [MatrixPart], steps: [MatrixStep], 
+        /**
+         * The whole answer, parts a quad apart, as a preview document (`TypstRenderer.render(source:)`).
+         */document: String, 
+        /**
+         * The same with each part's exact form; None when no part has one.
+         */exactDocument: String?) {
+        self.parts = parts
+        self.steps = steps
+        self.document = document
+        self.exactDocument = exactDocument
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension MatrixView: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeMatrixView: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MatrixView {
+        return
+            try MatrixView(
+                parts: FfiConverterSequenceTypeMatrixPart.read(from: &buf), 
+                steps: FfiConverterSequenceTypeMatrixStep.read(from: &buf), 
+                document: FfiConverterString.read(from: &buf), 
+                exactDocument: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MatrixView, into buf: inout [UInt8]) {
+        FfiConverterSequenceTypeMatrixPart.write(value.parts, into: &buf)
+        FfiConverterSequenceTypeMatrixStep.write(value.steps, into: &buf)
+        FfiConverterString.write(value.document, into: &buf)
+        FfiConverterOptionString.write(value.exactDocument, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixView_lift(_ buf: RustBuffer) throws -> MatrixView {
+    return try FfiConverterTypeMatrixView.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeMatrixView_lower(_ value: MatrixView) -> RustBuffer {
+    return FfiConverterTypeMatrixView.lower(value)
 }
 
 
@@ -13838,6 +14147,30 @@ fileprivate struct FfiConverterOptionTypeLobbyStep: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionTypeMatrixView: FfiConverterRustBuffer {
+    typealias SwiftType = MatrixView?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeMatrixView.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeMatrixView.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionTypeMeasInfo: FfiConverterRustBuffer {
     typealias SwiftType = MeasInfo?
 
@@ -14811,6 +15144,56 @@ fileprivate struct FfiConverterSequenceTypeLineAnswer: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeLineAnswer.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMatrixPart: FfiConverterRustBuffer {
+    typealias SwiftType = [MatrixPart]
+
+    public static func write(_ value: [MatrixPart], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMatrixPart.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MatrixPart] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MatrixPart]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMatrixPart.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeMatrixStep: FfiConverterRustBuffer {
+    typealias SwiftType = [MatrixStep]
+
+    public static func write(_ value: [MatrixStep], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMatrixStep.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MatrixStep] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MatrixStep]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMatrixStep.read(from: &buf))
         }
         return seq
     }

@@ -51,3 +51,18 @@ fit or scroll. New names count only on a line with a matrix in it (`zeros`, `one
 | `isposdef([2 -1; -1 2])` | `yes` |
 | `angle([1 0], [0 1])` in degrees | `90` |
 | `row = 3`, then `row + 1` | `4` (an ordinary name, untouched) |
+
+### Phase 3: parts, steps, storing parts (core + ffi)
+
+No Windows UI yet (that is Phase 5). The FFI records gained `LiveAnswer.matrix` and `LineAnswer.matrix:
+Option<MatrixView>` (`parts`, `steps`, `document`, `exact_document`; see `QCalcCore/API.md`). A test helper that
+builds a `LiveAnswer` field by field needs `matrix: None` (done in `windows/src/answer.rs`). The answer text is
+unchanged, so these only need checking:
+
+| Type | Expect |
+| --- | --- |
+| `A = [4 3; 6 3]`, then `L, U = lu(A)`, then `L * U` | `L = [1 0; 1.5 1],  U = [4 3; 0 -1.5]`, then `[4 3; 6 3]` |
+| `P, D = diagonalize([4 1; 2 3])`, then `ans` | `ans` is `[1 -1; 1 2]` (the first part) |
+| `L, U = lu([0 1; 1 0])`, then `U` | `[1 0; 0 1]` (names matched by label) |
+| `Q, R = eig([1 2; 3 4])` | `this answer has 1 part (λ); give 1 name` |
+| `M = 2 * [k 1; 1 k]` committed, then `det(M)` on the next line | `4*k^2 - 4` (history reads M back) |

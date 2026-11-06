@@ -24,6 +24,7 @@ mod exact_eval;
 mod functions;
 mod numeric;
 mod show;
+mod steps;
 
 /// A matrix answer: a matrix as `[1 2; 3 4]`, a number, or a message such as `not square`.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -38,6 +39,10 @@ pub struct MatrixAnswer {
     /// What a stored matrix or `ans` keeps when it says more than `literal`: exact entries (`1/1009`, `sqrt(2)`,
     /// `k`) where `literal` has the TS's floats. Native only.
     pub stored: Option<String>,
+    /// The answer in labeled parts (one unlabeled part for a plain matrix or number). Native only.
+    pub parts: Vec<crate::types::MatrixPart>,
+    /// The row operations behind it, for `rref`, `inv`, `solve`, `det` and `rank`. Native only.
+    pub steps: Vec<crate::types::MatrixStep>,
 }
 
 impl MatrixAnswer {
@@ -1155,10 +1160,40 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
     };
     // a matrix typed on its own answers with itself; its exact form would only repeat the line
     let bare = matches!(&node, Node::Array(_));
-    if uses_new(&node, opts.functions) {
-        return Some(generic_answer(exact_eval::exact_answer(&node, opts, true), bare, opts));
+    let mut ans = node_answer(&node, bare, opts)?;
+    if !ans.message {
+        if ans.parts.is_empty() && !ans.display.is_empty() {
+            ans.parts = vec![show::single_part(
+                &ans.display,
+                ans.exact.as_deref(),
+                ans.to_store().map(String::as_str),
+            )];
+        }
+        ans.steps = exact_eval::steps(&node, opts, bar_of(expr));
     }
-    let exact = exact_eval::exact_answer(&node, opts, false);
+    Some(ans)
+}
+
+/// Where a typed `[A | b]` divides its columns: the entries before the bar in its first row.
+fn bar_of(expr: &str) -> Option<usize> {
+    static BARRED: Lazy = Lazy::new(|| js(r"\[([^\][]*\|[^\][]*)\]", ""));
+    let m = BARRED.captures(expr).ok().flatten()?;
+    let body = jsre::group(&m, 1);
+    let first = body.split(';').next()?;
+    let left = first.split('|').next()?;
+    let n = if left.contains(',') {
+        left.split(',').filter(|c| !c.trim().is_empty()).count()
+    } else {
+        left.split_whitespace().count()
+    };
+    (n > 0).then_some(n)
+}
+
+fn node_answer(node: &Node, bare: bool, opts: &MatrixOptions<'_>) -> Option<MatrixAnswer> {
+    if uses_new(node, opts.functions) {
+        return Some(generic_answer(exact_eval::exact_answer(node, opts, true), bare, opts));
+    }
+    let exact = exact_eval::exact_answer(node, opts, false);
     let from_exact = |exact: Option<exact_eval::Exact>| match &exact {
         Some(exact_eval::Exact::Value {
             approx: Some(approx),
@@ -1166,7 +1201,7 @@ pub fn matrix_answer(expr: &str, opts: &MatrixOptions<'_>) -> Option<MatrixAnswe
         }) => Some(with_exact(numeric_answer(approx.clone(), opts), exact, bare, opts)),
         _ => None,
     };
-    match eval_node(&node, opts) {
+    match eval_node(node, opts) {
         Ok(value) => Some(with_exact(numeric_answer(value, opts), exact, bare, opts)),
         // the floats gave up (`nearly singular`) where exact arithmetic didn't
         Err(Fail::Matrix(msg)) => Some(from_exact(exact).unwrap_or_else(|| message(msg))),
@@ -1217,11 +1252,17 @@ fn generic_answer(
             MatrixAnswer {
                 display,
                 exact,
-                // one matrix is kept when stored; several parts wait for `L, U = lu(A)`
+                // one matrix is kept when stored; several are stored by `L, U = lu(A)`
                 stored: match a.parts.as_slice() {
                     [p] => p.literal.clone(),
                     _ => None,
                 },
+                // a lone number (`nullity`) is a number
+                n: match a.parts.as_slice() {
+                    [p] if p.label.is_none() && !p.words => p.literal.as_deref().and_then(|l| l.parse::<f64>().ok()),
+                    _ => None,
+                },
+                parts: show::public_parts(&a),
                 ..MatrixAnswer::default()
             }
         }

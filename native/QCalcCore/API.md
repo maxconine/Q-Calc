@@ -268,7 +268,29 @@ struct LiveAnswer {
     var expr: String = ""                    // what was evaluated (`ans*2` when chained)
     var phrase: Bool = false                 // the phrase layer answered
     var improper: Bool = false               // `improper unit conversion`
+    var matrix: MatrixView? = nil            // a matrix answer in labeled parts, with steps (native only)
     var json: String                         // the whole TS LineResult
+}
+
+struct MatrixView {                          // nil unless there is something to typeset
+    var parts: [MatrixPart]                  // `P = […]`, `D = […]`; one unlabeled part for a plain answer
+    var steps: [MatrixStep]                  // row operations for rref, inv, solve / A \ b, det, rank; [] otherwise
+    var document: String                     // the whole answer as a preview document, for TypstRenderer
+    var exactDocument: String?               // the same in exact form (Tab), when a part has one
+}
+struct MatrixPart {
+    var label: String                        // `P`, `λ = 5`, `x`, or ""
+    var display: String; var exact: String?
+    var literal: String?                     // what `P, D = diagonalize(A)` stores; nil when it can't be stored
+    var note: String?                        // words after the value: `(any t, s)`
+    var typst: String; var exactTypst: String? // math for the part, label included
+}
+struct MatrixStep {
+    var op: String                           // `Start`, `R₂ → R₂ − 3R₁`, or a closing remark (`det = …`)
+    var opTypst: String
+    var display: String                      // the matrix after it, `|` before an augmented column; "" for a remark
+    var typst: String                        // the matrix as math (`mat(delim: "[", augment: #2, …)`)
+    var document: String                     // operation then matrix, as a preview document
 }
 
 struct CommitResult {
@@ -283,6 +305,7 @@ struct CommitResult {
 struct LineAnswer {                          // one line of a sheet (foundation)
     var raw: String; var kind: AnswerKind; var display: String; var exact: String?
     var number: Double?; var unit: String?; var variable: String?; var quantity: String?
+    var matrix: MatrixView? = nil            // as LiveAnswer.matrix
     var json: String                         // the TS LineResult
 }
 enum AnswerKind { case empty, expression, assignment, function, solve }

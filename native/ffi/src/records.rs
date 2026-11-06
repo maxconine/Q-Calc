@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use qcalc_core::types::{
-    AngleMode, EvaluateOptions, LineKind, LineResult, Meas, SolveOutcome as CoreOutcome,
+    AngleMode, EvaluateOptions, LineKind, LineResult, MatrixParts, Meas, SolveOutcome as CoreOutcome,
     TimeLetters as CoreTimeLetters, UserFunction, ValueKind,
 };
 use serde::{Deserialize, Serialize};
@@ -442,8 +442,104 @@ pub struct LiveAnswer {
     /// `improper unit conversion`.
     #[uniffi(default)]
     pub improper: bool,
+    /// A matrix answer in labeled parts, with its row-operation steps. Native only.
+    #[uniffi(default)]
+    pub matrix: Option<MatrixView>,
     /// The whole TS `LineResult` as JSON.
     pub json: String,
+}
+
+/// One labeled part of a matrix answer: `P = [1 -1; 1 2]`.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct MatrixPart {
+    /// `P`, `λ = 5`, `x`, or empty.
+    pub label: String,
+    /// The value to a few digits, without its label.
+    pub display: String,
+    /// The exact value, when it says more (`(5 ± sqrt(33))/2`).
+    pub exact: Option<String>,
+    /// What storing the part keeps; None when it can't be stored.
+    pub literal: Option<String>,
+    /// Words after the value: `(any t, s)`.
+    pub note: Option<String>,
+    /// Typst math for the part, label included.
+    pub typst: String,
+    pub exact_typst: Option<String>,
+}
+
+/// One row operation and the matrix after it; a closing remark (`det = …`) has an empty `display`.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct MatrixStep {
+    /// `R₂ → R₂ − 3R₁`, `Start`, or a remark.
+    pub op: String,
+    /// The operation as Typst math.
+    pub op_typst: String,
+    /// The matrix after it, exact where it can be, `|` before an augmented column: `[1 2 | 5; 0 -2 | -9]`.
+    pub display: String,
+    /// The matrix as Typst math (`mat(delim: "[", augment: #2, …)`); empty for a remark.
+    pub typst: String,
+    /// A whole preview document: the operation, then the matrix.
+    pub document: String,
+}
+
+/// A matrix answer laid out for typesetting.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct MatrixView {
+    pub parts: Vec<MatrixPart>,
+    pub steps: Vec<MatrixStep>,
+    /// The whole answer, parts a quad apart, as a preview document (`TypstRenderer.render(source:)`).
+    pub document: String,
+    /// The same with each part's exact form; None when no part has one.
+    pub exact_document: Option<String>,
+}
+
+impl MatrixView {
+    /// None when there is nothing to typeset (a bare `[k 2; 3 k]` shows blank).
+    pub(crate) fn shown(m: &MatrixParts) -> Option<Self> {
+        (!m.parts.is_empty() || !m.steps.is_empty()).then(|| m.into())
+    }
+}
+
+impl From<&MatrixParts> for MatrixView {
+    fn from(m: &MatrixParts) -> Self {
+        use qcalc_core::app::typst_math::math_document;
+        MatrixView {
+            parts: m
+                .parts
+                .iter()
+                .map(|p| MatrixPart {
+                    label: p.label.clone(),
+                    display: p.display.clone(),
+                    exact: p.exact.clone(),
+                    literal: p.literal.clone(),
+                    note: p.note.clone(),
+                    typst: p.typst.clone(),
+                    exact_typst: p.exact_typst.clone(),
+                })
+                .collect(),
+            steps: m
+                .steps
+                .iter()
+                .map(|s| MatrixStep {
+                    op: s.op.clone(),
+                    op_typst: s.op_typst.clone(),
+                    display: s.display.clone(),
+                    typst: s.typst.clone(),
+                    document: math_document(&if s.typst.is_empty() {
+                        s.op_typst.clone()
+                    } else {
+                        format!("{} quad {}", s.op_typst, s.typst)
+                    }),
+                })
+                .collect(),
+            document: math_document(&m.typst(false)),
+            exact_document: m
+                .parts
+                .iter()
+                .any(|p| p.exact_typst.is_some())
+                .then(|| math_document(&m.typst(true))),
+        }
+    }
 }
 
 impl LiveAnswer {
@@ -468,6 +564,7 @@ impl LiveAnswer {
             expr: expr.to_string(),
             phrase: false,
             improper: false,
+            matrix: None,
             json: serde_json::to_string(&LineResult::blank(expr)).unwrap_or_default(),
         }
     }
@@ -489,6 +586,9 @@ pub struct LineAnswer {
     pub variable: Option<String>,
     /// A unit answer as text the reader reads back, for chaining `ans`.
     pub quantity: Option<String>,
+    /// A matrix answer in labeled parts, with its row-operation steps. Native only.
+    #[uniffi(default)]
+    pub matrix: Option<MatrixView>,
     /// The whole `LineResult` as the TS engine's JSON, for fields not typed here yet.
     pub json: String,
 }
@@ -503,6 +603,7 @@ pub(crate) fn line_answer(r: &LineResult) -> LineAnswer {
         unit: r.value.as_ref().and_then(|v| v.unit.clone()),
         variable: r.variable.clone(),
         quantity: r.quantity.clone(),
+        matrix: r.matrix.as_ref().and_then(MatrixView::shown),
         json: serde_json::to_string(r).unwrap_or_default(),
     }
 }

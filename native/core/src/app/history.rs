@@ -488,6 +488,16 @@ pub fn history_quantities(rows: &[Json]) -> Map<String, Json> {
         if truthy(row.get("solve")) {
             continue;
         }
+        // native: `L, U = lu(A)` stores several matrices, and `A = [k 2; 3 k]` one the TS can't write down
+        if !present(row, "quantity") {
+            let stores = matrix_stores_of(row, &out);
+            if !stores.is_empty() {
+                for (name, literal) in stores {
+                    out.insert(name, Json::String(literal));
+                }
+                continue;
+            }
+        }
         let Some(variable) = assignment_of(row) else {
             continue;
         };
@@ -501,6 +511,23 @@ pub fn history_quantities(rows: &[Json]) -> Map<String, Json> {
         out.insert("ans".into(), last["quantity"].clone());
     }
     out
+}
+
+/// The matrices a saved row stores beyond its one `quantity`, read again from its text with the matrices
+/// stored before it.
+fn matrix_stores_of(row: &Json, before: &Map<String, Json>) -> Vec<(String, String)> {
+    let expr = str_of(row, "expr").unwrap_or("");
+    if !expr.contains('[') && !expr.contains(',') {
+        return Vec::new();
+    }
+    let options = EvaluateOptions {
+        quantities: before
+            .iter()
+            .filter_map(|(k, v)| Some((k.clone(), v.as_str()?.to_string())))
+            .collect(),
+        ..EvaluateOptions::default()
+    };
+    crate::evaluate::matrix_stores(expr, &options)
 }
 
 /// `historyFunctions`: name → `{params, body}`.
