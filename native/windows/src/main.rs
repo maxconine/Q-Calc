@@ -52,6 +52,12 @@ mod games;
 #[cfg(windows)]
 mod graph;
 #[cfg(windows)]
+mod graph3d;
+#[cfg(windows)]
+mod graph_settings;
+#[cfg(windows)]
+mod graph_view;
+#[cfg(windows)]
 mod heap;
 #[cfg(windows)]
 mod history;

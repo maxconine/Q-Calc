@@ -486,6 +486,9 @@ impl BarModel {
         const RIGHT: u32 = 0x27;
         const DOWN: u32 = 0x28;
         const DELETE: u32 = 0x2E;
+        if let Some(outcome) = crate::graph::key_down(self, vk, mods, engine) {
+            return outcome;
+        }
         let clipboard = match crate::systems::key_down(self, vk, mods, engine, clipboard) {
             Ok(outcome) => return outcome,
             Err(clipboard) => clipboard,
@@ -605,6 +608,9 @@ impl BarModel {
 
     /// WM_CHAR.
     pub fn char16(&mut self, unit: u16, engine: &EngineThread) {
+        if crate::graph::char16(self, unit, engine) {
+            return;
+        }
         if crate::systems::char16(self, unit, engine) {
             return;
         }

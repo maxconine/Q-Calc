@@ -267,6 +267,9 @@ pub struct Store {
     // to the Tauri app doesn't lose it; this app reads the Run entry itself (autostart.rs)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sign_in: Option<bool>,
+    // native only: the graph's settings (graph_settings.rs `GraphPrefs`), kept as they were saved
+    #[serde(skip_serializing_if = "Value::is_null")]
+    pub graph_prefs: Value,
 }
 
 impl Default for Store {
@@ -284,6 +287,7 @@ impl Default for Store {
             defaults: DEFAULTS,
             auto_update: true,
             sign_in: None,
+            graph_prefs: Value::Null,
         }
     }
 }
@@ -311,6 +315,7 @@ impl Store {
             .unwrap_or(0.0);
         store.auto_update = v["autoUpdate"].as_bool().unwrap_or(true);
         store.sign_in = v["signIn"].as_bool();
+        store.graph_prefs = v["graphPrefs"].clone();
         if v["settings"].is_object() && v["defaults"].as_u64().unwrap_or(1) < 2 {
             if store.settings.sig_figs == 12 {
                 store.settings.sig_figs = DEFAULT_SIG_FIGS;

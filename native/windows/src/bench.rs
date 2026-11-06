@@ -417,6 +417,7 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
         c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
         // the formula sheets' windows (sheets.rs `debug`): sheetpages, sheetfilter:, sheetback, sheetclick:...
         c if c.starts_with("sheet") => crate::sheets::debug(c),
+        c if c.starts_with("graph ") => Some(crate::graph::bench(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
 }
