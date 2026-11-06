@@ -415,6 +415,8 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
         })),
         // share-e2e.ps1: messaging and sharing by name (share_debug.rs)
         c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
+        // the formula sheets' windows (sheets.rs `debug`): sheetpages, sheetfilter:, sheetback, sheetclick:...
+        c if c.starts_with("sheet") => crate::sheets::debug(c),
         _ => crate::perf::cmd(cmd),
     }
 }

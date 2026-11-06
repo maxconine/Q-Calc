@@ -94,8 +94,6 @@ New FFI fields: `GraphOptions.y_center`, `GraphOptions.surface`, `GraphWindow.y_
 - **`ans` in the typeset row:** `ans * (10^5)/30` shows the number, not the word. `model.rs` (`ans_value`), `typst_row.rs`, `word_tip.rs`.
 - **Typeset look:** `tan⁻¹(x)` has no brackets round `tan⁻¹`, and a root's bar sits clear of what's under it. `typst_row.rs` uses `native_typst_document`.
 - **Graph chips:** a y-intercept's chip copies y, not x. `graph.rs`. The separate Roots list still repeats the x-intercept, so decide whether to hide it for a line. The Mac has no Roots list.
-- **Sheet commands:** `commands.rs` uses `native_target_for`, with extra first-word stems and `part_could_start`. Check `beams`, `Ohm's law`, `newton's 2nd` and `F = ma` open a sheet, and that `ohm`, `newton`, `5 ohm` and `dt = 5` still calculate.
-- **Sheet rows (`sheets.rs`):** a section's own lead widths, heading rows that aren't clickable, a click on a table cell copying that cell, rows on `formulas` opening their sheet, and the copied state lasting 0.25 s.
 - **Graph FFI fields (`graph.rs`):** `kind_name` has arms for `saddle`, `vertical tangent` and `point`, and the three `GraphOptions` literals pass `y_center: None, surface: false, x_log: false`. This is only enough to compile. See section 3 for the behaviour.
 
 ## 3. Not on Windows yet: implement it
@@ -158,47 +156,6 @@ New FFI fields: `GraphOptions.y_center`, `GraphOptions.surface`, `GraphWindow.y_
 
 - When the line converts between currencies (`100 usd to eur`), the main answer's tip reads `1 USD = 0.8909 EUR · ECB rate, Nov 5 · click to copy`. Get it from the bridge `lib/currency` `rateNote(text, rates JSON, now ms)`, which returns null for any other line. Remember the result for each line.
 
-### Formula sheets (`macos/IdentityWindow.swift`, `Sheets/SheetData.swift`)
-
-Windows opens all the sheets, but draws them in its old text style. To match the Mac:
-
-- **Get the sheet from `identities::native_identity_sheet_by_id(id)`,** not `identity_sheet_by_id`. It fills in the Typst for the web's four sheets too. The web-parity data must stay as it is.
-- **Maths in Typst, words in the app's font:**
-  - Each string in `item.typst` is one cell (the lead cells, then the row). Compile it with `identities::sheet_math_document`.
-  - A cell that is only a quoted string (`"Time"`) is words, so draw it in the app's normal font at 13 pt.
-  - `item.note_typst` is a note that is maths, compiled as `#text(size: 10.5pt)[$…$]` inside `sheet_math_document`.
-  - All other notes, and section, group and window titles, stay in the app's font.
-  - Compile off the UI thread, the first time a sheet opens. `typst_row.rs` already draws Typst paths.
-- **Row heights:** the tallest cell plus 10 pt, with 22 pt as the least. Cells are centred on the row's height.
-- **Hover box:** on a typeset row, box only the text a click would copy. It is a rounded rectangle, radius 4, with a faint fill and a thin outline, and 3 pt of padding round the cell. Don't tint the whole row. It must fit the whole expression. `formulas` rows box the whole row.
-- **Clicks:**
-  - Copy on mouse down, not up, and show the box at once.
-  - The copied box stays for 0.25 s, darker, with no fade or animation anywhere.
-  - Over a label cell (`CT`, `Binomial`), box and copy the formula instead.
-  - The copied text is `lead_copy[i]` for a lead cell when it isn't empty, otherwise `copy`.
-- **Conversions:** `item.parts` draws the row as pieces in a line, 3 pt apart. A piece with a `copy` is boxed and copied alone (`2.54`, `cm`). A click anywhere else on the row boxes and copies the whole row.
-- **Unit circle:**
-  - `item.figure` is a complete Typst page of lines, and `item.spots` are its labels, each a document centred on (x, y) in page points.
-  - A sheet with a figure shows only that section. The table is still there as the part `exact values`. Windows shows a blank row and the table until this is done.
-  - No headings over the picture, centred, 680 pt square.
-  - The window opens tall enough for all of it, up to the screen's height, even if that covers the bar.
-  - Each label is hovered and copied alone, and each coordinate is separate.
-- **Status text:** `click to open` on `formulas`, otherwise `click to copy`.
-- **Colour:** draw in the theme's ink, in light and dark.
-- **Filter:** a search field (app font, 13 pt, `Filter` placeholder, clear button) sits under the header; the rows start 60 pt down. It takes the keys whenever the sheet does, so typing filters live.
-  - Each word of the filter (case and accents folded, `−` read as `-`) must appear in the row's text, note, copy, open line, lead copies or part copies, or in its group's or section's title (`torsion` keeps the Torsion section, `τ` its formulas). A word also matches a single word of the row with only its letters and digits kept (`tmax` finds `τ_max`).
-  - A table's heading row (empty copy) stays when its group has a match. Groups and sections with none hide; the figure is never filtered.
-  - No match anywhere: a quiet `no matches` line (12 pt, tertiary ink). The view scrolls back to the top on each change.
-  - Esc clears the filter first; Esc on an empty filter closes the sheet.
-  - Testing: the Mac dev build has `sheetfilter:<text>` (`drive.sh`), which sets the front sheet's filter as if typed, so it works while the app isn't in front. Give the Windows dev commands the same, if they drive sheets.
-- **One window, a page at a time** (`IdentityWindowController` pages, `OverlayController.mainSheetWindow` / `sheetController`):
-  - Every sheet the bar opens (`formulas`, `beams`, `ohm's law`…) goes in one sheets window, replacing the page. Its title, heading and height follow the page; the window keeps its top edge (and moves up if a taller page would run off the screen). The filter clears on each page.
-  - A `formulas` row opens its sheet in the window it was clicked in. The same sheet again just scrolls to the part asked for.
-  - Back and forward: ⌘[ and ⌘], two chevron buttons beside the close button (shown once there are two pages, greyed where there's nowhere to go), and a sideways two-finger swipe when the trackpad's "Swipe between pages" is on (`trackSwipeEvent`, the page following the fingers a little; a three-finger `swipe` too). The bar passes ⌘[ / ⌘] on to the front sheets window while it has the keys. Each page remembers where it was scrolled to. Windows: Alt+← / Alt+→ and the mouse's back/forward buttons as well.
-  - A closed sheets window starts its pages afresh next time.
-  - Right-click (or control-click) a row that opens a sheet: a menu with **Open in New Window**, which opens that sheet in a window of its own (cascaded, with its own pages).
-  - Dev commands: `sheetback`, `sheetforward`, `sheetswipe:back|forward`, `sheetnew:<x>,<y>`, `sheetpages:<file>` (see `drive.sh`).
-
 ### Stacked fractions and powers (`Bar/StackedMath.swift`, `Bar/StackedLayout.swift`, `Bar/InputField.swift`)
 - **Setting:** General → `Stacked fractions and powers`, key `qcalc.stackedMath`, **off by default**. When it's off, nothing changes.
 - **The text stays plain maths:** `/` and `^` only change what's inserted, and the line keeps text the engine already reads, such as `(5x)/(32+x^(3))`.
@@ -260,8 +217,4 @@ All of it is generated by `native/scripts/gen_native_sheets.py`, so edit that an
 
 ## 4. How to test the sheets
 
-- Open every sheet from `formulas`, and also by typing its name.
-- Type a part (`beams`, `torsion`, `trig`, `laplace pairs`, `pressure vessels`) and check only that part shows.
-- Hover and click every kind of cell: a formula, a label, both sides of a transform, a conversion's number and unit, the unit circle's labels. Check the clipboard after each click.
-- Try light and dark, and a small screen.
-- Run the keystroke bench. `part_could_start` builds its word list on first use, so make sure ordinary typing doesn't get slower.
+- Try a small screen (the sheets were tried on a 4K screen at 150% only).

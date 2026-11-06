@@ -95,8 +95,11 @@ mod share_debug;
 mod share_drop;
 #[cfg(windows)]
 mod share_keys;
+mod sheet_page;
 #[cfg(windows)]
 mod sheets;
+#[cfg(windows)]
+mod sheets_typst;
 #[cfg(windows)]
 mod systems;
 #[cfg(windows)]

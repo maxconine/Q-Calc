@@ -744,6 +744,7 @@ impl App {
                 // the bench pipe's `key` can say which modifiers are down (bench.rs)
                 let mods = || bench::forced_mods().unwrap_or_else(mods);
                 if crate::effects::key_down(self, vk, lp.0)
+                    || crate::sheets::bar_key(vk, mods())
                     || crate::commands::key_down(self, vk, mods())
                 {
                     return Some(LRESULT(0));
