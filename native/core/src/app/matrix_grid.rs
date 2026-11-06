@@ -86,9 +86,24 @@ pub fn grid_hint(text: &str) -> Option<String> {
             spot.cells.first().map_or(0, Vec::len)
         ));
     }
-    let t = text.trim().to_ascii_lowercase();
-    (t == "matrix" || t.starts_with("matrix ") && t[7..].trim().chars().all(|c| c.is_ascii_digit() || "x× ".contains(c)))
-        .then(|| format!("matrix 3x3 opens a grid · up to {MAX}×{MAX}"))
+    // `matrix` being typed at the end of the line (`det(matrix`, `matrix 3x`): ask for its size
+    let lower = text.trim_end().to_ascii_lowercase();
+    let i = lower.rfind("matrix")?;
+    if lower[..i].chars().next_back().is_some_and(|c| c.is_alphanumeric() || c == '_') {
+        return None;
+    }
+    let size = lower[i + 6..].trim();
+    if !size.chars().all(|c| c.is_ascii_digit() || "x× ".contains(c)) {
+        return None;
+    }
+    let too_big = size
+        .split(|c: char| !c.is_ascii_digit())
+        .any(|n| n.parse::<usize>().is_ok_and(|n| n == 0 || n > MAX));
+    Some(if too_big {
+        format!("1 to {MAX} rows and columns · matrix {MAX}x{MAX} is the biggest")
+    } else {
+        "what size? rows × columns: matrix 2x2, matrix 3x3…".to_string()
+    })
 }
 
 /// Splits `s` on `sep` outside brackets.
@@ -235,7 +250,20 @@ mod tests {
         assert!(grid_command("mymatrix 2x2").is_none());
         assert!(grid_command("matrix").is_none());
         assert_eq!(grid_hint("det(matrix 3x2)").as_deref(), Some("↵ opens a 3×2 grid"));
-        assert!(grid_hint("matrix").is_some());
+        let ask = Some("what size? rows × columns: matrix 2x2, matrix 3x3…");
+        assert_eq!(grid_hint("matrix").as_deref(), ask);
+        assert_eq!(grid_hint("Matrix ").as_deref(), ask);
+        assert_eq!(grid_hint("det(matrix").as_deref(), ask);
+        assert_eq!(grid_hint("matrix 3x").as_deref(), ask);
+        assert_eq!(grid_hint("matrix 3").as_deref(), Some("↵ opens a 3×3 grid"));
+        assert_eq!(
+            grid_hint("matrix 9x2").as_deref(),
+            Some("1 to 8 rows and columns · matrix 8x8 is the biggest")
+        );
+        assert!(grid_hint("matrix 0").is_some_and(|h| h.starts_with("1 to 8")));
+        // a word that only ends in it, or more typed after it
+        assert!(grid_hint("mymatrix").is_none());
+        assert!(grid_hint("matrix A").is_none());
         assert!(grid_hint("2+2").is_none());
     }
 

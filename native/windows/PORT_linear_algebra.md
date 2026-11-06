@@ -105,6 +105,7 @@ when an answer lands) and `typst_row.rs` (`Request::matrix`, `draw` shared with 
 | Do | Expect |
 | --- | --- |
 | type `matrix 3x3` | slot: `↵ opens a 3×3 grid`, muted; ↵ opens it, the line reads `[0 0 0; 0 0 0; 0 0 0]` |
+| type `matrix`, then `det(matrix`, then `matrix 9x2` | slot: `what size? rows × columns: matrix 2x2, matrix 3x3…`, the same, then `1 to 8 rows and columns · matrix 8x8 is the biggest` (core text, no Windows code) |
 | in the grid, ↑ from the top row, then type on the line | keys back on the line with the grid open; the edit closes it |
 | `[1 2; 3 4]`, Ctrl+G, select a cell's text, Ctrl+C | the cell's text is copied, not the answer |
 | `det([1 2 3])` | `determinant needs a square matrix`, 13 pt muted; the preview shows no answer after `=` |
