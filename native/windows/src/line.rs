@@ -725,6 +725,7 @@ pub fn after(app: &mut crate::app::App) {
     let focused = app.bar.focused;
     let m = &mut app.model;
     m.field.keep_words = m.settings.keep_words;
+    m.field.set_stacked(m.settings.stacked_math);
     let t = m.field.text();
     let hash = t.bytes().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3)

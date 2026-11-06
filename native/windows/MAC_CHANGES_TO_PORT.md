@@ -146,7 +146,6 @@ New FFI fields: `GraphOptions.y_center`, `GraphOptions.surface`, `GraphWindow.y_
 - **Units on answers:** the preview shows the answer's unit. The copy block covers only the number, with the unit beside it. Hovering a unit in any answer shows its name, as in the expression (`unitName(forAnswer:)`).
 - **Angle indicator:** the grey deg/rad appears only when no angle unit was typed.
 - **Tip delay:** the bar's edge buttons (deg/rad, fraction, sig figs, clear) wait 1.5 s before their tip. Unit tips keep their normal delay.
-- **Typed root sign:** drawn as one smooth stroke, with a gap under its bar like Desmos (`RootSign` and `RootStroke` in `Bar/RadicalText.swift`, `hideRootSigns()` in `Bar/InputField.swift`). Check how `line.rs` draws it.
 - **Sheet autofill on a command line:** `formula` is itself a command, but still shows its completion. See the `.identities` case in `BarModel.evaluateLive`. Check `commands.rs` and `line.rs` do the same.
 
 ### Feet and inches with ⌥↑ / ⌥↓ (`Bar/BarModel.swift` `stepPrefix`)
@@ -199,45 +198,6 @@ Windows opens all the sheets, but draws them in its old text style. To match the
   - Right-click (or control-click) a row that opens a sheet: a menu with **Open in New Window**, which opens that sheet in a window of its own (cascaded, with its own pages).
   - Dev commands: `sheetback`, `sheetforward`, `sheetswipe:back|forward`, `sheetnew:<x>,<y>`, `sheetpages:<file>` (see `drive.sh`).
 
-### Stacked fractions and powers (`Bar/StackedMath.swift`, `Bar/StackedLayout.swift`, `Bar/InputField.swift`)
-- **Setting:** General → `Stacked fractions and powers`, key `qcalc.stackedMath`, **off by default**. When it's off, nothing changes.
-- **The text stays plain maths:** `/` and `^` only change what's inserted, and the line keeps text the engine already reads, such as `(5x)/(32+x^(3))`.
-  - Each slot is a bracketed group. Its brackets, the `/` and the `^` are drawn as nothing.
-  - The numerator sits over a 1.2 pt ink bar on the math axis (0.25 em above the baseline), and the denominator sits under it. Both are 0.6× size and centred on the wider one.
-  - A power is 0.6× size, raised 0.36 em. An empty slot shows the muted 0.62 × 0.8 em box the ∫ limits use.
-- **`/`:** the term before the caret goes over the bar, and the caret goes into an empty denominator. A term is a number, a name, a function call, a bracketed group, a root, or a power or fraction made of them. A plain number or name stays as it is (`3/()`). Anything else is bracketed (`(5x)/()`). A selection becomes the numerator, and nothing before the caret gives `()/()`.
-- **`^`:** inserts `^()` with the caret inside. A fraction or power right before it is bracketed first (`((1)/(2))^()`).
-- **Typing after a stack:** a term typed right after a slot's hidden `)` gets a hidden `·` first (`(1)/(2)·x`), because the engine reads `(1)/(2)x` as 1/(2x). Backspace on that one term removes the `·` too.
-- **Keys:**
-  - `)` before a slot's hidden `)` steps out.
-  - ↑ and ↓ move between the numerator and the denominator, to the place nearest across.
-  - ← and → move one place in the text and skip the places that look the same as the one beside them (`StackedMath.dead`).
-  - Backspace right after a stack steps into its last slot. At the start of a slot it takes the stack apart and leaves the slots' text in the line.
-  - A click picks the nearest caret place, by height too.
-- **Drawing on the Mac:** TextKit 1 never lets kern take a glyph's advance below zero. So the hidden `/` carries a `qcalc.stackPull` attribute, and `StackTypesetter` moves the pen back by that much. The caret inside a slot is drawn by the line, at the slot's height, and the system caret is hidden. `font` on the text view is the first character's font, which can be a hidden bracket, so the line uses `BarTextView.lineFont`.
-- **A fraction that starts the line:** its numerator is centred by kerning the character before it, so a fraction at the very start (`42/12*12/23`, `1/12345`) had nothing to kern. The numerator sat at the bar's left end and the denominator, centred, stood off to the right of it. The line now starts that much further on instead: `qcalc.stackLead` on the first character, which `StackTypesetter` adds to where the line starts. The bar starts at the line's start.
-- **↑ ↓ reach the fraction:** arrow keys carry the function-key flag, so AppKit offers them to `performKeyEquivalent` before `keyDown`. The bar's history ↑ ↓ took them there, and ↑ in a denominator picked a history row. `BarTextView.stackArrow` now runs first in both. On Windows, the fraction's ↑ ↓ should likewise come before the history's.
-- **The caret, everywhere on a stacked line:** while the line has a stack, the line draws the caret at every place, at full height outside the slots. The system caret goes by the line's used width, which the pulled-back pen leaves wider than the text, so after `42/12 * 12/(23*12) 12` it stood far to the right of the last `12`. Every glyph also gets its own location from `StackTypesetter`, because TextKit works out where a glyph inside a run is from the font's advances. That left out the pulls and drew the caret at the start of the line inside the second fraction.
-- **Room past the row:** the line's view reaches 12 pt above and below its 36 pt row (`BarTextView.stackRoom`, a negative vertical padding on `InputField`), with the line still centred. That way a fraction inside a denominator, like `1/(x/3)`, isn't cut off at the bottom. A click in that extra room still goes to the bar (dragging it) unless the line has a stack (`LineScroll.hitTest`).
-- **The highlight fits the text:** `StackTypesetter.setLineFragmentRect` takes the pulls (and adds the lead) off the line's used width, so a selection's highlight and the line's end are where the text ends.
-- **Selections never split a stack:** a selection inside one slot stays as it is. One that reaches past a slot grows to take the whole stack, plus the hidden `·` after it (`StackedMath.expand`, applied in the text view delegate's `willChangeSelection`). ⇧← ⇧→ move the end away from where the selection started one place at a time and skip the places the caret never stops. A drag from a click goes to the place nearest the pointer.
-- **Deletes that keep stacks whole:**
-  - ⌦ before a hidden `/ ^ ( ) ·` steps over it instead of deleting it.
-  - ⌥⌫ ⌘⌫ ⌥⌦ ⌘⌦ inside a slot stop at the slot's edge. At the edge they act like Backspace or ⌦. Outside a slot they take whole stacks (`StackedMath.deletion`). The hidden `·` before what's taken goes with it when no term is left after it.
-  - Emptying a slot that has no hidden brackets (the `42` of `42/(12)`, typed as `42/`) leaves an empty `()` with the caret in it (`StackedMath.emptying`). This applies to Backspace, ⌦, the word and line deletes, and cut. Without it, the `/` was left with nothing before it and the line showed `/(12)`.
-- **Dev only:** the Mac dev build's `do:<selector>` drive command runs an editing action on the line (`do:moveLeft:`, `do:deleteWordBackward:`), which works when Q Calc isn't the frontmost app. Not needed on Windows.
-- **Pasted or linear text:** `3/4` is stacked only where the engine reads it the same way. The numerator is a number, a name, a call or a group after an operator or at the start. Nothing that binds tighter follows the denominator (`2x/4` and `(a)/(b)c` stay flat).
-- **Test:**
-  - Type `5x/32+x^3`, press → twice and type `x`. The typeset preview should read (5x/(32+x³))·x.
-  - Type `1/2`, press ↑, type `0`, press ↓, type `5`. You should get 10/25.
-  - Use Backspace in each slot, and check light and dark.
-  - Type `42/12*12/23*1212` and `1/12345` at the start of the line: each numerator should be centred over its denominator, with the bar under both.
-  - Type `42/12`, →, `*12/23*12`, →, `12`. The caret should be right after the last `12`. Press ← through the whole line: the caret should be at the place it is in each time, and the right size.
-  - Type `1/x/3` (a fraction in a denominator). Nothing should be cut off.
-  - On the `42/12 …` line: Home, →, then ⇧→ three times. The first fraction should be selected whole and the highlight should fit it. Select All then Backspace should clear the line.
-  - Home, then ⌦ twice. You should get an empty box over `12`, and typing `7` gives 7/12. Backspace twice after `42` should do the same.
-  - With the caret in `23*12`, ⌘⌫ should take only what's before the caret in that denominator. ⌥⌫ on the last `12` should leave no stray `·`.
-
 ### The working, ⌃W (`Bar/Working.swift`, `Bar/BarView.swift`, `Bar/MathText.swift` `paths`)
 - **Core:** `Engine::call_json("lib/steps", "steps", [text, options])` gives the steps for a line, or null. `options` is `EvaluateOptions` as JSON (`angleMode`, `sigFigs`, `fractionMode`, `spaceThousands`, `ans`, `variables`, `functions`). Each step is `{math, why, plain}`: Typst math, a short phrase, and plain text for copying. `lib/steps` `stepDocument` `[math]` gives the document a step compiles to (the preview's macros, 15 pt). The core already checks the last step against its own answer; the app also drops working whose last step's `plain` doesn't end in the shown `display`.
 - **What has working:** `d/dx …` (first derivatives, also `at`), `∫ … dx` from the integral table, one equation in one unknown (linear or quadratic), unit conversions (`5 ft to m`), and differential equations. Nothing else, and never a chained line.
@@ -245,14 +205,6 @@ Windows opens all the sheets, but draws them in its old text style. To match the
 - **Hint:** with working, `show working · Ctrl+W` (11 pt muted, a button) sits at the composer's bottom right, left of the clear tool's corner (gutter + 44). `hide working` while the panel is up. Hidden while the hint line or a tutorial step shows.
 - **Panel:** under the bar where the graph and systems panels go, same look: `--bg-tape`, a hairline on top, 12 / 16 / 16 padding. Head: `Working` 13 pt semibold, `click a step to copy it` and `⌃W hides` 12 pt muted. Rows: the number (12 pt muted), the typeset step, why at the right in 12 pt muted (up to 3 lines, 260 pt wide). Hover tints the row; a click copies `plain` with the copied flash. Scrolls past 320 pt.
 - **Keys:** `working` action, default `ctrl+w` on both, rebindable, listed in Settings → Keybinds and the `?` keys column. Esc closes the panel before the cheat sheet. Hiding the bar closes it. With the panel up on a line without working nothing shows; it comes back on the next line that has working.
-
-### The caret in ∫ Σ Π limits (`Bar/InputField.swift` `limitCaretRect`, `drawHoles`; `Bar/StackedLayout.swift` `stackCaretRect`)
-
-- Native only, the way Wolfram does it. It works whether or not the stacked setting is on.
-- In a limit, the line draws its own caret, sized to the limits' font (0.56 em) and standing on that limit's baseline: 0.36 em above the line for the upper, 0.2 em below it for the lower. The system caret is hidden. Take the line's baseline from the sign's glyph, not the limit's: the limit's glyph location already includes its raise or drop.
-- In an empty limit, the caret stands in the middle of the limit's box, and that box is drawn a shade darker (muted at 32%, not 18%). Which limit the caret is in follows `slotOf` in `lib/bounds.ts`: the lower first, both ends counted.
-- In the integrand, the caret is full size, as before.
-- **Test:** type `∫`. A small caret should stand in the lower box, and that box should be darker. Type `0`: the small caret is after the 0, low. Type `..`: it moves into the upper box. Type `10`: it is after the 10, high. Type a space and `x^2`: the caret is full size. Then type `Σi=1..n`. Check light and dark.
 
 ### Sheet data, for reference
 

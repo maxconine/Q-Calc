@@ -77,6 +77,9 @@ pub struct Settings {
     pub notifications: bool,
     pub notification_text: bool,
     pub notifications_in_dnd: bool,
+    // native only: `/` and `^` stack what's typed, as a graphing calculator does (stacked.rs; the Mac's
+    // qcalc.stackedMath), off unless chosen
+    pub stacked_math: bool,
 }
 
 // the core's actions, then the native app's own (exponent.rs NATIVE_ACTIONS)
@@ -120,6 +123,7 @@ impl Default for Settings {
             notifications: true,
             notification_text: true,
             notifications_in_dnd: false,
+            stacked_math: false,
         }
     }
 }
@@ -152,6 +156,7 @@ impl Settings {
         flag("notifications", &mut self.notifications);
         flag("notificationText", &mut self.notification_text);
         flag("notificationsInDnd", &mut self.notifications_in_dnd);
+        flag("stackedMath", &mut self.stacked_math);
         if let Some(f) = v["saveFolder"].as_str() {
             self.save_folder = f.trim().to_string();
         }
@@ -462,7 +467,8 @@ mod tests {
                 "sigFigs": 6, "draftSeconds": 60, "defaultUnits": {}, "theme": "system",
                 "typstPreview": true, "typstCopy": false, "spaceThousands": false, "copyUnitless": true, "shareUsage": true, "keybinds": {},
                 "exponentMode": false, "autoAcceptBytes": 0, "receivedToClipboard": false, "saveFolder": "",
-                "notifications": true, "notificationText": true, "notificationsInDnd": false
+                "notifications": true, "notificationText": true, "notificationsInDnd": false,
+                "stackedMath": false
             })
         );
         // the file rows: a size is kept to 0..1 GiB, a flag as it is

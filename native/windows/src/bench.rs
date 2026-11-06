@@ -396,6 +396,8 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
             Some(serde_json::json!({ "ok": true }))
         }
         "wordTip" => Some(crate::word_tip::debug(app)),
+        // a key with modifiers held, through the bar's handler (stacked_layout.rs)
+        _ if cmd.starts_with("mkey ") => Some(crate::stacked_layout::debug_key(cmd)),
         // update-e2e.ps1: the update loop's state and the Updates page's line; "update check" / "update install"
         // press its button
         "update" => Some(crate::update::debug(app)),

@@ -411,7 +411,12 @@ fn items(app: &App, win: &Win) -> Vec<Item> {
                     "A copied answer is just the number: 15 m² copies as 15.".into(),
                     s.copy_unitless,
                 ),
-                ("", "", String::new(), false),
+                (
+                    "stackedMath",
+                    "Stacked fractions and powers",
+                    "/ stacks a fraction, ^ raises a power, ↑ ↓ move between top and bottom.".into(),
+                    s.stacked_math,
+                ),
             ];
             for (id, title, hint, on) in flags.iter().filter(|f| !f.0.is_empty()) {
                 out.push(row(id, title, hint, Control::Toggle(*on)));
