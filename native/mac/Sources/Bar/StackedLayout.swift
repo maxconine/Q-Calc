@@ -8,9 +8,11 @@ struct StackHole { var anchor: Int; var dx: CGFloat; var offset: CGFloat; var si
 struct SlotLook { var content: NSRange; var size: CGFloat; var offset: CGFloat }
 
 /// TextKit 1 with one addition: a character's `pull` moves the pen by that much after it, back as well as on
-/// (a kern can't take an advance below nothing). The bar's line is one paragraph on one line.
+/// (a kern can't take an advance below nothing), and the first character's `lead` starts the line that much further
+/// on (a fraction that starts the line has no character before it to kern). The bar's line is one paragraph on one line.
 final class StackTypesetter: NSATSTypesetter {
     static let pull = NSAttributedString.Key("qcalc.stackPull")
+    static let lead = NSAttributedString.Key("qcalc.stackLead")
 
     private func pull(_ glyph: Int) -> CGFloat {
         guard let lm = layoutManager, let s = attributedString else { return 0 }
@@ -26,7 +28,8 @@ final class StackTypesetter: NSATSTypesetter {
         }
         // every pull earlier in the line moves this run too
         let start = paragraphGlyphRange.location
-        var before: CGFloat = 0
+        let first = layoutManager.map { $0.characterIndexForGlyph(at: start) } ?? 0
+        var before: CGFloat = first < s.length ? (s.attribute(Self.lead, at: first, effectiveRange: nil) as? CGFloat) ?? 0 : 0
         if glyphRange.location > start { for g in start..<glyphRange.location { before += pull(g) } }
         let at = NSPoint(x: location.x + before, y: location.y)
         let pulls = (0..<glyphRange.length).map { pull(glyphRange.location + $0) }
@@ -126,6 +129,11 @@ extension BarTextView {
                     if num.isEmpty { stackHoles.append(StackHole(anchor: o, dx: lead, offset: offset[s.op] + size[s.op] * 0.25 + 1.5 + f * 0.08, size: f)) }
                 } else if num.lo > 0 {
                     addKern(num.lo - 1, lead)
+                    used = lead
+                } else {
+                    // the line starts with this fraction: the whole line starts `lead` further on
+                    let had = (storage.attribute(StackTypesetter.lead, at: 0, effectiveRange: nil) as? CGFloat) ?? 0
+                    storage.addAttribute(StackTypesetter.lead, value: had + lead, range: NSRange(location: 0, length: 1))
                     used = lead
                 }
                 // the `/` takes the pen back to where the denominator starts, centred under the numerator (a pull:

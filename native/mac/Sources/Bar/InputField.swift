@@ -522,11 +522,7 @@ final class BarTextView: NSTextView {
         if hasMarkedText() { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         let sel = selectedRange()
-        if Self.stackedOn, sel.length == 0, flags.isEmpty, event.keyCode == 126 || event.keyCode == 125,
-           let to = stackVertical(up: event.keyCode == 126) {
-            setSelectedRange(NSRange(location: to, length: 0))
-            return
-        }
+        if stackArrow(event) { return }
         if sel.length == 0, flags.isSubset(of: [.shift]), let boundKey {
             let chars = event.charactersIgnoringModifiers ?? ""
             let name: String? = {
@@ -555,8 +551,19 @@ final class BarTextView: NSTextView {
         super.keyDown(with: event)
     }
 
+    /// ↑ ↓ between a fraction's top and bottom (stackVertical), before the bar takes them for the history
+    func stackArrow(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        guard Self.stackedOn, selectedRange().length == 0, flags.isEmpty, event.keyCode == 126 || event.keyCode == 125,
+              let to = stackVertical(up: event.keyCode == 126) else { return false }
+        setSelectedRange(NSRange(location: to, length: 0))
+        return true
+    }
+
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         guard window?.firstResponder === self, !hasMarkedText() else { return super.performKeyEquivalent(with: event) }
+        // arrows carry the function-key flag, so AppKit offers them here before keyDown
+        if stackArrow(event) { return true }
         if onKey?(event) == true { return true }
         // the bar has no Edit menu, so the editing keys are the field's own
         if isCommandKey(event, "c", 8) { copy(nil); return true }
