@@ -1376,10 +1376,14 @@ mod view {
                 }
             };
             // a root's sign and the bar over what it takes, one stroke
-            let base = r.y
-                + geom
+            // (the baseline asked of the layout only for a line with a root)
+            let base = if roots.is_empty() {
+                0.0
+            } else {
+                r.y + geom
                     .as_ref()
-                    .map_or_else(|| stacked::baseline(&layout), |g| g.base);
+                    .map_or_else(|| stacked::baseline(&layout), |g| g.base)
+            };
             for &(a, b) in &roots {
                 root(
                     c,
@@ -1404,7 +1408,8 @@ mod view {
                         c,
                         x0 + xa,
                         x0 + xb,
-                        r.y + r.h * 0.5 + 13.0,
+                        // under a stacked line's denominators
+                        r.y + r.h * 0.5 + if geom.is_some() { 19.0 } else { 13.0 },
                         with_alpha(t.muted, 0.7),
                     );
                 }
