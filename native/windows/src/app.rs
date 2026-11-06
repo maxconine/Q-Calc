@@ -839,6 +839,7 @@ impl App {
             }
             // a message thread under the bar scrolls (threads.rs)
             WM_MOUSEWHEEL if crate::threads::wheel(self, wp, lp) => {}
+            WM_MOUSEWHEEL if crate::matrices::wheel(self, wp, lp) => {}
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
                     if msg != WM_MOUSEWHEEL {
@@ -903,6 +904,7 @@ impl App {
     fn click(&mut self, x: f32, y: f32, double: bool) {
         if crate::line::click_chip(&mut self.model, x, y, &self.engine)
             || crate::commands::click(self, x, y)
+            || crate::matrices::click(self, x, y, double)
             || crate::systems::click(self, x, y, double, mods().shift)
             || crate::graph::click(self, x, y, double)
         {
@@ -1377,6 +1379,7 @@ impl App {
                     "hint": self.model.hint, "rows": rows, "visible": self.bar.visible, "focused": self.bar.focused,
                     "frame": [r.left, r.top, r.right, r.bottom], "hotkey": self.hotkey.active,
                     "graph": crate::graph::debug(&self.model), "systems": crate::systems::debug(&self.model),
+                    "matrix": crate::matrices::debug(&self.model),
                     "slot": self.model.command.as_ref().map(|c| c.message.clone()), "sheets": crate::sheets::open_keys(),
                     "game": crate::games::is_open(), "settingsOpen": settings_window::is_open(),
                     "cheats": crate::cheats::height(&self.model) > 0.0, "gamesList": crate::commands::games_shown(&self.model),

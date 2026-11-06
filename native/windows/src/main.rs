@@ -13,6 +13,7 @@ mod exponent;
 mod hotkey;
 mod keys;
 mod log;
+mod matrix_text;
 mod perf;
 mod place;
 mod store;
@@ -63,6 +64,8 @@ mod input;
 mod later;
 #[cfg(windows)]
 mod line;
+#[cfg(windows)]
+mod matrices;
 #[cfg(windows)]
 mod messaging;
 #[cfg(windows)]

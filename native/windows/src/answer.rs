@@ -145,6 +145,10 @@ pub fn shown_answer(m: &BarModel) -> String {
 
 /// The engine's own pretty text for the live display; `pretty_text` for anything else.
 fn pretty(m: &BarModel, s: &str) -> String {
+    // native only: a matrix answer's own minus signs, roots and powers (matrices.rs)
+    if let Some(p) = crate::matrices::pretty(m, s) {
+        return p;
+    }
     match &m.live {
         Some(a) if s == a.display && !a.pretty.is_empty() => radicals_if_math(&a.pretty),
         _ => pretty_text(s),
@@ -154,6 +158,10 @@ fn pretty(m: &BarModel, s: &str) -> String {
 /// `Pretty.answer` (TextRules.swift): `prettyAnswer` (a real minus, grouped digits), and in plain maths the web's
 /// radicals as text: `2sqrt(2)` reads `2√2`, a long argument keeps its brackets, `pi` is π.
 pub fn pretty_text(s: &str) -> String {
+    // native only: a matrix answer (the tape's too) as the live one is written
+    if s.starts_with('[') || s.starts_with('λ') || s.starts_with("span{") {
+        return crate::matrix_text::pretty(&radicals(s));
+    }
     // a solve's `±2sqrt(2)`: the sign kept the rest from reading as maths, so the root stayed plain text
     if let Some(sign) = s.chars().next().filter(|c| matches!(c, '±' | '∓'))
         && s.len() > sign.len_utf8()
@@ -286,6 +294,10 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
             )]
         };
     }
+    // `matrix 3x3`: what ↵ opens, until the grid is open (matrices.rs, native only)
+    if let Some(h) = crate::matrices::slot_hint(m) {
+        return vec![spec(h, Font::Body, Ink::Muted, None, (PAD_X, 0.0))];
+    }
     // Alt+↑/↓ stepped the answer's SI prefix (line.rs): that reading, copyable, until the line changes
     if let Some(p) = &m.line.prefix_shown {
         let p = crate::exponent::shown(m, p);
@@ -361,7 +373,8 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
             return out;
         }
     }
-    if a.improper {
+    // why a matrix has no answer (`determinant needs a square matrix`), as a message (native only)
+    if a.improper || a.matrix.as_ref().is_some_and(|v| v.message) {
         return vec![spec(&a.display, Font::Body, Ink::Muted, None, (PAD_X, 0.0))];
     }
     // `x =` before a single root (the web's varLabel)
@@ -391,8 +404,15 @@ pub fn specs(m: &BarModel) -> Vec<Spec> {
             (PAD_X, PAD_X),
         ));
         out.push(spec("≈", Font::Row, Ink::Muted, None, (0.0, 0.0)));
+        let d = crate::exponent::shown(m, &a.display);
+        // a matrix answer's shared `λ = ` is written once, before the exact half (native only)
+        let tail = crate::matrices::without_dual_label(m, Some(e), d.clone());
         out.push(spec(
-            pretty(m, &crate::exponent::shown(m, &a.display)),
+            if tail.len() < d.len() {
+                crate::matrix_text::pretty(&radicals(&tail))
+            } else {
+                pretty(m, &d)
+            },
             Font::Part,
             Ink::Answer,
             Some(a.display.clone()),
@@ -773,6 +793,7 @@ pub fn landed(
     m.answer.closed = closed.map(|job| Closed { text: typed, job });
     poll(app);
     crate::typst_row::refresh(&mut app.model, &app.engine);
+    crate::matrices::refresh_steps(&mut app.model, &app.engine);
 }
 
 /// The closed form's waker: a WM_ENGINE to the host, whose handler polls again.

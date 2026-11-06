@@ -88,6 +88,35 @@ shows it as a 13 pt muted message, not typeset in the preview. The cheat sheet g
 (`Pretty.matrix`: `−` leading each entry, `sqrt(` as `√(`), and when both halves of the dual start `λ = ` the
 approximation drops it. A step's matrix is set against the left of its row.
 
+## Phase 5: already ported, check it on Windows
+
+The Mac side wrote the Windows port of §2 (`src/matrices.rs`, `src/matrix_text.rs`). It type-checks and is
+clippy-clean for `x86_64-pc-windows-msvc` and `matrix_text`'s tests pass, but nobody has run it: build it, drive the
+table in §2 and the rows below, screenshot light and dark, and run the keystroke bench (nothing new runs on a plain
+line: `follow` is one `grid_hint` scan, the steps only on an answer that has them).
+
+Hub edits, one line or a few each: `model.rs` (`matrix` field and its default; `matrices::follow` in
+`evaluate_live`; `matrices::key_down` before the systems' in `key_down`; `char16`, `insert_text`), `window.rs`
+(`BarLayout::matrix`, its height after the typst row, its paint, the line's caret hidden while a cell has the keys),
+`app.rs` (`click`, `WM_MOUSEWHEEL`, the bench state's `matrix`), `keys.rs` (the cheat sheet's `Ctrl+G Ctrl+R` row),
+`main.rs`. Also `answer.rs` (`slot_hint`, matrix messages muted, `pretty`, the dual's label once, `refresh_steps`
+when an answer lands) and `typst_row.rs` (`Request::matrix`, `draw` shared with the steps' pictures, `trim`).
+
+| Do | Expect |
+| --- | --- |
+| type `matrix 3x3` | slot: `↵ opens a 3×3 grid`, muted; ↵ opens it, the line reads `[0 0 0; 0 0 0; 0 0 0]` |
+| in the grid, ↑ from the top row, then type on the line | keys back on the line with the grid open; the edit closes it |
+| `[1 2; 3 4]`, Ctrl+G, select a cell's text, Ctrl+C | the cell's text is copied, not the answer |
+| `det([1 2 3])` | `determinant needs a square matrix`, 13 pt muted; the preview shows no answer after `=` |
+| `characteristic equation of [1 2; 3 4]` | dual `λ² − 5λ − 2 = 0,  λ = (5 ± √33)/2 ≈ 5.37228, −0.372281` |
+| `inv` of a 6×6 with steps open | the card stops at 320 and the wheel scrolls it |
+
+The Mac fixed its dual to match (`BarModel.dualApprox`): the shared label comes off the plain text before styling, since `λ^2` styled as `λ²` is a character shorter.
+
+Known gaps: Ctrl+G and Ctrl+R are fixed chords (the core's keybinds have no matrix actions; a user binding on the
+same chord wins); a click in a cell puts the caret at the end (double-click selects it) rather than under the
+pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI Automation for the cells yet.
+
 ## 2. Mac UI to port (Phase 4)
 
 Mac code: `mac/Sources/Bar/Matrices.swift` (new), with hooks in `BarModel.swift` (`evaluateLive`, `setLive`,

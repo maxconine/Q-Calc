@@ -669,6 +669,14 @@ final class BarModel: ObservableObject {
     /// What both halves of a matrix answer's dual start with, written once, before the exact half (native only):
     /// the parts that read the same both ways, then a shared `name = ` (`λ^2 − 5λ + 5 = 0,  λ = (5 ± √5)/2 ≈
     /// 3.61803, 1.38197`); "" otherwise.
+    /// The dual's approximate half as shown: the shared label dropped from the plain text, then styled (styling
+    /// first would change the label's length: `λ^2` is `λ²`).
+    var dualApprox: String {
+        let shown = exponentShown(live.display), label = dualLabel
+        guard !label.isEmpty, shown.hasPrefix(label) else { return pretty(shown) }
+        return Pretty.matrix(String(shown.dropFirst(label.count)))
+    }
+
     var dualLabel: String {
         guard let m = live.matrix, !m.message, let exact else { return "" }
         let sep = ",  "

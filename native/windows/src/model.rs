@@ -80,6 +80,8 @@ pub struct BarModel {
     pub graph: Option<crate::graph::GraphState>,
     /// the `sys N` rows (systems.rs), once ↵ opened them
     pub systems: Option<crate::systems::SysState>,
+    /// the matrix grid and the row-operation steps (matrices.rs, native only)
+    pub matrix: crate::matrices::MatrixState,
     /// the live answer's own state: steady, Tab's forms, the closed form, the copied flash (answer.rs)
     pub answer: crate::answer::AnswerState,
     /// the tape's picks, scroll, deleted row, cheat sheet (history.rs)
@@ -122,6 +124,7 @@ impl BarModel {
             to_clipboard: None,
             graph: None,
             systems: None,
+            matrix: Default::default(),
             answer: Default::default(),
             tape: Default::default(),
             typeset: Default::default(),
@@ -211,6 +214,9 @@ impl BarModel {
     pub fn evaluate_live(&mut self, engine: &EngineThread) {
         crate::systems::follow(self, engine);
         crate::graph::follow(self, engine);
+        if crate::matrices::follow(self, engine) {
+            return;
+        }
         if crate::commands::live(self, engine) {
             return;
         }
@@ -480,6 +486,10 @@ impl BarModel {
         const RIGHT: u32 = 0x27;
         const DOWN: u32 = 0x28;
         const DELETE: u32 = 0x2E;
+        let clipboard = match crate::matrices::key_down(self, vk, mods, engine, clipboard) {
+            Ok(outcome) => return outcome,
+            Err(clipboard) => clipboard,
+        };
         let clipboard = match crate::systems::key_down(self, vk, mods, engine, clipboard) {
             Ok(outcome) => return outcome,
             Err(clipboard) => clipboard,
@@ -599,7 +609,8 @@ impl BarModel {
 
     /// WM_CHAR.
     pub fn char16(&mut self, unit: u16, engine: &EngineThread) {
-        if crate::systems::char16(self, unit, engine) {
+        if crate::matrices::char16(self, unit, engine) || crate::systems::char16(self, unit, engine)
+        {
             return;
         }
         if self.field.char16(unit) {
@@ -609,7 +620,9 @@ impl BarModel {
 
     /// Text from the IME or a paste.
     pub fn insert_text(&mut self, text: &str, engine: &EngineThread) {
-        if crate::systems::insert_text(self, text, engine) {
+        if crate::matrices::insert_text(self, text, engine)
+            || crate::systems::insert_text(self, text, engine)
+        {
             return;
         }
         self.field.compose(text);

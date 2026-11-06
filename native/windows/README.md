@@ -83,6 +83,8 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `log.rs` | the log file, ms since process creation, the panic hook |
 | `settings_window.rs` | the settings window (drawn with render.rs; made on first open, dropped on close); `set_messages_hook` for the Messages page |
 | `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`) |
+| `matrices.rs` | the matrix grid (`matrix 3x3`, Ctrl+G), the steps chip and card (Ctrl+R), matrix answers in the slot |
+| `matrix_text.rs` | pure: a matrix answer's slot text, its dual's shared label, the grid's moves and writing |
 | `systems.rs` | `sys2`…`sys5`: equation rows under the composer, solved live, saved as one row |
 | `typst_row.rs` | the typeset maths row under the composer |
 | `commands.rs` | the word commands that aren't maths (`periodic`, `idt …`, `constants`, `games` and a game's name, `message`, `tutorial`, `skip`, `hello`): their words in the answer slot, ↵ runs them, the games list above the bar |

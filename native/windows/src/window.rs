@@ -54,6 +54,8 @@ pub struct BarLayout {
     pub hint: Option<Rect>,
     /// the `sys` rows' panel (systems.rs)
     pub systems: Option<Rect>,
+    /// the matrix grid, or the steps' chip and card (matrices.rs)
+    pub matrix: Option<Rect>,
     /// the graph panel (graph.rs)
     pub graph: Option<Rect>,
     /// the answer's pieces, placed in `answer` (answer.rs)
@@ -312,6 +314,12 @@ impl Bar {
             height += th;
             r
         });
+        let mh = crate::matrices::height(model, width);
+        let matrix = (mh > 0.0).then(|| {
+            let r = Rect::new(0.0, height, width, mh);
+            height += mh;
+            r
+        });
         let systems = model.systems.as_ref().map(|s| {
             let r = Rect::new(0.0, height, width, crate::systems::height(s));
             height += r.h;
@@ -345,6 +353,7 @@ impl Bar {
             answer_text,
             hint,
             systems,
+            matrix,
             graph,
             live,
             tape,
@@ -363,6 +372,7 @@ impl Bar {
         let window_focused = self.focused || !self.visible;
         let focused = window_focused
             && !crate::systems::focused(model)
+            && !crate::matrices::grid_focused(model)
             && !crate::messaging::reply_has_keys(model);
         let crt = crate::effects::crt_theme(model);
         let (theme, scale) = (crt.as_ref().unwrap_or(theme), self.scale());
@@ -397,6 +407,9 @@ impl Bar {
             }
             if let Some(r) = layout.typst {
                 crate::typst_row::paint(c, model, r);
+            }
+            if let Some(r) = layout.matrix {
+                crate::matrices::paint(c, model, r, window_focused);
             }
             if let (Some(r), Some(s)) = (layout.systems, &model.systems) {
                 crate::systems::paint(c, s, r, window_focused);

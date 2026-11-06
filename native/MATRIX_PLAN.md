@@ -86,6 +86,11 @@ them (`sqrt(2)/2`). Tested in `core/tests/linear_algebra_typed.rs`.
 Same three pieces through the README "Adding a panel" pattern (steps panel, grid editor from `SysState`), within the
 budgets in `native/windows/AGENTS.md`. Done by porting from `MAC_CHANGES_TO_PORT.md` (core/ffi already landed).
 
+Written on the Mac: `windows/src/matrices.rs` (grid card, steps chip and card, keys, clicks, wheel) and the pure
+`windows/src/matrix_text.rs` (tested on the Mac), with hooks in model, window, app, answer, typst_row and keys. It
+type-checks and is clippy-clean for `x86_64-pc-windows-msvc` from the Mac, but hasn't been run on Windows yet: the
+checks are in `windows/PORT_linear_algebra.md`, Phase 5.
+
 ## Testing
 - Unit tests per operation in `matrix.rs`/`exact/` with known textbook answers (exact and decimal).
 - Golden (`native/core/golden`) unchanged for existing lines; new cases in `tests/native_fixes.rs`.

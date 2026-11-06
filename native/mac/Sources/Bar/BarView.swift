@@ -344,7 +344,7 @@ struct LiveAnswerView: View {
                 }
                 AnswerButton(model: model, shown: model.live.matrix == nil ? Pretty.answer(exact) : model.pretty(exact), copy: exact, size: Theme.answerPart, help: "Copy exact value", trailingPad: 8)
                 Text("≈").font(.system(size: Theme.row)).foregroundStyle(Color.qMuted).accessibilityHidden(true)
-                AnswerButton(model: model, shown: String(model.pretty(model.exponentShown(model.live.display)).dropFirst(model.dualLabel.count)), copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
+                AnswerButton(model: model, shown: model.dualApprox, copy: model.live.display, size: Theme.answerPart, help: "Copy approximation", trailingPad: -8)
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel("Answer")
