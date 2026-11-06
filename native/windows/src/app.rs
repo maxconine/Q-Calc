@@ -741,6 +741,8 @@ impl App {
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
+                // the bench pipe's `key` can say which modifiers are down (bench.rs)
+                let mods = || bench::forced_mods().unwrap_or_else(mods);
                 if crate::effects::key_down(self, vk, lp.0)
                     || crate::commands::key_down(self, vk, mods())
                 {
@@ -1358,6 +1360,7 @@ impl App {
             }
             "key" => {
                 let vk = spec.vk.unwrap_or(0) as usize;
+                bench::force_mods(spec.text.as_deref());
                 // SAFETY: as above
                 let _ =
                     unsafe { PostMessageW(Some(self.bar.hwnd), WM_KEYDOWN, WPARAM(vk), LPARAM(1)) };

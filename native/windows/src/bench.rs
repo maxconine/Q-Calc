@@ -14,7 +14,8 @@
 //!   text. `enter` presses ↵ after each input (and waits for the commit to land). The reply (and `out`) is
 //!   `{"ms": [...], "idx": [...], "timeouts": n, "wallMs": t, "n": n, "median": m, "p90": a, "p99": b}`.
 //! - commands: `{"cmd": "show"}`, `"hide"`, `"state"` (the line, the answer, the rows, visibility),
-//!   `{"cmd": "type", "text": "..."}` (posts WM_CHARs), `{"cmd": "key", "vk": 13}`, `"mem"` (working set and
+//!   `{"cmd": "type", "text": "..."}` (posts WM_CHARs), `{"cmd": "key", "vk": 13}` (with `"text": "ctrl+shift"`
+//!   those modifiers count as down for that key, `force_mods`), `"mem"` (working set and
 //!   private bytes), `"release"` (what 30 s hidden gives back, now), `"trim"` (that and the working-set trim), `"quit"`.
 //!
 //! The app also logs `ready` with ms since process creation (log.rs), for warm-launch timing.
@@ -416,6 +417,38 @@ pub fn extra(app: &crate::app::App, cmd: &str) -> Option<serde_json::Value> {
         c if c.starts_with("share ") => Some(crate::share_debug::cmd(app, &c[6..])),
         _ => crate::perf::cmd(cmd),
     }
+}
+
+thread_local! {
+    /// the modifiers the pipe's next `key` is pressed with, until that key-down is handled
+    static FORCED: std::cell::Cell<Option<(crate::keys::Mods, u8)>> = const { std::cell::Cell::new(None) };
+}
+
+/// The pipe's `key` with `text` naming modifiers (`ctrl+shift`, `alt`): they count as down for that key-down.
+#[cfg(windows)]
+pub fn force_mods(names: Option<&str>) {
+    let Some(names) = names.filter(|n| !n.is_empty()) else {
+        return;
+    };
+    let has = |m: &str| names.to_lowercase().split('+').any(|n| n.trim() == m);
+    let mods = crate::keys::Mods {
+        ctrl: has("ctrl"),
+        alt: has("alt"),
+        shift: has("shift"),
+        win: has("win"),
+    };
+    // asked for twice in one key-down (commands.rs, then the model)
+    FORCED.with(|f| f.set(Some((mods, 2))));
+}
+
+/// The forced modifiers for the key-down being handled, if the pipe pressed it.
+#[cfg(windows)]
+pub fn forced_mods() -> Option<crate::keys::Mods> {
+    FORCED.with(|f| {
+        let (mods, left) = f.get()?;
+        f.set((left > 1).then_some((mods, left - 1)));
+        Some(mods)
+    })
 }
 
 /// Process memory: (working set, private bytes), bytes.
