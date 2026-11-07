@@ -60,9 +60,9 @@ pub mod jsstr;
 pub mod sums;
 
 // ---- WP-GRAPH ----
+pub mod feet_inches;
 pub mod graph;
 pub mod graph_native;
-pub mod feet_inches;
 
 pub use evaluate::{evaluate_line, evaluate_sheet};
 pub use types::{EvaluateOptions, LineResult, Value};

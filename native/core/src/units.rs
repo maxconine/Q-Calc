@@ -974,7 +974,10 @@ fn last_place(q: &Qty) -> Option<f64> {
     if p.sig.is_infinite() || q.si == 0.0 {
         return Some(0.0);
     }
-    Some(jsmath::pow(10.0, jsmath::log10(q.si.abs()).floor() - p.sig + 1.0))
+    Some(jsmath::pow(
+        10.0,
+        jsmath::log10(q.si.abs()).floor() - p.sig + 1.0,
+    ))
 }
 
 /// The sig figs a sum's coarsest last place leaves it; None when it has none (both exact) or less than one.

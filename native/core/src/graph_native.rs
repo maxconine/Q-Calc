@@ -13,12 +13,13 @@
 // `!(x > y)` is true for NaN too, as graph.rs has it
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
-use crate::graph::{
-    ContourKind, ContourLevel, CriticalKind, CriticalPoint, GraphIntent, GraphOptions, GraphRange, GraphBounds,
-    SurfaceGrid, build_intent, compile_graph_y, compile_graph_z, evaluate_graph_y, home_of, marching_squares,
-    nice_window, parse_graph_intent, quantile, rewrite_params, sort_numbers, tidy, with_minus,
-};
 use crate::format::format_number;
+use crate::graph::{
+    ContourKind, ContourLevel, CriticalKind, CriticalPoint, GraphBounds, GraphIntent, GraphOptions,
+    GraphRange, SurfaceGrid, build_intent, compile_graph_y, compile_graph_z, evaluate_graph_y,
+    home_of, marching_squares, nice_window, parse_graph_intent, quantile, rewrite_params,
+    sort_numbers, tidy, with_minus,
+};
 use crate::jsre::{self, Lazy, js};
 use crate::latex::{latex_to_ascii, looks_like_latex};
 use crate::scientific::functions::jsmath;
@@ -67,15 +68,25 @@ pub const SURFACE_CELLS: usize = 48;
 /// The `graph …` line with LaTeX read as ascii and a `3d` marker dropped (the panel picks the view itself).
 fn normalize(input: &str) -> Option<String> {
     static CMD: Lazy = Lazy::new(|| js(r"(?s)^\s*graph\s+(.+?)\s*$", "i"));
-    static THREE_D: Lazy = Lazy::new(|| js(r"^(?:3d|3-d)\s*[:,]?\s+|\s+(?:in\s+)?(?:3d|3-d)$", "i"));
+    static THREE_D: Lazy =
+        Lazy::new(|| js(r"^(?:3d|3-d)\s*[:,]?\s+|\s+(?:in\s+)?(?:3d|3-d)$", "i"));
     // a bounds group: braces around a comparison
     static BOUNDS: Lazy = Lazy::new(|| js(r"\{[^{}]*[<>≤≥][^{}]*\}", ""));
     let m = CMD.captures(input).ok()??;
     let body = jsre::replace_all(&THREE_D, jsre::group(&m, 1), |_| String::new()).into_owned();
     // LaTeX before the bounds only, so `{0 < x < 3}` stays bounds
-    let cut = BOUNDS.find(&body).ok().flatten().map_or(body.len(), |b| b.start());
+    let cut = BOUNDS
+        .find(&body)
+        .ok()
+        .flatten()
+        .map_or(body.len(), |b| b.start());
     let (head, tail) = body.split_at(cut);
-    static GLUED: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])(x)(y)(?![A-Za-z0-9_(])|(?<![A-Za-z_])(y)(x)(?![A-Za-z0-9_(])", ""));
+    static GLUED: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z_])(x)(y)(?![A-Za-z0-9_(])|(?<![A-Za-z_])(y)(x)(?![A-Za-z0-9_(])",
+            "",
+        )
+    });
     let latex = looks_like_latex(head);
     let mut head = if latex {
         latex_to_ascii(head)
@@ -92,7 +103,11 @@ fn normalize(input: &str) -> Option<String> {
         }
     })
     .into_owned();
-    Some(format!("graph {} {}", head.trim(), tail.trim()).trim().to_string())
+    Some(
+        format!("graph {} {}", head.trim(), tail.trim())
+            .trim()
+            .to_string(),
+    )
 }
 
 /// LaTeX read as ascii, for the panel's label: `y^(2)` as `y^2`, no parens around the whole.
@@ -186,22 +201,29 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
         return None;
     }
     let mut slope = None;
-    let found = SLOPE
-        .captures(rest.as_str())
-        .ok()
-        .flatten()
-        .map(|m| (jsre::group(&m, 0).to_string(), jsre::group(&m, 1).replace('−', "-")));
+    let found = SLOPE.captures(rest.as_str()).ok().flatten().map(|m| {
+        (
+            jsre::group(&m, 0).to_string(),
+            jsre::group(&m, 1).replace('−', "-"),
+        )
+    });
     if let Some((whole, value)) = found {
         slope = Some(evaluate_graph_y(&value, 0.0, options)?);
         rest = rest.replacen(&whole, " ", 1);
     }
     // nothing but points, a slope and joining words
-    if !jsre::replace_all(&FILLER, &rest, |_| String::new()).trim().is_empty() {
+    if !jsre::replace_all(&FILLER, &rest, |_| String::new())
+        .trim()
+        .is_empty()
+    {
         return None;
     }
     let pt = |(x, y): (f64, f64)| format!("({}, {})", shown(x), shown(y));
     let line = |m: f64, (x1, y1): (f64, f64)| {
-        GraphIntent::new(format!("({})*(x - ({})) + ({})", num(m), num(x1), num(y1)), "")
+        GraphIntent::new(
+            format!("({})*(x - ({})) + ({})", num(m), num(x1), num(y1)),
+            "",
+        )
     };
     let mut out = NativeIntent {
         intent: GraphIntent::new("", ""),
@@ -212,7 +234,12 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
         (1, Some(m)) => {
             let p = points[0];
             out.intent = GraphIntent {
-                label: format!("{} through {} with slope {}", slope_intercept(m, p.1 - m * p.0), pt(p), shown(m)),
+                label: format!(
+                    "{} through {} with slope {}",
+                    slope_intercept(m, p.1 - m * p.0),
+                    pt(p),
+                    shown(m)
+                ),
                 ..line(m, p)
             };
         }
@@ -232,7 +259,12 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
             } else {
                 let m = (b.1 - a.1) / (b.0 - a.0);
                 out.intent = GraphIntent {
-                    label: format!("{} through {} and {}", slope_intercept(m, a.1 - m * a.0), pt(a), pt(b)),
+                    label: format!(
+                        "{} through {} and {}",
+                        slope_intercept(m, a.1 - m * a.0),
+                        pt(a),
+                        pt(b)
+                    ),
                     ..line(m, a)
                 };
             }
@@ -246,12 +278,24 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
                 return Some(out);
             }
             // y₀ + m₀(x − x₀) + Σ (mₖ − mₖ₋₁)·max(0, x − xₖ): straight between the points, bent at each
-            let slopes: Vec<f64> = ps.windows(2).map(|w| (w[1].1 - w[0].1) / (w[1].0 - w[0].0)).collect();
-            let mut e = format!("({}) + ({})*(x - ({}))", num(ps[0].1), num(slopes[0]), num(ps[0].0));
+            let slopes: Vec<f64> = ps
+                .windows(2)
+                .map(|w| (w[1].1 - w[0].1) / (w[1].0 - w[0].0))
+                .collect();
+            let mut e = format!(
+                "({}) + ({})*(x - ({}))",
+                num(ps[0].1),
+                num(slopes[0]),
+                num(ps[0].0)
+            );
             for k in 1..slopes.len() {
                 let d = slopes[k] - slopes[k - 1];
                 if d != 0.0 {
-                    e.push_str(&format!(" + ({})*(abs(x - ({x})) + (x - ({x})))/2", num(d), x = num(ps[k].0)));
+                    e.push_str(&format!(
+                        " + ({})*(abs(x - ({x})) + (x - ({x})))/2",
+                        num(d),
+                        x = num(ps[k].0)
+                    ));
                 }
             }
             out.intent = GraphIntent {
@@ -344,13 +388,15 @@ pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent
                 if let (Some(b), Some(one)) = (curve.at(0.0), curve.at(1.0)) {
                     let m = one - b;
                     let straight = XS.iter().all(|&x| {
-                        curve
-                            .at(x)
-                            .is_some_and(|v| (v - (b + m * x)).abs() <= 1e-9 * v.abs().max((m * x).abs()).max(b.abs()).max(1e-12))
+                        curve.at(x).is_some_and(|v| {
+                            (v - (b + m * x)).abs()
+                                <= 1e-9 * v.abs().max((m * x).abs()).max(b.abs()).max(1e-12)
+                        })
                     });
                     if straight {
                         let tidy = |v: f64| tidy(v, &|c| (c - v).abs() <= 1e-12 * v.abs().max(1.0));
-                        intent.label = format!("{} → {}", intent.label, slope_intercept(tidy(m), tidy(b)));
+                        intent.label =
+                            format!("{} → {}", intent.label, slope_intercept(tidy(m), tidy(b)));
                     }
                 }
                 intent.expression = y;
@@ -602,7 +648,9 @@ fn find_point(f: &dyn Fn(f64, f64) -> Option<f64>) -> Option<(f64, f64)> {
                 }
             }
         }
-        let Some((mut x, mut y, _)) = best else { continue };
+        let Some((mut x, mut y, _)) = best else {
+            continue;
+        };
         let h = s * 1e-7;
         for _ in 0..60 {
             let (Some(g), Some((gx, gy))) = (f(x, y), grad(f, x, y, h)) else {
@@ -647,14 +695,20 @@ fn scan_home(
         let (dx, dy) = (2.0 * s / NX as f64, 2.0 * s * aspect / ny as f64);
         for j in 0..=ny {
             for i in 0..=NX {
-                grid[j * (NX + 1) + i] = f(x0 + i as f64 * dx, y0 + j as f64 * dy).unwrap_or(f64::NAN);
+                grid[j * (NX + 1) + i] =
+                    f(x0 + i as f64 * dx, y0 + j as f64 * dy).unwrap_or(f64::NAN);
             }
         }
         let segs = marching_squares(&grid, NX, ny, 0.0, x0, y0, dx, dy);
         if segs.is_empty() {
             continue;
         }
-        let (mut bx0, mut bx1, mut by0, mut by1) = (f64::INFINITY, f64::NEG_INFINITY, f64::INFINITY, f64::NEG_INFINITY);
+        let (mut bx0, mut bx1, mut by0, mut by1) = (
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        );
         for p in segs.as_chunks::<2>().0 {
             bx0 = bx0.min(p[0]);
             bx1 = bx1.max(p[0]);
@@ -671,7 +725,9 @@ fn scan_home(
         // ties go to the zoom nearest ±10
         let better = match best {
             None => true,
-            Some((b, bk, _, _)) => score > b + 0.02 || ((score - b).abs() <= 0.02 && near(k) < near(bk)),
+            Some((b, bk, _, _)) => {
+                score > b + 0.02 || ((score - b).abs() <= 0.02 && near(k) < near(bk))
+            }
         };
         if better {
             best = Some((score, k, (bx0, bx1, by0, by1), held));
@@ -702,13 +758,22 @@ pub fn native_home(input: &str, options: &GraphOptions) -> (f64, f64, Option<f64
         return (-10.0, 10.0, None);
     };
     let intent = n.intent;
-    if intent.contour == Some(ContourKind::Zero) && intent.bounds.is_none() && intent.bounds_error.is_none() {
-        let g = compile_graph_z(&intent.expression, options, options.angle_mode.or(Some(AngleMode::Rad)));
+    if intent.contour == Some(ContourKind::Zero)
+        && intent.bounds.is_none()
+        && intent.bounds_error.is_none()
+    {
+        let g = compile_graph_z(
+            &intent.expression,
+            options,
+            options.angle_mode.or(Some(AngleMode::Rad)),
+        );
         if let Some((lo, hi, cy)) = implicit_home(&|x, y| g.at(x, y), options.aspect()) {
             return (lo, hi, (cy != 0.0).then_some(cy));
         }
     }
-    let (lo, hi) = home_of(Some(intent.clone()), options, &|o| Some(build_intent(intent.clone(), o, true)));
+    let (lo, hi) = home_of(Some(intent.clone()), options, &|o| {
+        Some(build_intent(intent.clone(), o, true))
+    });
     (lo, hi, None)
 }
 
@@ -723,7 +788,8 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
     let mut z = vec![f64::NAN; (N + 1) * (N + 1)];
     for j in 0..=N {
         for i in 0..=N {
-            z[j * (N + 1) + i] = f(w.x.0 + i as f64 * dx, w.y.0 + j as f64 * dy).unwrap_or(f64::NAN);
+            z[j * (N + 1) + i] =
+                f(w.x.0 + i as f64 * dx, w.y.0 + j as f64 * dy).unwrap_or(f64::NAN);
         }
     }
     let finite: Vec<f64> = z.iter().copied().filter(|v| v.is_finite()).collect();
@@ -754,7 +820,16 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
                 continue;
             }
             let mut lowest = true;
-            for (di, dj) in [(-1i32, -1i32), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)] {
+            for (di, dj) in [
+                (-1i32, -1i32),
+                (0, -1),
+                (1, -1),
+                (-1, 0),
+                (1, 0),
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+            ] {
                 let v = g2((i as i32 + di) as usize, (j as i32 + dj) as usize);
                 if !(c < v) {
                     lowest = false;
@@ -769,12 +844,24 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
             let Some((x, y)) = newton2(&gradient, start, w, 2.0 * dx.max(dy)) else {
                 continue;
             };
-            let Some((gx, gy)) = gradient(x, y) else { continue };
+            let Some((gx, gy)) = gradient(x, y) else {
+                continue;
+            };
             if len2(gx, gy) * span > range * 1e-5 {
                 continue;
             }
             let k = span * 1e-3;
-            let (Some(c0), Some(xp), Some(xm), Some(yp), Some(ym), Some(pp), Some(pm), Some(mp), Some(mm)) = (
+            let (
+                Some(c0),
+                Some(xp),
+                Some(xm),
+                Some(yp),
+                Some(ym),
+                Some(pp),
+                Some(pm),
+                Some(mp),
+                Some(mm),
+            ) = (
                 f(x, y),
                 f(x + k, y),
                 f(x - k, y),
@@ -784,7 +871,8 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
                 f(x + k, y - k),
                 f(x - k, y + k),
                 f(x - k, y - k),
-            ) else {
+            )
+            else {
                 continue;
             };
             let fxx = (xp - 2.0 * c0 + xm) / (k * k);
@@ -809,7 +897,10 @@ pub fn surface_features(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> Vec<C
                 kind,
                 z: Some(if zv.abs() < range * 1e-12 { 0.0 } else { zv }),
             };
-            if !found.iter().any(|q| len2(q.x - p.x, q.y - p.y) <= span * 1e-5) {
+            if !found
+                .iter()
+                .any(|q| len2(q.x - p.x, q.y - p.y) <= span * 1e-5)
+            {
                 found.push(p);
             }
         }

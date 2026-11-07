@@ -72,6 +72,8 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `cheats.rs` | `?` / `help`: the cheat sheet where the tape is |
 | `line.rs` | the input line's side: decorations, squiggle, completion, the draft, the empty bar's rotating examples (and counting opens), the d/dt chips, the caret's blink |
 | `text_rules.rs` | typing rules: words to symbols, bracket pairing and wrapping, flattened pastes |
+| `stacked.rs` | stacked fractions and powers (Settings, off by default), pure: what's stacked, dead caret places, the `/` `^` `)` edits, selections and deletes that keep a stack whole |
+| `stacked_layout.rs` | how the line draws them (places, runs, bars, boxes, the slot caret, clicks), the ↑ ↓ key, and a typed root's one-stroke sign |
 | `drag.rs` | moving and widening the bar, remembered per monitor |
 | `keys.rs` | the in-bar keybind router (`settings.keybinds` over the Windows defaults); `close_front_sheet` for Ctrl+W |
 | `hotkey.rs` | the global shortcut: chord parsing, RegisterHotKey with retries, re-registration triggers, the "held by X" guess |
@@ -82,11 +84,16 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `bench.rs` | the dev bench: spec, steps, stats, the named pipe, memory counters |
 | `log.rs` | the log file, ms since process creation, the panic hook |
 | `settings_window.rs` | the settings window (drawn with render.rs; made on first open, dropped on close); `set_messages_hook` for the Messages page |
-| `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`) |
+| `graph.rs` | the graph panel under the composer (`graph x^2`, `plot …`, `graph a; b`): state, sampling, pan / zoom / orbit, the panel's fields |
+| `graph_view.rs` | the graph panel drawn (the plot's base pass cached as a bitmap, the pointer's pass over it) and the pointer over it |
+| `graph3d.rs` | the graph's 3D view as maths: the cube's projection, clipping, the depth-sorted scene, the patch under the pointer |
+| `graph_settings.rs` | the graph's settings (the head's wrench): `graphPrefs` in settings.json and the per-graph controls |
 | `systems.rs` | `sys2`…`sys5`: equation rows under the composer, solved live, saved as one row |
 | `typst_row.rs` | the typeset maths row under the composer |
 | `commands.rs` | the word commands that aren't maths (`periodic`, `idt …`, `constants`, `games` and a game's name, `message`, `tutorial`, `skip`, `hello`): their words in the answer slot, ↵ runs them, the games list above the bar |
-| `sheets.rs` | the periodic table and identity sheets, each a no-activate window beside the bar; `close_front` for Ctrl+W |
+| `sheets.rs` | the periodic table and the formula sheets, no-activate windows beside the bar: the sheets' one window a page at a time (back / forward, Open in New Window), typeset rows, the hover box and copy on press, the filter field; `close_front` for Ctrl+W, `bar_key` for Ctrl+[ / Ctrl+], `debug` for the pipe's `sheet…` commands |
+| `sheet_page.rs` | a formula sheet's page, pure (tested): which sheet a page shows, the Typst documents its cells are, the filter, the layout, what a point boxes and copies, a window's pages |
+| `sheets_typst.rs` | the formula sheets' cells compiled on the Typst thread before a page shows, drawn as Direct2D geometry in the theme's ink |
 | `messaging.rs` | messages through the relay: the `message` line, the cards under the bar, the name; registers settings' Messages page (`set_messages_hook`) |
 | `threads.rs` | message threads under the cards (`messages`, `messages <name>`): the history (`messages.json`), the list, a thread's lines with Copy / Save / Retry, its reply line and 📎, Trust New Key and the safety code; the one-time privacy notice |
 | `share_drop.rs` | the bar as an OLE drop target once messaging is in use: the hint while files are dragged over the bar or a thread |
@@ -102,6 +109,7 @@ Each later feature lives in its own file; touch app.rs, model.rs and window.rs o
 | `edge.rs` | the edge tools over the composer's corners (settings, deg · a/b · sf · ×10ⁿ, clear) and their tips |
 | `exponent.rs` | Ctrl+E's lasting exponent form (`settings.exponentMode`, 3,000 → 3 × 10³) and Ctrl+Shift+E's other forms: the native app's own keybinds (`exponent`, `forms`) beside the core's, listed in Settings › Keybinds |
 | `word_tip.rs` | the pointer over the line names its units, functions and constants over the word (the core's `word_names`), and `ans` (typed or faint) the last answer; asked of the engine only while the pointer is on the line |
+| `working.rs` | the working, Ctrl+W (`working`, a native action; on a line without working Ctrl+W still closes the front sheet): the core's steps asked on `Lane::Working` once the line rests, the hint under the answer, the panel of typeset steps (a click copies one) |
 | `later.rs` | keyed one-shot timers that run a closure on the UI thread |
 | `effects.rs`, `effects/` | the easter eggs, each in its own short-lived layered window |
 | `games/` | the native games, each in a window and a process of its own (`qcalc.exe --game <kind>`, games/README.md): `open(kind)`, `is_open`, `command`/`hint` for the bar; online play over relay.rs |

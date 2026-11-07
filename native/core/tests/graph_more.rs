@@ -20,7 +20,10 @@ fn opened(input: &str, aspect: f64, surface: bool) -> GraphResult {
 }
 
 fn points(r: &GraphResult) -> Vec<(CriticalKind, f64, f64)> {
-    r.critical_points.iter().map(|c| (c.kind, c.x, c.y)).collect()
+    r.critical_points
+        .iter()
+        .map(|c| (c.kind, c.x, c.y))
+        .collect()
 }
 
 fn has(r: &GraphResult, kind: CriticalKind, x: f64, y: f64) -> bool {
@@ -44,7 +47,11 @@ fn a_sideways_parabola_in_latex_is_framed_whole() {
     // zoomed out to where it bends (the default ±10 shows a sliver at x = 0)
     assert!(r.domain.1 - r.domain.0 > 1e5, "{:?}", r.domain);
     assert!(r.domain.0 < 0.0 && r.domain.1 > 1e5);
-    assert!(has(&r, CriticalKind::VerticalTangent, 0.0, 0.0), "{:?}", points(&r));
+    assert!(
+        has(&r, CriticalKind::VerticalTangent, 0.0, 0.0),
+        "{:?}",
+        points(&r)
+    );
 }
 
 #[test]
@@ -61,7 +68,11 @@ fn implicit_curves_list_their_turns_and_intercepts() {
     // far from the origin and small: found, and the window centred on it
     let away = opened("graph (x-3)^2+(y-50)^2=4", PANEL, false);
     assert!(segments(&away) > 50);
-    assert!(away.y_scale.min < 48.0 && away.y_scale.max > 52.0, "{:?}", away.y_scale);
+    assert!(
+        away.y_scale.min < 48.0 && away.y_scale.max > 52.0,
+        "{:?}",
+        away.y_scale
+    );
     assert!(has(&away, CriticalKind::Max, 3.0, 52.0));
 
     let cubic = opened("graph y^3 - 3y = x", PANEL, false);
@@ -100,7 +111,11 @@ fn point_slope_and_other_linear_equations_are_lines() {
     assert_eq!(r.y_at(4.0), Some(0.25));
 
     // not linear in y: stays implicit
-    assert!(opened("graph x^2 + y^2 = 4", PANEL, false).contours.is_some());
+    assert!(
+        opened("graph x^2 + y^2 = 4", PANEL, false)
+            .contours
+            .is_some()
+    );
 }
 
 #[test]
@@ -112,10 +127,18 @@ fn lines_through_points() {
     assert_eq!(r.y_at(2.0), Some(3.5), "interpolated between the points");
     assert!(has(&r, CriticalKind::YIntercept, 0.0, 0.5));
 
-    for input in ["graph (1,2) slope 3", "graph slope 3 through (1, 2)", "graph m = 3, (1, 2)"] {
+    for input in [
+        "graph (1,2) slope 3",
+        "graph slope 3 through (1, 2)",
+        "graph m = 3, (1, 2)",
+    ] {
         let r = opened(input, PANEL, false);
         assert_eq!(r.error, None, "{input}");
-        assert!(r.intent.label.starts_with("y = 3x − 1"), "{input}: {}", r.intent.label);
+        assert!(
+            r.intent.label.starts_with("y = 3x − 1"),
+            "{input}: {}",
+            r.intent.label
+        );
         assert_eq!(r.y_at(2.0), Some(5.0), "{input}");
     }
 
@@ -132,10 +155,17 @@ fn lines_through_points() {
     assert_eq!(r.y_at(3.0), Some(3.0));
     assert_eq!(r.y_at(5.0), None);
     assert_eq!(
-        r.critical_points.iter().filter(|c| c.kind == CriticalKind::Point).count(),
+        r.critical_points
+            .iter()
+            .filter(|c| c.kind == CriticalKind::Point)
+            .count(),
         4
     );
-    assert!(opened("graph (0,0), (1,3), (1,4)", PANEL, false).error.is_some());
+    assert!(
+        opened("graph (0,0), (1,3), (1,4)", PANEL, false)
+            .error
+            .is_some()
+    );
 
     // a point alone isn't a line, and calls stay calls
     assert!(opened("graph (1, 2)", PANEL, false).error.is_some());
@@ -148,7 +178,10 @@ fn surfaces_have_critical_points_and_a_grid() {
     assert_eq!(r.error, None);
     let saddle = &r.critical_points;
     assert_eq!(saddle.len(), 1, "{:?}", points(&r));
-    assert_eq!((saddle[0].kind, saddle[0].x, saddle[0].y, saddle[0].z), (CriticalKind::Saddle, 0.0, 0.0, Some(0.0)));
+    assert_eq!(
+        (saddle[0].kind, saddle[0].x, saddle[0].y, saddle[0].z),
+        (CriticalKind::Saddle, 0.0, 0.0, Some(0.0))
+    );
     let g = r.surface.as_ref().expect("a grid");
     assert_eq!(g.z.len(), (g.nx + 1) * (g.ny + 1));
     assert_eq!((g.z_lo, g.z_hi), (-100.0, 100.0));

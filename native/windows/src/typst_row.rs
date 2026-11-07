@@ -240,7 +240,7 @@ struct Drawn {
     clips: Vec<usize>,
 }
 
-struct Built {
+pub(crate) struct Built {
     items: Vec<Drawn>,
     clips: Vec<ID2D1PathGeometry>,
 }
@@ -371,8 +371,7 @@ fn stroke_style(
     }
 }
 
-fn build(gfx: &Gfx, t: &Typeset) -> Built {
-    let p = &t.paths;
+pub(crate) fn build(gfx: &Gfx, p: &TypstPaths) -> Built {
     let clips = p
         .clips
         .iter()
@@ -448,7 +447,12 @@ thread_local! {
     static PICTURE: RefCell<Option<Picture>> = const { RefCell::new(None) };
 }
 
-fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Built, ink: Color) {
+pub(crate) fn draw_items(
+    rt: &ID2D1RenderTarget,
+    brush: &ID2D1SolidColorBrush,
+    built: &Built,
+    ink: Color,
+) {
     // SAFETY: inside the target's BeginDraw/EndDraw; layers are pushed and popped here
     unsafe {
         for item in &built.items {
@@ -492,7 +496,7 @@ fn draw_items(rt: &ID2D1RenderTarget, brush: &ID2D1SolidColorBrush, built: &Buil
 
 /// The page drawn at `s` into a bitmap the bar's target can copy.
 fn picture(c: &Canvas, t: &Typeset, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))> {
-    let built = build(c.gfx, t);
+    let built = build(c.gfx, &t.paths);
     let size = D2D_SIZE_F {
         width: (t.paths.width_pt * s).ceil().max(1.0),
         height: (t.paths.height_pt * s).ceil().max(1.0),
@@ -523,6 +527,16 @@ fn picture(c: &Canvas, t: &Typeset, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))>
         brt.EndDraw(None, None).ok()?;
         Some((brt.GetBitmap().ok()?, (size.width, size.height)))
     }
+}
+
+/// Any page of paths drawn at `s` into a bitmap the bar's target can copy (working.rs's steps).
+pub fn bitmap(c: &Canvas, paths: &Arc<TypstPaths>, s: f32) -> Option<(ID2D1Bitmap, (f32, f32))> {
+    let t = Typeset {
+        paths: paths.clone(),
+        doc: String::new(),
+        stale: false,
+    };
+    picture(c, &t, s)
 }
 
 /// The row in `r`: the page centred at the top, shrunk to fit, in `--ink` (40% while stale).

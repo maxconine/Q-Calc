@@ -3,7 +3,7 @@
 //! bottom right, over the composer's corners, shown while the pointer is on the composer (its line or the background
 //! that drags, which Windows reports as non-client). Each is 11 pt medium, muted and opaque (an active toggle in the
 //! answer's colour), with a hover and press fill, and takes clicks rather than starting a drag; its tip, an ink pill,
-//! after a 450 ms rest; the tip ends with the action's key, from the user's keybinds ("Degrees · click for
+//! after a 1.5 s rest; the tip ends with the action's key, from the user's keybinds ("Degrees · click for
 //! radians · Ctrl+D").
 
 use crate::keys::{KeyAction, Keybinds};
@@ -141,7 +141,8 @@ mod ui {
     const H: f32 = 23.0;
     /// not in the windows crate's Controls module
     pub const WM_NCMOUSELEAVE: u32 = 0x02A2;
-    const TIP_MS: u32 = 450;
+    // 1.5 s every time, not the other tips' short wait (BarView.swift)
+    const TIP_MS: u32 = 1500;
 
     thread_local! {
         /// the gear's icon font, made at the first hover

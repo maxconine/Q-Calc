@@ -81,6 +81,13 @@ const MUTEX: &str = "Local\\com.maxconine.qcalc.native";
 
 thread_local! {
     static APP: RefCell<Option<App>> = const { RefCell::new(None) };
+    /// the cursor WM_SETCURSOR last set over the bar, for the e2e suite: a runner with no mouse shows none
+    static CURSOR: std::cell::Cell<&'static str> = const { std::cell::Cell::new("") };
+}
+
+/// The cursor the bar last set ("hand", "ibeam", "arrow"; "" before any).
+pub fn last_cursor() -> &'static str {
+    CURSOR.with(|c| c.get())
 }
 
 /// Runs `f` on the app unless it is missing or already borrowed (a re-entrant message).
@@ -741,7 +748,10 @@ impl App {
             }
             WM_KEYDOWN | WM_SYSKEYDOWN => {
                 let vk = wp.0 as u32;
+                // the bench pipe's `key` can say which modifiers are down (bench.rs)
+                let mods = || bench::forced_mods().unwrap_or_else(mods);
                 if crate::effects::key_down(self, vk, lp.0)
+                    || crate::sheets::bar_key(vk, mods())
                     || crate::commands::key_down(self, vk, mods())
                 {
                     return Some(LRESULT(0));
@@ -816,6 +826,7 @@ impl App {
             WM_MOUSEMOVE => {
                 let (x, y) = self.dips(lp);
                 crate::commands::pointer(self, Some((x, y)));
+                crate::working::mouse_move(self, x, y);
                 if crate::systems::mouse_move(self, x, y) || crate::graph::mouse_move(self, x, y) {
                     return Some(LRESULT(0));
                 }
@@ -825,6 +836,22 @@ impl App {
                     self.model.field.set_caret_utf16(pos, true);
                     self.model.touch();
                 }
+            }
+            // the graph's plot: a right-drag orbits (and opens no menu), a middle-drag pans (graph.rs)
+            windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONDOWN
+            | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN => {
+                let (x, y) = self.dips(lp);
+                crate::graph::press(
+                    self,
+                    x,
+                    y,
+                    msg == windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONDOWN,
+                );
+            }
+            windows::Win32::UI::WindowsAndMessaging::WM_RBUTTONUP
+            | windows::Win32::UI::WindowsAndMessaging::WM_MBUTTONUP => {
+                let (x, y) = self.dips(lp);
+                crate::graph::mouse_up(self, x, y);
             }
             WM_LBUTTONUP => {
                 let (x, y) = self.dips(lp);
@@ -839,6 +866,7 @@ impl App {
             }
             // a message thread under the bar scrolls (threads.rs)
             WM_MOUSEWHEEL if crate::threads::wheel(self, wp, lp) => {}
+            WM_MOUSEWHEEL if crate::working::wheel(self, wp, lp) => {}
             WM_MOUSEWHEEL | WM_MOUSEHWHEEL => {
                 if !crate::graph::wheel(self, msg == WM_MOUSEHWHEEL, wp, lp) {
                     if msg != WM_MOUSEWHEEL {
@@ -853,6 +881,7 @@ impl App {
                 }
                 crate::commands::pointer(self, None);
                 crate::graph::leave(self);
+                crate::working::leave(self);
             }
             // the background that drags is non-client: the edge tools show over it too (edge.rs)
             windows::Win32::UI::WindowsAndMessaging::WM_NCMOUSEMOVE => {
@@ -877,14 +906,20 @@ impl App {
                 let (x, y) = (pt.x as f32 / s, pt.y as f32 / s);
                 let panel = crate::graph::cursor(self, x, y)
                     .or_else(|| crate::systems::cursor(self, x, y))
+                    .or_else(|| crate::working::cursor(self, x, y))
                     .or_else(|| crate::hover::cursor(self, x, y));
                 let over = self.bar.layout.field.contains(x, y);
+                let id = panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW });
+                let name = match id {
+                    _ if id == IDC_IBEAM => "ibeam",
+                    _ if id == IDC_ARROW => "arrow",
+                    _ if id == windows::Win32::UI::WindowsAndMessaging::IDC_HAND => "hand",
+                    _ => "other",
+                };
+                CURSOR.with(|c| c.set(name));
                 // SAFETY: system cursors
                 unsafe {
-                    if let Ok(c) = LoadCursorW(
-                        None,
-                        panel.unwrap_or(if over { IDC_IBEAM } else { IDC_ARROW }),
-                    ) {
+                    if let Ok(c) = LoadCursorW(None, id) {
                         SetCursor(Some(c));
                     }
                 }
@@ -905,6 +940,7 @@ impl App {
             || crate::commands::click(self, x, y)
             || crate::systems::click(self, x, y, double, mods().shift)
             || crate::graph::click(self, x, y, double)
+            || crate::working::click(self, x, y)
         {
             return;
         }
@@ -1110,6 +1146,7 @@ impl App {
         self.model.tape_open = false;
         self.model.hint = None;
         crate::commands::will_hide(&mut self.model);
+        crate::working::will_hide(&mut self.model);
         self.model.touch();
         self.hidden_at = Some(Instant::now());
         if self.store.moved_or_widened() {
@@ -1129,6 +1166,7 @@ impl App {
             return;
         }
         crate::answer::trim_hidden(self);
+        crate::graph::release(self);
         self.bar.surface.release();
         self.gfx.drop_flip_device();
         self.engine.release();
@@ -1358,6 +1396,7 @@ impl App {
             }
             "key" => {
                 let vk = spec.vk.unwrap_or(0) as usize;
+                bench::force_mods(spec.text.as_deref());
                 // SAFETY: as above
                 let _ =
                     unsafe { PostMessageW(Some(self.bar.hwnd), WM_KEYDOWN, WPARAM(vk), LPARAM(1)) };
@@ -1379,11 +1418,12 @@ impl App {
                     "graph": crate::graph::debug(&self.model), "systems": crate::systems::debug(&self.model),
                     "slot": self.model.command.as_ref().map(|c| c.message.clone()), "sheets": crate::sheets::open_keys(),
                     "game": crate::games::is_open(), "settingsOpen": settings_window::is_open(),
-                    "cheats": crate::cheats::height(&self.model) > 0.0, "gamesList": crate::commands::games_shown(&self.model),
+                    "cheats": self.model.tape.help, "gamesList": crate::commands::games_shown(&self.model),
                     "tour": self.model.tour.line.as_ref().map(|l| l.text.clone()),
                     "caret": self.model.field.to_utf16(self.model.field.caret()),
                     "selectionAnswer": self.model.line.selection_answer,
                     "shown": crate::answer::shown_answer(&self.model),
+                    "completion": self.model.line.completion,
                 }));
             }
             "mem" => {
