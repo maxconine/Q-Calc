@@ -534,7 +534,11 @@ fn an_integral_in_words() {
         assert_eq!(at(line), want, "{line}");
     }
     // bounds in words are still the numeric integral
-    assert!(at("integral of x^2 from 0 to 1").starts_with("0.3333"), "{}", at("integral of x^2 from 0 to 1"));
+    assert!(
+        at("integral of x^2 from 0 to 1").starts_with("0.3333"),
+        "{}",
+        at("integral of x^2 from 0 to 1")
+    );
 }
 
 #[test]
@@ -581,10 +585,7 @@ fn an_integral_by_parts_or_substitution() {
         ..EvaluateOptions::default()
     };
     assert_eq!(evaluate_line("∫ x sin(x) dx", &deg).display, "");
-    assert_eq!(
-        evaluate_line("∫ x e^x dx", &deg).display,
-        "x e^x - e^x + C"
-    );
+    assert_eq!(evaluate_line("∫ x e^x dx", &deg).display, "x e^x - e^x + C");
 }
 
 #[test]
@@ -729,7 +730,10 @@ mod working {
         let shown = qcalc_core::evaluate::evaluate_line(t, o).display;
         let last = &s.last().unwrap().plain;
         assert!(last.ends_with(&shown), "{t}: {last} vs {shown}");
-        assert!(s.iter().all(|x| !x.math.is_empty() && !x.why.is_empty()), "{t}");
+        assert!(
+            s.iter().all(|x| !x.math.is_empty() && !x.why.is_empty()),
+            "{t}"
+        );
         s
     }
 
@@ -762,7 +766,11 @@ mod working {
         let s = ends_in_answer("integral of x e^x", &o);
         assert_eq!(whys(&s)[0], "integrate by parts: u = x, dv = e^x dx");
         let s = ends_in_answer("∫ 2x cos(x^2) dx", &o);
-        assert!(whys(&s)[0].starts_with("substitute u = x^2"), "{:?}", whys(&s));
+        assert!(
+            whys(&s)[0].starts_with("substitute u = x^2"),
+            "{:?}",
+            whys(&s)
+        );
         let s = ends_in_answer("∫ x^2 + 3x - 1/x dx", &o);
         assert_eq!(whys(&s)[0], "sum rule: integrate term by term");
         assert_eq!(s.len(), 5);
@@ -777,7 +785,13 @@ mod working {
         let s = ends_in_answer("3(x-1) = x + 5", &o);
         assert_eq!(
             whys(&s),
-            ["the equation", "expand both sides", "subtract x and add 3 on both sides", "divide both sides by 2", "the answer"]
+            [
+                "the equation",
+                "expand both sides",
+                "subtract x and add 3 on both sides",
+                "divide both sides by 2",
+                "the answer"
+            ]
         );
         let s = ends_in_answer("x^2 - 5x + 6 = 0", &o);
         assert!(whys(&s)[1].starts_with("quadratic formula, a = 1, b = -5, c = 6"));
@@ -819,7 +833,17 @@ mod working {
     #[test]
     fn nothing_else_has_working() {
         let o = rad();
-        for t in ["2+2", "sin(30)", "", "hello", "x^3 = 8", "d/dx", "∫ e^(x^2) dx", "5 ft + 3 in", "graph x^2"] {
+        for t in [
+            "2+2",
+            "sin(30)",
+            "",
+            "hello",
+            "x^3 = 8",
+            "d/dx",
+            "∫ e^(x^2) dx",
+            "5 ft + 3 in",
+            "graph x^2",
+        ] {
             assert!(steps(t, &o).is_none(), "{t}");
         }
         assert!(step_document("x^2").contains("$ x^2 $"));
@@ -831,14 +855,25 @@ mod working {
 fn a_converted_amount_notes_its_rate() {
     use qcalc_core::golden::Outcome;
     use serde_json::json;
-    let page = r#"{"base":"EUR","rates":{"GBP":0.8721,"JPY":171.2,"USD":1.1224},"date":"2026-11-05"}"#;
+    let page =
+        r#"{"base":"EUR","rates":{"GBP":0.8721,"JPY":171.2,"USD":1.1224},"date":"2026-11-05"}"#;
     let now = 1_793_957_056_000.0;
-    let note = |text: &str| match qcalc_core::app::golden::dispatch("lib/currency", "rateNote", &[json!(text), json!(page), json!(now)]) {
+    let note = |text: &str| match qcalc_core::app::golden::dispatch(
+        "lib/currency",
+        "rateNote",
+        &[json!(text), json!(page), json!(now)],
+    ) {
         Some(Outcome::Answer(v)) => v.as_str().map(str::to_string),
         other => panic!("{other:?}"),
     };
-    assert_eq!(note("100 usd in eur").as_deref(), Some("1 USD = 0.89095 EUR · ECB rate, Nov 5"));
-    assert_eq!(note("100 usd to gbp").as_deref(), Some("1 USD = 0.777 GBP · ECB rate, Nov 5"));
+    assert_eq!(
+        note("100 usd in eur").as_deref(),
+        Some("1 USD = 0.89095 EUR · ECB rate, Nov 5")
+    );
+    assert_eq!(
+        note("100 usd to gbp").as_deref(),
+        Some("1 USD = 0.777 GBP · ECB rate, Nov 5")
+    );
     assert_eq!(note("2 + 2"), None);
 }
 

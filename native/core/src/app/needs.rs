@@ -220,13 +220,16 @@ pub fn answer_phrase(
     if let Some(zone) = time_zone.filter(|z| crate::phrases::time_zone(z).is_some()) {
         options["timeZone"] = json!(zone);
     }
-    let Some(a) = call("engine/phrases", "answerPhrase", &[json!(expr), options]).filter(|a| !a.is_null())
+    let Some(a) =
+        call("engine/phrases", "answerPhrase", &[json!(expr), options]).filter(|a| !a.is_null())
     else {
         // native only: currency lines the web leaves blank (`$5 + €3`, `$5 * 3 to eur`, `usd to eur`)
         let table = crate::phrases::currency::CurrencyRates::from_json(rates);
-        return crate::phrases::native_money::answer(expr, table.as_ref(), sig_figs).map(|p| PhraseAnswer {
-            display: p.display,
-            n: p.n,
+        return crate::phrases::native_money::answer(expr, table.as_ref(), sig_figs).map(|p| {
+            PhraseAnswer {
+                display: p.display,
+                n: p.n,
+            }
         });
     };
     Some(PhraseAnswer {

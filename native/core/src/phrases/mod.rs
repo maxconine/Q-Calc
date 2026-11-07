@@ -16,8 +16,8 @@ pub mod golden;
 pub mod jsdate;
 pub mod live;
 pub mod money;
-pub mod native_money;
 pub mod native_eval;
+pub mod native_money;
 pub mod rates;
 pub mod time;
 
