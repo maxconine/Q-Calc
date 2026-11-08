@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { ansWrittenOut } from './chain'
 import { TYPST_PREAMBLE, copiedEquation, previewMath, toTypstMath, typstAnswer, typstDocument, typstPreviewUseful } from './typstMath'
 
 describe('copiedEquation', () => {
@@ -150,6 +151,12 @@ describe('matrices', () => {
 })
 
 describe('typstPreviewUseful', () => {
+  it('shows a line through ans once the number is written out', () => {
+    expect(typstPreviewUseful('ans * (10^5)/30')).toBe(false)
+    expect(typstPreviewUseful(ansWrittenOut('ans * (10^5)/30', '3333.33'))).toBe(true)
+    expect(previewMath(ansWrittenOut('ans * (10^5)/30', '3333.33'))).toBe('3333.33 dot (10 ^ 5) / 30')
+  })
+
   it.each([
     '1/3 + 2/5', 'x^2 - 5x + 6 = 0', 'integral(x^2, 0, 1)', 'sum n, n=1..9', '[1 2; 3 4]', 'det([1 2; 3 4])',
     'inv([1 2; 3 4])', 'sqrt(2)', 'nthRoot(27, 3)', 'sin^-1(0.5)', 'abs(-3)', 'sin(x)', 'cos(pi/3)',

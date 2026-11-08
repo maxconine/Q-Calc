@@ -86,8 +86,9 @@ pub fn is_matrix_quantity(q: Option<&str>) -> bool {
 }
 
 pub fn is_complex_quantity(q: Option<&str>) -> bool {
-    static RE: crate::jsre::Lazy =
-        crate::jsre::Lazy::new(|| crate::jsre::js(r"^-?[\d.e+-]+ [+-] [\d.e+-]+i$", "i"));
+    static RE: crate::jsre::Lazy = crate::jsre::Lazy::new(|| {
+        crate::jsre::js(r"^\(?-?[\d.e+-]+ [+-] [\d.e+-]+[ij]\)?(?: \S+)?$", "i")
+    });
     q.is_some_and(|q| crate::jsre::test(&RE, q))
 }
 

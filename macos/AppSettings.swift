@@ -80,6 +80,7 @@ final class AppSettings: ObservableObject {
     static let shareUsageKey = "qcalc.shareUsage"
     static let copyUnitlessKey = "qcalc.copyUnitless"
     static let spaceThousandsKey = "qcalc.spaceThousands"
+    static let stackedMathKey = "qcalc.stackedMath"
     static let analyticsKey = "qcalc.analytics"
     static let gameSavesKey = "qcalc.gameSaves"
     static let hotKeyKey = "qcalc.hotkey"
@@ -130,6 +131,8 @@ final class AppSettings: ObservableObject {
     // copied answers leave their unit behind; on unless turned off
     @Published private(set) var copyUnitless: Bool
     @Published private(set) var spaceThousands: Bool
+    /// native only: `/` and `^` typed stack as in a graphing calculator (StackedMath.swift); off by default
+    @Published private(set) var stackedMath: Bool
     // what the user picked; activeHotKey is what actually got registered
     @Published private(set) var hotKey: GlobalHotKey
     @Published private(set) var activeHotKey: GlobalHotKey?
@@ -170,6 +173,7 @@ final class AppSettings: ObservableObject {
         shareUsage = UserDefaults.standard.object(forKey: Self.shareUsageKey) as? Bool ?? true
         copyUnitless = UserDefaults.standard.object(forKey: Self.copyUnitlessKey) as? Bool ?? true
         spaceThousands = UserDefaults.standard.bool(forKey: Self.spaceThousandsKey)
+        stackedMath = UserDefaults.standard.bool(forKey: Self.stackedMathKey)
         hotKey = GlobalHotKey.stored(UserDefaults.standard.string(forKey: Self.hotKeyKey))
         keybinds = KeyActions.sanitize(UserDefaults.standard.dictionary(forKey: Self.keybindsKey) ?? [:])
         onboarding = Self.loadOnboarding()
@@ -481,6 +485,13 @@ final class AppSettings: ObservableObject {
         guard value != typstCopy else { return }
         typstCopy = value
         UserDefaults.standard.set(value, forKey: Self.typstCopyKey)
+        if notifyWeb { notifySettingsChanged() }
+    }
+
+    func setStackedMath(_ value: Bool, notifyWeb: Bool) {
+        guard value != stackedMath else { return }
+        stackedMath = value
+        UserDefaults.standard.set(value, forKey: Self.stackedMathKey)
         if notifyWeb { notifySettingsChanged() }
     }
 

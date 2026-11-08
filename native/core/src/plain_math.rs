@@ -8,7 +8,7 @@ use crate::jsre::{self, Lazy};
 use crate::parens::fill_parens;
 use crate::scientific::{ScientificContext, eval_scientific, preprocess::rewrite_typeset_mul};
 use crate::types::{DefaultUnits, Value};
-use crate::{latex, precise, typst_input, units};
+use crate::{complex_line, latex, precise, typst_input, units};
 
 thread_local! {
     // the "spaces group thousands" setting, for the sheet being worked out; off unless evaluate_sheet turns it on
@@ -251,9 +251,90 @@ pub fn normalize_math_text(text: &str) -> String {
     } else {
         typst
     };
-    fill_parens(&fold_powers_of_ten(&strip_thousands(&rewrite_typeset_mul(
-        &ascii,
+    group_angle_quotients(&fill_parens(&fold_powers_of_ten(&strip_thousands(
+        &rewrite_typeset_mul(&ascii),
     ))))
+}
+
+/// native only: a quotient with an angle unit after it is that many of the unit inside a trig call, whatever it's
+/// made of: `cos(π/4 rad)` is `cos((π/4) rad)`. Left alone, π's `(pi)` reads `π / (4 rad)`, which is no angle.
+fn group_angle_quotients(text: &str) -> String {
+    static TRIG: Lazy = Lazy::new(|| {
+        js(
+            r"(?<![A-Za-z_])(?:sin|cos|tan|csc|sec|cot)(?:\^\d+|[²³])?\s*\(",
+            "i",
+        )
+    });
+    let mut out = String::new();
+    let mut from = 0;
+    while let Ok(Some(m)) = TRIG.find_from_pos(text, from) {
+        let open = m.end() - 1;
+        let mut depth = 0;
+        let close = text[open..].char_indices().find_map(|(i, c)| {
+            depth += i32::from(c == '(') - i32::from(c == ')');
+            (depth == 0).then_some(open + i)
+        });
+        let Some(close) = close else { break };
+        out.push_str(&text[from..m.end()]);
+        out.push_str(&group_angle_terms(&group_angle_quotients(
+            &text[m.end()..close],
+        )));
+        from = close;
+    }
+    out.push_str(&text[from..]);
+    out
+}
+
+// each term of a trig argument, split at its top-level + and -
+fn group_angle_terms(arg: &str) -> String {
+    static UNIT_AFTER: Lazy = Lazy::new(|| {
+        js(
+            r"^(\s*)(.*[^A-Za-z_\s/*^(])\s*(°|deg(?:rees?)?|rad(?:ians?)?|grad(?:ians?)?)\s*$",
+            "i",
+        )
+    });
+    let term = |t: &str| match UNIT_AFTER.captures(t).ok().flatten() {
+        Some(c) if has_top_level_slash(jsre::group(&c, 2)) => format!(
+            "{}({}) {}",
+            jsre::group(&c, 1),
+            jsre::group(&c, 2),
+            jsre::group(&c, 3)
+        ),
+        _ => t.to_string(),
+    };
+    let (mut out, mut from, mut depth, mut prev) = (String::new(), 0, 0, None::<char>);
+    let mut before_prev = None::<char>;
+    for (i, c) in arg.char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => depth -= 1,
+            '+' | '-' | '−' if depth == 0 => {
+                let binary = prev.is_some_and(|p| !"*/^(,+-−×·".contains(p));
+                let exponent = matches!(prev, Some('e' | 'E'))
+                    && before_prev.is_some_and(|p| p.is_ascii_digit() || p == '.');
+                if binary && !exponent {
+                    out.push_str(&term(&arg[from..i]));
+                    out.push(c);
+                    from = i + c.len_utf8();
+                }
+            }
+            _ => {}
+        }
+        if !c.is_whitespace() {
+            before_prev = prev;
+            prev = Some(c);
+        }
+    }
+    out.push_str(&term(&arg[from..]));
+    out
+}
+
+fn has_top_level_slash(s: &str) -> bool {
+    let mut depth = 0;
+    s.chars().any(|c| {
+        depth += i32::from(c == '(') - i32::from(c == ')');
+        depth == 0 && c == '/'
+    })
 }
 
 /// Everything `tryPlainMath` reads besides the text.
@@ -278,6 +359,16 @@ pub fn try_plain_math(text: &str, ctx: &PlainContext) -> Option<Value> {
     }
     let filled = normalize_math_text(&src);
     let sci = &ctx.sci;
+    // native only: `j`, polar and a complex number with a unit
+    let functions: Vec<String> = sci.functions.keys().cloned().collect();
+    if let Some(line) = complex_line::rewrite(&filled, &sci.variables, &functions, sci.angle_mode) {
+        let value = complex_line::evaluate(&line, sci)?;
+        return Some(if value.complex.is_some() || line.polar {
+            complex_line::styled(value, &line)
+        } else {
+            value
+        });
+    }
     // a known variable is never read as a unit symbol; a plain previous answer takes a unit the way a variable does
     let has_ans = sci.ans.is_some() && jsre::test(&ANS_WORD, &filled);
     let mut vars = sci.variables.clone();
@@ -322,7 +413,15 @@ pub fn try_plain_math(text: &str, ctx: &PlainContext) -> Option<Value> {
     if has_nlp_words(&cleaned) && !latex::looks_like_latex(&src) {
         return None;
     }
-    let value = eval_scientific(&filled, sci)?;
+    let Some(value) = eval_scientific(&filled, sci) else {
+        return complex_line::fallback(&filled, sci);
+    };
+    // native only: a function the engine's own scope only reads on the real line (`sin(i)`)
+    if value.text.as_deref() == Some("undefined")
+        && let Some(answer) = complex_line::fallback(&filled, sci)
+    {
+        return Some(answer);
+    }
     Some(precise::truthful(&filled, value, sci))
 }
 

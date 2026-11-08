@@ -61,15 +61,34 @@ extension BarModel {
         if i + 1 < lines.count { sysFocus = i + 1 } else { commitSystem() }
     }
 
+    /// ⌘⌫ in an equation (native only): empties it, or, already empty, closes the system for a fresh bar
+    func sysDeleteLine(_ i: Int) {
+        guard let lines = sysLines, lines.indices.contains(i) else { return }
+        if lines[i].trimmingCharacters(in: .whitespaces).isEmpty {
+            closeSystem()
+            text = ""
+        } else {
+            setSysLine(i, "")
+        }
+    }
+
     func solveSystemLive() {
         guard let lines = sysLines else { return }
         let units = settings.defaultUnits, angle = angleRad ? "rad" : "deg"
+        let fractions = settings.fractionMode, figures = Int(options.sigFigs)
         engine.submit(.forms, { [lines] engine -> (String, Bool)? in
             guard let json = try? engine.callJson(module: "engine/system", function: "solveLive",
                                                  argsJson: Self.json([lines, units, angle])),
                   let o = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
                   let display = o["display"] as? String else { return nil }
-            return (display, (o["message"] as? Bool) == true)
+            let message = (o["message"] as? Bool) == true
+            // native only: fractions only with fraction form on
+            guard !fractions, !message,
+                  let plain = try? engine.callJson(module: "lib/answer", function: "systemDecimals", argsJson: Self.json([display, figures])),
+                  let decimals = try? JSONSerialization.jsonObject(with: Data(plain.utf8), options: [.fragmentsAllowed]) as? String else {
+                return (display, message)
+            }
+            return (decimals, message)
         }) { [weak self] answer in
             guard let self, self.sysLines == lines else { return }
             self.sysAnswer = answer.map { SysAnswer(display: $0.0, message: $0.1) }
@@ -183,7 +202,13 @@ struct SystemPanel: View {
                     .focused($focused, equals: i)
                     .onSubmit { model.sysEnter(i) }
                     .arrowKeys(up: {
-                        if i == 0 { model.focusField?() } else { focused = i - 1 }
+                        if i == 0 {
+                            // after SwiftUI has let go of the field, or it takes the keys back off the bar
+                            focused = nil
+                            DispatchQueue.main.async { model.focusField?() }
+                        } else {
+                            focused = i - 1
+                        }
                     }, down: {
                         if i + 1 < (model.sysLines?.count ?? 0) { focused = i + 1 }
                     }, tab: { back in
@@ -203,34 +228,57 @@ struct SystemPanel: View {
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
         .onChange(of: model.sysFocus) { f in
-            if let f { focused = f; model.sysFocus = nil }
+            guard let f else { return }
+            model.sysFocus = nil
+            // the bar took the keys through AppKit, so `focused` can still say f, and setting it again would do nothing
+            focused = nil
+            DispatchQueue.main.async { focused = f }
         }
         .onAppear {
             focused = model.sysFocus ?? 0
+            // spent, or asking for the same field again later wouldn't count as a change
+            model.sysFocus = nil
             // ⌘V of several equations into field i fills the system from there on (onPasteLines)
-            paste.start { [weak model] in
+            paste.start(paste: { [weak model] in
                 guard let model, let i = paste.field, let raw = NSPasteboard.general.string(forType: .string) else { return false }
                 return model.pasteSystem(raw, keeping: Array((model.sysLines ?? []).prefix(i)))
-            }
+            }, deleteLine: { [weak model] in
+                // the equation's own editor has the keys, and isn't mid-IME
+                guard let model, let i = paste.field,
+                      let editor = NSApp.keyWindow?.firstResponder as? NSTextView,
+                      editor.isFieldEditor, !editor.hasMarkedText() else { return false }
+                model.sysDeleteLine(i)
+                return true
+            })
         }
         .onDisappear { paste.stop() }
-        .onChange(of: focused) { paste.field = $0 }
+        .onChange(of: focused) { field in
+            paste.field = field
+            // the caret at the end of the equation, not the whole of it selected for the next key to replace
+            guard field != nil else { return }
+            DispatchQueue.main.async {
+                guard let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isFieldEditor else { return }
+                editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("System of equations")
     }
 }
 
-/// ⌘V while a system field has the keys, offered to `take` first
+/// ⌘V and ⌘⌫ while a system field has the keys, offered to `paste` and `deleteLine` first
 final class PasteWatch {
     var field: Int?
     private var monitor: Any?
 
-    func start(_ take: @escaping () -> Bool) {
+    func start(paste: @escaping () -> Bool, deleteLine: @escaping () -> Bool) {
         stop()
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            guard self?.field != nil, mods == .command, event.charactersIgnoringModifiers?.lowercased() == "v" else { return event }
-            return take() ? nil : event
+            let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
+            guard self?.field != nil, mods == .command else { return event }
+            if event.keyCode == 51 { return deleteLine() ? nil : event }
+            guard event.charactersIgnoringModifiers?.lowercased() == "v" else { return event }
+            return paste() ? nil : event
         }
     }
 

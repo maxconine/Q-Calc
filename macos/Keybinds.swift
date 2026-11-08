@@ -176,10 +176,11 @@ enum KeyActions {
         ("clear", "Clear history"),
     ] + native
 
-    // native only: ⌃E's exponent form, and the answer's other forms (Tab cycles those on the page)
+    // native only: ⌃E's exponent form, the answer's other forms (Tab cycles those on the page), and ⌃W's working
     #if QCALC_NATIVE
     private static let native: [(id: String, label: String)] = [("exponent", "Exponent form (3 × 10³)"), ("forms", "Other answer forms"),
-                                                                 ("matrixGrid", "Matrix grid"), ("matrixSteps", "Matrix steps")]
+                                                                 ("matrixGrid", "Matrix grid"), ("matrixSteps", "Matrix steps"),
+                                                                 ("working", "Show the working")]
     #else
     private static let native: [(id: String, label: String)] = []
     #endif
@@ -197,6 +198,7 @@ enum KeyActions {
         "forms": "ctrl+shift+e",
         "matrixGrid": "ctrl+g",
         "matrixSteps": "ctrl+r",
+        "working": "ctrl+w",
     ]
 
     static func label(_ id: String) -> String {

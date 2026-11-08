@@ -43,6 +43,12 @@ pub struct Meas {
 pub struct Complex {
     pub re: f64,
     pub im: f64,
+    /// native only: written with `j`, because `j` was typed.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub j: bool,
+    /// native only: shown in polar form.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub polar: bool,
 }
 
 /// One answer. `n` is 0 for text answers, as in the TS engine.

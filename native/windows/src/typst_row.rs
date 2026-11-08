@@ -117,11 +117,16 @@ pub fn request(m: &BarModel) -> Option<Request> {
                 v.labeled,
             )
         });
+    let line = if m.chained {
+        qcalc_core::app::chain::chained_expr(text)
+    } else {
+        text.to_string()
+    };
     Some(Request {
-        expr: if m.chained {
-            qcalc_core::app::chain::chained_expr(text)
-        } else {
-            text.to_string()
+        // with the number `ans` stands for in place of the word
+        expr: match &m.ans_value {
+            Some(plain) => qcalc_core::app::chain::ans_written_out(&line, plain),
+            None => line,
         },
         display: if tabbed {
             st.forms[st.form_index].clone()
@@ -160,7 +165,7 @@ fn typeset(r: &TypstRenderer, req: &Request) -> Outcome {
     } else {
         typst_math::typst_answer(req.exact.as_deref(), &req.display)
     };
-    let Some(doc) = typst_math::typst_document(&req.expr, &answer, &req.solved_for) else {
+    let Some(doc) = typst_math::native_typst_document(&req.expr, &answer, &req.solved_for) else {
         return Outcome::Hidden;
     };
     match r.paths(doc.clone()) {

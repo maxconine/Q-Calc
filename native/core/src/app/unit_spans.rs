@@ -39,6 +39,8 @@ pub fn unit_spans(text: &str, variables: &[String], functions: &[String]) -> Vec
         let (start, end) = (m.start(), m.end());
         if NOT_UNITS.contains(&word.to_lowercase().as_str())
             || variables.iter().chain(functions).any(|t| t == word)
+            // native only: a lowercase j is the imaginary unit (`J` is joules)
+            || word == "j"
         {
             continue;
         }
@@ -131,6 +133,11 @@ fn unit_place(text: &str, start: usize, found: &[Found]) -> bool {
         return found
             .iter()
             .any(|u| u.end == len || (u.end < len && jsre::test(&POWER, &text[u.end..len])));
+    }
+    // native only: `integrate t^2 with respect to t` names the variable, not tonnes
+    static RESPECT: Lazy = Lazy::new(|| jsre::js(r"\brespect\s+to$", "i"));
+    if jsre::test(&RESPECT, before) {
+        return false;
     }
     // `10 km to mi`, and `ans in to mm`: ans is a number
     PRIOR.captures(before).ok().flatten().is_some_and(|c| {

@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::app::identities::IDENTITY_PARTS;
+use crate::app::identities::{IDENTITY_PARTS, NATIVE_SHEET_NAMES, sheet_line_names};
 use crate::app::js::{len16, skip16};
 use crate::app::needs::{GAS_CONSTANT_UNITS, is_unit_name};
 use crate::jsre::{self, Lazy, js};
@@ -168,6 +168,29 @@ fn finish<'a>(
 /// The rest of the word being typed at the end of `text`, or "" when nothing is a clear pick. After a number or
 /// `in`/`to` a unit is likelier than a function; elsewhere functions come first.
 pub fn completion_for(text: &str, names: &CompletionNames) -> String {
+    let rest = usual_completion(text, names);
+    if !rest.is_empty() {
+        return rest;
+    }
+    // native only: with nothing else to offer, the rest of a sheet, part or formula's name (`control ` to `control
+    // systems`, `ohms` to `ohms law`), unless the line is a name of yours
+    let line = text.trim_start().to_lowercase();
+    if line.len() < 4
+        || names
+            .variables
+            .iter()
+            .chain(&names.functions)
+            .any(|n| n.to_lowercase() == line.trim_end())
+    {
+        return String::new();
+    }
+    sheet_line_names()
+        .iter()
+        .find(|name| name.len() > line.len() && name.starts_with(&line))
+        .map_or_else(String::new, |name| skip16(name, len16(&line)))
+}
+
+fn usual_completion(text: &str, names: &CompletionNames) -> String {
     static TYPED: Lazy = Lazy::new(|| js(r"^\s*([A-Za-z]{3,})$", ""));
     static MESSAGE_TO: Lazy = Lazy::new(|| js(r"^\s*message\s+([a-z0-9_-]+)$", "i"));
     static MESSAGE: Lazy = Lazy::new(|| js(r"^\s*message\s", "i"));
@@ -223,6 +246,19 @@ pub fn completion_for(text: &str, names: &CompletionNames) -> String {
     {
         return skip16(hit, len16(&part));
     }
+    // native only: `four` finishes `fourier`, `ct t` finishes `ct transform table`: a whole line's sheet command,
+    // unless the line is a name of yours
+    let line = text.trim_start().to_lowercase();
+    if line.len() >= 4
+        && !names
+            .variables
+            .iter()
+            .chain(&names.functions)
+            .any(|n| n.to_lowercase() == line)
+        && let Some(sheet) = finish(NATIVE_SHEET_NAMES, &line, false)
+    {
+        return skip16(sheet, len16(&line));
+    }
     let Some(word) = WORD
         .captures(text)
         .ok()
@@ -263,5 +299,38 @@ pub fn completion_for(text: &str, names: &CompletionNames) -> String {
         or(unit(), &function)
     } else {
         or(function(), &unit)
+    }
+}
+
+#[cfg(test)]
+mod sheet_tests {
+    use super::*;
+
+    #[test]
+    fn a_line_finishes_to_its_formula_sheet() {
+        let names = CompletionNames::default();
+        for (typed, rest) in [
+            ("formula", "s"),
+            ("form", "ulas"),
+            ("four", "ier"),
+            ("beam", "s"),
+            ("cont", "inuum mechanics"),
+            ("ct t", "ransform table"),
+            ("complex n", "umbers"),
+            ("control ", "systems"),
+            ("ohms", " law"),
+            ("newton's 2", "nd"),
+            ("law of cos", "ines"),
+            ("differential", " equations"),
+            ("thermo", "dynamics"),
+        ] {
+            assert_eq!(completion_for(typed, &names), rest, "{typed}");
+        }
+        // a name of yours comes first
+        let mine = CompletionNames {
+            variables: vec!["form".into()],
+            ..CompletionNames::default()
+        };
+        assert_eq!(completion_for("form", &mine), "");
     }
 }

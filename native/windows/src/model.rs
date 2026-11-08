@@ -88,6 +88,8 @@ pub struct BarModel {
     pub tape: crate::history::TapeState,
     /// the typeset row (typst_row.rs)
     pub typeset: crate::typst_row::TypesetState,
+    /// the number `ans` stands for, as it inserts
+    pub ans_value: Option<String>,
     /// the easter eggs' gates, settle and CRT look (effects.rs)
     pub eggs: crate::effects::Eggs,
     /// the input line's decorations, completion, draft, examples, chips (line.rs)
@@ -128,6 +130,7 @@ impl BarModel {
             answer: Default::default(),
             tape: Default::default(),
             typeset: Default::default(),
+            ans_value: None,
             eggs: crate::effects::Eggs::default(),
             line: crate::line::LineState::default(),
             command: None,
@@ -233,6 +236,7 @@ impl BarModel {
         let now = now_ms();
         let view = self.view(now);
         let options = self.options();
+        let figs = f64::from(options.sig_figs);
         engine.submit(Lane::Live, move |cx| {
             use crate::perf::{Stage, mark};
             mark(Stage::JobStart);
@@ -251,8 +255,10 @@ impl BarModel {
             mark(Stage::Live);
             let closed = crate::answer::closed_form(&cx.engine, &answer);
             let (deco, completion) = crate::line::decorate(&typed, &context, &answer);
+            let ans_value = crate::word_tip::ans_value(&context, figs);
             mark(Stage::Decorated);
             done(move |app| {
+                app.model.ans_value = ans_value;
                 crate::answer::landed(app, typed.clone(), answer, chained, closed);
                 if app.model.field.text() == typed {
                     crate::line::landed(&mut app.model, &typed, deco, completion);

@@ -1,14 +1,16 @@
+import AppKit
 import SwiftUI
 
-// Radical.tsx's look in plain SwiftUI: a √ with a bar over what it takes (a bracketed group, or a run of digits,
-// letters and π), so `2sqrt(2)` reads 2√2̅ as the web bar draws it. The Typst renderer replaces this for full maths.
+// Radical.tsx's meaning in plain SwiftUI: a root over what it takes (a bracketed group, or a run of digits, letters and
+// π), so `2sqrt(2)` reads 2√2̅. Native only: the sign and bar are one stroke, as Desmos draws them, not a glyph and a
+// rectangle that meet at a seam. The Typst renderer replaces this for full maths.
 struct RadicalText: View {
     let text: String
     let size: CGFloat
     var tracking: CGFloat = 0
     var monospaced = false
 
-    private enum Run { case plain(String), root(String) }
+    private enum Run { case plain(String), root(String, cube: Bool) }
 
     private var runs: [Run] {
         var out: [Run] = []
@@ -19,7 +21,6 @@ struct RadicalText: View {
             guard chars[i] == "√" || chars[i] == "∛", i + 1 < chars.count else {
                 plain.append(chars[i]); i += 1; continue
             }
-            plain.append(chars[i])
             var j = i + 1
             if chars[j] == "(" {
                 var depth = 0
@@ -31,9 +32,10 @@ struct RadicalText: View {
             } else {
                 while j < chars.count, chars[j].isLetter || chars[j].isNumber || chars[j] == "." || chars[j] == "π" { j += 1 }
             }
-            guard j > i + 1 else { i += 1; continue }
-            out.append(.plain(plain)); plain = ""
-            out.append(.root(String(chars[(i + 1)..<j])))
+            guard j > i + 1 else { plain.append(chars[i]); i += 1; continue }
+            if !plain.isEmpty { out.append(.plain(plain)) }
+            plain = ""
+            out.append(.root(String(chars[(i + 1)..<j]), cube: chars[i] == "∛"))
             i = j
         }
         if !plain.isEmpty { out.append(.plain(plain)) }
@@ -46,10 +48,19 @@ struct RadicalText: View {
             ForEach(Array(runs.enumerated()), id: \.offset) { _, run in
                 switch run {
                 case let .plain(s): styled(s)
-                case let .root(s):
-                    styled(s).overlay(alignment: .top) {
-                        Rectangle().frame(height: max(1, size / 18)).offset(y: size * 0.08)
-                    }
+                case let .root(s, cube):
+                    styled(s)
+                        .padding(.leading, RootSign.width(size))
+                        .overlay {
+                            RootStroke(size: size)
+                                .stroke(style: StrokeStyle(lineWidth: RootSign.lineWidth(size), lineCap: .round, lineJoin: .round))
+                        }
+                        .overlay(alignment: .topLeading) {
+                            if cube {
+                                Text("3").font(.system(size: size * RootSign.indexScale))
+                                    .offset(y: RootSign.indexOrigin(left: 0, baseline: RootSign.baseline(size), size: size).y)
+                            }
+                        }
                 }
             }
         }
@@ -61,5 +72,54 @@ struct RadicalText: View {
         Text(s)
             .font(monospaced ? .system(size: size).monospacedDigit() : .system(size: size))
             .tracking(tracking)
+    }
+}
+
+/// The root's one line: a small tick up to the hook, down to the foot, up to the top, and on over what it takes. The
+/// input field strokes it with AppKit and the answers with `RootStroke`, from the same points.
+enum RootSign {
+    static let indexScale: CGFloat = 0.42
+
+    static func lineWidth(_ size: CGFloat) -> CGFloat { max(1, size / 17) }
+
+    static func width(_ size: CGFloat) -> CGFloat { size * 0.66 }
+
+    /// How far a line of text's baseline is from its top
+    static func baseline(_ size: CGFloat) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: size)
+        return ceil(font.ascender + abs(font.leading) / 2)
+    }
+
+    /// Top-left is the origin, y grows down. `left` and `width` are the sign's own space, `end` where the bar stops.
+    static func points(left: CGFloat, width: CGFloat, end: CGFloat, baseline: CGFloat, size: CGFloat) -> [CGPoint] {
+        let font = NSFont.systemFont(ofSize: size)
+        // clear of what's under it, as Desmos leaves it
+        let top = baseline - font.capHeight - size * 0.2
+        let foot = baseline + size * 0.02
+        let height = foot - top
+        return [
+            CGPoint(x: left + width * 0.1, y: foot - height * 0.36),
+            CGPoint(x: left + width * 0.26, y: foot - height * 0.44),
+            CGPoint(x: left + width * 0.5, y: foot),
+            CGPoint(x: left + width * 0.86, y: top),
+            CGPoint(x: end, y: top),
+        ]
+    }
+
+    /// Where a cube root's small 3 goes: in the crook of the sign
+    static func indexOrigin(left: CGFloat, baseline: CGFloat, size: CGFloat) -> CGPoint {
+        CGPoint(x: left, y: baseline - NSFont.systemFont(ofSize: size).capHeight - size * 0.24)
+    }
+}
+
+/// `RootSign`'s line, across the view it overlays
+private struct RootStroke: Shape {
+    let size: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.addLines(RootSign.points(left: rect.minX, width: RootSign.width(size), end: rect.maxX,
+                                      baseline: rect.minY + RootSign.baseline(size), size: size))
+        return path
     }
 }

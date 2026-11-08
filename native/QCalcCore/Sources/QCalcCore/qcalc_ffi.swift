@@ -4848,13 +4848,21 @@ public struct CriticalPoint: Equatable, Hashable {
     public var x: Double
     public var y: Double
     public var kind: CriticalKind
+    /**
+     * A surface's height there.
+     */
+    public var z: Double?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(x: Double, y: Double, kind: CriticalKind) {
+    public init(x: Double, y: Double, kind: CriticalKind, 
+        /**
+         * A surface's height there.
+         */z: Double?) {
         self.x = x
         self.y = y
         self.kind = kind
+        self.z = z
     }
 
     
@@ -4875,7 +4883,8 @@ public struct FfiConverterTypeCriticalPoint: FfiConverterRustBuffer {
             try CriticalPoint(
                 x: FfiConverterDouble.read(from: &buf), 
                 y: FfiConverterDouble.read(from: &buf), 
-                kind: FfiConverterTypeCriticalKind.read(from: &buf)
+                kind: FfiConverterTypeCriticalKind.read(from: &buf), 
+                z: FfiConverterOptionDouble.read(from: &buf)
         )
     }
 
@@ -4883,6 +4892,7 @@ public struct FfiConverterTypeCriticalPoint: FfiConverterRustBuffer {
         FfiConverterDouble.write(value.x, into: &buf)
         FfiConverterDouble.write(value.y, into: &buf)
         FfiConverterTypeCriticalKind.write(value.kind, into: &buf)
+        FfiConverterOptionDouble.write(value.z, into: &buf)
     }
 }
 
@@ -6492,18 +6502,42 @@ public struct GraphOptions: Equatable, Hashable {
      * The plot's height over its width, so a contour plot's x and y share a scale.
      */
     public var aspect: Double?
+    /**
+     * The y a plot of x and y (implicit curve, contour) centres on; none is 0, or the bounds' middle.
+     */
+    public var yCenter: Double?
+    /**
+     * Also sample a surface's grid of z for the 3D view (`GraphResult::surface`).
+     */
+    public var surface: Bool
+    /**
+     * Sample a curve evenly in log x, for a logarithmic x axis (a domain above 0).
+     */
+    public var xLog: Bool
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(domainLo: Double? = nil, domainHi: Double? = nil, sampleCount: UInt32? = nil, findRoots: Bool = true, 
         /**
          * The plot's height over its width, so a contour plot's x and y share a scale.
-         */aspect: Double? = nil) {
+         */aspect: Double? = nil, 
+        /**
+         * The y a plot of x and y (implicit curve, contour) centres on; none is 0, or the bounds' middle.
+         */yCenter: Double? = nil, 
+        /**
+         * Also sample a surface's grid of z for the 3D view (`GraphResult::surface`).
+         */surface: Bool = false, 
+        /**
+         * Sample a curve evenly in log x, for a logarithmic x axis (a domain above 0).
+         */xLog: Bool = false) {
         self.domainLo = domainLo
         self.domainHi = domainHi
         self.sampleCount = sampleCount
         self.findRoots = findRoots
         self.aspect = aspect
+        self.yCenter = yCenter
+        self.surface = surface
+        self.xLog = xLog
     }
 
     
@@ -6526,7 +6560,10 @@ public struct FfiConverterTypeGraphOptions: FfiConverterRustBuffer {
                 domainHi: FfiConverterOptionDouble.read(from: &buf), 
                 sampleCount: FfiConverterOptionUInt32.read(from: &buf), 
                 findRoots: FfiConverterBool.read(from: &buf), 
-                aspect: FfiConverterOptionDouble.read(from: &buf)
+                aspect: FfiConverterOptionDouble.read(from: &buf), 
+                yCenter: FfiConverterOptionDouble.read(from: &buf), 
+                surface: FfiConverterBool.read(from: &buf), 
+                xLog: FfiConverterBool.read(from: &buf)
         )
     }
 
@@ -6536,6 +6573,9 @@ public struct FfiConverterTypeGraphOptions: FfiConverterRustBuffer {
         FfiConverterOptionUInt32.write(value.sampleCount, into: &buf)
         FfiConverterBool.write(value.findRoots, into: &buf)
         FfiConverterOptionDouble.write(value.aspect, into: &buf)
+        FfiConverterOptionDouble.write(value.yCenter, into: &buf)
+        FfiConverterBool.write(value.surface, into: &buf)
+        FfiConverterBool.write(value.xLog, into: &buf)
     }
 }
 
@@ -6641,6 +6681,10 @@ public struct GraphResult: Equatable, Hashable {
     public var contourLevels: Bool
     public var error: String?
     public var json: String
+    /**
+     * When asked for (`GraphOptions::surface`) and the graph is a surface.
+     */
+    public var surface: SurfaceGrid?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -6650,7 +6694,10 @@ public struct GraphResult: Equatable, Hashable {
          */contour: Bool, 
         /**
          * WP-GRAPH: level curves with labels and a z readout (`contour: 'levels'`); false for an `f = g` curve.
-         */contourLevels: Bool, error: String?, json: String) {
+         */contourLevels: Bool, error: String?, json: String, 
+        /**
+         * When asked for (`GraphOptions::surface`) and the graph is a surface.
+         */surface: SurfaceGrid?) {
         self.label = label
         self.expression = expression
         self.functionDef = functionDef
@@ -6667,6 +6714,7 @@ public struct GraphResult: Equatable, Hashable {
         self.contourLevels = contourLevels
         self.error = error
         self.json = json
+        self.surface = surface
     }
 
     
@@ -6700,7 +6748,8 @@ public struct FfiConverterTypeGraphResult: FfiConverterRustBuffer {
                 contour: FfiConverterBool.read(from: &buf), 
                 contourLevels: FfiConverterBool.read(from: &buf), 
                 error: FfiConverterOptionString.read(from: &buf), 
-                json: FfiConverterString.read(from: &buf)
+                json: FfiConverterString.read(from: &buf), 
+                surface: FfiConverterOptionTypeSurfaceGrid.read(from: &buf)
         )
     }
 
@@ -6721,6 +6770,7 @@ public struct FfiConverterTypeGraphResult: FfiConverterRustBuffer {
         FfiConverterBool.write(value.contourLevels, into: &buf)
         FfiConverterOptionString.write(value.error, into: &buf)
         FfiConverterString.write(value.json, into: &buf)
+        FfiConverterOptionTypeSurfaceGrid.write(value.surface, into: &buf)
     }
 }
 
@@ -6803,12 +6853,20 @@ public func FfiConverterTypeGraphTick_lower(_ value: GraphTick) -> RustBuffer {
 public struct GraphWindow: Equatable, Hashable {
     public var lo: Double
     public var hi: Double
+    /**
+     * Where an implicit curve's y centres, when not 0 (pass it back as `GraphOptions::y_center`).
+     */
+    public var yCenter: Double?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(lo: Double, hi: Double) {
+    public init(lo: Double, hi: Double, 
+        /**
+         * Where an implicit curve's y centres, when not 0 (pass it back as `GraphOptions::y_center`).
+         */yCenter: Double?) {
         self.lo = lo
         self.hi = hi
+        self.yCenter = yCenter
     }
 
     
@@ -6828,13 +6886,15 @@ public struct FfiConverterTypeGraphWindow: FfiConverterRustBuffer {
         return
             try GraphWindow(
                 lo: FfiConverterDouble.read(from: &buf), 
-                hi: FfiConverterDouble.read(from: &buf)
+                hi: FfiConverterDouble.read(from: &buf), 
+                yCenter: FfiConverterOptionDouble.read(from: &buf)
         )
     }
 
     public static func write(_ value: GraphWindow, into buf: inout [UInt8]) {
         FfiConverterDouble.write(value.lo, into: &buf)
         FfiConverterDouble.write(value.hi, into: &buf)
+        FfiConverterOptionDouble.write(value.yCenter, into: &buf)
     }
 }
 
@@ -9128,6 +9188,92 @@ public func FfiConverterTypeSpan_lower(_ value: Span) -> RustBuffer {
 
 
 /**
+ * A surface on a grid for the 3D view: `z[j * (nx + 1) + i]` at x = x_lo + i·(x_hi − x_lo)/nx (y likewise),
+ * NaN where undefined; `z_lo`…`z_hi` is the height the view frames.
+ */
+public struct SurfaceGrid: Equatable, Hashable {
+    public var nx: UInt32
+    public var ny: UInt32
+    public var xLo: Double
+    public var xHi: Double
+    public var yLo: Double
+    public var yHi: Double
+    public var z: [Double]
+    public var zLo: Double
+    public var zHi: Double
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(nx: UInt32, ny: UInt32, xLo: Double, xHi: Double, yLo: Double, yHi: Double, z: [Double], zLo: Double, zHi: Double) {
+        self.nx = nx
+        self.ny = ny
+        self.xLo = xLo
+        self.xHi = xHi
+        self.yLo = yLo
+        self.yHi = yHi
+        self.z = z
+        self.zLo = zLo
+        self.zHi = zHi
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension SurfaceGrid: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeSurfaceGrid: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SurfaceGrid {
+        return
+            try SurfaceGrid(
+                nx: FfiConverterUInt32.read(from: &buf), 
+                ny: FfiConverterUInt32.read(from: &buf), 
+                xLo: FfiConverterDouble.read(from: &buf), 
+                xHi: FfiConverterDouble.read(from: &buf), 
+                yLo: FfiConverterDouble.read(from: &buf), 
+                yHi: FfiConverterDouble.read(from: &buf), 
+                z: FfiConverterSequenceDouble.read(from: &buf), 
+                zLo: FfiConverterDouble.read(from: &buf), 
+                zHi: FfiConverterDouble.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SurfaceGrid, into buf: inout [UInt8]) {
+        FfiConverterUInt32.write(value.nx, into: &buf)
+        FfiConverterUInt32.write(value.ny, into: &buf)
+        FfiConverterDouble.write(value.xLo, into: &buf)
+        FfiConverterDouble.write(value.xHi, into: &buf)
+        FfiConverterDouble.write(value.yLo, into: &buf)
+        FfiConverterDouble.write(value.yHi, into: &buf)
+        FfiConverterSequenceDouble.write(value.z, into: &buf)
+        FfiConverterDouble.write(value.zLo, into: &buf)
+        FfiConverterDouble.write(value.zHi, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSurfaceGrid_lift(_ buf: RustBuffer) throws -> SurfaceGrid {
+    return try FfiConverterTypeSurfaceGrid.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeSurfaceGrid_lower(_ value: SurfaceGrid) -> RustBuffer {
+    return FfiConverterTypeSurfaceGrid.lower(value)
+}
+
+
+/**
  * A highlighted span of the input (UTF-16 offsets).
  */
 public struct TextSpan: Equatable, Hashable {
@@ -11050,6 +11196,20 @@ public enum CriticalKind: Equatable, Hashable {
     case min
     case max
     case critical
+    case xIntercept
+    case yIntercept
+    /**
+     * A surface's saddle.
+     */
+    case saddle
+    /**
+     * Where an implicit curve turns vertical.
+     */
+    case verticalTangent
+    /**
+     * A point a line was drawn through.
+     */
+    case point
 
 
 
@@ -11077,6 +11237,16 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         
         case 3: return .critical
         
+        case 4: return .xIntercept
+        
+        case 5: return .yIntercept
+        
+        case 6: return .saddle
+        
+        case 7: return .verticalTangent
+        
+        case 8: return .point
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -11095,6 +11265,26 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         
         case .critical:
             writeInt(&buf, Int32(3))
+        
+        
+        case .xIntercept:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .yIntercept:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .saddle:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .verticalTangent:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .point:
+            writeInt(&buf, Int32(8))
         
         }
     }
@@ -14396,6 +14586,30 @@ fileprivate struct FfiConverterOptionTypeSpan: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterTypeSpan.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeSurfaceGrid: FfiConverterRustBuffer {
+    typealias SwiftType = SurfaceGrid?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeSurfaceGrid.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeSurfaceGrid.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }

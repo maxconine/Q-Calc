@@ -45,6 +45,23 @@ enum DevSnapshot {
                 background.setFill()
                 NSBezierPath(roundedRect: NSRect(origin: .zero, size: bounds.size), xRadius: 10, yRadius: 10).fill()
             }
+            if window is PeriodicPanel, !window.title.contains("Periodic"),
+               let sheet = find(NSScrollView.self, in: view)?.documentView,
+               let pdf = NSImage(data: sheet.dataWithPDF(inside: sheet.bounds)) {
+                // an identity sheet's rows are layer-backed, so through a PDF, and all of it rather than what's scrolled to
+                image.unlockFocus()
+                let whole = NSImage(size: sheet.bounds.size)
+                whole.lockFocus()
+                background.setFill()
+                NSRect(origin: .zero, size: sheet.bounds.size).fill()
+                pdf.draw(in: NSRect(origin: .zero, size: sheet.bounds.size))
+                whole.unlockFocus()
+                let name = window.title.replacingOccurrences(of: " ", with: "-").lowercased()
+                if let tiff = whole.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    try? png.write(to: URL(fileURLWithPath: "\(prefix)-\(name).png"))
+                }
+                continue
+            }
             if !window.title.contains("Periodic") || view.layer == nil {
                 // SwiftUI draws through cacheDisplay
                 guard let rep = view.bitmapImageRepForCachingDisplay(in: bounds) else { image.unlockFocus(); continue }
@@ -105,6 +122,13 @@ enum DevSnapshot {
         guard xy.count == 2, let event = NSEvent.mouseEvent(with: .mouseMoved, location: NSPoint(x: xy[0], y: window.frame.height - xy[1]), modifierFlags: [],
                                                             timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
                                                             context: nil, eventNumber: 0, clickCount: 0, pressure: 0) else { return }
+        // over something else that follows the pointer (the graph's 3D view), to that instead
+        if let content = window.contentView,
+           let hit = content.hitTest(content.convert(event.locationInWindow, from: nil)),
+           !hit.isDescendant(of: line), hit.trackingAreas.contains(where: { $0.options.contains(.mouseMoved) }) {
+            hit.mouseMoved(with: event)
+            return
+        }
         line.mouseMoved(with: event)
     }
 
@@ -113,6 +137,35 @@ enum DevSnapshot {
         if let hit = view as? T { return hit }
         for sub in view.subviews { if let hit = find(type, in: sub) { return hit } }
         return nil
+    }
+
+    /// A real click in a sheet, `<title>:<x>,<y>:<file>`, points from its content's top left, and what it copied
+    /// written to the file. It copies to a pasteboard of its own, so the one in use stays as it is. `sheethover:`
+    /// moves the pointer there instead, for the box round what a click would copy.
+    static func sheetClick(_ arg: String, hover: Bool = false) {
+        let parts = arg.components(separatedBy: ":")
+        guard parts.count >= 2, let window = NSApp.windows.first(where: { $0.title == parts[0] && $0.isVisible }) else { return }
+        let xy = parts[1].split(separator: ",").compactMap { Double($0) }
+        guard xy.count == 2, let content = window.contentView else { return }
+        window.orderFrontRegardless()
+        let at = NSPoint(x: xy[0], y: content.bounds.height - xy[1])
+        let board = NSPasteboard(name: NSPasteboard.Name("qcalc.dev.clicks"))
+        board.clearContents()
+        IdentityWindowController.board = board
+        let kinds: [NSEvent.EventType] = hover ? [.mouseMoved] : [.leftMouseDown, .leftMouseUp]
+        for type in kinds {
+            guard let event = NSEvent.mouseEvent(with: type, location: at, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                 windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) else { continue }
+            // a moved pointer goes to the row itself, since this isn't where the real pointer is
+            if hover { content.hitTest(at)?.mouseMoved(with: event) } else { NSApp.sendEvent(event) }
+        }
+        // back to the real one, for a person's own clicks
+        IdentityWindowController.board = .general
+        guard parts.count >= 3 else { return }
+        let file = parts[2]
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            try? (board.string(forType: .string) ?? "(nothing)").write(toFile: file, atomically: true, encoding: .utf8)
+        }
     }
 
     /// A key press, as `enter`, `up`, `down`, `tab`, `escape`, `cmd+w`, `cmd+c`, `ctrl+d`…, to the key window.
@@ -139,7 +192,8 @@ enum DevSnapshot {
                                                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
                                                context: nil, characters: chars, charactersIgnoringModifiers: chars,
                                                isARepeat: false, keyCode: UInt16(code)) else { continue }
-            NSApp.sendEvent(event)
+            // posted, not sent: it comes through the event queue, so local key monitors see it as they do a real key
+            NSApp.postEvent(event, atStart: false)
         }
     }
 }

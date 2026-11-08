@@ -6,9 +6,11 @@
 //! as mathjs differentiates a product of one object with itself (see `tree.rs`), and `f'(x)`, `d/dx f(x)` and
 //! `f'(3)` come out blank, as in the TS.
 
+pub mod antiderivative;
 pub mod closed_form;
 pub mod golden;
 pub mod numeric;
+pub mod ode;
 pub mod pretty;
 pub mod together;
 pub mod tree;
@@ -1879,6 +1881,89 @@ fn run_integral(
     Some(with_job(est.value, est.err, draft, sci))
 }
 
+/// Native only: `∫ f(x) dx` with no bounds, from the table in `antiderivative`: `tan(x) + C`, or the value with the
+/// variable defined: `-3.38052 + C`. An answer that doesn't differentiate back to the integrand isn't given.
+pub fn indefinite_integral(text: &str, sci: &ScientificContext, sig_figs: f64) -> Option<Value> {
+    let (body, v) = indefinite_parts(text)?;
+    let body = split_symbols(&join_spaced_numbers(&body), sci);
+    // read as written: the tree for degrees has the angle conversion in it, which the table scales for itself
+    let mut plain = sci.clone();
+    plain.angle_mode = AngleMode::Rad;
+    let tctx = TreeCtx {
+        sci: &plain,
+        bound: Some(v.clone()),
+        depth: 0,
+        keep: Vec::new(),
+    };
+    let tree = to_tree(&body, &tctx)?;
+    let found = antiderivative::antiderivative(&tree, &v, sci.angle_mode == AngleMode::Deg)?;
+    let f = body_fn(&body, sci, &v)?;
+    let big = body_fn(&found.eval, sci, &v)?;
+    // the derivative of the answer against the integrand, where both are defined
+    let mut agreed = 0;
+    for x in [0.37, 0.61, 1.13, 1.71, 2.39, 3.3, 4.7, 7.1] {
+        let h = 1e-5;
+        let (y, hi, lo) = (f(x), big(x + h), big(x - h));
+        if !y.is_finite() || !hi.is_finite() || !lo.is_finite() {
+            continue;
+        }
+        let slope = (hi - lo) / (2.0 * h);
+        if (slope - y).abs() > 1e-4 * y.abs().max(1.0) {
+            return None;
+        }
+        agreed += 1;
+    }
+    if agreed < 3 {
+        return None;
+    }
+    if let Some(at) = sci.variables.get(&v) {
+        let value = big(*at);
+        if !value.is_finite() {
+            return None;
+        }
+        return Some(Value::text(format!(
+            "{} + C",
+            crate::format::format_number(value, sig_figs)
+        )));
+    }
+    Some(Value::text(format!("{} + C", bare_powers(&found.show))))
+}
+
+/// The body and variable of an indefinite integral as typed: `∫ x^2 dx`, `integral x^2 dx`, and in words, `integral of
+/// x^2`, `the integral of x e^x dx`, `integrate sin(x)`, `antiderivative of t^2 with respect to t`. With no `dx` (or
+/// `with respect to`), the variable is x, else t or θ, whichever the body has. A line with bounds isn't one.
+fn indefinite_parts(text: &str) -> Option<(String, String)> {
+    static LINE: Lazy = Lazy::new(|| {
+        re(
+            r"^\s*(?:∫|int\s|(?:the\s+)?(?:indefinite\s+)?(?:integral|antiderivative)(?:\s+of)?\s|integrate\s)\s*(.+?)(?:\s*d([A-Za-zθ])|\s+(?:with\s+respect\s+to|wrt)\s+([A-Za-zθ]))?\s*$",
+            "i",
+        )
+    });
+    static BOUNDS: Lazy = Lazy::new(|| re(r"\b(?:from|to|between|and)\b|\.\.", "i"));
+    static WORD: Lazy = Lazy::new(|| re(r"[A-Za-zθ]+", ""));
+    let c = LINE.captures(text).ok()??;
+    let body = jsre::group(&c, 1).to_string();
+    if body.starts_with(['_', '^']) || BOUNDS.is_match(&body).unwrap_or(false) {
+        return None;
+    }
+    let named = [jsre::group(&c, 2), jsre::group(&c, 3)].into_iter().find(|g| !g.is_empty()).map(str::to_string);
+    let v = match named {
+        Some(v) => v,
+        None => {
+            // the body's own letters (`sin`, `e` and the like are words or constants, not the variable)
+            let words: Vec<String> = WORD.find_iter(&body).flatten().map(|m| m.as_str().to_string()).collect();
+            ["x", "t", "θ"].into_iter().find(|v| words.iter().any(|w| w == v))?.to_string()
+        }
+    };
+    Some((body, v))
+}
+
+/// `e^(x)` as `e^x`: a power of one letter or number needs no brackets.
+pub(crate) fn bare_powers(text: &str) -> String {
+    static ONE: Lazy = Lazy::new(|| jsre::js(r"\^\(([A-Za-zθ]|\d+)\)", ""));
+    jsre::replace_all(&ONE, text, |c| format!("^{}", jsre::group(c, 1))).into_owned()
+}
+
 fn run_limit(
     body: &str,
     v: &str,
@@ -2141,6 +2226,127 @@ fn run_time_derivative(text: &str, order: usize, ctx: &CalcContext) -> Option<Ca
         time: Some(time),
         ..CalculusResult::default()
     })
+}
+
+// ---- native only: what `crate::steps` reads to show the working of a line
+
+/// The angle-mode symbol the trees put in trig arguments in degrees (`sin(x deg__)`).
+pub(crate) const DEG_SYMBOL: &str = DEG;
+
+/// A first derivative typed on a line (`d/dx x^2 sin(x)`, `d/dx x^3 at 2`): the radian tree of its body, the
+/// variable, the point, and whether trig is in degrees. None for partial, higher or time derivatives, and for a
+/// body with any other free letter.
+pub(crate) struct DerivativeLine {
+    pub tree: T,
+    pub v: String,
+    pub at: Option<f64>,
+    pub deg: bool,
+}
+
+pub(crate) fn derivative_line(text: &str, sci: &ScientificContext) -> Option<DerivativeLine> {
+    let Intent::Derivative {
+        body,
+        vars,
+        at,
+        partial,
+    } = parse_derivative(text.trim(), &sci.functions, &sci.variables)?
+    else {
+        return None;
+    };
+    if partial || vars.len() != 1 {
+        return None;
+    }
+    let body = split_symbols(&join_spaced_numbers(&body), sci);
+    let free = free_symbols(&body, sci);
+    let v = match vars[0].as_str() {
+        "" if free.is_empty() || free.iter().any(|f| f == "x") => "x".to_string(),
+        "" if free.len() == 1 => free[0].clone(),
+        "" => return None,
+        given => given.to_string(),
+    };
+    if free.iter().any(|f| *f != v) {
+        return None;
+    }
+    let tree = to_tree(
+        &body,
+        &TreeCtx {
+            sci,
+            bound: Some(v.clone()),
+            depth: 0,
+            keep: Vec::new(),
+        },
+    )?;
+    let at = match at {
+        Some(a) => Some(bound_value(&a, sci).filter(|x| x.is_finite())?),
+        None => None,
+    };
+    Some(DerivativeLine {
+        tree,
+        v,
+        at,
+        deg: deg_mode(sci),
+    })
+}
+
+/// d/dv of a radian tree, simplified and written back in the user's angle mode, as the answer shows it.
+pub(crate) fn derivative_shown(t: &T, v: &str, deg: bool) -> Option<T> {
+    differentiate(t, v, deg).map(|d| d.user)
+}
+
+/// A radian tree as typed: `sin(x deg__)` is `sin(x)` again, and any other `deg__` is π/180.
+pub(crate) fn as_typed(t: &T, deg: bool) -> Option<T> {
+    let back = to_user_angles(t, deg)?;
+    Some(substitute(&back, &[(DEG.to_string(), deg_value())]))
+}
+
+/// `t` with letters replaced.
+pub(crate) fn substituted(t: &T, map: &[(String, T)]) -> T {
+    substitute(t, map)
+}
+
+/// A tree in the user's angle mode as a function of `v` through the scientific evaluator.
+pub(crate) fn shown_fn(t: &T, v: &str, sci: &ScientificContext) -> Option<RealFn> {
+    real_fn(&engine_text(t), sci, v)
+}
+
+/// Text through the scientific evaluator as a function of `v`.
+pub(crate) fn text_fn(text: &str, sci: &ScientificContext, v: &str) -> Option<RealFn> {
+    real_fn(text, sci, v)
+}
+
+/// One side of an equation in `v` as a radian tree (other letters must be known).
+pub(crate) fn tree_in(text: &str, sci: &ScientificContext, v: &str) -> Option<T> {
+    to_tree(
+        &split_symbols(&join_spaced_numbers(text), sci),
+        &TreeCtx {
+            sci,
+            bound: Some(v.to_string()),
+            depth: 0,
+            keep: Vec::new(),
+        },
+    )
+}
+
+/// An indefinite integral typed on a line, as `indefinite_integral` reads it: the tree (read in radians, the table
+/// scales for degrees itself), the variable, and the text of the body.
+pub(crate) fn integral_line(text: &str, sci: &ScientificContext) -> Option<(T, String, String)> {
+    let (body, v) = indefinite_parts(text)?;
+    if sci.variables.contains_key(&v) {
+        return None;
+    }
+    let body = split_symbols(&join_spaced_numbers(&body), sci);
+    let mut plain = sci.clone();
+    plain.angle_mode = AngleMode::Rad;
+    let tree = to_tree(
+        &body,
+        &TreeCtx {
+            sci: &plain,
+            bound: Some(v.clone()),
+            depth: 0,
+            keep: Vec::new(),
+        },
+    )?;
+    Some((tree, v, body))
 }
 
 #[cfg(test)]

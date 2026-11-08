@@ -805,6 +805,15 @@ pub struct GraphOptions {
     /// The plot's height over its width, so a contour plot's x and y share a scale.
     #[uniffi(default)]
     pub aspect: Option<f64>,
+    /// The y a plot of x and y (implicit curve, contour) centres on; none is 0, or the bounds' middle.
+    #[uniffi(default)]
+    pub y_center: Option<f64>,
+    /// Also sample a surface's grid of z for the 3D view (`GraphResult::surface`).
+    #[uniffi(default = false)]
+    pub surface: bool,
+    /// Sample a curve evenly in log x, for a logarithmic x axis (a domain above 0).
+    #[uniffi(default = false)]
+    pub x_log: bool,
 }
 
 /// `graph f(x) = …`'s function, for the caller to register.
@@ -827,6 +836,14 @@ pub enum CriticalKind {
     Min,
     Max,
     Critical,
+    XIntercept,
+    YIntercept,
+    /// A surface's saddle.
+    Saddle,
+    /// Where an implicit curve turns vertical.
+    VerticalTangent,
+    /// A point a line was drawn through.
+    Point,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
@@ -834,6 +851,23 @@ pub struct CriticalPoint {
     pub x: f64,
     pub y: f64,
     pub kind: CriticalKind,
+    /// A surface's height there.
+    pub z: Option<f64>,
+}
+
+/// A surface on a grid for the 3D view: `z[j * (nx + 1) + i]` at x = x_lo + i·(x_hi − x_lo)/nx (y likewise),
+/// NaN where undefined; `z_lo`…`z_hi` is the height the view frames.
+#[derive(Clone, Debug, PartialEq, uniffi::Record)]
+pub struct SurfaceGrid {
+    pub nx: u32,
+    pub ny: u32,
+    pub x_lo: f64,
+    pub x_hi: f64,
+    pub y_lo: f64,
+    pub y_hi: f64,
+    pub z: Vec<f64>,
+    pub z_lo: f64,
+    pub z_hi: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
@@ -874,6 +908,8 @@ pub struct GraphResult {
     pub contour_levels: bool,
     pub error: Option<String>,
     pub json: String,
+    /// When asked for (`GraphOptions::surface`) and the graph is a surface.
+    pub surface: Option<SurfaceGrid>,
 }
 
 /// Whether the currency rates are usable.
@@ -1000,4 +1036,6 @@ pub struct GraphTick {
 pub struct GraphWindow {
     pub lo: f64,
     pub hi: f64,
+    /// Where an implicit curve's y centres, when not 0 (pass it back as `GraphOptions::y_center`).
+    pub y_center: Option<f64>,
 }

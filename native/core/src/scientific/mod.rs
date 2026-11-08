@@ -134,7 +134,11 @@ pub fn finish(v: &Val, expr: &str) -> Option<Value> {
                 // a complex answer shows only when an i was typed; `sqrt(-1)` in plain real maths stays undefined
                 if typed_i(expr) {
                     Value {
-                        complex: Some(Complex { re: *re, im: *im }),
+                        complex: Some(Complex {
+                            re: *re,
+                            im: *im,
+                            ..Complex::default()
+                        }),
                         ..Value::text(format_complex(*re, *im))
                     }
                 } else {

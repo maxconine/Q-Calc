@@ -191,6 +191,11 @@ fn kind_name(k: CriticalKind) -> &'static str {
         CriticalKind::Min => "min",
         CriticalKind::Max => "max",
         CriticalKind::Critical => "crit",
+        CriticalKind::XIntercept => "x-intercept",
+        CriticalKind::YIntercept => "y-intercept",
+        CriticalKind::Saddle => "saddle",
+        CriticalKind::VerticalTangent => "vertical tangent",
+        CriticalKind::Point => "point",
     }
 }
 
@@ -426,6 +431,9 @@ fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
                     sample_count: None,
                     find_roots: true,
                     aspect: Some(PLOT_ASPECT),
+                    y_center: None,
+                    surface: false,
+                x_log: false,
                 },
                 settings.clone(),
             );
@@ -441,6 +449,9 @@ fn sample(m: &BarModel, engine: &EngineThread, home: bool) {
                 sample_count: None,
                 find_roots: true,
                 aspect: Some(PLOT_ASPECT),
+                y_center: None,
+                surface: false,
+                x_log: false,
             },
             settings,
         );
@@ -617,6 +628,8 @@ mod view {
         kind: IDWriteTextLayout,
         kind_w: f32,
         coords: IDWriteTextLayout,
+        /// what a click copies
+        copy: f64,
         x: f64,
         /// a critical point's y: hovering its chip rings the point on the plot (roots' chips have none)
         y: Option<f64>,
@@ -735,14 +748,16 @@ mod view {
                         .filter_map(|(kind, coords, x, cy)| {
                             let (kl, kw) = lay(gfx, kind, &res.kind, CHIP_H)?;
                             let (cl, cw) = lay(gfx, &coords, &f.small, CHIP_H)?;
-                            Some((kl, kw, cl, cw, (x, cy)))
+                            // a y-intercept's x is always 0, so its chip copies y
+                            let copy = cy.filter(|_| kind == "y-intercept").unwrap_or(x);
+                            Some((kl, kw, cl, cw, (x, cy, copy)))
                         })
                         .collect();
                     let widths: Vec<f32> =
                         built.iter().map(|b| 8.0 + b.1 + 6.0 + b.3 + 8.0).collect();
                     let places = wrap(&widths, inner, CHIP_GAP);
                     let lines = places.last().map_or(0, |p| p.1 + 1);
-                    for ((kl, kw, cl, _, (x, cy)), ((cx, line), w)) in
+                    for ((kl, kw, cl, _, (x, cy, copy)), ((cx, line), w)) in
                         built.into_iter().zip(places.into_iter().zip(widths))
                     {
                         geo.chips.push(Chip {
@@ -755,6 +770,7 @@ mod view {
                             kind: kl,
                             kind_w: kw,
                             coords: cl,
+                            copy,
                             x,
                             y: cy,
                         });
@@ -1306,7 +1322,7 @@ mod view {
             return true;
         }
         if let Some(chip) = geo.chips.iter().find(|c| c.rect.contains(p.0, p.1)) {
-            copy_x(&mut app.model, chip.x);
+            copy_x(&mut app.model, chip.copy);
             return true;
         }
         if let Some((svg, vx, _)) = svg
@@ -1480,6 +1496,9 @@ mod view {
             sample_count: None,
             find_roots: false,
             aspect: Some(PLOT_ASPECT),
+            y_center: None,
+            surface: false,
+                x_log: false,
         }
     }
 

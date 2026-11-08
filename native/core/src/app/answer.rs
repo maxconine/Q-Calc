@@ -107,6 +107,22 @@ pub fn unitless_answer(text: &str) -> String {
     .into_owned()
 }
 
+/// native only: a system's answer with fraction form off: `A = 15/2, B = 25/2` is `A = 7.5, B = 12.5`. A fraction
+/// that's part of a root or a π (`√2/2`, `2/3π`) stays as it is.
+pub fn system_decimals(display: &str, sig_figs: f64) -> String {
+    static FRACTION: Lazy = Lazy::new(|| js(r"(?<![\w.√∛π^/)])(\d+)/(\d+)(?![\w.√π^/(])", ""));
+    jsre::replace_all(&FRACTION, display, |c| {
+        let top: f64 = jsre::group(c, 1).parse().unwrap_or(f64::NAN);
+        let bottom: f64 = jsre::group(c, 2).parse().unwrap_or(f64::NAN);
+        if bottom == 0.0 || top.is_nan() || bottom.is_nan() {
+            jsre::group(c, 0).to_string()
+        } else {
+            format_number(top / bottom, sig_figs)
+        }
+    })
+    .into_owned()
+}
+
 /// Which side of a dual answer the bar reads as.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -333,6 +349,23 @@ mod tests {
         assert_eq!(answer_among("sqrt(2)", false), "sqrt(2)");
         assert_eq!(unitless_answer("x = 6 m, y = 4 m"), "x = 6, y = 4");
         assert_eq!(unitless_answer("$10.00"), "$10.00");
+        assert_eq!(
+            system_decimals("A = 15/2, B = 25/2", 6.0),
+            "A = 7.5, B = 12.5"
+        );
+        assert_eq!(
+            system_decimals("x = -1/3, y = 2", 6.0),
+            "x = -0.333333, y = 2"
+        );
+        assert_eq!(system_decimals("x = 3/2 kN", 6.0), "x = 1.5 kN");
+        assert_eq!(
+            system_decimals("x = √2/2, y = 2/3π", 6.0),
+            "x = √2/2, y = 2/3π"
+        );
+        assert_eq!(
+            system_decimals("x = 0.5, y = 1.25", 6.0),
+            "x = 0.5, y = 1.25"
+        );
         assert_eq!(pretty_roots("±1000000"), "±1,000,000");
     }
 }
