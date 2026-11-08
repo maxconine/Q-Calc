@@ -11,6 +11,9 @@ struct GraphPanel: View {
     let state: GraphState
     @State private var resetHover = false
     @State private var settingsShown = false
+    /// native: the export block under the head (the camera), and whether its picture labels the key points
+    @State private var exportShown = false
+    @State private var labelPoints = true
     /// every critical point's chip, rather than the dozen nearest the middle of the view
     @State private var allPoints = false
     /// the 3D scene from the last drawing of the plot, for the pointer's pass
@@ -41,9 +44,9 @@ struct GraphPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(label).font(.system(size: Theme.body, weight: .semibold, design: .monospaced)).foregroundStyle(Color.qInk)
+                Text(label).font(.system(size: Theme.body, weight: .semibold)).foregroundStyle(Color.qInk)
                 Text("x ∈ [\(fmt(state.xMin)), \(fmt(state.xMax))]")
-                    .font(.system(size: Theme.small, design: .monospaced))
+                    .font(.system(size: Theme.small))
                     .foregroundStyle(Color.qMuted)
                 if let unit = state.angleUnit {
                     Text(unit).font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
@@ -60,7 +63,7 @@ struct GraphPanel: View {
                 HeadIcon(symbol: "minus.magnifyingglass", tip: "Zoom out") { model.zoomGraph(1.25) }
                 HeadIcon(symbol: "plus.magnifyingglass", tip: "Zoom in") { model.zoomGraph(0.8) }
                 HeadIcon(symbol: "plus", tip: "Add an equation") { model.addGraphLayer() }
-                HeadIcon(symbol: "camera", tip: "Save a picture of the graph to the Desktop and copy it") { snapshot() }
+                HeadIcon(symbol: "camera", tip: "Export a picture of the graph", on: exportShown) { exportShown.toggle() }
                 HeadIcon(symbol: "wrench.adjustable", tip: "Graph settings", on: settingsShown) { settingsShown.toggle() }
                 Button { model.homeGraph() } label: {
                     Text("reset")
@@ -77,6 +80,9 @@ struct GraphPanel: View {
                 .hoverTip("Reset view")
             }
             // in the bar itself, not a popover: a popover is a window of its own, and the bar hides when it loses the keys
+            if exportShown {
+                GraphExportView(model: model, labelPoints: $labelPoints) { snapshot() }
+            }
             if settingsShown {
                 GraphSettingsView(model: model)
             }
@@ -184,14 +190,14 @@ struct GraphPanel: View {
         if allCritical.isEmpty {
             // .graph-detail-empty: the page says there are none rather than leaving the label out
             VStack(alignment: .leading, spacing: 6) {
-                Text(detailTitle.uppercased()).font(.system(size: Theme.caption, weight: .medium, design: .monospaced)).tracking(0.6).foregroundStyle(Color.qMuted)
+                Text(detailTitle.uppercased()).font(.system(size: Theme.caption, weight: .medium)).tracking(0.6).foregroundStyle(Color.qMuted)
                     .padding(.top, 12)
                 Text("None in this domain").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
             }
             .padding(.top, 8)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                Text(detailTitle.uppercased()).font(.system(size: Theme.caption, weight: .medium, design: .monospaced)).tracking(0.6).foregroundStyle(Color.qMuted)
+                Text(detailTitle.uppercased()).font(.system(size: Theme.caption, weight: .medium)).tracking(0.6).foregroundStyle(Color.qMuted)
                     .padding(.top, 12)
                 // .graph-detail-list: flex-wrap, so a narrow bar puts the chips on more rows (an HStack squeezed
                 // each into a column a character wide)
@@ -220,7 +226,7 @@ struct GraphPanel: View {
                     if all.count > Self.chipLimit {
                         Button { allPoints.toggle() } label: {
                             Text(allPoints ? "fewer" : "+\(all.count - shown.count) more")
-                                .font(.system(size: Theme.small, design: .monospaced))
+                                .font(.system(size: Theme.small))
                                 .foregroundStyle(Color.qMuted)
                                 .padding(.vertical, 3).padding(.horizontal, 7)
                                 .overlay(Rectangle().strokeBorder(Color.qInk.opacity(0.16), style: StrokeStyle(lineWidth: 0.75, dash: [2, 2])))
@@ -295,7 +301,7 @@ struct GraphPanel: View {
     private func snapshot() {
         let w = Self.svgW, h = plotH
         let eqs = [label] + state.layers.filter { !$0.isBlank }.map { Pretty.radicals($0.expression) }
-        let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+        let font = NSFont.systemFont(ofSize: 11, weight: .medium)
         let line: CGFloat = 17, head = 10 + line * CGFloat(eqs.count)
         let key = PlotKey(state: state, prefs: model.graphPrefs, hover: nil, spot: nil, scale: 1)
         let view = PlotCanvas.PlotNSView(frame: CGRect(x: 0, y: 0, width: w, height: h + head))
@@ -315,6 +321,18 @@ struct GraphPanel: View {
             }
             cg.translateBy(x: 0, y: head)
             if state.shows3D { draw3D(cg, .base, key: key) } else { draw(cg, .base) }
+            // the key points named beside their marks, when asked (as many as fit without crowding)
+            if labelPoints {
+                let frame = CGRect(x: Self.pad.left, y: Self.pad.top, width: w - Self.pad.left - Self.pad.right, height: h - Self.pad.top - Self.pad.bottom)
+                var placed: [CGRect] = []
+                for (q, e) in zip(markPoints(), allCritical) {
+                    guard let q, frame.contains(q) else { continue }
+                    let near = CGRect(x: q.x - 40, y: q.y - 22, width: 80, height: 30)
+                    if placed.contains(where: { $0.intersects(near) }) || placed.count >= 16 { continue }
+                    placed.append(near)
+                    Self.markLabel(cg, "\(kindName(e.c.kind)) \(coords(e.c))", at: q, in: frame, plotBg: Self.plotBgNS.cgColor)
+                }
+            }
         }
         guard let img = view.image(scale: 3) else { return }
         let rep = NSBitmapImageRep(cgImage: img)
@@ -382,9 +400,9 @@ struct GraphPanel: View {
         return Color(.sRGB, red: c.0, green: c.1, blue: c.2)
     }
 
-    /// The plot's monospaced type (native: the plot reads as a technical drawing)
+    /// The plot's type: Q Calc's own (the system font), its digits all one width so numbers line up
     private static func mono(_ size: CGFloat, _ weight: NSFont.Weight = .regular) -> NSFont {
-        NSFont.monospacedSystemFont(ofSize: size, weight: weight)
+        NSFont.monospacedDigitSystemFont(ofSize: size, weight: weight)
     }
 
     /// Which pass of the plot: everything that stays put (drawn once per change of graph, view or settings), or
@@ -430,7 +448,7 @@ struct GraphPanel: View {
             let every = max(1, (b - a) / 8)
             for k in a...b {
                 let v = pow(10, Double(k))
-                if v >= lo * (1 - 1e-9), v <= hi * (1 + 1e-9), (k - a) % every == 0 { out.major.append((v, Self.tickText(fmt(v)))) }
+                if v >= lo * (1 - 1e-9), v <= hi * (1 + 1e-9), (k - a) % every == 0 { out.major.append((v, Self.decade(k))) }
                 if b - a <= 12 {
                     for m in 2...9 where Double(m) * v >= lo && Double(m) * v <= hi { out.minor.append(Double(m) * v) }
                 }
@@ -565,18 +583,6 @@ struct GraphPanel: View {
             for (v, _) in gy.major { line(CGPoint(x: p.left - 4, y: py(v)), CGPoint(x: p.left, y: py(v)), frameC, 0.75) }
             if prefs.minorGrid { for v in gy.minor { line(CGPoint(x: p.left - 2, y: py(v)), CGPoint(x: p.left, y: py(v)), frameC, 0.5) } }
         }
-        if prefs.axisNumbers {
-            if prefs.showXAxis {
-                for (v, label) in gx.major {
-                    Self.text(label, tickFont, Theme.muted, at: CGPoint(x: px(v), y: Self.svgH - 11), anchor: .center)
-                }
-            }
-            if prefs.showYAxis {
-                for (v, label) in gy.major {
-                    Self.text(label, tickFont, Theme.muted, at: CGPoint(x: p.left - 7, y: py(v)), anchor: .trailing)
-                }
-            }
-        }
         // the axes (x = 0 and y = 0, none on a log axis), with arrowheads at their ends when asked
         let xAxisY: CGFloat? = !m.logY && py(0) >= p.top && py(0) <= bottom ? py(0) : nil
         let yAxisX: CGFloat? = !m.logX && px(0) >= p.left && px(0) <= right ? px(0) : nil
@@ -603,6 +609,47 @@ struct GraphPanel: View {
             if prefs.arrows {
                 arrow(at: CGPoint(x: x, y: p.top), dx: 0, dy: -1)
                 arrow(at: CGPoint(x: x, y: bottom), dx: 0, dy: 1)
+            }
+        }
+        // the numbers ride the axes, as Desmos's do: x's under the line y = 0 and y's beside the line x = 0. An
+        // axis off the view (or that can't be drawn, on a log scale) leaves its numbers at the edge it went off:
+        // the margins below and left, or just inside the top and right
+        if prefs.axisNumbers {
+            func boxed(_ label: String, at pt: CGPoint, anchor: UnitPoint) {
+                let str = NSAttributedString(string: label, attributes: [.font: tickFont])
+                let sz = str.size()
+                let r = CGRect(x: pt.x - sz.width * anchor.x - 2, y: pt.y - sz.height * anchor.y, width: sz.width + 4, height: sz.height)
+                cg.setFillColor(plotBg.copy(alpha: 0.85) ?? plotBg)
+                cg.fill(r)
+                Self.text(label, tickFont, Theme.muted, at: pt, anchor: anchor)
+            }
+            let zeroY = m.logY ? nil : Optional(py(0)), zeroX = m.logX ? nil : Optional(px(0))
+            if prefs.showXAxis {
+                for (v, label) in gx.major {
+                    let x = px(v)
+                    if let y = xAxisY {
+                        // the origin's 0 is written once, under and left of it
+                        if let ax = yAxisX, abs(x - ax) < 0.5 { boxed(label, at: CGPoint(x: x - 4, y: y + 3), anchor: UnitPoint(x: 1, y: 0)); continue }
+                        if x > p.left + 4, x < right - 4 { boxed(label, at: CGPoint(x: x, y: y + 3), anchor: UnitPoint(x: 0.5, y: 0)) }
+                    } else if let z = zeroY, z < p.top {
+                        if x > p.left + 4, x < right - 4 { boxed(label, at: CGPoint(x: x, y: p.top + 3), anchor: UnitPoint(x: 0.5, y: 0)) }
+                    } else {
+                        Self.text(label, tickFont, Theme.muted, at: CGPoint(x: x, y: Self.svgH - 11), anchor: .center)
+                    }
+                }
+            }
+            if prefs.showYAxis {
+                for (v, label) in gy.major {
+                    let y = py(v)
+                    if let x = yAxisX {
+                        if xAxisY != nil, v == 0 { continue }
+                        if y > p.top + 4, y < bottom - 4 { boxed(label, at: CGPoint(x: x - 4, y: y), anchor: UnitPoint(x: 1, y: 0.5)) }
+                    } else if let z = zeroX, z > right {
+                        if y > p.top + 4, y < bottom - 4 { boxed(label, at: CGPoint(x: right - 4, y: y), anchor: UnitPoint(x: 1, y: 0.5)) }
+                    } else {
+                        Self.text(label, tickFont, Theme.muted, at: CGPoint(x: p.left - 7, y: y), anchor: .trailing)
+                    }
+                }
             }
         }
         let axisLabelFont = Self.mono(big ? 13 : 11, .medium)
@@ -1164,6 +1211,13 @@ struct GraphPanel: View {
 
     /// GraphicsContext.draw(Text, at:, anchor:): the line's box placed so `anchor` of it sits on `point`
     /// (the context is flipped, as the view is).
+    /// A log axis's number for 10ᵏ: written out from 0.001 to 1000, else as a power, as Desmos does (10⁴, 10⁻⁵)
+    private static func decade(_ k: Int) -> String {
+        if abs(k) <= 3 { return k >= 0 ? String(Int(pow(10, Double(k)))) : "0." + String(repeating: "0", count: -k - 1) + "1" }
+        let sup: [Character: Character] = ["0": "⁰", "1": "¹", "2": "²", "3": "³", "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹", "-": "⁻"]
+        return "10" + String(String(k).map { sup[$0] ?? $0 })
+    }
+
     private static func text(_ s: String, _ font: NSFont, _ color: NSColor, at point: CGPoint, anchor: UnitPoint) {
         let str = NSAttributedString(string: s, attributes: [.font: font, .foregroundColor: color])
         let size = str.size()
@@ -1210,8 +1264,8 @@ private struct CriticalChip: View {
             // native: a plain monospaced cell with a hairline edge (the page's is a filled pill)
             HStack(spacing: 6) {
                 if let color { Rectangle().fill(color).frame(width: 6, height: 6) }
-                Text(kind).font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(lit ? Color.qAccent : Color.qMuted)
-                Text(coords).font(.system(size: Theme.small, design: .monospaced)).foregroundStyle(lit ? Color.qAccent : Color.qInk)
+                Text(kind).font(.system(size: Theme.caption)).foregroundStyle(lit ? Color.qAccent : Color.qMuted)
+                Text(coords).font(.system(size: Theme.small)).foregroundStyle(lit ? Color.qAccent : Color.qInk)
             }
             .padding(.vertical, 3).padding(.horizontal, 7)
             .background(Rectangle().fill(lit ? Color.qAccent.opacity(0.1) : Color.clear))
