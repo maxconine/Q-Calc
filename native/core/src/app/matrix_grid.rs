@@ -30,17 +30,29 @@ fn byte_at(text: &str, unit: usize) -> usize {
     text.len()
 }
 
-/// `matrix 3x3` (`matrix 2×4`, `matrix 3`): the grid it asks for, empty, in its place.
-pub fn grid_command(text: &str) -> Option<GridSpot> {
-    let lower = text.to_ascii_lowercase();
+/// Each `matrix` or `mat` standing as a word of its own in `lower`: (where, how long).
+fn keywords(lower: &str) -> Vec<(usize, usize)> {
+    let word = |c: char| c.is_alphanumeric() || c == '_';
+    let mut out = Vec::new();
     let mut from = 0;
-    while let Some(i) = lower[from..].find("matrix").map(|i| i + from) {
-        from = i + 6;
-        // a word of its own
-        if lower[..i].chars().next_back().is_some_and(|c| c.is_alphanumeric() || c == '_') {
+    while let Some(i) = lower[from..].find("mat").map(|i| i + from) {
+        let len = if lower[i..].starts_with("matrix") { 6 } else { 3 };
+        from = i + len;
+        if lower[..i].chars().next_back().is_some_and(word)
+            || lower[i + len..].chars().next().is_some_and(char::is_alphabetic)
+        {
             continue;
         }
-        let rest = &text[i + 6..];
+        out.push((i, len));
+    }
+    out
+}
+
+/// `matrix 3x3` (`matrix 2×4`, `matrix 3`, `mat 2x2`): the grid it asks for, empty, in its place.
+pub fn grid_command(text: &str) -> Option<GridSpot> {
+    let lower = text.to_ascii_lowercase();
+    for (i, kw) in keywords(&lower) {
+        let rest = &text[i + kw..];
         let trimmed = rest.trim_start();
         let digits = |s: &str| -> (usize, usize) {
             let n: String = s.chars().take_while(char::is_ascii_digit).collect();
@@ -50,7 +62,7 @@ pub fn grid_command(text: &str) -> Option<GridSpot> {
         if len == 0 {
             continue;
         }
-        let mut end = i + 6 + (rest.len() - trimmed.len()) + len;
+        let mut end = i + kw + (rest.len() - trimmed.len()) + len;
         let after = &text[end..];
         let after_t = after.trim_start();
         let mut cols = rows;
@@ -86,14 +98,12 @@ pub fn grid_hint(text: &str) -> Option<String> {
             spot.cells.first().map_or(0, Vec::len)
         ));
     }
-    // `matrix` being typed at the end of the line (`det(matrix`, `matrix 3x`): ask for its size
+    // `matrix` being typed at the end of the line (`det(matrix`, `matrix 3x`, `mat 3x`): ask for its size; a bare
+    // `mat` may be a name, so it waits for a digit
     let lower = text.trim_end().to_ascii_lowercase();
-    let i = lower.rfind("matrix")?;
-    if lower[..i].chars().next_back().is_some_and(|c| c.is_alphanumeric() || c == '_') {
-        return None;
-    }
-    let size = lower[i + 6..].trim();
-    if !size.chars().all(|c| c.is_ascii_digit() || "x× ".contains(c)) {
+    let (i, kw) = *keywords(&lower).last()?;
+    let size = lower[i + kw..].trim();
+    if !size.chars().all(|c| c.is_ascii_digit() || "x× ".contains(c)) || (kw == 3 && size.is_empty()) {
         return None;
     }
     let too_big = size
@@ -264,6 +274,14 @@ mod tests {
         // a word that only ends in it, or more typed after it
         assert!(grid_hint("mymatrix").is_none());
         assert!(grid_hint("matrix A").is_none());
+        // `mat` is short for it, once a size starts
+        assert_eq!(grid_command("mat 2x2").map(|s| s.cells.len()), Some(2));
+        assert_eq!(grid_command("det(mat 3)").map(|s| (s.start, s.end)), Some((4, 9)));
+        assert_eq!(grid_hint("mat 2x2").as_deref(), Some("↵ opens a 2×2 grid"));
+        assert_eq!(grid_hint("mat 3x").as_deref(), ask);
+        assert!(grid_hint("mat").is_none());
+        assert!(grid_hint("math").is_none());
+        assert!(grid_command("format 2x2").is_none());
         assert!(grid_hint("2+2").is_none());
     }
 
