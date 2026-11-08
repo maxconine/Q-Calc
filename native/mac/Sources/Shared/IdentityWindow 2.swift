@@ -1,1 +1,0 @@
-../../../../macos/IdentityWindow.swift
