@@ -74,6 +74,10 @@ final class BarModel: ObservableObject {
     // the matrix grid and the row-operation steps (Matrices.swift, native only)
     @Published var grid: GridState?
     @Published var gridFocus: GridCell?
+    /// bumped to hand the grid's focused cell the keys again (after the bar gave them to its line)
+    @Published var gridFocusAsk = 0
+    /// the matrix the grid last wrote, so a line committed with it is remembered (GridMemory)
+    var lastGridLiteral: String?
     /// the grid is writing the line, so the change is its own
     var writingGrid = false
     @Published var stepsShown = false
@@ -324,6 +328,9 @@ final class BarModel: ObservableObject {
             commandMessage = h
             setLive(.blank, for: typed)
             engine.cancel(.live)
+            // `mat` / `matrix` lit as a known word whose hover says what it is; no squiggle left from `mat` alone
+            squiggleTimer?.invalidate()
+            decorations = Self.matrixWord(typed)
             return
         }
         // `sys`: a hint until there's a count; the panel's own answer once its fields are open
@@ -929,6 +936,8 @@ final class BarModel: ObservableObject {
     func commit(leaving: Bool = false) {
         let typed = text
         guard !typed.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        // a line holding the grid's matrix opens the grid again when it comes back from history
+        if let lit = lastGridLiteral, typed.contains(lit) { GridMemory.note(typed) }
         // ↵ again on an offered unit takes it (missingUnit's `filled`)
         if !leaving, let offer = unitOffer, offer.typed == typed {
             unitOffer = nil
@@ -1117,6 +1126,8 @@ final class BarModel: ObservableObject {
         selected = nil
         tapeOpen = false
         insert(piece)
+        // a line made in the matrix grid comes back with the grid open on its matrix
+        if GridMemory.made(piece) { DispatchQueue.main.async { [weak self] in self?.reopenGrid() } }
     }
 
     /// Text into the line at the caret (history rows, periodic tiles); the field does the caret part.
@@ -1558,7 +1569,10 @@ final class BarModel: ObservableObject {
         if text.trimmingCharacters(in: .whitespaces).isEmpty {
             UserDefaults.standard.removeObject(forKey: Self.draftKey)
         } else if draftSeconds > 0 {
-            UserDefaults.standard.set(["expr": text, "savedAt": Date().timeIntervalSince1970 * 1000], forKey: Self.draftKey)
+            var d: [String: Any] = ["expr": text, "savedAt": Date().timeIntervalSince1970 * 1000]
+            // native only: an open matrix grid comes back with the line
+            if let g = grid { d["grid"] = ["start": g.start, "end": g.end, "r": gridFocus?.r ?? 0, "c": gridFocus?.c ?? 0] }
+            UserDefaults.standard.set(d, forKey: Self.draftKey)
         } else {
             if !live.isBlank { commit(leaving: true) }
             text = ""
@@ -1575,6 +1589,13 @@ final class BarModel: ObservableObject {
         let age = Date().timeIntervalSince1970 * 1000 - savedAt
         if settings.draftSeconds > 0, age < Double(settings.draftSeconds) * 1000 {
             if text != expr { text = expr }
+            if let g = d["grid"] as? [String: Int] {
+                let at = GridCell(r: g["r"] ?? 0, c: g["c"] ?? 0)
+                // after the bar has given its line the keys
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+                    self?.reopenGrid(at: g["start"], end: g["end"], focus: at)
+                }
+            }
         } else {
             text = ""
             UserDefaults.standard.removeObject(forKey: Self.draftKey)

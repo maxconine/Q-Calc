@@ -46,15 +46,75 @@ struct StepRow: Identifiable, Equatable {
     }
 }
 
+/// Lines committed with a matrix the grid wrote (native only), so bringing one back from history opens the grid
+/// again. The newest 200, kept across launches.
+enum GridMemory {
+    private static let key = "qcalc.gridLines"
+
+    static func note(_ line: String) {
+        var lines = UserDefaults.standard.stringArray(forKey: key) ?? []
+        lines.removeAll { $0 == line }
+        lines.append(line)
+        UserDefaults.standard.set(Array(lines.suffix(200)), forKey: key)
+    }
+
+    static func made(_ line: String) -> Bool {
+        (UserDefaults.standard.stringArray(forKey: key) ?? []).contains(line)
+    }
+}
+
 extension BarModel {
     // MARK: the grid
+
+    /// `mat 2x2` / `matrix 3x3` in the line: the word lit as a known one, its hover naming it
+    static func matrixWord(_ text: String) -> Decorations {
+        var d = Decorations()
+        let pattern = try? NSRegularExpression(pattern: "(?<![A-Za-z0-9_])(?:matrix|mat)(?![A-Za-z])", options: [.caseInsensitive])
+        let ns = text as NSString
+        if let m = pattern?.matches(in: text, range: NSRange(location: 0, length: ns.length)).last {
+            d.words = [m.range]
+            d.names = [WordName(range: m.range, name: "matrix")]
+        }
+        return d
+    }
 
     func openGrid(_ spot: GridSpot) {
         grid = GridState(cells: spot.cells, start: Int(spot.start), end: Int(spot.end), written: text)
         stepsShown = false
         writeGrid()
         gridFocus = GridCell(r: 0, c: 0)
+        gridFocusAsk += 1
         track("matrix.grid")
+    }
+
+    /// The grid back on the line's matrix (from a saved draft's place, else the one under the caret, else the
+    /// last), its cell `focus` given the keys; one already open just takes them again.
+    func reopenGrid(at start: Int? = nil, end: Int? = nil, focus: GridCell = GridCell(r: 0, c: 0)) {
+        if grid == nil {
+            // just inside the saved matrix's bracket, so it's the one read
+            let caret = start.map { $0 + 1 } ?? fieldCaret?() ?? (text as NSString).length
+            guard let spot = matrixGridAt(text: text, caret: UInt32(caret)) else { return }
+            grid = GridState(cells: spot.cells, start: Int(spot.start), end: Int(spot.end), written: text)
+            stepsShown = false
+        }
+        guard let g = grid else { return }
+        gridFocus = GridCell(r: min(focus.r, g.rows - 1), c: min(focus.c, g.cols - 1))
+        gridFocusAsk += 1
+    }
+
+    /// ⌘⌫ in a cell: empties it; in an empty one, the matrix and the line go, for a fresh bar (as the `sys` fields)
+    func gridDeleteLine(_ cell: GridCell) -> Bool {
+        guard let g = grid, g.cells.indices.contains(cell.r), g.cells[cell.r].indices.contains(cell.c) else { return false }
+        if g.cells[cell.r][cell.c].trimmingCharacters(in: .whitespaces).isEmpty {
+            grid = nil
+            gridFocus = nil
+            lastGridLiteral = nil
+            text = ""
+            focusField?()
+        } else {
+            setGridCell(cell, "")
+        }
+        return true
     }
 
     /// ⌃G: the matrix under the caret in the grid (else the last in the line, else a new 2×2 at the caret);
@@ -109,6 +169,7 @@ extension BarModel {
         guard g.start <= g.end, g.end <= before.length else { closeGrid(); return }
         let tail = before.length - g.end
         let literal = matrixGridLiteral(cells: g.cells)
+        lastGridLiteral = literal
         let line = before.replacingCharacters(in: NSRange(location: g.start, length: g.end - g.start), with: literal)
         writingGrid = true
         if let fill = fillParensInField {
@@ -204,6 +265,8 @@ private extension View {
 struct MatrixGridPanel: View {
     @ObservedObject var model: BarModel
     @FocusState private var focused: GridCell?
+    /// ⌘⌫ while a cell has the keys (Systems.swift's watch)
+    @State private var deleteWatch = PasteWatch()
 
     private static let cellWidth: CGFloat = 64
 
@@ -242,11 +305,31 @@ struct MatrixGridPanel: View {
         .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Color.black.opacity(0.1), lineWidth: 0.5))
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
-        .onAppear { focused = model.gridFocus ?? GridCell(r: 0, c: 0) }
+        // the cell takes the keys once the panel is in the window (the bar's line holds them as ↵ opens it)
+        .onAppear {
+            take(model.gridFocus ?? GridCell(r: 0, c: 0))
+            deleteWatch.start(paste: { false }, deleteLine: {
+                guard let f = focused else { return false }
+                return model.gridDeleteLine(f)
+            })
+        }
+        .onDisappear { deleteWatch.stop() }
         .onChange(of: model.gridFocus) { f in if let f { focused = f } }
-        .onChange(of: focused) { f in if let f, f != model.gridFocus { model.gridFocus = f } }
+        .onChange(of: model.gridFocusAsk) { _ in take(model.gridFocus ?? GridCell(r: 0, c: 0)) }
+        .onChange(of: focused) { f in
+            deleteWatch.field = f.map { $0.r * 100 + $0.c }
+            if let f, f != model.gridFocus { model.gridFocus = f }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Matrix, \(g.rows) by \(g.cols)")
+    }
+
+    /// focus on the next turns of the run loop: SwiftUI drops a focus set while the field editor is still the line's
+    private func take(_ at: GridCell) {
+        DispatchQueue.main.async {
+            focused = at
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { if focused != at { focused = at } }
+        }
     }
 
     private func cell(_ at: GridCell, _ value: String) -> some View {

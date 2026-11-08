@@ -132,6 +132,16 @@ Known gaps: Ctrl+G and Ctrl+R are fixed chords (the core's keybinds have no matr
 same chord wins); a click in a cell puts the caret at the end (double-click selects it) rather than under the
 pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI Automation for the cells yet.
 
+## 4. Mac grid changes after Phase 5 (to port)
+
+| Mac does | Windows should |
+| --- | --- |
+| `mat 2x2` / `matrix 3x3` lit as a known word with hover name `matrix`, no squiggle left from `mat` alone (`BarModel.matrixWord`) | the same in `matrices::follow`'s hint path |
+| ↵ on `mat 2x2`: the first cell gets the keys once the card is in the window (focus set on the next run-loop turns) | check the caret lands in row 1, column 1 |
+| ⌘⌫ in a cell empties it; in an empty cell the grid closes and the line clears (as `sys`) | Ctrl+Backspace the same |
+| hiding with the grid open saves it with the draft (`grid: start, end, r, c`); shown again within the draft time, the grid reopens on that cell | the same with the draft |
+| a line committed with a grid-written matrix is remembered (`GridMemory`, newest 200); inserted again from history, the grid opens on its matrix | the same |
+
 ## 2. Mac UI to port (Phase 4)
 
 Mac code: `mac/Sources/Bar/Matrices.swift` (new), with hooks in `BarModel.swift` (`evaluateLive`, `setLive`,
