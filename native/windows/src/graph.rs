@@ -270,6 +270,8 @@ pub fn kind_name(k: CriticalKind) -> &'static str {
         CriticalKind::Saddle => "saddle",
         CriticalKind::VerticalTangent => "vertical tangent",
         CriticalKind::Point => "point",
+        CriticalKind::Endpoint => "endpoint",
+        CriticalKind::OpenEndpoint => "open end",
     }
 }
 

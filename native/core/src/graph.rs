@@ -93,6 +93,9 @@ pub enum ContourKind {
 pub struct GraphRange {
     pub lo: f64,
     pub hi: f64,
+    /// Native only: the end is left out (`<`), not kept (`≤`): an open endpoint rather than a closed one.
+    pub lo_open: bool,
+    pub hi_open: bool,
 }
 
 /// The pieces of the plot to keep: a union of ranges per axis, intersected across x and y.
@@ -155,6 +158,10 @@ pub enum CriticalKind {
     VerticalTangent,
     /// Native only: a point the line was drawn through (`graph line through (1, 2) and (3, 5)`).
     Point,
+    /// Native only: where a curve restricted by `{a ≤ x ≤ b}` stops, the end kept (as Desmos's filled dot).
+    Endpoint,
+    /// Native only: where a curve restricted by `{a < x < b}` stops, the end left out (Desmos's open dot).
+    OpenEndpoint,
 }
 
 impl CriticalKind {
@@ -168,6 +175,8 @@ impl CriticalKind {
             CriticalKind::Saddle => "saddle",
             CriticalKind::VerticalTangent => "vertical tangent",
             CriticalKind::Point => "point",
+            CriticalKind::Endpoint => "endpoint",
+            CriticalKind::OpenEndpoint => "open endpoint",
         }
     }
 }
@@ -616,10 +625,23 @@ fn parse_bounds(
         if text.is_empty() {
             return None;
         }
+        // native: ∞, inf and infinity (signed) leave that side open, as Desmos reads {3 < x < ∞}
+        let bare = text.replace(' ', "").to_lowercase();
+        let (sign, word) = match bare.strip_prefix('-').or_else(|| bare.strip_prefix('−')) {
+            Some(w) => (-1.0, w.to_string()),
+            None => (1.0, bare.strip_prefix('+').unwrap_or(&bare).to_string()),
+        };
+        if matches!(
+            word.as_str(),
+            "∞" | "inf" | "infinity" | "infty" | "\\infty"
+        ) {
+            return Some(sign * f64::INFINITY);
+        }
         eval_scientific(text, sci)
             .filter(|v| v.kind == ValueKind::Number && !v.n.is_nan())
             .map(|v| v.n)
     };
+    let strict = |op: &str| op == "<" || op == ">";
     let axis_of = |name: &str| names.iter().find(|(k, _)| k == name).map(|(_, a)| *a);
     for piece in groups.iter().flat_map(|g| split_top_commas(g)) {
         if jtrim(&piece).is_empty() {
@@ -629,6 +651,7 @@ fn parse_bounds(
         let axis;
         let mut lo = f64::NEG_INFINITY;
         let mut hi = f64::INFINITY;
+        let (mut lo_open, mut hi_open) = (true, true);
         if t.len() == 3 {
             let (a, op, b) = (&t[0], &t[1], &t[2]);
             let left = axis_of(a);
@@ -637,8 +660,10 @@ fn parse_bounds(
             // x < 3 and 3 > x both cap x
             if is_less(op) == left.is_some() {
                 hi = bound;
+                hi_open = strict(op);
             } else {
                 lo = bound;
+                lo_open = strict(op);
             }
         } else if t.len() == 5 {
             let (a, op1, v, op2, b) = (&t[0], &t[1], &t[2], &t[3], &t[4]);
@@ -650,12 +675,27 @@ fn parse_bounds(
             }
             let (na, nb) = (na?, nb?);
             (lo, hi) = if is_less(op1) { (na, nb) } else { (nb, na) };
+            (lo_open, hi_open) = if is_less(op1) {
+                (strict(op1), strict(op2))
+            } else {
+                (strict(op2), strict(op1))
+            };
         } else {
             return None;
         }
         match axis {
-            Axis::X => out.x.push(GraphRange { lo, hi }),
-            Axis::Y => out.y.push(GraphRange { lo, hi }),
+            Axis::X => out.x.push(GraphRange {
+                lo,
+                hi,
+                lo_open,
+                hi_open,
+            }),
+            Axis::Y => out.y.push(GraphRange {
+                lo,
+                hi,
+                lo_open,
+                hi_open,
+            }),
         }
     }
     Some(out)
@@ -1580,6 +1620,8 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
     let mut r = build_intent(native.intent, options, true);
     let intercepts = line_intercepts(&r);
     r.critical_points.extend(intercepts);
+    let ends = endpoints(&r);
+    r.critical_points.extend(ends);
     // the points a line was drawn through, first
     if r.error.is_none() && !native.points.is_empty() {
         let mut marks: Vec<CriticalPoint> = native
@@ -1603,6 +1645,57 @@ pub fn build_native_graph(input: &str, options: &GraphOptions) -> Option<GraphRe
         r.error = Some(e);
     }
     Some(r)
+}
+
+/// Native only, as Desmos: where a curve cut off by `{a ≤ x ≤ b}` stops, each end inside the window marked
+/// closed or open (`<`), at the height the curve reaches there (approached from inside for an open end).
+fn endpoints(r: &GraphResult) -> Vec<CriticalPoint> {
+    let Some(b) = r.intent.bounds.as_ref() else {
+        return Vec::new();
+    };
+    if r.error.is_some() || r.contours.is_some() || r.intent.contour.is_some() {
+        return Vec::new();
+    }
+    let (w0, w1) = r.domain;
+    let nudge = (w1 - w0).abs() * 1e-9;
+    let unbounded = |x: f64| match &r.readout {
+        GraphReadout::Curve {
+            expression,
+            options,
+            mode,
+            ..
+        } => compile_graph_y(expression, options, Some(*mode)).at(x),
+        _ => None,
+    };
+    let in_y = |y: f64| b.y.is_empty() || b.y.iter().any(|g| y >= g.lo && y <= g.hi);
+    let mut out = Vec::new();
+    for g in &b.x {
+        for (x, open, inward) in [(g.lo, g.lo_open, nudge), (g.hi, g.hi_open, -nudge)] {
+            if !x.is_finite() || x < w0 || x > w1 {
+                continue;
+            }
+            // an open end isn't on the curve: its height is where the curve goes there (the formula itself,
+            // past the bounds), else the curve's just inside
+            let y = if open { unbounded(x) } else { r.y_at(x) }.or_else(|| r.y_at(x + inward));
+            let Some(y) = y.filter(|y| y.is_finite() && in_y(*y)) else {
+                continue;
+            };
+            let p = CriticalPoint {
+                x,
+                y,
+                kind: if open {
+                    CriticalKind::OpenEndpoint
+                } else {
+                    CriticalKind::Endpoint
+                },
+                z: None,
+            };
+            if !out.iter().any(|q: &CriticalPoint| q.x == p.x && q.y == p.y) {
+                out.push(p);
+            }
+        }
+    }
+    out
 }
 
 /// What `buildGraph(input, options).y` / `.z` evaluate, without sampling: for a readout under the pointer, so
@@ -1768,6 +1861,8 @@ pub(crate) fn home_of(
 const FULL: GraphRange = GraphRange {
     lo: f64::NEG_INFINITY,
     hi: f64::INFINITY,
+    lo_open: true,
+    hi_open: true,
 };
 
 /// Level curves of f(x, y) by marching squares, clipped to the bounds.

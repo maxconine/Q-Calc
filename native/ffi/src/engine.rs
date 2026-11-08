@@ -138,6 +138,8 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                             "saddle" => CriticalKind::Saddle,
                             "vertical tangent" => CriticalKind::VerticalTangent,
                             "point" => CriticalKind::Point,
+                            "endpoint" => CriticalKind::Endpoint,
+                            "open endpoint" => CriticalKind::OpenEndpoint,
                             _ => CriticalKind::Critical,
                         },
                         z: num(p.get("z")),
@@ -272,6 +274,8 @@ impl State {
             time_zone: self.config.time_zone.clone(),
             // the apps ask `blank_span` once typing pauses; a keystroke's answer doesn't wait for it
             no_squiggle: true,
+            // the native apps save `graph …` lines, so ↑ or a click on the row brings the graph back
+            keep_graphs: true,
             ..live::LiveRequest::default()
         }
     }

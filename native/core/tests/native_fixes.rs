@@ -422,7 +422,12 @@ fn a_straight_line_lists_its_intercepts() {
             .critical_points
             .is_empty()
     );
-    assert!(at("graph 2x+1 {5<x<8}").is_empty());
+    // (no intercepts inside {5 < x < 8}; its open ends are listed as endpoints)
+    let bounded = at("graph 2x+1 {5<x<8}");
+    assert!(
+        bounded.iter().all(|p| p.2 == CriticalKind::OpenEndpoint),
+        "{bounded:?}"
+    );
 
     // not lines: only their turns, as before
     for curve in [

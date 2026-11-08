@@ -110,6 +110,9 @@ pub struct LiveRequest {
     /// asks whether it answers, and for the native bars, which ask for it (`blank_reason`) only once typing has
     /// paused, so a keystroke needn't pay for it. Nothing else in the answer changes.
     pub no_squiggle: bool,
+    /// Native only: ↵ on a plain `graph …` line saves it to the tape (the web saves only `graph f(x) = …`), so
+    /// the graph can be brought back.
+    pub keep_graphs: bool,
 }
 
 /// A line that answers with a message or opens something, rather than calculating.
@@ -842,8 +845,8 @@ pub fn commit(req: &LiveRequest, rows: &[Json], row_id: &str) -> Commit {
         solve: live.solve.is_some(),
         graph: is_graph,
     });
-    // inline `graph f(x)=…` registers the function; plain `graph expr` is not saved
-    if is_graph && fn_def.is_none() {
+    // inline `graph f(x)=…` registers the function; plain `graph expr` is not saved (the native apps keep it)
+    if is_graph && fn_def.is_none() && !req.keep_graphs {
         return Commit {
             saved: true,
             row: None,

@@ -24,6 +24,23 @@ final class OverlayPanel: NSPanel {
 
     override func cancelOperation(_ sender: Any?) { onEscape?() }
 
+    /// The bar has no Edit menu, so its other text fields (the graph's settings and equations) get the editing keys
+    /// here; the line handles its own (BarTextView.performKeyEquivalent).
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if let field = firstResponder as? NSTextView, !(field is BarTextView),
+           event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command {
+            switch event.charactersIgnoringModifiers?.lowercased() {
+            case "a": field.selectAll(nil); return true
+            case "c": field.copy(nil); return true
+            case "x": field.cut(nil); return true
+            case "v": field.paste(nil); return true
+            case "z": field.undoManager?.undo(); return true
+            default: break
+            }
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func resignKey() {
         super.resignKey()
         if ignoreResignKey || commandShiftHeld() { return }
@@ -639,6 +656,15 @@ final class OverlayController: NSObject {
             // ⌘[ and ⌘] step back and forward through the front sheet window's pages
             if let step = IdentityWindowController.navigationStep(event), let sheets = IdentityWindowController.front(), sheets.go(step) {
                 return nil
+            }
+            // native: ⌘+ (or ⌘=) and ⌘− zoom the graph in and out, as the head's buttons do
+            if self.model.graph != nil, !composing,
+               event.modifierFlags.intersection([.command, .option, .control]) == [.command] {
+                switch event.keyCode {
+                case UInt16(kVK_ANSI_Equal), UInt16(kVK_ANSI_KeypadPlus): self.model.zoomGraph(0.8); return nil
+                case UInt16(kVK_ANSI_Minus), UInt16(kVK_ANSI_KeypadMinus): self.model.zoomGraph(1.25); return nil
+                default: break
+                }
             }
             if isCommandWCloseKey(event) {
                 if let sheet = PeriodicPanel.front() {

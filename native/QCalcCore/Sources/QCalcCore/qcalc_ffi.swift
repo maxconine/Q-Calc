@@ -11210,6 +11210,14 @@ public enum CriticalKind: Equatable, Hashable {
      * A point a line was drawn through.
      */
     case point
+    /**
+     * Where a curve cut off by `{a ≤ x ≤ b}` stops, the end kept.
+     */
+    case endpoint
+    /**
+     * Where a curve cut off by `{a < x < b}` stops, the end left out.
+     */
+    case openEndpoint
 
 
 
@@ -11246,6 +11254,10 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         case 7: return .verticalTangent
         
         case 8: return .point
+        
+        case 9: return .endpoint
+        
+        case 10: return .openEndpoint
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -11285,6 +11297,14 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         
         case .point:
             writeInt(&buf, Int32(8))
+        
+        
+        case .endpoint:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .openEndpoint:
+            writeInt(&buf, Int32(10))
         
         }
     }
