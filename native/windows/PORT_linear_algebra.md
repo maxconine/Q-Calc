@@ -67,6 +67,16 @@ fit or scroll. New names count only on a line with a matrix in it (`zeros`, `one
 | `projection of [1 2] onto [3 4]`, `angle between u and v`, `the dot product of u and v`, `magnitude of v`, `unit vector v` | the call's answer |
 | `basis for the null space of A`, `dim null A`, `least squares A b` | the call's answer |
 | `is A invertible?`, `is A positive definite`, `are u, v and w linearly independent` | `yes (det = -2)`, `no (rank 1 of 2)`… |
+| `find eigenvalues of A`, `what is the rank of A?`, `compute det A` | the bare question's answer |
+| `cofactor matrix of A`, `minor M12 of A`, `the (1, 2) cofactor of A` | the grid, `-6`, `6` |
+| `rotation matrix 30°`, `rotation matrix about the z axis by 90°`, `rot(30°)` | 2×2 / 3×3 rotation; `°` inside a matrix entry works |
+| `is [1 2 2] in the span of [1 0 0], [0 1 1]` | `yes (weights 1, 2)` |
+| `coordinates of [3 5] in basis [1 1], [1 -1]` | `[4; -1]` |
+| `orthogonal complement of [1 2 3]` | `span{[-2; 1; 0], [-3; 0; 1]}` |
+| `singular values of [3 0; 0 4]` | `σ = 4, 3` |
+| `change of basis from B (to C)` | `P = …, P⁻¹ = …` or `P = C⁻¹B` |
+| `outer product of [1 2] and [3 4]` | `[3 4; 6 8]` |
+| `A^(1/2)`, `A^0.5`, `matrix square root of A` | the matrix square root (was "power must be a whole number") |
 
 ### Phase 3: parts, steps, storing parts (core + ffi)
 

@@ -227,3 +227,47 @@ fn asked_with_a_lead_in() {
     // nothing to do with a matrix: untouched
     assert_eq!(show("find 2+2"), "");
 }
+
+#[test]
+fn more_textbook_questions() {
+    assert_eq!(show("cofactor matrix of [1 2; 3 4]"), "[4 -3; -2 1]");
+    assert_eq!(show("minor M12 of [1 2 0; 3 4 5; 6 7 8]"), "-6");
+    assert_eq!(show("the (1, 2) cofactor of [1 2 0; 3 4 5; 6 7 8]"), "6");
+    assert_eq!(show("rotation matrix 30°"), "[0.866025 -0.5; 0.5 0.866025]");
+    assert_eq!(
+        show("rotation matrix about the z axis by 90°"),
+        "[0 -1 0; 1 0 0; 0 0 1]"
+    );
+    assert_eq!(show("[cos(30°) 1]"), "[0.866025 1]");
+    assert_eq!(
+        show("is [1 2 2] in the span of [1 0 0], [0 1 1]"),
+        "yes (weights 1, 2)"
+    );
+    assert_eq!(show("is [1 2 3] in the span of [1 0 0] and [0 1 1]"), "no");
+    assert_eq!(
+        show("coordinates of [3 5] in basis [1 1], [1 -1]"),
+        "[4; -1]"
+    );
+    assert_eq!(
+        show("orthogonal complement of [1 2 3]"),
+        "span{[-2; 1; 0], [-3; 0; 1]}"
+    );
+    assert_eq!(show("singular values of [3 0; 0 4]"), "σ = 4, 3");
+    assert_eq!(
+        show("change of basis from [1 1], [1 -1]"),
+        "P = [1 1; 1 -1],  P⁻¹ = [0.5 0.5; 0.5 -0.5]"
+    );
+    assert_eq!(
+        show("change of basis matrix from [1 1], [1 -1] to [1 0], [1 1]"),
+        "P = [0 2; 1 -1]"
+    );
+    assert_eq!(show("outer product of [1 2] and [3 4]"), "[3 4; 6 8]");
+    assert_eq!(show("[4 0; 0 9]^(1/2)"), "[2 0; 0 3]");
+    assert_eq!(show("matrix square root of [4 0; 0 9]"), "[2 0; 0 3]");
+    assert_eq!(
+        after(&["A = [1 2 0; 3 4 5; 6 7 8]"], &["minor 1,2 of A"]),
+        ["-6"]
+    );
+    // not a matrix question
+    assert_eq!(show("rotation 30"), "");
+}

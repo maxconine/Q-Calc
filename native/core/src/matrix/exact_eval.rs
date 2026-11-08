@@ -710,6 +710,10 @@ impl<F: Cells> Ev<'_, '_, F> {
         };
         let Some(k) = self.int_of(&e) else {
             return match a {
+                // `A^(1/2)` is the matrix square root
+                X::Grid(g) if f.approx(&e) == Some(0.5) => {
+                    super::functions::call(self, "sqrtm", vec![X::Grid(g)])
+                }
                 X::Grid(_) if f.as_rat(&e).is_some() => {
                     fail("a matrix power must be a whole number")
                 }

@@ -182,13 +182,18 @@ const NEW_FNS: &[&str] = &[
     "pinv",
     "expm",
     "sqrtm",
+    "outer",
+    "inspan",
+    "orthcomp",
+    "svals",
+    "qc_cob",
 ];
 /// New names that make a matrix with no matrix typed.
 const MAKERS: &str = "zeros|ones|rot";
 /// New names that read as words: `eigenvalues of A`, `null A`.
 const NEW_WORDS: &str = "eigenvalues|eigenvectors|eig|charpoly|chareq|diagonalize|jordan|null|nullspace|kernel|leftnull|\
-nullity|colspace|rowspace|adj|adjugate|pinv|svd|lu|qr|cholesky|cond|expm|orth|gramschmidt|isinvertible|\
-isdiagonalizable|issymmetric|isorthogonal|isposdef";
+nullity|colspace|rowspace|adj|adjugate|cofactor|pinv|svd|svals|lu|qr|cholesky|cond|expm|sqrtm|orth|gramschmidt|\
+isinvertible|isdiagonalizable|issymmetric|isorthogonal|isposdef";
 
 static NEW_CALL: Lazy = Lazy::new(|| new_call_re(&[]));
 static MAKER_CALL: Lazy = Lazy::new(|| js(&format!(r"(?<![A-Za-z_])(?:{MAKERS})\s*\("), "i"));
@@ -230,6 +235,55 @@ fn sentences(expr: &str) -> String {
                 )
             };
             vec![
+                r(
+                    format!(
+                        r"(?:3d\s+)?rotation\s+matrix\s+(?:about|around)\s+(?:the\s+)?([xyz])(?:[-\s]*axis)?\s+(?:by\s+|of\s+|through\s+|for\s+)?{ARG}"
+                    ),
+                    "rot3",
+                ),
+                r(
+                    format!(
+                        r"(?:2d\s+)?rotation\s+matrix\s+(?:by\s+|of\s+|through\s+|for\s+)?{ARG}"
+                    ),
+                    "rot",
+                ),
+                r(
+                    format!(
+                        r"(?:cofactor\s+matrix|matrix\s+of\s+cofactors)\s+(?:of\s+|for\s+)?{ARG}"
+                    ),
+                    "cofactor",
+                ),
+                r(format!(r"singular\s+values\s+(?:of\s+)?{ARG}"), "svals"),
+                r(
+                    format!(r"outer\s+product\s+of\s+{ARG}\s+and\s+{ARG}"),
+                    "outer",
+                ),
+                r(
+                    format!(
+                        r"(?:matrix\s+)?square\s+root\s+of\s+(?:the\s+)?matrix\s+{ARG}|matrix\s+square\s+root\s+of\s+{ARG}"
+                    ),
+                    "sqrtm",
+                ),
+                r(
+                    format!(
+                        r"coord(?:inate)?s?\s+(?:vector\s+)?(?:of\s+)?{ARG}\s+(?:in|relative\s+to|with\s+respect\s+to|w\.?r\.?t\.?)\s+(?:the\s+)?basis\s+{ARG}"
+                    ),
+                    "coords",
+                ),
+                r(
+                    format!(r"(?:is|check\s+if)\s+{ARG}\s+in\s+(?:the\s+)?span\s+of\s+{ARG}"),
+                    "inspan",
+                ),
+                r(
+                    format!(r"orthogonal\s+complement\s+(?:of\s+)?{ARG}"),
+                    "orthcomp",
+                ),
+                r(
+                    format!(
+                        r"change[-\s]+of[-\s]+basis\s+(?:matrix\s+)?(?:from\s+)?{ARG}(?:\s+to\s+{ARG})?"
+                    ),
+                    "qc_cob",
+                ),
                 r(
                     format!(r"(?:vector\s+)?proj(?:ection)?\s+of\s+{ARG}\s+(?:onto|on)\s+{ARG}"),
                     "proj",
@@ -317,6 +371,9 @@ fn sentences(expr: &str) -> String {
             ]
         },
     );
+    if let Some(call) = minor_question(expr) {
+        return call;
+    }
     for (re, to) in RULES.iter() {
         let Ok(Some(c)) = re.captures(expr) else {
             continue;
@@ -335,11 +392,90 @@ fn sentences(expr: &str) -> String {
                 .map(|p| p.trim().to_string())
                 .filter(|p| !p.is_empty())
                 .collect(),
+            // `coordinates of v in basis u, w`, `is v in the span of u, w`
+            "coords" | "inspan" if args.len() == 2 => {
+                let mut list = vec![args[0].clone()];
+                list.extend(vector_list(&args[1]));
+                list
+            }
+            "orthcomp" => vector_list(&args[0]),
+            "rot3" => return format!("rot({}, {})", args[1], args[0].to_lowercase()),
+            // the count of the first basis's vectors, then both bases' vectors
+            "qc_cob" => {
+                let from = vector_list(&args[0]);
+                let mut list = vec![from.len().to_string()];
+                list.extend(from);
+                if let Some(to) = args.get(1) {
+                    list.extend(vector_list(to));
+                }
+                list
+            }
             _ => args,
         };
         return format!("{to}({})", args.join(", "));
     }
     expr.to_string()
+}
+
+/// `minor M12 of A`, `the (1, 2) cofactor of A`, `minor 1,2 of A`: the call with the matrix first.
+fn minor_question(expr: &str) -> Option<String> {
+    static AFTER: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(?:the\s+)?(minor|cofactor)\s+(?:[MC]_?)?\(?\s*(\d)\s*,?\s*(\d)\s*\)?\s+(?:of|in)\s+(.+?)\s*\??\s*$",
+            "i",
+        )
+    });
+    static BEFORE: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(?:the\s+)?\(\s*(\d)\s*,\s*(\d)\s*\)\s+(minor|cofactor)\s+(?:of|in)\s+(.+?)\s*\??\s*$",
+            "i",
+        )
+    });
+    let at = |c: &jsre::Caps, k: usize| jsre::group(c, k).to_string();
+    if let Ok(Some(c)) = AFTER.captures(expr) {
+        return Some(format!(
+            "{}({}, {}, {})",
+            at(&c, 1).to_lowercase(),
+            at(&c, 4),
+            at(&c, 2),
+            at(&c, 3)
+        ));
+    }
+    let c = BEFORE.captures(expr).ok().flatten()?;
+    Some(format!(
+        "{}({}, {}, {})",
+        at(&c, 3).to_lowercase(),
+        at(&c, 4),
+        at(&c, 1),
+        at(&c, 2)
+    ))
+}
+
+/// `[1 1], [1 -1] and [0 2]`: the vectors of a list, split at top-level commas and `and`.
+fn vector_list(s: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut depth = 0i32;
+    let mut cur = String::new();
+    let mut rest = s;
+    while let Some(ch) = rest.chars().next() {
+        if depth == 0 && (ch == ',' || rest.starts_with(" and ")) {
+            out.push(std::mem::take(&mut cur));
+            rest = &rest[if ch == ',' { 1 } else { 5 }..];
+            continue;
+        }
+        match ch {
+            '[' | '(' => depth += 1,
+            ']' | ')' => depth -= 1,
+            _ => {}
+        }
+        cur.push(ch);
+        rest = &rest[ch.len_utf8()..];
+    }
+    out.push(cur);
+    out.into_iter()
+        .map(|p| p.trim().to_string())
+        .filter(|p| !p.is_empty())
+        .collect()
 }
 
 /// `[1 1; 1 2] [1; 2]` or `A, b`: two operands side by side.
@@ -460,14 +596,15 @@ fn phrases(expr: &str) -> String {
 
 /// A line the generic evaluator takes: one of its own functions with a matrix about.
 fn looks_new(expr: &str, functions: &[String]) -> bool {
-    if jsre::test(&MAKER_CALL, expr) && !functions.iter().any(|f| MAKERS.split('|').any(|m| m == f))
+    let expr = phrases(expr);
+    if jsre::test(&MAKER_CALL, &expr)
+        && !functions.iter().any(|f| MAKERS.split('|').any(|m| m == f))
     {
         return true;
     }
     if !expr.contains('[') {
         return false;
     }
-    let expr = phrases(expr);
     let called = if functions.is_empty() {
         jsre::test(&NEW_CALL, &expr)
     } else {
@@ -892,6 +1029,13 @@ fn power(a: M, e: M) -> R<M> {
         (_, M::Grid(_)) => return err("can't raise to a matrix power"),
         (_, M::Num(e)) => e,
     };
+    // `A^(1/2)` is the matrix square root
+    if e == 0.5 {
+        let a = square(a, "a square root")?;
+        return numeric::sqrtm(&a).map(M::Grid).ok_or_else(|| {
+            Fail::Matrix("no real square root (a negative or repeated zero eigenvalue)".into())
+        });
+    }
     if !jsnum::is_integer(e) {
         return err("a matrix power must be a whole number");
     }
@@ -1333,8 +1477,11 @@ fn prep(expr: &str) -> String {
     static PRIME: Lazy = Lazy::new(|| js(r"([\])])\s*'", ""));
     // `x^T x`: a product after the transpose mark, not `T x`
     static T_THEN: Lazy = Lazy::new(|| js(r"(\^\s*T|ᵀ)\s+(?=[\[(A-Za-z0-9])", ""));
+    // `cos(30°)` is `cos(30deg)`: glued, so a space never splits the entry
+    static DEGREE: Lazy = Lazy::new(|| js(r"\s*°", ""));
+    let expr = jsre::replace_all(&DEGREE, expr, |_| "deg".into()).into_owned();
     let expr =
-        jsre::replace_all(&T_THEN, expr, |c| format!("{} * ", jsre::group(c, 1))).into_owned();
+        jsre::replace_all(&T_THEN, &expr, |c| format!("{} * ", jsre::group(c, 1))).into_owned();
     let expr = expr.as_str();
     // the input's word rule (prettyTokens, QuickInput's and the native bars') turns a typed `dot(` into `·(`: a `·`
     // with nothing to multiply before it is still the dot product's call, as `dot([1; 2; 3], [4 5 6])` is 32
@@ -1390,12 +1537,24 @@ fn rotations(expr: &str) -> String {
         let Some(end) = operand_end(&out, open) else {
             break;
         };
-        let t = out[open + 1..end - 1].to_string();
-        out = format!(
-            "{}[[cos({t}), -sin({t})], [sin({t}), cos({t})]]{}",
-            &out[..m.start()],
-            &out[end..]
-        );
+        let inner = out[open + 1..end - 1].to_string();
+        // `rot(θ, x)`: about an axis in 3D
+        static AXIS: Lazy = Lazy::new(|| js(r"^(.*),\s*([xyzXYZ])\s*$", ""));
+        let (t, axis) = match AXIS.captures(inner.as_str()) {
+            Ok(Some(c)) => (
+                jsre::group(&c, 1).trim().to_string(),
+                jsre::group(&c, 2).to_lowercase(),
+            ),
+            _ => (inner.clone(), String::new()),
+        };
+        let (c, s) = (format!("cos({t})"), format!("sin({t})"));
+        let m3 = match axis.as_str() {
+            "x" => format!("[[1, 0, 0], [0, {c}, -{s}], [0, {s}, {c}]]"),
+            "y" => format!("[[{c}, 0, {s}], [0, 1, 0], [-{s}, 0, {c}]]"),
+            "z" => format!("[[{c}, -{s}, 0], [{s}, {c}, 0], [0, 0, 1]]"),
+            _ => format!("[[{c}, -{s}], [{s}, {c}]]"),
+        };
+        out = format!("{}{m3}{}", &out[..m.start()], &out[end..]);
     }
     out
 }

@@ -72,6 +72,16 @@ impl<F: Cells> Ev<'_, '_, F> {
         Ok(vs)
     }
 
+    /// Like `columns_of`, but one vector on its own is that vector, not its entries.
+    fn vectors_of(&self, key: &str, args: Vec<X<F::C>>) -> XR<Vec<Vec<F::C>>> {
+        if let [one] = args.as_slice()
+            && let Some(v) = vector(one)
+        {
+            return Ok(vec![v]);
+        }
+        self.columns_of(key, args)
+    }
+
     fn cells(&self, g: &[Vec<F::C>]) -> Vec<Vec<Cell>> {
         self.fmt.cells(self.f, g)
     }
@@ -422,10 +432,17 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
             }
         }
         "coords" => {
-            takes(key, &args, 2, "a vector and a basis matrix")?;
+            if args.len() < 2 {
+                return fail("coords takes a vector and a basis");
+            }
             let v = vector(&args[0])
-                .ok_or_else(|| XFail::Matrix("coords takes a vector and a basis matrix".into()))?;
-            let b = ev.grid(args.remove(1))?;
+                .ok_or_else(|| XFail::Matrix("coords takes a vector and a basis".into()))?;
+            // the basis as a matrix of its vectors, or the vectors themselves
+            let basis = ev.vectors_of(key, args.split_off(1))?;
+            if basis[0].len() != v.len() {
+                return fail("the vector and the basis vectors must be the same length");
+            }
+            let b = algebra::from_columns(&basis);
             match algebra::solve(f, &b, &v) {
                 Solution::Unique(x) => Ok(X::Grid(x.into_iter().map(|c| vec![c]).collect())),
                 Solution::Inconsistent => fail("that vector isn't in the span of the basis"),
@@ -849,6 +866,84 @@ pub(super) fn call<F: Cells>(ev: &Ev<F>, key: &str, mut args: Vec<X<F::C>>) -> X
                 })?
             };
             Ok(done(vec![grid_part(None, &ev.float_cells(&out))]))
+        }
+
+        // ---- asked as a textbook asks (native only) ----
+        "outer" => {
+            takes(key, &args, 2, "two vectors")?;
+            let (Some(u), Some(v)) = (vector(&args[0]), vector(&args[1])) else {
+                return fail("the outer product takes two vectors");
+            };
+            Ok(X::Grid(
+                u.iter()
+                    .map(|a| v.iter().map(|b| f.mul(a, b)).collect())
+                    .collect(),
+            ))
+        }
+        "inspan" => {
+            if args.len() < 2 {
+                return fail("inspan takes a vector and the vectors of the span");
+            }
+            let v = vector(&args[0])
+                .ok_or_else(|| XFail::Matrix("inspan takes a vector first".into()))?;
+            let vs = ev.vectors_of(key, args.split_off(1))?;
+            if vs[0].len() != v.len() {
+                return fail("the vectors must be the same length");
+            }
+            let b = algebra::from_columns(&vs);
+            Ok(done(vec![match algebra::solve(f, &b, &v) {
+                Solution::Unique(x) | Solution::Family { particular: x, .. } => {
+                    let w: Vec<String> = x
+                        .iter()
+                        .map(|c| {
+                            let c = fmt.cell(f, c);
+                            c.exact.unwrap_or(c.dec)
+                        })
+                        .collect();
+                    verdict(true, Some(format!("weights {}", w.join(", "))))
+                }
+                Solution::Inconsistent => verdict(false, None),
+            }]))
+        }
+        "orthcomp" => {
+            let vs = ev.vectors_of(key, args)?;
+            let rows = algebra::transpose(&algebra::from_columns(&vs));
+            let n = algebra::null_space(f, &rows);
+            if n.is_empty() {
+                return Ok(done(vec![words_part("{0} (only the zero vector)")]));
+            }
+            Ok(ev.span(&n, false))
+        }
+        "svals" => {
+            let g = ev.floats(&ev.grid(one(&mut args)?)?)?;
+            let (_, s, _) = numeric::svd(&g);
+            let shown: Vec<String> = s.iter().map(|v| fmt.ccell((*v, 0.0)).dec).collect();
+            Ok(done(vec![text_part(Some("σ = ".into()), shown.join(", "))]))
+        }
+        // `change of basis from B (to C)`: the count of B's vectors, B's vectors, then C's (prep's hidden call)
+        "qc_cob" => {
+            if args.len() < 2 {
+                return Err(XFail::NotExact);
+            }
+            let k = ev.index(args.remove(0), args.len(), "the count")? + 1;
+            let rest = args.split_off(k);
+            let b = algebra::from_columns(&ev.vectors_of("change of basis", args)?);
+            if b.len() != b[0].len() || f.is_zero(&algebra::det(f, &b)?) {
+                return fail("a basis needs as many independent vectors as their length");
+            }
+            if rest.is_empty() {
+                let inv = algebra::inverse(f, &b)?;
+                return Ok(done(vec![
+                    grid_part(Some("P = ".into()), &ev.cells(&b)),
+                    grid_part(Some("P⁻¹ = ".into()), &ev.cells(&inv)),
+                ]));
+            }
+            let c = algebra::from_columns(&ev.vectors_of("change of basis", rest)?);
+            if c.len() != b.len() || c[0].len() != b.len() || f.is_zero(&algebra::det(f, &c)?) {
+                return fail("the two bases must be the same size, each independent");
+            }
+            let p = algebra::mul(f, &algebra::inverse(f, &c)?, &b)?;
+            Ok(done(vec![grid_part(Some("P = ".into()), &ev.cells(&p))]))
         }
         _ => Err(XFail::NotExact),
     }
