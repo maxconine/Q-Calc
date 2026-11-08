@@ -748,12 +748,21 @@ private struct HistoryRowView: View, Equatable {
         a.index == b.index && a.row == b.row && a.selected == b.selected && a.picked == b.picked
     }
 
+    /// the expression as typed; stacked as the bar draws it while "Stacked fractions and powers" is on
+    @ViewBuilder private var exprText: some View {
+        if StackedText.stacks(row.expr) {
+            StackedText(text: row.expr, size: Theme.body).frame(maxHeight: 32).clipped()
+        } else {
+            RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
+        }
+    }
+
     var body: some View {
         // grid: 1fr | minmax(120px, 46%), gap 12, padding 0 8, 36 pt rows with 6 pt corners
         GeometryReader { geo in
             HStack(spacing: 12) {
                 Button { model.insertFromRow(index, answer: false) } label: {
-                    RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
+                    exprText
                         .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
                         .lineLimit(1)
                         .truncationMode(.tail)

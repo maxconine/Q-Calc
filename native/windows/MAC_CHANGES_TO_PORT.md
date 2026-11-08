@@ -32,6 +32,18 @@ Nothing left.
 
 ## 3. Not on Windows yet: implement it
 
+### Stacked fractions and powers, laid out like Desmos (`Bar/StackedLayout.swift`, `Bar/StackedText.swift`, `Bar/InputField.swift`, `Bar/BarView.swift`, `Bar/BarModel.swift`)
+- **Sizes:** a fraction's slots are 0.82 of the line's size. A fraction inside a slot is 0.7 of that slot's size, as in TeX's script style. A power is 0.64 and raised 0.42 em (`BarTextView.slotSize`). Before, every slot was 0.6.
+- **Gaps:** a numerator's baseline is the bar's axis + 2.5 + max(0.24 f, the depth of a stack inside it). A denominator's baseline is the axis − 3 − max(0.74 f, the height of a stack inside it), where f is the slot's size (`numOffset`, `denOffset`, `extent`). So a fraction inside a denominator never touches the bar above it. The bar overhangs each side by 0.2 f.
+- **Room around signs:** with the setting on, `+ − = < > ≤ ≥ ± ≠` between two terms get 0.2 em each side, and `; ,` get 0.25 em after. A sign that starts a term (`-3`, `(−x`, `1e-5`) stays tight (`spaceOperators`). The caret beside a spaced sign is drawn in the middle of its room, never against the sign (`caretShift`), and it's placed after the spacing is applied.
+- **No clipping:** the text container is 400 pt tall, not 40. TextKit cut a line's fragment down to the container and drew nothing past it, so a denominator was cut off. The line's view uses the composer's whole 72 pt (`stackRoom` 18). The baseline stays where a plain line's is, measured at a stack's hidden `/` (TextKit lowers it for a raised numerator, so the inset takes that back). A line too tall for that position moves up or down until all of it shows (`updateInset`).
+- **No typeset preview** under the line while the setting is on: the line is already typeset (`refreshTypeset`).
+- **History rows** draw their expression stacked the same way at 13 pt (`StackedText`), muted like the plain rows.
+- **Test:**
+  - Type `5x/32+x^3`, →, →, `;x=3`. It should look like Desmos: the slots nearly full size, a clear gap above and below the bar, and spaces around `+` and `=`. There should be no preview row, and the caret after `=` should sit in the gap.
+  - Type `2^10+1/(x/3)+(1/2)/4;x=2` and `1/(x/3)`: nothing should be cut off at the top or the bottom.
+  - Press Enter: the row in history shows the fraction stacked, in light and dark.
+
 ### Graph panel, newer Mac round (`Bar/GraphModel.swift`, `Bar/GraphPanel.swift`, `Bar/GraphSettings.swift`, core `graph.rs`)
 
 - **Graph controls and fixes (this round):**

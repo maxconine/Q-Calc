@@ -87,6 +87,8 @@ final class BarTextView: NSTextView {
     private var stackWatch: AnyCancellable?
     /// where a ⇧← ⇧→ selection started
     private var stackAnchor: Int?
+    /// a caret place in the room around a spaced `+ = ;` moves this far back, to the room's middle (spaceOperators)
+    var caretShift: [Int: CGFloat] = [:]
 
     override var insertionPointColor: NSColor? {
         get { super.insertionPointColor }
@@ -282,7 +284,7 @@ final class BarTextView: NSTextView {
     static let fontSize: CGFloat = 24
     /// the view reaches this far above and below the bar's 36 pt row (the line stays in the middle), so a stacked
     /// fraction's slots have room past the row without being cut off (InputField's negative padding, LineScroll)
-    static let stackRoom: CGFloat = 12
+    static let stackRoom: CGFloat = 18
     /// the line's own font (`font` is the first character's, which may be a stacked fraction's hidden bracket)
     static let lineFont = NSFont.systemFont(ofSize: fontSize, weight: .regular)
     static let attributes: [NSAttributedString.Key: Any] = [
@@ -589,7 +591,9 @@ final class BarTextView: NSTextView {
         let layout = NSLayoutManager()
         layout.typesetter = StackTypesetter()
         storage.addLayoutManager(layout)
-        let container = NSTextContainer(size: NSSize(width: CGFloat.greatestFiniteMagnitude, height: 40))
+        // tall enough for a stacked line's fragment: TextKit cuts a line down to its container and draws nothing
+        // past it (a denominator was cut off at 40 pt)
+        let container = NSTextContainer(size: NSSize(width: CGFloat.greatestFiniteMagnitude, height: 400))
         container.widthTracksTextView = false
         container.lineFragmentPadding = 0
         layout.addTextContainer(container)
@@ -635,12 +639,30 @@ final class BarTextView: NSTextView {
     /// the text view doesn't repaint, so a new one never showed and an old one stayed after the line was cleared
     private let leadView = GhostLeadView()
 
-    private func updateInset() {
+    func updateInset() {
         // as wide as typed `(` with the line's tracking, so filling one in moves nothing
         let lead = ghostLead.isEmpty ? 0 : (ghostLead as NSString).size(withAttributes: Self.attributes).width
         // the line sits in the middle of its 36 pt box, as the web input's does
         let line = layoutManager?.defaultLineHeight(for: Self.lineFont) ?? Self.fontSize * 1.2
-        textContainerInset = NSSize(width: lead, height: max(0, (bounds.height - line) / 2))
+        var top = max(0, (bounds.height - line) / 2)
+        // a stacked line's fragment is taller than a plain one's (TextKit makes room for a raised numerator), its
+        // baseline lower: the line goes up by that much, so its baseline stays where a plain line's is
+        if !stacked.stacks.isEmpty, let lm = layoutManager, let tc = textContainer, (string as NSString).length > 0 {
+            lm.ensureLayout(for: tc)
+            // measured at a stack's hidden `/` or `^`, which sits on the line's own baseline (a raised glyph doesn't)
+            let g = lm.glyphIndexForCharacter(at: min(stacked.stacks[0].op, (string as NSString).length - 1))
+            let actual = lm.lineFragmentRect(forGlyphAt: g, effectiveRange: nil).minY + lm.location(forGlyphAt: g).y
+            let plain = lm.defaultBaselineOffset(for: Self.lineFont)
+            top -= max(0, actual - plain)
+            // a line taller than its room (a fraction in a denominator) moves up or down so all of it shows: its
+            // baseline stays a plain line's until the stacks would run off the bottom or the top
+            let e = Self.extent(stacked, NSRange(location: 0, length: (string as NSString).length), size: Self.fontSize)
+            let baseline = top + actual
+            let lowest = e.height + 2, highest = bounds.height - e.depth - 2
+            let to = lowest > highest ? (lowest + highest) / 2 : min(max(baseline, lowest), highest)
+            top += to - baseline
+        }
+        textContainerInset = NSSize(width: lead, height: top)
         if leadView.superview == nil { addSubview(leadView) }
         leadView.text = ghostLead
         leadView.attributes = [.font: Self.lineFont, .foregroundColor: Theme.muted, .kern: Theme.displayTracking(Self.fontSize)]
