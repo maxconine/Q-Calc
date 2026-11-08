@@ -1595,6 +1595,12 @@ public protocol EngineProtocol: AnyObject, Sendable {
     func graphHome(input: String, options: GraphOptions, settings: EvalOptions)  -> GraphWindow
     
     /**
+     * Native only: where the graph's curves cross one another over [lo, hi] (each input a `graph …` line),
+     * as `intersection` points.
+     */
+    func graphIntersections(inputs: [String], lo: Double, hi: Double, settings: EvalOptions)  -> [CriticalPoint]
+    
+    /**
      * The readout under the pointer, exactly `buildGraph(input, …).y(x)`: the curve cut to its bounds, None for
      * a contour plot. Cheap: it compiles without sampling.
      */
@@ -2007,6 +2013,23 @@ open func graphHome(input: String, options: GraphOptions, settings: EvalOptions)
             self.uniffiCloneHandle(),
         FfiConverterString.lower(input),
         FfiConverterTypeGraphOptions_lower(options),
+        FfiConverterTypeEvalOptions_lower(settings),uniffiCallStatus
+    )
+})
+}
+    
+    /**
+     * Native only: where the graph's curves cross one another over [lo, hi] (each input a `graph …` line),
+     * as `intersection` points.
+     */
+open func graphIntersections(inputs: [String], lo: Double, hi: Double, settings: EvalOptions) -> [CriticalPoint]  {
+    return try!  FfiConverterSequenceTypeCriticalPoint.lift(try! rustCall() {
+        uniffiCallStatus in
+    uniffi_qcalc_ffi_fn_method_engine_graph_intersections(
+            self.uniffiCloneHandle(),
+        FfiConverterSequenceString.lower(inputs),
+        FfiConverterDouble.lower(lo),
+        FfiConverterDouble.lower(hi),
         FfiConverterTypeEvalOptions_lower(settings),uniffiCallStatus
     )
 })
@@ -11218,6 +11241,10 @@ public enum CriticalKind: Equatable, Hashable {
      * Where a curve cut off by `{a < x < b}` stops, the end left out.
      */
     case openEndpoint
+    /**
+     * Where two of the graph's curves cross.
+     */
+    case intersection
 
 
 
@@ -11258,6 +11285,8 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         case 9: return .endpoint
         
         case 10: return .openEndpoint
+        
+        case 11: return .intersection
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -11305,6 +11334,10 @@ public struct FfiConverterTypeCriticalKind: FfiConverterRustBuffer {
         
         case .openEndpoint:
             writeInt(&buf, Int32(10))
+        
+        
+        case .intersection:
+            writeInt(&buf, Int32(11))
         
         }
     }
@@ -17345,6 +17378,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_graph_home() != 47656) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qcalc_ffi_checksum_method_engine_graph_intersections() != 64168) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qcalc_ffi_checksum_method_engine_graph_readout_y() != 6433) {

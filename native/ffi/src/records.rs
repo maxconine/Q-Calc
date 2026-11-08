@@ -848,6 +848,8 @@ pub enum CriticalKind {
     Endpoint,
     /// Where a curve cut off by `{a < x < b}` stops, the end left out.
     OpenEndpoint,
+    /// Where two of the graph's curves cross.
+    Intersection,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]

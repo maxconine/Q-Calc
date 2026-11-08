@@ -129,6 +129,7 @@ struct GraphPanel: View {
         case .point: return "point"
         case .endpoint: return "endpoint"
         case .openEndpoint: return "open end"
+        case .intersection: return "intersection"
         default: return "critical"
         }
     }
@@ -145,6 +146,9 @@ struct GraphPanel: View {
         return best?.0
     }
 
+    /// the layer number `allCritical` gives an intersection, which is drawn in the ink
+    static let crossing = -1
+
     /// Native only: every equation's critical points, the bar's first, each with its equation's number (0 is the
     /// bar's), which colours its mark and chip. On the 3D view only surfaces' points count.
     private var allCritical: [(layer: Int, c: CriticalPoint)] {
@@ -152,6 +156,8 @@ struct GraphPanel: View {
         for (i, l) in state.layers.enumerated() where l.error == nil && !l.isBlank && (!state.shows3D || l.surface != nil) {
             out += l.critical.map { (layer: i + 1, c: $0) }
         }
+        // where curves cross belongs to neither: marked in the ink (Desmos's grey dots)
+        if !state.shows3D { out += state.intersections.map { (layer: Self.crossing, c: $0) } }
         return out
     }
 
@@ -298,11 +304,46 @@ struct GraphPanel: View {
 
     /// Native only: the graph as a picture, its equations over the plot in their colours, at 3 pixels a point:
     /// saved to the Desktop as a PNG and copied.
+    /// The export: each equation typeset by Typst (as the preview row writes it), then the picture drawn. A
+    /// restriction (`{3<x<∞}`) is typeset beside its curve; whatever Typst can't write prints as text.
     private func snapshot() {
+        let layers = state.layers.filter { !$0.isBlank }
+        let exprs = [state.expression] + layers.map(\.expression)
+        var parts: [String] = []
+        for e in exprs {
+            let (head, bounds) = Self.splitBounds(e)
+            parts.append(head)
+            parts.append(bounds)
+        }
+        model.typesetter.equations(parts) { pictures in
+            let rows = exprs.indices.map { i in
+                (math: pictures[2 * i], bounds: pictures[2 * i + 1], text: i == 0 ? label : Pretty.radicals(exprs[i]),
+                 boundsText: Self.splitBounds(exprs[i]).1)
+            }
+            savePicture(rows)
+        }
+    }
+
+    /// `x^2-3 {3<x<∞}` → (`x^2-3`, `3<x<∞`); no braces → (the whole, "")
+    private static func splitBounds(_ e: String) -> (String, String) {
+        let t = e.trimmingCharacters(in: .whitespaces)
+        guard t.hasSuffix("}"), let open = t.lastIndex(of: "{"), open > t.startIndex else { return (t, "") }
+        let head = t[..<open].trimmingCharacters(in: .whitespaces)
+        let inner = t[t.index(after: open)..<t.index(before: t.endIndex)].trimmingCharacters(in: .whitespaces)
+        return head.isEmpty ? (t, "") : (head, inner)
+    }
+
+    private func savePicture(_ rows: [(math: TypstPaths?, bounds: TypstPaths?, text: String, boundsText: String)]) {
         let w = Self.svgW, h = plotH
-        let eqs = [label] + state.layers.filter { !$0.isBlank }.map { Pretty.radicals($0.expression) }
         let font = NSFont.systemFont(ofSize: 11, weight: .medium)
-        let line: CGFloat = 17, head = 10 + line * CGFloat(eqs.count)
+        // Typst writes at 18 pt; the header's maths reads at about 13 pt, a tall one (a fraction) shrunk to fit
+        let s: CGFloat = 13.0 / 18.0, maxRow: CGFloat = 40
+        let heights = rows.map { r -> CGFloat in
+            guard let m = r.math else { return 17 }
+            let tall = max(CGFloat(m.heightPt), CGFloat(r.bounds?.heightPt ?? 0)) * s
+            return min(max(tall, 17), maxRow) + 3
+        }
+        let head = 10 + heights.reduce(0, +)
         let key = PlotKey(state: state, prefs: model.graphPrefs, hover: nil, spot: nil, scale: 1)
         let view = PlotCanvas.PlotNSView(frame: CGRect(x: 0, y: 0, width: w, height: h + head))
         view.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
@@ -311,13 +352,37 @@ struct GraphPanel: View {
         view.drawing = { cg in
             cg.setFillColor(Self.plotBgNS.cgColor)
             cg.fill(CGRect(x: 0, y: 0, width: w, height: h + head))
-            for (i, eq) in eqs.enumerated() {
-                let y = 8 + CGFloat(i) * line
+            var y: CGFloat = 8
+            for (i, r) in rows.enumerated() {
+                let rowH = heights[i]
                 let n = i == 0 ? 0 : (state.layers.firstIndex { $0.id == layers[i - 1].id } ?? 0) + 1
                 cg.setFillColor(Self.layerColor(n))
-                cg.fill(CGRect(x: Self.pad.left, y: y + 3, width: 3, height: 11))
-                NSAttributedString(string: eq, attributes: [.font: font, .foregroundColor: Theme.ink])
-                    .draw(at: CGPoint(x: Self.pad.left + 10, y: y))
+                cg.fill(CGRect(x: Self.pad.left, y: y + (rowH - 11) / 2, width: 3, height: 11))
+                var x = Self.pad.left + 10
+                let room = w - Self.pad.right - x
+                if let m = r.math {
+                    let mw = CGFloat(m.widthPt), mh = CGFloat(m.heightPt)
+                    let bw = r.bounds.map { CGFloat($0.widthPt) + 18 } ?? 0
+                    // shrink a long or tall equation to the room it has
+                    let k = min(s, room / max(mw + bw, 1), (rowH - 3) / max(mh, 1))
+                    for (pic, gap) in [(m, CGFloat(0)), r.bounds.map { ($0, CGFloat(18)) }].compactMap({ $0 }) {
+                        x += gap * k
+                        cg.saveGState()
+                        cg.translateBy(x: x, y: y + (rowH - CGFloat(pic.heightPt) * k) / 2)
+                        cg.scaleBy(x: k, y: k)
+                        MathPreview.draw(pic, in: cg)
+                        cg.restoreGState()
+                        x += CGFloat(pic.widthPt) * k
+                    }
+                    if r.bounds == nil, !r.boundsText.isEmpty {
+                        NSAttributedString(string: "  {\(r.boundsText)}", attributes: [.font: font, .foregroundColor: Theme.ink])
+                            .draw(at: CGPoint(x: x, y: y + (rowH - 15) / 2))
+                    }
+                } else {
+                    NSAttributedString(string: r.text, attributes: [.font: font, .foregroundColor: Theme.ink])
+                        .draw(at: CGPoint(x: x, y: y + (rowH - 15) / 2))
+                }
+                y += rowH
             }
             cg.translateBy(x: 0, y: head)
             if state.shows3D { draw3D(cg, .base, key: key) } else { draw(cg, .base) }
@@ -391,11 +456,13 @@ struct GraphPanel: View {
     }
 
     static func layerColor(_ i: Int) -> CGColor {
+        if i == crossing { return Theme.ink.cgColor }
         guard let c = layerRGB(i) else { return Theme.accent.cgColor }
         return CGColor(srgbRed: c.0, green: c.1, blue: c.2, alpha: 1)
     }
 
     static func layerSwiftColor(_ i: Int) -> Color {
+        if i == crossing { return Color.qInk }
         guard let c = layerRGB(i) else { return Color.qAccent }
         return Color(.sRGB, red: c.0, green: c.1, blue: c.2)
     }
@@ -532,8 +599,13 @@ struct GraphPanel: View {
         let axisC = ink.copy(alpha: 0.62) ?? ink, frameC = ink.copy(alpha: 0.3) ?? ink
         let tickFont = Self.mono(big ? 12 : 9.5)
         let gx = axisGrid(g.xMin, g.xMax, log: m.logX, step: g.xStep, engine: g.xTicks)
-        let gy = axisGrid(g.yMin, g.yMax, log: m.logY, step: g.yStep ?? g.squareYStep, engine: g.yTicks,
+        var gy = axisGrid(g.yMin, g.yMax, log: m.logY, step: g.yStep ?? g.squareYStep, engine: g.yTicks,
                           sub: g.squareYStep != nil ? gx.sub : nil)
+        // a short plot of square cells can hold under two of y's rows (x² with 12x: rows of 250, only 0 in view),
+        // which left y unnumbered: then its minor rows are the numbered ones, the cells still square
+        if g.yStep == nil, let sq = g.squareYStep, gy.major.filter({ $0.0 != 0 }).count < 2, let sub = gx.sub, sub > 1 {
+            gy = axisGrid(g.yMin, g.yMax, log: m.logY, step: sq / Double(sub), engine: g.yTicks, sub: 1)
+        }
         cg.saveGState()
         cg.clip(to: m.rect)
         if prefs.grid {

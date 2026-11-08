@@ -22,6 +22,8 @@ struct GraphState: Equatable {
     var failed = false
     var roots: [Double] = []
     var critical: [CriticalPoint] = []
+    /// Native only: where the graph's curves cross one another (Desmos marks these too).
+    var intersections: [CriticalPoint] = []
     var contours: [ContourLevel] = []
     /// What was graphed: a curve in x, an implicit curve (`y^2 = 4x`) or a surface (`z = x^2 - y^2`).
     var kind: GraphKind = .curve
@@ -482,6 +484,18 @@ extension BarModel {
                         yCenter = nil
                     }
                 }
+                // native: and wide enough for where they cross (`x²; 12x` meet at 12, past ±10), looking 10 times as
+                // far out; a crowd of crossings (sin x against 0.1) keeps the window as it is
+                if !g.shows3D, !layers.isEmpty, hi > lo {
+                    let mid = (lo + hi) / 2, reach = (hi - lo) * 5
+                    let xs = engine.graphIntersections(inputs: [input] + layers.map(\.1), lo: mid - reach, hi: mid + reach,
+                                                       settings: settings).map(\.x)
+                    if let a = xs.min(), let b = xs.max(), xs.count <= 12, a < lo || b > hi {
+                        let a2 = min(a, lo), b2 = max(b, hi), pad = (b2 - a2) * 0.12
+                        (lo, hi) = (min(lo, a - pad), max(hi, b + pad))
+                        yCenter = nil
+                    }
+                }
                 if g.xLog, lo <= 0 { (lo, hi) = hi > 0 ? (hi / 1000, hi) : (0.1, 100) }
             }
             let in3D = g.shows3D
@@ -506,6 +520,10 @@ extension BarModel {
                 if let r = try? await engine.graphAsync(input: layerInput, options: first, settings: settings) { others[id] = r }
                 if Task.isCancelled { return }
             }
+            // native: where the curves cross, found with their own formulas
+            let crossings = in3D || layers.isEmpty || result == nil ? []
+                : engine.graphIntersections(inputs: [input] + layers.map(\.1), lo: lo, hi: hi, settings: settings)
+            if Task.isCancelled { return }
             // y: as set; or fitted to every curve when the first is one (a plot of x and y keeps its own)
             var yLo = result?.yMin ?? -10, yHi = result?.yMax ?? 10
             // native: about a dozen x ticks (Desmos's density), and with them square grid cells
@@ -615,6 +633,7 @@ extension BarModel {
                 }
                 now.roots = result.roots
                 now.critical = result.criticalPoints
+                now.intersections = crossings
                 now.contours = result.contours
                 now.kind = !result.contour ? .curve : result.contourLevels ? .surface : .implicit
                 now.surface = result.surface

@@ -329,3 +329,27 @@ fn a_log_x_axis_samples_evenly_in_log_x() {
     let lin = build_native_graph("graph log(x)", &GraphOptions { x_log: false, ..o }).unwrap();
     assert!(lin.points.iter().filter(|p| p.x < 0.01).count() <= 2);
 }
+
+#[test]
+fn curves_cross_at_exact_points() {
+    use qcalc_core::graph_native::native_intersections;
+    let o = GraphOptions::default();
+    let s = |v: &[&str]| v.iter().map(|e| format!("graph {e}")).collect::<Vec<_>>();
+    let mut p: Vec<(f64, f64)> = native_intersections(&s(&["x^2", "y=12x"]), &o, -8.0, 20.0)
+        .iter()
+        .inspect(|c| assert_eq!(c.kind, CriticalKind::Intersection))
+        .map(|c| (c.x, c.y))
+        .collect();
+    p.sort_by(|a, b| a.0.total_cmp(&b.0));
+    assert_eq!(p, vec![(0.0, 0.0), (12.0, 144.0)]);
+    // an asymptote's jump isn't a crossing; tan x meets 0 at its roots only
+    let t = native_intersections(&s(&["tan(x)", "0"]), &o, -2.0, 2.0);
+    assert_eq!(t.iter().map(|c| c.x).collect::<Vec<_>>(), vec![0.0]);
+    // a curve on itself has no single crossing
+    assert!(native_intersections(&s(&["2x", "x+x"]), &o, -5.0, 5.0).is_empty());
+    // three curves: every pair
+    assert_eq!(
+        native_intersections(&s(&["x", "-x", "1"]), &o, -5.0, 5.0).len(),
+        3
+    );
+}

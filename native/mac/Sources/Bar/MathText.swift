@@ -332,3 +332,18 @@ struct MathPreview: View {
         }
     }
 }
+
+extension MathTypesetter {
+    /// native only: the graph export's equations, each typeset as the preview writes it (no answer); nil for one
+    /// Typst can't write or compile, which the export then prints as text
+    func equations(_ exprs: [String], done: @escaping ([TypstPaths?]) -> Void) {
+        queue.async { [weak self] in
+            guard let self else { return }
+            let out = exprs.map { expr -> TypstPaths? in
+                guard let renderer = self.renderer, let doc = self.engine.typstSource(expr: expr, answer: "", solvedFor: "") else { return nil }
+                return try? renderer.paths(source: doc)
+            }
+            DispatchQueue.main.async { done(out) }
+        }
+    }
+}

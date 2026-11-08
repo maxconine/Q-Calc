@@ -162,6 +162,8 @@ pub enum CriticalKind {
     Endpoint,
     /// Native only: where a curve restricted by `{a < x < b}` stops, the end left out (Desmos's open dot).
     OpenEndpoint,
+    /// Native only: where two of the graph's curves cross (`x^2` and `12x` at (12, 144)), as Desmos marks them.
+    Intersection,
 }
 
 impl CriticalKind {
@@ -177,6 +179,7 @@ impl CriticalKind {
             CriticalKind::Point => "point",
             CriticalKind::Endpoint => "endpoint",
             CriticalKind::OpenEndpoint => "open endpoint",
+            CriticalKind::Intersection => "intersection",
         }
     }
 }
@@ -265,6 +268,22 @@ pub struct SurfaceGrid {
 
 impl GraphResult {
     /// `result.y(x)`: the curve at any x, inside the bounds; None for a contour plot.
+    /// Native only: `y_at` with the curve compiled once, for many points.
+    pub fn y_fn(&self) -> Option<impl Fn(f64) -> Option<f64> + '_> {
+        match &self.readout {
+            GraphReadout::Curve {
+                expression,
+                options,
+                mode,
+                bounds,
+            } => {
+                let curve = compile_graph_y(expression, options, Some(*mode));
+                Some(move |x: f64| restrict(&curve, bounds.as_ref(), x))
+            }
+            _ => None,
+        }
+    }
+
     pub fn y_at(&self, x: f64) -> Option<f64> {
         match &self.readout {
             GraphReadout::Curve {
@@ -2534,6 +2553,23 @@ pub fn golden_dispatch(name: &str, args: &[Json]) -> Option<Json> {
         "graphHome" => {
             let (lo, hi) = graph_home(&s(0), &opts(1));
             json!([lo, hi])
+        }
+        "graphNativeIntersections" => {
+            let inputs: Vec<String> = args
+                .first()
+                .and_then(Json::as_array)
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+            critical_json(&crate::graph_native::native_intersections(
+                &inputs,
+                &opts(1),
+                n(2)?,
+                n(3)?,
+            ))
         }
         "graphNativeHome" => {
             let (lo, hi, y) = crate::graph_native::native_home(&s(0), &opts(1));

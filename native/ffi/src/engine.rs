@@ -103,6 +103,37 @@ fn function_def_of(v: Option<&Json>) -> Option<FunctionDef> {
     })
 }
 
+/// A list of critical points as the engine writes them (`criticalPoints`).
+fn critical_points(v: Option<&Json>) -> Vec<CriticalPoint> {
+    let num = |x: Option<&Json>| x.and_then(Json::as_f64);
+    v.and_then(|v| v.as_array())
+        .map(|a| {
+            a.iter()
+                .filter_map(|p| {
+                    Some(CriticalPoint {
+                        x: num(p.get("x"))?,
+                        y: num(p.get("y"))?,
+                        kind: match p.get("kind")?.as_str()? {
+                            "min" => CriticalKind::Min,
+                            "max" => CriticalKind::Max,
+                            "x-intercept" => CriticalKind::XIntercept,
+                            "y-intercept" => CriticalKind::YIntercept,
+                            "saddle" => CriticalKind::Saddle,
+                            "vertical tangent" => CriticalKind::VerticalTangent,
+                            "point" => CriticalKind::Point,
+                            "endpoint" => CriticalKind::Endpoint,
+                            "open endpoint" => CriticalKind::OpenEndpoint,
+                            "intersection" => CriticalKind::Intersection,
+                            _ => CriticalKind::Critical,
+                        },
+                        z: num(p.get("z")),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 fn graph_result(v: &Json) -> Option<GraphResult> {
     let intent = v.get("intent")?;
     let num = |x: Option<&Json>| x.and_then(Json::as_f64);
@@ -121,33 +152,7 @@ fn graph_result(v: &Json) -> Option<GraphResult> {
                 .collect()
         })
         .unwrap_or_default();
-    let critical_points = v
-        .get("criticalPoints")
-        .and_then(Json::as_array)
-        .map(|a| {
-            a.iter()
-                .filter_map(|p| {
-                    Some(CriticalPoint {
-                        x: num(p.get("x"))?,
-                        y: num(p.get("y"))?,
-                        kind: match p.get("kind")?.as_str()? {
-                            "min" => CriticalKind::Min,
-                            "max" => CriticalKind::Max,
-                            "x-intercept" => CriticalKind::XIntercept,
-                            "y-intercept" => CriticalKind::YIntercept,
-                            "saddle" => CriticalKind::Saddle,
-                            "vertical tangent" => CriticalKind::VerticalTangent,
-                            "point" => CriticalKind::Point,
-                            "endpoint" => CriticalKind::Endpoint,
-                            "open endpoint" => CriticalKind::OpenEndpoint,
-                            _ => CriticalKind::Critical,
-                        },
-                        z: num(p.get("z")),
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let critical_points = critical_points(v.get("criticalPoints"));
     let contours: Vec<ContourLevel> = v
         .get("contours")
         .and_then(Json::as_array)
@@ -973,6 +978,40 @@ impl Engine {
                 ],
             )
             .and_then(|v| v.as_f64())
+        })
+    }
+
+    /// Native only: where the graph's curves cross one another over [lo, hi] (each input a `graph …` line),
+    /// as `intersection` points.
+    pub fn graph_intersections(
+        &self,
+        inputs: Vec<String>,
+        lo: f64,
+        hi: f64,
+        settings: EvalOptions,
+    ) -> Vec<CriticalPoint> {
+        self.on(Vec::new(), move |_| {
+            let options = graph_options_json(
+                &GraphOptions {
+                    domain_lo: None,
+                    domain_hi: None,
+                    sample_count: None,
+                    find_roots: false,
+                    aspect: None,
+                    y_center: None,
+                    surface: false,
+                    x_log: false,
+                },
+                &settings,
+            );
+            critical_points(
+                call(
+                    "engine/graph",
+                    "graphNativeIntersections",
+                    &[json!(inputs), options, json!(lo), json!(hi)],
+                )
+                .as_ref(),
+            )
         })
     }
 

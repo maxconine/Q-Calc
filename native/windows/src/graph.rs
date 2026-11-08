@@ -272,6 +272,7 @@ pub fn kind_name(k: CriticalKind) -> &'static str {
         CriticalKind::Point => "point",
         CriticalKind::Endpoint => "endpoint",
         CriticalKind::OpenEndpoint => "open end",
+        CriticalKind::Intersection => "intersection",
     }
 }
 

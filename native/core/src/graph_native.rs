@@ -16,9 +16,9 @@
 use crate::format::format_number;
 use crate::graph::{
     ContourKind, ContourLevel, CriticalKind, CriticalPoint, GraphBounds, GraphIntent, GraphOptions,
-    GraphRange, SurfaceGrid, build_intent, compile_graph_y, compile_graph_z, evaluate_graph_y,
-    home_of, marching_squares, nice_window, parse_graph_intent, quantile, rewrite_params,
-    sort_numbers, tidy, with_minus,
+    GraphRange, SurfaceGrid, build_intent, build_native_graph, compile_graph_y, compile_graph_z,
+    evaluate_graph_y, home_of, marching_squares, nice_window, parse_graph_intent, quantile,
+    rewrite_params, sort_numbers, tidy, with_minus,
 };
 use crate::jsre::{self, Lazy, js};
 use crate::latex::{latex_to_ascii, looks_like_latex};
@@ -1045,4 +1045,123 @@ pub fn surface_grid(f: &dyn Fn(f64, f64) -> Option<f64>, w: Window) -> SurfaceGr
         z_lo,
         z_hi,
     }
+}
+
+/// Native only: where the graph's curves cross one another over [lo, hi], as Desmos marks them: each pair's
+/// difference sampled finely, every change of sign closed in on by bisection with the curves' own formulas (so
+/// `x^2` and `12x` meet at exactly (12, 144)). A jump across an asymptote (`tan x` against `0`) isn't a crossing:
+/// the two must agree where it ends. Curves that lie on one another (`2x` and `x + x`) have no single point, so
+/// none is given. Implicit curves and surfaces don't take part.
+pub fn native_intersections(
+    inputs: &[String],
+    options: &GraphOptions,
+    lo: f64,
+    hi: f64,
+) -> Vec<CriticalPoint> {
+    const SAMPLES: usize = 4001;
+    const MANY: usize = 60;
+    if !(hi > lo) || !lo.is_finite() || !hi.is_finite() || inputs.len() < 2 {
+        return Vec::new();
+    }
+    let mut cheap = options.clone();
+    cheap.domain = Some((lo, hi));
+    cheap.sample_count = Some(16.0);
+    cheap.find_roots = Some(false);
+    let curves: Vec<_> = inputs
+        .iter()
+        .filter_map(|i| build_native_graph(i, &cheap))
+        .filter(|r| r.error.is_none())
+        .filter(|r| r.contours.is_none() && r.intent.contour.is_none() && r.surface.is_none())
+        .collect();
+    let fns: Vec<_> = curves.iter().filter_map(|r| r.y_fn()).collect();
+    let step = (hi - lo) / (SAMPLES - 1) as f64;
+    let xs: Vec<f64> = (0..SAMPLES).map(|i| lo + step * i as f64).collect();
+    let mut out: Vec<CriticalPoint> = Vec::new();
+    for a in 0..fns.len() {
+        for b in a + 1..fns.len() {
+            let d = |x: f64| -> Option<f64> {
+                let (p, q) = (fns[a](x)?, fns[b](x)?);
+                (p.is_finite() && q.is_finite()).then_some(p - q)
+            };
+            let ds: Vec<Option<f64>> = xs.iter().map(|&x| d(x)).collect();
+            // the same curve twice: no point is the crossing
+            let zeros = ds.iter().filter(|v| **v == Some(0.0)).count();
+            if zeros > SAMPLES / 20 {
+                continue;
+            }
+            let mut found: Vec<f64> = Vec::new();
+            for i in 0..SAMPLES - 1 {
+                let (Some(u), Some(v)) = (ds[i], ds[i + 1]) else {
+                    continue;
+                };
+                if u == 0.0 {
+                    found.push(xs[i]);
+                    continue;
+                }
+                if v == 0.0 || u.signum() == v.signum() {
+                    continue;
+                }
+                let (mut l, mut r, mut dl) = (xs[i], xs[i + 1], u);
+                for _ in 0..80 {
+                    let m = (l + r) / 2.0;
+                    let Some(dm) = d(m) else { break };
+                    if dm == 0.0 {
+                        l = m;
+                        r = m;
+                        break;
+                    }
+                    if dm.signum() == dl.signum() {
+                        l = m;
+                        dl = dm;
+                    } else {
+                        r = m;
+                    }
+                }
+                found.push((l + r) / 2.0);
+            }
+            if ds[SAMPLES - 1] == Some(0.0) {
+                found.push(xs[SAMPLES - 1]);
+            }
+            for x in found {
+                let x = tidy_x(x, step);
+                let (Some(p), Some(q)) = (fns[a](x), fns[b](x)) else {
+                    continue;
+                };
+                // an asymptote's jump: the two are far apart where the sign changed
+                let scale = 1.0 + p.abs().max(q.abs());
+                if !((p - q).abs() <= 1e-6 * scale) {
+                    continue;
+                }
+                let y = tidy_x((p + q) / 2.0, 1e-9 * scale);
+                if !out
+                    .iter()
+                    .any(|c| (c.x - x).abs() <= step && (c.y - y).abs() <= 1e-6 * scale)
+                {
+                    out.push(CriticalPoint {
+                        x,
+                        y,
+                        kind: CriticalKind::Intersection,
+                        z: None,
+                    });
+                }
+            }
+            if out.len() > MANY {
+                return out;
+            }
+        }
+    }
+    out
+}
+
+/// A crossing found by bisection to the last bit, rounded to a nearby short number when one is that close
+/// (11.999999999999998 → 12), so it reads as the point it is.
+fn tidy_x(x: f64, step: f64) -> f64 {
+    for digits in 0..12 {
+        let k = 10f64.powi(digits);
+        let r = (x * k).round() / k;
+        if (r - x).abs() <= (step * 1e-6).max(x.abs() * 1e-13) {
+            return if r == 0.0 { 0.0 } else { r };
+        }
+    }
+    x
 }
