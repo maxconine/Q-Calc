@@ -4,124 +4,140 @@ import SwiftUI
 // Native only: the graph's settings (Desmos's graph settings: text size, contrast, grid, arrows, numbers, axes'
 // labels, windows and steps, log axes, lock, radians or degrees) and the equations graphed beside the bar's.
 
-/// The settings, in a popover from the head's gear.
+/// The settings, under the head in the bar's own look: monospaced, hairline cells that read in ink when on, and
+/// plain fields. (A popover took the keys from the bar, which hid it.)
 struct GraphSettingsView: View {
     @ObservedObject var model: BarModel
-    @State private var more = false
 
     private var g: GraphState? { model.graph }
+    private var p: GraphPrefs { model.graphPrefs }
 
-    private func pref<T>(_ key: WritableKeyPath<GraphPrefs, T>) -> Binding<T> {
-        Binding(get: { model.graphPrefs[keyPath: key] }, set: { model.graphPrefs[keyPath: key] = $0 })
+    private func flip(_ key: WritableKeyPath<GraphPrefs, Bool>) { model.graphPrefs[keyPath: key].toggle() }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            row("view") {
+                Cell("A", on: !p.largeText, tip: "Small text") { model.graphPrefs.largeText = false }
+                Cell("A+", on: p.largeText, tip: "Large text") { model.graphPrefs.largeText = true }
+                Gap()
+                Cell("invert", on: p.reverseContrast, tip: "Reverse contrast") { flip(\.reverseContrast) }
+                Gap()
+                Cell("grid", on: p.grid, tip: "Gridlines") { flip(\.grid) }
+                Cell("xy", on: !p.polar, tip: "Cartesian grid") { model.graphPrefs.polar = false }.disabled(!p.grid)
+                Cell("rθ", on: p.polar, tip: "Polar grid") { model.graphPrefs.polar = true }.disabled(!p.grid)
+                Cell("minor", on: p.minorGrid, tip: "Minor gridlines") { flip(\.minorGrid) }
+                Gap()
+                Cell("numbers", on: p.axisNumbers, tip: "Axis numbers") { flip(\.axisNumbers) }
+                Cell("arrows", on: p.arrows, tip: "Arrows on the axes") { flip(\.arrows) }
+            }
+            if let g {
+                axis("x", show: \.showXAxis, label: g.xLabel, setLabel: { model.setGraphAxis(xLabel: $0) },
+                     lo: g.xMin, hi: g.xMax, set: model.setGraphX,
+                     step: g.xStep, setStep: { model.setGraphAxis(xStep: .some($0)) })
+                if g.shows3D {
+                    axis("z", show: \.showYAxis, label: g.yLabel, setLabel: { model.setGraphAxis(yLabel: $0) },
+                         lo: g.zWindow.lowerBound, hi: g.zWindow.upperBound, set: model.setGraphZ,
+                         step: g.yStep, setStep: { model.setGraphAxis(yStep: .some($0)) })
+                } else {
+                    axis("y", show: \.showYAxis, label: g.yLabel, setLabel: { model.setGraphAxis(yLabel: $0) },
+                         lo: g.yMin, hi: g.yMax, set: model.setGraphY,
+                         step: g.yStep, setStep: { model.setGraphAxis(yStep: .some($0)) })
+                }
+                row("scale") {
+                    if !g.shows3D {
+                        Cell("x lin", on: !g.xLog, tip: "Linear x axis") { model.setGraphLog(x: false) }
+                        Cell("x log", on: g.xLog, tip: "Logarithmic x axis") { model.setGraphLog(x: true) }
+                        Gap()
+                        Cell("y lin", on: !g.yLog, tip: "Linear y axis") { model.setGraphLog(y: false) }
+                        Cell("y log", on: g.yLog, tip: "Logarithmic y axis") { model.setGraphLog(y: true) }
+                        Gap()
+                        Cell("square", on: false, tip: "Zoom square: as many units per point up as across") { model.zoomGraphSquare() }
+                            .disabled(g.logX || g.logY)
+                    }
+                    Cell("lock", on: p.lockViewport, tip: "Lock the viewport: dragging and zooming don't move it") { flip(\.lockViewport) }
+                    Gap()
+                    let degrees = p.degrees ?? !model.options.angleRadians
+                    Cell("rad", on: !degrees, tip: "Radians") { model.graphPrefs.degrees = false }
+                    Cell("deg", on: degrees, tip: "Degrees") { model.graphPrefs.degrees = true }
+                }
+            }
+        }
+        .padding(.vertical, 8)
+        .overlay(alignment: .bottom) { Rectangle().fill(Color.qInk.opacity(0.1)).frame(height: 0.5) }
+    }
+
+    /// A row: its name in muted capitals, then cells that wrap on a narrow bar
+    private func row<Content: View>(_ name: String, @ViewBuilder _ content: @escaping () -> Content) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(name.uppercased()).font(.system(size: Theme.caption, weight: .medium, design: .monospaced)).tracking(0.6)
+                .foregroundStyle(Color.qMuted).frame(width: 46, alignment: .leading)
+            WrapRow(spacing: 4, leading: true) { content() }
+        }
+    }
+
+    /// An axis: shown or not, `lo ≤ name ≤ hi`, its step and its label (on the 3D view the second axis is z)
+    private func axis(_ name: String, show: WritableKeyPath<GraphPrefs, Bool>, label: String, setLabel: @escaping (String) -> Void,
+                      lo: Double, hi: Double, set: @escaping (Double, Double) -> Void,
+                      step: Double?, setStep: @escaping (Double?) -> Void) -> some View {
+        row("\(name) axis") {
+            Cell("show", on: p[keyPath: show], tip: "Show the \(name) axis") { flip(show) }
+            NumberField(value: lo) { set($0 ?? lo, hi) }.frame(width: 76)
+            Text("≤ \(name) ≤").font(.system(size: Theme.small, design: .monospaced)).foregroundStyle(Color.qMuted).fixedSize()
+            NumberField(value: hi) { set(lo, $0 ?? hi) }.frame(width: 76)
+            Text("step").font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(Color.qMuted).padding(.leading, 4)
+            NumberField(value: step, placeholder: "auto") { setStep($0) }.frame(width: 52)
+            Text("label").font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(Color.qMuted).padding(.leading, 4)
+            FieldBox { TextField(name, text: Binding(get: { label }, set: setLabel)) }.frame(width: 84)
+        }
+    }
+}
+
+/// A setting's cell: monospaced, a hairline square edge, in ink with a faint fill when on and muted when off.
+private struct Cell: View {
+    let title: String
+    let on: Bool
+    let tip: String
+    let action: () -> Void
+    @State private var hover = false
+    @Environment(\.isEnabled) private var enabled
+
+    init(_ title: String, on: Bool, tip: String, action: @escaping () -> Void) {
+        (self.title, self.on, self.tip, self.action) = (title, on, tip, action)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Picker("Text size", selection: pref(\.largeText)) {
-                Text("A").font(.system(size: 11)).tag(false)
-                Text("A").font(.system(size: 17)).tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .help("Text size")
-            Toggle("Reverse contrast", isOn: pref(\.reverseContrast))
-            Divider()
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Grid", isOn: pref(\.grid))
-                    Picker("Grid", selection: pref(\.polar)) {
-                        Image(systemName: "squareshape.split.3x3").tag(false).help("Cartesian grid")
-                        Image(systemName: "circle.circle").tag(true).help("Polar grid")
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 84)
-                    .disabled(!model.graphPrefs.grid)
-                    Toggle("Arrows", isOn: pref(\.arrows))
-                }
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Axis numbers", isOn: pref(\.axisNumbers))
-                    Toggle("Minor gridlines", isOn: pref(\.minorGrid))
-                    Button("Zoom Square") { model.zoomGraphSquare() }
-                        .disabled(g.map { $0.logX || $0.logY } ?? true)
-                }
-            }
-            Divider()
-            if let g {
-                axis("X-Axis", show: pref(\.showXAxis), label: g.xLabel, setLabel: { model.setGraphAxis(xLabel: $0) },
-                     name: "x", lo: g.xMin, hi: g.xMax, set: model.setGraphX,
-                     step: g.xStep, setStep: { model.setGraphAxis(xStep: .some($0)) })
-                if g.shows3D {
-                    axis("Y-Axis", show: pref(\.showYAxis), label: g.yLabel, setLabel: { model.setGraphAxis(yLabel: $0) },
-                         name: "z", lo: g.zWindow.lowerBound, hi: g.zWindow.upperBound, set: model.setGraphZ,
-                         step: g.yStep, setStep: { model.setGraphAxis(yStep: .some($0)) })
-                } else {
-                    axis("Y-Axis", show: pref(\.showYAxis), label: g.yLabel, setLabel: { model.setGraphAxis(yLabel: $0) },
-                         name: "y", lo: g.yMin, hi: g.yMax, set: model.setGraphY,
-                         step: g.yStep, setStep: { model.setGraphAxis(yStep: .some($0)) })
-                }
-                DisclosureGroup("More Options", isExpanded: $more) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        if !g.shows3D {
-                            scale("X-Axis:", log: g.xLog) { model.setGraphLog(x: $0) }
-                            scale("Y-Axis:", log: g.yLog) { model.setGraphLog(y: $0) }
-                        }
-                        Toggle("Lock Viewport", isOn: pref(\.lockViewport))
-                            .help("Keep the window still: dragging and zooming don't move it")
-                    }
-                    .padding(.top, 6)
-                    .padding(.leading, 4)
-                }
-            }
-            Divider()
-            Picker("Angles", selection: Binding(
-                get: { model.graphPrefs.degrees ?? !model.options.angleRadians },
-                set: { model.graphPrefs.degrees = $0 })) {
-                Text("Radians").tag(false)
-                Text("Degrees").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: Theme.small, weight: on ? .semibold : .regular, design: .monospaced))
+                .foregroundStyle(on ? Color.qInk : hover ? Color.qInk.opacity(0.8) : Color.qMuted)
+                .padding(.vertical, 2).padding(.horizontal, 7)
+                .background(Rectangle().fill(on ? Color.qInk.opacity(0.08) : hover ? Color.qFillHover : .clear))
+                .overlay(Rectangle().strokeBorder(Color.qInk.opacity(on ? 0.3 : 0.14), lineWidth: 0.75))
+                .contentShape(Rectangle())
         }
-        .toggleStyle(.checkbox)
-        .font(.system(size: 13))
-        .padding(14)
-        .frame(width: 320)
+        .buttonStyle(.plain)
+        .opacity(enabled ? 1 : 0.4)
+        .onHover { hover = $0 }
+        .hoverTip(tip)
+        .accessibilityLabel(tip)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
+}
 
-    /// An axis: shown or not, its label, `lo ≤ name ≤ hi` and its step (on the 3D view the second axis's window is z)
-    private func axis(_ title: String, show: Binding<Bool>, label: String, setLabel: @escaping (String) -> Void, name: String,
-                      lo: Double, hi: Double, set: @escaping (Double, Double) -> Void,
-                      step: Double?, setStep: @escaping (Double?) -> Void) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Toggle(title, isOn: show)
-                Spacer()
-                TextField("Label, e.g. “\(name)”", text: Binding(get: { label }, set: setLabel))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 130)
-            }
-            HStack(spacing: 4) {
-                NumberField(value: lo) { set($0 ?? lo, hi) }
-                Text("≤ \(name) ≤").font(.system(size: 13, design: .serif).italic()).fixedSize()
-                NumberField(value: hi) { set(lo, $0 ?? hi) }
-                Text("Step:").foregroundStyle(.secondary).padding(.leading, 6)
-                NumberField(value: step, placeholder: "auto") { setStep($0) }.frame(width: 52)
-            }
-        }
-    }
+/// A little space between groups of cells
+private struct Gap: View {
+    var body: some View { Color.clear.frame(width: 6, height: 1) }
+}
 
-    private func scale(_ title: String, log: Bool, set: @escaping (Bool) -> Void) -> some View {
-        HStack {
-            Text(title).frame(width: 52, alignment: .leading)
-            Picker(title, selection: Binding(get: { log }, set: set)) {
-                Text("Linear").tag(false)
-                Text("Logarithmic").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-        }
+/// A field's frame in the bar's look: plain monospaced text in a hairline box
+struct FieldBox<Content: View>: View {
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        content()
+            .textFieldStyle(.plain)
+            .font(.system(size: Theme.small, design: .monospaced))
+            .padding(.vertical, 2).padding(.horizontal, 5)
+            .overlay(Rectangle().strokeBorder(Color.qInk.opacity(0.18), lineWidth: 0.75))
     }
 }
 
@@ -156,9 +172,7 @@ struct NumberField: View {
     }
 
     var body: some View {
-        TextField(placeholder, text: $text)
-            .textFieldStyle(.roundedBorder)
-            .monospacedDigit()
+        FieldBox { TextField(placeholder, text: $text) }
             .focused($focused)
             .onAppear { text = Self.show(value) }
             .onChange(of: value) { if !focused { text = Self.show($0) } }

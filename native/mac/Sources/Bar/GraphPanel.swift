@@ -9,10 +9,10 @@ import SwiftUI
 struct GraphPanel: View {
     @ObservedObject var model: BarModel
     let state: GraphState
-    @State private var dragStart: CGPoint?
-    @State private var lastZoom: CGFloat = 1
     @State private var resetHover = false
     @State private var settingsShown = false
+    /// every critical point's chip, rather than the dozen nearest the middle of the view
+    @State private var allPoints = false
     /// the 3D scene from the last drawing of the plot, for the pointer's pass
     @State private var sceneCache = SceneCache()
     /// the pointer over the plot, in plot (viewBox) units
@@ -56,10 +56,12 @@ struct GraphPanel: View {
                         ViewToggle(title: "contour", on: !state.shows3D, tip: "Level curves, seen from above") { model.setGraph3D(false) }
                     }
                 }
-                // native only: another equation, and the graph settings
+                // native only: zoom out and in, another equation, and the graph settings
+                HeadIcon(symbol: "minus.magnifyingglass", tip: "Zoom out") { model.zoomGraph(1.25) }
+                HeadIcon(symbol: "plus.magnifyingglass", tip: "Zoom in") { model.zoomGraph(0.8) }
                 HeadIcon(symbol: "plus", tip: "Add an equation") { model.addGraphLayer() }
+                HeadIcon(symbol: "camera", tip: "Save a picture of the graph to the Desktop and copy it") { snapshot() }
                 HeadIcon(symbol: "wrench.adjustable", tip: "Graph settings", on: settingsShown) { settingsShown.toggle() }
-                    .popover(isPresented: $settingsShown, arrowEdge: .bottom) { GraphSettingsView(model: model) }
                 Button { model.homeGraph() } label: {
                     Text("reset")
                         .font(.system(size: Theme.small))
@@ -73,6 +75,10 @@ struct GraphPanel: View {
                 .padding(.vertical, -3).padding(.trailing, -8)
                 .onHover { resetHover = $0 }
                 .hoverTip("Reset view")
+            }
+            // in the bar itself, not a popover: a popover is a window of its own, and the bar hides when it loses the keys
+            if settingsShown {
+                GraphSettingsView(model: model)
             }
             if !state.layers.isEmpty {
                 GraphEquations(model: model, state: state, label: label)
@@ -115,13 +121,15 @@ struct GraphPanel: View {
         case .saddle: return "saddle"
         case .verticalTangent: return "vertical tangent"
         case .point: return "point"
+        case .endpoint: return "endpoint"
+        case .openEndpoint: return "open end"
         default: return "critical"
         }
     }
 
     /// the critical point the pointer is on, on the plot (native only)
     private var hoveredMark: Int? {
-        guard let h = hover else { return nil }
+        guard let h = hover, state.shows3D || allCritical.count + state.roots.count <= Self.markLimit else { return nil }
         var best: (Int, CGFloat)?
         for (i, m) in markPoints().enumerated() {
             guard let m else { continue }
@@ -139,6 +147,22 @@ struct GraphPanel: View {
             out += l.critical.map { (layer: i + 1, c: $0) }
         }
         return out
+    }
+
+    private static let chipLimit = 12
+    private static let markLimit = 60
+
+    /// Which chips show (indices into `allCritical`, in its order): all of them, or the dozen nearest the middle
+    /// of the view.
+    private func shownPoints(_ all: [(layer: Int, c: CriticalPoint)]) -> [Int] {
+        guard all.count > Self.chipLimit, !allPoints else { return Array(all.indices) }
+        let mx = (state.xMin + state.xMax) / 2, my = (state.yMin + state.yMax) / 2
+        let sx = max(state.xMax - state.xMin, 1e-300), sy = max(state.yMax - state.yMin, 1e-300)
+        let near = all.indices.sorted {
+            let a = all[$0].c, b = all[$1].c
+            return hypot((a.x - mx) / sx, (a.y - my) / sy) < hypot((b.x - mx) / sx, (b.y - my) / sy)
+        }
+        return Array(near.prefix(Self.chipLimit)).sorted()
     }
 
     /// the heading over the chips: what the list holds for this kind of graph
@@ -172,8 +196,11 @@ struct GraphPanel: View {
                 // .graph-detail-list: flex-wrap, so a narrow bar puts the chips on more rows (an HStack squeezed
                 // each into a column a character wide)
                 let onPlot = hoveredMark
-                WrapRow(spacing: 4, leading: true) {
-                    ForEach(Array(allCritical.enumerated()), id: \.offset) { i, entry in
+                let all = allCritical
+                let shown = shownPoints(all)
+                let list = WrapRow(spacing: 4, leading: true) {
+                    ForEach(shown, id: \.self) { i in
+                        let entry = all[i]
                         let c = entry.c
                         let here = PlotSpot(x: c.x, y: c.y)
                         // .graph-detail-item: a button, "Copy x" (selectX → copyValue), the point at 8 figures
@@ -188,6 +215,25 @@ struct GraphPanel: View {
                             if on { spot = here } else if spot == here { spot = nil }
                         })
                     }
+                    // native only: a zoomed-out sin(x) has hundreds; the dozen nearest the middle show, the rest
+                    // on asking, in a box that scrolls
+                    if all.count > Self.chipLimit {
+                        Button { allPoints.toggle() } label: {
+                            Text(allPoints ? "fewer" : "+\(all.count - shown.count) more")
+                                .font(.system(size: Theme.small, design: .monospaced))
+                                .foregroundStyle(Color.qMuted)
+                                .padding(.vertical, 3).padding(.horizontal, 7)
+                                .overlay(Rectangle().strokeBorder(Color.qInk.opacity(0.16), style: StrokeStyle(lineWidth: 0.75, dash: [2, 2])))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .hoverTip(allPoints ? "Show the dozen nearest the middle" : "Show all \(all.count)")
+                    }
+                }
+                if allPoints && all.count > Self.chipLimit {
+                    ScrollView(.vertical) { list }.frame(maxHeight: 156)
+                } else {
+                    list
                 }
             }
             .padding(.top, 8)
@@ -211,50 +257,77 @@ struct GraphPanel: View {
                     cg.scaleBy(x: scale, y: scale)
                     if state.shows3D { draw3D(cg, .overlay, key: baseKey) } else { draw(cg, .overlay) }
                 }))
-            // the 3D view takes the pointer and trackpad in AppKit, ahead of SwiftUI and of the panel's
-            // drag-by-background, so a drag or a two-finger drag orbits and never moves the window
+            // the plot takes the pointer and trackpad in AppKit, ahead of SwiftUI and of the panel's
+            // drag-by-background, so a drag never moves the window: in 2D a drag moves the view (as Desmos), in 3D
+            // it orbits and shift pans; two fingers up/down or a wheel zoom (about the pointer in 2D), a pinch zooms,
+            // a double-click resets
             .overlay {
-                if state.shows3D {
-                    PlotInput(
-                        drag: { [model] d, pan in
-                            let plotW = (Self.svgW - Self.pad.left - Self.pad.right) * scale
-                            let plotH = (Self.svgH3D - Self.pad.top - Self.pad.bottom) * scale
-                            // a pan follows the pointer; an orbit turns against it side to side and with it up/down
+                PlotInput(
+                    drag: { [model] d, pan in
+                        let plotW = (Self.svgW - Self.pad.left - Self.pad.right) * scale
+                        let plotH = (plotH - Self.pad.top - Self.pad.bottom) * scale
+                        if state.shows3D {
+                            // a pan follows the pointer; an orbit turns against it both ways
                             let k: CGFloat = pan ? 1 : -1
-                            model.panGraph(dx: k * d.width / plotW, dy: d.height / plotH, move3D: pan)
-                        },
-                        scroll: { [model] event, size in model.scrollGraph(event, size: size) },
-                        magnify: { [model] m in model.zoomGraph(1 / (1 + m)) },
-                        hover: { p in hover = p.map { CGPoint(x: $0.x / scale, y: $0.y / scale) } },
-                        home: { [model] in model.homeGraph() })
-                }
+                            model.panGraph(dx: k * d.width / plotW, dy: k * d.height / plotH, move3D: pan)
+                        } else {
+                            model.panGraph(dx: d.width / plotW, dy: d.height / plotH)
+                        }
+                    },
+                    scroll: { [model] event, size, p in
+                        guard !state.shows3D else { return model.scrollGraph(event, size: size) }
+                        let left = Self.pad.left * scale, w = (Self.svgW - Self.pad.left - Self.pad.right) * scale
+                        let at = min(1, max(0, (p.x - left) / w))
+                        return model.scrollGraph(event, size: CGSize(width: w, height: size.height), at: at)
+                    },
+                    magnify: { [model] m in model.zoomGraph(1 / (1 + m)) },
+                    hover: { p in hover = p.map { CGPoint(x: $0.x / scale, y: $0.y / scale) } },
+                    home: { [model] in model.homeGraph() })
             }
-            .contentShape(Rectangle())
-            .gesture(DragGesture(minimumDistance: 2)
-                .onChanged { g in
-                    let prev = dragStart ?? g.startLocation
-                    dragStart = g.location
-                    let plotW = (Self.svgW - Self.pad.left - Self.pad.right) * scale
-                    let plotH = (plotH - Self.pad.top - Self.pad.bottom) * scale
-                    // in 3D a drag orbits; shift- or option-drag pans
-                    let flags = NSEvent.modifierFlags
-                    model.panGraph(dx: (g.location.x - prev.x) / plotW, dy: (g.location.y - prev.y) / plotH,
-                                   move3D: flags.contains(.shift) || flags.contains(.option))
-                }
-                .onEnded { _ in dragStart = nil })
-            .gesture(MagnificationGesture()
-                .onChanged { s in
-                    model.zoomGraph(Double(lastZoom / s))
-                    lastZoom = s
-                }
-                .onEnded { _ in lastZoom = 1 })
-            .onTapGesture(count: 2) { model.homeGraph() }
-            // the readout: a hairline, a dot on the curve and (x, y) at the pointer (GraphPanel.tsx readout)
-            .pointerHover { p in hover = p.map { CGPoint(x: $0.x / scale, y: $0.y / scale) } }
             .accessibilityLabel(summary)
         }
         .aspectRatio(Self.svgW / plotH, contentMode: .fit)
         .frame(maxHeight: plotH)
+    }
+
+    /// Native only: the graph as a picture, its equations over the plot in their colours, at 3 pixels a point:
+    /// saved to the Desktop as a PNG and copied.
+    private func snapshot() {
+        let w = Self.svgW, h = plotH
+        let eqs = [label] + state.layers.filter { !$0.isBlank }.map { Pretty.radicals($0.expression) }
+        let font = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+        let line: CGFloat = 17, head = 10 + line * CGFloat(eqs.count)
+        let key = PlotKey(state: state, prefs: model.graphPrefs, hover: nil, spot: nil, scale: 1)
+        let view = PlotCanvas.PlotNSView(frame: CGRect(x: 0, y: 0, width: w, height: h + head))
+        view.appearance = NSApp.keyWindow?.effectiveAppearance ?? NSApp.effectiveAppearance
+        view.key = key
+        let layers = state.layers.filter { !$0.isBlank }
+        view.drawing = { cg in
+            cg.setFillColor(Self.plotBgNS.cgColor)
+            cg.fill(CGRect(x: 0, y: 0, width: w, height: h + head))
+            for (i, eq) in eqs.enumerated() {
+                let y = 8 + CGFloat(i) * line
+                let n = i == 0 ? 0 : (state.layers.firstIndex { $0.id == layers[i - 1].id } ?? 0) + 1
+                cg.setFillColor(Self.layerColor(n))
+                cg.fill(CGRect(x: Self.pad.left, y: y + 3, width: 3, height: 11))
+                NSAttributedString(string: eq, attributes: [.font: font, .foregroundColor: Theme.ink])
+                    .draw(at: CGPoint(x: Self.pad.left + 10, y: y))
+            }
+            cg.translateBy(x: 0, y: head)
+            if state.shows3D { draw3D(cg, .base, key: key) } else { draw(cg, .base) }
+        }
+        guard let img = view.image(scale: 3) else { return }
+        let rep = NSBitmapImageRep(cgImage: img)
+        guard let png = rep.representation(using: .png, properties: [:]) else { return }
+        let stamp = DateFormatter()
+        stamp.dateFormat = "yyyy-MM-dd 'at' HH.mm.ss"
+        let desk = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first
+        let url = desk?.appendingPathComponent("Q Calc graph \(stamp.string(from: Date())).png")
+        let saved = url.map { (try? png.write(to: $0)) != nil } ?? false
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setData(png, forType: .png)
+        model.hint = saved ? "graph saved to the Desktop and copied" : "graph copied"
     }
 
     private var summary: String {
@@ -322,17 +395,20 @@ struct GraphPanel: View {
     private struct AxisGrid {
         var major: [(Double, String)] = []
         var minor: [Double] = []
+        var sub: Int?
         var step: Double? { major.count >= 2 ? major[1].0 - major[0].0 : nil }
     }
 
     /// The step set in the settings, else decades on a log axis, else the engine's ticks; minor lines fifths of a
     /// step (quarters of a 2), or 2…9 of each decade
-    private func axisGrid(_ lo: Double, _ hi: Double, log: Bool, step: Double?, engine: [GraphTick]) -> AxisGrid {
+    private func axisGrid(_ lo: Double, _ hi: Double, log: Bool, step: Double?, engine: [GraphTick], sub fixedSub: Int? = nil) -> AxisGrid {
         var out = AxisGrid()
         guard hi > lo, lo.isFinite, hi.isFinite else { return out }
         func subdivide(from base: Double, step: Double) {
             let mant = step / pow(10, floor(log10(step)))
-            let sub = abs(mant - 2) < 0.01 ? 4 : 5
+            // square cells keep square minor cells: y splits as x does
+            let sub = fixedSub ?? (abs(mant - 2) < 0.01 ? 4 : 5)
+            out.sub = sub
             let ms = step / Double(sub)
             guard ms > 0, (hi - lo) / ms <= 1000 else { return }
             var m = ((lo - base) / ms).rounded(.up)
@@ -438,7 +514,8 @@ struct GraphPanel: View {
         let axisC = ink.copy(alpha: 0.62) ?? ink, frameC = ink.copy(alpha: 0.3) ?? ink
         let tickFont = Self.mono(big ? 12 : 9.5)
         let gx = axisGrid(g.xMin, g.xMax, log: m.logX, step: g.xStep, engine: g.xTicks)
-        let gy = axisGrid(g.yMin, g.yMax, log: m.logY, step: g.yStep, engine: g.yTicks)
+        let gy = axisGrid(g.yMin, g.yMax, log: m.logY, step: g.yStep ?? g.squareYStep, engine: g.yTicks,
+                          sub: g.squareYStep != nil ? gx.sub : nil)
         cg.saveGState()
         cg.clip(to: m.rect)
         if prefs.grid {
@@ -600,15 +677,24 @@ struct GraphPanel: View {
         // roots and critical points: small hollow squares in their equation's colour
         cg.saveGState()
         cg.clip(to: m.rect.insetBy(dx: -4, dy: -4))
-        for (i, layer) in g.layers.enumerated() where layer.error == nil && layer.kind != .surface {
+        // native: past a few dozen (a zoomed-out sin x) the marks would be a solid strip, so none are drawn
+        let sparse = allCritical.count + g.roots.count + g.layers.reduce(0) { $0 + $1.roots.count } <= Self.markLimit
+        for (i, layer) in g.layers.enumerated() where sparse && layer.error == nil && layer.kind != .surface {
             let color = Self.layerColor(i + 1)
             let pts = m.logY ? [] : layer.roots.map { CGPoint(x: px($0), y: py(0)) }
             for q in pts where m.inside(q) { Self.ring(cg, at: q, plotBg: plotBg, accent: color) }
         }
         let rootMarks = m.logY ? [] : g.roots.map { CGPoint(x: px($0), y: py(0)) }
-        for q in rootMarks where m.inside(q) { Self.ring(cg, at: q, plotBg: plotBg, accent: accent) }
-        for (q, e) in zip(markPoints(), allCritical) {
-            if let q, m.inside(q) { Self.ring(cg, at: q, plotBg: plotBg, accent: Self.layerColor(e.layer)) }
+        for q in rootMarks where sparse && m.inside(q) { Self.ring(cg, at: q, plotBg: plotBg, accent: accent) }
+        for (q, e) in zip(markPoints(), allCritical) where sparse {
+            guard let q, m.inside(q) else { continue }
+            // as Desmos: an end the bounds keep (≤) is filled, one they leave out (<) hollow
+            if e.c.kind == .endpoint {
+                cg.setFillColor(Self.layerColor(e.layer))
+                cg.fill(CGRect(x: q.x - 3.5, y: q.y - 3.5, width: 7, height: 7))
+            } else {
+                Self.ring(cg, at: q, plotBg: plotBg, accent: Self.layerColor(e.layer))
+            }
         }
         cg.restoreGState()
     }
@@ -620,7 +706,25 @@ struct GraphPanel: View {
         let bottom = p.top + m.h, right = p.left + m.w
         let hair = ink.copy(alpha: 0.35) ?? ink
         let snapped = hoveredMark
-        if snapped == nil, let h = hover, m.inside(h) {
+        // native: a root the pointer is close to is snapped to as a critical point is, labelled with its exact x
+        var rootHit: (x: Double, color: CGColor)?
+        if snapped == nil, let h = hover, !m.logY, allCritical.count + g.roots.count <= Self.markLimit {
+            var roots = g.roots.map { ($0, accent) }
+            for (i, l) in g.layers.enumerated() where l.error == nil && l.kind != .surface { roots += l.roots.map { ($0, Self.layerColor(i + 1)) } }
+            var best: CGFloat = Self.snap
+            for (r, color) in roots {
+                let q = CGPoint(x: m.px(r), y: m.py(0))
+                let d = hypot(q.x - h.x, q.y - h.y)
+                if m.inside(q), d <= best { best = d; rootHit = (r, color) }
+            }
+        }
+        if let r = rootHit {
+            let c = CGPoint(x: m.px(r.x), y: m.py(0))
+            let guide = r.color.copy(alpha: 0.6) ?? r.color
+            Self.stroke(cg, CGPoint(x: c.x, y: c.y + 6), CGPoint(x: c.x, y: bottom), guide, 0.75, dash: [3, 2])
+            Self.halo(cg, at: c, plotBg: plotBg, accent: r.color)
+            Self.markLabel(cg, "root (\(coord(r.x)), 0)", at: c, in: m.rect, plotBg: plotBg)
+        } else if snapped == nil, let h = hover, m.inside(h) {
             let x = m.dataX(h.x)
             Self.stroke(cg, CGPoint(x: h.x, y: p.top), CGPoint(x: h.x, y: bottom), hair, 0.5, dash: [2, 2])
             if g.kind == .curve {
@@ -1132,7 +1236,7 @@ private struct CriticalChip: View {
 private struct PlotInput: NSViewRepresentable {
     /// the pointer moved this far while pressed; true to pan rather than orbit
     let drag: (CGSize, Bool) -> Void
-    let scroll: (NSEvent, CGSize) -> Bool
+    let scroll: (NSEvent, CGSize, CGPoint) -> Bool
     let magnify: (CGFloat) -> Void
     let hover: (CGPoint?) -> Void
     let home: () -> Void
@@ -1196,7 +1300,7 @@ private struct PlotInput: NSViewRepresentable {
         override func otherMouseUp(with event: NSEvent) { last = nil }
 
         override func scrollWheel(with event: NSEvent) {
-            if input?.scroll(event, bounds.size) != true { super.scrollWheel(with: event) }
+            if input?.scroll(event, bounds.size, local(event)) != true { super.scrollWheel(with: event) }
         }
 
         override func magnify(with event: NSEvent) { input?.magnify(event.magnification) }

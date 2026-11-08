@@ -14,6 +14,8 @@ struct GraphState: Equatable {
     var label = ""
     var curves: [GraphCurve] = []
     var xTicks: [GraphTick] = []
+    /// native: the y step that makes the grid's cells square (nil when y isn't fitted, or is set or log)
+    var squareYStep: Double?
     var yTicks: [GraphTick] = []
     var angleUnit: String?
     var error: String?
@@ -137,6 +139,14 @@ struct GraphPrefs: Codable, Equatable {
 extension BarModel {
     /// PLOT_ASPECT: the plot's height over its width in the 652 × 200 view (padding 12/12/28/40)
     static let plotAspect = (200.0 - 12 - 28) / (652.0 - 40 - 12)
+
+    /// the least 1, 2 or 5 × 10ⁿ at or above v
+    static func stepAtLeast(_ v: Double) -> Double {
+        guard v > 0, v.isFinite else { return 1 }
+        let p = pow(10, floor(log10(v)))
+        for m in [1.0, 2, 5, 10] where m * p >= v * (1 - 1e-12) { return m * p }
+        return 10 * p
+    }
 
     /// `graph a; b; c`: the first equation and the rest, split at the `;`s outside brackets.
     static func splitGraphs(_ body: String) -> [String] {
@@ -288,6 +298,11 @@ extension BarModel {
     // MARK: pan, zoom, orbit
 
     /// `lo…hi` moved by `by` of its width (a log axis by that much of its decades)
+    /// A fitted y window held as it is, so a drag or zoom moves it rather than fitting it again
+    private static func holdY(_ g: inout GraphState) {
+        if g.fixedY == nil, g.yMax > g.yMin { g.fixedY = g.yMin...g.yMax }
+    }
+
     private static func shifted(_ lo: Double, _ hi: Double, by: Double, log: Bool) -> (Double, Double) {
         if log, lo > 0, hi > lo {
             let a = log10(lo), b = log10(hi), d = by * (b - a)
@@ -332,9 +347,14 @@ extension BarModel {
             return
         }
         (g.xMin, g.xMax) = Self.shifted(g.xMin, g.xMax, by: -dx, log: g.logX)
+        // native, as Desmos: the view moves as one piece under the pointer. A fitted y window is held from the
+        // first drag on (refitting it each move made the plot jump up and down), and shown at once, not after
+        // the resample
+        if g.kind == .curve { Self.holdY(&g) }
         if let fy = g.fixedY {
             let (lo, hi) = Self.shifted(fy.lowerBound, fy.upperBound, by: dy, log: g.logY)
             g.fixedY = lo...hi
+            (g.yMin, g.yMax) = (lo, hi)
         } else if g.kind != .curve {
             g.yCenter = (g.yCenter ?? (g.yMin + g.yMax) / 2) + dy * (g.yMax - g.yMin)
         }
@@ -344,23 +364,25 @@ extension BarModel {
 
     /// A scroll over the 3D view, as Onshape takes one: two fingers up/down zoom (with shift, a two-finger drag
     /// pans), a mouse wheel zooms about the middle. Pinching zooms too. False (the scroll goes on) outside 3D.
-    func scrollGraph(_ event: NSEvent, size: CGSize) -> Bool {
-        guard let g = graph, g.shows3D, size.width > 0, size.height > 0 else { return false }
+    /// Two fingers (or a wheel) over the plot, 2D or 3D: up/down zooms (about `at`, the pointer's fraction across a
+    /// 2D plot), shift pans. True when it was the graph's.
+    func scrollGraph(_ event: NSEvent, size: CGSize, at: Double = 0.5) -> Bool {
+        guard let g = graph, size.width > 0, size.height > 0 else { return false }
         if event.hasPreciseScrollingDeltas {
             // momentum after the fingers lift would keep it going; only the gesture itself counts
             guard event.momentumPhase.isEmpty else { return true }
             if event.modifierFlags.contains(.shift) {
                 // shift + two-finger drag pans, following the fingers
-                panGraph(dx: event.scrollingDeltaX / size.width, dy: event.scrollingDeltaY / size.height, move3D: true)
+                panGraph(dx: event.scrollingDeltaX / size.width, dy: event.scrollingDeltaY / size.height, move3D: g.shows3D)
             } else {
                 // two fingers up/down zoom (as Onshape): fingers up zooms in, whatever the natural-scrolling setting
                 let up = (event.isDirectionInvertedFromDevice ? -event.scrollingDeltaY : event.scrollingDeltaY) / size.height
-                if up != 0 { zoomGraph(exp(-up * 2.5)) }
+                if up != 0 { zoomGraph(exp(-up * 2.5), at: at) }
             }
         } else {
             let lines = event.scrollingDeltaY
             guard lines != 0 else { return true }
-            zoomGraph(exp(-lines * 0.08))
+            zoomGraph(exp(-lines * 0.08), at: at)
         }
         return true
     }
@@ -380,9 +402,11 @@ extension BarModel {
         let (lo, hi) = Self.scaled(g.xMin, g.xMax, by: factor, at: at, log: g.logX)
         guard hi - lo >= 1e-6, hi - lo <= 1e6 || g.logX else { return }
         (g.xMin, g.xMax) = (lo, hi)
+        if !g.shows3D, g.kind == .curve { Self.holdY(&g) }
         if let fy = g.fixedY {
             let (a, b) = Self.scaled(fy.lowerBound, fy.upperBound, by: factor, at: 0.5, log: g.logY)
             g.fixedY = a...b
+            if !g.shows3D { (g.yMin, g.yMax) = (a, b) }
         }
         if let fz = g.fixedZ {
             let (a, b) = Self.scaled(fz.lowerBound, fz.upperBound, by: factor, at: 0.5, log: false)
@@ -446,17 +470,28 @@ extension BarModel {
                 let w = engine.graphHome(input: input, options: GraphOptions(aspect: Self.plotAspect), settings: settings)
                 if w.hi > w.lo { (lo, hi) = (w.lo, w.hi) }
                 yCenter = w.yCenter
+                // native, as Desmos: the window opens wide enough for every equation (`x² {3 < x < ∞}; x {x < 1}`)
+                if !g.shows3D {
+                    for (_, layerInput) in layers {
+                        let lw = engine.graphHome(input: layerInput, options: GraphOptions(aspect: Self.plotAspect), settings: settings)
+                        guard lw.hi > lw.lo, lw.lo < lo || lw.hi > hi else { continue }
+                        (lo, hi) = (min(lo, lw.lo), max(hi, lw.hi))
+                        yCenter = nil
+                    }
+                }
                 if g.xLog, lo <= 0 { (lo, hi) = hi > 0 ? (hi / 1000, hi) : (0.1, 100) }
             }
             let in3D = g.shows3D
-            /// the options for a y window: a plot of x and y samples exactly it
+            /// the options for a y window: a plot of x and y samples exactly it. A curve gets 4001 samples, not the
+            /// page's 401, which alias a zoomed-out sin x into a slow false wave; odd, so one lands on the window's
+            /// middle (with an even count x² has two samples level across its turn, and the turn finder skips it)
             func options(y: ClosedRange<Double>?) -> GraphOptions {
                 var aspect = in3D ? 1 : Self.plotAspect, center = yCenter
                 if !in3D, let y, hi > lo {
                     aspect = (y.upperBound - y.lowerBound) / (hi - lo)
                     center = (y.lowerBound + y.upperBound) / 2
                 }
-                return GraphOptions(domainLo: lo, domainHi: hi, sampleCount: nil, findRoots: true, aspect: aspect,
+                return GraphOptions(domainLo: lo, domainHi: hi, sampleCount: in3D ? nil : 4001, findRoots: true, aspect: aspect,
                                     yCenter: center, surface: in3D, xLog: g.xLog && lo > 0)
             }
             // the 3D view samples a square of x and y
@@ -470,6 +505,9 @@ extension BarModel {
             }
             // y: as set; or fitted to every curve when the first is one (a plot of x and y keeps its own)
             var yLo = result?.yMin ?? -10, yHi = result?.yMax ?? 10
+            // native: about a dozen x ticks (Desmos's density), and with them square grid cells
+            let xTicks = result == nil ? [] : engine.graphTicks(lo: lo, hi: hi, unit: result?.angleUnit, target: in3D ? 6 : 12)
+            var squareStep: Double?
             if let fy = g.fixedY, !in3D {
                 (yLo, yHi) = (fy.lowerBound, fy.upperBound)
             } else if let result, !result.contour, !in3D {
@@ -482,6 +520,18 @@ extension BarModel {
                         yLo = min(yLo, r.yMin)
                         yHi = max(yHi, r.yMax)
                     }
+                    // native, as Desmos: square grid cells. y's step is the least 1, 2 or 5 × 10ⁿ whose rows, as
+                    // tall as x's columns are wide, hold every curve; the window is centred on them
+                    if !g.logX, g.yStep == nil, xTicks.count >= 2, hi > lo, yHi > yLo {
+                        let sx = xTicks[1].value - xTicks[0].value
+                        let rows = Self.plotAspect * (hi - lo) / sx
+                        if sx > 0, rows.isFinite, rows > 0 {
+                            let sy = Self.stepAtLeast((yHi - yLo) / rows)
+                            let mid = (yLo + yHi) / 2
+                            (yLo, yHi) = (mid - rows * sy / 2, mid + rows * sy / 2)
+                            squareStep = sy
+                        }
+                    }
                 }
                 // the others' plots of x and y again, over this y
                 for (id, r) in others where r.contour {
@@ -493,19 +543,30 @@ extension BarModel {
                 }
             }
             var unit: AngleUnit?
-            var xTicks: [GraphTick] = [], yTicks: [GraphTick] = []
+            var yTicks: [GraphTick] = []
             if let result {
                 unit = result.angleUnit
-                xTicks = engine.graphTicks(lo: lo, hi: hi, unit: unit, target: 6)
                 yTicks = engine.graphTicks(lo: yLo, hi: yHi, unit: nil, target: 5)
             }
-            let finalY = (yLo, yHi), sampled = others
+            // a held window keeps its cells square while x's ticks move to 1, 2, 5 steps: y's step at the same scale,
+            // when that is a round one
+            if squareStep == nil, !in3D, let fy = g.fixedY, !g.logX, !g.logY, g.yStep == nil, xTicks.count >= 2, hi > lo {
+                let sx = xTicks[1].value - xTicks[0].value
+                let sy = sx * (fy.upperBound - fy.lowerBound) / (Self.plotAspect * (hi - lo))
+                let p = pow(10, floor(log10(sy))), m = sy / p
+                if sy > 0, sy.isFinite, [1.0, 2, 2.5, 5, 10].contains(where: { abs(m - $0) < 1e-6 * $0 }) { squareStep = sy }
+            }
+            let finalY = (yLo, yHi), sampled = others, square = squareStep
             await MainActor.run {
                 guard let self, var now = self.graph, now.expression == expr else { return }
-                if home { (now.homeLo, now.homeHi, now.homeYCenter) = (lo, hi, yCenter) }
-                now.xMin = lo
-                now.xMax = hi
-                now.yCenter = yCenter
+                // the window is the panel's: a result that comes in after the view has moved on (a drag) is drawn
+                // in the current window, not put back to the one it was sampled for, which made the plot jump back
+                if home {
+                    (now.homeLo, now.homeHi, now.homeYCenter) = (lo, hi, yCenter)
+                    now.xMin = lo
+                    now.xMax = hi
+                    now.yCenter = yCenter
+                }
                 for i in now.layers.indices {
                     let id = now.layers[i].id
                     guard layers.contains(where: { $0.0 == id }) else {
@@ -537,7 +598,11 @@ extension BarModel {
                 now.error = result.error
                 now.label = result.label
                 now.curves = [GraphCurve(label: result.label, points: result.points)]
-                if finalY.1 > finalY.0 { (now.yMin, now.yMax) = finalY }
+                if let fy = now.fixedY, !now.shows3D {
+                    (now.yMin, now.yMax) = (fy.lowerBound, fy.upperBound)
+                } else if finalY.1 > finalY.0 {
+                    (now.yMin, now.yMax) = finalY
+                }
                 now.roots = result.roots
                 now.critical = result.criticalPoints
                 now.contours = result.contours
@@ -546,6 +611,7 @@ extension BarModel {
                 now.angleUnit = unit.map { $0 == .rad ? "rad" : "deg" }
                 now.xTicks = xTicks
                 now.yTicks = yTicks
+                now.squareYStep = square
                 // a surface opens in 3D: sample it again as a square, with its grid
                 let first3D = now.kind == .surface && now.view3D == nil
                 if first3D { now.view3D = true }

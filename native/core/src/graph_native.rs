@@ -303,6 +303,8 @@ fn point_intent(body: &str, options: &GraphOptions) -> Option<NativeIntent> {
                     x: vec![GraphRange {
                         lo: ps[0].0,
                         hi: ps[ps.len() - 1].0,
+                        lo_open: false,
+                        hi_open: false,
                     }],
                     y: Vec::new(),
                 }),
@@ -360,7 +362,8 @@ const YS: [f64; 9] = [2.9, -6.1, 0.47, 7.7, -1.3, 4.6, -3.9, -0.8, 5.2];
 /// What the native panel graphs for `input`: [`parse_graph_intent`] after [`normalize`], with lines through
 /// points and equations linear in y or z read as curves and surfaces.
 pub fn native_intent(input: &str, options: &GraphOptions) -> Option<NativeIntent> {
-    static FREE_Z: Lazy = Lazy::new(|| js(r"(?<![A-Za-z0-9_])z(?![A-Za-z0-9_])", ""));
+    // a z after a coefficient (`20z`) is free too, so only a letter or _ before it makes it part of a name
+    static FREE_Z: Lazy = Lazy::new(|| js(r"(?<![A-Za-z_])z(?![A-Za-z0-9_])", ""));
     let input = normalize(input)?;
     let body = input.trim_start()[5..].trim();
     if let Some(p) = point_intent(body, options) {
@@ -478,12 +481,16 @@ fn crossings(g: &dyn Fn(f64) -> Option<f64>, lo: f64, hi: f64) -> Vec<f64> {
     let mut out = Vec::new();
     let step = (hi - lo) / N as f64;
     let mut prev: Option<(f64, f64)> = None;
-    for i in 0..=N {
+    let values: Vec<Option<f64>> = (0..=N).map(|i| g(lo + i as f64 * step)).collect();
+    let zero_at = |i: usize| values.get(i).copied().flatten() == Some(0.0);
+    for (i, &v) in values.iter().enumerate() {
         let t = lo + i as f64 * step;
-        let v = g(t);
         if let Some(v) = v {
             if v == 0.0 {
-                out.push(t);
+                // a curve lying along the axis (x² = x has the line x = 0) is zero all the way: it doesn't cross
+                if !(i > 0 && zero_at(i - 1)) && !zero_at(i + 1) {
+                    out.push(t);
+                }
             } else if let Some((pt, pv)) = prev
                 && pv != 0.0
                 && pv.signum() != v.signum()

@@ -839,7 +839,9 @@ final class BarModel: ObservableObject {
             clearLine()
             skipTutorial()
         case .graph:
-            break
+            // native only: ↵ saves the equation to the tape as any line is (the page does nothing), so ↑ or a click
+            // brings the graph back
+            commit()
         case .greeting:
             clearLine()
         }

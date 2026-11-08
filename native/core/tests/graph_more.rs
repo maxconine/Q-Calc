@@ -202,6 +202,81 @@ fn surfaces_have_critical_points_and_a_grid() {
     assert!(plane.critical_points.is_empty());
     assert_eq!(plane.z_at(1.0, 2.0), Some(-2.0));
     assert!(opened("graph x^2+y^2+z^2=25", 1.0, true).error.is_some());
+    // a coefficient on z is solved through: 20z = 2y + 12x is z = (2y + 12x)/20
+    let scaled = opened("graph 20z=2y+12x", 1.0, true);
+    assert_eq!(scaled.error, None);
+    let z = scaled.z_at(1.0, 2.0).expect("a surface");
+    assert!((z - 0.8).abs() < 1e-12, "{z}");
+    let z = opened("graph 3z - x = y", 1.0, true)
+        .z_at(3.0, 6.0)
+        .expect("a surface");
+    assert!((z - 3.0).abs() < 1e-12, "{z}");
+    // and on y, as a curve
+    let line = opened("graph 4y = 2x + 8", PANEL, false);
+    assert_eq!(line.error, None);
+    assert!(line.y_at(2.0).is_some_and(|y| (y - 3.0).abs() < 1e-12));
+}
+
+#[test]
+fn a_line_along_an_axis_is_not_a_row_of_intercepts() {
+    // x² = x is the lines x = 0 and x = 1; the first lies on the y axis
+    let r = opened("graph x^2 = x", PANEL, false);
+    let ys = r
+        .critical_points
+        .iter()
+        .filter(|c| c.kind == CriticalKind::YIntercept)
+        .count();
+    assert_eq!(ys, 0, "{:?}", points(&r));
+    assert!(
+        has(&r, CriticalKind::XIntercept, 0.0, 0.0) && has(&r, CriticalKind::XIntercept, 1.0, 0.0),
+        "{:?}",
+        points(&r)
+    );
+    assert!(r.critical_points.len() <= 3, "{:?}", points(&r));
+}
+
+#[test]
+fn bounds_reach_infinity_and_mark_their_ends() {
+    let o = GraphOptions {
+        domain: Some((-10.0, 10.0)),
+        ..GraphOptions::default()
+    };
+    let ends = |s: &str| {
+        let r = build_native_graph(s, &o).expect("a graph");
+        assert_eq!(r.error, None, "{s}");
+        r.critical_points
+            .iter()
+            .filter(|c| matches!(c.kind, CriticalKind::Endpoint | CriticalKind::OpenEndpoint))
+            .map(|c| (c.kind, c.x, c.y))
+            .collect::<Vec<_>>()
+    };
+    // ∞ (or inf) is open on that side; the end that's left out is an open endpoint, at the height the curve reaches
+    assert_eq!(
+        ends("graph x^2-3 {3<x<∞}"),
+        [(CriticalKind::OpenEndpoint, 3.0, 6.0)]
+    );
+    assert_eq!(
+        ends("graph x^2-3 {3<x<inf}"),
+        [(CriticalKind::OpenEndpoint, 3.0, 6.0)]
+    );
+    assert_eq!(
+        ends("graph x^2-3 {-∞<x<=2}"),
+        [(CriticalKind::Endpoint, 2.0, 1.0)]
+    );
+    assert_eq!(
+        ends("graph x^2-3 {-1<=x<5}"),
+        [
+            (CriticalKind::Endpoint, -1.0, -2.0),
+            (CriticalKind::OpenEndpoint, 5.0, 22.0)
+        ]
+    );
+    // an end outside the window isn't marked
+    let far = build_native_graph("graph x^2-3 {-30<=x<=30}", &o).expect("a graph");
+    assert!(
+        far.critical_points
+            .iter()
+            .all(|c| !matches!(c.kind, CriticalKind::Endpoint | CriticalKind::OpenEndpoint))
+    );
 }
 
 #[test]

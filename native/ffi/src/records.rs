@@ -712,6 +712,10 @@ pub enum CriticalKind {
     VerticalTangent,
     /// A point a line was drawn through.
     Point,
+    /// Where a curve cut off by `{a ≤ x ≤ b}` stops, the end kept.
+    Endpoint,
+    /// Where a curve cut off by `{a < x < b}` stops, the end left out.
+    OpenEndpoint,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]

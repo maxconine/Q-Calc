@@ -32,7 +32,30 @@ Nothing left.
 
 ## 3. Not on Windows yet: implement it
 
-Nothing left. Open questions for the Mac side:
+### Graph panel, newer Mac round (`Bar/GraphModel.swift`, `Bar/GraphPanel.swift`, `Bar/GraphSettings.swift`, core `graph.rs`)
+
+- **Graph controls and fixes (this round):**
+  - **Input:** the 2D plot now takes the mouse in the same AppKit layer as 3D (`PlotInput`), so a drag pans the view and never moves the window. Two fingers up/down (or a wheel) zoom any graph, about the pointer in 2D. Shift + two fingers pans. A pinch zooms and a double-click resets. In 3D, an up/down drag now tilts the other way (`dy` negated with `dx`).
+  - **Zoom:** the head has zoom-out/zoom-in buttons (×1.25 / ×0.8). ⌘+ (or ⌘=) and ⌘− do the same while a graph shows (in the bar's key monitor in `OverlayController`).
+  - **Camera button:** the plot is redrawn at 3× with each equation (a colour bar plus its text) above it. It is saved as `~/Desktop/Q Calc graph <date> at <time>.png` and copied to the clipboard as PNG. The hint says so.
+  - **Settings inline:** the settings are now a block under the head, not a popover. A popover is a window of its own, and taking the keys hid the bar. The block uses the bar's look: monospaced rows (VIEW, X AXIS, Y/Z AXIS, SCALE) of hairline cells, in ink when on, with plain fields in hairline boxes.
+  - **Editing keys:** the bar's window (`OverlayPanel.performKeyEquivalent`) gives ⌘A/C/X/V/Z to any text field other than the line. The bar has no Edit menu, so the graph's fields had none.
+  - **Saving graphs:** ↵ on a `graph …` line saves it as a tape row. In the core, `LiveRequest.keep_graphs`, set by the FFI's `core_request` for every native app, so Windows gets it too. A click on the row brings the graph back. The web still saves only `graph f(x)=…`.
+  - **Coefficients before z:** `20z = 2y + 12x` graphs as a surface. `native_intent`'s free-z test no longer refuses a z after a digit.
+  - **Lines along an axis:** `x² = x` (the lines x = 0 and x = 1) no longer lists every sample of x = 0 as a y-intercept. `crossings` skips a zero whose neighbours are zero too.
+  - **Samples:** a 2D curve gets 4001 samples, not 401, so a zoomed-out sin x is a dense band rather than a slow false wave. The count is odd so a sample lands on the window's middle. With 4096, x² had two level samples across its turn, and `find_critical_points` skipped it.
+  - **Many points:** chips show the 12 points nearest the middle of the view, with "+N more". Expanded, they sit in a box that scrolls (156 pt high). Past 60 marks plus roots, no marks are drawn and the pointer doesn't snap.
+  - **Every equation's points:** the chips list the added equations' points too, each with a small square in its colour.
+  - **Square grid (as Desmos):** about 12 x ticks are asked for. For a fitted curve (no y window set, not log), y's step is the least 1/2/5 × 10ⁿ whose rows are as tall as x's columns are wide. The y window is centred on the curves (`squareYStep`), and y's minor lines split as x's do.
+  - **Bounds to ∞ and endpoints (core, so Windows gets them by rebuilding):** `{3 < x < ∞}` (also `inf`, `infinity`, `-∞`) is accepted. `GraphRange` now records `lo_open`/`hi_open` (`<` is open, `≤` closed). `build_native_graph` adds new kinds `CriticalKind::Endpoint` (kept end) and `OpenEndpoint` (left-out end) at each finite x bound inside the window. An open end's height is the formula's value there, past the bounds. On Windows, `windows/src/graph.rs` names them "endpoint" / "open end". Draw a kept end as a filled square, an open one hollow.
+  - **Home window:** in 2D, the home window is the union of every equation's home window, so a second equation bounded outside the first one's window still shows.
+  - **Smooth dragging (`GraphModel.swift`):**
+    - A resample no longer writes its x window back when it lands. Only a home view sets the window, so a result that arrives after the drag has moved on can't pull the view back.
+    - The first drag or zoom on a fitted curve holds its y window (`holdY` sets `fixedY`). From then on x and y move together under the pointer, with `yMin`/`yMax` updated at once rather than after the resample. Reset clears it.
+    - A held window keeps square cells: y's step is x's step at the same scale, when that is 1, 2, 2.5 or 5 × 10ⁿ.
+  - **Snapping to roots:** a root within 9 pt of the pointer is snapped to, as critical points are. It is drawn picked out, labelled `root (x, 0)`.
+
+Open questions for the Mac side:
 
 - **Sheet filter:** the spec says `tmax` finds `τ_max`, but `τ` doesn't fold to `t` in the Mac's own matching, and Windows follows the Mac's code, so `tmax` finds nothing on either.
 
