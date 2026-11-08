@@ -324,7 +324,7 @@ final class BarModel: ObservableObject {
         defer { if !lane { working = nil } }
         // the grid stays open only while the line is the one it wrote
         if let g = grid, !writingGrid, typed != g.written { grid = nil; gridFocus = nil }
-        if grid == nil, let h = matrixGridHint(text: typed) {
+        if grid == nil, let h = matrixGridHint(text: typed), !storesMat(typed) {
             commandMessage = h
             setLive(.blank, for: typed)
             engine.cancel(.live)
@@ -1426,6 +1426,11 @@ final class BarModel: ObservableObject {
                 return true
             }
             guard flags.isEmpty else { return false }
+            // native only: ↓ from the line goes back into the open matrix grid, at its first cell
+            if code == kVK_DownArrow, grid != nil, selected == nil {
+                reopenGrid(focus: GridCell(r: 0, c: 0))
+                return true
+            }
             moveSelection(up: code == kVK_UpArrow)
             return true
         case kVK_LeftArrow, kVK_RightArrow:

@@ -116,15 +116,14 @@ pub fn grid_hint(text: &str) -> Option<String> {
             spot.cells.first().map_or(0, Vec::len)
         ));
     }
-    // `matrix` being typed at the end of the line (`det(matrix`, `matrix 3x`, `mat 3x`): ask for its size; a bare
-    // `mat` may be a name, so it waits for a digit
+    // `matrix` or `mat` being typed at the end of the line (`det(matrix`, `matrix 3x`, `mat`): ask for its size (a
+    // bar with a stored `mat` keeps it a name: that's the bar's to know)
     let lower = text.trim_end().to_ascii_lowercase();
     let (i, kw) = *keywords(&lower).last()?;
     let size = lower[i + kw..].trim();
     if !size
         .chars()
         .all(|c| c.is_ascii_digit() || "x× ".contains(c))
-        || (kw == 3 && size.is_empty())
     {
         return None;
     }
@@ -328,7 +327,7 @@ mod tests {
         );
         assert_eq!(grid_hint("mat 2x2").as_deref(), Some("↵ opens a 2×2 grid"));
         assert_eq!(grid_hint("mat 3x").as_deref(), ask);
-        assert!(grid_hint("mat").is_none());
+        assert_eq!(grid_hint("mat").as_deref(), ask);
         assert!(grid_hint("math").is_none());
         assert!(grid_command("format 2x2").is_none());
         assert!(grid_hint("2+2").is_none());

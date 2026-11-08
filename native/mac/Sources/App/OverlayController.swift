@@ -24,6 +24,19 @@ final class OverlayPanel: NSPanel {
 
     override func cancelOperation(_ sender: Any?) { onEscape?() }
 
+    /// While this says so (the matrix grid or a system is open), a field taking the keys gets its caret at the end of
+    /// its text in the same turn, so its text is never drawn selected first (SwiftUI selects all on focus)
+    var caretToEndOnFocus: (() -> Bool)?
+
+    override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+        let ok = super.makeFirstResponder(responder)
+        if ok, caretToEndOnFocus?() == true, let editor = firstResponder as? NSTextView, editor.isFieldEditor,
+           !(editor is BarTextView) {
+            editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+        }
+        return ok
+    }
+
     /// The bar has no Edit menu, so its other text fields (the graph's settings and equations) get the editing keys
     /// here; the line handles its own (BarTextView.performKeyEquivalent).
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -186,6 +199,8 @@ final class OverlayController: NSObject {
         panel.title = "Q Calc"
         panel.onEscape = { [weak self] in self?.escape() }
         panel.onResignKey = { [weak self] in self?.lostFocus() }
+        // the matrix grid's cells and a system's equations take the keys with the caret at the end, never selected
+        panel.caretToEndOnFocus = { [weak self] in self.map { $0.model.grid != nil || $0.model.sysLines != nil } ?? false }
         panel.isFloatingPanel = true
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]

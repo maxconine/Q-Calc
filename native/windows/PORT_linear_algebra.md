@@ -140,6 +140,9 @@ pointer; the grid doesn't scroll sideways (8 columns need about 590 px); no UI A
 | ↵ on `mat 2x2`: the first cell gets the keys once the card is in the window (focus set on the next run-loop turns) | check the caret lands in row 1, column 1 |
 | ⌘⌫ in a cell empties it; in an empty cell the grid closes and the line clears (as `sys`) | Ctrl+Backspace the same |
 | hiding with the grid open saves it with the draft (`grid: start, end, r, c`); shown again within the draft time, the grid reopens on that cell | the same with the draft |
+| a bare `mat` asks for its size too (core), unless history stores a `mat` (`storesMat`) | the same |
+| moving to a cell (arrows, Tab, ↓ back) puts the caret at the end of its value, never drawn selected first (`OverlayPanel.makeFirstResponder` sets it in the same turn, while the grid or a system is open) | the same |
+| ↓ on the line while the grid is open goes to its first cell | the same |
 | a line committed with a grid-written matrix is remembered (`GridMemory`, newest 200); inserted again from history, the grid opens on its matrix | the same |
 
 ## 2. Mac UI to port (Phase 4)

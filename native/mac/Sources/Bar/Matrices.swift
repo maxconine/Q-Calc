@@ -78,6 +78,12 @@ extension BarModel {
         return d
     }
 
+    /// A line ending in a bare `mat` while history stores a `mat` of its own: that's the name, not the grid
+    func storesMat(_ typed: String) -> Bool {
+        guard typed.range(of: "(?i)(?<![A-Za-z0-9_])mat\\s*$", options: .regularExpression) != nil else { return false }
+        return rows.contains { $0.expr.range(of: "^\\s*mat\\s*=", options: .regularExpression) != nil }
+    }
+
     func openGrid(_ spot: GridSpot) {
         grid = GridState(cells: spot.cells, start: Int(spot.start), end: Int(spot.end), written: text)
         stepsShown = false
@@ -318,6 +324,7 @@ struct MatrixGridPanel: View {
         .onChange(of: model.gridFocusAsk) { _ in take(model.gridFocus ?? GridCell(r: 0, c: 0)) }
         .onChange(of: focused) { f in
             deleteWatch.field = f.map { $0.r * 100 + $0.c }
+            // the caret goes to the end of the cell's value as it takes the keys (OverlayPanel.caretToEndOnFocus)
             if let f, f != model.gridFocus { model.gridFocus = f }
         }
         .accessibilityElement(children: .contain)
