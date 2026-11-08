@@ -127,7 +127,11 @@ struct GraphPrefs: Codable, Equatable {
 
     static func load() -> GraphPrefs {
         guard let data = UserDefaults.standard.data(forKey: key),
-              let prefs = try? JSONDecoder().decode(GraphPrefs.self, from: data) else { return GraphPrefs() }
+              var prefs = try? JSONDecoder().decode(GraphPrefs.self, from: data) else { return GraphPrefs() }
+        // the settings taken out of the panel go back to their defaults, so none is left on with no way to see it
+        let plain = GraphPrefs()
+        (prefs.largeText, prefs.reverseContrast, prefs.arrows) = (plain.largeText, plain.reverseContrast, plain.arrows)
+        (prefs.showXAxis, prefs.showYAxis, prefs.lockViewport, prefs.degrees) = (true, true, false, nil)
         return prefs
     }
 
@@ -285,11 +289,10 @@ extension BarModel {
             if x, g.xMin <= 0 { (g.xMin, g.xMax) = g.xMax > 0 ? (g.xMax / 1000, g.xMax) : (0.1, 100) }
         }
         if let y {
+            // the y window fits the curves again on the new scale (on log, their positive values), as Desmos's does:
+            // a window held from the linear view cut e^x off below 24
+            if g.yLog != y { g.fixedY = nil }
             g.yLog = y
-            if y {
-                let top = max(g.fixedY?.upperBound ?? g.yMax, 0)
-                if (g.fixedY?.lowerBound ?? g.yMin) <= 0 { g.fixedY = top > 0 ? (top / 1000)...top : 0.1...100 }
-            }
         }
         graph = g
         sampleGraph()
@@ -519,6 +522,13 @@ extension BarModel {
                     for r in others.values where !r.contour && r.error == nil && r.yMax > r.yMin {
                         yLo = min(yLo, r.yMin)
                         yHi = max(yHi, r.yMax)
+                    }
+                    // native: the x axis comes into view when the curve nearly reaches it (within a third of its
+                    // height), so its intercepts and the axes read; a curve far from it isn't flattened against it
+                    if yHi > yLo, !g.logY {
+                        let h = yHi - yLo
+                        if yLo > 0, yLo < h / 3 { yLo = -h * 0.05 }
+                        if yHi < 0, -yHi < h / 3 { yHi = h * 0.05 }
                     }
                     // native, as Desmos: square grid cells. y's step is the least 1, 2 or 5 × 10ⁿ whose rows, as
                     // tall as x's columns are wide, hold every curve; the window is centred on them

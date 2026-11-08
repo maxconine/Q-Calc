@@ -86,7 +86,7 @@ enum DevSnapshot {
             func tree(_ v: NSView, _ depth: Int) -> String {
                 let label = v.accessibilityLabel() ?? (v as? NSTextField)?.stringValue ?? ""
                 var line = String(repeating: "  ", count: depth) + "\(type(of: v)) \(NSStringFromRect(v.frame)) \(label)\n"
-                if depth < 6 { for s in v.subviews.prefix(40) { line += tree(s, depth + 1) } }
+                if depth < 9 { for s in v.subviews.prefix(40) { line += tree(s, depth + 1) } }
                 return line
             }
             try? tree(view, 0).write(toFile: "\(prefix)-\(name).txt", atomically: true, encoding: .utf8)

@@ -280,6 +280,38 @@ fn bounds_reach_infinity_and_mark_their_ends() {
 }
 
 #[test]
+fn the_home_view_shows_every_key_point() {
+    let home = |s: &str| {
+        let (lo, hi, _) = native_home(
+            s,
+            &GraphOptions {
+                aspect: Some(PANEL),
+                ..GraphOptions::default()
+            },
+        );
+        (lo, hi)
+    };
+    // a far root and the y-intercept both in view
+    let (lo, hi) = home("graph y = 2x+34");
+    assert!(lo < -17.0 && hi > 0.0, "{lo} {hi}");
+    // turns past ±10
+    let (lo, hi) = home("graph x^3-1000x");
+    assert!(lo < -31.7 && hi > 31.7, "{lo} {hi}");
+    // a vertex far off, with the y axis
+    let (lo, hi) = home("graph (x-50)^2+3");
+    assert!(lo <= 0.0 && hi > 50.0, "{lo} {hi}");
+    // a root where the curve starts
+    let (lo, hi) = home("graph sqrt(x-40)");
+    assert!(lo < 40.0 && hi > 40.0, "{lo} {hi}");
+    // roots on the page's edge get room
+    let (lo, hi) = home("graph 0.01x^3 - x");
+    assert!(lo < -10.0 && hi > 10.0, "{lo} {hi}");
+    // endless features (sin x) and none at all (e^x, whose tiny values aren't roots) keep the page's view
+    assert_eq!(home("graph sin(x)"), (-10.0, 10.0));
+    assert_eq!(home("graph e^x"), (-10.0, 10.0));
+}
+
+#[test]
 fn a_log_x_axis_samples_evenly_in_log_x() {
     let o = GraphOptions {
         domain: Some((0.001, 1000.0)),

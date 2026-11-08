@@ -781,7 +781,93 @@ pub fn native_home(input: &str, options: &GraphOptions) -> (f64, f64, Option<f64
     let (lo, hi) = home_of(Some(intent.clone()), options, &|o| {
         Some(build_intent(intent.clone(), o, true))
     });
+    let (lo, hi) = widen_to_features(&intent, options, (lo, hi));
     (lo, hi, None)
+}
+
+/// Native only: the most useful first view of a curve is one that shows what there is to see on it: every root,
+/// every turn and where it crosses the y axis. The page's home stays within ±10 (`2x + 34` opened on [−10, 10],
+/// with its root at −17 off the side), so look further out: windows 10 and 100 times as wide, stopping once
+/// one finds no more than the last (all found) or too many to frame (sin x, whose features never end; it keeps
+/// the page's view). Features within the page's window leave it as it is; any beyond widen it to hold them all,
+/// with room around them.
+fn widen_to_features(
+    intent: &GraphIntent,
+    options: &GraphOptions,
+    (lo, hi): (f64, f64),
+) -> (f64, f64) {
+    const MANY: usize = 12;
+    if intent.contour.is_some()
+        || intent.bounds.is_some()
+        || intent.expression.is_empty()
+        || !(hi > lo)
+    {
+        return (lo, hi);
+    }
+    let reach = lo.abs().max(hi.abs());
+    let mut found: Option<Vec<f64>> = None;
+    for k in 1..=2 {
+        let h = reach * 10f64.powi(k);
+        let o = GraphOptions {
+            domain: Some((-h, h)),
+            sample_count: Some(4001.0),
+            ..options.clone()
+        };
+        let g = build_intent(intent.clone(), &o, true);
+        if g.error.is_some() {
+            break;
+        }
+        // a root the curve really crosses or touches: e^x's values far left are tiny, not zero
+        let d = h * 1e-7;
+        let real_root = |r: &f64| {
+            let (l, m, n) = (g.y_at(r - d), g.y_at(*r), g.y_at(r + d));
+            match (l, m, n) {
+                (Some(l), _, Some(n)) if l.signum() != n.signum() && l != 0.0 && n != 0.0 => true,
+                // touching (x²), or where the curve starts or stops at 0 (√(x − 40))
+                (l, Some(m), n) => {
+                    m == 0.0 && l.is_some_and(|v| v != 0.0)
+                        || m == 0.0 && n.is_some_and(|v| v != 0.0)
+                }
+                _ => false,
+            }
+        };
+        let mut xs: Vec<f64> = g
+            .roots
+            .iter()
+            .copied()
+            .filter(real_root)
+            .chain(g.critical_points.iter().map(|c| c.x))
+            .filter(|x| x.is_finite())
+            .collect();
+        if xs.len() > MANY {
+            break;
+        }
+        if g.y_at(0.0).is_some_and(f64::is_finite) {
+            xs.push(0.0);
+        }
+        let same = found.as_ref().is_some_and(|f| f.len() == xs.len());
+        found = Some(xs);
+        if same {
+            break;
+        }
+    }
+    let Some(xs) = found.filter(|xs| !xs.is_empty()) else {
+        return (lo, hi);
+    };
+    // already in view, and not on its edge
+    let margin = (hi - lo) * 0.05;
+    if xs.iter().all(|&x| x >= lo + margin && x <= hi - margin) {
+        return (lo, hi);
+    }
+    let a = xs.iter().copied().fold(f64::INFINITY, f64::min);
+    let b = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    // a third again around them; one alone gets the page's width around it
+    let span = if b > a {
+        ((b - a) * 1.35).max((hi - lo) / 4.0)
+    } else {
+        hi - lo
+    };
+    nice_window((a + b) / 2.0, span)
 }
 
 // ---- surfaces ----

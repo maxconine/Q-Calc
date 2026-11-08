@@ -86,6 +86,15 @@ extension BarTextView {
         stackBars = []
         stackHoles = []
         slotLooks = []
+        caretShift = [:]
+        // TextKit grows the line for a raised numerator and pushes its baseline down: the inset takes it back up
+        // (and back once the line has no stacks)
+        defer {
+            if Self.stackedOn { spaceOperators() }
+            updateInset()
+            // the caret goes where the spaced line puts it (the stacks' pass placed it before the room was added)
+            refreshStackCaret()
+        }
         guard Self.stackedOn, let storage = textStorage, storage.length > 0, string.contains("/") || string.contains("^") else {
             stacked = StackedMath.Parsed()
             refreshStackCaret()
@@ -100,7 +109,8 @@ extension BarTextView {
         guard !p.stacks.isEmpty else { return refreshStackCaret() }
         let n = storage.length, full = Self.fontSize
         var size = [CGFloat](repeating: full, count: n), offset = [CGFloat](repeating: 0, count: n)
-        func small(_ s: StackedMath.Stack) -> CGFloat { max(8, size[s.op] * 0.6) }
+        // a graphing calculator's proportions: a fraction's slots nearly the line's size, a power's well under it
+        func small(_ s: StackedMath.Stack) -> CGFloat { Self.slotSize(parent: size[s.op], fraction: s.isFraction) }
         // sizes and heights, outer stacks first: a slot's are its stack's, made smaller and moved
         for s in p.stacks {
             let parent = size[s.op], base = offset[s.op], f = small(s)
@@ -110,10 +120,11 @@ extension BarTextView {
             }
             if s.isFraction, let num = s.num {
                 let axis = base + parent * 0.25
-                put(num, axis + 1.5 + f * 0.08)
-                put(s.slot, axis - 1.5 - f * 0.72)
+                // a slot with a stack of its own in it stands as far off the bar as that stack is tall
+                put(num, Self.numOffset(axis: axis, f, depth: Self.extent(p, num.content, size: f).depth))
+                put(s.slot, Self.denOffset(axis: axis, f, height: Self.extent(p, s.slot.content, size: f).height))
             } else {
-                put(s.slot, base + parent * 0.36)
+                put(s.slot, base + parent * Self.powerRaise)
             }
         }
         for k in 0..<n {
@@ -137,13 +148,13 @@ extension BarTextView {
             if s.isFraction, let num = s.num {
                 let den = s.slot
                 let nw = num.isEmpty ? hole : width(num.content), dw = den.isEmpty ? hole : width(den.content)
-                let pad = f * 0.18, w = max(nw, dw) + 2 * pad
+                let pad = f * Self.barOverhang, w = max(nw, dw) + 2 * pad
                 let lead = (w - nw) / 2
                 var used: CGFloat = 0
                 if let o = num.open {
                     addKern(o, lead + (num.isEmpty ? hole : 0))
                     used = lead
-                    if num.isEmpty { stackHoles.append(StackHole(anchor: o, dx: lead, offset: offset[s.op] + size[s.op] * 0.25 + 1.5 + f * 0.08, size: f)) }
+                    if num.isEmpty { stackHoles.append(StackHole(anchor: o, dx: lead, offset: Self.numOffset(axis: offset[s.op] + size[s.op] * 0.25, f), size: f)) }
                 } else if num.lo > 0 {
                     addKern(num.lo - 1, lead)
                     used = lead
@@ -158,7 +169,7 @@ extension BarTextView {
                 storage.addAttribute(StackTypesetter.pull, value: (w - dw) / 2 - used - nw, range: NSRange(location: s.op, length: 1))
                 if let o = den.open, den.isEmpty {
                     addKern(o, hole)
-                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: offset[s.op] + size[s.op] * 0.25 - 1.5 - f * 0.72, size: f))
+                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: Self.denOffset(axis: offset[s.op] + size[s.op] * 0.25, f), size: f))
                 }
                 // and the denominator's end takes it on past the wider of the two
                 addKern(den.close ?? (den.hi - 1), (w - dw) / 2)
@@ -167,13 +178,85 @@ extension BarTextView {
             } else {
                 if let o = s.slot.open, s.slot.isEmpty {
                     addKern(o, hole)
-                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: offset[s.op] + size[s.op] * 0.36, size: f))
+                    stackHoles.append(StackHole(anchor: o, dx: 0, offset: offset[s.op] + size[s.op] * Self.powerRaise, size: f))
                 }
                 if let c = s.slot.close { addKern(c, f * 0.1) }
             }
         }
         for d in p.dots { addKern(d, size[d] * 0.14) }
         refreshStackCaret()
+    }
+
+    // a graphing calculator's measures, also used by the history's rows (StackedText)
+    static let fractionScale: CGFloat = 0.82
+    static let powerScale: CGFloat = 0.64
+    static let powerRaise: CGFloat = 0.42
+    /// a slot's size: a fraction's nearly the line's, one inside a slot smaller again (TeX's script style), a power's
+    /// well under it
+    static func slotSize(parent: CGFloat, fraction: Bool) -> CGFloat {
+        let scale = fraction ? (parent < fontSize - 0.01 ? 0.7 : fractionScale) : powerScale
+        return max(8, parent * scale)
+    }
+    static let barOverhang: CGFloat = 0.2
+    /// a numerator's baseline over the bar's axis: a clear gap, plus room for a letter's tail
+    static func numOffset(axis: CGFloat, _ f: CGFloat, depth: CGFloat = 0) -> CGFloat { axis + 2.5 + max(f * 0.24, depth) }
+    /// a denominator's baseline under it: the gap and a digit's height (or the height of a stack in it)
+    static func denOffset(axis: CGFloat, _ f: CGFloat, height: CGFloat = 0) -> CGFloat { axis - 3 - max(f * 0.74, height) }
+
+    /// how far what's in `r` reaches above its baseline and below it, at `size`, the stacks in it taken in
+    static func extent(_ p: StackedMath.Parsed, _ r: NSRange, size: CGFloat) -> (height: CGFloat, depth: CGFloat) {
+        var height = size * 0.74, depth: CGFloat = 0
+        let inside = p.stacks.filter { $0.start >= r.location && $0.end <= NSMaxRange(r) && $0.end - $0.start < r.length + 2 }
+        // only the stacks directly in r: one inside another's slot is taken in by that one
+        let direct = inside.filter { s in !inside.contains { o in o != s && o.slots.contains { $0.lo <= s.start && s.end <= $0.hi } } }
+        for s in direct {
+            if s.isFraction, let num = s.num {
+                let f = slotSize(parent: size, fraction: true), axis = size * 0.25
+                let n = extent(p, num.content, size: f), d = extent(p, s.slot.content, size: f)
+                height = max(height, numOffset(axis: axis, f, depth: n.depth) + n.height)
+                depth = max(depth, -denOffset(axis: axis, f, height: d.height) + d.depth)
+            } else {
+                let f = slotSize(parent: size, fraction: false)
+                height = max(height, size * powerRaise + extent(p, s.slot.content, size: f).height)
+            }
+        }
+        return (height, depth)
+    }
+
+    /// `+ − = < >` between two terms, `; ,` before the next: room around them, as a graphing calculator spaces
+    /// them (setting on only). A sign that starts a term (`-3`, `(−x`, `1e-5`) keeps tight.
+    private func spaceOperators() {
+        guard let storage = textStorage, storage.length > 1 else { return }
+        let u = Array(string.utf16), n = u.count
+        let hidden = stacked.hidden
+        func size(_ k: Int) -> CGFloat { (storage.attribute(.font, at: k, effectiveRange: nil) as? NSFont)?.pointSize ?? Self.fontSize }
+        func add(_ k: Int, _ v: CGFloat) {
+            let had = storage.attribute(.kern, at: k, effectiveRange: nil)
+            let was = (had as? CGFloat) ?? CGFloat((had as? NSNumber)?.doubleValue ?? 0)
+            storage.addAttribute(.kern, value: was + v, range: NSRange(location: k, length: 1))
+        }
+        // the shown character before k
+        func before(_ k: Int) -> Int? { var j = k - 1; while j >= 0, hidden.contains(j) { j -= 1 }; return j >= 0 ? j : nil }
+        for k in 0..<n where !hidden.contains(k) {
+            let c = u[k]
+            let binary: Set<UInt16> = [0x2B, 0x2D, 0x2212, 0x3D, 0x3C, 0x3E, 0x2264, 0x2265, 0xB1, 0x2260]
+            if binary.contains(c) {
+                guard k + 1 < n, let b = before(k) else { continue }
+                let p = u[b]
+                // a sign that starts a term
+                guard StackedMath.isWord(p) || p == 0x29 || p == 0x5D || p == 0x21 || p == 0x25 || p == 0xB2 || p == 0xB3 || p == 0x3C0 else { continue }
+                if (c == 0x2D || c == 0x2B), (p == 0x65 || p == 0x45), b > 0, StackedMath.isDigit(u[b - 1]) { continue }
+                // a hidden `)` before the sign belongs to a slot that ends there: the room goes after it
+                let gap = size(k) * 0.2
+                add(k - 1, gap)
+                add(k, gap)
+                // the caret either side of the sign stands in the middle of its room, never against the sign
+                caretShift[k] = gap / 2
+                caretShift[k + 1] = gap / 2
+            } else if c == 0x3B || c == 0x2C {
+                if k + 1 < n { add(k, size(k) * 0.25); caretShift[k + 1] = size(k) * 0.125 }
+            }
+        }
     }
 
     // ---- where things are
@@ -217,6 +300,7 @@ extension BarTextView {
         guard sel.length == 0 else { return nil }
         if let limit = limitCaretRect(sel.location) { return limit }
         guard !stacked.stacks.isEmpty, var x = stackCaretX(sel.location) else { return nil }
+        x -= caretShift[sel.location] ?? 0
         let look = stackLook(at: sel.location) ?? SlotLook(content: NSRange(location: 0, length: 0), size: Self.fontSize, offset: 0)
         // in an empty slot, the middle of its box
         if let slot = stacked.slot(at: sel.location), slot.isEmpty, let o = slot.open,

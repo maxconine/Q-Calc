@@ -32,6 +32,18 @@ Nothing left.
 
 ## 3. Not on Windows yet: implement it
 
+### Stacked fractions and powers, laid out like Desmos (`Bar/StackedLayout.swift`, `Bar/StackedText.swift`, `Bar/InputField.swift`, `Bar/BarView.swift`, `Bar/BarModel.swift`)
+- **Sizes:** a fraction's slots are 0.82 of the line's size. A fraction inside a slot is 0.7 of that slot's size, as in TeX's script style. A power is 0.64 and raised 0.42 em (`BarTextView.slotSize`). Before, every slot was 0.6.
+- **Gaps:** a numerator's baseline is the bar's axis + 2.5 + max(0.24 f, the depth of a stack inside it). A denominator's baseline is the axis − 3 − max(0.74 f, the height of a stack inside it), where f is the slot's size (`numOffset`, `denOffset`, `extent`). So a fraction inside a denominator never touches the bar above it. The bar overhangs each side by 0.2 f.
+- **Room around signs:** with the setting on, `+ − = < > ≤ ≥ ± ≠` between two terms get 0.2 em each side, and `; ,` get 0.25 em after. A sign that starts a term (`-3`, `(−x`, `1e-5`) stays tight (`spaceOperators`). The caret beside a spaced sign is drawn in the middle of its room, never against the sign (`caretShift`), and it's placed after the spacing is applied.
+- **No clipping:** the text container is 400 pt tall, not 40. TextKit cut a line's fragment down to the container and drew nothing past it, so a denominator was cut off. The line's view uses the composer's whole 72 pt (`stackRoom` 18). The baseline stays where a plain line's is, measured at a stack's hidden `/` (TextKit lowers it for a raised numerator, so the inset takes that back). A line too tall for that position moves up or down until all of it shows (`updateInset`).
+- **No typeset preview** under the line while the setting is on: the line is already typeset (`refreshTypeset`).
+- **History rows** draw their expression stacked the same way at 13 pt (`StackedText`), muted like the plain rows.
+- **Test:**
+  - Type `5x/32+x^3`, →, →, `;x=3`. It should look like Desmos: the slots nearly full size, a clear gap above and below the bar, and spaces around `+` and `=`. There should be no preview row, and the caret after `=` should sit in the gap.
+  - Type `2^10+1/(x/3)+(1/2)/4;x=2` and `1/(x/3)`: nothing should be cut off at the top or the bottom.
+  - Press Enter: the row in history shows the fraction stacked, in light and dark.
+
 ### Graph panel, newer Mac round (`Bar/GraphModel.swift`, `Bar/GraphPanel.swift`, `Bar/GraphSettings.swift`, core `graph.rs`)
 
 - **Graph controls and fixes (this round):**
@@ -53,6 +65,11 @@ Nothing left.
     - A resample no longer writes its x window back when it lands. Only a home view sets the window, so a result that arrives after the drag has moved on can't pull the view back.
     - The first drag or zoom on a fitted curve holds its y window (`holdY` sets `fixedY`). From then on x and y move together under the pointer, with `yMin`/`yMax` updated at once rather than after the resample. Reset clears it.
     - A held window keeps square cells: y's step is x's step at the same scale, when that is 1, 2, 2.5 or 5 × 10ⁿ.
+  - **Home view shows the key points (core `native_home`, so Windows gets it by rebuilding):** `widen_to_features` looks 10 and 100 times wider than the page's home. It takes the roots (only ones the curve crosses, touches, or starts at), turns and the y-intercept. It stops when a wider window finds no more, or more than 12 (sin x keeps ±10). Then it widens the home to hold them all, with a third again around them; features already inside the window (not within 5% of its edges) leave it alone. `y = 2x + 34` opens on [−20, 4]. On the Mac, the fitted y range also reaches y = 0 when the curve comes within a third of its height of it.
+  - **Numbers ride the axes (as Desmos):** x numbers sit under the line y = 0 and y numbers beside x = 0, on a small background patch. An axis off the view, or one that can't be drawn on a log scale, leaves its numbers at the edge it went off: the margins below and left, or just inside the top and right. The origin's 0 is written once. Log decades read 0.001 … 1000, then 10⁴, 10⁻⁵ (`decade`). Switching y between linear and log refits y (it clears `fixed_y`).
+  - **Settings, cut down:** the panel keeps grid on/off, Cartesian/Polar, minor lines, numbers, the x and y (or z) ranges, their steps, linear/log and Zoom square. Each row has a line of explanation, in rounded cells inside a rounded card. Text size, invert colours, arrows, lock viewport, radians/degrees and hiding the axes are gone, and `GraphPrefs.load` resets them to their defaults.
+  - **Export:** the camera opens an export block, not a menu (a menu or popover takes the keys, and the bar hides). It holds "Label key points" (on by default: each mark's `kind (x, y)` box, up to 16 that don't overlap), the axis names (moved here from the settings) and Save picture.
+  - **Font:** the whole graph uses the system font, the plot with tabular digits (`monospacedDigitSystemFont`), not monospace.
   - **Snapping to roots:** a root within 9 pt of the pointer is snapped to, as critical points are. It is drawn picked out, labelled `root (x, 0)`.
 
 Open questions for the Mac side:

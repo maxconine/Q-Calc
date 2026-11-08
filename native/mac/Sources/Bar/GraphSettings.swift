@@ -1,11 +1,11 @@
 import QCalcCore
 import SwiftUI
 
-// Native only: the graph's settings (Desmos's graph settings: text size, contrast, grid, arrows, numbers, axes'
-// labels, windows and steps, log axes, lock, radians or degrees) and the equations graphed beside the bar's.
+// Native only: the graph's settings (the grid, the x and y windows, steps and scales) and its export (labels on
+// the axes and the key points), and the equations graphed beside the bar's.
 
-/// The settings, under the head in the bar's own look: monospaced, hairline cells that read in ink when on, and
-/// plain fields. (A popover took the keys from the bar, which hid it.)
+/// The settings, under the head in the bar (a popover took the keys from the bar, which hid it). Each row says
+/// what it does underneath. Only what changes the view is here: the bar has its own deg/rad switch.
 struct GraphSettingsView: View {
     @ObservedObject var model: BarModel
 
@@ -15,84 +15,121 @@ struct GraphSettingsView: View {
     private func flip(_ key: WritableKeyPath<GraphPrefs, Bool>) { model.graphPrefs[keyPath: key].toggle() }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            row("view") {
-                Cell("A", on: !p.largeText, tip: "Small text") { model.graphPrefs.largeText = false }
-                Cell("A+", on: p.largeText, tip: "Large text") { model.graphPrefs.largeText = true }
-                Gap()
-                Cell("invert", on: p.reverseContrast, tip: "Reverse contrast") { flip(\.reverseContrast) }
-                Gap()
-                Cell("grid", on: p.grid, tip: "Gridlines") { flip(\.grid) }
-                Cell("xy", on: !p.polar, tip: "Cartesian grid") { model.graphPrefs.polar = false }.disabled(!p.grid)
-                Cell("rθ", on: p.polar, tip: "Polar grid") { model.graphPrefs.polar = true }.disabled(!p.grid)
-                Cell("minor", on: p.minorGrid, tip: "Minor gridlines") { flip(\.minorGrid) }
-                Gap()
-                Cell("numbers", on: p.axisNumbers, tip: "Axis numbers") { flip(\.axisNumbers) }
-                Cell("arrows", on: p.arrows, tip: "Arrows on the axes") { flip(\.arrows) }
+        VStack(alignment: .leading, spacing: 10) {
+            row("Grid", "Lines behind the graph. Cartesian is squares; polar is rings a step apart with spokes every 15°.") {
+                Cell("Grid", on: p.grid, tip: "Show gridlines") { flip(\.grid) }
+                Choice(["Cartesian", "Polar"], at: p.polar ? 1 : 0) { model.graphPrefs.polar = $0 == 1 }
+                    .disabled(!p.grid)
+                Cell("Minor lines", on: p.minorGrid, tip: "Fainter lines between the numbered ones") { flip(\.minorGrid) }
+                Cell("Numbers", on: p.axisNumbers, tip: "Numbers along the axes") { flip(\.axisNumbers) }
             }
             if let g {
-                axis("x", show: \.showXAxis, label: g.xLabel, setLabel: { model.setGraphAxis(xLabel: $0) },
-                     lo: g.xMin, hi: g.xMax, set: model.setGraphX,
-                     step: g.xStep, setStep: { model.setGraphAxis(xStep: .some($0)) })
+                range("x", lo: g.xMin, hi: g.xMax, set: model.setGraphX, step: g.xStep,
+                      setStep: { model.setGraphAxis(xStep: .some($0)) },
+                      log: g.shows3D ? nil : g.xLog, setLog: { model.setGraphLog(x: $0) })
                 if g.shows3D {
-                    axis("z", show: \.showYAxis, label: g.yLabel, setLabel: { model.setGraphAxis(yLabel: $0) },
-                         lo: g.zWindow.lowerBound, hi: g.zWindow.upperBound, set: model.setGraphZ,
-                         step: g.yStep, setStep: { model.setGraphAxis(yStep: .some($0)) })
+                    range("z", lo: g.zWindow.lowerBound, hi: g.zWindow.upperBound, set: model.setGraphZ, step: g.yStep,
+                          setStep: { model.setGraphAxis(yStep: .some($0)) }, log: nil, setLog: { _ in })
                 } else {
-                    axis("y", show: \.showYAxis, label: g.yLabel, setLabel: { model.setGraphAxis(yLabel: $0) },
-                         lo: g.yMin, hi: g.yMax, set: model.setGraphY,
-                         step: g.yStep, setStep: { model.setGraphAxis(yStep: .some($0)) })
+                    range("y", lo: g.yMin, hi: g.yMax, set: model.setGraphY, step: g.yStep,
+                          setStep: { model.setGraphAxis(yStep: .some($0)) }, log: g.yLog, setLog: { model.setGraphLog(y: $0) })
                 }
-                row("scale") {
-                    if !g.shows3D {
-                        Cell("x lin", on: !g.xLog, tip: "Linear x axis") { model.setGraphLog(x: false) }
-                        Cell("x log", on: g.xLog, tip: "Logarithmic x axis") { model.setGraphLog(x: true) }
-                        Gap()
-                        Cell("y lin", on: !g.yLog, tip: "Linear y axis") { model.setGraphLog(y: false) }
-                        Cell("y log", on: g.yLog, tip: "Logarithmic y axis") { model.setGraphLog(y: true) }
-                        Gap()
-                        Cell("square", on: false, tip: "Zoom square: as many units per point up as across") { model.zoomGraphSquare() }
+                if !g.shows3D {
+                    HStack(spacing: 6) {
+                        Cell("Zoom square", on: false, tip: "Make one unit up as long as one unit across") { model.zoomGraphSquare() }
                             .disabled(g.logX || g.logY)
+                        Text("Reset (top right) goes back to the view the graph opened on.")
+                            .font(.system(size: Theme.caption)).foregroundStyle(Color.qMuted)
                     }
-                    Cell("lock", on: p.lockViewport, tip: "Lock the viewport: dragging and zooming don't move it") { flip(\.lockViewport) }
-                    Gap()
-                    let degrees = p.degrees ?? !model.options.angleRadians
-                    Cell("rad", on: !degrees, tip: "Radians") { model.graphPrefs.degrees = false }
-                    Cell("deg", on: degrees, tip: "Degrees") { model.graphPrefs.degrees = true }
+                    .padding(.leading, Self.nameWidth + 8)
                 }
             }
         }
-        .padding(.vertical, 8)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.qInk.opacity(0.1)).frame(height: 0.5) }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: Theme.radiusCard).fill(Color.qInk.opacity(0.04)))
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Color.qInk.opacity(0.1), lineWidth: 0.5))
+        .padding(.vertical, 6)
     }
 
-    /// A row: its name in muted capitals, then cells that wrap on a narrow bar
-    private func row<Content: View>(_ name: String, @ViewBuilder _ content: @escaping () -> Content) -> some View {
+    static let nameWidth: CGFloat = 54
+
+    /// A setting: its name, its controls (wrapping on a narrow bar) and a line saying what it does
+    private func row<Content: View>(_ name: String, _ about: String, @ViewBuilder _ content: @escaping () -> Content) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(name.uppercased()).font(.system(size: Theme.caption, weight: .medium, design: .monospaced)).tracking(0.6)
-                .foregroundStyle(Color.qMuted).frame(width: 46, alignment: .leading)
-            WrapRow(spacing: 4, leading: true) { content() }
+            Text(name).font(.system(size: Theme.small, weight: .semibold)).foregroundStyle(Color.qInk)
+                .frame(width: Self.nameWidth, alignment: .leading)
+            VStack(alignment: .leading, spacing: 4) {
+                WrapRow(spacing: 6, leading: true) { content() }
+                Text(about).font(.system(size: Theme.caption)).foregroundStyle(Color.qMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
-    /// An axis: shown or not, `lo ≤ name ≤ hi`, its step and its label (on the 3D view the second axis is z)
-    private func axis(_ name: String, show: WritableKeyPath<GraphPrefs, Bool>, label: String, setLabel: @escaping (String) -> Void,
-                      lo: Double, hi: Double, set: @escaping (Double, Double) -> Void,
-                      step: Double?, setStep: @escaping (Double?) -> Void) -> some View {
-        row("\(name) axis") {
-            Cell("show", on: p[keyPath: show], tip: "Show the \(name) axis") { flip(show) }
-            NumberField(value: lo) { set($0 ?? lo, hi) }.frame(width: 76)
-            Text("≤ \(name) ≤").font(.system(size: Theme.small, design: .monospaced)).foregroundStyle(Color.qMuted).fixedSize()
-            NumberField(value: hi) { set(lo, $0 ?? hi) }.frame(width: 76)
-            Text("step").font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(Color.qMuted).padding(.leading, 4)
-            NumberField(value: step, placeholder: "auto") { setStep($0) }.frame(width: 52)
-            Text("label").font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(Color.qMuted).padding(.leading, 4)
-            FieldBox { TextField(name, text: Binding(get: { label }, set: setLabel)) }.frame(width: 84)
+    /// An axis's window `lo to hi`, its step and (2D) linear or log
+    private func range(_ name: String, lo: Double, hi: Double, set: @escaping (Double, Double) -> Void,
+                       step: Double?, setStep: @escaping (Double?) -> Void,
+                       log: Bool?, setLog: @escaping (Bool) -> Void) -> some View {
+        row("\(name) range", name == "x"
+            ? "The window across. Type numbers or pi; Step is the gap between numbered lines (blank picks one)."
+            : name == "z" ? "How high the box reaches. Step is the gap between numbered lines."
+            : "The window up and down. Log spaces 1, 10, 100… evenly, for values that grow fast.") {
+            NumberField(value: lo) { set($0 ?? lo, hi) }.frame(width: 96)
+            Text("to").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+            NumberField(value: hi) { set(lo, $0 ?? hi) }.frame(width: 96)
+            Text("step").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).padding(.leading, 4)
+            NumberField(value: step, placeholder: "auto") { setStep($0) }.frame(width: 56)
+            if let log {
+                Choice(["Linear", "Log"], at: log ? 1 : 0) { setLog($0 == 1) }
+            }
         }
     }
 }
 
-/// A setting's cell: monospaced, a hairline square edge, in ink with a faint fill when on and muted when off.
+/// The export, under the head when the camera is pressed: the axes' names and the key points' labels go on the
+/// picture, which is saved to the Desktop and copied.
+struct GraphExportView: View {
+    @ObservedObject var model: BarModel
+    @Binding var labelPoints: Bool
+    let save: () -> Void
+
+    var body: some View {
+        if let g = model.graph {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Export").font(.system(size: Theme.small, weight: .semibold)).foregroundStyle(Color.qInk)
+                    .frame(width: GraphSettingsView.nameWidth, alignment: .leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    WrapRow(spacing: 6, leading: true) {
+                        Cell("Label key points", on: labelPoints, tip: "Write each point's kind and (x, y) beside it") { labelPoints.toggle() }
+                        Text("x axis").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted).padding(.leading, 4)
+                        FieldBox { TextField("x", text: Binding(get: { g.xLabel }, set: { model.setGraphAxis(xLabel: $0) })) }.frame(width: 90)
+                        Text(g.shows3D ? "z axis" : "y axis").font(.system(size: Theme.small)).foregroundStyle(Color.qMuted)
+                        FieldBox { TextField(g.shows3D ? "z" : "y", text: Binding(get: { g.yLabel }, set: { model.setGraphAxis(yLabel: $0) })) }.frame(width: 90)
+                        Button(action: save) {
+                            Label("Save picture", systemImage: "square.and.arrow.down")
+                                .font(.system(size: Theme.small, weight: .semibold))
+                                .foregroundStyle(Color.qBg)
+                                .padding(.vertical, 3).padding(.horizontal, 10)
+                                .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qAccent))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .hoverTip("Save to the Desktop and copy")
+                    }
+                    Text("Saves a PNG of the graph and its equations to the Desktop and copies it. Axis names show on the graph too.")
+                        .font(.system(size: Theme.caption)).foregroundStyle(Color.qMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusCard).fill(Color.qInk.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusCard).strokeBorder(Color.qInk.opacity(0.1), lineWidth: 0.5))
+            .padding(.vertical, 6)
+        }
+    }
+}
+
+/// A setting that's on or off: a rounded cell, filled and in ink when on, muted when off.
 private struct Cell: View {
     let title: String
     let on: Bool
@@ -107,13 +144,15 @@ private struct Cell: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.system(size: Theme.small, weight: on ? .semibold : .regular, design: .monospaced))
-                .foregroundStyle(on ? Color.qInk : hover ? Color.qInk.opacity(0.8) : Color.qMuted)
-                .padding(.vertical, 2).padding(.horizontal, 7)
-                .background(Rectangle().fill(on ? Color.qInk.opacity(0.08) : hover ? Color.qFillHover : .clear))
-                .overlay(Rectangle().strokeBorder(Color.qInk.opacity(on ? 0.3 : 0.14), lineWidth: 0.75))
-                .contentShape(Rectangle())
+            HStack(spacing: 4) {
+                if on { Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)) }
+                Text(title).font(.system(size: Theme.small, weight: on ? .medium : .regular))
+            }
+            .foregroundStyle(on ? Color.qInk : hover ? Color.qInk.opacity(0.8) : Color.qMuted)
+            .padding(.vertical, 3).padding(.horizontal, 9)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(on ? Color.qInk.opacity(0.1) : hover ? Color.qFillHover : .clear))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusS).strokeBorder(Color.qInk.opacity(on ? 0.2 : 0.14), lineWidth: 0.75))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .opacity(enabled ? 1 : 0.4)
@@ -124,20 +163,47 @@ private struct Cell: View {
     }
 }
 
-/// A little space between groups of cells
-private struct Gap: View {
-    var body: some View { Color.clear.frame(width: 6, height: 1) }
+/// One of a few choices, side by side in one rounded box, the chosen one filled
+private struct Choice: View {
+    let names: [String]
+    let at: Int
+    let pick: (Int) -> Void
+    @Environment(\.isEnabled) private var enabled
+
+    init(_ names: [String], at: Int, pick: @escaping (Int) -> Void) {
+        (self.names, self.at, self.pick) = (names, at, pick)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(names.enumerated()), id: \.offset) { i, name in
+                Button { pick(i) } label: {
+                    Text(name).font(.system(size: Theme.small, weight: i == at ? .medium : .regular))
+                        .foregroundStyle(i == at ? Color.qInk : Color.qMuted)
+                        .padding(.vertical, 3).padding(.horizontal, 9)
+                        .background(RoundedRectangle(cornerRadius: Theme.radiusS - 1).fill(i == at ? Color.qInk.opacity(0.12) : .clear))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(i == at ? .isSelected : [])
+            }
+        }
+        .padding(1)
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusS).strokeBorder(Color.qInk.opacity(0.14), lineWidth: 0.75))
+        .opacity(enabled ? 1 : 0.4)
+    }
 }
 
-/// A field's frame in the bar's look: plain monospaced text in a hairline box
+/// A field in the bar's look: a rounded box with a hairline edge
 struct FieldBox<Content: View>: View {
     @ViewBuilder let content: () -> Content
     var body: some View {
         content()
             .textFieldStyle(.plain)
-            .font(.system(size: Theme.small, design: .monospaced))
-            .padding(.vertical, 2).padding(.horizontal, 5)
-            .overlay(Rectangle().strokeBorder(Color.qInk.opacity(0.18), lineWidth: 0.75))
+            .font(.system(size: Theme.small))
+            .padding(.vertical, 3).padding(.horizontal, 7)
+            .background(RoundedRectangle(cornerRadius: Theme.radiusS).fill(Color.qBg.opacity(0.6)))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusS).strokeBorder(Color.qInk.opacity(0.18), lineWidth: 0.75))
     }
 }
 
@@ -198,25 +264,25 @@ struct GraphEquations: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             row(color: GraphPanel.layerSwiftColor(0)) {
-                Text(label).font(.system(size: Theme.small, design: .monospaced)).foregroundStyle(Color.qInk).lineLimit(1)
+                Text(label).font(.system(size: Theme.small)).foregroundStyle(Color.qInk).lineLimit(1)
             }
             ForEach(Array(state.layers.enumerated()), id: \.element.id) { i, layer in
                 row(color: GraphPanel.layerSwiftColor(i + 1)) {
                     if layer.fromBar {
-                        Text(Pretty.radicals(layer.expression)).font(.system(size: Theme.small, design: .monospaced)).foregroundStyle(Color.qInk).lineLimit(1)
+                        Text(Pretty.radicals(layer.expression)).font(.system(size: Theme.small)).foregroundStyle(Color.qInk).lineLimit(1)
                             .help("After a ; in the bar: edit it there")
                     } else {
                         TextField("y = …  or  x^2 + y^2 = 9  or  z = …", text: Binding(
                             get: { layer.expression },
                             set: { model.setGraphLayer(layer.id, expression: $0) }))
                             .textFieldStyle(.plain)
-                            .font(.system(size: Theme.small, design: .monospaced))
+                            .font(.system(size: Theme.small))
                             .focused($focus, equals: layer.id)
                     }
                     if let error = layer.error, !layer.isBlank {
-                        Text(error).font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(Color.qMuted).lineLimit(1)
+                        Text(error).font(.system(size: Theme.caption)).foregroundStyle(Color.qMuted).lineLimit(1)
                     } else if state.shows3D, layer.surface == nil, !layer.isBlank {
-                        Text("not a surface: shown in 2D").font(.system(size: Theme.caption, design: .monospaced)).foregroundStyle(Color.qMuted)
+                        Text("not a surface: shown in 2D").font(.system(size: Theme.caption)).foregroundStyle(Color.qMuted)
                     }
                     Spacer(minLength: 0)
                     if !layer.fromBar {
