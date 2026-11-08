@@ -24,6 +24,8 @@ struct StackedText: View {
         let p: StackedMath.Parsed
         let range: Range<Int>
         let size: CGFloat
+        /// inside another stack's slot: a fraction there is smaller again, as in the bar
+        var nested = false
 
         private enum Part { case text(String), fraction(Range<Int>, Range<Int>), power(Range<Int>), gap }
 
@@ -87,7 +89,7 @@ struct StackedText: View {
                     case .gap:
                         Color.clear.frame(width: size * 0.14, height: 1)
                     case .fraction(let num, let den):
-                        let f = max(7, size * BarTextView.fractionScale)
+                        let f = max(7, size * (nested ? 0.7 : BarTextView.fractionScale))
                         VStack(spacing: f * 0.12) {
                             slot(num, f, overhang: true)
                             Rectangle().frame(height: max(1, size * 0.06))
@@ -97,7 +99,9 @@ struct StackedText: View {
                         .padding(.horizontal, size * 0.08)
                     case .power(let exp):
                         let f = max(6, size * BarTextView.powerScale)
-                        slot(exp, f).padding(.bottom, size * 0.62)
+                        // raised by an offset, which takes no height: padding made a denominator with a power in
+                        // it taller than the row, and the row cut it off
+                        slot(exp, f).offset(y: -size * 0.32).padding(.top, size * 0.12)
                     }
                 }
             }
@@ -108,7 +112,7 @@ struct StackedText: View {
                 RoundedRectangle(cornerRadius: f * 0.14).opacity(0.18).frame(width: f * 0.62, height: f * 0.8)
             } else {
                 // the bar reaches a little past the wider slot
-                AnyView(Piece(u: u, p: p, range: r, size: f)).padding(.horizontal, overhang ? f * BarTextView.barOverhang : 0)
+                AnyView(Piece(u: u, p: p, range: r, size: f, nested: true)).padding(.horizontal, overhang ? f * BarTextView.barOverhang : 0)
             }
         }
     }

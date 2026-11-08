@@ -751,7 +751,7 @@ private struct HistoryRowView: View, Equatable {
     /// the expression as typed; stacked as the bar draws it while "Stacked fractions and powers" is on
     @ViewBuilder private var exprText: some View {
         if StackedText.stacks(row.expr) {
-            StackedText(text: row.expr, size: Theme.body).frame(maxHeight: 32).clipped()
+            StackedText(text: row.expr, size: Theme.body).frame(maxHeight: Theme.tapeRow).clipped()
         } else {
             RadicalText(text: row.expr.replacingOccurrences(of: "sqrt(", with: "√("), size: Theme.body)
         }
@@ -766,7 +766,8 @@ private struct HistoryRowView: View, Equatable {
                         .foregroundStyle(exprHover || picked == 0 ? Color.qInk : Color.qMuted)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .padding(.vertical, 4)
+                        // a stacked expression takes the whole row's height
+                        .padding(.vertical, StackedText.stacks(row.expr) ? 0 : 4)
                         .padding(.horizontal, picked == 0 ? 4 : 0)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(PickedMark(on: picked == 0))
