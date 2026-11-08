@@ -411,8 +411,21 @@ fn top_level(s: &str, chars: &[char]) -> Vec<usize> {
     out
 }
 
+/// `find the eigenvalues of A`, `compute det A`, `what are the eigenvalues of A?`: the question as its bare word
+/// form (only lines the matrix reader already took get here, so `find x` elsewhere is untouched)
+fn lead_in(expr: &str) -> String {
+    static LEAD: Lazy = Lazy::new(|| {
+        js(
+            r"^\s*(?:please\s+)?(?:find|compute|calculate|calc|determine|evaluate|get|solve\s+for|give(?:\s+me)?|show(?:\s+me)?|what\s+(?:is|are)|what's)\s+(?:the\s+)?(?=[A-Za-z])",
+            "i",
+        )
+    });
+    let s = jsre::replace_all(&LEAD, expr, |_| String::new());
+    s.trim_end().trim_end_matches('?').trim_end().to_string()
+}
+
 fn phrases(expr: &str) -> String {
-    let expr = &sentences(expr);
+    let expr = &sentences(&lead_in(expr));
     static PHRASES: Lazy = Lazy::new(|| {
         js(
             r"(?<![A-Za-z_])(characteristic\s+(?:polynomial|equation|poly)|char\.?\s*poly(?:nomial)?|char\.?\s*eq(?:uation)?|left\s+null\s*space|null\s*space|column\s+space|row\s+space|jordan\s+(?:normal\s+)?form|pseudo-?\s*inverse|eigen\s+values|eigen\s+vectors|singular\s+value\s+decomposition|condition\s+number|least\s+squares|lu\s+decomposition|qr\s+decomposition|cholesky\s+decomposition)(?![A-Za-z_])",

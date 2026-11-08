@@ -211,3 +211,19 @@ fn questions_as_a_textbook_asks() {
     // a sentence without a matrix is not one
     assert_eq!(show("the length of the trip"), "");
 }
+
+#[test]
+fn asked_with_a_lead_in() {
+    assert_eq!(show("find eigenvalues of [2 1; 1 2]"), "λ = 3, 1");
+    assert_eq!(show("find the eigenvalues of [2 1; 1 2]"), "λ = 3, 1");
+    assert_eq!(show("what are the eigenvalues of [2 1; 1 2]?"), "λ = 3, 1");
+    assert_eq!(show("compute the determinant of [1 2; 3 4]"), "-2");
+    assert_eq!(show("find det [1 2; 3 4]"), "-2");
+    assert_eq!(show("what is the rank of [1 2; 2 4]"), "1");
+    assert_eq!(
+        after(&["A = [2 1; 1 2]"], &["find the eigenvalues of A?"]),
+        ["λ = 3, 1"]
+    );
+    // nothing to do with a matrix: untouched
+    assert_eq!(show("find 2+2"), "");
+}
